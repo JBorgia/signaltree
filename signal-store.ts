@@ -95,7 +95,8 @@ function create<T, P extends keyof T>(
  * You can use the Terminant class to wrap a value marking it as the end
  * value/object to be stored as a writable signal.
  *
- * It works great for objects that end in primitives or arrays of primitives.
+ * For objects that end in primitives or arrays of primitives, Terminant
+ * is not needed. They are converted automatically.
  ***********************************************************************/
 export function signalStore<T, P extends keyof T>(obj: T): SignalStore<T> {
   const store = create<T, P>(
