@@ -1,0 +1,18 @@
+{
+  "name": "signal-store",
+  "version": "1.0.0",
+  "description": "An Angular store that leverages Signals and focuses on simplicity",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Jonathan Borgia",
+  "license": "MIT",
+  "dependencies": {
+    "@angular/core": "^16.2.0",
+    "lodash-es": "^4.17.21"
+  },
+  "devDependencies": {
+    "@types/lodash-es": "^4.17.12"
+  }
+}
