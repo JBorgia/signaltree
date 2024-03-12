@@ -9,4 +9,4 @@ See the example.ts file for examples of how to handle unknown value inititalizat
 
 How tying is applied will determine how it is treated later.
 
-The signalStore() will recursively build out the store by working through all nested objects. If you want a nested object to be the end value (i.e. a WritableSignal) just pass that object as the argument to a new Terminat class instance (or as the argument to the terminant() function).
+The signalStore() will recursively build out the store by working through all nested objects. If you want a nested object to be the end value (i.e. a WritableSignal) just make it one. The function will not make a signal of a signal.
