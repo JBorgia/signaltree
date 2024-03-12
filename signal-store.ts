@@ -1,4 +1,4 @@
-import { WritableSignal, signal } from "@angular/core";
+import { Signal, WritableSignal, isSignal, signal } from "@angular/core";
 import isEqual from "lodash-es/isEqual";
 
 export function equal<T>(a: T, b: T): boolean {
@@ -10,27 +10,11 @@ type SignalValue<T> = T extends ArrayLike<SimpleSignalValue>
   ? SimpleSignalValue[]
   : SimpleSignalValue;
 
-/**********************************************************************************
- * Terminant is a wrapper class used to designate that the value is a terminal value
- * and should be a WritableSignal rather than recursively broken down into more
- * nested SignalStores.
- **********************************************************************************/
-export class Terminant<T> {
-  private _value?: T;
-  constructor(value?: T) {
-    this._value = value;
-  }
-
-  get primative() {
-    return this._value as SignalValue<T[keyof T]>;
-  }
-}
-
 export type SignalStore<T> = {
   [K in keyof T]: T[K] extends (infer U)[]
     ? WritableSignal<U[]>
     : T[K] extends object
-    ? T[K] extends Terminant<infer TK>
+    ? T[K] extends Signal<infer TK>
       ? WritableSignal<TK>
       : SignalStore<T[K]>
     : WritableSignal<T[K]>;
@@ -38,7 +22,7 @@ export type SignalStore<T> = {
   [K: string]: T[] extends (infer U)[]
     ? WritableSignal<U[]>
     : T[] extends object
-    ? T[] extends Terminant<infer TK>
+    ? T[] extends Signal<infer TK>
       ? WritableSignal<TK>
       : SignalStore<T[]>
     : WritableSignal<T[]>;
@@ -61,9 +45,7 @@ function create<T, P extends keyof T>(
     ) => {
       // eslint-disable-next-line no-extra-boolean-cast
       acc[key as P] = (
-        typeof value === "object" &&
-        !Array.isArray(value) &&
-        !(value instanceof Terminant) // Check if the value is an instance of Terminant
+        typeof value === "object" && !Array.isArray(value) && !isSignal(value) // Check if the value is an instance of Terminant
           ? (create(
               value as
                 | {
@@ -76,8 +58,8 @@ function create<T, P extends keyof T>(
                     | SignalStore<T[P][keyof T[P]][keyof T[P][keyof T[P]]]>
                   >
             ) as SignalStore<T[P]>)
-          : value instanceof Terminant // Check if the value is an instance of Terminant
-          ? signal(value.primative) // unwrap the Terminant into an object
+          : isSignal(value) // Check if the value is an instance of Terminant
+          ? value // unwrap the Terminant into an object
           : signal(value as SignalValue<T[P]>, { equal })
       ) as SignalStore<T>[P];
       return acc;
@@ -85,6 +67,49 @@ function create<T, P extends keyof T>(
     {} as SignalStore<T>
   );
 }
+
+// type NonFunctionKeys<T> = {
+//   [K in keyof T]: T[K] extends (...args: any[]) => any ? never : K;
+// };
+
+// type Leaves<T> = T extends object
+//   ? {
+//       [K in keyof NonFunctionKeys<T>]: `${Exclude<
+//         NonFunctionKeys<T>[K],
+//         symbol
+//       >}${Leaves<T[NonFunctionKeys<T>[K]]> extends never
+//         ? ''
+//         : `.${Leaves<T[NonFunctionKeys<T>[K]]>}`}`;
+//     }[keyof NonFunctionKeys<T>]
+//   : never;
+
+// type Paths<T> = T extends object
+//   ? {
+//       [K in keyof NonFunctionKeys<T>]: `${Exclude<
+//         NonFunctionKeys<T>[K],
+//         symbol
+//       >}${'' | `.${Paths<T[NonFunctionKeys<T>[K]]>}`}`;
+//     }[keyof NonFunctionKeys<T>]
+//   : never;
+
+// function getSignal<T>(
+//   obj: SignalStore<T>,
+//   path: Leaves<T> // | Paths<T> // pick one
+// ): SignalValue<any> | undefined {
+//   const keys = path.split('.');
+//   let currentObject: any = obj;
+
+//   for (const key of keys) {
+//     if (currentObject && typeof currentObject[key] !== 'undefined') {
+//       currentObject = currentObject[key];
+//     } else {
+//       return undefined;
+//     }
+//   }
+
+//   // At this point, currentObject is the WritableSignal we're looking for
+//   return currentObject();
+// }
 
 /***********************************************************************
  * WARNING:
@@ -99,6 +124,9 @@ function create<T, P extends keyof T>(
  * is not needed. They are converted automatically.
  ***********************************************************************/
 export function signalStore<T, P extends keyof T>(obj: T): SignalStore<T> {
+  //  & {
+  //   get: (path: Leaves<T>) => SimpleSignalValue | SimpleSignalValue[] | undefined;
+  // }
   const store = create<T, P>(
     obj as
       | ArrayLike<SignalValue<T[P]> | SignalStore<T[P][keyof T[P]]>>
@@ -106,8 +134,8 @@ export function signalStore<T, P extends keyof T>(obj: T): SignalStore<T> {
   );
 
   return store;
-}
-    
-export function terminant<T>(obj: T): Terminant<T> {
-  return new Terminant<T>(obj);
+  // return {
+  //   ...store,
+  //   get: (path: Leaves<T>) => getSignal<T>(store, path)
+  // };
 }

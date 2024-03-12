@@ -1,6 +1,6 @@
 {
   "name": "signal-store",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "An Angular store that leverages Signals and focuses on simplicity",
   "main": "index.js",
   "scripts": {

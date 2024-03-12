@@ -1,7 +1,7 @@
 // Example Usage:
 
-import { WritableSignal } from "@angular/core";
-import { Terminant, signalStore } from "./signal-store";
+import { WritableSignal, signal } from "@angular/core";
+import { signalStore } from "./signal-store";
 
 const storeConfigurationAndInititalizationObject = {
   prop1: 42,
@@ -16,13 +16,13 @@ const storeConfigurationAndInititalizationObject = {
         deeplyNestedUndefinedStringTyped: undefined as unknown as string, // the initial state is undefined, but after it MUST be of type string
         deeplyNestedUndefined: undefined as unknown | string, // the initial state is undefined, and after it CAN be of type undefined or string
       },
-      nestedTerminant4: new Terminant({
+      nestedTerminant4: signal({
         deeplyNested: true,
         deeplyNestedArray: [4, 5],
         deeplyNestedUndefinedStringTyped: undefined as unknown as string, // the initial state is undefined, but after it MUST be of type string
         deeplyNestedUndefined: undefined as unknown | string, // the initial state is undefined, and after it CAN be of type undefined or string
       }),
-      nestedTerminant5: new Terminant([4, 5]),
+      nestedTerminant5: signal([4, 5]),
     },
   },
 };
