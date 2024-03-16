@@ -117,9 +117,6 @@ function create<T, P extends keyof T>(
  * only be used for simple objects without any self-referenced fields
  * (for example, ArcGIS Layers and Objects).
  *
- * You can use the Terminant class to wrap a value marking it as the end
- * value/object to be stored as a writable signal.
- *
  * For objects that end in primitives or arrays of primitives, Terminant
  * is not needed. They are converted automatically.
  ***********************************************************************/
