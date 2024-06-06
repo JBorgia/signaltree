@@ -1,5 +1,5 @@
-import { Signal, WritableSignal, isSignal, signal } from "@angular/core";
-import isEqual from "lodash-es/isEqual";
+import { Signal, WritableSignal, isSignal, signal } from '@angular/core';
+import isEqual from 'lodash-es/isEqual';
 
 export function equal<T>(a: T, b: T): boolean {
   return Array.isArray(a) && Array.isArray(b) ? isEqual(a, b) : a === b;
@@ -45,7 +45,7 @@ function create<T, P extends keyof T>(
     ) => {
       // eslint-disable-next-line no-extra-boolean-cast
       acc[key as P] = (
-        typeof value === "object" && !Array.isArray(value) && !isSignal(value) // Check if the value is an instance of Terminant
+        typeof value === 'object' && !Array.isArray(value) && !isSignal(value) // Check if the value is an instance of Signal
           ? (create(
               value as
                 | {
@@ -58,8 +58,8 @@ function create<T, P extends keyof T>(
                     | SignalStore<T[P][keyof T[P]][keyof T[P][keyof T[P]]]>
                   >
             ) as SignalStore<T[P]>)
-          : isSignal(value) // Check if the value is an instance of Terminant
-          ? value // unwrap the Terminant into an object
+          : isSignal(value) // Check if the value is an instance of Signal
+          ? value // unwrap the Signal into an object
           : signal(value as SignalValue<T[P]>, { equal })
       ) as SignalStore<T>[P];
       return acc;
@@ -68,71 +68,54 @@ function create<T, P extends keyof T>(
   );
 }
 
-// type NonFunctionKeys<T> = {
-//   [K in keyof T]: T[K] extends (...args: any[]) => any ? never : K;
-// };
+export function unwrapSignalStore<T>(store: SignalStore<T>): T {
+  const unwrappedObject: any = {};
 
-// type Leaves<T> = T extends object
-//   ? {
-//       [K in keyof NonFunctionKeys<T>]: `${Exclude<
-//         NonFunctionKeys<T>[K],
-//         symbol
-//       >}${Leaves<T[NonFunctionKeys<T>[K]]> extends never
-//         ? ''
-//         : `.${Leaves<T[NonFunctionKeys<T>[K]]>}`}`;
-//     }[keyof NonFunctionKeys<T>]
-//   : never;
+  for (const key in store) {
+    const value = store[key];
 
-// type Paths<T> = T extends object
-//   ? {
-//       [K in keyof NonFunctionKeys<T>]: `${Exclude<
-//         NonFunctionKeys<T>[K],
-//         symbol
-//       >}${'' | `.${Paths<T[NonFunctionKeys<T>[K]]>}`}`;
-//     }[keyof NonFunctionKeys<T>]
-//   : never;
+    if (isSignal(value)) {
+      unwrappedObject[key] = value();
+    } else if (typeof value === 'object' && value !== null) {
+      unwrappedObject[key] = unwrapSignalStore(value as SignalStore<any>);
+    } else {
+      unwrappedObject[key] = value;
+    }
+  }
 
-// function getSignal<T>(
-//   obj: SignalStore<T>,
-//   path: Leaves<T> // | Paths<T> // pick one
-// ): SignalValue<any> | undefined {
-//   const keys = path.split('.');
-//   let currentObject: any = obj;
-
-//   for (const key of keys) {
-//     if (currentObject && typeof currentObject[key] !== 'undefined') {
-//       currentObject = currentObject[key];
-//     } else {
-//       return undefined;
-//     }
-//   }
-
-//   // At this point, currentObject is the WritableSignal we're looking for
-//   return currentObject();
-// }
+  return unwrappedObject as T;
+}
 
 /***********************************************************************
- * WARNING:
- * This will recursively wrap each field into SignalStores and should
+ * INSTRUCTIONS/WARNINGS:
+ * 1) This will recursively wrap each field into SignalStores and should
  * only be used for simple objects without any self-referenced fields
  * (for example, ArcGIS Layers and Objects).
  *
- * For objects that end in primitives or arrays of primitives, Terminant
- * is not needed. They are converted automatically.
+ * You can make anything into a signal and that will make it the end
+ * of the deep wrapping. It won't wrap a signal in a signal.
+ *
+ * 2) The store cannot be mutated in shape once created. Much like at an
+ * actual store, the shelves aren't added/removed, but the inventory does
+ * change. Similarly, the values can be updated, but fields cannot be
+ * removed or added. Types used in the store cannot have optional fields.
+ * However, Partial<> can still be used.
  ***********************************************************************/
-export function signalStore<T, P extends keyof T>(obj: T): SignalStore<T> {
-  //  & {
-  //   get: (path: Leaves<T>) => SimpleSignalValue | SimpleSignalValue[] | undefined;
-  // }
-  const store = create<T, P>(
+export function signalStore<T, P extends keyof T>(
+  obj: Required<T>
+): SignalStore<Required<T>> {
+  const store = create<Required<T>, P>(
     obj as
-      | ArrayLike<SignalValue<T[P]> | SignalStore<T[P][keyof T[P]]>>
-      | { [s: string]: SignalValue<T[P]> | SignalStore<T[P][keyof T[P]]> }
+      | ArrayLike<
+          | SignalValue<Required<T>[P]>
+          | SignalStore<Required<T>[P][keyof Required<T>[P]]>
+        >
+      | {
+          [s: string]:
+            | SignalValue<Required<T>[P]>
+            | SignalStore<Required<T>[P][keyof Required<T>[P]]>;
+        }
   );
 
   return store;
-  // return {
-  //   ...store,
-  //   get: (path: Leaves<T>) => getSignal<T>(store, path)
-  // };
 }
