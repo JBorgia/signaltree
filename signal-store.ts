@@ -32,7 +32,7 @@ export type SignalStore<T> = {
 
 // Helper function to add unwrap and update methods to a store
 function enhanceStore<T>(store: SignalStore<T>): SignalStore<T> {
-  store.unwrap = function () {
+  store.unwrap = () => {
     const unwrappedObject: any = {};
     for (const key in store) {
       const value = store[key as keyof SignalStore<T>];
@@ -47,7 +47,7 @@ function enhanceStore<T>(store: SignalStore<T>): SignalStore<T> {
     return unwrappedObject as T;
   };
 
-  store.update = function (partialObj: Partial<T>) {
+  store.update = (partialObj: Partial<T>) => {
     for (const key in partialObj) {
       if (!Object.prototype.hasOwnProperty.call(partialObj, key)) continue;
 
@@ -73,44 +73,30 @@ function enhanceStore<T>(store: SignalStore<T>): SignalStore<T> {
 // Function to create a signal store from an object or array, wrapping values in signals as necessary.
 function create<T, P extends keyof T>(
   obj:
-    | { [s: string]: SignalValue<T[P]> | SignalStore<T[P][keyof T[P]]> }
-    | ArrayLike<SignalValue<T[P]> | SignalStore<T[P][keyof T[P]]>>
+    | Required<T>
+    | { [K in keyof T]: SignalValue<T[K]> | SignalStore<T[K]> }
+    | ArrayLike<SignalValue<T[P]> | SignalStore<T[P]>>
 ): SignalStore<T> {
-  const store = Object.entries<
-    SignalValue<T[P]> | SignalStore<T[P][keyof T[P]]>
-  >(obj).reduce(
-    (
-      acc,
-      [key, value]: [
-        string,
-        SignalValue<T[P]> | SignalStore<T[P][keyof T[P]]> | unknown
-      ]
-    ) => {
-      acc[key as P] = (
-        typeof value === 'object' && !Array.isArray(value) && !isSignal(value)
-          ? create(
-              value as
-                | {
-                    [s: string]:
-                      | SignalValue<T[P][keyof T[P]]>
-                      | SignalStore<T[P][keyof T[P]][keyof T[P][keyof T[P]]]>;
-                  }
-                | ArrayLike<
-                    | SignalValue<T[P][keyof T[P]]>
-                    | SignalStore<T[P][keyof T[P]][keyof T[P][keyof T[P]]]>
-                  >
-            )
-          : isSignal(value)
-          ? value
-          : signal(value, { equal })
-      ) as SignalStore<T>[P];
-      return acc;
-    },
-    {} as SignalStore<T>
-  );
+  const store: Partial<SignalStore<T>> = {};
+
+  for (const [key, value] of Object.entries(obj)) {
+    const isObj = (v: any) => typeof v === 'object' && v !== null;
+
+    store[key as P] = (
+      isObj(value) && !Array.isArray(value) && !isSignal(value)
+        ? create(
+            value as
+              | { [K in keyof T]: SignalValue<T[K]> | SignalStore<T[K]> }
+              | ArrayLike<SignalValue<T[P]> | SignalStore<T[P]>>
+          ) // Recursive call
+        : isSignal(value)
+        ? value
+        : (signal(value, { equal }) as SignalStore<T>[P])
+    ) as SignalStore<T>[P]; // Ensure correct type
+  }
 
   // Enhance the store with unwrap and update methods
-  return enhanceStore(store);
+  return enhanceStore(store as SignalStore<T>);
 }
 
 /***********************************************************************
@@ -140,18 +126,5 @@ function create<T, P extends keyof T>(
 export function signalStore<T, P extends keyof T>(
   obj: Required<T>
 ): SignalStore<Required<T>> {
-  const store = create<Required<T>, P>(
-    obj as
-      | ArrayLike<
-          | SignalValue<Required<T>[P]>
-          | SignalStore<Required<T>[P][keyof Required<T>[P]]>
-        >
-      | {
-          [s: string]:
-            | SignalValue<Required<T>[P]>
-            | SignalStore<Required<T>[P][keyof Required<T>[P]]>;
-        }
-  );
-
-  return store;
+  return create<Required<T>, P>(obj);
 }
