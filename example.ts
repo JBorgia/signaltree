@@ -64,6 +64,8 @@ const storeConfigurationAndInititalizationObject: MyType = {
 
 // Create the store
 const store = signalStore(storeConfigurationAndInititalizationObject);
+
+console.log('store', store);
 store.prop2.nested2.nestedSignal4();
 
 // Accessing values
