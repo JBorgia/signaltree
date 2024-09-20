@@ -78,7 +78,6 @@ function create<T, P extends keyof T>(
     | ArrayLike<SignalValue<T[P]> | SignalStore<T[P]>>
 ): SignalStore<T> {
   const store: Partial<SignalStore<T>> = {};
-
   for (const [key, value] of Object.entries(obj)) {
     const isObj = (v: any) => typeof v === 'object' && v !== null;
 
