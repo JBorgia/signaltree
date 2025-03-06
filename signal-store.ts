@@ -12,32 +12,27 @@ type SimpleSignalValue = string | number | boolean;
 // Conditional type to determine the value type of a signal.
 // If T is an array-like type, it should be an array of SimpleSignalValue.
 // Otherwise, it is a SimpleSignalValue.
-type SignalValue<T> = T extends ArrayLike<SimpleSignalValue>
-  ? SimpleSignalValue[]
-  : SimpleSignalValue;
+type SignalValue<T> =
+  T extends ArrayLike<SimpleSignalValue>
+    ? SimpleSignalValue[]
+    : SimpleSignalValue;
 
 // SignalStore type with unwrap and update methods
 export type SignalStore<T> = {
   [K in keyof T]: T[K] extends (infer U)[]
-  ? WritableSignal<U[]> // If T[K] is an array, the property is a WritableSignal of U[].
-  : T[K] extends object
-  ? T[K] extends Signal<infer TK>
-  ? WritableSignal<TK> // If T[K] extends Signal, the property is a WritableSignal of TK.
-  : SignalStore<T[K]> // Otherwise, it's a nested SignalStore.
-  : WritableSignal<T[K]>; // If T[K] is not an object, it is a WritableSignal of T[K].
+    ? WritableSignal<U[]>
+    : T[K] extends object
+      ? T[K] extends Signal<infer TK>
+        ? WritableSignal<TK>
+        : SignalStore<T[K]>
+      : WritableSignal<T[K]>;
 } & {
   unwrap(): T;
-  update(partialObj: Partial<T>): void;
+  update(updater: (current: T) => Partial<T>): void;
 };
 
 // Helper function to add unwrap and update methods to a store
 function enhanceStore<T>(store: SignalStore<T>): SignalStore<T> {
-  /**
-   * unwrap() is a method that unwraps the store, calling all signals and unwrapping nested stores.
-   * HOWEVER, it should not be used often. If you find yourself using it a lot, you may want to
-   * reconsider your store structure.
-   * @returns an unwrapped object with all signals called and nested stores unwrapped
-   */
   store.unwrap = () => {
     const unwrappedObject: any = {};
 
@@ -45,23 +40,24 @@ function enhanceStore<T>(store: SignalStore<T>): SignalStore<T> {
       const value = store[key as keyof SignalStore<T>];
 
       if (isSignal(value)) {
-        // Directly unwrap the signal by calling it
         unwrappedObject[key] = value();
       } else if (typeof value === 'object' && value !== null) {
-        // Recursively unwrap the nested store
         const nestedUnwrapped = (value as SignalStore<any>).unwrap();
-        delete nestedUnwrapped.unwrap; // Remove unwrap method
-        delete nestedUnwrapped.update; // Remove update method
         unwrappedObject[key] = nestedUnwrapped;
       } else {
         unwrappedObject[key] = value;
       }
     }
 
+    delete unwrappedObject.unwrap;
+    delete unwrappedObject.update;
     return unwrappedObject as T;
   };
 
-  store.update = (partialObj: Partial<T>) => {
+  store.update = (updater: (current: T) => Partial<T>) => {
+    const currentValue = store.unwrap();
+    const partialObj = updater(currentValue);
+
     for (const key in partialObj) {
       if (!Object.prototype.hasOwnProperty.call(partialObj, key)) continue;
 
@@ -76,7 +72,7 @@ function enhanceStore<T>(store: SignalStore<T>): SignalStore<T> {
         partialValue !== null &&
         typeof partialValue === 'object'
       ) {
-        (storeValue as SignalStore<any>).update(partialValue as any);
+        (storeValue as SignalStore<any>).update(() => partialValue as any);
       }
     }
   };
@@ -98,10 +94,10 @@ function create<T, P extends keyof T>(
     store[key as P] = (
       isObj(value) && !Array.isArray(value) && !isSignal(value)
         ? create(
-          value as
-          | { [K in keyof T]: SignalValue<T[K]> | SignalStore<T[K]> }
-          | ArrayLike<SignalValue<T[P]> | SignalStore<T[P]>>
-        ) // Recursive call
+            value as
+              | { [K in keyof T]: SignalValue<T[K]> | SignalStore<T[K]> }
+              | ArrayLike<SignalValue<T[P]> | SignalStore<T[P]>>
+          ) // Recursive call
         : isSignal(value)
           ? value
           : (signal(value, { equal }) as SignalStore<T>[P])
