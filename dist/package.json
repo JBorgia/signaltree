@@ -7,10 +7,6 @@
   "main": "bundles/signal-store.umd.js",
   "module": "fesm2022/signal-store.mjs",
   "typings": "index.d.ts",
-  "scripts": {
-    "build": "ng-packagr -p ng-package.json",
-    "test": "echo \"No tests yet\""
-  },
   "peerDependencies": {
     "@angular/common": "^19.2.11",
     "@angular/core": "^19.2.11",
@@ -19,13 +15,19 @@
     "lodash-es": "^4.17.21"
   },
   "dependencies": {
-    "@angular/compiler": "^19.2.11"
+    "@angular/compiler": "^19.2.11",
+    "tslib": "^2.3.0"
   },
-  "devDependencies": {
-    "@angular/compiler-cli": "^19.2.11",
-    "@types/lodash-es": "^4.17.12",
-    "ng-packagr": "^17.0.0",
-    "tslib": "^2.6.2",
-    "typescript": "^5.3.0"
-  }
+  "exports": {
+    "./package.json": {
+      "default": "./package.json"
+    },
+    ".": {
+      "types": "./index.d.ts",
+      "esm2022": "./esm2022/signal-store.mjs",
+      "esm": "./esm2022/signal-store.mjs",
+      "default": "./fesm2022/signal-store.mjs"
+    }
+  },
+  "sideEffects": false
 }
