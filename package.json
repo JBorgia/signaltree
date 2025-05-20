@@ -2,17 +2,34 @@
   "name": "signal-store",
   "version": "2.0.0",
   "description": "An Angular store that leverages Signals and focuses on simplicity",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
   "author": "Jonathan Borgia",
   "license": "MIT",
+  "main": "bundles/signal-store.umd.js",
+  "module": "fesm2022/signal-store.mjs",
+  "typings": "index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "esm2022": "./esm2022/signal-store.mjs",
+      "default": "./fesm2022/signal-store.mjs"
+    }
+  },
+  "scripts": {
+    "build": "ng-packagr -p ng-package.json",
+    "test": "echo \"No tests yet\""
+  },
+  "peerDependencies": {
+    "@angular/core": "^16.0.0 || ^17.0.0",
+    "rxjs": "^7.0.0",
+    "zone.js": "~0.13.0"
+  },
   "dependencies": {
-    "@angular/core": "^16.2.0",
     "lodash-es": "^4.17.21"
   },
   "devDependencies": {
+    "ng-packagr": "^17.0.0",
+    "typescript": "^5.3.0",
+    "tslib": "^2.6.2",
     "@types/lodash-es": "^4.17.12"
   }
 }
