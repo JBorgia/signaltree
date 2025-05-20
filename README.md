@@ -2,7 +2,7 @@
 
 An Angular 16+ store built around Signals designed for simplicity and ease of use. This store leverages Angular's `Signal` functionality to manage state in a straightforward way.
 
-WHY USE THIS?  Because it will take your initial state as a typescript object and infer from it the typing of the rest of the store so you have type safety and easy (.) dot notation access through the store to any end values. Built in store functions like unwrap() and update() allow you to unwrap or update any branch of the store as a whole.
+WHY USE THIS?  Because it will take your initial state as a typescript object and infer from it the typing of the rest of the store so you have type safety and easy (.) dot notation access through the store to any end values. Built in store functions like `unwrap()` and `update()` allow you to unwrap or update any branch of the store as a whole.
 
 ## Features
 
