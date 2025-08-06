@@ -12,10 +12,12 @@
     "module": "esnext",
     "lib": ["es2020", "dom"],
     "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "ngx-signal-store": ["ngx-signal-store/src/index.ts"]
+      "@signal-store": ["ngx-signal-store/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]
