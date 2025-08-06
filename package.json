@@ -12,6 +12,7 @@
     "@angular/platform-browser": "~20.1.0",
     "@angular/platform-browser-dynamic": "~20.1.0",
     "@angular/router": "~20.1.0",
+    "lodash-es": "^4.17.21",
     "rxjs": "~7.8.0",
     "zone.js": "~0.15.0"
   },
@@ -38,6 +39,7 @@
     "@swc/core": "~1.5.7",
     "@swc/helpers": "~0.5.11",
     "@types/jest": "^30.0.0",
+    "@types/lodash-es": "^4.17.12",
     "@types/node": "18.16.9",
     "@typescript-eslint/utils": "^8.29.0",
     "angular-eslint": "^20.0.0",
