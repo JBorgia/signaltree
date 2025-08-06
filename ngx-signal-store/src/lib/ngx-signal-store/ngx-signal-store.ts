@@ -1,13 +1,24 @@
-import { 
-  Signal, WritableSignal, isSignal, signal, computed, effect, inject, DestroyRef,
-  Directive, Input, Output, EventEmitter, forwardRef, ElementRef, Renderer2,
-  HostListener, OnInit
+import {
+  Signal,
+  WritableSignal,
+  isSignal,
+  signal,
+  computed,
+  effect,
+  inject,
+  DestroyRef,
+  Directive,
+  Input,
+  Output,
+  EventEmitter,
+  forwardRef,
+  ElementRef,
+  Renderer2,
+  HostListener,
+  OnInit,
 } from '@angular/core';
-import { 
-  ControlValueAccessor, NG_VALUE_ACCESSOR
-} from '@angular/forms';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Observable, from, of } from 'rxjs';
+import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { Observable } from 'rxjs';
 import isEqual from 'lodash-es/isEqual';
 
 // ============================================
@@ -16,10 +27,9 @@ import isEqual from 'lodash-es/isEqual';
 
 export type SimpleSignalValue = string | number | boolean;
 
-export type SignalValue<T> =
-  T extends ArrayLike<SimpleSignalValue>
-    ? SimpleSignalValue[]
-    : SimpleSignalValue;
+export type SignalValue<T> = T extends ArrayLike<SimpleSignalValue>
+  ? SimpleSignalValue[]
+  : SimpleSignalValue;
 
 /**
  * Configuration options for creating signal stores
@@ -56,7 +66,7 @@ export interface TimeTravelEntry<T> {
   state: T;
   timestamp: number;
   action: string;
-  payload?: any;
+  payload?: unknown;
 }
 
 /**
@@ -64,8 +74,8 @@ export interface TimeTravelEntry<T> {
  */
 export interface Middleware<T> {
   id: string;
-  before?: (action: string, payload: any, state: T) => boolean;
-  after?: (action: string, payload: any, state: T, newState: T) => void;
+  before?: (action: string, payload: unknown, state: T) => boolean;
+  after?: (action: string, payload: unknown, state: T, newState: T) => void;
 }
 
 /**
@@ -90,7 +100,7 @@ export interface AsyncActionConfig<T, TResult> {
   loadingKey?: string;
   errorKey?: string;
   onSuccess?: (result: TResult, store: SignalStore<T>) => void;
-  onError?: (error: any, store: SignalStore<T>) => void;
+  onError?: (error: unknown, store: SignalStore<T>) => void;
   onFinally?: (store: SignalStore<T>) => void;
 }
 
@@ -111,45 +121,47 @@ export type SignalStore<T> = {
   [K in keyof T]: T[K] extends (infer U)[]
     ? WritableSignal<U[]>
     : T[K] extends object
-      ? T[K] extends Signal<infer TK>
-        ? WritableSignal<TK>
-        : SignalStore<T[K]>
-      : WritableSignal<T[K]>;
+    ? T[K] extends Signal<infer TK>
+      ? WritableSignal<TK>
+      : SignalStore<T[K]>
+    : WritableSignal<T[K]>;
 } & {
   // Core API
   unwrap(): T;
   update(updater: (current: T) => Partial<T>): void;
-  
+
   // Performance Features (optional)
   batchUpdate?: (updater: (current: T) => Partial<T>) => void;
   computed?: <R>(fn: (store: T) => R, cacheKey?: string) => Signal<R>;
   effect?: (fn: (store: T) => void) => void;
   subscribe?: (fn: (store: T) => void) => () => void;
-  
+
   // Optimization methods
   optimize?: () => void;
   clearCache?: () => void;
   getMetrics?: () => PerformanceMetrics;
-  
+
   // Middleware & Extensions
   addMiddleware?: (middleware: Middleware<T>) => void;
   removeMiddleware?: (id: string) => void;
-  
+
   // Entity Management
-  withEntityHelpers?: <E extends { id: string | number }>(entityKey: keyof T) => EntityHelpers<E>;
-  
+  withEntityHelpers?: <E extends { id: string | number }>(
+    entityKey: keyof T
+  ) => EntityHelpers<E>;
+
   // Async Operations
   createAsyncAction?: <TInput, TResult>(
     operation: (input: TInput) => Promise<TResult>,
     config: AsyncActionConfig<T, TResult>
   ) => (input: TInput) => Promise<TResult>;
-  
+
   // Time Travel (optional)
   undo?: () => void;
   redo?: () => void;
   getHistory?: () => TimeTravelEntry<T>[];
   resetHistory?: () => void;
-  
+
   // Dev Tools
   __devTools?: DevToolsInterface<T>;
 };
@@ -165,7 +177,7 @@ export function equal<T>(a: T, b: T): boolean {
 export function shallowEqual<T>(a: T, b: T): boolean {
   if (a === b) return true;
   if (a == null || b == null) return false;
-  
+
   if (Array.isArray(a) && Array.isArray(b)) {
     if (a.length !== b.length) return false;
     for (let i = 0; i < a.length; i++) {
@@ -173,19 +185,23 @@ export function shallowEqual<T>(a: T, b: T): boolean {
     }
     return true;
   }
-  
+
   if (typeof a === 'object' && typeof b === 'object') {
-    const keysA = Object.keys(a as any);
-    const keysB = Object.keys(b as any);
-    
+    const keysA = Object.keys(a as Record<string, unknown>);
+    const keysB = Object.keys(b as Record<string, unknown>);
+
     if (keysA.length !== keysB.length) return false;
-    
+
     for (const key of keysA) {
-      if ((a as any)[key] !== (b as any)[key]) return false;
+      if (
+        (a as Record<string, unknown>)[key] !==
+        (b as Record<string, unknown>)[key]
+      )
+        return false;
     }
     return true;
   }
-  
+
   return false;
 }
 
@@ -198,13 +214,13 @@ const globalMetrics: PerformanceMetrics = {
   computations: 0,
   cacheHits: 0,
   cacheMisses: 0,
-  averageUpdateTime: 0
+  averageUpdateTime: 0,
 };
 
-const computedCache = new WeakMap<any, Map<string, any>>();
-const middlewareMap = new WeakMap<any, Middleware<any>[]>();
-const timeTravelMap = new WeakMap<any, TimeTravelEntry<any>[]>();
-const redoStack = new WeakMap<any, TimeTravelEntry<any>[]>();
+const computedCache = new WeakMap<object, Map<string, Signal<unknown>>>();
+const middlewareMap = new WeakMap<object, Array<Middleware<unknown>>>();
+const timeTravelMap = new WeakMap<object, Array<TimeTravelEntry<unknown>>>();
+const redoStack = new WeakMap<object, Array<TimeTravelEntry<unknown>>>();
 
 // ============================================
 // BATCHING SYSTEM
@@ -216,21 +232,23 @@ let isUpdating = false;
 function batchUpdates(fn: () => void): void {
   const startTime = performance.now();
   updateQueue.push({ fn, startTime });
-  
+
   if (!isUpdating) {
     isUpdating = true;
     queueMicrotask(() => {
       const queue = updateQueue.slice();
       updateQueue = [];
       isUpdating = false;
-      
+
       const totalStart = performance.now();
       queue.forEach(({ fn }) => fn());
       const totalTime = performance.now() - totalStart;
-      
+
       globalMetrics.updates++;
-      globalMetrics.averageUpdateTime = 
-        (globalMetrics.averageUpdateTime * (globalMetrics.updates - 1) + totalTime) / globalMetrics.updates;
+      globalMetrics.averageUpdateTime =
+        (globalMetrics.averageUpdateTime * (globalMetrics.updates - 1) +
+          totalTime) /
+        globalMetrics.updates;
     });
   }
 }
@@ -239,31 +257,31 @@ function batchUpdates(fn: () => void): void {
 // TIME TRAVEL MIDDLEWARE
 // ============================================
 
-function createTimeTravelMiddleware<T>(maxEntries: number = 50): Middleware<T> {
+function createTimeTravelMiddleware<T>(maxEntries = 50): Middleware<T> {
   return {
     id: 'timetravel',
     before: (action, payload, state) => {
-      const store = state as any;
-      let history = timeTravelMap.get(store) || [];
-      
+      const store = state as object;
+      let history = (timeTravelMap.get(store) as TimeTravelEntry<T>[]) || [];
+
       if (action !== 'UNDO' && action !== 'REDO') {
         history.push({
           state: structuredClone(state),
           timestamp: Date.now(),
           action,
-          payload: payload ? structuredClone(payload) : undefined
+          payload: payload ? structuredClone(payload) : undefined,
         });
-        
+
         if (history.length > maxEntries) {
           history = history.slice(-maxEntries);
         }
-        
-        timeTravelMap.set(store, history);
-        redoStack.set(store, []);
+
+        timeTravelMap.set(store, history as TimeTravelEntry<unknown>[]);
+        redoStack.set(store, [] as TimeTravelEntry<unknown>[]);
       }
-      
+
       return true;
-    }
+    },
   };
 }
 
@@ -272,12 +290,27 @@ function createTimeTravelMiddleware<T>(maxEntries: number = 50): Middleware<T> {
 // ============================================
 
 function createDevToolsInterface<T>(storeName: string): DevToolsInterface<T> {
-  let devToolsConnection: any = null;
-  
+  let devToolsConnection: {
+    disconnect: () => void;
+    send: (action: string, state: T) => void;
+  } | null = null;
+
   return {
     connect: (name: string) => {
-      if (typeof window !== 'undefined' && (window as any).__REDUX_DEVTOOLS_EXTENSION__) {
-        devToolsConnection = (window as any).__REDUX_DEVTOOLS_EXTENSION__.connect({
+      if (
+        typeof window !== 'undefined' &&
+        '__REDUX_DEVTOOLS_EXTENSION__' in window
+      ) {
+        const devToolsExt = (window as unknown as Record<string, unknown>)[
+          '__REDUX_DEVTOOLS_EXTENSION__'
+        ] as {
+          connect: (config: unknown) => {
+            disconnect: () => void;
+            send: (action: string, state: T) => void;
+          };
+        };
+
+        devToolsConnection = devToolsExt.connect({
           name: name || storeName,
           features: {
             pause: true,
@@ -289,26 +322,26 @@ function createDevToolsInterface<T>(storeName: string): DevToolsInterface<T> {
             skip: true,
             reorder: true,
             dispatch: true,
-            test: true
-          }
+            test: true,
+          },
         });
       }
     },
-    
+
     disconnect: () => {
       if (devToolsConnection) {
         devToolsConnection.disconnect();
         devToolsConnection = null;
       }
     },
-    
+
     send: (action: string, state: T) => {
       if (devToolsConnection) {
         devToolsConnection.send(action, state);
       }
     },
-    
-    isConnected: () => !!devToolsConnection
+
+    isConnected: () => !!devToolsConnection,
   };
 }
 
@@ -321,52 +354,48 @@ function createEntityHelpers<T, E extends { id: string | number }>(
   entityKey: keyof T
 ): EntityHelpers<E> {
   const entitySignal = store[entityKey] as WritableSignal<E[]>;
-  
+
   return {
     add: (entity: E) => {
-      entitySignal.update(entities => [...entities, entity]);
+      entitySignal.update((entities) => [...entities, entity]);
     },
-    
+
     update: (id: string | number, updates: Partial<E>) => {
-      entitySignal.update(entities =>
-        entities.map(entity =>
+      entitySignal.update((entities) =>
+        entities.map((entity) =>
           entity.id === id ? { ...entity, ...updates } : entity
         )
       );
     },
-    
+
     remove: (id: string | number) => {
-      entitySignal.update(entities =>
-        entities.filter(entity => entity.id !== id)
+      entitySignal.update((entities) =>
+        entities.filter((entity) => entity.id !== id)
       );
     },
-    
+
     upsert: (entity: E) => {
-      entitySignal.update(entities => {
-        const index = entities.findIndex(e => e.id === entity.id);
+      entitySignal.update((entities) => {
+        const index = entities.findIndex((e) => e.id === entity.id);
         if (index >= 0) {
-          return entities.map((e, i) => i === index ? entity : e);
+          return entities.map((e, i) => (i === index ? entity : e));
         } else {
           return [...entities, entity];
         }
       });
     },
-    
-    findById: (id: string | number) => computed(() => 
-      entitySignal().find(entity => entity.id === id)
-    ),
-    
-    findBy: (predicate: (entity: E) => boolean) => computed(() =>
-      entitySignal().filter(predicate)
-    ),
-    
-    selectIds: () => computed(() => 
-      entitySignal().map(entity => entity.id)
-    ),
-    
+
+    findById: (id: string | number) =>
+      computed(() => entitySignal().find((entity) => entity.id === id)),
+
+    findBy: (predicate: (entity: E) => boolean) =>
+      computed(() => entitySignal().filter(predicate)),
+
+    selectIds: () => computed(() => entitySignal().map((entity) => entity.id)),
+
     selectAll: () => entitySignal,
-    
-    selectTotal: () => computed(() => entitySignal().length)
+
+    selectTotal: () => computed(() => entitySignal().length),
   };
 }
 
@@ -381,86 +410,66 @@ function createAsyncActionFactory<T>(store: SignalStore<T>) {
   ) {
     return async (input: TInput): Promise<TResult> => {
       const { loadingKey, errorKey, onSuccess, onError, onFinally } = config;
-      
+
+      // Helper function to set nested value
+      const setNestedValue = (path: string, value: unknown) => {
+        const keys = path.split('.');
+        if (keys.length === 1) {
+          store.update((state) => ({ ...state, [path]: value } as Partial<T>));
+        } else {
+          store.update((state) => {
+            const newState = { ...state } as Record<string, unknown>;
+            let current = newState;
+            for (let i = 0; i < keys.length - 1; i++) {
+              if (
+                current[keys[i]] &&
+                typeof current[keys[i]] === 'object' &&
+                !Array.isArray(current[keys[i]])
+              ) {
+                // Only spread if it's a plain object
+                if (
+                  Object.prototype.toString.call(current[keys[i]]) ===
+                    '[object Object]' &&
+                  typeof current[keys[i]] === 'object' &&
+                  current[keys[i]] !== null
+                ) {
+                  // Ensure the value is an object before spreading
+                  current[keys[i]] = {
+                    ...(current[keys[i]] as Record<string, unknown>),
+                  };
+                }
+                current = current[keys[i]] as Record<string, unknown>;
+              }
+            }
+            current[keys[keys.length - 1]] = value;
+            return newState as Partial<T>;
+          });
+        }
+      };
+
       // Set loading state
       if (loadingKey) {
-        const keys = loadingKey.split('.');
-        if (keys.length === 1) {
-          store.update(state => ({ ...state, [loadingKey]: true } as Partial<T>));
-        } else {
-          store.update(state => {
-            const newState = { ...state };
-            let current: any = newState;
-            for (let i = 0; i < keys.length - 1; i++) {
-              current[keys[i]] = { ...current[keys[i]] };
-              current = current[keys[i]];
-            }
-            current[keys[keys.length - 1]] = true;
-            return newState;
-          });
-        }
+        setNestedValue(loadingKey, true);
       }
-      
+
       // Clear error state
       if (errorKey) {
-        const keys = errorKey.split('.');
-        if (keys.length === 1) {
-          store.update(state => ({ ...state, [errorKey]: null } as Partial<T>));
-        } else {
-          store.update(state => {
-            const newState = { ...state };
-            let current: any = newState;
-            for (let i = 0; i < keys.length - 1; i++) {
-              current[keys[i]] = { ...current[keys[i]] };
-              current = current[keys[i]];
-            }
-            current[keys[keys.length - 1]] = null;
-            return newState;
-          });
-        }
+        setNestedValue(errorKey, null);
       }
-      
+
       try {
         const result = await operation(input);
         onSuccess?.(result, store);
         return result;
       } catch (error) {
         if (errorKey) {
-          const keys = errorKey.split('.');
-          if (keys.length === 1) {
-            store.update(state => ({ ...state, [errorKey]: error } as Partial<T>));
-          } else {
-            store.update(state => {
-              const newState = { ...state };
-              let current: any = newState;
-              for (let i = 0; i < keys.length - 1; i++) {
-                current[keys[i]] = { ...current[keys[i]] };
-                current = current[keys[i]];
-              }
-              current[keys[keys.length - 1]] = error;
-              return newState;
-            });
-          }
+          setNestedValue(errorKey, error);
         }
         onError?.(error, store);
         throw error;
       } finally {
         if (loadingKey) {
-          const keys = loadingKey.split('.');
-          if (keys.length === 1) {
-            store.update(state => ({ ...state, [loadingKey]: false } as Partial<T>));
-          } else {
-            store.update(state => {
-              const newState = { ...state };
-              let current: any = newState;
-              for (let i = 0; i < keys.length - 1; i++) {
-                current[keys[i]] = { ...current[keys[i]] };
-                current = current[keys[i]];
-              }
-              current[keys[keys.length - 1]] = false;
-              return newState;
-            });
-          }
+          setNestedValue(loadingKey, false);
         }
         onFinally?.(store);
       }
@@ -474,15 +483,20 @@ function createAsyncActionFactory<T>(store: SignalStore<T>) {
 
 function enhanceStoreBasic<T>(store: SignalStore<T>): SignalStore<T> {
   store.unwrap = () => {
-    const unwrappedObject: any = {};
+    const unwrappedObject: Record<string, unknown> = {};
 
     for (const key in store) {
       const value = store[key as keyof SignalStore<T>];
 
       if (isSignal(value)) {
         unwrappedObject[key] = value();
-      } else if (typeof value === 'object' && value !== null && typeof (value as any).unwrap === 'function') {
-        const nestedUnwrapped = (value as SignalStore<any>).unwrap();
+      } else if (
+        typeof value === 'object' &&
+        value !== null &&
+        'unwrap' in value &&
+        typeof value.unwrap === 'function'
+      ) {
+        const nestedUnwrapped = (value as SignalStore<unknown>).unwrap();
         unwrappedObject[key] = nestedUnwrapped;
       } else if (typeof value !== 'function') {
         unwrappedObject[key] = value;
@@ -503,14 +517,18 @@ function enhanceStoreBasic<T>(store: SignalStore<T>): SignalStore<T> {
       const storeValue = store[key as keyof SignalStore<T>];
 
       if (isSignal(storeValue)) {
-        (storeValue as WritableSignal<any>).set(partialValue);
+        (storeValue as WritableSignal<unknown>).set(partialValue);
       } else if (
         typeof storeValue === 'object' &&
         storeValue !== null &&
         partialValue !== null &&
-        typeof partialValue === 'object'
+        typeof partialValue === 'object' &&
+        'update' in storeValue &&
+        typeof storeValue.update === 'function'
       ) {
-        (storeValue as SignalStore<any>).update(() => partialValue as any);
+        (storeValue as SignalStore<unknown>).update(
+          () => partialValue as Partial<unknown>
+        );
       }
     }
   };
@@ -518,31 +536,35 @@ function enhanceStoreBasic<T>(store: SignalStore<T>): SignalStore<T> {
   return store;
 }
 
-function enhanceStore<T>(store: SignalStore<T>, config: StoreConfig = {}): SignalStore<T> {
+function enhanceStore<T>(
+  store: SignalStore<T>,
+  config: StoreConfig = {}
+): SignalStore<T> {
   const {
     enablePerformanceFeatures = false,
     batchUpdates: useBatching = false,
     useMemoization = false,
     trackPerformance = false,
-    useShallowComparison = false,
     maxCacheSize = 100,
     enableTimeTravel = false,
     enableDevTools = false,
-    storeName = 'SignalStore'
+    storeName = 'SignalStore',
   } = config;
 
   if (!enablePerformanceFeatures) {
     return store;
   }
 
-  console.log(`🚀 Enhanced Signal Store: "${storeName}" with performance features enabled`);
+  console.log(
+    `🚀 Enhanced Signal Store: "${storeName}" with performance features enabled`
+  );
 
   middlewareMap.set(store, []);
 
   if (enableTimeTravel) {
     const timeTravelMiddleware = createTimeTravelMiddleware<T>();
     const middlewares = middlewareMap.get(store) || [];
-    middlewares.push(timeTravelMiddleware);
+    middlewares.push(timeTravelMiddleware as Middleware<unknown>);
     middlewareMap.set(store, middlewares);
   }
 
@@ -550,16 +572,16 @@ function enhanceStore<T>(store: SignalStore<T>, config: StoreConfig = {}): Signa
     const devTools = createDevToolsInterface<T>(storeName);
     devTools.connect(storeName);
     store.__devTools = devTools;
-    
+
     const devToolsMiddleware: Middleware<T> = {
       id: 'devtools',
       after: (action, payload, state, newState) => {
         devTools.send(action, newState);
-      }
+      },
     };
-    
+
     const middlewares = middlewareMap.get(store) || [];
-    middlewares.push(devToolsMiddleware);
+    middlewares.push(devToolsMiddleware as Middleware<unknown>);
     middlewareMap.set(store, middlewares);
   }
 
@@ -567,17 +589,20 @@ function enhanceStore<T>(store: SignalStore<T>, config: StoreConfig = {}): Signa
   store.update = (updater: (current: T) => Partial<T>) => {
     const action = 'UPDATE';
     const currentState = store.unwrap();
-    
+
     const middlewares = middlewareMap.get(store) || [];
     for (const middleware of middlewares) {
-      if (middleware.before && !middleware.before(action, updater, currentState)) {
+      if (
+        middleware.before &&
+        !middleware.before(action, updater, currentState)
+      ) {
         return;
       }
     }
-    
+
     const updateFn = () => {
       originalUpdate.call(store, updater);
-      
+
       const newState = store.unwrap();
       for (const middleware of middlewares) {
         if (middleware.after) {
@@ -585,7 +610,7 @@ function enhanceStore<T>(store: SignalStore<T>, config: StoreConfig = {}): Signa
         }
       }
     };
-    
+
     if (useBatching) {
       batchUpdates(updateFn);
     } else {
@@ -600,24 +625,30 @@ function enhanceStore<T>(store: SignalStore<T>, config: StoreConfig = {}): Signa
   }
 
   if (useMemoization) {
-    store.computed = <R>(fn: (store: T) => R, cacheKey = Math.random().toString()): Signal<R> => {
+    store.computed = <R>(
+      fn: (store: T) => R,
+      cacheKey = Math.random().toString()
+    ): Signal<R> => {
       let cache = computedCache.get(store);
       if (!cache) {
         cache = new Map();
         computedCache.set(store, cache);
       }
-      
+
       if (cache.has(cacheKey)) {
         globalMetrics.cacheHits++;
-        return cache.get(cacheKey);
+        const cachedSignal = cache.get(cacheKey);
+        if (cachedSignal) {
+          return cachedSignal as Signal<R>;
+        }
       }
-      
+
       globalMetrics.cacheMisses++;
       const computedSignal = computed(() => {
         globalMetrics.computations++;
         return fn(store.unwrap());
       });
-      
+
       cache.set(cacheKey, computedSignal);
       return computedSignal;
     };
@@ -630,18 +661,18 @@ function enhanceStore<T>(store: SignalStore<T>, config: StoreConfig = {}): Signa
   store.subscribe = (fn: (store: T) => void): (() => void) => {
     const destroyRef = inject(DestroyRef);
     let isDestroyed = false;
-    
+
     const effectRef = effect(() => {
       if (!isDestroyed) {
         fn(store.unwrap());
       }
     });
-    
+
     const unsubscribe = () => {
       isDestroyed = true;
       effectRef.destroy();
     };
-    
+
     destroyRef.onDestroy(unsubscribe);
     return unsubscribe;
   };
@@ -651,9 +682,11 @@ function enhanceStore<T>(store: SignalStore<T>, config: StoreConfig = {}): Signa
     if (cache && cache.size > maxCacheSize) {
       cache.clear();
     }
-    
+
     if ('memory' in performance) {
-      globalMetrics.memoryUsage = (performance as any).memory.usedJSHeapSize;
+      globalMetrics.memoryUsage = (
+        performance as { memory: { usedJSHeapSize: number } }
+      ).memory.usedJSHeapSize;
     }
   };
 
@@ -669,24 +702,26 @@ function enhanceStore<T>(store: SignalStore<T>, config: StoreConfig = {}): Signa
       const timeTravelEntries = timeTravelMap.get(store)?.length || 0;
       return {
         ...globalMetrics,
-        timeTravelEntries
+        timeTravelEntries,
       };
     };
   }
 
   store.addMiddleware = (middleware: Middleware<T>) => {
     const middlewares = middlewareMap.get(store) || [];
-    middlewares.push(middleware);
+    middlewares.push(middleware as Middleware<unknown>);
     middlewareMap.set(store, middlewares);
   };
 
   store.removeMiddleware = (id: string) => {
     const middlewares = middlewareMap.get(store) || [];
-    const filtered = middlewares.filter(m => m.id !== id);
+    const filtered = middlewares.filter((m) => m.id !== id);
     middlewareMap.set(store, filtered);
   };
 
-  store.withEntityHelpers = <E extends { id: string | number }>(entityKey: keyof T) => {
+  store.withEntityHelpers = <E extends { id: string | number }>(
+    entityKey: keyof T
+  ) => {
     return createEntityHelpers<T, E>(store, entityKey);
   };
 
@@ -694,31 +729,43 @@ function enhanceStore<T>(store: SignalStore<T>, config: StoreConfig = {}): Signa
 
   if (enableTimeTravel) {
     store.undo = () => {
-      const history = timeTravelMap.get(store) || [];
+      const history = (timeTravelMap.get(store) as TimeTravelEntry<T>[]) || [];
       if (history.length > 1) {
-        const currentEntry = history.pop()!;
-        let redoHistory = redoStack.get(store) || [];
+        const currentEntry = history.pop();
+        if (!currentEntry) return;
+
+        const redoHistory =
+          (redoStack.get(store) as TimeTravelEntry<T>[]) || [];
         redoHistory.push(currentEntry);
-        redoStack.set(store, redoHistory);
-        
+        redoStack.set(store, redoHistory as TimeTravelEntry<unknown>[]);
+
         const previousEntry = history[history.length - 1];
         if (previousEntry) {
           const action = 'UNDO';
           const currentState = store.unwrap();
-          
+
           const middlewares = middlewareMap.get(store) || [];
           for (const middleware of middlewares) {
-            if (middleware.id !== 'timetravel' && middleware.before && !middleware.before(action, previousEntry.state, currentState)) {
+            if (
+              middleware.id !== 'timetravel' &&
+              middleware.before &&
+              !middleware.before(action, previousEntry.state, currentState)
+            ) {
               return;
             }
           }
-          
+
           store.update(() => previousEntry.state as Partial<T>);
-          
+
           const newState = store.unwrap();
           for (const middleware of middlewares) {
             if (middleware.id !== 'timetravel' && middleware.after) {
-              middleware.after(action, previousEntry.state, currentState, newState);
+              middleware.after(
+                action,
+                previousEntry.state,
+                currentState,
+                newState
+              );
             }
           }
         }
@@ -726,23 +773,29 @@ function enhanceStore<T>(store: SignalStore<T>, config: StoreConfig = {}): Signa
     };
 
     store.redo = () => {
-      const redoHistory = redoStack.get(store) || [];
+      const redoHistory = (redoStack.get(store) as TimeTravelEntry<T>[]) || [];
       if (redoHistory.length > 0) {
-        const redoEntry = redoHistory.pop()!;
-        redoStack.set(store, redoHistory);
-        
+        const redoEntry = redoHistory.pop();
+        if (!redoEntry) return;
+
+        redoStack.set(store, redoHistory as TimeTravelEntry<unknown>[]);
+
         const action = 'REDO';
         const currentState = store.unwrap();
-        
+
         const middlewares = middlewareMap.get(store) || [];
         for (const middleware of middlewares) {
-          if (middleware.id !== 'timetravel' && middleware.before && !middleware.before(action, redoEntry.state, currentState)) {
+          if (
+            middleware.id !== 'timetravel' &&
+            middleware.before &&
+            !middleware.before(action, redoEntry.state, currentState)
+          ) {
             return;
           }
         }
-        
+
         store.update(() => redoEntry.state as Partial<T>);
-        
+
         const newState = store.unwrap();
         for (const middleware of middlewares) {
           if (middleware.id !== 'timetravel' && middleware.after) {
@@ -753,7 +806,7 @@ function enhanceStore<T>(store: SignalStore<T>, config: StoreConfig = {}): Signa
     };
 
     store.getHistory = () => {
-      return timeTravelMap.get(store) || [];
+      return (timeTravelMap.get(store) as TimeTravelEntry<T>[]) || [];
     };
 
     store.resetHistory = () => {
@@ -765,29 +818,29 @@ function enhanceStore<T>(store: SignalStore<T>, config: StoreConfig = {}): Signa
   return store;
 }
 
-function create<T, P extends keyof T>(
-  obj: Required<T> | { [K in keyof T]: SignalValue<T[K]> | SignalStore<T[K]> },
+function create<T extends Record<string, unknown>, P extends keyof T>(
+  obj: T,
   config: StoreConfig = {}
 ): SignalStore<T> {
   const store: Partial<SignalStore<T>> = {};
   const equalityFn = config.useShallowComparison ? shallowEqual : equal;
-  
+
   for (const [key, value] of Object.entries(obj)) {
-    const isObj = (v: any) => typeof v === 'object' && v !== null;
+    const isObj = (v: unknown) => typeof v === 'object' && v !== null;
 
     store[key as P] = (
       isObj(value) && !Array.isArray(value) && !isSignal(value)
-        ? create(value as any, config)
+        ? create(value as Record<string, unknown>, config)
         : isSignal(value)
-          ? value
-          : (signal(value, { equal: equalityFn }) as SignalStore<T>[P])
+        ? value
+        : (signal(value, { equal: equalityFn }) as SignalStore<T>[P])
     ) as SignalStore<T>[P];
   }
 
   const resultStore = store as SignalStore<T>;
-  
+
   enhanceStoreBasic(resultStore);
-  
+
   return enhanceStore(resultStore, config);
 }
 
@@ -798,20 +851,24 @@ function create<T, P extends keyof T>(
 /**
  * Create a basic hierarchical signal store
  */
-export function signalStore<T>(obj: Required<T>): SignalStore<Required<T>> {
-  return create<Required<T>, keyof Required<T>>(obj, { enablePerformanceFeatures: false });
+export function signalStore<T extends Record<string, unknown>>(
+  obj: T
+): SignalStore<T> {
+  return create<T, keyof T>(obj, {
+    enablePerformanceFeatures: false,
+  });
 }
 
 /**
  * Create an enhanced signal store with performance features
  */
-export function enhancedSignalStore<T>(
-  obj: Required<T>,
+export function enhancedSignalStore<T extends Record<string, unknown>>(
+  obj: T,
   config: StoreConfig = {}
-): SignalStore<Required<T>> {
-  return create<Required<T>, keyof Required<T>>(obj, { 
-    enablePerformanceFeatures: true, 
-    ...config 
+): SignalStore<T> {
+  return create<T, keyof T>(obj, {
+    enablePerformanceFeatures: true,
+    ...config,
   });
 }
 
@@ -824,13 +881,16 @@ export const loggingMiddleware = <T>(storeName: string): Middleware<T> => ({
   before: (action, payload, state) => {
     console.group(`🏪 ${storeName}: ${action}`);
     console.log('Previous state:', state);
-    console.log('Payload:', typeof payload === 'function' ? 'Function' : payload);
+    console.log(
+      'Payload:',
+      typeof payload === 'function' ? 'Function' : payload
+    );
     return true;
   },
   after: (action, payload, state, newState) => {
     console.log('New state:', newState);
     console.groupEnd();
-  }
+  },
 });
 
 export const performanceMiddleware = <T>(): Middleware<T> => ({
@@ -841,7 +901,7 @@ export const performanceMiddleware = <T>(): Middleware<T> => ({
   },
   after: (action) => {
     console.timeEnd(`Store update: ${action}`);
-  }
+  },
 });
 
 export const validationMiddleware = <T>(
@@ -853,7 +913,7 @@ export const validationMiddleware = <T>(
     if (error) {
       console.error(`Validation failed after ${action}:`, error);
     }
-  }
+  },
 });
 
 // ============================================
@@ -864,54 +924,68 @@ export function createEntityStore<E extends { id: string | number }>(
   initialEntities: E[] = [],
   config: StoreConfig = {}
 ) {
-  const store = enhancedSignalStore({
-    entities: initialEntities,
-    loading: false,
-    error: null as string | null,
-    selectedId: null as string | number | null
-  }, {
-    enablePerformanceFeatures: true,
-    useMemoization: true,
-    batchUpdates: true,
-    ...config
-  });
+  const store = enhancedSignalStore(
+    {
+      entities: initialEntities,
+      loading: false,
+      error: null as string | null,
+      selectedId: null as string | number | null,
+    },
+    {
+      enablePerformanceFeatures: true,
+      useMemoization: true,
+      batchUpdates: true,
+      ...config,
+    }
+  );
 
-  const entityHelpers = store.withEntityHelpers!<E>('entities');
+  if (!store.withEntityHelpers) {
+    throw new Error('Entity helpers not available');
+  }
+  const entityHelpers = store.withEntityHelpers<E>('entities');
 
   return {
     ...store,
     ...entityHelpers,
-    
+
     select: (id: string | number) => {
-      store.selectedId!.set(id);
+      store.selectedId.set(id);
     },
-    
+
     deselect: () => {
-      store.selectedId!.set(null);
+      store.selectedId.set(null);
     },
-    
-    getSelected: () => computed(() => {
-      const selectedId = store.selectedId!();
-      return selectedId ? entityHelpers.findById(selectedId)() : undefined;
-    }),
-    
-    loadAsync: store.createAsyncAction!(
-      async (loader: () => Promise<E[]>) => {
-        const entities = await loader();
-        return entities;
-      },
-      {
-        loadingKey: 'loading',
-        errorKey: 'error',
-        onSuccess: (entities) => {
-          store.entities.set(entities);
-        }
+
+    getSelected: () =>
+      computed(() => {
+        const selectedId = store.selectedId();
+        return selectedId ? entityHelpers.findById(selectedId)() : undefined;
+      }),
+
+    loadAsync: (() => {
+      if (!store.createAsyncAction) {
+        throw new Error('Async action creator not available');
       }
-    )
+      return store.createAsyncAction(
+        async (loader: () => Promise<E[]>) => {
+          const entities = await loader();
+          return entities;
+        },
+        {
+          loadingKey: 'loading',
+          errorKey: 'error',
+          onSuccess: (entities) => {
+            store.entities.set(entities);
+          },
+        }
+      );
+    })(),
   };
 }
 
-export type AsyncValidatorFn<T> = (value: T) => Observable<string | null> | Promise<string | null>;
+export type AsyncValidatorFn<T> = (
+  value: T
+) => Observable<string | null> | Promise<string | null>;
 
 export type EnhancedArraySignal<T> = WritableSignal<T[]> & {
   push: (item: T) => void;
@@ -922,57 +996,61 @@ export type EnhancedArraySignal<T> = WritableSignal<T[]> & {
   clear: () => void;
 };
 
-export function createFormStore<T extends Record<string, any>>(
+export function createFormStore<T extends Record<string, unknown>>(
   initialValues: T,
   config: {
-    validators?: Record<string, (value: any) => string | null>;
-    asyncValidators?: Record<string, AsyncValidatorFn<any>>;
+    validators?: Record<string, (value: unknown) => string | null>;
+    asyncValidators?: Record<string, AsyncValidatorFn<unknown>>;
   } & StoreConfig = {}
 ) {
   const { validators = {}, asyncValidators = {}, ...storeConfig } = config;
-  
-  const store = enhancedSignalStore({
-    values: initialValues,
-    errors: {} as Record<string, string>,
-    asyncErrors: {} as Record<string, string>,
-    touched: {} as Record<string, boolean>,
-    asyncValidating: {} as Record<string, boolean>,
-    dirty: false,
-    valid: true,
-    submitting: false
-  }, {
-    batchUpdates: true,
-    useMemoization: true,
-    storeName: 'FormStore',
-    ...storeConfig
-  });
+
+  // Create the store with proper signal types
+  const store = {
+    values: signalStore(initialValues),
+    errors: signal<Record<string, string>>({}),
+    asyncErrors: signal<Record<string, string>>({}),
+    touched: signal<Record<string, boolean>>({}),
+    asyncValidating: signal<Record<string, boolean>>({}),
+    dirty: signal(false),
+    valid: signal(true),
+    submitting: signal(false),
+  };
 
   // Enhance arrays with natural operations
-  const enhanceArray = <U>(arraySignal: WritableSignal<U[]>): EnhancedArraySignal<U> => {
+  const enhanceArray = <U>(
+    arraySignal: WritableSignal<U[]>
+  ): EnhancedArraySignal<U> => {
     const enhanced = arraySignal as EnhancedArraySignal<U>;
 
     enhanced.push = (item: U) => {
-      arraySignal.update(arr => [...arr, item]);
+      arraySignal.update((arr) => [...arr, item]);
       markDirty();
     };
 
     enhanced.removeAt = (index: number) => {
-      arraySignal.update(arr => arr.filter((_, i) => i !== index));
+      arraySignal.update((arr) => arr.filter((_, i) => i !== index));
       markDirty();
     };
 
     enhanced.setAt = (index: number, value: U) => {
-      arraySignal.update(arr => arr.map((item, i) => i === index ? value : item));
+      arraySignal.update((arr) =>
+        arr.map((item, i) => (i === index ? value : item))
+      );
       markDirty();
     };
 
     enhanced.insertAt = (index: number, item: U) => {
-      arraySignal.update(arr => [...arr.slice(0, index), item, ...arr.slice(index)]);
+      arraySignal.update((arr) => [
+        ...arr.slice(0, index),
+        item,
+        ...arr.slice(index),
+      ]);
       markDirty();
     };
 
     enhanced.move = (from: number, to: number) => {
-      arraySignal.update(arr => {
+      arraySignal.update((arr) => {
         const newArr = [...arr];
         const [item] = newArr.splice(from, 1);
         newArr.splice(to, 0, item);
@@ -989,72 +1067,104 @@ export function createFormStore<T extends Record<string, any>>(
     return enhanced;
   };
 
-  // Recursively enhance all arrays
-  const enhanceArraysRecursively = (obj: any) => {
-    Object.keys(obj).forEach(key => {
+  // Recursively enhance all arrays in the values
+  const enhanceArraysRecursively = (obj: Record<string, unknown>) => {
+    Object.keys(obj).forEach((key) => {
       const value = obj[key];
-      if (isSignal(value) && Array.isArray(value())) {
-        obj[key] = enhanceArray(value as WritableSignal<any[]>);
-      } else if (typeof value === 'object' && value !== null && !isSignal(value)) {
-        enhanceArraysRecursively(value);
+      if (isSignal(value) && Array.isArray((value as Signal<unknown>)())) {
+        obj[key] = enhanceArray(value as WritableSignal<unknown[]>);
+      } else if (
+        typeof value === 'object' &&
+        value !== null &&
+        !isSignal(value)
+      ) {
+        enhanceArraysRecursively(value as Record<string, unknown>);
       }
     });
   };
 
-  enhanceArraysRecursively(store.values);
+  // Only enhance arrays if the unwrap method exists
+  const valuesUnwrapped =
+    'unwrap' in store.values && typeof store.values.unwrap === 'function'
+      ? store.values.unwrap()
+      : store.values;
+
+  if (typeof valuesUnwrapped === 'object' && valuesUnwrapped !== null) {
+    enhanceArraysRecursively(valuesUnwrapped as Record<string, unknown>);
+  }
 
   const markDirty = () => store.dirty.set(true);
 
   // Helper functions for nested paths
-  const getNestedValue = (obj: any, path: string): any => {
+  const getNestedValue = (
+    obj: Record<string, unknown>,
+    path: string
+  ): unknown => {
     const keys = path.split('.');
-    let current = obj;
-    
+    let current: unknown = obj;
+
     for (const key of keys) {
       if (current && typeof current === 'object' && key in current) {
-        current = current[key];
+        current = (current as Record<string, unknown>)[key];
         if (isSignal(current)) {
-          current = current();
+          current = (current as Signal<unknown>)();
         }
       } else {
         return undefined;
       }
     }
-    
+
     return current;
   };
 
-  const setNestedValue = (path: string, value: any) => {
+  const setNestedValue = (path: string, value: unknown) => {
     const keys = path.split('.');
-    
+
     if (keys.length === 1) {
-      const signal = store.values[keys[0]];
-      if (isSignal(signal)) {
-        signal.set(value);
+      const signal = (store.values as Record<string, unknown>)[keys[0]];
+      if (
+        isSignal(signal) &&
+        'set' in signal &&
+        typeof signal.set === 'function'
+      ) {
+        (signal as WritableSignal<unknown>).set(value);
       }
     } else {
-      let current: any = store.values;
+      let current: unknown = store.values;
       for (let i = 0; i < keys.length - 1; i++) {
-        current = current[keys[i]];
+        current = (current as Record<string, unknown>)[keys[i]];
       }
-      if (isSignal(current[keys[keys.length - 1]])) {
-        current[keys[keys.length - 1]].set(value);
+      const finalSignal = (current as Record<string, unknown>)[
+        keys[keys.length - 1]
+      ];
+      if (
+        isSignal(finalSignal) &&
+        'set' in finalSignal &&
+        typeof finalSignal.set === 'function'
+      ) {
+        (finalSignal as WritableSignal<unknown>).set(value);
       }
     }
   };
 
   const validate = async (field?: string) => {
-    const values = store.values.unwrap();
+    const values =
+      'unwrap' in store.values && typeof store.values.unwrap === 'function'
+        ? store.values.unwrap()
+        : store.values;
     const errors: Record<string, string> = {};
     const asyncErrors: Record<string, string> = {};
-    
+
     const fieldsToValidate = field ? [field] : Object.keys(validators);
 
     // Sync validation
     for (const fieldPath of fieldsToValidate) {
       const validator = validators[fieldPath];
       if (validator) {
-        const value = getNestedValue(values, fieldPath);
+        const value = getNestedValue(
+          values as Record<string, unknown>,
+          fieldPath
+        );
         const error = validator(value);
         if (error) {
           errors[fieldPath] = error;
@@ -1065,24 +1175,29 @@ export function createFormStore<T extends Record<string, any>>(
     store.errors.set(errors);
 
     // Async validation
-    const asyncFieldsToValidate = field ? [field] : Object.keys(asyncValidators);
-    
+    const asyncFieldsToValidate = field
+      ? [field]
+      : Object.keys(asyncValidators);
+
     for (const fieldPath of asyncFieldsToValidate) {
       const asyncValidator = asyncValidators[fieldPath];
       if (asyncValidator && (!field || field === fieldPath)) {
-        store.asyncValidating.update(v => ({ ...v, [fieldPath]: true }));
-        
+        store.asyncValidating.update((v) => ({ ...v, [fieldPath]: true }));
+
         try {
-          const value = getNestedValue(values, fieldPath);
+          const value = getNestedValue(
+            values as Record<string, unknown>,
+            fieldPath
+          );
           const result = await asyncValidator(value);
-          if (result) {
+          if (result && typeof result === 'string') {
             asyncErrors[fieldPath] = result;
           }
-        } catch (error) {
+        } catch {
           asyncErrors[fieldPath] = 'Validation error';
         }
-        
-        store.asyncValidating.update(v => ({ ...v, [fieldPath]: false }));
+
+        store.asyncValidating.update((v) => ({ ...v, [fieldPath]: false }));
       }
     }
 
@@ -1091,61 +1206,71 @@ export function createFormStore<T extends Record<string, any>>(
     // Update validity
     const hasErrors = Object.keys(errors).length > 0;
     const hasAsyncErrors = Object.keys(asyncErrors).length > 0;
-    const isValidating = Object.values(store.asyncValidating()).some(v => v);
-    
+    const isValidating = Object.values(store.asyncValidating()).some((v) => v);
+
     store.valid.set(!hasErrors && !hasAsyncErrors && !isValidating);
   };
 
   // Create computed signals for field errors
   const fieldErrors: Record<string, Signal<string | undefined>> = {};
   const fieldAsyncErrors: Record<string, Signal<string | undefined>> = {};
-  
+
   // Create error signals for all defined validators
-  [...Object.keys(validators), ...Object.keys(asyncValidators)].forEach(fieldPath => {
-    fieldErrors[fieldPath] = computed(() => store.errors()[fieldPath]);
-    fieldAsyncErrors[fieldPath] = computed(() => store.asyncErrors()[fieldPath]);
-  });
+  [...Object.keys(validators), ...Object.keys(asyncValidators)].forEach(
+    (fieldPath) => {
+      fieldErrors[fieldPath] = computed(() => {
+        const errors = store.errors();
+        return errors[fieldPath];
+      });
+      fieldAsyncErrors[fieldPath] = computed(() => {
+        const errors = store.asyncErrors();
+        return errors[fieldPath];
+      });
+    }
+  );
 
   return {
     ...store,
-    
-    setValue: (field: string, value: any) => {
+
+    setValue: (field: string, value: unknown) => {
       setNestedValue(field, value);
-      store.touched.update(t => ({ ...t, [field]: true }));
+      store.touched.update((t) => ({ ...t, [field]: true }));
       markDirty();
       validate(field);
     },
 
     setValues: (values: Partial<T>) => {
-      store.values.update(v => ({ ...v, ...values }));
+      store.values.update((v) => ({ ...v, ...values }));
       markDirty();
       validate();
     },
 
     reset: () => {
-      store.update(() => ({
-        values: initialValues,
-        errors: {},
-        asyncErrors: {},
-        touched: {},
-        asyncValidating: {},
-        dirty: false,
-        valid: true,
-        submitting: false
-      }));
+      store.values = signalStore(initialValues);
+      store.errors.set({});
+      store.asyncErrors.set({});
+      store.touched.set({});
+      store.asyncValidating.set({});
+      store.dirty.set(false);
+      store.valid.set(true);
+      store.submitting.set(false);
     },
 
-    submit: async (submitFn: (values: T) => Promise<any>) => {
+    submit: async (submitFn: (values: T) => Promise<unknown>) => {
       store.submitting.set(true);
-      
+
       try {
         await validate();
-        
+
         if (!store.valid()) {
           throw new Error('Form is invalid');
         }
-        
-        const result = await submitFn(store.values.unwrap());
+
+        const currentValues =
+          'unwrap' in store.values && typeof store.values.unwrap === 'function'
+            ? store.values.unwrap()
+            : store.values;
+        const result = await submitFn(currentValues as T);
         return result;
       } finally {
         store.submitting.set(false);
@@ -1153,23 +1278,47 @@ export function createFormStore<T extends Record<string, any>>(
     },
 
     validate,
-    
+
     // Convenience methods
-    getFieldError: (field: string) => fieldErrors[field] || computed(() => undefined),
-    getFieldAsyncError: (field: string) => fieldAsyncErrors[field] || computed(() => undefined),
-    getFieldTouched: (field: string) => computed(() => store.touched()[field]),
-    isFieldValid: (field: string) => computed(() => 
-      !store.errors()[field] && !store.asyncErrors()[field] && !store.asyncValidating()[field]
-    ),
-    isFieldAsyncValidating: (field: string) => computed(() => store.asyncValidating()[field]),
-    
+    getFieldError: (field: string) =>
+      fieldErrors[field] || computed(() => undefined),
+    getFieldAsyncError: (field: string) =>
+      fieldAsyncErrors[field] || computed(() => undefined),
+    getFieldTouched: (field: string) =>
+      computed(() => {
+        const touched = store.touched();
+        return touched[field];
+      }),
+    isFieldValid: (field: string) =>
+      computed(() => {
+        const errors = store.errors();
+        const asyncErrors = store.asyncErrors();
+        const asyncValidating = store.asyncValidating();
+        return !errors[field] && !asyncErrors[field] && !asyncValidating[field];
+      }),
+    isFieldAsyncValidating: (field: string) =>
+      computed(() => {
+        const asyncValidating = store.asyncValidating();
+        return asyncValidating[field];
+      }),
+
     // Keep the direct access too
     fieldErrors,
-    fieldAsyncErrors
+    fieldAsyncErrors,
+
+    // Expose the signals directly
+    values: store.values,
+    errors: store.errors,
+    asyncErrors: store.asyncErrors,
+    touched: store.touched,
+    asyncValidating: store.asyncValidating,
+    dirty: store.dirty,
+    valid: store.valid,
+    submitting: store.submitting,
   };
 }
 
-export function createTestStore<T>(
+export function createTestStore<T extends Record<string, unknown>>(
   initialState: T,
   config: StoreConfig = {}
 ): SignalStore<T> & {
@@ -1178,107 +1327,129 @@ export function createTestStore<T>(
   getHistory: () => TimeTravelEntry<T>[];
   expectState: (expectedState: Partial<T>) => void;
 } {
-  const store = enhancedSignalStore(initialState as Required<T>, {
+  const store = enhancedSignalStore(initialState, {
     enableTimeTravel: true,
     enableDevTools: false,
     trackPerformance: true,
-    ...config
+    ...config,
   });
 
   return {
     ...store,
-    
+
     setState: (state: Partial<T>) => {
       store.update(() => state);
     },
-    
+
     getState: () => store.unwrap(),
-    
-    getHistory: () => store.getHistory!(),
-    
+
+    getHistory: () => {
+      if (!store.getHistory) {
+        throw new Error('Time travel not enabled for this store');
+      }
+      return store.getHistory();
+    },
+
     expectState: (expectedState: Partial<T>) => {
       const currentState = store.unwrap();
       for (const [key, value] of Object.entries(expectedState)) {
-        if (!isEqual((currentState as any)[key], value)) {
-          throw new Error(`Expected ${key} to be ${JSON.stringify(value)}, but got ${JSON.stringify((currentState as any)[key])}`);
+        const currentValue = (currentState as Record<string, unknown>)[key];
+        if (!isEqual(currentValue, value)) {
+          throw new Error(
+            `Expected ${key} to be ${JSON.stringify(
+              value
+            )}, but got ${JSON.stringify(currentValue)}`
+          );
         }
       }
-    }
+    },
   };
 }
 
 // ============================================
-// ANGULAR FORM INTEGRATION (NEW)
+// ANGULAR FORM INTEGRATION
 // ============================================
 
 /**
  * Simple directive for two-way binding with signals
  */
 @Directive({
-  selector: '[signalValue]',
-  providers: [{
-    provide: NG_VALUE_ACCESSOR,
-    useExisting: forwardRef(() => SignalValueDirective),
-    multi: true
-  }],
-  standalone: true
+  selector: '[libSignalValue]',
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => SignalValueDirective),
+      multi: true,
+    },
+  ],
+  standalone: true,
 })
 export class SignalValueDirective implements ControlValueAccessor, OnInit {
-  @Input() signalValue!: WritableSignal<any>;
-  @Output() signalValueChange = new EventEmitter<any>();
-  
-  private onChange: (value: any) => void = () => {};
-  private onTouched: () => void = () => {};
-  
-  constructor(
-    private elementRef: ElementRef,
-    private renderer: Renderer2
-  ) {}
-  
+  @Input() signalValue!: WritableSignal<unknown>;
+  @Output() signalValueChange = new EventEmitter<unknown>();
+
+  private elementRef = inject(ElementRef);
+  private renderer = inject(Renderer2);
+
+  private onChange: (value: unknown) => void = () => {
+    // Empty implementation for ControlValueAccessor
+  };
+  private onTouched: () => void = () => {
+    // Empty implementation for ControlValueAccessor
+  };
+
   ngOnInit() {
     effect(() => {
       const value = this.signalValue();
       this.renderer.setProperty(this.elementRef.nativeElement, 'value', value);
     });
   }
-  
-  @HostListener('input', ['$event.target.value'])
-  @HostListener('change', ['$event.target.value'])
-  handleChange(value: any) {
-    this.signalValue.set(value);
-    this.signalValueChange.emit(value);
-    this.onChange(value);
+
+  @HostListener('input', ['$event'])
+  @HostListener('change', ['$event'])
+  handleChange(event: Event) {
+    const target = event.target as HTMLInputElement;
+    const value = target?.value;
+    if (value !== undefined) {
+      this.signalValue.set(value);
+      this.signalValueChange.emit(value);
+      this.onChange(value);
+    }
   }
-  
+
   @HostListener('blur')
   handleBlur() {
     this.onTouched();
   }
-  
-  writeValue(value: any): void {
+
+  writeValue(value: unknown): void {
     if (value !== undefined) {
       this.signalValue.set(value);
     }
   }
-  
-  registerOnChange(fn: any): void {
+
+  registerOnChange(fn: (value: unknown) => void): void {
     this.onChange = fn;
   }
-  
-  registerOnTouched(fn: any): void {
+
+  registerOnTouched(fn: () => void): void {
     this.onTouched = fn;
   }
-  
+
   setDisabledState?(isDisabled: boolean): void {
-    this.renderer.setProperty(this.elementRef.nativeElement, 'disabled', isDisabled);
+    this.renderer.setProperty(
+      this.elementRef.nativeElement,
+      'disabled',
+      isDisabled
+    );
   }
 }
 
 // ============================================
-// SIMPLE AUDIT TRAIL (NEW)
+// SIMPLE AUDIT TRAIL
 // ============================================
 
-export interface AuditEntry<T = any> {
+export interface AuditEntry<T = unknown> {
   timestamp: number;
   changes: Partial<T>;
   metadata?: {
@@ -1294,68 +1465,78 @@ export function createAuditMiddleware<T>(
 ): Middleware<T> {
   return {
     id: 'audit',
-    after: (action: string, payload: any, oldState: T, newState: T) => {
+    after: (action: string, payload: unknown, oldState: T, newState: T) => {
       const changes = getChanges(oldState, newState);
       if (Object.keys(changes).length > 0) {
         auditLog.push({
           timestamp: Date.now(),
           changes,
-          metadata: getMetadata?.()
+          metadata: getMetadata?.(),
         });
       }
-    }
+    },
   };
 }
 
 function getChanges<T>(oldState: T, newState: T): Partial<T> {
-  const changes: any = {};
-  
+  const changes: Record<string, unknown> = {};
+
   for (const key in newState) {
     if (oldState[key] !== newState[key]) {
       changes[key] = newState[key];
     }
   }
-  
-  return changes;
+
+  return changes as Partial<T>;
 }
 
 // ============================================
-// COMMON VALIDATORS (NEW)
+// COMMON VALIDATORS
 // ============================================
 
 export const validators = {
-  required: (message = 'Required') => 
-    (value: any) => !value ? message : null,
-    
-  email: (message = 'Invalid email') => 
-    (value: string) => value && !value.includes('@') ? message : null,
-    
-  minLength: (min: number) => 
-    (value: string) => value && value.length < min ? `Min ${min} characters` : null,
-    
-  pattern: (regex: RegExp, message = 'Invalid format') => 
-    (value: string) => value && !regex.test(value) ? message : null
+  required:
+    (message = 'Required') =>
+    (value: unknown) =>
+      !value ? message : null,
+
+  email:
+    (message = 'Invalid email') =>
+    (value: string) =>
+      value && !value.includes('@') ? message : null,
+
+  minLength: (min: number) => (value: string) =>
+    value && value.length < min ? `Min ${min} characters` : null,
+
+  pattern:
+    (regex: RegExp, message = 'Invalid format') =>
+    (value: string) =>
+      value && !regex.test(value) ? message : null,
 };
 
 export const asyncValidators = {
-  unique: (checkFn: (value: any) => Promise<boolean>, message = 'Already exists') => 
-    async (value: any) => {
+  unique:
+    (
+      checkFn: (value: unknown) => Promise<boolean>,
+      message = 'Already exists'
+    ) =>
+    async (value: unknown) => {
       if (!value) return null;
       const exists = await checkFn(value);
       return exists ? message : null;
-    }
+    },
 };
 
 // ============================================
-// OPTIONAL RXJS BRIDGE (NEW)
+// OPTIONAL RXJS BRIDGE
 // ============================================
 
 export function toObservable<T>(signal: Signal<T>): Observable<T> {
-  return new Observable(subscriber => {
+  return new Observable((subscriber) => {
     const effectRef = effect(() => {
       subscriber.next(signal());
     });
-    
+
     return () => effectRef.destroy();
   });
 }
@@ -1364,20 +1545,4 @@ export function toObservable<T>(signal: Signal<T>): Observable<T> {
 // EXPORTS
 // ============================================
 
-export const SIGNAL_FORM_DIRECTIVES = [
-  SignalValueDirective
-];
-
-export type {
-  SignalStore,
-  StoreConfig,
-  PerformanceMetrics,
-  TimeTravelEntry,
-  Middleware,
-  EntityHelpers,
-  AsyncActionConfig,
-  DevToolsInterface,
-  AuditEntry,
-  AsyncValidatorFn,
-  EnhancedArraySignal
-};
+export const SIGNAL_FORM_DIRECTIVES = [SignalValueDirective];
