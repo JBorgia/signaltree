@@ -560,6 +560,72 @@ describe('Signal Tree', () => {
         tree.undo();
         expect(tree.unwrap()).toEqual(stateBefore);
       });
+
+      it('should support path-based memoization for fine-grained cache invalidation', () => {
+        const tree = signalTree(
+          {
+            users: { count: 10, list: ['Alice', 'Bob'] },
+            products: { count: 5, list: ['A', 'B', 'C'] },
+            settings: { theme: 'dark' },
+          },
+          {
+            enablePerformanceFeatures: true,
+            useMemoization: true,
+            usePathBasedMemoization: true,
+            trackPerformance: true,
+          }
+        );
+
+        let userComputations = 0;
+        let productComputations = 0;
+        let settingsComputations = 0;
+
+        // Create computations that depend on different paths
+        const userCount = tree.memoize((state) => {
+          userComputations++;
+          return state.users.count * 2;
+        }, 'userCount');
+
+        const productCount = tree.memoize((state) => {
+          productComputations++;
+          return state.products.count * 3;
+        }, 'productCount');
+
+        const themeDisplay = tree.memoize((state) => {
+          settingsComputations++;
+          return `Theme: ${state.settings.theme}`;
+        }, 'themeDisplay');
+
+        // Initial computation - all should run
+        expect(userCount()).toBe(20);
+        expect(productCount()).toBe(15);
+        expect(themeDisplay()).toBe('Theme: dark');
+        expect(userComputations).toBe(1);
+        expect(productComputations).toBe(1);
+        expect(settingsComputations).toBe(1);
+
+        // Update only users - should only invalidate user computation
+        tree.update(() => ({
+          users: { count: 15, list: ['Alice', 'Bob', 'Charlie'] },
+        }));
+
+        expect(userCount()).toBe(30); // Recomputed
+        expect(productCount()).toBe(15); // Cached (no recomputation)
+        expect(themeDisplay()).toBe('Theme: dark'); // Cached (no recomputation)
+        expect(userComputations).toBe(2);
+        expect(productComputations).toBe(1); // Should not have increased
+        expect(settingsComputations).toBe(1); // Should not have increased
+
+        // Update only settings - should only invalidate settings computation
+        tree.update(() => ({ settings: { theme: 'light' } }));
+
+        expect(userCount()).toBe(30); // Cached (no recomputation)
+        expect(productCount()).toBe(15); // Cached (no recomputation)
+        expect(themeDisplay()).toBe('Theme: light'); // Recomputed
+        expect(userComputations).toBe(2); // Should not have increased
+        expect(productComputations).toBe(1); // Should not have increased
+        expect(settingsComputations).toBe(2);
+      });
     });
 
     describe('performance optimization', () => {
