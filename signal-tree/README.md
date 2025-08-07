@@ -100,14 +100,14 @@ tree.getMetrics();
 </tr>
 <tr>
 <td><strong>Learning Curve</strong></td>
-<td>🏆 **⭐⭐⭐⭐⭐ Easy**</td>
+<td>🏆 ⭐⭐⭐⭐⭐ **Easy**</td>
 <td>⭐⭐ Steep</td>
 <td>⭐⭐⭐ Moderate</td>
 <td>⭐⭐⭐⭐ Easy</td>
 <td>⭐⭐⭐ Moderate</td>
 <td>⭐⭐⭐⭐ Easy</td>
 <td>⭐⭐⭐ Moderate</td>
-<td>🏆 **⭐⭐⭐⭐⭐ Very Easy**</td>
+<td>🏆 ⭐⭐⭐⭐⭐ **Very Easy**</td>
 </tr>
 <tr>
 <td><strong>Boilerplate</strong></td>
@@ -144,79 +144,79 @@ tree.getMetrics();
 </tr>
 <tr>
 <td><strong>Type Safety</strong></td>
-<td>🏆 **✅ Full inference**</td>
+<td>🏆 ✅ **Full inference**</td>
 <td>✅ Manual typing</td>
 <td>✅ Good</td>
-<td>🏆 **✅ Excellent**</td>
+<td>🏆 ✅ **Excellent**</td>
 <td>✅ Good</td>
 <td>⚠️ Limited</td>
 <td>✅ Good</td>
-<td>🏆 **✅ Native**</td>
+<td>🏆 ✅ **Native**</td>
 </tr>
 <tr>
 <td><strong>Performance</strong></td>
-<td>🏆 **⚡ Excellent**</td>
+<td>🏆 ⚡ **Excellent**</td>
 <td>🔄 Good</td>
 <td>🔄 Good</td>
-<td>🏆 **⚡ Excellent**</td>
+<td>🏆 ⚡ **Excellent**</td>
 <td>🔄 Good</td>
-<td>🏆 **⚡ Excellent**</td>
+<td>🏆 ⚡ **Excellent**</td>
 <td>🔄 Good</td>
-<td>🏆 **⚡ Excellent**</td>
+<td>🏆 ⚡ **Excellent**</td>
 </tr>
 <tr>
 <td><strong>DevTools</strong></td>
-<td>🏆 **✅ Opt-in**</td>
-<td>🏆 **✅ Redux DevTools**</td>
-<td>🏆 **✅ Akita DevTools**</td>
-<td>🏆 **✅ Redux DevTools**</td>
+<td>🏆 ✅ **Opt-in**</td>
+<td>🏆 ✅ **Redux DevTools**</td>
+<td>🏆 ✅ **Akita DevTools**</td>
+<td>🏆 ✅ **Redux DevTools**</td>
 <td>⚠️ Limited</td>
-<td>🏆 **✅ MobX DevTools**</td>
-<td>🏆 **✅ NGXS DevTools**</td>
+<td>🏆 ✅ **MobX DevTools**</td>
+<td>🏆 ✅ **NGXS DevTools**</td>
 <td>❌ None</td>
 </tr>
 <tr>
 <td><strong>Time Travel</strong></td>
-<td>🏆 **✅ Opt-in**</td>
-<td>🏆 **✅ Built-in**</td>
-<td>🏆 **✅ Plugin**</td>
-<td>🏆 **✅ Plugin**</td>
+<td>🏆 ✅ **Opt-in**</td>
+<td>🏆 ✅ **Built-in**</td>
+<td>🏆 ✅ **Plugin**</td>
+<td>🏆 ✅ **Plugin**</td>
 <td>❌ No</td>
-<td>🏆 **✅ Via DevTools**</td>
-<td>🏆 **✅ Plugin**</td>
+<td>🏆 ✅ **Via DevTools**</td>
+<td>🏆 ✅ **Plugin**</td>
 <td>❌ No</td>
 </tr>
 <tr>
 <td><strong>Entity Management</strong></td>
-<td>🏆 **✅ Always included**</td>
-<td>🏆 **✅ @ngrx/entity**</td>
-<td>🏆 **✅ Core feature**</td>
-<td>🏆 **✅ Via plugins**</td>
+<td>🏆 ✅ **Always included**</td>
+<td>🏆 ✅ **@ngrx/entity**</td>
+<td>🏆 ✅ **Core feature**</td>
+<td>🏆 ✅ **Via plugins**</td>
 <td>❌ Manual</td>
 <td>❌ Manual</td>
-<td>🏆 **✅ Via plugins**</td>
+<td>🏆 ✅ **Via plugins**</td>
 <td>❌ Manual</td>
 </tr>
 <tr>
 <td><strong>Batching</strong></td>
-<td>🏆 **✅ Opt-in**</td>
+<td>🏆 ✅ **Opt-in**</td>
 <td>❌ Manual</td>
 <td>❌ Manual</td>
-<td>🏆 **✅ Available**</td>
-<td>🏆 **✅ Via schedulers**</td>
-<td>🏆 **✅ Transaction**</td>
+<td>🏆 ✅ **Available**</td>
+<td>🏆 ✅ **Via schedulers**</td>
+<td>🏆 ✅ **Transaction**</td>
 <td>❌ Manual</td>
-<td>🏆 **✅ Automatic**</td>
+<td>🏆 ✅ **Automatic**</td>
 </tr>
 <tr>
 <td><strong>Form Integration</strong></td>
-<td>🏆 **✅ Built-in**</td>
+<td>🏆 ✅ **Built-in**</td>
 <td>⚠️ Separate</td>
 <td>⚠️ Separate</td>
 <td>❌ Manual</td>
 <td>❌ Manual</td>
 <td>⚠️ Third-party</td>
-<td>🏆 **✅ Form plugin**</td>
+<td>🏆 ✅ **Form plugin**</td>
 <td>❌ Manual</td>
 </tr>
 </tbody>
