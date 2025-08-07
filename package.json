@@ -26,8 +26,8 @@
     "graph": "nx graph",
     "dep-graph": "nx dep-graph",
     "help": "nx help",
-    "publish:lib": "nx build signal-tree && cd ../dist/signal-tree && npm publish",
-    "publish:lib:dry-run": "nx build signal-tree && cd ../dist/signal-tree && npm publish --dry-run",
+    "publish:lib": "nx build signal-tree && cd ./dist/signal-tree && npm publish",
+    "publish:lib:dry-run": "nx build signal-tree && cd ./dist/signal-tree && npm publish --dry-run",
     "postinstall": "node ./decorate-angular-cli.js"
   },
   "private": true,
