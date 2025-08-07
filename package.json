@@ -1,6 +1,6 @@
 {
   "name": "@signal-tree/source",
-  "version": "0.0.0",
+  "version": "0.1.6",
   "license": "MIT",
   "scripts": {
     "build": "nx build",
