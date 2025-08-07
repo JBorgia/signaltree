@@ -506,6 +506,60 @@ describe('Signal Tree', () => {
           expect(typeof tree.resetHistory).toBe('function');
         }
       });
+
+      it('should support patch-based time travel for memory efficiency', () => {
+        const tree = signalTree(
+          { counter: 0, name: 'test', data: { nested: { value: 42 } } },
+          {
+            enablePerformanceFeatures: true,
+            enableTimeTravel: true,
+            usePatchBasedTimeTravel: true,
+          }
+        );
+
+        // Make incremental changes - patch-based time travel should store only diffs
+        tree.update(() => ({ counter: 1 })); // Only counter changed
+        tree.update(() => ({ name: 'updated' })); // Only name changed
+        tree.update(() => ({ data: { nested: { value: 100 } } })); // Only nested value changed
+
+        expect(tree.$.counter()).toBe(1);
+        expect(tree.$.name()).toBe('updated');
+        expect(tree.$.data.nested.value()).toBe(100);
+
+        // Test undo functionality
+        tree.undo(); // Should revert nested value
+        expect(tree.$.data.nested.value()).toBe(42);
+        expect(tree.$.name()).toBe('updated'); // Should remain unchanged
+        expect(tree.$.counter()).toBe(1); // Should remain unchanged
+
+        tree.undo(); // Should revert name
+        expect(tree.$.name()).toBe('test');
+        expect(tree.$.counter()).toBe(1); // Should remain unchanged
+
+        tree.undo(); // Should revert counter
+        expect(tree.$.counter()).toBe(0);
+
+        // Test redo functionality
+        tree.redo(); // Should restore counter
+        expect(tree.$.counter()).toBe(1);
+
+        tree.redo(); // Should restore name
+        expect(tree.$.name()).toBe('updated');
+
+        tree.redo(); // Should restore nested value
+        expect(tree.$.data.nested.value()).toBe(100);
+
+        // Verify history reconstruction works
+        const history = tree.getHistory();
+        expect(history.length).toBeGreaterThan(0);
+
+        // Reset should work
+        tree.resetHistory();
+        // After reset, undo/redo should not change state
+        const stateBefore = tree.unwrap();
+        tree.undo();
+        expect(tree.unwrap()).toEqual(stateBefore);
+      });
     });
 
     describe('performance optimization', () => {
