@@ -173,7 +173,7 @@ export class MyComponent implements OnDestroy {
 
   ngOnDestroy() {
     // Gentle cleanup that respects cache limits
-    this.tree.cleanup();
+    this.tree.optimize();
   }
 }
 ```
@@ -222,7 +222,7 @@ class AdvancedOptimizer {
 
   // Routine maintenance
   performMaintenance() {
-    this.tree.cleanup(); // Gentle, respects limits
+    this.tree.optimize(); // Gentle, respects limits
   }
 
   // Emergency cleanup
@@ -237,7 +237,7 @@ class AdvancedOptimizer {
     if (metrics.memoryUsage && metrics.memoryUsage > this.memoryThreshold) {
       this.tree.clearCache(); // Memory pressure
     } else {
-      this.tree.cleanup(); // Normal maintenance
+      this.tree.optimize(); // Normal maintenance
     }
   }
 }
