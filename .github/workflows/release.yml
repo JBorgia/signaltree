@@ -35,8 +35,17 @@ jobs:
       - name: Clear Nx cache
         run: pnpm exec nx reset
 
+      - name: Debug environment
+        run: |
+          node --version
+          pnpm --version
+          pnpm exec nx --version
+          ls -la
+
       - name: Build library
-        run: pnpm run build:lib
+        run: pnpm run build:lib --verbose
+        env:
+          NX_DAEMON: false
 
       - name: Extract version from tag
         id: version
