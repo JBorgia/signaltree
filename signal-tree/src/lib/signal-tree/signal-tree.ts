@@ -36,7 +36,7 @@
  *
  * // Routine maintenance - conditional cleanup
  * ngOnDestroy() {
- *   tree.cleanup(); // Only clears if cache > 50 items
+ *   tree.optimize(); // Only clears if cache > 50 items
  * }
  *
  * // Force invalidation - immediate cleanup

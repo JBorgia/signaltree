@@ -267,7 +267,7 @@ const tree = signalTree({
 
 // Multiple updates batched together
 for (let i = 0; i < 100; i++) {
-  tree.batch(() => ({
+  tree.batchUpdate(() => ({
     counter: i,
     text: \`Update \${i}\`,
     flag: i % 2 === 0
