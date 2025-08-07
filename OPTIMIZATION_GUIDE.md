@@ -37,11 +37,11 @@ const tree = signalTree(
 
 // Create many cached computations
 for (let i = 0; i < 100; i++) {
-  tree.computed(state => expensiveCalculation(state, i), `calc-${i}`);
+  tree.memoize(state => expensiveCalculation(state, i), `calc-${i}`);
 }
 
 // Smart cleanup - only clears if cache > 50 items
-tree.cleanup();
+tree.optimize();
 
 // Check if cleanup helped with memory
 const metrics = tree.getMetrics();
@@ -49,7 +49,7 @@ console.log(`Memory usage: ${metrics.memoryUsage} bytes`);
 
 // Use in component lifecycle
 ngOnDestroy() {
-  this.tree.cleanup(); // Gentle cleanup before component destruction
+  this.tree.optimize(); // Gentle cleanup before component destruction
 }
 ```
 
