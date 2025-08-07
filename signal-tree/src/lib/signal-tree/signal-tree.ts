@@ -345,7 +345,7 @@ export interface TreeConfig {
    * }
    *
    * // Automatic cleanup when exceeded
-   * tree.cleanup(); // Clears cache if > 50 entries
+   * tree.optimize(); // Clears cache if > 50 entries
    *
    * // Manual cleanup anytime
    * tree.clearCache(); // Clears all cached entries
