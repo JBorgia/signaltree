@@ -111,10 +111,11 @@ export class HomeComponent {
 
   quickStartCode = `import { signalStore } from '@signal-store';
 
-// Create a basic store
-const store = signalStore({
+// Create a signal store
+const userStore = signalStore({
   user: {
     name: 'John Doe',
+    age: 30,
     email: 'john@example.com'
   },
   settings: {
@@ -123,14 +124,20 @@ const store = signalStore({
   }
 });
 
-// Access nested state
-console.log(store.state.user.name()); // 'John Doe'
-console.log(store.$.settings.theme()); // 'dark'
+// Access signals directly through state or $ (shorthand)
+console.log(userStore.state.user.name()); // 'John Doe'
+console.log(userStore.$.settings.theme()); // 'dark'
 
-// Update state
-store.state.user.name.set('Jane Doe');
-store.update(current => ({
+// Update individual values
+userStore.state.user.name.set('Jane Doe');
+userStore.$.settings.theme.set('light');
+
+// Update entire store
+userStore.update(current => ({
   ...current,
-  settings: { ...current.settings, theme: 'light' }
-}));`;
+  user: { ...current.user, age: 31 }
+}));
+
+// Get unwrapped values
+const userData = userStore.unwrap();`;
 }

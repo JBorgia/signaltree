@@ -124,19 +124,19 @@ interface PerformanceMetrics {
                 <div>
                   <strong>Counter:</strong>
                   <code class="bg-red-100 px-2 py-1 rounded">{{
-                    regularStore.counter()
+                    regularStore.state.counter()
                   }}</code>
                 </div>
                 <div>
                   <strong>Text:</strong>
                   <code class="bg-red-100 px-2 py-1 rounded">{{
-                    regularStore.text()
+                    regularStore.state.text()
                   }}</code>
                 </div>
                 <div>
                   <strong>Flag:</strong>
                   <code class="bg-red-100 px-2 py-1 rounded">{{
-                    regularStore.flag()
+                    regularStore.state.flag()
                   }}</code>
                 </div>
               </div>
@@ -214,19 +214,19 @@ interface PerformanceMetrics {
                 <div>
                   <strong>Counter:</strong>
                   <code class="bg-green-100 px-2 py-1 rounded">{{
-                    batchedStore.counter()
+                    batchedStore.state.counter()
                   }}</code>
                 </div>
                 <div>
                   <strong>Text:</strong>
                   <code class="bg-green-100 px-2 py-1 rounded">{{
-                    batchedStore.text()
+                    batchedStore.state.text()
                   }}</code>
                 </div>
                 <div>
                   <strong>Flag:</strong>
                   <code class="bg-green-100 px-2 py-1 rounded">{{
-                    batchedStore.flag()
+                    batchedStore.state.flag()
                   }}</code>
                 </div>
               </div>
@@ -439,9 +439,9 @@ export class BatchingComparisonComponent implements OnDestroy {
       this.lastRegularUpdate = current;
 
       // Access store values to trigger effect
-      this.regularStore.counter();
-      this.regularStore.text();
-      this.regularStore.flag();
+      this.regularStore.state.counter();
+      this.regularStore.state.text();
+      this.regularStore.state.flag();
 
       this.regularMetrics.update((metrics) => ({
         updates: metrics.updates + 1,
@@ -458,9 +458,9 @@ export class BatchingComparisonComponent implements OnDestroy {
       this.lastBatchedUpdate = current;
 
       // Access store values to trigger effect
-      this.batchedStore.counter();
-      this.batchedStore.text();
-      this.batchedStore.flag();
+      this.batchedStore.state.counter();
+      this.batchedStore.state.text();
+      this.batchedStore.state.flag();
 
       this.batchedMetrics.update((metrics) => ({
         updates: metrics.updates + 1,
@@ -482,9 +482,9 @@ export class BatchingComparisonComponent implements OnDestroy {
 
     // Run updates on regular store
     for (let i = 0; i < this.updateCount; i++) {
-      this.regularStore.counter.set(i);
-      this.regularStore.text.set(`Update ${i}`);
-      this.regularStore.flag.set(i % 2 === 0);
+      this.regularStore.state.counter.set(i);
+      this.regularStore.state.text.set(`Update ${i}`);
+      this.regularStore.state.flag.set(i % 2 === 0);
 
       if (this.delay > 0) {
         await new Promise((resolve) => setTimeout(resolve, this.delay));
@@ -543,26 +543,26 @@ export class BatchingComparisonComponent implements OnDestroy {
   }
 
   updateRegularStore() {
-    const current = this.regularStore.counter() + 1;
-    this.regularStore.counter.set(current);
-    this.regularStore.text.set(`Manual ${current}`);
-    this.regularStore.flag.set(current % 2 === 0);
+    const current = this.regularStore.state.counter() + 1;
+    this.regularStore.state.counter.set(current);
+    this.regularStore.state.text.set(`Manual ${current}`);
+    this.regularStore.state.flag.set(current % 2 === 0);
   }
 
   updateBatchedStore() {
-    const current = this.batchedStore.counter() + 1;
-    this.batchedStore.counter.set(current);
-    this.batchedStore.text.set(`Manual ${current}`);
-    this.batchedStore.flag.set(current % 2 === 0);
+    const current = this.batchedStore.state.counter() + 1;
+    this.batchedStore.state.counter.set(current);
+    this.batchedStore.state.text.set(`Manual ${current}`);
+    this.batchedStore.state.flag.set(current % 2 === 0);
   }
 
   multiUpdateRegular() {
     // Multiple individual updates (will trigger effect multiple times)
     for (let i = 0; i < 5; i++) {
-      const value = this.regularStore.counter() + 1;
-      this.regularStore.counter.set(value);
-      this.regularStore.text.set(`Multi ${value}`);
-      this.regularStore.flag.set(value % 2 === 0);
+      const value = this.regularStore.state.counter() + 1;
+      this.regularStore.state.counter.set(value);
+      this.regularStore.state.text.set(`Multi ${value}`);
+      this.regularStore.state.flag.set(value % 2 === 0);
     }
   }
 
