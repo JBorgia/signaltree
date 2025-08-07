@@ -9,14 +9,14 @@ export const appRoutes: Route[] = [
   {
     path: 'basic-tree',
     loadComponent: () =>
-      import('./components/examples/basic-tree/basic-tree.component').then(
+      import('./components/examples/basic-store/basic-store.component').then(
         (c) => c.BasicTreeComponent
       ),
   },
   {
     path: 'nested-tree',
     loadComponent: () =>
-      import('./components/examples/basic-tree/nested-tree.component').then(
+      import('./components/examples/basic-store/nested-store.component').then(
         (c) => c.NestedTreeComponent
       ),
   },

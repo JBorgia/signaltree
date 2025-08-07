@@ -146,7 +146,7 @@ import { signalTree } from '@signal-tree';
       </div>
     </div>
   `,
-  styleUrls: ['./basic-tree.component.scss'],
+  styleUrls: ['./basic-store.component.scss'],
 })
 export class BasicTreeComponent {
   state = {
