@@ -22,7 +22,7 @@ import {
   SIGNAL_FORM_DIRECTIVES,
   type Middleware,
   type AuditEntry,
-} from './ngx-signal-store';
+} from './signal-tree';
 import { take } from 'rxjs';
 
 // Mock performance.now() for consistent testing
