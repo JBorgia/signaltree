@@ -1,0 +1,133 @@
+<div class="container">
+  <h1 class="page-title">🎯 Basic Signal Tree</h1>
+
+  <div class="main-grid">
+    <!-- Interactive Demo -->
+    <div class="demo-card">
+      <h2 class="card-title">Interactive Demo</h2>
+
+      <div class="form-group">
+        <div class="input-group">
+          <label for="name" class="input-label"> Name </label>
+          <input
+            id="name"
+            [value]="tree.state.name()"
+            (input)="updateName($event)"
+            class="form-input"
+            placeholder="Enter your name"
+          />
+        </div>
+
+        <div class="input-group">
+          <label for="age" class="input-label"> Age </label>
+          <input
+            id="age"
+            type="number"
+            [value]="tree.state.age()"
+            (input)="updateAge($event)"
+            class="form-input"
+            placeholder="Enter your age"
+          />
+        </div>
+
+        <div class="input-group">
+          <label for="email" class="input-label"> Email </label>
+          <input
+            id="email"
+            type="email"
+            [value]="tree.state.email()"
+            (input)="updateEmail($event)"
+            class="form-input"
+            placeholder="Enter your email"
+          />
+        </div>
+
+        <div class="button-group">
+          <button (click)="incrementAge()" class="btn btn-primary">
+            Increment Age
+          </button>
+
+          <button (click)="resetTree()" class="btn btn-secondary">Reset</button>
+
+          <button (click)="randomizeData()" class="btn btn-success">
+            Randomize
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live State Display -->
+    <div class="demo-card">
+      <h2 class="card-title">Live State</h2>
+
+      <div class="state-display">
+        <div class="state-section">
+          <h3 class="state-title">Individual Signals</h3>
+          <div class="signal-list">
+            <div class="signal-item">
+              <strong>Name:</strong>
+              <code class="signal-value">{{ tree.state.name() }}</code>
+            </div>
+            <div class="signal-item">
+              <strong>Age:</strong>
+              <code class="signal-value">{{ tree.state.age() }}</code>
+            </div>
+            <div class="signal-item">
+              <strong>Email:</strong>
+              <code class="signal-value">{{ tree.state.email() }}</code>
+            </div>
+          </div>
+        </div>
+
+        <div class="state-section">
+          <h3 class="state-title">Unwrapped Tree</h3>
+          <pre class="json-display">{{ tree.unwrap() | json }}</pre>
+        </div>
+
+        <div class="state-section">
+          <h3 class="state-title">Tree Methods</h3>
+          <div class="methods-list">
+            <div><strong>Available methods:</strong></div>
+            <ul class="method-items">
+              <li><code>tree.state.name()</code> - Get name signal value</li>
+              <li>
+                <code>tree.state.name.set(value)</code> - Set name directly
+              </li>
+              <li><code>tree.update(fn)</code> - Update entire tree</li>
+              <li><code>tree.unwrap()</code> - Get plain object</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Code Example -->
+  <div class="code-section">
+    <h2 class="section-title">💻 Code Example</h2>
+
+    <div class="code-block">
+      <pre><code>{{ codeExample }}</code></pre>
+    </div>
+  </div>
+
+  <!-- Update Log -->
+  <div class="log-section">
+    <h2 class="section-title">📋 Update Log</h2>
+
+    <div class="log-container">
+      <div
+        *ngFor="let log of updateLog; trackBy: trackByIndex"
+        class="log-entry"
+      >
+        <div class="log-timestamp">
+          {{ log.timestamp | date : 'medium' }}
+        </div>
+        <div class="log-action">{{ log.action }}</div>
+        <div class="log-data">{{ log.data | json }}</div>
+      </div>
+    </div>
+
+    <button (click)="clearLog()" class="btn btn-danger">Clear Log</button>
+  </div>
+</div>
