@@ -1,6 +1,6 @@
 {
   "name": "signal-tree",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Reactive state management for Angular using signals with advanced features like memoization, batching, middleware, and performance monitoring",
   "author": "Jonathan Borgia",
   "license": "MIT",
