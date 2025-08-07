@@ -1,5 +1,5 @@
 {
-  "name": "ngx-signal-store",
+  "name": "signal-tree",
   "version": "0.0.1",
   "peerDependencies": {
     "@angular/common": "^20.1.0",

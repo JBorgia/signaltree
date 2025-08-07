@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { signalStore } from '@signal-store';
+import { signalStore } from '@signal-tree';
 
 @Component({
   selector: 'app-basic-store',
@@ -232,7 +232,7 @@ export class BasicStoreComponent {
     return index;
   }
 
-  codeExample = `import { signalStore } from '@signal-store';
+  codeExample = `import { signalStore } from 'signal-tree';
 
 // Create a basic signal store
 const store = signalStore({

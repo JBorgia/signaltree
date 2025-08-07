@@ -109,7 +109,7 @@ export class HomeComponent {
     return this.features.filter((f) => f.category === category);
   }
 
-  quickStartCode = `import { signalStore } from '@signal-store';
+  quickStartCode = `import { signalStore } from 'signal-tree';
 
 // Create a signal store
 const userStore = signalStore({

@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { createEntityStore } from '@signal-store';
+import { createEntityStore } from '@signal-tree';
 
 interface User {
   id: string;

@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, effect, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { signalStore, enhancedSignalStore } from '@signal-store';
+import { signalStore, enhancedSignalStore } from '@signal-tree';
 
 interface PerformanceMetrics {
   updates: number;
