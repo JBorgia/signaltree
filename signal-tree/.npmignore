@@ -1,0 +1,37 @@
+# Development files
+src/
+*.spec.ts
+*.test.ts
+test-setup.ts
+jest.config.ts
+tsconfig.spec.json
+
+# Build artifacts
+*.tsbuildinfo
+*.log
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation (except README)
+docs/
+*.md
+!README.md
+
+# Config files
+eslint.config.mjs
+.eslintrc*
+.editorconfig
+.gitignore
+
+# Project files
+project.json
+tsconfig.*.json
+ng-package.json

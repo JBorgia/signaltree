@@ -2,6 +2,15 @@
   "name": "@signal-tree/source",
   "version": "0.1.8",
   "license": "MIT",
+  "author": "Jonathan D Borgia",
+  "homepage": "https://github.com/JBorgia/signal-store#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JBorgia/signal-store.git"
+  },
+  "bugs": {
+    "url": "https://github.com/JBorgia/signal-store/issues"
+  },
   "scripts": {
     "build": "nx build",
     "test": "nx test",
