@@ -171,11 +171,11 @@ export interface TreeConfig {
    * ```typescript
    * // Basic mode - minimal functionality
    * const basic = signalTree(state, { enablePerformanceFeatures: false });
-   * basic.batch(() => {}); // ⚠️ Warning + fallback to update()
+   * basic.batchUpdate(() => {}); // ⚠️ Warning + fallback to update()
    *
    * // Enhanced mode - full functionality
    * const enhanced = signalTree(state, { enablePerformanceFeatures: true });
-   * enhanced.batch(() => {}); // ✅ Actual batching (if batchUpdates: true)
+   * enhanced.batchUpdate(() => {}); // ✅ Actual batching (if batchUpdates: true)
    * ```
    */
   enablePerformanceFeatures?: boolean;
@@ -287,7 +287,7 @@ export interface TreeConfig {
    * }
    * ```
    */
-  trackPerformance?: boolean
+  trackPerformance?: boolean;
   /**
    * Uses faster shallow equality comparison instead of deep equality.
    *
@@ -318,7 +318,7 @@ export interface TreeConfig {
    *   preferences: { theme: 'dark' }
    * });
    * ```
-   */;
+   */
   useShallowComparison?: boolean;
 
   /**
@@ -1116,8 +1116,8 @@ export type SignalTree<T> = {
    *
    * // Perform various operations
    * tree.update(state => ({ users: [...state.users, newUser] }));
-   * tree.computed(state => state.users.length, 'user-count')();
-   * tree.computed(state => state.users.length, 'user-count')(); // Cache hit
+   * tree.memoize(state => state.users.length, 'user-count')();
+   * tree.memoize(state => state.users.length, 'user-count')(); // Cache hit
    *
    * const metrics = tree.getMetrics();
    * console.log(`
@@ -1132,7 +1132,7 @@ export type SignalTree<T> = {
    * // Performance monitoring in production
    * if (metrics.averageUpdateTime > 16) { // 60fps threshold
    *   console.warn('Updates are slower than 60fps target');
-   *   tree.cleanup(); // Attempt optimization
+   *   tree.optimize(); // Attempt optimization
    * }
    * ```
    */
@@ -2502,8 +2502,8 @@ function create<T extends Record<string, unknown>>(
  * tree.update(state => ({ counter: state.counter + 1 }));
  *
  * // Advanced features show warnings but provide fallbacks
- * tree.batch(state => ({ counter: 10 })); // ⚠️ Warning: batching not enabled
- * tree.cleanup(); // ⚠️ Warning: optimization not enabled
+ * tree.batchUpdate(state => ({ counter: 10 })); // ⚠️ Warning: batching not enabled
+ * tree.optimize(); // ⚠️ Warning: optimization not enabled
  * ```
  */
 export function signalTree<T extends Record<string, unknown>>(
