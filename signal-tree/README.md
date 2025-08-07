@@ -1,5 +1,10 @@
 # 🌳 SignalTree
 
+[![npm version](https://badge.fury.io/js/signal-tree.svg)](https://badge.fury.io/js/signal-tree)
+[![npm downloads](https://img.shields.io/npm/dm/signal-tree.svg)](https://www.npmjs.com/package/signal-tree)
+[![GitHub release](https://img.shields.io/github/release/JBorgia/signal-tree.svg)](https://github.com/JBorgia/signal-tree/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A powerful, type-safe, hierarchical signal-based state management solution for Angular applications. SignalTree provides a modern, lightweight alternative to traditional state management with superior performance and developer experience.
 
 ## ✨ Why SignalTree?
