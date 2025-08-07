@@ -5,8 +5,7 @@ import {
 } from '@angular/platform-browser-dynamic/testing';
 import { signal } from '@angular/core';
 import {
-  signalStore,
-  enhancedSignalStore,
+  signalTree,
   createEntityStore,
   createFormStore,
   createTestStore,
@@ -52,9 +51,9 @@ describe('Signal Store', () => {
   });
 
   describe('Core Functionality', () => {
-    describe('signalStore', () => {
+    describe('signalTree', () => {
       it('should create a basic signal store from a flat object', () => {
-        const store = signalStore({
+        const store = signalTree({
           name: 'John',
           age: 30,
           active: true,
@@ -71,7 +70,7 @@ describe('Signal Store', () => {
       });
 
       it('should create nested signal stores for hierarchical objects', () => {
-        const store = signalStore({
+        const store = signalTree({
           user: {
             profile: {
               name: 'John',
@@ -91,7 +90,7 @@ describe('Signal Store', () => {
       });
 
       it('should handle arrays as signals', () => {
-        const store = signalStore({
+        const store = signalTree({
           items: [1, 2, 3],
           tags: ['angular', 'signals'],
         });
@@ -105,7 +104,7 @@ describe('Signal Store', () => {
 
       it('should preserve existing signals without double-wrapping', () => {
         const existingSignal = signal('existing');
-        const store = signalStore({
+        const store = signalTree({
           normal: 'value',
           existing: existingSignal,
         });
@@ -115,7 +114,7 @@ describe('Signal Store', () => {
       });
 
       it('should not have naming conflicts with API methods', () => {
-        const store = signalStore({
+        const store = signalTree({
           update: 'last updated timestamp',
           batchUpdate: 'batch update setting',
           computed: 'computed value',
@@ -140,7 +139,7 @@ describe('Signal Store', () => {
 
     describe('unwrap', () => {
       it('should unwrap flat store to plain object', () => {
-        const store = signalStore({
+        const store = signalTree({
           name: 'John',
           age: 30,
         });
@@ -153,7 +152,7 @@ describe('Signal Store', () => {
       });
 
       it('should recursively unwrap nested stores', () => {
-        const store = signalStore({
+        const store = signalTree({
           user: {
             profile: {
               name: 'John',
@@ -182,7 +181,7 @@ describe('Signal Store', () => {
 
     describe('update', () => {
       it('should update flat store values', () => {
-        const store = signalStore({
+        const store = signalTree({
           name: 'John',
           age: 30,
         });
@@ -197,7 +196,7 @@ describe('Signal Store', () => {
       });
 
       it('should update nested store values', () => {
-        const store = signalStore({
+        const store = signalTree({
           user: {
             name: 'John',
             settings: {
@@ -219,7 +218,7 @@ describe('Signal Store', () => {
       });
 
       it('should handle partial updates', () => {
-        const store = signalStore({
+        const store = signalTree({
           name: 'John',
           age: 30,
           active: true,
@@ -239,7 +238,7 @@ describe('Signal Store', () => {
   describe('Enhanced Store Features', () => {
     describe('batchUpdate', () => {
       it('should batch multiple updates into single operation', async () => {
-        const store = enhancedSignalStore(
+        const store = signalTree(
           {
             counter: 0,
             message: 'initial',
@@ -286,7 +285,7 @@ describe('Signal Store', () => {
 
     describe('computed (memoization)', () => {
       it('should memoize expensive computations', () => {
-        const store = enhancedSignalStore(
+        const store = signalTree(
           {
             items: [1, 2, 3, 4, 5],
             multiplier: 2,
@@ -323,7 +322,7 @@ describe('Signal Store', () => {
       });
 
       it('should track cache hits and misses', () => {
-        const store = enhancedSignalStore(
+        const store = signalTree(
           { value: 10 },
           {
             enablePerformanceFeatures: true,
@@ -353,7 +352,7 @@ describe('Signal Store', () => {
         const consoleSpy = jest.spyOn(console, 'group').mockImplementation();
         const logSpy = jest.spyOn(console, 'log').mockImplementation();
 
-        const store = enhancedSignalStore(
+        const store = signalTree(
           { value: 0 },
           { enablePerformanceFeatures: true }
         );
@@ -368,7 +367,7 @@ describe('Signal Store', () => {
       it('should support validation middleware', () => {
         const errorSpy = jest.spyOn(console, 'error').mockImplementation();
 
-        const store = enhancedSignalStore(
+        const store = signalTree(
           { age: 20 },
           { enablePerformanceFeatures: true }
         );
@@ -386,7 +385,7 @@ describe('Signal Store', () => {
       });
 
       it('should allow middleware to cancel updates', () => {
-        const store = enhancedSignalStore(
+        const store = signalTree(
           { value: 10 },
           { enablePerformanceFeatures: true }
         );
@@ -414,7 +413,7 @@ describe('Signal Store', () => {
       });
 
       it('should support removing middleware', () => {
-        const store = enhancedSignalStore(
+        const store = signalTree(
           { value: 0 },
           { enablePerformanceFeatures: true }
         );
@@ -436,7 +435,7 @@ describe('Signal Store', () => {
 
     describe('time travel', () => {
       it('should support undo/redo operations', () => {
-        const store = enhancedSignalStore(
+        const store = signalTree(
           { counter: 0 },
           {
             enablePerformanceFeatures: true,
@@ -465,7 +464,7 @@ describe('Signal Store', () => {
       });
 
       it('should maintain history of state changes', () => {
-        const store = enhancedSignalStore(
+        const store = signalTree(
           { value: 'initial' },
           {
             enablePerformanceFeatures: true,
@@ -485,7 +484,7 @@ describe('Signal Store', () => {
       });
 
       it('should reset history', () => {
-        const store = enhancedSignalStore(
+        const store = signalTree(
           { value: 0 },
           {
             enablePerformanceFeatures: true,
@@ -511,7 +510,7 @@ describe('Signal Store', () => {
 
     describe('performance optimization', () => {
       it('should clear cache when optimize is called', () => {
-        const store = enhancedSignalStore(
+        const store = signalTree(
           { items: [1, 2, 3] },
           {
             enablePerformanceFeatures: true,
@@ -545,7 +544,7 @@ describe('Signal Store', () => {
       });
 
       it('should track performance metrics', () => {
-        const store = enhancedSignalStore(
+        const store = signalTree(
           { value: 0 },
           {
             enablePerformanceFeatures: true,
@@ -1100,7 +1099,7 @@ describe('Signal Store', () => {
   describe('Audit Middleware', () => {
     it('should track changes in audit log', () => {
       const auditLog: AuditEntry[] = [];
-      const store = enhancedSignalStore(
+      const store = signalTree(
         { value: 0, name: 'test' },
         { enablePerformanceFeatures: true }
       );
@@ -1127,7 +1126,7 @@ describe('Signal Store', () => {
         source: 'test',
       });
 
-      const store = enhancedSignalStore(
+      const store = signalTree(
         { value: 0 },
         { enablePerformanceFeatures: true }
       );
@@ -1201,7 +1200,7 @@ describe('Signal Store', () => {
       const ordersStore = createEntityStore<Order>([]);
 
       // Create the main app store with references
-      const appStore = signalStore({
+      const appStore = signalTree({
         user: {
           name: 'John',
           preferences: {
@@ -1255,7 +1254,7 @@ describe('Signal Store', () => {
         { id: 'u2', name: 'Bob' },
       ]);
 
-      const projectStore = enhancedSignalStore(
+      const projectStore = signalTree(
         {
           project: {
             name: 'Test Project',
@@ -1325,7 +1324,7 @@ describe('Performance and Memory', () => {
   });
 
   it('should efficiently batch large updates', async () => {
-    const store = enhancedSignalStore(
+    const store = signalTree(
       {
         items: Array.from({ length: 1000 }, (_, i) => i),
       },
@@ -1376,7 +1375,7 @@ describe('Performance and Memory', () => {
 
 describe('Edge Cases and Error Handling', () => {
   it('should handle null and undefined values', () => {
-    const store = signalStore({
+    const store = signalTree({
       nullable: null as string | null,
       optional: undefined as string | undefined,
       nested: {
@@ -1393,7 +1392,7 @@ describe('Edge Cases and Error Handling', () => {
   });
 
   it('should handle circular references in time travel', () => {
-    const store = enhancedSignalStore(
+    const store = signalTree(
       { value: 0 },
       {
         enablePerformanceFeatures: true,
@@ -1409,7 +1408,7 @@ describe('Edge Cases and Error Handling', () => {
   });
 
   it('should handle store destruction gracefully', () => {
-    const store = enhancedSignalStore(
+    const store = signalTree(
       { value: 0 },
       { enablePerformanceFeatures: true }
     );
@@ -1428,7 +1427,7 @@ describe('Edge Cases and Error Handling', () => {
   });
 
   it('should handle concurrent async operations', async () => {
-    const store = enhancedSignalStore(
+    const store = signalTree(
       {
         loading: false,
         data: null as string | null,

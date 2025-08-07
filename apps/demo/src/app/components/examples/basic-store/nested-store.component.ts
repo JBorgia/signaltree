@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { signalStore } from '@signal-tree';
+import { signalTree } from '@signal-tree';
 
 interface Address {
   street: string;
@@ -523,7 +523,7 @@ interface UserData {
   ],
 })
 export class NestedStoreComponent {
-  userStore = signalStore<UserData>({
+  userStore = signalTree<UserData>({
     profile: {
       firstName: 'John',
       lastName: 'Doe',
@@ -706,7 +706,7 @@ export class NestedStoreComponent {
   }
 
   codeExample = `// Create a nested signal store
-const userStore = signalStore<UserData>({
+const userStore = signalTree<UserData>({
   profile: {
     firstName: 'John',
     lastName: 'Doe',
