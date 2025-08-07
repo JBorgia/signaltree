@@ -10,9 +10,9 @@
  * - Basic: Core functionality with warnings for advanced features
  * - Enhanced: Full feature set when `enablePerformanceFeatures: true`
  *
- * **Memory Management - `cleanup()` vs `clearCache()`:**
+ * **Memory Management - `optimize()` vs `clearCache()`:**
  *
- * ### cleanup()
+ * ### optimize()
  * - **Smart optimization**: Only clears cache when size exceeds `maxCacheSize` limit
  * - **Memory tracking**: Updates memory usage metrics when available
  * - **Preserves frequently used cache**: Maintains performance while controlling memory
@@ -56,7 +56,7 @@
  * - **Middleware**: Extensible plugin system for custom functionality
  *
  * @author SignalTree Team
- * @version 1.0.0
+ * @version 0.1.1
  */
 
 import {
@@ -79,7 +79,6 @@ import {
   OnInit,
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
-import isEqual from 'lodash/isEqual';
 import { Observable } from 'rxjs';
 
 // ============================================
@@ -322,10 +321,10 @@ export interface TreeConfig {
   useShallowComparison?: boolean;
 
   /**
-   * Maximum number of cached computed values before triggering cleanup.
+   * Maximum number of cached computed values before triggering optimization.
    *
    * When `useMemoization` is enabled, this controls how many cached computations
-   * to retain. The `cleanup()` method removes excess entries when this limit is exceeded.
+   * to retain. The `optimize()` method removes excess entries when this limit is exceeded.
    *
    * **Requires**: `useMemoization: true`
    * **Impact**: Memory usage vs cache effectiveness trade-off
@@ -619,20 +618,20 @@ export interface PerformanceMetrics {
    * Current JavaScript heap memory usage in bytes (when available).
    *
    * Only populated in environments that expose `performance.memory` (Chrome).
-   * Updated during `cleanup()` operations to track memory optimization effectiveness.
+   * Updated during `optimize()` operations to track memory optimization effectiveness.
    *
    * **Availability**: Chrome/Chromium browsers only
    * **Unit**: Bytes
    *
    * @example
    * ```typescript
-   * const beforeCleanup = tree.getMetrics().memoryUsage;
+   * const beforeOptimization = tree.getMetrics().memoryUsage;
    * tree.optimize();
-   * const afterCleanup = tree.getMetrics().memoryUsage;
+   * const afterOptimization = tree.getMetrics().memoryUsage;
    *
-   * if (beforeCleanup && afterCleanup) {
-   *   const saved = beforeCleanup - afterCleanup;
-   *   console.log(`Cleanup freed ${(saved / 1024 / 1024).toFixed(1)}MB`);
+   * if (beforeOptimization && afterOptimization) {
+   *   const saved = beforeOptimization - afterOptimization;
+   *   console.log(`Optimization freed ${(saved / 1024 / 1024).toFixed(1)}MB`);
    * }
    *
    * // Memory monitoring
@@ -1505,8 +1504,63 @@ export type SignalTree<T> = {
 // EQUALITY FUNCTIONS
 // ============================================
 
+/**
+ * Native deep equality check for arrays and objects.
+ * Handles all common cases that lodash.isEqual handles for our use cases.
+ */
+function deepEqual<T>(a: T, b: T): boolean {
+  // Same reference or primitives
+  if (a === b) return true;
+
+  // Handle null/undefined
+  if (a == null || b == null) return false;
+
+  // Different types
+  if (typeof a !== typeof b) return false;
+
+  // Handle dates
+  if (a instanceof Date && b instanceof Date) {
+    return a.getTime() === b.getTime();
+  }
+
+  // Handle arrays
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (!deepEqual(a[i], b[i])) return false;
+    }
+    return true;
+  }
+
+  // Handle objects (but not arrays, dates, or other special objects)
+  if (
+    typeof a === 'object' &&
+    typeof b === 'object' &&
+    !Array.isArray(a) &&
+    !Array.isArray(b) &&
+    !(a instanceof Date) &&
+    !(b instanceof Date)
+  ) {
+    const objA = a as Record<string, unknown>;
+    const objB = b as Record<string, unknown>;
+    const keysA = Object.keys(objA);
+    const keysB = Object.keys(objB);
+
+    if (keysA.length !== keysB.length) return false;
+
+    for (const key of keysA) {
+      if (!(key in objB)) return false;
+      if (!deepEqual(objA[key], objB[key])) return false;
+    }
+    return true;
+  }
+
+  // For all other cases (primitives that aren't equal)
+  return false;
+}
+
 export function equal<T>(a: T, b: T): boolean {
-  return Array.isArray(a) && Array.isArray(b) ? isEqual(a, b) : a === b;
+  return Array.isArray(a) && Array.isArray(b) ? deepEqual(a, b) : a === b;
 }
 
 export function shallowEqual<T>(a: T, b: T): boolean {
@@ -3234,7 +3288,7 @@ export function createTestTree<T extends Record<string, unknown>>(
       const currentState = tree.unwrap();
       for (const [key, value] of Object.entries(expectedState)) {
         const currentValue = (currentState as Record<string, unknown>)[key];
-        if (!isEqual(currentValue, value)) {
+        if (!deepEqual(currentValue, value)) {
           throw new Error(
             `Expected ${key} to be ${JSON.stringify(
               value

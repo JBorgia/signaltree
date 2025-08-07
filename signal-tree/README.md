@@ -72,31 +72,234 @@ tree.getMetrics();
 
 ### SignalTree vs All Major Angular Solutions
 
-| Feature                | SignalTree               | NgRx              | Akita             | Elf               | RxAngular         | MobX               | NGXS             | Native Signals       |
-| ---------------------- | ------------------------ | ----------------- | ----------------- | ----------------- | ----------------- | ------------------ | ---------------- | -------------------- |
-| **Philosophy**         | Tree-based, Signal-first | Redux pattern     | Entity-based      | Functional        | RxJS-centric      | Observable objects | Decorator-based  | Primitive signals    |
-| **Learning Curve**     | ⭐⭐⭐⭐⭐ Easy          | ⭐⭐ Steep        | ⭐⭐⭐ Moderate   | ⭐⭐⭐⭐ Easy     | ⭐⭐⭐ Moderate   | ⭐⭐⭐⭐ Easy      | ⭐⭐⭐ Moderate  | ⭐⭐⭐⭐⭐ Very Easy |
-| **Boilerplate**        | Minimal                  | Extensive         | Moderate          | Minimal           | Moderate          | Minimal            | Moderate         | None                 |
-| **Bundle Size (min)**  | ~5KB basic               | ~25KB             | ~20KB             | ~2KB              | ~25KB             | ~30KB              | ~25KB            | 0KB                  |
-| **Bundle Size (full)** | ~15KB                    | ~50KB+            | ~30KB             | ~10KB             | ~25KB             | ~40KB              | ~35KB            | 0KB                  |
-| **Type Safety**        | ✅ Full inference        | ✅ Manual typing  | ✅ Good           | ✅ Excellent      | ✅ Good           | ⚠️ Limited         | ✅ Good          | ✅ Native            |
-| **Performance**        | ⚡ Excellent             | 🔄 Good           | 🔄 Good           | ⚡ Excellent      | 🔄 Good           | ⚡ Excellent       | 🔄 Good          | ⚡ Excellent         |
-| **DevTools**           | ✅ Opt-in                | ✅ Redux DevTools | ✅ Akita DevTools | ✅ Redux DevTools | ⚠️ Limited        | ✅ MobX DevTools   | ✅ NGXS DevTools | ❌ None              |
-| **Time Travel**        | ✅ Opt-in                | ✅ Built-in       | ✅ Plugin         | ✅ Plugin         | ❌ No             | ✅ Via DevTools    | ✅ Plugin        | ❌ No                |
-| **Entity Management**  | ✅ Always included       | ✅ @ngrx/entity   | ✅ Core feature   | ✅ Via plugins    | ❌ Manual         | ❌ Manual          | ✅ Via plugins   | ❌ Manual            |
-| **Batching**           | ✅ Opt-in                | ❌ Manual         | ❌ Manual         | ✅ Available      | ✅ Via schedulers | ✅ Transaction     | ❌ Manual        | ✅ Automatic         |
-| **Form Integration**   | ✅ Built-in              | ⚠️ Separate       | ⚠️ Separate       | ❌ Manual         | ❌ Manual         | ⚠️ Third-party     | ✅ Form plugin   | ❌ Manual            |
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>SignalTree</th>
+<th>NgRx</th>
+<th>Akita</th>
+<th>Elf</th>
+<th>RxAngular</th>
+<th>MobX</th>
+<th>NGXS</th>
+<th>Native Signals</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Philosophy</strong></td>
+<td>Tree-based, Signal-first</td>
+<td>Redux pattern</td>
+<td>Entity-based</td>
+<td>Functional</td>
+<td>RxJS-centric</td>
+<td>Observable objects</td>
+<td>Decorator-based</td>
+<td>Primitive signals</td>
+</tr>
+<tr>
+<td><strong>Learning Curve</strong></td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">⭐⭐⭐⭐⭐ Easy</td>
+<td>⭐⭐ Steep</td>
+<td>⭐⭐⭐ Moderate</td>
+<td>⭐⭐⭐⭐ Easy</td>
+<td>⭐⭐⭐ Moderate</td>
+<td>⭐⭐⭐⭐ Easy</td>
+<td>⭐⭐⭐ Moderate</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">⭐⭐⭐⭐⭐ Very Easy</td>
+</tr>
+<tr>
+<td><strong>Boilerplate</strong></td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">Minimal</td>
+<td>Extensive</td>
+<td>Moderate</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">Minimal</td>
+<td>Moderate</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">Minimal</td>
+<td>Moderate</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">None</td>
+</tr>
+<tr>
+<td><strong>Bundle Size (min)</strong></td>
+<td>~5KB basic</td>
+<td>~25KB</td>
+<td>~20KB</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">~2KB</td>
+<td>~25KB</td>
+<td>~30KB</td>
+<td>~25KB</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">0KB</td>
+</tr>
+<tr>
+<td><strong>Bundle Size (full)</strong></td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">~15KB</td>
+<td>~50KB+</td>
+<td>~30KB</td>
+<td>~10KB</td>
+<td>~25KB</td>
+<td>~40KB</td>
+<td>~35KB</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">0KB</td>
+</tr>
+<tr>
+<td><strong>Type Safety</strong></td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Full inference</td>
+<td>✅ Manual typing</td>
+<td>✅ Good</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Excellent</td>
+<td>✅ Good</td>
+<td>⚠️ Limited</td>
+<td>✅ Good</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Native</td>
+</tr>
+<tr>
+<td><strong>Performance</strong></td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">⚡ Excellent</td>
+<td>🔄 Good</td>
+<td>🔄 Good</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">⚡ Excellent</td>
+<td>🔄 Good</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">⚡ Excellent</td>
+<td>🔄 Good</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">⚡ Excellent</td>
+</tr>
+<tr>
+<td><strong>DevTools</strong></td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Opt-in</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Redux DevTools</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Akita DevTools</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Redux DevTools</td>
+<td>⚠️ Limited</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ MobX DevTools</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ NGXS DevTools</td>
+<td>❌ None</td>
+</tr>
+<tr>
+<td><strong>Time Travel</strong></td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Opt-in</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Built-in</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Plugin</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Plugin</td>
+<td>❌ No</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Via DevTools</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Plugin</td>
+<td>❌ No</td>
+</tr>
+<tr>
+<td><strong>Entity Management</strong></td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Always included</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ @ngrx/entity</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Core feature</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Via plugins</td>
+<td>❌ Manual</td>
+<td>❌ Manual</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Via plugins</td>
+<td>❌ Manual</td>
+</tr>
+<tr>
+<td><strong>Batching</strong></td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Opt-in</td>
+<td>❌ Manual</td>
+<td>❌ Manual</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Available</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Via schedulers</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Transaction</td>
+<td>❌ Manual</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Automatic</td>
+</tr>
+<tr>
+<td><strong>Form Integration</strong></td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Built-in</td>
+<td>⚠️ Separate</td>
+<td>⚠️ Separate</td>
+<td>❌ Manual</td>
+<td>❌ Manual</td>
+<td>⚠️ Third-party</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Form plugin</td>
+<td>❌ Manual</td>
+</tr>
+</tbody>
+</table>
 
 ### Performance Benchmarks
 
-| Operation                   | SignalTree (Basic) | SignalTree (Full) | NgRx  | Akita | Elf   | NGXS  | Native Signals |
-| --------------------------- | ------------------ | ----------------- | ----- | ----- | ----- | ----- | -------------- |
-| Initial render (1000 items) | 43ms               | 45ms              | 78ms  | 65ms  | 48ms  | 72ms  | 42ms           |
-| Update single item          | 2ms                | 2ms               | 8ms   | 6ms   | 3ms   | 7ms   | 2ms            |
-| Batch update (100 items)    | 14ms               | 12ms              | 35ms  | 28ms  | 15ms  | 32ms  | 10ms           |
-| Computed value (cached)     | 2ms                | <1ms              | 3ms   | 2ms   | 1ms   | 3ms   | <1ms           |
-| Memory per 1000 entities    | 2.6MB              | 2.8MB             | 4.2MB | 3.5MB | 2.5MB | 3.8MB | 2.3MB          |
-| Bundle size impact          | +5KB               | +15KB             | +50KB | +30KB | +10KB | +35KB | 0KB            |
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>SignalTree (Basic)</th>
+<th>SignalTree (Full)</th>
+<th>NgRx</th>
+<th>Akita</th>
+<th>Elf</th>
+<th>NGXS</th>
+<th>Native Signals</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Initial render (1000 items)</strong></td>
+<td>43ms</td>
+<td>45ms</td>
+<td>78ms</td>
+<td>65ms</td>
+<td>48ms</td>
+<td>72ms</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">42ms</td>
+</tr>
+<tr>
+<td><strong>Update single item</strong></td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">2ms</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">2ms</td>
+<td>8ms</td>
+<td>6ms</td>
+<td>3ms</td>
+<td>7ms</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">2ms</td>
+</tr>
+<tr>
+<td><strong>Batch update (100 items)</strong></td>
+<td>14ms</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">12ms</td>
+<td>35ms</td>
+<td>28ms</td>
+<td>15ms</td>
+<td>32ms</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">10ms</td>
+</tr>
+<tr>
+<td><strong>Computed value (cached)</strong></td>
+<td>2ms</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">&lt;1ms</td>
+<td>3ms</td>
+<td>2ms</td>
+<td>1ms</td>
+<td>3ms</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">&lt;1ms</td>
+</tr>
+<tr>
+<td><strong>Memory per 1000 entities</strong></td>
+<td>2.6MB</td>
+<td>2.8MB</td>
+<td>4.2MB</td>
+<td>3.5MB</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">2.5MB</td>
+<td>3.8MB</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">2.3MB</td>
+</tr>
+<tr>
+<td><strong>Bundle size impact</strong></td>
+<td>+5KB</td>
+<td>+15KB</td>
+<td>+50KB</td>
+<td>+30KB</td>
+<td>+10KB</td>
+<td>+35KB</td>
+<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">0KB</td>
+</tr>
+</tbody>
+</table>
 
 ### Code Comparison: Counter Example
 
