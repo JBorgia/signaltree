@@ -511,7 +511,7 @@ export interface PerformanceMetrics {
    * @example
    * ```typescript
    * tree.update(state => ({ count: 1 })); // updates: 1
-   * tree.batch(state => ({ count: 2, name: 'test' })); // updates: 2
+   * tree.batchUpdate(state => ({ count: 2, name: 'test' })); // updates: 2
    *
    * console.log(tree.getMetrics().updates); // 2
    * ```
@@ -527,7 +527,7 @@ export interface PerformanceMetrics {
    *
    * @example
    * ```typescript
-   * const calc = tree.computed(state => expensiveOperation(state), 'calc');
+   * const calc = tree.memoize(state => expensiveOperation(state), 'calc');
    * calc(); // computations: 1 (cache miss)
    * calc(); // computations: 1 (cache hit, not incremented)
    *
@@ -547,7 +547,7 @@ export interface PerformanceMetrics {
    *
    * @example
    * ```typescript
-   * const filtered = tree.computed(state =>
+   * const filtered = tree.memoize(state =>
    *   state.items.filter(item => item.active), 'active-items'
    * );
    *
