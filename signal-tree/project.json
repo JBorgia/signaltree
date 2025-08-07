@@ -1,7 +1,7 @@
 {
-  "name": "ngx-signal-store",
+  "name": "signal-tree",
   "$schema": "../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "ngx-signal-store/src",
+  "sourceRoot": "signal-tree/src",
   "prefix": "lib",
   "projectType": "library",
   "release": {
@@ -17,14 +17,14 @@
       "executor": "@nx/angular:package",
       "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
       "options": {
-        "project": "ngx-signal-store/ng-package.json"
+        "project": "signal-tree/ng-package.json"
       },
       "configurations": {
         "production": {
-          "tsConfig": "ngx-signal-store/tsconfig.lib.prod.json"
+          "tsConfig": "signal-tree/tsconfig.lib.prod.json"
         },
         "development": {
-          "tsConfig": "ngx-signal-store/tsconfig.lib.json"
+          "tsConfig": "signal-tree/tsconfig.lib.json"
         }
       },
       "defaultConfiguration": "production"
@@ -38,7 +38,7 @@
       "executor": "@nx/jest:jest",
       "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
       "options": {
-        "jestConfig": "ngx-signal-store/jest.config.ts"
+        "jestConfig": "signal-tree/jest.config.ts"
       }
     },
     "lint": {

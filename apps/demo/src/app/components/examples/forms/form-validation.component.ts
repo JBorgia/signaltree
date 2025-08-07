@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { createFormStore, validators } from '@signal-store';
+import { createFormStore, validators } from '@signal-tree';
 
 interface UserRegistrationForm {
   username: string;
@@ -774,7 +774,7 @@ export class FormValidationComponent {
     };
   }
 
-  formStoreCode = `import { createFormStore, validators, asyncValidators } from '@signal-store';
+  formStoreCode = `import { createFormStore, validators, asyncValidators } from 'signal-tree';
 
 const formStore = createFormStore({
   username: '',
