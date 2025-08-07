@@ -264,7 +264,7 @@ describe('Signal Tree', () => {
         const initialCount = updateCount;
 
         // Batch multiple updates
-        tree.batch((state) => ({
+        tree.batchUpdate((state) => ({
           counter: state.counter + 1,
           message: 'updated',
         }));
