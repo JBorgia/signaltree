@@ -3,7 +3,7 @@
   "version": "0.1.1",
   "description": "Reactive state management for Angular using signals with advanced features like memoization, batching, middleware, and performance monitoring",
   "author": "Jonathan Borgia",
-  "license": "MIT",
+  "license": "BUSL-1.1",
   "homepage": "https://github.com/JBorgia/signal-store#readme",
   "repository": {
     "type": "git",

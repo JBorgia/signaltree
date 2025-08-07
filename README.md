@@ -1754,3 +1754,34 @@ import { StoreDevtoolsModule } from '@ngrx/store-devtools'; // 5KB
 - **For Simplicity**: Native signals (0KB) only for trivial state needs
 
 SignalTree isn't just another state management library—it's a **paradigm shift** that makes complex state management feel natural while respecting your bundle size budget through progressive enhancement.
+
+## 👨‍💻 Author
+
+**Jonathan D Borgia**
+
+- 🐙 GitHub: [https://github.com/JBorgia/signal-store](https://github.com/JBorgia/signal-store)
+- 💼 LinkedIn: [https://www.linkedin.com/in/jonathanborgia/](https://www.linkedin.com/in/jonathanborgia/)
+
+## 📄 License
+
+**Business Source License 1.1** - see the [LICENSE](LICENSE) file for details.
+
+### 🆓 Free Usage
+
+- ✅ **Individual developers** (any revenue level)
+- ✅ **Startups & small businesses** (under $10M annual revenue)
+- ✅ **Educational institutions** and non-profits
+- ✅ **Open source projects** and research
+- ✅ **Internal business tools** and applications
+
+### 💼 Commercial License Required (unless exception given by author)
+
+- 🏢 **Enterprise organizations** with $10M+ annual revenue
+- 🤖 **AI training** and machine learning model development
+- ☁️ **Offering as a service** (SaaS, cloud hosting, etc.)
+
+### 🔄 Future Open Source
+
+This license converts to **MIT License** after 4 years, ensuring long-term open source availability.
+
+**Need a commercial license?** Contact: jonathanborgia@gmail.com
