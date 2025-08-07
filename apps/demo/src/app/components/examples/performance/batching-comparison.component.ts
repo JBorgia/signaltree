@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, effect, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { signalTree, enhancedSignalTree } from '@signal-tree';
+import { signalTree } from '@signal-tree';
 
 interface PerformanceMetrics {
   updates: number;
@@ -391,7 +391,7 @@ export class BatchingComparisonComponent implements OnDestroy {
   });
 
   // Enhanced tree with batching
-  batchedTree = enhancedSignalTree(
+  batchedTree = signalTree(
     {
       counter: 0,
       text: 'Initial',
@@ -622,7 +622,7 @@ for (let i = 0; i < 100; i++) {
 // Total: 300 effect runs`;
 
   batchedTreeCode = `// Enhanced tree with batching
-const tree = enhancedSignalTree({
+const tree = signalTree({
   counter: 0,
   text: 'Initial',
   flag: false

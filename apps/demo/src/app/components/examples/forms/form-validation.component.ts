@@ -106,7 +106,7 @@ interface UserRegistrationForm {
                 </label>
                 <input
                   id="firstName"
-                  [(ngModel)]="formTree.values.firstName"
+                  [(ngModel)]="formTree.state.firstName"
                   (blur)="markFieldAsTouched('firstName')"
                   name="firstName"
                   class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -133,7 +133,7 @@ interface UserRegistrationForm {
                 </label>
                 <input
                   id="lastName"
-                  [(ngModel)]="formTree.values.lastName"
+                  [(ngModel)]="formTree.state.lastName"
                   (blur)="markFieldAsTouched('lastName')"
                   name="lastName"
                   class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -159,7 +159,7 @@ interface UserRegistrationForm {
                 <input
                   id="dateOfBirth"
                   type="date"
-                  [(ngModel)]="formTree.values.dateOfBirth"
+                  [(ngModel)]="formTree.state.dateOfBirth"
                   (blur)="markFieldAsTouched('dateOfBirth')"
                   name="dateOfBirth"
                   class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -186,7 +186,7 @@ interface UserRegistrationForm {
                 <input
                   id="phoneNumber"
                   type="tel"
-                  [(ngModel)]="formTree.values.phoneNumber"
+                  [(ngModel)]="formTree.state.phoneNumber"
                   (blur)="markFieldAsTouched('phoneNumber')"
                   name="phoneNumber"
                   class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -228,7 +228,7 @@ interface UserRegistrationForm {
                 </label>
                 <input
                   id="username"
-                  [(ngModel)]="formTree.values.username"
+                  [(ngModel)]="formTree.state.username"
                   (blur)="markFieldAsTouched('username')"
                   (input)="onUsernameChange()"
                   name="username"
@@ -272,7 +272,7 @@ interface UserRegistrationForm {
                 <input
                   id="email"
                   type="email"
-                  [(ngModel)]="formTree.values.email"
+                  [(ngModel)]="formTree.state.email"
                   (blur)="markFieldAsTouched('email')"
                   (input)="onEmailChange()"
                   name="email"
@@ -311,7 +311,7 @@ interface UserRegistrationForm {
                   <input
                     id="password"
                     type="password"
-                    [(ngModel)]="formTree.values.password"
+                    [(ngModel)]="formTree.state.password"
                     (blur)="markFieldAsTouched('password')"
                     name="password"
                     class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -343,7 +343,7 @@ interface UserRegistrationForm {
                   <input
                     id="confirmPassword"
                     type="password"
-                    [(ngModel)]="formTree.values.confirmPassword"
+                    [(ngModel)]="formTree.state.confirmPassword"
                     (blur)="markFieldAsTouched('confirmPassword')"
                     name="confirmPassword"
                     class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -370,7 +370,7 @@ interface UserRegistrationForm {
               <input
                 type="checkbox"
                 id="agreeToTerms"
-                [(ngModel)]="formTree.values.agreeToTerms"
+                [(ngModel)]="formTree.state.agreeToTerms"
                 (change)="markFieldAsTouched('agreeToTerms')"
                 name="agreeToTerms"
                 class="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded mt-1"
@@ -699,8 +699,8 @@ export class FormValidationComponent {
 
   async onUsernameChange() {
     if (
-      this.formTree.values.username() &&
-      this.formTree.values.username().length >= 3
+      this.formTree.state.username() &&
+      this.formTree.state.username().length >= 3
     ) {
       await this.formTree.validate();
     }
@@ -708,8 +708,8 @@ export class FormValidationComponent {
 
   async onEmailChange() {
     if (
-      this.formTree.values.email() &&
-      this.formTree.values.email().includes('@')
+      this.formTree.state.email() &&
+      this.formTree.state.email().includes('@')
     ) {
       await this.formTree.validate();
     }
@@ -763,7 +763,7 @@ export class FormValidationComponent {
   }
 
   getCurrentValues(): Partial<UserRegistrationForm> {
-    const values = this.formTree.values.unwrap();
+    const values = this.formTree.state.unwrap();
     // Don't show passwords in the display
     return {
       ...values,
