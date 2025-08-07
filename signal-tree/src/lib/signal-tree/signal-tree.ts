@@ -1336,9 +1336,14 @@ export function createFormTree<T extends Record<string, unknown>>(
   const { validators = {}, asyncValidators = {} } = config;
   // Note: treeConfig portion is not currently used in form trees
 
-  // Create the tree with proper signal types
+  // Create the underlying signal tree
+  const valuesTree = signalTree(initialValues);
+
+  // Create the tree with form-specific properties and flattened state access
   const tree = {
-    values: signalTree(initialValues),
+    // Flatten the state access - expose state directly like a regular signal tree
+    state: valuesTree.state,
+    // Form-specific properties
     errors: signal<Record<string, string>>({}),
     asyncErrors: signal<Record<string, string>>({}),
     touched: signal<Record<string, boolean>>({}),
@@ -1346,6 +1351,8 @@ export function createFormTree<T extends Record<string, unknown>>(
     dirty: signal(false),
     valid: signal(true),
     submitting: signal(false),
+    // Keep the valuesTree for internal use and backward compatibility
+    values: valuesTree,
   };
 
   // Enhance arrays with natural operations
@@ -1452,7 +1459,7 @@ export function createFormTree<T extends Record<string, unknown>>(
     const keys = path.split('.');
 
     if (keys.length === 1) {
-      const signal = (tree.values.state as Record<string, unknown>)[keys[0]];
+      const signal = (tree.state as Record<string, unknown>)[keys[0]];
       if (
         isSignal(signal) &&
         'set' in signal &&
@@ -1461,7 +1468,7 @@ export function createFormTree<T extends Record<string, unknown>>(
         (signal as WritableSignal<unknown>).set(value);
       }
     } else {
-      let current: unknown = tree.values.state;
+      let current: unknown = tree.state;
       for (let i = 0; i < keys.length - 1; i++) {
         current = (current as Record<string, unknown>)[keys[i]];
       }
@@ -1603,7 +1610,7 @@ export function createFormTree<T extends Record<string, unknown>>(
         }
       };
 
-      resetSignals(tree.values.state, initialValues);
+      resetSignals(tree.state, initialValues);
 
       tree.errors.set({});
       tree.asyncErrors.set({});
@@ -1664,8 +1671,10 @@ export function createFormTree<T extends Record<string, unknown>>(
     fieldErrors,
     fieldAsyncErrors,
 
-    // Expose the signals directly
-    values: tree.values,
+    // Flattened state access (Option 1) - direct access like regular signal trees
+    state: tree.state,
+
+    // Form-specific signals
     errors: tree.errors,
     asyncErrors: tree.asyncErrors,
     touched: tree.touched,
@@ -1673,6 +1682,9 @@ export function createFormTree<T extends Record<string, unknown>>(
     dirty: tree.dirty,
     valid: tree.valid,
     submitting: tree.submitting,
+
+    // Keep values for backward compatibility
+    values: tree.values,
   };
 }
 
