@@ -277,7 +277,7 @@ const tree = enhancedSignalTree(data, {
 #### Performance Methods
 
 - `tree.batchUpdate(updater)` - Batch multiple updates for better performance
-- `tree.computed(fn, cacheKey?)` - Create memoized computed values
+- `tree.memoize(fn, cacheKey?)` - Create memoized computed values
 - `tree.optimize()` - Trigger cache cleanup and memory optimization
 - `tree.clearCache()` - Clear all cached computed values
 - `tree.getMetrics()` - Get performance metrics and statistics
@@ -495,7 +495,7 @@ const ecommerceTree = enhancedSignalTree(
 );
 
 // Computed values with automatic memoization
-const cartTotal = ecommerceTree.computed((state) => {
+const cartTotal = ecommerceTree.memoize((state) => {
   const items = state.cart.items;
   const products = state.products.items;
 
@@ -505,7 +505,7 @@ const cartTotal = ecommerceTree.computed((state) => {
   }, 0);
 }, 'cartTotal');
 
-const filteredProducts = ecommerceTree.computed((state) => {
+const filteredProducts = ecommerceTree.memoize((state) => {
   let products = state.products.items;
   const filters = state.products.filters;
 
@@ -720,7 +720,7 @@ describe('Shopping Cart', () => {
     });
 
     // Test computed total
-    const total = tree.computed((state) => {
+    const total = tree.memoize((state) => {
       return state.cart.reduce((sum, item) => {
         const product = state.products.find((p) => p.id === item.productId);
         return sum + (product?.price || 0) * item.quantity;
