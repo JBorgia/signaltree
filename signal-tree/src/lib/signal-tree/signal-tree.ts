@@ -280,16 +280,14 @@ export interface TreeConfig {
    *   Cache hit ratio: ${metrics.cacheHits / (metrics.cacheHits + metrics.cacheMisses)}
    * `);
    *
-   * // Production monitoring
-   * if (metrics.averageUpdateTime > 16) { // 60fps threshold
-   *   console.warn('Performance degradation detected');
-   *   tree.cleanup(); // Attempt optimization
-   * }
-   * ```
-   */
-  trackPerformance?: boolean;
-
-  /**
+ * // Production monitoring
+ * if (metrics.averageUpdateTime > 16) { // 60fps threshold
+ *   console.warn('Performance degradation detected');
+ *   tree.optimize(); // Attempt optimization
+ * }
+ * ```
+ */
+  trackPerformance?: boolean;  /**
    * Uses faster shallow equality comparison instead of deep equality.
    *
    * When enabled, improves performance for primitive values and simple objects
@@ -343,7 +341,7 @@ export interface TreeConfig {
    *
    * // Create many cached computations
    * for (let i = 0; i < 100; i++) {
-   *   tree.computed(state => filterData(state, i), `filter-${i}`);
+   *   tree.memoize(state => filterData(state, i), `filter-${i}`);
    * }
    *
    * // Automatic cleanup when exceeded
