@@ -133,21 +133,16 @@ export class BatchingComparisonComponent implements OnDestroy {
     // Small delay between tests
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    // Run updates on batched tree using batchUpdate
-    if (this.batchedTree.batchUpdate) {
-      for (let i = 0; i < this.updateCount; i++) {
-        this.batchedTree.batchUpdate(() => ({
+    // Run updates on batched tree using batch
+    if (this.batchedTree.batch) {
+      for (let i = 0; i < 100; i++) {
+        this.batchedTree.batch(() => ({
           counter: i,
-          text: `Update ${i}`,
+          text: `Batch ${i}`,
           flag: i % 2 === 0,
         }));
-
-        if (this.delay > 0) {
-          await new Promise((resolve) => setTimeout(resolve, this.delay));
-        }
       }
     }
-
     this.isRunning = false;
   }
 
@@ -205,11 +200,11 @@ export class BatchingComparisonComponent implements OnDestroy {
     }
   }
 
-  multiBatchUpdate() {
+  multiBatch() {
     // Multiple updates in a batch (will trigger effect once)
-    if (this.batchedTree.batchUpdate) {
+    if (this.batchedTree.batch) {
       for (let i = 0; i < 5; i++) {
-        this.batchedTree.batchUpdate((current) => ({
+        this.batchedTree.batch((current) => ({
           counter: current.counter + 1,
           text: `Batch ${current.counter + 1}`,
           flag: (current.counter + 1) % 2 === 0,
@@ -272,7 +267,7 @@ const tree = signalTree({
 
 // Multiple updates batched together
 for (let i = 0; i < 100; i++) {
-  tree.batchUpdate(() => ({
+  tree.batch(() => ({
     counter: i,
     text: \`Update \${i}\`,
     flag: i % 2 === 0

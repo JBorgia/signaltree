@@ -116,20 +116,20 @@ describe('Signal Tree', () => {
       it('should not have naming conflicts with API methods', () => {
         const tree = signalTree({
           update: 'last updated timestamp',
-          batchUpdate: 'batch update setting',
+          batch: 'batch update setting',
           computed: 'computed value',
           effect: 'effect type',
           subscribe: 'subscribe setting',
-          optimize: 'optimize flag',
+          cleanup: 'cleanup flag',
         });
 
         // User data accessible through .$ or .state
         expect(tree.$.update()).toBe('last updated timestamp');
-        expect(tree.$.batchUpdate()).toBe('batch update setting');
+        expect(tree.$.batch()).toBe('batch update setting');
         expect(tree.$.computed()).toBe('computed value');
         expect(tree.$.effect()).toBe('effect type');
         expect(tree.$.subscribe()).toBe('subscribe setting');
-        expect(tree.$.optimize()).toBe('optimize flag');
+        expect(tree.$.cleanup()).toBe('cleanup flag');
 
         // API methods are functions
         expect(typeof tree.update).toBe('function');
@@ -236,7 +236,7 @@ describe('Signal Tree', () => {
   });
 
   describe('Enhanced Tree Features', () => {
-    describe('batchUpdate', () => {
+    describe('batch', () => {
       it('should batch multiple updates into single operation', async () => {
         const tree = signalTree(
           {
@@ -264,7 +264,7 @@ describe('Signal Tree', () => {
         const initialCount = updateCount;
 
         // Batch multiple updates
-        tree.batchUpdate((state) => ({
+        tree.batch((state) => ({
           counter: state.counter + 1,
           message: 'updated',
         }));
@@ -357,7 +357,7 @@ describe('Signal Tree', () => {
           { enablePerformanceFeatures: true }
         );
 
-        tree.addMiddleware(loggingMiddleware('TestTree'));
+        tree.use(loggingMiddleware('TestTree'));
         tree.update((state) => ({ value: state.value + 1 }));
 
         expect(consoleSpy).toHaveBeenCalledWith('🏪 TestTree: UPDATE');
@@ -375,7 +375,7 @@ describe('Signal Tree', () => {
         const validator = (state: { age: number }) =>
           state.age < 0 ? 'Age cannot be negative' : null;
 
-        tree.addMiddleware(validationMiddleware(validator));
+        tree.use(validationMiddleware(validator));
         tree.update(() => ({ age: -5 }));
 
         expect(errorSpy).toHaveBeenCalledWith(
@@ -403,7 +403,7 @@ describe('Signal Tree', () => {
           },
         };
 
-        tree.addMiddleware(blockingMiddleware);
+        tree.use(blockingMiddleware);
 
         tree.update(() => ({ value: 20 }));
         expect(tree.$.value()).toBe(20);
@@ -423,11 +423,11 @@ describe('Signal Tree', () => {
           before: () => false, // Block all updates
         };
 
-        tree.addMiddleware(middleware);
+        tree.use(middleware);
         tree.update(() => ({ value: 10 }));
         expect(tree.$.value()).toBe(0); // Blocked
 
-        tree.removeMiddleware('test-middleware');
+        tree.removePlugin('test-middleware');
         tree.update(() => ({ value: 10 }));
         expect(tree.$.value()).toBe(10); // Not blocked
       });
@@ -527,7 +527,7 @@ describe('Signal Tree', () => {
         computed2();
         computed3();
 
-        tree.optimize();
+        tree.cleanup();
 
         // Cache should be managed according to maxCacheSize
         tree.clearCache();
@@ -1104,7 +1104,7 @@ describe('Signal Tree', () => {
         { enablePerformanceFeatures: true }
       );
 
-      tree.addMiddleware(createAuditMiddleware(auditLog));
+      tree.use(createAuditMiddleware(auditLog));
 
       // Use tree.update instead of direct signal.set to trigger middleware
       tree.update(() => ({ value: 1 }));
@@ -1131,7 +1131,7 @@ describe('Signal Tree', () => {
         { enablePerformanceFeatures: true }
       );
 
-      tree.addMiddleware(createAuditMiddleware(auditLog, getMetadata));
+      tree.use(createAuditMiddleware(auditLog, getMetadata));
       tree.$.value.set(10);
 
       if (auditLog[0]) {
@@ -1351,7 +1351,7 @@ describe('Performance and Memory', () => {
 
     // Batch 10 updates (reduced for faster test)
     for (let i = 0; i < 10; i++) {
-      tree.batchUpdate((state) => ({
+      tree.batch((state) => ({
         items: [...state.items, i + 1000],
       }));
     }
@@ -1432,7 +1432,7 @@ describe('Edge Cases and Error Handling', () => {
       { enablePerformanceFeatures: true }
     );
 
-    const asyncAction = tree.createAsyncAction(
+    const asyncAction = tree.asyncAction(
       async (input: string) => {
         await new Promise((resolve) => setTimeout(resolve, 10));
         return `Result: ${input}`;
