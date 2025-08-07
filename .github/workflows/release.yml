@@ -57,9 +57,9 @@ jobs:
             ```
 
             ### 🔗 Links
-            - 📖 [Documentation](https://github.com/JBorgia/signal-store#readme)
+            - 📖 [Documentation](https://github.com/JBorgia/signal-tree#readme)
             - 📊 [npm Package](https://www.npmjs.com/package/signal-tree)
-            - 🐛 [Report Issues](https://github.com/JBorgia/signal-store/issues)
+            - 🐛 [Report Issues](https://github.com/JBorgia/signal-tree/issues)
 
             ### ✨ Features
             - **Progressive Enhancement**: Start with ~5KB basic mode, scale to 15KB with all features
@@ -69,7 +69,7 @@ jobs:
             - **Type-safe by default** with automatic inference
 
             ---
-            **Full Changelog**: https://github.com/JBorgia/signal-store/compare/v${{ steps.version.outputs.VERSION }}
+            **Full Changelog**: https://github.com/JBorgia/signal-tree/compare/v${{ steps.version.outputs.VERSION }}
           draft: false
           prerelease: false
 
@@ -89,16 +89,25 @@ jobs:
       - name: Publish to GitHub Packages
         run: |
           cd dist/signal-tree
-          # Update package name for GitHub Packages
+          # Create .npmrc for GitHub Packages
+          echo "@JBorgia:registry=https://npm.pkg.github.com" > .npmrc
+          echo "//npm.pkg.github.com/:_authToken=$NODE_AUTH_TOKEN" >> .npmrc
+
+          # Update package name for GitHub Packages (must be scoped)
           node -p "
             const fs = require('fs');
             const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
             pkg.name = '@JBorgia/signal-tree';
-            pkg.publishConfig = { registry: 'https://npm.pkg.github.com' };
+            pkg.publishConfig = {
+              registry: 'https://npm.pkg.github.com',
+              access: 'public'
+            };
             fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2));
             'Updated package.json for GitHub Packages'
           "
-          npm publish
+
+          # Publish to GitHub Packages
+          npm publish --registry=https://npm.pkg.github.com --access=public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
