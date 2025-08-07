@@ -80,7 +80,7 @@ function enhanceStore<T>(store: SignalTree<T>): SignalTree<T> {
   return store;
 }
 
-// Function to create a signal store from an object or array, wrapping values in signals as necessary.
+// Function to create a signal tree from an object or array, wrapping values in signals as necessary.
 function create<T, P extends keyof T>(
   obj:
     | Required<T>

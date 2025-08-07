@@ -42,7 +42,7 @@ interface UserData {
   template: `
     <div class="container p-6">
       <h1 class="text-3xl font-bold text-gray-800 mb-6">
-        🏗️ Nested Signal Store
+        🏗️ Nested Signal Tree
       </h1>
 
       <div class="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
@@ -51,7 +51,7 @@ interface UserData {
           <h3 class="font-semibold text-green-800">What This Demonstrates</h3>
         </div>
         <p class="text-green-700 text-sm">
-          Signal stores can automatically handle nested object structures,
+          Signal Trees can automatically handle nested object structures,
           creating individual signals for each property while maintaining the
           hierarchical structure.
         </p>
@@ -705,7 +705,7 @@ export class NestedStoreComponent {
     return countStrings(data);
   }
 
-  codeExample = `// Create a nested signal store
+  codeExample = `// Create a nested signal tree
 const userStore = signalTree<UserData>({
   profile: {
     firstName: 'John',
