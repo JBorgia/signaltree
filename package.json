@@ -1,6 +1,6 @@
 {
   "name": "@signal-tree/source",
-  "version": "0.1.13",
+  "version": "0.1.15",
   "license": "MIT",
   "author": "Jonathan D Borgia",
   "homepage": "https://github.com/JBorgia/signal-tree#readme",
@@ -40,8 +40,7 @@
     "release": "./scripts/release.sh patch",
     "release:minor": "./scripts/release.sh minor",
     "release:major": "./scripts/release.sh major",
-    "release:patch": "./scripts/release.sh patch",
-    "postinstall": "node ./decorate-angular-cli.js"
+    "release:patch": "./scripts/release.sh patch"
   },
   "private": true,
   "dependencies": {
