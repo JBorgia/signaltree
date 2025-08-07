@@ -357,7 +357,7 @@ describe('Signal Tree', () => {
           { enablePerformanceFeatures: true }
         );
 
-        tree.use(loggingMiddleware('TestTree'));
+        tree.addTap(loggingMiddleware('TestTree'));
         tree.update((state) => ({ value: state.value + 1 }));
 
         expect(consoleSpy).toHaveBeenCalledWith('🏪 TestTree: UPDATE');
@@ -375,7 +375,7 @@ describe('Signal Tree', () => {
         const validator = (state: { age: number }) =>
           state.age < 0 ? 'Age cannot be negative' : null;
 
-        tree.use(validationMiddleware(validator));
+        tree.addTap(validationMiddleware(validator));
         tree.update(() => ({ age: -5 }));
 
         expect(errorSpy).toHaveBeenCalledWith(
@@ -403,7 +403,7 @@ describe('Signal Tree', () => {
           },
         };
 
-        tree.use(blockingMiddleware);
+        tree.addTap(blockingMiddleware);
 
         tree.update(() => ({ value: 20 }));
         expect(tree.$.value()).toBe(20);
