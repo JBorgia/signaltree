@@ -4,14 +4,14 @@
   "description": "Reactive state management for Angular using signals with advanced features like memoization, batching, middleware, and performance monitoring",
   "author": "Jonathan Borgia",
   "license": "MIT",
-  "homepage": "https://github.com/JBorgia/signal-store#readme",
+  "homepage": "https://github.com/JBorgia/signal-tree#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/JBorgia/signal-store.git",
+    "url": "https://github.com/JBorgia/signal-tree.git",
     "directory": "signal-tree"
   },
   "bugs": {
-    "url": "https://github.com/JBorgia/signal-store/issues"
+    "url": "https://github.com/JBorgia/signal-tree/issues"
   },
   "keywords": [
     "angular",
