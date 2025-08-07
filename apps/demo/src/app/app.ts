@@ -1,23 +1,19 @@
-import { signalStore } from '@signal-store';
-
+import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { NxWelcome } from './nx-welcome';
+import { NavigationComponent } from './components/navigation/navigation.component';
 
 @Component({
-  imports: [NxWelcome, RouterModule],
   selector: 'app-root',
-  templateUrl: './app.html',
-  styleUrl: './app.scss',
+  imports: [CommonModule, RouterModule, NavigationComponent],
+  template: `
+    <div class="min-h-screen bg-gray-100">
+      <app-navigation></app-navigation>
+      <main>
+        <router-outlet></router-outlet>
+      </main>
+    </div>
+  `,
+  styles: [],
 })
-export class App {
-  protected title = 'demo';
-
-  store = signalStore({ name: 'borgia', age: 30, location: 'San Francisco' });
-
-  constructor() {
-    this.store.name.set('Jonathan Borgia');
-    this.store.age.set(30);
-    this.store.location.set('San Francisco');
-  }
-}
+export class AppComponent {}

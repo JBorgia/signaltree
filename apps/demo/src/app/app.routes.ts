@@ -1,3 +1,49 @@
 import { Route } from '@angular/router';
 
-export const appRoutes: Route[] = [];
+export const appRoutes: Route[] = [
+  {
+    path: '',
+    loadComponent: () =>
+      import('./components/home/home.component').then((c) => c.HomeComponent),
+  },
+  {
+    path: 'basic-store',
+    loadComponent: () =>
+      import('./components/examples/basic-store/basic-store.component').then(
+        (c) => c.BasicStoreComponent
+      ),
+  },
+  {
+    path: 'nested-store',
+    loadComponent: () =>
+      import('./components/examples/basic-store/nested-store.component').then(
+        (c) => c.NestedStoreComponent
+      ),
+  },
+  {
+    path: 'batching-comparison',
+    loadComponent: () =>
+      import(
+        './components/examples/performance/batching-comparison.component'
+      ).then((c) => c.BatchingComparisonComponent),
+  },
+  {
+    path: 'entity-crud',
+    loadComponent: () =>
+      import('./components/examples/entities/entity-crud.component').then(
+        (c) => c.EntityCrudComponent
+      ),
+  },
+  {
+    path: 'form-validation',
+    loadComponent: () =>
+      import('./components/examples/forms/form-validation.component').then(
+        (c) => c.FormValidationComponent
+      ),
+  },
+  // Redirect any unknown routes to home
+  {
+    path: '**',
+    redirectTo: '',
+  },
+];

@@ -118,51 +118,65 @@ export interface DevToolsInterface<T> {
  * Main signal store type that preserves hierarchical structure
  */
 export type SignalStore<T> = {
-  [K in keyof T]: T[K] extends (infer U)[]
-    ? WritableSignal<U[]>
-    : T[K] extends object
-    ? T[K] extends Signal<infer TK>
-      ? WritableSignal<TK>
-      : SignalStore<T[K]>
-    : WritableSignal<T[K]>;
+  // The actual state under 'state' property
+  state: {
+    [K in keyof T]: T[K] extends (infer U)[]
+      ? WritableSignal<U[]>
+      : T[K] extends object
+      ? T[K] extends Signal<infer TK>
+        ? WritableSignal<TK>
+        : SignalStore<T[K]>['state']
+      : WritableSignal<T[K]>;
+  };
+
+  // $ as an alias to state
+  $: {
+    [K in keyof T]: T[K] extends (infer U)[]
+      ? WritableSignal<U[]>
+      : T[K] extends object
+      ? T[K] extends Signal<infer TK>
+        ? WritableSignal<TK>
+        : SignalStore<T[K]>['state']
+      : WritableSignal<T[K]>;
+  };
 } & {
   // Core API
   unwrap(): T;
   update(updater: (current: T) => Partial<T>): void;
 
-  // Performance Features (optional)
-  batchUpdate?: (updater: (current: T) => Partial<T>) => void;
-  computed?: <R>(fn: (store: T) => R, cacheKey?: string) => Signal<R>;
-  effect?: (fn: (store: T) => void) => void;
-  subscribe?: (fn: (store: T) => void) => () => void;
+  // Performance Features (always available - bypass when disabled)
+  batchUpdate(updater: (current: T) => Partial<T>): void;
+  computed<R>(fn: (store: T) => R, cacheKey?: string): Signal<R>;
+  effect(fn: (store: T) => void): void;
+  subscribe(fn: (store: T) => void): () => void;
 
-  // Optimization methods
-  optimize?: () => void;
-  clearCache?: () => void;
-  getMetrics?: () => PerformanceMetrics;
+  // Optimization methods (always available)
+  optimize(): void;
+  clearCache(): void;
+  getMetrics(): PerformanceMetrics;
 
-  // Middleware & Extensions
-  addMiddleware?: (middleware: Middleware<T>) => void;
-  removeMiddleware?: (id: string) => void;
+  // Middleware & Extensions (always available)
+  addMiddleware(middleware: Middleware<T>): void;
+  removeMiddleware(id: string): void;
 
-  // Entity Management
-  withEntityHelpers?: <E extends { id: string | number }>(
+  // Entity Management (always available)
+  withEntityHelpers<E extends { id: string | number }>(
     entityKey: keyof T
-  ) => EntityHelpers<E>;
+  ): EntityHelpers<E>;
 
-  // Async Operations
-  createAsyncAction?: <TInput, TResult>(
+  // Async Operations (always available)
+  createAsyncAction<TInput, TResult>(
     operation: (input: TInput) => Promise<TResult>,
     config: AsyncActionConfig<T, TResult>
-  ) => (input: TInput) => Promise<TResult>;
+  ): (input: TInput) => Promise<TResult>;
 
-  // Time Travel (optional)
-  undo?: () => void;
-  redo?: () => void;
-  getHistory?: () => TimeTravelEntry<T>[];
-  resetHistory?: () => void;
+  // Time Travel (always available - bypass when disabled)
+  undo(): void;
+  redo(): void;
+  getHistory(): TimeTravelEntry<T>[];
+  resetHistory(): void;
 
-  // Dev Tools
+  // Dev Tools (always available)
   __devTools?: DevToolsInterface<T>;
 };
 
@@ -214,6 +228,7 @@ const middlewareMap = new WeakMap<object, Array<Middleware<unknown>>>();
 const timeTravelMap = new WeakMap<object, Array<TimeTravelEntry<unknown>>>();
 const redoStack = new WeakMap<object, Array<TimeTravelEntry<unknown>>>();
 const storeMetrics = new WeakMap<object, PerformanceMetrics>(); // ADDED THIS
+const testSubscribers = new WeakMap<object, Array<(store: unknown) => void>>(); // For test environment
 
 // ============================================
 // BATCHING SYSTEM
@@ -242,16 +257,41 @@ function batchUpdates(fn: () => void): void {
 // TIME TRAVEL MIDDLEWARE
 // ============================================
 
-function createTimeTravelMiddleware<T>(maxEntries = 50): Middleware<T> {
+function createTimeTravelMiddleware<T>(
+  storeRef: object,
+  maxEntries = 50
+): Middleware<T> {
   return {
     id: 'timetravel',
     before: (action, payload, state) => {
-      const store = state as object;
-      let history = (timeTravelMap.get(store) as TimeTravelEntry<T>[]) || [];
-
+      // Initialize history with the initial state if it doesn't exist
+      if (
+        !timeTravelMap.has(storeRef) &&
+        action !== 'UNDO' &&
+        action !== 'REDO'
+      ) {
+        const initialHistory: TimeTravelEntry<T>[] = [
+          {
+            state: structuredClone(state),
+            timestamp: Date.now(),
+            action: 'INITIAL',
+            payload: undefined,
+          },
+        ];
+        timeTravelMap.set(
+          storeRef,
+          initialHistory as TimeTravelEntry<unknown>[]
+        );
+      }
+      return true;
+    },
+    after: (action, payload, state, newState) => {
       if (action !== 'UNDO' && action !== 'REDO') {
+        let history =
+          (timeTravelMap.get(storeRef) as TimeTravelEntry<T>[]) || [];
+
         history.push({
-          state: structuredClone(state),
+          state: structuredClone(newState),
           timestamp: Date.now(),
           action,
           payload: payload ? structuredClone(payload) : undefined,
@@ -261,11 +301,9 @@ function createTimeTravelMiddleware<T>(maxEntries = 50): Middleware<T> {
           history = history.slice(-maxEntries);
         }
 
-        timeTravelMap.set(store, history as TimeTravelEntry<unknown>[]);
-        redoStack.set(store, [] as TimeTravelEntry<unknown>[]);
+        timeTravelMap.set(storeRef, history as TimeTravelEntry<unknown>[]);
+        redoStack.set(storeRef, [] as TimeTravelEntry<unknown>[]);
       }
-
-      return true;
     },
   };
 }
@@ -338,7 +376,7 @@ function createEntityHelpers<T, E extends { id: string | number }>(
   store: SignalStore<T>,
   entityKey: keyof T
 ): EntityHelpers<E> {
-  const entitySignal = store[entityKey] as WritableSignal<E[]>;
+  const entitySignal = store.state[entityKey] as WritableSignal<E[]>;
 
   return {
     add: (entity: E) => {
@@ -518,6 +556,162 @@ function enhanceStoreBasic<T>(store: SignalStore<T>): SignalStore<T> {
     }
   };
 
+  // Add all required methods with bypass logic (will be overridden if enhanced)
+  store.batchUpdate = (updater: (current: T) => Partial<T>) => {
+    console.warn(
+      '⚠️ batchUpdate() called but batching is not enabled.',
+      '\nTo enable batch updates, create an enhanced store:',
+      '\nenhancedSignalStore(data, { enablePerformanceFeatures: true, batchUpdates: true })'
+    );
+    // Fallback: Just call update directly
+    store.update(updater);
+  };
+
+  store.computed = <R>(fn: (store: T) => R, _cacheKey?: string): Signal<R> => {
+    console.warn(
+      '⚠️ computed() called but memoization is not enabled.',
+      '\nTo enable memoized computations, create an enhanced store:',
+      '\nenhancedSignalStore(data, { enablePerformanceFeatures: true, useMemoization: true })'
+    );
+    // Note: _cacheKey parameter is intentionally unused in bypass implementation
+    // Fallback: Use simple Angular computed without memoization
+    return computed(() => fn(store.unwrap()));
+  };
+
+  store.effect = (fn: (store: T) => void) => {
+    try {
+      effect(() => fn(store.unwrap()));
+    } catch {
+      // Fallback for test environments without injection context
+      console.warn('Effect requires Angular injection context');
+    }
+  };
+
+  store.subscribe = (fn: (store: T) => void): (() => void) => {
+    try {
+      const destroyRef = inject(DestroyRef);
+      let isDestroyed = false;
+
+      const effectRef = effect(() => {
+        if (!isDestroyed) {
+          fn(store.unwrap());
+        }
+      });
+
+      const unsubscribe = () => {
+        isDestroyed = true;
+        effectRef.destroy();
+      };
+
+      destroyRef.onDestroy(unsubscribe);
+      return unsubscribe;
+    } catch {
+      // Fallback for test environment - call once immediately
+      fn(store.unwrap());
+      return () => {
+        // No-op unsubscribe
+      };
+    }
+  };
+
+  store.optimize = () => {
+    console.warn(
+      '⚠️ optimize() called but performance optimization is not enabled.',
+      '\nTo enable optimization features, create an enhanced store:',
+      '\nenhancedSignalStore(data, { enablePerformanceFeatures: true })'
+    );
+  };
+
+  store.clearCache = () => {
+    console.warn(
+      '⚠️ clearCache() called but caching is not enabled.',
+      '\nTo enable caching, create an enhanced store:',
+      '\nenhancedSignalStore(data, { enablePerformanceFeatures: true, useMemoization: true })'
+    );
+  };
+
+  store.getMetrics = (): PerformanceMetrics => {
+    console.warn(
+      '⚠️ getMetrics() called but performance tracking is not enabled.',
+      '\nTo enable performance tracking, create an enhanced store:',
+      '\nenhancedSignalStore(data, { enablePerformanceFeatures: true, trackPerformance: true })'
+    );
+    // Return minimal metrics when tracking not enabled
+    return {
+      updates: 0,
+      computations: 0,
+      cacheHits: 0,
+      cacheMisses: 0,
+      averageUpdateTime: 0,
+    };
+  };
+
+  store.addMiddleware = (_middleware: Middleware<T>) => {
+    console.warn(
+      '⚠️ addMiddleware() called but performance features are not enabled.',
+      '\nTo enable middleware support, create an enhanced store:',
+      '\nenhancedSignalStore(data, { enablePerformanceFeatures: true })'
+    );
+    // Note: _middleware parameter is intentionally unused in bypass implementation
+  };
+
+  store.removeMiddleware = (_id: string) => {
+    console.warn(
+      '⚠️ removeMiddleware() called but performance features are not enabled.',
+      '\nTo enable middleware support, create an enhanced store:',
+      '\nenhancedSignalStore(data, { enablePerformanceFeatures: true })'
+    );
+    // Note: _id parameter is intentionally unused in bypass implementation
+  };
+
+  store.withEntityHelpers = <E extends { id: string | number }>(
+    entityKey: keyof T
+  ): EntityHelpers<E> => {
+    // Always provide entity helpers - they're lightweight
+    return createEntityHelpers<T, E>(store, entityKey);
+  };
+
+  store.createAsyncAction = <TInput, TResult>(
+    operation: (input: TInput) => Promise<TResult>,
+    config: AsyncActionConfig<T, TResult> = {}
+  ) => {
+    // Always provide async actions - they're lightweight
+    return createAsyncActionFactory(store)(operation, config);
+  };
+
+  store.undo = () => {
+    console.warn(
+      '⚠️ undo() called but time travel is not enabled.',
+      '\nTo enable time travel, create an enhanced store:',
+      '\nenhancedSignalStore(data, { enablePerformanceFeatures: true, enableTimeTravel: true })'
+    );
+  };
+
+  store.redo = () => {
+    console.warn(
+      '⚠️ redo() called but time travel is not enabled.',
+      '\nTo enable time travel, create an enhanced store:',
+      '\nenhancedSignalStore(data, { enablePerformanceFeatures: true, enableTimeTravel: true })'
+    );
+  };
+
+  store.getHistory = (): TimeTravelEntry<T>[] => {
+    console.warn(
+      '⚠️ getHistory() called but time travel is not enabled.',
+      '\nTo enable time travel, create an enhanced store:',
+      '\nenhancedSignalStore(data, { enablePerformanceFeatures: true, enableTimeTravel: true })'
+    );
+    return [];
+  };
+
+  store.resetHistory = () => {
+    console.warn(
+      '⚠️ resetHistory() called but time travel is not enabled.',
+      '\nTo enable time travel, create an enhanced store:',
+      '\nenhancedSignalStore(data, { enablePerformanceFeatures: true, enableTimeTravel: true })'
+    );
+  };
+
   return store;
 }
 
@@ -537,7 +731,7 @@ function enhanceStore<T>(
   } = config;
 
   if (!enablePerformanceFeatures) {
-    return store;
+    return store; // Use bypass methods from enhanceStoreBasic
   }
 
   console.log(
@@ -559,7 +753,7 @@ function enhanceStore<T>(
   }
 
   if (enableTimeTravel) {
-    const timeTravelMiddleware = createTimeTravelMiddleware<T>();
+    const timeTravelMiddleware = createTimeTravelMiddleware<T>(store);
     const middlewares = middlewareMap.get(store) || [];
     middlewares.push(timeTravelMiddleware as Middleware<unknown>);
     middlewareMap.set(store, middlewares);
@@ -620,6 +814,18 @@ function enhanceStore<T>(
         if (middleware.after) {
           middleware.after(action, updateResult, currentState, newState);
         }
+      }
+
+      // Notify test subscribers if in test environment
+      const subscribers = testSubscribers.get(store);
+      if (subscribers) {
+        subscribers.forEach((subscriber) => {
+          try {
+            subscriber(newState);
+          } catch (error) {
+            // Ignore subscriber errors in test environment
+          }
+        });
       }
     };
 
@@ -696,10 +902,25 @@ function enhanceStore<T>(
       destroyRef.onDestroy(unsubscribe);
       return unsubscribe;
     } catch {
-      // Fallback for test environment - call once immediately
+      // Fallback for test environment - use subscriber tracking
+      const subscribers = testSubscribers.get(store) || [];
+      subscribers.push(fn as (store: unknown) => void);
+      testSubscribers.set(store, subscribers);
+
+      // Call immediately for initial subscription
       fn(store.unwrap());
-      const noopUnsubscribe = () => undefined;
-      return noopUnsubscribe; // No-op unsubscribe
+
+      // Return unsubscribe function
+      return () => {
+        const currentSubscribers = testSubscribers.get(store) || [];
+        const index = currentSubscribers.indexOf(
+          fn as (store: unknown) => void
+        );
+        if (index > -1) {
+          currentSubscribers.splice(index, 1);
+          testSubscribers.set(store, currentSubscribers);
+        }
+      };
     }
   };
 
@@ -743,6 +964,9 @@ function enhanceStore<T>(
     };
   }
 
+  // Override methods when features are enabled
+
+  // Always override addMiddleware and removeMiddleware when enhanced
   store.addMiddleware = (middleware: Middleware<T>) => {
     const middlewares = middlewareMap.get(store) || [];
     middlewares.push(middleware as Middleware<unknown>);
@@ -755,6 +979,7 @@ function enhanceStore<T>(
     middlewareMap.set(store, filtered);
   };
 
+  // Always override these when enhanced since entity helpers are always useful
   store.withEntityHelpers = <E extends { id: string | number }>(
     entityKey: keyof T
   ) => {
@@ -791,7 +1016,8 @@ function enhanceStore<T>(
             }
           }
 
-          store.update(() => previousEntry.state as Partial<T>);
+          // Update store directly without triggering middleware
+          originalUpdate.call(store, () => previousEntry.state as Partial<T>);
 
           const newState = store.unwrap();
           for (const middleware of middlewares) {
@@ -830,7 +1056,14 @@ function enhanceStore<T>(
           }
         }
 
-        store.update(() => redoEntry.state as Partial<T>);
+        // Update store directly without triggering middleware
+        originalUpdate.call(store, () => redoEntry.state as Partial<T>);
+
+        // Add the state back to history for future undo operations
+        const history =
+          (timeTravelMap.get(store) as TimeTravelEntry<T>[]) || [];
+        history.push(redoEntry);
+        timeTravelMap.set(store, history as TimeTravelEntry<unknown>[]);
 
         const newState = store.unwrap();
         for (const middleware of middlewares) {
@@ -854,29 +1087,32 @@ function enhanceStore<T>(
   return store;
 }
 
-function create<T extends Record<string, unknown>, P extends keyof T>(
+function create<T extends Record<string, unknown>>(
   obj: T,
   config: StoreConfig = {}
 ): SignalStore<T> {
-  const store: Partial<SignalStore<T>> = {};
+  const state: any = {};
   const equalityFn = config.useShallowComparison ? shallowEqual : equal;
 
   for (const [key, value] of Object.entries(obj)) {
     const isObj = (v: unknown) => typeof v === 'object' && v !== null;
 
-    store[key as P] = (
-      isObj(value) && !Array.isArray(value) && !isSignal(value)
-        ? create(value as Record<string, unknown>, config)
-        : isSignal(value)
-        ? value
-        : (signal(value, { equal: equalityFn }) as SignalStore<T>[P])
-    ) as SignalStore<T>[P];
+    if (isObj(value) && !Array.isArray(value) && !isSignal(value)) {
+      const nestedStore = create(value as Record<string, unknown>, config);
+      state[key] = nestedStore.state; // Use the state property of nested store
+    } else if (isSignal(value)) {
+      state[key] = value;
+    } else {
+      state[key] = signal(value, { equal: equalityFn });
+    }
   }
 
-  const resultStore = store as SignalStore<T>;
+  const resultStore = {
+    state,
+    $: state, // $ points to the same state object
+  } as SignalStore<T>;
 
   enhanceStoreBasic(resultStore);
-
   return enhanceStore(resultStore, config);
 }
 
@@ -890,7 +1126,7 @@ function create<T extends Record<string, unknown>, P extends keyof T>(
 export function signalStore<T extends Record<string, unknown>>(
   obj: T
 ): SignalStore<T> {
-  return create<T, keyof T>(obj, {
+  return create(obj, {
     enablePerformanceFeatures: false,
   });
 }
@@ -902,7 +1138,7 @@ export function enhancedSignalStore<T extends Record<string, unknown>>(
   obj: T,
   config: StoreConfig = {}
 ): SignalStore<T> {
-  return create<T, keyof T>(obj, {
+  return create(obj, {
     enablePerformanceFeatures: true,
     ...config,
   });
@@ -985,16 +1221,16 @@ export function createEntityStore<E extends { id: string | number }>(
     ...entityHelpers,
 
     select: (id: string | number) => {
-      store.selectedId.set(id);
+      store.state.selectedId.set(id);
     },
 
     deselect: () => {
-      store.selectedId.set(null);
+      store.state.selectedId.set(null);
     },
 
     getSelected: () =>
       computed(() => {
-        const selectedId = store.selectedId();
+        const selectedId = store.state.selectedId();
         return selectedId ? entityHelpers.findById(selectedId)() : undefined;
       }),
 
@@ -1011,7 +1247,7 @@ export function createEntityStore<E extends { id: string | number }>(
           loadingKey: 'loading',
           errorKey: 'error',
           onSuccess: (entities) => {
-            store.entities.set(entities);
+            store.state.entities.set(entities);
           },
         }
       );
