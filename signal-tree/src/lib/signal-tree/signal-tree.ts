@@ -1326,24 +1326,67 @@ export type EnhancedArraySignal<T> = WritableSignal<T[]> & {
   clear: () => void;
 };
 
+// ============================================
+// FORM TREE TYPES
+// ============================================
+
+/**
+ * Form tree type that flattens the state access while maintaining form-specific properties
+ */
+export type FormTree<T extends Record<string, unknown>> = {
+  // Flattened state access - direct access to form values as signals
+  state: DeepSignalify<T>;
+  $: DeepSignalify<T>; // Alias for state
+
+  // Form-specific signals
+  errors: WritableSignal<Record<string, string>>;
+  asyncErrors: WritableSignal<Record<string, string>>;
+  touched: WritableSignal<Record<string, boolean>>;
+  asyncValidating: WritableSignal<Record<string, boolean>>;
+  dirty: WritableSignal<boolean>;
+  valid: WritableSignal<boolean>;
+  submitting: WritableSignal<boolean>;
+
+  // Form methods
+  unwrap(): T;
+  setValue(field: string, value: unknown): void;
+  setValues(values: Partial<T>): void;
+  reset(): void;
+  submit<TResult>(submitFn: (values: T) => Promise<TResult>): Promise<TResult>;
+  validate(field?: string): Promise<void>;
+
+  // Field-level helpers
+  getFieldError(field: string): Signal<string | undefined>;
+  getFieldAsyncError(field: string): Signal<string | undefined>;
+  getFieldTouched(field: string): Signal<boolean | undefined>;
+  isFieldValid(field: string): Signal<boolean>;
+  isFieldAsyncValidating(field: string): Signal<boolean | undefined>;
+
+  // Direct access to field errors
+  fieldErrors: Record<string, Signal<string | undefined>>;
+  fieldAsyncErrors: Record<string, Signal<string | undefined>>;
+
+  // Keep values tree for backward compatibility
+  values: SignalTree<T>;
+};
+
 export function createFormTree<T extends Record<string, unknown>>(
   initialValues: T,
   config: {
     validators?: Record<string, (value: unknown) => string | null>;
     asyncValidators?: Record<string, AsyncValidatorFn<unknown>>;
   } & TreeConfig = {}
-) {
-  const { validators = {}, asyncValidators = {} } = config;
-  // Note: treeConfig portion is not currently used in form trees
+): FormTree<T> {
+  const { validators = {}, asyncValidators = {}, ...treeConfig } = config;
 
   // Create the underlying signal tree
-  const valuesTree = signalTree(initialValues);
+  const valuesTree = signalTree(initialValues, treeConfig);
 
-  // Create the tree with form-specific properties and flattened state access
-  const tree = {
-    // Flatten the state access - expose state directly like a regular signal tree
-    state: valuesTree.state,
-    // Form-specific properties
+  // Ensure the state has the correct type - this is the key fix
+  const flattenedState = valuesTree.state as DeepSignalify<T>;
+
+  // Create form-specific signals
+  const formSignals = {
     errors: signal<Record<string, string>>({}),
     asyncErrors: signal<Record<string, string>>({}),
     touched: signal<Record<string, boolean>>({}),
@@ -1351,9 +1394,9 @@ export function createFormTree<T extends Record<string, unknown>>(
     dirty: signal(false),
     valid: signal(true),
     submitting: signal(false),
-    // Keep the valuesTree for internal use and backward compatibility
-    values: valuesTree,
   };
+
+  const markDirty = () => formSignals.dirty.set(true);
 
   // Enhance arrays with natural operations
   const enhanceArray = <U>(
@@ -1391,7 +1434,9 @@ export function createFormTree<T extends Record<string, unknown>>(
       arraySignal.update((arr) => {
         const newArr = [...arr];
         const [item] = newArr.splice(from, 1);
-        newArr.splice(to, 0, item);
+        if (item !== undefined) {
+          newArr.splice(to, 0, item);
+        }
         return newArr;
       });
       markDirty();
@@ -1405,44 +1450,37 @@ export function createFormTree<T extends Record<string, unknown>>(
     return enhanced;
   };
 
-  // Recursively enhance all arrays in the values
-  const enhanceArraysRecursively = (obj: Record<string, unknown>) => {
-    Object.keys(obj).forEach((key) => {
+  // Recursively enhance all arrays in the state
+  const enhanceArraysRecursively = (obj: Record<string, unknown>): void => {
+    for (const key in obj) {
       const value = obj[key];
-      if (isSignal(value) && Array.isArray((value as Signal<unknown>)())) {
-        obj[key] = enhanceArray(value as WritableSignal<unknown[]>);
+      if (isSignal(value)) {
+        const signalValue = (value as Signal<unknown>)();
+        if (Array.isArray(signalValue)) {
+          (obj as Record<string, unknown>)[key] = enhanceArray(
+            value as WritableSignal<unknown[]>
+          );
+        }
       } else if (
         typeof value === 'object' &&
         value !== null &&
-        !isSignal(value)
+        !Array.isArray(value)
       ) {
         enhanceArraysRecursively(value as Record<string, unknown>);
       }
-    });
+    }
   };
 
-  // Only enhance arrays if the unwrap method exists
-  const valuesUnwrapped =
-    'unwrap' in tree.values && typeof tree.values.unwrap === 'function'
-      ? tree.values.unwrap()
-      : tree.values;
-
-  if (typeof valuesUnwrapped === 'object' && valuesUnwrapped !== null) {
-    enhanceArraysRecursively(valuesUnwrapped as Record<string, unknown>);
-  }
-
-  const markDirty = () => tree.dirty.set(true);
+  // Enhance arrays in the state
+  enhanceArraysRecursively(flattenedState as Record<string, unknown>);
 
   // Helper functions for nested paths
-  const getNestedValue = (
-    obj: Record<string, unknown>,
-    path: string
-  ): unknown => {
+  const getNestedValue = (obj: DeepSignalify<T>, path: string): unknown => {
     const keys = path.split('.');
     let current: unknown = obj;
 
     for (const key of keys) {
-      if (current && typeof current === 'object' && key in current) {
+      if (current && typeof current === 'object') {
         current = (current as Record<string, unknown>)[key];
         if (isSignal(current)) {
           current = (current as Signal<unknown>)();
@@ -1455,41 +1493,24 @@ export function createFormTree<T extends Record<string, unknown>>(
     return current;
   };
 
-  const setNestedValue = (path: string, value: unknown) => {
+  const setNestedValue = (path: string, value: unknown): void => {
     const keys = path.split('.');
+    let current: unknown = flattenedState;
 
-    if (keys.length === 1) {
-      const signal = (tree.state as Record<string, unknown>)[keys[0]];
-      if (
-        isSignal(signal) &&
-        'set' in signal &&
-        typeof signal.set === 'function'
-      ) {
-        (signal as WritableSignal<unknown>).set(value);
-      }
-    } else {
-      let current: unknown = tree.state;
-      for (let i = 0; i < keys.length - 1; i++) {
-        current = (current as Record<string, unknown>)[keys[i]];
-      }
-      const finalSignal = (current as Record<string, unknown>)[
-        keys[keys.length - 1]
-      ];
-      if (
-        isSignal(finalSignal) &&
-        'set' in finalSignal &&
-        typeof finalSignal.set === 'function'
-      ) {
-        (finalSignal as WritableSignal<unknown>).set(value);
-      }
+    for (let i = 0; i < keys.length - 1; i++) {
+      current = (current as Record<string, unknown>)[keys[i]];
+      if (!current) return;
+    }
+
+    const lastKey = keys[keys.length - 1];
+    const target = (current as Record<string, unknown>)[lastKey];
+
+    if (isSignal(target) && 'set' in target) {
+      (target as WritableSignal<unknown>).set(value);
     }
   };
 
-  const validate = async (field?: string) => {
-    const values =
-      'unwrap' in tree.values && typeof tree.values.unwrap === 'function'
-        ? tree.values.unwrap()
-        : tree.values;
+  const validate = async (field?: string): Promise<void> => {
     const errors: Record<string, string> = {};
     const asyncErrors: Record<string, string> = {};
 
@@ -1499,10 +1520,7 @@ export function createFormTree<T extends Record<string, unknown>>(
     for (const fieldPath of fieldsToValidate) {
       const validator = validators[fieldPath];
       if (validator) {
-        const value = getNestedValue(
-          values as Record<string, unknown>,
-          fieldPath
-        );
+        const value = getNestedValue(flattenedState, fieldPath);
         const error = validator(value);
         if (error) {
           errors[fieldPath] = error;
@@ -1510,7 +1528,7 @@ export function createFormTree<T extends Record<string, unknown>>(
       }
     }
 
-    tree.errors.set(errors);
+    formSignals.errors.set(errors);
 
     // Async validation
     const asyncFieldsToValidate = field
@@ -1520,13 +1538,13 @@ export function createFormTree<T extends Record<string, unknown>>(
     for (const fieldPath of asyncFieldsToValidate) {
       const asyncValidator = asyncValidators[fieldPath];
       if (asyncValidator && (!field || field === fieldPath)) {
-        tree.asyncValidating.update((v) => ({ ...v, [fieldPath]: true }));
+        formSignals.asyncValidating.update((v) => ({
+          ...v,
+          [fieldPath]: true,
+        }));
 
         try {
-          const value = getNestedValue(
-            values as Record<string, unknown>,
-            fieldPath
-          );
+          const value = getNestedValue(flattenedState, fieldPath);
           const result = await asyncValidator(value);
           if (result && typeof result === 'string') {
             asyncErrors[fieldPath] = result;
@@ -1535,18 +1553,23 @@ export function createFormTree<T extends Record<string, unknown>>(
           asyncErrors[fieldPath] = 'Validation error';
         }
 
-        tree.asyncValidating.update((v) => ({ ...v, [fieldPath]: false }));
+        formSignals.asyncValidating.update((v) => ({
+          ...v,
+          [fieldPath]: false,
+        }));
       }
     }
 
-    tree.asyncErrors.set(asyncErrors);
+    formSignals.asyncErrors.set(asyncErrors);
 
     // Update validity
     const hasErrors = Object.keys(errors).length > 0;
     const hasAsyncErrors = Object.keys(asyncErrors).length > 0;
-    const isValidating = Object.values(tree.asyncValidating()).some((v) => v);
+    const isValidating = Object.values(formSignals.asyncValidating()).some(
+      (v) => v
+    );
 
-    tree.valid.set(!hasErrors && !hasAsyncErrors && !isValidating);
+    formSignals.valid.set(!hasErrors && !hasAsyncErrors && !isValidating);
   };
 
   // Create computed signals for field errors
@@ -1557,30 +1580,39 @@ export function createFormTree<T extends Record<string, unknown>>(
   [...Object.keys(validators), ...Object.keys(asyncValidators)].forEach(
     (fieldPath) => {
       fieldErrors[fieldPath] = computed(() => {
-        const errors = tree.errors();
+        const errors = formSignals.errors();
         return errors[fieldPath];
       });
       fieldAsyncErrors[fieldPath] = computed(() => {
-        const errors = tree.asyncErrors();
+        const errors = formSignals.asyncErrors();
         return errors[fieldPath];
       });
     }
   );
 
-  return {
-    ...tree,
+  // Create the form tree object
+  const formTree: FormTree<T> = {
+    // Flattened state access
+    state: flattenedState,
+    $: flattenedState,
+
+    // Form signals
+    ...formSignals,
+
+    // Core methods
+    unwrap: () => valuesTree.unwrap(),
 
     setValue: (field: string, value: unknown) => {
       setNestedValue(field, value);
-      tree.touched.update((t) => ({ ...t, [field]: true }));
+      formSignals.touched.update((t) => ({ ...t, [field]: true }));
       markDirty();
-      validate(field);
+      void validate(field);
     },
 
     setValues: (values: Partial<T>) => {
-      tree.values.update((v) => ({ ...v, ...values }));
+      valuesTree.update((v) => ({ ...v, ...values }));
       markDirty();
-      validate();
+      void validate();
     },
 
     reset: () => {
@@ -1610,82 +1642,75 @@ export function createFormTree<T extends Record<string, unknown>>(
         }
       };
 
-      resetSignals(tree.state, initialValues);
+      resetSignals(flattenedState, initialValues);
 
-      tree.errors.set({});
-      tree.asyncErrors.set({});
-      tree.touched.set({});
-      tree.asyncValidating.set({});
-      tree.dirty.set(false);
-      tree.valid.set(true);
-      tree.submitting.set(false);
+      formSignals.errors.set({});
+      formSignals.asyncErrors.set({});
+      formSignals.touched.set({});
+      formSignals.asyncValidating.set({});
+      formSignals.dirty.set(false);
+      formSignals.valid.set(true);
+      formSignals.submitting.set(false);
     },
 
-    submit: async (submitFn: (values: T) => Promise<unknown>) => {
-      tree.submitting.set(true);
+    submit: async <TResult>(
+      submitFn: (values: T) => Promise<TResult>
+    ): Promise<TResult> => {
+      formSignals.submitting.set(true);
 
       try {
         await validate();
 
-        if (!tree.valid()) {
+        if (!formSignals.valid()) {
           throw new Error('Form is invalid');
         }
 
-        const currentValues =
-          'unwrap' in tree.values && typeof tree.values.unwrap === 'function'
-            ? tree.values.unwrap()
-            : tree.values;
-        const result = await submitFn(currentValues as T);
+        const currentValues = valuesTree.unwrap();
+        const result = await submitFn(currentValues);
         return result;
       } finally {
-        tree.submitting.set(false);
+        formSignals.submitting.set(false);
       }
     },
 
     validate,
 
-    // Convenience methods
+    // Field helpers
     getFieldError: (field: string) =>
       fieldErrors[field] || computed(() => undefined),
+
     getFieldAsyncError: (field: string) =>
       fieldAsyncErrors[field] || computed(() => undefined),
+
     getFieldTouched: (field: string) =>
       computed(() => {
-        const touched = tree.touched();
+        const touched = formSignals.touched();
         return touched[field];
       }),
+
     isFieldValid: (field: string) =>
       computed(() => {
-        const errors = tree.errors();
-        const asyncErrors = tree.asyncErrors();
-        const asyncValidating = tree.asyncValidating();
+        const errors = formSignals.errors();
+        const asyncErrors = formSignals.asyncErrors();
+        const asyncValidating = formSignals.asyncValidating();
         return !errors[field] && !asyncErrors[field] && !asyncValidating[field];
       }),
+
     isFieldAsyncValidating: (field: string) =>
       computed(() => {
-        const asyncValidating = tree.asyncValidating();
+        const asyncValidating = formSignals.asyncValidating();
         return asyncValidating[field];
       }),
 
-    // Keep the direct access too
+    // Direct access
     fieldErrors,
     fieldAsyncErrors,
 
-    // Flattened state access (Option 1) - direct access like regular signal trees
-    state: tree.state,
-
-    // Form-specific signals
-    errors: tree.errors,
-    asyncErrors: tree.asyncErrors,
-    touched: tree.touched,
-    asyncValidating: tree.asyncValidating,
-    dirty: tree.dirty,
-    valid: tree.valid,
-    submitting: tree.submitting,
-
-    // Keep values for backward compatibility
-    values: tree.values,
+    // Keep values tree for backward compatibility
+    values: valuesTree,
   };
+
+  return formTree;
 }
 
 export function createTestTree<T extends Record<string, unknown>>(
@@ -1873,16 +1898,22 @@ export const validators = {
 
   email:
     (message = 'Invalid email') =>
-    (value: string) =>
-      value && !value.includes('@') ? message : null,
+    (value: unknown) => {
+      const strValue = value as string;
+      return strValue && !strValue.includes('@') ? message : null;
+    },
 
-  minLength: (min: number) => (value: string) =>
-    value && value.length < min ? `Min ${min} characters` : null,
+  minLength: (min: number) => (value: unknown) => {
+    const strValue = value as string;
+    return strValue && strValue.length < min ? `Min ${min} characters` : null;
+  },
 
   pattern:
     (regex: RegExp, message = 'Invalid format') =>
-    (value: string) =>
-      value && !regex.test(value) ? message : null,
+    (value: unknown) => {
+      const strValue = value as string;
+      return strValue && !regex.test(strValue) ? message : null;
+    },
 };
 
 export const asyncValidators = {

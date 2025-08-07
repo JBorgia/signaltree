@@ -1,9 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { createFormTree, validators } from '@signal-tree';
+import { createFormTree, validators, FormTree } from '@signal-tree';
 
-interface UserRegistrationForm {
+interface UserRegistrationForm extends Record<string, unknown> {
   username: string;
   email: string;
   password: string;
@@ -313,6 +313,7 @@ interface UserRegistrationForm {
                     type="password"
                     [(ngModel)]="formTree.state.password"
                     (blur)="markFieldAsTouched('password')"
+                    (input)="onPasswordChange()"
                     name="password"
                     class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                     [class.border-red-500]="hasFieldError('password')"
@@ -345,6 +346,7 @@ interface UserRegistrationForm {
                     type="password"
                     [(ngModel)]="formTree.state.confirmPassword"
                     (blur)="markFieldAsTouched('confirmPassword')"
+                    (input)="onConfirmPasswordChange()"
                     name="confirmPassword"
                     class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                     [class.border-red-500]="hasFieldError('confirmPassword')"
@@ -538,117 +540,137 @@ export class FormValidationComponent {
   isCheckingUsername = false;
   isCheckingEmail = false;
 
-  formTree = createFormTree<UserRegistrationForm>(
-    {
-      username: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      firstName: '',
-      lastName: '',
-      phoneNumber: '',
-      dateOfBirth: '',
-      agreeToTerms: false,
-    },
-    {
-      validators: {
-        username: (value) => {
-          if (!value) return 'Username is required';
-          if (value.length < 3) return 'Username must be at least 3 characters';
-          if (!/^[a-zA-Z0-9_]+$/.test(value))
-            return 'Username can only contain letters, numbers, and underscores';
-          return null;
-        },
+  Object = Object; // Expose Object to template
 
-        email: validators.email(),
-
-        password: (value) => {
-          if (!value) return 'Password is required';
-          if (value.length < 8) return 'Password must be at least 8 characters';
-          if (!/(?=.*[a-z])/.test(value))
-            return 'Password must contain at least one lowercase letter';
-          if (!/(?=.*[A-Z])/.test(value))
-            return 'Password must contain at least one uppercase letter';
-          if (!/(?=.*\d)/.test(value))
-            return 'Password must contain at least one number';
-          return null;
-        },
-
-        confirmPassword: (value, formValues) => {
-          if (!value) return 'Please confirm your password';
-          if (value !== formValues?.password) return 'Passwords do not match';
-          return null;
-        },
-
-        firstName: validators.required('First name is required'),
-        lastName: validators.required('Last name is required'),
-
-        dateOfBirth: (value) => {
-          if (!value) return 'Date of birth is required';
-          const birthDate = new Date(value);
-          const today = new Date();
-          const age = today.getFullYear() - birthDate.getFullYear();
-          if (age < 18) return 'You must be at least 18 years old';
-          if (age > 120) return 'Please enter a valid date of birth';
-          return null;
-        },
-
-        phoneNumber: (value) => {
-          if (
-            value &&
-            !/^[+]?[1-9][\d]{0,15}$/.test(value.replace(/[\s\-()]/g, ''))
-          ) {
-            return 'Please enter a valid phone number';
-          }
-          return null;
-        },
-
-        agreeToTerms: (value) => {
-          return value ? null : 'You must agree to the terms and conditions';
-        },
+  formTree: FormTree<UserRegistrationForm> =
+    createFormTree<UserRegistrationForm>(
+      {
+        username: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        firstName: '',
+        lastName: '',
+        phoneNumber: '',
+        dateOfBirth: '',
+        agreeToTerms: false,
       },
+      {
+        validators: {
+          username: (value: unknown) => {
+            const strValue = value as string;
+            if (!strValue) return 'Username is required';
+            if (strValue.length < 3)
+              return 'Username must be at least 3 characters';
+            if (!/^[a-zA-Z0-9_]+$/.test(strValue))
+              return 'Username can only contain letters, numbers, and underscores';
+            return null;
+          },
 
-      asyncValidators: {
-        username: async (value) => {
-          if (!value || value.length < 3) return null;
+          email: validators.email(),
 
-          this.isCheckingUsername = true;
+          password: (value: unknown) => {
+            const strValue = value as string;
+            if (!strValue) return 'Password is required';
+            if (strValue.length < 8)
+              return 'Password must be at least 8 characters';
+            if (!/(?=.*[a-z])/.test(strValue))
+              return 'Password must contain at least one lowercase letter';
+            if (!/(?=.*[A-Z])/.test(strValue))
+              return 'Password must contain at least one uppercase letter';
+            if (!/(?=.*\d)/.test(strValue))
+              return 'Password must contain at least one number';
+            return null;
+          },
 
-          // Simulate API call
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+          confirmPassword: (value: unknown) => {
+            const strValue = value as string;
+            if (!strValue) return 'Please confirm your password';
 
-          this.isCheckingUsername = false;
+            // Get the current password value to compare
+            const currentPassword = this.formTree.state.password();
+            if (strValue !== currentPassword) {
+              return 'Passwords do not match';
+            }
+            return null;
+          },
 
-          // Simulate some usernames being taken
-          const takenUsernames = ['admin', 'test', 'user', 'demo', 'example'];
-          return takenUsernames.includes(value.toLowerCase())
-            ? 'Username is already taken'
-            : null;
+          firstName: validators.required('First name is required'),
+          lastName: validators.required('Last name is required'),
+
+          dateOfBirth: (value: unknown) => {
+            const strValue = value as string;
+            if (!strValue) return 'Date of birth is required';
+            const birthDate = new Date(strValue);
+            const today = new Date();
+            const age = today.getFullYear() - birthDate.getFullYear();
+            if (age < 18) return 'You must be at least 18 years old';
+            if (age > 120) return 'Please enter a valid date of birth';
+            return null;
+          },
+
+          phoneNumber: (value: unknown) => {
+            const strValue = value as string;
+            if (
+              strValue &&
+              !/^[+]?[1-9][\d]{0,15}$/.test(strValue.replace(/[\s\-()]/g, ''))
+            ) {
+              return 'Please enter a valid phone number';
+            }
+            return null;
+          },
+
+          agreeToTerms: (value: unknown) => {
+            const boolValue = value as boolean;
+            return boolValue
+              ? null
+              : 'You must agree to the terms and conditions';
+          },
         },
 
-        email: async (value) => {
-          if (!value || !value.includes('@')) return null;
+        asyncValidators: {
+          username: async (value: unknown) => {
+            const strValue = value as string;
+            if (!strValue || strValue.length < 3) return null;
 
-          this.isCheckingEmail = true;
+            this.isCheckingUsername = true;
 
-          // Simulate API call
-          await new Promise((resolve) => setTimeout(resolve, 800));
+            // Simulate API call
+            await new Promise((resolve) => setTimeout(resolve, 1000));
 
-          this.isCheckingEmail = false;
+            this.isCheckingUsername = false;
 
-          // Simulate some emails being taken
-          const takenEmails = [
-            'admin@example.com',
-            'test@example.com',
-            'user@example.com',
-          ];
-          return takenEmails.includes(value.toLowerCase())
-            ? 'Email address is already registered'
-            : null;
+            // Simulate some usernames being taken
+            const takenUsernames = ['admin', 'test', 'user', 'demo', 'example'];
+            return takenUsernames.includes(strValue.toLowerCase())
+              ? 'Username is already taken'
+              : null;
+          },
+
+          email: async (value: unknown) => {
+            const strValue = value as string;
+            if (!strValue || !strValue.includes('@')) return null;
+
+            this.isCheckingEmail = true;
+
+            // Simulate API call
+            await new Promise((resolve) => setTimeout(resolve, 800));
+
+            this.isCheckingEmail = false;
+
+            // Simulate some emails being taken
+            const takenEmails = [
+              'admin@example.com',
+              'test@example.com',
+              'user@example.com',
+            ];
+            return takenEmails.includes(strValue.toLowerCase())
+              ? 'Email address is already registered'
+              : null;
+          },
         },
-      },
-    }
-  );
+      }
+    );
 
   async onSubmit() {
     try {
@@ -692,39 +714,49 @@ export class FormValidationComponent {
     this.formTree.reset();
   }
 
-  markFieldAsTouched() {
-    // This would normally be handled automatically by the form tree
-    // but we can add custom logic here if needed
+  markFieldAsTouched(field: string) {
+    // Mark the field as touched in the form tree
+    this.formTree.touched.update((t) => ({ ...t, [field]: true }));
   }
 
   async onUsernameChange() {
-    if (
-      this.formTree.state.username() &&
-      this.formTree.state.username().length >= 3
-    ) {
+    const username = this.formTree.state.username();
+    if (username && username.length >= 3) {
       await this.formTree.validate();
     }
   }
 
   async onEmailChange() {
-    if (
-      this.formTree.state.email() &&
-      this.formTree.state.email().includes('@')
-    ) {
+    const email = this.formTree.state.email();
+    if (email && email.includes('@')) {
       await this.formTree.validate();
     }
   }
 
-  hasFieldError(field: keyof UserRegistrationForm): boolean {
+  async onPasswordChange() {
+    // Validate both password and confirm password when password changes
+    await this.formTree.validate('password');
+    const confirmPassword = this.formTree.state.confirmPassword();
+    if (confirmPassword) {
+      await this.formTree.validate('confirmPassword');
+    }
+  }
+
+  async onConfirmPasswordChange() {
+    // Validate confirm password when it changes
+    await this.formTree.validate('confirmPassword');
+  }
+
+  hasFieldError(field: string): boolean {
     const error = this.formTree.getFieldError(field)();
     return !!error;
   }
 
-  getFieldError(field: keyof UserRegistrationForm): string | undefined {
+  getFieldError(field: string): string | undefined {
     return this.formTree.getFieldError(field)();
   }
 
-  hasAsyncFieldError(field: keyof UserRegistrationForm): boolean {
+  hasAsyncFieldError(field: string): boolean {
     const asyncErrors = this.formTree.asyncErrors();
     return !!asyncErrors[field];
   }
@@ -763,7 +795,7 @@ export class FormValidationComponent {
   }
 
   getCurrentValues(): Partial<UserRegistrationForm> {
-    const values = this.formTree.state.unwrap();
+    const values = this.formTree.unwrap();
     // Don't show passwords in the display
     return {
       ...values,

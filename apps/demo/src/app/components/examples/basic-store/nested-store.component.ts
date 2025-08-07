@@ -3,28 +3,28 @@ import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree } from '@signal-tree';
 
-interface Address {
+interface Address extends Record<string, unknown> {
   street: string;
   city: string;
   state: string;
   zipCode: string;
 }
 
-interface UserProfile {
+interface UserProfile extends Record<string, unknown> {
   firstName: string;
   lastName: string;
   email: string;
   avatar: string;
 }
 
-interface UserSettings {
+interface UserSettings extends Record<string, unknown> {
   theme: 'light' | 'dark';
   notifications: boolean;
   language: string;
   timezone: string;
 }
 
-interface UserData {
+interface UserData extends Record<string, unknown> {
   profile: UserProfile;
   settings: UserSettings;
   address: Address;
@@ -75,7 +75,7 @@ interface UserData {
                 </label>
                 <input
                   id="firstName"
-                  [(ngModel)]="userTree.profile.firstName"
+                  [(ngModel)]="userTree.state.profile.firstName"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="Enter first name"
                 />
@@ -90,7 +90,7 @@ interface UserData {
                 </label>
                 <input
                   id="lastName"
-                  [(ngModel)]="userTree.profile.lastName"
+                  [(ngModel)]="userTree.state.profile.lastName"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="Enter last name"
                 />
@@ -107,7 +107,7 @@ interface UserData {
               <input
                 id="email"
                 type="email"
-                [(ngModel)]="userTree.profile.email"
+                [(ngModel)]="userTree.state.profile.email"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                 placeholder="Enter email address"
               />
@@ -122,7 +122,7 @@ interface UserData {
               </label>
               <input
                 id="avatar"
-                [(ngModel)]="userTree.profile.avatar"
+                [(ngModel)]="userTree.state.profile.avatar"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                 placeholder="https://example.com/avatar.jpg"
               />
@@ -146,7 +146,7 @@ interface UserData {
               </label>
               <select
                 id="theme"
-                [(ngModel)]="userTree.settings.theme"
+                [(ngModel)]="userTree.state.settings.theme"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               >
                 <option value="light">Light</option>
@@ -163,7 +163,7 @@ interface UserData {
               </label>
               <select
                 id="language"
-                [(ngModel)]="userTree.settings.language"
+                [(ngModel)]="userTree.state.settings.language"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               >
                 <option value="en">English</option>
@@ -183,7 +183,7 @@ interface UserData {
               </label>
               <select
                 id="timezone"
-                [(ngModel)]="userTree.settings.timezone"
+                [(ngModel)]="userTree.state.settings.timezone"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               >
                 <option value="UTC">UTC</option>
@@ -198,7 +198,7 @@ interface UserData {
               <input
                 type="checkbox"
                 id="notifications"
-                [(ngModel)]="userTree.settings.notifications"
+                [(ngModel)]="userTree.state.settings.notifications"
                 class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
               />
               <label
@@ -228,7 +228,7 @@ interface UserData {
             </label>
             <input
               id="street"
-              [(ngModel)]="userTree.address.street"
+              [(ngModel)]="userTree.state.address.street"
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               placeholder="123 Main Street"
             />
@@ -243,7 +243,7 @@ interface UserData {
             </label>
             <input
               id="city"
-              [(ngModel)]="userTree.address.city"
+              [(ngModel)]="userTree.state.address.city"
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               placeholder="San Francisco"
             />
@@ -258,7 +258,7 @@ interface UserData {
             </label>
             <input
               id="state"
-              [(ngModel)]="userTree.address.state"
+              [(ngModel)]="userTree.state.address.state"
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               placeholder="CA"
             />
@@ -273,7 +273,7 @@ interface UserData {
             </label>
             <input
               id="zipCode"
-              [(ngModel)]="userTree.address.zipCode"
+              [(ngModel)]="userTree.state.address.zipCode"
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               placeholder="94102"
             />
@@ -292,7 +292,7 @@ interface UserData {
             <input
               type="checkbox"
               id="newsletter"
-              [(ngModel)]="userTree.preferences.newsletter"
+              [(ngModel)]="userTree.state.preferences.newsletter"
               class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
             />
             <label for="newsletter" class="ml-2 block text-sm text-gray-700">
@@ -304,7 +304,7 @@ interface UserData {
             <input
               type="checkbox"
               id="marketing"
-              [(ngModel)]="userTree.preferences.marketing"
+              [(ngModel)]="userTree.state.preferences.marketing"
               class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
             />
             <label for="marketing" class="ml-2 block text-sm text-gray-700">
@@ -316,7 +316,7 @@ interface UserData {
             <input
               type="checkbox"
               id="updates"
-              [(ngModel)]="userTree.preferences.updates"
+              [(ngModel)]="userTree.state.preferences.updates"
               class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
             />
             <label for="updates" class="ml-2 block text-sm text-gray-700">
@@ -376,19 +376,19 @@ interface UserData {
                 <div>
                   <strong>First Name:</strong>
                   <code class="bg-green-100 px-2 py-1 rounded">{{
-                    userTree.profile.firstName()
+                    userTree.state.profile.firstName()
                   }}</code>
                 </div>
                 <div>
                   <strong>Last Name:</strong>
                   <code class="bg-green-100 px-2 py-1 rounded">{{
-                    userTree.profile.lastName()
+                    userTree.state.profile.lastName()
                   }}</code>
                 </div>
                 <div>
                   <strong>Email:</strong>
                   <code class="bg-green-100 px-2 py-1 rounded">{{
-                    userTree.profile.email()
+                    userTree.state.profile.email()
                   }}</code>
                 </div>
                 <div>
@@ -406,25 +406,25 @@ interface UserData {
                 <div>
                   <strong>Theme:</strong>
                   <code class="bg-green-100 px-2 py-1 rounded">{{
-                    userTree.settings.theme()
+                    userTree.state.settings.theme()
                   }}</code>
                 </div>
                 <div>
                   <strong>Notifications:</strong>
                   <code class="bg-green-100 px-2 py-1 rounded">{{
-                    userTree.settings.notifications()
+                    userTree.state.settings.notifications()
                   }}</code>
                 </div>
                 <div>
                   <strong>Language:</strong>
                   <code class="bg-green-100 px-2 py-1 rounded">{{
-                    userTree.settings.language()
+                    userTree.state.settings.language()
                   }}</code>
                 </div>
                 <div>
                   <strong>Timezone:</strong>
                   <code class="bg-green-100 px-2 py-1 rounded">{{
-                    userTree.settings.timezone()
+                    userTree.state.settings.timezone()
                   }}</code>
                 </div>
               </div>
@@ -436,7 +436,7 @@ interface UserData {
                 <div>
                   <strong>Street:</strong>
                   <code class="bg-green-100 px-2 py-1 rounded">{{
-                    userTree.address.street()
+                    userTree.state.address.street()
                   }}</code>
                 </div>
                 <div>
@@ -493,8 +493,10 @@ interface UserData {
             <div class="bg-gray-50 rounded-lg p-4">
               <h3 class="font-medium text-gray-800 mb-2">Update Methods</h3>
               <div class="space-y-1 text-sm text-gray-600">
-                <div><code>userTree.profile.firstName.set('John')</code></div>
-                <div><code>userTree.settings.update(...)</code></div>
+                <div>
+                  <code>userTree.state.profile.firstName.set('John')</code>
+                </div>
+                <div><code>userTree.state.settings.update(...)</code></div>
                 <div><code>userTree.update(...)</code></div>
               </div>
             </div>
@@ -550,11 +552,14 @@ export class NestedTreeComponent {
   });
 
   updateProfile() {
-    // Example of updating nested properties
-    this.userTree.profile.update((profile) => ({
-      ...profile,
-      firstName: profile.firstName.toUpperCase(),
-      lastName: profile.lastName.toUpperCase(),
+    // Example of updating nested properties using the tree's update method
+    this.userTree.update((current) => ({
+      ...current,
+      profile: {
+        ...current.profile,
+        firstName: current.profile.firstName.toUpperCase(),
+        lastName: current.profile.lastName.toUpperCase(),
+      },
     }));
   }
 
@@ -615,28 +620,28 @@ export class NestedTreeComponent {
   }
 
   toggleTheme() {
-    const currentTheme = this.userTree.settings.theme();
-    this.userTree.settings.theme.set(
+    const currentTheme = this.userTree.state.settings.theme();
+    this.userTree.state.settings.theme.set(
       currentTheme === 'light' ? 'dark' : 'light'
     );
   }
 
   getFullName(): string {
-    const firstName = this.userTree.profile.firstName();
-    const lastName = this.userTree.profile.lastName();
+    const firstName = this.userTree.state.profile.firstName();
+    const lastName = this.userTree.state.profile.lastName();
     return `${firstName} ${lastName}`.trim();
   }
 
   getCityState(): string {
-    const city = this.userTree.address.city();
-    const state = this.userTree.address.state();
+    const city = this.userTree.state.address.city();
+    const state = this.userTree.state.address.state();
     return `${city}, ${state}`.replace(', ,', '').replace(',  ', ', ').trim();
   }
 
   getFullAddress(): string {
-    const street = this.userTree.address.street();
+    const street = this.userTree.state.address.street();
     const cityState = this.getCityState();
-    const zipCode = this.userTree.address.zipCode();
+    const zipCode = this.userTree.state.address.zipCode();
 
     const parts = [street, cityState, zipCode].filter((part) => part.trim());
     return parts.join(', ');
@@ -728,16 +733,16 @@ const userTree = signalTree<UserData>({
 });
 
 // Access nested signals directly
-console.log(userTree.profile.firstName()); // 'John'
-console.log(userTree.settings.theme());    // 'light'
-console.log(userTree.address.city());      // 'San Francisco'
+console.log(userTree.state.profile.firstName()); // 'John'
+console.log(userTree.state.settings.theme());    // 'light'
+console.log(userTree.state.address.city());      // 'San Francisco'
 
 // Update individual nested properties
-userTree.profile.firstName.set('Jane');
-userTree.settings.theme.set('dark');
+userTree.state.profile.firstName.set('Jane');
+userTree.state.settings.theme.set('dark');
 
 // Update entire nested objects
-userTree.address.update(addr => ({
+userTree.state.address.update(addr => ({
   ...addr,
   city: 'Los Angeles',
   state: 'CA'
