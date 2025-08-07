@@ -1,9 +1,9 @@
 {
   "name": "signal-tree",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Reactive state management for Angular using signals with advanced features like memoization, batching, middleware, and performance monitoring",
   "author": "Jonathan Borgia",
-  "license": "BUSL-1.1",
+  "license": "MIT",
   "homepage": "https://github.com/JBorgia/signal-store#readme",
   "repository": {
     "type": "git",
