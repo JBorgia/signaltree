@@ -527,7 +527,7 @@ describe('Signal Tree', () => {
         computed2();
         computed3();
 
-        tree.cleanup();
+        tree.optimize();
 
         // Cache should be managed according to maxCacheSize
         tree.clearCache();
