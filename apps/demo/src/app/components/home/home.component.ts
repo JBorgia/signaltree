@@ -23,13 +23,7 @@ export class HomeComponent {
       description: 'Batched updates, memoization, and performance optimization',
       route: '/performance',
       category: 'Performance',
-      methods: [
-        'batchUpdate',
-        'computed',
-        'optimize',
-        'clearCache',
-        'getMetrics',
-      ],
+      methods: ['batch', 'computed', 'optimize', 'clearCache', 'getMetrics'],
     },
     {
       title: '🔌 Middleware',
@@ -37,7 +31,7 @@ export class HomeComponent {
         'Intercept and extend tree operations with custom middleware',
       route: '/middleware',
       category: 'Middleware',
-      methods: ['addMiddleware', 'removeMiddleware'],
+      methods: ['use', 'removePlugin'],
     },
     {
       title: '📦 Entity Management',
@@ -46,7 +40,7 @@ export class HomeComponent {
       route: '/entity',
       category: 'Entity',
       methods: [
-        'withEntityHelpers',
+        'entities',
         'add',
         'update',
         'remove',
@@ -61,7 +55,7 @@ export class HomeComponent {
         'Handle async operations with loading states and error management',
       route: '/async',
       category: 'Async',
-      methods: ['createAsyncAction'],
+      methods: ['asyncAction'],
     },
     {
       title: '⏰ Time Travel',
