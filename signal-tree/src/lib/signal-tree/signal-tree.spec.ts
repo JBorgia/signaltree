@@ -423,11 +423,11 @@ describe('Signal Tree', () => {
           before: () => false, // Block all updates
         };
 
-        tree.use(middleware);
+        tree.addTap(middleware);
         tree.update(() => ({ value: 10 }));
         expect(tree.$.value()).toBe(0); // Blocked
 
-        tree.removePlugin('test-middleware');
+        tree.removeTap('test-middleware');
         tree.update(() => ({ value: 10 }));
         expect(tree.$.value()).toBe(10); // Not blocked
       });
