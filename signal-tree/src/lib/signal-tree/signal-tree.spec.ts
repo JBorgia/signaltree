@@ -297,7 +297,7 @@ describe('Signal Tree', () => {
         );
 
         let computationCount = 0;
-        const expensiveSum = tree.computed((state) => {
+        const expensiveSum = tree.memoize((state) => {
           computationCount++;
           return state.items.reduce(
             (sum, item) => sum + item * state.multiplier,
@@ -331,8 +331,8 @@ describe('Signal Tree', () => {
           }
         );
 
-        const computed1 = tree.computed((state) => state.value * 2, 'double');
-        const computed2 = tree.computed((state) => state.value * 3, 'triple');
+        const computed1 = tree.memoize((state) => state.value * 2, 'double');
+        const computed2 = tree.memoize((state) => state.value * 3, 'triple');
 
         computed1(); // Cache miss
         computed1(); // Cache hit
@@ -1351,7 +1351,7 @@ describe('Performance and Memory', () => {
 
     // Batch 10 updates (reduced for faster test)
     for (let i = 0; i < 10; i++) {
-      tree.batch((state) => ({
+      tree.batchUpdate((state) => ({
         items: [...state.items, i + 1000],
       }));
     }
