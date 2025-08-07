@@ -570,12 +570,12 @@ export interface PerformanceMetrics {
    * @example
    * ```typescript
    * // Each unique cache key starts with a miss
-   * tree.computed(state => calc1(state), 'calc1')(); // cacheMisses: 1
-   * tree.computed(state => calc2(state), 'calc2')(); // cacheMisses: 2
+   * tree.memoize(state => calc1(state), 'calc1')(); // cacheMisses: 1
+   * tree.memoize(state => calc2(state), 'calc2')(); // cacheMisses: 2
    *
    * // Cache invalidation causes misses
    * tree.clearCache();
-   * tree.computed(state => calc1(state), 'calc1')(); // cacheMisses: 3
+   * tree.memoize(state => calc1(state), 'calc1')(); // cacheMisses: 3
    * ```
    */
   cacheMisses: number;
