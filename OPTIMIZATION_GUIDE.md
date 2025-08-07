@@ -1,12 +1,12 @@
 # SignalTree Optimization Guide
 
-## `cleanup()` vs `clearCache()` - Key Differences
+## `optimize()` vs `clearCache()` - Key Differences
 
 ### Overview
 
 SignalTree provides two distinct methods for memory management and cache optimization. Understanding when and how to use each is crucial for optimal performance.
 
-## `cleanup()` - Smart Optimization
+## `optimize()` - Smart Optimization
 
 ### What it does:
 
