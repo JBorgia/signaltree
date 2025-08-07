@@ -72,234 +72,31 @@ tree.getMetrics();
 
 ### SignalTree vs All Major Angular Solutions
 
-<table>
-<thead>
-<tr>
-<th>Feature</th>
-<th>SignalTree</th>
-<th>NgRx</th>
-<th>Akita</th>
-<th>Elf</th>
-<th>RxAngular</th>
-<th>MobX</th>
-<th>NGXS</th>
-<th>Native Signals</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Philosophy</strong></td>
-<td>Tree-based, Signal-first</td>
-<td>Redux pattern</td>
-<td>Entity-based</td>
-<td>Functional</td>
-<td>RxJS-centric</td>
-<td>Observable objects</td>
-<td>Decorator-based</td>
-<td>Primitive signals</td>
-</tr>
-<tr>
-<td><strong>Learning Curve</strong></td>
-<td>🏆 ⭐⭐⭐⭐⭐ Easy</td>
-<td>⭐⭐ Steep</td>
-<td>⭐⭐⭐ Moderate</td>
-<td>⭐⭐⭐⭐ Easy</td>
-<td>⭐⭐⭐ Moderate</td>
-<td>⭐⭐⭐⭐ Easy</td>
-<td>⭐⭐⭐ Moderate</td>
-<td>🏆 ⭐⭐⭐⭐⭐ Very Easy</td>
-</tr>
-<tr>
-<td><strong>Boilerplate</strong></td>
-<td>🏆 Minimal</td>
-<td>Extensive</td>
-<td>Moderate</td>
-<td>🏆 Minimal</td>
-<td>Moderate</td>
-<td>🏆 Minimal</td>
-<td>Moderate</td>
-<td>🏆 None</td>
-</tr>
-<tr>
-<td><strong>Bundle Size (min)</strong></td>
-<td>~5KB basic</td>
-<td>~25KB</td>
-<td>~20KB</td>
-<td>🏆 ~2KB</td>
-<td>~25KB</td>
-<td>~30KB</td>
-<td>~25KB</td>
-<td>🏆 0KB</td>
-</tr>
-<tr>
-<td><strong>Bundle Size (full)</strong></td>
-<td>🏆 ~15KB</td>
-<td>~50KB+</td>
-<td>~30KB</td>
-<td>~10KB</td>
-<td>~25KB</td>
-<td>~40KB</td>
-<td>~35KB</td>
-<td>🏆 0KB</td>
-</tr>
-<tr>
-<td><strong>Type Safety</strong></td>
-<td>🏆 ✅ Full inference</td>
-<td>✅ Manual typing</td>
-<td>✅ Good</td>
-<td>🏆 ✅ Excellent</td>
-<td>✅ Good</td>
-<td>⚠️ Limited</td>
-<td>✅ Good</td>
-<td>🏆 ✅ Native</td>
-</tr>
-<tr>
-<td><strong>Performance</strong></td>
-<td>🏆 ⚡ Excellent</td>
-<td>🔄 Good</td>
-<td>🔄 Good</td>
-<td>🏆 ⚡ Excellent</td>
-<td>🔄 Good</td>
-<td>🏆 ⚡ Excellent</td>
-<td>🔄 Good</td>
-<td>🏆 ⚡ Excellent</td>
-</tr>
-<tr>
-<td><strong>DevTools</strong></td>
-<td>🏆 ✅ Opt-in</td>
-<td>🏆 ✅ Redux DevTools</td>
-<td>🏆 ✅ Akita DevTools</td>
-<td>🏆 ✅ Redux DevTools</td>
-<td>⚠️ Limited</td>
-<td>🏆 ✅ MobX DevTools</td>
-<td>🏆 ✅ NGXS DevTools</td>
-<td>❌ None</td>
-</tr>
-<tr>
-<td><strong>Time Travel</strong></td>
-<td>🏆 ✅ Opt-in</td>
-<td>🏆 ✅ Built-in</td>
-<td>🏆 ✅ Plugin</td>
-<td>🏆 ✅ Plugin</td>
-<td>❌ No</td>
-<td>🏆 ✅ Via DevTools</td>
-<td>🏆 ✅ Plugin</td>
-<td>❌ No</td>
-</tr>
-<tr>
-<td><strong>Entity Management</strong></td>
-<td>🏆 ✅ Always included</td>
-<td>🏆 ✅ @ngrx/entity</td>
-<td>🏆 ✅ Core feature</td>
-<td>🏆 ✅ Via plugins</td>
-<td>❌ Manual</td>
-<td>❌ Manual</td>
-<td>🏆 ✅ Via plugins</td>
-<td>❌ Manual</td>
-</tr>
-<tr>
-<td><strong>Batching</strong></td>
-<td>🏆 ✅ Opt-in</td>
-<td>❌ Manual</td>
-<td>❌ Manual</td>
-<td>🏆 ✅ Available</td>
-<td>🏆 ✅ Via schedulers</td>
-<td>🏆 ✅ Transaction</td>
-<td>❌ Manual</td>
-<td>🏆 ✅ Automatic</td>
-</tr>
-<tr>
-<td><strong>Form Integration</strong></td>
-<td>🏆 ✅ Built-in</td>
-<td>⚠️ Separate</td>
-<td>⚠️ Separate</td>
-<td>❌ Manual</td>
-<td>❌ Manual</td>
-<td>⚠️ Third-party</td>
-<td>🏆 ✅ Form plugin</td>
-<td>❌ Manual</td>
-</tr>
-</tbody>
-</table>
+| Feature                |         SignalTree         |          NgRx           |          Akita          |           Elf           |        RxAngular        |          MobX          |          NGXS          |       Native Signals       |
+| :--------------------- | :------------------------: | :---------------------: | :---------------------: | :---------------------: | :---------------------: | :--------------------: | :--------------------: | :------------------------: |
+| **Philosophy**         |  Tree-based, Signal-first  |      Redux pattern      |      Entity-based       |       Functional        |      RxJS-centric       |   Observable objects   |    Decorator-based     |     Primitive signals      |
+| **Learning Curve**     | ⭐⭐⭐⭐⭐<br/>_Very Easy_ |     ⭐⭐<br/>Steep      |   ⭐⭐⭐<br/>Moderate   |    ⭐⭐⭐⭐<br/>Easy    |   ⭐⭐⭐<br/>Moderate   |   ⭐⭐⭐⭐<br/>Easy    |  ⭐⭐⭐<br/>Moderate   | ⭐⭐⭐⭐⭐<br/>_Very Easy_ |
+| **Boilerplate**        |   🏆<br/>_Very Minimal_    |        Extensive        |        Moderate         |    🏆<br/>_Minimal_     |        Moderate         |    🏆<br/>_Minimal_    |        Moderate        |            None            |
+| **Bundle Size (min)**  |         ~5KB basic         |          ~25KB          |          ~20KB          |      🏆<br/>_~2KB_      |          ~25KB          |         ~30KB          |         ~25KB          |            0KB             |
+| **Bundle Size (full)** |       ✅<br/>_~15KB_       |         ~50KB+          |          ~30KB          |     🏆<br/>_~10KB_      |          ~25KB          |         ~40KB          |         ~35KB          |            0KB             |
+| **Type Safety**        |  🏆<br/>_Full inference_   |  ✅<br/>Manual typing   |       ✅<br/>Good       |   🏆<br/>_Excellent_    |       ✅<br/>Good       |     ⚠️<br/>Limited     |      ✅<br/>Good       |       ✅<br/>Native        |
+| **Performance**        |   🏆 ⚡<br/>_Excellent_    |       🔄<br/>Good       |       🔄<br/>Good       |  🏆 ⚡<br/>_Excellent_  |       🔄<br/>Good       | 🏆 ⚡<br/>_Excellent_  |      🔄<br/>Good       |      ⚡<br/>Excellent      |
+| **DevTools**           |      🏆<br/>_Opt-in_       | ✅<br/>_Redux DevTools_ | ✅<br/>_Akita DevTools_ | ✅<br/>_Redux DevTools_ |     ⚠️<br/>Limited      | ✅<br/>_MobX DevTools_ | ✅<br/>_NGXS DevTools_ |        ❌<br/>None         |
+| **Time Travel**        |      🏆<br/>_Opt-in_       |    🏆<br/>_Built-in_    |     ✅<br/>_Plugin_     |     ✅<br/>_Plugin_     |        ❌<br/>No        | ✅<br/>_Via DevTools_  |    ✅<br/>_Plugin_     |         ❌<br/>No          |
+| **Entity Management**  |  🏆<br/>_Always included_  |  ✅<br/>_@ngrx/entity_  |  🏆<br/>_Core feature_  |  ✅<br/>_Via plugins_   |      ❌<br/>Manual      |     ❌<br/>Manual      |  ✅<br/>_Via plugins_  |       ❌<br/>Manual        |
+| **Batching**           |      🏆<br/>_Opt-in_       |      ❌<br/>Manual      |      ❌<br/>Manual      |   🏆<br/>_Available_    | 🏆<br/>_Via schedulers_ |  🏆<br/>_Transaction_  |     ❌<br/>Manual      |      ✅<br/>Automatic      |
+| **Form Integration**   |     🏆<br/>_Built-in_      |     ⚠️<br/>Separate     |     ⚠️<br/>Separate     |      ❌<br/>Manual      |      ❌<br/>Manual      |   ⚠️<br/>Third-party   |  ✅<br/>_Form plugin_  |       ❌<br/>Manual        |
 
 ### Performance Benchmarks
 
-<table>
-<thead>
-<tr>
-<th>Operation</th>
-<th>SignalTree (Basic)</th>
-<th>SignalTree (Full)</th>
-<th>NgRx</th>
-<th>Akita</th>
-<th>Elf</th>
-<th>NGXS</th>
-<th>Native Signals</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Initial render (1000 items)</strong></td>
-<td>43ms</td>
-<td>45ms</td>
-<td>78ms</td>
-<td>65ms</td>
-<td>48ms</td>
-<td>72ms</td>
-<td>🏆 42ms</td>
-</tr>
-<tr>
-<td><strong>Update single item</strong></td>
-<td>🏆 2ms</td>
-<td>🏆 2ms</td>
-<td>8ms</td>
-<td>6ms</td>
-<td>3ms</td>
-<td>7ms</td>
-<td>🏆 2ms</td>
-</tr>
-<tr>
-<td><strong>Batch update (100 items)</strong></td>
-<td>14ms</td>
-<td>🏆 12ms</td>
-<td>35ms</td>
-<td>28ms</td>
-<td>15ms</td>
-<td>32ms</td>
-<td>🏆 10ms</td>
-</tr>
-<tr>
-<td><strong>Computed value (cached)</strong></td>
-<td>2ms</td>
-<td>🏆 &lt;1ms</td>
-<td>3ms</td>
-<td>2ms</td>
-<td>1ms</td>
-<td>3ms</td>
-<td>🏆 &lt;1ms</td>
-</tr>
-<tr>
-<td><strong>Memory per 1000 entities</strong></td>
-<td>2.6MB</td>
-<td>2.8MB</td>
-<td>4.2MB</td>
-<td>3.5MB</td>
-<td>🏆 2.5MB</td>
-<td>3.8MB</td>
-<td>🏆 2.3MB</td>
-</tr>
-<tr>
-<td><strong>Bundle size impact</strong></td>
-<td>+5KB</td>
-<td>+15KB</td>
-<td>+50KB</td>
-<td>+30KB</td>
-<td>+10KB</td>
-<td>+35KB</td>
-<td>🏆 0KB</td>
-</tr>
-</tbody>
-</table>
+| Operation                       | SignalTree (Basic) | SignalTree (Full) |    NgRx    |   Akita    |      Elf       |    NGXS    | Native Signals |
+| :------------------------------ | :----------------: | :---------------: | :--------: | :--------: | :------------: | :--------: | :------------: |
+| **Initial render (1000 items)** |     <br/>43ms      |     <br/>45ms     | <br/>78ms  | <br/>65ms  |   <br/>48ms    | <br/>72ms  |   <br/>42ms    |
+| **Update single item**          |    🏆<br/>_2ms_    |   🏆<br/>_2ms_    |  <br/>8ms  |  <br/>6ms  |    <br/>3ms    |  <br/>7ms  |    <br/>2ms    |
+| **Batch update (100 items)**    |        14ms        |   🏆<br/>_12ms_   | <br/>35ms  | <br/>28ms  |   <br/>15ms    | <br/>32ms  |   <br/>10ms    |
+| **Computed value (cached)**     |      <br/>2ms      |   🏆<br/>_<1ms_   |  <br/>3ms  |  <br/>2ms  |    <br/>1ms    |  <br/>3ms  |   <br/><1ms    |
+| **Memory per 1000 entities**    |     <br/>2.6MB     |    <br/>2.8MB     | <br/>4.2MB | <br/>3.5MB | 🏆<br/>_2.5MB_ | <br/>3.8MB |   <br/>2.3MB   |
+| **Bundle size impact**          |     <br/>+5KB      |    <br/>+15KB     | <br/>+50KB | <br/>+30KB |   <br/>+10KB   | <br/>+35KB |    <br/>0KB    |
 
 ### Code Comparison: Counter Example
 
