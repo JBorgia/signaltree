@@ -149,11 +149,12 @@ import { signalStore } from '@signal-store';
   styleUrls: ['./basic-store.component.scss'],
 })
 export class BasicStoreComponent {
-  store = signalStore({
+  state = {
     name: 'John Doe',
     age: 25,
     email: 'john@example.com',
-  });
+  };
+  store = signalStore(this.state);
 
   updateLog: Array<{ timestamp: Date; action: string; data: unknown }> = [];
 
@@ -161,7 +162,6 @@ export class BasicStoreComponent {
     // Track all store changes
     this.logUpdate('Store initialized', this.store.unwrap());
   }
-
   incrementAge() {
     const newAge = this.store.state.age() + 1;
     this.store.state.age.set(newAge);

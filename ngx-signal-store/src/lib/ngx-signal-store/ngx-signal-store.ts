@@ -117,28 +117,28 @@ export interface DevToolsInterface<T> {
 /**
  * Main signal store type that preserves hierarchical structure
  */
+type SignalState<T> = T extends Record<string, unknown>
+  ? {
+      [K in keyof T]: T[K] extends (infer U)[]
+        ? WritableSignal<U[]>
+        : T[K] extends Record<string, unknown>
+        ? T[K] extends Signal<infer TK>
+          ? WritableSignal<TK>
+          : SignalState<T[K]>
+        : T[K] extends Signal<infer TK>
+        ? WritableSignal<TK>
+        : WritableSignal<T[K]>;
+    }
+  : never;
+
+/**
+ * Main signal store type with proper typing
+ */
 export type SignalStore<T> = {
   // The actual state under 'state' property
-  state: {
-    [K in keyof T]: T[K] extends (infer U)[]
-      ? WritableSignal<U[]>
-      : T[K] extends object
-      ? T[K] extends Signal<infer TK>
-        ? WritableSignal<TK>
-        : SignalStore<T[K]>['state']
-      : WritableSignal<T[K]>;
-  };
-
+  state: SignalState<T>;
   // $ as an alias to state
-  $: {
-    [K in keyof T]: T[K] extends (infer U)[]
-      ? WritableSignal<U[]>
-      : T[K] extends object
-      ? T[K] extends Signal<infer TK>
-        ? WritableSignal<TK>
-        : SignalStore<T[K]>['state']
-      : WritableSignal<T[K]>;
-  };
+  $: SignalState<T>;
 } & {
   // Core API
   unwrap(): T;
@@ -504,56 +504,71 @@ function createAsyncActionFactory<T>(store: SignalStore<T>) {
 // CORE STORE ENHANCEMENT
 // ============================================
 
+// Improved unwrap and update with better typing
 function enhanceStoreBasic<T>(store: SignalStore<T>): SignalStore<T> {
   store.unwrap = () => {
-    const unwrappedObject: Record<string, unknown> = {};
+    // Recursively unwrap with proper typing
+    const unwrapObject = <O>(obj: SignalState<O>): O => {
+      const result = {} as O;
 
-    for (const key in store) {
-      const value = store[key as keyof SignalStore<T>];
+      for (const key in obj) {
+        const value = obj[key];
 
-      if (isSignal(value)) {
-        unwrappedObject[key] = value();
-      } else if (
-        typeof value === 'object' &&
-        value !== null &&
-        'unwrap' in value &&
-        typeof value.unwrap === 'function'
-      ) {
-        const nestedUnwrapped = (value as SignalStore<unknown>).unwrap();
-        unwrappedObject[key] = nestedUnwrapped;
-      } else if (typeof value !== 'function') {
-        unwrappedObject[key] = value;
+        if (isSignal(value)) {
+          (result as any)[key] = value();
+        } else if (
+          typeof value === 'object' &&
+          value !== null &&
+          !Array.isArray(value)
+        ) {
+          // Nested signal state
+          (result as any)[key] = unwrapObject(value as SignalState<any>);
+        } else {
+          (result as any)[key] = value;
+        }
       }
-    }
 
-    return unwrappedObject as T;
+      return result;
+    };
+
+    return unwrapObject(store.state as SignalState<T>);
   };
 
   store.update = (updater: (current: T) => Partial<T>) => {
     const currentValue = store.unwrap();
     const partialObj = updater(currentValue);
 
-    for (const key in partialObj) {
-      if (!Object.prototype.hasOwnProperty.call(partialObj, key)) continue;
+    // Recursively update with better typing
+    const updateObject = <O>(
+      target: SignalState<O>,
+      updates: Partial<O>
+    ): void => {
+      for (const key in updates) {
+        if (!Object.prototype.hasOwnProperty.call(updates, key)) continue;
 
-      const partialValue = partialObj[key];
-      const storeValue = store[key as keyof SignalStore<T>];
+        const updateValue = updates[key];
+        const currentSignalOrState = target[key];
 
-      if (isSignal(storeValue)) {
-        (storeValue as WritableSignal<unknown>).set(partialValue);
-      } else if (
-        typeof storeValue === 'object' &&
-        storeValue !== null &&
-        partialValue !== null &&
-        typeof partialValue === 'object' &&
-        'update' in storeValue &&
-        typeof storeValue.update === 'function'
-      ) {
-        (storeValue as SignalStore<unknown>).update(
-          () => partialValue as Partial<unknown>
-        );
+        if (isSignal(currentSignalOrState)) {
+          // Direct signal update
+          (currentSignalOrState as WritableSignal<any>).set(updateValue);
+        } else if (
+          typeof updateValue === 'object' &&
+          updateValue !== null &&
+          !Array.isArray(updateValue) &&
+          typeof currentSignalOrState === 'object' &&
+          currentSignalOrState !== null
+        ) {
+          // Nested object - recurse
+          updateObject(
+            currentSignalOrState as SignalState<any>,
+            updateValue as Partial<any>
+          );
+        }
       }
-    }
+    };
+
+    updateObject(store.state as SignalState<T>, partialObj);
   };
 
   // Add all required methods with bypass logic (will be overridden if enhanced)
@@ -1094,22 +1109,32 @@ function create<T extends Record<string, unknown>>(
   const state: any = {};
   const equalityFn = config.useShallowComparison ? shallowEqual : equal;
 
-  for (const [key, value] of Object.entries(obj)) {
-    const isObj = (v: unknown) => typeof v === 'object' && v !== null;
+  // Recursively create signals for nested objects, but don't wrap them in stores
+  const createSignalsFromObject = (obj: Record<string, unknown>): any => {
+    const result: any = {};
 
-    if (isObj(value) && !Array.isArray(value) && !isSignal(value)) {
-      const nestedStore = create(value as Record<string, unknown>, config);
-      state[key] = nestedStore.state; // Use the state property of nested store
-    } else if (isSignal(value)) {
-      state[key] = value;
-    } else {
-      state[key] = signal(value, { equal: equalityFn });
+    for (const [key, value] of Object.entries(obj)) {
+      const isObj = (v: unknown) => typeof v === 'object' && v !== null;
+
+      if (isObj(value) && !Array.isArray(value) && !isSignal(value)) {
+        // For nested objects, create nested signal structure directly
+        result[key] = createSignalsFromObject(value as Record<string, unknown>);
+      } else if (isSignal(value)) {
+        result[key] = value;
+      } else {
+        result[key] = signal(value, { equal: equalityFn });
+      }
     }
-  }
+
+    return result;
+  };
+
+  // Create the signal structure
+  const signalState = createSignalsFromObject(obj);
 
   const resultStore = {
-    state,
-    $: state, // $ points to the same state object
+    state: signalState,
+    $: signalState, // $ points to the same state object
   } as SignalStore<T>;
 
   enhanceStoreBasic(resultStore);
@@ -1393,7 +1418,7 @@ export function createFormStore<T extends Record<string, unknown>>(
     const keys = path.split('.');
 
     if (keys.length === 1) {
-      const signal = (store.values as Record<string, unknown>)[keys[0]];
+      const signal = (store.values.state as Record<string, unknown>)[keys[0]];
       if (
         isSignal(signal) &&
         'set' in signal &&
@@ -1402,7 +1427,7 @@ export function createFormStore<T extends Record<string, unknown>>(
         (signal as WritableSignal<unknown>).set(value);
       }
     } else {
-      let current: unknown = store.values;
+      let current: unknown = store.values.state;
       for (let i = 0; i < keys.length - 1; i++) {
         current = (current as Record<string, unknown>)[keys[i]];
       }
@@ -1538,7 +1563,7 @@ export function createFormStore<T extends Record<string, unknown>>(
         }
       };
 
-      resetSignals(store.values, initialValues);
+      resetSignals(store.values.state, initialValues);
 
       store.errors.set({});
       store.asyncErrors.set({});
