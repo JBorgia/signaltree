@@ -15,7 +15,7 @@
   "targets": {
     "build": {
       "executor": "@nx/angular:package",
-      "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
+      "outputs": ["{workspaceRoot}/dist/signal-tree"],
       "options": {
         "project": "signal-tree/ng-package.json"
       },
