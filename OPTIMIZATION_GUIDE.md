@@ -80,7 +80,7 @@ const tree = signalTree(
 );
 
 // Create cached computations
-const filteredData = tree.computed(
+const filteredData = tree.memoize(
   state => state.dataset.filter(item =>
     item.category.includes(state.filters.category) &&
     item.price >= state.filters.price
