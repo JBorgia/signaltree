@@ -18,7 +18,7 @@
     "serve": "nx serve",
     "e2e": "nx e2e",
     "start": "nx serve demo",
-    "build:lib": "nx build signal-tree",
+    "build:lib": "nx build signal-tree --configuration=production",
     "build:demo": "nx build demo",
     "test:lib": "nx test signal-tree",
     "test:demo": "nx test demo",
