@@ -280,14 +280,15 @@ export interface TreeConfig {
    *   Cache hit ratio: ${metrics.cacheHits / (metrics.cacheHits + metrics.cacheMisses)}
    * `);
    *
- * // Production monitoring
- * if (metrics.averageUpdateTime > 16) { // 60fps threshold
- *   console.warn('Performance degradation detected');
- *   tree.optimize(); // Attempt optimization
- * }
- * ```
- */
-  trackPerformance?: boolean;  /**
+   * // Production monitoring
+   * if (metrics.averageUpdateTime > 16) { // 60fps threshold
+   *   console.warn('Performance degradation detected');
+   *   tree.optimize(); // Attempt optimization
+   * }
+   * ```
+   */
+  trackPerformance?: boolean
+  /**
    * Uses faster shallow equality comparison instead of deep equality.
    *
    * When enabled, improves performance for primitive values and simple objects
@@ -317,7 +318,7 @@ export interface TreeConfig {
    *   preferences: { theme: 'dark' }
    * });
    * ```
-   */
+   */;
   useShallowComparison?: boolean;
 
   /**
@@ -598,8 +599,8 @@ export interface PerformanceMetrics {
    *   console.warn(`Updates averaging ${metrics.averageUpdateTime.toFixed(2)}ms - slower than 60fps target`);
    *
    *   // Potential optimizations:
-   *   tree.cleanup(); // Clear excess cached computations
-   *   tree.removePlugin('expensive-middleware'); // Remove costly middleware
+   *   tree.optimize(); // Clear excess cached computations
+   *   tree.removeTap('expensive-middleware'); // Remove costly middleware
    * }
    *
    * // Trend analysis
