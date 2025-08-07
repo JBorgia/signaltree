@@ -37,6 +37,10 @@
     "help": "nx help",
     "publish:lib": "nx build signal-tree && cd ./dist/signal-tree && npm publish",
     "publish:lib:dry-run": "nx build signal-tree && cd ./dist/signal-tree && npm publish --dry-run",
+    "release": "./scripts/release.sh patch",
+    "release:minor": "./scripts/release.sh minor",
+    "release:major": "./scripts/release.sh major",
+    "release:patch": "./scripts/release.sh patch",
     "postinstall": "node ./decorate-angular-cli.js"
   },
   "private": true,
