@@ -133,10 +133,10 @@ export class BatchingComparisonComponent implements OnDestroy {
     // Small delay between tests
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    // Run updates on batched tree using batch
-    if (this.batchedTree.batch) {
+    // Run updates on batched tree using batchUpdate
+    if (this.batchedTree.batchUpdate) {
       for (let i = 0; i < 100; i++) {
-        this.batchedTree.batch(() => ({
+        this.batchedTree.batchUpdate(() => ({
           counter: i,
           text: `Batch ${i}`,
           flag: i % 2 === 0,
@@ -202,9 +202,9 @@ export class BatchingComparisonComponent implements OnDestroy {
 
   multiBatch() {
     // Multiple updates in a batch (will trigger effect once)
-    if (this.batchedTree.batch) {
+    if (this.batchedTree.batchUpdate) {
       for (let i = 0; i < 5; i++) {
-        this.batchedTree.batch((current) => ({
+        this.batchedTree.batchUpdate((current) => ({
           counter: current.counter + 1,
           text: `Batch ${current.counter + 1}`,
           flag: (current.counter + 1) % 2 === 0,
