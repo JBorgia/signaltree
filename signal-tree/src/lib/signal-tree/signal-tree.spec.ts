@@ -1272,7 +1272,7 @@ describe('Signal Tree', () => {
       );
 
       // Computed cross-domain values using the separate trees
-      const tasksByUser = projectTree.computed(() => {
+      const tasksByUser = projectTree.memoize(() => {
         const tasks = tasksTree.selectAll()();
         const users = usersTree.selectAll()();
 
