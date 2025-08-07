@@ -1,6 +1,6 @@
 # 🌳 SignalTree
 
-A powerful, type-safe, hierarchical signal tree for Angular applications built on top of Angular Signals. SignalTree provides a modern, lightweight alternative to traditional state management with superior performance and developer experience.
+A powerful, type-safe, hierarchical signal based JSON tree modeled tree for Angular applications built on top of Angular Signals. SignalTree provides a modern, lightweight alternative to traditional state management with superior performance and developer experience.
 
 ## ✨ Features
 
@@ -12,7 +12,7 @@ A powerful, type-safe, hierarchical signal tree for Angular applications built o
 - **📦 Entity Management**: Built-in CRUD operations for collections
 - **🌐 Async Support**: Integrated async action handling with loading states
 - **⏰ Time Travel**: Undo/redo functionality with state history
-- **🎯 Tree-Based Access**: Intuitive `store.$.path.to.value()` syntax
+- **🎯 Tree-Based Access**: Intuitive `tree.$.path.to.value()` syntax
 
 ## 🚀 Quick Start
 
@@ -27,8 +27,8 @@ npm install signal-tree
 ```typescript
 import { signalTree } from 'signal-tree';
 
-// Create a hierarchical store
-const store = signalTree({
+// Create a hierarchical tree
+const tree = signalTree({
   user: {
     name: 'John Doe',
     email: 'john@example.com',
@@ -40,20 +40,20 @@ const store = signalTree({
 });
 
 // Access nested state through signals
-console.log(store.state.user.name()); // 'John Doe'
-console.log(store.$.settings.theme()); // 'dark' ($ is shorthand for state)
+console.log(tree.state.user.name()); // 'John Doe'
+console.log(tree.$.settings.theme()); // 'dark' ($ is shorthand for state)
 
 // Update individual signals
-store.state.user.name.set('Jane Doe');
+tree.state.user.name.set('Jane Doe');
 
-// Update entire store
-store.update((current) => ({
+// Update entire tree
+tree.update((current) => ({
   ...current,
   settings: { ...current.settings, theme: 'light' },
 }));
 
 // Get plain object representation
-const plainData = store.unwrap();
+const plainData = tree.unwrap();
 ```
 
 ## 📊 SignalTree vs NgRx Comparison
@@ -73,10 +73,10 @@ const plainData = store.unwrap();
 
 ```typescript
 // SignalTree - Direct signal access, no overhead
-store.$.user.profile.name(); // O(1) access
+tree.$.user.profile.name(); // O(1) access
 
 // NgRx - Selector computation on each access
-store.select(selectUserProfileName); // O(n) selector chain
+tree.select(selectUserProfileName); // O(n) selector chain
 ```
 
 | Metric                 | SignalTree                   | NgRx                           |
@@ -96,16 +96,16 @@ store.select(selectUserProfileName); // O(n) selector chain
 
 ```typescript
 // Definition (1 line)
-const store = signalTree({ count: 0 });
+const tree = signalTree({ count: 0 });
 
 // Usage in component
 @Component({
-  template: `<button (click)="increment()">{{ store.$.count() }}</button>`,
+  template: `<button (click)="increment()">{{ tree.$.count() }}</button>`,
 })
 class CounterComponent {
-  store = store;
+  tree = tree;
   increment() {
-    this.store.$.count.update((n) => n + 1);
+    this.tree.$.count.update((n) => n + 1);
   }
 }
 ```
@@ -130,12 +130,12 @@ export const selectCount = (state: AppState) => state.count;
   template: `<button (click)="increment()">{{ count$ | async }}</button>`,
 })
 class CounterComponent {
-  count$ = this.store.select(selectCount);
+  count$ = this.tree.select(selectCount);
 
-  constructor(private store: Store) {}
+  constructor(private tree: Tree) {}
 
   increment() {
-    this.store.dispatch(increment());
+    this.tree.dispatch(increment());
   }
 }
 ```
@@ -146,30 +146,30 @@ class CounterComponent {
 
 ```typescript
 // Complete implementation in one file
-const userStore = enhancedSignalTree({
+const userTree = enhancedSignalTree({
   users: [] as User[],
   loading: false,
   error: null as string | null,
 });
 
-const loadUsers = userStore.createAsyncAction(async () => await api.getUsers(), {
+const loadUsers = userTree.createAsyncAction(async () => await api.getUsers(), {
   loadingKey: 'loading',
   errorKey: 'error',
-  onSuccess: (users, store) => store.$.users.set(users),
+  onSuccess: (users, tree) => tree.$.users.set(users),
 });
 
 // Component usage
 @Component({
   template: `
-    @if (store.$.loading()) {
+    @if (tree.$.loading()) {
     <spinner />
-    } @else { @for (user of store.$.users(); track user.id) {
+    } @else { @for (user of tree.$.users(); track user.id) {
     <user-card [user]="user" />
     } }
   `,
 })
 class UsersComponent {
-  store = userStore;
+  tree = userTree;
 
   ngOnInit() {
     loadUsers();
@@ -233,13 +233,13 @@ export const selectLoading = createSelector(selectUsersState, (state) => state.l
   `,
 })
 class UsersComponent {
-  users$ = this.store.select(selectUsers);
-  loading$ = this.store.select(selectLoading);
+  users$ = this.tree.select(selectUsers);
+  loading$ = this.tree.select(selectLoading);
 
-  constructor(private store: Store) {}
+  constructor(private tree: Tree) {}
 
   ngOnInit() {
-    this.store.dispatch(loadUsers());
+    this.tree.dispatch(loadUsers());
   }
 
   trackById(index: number, user: User) {
@@ -252,21 +252,21 @@ class UsersComponent {
 
 ### Core API
 
-#### Basic Store Operations
+#### Basic Tree Operations
 
 - `signalTree(initialState)` - Create a basic signal tree
-- `enhancedSignalTree(initialState, config)` - Create an enhanced store with performance features
-- `store.state.*` - Access nested signals (reactive)
-- `store.$.*` - Shorthand alias for state
-- `store.update(updater)` - Update entire store
-- `store.unwrap()` - Get plain object representation
+- `enhancedSignalTree(initialState, config)` - Create an enhanced tree with performance features
+- `tree.state.*` - Access nested signals (reactive)
+- `tree.$.*` - Shorthand alias for state
+- `tree.update(updater)` - Update entire tree
+- `tree.unwrap()` - Get plain object representation
 
 ### ⚡ Performance Features
 
 Boost your application's performance with advanced optimization features:
 
 ```typescript
-const store = enhancedSignalTree(data, {
+const tree = enhancedSignalTree(data, {
   enablePerformanceFeatures: true,
   batchUpdates: true,
   useMemoization: true,
@@ -276,19 +276,19 @@ const store = enhancedSignalTree(data, {
 
 #### Performance Methods
 
-- `store.batchUpdate(updater)` - Batch multiple updates for better performance
-- `store.computed(fn, cacheKey?)` - Create memoized computed values
-- `store.optimize()` - Trigger cache cleanup and memory optimization
-- `store.clearCache()` - Clear all cached computed values
-- `store.getMetrics()` - Get performance metrics and statistics
+- `tree.batchUpdate(updater)` - Batch multiple updates for better performance
+- `tree.computed(fn, cacheKey?)` - Create memoized computed values
+- `tree.optimize()` - Trigger cache cleanup and memory optimization
+- `tree.clearCache()` - Clear all cached computed values
+- `tree.getMetrics()` - Get performance metrics and statistics
 
 ### 🔌 Middleware System
 
-Extend store functionality with a powerful middleware system:
+Extend tree functionality with a powerful middleware system:
 
 ```typescript
 // Add custom middleware
-store.addMiddleware({
+tree.addMiddleware({
   id: 'logger',
   before: (action, payload, state) => {
     console.log('Before:', action, state);
@@ -302,12 +302,12 @@ store.addMiddleware({
 
 #### Middleware Methods
 
-- `store.addMiddleware(middleware)` - Add custom middleware
-- `store.removeMiddleware(id)` - Remove middleware by ID
+- `tree.addMiddleware(middleware)` - Add custom middleware
+- `tree.removeMiddleware(id)` - Remove middleware by ID
 
 #### Built-in Middleware
 
-- `loggingMiddleware(storeName)` - Console logging for all actions
+- `loggingMiddleware(treeName)` - Console logging for all actions
 - `performanceMiddleware()` - Performance timing for updates
 - `validationMiddleware(validator)` - State validation after updates
 - `createAuditMiddleware(auditLog)` - Track state changes for compliance
@@ -317,18 +317,18 @@ store.addMiddleware({
 Manage collections with built-in CRUD operations:
 
 ```typescript
-const entityStore = createEntityStore([
+const entityTree = createEntityTree([
   { id: 1, name: 'Item 1' },
   { id: 2, name: 'Item 2' },
 ]);
 
-// Or add entity helpers to existing store
-const helpers = store.withEntityHelpers('items');
+// Or add entity helpers to existing tree
+const helpers = tree.withEntityHelpers('items');
 ```
 
 #### Entity Methods
 
-- `store.withEntityHelpers(entityKey)` - Add entity helpers to a store property
+- `tree.withEntityHelpers(entityKey)` - Add entity helpers to a tree property
 - `entityHelpers.add(entity)` - Add new entity
 - `entityHelpers.update(id, updates)` - Update entity by ID
 - `entityHelpers.remove(id)` - Remove entity by ID
@@ -345,15 +345,15 @@ Handle asynchronous operations with integrated loading states:
 
 ```typescript
 // Create async action
-const loadUser = store.createAsyncAction(
+const loadUser = tree.createAsyncAction(
   async (userId: string) => {
     return await userService.getUser(userId);
   },
   {
     loadingKey: 'loading',
     errorKey: 'error',
-    onSuccess: (user, store) => {
-      store.state.user.set(user);
+    onSuccess: (user, tree) => {
+      tree.state.user.set(user);
     },
   }
 );
@@ -364,31 +364,31 @@ await loadUser('123');
 
 #### Async Methods
 
-- `store.createAsyncAction(operation, config)` - Create async action with loading states
+- `tree.createAsyncAction(operation, config)` - Create async action with loading states
 
 ### ⏰ Time Travel & History
 
 Implement undo/redo functionality:
 
 ```typescript
-const store = enhancedSignalTree(data, {
+const tree = enhancedSignalTree(data, {
   enablePerformanceFeatures: true,
   enableTimeTravel: true,
 });
 
 // Time travel operations
-store.undo();
-store.redo();
-const history = store.getHistory();
-store.resetHistory();
+tree.undo();
+tree.redo();
+const history = tree.getHistory();
+tree.resetHistory();
 ```
 
 #### Time Travel Methods
 
-- `store.undo()` - Undo last state change
-- `store.redo()` - Redo previously undone change
-- `store.getHistory()` - Get state change history
-- `store.resetHistory()` - Clear undo/redo history
+- `tree.undo()` - Undo last state change
+- `tree.redo()` - Redo previously undone change
+- `tree.getHistory()` - Get state change history
+- `tree.resetHistory()` - Clear undo/redo history
 
 ## 📖 Advanced Examples
 
@@ -433,20 +433,20 @@ interface Todo {
   completed: boolean;
 }
 
-const todoStore = createEntityStore<Todo>([]);
+const todoTree = createEntityTree<Todo>([]);
 
 // Add todo
-todoStore.add({ id: '1', text: 'Learn signals', completed: false });
+todoTree.add({ id: '1', text: 'Learn signals', completed: false });
 
 // Update todo
-todoStore.update('1', { completed: true });
+todoTree.update('1', { completed: true });
 
 // Query todos
-const activeTodos = todoStore.findBy((todo) => !todo.completed);
-const todoCount = todoStore.selectTotal();
+const activeTodos = todoTree.findBy((todo) => !todo.completed);
+const todoCount = todoTree.selectTotal();
 ```
 
-### Real-World E-Commerce Store
+### Real-World E-Commerce Tree
 
 ```typescript
 interface Product {
@@ -461,7 +461,7 @@ interface CartItem {
   quantity: number;
 }
 
-const ecommerceStore = enhancedSignalTree(
+const ecommerceTree = enhancedSignalTree(
   {
     products: {
       items: [] as Product[],
@@ -490,12 +490,12 @@ const ecommerceStore = enhancedSignalTree(
     enablePerformanceFeatures: true,
     useMemoization: true,
     enableDevTools: true,
-    storeName: 'Ecommerce',
+    treeName: 'Ecommerce',
   }
 );
 
 // Computed values with automatic memoization
-const cartTotal = ecommerceStore.computed((state) => {
+const cartTotal = ecommerceTree.computed((state) => {
   const items = state.cart.items;
   const products = state.products.items;
 
@@ -505,7 +505,7 @@ const cartTotal = ecommerceStore.computed((state) => {
   }, 0);
 }, 'cartTotal');
 
-const filteredProducts = ecommerceStore.computed((state) => {
+const filteredProducts = ecommerceTree.computed((state) => {
   let products = state.products.items;
   const filters = state.products.filters;
 
@@ -522,7 +522,7 @@ const filteredProducts = ecommerceStore.computed((state) => {
 
 // Actions
 const addToCart = (productId: string, quantity = 1) => {
-  ecommerceStore.$.cart.items.update((items) => {
+  ecommerceTree.$.cart.items.update((items) => {
     const existing = items.find((i) => i.productId === productId);
     if (existing) {
       return items.map((i) => (i.productId === productId ? { ...i, quantity: i.quantity + quantity } : i));
@@ -532,15 +532,15 @@ const addToCart = (productId: string, quantity = 1) => {
 };
 
 // Async actions with loading states
-const loadProducts = ecommerceStore.createAsyncAction(
+const loadProducts = ecommerceTree.createAsyncAction(
   async (category?: string) => {
     const params = category ? { category } : {};
     return await api.getProducts(params);
   },
   {
     loadingKey: 'products.loading',
-    onSuccess: (products, store) => {
-      store.$.products.items.set(products);
+    onSuccess: (products, tree) => {
+      tree.$.products.items.set(products);
     },
   }
 );
@@ -549,7 +549,7 @@ const loadProducts = ecommerceStore.createAsyncAction(
 ### Form Management with Validation
 
 ```typescript
-import { createFormStore, validators, asyncValidators } from 'signal-tree';
+import { createFormTree, validators, asyncValidators } from 'signal-tree';
 
 interface RegistrationForm {
   username: string;
@@ -564,7 +564,7 @@ interface RegistrationForm {
   };
 }
 
-const registrationForm = createFormStore<RegistrationForm>(
+const registrationForm = createFormTree<RegistrationForm>(
   {
     username: '',
     email: '',
@@ -627,7 +627,7 @@ class RegistrationComponent {
 ### Real-Time Collaboration with WebSockets
 
 ```typescript
-const collaborationStore = enhancedSignalTree(
+const collaborationTree = enhancedSignalTree(
   {
     document: {
       id: null as string | null,
@@ -655,7 +655,7 @@ class CollaborationService {
     this.ws.onmessage = (event) => {
       const message = JSON.parse(event.data);
 
-      collaborationStore.batchUpdate((state) => {
+      collaborationTree.batchUpdate((state) => {
         switch (message.type) {
           case 'document-update':
             return {
@@ -681,8 +681,8 @@ class CollaborationService {
 
   sendChange(change: Change) {
     // Optimistic update
-    collaborationStore.$.localChanges.update((changes) => [...changes, change]);
-    collaborationStore.$.syncStatus.set('syncing');
+    collaborationTree.$.localChanges.update((changes) => [...changes, change]);
+    collaborationTree.$.syncStatus.set('syncing');
 
     this.ws.send(JSON.stringify({ type: 'change', change }));
   }
@@ -692,13 +692,13 @@ class CollaborationService {
 ### Testing Complex Scenarios
 
 ```typescript
-import { createTestStore } from 'signal-tree';
+import { createTestTree } from 'signal-tree';
 
 describe('Shopping Cart', () => {
-  let store: ReturnType<typeof createTestStore>;
+  let tree: ReturnType<typeof createTestTree>;
 
   beforeEach(() => {
-    store = createTestStore({
+    tree = createTestTree({
       products: [
         { id: '1', name: 'Widget', price: 10, stock: 5 },
         { id: '2', name: 'Gadget', price: 20, stock: 3 },
@@ -710,17 +710,17 @@ describe('Shopping Cart', () => {
 
   it('should handle complex cart operations', () => {
     // Add items to cart
-    store.update((state) => ({
+    tree.update((state) => ({
       cart: [...state.cart, { productId: '1', quantity: 2 }],
     }));
 
     // Verify state
-    store.expectState({
+    tree.expectState({
       cart: [{ productId: '1', quantity: 2 }],
     });
 
     // Test computed total
-    const total = store.computed((state) => {
+    const total = tree.computed((state) => {
       return state.cart.reduce((sum, item) => {
         const product = state.products.find((p) => p.id === item.productId);
         return sum + (product?.price || 0) * item.quantity;
@@ -730,27 +730,27 @@ describe('Shopping Cart', () => {
     expect(total()).toBe(20);
 
     // Test time travel
-    const history = store.getHistory();
+    const history = tree.getHistory();
     expect(history).toHaveLength(2); // Initial + update
 
-    store.undo();
-    expect(store.$.cart()).toEqual([]);
+    tree.undo();
+    expect(tree.$.cart()).toEqual([]);
   });
 
   it('should handle async operations', async () => {
-    const loadProducts = store.createAsyncAction(async () => mockApi.getProducts(), {
+    const loadProducts = tree.createAsyncAction(async () => mockApi.getProducts(), {
       loadingKey: 'loading',
-      onSuccess: (products, store) => {
-        store.setState({ products });
+      onSuccess: (products, tree) => {
+        tree.setState({ products });
       },
     });
 
     const promise = loadProducts();
-    expect(store.getState().loading).toBe(true);
+    expect(tree.getState().loading).toBe(true);
 
     await promise;
-    expect(store.getState().loading).toBe(false);
-    expect(store.getState().products).toHaveLength(3);
+    expect(tree.getState().loading).toBe(false);
+    expect(tree.getState().products).toHaveLength(3);
   });
 });
 ```
@@ -760,19 +760,19 @@ describe('Shopping Cart', () => {
 ```typescript
 // Create a persistence plugin
 class PersistencePlugin<T> {
-  constructor(private store: SignalTree<T>, private key: string, private storage = localStorage) {
-    this.restore();
-    this.store.subscribe((state) => this.persist(state));
+  constructor(private tree: SignalTree<T>, private key: string, private storage = localStorage) {
+    this.retree();
+    this.tree.subscribe((state) => this.persist(state));
   }
 
-  private restore() {
+  private retree() {
     const saved = this.storage.getItem(this.key);
     if (saved) {
       try {
         const state = JSON.parse(saved);
-        this.store.update(() => state);
+        this.tree.update(() => state);
       } catch (e) {
-        console.error('Failed to restore state:', e);
+        console.error('Failed to retree state:', e);
       }
     }
   }
@@ -787,10 +787,10 @@ class PersistencePlugin<T> {
 }
 
 // Use the plugin
-const store = enhancedSignalTree({
+const tree = enhancedSignalTree({
   /* ... */
 });
-const persistence = new PersistencePlugin(store, 'app-state');
+const persistence = new PersistencePlugin(tree, 'app-state');
 ```
 
 ## 🛠️ Advanced Features
@@ -798,9 +798,9 @@ const persistence = new PersistencePlugin(store, 'app-state');
 ### Form Integration
 
 ```typescript
-import { createFormStore, validators } from 'signal-tree';
+import { createFormTree, validators } from 'signal-tree';
 
-const form = createFormStore(
+const form = createFormTree(
   { name: '', email: '', age: 0 },
   {
     validators: {
@@ -815,39 +815,39 @@ const form = createFormStore(
 ### Testing Utilities
 
 ```typescript
-import { createTestStore } from 'signal-tree';
+import { createTestTree } from 'signal-tree';
 
-const testStore = createTestStore({ count: 0 });
+const testTree = createTestTree({ count: 0 });
 
 // Test helpers
-testStore.setState({ count: 5 });
-testStore.expectState({ count: 5 });
-const history = testStore.getHistory();
+testTree.setState({ count: 5 });
+testTree.expectState({ count: 5 });
+const history = testTree.getHistory();
 ```
 
 ### DevTools Integration
 
 ```typescript
-const store = enhancedSignalTree(data, {
+const tree = enhancedSignalTree(data, {
   enablePerformanceFeatures: true,
   enableDevTools: true,
-  storeName: 'MyStore',
+  treeName: 'MyTree',
 });
 ```
 
 ## 🎯 Migration Guide from NgRx
 
-### Step 1: Replace Store Module
+### Step 1: Replace Tree Module
 
 ```typescript
 // Before (NgRx)
 @NgModule({
-  imports: [StoreModule.forRoot({ counter: counterReducer }), EffectsModule.forRoot([CounterEffects]), StoreDevtoolsModule.instrument()],
+  imports: [TreeModule.forRoot({ counter: counterReducer }), EffectsModule.forRoot([CounterEffects]), TreeDevtoolsModule.instrument()],
 })
 export class AppModule {}
 
 // After (SignalTree)
-export const appStore = enhancedSignalTree({ counter: 0 }, { enableDevTools: true });
+export const appTree = enhancedSignalTree({ counter: 0 }, { enableDevTools: true });
 ```
 
 ### Step 2: Convert Actions to Methods
@@ -860,9 +860,9 @@ export const reset = createAction('[Counter] Reset');
 
 // After (SignalTree)
 export const counterActions = {
-  increment: () => appStore.$.counter.update((n) => n + 1),
-  decrement: () => appStore.$.counter.update((n) => n - 1),
-  reset: () => appStore.$.counter.set(0),
+  increment: () => appTree.$.counter.update((n) => n + 1),
+  decrement: () => appTree.$.counter.update((n) => n - 1),
+  reset: () => appTree.$.counter.set(0),
 };
 ```
 
@@ -873,7 +873,7 @@ export const counterActions = {
 export const selectCount = createSelector(selectCounterState, (state) => state.count);
 
 // After (SignalTree)
-export const count = appStore.$.counter; // Already a signal!
+export const count = appTree.$.counter; // Already a signal!
 ```
 
 ### Step 4: Convert Effects to Async Actions
@@ -889,7 +889,7 @@ loadUsers$ = createEffect(() =>
 );
 
 // After (SignalTree)
-const loadUsers = appStore.createAsyncAction(() => api.getUsers(), { onSuccess: (users, store) => store.$.users.set(users) });
+const loadUsers = appTree.createAsyncAction(() => api.getUsers(), { onSuccess: (users, tree) => tree.$.users.set(users) });
 ```
 
 ## Run tasks
@@ -974,7 +974,7 @@ npx nx test signal-tree
 
 Visit the demo at `http://localhost:4200` to see live examples of:
 
-- Basic store operations
+- Basic tree operations
 - Performance comparisons with NgRx
 - Middleware implementations
 - Entity management

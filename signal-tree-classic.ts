@@ -1,4 +1,4 @@
-// ./libs/core/src/store/signal-store.ts
+// ./libs/core/src/tree/signal-tree.ts
 import { Signal, WritableSignal, isSignal, signal } from '@angular/core';
 import isEqual from 'lodash-es/isEqual';
 
@@ -31,13 +31,13 @@ export type SignalTree<T> = {
   update(updater: (current: T) => Partial<T>): void;
 };
 
-// Helper function to add unwrap and update methods to a store
-function enhanceStore<T>(store: SignalTree<T>): SignalTree<T> {
-  store.unwrap = () => {
+// Helper function to add unwrap and update methods to a tree
+function enhanceTree<T>(tree: SignalTree<T>): SignalTree<T> {
+  tree.unwrap = () => {
     const unwrappedObject: any = {};
 
-    for (const key in store) {
-      const value = store[key as keyof SignalTree<T>];
+    for (const key in tree) {
+      const value = tree[key as keyof SignalTree<T>];
 
       if (isSignal(value)) {
         unwrappedObject[key] = value();
@@ -54,30 +54,30 @@ function enhanceStore<T>(store: SignalTree<T>): SignalTree<T> {
     return unwrappedObject as T;
   };
 
-  store.update = (updater: (current: T) => Partial<T>) => {
-    const currentValue = store.unwrap();
+  tree.update = (updater: (current: T) => Partial<T>) => {
+    const currentValue = tree.unwrap();
     const partialObj = updater(currentValue);
 
     for (const key in partialObj) {
       if (!Object.prototype.hasOwnProperty.call(partialObj, key)) continue;
 
       const partialValue = partialObj[key];
-      const storeValue = store[key as keyof SignalTree<T>];
+      const treeValue = tree[key as keyof SignalTree<T>];
 
-      if (isSignal(storeValue)) {
-        (storeValue as WritableSignal<any>).set(partialValue);
+      if (isSignal(treeValue)) {
+        (treeValue as WritableSignal<any>).set(partialValue);
       } else if (
-        typeof storeValue === 'object' &&
-        storeValue !== null &&
+        typeof treeValue === 'object' &&
+        treeValue !== null &&
         partialValue !== null &&
         typeof partialValue === 'object'
       ) {
-        (storeValue as SignalTree<any>).update(() => partialValue as any);
+        (treeValue as SignalTree<any>).update(() => partialValue as any);
       }
     }
   };
 
-  return store;
+  return tree;
 }
 
 // Function to create a signal tree from an object or array, wrapping values in signals as necessary.
@@ -87,11 +87,11 @@ function create<T, P extends keyof T>(
     | { [K in keyof T]: SignalValue<T[K]> | SignalTree<T[K]> }
     | ArrayLike<SignalValue<T[P]> | SignalTree<T[P]>>
 ): SignalTree<T> {
-  const store: Partial<SignalTree<T>> = {};
+  const tree: Partial<SignalTree<T>> = {};
   for (const [key, value] of Object.entries(obj)) {
     const isObj = (v: any) => typeof v === 'object' && v !== null;
 
-    store[key as P] = (
+    tree[key as P] = (
       isObj(value) && !Array.isArray(value) && !isSignal(value)
         ? create(
             value as
@@ -104,8 +104,8 @@ function create<T, P extends keyof T>(
     ) as SignalTree<T>[P]; // Ensure correct type
   }
 
-  // Enhance the store with unwrap and update methods
-  return enhanceStore(store as SignalTree<T>);
+  // Enhance the tree with unwrap and update methods
+  return enhanceTree(tree as SignalTree<T>);
 }
 
 /***********************************************************************
@@ -119,15 +119,15 @@ function create<T, P extends keyof T>(
  *
  * NOTE, if you want to have the signal utilize the same equal()
  * functionality that the signalTree uses by default for deep checking
- * arrays, you should use the 'terminal' function from the store rather
+ * arrays, you should use the 'terminal' function from the tree rather
  * than the 'signal' from '@angular/core' when wrapping the end object
  * or create your own equal function to ensure proper emissions when
  * changes to your final object occur.
  *
- * 2) The store cannot be mutated in shape once created. Much like at an
- * actual store, the shelves aren't added/removed, but the inventory does
+ * 2) The tree cannot be mutated in shape once created. Much like at an
+ * actual tree, the shelves aren't added/removed, but the inventory does
  * change. Similarly, the values can be updated, but fields cannot be
- * removed or added. Types used in the store cannot have optional (?) fields.
+ * removed or added. Types used in the tree cannot have optional (?) fields.
  * However, Partial<> can still be used.
  *
  * IN SUMMARY: ALL VALUES THAT WILL EXIST MUST EXIST. See example.ts

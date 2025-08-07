@@ -55,17 +55,17 @@ export class NavigationComponent {
   examples: DemoExample[] = [
     // Basic Examples
     {
-      id: 'basic-store',
-      title: 'Basic Store',
+      id: 'basic-tree',
+      title: 'Basic Tree',
       description: 'Simple signal tree creation and updates',
-      route: '/basic-store',
+      route: '/basic-tree',
       category: 'basic',
     },
     {
-      id: 'nested-store',
-      title: 'Nested Store',
-      description: 'Hierarchical store structures',
-      route: '/nested-store',
+      id: 'nested-tree',
+      title: 'Nested Tree',
+      description: 'Hierarchical tree structures',
+      route: '/nested-tree',
       category: 'basic',
     },
     {
@@ -163,7 +163,7 @@ export class NavigationComponent {
     {
       id: 'cross-domain',
       title: 'Cross-Domain Operations',
-      description: 'Complex operations across multiple stores',
+      description: 'Complex operations across multiple trees',
       route: '/cross-domain',
       category: 'advanced',
     },
@@ -192,8 +192,8 @@ export class NavigationComponent {
     const labels: Record<DemoExample['category'], string> = {
       basic: 'Basic Features',
       performance: 'Performance',
-      entities: 'Entity Store',
-      forms: 'Form Store',
+      entities: 'Entity Tree',
+      forms: 'Form Tree',
       advanced: 'Advanced',
     };
     return labels[category];

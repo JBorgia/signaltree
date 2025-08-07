@@ -36,7 +36,7 @@ interface UserData {
 }
 
 @Component({
-  selector: 'app-nested-store',
+  selector: 'app-nested-tree',
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
@@ -75,7 +75,7 @@ interface UserData {
                 </label>
                 <input
                   id="firstName"
-                  [(ngModel)]="userStore.profile.firstName"
+                  [(ngModel)]="userTree.profile.firstName"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="Enter first name"
                 />
@@ -90,7 +90,7 @@ interface UserData {
                 </label>
                 <input
                   id="lastName"
-                  [(ngModel)]="userStore.profile.lastName"
+                  [(ngModel)]="userTree.profile.lastName"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="Enter last name"
                 />
@@ -107,7 +107,7 @@ interface UserData {
               <input
                 id="email"
                 type="email"
-                [(ngModel)]="userStore.profile.email"
+                [(ngModel)]="userTree.profile.email"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                 placeholder="Enter email address"
               />
@@ -122,7 +122,7 @@ interface UserData {
               </label>
               <input
                 id="avatar"
-                [(ngModel)]="userStore.profile.avatar"
+                [(ngModel)]="userTree.profile.avatar"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                 placeholder="https://example.com/avatar.jpg"
               />
@@ -146,7 +146,7 @@ interface UserData {
               </label>
               <select
                 id="theme"
-                [(ngModel)]="userStore.settings.theme"
+                [(ngModel)]="userTree.settings.theme"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               >
                 <option value="light">Light</option>
@@ -163,7 +163,7 @@ interface UserData {
               </label>
               <select
                 id="language"
-                [(ngModel)]="userStore.settings.language"
+                [(ngModel)]="userTree.settings.language"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               >
                 <option value="en">English</option>
@@ -183,7 +183,7 @@ interface UserData {
               </label>
               <select
                 id="timezone"
-                [(ngModel)]="userStore.settings.timezone"
+                [(ngModel)]="userTree.settings.timezone"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               >
                 <option value="UTC">UTC</option>
@@ -198,7 +198,7 @@ interface UserData {
               <input
                 type="checkbox"
                 id="notifications"
-                [(ngModel)]="userStore.settings.notifications"
+                [(ngModel)]="userTree.settings.notifications"
                 class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
               />
               <label
@@ -228,7 +228,7 @@ interface UserData {
             </label>
             <input
               id="street"
-              [(ngModel)]="userStore.address.street"
+              [(ngModel)]="userTree.address.street"
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               placeholder="123 Main Street"
             />
@@ -243,7 +243,7 @@ interface UserData {
             </label>
             <input
               id="city"
-              [(ngModel)]="userStore.address.city"
+              [(ngModel)]="userTree.address.city"
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               placeholder="San Francisco"
             />
@@ -258,7 +258,7 @@ interface UserData {
             </label>
             <input
               id="state"
-              [(ngModel)]="userStore.address.state"
+              [(ngModel)]="userTree.address.state"
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               placeholder="CA"
             />
@@ -273,7 +273,7 @@ interface UserData {
             </label>
             <input
               id="zipCode"
-              [(ngModel)]="userStore.address.zipCode"
+              [(ngModel)]="userTree.address.zipCode"
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               placeholder="94102"
             />
@@ -292,7 +292,7 @@ interface UserData {
             <input
               type="checkbox"
               id="newsletter"
-              [(ngModel)]="userStore.preferences.newsletter"
+              [(ngModel)]="userTree.preferences.newsletter"
               class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
             />
             <label for="newsletter" class="ml-2 block text-sm text-gray-700">
@@ -304,7 +304,7 @@ interface UserData {
             <input
               type="checkbox"
               id="marketing"
-              [(ngModel)]="userStore.preferences.marketing"
+              [(ngModel)]="userTree.preferences.marketing"
               class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
             />
             <label for="marketing" class="ml-2 block text-sm text-gray-700">
@@ -316,7 +316,7 @@ interface UserData {
             <input
               type="checkbox"
               id="updates"
-              [(ngModel)]="userStore.preferences.updates"
+              [(ngModel)]="userTree.preferences.updates"
               class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
             />
             <label for="updates" class="ml-2 block text-sm text-gray-700">
@@ -376,19 +376,19 @@ interface UserData {
                 <div>
                   <strong>First Name:</strong>
                   <code class="bg-green-100 px-2 py-1 rounded">{{
-                    userStore.profile.firstName()
+                    userTree.profile.firstName()
                   }}</code>
                 </div>
                 <div>
                   <strong>Last Name:</strong>
                   <code class="bg-green-100 px-2 py-1 rounded">{{
-                    userStore.profile.lastName()
+                    userTree.profile.lastName()
                   }}</code>
                 </div>
                 <div>
                   <strong>Email:</strong>
                   <code class="bg-green-100 px-2 py-1 rounded">{{
-                    userStore.profile.email()
+                    userTree.profile.email()
                   }}</code>
                 </div>
                 <div>
@@ -406,25 +406,25 @@ interface UserData {
                 <div>
                   <strong>Theme:</strong>
                   <code class="bg-green-100 px-2 py-1 rounded">{{
-                    userStore.settings.theme()
+                    userTree.settings.theme()
                   }}</code>
                 </div>
                 <div>
                   <strong>Notifications:</strong>
                   <code class="bg-green-100 px-2 py-1 rounded">{{
-                    userStore.settings.notifications()
+                    userTree.settings.notifications()
                   }}</code>
                 </div>
                 <div>
                   <strong>Language:</strong>
                   <code class="bg-green-100 px-2 py-1 rounded">{{
-                    userStore.settings.language()
+                    userTree.settings.language()
                   }}</code>
                 </div>
                 <div>
                   <strong>Timezone:</strong>
                   <code class="bg-green-100 px-2 py-1 rounded">{{
-                    userStore.settings.timezone()
+                    userTree.settings.timezone()
                   }}</code>
                 </div>
               </div>
@@ -436,7 +436,7 @@ interface UserData {
                 <div>
                   <strong>Street:</strong>
                   <code class="bg-green-100 px-2 py-1 rounded">{{
-                    userStore.address.street()
+                    userTree.address.street()
                   }}</code>
                 </div>
                 <div>
@@ -456,23 +456,23 @@ interface UserData {
           </div>
         </div>
 
-        <!-- Complete Store State -->
+        <!-- Complete Tree State -->
         <div class="bg-white rounded-lg shadow-md p-6">
           <h2 class="text-xl font-semibold text-gray-800 mb-4">
-            📊 Complete Store State
+            📊 Complete Tree State
           </h2>
 
           <div class="space-y-4">
             <div class="bg-gray-50 rounded-lg p-4">
-              <h3 class="font-medium text-gray-800 mb-2">Unwrapped Store</h3>
+              <h3 class="font-medium text-gray-800 mb-2">Unwrapped Tree</h3>
               <pre
                 class="text-xs bg-gray-800 text-green-400 p-3 rounded overflow-x-auto max-h-64 overflow-y-auto"
-                >{{ userStore.unwrap() | json }}</pre
+                >{{ userTree.unwrap() | json }}</pre
               >
             </div>
 
             <div class="bg-gray-50 rounded-lg p-4">
-              <h3 class="font-medium text-gray-800 mb-2">Store Statistics</h3>
+              <h3 class="font-medium text-gray-800 mb-2">Tree Statistics</h3>
               <div class="space-y-2 text-sm">
                 <div>
                   <strong>Total Properties:</strong> {{ getTotalProperties() }}
@@ -493,9 +493,9 @@ interface UserData {
             <div class="bg-gray-50 rounded-lg p-4">
               <h3 class="font-medium text-gray-800 mb-2">Update Methods</h3>
               <div class="space-y-1 text-sm text-gray-600">
-                <div><code>userStore.profile.firstName.set('John')</code></div>
-                <div><code>userStore.settings.update(...)</code></div>
-                <div><code>userStore.update(...)</code></div>
+                <div><code>userTree.profile.firstName.set('John')</code></div>
+                <div><code>userTree.settings.update(...)</code></div>
+                <div><code>userTree.update(...)</code></div>
               </div>
             </div>
           </div>
@@ -522,8 +522,8 @@ interface UserData {
     `,
   ],
 })
-export class NestedStoreComponent {
-  userStore = signalTree<UserData>({
+export class NestedTreeComponent {
+  userTree = signalTree<UserData>({
     profile: {
       firstName: 'John',
       lastName: 'Doe',
@@ -551,7 +551,7 @@ export class NestedStoreComponent {
 
   updateProfile() {
     // Example of updating nested properties
-    this.userStore.profile.update((profile) => ({
+    this.userTree.profile.update((profile) => ({
       ...profile,
       firstName: profile.firstName.toUpperCase(),
       lastName: profile.lastName.toUpperCase(),
@@ -559,7 +559,7 @@ export class NestedStoreComponent {
   }
 
   resetToDefaults() {
-    this.userStore.update(() => ({
+    this.userTree.update(() => ({
       profile: {
         firstName: 'John',
         lastName: 'Doe',
@@ -587,7 +587,7 @@ export class NestedStoreComponent {
   }
 
   loadSampleData() {
-    this.userStore.update(() => ({
+    this.userTree.update(() => ({
       profile: {
         firstName: 'Alice',
         lastName: 'Johnson',
@@ -615,35 +615,35 @@ export class NestedStoreComponent {
   }
 
   toggleTheme() {
-    const currentTheme = this.userStore.settings.theme();
-    this.userStore.settings.theme.set(
+    const currentTheme = this.userTree.settings.theme();
+    this.userTree.settings.theme.set(
       currentTheme === 'light' ? 'dark' : 'light'
     );
   }
 
   getFullName(): string {
-    const firstName = this.userStore.profile.firstName();
-    const lastName = this.userStore.profile.lastName();
+    const firstName = this.userTree.profile.firstName();
+    const lastName = this.userTree.profile.lastName();
     return `${firstName} ${lastName}`.trim();
   }
 
   getCityState(): string {
-    const city = this.userStore.address.city();
-    const state = this.userStore.address.state();
+    const city = this.userTree.address.city();
+    const state = this.userTree.address.state();
     return `${city}, ${state}`.replace(', ,', '').replace(',  ', ', ').trim();
   }
 
   getFullAddress(): string {
-    const street = this.userStore.address.street();
+    const street = this.userTree.address.street();
     const cityState = this.getCityState();
-    const zipCode = this.userStore.address.zipCode();
+    const zipCode = this.userTree.address.zipCode();
 
     const parts = [street, cityState, zipCode].filter((part) => part.trim());
     return parts.join(', ');
   }
 
   getTotalProperties(): number {
-    const data = this.userStore.unwrap();
+    const data = this.userTree.unwrap();
 
     function countProperties(obj: unknown): number {
       if (obj && typeof obj === 'object') {
@@ -664,7 +664,7 @@ export class NestedStoreComponent {
   }
 
   getBooleanCount(): number {
-    const data = this.userStore.unwrap();
+    const data = this.userTree.unwrap();
 
     function countBooleans(obj: unknown): number {
       if (obj && typeof obj === 'object') {
@@ -685,7 +685,7 @@ export class NestedStoreComponent {
   }
 
   getStringCount(): number {
-    const data = this.userStore.unwrap();
+    const data = this.userTree.unwrap();
 
     function countStrings(obj: unknown): number {
       if (obj && typeof obj === 'object') {
@@ -706,7 +706,7 @@ export class NestedStoreComponent {
   }
 
   codeExample = `// Create a nested signal tree
-const userStore = signalTree<UserData>({
+const userTree = signalTree<UserData>({
   profile: {
     firstName: 'John',
     lastName: 'Doe',
@@ -728,23 +728,23 @@ const userStore = signalTree<UserData>({
 });
 
 // Access nested signals directly
-console.log(userStore.profile.firstName()); // 'John'
-console.log(userStore.settings.theme());    // 'light'
-console.log(userStore.address.city());      // 'San Francisco'
+console.log(userTree.profile.firstName()); // 'John'
+console.log(userTree.settings.theme());    // 'light'
+console.log(userTree.address.city());      // 'San Francisco'
 
 // Update individual nested properties
-userStore.profile.firstName.set('Jane');
-userStore.settings.theme.set('dark');
+userTree.profile.firstName.set('Jane');
+userTree.settings.theme.set('dark');
 
 // Update entire nested objects
-userStore.address.update(addr => ({
+userTree.address.update(addr => ({
   ...addr,
   city: 'Los Angeles',
   state: 'CA'
 }));
 
 // Update multiple nested properties
-userStore.update(state => ({
+userTree.update(state => ({
   ...state,
   profile: {
     ...state.profile,

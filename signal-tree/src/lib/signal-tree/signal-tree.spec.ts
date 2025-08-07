@@ -6,9 +6,9 @@ import {
 import { signal } from '@angular/core';
 import {
   signalTree,
-  createEntityStore,
-  createFormStore,
-  createTestStore,
+  createEntityTree,
+  createFormTree,
+  createTestTree,
   equal,
   shallowEqual,
   loggingMiddleware,
@@ -53,24 +53,24 @@ describe('Signal Tree', () => {
   describe('Core Functionality', () => {
     describe('signalTree', () => {
       it('should create a basic signal tree from a flat object', () => {
-        const store = signalTree({
+        const tree = signalTree({
           name: 'John',
           age: 30,
           active: true,
         });
 
-        expect(store.$.name()).toBe('John');
-        expect(store.$.age()).toBe(30);
-        expect(store.$.active()).toBe(true);
+        expect(tree.$.name()).toBe('John');
+        expect(tree.$.age()).toBe(30);
+        expect(tree.$.active()).toBe(true);
 
         // Also test state accessor
-        expect(store.state.name()).toBe('John');
-        expect(store.state.age()).toBe(30);
-        expect(store.state.active()).toBe(true);
+        expect(tree.state.name()).toBe('John');
+        expect(tree.state.age()).toBe(30);
+        expect(tree.state.active()).toBe(true);
       });
 
       it('should create nested signal trees for hierarchical objects', () => {
-        const store = signalTree({
+        const tree = signalTree({
           user: {
             profile: {
               name: 'John',
@@ -83,38 +83,38 @@ describe('Signal Tree', () => {
           },
         });
 
-        expect(store.$.user.profile.name()).toBe('John');
-        expect(store.$.user.profile.email()).toBe('john@example.com');
-        expect(store.$.user.settings.theme()).toBe('dark');
-        expect(store.$.user.settings.notifications()).toBe(true);
+        expect(tree.$.user.profile.name()).toBe('John');
+        expect(tree.$.user.profile.email()).toBe('john@example.com');
+        expect(tree.$.user.settings.theme()).toBe('dark');
+        expect(tree.$.user.settings.notifications()).toBe(true);
       });
 
       it('should handle arrays as signals', () => {
-        const store = signalTree({
+        const tree = signalTree({
           items: [1, 2, 3],
           tags: ['angular', 'signals'],
         });
 
-        expect(store.$.items()).toEqual([1, 2, 3]);
-        expect(store.$.tags()).toEqual(['angular', 'signals']);
+        expect(tree.$.items()).toEqual([1, 2, 3]);
+        expect(tree.$.tags()).toEqual(['angular', 'signals']);
 
-        store.$.items.update((items) => [...items, 4]);
-        expect(store.$.items()).toEqual([1, 2, 3, 4]);
+        tree.$.items.update((items) => [...items, 4]);
+        expect(tree.$.items()).toEqual([1, 2, 3, 4]);
       });
 
       it('should preserve existing signals without double-wrapping', () => {
         const existingSignal = signal('existing');
-        const store = signalTree({
+        const tree = signalTree({
           normal: 'value',
           existing: existingSignal,
         });
 
-        expect(store.$.existing).toBe(existingSignal);
-        expect(store.$.existing()).toBe('existing');
+        expect(tree.$.existing).toBe(existingSignal);
+        expect(tree.$.existing()).toBe('existing');
       });
 
       it('should not have naming conflicts with API methods', () => {
-        const store = signalTree({
+        const tree = signalTree({
           update: 'last updated timestamp',
           batchUpdate: 'batch update setting',
           computed: 'computed value',
@@ -124,35 +124,35 @@ describe('Signal Tree', () => {
         });
 
         // User data accessible through .$ or .state
-        expect(store.$.update()).toBe('last updated timestamp');
-        expect(store.$.batchUpdate()).toBe('batch update setting');
-        expect(store.$.computed()).toBe('computed value');
-        expect(store.$.effect()).toBe('effect type');
-        expect(store.$.subscribe()).toBe('subscribe setting');
-        expect(store.$.optimize()).toBe('optimize flag');
+        expect(tree.$.update()).toBe('last updated timestamp');
+        expect(tree.$.batchUpdate()).toBe('batch update setting');
+        expect(tree.$.computed()).toBe('computed value');
+        expect(tree.$.effect()).toBe('effect type');
+        expect(tree.$.subscribe()).toBe('subscribe setting');
+        expect(tree.$.optimize()).toBe('optimize flag');
 
         // API methods are functions
-        expect(typeof store.update).toBe('function');
-        expect(typeof store.batchUpdate).toBe('function');
+        expect(typeof tree.update).toBe('function');
+        expect(typeof tree.batchUpdate).toBe('function');
       });
     });
 
     describe('unwrap', () => {
-      it('should unwrap flat store to plain object', () => {
-        const store = signalTree({
+      it('should unwrap flat tree to plain object', () => {
+        const tree = signalTree({
           name: 'John',
           age: 30,
         });
 
-        const plain = store.unwrap();
+        const plain = tree.unwrap();
         expect(plain).toEqual({
           name: 'John',
           age: 30,
         });
       });
 
-      it('should recursively unwrap nested stores', () => {
-        const store = signalTree({
+      it('should recursively unwrap nested trees', () => {
+        const tree = signalTree({
           user: {
             profile: {
               name: 'John',
@@ -164,7 +164,7 @@ describe('Signal Tree', () => {
           items: [1, 2, 3],
         });
 
-        const plain = store.unwrap();
+        const plain = tree.unwrap();
         expect(plain).toEqual({
           user: {
             profile: {
@@ -180,23 +180,23 @@ describe('Signal Tree', () => {
     });
 
     describe('update', () => {
-      it('should update flat store values', () => {
-        const store = signalTree({
+      it('should update flat tree values', () => {
+        const tree = signalTree({
           name: 'John',
           age: 30,
         });
 
-        store.update((current) => ({
+        tree.update((current) => ({
           name: 'Jane',
           age: current.age + 1,
         }));
 
-        expect(store.$.name()).toBe('Jane');
-        expect(store.$.age()).toBe(31);
+        expect(tree.$.name()).toBe('Jane');
+        expect(tree.$.age()).toBe(31);
       });
 
-      it('should update nested store values', () => {
-        const store = signalTree({
+      it('should update nested tree values', () => {
+        const tree = signalTree({
           user: {
             name: 'John',
             settings: {
@@ -205,7 +205,7 @@ describe('Signal Tree', () => {
           },
         });
 
-        store.update((current) => ({
+        tree.update((current) => ({
           user: {
             ...current.user,
             settings: {
@@ -214,31 +214,31 @@ describe('Signal Tree', () => {
           },
         }));
 
-        expect(store.$.user.settings.theme()).toBe('dark');
+        expect(tree.$.user.settings.theme()).toBe('dark');
       });
 
       it('should handle partial updates', () => {
-        const store = signalTree({
+        const tree = signalTree({
           name: 'John',
           age: 30,
           active: true,
         });
 
-        store.update(() => ({
+        tree.update(() => ({
           age: 31,
         }));
 
-        expect(store.$.name()).toBe('John');
-        expect(store.$.age()).toBe(31);
-        expect(store.$.active()).toBe(true);
+        expect(tree.$.name()).toBe('John');
+        expect(tree.$.age()).toBe(31);
+        expect(tree.$.active()).toBe(true);
       });
     });
   });
 
-  describe('Enhanced Store Features', () => {
+  describe('Enhanced Tree Features', () => {
     describe('batchUpdate', () => {
       it('should batch multiple updates into single operation', async () => {
-        const store = signalTree(
+        const tree = signalTree(
           {
             counter: 0,
             message: 'initial',
@@ -252,8 +252,8 @@ describe('Signal Tree', () => {
         let updateCount = 0;
 
         // Use a simple subscription instead of effect for testing
-        const unsubscribe = store.subscribe
-          ? store.subscribe(() => {
+        const unsubscribe = tree.subscribe
+          ? tree.subscribe(() => {
               updateCount++;
             })
           : () => {
@@ -264,7 +264,7 @@ describe('Signal Tree', () => {
         const initialCount = updateCount;
 
         // Batch multiple updates
-        store.batchUpdate((state) => ({
+        tree.batchUpdate((state) => ({
           counter: state.counter + 1,
           message: 'updated',
         }));
@@ -274,8 +274,8 @@ describe('Signal Tree', () => {
 
         // Should only trigger one additional update after initial
         expect(updateCount).toBe(initialCount + 1);
-        expect(store.$.counter()).toBe(1);
-        expect(store.$.message()).toBe('updated');
+        expect(tree.$.counter()).toBe(1);
+        expect(tree.$.message()).toBe('updated');
 
         if (typeof unsubscribe === 'function') {
           unsubscribe();
@@ -285,7 +285,7 @@ describe('Signal Tree', () => {
 
     describe('computed (memoization)', () => {
       it('should memoize expensive computations', () => {
-        const store = signalTree(
+        const tree = signalTree(
           {
             items: [1, 2, 3, 4, 5],
             multiplier: 2,
@@ -297,7 +297,7 @@ describe('Signal Tree', () => {
         );
 
         let computationCount = 0;
-        const expensiveSum = store.computed((state) => {
+        const expensiveSum = tree.computed((state) => {
           computationCount++;
           return state.items.reduce(
             (sum, item) => sum + item * state.multiplier,
@@ -313,8 +313,8 @@ describe('Signal Tree', () => {
         expect(expensiveSum()).toBe(30);
         expect(computationCount).toBe(1);
 
-        // Update store - cache invalidated
-        store.$.items.update((items) => [...items, 6]);
+        // Update tree - cache invalidated
+        tree.$.items.update((items) => [...items, 6]);
 
         // Next call - computation runs again
         expect(expensiveSum()).toBe(42);
@@ -322,7 +322,7 @@ describe('Signal Tree', () => {
       });
 
       it('should track cache hits and misses', () => {
-        const store = signalTree(
+        const tree = signalTree(
           { value: 10 },
           {
             enablePerformanceFeatures: true,
@@ -331,8 +331,8 @@ describe('Signal Tree', () => {
           }
         );
 
-        const computed1 = store.computed((state) => state.value * 2, 'double');
-        const computed2 = store.computed((state) => state.value * 3, 'triple');
+        const computed1 = tree.computed((state) => state.value * 2, 'double');
+        const computed2 = tree.computed((state) => state.value * 3, 'triple');
 
         computed1(); // Cache miss
         computed1(); // Cache hit
@@ -340,7 +340,7 @@ describe('Signal Tree', () => {
         computed2(); // Cache hit
         computed1(); // Cache hit
 
-        const metrics = store.getMetrics();
+        const metrics = tree.getMetrics();
         // Only check metrics if memoization is actually enabled
         expect(metrics.cacheHits).toBeGreaterThanOrEqual(0);
         expect(metrics.cacheMisses).toBeGreaterThanOrEqual(0);
@@ -352,22 +352,22 @@ describe('Signal Tree', () => {
         const consoleSpy = jest.spyOn(console, 'group').mockImplementation();
         const logSpy = jest.spyOn(console, 'log').mockImplementation();
 
-        const store = signalTree(
+        const tree = signalTree(
           { value: 0 },
           { enablePerformanceFeatures: true }
         );
 
-        store.addMiddleware(loggingMiddleware('TestStore'));
-        store.update((state) => ({ value: state.value + 1 }));
+        tree.addMiddleware(loggingMiddleware('TestTree'));
+        tree.update((state) => ({ value: state.value + 1 }));
 
-        expect(consoleSpy).toHaveBeenCalledWith('🏪 TestStore: UPDATE');
+        expect(consoleSpy).toHaveBeenCalledWith('🏪 TestTree: UPDATE');
         expect(logSpy).toHaveBeenCalled();
       });
 
       it('should support validation middleware', () => {
         const errorSpy = jest.spyOn(console, 'error').mockImplementation();
 
-        const store = signalTree(
+        const tree = signalTree(
           { age: 20 },
           { enablePerformanceFeatures: true }
         );
@@ -375,8 +375,8 @@ describe('Signal Tree', () => {
         const validator = (state: { age: number }) =>
           state.age < 0 ? 'Age cannot be negative' : null;
 
-        store.addMiddleware(validationMiddleware(validator));
-        store.update(() => ({ age: -5 }));
+        tree.addMiddleware(validationMiddleware(validator));
+        tree.update(() => ({ age: -5 }));
 
         expect(errorSpy).toHaveBeenCalledWith(
           'Validation failed after UPDATE:',
@@ -385,7 +385,7 @@ describe('Signal Tree', () => {
       });
 
       it('should allow middleware to cancel updates', () => {
-        const store = signalTree(
+        const tree = signalTree(
           { value: 10 },
           { enablePerformanceFeatures: true }
         );
@@ -403,17 +403,17 @@ describe('Signal Tree', () => {
           },
         };
 
-        store.addMiddleware(blockingMiddleware);
+        tree.addMiddleware(blockingMiddleware);
 
-        store.update(() => ({ value: 20 }));
-        expect(store.$.value()).toBe(20);
+        tree.update(() => ({ value: 20 }));
+        expect(tree.$.value()).toBe(20);
 
-        store.update(() => ({ value: 0 }));
-        expect(store.$.value()).toBe(20); // Update blocked
+        tree.update(() => ({ value: 0 }));
+        expect(tree.$.value()).toBe(20); // Update blocked
       });
 
       it('should support removing middleware', () => {
-        const store = signalTree(
+        const tree = signalTree(
           { value: 0 },
           { enablePerformanceFeatures: true }
         );
@@ -423,19 +423,19 @@ describe('Signal Tree', () => {
           before: () => false, // Block all updates
         };
 
-        store.addMiddleware(middleware);
-        store.update(() => ({ value: 10 }));
-        expect(store.$.value()).toBe(0); // Blocked
+        tree.addMiddleware(middleware);
+        tree.update(() => ({ value: 10 }));
+        expect(tree.$.value()).toBe(0); // Blocked
 
-        store.removeMiddleware('test-middleware');
-        store.update(() => ({ value: 10 }));
-        expect(store.$.value()).toBe(10); // Not blocked
+        tree.removeMiddleware('test-middleware');
+        tree.update(() => ({ value: 10 }));
+        expect(tree.$.value()).toBe(10); // Not blocked
       });
     });
 
     describe('time travel', () => {
       it('should support undo/redo operations', () => {
-        const store = signalTree(
+        const tree = signalTree(
           { counter: 0 },
           {
             enablePerformanceFeatures: true,
@@ -443,28 +443,28 @@ describe('Signal Tree', () => {
           }
         );
 
-        // Use store.update() instead of signal.set() to trigger middleware
-        store.update(() => ({ counter: 1 }));
-        store.update(() => ({ counter: 2 }));
-        store.update(() => ({ counter: 3 }));
+        // Use tree.update() instead of signal.set() to trigger middleware
+        tree.update(() => ({ counter: 1 }));
+        tree.update(() => ({ counter: 2 }));
+        tree.update(() => ({ counter: 3 }));
 
-        expect(store.$.counter()).toBe(3);
+        expect(tree.$.counter()).toBe(3);
 
-        store.undo();
-        expect(store.$.counter()).toBe(2);
+        tree.undo();
+        expect(tree.$.counter()).toBe(2);
 
-        store.undo();
-        expect(store.$.counter()).toBe(1);
+        tree.undo();
+        expect(tree.$.counter()).toBe(1);
 
-        store.redo();
-        expect(store.$.counter()).toBe(2);
+        tree.redo();
+        expect(tree.$.counter()).toBe(2);
 
-        store.redo();
-        expect(store.$.counter()).toBe(3);
+        tree.redo();
+        expect(tree.$.counter()).toBe(3);
       });
 
       it('should maintain history of state changes', () => {
-        const store = signalTree(
+        const tree = signalTree(
           { value: 'initial' },
           {
             enablePerformanceFeatures: true,
@@ -472,11 +472,11 @@ describe('Signal Tree', () => {
           }
         );
 
-        // Use store.update() to trigger time travel middleware
-        store.update(() => ({ value: 'first' }));
-        store.update(() => ({ value: 'second' }));
+        // Use tree.update() to trigger time travel middleware
+        tree.update(() => ({ value: 'first' }));
+        tree.update(() => ({ value: 'second' }));
 
-        const history = store.getHistory();
+        const history = tree.getHistory();
         expect(history.length).toBeGreaterThanOrEqual(0);
         if (history.length > 0) {
           expect(history.some((entry) => entry.action === 'UPDATE')).toBe(true);
@@ -484,7 +484,7 @@ describe('Signal Tree', () => {
       });
 
       it('should reset history', () => {
-        const store = signalTree(
+        const tree = signalTree(
           { value: 0 },
           {
             enablePerformanceFeatures: true,
@@ -492,25 +492,25 @@ describe('Signal Tree', () => {
           }
         );
 
-        store.$.value.set(1);
-        store.$.value.set(2);
+        tree.$.value.set(1);
+        tree.$.value.set(2);
 
-        const initialLength = store.getHistory().length;
+        const initialLength = tree.getHistory().length;
         if (initialLength > 0) {
           expect(initialLength).toBeGreaterThan(0);
-          store.resetHistory();
-          expect(store.getHistory().length).toBe(0);
+          tree.resetHistory();
+          expect(tree.getHistory().length).toBe(0);
         } else {
           // For bypass implementation, just verify the methods exist
-          expect(typeof store.getHistory).toBe('function');
-          expect(typeof store.resetHistory).toBe('function');
+          expect(typeof tree.getHistory).toBe('function');
+          expect(typeof tree.resetHistory).toBe('function');
         }
       });
     });
 
     describe('performance optimization', () => {
       it('should clear cache when optimize is called', () => {
-        const store = signalTree(
+        const tree = signalTree(
           { items: [1, 2, 3] },
           {
             enablePerformanceFeatures: true,
@@ -519,22 +519,22 @@ describe('Signal Tree', () => {
           }
         );
 
-        const computed1 = store.computed((s) => s.items.length, 'length');
-        const computed2 = store.computed((s) => s.items[0], 'first');
-        const computed3 = store.computed((s) => s.items[1], 'second');
+        const computed1 = tree.computed((s) => s.items.length, 'length');
+        const computed2 = tree.computed((s) => s.items[0], 'first');
+        const computed3 = tree.computed((s) => s.items[1], 'second');
 
         computed1();
         computed2();
         computed3();
 
-        store.optimize();
+        tree.optimize();
 
         // Cache should be managed according to maxCacheSize
-        store.clearCache();
+        tree.clearCache();
 
         // After clearing, new computations should be cache misses
         let computationRuns = 0;
-        const newComputed = store.computed((s) => {
+        const newComputed = tree.computed((s) => {
           computationRuns++;
           return s.items.reduce((a, b) => a + b, 0);
         }, 'sum');
@@ -544,7 +544,7 @@ describe('Signal Tree', () => {
       });
 
       it('should track performance metrics', () => {
-        const store = signalTree(
+        const tree = signalTree(
           { value: 0 },
           {
             enablePerformanceFeatures: true,
@@ -552,27 +552,27 @@ describe('Signal Tree', () => {
           }
         );
 
-        store.update((s) => ({ value: s.value + 1 }));
-        store.update((s) => ({ value: s.value + 1 }));
+        tree.update((s) => ({ value: s.value + 1 }));
+        tree.update((s) => ({ value: s.value + 1 }));
 
-        const metrics = store.getMetrics();
+        const metrics = tree.getMetrics();
         expect(metrics.updates).toBeGreaterThan(0);
         expect(metrics.averageUpdateTime).toBeDefined();
       });
     });
   });
 
-  describe('Entity Store', () => {
+  describe('Entity Tree', () => {
     interface TestEntity {
       id: string;
       name: string;
       active: boolean;
     }
 
-    let entityStore: ReturnType<typeof createEntityStore<TestEntity>>;
+    let entityTree: ReturnType<typeof createEntityTree<TestEntity>>;
 
     beforeEach(() => {
-      entityStore = createEntityStore<TestEntity>([
+      entityTree = createEntityTree<TestEntity>([
         { id: '1', name: 'Entity 1', active: true },
         { id: '2', name: 'Entity 2', active: false },
       ]);
@@ -580,9 +580,9 @@ describe('Signal Tree', () => {
 
     describe('CRUD operations', () => {
       it('should add entities', () => {
-        entityStore.add({ id: '3', name: 'Entity 3', active: true });
-        expect(entityStore.selectAll()()).toHaveLength(3);
-        expect(entityStore.findById('3')()).toEqual({
+        entityTree.add({ id: '3', name: 'Entity 3', active: true });
+        expect(entityTree.selectAll()()).toHaveLength(3);
+        expect(entityTree.findById('3')()).toEqual({
           id: '3',
           name: 'Entity 3',
           active: true,
@@ -590,46 +590,46 @@ describe('Signal Tree', () => {
       });
 
       it('should update entities', () => {
-        entityStore.update('1', { name: 'Updated Entity 1' });
-        const entity = entityStore.findById('1')();
+        entityTree.update('1', { name: 'Updated Entity 1' });
+        const entity = entityTree.findById('1')();
         expect(entity?.name).toBe('Updated Entity 1');
       });
 
       it('should remove entities', () => {
-        entityStore.remove('1');
-        expect(entityStore.selectAll()()).toHaveLength(1);
-        expect(entityStore.findById('1')()).toBeUndefined();
+        entityTree.remove('1');
+        expect(entityTree.selectAll()()).toHaveLength(1);
+        expect(entityTree.findById('1')()).toBeUndefined();
       });
 
       it('should upsert entities', () => {
         // Update existing
-        entityStore.upsert({ id: '1', name: 'Upserted 1', active: false });
-        expect(entityStore.findById('1')()).toEqual({
+        entityTree.upsert({ id: '1', name: 'Upserted 1', active: false });
+        expect(entityTree.findById('1')()).toEqual({
           id: '1',
           name: 'Upserted 1',
           active: false,
         });
 
         // Add new
-        entityStore.upsert({ id: '3', name: 'New Entity', active: true });
-        expect(entityStore.selectAll()()).toHaveLength(3);
+        entityTree.upsert({ id: '3', name: 'New Entity', active: true });
+        expect(entityTree.selectAll()()).toHaveLength(3);
       });
     });
 
     describe('selectors', () => {
       it('should select all entities', () => {
-        const all = entityStore.selectAll()();
+        const all = entityTree.selectAll()();
         expect(all).toHaveLength(2);
         expect(all[0].id).toBe('1');
       });
 
       it('should select by ID', () => {
-        const entity = entityStore.findById('2')();
+        const entity = entityTree.findById('2')();
         expect(entity?.name).toBe('Entity 2');
       });
 
       it('should select by predicate', () => {
-        const activeEntities = entityStore.findBy((e) => e.active)();
+        const activeEntities = entityTree.findBy((e) => e.active)();
         expect(activeEntities).toHaveLength(1);
         if (activeEntities[0]) {
           expect(activeEntities[0].id).toBe('1');
@@ -637,26 +637,26 @@ describe('Signal Tree', () => {
       });
 
       it('should select IDs', () => {
-        const ids = entityStore.selectIds()();
+        const ids = entityTree.selectIds()();
         expect(ids).toEqual(['1', '2']);
       });
 
       it('should select total count', () => {
-        expect(entityStore.selectTotal()()).toBe(2);
+        expect(entityTree.selectTotal()()).toBe(2);
       });
     });
 
     describe('selection management', () => {
       it('should select and deselect entities', () => {
-        entityStore.select('1');
-        expect(entityStore.$.selectedId()).toBe('1');
+        entityTree.select('1');
+        expect(entityTree.$.selectedId()).toBe('1');
 
-        const selected = entityStore.getSelected()();
+        const selected = entityTree.getSelected()();
         expect(selected?.id).toBe('1');
 
-        entityStore.deselect();
-        expect(entityStore.$.selectedId()).toBeNull();
-        expect(entityStore.getSelected()()).toBeUndefined();
+        entityTree.deselect();
+        expect(entityTree.$.selectedId()).toBeNull();
+        expect(entityTree.getSelected()()).toBeUndefined();
       });
     });
 
@@ -668,11 +668,11 @@ describe('Signal Tree', () => {
             { id: '10', name: 'Async Entity', active: true },
           ]);
 
-        await entityStore.loadAsync(mockLoader);
+        await entityTree.loadAsync(mockLoader);
 
-        expect(entityStore.$.loading()).toBe(false);
-        expect(entityStore.$.error()).toBeNull();
-        expect(entityStore.selectAll()()).toEqual([
+        expect(entityTree.$.loading()).toBe(false);
+        expect(entityTree.$.error()).toBeNull();
+        expect(entityTree.selectAll()()).toEqual([
           { id: '10', name: 'Async Entity', active: true },
         ]);
       });
@@ -682,19 +682,19 @@ describe('Signal Tree', () => {
           .fn()
           .mockRejectedValue(new Error('Load failed'));
 
-        await expect(entityStore.loadAsync(mockLoader)).rejects.toThrow(
+        await expect(entityTree.loadAsync(mockLoader)).rejects.toThrow(
           'Load failed'
         );
-        expect(entityStore.$.loading()).toBe(false);
-        expect(entityStore.$.error()).toBeTruthy();
+        expect(entityTree.$.loading()).toBe(false);
+        expect(entityTree.$.error()).toBeTruthy();
       });
     });
   });
 
-  describe('Form Store', () => {
+  describe('Form Tree', () => {
     describe('basic form operations', () => {
-      it('should create form store with initial values', () => {
-        const form = createFormStore({
+      it('should create form tree with initial values', () => {
+        const form = createFormTree({
           name: '',
           email: '',
           age: 18,
@@ -708,7 +708,7 @@ describe('Signal Tree', () => {
       });
 
       it('should set individual field values', () => {
-        const form = createFormStore({
+        const form = createFormTree({
           name: '',
           email: '',
         });
@@ -720,7 +720,7 @@ describe('Signal Tree', () => {
       });
 
       it('should set multiple values at once', () => {
-        const form = createFormStore({
+        const form = createFormTree({
           name: '',
           email: '',
           age: 0,
@@ -732,7 +732,7 @@ describe('Signal Tree', () => {
       });
 
       it('should reset form to initial values', () => {
-        const form = createFormStore({
+        const form = createFormTree({
           name: '',
           email: '',
         });
@@ -753,7 +753,7 @@ describe('Signal Tree', () => {
 
     describe('validation', () => {
       it('should validate fields synchronously', async () => {
-        const form = createFormStore(
+        const form = createFormTree(
           {
             name: '',
             email: '',
@@ -787,7 +787,7 @@ describe('Signal Tree', () => {
       it('should validate fields asynchronously', async () => {
         const checkEmailExists = jest.fn().mockResolvedValue(true);
 
-        const form = createFormStore(
+        const form = createFormTree(
           {
             email: '',
           },
@@ -813,7 +813,7 @@ describe('Signal Tree', () => {
       });
 
       it('should provide field-level validation status', () => {
-        const form = createFormStore(
+        const form = createFormTree(
           {
             name: '',
             email: '',
@@ -839,7 +839,7 @@ describe('Signal Tree', () => {
 
     describe('nested forms', () => {
       it('should handle nested form structures', () => {
-        const form = createFormStore({
+        const form = createFormTree({
           user: {
             profile: {
               firstName: '',
@@ -860,7 +860,7 @@ describe('Signal Tree', () => {
       });
 
       it('should validate nested fields', async () => {
-        const form = createFormStore(
+        const form = createFormTree(
           {
             user: {
               profile: {
@@ -886,7 +886,7 @@ describe('Signal Tree', () => {
       it('should submit valid form', async () => {
         const submitFn = jest.fn().mockResolvedValue({ success: true });
 
-        const form = createFormStore(
+        const form = createFormTree(
           {
             name: 'John',
             email: 'john@example.com',
@@ -913,7 +913,7 @@ describe('Signal Tree', () => {
       it('should not submit invalid form', async () => {
         const submitFn = jest.fn();
 
-        const form = createFormStore(
+        const form = createFormTree(
           {
             name: '',
           },
@@ -938,7 +938,7 @@ describe('Signal Tree', () => {
               )
           );
 
-        const form = createFormStore({
+        const form = createFormTree({
           name: 'John',
         });
 
@@ -951,58 +951,58 @@ describe('Signal Tree', () => {
     });
   });
 
-  describe('Test Store', () => {
-    it('should create test store with testing utilities', () => {
-      const testStore = createTestStore({
+  describe('Test Tree', () => {
+    it('should create test tree with testing utilities', () => {
+      const testTree = createTestTree({
         counter: 0,
         message: 'test',
       });
 
-      expect(testStore.$.counter()).toBe(0);
-      expect(testStore.$.message()).toBe('test');
+      expect(testTree.$.counter()).toBe(0);
+      expect(testTree.$.message()).toBe('test');
     });
 
     it('should set state directly for testing', () => {
-      const testStore = createTestStore({
+      const testTree = createTestTree({
         value: 10,
       });
 
-      testStore.setState({ value: 20 });
-      expect(testStore.$.value()).toBe(20);
+      testTree.setState({ value: 20 });
+      expect(testTree.$.value()).toBe(20);
     });
 
     it('should get current state', () => {
-      const testStore = createTestStore({
+      const testTree = createTestTree({
         a: 1,
         b: 2,
       });
 
-      const state = testStore.getState();
+      const state = testTree.getState();
       expect(state).toEqual({ a: 1, b: 2 });
     });
 
     it('should assert expected state', () => {
-      const testStore = createTestStore({
+      const testTree = createTestTree({
         name: 'John',
         age: 30,
       });
 
-      testStore.expectState({ name: 'John' });
+      testTree.expectState({ name: 'John' });
 
       expect(() => {
-        testStore.expectState({ name: 'Jane' });
+        testTree.expectState({ name: 'Jane' });
       }).toThrow();
     });
 
     it('should track history for testing', () => {
-      const testStore = createTestStore({
+      const testTree = createTestTree({
         value: 0,
       });
 
-      testStore.$.value.set(1);
-      testStore.$.value.set(2);
+      testTree.$.value.set(1);
+      testTree.$.value.set(2);
 
-      const history = testStore.getHistory();
+      const history = testTree.getHistory();
       expect(history.length).toBeGreaterThanOrEqual(0);
     });
   });
@@ -1099,16 +1099,16 @@ describe('Signal Tree', () => {
   describe('Audit Middleware', () => {
     it('should track changes in audit log', () => {
       const auditLog: AuditEntry[] = [];
-      const store = signalTree(
+      const tree = signalTree(
         { value: 0, name: 'test' },
         { enablePerformanceFeatures: true }
       );
 
-      store.addMiddleware(createAuditMiddleware(auditLog));
+      tree.addMiddleware(createAuditMiddleware(auditLog));
 
-      // Use store.update instead of direct signal.set to trigger middleware
-      store.update(() => ({ value: 1 }));
-      store.update(() => ({ name: 'changed' }));
+      // Use tree.update instead of direct signal.set to trigger middleware
+      tree.update(() => ({ value: 1 }));
+      tree.update(() => ({ name: 'changed' }));
 
       expect(auditLog).toHaveLength(2);
       if (auditLog[0]) {
@@ -1126,13 +1126,13 @@ describe('Signal Tree', () => {
         source: 'test',
       });
 
-      const store = signalTree(
+      const tree = signalTree(
         { value: 0 },
         { enablePerformanceFeatures: true }
       );
 
-      store.addMiddleware(createAuditMiddleware(auditLog, getMetadata));
-      store.$.value.set(10);
+      tree.addMiddleware(createAuditMiddleware(auditLog, getMetadata));
+      tree.$.value.set(10);
 
       if (auditLog[0]) {
         expect(auditLog[0].metadata).toEqual({
@@ -1179,8 +1179,8 @@ describe('Signal Tree', () => {
     });
   });
 
-  describe('Nested Entity Stores', () => {
-    it('should nest entity stores within regular signal trees', () => {
+  describe('Nested Entity Trees', () => {
+    it('should nest entity trees within regular signal trees', () => {
       interface Product {
         id: string;
         name: string;
@@ -1193,14 +1193,14 @@ describe('Signal Tree', () => {
         total: number;
       }
 
-      // Create entity stores separately first
-      const productsStore = createEntityStore<Product>([
+      // Create entity trees separately first
+      const productsTree = createEntityTree<Product>([
         { id: 'p1', name: 'Product 1', price: 100 },
       ]);
-      const ordersStore = createEntityStore<Order>([]);
+      const ordersTree = createEntityTree<Order>([]);
 
-      // Create the main app store with references
-      const appStore = signalTree({
+      // Create the main app tree with references
+      const appTree = signalTree({
         user: {
           name: 'John',
           preferences: {
@@ -1210,24 +1210,24 @@ describe('Signal Tree', () => {
       });
 
       // Access hierarchical data
-      expect(appStore.$.user.name()).toBe('John');
-      expect(appStore.$.user.preferences.theme()).toBe('light');
+      expect(appTree.$.user.name()).toBe('John');
+      expect(appTree.$.user.preferences.theme()).toBe('light');
 
-      // Use entity store methods directly
-      productsStore.add({ id: 'p2', name: 'Product 2', price: 200 });
-      expect(productsStore.selectAll()()).toHaveLength(2);
+      // Use entity tree methods directly
+      productsTree.add({ id: 'p2', name: 'Product 2', price: 200 });
+      expect(productsTree.selectAll()()).toHaveLength(2);
 
       // Cross-domain operations
-      const product = productsStore.findById('p1')();
+      const product = productsTree.findById('p1')();
       if (product) {
-        ordersStore.add({
+        ordersTree.add({
           id: 'o1',
           productIds: ['p1'],
           total: product.price,
         });
       }
 
-      expect(ordersStore.selectAll()()).toHaveLength(1);
+      expect(ordersTree.selectAll()()).toHaveLength(1);
     });
 
     it('should support complex cross-domain operations', () => {
@@ -1243,18 +1243,18 @@ describe('Signal Tree', () => {
         name: string;
       }
 
-      // Create entity stores separately
-      const tasksStore = createEntityStore<Task>([
+      // Create entity trees separately
+      const tasksTree = createEntityTree<Task>([
         { id: 't1', title: 'Task 1', assigneeId: 'u1', completed: false },
         { id: 't2', title: 'Task 2', assigneeId: 'u2', completed: true },
       ]);
 
-      const usersStore = createEntityStore<User>([
+      const usersTree = createEntityTree<User>([
         { id: 'u1', name: 'Alice' },
         { id: 'u2', name: 'Bob' },
       ]);
 
-      const projectStore = signalTree(
+      const projectTree = signalTree(
         {
           project: {
             name: 'Test Project',
@@ -1271,10 +1271,10 @@ describe('Signal Tree', () => {
         }
       );
 
-      // Computed cross-domain values using the separate stores
-      const tasksByUser = projectStore.computed(() => {
-        const tasks = tasksStore.selectAll()();
-        const users = usersStore.selectAll()();
+      // Computed cross-domain values using the separate trees
+      const tasksByUser = projectTree.computed(() => {
+        const tasks = tasksTree.selectAll()();
+        const users = usersTree.selectAll()();
 
         return users.map((user) => ({
           user,
@@ -1290,41 +1290,41 @@ describe('Signal Tree', () => {
 
       // Update metrics based on tasks
       const updateMetrics = () => {
-        const tasks = tasksStore.selectAll()();
-        projectStore.$.metrics.totalTasks.set(tasks.length);
-        projectStore.$.metrics.completedTasks.set(
+        const tasks = tasksTree.selectAll()();
+        projectTree.$.metrics.totalTasks.set(tasks.length);
+        projectTree.$.metrics.completedTasks.set(
           tasks.filter((t: Task) => t.completed).length
         );
       };
 
       updateMetrics();
-      expect(projectStore.$.metrics.totalTasks()).toBe(2);
-      expect(projectStore.$.metrics.completedTasks()).toBe(1);
+      expect(projectTree.$.metrics.totalTasks()).toBe(2);
+      expect(projectTree.$.metrics.completedTasks()).toBe(1);
     });
   });
 });
 
 describe('Performance and Memory', () => {
   it('should handle large datasets efficiently', () => {
-    const largeStore = createEntityStore<{ id: string; value: number }>(
+    const largeTree = createEntityTree<{ id: string; value: number }>(
       Array.from({ length: 10000 }, (_, i) => ({
         id: `id-${i}`,
         value: i,
       }))
     );
 
-    expect(largeStore.selectTotal()()).toBe(10000);
+    expect(largeTree.selectTotal()()).toBe(10000);
 
-    const filtered = largeStore.findBy((item) => item.value > 9990)();
+    const filtered = largeTree.findBy((item) => item.value > 9990)();
     expect(filtered).toHaveLength(9);
 
-    largeStore.update('id-5000', { value: 99999 });
-    const entity = largeStore.findById('id-5000')();
+    largeTree.update('id-5000', { value: 99999 });
+    const entity = largeTree.findById('id-5000')();
     expect(entity?.value).toBe(99999);
   });
 
   it('should efficiently batch large updates', async () => {
-    const store = signalTree(
+    const tree = signalTree(
       {
         items: Array.from({ length: 1000 }, (_, i) => i),
       },
@@ -1340,8 +1340,8 @@ describe('Performance and Memory', () => {
     const noop = () => {
       /* no-op unsubscribe */
     };
-    const unsubscribe = store.subscribe
-      ? store.subscribe(() => {
+    const unsubscribe = tree.subscribe
+      ? tree.subscribe(() => {
           updateCount++;
         })
       : noop;
@@ -1351,7 +1351,7 @@ describe('Performance and Memory', () => {
 
     // Batch 10 updates (reduced for faster test)
     for (let i = 0; i < 10; i++) {
-      store.batchUpdate((state) => ({
+      tree.batchUpdate((state) => ({
         items: [...state.items, i + 1000],
       }));
     }
@@ -1361,7 +1361,7 @@ describe('Performance and Memory', () => {
     await Promise.resolve(); // Double check microtask queue
 
     // Verify that updates were applied correctly
-    expect(store.unwrap().items.length).toBe(1010); // 1000 + 10 new items
+    expect(tree.unwrap().items.length).toBe(1010); // 1000 + 10 new items
 
     // Verify performance - should have minimal update notifications relative to operations
     expect(updateCount).toBeGreaterThan(initialCount);
@@ -1375,7 +1375,7 @@ describe('Performance and Memory', () => {
 
 describe('Edge Cases and Error Handling', () => {
   it('should handle null and undefined values', () => {
-    const store = signalTree({
+    const tree = signalTree({
       nullable: null as string | null,
       optional: undefined as string | undefined,
       nested: {
@@ -1383,16 +1383,16 @@ describe('Edge Cases and Error Handling', () => {
       },
     });
 
-    expect(store.$.nullable()).toBeNull();
-    expect(store.$.optional()).toBeUndefined();
-    expect(store.$.nested.value()).toBeNull();
+    expect(tree.$.nullable()).toBeNull();
+    expect(tree.$.optional()).toBeUndefined();
+    expect(tree.$.nested.value()).toBeNull();
 
-    store.$.nullable.set('value');
-    expect(store.$.nullable()).toBe('value');
+    tree.$.nullable.set('value');
+    expect(tree.$.nullable()).toBe('value');
   });
 
   it('should handle circular references in time travel', () => {
-    const store = signalTree(
+    const tree = signalTree(
       { value: 0 },
       {
         enablePerformanceFeatures: true,
@@ -1402,29 +1402,29 @@ describe('Edge Cases and Error Handling', () => {
 
     // Should handle circular references without crashing
     expect(() => {
-      store.update(() => ({ value: 1 }));
-      store.undo();
+      tree.update(() => ({ value: 1 }));
+      tree.undo();
     }).not.toThrow();
   });
 
-  it('should handle store destruction gracefully', () => {
-    const store = signalTree({ value: 0 }, { enablePerformanceFeatures: true });
+  it('should handle tree destruction gracefully', () => {
+    const tree = signalTree({ value: 0 }, { enablePerformanceFeatures: true });
 
     const effectRan = jest.fn();
 
     try {
-      store.effect((state) => {
+      tree.effect((state) => {
         effectRan(state.value);
       });
       expect(effectRan).toHaveBeenCalledWith(0);
     } catch {
       // Effect may fail in test environment, that's ok
-      expect(store.$.value()).toBe(0);
+      expect(tree.$.value()).toBe(0);
     }
   });
 
   it('should handle concurrent async operations', async () => {
-    const store = signalTree(
+    const tree = signalTree(
       {
         loading: false,
         data: null as string | null,
@@ -1432,7 +1432,7 @@ describe('Edge Cases and Error Handling', () => {
       { enablePerformanceFeatures: true }
     );
 
-    const asyncAction = store.createAsyncAction(
+    const asyncAction = tree.createAsyncAction(
       async (input: string) => {
         await new Promise((resolve) => setTimeout(resolve, 10));
         return `Result: ${input}`;
@@ -1451,6 +1451,6 @@ describe('Edge Cases and Error Handling', () => {
 
     const results = await Promise.all([promise1, promise2]);
     expect(results).toEqual(['Result: first', 'Result: second']);
-    expect(store.$.loading()).toBe(false);
+    expect(tree.$.loading()).toBe(false);
   });
 });
