@@ -14,42 +14,8 @@ export interface DemoExample {
   selector: 'app-navigation',
   standalone: true,
   imports: [CommonModule, RouterModule],
-  template: `
-    <nav class="bg-blue-900 text-white p-4">
-      <div class="container mx-auto">
-        <h1 class="text-2xl font-bold mb-4">🚀 NGX Signal Tree Demo</h1>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div *ngFor="let category of categories" class="space-y-2">
-            <h3
-              class="font-semibold text-blue-200 uppercase text-sm tracking-wide"
-            >
-              {{ getCategoryLabel(category) }}
-            </h3>
-            <ul class="space-y-1">
-              <li *ngFor="let example of getExamplesByCategory(category)">
-                <a
-                  [routerLink]="example.route"
-                  routerLinkActive="bg-blue-700"
-                  class="block px-3 py-2 rounded text-sm hover:bg-blue-800 transition-colors"
-                  [attr.title]="example.description"
-                >
-                  {{ example.title }}
-                </a>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </nav>
-  `,
-  styles: [
-    `
-      .container {
-        max-width: 1200px;
-      }
-    `,
-  ],
+  templateUrl: './navigation.component.html',
+  styleUrls: ['./navigation.component.scss'],
 })
 export class NavigationComponent {
   examples: DemoExample[] = [
