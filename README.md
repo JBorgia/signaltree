@@ -1556,7 +1556,7 @@ SignalTree isn't just another state management library—it's a **paradigm shift
 
 **Jonathan D Borgia**
 
-- 🐙 GitHub: [https://github.com/JBorgia/signal-store](https://github.com/JBorgia/signal-store)
+- 🐙 GitHub: [https://github.com/JBorgia/signal-tree](https://github.com/JBorgia/signal-tree)
 - 💼 LinkedIn: [https://www.linkedin.com/in/jonathanborgia/](https://www.linkedin.com/in/jonathanborgia/)
 
 ## 📄 License
