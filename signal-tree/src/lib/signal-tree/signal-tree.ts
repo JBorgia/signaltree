@@ -25,6 +25,30 @@ import { Observable } from 'rxjs';
 // CORE TYPES AND INTERFACES
 // ============================================
 
+// Define primitive types for better type constraints
+type Primitive = string | number | boolean | null | undefined | bigint | symbol;
+
+// Helper type to check if a type is a primitive
+type IsPrimitive<T> = T extends Primitive ? true : false;
+
+// Deep signalify type with proper generic constraints
+export type DeepSignalify<T> = IsPrimitive<T> extends true
+  ? WritableSignal<T>
+  : T extends (infer U)[]
+  ? WritableSignal<U[]>
+  : T extends Record<string, unknown>
+  ? T extends Signal<infer TSignal>
+    ? WritableSignal<TSignal>
+    : { [K in keyof T]: DeepSignalify<T[K]> }
+  : WritableSignal<T>;
+
+// Helper type for unwrapping signal states back to original types
+export type UnwrapSignalState<T> = T extends WritableSignal<infer U>
+  ? U
+  : T extends Record<string, unknown>
+  ? { [K in keyof T]: UnwrapSignalState<T[K]> }
+  : T;
+
 export type SimpleSignalValue = string | number | boolean;
 
 export type SignalValue<T> = T extends ArrayLike<SimpleSignalValue>
@@ -99,9 +123,9 @@ export interface EntityHelpers<E extends { id: string | number }> {
 export interface AsyncActionConfig<T, TResult> {
   loadingKey?: string;
   errorKey?: string;
-  onSuccess?: (result: TResult, store: SignalStore<T>) => void;
-  onError?: (error: unknown, store: SignalStore<T>) => void;
-  onFinally?: (store: SignalStore<T>) => void;
+  onSuccess?: (result: TResult, store: SignalTree<T>) => void;
+  onError?: (error: unknown, store: SignalTree<T>) => void;
+  onFinally?: (store: SignalTree<T>) => void;
 }
 
 /**
@@ -118,23 +142,13 @@ export interface DevToolsInterface<T> {
  * Main signal store type that preserves hierarchical structure
  */
 type SignalState<T> = T extends Record<string, unknown>
-  ? {
-      [K in keyof T]: T[K] extends (infer U)[]
-        ? WritableSignal<U[]>
-        : T[K] extends Record<string, unknown>
-        ? T[K] extends Signal<infer TK>
-          ? WritableSignal<TK>
-          : SignalState<T[K]>
-        : T[K] extends Signal<infer TK>
-        ? WritableSignal<TK>
-        : WritableSignal<T[K]>;
-    }
+  ? DeepSignalify<T>
   : never;
 
 /**
  * Main signal store type with proper typing
  */
-export type SignalStore<T> = {
+export type SignalTree<T> = {
   // The actual state under 'state' property
   state: SignalState<T>;
   // $ as an alias to state
@@ -373,10 +387,13 @@ function createDevToolsInterface<T>(storeName: string): DevToolsInterface<T> {
 // ============================================
 
 function createEntityHelpers<T, E extends { id: string | number }>(
-  store: SignalStore<T>,
+  store: SignalTree<T>,
   entityKey: keyof T
 ): EntityHelpers<E> {
-  const entitySignal = store.state[entityKey] as WritableSignal<E[]>;
+  // Type assertion needed here due to generic constraints
+  const entitySignal = (store.state as Record<string, unknown>)[
+    entityKey as string
+  ] as WritableSignal<E[]>;
 
   return {
     add: (entity: E) => {
@@ -426,7 +443,7 @@ function createEntityHelpers<T, E extends { id: string | number }>(
 // ASYNC ACTION FACTORY
 // ============================================
 
-function createAsyncActionFactory<T>(store: SignalStore<T>) {
+function createAsyncActionFactory<T>(store: SignalTree<T>) {
   return function createAsyncAction<TInput, TResult>(
     operation: (input: TInput) => Promise<TResult>,
     config: AsyncActionConfig<T, TResult> = {}
@@ -505,33 +522,39 @@ function createAsyncActionFactory<T>(store: SignalStore<T>) {
 // ============================================
 
 // Improved unwrap and update with better typing
-function enhanceStoreBasic<T>(store: SignalStore<T>): SignalStore<T> {
-  store.unwrap = () => {
+function enhanceStoreBasic<T extends Record<string, unknown>>(
+  store: SignalTree<T>
+): SignalTree<T> {
+  store.unwrap = (): T => {
     // Recursively unwrap with proper typing
-    const unwrapObject = <O>(obj: SignalState<O>): O => {
-      const result = {} as O;
+    const unwrapObject = <O extends Record<string, unknown>>(
+      obj: DeepSignalify<O>
+    ): O => {
+      const result = {} as Record<string, unknown>;
 
       for (const key in obj) {
         const value = obj[key];
 
         if (isSignal(value)) {
-          (result as any)[key] = value();
+          result[key] = (value as Signal<unknown>)();
         } else if (
           typeof value === 'object' &&
           value !== null &&
           !Array.isArray(value)
         ) {
           // Nested signal state
-          (result as any)[key] = unwrapObject(value as SignalState<any>);
+          result[key] = unwrapObject(
+            value as DeepSignalify<Record<string, unknown>>
+          );
         } else {
-          (result as any)[key] = value;
+          result[key] = value;
         }
       }
 
-      return result;
+      return result as O;
     };
 
-    return unwrapObject(store.state as SignalState<T>);
+    return unwrapObject(store.state as DeepSignalify<T>);
   };
 
   store.update = (updater: (current: T) => Partial<T>) => {
@@ -539,19 +562,19 @@ function enhanceStoreBasic<T>(store: SignalStore<T>): SignalStore<T> {
     const partialObj = updater(currentValue);
 
     // Recursively update with better typing
-    const updateObject = <O>(
-      target: SignalState<O>,
+    const updateObject = <O extends Record<string, unknown>>(
+      target: DeepSignalify<O>,
       updates: Partial<O>
     ): void => {
       for (const key in updates) {
         if (!Object.prototype.hasOwnProperty.call(updates, key)) continue;
 
         const updateValue = updates[key];
-        const currentSignalOrState = target[key];
+        const currentSignalOrState = (target as Record<string, unknown>)[key];
 
         if (isSignal(currentSignalOrState)) {
           // Direct signal update
-          (currentSignalOrState as WritableSignal<any>).set(updateValue);
+          (currentSignalOrState as WritableSignal<unknown>).set(updateValue);
         } else if (
           typeof updateValue === 'object' &&
           updateValue !== null &&
@@ -561,14 +584,14 @@ function enhanceStoreBasic<T>(store: SignalStore<T>): SignalStore<T> {
         ) {
           // Nested object - recurse
           updateObject(
-            currentSignalOrState as SignalState<any>,
-            updateValue as Partial<any>
+            currentSignalOrState as DeepSignalify<Record<string, unknown>>,
+            updateValue as Partial<Record<string, unknown>>
           );
         }
       }
     };
 
-    updateObject(store.state as SignalState<T>, partialObj);
+    updateObject(store.state as DeepSignalify<T>, partialObj);
   };
 
   // Add all required methods with bypass logic (will be overridden if enhanced)
@@ -576,29 +599,29 @@ function enhanceStoreBasic<T>(store: SignalStore<T>): SignalStore<T> {
     console.warn(
       '⚠️ batchUpdate() called but batching is not enabled.',
       '\nTo enable batch updates, create an enhanced store:',
-      '\nenhancedSignalStore(data, { enablePerformanceFeatures: true, batchUpdates: true })'
+      '\nsignalTree(data, { enablePerformanceFeatures: true, batchUpdates: true })'
     );
     // Fallback: Just call update directly
     store.update(updater);
   };
 
-  store.computed = <R>(fn: (store: T) => R, _cacheKey?: string): Signal<R> => {
+  store.computed = <R>(fn: (store: T) => R, cacheKey?: string): Signal<R> => {
     console.warn(
       '⚠️ computed() called but memoization is not enabled.',
       '\nTo enable memoized computations, create an enhanced store:',
-      '\nenhancedSignalStore(data, { enablePerformanceFeatures: true, useMemoization: true })'
+      '\nsignalTree(data, { enablePerformanceFeatures: true, useMemoization: true })'
     );
-    // Note: _cacheKey parameter is intentionally unused in bypass implementation
     // Fallback: Use simple Angular computed without memoization
+    void cacheKey; // Mark as intentionally unused
     return computed(() => fn(store.unwrap()));
   };
 
   store.effect = (fn: (store: T) => void) => {
     try {
       effect(() => fn(store.unwrap()));
-    } catch {
+    } catch (error) {
       // Fallback for test environments without injection context
-      console.warn('Effect requires Angular injection context');
+      console.warn('Effect requires Angular injection context', error);
     }
   };
 
@@ -620,8 +643,9 @@ function enhanceStoreBasic<T>(store: SignalStore<T>): SignalStore<T> {
 
       destroyRef.onDestroy(unsubscribe);
       return unsubscribe;
-    } catch {
+    } catch (error) {
       // Fallback for test environment - call once immediately
+      console.warn('Subscribe requires Angular injection context', error);
       fn(store.unwrap());
       return () => {
         // No-op unsubscribe
@@ -633,7 +657,7 @@ function enhanceStoreBasic<T>(store: SignalStore<T>): SignalStore<T> {
     console.warn(
       '⚠️ optimize() called but performance optimization is not enabled.',
       '\nTo enable optimization features, create an enhanced store:',
-      '\nenhancedSignalStore(data, { enablePerformanceFeatures: true })'
+      '\nsignalTree(data, { enablePerformanceFeatures: true })'
     );
   };
 
@@ -641,7 +665,7 @@ function enhanceStoreBasic<T>(store: SignalStore<T>): SignalStore<T> {
     console.warn(
       '⚠️ clearCache() called but caching is not enabled.',
       '\nTo enable caching, create an enhanced store:',
-      '\nenhancedSignalStore(data, { enablePerformanceFeatures: true, useMemoization: true })'
+      '\nsignalTree(data, { enablePerformanceFeatures: true, useMemoization: true })'
     );
   };
 
@@ -649,7 +673,7 @@ function enhanceStoreBasic<T>(store: SignalStore<T>): SignalStore<T> {
     console.warn(
       '⚠️ getMetrics() called but performance tracking is not enabled.',
       '\nTo enable performance tracking, create an enhanced store:',
-      '\nenhancedSignalStore(data, { enablePerformanceFeatures: true, trackPerformance: true })'
+      '\nsignalTree(data, { enablePerformanceFeatures: true, trackPerformance: true })'
     );
     // Return minimal metrics when tracking not enabled
     return {
@@ -661,22 +685,22 @@ function enhanceStoreBasic<T>(store: SignalStore<T>): SignalStore<T> {
     };
   };
 
-  store.addMiddleware = (_middleware: Middleware<T>) => {
+  store.addMiddleware = (middleware: Middleware<T>) => {
     console.warn(
       '⚠️ addMiddleware() called but performance features are not enabled.',
       '\nTo enable middleware support, create an enhanced store:',
-      '\nenhancedSignalStore(data, { enablePerformanceFeatures: true })'
+      '\nsignalTree(data, { enablePerformanceFeatures: true })'
     );
-    // Note: _middleware parameter is intentionally unused in bypass implementation
+    void middleware; // Mark as intentionally unused
   };
 
-  store.removeMiddleware = (_id: string) => {
+  store.removeMiddleware = (id: string) => {
     console.warn(
       '⚠️ removeMiddleware() called but performance features are not enabled.',
       '\nTo enable middleware support, create an enhanced store:',
-      '\nenhancedSignalStore(data, { enablePerformanceFeatures: true })'
+      '\nsignalTree(data, { enablePerformanceFeatures: true })'
     );
-    // Note: _id parameter is intentionally unused in bypass implementation
+    void id; // Mark as intentionally unused
   };
 
   store.withEntityHelpers = <E extends { id: string | number }>(
@@ -698,7 +722,7 @@ function enhanceStoreBasic<T>(store: SignalStore<T>): SignalStore<T> {
     console.warn(
       '⚠️ undo() called but time travel is not enabled.',
       '\nTo enable time travel, create an enhanced store:',
-      '\nenhancedSignalStore(data, { enablePerformanceFeatures: true, enableTimeTravel: true })'
+      '\nsignalTree(data, { enablePerformanceFeatures: true, enableTimeTravel: true })'
     );
   };
 
@@ -706,7 +730,7 @@ function enhanceStoreBasic<T>(store: SignalStore<T>): SignalStore<T> {
     console.warn(
       '⚠️ redo() called but time travel is not enabled.',
       '\nTo enable time travel, create an enhanced store:',
-      '\nenhancedSignalStore(data, { enablePerformanceFeatures: true, enableTimeTravel: true })'
+      '\nsignalTree(data, { enablePerformanceFeatures: true, enableTimeTravel: true })'
     );
   };
 
@@ -714,7 +738,7 @@ function enhanceStoreBasic<T>(store: SignalStore<T>): SignalStore<T> {
     console.warn(
       '⚠️ getHistory() called but time travel is not enabled.',
       '\nTo enable time travel, create an enhanced store:',
-      '\nenhancedSignalStore(data, { enablePerformanceFeatures: true, enableTimeTravel: true })'
+      '\nsignalTree(data, { enablePerformanceFeatures: true, enableTimeTravel: true })'
     );
     return [];
   };
@@ -723,7 +747,7 @@ function enhanceStoreBasic<T>(store: SignalStore<T>): SignalStore<T> {
     console.warn(
       '⚠️ resetHistory() called but time travel is not enabled.',
       '\nTo enable time travel, create an enhanced store:',
-      '\nenhancedSignalStore(data, { enablePerformanceFeatures: true, enableTimeTravel: true })'
+      '\nsignalTree(data, { enablePerformanceFeatures: true, enableTimeTravel: true })'
     );
   };
 
@@ -731,9 +755,9 @@ function enhanceStoreBasic<T>(store: SignalStore<T>): SignalStore<T> {
 }
 
 function enhanceStore<T>(
-  store: SignalStore<T>,
+  store: SignalTree<T>,
   config: StoreConfig = {}
-): SignalStore<T> {
+): SignalTree<T> {
   const {
     enablePerformanceFeatures = false,
     batchUpdates: useBatching = false,
@@ -742,7 +766,7 @@ function enhanceStore<T>(
     maxCacheSize = 100,
     enableTimeTravel = false,
     enableDevTools = false,
-    storeName = 'SignalStore',
+    storeName = 'SignalTree',
   } = config;
 
   if (!enablePerformanceFeatures) {
@@ -839,6 +863,7 @@ function enhanceStore<T>(
             subscriber(newState);
           } catch (error) {
             // Ignore subscriber errors in test environment
+            void error; // Mark as intentionally unused
           }
         });
       }
@@ -894,7 +919,7 @@ function enhanceStore<T>(
       effect(() => fn(store.unwrap()));
     } catch (error) {
       // Fallback for test environments without injection context
-      console.warn('Effect requires Angular injection context');
+      console.warn('Effect requires Angular injection context', error);
     }
   };
 
@@ -916,8 +941,9 @@ function enhanceStore<T>(
 
       destroyRef.onDestroy(unsubscribe);
       return unsubscribe;
-    } catch {
+    } catch (error) {
       // Fallback for test environment - use subscriber tracking
+      console.warn('Subscribe requires Angular injection context', error);
       const subscribers = testSubscribers.get(store) || [];
       subscribers.push(fn as (store: unknown) => void);
       testSubscribers.set(store, subscribers);
@@ -1105,24 +1131,29 @@ function enhanceStore<T>(
 function create<T extends Record<string, unknown>>(
   obj: T,
   config: StoreConfig = {}
-): SignalStore<T> {
-  const state: any = {};
+): SignalTree<T> {
   const equalityFn = config.useShallowComparison ? shallowEqual : equal;
 
   // Recursively create signals for nested objects, but don't wrap them in stores
-  const createSignalsFromObject = (obj: Record<string, unknown>): any => {
-    const result: any = {};
+  const createSignalsFromObject = <O extends Record<string, unknown>>(
+    obj: O
+  ): DeepSignalify<O> => {
+    const result = {} as DeepSignalify<O>;
 
     for (const [key, value] of Object.entries(obj)) {
-      const isObj = (v: unknown) => typeof v === 'object' && v !== null;
+      const isObj = (v: unknown): v is Record<string, unknown> =>
+        typeof v === 'object' && v !== null;
 
       if (isObj(value) && !Array.isArray(value) && !isSignal(value)) {
         // For nested objects, create nested signal structure directly
-        result[key] = createSignalsFromObject(value as Record<string, unknown>);
+        (result as Record<string, unknown>)[key] =
+          createSignalsFromObject(value);
       } else if (isSignal(value)) {
-        result[key] = value;
+        (result as Record<string, unknown>)[key] = value;
       } else {
-        result[key] = signal(value, { equal: equalityFn });
+        (result as Record<string, unknown>)[key] = signal(value, {
+          equal: equalityFn,
+        });
       }
     }
 
@@ -1135,7 +1166,7 @@ function create<T extends Record<string, unknown>>(
   const resultStore = {
     state: signalState,
     $: signalState, // $ points to the same state object
-  } as SignalStore<T>;
+  } as SignalTree<T>;
 
   enhanceStoreBasic(resultStore);
   return enhanceStore(resultStore, config);
@@ -1146,27 +1177,33 @@ function create<T extends Record<string, unknown>>(
 // ============================================
 
 /**
- * Create a basic hierarchical signal store
+ * Create a hierarchical signal tree store
+ *
+ * @param obj - The initial state object
+ * @returns A basic signal tree store
  */
-export function signalStore<T extends Record<string, unknown>>(
+export function signalTree<T extends Record<string, unknown>>(
   obj: T
-): SignalStore<T> {
-  return create(obj, {
-    enablePerformanceFeatures: false,
-  });
-}
+): SignalTree<T>;
 
 /**
- * Create an enhanced signal store with performance features
+ * Create a hierarchical signal tree store with configuration
+ *
+ * @param obj - The initial state object
+ * @param config - Configuration options for enhanced features
+ * @returns A signal tree store with enhanced features if enabled
  */
-export function enhancedSignalStore<T extends Record<string, unknown>>(
+export function signalTree<T extends Record<string, unknown>>(
+  obj: T,
+  config: StoreConfig
+): SignalTree<T>;
+
+// Implementation
+export function signalTree<T extends Record<string, unknown>>(
   obj: T,
   config: StoreConfig = {}
-): SignalStore<T> {
-  return create(obj, {
-    enablePerformanceFeatures: true,
-    ...config,
-  });
+): SignalTree<T> {
+  return create(obj, config);
 }
 
 // ============================================
@@ -1221,7 +1258,7 @@ export function createEntityStore<E extends { id: string | number }>(
   initialEntities: E[] = [],
   config: StoreConfig = {}
 ) {
-  const store = enhancedSignalStore(
+  const store = signalTree(
     {
       entities: initialEntities,
       loading: false,
@@ -1300,11 +1337,12 @@ export function createFormStore<T extends Record<string, unknown>>(
     asyncValidators?: Record<string, AsyncValidatorFn<unknown>>;
   } & StoreConfig = {}
 ) {
-  const { validators = {}, asyncValidators = {}, ...storeConfig } = config;
+  const { validators = {}, asyncValidators = {} } = config;
+  // Note: storeConfig portion is not currently used in form stores
 
   // Create the store with proper signal types
   const store = {
-    values: signalStore(initialValues),
+    values: signalTree(initialValues),
     errors: signal<Record<string, string>>({}),
     asyncErrors: signal<Record<string, string>>({}),
     touched: signal<Record<string, boolean>>({}),
@@ -1544,9 +1582,12 @@ export function createFormStore<T extends Record<string, unknown>>(
 
     reset: () => {
       // Reset each field individually to maintain signal reactivity
-      const resetSignals = (current: any, initial: any): void => {
+      const resetSignals = <TReset extends Record<string, unknown>>(
+        current: DeepSignalify<TReset>,
+        initial: TReset
+      ): void => {
         for (const [key, initialValue] of Object.entries(initial)) {
-          const currentValue = current[key];
+          const currentValue = (current as Record<string, unknown>)[key];
 
           if (isSignal(currentValue) && 'set' in currentValue) {
             (currentValue as WritableSignal<unknown>).set(initialValue);
@@ -1558,7 +1599,10 @@ export function createFormStore<T extends Record<string, unknown>>(
             currentValue !== null &&
             !isSignal(currentValue)
           ) {
-            resetSignals(currentValue, initialValue);
+            resetSignals(
+              currentValue as DeepSignalify<Record<string, unknown>>,
+              initialValue as Record<string, unknown>
+            );
           }
         }
       };
@@ -1639,13 +1683,14 @@ export function createFormStore<T extends Record<string, unknown>>(
 export function createTestStore<T extends Record<string, unknown>>(
   initialState: T,
   config: StoreConfig = {}
-): SignalStore<T> & {
+): SignalTree<T> & {
   setState: (state: Partial<T>) => void;
   getState: () => T;
   getHistory: () => TimeTravelEntry<T>[];
   expectState: (expectedState: Partial<T>) => void;
 } {
-  const store = enhancedSignalStore(initialState, {
+  const store = signalTree(initialState, {
+    enablePerformanceFeatures: true,
     enableTimeTravel: true,
     enableDevTools: false,
     trackPerformance: true,

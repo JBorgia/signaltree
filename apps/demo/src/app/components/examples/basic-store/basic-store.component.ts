@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { signalStore } from '@signal-tree';
+import { signalTree } from '@signal-tree';
 
 @Component({
   selector: 'app-basic-store',
@@ -154,7 +154,7 @@ export class BasicStoreComponent {
     age: 25,
     email: 'john@example.com',
   };
-  store = signalStore(this.state);
+  store = signalTree(this.state);
 
   updateLog: Array<{ timestamp: Date; action: string; data: unknown }> = [];
 
@@ -232,10 +232,10 @@ export class BasicStoreComponent {
     return index;
   }
 
-  codeExample = `import { signalStore } from 'signal-tree';
+  codeExample = `import { signalTree } from 'signal-tree';
 
 // Create a basic signal store
-const store = signalStore({
+const store = signalTree({
   name: 'John Doe',
   age: 25,
   email: 'john@example.com'

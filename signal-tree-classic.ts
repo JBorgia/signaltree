@@ -13,37 +13,36 @@ type SimpleSignalValue = string | number | boolean;
 // Conditional type to determine the value type of a signal.
 // If T is an array-like type, it should be an array of SimpleSignalValue.
 // Otherwise, it is a SimpleSignalValue.
-type SignalValue<T> =
-  T extends ArrayLike<SimpleSignalValue>
-    ? SimpleSignalValue[]
-    : SimpleSignalValue;
+type SignalValue<T> = T extends ArrayLike<SimpleSignalValue>
+  ? SimpleSignalValue[]
+  : SimpleSignalValue;
 
-// SignalStore type with unwrap and update methods
-export type SignalStore<T> = {
+// SignalTree type with unwrap and update methods
+export type SignalTree<T> = {
   [K in keyof T]: T[K] extends (infer U)[]
     ? WritableSignal<U[]>
     : T[K] extends object
-      ? T[K] extends Signal<infer TK>
-        ? WritableSignal<TK>
-        : SignalStore<T[K]>
-      : WritableSignal<T[K]>;
+    ? T[K] extends Signal<infer TK>
+      ? WritableSignal<TK>
+      : SignalTree<T[K]>
+    : WritableSignal<T[K]>;
 } & {
   unwrap(): T;
   update(updater: (current: T) => Partial<T>): void;
 };
 
 // Helper function to add unwrap and update methods to a store
-function enhanceStore<T>(store: SignalStore<T>): SignalStore<T> {
+function enhanceStore<T>(store: SignalTree<T>): SignalTree<T> {
   store.unwrap = () => {
     const unwrappedObject: any = {};
 
     for (const key in store) {
-      const value = store[key as keyof SignalStore<T>];
+      const value = store[key as keyof SignalTree<T>];
 
       if (isSignal(value)) {
         unwrappedObject[key] = value();
       } else if (typeof value === 'object' && value !== null) {
-        const nestedUnwrapped = (value as SignalStore<any>).unwrap();
+        const nestedUnwrapped = (value as SignalTree<any>).unwrap();
         unwrappedObject[key] = nestedUnwrapped;
       } else {
         unwrappedObject[key] = value;
@@ -63,7 +62,7 @@ function enhanceStore<T>(store: SignalStore<T>): SignalStore<T> {
       if (!Object.prototype.hasOwnProperty.call(partialObj, key)) continue;
 
       const partialValue = partialObj[key];
-      const storeValue = store[key as keyof SignalStore<T>];
+      const storeValue = store[key as keyof SignalTree<T>];
 
       if (isSignal(storeValue)) {
         (storeValue as WritableSignal<any>).set(partialValue);
@@ -73,7 +72,7 @@ function enhanceStore<T>(store: SignalStore<T>): SignalStore<T> {
         partialValue !== null &&
         typeof partialValue === 'object'
       ) {
-        (storeValue as SignalStore<any>).update(() => partialValue as any);
+        (storeValue as SignalTree<any>).update(() => partialValue as any);
       }
     }
   };
@@ -85,10 +84,10 @@ function enhanceStore<T>(store: SignalStore<T>): SignalStore<T> {
 function create<T, P extends keyof T>(
   obj:
     | Required<T>
-    | { [K in keyof T]: SignalValue<T[K]> | SignalStore<T[K]> }
-    | ArrayLike<SignalValue<T[P]> | SignalStore<T[P]>>
-): SignalStore<T> {
-  const store: Partial<SignalStore<T>> = {};
+    | { [K in keyof T]: SignalValue<T[K]> | SignalTree<T[K]> }
+    | ArrayLike<SignalValue<T[P]> | SignalTree<T[P]>>
+): SignalTree<T> {
+  const store: Partial<SignalTree<T>> = {};
   for (const [key, value] of Object.entries(obj)) {
     const isObj = (v: any) => typeof v === 'object' && v !== null;
 
@@ -96,22 +95,22 @@ function create<T, P extends keyof T>(
       isObj(value) && !Array.isArray(value) && !isSignal(value)
         ? create(
             value as
-              | { [K in keyof T]: SignalValue<T[K]> | SignalStore<T[K]> }
-              | ArrayLike<SignalValue<T[P]> | SignalStore<T[P]>>
+              | { [K in keyof T]: SignalValue<T[K]> | SignalTree<T[K]> }
+              | ArrayLike<SignalValue<T[P]> | SignalTree<T[P]>>
           ) // Recursive call
         : isSignal(value)
-          ? value
-          : (signal(value, { equal }) as SignalStore<T>[P])
-    ) as SignalStore<T>[P]; // Ensure correct type
+        ? value
+        : (signal(value, { equal }) as SignalTree<T>[P])
+    ) as SignalTree<T>[P]; // Ensure correct type
   }
 
   // Enhance the store with unwrap and update methods
-  return enhanceStore(store as SignalStore<T>);
+  return enhanceStore(store as SignalTree<T>);
 }
 
 /***********************************************************************
  * INSTRUCTIONS/WARNINGS:
- * 1) This will recursively wrap each field into SignalStores and should
+ * 1) This will recursively wrap each field into SignalTrees and should
  * only be used for simple objects without any self-referenced fields
  * (for example, ArcGIS Layers and Objects).
  *
@@ -119,7 +118,7 @@ function create<T, P extends keyof T>(
  * of the deep wrapping. It won't wrap a signal in a signal.
  *
  * NOTE, if you want to have the signal utilize the same equal()
- * functionality that the signalStore uses by default for deep checking
+ * functionality that the signalTree uses by default for deep checking
  * arrays, you should use the 'terminal' function from the store rather
  * than the 'signal' from '@angular/core' when wrapping the end object
  * or create your own equal function to ensure proper emissions when
@@ -133,8 +132,8 @@ function create<T, P extends keyof T>(
  *
  * IN SUMMARY: ALL VALUES THAT WILL EXIST MUST EXIST. See example.ts
  ***********************************************************************/
-export function signalStore<T, P extends keyof T>(
+export function signalTree<T, P extends keyof T>(
   obj: Required<T>
-): SignalStore<Required<T>> {
+): SignalTree<Required<T>> {
   return create<Required<T>, P>(obj);
 }

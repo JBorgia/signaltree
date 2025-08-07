@@ -25,10 +25,10 @@ npm install signal-tree
 ### Basic Usage
 
 ```typescript
-import { signalStore } from 'signal-tree';
+import { signalTree } from 'signal-tree';
 
 // Create a hierarchical store
-const store = signalStore({
+const store = signalTree({
   user: {
     name: 'John Doe',
     email: 'john@example.com',
@@ -96,7 +96,7 @@ store.select(selectUserProfileName); // O(n) selector chain
 
 ```typescript
 // Definition (1 line)
-const store = signalStore({ count: 0 });
+const store = signalTree({ count: 0 });
 
 // Usage in component
 @Component({
@@ -146,7 +146,7 @@ class CounterComponent {
 
 ```typescript
 // Complete implementation in one file
-const userStore = enhancedSignalStore({
+const userStore = enhancedSignalTree({
   users: [] as User[],
   loading: false,
   error: null as string | null,
@@ -254,8 +254,8 @@ class UsersComponent {
 
 #### Basic Store Operations
 
-- `signalStore(initialState)` - Create a basic signal store
-- `enhancedSignalStore(initialState, config)` - Create an enhanced store with performance features
+- `signalTree(initialState)` - Create a basic signal store
+- `enhancedSignalTree(initialState, config)` - Create an enhanced store with performance features
 - `store.state.*` - Access nested signals (reactive)
 - `store.$.*` - Shorthand alias for state
 - `store.update(updater)` - Update entire store
@@ -266,7 +266,7 @@ class UsersComponent {
 Boost your application's performance with advanced optimization features:
 
 ```typescript
-const store = enhancedSignalStore(data, {
+const store = enhancedSignalTree(data, {
   enablePerformanceFeatures: true,
   batchUpdates: true,
   useMemoization: true,
@@ -371,7 +371,7 @@ await loadUser('123');
 Implement undo/redo functionality:
 
 ```typescript
-const store = enhancedSignalStore(data, {
+const store = enhancedSignalTree(data, {
   enablePerformanceFeatures: true,
   enableTimeTravel: true,
 });
@@ -395,7 +395,7 @@ store.resetHistory();
 ### Basic Counter
 
 ```typescript
-const counter = signalStore({ count: 0 });
+const counter = signalTree({ count: 0 });
 
 // Read value
 console.log(counter.state.count()); // 0
@@ -408,7 +408,7 @@ counter.state.count.set(10);
 ### Nested State
 
 ```typescript
-const app = signalStore({
+const app = signalTree({
   user: {
     profile: { name: 'John', age: 30 },
     preferences: { theme: 'dark' },
@@ -461,7 +461,7 @@ interface CartItem {
   quantity: number;
 }
 
-const ecommerceStore = enhancedSignalStore(
+const ecommerceStore = enhancedSignalTree(
   {
     products: {
       items: [] as Product[],
@@ -627,7 +627,7 @@ class RegistrationComponent {
 ### Real-Time Collaboration with WebSockets
 
 ```typescript
-const collaborationStore = enhancedSignalStore(
+const collaborationStore = enhancedSignalTree(
   {
     document: {
       id: null as string | null,
@@ -760,7 +760,7 @@ describe('Shopping Cart', () => {
 ```typescript
 // Create a persistence plugin
 class PersistencePlugin<T> {
-  constructor(private store: SignalStore<T>, private key: string, private storage = localStorage) {
+  constructor(private store: SignalTree<T>, private key: string, private storage = localStorage) {
     this.restore();
     this.store.subscribe((state) => this.persist(state));
   }
@@ -787,7 +787,7 @@ class PersistencePlugin<T> {
 }
 
 // Use the plugin
-const store = enhancedSignalStore({
+const store = enhancedSignalTree({
   /* ... */
 });
 const persistence = new PersistencePlugin(store, 'app-state');
@@ -828,7 +828,7 @@ const history = testStore.getHistory();
 ### DevTools Integration
 
 ```typescript
-const store = enhancedSignalStore(data, {
+const store = enhancedSignalTree(data, {
   enablePerformanceFeatures: true,
   enableDevTools: true,
   storeName: 'MyStore',
@@ -847,7 +847,7 @@ const store = enhancedSignalStore(data, {
 export class AppModule {}
 
 // After (SignalTree)
-export const appStore = enhancedSignalStore({ counter: 0 }, { enableDevTools: true });
+export const appStore = enhancedSignalTree({ counter: 0 }, { enableDevTools: true });
 ```
 
 ### Step 2: Convert Actions to Methods

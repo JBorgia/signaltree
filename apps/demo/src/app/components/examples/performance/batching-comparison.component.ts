@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, effect, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { signalStore, enhancedSignalStore } from '@signal-tree';
+import { signalTree, enhancedSignalTree } from '@signal-tree';
 
 interface PerformanceMetrics {
   updates: number;
@@ -384,14 +384,14 @@ export class BatchingComparisonComponent implements OnDestroy {
   isRunning = false;
 
   // Regular store without batching
-  regularStore = signalStore({
+  regularStore = signalTree({
     counter: 0,
     text: 'Initial',
     flag: false,
   });
 
   // Enhanced store with batching
-  batchedStore = enhancedSignalStore(
+  batchedStore = enhancedSignalTree(
     {
       counter: 0,
       text: 'Initial',
@@ -607,7 +607,7 @@ export class BatchingComparisonComponent implements OnDestroy {
   }
 
   regularStoreCode = `// Regular store - no batching
-const store = signalStore({
+const store = signalTree({
   counter: 0,
   text: 'Initial',
   flag: false
@@ -622,7 +622,7 @@ for (let i = 0; i < 100; i++) {
 // Total: 300 effect runs`;
 
   batchedStoreCode = `// Enhanced store with batching
-const store = enhancedSignalStore({
+const store = enhancedSignalTree({
   counter: 0,
   text: 'Initial',
   flag: false
