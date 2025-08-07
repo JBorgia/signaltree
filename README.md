@@ -1764,24 +1764,22 @@ SignalTree isn't just another state management library—it's a **paradigm shift
 
 ## 📄 License
 
-**Business Source License 1.1** - see the [LICENSE](LICENSE) file for details.
+**MIT License with AI Training Restriction** - see the [LICENSE](LICENSE) file for details.
 
 ### 🆓 Free Usage
 
-- ✅ **Individual developers** (any revenue level)
-- ✅ **Startups & small businesses** (under $10M annual revenue)
+- ✅ **All developers** (any revenue level)
+- ✅ **All organizations** (any size)
 - ✅ **Educational institutions** and non-profits
 - ✅ **Open source projects** and research
+- ✅ **Commercial applications** and products
 - ✅ **Internal business tools** and applications
+- ✅ **Distribution and modification** of the code
 
-### 💼 Commercial License Required (unless exception given by author)
+### 🚫 Restricted Usage
 
-- 🏢 **Enterprise organizations** with $10M+ annual revenue
-- 🤖 **AI training** and machine learning model development
-- ☁️ **Offering as a service** (SaaS, cloud hosting, etc.)
+- ❌ **AI training** and machine learning model development (unless explicit permission granted)
 
-### 🔄 Future Open Source
+This is essentially a standard MIT license with one restriction: no AI training without permission. Everything else is completely free and open!
 
-This license converts to **MIT License** after 4 years, ensuring long-term open source availability.
-
-**Need a commercial license?** Contact: jonathanborgia@gmail.com
+**Need AI training permission?** Contact: jonathanborgia@gmail.com
