@@ -414,7 +414,7 @@ export interface TreeConfig {
    *
    * // All state changes appear in Redux DevTools:
    * tree.update(state => ({ user: newUser })); // Action: UPDATE
-   * tree.batch(state => ({ loading: false })); // Action: BATCH_UPDATE
+   * tree.batchUpdate(state => ({ loading: false })); // Action: BATCH_UPDATE
    *
    * // DevTools features available:
    * // - State inspection and diffs
@@ -476,7 +476,7 @@ export interface TreeConfig {
  *
  * // Perform operations
  * tree.update(state => ({ count: state.count + 1 }));
- * const computation = tree.computed(state => expensiveCalc(state), 'calc');
+ * const computation = tree.memoize(state => expensiveCalc(state), 'calc');
  * computation(); // Cache miss
  * computation(); // Cache hit
  *
