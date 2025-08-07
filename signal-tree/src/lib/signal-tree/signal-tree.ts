@@ -627,7 +627,7 @@ export interface PerformanceMetrics {
    * @example
    * ```typescript
    * const beforeCleanup = tree.getMetrics().memoryUsage;
-   * tree.cleanup();
+   * tree.optimize();
    * const afterCleanup = tree.getMetrics().memoryUsage;
    *
    * if (beforeCleanup && afterCleanup) {
