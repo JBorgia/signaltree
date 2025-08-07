@@ -700,7 +700,7 @@ describe('Signal Tree', () => {
           age: 18,
         });
 
-        expect(form.unwrap()).toEqual({
+        expect(form.values.unwrap()).toEqual({
           name: '',
           email: '',
           age: 18,
@@ -714,7 +714,7 @@ describe('Signal Tree', () => {
         });
 
         form.setValue('name', 'John');
-        expect(form.$.name()).toBe('John');
+        expect(form.state.name()).toBe('John');
         expect(form.dirty()).toBe(true);
         expect(form.touched()).toEqual({ name: true });
       });
@@ -727,8 +727,8 @@ describe('Signal Tree', () => {
         });
 
         form.setValues({ name: 'John', age: 30 });
-        expect(form.$.name()).toBe('John');
-        expect(form.$.age()).toBe(30);
+        expect(form.state.name()).toBe('John');
+        expect(form.state.age()).toBe(30);
       });
 
       it('should reset form to initial values', () => {
@@ -742,7 +742,7 @@ describe('Signal Tree', () => {
 
         form.reset();
 
-        expect(form.unwrap()).toEqual({
+        expect(form.values.unwrap()).toEqual({
           name: '',
           email: '',
         });
@@ -855,8 +855,8 @@ describe('Signal Tree', () => {
         form.setValue('user.profile.firstName', 'John');
         form.setValue('user.contact.email', 'john@example.com');
 
-        expect(form.$.user.profile.firstName()).toBe('John');
-        expect(form.$.user.contact.email()).toBe('john@example.com');
+        expect(form.state.user.profile.firstName()).toBe('John');
+        expect(form.state.user.contact.email()).toBe('john@example.com');
       });
 
       it('should validate nested fields', async () => {
