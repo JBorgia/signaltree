@@ -204,7 +204,7 @@ export interface TreeConfig {
    * tree.state.data.set(newData);
    *
    * // With batching - 1 render cycle
-   * tree.batch(state => ({
+   * tree.batchUpdate(state => ({
    *   loading: false,
    *   error: null,
    *   data: newData
@@ -234,7 +234,7 @@ export interface TreeConfig {
    * });
    *
    * // Expensive computation cached by key
-   * const expensiveCalc = tree.computed(
+   * const expensiveCalc = tree.memoize(
    *   state => heavyProcessing(state.largeDataset),
    *   'heavy-processing'
    * );
@@ -270,7 +270,7 @@ export interface TreeConfig {
    *
    * // Perform operations
    * tree.update(state => ({ count: state.count + 1 }));
-   * tree.computed(state => state.items.length, 'count')();
+   * tree.memoize(state => state.items.length, 'count')();
    *
    * // Analyze performance
    * const metrics = tree.getMetrics();
