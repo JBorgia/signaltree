@@ -12,10 +12,10 @@ import { RouterModule } from '@angular/router';
 export class HomeComponent {
   features = [
     {
-      title: '🏪 Basic Store',
+      title: '🏪 Basic Tree',
       description:
         'Simple hierarchical signal tree with reactive state management',
-      route: '/basic-store',
+      route: '/basic-tree',
       category: 'Core',
     },
     {
@@ -34,7 +34,7 @@ export class HomeComponent {
     {
       title: '🔌 Middleware',
       description:
-        'Intercept and extend store operations with custom middleware',
+        'Intercept and extend tree operations with custom middleware',
       route: '/middleware',
       category: 'Middleware',
       methods: ['addMiddleware', 'removeMiddleware'],
@@ -112,7 +112,7 @@ export class HomeComponent {
   quickStartCode = `import { signalTree } from 'signal-tree';
 
 // Create a signal tree
-const userStore = signalTree({
+const userTree = signalTree({
   user: {
     name: 'John Doe',
     age: 30,
@@ -125,19 +125,19 @@ const userStore = signalTree({
 });
 
 // Access signals directly through state or $ (shorthand)
-console.log(userStore.state.user.name()); // 'John Doe'
-console.log(userStore.$.settings.theme()); // 'dark'
+console.log(userTree.state.user.name()); // 'John Doe'
+console.log(userTree.$.settings.theme()); // 'dark'
 
 // Update individual values
-userStore.state.user.name.set('Jane Doe');
-userStore.$.settings.theme.set('light');
+userTree.state.user.name.set('Jane Doe');
+userTree.$.settings.theme.set('light');
 
-// Update entire store
-userStore.update(current => ({
+// Update entire tree
+userTree.update(current => ({
   ...current,
   user: { ...current.user, age: 31 }
 }));
 
 // Get unwrapped values
-const userData = userStore.unwrap();`;
+const userData = userTree.unwrap();`;
 }

@@ -7,17 +7,17 @@ export const appRoutes: Route[] = [
       import('./components/home/home.component').then((c) => c.HomeComponent),
   },
   {
-    path: 'basic-store',
+    path: 'basic-tree',
     loadComponent: () =>
-      import('./components/examples/basic-store/basic-store.component').then(
-        (c) => c.BasicStoreComponent
+      import('./components/examples/basic-tree/basic-tree.component').then(
+        (c) => c.BasicTreeComponent
       ),
   },
   {
-    path: 'nested-store',
+    path: 'nested-tree',
     loadComponent: () =>
-      import('./components/examples/basic-store/nested-store.component').then(
-        (c) => c.NestedStoreComponent
+      import('./components/examples/basic-tree/nested-tree.component').then(
+        (c) => c.NestedTreeComponent
       ),
   },
   {

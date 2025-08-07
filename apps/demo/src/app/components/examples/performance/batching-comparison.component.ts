@@ -87,10 +87,10 @@ interface PerformanceMetrics {
 
         <div class="flex space-x-4">
           <button
-            (click)="resetStores()"
+            (click)="resetTrees()"
             class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
           >
-            Reset Stores
+            Reset Trees
           </button>
 
           <button
@@ -104,12 +104,12 @@ interface PerformanceMetrics {
 
       <!-- Side-by-Side Comparison -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <!-- Regular Store -->
+        <!-- Regular Tree -->
         <div class="bg-white rounded-lg shadow-md p-6">
           <h2
             class="text-xl font-semibold text-gray-800 mb-4 flex items-center"
           >
-            🐌 Regular Store
+            🐌 Regular Tree
             <span
               class="ml-2 text-sm bg-red-100 text-red-800 px-2 py-1 rounded"
             >
@@ -124,19 +124,19 @@ interface PerformanceMetrics {
                 <div>
                   <strong>Counter:</strong>
                   <code class="bg-red-100 px-2 py-1 rounded">{{
-                    regularStore.state.counter()
+                    regularTree.state.counter()
                   }}</code>
                 </div>
                 <div>
                   <strong>Text:</strong>
                   <code class="bg-red-100 px-2 py-1 rounded">{{
-                    regularStore.state.text()
+                    regularTree.state.text()
                   }}</code>
                 </div>
                 <div>
                   <strong>Flag:</strong>
                   <code class="bg-red-100 px-2 py-1 rounded">{{
-                    regularStore.state.flag()
+                    regularTree.state.flag()
                   }}</code>
                 </div>
               </div>
@@ -178,10 +178,10 @@ interface PerformanceMetrics {
               <h3 class="font-medium text-gray-800 mb-2">Manual Controls</h3>
               <div class="flex space-x-2">
                 <button
-                  (click)="updateRegularStore()"
+                  (click)="updateRegularTree()"
                   class="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors"
                 >
-                  Update Store
+                  Update Tree
                 </button>
                 <button
                   (click)="multiUpdateRegular()"
@@ -194,12 +194,12 @@ interface PerformanceMetrics {
           </div>
         </div>
 
-        <!-- Batched Store -->
+        <!-- Batched Tree -->
         <div class="bg-white rounded-lg shadow-md p-6">
           <h2
             class="text-xl font-semibold text-gray-800 mb-4 flex items-center"
           >
-            🚀 Enhanced Store
+            🚀 Enhanced Tree
             <span
               class="ml-2 text-sm bg-green-100 text-green-800 px-2 py-1 rounded"
             >
@@ -214,19 +214,19 @@ interface PerformanceMetrics {
                 <div>
                   <strong>Counter:</strong>
                   <code class="bg-green-100 px-2 py-1 rounded">{{
-                    batchedStore.state.counter()
+                    batchedTree.state.counter()
                   }}</code>
                 </div>
                 <div>
                   <strong>Text:</strong>
                   <code class="bg-green-100 px-2 py-1 rounded">{{
-                    batchedStore.state.text()
+                    batchedTree.state.text()
                   }}</code>
                 </div>
                 <div>
                   <strong>Flag:</strong>
                   <code class="bg-green-100 px-2 py-1 rounded">{{
-                    batchedStore.state.flag()
+                    batchedTree.state.flag()
                   }}</code>
                 </div>
               </div>
@@ -268,10 +268,10 @@ interface PerformanceMetrics {
               <h3 class="font-medium text-gray-800 mb-2">Manual Controls</h3>
               <div class="flex space-x-2">
                 <button
-                  (click)="updateBatchedStore()"
+                  (click)="updateBatchedTree()"
                   class="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors"
                 >
-                  Update Store
+                  Update Tree
                 </button>
                 <button
                   (click)="multiBatchUpdate()"
@@ -344,22 +344,22 @@ interface PerformanceMetrics {
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div>
-            <h3 class="font-medium text-gray-800 mb-2">Regular Store</h3>
+            <h3 class="font-medium text-gray-800 mb-2">Regular Tree</h3>
             <div
               class="bg-gray-800 text-gray-300 p-4 rounded-lg overflow-x-auto text-sm"
             >
-              <pre><code>{{ regularStoreCode }}</code></pre>
+              <pre><code>{{ regularTreeCode }}</code></pre>
             </div>
           </div>
 
           <div>
             <h3 class="font-medium text-gray-800 mb-2">
-              Enhanced Store with Batching
+              Enhanced Tree with Batching
             </h3>
             <div
               class="bg-gray-800 text-gray-300 p-4 rounded-lg overflow-x-auto text-sm"
             >
-              <pre><code>{{ batchedStoreCode }}</code></pre>
+              <pre><code>{{ batchedTreeCode }}</code></pre>
             </div>
           </div>
         </div>
@@ -383,15 +383,15 @@ export class BatchingComparisonComponent implements OnDestroy {
   delay = 0;
   isRunning = false;
 
-  // Regular store without batching
-  regularStore = signalTree({
+  // Regular tree without batching
+  regularTree = signalTree({
     counter: 0,
     text: 'Initial',
     flag: false,
   });
 
-  // Enhanced store with batching
-  batchedStore = enhancedSignalTree(
+  // Enhanced tree with batching
+  batchedTree = enhancedSignalTree(
     {
       counter: 0,
       text: 'Initial',
@@ -432,16 +432,16 @@ export class BatchingComparisonComponent implements OnDestroy {
   }
 
   private setupEffects() {
-    // Effect for regular store
+    // Effect for regular tree
     effect(() => {
       const current = performance.now();
       const updateTime = current - this.lastRegularUpdate;
       this.lastRegularUpdate = current;
 
-      // Access store values to trigger effect
-      this.regularStore.state.counter();
-      this.regularStore.state.text();
-      this.regularStore.state.flag();
+      // Access tree values to trigger effect
+      this.regularTree.state.counter();
+      this.regularTree.state.text();
+      this.regularTree.state.flag();
 
       this.regularMetrics.update((metrics) => ({
         updates: metrics.updates + 1,
@@ -451,16 +451,16 @@ export class BatchingComparisonComponent implements OnDestroy {
       }));
     });
 
-    // Effect for batched store
+    // Effect for batched tree
     effect(() => {
       const current = performance.now();
       const updateTime = current - this.lastBatchedUpdate;
       this.lastBatchedUpdate = current;
 
-      // Access store values to trigger effect
-      this.batchedStore.state.counter();
-      this.batchedStore.state.text();
-      this.batchedStore.state.flag();
+      // Access tree values to trigger effect
+      this.batchedTree.state.counter();
+      this.batchedTree.state.text();
+      this.batchedTree.state.flag();
 
       this.batchedMetrics.update((metrics) => ({
         updates: metrics.updates + 1,
@@ -473,18 +473,18 @@ export class BatchingComparisonComponent implements OnDestroy {
 
   async runTest() {
     this.isRunning = true;
-    this.resetStores();
+    this.resetTrees();
     this.clearMetrics();
 
     // Initialize timing
     this.lastRegularUpdate = performance.now();
     this.lastBatchedUpdate = performance.now();
 
-    // Run updates on regular store
+    // Run updates on regular tree
     for (let i = 0; i < this.updateCount; i++) {
-      this.regularStore.state.counter.set(i);
-      this.regularStore.state.text.set(`Update ${i}`);
-      this.regularStore.state.flag.set(i % 2 === 0);
+      this.regularTree.state.counter.set(i);
+      this.regularTree.state.text.set(`Update ${i}`);
+      this.regularTree.state.flag.set(i % 2 === 0);
 
       if (this.delay > 0) {
         await new Promise((resolve) => setTimeout(resolve, this.delay));
@@ -494,10 +494,10 @@ export class BatchingComparisonComponent implements OnDestroy {
     // Small delay between tests
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    // Run updates on batched store using batchUpdate
-    if (this.batchedStore.batchUpdate) {
+    // Run updates on batched tree using batchUpdate
+    if (this.batchedTree.batchUpdate) {
       for (let i = 0; i < this.updateCount; i++) {
-        this.batchedStore.batchUpdate(() => ({
+        this.batchedTree.batchUpdate(() => ({
           counter: i,
           text: `Update ${i}`,
           flag: i % 2 === 0,
@@ -512,14 +512,14 @@ export class BatchingComparisonComponent implements OnDestroy {
     this.isRunning = false;
   }
 
-  resetStores() {
-    this.regularStore.update(() => ({
+  resetTrees() {
+    this.regularTree.update(() => ({
       counter: 0,
       text: 'Initial',
       flag: false,
     }));
 
-    this.batchedStore.update(() => ({
+    this.batchedTree.update(() => ({
       counter: 0,
       text: 'Initial',
       flag: false,
@@ -542,35 +542,35 @@ export class BatchingComparisonComponent implements OnDestroy {
     });
   }
 
-  updateRegularStore() {
-    const current = this.regularStore.state.counter() + 1;
-    this.regularStore.state.counter.set(current);
-    this.regularStore.state.text.set(`Manual ${current}`);
-    this.regularStore.state.flag.set(current % 2 === 0);
+  updateRegularTree() {
+    const current = this.regularTree.state.counter() + 1;
+    this.regularTree.state.counter.set(current);
+    this.regularTree.state.text.set(`Manual ${current}`);
+    this.regularTree.state.flag.set(current % 2 === 0);
   }
 
-  updateBatchedStore() {
-    const current = this.batchedStore.state.counter() + 1;
-    this.batchedStore.state.counter.set(current);
-    this.batchedStore.state.text.set(`Manual ${current}`);
-    this.batchedStore.state.flag.set(current % 2 === 0);
+  updateBatchedTree() {
+    const current = this.batchedTree.state.counter() + 1;
+    this.batchedTree.state.counter.set(current);
+    this.batchedTree.state.text.set(`Manual ${current}`);
+    this.batchedTree.state.flag.set(current % 2 === 0);
   }
 
   multiUpdateRegular() {
     // Multiple individual updates (will trigger effect multiple times)
     for (let i = 0; i < 5; i++) {
-      const value = this.regularStore.state.counter() + 1;
-      this.regularStore.state.counter.set(value);
-      this.regularStore.state.text.set(`Multi ${value}`);
-      this.regularStore.state.flag.set(value % 2 === 0);
+      const value = this.regularTree.state.counter() + 1;
+      this.regularTree.state.counter.set(value);
+      this.regularTree.state.text.set(`Multi ${value}`);
+      this.regularTree.state.flag.set(value % 2 === 0);
     }
   }
 
   multiBatchUpdate() {
     // Multiple updates in a batch (will trigger effect once)
-    if (this.batchedStore.batchUpdate) {
+    if (this.batchedTree.batchUpdate) {
       for (let i = 0; i < 5; i++) {
-        this.batchedStore.batchUpdate((current) => ({
+        this.batchedTree.batchUpdate((current) => ({
           counter: current.counter + 1,
           text: `Batch ${current.counter + 1}`,
           flag: (current.counter + 1) % 2 === 0,
@@ -606,8 +606,8 @@ export class BatchingComparisonComponent implements OnDestroy {
     return ratio.toFixed(1);
   }
 
-  regularStoreCode = `// Regular store - no batching
-const store = signalTree({
+  regularTreeCode = `// Regular tree - no batching
+const tree = signalTree({
   counter: 0,
   text: 'Initial',
   flag: false
@@ -615,14 +615,14 @@ const store = signalTree({
 
 // Each update triggers effects immediately
 for (let i = 0; i < 100; i++) {
-  store.counter.set(i);        // Effect runs
-  store.text.set(\`Update \${i}\`); // Effect runs
-  store.flag.set(i % 2 === 0); // Effect runs
+  tree.counter.set(i);        // Effect runs
+  tree.text.set(\`Update \${i}\`); // Effect runs
+  tree.flag.set(i % 2 === 0); // Effect runs
 }
 // Total: 300 effect runs`;
 
-  batchedStoreCode = `// Enhanced store with batching
-const store = enhancedSignalTree({
+  batchedTreeCode = `// Enhanced tree with batching
+const tree = enhancedSignalTree({
   counter: 0,
   text: 'Initial',
   flag: false
@@ -633,7 +633,7 @@ const store = enhancedSignalTree({
 
 // Multiple updates batched together
 for (let i = 0; i < 100; i++) {
-  store.batchUpdate(() => ({
+  tree.batchUpdate(() => ({
     counter: i,
     text: \`Update \${i}\`,
     flag: i % 2 === 0

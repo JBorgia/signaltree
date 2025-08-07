@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { createFormStore, validators } from '@signal-tree';
+import { createFormTree, validators } from '@signal-tree';
 
 interface UserRegistrationForm {
   username: string;
@@ -31,7 +31,7 @@ interface UserRegistrationForm {
           <h3 class="font-semibold text-orange-800">What This Demonstrates</h3>
         </div>
         <p class="text-orange-700 text-sm">
-          Form stores provide comprehensive validation with synchronous and
+          Form trees provide comprehensive validation with synchronous and
           asynchronous validators, field-level error handling, and reactive form
           state management.
         </p>
@@ -42,9 +42,9 @@ interface UserRegistrationForm {
         <div class="bg-white rounded-lg shadow-md p-4 text-center">
           <div
             class="text-2xl mb-2"
-            [class]="formStore.valid() ? 'text-green-600' : 'text-red-600'"
+            [class]="formTree.valid() ? 'text-green-600' : 'text-red-600'"
           >
-            {{ formStore.valid() ? '✅' : '❌' }}
+            {{ formTree.valid() ? '✅' : '❌' }}
           </div>
           <div class="text-sm text-gray-600">Form Valid</div>
         </div>
@@ -52,12 +52,12 @@ interface UserRegistrationForm {
         <div class="bg-white rounded-lg shadow-md p-4 text-center">
           <div
             class="text-2xl mb-2"
-            [class]="formStore.dirty() ? 'text-blue-600' : 'text-gray-400'"
+            [class]="formTree.dirty() ? 'text-blue-600' : 'text-gray-400'"
           >
-            {{ formStore.dirty() ? '📝' : '📄' }}
+            {{ formTree.dirty() ? '📝' : '📄' }}
           </div>
           <div class="text-sm text-gray-600">
-            {{ formStore.dirty() ? 'Modified' : 'Pristine' }}
+            {{ formTree.dirty() ? 'Modified' : 'Pristine' }}
           </div>
         </div>
 
@@ -65,13 +65,13 @@ interface UserRegistrationForm {
           <div
             class="text-2xl mb-2"
             [class]="
-              formStore.submitting() ? 'text-yellow-600' : 'text-gray-400'
+              formTree.submitting() ? 'text-yellow-600' : 'text-gray-400'
             "
           >
-            {{ formStore.submitting() ? '⏳' : '💤' }}
+            {{ formTree.submitting() ? '⏳' : '💤' }}
           </div>
           <div class="text-sm text-gray-600">
-            {{ formStore.submitting() ? 'Submitting' : 'Ready' }}
+            {{ formTree.submitting() ? 'Submitting' : 'Ready' }}
           </div>
         </div>
 
@@ -106,13 +106,13 @@ interface UserRegistrationForm {
                 </label>
                 <input
                   id="firstName"
-                  [(ngModel)]="formStore.values.firstName"
+                  [(ngModel)]="formTree.values.firstName"
                   (blur)="markFieldAsTouched('firstName')"
                   name="firstName"
                   class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                   [class.border-red-500]="hasFieldError('firstName')"
                   [class.border-green-500]="
-                    formStore.isFieldValid('firstName')()
+                    formTree.isFieldValid('firstName')()
                   "
                   placeholder="Enter your first name"
                 />
@@ -133,14 +133,12 @@ interface UserRegistrationForm {
                 </label>
                 <input
                   id="lastName"
-                  [(ngModel)]="formStore.values.lastName"
+                  [(ngModel)]="formTree.values.lastName"
                   (blur)="markFieldAsTouched('lastName')"
                   name="lastName"
                   class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                   [class.border-red-500]="hasFieldError('lastName')"
-                  [class.border-green-500]="
-                    formStore.isFieldValid('lastName')()
-                  "
+                  [class.border-green-500]="formTree.isFieldValid('lastName')()"
                   placeholder="Enter your last name"
                 />
                 <div
@@ -161,13 +159,13 @@ interface UserRegistrationForm {
                 <input
                   id="dateOfBirth"
                   type="date"
-                  [(ngModel)]="formStore.values.dateOfBirth"
+                  [(ngModel)]="formTree.values.dateOfBirth"
                   (blur)="markFieldAsTouched('dateOfBirth')"
                   name="dateOfBirth"
                   class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                   [class.border-red-500]="hasFieldError('dateOfBirth')"
                   [class.border-green-500]="
-                    formStore.isFieldValid('dateOfBirth')()
+                    formTree.isFieldValid('dateOfBirth')()
                   "
                 />
                 <div
@@ -188,13 +186,13 @@ interface UserRegistrationForm {
                 <input
                   id="phoneNumber"
                   type="tel"
-                  [(ngModel)]="formStore.values.phoneNumber"
+                  [(ngModel)]="formTree.values.phoneNumber"
                   (blur)="markFieldAsTouched('phoneNumber')"
                   name="phoneNumber"
                   class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                   [class.border-red-500]="hasFieldError('phoneNumber')"
                   [class.border-green-500]="
-                    formStore.isFieldValid('phoneNumber')()
+                    formTree.isFieldValid('phoneNumber')()
                   "
                   placeholder="+1 (555) 123-4567"
                 />
@@ -230,7 +228,7 @@ interface UserRegistrationForm {
                 </label>
                 <input
                   id="username"
-                  [(ngModel)]="formStore.values.username"
+                  [(ngModel)]="formTree.values.username"
                   (blur)="markFieldAsTouched('username')"
                   (input)="onUsernameChange()"
                   name="username"
@@ -239,7 +237,7 @@ interface UserRegistrationForm {
                     hasFieldError('username') || hasAsyncFieldError('username')
                   "
                   [class.border-green-500]="
-                    formStore.isFieldValid('username')() &&
+                    formTree.isFieldValid('username')() &&
                     !hasAsyncFieldError('username')
                   "
                   placeholder="Choose a unique username"
@@ -274,7 +272,7 @@ interface UserRegistrationForm {
                 <input
                   id="email"
                   type="email"
-                  [(ngModel)]="formStore.values.email"
+                  [(ngModel)]="formTree.values.email"
                   (blur)="markFieldAsTouched('email')"
                   (input)="onEmailChange()"
                   name="email"
@@ -283,7 +281,7 @@ interface UserRegistrationForm {
                     hasFieldError('email') || hasAsyncFieldError('email')
                   "
                   [class.border-green-500]="
-                    formStore.isFieldValid('email')() &&
+                    formTree.isFieldValid('email')() &&
                     !hasAsyncFieldError('email')
                   "
                   placeholder="your.email@example.com"
@@ -313,13 +311,13 @@ interface UserRegistrationForm {
                   <input
                     id="password"
                     type="password"
-                    [(ngModel)]="formStore.values.password"
+                    [(ngModel)]="formTree.values.password"
                     (blur)="markFieldAsTouched('password')"
                     name="password"
                     class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                     [class.border-red-500]="hasFieldError('password')"
                     [class.border-green-500]="
-                      formStore.isFieldValid('password')()
+                      formTree.isFieldValid('password')()
                     "
                     placeholder="Choose a strong password"
                   />
@@ -345,13 +343,13 @@ interface UserRegistrationForm {
                   <input
                     id="confirmPassword"
                     type="password"
-                    [(ngModel)]="formStore.values.confirmPassword"
+                    [(ngModel)]="formTree.values.confirmPassword"
                     (blur)="markFieldAsTouched('confirmPassword')"
                     name="confirmPassword"
                     class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                     [class.border-red-500]="hasFieldError('confirmPassword')"
                     [class.border-green-500]="
-                      formStore.isFieldValid('confirmPassword')()
+                      formTree.isFieldValid('confirmPassword')()
                     "
                     placeholder="Confirm your password"
                   />
@@ -372,7 +370,7 @@ interface UserRegistrationForm {
               <input
                 type="checkbox"
                 id="agreeToTerms"
-                [(ngModel)]="formStore.values.agreeToTerms"
+                [(ngModel)]="formTree.values.agreeToTerms"
                 (change)="markFieldAsTouched('agreeToTerms')"
                 name="agreeToTerms"
                 class="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded mt-1"
@@ -432,11 +430,11 @@ interface UserRegistrationForm {
 
             <button
               type="submit"
-              [disabled]="!formStore.valid() || formStore.submitting()"
+              [disabled]="!formTree.valid() || formTree.submitting()"
               class="px-6 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:bg-gray-400 transition-colors"
             >
               {{
-                formStore.submitting() ? 'Registering...' : 'Register Account'
+                formTree.submitting() ? 'Registering...' : 'Register Account'
               }}
             </button>
           </div>
@@ -488,7 +486,7 @@ interface UserRegistrationForm {
             <div class="bg-gray-50 rounded-lg p-4">
               <h3 class="font-medium text-gray-800 mb-2">Touched Fields</h3>
               <div class="text-sm text-gray-600">
-                {{ Object.keys(formStore.touched()).join(', ') || 'None' }}
+                {{ Object.keys(formTree.touched()).join(', ') || 'None' }}
               </div>
             </div>
 
@@ -496,14 +494,14 @@ interface UserRegistrationForm {
               <h3 class="font-medium text-gray-800 mb-2">Form Statistics</h3>
               <div class="space-y-1 text-sm">
                 <div>
-                  <strong>Valid:</strong> {{ formStore.valid() ? 'Yes' : 'No' }}
+                  <strong>Valid:</strong> {{ formTree.valid() ? 'Yes' : 'No' }}
                 </div>
                 <div>
-                  <strong>Dirty:</strong> {{ formStore.dirty() ? 'Yes' : 'No' }}
+                  <strong>Dirty:</strong> {{ formTree.dirty() ? 'Yes' : 'No' }}
                 </div>
                 <div>
                   <strong>Submitting:</strong>
-                  {{ formStore.submitting() ? 'Yes' : 'No' }}
+                  {{ formTree.submitting() ? 'Yes' : 'No' }}
                 </div>
                 <div><strong>Error Count:</strong> {{ getErrorCount() }}</div>
               </div>
@@ -515,11 +513,11 @@ interface UserRegistrationForm {
       <!-- Code Example -->
       <div class="mt-8 bg-white rounded-lg shadow-md p-6">
         <h2 class="text-xl font-semibold text-gray-800 mb-4">
-          💻 Form Store Setup
+          💻 Form Tree Setup
         </h2>
 
         <div class="bg-gray-800 text-gray-300 p-4 rounded-lg overflow-x-auto">
-          <pre><code>{{ formStoreCode }}</code></pre>
+          <pre><code>{{ formTreeCode }}</code></pre>
         </div>
       </div>
     </div>
@@ -540,7 +538,7 @@ export class FormValidationComponent {
   isCheckingUsername = false;
   isCheckingEmail = false;
 
-  formStore = createFormStore<UserRegistrationForm>(
+  formTree = createFormTree<UserRegistrationForm>(
     {
       username: '',
       email: '',
@@ -654,7 +652,7 @@ export class FormValidationComponent {
 
   async onSubmit() {
     try {
-      await this.formStore.submit(async (values) => {
+      await this.formTree.submit(async (values) => {
         // Simulate form submission
         await new Promise((resolve) => setTimeout(resolve, 2000));
 
@@ -673,11 +671,11 @@ export class FormValidationComponent {
   }
 
   async validateForm() {
-    await this.formStore.validate();
+    await this.formTree.validate();
   }
 
   fillSampleData() {
-    this.formStore.setValues({
+    this.formTree.setValues({
       username: 'johndoe123',
       email: 'john.doe@example.com',
       password: 'SecurePass123',
@@ -691,54 +689,54 @@ export class FormValidationComponent {
   }
 
   resetForm() {
-    this.formStore.reset();
+    this.formTree.reset();
   }
 
   markFieldAsTouched() {
-    // This would normally be handled automatically by the form store
+    // This would normally be handled automatically by the form tree
     // but we can add custom logic here if needed
   }
 
   async onUsernameChange() {
     if (
-      this.formStore.values.username() &&
-      this.formStore.values.username().length >= 3
+      this.formTree.values.username() &&
+      this.formTree.values.username().length >= 3
     ) {
-      await this.formStore.validate();
+      await this.formTree.validate();
     }
   }
 
   async onEmailChange() {
     if (
-      this.formStore.values.email() &&
-      this.formStore.values.email().includes('@')
+      this.formTree.values.email() &&
+      this.formTree.values.email().includes('@')
     ) {
-      await this.formStore.validate();
+      await this.formTree.validate();
     }
   }
 
   hasFieldError(field: keyof UserRegistrationForm): boolean {
-    const error = this.formStore.getFieldError(field)();
+    const error = this.formTree.getFieldError(field)();
     return !!error;
   }
 
   getFieldError(field: keyof UserRegistrationForm): string | undefined {
-    return this.formStore.getFieldError(field)();
+    return this.formTree.getFieldError(field)();
   }
 
   hasAsyncFieldError(field: keyof UserRegistrationForm): boolean {
-    const asyncErrors = this.formStore.asyncErrors();
+    const asyncErrors = this.formTree.asyncErrors();
     return !!asyncErrors[field];
   }
 
   getAsyncFieldError(field: keyof UserRegistrationForm): string | undefined {
-    const asyncErrors = this.formStore.asyncErrors();
+    const asyncErrors = this.formTree.asyncErrors();
     return asyncErrors[field];
   }
 
   getErrorCount(): number {
-    const syncErrors = Object.keys(this.formStore.errors()).length;
-    const asyncErrors = Object.keys(this.formStore.asyncErrors()).length;
+    const syncErrors = Object.keys(this.formTree.errors()).length;
+    const asyncErrors = Object.keys(this.formTree.asyncErrors()).length;
     return syncErrors + asyncErrors;
   }
 
@@ -746,7 +744,7 @@ export class FormValidationComponent {
     const errors: Array<{ field: string; message: string }> = [];
 
     // Add sync errors
-    const syncErrors = this.formStore.errors();
+    const syncErrors = this.formTree.errors();
     Object.entries(syncErrors).forEach(([field, message]) => {
       if (message) {
         errors.push({ field, message });
@@ -754,7 +752,7 @@ export class FormValidationComponent {
     });
 
     // Add async errors
-    const asyncErrors = this.formStore.asyncErrors();
+    const asyncErrors = this.formTree.asyncErrors();
     Object.entries(asyncErrors).forEach(([field, message]) => {
       if (message) {
         errors.push({ field: `${field} (async)`, message });
@@ -765,7 +763,7 @@ export class FormValidationComponent {
   }
 
   getCurrentValues(): Partial<UserRegistrationForm> {
-    const values = this.formStore.values.unwrap();
+    const values = this.formTree.values.unwrap();
     // Don't show passwords in the display
     return {
       ...values,
@@ -774,9 +772,9 @@ export class FormValidationComponent {
     };
   }
 
-  formStoreCode = `import { createFormStore, validators, asyncValidators } from 'signal-tree';
+  formTreeCode = `import { createFormTree, validators, asyncValidators } from 'signal-tree';
 
-const formStore = createFormStore({
+const formTree = createFormTree({
   username: '',
   email: '',
   password: '',
@@ -810,7 +808,7 @@ const formStore = createFormStore({
 });
 
 // Form submission with validation
-await formStore.submit(async (values) => {
+await formTree.submit(async (values) => {
   return await submitRegistration(values);
 });`;
 }

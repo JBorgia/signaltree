@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { signalTree } from '@signal-tree';
 
 @Component({
-  selector: 'app-basic-store',
+  selector: 'app-basic-tree',
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
@@ -21,7 +21,7 @@ import { signalTree } from '@signal-tree';
               <label for="name" class="input-label"> Name </label>
               <input
                 id="name"
-                [value]="store.state.name()"
+                [value]="tree.state.name()"
                 (input)="updateName($event)"
                 class="form-input"
                 placeholder="Enter your name"
@@ -33,7 +33,7 @@ import { signalTree } from '@signal-tree';
               <input
                 id="age"
                 type="number"
-                [value]="store.state.age()"
+                [value]="tree.state.age()"
                 (input)="updateAge($event)"
                 class="form-input"
                 placeholder="Enter your age"
@@ -45,7 +45,7 @@ import { signalTree } from '@signal-tree';
               <input
                 id="email"
                 type="email"
-                [value]="store.state.email()"
+                [value]="tree.state.email()"
                 (input)="updateEmail($event)"
                 class="form-input"
                 placeholder="Enter your email"
@@ -57,7 +57,7 @@ import { signalTree } from '@signal-tree';
                 Increment Age
               </button>
 
-              <button (click)="resetStore()" class="btn btn-secondary">
+              <button (click)="resetTree()" class="btn btn-secondary">
                 Reset
               </button>
 
@@ -78,37 +78,37 @@ import { signalTree } from '@signal-tree';
               <div class="signal-list">
                 <div class="signal-item">
                   <strong>Name:</strong>
-                  <code class="signal-value">{{ store.state.name() }}</code>
+                  <code class="signal-value">{{ tree.state.name() }}</code>
                 </div>
                 <div class="signal-item">
                   <strong>Age:</strong>
-                  <code class="signal-value">{{ store.state.age() }}</code>
+                  <code class="signal-value">{{ tree.state.age() }}</code>
                 </div>
                 <div class="signal-item">
                   <strong>Email:</strong>
-                  <code class="signal-value">{{ store.state.email() }}</code>
+                  <code class="signal-value">{{ tree.state.email() }}</code>
                 </div>
               </div>
             </div>
 
             <div class="state-section">
-              <h3 class="state-title">Unwrapped Store</h3>
-              <pre class="json-display">{{ store.unwrap() | json }}</pre>
+              <h3 class="state-title">Unwrapped Tree</h3>
+              <pre class="json-display">{{ tree.unwrap() | json }}</pre>
             </div>
 
             <div class="state-section">
-              <h3 class="state-title">Store Methods</h3>
+              <h3 class="state-title">Tree Methods</h3>
               <div class="methods-list">
                 <div><strong>Available methods:</strong></div>
                 <ul class="method-items">
                   <li>
-                    <code>store.state.name()</code> - Get name signal value
+                    <code>tree.state.name()</code> - Get name signal value
                   </li>
                   <li>
-                    <code>store.state.name.set(value)</code> - Set name directly
+                    <code>tree.state.name.set(value)</code> - Set name directly
                   </li>
-                  <li><code>store.update(fn)</code> - Update entire store</li>
-                  <li><code>store.unwrap()</code> - Get plain object</li>
+                  <li><code>tree.update(fn)</code> - Update entire tree</li>
+                  <li><code>tree.unwrap()</code> - Get plain object</li>
                 </ul>
               </div>
             </div>
@@ -146,54 +146,54 @@ import { signalTree } from '@signal-tree';
       </div>
     </div>
   `,
-  styleUrls: ['./basic-store.component.scss'],
+  styleUrls: ['./basic-tree.component.scss'],
 })
-export class BasicStoreComponent {
+export class BasicTreeComponent {
   state = {
     name: 'John Doe',
     age: 25,
     email: 'john@example.com',
   };
-  store = signalTree(this.state);
+  tree = signalTree(this.state);
 
   updateLog: Array<{ timestamp: Date; action: string; data: unknown }> = [];
 
   constructor() {
-    // Track all store changes
-    this.logUpdate('Store initialized', this.store.unwrap());
+    // Track all tree changes
+    this.logUpdate('Tree initialized', this.tree.unwrap());
   }
   incrementAge() {
-    const newAge = this.store.state.age() + 1;
-    this.store.state.age.set(newAge);
+    const newAge = this.tree.state.age() + 1;
+    this.tree.state.age.set(newAge);
     this.logUpdate('Age incremented', { age: newAge });
   }
 
   updateName(event: Event) {
     const target = event.target as HTMLInputElement;
-    this.store.state.name.set(target.value);
+    this.tree.state.name.set(target.value);
     this.logUpdate('Name updated', { name: target.value });
   }
 
   updateAge(event: Event) {
     const target = event.target as HTMLInputElement;
     const age = parseInt(target.value) || 0;
-    this.store.state.age.set(age);
+    this.tree.state.age.set(age);
     this.logUpdate('Age updated', { age });
   }
 
   updateEmail(event: Event) {
     const target = event.target as HTMLInputElement;
-    this.store.state.email.set(target.value);
+    this.tree.state.email.set(target.value);
     this.logUpdate('Email updated', { email: target.value });
   }
 
-  resetStore() {
-    this.store.update(() => ({
+  resetTree() {
+    this.tree.update(() => ({
       name: 'John Doe',
       age: 25,
       email: 'john@example.com',
     }));
-    this.logUpdate('Store reset', this.store.unwrap());
+    this.logUpdate('Tree reset', this.tree.unwrap());
   }
 
   randomizeData() {
@@ -207,7 +207,7 @@ export class BasicStoreComponent {
       '@' +
       domains[Math.floor(Math.random() * domains.length)];
 
-    this.store.update(() => ({ name, age, email }));
+    this.tree.update(() => ({ name, age, email }));
     this.logUpdate('Data randomized', { name, age, email });
   }
 
@@ -235,27 +235,27 @@ export class BasicStoreComponent {
   codeExample = `import { signalTree } from 'signal-tree';
 
 // Create a basic signal tree
-const store = signalTree({
+const tree = signalTree({
   name: 'John Doe',
   age: 25,
   email: 'john@example.com'
 });
 
 // Access individual signals through state
-console.log(store.state.name()); // 'John Doe'
-console.log(store.$.age());      // 25 ($ is shorthand for state)
+console.log(tree.state.name()); // 'John Doe'
+console.log(tree.$.age());      // 25 ($ is shorthand for state)
 
 // Update individual signals
-store.state.name.set('Jane Doe');
-store.state.age.update(age => age + 1);
+tree.state.name.set('Jane Doe');
+tree.state.age.update(age => age + 1);
 
-// Update entire store
-store.update(current => ({
+// Update entire tree
+tree.update(current => ({
   ...current,
   age: current.age + 1
 }));
 
 // Get plain object
-const plainData = store.unwrap();
+const plainData = tree.unwrap();
 console.log(plainData); // { name: 'Jane Doe', age: 26, email: '...' }`;
 }

@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { createEntityStore } from '@signal-tree';
+import { createEntityTree } from '@signal-tree';
 
 interface User {
   id: string;
@@ -19,7 +19,7 @@ interface User {
   template: `
     <div class="container mx-auto p-6">
       <h1 class="text-3xl font-bold text-gray-800 mb-6">
-        🗃️ Entity Store CRUD Operations
+        🗃️ Entity Tree CRUD Operations
       </h1>
 
       <div class="mb-6 bg-purple-50 border border-purple-200 rounded-lg p-4">
@@ -28,7 +28,7 @@ interface User {
           <h3 class="font-semibold text-purple-800">What This Demonstrates</h3>
         </div>
         <p class="text-purple-700 text-sm">
-          Entity stores provide specialized CRUD operations for managing
+          Entity trees provide specialized CRUD operations for managing
           collections of entities. This includes optimized selectors, built-in
           CRUD methods, and reactive queries.
         </p>
@@ -241,7 +241,7 @@ interface User {
       <div class="mb-8 grid grid-cols-1 md:grid-cols-4 gap-4">
         <div class="bg-white rounded-lg shadow-md p-6 text-center">
           <div class="text-2xl font-bold text-purple-600 mb-2">
-            {{ userStore.selectTotal()() }}
+            {{ userTree.selectTotal()() }}
           </div>
           <div class="text-sm text-gray-600">Total Users</div>
         </div>
@@ -393,10 +393,10 @@ interface User {
         </div>
       </div>
 
-      <!-- Entity Store Methods Demo -->
+      <!-- Entity Tree Methods Demo -->
       <div class="mt-8 bg-white rounded-lg shadow-md p-6">
         <h2 class="text-xl font-semibold text-gray-800 mb-4">
-          🔧 Entity Store Methods
+          🔧 Entity Tree Methods
         </h2>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -459,7 +459,7 @@ interface User {
   ],
 })
 export class EntityCrudComponent {
-  userStore = createEntityStore<User>([
+  userTree = createEntityTree<User>([
     {
       id: '1',
       name: 'John Doe',
@@ -502,14 +502,14 @@ export class EntityCrudComponent {
         department: this.userForm.department as string,
       };
 
-      this.userStore.add(newUser);
+      this.userTree.add(newUser);
       this.resetForm();
     }
   }
 
   updateUser() {
     if (this.editingUser && this.isFormValid()) {
-      this.userStore.update(this.editingUser.id, {
+      this.userTree.update(this.editingUser.id, {
         name: this.userForm.name as string,
         email: this.userForm.email as string,
         age: this.userForm.age as number,
@@ -533,7 +533,7 @@ export class EntityCrudComponent {
 
   deleteUser(id: string) {
     if (confirm('Are you sure you want to delete this user?')) {
-      this.userStore.remove(id);
+      this.userTree.remove(id);
 
       if (this.editingUser?.id === id) {
         this.cancelEdit();
@@ -542,9 +542,9 @@ export class EntityCrudComponent {
   }
 
   toggleUserStatus(id: string) {
-    const user = this.userStore.findById(id)();
+    const user = this.userTree.findById(id)();
     if (user) {
-      this.userStore.update(id, { active: !user.active });
+      this.userTree.update(id, { active: !user.active });
     }
   }
 
@@ -592,19 +592,19 @@ export class EntityCrudComponent {
       },
     ];
 
-    sampleUsers.forEach((user) => this.userStore.add(user));
+    sampleUsers.forEach((user) => this.userTree.add(user));
   }
 
   clearAllUsers() {
     if (confirm('Are you sure you want to delete all users?')) {
-      const allUsers = this.userStore.selectAll()();
-      allUsers.forEach((user) => this.userStore.remove(user.id));
+      const allUsers = this.userTree.selectAll()();
+      allUsers.forEach((user) => this.userTree.remove(user.id));
       this.cancelEdit();
     }
   }
 
   getFilteredUsers(): User[] {
-    let users = this.userStore.selectAll()();
+    let users = this.userTree.selectAll()();
 
     // Search filter
     if (this.searchTerm) {
@@ -632,11 +632,11 @@ export class EntityCrudComponent {
   }
 
   getActiveUsers(): User[] {
-    return this.userStore.findBy((user) => user.active)();
+    return this.userTree.findBy((user) => user.active)();
   }
 
   getDepartmentCount(): number {
-    const users = this.userStore.selectAll()();
+    const users = this.userTree.selectAll()();
     const departments = new Set(users.map((user) => user.department));
     return departments.size;
   }
@@ -669,16 +669,16 @@ export class EntityCrudComponent {
     );
   }
 
-  entityMethods = `// Entity Store CRUD Methods
-userStore.add(user);           // Add entity
-userStore.update(id, changes); // Update entity
-userStore.remove(id);          // Remove entity
-userStore.upsert(user);        // Add or update
+  entityMethods = `// Entity Tree CRUD Methods
+userTree.add(user);           // Add entity
+userTree.update(id, changes); // Update entity
+userTree.remove(id);          // Remove entity
+userTree.upsert(user);        // Add or update
 
 // Selectors
-userStore.selectAll()();       // Get all entities
-userStore.findById(id)();      // Find by ID
-userStore.findBy(predicate)(); // Filter entities
-userStore.selectIds()();       // Get all IDs
-userStore.selectTotal()();     // Get count`;
+userTree.selectAll()();       // Get all entities
+userTree.findById(id)();      // Find by ID
+userTree.findBy(predicate)(); // Filter entities
+userTree.selectIds()();       // Get all IDs
+userTree.selectTotal()();     // Get count`;
 }

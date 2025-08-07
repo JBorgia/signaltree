@@ -58,7 +58,7 @@ export type SignalValue<T> = T extends ArrayLike<SimpleSignalValue>
 /**
  * Configuration options for creating signal trees
  */
-export interface StoreConfig {
+export interface TreeConfig {
   enablePerformanceFeatures?: boolean;
   batchUpdates?: boolean;
   useMemoization?: boolean;
@@ -67,11 +67,11 @@ export interface StoreConfig {
   maxCacheSize?: number;
   enableTimeTravel?: boolean;
   enableDevTools?: boolean;
-  storeName?: string;
+  treeName?: string;
 }
 
 /**
- * Performance metrics tracked by the store
+ * Performance metrics tracked by the tree
  */
 export interface PerformanceMetrics {
   updates: number;
@@ -94,7 +94,7 @@ export interface TimeTravelEntry<T> {
 }
 
 /**
- * Middleware interface for intercepting store operations
+ * Middleware interface for intercepting tree operations
  */
 export interface Middleware<T> {
   id: string;
@@ -123,16 +123,16 @@ export interface EntityHelpers<E extends { id: string | number }> {
 export interface AsyncActionConfig<T, TResult> {
   loadingKey?: string;
   errorKey?: string;
-  onSuccess?: (result: TResult, store: SignalTree<T>) => void;
-  onError?: (error: unknown, store: SignalTree<T>) => void;
-  onFinally?: (store: SignalTree<T>) => void;
+  onSuccess?: (result: TResult, tree: SignalTree<T>) => void;
+  onError?: (error: unknown, tree: SignalTree<T>) => void;
+  onFinally?: (tree: SignalTree<T>) => void;
 }
 
 /**
  * Dev tools integration interface
  */
 export interface DevToolsInterface<T> {
-  connect: (storeName: string) => void;
+  connect: (treeName: string) => void;
   disconnect: () => void;
   send: (action: string, state: T) => void;
   isConnected: () => boolean;
@@ -160,9 +160,9 @@ export type SignalTree<T> = {
 
   // Performance Features (always available - bypass when disabled)
   batchUpdate(updater: (current: T) => Partial<T>): void;
-  computed<R>(fn: (store: T) => R, cacheKey?: string): Signal<R>;
-  effect(fn: (store: T) => void): void;
-  subscribe(fn: (store: T) => void): () => void;
+  computed<R>(fn: (tree: T) => R, cacheKey?: string): Signal<R>;
+  effect(fn: (tree: T) => void): void;
+  subscribe(fn: (tree: T) => void): () => void;
 
   // Optimization methods (always available)
   optimize(): void;
@@ -234,15 +234,15 @@ export function shallowEqual<T>(a: T, b: T): boolean {
 }
 
 // ============================================
-// GLOBAL STATE - UPDATED WITH PER-STORE METRICS
+// GLOBAL STATE - UPDATED WITH PER-TREE METRICS
 // ============================================
 
 const computedCache = new WeakMap<object, Map<string, Signal<unknown>>>();
 const middlewareMap = new WeakMap<object, Array<Middleware<unknown>>>();
 const timeTravelMap = new WeakMap<object, Array<TimeTravelEntry<unknown>>>();
 const redoStack = new WeakMap<object, Array<TimeTravelEntry<unknown>>>();
-const storeMetrics = new WeakMap<object, PerformanceMetrics>(); // ADDED THIS
-const testSubscribers = new WeakMap<object, Array<(store: unknown) => void>>(); // For test environment
+const treeMetrics = new WeakMap<object, PerformanceMetrics>(); // ADDED THIS
+const testSubscribers = new WeakMap<object, Array<(tree: unknown) => void>>(); // For test environment
 
 // ============================================
 // BATCHING SYSTEM
@@ -272,7 +272,7 @@ function batchUpdates(fn: () => void): void {
 // ============================================
 
 function createTimeTravelMiddleware<T>(
-  storeRef: object,
+  treeRef: object,
   maxEntries = 50
 ): Middleware<T> {
   return {
@@ -280,7 +280,7 @@ function createTimeTravelMiddleware<T>(
     before: (action, payload, state) => {
       // Initialize history with the initial state if it doesn't exist
       if (
-        !timeTravelMap.has(storeRef) &&
+        !timeTravelMap.has(treeRef) &&
         action !== 'UNDO' &&
         action !== 'REDO'
       ) {
@@ -293,7 +293,7 @@ function createTimeTravelMiddleware<T>(
           },
         ];
         timeTravelMap.set(
-          storeRef,
+          treeRef,
           initialHistory as TimeTravelEntry<unknown>[]
         );
       }
@@ -302,7 +302,7 @@ function createTimeTravelMiddleware<T>(
     after: (action, payload, state, newState) => {
       if (action !== 'UNDO' && action !== 'REDO') {
         let history =
-          (timeTravelMap.get(storeRef) as TimeTravelEntry<T>[]) || [];
+          (timeTravelMap.get(treeRef) as TimeTravelEntry<T>[]) || [];
 
         history.push({
           state: structuredClone(newState),
@@ -315,8 +315,8 @@ function createTimeTravelMiddleware<T>(
           history = history.slice(-maxEntries);
         }
 
-        timeTravelMap.set(storeRef, history as TimeTravelEntry<unknown>[]);
-        redoStack.set(storeRef, [] as TimeTravelEntry<unknown>[]);
+        timeTravelMap.set(treeRef, history as TimeTravelEntry<unknown>[]);
+        redoStack.set(treeRef, [] as TimeTravelEntry<unknown>[]);
       }
     },
   };
@@ -326,7 +326,7 @@ function createTimeTravelMiddleware<T>(
 // DEV TOOLS INTEGRATION
 // ============================================
 
-function createDevToolsInterface<T>(storeName: string): DevToolsInterface<T> {
+function createDevToolsInterface<T>(treeName: string): DevToolsInterface<T> {
   let devToolsConnection: {
     disconnect: () => void;
     send: (action: string, state: T) => void;
@@ -348,7 +348,7 @@ function createDevToolsInterface<T>(storeName: string): DevToolsInterface<T> {
         };
 
         devToolsConnection = devToolsExt.connect({
-          name: name || storeName,
+          name: name || treeName,
           features: {
             pause: true,
             lock: true,
@@ -387,11 +387,11 @@ function createDevToolsInterface<T>(storeName: string): DevToolsInterface<T> {
 // ============================================
 
 function createEntityHelpers<T, E extends { id: string | number }>(
-  store: SignalTree<T>,
+  tree: SignalTree<T>,
   entityKey: keyof T
 ): EntityHelpers<E> {
   // Type assertion needed here due to generic constraints
-  const entitySignal = (store.state as Record<string, unknown>)[
+  const entitySignal = (tree.state as Record<string, unknown>)[
     entityKey as string
   ] as WritableSignal<E[]>;
 
@@ -443,7 +443,7 @@ function createEntityHelpers<T, E extends { id: string | number }>(
 // ASYNC ACTION FACTORY
 // ============================================
 
-function createAsyncActionFactory<T>(store: SignalTree<T>) {
+function createAsyncActionFactory<T>(tree: SignalTree<T>) {
   return function createAsyncAction<TInput, TResult>(
     operation: (input: TInput) => Promise<TResult>,
     config: AsyncActionConfig<T, TResult> = {}
@@ -455,9 +455,9 @@ function createAsyncActionFactory<T>(store: SignalTree<T>) {
       const setNestedValue = (path: string, value: unknown) => {
         const keys = path.split('.');
         if (keys.length === 1) {
-          store.update((state) => ({ ...state, [path]: value } as Partial<T>));
+          tree.update((state) => ({ ...state, [path]: value } as Partial<T>));
         } else {
-          store.update((state) => {
+          tree.update((state) => {
             const newState = { ...state } as Record<string, unknown>;
             let current = newState;
             for (let i = 0; i < keys.length - 1; i++) {
@@ -499,33 +499,33 @@ function createAsyncActionFactory<T>(store: SignalTree<T>) {
 
       try {
         const result = await operation(input);
-        onSuccess?.(result, store);
+        onSuccess?.(result, tree);
         return result;
       } catch (error) {
         if (errorKey) {
           setNestedValue(errorKey, error);
         }
-        onError?.(error, store);
+        onError?.(error, tree);
         throw error;
       } finally {
         if (loadingKey) {
           setNestedValue(loadingKey, false);
         }
-        onFinally?.(store);
+        onFinally?.(tree);
       }
     };
   };
 }
 
 // ============================================
-// CORE STORE ENHANCEMENT
+// CORE TREE ENHANCEMENT
 // ============================================
 
 // Improved unwrap and update with better typing
-function enhanceStoreBasic<T extends Record<string, unknown>>(
-  store: SignalTree<T>
+function enhanceTreeBasic<T extends Record<string, unknown>>(
+  tree: SignalTree<T>
 ): SignalTree<T> {
-  store.unwrap = (): T => {
+  tree.unwrap = (): T => {
     // Recursively unwrap with proper typing
     const unwrapObject = <O extends Record<string, unknown>>(
       obj: DeepSignalify<O>
@@ -554,11 +554,11 @@ function enhanceStoreBasic<T extends Record<string, unknown>>(
       return result as O;
     };
 
-    return unwrapObject(store.state as DeepSignalify<T>);
+    return unwrapObject(tree.state as DeepSignalify<T>);
   };
 
-  store.update = (updater: (current: T) => Partial<T>) => {
-    const currentValue = store.unwrap();
+  tree.update = (updater: (current: T) => Partial<T>) => {
+    const currentValue = tree.unwrap();
     const partialObj = updater(currentValue);
 
     // Recursively update with better typing
@@ -591,48 +591,48 @@ function enhanceStoreBasic<T extends Record<string, unknown>>(
       }
     };
 
-    updateObject(store.state as DeepSignalify<T>, partialObj);
+    updateObject(tree.state as DeepSignalify<T>, partialObj);
   };
 
   // Add all required methods with bypass logic (will be overridden if enhanced)
-  store.batchUpdate = (updater: (current: T) => Partial<T>) => {
+  tree.batchUpdate = (updater: (current: T) => Partial<T>) => {
     console.warn(
       '⚠️ batchUpdate() called but batching is not enabled.',
-      '\nTo enable batch updates, create an enhanced store:',
+      '\nTo enable batch updates, create an enhanced tree:',
       '\nsignalTree(data, { enablePerformanceFeatures: true, batchUpdates: true })'
     );
     // Fallback: Just call update directly
-    store.update(updater);
+    tree.update(updater);
   };
 
-  store.computed = <R>(fn: (store: T) => R, cacheKey?: string): Signal<R> => {
+  tree.computed = <R>(fn: (tree: T) => R, cacheKey?: string): Signal<R> => {
     console.warn(
       '⚠️ computed() called but memoization is not enabled.',
-      '\nTo enable memoized computations, create an enhanced store:',
+      '\nTo enable memoized computations, create an enhanced tree:',
       '\nsignalTree(data, { enablePerformanceFeatures: true, useMemoization: true })'
     );
     // Fallback: Use simple Angular computed without memoization
     void cacheKey; // Mark as intentionally unused
-    return computed(() => fn(store.unwrap()));
+    return computed(() => fn(tree.unwrap()));
   };
 
-  store.effect = (fn: (store: T) => void) => {
+  tree.effect = (fn: (tree: T) => void) => {
     try {
-      effect(() => fn(store.unwrap()));
+      effect(() => fn(tree.unwrap()));
     } catch (error) {
       // Fallback for test environments without injection context
       console.warn('Effect requires Angular injection context', error);
     }
   };
 
-  store.subscribe = (fn: (store: T) => void): (() => void) => {
+  tree.subscribe = (fn: (tree: T) => void): (() => void) => {
     try {
       const destroyRef = inject(DestroyRef);
       let isDestroyed = false;
 
       const effectRef = effect(() => {
         if (!isDestroyed) {
-          fn(store.unwrap());
+          fn(tree.unwrap());
         }
       });
 
@@ -646,33 +646,33 @@ function enhanceStoreBasic<T extends Record<string, unknown>>(
     } catch (error) {
       // Fallback for test environment - call once immediately
       console.warn('Subscribe requires Angular injection context', error);
-      fn(store.unwrap());
+      fn(tree.unwrap());
       return () => {
         // No-op unsubscribe
       };
     }
   };
 
-  store.optimize = () => {
+  tree.optimize = () => {
     console.warn(
       '⚠️ optimize() called but performance optimization is not enabled.',
-      '\nTo enable optimization features, create an enhanced store:',
+      '\nTo enable optimization features, create an enhanced tree:',
       '\nsignalTree(data, { enablePerformanceFeatures: true })'
     );
   };
 
-  store.clearCache = () => {
+  tree.clearCache = () => {
     console.warn(
       '⚠️ clearCache() called but caching is not enabled.',
-      '\nTo enable caching, create an enhanced store:',
+      '\nTo enable caching, create an enhanced tree:',
       '\nsignalTree(data, { enablePerformanceFeatures: true, useMemoization: true })'
     );
   };
 
-  store.getMetrics = (): PerformanceMetrics => {
+  tree.getMetrics = (): PerformanceMetrics => {
     console.warn(
       '⚠️ getMetrics() called but performance tracking is not enabled.',
-      '\nTo enable performance tracking, create an enhanced store:',
+      '\nTo enable performance tracking, create an enhanced tree:',
       '\nsignalTree(data, { enablePerformanceFeatures: true, trackPerformance: true })'
     );
     // Return minimal metrics when tracking not enabled
@@ -685,78 +685,78 @@ function enhanceStoreBasic<T extends Record<string, unknown>>(
     };
   };
 
-  store.addMiddleware = (middleware: Middleware<T>) => {
+  tree.addMiddleware = (middleware: Middleware<T>) => {
     console.warn(
       '⚠️ addMiddleware() called but performance features are not enabled.',
-      '\nTo enable middleware support, create an enhanced store:',
+      '\nTo enable middleware support, create an enhanced tree:',
       '\nsignalTree(data, { enablePerformanceFeatures: true })'
     );
     void middleware; // Mark as intentionally unused
   };
 
-  store.removeMiddleware = (id: string) => {
+  tree.removeMiddleware = (id: string) => {
     console.warn(
       '⚠️ removeMiddleware() called but performance features are not enabled.',
-      '\nTo enable middleware support, create an enhanced store:',
+      '\nTo enable middleware support, create an enhanced tree:',
       '\nsignalTree(data, { enablePerformanceFeatures: true })'
     );
     void id; // Mark as intentionally unused
   };
 
-  store.withEntityHelpers = <E extends { id: string | number }>(
+  tree.withEntityHelpers = <E extends { id: string | number }>(
     entityKey: keyof T
   ): EntityHelpers<E> => {
     // Always provide entity helpers - they're lightweight
-    return createEntityHelpers<T, E>(store, entityKey);
+    return createEntityHelpers<T, E>(tree, entityKey);
   };
 
-  store.createAsyncAction = <TInput, TResult>(
+  tree.createAsyncAction = <TInput, TResult>(
     operation: (input: TInput) => Promise<TResult>,
     config: AsyncActionConfig<T, TResult> = {}
   ) => {
     // Always provide async actions - they're lightweight
-    return createAsyncActionFactory(store)(operation, config);
+    return createAsyncActionFactory(tree)(operation, config);
   };
 
-  store.undo = () => {
+  tree.undo = () => {
     console.warn(
       '⚠️ undo() called but time travel is not enabled.',
-      '\nTo enable time travel, create an enhanced store:',
+      '\nTo enable time travel, create an enhanced tree:',
       '\nsignalTree(data, { enablePerformanceFeatures: true, enableTimeTravel: true })'
     );
   };
 
-  store.redo = () => {
+  tree.redo = () => {
     console.warn(
       '⚠️ redo() called but time travel is not enabled.',
-      '\nTo enable time travel, create an enhanced store:',
+      '\nTo enable time travel, create an enhanced tree:',
       '\nsignalTree(data, { enablePerformanceFeatures: true, enableTimeTravel: true })'
     );
   };
 
-  store.getHistory = (): TimeTravelEntry<T>[] => {
+  tree.getHistory = (): TimeTravelEntry<T>[] => {
     console.warn(
       '⚠️ getHistory() called but time travel is not enabled.',
-      '\nTo enable time travel, create an enhanced store:',
+      '\nTo enable time travel, create an enhanced tree:',
       '\nsignalTree(data, { enablePerformanceFeatures: true, enableTimeTravel: true })'
     );
     return [];
   };
 
-  store.resetHistory = () => {
+  tree.resetHistory = () => {
     console.warn(
       '⚠️ resetHistory() called but time travel is not enabled.',
-      '\nTo enable time travel, create an enhanced store:',
+      '\nTo enable time travel, create an enhanced tree:',
       '\nsignalTree(data, { enablePerformanceFeatures: true, enableTimeTravel: true })'
     );
   };
 
-  return store;
+  return tree;
 }
 
-function enhanceStore<T>(
-  store: SignalTree<T>,
-  config: StoreConfig = {}
+function enhanceTree<T>(
+  tree: SignalTree<T>,
+  config: TreeConfig = {}
 ): SignalTree<T> {
   const {
     enablePerformanceFeatures = false,
@@ -766,20 +766,20 @@ function enhanceStore<T>(
     maxCacheSize = 100,
     enableTimeTravel = false,
     enableDevTools = false,
-    storeName = 'SignalTree',
+    treeName = 'SignalTree',
   } = config;
 
   if (!enablePerformanceFeatures) {
-    return store; // Use bypass methods from enhanceStoreBasic
+    return tree; // Use bypass methods from enhanceTreeBasic
   }
 
   console.log(
-    `🚀 Enhanced Signal Tree: "${storeName}" with performance features enabled`
+    `🚀 Enhanced Signal Tree: "${treeName}" with performance features enabled`
   );
 
-  middlewareMap.set(store, []);
+  middlewareMap.set(tree, []);
 
-  // INITIALIZE PER-STORE METRICS
+  // INITIALIZE PER-TREE METRICS
   if (trackPerformance) {
     const initialMetrics: PerformanceMetrics = {
       updates: 0,
@@ -788,20 +788,20 @@ function enhanceStore<T>(
       cacheMisses: 0,
       averageUpdateTime: 0,
     };
-    storeMetrics.set(store, initialMetrics);
+    treeMetrics.set(tree, initialMetrics);
   }
 
   if (enableTimeTravel) {
-    const timeTravelMiddleware = createTimeTravelMiddleware<T>(store);
-    const middlewares = middlewareMap.get(store) || [];
+    const timeTravelMiddleware = createTimeTravelMiddleware<T>(tree);
+    const middlewares = middlewareMap.get(tree) || [];
     middlewares.push(timeTravelMiddleware as Middleware<unknown>);
-    middlewareMap.set(store, middlewares);
+    middlewareMap.set(tree, middlewares);
   }
 
   if (enableDevTools) {
-    const devTools = createDevToolsInterface<T>(storeName);
-    devTools.connect(storeName);
-    store.__devTools = devTools;
+    const devTools = createDevToolsInterface<T>(treeName);
+    devTools.connect(treeName);
+    tree.__devTools = devTools;
 
     const devToolsMiddleware: Middleware<T> = {
       id: 'devtools',
@@ -810,20 +810,20 @@ function enhanceStore<T>(
       },
     };
 
-    const middlewares = middlewareMap.get(store) || [];
+    const middlewares = middlewareMap.get(tree) || [];
     middlewares.push(devToolsMiddleware as Middleware<unknown>);
-    middlewareMap.set(store, middlewares);
+    middlewareMap.set(tree, middlewares);
   }
 
-  const originalUpdate = store.update;
-  store.update = (updater: (current: T) => Partial<T>) => {
+  const originalUpdate = tree.update;
+  tree.update = (updater: (current: T) => Partial<T>) => {
     const action = 'UPDATE';
-    const currentState = store.unwrap();
+    const currentState = tree.unwrap();
 
     // Calculate the update result to pass to middleware
     const updateResult = updater(currentState);
 
-    const middlewares = middlewareMap.get(store) || [];
+    const middlewares = middlewareMap.get(tree) || [];
     for (const middleware of middlewares) {
       if (
         middleware.before &&
@@ -835,11 +835,11 @@ function enhanceStore<T>(
 
     const updateFn = () => {
       const startTime = performance.now();
-      originalUpdate.call(store, updater);
+      originalUpdate.call(tree, updater);
       const endTime = performance.now();
 
-      // Track metrics per store
-      const metrics = storeMetrics.get(store);
+      // Track metrics per tree
+      const metrics = treeMetrics.get(tree);
       if (metrics) {
         metrics.updates++;
         const updateTime = endTime - startTime;
@@ -848,7 +848,7 @@ function enhanceStore<T>(
           metrics.updates;
       }
 
-      const newState = store.unwrap();
+      const newState = tree.unwrap();
       for (const middleware of middlewares) {
         if (middleware.after) {
           middleware.after(action, updateResult, currentState, newState);
@@ -856,7 +856,7 @@ function enhanceStore<T>(
       }
 
       // Notify test subscribers if in test environment
-      const subscribers = testSubscribers.get(store);
+      const subscribers = testSubscribers.get(tree);
       if (subscribers) {
         subscribers.forEach((subscriber) => {
           try {
@@ -877,23 +877,23 @@ function enhanceStore<T>(
   };
 
   if (useBatching) {
-    store.batchUpdate = (updater: (current: T) => Partial<T>) => {
-      batchUpdates(() => store.update(updater));
+    tree.batchUpdate = (updater: (current: T) => Partial<T>) => {
+      batchUpdates(() => tree.update(updater));
     };
   }
 
   if (useMemoization) {
-    store.computed = <R>(
-      fn: (store: T) => R,
+    tree.computed = <R>(
+      fn: (tree: T) => R,
       cacheKey = Math.random().toString()
     ): Signal<R> => {
-      let cache = computedCache.get(store);
+      let cache = computedCache.get(tree);
       if (!cache) {
         cache = new Map();
-        computedCache.set(store, cache);
+        computedCache.set(tree, cache);
       }
 
-      const metrics = storeMetrics.get(store);
+      const metrics = treeMetrics.get(tree);
 
       if (cache.has(cacheKey)) {
         if (metrics) metrics.cacheHits++;
@@ -906,7 +906,7 @@ function enhanceStore<T>(
       if (metrics) metrics.cacheMisses++;
       const computedSignal = computed(() => {
         if (metrics) metrics.computations++;
-        return fn(store.unwrap());
+        return fn(tree.unwrap());
       });
 
       cache.set(cacheKey, computedSignal);
@@ -914,23 +914,23 @@ function enhanceStore<T>(
     };
   }
 
-  store.effect = (fn: (store: T) => void) => {
+  tree.effect = (fn: (tree: T) => void) => {
     try {
-      effect(() => fn(store.unwrap()));
+      effect(() => fn(tree.unwrap()));
     } catch (error) {
       // Fallback for test environments without injection context
       console.warn('Effect requires Angular injection context', error);
     }
   };
 
-  store.subscribe = (fn: (store: T) => void): (() => void) => {
+  tree.subscribe = (fn: (tree: T) => void): (() => void) => {
     try {
       const destroyRef = inject(DestroyRef);
       let isDestroyed = false;
 
       const effectRef = effect(() => {
         if (!isDestroyed) {
-          fn(store.unwrap());
+          fn(tree.unwrap());
         }
       });
 
@@ -944,35 +944,33 @@ function enhanceStore<T>(
     } catch (error) {
       // Fallback for test environment - use subscriber tracking
       console.warn('Subscribe requires Angular injection context', error);
-      const subscribers = testSubscribers.get(store) || [];
-      subscribers.push(fn as (store: unknown) => void);
-      testSubscribers.set(store, subscribers);
+      const subscribers = testSubscribers.get(tree) || [];
+      subscribers.push(fn as (tree: unknown) => void);
+      testSubscribers.set(tree, subscribers);
 
       // Call immediately for initial subscription
-      fn(store.unwrap());
+      fn(tree.unwrap());
 
       // Return unsubscribe function
       return () => {
-        const currentSubscribers = testSubscribers.get(store) || [];
-        const index = currentSubscribers.indexOf(
-          fn as (store: unknown) => void
-        );
+        const currentSubscribers = testSubscribers.get(tree) || [];
+        const index = currentSubscribers.indexOf(fn as (tree: unknown) => void);
         if (index > -1) {
           currentSubscribers.splice(index, 1);
-          testSubscribers.set(store, currentSubscribers);
+          testSubscribers.set(tree, currentSubscribers);
         }
       };
     }
   };
 
-  store.optimize = () => {
-    const cache = computedCache.get(store);
+  tree.optimize = () => {
+    const cache = computedCache.get(tree);
     if (cache && cache.size > maxCacheSize) {
       cache.clear();
     }
 
     if ('memory' in performance) {
-      const metrics = storeMetrics.get(store);
+      const metrics = treeMetrics.get(tree);
       if (metrics) {
         metrics.memoryUsage = (
           performance as { memory: { usedJSHeapSize: number } }
@@ -981,17 +979,17 @@ function enhanceStore<T>(
     }
   };
 
-  store.clearCache = () => {
-    const cache = computedCache.get(store);
+  tree.clearCache = () => {
+    const cache = computedCache.get(tree);
     if (cache) {
       cache.clear();
     }
   };
 
   if (trackPerformance) {
-    store.getMetrics = () => {
-      const metrics = storeMetrics.get(store);
-      const timeTravelEntries = timeTravelMap.get(store)?.length || 0;
+    tree.getMetrics = () => {
+      const metrics = treeMetrics.get(tree);
+      const timeTravelEntries = timeTravelMap.get(tree)?.length || 0;
       return {
         ...(metrics || {
           updates: 0,
@@ -1008,45 +1006,44 @@ function enhanceStore<T>(
   // Override methods when features are enabled
 
   // Always override addMiddleware and removeMiddleware when enhanced
-  store.addMiddleware = (middleware: Middleware<T>) => {
-    const middlewares = middlewareMap.get(store) || [];
+  tree.addMiddleware = (middleware: Middleware<T>) => {
+    const middlewares = middlewareMap.get(tree) || [];
     middlewares.push(middleware as Middleware<unknown>);
-    middlewareMap.set(store, middlewares);
+    middlewareMap.set(tree, middlewares);
   };
 
-  store.removeMiddleware = (id: string) => {
-    const middlewares = middlewareMap.get(store) || [];
+  tree.removeMiddleware = (id: string) => {
+    const middlewares = middlewareMap.get(tree) || [];
     const filtered = middlewares.filter((m) => m.id !== id);
-    middlewareMap.set(store, filtered);
+    middlewareMap.set(tree, filtered);
   };
 
   // Always override these when enhanced since entity helpers are always useful
-  store.withEntityHelpers = <E extends { id: string | number }>(
+  tree.withEntityHelpers = <E extends { id: string | number }>(
     entityKey: keyof T
   ) => {
-    return createEntityHelpers<T, E>(store, entityKey);
+    return createEntityHelpers<T, E>(tree, entityKey);
   };
 
-  store.createAsyncAction = createAsyncActionFactory(store);
+  tree.createAsyncAction = createAsyncActionFactory(tree);
 
   if (enableTimeTravel) {
-    store.undo = () => {
-      const history = (timeTravelMap.get(store) as TimeTravelEntry<T>[]) || [];
+    tree.undo = () => {
+      const history = (timeTravelMap.get(tree) as TimeTravelEntry<T>[]) || [];
       if (history.length > 1) {
         const currentEntry = history.pop();
         if (!currentEntry) return;
 
-        const redoHistory =
-          (redoStack.get(store) as TimeTravelEntry<T>[]) || [];
+        const redoHistory = (redoStack.get(tree) as TimeTravelEntry<T>[]) || [];
         redoHistory.push(currentEntry);
-        redoStack.set(store, redoHistory as TimeTravelEntry<unknown>[]);
+        redoStack.set(tree, redoHistory as TimeTravelEntry<unknown>[]);
 
         const previousEntry = history[history.length - 1];
         if (previousEntry) {
           const action = 'UNDO';
-          const currentState = store.unwrap();
+          const currentState = tree.unwrap();
 
-          const middlewares = middlewareMap.get(store) || [];
+          const middlewares = middlewareMap.get(tree) || [];
           for (const middleware of middlewares) {
             if (
               middleware.id !== 'timetravel' &&
@@ -1057,10 +1054,10 @@ function enhanceStore<T>(
             }
           }
 
-          // Update store directly without triggering middleware
-          originalUpdate.call(store, () => previousEntry.state as Partial<T>);
+          // Update tree directly without triggering middleware
+          originalUpdate.call(tree, () => previousEntry.state as Partial<T>);
 
-          const newState = store.unwrap();
+          const newState = tree.unwrap();
           for (const middleware of middlewares) {
             if (middleware.id !== 'timetravel' && middleware.after) {
               middleware.after(
@@ -1075,18 +1072,18 @@ function enhanceStore<T>(
       }
     };
 
-    store.redo = () => {
-      const redoHistory = (redoStack.get(store) as TimeTravelEntry<T>[]) || [];
+    tree.redo = () => {
+      const redoHistory = (redoStack.get(tree) as TimeTravelEntry<T>[]) || [];
       if (redoHistory.length > 0) {
         const redoEntry = redoHistory.pop();
         if (!redoEntry) return;
 
-        redoStack.set(store, redoHistory as TimeTravelEntry<unknown>[]);
+        redoStack.set(tree, redoHistory as TimeTravelEntry<unknown>[]);
 
         const action = 'REDO';
-        const currentState = store.unwrap();
+        const currentState = tree.unwrap();
 
-        const middlewares = middlewareMap.get(store) || [];
+        const middlewares = middlewareMap.get(tree) || [];
         for (const middleware of middlewares) {
           if (
             middleware.id !== 'timetravel' &&
@@ -1097,16 +1094,15 @@ function enhanceStore<T>(
           }
         }
 
-        // Update store directly without triggering middleware
-        originalUpdate.call(store, () => redoEntry.state as Partial<T>);
+        // Update tree directly without triggering middleware
+        originalUpdate.call(tree, () => redoEntry.state as Partial<T>);
 
         // Add the state back to history for future undo operations
-        const history =
-          (timeTravelMap.get(store) as TimeTravelEntry<T>[]) || [];
+        const history = (timeTravelMap.get(tree) as TimeTravelEntry<T>[]) || [];
         history.push(redoEntry);
-        timeTravelMap.set(store, history as TimeTravelEntry<unknown>[]);
+        timeTravelMap.set(tree, history as TimeTravelEntry<unknown>[]);
 
-        const newState = store.unwrap();
+        const newState = tree.unwrap();
         for (const middleware of middlewares) {
           if (middleware.id !== 'timetravel' && middleware.after) {
             middleware.after(action, redoEntry.state, currentState, newState);
@@ -1115,26 +1111,26 @@ function enhanceStore<T>(
       }
     };
 
-    store.getHistory = () => {
-      return (timeTravelMap.get(store) as TimeTravelEntry<T>[]) || [];
+    tree.getHistory = () => {
+      return (timeTravelMap.get(tree) as TimeTravelEntry<T>[]) || [];
     };
 
-    store.resetHistory = () => {
-      timeTravelMap.set(store, []);
-      redoStack.set(store, []);
+    tree.resetHistory = () => {
+      timeTravelMap.set(tree, []);
+      redoStack.set(tree, []);
     };
   }
 
-  return store;
+  return tree;
 }
 
 function create<T extends Record<string, unknown>>(
   obj: T,
-  config: StoreConfig = {}
+  config: TreeConfig = {}
 ): SignalTree<T> {
   const equalityFn = config.useShallowComparison ? shallowEqual : equal;
 
-  // Recursively create signals for nested objects, but don't wrap them in stores
+  // Recursively create signals for nested objects, but don't wrap them in trees
   const createSignalsFromObject = <O extends Record<string, unknown>>(
     obj: O
   ): DeepSignalify<O> => {
@@ -1163,13 +1159,13 @@ function create<T extends Record<string, unknown>>(
   // Create the signal structure
   const signalState = createSignalsFromObject(obj);
 
-  const resultStore = {
+  const resultTree = {
     state: signalState,
     $: signalState, // $ points to the same state object
   } as SignalTree<T>;
 
-  enhanceStoreBasic(resultStore);
-  return enhanceStore(resultStore, config);
+  enhanceTreeBasic(resultTree);
+  return enhanceTree(resultTree, config);
 }
 
 // ============================================
@@ -1177,31 +1173,31 @@ function create<T extends Record<string, unknown>>(
 // ============================================
 
 /**
- * Create a hierarchical signal tree store
+ * Create a hierarchical signal tree tree
  *
  * @param obj - The initial state object
- * @returns A basic signal tree store
+ * @returns A basic signal tree tree
  */
 export function signalTree<T extends Record<string, unknown>>(
   obj: T
 ): SignalTree<T>;
 
 /**
- * Create a hierarchical signal tree store with configuration
+ * Create a hierarchical signal tree tree with configuration
  *
  * @param obj - The initial state object
  * @param config - Configuration options for enhanced features
- * @returns A signal tree store with enhanced features if enabled
+ * @returns A signal tree tree with enhanced features if enabled
  */
 export function signalTree<T extends Record<string, unknown>>(
   obj: T,
-  config: StoreConfig
+  config: TreeConfig
 ): SignalTree<T>;
 
 // Implementation
 export function signalTree<T extends Record<string, unknown>>(
   obj: T,
-  config: StoreConfig = {}
+  config: TreeConfig = {}
 ): SignalTree<T> {
   return create(obj, config);
 }
@@ -1210,10 +1206,10 @@ export function signalTree<T extends Record<string, unknown>>(
 // BUILT-IN MIDDLEWARE
 // ============================================
 
-export const loggingMiddleware = <T>(storeName: string): Middleware<T> => ({
+export const loggingMiddleware = <T>(treeName: string): Middleware<T> => ({
   id: 'logging',
   before: (action, payload, state) => {
-    console.group(`🏪 ${storeName}: ${action}`);
+    console.group(`🏪 ${treeName}: ${action}`);
     console.log('Previous state:', state);
     console.log(
       'Payload:',
@@ -1230,11 +1226,11 @@ export const loggingMiddleware = <T>(storeName: string): Middleware<T> => ({
 export const performanceMiddleware = <T>(): Middleware<T> => ({
   id: 'performance',
   before: (action) => {
-    console.time(`Store update: ${action}`);
+    console.time(`Tree update: ${action}`);
     return true;
   },
   after: (action) => {
-    console.timeEnd(`Store update: ${action}`);
+    console.timeEnd(`Tree update: ${action}`);
   },
 });
 
@@ -1254,11 +1250,11 @@ export const validationMiddleware = <T>(
 // UTILITY FUNCTIONS
 // ============================================
 
-export function createEntityStore<E extends { id: string | number }>(
+export function createEntityTree<E extends { id: string | number }>(
   initialEntities: E[] = [],
-  config: StoreConfig = {}
+  config: TreeConfig = {}
 ) {
-  const store = signalTree(
+  const tree = signalTree(
     {
       entities: initialEntities,
       loading: false,
@@ -1273,34 +1269,34 @@ export function createEntityStore<E extends { id: string | number }>(
     }
   );
 
-  if (!store.withEntityHelpers) {
+  if (!tree.withEntityHelpers) {
     throw new Error('Entity helpers not available');
   }
-  const entityHelpers = store.withEntityHelpers<E>('entities');
+  const entityHelpers = tree.withEntityHelpers<E>('entities');
 
   return {
-    ...store,
+    ...tree,
     ...entityHelpers,
 
     select: (id: string | number) => {
-      store.state.selectedId.set(id);
+      tree.state.selectedId.set(id);
     },
 
     deselect: () => {
-      store.state.selectedId.set(null);
+      tree.state.selectedId.set(null);
     },
 
     getSelected: () =>
       computed(() => {
-        const selectedId = store.state.selectedId();
+        const selectedId = tree.state.selectedId();
         return selectedId ? entityHelpers.findById(selectedId)() : undefined;
       }),
 
     loadAsync: (() => {
-      if (!store.createAsyncAction) {
+      if (!tree.createAsyncAction) {
         throw new Error('Async action creator not available');
       }
-      return store.createAsyncAction(
+      return tree.createAsyncAction(
         async (loader: () => Promise<E[]>) => {
           const entities = await loader();
           return entities;
@@ -1309,7 +1305,7 @@ export function createEntityStore<E extends { id: string | number }>(
           loadingKey: 'loading',
           errorKey: 'error',
           onSuccess: (entities) => {
-            store.state.entities.set(entities);
+            tree.state.entities.set(entities);
           },
         }
       );
@@ -1330,18 +1326,18 @@ export type EnhancedArraySignal<T> = WritableSignal<T[]> & {
   clear: () => void;
 };
 
-export function createFormStore<T extends Record<string, unknown>>(
+export function createFormTree<T extends Record<string, unknown>>(
   initialValues: T,
   config: {
     validators?: Record<string, (value: unknown) => string | null>;
     asyncValidators?: Record<string, AsyncValidatorFn<unknown>>;
-  } & StoreConfig = {}
+  } & TreeConfig = {}
 ) {
   const { validators = {}, asyncValidators = {} } = config;
-  // Note: storeConfig portion is not currently used in form stores
+  // Note: treeConfig portion is not currently used in form trees
 
-  // Create the store with proper signal types
-  const store = {
+  // Create the tree with proper signal types
+  const tree = {
     values: signalTree(initialValues),
     errors: signal<Record<string, string>>({}),
     asyncErrors: signal<Record<string, string>>({}),
@@ -1420,15 +1416,15 @@ export function createFormStore<T extends Record<string, unknown>>(
 
   // Only enhance arrays if the unwrap method exists
   const valuesUnwrapped =
-    'unwrap' in store.values && typeof store.values.unwrap === 'function'
-      ? store.values.unwrap()
-      : store.values;
+    'unwrap' in tree.values && typeof tree.values.unwrap === 'function'
+      ? tree.values.unwrap()
+      : tree.values;
 
   if (typeof valuesUnwrapped === 'object' && valuesUnwrapped !== null) {
     enhanceArraysRecursively(valuesUnwrapped as Record<string, unknown>);
   }
 
-  const markDirty = () => store.dirty.set(true);
+  const markDirty = () => tree.dirty.set(true);
 
   // Helper functions for nested paths
   const getNestedValue = (
@@ -1456,7 +1452,7 @@ export function createFormStore<T extends Record<string, unknown>>(
     const keys = path.split('.');
 
     if (keys.length === 1) {
-      const signal = (store.values.state as Record<string, unknown>)[keys[0]];
+      const signal = (tree.values.state as Record<string, unknown>)[keys[0]];
       if (
         isSignal(signal) &&
         'set' in signal &&
@@ -1465,7 +1461,7 @@ export function createFormStore<T extends Record<string, unknown>>(
         (signal as WritableSignal<unknown>).set(value);
       }
     } else {
-      let current: unknown = store.values.state;
+      let current: unknown = tree.values.state;
       for (let i = 0; i < keys.length - 1; i++) {
         current = (current as Record<string, unknown>)[keys[i]];
       }
@@ -1484,9 +1480,9 @@ export function createFormStore<T extends Record<string, unknown>>(
 
   const validate = async (field?: string) => {
     const values =
-      'unwrap' in store.values && typeof store.values.unwrap === 'function'
-        ? store.values.unwrap()
-        : store.values;
+      'unwrap' in tree.values && typeof tree.values.unwrap === 'function'
+        ? tree.values.unwrap()
+        : tree.values;
     const errors: Record<string, string> = {};
     const asyncErrors: Record<string, string> = {};
 
@@ -1507,7 +1503,7 @@ export function createFormStore<T extends Record<string, unknown>>(
       }
     }
 
-    store.errors.set(errors);
+    tree.errors.set(errors);
 
     // Async validation
     const asyncFieldsToValidate = field
@@ -1517,7 +1513,7 @@ export function createFormStore<T extends Record<string, unknown>>(
     for (const fieldPath of asyncFieldsToValidate) {
       const asyncValidator = asyncValidators[fieldPath];
       if (asyncValidator && (!field || field === fieldPath)) {
-        store.asyncValidating.update((v) => ({ ...v, [fieldPath]: true }));
+        tree.asyncValidating.update((v) => ({ ...v, [fieldPath]: true }));
 
         try {
           const value = getNestedValue(
@@ -1532,18 +1528,18 @@ export function createFormStore<T extends Record<string, unknown>>(
           asyncErrors[fieldPath] = 'Validation error';
         }
 
-        store.asyncValidating.update((v) => ({ ...v, [fieldPath]: false }));
+        tree.asyncValidating.update((v) => ({ ...v, [fieldPath]: false }));
       }
     }
 
-    store.asyncErrors.set(asyncErrors);
+    tree.asyncErrors.set(asyncErrors);
 
     // Update validity
     const hasErrors = Object.keys(errors).length > 0;
     const hasAsyncErrors = Object.keys(asyncErrors).length > 0;
-    const isValidating = Object.values(store.asyncValidating()).some((v) => v);
+    const isValidating = Object.values(tree.asyncValidating()).some((v) => v);
 
-    store.valid.set(!hasErrors && !hasAsyncErrors && !isValidating);
+    tree.valid.set(!hasErrors && !hasAsyncErrors && !isValidating);
   };
 
   // Create computed signals for field errors
@@ -1554,28 +1550,28 @@ export function createFormStore<T extends Record<string, unknown>>(
   [...Object.keys(validators), ...Object.keys(asyncValidators)].forEach(
     (fieldPath) => {
       fieldErrors[fieldPath] = computed(() => {
-        const errors = store.errors();
+        const errors = tree.errors();
         return errors[fieldPath];
       });
       fieldAsyncErrors[fieldPath] = computed(() => {
-        const errors = store.asyncErrors();
+        const errors = tree.asyncErrors();
         return errors[fieldPath];
       });
     }
   );
 
   return {
-    ...store,
+    ...tree,
 
     setValue: (field: string, value: unknown) => {
       setNestedValue(field, value);
-      store.touched.update((t) => ({ ...t, [field]: true }));
+      tree.touched.update((t) => ({ ...t, [field]: true }));
       markDirty();
       validate(field);
     },
 
     setValues: (values: Partial<T>) => {
-      store.values.update((v) => ({ ...v, ...values }));
+      tree.values.update((v) => ({ ...v, ...values }));
       markDirty();
       validate();
     },
@@ -1607,35 +1603,35 @@ export function createFormStore<T extends Record<string, unknown>>(
         }
       };
 
-      resetSignals(store.values.state, initialValues);
+      resetSignals(tree.values.state, initialValues);
 
-      store.errors.set({});
-      store.asyncErrors.set({});
-      store.touched.set({});
-      store.asyncValidating.set({});
-      store.dirty.set(false);
-      store.valid.set(true);
-      store.submitting.set(false);
+      tree.errors.set({});
+      tree.asyncErrors.set({});
+      tree.touched.set({});
+      tree.asyncValidating.set({});
+      tree.dirty.set(false);
+      tree.valid.set(true);
+      tree.submitting.set(false);
     },
 
     submit: async (submitFn: (values: T) => Promise<unknown>) => {
-      store.submitting.set(true);
+      tree.submitting.set(true);
 
       try {
         await validate();
 
-        if (!store.valid()) {
+        if (!tree.valid()) {
           throw new Error('Form is invalid');
         }
 
         const currentValues =
-          'unwrap' in store.values && typeof store.values.unwrap === 'function'
-            ? store.values.unwrap()
-            : store.values;
+          'unwrap' in tree.values && typeof tree.values.unwrap === 'function'
+            ? tree.values.unwrap()
+            : tree.values;
         const result = await submitFn(currentValues as T);
         return result;
       } finally {
-        store.submitting.set(false);
+        tree.submitting.set(false);
       }
     },
 
@@ -1648,19 +1644,19 @@ export function createFormStore<T extends Record<string, unknown>>(
       fieldAsyncErrors[field] || computed(() => undefined),
     getFieldTouched: (field: string) =>
       computed(() => {
-        const touched = store.touched();
+        const touched = tree.touched();
         return touched[field];
       }),
     isFieldValid: (field: string) =>
       computed(() => {
-        const errors = store.errors();
-        const asyncErrors = store.asyncErrors();
-        const asyncValidating = store.asyncValidating();
+        const errors = tree.errors();
+        const asyncErrors = tree.asyncErrors();
+        const asyncValidating = tree.asyncValidating();
         return !errors[field] && !asyncErrors[field] && !asyncValidating[field];
       }),
     isFieldAsyncValidating: (field: string) =>
       computed(() => {
-        const asyncValidating = store.asyncValidating();
+        const asyncValidating = tree.asyncValidating();
         return asyncValidating[field];
       }),
 
@@ -1669,27 +1665,27 @@ export function createFormStore<T extends Record<string, unknown>>(
     fieldAsyncErrors,
 
     // Expose the signals directly
-    values: store.values,
-    errors: store.errors,
-    asyncErrors: store.asyncErrors,
-    touched: store.touched,
-    asyncValidating: store.asyncValidating,
-    dirty: store.dirty,
-    valid: store.valid,
-    submitting: store.submitting,
+    values: tree.values,
+    errors: tree.errors,
+    asyncErrors: tree.asyncErrors,
+    touched: tree.touched,
+    asyncValidating: tree.asyncValidating,
+    dirty: tree.dirty,
+    valid: tree.valid,
+    submitting: tree.submitting,
   };
 }
 
-export function createTestStore<T extends Record<string, unknown>>(
+export function createTestTree<T extends Record<string, unknown>>(
   initialState: T,
-  config: StoreConfig = {}
+  config: TreeConfig = {}
 ): SignalTree<T> & {
   setState: (state: Partial<T>) => void;
   getState: () => T;
   getHistory: () => TimeTravelEntry<T>[];
   expectState: (expectedState: Partial<T>) => void;
 } {
-  const store = signalTree(initialState, {
+  const tree = signalTree(initialState, {
     enablePerformanceFeatures: true,
     enableTimeTravel: true,
     enableDevTools: false,
@@ -1698,23 +1694,23 @@ export function createTestStore<T extends Record<string, unknown>>(
   });
 
   return {
-    ...store,
+    ...tree,
 
     setState: (state: Partial<T>) => {
-      store.update(() => state);
+      tree.update(() => state);
     },
 
-    getState: () => store.unwrap(),
+    getState: () => tree.unwrap(),
 
     getHistory: () => {
-      if (!store.getHistory) {
-        throw new Error('Time travel not enabled for this store');
+      if (!tree.getHistory) {
+        throw new Error('Time travel not enabled for this tree');
       }
-      return store.getHistory();
+      return tree.getHistory();
     },
 
     expectState: (expectedState: Partial<T>) => {
-      const currentState = store.unwrap();
+      const currentState = tree.unwrap();
       for (const [key, value] of Object.entries(expectedState)) {
         const currentValue = (currentState as Record<string, unknown>)[key];
         if (!isEqual(currentValue, value)) {
