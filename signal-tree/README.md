@@ -100,123 +100,123 @@ tree.getMetrics();
 </tr>
 <tr>
 <td><strong>Learning Curve</strong></td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">⭐⭐⭐⭐⭐ Easy</td>
+<td>🏆 **⭐⭐⭐⭐⭐ Easy**</td>
 <td>⭐⭐ Steep</td>
 <td>⭐⭐⭐ Moderate</td>
 <td>⭐⭐⭐⭐ Easy</td>
 <td>⭐⭐⭐ Moderate</td>
 <td>⭐⭐⭐⭐ Easy</td>
 <td>⭐⭐⭐ Moderate</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">⭐⭐⭐⭐⭐ Very Easy</td>
+<td>🏆 **⭐⭐⭐⭐⭐ Very Easy**</td>
 </tr>
 <tr>
 <td><strong>Boilerplate</strong></td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">Minimal</td>
+<td>🏆 **Minimal**</td>
 <td>Extensive</td>
 <td>Moderate</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">Minimal</td>
+<td>🏆 **Minimal**</td>
 <td>Moderate</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">Minimal</td>
+<td>🏆 **Minimal**</td>
 <td>Moderate</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">None</td>
+<td>🏆 **None**</td>
 </tr>
 <tr>
 <td><strong>Bundle Size (min)</strong></td>
 <td>~5KB basic</td>
 <td>~25KB</td>
 <td>~20KB</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">~2KB</td>
+<td>🏆 **~2KB**</td>
 <td>~25KB</td>
 <td>~30KB</td>
 <td>~25KB</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">0KB</td>
+<td>🏆 **0KB**</td>
 </tr>
 <tr>
 <td><strong>Bundle Size (full)</strong></td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">~15KB</td>
+<td>🏆 **~15KB**</td>
 <td>~50KB+</td>
 <td>~30KB</td>
 <td>~10KB</td>
 <td>~25KB</td>
 <td>~40KB</td>
 <td>~35KB</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">0KB</td>
+<td>🏆 **0KB**</td>
 </tr>
 <tr>
 <td><strong>Type Safety</strong></td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Full inference</td>
+<td>🏆 **✅ Full inference**</td>
 <td>✅ Manual typing</td>
 <td>✅ Good</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Excellent</td>
+<td>🏆 **✅ Excellent**</td>
 <td>✅ Good</td>
 <td>⚠️ Limited</td>
 <td>✅ Good</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Native</td>
+<td>🏆 **✅ Native**</td>
 </tr>
 <tr>
 <td><strong>Performance</strong></td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">⚡ Excellent</td>
+<td>🏆 **⚡ Excellent**</td>
 <td>🔄 Good</td>
 <td>🔄 Good</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">⚡ Excellent</td>
+<td>🏆 **⚡ Excellent**</td>
 <td>🔄 Good</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">⚡ Excellent</td>
+<td>🏆 **⚡ Excellent**</td>
 <td>🔄 Good</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">⚡ Excellent</td>
+<td>🏆 **⚡ Excellent**</td>
 </tr>
 <tr>
 <td><strong>DevTools</strong></td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Opt-in</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Redux DevTools</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Akita DevTools</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Redux DevTools</td>
+<td>🏆 **✅ Opt-in**</td>
+<td>🏆 **✅ Redux DevTools**</td>
+<td>🏆 **✅ Akita DevTools**</td>
+<td>🏆 **✅ Redux DevTools**</td>
 <td>⚠️ Limited</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ MobX DevTools</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ NGXS DevTools</td>
+<td>🏆 **✅ MobX DevTools**</td>
+<td>🏆 **✅ NGXS DevTools**</td>
 <td>❌ None</td>
 </tr>
 <tr>
 <td><strong>Time Travel</strong></td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Opt-in</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Built-in</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Plugin</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Plugin</td>
+<td>🏆 **✅ Opt-in**</td>
+<td>🏆 **✅ Built-in**</td>
+<td>🏆 **✅ Plugin**</td>
+<td>🏆 **✅ Plugin**</td>
 <td>❌ No</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Via DevTools</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Plugin</td>
+<td>🏆 **✅ Via DevTools**</td>
+<td>🏆 **✅ Plugin**</td>
 <td>❌ No</td>
 </tr>
 <tr>
 <td><strong>Entity Management</strong></td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Always included</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ @ngrx/entity</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Core feature</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Via plugins</td>
+<td>🏆 **✅ Always included**</td>
+<td>🏆 **✅ @ngrx/entity**</td>
+<td>🏆 **✅ Core feature**</td>
+<td>🏆 **✅ Via plugins**</td>
 <td>❌ Manual</td>
 <td>❌ Manual</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Via plugins</td>
+<td>🏆 **✅ Via plugins**</td>
 <td>❌ Manual</td>
 </tr>
 <tr>
 <td><strong>Batching</strong></td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Opt-in</td>
+<td>🏆 **✅ Opt-in**</td>
 <td>❌ Manual</td>
 <td>❌ Manual</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Available</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Via schedulers</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Transaction</td>
+<td>🏆 **✅ Available**</td>
+<td>🏆 **✅ Via schedulers**</td>
+<td>🏆 **✅ Transaction**</td>
 <td>❌ Manual</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Automatic</td>
+<td>🏆 **✅ Automatic**</td>
 </tr>
 <tr>
 <td><strong>Form Integration</strong></td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Built-in</td>
+<td>🏆 **✅ Built-in**</td>
 <td>⚠️ Separate</td>
 <td>⚠️ Separate</td>
 <td>❌ Manual</td>
 <td>❌ Manual</td>
 <td>⚠️ Third-party</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">✅ Form plugin</td>
+<td>🏆 **✅ Form plugin**</td>
 <td>❌ Manual</td>
 </tr>
 </tbody>
@@ -246,37 +246,37 @@ tree.getMetrics();
 <td>65ms</td>
 <td>48ms</td>
 <td>72ms</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">42ms</td>
+<td>🏆 **42ms**</td>
 </tr>
 <tr>
 <td><strong>Update single item</strong></td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">2ms</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">2ms</td>
+<td>🏆 **2ms**</td>
+<td>🏆 **2ms**</td>
 <td>8ms</td>
 <td>6ms</td>
 <td>3ms</td>
 <td>7ms</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">2ms</td>
+<td>🏆 **2ms**</td>
 </tr>
 <tr>
 <td><strong>Batch update (100 items)</strong></td>
 <td>14ms</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">12ms</td>
+<td>🏆 **12ms**</td>
 <td>35ms</td>
 <td>28ms</td>
 <td>15ms</td>
 <td>32ms</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">10ms</td>
+<td>🏆 **10ms**</td>
 </tr>
 <tr>
 <td><strong>Computed value (cached)</strong></td>
 <td>2ms</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">&lt;1ms</td>
+<td>🏆 **&lt;1ms**</td>
 <td>3ms</td>
 <td>2ms</td>
 <td>1ms</td>
 <td>3ms</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">&lt;1ms</td>
+<td>🏆 **&lt;1ms**</td>
 </tr>
 <tr>
 <td><strong>Memory per 1000 entities</strong></td>
@@ -284,9 +284,9 @@ tree.getMetrics();
 <td>2.8MB</td>
 <td>4.2MB</td>
 <td>3.5MB</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">2.5MB</td>
+<td>🏆 **2.5MB**</td>
 <td>3.8MB</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">2.3MB</td>
+<td>🏆 **2.3MB**</td>
 </tr>
 <tr>
 <td><strong>Bundle size impact</strong></td>
@@ -296,7 +296,7 @@ tree.getMetrics();
 <td>+30KB</td>
 <td>+10KB</td>
 <td>+35KB</td>
-<td style="border: 2px solid #4CAF50; background-color: #E8F5E8;">0KB</td>
+<td>🏆 **0KB**</td>
 </tr>
 </tbody>
 </table>
