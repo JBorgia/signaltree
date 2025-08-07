@@ -519,9 +519,9 @@ describe('Signal Tree', () => {
           }
         );
 
-        const computed1 = tree.computed((s) => s.items.length, 'length');
-        const computed2 = tree.computed((s) => s.items[0], 'first');
-        const computed3 = tree.computed((s) => s.items[1], 'second');
+        const computed1 = tree.memoize((s) => s.items.length, 'length');
+        const computed2 = tree.memoize((s) => s.items[0], 'first');
+        const computed3 = tree.memoize((s) => s.items[1], 'second');
 
         computed1();
         computed2();
@@ -534,7 +534,7 @@ describe('Signal Tree', () => {
 
         // After clearing, new computations should be cache misses
         let computationRuns = 0;
-        const newComputed = tree.computed((s) => {
+        const newComputed = tree.memoize((s) => {
           computationRuns++;
           return s.items.reduce((a, b) => a + b, 0);
         }, 'sum');
