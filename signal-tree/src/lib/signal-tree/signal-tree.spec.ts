@@ -1104,7 +1104,7 @@ describe('Signal Tree', () => {
         { enablePerformanceFeatures: true }
       );
 
-      tree.use(createAuditMiddleware(auditLog));
+      tree.addTap(createAuditMiddleware(auditLog));
 
       // Use tree.update instead of direct signal.set to trigger middleware
       tree.update(() => ({ value: 1 }));
@@ -1131,7 +1131,7 @@ describe('Signal Tree', () => {
         { enablePerformanceFeatures: true }
       );
 
-      tree.use(createAuditMiddleware(auditLog, getMetadata));
+      tree.addTap(createAuditMiddleware(auditLog, getMetadata));
       tree.$.value.set(10);
 
       if (auditLog[0]) {
