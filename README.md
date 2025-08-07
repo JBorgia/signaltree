@@ -1,6 +1,6 @@
 # 🌳 SignalTree
 
-A powerful, type-safe, hierarchical signal store for Angular applications built on top of Angular Signals. SignalTree provides a modern, lightweight alternative to traditional state management with superior performance and developer experience.
+A powerful, type-safe, hierarchical signal tree for Angular applications built on top of Angular Signals. SignalTree provides a modern, lightweight alternative to traditional state management with superior performance and developer experience.
 
 ## ✨ Features
 
@@ -254,7 +254,7 @@ class UsersComponent {
 
 #### Basic Store Operations
 
-- `signalTree(initialState)` - Create a basic signal store
+- `signalTree(initialState)` - Create a basic signal tree
 - `enhancedSignalTree(initialState, config)` - Create an enhanced store with performance features
 - `store.state.*` - Access nested signals (reactive)
 - `store.$.*` - Shorthand alias for state

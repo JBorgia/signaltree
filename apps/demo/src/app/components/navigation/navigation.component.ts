@@ -17,7 +17,7 @@ export interface DemoExample {
   template: `
     <nav class="bg-blue-900 text-white p-4">
       <div class="container mx-auto">
-        <h1 class="text-2xl font-bold mb-4">🚀 NGX Signal Store Demo</h1>
+        <h1 class="text-2xl font-bold mb-4">🚀 NGX Signal Tree Demo</h1>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div *ngFor="let category of categories" class="space-y-2">
@@ -57,7 +57,7 @@ export class NavigationComponent {
     {
       id: 'basic-store',
       title: 'Basic Store',
-      description: 'Simple signal store creation and updates',
+      description: 'Simple signal tree creation and updates',
       route: '/basic-store',
       category: 'basic',
     },

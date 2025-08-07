@@ -14,7 +14,7 @@ export class HomeComponent {
     {
       title: '🏪 Basic Store',
       description:
-        'Simple hierarchical signal store with reactive state management',
+        'Simple hierarchical signal tree with reactive state management',
       route: '/basic-store',
       category: 'Core',
     },
@@ -111,7 +111,7 @@ export class HomeComponent {
 
   quickStartCode = `import { signalTree } from 'signal-tree';
 
-// Create a signal store
+// Create a signal tree
 const userStore = signalTree({
   user: {
     name: 'John Doe',

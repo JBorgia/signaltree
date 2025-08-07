@@ -9,7 +9,7 @@ import { signalTree } from '@signal-tree';
   imports: [CommonModule, FormsModule],
   template: `
     <div class="container">
-      <h1 class="page-title">🎯 Basic Signal Store</h1>
+      <h1 class="page-title">🎯 Basic Signal Tree</h1>
 
       <div class="main-grid">
         <!-- Interactive Demo -->
@@ -234,7 +234,7 @@ export class BasicStoreComponent {
 
   codeExample = `import { signalTree } from 'signal-tree';
 
-// Create a basic signal store
+// Create a basic signal tree
 const store = signalTree({
   name: 'John Doe',
   age: 25,

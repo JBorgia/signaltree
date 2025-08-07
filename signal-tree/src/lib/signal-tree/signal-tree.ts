@@ -56,7 +56,7 @@ export type SignalValue<T> = T extends ArrayLike<SimpleSignalValue>
   : SimpleSignalValue;
 
 /**
- * Configuration options for creating signal stores
+ * Configuration options for creating signal trees
  */
 export interface StoreConfig {
   enablePerformanceFeatures?: boolean;
@@ -139,14 +139,14 @@ export interface DevToolsInterface<T> {
 }
 
 /**
- * Main signal store type that preserves hierarchical structure
+ * Main signal tree type that preserves hierarchical structure
  */
 type SignalState<T> = T extends Record<string, unknown>
   ? DeepSignalify<T>
   : never;
 
 /**
- * Main signal store type with proper typing
+ * Main signal tree type with proper typing
  */
 export type SignalTree<T> = {
   // The actual state under 'state' property
@@ -774,7 +774,7 @@ function enhanceStore<T>(
   }
 
   console.log(
-    `🚀 Enhanced Signal Store: "${storeName}" with performance features enabled`
+    `🚀 Enhanced Signal Tree: "${storeName}" with performance features enabled`
   );
 
   middlewareMap.set(store, []);

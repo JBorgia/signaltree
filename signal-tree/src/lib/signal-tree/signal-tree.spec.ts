@@ -27,7 +27,7 @@ import { take } from 'rxjs';
 // Mock performance.now() for consistent testing
 const mockPerformanceNow = jest.spyOn(performance, 'now');
 
-describe('Signal Store', () => {
+describe('Signal Tree', () => {
   beforeAll(async () => {
     // Initialize TestBed environment once for all tests
     TestBed.resetTestEnvironment();
@@ -52,7 +52,7 @@ describe('Signal Store', () => {
 
   describe('Core Functionality', () => {
     describe('signalTree', () => {
-      it('should create a basic signal store from a flat object', () => {
+      it('should create a basic signal tree from a flat object', () => {
         const store = signalTree({
           name: 'John',
           age: 30,
@@ -69,7 +69,7 @@ describe('Signal Store', () => {
         expect(store.state.active()).toBe(true);
       });
 
-      it('should create nested signal stores for hierarchical objects', () => {
+      it('should create nested signal trees for hierarchical objects', () => {
         const store = signalTree({
           user: {
             profile: {
@@ -1180,7 +1180,7 @@ describe('Signal Store', () => {
   });
 
   describe('Nested Entity Stores', () => {
-    it('should nest entity stores within regular signal stores', () => {
+    it('should nest entity stores within regular signal trees', () => {
       interface Product {
         id: string;
         name: string;
@@ -1408,10 +1408,7 @@ describe('Edge Cases and Error Handling', () => {
   });
 
   it('should handle store destruction gracefully', () => {
-    const store = signalTree(
-      { value: 0 },
-      { enablePerformanceFeatures: true }
-    );
+    const store = signalTree({ value: 0 }, { enablePerformanceFeatures: true });
 
     const effectRan = jest.fn();
 
