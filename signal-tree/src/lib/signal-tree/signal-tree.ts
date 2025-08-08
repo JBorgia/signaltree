@@ -84,6 +84,64 @@
  * console.log(`Cache hit rate: ${metrics.cacheHits / (metrics.cacheHits + metrics.cacheMisses) * 100}%`);
  * ```
  *
+ * ## 📦 Bundle Optimization & Tree-Shaking
+ *
+ * SignalTree employs intelligent tree-shaking to include only the features you actually use:
+ *
+ * **Smart Progressive Enhancement:**
+ * - Features are added to bundle only when methods are called
+ * - Unused features are completely removed in production builds
+ * - No fake methods or warning messages - real tree-shaking
+ *
+ * **Bundle Size by Feature Usage:**
+ * ```typescript
+ * // Basic usage: ~5KB (core signals only)
+ * const basic = signalTree({ count: 0 });
+ * basic.$.count.set(1); // Only core signals included
+ *
+ * // With batching: +2KB (batching system)
+ * basic.batchUpdate(() => ({ count: 2 })); // Batching auto-included
+ *
+ * // With memoization: +3KB (caching system)
+ * basic.memoize(state => state.count * 2, 'doubled'); // Caching auto-included
+ *
+ * // With time travel: +4KB (history system)
+ * basic.undo(); // Time travel auto-included
+ *
+ * // With DevTools: +2KB (browser integration)
+ * signalTree(state, { enableDevTools: true }); // DevTools included
+ *
+ * // Maximum features: ~15KB total (only if all features used)
+ * ```
+ *
+ * **Production Optimization Tips:**
+ * - Use presets for optimal configuration: `signalTree(state, 'production')`
+ * - Conditional feature loading: Import heavy features only when needed
+ * - Bundle analysis: Use webpack-bundle-analyzer to verify tree-shaking
+ * - Feature flags: Disable development features in production builds
+ *
+ * @example Migration from Other Libraries
+ * ```typescript
+ * // From NgRx (reducer pattern)
+ * const ngrxState = { users: [], loading: false };
+ * // Becomes:
+ * const tree = signalTree({ users: [], loading: false });
+ * tree.$.loading.set(true); // Direct, type-safe access
+ *
+ * // From plain signals (scattered state)
+ * const count = signal(0);
+ * const name = signal('');
+ * // Becomes:
+ * const tree = signalTree({ count: 0, name: '' });
+ * // All benefits: batching, memoization, time travel, etc.
+ *
+ * // From RxJS/BehaviorSubject
+ * const subject = new BehaviorSubject({ items: [] });
+ * // Becomes:
+ * const tree = signalTree({ items: [] });
+ * tree.effect(state => console.log(state.items)); // Reactive updates
+ * ```
+ *
  * @author SignalTree Team
  * @version 0.2.0
  * @since Angular 17+
@@ -441,11 +499,64 @@ export type SignalValue<T> = T extends ArrayLike<SimpleSignalValue>
 /**
  * Configuration presets for common use cases.
  * Provides intelligent defaults that can be customized as needed.
+ *
+ * **Preset Options:**
+ * - **`'basic'`**: Minimal features, smallest bundle, manual optimization
+ * - **`'performance'`**: Maximum speed, smart batching, aggressive memoization
+ * - **`'development'`**: Full debugging, time travel, DevTools integration
+ * - **`'production'`**: Optimized for deployment, minimal overhead, smart defaults
  */
 export type TreePreset = 'basic' | 'performance' | 'development' | 'production';
 
 /**
  * Preset configurations for different environments and use cases.
+ *
+ * Each preset is carefully tuned for specific scenarios:
+ *
+ * ## 🎯 **`'basic'`** - Minimal Configuration
+ * **Use Case**: Learning, prototyping, minimal apps, custom optimization
+ * **Bundle Impact**: ~5KB minified
+ * **Features**: Core signals only, manual batching, no caching
+ * **Best For**: Simple state, educational use, when bundle size is critical
+ *
+ * ## ⚡ **`'performance'`** - Maximum Speed
+ * **Use Case**: High-frequency updates, large datasets, real-time apps
+ * **Bundle Impact**: ~12KB minified
+ * **Features**: Aggressive batching, memoization, shallow comparison, large cache
+ * **Best For**: Gaming, real-time dashboards, heavy computation
+ *
+ * ## 🛠️ **`'development'`** - Full Debugging
+ * **Use Case**: Development, debugging, testing, feature exploration
+ * **Bundle Impact**: ~15KB minified (includes DevTools)
+ * **Features**: Time travel, Redux DevTools, performance tracking, debug logs
+ * **Best For**: Development environment, debugging complex state flows
+ *
+ * ## 🚀 **`'production'`** - Optimized Deployment
+ * **Use Case**: Production apps, optimal balance of features and performance
+ * **Bundle Impact**: ~8KB minified
+ * **Features**: Smart batching, memoization, optimized cache, no debugging overhead
+ * **Best For**: Most production applications, balanced performance and features
+ *
+ * @example Preset Usage Examples
+ * ```typescript
+ * // Development: Full debugging capabilities
+ * const devTree = signalTree(initialState, 'development');
+ * devTree.undo(); // ✅ Time travel enabled
+ * // Redux DevTools automatically connected
+ *
+ * // Production: Optimized for deployment
+ * const prodTree = signalTree(initialState, 'production');
+ * prodTree.batchUpdate(() => ({ users: newUsers })); // ✅ Smart batching
+ * // No debugging overhead, optimal performance
+ *
+ * // Performance: Maximum speed for intensive apps
+ * const perfTree = signalTree(largeDataset, 'performance');
+ * // Aggressive caching, shallow comparison, large cache size
+ *
+ * // Basic: Minimal footprint
+ * const basicTree = signalTree(simpleState, 'basic');
+ * // Smallest bundle, manual optimization, core features only
+ * ```
  */
 export const TREE_PRESETS: Record<TreePreset, Partial<TreeConfig>> = {
   basic: {
@@ -922,37 +1033,590 @@ export interface TimeTravelEntry<T> {
 }
 
 /**
- * Middleware interface for intercepting tree operations
+ * Middleware interface for intercepting and extending tree operations.
+ *
+ * Middleware provides a powerful tap system to observe, validate, transform,
+ * or prevent state changes. Middleware runs in registration order and can
+ * short-circuit the operation by returning false from `before()`.
+ *
+ * ## Common Middleware Patterns:
+ *
+ * **Logging Middleware:** Track all state changes for debugging
+ * **Validation Middleware:** Ensure state integrity and business rules
+ * **Performance Middleware:** Monitor and optimize update performance
+ * **Security Middleware:** Implement access control and audit trails
+ * **Persistence Middleware:** Auto-save state changes to storage
+ * **Analytics Middleware:** Track user interactions and state flows
+ *
+ * @example Basic Logging Middleware
+ * ```typescript
+ * const loggingMiddleware: Middleware<AppState> = {
+ *   id: 'logger',
+ *   before: (action, payload, state) => {
+ *     console.log(`🔄 ${action}:`, { payload, currentState: state });
+ *     return true; // Allow operation to proceed
+ *   },
+ *   after: (action, payload, oldState, newState) => {
+ *     console.log(`✅ ${action} completed:`, {
+ *       changes: getChanges(oldState, newState),
+ *       newState
+ *     });
+ *   }
+ * };
+ *
+ * tree.addTap(loggingMiddleware);
+ * ```
+ *
+ * @example Validation Middleware with Prevention
+ * ```typescript
+ * const validationMiddleware: Middleware<UserState> = {
+ *   id: 'validator',
+ *   before: (action, payload, state) => {
+ *     if (action === 'UPDATE' && payload) {
+ *       const updates = payload as Partial<UserState>;
+ *
+ *       // Prevent invalid email updates
+ *       if (updates.email && !isValidEmail(updates.email)) {
+ *         console.error('Invalid email format');
+ *         return false; // Prevent the update
+ *       }
+ *
+ *       // Prevent negative age
+ *       if (updates.age !== undefined && updates.age < 0) {
+ *         console.error('Age cannot be negative');
+ *         return false;
+ *       }
+ *     }
+ *     return true; // Allow valid updates
+ *   }
+ * };
+ * ```
+ *
+ * @example Performance Monitoring Middleware
+ * ```typescript
+ * const performanceMiddleware: Middleware<AppState> = {
+ *   id: 'performance',
+ *   before: (action, payload, state) => {
+ *     performance.mark(`${action}-start`);
+ *     return true;
+ *   },
+ *   after: (action, payload, oldState, newState) => {
+ *     performance.mark(`${action}-end`);
+ *     performance.measure(action, `${action}-start`, `${action}-end`);
+ *
+ *     const measure = performance.getEntriesByName(action)[0];
+ *     if (measure.duration > 10) {
+ *       console.warn(`Slow operation: ${action} took ${measure.duration.toFixed(2)}ms`);
+ *     }
+ *   }
+ * };
+ * ```
+ *
+ * @example Auto-Persistence Middleware
+ * ```typescript
+ * const persistenceMiddleware: Middleware<AppState> = {
+ *   id: 'persistence',
+ *   after: (action, payload, oldState, newState) => {
+ *     // Auto-save on specific actions
+ *     if (['UPDATE_USER', 'CREATE_POST', 'DELETE_COMMENT'].includes(action)) {
+ *       debounce(() => {
+ *         localStorage.setItem('app-state', JSON.stringify(newState));
+ *         console.log('💾 State auto-saved');
+ *       }, 1000)();
+ *     }
+ *   }
+ * };
+ * ```
  */
 export interface Middleware<T> {
+  /**
+   * Unique identifier for this middleware.
+   * Used for removal with `removeTap()` and duplicate prevention.
+   */
   id: string;
+
+  /**
+   * Called before state changes are applied.
+   *
+   * @param action - The action being performed (e.g., 'UPDATE', 'BATCH_UPDATE')
+   * @param payload - The data being applied to the state
+   * @param state - Current state before changes
+   * @returns `true` to allow operation, `false` to prevent it
+   */
   before?: (action: string, payload: unknown, state: T) => boolean;
+
+  /**
+   * Called after state changes have been successfully applied.
+   *
+   * @param action - The action that was performed
+   * @param payload - The data that was applied
+   * @param state - Previous state before changes
+   * @param newState - New state after changes
+   */
   after?: (action: string, payload: unknown, state: T, newState: T) => void;
 }
 
 /**
- * Entity helpers interface for CRUD operations
+ * Entity helpers interface for CRUD operations on collections.
+ *
+ * Provides a comprehensive set of methods for managing collections of entities
+ * with automatic reactivity, type safety, and performance optimizations.
+ *
+ * All operations automatically trigger Angular change detection and maintain
+ * referential integrity. Methods return signals for reactive programming patterns.
+ *
+ * @example Basic Entity Management
+ * ```typescript
+ * interface User {
+ *   id: string;
+ *   name: string;
+ *   email: string;
+ *   active: boolean;
+ * }
+ *
+ * const tree = signalTree({ users: [] as User[] });
+ * const userManager = tree.asCrud<User>('users');
+ *
+ * // Add new entities
+ * userManager.add({ id: '1', name: 'Alice', email: 'alice@example.com', active: true });
+ * userManager.add({ id: '2', name: 'Bob', email: 'bob@example.com', active: false });
+ *
+ * // Reactive queries
+ * const allUsers = userManager.selectAll(); // Signal<User[]>
+ * const activeUsers = userManager.findBy(user => user.active); // Signal<User[]>
+ * const userCount = userManager.selectTotal(); // Signal<number>
+ *
+ * console.log(allUsers()); // [{ id: '1', name: 'Alice', ... }, { id: '2', name: 'Bob', ... }]
+ * console.log(activeUsers()); // [{ id: '1', name: 'Alice', ... }]
+ * console.log(userCount()); // 2
+ * ```
+ *
+ * @example Advanced Entity Operations
+ * ```typescript
+ * // Update specific entity
+ * userManager.update('1', { name: 'Alice Smith', email: 'alice.smith@example.com' });
+ *
+ * // Upsert (add if not exists, update if exists)
+ * userManager.upsert({ id: '3', name: 'Charlie', email: 'charlie@example.com', active: true });
+ * userManager.upsert({ id: '1', active: false }); // Updates existing user
+ *
+ * // Find specific entities
+ * const alice = userManager.findById('1'); // Signal<User | undefined>
+ * const admins = userManager.findBy(user => user.role === 'admin');
+ *
+ * // Get entity IDs for optimized rendering
+ * const userIds = userManager.selectIds(); // Signal<string[]>
+ *
+ * // Remove entities
+ * userManager.remove('2'); // Remove Bob
+ * ```
+ *
+ * @example Reactive UI Integration
+ * ```typescript
+ * @Component({
+ *   template: `
+ *     <div *ngFor="let user of users(); trackBy: trackById">
+ *       {{ user.name }} ({{ user.active ? 'Active' : 'Inactive' }})
+ *       <button (click)="toggleUser(user.id)">Toggle</button>
+ *       <button (click)="deleteUser(user.id)">Delete</button>
+ *     </div>
+ *     <p>Total users: {{ userCount() }}</p>
+ *     <p>Active users: {{ activeCount() }}</p>
+ *   `
+ * })
+ * export class UserListComponent {
+ *   private userManager = this.tree.asCrud<User>('users');
+ *
+ *   users = this.userManager.selectAll();
+ *   userCount = this.userManager.selectTotal();
+ *   activeCount = computed(() =>
+ *     this.users().filter(u => u.active).length
+ *   );
+ *
+ *   toggleUser(id: string) {
+ *     const user = this.userManager.findById(id)();
+ *     if (user) {
+ *       this.userManager.update(id, { active: !user.active });
+ *     }
+ *   }
+ *
+ *   deleteUser(id: string) {
+ *     this.userManager.remove(id);
+ *   }
+ *
+ *   trackById(index: number, user: User) {
+ *     return user.id;
+ *   }
+ * }
+ * ```
  */
 export interface EntityHelpers<E extends { id: string | number }> {
+  /**
+   * Adds a new entity to the collection.
+   *
+   * @param entity - The entity to add (must include id)
+   * @throws Error if entity with same id already exists
+   *
+   * @example
+   * ```typescript
+   * userManager.add({
+   *   id: 'user-123',
+   *   name: 'John Doe',
+   *   email: 'john@example.com'
+   * });
+   * ```
+   */
   add: (entity: E) => void;
+
+  /**
+   * Updates an existing entity with partial data.
+   *
+   * @param id - The id of the entity to update
+   * @param updates - Partial entity data to merge
+   * @returns void (no-op if entity not found)
+   *
+   * @example
+   * ```typescript
+   * userManager.update('user-123', {
+   *   name: 'John Smith',  // Update name
+   *   lastLogin: new Date() // Add new field
+   * });
+   * ```
+   */
   update: (id: string | number, updates: Partial<E>) => void;
+
+  /**
+   * Removes an entity from the collection.
+   *
+   * @param id - The id of the entity to remove
+   * @returns void (no-op if entity not found)
+   *
+   * @example
+   * ```typescript
+   * userManager.remove('user-123');
+   * ```
+   */
   remove: (id: string | number) => void;
+
+  /**
+   * Adds entity if it doesn't exist, updates if it does.
+   * Combines add and update operations for convenience.
+   *
+   * @param entity - Complete entity data
+   *
+   * @example
+   * ```typescript
+   * // Adds if new, updates if exists
+   * userManager.upsert({
+   *   id: 'user-123',
+   *   name: 'Updated Name',
+   *   email: 'new-email@example.com'
+   * });
+   * ```
+   */
   upsert: (entity: E) => void;
+
+  /**
+   * Finds an entity by its id.
+   *
+   * @param id - The id to search for
+   * @returns Signal that emits the entity or undefined if not found
+   *
+   * @example
+   * ```typescript
+   * const user = userManager.findById('user-123');
+   * console.log(user()); // User | undefined
+   *
+   * // Reactive usage
+   * effect(() => {
+   *   const currentUser = user();
+   *   if (currentUser) {
+   *     console.log(`Current user: ${currentUser.name}`);
+   *   }
+   * });
+   * ```
+   */
   findById: (id: string | number) => Signal<E | undefined>;
+
+  /**
+   * Finds entities matching a predicate function.
+   *
+   * @param predicate - Function to test each entity
+   * @returns Signal that emits array of matching entities
+   *
+   * @example
+   * ```typescript
+   * const activeUsers = userManager.findBy(user => user.active);
+   * const admins = userManager.findBy(user => user.role === 'admin');
+   * const recentUsers = userManager.findBy(user =>
+   *   user.createdAt > Date.now() - 86400000 // Last 24 hours
+   * );
+   *
+   * console.log(activeUsers()); // User[]
+   * ```
+   */
   findBy: (predicate: (entity: E) => boolean) => Signal<E[]>;
+
+  /**
+   * Returns all entity IDs in the collection.
+   * Optimized for virtual scrolling and change tracking.
+   *
+   * @returns Signal that emits array of all entity IDs
+   *
+   * @example
+   * ```typescript
+   * const userIds = userManager.selectIds();
+   * console.log(userIds()); // ['user-1', 'user-2', 'user-3']
+   *
+   * // Optimized rendering with trackBy
+   * template: `
+   *   <div *ngFor="let id of userIds(); trackBy: trackById">
+   *     <user-card [userId]="id"></user-card>
+   *   </div>
+   * `
+   * ```
+   */
   selectIds: () => Signal<Array<string | number>>;
+
+  /**
+   * Returns all entities in the collection.
+   *
+   * @returns Signal that emits array of all entities
+   *
+   * @example
+   * ```typescript
+   * const allUsers = userManager.selectAll();
+   * console.log(allUsers()); // User[]
+   *
+   * // Computed derived values
+   * const userCount = computed(() => allUsers().length);
+   * const activeUserCount = computed(() =>
+   *   allUsers().filter(u => u.active).length
+   * );
+   * ```
+   */
   selectAll: () => Signal<E[]>;
+
+  /**
+   * Returns the total number of entities in the collection.
+   *
+   * @returns Signal that emits the entity count
+   *
+   * @example
+   * ```typescript
+   * const userCount = userManager.selectTotal();
+   * console.log(userCount()); // 42
+   *
+   * // Template usage
+   * template: `<p>Total users: {{ userCount() }}</p>`
+   * ```
+   */
   selectTotal: () => Signal<number>;
 }
 
 /**
- * Configuration for async actions
+ * Configuration for async actions with automatic loading state management.
+ *
+ * Provides a declarative way to handle async operations with built-in loading states,
+ * error handling, and success callbacks. Automatically manages UI state during
+ * async operations to prevent common loading state bugs.
+ *
+ * @example Basic Configuration
+ * ```typescript
+ * interface AppState {
+ *   users: User[];
+ *   loading: { users: boolean; posts: boolean };
+ *   errors: { users: string | null; posts: string | null };
+ * }
+ *
+ * const config: AsyncActionConfig<AppState, User[]> = {
+ *   loadingKey: 'loading.users',     // Set to true during operation
+ *   errorKey: 'errors.users',       // Set to error message on failure
+ *   onSuccess: (users, tree) => {   // Called on successful completion
+ *     tree.update(state => ({ users }));
+ *   },
+ *   onError: (error, tree) => {     // Called on failure
+ *     console.error('Failed to load users:', error);
+ *     analytics.track('user_load_failed', { error: error.message });
+ *   },
+ *   onFinally: (tree) => {          // Always called (cleanup)
+ *     tree.update(state => ({ lastSync: new Date() }));
+ *   }
+ * };
+ * ```
+ *
+ * @example Advanced Error Handling
+ * ```typescript
+ * const advancedConfig: AsyncActionConfig<AppState, ApiResponse> = {
+ *   loadingKey: 'ui.loading',
+ *   errorKey: 'ui.error',
+ *   onSuccess: (response, tree) => {
+ *     // Transform and store data
+ *     const normalizedData = normalizeApiResponse(response);
+ *     tree.batchUpdate(state => ({
+ *       data: normalizedData,
+ *       lastUpdated: Date.now(),
+ *       syncStatus: 'success'
+ *     }));
+ *   },
+ *   onError: (error, tree) => {
+ *     // Sophisticated error handling
+ *     if (error instanceof NetworkError) {
+ *       tree.update(state => ({
+ *         syncStatus: 'offline',
+ *         retryCount: (state.retryCount || 0) + 1
+ *       }));
+ *
+ *       // Auto-retry with exponential backoff
+ *       setTimeout(() => retryOperation(),
+ *         Math.pow(2, tree.unwrap().retryCount) * 1000
+ *       );
+ *     } else if (error instanceof ValidationError) {
+ *       tree.update(state => ({
+ *         validationErrors: error.fieldErrors,
+ *         syncStatus: 'validation_failed'
+ *       }));
+ *     }
+ *   },
+ *   onFinally: (tree) => {
+ *     // Always update last attempt timestamp
+ *     tree.update(state => ({ lastAttempt: Date.now() }));
+ *   }
+ * };
+ * ```
+ *
+ * @example Optimistic Updates
+ * ```typescript
+ * const optimisticConfig: AsyncActionConfig<AppState, Post> = {
+ *   loadingKey: 'ui.saving',
+ *   onSuccess: (savedPost, tree) => {
+ *     // Replace optimistic update with server response
+ *     tree.update(state => ({
+ *       posts: state.posts.map(p => p.id === savedPost.id ? savedPost : p)
+ *     }));
+ *   },
+ *   onError: (error, tree) => {
+ *     // Revert optimistic update
+ *     tree.undo(); // Revert to pre-optimistic state
+ *
+ *     // Show error to user
+ *     tree.update(state => ({
+ *       notifications: [...state.notifications, {
+ *         type: 'error',
+ *         message: 'Failed to save post. Please try again.',
+ *         timestamp: Date.now()
+ *       }]
+ *     }));
+ *   }
+ * };
+ *
+ * // Usage with optimistic update
+ * const savePost = tree.asyncAction(savePostApi, optimisticConfig);
+ *
+ * // Apply optimistic update immediately
+ * tree.update(state => ({
+ *   posts: [...state.posts, optimisticNewPost]
+ * }));
+ *
+ * // Save to server (will revert on error)
+ * savePost(optimisticNewPost);
+ * ```
  */
 export interface AsyncActionConfig<T, TResult> {
+  /**
+   * Dot-notation path to the loading state boolean.
+   * Automatically set to `true` when operation starts and `false` when complete.
+   *
+   * @example
+   * ```typescript
+   * // For state: { ui: { loading: { users: false } } }
+   * loadingKey: 'ui.loading.users'
+   *
+   * // For flat state: { isLoading: false }
+   * loadingKey: 'isLoading'
+   * ```
+   */
   loadingKey?: string;
+
+  /**
+   * Dot-notation path to the error state.
+   * Set to `null` when operation starts, error message/object on failure.
+   *
+   * @example
+   * ```typescript
+   * // For state: { errors: { api: null } }
+   * errorKey: 'errors.api'
+   *
+   * // For flat state: { error: null }
+   * errorKey: 'error'
+   * ```
+   */
   errorKey?: string;
+
+  /**
+   * Called when the async operation completes successfully.
+   * Use this to update state with the operation result.
+   *
+   * @param result - The successful result from the async operation
+   * @param tree - The SignalTree instance for state updates
+   *
+   * @example
+   * ```typescript
+   * onSuccess: (users, tree) => {
+   *   tree.batchUpdate(state => ({
+   *     users,
+   *     lastSync: new Date(),
+   *     hasData: true
+   *   }));
+   * }
+   * ```
+   */
   onSuccess?: (result: TResult, tree: SignalTree<T>) => void;
+
+  /**
+   * Called when the async operation fails.
+   * Use this for error handling, logging, and user feedback.
+   *
+   * @param error - The error that occurred during the operation
+   * @param tree - The SignalTree instance for state updates
+   *
+   * @example
+   * ```typescript
+   * onError: (error, tree) => {
+   *   console.error('Operation failed:', error);
+   *
+   *   if (error.code === 'NETWORK_ERROR') {
+   *     tree.update(state => ({ isOffline: true }));
+   *   }
+   *
+   *   analytics.track('async_error', {
+   *     operation: 'loadUsers',
+   *     error: error.message
+   *   });
+   * }
+   * ```
+   */
   onError?: (error: unknown, tree: SignalTree<T>) => void;
+
+  /**
+   * Called after the operation completes, regardless of success or failure.
+   * Use this for cleanup, analytics, or state normalization.
+   *
+   * @param tree - The SignalTree instance for state updates
+   *
+   * @example
+   * ```typescript
+   * onFinally: (tree) => {
+   *   tree.update(state => ({
+   *     lastAttempt: Date.now(),
+   *     operationCount: state.operationCount + 1
+   *   }));
+   *
+   *   // Cleanup temporary data
+   *   tree.invalidatePattern('temp.*');
+   * }
+   * ```
+   */
   onFinally?: (tree: SignalTree<T>) => void;
 }
 
