@@ -244,7 +244,6 @@ describe('Signal Tree', () => {
             message: 'initial',
           },
           {
-            enablePerformanceFeatures: true,
             batchUpdates: true,
           }
         );
@@ -291,7 +290,6 @@ describe('Signal Tree', () => {
             multiplier: 2,
           },
           {
-            enablePerformanceFeatures: true,
             useMemoization: true,
           }
         );
@@ -325,7 +323,6 @@ describe('Signal Tree', () => {
         const tree = signalTree(
           { value: 10 },
           {
-            enablePerformanceFeatures: true,
             useMemoization: true,
             trackPerformance: true,
           }
@@ -352,10 +349,7 @@ describe('Signal Tree', () => {
         const consoleSpy = jest.spyOn(console, 'group').mockImplementation();
         const logSpy = jest.spyOn(console, 'log').mockImplementation();
 
-        const tree = signalTree(
-          { value: 0 },
-          { enablePerformanceFeatures: true }
-        );
+        const tree = signalTree({ value: 0 }, {});
 
         tree.addTap(loggingMiddleware('TestTree'));
         tree.update((state) => ({ value: state.value + 1 }));
@@ -367,10 +361,7 @@ describe('Signal Tree', () => {
       it('should support validation middleware', () => {
         const errorSpy = jest.spyOn(console, 'error').mockImplementation();
 
-        const tree = signalTree(
-          { age: 20 },
-          { enablePerformanceFeatures: true }
-        );
+        const tree = signalTree({ age: 20 }, {});
 
         const validator = (state: { age: number }) =>
           state.age < 0 ? 'Age cannot be negative' : null;
@@ -385,10 +376,7 @@ describe('Signal Tree', () => {
       });
 
       it('should allow middleware to cancel updates', () => {
-        const tree = signalTree(
-          { value: 10 },
-          { enablePerformanceFeatures: true }
-        );
+        const tree = signalTree({ value: 10 }, {});
 
         const blockingMiddleware: Middleware<{ value: number }> = {
           id: 'blocker',
@@ -413,10 +401,7 @@ describe('Signal Tree', () => {
       });
 
       it('should support removing middleware', () => {
-        const tree = signalTree(
-          { value: 0 },
-          { enablePerformanceFeatures: true }
-        );
+        const tree = signalTree({ value: 0 }, {});
 
         const middleware: Middleware<{ value: number }> = {
           id: 'test-middleware',
@@ -438,7 +423,6 @@ describe('Signal Tree', () => {
         const tree = signalTree(
           { counter: 0 },
           {
-            enablePerformanceFeatures: true,
             enableTimeTravel: true,
           }
         );
@@ -467,7 +451,6 @@ describe('Signal Tree', () => {
         const tree = signalTree(
           { value: 'initial' },
           {
-            enablePerformanceFeatures: true,
             enableTimeTravel: true,
           }
         );
@@ -487,7 +470,6 @@ describe('Signal Tree', () => {
         const tree = signalTree(
           { value: 0 },
           {
-            enablePerformanceFeatures: true,
             enableTimeTravel: true,
           }
         );
@@ -506,126 +488,6 @@ describe('Signal Tree', () => {
           expect(typeof tree.resetHistory).toBe('function');
         }
       });
-
-      it('should support patch-based time travel for memory efficiency', () => {
-        const tree = signalTree(
-          { counter: 0, name: 'test', data: { nested: { value: 42 } } },
-          {
-            enablePerformanceFeatures: true,
-            enableTimeTravel: true,
-            usePatchBasedTimeTravel: true,
-          }
-        );
-
-        // Make incremental changes - patch-based time travel should store only diffs
-        tree.update(() => ({ counter: 1 })); // Only counter changed
-        tree.update(() => ({ name: 'updated' })); // Only name changed
-        tree.update(() => ({ data: { nested: { value: 100 } } })); // Only nested value changed
-
-        expect(tree.$.counter()).toBe(1);
-        expect(tree.$.name()).toBe('updated');
-        expect(tree.$.data.nested.value()).toBe(100);
-
-        // Test undo functionality
-        tree.undo(); // Should revert nested value
-        expect(tree.$.data.nested.value()).toBe(42);
-        expect(tree.$.name()).toBe('updated'); // Should remain unchanged
-        expect(tree.$.counter()).toBe(1); // Should remain unchanged
-
-        tree.undo(); // Should revert name
-        expect(tree.$.name()).toBe('test');
-        expect(tree.$.counter()).toBe(1); // Should remain unchanged
-
-        tree.undo(); // Should revert counter
-        expect(tree.$.counter()).toBe(0);
-
-        // Test redo functionality
-        tree.redo(); // Should restore counter
-        expect(tree.$.counter()).toBe(1);
-
-        tree.redo(); // Should restore name
-        expect(tree.$.name()).toBe('updated');
-
-        tree.redo(); // Should restore nested value
-        expect(tree.$.data.nested.value()).toBe(100);
-
-        // Verify history reconstruction works
-        const history = tree.getHistory();
-        expect(history.length).toBeGreaterThan(0);
-
-        // Reset should work
-        tree.resetHistory();
-        // After reset, undo/redo should not change state
-        const stateBefore = tree.unwrap();
-        tree.undo();
-        expect(tree.unwrap()).toEqual(stateBefore);
-      });
-
-      it('should support path-based memoization for fine-grained cache invalidation', () => {
-        const tree = signalTree(
-          {
-            users: { count: 10, list: ['Alice', 'Bob'] },
-            products: { count: 5, list: ['A', 'B', 'C'] },
-            settings: { theme: 'dark' },
-          },
-          {
-            enablePerformanceFeatures: true,
-            useMemoization: true,
-            usePathBasedMemoization: true,
-            trackPerformance: true,
-          }
-        );
-
-        let userComputations = 0;
-        let productComputations = 0;
-        let settingsComputations = 0;
-
-        // Create computations that depend on different paths
-        const userCount = tree.memoize((state) => {
-          userComputations++;
-          return state.users.count * 2;
-        }, 'userCount');
-
-        const productCount = tree.memoize((state) => {
-          productComputations++;
-          return state.products.count * 3;
-        }, 'productCount');
-
-        const themeDisplay = tree.memoize((state) => {
-          settingsComputations++;
-          return `Theme: ${state.settings.theme}`;
-        }, 'themeDisplay');
-
-        // Initial computation - all should run
-        expect(userCount()).toBe(20);
-        expect(productCount()).toBe(15);
-        expect(themeDisplay()).toBe('Theme: dark');
-        expect(userComputations).toBe(1);
-        expect(productComputations).toBe(1);
-        expect(settingsComputations).toBe(1);
-
-        // Update only users - should only invalidate user computation
-        tree.update(() => ({
-          users: { count: 15, list: ['Alice', 'Bob', 'Charlie'] },
-        }));
-
-        expect(userCount()).toBe(30); // Recomputed
-        expect(productCount()).toBe(15); // Cached (no recomputation)
-        expect(themeDisplay()).toBe('Theme: dark'); // Cached (no recomputation)
-        expect(userComputations).toBe(2);
-        expect(productComputations).toBe(1); // Should not have increased
-        expect(settingsComputations).toBe(1); // Should not have increased
-
-        // Update only settings - should only invalidate settings computation
-        tree.update(() => ({ settings: { theme: 'light' } }));
-
-        expect(userCount()).toBe(30); // Cached (no recomputation)
-        expect(productCount()).toBe(15); // Cached (no recomputation)
-        expect(themeDisplay()).toBe('Theme: light'); // Recomputed
-        expect(userComputations).toBe(2); // Should not have increased
-        expect(productComputations).toBe(1); // Should not have increased
-        expect(settingsComputations).toBe(2);
-      });
     });
 
     describe('performance optimization', () => {
@@ -633,7 +495,6 @@ describe('Signal Tree', () => {
         const tree = signalTree(
           { items: [1, 2, 3] },
           {
-            enablePerformanceFeatures: true,
             useMemoization: true,
             maxCacheSize: 2,
           }
@@ -667,7 +528,6 @@ describe('Signal Tree', () => {
         const tree = signalTree(
           { value: 0 },
           {
-            enablePerformanceFeatures: true,
             trackPerformance: true,
           }
         );
@@ -1219,10 +1079,7 @@ describe('Signal Tree', () => {
   describe('Audit Middleware', () => {
     it('should track changes in audit log', () => {
       const auditLog: AuditEntry[] = [];
-      const tree = signalTree(
-        { value: 0, name: 'test' },
-        { enablePerformanceFeatures: true }
-      );
+      const tree = signalTree({ value: 0, name: 'test' }, {});
 
       tree.addTap(createAuditMiddleware(auditLog));
 
@@ -1246,10 +1103,7 @@ describe('Signal Tree', () => {
         source: 'test',
       });
 
-      const tree = signalTree(
-        { value: 0 },
-        { enablePerformanceFeatures: true }
-      );
+      const tree = signalTree({ value: 0 }, {});
 
       tree.addTap(createAuditMiddleware(auditLog, getMetadata));
       tree.$.value.set(10);
@@ -1386,7 +1240,6 @@ describe('Signal Tree', () => {
           },
         },
         {
-          enablePerformanceFeatures: true,
           useMemoization: true,
         }
       );
@@ -1449,7 +1302,6 @@ describe('Performance and Memory', () => {
         items: Array.from({ length: 1000 }, (_, i) => i),
       },
       {
-        enablePerformanceFeatures: true,
         batchUpdates: true,
       }
     );
@@ -1515,7 +1367,6 @@ describe('Edge Cases and Error Handling', () => {
     const tree = signalTree(
       { value: 0 },
       {
-        enablePerformanceFeatures: true,
         enableTimeTravel: true,
       }
     );
@@ -1528,7 +1379,7 @@ describe('Edge Cases and Error Handling', () => {
   });
 
   it('should handle tree destruction gracefully', () => {
-    const tree = signalTree({ value: 0 }, { enablePerformanceFeatures: true });
+    const tree = signalTree({ value: 0 }, {});
 
     const effectRan = jest.fn();
 
@@ -1549,7 +1400,7 @@ describe('Edge Cases and Error Handling', () => {
         loading: false,
         data: null as string | null,
       },
-      { enablePerformanceFeatures: true }
+      {}
     );
 
     const asyncAction = tree.asyncAction(

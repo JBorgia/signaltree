@@ -37,7 +37,6 @@ export class BatchingComparisonComponent implements OnDestroy {
       flag: false,
     },
     {
-      enablePerformanceFeatures: true,
       batchUpdates: true,
     }
   );
