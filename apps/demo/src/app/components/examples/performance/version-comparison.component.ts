@@ -14,7 +14,7 @@ interface TestMetrics {
 }
 
 interface TestResults {
-  basic: TestMetrics;
+  legacy: TestMetrics;
   optimized: TestMetrics;
   improvement: {
     performance: number;
@@ -77,12 +77,11 @@ export class VersionComparisonComponent implements OnDestroy {
     },
   };
 
-  // Basic version (no optimizations)
-  basicTree = signalTree(this.testData);
+  // Legacy version (basic configuration - minimal features for comparison)
+  legacyTree = signalTree(this.testData, 'basic');
 
-  // Optimized version (all features enabled)
+  // Current optimized version (all features enabled)
   optimizedTree = signalTree(this.testData, {
-    enablePerformanceFeatures: true,
     batchUpdates: true,
     useMemoization: true,
     debugMode: true,
@@ -92,7 +91,7 @@ export class VersionComparisonComponent implements OnDestroy {
 
   // Results tracking
   testResults = signal<TestResults>({
-    basic: this.getEmptyMetrics(),
+    legacy: this.getEmptyMetrics(),
     optimized: this.getEmptyMetrics(),
     improvement: {
       performance: 0,
@@ -102,17 +101,17 @@ export class VersionComparisonComponent implements OnDestroy {
   });
 
   // Computed values for testing memoization
-  basicActiveUsers = computed(() =>
-    this.basicTree.$.users().filter((u) => u.active)
+  legacyActiveUsers = computed(() =>
+    this.legacyTree.$.users().filter((u) => u.active)
   );
 
   optimizedActiveUsers = computed(() =>
     this.optimizedTree.$.users().filter((u) => u.active)
   );
 
-  basicExpensiveComputation = computed(() => {
-    const users = this.basicTree.$.users();
-    const products = this.basicTree.$.products();
+  legacyExpensiveComputation = computed(() => {
+    const users = this.legacyTree.$.users();
+    const products = this.legacyTree.$.products();
 
     // Simulate expensive computation
     let result = 0;
@@ -139,7 +138,7 @@ export class VersionComparisonComponent implements OnDestroy {
   });
 
   // Effect counters
-  private basicEffectRuns = 0;
+  private legacyEffectRuns = 0;
   private optimizedEffectRuns = 0;
 
   constructor() {
@@ -151,11 +150,11 @@ export class VersionComparisonComponent implements OnDestroy {
   }
 
   private setupEffects() {
-    // Basic tree effect tracking
+    // Legacy tree effect tracking
     effect(() => {
-      this.basicActiveUsers();
-      this.basicExpensiveComputation();
-      this.basicEffectRuns++;
+      this.legacyActiveUsers();
+      this.legacyExpensiveComputation();
+      this.legacyEffectRuns++;
     });
 
     // Optimized tree effect tracking
@@ -231,15 +230,15 @@ export class VersionComparisonComponent implements OnDestroy {
   private async testNestedUpdates() {
     const size = this.testSize();
 
-    // Test basic tree
-    const basicStart = performance.now();
+    // Test legacy tree
+    const legacyStart = performance.now();
     for (let i = 0; i < size; i++) {
-      this.basicTree.$.users.update((users) =>
+      this.legacyTree.$.users.update((users) =>
         users.map((u) => ({ ...u, score: u.score + 1 }))
       );
-      this.basicTree.$.settings.$.features.$.analytics.set(i % 2 === 0);
+      this.legacyTree.$.settings.features.analytics.set(i % 2 === 0);
     }
-    const basicTime = performance.now() - basicStart;
+    const legacyTime = performance.now() - legacyStart;
 
     // Test optimized tree with batching
     const optimizedStart = performance.now();
@@ -260,13 +259,13 @@ export class VersionComparisonComponent implements OnDestroy {
     }
     const optimizedTime = performance.now() - optimizedStart;
 
-    this.updateResults('basic', {
+    this.updateResults('legacy', {
       updates: size,
-      totalTime: basicTime,
-      averageTime: basicTime / size,
-      memoryUsage: this.estimateMemoryUsage(this.basicTree),
+      totalTime: legacyTime,
+      averageTime: legacyTime / size,
+      memoryUsage: this.estimateMemoryUsage(this.legacyTree),
       cacheHits: 0,
-      renderCount: this.basicEffectRuns,
+      renderCount: this.legacyEffectRuns,
     });
 
     this.updateResults('optimized', {
@@ -287,14 +286,14 @@ export class VersionComparisonComponent implements OnDestroy {
 
     const size = this.testSize();
 
-    // Basic tree - update everything manually
-    const basicStart = performance.now();
+    // Legacy tree - update everything manually
+    const legacyStart = performance.now();
     for (let i = 0; i < size; i++) {
-      this.basicTree.$.users.update((users) =>
+      this.legacyTree.$.users.update((users) =>
         users.map((u) => ({ ...u, name: `Updated ${u.name}` }))
       );
     }
-    const basicTime = performance.now() - basicStart;
+    const legacyTime = performance.now() - legacyStart;
 
     // Optimized tree - use pattern invalidation
     const optimizedStart = performance.now();
@@ -308,13 +307,13 @@ export class VersionComparisonComponent implements OnDestroy {
     }
     const optimizedTime = performance.now() - optimizedStart;
 
-    this.updateResults('basic', {
+    this.updateResults('legacy', {
       updates: size,
-      totalTime: basicTime,
-      averageTime: basicTime / size,
-      memoryUsage: this.estimateMemoryUsage(this.basicTree),
+      totalTime: legacyTime,
+      averageTime: legacyTime / size,
+      memoryUsage: this.estimateMemoryUsage(this.legacyTree),
       cacheHits: 0,
-      renderCount: this.basicEffectRuns,
+      renderCount: this.legacyEffectRuns,
     });
 
     this.updateResults('optimized', {
@@ -330,10 +329,10 @@ export class VersionComparisonComponent implements OnDestroy {
   private async testMemoryOptimization() {
     const size = this.testSize();
 
-    // Basic tree - no optimization
-    const basicStart = performance.now();
+    // Legacy tree - no optimization
+    const legacyStart = performance.now();
     for (let i = 0; i < size; i++) {
-      this.basicTree.$.products.update((products) => [
+      this.legacyTree.$.products.update((products) => [
         ...products,
         {
           id: products.length,
@@ -344,8 +343,8 @@ export class VersionComparisonComponent implements OnDestroy {
         },
       ]);
     }
-    const basicMemoryAfter = this.estimateMemoryUsage(this.basicTree);
-    const basicTime = performance.now() - basicStart;
+    const legacyMemoryAfter = this.estimateMemoryUsage(this.legacyTree);
+    const legacyTime = performance.now() - legacyStart;
 
     // Optimized tree - with memory optimization
     const optimizedStart = performance.now();
@@ -369,13 +368,13 @@ export class VersionComparisonComponent implements OnDestroy {
     const optimizedTime = performance.now() - optimizedStart;
     const optimizedMemoryAfter = this.estimateMemoryUsage(this.optimizedTree);
 
-    this.updateResults('basic', {
+    this.updateResults('legacy', {
       updates: size,
-      totalTime: basicTime,
-      averageTime: basicTime / size,
-      memoryUsage: basicMemoryAfter,
+      totalTime: legacyTime,
+      averageTime: legacyTime / size,
+      memoryUsage: legacyMemoryAfter,
       cacheHits: 0,
-      renderCount: this.basicEffectRuns,
+      renderCount: this.legacyEffectRuns,
     });
 
     this.updateResults('optimized', {
@@ -392,19 +391,19 @@ export class VersionComparisonComponent implements OnDestroy {
     const size = this.testSize();
 
     // Reset effect counters
-    this.basicEffectRuns = 0;
+    this.legacyEffectRuns = 0;
     this.optimizedEffectRuns = 0;
 
-    // Basic tree - trigger expensive computations
-    const basicStart = performance.now();
+    // Legacy tree - trigger expensive computations
+    const legacyStart = performance.now();
     for (let i = 0; i < size; i++) {
-      this.basicTree.$.users.update((users) =>
+      this.legacyTree.$.users.update((users) =>
         users.map((u) => ({ ...u, score: u.score + 0.1 }))
       );
       // Force computation
-      this.basicExpensiveComputation();
+      this.legacyExpensiveComputation();
     }
-    const basicTime = performance.now() - basicStart;
+    const legacyTime = performance.now() - legacyStart;
 
     // Optimized tree - should benefit from memoization
     const optimizedStart = performance.now();
@@ -417,13 +416,13 @@ export class VersionComparisonComponent implements OnDestroy {
     }
     const optimizedTime = performance.now() - optimizedStart;
 
-    this.updateResults('basic', {
+    this.updateResults('legacy', {
       updates: size,
-      totalTime: basicTime,
-      averageTime: basicTime / size,
-      memoryUsage: this.estimateMemoryUsage(this.basicTree),
+      totalTime: legacyTime,
+      averageTime: legacyTime / size,
+      memoryUsage: this.estimateMemoryUsage(this.legacyTree),
       cacheHits: 0,
-      renderCount: this.basicEffectRuns,
+      renderCount: this.legacyEffectRuns,
     });
 
     this.updateResults('optimized', {
@@ -439,27 +438,27 @@ export class VersionComparisonComponent implements OnDestroy {
   private async testDebugMode() {
     const size = Math.min(this.testSize(), 100); // Limit for debug output
 
-    // Basic tree - no debug info
-    const basicStart = performance.now();
+    // Legacy tree - no debug info
+    const legacyStart = performance.now();
     for (let i = 0; i < size; i++) {
-      this.basicTree.$.settings.$.theme.set(i % 2 === 0 ? 'dark' : 'light');
+      this.legacyTree.$.settings.theme.set(i % 2 === 0 ? 'dark' : 'light');
     }
-    const basicTime = performance.now() - basicStart;
+    const legacyTime = performance.now() - legacyStart;
 
     // Optimized tree - with debug mode
     const optimizedStart = performance.now();
     for (let i = 0; i < size; i++) {
-      this.optimizedTree.$.settings.$.theme.set(i % 2 === 0 ? 'dark' : 'light');
+      this.optimizedTree.$.settings.theme.set(i % 2 === 0 ? 'dark' : 'light');
     }
     const optimizedTime = performance.now() - optimizedStart;
 
-    this.updateResults('basic', {
+    this.updateResults('legacy', {
       updates: size,
-      totalTime: basicTime,
-      averageTime: basicTime / size,
-      memoryUsage: this.estimateMemoryUsage(this.basicTree),
+      totalTime: legacyTime,
+      averageTime: legacyTime / size,
+      memoryUsage: this.estimateMemoryUsage(this.legacyTree),
       cacheHits: 0,
-      renderCount: this.basicEffectRuns,
+      renderCount: this.legacyEffectRuns,
     });
 
     this.updateResults('optimized', {
@@ -488,16 +487,16 @@ export class VersionComparisonComponent implements OnDestroy {
   }
 
   private resetTrees() {
-    this.basicTree.update(() => ({ ...this.testData }));
+    this.legacyTree.update(() => ({ ...this.testData }));
     this.optimizedTree.update(() => ({ ...this.testData }));
   }
 
   private resetMetrics() {
-    this.basicEffectRuns = 0;
+    this.legacyEffectRuns = 0;
     this.optimizedEffectRuns = 0;
   }
 
-  private updateResults(type: 'basic' | 'optimized', metrics: TestMetrics) {
+  private updateResults(type: 'legacy' | 'optimized', metrics: TestMetrics) {
     this.testResults.update((results) => ({
       ...results,
       [type]: metrics,
@@ -506,23 +505,23 @@ export class VersionComparisonComponent implements OnDestroy {
 
   private calculateImprovements() {
     const results = this.testResults();
-    const basic = results.basic;
+    const legacy = results.legacy;
     const optimized = results.optimized;
 
     const performance =
-      basic.totalTime > 0
-        ? ((basic.totalTime - optimized.totalTime) / basic.totalTime) * 100
+      legacy.totalTime > 0
+        ? ((legacy.totalTime - optimized.totalTime) / legacy.totalTime) * 100
         : 0;
 
     const memory =
-      basic.memoryUsage > 0
-        ? ((basic.memoryUsage - optimized.memoryUsage) / basic.memoryUsage) *
+      legacy.memoryUsage > 0
+        ? ((legacy.memoryUsage - optimized.memoryUsage) / legacy.memoryUsage) *
           100
         : 0;
 
     const efficiency =
-      basic.renderCount > 0
-        ? ((basic.renderCount - optimized.renderCount) / basic.renderCount) *
+      legacy.renderCount > 0
+        ? ((legacy.renderCount - optimized.renderCount) / legacy.renderCount) *
           100
         : 0;
 
@@ -564,20 +563,20 @@ export class VersionComparisonComponent implements OnDestroy {
     return value.toFixed(1) + '%';
   }
 
-  getBasicTreeCode(): string {
-    return `// Basic SignalTree (no optimizations)
+  getLegacyTreeCode(): string {
+    return `// Basic SignalTree (minimal features for comparison)
 const tree = signalTree({
   users: [...],
   products: [...],
   settings: {...}
-});
+}, 'basic');
 
 // Individual updates trigger effects immediately
 for (let i = 0; i < 1000; i++) {
   tree.$.users.update(users =>
     users.map(u => ({ ...u, score: u.score + 1 }))
   );
-  tree.$.settings.$.features.$.analytics.set(i % 2 === 0);
+  tree.$.settings.features.analytics.set(i % 2 === 0);
 }`;
   }
 
@@ -588,7 +587,6 @@ const tree = signalTree({
   products: [...],
   settings: {...}
 }, {
-  enablePerformanceFeatures: true,
   batchUpdates: true,
   useMemoization: true,
   debugMode: true,

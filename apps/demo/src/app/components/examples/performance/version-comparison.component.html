@@ -68,38 +68,38 @@
 
   <div class="results-container">
     <div class="results-grid">
-      <!-- Basic Version Results -->
+      <!-- Legacy Version Results -->
       <div class="result-card basic">
-        <h3>📊 Basic Version</h3>
+        <h3>📊 Legacy Version</h3>
         <div class="metrics">
           <div class="metric">
             <span class="label">Updates:</span>
             <span class="value">{{
-              testResults().basic.updates | number
+              testResults().legacy.updates | number
             }}</span>
           </div>
           <div class="metric">
             <span class="label">Total Time:</span>
             <span class="value">{{
-              formatTime(testResults().basic.totalTime)
+              formatTime(testResults().legacy.totalTime)
             }}</span>
           </div>
           <div class="metric">
             <span class="label">Average Time:</span>
             <span class="value">{{
-              formatTime(testResults().basic.averageTime)
+              formatTime(testResults().legacy.averageTime)
             }}</span>
           </div>
           <div class="metric">
             <span class="label">Memory Usage:</span>
             <span class="value">{{
-              formatMemory(testResults().basic.memoryUsage)
+              formatMemory(testResults().legacy.memoryUsage)
             }}</span>
           </div>
           <div class="metric">
             <span class="label">Effect Runs:</span>
             <span class="value">{{
-              testResults().basic.renderCount | number
+              testResults().legacy.renderCount | number
             }}</span>
           </div>
         </div>
@@ -187,7 +187,7 @@
     <div class="code-grid">
       <div class="code-block">
         <h4>Basic Version</h4>
-        <pre><code>{{ getBasicTreeCode() }}</code></pre>
+        <pre><code>{{ getLegacyTreeCode() }}</code></pre>
       </div>
       <div class="code-block">
         <h4>Optimized Version</h4>
@@ -205,20 +205,20 @@
         <div class="state-preview">
           <div class="state-item">
             <span class="key">Active Users:</span>
-            <span class="value">{{ basicActiveUsers().length }}</span>
+            <span class="value">{{ legacyActiveUsers().length }}</span>
           </div>
           <div class="state-item">
             <span class="key">Total Products:</span>
-            <span class="value">{{ basicTree.$.products().length }}</span>
+            <span class="value">{{ legacyTree.$.products().length }}</span>
           </div>
           <div class="state-item">
             <span class="key">Theme:</span>
-            <span class="value">{{ basicTree.$.settings.theme() }}</span>
+            <span class="value">{{ legacyTree.$.settings.theme() }}</span>
           </div>
           <div class="state-item">
             <span class="key">Expensive Computation:</span>
             <span class="value">{{
-              basicExpensiveComputation() | number : '1.0-0'
+              legacyExpensiveComputation() | number : '1.0-0'
             }}</span>
           </div>
         </div>
