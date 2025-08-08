@@ -22,32 +22,42 @@ export class BatchingComparisonComponent implements OnDestroy {
   delay = 0;
   isRunning = false;
 
-  // Regular tree without batching
-  regularTree = signalTree({
+  // Tree demonstrating individual updates
+  individualTree = signalTree({
     counter: 0,
     text: 'Initial',
     flag: false,
   });
 
-  // Enhanced tree with batching
-  batchedTree = signalTree(
-    {
-      counter: 0,
-      text: 'Initial',
-      flag: false,
-    },
-    {
-      batchUpdates: true,
-    }
-  );
+  // Tree showcasing smart progressive enhancement with auto-enabling batch updates
+  smartTree = signalTree({
+    counter: 0,
+    text: 'Initial',
+    flag: false,
+  });
 
   // Performance metrics
-  regularMetrics = signal<PerformanceMetrics>({
+  individualMetrics = signal<PerformanceMetrics>({
     updates: 0,
     totalTime: 0,
     averageTime: 0,
     lastUpdate: 0,
   });
+
+  smartMetrics = signal<PerformanceMetrics>({
+    updates: 0,
+    totalTime: 0,
+    averageTime: 0,
+    lastUpdate: 0,
+  });
+
+  comparisonLog: Array<{
+    timestamp: Date;
+    test: string;
+    individual: number;
+    smart: number;
+    improvement: string;
+  }> = [];
 
   batchedMetrics = signal<PerformanceMetrics>({
     updates: 0,
@@ -57,8 +67,8 @@ export class BatchingComparisonComponent implements OnDestroy {
   });
 
   private startTime = 0;
-  private lastRegularUpdate = 0;
-  private lastBatchedUpdate = 0;
+  private lastIndividualUpdate = 0;
+  private lastSmartUpdate = 0;
 
   constructor() {
     this.setupEffects();
@@ -70,18 +80,37 @@ export class BatchingComparisonComponent implements OnDestroy {
   }
 
   private setupEffects() {
-    // Effect for regular tree
+    // Effect for individual updates tree
     effect(() => {
       const current = performance.now();
-      const updateTime = current - this.lastRegularUpdate;
-      this.lastRegularUpdate = current;
+      const updateTime = current - this.lastIndividualUpdate;
+      this.lastIndividualUpdate = current;
 
       // Access tree values to trigger effect
-      this.regularTree.state.counter();
-      this.regularTree.state.text();
-      this.regularTree.state.flag();
+      this.individualTree.$.counter();
+      this.individualTree.$.text();
+      this.individualTree.$.flag();
 
-      this.regularMetrics.update((metrics) => ({
+      this.individualMetrics.update((metrics) => ({
+        updates: metrics.updates + 1,
+        totalTime: metrics.totalTime + updateTime,
+        averageTime: (metrics.totalTime + updateTime) / (metrics.updates + 1),
+        lastUpdate: updateTime,
+      }));
+    });
+
+    // Effect for smart batching tree
+    effect(() => {
+      const current = performance.now();
+      const updateTime = current - this.lastSmartUpdate;
+      this.lastSmartUpdate = current;
+
+      // Access tree values to trigger effect
+      this.smartTree.$.counter();
+      this.smartTree.$.text();
+      this.smartTree.$.flag();
+
+      this.smartMetrics.update((metrics) => ({
         updates: metrics.updates + 1,
         totalTime: metrics.totalTime + updateTime,
         averageTime: (metrics.totalTime + updateTime) / (metrics.updates + 1),
@@ -109,50 +138,102 @@ export class BatchingComparisonComponent implements OnDestroy {
     });
   }
 
-  async runTest() {
+  async runIndividualUpdatesTest() {
     this.isRunning = true;
     this.resetTrees();
     this.clearMetrics();
 
     // Initialize timing
-    this.lastRegularUpdate = performance.now();
-    this.lastBatchedUpdate = performance.now();
+    this.lastIndividualUpdate = performance.now();
 
-    // Run updates on regular tree
+    const startTime = performance.now();
+
+    // Run individual updates - each triggers separate renders
     for (let i = 0; i < this.updateCount; i++) {
-      this.regularTree.state.counter.set(i);
-      this.regularTree.state.text.set(`Update ${i}`);
-      this.regularTree.state.flag.set(i % 2 === 0);
+      this.individualTree.$.counter.set(i);
+      this.individualTree.$.text.set(`Update ${i}`);
+      this.individualTree.$.flag.set(i % 2 === 0);
 
       if (this.delay > 0) {
         await new Promise((resolve) => setTimeout(resolve, this.delay));
       }
     }
 
+    const individualTime = performance.now() - startTime;
+    this.isRunning = false;
+    return individualTime;
+  }
+
+  async runSmartBatchingTest() {
+    this.isRunning = true;
+    this.resetTrees();
+
+    // Initialize timing
+    this.lastSmartUpdate = performance.now();
+
+    const startTime = performance.now();
+
+    // Run smart batching - auto-enables on first use!
+    for (let i = 0; i < Math.ceil(this.updateCount / 10); i++) {
+      this.smartTree.batchUpdate(() => {
+        for (let j = 0; j < 10 && (i * 10 + j) < this.updateCount; j++) {
+          const index = i * 10 + j;
+          this.smartTree.$.counter.set(index);
+          this.smartTree.$.text.set(`Batch ${index}`);
+          this.smartTree.$.flag.set(index % 2 === 0);
+        }
+      });
+
+      if (this.delay > 0) {
+        await new Promise((resolve) => setTimeout(resolve, this.delay));
+      }
+    }
+
+    const smartTime = performance.now() - startTime;
+    this.isRunning = false;
+    return smartTime;
+  }
+
+  async runComparisonTest() {
+    this.isRunning = true;
+
+    // Run individual updates test
+    const individualTime = await this.runIndividualUpdatesTest();
+
     // Small delay between tests
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    // Run updates on batched tree using batchUpdate
-    if (this.batchedTree.batchUpdate) {
-      for (let i = 0; i < 100; i++) {
-        this.batchedTree.batchUpdate(() => ({
-          counter: i,
-          text: `Batch ${i}`,
-          flag: i % 2 === 0,
-        }));
-      }
+    // Run smart batching test
+    const smartTime = await this.runSmartBatchingTest();
+
+    // Calculate improvement
+    const improvement = Math.round(((individualTime - smartTime) / individualTime) * 100);
+
+    // Log comparison
+    this.comparisonLog.unshift({
+      timestamp: new Date(),
+      test: `${this.updateCount} updates`,
+      individual: Math.round(individualTime),
+      smart: Math.round(smartTime),
+      improvement: improvement > 0 ? `${improvement}% faster` : `${Math.abs(improvement)}% slower`
+    });
+
+    // Keep only last 10 entries
+    if (this.comparisonLog.length > 10) {
+      this.comparisonLog = this.comparisonLog.slice(0, 10);
     }
+
     this.isRunning = false;
   }
 
   resetTrees() {
-    this.regularTree.update(() => ({
+    this.individualTree.update(() => ({
       counter: 0,
       text: 'Initial',
       flag: false,
     }));
 
-    this.batchedTree.update(() => ({
+    this.smartTree.update(() => ({
       counter: 0,
       text: 'Initial',
       flag: false,
@@ -160,14 +241,14 @@ export class BatchingComparisonComponent implements OnDestroy {
   }
 
   clearMetrics() {
-    this.regularMetrics.set({
+    this.individualMetrics.set({
       updates: 0,
       totalTime: 0,
       averageTime: 0,
       lastUpdate: 0,
     });
 
-    this.batchedMetrics.set({
+    this.smartMetrics.set({
       updates: 0,
       totalTime: 0,
       averageTime: 0,
@@ -175,48 +256,90 @@ export class BatchingComparisonComponent implements OnDestroy {
     });
   }
 
-  updateRegularTree() {
-    const current = this.regularTree.state.counter() + 1;
-    this.regularTree.state.counter.set(current);
-    this.regularTree.state.text.set(`Manual ${current}`);
-    this.regularTree.state.flag.set(current % 2 === 0);
+  // Manual update methods for demonstration
+  updateIndividualTree() {
+    const current = this.individualTree.$.counter() + 1;
+    this.individualTree.$.counter.set(current);
+    this.individualTree.$.text.set(`Manual ${current}`);
+    this.individualTree.$.flag.set(current % 2 === 0);
   }
 
-  updateBatchedTree() {
-    const current = this.batchedTree.state.counter() + 1;
-    this.batchedTree.state.counter.set(current);
-    this.batchedTree.state.text.set(`Manual ${current}`);
-    this.batchedTree.state.flag.set(current % 2 === 0);
+  updateSmartTree() {
+    const current = this.smartTree.$.counter() + 1;
+    this.smartTree.$.counter.set(current);
+    this.smartTree.$.text.set(`Manual ${current}`);
+    this.smartTree.$.flag.set(current % 2 === 0);
   }
 
-  multiUpdateRegular() {
+  // Demonstrate multiple individual updates
+  multiUpdateIndividual() {
     // Multiple individual updates (will trigger effect multiple times)
     for (let i = 0; i < 5; i++) {
-      const value = this.regularTree.state.counter() + 1;
-      this.regularTree.state.counter.set(value);
-      this.regularTree.state.text.set(`Multi ${value}`);
-      this.regularTree.state.flag.set(value % 2 === 0);
+      const value = this.individualTree.$.counter() + 1;
+      this.individualTree.$.counter.set(value);
+      this.individualTree.$.text.set(`Multi ${value}`);
+      this.individualTree.$.flag.set(value % 2 === 0);
     }
   }
 
-  multiBatch() {
-    // Multiple updates in a batch (will trigger effect once)
-    if (this.batchedTree.batchUpdate) {
+  // Demonstrate smart batching (auto-enables!)
+  multiUpdateSmart() {
+    // Multiple updates in a batch - auto-enabling feature!
+    this.smartTree.batchUpdate(() => {
       for (let i = 0; i < 5; i++) {
-        this.batchedTree.batchUpdate((current) => ({
-          counter: current.counter + 1,
-          text: `Batch ${current.counter + 1}`,
-          flag: (current.counter + 1) % 2 === 0,
-        }));
+        const value = this.smartTree.$.counter() + i + 1;
+        this.smartTree.$.counter.set(value);
+        this.smartTree.$.text.set(`Smart Batch ${value}`);
+        this.smartTree.$.flag.set(value % 2 === 0);
       }
-    }
+    });
+  }
+
+  clearComparisonLog() {
+    this.comparisonLog = [];
+  }
+
+  // Get metrics to show auto-enabled features
+  getSmartTreeMetrics() {
+    return this.smartTree.getMetrics();
   }
 
   getImprovementPercentage(): string {
-    const regular = this.regularMetrics().updates;
-    const batched = this.batchedMetrics().updates;
+    const individual = this.individualMetrics().updates;
+    const smart = this.smartMetrics().updates;
 
-    if (regular === 0 || batched === 0) return '0';
+    if (individual === 0 || smart === 0) return '0';
+
+    const improvement = Math.round(((individual - smart) / individual) * 100);
+    return improvement > 0 ? `+${improvement}` : `${improvement}`;
+  }
+
+  trackByIndex(index: number): number {
+    return index;
+  }
+
+  codeExample = `// Smart Progressive Enhancement Batching Demo
+
+// Create trees - no configuration needed!
+const individualTree = signalTree({ counter: 0, text: '', flag: false });
+const smartTree = signalTree({ counter: 0, text: '', flag: false });
+
+// Individual updates (multiple renders)
+individualTree.$.counter.set(1);
+individualTree.$.text.set('Update 1');
+individualTree.$.flag.set(true);
+
+// Smart batching auto-enables on first use!
+smartTree.batchUpdate(() => {
+  smartTree.$.counter.set(1);
+  smartTree.$.text.set('Batch Update 1');
+  smartTree.$.flag.set(true);
+  // Only one render cycle for all updates!
+});
+
+// Performance automatically optimized - no config required!`;
+}`;
+}
 
     const improvement = ((regular - batched) / regular) * 100;
     return Math.max(0, improvement).toFixed(1);
@@ -235,41 +358,3 @@ export class BatchingComparisonComponent implements OnDestroy {
 
     if (batched === 0) return '∞';
 
-    const ratio = regular / batched;
-    return ratio.toFixed(1);
-  }
-
-  regularTreeCode = `// Regular tree - no batching
-const tree = signalTree({
-  counter: 0,
-  text: 'Initial',
-  flag: false
-});
-
-// Each update triggers effects immediately
-for (let i = 0; i < 100; i++) {
-  tree.counter.set(i);        // Effect runs
-  tree.text.set(\`Update \${i}\`); // Effect runs
-  tree.flag.set(i % 2 === 0); // Effect runs
-}
-// Total: 300 effect runs`;
-
-  batchedTreeCode = `// Enhanced tree with batching
-const tree = signalTree({
-  counter: 0,
-  text: 'Initial',
-  flag: false
-}, {
-  batchUpdates: true
-});
-
-// Multiple updates batched together
-for (let i = 0; i < 100; i++) {
-  tree.batchUpdate(() => ({
-    counter: i,
-    text: \`Update \${i}\`,
-    flag: i % 2 === 0
-  }));
-}
-// Total: ~100 effect runs (batched)`;
-}

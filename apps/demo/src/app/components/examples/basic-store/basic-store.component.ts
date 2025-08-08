@@ -16,36 +16,42 @@ export class BasicTreeComponent {
     age: 25,
     email: 'john@example.com',
   };
+
+  // Smart progressive enhancement - no configuration needed!
   tree = signalTree(this.state);
 
   updateLog: Array<{ timestamp: Date; action: string; data: unknown }> = [];
 
   constructor() {
     // Track all tree changes
-    this.logUpdate('Tree initialized', this.tree.unwrap());
+    this.logUpdate(
+      'Tree initialized with smart progressive enhancement',
+      this.tree.unwrap()
+    );
   }
+
   incrementAge() {
-    const newAge = this.tree.state.age() + 1;
-    this.tree.state.age.set(newAge);
+    const newAge = this.tree.$.age() + 1;
+    this.tree.$.age.set(newAge);
     this.logUpdate('Age incremented', { age: newAge });
   }
 
   updateName(event: Event) {
     const target = event.target as HTMLInputElement;
-    this.tree.state.name.set(target.value);
+    this.tree.$.name.set(target.value);
     this.logUpdate('Name updated', { name: target.value });
   }
 
   updateAge(event: Event) {
     const target = event.target as HTMLInputElement;
     const age = parseInt(target.value) || 0;
-    this.tree.state.age.set(age);
+    this.tree.$.age.set(age);
     this.logUpdate('Age updated', { age });
   }
 
   updateEmail(event: Event) {
     const target = event.target as HTMLInputElement;
-    this.tree.state.email.set(target.value);
+    this.tree.$.email.set(target.value);
     this.logUpdate('Email updated', { email: target.value });
   }
 
@@ -56,6 +62,38 @@ export class BasicTreeComponent {
       email: 'john@example.com',
     }));
     this.logUpdate('Tree reset', this.tree.unwrap());
+  }
+
+  // Batch update example - auto-enabling!
+  batchUpdateExample() {
+    this.tree.batchUpdate(() => {
+      this.tree.$.name.set('Jane Smith');
+      this.tree.$.age.set(30);
+      this.tree.$.email.set('jane@example.com');
+    });
+    this.logUpdate('Batch update completed', this.tree.unwrap());
+  }
+
+  // Memoized getter example
+  get fullInfo() {
+    return this.tree.memoize(
+      'fullInfo',
+      () =>
+        `${this.tree.$.name()} (${this.tree.$.age()}) - ${this.tree.$.email()}`
+    );
+  }
+
+  // Clear cache to force re-computation
+  clearCache() {
+    this.tree.clearCache();
+    this.logUpdate('Cache cleared', 'All memoized values will be recomputed');
+  }
+
+  // Get tree metrics (shows auto-enabled features)
+  getMetrics() {
+    const metrics = this.tree.getMetrics();
+    this.logUpdate('Tree metrics', metrics);
+    return metrics;
   }
 
   randomizeData() {
@@ -96,28 +134,34 @@ export class BasicTreeComponent {
 
   codeExample = `import { signalTree } from 'signal-tree';
 
-// Create a basic signal tree
+// Smart progressive enhancement - zero configuration!
 const tree = signalTree({
   name: 'John Doe',
   age: 25,
   email: 'john@example.com'
 });
 
-// Access individual signals through state
-console.log(tree.state.name()); // 'John Doe'
-console.log(tree.$.age());      // 25 ($ is shorthand for state)
+// Access signals with $ shorthand
+console.log(tree.$.name()); // 'John Doe'
+console.log(tree.$.age());  // 25
 
 // Update individual signals
-tree.state.name.set('Jane Doe');
-tree.state.age.update(age => age + 1);
+tree.$.name.set('Jane Doe');
+tree.$.age.update(age => age + 1);
 
-// Update entire tree
-tree.update(current => ({
-  ...current,
-  age: current.age + 1
-}));
+// Batch updates auto-enable on first use
+tree.batchUpdate(() => {
+  tree.$.name.set('Alice');
+  tree.$.age.set(28);
+  tree.$.email.set('alice@example.com');
+});
 
-// Get plain object
-const plainData = tree.unwrap();
-console.log(plainData); // { name: 'Jane Doe', age: 26, email: '...' }`;
+// Memoization auto-enables
+const computed = tree.memoize('fullName', () =>
+  \`\${tree.$.name()} (\${tree.$.age()})\`
+);
+
+// Get metrics to see auto-enabled features
+const metrics = tree.getMetrics();
+console.log(metrics); // Shows caching, batching status`;
 }
