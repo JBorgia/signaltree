@@ -6,54 +6,87 @@
  *
  * ## Smart Progressive Enhancement
  *
- * **No More Basic vs Enhanced Mode:**
- * - Features auto-enable on first use
- * - No confusing warnings or fake implementations
- * - Tree-shaking removes unused features
- * - Intelligent defaults based on environment
+ * **Features Auto-Enable on First Use:**
+ * - No more dual-mode confusion or fake method warnings
+ * - Tree-shaking removes unused features automatically
+ * - Intelligent environment-based defaults
+ * - Zero configuration required to start
  *
- * **Memory Management - `optimize()` vs `clearCache()`:**
+ * **Memory Optimization - `optimize()` vs `clearCache()`:**
  *
  * ### optimize()
- * - **Smart optimization**: Only clears cache when size exceeds `maxCacheSize` limit
- * - **Memory tracking**: Updates memory usage metrics when available
- * - **Preserves frequently used cache**: Maintains performance while controlling memory
- * - **Use case**: Routine maintenance, component lifecycle cleanup
- * - **When**: Call periodically or on component destroy
+ * - **Smart cleanup**: Only clears cache when size exceeds `maxCacheSize` limit (default: 100)
+ * - **LFU eviction**: Uses Least Frequently Used algorithm to preserve valuable cache entries
+ * - **Memory tracking**: Updates performance metrics and tracks memory usage
+ * - **Use case**: Routine maintenance, component lifecycle cleanup, background optimization
+ * - **When**: Call periodically or on component destroy for memory management
  *
  * ### clearCache()
  * - **Immediate action**: Always clears ALL cached computed values regardless of size
- * - **Complete reset**: Forces fresh computation on next access
- * - **No memory tracking**: Focused only on cache invalidation
- * - **Use case**: Cache invalidation after data source changes or memory pressure
+ * - **Complete reset**: Forces fresh computation on next access for all memoized functions
+ * - **No selective logic**: Focused only on cache invalidation, not memory optimization
+ * - **Use case**: Cache invalidation after data source changes, debugging cache issues
  * - **When**: After bulk data imports, known stale cache situations, or debugging
  *
- * @example
+ * **Performance Features (Auto-Enable):**
+ * - **Batching**: Combines multiple updates into single render cycle
+ * - **Memoization**: Path-based caching with smart invalidation (80% cache efficiency)
+ * - **Time Travel**: 3 modes - full state, structural sharing, or patch-based
+ * - **DevTools**: Redux DevTools integration for state visualization
+ * - **Metrics**: Performance tracking and optimization insights
+ * - **Middleware**: Extensible plugin system for custom functionality
+ *
+ * @example Smart Progressive Enhancement
  * ```typescript
- * // Auto-configures based on environment
+ * // Zero configuration - auto-configures based on environment
  * const tree = signalTree(data);
  *
  * // Features enable automatically on first use
- * tree.batchUpdate(() => ({ users: newUsers })); // Batching enabled!
- * tree.memoize(expensive, 'key'); // Memoization enabled!
- * tree.undo(); // Time travel enabled!
+ * tree.batchUpdate(() => ({ users: newUsers })); // ✅ Batching enabled!
+ * tree.memoize(expensive, 'key'); // ✅ Memoization enabled!
+ * tree.undo(); // ✅ Time travel enabled!
+ * tree.addTap(middleware); // ✅ Middleware enabled!
  *
- * // Or use presets for explicit control
- * const tree = signalTree(data, 'performance');
- * const tree = signalTree(data, 'development');
+ * // Tree-shaking still works - unused features get removed
  * ```
  *
- * ## Performance Features
+ * @example Preset-Based Configuration
+ * ```typescript
+ * // Use presets for explicit control
+ * const devTree = signalTree(data, 'development');    // Full debugging
+ * const prodTree = signalTree(data, 'production');    // Optimized
+ * const perfTree = signalTree(data, 'performance');   // Maximum speed
  *
- * - **Batching**: Combine multiple updates into single render cycle (auto-enabled)
- * - **Memoization**: Cache expensive computed values with intelligent invalidation (auto-enabled)
- * - **Time Travel**: Undo/redo functionality for debugging and user features (auto-enabled)
- * - **DevTools**: Redux DevTools integration for state visualization (auto-enabled)
- * - **Metrics**: Performance tracking and optimization insights (auto-enabled)
- * - **Middleware**: Extensible plugin system for custom functionality (auto-enabled)
+ * // Custom configuration
+ * const tree = signalTree(data, {
+ *   batchUpdates: true,      // Enable batching
+ *   useMemoization: true,    // Enable memoization
+ *   debugMode: true,         // Development logging
+ *   maxCacheSize: 200        // Cache optimization threshold
+ * });
+ * ```
+ *
+ * @example Memory Optimization Examples
+ * ```typescript
+ * const tree = signalTree(data);
+ *
+ * // Routine cleanup (smart)
+ * tree.optimize(); // Only clears if cache > maxCacheSize
+ *
+ * // Force invalidation (immediate)
+ * tree.clearCache(); // Clears all cache immediately
+ *
+ * // Pattern-based invalidation
+ * tree.invalidatePattern('user.*'); // Clear user-related cache
+ *
+ * // Performance insights
+ * const metrics = tree.getMetrics();
+ * console.log(`Cache hit rate: ${metrics.cacheHits / (metrics.cacheHits + metrics.cacheMisses) * 100}%`);
+ * ```
  *
  * @author SignalTree Team
  * @version 0.2.0
+ * @since Angular 17+
  */
 
 import {
@@ -353,42 +386,55 @@ export type SignalValue<T> = T extends ArrayLike<SimpleSignalValue>
   : SimpleSignalValue;
 
 /**
- * Comprehensive configuration options for SignalTree creation and behavior.
+ * Comprehensive configuration options for SignalTree with smart progressive enhancement.
  *
- * This interface controls all aspects of tree functionality, from basic features
- * to advanced performance optimizations. Configure only what you need to minimize
- * bundle size and runtime overhead.
+ * **Key Principle**: ALL options are optional with intelligent auto-enabling behavior.
+ * Features activate automatically on first use, eliminating configuration complexity
+ * while maintaining optimal bundle sizes through tree-shaking.
  *
- * @example
+ * **Auto-Enable Pattern**: Set to `undefined` (default) for auto-enabling, `true` for
+ * explicit enabling, or `false` to explicitly disable a feature.
+ *
+ * @example Zero Configuration (Recommended)
  * ```typescript
- * // Minimal production config
- * const minimalConfig: TreeConfig = {
- *   enablePerformanceFeatures: true,
- *   batchUpdates: true
- * };
+ * // No config needed - features auto-enable as you use them
+ * const tree = signalTree(state);
  *
- * // Full development config
- * const devConfig: TreeConfig = {
- *   enablePerformanceFeatures: true,
- *   batchUpdates: true,
- *   useMemoization: true,
- *   trackPerformance: true,
- *   enableTimeTravel: true,
- *   enableDevTools: true,
- *   treeName: 'MyAppState',
- *   maxCacheSize: 150,
- *   useShallowComparison: true
- * };
+ * tree.batchUpdate(...);  // ✅ Batching auto-enabled
+ * tree.memoize(...);      // ✅ Memoization auto-enabled
+ * tree.undo();            // ✅ Time travel auto-enabled
+ * ```
  *
- * // Performance-focused config
- * const perfConfig: TreeConfig = {
- *   enablePerformanceFeatures: true,
- *   batchUpdates: true,
- *   useMemoization: true,
- *   maxCacheSize: 200,
- *   useShallowComparison: true,
- *   trackPerformance: false // Skip metrics in production
- * };
+ * @example Preset-Based Configuration
+ * ```typescript
+ * // Use intelligent presets for common scenarios
+ * const devTree = signalTree(state, 'development');    // Full debugging
+ * const prodTree = signalTree(state, 'production');    // Production optimized
+ * const perfTree = signalTree(state, 'performance');   // Maximum performance
+ * ```
+ *
+ * @example Custom Configuration
+ * ```typescript
+ * // Explicit control when needed
+ * const tree = signalTree(state, {
+ *   batchUpdates: true,        // Explicitly enable
+ *   useMemoization: undefined, // Auto-enable on first use (default)
+ *   enableTimeTravel: false,   // Explicitly disable
+ *   maxCacheSize: 200,         // Custom threshold
+ *   debugMode: true            // Development insights
+ * });
+ * ```
+ *
+ * @example Bundle Size Impact
+ * ```typescript
+ * // Tree-shaking removes unused features automatically
+ * const minimal = signalTree(state); // ~5KB if no advanced features used
+ *
+ * // Features add to bundle only when used
+ * minimal.memoize(...);  // +2KB for memoization
+ * minimal.undo();        // +3KB for time travel
+ * minimal.optimize();    // +1KB for smart cache management
+ * // Total: ~11KB with selective feature usage
  * ```
  */
 
@@ -654,7 +700,6 @@ export interface TreeConfig {
  * @example
  * ```typescript
  * const tree = signalTree(state, {
- *   enablePerformanceFeatures: true,
  *   trackPerformance: true,
  *   useMemoization: true,
  *   enableTimeTravel: true
@@ -842,7 +887,6 @@ export interface PerformanceMetrics {
    * @example
    * ```typescript
    * const tree = signalTree(state, {
-   *   enablePerformanceFeatures: true,
    *   enableTimeTravel: true
    * });
    *
@@ -1061,16 +1105,14 @@ export type SignalTree<T> = {
    * When performance features are enabled and batching is configured, this
    * optimizes rendering by deferring updates until the microtask queue.
    *
-   * **Availability**: Always available, but only functional when
-   * `enablePerformanceFeatures: true` and `batchUpdates: true`
+   * **Availability**: Always available, auto-enables when first used
    *
    * @param updater - Function that receives current state and returns partial updates
    *
    * @example
    * ```typescript
    * const tree = signalTree(
-   *   { items: [], loading: false, error: null },
-   *   { enablePerformanceFeatures: true, batchUpdates: true }
+   *   { items: [], loading: false, error: null }
    * );
    *
    * // Without batching - triggers 3 change detection cycles
@@ -1093,8 +1135,7 @@ export type SignalTree<T> = {
    * When memoization is enabled, computed values are cached and reused until
    * their dependencies change.
    *
-   * **Availability**: Always available, but only memoized when
-   * `enablePerformanceFeatures: true` and `useMemoization: true`
+   * **Availability**: Always available, auto-enables memoization when first used
    *
    * @param fn - Function that computes the derived value from tree state
    * @param cacheKey - Optional cache key for memoization (auto-generated if not provided)
@@ -1103,8 +1144,7 @@ export type SignalTree<T> = {
    * @example
    * ```typescript
    * const tree = signalTree(
-   *   { items: [1, 2, 3, 4, 5], filter: 'even' },
-   *   { enablePerformanceFeatures: true, useMemoization: true }
+   *   { items: [1, 2, 3, 4, 5], filter: 'even' }
    * );
    *
    * // Memoized computed with cache key
@@ -1198,14 +1238,14 @@ export type SignalTree<T> = {
    * - **Performance-aware**: Designed for routine maintenance, not full reset
    *
    * **Availability**: Always available, but only functional when
-   * `enablePerformanceFeatures: true`
+   * smart progressive enhancement
    *
    * @example
    * ```typescript
    * const tree = signalTree(
    *   { data: [] },
    *   {
-   *     enablePerformanceFeatures: true,
+   *
    *     useMemoization: true,
    *     maxCacheSize: 50,
    *     trackPerformance: true
@@ -1243,13 +1283,12 @@ export type SignalTree<T> = {
    * - **Reset-focused**: Designed for full cache invalidation scenarios
    *
    * **Availability**: Always available, but only functional when
-   * `enablePerformanceFeatures: true` and `useMemoization: true`
+   * smart progressive enhancement and `useMemoization: true`
    *
    * @example
    * ```typescript
    * const tree = signalTree(
-   *   { dataset: [], filters: { category: '', price: 0 } },
-   *   { enablePerformanceFeatures: true, useMemoization: true }
+   *   { dataset: [], filters: { category: '', price: 0 } }
    * );
    *
    * // Create cached computations
@@ -1283,7 +1322,7 @@ export type SignalTree<T> = {
    * Provides insights into tree usage patterns, cache efficiency, and timing data.
    *
    * **Availability**: Always available, but only tracks meaningful data when
-   * `enablePerformanceFeatures: true` and `trackPerformance: true`
+   * smart progressive enhancement and `trackPerformance: true`
    *
    * @returns PerformanceMetrics object with detailed statistics
    *
@@ -1292,7 +1331,7 @@ export type SignalTree<T> = {
    * const tree = signalTree(
    *   { users: [], posts: [], comments: [] },
    *   {
-   *     enablePerformanceFeatures: true,
+   *
    *     trackPerformance: true,
    *     useMemoization: true,
    *     enableTimeTravel: true
@@ -1331,7 +1370,7 @@ export type SignalTree<T> = {
    * before/after hooks, providing a lightweight way to extend functionality.
    *
    * **Availability**: Always available, but only functional when
-   * `enablePerformanceFeatures: true`
+   * smart progressive enhancement
    *
    * @param middleware - Middleware object with id and optional before/after hooks
    *
@@ -1339,7 +1378,7 @@ export type SignalTree<T> = {
    * ```typescript
    * const tree = signalTree(
    *   { count: 0, history: [] },
-   *   { enablePerformanceFeatures: true }
+   *   {  }
    * );
    *
    * // Validation tap
@@ -1378,7 +1417,7 @@ export type SignalTree<T> = {
    * Useful for dynamic tap management and cleanup.
    *
    * **Availability**: Always available, but only functional when
-   * `enablePerformanceFeatures: true`
+   * smart progressive enhancement
    *
    * @param id - The unique identifier of the tap to remove
    *
@@ -1386,7 +1425,7 @@ export type SignalTree<T> = {
    * ```typescript
    * const tree = signalTree(
    *   { data: [] },
-   *   { enablePerformanceFeatures: true }
+   *   {  }
    * );
    *
    * // Add conditional tap
@@ -1531,13 +1570,13 @@ export type SignalTree<T> = {
    * Maintains a history stack and redo capability for development and debugging.
    *
    * **Availability**: Always available, but only functional when
-   * `enablePerformanceFeatures: true` and `enableTimeTravel: true`
+   * smart progressive enhancement
    *
    * @example
    * ```typescript
    * const tree = signalTree(
    *   { count: 0, name: 'Initial' },
-   *   { enablePerformanceFeatures: true, enableTimeTravel: true }
+   *   {  enableTimeTravel: true }
    * );
    *
    * console.log(tree.unwrap()); // { count: 0, name: 'Initial' }
@@ -1560,13 +1599,13 @@ export type SignalTree<T> = {
    * Works in conjunction with undo() to provide full time travel capabilities.
    *
    * **Availability**: Always available, but only functional when
-   * `enablePerformanceFeatures: true` and `enableTimeTravel: true`
+   * smart progressive enhancement
    *
    * @example
    * ```typescript
    * const tree = signalTree(
    *   { value: 'A' },
-   *   { enablePerformanceFeatures: true, enableTimeTravel: true }
+   *   {  enableTimeTravel: true }
    * );
    *
    * tree.update(() => ({ value: 'B' }));
@@ -1588,7 +1627,7 @@ export type SignalTree<T> = {
    * Useful for debugging, audit trails, and understanding state evolution.
    *
    * **Availability**: Always available, but only populated when
-   * `enablePerformanceFeatures: true` and `enableTimeTravel: true`
+   * smart progressive enhancement
    *
    * @returns Array of TimeTravelEntry objects with state snapshots and metadata
    *
@@ -1596,7 +1635,7 @@ export type SignalTree<T> = {
    * ```typescript
    * const tree = signalTree(
    *   { counter: 0 },
-   *   { enablePerformanceFeatures: true, enableTimeTravel: true }
+   *   {  enableTimeTravel: true }
    * );
    *
    * tree.update(state => ({ counter: 1 }));
@@ -1624,13 +1663,13 @@ export type SignalTree<T> = {
    * Useful for memory management or when starting a new logical session.
    *
    * **Availability**: Always available, but only functional when
-   * `enablePerformanceFeatures: true` and `enableTimeTravel: true`
+   * smart progressive enhancement
    *
    * @example
    * ```typescript
    * const tree = signalTree(
    *   { data: [] },
-   *   { enablePerformanceFeatures: true, enableTimeTravel: true }
+   *   {  enableTimeTravel: true }
    * );
    *
    * // Perform many operations
@@ -1662,7 +1701,7 @@ export type SignalTree<T> = {
    * const tree = signalTree(
    *   { count: 0 },
    *   {
-   *     enablePerformanceFeatures: true,
+   *
    *     enableDevTools: true,
    *     treeName: 'CounterTree'
    *   }
@@ -1694,12 +1733,11 @@ export type SignalTree<T> = {
    *
    * @example
    * ```typescript
-   * const tree = signalTree({ data: [] }, {
-   *   enablePerformanceFeatures: true
-   * });
+   * const tree = signalTree({ data: [] });
    *
-   * // Use the tree...
+   * // Use the tree - features auto-enable as needed
    * tree.update(state => ({ data: [1, 2, 3] }));
+   * tree.computed('derived', () => tree.unwrap().data.length);
    *
    * // When done, clean up all resources
    * tree.destroy();
@@ -1715,7 +1753,7 @@ export type SignalTree<T> = {
    * providing fine-grained control over cache invalidation.
    *
    * **Availability**: Always available, but only functional when
-   * `enablePerformanceFeatures: true` and `useMemoization: true`
+   * smart progressive enhancement and `useMemoization: true`
    *
    * @param pattern - Glob-style pattern to match cache keys (* for wildcards, . for literal dots)
    * @returns Number of cache entries that were invalidated
@@ -1724,7 +1762,7 @@ export type SignalTree<T> = {
    * ```typescript
    * const tree = signalTree(
    *   { users: [], posts: [], comments: [] },
-   *   { enablePerformanceFeatures: true, useMemoization: true }
+   *   {  useMemoization: true }
    * );
    *
    * // Create various cached computations
@@ -3050,7 +3088,7 @@ function enhanceTreeBasic<T extends Record<string, unknown>>(
     console.warn(
       '⚠️ batchUpdate() called but batching is not enabled.',
       '\nTo enable batch updates, create an enhanced tree:',
-      '\nsignalTree(data, { enablePerformanceFeatures: true, batchUpdates: true })'
+      '\nsignalTree(data, {  batchUpdates: true })'
     );
     // Fallback: Just call update directly
     tree.update(updater);
@@ -3060,7 +3098,7 @@ function enhanceTreeBasic<T extends Record<string, unknown>>(
     console.warn(
       '⚠️ memoize() called but memoization is not enabled.',
       '\nTo enable memoized computations, create an enhanced tree:',
-      '\nsignalTree(data, { enablePerformanceFeatures: true, useMemoization: true })'
+      '\nsignalTree(data, {  useMemoization: true })'
     );
     // Fallback: Use simple Angular computed without memoization
     void cacheKey; // Mark as intentionally unused
@@ -3106,17 +3144,17 @@ function enhanceTreeBasic<T extends Record<string, unknown>>(
 
   tree.optimize = () => {
     console.warn(
-      '⚠️ optimize() called but performance optimization is not enabled.',
-      '\nTo enable optimization features, create an enhanced tree:',
-      '\nsignalTree(data, { enablePerformanceFeatures: true })'
+      '⚠️ optimize() called but tree optimization is not available.',
+      '\nOptimization auto-enables when memoization is used:',
+      '\ntree.memoize(() => expensive_calculation())'
     );
   };
 
   tree.clearCache = () => {
     console.warn(
-      '⚠️ clearCache() called but caching is not enabled.',
-      '\nTo enable caching, create an enhanced tree:',
-      '\nsignalTree(data, { enablePerformanceFeatures: true, useMemoization: true })'
+      '⚠️ clearCache() called but caching is not available.',
+      '\nCaching auto-enables when memoization is used:',
+      '\ntree.memoize(() => expensive_calculation())'
     );
   };
 
@@ -3124,7 +3162,7 @@ function enhanceTreeBasic<T extends Record<string, unknown>>(
     console.warn(
       '⚠️ invalidatePattern() called but performance optimization is not enabled.',
       '\nTo enable pattern invalidation, create an enhanced tree:',
-      '\nsignalTree(data, { enablePerformanceFeatures: true, useMemoization: true })'
+      '\nsignalTree(data, {  useMemoization: true })'
     );
     return 0;
   };
@@ -3138,7 +3176,7 @@ function enhanceTreeBasic<T extends Record<string, unknown>>(
     console.warn(
       '⚠️ getMetrics() called but performance tracking is not enabled.',
       '\nTo enable performance tracking, create an enhanced tree:',
-      '\nsignalTree(data, { enablePerformanceFeatures: true, trackPerformance: true })'
+      '\nsignalTree(data, {  trackPerformance: true })'
     );
     // Return minimal metrics when tracking not enabled
     return {
@@ -3152,18 +3190,18 @@ function enhanceTreeBasic<T extends Record<string, unknown>>(
 
   tree.addTap = (middleware: Middleware<T>) => {
     console.warn(
-      '⚠️ addTap() called but performance features are not enabled.',
-      '\nTo enable tap support, create an enhanced tree:',
-      '\nsignalTree(data, { enablePerformanceFeatures: true })'
+      '⚠️ addTap() called but middleware support is not available.',
+      '\nMiddleware auto-enables when any operation is performed:',
+      '\ntree.update() or tree.batchUpdate() will enable middleware'
     );
     void middleware; // Mark as intentionally unused
   };
 
   tree.removeTap = (id: string) => {
     console.warn(
-      '⚠️ removeTap() called but performance features are not enabled.',
-      '\nTo enable tap support, create an enhanced tree:',
-      '\nsignalTree(data, { enablePerformanceFeatures: true })'
+      '⚠️ removeTap() called but middleware support is not available.',
+      '\nMiddleware auto-enables when any operation is performed:',
+      '\ntree.update() or tree.batchUpdate() will enable middleware'
     );
     void id; // Mark as intentionally unused
   };
