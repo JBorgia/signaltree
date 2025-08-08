@@ -260,7 +260,6 @@ const tree = signalTree({
   text: 'Initial',
   flag: false
 }, {
-  enablePerformanceFeatures: true,
   batchUpdates: true
 });
 
