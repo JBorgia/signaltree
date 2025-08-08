@@ -5,10 +5,7 @@ import { signalTree } from '@signal-tree';
 
 interface Address extends Record<string, unknown> {
   street: string;
-  ci// Memoized computed values
-const fullName = userTree.memoize('fullName', () =>
-  \`\${userTree.$.profile.firstName()} \${userTree.$.profile.lastName()}\`
-);string;
+  city: string;
   state: string;
   zipCode: string;
 }
@@ -262,56 +259,4 @@ const fullName = userTree.memoize('fullName', () =>
 );
 
 // All features work immediately - no configuration!`;
-}
-
-  codeExample = `// Create a nested signal tree
-const userTree = signalTree<UserData>({
-  profile: {
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john.doe@example.com',
-    avatar: 'https://...'
-  },
-  settings: {
-    theme: 'light',
-    notifications: true,
-    language: 'en',
-    timezone: 'America/New_York'
-  },
-  address: {
-    street: '123 Main Street',
-    city: 'San Francisco',
-    state: 'CA',
-    zipCode: '94102'
-  }
-});
-
-// Access nested signals directly
-console.log(userTree.state.profile.firstName()); // 'John'
-console.log(userTree.state.settings.theme());    // 'light'
-console.log(userTree.state.address.city());      // 'San Francisco'
-
-// Update individual nested properties
-userTree.state.profile.firstName.set('Jane');
-userTree.state.settings.theme.set('dark');
-
-// Update entire nested objects
-userTree.state.address.update(addr => ({
-  ...addr,
-  city: 'Los Angeles',
-  state: 'CA'
-}));
-
-// Update multiple nested properties
-userTree.update(state => ({
-  ...state,
-  profile: {
-    ...state.profile,
-    firstName: 'Alice'
-  },
-  settings: {
-    ...state.settings,
-    theme: 'dark'
-  }
-}));`;
 }
