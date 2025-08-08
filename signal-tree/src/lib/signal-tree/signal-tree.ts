@@ -810,6 +810,38 @@ export interface TreeConfig {
    * ```
    */
   treeName?: string;
+
+  /**
+   * Enables detailed debug logging for development and troubleshooting.
+   *
+   * When enabled, SignalTree will log detailed information about path access,
+   * cache operations, invalidations, and performance events to help with
+   * debugging and optimization.
+   *
+   * **Impact**: Detailed console output for debugging
+   * **Default**: `false`
+   * **Bundle Size**: Small
+   * **Recommended**: Only enable in development environments
+   *
+   * @example
+   * ```typescript
+   * const tree = signalTree(state, {
+   *   enablePerformanceFeatures: true,
+   *   useMemoization: true,
+   *   debugMode: true,
+   *   treeName: 'MyDebugTree'
+   * });
+   *
+   * // Will log detailed operations:
+   * tree.memoize(state => state.user.name, 'user-name')();
+   * // Console: [DEBUG] MyDebugTree: Path accessed: user.name by user-name
+   * // Console: [DEBUG] MyDebugTree: Cache miss for user-name, computing...
+   *
+   * tree.invalidatePattern('user.*');
+   * // Console: [DEBUG] MyDebugTree: Invalidating 3 cache entries matching 'user.*'
+   * ```
+   */
+  debugMode?: boolean;
 }
 
 /**
@@ -1851,6 +1883,72 @@ export type SignalTree<T> = {
    * ```
    */
   __devTools?: DevToolsInterface<T>;
+
+  /**
+   * Completely destroys the tree and cleans up all resources.
+   * This method performs comprehensive cleanup including all caches,
+   * proxies, tracking data, and prevents memory leaks.
+   *
+   * **Availability**: Always available
+   *
+   * @example
+   * ```typescript
+   * const tree = signalTree({ data: [] }, {
+   *   enablePerformanceFeatures: true
+   * });
+   *
+   * // Use the tree...
+   * tree.update(state => ({ data: [1, 2, 3] }));
+   *
+   * // When done, clean up all resources
+   * tree.destroy();
+   *
+   * // Tree is now fully cleaned up and should not be used
+   * ```
+   */
+  destroy(): void;
+
+  /**
+   * Invalidates cached computations that match a specific pattern.
+   * Uses glob-style pattern matching to selectively clear cache entries,
+   * providing fine-grained control over cache invalidation.
+   *
+   * **Availability**: Always available, but only functional when
+   * `enablePerformanceFeatures: true` and `useMemoization: true`
+   *
+   * @param pattern - Glob-style pattern to match cache keys (* for wildcards, . for literal dots)
+   * @returns Number of cache entries that were invalidated
+   *
+   * @example
+   * ```typescript
+   * const tree = signalTree(
+   *   { users: [], posts: [], comments: [] },
+   *   { enablePerformanceFeatures: true, useMemoization: true }
+   * );
+   *
+   * // Create various cached computations
+   * tree.memoize(state => state.users.length, 'user.count');
+   * tree.memoize(state => state.users.filter(u => u.active), 'user.active');
+   * tree.memoize(state => state.posts.length, 'post.count');
+   * tree.memoize(state => state.comments.length, 'comment.count');
+   *
+   * // Invalidate all user-related cache entries
+   * const invalidated = tree.invalidatePattern('user.*');
+   * console.log(`Invalidated ${invalidated} user cache entries`); // 2
+   *
+   * // Invalidate all count-related cache entries
+   * tree.invalidatePattern('*.count'); // Invalidates user.count, post.count, comment.count
+   *
+   * // Invalidate specific pattern
+   * tree.invalidatePattern('user.active'); // Exact match
+   *
+   * // Use cases:
+   * // - Domain-specific cache invalidation
+   * // - Feature-based cache cleanup
+   * // - Selective optimization before critical operations
+   * ```
+   */
+  invalidatePattern(pattern: string): number;
 };
 
 // ============================================
@@ -1991,9 +2089,16 @@ const cacheVersionSignals = new WeakMap<
   Map<string, WritableSignal<number>>
 >(); // tree -> cacheKey -> version signal
 
+// Lazy proxy cache for memory leak prevention
+const lazyProxyCache = new WeakMap<object, WeakMap<object, object>>(); // tree -> original -> proxy
+const proxyCleanupTasks = new WeakMap<object, Set<() => void>>(); // tree -> cleanup functions
+
 // Cache access tracking for smart eviction
 const cacheAccessTimes = new WeakMap<object, Map<string, number>>();
 const cacheAccessCounts = new WeakMap<object, Map<string, number>>();
+
+// Tree configuration storage for debug logging
+const treeConfigs = new WeakMap<object, TreeConfig>();
 
 /**
  * Updates access tracking for a cache key to enable smart eviction.
@@ -2086,6 +2191,10 @@ function batchUpdatesWithPath(fn: () => void, path?: string): void {
  * Creates a proxy that tracks which paths are accessed during computation.
  * This enables fine-grained cache invalidation by tracking dependencies.
  */
+/**
+ * Creates a tracking proxy with lazy caching and memory leak prevention.
+ * Uses a cache to avoid creating multiple proxies for the same object.
+ */
 function createTrackingProxy<T>(
   obj: T,
   tree: object,
@@ -2096,7 +2205,21 @@ function createTrackingProxy<T>(
     return obj;
   }
 
-  return new Proxy(obj as object, {
+  // Get or create proxy cache for this tree
+  let treeProxyCache = lazyProxyCache.get(tree);
+  if (!treeProxyCache) {
+    treeProxyCache = new WeakMap();
+    lazyProxyCache.set(tree, treeProxyCache);
+  }
+
+  // Check if we already have a proxy for this object
+  const existingProxy = treeProxyCache.get(obj as object);
+  if (existingProxy) {
+    return existingProxy as T;
+  }
+
+  // Create new proxy with tracking
+  const proxy = new Proxy(obj as object, {
     get(target, prop, receiver) {
       const value = Reflect.get(target, prop, receiver);
 
@@ -2119,6 +2242,48 @@ function createTrackingProxy<T>(
       return value;
     },
   }) as T;
+
+  // Cache the proxy for reuse
+  treeProxyCache.set(obj as object, proxy as object);
+
+  // Register cleanup task for this proxy
+  let cleanupTasks = proxyCleanupTasks.get(tree);
+  if (!cleanupTasks) {
+    cleanupTasks = new Set();
+    proxyCleanupTasks.set(tree, cleanupTasks);
+  }
+
+  const cleanup = () => {
+    treeProxyCache?.delete(obj as object);
+  };
+  cleanupTasks.add(cleanup);
+
+  return proxy;
+}
+
+/**
+ * Cleans up lazy proxy cache to prevent memory leaks.
+ * Should be called during optimization or tree destruction.
+ */
+function cleanupLazyProxies(tree: object): void {
+  // Run all cleanup tasks for this tree
+  const cleanupTasks = proxyCleanupTasks.get(tree);
+  if (cleanupTasks) {
+    for (const cleanup of cleanupTasks) {
+      try {
+        cleanup();
+      } catch (error) {
+        console.warn('[MEMORY-CLEANUP] Error during proxy cleanup:', error);
+      }
+    }
+    cleanupTasks.clear();
+  }
+
+  // Clear the proxy cache for this tree
+  lazyProxyCache.delete(tree);
+  proxyCleanupTasks.delete(tree);
+
+  console.log(`[MEMORY-CLEANUP] Cleaned up lazy proxy cache for tree`);
 }
 
 /**
@@ -2153,8 +2318,15 @@ function addPathDependency(tree: object, cacheKey: string, path: string): void {
   }
   cacheKeys.add(cacheKey);
 
-  // Debug logging
-  console.log(`[PATH-MEMOIZATION] Added dependency: ${cacheKey} -> ${path}`);
+  // Debug logging if enabled
+  const config = treeConfigs.get(tree);
+  if (config?.debugMode) {
+    console.log(
+      `[DEBUG] ${
+        config.treeName || 'SignalTree'
+      }: Path accessed: ${path} by ${cacheKey}`
+    );
+  }
 }
 
 /**
@@ -2164,16 +2336,25 @@ function invalidateCacheByPaths(tree: object, changedPaths: Set<string>): void {
   const cache = computedCache.get(tree);
   const pathCache = pathToCache.get(tree);
   const versionSignals = cacheVersionSignals.get(tree);
+  const config = treeConfigs.get(tree);
 
-  console.log(
-    `[PATH-MEMOIZATION] Invalidating for changed paths:`,
-    Array.from(changedPaths)
-  );
+  if (config?.debugMode) {
+    console.log(
+      `[DEBUG] ${
+        config.treeName || 'SignalTree'
+      }: Invalidating for changed paths:`,
+      Array.from(changedPaths)
+    );
+  }
 
   if (!cache || !pathCache || !versionSignals) {
-    console.log(
-      `[PATH-MEMOIZATION] No cache, pathCache, or versionSignals found`
-    );
+    if (config?.debugMode) {
+      console.log(
+        `[DEBUG] ${
+          config.treeName || 'SignalTree'
+        }: No cache, pathCache, or versionSignals found`
+      );
+    }
     return;
   }
 
@@ -2182,10 +2363,14 @@ function invalidateCacheByPaths(tree: object, changedPaths: Set<string>): void {
   // Find all cache keys that depend on any of the changed paths
   for (const path of changedPaths) {
     const dependentKeys = pathCache.get(path);
-    console.log(
-      `[PATH-MEMOIZATION] Path ${path} has dependent keys:`,
-      dependentKeys ? Array.from(dependentKeys) : 'none'
-    );
+    if (config?.debugMode) {
+      console.log(
+        `[DEBUG] ${
+          config.treeName || 'SignalTree'
+        }: Path ${path} has dependent keys:`,
+        dependentKeys ? Array.from(dependentKeys) : 'none'
+      );
+    }
     if (dependentKeys) {
       for (const key of dependentKeys) {
         keysToInvalidate.add(key);
@@ -2193,19 +2378,26 @@ function invalidateCacheByPaths(tree: object, changedPaths: Set<string>): void {
     }
   }
 
-  console.log(
-    `[PATH-MEMOIZATION] Invalidating cache keys:`,
-    Array.from(keysToInvalidate)
-  );
+  if (config?.debugMode) {
+    console.log(
+      `[DEBUG] ${config.treeName || 'SignalTree'}: Invalidating ${
+        keysToInvalidate.size
+      } cache entries`
+    );
+  }
 
   // Increment version signals to trigger recomputation
   for (const key of keysToInvalidate) {
     const versionSignal = versionSignals.get(key);
     if (versionSignal) {
       versionSignal.update((v) => v + 1);
-      console.log(
-        `[PATH-MEMOIZATION] Incremented version for ${key} to ${versionSignal()}`
-      );
+      if (config?.debugMode) {
+        console.log(
+          `[DEBUG] ${
+            config.treeName || 'SignalTree'
+          }: Incremented version for ${key} to ${versionSignal()}`
+        );
+      }
     }
   }
 
@@ -2238,7 +2430,8 @@ function createPathBasedComputed<T, R>(
   tree: object,
   cacheKey: string,
   fn: (state: T) => R,
-  metrics?: PerformanceMetrics
+  metrics?: PerformanceMetrics,
+  config?: TreeConfig
 ): Signal<R> {
   // Initialize version signals map
   let versionSignals = cacheVersionSignals.get(tree);
@@ -2266,9 +2459,13 @@ function createPathBasedComputed<T, R>(
 
     // Only recompute if version changed
     if (!hasResult || currentVersion !== lastVersion) {
-      console.log(
-        `[PATH-MEMOIZATION] Computing ${cacheKey} (version ${currentVersion})`
-      );
+      if (config?.debugMode) {
+        console.log(
+          `[DEBUG] ${
+            config.treeName || 'SignalTree'
+          }: Computing ${cacheKey} (version ${currentVersion})`
+        );
+      }
 
       if (metrics) metrics.computations++;
 
@@ -3122,6 +3319,20 @@ function enhanceTreeBasic<T extends Record<string, unknown>>(
     );
   };
 
+  tree.invalidatePattern = (pattern: string): number => {
+    console.warn(
+      '⚠️ invalidatePattern() called but performance optimization is not enabled.',
+      '\nTo enable pattern invalidation, create an enhanced tree:',
+      '\nsignalTree(data, { enablePerformanceFeatures: true, useMemoization: true })'
+    );
+    return 0;
+  };
+
+  tree.destroy = () => {
+    // Basic cleanup for non-enhanced trees
+    console.log('[MEMORY-CLEANUP] Basic tree destroyed');
+  };
+
   tree.getMetrics = (): PerformanceMetrics => {
     console.warn(
       '⚠️ getMetrics() called but performance tracking is not enabled.',
@@ -3224,6 +3435,9 @@ function enhanceTree<T>(
     useStructuralSharing = true, // Default to structural sharing for better performance
     usePatchBasedTimeTravel = false, // Default to structural sharing time travel
   } = config;
+
+  // Store config for debug logging and other features
+  treeConfigs.set(tree, config);
 
   if (!enablePerformanceFeatures) {
     return tree; // Use bypass methods from enhanceTreeBasic
@@ -3396,7 +3610,7 @@ function enhanceTree<T>(
 
       // Create computation with path tracking if enabled
       const computedSignal = usePathBasedMemoization
-        ? createPathBasedComputed(tree, cacheKey, fn, metrics)
+        ? createPathBasedComputed(tree, cacheKey, fn, metrics, config)
         : computed(() => {
             if (metrics) metrics.computations++;
             return fn(tree.unwrap());
@@ -3496,6 +3710,19 @@ function enhanceTree<T>(
       }
     }
 
+    // Always clean up proxies during optimization
+    cleanupLazyProxies(tree);
+
+    // Clean up orphaned version signals
+    const versionSignals = cacheVersionSignals.get(tree);
+    if (versionSignals && cache) {
+      for (const [key] of versionSignals) {
+        if (!cache.has(key)) {
+          versionSignals.delete(key);
+        }
+      }
+    }
+
     if ('memory' in performance) {
       const metrics = treeMetrics.get(tree);
       if (metrics) {
@@ -3511,6 +3738,65 @@ function enhanceTree<T>(
     if (cache) {
       cache.clear();
     }
+
+    // Clean up proxy cache when clearing all caches
+    cleanupLazyProxies(tree);
+
+    // Clear path-based memoization caches
+    pathDependencies.delete(tree);
+    pathToCache.delete(tree);
+    pathBasedValues.delete(tree);
+    pathBasedRecompute.delete(tree);
+    cacheVersionSignals.delete(tree);
+  };
+
+  tree.invalidatePattern = (pattern: string): number => {
+    const regex = new RegExp(
+      pattern.replace(/\*/g, '[^.]+').replace(/\./g, '\\.')
+    );
+    const pathCache = pathToCache.get(tree);
+    if (!pathCache) return 0;
+
+    const matchingPaths = new Set<string>();
+    for (const path of pathCache.keys()) {
+      if (regex.test(path)) {
+        matchingPaths.add(path);
+      }
+    }
+
+    if (matchingPaths.size > 0) {
+      invalidateCacheByPaths(tree, matchingPaths);
+
+      if (config.debugMode) {
+        console.log(
+          `[DEBUG] ${config.treeName || 'SignalTree'}: Invalidating ${
+            matchingPaths.size
+          } cache entries matching '${pattern}'`
+        );
+      }
+    }
+
+    return matchingPaths.size;
+  };
+
+  tree.destroy = () => {
+    // Clear all caches and proxies
+    tree.clearCache();
+
+    // Clear access tracking
+    cacheAccessTimes.delete(tree);
+    cacheAccessCounts.delete(tree);
+
+    // Clear metrics
+    treeMetrics.delete(tree);
+
+    // Clear time travel
+    timeTravelMap.delete(tree);
+
+    // Clear middleware
+    middlewareMap.delete(tree);
+
+    console.log('[MEMORY-CLEANUP] Tree destroyed and all resources cleaned up');
   };
 
   if (trackPerformance) {
