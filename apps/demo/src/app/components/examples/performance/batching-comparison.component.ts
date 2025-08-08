@@ -176,7 +176,7 @@ export class BatchingComparisonComponent implements OnDestroy {
     // Run smart batching - auto-enables on first use!
     for (let i = 0; i < Math.ceil(this.updateCount / 10); i++) {
       this.smartTree.batchUpdate(() => {
-        for (let j = 0; j < 10 && (i * 10 + j) < this.updateCount; j++) {
+        for (let j = 0; j < 10 && i * 10 + j < this.updateCount; j++) {
           const index = i * 10 + j;
           this.smartTree.$.counter.set(index);
           this.smartTree.$.text.set(`Batch ${index}`);
@@ -207,7 +207,9 @@ export class BatchingComparisonComponent implements OnDestroy {
     const smartTime = await this.runSmartBatchingTest();
 
     // Calculate improvement
-    const improvement = Math.round(((individualTime - smartTime) / individualTime) * 100);
+    const improvement = Math.round(
+      ((individualTime - smartTime) / individualTime) * 100
+    );
 
     // Log comparison
     this.comparisonLog.unshift({
@@ -215,7 +217,10 @@ export class BatchingComparisonComponent implements OnDestroy {
       test: `${this.updateCount} updates`,
       individual: Math.round(individualTime),
       smart: Math.round(smartTime),
-      improvement: improvement > 0 ? `${improvement}% faster` : `${Math.abs(improvement)}% slower`
+      improvement:
+        improvement > 0
+          ? `${improvement}% faster`
+          : `${Math.abs(improvement)}% slower`,
     });
 
     // Keep only last 10 entries
@@ -338,23 +343,4 @@ smartTree.batchUpdate(() => {
 });
 
 // Performance automatically optimized - no config required!`;
-}`;
 }
-
-    const improvement = ((regular - batched) / regular) * 100;
-    return Math.max(0, improvement).toFixed(1);
-  }
-
-  getTimeImprovement(): string {
-    const regular = this.regularMetrics().totalTime;
-    const batched = this.batchedMetrics().totalTime;
-
-    return Math.max(0, regular - batched).toFixed(2);
-  }
-
-  getEfficiencyRatio(): string {
-    const regular = this.regularMetrics().updates;
-    const batched = this.batchedMetrics().updates;
-
-    if (batched === 0) return '∞';
-
