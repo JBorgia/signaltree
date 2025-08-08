@@ -44,6 +44,13 @@ export class NavigationComponent {
 
     // Performance Examples
     {
+      id: 'version-comparison',
+      title: 'Version Comparison',
+      description: 'Compare basic vs optimized SignalTree versions',
+      route: '/version-comparison',
+      category: 'performance',
+    },
+    {
       id: 'batching-comparison',
       title: 'Batching Comparison',
       description: 'Compare batched vs unbatched updates',

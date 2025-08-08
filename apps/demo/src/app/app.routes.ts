@@ -28,6 +28,13 @@ export const appRoutes: Route[] = [
       ).then((c) => c.BatchingComparisonComponent),
   },
   {
+    path: 'version-comparison',
+    loadComponent: () =>
+      import(
+        './components/examples/performance/version-comparison.component'
+      ).then((c) => c.VersionComparisonComponent),
+  },
+  {
     path: 'entity-crud',
     loadComponent: () =>
       import('./components/examples/entities/entity-crud.component').then(
