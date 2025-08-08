@@ -11,7 +11,7 @@
           <label for="name" class="input-label"> Name </label>
           <input
             id="name"
-            [value]="tree.state.name()"
+            [value]="tree.$.name()"
             (input)="updateName($event)"
             class="form-input"
             placeholder="Enter your name"
@@ -23,7 +23,7 @@
           <input
             id="age"
             type="number"
-            [value]="tree.state.age()"
+            [value]="tree.$.age()"
             (input)="updateAge($event)"
             class="form-input"
             placeholder="Enter your age"
@@ -35,7 +35,7 @@
           <input
             id="email"
             type="email"
-            [value]="tree.state.email()"
+            [value]="tree.$.email()"
             (input)="updateEmail($event)"
             class="form-input"
             placeholder="Enter your email"
@@ -45,6 +45,18 @@
         <div class="button-group">
           <button (click)="incrementAge()" class="btn btn-primary">
             Increment Age
+          </button>
+
+          <button (click)="batchUpdateExample()" class="btn btn-primary">
+            Batch Update
+          </button>
+
+          <button (click)="clearCache()" class="btn btn-warning">
+            Clear Cache
+          </button>
+
+          <button (click)="getMetrics()" class="btn btn-info">
+            Get Metrics
           </button>
 
           <button (click)="resetTree()" class="btn btn-secondary">Reset</button>
@@ -66,15 +78,19 @@
           <div class="signal-list">
             <div class="signal-item">
               <strong>Name:</strong>
-              <code class="signal-value">{{ tree.state.name() }}</code>
+              <code class="signal-value">{{ tree.$.name() }}</code>
             </div>
             <div class="signal-item">
               <strong>Age:</strong>
-              <code class="signal-value">{{ tree.state.age() }}</code>
+              <code class="signal-value">{{ tree.$.age() }}</code>
             </div>
             <div class="signal-item">
               <strong>Email:</strong>
-              <code class="signal-value">{{ tree.state.email() }}</code>
+              <code class="signal-value">{{ tree.$.email() }}</code>
+            </div>
+            <div class="signal-item">
+              <strong>Full Info (Memoized):</strong>
+              <code class="signal-value">{{ fullInfo() }}</code>
             </div>
           </div>
         </div>
@@ -85,16 +101,23 @@
         </div>
 
         <div class="state-section">
-          <h3 class="state-title">Tree Methods</h3>
+          <h3 class="state-title">Smart Progressive Enhancement Features</h3>
           <div class="methods-list">
-            <div><strong>Available methods:</strong></div>
+            <div><strong>Auto-enabling methods:</strong></div>
             <ul class="method-items">
-              <li><code>tree.state.name()</code> - Get name signal value</li>
               <li>
-                <code>tree.state.name.set(value)</code> - Set name directly
+                <code>tree.$.name()</code> - Access signals with $ shorthand
               </li>
-              <li><code>tree.update(fn)</code> - Update entire tree</li>
-              <li><code>tree.unwrap()</code> - Get plain object</li>
+              <li>
+                <code>tree.batchUpdate(fn)</code> - Auto-enabling batch updates
+              </li>
+              <li>
+                <code>tree.memoize(key, fn)</code> - Auto-enabling memoization
+              </li>
+              <li>
+                <code>tree.getMetrics()</code> - View auto-enabled features
+              </li>
+              <li><code>tree.clearCache()</code> - Clear memoized values</li>
             </ul>
           </div>
         </div>

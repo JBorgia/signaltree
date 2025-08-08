@@ -5,7 +5,10 @@ import { signalTree } from '@signal-tree';
 
 interface Address extends Record<string, unknown> {
   street: string;
-  city: string;
+  ci// Memoized computed values
+const fullName = userTree.memoize('fullName', () =>
+  \`\${userTree.$.profile.firstName()} \${userTree.$.profile.lastName()}\`
+);string;
   state: string;
   zipCode: string;
 }
@@ -43,6 +46,7 @@ interface UserData extends Record<string, unknown> {
   styleUrls: ['./nested-store.component.scss'],
 })
 export class NestedTreeComponent {
+  // Smart progressive enhancement - complex nested structures work immediately!
   userTree = signalTree<UserData>({
     profile: {
       firstName: 'John',
@@ -69,15 +73,77 @@ export class NestedTreeComponent {
     },
   });
 
-  updateProfile() {
-    // Example of updating nested properties using the tree's update method
-    this.userTree.update((current) => ({
-      ...current,
-      profile: {
-        ...current.profile,
-        firstName: current.profile.firstName.toUpperCase(),
-        lastName: current.profile.lastName.toUpperCase(),
-      },
+  updateLog: Array<{ timestamp: Date; action: string; path: string }> = [];
+
+  constructor() {
+    this.logAction(
+      'Nested tree initialized with smart progressive enhancement',
+      ''
+    );
+  }
+
+  // Direct signal access with $ shorthand
+  updateFirstName(event: Event) {
+    const target = event.target as HTMLInputElement;
+    this.userTree.$.profile.firstName.set(target.value);
+    this.logAction('First name updated', 'profile.firstName');
+  }
+
+  updateLastName(event: Event) {
+    const target = event.target as HTMLInputElement;
+    this.userTree.$.profile.lastName.set(target.value);
+    this.logAction('Last name updated', 'profile.lastName');
+  }
+
+  updateEmail(event: Event) {
+    const target = event.target as HTMLInputElement;
+    this.userTree.$.profile.email.set(target.value);
+    this.logAction('Email updated', 'profile.email');
+  }
+
+  toggleTheme() {
+    const currentTheme = this.userTree.$.settings.theme();
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    this.userTree.$.settings.theme.set(newTheme);
+    this.logAction('Theme toggled', 'settings.theme');
+  }
+
+  toggleNotifications() {
+    this.userTree.$.settings.notifications.update((current) => !current);
+    this.logAction('Notifications toggled', 'settings.notifications');
+  }
+
+  // Batch update example with auto-enabling
+  updateProfileBatch() {
+    this.userTree.batchUpdate(() => {
+      this.userTree.$.profile.firstName.set(
+        this.userTree.$.profile.firstName().toUpperCase()
+      );
+      this.userTree.$.profile.lastName.set(
+        this.userTree.$.profile.lastName().toUpperCase()
+      );
+      this.userTree.$.profile.email.set(
+        this.userTree.$.profile.email().toLowerCase()
+      );
+    });
+    this.logAction('Profile batch updated', 'profile.*');
+  }
+
+  // Memoized computed values
+  get fullName() {
+    return this.userTree.memoize(
+      'fullName',
+      () =>
+        `${this.userTree.$.profile.firstName()} ${this.userTree.$.profile.lastName()}`
+    );
+  }
+
+  get userSummary() {
+    return this.userTree.memoize('userSummary', () => ({
+      name: this.fullName(),
+      email: this.userTree.$.profile.email(),
+      theme: this.userTree.$.settings.theme(),
+      location: `${this.userTree.$.address.city()}, ${this.userTree.$.address.state()}`,
     }));
   }
 
@@ -96,137 +162,107 @@ export class NestedTreeComponent {
         timezone: 'UTC',
       },
       address: {
-        street: '',
-        city: '',
-        state: '',
-        zipCode: '',
-      },
-      preferences: {
-        newsletter: false,
-        marketing: false,
-        updates: false,
-      },
-    }));
-  }
-
-  loadSampleData() {
-    this.userTree.update(() => ({
-      profile: {
-        firstName: 'Alice',
-        lastName: 'Johnson',
-        email: 'alice.johnson@company.com',
-        avatar: 'https://avatars.githubusercontent.com/u/2?v=4',
-      },
-      settings: {
-        theme: 'dark',
-        notifications: false,
-        language: 'es',
-        timezone: 'America/Los_Angeles',
-      },
-      address: {
-        street: '456 Oak Avenue',
-        city: 'Los Angeles',
+        street: '123 Main Street',
+        city: 'San Francisco',
         state: 'CA',
-        zipCode: '90210',
+        zipCode: '94102',
       },
       preferences: {
         newsletter: true,
-        marketing: true,
-        updates: false,
+        marketing: false,
+        updates: true,
       },
     }));
+    this.logAction('Reset to defaults', 'all');
   }
 
-  toggleTheme() {
-    const currentTheme = this.userTree.state.settings.theme();
-    this.userTree.state.settings.theme.set(
-      currentTheme === 'light' ? 'dark' : 'light'
-    );
+  loadSampleData() {
+    this.userTree.batchUpdate(() => {
+      this.userTree.$.profile.firstName.set('Alice');
+      this.userTree.$.profile.lastName.set('Johnson');
+      this.userTree.$.profile.email.set('alice.johnson@company.com');
+      this.userTree.$.settings.theme.set('dark');
+      this.userTree.$.settings.notifications.set(false);
+      this.userTree.$.address.city.set('Los Angeles');
+      this.userTree.$.address.state.set('CA');
+    });
+    this.logAction('Sample data loaded with batch update', 'multiple');
   }
 
-  getFullName(): string {
-    const firstName = this.userTree.state.profile.firstName();
-    const lastName = this.userTree.state.profile.lastName();
-    return `${firstName} ${lastName}`.trim();
+  // Clear memoized cache
+  clearCache() {
+    this.userTree.clearCache();
+    this.logAction('Cache cleared', 'cache');
   }
 
-  getCityState(): string {
-    const city = this.userTree.state.address.city();
-    const state = this.userTree.state.address.state();
-    return `${city}, ${state}`.replace(', ,', '').replace(',  ', ', ').trim();
+  // Get metrics to see auto-enabled features
+  getMetrics() {
+    const metrics = this.userTree.getMetrics();
+    this.logAction('Metrics retrieved', 'metrics');
+    return metrics;
   }
 
-  getFullAddress(): string {
-    const street = this.userTree.state.address.street();
-    const cityState = this.getCityState();
-    const zipCode = this.userTree.state.address.zipCode();
+  private logAction(action: string, path: string) {
+    this.updateLog.unshift({
+      timestamp: new Date(),
+      action,
+      path,
+    });
 
-    const parts = [street, cityState, zipCode].filter((part) => part.trim());
-    return parts.join(', ');
-  }
-
-  getTotalProperties(): number {
-    const data = this.userTree.unwrap();
-
-    function countProperties(obj: unknown): number {
-      if (obj && typeof obj === 'object') {
-        let localCount = 0;
-        for (const value of Object.values(obj)) {
-          if (value && typeof value === 'object') {
-            localCount += countProperties(value);
-          } else {
-            localCount += 1;
-          }
-        }
-        return localCount;
-      }
-      return 1;
+    // Keep only last 15 entries
+    if (this.updateLog.length > 15) {
+      this.updateLog = this.updateLog.slice(0, 15);
     }
-
-    return countProperties(data);
   }
 
-  getBooleanCount(): number {
-    const data = this.userTree.unwrap();
-
-    function countBooleans(obj: unknown): number {
-      if (obj && typeof obj === 'object') {
-        let localCount = 0;
-        for (const value of Object.values(obj)) {
-          if (typeof value === 'boolean') {
-            localCount += 1;
-          } else if (value && typeof value === 'object') {
-            localCount += countBooleans(value);
-          }
-        }
-        return localCount;
-      }
-      return 0;
-    }
-
-    return countBooleans(data);
+  clearLog() {
+    this.updateLog = [];
   }
 
-  getStringCount(): number {
-    const data = this.userTree.unwrap();
-
-    function countStrings(obj: unknown): number {
-      if (obj && typeof obj === 'object') {
-        let localCount = 0;
-        for (const value of Object.values(obj)) {
-          if (typeof value === 'string') {
-            localCount += 1;
-          } else if (value && typeof value === 'object') {
-            localCount += countStrings(value);
-          }
-        }
-        return localCount;
-      }
-      return 0;
-    }
-
-    return countStrings(data);
+  trackByIndex(index: number): number {
+    return index;
   }
+
+  codeExample = `// Nested structures with smart progressive enhancement
+const userTree = signalTree<UserData>({
+  profile: {
+    firstName: 'John',
+    lastName: 'Doe',
+    email: 'john.doe@example.com'
+  },
+  settings: {
+    theme: 'light',
+    notifications: true
+  },
+  address: {
+    street: '123 Main Street',
+    city: 'San Francisco',
+    state: 'CA'
+  }
+});
+
+// Direct access with $ shorthand - auto-enabling!
+console.log(userTree.$.profile.firstName()); // 'John'
+console.log(userTree.$.settings.theme());    // 'light'
+
+// Update nested properties directly
+userTree.$.profile.firstName.set('Jane');
+userTree.$.settings.theme.set('dark');
+
+// Batch updates auto-enable
+userTree.batchUpdate(() => {
+  userTree.$.profile.firstName.set('Alice');
+  userTree.$.profile.lastName.set('Smith');
+  userTree.$.settings.notifications.set(false);
+});
+
+// Memoized computed values
+const fullName = userTree.memoize('fullName', () =>
+  userTree.$.profile.firstName() + ' ' + userTree.$.profile.lastName()
+);
+
+// All features work immediately - no configuration!`;
+}
 
   codeExample = `// Create a nested signal tree
 const userTree = signalTree<UserData>({

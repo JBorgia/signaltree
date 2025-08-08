@@ -20,6 +20,7 @@ interface User {
   styleUrls: ['./entity-crud.component.scss'],
 })
 export class EntityCrudComponent {
+  // Entity trees work with smart progressive enhancement!
   userTree = createEntityTree<User>([
     {
       id: '1',
@@ -37,6 +38,14 @@ export class EntityCrudComponent {
       active: true,
       department: 'Design',
     },
+    {
+      id: '3',
+      name: 'Bob Wilson',
+      email: 'bob@example.com',
+      age: 35,
+      active: false,
+      department: 'Engineering',
+    },
   ]);
 
   userForm: Partial<User> = {
@@ -52,6 +61,61 @@ export class EntityCrudComponent {
   departmentFilter = '';
   statusFilter = '';
 
+  operationLog: Array<{ timestamp: Date; operation: string; user?: string }> =
+    [];
+
+  constructor() {
+    this.logOperation(
+      'Entity tree initialized with smart progressive enhancement'
+    );
+  }
+
+  // Memoized filtered users - auto-enabling!
+  get filteredUsers() {
+    return this.userTree.memoize('filteredUsers', () => {
+      const users = this.userTree.getAll();
+
+      return users.filter((user) => {
+        const matchesSearch =
+          !this.searchTerm ||
+          user.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+          user.email.toLowerCase().includes(this.searchTerm.toLowerCase());
+
+        const matchesDepartment =
+          !this.departmentFilter || user.department === this.departmentFilter;
+
+        const matchesStatus =
+          !this.statusFilter ||
+          (this.statusFilter === 'active' ? user.active : !user.active);
+
+        return matchesSearch && matchesDepartment && matchesStatus;
+      });
+    });
+  }
+
+  // Memoized departments list
+  get departments() {
+    return this.userTree.memoize('departments', () => {
+      const users = this.userTree.getAll();
+      return [...new Set(users.map((user) => user.department))].sort();
+    });
+  }
+
+  // Memoized statistics
+  get userStats() {
+    return this.userTree.memoize('userStats', () => {
+      const users = this.userTree.getAll();
+      return {
+        total: users.length,
+        active: users.filter((u) => u.active).length,
+        inactive: users.filter((u) => !u.active).length,
+        avgAge:
+          Math.round(users.reduce((sum, u) => sum + u.age, 0) / users.length) ||
+          0,
+      };
+    });
+  }
+
   addUser() {
     if (this.isFormValid()) {
       const newUser: User = {
@@ -65,6 +129,10 @@ export class EntityCrudComponent {
 
       this.userTree.add(newUser);
       this.resetForm();
+      this.logOperation('User added', newUser.name);
+
+      // Clear cached values after changes
+      this.userTree.clearCache(['filteredUsers', 'departments', 'userStats']);
     }
   }
 
@@ -78,8 +146,42 @@ export class EntityCrudComponent {
         department: this.userForm.department as string,
       });
 
+      this.logOperation('User updated', this.userForm.name as string);
       this.cancelEdit();
+
+      // Clear cached values after changes
+      this.userTree.clearCache(['filteredUsers', 'departments', 'userStats']);
     }
+  }
+
+  // Batch operations with auto-enabling
+  batchToggleStatus() {
+    const selectedUsers = this.filteredUsers().filter((_, index) => index < 3);
+
+    this.userTree.batchUpdate(() => {
+      selectedUsers.forEach((user) => {
+        this.userTree.update(user.id, { active: !user.active });
+      });
+    });
+
+    this.logOperation('Batch status toggle', `${selectedUsers.length} users`);
+    this.userTree.clearCache();
+  }
+
+  batchAssignDepartment(department: string) {
+    const inactiveUsers = this.userTree.getAll().filter((u) => !u.active);
+
+    this.userTree.batchUpdate(() => {
+      inactiveUsers.forEach((user) => {
+        this.userTree.update(user.id, { department, active: true });
+      });
+    });
+
+    this.logOperation(
+      'Batch department assignment',
+      `${inactiveUsers.length} users`
+    );
+    this.userTree.clearCache();
   }
 
   editUser(user: User) {
@@ -93,19 +195,51 @@ export class EntityCrudComponent {
   }
 
   deleteUser(id: string) {
-    if (confirm('Are you sure you want to delete this user?')) {
+    const user = this.userTree.get(id);
+    if (user && confirm(`Are you sure you want to delete ${user.name}?`)) {
       this.userTree.remove(id);
+      this.logOperation('User deleted', user.name);
 
       if (this.editingUser?.id === id) {
         this.cancelEdit();
       }
+
+      // Clear cached values after changes
+      this.userTree.clearCache();
     }
+  }
+
+  // Optimized search with cache invalidation
+  onSearchChange() {
+    this.userTree.invalidatePattern(['filteredUsers']);
+  }
+
+  onFilterChange() {
+    this.userTree.invalidatePattern(['filteredUsers']);
+  }
+
+  // Get tree metrics to show auto-enabled features
+  getMetrics() {
+    const metrics = this.userTree.getMetrics();
+    this.logOperation(
+      'Metrics retrieved',
+      `${Object.keys(metrics).length} properties`
+    );
+    return metrics;
+  }
+
+  // Clear all caches
+  clearAllCaches() {
+    this.userTree.clearCache();
+    this.logOperation('All caches cleared');
   }
 
   toggleUserStatus(id: string) {
     const user = this.userTree.findById(id)();
     if (user) {
       this.userTree.update(id, { active: !user.active });
+      this.logOperation('Status toggled', user.name);
+      this.userTree.clearCache(['filteredUsers', 'userStats']);
     }
   }
 
@@ -123,6 +257,7 @@ export class EntityCrudComponent {
     this.searchTerm = '';
     this.departmentFilter = '';
     this.statusFilter = '';
+    this.userTree.invalidatePattern(['filteredUsers']);
   }
 
   addSampleUsers() {
@@ -153,68 +288,52 @@ export class EntityCrudComponent {
       },
     ];
 
-    sampleUsers.forEach((user) => this.userTree.add(user));
+    // Batch add with auto-enabling
+    this.userTree.batchUpdate(() => {
+      sampleUsers.forEach((user) => this.userTree.add(user));
+    });
+
+    this.logOperation('Sample users added', `${sampleUsers.length} users`);
+    this.userTree.clearCache();
   }
 
   clearAllUsers() {
     if (confirm('Are you sure you want to delete all users?')) {
-      const allUsers = this.userTree.selectAll()();
-      allUsers.forEach((user) => this.userTree.remove(user.id));
+      const allUsers = this.userTree.getAll();
+
+      this.userTree.batchUpdate(() => {
+        allUsers.forEach((user) => this.userTree.remove(user.id));
+      });
+
       this.cancelEdit();
+      this.logOperation('All users cleared', `${allUsers.length} users`);
+      this.userTree.clearCache();
     }
   }
 
-  getFilteredUsers(): User[] {
-    let users = this.userTree.selectAll()();
+  private logOperation(operation: string, user?: string) {
+    this.operationLog.unshift({
+      timestamp: new Date(),
+      operation,
+      user,
+    });
 
-    // Search filter
-    if (this.searchTerm) {
-      const term = this.searchTerm.toLowerCase();
-      users = users.filter(
-        (user) =>
-          user.name.toLowerCase().includes(term) ||
-          user.email.toLowerCase().includes(term)
-      );
+    // Keep only last 10 entries
+    if (this.operationLog.length > 10) {
+      this.operationLog = this.operationLog.slice(0, 10);
     }
-
-    // Department filter
-    if (this.departmentFilter) {
-      users = users.filter((user) => user.department === this.departmentFilter);
-    }
-
-    // Status filter
-    if (this.statusFilter === 'active') {
-      users = users.filter((user) => user.active);
-    } else if (this.statusFilter === 'inactive') {
-      users = users.filter((user) => !user.active);
-    }
-
-    return users;
   }
 
-  getActiveUsers(): User[] {
-    return this.userTree.findBy((user) => user.active)();
-  }
-
-  getDepartmentCount(): number {
-    const users = this.userTree.selectAll()();
-    const departments = new Set(users.map((user) => user.department));
-    return departments.size;
-  }
-
-  getDepartmentClass(department: string): string {
-    const classes: Record<string, string> = {
-      Engineering: 'bg-blue-100 text-blue-800',
-      Design: 'bg-purple-100 text-purple-800',
-      Marketing: 'bg-green-100 text-green-800',
-      Sales: 'bg-yellow-100 text-yellow-800',
-      HR: 'bg-red-100 text-red-800',
-    };
-    return classes[department] || 'bg-gray-100 text-gray-800';
+  clearOperationLog() {
+    this.operationLog = [];
   }
 
   trackByUserId(index: number, user: User): string {
     return user.id;
+  }
+
+  trackByIndex(index: number): number {
+    return index;
   }
 
   private generateId(): string {
@@ -230,16 +349,31 @@ export class EntityCrudComponent {
     );
   }
 
-  entityMethods = `// Entity Tree CRUD Methods
+  entityMethods = `// Entity Tree with Smart Progressive Enhancement
+const userTree = createEntityTree<User>([
+  { id: '1', name: 'John', email: 'john@example.com', age: 30 }
+]);
+
+// CRUD Operations (auto-optimized!)
 userTree.add(user);           // Add entity
 userTree.update(id, changes); // Update entity
 userTree.remove(id);          // Remove entity
 userTree.upsert(user);        // Add or update
 
-// Selectors
-userTree.selectAll()();       // Get all entities
-userTree.findById(id)();      // Find by ID
-userTree.findBy(predicate)(); // Filter entities
-userTree.selectIds()();       // Get all IDs
-userTree.selectTotal()();     // Get count`;
+// Queries
+userTree.getAll();            // Get all entities
+userTree.get(id);             // Get by ID
+userTree.findBy(predicate);   // Filter entities
+
+// Auto-enabling batch operations
+userTree.batchUpdate(() => {
+  userTree.add(user1);
+  userTree.update(id, changes);
+  userTree.remove(id2);
+});
+
+// Auto-enabling memoization for expensive queries
+const filtered = userTree.memoize('filtered', () =>
+  userTree.getAll().filter(u => u.active)
+);`;
 }
