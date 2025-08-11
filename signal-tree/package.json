@@ -1,5 +1,5 @@
 {
-  "name": "signal-tree",
+  "name": "@signaltree/monolith",
   "version": "0.1.16",
   "description": "Reactive state management for Angular using signals with advanced features like memoization, batching, middleware, and performance monitoring",
   "author": "Jonathan Borgia",

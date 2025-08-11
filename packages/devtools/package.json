@@ -1,0 +1,9 @@
+{
+  "name": "@signaltree/devtools",
+  "version": "0.0.1",
+  "peerDependencies": {
+    "@angular/common": "^20.1.0",
+    "@angular/core": "^20.1.0"
+  },
+  "sideEffects": false
+}
