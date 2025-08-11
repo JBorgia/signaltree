@@ -1,5 +1,5 @@
 {
-  "name": "@signal-tree/source",
+  "name": "@signaltree/workspace",
   "version": "0.1.16",
   "license": "MIT",
   "author": "Jonathan D Borgia",
@@ -83,6 +83,7 @@
     "@types/node": "18.16.9",
     "@typescript-eslint/utils": "^8.29.0",
     "angular-eslint": "^20.0.0",
+    "autoprefixer": "^10.4.0",
     "eslint": "^9.8.0",
     "eslint-config-prettier": "^10.0.0",
     "eslint-plugin-playwright": "^1.6.2",
@@ -94,6 +95,7 @@
     "ng-packagr": "~20.1.0",
     "nx": "21.3.9",
     "postcss": "^8.4.5",
+    "postcss-url": "~10.1.3",
     "prettier": "^2.6.2",
     "ts-jest": "^29.4.0",
     "ts-node": "10.9.1",

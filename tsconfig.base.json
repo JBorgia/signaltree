@@ -17,7 +17,16 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@signal-tree": ["signal-tree/src/index.ts"]
+      "@signaltree/async": ["packages/async/src/index.ts"],
+      "@signaltree/batching": ["packages/batching/src/index.ts"],
+      "@signaltree/core": ["packages/core/src/index.ts"],
+      "@signaltree/devtools": ["packages/devtools/src/index.ts"],
+      "@signaltree/entities": ["packages/entities/src/index.ts"],
+      "@signaltree/memoization": ["packages/memoization/src/index.ts"],
+      "@signaltree/middleware": ["packages/middleware/src/index.ts"],
+      "@signaltree/monolith": ["signal-tree/src/index.ts"],
+      "@signaltree/presets": ["packages/presets/src/index.ts"],
+      "@signaltree/time-travel": ["packages/time-travel/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]
