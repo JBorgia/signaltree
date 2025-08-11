@@ -1,1 +1,1 @@
-export * from './lib/async/async';
+export * from './lib/async';

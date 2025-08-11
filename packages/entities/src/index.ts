@@ -1,1 +1,1 @@
-export * from './lib/entities/entities';
+export * from './lib/entities';

@@ -88,4 +88,52 @@ describe('signalTree', () => {
 
     consoleSpy.mockRestore();
   });
+
+  it('should have pipe method for composition', () => {
+    const tree = signalTree({ count: 0 });
+
+    // Test pipe method exists
+    expect(tree.pipe).toBeDefined();
+    expect(typeof tree.pipe).toBe('function');
+
+    // Test empty pipe returns same tree
+    const piped = tree.pipe();
+    expect(piped).toBe(tree);
+  });
+
+  it('should support pipe with enhancer functions', () => {
+    const tree = signalTree({ count: 0 });
+
+    // Create a simple enhancer function
+    const addCustomMethod = (inputTree: typeof tree) => {
+      return {
+        ...inputTree,
+        customMethod: () => 'custom',
+      };
+    };
+
+    const enhanced = tree.pipe(addCustomMethod);
+    expect(enhanced.customMethod).toBeDefined();
+    expect(enhanced.customMethod()).toBe('custom');
+  });
+
+  it('should support chaining multiple enhancers', () => {
+    const tree = signalTree({ count: 0 });
+
+    const addMethod1 = (inputTree: typeof tree) => ({
+      ...inputTree,
+      method1: () => 'method1',
+    });
+
+    const addMethod2 = (inputTree: ReturnType<typeof addMethod1>) => ({
+      ...inputTree,
+      method2: () => 'method2',
+    });
+
+    const enhanced = tree.pipe(addMethod1, addMethod2);
+    expect(enhanced.method1).toBeDefined();
+    expect(enhanced.method2).toBeDefined();
+    expect(enhanced.method1()).toBe('method1');
+    expect(enhanced.method2()).toBe('method2');
+  });
 });

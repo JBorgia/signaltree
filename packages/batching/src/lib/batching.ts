@@ -1,5 +1,22 @@
 import { SignalTree, StateObject } from '@signaltree/core';
 
+/**
+ * Configuration options for batching
+ */
+interface BatchingConfig {
+  enabled?: boolean;
+  maxBatchSize?: number;
+  autoFlushDelay?: number;
+  batchTimeoutMs?: number;
+}
+
+/**
+ * Enhanced SignalTree interface with batching capabilities
+ */
+interface BatchingSignalTree<T extends StateObject> extends SignalTree<T> {
+  batchUpdate(updater: (current: T) => Partial<T>): void;
+}
+
 // Batching state
 interface BatchedUpdate {
   fn: () => void;
@@ -10,6 +27,7 @@ interface BatchedUpdate {
 
 let updateQueue: Array<BatchedUpdate> = [];
 let isUpdating = false;
+let currentBatchingConfig: BatchingConfig = {};
 
 /**
  * Core batching function that queues updates and processes them in microtasks.
@@ -21,9 +39,15 @@ function batchUpdates(fn: () => void, path?: string): void {
 
   updateQueue.push({ fn, startTime, depth, path });
 
+  // Check if we need to process immediately due to maxBatchSize
+  const shouldFlushImmediately =
+    currentBatchingConfig.maxBatchSize &&
+    updateQueue.length >= currentBatchingConfig.maxBatchSize;
+
   if (!isUpdating) {
     isUpdating = true;
-    queueMicrotask(() => {
+
+    const processQueue = () => {
       const queue = updateQueue.slice();
       updateQueue = [];
       isUpdating = false;
@@ -32,6 +56,26 @@ function batchUpdates(fn: () => void, path?: string): void {
       queue.sort((a, b) => (b.depth ?? 0) - (a.depth ?? 0));
 
       queue.forEach(({ fn }) => fn());
+    };
+
+    if (shouldFlushImmediately) {
+      // Process immediately when maxBatchSize is reached
+      processQueue();
+    } else {
+      // Use microtask for normal batching
+      queueMicrotask(processQueue);
+    }
+  } else if (shouldFlushImmediately) {
+    // If we're already updating but hit maxBatchSize,
+    // schedule immediate processing after current batch
+    queueMicrotask(() => {
+      if (updateQueue.length > 0 && !isUpdating) {
+        const queue = updateQueue.slice();
+        updateQueue = [];
+
+        queue.sort((a, b) => (b.depth ?? 0) - (a.depth ?? 0));
+        queue.forEach(({ fn }) => fn());
+      }
     });
   }
 }
@@ -50,43 +94,34 @@ function parsePath(path: string): string[] {
  * @returns Function that takes a tree and returns enhanced tree
  */
 export function withBatching<T extends StateObject>(
-  config: {
-    enabled?: boolean;
-    maxBatchSize?: number;
-    batchTimeoutMs?: number;
-  } = {}
-): (tree: SignalTree<T>) => SignalTree<T> {
-  const { enabled = true, maxBatchSize = 100 } = config;
+  config: BatchingConfig = {}
+): (tree: SignalTree<T>) => BatchingSignalTree<T> {
+  const { enabled = true } = config;
 
-  return (tree: SignalTree<T>) => {
+  // Update global config for this batching instance
+  currentBatchingConfig = { ...currentBatchingConfig, ...config };
+
+  return (tree: SignalTree<T>): BatchingSignalTree<T> => {
     if (!enabled) {
-      return tree; // Return tree unchanged if batching is disabled
+      return tree as BatchingSignalTree<T>;
     }
 
-    // Store original update method
-    const originalUpdate = tree.update;
+    // Store the original update method
+    const originalUpdate = tree.update.bind(tree);
 
-    // Override batchUpdate with real batching functionality
-    tree.batchUpdate = (updater: (current: T) => Partial<T>) => {
-      batchUpdates(() => {
-        originalUpdate.call(tree, updater);
-      });
-    };
-
-    // Optionally override regular update to use batching
+    // Override update method with batching
     tree.update = (updater: (current: T) => Partial<T>) => {
-      if (updateQueue.length < maxBatchSize) {
-        // Use batching for regular updates too
-        batchUpdates(() => {
-          originalUpdate.call(tree, updater);
-        });
-      } else {
-        // Fall back to immediate update if queue is too large
-        originalUpdate.call(tree, updater);
-      }
+      // Always use batching for regular updates
+      batchUpdates(() => originalUpdate(updater));
     };
 
-    return tree;
+    // Add batchUpdate method to the tree
+    const enhancedTree = tree as BatchingSignalTree<T>;
+    enhancedTree.batchUpdate = (updater: (current: T) => Partial<T>) => {
+      batchUpdates(() => originalUpdate(updater));
+    };
+
+    return enhancedTree;
   };
 }
 
