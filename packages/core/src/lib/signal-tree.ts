@@ -358,7 +358,7 @@ function enhanceTreeBasic<T extends StateObject>(
  * environment (development vs production). No confusing warnings or
  * fake implementations - everything just works!
  *
- * @template T - The state object type, must extend StateObject for type safety
+ * @template T - The state object type, must extend Record<string, unknown>
  * @param obj - The initial state object to convert into a reactive tree
  * @returns A SignalTree with auto-enabling features
  *
@@ -386,7 +386,7 @@ export function signalTree<T extends StateObject>(obj: T): SignalTree<T>;
  * Uses predefined configurations for common scenarios while still
  * allowing features to auto-enable as needed.
  *
- * @template T - The state object type, must extend StateObject for type safety
+ * @template T - The state object type, must extend Record<string, unknown>
  * @param obj - The initial state object to convert into a reactive tree
  * @param preset - Preset configuration ('basic', 'performance', 'development', 'production')
  * @returns A SignalTree configured with the specified preset
@@ -414,7 +414,7 @@ export function signalTree<T extends StateObject>(
  * Provides full control over feature enablement while maintaining
  * auto-enabling behavior for unspecified features.
  *
- * @template T - The state object type, must extend StateObject for type safety
+ * @template T - The state object type, must extend Record<string, unknown>
  * @param obj - The initial state object to convert into a reactive tree
  * @param config - Custom configuration object
  * @returns A SignalTree configured with custom options

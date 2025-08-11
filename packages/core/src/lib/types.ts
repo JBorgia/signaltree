@@ -18,18 +18,11 @@ export type TreeId = string & { readonly [__treeId]: never };
 // Define primitive types for better type constraints
 type Primitive = string | number | boolean | null | undefined | bigint | symbol;
 
-// Serializable types - more restrictive than unknown
-export type SerializableValue =
-  | string
-  | number
-  | boolean
-  | null
-  | undefined
-  | SerializableValue[]
-  | { [key: string]: SerializableValue };
+// Serializable types - more flexible like the monolith
+export type SerializableValue = unknown;
 
-// Valid state object constraint - more restrictive than Record<string, unknown>
-export type StateObject = Record<string | number | symbol, SerializableValue>;
+// Valid state object constraint - flexible like monolith
+export type StateObject = Record<string | number | symbol, unknown>;
 
 // Helper type to check if a type is a primitive
 type IsPrimitive<T> = T extends Primitive ? true : false;
@@ -191,8 +184,13 @@ export interface EntityHelpers<E extends { id: string | number }> {
   add(entity: E): void;
   update(id: E['id'], updates: Partial<E>): void;
   remove(id: E['id']): void;
+  upsert(entity: E): void;
   findById(id: E['id']): Signal<E | undefined>;
-  findAll(): Signal<E[]>;
+  findBy(predicate: (entity: E) => boolean): Signal<E[]>;
+  selectIds(): Signal<Array<string | number>>;
+  selectAll(): Signal<E[]>;
+  selectTotal(): Signal<number>;
+  findAll(): Signal<E[]>; // Alias for selectAll for backward compatibility
   clear(): void;
 }
 

@@ -37,7 +37,7 @@ interface MemoizationConfig {
 }
 
 /**
- * Deep equality check for dependency comparison - keeping flexible for any values
+ * Deep equality check for dependency comparison
  */
 function deepEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
@@ -45,16 +45,19 @@ function deepEqual(a: unknown, b: unknown): boolean {
   if (typeof a !== typeof b) return false;
 
   if (typeof a === 'object') {
-    const objA = a as Record<string, unknown>;
-    const objB = b as Record<string, unknown>;
-    const keysA = Object.keys(objA);
-    const keysB = Object.keys(objB);
+    const keysA = Object.keys(a as Record<string, unknown>);
+    const keysB = Object.keys(b as Record<string, unknown>);
 
     if (keysA.length !== keysB.length) return false;
 
     for (const key of keysA) {
       if (!keysB.includes(key)) return false;
-      if (!deepEqual(objA[key], objB[key])) {
+      if (
+        !deepEqual(
+          (a as Record<string, unknown>)[key],
+          (b as Record<string, unknown>)[key]
+        )
+      ) {
         return false;
       }
     }
@@ -65,7 +68,7 @@ function deepEqual(a: unknown, b: unknown): boolean {
 }
 
 /**
- * Generate cache key for memoization - keeping flexible for any function types
+ * Generate cache key for memoization
  */
 function generateCacheKey(
   fn: (...args: unknown[]) => unknown,

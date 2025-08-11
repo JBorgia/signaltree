@@ -5,6 +5,61 @@ import type { DeepSignalify } from './types';
 const pathCache = new Map<string, string[]>();
 
 /**
+ * Enhanced equality function inspired by the monolithic implementation.
+ * Uses deep equality for arrays and objects, === for primitives.
+ * More efficient than lodash while maintaining compatibility.
+ */
+export function equal<T>(a: T, b: T): boolean {
+  // Fast path for reference equality
+  if (a === b) return true;
+
+  // Handle null/undefined cases
+  if (a == null || b == null) return a === b;
+
+  // Handle arrays with deep comparison
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false;
+    return a.every((item, index) => equal(item, b[index]));
+  }
+
+  // Handle objects with deep comparison
+  if (typeof a === 'object' && typeof b === 'object') {
+    const keysA = Object.keys(a as Record<string, unknown>);
+    const keysB = Object.keys(b as Record<string, unknown>);
+
+    if (keysA.length !== keysB.length) return false;
+
+    return keysA.every(
+      (key) =>
+        keysB.includes(key) &&
+        equal(
+          (a as Record<string, unknown>)[key],
+          (b as Record<string, unknown>)[key]
+        )
+    );
+  }
+
+  // Fallback to strict equality
+  return a === b;
+}
+
+/**
+ * Creates a terminal signal with the enhanced equality function.
+ * This should be used instead of Angular's signal() when you want
+ * the same deep equality behavior as signalTree.
+ *
+ * Inspired by the monolithic implementation's terminal signal creation.
+ */
+export function terminalSignal<T>(
+  value: T,
+  customEqual?: (a: T, b: T) => boolean
+): WritableSignal<T> {
+  return signal(value, {
+    equal: customEqual || equal,
+  });
+}
+
+/**
  * Parses a dot-notation path into an array of keys with memoization.
  * Critical for performance when accessing nested properties frequently.
  *
@@ -185,13 +240,6 @@ export function deepEqual<T>(a: T, b: T): boolean {
 
   // For all other cases (primitives that aren't equal)
   return false;
-}
-
-/**
- * Standard equality function that uses deep comparison for arrays.
- */
-export function equal<T>(a: T, b: T): boolean {
-  return Array.isArray(a) && Array.isArray(b) ? deepEqual(a, b) : a === b;
 }
 
 /**
