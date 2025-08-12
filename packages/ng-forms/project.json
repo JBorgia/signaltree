@@ -2,7 +2,7 @@
   "name": "ng-forms",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/ng-forms/src",
-  "prefix": "signal-tree",
+  "prefix": "signaltree",
   "projectType": "library",
   "release": {
     "version": {

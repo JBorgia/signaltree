@@ -164,10 +164,10 @@ function testBundleSizeOptimization() {
   console.log('\n📊 Testing Bundle Size Optimization...');
 
   console.log('  🎯 Import strategies available:');
-  console.log('    Core only: import { signalTree } from "@signal-tree/core"');
-  console.log('    With batching: + withBatching from "@signal-tree/batching"');
+  console.log('    Core only: import { signalTree } from "@signaltree/core"');
+  console.log('    With batching: + withBatching from "@signaltree/batching"');
   console.log(
-    '    With memoization: + withMemoization from "@signal-tree/memoization"'
+    '    With memoization: + withMemoization from "@signaltree/memoization"'
   );
 
   console.log('  📦 Expected bundle sizes:');

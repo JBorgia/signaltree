@@ -34,7 +34,7 @@ export default [
         'error',
         {
           type: 'element',
-          prefix: 'signal-tree',
+          prefix: 'signaltree',
           style: 'kebab-case',
         },
       ],

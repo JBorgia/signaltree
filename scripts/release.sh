@@ -216,7 +216,7 @@ print_success "Published to npm successfully"
 
 # Step 7: Check GitHub Actions
 print_step "GitHub Actions should now create a release automatically"
-print_step "Check: https://github.com/JBorgia/signal-tree/actions"
+print_step "Check: https://github.com/JBorgia/signaltree/actions"
 
 # Final success message
 echo ""
@@ -227,5 +227,5 @@ for package in "${PACKAGES[@]}"; do
     echo -e "${GREEN}📦 @signaltree/$package@$NEW_VERSION${NC}"
 done
 echo ""
-echo -e "${GREEN}🏷️  GitHub: https://github.com/JBorgia/signal-tree/releases/tag/v$NEW_VERSION${NC}"
+echo -e "${GREEN}🏷️  GitHub: https://github.com/JBorgia/signaltree/releases/tag/v$NEW_VERSION${NC}"
 echo ""

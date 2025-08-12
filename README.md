@@ -132,13 +132,13 @@ npm install @signaltree/core @signaltree/batching @signaltree/memoization @signa
 npm install @signaltree/core @signaltree/presets
 ```
 
-## 🔄 Migration from signal-tree
+## 🔄 Migration from signaltree
 
-If you're currently using the monolithic `signal-tree` package:
+If you're currently using the monolithic `signaltree` package:
 
 ```typescript
 // Old (monolithic) - DEPRECATED
-import { signalTree } from 'signal-tree';
+import { signalTree } from 'signaltree';
 
 // New (modular) - RECOMMENDED
 import { signalTree } from '@signaltree/core';
@@ -2053,7 +2053,7 @@ npx nx serve demo
 npx nx build demo
 
 # Run tests
-npx nx test signal-tree
+npx nx test signaltree
 ```
 
 Visit `http://localhost:4200` to see:
@@ -2127,7 +2127,7 @@ SignalTree isn't just another state management library—it's a **paradigm shift
 
 **Jonathan D Borgia**
 
-- 🐙 GitHub: [https://github.com/JBorgia/signal-tree](https://github.com/JBorgia/signal-tree)
+- 🐙 GitHub: [https://github.com/JBorgia/signaltree](https://github.com/JBorgia/signaltree)
 - 💼 LinkedIn: [https://www.linkedin.com/in/jonathanborgia/](https://www.linkedin.com/in/jonathanborgia/)
 
 ## � Links
@@ -2135,7 +2135,7 @@ SignalTree isn't just another state management library—it's a **paradigm shift
 - [Official Website & Documentation](https://signaltree.io)
 - [Interactive Demos](https://signaltree.io/demos)
 - [NPM Organization](https://www.npmjs.com/org/signaltree)
-- [GitHub Repository](https://github.com/JBorgia/signal-tree)
+- [GitHub Repository](https://github.com/JBorgia/signaltree)
 - [Community Discord](https://discord.gg/signaltree)
 
 ## �📄 License
@@ -2165,4 +2165,5 @@ This is essentially a standard MIT license with one restriction: no AI training 
 **Ready to modernize your state management?** Start with `@signaltree/core` and scale as needed. 🚀
 
 Visit [signaltree.io](https://signaltree.io) for interactive demos and comprehensive documentation.
+
 # signaltree

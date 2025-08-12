@@ -17,7 +17,7 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@signal-tree/ng-forms": ["packages/ng-forms/src/index.ts"],
+      "@signaltree/ng-forms": ["packages/ng-forms/src/index.ts"],
       "@signaltree/async": ["packages/async/src/index.ts"],
       "@signaltree/batching": ["packages/batching/src/index.ts"],
       "@signaltree/core": ["packages/core/src/index.ts"],
@@ -25,7 +25,7 @@
       "@signaltree/entities": ["packages/entities/src/index.ts"],
       "@signaltree/memoization": ["packages/memoization/src/index.ts"],
       "@signaltree/middleware": ["packages/middleware/src/index.ts"],
-      "@signaltree/monolith": ["signal-tree/src/index.ts"],
+      "@signaltree/monolith": ["signaltree/src/index.ts"],
       "@signaltree/presets": ["packages/presets/src/index.ts"],
       "@signaltree/time-travel": ["packages/time-travel/src/index.ts"]
     }

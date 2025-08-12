@@ -1,10 +1,10 @@
 import type { Config } from 'jest';
 
 const config: Config = {
-  displayName: 'signal-tree',
+  displayName: 'signaltree',
   preset: '../../jest.preset.js',
   setupFilesAfterEnv: ['<rootDir>/src/test-setup.ts'],
-  coverageDirectory: '../../coverage/signal-tree',
+  coverageDirectory: '../../coverage/signaltree',
   transform: {
     '^.+\\.(ts|mjs|js|html)': [
       'jest-preset-angular',

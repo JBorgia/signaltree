@@ -65,13 +65,13 @@ jobs:
 
             ### 📦 Installation
             ```bash
-            npm install signal-tree@${{ steps.version.outputs.VERSION }}
+            npm install signaltree@${{ steps.version.outputs.VERSION }}
             ```
 
             ### 🔗 Links
-            - 📖 [Documentation](https://github.com/JBorgia/signal-tree#readme)
-            - 📊 [npm Package](https://www.npmjs.com/package/signal-tree)
-            - 🐛 [Report Issues](https://github.com/JBorgia/signal-tree/issues)
+            - 📖 [Documentation](https://github.com/JBorgia/signaltree#readme)
+            - 📊 [npm Package](https://www.npmjs.com/package/signaltree)
+            - 🐛 [Report Issues](https://github.com/JBorgia/signaltree/issues)
 
             ### ✨ Features
             - **Progressive Enhancement**: Start with ~5KB basic mode, scale to 15KB with all features
@@ -81,13 +81,13 @@ jobs:
             - **Type-safe by default** with automatic inference
 
             ---
-            **Full Changelog**: https://github.com/JBorgia/signal-tree/compare/v${{ steps.version.outputs.VERSION }}
+            **Full Changelog**: https://github.com/JBorgia/signaltree/compare/v${{ steps.version.outputs.VERSION }}
           draft: false
           prerelease: false
 
       - name: Publish to NPM
         run: |
-          cd dist/signal-tree
+          cd dist/signaltree
           npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -100,7 +100,7 @@ jobs:
 
       - name: Publish to GitHub Packages
         run: |
-          cd dist/signal-tree
+          cd dist/signaltree
           # Create .npmrc for GitHub Packages
           echo "@JBorgia:registry=https://npm.pkg.github.com" > .npmrc
           echo "//npm.pkg.github.com/:_authToken=$NODE_AUTH_TOKEN" >> .npmrc
@@ -109,7 +109,7 @@ jobs:
           node -p "
             const fs = require('fs');
             const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
-            pkg.name = '@JBorgia/signal-tree';
+            pkg.name = '@JBorgia/signaltree';
             pkg.publishConfig = {
               registry: 'https://npm.pkg.github.com',
               access: 'public'
@@ -129,6 +129,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/signal-tree
-          asset_name: signal-tree-v${{ steps.version.outputs.VERSION }}.tgz
+          asset_path: ./dist/signaltree
+          asset_name: signaltree-v${{ steps.version.outputs.VERSION }}.tgz
           asset_content_type: application/gzip

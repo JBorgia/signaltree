@@ -1,15 +1,15 @@
 {
   "name": "@signaltree/workspace",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "license": "MIT",
   "author": "Jonathan D Borgia",
-  "homepage": "https://github.com/JBorgia/signal-tree#readme",
+  "homepage": "https://github.com/JBorgia/signaltree#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/JBorgia/signal-tree.git"
+    "url": "https://github.com/JBorgia/signaltree.git"
   },
   "bugs": {
-    "url": "https://github.com/JBorgia/signal-tree/issues"
+    "url": "https://github.com/JBorgia/signaltree/issues"
   },
   "scripts": {
     "build": "nx build",
@@ -18,9 +18,9 @@
     "serve": "nx serve",
     "e2e": "nx e2e",
     "start": "nx serve demo",
-    "build:lib": "nx build signal-tree --configuration=production",
+    "build:lib": "nx build signaltree --configuration=production",
     "build:demo": "nx build demo",
-    "test:lib": "nx test signal-tree",
+    "test:lib": "nx test signaltree",
     "test:demo": "nx test demo",
     "test:watch": "nx test --watch",
     "test:ci": "nx test --watch=false --browsers=ChromeHeadless",
@@ -35,8 +35,8 @@
     "graph": "nx graph",
     "dep-graph": "nx dep-graph",
     "help": "nx help",
-    "publish:lib": "nx build signal-tree && cd ./dist/signal-tree && npm publish",
-    "publish:lib:dry-run": "nx build signal-tree && cd ./dist/signal-tree && npm publish --dry-run",
+    "publish:lib": "nx build signaltree && cd ./dist/signaltree && npm publish",
+    "publish:lib:dry-run": "nx build signaltree && cd ./dist/signaltree && npm publish --dry-run",
     "release": "./scripts/release.sh patch",
     "release:minor": "./scripts/release.sh minor",
     "release:major": "./scripts/release.sh major",
@@ -54,7 +54,6 @@
     "lodash": "^4.17.21",
     "lodash-es": "^4.17.21",
     "rxjs": "~7.8.0",
-    "signal-tree-legacy": "npm:signal-tree@0.1.16",
     "zone.js": "~0.15.0"
   },
   "devDependencies": {
