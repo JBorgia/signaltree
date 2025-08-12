@@ -1,5 +1,5 @@
 {
-  "name": "@signal-tree/time-travel",
+  "name": "@signaltree/time-travel",
   "version": "0.0.1",
   "peerDependencies": {
     "@angular/common": "^20.1.0",

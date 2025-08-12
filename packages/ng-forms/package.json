@@ -1,5 +1,5 @@
 {
-  "name": "@signal-tree/ng-forms",
+  "name": "@signaltree/ng-forms",
   "version": "0.0.1",
   "peerDependencies": {
     "@angular/core": "^20.1.0",

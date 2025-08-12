@@ -1,28 +1,53 @@
-MIT License with AI Training Restriction
+Fair Source License, version 0.9
 
 Copyright (c) 2025 Jonathan D Borgia
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Licensor: Jonathan D Borgia
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Software: SignalTree - A modern state management library for TypeScript/JavaScript applications
 
-**AI Training Restriction**: You may not use the Software, its source code,
-documentation, or any derivative works to train, develop, or improve artificial
-intelligence models, machine learning algorithms, large language models, code
-generation systems, or any automated systems designed to generate code,
-documentation, or other content, unless explicit written permission is granted
-by the copyright holder.
+Use Limitation: You may use, copy, modify, and distribute this Software for any purpose,
+EXCEPT if your use meets ANY of the following conditions, in which case you must obtain
+a paid commercial license:
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+1. Your organization has more than $1,000,000 USD in annual gross revenue; OR
+2. Your application or service using this Software has more than 25,000 monthly active users; OR
+3. You are providing this Software as a managed service or hosted solution to third parties; OR
+4. You are embedding this Software in a commercial product that you sell or license to others.
+
+These limitations do NOT apply to:
+
+- Educational institutions and students using the Software for learning purposes
+- Non-profit organizations with 501(c)(3) or equivalent status
+- Open source projects licensed under an OSI-approved license
+- Personal projects with no commercial activity
+- Evaluation and testing for up to 90 days
+
+Change Date: January 1, 2029
+
+Change License: Apache License, Version 2.0
+
+Additional Terms:
+
+1. ATTRIBUTION: You must retain all copyright notices and this license in all copies.
+
+2. NO WARRANTY: THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+   PARTICULAR PURPOSE AND NONINFRINGEMENT.
+
+3. COMMERCIAL LICENSE: To obtain a commercial license, contact: licensing@signaltree.dev
+   or visit: https://signaltree.dev/pricing
+
+4. EXEMPTIONS: The Licensor reserves the right to grant exemptions from commercial licensing
+   requirements at their sole discretion. Contact the author to discuss special circumstances,
+   hardship cases, or unique use cases that may qualify for an exemption.
+
+5. GOOD FAITH USAGE: This license operates on good faith. If you're unsure whether your
+   use case requires a commercial license, please reach out to discuss.
+
+---
+
+Full Fair Source License details: https://fair.io/
+
+For the most up-to-date version of this license, see:
+https://github.com/tsofist/signaltree/blob/main/LICENSE
