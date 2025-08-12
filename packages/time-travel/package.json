@@ -1,6 +1,7 @@
 {
   "name": "@signaltree/time-travel",
   "version": "1.0.0",
+  "description": "Undo/redo functionality for SignalTree. State history management with snapshots, branching support, and patch-based storage for 95% memory reduction.",
   "peerDependencies": {
     "@angular/common": "^20.1.0",
     "@angular/core": "^20.1.0",
