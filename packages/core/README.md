@@ -274,7 +274,45 @@ class UsersComponent {
 }
 ```
 
-## 🔗 Links
+## � Available Extension Packages
+
+Extend the core with optional feature packages:
+
+### Performance & Optimization
+
+- **[@signaltree/batching](../batching)** (+1KB) - Batch multiple updates for better performance
+- **[@signaltree/memoization](../memoization)** (+2KB) - Intelligent caching & performance optimization
+
+### Advanced Features
+
+- **[@signaltree/middleware](../middleware)** (+1KB) - Middleware system & state interceptors
+- **[@signaltree/async](../async)** (+2KB) - Advanced async operations & loading states
+- **[@signaltree/entities](../entities)** (+2KB) - Enhanced CRUD operations & entity management
+
+### Development Tools
+
+- **[@signaltree/devtools](../devtools)** (+1KB) - Development tools & Redux DevTools integration
+- **[@signaltree/time-travel](../time-travel)** (+3KB) - Undo/redo functionality & state history
+
+### Integration & Convenience
+
+- **[@signaltree/presets](../presets)** (+0.5KB) - Pre-configured setups for common patterns
+- **[@signaltree/ng-forms](../ng-forms)** (+3KB) - Complete Angular Forms integration
+
+### Quick Start with Extensions
+
+```bash
+# Performance-focused setup
+npm install @signaltree/core @signaltree/batching @signaltree/memoization
+
+# Full development setup
+npm install @signaltree/core @signaltree/batching @signaltree/memoization @signaltree/devtools @signaltree/time-travel
+
+# All packages (full-featured)
+npm install @signaltree/core @signaltree/batching @signaltree/memoization @signaltree/middleware @signaltree/async @signaltree/entities @signaltree/devtools @signaltree/time-travel @signaltree/presets @signaltree/ng-forms
+```
+
+## �🔗 Links
 
 - [SignalTree Documentation](https://signaltree.io)
 - [GitHub Repository](https://github.com/JBorgia/signaltree)
