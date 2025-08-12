@@ -2,7 +2,7 @@
 
 ## 🎯 Overview
 
-Since `signal-tree` (monolithic) is already published on NPM, we're moving to scoped packages under `@signaltree/` for the new modular architecture.
+Since `signaltree` (monolithic) is already published on NPM, we're moving to scoped packages under `@signaltree/` for the new modular architecture.
 
 ## 📋 Prerequisites Setup
 
@@ -155,7 +155,7 @@ npm install @signaltree/core @signaltree/batching @signaltree/memoization @signa
 ### 1. Scoped Package Naming
 
 - All packages use `@signaltree/` prefix
-- This avoids conflicts with the existing `signal-tree` package
+- This avoids conflicts with the existing `signaltree` package
 - Provides clear namespace ownership
 
 ### 2. Version Synchronization
@@ -209,13 +209,13 @@ After successful publishing:
 1. **Update README.md** with new installation instructions
 2. **Update documentation** to reference `@signaltree/*` packages
 3. **Create GitHub Release** (automated by the script)
-4. **Update the old `signal-tree` package** with migration notice
+4. **Update the old `signaltree` package** with migration notice
 5. **Notify users** about the new modular packages
 
 ## 🔗 URLs After Publishing
 
 - NPM: `https://www.npmjs.com/package/@signaltree/core`
-- GitHub: `https://github.com/JBorgia/signal-tree/releases`
+- GitHub: `https://github.com/JBorgia/signaltree/releases`
 - Documentation: Update to reference new packages
 
 ## 🚨 Troubleshooting
@@ -248,7 +248,7 @@ nx build core
 nx build batching
 # ... etc
 
-# If you get "@signal-tree/source" errors, exclude it from builds
+# If you get "@signaltree/source" errors, exclude it from builds
 # The source project is not meant to be built as a package
 ```
 

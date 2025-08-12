@@ -103,7 +103,7 @@ export class HomeComponent {
     return this.features.filter((f) => f.category === category);
   }
 
-  quickStartCode = `import { signalTree } from '@signaltree/signal-tree';
+  quickStartCode = `import { signalTree } from '@signaltree/signaltree';
 
 // Create a signal tree
 const userTree = signalTree({
