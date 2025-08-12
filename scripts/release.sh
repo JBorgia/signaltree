@@ -100,10 +100,16 @@ fi
 # Step 1: Run tests for all packages (unless skipped)
 if [ "$SKIP_TESTS" != "skip-tests" ]; then
     print_step "Running tests for all packages..."
-    npx nx test core batching memoization middleware async entities devtools time-travel presets ng-forms --parallel=5 || {
-        print_error "Tests failed! Aborting release."
-        exit 1
-    }
+    
+    # Run tests for each package individually
+    for package in "${PACKAGES[@]}"; do
+        print_step "Testing package: $package"
+        npx nx test $package || {
+            print_error "Tests failed for package: $package! Aborting release."
+            exit 1
+        }
+    done
+    
     print_success "All package tests passed"
 fi
 
@@ -157,10 +163,16 @@ done
 
 # Step 3: Build all packages
 print_step "Building all packages..."
-npx nx build core batching memoization middleware async entities devtools time-travel presets ng-forms --parallel=5 || {
-    print_error "Build failed! Aborting release."
-    exit 1
-}
+
+# Build packages one by one (Nx doesn't support multiple projects in one command)
+for package in "${PACKAGES[@]}"; do
+    print_step "Building package: $package"
+    npx nx build $package || {
+        print_error "Build failed for package: $package! Aborting release."
+        exit 1
+    }
+done
+
 print_success "All packages built successfully"
 
 # Step 4: Commit changes
