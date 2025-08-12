@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/devtools",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Development and debugging tools for SignalTree. Redux DevTools integration, performance profiling, module tracking, and production-safe debugging.",
   "peerDependencies": {
     "@angular/common": "^20.1.0",
