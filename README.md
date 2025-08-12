@@ -2195,6 +2195,10 @@ SignalTree isn't just another state management library—it's a **paradigm shift
 - 🐙 GitHub: [https://github.com/JBorgia/signaltree](https://github.com/JBorgia/signaltree)
 - 💼 LinkedIn: [https://www.linkedin.com/in/jonathanborgia/](https://www.linkedin.com/in/jonathanborgia/)
 
+## 🙏 Acknowledgments
+
+Special thanks to **Christian Moser** - an invaluable tester, colleague, and friend whose insights and feedback have been instrumental in making SignalTree robust and developer-friendly.
+
 ## � Links
 
 - [Official Website & Documentation](https://signaltree.io)
@@ -2202,6 +2206,24 @@ SignalTree isn't just another state management library—it's a **paradigm shift
 - [NPM Organization](https://www.npmjs.com/org/signaltree)
 - [GitHub Repository](https://github.com/JBorgia/signaltree)
 - [Community Discord](https://discord.gg/signaltree)
+
+## 📦 NPM Packages
+
+### Core Package
+
+- [@signaltree/core](https://www.npmjs.com/package/@signaltree/core) - Essential SignalTree functionality
+
+### Feature Packages
+
+- [@signaltree/async](https://www.npmjs.com/package/@signaltree/async) - Async operations and state management
+- [@signaltree/batching](https://www.npmjs.com/package/@signaltree/batching) - Performance optimization through batching
+- [@signaltree/memoization](https://www.npmjs.com/package/@signaltree/memoization) - Caching and computed values
+- [@signaltree/middleware](https://www.npmjs.com/package/@signaltree/middleware) - Extensible middleware system
+- [@signaltree/entities](https://www.npmjs.com/package/@signaltree/entities) - Entity and collection management
+- [@signaltree/devtools](https://www.npmjs.com/package/@signaltree/devtools) - Development and debugging tools
+- [@signaltree/time-travel](https://www.npmjs.com/package/@signaltree/time-travel) - Undo/redo functionality
+- [@signaltree/presets](https://www.npmjs.com/package/@signaltree/presets) - Pre-configured setups
+- [@signaltree/ng-forms](https://www.npmjs.com/package/@signaltree/ng-forms) - Angular forms integration
 
 ## �📄 License
 

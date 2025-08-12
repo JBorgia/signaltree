@@ -25,6 +25,18 @@ import { createLazySignalTree, equal } from './utils';
 
 /**
  * Creates an equality function based on configuration.
+ *
+ * @param useShallowComparison - If true, uses Object.is for comparison; otherwise uses deep equality
+ * @returns A function that compares two values for equality
+ *
+ * @example
+ * ```typescript
+ * const shallowEqual = createEqualityFn(true);
+ * const deepEqual = createEqualityFn(false);
+ *
+ * shallowEqual({ a: 1 }, { a: 1 }); // false (different objects)
+ * deepEqual({ a: 1 }, { a: 1 }); // true (same structure and values)
+ * ```
  */
 function createEqualityFn(useShallowComparison: boolean) {
   return useShallowComparison ? Object.is : equal;
@@ -33,6 +45,26 @@ function createEqualityFn(useShallowComparison: boolean) {
 /**
  * Core function to create a basic SignalTree.
  * This provides the minimal functionality without advanced features.
+ *
+ * @template T - The state object type
+ * @param obj - The initial state object
+ * @param config - Configuration options for the tree
+ * @returns A basic SignalTree with core functionality
+ *
+ * @example
+ * ```typescript
+ * const tree = create({
+ *   count: 0,
+ *   user: { name: 'John', age: 30 }
+ * }, {
+ *   useLazySignals: true,
+ *   useShallowComparison: false
+ * });
+ *
+ * // Access nested signals
+ * console.log(tree.$.count()); // 0
+ * tree.$.user.name.set('Jane');
+ * ```
  */
 function create<T extends StateObject>(
   obj: T,
@@ -51,12 +83,30 @@ function create<T extends StateObject>(
     $: signalState, // $ points to the same state object
   } as SignalTree<T>;
 
-  enhanceTreeBasic(resultTree);
+  enhanceTree(resultTree);
   return resultTree;
 }
 
 /**
  * Creates eager signals from an object (non-lazy approach).
+ * All signals are created immediately during initialization.
+ *
+ * @template O - The object type to convert to signals
+ * @param obj - The object to convert to signals
+ * @param equalityFn - Function to compare values for equality
+ * @returns A deeply signalified version of the object
+ *
+ * @example
+ * ```typescript
+ * const eagerSignals = createEagerSignalsFromObject({
+ *   user: { name: 'John', age: 30 },
+ *   settings: { theme: 'dark' }
+ * }, Object.is);
+ *
+ * // All signals are created immediately
+ * eagerSignals.user.name.set('Jane');
+ * console.log(eagerSignals.settings.theme()); // 'dark'
+ * ```
  */
 function createEagerSignalsFromObject<O extends StateObject>(
   obj: O,
@@ -88,10 +138,46 @@ function createEagerSignalsFromObject<O extends StateObject>(
 
 /**
  * Enhances a tree with basic functionality (unwrap, update, pipe).
+ * Adds core methods that every SignalTree needs for basic operation.
+ *
+ * @template T - The state object type
+ * @param tree - The tree to enhance with basic functionality
+ * @returns The enhanced tree with unwrap, update, and pipe methods
+ *
+ * @example
+ * ```typescript
+ * const basicTree = { state: signalState, $: signalState };
+ * enhanceTree(basicTree);
+ *
+ * // Now has basic methods:
+ * const currentState = basicTree.unwrap();
+ * basicTree.update(state => ({ ...state, count: state.count + 1 }));
+ * const enhancedTree = basicTree.pipe(withSomeFeature());
+ * ```
  */
-function enhanceTreeBasic<T extends StateObject>(
+function enhanceTree<T extends StateObject>(
   tree: SignalTree<T>
 ): SignalTree<T> {
+  /**
+   * Unwraps the current state by reading all signal values.
+   * Recursively converts the signal tree back to plain JavaScript values.
+   *
+   * @returns The current state as a plain object
+   *
+   * @example
+   * ```typescript
+   * const tree = signalTree({
+   *   user: { name: 'John', age: 30 },
+   *   count: 0
+   * });
+   *
+   * tree.$.user.name.set('Jane');
+   * tree.$.count.set(5);
+   *
+   * const currentState = tree.unwrap();
+   * // { user: { name: 'Jane', age: 30 }, count: 5 }
+   * ```
+   */
   tree.unwrap = (): T => {
     // Recursively unwrap with proper typing
     const unwrapObject = <O extends Record<string, unknown>>(
@@ -124,6 +210,38 @@ function enhanceTreeBasic<T extends StateObject>(
     return unwrapObject(tree.state as DeepSignalify<T>);
   };
 
+  /**
+   * Updates the state using an updater function.
+   * The updater receives the current state and returns a partial update.
+   * Automatically handles nested signal updates.
+   *
+   * @param updater - Function that receives current state and returns partial updates
+   *
+   * @example
+   * ```typescript
+   * const tree = signalTree({
+   *   user: { name: 'John', age: 30 },
+   *   count: 0,
+   *   todos: []
+   * });
+   *
+   * // Simple update
+   * tree.update(state => ({ count: state.count + 1 }));
+   *
+   * // Nested update
+   * tree.update(state => ({
+   *   user: { ...state.user, age: state.user.age + 1 },
+   *   todos: [...state.todos, { id: 1, text: 'New todo' }]
+   * }));
+   *
+   * // Conditional update
+   * tree.update(state =>
+   *   state.count < 10
+   *     ? { count: state.count + 1 }
+   *     : { count: 0, user: { ...state.user, name: 'Reset' } }
+   * );
+   * ```
+   */
   tree.update = (updater: (current: T) => Partial<T>) => {
     const currentValue = tree.unwrap();
     const partialObj = updater(currentValue);
