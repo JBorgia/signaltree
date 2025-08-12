@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/middleware",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Middleware system for SignalTree. Intercept state changes with before/after hooks, logging, performance tracking, and validation middleware.",
   "peerDependencies": {
     "@angular/common": "^20.1.0",
