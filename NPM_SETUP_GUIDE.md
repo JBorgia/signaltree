@@ -35,7 +35,7 @@ npm org ls signaltree
 # If the org doesn't exist, create it:
 npm org create signaltree
 
-# Note: Since no packages are published yet, 
+# Note: Since no packages are published yet,
 # "npm access list packages @signaltree" will return empty until first publish
 ```
 
@@ -196,8 +196,8 @@ node test.js
 - [ ] NPM account created and verified
 - [ ] `@signaltree` organization created on NPM
 - [ ] Logged into NPM CLI (`npm whoami`)
-- [ ] All tests passing (`nx test --all`)
-- [ ] All packages building (`nx build --all`)
+- [ ] All tests passing (`nx test core batching memoization middleware async entities devtools time-travel presets ng-forms`)
+- [ ] All packages building (`nx build core batching memoization middleware async entities devtools time-travel presets ng-forms`)
 - [ ] Release script permissions (`chmod +x scripts/release.sh`)
 - [ ] Run first release (`./scripts/release.sh patch`)
 
@@ -238,9 +238,12 @@ npm org ls signaltree
 ### Build Failures
 
 ```bash
-# Clean and rebuild:
+# Clean and rebuild (specific packages):
 nx reset
-nx build --all
+nx build core batching memoization middleware async entities devtools time-travel presets ng-forms
+
+# If you get "@signal-tree/source" errors, exclude it from builds
+# The source project is not meant to be built as a package
 ```
 
 Ready to publish? Run: `./scripts/release.sh patch`
