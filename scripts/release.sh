@@ -100,7 +100,7 @@ fi
 # Step 1: Run tests for all packages (unless skipped)
 if [ "$SKIP_TESTS" != "skip-tests" ]; then
     print_step "Running tests for all packages..."
-    
+
     # Run tests for each package individually
     for package in "${PACKAGES[@]}"; do
         print_step "Testing package: $package"
@@ -109,7 +109,7 @@ if [ "$SKIP_TESTS" != "skip-tests" ]; then
             exit 1
         }
     done
-    
+
     print_success "All package tests passed"
 fi
 
