@@ -152,6 +152,9 @@ export interface TreeConfig {
   maxCacheSize?: number;
   trackPerformance?: boolean;
   treeName?: string;
+  enableDevTools?: boolean;
+  debugMode?: boolean;
+  useStructuralSharing?: boolean;
 }
 
 // ============================================

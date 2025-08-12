@@ -17,6 +17,7 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
+      "@signal-tree/ng-forms": ["packages/ng-forms/src/index.ts"],
       "@signaltree/async": ["packages/async/src/index.ts"],
       "@signaltree/batching": ["packages/batching/src/index.ts"],
       "@signaltree/core": ["packages/core/src/index.ts"],
