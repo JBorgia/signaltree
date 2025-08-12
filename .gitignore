@@ -44,3 +44,19 @@ Thumbs.db
 .github/instructions/nx.instructions.md
 
 .angular
+
+# Added by cleanup script
+# Test artifacts
+test-*.mjs
+memory-leak-test.mjs
+simple-memory-test.mjs
+*.test.mjs
+
+# Documentation artifacts
+*_SUMMARY.md
+OPTIMIZATION_*.md
+
+# Temporary files
+error.log
+*.tmp
+tmp/
