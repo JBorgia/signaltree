@@ -1,1 +1,1 @@
-export * from './lib/devtools/devtools';
+export * from './lib/devtools';

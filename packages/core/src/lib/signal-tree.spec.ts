@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { signalTree } from './signaltree';
+import { signalTree } from './signal-tree';
 
 describe('signalTree', () => {
   beforeEach(() => {
