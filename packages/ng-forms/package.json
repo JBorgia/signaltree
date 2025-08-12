@@ -1,10 +1,10 @@
 {
   "name": "@signaltree/ng-forms",
-  "version": "0.0.1",
+  "version": "0.0.0",
   "peerDependencies": {
     "@angular/core": "^20.1.0",
     "@angular/forms": "^20.1.0",
-    "@signaltree/core": "*",
+    "@signaltree/core": "^1.0.0",
     "rxjs": "^7.0.0"
   },
   "sideEffects": false

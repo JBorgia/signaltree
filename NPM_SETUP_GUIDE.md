@@ -72,9 +72,10 @@ npm whoami
 ### Option 2: Manual Step-by-Step
 
 ```bash
-# 1. Test and build all packages (excluding source project)
-nx test core batching memoization middleware async entities devtools time-travel presets ng-forms
-nx build core batching memoization middleware async entities devtools time-travel presets ng-forms
+# 1. Test and build all packages (one by one)
+nx test core && nx test batching && nx test memoization && nx test middleware && nx test async && nx test entities && nx test devtools && nx test time-travel && nx test presets && nx test ng-forms
+
+nx build core && nx build batching && nx build memoization && nx build middleware && nx build async && nx build entities && nx build devtools && nx build time-travel && nx build presets && nx build ng-forms
 
 # 2. Update versions manually (or use the script)
 # Edit each packages/*/package.json
@@ -196,8 +197,8 @@ node test.js
 - [ ] NPM account created and verified
 - [ ] `@signaltree` organization created on NPM
 - [ ] Logged into NPM CLI (`npm whoami`)
-- [ ] All tests passing (`nx test core batching memoization middleware async entities devtools time-travel presets ng-forms`)
-- [ ] All packages building (`nx build core batching memoization middleware async entities devtools time-travel presets ng-forms`)
+- [ ] All tests passing (use release script to run all tests)
+- [ ] All packages building (use release script to build all packages)
 - [ ] Release script permissions (`chmod +x scripts/release.sh`)
 - [ ] Run first release (`./scripts/release.sh patch`)
 
@@ -238,9 +239,14 @@ npm org ls signaltree
 ### Build Failures
 
 ```bash
-# Clean and rebuild (specific packages):
+# Clean and rebuild (use the release script for all packages):
 nx reset
-nx build core batching memoization middleware async entities devtools time-travel presets ng-forms
+./scripts/release.sh patch
+
+# Or build individual packages:
+nx build core
+nx build batching
+# ... etc
 
 # If you get "@signal-tree/source" errors, exclude it from builds
 # The source project is not meant to be built as a package
