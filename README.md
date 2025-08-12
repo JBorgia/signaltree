@@ -70,24 +70,71 @@ const loadUser = tree.asyncAction(async (id: string) => {
 import { signalTree } from '@signaltree/core';
 import { withBatching } from '@signaltree/batching';
 import { withMemoization } from '@signaltree/memoization';
+import { withMiddleware } from '@signaltree/middleware';
+import { withAsync } from '@signaltree/async';
+import { withEntities } from '@signaltree/entities';
+import { withDevtools } from '@signaltree/devtools';
 import { withTimeTravel } from '@signaltree/time-travel';
 
-// Compose features using pipe
+// Compose multiple features using pipe
 const tree = signalTree({
   users: [] as User[],
-  loading: false,
+  posts: [] as Post[],
+  ui: { loading: false, theme: 'light' },
   filters: { search: '', category: 'all' },
-}).pipe(withBatching(), withMemoization(), withTimeTravel());
+}).pipe(
+  withBatching(), // Batch updates for performance
+  withMemoization(), // Intelligent caching
+  withMiddleware(), // State interceptors
+  withAsync(), // Advanced async operations
+  withEntities(), // Enhanced CRUD operations
+  withTimeTravel(), // Undo/redo functionality
+  withDevtools() // Development tools (auto-disabled in production)
+);
 
-// Now advanced features are available
+// Batching: Multiple updates in single render cycle
 tree.batchUpdate((state) => ({
   users: [...state.users, newUser],
-  loading: false,
+  ui: { ...state.ui, loading: false },
+  filters: { ...state.filters, search: '' },
 }));
 
-const filteredUsers = tree.memoize((state) => state.users.filter((u) => u.name.includes(state.filters.search)), 'filtered-users');
+// Memoization: Cache expensive computations
+const filteredUsers = tree.memoize((state) => state.users.filter((u) => u.name.includes(state.filters.search) && (state.filters.category === 'all' || u.category === state.filters.category)), 'filtered-users');
 
-tree.undo(); // Time travel enabled
+// Middleware: Intercept and log state changes
+tree.addMiddleware((action, state, next) => {
+  console.log('Action:', action.type, action.payload);
+  const result = next();
+  console.log('New state:', tree.$());
+  return result;
+});
+
+// Async: Advanced async operations with automatic loading states
+const loadUsersWithPosts = tree.createAsyncAction(
+  'loadUsersWithPosts',
+  async () => {
+    const users = await api.getUsers();
+    const posts = await api.getPosts();
+    return { users, posts };
+  },
+  {
+    onStart: () => ({ ui: { loading: true } }),
+    onSuccess: ({ users, posts }) => ({ users, posts, ui: { loading: false } }),
+    onError: (error) => ({ ui: { loading: false, error: error.message } }),
+  }
+);
+
+// Entities: Enhanced CRUD with advanced querying
+const users = tree.asCrud<User>('users');
+users.addMany([user1, user2, user3]); // Bulk operations
+const activeUsers = users.findBy((user) => user.active); // Advanced filtering
+const sortedUsers = users.findBy((user) => user, { sortBy: 'name' }); // Sorting
+
+// Time Travel: Undo/redo functionality
+tree.undo(); // Undo last change
+tree.redo(); // Redo undone change
+tree.createSnapshot('before-bulk-update'); // Create named snapshot
 users.add({ id: 1, name: 'Alice' });
 ```
 
@@ -106,15 +153,15 @@ SignalTree uses a modular architecture where each feature is an optional package
 
 ### Optional Feature Packages
 
-- **@signaltree/batching** (+1KB) - Batch multiple updates
-- **@signaltree/memoization** (+2KB) - Intelligent caching & performance
-- **@signaltree/middleware** (+1KB) - Middleware system & taps
-- **@signaltree/async** (+2KB) - Advanced async actions & states
-- **@signaltree/entities** (+2KB) - Advanced entity management
-- **@signaltree/devtools** (+1KB) - Redux DevTools integration
-- **@signaltree/time-travel** (+3KB) - Undo/redo functionality
-- **@signaltree/presets** (+0.5KB) - Environment-based configurations
-- **@signaltree/ng-forms** (+3KB) - Complete Angular forms integration
+- **@signaltree/batching** (+1KB) - Batch multiple updates for performance
+- **@signaltree/memoization** (+2KB) - Intelligent caching & performance optimization
+- **@signaltree/middleware** (+1KB) - Middleware system & interceptors
+- **@signaltree/async** (+2KB) - Advanced async actions & loading states
+- **@signaltree/entities** (+2KB) - Enhanced CRUD operations & entity management
+- **@signaltree/devtools** (+1KB) - Development tools & Redux DevTools integration
+- **@signaltree/time-travel** (+3KB) - Undo/redo functionality & state history
+- **@signaltree/presets** (+0.5KB) - Pre-configured setups & common patterns
+- **@signaltree/ng-forms** (+3KB) - Complete Angular Forms integration
 
 ### Installation Examples
 
@@ -125,12 +172,30 @@ npm install @signaltree/core
 # Performance-focused (8KB)
 npm install @signaltree/core @signaltree/batching @signaltree/memoization
 
-# Full-featured (18KB)
-npm install @signaltree/core @signaltree/batching @signaltree/memoization @signaltree/time-travel @signaltree/devtools @signaltree/ng-forms
+# Development-enhanced (12KB)
+npm install @signaltree/core @signaltree/batching @signaltree/memoization @signaltree/devtools @signaltree/time-travel
+
+# Full-featured (18KB) - All packages
+npm install @signaltree/core @signaltree/batching @signaltree/memoization @signaltree/middleware @signaltree/async @signaltree/entities @signaltree/devtools @signaltree/time-travel @signaltree/presets @signaltree/ng-forms
 
 # Use presets for common combinations
 npm install @signaltree/core @signaltree/presets
 ```
+
+## 📋 Complete Package Reference
+
+| Package                                               | Size   | Purpose          | Key Features                                    |
+| ----------------------------------------------------- | ------ | ---------------- | ----------------------------------------------- |
+| **[@signaltree/core](./packages/core)**               | 5KB    | Foundation       | Hierarchical signals, basic CRUD, async actions |
+| **[@signaltree/batching](./packages/batching)**       | +1KB   | Performance      | Batch updates, reduce re-renders                |
+| **[@signaltree/memoization](./packages/memoization)** | +2KB   | Caching          | Intelligent caching, performance optimization   |
+| **[@signaltree/middleware](./packages/middleware)**   | +1KB   | Interceptors     | State interceptors, logging, validation         |
+| **[@signaltree/async](./packages/async)**             | +2KB   | Async Operations | Advanced async patterns, loading states         |
+| **[@signaltree/entities](./packages/entities)**       | +2KB   | Data Management  | Enhanced CRUD, filtering, querying              |
+| **[@signaltree/devtools](./packages/devtools)**       | +1KB   | Development      | Redux DevTools, debugging, monitoring           |
+| **[@signaltree/time-travel](./packages/time-travel)** | +3KB   | History          | Undo/redo, snapshots, state persistence         |
+| **[@signaltree/presets](./packages/presets)**         | +0.5KB | Convenience      | Pre-configured setups, common patterns          |
+| **[@signaltree/ng-forms](./packages/ng-forms)**       | +3KB   | Angular Forms    | Reactive forms, validation, form state          |
 
 ## 🔄 Migration from signaltree
 
