@@ -1,10 +1,5 @@
 import { signal, Signal } from '@angular/core';
-import {
-  SignalTree,
-  AsyncAction,
-  AsyncActionConfig,
-  StateObject,
-} from '@signaltree/core';
+import { SignalTree, AsyncAction, AsyncActionConfig } from '@signaltree/core';
 
 /**
  * Extended AsyncActionConfig with additional async state management features.
@@ -68,7 +63,7 @@ interface ExtendedAsyncActionConfig<T, TResult>
  * );
  * ```
  */
-interface AsyncSignalTree<T extends StateObject> extends SignalTree<T> {
+interface AsyncSignalTree<T> extends SignalTree<T> {
   /**
    * Creates an async action with comprehensive state management and lifecycle hooks.
    *
@@ -182,7 +177,7 @@ function parsePath(path: string): string[] {
  * // Safely creates intermediate objects if they don't exist
  * ```
  */
-function setNestedValue<T extends StateObject>(
+function setNestedValue<T>(
   tree: SignalTree<T>,
   path: string,
   value: unknown
@@ -277,7 +272,7 @@ interface AsyncConfig {
  * console.log('Result:', loginAction.result());
  * ```
  */
-class AsyncActionImpl<TInput, TResult, T extends StateObject = StateObject>
+class AsyncActionImpl<TInput, TResult, T >
   implements AsyncAction<TInput, TResult>
 {
   /** Signal indicating if the operation is currently pending */
@@ -446,7 +441,7 @@ class AsyncActionImpl<TInput, TResult, T extends StateObject = StateObject>
  * const submitForm = tree.submitForm(async (data: FormData) => api.submit(data));
  * ```
  */
-export function withAsync<T extends StateObject>(
+export function withAsync<T>(
   config: AsyncConfig = {}
 ): (tree: SignalTree<T>) => AsyncSignalTree<T> {
   const { enabled = true } = config;
@@ -509,7 +504,7 @@ export function withAsync<T extends StateObject>(
  * await loadUser.execute();
  * ```
  */
-export function enableAsync<T extends StateObject>() {
+export function enableAsync<T>() {
   return withAsync<T>({ enabled: true });
 }
 
@@ -540,7 +535,7 @@ export function enableAsync<T extends StateObject>() {
  * await criticalOperation.execute(data);
  * ```
  */
-export function withHighPerformanceAsync<T extends StateObject>() {
+export function withHighPerformanceAsync<T>() {
   return withAsync<T>({
     enabled: true,
     defaultTimeout: 30000,

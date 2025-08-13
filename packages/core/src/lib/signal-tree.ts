@@ -60,7 +60,7 @@ function createEqualityFn(useShallowComparison: boolean) {
  * Core function to create a basic SignalTree with enhanced safety.
  * This provides the minimal functionality without advanced features.
  *
- * CRITICAL: Uses flexible typing - accepts ANY type T, not T extends StateObject
+ * CRITICAL: Uses flexible typing - accepts ANY type T, not T
  *
  * @template T - The state object type (NO constraints - maximum flexibility)
  * @param obj - The initial state object

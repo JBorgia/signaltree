@@ -1,4 +1,4 @@
-import { SignalTree, Middleware, StateObject } from '@signaltree/core';
+import { SignalTree, Middleware } from '@signaltree/core';
 
 // Global middleware storage - using unknown for type safety
 const middlewareMap = new WeakMap<object, unknown[]>();
@@ -11,7 +11,7 @@ const middlewareMap = new WeakMap<object, unknown[]>();
  * @param middlewares - Array of middleware functions to apply
  * @returns The enhanced SignalTree
  */
-export function withMiddleware<T extends StateObject>(
+export function withMiddleware<T>(
   middlewares: Middleware<T>[] = []
 ): (tree: SignalTree<T>) => SignalTree<T> {
   return (tree: SignalTree<T>) => {

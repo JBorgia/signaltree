@@ -1,10 +1,10 @@
 import { signalTree } from '../lib/signal-tree';
 
 /**
- * Revolutionary Recursive Performance Metrics Test
+ * Recursive Performance Metrics Test
  * This test demonstrates the breakthrough achieved in recursive typing
  */
-describe('🔥 Revolutionary Recursive Performance', () => {
+describe('🔥 Recursive Performance Tests', () => {
   interface PerformanceResult {
     depth: number;
     time: number;
@@ -19,7 +19,7 @@ describe('🔥 Revolutionary Recursive Performance', () => {
   };
 
   beforeAll(async () => {
-    console.log('🚀 Starting Revolutionary Recursive Performance Tests...');
+    console.log('🚀 Starting recursive performance tests...');
     results = {};
   });
 
@@ -92,7 +92,7 @@ describe('🔥 Revolutionary Recursive Performance', () => {
                                 validation: {
                                   tests: {
                                     extreme: {
-                                      status: 'revolutionary',
+                                      status: 'validated',
                                       depth: 15,
                                       performance: 'sub-millisecond',
                                     },
@@ -124,14 +124,12 @@ describe('🔥 Revolutionary Recursive Performance', () => {
       typeInference: typeof access === 'string',
     };
 
-    // Revolutionary assertions
+    // Performance assertions
     expect(time).toBeLessThan(1); // STILL sub-millisecond at 15+ levels!
-    expect(access).toBe('revolutionary');
+    expect(access).toBe('validated');
     expect(typeof access).toBe('string'); // TypeScript KNOWS this is a string!
 
-    console.log(
-      `🔥 EXTREME (15 levels): ${time.toFixed(3)}ms - REVOLUTIONARY!`
-    );
+    console.log(`🔥 EXTREME (15 levels): ${time.toFixed(3)}ms - BREAKTHROUGH!`);
   });
 
   it('🚀 should handle unlimited depth (20+ levels)', () => {
@@ -201,9 +199,8 @@ describe('🔥 Revolutionary Recursive Performance', () => {
 
   it('should demonstrate framework implications', () => {
     const report = `
-🎯 REVOLUTIONARY RECURSIVE PERFORMANCE RESULTS
 
-📊 DEPTH PERFORMANCE METRICS:
+🎯 RECURSIVE PERFORMANCE RESULTS📊 DEPTH PERFORMANCE METRICS:
 - Basic (5 levels):     ${results.basic?.time.toFixed(3) || 'N/A'}ms ✅
 - Medium (10 levels):   ${results.medium?.time.toFixed(3) || 'N/A'}ms ✅
 - Extreme (15 levels):  ${results.extreme?.time.toFixed(3) || 'N/A'}ms 🔥

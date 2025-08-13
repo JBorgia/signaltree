@@ -1,17 +1,17 @@
 # 🌳 SignalTree Core
 
-The revolutionary foundation package for SignalTree - featuring breakthrough recursive typing with unlimited depth and sub-millisecond performance.
+The foundation package for SignalTree - featuring revolutionary recursive typing with deep nesting support and excellent performance.
 
 ## ✨ What is @signaltree/core?
 
-SignalTree Core is the revolutionary lightweight (1.5KB) foundation that provides:
+SignalTree Core is the lightweight (1.5KB) foundation that provides:
 
-- **🔥 Revolutionary Recursive Typing** with unlimited depth and perfect type inference
-- **⚡ Performance Breakthrough** - 0.036ms at 15+ levels, improves with depth!
-- **🏆 Perfect Type Safety** with TypeScript inference at 25+ recursive levels
-- **💾 89% Memory Efficiency** through structural sharing and lazy signals
-- **🌳 Zero-Cost Abstractions** for unlimited recursive patterns
-- **📦 Industry-Leading Bundle Size** - Complete recursive power in just 1.5KB
+- **🔥 Revolutionary Recursive Typing** with deep nesting support and strong type inference
+- **⚡ Excellent Performance** - 0.037ms at 15+ levels with consistent speed
+- **🏆 Strong Type Safety** with TypeScript inference at 25+ recursive levels
+- **💾 Memory Efficient** through structural sharing and lazy signals
+- **🌳 Lightweight Abstractions** for recursive patterns
+- **📦 Compact Bundle Size** - Complete recursive power in just 1.5KB
 
 ## 🚀 Quick Start
 
@@ -21,12 +21,12 @@ SignalTree Core is the revolutionary lightweight (1.5KB) foundation that provide
 npm install @signaltree/core
 ```
 
-### Revolutionary Usage - Unlimited Recursive Depth
+### Elegant Usage - Deep Nesting Support
 
 ```typescript
 import { signalTree } from '@signaltree/core';
 
-// Revolutionary: Perfect type inference at unlimited depth!
+// Powerful: Strong type inference at deep nesting levels!
 const tree = signalTree({
   enterprise: {
     divisions: {
@@ -45,7 +45,7 @@ const tree = signalTree({
                               tests: {
                                 extreme: {
                                   depth: 15,
-                                  performance: 0.036, // ms - REVOLUTIONARY!
+                                  performance: 0.037, // ms - Excellent!
                                   typeInference: true,
                                 },
                               },
@@ -68,7 +68,7 @@ const tree = signalTree({
 // Perfect type inference at extreme depth - no 'any' types!
 const performance = tree.$.enterprise.divisions.technology.departments.engineering.teams.frontend.projects.signaltree.releases.v1.features.recursiveTyping.validation.tests.extreme.performance();
 
-console.log(`Revolutionary performance: ${performance}ms`); // 0.036ms
+console.log(`Excellent performance: ${performance}ms`); // 0.037ms
 
 // Type-safe updates at unlimited depth
 tree.$.enterprise.divisions.technology.departments.engineering.teams.frontend.projects.signaltree.releases.v1.features.recursiveTyping.validation.tests.extreme.depth.set(25); // Perfect type safety!
@@ -90,10 +90,9 @@ tree.$.message.set('Updated!');
 
 // Use in Angular components
 @Component({
-template: `    <div>Count: {{ tree.$.count() }}</div>
+template: `  <div>Count: {{ tree.$.count() }}</div>
     <div>Message: {{ tree.$.message() }}</div>
-    <button (click)="increment()">+1</button>
- `,
+    <button (click)="increment()">+1</button>`,
 })
 class SimpleComponent {
 tree = tree;

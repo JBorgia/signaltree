@@ -1,5 +1,5 @@
 import { computed, Signal, signal } from '@angular/core';
-import { SignalTree, StateObject } from '@signaltree/core';
+import { SignalTree } from '@signaltree/core';
 
 /**
  * Module metadata for tracking in the composition chain
@@ -87,7 +87,7 @@ export interface CompositionLogger {
 /**
  * DevTools interface specifically for modular SignalTree
  */
-export interface ModularDevToolsInterface<T extends StateObject> {
+export interface ModularDevToolsInterface<T> {
   /** Activity tracker for all modules */
   activityTracker: ModuleActivityTracker;
   /** Composition-aware logger */
@@ -267,7 +267,7 @@ function createModularMetrics() {
 /**
  * Enhances a SignalTree with modular composition-aware DevTools
  */
-export function withDevTools<T extends StateObject>(
+export function withDevTools<T>(
   config: {
     enabled?: boolean;
     treeName?: string;
@@ -463,16 +463,14 @@ export function withDevTools<T extends StateObject>(
 /**
  * Simple devtools for development
  */
-export function enableDevTools<T extends StateObject>(treeName = 'SignalTree') {
+export function enableDevTools<T>(treeName = 'SignalTree') {
   return withDevTools<T>({ treeName, enabled: true });
 }
 
 /**
  * Full-featured devtools for intensive debugging
  */
-export function withFullDevTools<T extends StateObject>(
-  treeName = 'SignalTree'
-) {
+export function withFullDevTools<T>(treeName = 'SignalTree') {
   return withDevTools<T>({
     treeName,
     enabled: true,
@@ -485,7 +483,7 @@ export function withFullDevTools<T extends StateObject>(
 /**
  * Lightweight devtools for production
  */
-export function withProductionDevTools<T extends StateObject>() {
+export function withProductionDevTools<T>() {
   return withDevTools<T>({
     enabled: true,
     enableBrowserDevTools: false,
