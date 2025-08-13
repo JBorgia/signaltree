@@ -2,7 +2,7 @@
 
 ## Recursive Typing System - Proprietary Innovation
 
-This document outlines the intellectual property protections for the revolutionary recursive typing system implemented in SignalTree.
+This document outlines the intellectual property protections for the recursive typing system implemented in SignalTree.
 
 ### Protected Innovations
 
@@ -24,7 +24,7 @@ export type DeepSignalify<T> = {
 
 #### 2. Signal-Store Pattern Implementation
 
-The revolutionary approach that mirrors type recursion with runtime recursion:
+The approach that mirrors type recursion with runtime recursion:
 
 ```typescript
 // 🔒 PROTECTED: Type-Runtime Alignment Pattern

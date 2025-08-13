@@ -5,7 +5,7 @@ import {
   withHighPerformanceEntities,
 } from './entities';
 
-// Simple serializable interfaces that are compatible with StateObject
+// Simple serializable interfaces that are compatible with advanced typing
 interface User {
   id: string;
   name: string;
@@ -19,27 +19,15 @@ interface Post {
   content: string;
 }
 
-// Properly typed state interface that satisfies StateObject constraint
-// This teaches proper TypeScript patterns for comprehensive index signatures
-interface AppState {
-  users: User[];
-  posts: Post[];
-  loading: boolean;
-  // Complete index signatures required by StateObject = Record<string | number | symbol, unknown>
-  [key: string]: unknown;
-  [key: number]: unknown;
-  [key: symbol]: unknown;
-}
-
 describe('Entities', () => {
   it('should enhance tree with entity capabilities', () => {
-    const tree = signalTree<AppState>({
-      users: [],
-      posts: [],
+    const tree = signalTree({
+      users: [] as User[],
+      posts: [] as Post[],
       loading: false,
     });
 
-    const enhancer = withEntities({ enabled: true });
+    const enhancer = withEntities();
     const enhancedTree = enhancer(tree);
 
     expect(enhancedTree.asCrud).toBeDefined();
@@ -47,13 +35,83 @@ describe('Entities', () => {
   });
 
   it('should create entity helpers with CRUD operations', () => {
-    const tree = signalTree<AppState>({
-      users: [],
-      posts: [],
+    const tree = signalTree({
+      users: [] as User[],
+      posts: [] as Post[],
       loading: false,
     });
 
-    const enhancedTree = withEntities<AppState>()(tree);
+    const enhancedTree = withEntities()(tree);
+    const userManager = enhancedTree.asCrud<User>('users');
+
+    const user: User = {
+      id: 'user-1',
+      name: 'John Doe',
+      email: 'john@example.com',
+      active: true,
+    };
+
+    userManager.add(user);
+
+    const allUsers = userManager.selectAll();
+    expect(allUsers()).toEqual([user]);
+    expect(userManager.selectTotal()()).toBe(1);
+  });
+
+  it('should prevent duplicate entities', () => {
+    const tree = signalTree({
+      users: [
+        {
+          id: 'user-1',
+          name: 'Existing User',
+          email: 'existing@example.com',
+          active: true,
+        },
+      ] as User[],
+      posts: [] as Post[],
+      loading: false,
+    });
+
+    const enhancedTree = withEntities()(tree);
+    const userManager = enhancedTree.asCrud<User>('users');
+
+    const duplicateUser: User = {
+      id: 'user-1',
+      name: 'Duplicate User',
+      email: 'duplicate@example.com',
+      active: false,
+    };
+
+    expect(() => userManager.add(duplicateUser)).toThrow(
+      "Entity with id 'user-1' already exists"
+    );
+  });
+
+  it('should update entities correctly', () => {
+    const tree = signalTree({
+      users: [
+        {
+          id: 'user-1',
+          name: 'John Doe',
+          email: 'john@example.com',
+          active: true,
+        },
+      ] as User[],
+      posts: [] as Post[],
+      loading: false,
+    });
+
+    const enhancedTree = withEntities()(tree);
+  });
+
+  it('should add entities successfully', () => {
+    const tree = signalTree({
+      users: [] as User[],
+      posts: [] as Post[],
+      loading: false,
+    });
+
+    const enhancedTree = withEntities()(tree);
     const userManager = enhancedTree.asCrud<User>('users');
 
     expect(userManager.add).toBeDefined();
@@ -68,13 +126,13 @@ describe('Entities', () => {
   });
 
   it('should add entities to collection', () => {
-    const tree = signalTree<AppState>({
-      users: [],
-      posts: [],
+    const tree = signalTree({
+      users: [] as User[],
+      posts: [] as Post[],
       loading: false,
     });
 
-    const enhancedTree = withEntities<AppState>()(tree);
+    const enhancedTree = withEntities()(tree);
     const userManager = enhancedTree.asCrud<User>('users');
 
     const user: User = {
@@ -92,7 +150,7 @@ describe('Entities', () => {
   });
 
   it('should update existing entities', () => {
-    const tree = signalTree<AppState>({
+    const tree = signalTree({
       users: [
         {
           id: 'user-1',
@@ -100,12 +158,12 @@ describe('Entities', () => {
           email: 'john@example.com',
           active: true,
         },
-      ],
-      posts: [],
+      ] as User[],
+      posts: [] as Post[],
       loading: false,
     });
 
-    const enhancedTree = withEntities<AppState>()(tree);
+    const enhancedTree = withEntities()(tree);
     const userManager = enhancedTree.asCrud<User>('users');
 
     userManager.update('user-1', { name: 'John Smith', active: false });
@@ -118,7 +176,7 @@ describe('Entities', () => {
   });
 
   it('should remove entities from collection', () => {
-    const tree = signalTree<AppState>({
+    const tree = signalTree({
       users: [
         {
           id: 'user-1',
@@ -132,12 +190,12 @@ describe('Entities', () => {
           email: 'jane@example.com',
           active: false,
         },
-      ],
-      posts: [],
+      ] as User[],
+      posts: [] as Post[],
       loading: false,
     });
 
-    const enhancedTree = withEntities<AppState>()(tree);
+    const enhancedTree = withEntities()(tree);
     const userManager = enhancedTree.asCrud<User>('users');
 
     userManager.remove('user-1');
@@ -148,7 +206,7 @@ describe('Entities', () => {
   });
 
   it('should upsert entities (add or update)', () => {
-    const tree = signalTree<AppState>({
+    const tree = signalTree({
       users: [
         {
           id: 'user-1',
@@ -156,12 +214,12 @@ describe('Entities', () => {
           email: 'john@example.com',
           active: true,
         },
-      ],
-      posts: [],
+      ] as User[],
+      posts: [] as Post[],
       loading: false,
     });
 
-    const enhancedTree = withEntities<AppState>()(tree);
+    const enhancedTree = withEntities()(tree);
     const userManager = enhancedTree.asCrud<User>('users');
 
     // Update existing
@@ -187,7 +245,7 @@ describe('Entities', () => {
   });
 
   it('should find entity by id', () => {
-    const tree = signalTree<AppState>({
+    const tree = signalTree({
       users: [
         {
           id: 'user-1',
@@ -201,12 +259,12 @@ describe('Entities', () => {
           email: 'jane@example.com',
           active: false,
         },
-      ],
-      posts: [],
+      ] as User[],
+      posts: [] as Post[],
       loading: false,
     });
 
-    const enhancedTree = withEntities<AppState>()(tree);
+    const enhancedTree = withEntities()(tree);
     const userManager = enhancedTree.asCrud<User>('users');
 
     const user1 = userManager.findById('user-1');
@@ -217,7 +275,7 @@ describe('Entities', () => {
   });
 
   it('should find entities by predicate', () => {
-    const tree = signalTree<AppState>({
+    const tree = signalTree({
       users: [
         {
           id: 'user-1',
@@ -237,12 +295,12 @@ describe('Entities', () => {
           email: 'bob@example.com',
           active: true,
         },
-      ],
-      posts: [],
+      ] as User[],
+      posts: [] as Post[],
       loading: false,
     });
 
-    const enhancedTree = withEntities<AppState>()(tree);
+    const enhancedTree = withEntities()(tree);
     const userManager = enhancedTree.asCrud<User>('users');
 
     const activeUsers = userManager.findBy((user) => user.active);
@@ -255,7 +313,7 @@ describe('Entities', () => {
   });
 
   it('should select entity IDs', () => {
-    const tree = signalTree<AppState>({
+    const tree = signalTree({
       users: [
         {
           id: 'user-1',
@@ -269,12 +327,12 @@ describe('Entities', () => {
           email: 'jane@example.com',
           active: false,
         },
-      ],
-      posts: [],
+      ] as User[],
+      posts: [] as Post[],
       loading: false,
     });
 
-    const enhancedTree = withEntities<AppState>()(tree);
+    const enhancedTree = withEntities()(tree);
     const userManager = enhancedTree.asCrud<User>('users');
 
     const userIds = userManager.selectIds();
@@ -282,7 +340,7 @@ describe('Entities', () => {
   });
 
   it('should select total count', () => {
-    const tree = signalTree<AppState>({
+    const tree = signalTree({
       users: [
         {
           id: 'user-1',
@@ -302,12 +360,12 @@ describe('Entities', () => {
           email: 'bob@example.com',
           active: true,
         },
-      ],
-      posts: [],
+      ] as User[],
+      posts: [] as Post[],
       loading: false,
     });
 
-    const enhancedTree = withEntities<AppState>()(tree);
+    const enhancedTree = withEntities()(tree);
     const userManager = enhancedTree.asCrud<User>('users');
 
     const totalUsers = userManager.selectTotal();
@@ -315,7 +373,7 @@ describe('Entities', () => {
   });
 
   it('should throw error when adding duplicate entity', () => {
-    const tree = signalTree<AppState>({
+    const tree = signalTree({
       users: [
         {
           id: 'user-1',
@@ -323,12 +381,12 @@ describe('Entities', () => {
           email: 'john@example.com',
           active: true,
         },
-      ],
-      posts: [],
+      ] as User[],
+      posts: [] as Post[],
       loading: false,
     });
 
-    const enhancedTree = withEntities<AppState>()(tree);
+    const enhancedTree = withEntities()(tree);
     const userManager = enhancedTree.asCrud<User>('users');
 
     expect(() => {
@@ -338,39 +396,39 @@ describe('Entities', () => {
         email: 'jane@example.com',
         active: false,
       });
-    }).toThrow('Entity with id user-1 already exists');
+    }).toThrow("Entity with id 'user-1' already exists");
   });
 
   it('should work with enableEntities convenience function', () => {
-    const tree = signalTree<AppState>({
-      users: [],
-      posts: [],
+    const tree = signalTree({
+      users: [] as User[],
+      posts: [] as Post[],
       loading: false,
     });
 
-    const enhancedTree = enableEntities<AppState>()(tree);
+    const enhancedTree = enableEntities()(tree);
     expect(enhancedTree.asCrud).toBeDefined();
   });
 
   it('should work with high performance entities', () => {
-    const tree = signalTree<AppState>({
-      users: [],
-      posts: [],
+    const tree = signalTree({
+      users: [] as User[],
+      posts: [] as Post[],
       loading: false,
     });
 
-    const enhancedTree = withHighPerformanceEntities<AppState>()(tree);
+    const enhancedTree = withHighPerformanceEntities()(tree);
     expect(enhancedTree.asCrud).toBeDefined();
   });
 
   it('should disable entities when enabled is false', () => {
-    const tree = signalTree<AppState>({
-      users: [],
-      posts: [],
+    const tree = signalTree({
+      users: [] as User[],
+      posts: [] as Post[],
       loading: false,
     });
 
-    const enhancedTree = withEntities<AppState>({ enabled: false })(tree);
+    const enhancedTree = withEntities({ enabled: false })(tree);
     // When disabled, it should return the original tree without entity capabilities
     expect(enhancedTree).toBe(tree);
   });

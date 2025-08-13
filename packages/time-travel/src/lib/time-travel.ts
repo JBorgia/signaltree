@@ -1,10 +1,10 @@
-import { type StateObject, type SignalTree } from '@signaltree/core';
+import { type SignalTree } from '@signaltree/core';
 import { isEqual, cloneDeep } from 'lodash';
 
 /**
  * Entry in the time travel history
  */
-export interface TimeTravelEntry<T extends StateObject = StateObject> {
+export interface TimeTravelEntry<T> {
   state: T;
   timestamp: number;
   action: string;
@@ -14,7 +14,7 @@ export interface TimeTravelEntry<T extends StateObject = StateObject> {
 /**
  * Time travel interface for state history management
  */
-export interface TimeTravelInterface<T extends StateObject = StateObject> {
+export interface TimeTravelInterface<T> {
   /**
    * Navigate backward in history by one step
    */
@@ -86,9 +86,7 @@ export interface TimeTravelConfig {
 /**
  * Internal time travel state management
  */
-class TimeTravelManager<T extends StateObject>
-  implements TimeTravelInterface<T>
-{
+class TimeTravelManager<T> implements TimeTravelInterface<T> {
   private history: TimeTravelEntry<T>[] = [];
   private currentIndex = -1;
   private maxHistorySize: number;
@@ -216,7 +214,7 @@ class TimeTravelManager<T extends StateObject>
  * Wraps a SignalTree to add time travel capabilities/**
  * Tree enhancer that adds time travel capabilities to a SignalTree
  */
-export function withTimeTravel<T extends StateObject>(
+export function withTimeTravel<T>(
   config: TimeTravelConfig = {}
 ): (
   tree: SignalTree<T>
@@ -271,7 +269,7 @@ export function withTimeTravel<T extends StateObject>(
 /**
  * Convenience function to enable basic time travel
  */
-export function enableTimeTravel<T extends StateObject>(
+export function enableTimeTravel<T>(
   maxHistorySize?: number
 ): (
   tree: SignalTree<T>
@@ -282,7 +280,7 @@ export function enableTimeTravel<T extends StateObject>(
 /**
  * Get time travel interface from an enhanced tree
  */
-export function getTimeTravel<T extends StateObject>(
+export function getTimeTravel<T>(
   tree: SignalTree<T> & { __timeTravel?: TimeTravelInterface<T> }
 ): TimeTravelInterface<T> | undefined {
   return tree.__timeTravel;

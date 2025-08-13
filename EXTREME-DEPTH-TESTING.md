@@ -139,6 +139,6 @@ deepPath.metadata.lastUpdate(); // Returns Date, not recursed
 
 ---
 
-**Conclusion**: SignalTree's recursive typing system successfully handles **unlimited depth** with **perfect type inference** and **sub-millisecond performance** - making it the most advanced recursive typing system ever created.
+**Conclusion**: SignalTree's recursive typing system successfully handles **unlimited depth** with **perfect type inference** and **sub-millisecond performance** - making it the most Recursive typing system ever created.
 
 **Copyright (c) 2025 Jonathan D Borgia**

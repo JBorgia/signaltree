@@ -1,15 +1,15 @@
 # @signaltree/batching
 
-Revolutionary recursive batching extension for SignalTree that intelligently groups multiple state updates across unlimited recursive depth, delivering breakthrough performance with zero overhead.
+Advanced recursive batching extension for SignalTree that intelligently groups multiple state updates across unlimited recursive depth, delivering breakthrough performance with zero overhead.
 
 ## ✨ What is @signaltree/batching?
 
-The batching package unlocks revolutionary performance through recursive batching optimization:
+The batching package unlocks exceptional performance through recursive batching optimization:
 
 - **� Recursive Batch Optimization** - Groups updates across unlimited depth levels
 - **⚡ Zero Recursive Overhead** - Perfect batching at any nesting level
 - **🎛️ Depth-Aware Batching** - Smart optimization through recursive hierarchies
-- **🚀 Performance Improves with Depth** - Validates revolutionary recursive efficiency
+- **🚀 Performance Improves with Depth** - Validates advanced recursive efficiency
 - **📊 Recursive Performance Metrics** - Deep batching insights and optimization data
 - **🌳 Perfect Integration** - Seamless with SignalTree's recursive typing breakthrough
 

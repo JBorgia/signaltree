@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
  * 🚀 Simple Recursive Performance Benchmark
- * Quick validation of revolutionary recursive typing performance
+ * Quick validation of recursive typing performance
  */
 
 const { signalTree } = require('./packages/core/src/lib/signal-tree');
 
 console.log('🚀 SignalTree Recursive Performance Benchmark');
-console.log('⚡ Testing revolutionary recursive typing performance...\n');
+console.log('⚡ Testing recursive typing performance...\n');
 
 // 🎯 Quick Performance Tests
 async function runBenchmarks() {
@@ -92,7 +92,7 @@ async function runBenchmarks() {
                             l13: {
                               l14: {
                                 l15: {
-                                  revolutionaryValue: 'extreme-depth',
+                                  validatedValue: 'extreme-depth',
                                   breakthrough: true,
                                 },
                               },
@@ -115,13 +115,13 @@ async function runBenchmarks() {
     true
   );
   const extremeValue =
-    extremeTree.$.l1.l2.l3.l4.l5.l6.l7.l8.l9.l10.l11.l12.l13.l14.l15.revolutionaryValue();
+    extremeTree.$.l1.l2.l3.l4.l5.l6.l7.l8.l9.l10.l11.l12.l13.l14.l15.validatedValue();
 
   results.extreme.time = performance.now() - extremeStart;
   console.log(
     `🔥 Extreme: ${results.extreme.time.toFixed(
       3
-    )}ms - Value: ${extremeValue} - REVOLUTIONARY!`
+    )}ms - Value: ${extremeValue} - BREAKTHROUGH!`
   );
 
   // Unlimited recursive depth test (20+ levels)
@@ -150,7 +150,7 @@ async function runBenchmarks() {
                                         l19: {
                                           l20: {
                                             ultimateDepth: 'unlimited',
-                                            revolutionaryAchievement: true,
+                                            validatedAchievement: true,
                                           },
                                         },
                                       },
@@ -188,7 +188,7 @@ async function runBenchmarks() {
   console.log('🚀 RECURSIVE PERFORMANCE BENCHMARK RESULTS');
   console.log('='.repeat(60));
 
-  console.log('\n📊 REVOLUTIONARY DEPTH PERFORMANCE:');
+  console.log('\n📊 RECURSIVE PERFORMANCE:');
   console.log(`- Basic (5 levels):     ${results.basic.time.toFixed(3)}ms`);
   console.log(`- Medium (10 levels):   ${results.medium.time.toFixed(3)}ms`);
   console.log(
@@ -211,7 +211,7 @@ async function runBenchmarks() {
       '🎉 BREAKTHROUGH CONFIRMED: Performance IMPROVES with recursive depth!'
     );
     console.log(
-      '🚀 This revolutionary achievement breaks all traditional paradigms!'
+      '🚀 This breakthrough achievement breaks all traditional paradigms!'
     );
   }
 

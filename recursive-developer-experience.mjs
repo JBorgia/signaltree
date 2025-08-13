@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 /**
- * 🚀 Revolutionary Developer Experience & Recursive Typing Analysis
+ * 🚀 Advanced Developer Experience & Recursive Typing Analysis
  * SignalTree Dynamic Developer Experience Metrics
  *
- * This script measures the revolutionary impact of recursive typing on developer experience:
+ * This script measures the advanced impact of recursive typing on developer experience:
  * - Code simplicity through unlimited depth
  * - Type safety without performance costs
  * - Maintainability at any complexity level
  */
 
-console.log('👨‍💻 SignalTree Revolutionary Developer Experience Analysis');
+console.log('👨‍💻 SignalTree Advanced Developer Experience Analysis');
 console.log(
   '🔬 Measuring the impact of recursive typing on developer productivity\n'
 );
@@ -23,7 +23,7 @@ class RecursiveDeveloperExperienceAnalyzer {
   initializeFrameworks() {
     this.frameworks = [
       {
-        name: 'SignalTree (Revolutionary)',
+        name: 'SignalTree (Advanced)',
         metrics: {
           codeComplexity: {
             linesOfCode: 15, // Minimal code for complex state
