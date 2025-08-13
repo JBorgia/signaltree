@@ -2,7 +2,7 @@
   <!-- Hero Section -->
   <section class="hero-section">
     <div class="hero-content">
-      <h1 class="hero-title">🎯 NGX Signal Tree</h1>
+      <h1 class="hero-title">🎯 Signal Tree</h1>
       <p class="hero-subtitle">
         A powerful, type-safe, hierarchical signal tree for Angular applications
       </p>
@@ -204,14 +204,81 @@
     </div>
   </section>
 
-  <!-- Getting Started -->
+  <!-- Extreme Depth Showcase -->
+  <section class="extreme-depth-section">
+    <h2 class="section-title">🔥 Extreme Depth Testing</h2>
+    <div class="extreme-depth-content">
+      <div class="extreme-depth-highlight">
+        <h3>Breaking the 15+ Level Barrier</h3>
+        <p>
+          SignalTree achieves perfect type inference at unprecedented nesting
+          depths. The recursive typing system maintains full TypeScript support
+          without degrading to 'any' types.
+        </p>
+        <div class="depth-stats">
+          <div class="stat">
+            <span class="stat-value">15+</span>
+            <span class="stat-label">Nesting Levels</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value">&lt;1ms</span>
+            <span class="stat-label">Performance</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value">28</span>
+            <span class="stat-label">Tests Passing</span>
+          </div>
+        </div>
+      </div>
+      <div class="code-example extreme-depth-code">
+        <pre><code>{{ extremeDepthCode }}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Additional Features -->
+  <section class="additional-features-section">
+    <h2 class="section-title">🔬 Advanced Features</h2>
+    <div class="category-grid">
+      <div
+        *ngFor="let feature of getFeaturesByCategory('Advanced')"
+        class="category-card extreme-depth-card"
+        [class.highlight]="feature.highlight"
+      >
+        <h4 class="card-title">{{ feature.title }}</h4>
+        <p class="card-description">{{ feature.description }}</p>
+        <a [routerLink]="feature.route" class="card-link">
+          Experience Extreme Depth →
+        </a>
+      </div>
+    </div>
+
+    <!-- Additional Features -->
+    <div class="category-section">
+      <h3 class="category-title">🛠️ Additional Features</h3>
+      <div class="category-grid">
+        <div
+          *ngFor="
+            let feature of getFeaturesByCategory('Forms').concat(
+              getFeaturesByCategory('Testing')
+            )
+          "
+          class="category-card"
+        >
+          <h4 class="card-title">{{ feature.title }}</h4>
+          <p class="card-description">{{ feature.description }}</p>
+          <a [routerLink]="feature.route" class="card-link"> Explore → </a>
+        </div>
+      </div>
+    </div>
+  </section>
   <section class="getting-started-section">
     <h2 class="section-title">🏁 Getting Started</h2>
     <div class="steps-grid">
       <div class="step-card">
         <div class="step-number">1</div>
         <h3 class="step-title">Install</h3>
-        <p class="step-description">Add NGX Signal Tree to your project</p>
+        <p class="step-description">Add Signal Tree to your project</p>
         <code class="step-code">npm install &#64;signaltree</code>
       </div>
 

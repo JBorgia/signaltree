@@ -22,7 +22,13 @@ export class NavigationComponent {
     // Basic Examples
 
     // Performance Examples
-
+    {
+      id: 'metrics',
+      title: 'Performance Metrics',
+      description: 'Real-time benchmarks and performance analysis',
+      route: '/metrics',
+      category: 'performance',
+    },
     {
       id: 'batching-comparison',
       title: 'Batching Comparison',
@@ -62,6 +68,13 @@ export class NavigationComponent {
       title: 'Time Travel',
       description: 'Undo/redo functionality',
       route: '/time-travel',
+      category: 'advanced',
+    },
+    {
+      id: 'extreme-depth',
+      title: '🔥 Extreme Depth',
+      description: 'Push recursive typing to 15+ levels',
+      route: '/extreme-depth',
       category: 'advanced',
     },
   ];

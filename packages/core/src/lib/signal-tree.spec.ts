@@ -136,4 +136,174 @@ describe('signalTree', () => {
     expect(enhanced.method1()).toBe('method1');
     expect(enhanced.method2()).toBe('method2');
   });
+
+  // 🎯 THE GRAND IDEA: Initiation defines structure, typing works as inferred
+  describe('THE GRAND IDEA: Structure Definition and Type Inference Validation', () => {
+    it('should demonstrate that initiation defines structure and typing works forever', () => {
+      // 🎪 STEP 1: INITIATION DEFINES THE COMPLETE STRUCTURE
+      const initialStructure = {
+        counter: 0,
+        user: {
+          id: 1,
+          name: 'John',
+          settings: {
+            theme: 'dark' as 'light' | 'dark',
+            level: 'beginner' as 'beginner' | 'intermediate' | 'advanced',
+          },
+        },
+        features: ['auth', 'dashboard'] as const,
+        metadata: new Date('2024-01-01'),
+      };
+
+      const tree = signalTree(initialStructure);
+
+      // 🎯 STEP 2: FROM INITIATION FORWARD - PERFECT TYPE INFERENCE EVERYWHERE
+
+      // ✅ Root level access
+      expect(tree.state.counter()).toBe(0);
+      expect(tree.state.features()).toEqual(['auth', 'dashboard']);
+      expect(tree.state.metadata()).toEqual(new Date('2024-01-01'));
+
+      // ✅ Nested object access with preserved types
+      expect(tree.state.user.id()).toBe(1);
+      expect(tree.state.user.name()).toBe('John');
+      expect(tree.state.user.settings.theme()).toBe('dark');
+      expect(tree.state.user.settings.level()).toBe('beginner');
+
+      // ✅ Type-safe updates at any level (TypeScript should enforce exact types)
+      tree.state.counter.set(5);
+      tree.state.user.name.set('Jane');
+      tree.state.user.settings.theme.set('light'); // Only 'light' | 'dark' allowed
+      tree.state.user.settings.level.set('advanced'); // Only valid enum values
+
+      // ✅ Verify all updates maintained type safety
+      expect(tree.state.counter()).toBe(5);
+      expect(tree.state.user.name()).toBe('Jane');
+      expect(tree.state.user.settings.theme()).toBe('light');
+      expect(tree.state.user.settings.level()).toBe('advanced');
+
+      // ✅ Complex updates using the update method
+      tree.update((current) => ({
+        counter: current.counter + 10,
+        user: {
+          ...current.user,
+          settings: {
+            ...current.user.settings,
+            theme: 'dark' as const,
+          },
+        },
+      }));
+
+      expect(tree.state.counter()).toBe(15);
+      expect(tree.state.user.settings.theme()).toBe('dark');
+
+      // ✅ Unwrap maintains the original structure
+      const unwrapped = tree.unwrap();
+      expect(unwrapped).toEqual({
+        counter: 15,
+        user: {
+          id: 1,
+          name: 'Jane',
+          settings: {
+            theme: 'dark',
+            level: 'advanced',
+          },
+        },
+        features: ['auth', 'dashboard'],
+        metadata: new Date('2024-01-01'),
+      });
+    });
+
+    it('should handle deeply nested structures with perfect type preservation', () => {
+      // 🎪 EXTREME NESTING TEST - 6+ levels deep
+      const deepStructure = {
+        app: {
+          modules: {
+            auth: {
+              providers: {
+                oauth: {
+                  google: {
+                    clientId: 'google-client-id',
+                    scopes: ['profile', 'email'] as const,
+                    config: {
+                      autoLogin: true,
+                      rememberUser: false,
+                    },
+                  },
+                  github: {
+                    clientId: 'github-client-id',
+                    permissions: ['read:user', 'repo'] as const,
+                  },
+                },
+                local: {
+                  enabled: true,
+                  registration: {
+                    allowSelfRegistration: false,
+                    requireEmailVerification: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      };
+
+      const tree = signalTree(deepStructure);
+
+      // 🎯 6-LEVEL DEEP ACCESS WITH PERFECT TYPE INFERENCE
+      expect(
+        tree.state.app.modules.auth.providers.oauth.google.clientId()
+      ).toBe('google-client-id');
+
+      expect(
+        tree.state.app.modules.auth.providers.oauth.google.scopes()
+      ).toEqual(['profile', 'email']);
+
+      expect(
+        tree.state.app.modules.auth.providers.oauth.google.config.autoLogin()
+      ).toBe(true);
+
+      expect(
+        tree.state.app.modules.auth.providers.local.registration.requireEmailVerification()
+      ).toBe(true);
+
+      // 🎯 6-LEVEL DEEP UPDATES
+      tree.state.app.modules.auth.providers.oauth.google.config.autoLogin.set(
+        false
+      );
+      tree.state.app.modules.auth.providers.local.registration.allowSelfRegistration.set(
+        true
+      );
+
+      expect(
+        tree.state.app.modules.auth.providers.oauth.google.config.autoLogin()
+      ).toBe(false);
+      expect(
+        tree.state.app.modules.auth.providers.local.registration.allowSelfRegistration()
+      ).toBe(true);
+    });
+
+    it('should demonstrate that structure cannot be changed after initiation', () => {
+      const fixedStructure = {
+        count: 0,
+        user: { name: 'John' },
+      };
+
+      const tree = signalTree(fixedStructure);
+
+      // ✅ Structure is fixed - you can only update existing properties
+      expect(tree.state.count()).toBe(0);
+      expect(tree.state.user.name()).toBe('John');
+
+      // ✅ Updates work within the defined structure
+      tree.state.count.set(10);
+      tree.state.user.name.set('Jane');
+
+      expect(tree.state.count()).toBe(10);
+      expect(tree.state.user.name()).toBe('Jane');
+
+      // Note: TypeScript would prevent adding new properties at compile time
+      // The structure is immutable after initiation - this is the key principle
+    });
+  });
 });

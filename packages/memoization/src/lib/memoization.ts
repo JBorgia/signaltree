@@ -1,9 +1,10 @@
-import { SignalTree, StateObject } from '@signaltree/core';
+import { SignalTree } from '@signaltree/core';
 
 /**
  * Extended SignalTree interface with memoization capabilities
+ * Uses the same unconstrained recursive typing approach as core
  */
-interface MemoizedSignalTree<T extends StateObject> extends SignalTree<T> {
+interface MemoizedSignalTree<T> extends SignalTree<T> {
   memoizedUpdate: (
     updater: (current: T) => Partial<T>,
     cacheKey?: string
@@ -16,16 +17,44 @@ interface MemoizedSignalTree<T extends StateObject> extends SignalTree<T> {
   };
 }
 
-// Cache entry interface
+// Cache entry interface with proper timestamp tracking
 interface CacheEntry<T> {
   value: T;
-  deps: readonly unknown[]; // Use readonly to fix the mutable assignment error
-  timestamp?: number;
-  hitCount?: number;
+  deps: readonly unknown[];
+  timestamp: number;
+  hitCount: number;
 }
 
-// Memoization cache storage using Map for iteration support
+// Global memoization cache with size limits and TTL
+const MAX_CACHE_SIZE = 1000;
+const DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Use Map for global cache management (WeakMap doesn't support iteration)
 const memoizationCache = new Map<object, Map<string, CacheEntry<unknown>>>();
+
+// Track cache for cleanup
+const cacheCleanupInterval = setInterval(() => {
+  const now = Date.now();
+  for (const [obj, cache] of memoizationCache.entries()) {
+    for (const [key, entry] of cache.entries()) {
+      if (now - entry.timestamp > DEFAULT_TTL) {
+        cache.delete(key);
+      }
+    }
+    // Remove empty caches
+    if (cache.size === 0) {
+      memoizationCache.delete(obj);
+    }
+  }
+}, 60000); // Clean up every minute
+
+/**
+ * Cleanup the cache interval on app shutdown
+ */
+export function cleanupMemoizationCache(): void {
+  clearInterval(cacheCleanupInterval);
+  memoizationCache.clear();
+}
 
 /**
  * Memoization configuration options
@@ -78,15 +107,49 @@ function generateCacheKey(
 }
 
 /**
- * Memoization function that caches expensive computations
+ * Memoization function that caches expensive computations with enhanced cache management
  */
 export function memoize<TArgs extends unknown[], TReturn>(
   fn: (...args: TArgs) => TReturn,
-  keyFn?: (...args: TArgs) => string
+  keyFn?: (...args: TArgs) => string,
+  config: MemoizationConfig = {}
 ): (...args: TArgs) => TReturn {
   const cache = new Map<string, CacheEntry<TReturn>>();
+  const maxSize = config.maxCacheSize ?? MAX_CACHE_SIZE;
+  const ttl = config.ttl ?? DEFAULT_TTL;
+
+  const cleanExpiredEntries = () => {
+    const now = Date.now();
+    for (const [key, entry] of cache.entries()) {
+      if (now - entry.timestamp > ttl) {
+        cache.delete(key);
+      }
+    }
+  };
+
+  const evictLRUEntries = () => {
+    if (cache.size >= maxSize) {
+      // Find the least recently used entry (lowest hitCount)
+      let lruKey = '';
+      let minHitCount = Infinity;
+
+      for (const [key, entry] of cache.entries()) {
+        if (entry.hitCount < minHitCount) {
+          minHitCount = entry.hitCount;
+          lruKey = key;
+        }
+      }
+
+      if (lruKey) {
+        cache.delete(lruKey);
+      }
+    }
+  };
 
   return (...args: TArgs): TReturn => {
+    // Clean expired entries periodically
+    cleanExpiredEntries();
+
     const key = keyFn
       ? keyFn(...args)
       : generateCacheKey(
@@ -97,14 +160,17 @@ export function memoize<TArgs extends unknown[], TReturn>(
 
     // If using custom key function, trust the key; otherwise check deep equality
     if (cached && (keyFn || deepEqual(cached.deps, args))) {
-      cached.hitCount = (cached.hitCount || 0) + 1;
+      cached.hitCount += 1;
       return cached.value;
     }
+
+    // Evict entries if cache is too large
+    evictLRUEntries();
 
     const result = fn(...args);
     cache.set(key, {
       value: result,
-      deps: [...args],
+      deps: args as readonly unknown[],
       timestamp: Date.now(),
       hitCount: 1,
     });
@@ -115,8 +181,9 @@ export function memoize<TArgs extends unknown[], TReturn>(
 
 /**
  * Enhances a SignalTree with memoization capabilities
+ * Uses unconstrained recursive typing - no limitations on T
  */
-export function withMemoization<T extends StateObject>(
+export function withMemoization<T>(
   config: MemoizationConfig = {}
 ): (tree: SignalTree<T>) => MemoizedSignalTree<T> {
   const { enabled = true, maxCacheSize = 1000, ttl } = config;
@@ -146,7 +213,8 @@ export function withMemoization<T extends StateObject>(
     const originalUpdate = tree.update;
 
     // Add memoized update method
-    tree.memoizedUpdate = (
+    // Add memoization methods to the tree
+    (tree as MemoizedSignalTree<T>).memoizedUpdate = (
       updater: (current: T) => Partial<T>,
       cacheKey?: string
     ) => {
@@ -180,7 +248,7 @@ export function withMemoization<T extends StateObject>(
     };
 
     // Add cache management methods
-    tree.clearMemoCache = (key?: string) => {
+    (tree as MemoizedSignalTree<T>).clearMemoCache = (key?: string) => {
       if (key) {
         cache.delete(key);
       } else {
@@ -188,7 +256,7 @@ export function withMemoization<T extends StateObject>(
       }
     };
 
-    tree.getCacheStats = () => {
+    (tree as MemoizedSignalTree<T>).getCacheStats = () => {
       let totalHits = 0;
       let totalMisses = 0;
 
@@ -246,15 +314,17 @@ export function withMemoization<T extends StateObject>(
 
 /**
  * Convenience function to enable memoization with default settings
+ * Uses unconstrained recursive typing - no limitations on T
  */
-export function enableMemoization<T extends StateObject>() {
+export function enableMemoization<T>() {
   return withMemoization<T>({ enabled: true });
 }
 
 /**
  * High-performance memoization with aggressive caching
+ * Uses unconstrained recursive typing - no limitations on T
  */
-export function withHighPerformanceMemoization<T extends StateObject>() {
+export function withHighPerformanceMemoization<T>() {
   return withMemoization<T>({
     enabled: true,
     maxCacheSize: 10000,
@@ -296,20 +366,4 @@ export function getGlobalCacheStats() {
     totalHits,
     averageCacheSize: treeCount > 0 ? totalSize / treeCount : 0,
   };
-}
-
-// Type augmentation for memoization methods
-declare module '@signaltree/core' {
-  interface SignalTree<T> {
-    memoizedUpdate?: (
-      updater: (current: T) => Partial<T>,
-      cacheKey?: string
-    ) => void;
-    clearMemoCache?: (key?: string) => void;
-    getCacheStats?: () => {
-      size: number;
-      totalHits: number;
-      keys: string[];
-    };
-  }
 }

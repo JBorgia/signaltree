@@ -76,6 +76,14 @@ export class HomeComponent {
       route: '/testing',
       category: 'Testing',
     },
+    {
+      title: '🔥 Extreme Depth Testing',
+      description:
+        'Push recursive typing to 15+ levels with perfect type inference',
+      route: '/extreme-depth',
+      category: 'Advanced',
+      highlight: true,
+    },
   ];
 
   coreFeatures = [
@@ -96,6 +104,12 @@ export class HomeComponent {
     {
       name: 'Developer Tools',
       description: 'Redux DevTools integration for debugging and inspection',
+    },
+    {
+      name: 'Extreme Depth',
+      description:
+        'Unlimited nesting depth with perfect type inference at 15+ levels',
+      highlight: true,
     },
   ];
 
@@ -134,4 +148,56 @@ userTree.update(current => ({
 
 // Get unwrapped values
 const userData = userTree.unwrap();`;
+
+  extremeDepthCode = `import { signalTree } from '@signaltree/signaltree';
+
+// 15+ Level Deep Enterprise Structure with Perfect Type Inference
+const extremeDepth = signalTree({
+  enterprise: {
+    divisions: {
+      technology: {
+        departments: {
+          engineering: {
+            teams: {
+              frontend: {
+                projects: {
+                  signaltree: {
+                    releases: {
+                      v1: {
+                        features: {
+                          recursiveTyping: {
+                            validation: {
+                              tests: {
+                                extreme: {
+                                  status: 'passing',
+                                  depth: 15,
+                                  performance: 'sub-millisecond'
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+});
+
+// Perfect type inference at 15+ levels - no 'any' types!
+const status = extremeDepth.$.enterprise.divisions.technology
+  .departments.engineering.teams.frontend.projects.signaltree
+  .releases.v1.features.recursiveTyping.validation.tests
+  .extreme.status(); // TypeScript knows this is a string signal
+
+// Update at extreme depth with full type safety
+extremeDepth.$.enterprise.divisions.technology.departments
+  .engineering.teams.frontend.projects.signaltree.releases.v1
+  .features.recursiveTyping.validation.tests.extreme.depth.set(20);`;
 }
