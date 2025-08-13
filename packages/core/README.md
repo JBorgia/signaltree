@@ -4,14 +4,14 @@ The foundation package for SignalTree - featuring revolutionary recursive typing
 
 ## ✨ What is @signaltree/core?
 
-SignalTree Core is the lightweight (1.5KB) foundation that provides:
+SignalTree Core is the lightweight (7.6KB) foundation that provides:
 
 - **🔥 Revolutionary Recursive Typing** with deep nesting support and strong type inference
 - **⚡ Excellent Performance** - 0.021ms at 15+ levels with consistent speed
 - **🏆 Strong Type Safety** with TypeScript inference at 25+ recursive levels
 - **💾 Memory Efficient** through structural sharing and lazy signals
 - **🌳 Lightweight Abstractions** for recursive patterns
-- **📦 Compact Bundle Size** - Complete recursive power in just 1.5KB
+- **📦 Compact Bundle Size** - Complete recursive power in just 7.6KB
 
 ### 🔥 Recursive Depth Performance Metrics
 
@@ -577,7 +577,7 @@ _Exceptional scaling: Only 92% performance overhead for 4x depth increase_
 | Batching efficiency | Standard        | **455.8x improvement** | vs non-batched         |
 | Memoization speedup | Basic           | **197.9x speedup**     | vs non-memoized        |
 | Memory efficiency   | **Optimized**   | **Further optimized**  | Lazy signals + cleanup |
-| Bundle impact       | **+5KB**        | **+15KB max**          | Tree-shakeable         |
+| Bundle impact       | **7.6KB**       | **+15KB max**          | Tree-shakeable         |
 
 ### Developer Experience (Core Package)
 
@@ -858,11 +858,11 @@ const tree = signalTree(initialState).pipe(withBatching(), withMemoization(), wi
 
 ### Available Extensions
 
-- **@signaltree/batching** (+1KB) - Batch multiple updates
+- **@signaltree/batching** (+3.7KB) - Batch multiple updates
 - **@signaltree/memoization** (+2KB) - Intelligent caching & performance
-- **@signaltree/middleware** (+1KB) - Middleware system & taps
-- **@signaltree/async** (+2KB) - Advanced async actions & states
-- **@signaltree/entities** (+2KB) - Advanced entity management
+- **@signaltree/middleware** (+1.7KB) - Middleware system & taps
+- **@signaltree/async** (+5.5KB) - Advanced async actions & states
+- **@signaltree/entities** (+1.6KB) - Advanced entity management
 - **@signaltree/devtools** (+1KB) - Redux DevTools integration
 - **@signaltree/time-travel** (+3KB) - Undo/redo functionality
 - **@signaltree/ng-forms** (+3KB) - Complete Angular forms integration
@@ -999,7 +999,7 @@ Extend the core with optional feature packages:
 
 ### Performance & Optimization
 
-- **[@signaltree/batching](../batching)** (+1KB) - Batch multiple updates for better performance
+- **[@signaltree/batching](../batching)** (+3.7KB) - Batch multiple updates for better performance
 - **[@signaltree/memoization](../memoization)** (+2KB) - Intelligent caching & performance optimization
 
 ### Advanced Features

@@ -254,7 +254,7 @@ npm run analyze:bundle      # Bundle size impact
 - Performance tests show the revolutionary recursive typing metrics
 - All builds use Nx caching for maximum efficiency
 
-## 🚀 Revolutionary Performance Metrics
+## 🚀 Performance Metrics
 
 When you run `npm run perf:test`, you'll see the breakthrough recursive typing performance:
 
@@ -263,4 +263,4 @@ When you run `npm run perf:test`, you'll see the breakthrough recursive typing p
 - **Extreme (15 levels)**: ~0.025ms 🔥
 - **Unlimited (20+ levels)**: ~0.030ms 🚀
 
-These metrics demonstrate the 85% bundle size reduction achieved through compile-time recursive typing while maintaining sub-millisecond performance at unlimited depths!
+These metrics demonstrate the ~50% bundle size reduction achieved through compile-time recursive typing while maintaining sub-millisecond performance at unlimited depths!

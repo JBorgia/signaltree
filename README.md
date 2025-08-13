@@ -12,6 +12,7 @@ A powerful, type-safe, modular signal-based state management solution for Angula
 - **🎯 Great Developer Experience**: 96.0/100 score with intuitive APIs
 - **💾 Memory Efficient**: Optimized memory usage with structural sharing and lazy signals
 - **🌳 Tree-Shakeable**: Unused branches completely removed from bundle
+- **💽 State Persistence**: Built-in serialization for SSR, debugging, and cross-session state
 - **✅ Production-Ready**: Comprehensive test coverage including performance validations
 
 ### 🔥 How Recursive Typing Enables Revolutionary Bundle Size Reductions
@@ -24,7 +25,7 @@ SignalTree's recursive typing system isn't just about developer experience—it'
 | ----------------------------- | ----------------------------------- | ------------------------------- | --------------- |
 | **Type Resolution**           | Runtime type checking (~15-25KB)    | Compile-time resolution (0KB)   | **100% saving** |
 | **Deep Nesting Support**      | Manual typing definitions (~5-10KB) | Generated type inference (0KB)  | **100% saving** |
-| **Proxy-based Architecture**  | Heavy runtime proxies (~8-15KB)     | Lazy signal creation (~1.5KB)   | **90% saving**  |
+| **Proxy-based Architecture**  | Heavy runtime proxies (~8-15KB)     | Lazy signal creation (~7.6KB)   | **50% saving**  |
 | **State Management Overhead** | Boilerplate + runtime (~20-30KB)    | Zero-cost abstractions (~3KB)   | **85% saving**  |
 
 #### **Performance Breakthrough Through Type-Level Optimization**
@@ -36,19 +37,19 @@ The recursive typing system enables:
 - **Optimized Proxy Architecture**: Intelligent proxying with minimal runtime cost
 - **Tree-Shakeable Design**: Unused code completely eliminated from final bundle
 
-#### **The Math: 70-85% Bundle Size Reduction**
+#### **The Math: ~50% Bundle Size Reduction**
 
 ```
-Traditional State Management: 25-50KB+
+Traditional State Management: 25-50KB+ (gzipped)
 ├── Runtime type system: ~15KB
 ├── Boilerplate code: ~10KB
 ├── State management: ~15KB
 └── Deep nesting support: ~5KB
 Total: ~45KB average
 
-SignalTree Recursive Typing: 1.5-6.9KB
+SignalTree Recursive Typing: 7.6-22KB (gzipped)
 ├── Compile-time types: 0KB (compile away)
-├── Core engine: ~1.5KB
+├── Core engine: ~7.6KB
 ├── Optional features: ~5.4KB
 └── Zero runtime overhead: 0KB
 Total: ~6.9KB maximum
@@ -114,7 +115,7 @@ Based on comprehensive review and testing, SignalTree now includes enterprise-gr
 - ✅ **Safe Object Iteration**: Error handling for invalid inputs
 - ✅ **Fallback Mechanisms**: Graceful degradation on edge cases
 
-**Result**: Enterprise-grade reliability while maintaining the revolutionary 85% bundle size reduction.
+**Result**: Enterprise-grade reliability while maintaining the revolutionary ~50% bundle size reduction.
 
 ### 🔥 Recursive Depth Performance Scaling
 
@@ -136,7 +137,7 @@ _Performance scales predictably and remains sub-millisecond even at unlimited de
 Choose the packages you need:
 
 ```bash
-# Core package (required) - 1.5KB with deep recursive typing!
+# Core package (required) - 7.6KB with deep recursive typing!
 npm install @signaltree/core
 
 # Optional feature packages - Total ecosystem only 6.9KB!
@@ -264,13 +265,85 @@ const history = tree.getHistory(); // Get state history
 users.add({ id: 1, name: 'Alice' });
 ```
 
+### State Persistence & Serialization
+
+```typescript
+import { signalTree } from '@signaltree/core';
+import { withSerialization, withPersistence } from '@signaltree/serialization';
+
+// Create a tree with serialization capabilities
+const tree = signalTree({
+  user: { name: 'John', preferences: { theme: 'dark' } },
+  settings: { language: 'en', notifications: true },
+  cart: { items: [], total: 0 },
+}).pipe(
+  withSerialization({
+    preserveTypes: true, // Handle Date, Map, Set, etc.
+    handleCircular: true, // Detect and resolve circular references
+    includeMetadata: true, // Add timestamps and version info
+  })
+);
+
+// Basic Serialization
+const serialized = tree.serialize();
+console.log(serialized); // JSON string with metadata
+
+// Deserialize and restore state
+const newTree = signalTree({}).pipe(withSerialization());
+newTree.deserialize(serialized);
+
+// Snapshots for debugging and state management
+const snapshot = tree.snapshot();
+tree.restore(snapshot);
+
+// Plain object conversion
+const plainState = tree.toJSON();
+tree.fromJSON(plainState);
+
+// Persistence with localStorage/custom storage
+const persistentTree = signalTree({
+  user: { name: 'John' },
+  settings: { theme: 'dark' },
+}).pipe(
+  withPersistence({
+    key: 'app-state',
+    autoSave: true, // Automatically save on updates
+    autoLoad: true, // Load state on initialization
+    debounceMs: 1000, // Debounce saves for performance
+    storage: localStorage, // Use any storage adapter
+  })
+);
+
+// Manual persistence operations
+await persistentTree.save(); // Save current state
+await persistentTree.load(); // Load saved state
+await persistentTree.clear(); // Clear saved state
+
+// Custom storage adapters
+import { createStorageAdapter } from '@signaltree/serialization';
+
+const customStorage = createStorageAdapter(
+  async (key) => await database.get(key), // getItem
+  async (key, value) => await database.set(key, value), // setItem
+  async (key) => await database.delete(key) // removeItem
+);
+
+// Use cases enabled:
+// ✅ SSR state hydration
+// ✅ State debugging (copy state as JSON)
+// ✅ Time-travel debugging
+// ✅ Cross-tab state synchronization
+// ✅ Offline state persistence
+// ✅ State transfer between contexts
+```
+
 ## 📦 Package Architecture
 
 SignalTree uses a modular architecture where each feature is an optional package:
 
 ### Core Package (Required)
 
-- **@signaltree/core** (5KB) - Base functionality
+- **@signaltree/core** (7.6KB) - Base functionality
   - Hierarchical signal trees with type safety
   - Basic state updates with `.update()` method
   - Signal unwrapping with `.unwrap()` method
@@ -279,6 +352,7 @@ SignalTree uses a modular architecture where each feature is an optional package
 
 ### Optional Feature Packages
 
+- **@signaltree/serialization** (+2.8KB) - State serialization, persistence & SSR support
 - **@signaltree/batching** (+3KB) - Batch multiple updates for performance
 - **@signaltree/memoization** (+2KB) - Intelligent caching & performance optimization
 - **@signaltree/middleware** (+1.7KB) - Middleware system & interceptors
@@ -292,17 +366,20 @@ SignalTree uses a modular architecture where each feature is an optional package
 ### Installation Examples
 
 ```bash
-# Minimal setup (5KB)
+# Minimal setup (7.6KB)
 npm install @signaltree/core
 
-# Performance-focused (10KB)
+# Performance-focused (13.3KB)
 npm install @signaltree/core @signaltree/batching @signaltree/memoization
+
+# State persistence (10.4KB)
+npm install @signaltree/core @signaltree/serialization
 
 # Development-enhanced (15KB)
 npm install @signaltree/core @signaltree/batching @signaltree/memoization @signaltree/devtools @signaltree/time-travel
 
-# Full-featured (22KB) - All packages
-npm install @signaltree/core @signaltree/batching @signaltree/memoization @signaltree/middleware @signaltree/async @signaltree/entities @signaltree/devtools @signaltree/time-travel @signaltree/presets @signaltree/ng-forms
+# Full-featured (25KB) - All packages
+npm install @signaltree/core @signaltree/serialization @signaltree/batching @signaltree/memoization @signaltree/middleware @signaltree/async @signaltree/entities @signaltree/devtools @signaltree/time-travel @signaltree/presets @signaltree/ng-forms
 
 # Use presets for common combinations
 npm install @signaltree/core @signaltree/presets
@@ -310,18 +387,19 @@ npm install @signaltree/core @signaltree/presets
 
 ## 📋 Complete Package Reference
 
-| Package                                               | Size   | Purpose          | Key Features                                     |
-| ----------------------------------------------------- | ------ | ---------------- | ------------------------------------------------ |
-| **[@signaltree/core](./packages/core)**               | 5KB    | Foundation       | Hierarchical signals, state updates, composition |
-| **[@signaltree/batching](./packages/batching)**       | +3KB   | Performance      | Batch updates, reduce re-renders                 |
-| **[@signaltree/memoization](./packages/memoization)** | +2KB   | Caching          | Intelligent caching, performance optimization    |
-| **[@signaltree/middleware](./packages/middleware)**   | +1.7KB | Interceptors     | State interceptors, logging, validation          |
-| **[@signaltree/async](./packages/async)**             | +5.3KB | Async Operations | Advanced async patterns, loading states          |
-| **[@signaltree/entities](./packages/entities)**       | +1.1KB | Data Management  | Enhanced CRUD, filtering, querying               |
-| **[@signaltree/devtools](./packages/devtools)**       | +2.6KB | Development      | Redux DevTools, debugging, monitoring            |
-| **[@signaltree/time-travel](./packages/time-travel)** | +1.4KB | History          | Undo/redo, snapshots, state persistence          |
-| **[@signaltree/presets](./packages/presets)**         | +1.2KB | Convenience      | Pre-configured setups, common patterns           |
-| **[@signaltree/ng-forms](./packages/ng-forms)**       | +4.1KB | Angular Forms    | Reactive forms, validation, form state           |
+| Package                                                   | Size   | Purpose          | Key Features                                     |
+| --------------------------------------------------------- | ------ | ---------------- | ------------------------------------------------ |
+| **[@signaltree/core](./packages/core)**                   | 7.6KB  | Foundation       | Hierarchical signals, state updates, composition |
+| **[@signaltree/serialization](./packages/serialization)** | +2.8KB | Persistence      | State serialization, SSR, time-travel debugging  |
+| **[@signaltree/batching](./packages/batching)**           | +3.7KB | Performance      | Batch updates, reduce re-renders                 |
+| **[@signaltree/memoization](./packages/memoization)**     | +2KB   | Caching          | Intelligent caching, performance optimization    |
+| **[@signaltree/middleware](./packages/middleware)**       | +1.7KB | Interceptors     | State interceptors, logging, validation          |
+| **[@signaltree/async](./packages/async)**                 | +5.5KB | Async Operations | Advanced async patterns, loading states          |
+| **[@signaltree/entities](./packages/entities)**           | +1.6KB | Data Management  | Enhanced CRUD, filtering, querying               |
+| **[@signaltree/devtools](./packages/devtools)**           | +2.6KB | Development      | Redux DevTools, debugging, monitoring            |
+| **[@signaltree/time-travel](./packages/time-travel)**     | +1.4KB | History          | Undo/redo, snapshots, state persistence          |
+| **[@signaltree/presets](./packages/presets)**             | +1.2KB | Convenience      | Pre-configured setups, common patterns           |
+| **[@signaltree/ng-forms](./packages/ng-forms)**           | +4.1KB | Angular Forms    | Reactive forms, validation, form state           |
 
 ## 🔄 Migration from signaltree
 
@@ -346,26 +424,29 @@ The API remains 100% compatible - only the import statements change!
 
 ### SignalTree vs All Major Angular Solutions
 
-| Feature                    |              SignalTree              |          NgRx           |          Akita          |              Elf              |       RxAngular       |            MobX             |               NGXS               |       Native Signals       |
-| :------------------------- | :----------------------------------: | :---------------------: | :---------------------: | :---------------------------: | :-------------------: | :-------------------------: | :------------------------------: | :------------------------: |
-| **Philosophy**             |       Tree-based, Signal-first       |      Redux pattern      |     Entity-focused      |          Functional           |     RxJS-centric      |     Observable objects      |         Decorator-based          |     Primitive signals      |
-| **Learning Curve**         |      ⭐⭐⭐⭐⭐<br/>_Very Easy_      |    ⭐⭐<br/>_Steep_     |  ⭐⭐⭐<br/>_Moderate_  |      ⭐⭐⭐⭐<br/>_Easy_      | ⭐⭐⭐<br/>_Moderate_ |     ⭐⭐⭐⭐<br/>_Easy_     |      ⭐⭐⭐<br/>_Moderate_       | ⭐⭐⭐⭐⭐<br/>_Very Easy_ |
-| **Boilerplate**            |        🏆<br/>_Very Minimal_         |   ❌<br/>_Extensive_    |    ⚠️<br/>_Moderate_    |       🏆<br/>_Minimal_        |   ⚠️<br/>_Moderate_   |      🏆<br/>_Minimal_       |        ⚠️<br/>_Moderate_         |       ✅<br/>_None_        |
-| **Bundle Size (min)**      |         🏆<br/>_~1.5KB core_         |     ❌<br/>_~25KB_      |     ❌<br/>_~20KB_      |         ✅<br/>_~2KB_         |    ❌<br/>_~25KB_     |       ❌<br/>_~30KB_        |          ❌<br/>_~25KB_          |        🏆<br/>_0KB_        |
-| **Bundle Size (full)**     |           🏆<br/>_~6.9KB_            |     ❌<br/>_~50KB+_     |     ❌<br/>_~30KB_      |        ✅<br/>_~10KB_         |    ❌<br/>_~25KB_     |       ❌<br/>_~40KB_        |          ❌<br/>_~35KB_          |        🏆<br/>_0KB_        |
-| **Memory Efficiency**      |          🏆<br/>_Excellent_          |    ⚠️<br/>_Standard_    |    ⚠️<br/>_Standard_    |         ✅<br/>_Good_         |   ⚠️<br/>_Standard_   |        ✅<br/>_Good_        |        ⚠️<br/>_Standard_         |       ✅<br/>_Good_        |
-| **Type Safety**            |       🏆<br/>_Full inference_        | ✅<br/>_Manual typing_  |      ✅<br/>_Good_      |      🏆<br/>_Excellent_       |     ✅<br/>_Good_     |      ⚠️<br/>_Limited_       |          ✅<br/>_Good_           |      ✅<br/>_Native_       |
-| **Performance**            |         🏆<br/>_Exceptional_         |      🔄<br/>_Good_      |      🔄<br/>_Good_      |      ⚡<br/>_Excellent_       |     🔄<br/>_Good_     |     ⚡<br/>_Excellent_      |          🔄<br/>_Good_           |     ⚡<br/>_Excellent_     |
-| **DevTools**               |   ✅<br/>_Redux DevTools (opt-in)_   | ✅<br/>_Redux DevTools_ | ✅<br/>_Redux DevTools_ |    ✅<br/>_Redux DevTools_    |   ⚠️<br/>_Limited_    |   ✅<br/>_MobX DevTools_    |     ✅<br/>_Redux DevTools_      |       ❌<br/>_None_        |
-| **Time Travel**            | 🏆<br/>_Via @signaltree/time-travel_ |    🏆<br/>_Built-in_    |   ✅<br/>_Via plugin_   |      ✅<br/>_Via plugin_      |      ❌<br/>_No_      |    ✅<br/>_Via DevTools_    |       ✅<br/>_Via plugin_        |        ❌<br/>_No_         |
-| **Entity Management**      |  ✅<br/>_Via @signaltree/entities_   |  ✅<br/>_@ngrx/entity_  |  🏆<br/>_Core feature_  | ✅<br/>_@ngneat/elf-entities_ |    ❌<br/>_Manual_    |       ❌<br/>_Manual_       | ✅<br/>_@ngxs-labs/entity-state_ |      ❌<br/>_Manual_       |
-| **Batching**               |  🏆<br/>_Via @signaltree/batching_   |     ❌<br/>_Manual_     |     ❌<br/>_Manual_     |       🏆<br/>_emitOnce_       |  🏆<br/>_schedulers_  | 🏆<br/>_action/runInAction_ |         ❌<br/>_Manual_          |     ✅<br/>_Automatic_     |
-| **Form Integration**       |  🏆<br/>_Via @signaltree/ng-forms_   |    ⚠️<br/>_Separate_    |    ⚠️<br/>_Separate_    |        ❌<br/>_Manual_        |    ❌<br/>_Manual_    |    ⚠️<br/>_Third-party_     |    ✅<br/>_@ngxs/form-plugin_    |      ❌<br/>_Manual_       |
-| **Lazy Loading**           |         🏆<br/>_Proxy-based_         |      ❌<br/>_None_      |      ❌<br/>_None_      |         ❌<br/>_None_         |     ❌<br/>_None_     |      ⚠️<br/>_Partial_       |          ❌<br/>_None_           |       ❌<br/>_None_        |
-| **Smart Cache Eviction**   | ✅<br/>_Via @signaltree/memoization_ |      ❌<br/>_None_      |      ❌<br/>_None_      |         ❌<br/>_None_         |     ❌<br/>_None_     |       ⚠️<br/>_Basic_        |          ❌<br/>_None_           |       ❌<br/>_None_        |
-| **Path-based Memoization** |        🏆<br/>_Fine-grained_         |      ❌<br/>_None_      |      ❌<br/>_None_      |        ⚠️<br/>_Basic_         |     ❌<br/>_None_     |       ⚠️<br/>_Basic_        |          ❌<br/>_None_           |       ❌<br/>_None_        |
-| **Pattern Invalidation**   |        🏆<br/>_Glob patterns_        |      ❌<br/>_None_      |      ❌<br/>_None_      |         ❌<br/>_None_         |     ❌<br/>_None_     |        ❌<br/>_None_        |          ❌<br/>_None_           |       ❌<br/>_None_        |
-| **Debug Mode**             |  🏆<br/>_Via @signaltree/devtools_   |  ⚠️<br/>_Via DevTools_  |  ⚠️<br/>_Via DevTools_  |     ⚠️<br/>_Via DevTools_     |     ❌<br/>_None_     |    ⚠️<br/>_Via DevTools_    |      ⚠️<br/>_Via DevTools_       |       ❌<br/>_None_        |
+| Feature                    |               SignalTree               |          NgRx           |          Akita          |              Elf              |       RxAngular       |            MobX             |               NGXS               |       Native Signals       |
+| :------------------------- | :------------------------------------: | :---------------------: | :---------------------: | :---------------------------: | :-------------------: | :-------------------------: | :------------------------------: | :------------------------: |
+| **Philosophy**             |        Tree-based, Signal-first        |      Redux pattern      |     Entity-focused      |          Functional           |     RxJS-centric      |     Observable objects      |         Decorator-based          |     Primitive signals      |
+| **Learning Curve**         |       ⭐⭐⭐⭐⭐<br/>_Very Easy_       |    ⭐⭐<br/>_Steep_     |  ⭐⭐⭐<br/>_Moderate_  |      ⭐⭐⭐⭐<br/>_Easy_      | ⭐⭐⭐<br/>_Moderate_ |     ⭐⭐⭐⭐<br/>_Easy_     |      ⭐⭐⭐<br/>_Moderate_       | ⭐⭐⭐⭐⭐<br/>_Very Easy_ |
+| **Boilerplate**            |         🏆<br/>_Very Minimal_          |   ❌<br/>_Extensive_    |    ⚠️<br/>_Moderate_    |       🏆<br/>_Minimal_        |   ⚠️<br/>_Moderate_   |      🏆<br/>_Minimal_       |        ⚠️<br/>_Moderate_         |       ✅<br/>_None_        |
+| **Bundle Size (min)**      |          🏆<br/>_~7.6KB core_          |     ❌<br/>_~25KB_      |     ❌<br/>_~20KB_      |         ✅<br/>_~2KB_         |    ❌<br/>_~25KB_     |       ❌<br/>_~30KB_        |          ❌<br/>_~25KB_          |        🏆<br/>_0KB_        |
+| **Bundle Size (full)**     |             🏆<br/>_~22KB_             |     ❌<br/>_~50KB+_     |     ❌<br/>_~30KB_      |        ✅<br/>_~10KB_         |    ❌<br/>_~25KB_     |       ❌<br/>_~40KB_        |          ❌<br/>_~35KB_          |        🏆<br/>_0KB_        |
+| **Memory Efficiency**      |           🏆<br/>_Excellent_           |    ⚠️<br/>_Standard_    |    ⚠️<br/>_Standard_    |         ✅<br/>_Good_         |   ⚠️<br/>_Standard_   |        ✅<br/>_Good_        |        ⚠️<br/>_Standard_         |       ✅<br/>_Good_        |
+| **Type Safety**            |        🏆<br/>_Full inference_         | ✅<br/>_Manual typing_  |      ✅<br/>_Good_      |      🏆<br/>_Excellent_       |     ✅<br/>_Good_     |      ⚠️<br/>_Limited_       |          ✅<br/>_Good_           |      ✅<br/>_Native_       |
+| **Performance**            |          🏆<br/>_Exceptional_          |      🔄<br/>_Good_      |      🔄<br/>_Good_      |      ⚡<br/>_Excellent_       |     🔄<br/>_Good_     |     ⚡<br/>_Excellent_      |          🔄<br/>_Good_           |     ⚡<br/>_Excellent_     |
+| **DevTools**               |    ✅<br/>_Redux DevTools (opt-in)_    | ✅<br/>_Redux DevTools_ | ✅<br/>_Redux DevTools_ |    ✅<br/>_Redux DevTools_    |   ⚠️<br/>_Limited_    |   ✅<br/>_MobX DevTools_    |     ✅<br/>_Redux DevTools_      |       ❌<br/>_None_        |
+| **Time Travel**            |  🏆<br/>_Via @signaltree/time-travel_  |    🏆<br/>_Built-in_    |   ✅<br/>_Via plugin_   |      ✅<br/>_Via plugin_      |      ❌<br/>_No_      |    ✅<br/>_Via DevTools_    |       ✅<br/>_Via plugin_        |        ❌<br/>_No_         |
+| **Entity Management**      |   ✅<br/>_Via @signaltree/entities_    |  ✅<br/>_@ngrx/entity_  |  🏆<br/>_Core feature_  | ✅<br/>_@ngneat/elf-entities_ |    ❌<br/>_Manual_    |       ❌<br/>_Manual_       | ✅<br/>_@ngxs-labs/entity-state_ |      ❌<br/>_Manual_       |
+| **Batching**               |   🏆<br/>_Via @signaltree/batching_    |     ❌<br/>_Manual_     |     ❌<br/>_Manual_     |       🏆<br/>_emitOnce_       |  🏆<br/>_schedulers_  | 🏆<br/>_action/runInAction_ |         ❌<br/>_Manual_          |     ✅<br/>_Automatic_     |
+| **Form Integration**       |   🏆<br/>_Via @signaltree/ng-forms_    |    ⚠️<br/>_Separate_    |    ⚠️<br/>_Separate_    |        ❌<br/>_Manual_        |    ❌<br/>_Manual_    |    ⚠️<br/>_Third-party_     |    ✅<br/>_@ngxs/form-plugin_    |      ❌<br/>_Manual_       |
+| **State Serialization**    | 🏆<br/>_Via @signaltree/serialization_ |     ⚠️<br/>_Custom_     |     ⚠️<br/>_Custom_     |        ❌<br/>_Manual_        |    ❌<br/>_Manual_    |       ❌<br/>_Manual_       |         ⚠️<br/>_Custom_          |      ❌<br/>_Manual_       |
+| **SSR Support**            |    🏆<br/>_Built-in serialization_     |     ⚠️<br/>_Manual_     |     ⚠️<br/>_Manual_     |        ⚠️<br/>_Manual_        |    ⚠️<br/>_Manual_    |       ⚠️<br/>_Manual_       |         ⚠️<br/>_Manual_          |      ⚠️<br/>_Manual_       |
+| **State Persistence**      |    🏆<br/>_Auto-save with adapters_    |     ⚠️<br/>_Manual_     |     ⚠️<br/>_Manual_     |        ❌<br/>_Manual_        |    ❌<br/>_Manual_    |       ❌<br/>_Manual_       |         ⚠️<br/>_Plugin_          |      ❌<br/>_Manual_       |
+| **Lazy Loading**           |          🏆<br/>_Proxy-based_          |      ❌<br/>_None_      |      ❌<br/>_None_      |         ❌<br/>_None_         |     ❌<br/>_None_     |      ⚠️<br/>_Partial_       |          ❌<br/>_None_           |       ❌<br/>_None_        |
+| **Smart Cache Eviction**   |  ✅<br/>_Via @signaltree/memoization_  |      ❌<br/>_None_      |      ❌<br/>_None_      |         ❌<br/>_None_         |     ❌<br/>_None_     |       ⚠️<br/>_Basic_        |          ❌<br/>_None_           |       ❌<br/>_None_        |
+| **Path-based Memoization** |         🏆<br/>_Fine-grained_          |      ❌<br/>_None_      |      ❌<br/>_None_      |        ⚠️<br/>_Basic_         |     ❌<br/>_None_     |       ⚠️<br/>_Basic_        |          ❌<br/>_None_           |       ❌<br/>_None_        |
+| **Pattern Invalidation**   |         🏆<br/>_Glob patterns_         |      ❌<br/>_None_      |      ❌<br/>_None_      |         ❌<br/>_None_         |     ❌<br/>_None_     |        ❌<br/>_None_        |          ❌<br/>_None_           |       ❌<br/>_None_        |
+| **Debug Mode**             |   🏆<br/>_Via @signaltree/devtools_    |  ⚠️<br/>_Via DevTools_  |  ⚠️<br/>_Via DevTools_  |     ⚠️<br/>_Via DevTools_     |     ❌<br/>_None_     |    ⚠️<br/>_Via DevTools_    |      ⚠️<br/>_Via DevTools_       |       ❌<br/>_None_        |
 
 ### Performance Benchmarks (Measured SignalTree Results)
 
@@ -2461,25 +2542,30 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 After comprehensive analysis across all major Angular state management solutions, SignalTree emerges as the **optimal choice** for most Angular applications by offering:
 
-1. **Smart Progressive Enhancement**: Start with 5KB, scale to 15KB only when needed
+1. **Smart Progressive Enhancement**: Start with 7.6KB, scale to 25KB only when needed
 2. **Best Developer Experience**: 55% less code than NgRx, 35% less than Akita
 3. **Optimized Performance**: Efficient nested updates, automatic batching available
-4. **Complete Feature Set**: Only solution with built-in forms, entities, and async handling in base package
-5. **Lowest TCO**: $35k vs $71k (NgRx) over 3 years for medium apps
-6. **Fastest Learning Curve**: 1-2 days vs weeks for alternatives
-7. **Modern Architecture**: Built specifically for Angular Signals paradigm
+4. **Complete Feature Set**: Only solution with built-in forms, entities, serialization, and async handling
+5. **State Persistence**: Built-in serialization, SSR support, and cross-session state management
+6. **Lowest TCO**: $35k vs $71k (NgRx) over 3 years for medium apps
+7. **Fastest Learning Curve**: 1-2 days vs weeks for alternatives
+8. **Modern Architecture**: Built specifically for Angular Signals paradigm
 
 ### The Bundle Size Truth
 
 ```typescript
 // What you ACTUALLY ship:
 
-// SignalTree Basic (5KB) - Most apps need just this
+// SignalTree Basic (7.6KB) - Most apps need just this
 const tree = signalTree(state);
-// Includes: signals, entities, async, forms basics
+// Includes: signals, hierarchical state, full TypeScript inference
 
-// SignalTree Smart Auto-Enable (5-15KB) - Features enable as needed
-const tree = signalTree(state); // Starts at 5KB, grows to 15KB as you use features
+// SignalTree with Persistence (10.4KB) - Add state serialization
+const tree = signalTree(state).pipe(withSerialization());
+// Adds: SSR support, state debugging, persistence, time-travel ready
+
+// SignalTree Smart Auto-Enable (7.6-25KB) - Features enable as needed
+const tree = signalTree(state); // Starts at 7.6KB, grows to 25KB as you use features
 // Auto-adds: memoization, time-travel, devtools, batching, middleware on first use
 
 // Elf "Equivalent" (10KB) - To match SignalTree features
