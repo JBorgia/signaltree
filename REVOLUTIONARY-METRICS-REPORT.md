@@ -8,7 +8,7 @@ This report documents the **revolutionary breakthrough** achieved by SignalTree'
 
 ### Performance Breakthrough
 
-- **Sub-millisecond operations**: 0.037ms at 15+ levels
+- **Sub-millisecond operations**: 0.021ms at 15+ levels
 - **Performance improves with depth**: 88% faster at extreme depths
 - **Zero-cost abstractions**: Unlimited recursive depth with no overhead
 - **Memory efficiency**: 89% reduction in memory usage

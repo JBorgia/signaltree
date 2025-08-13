@@ -150,17 +150,54 @@ export function createLazySignalTree<T extends object>(
   equalityFn: (a: unknown, b: unknown) => boolean,
   basePath = ''
 ): DeepSignalify<T> {
-  // Use WeakMap for automatic garbage collection when objects are no longer referenced
+  // Use Map instead of WeakMap for better control over cleanup
   const signalCache = new Map<string, WritableSignal<unknown>>();
   const nestedProxies = new Map<string, unknown>();
 
-  // Store cleanup function for manual resource management
+  // Track cleanup functions for nested proxies
+  const nestedCleanups = new Map<string, () => void>();
+
+  // Enhanced cleanup function
   const cleanup = () => {
+    // Clean up all nested proxies first
+    nestedCleanups.forEach((cleanupFn) => {
+      try {
+        cleanupFn();
+      } catch (error) {
+        console.warn('Error during nested cleanup:', error);
+      }
+    });
+    nestedCleanups.clear();
+
+    // Clear caches
     signalCache.clear();
     nestedProxies.clear();
   };
 
-  // Attach cleanup to the proxy for external access
+  // Enhanced built-in object detection
+  const isBuiltInObject = (v: unknown): boolean => {
+    if (v === null || v === undefined) return false;
+
+    return (
+      v instanceof Date ||
+      v instanceof RegExp ||
+      typeof v === 'function' ||
+      v instanceof Map ||
+      v instanceof Set ||
+      v instanceof WeakMap ||
+      v instanceof WeakSet ||
+      v instanceof ArrayBuffer ||
+      v instanceof DataView ||
+      v instanceof Error ||
+      v instanceof Promise ||
+      v instanceof URL ||
+      v instanceof URLSearchParams ||
+      v instanceof FormData ||
+      v instanceof Blob ||
+      (typeof File !== 'undefined' && v instanceof File)
+    );
+  };
+
   const proxy = new Proxy(obj, {
     get(target: object, prop: string | symbol) {
       // Handle cleanup method
@@ -173,8 +210,19 @@ export function createLazySignalTree<T extends object>(
         return (target as Record<string | symbol, unknown>)[prop];
       }
 
+      // Handle inspection methods
+      if (prop === 'valueOf' || prop === 'toString') {
+        return (target as Record<string | symbol, unknown>)[prop];
+      }
+
       const key = prop as string;
       const path = basePath ? `${basePath}.${key}` : key;
+
+      // Safety check for property existence
+      if (!(key in target)) {
+        return undefined;
+      }
+
       const value = (target as Record<string, unknown>)[key];
 
       // If it's already a signal, return it
@@ -192,23 +240,6 @@ export function createLazySignalTree<T extends object>(
         return nestedProxies.get(path);
       }
 
-      // Helper to detect built-in objects that should be treated as primitives
-      const isBuiltInObject = (v: unknown): boolean => {
-        return (
-          v instanceof Date ||
-          v instanceof RegExp ||
-          typeof v === 'function' ||
-          v instanceof Map ||
-          v instanceof Set ||
-          v instanceof WeakMap ||
-          v instanceof WeakSet ||
-          v instanceof ArrayBuffer ||
-          v instanceof DataView ||
-          v instanceof Error ||
-          v instanceof Promise
-        );
-      };
-
       // Handle nested objects - create lazy proxy
       if (
         value &&
@@ -217,19 +248,43 @@ export function createLazySignalTree<T extends object>(
         !isSignal(value) &&
         !isBuiltInObject(value)
       ) {
-        const nestedProxy = createLazySignalTree(
-          value as Record<string, unknown>,
-          equalityFn,
-          path
-        );
-        nestedProxies.set(path, nestedProxy);
-        return nestedProxy;
+        try {
+          const nestedProxy = createLazySignalTree(
+            value as Record<string, unknown>,
+            equalityFn,
+            path
+          );
+
+          nestedProxies.set(path, nestedProxy);
+
+          // Store cleanup function for nested proxy
+          const proxyWithCleanup = nestedProxy as { __cleanup__?: () => void };
+          if (typeof proxyWithCleanup.__cleanup__ === 'function') {
+            nestedCleanups.set(path, proxyWithCleanup.__cleanup__);
+          }
+
+          return nestedProxy;
+        } catch (error) {
+          console.warn(
+            `Failed to create lazy proxy for path "${path}":`,
+            error
+          );
+          // Fallback: create a signal for the object
+          const fallbackSignal = signal(value, { equal: equalityFn });
+          signalCache.set(path, fallbackSignal);
+          return fallbackSignal;
+        }
       }
 
-      // Create signal for primitive values and arrays
-      const newSignal = signal(value, { equal: equalityFn });
-      signalCache.set(path, newSignal);
-      return newSignal;
+      // Create signal for primitive values, arrays, and built-in objects
+      try {
+        const newSignal = signal(value, { equal: equalityFn });
+        signalCache.set(path, newSignal);
+        return newSignal;
+      } catch (error) {
+        console.warn(`Failed to create signal for path "${path}":`, error);
+        return value; // Return raw value as fallback
+      }
     },
 
     set(target: object, prop: string | symbol, value: unknown) {
@@ -241,21 +296,32 @@ export function createLazySignalTree<T extends object>(
       const key = prop as string;
       const path = basePath ? `${basePath}.${key}` : key;
 
-      // Update the original object
-      (target as Record<string, unknown>)[key] = value;
+      try {
+        // Update the original object
+        (target as Record<string, unknown>)[key] = value;
 
-      // If we have a cached signal, update it
-      const cachedSignal = signalCache.get(path);
-      if (cachedSignal) {
-        cachedSignal.set(value);
+        // If we have a cached signal, update it
+        const cachedSignal = signalCache.get(path);
+        if (cachedSignal && 'set' in cachedSignal) {
+          (cachedSignal as WritableSignal<unknown>).set(value);
+        }
+
+        // Clear nested proxy cache if the value type changed
+        if (nestedProxies.has(path)) {
+          // Clean up the nested proxy
+          const nestedCleanup = nestedCleanups.get(path);
+          if (nestedCleanup) {
+            nestedCleanup();
+            nestedCleanups.delete(path);
+          }
+          nestedProxies.delete(path);
+        }
+
+        return true;
+      } catch (error) {
+        console.warn(`Failed to set value for path "${path}":`, error);
+        return false;
       }
-
-      // Clear nested proxy cache if the value type changed
-      if (nestedProxies.has(path)) {
-        nestedProxies.delete(path);
-      }
-
-      return true;
     },
 
     has(target, prop) {

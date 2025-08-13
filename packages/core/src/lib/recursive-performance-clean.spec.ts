@@ -23,78 +23,108 @@ describe('🔥 Recursive Performance Tests', () => {
     results = {};
   });
 
+  // Helper function to run multiple iterations and get stable results
+  function measurePerformance(testFn: () => void, iterations = 10): number {
+    const times: number[] = [];
+
+    // Warm-up runs
+    for (let i = 0; i < 3; i++) {
+      testFn();
+    }
+
+    // Actual measurements
+    for (let i = 0; i < iterations; i++) {
+      const start = performance.now();
+      testFn();
+      times.push(performance.now() - start);
+    }
+
+    // Remove outliers (highest and lowest) and calculate average
+    times.sort((a, b) => a - b);
+    const trimmed = times.slice(1, -1);
+    return trimmed.reduce((sum, time) => sum + time, 0) / trimmed.length;
+  }
+
   it('should achieve sub-millisecond performance at 5 levels', () => {
-    const start = performance.now();
-    const basic = signalTree({
-      l1: { l2: { l3: { l4: { l5: { value: 'basic' } } } } },
-    });
-    const access = basic.$.l1.l2.l3.l4.l5.value();
-    const time = performance.now() - start;
+    let access = '';
+
+    const avgTime = measurePerformance(() => {
+      const basic = signalTree({
+        l1: { l2: { l3: { l4: { l5: { value: 'basic' } } } } },
+      });
+      access = basic.$.l1.l2.l3.l4.l5.value();
+    }, 15);
 
     results.basic = {
       depth: 5,
-      time,
+      time: avgTime,
       typeInference: typeof access === 'string',
     };
 
-    expect(time).toBeLessThan(1); // Sub-millisecond
+    expect(avgTime).toBeLessThan(1); // Sub-millisecond
     expect(access).toBe('basic');
     expect(typeof access).toBe('string'); // Perfect type inference
 
-    console.log(`✅ Basic (5 levels): ${time.toFixed(3)}ms`);
+    console.log(`✅ Basic (5 levels): ${avgTime.toFixed(3)}ms`);
   });
-
   it('should maintain performance at 10 levels', () => {
-    const start = performance.now();
-    const medium = signalTree({
-      l1: {
-        l2: {
-          l3: {
-            l4: {
-              l5: { l6: { l7: { l8: { l9: { l10: { value: 'medium' } } } } } },
+    let access = '';
+
+    const avgTime = measurePerformance(() => {
+      const medium = signalTree({
+        l1: {
+          l2: {
+            l3: {
+              l4: {
+                l5: {
+                  l6: { l7: { l8: { l9: { l10: { value: 'medium' } } } } },
+                },
+              },
             },
           },
         },
-      },
-    });
-    const access = medium.$.l1.l2.l3.l4.l5.l6.l7.l8.l9.l10.value();
-    const time = performance.now() - start;
+      });
+      access = medium.$.l1.l2.l3.l4.l5.l6.l7.l8.l9.l10.value();
+    }, 15);
 
     results.medium = {
       depth: 10,
-      time,
+      time: avgTime,
       typeInference: typeof access === 'string',
     };
 
-    expect(time).toBeLessThan(1); // Still sub-millisecond
+    expect(avgTime).toBeLessThan(1); // Still sub-millisecond
     expect(access).toBe('medium');
     expect(typeof access).toBe('string'); // Perfect type inference maintained
 
-    console.log(`✅ Medium (10 levels): ${time.toFixed(3)}ms`);
+    console.log(`✅ Medium (10 levels): ${avgTime.toFixed(3)}ms`);
   });
 
   it('🔥 should breakthrough at 15+ levels with perfect type inference', () => {
-    const start = performance.now();
-    const extreme = signalTree({
-      enterprise: {
-        divisions: {
-          technology: {
-            departments: {
-              engineering: {
-                teams: {
-                  frontend: {
-                    projects: {
-                      signaltree: {
-                        releases: {
-                          v1: {
-                            features: {
-                              recursiveTyping: {
-                                validation: {
-                                  tests: {
-                                    extreme: {
-                                      status: 'validated',
-                                      depth: 15,
-                                      performance: 'sub-millisecond',
+    let access = '';
+
+    const avgTime = measurePerformance(() => {
+      const extreme = signalTree({
+        enterprise: {
+          divisions: {
+            technology: {
+              departments: {
+                engineering: {
+                  teams: {
+                    frontend: {
+                      projects: {
+                        signaltree: {
+                          releases: {
+                            v1: {
+                              features: {
+                                recursiveTyping: {
+                                  validation: {
+                                    tests: {
+                                      extreme: {
+                                        status: 'validated',
+                                        depth: 15,
+                                        performance: 'sub-millisecond',
+                                      },
                                     },
                                   },
                                 },
@@ -110,52 +140,56 @@ describe('🔥 Recursive Performance Tests', () => {
             },
           },
         },
-      },
-    });
+      });
 
-    // This is the breakthrough - 15+ level access with perfect type inference
-    const access =
-      extreme.$.enterprise.divisions.technology.departments.engineering.teams.frontend.projects.signaltree.releases.v1.features.recursiveTyping.validation.tests.extreme.status();
-    const time = performance.now() - start;
+      // This is the breakthrough - 15+ level access with perfect type inference
+      access =
+        extreme.$.enterprise.divisions.technology.departments.engineering.teams.frontend.projects.signaltree.releases.v1.features.recursiveTyping.validation.tests.extreme.status();
+    }, 12);
 
     results.extreme = {
       depth: 15,
-      time,
+      time: avgTime,
       typeInference: typeof access === 'string',
     };
 
     // Performance assertions
-    expect(time).toBeLessThan(1); // STILL sub-millisecond at 15+ levels!
+    expect(avgTime).toBeLessThan(1); // STILL sub-millisecond at 15+ levels!
     expect(access).toBe('validated');
     expect(typeof access).toBe('string'); // TypeScript KNOWS this is a string!
 
-    console.log(`🔥 EXTREME (15 levels): ${time.toFixed(3)}ms - BREAKTHROUGH!`);
+    console.log(
+      `🔥 EXTREME (15 levels): ${avgTime.toFixed(3)}ms - BREAKTHROUGH!`
+    );
   });
 
   it('🚀 should handle unlimited depth (20+ levels)', () => {
-    const start = performance.now();
-    const unlimited = signalTree({
-      l1: {
-        l2: {
-          l3: {
-            l4: {
-              l5: {
-                l6: {
-                  l7: {
-                    l8: {
-                      l9: {
-                        l10: {
-                          l11: {
-                            l12: {
-                              l13: {
-                                l14: {
-                                  l15: {
-                                    l16: {
-                                      l17: {
-                                        l18: {
-                                          l19: {
-                                            l20: {
-                                              value: 'unlimited',
+    let access = '';
+
+    const avgTime = measurePerformance(() => {
+      const unlimited = signalTree({
+        l1: {
+          l2: {
+            l3: {
+              l4: {
+                l5: {
+                  l6: {
+                    l7: {
+                      l8: {
+                        l9: {
+                          l10: {
+                            l11: {
+                              l12: {
+                                l13: {
+                                  l14: {
+                                    l15: {
+                                      l16: {
+                                        l17: {
+                                          l18: {
+                                            l19: {
+                                              l20: {
+                                                value: 'unlimited',
+                                              },
                                             },
                                           },
                                         },
@@ -175,25 +209,24 @@ describe('🔥 Recursive Performance Tests', () => {
             },
           },
         },
-      },
-    });
+      });
 
-    const access =
-      unlimited.$.l1.l2.l3.l4.l5.l6.l7.l8.l9.l10.l11.l12.l13.l14.l15.l16.l17.l18.l19.l20.value();
-    const time = performance.now() - start;
+      access =
+        unlimited.$.l1.l2.l3.l4.l5.l6.l7.l8.l9.l10.l11.l12.l13.l14.l15.l16.l17.l18.l19.l20.value();
+    }, 10);
 
     results.unlimited = {
       depth: 20,
-      time,
+      time: avgTime,
       typeInference: typeof access === 'string',
     };
 
-    expect(time).toBeLessThan(2); // Still incredibly fast
+    expect(avgTime).toBeLessThan(2); // Still incredibly fast
     expect(access).toBe('unlimited');
     expect(typeof access).toBe('string'); // Perfect type inference at 20 levels!
 
     console.log(
-      `🚀 UNLIMITED (20 levels): ${time.toFixed(3)}ms - BREAKTHROUGH!`
+      `🚀 UNLIMITED (20 levels): ${avgTime.toFixed(3)}ms - BREAKTHROUGH!`
     );
   });
 

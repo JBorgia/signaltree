@@ -3,8 +3,8 @@
   "version": "1.0.3",
   "description": "Advanced entity collection management for SignalTree. Enhanced CRUD operations, entity finding, filtering, querying, and duplicate prevention.",
   "peerDependencies": {
-    "@angular/common": "^20.1.0",
-    "@angular/core": "^20.1.0"
+    "@angular/core": "^20.1.0",
+    "@signaltree/core": "1.0.3"
   },
   "sideEffects": false
 }

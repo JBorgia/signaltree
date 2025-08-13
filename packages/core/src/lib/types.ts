@@ -40,7 +40,7 @@ export type Primitive =
 
 /**
  * Built-in object types that should be treated as primitive values
- * These should not be deeply signalified
+ * Enhanced detection for better edge case handling
  */
 export type BuiltInObject =
   | Date
@@ -53,7 +53,12 @@ export type BuiltInObject =
   | ArrayBuffer
   | DataView
   | Error
-  | Promise<unknown>;
+  | Promise<unknown>
+  | URL
+  | URLSearchParams
+  | FormData
+  | Blob
+  | File;
 
 export type IsPrimitive<T> = T extends Primitive ? true : false;
 export type IsBuiltInObject<T> = T extends BuiltInObject ? true : false;
@@ -67,10 +72,8 @@ export type IsWritableSignal<T> = T extends WritableSignal<unknown>
   : false;
 
 /**
- * Superior recursive signalification that maintains complete type information
- * Key insight from signal-store.ts: Use the same type T throughout recursion
- *
- * Enhanced with better primitive detection, built-in object handling, and array handling
+ * Enhanced DeepSignalify with better edge case handling
+ * Never double-wraps signals and properly handles functions and built-in objects
  */
 export type DeepSignalify<T> = IsSignal<T> extends true
   ? T // Never double-wrap signals
@@ -79,19 +82,23 @@ export type DeepSignalify<T> = IsSignal<T> extends true
   : T extends BuiltInObject
   ? WritableSignal<T> // Treat built-in objects as primitive values
   : T extends readonly (infer U)[]
-  ? WritableSignal<U[]>
+  ? WritableSignal<U[]> // Handle readonly arrays
+  : T extends (infer U)[]
+  ? WritableSignal<U[]> // Handle mutable arrays
   : T extends object
-  ? {
-      [K in keyof T]: T[K] extends (infer U)[]
-        ? WritableSignal<U[]>
-        : T[K] extends BuiltInObject
-        ? WritableSignal<T[K]>
-        : T[K] extends object
-        ? T[K] extends Signal<infer TK>
-          ? WritableSignal<TK>
-          : DeepSignalify<T[K]> // 🎯 Recursive call preserves original type structure
-        : WritableSignal<T[K]>;
-    }
+  ? T extends (...args: unknown[]) => unknown // Functions should be wrapped as signals
+    ? WritableSignal<T>
+    : {
+        [K in keyof T]: T[K] extends (infer U)[]
+          ? WritableSignal<U[]>
+          : T[K] extends BuiltInObject
+          ? WritableSignal<T[K]>
+          : T[K] extends object
+          ? T[K] extends Signal<infer TK>
+            ? WritableSignal<TK>
+            : DeepSignalify<T[K]> // Recursive call preserves original type structure
+          : WritableSignal<T[K]>;
+      }
   : WritableSignal<T>;
 
 /**
