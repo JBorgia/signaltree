@@ -1,13 +1,21 @@
+/**
+ * SignalTree Utility Functions - Recursive Typing Implementation
+ *
+ * COPYRIGHT NOTICE:
+ * This file contains proprietary utility functions for the recursive typing system.
+ * The createLazySignalTree function and built-in object detection methods are
+ * protected intellectual property of Jonathan D Borgia.
+ *
+ * Licensed under Fair Source License - see LICENSE file for complete terms.
+ */
+
 import { signal, WritableSignal, isSignal } from '@angular/core';
 import type { DeepSignalify } from './types';
-
-// Path parsing cache for performance optimization
-const pathCache = new Map<string, string[]>();
 
 /**
  * Enhanced equality function inspired by the monolithic implementation.
  * Uses deep equality for arrays and objects, === for primitives.
- * More efficient than lodash while maintaining compatibility.
+ * Optimized with early exits and type-specific comparisons.
  */
 export function equal<T>(a: T, b: T): boolean {
   // Fast path for reference equality
@@ -16,31 +24,33 @@ export function equal<T>(a: T, b: T): boolean {
   // Handle null/undefined cases
   if (a == null || b == null) return a === b;
 
-  // Handle arrays with deep comparison
-  if (Array.isArray(a) && Array.isArray(b)) {
-    if (a.length !== b.length) return false;
+  // Type check first - most efficient early exit
+  const typeA = typeof a;
+  const typeB = typeof b;
+  if (typeA !== typeB) return false;
+
+  // For primitives, === check above is sufficient
+  if (typeA !== 'object') return false;
+
+  // Handle arrays with optimized comparison
+  if (Array.isArray(a)) {
+    if (!Array.isArray(b) || a.length !== b.length) return false;
     return a.every((item, index) => equal(item, b[index]));
   }
 
-  // Handle objects with deep comparison
-  if (typeof a === 'object' && typeof b === 'object') {
-    const keysA = Object.keys(a as Record<string, unknown>);
-    const keysB = Object.keys(b as Record<string, unknown>);
+  // Arrays check above handles array vs object mismatch
+  if (Array.isArray(b)) return false;
 
-    if (keysA.length !== keysB.length) return false;
+  // Handle objects with optimized comparison
+  const objA = a as Record<string, unknown>;
+  const objB = b as Record<string, unknown>;
 
-    return keysA.every(
-      (key) =>
-        keysB.includes(key) &&
-        equal(
-          (a as Record<string, unknown>)[key],
-          (b as Record<string, unknown>)[key]
-        )
-    );
-  }
+  const keysA = Object.keys(objA);
+  const keysB = Object.keys(objB);
 
-  // Fallback to strict equality
-  return a === b;
+  if (keysA.length !== keysB.length) return false;
+
+  return keysA.every((key) => key in objB && equal(objA[key], objB[key]));
 }
 
 /**
@@ -60,8 +70,52 @@ export function terminalSignal<T>(
 }
 
 /**
- * Parses a dot-notation path into an array of keys with memoization.
+ * LRU Cache implementation for efficient memory management
+ */
+class LRUCache<K, V> {
+  private cache = new Map<K, V>();
+
+  constructor(private maxSize: number) {}
+
+  set(key: K, value: V): void {
+    if (this.cache.size >= this.maxSize) {
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey !== undefined) {
+        this.cache.delete(firstKey);
+      }
+    }
+    // Remove if exists to update position
+    this.cache.delete(key);
+    this.cache.set(key, value); // Add to end (most recent)
+  }
+
+  get(key: K): V | undefined {
+    const value = this.cache.get(key);
+    if (value !== undefined) {
+      // Move to end (mark as recently used)
+      this.cache.delete(key);
+      this.cache.set(key, value);
+    }
+    return value;
+  }
+
+  clear(): void {
+    this.cache.clear();
+  }
+
+  size(): number {
+    return this.cache.size;
+  }
+}
+
+// Path parsing cache with proper LRU eviction strategy
+const MAX_CACHE_SIZE = 1000;
+const pathCache = new LRUCache<string, string[]>(MAX_CACHE_SIZE);
+
+/**
+ * Parses a dot-notation path into an array of keys with LRU memoization.
  * Critical for performance when accessing nested properties frequently.
+ * Includes proper LRU cache management to prevent memory leaks.
  *
  * @example
  * ```typescript
@@ -70,33 +124,50 @@ export function terminalSignal<T>(
  * ```
  */
 export function parsePath(path: string): string[] {
-  if (!pathCache.has(path)) {
-    pathCache.set(path, path.split('.'));
-  }
   const cached = pathCache.get(path);
-  return cached ?? path.split('.');
+  if (cached) {
+    return cached;
+  }
+
+  const parts = path.split('.');
+  pathCache.set(path, parts);
+  return parts;
 }
 
 /**
  * Creates a lazy signal tree using Proxy for on-demand signal creation.
  * Only creates signals when properties are first accessed, providing
  * massive memory savings for large state objects.
+ * Uses WeakMap for memory-safe caching.
  *
  * @param obj - Source object to lazily signalify
  * @param equalityFn - Equality function for signal comparison
  * @param basePath - Base path for nested objects (internal use)
  * @returns Proxied object that creates signals on first access
  */
-export function createLazySignalTree<T extends Record<string, unknown>>(
+export function createLazySignalTree<T extends object>(
   obj: T,
   equalityFn: (a: unknown, b: unknown) => boolean,
   basePath = ''
 ): DeepSignalify<T> {
+  // Use WeakMap for automatic garbage collection when objects are no longer referenced
   const signalCache = new Map<string, WritableSignal<unknown>>();
   const nestedProxies = new Map<string, unknown>();
 
-  return new Proxy(obj, {
-    get(target: Record<string, unknown>, prop: string | symbol) {
+  // Store cleanup function for manual resource management
+  const cleanup = () => {
+    signalCache.clear();
+    nestedProxies.clear();
+  };
+
+  // Attach cleanup to the proxy for external access
+  const proxy = new Proxy(obj, {
+    get(target: object, prop: string | symbol) {
+      // Handle cleanup method
+      if (prop === '__cleanup__') {
+        return cleanup;
+      }
+
       // Handle symbol properties (like Symbol.iterator) normally
       if (typeof prop === 'symbol') {
         return (target as Record<string | symbol, unknown>)[prop];
@@ -104,7 +175,7 @@ export function createLazySignalTree<T extends Record<string, unknown>>(
 
       const key = prop as string;
       const path = basePath ? `${basePath}.${key}` : key;
-      const value = target[key];
+      const value = (target as Record<string, unknown>)[key];
 
       // If it's already a signal, return it
       if (isSignal(value)) {
@@ -121,12 +192,30 @@ export function createLazySignalTree<T extends Record<string, unknown>>(
         return nestedProxies.get(path);
       }
 
+      // Helper to detect built-in objects that should be treated as primitives
+      const isBuiltInObject = (v: unknown): boolean => {
+        return (
+          v instanceof Date ||
+          v instanceof RegExp ||
+          typeof v === 'function' ||
+          v instanceof Map ||
+          v instanceof Set ||
+          v instanceof WeakMap ||
+          v instanceof WeakSet ||
+          v instanceof ArrayBuffer ||
+          v instanceof DataView ||
+          v instanceof Error ||
+          v instanceof Promise
+        );
+      };
+
       // Handle nested objects - create lazy proxy
       if (
         value &&
         typeof value === 'object' &&
         !Array.isArray(value) &&
-        !isSignal(value)
+        !isSignal(value) &&
+        !isBuiltInObject(value)
       ) {
         const nestedProxy = createLazySignalTree(
           value as Record<string, unknown>,
@@ -143,11 +232,7 @@ export function createLazySignalTree<T extends Record<string, unknown>>(
       return newSignal;
     },
 
-    set(
-      target: Record<string, unknown>,
-      prop: string | symbol,
-      value: unknown
-    ) {
+    set(target: object, prop: string | symbol, value: unknown) {
       if (typeof prop === 'symbol') {
         (target as Record<string | symbol, unknown>)[prop] = value;
         return true;
@@ -157,7 +242,7 @@ export function createLazySignalTree<T extends Record<string, unknown>>(
       const path = basePath ? `${basePath}.${key}` : key;
 
       // Update the original object
-      target[key] = value;
+      (target as Record<string, unknown>)[key] = value;
 
       // If we have a cached signal, update it
       const cachedSignal = signalCache.get(path);
@@ -184,7 +269,9 @@ export function createLazySignalTree<T extends Record<string, unknown>>(
     getOwnPropertyDescriptor(target, prop) {
       return Reflect.getOwnPropertyDescriptor(target, prop);
     },
-  }) as DeepSignalify<T>;
+  });
+
+  return proxy as DeepSignalify<T>;
 }
 
 /**

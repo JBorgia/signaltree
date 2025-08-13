@@ -1,0 +1,315 @@
+.extreme-depth-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 3rem;
+
+  h1 {
+    font-size: 3rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #ff6b6b, #ee5a24, #ff9ff3);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 1rem;
+  }
+
+  .subtitle {
+    font-size: 1.2rem;
+    color: #6b7280;
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+}
+
+.demo-section {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 3rem;
+  border: 1px solid #e2e8f0;
+
+  h2 {
+    color: #1f2937;
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+}
+
+.structure-demo {
+  .path-display {
+    background: #ffffff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    border: 1px solid #d1d5db;
+
+    h3 {
+      color: #374151;
+      margin-bottom: 0.75rem;
+      font-size: 1rem;
+      font-weight: 500;
+    }
+
+    .path {
+      background: #f3f4f6;
+      color: #1f2937;
+      padding: 1rem;
+      border-radius: 6px;
+      font-family: 'Fira Code', 'Courier New', monospace;
+      font-size: 0.875rem;
+      display: block;
+      overflow-x: auto;
+      border: 1px solid #d1d5db;
+    }
+  }
+
+  .controls {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 0.875rem;
+
+      &.primary {
+        background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+        color: white;
+
+        &:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+        }
+
+        &:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+      }
+
+      &.secondary {
+        background: #ffffff;
+        color: #374151;
+        border: 1px solid #d1d5db;
+
+        &:hover {
+          background: #f9fafb;
+          border-color: #9ca3af;
+        }
+      }
+    }
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+
+    .stat-card {
+      background: #ffffff;
+      padding: 1.5rem;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      text-align: center;
+
+      .stat-value {
+        display: block;
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 0.5rem;
+      }
+
+      .stat-label {
+        color: #6b7280;
+        font-size: 0.875rem;
+        font-weight: 500;
+      }
+    }
+  }
+}
+
+.code-section {
+  margin-bottom: 3rem;
+
+  h2 {
+    color: #1f2937;
+    margin-bottom: 2rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+
+  .code-example {
+    background: #1f2937;
+    color: #f9fafb;
+    padding: 2rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    overflow-x: auto;
+
+    h3 {
+      color: #f3f4f6;
+      margin-bottom: 1rem;
+      font-size: 1rem;
+      font-weight: 500;
+    }
+
+    pre {
+      margin: 0;
+      font-family: 'Fira Code', 'Courier New', monospace;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+  }
+}
+
+.performance-section {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  padding: 2rem;
+  border-radius: 12px;
+  margin-bottom: 3rem;
+
+  h2 {
+    margin-bottom: 2rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .performance-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+
+    .perf-card {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      padding: 1.5rem;
+      border-radius: 8px;
+      text-align: center;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+
+      h3 {
+        margin-bottom: 1rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+      }
+
+      .perf-value {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: #fbbf24;
+      }
+
+      .perf-desc {
+        font-size: 0.875rem;
+        opacity: 0.9;
+        line-height: 1.4;
+      }
+    }
+  }
+}
+
+.validation-section {
+  background: #f0fdf4;
+  padding: 2rem;
+  border-radius: 12px;
+  border: 1px solid #bbf7d0;
+
+  h2 {
+    color: #15803d;
+    margin-bottom: 2rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .test-results {
+    max-width: 600px;
+    margin: 0 auto;
+
+    .test-summary {
+      text-align: center;
+      margin-bottom: 2rem;
+
+      .test-count {
+        display: block;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #15803d;
+        margin-bottom: 0.5rem;
+      }
+
+      .test-coverage {
+        color: #059669;
+        font-size: 1rem;
+      }
+    }
+
+    .test-categories {
+      .test-category {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        background: #ffffff;
+        border: 1px solid #d1fae5;
+        border-radius: 8px;
+        margin-bottom: 0.75rem;
+
+        .category-name {
+          font-weight: 500;
+          color: #374151;
+        }
+
+        .category-status {
+          color: #059669;
+          font-weight: 600;
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .extreme-depth-container {
+    padding: 1rem;
+  }
+
+  .header h1 {
+    font-size: 2rem;
+  }
+
+  .controls {
+    flex-direction: column;
+
+    .btn {
+      width: 100%;
+    }
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .performance-grid {
+    grid-template-columns: 1fr;
+  }
+}

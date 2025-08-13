@@ -45,6 +45,44 @@ Additional Terms:
 5. GOOD FAITH USAGE: This license operates on good faith. If you're unsure whether your
    use case requires a commercial license, please reach out to discuss.
 
+6. RECURSIVE TYPING INTELLECTUAL PROPERTY RIGHTS:
+
+   a) EXCLUSIVE INNOVATION: The recursive typing system implemented in this Software,
+   including but not limited to the "DeepSignalify<T>" type system, the signal-store
+   pattern, and the method of achieving perfect type inference through recursive
+   type-runtime alignment, constitutes proprietary intellectual property of the Licensor.
+
+   b) SCOPE OF PROTECTION: This includes the specific approach of:
+
+   - Using recursive type transformations that mirror runtime recursion
+   - The "initiation defines structure, typing works as inferred" paradigm
+   - Built-in object detection and handling in recursive type systems
+   - Lazy signal tree creation with perfect type preservation
+   - The method of maintaining exact literal types through deep nesting
+   - Any derivative implementations of these core concepts
+
+   c) RESTRICTED USE: You may NOT:
+
+   - Extract, copy, or reimplement the recursive typing system in other projects
+   - Create derivative works based on the recursive typing methodology
+   - Use the recursive typing concepts in competing state management libraries
+   - Teach, distribute, or license the recursive typing implementation to others
+   - Create educational content that reveals the implementation details
+
+   d) PERMITTED USE: You MAY:
+
+   - Use the Software as provided under the main license terms
+   - Build applications that consume the public API
+   - Contribute improvements back to this project under a Contributor License Agreement
+
+   e) VIOLATIONS: Any unauthorized use of the recursive typing system constitutes
+   copyright infringement and breach of this license, subject to immediate
+   termination of all rights and potential legal action.
+
+7. ENFORCEMENT: The Licensor reserves all rights to enforce these intellectual property
+   protections through legal action, including but not limited to injunctive relief,
+   damages, and attorney fees.
+
 ---
 
 Full Fair Source License details: https://fair.io/

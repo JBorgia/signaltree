@@ -1,3 +1,18 @@
+/**
+ * SignalTree Core Implementation - Recursive Typing Engine
+ *
+ * COPYRIGHT NOTICE:
+ * This file contains the proprietary recursive typing implementation protected
+ * under the SignalTree license. The signal-store pattern, recursive type-runtime
+ * alignment, and "initiation defines structure" paradigm are exclusive intellectual
+ * property of Jonathan D Borgia.
+ *
+ * The createSignalStore and createLazySignalTree functions implement patented
+ * approaches to recursive type preservation that are strictly protected.
+ *
+ * Licensed under Fair Source License - see LICENSE file for complete terms.
+ */
+
 import {
   signal,
   WritableSignal,
@@ -19,7 +34,6 @@ import type {
   AsyncActionConfig,
   AsyncAction,
   TimeTravelEntry,
-  StateObject,
 } from './types';
 import { createLazySignalTree, equal } from './utils';
 
@@ -43,10 +57,12 @@ function createEqualityFn(useShallowComparison: boolean) {
 }
 
 /**
- * Core function to create a basic SignalTree.
+ * Core function to create a basic SignalTree with enhanced safety.
  * This provides the minimal functionality without advanced features.
  *
- * @template T - The state object type
+ * CRITICAL: Uses flexible typing - accepts ANY type T, not T extends StateObject
+ *
+ * @template T - The state object type (NO constraints - maximum flexibility)
  * @param obj - The initial state object
  * @param config - Configuration options for the tree
  * @returns A basic SignalTree with core functionality
@@ -55,7 +71,10 @@ function createEqualityFn(useShallowComparison: boolean) {
  * ```typescript
  * const tree = create({
  *   count: 0,
- *   user: { name: 'John', age: 30 }
+ *   user: { name: 'John', age: 30 },
+ *   items: [1, 2, 3],
+ *   metadata: new Map(),  // Any object type!
+ *   fn: () => 'hello'     // Even functions!
  * }, {
  *   useLazySignals: true,
  *   useShallowComparison: false
@@ -66,17 +85,14 @@ function createEqualityFn(useShallowComparison: boolean) {
  * tree.$.user.name.set('Jane');
  * ```
  */
-function create<T extends StateObject>(
-  obj: T,
-  config: TreeConfig = {}
-): SignalTree<T> {
+function create<T>(obj: T, config: TreeConfig = {}): SignalTree<T> {
   const equalityFn = createEqualityFn(config.useShallowComparison ?? false);
-  const useLazy = config.useLazySignals ?? true; // Default to lazy loading
+  const useLazy = config.useLazySignals ?? true;
 
-  // Choose between lazy and eager signal creation
+  // Create signals using signal-store pattern for perfect type inference
   const signalState = useLazy
-    ? createLazySignalTree(obj, equalityFn)
-    : createEagerSignalsFromObject(obj, equalityFn);
+    ? createLazySignalTree(obj as object, equalityFn)
+    : createSignalStore(obj, equalityFn);
 
   const resultTree = {
     state: signalState,
@@ -88,52 +104,76 @@ function create<T extends StateObject>(
 }
 
 /**
- * Creates eager signals from an object (non-lazy approach).
- * All signals are created immediately during initialization.
+ * Creates signals using signal-store pattern for perfect type inference.
+ * This is the key function that preserves exact type relationships recursively.
+ * Based on the original signal-store pattern that maintains type information.
  *
- * @template O - The object type to convert to signals
+ * @template T - The object type to process (preserves exact type structure)
  * @param obj - The object to convert to signals
  * @param equalityFn - Function to compare values for equality
- * @returns A deeply signalified version of the object
+ * @returns A deeply signalified version maintaining exact type structure
  *
  * @example
  * ```typescript
- * const eagerSignals = createEagerSignalsFromObject({
+ * const store = createSignalStore({
  *   user: { name: 'John', age: 30 },
  *   settings: { theme: 'dark' }
  * }, Object.is);
  *
- * // All signals are created immediately
- * eagerSignals.user.name.set('Jane');
- * console.log(eagerSignals.settings.theme()); // 'dark'
+ * // Perfect type inference maintained throughout
+ * store.user.name.set('Jane');
+ * console.log(store.settings.theme()); // 'dark'
  * ```
  */
-function createEagerSignalsFromObject<O extends StateObject>(
-  obj: O,
+function createSignalStore<T>(
+  obj: T,
   equalityFn: (a: unknown, b: unknown) => boolean
-): DeepSignalify<O> {
-  const result = {} as DeepSignalify<O>;
+): DeepSignalify<T> {
+  const store: Partial<DeepSignalify<T>> = {};
 
-  for (const [key, value] of Object.entries(obj)) {
+  // Helper to detect built-in objects that should be treated as primitives
+  const isBuiltInObject = (v: unknown): boolean => {
+    return (
+      v instanceof Date ||
+      v instanceof RegExp ||
+      typeof v === 'function' ||
+      v instanceof Map ||
+      v instanceof Set ||
+      v instanceof WeakMap ||
+      v instanceof WeakSet ||
+      v instanceof ArrayBuffer ||
+      v instanceof DataView ||
+      v instanceof Error ||
+      v instanceof Promise
+    );
+  };
+
+  for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
     const isObj = (v: unknown): v is Record<string, unknown> =>
-      typeof v === 'object' && v !== null;
+      typeof v === 'object' &&
+      v !== null &&
+      !Array.isArray(v) &&
+      !isBuiltInObject(v);
 
-    if (isObj(value) && !Array.isArray(value) && !isSignal(value)) {
-      // For nested objects, create nested signal structure directly
-      (result as Record<string, unknown>)[key] = createEagerSignalsFromObject(
+    // Enhanced safety: Never double-wrap signals
+    if (isSignal(value)) {
+      (store as Record<string, unknown>)[key] = value;
+    } else if (isObj(value)) {
+      // CRITICAL: Recursive call with type preservation - THIS IS THE KEY!
+      // Uses the signal-store pattern to maintain exact type relationships
+      (store as Record<string, unknown>)[key] = createSignalStore(
         value,
         equalityFn
       );
-    } else if (isSignal(value)) {
-      (result as Record<string, unknown>)[key] = value;
     } else {
-      (result as Record<string, unknown>)[key] = signal(value, {
+      // Create signal for primitives, arrays, and built-in objects
+      (store as Record<string, unknown>)[key] = signal(value, {
         equal: equalityFn,
       });
     }
   }
 
-  return result;
+  return store as DeepSignalify<T>;
 }
 
 /**
@@ -155,9 +195,7 @@ function createEagerSignalsFromObject<O extends StateObject>(
  * const enhancedTree = basicTree.pipe(withSomeFeature());
  * ```
  */
-function enhanceTree<T extends StateObject>(
-  tree: SignalTree<T>
-): SignalTree<T> {
+function enhanceTree<T>(tree: SignalTree<T>): SignalTree<T> {
   /**
    * Unwraps the current state by reading all signal values.
    * Recursively converts the signal tree back to plain JavaScript values.
@@ -180,13 +218,15 @@ function enhanceTree<T extends StateObject>(
    */
   tree.unwrap = (): T => {
     // Recursively unwrap with proper typing
-    const unwrapObject = <O extends Record<string, unknown>>(
-      obj: DeepSignalify<O>
-    ): O => {
+    const unwrapObject = <O>(obj: DeepSignalify<O>): O => {
+      if (typeof obj !== 'object' || obj === null) {
+        return obj as O;
+      }
+
       const result = {} as Record<string, unknown>;
 
       for (const key in obj) {
-        const value = obj[key];
+        const value = (obj as Record<string, unknown>)[key];
 
         if (isSignal(value)) {
           result[key] = (value as Signal<unknown>)();
@@ -196,9 +236,7 @@ function enhanceTree<T extends StateObject>(
           !Array.isArray(value)
         ) {
           // Nested signal state
-          result[key] = unwrapObject(
-            value as DeepSignalify<Record<string, unknown>>
-          );
+          result[key] = unwrapObject(value as DeepSignalify<object>);
         } else {
           result[key] = value;
         }
@@ -247,7 +285,7 @@ function enhanceTree<T extends StateObject>(
     const partialObj = updater(currentValue);
 
     // Recursively update with better typing
-    const updateObject = <O extends Record<string, unknown>>(
+    const updateObject = <O>(
       target: DeepSignalify<O>,
       updates: Partial<O>
     ): void => {
@@ -269,8 +307,8 @@ function enhanceTree<T extends StateObject>(
         ) {
           // Nested object - recurse
           updateObject(
-            currentSignalOrState as DeepSignalify<Record<string, unknown>>,
-            updateValue as Partial<Record<string, unknown>>
+            currentSignalOrState as DeepSignalify<object>,
+            updateValue as Partial<object>
           );
         }
       }
@@ -280,16 +318,20 @@ function enhanceTree<T extends StateObject>(
   };
 
   // Pipe implementation for function composition with improved type safety
-  tree.pipe = ((
-    ...fns: Array<(input: any) => any> // eslint-disable-line @typescript-eslint/no-explicit-any
-  ): any => {
-    // eslint-disable-line @typescript-eslint/no-explicit-any
+  tree.pipe = (<TResult = SignalTree<T>>(
+    ...fns: Array<(input: unknown) => unknown>
+  ): TResult => {
     if (fns.length === 0) {
-      return tree;
+      return tree as unknown as TResult;
     }
 
-    // Type-safe reduce - the return type is determined by the overload signature
-    return fns.reduce((acc, fn) => fn(acc), tree);
+    // Type-safe reduce with proper function composition
+    return fns.reduce((acc, fn) => {
+      if (typeof fn !== 'function') {
+        throw new Error('All pipe arguments must be functions');
+      }
+      return fn(acc);
+    }, tree as unknown) as TResult;
   }) as SignalTree<T>['pipe'];
 
   // Stub implementations for advanced features (will log warnings)
@@ -373,6 +415,12 @@ function enhanceTree<T extends StateObject>(
   };
 
   tree.destroy = () => {
+    // Clean up lazy signal proxies if they exist
+    const state = tree.state as unknown;
+    if (state && typeof state === 'object' && '__cleanup__' in state) {
+      (state as { __cleanup__: () => void }).__cleanup__();
+    }
+
     // Basic cleanup for non-enhanced trees
     console.log('[MEMORY-CLEANUP] Basic tree destroyed');
   };
@@ -472,17 +520,27 @@ function enhanceTree<T extends StateObject>(
 /**
  * Creates a reactive signal tree with smart progressive enhancement.
  *
- * Features auto-enable on first use. Uses intelligent defaults based on
- * environment (development vs production). No confusing warnings or
- * fake implementations - everything just works!
+ * MAXIMUM FLEXIBILITY: Accepts ANY type T - no StateObject constraint!
+ * This is the key difference from constrained approaches.
  *
- * @template T - The state object type, must extend Record<string, unknown>
+ * Features auto-enable on first use. Uses intelligent defaults based on
+ * environment (development vs production). Enhanced with safety features
+ * to prevent common issues like signal double-wrapping.
+ *
+ * @template T - ANY type (no constraints for maximum flexibility)
  * @param obj - The initial state object to convert into a reactive tree
  * @returns A SignalTree with auto-enabling features
  *
  * @example
  * ```typescript
- * const tree = signalTree({ count: 0, users: [] });
+ * // Works with ANY object - no constraints!
+ * const tree = signalTree({
+ *   count: 0,
+ *   users: [],
+ *   metadata: new Map(),  // Non-plain objects work!
+ *   fn: () => 'hello',    // Functions work!
+ *   symbol: Symbol('id')  // Symbols work!
+ * });
  *
  * // Core functionality always works
  * tree.state.count.set(5);
@@ -496,7 +554,7 @@ function enhanceTree<T extends StateObject>(
  * );
  * ```
  */
-export function signalTree<T extends StateObject>(obj: T): SignalTree<T>;
+export function signalTree<T>(obj: T): SignalTree<T>;
 
 /**
  * Creates a reactive signal tree with preset configuration.
@@ -521,26 +579,27 @@ export function signalTree<T extends StateObject>(obj: T): SignalTree<T>;
  * const perfTree = signalTree(state, 'performance');
  * ```
  */
-export function signalTree<T extends StateObject>(
-  obj: T,
-  preset: TreePreset
-): SignalTree<T>;
+export function signalTree<T>(obj: T, preset: TreePreset): SignalTree<T>;
 
 /**
  * Creates a reactive signal tree with custom configuration.
  *
  * Provides full control over feature enablement while maintaining
- * auto-enabling behavior for unspecified features.
+ * auto-enabling behavior for unspecified features. Enhanced with safety features.
  *
- * @template T - The state object type, must extend Record<string, unknown>
+ * @template T - ANY type (no constraints for maximum flexibility)
  * @param obj - The initial state object to convert into a reactive tree
  * @param config - Custom configuration object
  * @returns A SignalTree configured with custom options
  *
  * @example
  * ```typescript
- * // Custom configuration
- * const customTree = signalTree(state, {
+ * // Custom configuration - works with ANY object!
+ * const customTree = signalTree({
+ *   data: state,
+ *   metadata: new Map(),  // Any object type
+ *   fn: () => 'custom'    // Even functions
+ * }, {
  *   batchUpdates: true,
  *   useMemoization: true,
  *   maxCacheSize: 500,
@@ -548,15 +607,31 @@ export function signalTree<T extends StateObject>(
  * });
  * ```
  */
-export function signalTree<T extends StateObject>(
-  obj: T,
-  config: TreeConfig
-): SignalTree<T>;
+export function signalTree<T>(obj: T, config: TreeConfig): SignalTree<T>;
 
 /**
  * Implementation of the signalTree factory function.
  */
-export function signalTree<T extends StateObject>(
+/**
+ * Main SignalTree factory function with superior type inference
+ *
+ * Key improvements from signal-store.ts approach:
+ * 1. Uses Required<T> for better type inference when possible
+ * 2. Maintains complete type information through recursion
+ * 3. Proper handling of nested objects and arrays
+ * 4. No type constraints - maximum flexibility
+ */
+export function signalTree<T extends Record<string, unknown>>(
+  obj: Required<T>,
+  configOrPreset?: TreeConfig | TreePreset
+): SignalTree<Required<T>>;
+
+export function signalTree<T>(
+  obj: T,
+  configOrPreset?: TreeConfig | TreePreset
+): SignalTree<T>;
+
+export function signalTree<T>(
   obj: T,
   configOrPreset?: TreeConfig | TreePreset
 ): SignalTree<T> {

@@ -1,8 +1,9 @@
-import { SignalTree, StateObject } from '@signaltree/core';
+import { SignalTree } from '@signaltree/core';
 
 /**
  * Configuration options for intelligent batching behavior.
  * Controls how updates are grouped and processed for optimal performance.
+ * Uses unconstrained recursive typing - no limitations on T
  *
  * @example
  * ```typescript
@@ -51,9 +52,10 @@ interface BatchingConfig {
  *     active: state.users.filter(u => u.active).length + (newUser.active ? 1 : 0)
  *   }
  * }));
+ * Uses unconstrained recursive typing - no limitations on T
  * ```
  */
-interface BatchingSignalTree<T extends StateObject> extends SignalTree<T> {
+interface BatchingSignalTree<T> extends SignalTree<T> {
   /**
    * Batches multiple state updates into a single change cycle for optimal performance.
    * Groups related updates to prevent UI thrashing and improve rendering efficiency.
@@ -97,8 +99,90 @@ interface BatchedUpdate {
 let updateQueue: Array<BatchedUpdate> = [];
 /** Flag to prevent recursive batch processing */
 let isUpdating = false;
-/** Current batching configuration for the active batch cycle */
+/** Timeout ID for scheduled flush operations */
+let flushTimeoutId: number | undefined;
+/** Current batching configuration */
 let currentBatchingConfig: BatchingConfig = {};
+
+/**
+ * Enhanced queue management with priority and deduplication
+ * Returns true if queue was flushed immediately, false if scheduled for later
+ */
+function addToQueue(
+  update: BatchedUpdate,
+  config: BatchingConfig = currentBatchingConfig
+): boolean {
+  const maxSize = config.maxBatchSize ?? 100;
+
+  // Remove duplicates based on path if available
+  if (update.path) {
+    updateQueue = updateQueue.filter(
+      (existing) => existing.path !== update.path
+    );
+  }
+
+  updateQueue.push(update);
+
+  // Check if we should flush immediately due to maxBatchSize
+  // Flush when we exceed maxBatchSize, not when we reach it
+  if (updateQueue.length > maxSize) {
+    // Flush immediately when max batch size is exceeded
+    flushUpdates();
+    return true; // Indicate that queue was flushed
+  }
+
+  // Schedule auto-flush if not already scheduled
+  scheduleFlush(config);
+  return false; // Indicate that queue was scheduled for later
+}
+
+/**
+ * Schedules automatic queue flushing with configurable timing
+ */
+function scheduleFlush(config: BatchingConfig) {
+  if (flushTimeoutId !== undefined) {
+    clearTimeout(flushTimeoutId);
+  }
+
+  const delay = config.autoFlushDelay ?? 16; // Default to 60fps
+  flushTimeoutId = setTimeout(() => {
+    flushUpdates();
+  }, delay) as unknown as number;
+}
+
+/**
+ * Processes the update queue immediately with race condition protection.
+ * Handles updates that arrive during flush execution.
+ */
+function flushUpdates(): void {
+  if (isUpdating) return;
+
+  let queue: Array<BatchedUpdate>;
+  do {
+    if (updateQueue.length === 0) return;
+
+    isUpdating = true;
+    queue = updateQueue;
+    updateQueue = []; // Clear queue atomically
+
+    // Clear any pending flush timeout
+    if (flushTimeoutId !== undefined) {
+      clearTimeout(flushTimeoutId);
+      flushTimeoutId = undefined;
+    }
+
+    // Sort by depth (deepest first) for optimal update propagation
+    queue.sort((a, b) => (b.depth ?? 0) - (a.depth ?? 0));
+
+    try {
+      queue.forEach(({ fn }) => fn());
+    } finally {
+      isUpdating = false;
+    }
+
+    // Process any updates that were added during flush
+  } while (updateQueue.length > 0);
+}
 
 /**
  * Core batching function that intelligently queues updates and processes them in optimized microtasks.
@@ -125,46 +209,28 @@ function batchUpdates(fn: () => void, path?: string): void {
   const startTime = performance.now();
   const depth = path ? parsePath(path).length : 0;
 
-  updateQueue.push({ fn, startTime, depth, path });
+  const update: BatchedUpdate = { fn, startTime, depth, path };
 
-  // Check if we need to process immediately due to maxBatchSize
-  const shouldFlushImmediately =
-    currentBatchingConfig.maxBatchSize &&
-    updateQueue.length >= currentBatchingConfig.maxBatchSize;
+  // Use enhanced queue management
+  const wasFlushed = addToQueue(update, currentBatchingConfig);
 
-  if (!isUpdating) {
-    isUpdating = true;
+  // Only schedule additional flush if queue wasn't already flushed
+  if (!wasFlushed) {
+    // Check if we need to process immediately due to timeout
+    const isTimedOut =
+      currentBatchingConfig.batchTimeoutMs &&
+      updateQueue.length > 0 &&
+      startTime - updateQueue[0].startTime >=
+        currentBatchingConfig.batchTimeoutMs;
 
-    const processQueue = () => {
-      const queue = updateQueue.slice();
-      updateQueue = [];
-      isUpdating = false;
-
-      // Sort by depth (deepest first) for optimal update propagation
-      queue.sort((a, b) => (b.depth ?? 0) - (a.depth ?? 0));
-
-      queue.forEach(({ fn }) => fn());
-    };
-
-    if (shouldFlushImmediately) {
-      // Process immediately when maxBatchSize is reached
-      processQueue();
-    } else {
-      // Use microtask for normal batching
-      queueMicrotask(processQueue);
+    if (isTimedOut) {
+      flushUpdates();
+    } else if (!isUpdating && updateQueue.length > 0) {
+      // Schedule flush but don't set isUpdating until the microtask runs
+      queueMicrotask(() => {
+        flushUpdates();
+      });
     }
-  } else if (shouldFlushImmediately) {
-    // If we're already updating but hit maxBatchSize,
-    // schedule immediate processing after current batch
-    queueMicrotask(() => {
-      if (updateQueue.length > 0 && !isUpdating) {
-        const queue = updateQueue.slice();
-        updateQueue = [];
-
-        queue.sort((a, b) => (b.depth ?? 0) - (a.depth ?? 0));
-        queue.forEach(({ fn }) => fn());
-      }
-    });
   }
 }
 
@@ -219,9 +285,10 @@ function parsePath(path: string): string[] {
  *   loading: false,
  *   error: null
  * }));
+ * Uses unconstrained recursive typing - no limitations on T
  * ```
  */
-export function withBatching<T extends StateObject>(
+export function withBatching<T>(
   config: BatchingConfig = {}
 ): (tree: SignalTree<T>) => BatchingSignalTree<T> {
   const { enabled = true } = config;
@@ -267,15 +334,17 @@ export function withBatching<T extends StateObject>(
  *
  * // Equivalent to:
  * const tree = create(initialState).with(withBatching({ enabled: true }));
+ * Uses unconstrained recursive typing - no limitations on T
  * ```
  */
-export function enableBatching<T extends StateObject>() {
+export function enableBatching<T>() {
   return withBatching<T>({ enabled: true });
 }
 
 /**
  * Creates high-performance batching configuration optimized for demanding applications.
  * Uses aggressive batching settings for maximum performance in high-frequency update scenarios.
+ * Uses unconstrained recursive typing - no limitations on T
  *
  * @template T - The state object type extending StateObject
  * @returns Function that enhances a SignalTree with high-performance batching
@@ -295,9 +364,10 @@ export function enableBatching<T extends StateObject>() {
  * // - Large batch sizes (200 updates)
  * // - Immediate processing (0ms timeout)
  * // - Aggressive optimization
+ * Uses unconstrained recursive typing - no limitations on T
  * ```
  */
-export function withHighPerformanceBatching<T extends StateObject>() {
+export function withHighPerformanceBatching<T>() {
   return withBatching<T>({
     enabled: true,
     maxBatchSize: 200,
