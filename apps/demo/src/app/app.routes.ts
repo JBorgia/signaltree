@@ -7,11 +7,6 @@ export const appRoutes: Route[] = [
       import('./components/home/home.component').then((c) => c.HomeComponent),
   },
   {
-    path: 'metrics',
-    loadComponent: () =>
-      import('./metrics.component').then((c) => c.MetricsComponent),
-  },
-  {
     path: 'extreme-depth',
     loadComponent: () =>
       import('./components/extreme-depth/extreme-depth.component').then(
