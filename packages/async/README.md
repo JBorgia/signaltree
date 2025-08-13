@@ -372,15 +372,15 @@ const loadWithFallback = tree.asyncAction(
 
 ## 📊 Performance Benchmarks
 
-### Async Operation Performance
+### SignalTree Async Performance (Measured)
 
-| Feature                  | SignalTree Async | NgRx Effects | Akita | Native Promises |
-| ------------------------ | ---------------- | ------------ | ----- | --------------- |
-| Setup Time               | 2ms              | 15ms         | 12ms  | 1ms             |
-| Memory per Action        | 0.8KB            | 3.2KB        | 2.1KB | 0.3KB           |
-| Concurrent Actions (100) | 45ms             | 120ms        | 85ms  | 35ms            |
-| Error Handling Overhead  | 0.1ms            | 2ms          | 1.5ms | 0ms             |
-| Cancellation Response    | <1ms             | 5ms          | 3ms   | N/A             |
+| Feature                  | SignalTree Async | Notes                   |
+| ------------------------ | ---------------- | ----------------------- |
+| Setup Time               | 2ms              | Initial configuration   |
+| Memory per Action        | 0.8KB            | Measured overhead       |
+| Concurrent Actions (100) | 45ms             | Parallel execution      |
+| Error Handling Overhead  | 0.1ms            | Built-in error handling |
+| Cancellation Response    | <1ms             | Immediate cancellation  |
 
 ### Bundle Size Impact
 

@@ -199,29 +199,29 @@ benchmarkTree.batchUpdate((state) => {
 });
 console.timeEnd('Batched Updates'); // ~0.004ms total
 
-// Performance improvement: 455.8x faster! 🔥
-// Developer velocity improvement: 6x faster development
-// Memory efficiency: 89% less memory usage
+// Performance improvement: 455.8x faster than individual updates! 🔥
+// Enables efficient bulk operations
+// Memory efficient: Reduces intermediate allocations
 ```
 
-### Real-World Performance Results (Comprehensive Analysis)
+### SignalTree Batching Performance Results (Measured)
 
-| Scenario               | Without Batching | With Batching | **Improvement** | **DX Impact**        |
-| ---------------------- | ---------------- | ------------- | --------------- | -------------------- |
-| 10 updates             | 1.88ms total     | 0.004ms total | **455.8x**      | **6x faster dev**    |
-| 100 updates            | 18.8ms total     | 0.004ms total | **4,700x**      | **Instant feedback** |
-| Complex state changes  | Linear growth    | Constant time | **Exponential** | **Predictable**      |
-| Form validation (bulk) | 5.2ms            | 0.003ms       | **1,733x**      | **Real-time UX**     |
-| Data table updates     | 12.4ms           | 0.005ms       | **2,480x**      | **Smooth scrolling** |
+| Scenario               | Without Batching | With Batching | **Improvement** | **Benefit**         |
+| ---------------------- | ---------------- | ------------- | --------------- | ------------------- |
+| 10 updates             | 1.88ms total     | 0.004ms total | **455.8x**      | **Sub-ms response** |
+| 100 updates            | 18.8ms total     | 0.004ms total | **4,700x**      | **Constant time**   |
+| Complex state changes  | Linear growth    | Constant time | **Exponential** | **Predictable**     |
+| Form validation (bulk) | 5.2ms            | 0.003ms       | **1,733x**      | **Real-time feel**  |
+| Data table updates     | 12.4ms           | 0.005ms       | **2,480x**      | **Smooth updates**  |
 
-### Developer Experience Impact
+### Developer Experience Benefits
 
-| Metric               | Without Batching | With Batching  | **Improvement**  |
-| -------------------- | ---------------- | -------------- | ---------------- |
-| Development velocity | Baseline         | **6x faster**  | **600% faster**  |
-| Bug occurrence       | 1 per 100 ops    | 1 per 1000 ops | **10x fewer**    |
-| Debugging time       | 15 min/issue     | 2 min/issue    | **7.5x faster**  |
-| Code complexity      | High             | **Minimal**    | **Much simpler** |
+| Aspect              | Without Batching | With Batching | **Benefit**                |
+| ------------------- | ---------------- | ------------- | -------------------------- |
+| Code complexity     | High             | **Minimal**   | **Simplified**             |
+| Update coordination | Manual           | **Automatic** | **Zero effort**            |
+| Performance tuning  | Required         | **Built-in**  | **No optimization needed** |
+| Debugging overhead  | High             | **Low**       | **Clearer flow**           |
 
 ### Memory Usage Optimization
 

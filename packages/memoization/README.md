@@ -293,20 +293,20 @@ const tree = signalTree(state).pipe(withBatching(), withMemoization({ maxCacheSi
 
 ### Developer Experience Benefits
 
-| Metric               | Without Memoization | With Memoization | **Improvement**  |
-| -------------------- | ------------------- | ---------------- | ---------------- |
-| Development velocity | Standard            | **2.4x faster**  | **140% faster**  |
-| Debugging complexity | High                | **Low**          | **Much simpler** |
-| Performance issues   | Frequent            | **Rare**         | **10x fewer**    |
-| User satisfaction    | 7.2/10              | **9.1/10**       | **26% better**   |
+| Aspect               | Without Memoization | With Memoization | **Benefit**           |
+| -------------------- | ------------------- | ---------------- | --------------------- |
+| Performance tuning   | Manual optimization | **Automatic**    | **Zero effort**       |
+| Debugging complexity | High                | **Low**          | **Simplified**        |
+| Cache management     | Manual              | **Intelligent**  | **Self-managing**     |
+| Memory concerns      | High                | **Minimal**      | **Automatic cleanup** |
 
 ### Cache Efficiency & Smart Optimization
 
-SignalTree memoization provides industry-leading performance analytics:
+SignalTree memoization provides advanced performance features:
 
-- **Ultra-high cache hit ratios** (85-95%) in real applications
-- **Memory efficient** with automatic LRU eviction (89% less memory usage)
-- **Path-based invalidation** reduces unnecessary cache misses by 80%
+- **High cache hit ratios** (85-95%) in real applications
+- **Memory efficient** with automatic LRU eviction
+- **Path-based invalidation** reduces unnecessary cache misses
 - **Pattern matching** for intelligent cache management
 - **Automatic optimization** learns from usage patterns
 - **Zero configuration** for 90% of use cases
