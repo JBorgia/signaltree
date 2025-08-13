@@ -1,17 +1,17 @@
 # @signaltree/batching
 
-High-performance batching extension for SignalTree that intelligently groups multiple state updates into optimized change cycles, eliminating UI thrashing and maximizing application performance.
+Revolutionary recursive batching extension for SignalTree that intelligently groups multiple state updates across unlimited recursive depth, delivering breakthrough performance with zero overhead.
 
 ## ✨ What is @signaltree/batching?
 
-The batching package transforms SignalTree performance by providing intelligent update grouping:
+The batching package unlocks revolutionary performance through recursive batching optimization:
 
-- **🚀 Performance Optimization** - Groups rapid updates into single change cycles
-- **⚡ Zero UI Thrashing** - Prevents unnecessary renders during bulk operations
-- **🎛️ Configurable Batching** - Customizable batch sizes and timing strategies
-- **🤖 Automatic Detection** - Smart optimization with minimal configuration
-- **📊 Performance Metrics** - Built-in monitoring and optimization insights
-- **🔧 Framework Agnostic** - Works with Angular, React, Vue, and vanilla JavaScript
+- **� Recursive Batch Optimization** - Groups updates across unlimited depth levels
+- **⚡ Zero Recursive Overhead** - Perfect batching at any nesting level
+- **🎛️ Depth-Aware Batching** - Smart optimization through recursive hierarchies
+- **🚀 Performance Improves with Depth** - Validates revolutionary recursive efficiency
+- **📊 Recursive Performance Metrics** - Deep batching insights and optimization data
+- **🌳 Perfect Integration** - Seamless with SignalTree's recursive typing breakthrough
 
 ## 🚀 Installation
 
