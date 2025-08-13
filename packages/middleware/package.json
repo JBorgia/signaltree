@@ -3,8 +3,7 @@
   "version": "1.0.3",
   "description": "Middleware system for SignalTree. Intercept state changes with before/after hooks, logging, performance tracking, and validation middleware.",
   "peerDependencies": {
-    "@angular/common": "^20.1.0",
-    "@angular/core": "^20.1.0"
+    "@signaltree/core": "1.0.3"
   },
   "sideEffects": false
 }

@@ -129,10 +129,22 @@ function createSignalStore<T>(
   obj: T,
   equalityFn: (a: unknown, b: unknown) => boolean
 ): DeepSignalify<T> {
+  // Input validation
+  if (obj === null || obj === undefined) {
+    throw new Error('Cannot create signal store from null or undefined');
+  }
+
+  if (typeof obj !== 'object') {
+    // For primitives, just return a signal
+    return signal(obj, { equal: equalityFn }) as DeepSignalify<T>;
+  }
+
   const store: Partial<DeepSignalify<T>> = {};
 
-  // Helper to detect built-in objects that should be treated as primitives
+  // Enhanced built-in object detection
   const isBuiltInObject = (v: unknown): boolean => {
+    if (v === null || v === undefined) return false;
+
     return (
       v instanceof Date ||
       v instanceof RegExp ||
@@ -144,33 +156,57 @@ function createSignalStore<T>(
       v instanceof ArrayBuffer ||
       v instanceof DataView ||
       v instanceof Error ||
-      v instanceof Promise
+      v instanceof Promise ||
+      v instanceof URL ||
+      v instanceof URLSearchParams ||
+      v instanceof FormData ||
+      v instanceof Blob ||
+      (typeof File !== 'undefined' && v instanceof File)
     );
   };
 
-  for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-    const isObj = (v: unknown): v is Record<string, unknown> =>
-      typeof v === 'object' &&
-      v !== null &&
-      !Array.isArray(v) &&
-      !isBuiltInObject(v);
+  // Safe object iteration
+  try {
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+      const isObj = (v: unknown): v is Record<string, unknown> =>
+        typeof v === 'object' &&
+        v !== null &&
+        !Array.isArray(v) &&
+        !isBuiltInObject(v);
 
-    // Enhanced safety: Never double-wrap signals
-    if (isSignal(value)) {
-      (store as Record<string, unknown>)[key] = value;
-    } else if (isObj(value)) {
-      // CRITICAL: Recursive call with type preservation - THIS IS THE KEY!
-      // Uses the signal-store pattern to maintain exact type relationships
-      (store as Record<string, unknown>)[key] = createSignalStore(
-        value,
-        equalityFn
-      );
-    } else {
-      // Create signal for primitives, arrays, and built-in objects
-      (store as Record<string, unknown>)[key] = signal(value, {
-        equal: equalityFn,
-      });
+      // Enhanced safety: Never double-wrap signals
+      if (isSignal(value)) {
+        (store as Record<string, unknown>)[key] = value;
+      } else if (isObj(value)) {
+        // CRITICAL: Recursive call with type preservation
+        try {
+          (store as Record<string, unknown>)[key] = createSignalStore(
+            value,
+            equalityFn
+          );
+        } catch (error) {
+          console.warn(
+            `Failed to create signal store for key "${key}":`,
+            error
+          );
+          // Fallback: treat as primitive
+          (store as Record<string, unknown>)[key] = signal(value, {
+            equal: equalityFn,
+          });
+        }
+      } else {
+        // Create signal for primitives, arrays, and built-in objects
+        (store as Record<string, unknown>)[key] = signal(value, {
+          equal: equalityFn,
+        });
+      }
     }
+  } catch (error) {
+    throw new Error(
+      `Failed to create signal store: ${
+        error instanceof Error ? error.message : 'Unknown error'
+      }`
+    );
   }
 
   return store as DeepSignalify<T>;
@@ -280,41 +316,103 @@ function enhanceTree<T>(tree: SignalTree<T>): SignalTree<T> {
    * );
    * ```
    */
+  /**
+   * Enhanced update with error handling and rollback capability
+   */
   tree.update = (updater: (current: T) => Partial<T>) => {
-    const currentValue = tree.unwrap();
-    const partialObj = updater(currentValue);
+    const originalState = new Map<string, unknown>();
 
-    // Recursively update with better typing
-    const updateObject = <O>(
-      target: DeepSignalify<O>,
-      updates: Partial<O>
-    ): void => {
-      for (const key in updates) {
-        if (!Object.prototype.hasOwnProperty.call(updates, key)) continue;
+    try {
+      const currentValue = tree.unwrap();
+      const partialObj = updater(currentValue);
 
-        const updateValue = updates[key];
-        const currentSignalOrState = (target as Record<string, unknown>)[key];
-
-        if (isSignal(currentSignalOrState)) {
-          // Direct signal update
-          (currentSignalOrState as WritableSignal<unknown>).set(updateValue);
-        } else if (
-          typeof updateValue === 'object' &&
-          updateValue !== null &&
-          !Array.isArray(updateValue) &&
-          typeof currentSignalOrState === 'object' &&
-          currentSignalOrState !== null
-        ) {
-          // Nested object - recurse
-          updateObject(
-            currentSignalOrState as DeepSignalify<object>,
-            updateValue as Partial<object>
-          );
-        }
+      if (!partialObj || typeof partialObj !== 'object') {
+        throw new Error('Updater must return an object');
       }
-    };
 
-    updateObject(tree.state as DeepSignalify<T>, partialObj);
+      // Recursively update with better error handling and rollback
+      const updateObject = <O>(
+        target: DeepSignalify<O>,
+        updates: Partial<O>,
+        path = ''
+      ): void => {
+        for (const key in updates) {
+          if (!Object.prototype.hasOwnProperty.call(updates, key)) continue;
+
+          const updateValue = updates[key];
+          const currentPath = path ? `${path}.${key}` : key;
+          const currentSignalOrState = (target as Record<string, unknown>)[key];
+
+          try {
+            if (isSignal(currentSignalOrState)) {
+              // Store original value for potential rollback
+              const originalValue = (currentSignalOrState as Signal<unknown>)();
+              originalState.set(currentPath, originalValue);
+
+              // Direct signal update
+              (currentSignalOrState as WritableSignal<unknown>).set(
+                updateValue
+              );
+            } else if (
+              typeof updateValue === 'object' &&
+              updateValue !== null &&
+              !Array.isArray(updateValue) &&
+              typeof currentSignalOrState === 'object' &&
+              currentSignalOrState !== null &&
+              !isSignal(currentSignalOrState)
+            ) {
+              // Nested object - recurse
+              updateObject(
+                currentSignalOrState as DeepSignalify<object>,
+                updateValue as Partial<object>,
+                currentPath
+              );
+            } else if (currentSignalOrState === undefined) {
+              console.warn(`Cannot update non-existent path: ${currentPath}`);
+            }
+          } catch (error) {
+            console.error(`Failed to update path "${currentPath}":`, error);
+            // Continue with other updates rather than failing completely
+          }
+        }
+      };
+
+      updateObject(tree.state as DeepSignalify<T>, partialObj);
+    } catch (error) {
+      // Rollback on error
+      console.error('Update failed, attempting rollback:', error);
+
+      try {
+        // Attempt to restore original values
+        for (const [path, originalValue] of originalState.entries()) {
+          const pathParts = path.split('.');
+          let current: unknown = tree.state;
+
+          for (let i = 0; i < pathParts.length - 1; i++) {
+            current = (current as Record<string, unknown>)[pathParts[i]];
+            if (!current) break;
+          }
+
+          if (
+            current &&
+            isSignal(
+              (current as Record<string, unknown>)[
+                pathParts[pathParts.length - 1]
+              ]
+            )
+          ) {
+            const signal = (current as Record<string, unknown>)[
+              pathParts[pathParts.length - 1]
+            ] as WritableSignal<unknown>;
+            signal.set(originalValue);
+          }
+        }
+      } catch (rollbackError) {
+        console.error('Rollback failed:', rollbackError);
+      }
+
+      throw error;
+    }
   };
 
   // Pipe implementation for function composition with improved type safety

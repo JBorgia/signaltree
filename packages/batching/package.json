@@ -3,8 +3,6 @@
   "version": "1.0.3",
   "description": "Batching extension for SignalTree. Groups multiple state updates into single change cycles for improved performance and reduced UI thrashing.",
   "peerDependencies": {
-    "@angular/common": "^20.1.0",
-    "@angular/core": "^20.1.0",
     "@signaltree/core": "^1.0.0"
   },
   "sideEffects": false
