@@ -559,35 +559,34 @@ class AppStateService {
 
 _Exceptional scaling: Only 92% performance overhead for 4x depth increase_
 
-### Real-World Performance Results (Latest Comprehensive Analysis)
+### SignalTree Core Performance Results (Measured)
 
-| Operation                   | SignalTree Core | NgRx  | Akita | Native Signals | **Improvement**  |
-| --------------------------- | --------------- | ----- | ----- | -------------- | ---------------- |
-| Tree initialization (small) | **0.031ms**     | 78ms  | 65ms  | 42ms           | **6.7x faster**  |
-| Tree initialization (large) | **0.745ms**     | 450ms | 380ms | 95ms           | **127x faster**  |
-| Single update               | **0.188ms**     | 8ms   | 6ms   | 2ms            | **15.9x faster** |
-| Nested update (5 levels)    | **0.188ms**     | 12ms  | 10ms  | 3ms            | **15.9x faster** |
-| Computation (cached)        | **0.094ms**     | 3ms   | 2ms   | <1ms           | **10.6x faster** |
-| Memory per 1K entities      | **1.2MB**       | 4.2MB | 3.5MB | 2.3MB          | **71% less**     |
+| Operation                   | SignalTree Core | Notes            |
+| --------------------------- | --------------- | ---------------- |
+| Tree initialization (small) | **0.031ms**     | 27 nodes         |
+| Tree initialization (large) | **0.745ms**     | 341 nodes        |
+| Single update               | **0.188ms**     | Property update  |
+| Nested update (5 levels)    | **0.188ms**     | Deep tree update |
+| Computation (cached)        | **0.094ms**     | Memoized result  |
+| Memory per 1K entities      | **1.2MB**       | Measured usage   |
 
 ### Advanced Performance Features
 
-| Feature             | SignalTree Core | With Extensions        | NgRx  | Akita | **Advantage**     |
-| ------------------- | --------------- | ---------------------- | ----- | ----- | ----------------- |
-| Batching efficiency | Standard        | **455.8x improvement** | 1.2x  | 1.5x  | **455x better**   |
-| Memoization speedup | Basic           | **197.9x speedup**     | N/A   | 60%   | **197x better**   |
-| Memory efficiency   | **89% less**    | **95% less**           | Base  | Base  | **Best-in-class** |
-| Bundle impact       | **+5KB**        | **+15KB max**          | +50KB | +30KB | **70% smaller**   |
+| Feature             | SignalTree Core | With Extensions        | Notes                  |
+| ------------------- | --------------- | ---------------------- | ---------------------- |
+| Batching efficiency | Standard        | **455.8x improvement** | vs non-batched         |
+| Memoization speedup | Basic           | **197.9x speedup**     | vs non-memoized        |
+| Memory efficiency   | **Optimized**   | **Further optimized**  | Lazy signals + cleanup |
+| Bundle impact       | **+5KB**        | **+15KB max**          | Tree-shakeable         |
 
-### Developer Experience Metrics (Core Package)
+### Developer Experience (Core Package)
 
-| Metric                  | SignalTree Core | NgRx  | Akita  | **Improvement** |
-| ----------------------- | --------------- | ----- | ------ | --------------- |
-| Lines of code (counter) | **4 lines**     | 32    | 18     | **68-88% less** |
-| Files required          | **1 file**      | 4     | 3      | **75% fewer**   |
-| Learning time           | **5 minutes**   | 45min | 20min  | **9x faster**   |
-| Time to productivity    | **15 minutes**  | 4hrs  | 1.5hrs | **16x faster**  |
-| Maintenance score       | **9.2/10**      | 3.8   | 6.5    | **2.4x better** |
+| Metric                  | SignalTree Core | Traditional State Mgmt | **Improvement** |
+| ----------------------- | --------------- | ---------------------- | --------------- |
+| Lines of code (counter) | **4 lines**     | 18-32 lines            | **68-88% less** |
+| Files required          | **1 file**      | 3-4 files              | **75% fewer**   |
+| Setup complexity        | **Minimal**     | Complex                | **Simplified**  |
+| API surface             | **Small**       | Large                  | **Focused**     |
 
 ### Memory Usage Comparison
 
