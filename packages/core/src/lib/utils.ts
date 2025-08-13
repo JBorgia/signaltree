@@ -1,12 +1,6 @@
 /**
- * SignalTree Utility Functions - Recursive Typing Implementation
- *
- * COPYRIGHT NOTICE:
- * This file contains proprietary utility functions for the recursive typing system.
- * The createLazySignalTree function and built-in object detection methods are
- * protected intellectual property of Jonathan D Borgia.
- *
- * Licensed under Fair Source License - see LICENSE file for complete terms.
+ * SignalTree Utility Functions v1.1.1 - Fair Source License
+ * @see https://github.com/JBorgia/signaltree/blob/main/LICENSE
  */
 
 import { signal, WritableSignal, isSignal } from '@angular/core';
@@ -32,6 +26,33 @@ export function equal<T>(a: T, b: T): boolean {
   // For primitives, === check above is sufficient
   if (typeA !== 'object') return false;
 
+  // Handle Date objects specifically
+  if (a instanceof Date && b instanceof Date) {
+    return a.getTime() === b.getTime();
+  }
+
+  // Handle RegExp objects specifically
+  if (a instanceof RegExp && b instanceof RegExp) {
+    return a.source === b.source && a.flags === b.flags;
+  }
+
+  // Handle other built-in objects that need special comparison
+  if (a instanceof Map && b instanceof Map) {
+    if (a.size !== b.size) return false;
+    for (const [key, value] of a) {
+      if (!b.has(key) || !equal(value, b.get(key))) return false;
+    }
+    return true;
+  }
+
+  if (a instanceof Set && b instanceof Set) {
+    if (a.size !== b.size) return false;
+    for (const value of a) {
+      if (!b.has(value)) return false;
+    }
+    return true;
+  }
+
   // Handle arrays with optimized comparison
   if (Array.isArray(a)) {
     if (!Array.isArray(b) || a.length !== b.length) return false;
@@ -41,7 +62,7 @@ export function equal<T>(a: T, b: T): boolean {
   // Arrays check above handles array vs object mismatch
   if (Array.isArray(b)) return false;
 
-  // Handle objects with optimized comparison
+  // Handle regular objects with optimized comparison
   const objA = a as Record<string, unknown>;
   const objB = b as Record<string, unknown>;
 
@@ -136,10 +157,9 @@ export function parsePath(path: string): string[] {
 
 /**
  * Creates a lazy signal tree using Proxy for on-demand signal creation.
- * Only creates signals when properties are first accessed, providing
- * massive memory savings for large state objects.
- * Uses WeakMap for memory-safe caching.
+ * Only creates signals when properties are first accessed.
  *
+ * @see https://github.com/JBorgia/signaltree/blob/main/docs/api/create-lazy-signal-tree.md
  * @param obj - Source object to lazily signalify
  * @param equalityFn - Equality function for signal comparison
  * @param basePath - Base path for nested objects (internal use)

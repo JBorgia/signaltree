@@ -557,7 +557,7 @@ The batching package typically provides:
 
 - **Significant reduction** in UI updates during bulk operations
 - **Faster nested state updates** through intelligent batching
-- **Minimal overhead** - only ~3KB added to bundle
+- **Minimal overhead** - only ~3.7KB added to bundle
 - **Frame-rate aware** batching for smooth animations
 
 ## 🔗 Links

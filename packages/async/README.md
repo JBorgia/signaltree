@@ -387,11 +387,11 @@ const loadWithFallback = tree.asyncAction(
 ```typescript
 // Minimal async usage
 import { withAsync } from '@signaltree/async';
-// +2KB to bundle
+// +5.5KB to bundle
 
 // Full async features
 import { withAsync, createRetryStrategy, createTimeoutHandler, AsyncBatch } from '@signaltree/async';
-// +2.5KB to bundle (tree-shakeable)
+// +5.5KB to bundle (tree-shakeable)
 ```
 
 ## 🔗 Package Composition
@@ -764,7 +764,7 @@ const tree = signalTree(state).pipe(withBatching(), withMemoization(), withAsync
 - **Cancellation** prevents race conditions
 - **Retry logic** improves reliability
 - **Timeout handling** prevents hanging operations
-- **Minimal overhead** - only ~2KB added to bundle
+- **Minimal overhead** - only ~5.5KB added to bundle
 
 ## 🔗 Links
 
