@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/presets",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "Pre-configured feature combinations for SignalTree. Environment-based configurations (basic, performance, development, production) for quick setup.",
   "peerDependencies": {
     "@signaltree/core": "^1.0.0"
