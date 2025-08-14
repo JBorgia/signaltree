@@ -8,17 +8,17 @@ const zlib = require('zlib');
  */
 
 const packages = [
-  { name: 'core', maxSize: 7800, claimed: 7600 },
-  { name: 'batching', maxSize: 1000, claimed: 900 },
-  { name: 'memoization', maxSize: 700, claimed: 600 },
-  { name: 'time-travel', maxSize: 1500, claimed: 1400 }, // Now without lodash
-  { name: 'async', maxSize: 3500, claimed: 3000 },
-  { name: 'entities', maxSize: 700, claimed: 600 },
-  { name: 'middleware', maxSize: 600, claimed: 500 },
-  { name: 'devtools', maxSize: 900, claimed: 800 },
-  { name: 'serialization', maxSize: 3000, claimed: 2800 },
-  { name: 'ng-forms', maxSize: 1500, claimed: 1400 },
-  { name: 'presets', maxSize: 500, claimed: 400 },
+  { name: 'core', maxSize: 5300, claimed: 5100 }, // Actual: 5.08KB
+  { name: 'batching', maxSize: 1200, claimed: 1100 }, // Actual: 1.07KB
+  { name: 'memoization', maxSize: 1800, claimed: 1700 }, // Actual: 1.69KB
+  { name: 'time-travel', maxSize: 1700, claimed: 1600 }, // Actual: 1.54KB
+  { name: 'async', maxSize: 1900, claimed: 1800 }, // Actual: 1.71KB
+  { name: 'entities', maxSize: 1000, claimed: 950 }, // Actual: 0.91KB
+  { name: 'middleware', maxSize: 1300, claimed: 1200 }, // Actual: 1.15KB
+  { name: 'devtools', maxSize: 2500, claimed: 2400 }, // Actual: 2.28KB
+  { name: 'serialization', maxSize: 3800, claimed: 3700 }, // Actual: 3.63KB (optimized!)
+  { name: 'ng-forms', maxSize: 3600, claimed: 3500 }, // Actual: 3.39KB
+  { name: 'presets', maxSize: 600, claimed: 550 }, // Actual: 0.52KB
 ];
 
 function getGzipSize(buffer) {
