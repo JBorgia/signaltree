@@ -1000,24 +1000,24 @@ Extend the core with optional feature packages:
 
 ### Performance & Optimization
 
-- **[@signaltree/batching](../batching)** (+3.7KB) - Batch multiple updates for better performance
-- **[@signaltree/memoization](../memoization)** (+2KB) - Intelligent caching & performance optimization
+- **[@signaltree/batching](../batching)** (+1.1KB gzipped) - Batch multiple updates for better performance
+- **[@signaltree/memoization](../memoization)** (+1.7KB gzipped) - Intelligent caching & performance optimization
 
 ### Advanced Features
 
-- **[@signaltree/middleware](../middleware)** (+1KB) - Middleware system & state interceptors
-- **[@signaltree/async](../async)** (+2KB) - Advanced async operations & loading states
-- **[@signaltree/entities](../entities)** (+2KB) - Enhanced CRUD operations & entity management
+- **[@signaltree/middleware](../middleware)** (+1.2KB gzipped) - Middleware system & state interceptors
+- **[@signaltree/async](../async)** (+1.7KB gzipped) - Advanced async operations & loading states
+- **[@signaltree/entities](../entities)** (+929B gzipped) - Enhanced CRUD operations & entity management
 
 ### Development Tools
 
-- **[@signaltree/devtools](../devtools)** (+1KB) - Development tools & Redux DevTools integration
-- **[@signaltree/time-travel](../time-travel)** (+3KB) - Undo/redo functionality & state history
+- **[@signaltree/devtools](../devtools)** (+2.3KB gzipped) - Development tools & Redux DevTools integration
+- **[@signaltree/time-travel](../time-travel)** (+1.5KB gzipped) - Undo/redo functionality & state history
 
 ### Integration & Convenience
 
-- **[@signaltree/presets](../presets)** (+0.5KB) - Pre-configured setups for common patterns
-- **[@signaltree/ng-forms](../ng-forms)** (+3KB) - Complete Angular Forms integration
+- **[@signaltree/presets](../presets)** (+0.5KB gzipped) - Pre-configured setups for common patterns
+- **[@signaltree/ng-forms](../ng-forms)** (+3.4KB gzipped) - Complete Angular Forms integration
 
 ### Quick Start with Extensions
 

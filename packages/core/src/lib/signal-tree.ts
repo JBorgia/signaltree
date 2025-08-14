@@ -1,5 +1,5 @@
 /**
- * SignalTree Core v1.1.1 - Fair Source License
+ * SignalTree Core v1.1.4 - Fair Source License
  * Copyright (c) 2025 Jonathan D Borgia
  * @see https://github.com/JBorgia/signaltree/blob/main/LICENSE
  */
