@@ -27,6 +27,8 @@
     "lint:fix": "nx lint --fix",
     "format": "nx format:write",
     "format:check": "nx format:check",
+    "docs": "typedoc",
+    "docs:serve": "typedoc --serve",
     "affected:build": "nx affected:build",
     "affected:test": "nx affected:test",
     "affected:lint": "nx affected:lint",
@@ -76,6 +78,11 @@
     "perf:build": "npm run build:production && npm run analyze:bundle",
     "analyze:bundle": "nx build core --stats-json && npx webpack-bundle-analyzer dist/packages/core/bundles/*.js",
     "analyze:deps": "nx graph",
+    "size:report": "node scripts/bundle-size-report.js",
+    "size:check": "npm run build:all && npm run size:report",
+    "verify:jsdoc": "node scripts/verify-jsdoc-stripping.js",
+    "postbuild": "npm run verify:jsdoc",
+    "size:validate": "npm run build:production && npm run size:report",
     "// Maintenance": "Workspace maintenance and updates",
     "update:deps": "nx migrate latest && npm install && nx migrate --run-migrations",
     "workspace:info": "nx report"
@@ -141,6 +148,7 @@
     "ts-jest": "^29.4.0",
     "ts-node": "10.9.1",
     "tslib": "^2.3.0",
+    "typedoc": "^0.28.10",
     "typescript": "~5.8.2",
     "typescript-eslint": "^8.29.0",
     "verdaccio": "^6.0.5"

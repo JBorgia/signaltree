@@ -7,9 +7,50 @@ import { signal, WritableSignal, isSignal } from '@angular/core';
 import type { DeepSignalify } from './types';
 
 /**
- * Enhanced equality function inspired by the monolithic implementation.
- * Uses deep equality for arrays and objects, === for primitives.
- * Optimized with early exits and type-specific comparisons.
+ * Enhanced deep equality function optimized for SignalTree operations.
+ *
+ * Performs comprehensive equality checking for all JavaScript types including
+ * primitives, objects, arrays, Date, RegExp, Map, Set, and other built-ins.
+ * Optimized with early exits and type-specific comparisons for maximum performance.
+ *
+ * @template T - The type of values being compared
+ * @param a - First value to compare
+ * @param b - Second value to compare
+ * @returns True if values are deeply equal, false otherwise
+ *
+ * @example
+ * ```typescript
+ * // Primitive comparisons
+ * equal(42, 42);           // true
+ * equal('hello', 'hello'); // true
+ * equal(null, undefined);  // false
+ *
+ * // Object comparisons
+ * equal({ a: 1, b: 2 }, { a: 1, b: 2 }); // true
+ * equal({ a: 1 }, { a: 1, b: 2 });       // false
+ *
+ * // Array comparisons
+ * equal([1, 2, 3], [1, 2, 3]);           // true
+ * equal([1, [2, 3]], [1, [2, 3]]);       // true (deep)
+ *
+ * // Complex types
+ * equal(new Date('2023-01-01'), new Date('2023-01-01')); // true
+ * equal(/abc/gi, /abc/gi);                               // true
+ * equal(new Set([1, 2]), new Set([1, 2]));               // true
+ * equal(new Map([['a', 1]]), new Map([['a', 1]]));       // true
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // Usage in SignalTree for change detection
+ * const state = signalTree({
+ *   user: { name: 'John', age: 30 }
+ * });
+ *
+ * // Internal equal() usage prevents unnecessary updates
+ * state.user.set({ name: 'John', age: 30 }); // No change detected
+ * state.user.set({ name: 'Jane', age: 30 }); // Change detected
+ * ```
  */
 export function equal<T>(a: T, b: T): boolean {
   // Fast path for reference equality
@@ -75,11 +116,40 @@ export function equal<T>(a: T, b: T): boolean {
 }
 
 /**
- * Creates a terminal signal with the enhanced equality function.
- * This should be used instead of Angular's signal() when you want
- * the same deep equality behavior as signalTree.
+ * Creates a terminal signal with enhanced deep equality comparison.
  *
- * Inspired by the monolithic implementation's terminal signal creation.
+ * Alternative to Angular's signal() that uses SignalTree's deep equality
+ * function for change detection. Useful when you need standalone signals
+ * with the same equality semantics as SignalTree.
+ *
+ * @template T - The type of the signal value
+ * @param value - Initial value for the signal
+ * @param customEqual - Optional custom equality function (defaults to deep equal)
+ * @returns A WritableSignal with deep equality comparison
+ *
+ * @example
+ * ```typescript
+ * // Standard Angular signal with reference equality
+ * const standardSignal = signal({ count: 0 });
+ * standardSignal.set({ count: 0 }); // Triggers update (different reference)
+ *
+ * // Terminal signal with deep equality
+ * const terminalSig = terminalSignal({ count: 0 });
+ * terminalSig.set({ count: 0 }); // No update (same value)
+ * terminalSig.set({ count: 1 }); // Triggers update (different value)
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // Custom equality function
+ * const userSignal = terminalSignal(
+ *   { id: 1, name: 'John' },
+ *   (a, b) => a.id === b.id // Only compare by ID
+ * );
+ *
+ * userSignal.set({ id: 1, name: 'Jane' }); // No update (same ID)
+ * userSignal.set({ id: 2, name: 'Jane' }); // Triggers update (different ID)
+ * ```
  */
 export function terminalSignal<T>(
   value: T,
@@ -134,14 +204,39 @@ const MAX_CACHE_SIZE = 1000;
 const pathCache = new LRUCache<string, string[]>(MAX_CACHE_SIZE);
 
 /**
- * Parses a dot-notation path into an array of keys with LRU memoization.
- * Critical for performance when accessing nested properties frequently.
- * Includes proper LRU cache management to prevent memory leaks.
+ * Parses a dot-notation path into an array of keys with intelligent caching.
+ *
+ * Converts string paths like 'user.profile.name' into arrays ['user', 'profile', 'name']
+ * for efficient nested property access. Uses LRU caching to optimize performance
+ * for frequently accessed paths while preventing memory leaks.
+ *
+ * @param path - Dot-notation path string to parse
+ * @returns Array of property keys for nested access
  *
  * @example
  * ```typescript
- * const keys1 = parsePath('user.name'); // Splits and caches
- * const keys2 = parsePath('user.name'); // Returns cached result
+ * // Basic path parsing
+ * parsePath('user.name');           // ['user', 'name']
+ * parsePath('data.items.0.title');  // ['data', 'items', '0', 'title']
+ * parsePath('settings');            // ['settings']
+ *
+ * // Cached for performance
+ * parsePath('user.profile.name');   // Parses and caches
+ * parsePath('user.profile.name');   // Returns cached result
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // Used internally for nested state access
+ * const store = signalTree({
+ *   user: { profile: { name: 'John' } }
+ * });
+ *
+ * // Internally uses parsePath for efficient access
+ * store.user.profile.name.set('Jane');
+ *
+ * // Or with string paths in extensions
+ * setNestedValue(store, 'user.profile.name', 'Bob');
  * ```
  */
 export function parsePath(path: string): string[] {
@@ -362,58 +457,9 @@ export function createLazySignalTree<T extends object>(
 
 /**
  * Native deep equality check for arrays and objects.
- * Handles all common cases that lodash.isEqual handles for our use cases.
+ * Alias for the enhanced equal function for backward compatibility.
  */
-export function deepEqual<T>(a: T, b: T): boolean {
-  // Same reference or primitives
-  if (a === b) return true;
-
-  // Handle null/undefined
-  if (a == null || b == null) return false;
-
-  // Different types
-  if (typeof a !== typeof b) return false;
-
-  // Handle dates
-  if (a instanceof Date && b instanceof Date) {
-    return a.getTime() === b.getTime();
-  }
-
-  // Handle arrays
-  if (Array.isArray(a) && Array.isArray(b)) {
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) {
-      if (!deepEqual(a[i], b[i])) return false;
-    }
-    return true;
-  }
-
-  // Handle objects (but not arrays, dates, or other special objects)
-  if (
-    typeof a === 'object' &&
-    typeof b === 'object' &&
-    !Array.isArray(a) &&
-    !Array.isArray(b) &&
-    !(a instanceof Date) &&
-    !(b instanceof Date)
-  ) {
-    const objA = a as Record<string, unknown>;
-    const objB = b as Record<string, unknown>;
-    const keysA = Object.keys(objA);
-    const keysB = Object.keys(objB);
-
-    if (keysA.length !== keysB.length) return false;
-
-    for (const key of keysA) {
-      if (!(key in objB)) return false;
-      if (!deepEqual(objA[key], objB[key])) return false;
-    }
-    return true;
-  }
-
-  // For all other cases (primitives that aren't equal)
-  return false;
-}
+export const deepEqual = equal;
 
 /**
  * Shallow equality check for objects and arrays.

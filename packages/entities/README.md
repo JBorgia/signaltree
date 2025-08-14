@@ -448,7 +448,7 @@ const tree = signalTree(state).pipe(
 - **Efficient filtering** with predicate-based queries
 - **Smart duplicate detection** prevents data corruption
 - **Memoization compatible** for caching expensive queries
-- **Minimal overhead** - only ~1.6KB added to bundle
+- **Minimal overhead** - only ~929B gzipped added to bundle
 
 ## 🔗 Links
 

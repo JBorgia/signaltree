@@ -11,6 +11,8 @@
 
 import fs from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
+import { gzipSync } from 'zlib';
 
 console.log('📦 SignalTree Revolutionary Bundle Analysis');
 console.log(
@@ -68,7 +70,26 @@ const packages = [
     path: 'packages/presets',
     features: ['Recursive Configuration Presets'],
   },
+  {
+    name: 'serialization',
+    path: 'packages/serialization',
+    features: ['Recursive Serialization', 'Deep Object Handling'],
+  },
 ];
+
+// Build all packages first
+console.log('🔨 Building all library packages...');
+try {
+  const packageNames = packages.map((p) => p.name).join(',');
+  execSync(`pnpm nx run-many --target=build --projects=${packageNames}`, {
+    stdio: 'pipe',
+  });
+  console.log('✅ All library packages built successfully\n');
+} catch (error) {
+  console.error('❌ Build failed:', error.message);
+  // Continue anyway since some packages might be built
+  console.log('⚠️  Continuing with available builds...\n');
+}
 
 class RecursiveBundleAnalyzer {
   constructor() {
@@ -85,7 +106,7 @@ class RecursiveBundleAnalyzer {
     console.log(`🔍 Analyzing ${pkg.name} package...`);
 
     const packagePath = path.join(process.cwd(), pkg.path);
-    const distPath = path.join(packagePath, 'dist');
+    const distPath = path.join(process.cwd(), 'dist/packages', pkg.name);
 
     const bundleMetrics = {
       package: pkg.name,
@@ -105,28 +126,32 @@ class RecursiveBundleAnalyzer {
 
     try {
       // Check if package exists and is built
-      if (fs.existsSync(distPath)) {
-        const files = fs.readdirSync(distPath, { recursive: true });
+      const fesmPath = path.join(distPath, 'fesm2022');
+      if (fs.existsSync(fesmPath)) {
+        const files = fs.readdirSync(fesmPath);
 
-        // Calculate bundle sizes
+        // Calculate bundle sizes using actual compression for .mjs files
         files.forEach((file) => {
           if (
             typeof file === 'string' &&
-            (file.endsWith('.js') || file.endsWith('.mjs'))
+            file.endsWith('.mjs') &&
+            !file.endsWith('.map')
           ) {
-            const filePath = path.join(distPath, file);
+            const filePath = path.join(fesmPath, file);
             if (fs.existsSync(filePath)) {
+              const content = fs.readFileSync(filePath);
               const stats = fs.statSync(filePath);
               bundleMetrics.size.raw += stats.size;
+
+              // Calculate actual gzipped size
+              const gzipped = gzipSync(content);
+              bundleMetrics.size.gzipped += gzipped.length;
+
+              // Estimate brotli (usually ~15% better than gzip)
+              bundleMetrics.size.brotli += Math.round(gzipped.length * 0.85);
             }
           }
-        });
-
-        // Estimate gzipped and brotli sizes (simplified calculation)
-        bundleMetrics.size.gzipped = Math.round(bundleMetrics.size.raw * 0.3); // ~70% compression
-        bundleMetrics.size.brotli = Math.round(bundleMetrics.size.raw * 0.25); // ~75% compression
-
-        // Performance metrics based on recursive typing optimizations
+        }); // Performance metrics based on recursive typing optimizations
         bundleMetrics.performance = {
           loadTime: bundleMetrics.size.gzipped / 1000, // Estimated load time in ms per KB
           parseTime: bundleMetrics.size.raw / 5000, // Estimated parse time
@@ -139,21 +164,17 @@ class RecursiveBundleAnalyzer {
           )} (${this.formatBytes(bundleMetrics.size.gzipped)} gzipped)`
         );
       } else {
-        console.log(
-          `  ⚠️  ${pkg.name}: Not built - run 'nx build ${pkg.name}' first`
-        );
+        console.log(`  ❌ ${pkg.name}: Build output not found at ${distPath}`);
         bundleMetrics.size = {
-          raw: this.estimateSize(pkg),
+          raw: 0,
           gzipped: 0,
           brotli: 0,
         };
-        bundleMetrics.size.gzipped = Math.round(bundleMetrics.size.raw * 0.3);
-        bundleMetrics.size.brotli = Math.round(bundleMetrics.size.raw * 0.25);
       }
     } catch (error) {
       console.log(`  ❌ Error analyzing ${pkg.name}:`, error.message);
       bundleMetrics.size = {
-        raw: this.estimateSize(pkg),
+        raw: 0,
         gzipped: 0,
         brotli: 0,
       };
