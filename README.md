@@ -390,7 +390,7 @@ npm install @signaltree/core @signaltree/presets
 
 | Package                                                   | Size   | Purpose          | Key Features                                     |
 | --------------------------------------------------------- | ------ | ---------------- | ------------------------------------------------ |
-| **[@signaltree/core](./packages/core)**                   | 5.2KB  | Foundation       | Hierarchical signals, state updates, composition |
+| **[@signaltree/core](./packages/core)**                   | 5.1KB  | Foundation       | Hierarchical signals, state updates, composition |
 | **[@signaltree/serialization](./packages/serialization)** | +3.6KB | Persistence      | State serialization, SSR, time-travel debugging  |
 | **[@signaltree/batching](./packages/batching)**           | +1.1KB | Performance      | Batch updates, reduce re-renders                 |
 | **[@signaltree/memoization](./packages/memoization)**     | +1.7KB | Caching          | Intelligent caching, performance optimization    |
@@ -398,9 +398,9 @@ npm install @signaltree/core @signaltree/presets
 | **[@signaltree/async](./packages/async)**                 | +1.7KB | Async Operations | Advanced async patterns, loading states          |
 | **[@signaltree/entities](./packages/entities)**           | +929B  | Data Management  | Enhanced CRUD, filtering, querying               |
 | **[@signaltree/devtools](./packages/devtools)**           | +2.3KB | Development      | Redux DevTools, debugging, monitoring            |
-| **[@signaltree/time-travel](./packages/time-travel)**     | +1.6KB | History          | Undo/redo, snapshots, state persistence          |
-| **[@signaltree/presets](./packages/presets)**             | +1.2KB | Convenience      | Pre-configured setups, common patterns           |
-| **[@signaltree/ng-forms](./packages/ng-forms)**           | +4.1KB | Angular Forms    | Reactive forms, validation, form state           |
+| **[@signaltree/time-travel](./packages/time-travel)**     | +1.5KB | History          | Undo/redo, snapshots, state persistence          |
+| **[@signaltree/presets](./packages/presets)**             | +0.5KB | Convenience      | Pre-configured setups, common patterns           |
+| **[@signaltree/ng-forms](./packages/ng-forms)**           | +3.4KB | Angular Forms    | Reactive forms, validation, form state           |
 
 ## 🔄 Migration from signaltree
 
