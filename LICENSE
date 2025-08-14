@@ -1,91 +1,96 @@
-Fair Source License, version 0.9
+Fair Source License, version 0.9 (Seat-Based)
 
 Copyright (c) 2025 Jonathan D Borgia
-
 Licensor: Jonathan D Borgia
-
-Software: SignalTree - A modern state management library for TypeScript/JavaScript applications
-
-Use Limitation: You may use, copy, modify, and distribute this Software for any purpose,
-EXCEPT if your use meets ANY of the following conditions, in which case you must obtain
-a paid commercial license:
-
-1. Your organization has more than $1,000,000 USD in annual gross revenue; OR
-2. Your application or service using this Software has more than 25,000 monthly active users; OR
-3. You are providing this Software as a managed service or hosted solution to third parties; OR
-4. You are embedding this Software in a commercial product that you sell or license to others.
-
-These limitations do NOT apply to:
-
-- Educational institutions and students using the Software for learning purposes
-- Non-profit organizations with 501(c)(3) or equivalent status
-- Open source projects licensed under an OSI-approved license
-- Personal projects with no commercial activity
-- Evaluation and testing for up to 90 days
-
-Change Date: January 1, 2029
-
-Change License: Apache License, Version 2.0
-
-Additional Terms:
-
-1. ATTRIBUTION: You must retain all copyright notices and this license in all copies.
-
-2. NO WARRANTY: THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-   PARTICULAR PURPOSE AND NONINFRINGEMENT.
-
-3. COMMERCIAL LICENSE: To obtain a commercial license, contact: licensing@signaltree.dev
-   or visit: https://signaltree.dev/pricing
-
-4. EXEMPTIONS: The Licensor reserves the right to grant exemptions from commercial licensing
-   requirements at their sole discretion. Contact the author to discuss special circumstances,
-   hardship cases, or unique use cases that may qualify for an exemption.
-
-5. GOOD FAITH USAGE: This license operates on good faith. If you're unsure whether your
-   use case requires a commercial license, please reach out to discuss.
-
-6. RECURSIVE TYPING INTELLECTUAL PROPERTY RIGHTS:
-
-   a) EXCLUSIVE INNOVATION: The recursive typing system implemented in this Software,
-   including but not limited to the "DeepSignalify<T>" type system, the signal-store
-   pattern, and the method of achieving perfect type inference through recursive
-   type-runtime alignment, constitutes proprietary intellectual property of the Licensor.
-
-   b) SCOPE OF PROTECTION: This includes the specific approach of:
-
-   - Using recursive type transformations that mirror runtime recursion
-   - The "initiation defines structure, typing works as inferred" paradigm
-   - Built-in object detection and handling in recursive type systems
-   - Lazy signal tree creation with perfect type preservation
-   - The method of maintaining exact literal types through deep nesting
-   - Any derivative implementations of these core concepts
-
-   c) RESTRICTED USE: You may NOT:
-
-   - Extract, copy, or reimplement the recursive typing system in other projects
-   - Create derivative works based on the recursive typing methodology
-   - Use the recursive typing concepts in competing state management libraries
-   - Teach, distribute, or license the recursive typing implementation to others
-   - Create educational content that reveals the implementation details
-
-   d) PERMITTED USE: You MAY:
-
-   - Use the Software as provided under the main license terms
-   - Build applications that consume the public API
-   - Contribute improvements back to this project under a Contributor License Agreement
-
-   e) VIOLATIONS: Any unauthorized use of the recursive typing system constitutes
-   copyright infringement and breach of this license, subject to immediate
-   termination of all rights and potential legal action.
-
-7. ENFORCEMENT: The Licensor reserves all rights to enforce these intellectual property
-   protections through legal action, including but not limited to injunctive relief,
-   damages, and attorney fees.
+Software: SignalTree — A modern state management library for TypeScript/JavaScript applications
 
 ---
 
-Full Fair Source License details: https://fair.io/
+## Use Limitation (Seat-Based)
 
+You may use, copy, modify, and distribute this Software at no charge provided that,
+in any rolling ninety (90) day period, no more than ten (10) individual developers
+within your Organization work on, modify, or integrate the Software (“Developer Seats”).
+
+A paid Commercial License is required if any of the following apply:
+(a) More than ten (10) Developer Seats are used in any rolling 90-day period; or
+(b) You Redistribute the Software to third parties (as defined below), including as
+part of a managed/hosted service that exposes the Software’s functionality; or
+(c) You embed the Software in a library, SDK, plugin, or developer tool offered to
+third parties (whether paid or free).
+
+Internal distribution within your Organization is permitted and is not Redistribution.
+
+---
+
+## Free Use Carve-outs
+
+The Use Limitation above does not apply to:
+
+- Educational institutions and students using the Software for learning purposes
+- Nonprofit organizations with 501(c)(3) or equivalent status
+- Open-source applications under OSI-approved licenses that depend on (but do not
+  vendorize or redistribute) this Software
+- Personal projects with no commercial activity
+- Evaluation and testing for up to ninety (90) days
+
+---
+
+## Definitions
+
+“Organization” means a single legal entity and its controlled subsidiaries.
+
+“Developer Seat” means a natural person who, during a 90-day period, writes, modifies,
+or reviews code that directly integrates with, configures, or changes the Software.
+
+“Redistribute” means providing the Software, or substantial portions of its source or
+compiled form, to any third party as part of a development kit, library, SDK, plugin,
+or service that exposes the Software’s functionality. Ordinary distribution of your
+end-user applications that merely depend on the Software is not Redistribution.
+
+“Managed/Hosted Service” means making the Software’s functionality available to third
+parties over a network as a primary feature of your service.
+
+---
+
+## Change Date and Change License
+
+For each version of the Software, on the date thirty-six (36) months after its first
+public release (the “Change Date” for that version), the “Change License” for that
+version becomes the Apache License, Version 2.0.
+
+---
+
+## Additional Terms
+
+1. Attribution. You must retain all copyright notices and this license in all copies.
+
+2. No Warranty. THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+
+3. Commercial License. For use beyond the limits above (including additional Developer
+   Seats, Redistribution, or Managed/Hosted Service use), purchase a commercial license at
+   https://signaltree.dev/pricing or contact licensing@signaltree.dev.
+
+4. Exemptions. The Licensor may grant written exemptions from commercial licensing
+   requirements at their discretion (e.g., hardship or special cases). Exemptions must
+   be in writing to be effective.
+
+5. Good Faith. If you are unsure whether your use requires a commercial license,
+   please reach out to discuss in good faith.
+
+6. Intellectual Property. Except as expressly licensed, the Licensor retains all rights
+   in the Software. No trademark rights are granted. This license does not grant any
+   patent rights. (Commercial licenses may include additional rights and support/SLA.)
+
+7. Enforcement. The Licensor reserves all rights to enforce these terms, including but
+   not limited to injunctive relief, damages, and recovery of reasonable attorney fees.
+
+---
+
+## References
+
+Fair Source background: https://fair.io/
 For the most up-to-date version of this license, see:
 https://github.com/tsofist/signaltree/blob/main/LICENSE
