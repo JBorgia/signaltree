@@ -526,12 +526,12 @@ class AppStateService {
 
 | Preset       | Best For                   | Bundle Size (gzipped) | Features           |
 | ------------ | -------------------------- | --------------------- | ------------------ |
-| **Minimal**  | Simple components, widgets | ~5.2KB                | Core only          |
-| **Standard** | Most applications          | ~8.1KB                | Core + performance |
-| **Async**    | API-heavy apps             | ~9.8KB                | Enhanced async     |
-| **Entity**   | Data management            | ~6.1KB                | CRUD operations    |
-| **Full**     | Complex applications       | ~22.9KB               | All features       |
-| **Dev**      | Development/debugging      | ~25.2KB               | All + debugging    |
+| **Minimal**  | Simple components, widgets | ~5.1KB                | Core only          |
+| **Standard** | Most applications          | ~8.2KB                | Core + performance |
+| **Async**    | API-heavy apps             | ~10.2KB               | Enhanced async     |
+| **Entity**   | Data management            | ~6.9KB                | CRUD operations    |
+| **Full**     | Complex applications       | ~23KB                 | All features       |
+| **Dev**      | Development/debugging      | ~25.3KB               | All + debugging    |
 
 ## 🔗 Composition and Customization
 
