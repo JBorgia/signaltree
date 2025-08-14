@@ -352,12 +352,12 @@ SignalTree uses a modular architecture where each feature is an optional package
 
 ### Optional Feature Packages
 
-- **@signaltree/serialization** (+2.8KB) - State serialization, persistence & SSR support
-- **@signaltree/batching** (+3KB) - Batch multiple updates for performance
-- **@signaltree/memoization** (+2KB) - Intelligent caching & performance optimization
-- **@signaltree/middleware** (+1.7KB) - Middleware system & interceptors
-- **@signaltree/async** (+5.3KB) - Advanced async actions & loading states
-- **@signaltree/entities** (+1.1KB) - Enhanced CRUD operations & entity management
+- **@signaltree/serialization** (+3.6KB gzipped) - State serialization, persistence & SSR support
+- **@signaltree/batching** (+1.1KB gzipped) - Batch multiple updates for performance
+- **@signaltree/memoization** (+1.7KB gzipped) - Intelligent caching & performance optimization
+- **@signaltree/middleware** (+1.2KB gzipped) - Middleware system & interceptors
+- **@signaltree/async** (+1.7KB gzipped) - Advanced async actions & loading states
+- **@signaltree/entities** (+929B gzipped) - Enhanced CRUD operations & entity management
 - **@signaltree/devtools** (+2.6KB) - Development tools & Redux DevTools integration
 - **@signaltree/time-travel** (+1.4KB) - Undo/redo functionality & state history
 - **@signaltree/presets** (+1.2KB) - Pre-configured setups & common patterns
@@ -389,15 +389,15 @@ npm install @signaltree/core @signaltree/presets
 
 | Package                                                   | Size   | Purpose          | Key Features                                     |
 | --------------------------------------------------------- | ------ | ---------------- | ------------------------------------------------ |
-| **[@signaltree/core](./packages/core)**                   | 7.6KB  | Foundation       | Hierarchical signals, state updates, composition |
-| **[@signaltree/serialization](./packages/serialization)** | +2.8KB | Persistence      | State serialization, SSR, time-travel debugging  |
-| **[@signaltree/batching](./packages/batching)**           | +3.7KB | Performance      | Batch updates, reduce re-renders                 |
-| **[@signaltree/memoization](./packages/memoization)**     | +2KB   | Caching          | Intelligent caching, performance optimization    |
-| **[@signaltree/middleware](./packages/middleware)**       | +1.7KB | Interceptors     | State interceptors, logging, validation          |
-| **[@signaltree/async](./packages/async)**                 | +5.5KB | Async Operations | Advanced async patterns, loading states          |
-| **[@signaltree/entities](./packages/entities)**           | +1.6KB | Data Management  | Enhanced CRUD, filtering, querying               |
-| **[@signaltree/devtools](./packages/devtools)**           | +2.6KB | Development      | Redux DevTools, debugging, monitoring            |
-| **[@signaltree/time-travel](./packages/time-travel)**     | +1.4KB | History          | Undo/redo, snapshots, state persistence          |
+| **[@signaltree/core](./packages/core)**                   | 5.2KB  | Foundation       | Hierarchical signals, state updates, composition |
+| **[@signaltree/serialization](./packages/serialization)** | +3.6KB | Persistence      | State serialization, SSR, time-travel debugging  |
+| **[@signaltree/batching](./packages/batching)**           | +1.1KB | Performance      | Batch updates, reduce re-renders                 |
+| **[@signaltree/memoization](./packages/memoization)**     | +1.7KB | Caching          | Intelligent caching, performance optimization    |
+| **[@signaltree/middleware](./packages/middleware)**       | +1.2KB | Interceptors     | State interceptors, logging, validation          |
+| **[@signaltree/async](./packages/async)**                 | +1.7KB | Async Operations | Advanced async patterns, loading states          |
+| **[@signaltree/entities](./packages/entities)**           | +929B  | Data Management  | Enhanced CRUD, filtering, querying               |
+| **[@signaltree/devtools](./packages/devtools)**           | +2.3KB | Development      | Redux DevTools, debugging, monitoring            |
+| **[@signaltree/time-travel](./packages/time-travel)**     | +1.6KB | History          | Undo/redo, snapshots, state persistence          |
 | **[@signaltree/presets](./packages/presets)**             | +1.2KB | Convenience      | Pre-configured setups, common patterns           |
 | **[@signaltree/ng-forms](./packages/ng-forms)**           | +4.1KB | Angular Forms    | Reactive forms, validation, form state           |
 
