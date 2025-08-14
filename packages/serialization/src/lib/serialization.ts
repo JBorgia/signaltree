@@ -7,6 +7,7 @@
 
 import { SignalTree } from '@signaltree/core';
 import { isSignal, WritableSignal, Signal } from '@angular/core';
+import { TYPE_MARKERS } from '../constants';
 
 /**
  * Interface for SignalTree with debug configuration
@@ -105,24 +106,6 @@ export interface SerializedState<T = unknown> {
     circularRefs?: Array<{ path: string; targetPath: string }>;
   };
 }
-
-/**
- * Type markers for special object serialization
- */
-const TYPE_MARKERS = {
-  DATE: '$$date',
-  REGEXP: '$$regexp',
-  MAP: '$$map',
-  SET: '$$set',
-  UNDEFINED: '$$undefined',
-  NAN: '$$nan',
-  INFINITY: '$$infinity',
-  NEG_INFINITY: '$$neg_infinity',
-  BIGINT: '$$bigint',
-  SYMBOL: '$$symbol',
-  FUNCTION: '$$function',
-  CIRCULAR: '$$circular',
-} as const;
 
 /**
  * Enhanced SignalTree interface with serialization capabilities
