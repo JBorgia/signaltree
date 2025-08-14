@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/batching",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "description": "Batching extension for SignalTree. Groups multiple state updates into single change cycles for improved performance and reduced UI thrashing.",
   "peerDependencies": {
     "@signaltree/core": "^1.0.0"
