@@ -33,7 +33,7 @@ import type {
   DeepSignalify,
   Middleware,
 } from '@signaltree/core';
-import { signalTree } from '@signaltree/core';
+import { signalTree, parsePath } from '@signaltree/core';
 
 // ============================================
 // FORM TREE TYPES
@@ -95,13 +95,6 @@ export type FormTree<T extends Record<string, unknown>> = {
 // ============================================
 // UTILITY FUNCTIONS
 // ============================================
-
-/**
- * Simple path parsing for nested field access
- */
-function parsePath(path: string): string[] {
-  return path.split('.');
-}
 
 // ============================================
 // FORM TREE IMPLEMENTATION

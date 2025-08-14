@@ -1,5 +1,11 @@
-import { signal, Signal } from '@angular/core';
-import { SignalTree, AsyncAction, AsyncActionConfig } from '@signaltree/core';
+import { signal } from '@angular/core';
+import type { Signal } from '@angular/core';
+import { parsePath } from '@signaltree/core';
+import type {
+  SignalTree,
+  AsyncAction,
+  AsyncActionConfig,
+} from '@signaltree/core';
 
 /**
  * Extended AsyncActionConfig with additional async state management features.
@@ -136,22 +142,10 @@ interface AsyncSignalTree<T> extends SignalTree<T> {
 }
 
 /**
- * Parses dot-notation paths into an array of property keys.
- * Supports nested object navigation for state updates.
+ * Sets nested values in state using dot-notation paths with immutable updates.
+ * Safely navigates and updates deeply nested state properties while preserving immutability.
  *
- * @param path - Dot-notation path string (e.g., 'user.profile.name')
- * @returns Array of property keys for navigation
- *
- * @example
- * ```typescript
- * parsePath('user.profile.name') // ['user', 'profile', 'name']
- * parsePath('loading') // ['loading']
- * parsePath('api.errors.validation') // ['api', 'errors', 'validation']
- * ```
- */
-function parsePath(path: string): string[] {
-  return path.split('.');
-}
+ * @template T - The state object type extending StateObject
 
 /**
  * Sets nested values in state using dot-notation paths with immutable updates.
@@ -272,7 +266,7 @@ interface AsyncConfig {
  * console.log('Result:', loginAction.result());
  * ```
  */
-class AsyncActionImpl<TInput, TResult, T >
+class AsyncActionImpl<TInput, TResult, T>
   implements AsyncAction<TInput, TResult>
 {
   /** Signal indicating if the operation is currently pending */

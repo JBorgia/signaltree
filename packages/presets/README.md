@@ -524,14 +524,14 @@ class AppStateService {
 
 ## 🎯 Choosing the Right Preset
 
-| Preset       | Best For                   | Bundle Size | Features           |
-| ------------ | -------------------------- | ----------- | ------------------ |
-| **Minimal**  | Simple components, widgets | ~2KB        | Core only          |
-| **Standard** | Most applications          | ~6KB        | Core + performance |
-| **Async**    | API-heavy apps             | ~8KB        | Enhanced async     |
-| **Entity**   | Data management            | ~8KB        | CRUD operations    |
-| **Full**     | Complex applications       | ~12KB       | All features       |
-| **Dev**      | Development/debugging      | ~15KB       | All + debugging    |
+| Preset       | Best For                   | Bundle Size (gzipped) | Features           |
+| ------------ | -------------------------- | --------------------- | ------------------ |
+| **Minimal**  | Simple components, widgets | ~5.2KB                | Core only          |
+| **Standard** | Most applications          | ~8.1KB                | Core + performance |
+| **Async**    | API-heavy apps             | ~9.8KB                | Enhanced async     |
+| **Entity**   | Data management            | ~6.1KB                | CRUD operations    |
+| **Full**     | Complex applications       | ~22.9KB               | All features       |
+| **Dev**      | Development/debugging      | ~25.2KB               | All + debugging    |
 
 ## 🔗 Composition and Customization
 

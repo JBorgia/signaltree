@@ -1,5 +1,5 @@
 import { type SignalTree } from '@signaltree/core';
-import { isEqual, cloneDeep } from 'lodash';
+import { deepEqual, deepClone } from './utils';
 
 /**
  * Entry in the time travel history
@@ -122,7 +122,7 @@ class TimeTravelManager<T> implements TimeTravelInterface<T> {
 
     // Create new entry
     const entry: TimeTravelEntry<T> = {
-      state: cloneDeep(state),
+      state: deepClone(state),
       timestamp: Date.now(),
       action: this.actionNames[action] || action,
       ...(this.includePayload && payload !== undefined && { payload }),
@@ -163,7 +163,7 @@ class TimeTravelManager<T> implements TimeTravelInterface<T> {
   getHistory(): TimeTravelEntry<T>[] {
     return this.history.map((entry) => ({
       ...entry,
-      state: cloneDeep(entry.state),
+      state: deepClone(entry.state),
     }));
   }
 
@@ -211,8 +211,62 @@ class TimeTravelManager<T> implements TimeTravelInterface<T> {
 }
 
 /**
- * Wraps a SignalTree to add time travel capabilities/**
- * Tree enhancer that adds time travel capabilities to a SignalTree
+ * Enhances a SignalTree with comprehensive time travel capabilities.
+ *
+ * Adds undo/redo functionality, state history management, and snapshot features.
+ * Automatically tracks state changes and provides methods to navigate through
+ * the application's state history with configurable limits and optimizations.
+ *
+ * @template T - The state object type
+ * @param config - Configuration options for time travel behavior
+ * @returns Function that enhances a SignalTree with time travel capabilities
+ *
+ * @example
+ * ```typescript
+ * // Basic time travel enhancement
+ * const store = signalTree({ count: 0, text: '' }).with(withTimeTravel());
+ *
+ * // Make some changes
+ * store.count.set(1);
+ * store.text.set('hello');
+ * store.count.set(2);
+ *
+ * // Access time travel interface
+ * const timeTravel = store.__timeTravel;
+ *
+ * // Navigate history
+ * console.log(timeTravel.canUndo()); // true
+ * timeTravel.undo(); // count: 1, text: 'hello'
+ * timeTravel.undo(); // count: 1, text: ''
+ * timeTravel.undo(); // count: 0, text: ''
+ *
+ * timeTravel.redo(); // count: 1, text: ''
+ * console.log(timeTravel.canRedo()); // true
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // Advanced configuration
+ * const store = signalTree({
+ *   document: { title: '', content: '' },
+ *   settings: { theme: 'light' }
+ * }).with(withTimeTravel({
+ *   maxHistorySize: 50,        // Limit memory usage
+ *   includePayload: true,      // Store action metadata
+ *   actionNames: {             // Custom action names
+ *     'update_title': 'Update Document Title',
+ *     'change_theme': 'Change Theme'
+ *   }
+ * }));
+ *
+ * // Named actions with metadata
+ * store.update(() => ({ document: { title: 'New Title' } }), 'update_title');
+ *
+ * // View detailed history
+ * const history = store.__timeTravel.getHistory();
+ * console.log(history[0].action); // 'Update Document Title'
+ * console.log(history[0].timestamp); // Date when change occurred
+ * ```
  */
 export function withTimeTravel<T>(
   config: TimeTravelConfig = {}
@@ -252,7 +306,7 @@ export function withTimeTravel<T>(
       const afterState = tree.unwrap();
 
       // Only add to history if state actually changed
-      const statesEqual = isEqual(beforeState, afterState);
+      const statesEqual = deepEqual(beforeState, afterState);
 
       if (!statesEqual) {
         timeTravelManager.addEntry('update', afterState);

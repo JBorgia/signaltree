@@ -23,7 +23,7 @@ import { WritableSignal, Signal } from '@angular/core';
  * NO MORE StateObject constraint!
  * We don't need this at all - remove it or make it accept anything
  */
-// DELETE THIS: export type StateObject = Record<PropertyKey, unknown>;
+
 // REPLACE WITH: Just use generic T with no constraints
 
 /**

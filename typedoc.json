@@ -1,0 +1,12 @@
+{
+  "entryPoints": ["packages/*/src/index.ts"],
+  "out": "docs-generated",
+  "theme": "default",
+  "includeVersion": true,
+  "exclude": ["**/*.spec.ts", "**/*.test.ts", "**/test/**/*", "apps/**/*"],
+  "excludeExternals": true,
+  "readme": "README.md",
+  "name": "SignalTree Documentation",
+  "tsconfig": "tsconfig.base.json",
+  "skipErrorChecking": true
+}

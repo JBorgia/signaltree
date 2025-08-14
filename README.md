@@ -8,7 +8,7 @@ A powerful, type-safe, modular signal-based state management solution for Angula
 - **🚀 Deep Nesting Support**: Hypothetically infinite type inference
 - **⚡ Fast Operations**: Sub-millisecond operations that scale well with depth
 - **🏆 Strong Type Inference**: TypeScript maintains exact types at deep levels
-- **📦 Compact Bundle**: 6.9KB total ecosystem - significantly smaller than alternatives
+- **📦 Compact Bundle**: 22.9KB total ecosystem (gzipped) - significantly smaller than alternatives
 - **🎯 Great Developer Experience**: 96.0/100 score with intuitive APIs
 - **💾 Memory Efficient**: Optimized memory usage with structural sharing and lazy signals
 - **🌳 Tree-Shakeable**: Unused branches completely removed from bundle
@@ -429,8 +429,8 @@ The API remains 100% compatible - only the import statements change!
 | **Philosophy**             |        Tree-based, Signal-first        |      Redux pattern      |     Entity-focused      |          Functional           |     RxJS-centric      |     Observable objects      |         Decorator-based          |     Primitive signals      |
 | **Learning Curve**         |       ⭐⭐⭐⭐⭐<br/>_Very Easy_       |    ⭐⭐<br/>_Steep_     |  ⭐⭐⭐<br/>_Moderate_  |      ⭐⭐⭐⭐<br/>_Easy_      | ⭐⭐⭐<br/>_Moderate_ |     ⭐⭐⭐⭐<br/>_Easy_     |      ⭐⭐⭐<br/>_Moderate_       | ⭐⭐⭐⭐⭐<br/>_Very Easy_ |
 | **Boilerplate**            |         🏆<br/>_Very Minimal_          |   ❌<br/>_Extensive_    |    ⚠️<br/>_Moderate_    |       🏆<br/>_Minimal_        |   ⚠️<br/>_Moderate_   |      🏆<br/>_Minimal_       |        ⚠️<br/>_Moderate_         |       ✅<br/>_None_        |
-| **Bundle Size (min)**      |          🏆<br/>_~7.6KB core_          |     ❌<br/>_~25KB_      |     ❌<br/>_~20KB_      |         ✅<br/>_~2KB_         |    ❌<br/>_~25KB_     |       ❌<br/>_~30KB_        |          ❌<br/>_~25KB_          |        🏆<br/>_0KB_        |
-| **Bundle Size (full)**     |             🏆<br/>_~22KB_             |     ❌<br/>_~50KB+_     |     ❌<br/>_~30KB_      |        ✅<br/>_~10KB_         |    ❌<br/>_~25KB_     |       ❌<br/>_~40KB_        |          ❌<br/>_~35KB_          |        🏆<br/>_0KB_        |
+| **Bundle Size (min)**      |          🏆<br/>_~5.2KB core_          |     ❌<br/>_~25KB_      |     ❌<br/>_~20KB_      |         ✅<br/>_~2KB_         |    ❌<br/>_~25KB_     |       ❌<br/>_~30KB_        |          ❌<br/>_~25KB_          |        🏆<br/>_0KB_        |
+| **Bundle Size (full)**     |             🏆<br/>_~23KB_             |     ❌<br/>_~50KB+_     |     ❌<br/>_~30KB_      |        ✅<br/>_~10KB_         |    ❌<br/>_~25KB_     |       ❌<br/>_~40KB_        |          ❌<br/>_~35KB_          |        🏆<br/>_0KB_        |
 | **Memory Efficiency**      |           🏆<br/>_Excellent_           |    ⚠️<br/>_Standard_    |    ⚠️<br/>_Standard_    |         ✅<br/>_Good_         |   ⚠️<br/>_Standard_   |        ✅<br/>_Good_        |        ⚠️<br/>_Standard_         |       ✅<br/>_Good_        |
 | **Type Safety**            |        🏆<br/>_Full inference_         | ✅<br/>_Manual typing_  |      ✅<br/>_Good_      |      🏆<br/>_Excellent_       |     ✅<br/>_Good_     |      ⚠️<br/>_Limited_       |          ✅<br/>_Good_           |      ✅<br/>_Native_       |
 | **Performance**            |          🏆<br/>_Exceptional_          |      🔄<br/>_Good_      |      🔄<br/>_Good_      |      ⚡<br/>_Excellent_       |     🔄<br/>_Good_     |     ⚡<br/>_Excellent_      |          🔄<br/>_Good_           |     ⚡<br/>_Excellent_     |

@@ -1,0 +1,57 @@
+[
+  {
+    "path": "packages/core/dist/index.js",
+    "limit": "8 KB",
+    "name": "@signaltree/core"
+  },
+  {
+    "path": "packages/time-travel/dist/index.js",
+    "limit": "1.5 KB",
+    "name": "@signaltree/time-travel"
+  },
+  {
+    "path": "packages/batching/dist/index.js",
+    "limit": "1 KB",
+    "name": "@signaltree/batching"
+  },
+  {
+    "path": "packages/memoization/dist/index.js",
+    "limit": "700 B",
+    "name": "@signaltree/memoization"
+  },
+  {
+    "path": "packages/async/dist/index.js",
+    "limit": "3.5 KB",
+    "name": "@signaltree/async"
+  },
+  {
+    "path": "packages/entities/dist/index.js",
+    "limit": "700 B",
+    "name": "@signaltree/entities"
+  },
+  {
+    "path": "packages/middleware/dist/index.js",
+    "limit": "600 B",
+    "name": "@signaltree/middleware"
+  },
+  {
+    "path": "packages/devtools/dist/index.js",
+    "limit": "900 B",
+    "name": "@signaltree/devtools"
+  },
+  {
+    "path": "packages/serialization/dist/index.js",
+    "limit": "3 KB",
+    "name": "@signaltree/serialization"
+  },
+  {
+    "path": "packages/ng-forms/dist/index.js",
+    "limit": "1.5 KB",
+    "name": "@signaltree/ng-forms"
+  },
+  {
+    "path": "packages/presets/dist/index.js",
+    "limit": "500 B",
+    "name": "@signaltree/presets"
+  }
+]

@@ -387,7 +387,7 @@ const loadWithFallback = tree.asyncAction(
 ```typescript
 // Minimal async usage
 import { withAsync } from '@signaltree/async';
-// +5.5KB to bundle
+// +1.7KB gzipped to bundle
 
 // Full async features
 import { withAsync, createRetryStrategy, createTimeoutHandler, AsyncBatch } from '@signaltree/async';

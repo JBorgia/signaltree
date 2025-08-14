@@ -1,4 +1,5 @@
-import { SignalTree } from '@signaltree/core';
+import { parsePath } from '@signaltree/core';
+import type { SignalTree } from '@signaltree/core';
 
 /**
  * Configuration options for intelligent batching behavior.
@@ -232,24 +233,6 @@ function batchUpdates(fn: () => void, path?: string): void {
       });
     }
   }
-}
-
-/**
- * Parses a dot-notation path string into individual property keys.
- * Used for determining update depth and hierarchy for optimal batch processing.
- *
- * @param path - Dot-notation path string (e.g., 'user.profile.name')
- * @returns Array of property keys
- *
- * @example
- * ```typescript
- * parsePath('user.profile.name') // ['user', 'profile', 'name']
- * parsePath('loading') // ['loading']
- * parsePath('api.cache.users') // ['api', 'cache', 'users']
- * ```
- */
-function parsePath(path: string): string[] {
-  return path.split('.');
 }
 
 /**

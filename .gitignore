@@ -4,6 +4,7 @@
 dist
 tmp
 out-tsc
+docs-generated
 
 # dependencies
 node_modules

@@ -780,29 +780,175 @@ function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
 /**
  * Creates a reactive signal tree with smart progressive enhancement.
  *
- * @see https://github.com/JBorgia/signaltree/blob/main/docs/api/signal-tree.md
- * @example https://github.com/JBorgia/signaltree/blob/main/docs/examples/README.md
- * @template T - ANY type (no constraints for maximum flexibility)
+ * Automatically converts plain objects into a reactive signal tree where each property
+ * becomes a writable signal. Provides intelligent performance optimizations, automatic
+ * change detection, and seamless integration with Angular's signal system.
+ *
+ * @template T - The type of the initial state object (no constraints for maximum flexibility)
  * @param obj - The initial state object to convert into a reactive tree
- * @returns A SignalTree with auto-enabling features
+ * @returns A SignalTree with auto-enabling features and reactive properties
+ *
+ * @example
+ * ```typescript
+ * // Basic usage - simple state management
+ * const state = signalTree({ count: 0, user: { name: 'John' } });
+ *
+ * // Access reactive properties
+ * console.log(state.count()); // 0
+ * console.log(state.user.name()); // 'John'
+ *
+ * // Update state
+ * state.count.set(1);
+ * state.user.name.set('Jane');
+ *
+ * // Batch updates
+ * state.update(current => ({
+ *   count: current.count + 1,
+ *   user: { ...current.user, name: 'Bob' }
+ * }));
+ *
+ * // Subscribe to changes
+ * state.subscribe(newState => {
+ *   console.log('State changed:', newState);
+ * });
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // Advanced usage with effects and computed values
+ * interface AppState {
+ *   todos: Todo[];
+ *   filter: 'all' | 'active' | 'completed';
+ * }
+ *
+ * const store = signalTree<AppState>({
+ *   todos: [],
+ *   filter: 'all'
+ * });
+ *
+ * // Create computed values
+ * const filteredTodos = computed(() => {
+ *   const todos = store.todos();
+ *   const filter = store.filter();
+ *   return todos.filter(todo =>
+ *     filter === 'all' ||
+ *     (filter === 'active' && !todo.completed) ||
+ *     (filter === 'completed' && todo.completed)
+ *   );
+ * });
+ *
+ * // React to state changes
+ * store.effect(state => {
+ *   console.log(`${state.todos.length} todos, showing ${state.filter}`);
+ * });
+ * ```
  */
 export function signalTree<T>(obj: T): SignalTree<T>;
 
 /**
  * Creates a reactive signal tree with preset configuration.
- * @see https://github.com/JBorgia/signaltree/blob/main/docs/api/signal-tree.md#presets
+ *
+ * Uses predefined configurations optimized for common use cases.
+ * Available presets: 'basic', 'performance', 'development', 'production'.
+ *
+ * @template T - The type of the initial state object
+ * @param obj - The initial state object to convert into a reactive tree
+ * @param preset - Predefined configuration preset
+ * @returns A SignalTree configured with the specified preset
+ *
+ * @example
+ * ```typescript
+ * // Development preset - enhanced debugging
+ * const devStore = signalTree({ count: 0 }, 'development');
+ * // Enables: debugMode, enableDevTools, trackPerformance
+ *
+ * // Production preset - optimized performance
+ * const prodStore = signalTree({ count: 0 }, 'production');
+ * // Enables: useLazySignals, batchUpdates, useMemoization
+ *
+ * // Performance preset - maximum optimization
+ * const perfStore = signalTree({ users: [] }, 'performance');
+ * // Enables: useLazySignals, batchUpdates, useMemoization, useShallowComparison
+ *
+ * // Basic preset - minimal features
+ * const basicStore = signalTree({ data: {} }, 'basic');
+ * // Minimal overhead, no optimizations
+ * ```
  */
 export function signalTree<T>(obj: T, preset: TreePreset): SignalTree<T>;
 
 /**
  * Creates a reactive signal tree with custom configuration.
- * @see https://github.com/JBorgia/signaltree/blob/main/docs/api/signal-tree.md#configuration
+ *
+ * Provides fine-grained control over SignalTree behavior and performance characteristics.
+ * Use this overload when you need specific optimization settings or debugging features.
+ *
+ * @template T - The type of the initial state object
+ * @param obj - The initial state object to convert into a reactive tree
+ * @param config - Custom configuration object
+ * @returns A SignalTree configured with the specified options
+ *
+ * @example
+ * ```typescript
+ * // Custom configuration for specific needs
+ * const store = signalTree({
+ *   users: [],
+ *   settings: { theme: 'dark' }
+ * }, {
+ *   useLazySignals: true,      // Create signals on-demand
+ *   batchUpdates: true,        // Group rapid updates
+ *   useMemoization: true,      // Cache computed values
+ *   debugMode: false,          // Production mode
+ *   enableDevTools: false,     // No dev tools
+ *   trackPerformance: true,    // Monitor performance
+ *   useShallowComparison: false // Deep equality checking
+ * });
+ *
+ * // Access performance metrics
+ * const metrics = store.getMetrics();
+ * console.log(`Updates: ${metrics.updateCount}, Time: ${metrics.totalTime}ms`);
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // Configuration for large datasets
+ * const bigDataStore = signalTree(largeDataset, {
+ *   useLazySignals: true,        // Essential for large objects
+ *   useShallowComparison: true,  // Faster comparisons
+ *   batchUpdates: true,          // Prevent UI thrashing
+ *   useMemoization: true,        // Cache expensive computations
+ *   debugMode: false             // No debug overhead
+ * });
+ * ```
  */
 export function signalTree<T>(obj: T, config: TreeConfig): SignalTree<T>;
 
 /**
  * Main SignalTree factory function with superior type inference.
- * @see https://github.com/JBorgia/signaltree/blob/main/docs/api/signal-tree.md
+ *
+ * This overload provides enhanced TypeScript inference for object types,
+ * ensuring all properties are properly typed and reactive. Ideal for
+ * strongly-typed applications where type safety is paramount.
+ *
+ * @template T - Object type extending Record<string, unknown> for better inference
+ * @param obj - Required state object with all properties defined
+ * @param configOrPreset - Optional configuration object or preset string
+ * @returns A SignalTree with enhanced type safety and inference
+ *
+ * @example
+ * ```typescript
+ * // Enhanced type inference
+ * const typedStore = signalTree({
+ *   user: { id: 1, name: 'John', email: 'john@example.com' },
+ *   settings: { theme: 'dark', notifications: true },
+ *   data: { items: [], loading: false, error: null }
+ * } as const);
+ *
+ * // TypeScript knows exact types
+ * typedStore.user.id.set(2);           // number
+ * typedStore.settings.theme.set('light'); // 'dark' | 'light'
+ * typedStore.data.loading.set(true);   // boolean
+ * ```
  */
 export function signalTree<T extends Record<string, unknown>>(
   obj: Required<T>,
