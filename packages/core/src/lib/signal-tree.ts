@@ -611,17 +611,19 @@ function enhanceTree<T>(
 function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
   // Stub implementations for advanced features (will log warnings)
   tree.batchUpdate = (updater: (current: T) => Partial<T>) => {
-    if (config.debugMode) {
-      console.warn('⚠️ batchUpdate() called but batching is not enabled.');
-    }
+    console.warn(
+      '⚠️ batchUpdate() called but batching is not enabled.',
+      'To enable batch updates, install @signaltree/batching'
+    );
     // Fallback: Just call update directly
     tree.update(updater);
   };
 
   tree.memoize = <R>(fn: (tree: T) => R, cacheKey?: string): Signal<R> => {
-    if (config.debugMode) {
-      console.warn('⚠️ memoize() called but memoization is not enabled.');
-    }
+    console.warn(
+      '⚠️ memoize() called but memoization is not enabled.',
+      'To enable memoized computations, install @signaltree/memoization'
+    );
     void cacheKey; // Mark as intentionally unused
     return computed(() => fn(tree.unwrap()));
   };

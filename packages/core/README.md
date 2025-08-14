@@ -4,14 +4,14 @@ The foundation package for SignalTree - featuring revolutionary recursive typing
 
 ## ✨ What is @signaltree/core?
 
-SignalTree Core is the lightweight (5.2KB gzipped) foundation that provides:
+SignalTree Core is the lightweight (5.1KB gzipped) foundation that provides:
 
 - **🔥 Revolutionary Recursive Typing** with deep nesting support and strong type inference
 - **⚡ Excellent Performance** - 0.021ms at 15+ levels with consistent speed
 - **🏆 Strong Type Safety** with TypeScript inference at 25+ recursive levels
 - **💾 Memory Efficient** through structural sharing and lazy signals
 - **🌳 Lightweight Abstractions** for recursive patterns
-- **📦 Compact Bundle Size** - Complete recursive power in just 5.2KB gzipped
+- **📦 Compact Bundle Size** - Complete recursive power in just 5.1KB gzipped
 
 ### 🔥 Recursive Depth Performance Metrics
 
@@ -577,7 +577,7 @@ _Exceptional scaling: Only 92% performance overhead for 4x depth increase_
 | Batching efficiency | Standard          | **455.8x improvement** | vs non-batched         |
 | Memoization speedup | Basic             | **197.9x speedup**     | vs non-memoized        |
 | Memory efficiency   | **Optimized**     | **Further optimized**  | Lazy signals + cleanup |
-| Bundle impact       | **5.2KB gzipped** | **+15KB max**          | Tree-shakeable         |
+| Bundle impact       | **5.1KB gzipped** | **+15KB max**          | Tree-shakeable         |
 
 ### Developer Experience (Core Package)
 
@@ -864,10 +864,10 @@ const tree = signalTree(initialState).pipe(withBatching(), withMemoization(), wi
 - **@signaltree/async** (+1.7KB gzipped) - Advanced async actions & states
 - **@signaltree/entities** (+929B gzipped) - Advanced entity management
 - **@signaltree/devtools** (+2.3KB gzipped) - Redux DevTools integration
-- **@signaltree/time-travel** (+1.6KB gzipped) - Undo/redo functionality
+- **@signaltree/time-travel** (+1.5KB gzipped) - Undo/redo functionality
 - **@signaltree/ng-forms** (+3.4KB gzipped) - Complete Angular forms integration
 - **@signaltree/serialization** (+3.6KB gzipped) - State persistence & SSR support
-- **@signaltree/presets** (+537B gzipped) - Environment-based configurations
+- **@signaltree/presets** (+0.5KB gzipped) - Environment-based configurations
 
 ## 🎯 When to Use Core Only
 
