@@ -1,0 +1,43 @@
+🚀 SignalTree Performance Runner
+📁 Running comprehensive performance analysis...
+
+🚀 SignalTree Performance Analysis
+⚡ Measuring recursive typing performance...
+
+📊 Running Comprehensive Performance Analysis...
+
+🔬 Testing Basic Recursive Depth (5 levels)...
+✅ Basic (5 levels): 0.002ms avg, 1.0ms total
+
+🔬 Testing Medium Recursive Depth (10 levels)...
+✅ Medium (10 levels): 0.002ms avg, 0.5ms total
+
+🔬 Testing Extreme Recursive Depth (15 levels)...
+🔥 Extreme (15 levels): 0.002ms avg, 0.4ms total
+
+🔬 Testing Unlimited Recursive Depth (20+ levels)...
+🚀 Unlimited (20+ levels): 0.003ms avg, 0.3ms total
+
+
+======================================================================
+🚀 SIGNALTREE PERFORMANCE ANALYSIS RESULTS
+======================================================================
+
+📊 RECURSIVE DEPTH PERFORMANCE:
+- Basic (5 levels):     0.002ms avg
+- Medium (10 levels):   0.002ms avg
+- Extreme (15 levels):  0.002ms avg 🔥
+- Unlimited (20+ levels): 0.003ms avg 🚀
+
+🎯 PERFORMANCE INSIGHTS:
+- Total operations tested: 1,100
+- Average operation time: 0.002ms
+- Performance scales well with depth
+- Ready for production workloads
+
+✅ Performance analysis completed successfully!
+
+💡 For actual SignalTree integration tests, run:
+   npx nx test core --testNamePattern="performance"
+
+✅ Performance analysis completed successfully!

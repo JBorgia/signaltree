@@ -9,7 +9,8 @@
  * - Zero performance degradation with complexity
  */
 
-import { signalTree } from '@signaltree/core';
+// Using built distribution import for Phase 0 baseline capture (avoids workspace resolution issues)
+import { signalTree } from '../../dist/packages/core/fesm2022/signaltree-core.mjs';
 
 // 🎯 REVOLUTIONARY RECURSIVE STRUCTURES
 interface RecursivePerformanceStructure {
