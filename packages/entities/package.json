@@ -6,5 +6,26 @@
     "@angular/core": "^20.1.0",
     "@signaltree/core": "1.1.0"
   },
-  "sideEffects": false
+  "sideEffects": false,
+  "license": "MIT",
+  "author": "Jonathan D Borgia",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JBorgia/signaltree"
+  },
+  "homepage": "https://github.com/JBorgia/signaltree#readme",
+  "bugs": {
+    "url": "https://github.com/JBorgia/signaltree/issues"
+  },
+  "keywords": [
+    "signals",
+    "state",
+    "entities",
+    "crud",
+    "angular",
+    "signaltree"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }
