@@ -376,6 +376,18 @@ function enhanceTree<T>(
   tree: SignalTree<T>,
   config: TreeConfig = {}
 ): SignalTree<T> {
+  // Phase 3: internal version + metrics (opt-in via trackPerformance)
+  let __version = 0;
+  const perfEnabled = !!config.trackPerformance;
+  const metrics: PerformanceMetrics = {
+    updates: 0,
+    computations: 0,
+    cacheHits: 0,
+    cacheMisses: 0,
+    averageUpdateTime: 0,
+  };
+
+  tree.getVersion = () => __version;
   // Track if this tree uses lazy signals for proper cleanup
   const isLazy = config.useLazySignals ?? shouldUseLazy(tree.state, config);
 
@@ -447,6 +459,7 @@ function enhanceTree<T>(
    * Updates the state using an updater function with transaction support.
    */
   tree.update = (updater: (current: T) => Partial<T>) => {
+    const perfStart = perfEnabled ? performance.now?.() : 0;
     const transactionLog: Array<{
       path: string;
       oldValue: unknown;
@@ -519,6 +532,21 @@ function enhanceTree<T>(
       // Log transaction in debug mode
       if (config.debugMode && transactionLog.length > 0) {
         console.log('[SignalTree] Update transaction:', transactionLog);
+      }
+
+      // Only increment version & metrics if a real change happened
+      if (transactionLog.length > 0) {
+        __version++;
+        if (perfEnabled) {
+          const dur = (performance.now?.() || 0) - (perfStart || 0);
+          metrics.updates++;
+          // Exponential moving average for stability
+          const alpha = 0.2;
+          metrics.averageUpdateTime =
+            metrics.averageUpdateTime === 0
+              ? dur
+              : metrics.averageUpdateTime * (1 - alpha) + dur * alpha;
+        }
       }
     } catch (error) {
       // Rollback on error
@@ -599,6 +627,18 @@ function enhanceTree<T>(
     } catch (error) {
       console.error('[SignalTree] Error during cleanup:', error);
     }
+  };
+
+  // Metrics accessor (Phase 3). Implement here so closure captures perfEnabled/metrics.
+  tree.getMetrics = (): PerformanceMetrics => {
+    if (perfEnabled) return { ...metrics };
+    return {
+      updates: 0,
+      computations: 0,
+      cacheHits: 0,
+      cacheMisses: 0,
+      averageUpdateTime: 0,
+    };
   };
 
   // Add stub implementations for advanced features
@@ -699,16 +739,7 @@ function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
     return 0;
   };
 
-  tree.getMetrics = (): PerformanceMetrics => {
-    // Return actual metrics if we're tracking them
-    return {
-      updates: 0,
-      computations: 0,
-      cacheHits: 0,
-      cacheMisses: 0,
-      averageUpdateTime: 0,
-    };
-  };
+  // getMetrics implemented in enhanceTree (Phase 3)
 
   // Middleware stubs
   tree.addTap = (middleware: Middleware<T>) => {

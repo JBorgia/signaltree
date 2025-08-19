@@ -149,6 +149,8 @@ export type SignalTree<T> = {
   redo(): void;
   getHistory(): TimeTravelEntry<T>[];
   resetHistory(): void;
+  /** Internal monotonically increasing version counter (increments on meaningful state change) */
+  getVersion(): number;
 };
 
 // ============================================
