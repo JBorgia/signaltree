@@ -2,6 +2,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+// Basic regression detection using Phase0 baseline (if extended metrics added later, adapt diff logic)
+const PERF_SLOWDOWN_THRESHOLD_PCT = parseFloat(
+  process.env.BENCH_SLOW_PCT || '12'
+);
+
 // Future: thresholds will be applied when baseline perf numbers stored
 
 function loadJSON(p) {
@@ -23,8 +28,7 @@ if (!fs.existsSync(latestPath)) {
 }
 
 const latest = loadJSON(latestPath);
-// Baseline currently only stores size; not yet integrated in numeric comparison
-loadJSON(baselinePath);
+const baselineSize = loadJSON(baselinePath); // { rawBytes, gzipBytes }
 
 const failures = [];
 
@@ -35,9 +39,35 @@ if (latestCases.length === 0) {
   console.warn('No benchmark cases in latest results.');
 }
 
-// (Optional) if we extend baseline to hold perf numbers later.
-// For now we only check bundle size growth from baseline-core.json
-// Future: integrate size diff once new metrics include current size.
+// Optional size regression check if env provides CURRENT_GZIP_BYTES
+const currentGzip = process.env.CURRENT_GZIP_BYTES
+  ? parseInt(process.env.CURRENT_GZIP_BYTES, 10)
+  : undefined;
+if (currentGzip && baselineSize.gzipBytes) {
+  const pct =
+    ((currentGzip - baselineSize.gzipBytes) / baselineSize.gzipBytes) * 100;
+  if (pct > 2) {
+    failures.push(`Gzip size increased ${pct.toFixed(2)}% (>2%)`);
+  }
+}
+
+// Very coarse perf slowdown heuristic: compare aggregate totalMs vs previous snapshot if provided
+const previousFile = process.env.PREV_BENCH_FILE;
+if (previousFile) {
+  const prev = loadJSON(path.join(perfDir, previousFile));
+  if (prev?.totals?.totalMs && latest?.totals?.totalMs) {
+    const pct =
+      ((latest.totals.totalMs - prev.totals.totalMs) / prev.totals.totalMs) *
+      100;
+    if (pct > PERF_SLOWDOWN_THRESHOLD_PCT) {
+      failures.push(
+        `Total benchmark time +${pct.toFixed(
+          2
+        )}% (> ${PERF_SLOWDOWN_THRESHOLD_PCT}%) vs ${previousFile}`
+      );
+    }
+  }
+}
 
 // Placeholder: we could fail if schema version mismatch
 if (latest.schemaVersion && latest.schemaVersion !== 1) {

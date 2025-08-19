@@ -15,7 +15,7 @@ import {
   DestroyRefToken,
   isSignal,
 } from './adapter';
-import { scheduleTask } from './scheduler';
+import { scheduleTask, untracked } from './scheduler';
 import type {
   SignalTree,
   DeepSignalify,
@@ -683,6 +683,9 @@ function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
       }
     }
   };
+
+  // Provide untracked passthrough (Phase 3 minimal)
+  (tree as unknown as { untracked: typeof untracked }).untracked = untracked;
 
   tree.subscribe = (fn: (tree: T) => void): (() => void) => {
     try {

@@ -14,6 +14,11 @@
 
 type Task = () => void;
 
+// Simple reentrancy protection for write-loop detection (dev only)
+let currentDispatchDepth = 0;
+let maxDepthObserved = 0;
+const MAX_SAFE_DEPTH = 1000; // heuristic; adjustable later
+
 let queue: Task[] = [];
 let scheduled = false;
 
@@ -25,11 +30,28 @@ function flush() {
   // Execute sequentially; errors in one task should not block the rest
   for (const t of tasks) {
     try {
+      currentDispatchDepth++;
+      if (currentDispatchDepth > maxDepthObserved)
+        maxDepthObserved = currentDispatchDepth;
+      const g: unknown = globalThis;
+      const env =
+        typeof g === 'object' && g && 'process' in g
+          ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ((g as any).process?.env?.NODE_ENV as string | undefined)
+          : undefined;
+      if (currentDispatchDepth > MAX_SAFE_DEPTH && env !== 'production') {
+        console.warn(
+          '[SignalTree Scheduler] potential write loop detected (depth>',
+          currentDispatchDepth,
+          ')'
+        );
+      }
       t();
     } catch (err) {
       // Fail soft; future: optional error channel
       console.error('[SignalTree Scheduler] task error', err);
     }
+    currentDispatchDepth--;
   }
 }
 
@@ -45,4 +67,10 @@ export function scheduleTask(fn: Task): void {
 export const __scheduler__ = {
   flush,
   pending: () => queue.length,
+  stats: () => ({ maxDepthObserved }),
 };
+
+// untracked simply executes the function now; placeholder for future engine-specific untracked semantics
+export function untracked<T>(fn: () => T): T {
+  return fn();
+}

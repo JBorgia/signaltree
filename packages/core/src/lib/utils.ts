@@ -4,6 +4,21 @@
  */
 
 import { signal, WritableSignal, isSignal } from './adapter';
+
+// Phase 3: central equality guard enabling Object.is short-circuit then deep fallback
+export function valueChanged(oldVal: unknown, newVal: unknown): boolean {
+  if (Object.is(oldVal, newVal)) return false; // identical
+  // If both are objects/arrays perform deep compare; primitives already differ here
+  if (
+    oldVal !== null &&
+    newVal !== null &&
+    typeof oldVal === 'object' &&
+    typeof newVal === 'object'
+  ) {
+    return !equal(oldVal, newVal);
+  }
+  return true;
+}
 import type { DeepSignalify } from './types';
 
 /**

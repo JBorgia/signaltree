@@ -151,6 +151,8 @@ export type SignalTree<T> = {
   resetHistory(): void;
   /** Internal monotonically increasing version counter (increments on meaningful state change) */
   getVersion(): number;
+  /** Execute function without tracking reactive dependencies (placeholder implementation) */
+  untracked?<R>(fn: () => R): R;
 };
 
 // ============================================
