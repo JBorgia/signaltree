@@ -1,0 +1,13 @@
+{
+  "timestamp": "2025-08-19T02:16:38.344Z",
+  "results": [
+    {
+      "label": "1000 shallow increments",
+      "ms": 0.5894999999998163
+    },
+    {
+      "label": "Deep path write loop",
+      "ms": 0.19020899999986796
+    }
+  ]
+}

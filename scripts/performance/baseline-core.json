@@ -1,0 +1,8 @@
+{
+  "timestamp": "2025-08-18T00:00:00Z",
+  "core": {
+    "rawBytes": 27075,
+    "gzipBytes": 5238,
+    "notes": "Baseline before neutral abstraction (Angular-backed)."
+  }
+}
