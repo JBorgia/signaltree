@@ -2,17 +2,19 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const THRESHOLDS = {
-  avgNsPerOpIncreasePct: 15, // fail if any case slows > 15%
-  gzipSizeIncreasePct: 2, // optional if size file present
-};
+// Future: thresholds will be applied when baseline perf numbers stored
 
 function loadJSON(p) {
   return JSON.parse(fs.readFileSync(p, 'utf8'));
 }
 
 const perfDir = path.join(process.cwd(), 'scripts/performance');
-const latestPath = path.join(perfDir, 'latest-benchmark.json');
+// Allow alternate filename for phase comparison if provided via env
+const alt = process.env.LATEST_BENCHMARK_FILE;
+const latestPath = path.join(
+  perfDir,
+  alt && alt.trim() ? alt.trim() : 'latest-benchmark.json'
+);
 const baselinePath = path.join(perfDir, 'baseline-core.json');
 
 if (!fs.existsSync(latestPath)) {

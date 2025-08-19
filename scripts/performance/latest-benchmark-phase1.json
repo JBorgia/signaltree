@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "timestamp": "2025-08-19T03:17:52.861Z",
+  "totals": {
+    "cases": 6,
+    "totalMs": 1.771874999999909,
+    "totalOps": 7200
+  },
+  "cases": [
+    {
+      "name": "tree creation x100",
+      "ops": 100,
+      "totalMs": 1.195165999999972,
+      "avgNsPerOp": 11951.65999999972
+    },
+    {
+      "name": "shallow increments (set) x1000",
+      "ops": 1000,
+      "totalMs": 0.2287499999999909,
+      "avgNsPerOp": 228.7499999999909
+    },
+    {
+      "name": "deep path update (update) x300",
+      "ops": 300,
+      "totalMs": 0.07354200000003175,
+      "avgNsPerOp": 245.14000000010586
+    },
+    {
+      "name": "shallow set fan-out x500 (10 subs)",
+      "ops": 500,
+      "totalMs": 0.05899999999996908,
+      "avgNsPerOp": 117.99999999993815
+    },
+    {
+      "name": "deep update fan-out x300 (10 subs)",
+      "ops": 300,
+      "totalMs": 0.06479199999995444,
+      "avgNsPerOp": 215.97333333318147
+    },
+    {
+      "name": "bulk reads x5000",
+      "ops": 5000,
+      "totalMs": 0.1506249999999909,
+      "avgNsPerOp": 30.12499999999818
+    }
+  ]
+}

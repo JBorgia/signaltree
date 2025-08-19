@@ -3,7 +3,7 @@
  * @see https://github.com/JBorgia/signaltree/blob/main/LICENSE
  */
 
-import { signal, WritableSignal, isSignal } from '@angular/core';
+import { signal, WritableSignal, isSignal } from './adapter';
 import type { DeepSignalify } from './types';
 
 /**

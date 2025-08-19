@@ -5,7 +5,7 @@
  * Copyright (c) 2025 Jonathan D Borgia
  */
 
-import { WritableSignal, Signal } from '@angular/core';
+import { WritableSignal, Signal } from './adapter';
 
 // ============================================
 // RECURSIVE TYPING SYSTEM

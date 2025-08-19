@@ -12,8 +12,9 @@ import {
   effect,
   inject,
   DestroyRef,
+  DestroyRefToken,
   isSignal,
-} from '@angular/core';
+} from './adapter';
 import type {
   SignalTree,
   DeepSignalify,
@@ -641,7 +642,8 @@ function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
 
   tree.subscribe = (fn: (tree: T) => void): (() => void) => {
     try {
-      const destroyRef = inject(DestroyRef);
+      // Inject destroy ref using exported runtime token
+      const destroyRef = inject(DestroyRefToken) as DestroyRef;
       let isDestroyed = false;
 
       const effectRef = effect(() => {
@@ -655,7 +657,7 @@ function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
         effectRef.destroy();
       };
 
-      destroyRef.onDestroy(unsubscribe);
+      destroyRef.onDestroy(unsubscribe as () => void);
       return unsubscribe;
     } catch (error) {
       // Fallback for test environment

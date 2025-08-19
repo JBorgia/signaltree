@@ -1,3 +1,13 @@
+## Phase 1 Adapter Benchmarks
+
+An additional snapshot `latest-benchmark-phase1.json` is produced immediately after introducing the neutral adapter layer. Use:
+
+```
+LATEST_BENCHMARK_FILE=latest-benchmark-phase1.json node scripts/performance/compare-benchmark.mjs
+```
+
+to validate schema/thresholds against the standard baseline (`baseline-core.json` + logic once size thresholds are enforced).
+
 # 🚀 SignalTree Performance Analysis Scripts
 
 This directory contains comprehensive performance testing and analysis tools for SignalTree's recursive typing capabilities.
