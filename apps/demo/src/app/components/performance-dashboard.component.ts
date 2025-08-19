@@ -275,7 +275,7 @@ interface PerformanceMetrics {
         font-weight: 700;
       }
 
-      .grade-A\\ + {
+      .grade-A-plus {
         background: #10b981;
         color: white;
       }
@@ -285,7 +285,7 @@ interface PerformanceMetrics {
         color: white;
       }
 
-      .grade-B\\ + {
+      .grade-B-plus {
         background: #8b5cf6;
         color: white;
       }

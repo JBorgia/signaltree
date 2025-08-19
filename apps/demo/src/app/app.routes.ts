@@ -6,6 +6,97 @@ export const appRoutes: Route[] = [
     loadComponent: () =>
       import('./components/home/home.component').then((c) => c.HomeComponent),
   },
+
+  // Core SignalTree modules
+  {
+    path: 'core',
+    loadComponent: () =>
+      import('./pages/core-demo/core-demo.component').then(
+        (c) => c.CoreDemoComponent
+      ),
+  },
+  {
+    path: 'async',
+    loadComponent: () =>
+      import('./pages/async-demo/async-demo.component').then(
+        (c) => c.AsyncDemoComponent
+      ),
+  },
+  {
+    path: 'batching',
+    loadComponent: () =>
+      import('./pages/batching-demo/batching-demo.component').then(
+        (c) => c.BatchingDemoComponent
+      ),
+  },
+  {
+    path: 'entities',
+    loadComponent: () =>
+      import('./pages/entities-demo/entities-demo.component').then(
+        (c) => c.EntitiesDemoComponent
+      ),
+  },
+  // Temporarily commented out until components are created
+  // {
+  //   path: 'memoization',
+  //   loadComponent: () =>
+  //     import('./pages/memoization-demo/memoization-demo.component').then(
+  //       (c) => c.MemoizationDemoComponent
+  //     ),
+  // },
+  {
+    path: 'middleware',
+    loadComponent: () =>
+      import('./pages/middleware-demo/middleware-demo.component').then(
+        (c) => c.MiddlewareDemoComponent
+      ),
+  },
+  // {
+  //   path: 'ng-forms',
+  //   loadComponent: () =>
+  //     import('./pages/ng-forms-demo/ng-forms-demo.component').then(
+  //       (c) => c.NgFormsDemoComponent
+  //     ),
+  // },
+  // {
+  //   path: 'presets',
+  //   loadComponent: () =>
+  //     import('./pages/presets-demo/presets-demo.component').then(
+  //       (c) => c.PresetsDemoComponent
+  //     ),
+  // },
+  // {
+  //   path: 'time-travel',
+  //   loadComponent: () =>
+  //     import('./pages/time-travel-demo/time-travel-demo.component').then(
+  //       (c) => c.TimeTravelDemoComponent
+  //     ),
+  // },
+  // {
+  //   path: 'devtools',
+  //   loadComponent: () =>
+  //     import('./pages/devtools-demo/devtools-demo.component').then(
+  //       (c) => c.DevtoolsDemoComponent
+  //     ),
+  // },
+  // {
+  //   path: 'serialization',
+  //   loadComponent: () =>
+  //     import('./pages/serialization-demo/serialization-demo.component').then(
+  //       (c) => c.SerializationDemoComponent
+  //     ),
+  // },
+
+  // Performance comparisons
+  {
+    path: 'performance',
+    loadComponent: () =>
+      import(
+        './pages/performance-comparison/performance-comparison.component'
+      ).then((c) => c.PerformanceComparisonComponent),
+  },
+
+  // Existing pages
   {
     path: 'extreme-depth',
     loadComponent: () =>
