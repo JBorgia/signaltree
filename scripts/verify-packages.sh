@@ -86,8 +86,13 @@ for pkg in "${PACKAGES[@]}"; do
         ((ISSUES_FOUND++))
     fi
 
-    # Check sideEffects is false (for tree-shaking)
-    sideEffects=$(cat "$pkg_json" | grep '"sideEffects"' | sed 's/.*"sideEffects": \(.*\),*/\1/')
+    # Check sideEffects is explicitly false (for tree-shaking). Prefer jq when available for accurate parsing.
+    if command -v jq >/dev/null 2>&1; then
+        sideEffects=$(jq -r 'if .sideEffects==false then "false" else empty end' "$pkg_json")
+    else
+        # Fallback: extract and normalize (remove trailing commas/quotes)
+        sideEffects=$(grep '"sideEffects"' "$pkg_json" | head -n1 | sed -E 's/.*"sideEffects"[[:space:]]*:[[:space:]]*([^,]+).*/\1/' | tr -d '"' | tr -d ',')
+    fi
     if [ "$sideEffects" = "false" ]; then
         print_success "✓ sideEffects: false (tree-shaking enabled)"
     else
