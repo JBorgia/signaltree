@@ -113,6 +113,15 @@ export type SignalTree<T> = {
    */
   unwrap(): T;
   update(updater: (current: T) => Partial<T>): void;
+  update(
+    updater: (current: T) => Partial<T>,
+    options?: { label?: string; payload?: unknown }
+  ): void;
+  /**
+   * Derive reactive data from the current state. Uses memoization cache when enabled.
+   * Falls back to a simple computed() when memoization is disabled.
+   */
+  select<R>(selector: (state: T) => R, cacheKey?: string): Signal<R>;
   effect(fn: (tree: T) => void): void;
   subscribe(fn: (tree: T) => void): () => void;
   destroy(): void;
@@ -130,7 +139,10 @@ export type SignalTree<T> = {
   ): R3;
 
   // Extended features
-  batchUpdate(updater: (current: T) => Partial<T>): void;
+  batchUpdate(
+    updater: (current: T) => Partial<T>,
+    options?: { label?: string; payload?: unknown }
+  ): void;
   memoize<R>(fn: (tree: T) => R, cacheKey?: string): Signal<R>;
   optimize(): void;
   clearCache(): void;
@@ -142,7 +154,7 @@ export type SignalTree<T> = {
     entityKey?: keyof T
   ): EntityHelpers<E>;
   asyncAction<TInput, TResult>(
-    operation: (input: TInput) => Promise<TResult>,
+    operation: (input: TInput, signal?: AbortSignal) => Promise<TResult>,
     config?: AsyncActionConfig<T, TResult>
   ): AsyncAction<TInput, TResult>;
   undo(): void;
@@ -165,6 +177,7 @@ export interface TreeConfig {
   batchUpdates?: boolean;
   useMemoization?: boolean;
   enableTimeTravel?: boolean;
+  historyLimit?: number;
   useLazySignals?: boolean;
   useShallowComparison?: boolean;
   maxCacheSize?: number;
@@ -173,6 +186,7 @@ export interface TreeConfig {
   enableDevTools?: boolean;
   debugMode?: boolean;
   useStructuralSharing?: boolean;
+  actionTracking?: boolean;
 }
 
 export interface Middleware<T> {
@@ -208,6 +222,16 @@ export interface AsyncActionConfig<T, TResult> {
   onSuccess?: (result: TResult, state: T) => Partial<T>;
   onError?: (error: Error, state: T) => Partial<T>;
   onComplete?: (state: T) => Partial<T>;
+  label?: string; // action label for history/devtools
+  enableCancellation?: boolean;
+  /**
+   * Concurrency policy determining how multiple execute() calls are handled while a run is in-flight.
+   *  - 'replace' (default): cancels previous run (if enableCancellation) and starts new
+   *  - 'drop': ignore new calls while pending (returns the in-flight promise)
+   *  - 'queue': enqueue calls and run sequentially
+   *  - 'race': allow concurrent runs; only first successful result (or error) is applied
+   */
+  concurrencyPolicy?: 'replace' | 'drop' | 'queue' | 'race';
 }
 
 export interface AsyncAction<TInput, TResult> {
@@ -215,6 +239,7 @@ export interface AsyncAction<TInput, TResult> {
   pending: Signal<boolean>;
   error: Signal<Error | null>;
   result: Signal<TResult | null>;
+  cancel(): void;
 }
 
 export interface TimeTravelEntry<T> {

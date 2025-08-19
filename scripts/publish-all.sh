@@ -45,19 +45,31 @@ fi
 
 print_status "Verified npm authentication"
 
-# Define packages in dependency order (core first, then others)
-PACKAGES=(
-    "core"
-    "async"
-    "batching"
-    "memoization"
-    "devtools"
-    "entities"
-    "middleware"
-    "ng-forms"
-    "presets"
-    "time-travel"
-)
+# Discover packages dynamically (core first, then the rest alphabetically)
+discover_packages() {
+    local dirs=(packages/*)
+    local names=()
+    for d in "${dirs[@]}"; do
+        [ -d "$d" ] || continue
+        if [ -f "$d/package.json" ]; then
+            local name
+            name=$(basename "$d")
+            names+=("$name")
+        fi
+    done
+    # Remove core then sort remainder, prepend core
+    local filtered=()
+    for n in "${names[@]}"; do
+        [ "$n" = "core" ] && continue
+        filtered+=("$n")
+    done
+    IFS=$'\n' filtered=($(sort <<<"${filtered[*]}"))
+    unset IFS
+    echo core "${filtered[@]}"
+}
+
+PACKAGES=($(discover_packages))
+print_status "Discovered packages: ${PACKAGES[*]}"
 
 # Check if dry-run flag is passed
 DRY_RUN=""

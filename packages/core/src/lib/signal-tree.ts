@@ -16,6 +16,12 @@ import {
   isSignal,
 } from './adapter';
 import { scheduleTask, untracked } from './scheduler';
+import {
+  registerTree,
+  unregisterTree,
+  snapshotTree,
+  snapshot,
+} from './devtools';
 import type {
   SignalTree,
   DeepSignalify,
@@ -24,11 +30,9 @@ import type {
   Middleware,
   PerformanceMetrics,
   EntityHelpers,
-  AsyncActionConfig,
-  AsyncAction,
-  TimeTravelEntry,
 } from './types';
 import { createLazySignalTree, equal } from './utils';
+import { createTimeTravelFeature } from './internal/time-travel';
 
 // ============================================
 // PERFORMANCE HEURISTICS
@@ -241,7 +245,6 @@ function create<T>(obj: T, config: TreeConfig = {}): SignalTree<T> {
     state: signalState,
     $: signalState, // $ points to the same state object
   } as SignalTree<T>;
-
   enhanceTree(resultTree, config);
   return resultTree;
 }
@@ -260,124 +263,79 @@ function createSignalStore<T>(
   obj: T,
   equalityFn: (a: unknown, b: unknown) => boolean
 ): DeepSignalify<T> {
-  // Handle primitives and null/undefined
+  // Primitives, null/undefined
   if (obj === null || obj === undefined || typeof obj !== 'object') {
     return signal(obj, { equal: equalityFn }) as DeepSignalify<T>;
   }
 
-  // Handle arrays - treat as primitive signal
+  // Arrays treated as atomic
   if (Array.isArray(obj)) {
     return signal(obj, { equal: equalityFn }) as DeepSignalify<T>;
   }
 
-  // Handle built-in objects - treat as primitive signal
+  // Built-ins treated as atomic
   if (isBuiltInObject(obj)) {
     return signal(obj, { equal: equalityFn }) as DeepSignalify<T>;
   }
 
-  const store: Partial<DeepSignalify<T>> = {};
-  const processedObjects = new WeakSet<object>();
+  const out: Record<string | symbol, unknown> = {};
 
-  // Prevent circular references
-  if (processedObjects.has(obj as object)) {
-    console.warn(
-      '[SignalTree] Circular reference detected, creating reference signal'
-    );
-    return signal(obj, { equal: equalityFn }) as DeepSignalify<T>;
-  }
-  processedObjects.add(obj as object);
-
-  try {
-    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-      try {
-        // Skip symbol keys for now (handle separately if needed)
-        if (typeof key === 'symbol') continue;
-
-        // Never double-wrap signals
-        if (isSignal(value)) {
-          (store as Record<string, unknown>)[key] = value;
-          continue;
-        }
-
-        // Handle different value types
-        if (value === null || value === undefined) {
-          (store as Record<string, unknown>)[key] = signal(value, {
-            equal: equalityFn,
-          });
-        } else if (typeof value !== 'object') {
-          // Primitives
-          (store as Record<string, unknown>)[key] = signal(value, {
-            equal: equalityFn,
-          });
-        } else if (Array.isArray(value) || isBuiltInObject(value)) {
-          // Arrays and built-in objects
-          (store as Record<string, unknown>)[key] = signal(value, {
-            equal: equalityFn,
-          });
-        } else {
-          // Nested objects - recurse
-          (store as Record<string, unknown>)[key] = createSignalStore(
-            value,
-            equalityFn
-          );
-        }
-      } catch (error) {
-        console.warn(
-          `[SignalTree] Failed to create signal for key "${key}":`,
-          error
-        );
-        // Fallback: treat as primitive
-        (store as Record<string, unknown>)[key] = signal(value, {
-          equal: equalityFn,
-        });
-      }
+  for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+    // Never double-wrap existing signals
+    if (isSignal(value)) {
+      out[key] = value as unknown;
+      continue;
     }
 
-    // Handle symbol properties if present
-    const symbols = Object.getOwnPropertySymbols(obj);
-    for (const sym of symbols) {
-      const value = (obj as Record<symbol, unknown>)[sym];
-      try {
-        if (isSignal(value)) {
-          (store as Record<symbol, unknown>)[sym] = value;
-        } else {
-          (store as Record<symbol, unknown>)[sym] = signal(value, {
-            equal: equalityFn,
-          });
-        }
-      } catch (error) {
-        console.warn(
-          `[SignalTree] Failed to create signal for symbol key:`,
-          error
-        );
-      }
+    if (
+      value !== null &&
+      value !== undefined &&
+      typeof value === 'object' &&
+      !Array.isArray(value) &&
+      !isBuiltInObject(value)
+    ) {
+      // Recurse for plain objects
+      out[key] = createSignalStore(
+        value as Record<string, unknown>,
+        equalityFn
+      );
+    } else {
+      // Primitive / array / built-in / function
+      out[key] = signal(value, { equal: equalityFn });
     }
-  } catch (error) {
-    throw new Error(
-      `Failed to create signal store: ${
-        error instanceof Error ? error.message : 'Unknown error'
-      }`
-    );
   }
 
-  return store as DeepSignalify<T>;
+  // Copy symbol properties
+  for (const sym of Object.getOwnPropertySymbols(obj as object)) {
+    const value = (obj as Record<symbol, unknown>)[sym];
+    if (isSignal(value)) {
+      out[sym] = value;
+    } else if (
+      value !== null &&
+      value !== undefined &&
+      typeof value === 'object' &&
+      !Array.isArray(value) &&
+      !isBuiltInObject(value)
+    ) {
+      out[sym] = createSignalStore(
+        value as Record<string, unknown>,
+        equalityFn
+      );
+    } else {
+      out[sym] = signal(value, { equal: equalityFn });
+    }
+  }
+
+  return out as DeepSignalify<T>;
 }
 
-/**
- * Enhances a tree with basic functionality (unwrap, update, pipe).
- * Adds core methods that every SignalTree needs for basic operation.
- *
- * @template T - The state object type
- * @param tree - The tree to enhance with basic functionality
- * @param config - Configuration used during tree creation
- * @returns The enhanced tree with unwrap, update, and pipe methods
- */
-function enhanceTree<T>(
-  tree: SignalTree<T>,
-  config: TreeConfig = {}
-): SignalTree<T> {
-  // Phase 3: internal version + metrics (opt-in via trackPerformance)
+// ==============================
+// Enhancement (moved from inline)
+// ==============================
+function enhanceTree<T>(tree: SignalTree<T>, config: TreeConfig): void {
+  // Version & Metrics
   let __version = 0;
+  // Use existing trackPerformance flag from TreeConfig for perf metrics
   const perfEnabled = !!config.trackPerformance;
   const metrics: PerformanceMetrics = {
     updates: 0,
@@ -386,89 +344,94 @@ function enhanceTree<T>(
     cacheMisses: 0,
     averageUpdateTime: 0,
   };
-
+  const isLazy = shouldUseLazy(tree.state, config);
+  // Provide version accessor early so devtools can capture it during registration
   tree.getVersion = () => __version;
-  // Track if this tree uses lazy signals for proper cleanup
-  const isLazy = config.useLazySignals ?? shouldUseLazy(tree.state, config);
 
-  /**
-   * Unwraps the current state by reading all signal values.
-   * Recursively converts the signal tree back to plain JavaScript values.
-   */
-  tree.unwrap = (): T => {
-    const unwrapObject = <O>(obj: DeepSignalify<O>): O => {
-      if (typeof obj !== 'object' || obj === null) {
-        return obj as O;
-      }
-
-      // Handle signals directly
-      if (isSignal(obj)) {
-        return (obj as Signal<O>)();
-      }
-
-      // Handle arrays (which are signals in our structure)
-      if (isSignal(obj)) {
-        const value = (obj as Signal<unknown>)();
-        if (Array.isArray(value)) {
-          return value as O;
-        }
-      }
-
-      const result = {} as Record<string, unknown>;
-
-      for (const key in obj) {
-        if (!Object.prototype.hasOwnProperty.call(obj, key)) continue;
-
-        const value = (obj as Record<string, unknown>)[key];
-
-        if (isSignal(value)) {
-          result[key] = (value as Signal<unknown>)();
+  // unwrap implementation
+  tree.unwrap = (() => {
+    const unwrapObject = <O>(o: DeepSignalify<O>): O => {
+      if (o === null || o === undefined || typeof o !== 'object')
+        return o as unknown as O;
+      const result: { [key: string | symbol]: unknown } = Array.isArray(o)
+        ? ([] as unknown as { [key: string | symbol]: unknown })
+        : {};
+      for (const [k, v] of Object.entries(o as Record<string, unknown>)) {
+        if (isSignal(v)) {
+          result[k] = (v as Signal<unknown>)();
         } else if (
-          typeof value === 'object' &&
-          value !== null &&
-          !Array.isArray(value) &&
-          !isBuiltInObject(value)
+          v &&
+          typeof v === 'object' &&
+          !Array.isArray(v) &&
+          !isBuiltInObject(v)
         ) {
-          // Nested signal state
-          result[key] = unwrapObject(value as DeepSignalify<object>);
+          result[k] = unwrapObject(v as DeepSignalify<unknown>);
         } else {
-          result[key] = value;
+          result[k] = v;
         }
       }
-
-      // Handle symbol properties
-      const symbols = Object.getOwnPropertySymbols(obj);
-      for (const sym of symbols) {
-        const value = (obj as Record<symbol, unknown>)[sym];
-        if (isSignal(value)) {
-          (result as Record<symbol, unknown>)[sym] = (
-            value as Signal<unknown>
-          )();
+      for (const sym of Object.getOwnPropertySymbols(o as object)) {
+        const v = (o as Record<symbol, unknown>)[sym];
+        if (isSignal(v)) {
+          result[sym] = (v as Signal<unknown>)();
+        } else if (
+          v &&
+          typeof v === 'object' &&
+          !Array.isArray(v) &&
+          !isBuiltInObject(v)
+        ) {
+          result[sym] = unwrapObject(v as DeepSignalify<unknown>);
         } else {
-          (result as Record<symbol, unknown>)[sym] = value;
+          result[sym] = v;
         }
       }
-
       return result as O;
     };
+    return () => unwrapObject(tree.state as DeepSignalify<T>);
+  })();
 
-    return unwrapObject(tree.state as DeepSignalify<T>);
-  };
+  // (All subsequent method augmentations below rely on variables above)
+
+  // The following assignments remain unchanged but now in scope
+  // (Original code begins)
 
   /**
    * Updates the state using an updater function with transaction support.
    */
-  tree.update = (updater: (current: T) => Partial<T>) => {
+  tree.update = (
+    updater: (current: T) => Partial<T>,
+    options?: { label?: string; payload?: unknown }
+  ) => {
     const perfStart = perfEnabled ? performance.now?.() : 0;
     const transactionLog: Array<{
       path: string;
       oldValue: unknown;
       newValue: unknown;
     }> = [];
+    // If structural sharing / patch history enabled we also keep a patches list (old/new for leaf changes)
+    // Collect middleware hooks (lazy init)
+    const middlewareList: Middleware<T>[] =
+      (tree as unknown as { __middleware?: Middleware<T>[] }).__middleware ||
+      [];
+    // Run BEFORE middlewares; if any returns false, abort update silently
+    for (const mw of middlewareList) {
+      try {
+        if (mw.before) {
+          const proceed = mw.before('update', updater, tree.unwrap());
+          if (proceed === false) {
+            return; // veto
+          }
+        }
+      } catch (e) {
+        if (config.debugMode) {
+          console.warn('[SignalTree] middleware before() error', e);
+        }
+      }
+    }
 
     try {
-      const currentValue = tree.unwrap();
-      const partialObj = updater(currentValue);
+      const preState = tree.unwrap();
+      const partialObj = updater(preState);
 
       if (!partialObj || typeof partialObj !== 'object') {
         throw new Error('Updater must return an object');
@@ -489,14 +452,18 @@ function enhanceTree<T>(
           try {
             if (isSignal(currentSignalOrState)) {
               const originalValue = (currentSignalOrState as Signal<unknown>)();
-              transactionLog.push({
-                path: currentPath,
-                oldValue: originalValue,
-                newValue: updateValue,
-              });
-              (currentSignalOrState as WritableSignal<unknown>).set(
-                updateValue
-              );
+              // Equality guard: only apply and log if value actually changes
+              const changed = !equal(originalValue, updateValue);
+              if (changed) {
+                transactionLog.push({
+                  path: currentPath,
+                  oldValue: originalValue,
+                  newValue: updateValue,
+                });
+                (currentSignalOrState as WritableSignal<unknown>).set(
+                  updateValue
+                );
+              }
             } else if (
               typeof updateValue === 'object' &&
               updateValue !== null &&
@@ -531,12 +498,20 @@ function enhanceTree<T>(
 
       // Log transaction in debug mode
       if (config.debugMode && transactionLog.length > 0) {
-        console.log('[SignalTree] Update transaction:', transactionLog);
+        console.log(
+          '[SignalTree] Update transaction:',
+          transactionLog,
+          options?.label ? `label=${options.label}` : ''
+        );
       }
 
       // Only increment version & metrics if a real change happened
       if (transactionLog.length > 0) {
         __version++;
+        // Attach last patches for time-travel layer to read (always captured)
+        (
+          tree as unknown as { __lastPatches?: typeof transactionLog }
+        ).__lastPatches = transactionLog.slice();
         if (perfEnabled) {
           const dur = (performance.now?.() || 0) - (perfStart || 0);
           metrics.updates++;
@@ -546,6 +521,22 @@ function enhanceTree<T>(
             metrics.averageUpdateTime === 0
               ? dur
               : metrics.averageUpdateTime * (1 - alpha) + dur * alpha;
+        }
+        // AFTER middlewares (fire & forget) with old/new state distinction
+        const postState = tree.unwrap();
+        for (const mw of middlewareList) {
+          try {
+            mw.after?.(
+              options?.label || 'update',
+              updater,
+              preState,
+              postState
+            );
+          } catch (e) {
+            if (config.debugMode) {
+              console.warn('[SignalTree] middleware after() error', e);
+            }
+          }
         }
       }
     } catch (error) {
@@ -603,6 +594,20 @@ function enhanceTree<T>(
       }
     }, tree as unknown) as TResult;
   }) as SignalTree<T>['pipe'];
+  // Devtools registration (Phase 4) - declare before destroy uses it
+  let __devtoolsId: string | null = null;
+  if (config.enableDevTools) {
+    try {
+      __devtoolsId = registerTree(tree, config.treeName);
+      if (config.debugMode && __devtoolsId) {
+        console.log('[SignalTree] Devtools registered:', __devtoolsId);
+      }
+    } catch (err) {
+      if (config.debugMode) {
+        console.warn('[SignalTree] Devtools registration failed', err);
+      }
+    }
+  }
 
   // Enhanced destroy with proper cleanup
   tree.destroy = () => {
@@ -627,6 +632,20 @@ function enhanceTree<T>(
     } catch (error) {
       console.error('[SignalTree] Error during cleanup:', error);
     }
+    // Devtools unregistration
+    if (__devtoolsId) {
+      try {
+        unregisterTree(__devtoolsId);
+        if (config.debugMode) {
+          console.log('[SignalTree] Devtools unregistered:', __devtoolsId);
+        }
+      } catch (err) {
+        if (config.debugMode) {
+          console.warn('[SignalTree] Devtools unregistration failed', err);
+        }
+      }
+      __devtoolsId = null;
+    }
   };
 
   // Metrics accessor (Phase 3). Implement here so closure captures perfEnabled/metrics.
@@ -641,379 +660,361 @@ function enhanceTree<T>(
     };
   };
 
-  // Add stub implementations for advanced features
-  addStubMethods(tree, config);
+  // Provide untracked passthrough & snapshot helpers will be added in stubs call section
+  addStubMethods(tree, config, metrics);
 
-  return tree;
-}
+  // Augment with snapshot helpers if devtools enabled
+  if (config.enableDevTools) {
+    (tree as unknown as { snapshot: () => unknown }).snapshot = () =>
+      snapshot(tree.state);
+    (tree as unknown as { snapshotMeta: () => unknown }).snapshotMeta = () =>
+      __devtoolsId
+        ? snapshotTree(__devtoolsId, { includeMetrics: true })
+        : null;
+  }
+  // (asyncAction, time-travel etc. remain appended below inside enhanceTree)
 
-/**
- * Adds stub implementations for advanced features
- */
-function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
-  // Stub implementations for advanced features (will log warnings)
-  tree.batchUpdate = (updater: (current: T) => Partial<T>) => {
-    if (config.batchUpdates) {
-      scheduleTask(() => tree.update(updater));
-      return;
-    }
-    console.warn(
-      '⚠️ batchUpdate() called but batching is not enabled.',
-      'Set batchUpdates: true or install @signaltree/batching for advanced features.'
-    );
-    tree.update(updater);
-  };
-
-  tree.memoize = <R>(fn: (tree: T) => R, cacheKey?: string): Signal<R> => {
-    console.warn(
-      '⚠️ memoize() called but memoization is not enabled.',
-      'To enable memoized computations, install @signaltree/memoization'
-    );
-    void cacheKey; // Mark as intentionally unused
-    return computed(() => fn(tree.unwrap()));
-  };
-
-  tree.effect = (fn: (tree: T) => void) => {
-    try {
-      effect(() => fn(tree.unwrap()));
-    } catch (error) {
-      // Fallback for test environments without injection context
-      if (config.debugMode) {
-        console.warn('Effect requires Angular injection context', error);
-      }
-    }
-  };
-
-  // Provide untracked passthrough (Phase 3 minimal)
-  (tree as unknown as { untracked: typeof untracked }).untracked = untracked;
-
-  tree.subscribe = (fn: (tree: T) => void): (() => void) => {
-    try {
-      // Inject destroy ref using exported runtime token
-      const destroyRef = inject(DestroyRefToken) as DestroyRef;
-      let isDestroyed = false;
-
-      const effectRef = effect(() => {
-        if (!isDestroyed) {
-          fn(tree.unwrap());
+  /**
+   * Adds stub implementations for advanced features
+   */
+  function addStubMethods<T>(
+    tree: SignalTree<T>,
+    config: TreeConfig,
+    metrics?: PerformanceMetrics
+  ): void {
+    // Stub implementations for advanced features (will log warnings)
+    // Simple microtask coalescing (Phase 5 enhancement): multiple batchUpdate calls collapse into one version bump
+    let __pendingBatchUpdaters: Array<(current: T) => Partial<T>> = [];
+    let __batchScheduled = false;
+    tree.batchUpdate = (
+      updater: (current: T) => Partial<T>,
+      options?: { label?: string; payload?: unknown }
+    ) => {
+      if (config.batchUpdates) {
+        // Wrap updater with label capture
+        const labeled = (current: T) => {
+          const partial = updater(current);
+          return partial;
+        };
+        (
+          labeled as unknown as { __label?: string; __payload?: unknown }
+        ).__label = options?.label;
+        (labeled as unknown as { __payload?: unknown }).__payload =
+          options?.payload;
+        __pendingBatchUpdaters.push(labeled);
+        if (!__batchScheduled) {
+          __batchScheduled = true;
+          scheduleTask(() => {
+            const fns = __pendingBatchUpdaters;
+            __pendingBatchUpdaters = [];
+            __batchScheduled = false;
+            // Merge outputs; later updaters override earlier key writes
+            tree.update(
+              (current) => {
+                const merged: Partial<T> = {};
+                for (const fn of fns) {
+                  try {
+                    const partial = fn(current);
+                    if (partial && typeof partial === 'object') {
+                      Object.assign(merged, partial);
+                    } else if (config.debugMode) {
+                      console.warn(
+                        '[SignalTree] batchUpdate updater must return an object'
+                      );
+                    }
+                  } catch (e) {
+                    console.error('[SignalTree] batchUpdate updater failed', e);
+                  }
+                }
+                return merged;
+              },
+              {
+                label:
+                  fns
+                    .map((f) => (f as unknown as { __label?: string }).__label)
+                    .filter(Boolean)
+                    .join('+') || options?.label,
+                payload: undefined,
+              }
+            );
+          });
         }
-      });
-
-      const unsubscribe = () => {
-        isDestroyed = true;
-        effectRef.destroy();
-      };
-
-      destroyRef.onDestroy(unsubscribe as () => void);
-      return unsubscribe;
-    } catch (error) {
-      // Fallback for test environment
-      if (config.debugMode) {
-        console.warn('Subscribe requires Angular injection context', error);
+        return;
       }
-      fn(tree.unwrap());
-      return () => {
-        // No-op unsubscribe
+      console.warn(
+        '⚠️ batchUpdate() called but batching is not enabled.',
+        'Set batchUpdates: true or install @signaltree/batching for advanced features.'
+      );
+      tree.update(updater, options);
+    };
+
+    if (config.useMemoization) {
+      const memoCache = new Map<string, Signal<unknown>>();
+      let autoKeyCounter = 0;
+      tree.memoize = <R>(fn: (tree: T) => R, cacheKey?: string): Signal<R> => {
+        const key = cacheKey || `__auto_${autoKeyCounter++}`;
+        if (memoCache.has(key)) {
+          if (metrics) metrics.cacheHits += 1;
+          return memoCache.get(key) as Signal<R>;
+        }
+        if (metrics) metrics.cacheMisses += 1;
+        const c = computed(() => fn(tree.unwrap()));
+        memoCache.set(key, c);
+        return c;
+      };
+      tree.clearCache = () => {
+        memoCache.clear();
+        if (config.debugMode) {
+          console.log('[SignalTree] Memoization cache cleared');
+        }
+      };
+    } else {
+      tree.memoize = <R>(fn: (tree: T) => R, cacheKey?: string): Signal<R> => {
+        console.warn(
+          '⚠️ memoize() called but memoization is not enabled.',
+          'To enable memoized computations, install @signaltree/memoization'
+        );
+        void cacheKey; // Mark as intentionally unused
+        return computed(() => fn(tree.unwrap()));
       };
     }
-  };
 
-  // Performance stubs
-  tree.optimize = () => {
-    if (config.debugMode) {
-      console.warn(
-        '⚠️ optimize() called but tree optimization is not available.'
+    tree.effect = (fn: (tree: T) => void) => {
+      try {
+        effect(() => fn(tree.unwrap()));
+      } catch (error) {
+        // Fallback for test environments without injection context
+        if (config.debugMode) {
+          console.warn('Effect requires Angular injection context', error);
+        }
+      }
+    };
+
+    // Provide untracked passthrough (Phase 3 minimal)
+    (tree as unknown as { untracked: typeof untracked }).untracked = untracked;
+
+    tree.subscribe = (fn: (tree: T) => void): (() => void) => {
+      try {
+        // Inject destroy ref using exported runtime token
+        const destroyRef = inject(DestroyRefToken) as DestroyRef;
+        let isDestroyed = false;
+
+        const effectRef = effect(() => {
+          if (!isDestroyed) {
+            fn(tree.unwrap());
+          }
+        });
+
+        const unsubscribe = () => {
+          isDestroyed = true;
+          effectRef.destroy();
+        };
+
+        destroyRef.onDestroy(unsubscribe as () => void);
+        return unsubscribe;
+      } catch (error) {
+        // Fallback for test environment
+        if (config.debugMode) {
+          console.warn('Subscribe requires Angular injection context', error);
+        }
+        fn(tree.unwrap());
+        return () => {
+          // No-op unsubscribe
+        };
+      }
+    };
+
+    // Performance stubs
+    tree.optimize = () => {
+      if (config.debugMode) {
+        console.warn(
+          '⚠️ optimize() called but tree optimization is not available.'
+        );
+      }
+    };
+
+    if (!config.useMemoization) {
+      tree.clearCache = () => {
+        if (config.debugMode) {
+          console.warn('⚠️ clearCache() called but caching is not available.');
+        }
+      };
+    }
+
+    // Basic middleware management (Phase 5 incremental)
+    (tree as unknown as { __middleware?: Middleware<T>[] }).__middleware = [];
+    tree.addTap = (middleware: Middleware<T>) => {
+      const list = (tree as unknown as { __middleware: Middleware<T>[] })
+        .__middleware;
+      list.push(middleware);
+    };
+    tree.removeTap = (id: string) => {
+      const holder = tree as unknown as { __middleware: Middleware<T>[] };
+      holder.__middleware = holder.__middleware.filter((m) => m.id !== id);
+    };
+
+    tree.invalidatePattern = (): number => {
+      if (config.debugMode) {
+        console.warn(
+          '⚠️ invalidatePattern() called but performance optimization is not enabled.'
+        );
+      }
+      return 0;
+    };
+
+    // getMetrics implemented in enhanceTree (Phase 3)
+
+    // Basic selector helper built atop memoize OR computed
+    tree.select = <R>(
+      selector: (state: T) => R,
+      cacheKey?: string
+    ): Signal<R> => {
+      if (tree.memoize && config.useMemoization) {
+        return tree.memoize(selector, cacheKey);
+      }
+      return computed(() => selector(tree.unwrap()));
+    };
+
+    // Middleware stubs removed (real implementation above)
+
+    // Entity helpers implementation (basic CRUD over an entity array property)
+    const __crudRegistry = new Map<
+      string | number | symbol | undefined,
+      unknown
+    >();
+    tree.asCrud = <E extends { id: string | number }>(
+      entityKey?: keyof T
+    ): EntityHelpers<E> => {
+      const regKey = entityKey as string | number | symbol | undefined;
+      if (__crudRegistry.has(regKey)) {
+        return __crudRegistry.get(regKey) as EntityHelpers<E>;
+      }
+
+      // Internal storage if no entityKey provided (non-reactive warning)
+      let internal: E[] = [];
+      const entitySignal = entityKey
+        ? (tree.state as Record<string | symbol, unknown>)[
+            entityKey as unknown as string
+          ]
+        : undefined;
+
+      if (entityKey && entitySignal && !isSignal(entitySignal)) {
+        if (config.debugMode) {
+          console.warn(
+            '[SignalTree] asCrud(): target key is not a signal array – operations may not be reactive'
+          );
+        }
+      }
+
+      const getEntities = (): E[] => {
+        if (entityKey && entitySignal && isSignal(entitySignal)) {
+          const value = (entitySignal as Signal<unknown>)();
+          if (Array.isArray(value)) return value as E[];
+          return [];
+        }
+        return internal;
+      };
+
+      const setEntities = (list: E[]) => {
+        if (entityKey && entitySignal && isSignal(entitySignal)) {
+          tree.update(() => ({ [entityKey]: list } as Partial<T>));
+        } else {
+          internal = list;
+          if (config.debugMode && !entityKey) {
+            console.warn(
+              '[SignalTree] asCrud(): using internal store without entityKey – changes are not reactive to consumers.'
+            );
+          }
+        }
+      };
+
+      const helpers: EntityHelpers<E> = {
+        add(entity: E) {
+          const list = getEntities();
+          if (list.some((e) => e.id === entity.id)) return; // skip duplicates
+          setEntities([...list, entity]);
+        },
+        update(id: E['id'], updates: Partial<E>) {
+          const list = getEntities();
+          let changed = false;
+          const next = list.map((e) => {
+            if (e.id === id) {
+              changed = true;
+              return { ...e, ...updates } as E;
+            }
+            return e;
+          });
+          if (changed) setEntities(next);
+        },
+        remove(id: E['id']) {
+          const list = getEntities();
+          const next = list.filter((e) => e.id !== id);
+          if (next.length !== list.length) setEntities(next);
+        },
+        upsert(entity: E) {
+          const list = getEntities();
+          const idx = list.findIndex((e) => e.id === entity.id);
+          if (idx === -1) setEntities([...list, entity]);
+          else {
+            const next = [...list];
+            next[idx] = entity;
+            setEntities(next);
+          }
+        },
+        findById(id: E['id']): Signal<E | undefined> {
+          return computed(() => getEntities().find((e) => e.id === id));
+        },
+        findBy(predicate: (entity: E) => boolean): Signal<E[]> {
+          return computed(() => getEntities().filter(predicate));
+        },
+        selectIds(): Signal<Array<string | number>> {
+          return computed(() => getEntities().map((e) => e.id));
+        },
+        selectAll(): Signal<E[]> {
+          return computed(() => getEntities());
+        },
+        selectTotal(): Signal<number> {
+          return computed(() => getEntities().length);
+        },
+        findAll(): Signal<E[]> {
+          return computed(() => getEntities());
+        },
+        clear() {
+          if (getEntities().length > 0) setEntities([]);
+        },
+      };
+
+      __crudRegistry.set(regKey, helpers);
+      return helpers;
+    };
+
+    // Provide asyncAction stub (real implementation supplied by @signaltree/async enhancer package)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (tree as any).asyncAction = () => {
+      throw new Error(
+        'asyncAction not installed. Import and apply withAsync() from @signaltree/async.'
       );
-    }
-  };
+    };
+    // Attach modular time-travel feature
+    createTimeTravelFeature<T>().enable(tree, config);
+  }
 
-  tree.clearCache = () => {
-    if (config.debugMode) {
-      console.warn('⚠️ clearCache() called but caching is not available.');
-    }
-  };
-
-  tree.invalidatePattern = (): number => {
-    if (config.debugMode) {
-      console.warn(
-        '⚠️ invalidatePattern() called but performance optimization is not enabled.'
-      );
-    }
-    return 0;
-  };
-
-  // getMetrics implemented in enhanceTree (Phase 3)
-
-  // Middleware stubs
-  tree.addTap = (middleware: Middleware<T>) => {
-    if (config.debugMode) {
-      console.warn(
-        '⚠️ addTap() called but middleware support is not available.'
-      );
-    }
-    void middleware;
-  };
-
-  tree.removeTap = (id: string) => {
-    if (config.debugMode) {
-      console.warn(
-        '⚠️ removeTap() called but middleware support is not available.'
-      );
-    }
-    void id;
-  };
-
-  // Entity helpers stub
-  tree.asCrud = <E extends { id: string | number }>(): EntityHelpers<E> => {
-    if (config.debugMode) {
-      console.warn('⚠️ asCrud() called but entity helpers are not available.');
-    }
-    return {} as EntityHelpers<E>;
-  };
-
-  // Async action stub
-  tree.asyncAction = <TInput, TResult>(
-    operation: (input: TInput) => Promise<TResult>,
-    asyncConfig: AsyncActionConfig<T, TResult> = {}
-  ): AsyncAction<TInput, TResult> => {
-    if (config.debugMode) {
-      console.warn(
-        '⚠️ asyncAction() called but async actions are not available.'
-      );
-    }
-    void operation;
-    void asyncConfig;
-    return {} as AsyncAction<TInput, TResult>;
-  };
-
-  // Time travel stubs
-  tree.undo = () => {
-    if (config.debugMode) {
-      console.warn('⚠️ undo() called but time travel is not available.');
-    }
-  };
-
-  tree.redo = () => {
-    if (config.debugMode) {
-      console.warn('⚠️ redo() called but time travel is not available.');
-    }
-  };
-
-  tree.getHistory = (): TimeTravelEntry<T>[] => {
-    if (config.debugMode) {
-      console.warn('⚠️ getHistory() called but time travel is not available.');
-    }
-    return [];
-  };
-
-  tree.resetHistory = () => {
-    if (config.debugMode) {
-      console.warn(
-        '⚠️ resetHistory() called but time travel is not available.'
-      );
-    }
-  };
+  // ============================================
+  // PUBLIC API
+  // ============================================
 }
 
-// ============================================
-// PUBLIC API
-// ============================================
-
-/**
- * Creates a reactive signal tree with smart progressive enhancement.
- *
- * Automatically converts plain objects into a reactive signal tree where each property
- * becomes a writable signal. Provides intelligent performance optimizations, automatic
- * change detection, and seamless integration with Angular's signal system.
- *
- * @template T - The type of the initial state object (no constraints for maximum flexibility)
- * @param obj - The initial state object to convert into a reactive tree
- * @returns A SignalTree with auto-enabling features and reactive properties
- *
- * @example
- * ```typescript
- * // Basic usage - simple state management
- * const state = signalTree({ count: 0, user: { name: 'John' } });
- *
- * // Access reactive properties
- * console.log(state.count()); // 0
- * console.log(state.user.name()); // 'John'
- *
- * // Update state
- * state.count.set(1);
- * state.user.name.set('Jane');
- *
- * // Batch updates
- * state.update(current => ({
- *   count: current.count + 1,
- *   user: { ...current.user, name: 'Bob' }
- * }));
- *
- * // Subscribe to changes
- * state.subscribe(newState => {
- *   console.log('State changed:', newState);
- * });
- * ```
- *
- * @example
- * ```typescript
- * // Advanced usage with effects and computed values
- * interface AppState {
- *   todos: Todo[];
- *   filter: 'all' | 'active' | 'completed';
- * }
- *
- * const store = signalTree<AppState>({
- *   todos: [],
- *   filter: 'all'
- * });
- *
- * // Create computed values
- * const filteredTodos = computed(() => {
- *   const todos = store.todos();
- *   const filter = store.filter();
- *   return todos.filter(todo =>
- *     filter === 'all' ||
- *     (filter === 'active' && !todo.completed) ||
- *     (filter === 'completed' && todo.completed)
- *   );
- * });
- *
- * // React to state changes
- * store.effect(state => {
- *   console.log(`${state.todos.length} todos, showing ${state.filter}`);
- * });
- * ```
- */
+// Public factory with lightweight overloads
 export function signalTree<T>(obj: T): SignalTree<T>;
-
-/**
- * Creates a reactive signal tree with preset configuration.
- *
- * Uses predefined configurations optimized for common use cases.
- * Available presets: 'basic', 'performance', 'development', 'production'.
- *
- * @template T - The type of the initial state object
- * @param obj - The initial state object to convert into a reactive tree
- * @param preset - Predefined configuration preset
- * @returns A SignalTree configured with the specified preset
- *
- * @example
- * ```typescript
- * // Development preset - enhanced debugging
- * const devStore = signalTree({ count: 0 }, 'development');
- * // Enables: debugMode, enableDevTools, trackPerformance
- *
- * // Production preset - optimized performance
- * const prodStore = signalTree({ count: 0 }, 'production');
- * // Enables: useLazySignals, batchUpdates, useMemoization
- *
- * // Performance preset - maximum optimization
- * const perfStore = signalTree({ users: [] }, 'performance');
- * // Enables: useLazySignals, batchUpdates, useMemoization, useShallowComparison
- *
- * // Basic preset - minimal features
- * const basicStore = signalTree({ data: {} }, 'basic');
- * // Minimal overhead, no optimizations
- * ```
- */
 export function signalTree<T>(obj: T, preset: TreePreset): SignalTree<T>;
-
-/**
- * Creates a reactive signal tree with custom configuration.
- *
- * Provides fine-grained control over SignalTree behavior and performance characteristics.
- * Use this overload when you need specific optimization settings or debugging features.
- *
- * @template T - The type of the initial state object
- * @param obj - The initial state object to convert into a reactive tree
- * @param config - Custom configuration object
- * @returns A SignalTree configured with the specified options
- *
- * @example
- * ```typescript
- * // Custom configuration for specific needs
- * const store = signalTree({
- *   users: [],
- *   settings: { theme: 'dark' }
- * }, {
- *   useLazySignals: true,      // Create signals on-demand
- *   batchUpdates: true,        // Group rapid updates
- *   useMemoization: true,      // Cache computed values
- *   debugMode: false,          // Production mode
- *   enableDevTools: false,     // No dev tools
- *   trackPerformance: true,    // Monitor performance
- *   useShallowComparison: false // Deep equality checking
- * });
- *
- * // Access performance metrics
- * const metrics = store.getMetrics();
- * console.log(`Updates: ${metrics.updateCount}, Time: ${metrics.totalTime}ms`);
- * ```
- *
- * @example
- * ```typescript
- * // Configuration for large datasets
- * const bigDataStore = signalTree(largeDataset, {
- *   useLazySignals: true,        // Essential for large objects
- *   useShallowComparison: true,  // Faster comparisons
- *   batchUpdates: true,          // Prevent UI thrashing
- *   useMemoization: true,        // Cache expensive computations
- *   debugMode: false             // No debug overhead
- * });
- * ```
- */
 export function signalTree<T>(obj: T, config: TreeConfig): SignalTree<T>;
-
-/**
- * Main SignalTree factory function with superior type inference.
- *
- * This overload provides enhanced TypeScript inference for object types,
- * ensuring all properties are properly typed and reactive. Ideal for
- * strongly-typed applications where type safety is paramount.
- *
- * @template T - Object type extending Record<string, unknown> for better inference
- * @param obj - Required state object with all properties defined
- * @param configOrPreset - Optional configuration object or preset string
- * @returns A SignalTree with enhanced type safety and inference
- *
- * @example
- * ```typescript
- * // Enhanced type inference
- * const typedStore = signalTree({
- *   user: { id: 1, name: 'John', email: 'john@example.com' },
- *   settings: { theme: 'dark', notifications: true },
- *   data: { items: [], loading: false, error: null }
- * } as const);
- *
- * // TypeScript knows exact types
- * typedStore.user.id.set(2);           // number
- * typedStore.settings.theme.set('light'); // 'dark' | 'light'
- * typedStore.data.loading.set(true);   // boolean
- * ```
- */
-export function signalTree<T extends Record<string, unknown>>(
-  obj: Required<T>,
-  configOrPreset?: TreeConfig | TreePreset
-): SignalTree<Required<T>>;
-
-export function signalTree<T>(
-  obj: T,
-  configOrPreset?: TreeConfig | TreePreset
-): SignalTree<T>;
-
 export function signalTree<T>(
   obj: T,
   configOrPreset?: TreeConfig | TreePreset
 ): SignalTree<T> {
-  // Handle preset strings
   if (typeof configOrPreset === 'string') {
-    // Map preset to configuration
     const presetConfigs: Record<TreePreset, Partial<TreeConfig>> = {
-      basic: {
-        useLazySignals: false,
-        debugMode: false,
-      },
+      basic: { useLazySignals: false, debugMode: false },
       performance: {
         useLazySignals: true,
         batchUpdates: true,
@@ -1021,7 +1022,7 @@ export function signalTree<T>(
         useShallowComparison: true,
       },
       development: {
-        useLazySignals: false, // Eager for better debugging
+        useLazySignals: false,
         debugMode: true,
         enableDevTools: true,
         trackPerformance: true,
@@ -1033,7 +1034,6 @@ export function signalTree<T>(
         debugMode: false,
       },
     };
-
     const config = presetConfigs[configOrPreset];
     if (!config) {
       console.warn(
@@ -1043,8 +1043,5 @@ export function signalTree<T>(
     }
     return create(obj, config);
   }
-
-  // Handle configuration objects or default
-  const config = configOrPreset || {};
-  return create(obj, config);
+  return create(obj, configOrPreset || {});
 }

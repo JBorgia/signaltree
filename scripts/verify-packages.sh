@@ -31,18 +31,27 @@ print_error() {
 print_step "Verifying package configurations for NPM publishing..."
 echo ""
 
-PACKAGES=(
-    "core"
-    "batching"
-    "memoization"
-    "middleware"
-    "async"
-    "entities"
-    "devtools"
-    "time-travel"
-    "presets"
-    "ng-forms"
-)
+discover_packages() {
+    local dirs=(packages/*)
+    local names=()
+    for d in "${dirs[@]}"; do
+        [ -d "$d" ] || continue
+        if [ -f "$d/package.json" ]; then
+            names+=("$(basename "$d")")
+        fi
+    done
+    local filtered=()
+    for n in "${names[@]}"; do
+        [ "$n" = "core" ] && continue
+        filtered+=("$n")
+    done
+    IFS=$'\n' filtered=($(sort <<<"${filtered[*]}"))
+    unset IFS
+    echo core "${filtered[@]}"
+}
+
+PACKAGES=($(discover_packages))
+print_step "Discovered packages: ${PACKAGES[*]}"
 
 ISSUES_FOUND=0
 

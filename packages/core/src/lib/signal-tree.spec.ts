@@ -72,7 +72,7 @@ describe('signalTree', () => {
         'batchUpdate() called but batching is not enabled'
       ),
       expect.stringContaining(
-        'To enable batch updates, install @signaltree/batching'
+        'Set batchUpdates: true or install @signaltree/batching'
       )
     );
 

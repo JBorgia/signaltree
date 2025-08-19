@@ -35,19 +35,28 @@ if [ ! -f "package.json" ] || [ ! -d "packages" ]; then
     exit 1
 fi
 
-# List of packages to release
-PACKAGES=(
-    "core"
-    "batching"
-    "memoization"
-    "middleware"
-    "async"
-    "entities"
-    "devtools"
-    "time-travel"
-    "presets"
-    "ng-forms"
-)
+# Discover packages dynamically (core first, others alphabetical) so we don't maintain this manually
+discover_packages() {
+    local dirs=(packages/*)
+    local names=()
+    for d in "${dirs[@]}"; do
+        [ -d "$d" ] || continue
+        if [ -f "$d/package.json" ]; then
+            names+=("$(basename "$d")")
+        fi
+    done
+    local filtered=()
+    for n in "${names[@]}"; do
+        [ "$n" = "core" ] && continue
+        filtered+=("$n")
+    done
+    IFS=$'\n' filtered=($(sort <<<"${filtered[*]}"))
+    unset IFS
+    echo core "${filtered[@]}"
+}
+
+PACKAGES=($(discover_packages))
+print_step "Discovered packages: ${PACKAGES[*]}"
 
 # Parse command line arguments
 RELEASE_TYPE=${1:-patch}
@@ -135,23 +144,17 @@ for package in "${PACKAGES[@]}"; do
             const pkg = JSON.parse(fs.readFileSync('$PACKAGE_JSON', 'utf8'));
             pkg.version = '$NEW_VERSION';
 
-            // Update peer dependencies to use specific versions for other @signaltree packages
-            if (pkg.peerDependencies) {
-                Object.keys(pkg.peerDependencies).forEach(dep => {
-                    if (dep.startsWith('@signaltree/') && pkg.peerDependencies[dep] === '*') {
-                        pkg.peerDependencies[dep] = '^' + '$NEW_VERSION';
-                    }
-                });
-            }
-
-            // Update dependencies if any
-            if (pkg.dependencies) {
-                Object.keys(pkg.dependencies).forEach(dep => {
-                    if (dep.startsWith('@signaltree/') && pkg.dependencies[dep] === '*') {
-                        pkg.dependencies[dep] = '^' + '$NEW_VERSION';
-                    }
-                });
-            }
+                        // Update peerDependencies and dependencies for internal packages to new caret version
+                        const bumpRanges = (deps) => {
+                            if (!deps) return;
+                            Object.keys(deps).forEach(dep => {
+                                if (dep.startsWith('@signaltree/')) {
+                                    deps[dep] = '^' + '$NEW_VERSION';
+                                }
+                            });
+                        };
+                        bumpRanges(pkg.peerDependencies);
+                        bumpRanges(pkg.dependencies);
 
             fs.writeFileSync('$PACKAGE_JSON', JSON.stringify(pkg, null, 2) + '\n');
             'Package $package version and dependencies updated successfully'
