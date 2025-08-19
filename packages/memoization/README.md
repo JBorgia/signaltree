@@ -320,7 +320,7 @@ SignalTree memoization provides advanced performance features:
 
 ## 📄 License
 
-MIT License with AI Training Restriction - see the [LICENSE](../../LICENSE) file for details.
+MIT License - see the [LICENSE](../../LICENSE) file for details.
 
 ---
 

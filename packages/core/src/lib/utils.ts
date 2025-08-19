@@ -1,5 +1,5 @@
 /**
- * SignalTree Utility Functions v1.1.1 - Fair Source License
+ * SignalTree Utility Functions v1.1.6 - MIT License
  * @see https://github.com/JBorgia/signaltree/blob/main/LICENSE
  */
 

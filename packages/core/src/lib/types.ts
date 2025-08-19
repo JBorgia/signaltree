@@ -1,22 +1,15 @@
 /**
  * SignalTree Core Types - Recursive Typing System
  *
- * COPYRIGHT NOTICE:
- * This file contains proprietary recursive typing innovations protected under
- * the SignalTree license. The DeepSignalify<T> recursive type system and
- * related implementations are exclusive intellectual property of Jonathan D Borgia.
- *
- * Unauthorized extraction, copying, or reimplementation of these recursive typing
- * concepts is strictly prohibited and constitutes copyright infringement.
- *
- * Licensed under Fair Source License - see LICENSE file for complete terms.
+ * MIT License
+ * Copyright (c) 2025 Jonathan D Borgia
  */
 
 import { WritableSignal, Signal } from '@angular/core';
 
 // ============================================
-// PROPRIETARY RECURSIVE TYPING SYSTEM
-// Copyright (c) 2025 Jonathan D Borgia
+// RECURSIVE TYPING SYSTEM
+// MIT License - Copyright (c) 2025 Jonathan D Borgia
 // ============================================
 
 /**

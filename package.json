@@ -1,7 +1,7 @@
 {
   "name": "@signaltree/workspace",
   "version": "1.1.6",
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "MIT",
   "funding": {
     "type": "github",
     "url": "https://github.com/sponsors/<you>"

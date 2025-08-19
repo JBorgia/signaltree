@@ -2631,21 +2631,20 @@ Special thanks to **Christian Moser** - an invaluable tester, colleague, and fri
 - [@signaltree/presets](https://www.npmjs.com/package/@signaltree/presets) - Pre-configured setups
 - [@signaltree/ng-forms](https://www.npmjs.com/package/@signaltree/ng-forms) - Angular forms integration
 
-## 📄 License & Intellectual Property
+## 📄 License
 
-**Fair Source License** - see the [LICENSE](LICENSE) file for complete terms.
+**MIT License** - see the [LICENSE](LICENSE) file for complete terms.
 
-### 🔒 Recursive Typing System - Protected Innovation
+SignalTree is free and open source. You can use it in personal and commercial projects without restrictions.
 
-SignalTree's revolutionary recursive typing system is proprietary intellectual property:
+### ⭐ If You Like SignalTree
 
-- **DeepSignalify<T>** recursive type transformations
-- **Signal-store pattern** with type-runtime alignment
-- **"Initiation defines structure"** paradigm
-- **Built-in object detection** algorithms
-- **Lazy signal tree creation** with perfect type preservation
+If SignalTree helps your project, please consider:
 
-**⚠️ Important**: The recursive typing methodology is exclusively protected. See [INTELLECTUAL_PROPERTY.md](INTELLECTUAL_PROPERTY.md) for details.
+- ⭐ Starring the repository
+- 🐛 Reporting issues and contributing improvements
+- 💬 Sharing your success stories
+- 📝 Writing about your experience with SignalTree
 
 ### 🆓 Free Usage
 

@@ -1041,7 +1041,7 @@ npm install @signaltree/core @signaltree/batching @signaltree/memoization @signa
 
 ## 📄 License
 
-MIT License with AI Training Restriction - see the [LICENSE](../../LICENSE) file for details.
+MIT License - see the [LICENSE](../../LICENSE) file for details.
 
 ---
 

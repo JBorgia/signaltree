@@ -775,7 +775,7 @@ const tree = signalTree(state).pipe(withBatching(), withMemoization(), withAsync
 
 ## 📄 License
 
-MIT License with AI Training Restriction - see the [LICENSE](../../LICENSE) file for details.
+MIT License - see the [LICENSE](../../LICENSE) file for details.
 
 ---
 

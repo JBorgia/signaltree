@@ -324,7 +324,7 @@ const tree = signalTree(state).pipe(withBatching(), withMiddleware([loggingMiddl
 
 ## 📄 License
 
-MIT License with AI Training Restriction - see the [LICENSE](../../LICENSE) file for details.
+MIT License - see the [LICENSE](../../LICENSE) file for details.
 
 ---
 
