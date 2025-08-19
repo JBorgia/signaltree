@@ -15,6 +15,7 @@ import {
   DestroyRefToken,
   isSignal,
 } from './adapter';
+import { scheduleTask } from './scheduler';
 import type {
   SignalTree,
   DeepSignalify,
@@ -612,11 +613,14 @@ function enhanceTree<T>(
 function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
   // Stub implementations for advanced features (will log warnings)
   tree.batchUpdate = (updater: (current: T) => Partial<T>) => {
+    if (config.batchUpdates) {
+      scheduleTask(() => tree.update(updater));
+      return;
+    }
     console.warn(
       '⚠️ batchUpdate() called but batching is not enabled.',
-      'To enable batch updates, install @signaltree/batching'
+      'Set batchUpdates: true or install @signaltree/batching for advanced features.'
     );
-    // Fallback: Just call update directly
     tree.update(updater);
   };
 
