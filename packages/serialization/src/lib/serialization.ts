@@ -770,15 +770,44 @@ export function withPersistence<T extends Record<string, unknown>>(
 
     // Auto-save on a simple interval if enabled (test-friendly deterministic approach)
     if (autoSave) {
+      let stopped = false;
       const interval = setInterval(() => {
+        if (stopped) return;
         enhanced.save().catch((error) => {
           console.error('[SignalTree] Auto-save failed:', error);
         });
       }, debounceMs);
+
+      // Expose test-only flushing & cancellation helpers
       (enhanced as EnhancedSignalTree).__flushAutoSave = () => {
-        clearInterval(interval);
+        if (!stopped) {
+          clearInterval(interval);
+          stopped = true;
+        }
         return enhanced.save();
       };
+      // Augment type locally to avoid 'any'
+      interface AutoSaveAugmented {
+        __cancelAutoSave?: () => void;
+        destroy?: (...args: unknown[]) => unknown;
+      }
+      const augmented = enhanced as unknown as AutoSaveAugmented;
+      augmented.__cancelAutoSave = () => {
+        if (!stopped) {
+          clearInterval(interval);
+          stopped = true;
+        }
+      };
+      const originalDestroy = augmented.destroy;
+      if (typeof originalDestroy === 'function') {
+        augmented.destroy = (...args: unknown[]) => {
+          if (!stopped) {
+            clearInterval(interval);
+            stopped = true;
+          }
+          return originalDestroy.apply(enhanced, args as never);
+        };
+      }
     }
 
     return enhanced;

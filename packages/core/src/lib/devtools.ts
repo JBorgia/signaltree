@@ -26,13 +26,17 @@ function getGlobalRegistry(): RegistryMap {
 }
 
 function shouldRegister(): boolean {
-  const g: unknown = globalThis;
-  const env =
-    typeof g === 'object' && g && 'process' in g
-      ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ((g as any).process?.env?.NODE_ENV as string | undefined)
-      : undefined;
-  return env !== 'production';
+  // Detect production via typical env markers without referencing Node types directly
+  interface GlobalLike {
+    process?: { env?: Record<string, string | undefined> };
+    import?: { meta?: { env?: { MODE?: string } } };
+  }
+  const g = globalThis as unknown as GlobalLike;
+  const envNode = g.process?.env?.['NODE_ENV'];
+  const envVite = g.import?.meta?.env?.MODE;
+  const mode = envNode || envVite;
+  if (mode === 'production') return false;
+  return true;
 }
 
 export function registerTree<T>(
@@ -136,3 +140,47 @@ export function snapshot(value: unknown): unknown {
 export const __DEVTOOLS_META__ = {
   key: String(REGISTRY_KEY),
 };
+
+/**
+ * Performance Metrics Guide
+ * ==========================
+ * The snapshot / snapshotMeta helpers expose a `metrics` object with the following fields:
+ *
+ *  updates
+ *    Total root state mutations applied (version bumps). High frequency without
+ *    corresponding UI or consumer benefit can signal redundant writes or that
+ *    batching (`batchUpdate`) should be enabled / expanded.
+ *
+ *  computations
+ *    Number of computed / memoized derivations executed. If computations grows
+ *    much faster than updates, you may be over‑deriving (too many dependent
+ *    computed signals) or missing memoization boundaries. Consider splitting
+ *    large computeds or introducing more granular signals.
+ *
+ *  cacheHits & cacheMisses
+ *    These track memoization effectiveness. A cache hit means a computed value
+ *    was served from cache (dependencies unchanged). A miss triggers a recompute.
+ *    Monitor the ratio: a falling hit rate (hits / (hits + misses)) indicates
+ *    either increasingly dynamic dependency graphs or insufficient caching.
+ *
+ *  averageUpdateTime (ms)
+ *    Mean wall‑clock time to process a single update cycle (including invalidation
+ *    + propagation). Stable or decreasing values are ideal. Regressions can point
+ *    to expensive new derivations, deep object copies, or large fan‑out graphs.
+ *
+ * Interpreting Changes
+ * --------------------
+ *  - Rising averageUpdateTime with stable updates/computations: each update got slower;
+ *    profile recent reducers or heavy computeds.
+ *  - Rising computations with flat updates: derivations are invalidating more often;
+ *    examine dependency breadth or introduce memoization.
+ *  - High cacheMisses relative to cacheHits: consider splitting computeds so unrelated
+ *    changes don't invalidate broad dependency sets.
+ *  - Spiky metrics: run the variance benchmarks (scripts/performance/*variance*) to
+ *    gather distribution (median, stddev, p95) for more robust comparisons.
+ *
+ * Resetting Baselines
+ * -------------------
+ * Use the performance scripts (see root package.json `perf:bench:*`) to capture and
+ * guard against regressions. Approve intentional performance shifts by updating baselines.
+ */

@@ -60,6 +60,11 @@ export default [
               message:
                 'Do not import from @angular/core/* directly in core. Use ./lib/adapter instead.',
             },
+            {
+              group: ['**/internal/*'],
+              message:
+                'Internal modules are not part of the public API surface; refactor to a public export or move usage.',
+            },
           ],
         },
       ],

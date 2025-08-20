@@ -1,12 +1,26 @@
 {
   "name": "@signaltree/core",
   "version": "1.1.7",
-  "description": "Lightweight, type-safe signal-based state management for Angular. Core SignalTree primitives, hierarchical state, memoization hooks, and extension points.",
+  "description": "Lightweight, framework-adaptable signal-based state management. Core primitives only (Angular adapter currently internal).",
+  "type": "module",
   "peerDependencies": {
     "@angular/core": "^20.1.0",
     "lodash-es": "^4.17.21"
   },
   "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./fesm2022/signaltree-core.mjs"
+    },
+    "./vanilla": {
+      "types": "./vanilla/index.d.ts",
+      "import": "./fesm2022/signaltree-core.mjs"
+    },
+    "./package.json": {
+      "default": "./package.json"
+    }
+  },
   "license": "MIT",
   "author": "Jonathan D Borgia",
   "repository": {
@@ -29,9 +43,7 @@
     "access": "public"
   },
   "files": [
-    "fesm2022/**/*",
     "esm2022/**/*",
-    "bundles/**/*",
     "index.d.ts",
     "README.md",
     "LICENSE",

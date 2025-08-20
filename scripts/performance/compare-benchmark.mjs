@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
+import {
+  macroLatestPath,
+  macroMedianPath,
+  macroHistoryDir,
+  ensurePerformanceDirs,
+} from './paths.mjs';
 
 // Basic regression detection using Phase0 baseline (if extended metrics added later, adapt diff logic)
 const PERF_SLOWDOWN_THRESHOLD_PCT = parseFloat(
@@ -28,14 +34,13 @@ function loadJSON(p) {
   return JSON.parse(fs.readFileSync(p, 'utf8'));
 }
 
-const perfDir = path.join(process.cwd(), 'scripts/performance');
-// Allow alternate filename for phase comparison if provided via env
+ensurePerformanceDirs();
+const perfDir = path.join(process.cwd(), 'performance');
+// Allow alternate filename (for historical comparisons) but default to macro latest path
 const alt = process.env.LATEST_BENCHMARK_FILE;
-const latestPath = path.join(
-  perfDir,
-  alt && alt.trim() ? alt.trim() : 'latest-benchmark.json'
-);
-const baselinePath = path.join(perfDir, 'baseline-core.json');
+const latestPath =
+  alt && alt.trim() ? path.join(perfDir, alt.trim()) : macroLatestPath();
+const baselinePath = path.join(perfDir, 'baselines/macro/baseline.json');
 
 if (!fs.existsSync(latestPath)) {
   console.error('Latest benchmark not found. Run run-benchmark.mjs first.');
@@ -44,7 +49,7 @@ if (!fs.existsSync(latestPath)) {
 
 let latest = loadJSON(latestPath);
 // Swap in median summary if requested and available
-const medianPath = path.join(perfDir, 'latest-benchmark-median.json');
+const medianPath = macroMedianPath();
 if ((USE_MEDIAN || process.env.CI) && fs.existsSync(medianPath)) {
   try {
     latest = loadJSON(medianPath);
@@ -83,11 +88,10 @@ let previousFile = process.env.PREV_BENCH_FILE;
 // Auto-pick previous snapshot (lexicographically latest earlier json matching pattern phase*.json) if not provided
 if (!previousFile) {
   try {
+    const historyDir = macroHistoryDir();
     const files = fs
-      .readdirSync(perfDir)
-      .filter(
-        (f) => /benchmark.*\.json$/i.test(f) && f !== path.basename(latestPath)
-      );
+      .readdirSync(historyDir)
+      .filter((f) => /benchmark-median-.*\.json$/i.test(f));
     // Use timestamp inside file for ordering if available
     const snapshots = files.map((f) => {
       try {
@@ -98,13 +102,15 @@ if (!previousFile) {
       }
     });
     snapshots.sort((a, b) => b.ts - a.ts);
-    previousFile = snapshots[0]?.f;
+    previousFile = snapshots[0]?.f
+      ? path.join(historyDir, snapshots[0].f)
+      : undefined;
   } catch {
     // ignore
   }
 }
 if (previousFile) {
-  const prev = loadJSON(path.join(perfDir, previousFile));
+  const prev = loadJSON(previousFile);
   if (prev?.totals?.totalMs && latest?.totals?.totalMs) {
     const pct =
       ((latest.totals.totalMs - prev.totals.totalMs) / prev.totals.totalMs) *
@@ -121,7 +127,7 @@ if (previousFile) {
 
 // Per-case slowdown checks
 if (previousFile) {
-  const prev = loadJSON(path.join(perfDir, previousFile));
+  const prev = loadJSON(previousFile);
   const prevCases = prev.cases || [];
   const prevMap = new Map(prevCases.map((c) => [c.name, c]));
   for (const c of latestCases) {
@@ -182,7 +188,7 @@ try {
   const report = {
     timestamp: new Date().toISOString(),
     usingMedian: !!medianSourceRuns.length,
-    previousFile: previousFile || null,
+    previousFile: previousFile ? path.basename(previousFile) : null,
     failures,
     variabilityWarnings,
     totals: latest.totals || null,

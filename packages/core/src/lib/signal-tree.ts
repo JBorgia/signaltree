@@ -32,7 +32,7 @@ import type {
   EntityHelpers,
   DeepPartial,
 } from './types';
-import { createLazySignalTree, equal } from './utils';
+import { createLazySignalTree, equal } from './internal/utils';
 import { createTimeTravelFeature } from './internal/time-travel';
 
 // ============================================

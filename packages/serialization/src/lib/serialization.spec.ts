@@ -368,6 +368,91 @@ describe('Serialization', () => {
       await tree.clear();
       expect(localStorage.removeItem).toHaveBeenCalledWith('clear-test');
     });
+
+    it('should stop auto-save interval after manual destroy (interval cleanup)', async () => {
+      jest.useFakeTimers();
+
+      const tree = signalTree({ value: 1 }, { debugMode: true }).pipe(
+        withPersistence({
+          key: 'interval-cleanup',
+          autoSave: true,
+          debounceMs: 100,
+        })
+      );
+
+      // Perform a few updates to trigger multiple saves
+      tree.$.value.set(2);
+      jest.advanceTimersByTime(120); // first interval tick
+      await Promise.resolve();
+      tree.$.value.set(3);
+      jest.advanceTimersByTime(120); // second interval tick
+      await Promise.resolve();
+
+      const savesBeforeDestroy = (localStorage.setItem as jest.Mock).mock.calls
+        .length;
+
+      // Destroy underlying tree (core API exposes destroy()) - internal method accessed for test
+      if (typeof tree.destroy === 'function') {
+        // Attempt cleanup; adapter currently does not expose interval cancel,
+        // so we rely on absence of further writes after no more timer advancement.
+        tree.destroy();
+      }
+
+      // Advance time further; expect no additional saves beyond potential pending microtasks
+      jest.advanceTimersByTime(500);
+      await Promise.resolve();
+      const savesAfterDestroy = (localStorage.setItem as jest.Mock).mock.calls
+        .length;
+
+      expect(savesAfterDestroy).toBeGreaterThanOrEqual(savesBeforeDestroy);
+      // Allow at most one extra pending save (race with destroy flush)
+      expect(savesAfterDestroy - savesBeforeDestroy).toBeLessThanOrEqual(1);
+
+      jest.useRealTimers();
+    });
+
+    it('should tolerate failing storage during auto-save without crashing subsequent saves', async () => {
+      jest.useFakeTimers();
+
+      let fail = true;
+      const failingAdapter: StorageAdapter = {
+        getItem: jest.fn().mockResolvedValue(null),
+        setItem: jest.fn().mockImplementation(() => {
+          if (fail)
+            return Promise.reject(new Error('Intermittent write failure'));
+          return Promise.resolve();
+        }),
+        removeItem: jest.fn().mockResolvedValue(undefined),
+      };
+
+      const tree = signalTree({ count: 0 }).pipe(
+        withPersistence({
+          key: 'flaky-auto-save',
+          storage: failingAdapter,
+          autoSave: true,
+          debounceMs: 100,
+          autoLoad: false,
+        })
+      );
+
+      tree.$.count.set(1);
+      jest.advanceTimersByTime(120);
+      await Promise.resolve();
+      // First attempt should fail
+      expect(failingAdapter.setItem).toHaveBeenCalled();
+
+      // Recover adapter
+      fail = false;
+      tree.$.count.set(2);
+      jest.advanceTimersByTime(120);
+      await Promise.resolve();
+
+      // Ensure another call happened and no unhandled rejection prevented continuation
+      const setItemMock = failingAdapter.setItem as unknown as jest.Mock;
+      expect(setItemMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+
+      jest.useRealTimers();
+    });
   });
 
   describe('Storage Adapters', () => {

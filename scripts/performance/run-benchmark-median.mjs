@@ -2,6 +2,11 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import {
+  macroMedianPath,
+  macroHistoryDir,
+  ensurePerformanceDirs,
+} from './paths.mjs';
 
 const RUNS = parseInt(process.env.BENCH_RUNS || '5', 10); // includes warmup
 const DISCARD = parseInt(process.env.BENCH_WARMUP || '1', 10);
@@ -9,7 +14,6 @@ const script = path.join(
   path.dirname(new URL(import.meta.url).pathname),
   'run-benchmark.mjs'
 );
-const perfDir = path.dirname(script);
 
 const results = [];
 for (let i = 0; i < RUNS; i++) {
@@ -73,8 +77,14 @@ const summary = {
   sourceCaseRuns,
 };
 
+ensurePerformanceDirs();
+const medianFile = macroMedianPath();
+fs.writeFileSync(medianFile, JSON.stringify(summary, null, 2));
+// Archive to history for longitudinal tracking
+const historyDir = macroHistoryDir();
+const tsSafe = summary.timestamp.replace(/[:.]/g, '-');
 fs.writeFileSync(
-  path.join(perfDir, 'latest-benchmark-median.json'),
+  path.join(historyDir, `benchmark-median-${tsSafe}.json`),
   JSON.stringify(summary, null, 2)
 );
 console.log(JSON.stringify(summary, null, 2));

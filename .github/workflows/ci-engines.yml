@@ -1,0 +1,99 @@
+name: CI (Engines Matrix)
+
+on:
+  push:
+    branches: [main, feat/**, fix/**, chore/**]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+
+jobs:
+  build-test:
+    name: Engine ${{ matrix.engine }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [angular, vanilla]
+    env:
+      NX_CACHE_DIRECTORY: .nx-cache
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore Nx cache
+        uses: actions/cache@v4
+        with:
+          path: .nx-cache
+          key: nx-cache-${{ runner.os }}-${{ matrix.engine }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            nx-cache-${{ runner.os }}-${{ matrix.engine }}-${{ hashFiles('pnpm-lock.yaml') }}-
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint (angular only)
+        if: matrix.engine == 'angular'
+        run: pnpm lint:all
+
+      - name: Run tests (angular full matrix)
+        if: matrix.engine == 'angular'
+        run: pnpm test:all
+
+      - name: Run tests (vanilla core only)
+        if: matrix.engine == 'vanilla'
+        env:
+          SIGNALTREE_ENGINE: vanilla
+        run: pnpm test:core
+
+      - name: Performance regression (angular)
+        if: matrix.engine == 'angular'
+        run: pnpm perf:bench:check
+      - name: Performance stats regression (angular)
+        if: matrix.engine == 'angular'
+        run: pnpm perf:bench:stats:check
+
+      - name: Performance regression (vanilla)
+        if: matrix.engine == 'vanilla'
+        run: pnpm perf:bench:vanilla:check
+      - name: Performance stats regression (vanilla)
+        if: matrix.engine == 'vanilla'
+        run: pnpm perf:bench:stats:vanilla:check
+
+      - name: Size regression (angular only)
+        if: matrix.engine == 'angular'
+        run: pnpm perf:size:check
+
+      - name: Upload performance artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-${{ matrix.engine }}
+          path: |
+            scripts/performance/latest-micro-bench*.json
+            scripts/performance/latest-size-snapshot.json
+          if-no-files-found: ignore
+
+      - name: Summary
+        run: |
+          echo "Engine: ${{ matrix.engine }} completed."
+          echo "Workspace hash: $(git rev-parse --short HEAD)"

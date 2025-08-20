@@ -197,10 +197,44 @@ export interface Middleware<T> {
 }
 
 export interface PerformanceMetrics {
+  /**
+   * Total number of state update operations that have occurred on the tree.
+   * An "update" is counted whenever the tree's root state version increments
+   * (i.e. a call to update / batchUpdate that produces a new object shape).
+   * Use this to understand how write-heavy a workload is. A rapidly growing
+   * updates number without a proportional increase in user‑visible changes can
+   * indicate redundant writes or missing memoization.
+   */
   updates: number;
+  /**
+   * Number of computed derivations (lazy computations, selectors, memoized
+   * reads) that have executed since metrics tracking began. This is a proxy
+   * for reactive recomputation pressure. High computations relative to
+   * updates can reveal over-derivation (too many dependent computeds) or a
+   * need to introduce finer‑grained signals.
+   */
   computations: number;
+  /**
+   * Count of successful cache reuses for memoized / computed values. A cache
+   * hit means a consumer accessed a computed result whose dependencies did
+   * not change, so recomputation was skipped. Higher is generally better and
+   * indicates effective memoization.
+   */
   cacheHits: number;
+  /**
+   * Count of times a memoized / computed value had to recompute because one
+   * or more of its tracked dependencies changed (or the value was evicted).
+   * A growing cacheMisses:cacheHits ratio signals either highly dynamic
+   * dependency graphs or insufficient caching granularity.
+   */
   cacheMisses: number;
+  /**
+   * Mean wall‑clock time in milliseconds spent applying each update (not per
+   * field, but per root update cycle). This includes propagation + computed
+   * invalidation work attributable to that update. Aim to keep this stable.
+   * Regressions (increase vs. baseline) often surface scaling issues or new
+   * expensive derivations introduced by recent code.
+   */
   averageUpdateTime: number;
 }
 

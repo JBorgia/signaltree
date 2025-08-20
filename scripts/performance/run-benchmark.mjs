@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 import { performance } from 'node:perf_hooks';
 import fs from 'node:fs';
-import path from 'node:path';
-import url from 'node:url';
+import { macroLatestPath, ensurePerformanceDirs } from './paths.mjs';
 
 // Simple baseline micro-benchmark: create tree, perform 1000 incremental updates, deep path update.
 import { signalTree } from '../../dist/packages/core/fesm2022/signaltree-core.mjs';
@@ -109,9 +108,7 @@ const summary = {
   cases,
 };
 
-const outDir = path.dirname(url.fileURLToPath(import.meta.url));
-fs.writeFileSync(
-  path.join(outDir, 'latest-benchmark.json'),
-  JSON.stringify(summary, null, 2)
-);
+ensurePerformanceDirs();
+const outFile = macroLatestPath();
+fs.writeFileSync(outFile, JSON.stringify(summary, null, 2));
 console.log(JSON.stringify(summary, null, 2));

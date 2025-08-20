@@ -1,0 +1,9 @@
+{
+  "name": "@signaltree/core/vanilla",
+  "private": true,
+  "ngPackage": {
+    "lib": {
+      "entryFile": "src/index.ts"
+    }
+  }
+}
