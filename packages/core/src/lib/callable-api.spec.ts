@@ -1,12 +1,7 @@
-import { TestBed } from '@angular/core/testing';
 import { signal } from './adapter';
 import { signalTree } from './signal-tree';
 
 describe('SignalTree Callable API', () => {
-  beforeEach(() => {
-    TestBed.configureTestingModule({});
-  });
-
   it('should support callable unwrapping at root level', () => {
     const initialState = { count: 0, user: { name: 'John' } };
     const tree = signalTree(initialState);

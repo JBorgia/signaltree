@@ -1,11 +1,6 @@
-import { TestBed } from '@angular/core/testing';
 import { signalTree } from './signal-tree';
 
 describe('signalTree', () => {
-  beforeEach(() => {
-    TestBed.configureTestingModule({});
-  });
-
   it('should create a basic signal tree', () => {
     const tree = signalTree({ count: 0, user: { name: 'John' } });
 

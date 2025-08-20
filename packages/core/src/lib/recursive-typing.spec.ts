@@ -3,14 +3,9 @@
  * Tests the MAGIC recursive pattern that achieves perfect type inference
  */
 
-import { TestBed } from '@angular/core/testing';
 import { signalTree } from './signal-tree';
 
 describe('SignalTree Recursive Typing Magic', () => {
-  beforeEach(() => {
-    TestBed.configureTestingModule({});
-  });
-
   it('should achieve perfect type recursion like signal-store pattern', () => {
     // The MAGIC: Complex nested structure that tests the recursive pattern
     const complexState = {
