@@ -1,6 +1,10 @@
-import { isSignal, Signal, WritableSignal } from '../adapter';
-import { equal } from '../utils';
-import type { SignalTree, TimeTravelEntry, TreeConfig } from '../types';
+// (No longer need fine-grained patch application utilities after snapshot approach)
+import type {
+  SignalTree,
+  TimeTravelEntry,
+  TreeConfig,
+  DeepPartial,
+} from '../types';
 
 export interface TimeTravelFeature<T> {
   enable(tree: SignalTree<T>, config: TreeConfig): void;
@@ -48,22 +52,30 @@ export function createTimeTravelFeature<T>(): TimeTravelFeature<T> {
 
       type Patch = { path: string; oldValue: unknown; newValue: unknown };
       interface PatchEntry {
-        patches: Patch[];
+        patches: Patch[]; // retained for potential diff tooling / future compression
         timestamp: number;
         action: string;
         payload?: unknown;
-        materialized?: T;
+        // We now always capture a full materialized snapshot at this point in history
+        materialized: T;
       }
 
+      // Base snapshot represents state at history index 0 ("init")
       let baseSnapshot: T = deepClone(tree.unwrap());
       const patchHistory: PatchEntry[] = [];
       let __historyIndex = 0;
+      let __suppressRecord = false;
 
       const originalUpdate = tree.update;
       tree.update = (
-        updater: (current: T) => Partial<T>,
+        updater: (current: T) => T | DeepPartial<T>,
         options?: { label?: string; payload?: unknown }
       ) => {
+        if (__suppressRecord) {
+          // Bypass history capture when applying snapshots
+          originalUpdate(updater, options as unknown as undefined);
+          return;
+        }
         const beforeIndex = __historyIndex;
         if (__historyIndex < patchHistory.length) {
           patchHistory.splice(__historyIndex);
@@ -71,18 +83,21 @@ export function createTimeTravelFeature<T>(): TimeTravelFeature<T> {
         originalUpdate(updater, options as unknown as undefined);
         const patches = (tree as unknown as { __lastPatches?: Patch[] })
           .__lastPatches;
+        const snap = deepClone(tree.unwrap());
         if (patches && patches.length > 0) {
           patchHistory.push({
             patches: patches.map((p) => ({ ...p })),
             timestamp: Date.now(),
             action: options?.label || 'update',
             payload: options?.payload,
+            materialized: snap,
           });
           __historyIndex = patchHistory.length;
           while (1 + patchHistory.length > limit) {
             const first = patchHistory.shift();
             if (first) {
-              baseSnapshot = applyPatchesClone(baseSnapshot, first.patches);
+              // When trimming, promote the removed entry's snapshot to new base
+              baseSnapshot = deepClone(first.materialized);
             }
             __historyIndex = Math.max(0, __historyIndex - 1);
           }
@@ -90,80 +105,23 @@ export function createTimeTravelFeature<T>(): TimeTravelFeature<T> {
           console.warn('[SignalTree] update produced no patches');
         }
       };
-
-      function applyPatchesClone(state: T, patches: Patch[]): T {
-        const root: unknown = Array.isArray(state)
-          ? [...(state as unknown[])]
-          : { ...(state as Record<string, unknown>) };
-        for (const { path, newValue } of patches) {
-          const parts = path.split('.');
-          let cursor: Record<string, unknown> | unknown[] = root as
-            | Record<string, unknown>
-            | unknown[];
-          for (let i = 0; i < parts.length - 1; i++) {
-            const k = parts[i];
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const next = (cursor as any)[k];
-            if (!next || typeof next !== 'object') {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              (cursor as any)[k] = {};
-            } else if (Array.isArray(next)) {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              (cursor as any)[k] = [...next];
-            } else {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              (cursor as any)[k] = { ...next };
-            }
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            cursor = (cursor as any)[k];
-          }
-          const last = parts[parts.length - 1];
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (cursor as any)[last] = newValue;
-        }
-        return root as T;
-      }
-
+      // Materialize now is O(1) – we store full snapshots per entry.
       function materialize(index: number): T {
         if (index === 0) return deepClone(baseSnapshot);
         const entry = patchHistory[index - 1];
-        if (entry.materialized) return deepClone(entry.materialized);
-        const prev = materialize(index - 1);
-        const next = applyPatchesClone(prev, entry.patches);
-        entry.materialized = next;
-        return deepClone(next);
+        return deepClone(entry.materialized);
       }
 
       const applySnapshot = (targetIndex: number, label: string) => {
         const snap = materialize(targetIndex);
-        const applyObject = (target: unknown, source: unknown) => {
-          if (
-            !target ||
-            typeof target !== 'object' ||
-            !source ||
-            typeof source !== 'object'
-          )
-            return;
-          for (const key of Object.keys(source as Record<string, unknown>)) {
-            const tgtVal = (target as Record<string, unknown>)[key];
-            const srcVal = (source as Record<string, unknown>)[key];
-            if (isSignal(tgtVal)) {
-              const currentVal = (tgtVal as Signal<unknown>)();
-              if (!equal(currentVal, srcVal)) {
-                (tgtVal as WritableSignal<unknown>).set(srcVal);
-              }
-            } else if (
-              tgtVal &&
-              typeof tgtVal === 'object' &&
-              srcVal &&
-              typeof srcVal === 'object' &&
-              !Array.isArray(srcVal)
-            ) {
-              applyObject(tgtVal, srcVal);
-            }
-          }
-        };
-        applyObject(tree.state, snap);
+        __suppressRecord = true;
+        try {
+          originalUpdate(() => snap as unknown as T, {
+            label: `__time_travel_${label}`,
+          } as unknown as undefined);
+        } finally {
+          __suppressRecord = false;
+        }
         if (config.debugMode) {
           console.log(`[SignalTree] Applied snapshot via ${label}`);
         }

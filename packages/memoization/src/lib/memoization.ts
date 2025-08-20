@@ -1,4 +1,4 @@
-import { SignalTree } from '@signaltree/core';
+import { SignalTree, DeepPartial } from '@signaltree/core';
 
 /**
  * Extended SignalTree interface with memoization capabilities
@@ -6,7 +6,7 @@ import { SignalTree } from '@signaltree/core';
  */
 interface MemoizedSignalTree<T> extends SignalTree<T> {
   memoizedUpdate: (
-    updater: (current: T) => Partial<T>,
+    updater: (current: T) => T | DeepPartial<T>,
     cacheKey?: string
   ) => void;
   clearMemoCache: (key?: string) => void;
@@ -215,7 +215,7 @@ export function withMemoization<T>(
     // Add memoized update method
     // Add memoization methods to the tree
     (tree as MemoizedSignalTree<T>).memoizedUpdate = (
-      updater: (current: T) => Partial<T>,
+      updater: (current: T) => T | DeepPartial<T>,
       cacheKey?: string
     ) => {
       const key = cacheKey || `update_${Date.now()}`;
@@ -225,7 +225,7 @@ export function withMemoization<T>(
       const cached = cache.get(key);
       if (cached && deepEqual(cached.deps, [currentState])) {
         // Apply cached result
-        originalUpdate.call(tree, () => cached.value as Partial<T>);
+        originalUpdate.call(tree, () => cached.value as DeepPartial<T>);
         return;
       }
 
@@ -241,7 +241,7 @@ export function withMemoization<T>(
       });
 
       // Apply update
-      originalUpdate.call(tree, () => result);
+      originalUpdate.call(tree, () => result as DeepPartial<T>);
 
       // Enforce cache limits after adding new entry
       enforceCacheLimit();
@@ -302,7 +302,7 @@ export function withMemoization<T>(
 
     // Override update to enforce cache limits
     const enhancedUpdate = tree.update;
-    tree.update = (updater: (current: T) => Partial<T>) => {
+    tree.update = (updater: (current: T) => T | DeepPartial<T>) => {
       const result = enhancedUpdate.call(tree, updater);
       enforceCacheLimit();
       return result;

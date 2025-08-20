@@ -1,4 +1,4 @@
-import { type SignalTree } from '@signaltree/core';
+import { type SignalTree, type DeepPartial } from '@signaltree/core';
 import { deepEqual, deepClone } from './utils';
 
 /**
@@ -295,23 +295,25 @@ export function withTimeTravel<T>(
     );
 
     // Add middleware to track state changes
-    tree.update = (updater: (current: T) => Partial<T>) => {
+    tree.update = ((
+      updater: (current: T) => T | DeepPartial<T>,
+      options?: { label?: string; payload?: unknown }
+    ) => {
       if (isRestoring) {
-        // During restoration, just call original update
-        return originalUpdate(updater);
+        return originalUpdate(updater, options as unknown as undefined);
       }
 
       const beforeState = tree.unwrap();
-      originalUpdate(updater);
+      originalUpdate(updater, options as unknown as undefined);
       const afterState = tree.unwrap();
-
-      // Only add to history if state actually changed
-      const statesEqual = deepEqual(beforeState, afterState);
-
-      if (!statesEqual) {
-        timeTravelManager.addEntry('update', afterState);
+      if (!deepEqual(beforeState, afterState)) {
+        timeTravelManager.addEntry(
+          options?.label || 'update',
+          afterState,
+          options?.payload
+        );
       }
-    };
+    }) as typeof tree.update;
 
     return {
       ...tree,

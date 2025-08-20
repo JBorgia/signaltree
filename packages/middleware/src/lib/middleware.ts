@@ -1,4 +1,4 @@
-import { SignalTree, Middleware } from '@signaltree/core';
+import { SignalTree, Middleware, DeepPartial } from '@signaltree/core';
 
 // Global middleware storage - using unknown for type safety
 const middlewareMap = new WeakMap<object, unknown[]>();
@@ -22,7 +22,10 @@ export function withMiddleware<T>(
     const originalUpdate = tree.update;
 
     // Override update method to include middleware execution
-    tree.update = (updater: (current: T) => Partial<T>) => {
+    tree.update = ((
+      updater: (current: T) => T | DeepPartial<T>,
+      options?: { label?: string; payload?: unknown }
+    ) => {
       const action = 'UPDATE';
       const currentState = tree.unwrap();
       const updateResult = updater(currentState);
@@ -44,7 +47,7 @@ export function withMiddleware<T>(
       const previousState = currentState;
 
       // Execute the actual update
-      originalUpdate.call(tree, updater);
+      originalUpdate.call(tree, updater, options as unknown as undefined);
 
       // Get new state after update
       const newState = tree.unwrap();
@@ -55,7 +58,7 @@ export function withMiddleware<T>(
           middleware.after(action, updateResult, previousState, newState);
         }
       }
-    };
+    }) as typeof tree.update;
 
     // Override addTap to work with the middleware system
     tree.addTap = (middleware: Middleware<T>) => {
@@ -88,7 +91,7 @@ export function withMiddleware<T>(
     const originalBatchUpdate = tree.batchUpdate;
 
     // Override batchUpdate to include middleware
-    tree.batchUpdate = (updater: (current: T) => Partial<T>) => {
+    tree.batchUpdate = ((updater: (current: T) => T | DeepPartial<T>) => {
       const action = 'BATCH_UPDATE';
       const currentState = tree.unwrap();
       const updateResult = updater(currentState);
@@ -121,7 +124,7 @@ export function withMiddleware<T>(
           middleware.after(action, updateResult, previousState, newState);
         }
       }
-    };
+    }) as typeof tree.batchUpdate;
 
     // Override destroy to cleanup middleware
     const originalDestroy = tree.destroy;

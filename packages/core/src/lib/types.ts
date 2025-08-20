@@ -65,34 +65,40 @@ export type IsWritableSignal<T> = T extends WritableSignal<unknown>
   : false;
 
 /**
- * Enhanced DeepSignalify with better edge case handling
- * Never double-wraps signals and properly handles functions and built-in objects
+ * Enhanced DeepSignalify type that makes nested objects callable
+ * Handles all edge cases: signals, arrays, built-ins, functions, complex unions
  */
-export type DeepSignalify<T> = IsSignal<T> extends true
-  ? T // Never double-wrap signals
-  : T extends Primitive
-  ? WritableSignal<T>
-  : T extends BuiltInObject
-  ? WritableSignal<T> // Treat built-in objects as primitive values
-  : T extends readonly (infer U)[]
-  ? WritableSignal<U[]> // Handle readonly arrays
-  : T extends (infer U)[]
-  ? WritableSignal<U[]> // Handle mutable arrays
+// DeepPartial utility for sparse updates
+export type DeepPartial<T> = T extends BuiltInObject
+  ? T
+  : T extends (...args: unknown[]) => unknown
+  ? T
+  : T extends Array<infer U>
+  ? Array<DeepPartial<U>>
   : T extends object
-  ? T extends (...args: unknown[]) => unknown // Functions should be wrapped as signals
-    ? WritableSignal<T>
-    : {
-        [K in keyof T]: T[K] extends (infer U)[]
-          ? WritableSignal<U[]>
-          : T[K] extends BuiltInObject
-          ? WritableSignal<T[K]>
-          : T[K] extends object
-          ? T[K] extends Signal<infer TK>
-            ? WritableSignal<TK>
-            : DeepSignalify<T[K]> // Recursive call preserves original type structure
-          : WritableSignal<T[K]>;
-      }
-  : WritableSignal<T>;
+  ? { [K in keyof T]?: DeepPartial<T[K]> }
+  : T;
+
+export type DeepSignalify<T> = {
+  [K in keyof T]: T[K] extends (infer U)[]
+    ? WritableSignal<U[]>
+    : T[K] extends object
+    ? T[K] extends Signal<unknown>
+      ? T[K]
+      : T[K] extends BuiltInObject
+      ? WritableSignal<T[K]>
+      : T[K] extends (...args: unknown[]) => unknown
+      ? WritableSignal<T[K]>
+      : DeepSignalify<T[K]> &
+          (() => T[K]) & {
+            update(updater: (current: T[K]) => T[K] | DeepPartial<T[K]>): void;
+            set(value: T[K] | DeepPartial<T[K]>): void;
+          }
+    : WritableSignal<T[K]>;
+} & (() => T) & {
+    update(updater: (current: T) => T | DeepPartial<T>): void;
+    set(value: T | DeepPartial<T>): void;
+  };
 
 /**
  * SignalTree type - NO CONSTRAINTS on T
@@ -104,7 +110,7 @@ export type SignalTree<T> = {
   state: DeepSignalify<T>;
 
   /**
-   * Shorthand alias for state
+   * Shorthand alias for state - also callable to unwrap entire tree
    */
   $: DeepSignalify<T>;
 
@@ -112,15 +118,17 @@ export type SignalTree<T> = {
    * Core methods
    */
   unwrap(): T;
-  update(updater: (current: T) => Partial<T>): void;
+  update(updater: (current: T) => T | DeepPartial<T>): void;
   update(
-    updater: (current: T) => Partial<T>,
+    updater: (current: T) => T | DeepPartial<T>,
     options?: { label?: string; payload?: unknown }
   ): void;
-  /**
-   * Derive reactive data from the current state. Uses memoization cache when enabled.
-   * Falls back to a simple computed() when memoization is disabled.
-   */
+  set(value: T | DeepPartial<T>): void;
+  set(
+    value: T | DeepPartial<T>,
+    options?: { label?: string; payload?: unknown }
+  ): void;
+  getVersion(): number;
   select<R>(selector: (state: T) => R, cacheKey?: string): Signal<R>;
   effect(fn: (tree: T) => void): void;
   subscribe(fn: (tree: T) => void): () => void;
@@ -138,11 +146,8 @@ export type SignalTree<T> = {
     fn3: (arg: R2) => R3
   ): R3;
 
-  // Extended features
-  batchUpdate(
-    updater: (current: T) => Partial<T>,
-    options?: { label?: string; payload?: unknown }
-  ): void;
+  // Extended features (stub implementations)
+  batchUpdate(updater: (current: T) => T | DeepPartial<T>): void;
   memoize<R>(fn: (tree: T) => R, cacheKey?: string): Signal<R>;
   optimize(): void;
   clearCache(): void;
@@ -154,17 +159,13 @@ export type SignalTree<T> = {
     entityKey?: keyof T
   ): EntityHelpers<E>;
   asyncAction<TInput, TResult>(
-    operation: (input: TInput, signal?: AbortSignal) => Promise<TResult>,
+    operation: (input: TInput) => Promise<TResult>,
     config?: AsyncActionConfig<T, TResult>
   ): AsyncAction<TInput, TResult>;
   undo(): void;
   redo(): void;
   getHistory(): TimeTravelEntry<T>[];
   resetHistory(): void;
-  /** Internal monotonically increasing version counter (increments on meaningful state change) */
-  getVersion(): number;
-  /** Execute function without tracking reactive dependencies (placeholder implementation) */
-  untracked?<R>(fn: () => R): R;
 };
 
 // ============================================
@@ -205,7 +206,7 @@ export interface PerformanceMetrics {
 
 export interface EntityHelpers<E extends { id: string | number }> {
   add(entity: E): void;
-  update(id: E['id'], updates: Partial<E>): void;
+  update(id: E['id'], updates: DeepPartial<E>): void;
   remove(id: E['id']): void;
   upsert(entity: E): void;
   findById(id: E['id']): Signal<E | undefined>;
@@ -218,20 +219,10 @@ export interface EntityHelpers<E extends { id: string | number }> {
 }
 
 export interface AsyncActionConfig<T, TResult> {
-  onStart?: (state: T) => Partial<T>;
-  onSuccess?: (result: TResult, state: T) => Partial<T>;
-  onError?: (error: Error, state: T) => Partial<T>;
-  onComplete?: (state: T) => Partial<T>;
-  label?: string; // action label for history/devtools
-  enableCancellation?: boolean;
-  /**
-   * Concurrency policy determining how multiple execute() calls are handled while a run is in-flight.
-   *  - 'replace' (default): cancels previous run (if enableCancellation) and starts new
-   *  - 'drop': ignore new calls while pending (returns the in-flight promise)
-   *  - 'queue': enqueue calls and run sequentially
-   *  - 'race': allow concurrent runs; only first successful result (or error) is applied
-   */
-  concurrencyPolicy?: 'replace' | 'drop' | 'queue' | 'race';
+  onStart?: (state: T) => DeepPartial<T>;
+  onSuccess?: (result: TResult, state: T) => DeepPartial<T>;
+  onError?: (error: Error, state: T) => DeepPartial<T>;
+  onComplete?: (state: T) => DeepPartial<T>;
 }
 
 export interface AsyncAction<TInput, TResult> {
@@ -239,7 +230,6 @@ export interface AsyncAction<TInput, TResult> {
   pending: Signal<boolean>;
   error: Signal<Error | null>;
   result: Signal<TResult | null>;
-  cancel(): void;
 }
 
 export interface TimeTravelEntry<T> {

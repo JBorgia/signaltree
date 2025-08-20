@@ -106,7 +106,7 @@ describe('NgForms', () => {
       const form = createFormTree(initialFormData, {
         asyncValidators: {
           username: asyncValidators.unique(
-            async (value) => value === 'taken',
+            async (value) => (value as string) === 'taken',
             'Username already exists'
           ),
         },

@@ -468,7 +468,7 @@ export class AsyncDemoComponent {
   }
 
   async loadUsers() {
-    await this.loadUsersAction.execute();
+    await this.loadUsersAction();
   }
 
   async loadUsersWithError() {
@@ -476,21 +476,21 @@ export class AsyncDemoComponent {
     const originalRandom = Math.random;
     Math.random = () => 0; // Force error condition
 
-    await this.loadUsersAction.execute();
+    await this.loadUsersAction();
 
     Math.random = originalRandom; // Restore original
   }
 
   async searchUsers() {
     if (!this.searchQuery.trim()) return;
-    await this.searchUsersAction.execute(this.searchQuery);
+    await this.searchUsersAction(this.searchQuery);
     this.store.$.searchQuery.set(this.searchQuery);
   }
 
   async createUser() {
     if (!this.newUserName.trim() || !this.newUserEmail.trim()) return;
 
-    await this.createUserAction.execute({
+    await this.createUserAction({
       name: this.newUserName,
       email: this.newUserEmail,
     });
@@ -500,7 +500,7 @@ export class AsyncDemoComponent {
   }
 
   async selectUser(user: User) {
-    await this.loadUserByIdAction.execute(user.id);
+    await this.loadUserByIdAction(user.id);
     this.cacheHits++; // Simulate cache behavior
   }
 

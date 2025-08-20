@@ -26,5 +26,14 @@
   ],
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "files": [
+    "fesm2022/**/*",
+    "esm2022/**/*",
+    "bundles/**/*",
+    "index.d.ts",
+    "README.md",
+    "LICENSE",
+    "package.json"
+  ]
 }

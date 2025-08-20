@@ -1,11 +1,8 @@
-import { signal } from '@angular/core';
-import type { Signal } from '@angular/core';
+// Use framework-neutral adapter exports (phase 1) instead of direct Angular imports
+import { signal, type Signal } from '@signaltree/core';
 import { parsePath } from '@signaltree/core';
-import type {
-  SignalTree,
-  AsyncAction,
-  AsyncActionConfig,
-} from '@signaltree/core';
+import type { SignalTree, DeepPartial } from '@signaltree/core';
+import type { AsyncAction, AsyncActionConfig, AsyncSignalTree } from './types';
 
 /**
  * Extended AsyncActionConfig with additional async state management features.
@@ -16,7 +13,7 @@ import type {
  *
  * @example
  * ```typescript
- * const config: ExtendedAsyncActionConfig<AppState, User> = {
+ * const config: AsyncActionConfig<AppState, User> = {
  *   loadingKey: 'user.loading',
  *   errorKey: 'user.error',
  *   onStart: (state) => ({ ui: { ...state.ui, loading: true } }),
@@ -25,15 +22,6 @@ import type {
  * };
  * ```
  */
-interface ExtendedAsyncActionConfig<T, TResult>
-  extends AsyncActionConfig<T, TResult> {
-  /** Dot-notation path for loading state (e.g., 'user.loading') */
-  loadingKey?: string;
-  /** Dot-notation path for error state (e.g., 'user.error') */
-  errorKey?: string;
-  /** Hook executed after completion regardless of success/failure */
-  onFinally?: (state: T) => Partial<T>;
-}
 
 /**
  * Extended SignalTree interface with comprehensive async operation capabilities.
@@ -69,77 +57,6 @@ interface ExtendedAsyncActionConfig<T, TResult>
  * );
  * ```
  */
-interface AsyncSignalTree<T> extends SignalTree<T> {
-  /**
-   * Creates an async action with comprehensive state management and lifecycle hooks.
-   *
-   * @template TInput - Input parameter type for the operation
-   * @template TResult - Return type of the async operation
-   * @param operation - The async function to execute
-   * @param config - Configuration for state management and lifecycle hooks
-   * @returns AsyncAction instance with pending, error, and result signals
-   */
-  asyncAction<TInput, TResult>(
-    operation: (input: TInput) => Promise<TResult>,
-    config?: ExtendedAsyncActionConfig<T, TResult>
-  ): AsyncAction<TInput, TResult>;
-
-  /**
-   * Convenience method for data loading operations (no input parameters).
-   * Perfect for initial data fetching and refresh operations.
-   *
-   * @template TResult - The type of data being loaded
-   * @param loader - Function that returns a Promise of the data
-   * @param config - Configuration for state management and lifecycle hooks
-   * @returns AsyncAction instance that can be executed with no parameters
-   *
-   * @example
-   * ```typescript
-   * const loadUserProfile = tree.loadData(
-   *   () => api.getCurrentUser(),
-   *   {
-   *     loadingKey: 'user.loading',
-   *     onSuccess: (user) => ({ user })
-   *   }
-   * );
-   *
-   * await loadUserProfile.execute();
-   * ```
-   */
-  loadData<TResult>(
-    loader: () => Promise<TResult>,
-    config?: ExtendedAsyncActionConfig<T, TResult>
-  ): AsyncAction<void, TResult>;
-
-  /**
-   * Convenience method for form submission operations.
-   * Handles form data processing with built-in state management.
-   *
-   * @template TInput - The form data type
-   * @template TResult - The submission result type
-   * @param submitter - Function that processes form data and returns a Promise
-   * @param config - Configuration for state management and lifecycle hooks
-   * @returns AsyncAction instance for form submission
-   *
-   * @example
-   * ```typescript
-   * const submitRegistration = tree.submitForm(
-   *   async (formData: RegistrationForm) => auth.register(formData),
-   *   {
-   *     loadingKey: 'registration.submitting',
-   *     errorKey: 'registration.error',
-   *     onSuccess: (result) => ({ user: result.user, isAuthenticated: true })
-   *   }
-   * );
-   *
-   * await submitRegistration.execute(formData);
-   * ```
-   */
-  submitForm<TInput, TResult>(
-    submitter: (input: TInput) => Promise<TResult>,
-    config?: ExtendedAsyncActionConfig<T, TResult>
-  ): AsyncAction<TInput, TResult>;
-}
 
 /**
  * Sets nested values in state using dot-notation paths with immutable updates.
@@ -178,7 +95,7 @@ function setNestedValue<T>(
 ): void {
   const keys = parsePath(path);
   if (keys.length === 1) {
-    tree.update(() => ({ [path]: value } as Partial<T>));
+    tree.update(() => ({ [path]: value } as DeepPartial<T>));
   } else {
     tree.update((state) => {
       const newState = { ...state } as Record<string, unknown>;
@@ -196,7 +113,7 @@ function setNestedValue<T>(
         }
       }
       current[keys[keys.length - 1]] = value;
-      return newState as Partial<T>;
+      return newState as DeepPartial<T>;
     });
   }
 }
@@ -266,128 +183,152 @@ interface AsyncConfig {
  * console.log('Result:', loginAction.result());
  * ```
  */
-class AsyncActionImpl<TInput, TResult, T>
-  implements AsyncAction<TInput, TResult>
-{
-  /** Signal indicating if the operation is currently pending */
+class AsyncActionImpl<TInput, TResult, T> {
   readonly pending = signal(false);
-  /** Signal containing any error that occurred during execution */
   readonly error = signal<Error | null>(null);
-  /** Signal containing the successful result of the operation */
   readonly result = signal<TResult | null>(null);
 
+  private controller: AbortController | null = null;
+  private currentRun = 0;
+  private currentPromise: Promise<TResult> | null = null;
+  private raceSettled = false;
+  private queue: Array<{
+    input: TInput;
+    resolve: (v: TResult) => void;
+    reject: (e: unknown) => void;
+  }> = [];
+
   constructor(
-    private operation: (input: TInput) => Promise<TResult>,
+    private operation: (
+      input: TInput,
+      signal?: AbortSignal
+    ) => Promise<TResult>,
     private tree: SignalTree<T>,
-    private config: ExtendedAsyncActionConfig<T, TResult> = {}
+    private config: AsyncActionConfig<T, TResult> = {}
   ) {}
 
-  /**
-   * Executes the async operation with complete lifecycle management and error handling.
-   * Manages loading states, executes lifecycle hooks, and handles both success and error cases.
-   *
-   * @param input - Input parameters for the operation
-   * @returns Promise resolving to the operation result
-   * @throws Error if the operation fails after executing error handling hooks
-   *
-   * @example
-   * ```typescript
-   * // Basic execution
-   * const result = await action.execute(inputData);
-   *
-   * // With error handling
-   * try {
-   *   const result = await action.execute(inputData);
-   *   // Handle success
-   * } catch (error) {
-   *   // Error has been processed through onError hook
-   *   // and stored in error signal and errorKey path
-   * }
-   *
-   * // Monitor state during execution
-   * action.pending.subscribe(pending => {
-   *   if (pending) console.log('Operation in progress...');
-   * });
-   * ```
-   */
-  async execute(input: TInput): Promise<TResult> {
-    const {
-      loadingKey,
-      errorKey,
-      onStart,
-      onSuccess,
-      onError,
-      onComplete,
-      onFinally,
-    } = this.config;
+  cancel(): void {
+    if (this.config.enableCancellation && this.controller) {
+      this.controller.abort();
+    }
+  }
 
-    try {
-      // Set loading state
-      this.pending.set(true);
-      this.error.set(null);
+  clear(): void {
+    this.error.set(null);
+    this.result.set(null);
+  }
 
-      if (loadingKey) {
-        setNestedValue(this.tree, loadingKey, true);
+  private runOperation(input: TInput): Promise<TResult> {
+    const policy = this.config.concurrencyPolicy || 'replace';
+    if (this.config.enableCancellation && policy === 'replace') {
+      this.controller?.abort();
+    }
+    if (this.config.enableCancellation) {
+      this.controller = new AbortController();
+    }
+    const runId = ++this.currentRun;
+    this.error.set(null);
+    this.pending.set(true);
+    if (policy === 'race') this.raceSettled = false;
+
+    // Path / hook handling
+    const { loadingKey, errorKey, onStart } = this.config;
+    if (loadingKey) setNestedValue(this.tree, loadingKey, true);
+    if (errorKey) setNestedValue(this.tree, errorKey, null);
+    if (onStart) {
+      try {
+        const patch = onStart(this.tree.unwrap());
+        if (patch) this.tree.update(() => patch as DeepPartial<T>);
+      } catch {
+        // swallow onStart hook errors
       }
+    }
 
-      if (errorKey) {
-        setNestedValue(this.tree, errorKey, null);
-      }
+    const p = this.operation(input, this.controller?.signal)
+      .then((value) => {
+        if (policy !== 'race' && runId !== this.currentRun) return value; // stale
+        if (policy !== 'race' || !this.raceSettled) {
+          this.result.set(value);
+          if (policy === 'race') this.raceSettled = true;
+          if (this.config.onSuccess) {
+            try {
+              const patch = this.config.onSuccess(value, this.tree.unwrap());
+              if (patch) this.tree.update(() => patch as DeepPartial<T>);
+            } catch {
+              // swallow onSuccess hook errors
+            }
+          }
+        }
+        return value;
+      })
+      .catch((err) => {
+        if (
+          (policy === 'race' || runId === this.currentRun) &&
+          (policy !== 'race' || !this.raceSettled)
+        ) {
+          if (policy === 'race') this.raceSettled = true;
+          const e = err as Error;
+          this.error.set(e);
+          if (errorKey) setNestedValue(this.tree, errorKey, e.message);
+          if (this.config.onError) {
+            try {
+              const patch = this.config.onError(e, this.tree.unwrap());
+              if (patch) this.tree.update(() => patch as DeepPartial<T>);
+            } catch {
+              // swallow onError hook errors
+            }
+          }
+        }
+        throw err;
+      })
+      .finally(() => {
+        if (policy === 'race' || runId === this.currentRun) {
+          this.pending.set(false);
+          if (loadingKey) setNestedValue(this.tree, loadingKey, false);
+          if (this.config.onComplete) {
+            try {
+              const patch = this.config.onComplete(this.tree.unwrap());
+              if (patch) this.tree.update(() => patch as DeepPartial<T>);
+            } catch {
+              // swallow onComplete hook errors
+            }
+          }
+          if (this.config.onFinally) {
+            try {
+              const patch = this.config.onFinally(this.tree.unwrap());
+              if (patch) this.tree.update(() => patch as DeepPartial<T>);
+            } catch {
+              // swallow onFinally hook errors
+            }
+          }
+          if (policy === 'queue' && this.queue.length > 0) {
+            const next = this.queue.shift();
+            if (next) this.execute(next.input).then(next.resolve, next.reject);
+          }
+        }
+      });
+    this.currentPromise = p;
+    return p;
+  }
 
-      // Execute onStart hook
-      if (onStart) {
-        const startUpdate = onStart(this.tree.unwrap());
-        this.tree.update(() => startUpdate);
-      }
-
-      // Execute the operation
-      const result = await this.operation(input);
-
-      // Store successful result
-      this.result.set(result);
-
-      // Execute onSuccess hook
-      if (onSuccess) {
-        const successUpdate = onSuccess(result, this.tree.unwrap());
-        this.tree.update(() => successUpdate);
-      }
-
-      return result;
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      this.error.set(err);
-
-      // Set error in path-based location
-      if (errorKey) {
-        setNestedValue(this.tree, errorKey, err.message);
-      }
-
-      // Execute onError hook
-      if (onError) {
-        const errorUpdate = onError(err, this.tree.unwrap());
-        this.tree.update(() => errorUpdate);
-      }
-
-      throw err;
-    } finally {
-      this.pending.set(false);
-
-      // Clear loading state
-      if (loadingKey) {
-        setNestedValue(this.tree, loadingKey, false);
-      }
-
-      // Execute onComplete hook
-      if (onComplete) {
-        const completeUpdate = onComplete(this.tree.unwrap());
-        this.tree.update(() => completeUpdate);
-      }
-
-      // Execute onFinally hook
-      if (onFinally) {
-        const finallyUpdate = onFinally(this.tree.unwrap());
-        this.tree.update(() => finallyUpdate);
-      }
+  execute(input: TInput): Promise<TResult> {
+    const policy = this.config.concurrencyPolicy || 'replace';
+    switch (policy) {
+      case 'drop':
+        if (this.pending()) return this.currentPromise as Promise<TResult>;
+        return this.runOperation(input);
+      case 'queue':
+        if (this.pending()) {
+          return new Promise<TResult>((resolve, reject) =>
+            this.queue.push({ input, resolve, reject })
+          );
+        }
+        return this.runOperation(input);
+      case 'race':
+        return this.runOperation(input);
+      case 'replace':
+      default:
+        return this.runOperation(input);
     }
   }
 }
@@ -435,46 +376,52 @@ class AsyncActionImpl<TInput, TResult, T>
  * const submitForm = tree.submitForm(async (data: FormData) => api.submit(data));
  * ```
  */
-export function withAsync<T>(
-  config: AsyncConfig = {}
-): (tree: SignalTree<T>) => AsyncSignalTree<T> {
+export function withAsync(config: AsyncConfig = {}) {
   const { enabled = true } = config;
+  return function enhance<T>(tree: SignalTree<T>): AsyncSignalTree<T> {
+    if (!enabled) return tree as unknown as AsyncSignalTree<T>;
 
-  return (tree: SignalTree<T>): AsyncSignalTree<T> => {
-    if (!enabled) {
-      return tree as AsyncSignalTree<T>;
-    }
+    // Enhance the tree with async methods
+    const enhancedTree = tree as SignalTree<T> & {
+      asyncAction: <TInput, TResult>(
+        operation: (input: TInput, signal?: AbortSignal) => Promise<TResult>,
+        actionConfig?: AsyncActionConfig<T, TResult>
+      ) => AsyncAction<TInput, TResult>;
+    };
 
-    // Override the asyncAction stub with real implementation
-    tree.asyncAction = <TInput, TResult>(
-      operation: (input: TInput) => Promise<TResult>,
-      actionConfig?: ExtendedAsyncActionConfig<T, TResult>
+    enhancedTree.asyncAction = <TInput, TResult>(
+      operation: (input: TInput, signal?: AbortSignal) => Promise<TResult>,
+      actionConfig?: AsyncActionConfig<T, TResult>
     ): AsyncAction<TInput, TResult> => {
-      return new AsyncActionImpl<TInput, TResult, T>(
+      const impl = new AsyncActionImpl<TInput, TResult, T>(
         operation,
         tree,
         actionConfig
       );
+      const fn = (input: TInput) => impl.execute(input);
+      const action = fn as unknown as AsyncAction<TInput, TResult>;
+      action.execute = (input: TInput) => impl.execute(input);
+      action.cancel = () => impl.cancel();
+      action.clear = () => impl.clear();
+      // Expose signals directly (they are callable) preserving signal brand
+      action.pending = impl.pending as unknown as typeof action.pending;
+      action.error = impl.error as unknown as typeof action.error;
+      action.result = impl.result as unknown as typeof action.result;
+      return action;
     };
 
-    // Add convenience methods
-    const enhancedTree = tree as AsyncSignalTree<T>;
-
-    enhancedTree.loadData = <TResult>(
+    const enhanced = enhancedTree as unknown as AsyncSignalTree<T>;
+    enhanced.loadData = <TResult>(
       loader: () => Promise<TResult>,
-      actionConfig?: ExtendedAsyncActionConfig<T, TResult>
-    ): AsyncAction<void, TResult> => {
-      return enhancedTree.asyncAction(() => loader(), actionConfig);
-    };
-
-    enhancedTree.submitForm = <TInput, TResult>(
+      actionConfig?: AsyncActionConfig<T, TResult>
+    ): AsyncAction<void, TResult> =>
+      enhanced.asyncAction(() => loader(), actionConfig);
+    enhanced.submitForm = <TInput, TResult>(
       submitter: (input: TInput) => Promise<TResult>,
-      actionConfig?: ExtendedAsyncActionConfig<T, TResult>
-    ): AsyncAction<TInput, TResult> => {
-      return enhancedTree.asyncAction(submitter, actionConfig);
-    };
-
-    return enhancedTree;
+      actionConfig?: AsyncActionConfig<T, TResult>
+    ): AsyncAction<TInput, TResult> =>
+      enhanced.asyncAction(submitter, actionConfig);
+    return enhanced;
   };
 }
 
@@ -498,8 +445,9 @@ export function withAsync<T>(
  * await loadUser.execute();
  * ```
  */
-export function enableAsync<T>() {
-  return withAsync<T>({ enabled: true });
+export function enableAsync() {
+  // Generic inference happens in the returned enhancer from withAsync
+  return withAsync({ enabled: true });
 }
 
 /**
@@ -529,8 +477,9 @@ export function enableAsync<T>() {
  * await criticalOperation.execute(data);
  * ```
  */
-export function withHighPerformanceAsync<T>() {
-  return withAsync<T>({
+export function withHighPerformanceAsync() {
+  // Generic inference happens in the returned enhancer from withAsync
+  return withAsync({
     enabled: true,
     defaultTimeout: 30000,
     retryAttempts: 3,

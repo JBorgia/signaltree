@@ -251,8 +251,6 @@ describe('SignalTree Conformance (Phase 5)', () => {
     expect(afterCalls).toBe(1);
   });
 
-  // asyncAction tests moved to @signaltree/async package
-
   it('asCrud provides basic add/remove/update/select operations (internal store)', () => {
     const tree = signalTree({}, { debugMode: true });
     const users = tree.asCrud<{ id: number; name: string }>();
@@ -283,7 +281,7 @@ describe('SignalTree Conformance (Phase 5)', () => {
     expect(tree.unwrap().people.length).toBe(1);
   });
 
-  it('time travel captures history, undo/redo works, and truncates forward history', () => {
+  it('time travel captures history and supports multi-step undo/redo', () => {
     const tree = signalTree(
       { count: 0 },
       { debugMode: true, enableTimeTravel: true }
@@ -299,12 +297,26 @@ describe('SignalTree Conformance (Phase 5)', () => {
     expect(tree.unwrap().count).toBe(1);
     tree.redo();
     expect(tree.unwrap().count).toBe(2);
-    // Diverge new timeline
+    tree.redo();
+    expect(tree.unwrap().count).toBe(3);
+  });
+
+  it('time travel truncates forward history when diverging after undo', () => {
+    const tree = signalTree(
+      { count: 0 },
+      { debugMode: true, enableTimeTravel: true }
+    );
+    tree.update((s) => ({ count: s.count + 1 })); // 1
+    tree.update((s) => ({ count: s.count + 1 })); // 2
+    tree.update((s) => ({ count: s.count + 1 })); // 3
+    expect(tree.unwrap().count).toBe(3);
+    tree.undo(); // back to 2
+    expect(tree.unwrap().count).toBe(2);
+    // Diverge new timeline from count=2
     tree.update((s) => ({ count: s.count + 10 })); // 12
     expect(tree.unwrap().count).toBe(12);
     const history = tree.getHistory();
     expect(history.length).toBe(4); // init, +1, +2, diverged +10 (original +3 truncated)
-    // Ensure no snapshot has count 3 anymore
     expect(history.some((h) => h.state.count === 3)).toBe(false);
     expect(history[history.length - 1].state.count).toBe(12);
   });
@@ -321,14 +333,6 @@ describe('SignalTree Conformance (Phase 5)', () => {
     // Latest state present
     expect(tree.unwrap().v).toBe(25);
   });
-
-  // asyncAction cancellation test moved to @signaltree/async package
-
-  // asyncAction drop policy test moved to @signaltree/async package
-
-  // asyncAction queue policy test moved to @signaltree/async package
-
-  // asyncAction race policy test moved to @signaltree/async package
 
   it('resetHistory replaces history with single snapshot', () => {
     const tree = signalTree(

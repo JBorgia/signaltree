@@ -30,6 +30,7 @@ import type {
   Middleware,
   PerformanceMetrics,
   EntityHelpers,
+  DeepPartial,
 } from './types';
 import { createLazySignalTree, equal } from './utils';
 import { createTimeTravelFeature } from './internal/time-travel';
@@ -250,8 +251,110 @@ function create<T>(obj: T, config: TreeConfig = {}): SignalTree<T> {
 }
 
 /**
- * Creates signals using signal-store pattern for perfect type inference.
- * Eager creation - all signals created immediately.
+ * Creates a callable proxy that acts as both an object and a function
+ * This enables the pattern: tree.$.user() and tree.$.user.name()
+ */
+function createCallableProxy<T>(
+  nestedStore: Record<string | symbol, unknown>,
+  unwrapFn: () => T,
+  updateFn: (updater: (current: T) => T | DeepPartial<T>) => void,
+  setFn?: (value: T | DeepPartial<T>) => void
+): DeepSignalify<T> {
+  // Create the callable function
+  const callableFunction = unwrapFn;
+
+  // Attach the update method to function
+  Object.defineProperties(callableFunction, {
+    update: {
+      value: updateFn,
+      enumerable: false,
+      configurable: true,
+      writable: true,
+    },
+    set: {
+      value: (val: T | DeepPartial<T>) => {
+        if (setFn) setFn(val);
+        else updateFn(() => val as T);
+      },
+      enumerable: false,
+      configurable: true,
+      writable: true,
+    },
+  });
+
+  // Create a proxy that:
+  // 1. Acts as a function when called directly
+  // 2. Proxies property access to the nested store
+  const callableProxy = new Proxy(callableFunction, {
+    get(target, prop) {
+      // Handle the update method
+      if (prop === 'update') return updateFn;
+      if (prop === 'set') {
+        // Don't shadow legitimate user state property named 'set'
+        if (Object.prototype.hasOwnProperty.call(nestedStore, prop)) {
+          return (nestedStore as Record<string | symbol, unknown>)[prop];
+        }
+        return (val: T | DeepPartial<T>) =>
+          setFn ? setFn(val) : updateFn(() => val as T);
+      }
+
+      // Handle the callable proxy marker
+      if (prop === '__isCallableProxy__') {
+        return true;
+      }
+
+      // Proxy all other properties to the nested store
+      if (prop in nestedStore) {
+        return nestedStore[prop];
+      }
+
+      // Return undefined for unknown properties
+      return undefined;
+    },
+
+    has(target, prop) {
+      return (
+        prop === 'update' ||
+        prop === 'set' ||
+        prop === '__isCallableProxy__' ||
+        prop in nestedStore
+      );
+    },
+
+    ownKeys() {
+      return [
+        'update',
+        'set',
+        '__isCallableProxy__',
+        ...Object.keys(nestedStore),
+      ];
+    },
+
+    getOwnPropertyDescriptor(target, prop) {
+      if (prop === 'update' || prop === 'set') {
+        return { configurable: true, enumerable: false, writable: true };
+      }
+      if (prop === '__isCallableProxy__') {
+        return {
+          configurable: false,
+          enumerable: false,
+          writable: false,
+          value: true,
+        };
+      }
+      if (prop in nestedStore) {
+        return Object.getOwnPropertyDescriptor(nestedStore, prop);
+      }
+      return undefined;
+    },
+  });
+
+  return callableProxy as DeepSignalify<T>;
+}
+
+/**
+ * Enhanced createSignalStore with callable proxy support
+ * Creates signals using signal-store pattern with callable unwrapping at every level.
  *
  * @see https://github.com/JBorgia/signaltree/blob/main/docs/api/create-signal-store.md
  * @template T - The object type to process (preserves exact type structure)
@@ -265,25 +368,28 @@ function createSignalStore<T>(
 ): DeepSignalify<T> {
   // Primitives, null/undefined
   if (obj === null || obj === undefined || typeof obj !== 'object') {
-    return signal(obj, { equal: equalityFn }) as DeepSignalify<T>;
+    const sig = signal(obj, { equal: equalityFn });
+    return sig as DeepSignalify<T>;
   }
 
   // Arrays treated as atomic
   if (Array.isArray(obj)) {
-    return signal(obj, { equal: equalityFn }) as DeepSignalify<T>;
+    const sig = signal(obj, { equal: equalityFn });
+    return sig as DeepSignalify<T>;
   }
 
   // Built-ins treated as atomic
   if (isBuiltInObject(obj)) {
-    return signal(obj, { equal: equalityFn }) as DeepSignalify<T>;
+    const sig = signal(obj, { equal: equalityFn });
+    return sig as DeepSignalify<T>;
   }
 
-  const out: Record<string | symbol, unknown> = {};
+  const store: Record<string | symbol, unknown> = {};
 
   for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
     // Never double-wrap existing signals
     if (isSignal(value)) {
-      out[key] = value as unknown;
+      store[key] = value as unknown;
       continue;
     }
 
@@ -295,38 +401,168 @@ function createSignalStore<T>(
       !isBuiltInObject(value)
     ) {
       // Recurse for plain objects
-      out[key] = createSignalStore(
+      store[key] = createSignalStore(
         value as Record<string, unknown>,
         equalityFn
       );
     } else {
-      // Primitive / array / built-in / function
-      out[key] = signal(value, { equal: equalityFn });
+      // Create signal for primitive values
+      store[key] = signal(value, { equal: equalityFn });
     }
   }
 
-  // Copy symbol properties
+  // Handle symbol properties
   for (const sym of Object.getOwnPropertySymbols(obj as object)) {
     const value = (obj as Record<symbol, unknown>)[sym];
     if (isSignal(value)) {
-      out[sym] = value;
-    } else if (
+      store[sym] = value as unknown;
+      continue;
+    }
+
+    if (
       value !== null &&
       value !== undefined &&
       typeof value === 'object' &&
       !Array.isArray(value) &&
       !isBuiltInObject(value)
     ) {
-      out[sym] = createSignalStore(
+      store[sym] = createSignalStore(
         value as Record<string, unknown>,
         equalityFn
       );
     } else {
-      out[sym] = signal(value, { equal: equalityFn });
+      store[sym] = signal(value, { equal: equalityFn });
     }
   }
 
-  return out as DeepSignalify<T>;
+  // Create unwrap function for this level
+  const unwrapFunction = (): T => {
+    const result: Record<string | symbol, unknown> = {};
+
+    for (const [key, value] of Object.entries(store)) {
+      if (isSignal(value)) {
+        result[key] = (value as WritableSignal<unknown>)();
+      } else if (
+        typeof value === 'function' &&
+        '__isCallableProxy__' in value
+      ) {
+        // This is a nested callable proxy, call it to unwrap
+        result[key] = (value as unknown as () => unknown)();
+      } else if (typeof value === 'object' && value !== null) {
+        // For regular objects that might contain signals, unwrap recursively
+        const nestedResult: Record<string, unknown> = {};
+        for (const [nestedKey, nestedValue] of Object.entries(
+          value as Record<string, unknown>
+        )) {
+          if (isSignal(nestedValue)) {
+            nestedResult[nestedKey] = (
+              nestedValue as WritableSignal<unknown>
+            )();
+          } else {
+            nestedResult[nestedKey] = nestedValue;
+          }
+        }
+        result[key] = nestedResult;
+      } else {
+        result[key] = value;
+      }
+    }
+
+    for (const sym of Object.getOwnPropertySymbols(store)) {
+      const value = store[sym];
+      if (isSignal(value)) {
+        result[sym] = (value as WritableSignal<unknown>)();
+      } else if (
+        typeof value === 'function' &&
+        '__isCallableProxy__' in value
+      ) {
+        result[sym] = (value as unknown as () => unknown)();
+      } else {
+        result[sym] = value;
+      }
+    }
+
+    return result as T;
+  };
+
+  // Create update function for this level
+  const updateFunction = (
+    updater: (current: T) => T | DeepPartial<T>
+  ): void => {
+    const currentState = unwrapFunction();
+    const patch = updater(currentState) as DeepPartial<T> | T;
+    if (!patch || typeof patch !== 'object') return;
+
+    const applyUpdates = (
+      target: Record<string | symbol, unknown>,
+      updates: Record<string | symbol, unknown>
+    ): void => {
+      for (const key of Reflect.ownKeys(updates)) {
+        const updateValue = (updates as Record<string | symbol, unknown>)[key];
+        if (!(key in target)) continue; // skip non-existent keys silently at branch level
+        const existing = target[key];
+        try {
+          if (isSignal(existing)) {
+            const sig = existing as WritableSignal<unknown>;
+            if (!equal(sig(), updateValue)) {
+              sig.set(updateValue);
+            }
+          } else if (
+            typeof existing === 'function' &&
+            existing &&
+            typeof updateValue === 'object' &&
+            updateValue !== null &&
+            '__isCallableProxy__' in (existing as object)
+          ) {
+            // Delegate deep patch to nested callable proxy's update
+            try {
+              (
+                existing as unknown as {
+                  update: (fn: (c: unknown) => unknown) => void;
+                }
+              ).update(() => updateValue as object);
+            } catch (e) {
+              console.warn('[SignalTree] Nested proxy update failed', e);
+            }
+          } else if (
+            existing &&
+            typeof existing === 'object' &&
+            !Array.isArray(existing) &&
+            !isSignal(existing) &&
+            updateValue &&
+            typeof updateValue === 'object' &&
+            !Array.isArray(updateValue) &&
+            !isBuiltInObject(updateValue)
+          ) {
+            applyUpdates(
+              existing as Record<string | symbol, unknown>,
+              updateValue as Record<string | symbol, unknown>
+            );
+          } // else: primitive mismatch or unsupported structure, ignore
+        } catch (err) {
+          console.error(
+            '[SignalTree] Failed applying branch patch key',
+            key,
+            err
+          );
+        }
+      }
+    };
+
+    applyUpdates(
+      store as Record<string | symbol, unknown>,
+      patch as unknown as Record<string | symbol, unknown>
+    );
+  };
+
+  // Create callable proxy that combines function call with property access
+  const callableProxy = createCallableProxy<T>(
+    store,
+    unwrapFunction,
+    updateFunction
+  );
+
+  return callableProxy;
 }
 
 // ==============================
@@ -347,48 +583,41 @@ function enhanceTree<T>(tree: SignalTree<T>, config: TreeConfig): void {
   const isLazy = shouldUseLazy(tree.state, config);
   // Provide version accessor early so devtools can capture it during registration
   tree.getVersion = () => __version;
-
-  // unwrap implementation
-  tree.unwrap = (() => {
-    const unwrapObject = <O>(o: DeepSignalify<O>): O => {
-      if (o === null || o === undefined || typeof o !== 'object')
-        return o as unknown as O;
-      const result: { [key: string | symbol]: unknown } = Array.isArray(o)
-        ? ([] as unknown as { [key: string | symbol]: unknown })
-        : {};
-      for (const [k, v] of Object.entries(o as Record<string, unknown>)) {
-        if (isSignal(v)) {
-          result[k] = (v as Signal<unknown>)();
-        } else if (
-          v &&
-          typeof v === 'object' &&
-          !Array.isArray(v) &&
-          !isBuiltInObject(v)
+  // Backward compatibility: provide tree.unwrap() for internal features (time-travel, tests)
+  if (!(tree as unknown as { unwrap?: unknown }).unwrap) {
+    (tree as unknown as { unwrap: () => T }).unwrap = () => {
+      const walk = (node: unknown): unknown => {
+        if (isSignal(node)) return (node as Signal<unknown>)();
+        if (
+          typeof node === 'function' &&
+          node &&
+          '__isCallableProxy__' in (node as object)
         ) {
-          result[k] = unwrapObject(v as DeepSignalify<unknown>);
-        } else {
-          result[k] = v;
+          // Call nested callable proxy to unwrap its structure
+          try {
+            return (node as unknown as () => unknown)();
+          } catch {
+            return undefined;
+          }
         }
-      }
-      for (const sym of Object.getOwnPropertySymbols(o as object)) {
-        const v = (o as Record<symbol, unknown>)[sym];
-        if (isSignal(v)) {
-          result[sym] = (v as Signal<unknown>)();
-        } else if (
-          v &&
-          typeof v === 'object' &&
-          !Array.isArray(v) &&
-          !isBuiltInObject(v)
-        ) {
-          result[sym] = unwrapObject(v as DeepSignalify<unknown>);
-        } else {
-          result[sym] = v;
+        if (Array.isArray(node)) {
+          return node.map((v) => walk(v));
         }
-      }
-      return result as O;
+        if (node && typeof node === 'object') {
+          const out: Record<string | symbol, unknown> = {};
+          for (const key of Reflect.ownKeys(
+            node as Record<string | symbol, unknown>
+          )) {
+            const value = (node as Record<string | symbol, unknown>)[key];
+            out[key] = walk(value);
+          }
+          return out;
+        }
+        return node;
+      };
+      return walk(tree.state) as T;
     };
-    return () => unwrapObject(tree.state as DeepSignalify<T>);
-  })();
+  }
 
   // (All subsequent method augmentations below rely on variables above)
 
@@ -399,7 +628,7 @@ function enhanceTree<T>(tree: SignalTree<T>, config: TreeConfig): void {
    * Updates the state using an updater function with transaction support.
    */
   tree.update = (
-    updater: (current: T) => Partial<T>,
+    updater: (current: T) => T | DeepPartial<T>,
     options?: { label?: string; payload?: unknown }
   ) => {
     const perfStart = perfEnabled ? performance.now?.() : 0;
@@ -431,7 +660,7 @@ function enhanceTree<T>(tree: SignalTree<T>, config: TreeConfig): void {
 
     try {
       const preState = tree.unwrap();
-      const partialObj = updater(preState);
+      const partialObj = updater(preState) as DeepPartial<T> | T;
 
       if (!partialObj || typeof partialObj !== 'object') {
         throw new Error('Updater must return an object');
@@ -439,13 +668,14 @@ function enhanceTree<T>(tree: SignalTree<T>, config: TreeConfig): void {
 
       const updateObject = <O>(
         target: DeepSignalify<O>,
-        updates: Partial<O>,
+        updates: DeepPartial<O> | O,
         path = ''
       ): void => {
-        for (const key in updates) {
-          if (!Object.prototype.hasOwnProperty.call(updates, key)) continue;
+        const source = updates as unknown as Record<string, unknown>;
+        for (const key in source) {
+          if (!Object.prototype.hasOwnProperty.call(source, key)) continue;
 
-          const updateValue = updates[key];
+          const updateValue = source[key];
           const currentPath = path ? `${path}.${key}` : key;
           const currentSignalOrState = (target as Record<string, unknown>)[key];
 
@@ -465,6 +695,36 @@ function enhanceTree<T>(tree: SignalTree<T>, config: TreeConfig): void {
                 );
               }
             } else if (
+              typeof currentSignalOrState === 'function' &&
+              currentSignalOrState &&
+              typeof updateValue === 'object' &&
+              updateValue !== null &&
+              '__isCallableProxy__' in (currentSignalOrState as object)
+            ) {
+              // Delegate deep partial into nested callable proxy update
+              try {
+                (
+                  currentSignalOrState as unknown as {
+                    update: (fn: (c: unknown) => unknown) => void;
+                  }
+                ).update(() => updateValue as object);
+                // We can't easily know which nested leaves changed here without diffing;
+                // rely on nested update to populate its own patches. For history completeness,
+                // still record a synthetic parent path patch if debug mode to reflect intent.
+                if (config.debugMode) {
+                  transactionLog.push({
+                    path: currentPath,
+                    oldValue: undefined,
+                    newValue: updateValue,
+                  });
+                }
+              } catch (e) {
+                console.warn(
+                  '[SignalTree] Nested callable proxy update failed',
+                  e
+                );
+              }
+            } else if (
               typeof updateValue === 'object' &&
               updateValue !== null &&
               !Array.isArray(updateValue) &&
@@ -476,7 +736,7 @@ function enhanceTree<T>(tree: SignalTree<T>, config: TreeConfig): void {
               // Nested object - recurse
               updateObject(
                 currentSignalOrState as DeepSignalify<object>,
-                updateValue as Partial<object>,
+                updateValue as DeepPartial<object>,
                 currentPath
               );
             } else if (currentSignalOrState === undefined) {
@@ -573,6 +833,27 @@ function enhanceTree<T>(tree: SignalTree<T>, config: TreeConfig): void {
       throw error;
     }
   };
+
+  // Convenience root-level set() supporting full or deep-partial replacement
+  // (Internally delegates to update for consistency / middleware / metrics)
+  if (!(tree as unknown as { set?: unknown }).set) {
+    (
+      tree as unknown as {
+        set: (
+          value: T | DeepPartial<T>,
+          options?: { label?: string; payload?: unknown }
+        ) => void;
+      }
+    ).set = (
+      value: T | DeepPartial<T>,
+      options?: { label?: string; payload?: unknown }
+    ) => {
+      tree.update(() => value as DeepPartial<T>, {
+        ...options,
+        label: options?.label ?? 'set',
+      });
+    };
+  }
 
   // Pipe implementation for function composition
   tree.pipe = (<TResult = SignalTree<T>>(
@@ -684,18 +965,15 @@ function enhanceTree<T>(tree: SignalTree<T>, config: TreeConfig): void {
   ): void {
     // Stub implementations for advanced features (will log warnings)
     // Simple microtask coalescing (Phase 5 enhancement): multiple batchUpdate calls collapse into one version bump
-    let __pendingBatchUpdaters: Array<(current: T) => Partial<T>> = [];
+    let __pendingBatchUpdaters: Array<(current: T) => DeepPartial<T> | T> = [];
     let __batchScheduled = false;
     tree.batchUpdate = (
-      updater: (current: T) => Partial<T>,
+      updater: (current: T) => DeepPartial<T> | T,
       options?: { label?: string; payload?: unknown }
     ) => {
       if (config.batchUpdates) {
         // Wrap updater with label capture
-        const labeled = (current: T) => {
-          const partial = updater(current);
-          return partial;
-        };
+        const labeled = (current: T) => updater(current);
         (
           labeled as unknown as { __label?: string; __payload?: unknown }
         ).__label = options?.label;
@@ -711,12 +989,12 @@ function enhanceTree<T>(tree: SignalTree<T>, config: TreeConfig): void {
             // Merge outputs; later updaters override earlier key writes
             tree.update(
               (current) => {
-                const merged: Partial<T> = {};
+                const merged: DeepPartial<T> = {} as DeepPartial<T>;
                 for (const fn of fns) {
                   try {
                     const partial = fn(current);
                     if (partial && typeof partial === 'object') {
-                      Object.assign(merged, partial);
+                      Object.assign(merged as object, partial);
                     } else if (config.debugMode) {
                       console.warn(
                         '[SignalTree] batchUpdate updater must return an object'
@@ -917,7 +1195,7 @@ function enhanceTree<T>(tree: SignalTree<T>, config: TreeConfig): void {
 
       const setEntities = (list: E[]) => {
         if (entityKey && entitySignal && isSignal(entitySignal)) {
-          tree.update(() => ({ [entityKey]: list } as Partial<T>));
+          tree.update(() => ({ [entityKey]: list } as DeepPartial<T>));
         } else {
           internal = list;
           if (config.debugMode && !entityKey) {
@@ -934,7 +1212,7 @@ function enhanceTree<T>(tree: SignalTree<T>, config: TreeConfig): void {
           if (list.some((e) => e.id === entity.id)) return; // skip duplicates
           setEntities([...list, entity]);
         },
-        update(id: E['id'], updates: Partial<E>) {
+        update(id: E['id'], updates: DeepPartial<E>) {
           const list = getEntities();
           let changed = false;
           const next = list.map((e) => {

@@ -186,16 +186,16 @@ describe('signalTree', () => {
       tree.update((current) => ({
         counter: current.counter + 10,
         user: {
-          ...current.user,
+          // demonstrate sparse deep update: only change level, omit theme (should remain "light")
           settings: {
-            ...current.user.settings,
-            theme: 'dark' as const,
+            level: 'advanced' as const,
           },
         },
       }));
 
       expect(tree.state.counter()).toBe(15);
-      expect(tree.state.user.settings.theme()).toBe('dark');
+      // Theme remains whatever was previously set (light) because we omitted it in sparse update
+      expect(tree.state.user.settings.theme()).toBe('light');
 
       // ✅ Unwrap maintains the original structure
       const unwrapped = tree.unwrap();
@@ -205,7 +205,7 @@ describe('signalTree', () => {
           id: 1,
           name: 'Jane',
           settings: {
-            theme: 'dark',
+            theme: 'light',
             level: 'advanced',
           },
         },

@@ -5,6 +5,7 @@
  * directives, validators, enhanced array operations, and RxJS bridge.
  */
 
+// Import reactive primitives & decorators from adapter layer (phase 1)
 import {
   Signal,
   WritableSignal,
@@ -13,6 +14,7 @@ import {
   computed,
   effect,
   inject,
+  // Decorators / DI tokens still come from Angular for now; they are re-exportable later if needed
   Directive,
   Input,
   Output,
@@ -22,7 +24,7 @@ import {
   Renderer2,
   HostListener,
   OnInit,
-} from '@angular/core';
+} from '@signaltree/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { Observable } from 'rxjs';
 
@@ -180,27 +182,42 @@ export function createFormTree<T extends Record<string, unknown>>(
     return enhanced;
   };
 
-  // Recursively enhance all arrays in the state
-  const enhanceArraysRecursively = (obj: Record<string, unknown>): void => {
-    for (const key in obj) {
-      const value = obj[key];
-      if (isSignal(value)) {
-        const signalValue = (value as Signal<unknown>)();
-        if (Array.isArray(signalValue)) {
-          obj[key] = enhanceArray(value as WritableSignal<unknown[]>);
+  // Recursively enhance arrays based on the shape of the initial values
+  const enhanceArraysFromInitial = (
+    initial: unknown,
+    stateNode: unknown
+  ): void => {
+    if (
+      !initial ||
+      typeof initial !== 'object' ||
+      Array.isArray(initial) ||
+      !stateNode ||
+      typeof stateNode !== 'object'
+    ) {
+      return;
+    }
+    for (const key of Object.keys(initial as Record<string, unknown>)) {
+      const initVal = (initial as Record<string, unknown>)[key];
+      const current = (stateNode as Record<string, unknown>)[key];
+      if (isSignal(current)) {
+        if (Array.isArray(initVal)) {
+          // Enhance array signal with helper methods
+          const sig = current as WritableSignal<unknown[]>;
+          (stateNode as Record<string, unknown>)[key] = enhanceArray(sig);
         }
       } else if (
-        typeof value === 'object' &&
-        value !== null &&
-        !Array.isArray(value)
+        initVal &&
+        typeof initVal === 'object' &&
+        !Array.isArray(initVal) &&
+        current &&
+        typeof current === 'object'
       ) {
-        enhanceArraysRecursively(value as Record<string, unknown>);
+        enhanceArraysFromInitial(initVal, current);
       }
     }
   };
 
-  // Enhance arrays in the state
-  enhanceArraysRecursively(flattenedState as Record<string, unknown>);
+  enhanceArraysFromInitial(initialValues, flattenedState);
 
   // Helper functions for nested paths
   const getNestedValue = (obj: DeepSignalify<T>, path: string): unknown => {
@@ -240,7 +257,24 @@ export function createFormTree<T extends Record<string, unknown>>(
 
   const validate = async (field?: string): Promise<void> => {
     const errors: Record<string, string> = {};
-    const asyncErrors: Record<string, string> = {};
+    const asyncErrors: Record<string, string> = {
+      ...formSignals.asyncErrors(),
+    };
+
+    const getRawValue = (path: string): unknown => {
+      const raw = valuesTree.unwrap();
+      const keys = parsePath(path);
+      let cur: unknown = raw;
+      for (const k of keys) {
+        if (cur == null) return undefined;
+        if (typeof cur === 'object') {
+          cur = (cur as Record<string, unknown>)[k];
+        } else {
+          return undefined;
+        }
+      }
+      return cur;
+    };
 
     const fieldsToValidate = field ? [field] : Object.keys(validators);
 
@@ -248,7 +282,7 @@ export function createFormTree<T extends Record<string, unknown>>(
     for (const fieldPath of fieldsToValidate) {
       const validator = validators[fieldPath];
       if (validator) {
-        const value = getNestedValue(flattenedState, fieldPath);
+        const value = getRawValue(fieldPath);
         const error = validator(value);
         if (error) {
           errors[fieldPath] = error;
@@ -272,7 +306,7 @@ export function createFormTree<T extends Record<string, unknown>>(
         }));
 
         try {
-          const value = getNestedValue(flattenedState, fieldPath);
+          const value = getRawValue(fieldPath);
           const result = asyncValidator(value);
 
           let error: string | null;
@@ -291,6 +325,9 @@ export function createFormTree<T extends Record<string, unknown>>(
 
           if (error) {
             asyncErrors[fieldPath] = error;
+          } else {
+            // Ensure previous async error cleared if now valid
+            delete asyncErrors[fieldPath];
           }
         } catch {
           asyncErrors[fieldPath] = 'Validation error';
@@ -303,7 +340,7 @@ export function createFormTree<T extends Record<string, unknown>>(
       }
     }
 
-    formSignals.asyncErrors.set(asyncErrors);
+    formSignals.asyncErrors.set({ ...asyncErrors });
 
     // Update validity
     const hasErrors = Object.keys(errors).length > 0;
@@ -349,7 +386,47 @@ export function createFormTree<T extends Record<string, unknown>>(
       setNestedValue(field, value);
       formSignals.touched.update((t) => ({ ...t, [field]: true }));
       markDirty();
-      void validate(field);
+      void validate(field); // trigger sync + async validation
+      // If async validator defined, ensure re-validation cycle after promise resolution
+      if (asyncValidators[field]) {
+        // Schedule a follow-up validation to capture asyncErrors
+        setTimeout(() => void validate(field), 0);
+        // Fire immediate async validation for faster feedback
+        try {
+          const asyncValidator = asyncValidators[field];
+          const currentVal = getNestedValue(flattenedState, field);
+          const result = asyncValidator(currentVal);
+          Promise.resolve(
+            result instanceof Observable
+              ? new Promise<string | null>((resolve) => {
+                  result.subscribe({
+                    next: (v) => resolve(v),
+                    error: () => resolve('Validation error'),
+                  });
+                })
+              : result
+          ).then((error) => {
+            formSignals.asyncErrors.update((ae) => {
+              const next = { ...ae };
+              if (error) next[field] = error;
+              else delete next[field];
+              return next;
+            });
+            // Recompute validity quickly
+            const hasErrors = Object.keys(formSignals.errors()).length > 0;
+            const hasAsyncErrors =
+              Object.keys(formSignals.asyncErrors()).length > 0;
+            const isValidating = Object.values(
+              formSignals.asyncValidating()
+            ).some((v) => v);
+            formSignals.valid.set(
+              !hasErrors && !hasAsyncErrors && !isValidating
+            );
+          });
+        } catch {
+          /* noop */
+        }
+      }
     },
 
     setValues: (values: Partial<T>) => {
@@ -634,13 +711,14 @@ export function createAuditMiddleware<T>(
 
 function getChanges<T>(oldState: T, newState: T): Partial<T> {
   const changes: Record<string, unknown> = {};
-
-  for (const key in newState) {
-    if (oldState[key] !== newState[key]) {
-      changes[key] = newState[key];
+  // Use Object.keys to avoid proxy invariant issues
+  for (const key of Object.keys(newState as Record<string, unknown>)) {
+    const a = (oldState as Record<string, unknown>)[key];
+    const b = (newState as Record<string, unknown>)[key];
+    if (a !== b) {
+      changes[key] = b;
     }
   }
-
   return changes as Partial<T>;
 }
 

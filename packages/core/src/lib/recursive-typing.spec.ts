@@ -5,7 +5,6 @@
 
 import { TestBed } from '@angular/core/testing';
 import { signalTree } from './signal-tree';
-import { signal } from '@angular/core';
 
 describe('SignalTree Recursive Typing Magic', () => {
   beforeEach(() => {

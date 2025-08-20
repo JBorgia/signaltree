@@ -1,0 +1,14 @@
+{
+  "timestamp": "2025-08-19T14:00:35.309Z",
+  "usingMedian": true,
+  "previousFile": "latest-benchmark-median.json",
+  "failures": [],
+  "variabilityWarnings": [
+    "Case 'bulk reads x5000' high variability: cov=20.2% (warn>20%)"
+  ],
+  "totals": {
+    "cases": 6,
+    "totalMs": 1.7033959999999908,
+    "totalOps": 7200
+  }
+}

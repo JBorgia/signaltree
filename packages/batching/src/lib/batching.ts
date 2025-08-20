@@ -1,5 +1,5 @@
 import { parsePath } from '@signaltree/core';
-import type { SignalTree } from '@signaltree/core';
+import type { SignalTree, DeepPartial } from '@signaltree/core';
 
 /**
  * Configuration options for intelligent batching behavior.
@@ -78,7 +78,7 @@ interface BatchingSignalTree<T> extends SignalTree<T> {
    * }));
    * ```
    */
-  batchUpdate(updater: (current: T) => Partial<T>): void;
+  batchUpdate(updater: (current: T) => T | DeepPartial<T>): void;
 }
 
 /**
@@ -288,14 +288,16 @@ export function withBatching<T>(
     const originalUpdate = tree.update.bind(tree);
 
     // Override update method with batching
-    tree.update = (updater: (current: T) => Partial<T>) => {
+    tree.update = (updater: (current: T) => T | DeepPartial<T>) => {
       // Always use batching for regular updates
       batchUpdates(() => originalUpdate(updater));
     };
 
     // Add batchUpdate method to the tree
     const enhancedTree = tree as BatchingSignalTree<T>;
-    enhancedTree.batchUpdate = (updater: (current: T) => Partial<T>) => {
+    enhancedTree.batchUpdate = (
+      updater: (current: T) => T | DeepPartial<T>
+    ) => {
       batchUpdates(() => originalUpdate(updater));
     };
 

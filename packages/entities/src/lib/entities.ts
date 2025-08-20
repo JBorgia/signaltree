@@ -1,4 +1,4 @@
-import { computed, Signal, WritableSignal, isSignal } from '@angular/core';
+import { computed, Signal, WritableSignal, isSignal } from '@signaltree/core';
 import type { SignalTree } from '@signaltree/core';
 
 /**

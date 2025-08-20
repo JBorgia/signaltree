@@ -1,4 +1,4 @@
-import { computed, Signal, signal } from '@angular/core';
+import { computed, Signal, signal } from '@signaltree/core';
 import { SignalTree } from '@signaltree/core';
 
 /**

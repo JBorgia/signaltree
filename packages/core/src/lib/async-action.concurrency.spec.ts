@@ -1,7 +1,6 @@
-// Async concurrency specs moved to @signaltree/async package.
-// This placeholder file remains so jest's test globs stay stable.
-describe('asyncAction concurrency (moved)', () => {
-  it('placeholder', () => {
+// Placeholder test to avoid empty suite failure after refactors.
+describe('async action concurrency placeholder', () => {
+  it('placeholder passes', () => {
     expect(true).toBe(true);
   });
 });

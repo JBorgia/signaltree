@@ -158,7 +158,7 @@ npm install @signaltree/core @signaltree/batching @signaltree/memoization @signa
 
 ### Elegant Usage (5.1KB Bundle with Deep Nesting!)
 
-```typescript
+````typescript
 import { signalTree } from '@signaltree/core';
 
 // Create a reactive state tree
@@ -182,7 +182,94 @@ tree.update((state) => ({
   user: { ...state.user, name: 'Jane Doe' },
   settings: { ...state.settings, theme: 'light' },
 }));
-```
+
+// Deep partial sparse updates (only changed leaves need to be specified)
+tree.update(() => ({
+  settings: { notifications: false } // theme preserved automatically
+}));
+
+// Root-level set() accepts full or deep partial
+tree.set({ user: { name: 'Johnny' } }); // only user.name changes
+
+// Direct branch set()
+tree.$.settings.set({ theme: 'dark' });
+
+// User-defined property named "set" is safe
+const special = signalTree({ set: 1, other: 2 });
+console.log(special.$.set()); // 1
+special.update(() => ({ set: 5 }));
+console.log(special.$.set()); // 5
+// Additional context for deep partial merge rules
+#### Deep Partial Merge Rules
+
+SignalTree uses a recursive `DeepPartial<T>` for all updater returns:
+
+| Structure               | Behavior                                                   |
+|-------------------------|------------------------------------------------------------|
+| Plain Objects           | Sparse merge – unspecified keys preserved                  |
+| Arrays                  | Replaced atomically                                       |
+| Built-ins (Date, Map…)  | Replaced atomically                                       |
+| Callable proxy branch   | Delegated to nested `.update` (recursive sparse merge)    |
+| Missing path            | Ignored (debug warning in `debugMode`)                    |
+
+Examples:
+
+```ts
+// Given { ui: { theme: 'dark', loading: false, flags: { a: true, b: true } } }
+tree.update(() => ({ ui: { flags: { a: false } } }));
+// => { ui: { theme: 'dark', loading: false, flags: { a: false, b: true } } }
+
+// Arrays: replace
+tree.update((s) => ({ items: [...s.items, newItem] }));
+````
+
+> Deletions are not performed by sparse patches; supply a full replacement or await a future explicit removal helper.
+
+// Deep partial sparse updates (only changed leaves need to be specified)
+tree.update(() => ({
+settings: { notifications: false } // theme key preserved automatically
+}));
+
+// Root-level set() accepts full or deep partial as well
+tree.set({ user: { name: 'Johnny' } }); // only user.name changes
+
+// Direct branch set() (callable proxy exposes .set)
+tree.$.settings.set({ theme: 'dark' });
+
+// Accessing a user-defined property named "set" is safe; proxy does not shadow
+const special = signalTree({ set: 1, other: 2 });
+console.log(special.$.set()); // 1
+special.update(() => ({ set: 5 }));
+console.log(special.$.set()); // 5
+
+````
+
+#### Deep Partial Merge Rules
+
+SignalTree now uses a recursive `DeepPartial<T>` for updates:
+
+| Structure                | Behavior                                                    |
+|--------------------------|-------------------------------------------------------------|
+| Plain Objects            | Sparse merge: only provided keys updated (no deletions)     |
+| Arrays                   | Replaced atomically                                        |
+| Built-ins (Date, Map…)   | Replaced atomically                                        |
+| Callable proxy branches  | Delegated recursively preserving unspecified siblings      |
+| Unknown / missing path   | Ignored with a debug warning (in `debugMode`)              |
+
+This lets you author minimal patches without spreading existing nested state.
+
+Examples:
+
+```ts
+// Given state { ui: { theme: 'dark', loading: false, flags: { a: true, b: true } } }
+tree.update(() => ({ ui: { flags: { a: false } } }));
+// Result: { ui: { theme: 'dark', loading: false, flags: { a: false, b: true } } }
+
+// Arrays replace wholesale
+tree.update(() => ({ items: [...tree.unwrap().items, newItem] }));
+````
+
+> Deletions (removing keys) are intentionally not performed by sparse patches; use a future explicit remove helper or full object replacement if needed.
 
 ### Composed Usage (Modular Features)
 
@@ -265,6 +352,23 @@ tree.redo(); // Redo undone change
 const history = tree.getHistory(); // Get state history
 users.add({ id: 1, name: 'Alice' });
 ```
+
+### Async Actions & Concurrency Policies
+
+SignalTree provides an `asyncAction` helper with lifecycle hooks and four concurrency policies (`replace`, `drop`, `queue`, `race`).
+
+Quick comparison:
+
+| Policy  | Behavior                              | Use Case                                 |
+| ------- | ------------------------------------- | ---------------------------------------- |
+| replace | Cancel/ignore previous run, start new | Type‑ahead search, latest-only requests  |
+| drop    | Ignore new call while pending         | Debounce button spam                     |
+| queue   | Run calls sequentially (FIFO)         | Ordered mutations, background tasks      |
+| race    | All run; first settled result applied | Competing data sources, fastest response |
+
+See full documentation: [Async Actions & Concurrency](./docs/api/async-action.md)
+
+Disable core attachment (to supply a custom or external implementation) by passing `{ enableAsync: false }` in the `signalTree` config/preset override.
 
 ### State Persistence & Serialization
 
