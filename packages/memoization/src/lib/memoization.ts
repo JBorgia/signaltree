@@ -219,7 +219,7 @@ export function withMemoization<T>(
       cacheKey?: string
     ) => {
       const key = cacheKey || `update_${Date.now()}`;
-      const currentState = tree.unwrap();
+      const currentState = tree.$();
 
       // Check cache
       const cached = cache.get(key);

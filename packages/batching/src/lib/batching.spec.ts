@@ -109,13 +109,13 @@ describe('Batching', () => {
     );
 
     // First 2 updates should be batched
-    tree.update((state) => ({ count: state.count + 1 }));
-    tree.update((state) => ({ count: state.count + 1 }));
+    tree.$.update((state) => ({ count: state.count + 1 }));
+    tree.$.update((state) => ({ count: state.count + 1 }));
 
     expect(tree.state.count()).toBe(0); // Still batched
 
     // Third update should trigger immediate execution due to maxBatchSize
-    tree.update((state) => ({ count: state.count + 1 }));
+    tree.$.update((state) => ({ count: state.count + 1 }));
 
     // Wait for any batched updates
     await new Promise<void>((resolve) => queueMicrotask(resolve));

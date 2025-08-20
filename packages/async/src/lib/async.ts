@@ -178,9 +178,9 @@ function setNestedValue<T>(
 ): void {
   const keys = parsePath(path);
   if (keys.length === 1) {
-    tree.update(() => ({ [path]: value } as Partial<T>));
+    tree.$.update(() => ({ [path]: value } as Partial<T>));
   } else {
-    tree.update((state) => {
+    tree.$.update((state) => {
       const newState = { ...state } as Record<string, unknown>;
       let current = newState;
       for (let i = 0; i < keys.length - 1; i++) {
@@ -336,8 +336,8 @@ class AsyncActionImpl<TInput, TResult, T>
 
       // Execute onStart hook
       if (onStart) {
-        const startUpdate = onStart(this.tree.unwrap());
-        this.tree.update(() => startUpdate);
+        const startUpdate = onStart(this.tree.$());
+        this.tree.$.update(() => startUpdate);
       }
 
       // Execute the operation
@@ -348,8 +348,8 @@ class AsyncActionImpl<TInput, TResult, T>
 
       // Execute onSuccess hook
       if (onSuccess) {
-        const successUpdate = onSuccess(result, this.tree.unwrap());
-        this.tree.update(() => successUpdate);
+        const successUpdate = onSuccess(result, this.tree.$());
+        this.tree.$.update(() => successUpdate);
       }
 
       return result;
@@ -364,8 +364,8 @@ class AsyncActionImpl<TInput, TResult, T>
 
       // Execute onError hook
       if (onError) {
-        const errorUpdate = onError(err, this.tree.unwrap());
-        this.tree.update(() => errorUpdate);
+        const errorUpdate = onError(err, this.tree.$());
+        this.tree.$.update(() => errorUpdate);
       }
 
       throw err;
@@ -379,14 +379,14 @@ class AsyncActionImpl<TInput, TResult, T>
 
       // Execute onComplete hook
       if (onComplete) {
-        const completeUpdate = onComplete(this.tree.unwrap());
-        this.tree.update(() => completeUpdate);
+        const completeUpdate = onComplete(this.tree.$());
+        this.tree.$.update(() => completeUpdate);
       }
 
       // Execute onFinally hook
       if (onFinally) {
-        const finallyUpdate = onFinally(this.tree.unwrap());
-        this.tree.update(() => finallyUpdate);
+        const finallyUpdate = onFinally(this.tree.$());
+        this.tree.$.update(() => finallyUpdate);
       }
     }
   }

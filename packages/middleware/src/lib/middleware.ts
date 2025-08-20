@@ -18,47 +18,124 @@ export function withMiddleware<T>(
     // Initialize middleware array for this tree
     middlewareMap.set(tree, [...middlewares]);
 
-    // Store original update method
-    const originalUpdate = tree.update;
+    // Create a wrapper for the $ callable proxy that intercepts update calls
+    const createInterceptedProxy = (
+      originalProxy: Record<string | symbol, unknown>,
+      parentPath = ''
+    ) => {
+      return new Proxy(originalProxy, {
+        get(target, prop) {
+          const value = (target as Record<string | symbol, unknown>)[prop];
 
-    // Override update method to include middleware execution
-    tree.update = (updater: (current: T) => Partial<T>) => {
-      const action = 'UPDATE';
-      const currentState = tree.unwrap();
-      const updateResult = updater(currentState);
-      const treeMiddlewares =
-        (middlewareMap.get(tree) as Middleware<T>[]) || [];
+          if (prop === 'update') {
+            // Intercept update method
+            return (updater: (current: T) => Partial<T>) => {
+              const action = 'UPDATE';
+              const currentState = tree.$();
+              const updateResult = updater(currentState);
+              const treeMiddlewares =
+                (middlewareMap.get(tree) as Middleware<T>[]) || [];
 
-      // Execute 'before' middleware hooks
-      for (const middleware of treeMiddlewares) {
-        if (
-          middleware.before &&
-          !middleware.before(action, updateResult, currentState)
-        ) {
-          // Middleware blocked the update
-          return;
-        }
-      }
+              // Execute 'before' middleware hooks
+              for (const middleware of treeMiddlewares) {
+                if (
+                  middleware.before &&
+                  !middleware.before(action, updateResult, currentState)
+                ) {
+                  // Middleware blocked the update
+                  return;
+                }
+              }
 
-      // Capture state before update for 'after' hooks
-      const previousState = currentState;
+              // Capture state before update for 'after' hooks
+              const previousState = currentState;
 
-      // Execute the actual update
-      originalUpdate.call(tree, updater);
+              // Execute the actual update using the original method
+              (value as (updater: (current: T) => Partial<T>) => void).call(
+                target,
+                updater
+              );
 
-      // Get new state after update
-      const newState = tree.unwrap();
+              // Get new state after update
+              const newState = tree.$();
 
-      // Execute 'after' middleware hooks
-      for (const middleware of treeMiddlewares) {
-        if (middleware.after) {
-          middleware.after(action, updateResult, previousState, newState);
-        }
-      }
+              // Execute 'after' middleware hooks
+              for (const middleware of treeMiddlewares) {
+                if (middleware.after) {
+                  middleware.after(
+                    action,
+                    updateResult,
+                    previousState,
+                    newState
+                  );
+                }
+              }
+            };
+          }
+
+          if (prop === 'set') {
+            // Intercept set method too
+            return (partial: Partial<T>) => {
+              const action = 'SET';
+              const currentState = tree.$();
+              const treeMiddlewares =
+                (middlewareMap.get(tree) as Middleware<T>[]) || [];
+
+              // Execute 'before' middleware hooks
+              for (const middleware of treeMiddlewares) {
+                if (
+                  middleware.before &&
+                  !middleware.before(action, partial, currentState)
+                ) {
+                  // Middleware blocked the set
+                  return;
+                }
+              }
+
+              // Capture state before update for 'after' hooks
+              const previousState = currentState;
+
+              // Execute the actual set using the original method
+              (value as (partial: Partial<T>) => void).call(target, partial);
+
+              // Get new state after update
+              const newState = tree.$();
+
+              // Execute 'after' middleware hooks
+              for (const middleware of treeMiddlewares) {
+                if (middleware.after) {
+                  middleware.after(action, partial, previousState, newState);
+                }
+              }
+            };
+          }
+
+          // For other properties, check if they're callable proxies and wrap them recursively
+          if (
+            typeof value === 'function' &&
+            (value as unknown as { __isCallableProxy__?: boolean })
+              .__isCallableProxy__
+          ) {
+            return createInterceptedProxy(
+              value as unknown as Record<string | symbol, unknown>,
+              parentPath + '.' + String(prop)
+            );
+          }
+
+          return value;
+        },
+      });
     };
 
+    // Create the enhanced tree with intercepted $ proxy
+    const enhancedTree = {
+      ...tree,
+      $: createInterceptedProxy(tree.$),
+      state: createInterceptedProxy(tree.state),
+    } as SignalTree<T>;
+
     // Override addTap to work with the middleware system
-    tree.addTap = (middleware: Middleware<T>) => {
+    enhancedTree.addTap = (middleware: Middleware<T>) => {
       const treeMiddlewares =
         (middlewareMap.get(tree) as Middleware<T>[]) || [];
 
@@ -77,7 +154,7 @@ export function withMiddleware<T>(
     };
 
     // Override removeTap method
-    tree.removeTap = (id: string) => {
+    enhancedTree.removeTap = (id: string) => {
       const treeMiddlewares =
         (middlewareMap.get(tree) as Middleware<T>[]) || [];
       const filtered = treeMiddlewares.filter((m) => m.id !== id);
@@ -88,9 +165,9 @@ export function withMiddleware<T>(
     const originalBatchUpdate = tree.batchUpdate;
 
     // Override batchUpdate to include middleware
-    tree.batchUpdate = (updater: (current: T) => Partial<T>) => {
+    enhancedTree.batchUpdate = (updater: (current: T) => Partial<T>) => {
       const action = 'BATCH_UPDATE';
-      const currentState = tree.unwrap();
+      const currentState = tree.$();
       const updateResult = updater(currentState);
       const treeMiddlewares =
         (middlewareMap.get(tree) as Middleware<T>[]) || [];
@@ -113,7 +190,7 @@ export function withMiddleware<T>(
       originalBatchUpdate.call(tree, updater);
 
       // Get new state after update
-      const newState = tree.unwrap();
+      const newState = tree.$();
 
       // Execute 'after' middleware hooks
       for (const middleware of treeMiddlewares) {
@@ -125,12 +202,12 @@ export function withMiddleware<T>(
 
     // Override destroy to cleanup middleware
     const originalDestroy = tree.destroy;
-    tree.destroy = () => {
+    enhancedTree.destroy = () => {
       middlewareMap.delete(tree);
       originalDestroy.call(tree);
     };
 
-    return tree;
+    return enhancedTree;
   };
 }
 

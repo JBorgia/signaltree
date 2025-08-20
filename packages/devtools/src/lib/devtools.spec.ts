@@ -234,7 +234,7 @@ describe('Modular DevTools', () => {
       expect(initialMetrics.totalUpdates).toBe(0);
 
       // Perform an update
-      tree.update((state) => ({
+      tree.$.update((state) => ({
         ...state,
         count: (state as TestState).count + 1,
       }));
@@ -253,7 +253,7 @@ describe('Modular DevTools', () => {
         })
       );
 
-      tree.update((state) => ({
+      tree.$.update((state) => ({
         ...state,
         count: (state as TestState).count + 1,
       }));

@@ -1,6 +1,7 @@
 import { Component, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+
 import { signalTree } from '@signaltree/core';
 import { withAsync } from '@signaltree/async';
 import { User, generateUsers, sleep } from '../../shared/models';
@@ -513,12 +514,14 @@ export class AsyncDemoComponent {
     );
 
     if (refreshedUser) {
-      this.store.$.selectedUser.set(refreshedUser);
-
-      // Also update in the users list
-      this.store.$.users.update((users: User[]) =>
-        users.map((u: User) => (u.id === refreshedUser.id ? refreshedUser : u))
-      );
+      this.store.update(() => ({
+        selectedUser: refreshedUser,
+        users: this.store
+          .unwrap()
+          .users.map((u: User) =>
+            u.id === refreshedUser.id ? refreshedUser : u
+          ),
+      }));
     }
   }
 

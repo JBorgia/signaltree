@@ -183,76 +183,233 @@ function isBuiltInObject(v: unknown): boolean {
 }
 
 /**
- * Core function to create a basic SignalTree with enhanced safety and smart strategy selection.
- * This provides the minimal functionality without advanced features.
- *
- * @template T - The state object type (NO constraints - maximum flexibility)
- * @param obj - The initial state object
- * @param config - Configuration options for the tree
- * @returns A basic SignalTree with core functionality
+ * Creates a callable proxy that acts like the classic implementation
  */
-function create<T>(obj: T, config: TreeConfig = {}): SignalTree<T> {
-  // Validate input
-  if (obj === null || obj === undefined) {
-    throw new Error('Cannot create SignalTree from null or undefined');
-  }
+function createCallableProxy<T>(
+  nestedStore: DeepSignalify<T>,
+  isBuiltInObjectFn: (v: unknown) => boolean
+): DeepSignalify<T> {
+  // Create the unwrap logic
+  const unwrapFunction = (): T => {
+    const unwrapObject = <O>(obj: unknown): O => {
+      if (typeof obj !== 'object' || obj === null) {
+        return obj as O;
+      }
 
-  const equalityFn = createEqualityFn(config.useShallowComparison ?? false);
-  const useLazy = shouldUseLazy(obj, config);
+      // Handle signals directly
+      if (isSignal(obj)) {
+        return (obj as Signal<O>)();
+      }
 
-  // Log strategy selection in debug mode
-  if (config.debugMode) {
-    const estimatedSize = estimateObjectSize(obj);
-    console.log(
-      `[SignalTree] Creating tree with ${
-        useLazy ? 'lazy' : 'eager'
-      } strategy (estimated size: ${estimatedSize})`
-    );
-  }
+      // If it's a callable nested object (has our special marker), call it
+      if (
+        typeof obj === 'function' &&
+        (obj as (() => unknown) & { __isCallableProxy__?: boolean })
+          .__isCallableProxy__ === true
+      ) {
+        return obj();
+      }
 
-  // Create signals using appropriate strategy
-  let signalState: DeepSignalify<T>;
+      const result = {} as Record<string, unknown>;
 
-  try {
-    if (useLazy && typeof obj === 'object') {
-      signalState = createLazySignalTree(
-        obj as object,
-        equalityFn
-      ) as DeepSignalify<T>;
-    } else {
-      signalState = createSignalStore(obj, equalityFn);
-    }
-  } catch (error) {
-    // Fallback to eager if lazy fails
-    if (useLazy) {
-      console.warn(
-        '[SignalTree] Lazy creation failed, falling back to eager:',
-        error
-      );
-      signalState = createSignalStore(obj, equalityFn);
-    } else {
-      throw error;
-    }
-  }
+      for (const key in obj as Record<string, unknown>) {
+        // Skip our special properties
+        if (key === 'update' || key === '__isCallableProxy__') continue;
 
-  const resultTree = {
-    state: signalState,
-    $: signalState, // $ points to the same state object
-  } as SignalTree<T>;
+        const value = (obj as Record<string, unknown>)[key];
 
-  enhanceTree(resultTree, config);
-  return resultTree;
+        if (isSignal(value)) {
+          result[key] = (value as Signal<unknown>)();
+        } else if (
+          typeof value === 'function' &&
+          (value as (() => unknown) & { __isCallableProxy__?: boolean })
+            .__isCallableProxy__ === true
+        ) {
+          // It's a callable nested SignalTree node
+          result[key] = value();
+        } else if (
+          typeof value === 'object' &&
+          value !== null &&
+          !Array.isArray(value) &&
+          !isBuiltInObjectFn(value)
+        ) {
+          result[key] = unwrapObject(value);
+        } else {
+          result[key] = value;
+        }
+      }
+
+      return result as O;
+    };
+
+    return unwrapObject(nestedStore);
+  };
+
+  // Create a callable function with all properties attached
+  const callableProxy = new Proxy(unwrapFunction, {
+    apply(target) {
+      // When called as a function, execute the unwrap logic
+      return target();
+    },
+
+    get(target, prop) {
+      // Return the unwrap function when called
+      if (
+        prop === Symbol.toPrimitive ||
+        prop === 'valueOf' ||
+        prop === 'toString'
+      ) {
+        return () => unwrapFunction();
+      }
+
+      // Mark this as a callable proxy
+      if (prop === '__isCallableProxy__') {
+        return true;
+      }
+
+      // Handle update method - supports both functional and imperative styles
+      if (prop === 'update') {
+        return (
+          updaterOrPartial: ((current: T) => Partial<T>) | Partial<T>
+        ) => {
+          let partialObj: Partial<T>;
+
+          // Check if it's a function (functional style) or object (imperative style)
+          if (typeof updaterOrPartial === 'function') {
+            // Functional style: update((current) => ({ ...changes }))
+            const currentValue = unwrapFunction();
+            partialObj = updaterOrPartial(currentValue);
+          } else {
+            // Imperative style: update({ ...changes })
+            partialObj = updaterOrPartial;
+          }
+
+          if (!partialObj || typeof partialObj !== 'object') {
+            throw new Error('Update must return/receive an object');
+          }
+
+          const updateObject = <O>(
+            target:
+              | Record<string, unknown>
+              | ((() => unknown) & { [key: string]: unknown }),
+            updates: Partial<O>
+          ): void => {
+            for (const key in updates) {
+              if (!Object.prototype.hasOwnProperty.call(updates, key)) continue;
+
+              const updateValue = updates[key];
+              const currentSignalOrState = target[key];
+
+              if (isSignal(currentSignalOrState)) {
+                (currentSignalOrState as WritableSignal<unknown>).set(
+                  updateValue
+                );
+              } else if (
+                typeof currentSignalOrState === 'function' &&
+                (
+                  currentSignalOrState as (() => unknown) & {
+                    __isCallableProxy__?: boolean;
+                  }
+                ).__isCallableProxy__ === true &&
+                updateValue !== null &&
+                typeof updateValue === 'object' &&
+                !Array.isArray(updateValue) &&
+                !isBuiltInObjectFn(updateValue)
+              ) {
+                // It's a nested callable proxy - recursively update
+                updateObject(
+                  currentSignalOrState as Record<string, unknown>,
+                  updateValue
+                );
+              }
+            }
+          };
+
+          updateObject(nestedStore, partialObj);
+        };
+      }
+
+      // Handle set method - shallow merge with current state
+      if (prop === 'set') {
+        return (partialObj: Partial<T>) => {
+          if (!partialObj || typeof partialObj !== 'object') {
+            throw new Error('Set must be called with an object');
+          }
+
+          const updateObject = <O>(
+            target:
+              | Record<string, unknown>
+              | ((() => unknown) & { [key: string]: unknown }),
+            updates: Partial<O>
+          ): void => {
+            for (const key in updates) {
+              if (!Object.prototype.hasOwnProperty.call(updates, key)) continue;
+
+              const updateValue = updates[key];
+              const currentSignalOrState = target[key];
+
+              if (isSignal(currentSignalOrState)) {
+                (currentSignalOrState as WritableSignal<unknown>).set(
+                  updateValue
+                );
+              } else if (
+                typeof currentSignalOrState === 'function' &&
+                (
+                  currentSignalOrState as (() => unknown) & {
+                    __isCallableProxy__?: boolean;
+                  }
+                ).__isCallableProxy__ === true &&
+                updateValue !== null &&
+                typeof updateValue === 'object' &&
+                !Array.isArray(updateValue) &&
+                !isBuiltInObjectFn(updateValue)
+              ) {
+                // It's a nested callable proxy - recursively update
+                updateObject(
+                  currentSignalOrState as Record<string, unknown>,
+                  updateValue
+                );
+              }
+            }
+          };
+
+          updateObject(nestedStore, partialObj);
+        };
+      }
+
+      // Return the property from the nested store
+      return (nestedStore as Record<string | symbol, unknown>)[prop];
+    },
+
+    has(target, prop) {
+      return prop in nestedStore;
+    },
+
+    ownKeys() {
+      return Reflect.ownKeys(nestedStore);
+    },
+
+    getOwnPropertyDescriptor(target, prop) {
+      return Reflect.getOwnPropertyDescriptor(nestedStore, prop);
+    },
+  });
+
+  return callableProxy as DeepSignalify<T>;
+}
+
+/**
+ * Enhanced function to create signal store with callable nested objects
+ */
+function enhanceNestedObject<T>(
+  nestedStore: DeepSignalify<T>,
+  isBuiltInObjectFn: (v: unknown) => boolean
+): DeepSignalify<T> {
+  return createCallableProxy<T>(nestedStore, isBuiltInObjectFn);
 }
 
 /**
  * Creates signals using signal-store pattern for perfect type inference.
  * Eager creation - all signals created immediately.
- *
- * @see https://github.com/JBorgia/signaltree/blob/main/docs/api/create-signal-store.md
- * @template T - The object type to process (preserves exact type structure)
- * @param obj - The object to convert to signals
- * @param equalityFn - Function to compare values for equality
- * @returns A deeply signalified version maintaining exact type structure
  */
 function createSignalStore<T>(
   obj: T,
@@ -313,11 +470,9 @@ function createSignalStore<T>(
             equal: equalityFn,
           });
         } else {
-          // Nested objects - recurse
-          (store as Record<string, unknown>)[key] = createSignalStore(
-            value,
-            equalityFn
-          );
+          // Nested objects - recurse (recursive call handles enhancement)
+          const nestedStore = createSignalStore(value, equalityFn);
+          (store as Record<string, unknown>)[key] = nestedStore;
         }
       } catch (error) {
         console.warn(
@@ -358,17 +513,80 @@ function createSignalStore<T>(
     );
   }
 
-  return store as DeepSignalify<T>;
+  // Wrap the entire store in a callable proxy for root-level access
+  return enhanceNestedObject<T>(store as DeepSignalify<T>, isBuiltInObject);
 }
 
 /**
- * Enhances a tree with basic functionality (unwrap, update, pipe).
- * Adds core methods that every SignalTree needs for basic operation.
+ * Core function to create a basic SignalTree with enhanced safety and smart strategy selection.
+ * This provides the minimal functionality without advanced features.
+ *
+ * @template T - The state object type (NO constraints - maximum flexibility)
+ * @param obj - The initial state object
+ * @param config - Configuration options for the tree
+ * @returns A basic SignalTree with core functionality
+ */
+function create<T>(obj: T, config: TreeConfig = {}): SignalTree<T> {
+  // Validate input
+  if (obj === null || obj === undefined) {
+    throw new Error('Cannot create SignalTree from null or undefined');
+  }
+
+  const equalityFn = createEqualityFn(config.useShallowComparison ?? false);
+  const useLazy = shouldUseLazy(obj, config);
+
+  // Log strategy selection in debug mode
+  if (config.debugMode) {
+    const estimatedSize = estimateObjectSize(obj);
+    console.log(
+      `[SignalTree] Creating tree with ${
+        useLazy ? 'lazy' : 'eager'
+      } strategy (estimated size: ${estimatedSize})`
+    );
+  }
+
+  // Create signals using appropriate strategy
+  let signalState: DeepSignalify<T>;
+
+  try {
+    if (useLazy && typeof obj === 'object') {
+      signalState = createLazySignalTree(
+        obj as object,
+        equalityFn
+      ) as DeepSignalify<T>;
+    } else {
+      signalState = createSignalStore(obj, equalityFn) as DeepSignalify<T>;
+    }
+  } catch (error) {
+    // Fallback to eager if lazy fails
+    if (useLazy) {
+      console.warn(
+        '[SignalTree] Lazy creation failed, falling back to eager:',
+        error
+      );
+      signalState = createSignalStore(obj, equalityFn) as DeepSignalify<T>;
+    } else {
+      throw error;
+    }
+  }
+
+  const resultTree = {
+    state: signalState,
+    $: signalState, // $ points to the same state object
+  } as SignalTree<T>;
+
+  enhanceTree(resultTree, config);
+  return resultTree;
+}
+
+/**
+ * Enhances a tree with basic functionality (pipe, destroy).
+ * The state itself (tree.$) provides the callable unwrapping and update functionality.
  *
  * @template T - The state object type
  * @param tree - The tree to enhance with basic functionality
  * @param config - Configuration used during tree creation
- * @returns The enhanced tree with unwrap, update, and pipe methods
+ * @returns The enhanced tree with pipe and destroy methods
  */
 function enhanceTree<T>(
   tree: SignalTree<T>,
@@ -376,182 +594,6 @@ function enhanceTree<T>(
 ): SignalTree<T> {
   // Track if this tree uses lazy signals for proper cleanup
   const isLazy = config.useLazySignals ?? shouldUseLazy(tree.state, config);
-
-  /**
-   * Unwraps the current state by reading all signal values.
-   * Recursively converts the signal tree back to plain JavaScript values.
-   */
-  tree.unwrap = (): T => {
-    const unwrapObject = <O>(obj: DeepSignalify<O>): O => {
-      if (typeof obj !== 'object' || obj === null) {
-        return obj as O;
-      }
-
-      // Handle signals directly
-      if (isSignal(obj)) {
-        return (obj as Signal<O>)();
-      }
-
-      // Handle arrays (which are signals in our structure)
-      if (isSignal(obj)) {
-        const value = (obj as Signal<unknown>)();
-        if (Array.isArray(value)) {
-          return value as O;
-        }
-      }
-
-      const result = {} as Record<string, unknown>;
-
-      for (const key in obj) {
-        if (!Object.prototype.hasOwnProperty.call(obj, key)) continue;
-
-        const value = (obj as Record<string, unknown>)[key];
-
-        if (isSignal(value)) {
-          result[key] = (value as Signal<unknown>)();
-        } else if (
-          typeof value === 'object' &&
-          value !== null &&
-          !Array.isArray(value) &&
-          !isBuiltInObject(value)
-        ) {
-          // Nested signal state
-          result[key] = unwrapObject(value as DeepSignalify<object>);
-        } else {
-          result[key] = value;
-        }
-      }
-
-      // Handle symbol properties
-      const symbols = Object.getOwnPropertySymbols(obj);
-      for (const sym of symbols) {
-        const value = (obj as Record<symbol, unknown>)[sym];
-        if (isSignal(value)) {
-          (result as Record<symbol, unknown>)[sym] = (
-            value as Signal<unknown>
-          )();
-        } else {
-          (result as Record<symbol, unknown>)[sym] = value;
-        }
-      }
-
-      return result as O;
-    };
-
-    return unwrapObject(tree.state as DeepSignalify<T>);
-  };
-
-  /**
-   * Updates the state using an updater function with transaction support.
-   */
-  tree.update = (updater: (current: T) => Partial<T>) => {
-    const transactionLog: Array<{
-      path: string;
-      oldValue: unknown;
-      newValue: unknown;
-    }> = [];
-
-    try {
-      const currentValue = tree.unwrap();
-      const partialObj = updater(currentValue);
-
-      if (!partialObj || typeof partialObj !== 'object') {
-        throw new Error('Updater must return an object');
-      }
-
-      const updateObject = <O>(
-        target: DeepSignalify<O>,
-        updates: Partial<O>,
-        path = ''
-      ): void => {
-        for (const key in updates) {
-          if (!Object.prototype.hasOwnProperty.call(updates, key)) continue;
-
-          const updateValue = updates[key];
-          const currentPath = path ? `${path}.${key}` : key;
-          const currentSignalOrState = (target as Record<string, unknown>)[key];
-
-          try {
-            if (isSignal(currentSignalOrState)) {
-              const originalValue = (currentSignalOrState as Signal<unknown>)();
-              transactionLog.push({
-                path: currentPath,
-                oldValue: originalValue,
-                newValue: updateValue,
-              });
-              (currentSignalOrState as WritableSignal<unknown>).set(
-                updateValue
-              );
-            } else if (
-              typeof updateValue === 'object' &&
-              updateValue !== null &&
-              !Array.isArray(updateValue) &&
-              !isBuiltInObject(updateValue) &&
-              typeof currentSignalOrState === 'object' &&
-              currentSignalOrState !== null &&
-              !isSignal(currentSignalOrState)
-            ) {
-              // Nested object - recurse
-              updateObject(
-                currentSignalOrState as DeepSignalify<object>,
-                updateValue as Partial<object>,
-                currentPath
-              );
-            } else if (currentSignalOrState === undefined) {
-              console.warn(
-                `[SignalTree] Cannot update non-existent path: ${currentPath}`
-              );
-            }
-          } catch (error) {
-            console.error(
-              `[SignalTree] Failed to update path "${currentPath}":`,
-              error
-            );
-            throw error; // Re-throw to trigger rollback
-          }
-        }
-      };
-
-      updateObject(tree.state as DeepSignalify<T>, partialObj);
-
-      // Log transaction in debug mode
-      if (config.debugMode && transactionLog.length > 0) {
-        console.log('[SignalTree] Update transaction:', transactionLog);
-      }
-    } catch (error) {
-      // Rollback on error
-      console.error('[SignalTree] Update failed, attempting rollback:', error);
-
-      // Attempt to restore original values from transaction log
-      for (const { path, oldValue } of transactionLog.reverse()) {
-        try {
-          const pathParts = path.split('.');
-          let current: unknown = tree.state;
-
-          for (let i = 0; i < pathParts.length - 1; i++) {
-            current = (current as Record<string, unknown>)[pathParts[i]];
-            if (!current) break;
-          }
-
-          if (current) {
-            const lastKey = pathParts[pathParts.length - 1];
-            const targetSignal = (current as Record<string, unknown>)[lastKey];
-            if (isSignal(targetSignal)) {
-              (targetSignal as WritableSignal<unknown>).set(oldValue);
-            }
-          }
-        } catch (rollbackError) {
-          console.error(
-            '[SignalTree] Rollback failed for path:',
-            path,
-            rollbackError
-          );
-        }
-      }
-
-      throw error;
-    }
-  };
 
   // Pipe implementation for function composition
   tree.pipe = (<TResult = SignalTree<T>>(
@@ -615,8 +657,8 @@ function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
       '⚠️ batchUpdate() called but batching is not enabled.',
       'To enable batch updates, install @signaltree/batching'
     );
-    // Fallback: Just call update directly
-    tree.update(updater);
+    // Fallback: Use the tree's nested update method
+    tree.$.update(updater);
   };
 
   tree.memoize = <R>(fn: (tree: T) => R, cacheKey?: string): Signal<R> => {
@@ -625,12 +667,12 @@ function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
       'To enable memoized computations, install @signaltree/memoization'
     );
     void cacheKey; // Mark as intentionally unused
-    return computed(() => fn(tree.unwrap()));
+    return computed(() => fn(tree.$()));
   };
 
   tree.effect = (fn: (tree: T) => void) => {
     try {
-      effect(() => fn(tree.unwrap()));
+      effect(() => fn(tree.$()));
     } catch (error) {
       // Fallback for test environments without injection context
       if (config.debugMode) {
@@ -646,7 +688,7 @@ function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
 
       const effectRef = effect(() => {
         if (!isDestroyed) {
-          fn(tree.unwrap());
+          fn(tree.$());
         }
       });
 
@@ -662,7 +704,7 @@ function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
       if (config.debugMode) {
         console.warn('Subscribe requires Angular injection context', error);
       }
-      fn(tree.unwrap());
+      fn(tree.$());
       return () => {
         // No-op unsubscribe
       };
@@ -781,176 +823,21 @@ function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
 
 /**
  * Creates a reactive signal tree with smart progressive enhancement.
- *
- * Automatically converts plain objects into a reactive signal tree where each property
- * becomes a writable signal. Provides intelligent performance optimizations, automatic
- * change detection, and seamless integration with Angular's signal system.
- *
- * @template T - The type of the initial state object (no constraints for maximum flexibility)
- * @param obj - The initial state object to convert into a reactive tree
- * @returns A SignalTree with auto-enabling features and reactive properties
- *
- * @example
- * ```typescript
- * // Basic usage - simple state management
- * const state = signalTree({ count: 0, user: { name: 'John' } });
- *
- * // Access reactive properties
- * console.log(state.count()); // 0
- * console.log(state.user.name()); // 'John'
- *
- * // Update state
- * state.count.set(1);
- * state.user.name.set('Jane');
- *
- * // Batch updates
- * state.update(current => ({
- *   count: current.count + 1,
- *   user: { ...current.user, name: 'Bob' }
- * }));
- *
- * // Subscribe to changes
- * state.subscribe(newState => {
- *   console.log('State changed:', newState);
- * });
- * ```
- *
- * @example
- * ```typescript
- * // Advanced usage with effects and computed values
- * interface AppState {
- *   todos: Todo[];
- *   filter: 'all' | 'active' | 'completed';
- * }
- *
- * const store = signalTree<AppState>({
- *   todos: [],
- *   filter: 'all'
- * });
- *
- * // Create computed values
- * const filteredTodos = computed(() => {
- *   const todos = store.todos();
- *   const filter = store.filter();
- *   return todos.filter(todo =>
- *     filter === 'all' ||
- *     (filter === 'active' && !todo.completed) ||
- *     (filter === 'completed' && todo.completed)
- *   );
- * });
- *
- * // React to state changes
- * store.effect(state => {
- *   console.log(`${state.todos.length} todos, showing ${state.filter}`);
- * });
- * ```
  */
 export function signalTree<T>(obj: T): SignalTree<T>;
 
 /**
  * Creates a reactive signal tree with preset configuration.
- *
- * Uses predefined configurations optimized for common use cases.
- * Available presets: 'basic', 'performance', 'development', 'production'.
- *
- * @template T - The type of the initial state object
- * @param obj - The initial state object to convert into a reactive tree
- * @param preset - Predefined configuration preset
- * @returns A SignalTree configured with the specified preset
- *
- * @example
- * ```typescript
- * // Development preset - enhanced debugging
- * const devStore = signalTree({ count: 0 }, 'development');
- * // Enables: debugMode, enableDevTools, trackPerformance
- *
- * // Production preset - optimized performance
- * const prodStore = signalTree({ count: 0 }, 'production');
- * // Enables: useLazySignals, batchUpdates, useMemoization
- *
- * // Performance preset - maximum optimization
- * const perfStore = signalTree({ users: [] }, 'performance');
- * // Enables: useLazySignals, batchUpdates, useMemoization, useShallowComparison
- *
- * // Basic preset - minimal features
- * const basicStore = signalTree({ data: {} }, 'basic');
- * // Minimal overhead, no optimizations
- * ```
  */
 export function signalTree<T>(obj: T, preset: TreePreset): SignalTree<T>;
 
 /**
  * Creates a reactive signal tree with custom configuration.
- *
- * Provides fine-grained control over SignalTree behavior and performance characteristics.
- * Use this overload when you need specific optimization settings or debugging features.
- *
- * @template T - The type of the initial state object
- * @param obj - The initial state object to convert into a reactive tree
- * @param config - Custom configuration object
- * @returns A SignalTree configured with the specified options
- *
- * @example
- * ```typescript
- * // Custom configuration for specific needs
- * const store = signalTree({
- *   users: [],
- *   settings: { theme: 'dark' }
- * }, {
- *   useLazySignals: true,      // Create signals on-demand
- *   batchUpdates: true,        // Group rapid updates
- *   useMemoization: true,      // Cache computed values
- *   debugMode: false,          // Production mode
- *   enableDevTools: false,     // No dev tools
- *   trackPerformance: true,    // Monitor performance
- *   useShallowComparison: false // Deep equality checking
- * });
- *
- * // Access performance metrics
- * const metrics = store.getMetrics();
- * console.log(`Updates: ${metrics.updateCount}, Time: ${metrics.totalTime}ms`);
- * ```
- *
- * @example
- * ```typescript
- * // Configuration for large datasets
- * const bigDataStore = signalTree(largeDataset, {
- *   useLazySignals: true,        // Essential for large objects
- *   useShallowComparison: true,  // Faster comparisons
- *   batchUpdates: true,          // Prevent UI thrashing
- *   useMemoization: true,        // Cache expensive computations
- *   debugMode: false             // No debug overhead
- * });
- * ```
  */
 export function signalTree<T>(obj: T, config: TreeConfig): SignalTree<T>;
 
 /**
  * Main SignalTree factory function with superior type inference.
- *
- * This overload provides enhanced TypeScript inference for object types,
- * ensuring all properties are properly typed and reactive. Ideal for
- * strongly-typed applications where type safety is paramount.
- *
- * @template T - Object type extending Record<string, unknown> for better inference
- * @param obj - Required state object with all properties defined
- * @param configOrPreset - Optional configuration object or preset string
- * @returns A SignalTree with enhanced type safety and inference
- *
- * @example
- * ```typescript
- * // Enhanced type inference
- * const typedStore = signalTree({
- *   user: { id: 1, name: 'John', email: 'john@example.com' },
- *   settings: { theme: 'dark', notifications: true },
- *   data: { items: [], loading: false, error: null }
- * } as const);
- *
- * // TypeScript knows exact types
- * typedStore.user.id.set(2);           // number
- * typedStore.settings.theme.set('light'); // 'dark' | 'light'
- * typedStore.data.loading.set(true);   // boolean
- * ```
  */
 export function signalTree<T extends Record<string, unknown>>(
   obj: Required<T>,

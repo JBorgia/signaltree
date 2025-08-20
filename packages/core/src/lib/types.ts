@@ -9,15 +9,7 @@ import { WritableSignal, Signal } from '@angular/core';
 
 // ============================================
 // RECURSIVE TYPING SYSTEM
-// MIT License - Copyright (c) 2025 Jonathan D Borgia
 // ============================================
-
-/**
- * NO MORE StateObject constraint!
- * We don't need this at all - remove it or make it accept anything
- */
-
-// REPLACE WITH: Just use generic T with no constraints
 
 /**
  * Primitive types for type checking
@@ -65,34 +57,25 @@ export type IsWritableSignal<T> = T extends WritableSignal<unknown>
   : false;
 
 /**
- * Enhanced DeepSignalify with better edge case handling
- * Never double-wraps signals and properly handles functions and built-in objects
+ * Enhanced DeepSignalify type that makes nested objects callable
+ * Just like the classic implementation
  */
-export type DeepSignalify<T> = IsSignal<T> extends true
-  ? T // Never double-wrap signals
-  : T extends Primitive
-  ? WritableSignal<T>
-  : T extends BuiltInObject
-  ? WritableSignal<T> // Treat built-in objects as primitive values
-  : T extends readonly (infer U)[]
-  ? WritableSignal<U[]> // Handle readonly arrays
-  : T extends (infer U)[]
-  ? WritableSignal<U[]> // Handle mutable arrays
-  : T extends object
-  ? T extends (...args: unknown[]) => unknown // Functions should be wrapped as signals
-    ? WritableSignal<T>
-    : {
-        [K in keyof T]: T[K] extends (infer U)[]
-          ? WritableSignal<U[]>
-          : T[K] extends BuiltInObject
-          ? WritableSignal<T[K]>
-          : T[K] extends object
-          ? T[K] extends Signal<infer TK>
-            ? WritableSignal<TK>
-            : DeepSignalify<T[K]> // Recursive call preserves original type structure
-          : WritableSignal<T[K]>;
-      }
-  : WritableSignal<T>;
+export type DeepSignalify<T> = {
+  [K in keyof T]: T[K] extends (infer U)[]
+    ? WritableSignal<U[]>
+    : T[K] extends object
+    ? T[K] extends Signal<unknown>
+      ? T[K] // Don't double-wrap signals - keep original
+      : T[K] extends BuiltInObject
+      ? WritableSignal<T[K]>
+      : T[K] extends (...args: unknown[]) => unknown
+      ? WritableSignal<T[K]>
+      : DeepSignalify<T[K]>
+    : WritableSignal<T[K]>;
+} & (() => T) & {
+    update(updaterOrPartial: ((current: T) => Partial<T>) | Partial<T>): void;
+    set(partial: Partial<T>): void;
+  };
 
 /**
  * SignalTree type - NO CONSTRAINTS on T
@@ -111,8 +94,6 @@ export type SignalTree<T> = {
   /**
    * Core methods
    */
-  unwrap(): T;
-  update(updater: (current: T) => Partial<T>): void;
   effect(fn: (tree: T) => void): void;
   subscribe(fn: (tree: T) => void): () => void;
   destroy(): void;
@@ -152,7 +133,7 @@ export type SignalTree<T> = {
 };
 
 // ============================================
-// OTHER TYPES (keep as-is but update generics)
+// OTHER TYPES
 // ============================================
 
 export type TreePreset = 'basic' | 'performance' | 'development' | 'production';

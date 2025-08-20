@@ -66,9 +66,9 @@ interface BatchingSignalTree<T> extends SignalTree<T> {
    * @example
    * ```typescript
    * // Instead of multiple individual updates
-   * tree.update(() => ({ loading: true }));
-   * tree.update(() => ({ error: null }));
-   * tree.update(() => ({ users: [] }));
+   * tree.$.update(() => ({ loading: true }));
+   * tree.$.update(() => ({ error: null }));
+   * tree.$.update(() => ({ users: [] }));
    *
    * // Use a single batched update
    * tree.batchUpdate((state) => ({
@@ -195,14 +195,14 @@ function flushUpdates(): void {
  * @example
  * ```typescript
  * // Simple batched update
- * batchUpdates(() => tree.update(() => ({ count: 1 })));
+ * batchUpdates(() => tree.$.update(() => ({ count: 1 })));
  *
  * // Path-aware batching for nested updates
- * batchUpdates(() => tree.update(() => ({ user: { name: 'John' } })), 'user.name');
+ * batchUpdates(() => tree.$.update(() => ({ user: { name: 'John' } })), 'user.name');
  *
  * // Multiple updates get automatically batched
- * batchUpdates(() => tree.update(() => ({ loading: true })));
- * batchUpdates(() => tree.update(() => ({ error: null })));
+ * batchUpdates(() => tree.$.update(() => ({ loading: true })));
+ * batchUpdates(() => tree.$.update(() => ({ error: null })));
  * // Both execute in single microtask
  * ```
  */
@@ -285,10 +285,10 @@ export function withBatching<T>(
     }
 
     // Store the original update method
-    const originalUpdate = tree.update.bind(tree);
+    const originalUpdate = tree.$.update.bind(tree.$);
 
     // Override update method with batching
-    tree.update = (updater: (current: T) => Partial<T>) => {
+    tree.$.update = (updater: (current: T) => Partial<T>) => {
       // Always use batching for regular updates
       batchUpdates(() => originalUpdate(updater));
     };
@@ -371,12 +371,12 @@ export function withHighPerformanceBatching<T>() {
  *
  * // In tests, ensure updates are applied immediately
  * flushBatchedUpdates();
- * expect(tree.unwrap().count).toBe(1);
- * expect(tree.unwrap().name).toBe('test');
+ * expect(tree.$().count).toBe(1);
+ * expect(tree.$().name).toBe('test');
  *
  * // Before critical operations that need current state
  * flushBatchedUpdates();
- * const currentState = tree.unwrap(); // Guaranteed to be up-to-date
+ * const currentState = tree.$(); // Guaranteed to be up-to-date
  *
  * // In animation frames for precise timing
  * requestAnimationFrame(() => {

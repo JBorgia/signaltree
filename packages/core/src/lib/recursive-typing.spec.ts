@@ -5,7 +5,6 @@
 
 import { TestBed } from '@angular/core/testing';
 import { signalTree } from './signal-tree';
-import { signal } from '@angular/core';
 
 describe('SignalTree Recursive Typing Magic', () => {
   beforeEach(() => {
@@ -443,7 +442,7 @@ describe('SignalTree Recursive Typing Magic', () => {
           date: new Date('2024-01-01'),
           regex: /pattern/gi,
           map: new Map([['key', 'value']]),
-          set: new Set([1, 2, 3]),
+          mySet: new Set([1, 2, 3]),
         },
         functions: {
           arrow: () => 'arrow',
@@ -480,7 +479,7 @@ describe('SignalTree Recursive Typing Magic', () => {
       expect(tree.state.builtIns.date()).toEqual(new Date('2024-01-01'));
       expect(tree.state.builtIns.regex()).toEqual(/pattern/gi);
       expect(tree.state.builtIns.map()).toEqual(new Map([['key', 'value']]));
-      expect(tree.state.builtIns.set()).toEqual(new Set([1, 2, 3]));
+      expect(tree.state.builtIns.mySet()).toEqual(new Set([1, 2, 3]));
 
       // Functions (treated as primitives)
       expect(tree.state.functions.arrow()()).toBe('arrow');

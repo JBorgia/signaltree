@@ -655,10 +655,14 @@ export class PerformanceDashboardComponent {
       const start = performance.now();
 
       // Simulate typical operations
-      tree.$.counter.set(Math.random());
-      tree.$.data.value.set(Math.random());
-      tree.$.counter();
-      tree.$.data.value();
+      const treeState = tree.$ as {
+        counter: { set: (v: number) => void; (): number };
+        data: { value: { set: (v: number) => void; (): number } };
+      };
+      treeState.counter.set(Math.random());
+      treeState.data.value.set(Math.random());
+      treeState.counter();
+      treeState.data.value();
 
       results.push(performance.now() - start);
     }
