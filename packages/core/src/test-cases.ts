@@ -1,6 +1,8 @@
-import { WritableSignal, signal } from '@angular/core';
+// Using the internal adapter instead of direct '@angular/core' imports to maintain framework neutrality
+import { WritableSignal, signal } from './lib/lib/adapter';
 import { isEqual } from 'lodash-es';
-import { signalTree } from '@signaltree/core';
+// Use local relative import rather than package alias to satisfy lint rule
+import { signalTree } from './lib/signal-tree';
 
 export type Configuration = Partial<{
   map: Partial<Map<string, string>>;
@@ -12,8 +14,9 @@ export type ConfigurationRecord = Partial<
   Record<string | string, Configuration>
 >;
 
+// Broad index signature replaced with unknown to avoid 'any'.
 export type DateConfiguration = Partial<{
-  [K in string]: Date[keyof Date] | any; // Allows ArcGIS types plus extensions
+  [K in string]: Date[keyof Date] | unknown; // Allows ArcGIS types plus extensions
 }>;
 
 export type DateConfigurations = Record<string, DateConfiguration>;
@@ -90,21 +93,17 @@ console.log('store', tree);
 tree.$.prop2.nested2.nestedSignal4();
 
 // Accessing values
-const value1: number = tree.$.prop1();
-const value2: string = tree.$.prop2.nested1();
-const value3: boolean = tree.$.prop2.nested2.deeplyNested();
-const value4: string[] = tree.$.prop2.nested2.deeplyNestedArray();
-const value5: WritableSignal<number[] | undefined> | undefined =
-  tree.$.prop2.nested2.nested3.deeplyNestedArray;
-const value6: {
-  deeplyNested: boolean;
-  deeplyNestedArray: number[];
-  deeplyNestedUndefinedStringTyped: string;
-  deeplyNestedUndefined?: string | unknown;
-} = tree.$.prop2.nested2.nestedSignal4();
-const value7: number[] = tree.$.prop2.nested2.nestedSignal5();
-const value8: ConfigurationRecord =
-  tree.$.prop2.nested2.deeplyNestedConfiguration();
+// Access sample values (logged to avoid unused variable lint errors)
+console.log('examples', {
+  value1: tree.$.prop1(),
+  value2: tree.$.prop2.nested1(),
+  value3: tree.$.prop2.nested2.deeplyNested(),
+  value4: tree.$.prop2.nested2.deeplyNestedArray(),
+  value5: tree.$.prop2.nested2.nested3.deeplyNestedArray,
+  value6: tree.$.prop2.nested2.nestedSignal4(),
+  value7: tree.$.prop2.nested2.nestedSignal5(),
+  value8: tree.$.prop2.nested2.deeplyNestedConfiguration(),
+});
 
 // Example 1: Updating a string value
 tree.$.prop2.nested1.update((val) => val + ' world'); // Updates 'hello' to 'hello world'
@@ -130,7 +129,7 @@ console.log(
   'store.$.prop2.nested2.nested3',
   tree.$.prop2.nested2.nested3.unwrap()
 );
-tree.$.prop2.nested2.nested3.update((curr) => ({
+tree.$.prop2.nested2.nested3.update(() => ({
   deeplyNested: false,
   deeplyNestedArray: [1, 2, 3, 4],
   deeplyNestedUndefinedStringTyped: 'test1', // STRONG TYPE(string only): initial state is undefined, but it must be of type string afterward
