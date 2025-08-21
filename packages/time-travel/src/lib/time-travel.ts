@@ -1,4 +1,4 @@
-import { type SignalTree } from '@signaltree/core';
+import type { SignalTree, DeepSignalify } from '@signaltree/core';
 import { deepEqual, deepClone } from './utils';
 
 /**
@@ -385,6 +385,25 @@ export function withTimeTravel<T>(
     }
 
     const enhancedTree = createInterceptedProxy(tree);
+
+    // Best-effort: expose time-travel helpers on the callable proxy (`tree.$`)
+    try {
+      const callable = (enhancedTree as SignalTree<T>)
+        .$ as unknown as DeepSignalify<T>;
+
+      // These properties are defined on DeepSignalify in core types so dot-assignment
+      // is type-safe and avoids index-signature workarounds.
+      callable.undo = () => timeTravelManager.undo();
+      callable.redo = () => timeTravelManager.redo();
+      callable.getHistory = () => timeTravelManager.getHistory();
+      callable.resetHistory = () => timeTravelManager.resetHistory();
+      callable.jumpTo = (index: number) => timeTravelManager.jumpTo(index);
+      callable.getCurrentIndex = () => timeTravelManager.getCurrentIndex();
+      callable.canUndo = () => timeTravelManager.canUndo();
+      callable.canRedo = () => timeTravelManager.canRedo();
+    } catch {
+      // best-effort only; don't break if proxy is sealed
+    }
 
     return {
       ...enhancedTree,

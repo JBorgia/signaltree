@@ -84,15 +84,10 @@ describe('signalTree', () => {
     const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
     const tree = signalTree({ count: 0 });
 
-    tree.batchUpdate((state) => ({ count: state.count + 1 }));
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining(
-        'batchUpdate() called but batching is not enabled'
-      ),
-      expect.stringContaining(
-        'To enable batch updates, install @signaltree/batching'
-      )
-    );
+    // The core package no longer provides a runtime shim for batchUpdate on
+    // the callable proxy. The batching enhancer must be installed to get the
+    // runtime implementation. Ensure the property is not present by default.
+    expect((tree.$ as any).batchUpdate).toBeUndefined();
 
     tree.memoize((state) => state.count * 2);
     expect(consoleSpy).toHaveBeenCalledWith(

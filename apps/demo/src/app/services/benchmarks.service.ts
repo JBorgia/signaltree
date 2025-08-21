@@ -209,7 +209,7 @@ export class BenchmarkService {
     const batchTree = signalTree(state).pipe(withBatching());
 
     results.batch10 = BenchmarkService.measureTime(() => {
-      batchTree.batchUpdate((state) => {
+      batchTree.$.batchUpdate((state) => {
         const updates: any = {};
         for (let i = 0; i < 10; i++) {
           updates[`field_${i}`] = Math.random();
@@ -219,7 +219,7 @@ export class BenchmarkService {
     });
 
     results.batch100 = BenchmarkService.measureTime(() => {
-      batchTree.batchUpdate((state) => {
+      batchTree.$.batchUpdate((state) => {
         const updates: any = {};
         for (let i = 0; i < 100; i++) {
           updates[`field_${i}`] = Math.random();

@@ -278,6 +278,26 @@ export function withMemoization<T>(
       };
     };
 
+    // Also expose these helpers on the callable state proxy (`tree.$`) so
+    // consumer code can call `tree.$.memoizedUpdate(...)` and related methods
+    // as part of the callable proxy API. This is a non-destructive migration
+    // step; we keep the existing tree-level methods for backward compatibility.
+    try {
+      const treeHelpers = tree as MemoizedSignalTree<T>;
+      const stateProxy = tree.$ as unknown as {
+        memoizedUpdate?: typeof treeHelpers.memoizedUpdate;
+        clearMemoCache?: typeof treeHelpers.clearMemoCache;
+        getCacheStats?: typeof treeHelpers.getCacheStats;
+      };
+
+      stateProxy.memoizedUpdate = treeHelpers.memoizedUpdate.bind(tree);
+      stateProxy.clearMemoCache = treeHelpers.clearMemoCache.bind(tree);
+      stateProxy.getCacheStats = treeHelpers.getCacheStats.bind(tree);
+    } catch {
+      // best-effort only; don't block runtime if the callable proxy shape
+      // doesn't accept extra properties in some environments.
+    }
+
     // Clean up expired entries if TTL is set
     if (ttl) {
       const cleanup = () => {

@@ -474,6 +474,24 @@ export function withAsync<T>(
       return enhancedTree.asyncAction(submitter, actionConfig);
     };
 
+    // Also expose async helpers on the callable proxy (`tree.$`) so callers
+    // can use `tree.$.asyncAction(...)`, `tree.$.loadData(...)` and
+    // `tree.$.submitForm(...)`. Wrapped in try/catch as a best-effort
+    // non-breaking migration step.
+    try {
+      const stateProxy = tree.$ as unknown as {
+        asyncAction?: typeof enhancedTree.asyncAction;
+        loadData?: typeof enhancedTree.loadData;
+        submitForm?: typeof enhancedTree.submitForm;
+      };
+
+      stateProxy.asyncAction = enhancedTree.asyncAction.bind(tree);
+      stateProxy.loadData = enhancedTree.loadData.bind(tree);
+      stateProxy.submitForm = enhancedTree.submitForm.bind(tree);
+    } catch {
+      // ignore - best-effort only
+    }
+
     return enhancedTree;
   };
 }

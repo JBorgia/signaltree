@@ -609,7 +609,7 @@ export class BatchingDemoComponent {
     }
 
     // Use batchUpdate to efficiently update multiple state properties
-    this.store.batchUpdate((state) => ({
+    this.store.$.batchUpdate((state) => ({
       users: [...state.users, ...newUsers],
       batchQueue: [], // Clear queue after processing
       processing: false,
@@ -715,7 +715,7 @@ export class BatchingDemoComponent {
     }
 
     // Use batchUpdate to efficiently update multiple state properties
-    this.store.batchUpdate((state) => ({
+    this.store.$.batchUpdate((state) => ({
       posts: [...state.posts, ...newPosts],
       batchQueue: [], // Clear queue after processing
       processing: false,

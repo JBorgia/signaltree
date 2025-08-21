@@ -130,55 +130,6 @@ function isBuiltInObject(v: unknown): boolean {
   ) {
     return true;
   }
-
-  // Typed Arrays
-  if (
-    v instanceof Int8Array ||
-    v instanceof Uint8Array ||
-    v instanceof Uint8ClampedArray ||
-    v instanceof Int16Array ||
-    v instanceof Uint16Array ||
-    v instanceof Int32Array ||
-    v instanceof Uint32Array ||
-    v instanceof Float32Array ||
-    v instanceof Float64Array ||
-    v instanceof BigInt64Array ||
-    v instanceof BigUint64Array
-  ) {
-    return true;
-  }
-
-  // Web APIs (when available)
-  if (typeof window !== 'undefined') {
-    if (
-      v instanceof URL ||
-      v instanceof URLSearchParams ||
-      v instanceof FormData ||
-      v instanceof Blob ||
-      (typeof File !== 'undefined' && v instanceof File) ||
-      (typeof FileList !== 'undefined' && v instanceof FileList) ||
-      (typeof Headers !== 'undefined' && v instanceof Headers) ||
-      (typeof Request !== 'undefined' && v instanceof Request) ||
-      (typeof Response !== 'undefined' && v instanceof Response) ||
-      (typeof AbortController !== 'undefined' &&
-        v instanceof AbortController) ||
-      (typeof AbortSignal !== 'undefined' && v instanceof AbortSignal)
-    ) {
-      return true;
-    }
-  }
-
-  // Node.js built-ins (when available)
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const NodeBuffer = (globalThis as any)?.Buffer;
-    if (NodeBuffer && v instanceof NodeBuffer) {
-      return true;
-    }
-  } catch {
-    // Ignore if Buffer is not available
-  }
-
   return false;
 }
 
@@ -417,17 +368,17 @@ function createSignalStore<T>(
 ): DeepSignalify<T> {
   // Handle primitives and null/undefined
   if (obj === null || obj === undefined || typeof obj !== 'object') {
-    return signal(obj, { equal: equalityFn }) as DeepSignalify<T>;
+    return signal(obj, { equal: equalityFn }) as unknown as DeepSignalify<T>;
   }
 
   // Handle arrays - treat as primitive signal
   if (Array.isArray(obj)) {
-    return signal(obj, { equal: equalityFn }) as DeepSignalify<T>;
+    return signal(obj, { equal: equalityFn }) as unknown as DeepSignalify<T>;
   }
 
   // Handle built-in objects - treat as primitive signal
   if (isBuiltInObject(obj)) {
-    return signal(obj, { equal: equalityFn }) as DeepSignalify<T>;
+    return signal(obj, { equal: equalityFn }) as unknown as DeepSignalify<T>;
   }
 
   const store: Partial<DeepSignalify<T>> = {};
@@ -438,7 +389,7 @@ function createSignalStore<T>(
     console.warn(
       '[SignalTree] Circular reference detected, creating reference signal'
     );
-    return signal(obj, { equal: equalityFn }) as DeepSignalify<T>;
+    return signal(obj, { equal: equalityFn }) as unknown as DeepSignalify<T>;
   }
   processedObjects.add(obj as object);
 
@@ -553,9 +504,12 @@ function create<T>(obj: T, config: TreeConfig = {}): SignalTree<T> {
       signalState = createLazySignalTree(
         obj as object,
         equalityFn
-      ) as DeepSignalify<T>;
+      ) as unknown as DeepSignalify<T>;
     } else {
-      signalState = createSignalStore(obj, equalityFn) as DeepSignalify<T>;
+      signalState = createSignalStore(
+        obj,
+        equalityFn
+      ) as unknown as DeepSignalify<T>;
     }
   } catch (error) {
     // Fallback to eager if lazy fails
@@ -564,7 +518,10 @@ function create<T>(obj: T, config: TreeConfig = {}): SignalTree<T> {
         '[SignalTree] Lazy creation failed, falling back to eager:',
         error
       );
-      signalState = createSignalStore(obj, equalityFn) as DeepSignalify<T>;
+      signalState = createSignalStore(
+        obj,
+        equalityFn
+      ) as unknown as DeepSignalify<T>;
     } else {
       throw error;
     }
@@ -652,14 +609,13 @@ function enhanceTree<T>(
  */
 function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
   // Stub implementations for advanced features (will log warnings)
-  tree.batchUpdate = (updater: (current: T) => Partial<T>) => {
-    console.warn(
-      '⚠️ batchUpdate() called but batching is not enabled.',
-      'To enable batch updates, install @signaltree/batching'
-    );
-    // Fallback: Use the tree's nested update method
-    tree.$.update(updater);
-  };
+  // Note: batchUpdate and related batching helpers are provided by the
+  // optional @signaltree/batching enhancer. We intentionally do not add a
+  // shim here on the core SignalTree or on the callable proxy (`tree.$`) to
+  // avoid brittle proxy-wrapping and to keep core semantics stable. If a
+  // consumer calls `tree.$.batchUpdate` without installing the batching
+  // enhancer, they'll receive a runtime error — this encourages explicit
+  // installation of the batching package and prevents surprising behavior.
 
   tree.memoize = <R>(fn: (tree: T) => R, cacheKey?: string): Signal<R> => {
     console.warn(

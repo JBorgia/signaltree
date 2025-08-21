@@ -1,5 +1,19 @@
 import { TestBed } from '@angular/core/testing';
 import { signalTree } from '@signaltree/core';
+import type { DeepSignalify } from '@signaltree/core';
+
+// Helper to invoke batchUpdate on the callable proxy while keeping TypeScript
+// happy. Tests assume the core installs a stub when the batching enhancer
+// isn't enabled. We cast to the expected shape so we can call it without
+// non-null assertions in test code.
+function callBatch<T>(
+  tree: { $: DeepSignalify<T> },
+  updater: (s: T) => Partial<T>
+) {
+  (
+    tree.$ as unknown as { batchUpdate: (u: (c: T) => Partial<T>) => void }
+  ).batchUpdate(updater as (c: T) => Partial<T>);
+}
 import {
   withBatching,
   enableBatching,
@@ -17,7 +31,7 @@ describe('Batching', () => {
   it('should enhance tree with batching capabilities', () => {
     const tree = signalTree({ count: 0 }).pipe(withBatching());
 
-    expect(tree.batchUpdate).toBeDefined();
+    expect(tree.$.batchUpdate).toBeDefined();
   });
 
   it('should batch multiple updates', async () => {
@@ -34,9 +48,9 @@ describe('Batching', () => {
     })(tree.state.count.set);
 
     // Perform multiple batched updates
-    tree.batchUpdate((state) => ({ count: state.count + 1 }));
-    tree.batchUpdate((state) => ({ count: state.count + 1 }));
-    tree.batchUpdate((state) => ({ count: state.count + 1 }));
+    tree.$.batchUpdate((state) => ({ count: state.count + 1 }));
+    tree.$.batchUpdate((state) => ({ count: state.count + 1 }));
+    tree.$.batchUpdate((state) => ({ count: state.count + 1 }));
 
     // Updates should be batched (not executed immediately)
     expect(tree.state.count()).toBe(0);
@@ -55,7 +69,7 @@ describe('Batching', () => {
   it('should allow manual flush of batched updates', () => {
     const tree = signalTree({ count: 0 }).pipe(withBatching());
 
-    tree.batchUpdate((state) => ({ count: state.count + 5 }));
+    tree.$.batchUpdate((state) => ({ count: state.count + 5 }));
 
     // Should be pending
     expect(tree.state.count()).toBe(0);
@@ -71,20 +85,20 @@ describe('Batching', () => {
   it('should work with enableBatching convenience function', () => {
     const tree = signalTree({ count: 0 }).pipe(enableBatching());
 
-    expect(tree.batchUpdate).toBeDefined();
+    expect(tree.$.batchUpdate).toBeDefined();
 
-    tree.batchUpdate(() => ({ count: 10 }));
+    tree.$.batchUpdate(() => ({ count: 10 }));
     expect(hasPendingUpdates()).toBe(true);
   });
 
   it('should work with high performance batching', () => {
     const tree = signalTree({ count: 0 }).pipe(withHighPerformanceBatching());
 
-    expect(tree.batchUpdate).toBeDefined();
+    expect(tree.$.batchUpdate).toBeDefined();
 
     // Should handle larger batch sizes
     for (let i = 0; i < 50; i++) {
-      tree.batchUpdate((state) => ({ count: state.count + 1 }));
+      tree.$.batchUpdate((state) => ({ count: state.count + 1 }));
     }
 
     expect(getBatchQueueSize()).toBe(50);
@@ -96,7 +110,7 @@ describe('Batching', () => {
     );
 
     // Should still have batchUpdate method but it should be the original stub
-    tree.batchUpdate(() => ({ count: 5 }));
+    tree.$.batchUpdate(() => ({ count: 5 }));
 
     // Should update immediately since batching is disabled
     expect(tree.state.count()).toBe(5);

@@ -110,7 +110,15 @@ let lastBatchingManager: {
   flush: () => void;
   getSize: () => number;
   hasPending: () => boolean;
+  // Optional inspector for tests/debugging
+  getQueue?: () => Array<BatchedUpdate>;
 } | null = null;
+
+// Maps a wrapped callable proxy to its dot-path within the tree
+const proxyPathMap: WeakMap<object, string> = new WeakMap();
+// Cache wrapper proxies for original callable proxies so we don't create
+// a new wrapper on every property access
+const wrapperCache: WeakMap<object, unknown> = new WeakMap();
 
 /**
  * Enhanced queue management with priority and deduplication
@@ -285,6 +293,37 @@ export function withBatching<T>(
   return (tree: SignalTree<T>): BatchingSignalTree<T> => {
     // withBatching invoked
     if (!enabled) {
+      // Replace the callable state with a tiny proxy that provides a
+      // `batchUpdate` stub which delegates to the normal `.update`. This is a
+      // best-effort compatibility shim used only when batching is disabled.
+      try {
+        const original = tree.$ as unknown as object;
+        const wrapper = new Proxy(original as object, {
+          get(target, prop, receiver) {
+            if (prop === 'batchUpdate') {
+              return (updater: (current: T) => Partial<T>) => {
+                (tree.$ as DeepSignalify<T>).update(updater);
+              };
+            }
+            const val = Reflect.get(target, prop, receiver);
+            return typeof val === 'function'
+              ? (val as (...a: unknown[]) => unknown).bind(target)
+              : val;
+          },
+          apply(target, thisArg, argArray) {
+            return (target as (...a: unknown[]) => unknown).apply(
+              thisArg,
+              argArray
+            );
+          },
+        }) as unknown as DeepSignalify<T>;
+
+        tree.state = wrapper;
+        tree.$ = wrapper;
+      } catch {
+        // ignore - best-effort only
+      }
+
       return tree as BatchingSignalTree<T>;
     }
     // Per-instance batching state to avoid cross-tree interference
@@ -365,86 +404,149 @@ export function withBatching<T>(
       return false;
     }
 
-    // Override update and batchUpdate to use per-instance queue
-    tree.$.update = (updater: (current: T) => Partial<T>) => {
-      // Regular imperative updates should only be queued. Flushing is handled
-      // by maxBatchSize, batchUpdate (microtask), or manual flush.
-      instanceAddToQueue(
-        {
-          fn: () => originalUpdate(updater),
-          startTime: performance.now(),
-          depth: 0,
-        },
-        false
-      );
-    };
+    // We will wrap callable proxies (root and nested) so that .update and
+    // .batchUpdate on any node route through the per-instance queue with a
+    // stable path annotation. Use wrapperCache to avoid double-wrapping.
+    const originalState = tree.$ as unknown as object;
 
-    // Create an enhanced wrapper around the callable state proxy so we can
-    // intercept `.update` accesses. The original callable proxy always returned
-    // its own update implementation from the `get` trap, so assigning
-    // `tree.$.update = ...` didn't override it. Wrapping preserves all other
-    // behavior while ensuring `.update` routes through our batching queue.
-    // Keep original callable proxy/state
-    type CallableState = DeepSignalify<T> & {
-      apply?: (...args: unknown[]) => unknown;
-    };
-    const originalState = tree.$ as unknown as CallableState;
+    function createNodeWrapper(node: unknown, path = ''): unknown {
+      if (wrapperCache.has(node as object))
+        return wrapperCache.get(node as object);
 
-    const callableWrapper = function thisCallable(
-      this: unknown,
-      ...args: unknown[]
-    ) {
-      return originalState.apply
-        ? originalState.apply(this, args)
-        : (originalState as unknown as () => unknown)();
-    };
-
-    const stateProxy = new Proxy(callableWrapper, {
-      apply(_target, thisArg, argArray: unknown[]) {
-        return originalState.apply
-          ? originalState.apply(thisArg, argArray)
-          : (originalState as unknown as () => unknown)();
-      },
-      get(_target, prop, receiver) {
-        if (prop === 'update') {
-          return (updater: (current: T) => Partial<T>) => {
-            instanceAddToQueue(
-              {
-                fn: () => originalUpdate(updater),
-                startTime: performance.now(),
-                depth: 0,
-              },
-              false // imperative updates should only queue
-            );
+      const callable = function wrappedCallable(
+        this: unknown,
+        ...args: unknown[]
+      ) {
+        // If the original node is callable, call it
+        if (typeof node === 'function') {
+          const fn = node as ((...a: unknown[]) => unknown) & {
+            apply?: (...a: unknown[]) => unknown;
           };
+          return fn.apply ? fn.apply(this, args) : (fn as () => unknown)();
         }
-        // Delegate everything else to the original state proxy
-        const val = Reflect.get(originalState, prop, receiver);
-        return typeof val === 'function' ? val.bind(originalState) : val;
-      },
-      has(_target, prop) {
-        return prop in originalState;
-      },
-      ownKeys() {
-        return Reflect.ownKeys(originalState);
-      },
-      getOwnPropertyDescriptor(_target, prop) {
-        return Reflect.getOwnPropertyDescriptor(
-          originalState,
-          prop as PropertyKey
-        );
-      },
-      set(_target, prop, value) {
-        return Reflect.set(originalState as object, prop as PropertyKey, value);
-      },
-    }) as unknown as DeepSignalify<T>;
+        return undefined;
+      } as unknown;
+
+      const nodeObj = node as object;
+      const proxy = new Proxy(callable as object, {
+        apply(_t, thisArg, argArray) {
+          if (typeof node === 'function') {
+            const fn = node as ((...a: unknown[]) => unknown) & {
+              apply?: (...a: unknown[]) => unknown;
+            };
+            return fn.apply
+              ? fn.apply(thisArg, argArray)
+              : (fn as () => unknown)();
+          }
+          return undefined;
+        },
+        get(_t, prop, receiver) {
+          // Provide path-aware update/batchUpdate on the wrapper
+          if (prop === 'update') {
+            return (updater: (current: T) => Partial<T>) => {
+              instanceAddToQueue(
+                {
+                  fn: () => {
+                    const upd = (
+                      node as unknown as { update?: (u: unknown) => unknown }
+                    ).update;
+                    if (typeof upd === 'function') return upd(updater);
+                    return undefined;
+                  },
+                  startTime: performance.now(),
+                  depth: path ? parsePath(path).length : 0,
+                  path,
+                },
+                false
+              );
+            };
+          }
+
+          if (prop === 'batchUpdate') {
+            return (updater: (current: T) => Partial<T>) => {
+              instanceAddToQueue(
+                {
+                  fn: () => {
+                    const upd = (
+                      node as unknown as { update?: (u: unknown) => unknown }
+                    ).update;
+                    if (typeof upd === 'function') return upd(updater);
+                    return undefined;
+                  },
+                  startTime: performance.now(),
+                  depth: path ? parsePath(path).length : 0,
+                  path,
+                },
+                true
+              );
+            };
+          }
+
+          // Expose callable marker
+          if (prop === '__isCallableProxy__') return true;
+
+          // Delegate other properties to the original node
+          const val = Reflect.get(nodeObj, prop, receiver);
+          // If it's a nested callable proxy, wrap it with the proper path
+          if (
+            typeof val === 'function' &&
+            (val as unknown as { __isCallableProxy__?: boolean })
+              .__isCallableProxy__ === true
+          ) {
+            const childPath = path ? `${path}.${String(prop)}` : String(prop);
+            const wrappedChild = createNodeWrapper(val, childPath);
+            return wrappedChild;
+          }
+
+          // If this looks like an Angular signal (callable with `.set`),
+          // return it directly so we don't lose its properties by binding.
+          if (
+            typeof val === 'function' &&
+            typeof (val as unknown as { set?: unknown }).set === 'function'
+          ) {
+            return val;
+          }
+
+          // For other functions, bind to the original node object so `this`
+          // remains correct. For non-functions, return as-is.
+          return typeof val === 'function'
+            ? (val as (...a: unknown[]) => unknown).bind(nodeObj)
+            : val;
+        },
+        has(_t, prop) {
+          return Reflect.has(nodeObj, prop);
+        },
+        ownKeys() {
+          return Reflect.ownKeys(nodeObj);
+        },
+        getOwnPropertyDescriptor(_t, prop) {
+          return Reflect.getOwnPropertyDescriptor(nodeObj, prop as PropertyKey);
+        },
+        set(_t, prop, value) {
+          return Reflect.set(nodeObj as object, prop as PropertyKey, value);
+        },
+      });
+
+      // Record path mapping
+      proxyPathMap.set(proxy as object, path);
+      wrapperCache.set(node as object, proxy);
+      return proxy;
+    }
+
+    // Create wrapped root proxy and replace tree references
+    const stateProxy = createNodeWrapper(originalState, '');
 
     const enhancedTree = tree as BatchingSignalTree<T>;
     // Replace the tree's state and $ references with our proxy wrapper
     enhancedTree.state = stateProxy as unknown as DeepSignalify<T>;
     enhancedTree.$ = stateProxy as unknown as DeepSignalify<T>;
 
-    enhancedTree.batchUpdate = (updater: (current: T) => Partial<T>) => {
+    // Attach batchUpdate to the callable state proxy so the API lives on `tree.$`
+    (
+      stateProxy as unknown as {
+        batchUpdate?: (u: (current: T) => Partial<T>) => void;
+      }
+    ).batchUpdate = (updater: (current: T) => Partial<T>) => {
       instanceAddToQueue(
         {
           fn: () => originalUpdate(updater),
@@ -460,6 +562,7 @@ export function withBatching<T>(
       flush: instanceFlushUpdates,
       getSize: () => instanceQueue.length,
       hasPending: () => instanceQueue.length > 0,
+      getQueue: () => instanceQueue.slice(),
     };
 
     return enhancedTree;
@@ -651,4 +754,40 @@ export function hasPendingUpdates(): boolean {
 export function getBatchQueueSize(): number {
   if (lastBatchingManager) return lastBatchingManager.getSize();
   return updateQueue.length;
+}
+
+/**
+ * Returns a shallow copy of pending queued updates for debugging/tests.
+ * This is not part of the public runtime contract, but helps tests inspect
+ * internal queue state during development.
+ */
+export function getPendingBatchedUpdates(): Array<BatchedUpdate> {
+  if (lastBatchingManager && lastBatchingManager.getQueue) {
+    return lastBatchingManager.getQueue() || [];
+  }
+  return updateQueue.slice();
+}
+
+/**
+ * DEV-ONLY: Return friendly node paths for queued batched updates.
+ * Uses the internal proxyPathMap to map wrapper proxies to their dot-paths.
+ * This helper is intended for debugging and tests only and may be removed
+ * or behind a feature flag in production builds.
+ */
+export function getPendingBatchedUpdatePaths(): string[] {
+  const queue = getPendingBatchedUpdates();
+  const paths: string[] = [];
+  for (const entry of queue) {
+    if (entry.path) {
+      paths.push(entry.path);
+      continue;
+    }
+    // If path not available, try to infer from queued fn using proxyPathMap:
+    // Some queued functions close over wrapped proxies; attempt a best-effort
+    // string extraction by checking known wrapperCache/proxyPathMap entries.
+    // This is best-effort and primarily useful in tests where we set path
+    // explicitly when scheduling updates.
+    paths.push('<unknown>');
+  }
+  return paths;
 }

@@ -1,4 +1,4 @@
-import { computed, Signal, signal } from '@angular/core';
+import { Signal, signal } from '@angular/core';
 import { SignalTree } from '@signaltree/core';
 
 /**
@@ -384,37 +384,53 @@ export function withDevTools<T>(
     // proxy's get trap often returns values from the nested store instead of
     // the function target. A wrapper proxy preserves callability while
     // intercepting property access safely.
-    const originalState = tree.$ as unknown as Record<string | symbol, any> &
-      ((() => T) | Function);
+    // Callable state type: a function returning T with additional indexable
+    // helper properties. Using `unknown` for property values keeps us safe
+    // while allowing runtime binding of helpers like `update`.
+    type CallableState<S> = (() => S) & Record<PropertyKey, unknown>;
+
+    const originalState = tree.$ as unknown as CallableState<T>;
+
+    const maybeUpdate = originalState['update'];
 
     const originalUpdate =
-      typeof originalState.update === 'function'
-        ? originalState.update.bind(originalState)
+      typeof maybeUpdate === 'function'
+        ? (maybeUpdate as (u: unknown) => unknown).bind(originalState)
         : undefined;
 
-    const stateProxy = new Proxy(originalState as any, {
-      apply(target, thisArg, args) {
+    const stateProxy = new Proxy(originalState, {
+      apply() {
         // Preserve callable behavior
-        return (originalState as any)();
+        return originalState();
       },
-      get(target, prop, receiver) {
+      get(_target, prop) {
         if (prop === 'update') {
           return (updater: ((current: T) => Partial<T>) | Partial<T>) => {
             // Instrumented update wrapper
             if (typeof console !== 'undefined') {
               console.log('[DevTools] Update method called');
             }
+            const startTime =
+              typeof performance !== 'undefined' && performance.now
+                ? performance.now()
+                : Date.now();
 
-            const startTime = performance.now();
-            const result = originalUpdate ? originalUpdate(updater) : undefined;
-            const duration = performance.now() - startTime;
-            const newState = (originalState as any)();
+            const result = originalUpdate
+              ? (originalUpdate as (u: unknown) => unknown)(updater)
+              : undefined;
+
+            const duration =
+              typeof performance !== 'undefined' && performance.now
+                ? performance.now() - startTime
+                : Date.now() - startTime;
+
+            const newState = originalState();
 
             // Track performance
             try {
               metrics.trackModuleUpdate('core', duration);
-            } catch (e) {
-              // Swallow to avoid interfering with app behavior
+            } catch (err) {
+              console.debug('devtools: metrics.trackModuleUpdate failed', err);
             }
 
             if (duration > performanceThreshold) {
@@ -425,40 +441,49 @@ export function withDevTools<T>(
                   duration,
                   performanceThreshold
                 );
-              } catch {}
+              } catch (err) {
+                console.debug(
+                  'devtools: logger.logPerformanceWarning failed',
+                  err
+                );
+              }
             }
 
             if (browserDevTools) {
               try {
                 browserDevTools.send('UPDATE', newState);
-              } catch {}
+              } catch (err) {
+                console.debug('devtools: browserDevTools.send failed', err);
+              }
             }
 
             return result;
           };
         }
 
-        const val = Reflect.get(originalState as any, prop);
-        if (typeof val === 'function') return val.bind(originalState);
+        const val = Reflect.get(originalState, prop);
+        if (typeof val === 'function')
+          return (val as (...a: unknown[]) => unknown).bind(originalState);
         return val;
       },
       has() {
         return true;
       },
       ownKeys() {
-        return Reflect.ownKeys(originalState as any);
+        return Reflect.ownKeys(originalState);
       },
       getOwnPropertyDescriptor(target, prop) {
-        return Reflect.getOwnPropertyDescriptor(originalState as any, prop);
+        return Reflect.getOwnPropertyDescriptor(originalState, prop);
       },
     });
 
-    // Replace the callable state proxy on the tree with our wrapper
+    // Replace the callable state proxy on the tree with our wrapper. Use a
+    // defensive assignment to avoid type-assertion errors in strict codepaths.
     try {
-      (tree as any).$ = stateProxy;
-    } catch (e) {
-      // If assignment fails for any reason, fall back to best-effort
-      // instrumentation by leaving the original state in place.
+      (tree as unknown as { $?: unknown }).$ = stateProxy;
+    } catch (assignErr) {
+      console.debug('devtools: could not replace tree.$ with proxy', assignErr);
+      // Fall back to leaving the original tree.$ in place.
     }
     const devToolsInterface: ModularDevToolsInterface<T> = {
       activityTracker,

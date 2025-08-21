@@ -73,6 +73,49 @@ export function withMiddleware<T>(
             };
           }
 
+          if (prop === 'batchUpdate') {
+            return (updater: (current: T) => Partial<T>) => {
+              const action = 'BATCH_UPDATE';
+              const currentState = tree.$();
+              const updateResult = updater(currentState);
+              const treeMiddlewares =
+                (middlewareMap.get(tree) as Middleware<T>[]) || [];
+
+              // Execute 'before' middleware hooks
+              for (const middleware of treeMiddlewares) {
+                if (
+                  middleware.before &&
+                  !middleware.before(action, updateResult, currentState)
+                ) {
+                  // Middleware blocked the batch update
+                  return;
+                }
+              }
+
+              const previousState = currentState;
+
+              // Call the original batchUpdate on the callable target
+              (value as (updater: (current: T) => Partial<T>) => void).call(
+                target,
+                updater
+              );
+
+              const newState = tree.$();
+
+              // Execute 'after' middleware hooks
+              for (const middleware of treeMiddlewares) {
+                if (middleware.after) {
+                  middleware.after(
+                    action,
+                    updateResult,
+                    previousState,
+                    newState
+                  );
+                }
+              }
+            };
+          }
+
           if (prop === 'set') {
             // Intercept set method too
             return (partial: Partial<T>) => {
@@ -161,44 +204,8 @@ export function withMiddleware<T>(
       middlewareMap.set(tree, filtered);
     };
 
-    // Store original batchUpdate for enhancement
-    const originalBatchUpdate = tree.batchUpdate;
-
-    // Override batchUpdate to include middleware
-    enhancedTree.batchUpdate = (updater: (current: T) => Partial<T>) => {
-      const action = 'BATCH_UPDATE';
-      const currentState = tree.$();
-      const updateResult = updater(currentState);
-      const treeMiddlewares =
-        (middlewareMap.get(tree) as Middleware<T>[]) || [];
-
-      // Execute 'before' middleware hooks
-      for (const middleware of treeMiddlewares) {
-        if (
-          middleware.before &&
-          !middleware.before(action, updateResult, currentState)
-        ) {
-          // Middleware blocked the update
-          return;
-        }
-      }
-
-      // Capture state before update for 'after' hooks
-      const previousState = currentState;
-
-      // Execute the actual batch update
-      originalBatchUpdate.call(tree, updater);
-
-      // Get new state after update
-      const newState = tree.$();
-
-      // Execute 'after' middleware hooks
-      for (const middleware of treeMiddlewares) {
-        if (middleware.after) {
-          middleware.after(action, updateResult, previousState, newState);
-        }
-      }
-    };
+    // batchUpdate is intercepted on the callable proxy (`tree.$`) so no
+    // explicit assignment on the tree object is necessary here.
 
     // Override destroy to cleanup middleware
     const originalDestroy = tree.destroy;

@@ -1,5 +1,5 @@
 import { computed, Signal, WritableSignal, isSignal } from '@angular/core';
-import type { SignalTree } from '@signaltree/core';
+import type { SignalTree, DeepSignalify } from '@signaltree/core';
 
 /**
  * Entity helpers interface - provides CRUD operations
@@ -42,8 +42,10 @@ function createEntityHelpers<T, E extends { id: string | number }>(
   // The state property is of type DeepSignalify<T>
   const getEntitySignal = (): WritableSignal<E[]> => {
     // Access the state property - it's already a signal due to DeepSignalify
-    // We need to use type assertion here because TypeScript can't track the deep signalification
-    const stateProperty = (tree.state as any)[entityKey];
+    // Use DeepSignalify<T> to represent the deeply-signalified shape and avoid `any`.
+    const stateProperty = (tree.state as unknown as DeepSignalify<T>)[
+      entityKey as keyof DeepSignalify<T>
+    ];
 
     // Check if it exists
     if (!stateProperty) {
@@ -197,6 +199,25 @@ export function withEntities(config: EntityConfig = {}) {
         return createEntityHelpers<T, E>(tree, entityKey);
       },
     });
+
+    // Also expose asCrud on the callable proxy so callers can obtain
+    // entity helpers from `tree.$.asCrud('users')`. Wrap in try/catch so
+    // environments where the proxy is sealed won't throw.
+    try {
+      const stateProxy = tree.$ as unknown as {
+        asCrud?: <E extends { id: string | number }>(
+          key: keyof T
+        ) => EntityHelpers<E> | undefined;
+      };
+
+      stateProxy.asCrud = function asCrudOnState<
+        E extends { id: string | number }
+      >(key: keyof T) {
+        return createEntityHelpers<T, E>(tree, key);
+      };
+    } catch {
+      // best-effort only
+    }
 
     return enhancedTree;
   };

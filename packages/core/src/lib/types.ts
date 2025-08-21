@@ -75,6 +75,52 @@ export type DeepSignalify<T> = {
 } & (() => T) & {
     update(updaterOrPartial: ((current: T) => Partial<T>) | Partial<T>): void;
     set(partial: Partial<T>): void;
+    // batchUpdate lives on the callable proxy. The core runtime will install
+    // a harmless stub when the batching enhancer isn't enabled so callers
+    // can safely invoke `tree.$.batchUpdate(...)` without runtime checks.
+    batchUpdate(updater: (current: T) => Partial<T>): void;
+    // Helpers that enhancers attach to the callable proxy. These are now
+    // considered part of the public callable proxy API for a smoother
+    // developer experience.
+    memoizedUpdate: (
+      updater: (current: T) => Partial<T>,
+      cacheKey?: string
+    ) => void;
+    clearMemoCache: (key?: string) => void;
+    getCacheStats: () => {
+      size?: number;
+      hitRate?: number;
+      totalHits?: number;
+      totalMisses?: number;
+      keys?: string[];
+    };
+    asyncAction: <TInput = void, TResult = void>(
+      operation: (input: TInput) => Promise<TResult>,
+      config?: AsyncActionConfig<T, TResult>
+    ) => AsyncAction<TInput, TResult>;
+    loadData: <TResult = void>(
+      loader: () => Promise<TResult>,
+      config?: AsyncActionConfig<T, TResult>
+    ) => AsyncAction<void, TResult>;
+    submitForm: <TInput = void, TResult = void>(
+      submitter: (input: TInput) => Promise<TResult>,
+      config?: AsyncActionConfig<T, TResult>
+    ) => AsyncAction<TInput, TResult>;
+    asCrud: <E extends { id: string | number } = { id: string | number }>(
+      entityKey?: keyof T
+    ) => EntityHelpers<E>;
+    // Time-travel helpers
+    undo: () => boolean;
+    redo: () => boolean;
+    getHistory: () => TimeTravelEntry<T>[];
+    resetHistory: () => void;
+    jumpTo: (index: number) => boolean;
+    getCurrentIndex: () => number;
+    canUndo: () => boolean;
+    canRedo: () => boolean;
+    // DevTools interface attached by the devtools enhancer. Typed as unknown
+    // here to avoid introducing a hard dependency from core -> devtools.
+    __devTools: unknown;
   };
 
 /**
@@ -116,7 +162,6 @@ export type SignalTree<T> = {
   // unwrapping and update APIs for the nested signals.
 
   // Extended features
-  batchUpdate(updater: (current: T) => Partial<T>): void;
   memoize<R>(fn: (tree: T) => R, cacheKey?: string): Signal<R>;
   optimize(): void;
   clearCache(): void;
@@ -203,5 +248,5 @@ export interface TimeTravelEntry<T> {
   action: string;
   timestamp: number;
   state: T;
-  payload: unknown;
+  payload?: unknown;
 }
