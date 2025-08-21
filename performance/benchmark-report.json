@@ -1,0 +1,12 @@
+{
+  "timestamp": "2025-08-20T21:14:41.551Z",
+  "usingMedian": false,
+  "previousFile": null,
+  "failures": [],
+  "variabilityWarnings": [],
+  "totals": {
+    "cases": 6,
+    "totalMs": 1.7587489999999946,
+    "totalOps": 7200
+  }
+}

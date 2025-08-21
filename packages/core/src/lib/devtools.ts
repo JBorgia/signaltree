@@ -1,15 +1,16 @@
-import { isSignal } from './adapter';
-import type { SignalTree, PerformanceMetrics } from './types';
+// Minimal in-core devtools registry and snapshot helpers.
+// Purpose: provide the small runtime API core expects (register/list/snapshot)
+// without pulling in the full @signaltree/devtools package and without
+// creating a project dependency cycle in the build graph.
 
-// Global registry symbol (shared across bundles if Symbol.for)
 const REGISTRY_KEY = Symbol.for('__SIGNALTREE_REGISTRY__');
 
 interface RegistryEntry {
   name: string;
-  tree: SignalTree<unknown>; // intentionally widened for heterogeneous storage
+  tree: unknown;
   created: number;
-  version: () => number;
-  getMetrics: () => PerformanceMetrics;
+  version?: () => number;
+  getMetrics?: () => unknown;
 }
 
 type RegistryMap = Map<string, RegistryEntry> & { _counter?: number };
@@ -26,55 +27,41 @@ function getGlobalRegistry(): RegistryMap {
 }
 
 function shouldRegister(): boolean {
-  // Detect production via typical env markers without referencing Node types directly
-  interface GlobalLike {
+  // Prefer a build-time define so bundlers can DCE this module in production.
+  // If __DEV__ is defined by the build tool it takes precedence. Otherwise
+  // fall back to runtime env detection for environments that don't define it.
+  // Prefer a build-time define if available on globalThis (avoid redeclaring __DEV__ here)
+  const globalDev = (globalThis as any).__DEV__;
+  if (typeof globalDev !== 'undefined') return Boolean(globalDev);
+  const g = globalThis as unknown as {
     process?: { env?: Record<string, string | undefined> };
     import?: { meta?: { env?: { MODE?: string } } };
-  }
-  const g = globalThis as unknown as GlobalLike;
+  };
   const envNode = g.process?.env?.['NODE_ENV'];
-  const envVite = g.import?.meta?.env?.MODE;
+  const envVite = (g.import as any)?.meta?.env?.MODE;
   const mode = envNode || envVite;
-  if (mode === 'production') return false;
-  return true;
+  return mode !== 'production';
 }
 
-export function registerTree<T>(
-  tree: SignalTree<T>,
-  explicitName?: string
-): string | null {
+export function registerTree<T>(tree: T, explicitName?: string): string | null {
   if (!shouldRegister()) return null;
   const registry = getGlobalRegistry();
   registry._counter = (registry._counter ?? 0) + 1;
   const name = explicitName || `tree#${registry._counter}`;
+  // Avoid accidental duplicate entries for the same name
+  if (registry.has(name)) registry.delete(name);
   registry.set(name, {
     name,
-    tree: tree as unknown as SignalTree<unknown>,
+    tree,
     created: Date.now(),
-    version: tree.getVersion,
-    getMetrics: () => {
-      try {
-        return typeof tree.getMetrics === 'function'
-          ? tree.getMetrics()
-          : {
-              updates: 0,
-              computations: 0,
-              cacheHits: 0,
-              cacheMisses: 0,
-              averageUpdateTime: 0,
-            };
-      } catch {
-        return {
-          updates: 0,
-          computations: 0,
-          cacheHits: 0,
-          cacheMisses: 0,
-          averageUpdateTime: 0,
-        };
-      }
-    },
+    version: (tree as any).getVersion?.bind(tree),
+    getMetrics: (tree as any).getMetrics?.bind(tree),
   });
-  (tree as unknown as { __devtoolsId?: string }).__devtoolsId = name;
+  try {
+    (tree as any).__devtoolsId = name;
+  } catch {
+    // ignore
+  }
   return name;
 }
 
@@ -88,99 +75,51 @@ export function listTrees(): string[] {
   return Array.from(getGlobalRegistry().keys());
 }
 
-export function getTree(name: string): SignalTree<unknown> | undefined {
+export function getTree(name: string): unknown | undefined {
   if (!shouldRegister()) return undefined;
   const entry = getGlobalRegistry().get(name);
   return entry?.tree;
 }
 
-function unwrapAny(value: unknown): unknown {
-  if (isSignal(value)) {
+// Prefer the tree's own `unwrap()` when available. This avoids coupling to
+// the host adapter and is faster than walking signals manually.
+function unwrapTreeLike(value: unknown): unknown {
+  const maybe = value as { unwrap?: () => unknown; state?: unknown };
+  if (typeof maybe?.unwrap === 'function') {
     try {
-      return (value as () => unknown)();
+      return maybe.unwrap();
     } catch {
-      return undefined;
+      // ignore
     }
   }
-  if (Array.isArray(value)) {
-    return value.map(unwrapAny);
-  }
-  if (value && typeof value === 'object') {
-    const out: Record<string | symbol, unknown> = {};
-    for (const k of Reflect.ownKeys(value)) {
-      const key = k as string | symbol;
-      out[key] = unwrapAny((value as Record<string | symbol, unknown>)[key]);
-    }
-    return out;
-  }
+  // Fallback: shallowly follow `.state` if present (covers registered objects)
+  if (maybe && 'state' in maybe) return unwrapTreeLike((maybe as any).state);
   return value;
 }
 
-export interface SnapshotOptions {
-  includeMetrics?: boolean;
-}
-
-export function snapshotTree(name: string, opts: SnapshotOptions = {}) {
+export function snapshotTree(
+  name: string,
+  opts: { includeMetrics?: boolean } = { includeMetrics: false }
+) {
   if (!shouldRegister()) return null;
   const entry = getGlobalRegistry().get(name);
   if (!entry) return null;
+  const t = entry.tree as any;
   return {
     name: entry.name,
-    version: entry.version(),
-    state: unwrapAny(entry.tree.state),
-    metrics: opts.includeMetrics ? entry.getMetrics() : undefined,
+    version: entry.version ? entry.version() : undefined,
+    state:
+      typeof t?.unwrap === 'function' ? t.unwrap() : unwrapTreeLike(t?.state),
+    metrics:
+      opts.includeMetrics && entry.getMetrics ? entry.getMetrics() : undefined,
     created: entry.created,
   };
 }
 
 export function snapshot(value: unknown): unknown {
-  return unwrapAny(value);
+  const maybe = value as any;
+  return typeof maybe?.unwrap === 'function' ? maybe.unwrap() : value;
 }
 
-export const __DEVTOOLS_META__ = {
-  key: String(REGISTRY_KEY),
-};
-
-/**
- * Performance Metrics Guide
- * ==========================
- * The snapshot / snapshotMeta helpers expose a `metrics` object with the following fields:
- *
- *  updates
- *    Total root state mutations applied (version bumps). High frequency without
- *    corresponding UI or consumer benefit can signal redundant writes or that
- *    batching (`batchUpdate`) should be enabled / expanded.
- *
- *  computations
- *    Number of computed / memoized derivations executed. If computations grows
- *    much faster than updates, you may be over‑deriving (too many dependent
- *    computed signals) or missing memoization boundaries. Consider splitting
- *    large computeds or introducing more granular signals.
- *
- *  cacheHits & cacheMisses
- *    These track memoization effectiveness. A cache hit means a computed value
- *    was served from cache (dependencies unchanged). A miss triggers a recompute.
- *    Monitor the ratio: a falling hit rate (hits / (hits + misses)) indicates
- *    either increasingly dynamic dependency graphs or insufficient caching.
- *
- *  averageUpdateTime (ms)
- *    Mean wall‑clock time to process a single update cycle (including invalidation
- *    + propagation). Stable or decreasing values are ideal. Regressions can point
- *    to expensive new derivations, deep object copies, or large fan‑out graphs.
- *
- * Interpreting Changes
- * --------------------
- *  - Rising averageUpdateTime with stable updates/computations: each update got slower;
- *    profile recent reducers or heavy computeds.
- *  - Rising computations with flat updates: derivations are invalidating more often;
- *    examine dependency breadth or introduce memoization.
- *  - High cacheMisses relative to cacheHits: consider splitting computeds so unrelated
- *    changes don't invalidate broad dependency sets.
- *  - Spiky metrics: run the variance benchmarks (scripts/performance/*variance*) to
- *    gather distribution (median, stddev, p95) for more robust comparisons.
- *
- * Resetting Baselines
- * -------------------
- * Use the performance scripts (see root package.json `perf:bench:*`) to capture and
- * guard against regressions. Approve intentional performance shifts by updating baselines.
- */
+export const __DEVTOOLS_META__ = { key: String(REGISTRY_KEY) } as const;
+export const __DEVTOOLS_ENABLED__ = shouldRegister();

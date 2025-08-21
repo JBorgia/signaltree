@@ -1,8 +1,8 @@
 // Using the internal adapter instead of direct '@angular/core' imports to maintain framework neutrality
-import { WritableSignal, signal } from './lib/lib/adapter';
 import { isEqual } from 'lodash-es';
 // Use local relative import rather than package alias to satisfy lint rule
 import { signalTree } from './lib/signal-tree';
+import { signal, WritableSignal } from './lib/adapter';
 
 export type Configuration = Partial<{
   map: Partial<Map<string, string>>;
@@ -116,7 +116,7 @@ tree.$.prop2.nested2.nestedSignal5.update((arr) => arr.map((x) => x * 2)); // Do
 
 // Example 4: Unwrapping part of the store
 const unwrappedNested3: Partial<Nested3> =
-  tree.$.prop2.nested2.nested3.deeplyNested3.unwrap();
+  tree.$.prop2.nested2.nested3.deeplyNested3();
 console.log(unwrappedNested3.deeplyNestedArray); // Output: [7, 8]
 
 // Example 5: Handling undefined values in updates
@@ -125,20 +125,14 @@ tree.$.prop2.nested2.nested3.deeplyNestedUndefinedStringTyped.update(
 ); // Updates with a new string value
 
 // Example 6: Accessing nested signals
-console.log(
-  'store.$.prop2.nested2.nested3',
-  tree.$.prop2.nested2.nested3.unwrap()
-);
+console.log('store.$.prop2.nested2.nested3', tree.$.prop2.nested2.nested3());
 tree.$.prop2.nested2.nested3.update(() => ({
   deeplyNested: false,
   deeplyNestedArray: [1, 2, 3, 4],
   deeplyNestedUndefinedStringTyped: 'test1', // STRONG TYPE(string only): initial state is undefined, but it must be of type string afterward
   deeplyNestedStringOrUndefined: 'test2', // WEAKER TYPE(unknown | string): initial state is undefined, but it can be undefined or string afterward
 }));
-console.log(
-  'store.$.prop2.nested2.nested3',
-  tree.$.prop2.nested2.nested3.unwrap()
-);
+console.log('store.$.prop2.nested2.nested3', tree.$.prop2.nested2.nested3());
 
 // Example 7: Accessing nested signals
 const nestedSignalValue = tree.$.prop2.nested2.nestedSignal4();
@@ -162,4 +156,6 @@ const storeWithTerminal = signalTree({
     },
   },
 });
-console.log(storeWithTerminal.prop2.nested2.nestedSignal4().deeplyNestedArray); // Output: [1, 2, 3]
+console.log(
+  storeWithTerminal.$.prop2.nested2.nestedSignal4().deeplyNestedArray
+); // Output: [1, 2, 3]

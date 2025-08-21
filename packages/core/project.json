@@ -19,6 +19,7 @@
       "options": {
         "project": "packages/core/ng-package.json"
       },
+
       "configurations": {
         "production": {
           "tsConfig": "packages/core/tsconfig.lib.prod.json"
@@ -28,6 +29,13 @@
         }
       },
       "defaultConfiguration": "production"
+    },
+    "postbuild": {
+      "executor": "@nx/workspace:run-commands",
+      "options": {
+        "commands": [{ "command": "echo postbuild placeholder" }],
+        "parallel": false
+      }
     },
     "nx-release-publish": {
       "options": {

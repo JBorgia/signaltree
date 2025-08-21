@@ -16,12 +16,8 @@ import {
   isSignal,
 } from './adapter';
 import { scheduleTask, untracked } from './scheduler';
-import {
-  registerTree,
-  unregisterTree,
-  snapshotTree,
-  snapshot,
-} from './devtools';
+// devtools/time-travel are loaded on-demand below to avoid shipping dev-only
+// runtime in the core bundle. See dynamic import blocks in `enhanceTree`.
 import type {
   SignalTree,
   DeepSignalify,
@@ -33,7 +29,62 @@ import type {
   DeepPartial,
 } from './types';
 import { createLazySignalTree, equal } from './internal/utils';
-import { createTimeTravelFeature } from './internal/time-travel';
+
+// Bundlers can replace __DEV__ at build time (define) so dev logs can be
+// DCE'd in production builds.
+declare const __DEV__: boolean;
+const __IS_DEV__ = typeof __DEV__ !== 'undefined' ? __DEV__ : true;
+
+// Local symbol key for the in-core devtools registry. Accessing the registry
+// on globalThis directly lets us avoid a static import of the devtools module
+// while keeping snapshot/unregister semantics synchronous for tests/tools.
+const DEVTOOLS_REGISTRY_KEY = Symbol.for('__SIGNALTREE_REGISTRY__');
+
+type LocalRegistryEntry = {
+  name: string;
+  tree: unknown;
+  created: number;
+  version?: () => number;
+  getMetrics?: () => unknown;
+};
+
+type LocalRegistryMap = Map<string, LocalRegistryEntry> & { _counter?: number };
+
+function getLocalRegistry(): LocalRegistryMap | undefined {
+  const g = globalThis as unknown as Record<string | symbol, unknown>;
+  return g[DEVTOOLS_REGISTRY_KEY] as LocalRegistryMap | undefined;
+}
+
+function snapshot(value: unknown): unknown {
+  const maybe = value as unknown as { unwrap?: () => unknown };
+  return typeof maybe?.unwrap === 'function' ? maybe.unwrap() : value;
+}
+
+function snapshotTree(
+  name: string,
+  opts: { includeMetrics?: boolean } = { includeMetrics: false }
+) {
+  const registry = getLocalRegistry();
+  if (!registry) return null;
+  const entry = registry.get(name) as LocalRegistryEntry | undefined;
+  if (!entry) return null;
+  const t = entry.tree as unknown;
+  const unwrapFn = (t as { unwrap?: () => unknown })?.unwrap;
+  const state =
+    typeof unwrapFn === 'function'
+      ? unwrapFn()
+      : t && typeof t === 'object' && 'state' in (t as Record<string, unknown>)
+      ? (t as Record<string, unknown>)['state']
+      : undefined;
+  return {
+    name: entry.name,
+    version: entry.version ? entry.version() : undefined,
+    state,
+    metrics:
+      opts.includeMetrics && entry.getMetrics ? entry.getMetrics() : undefined,
+    created: entry.created,
+  };
+}
 
 // ============================================
 // PERFORMANCE HEURISTICS
@@ -119,74 +170,27 @@ function createEqualityFn(useShallowComparison: boolean) {
  * Enhanced built-in object detection with comprehensive coverage
  */
 function isBuiltInObject(v: unknown): boolean {
-  if (v === null || v === undefined) return false;
-
-  // Core JavaScript built-ins
-  if (
-    v instanceof Date ||
-    v instanceof RegExp ||
-    typeof v === 'function' ||
-    v instanceof Map ||
-    v instanceof Set ||
-    v instanceof WeakMap ||
-    v instanceof WeakSet ||
-    v instanceof ArrayBuffer ||
-    v instanceof DataView ||
-    v instanceof Error ||
-    v instanceof Promise
-  ) {
+  if (v == null) return false;
+  if (typeof v === 'function') return true;
+  // Fast typed-array/arraybuffer check for many built-ins
+  const maybeAny = v as unknown as ArrayBuffer | ArrayBufferView | object;
+  if (typeof ArrayBuffer !== 'undefined' && ArrayBuffer.isView(maybeAny as any))
     return true;
-  }
-
-  // Typed Arrays
-  if (
-    v instanceof Int8Array ||
-    v instanceof Uint8Array ||
-    v instanceof Uint8ClampedArray ||
-    v instanceof Int16Array ||
-    v instanceof Uint16Array ||
-    v instanceof Int32Array ||
-    v instanceof Uint32Array ||
-    v instanceof Float32Array ||
-    v instanceof Float64Array ||
-    v instanceof BigInt64Array ||
-    v instanceof BigUint64Array
-  ) {
-    return true;
-  }
-
-  // Web APIs (when available)
-  if (typeof window !== 'undefined') {
-    if (
-      v instanceof URL ||
-      v instanceof URLSearchParams ||
-      v instanceof FormData ||
-      v instanceof Blob ||
-      (typeof File !== 'undefined' && v instanceof File) ||
-      (typeof FileList !== 'undefined' && v instanceof FileList) ||
-      (typeof Headers !== 'undefined' && v instanceof Headers) ||
-      (typeof Request !== 'undefined' && v instanceof Request) ||
-      (typeof Response !== 'undefined' && v instanceof Response) ||
-      (typeof AbortController !== 'undefined' &&
-        v instanceof AbortController) ||
-      (typeof AbortSignal !== 'undefined' && v instanceof AbortSignal)
-    ) {
+  const tag = Object.prototype.toString.call(v);
+  switch (tag) {
+    case '[object Date]':
+    case '[object RegExp]':
+    case '[object Map]':
+    case '[object Set]':
+    case '[object WeakMap]':
+    case '[object WeakSet]':
+    case '[object Promise]':
+    case '[object Error]':
+    case '[object ArrayBuffer]':
       return true;
-    }
+    default:
+      return false;
   }
-
-  // Node.js built-ins (when available)
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const NodeBuffer = (globalThis as any)?.Buffer;
-    if (NodeBuffer && v instanceof NodeBuffer) {
-      return true;
-    }
-  } catch {
-    // Ignore if Buffer is not available
-  }
-
-  return false;
 }
 
 /**
@@ -312,15 +316,8 @@ function createCallableProxy<T>(
       return undefined;
     },
 
-    has(target, prop) {
-      return (
-        prop === 'update' ||
-        prop === 'set' ||
-        prop === '__isCallableProxy__' ||
-        prop in nestedStore
-      );
-    },
-
+    // Only `get` trap is necessary for our lightweight proxy use-case. This
+    // reduces reflective code paths and bundle size.
     ownKeys() {
       return [
         'update',
@@ -497,14 +494,15 @@ function createSignalStore<T>(
       target: Record<string | symbol, unknown>,
       updates: Record<string | symbol, unknown>
     ): void => {
-      for (const key of Reflect.ownKeys(updates)) {
-        const updateValue = (updates as Record<string | symbol, unknown>)[key];
+      for (const key of Object.keys(updates as Record<string, unknown>)) {
+        const updateValue = (updates as Record<string, unknown>)[key];
         if (!(key in target)) continue; // skip non-existent keys silently at branch level
         const existing = target[key];
         try {
           if (isSignal(existing)) {
             const sig = existing as WritableSignal<unknown>;
-            if (!equal(sig(), updateValue)) {
+            // Use the configured equality function for update guards
+            if (!equalityFn(sig(), updateValue)) {
               sig.set(updateValue);
             }
           } else if (
@@ -569,6 +567,7 @@ function createSignalStore<T>(
 // Enhancement (moved from inline)
 // ==============================
 function enhanceTree<T>(tree: SignalTree<T>, config: TreeConfig): void {
+  const compare = createEqualityFn(config.useShallowComparison ?? false);
   // Version & Metrics
   let __version = 0;
   // Use existing trackPerformance flag from TreeConfig for perf metrics
@@ -605,10 +604,8 @@ function enhanceTree<T>(tree: SignalTree<T>, config: TreeConfig): void {
         }
         if (node && typeof node === 'object') {
           const out: Record<string | symbol, unknown> = {};
-          for (const key of Reflect.ownKeys(
-            node as Record<string | symbol, unknown>
-          )) {
-            const value = (node as Record<string | symbol, unknown>)[key];
+          for (const key of Object.keys(node as Record<string, unknown>)) {
+            const value = (node as Record<string, unknown>)[key];
             out[key] = walk(value);
           }
           return out;
@@ -683,7 +680,7 @@ function enhanceTree<T>(tree: SignalTree<T>, config: TreeConfig): void {
             if (isSignal(currentSignalOrState)) {
               const originalValue = (currentSignalOrState as Signal<unknown>)();
               // Equality guard: only apply and log if value actually changes
-              const changed = !equal(originalValue, updateValue);
+              const changed = !compare(originalValue, updateValue);
               if (changed) {
                 transactionLog.push({
                   path: currentPath,
@@ -875,16 +872,51 @@ function enhanceTree<T>(tree: SignalTree<T>, config: TreeConfig): void {
       }
     }, tree as unknown) as TResult;
   }) as SignalTree<T>['pipe'];
-  // Devtools registration (Phase 4) - declare before destroy uses it
+  // Devtools registration (Phase 4) - use on-demand loading so bundlers can split devtools
   let __devtoolsId: string | null = null;
   if (config.enableDevTools) {
     try {
-      __devtoolsId = registerTree(tree, config.treeName);
-      if (config.debugMode && __devtoolsId) {
-        console.log('[SignalTree] Devtools registered:', __devtoolsId);
+      // Lightweight inline registration to the in-core registry on globalThis.
+      const g = globalThis as unknown as Record<string | symbol, unknown>;
+      const reg = g[DEVTOOLS_REGISTRY_KEY] as LocalRegistryMap | undefined;
+      try {
+        const registry =
+          reg ?? (g[DEVTOOLS_REGISTRY_KEY] = new Map() as LocalRegistryMap);
+        const counter = (registry._counter = (registry._counter ?? 0) + 1);
+        const name = config.treeName || `tree#${counter}`;
+        if (registry.has(name)) registry.delete(name);
+        registry.set(name, {
+          name,
+          tree,
+          created: Date.now(),
+          version: (
+            tree as unknown as { getVersion?: () => number }
+          ).getVersion?.bind(tree),
+          getMetrics: (
+            tree as unknown as { getMetrics?: () => unknown }
+          ).getMetrics?.bind(tree),
+        });
+        try {
+          try {
+            (tree as unknown as { __devtoolsId?: string }).__devtoolsId = name;
+          } catch {
+            /* ignore */
+          }
+        } catch {
+          /* ignore */
+        }
+        __devtoolsId = name;
+        if (config.debugMode && __devtoolsId) {
+          if (__IS_DEV__)
+            console.log('[SignalTree] Devtools registered:', __devtoolsId);
+        }
+      } catch (err) {
+        if (config.debugMode && __IS_DEV__) {
+          console.warn('[SignalTree] Devtools registration failed', err);
+        }
       }
     } catch (err) {
-      if (config.debugMode) {
+      if (config.debugMode && __IS_DEV__) {
         console.warn('[SignalTree] Devtools registration failed', err);
       }
     }
@@ -916,7 +948,11 @@ function enhanceTree<T>(tree: SignalTree<T>, config: TreeConfig): void {
     // Devtools unregistration
     if (__devtoolsId) {
       try {
-        unregisterTree(__devtoolsId);
+        const g = globalThis as unknown as Record<string | symbol, unknown>;
+        const registry = g[DEVTOOLS_REGISTRY_KEY] as
+          | LocalRegistryMap
+          | undefined;
+        registry?.delete(__devtoolsId);
         if (config.debugMode) {
           console.log('[SignalTree] Devtools unregistered:', __devtoolsId);
         }
@@ -1273,8 +1309,19 @@ function enhanceTree<T>(tree: SignalTree<T>, config: TreeConfig): void {
         'asyncAction not installed. Import and apply withAsync() from @signaltree/async.'
       );
     };
-    // Attach modular time-travel feature
-    createTimeTravelFeature<T>().enable(tree, config);
+    // Attach modular time-travel feature only when explicitly enabled. This keeps
+    // the time-travel runtime out of the core bundle unless requested.
+    const feats = (config as unknown as { features?: { timeTravel?: boolean } })
+      .features;
+    if (feats?.timeTravel) {
+      Promise.resolve()
+        .then(() => import('./internal/time-travel'))
+        .then((m) => m.createTimeTravelFeature<T>().enable(tree, config))
+        .catch((e) => {
+          if (config.debugMode && __IS_DEV__)
+            console.warn('[SignalTree] time-travel load failed', e);
+        });
+    }
   }
 
   // ============================================

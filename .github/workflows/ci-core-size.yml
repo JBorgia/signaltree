@@ -1,0 +1,29 @@
+name: CI - Core size
+
+on:
+  push:
+    branches: ['main', 'master']
+  pull_request:
+    branches: ['*']
+
+jobs:
+  build-and-check-size:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build core (production) + normalize
+        run: npm run build:core:normalized
+
+      - name: Size check
+        run: npm run size:check:core
