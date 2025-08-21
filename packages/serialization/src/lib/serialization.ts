@@ -441,11 +441,13 @@ export function withSerialization<T extends Record<string, unknown>>(
         ...DEFAULT_CONFIG,
         ...defaultConfig,
       };
+      // Use the unwrapped state via the callable API to avoid serializing
+      // proxy objects or internal wrappers.
       return unwrapObjectSafely(
-        tree.state,
+        tree.$(),
         new WeakSet(),
         0,
-        50,
+        fullConfig.maxDepth,
         fullConfig.preserveTypes
       ) as T;
     };
@@ -512,23 +514,35 @@ export function withSerialization<T extends Record<string, unknown>>(
       // Restore special types in the data
       const restoredData = restoreSpecialTypes(data);
 
-      // Deep update the tree with new data
+      // Deep update the tree with new data by walking the restored object
+      // and assigning values to matching signals. This preserves existing
+      // signal shapes and avoids making invalid `set` calls.
       const updateSignals = (
         target: Record<string, unknown>,
-        source: Record<string, unknown>,
-        path = ''
+        source: Record<string, unknown>
       ): void => {
         if (!target || !source) return;
 
-        for (const key in source) {
-          if (!Object.prototype.hasOwnProperty.call(source, key)) continue;
-
-          const targetValue = target[key];
+        for (const key of Object.keys(source)) {
           const sourceValue = source[key];
+          const targetValue = (target as Record<string, unknown>)[key];
 
           if (isSignal(targetValue)) {
-            // Update signal value
-            (targetValue as WritableSignal<unknown>).set(sourceValue);
+            // For signals, use set when available, otherwise update via
+            // the writable signal API.
+            try {
+              (targetValue as WritableSignal<unknown>).set(sourceValue);
+            } catch {
+              // If set is not supported, fallback to update on the parent
+              // tree via a partial update.
+              tree.$.update(
+                (state) =>
+                  ({
+                    ...(state as Record<string, unknown>),
+                    [key]: sourceValue,
+                  } as T)
+              );
+            }
           } else if (
             sourceValue &&
             typeof sourceValue === 'object' &&
@@ -540,15 +554,24 @@ export function withSerialization<T extends Record<string, unknown>>(
             // Recurse into nested objects
             updateSignals(
               targetValue as Record<string, unknown>,
-              sourceValue as Record<string, unknown>,
-              path ? `${path}.${key}` : key
+              sourceValue as Record<string, unknown>
+            );
+          } else {
+            // For non-signal or new properties, apply a partial update to the
+            // tree so enhancements see the change.
+            tree.$.update(
+              (state) =>
+                ({
+                  ...(state as Record<string, unknown>),
+                  [key]: sourceValue,
+                } as T)
             );
           }
         }
       };
 
       updateSignals(
-        tree.state as Record<string, unknown>,
+        tree.$() as Record<string, unknown>,
         restoredData as Record<string, unknown>
       );
     };
@@ -563,9 +586,10 @@ export function withSerialization<T extends Record<string, unknown>>(
         ...config,
       };
 
-      // Get current state with the correct preserveTypes setting
+      // Use the unwrapped callable state to avoid serializing internal
+      // proxy wrappers.
       const state = unwrapObjectSafely(
-        tree.state,
+        tree.$(),
         new WeakSet(),
         0,
         fullConfig.maxDepth,

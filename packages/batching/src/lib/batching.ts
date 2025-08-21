@@ -1,5 +1,5 @@
 import { parsePath } from '@signaltree/core';
-import type { SignalTree } from '@signaltree/core';
+import type { SignalTree, DeepSignalify } from '@signaltree/core';
 
 /**
  * Configuration options for intelligent batching behavior.
@@ -103,7 +103,14 @@ let isUpdating = false;
 /** Timeout ID for scheduled flush operations */
 let flushTimeoutId: number | undefined;
 /** Current batching configuration */
-let currentBatchingConfig: BatchingConfig = {};
+const currentBatchingConfig: BatchingConfig = {};
+
+/** Last active per-instance batching manager (used by exported helpers in tests) */
+let lastBatchingManager: {
+  flush: () => void;
+  getSize: () => number;
+  hasPending: () => boolean;
+} | null = null;
 
 /**
  * Enhanced queue management with priority and deduplication
@@ -206,7 +213,7 @@ function flushUpdates(): void {
  * // Both execute in single microtask
  * ```
  */
-function batchUpdates(fn: () => void, path?: string): void {
+export function batchUpdates(fn: () => void, path?: string): void {
   const startTime = performance.now();
   const depth = path ? parsePath(path).length : 0;
 
@@ -275,28 +282,184 @@ export function withBatching<T>(
   config: BatchingConfig = {}
 ): (tree: SignalTree<T>) => BatchingSignalTree<T> {
   const { enabled = true } = config;
-
-  // Update global config for this batching instance
-  currentBatchingConfig = { ...currentBatchingConfig, ...config };
-
   return (tree: SignalTree<T>): BatchingSignalTree<T> => {
+    // withBatching invoked
     if (!enabled) {
       return tree as BatchingSignalTree<T>;
     }
+    // Per-instance batching state to avoid cross-tree interference
+    const instanceConfig: BatchingConfig = { ...config };
+    let instanceQueue: Array<BatchedUpdate> = [];
+    let instanceIsUpdating = false;
+    let instanceFlushTimeoutId: number | undefined;
 
-    // Store the original update method
     const originalUpdate = tree.$.update.bind(tree.$);
 
-    // Override update method with batching
+    function instanceScheduleFlush() {
+      // Prefer microtask scheduling so awaiting queueMicrotask in tests works
+      if (instanceFlushTimeoutId !== undefined) {
+        clearTimeout(instanceFlushTimeoutId);
+        instanceFlushTimeoutId = undefined;
+      }
+      // Schedule a fallback timeout flush (do not use microtasks here to keep
+      // imperative updates batched until explicitly requested)
+      // schedule fallback timeout flush
+      const delay = instanceConfig.autoFlushDelay ?? 16;
+      instanceFlushTimeoutId = setTimeout(() => {
+        instanceFlushTimeoutId = undefined;
+        instanceFlushUpdates();
+      }, delay) as unknown as number;
+    }
+
+    function instanceFlushUpdates(): void {
+      if (instanceIsUpdating) return;
+      let q: Array<BatchedUpdate>;
+      do {
+        if (instanceQueue.length === 0) return;
+        // executing instance flush
+        instanceIsUpdating = true;
+        q = instanceQueue;
+        instanceQueue = [];
+        if (instanceFlushTimeoutId !== undefined) {
+          clearTimeout(instanceFlushTimeoutId);
+          instanceFlushTimeoutId = undefined;
+        }
+        q.sort((a, b) => (b.depth ?? 0) - (a.depth ?? 0));
+        try {
+          q.forEach(({ fn }) => fn());
+        } finally {
+          instanceIsUpdating = false;
+        }
+      } while (instanceQueue.length > 0);
+    }
+
+    function instanceAddToQueue(
+      update: BatchedUpdate,
+      scheduleMicrotask = false
+    ): boolean {
+      const maxSize = instanceConfig.maxBatchSize ?? 100;
+
+      if (update.path) {
+        instanceQueue = instanceQueue.filter(
+          (existing) => existing.path !== update.path
+        );
+      }
+
+      instanceQueue.push(update);
+
+      if (instanceQueue.length > maxSize) {
+        instanceFlushUpdates();
+        return true;
+      }
+
+      // Optionally schedule microtask flush (used by batchUpdate)
+      if (scheduleMicrotask) {
+        if (typeof queueMicrotask === 'function') {
+          queueMicrotask(() => instanceFlushUpdates());
+        } else {
+          Promise.resolve().then(() => instanceFlushUpdates());
+        }
+        // also schedule fallback timeout in case microtasks aren't available
+        instanceScheduleFlush();
+      }
+      return false;
+    }
+
+    // Override update and batchUpdate to use per-instance queue
     tree.$.update = (updater: (current: T) => Partial<T>) => {
-      // Always use batching for regular updates
-      batchUpdates(() => originalUpdate(updater));
+      // Regular imperative updates should only be queued. Flushing is handled
+      // by maxBatchSize, batchUpdate (microtask), or manual flush.
+      instanceAddToQueue(
+        {
+          fn: () => originalUpdate(updater),
+          startTime: performance.now(),
+          depth: 0,
+        },
+        false
+      );
     };
 
-    // Add batchUpdate method to the tree
+    // Create an enhanced wrapper around the callable state proxy so we can
+    // intercept `.update` accesses. The original callable proxy always returned
+    // its own update implementation from the `get` trap, so assigning
+    // `tree.$.update = ...` didn't override it. Wrapping preserves all other
+    // behavior while ensuring `.update` routes through our batching queue.
+    // Keep original callable proxy/state
+    type CallableState = DeepSignalify<T> & {
+      apply?: (...args: unknown[]) => unknown;
+    };
+    const originalState = tree.$ as unknown as CallableState;
+
+    const callableWrapper = function thisCallable(
+      this: unknown,
+      ...args: unknown[]
+    ) {
+      return originalState.apply
+        ? originalState.apply(this, args)
+        : (originalState as unknown as () => unknown)();
+    };
+
+    const stateProxy = new Proxy(callableWrapper, {
+      apply(_target, thisArg, argArray: unknown[]) {
+        return originalState.apply
+          ? originalState.apply(thisArg, argArray)
+          : (originalState as unknown as () => unknown)();
+      },
+      get(_target, prop, receiver) {
+        if (prop === 'update') {
+          return (updater: (current: T) => Partial<T>) => {
+            instanceAddToQueue(
+              {
+                fn: () => originalUpdate(updater),
+                startTime: performance.now(),
+                depth: 0,
+              },
+              false // imperative updates should only queue
+            );
+          };
+        }
+        // Delegate everything else to the original state proxy
+        const val = Reflect.get(originalState, prop, receiver);
+        return typeof val === 'function' ? val.bind(originalState) : val;
+      },
+      has(_target, prop) {
+        return prop in originalState;
+      },
+      ownKeys() {
+        return Reflect.ownKeys(originalState);
+      },
+      getOwnPropertyDescriptor(_target, prop) {
+        return Reflect.getOwnPropertyDescriptor(
+          originalState,
+          prop as PropertyKey
+        );
+      },
+      set(_target, prop, value) {
+        return Reflect.set(originalState as object, prop as PropertyKey, value);
+      },
+    }) as unknown as DeepSignalify<T>;
+
     const enhancedTree = tree as BatchingSignalTree<T>;
+    // Replace the tree's state and $ references with our proxy wrapper
+    enhancedTree.state = stateProxy as unknown as DeepSignalify<T>;
+    enhancedTree.$ = stateProxy as unknown as DeepSignalify<T>;
+
     enhancedTree.batchUpdate = (updater: (current: T) => Partial<T>) => {
-      batchUpdates(() => originalUpdate(updater));
+      instanceAddToQueue(
+        {
+          fn: () => originalUpdate(updater),
+          startTime: performance.now(),
+          depth: 0,
+        },
+        true // batchUpdate should schedule microtask flush
+      );
+    };
+
+    // Register this instance as the last active manager so exported helpers work in tests
+    lastBatchingManager = {
+      flush: instanceFlushUpdates,
+      getSize: () => instanceQueue.length,
+      hasPending: () => instanceQueue.length > 0,
     };
 
     return enhancedTree;
@@ -386,28 +549,27 @@ export function withHighPerformanceBatching<T>() {
  * ```
  */
 export function flushBatchedUpdates(): void {
-  console.log(
-    'flushBatchedUpdates called, queue length:',
-    updateQueue.length,
-    'isUpdating:',
-    isUpdating
-  );
+  // If an instance-level batching manager exists (created by withBatching), prefer it
+  if (lastBatchingManager) {
+    lastBatchingManager.flush();
+    return;
+  }
+
+  // Fallback to module-level/global queue behavior for older code/tests
+  // global flush invoked
   if (updateQueue.length > 0) {
     // Force flush regardless of isUpdating state
     const queue = updateQueue.slice();
     updateQueue = [];
     isUpdating = false; // Reset the updating flag
-    console.log('Flushing', queue.length, 'updates');
+    // Flushing queued updates
 
     // Sort by depth (deepest first) for optimal update propagation
     queue.sort((a, b) => (b.depth ?? 0) - (a.depth ?? 0));
 
-    queue.forEach(({ fn }) => {
-      console.log('Executing queued function');
-      fn();
-    });
+    queue.forEach(({ fn }) => fn());
   } else {
-    console.log('Flush skipped - queue empty');
+    // nothing to flush
   }
 }
 
@@ -444,6 +606,7 @@ export function flushBatchedUpdates(): void {
  * ```
  */
 export function hasPendingUpdates(): boolean {
+  if (lastBatchingManager) return lastBatchingManager.hasPending();
   return updateQueue.length > 0;
 }
 
@@ -486,5 +649,6 @@ export function hasPendingUpdates(): boolean {
  * ```
  */
 export function getBatchQueueSize(): number {
+  if (lastBatchingManager) return lastBatchingManager.getSize();
   return updateQueue.length;
 }

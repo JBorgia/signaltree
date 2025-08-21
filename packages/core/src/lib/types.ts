@@ -110,6 +110,11 @@ export type SignalTree<T> = {
     fn3: (arg: R2) => R3
   ): R3;
 
+  // Note: `update` and `unwrap` are provided on the `DeepSignalify` state
+  // (`tree.$`) rather than the tree object itself. This keeps the recursive
+  // typing architecture consistent: the callable state proxy exposes the
+  // unwrapping and update APIs for the nested signals.
+
   // Extended features
   batchUpdate(updater: (current: T) => Partial<T>): void;
   memoize<R>(fn: (tree: T) => R, cacheKey?: string): Signal<R>;

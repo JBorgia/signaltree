@@ -365,7 +365,17 @@ export function withTimeTravel<T>(
                 return callableValue;
               },
               apply(callableTarget, thisArg, args) {
-                return callableTarget.apply(thisArg, args);
+                // Use the original callable via closure to ensure we invoke the
+                // actual underlying function (and not the proxy wrapper).
+                // Reflect.apply is safer and avoids relying on `.apply` existing
+                // on the passed-in target (which may be a proxy object).
+                return Reflect.apply(
+                  originalCallable as unknown as (
+                    ...args: unknown[]
+                  ) => unknown,
+                  thisArg,
+                  args as unknown[]
+                );
               },
             });
           }

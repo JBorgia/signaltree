@@ -379,16 +379,19 @@ export function withDevTools<T>(
       browserDevTools = { send: connection.send };
     }
 
-    // Wrap tree methods to track activity
-    const originalUpdate = tree.update;
-    tree.update = (updater) => {
+    // Wrap tree methods to track activity by storing original and replacing
+    const originalUpdate = tree.$.update.bind(tree.$);
+    tree.$.update = (updater: ((current: T) => Partial<T>) | Partial<T>) => {
+      console.log('[DevTools] Update method called');
       const startTime = performance.now();
 
-      originalUpdate.call(tree, updater);
+      // Call the original update method with proper binding
+      originalUpdate(updater);
 
       const duration = performance.now() - startTime;
-      const newState = tree.unwrap();
+      const newState = tree.$();
 
+      console.log('[DevTools] Tracking update with duration:', duration);
       // Track performance
       metrics.trackModuleUpdate('core', duration);
 
@@ -406,7 +409,6 @@ export function withDevTools<T>(
         browserDevTools.send('UPDATE', newState);
       }
     };
-
     const devToolsInterface: ModularDevToolsInterface<T> = {
       activityTracker,
       logger,
@@ -443,7 +445,7 @@ export function withDevTools<T>(
 
       connectDevTools: (name: string) => {
         if (browserDevTools) {
-          browserDevTools.send('@@INIT', tree.unwrap());
+          browserDevTools.send('@@INIT', tree.$());
           console.log(`🔗 Connected to Redux DevTools as "${name}"`);
         }
       },

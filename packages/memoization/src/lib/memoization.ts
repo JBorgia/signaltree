@@ -209,8 +209,8 @@ export function withMemoization<T>(
       }
     };
 
-    // Store original update method
-    const originalUpdate = tree.update;
+    // Store original update method on the callable state
+    const originalUpdate = tree.$.update.bind(tree.$);
 
     // Add memoized update method
     // Add memoization methods to the tree
@@ -225,7 +225,7 @@ export function withMemoization<T>(
       const cached = cache.get(key);
       if (cached && deepEqual(cached.deps, [currentState])) {
         // Apply cached result
-        originalUpdate.call(tree, () => cached.value as Partial<T>);
+        originalUpdate(() => cached.value as Partial<T>);
         return;
       }
 
@@ -241,7 +241,7 @@ export function withMemoization<T>(
       });
 
       // Apply update
-      originalUpdate.call(tree, () => result);
+      originalUpdate(() => result);
 
       // Enforce cache limits after adding new entry
       enforceCacheLimit();
@@ -300,10 +300,10 @@ export function withMemoization<T>(
       )._memoCleanupInterval = intervalId;
     }
 
-    // Override update to enforce cache limits
-    const enhancedUpdate = tree.update;
-    tree.update = (updater: (current: T) => Partial<T>) => {
-      const result = enhancedUpdate.call(tree, updater);
+    // Wrap the callable state's update to enforce cache limits
+    const enhancedUpdate = tree.$.update.bind(tree.$);
+    tree.$.update = (updater: (current: T) => Partial<T>) => {
+      const result = enhancedUpdate(updater);
       enforceCacheLimit();
       return result;
     };
