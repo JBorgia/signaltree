@@ -514,34 +514,66 @@ export function withSerialization<T extends Record<string, unknown>>(
       // Restore special types in the data
       const restoredData = restoreSpecialTypes(data);
 
-      // Deep update the tree with new data by walking the restored object
-      // and assigning values to matching signals. This preserves existing
-      // signal shapes and avoids making invalid `set` calls.
+      // Deep update the tree with new data while preserving signal shapes.
+      // The previous implementation attempted to apply partial updates at
+      // nested levels by calling `tree.$.update({ [key]: value })` from a
+      // nested recursion which incorrectly wrote top-level keys instead of
+      // nested paths (e.g. writing `name` instead of `user.name`). To fix
+      // that we collect the path and apply updates at the root using a
+      // path-aware patch that clones only the path being modified.
+
+      const applyUpdateAtPath = (path: string[], value: unknown) => {
+        if (path.length === 0) return;
+
+        tree.$.update((state) => {
+          // Shallow-copy along the path so we don't mutate original state
+          const newState = { ...(state as Record<string, unknown>) } as any;
+          let srcCursor: any = state as any;
+          let dstCursor: any = newState;
+
+          for (let i = 0; i < path.length - 1; i++) {
+            const part = path[i];
+            const nextSrc = srcCursor ? srcCursor[part] : undefined;
+            // Clone arrays or objects along the path
+            if (Array.isArray(nextSrc)) {
+              dstCursor[part] = [...(nextSrc as any[])];
+            } else if (nextSrc && typeof nextSrc === 'object') {
+              dstCursor[part] = { ...(nextSrc as Record<string, unknown>) };
+            } else {
+              // If the path doesn't exist on source, create an object so we can set the leaf
+              dstCursor[part] = {};
+            }
+            // Advance cursors
+            srcCursor = nextSrc;
+            dstCursor = dstCursor[part];
+          }
+
+          const last = path[path.length - 1];
+          dstCursor[last] = value;
+
+          return newState as T;
+        });
+      };
+
       const updateSignals = (
         target: Record<string, unknown>,
-        source: Record<string, unknown>
+        source: Record<string, unknown>,
+        basePath: string[] = []
       ): void => {
         if (!target || !source) return;
 
         for (const key of Object.keys(source)) {
           const sourceValue = source[key];
           const targetValue = (target as Record<string, unknown>)[key];
+          const path = [...basePath, key];
 
           if (isSignal(targetValue)) {
-            // For signals, use set when available, otherwise update via
-            // the writable signal API.
+            // For signals, use set when available.
             try {
               (targetValue as WritableSignal<unknown>).set(sourceValue);
-            } catch {
-              // If set is not supported, fallback to update on the parent
-              // tree via a partial update.
-              tree.$.update(
-                (state) =>
-                  ({
-                    ...(state as Record<string, unknown>),
-                    [key]: sourceValue,
-                  } as T)
-              );
+            } catch (e) {
+              // If `set` isn't supported, fall back to a root-level update
+              applyUpdateAtPath(path, sourceValue);
             }
           } else if (
             sourceValue &&
@@ -554,18 +586,12 @@ export function withSerialization<T extends Record<string, unknown>>(
             // Recurse into nested objects
             updateSignals(
               targetValue as Record<string, unknown>,
-              sourceValue as Record<string, unknown>
+              sourceValue as Record<string, unknown>,
+              path
             );
           } else {
-            // For non-signal or new properties, apply a partial update to the
-            // tree so enhancements see the change.
-            tree.$.update(
-              (state) =>
-                ({
-                  ...(state as Record<string, unknown>),
-                  [key]: sourceValue,
-                } as T)
-            );
+            // Non-signal leaf: apply update at root with proper path
+            applyUpdateAtPath(path, sourceValue);
           }
         }
       };
