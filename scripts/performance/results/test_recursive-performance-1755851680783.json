@@ -1,0 +1,52 @@
+// TypeScript test file for validating recursive-performance JSON data
+
+import * as fs from 'fs';
+import * as path from 'path';
+
+describe('Recursive Performance JSON Tests', () => {
+  const filePath = path.resolve(
+    __dirname,
+    '../results/recursive-performance-1755851680783.json'
+  );
+  let jsonData: any;
+
+  beforeAll(() => {
+    const fileContent = fs.readFileSync(filePath, 'utf-8');
+    jsonData = JSON.parse(fileContent);
+  });
+
+  test('JSON file should have a valid structure', () => {
+    expect(jsonData).toHaveProperty('timestamp');
+    expect(jsonData).toHaveProperty('version');
+    expect(jsonData).toHaveProperty('results');
+  });
+
+  test('Results should contain required keys', () => {
+    const results = jsonData.results;
+    expect(results).toHaveProperty('basic');
+    expect(results).toHaveProperty('medium');
+    expect(results).toHaveProperty('extreme');
+    expect(results).toHaveProperty('unlimited');
+  });
+
+  const validateResult = (key: string, result: any) => {
+    expect(result).toHaveProperty('depth');
+    expect(result.depth).toBeGreaterThan(0);
+
+    expect(result).toHaveProperty('operations');
+    expect(result.operations).toBeGreaterThan(0);
+
+    expect(result).toHaveProperty('totalTime');
+    expect(result.totalTime).toBeGreaterThan(0);
+
+    expect(result).toHaveProperty('avgTime');
+    expect(result.avgTime).toBeGreaterThan(0);
+  };
+
+  test('Each result should have valid properties', () => {
+    const results = jsonData.results;
+    Object.keys(results).forEach((key) => {
+      validateResult(key, results[key]);
+    });
+  });
+});

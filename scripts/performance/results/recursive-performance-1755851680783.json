@@ -1,0 +1,30 @@
+{
+  "timestamp": 1755851680783,
+  "version": null,
+  "results": {
+    "basic": {
+      "depth": 5,
+      "operations": 500,
+      "totalTime": 44.12879600000018,
+      "avgTime": 0.08825759200000036
+    },
+    "medium": {
+      "depth": 10,
+      "operations": 300,
+      "totalTime": 4.917786000000035,
+      "avgTime": 0.016392620000000118
+    },
+    "extreme": {
+      "depth": 15,
+      "operations": 200,
+      "totalTime": 11.110624000000001,
+      "avgTime": 0.055553120000000004
+    },
+    "unlimited": {
+      "depth": 20,
+      "operations": 100,
+      "totalTime": 5.752460999999869,
+      "avgTime": 0.057524609999998685
+    }
+  }
+}

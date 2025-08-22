@@ -213,6 +213,18 @@ const currentState = tree.unwrap();
 console.log('Current app state:', currentState);
 ```
 
+### Enhancers and optional features
+
+Core intentionally keeps advanced features (batching, memoization, devtools, time travel, middleware) as optional enhancers to preserve a tiny core bundle. To improve DX, core provides type declarations and a tiny runtime shim for some enhancer methods (for example `tree.$.batchUpdate`). Calling these shimbed methods without installing the associated enhancer will throw a clear message instructing you to install the enhancer.
+
+To lazily enable batching at runtime, use `installBatching(tree)` from `@signaltree/batching` which dynamically imports and applies the batching enhancer:
+
+```ts
+import { installBatching } from '@signaltree/batching';
+await installBatching(tree);
+// now tree.$.batchUpdate is functional
+```
+
 ## 📦 Core Features
 
 ### 1. Hierarchical Signal Trees

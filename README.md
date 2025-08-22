@@ -115,9 +115,17 @@ Based on comprehensive review and testing, SignalTree now includes enterprise-gr
 - ✅ **Safe Object Iteration**: Error handling for invalid inputs
 - ✅ **Fallback Mechanisms**: Graceful degradation on edge cases
 
-**Result**: Enterprise-grade reliability while maintaining the revolutionary ~50% bundle size reduction.
+#### **Bundle Hygiene & Middleware Factories Split**
 
-### 🔥 Recursive Depth Performance Scaling
+- ✅ **All packages now meet bundle-size claims**: Each package is under its claimed gzipped size, including middleware.
+- ✅ **Middleware factories split**: Heavy middleware implementations (logging, performance, persistence) are now available via `@signaltree/middleware/factories`.
+- ✅ **Minimal main bundle**: The main middleware entry only includes lightweight dynamic wrappers; heavy logic is loaded on demand.
+- ✅ **Dynamic wrappers**: Logging, performance, and persistence middleware creators are now dynamic wrappers that lazy-load their full implementations.
+- ✅ **How to use**: For advanced use, import from `@signaltree/middleware/factories`.
+
+**Result**: Enterprise-grade reliability, minimal bundles, and flexible middleware composition.
+
+### � Recursive Depth Performance Scaling
 
 Performance remains exceptional across all recursive depths:
 

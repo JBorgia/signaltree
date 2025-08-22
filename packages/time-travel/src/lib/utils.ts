@@ -8,6 +8,15 @@
  * Handles circular references, complex types, and maintains performance
  */
 export function deepClone<T>(obj: T): T {
+  // Prefer native structuredClone when available (smaller polyfill footprint)
+  if (typeof (globalThis as any).structuredClone === 'function') {
+    try {
+      return (globalThis as any).structuredClone(obj) as T;
+    } catch {
+      // fall through to fallback implementation
+    }
+  }
+
   if (obj === null || typeof obj !== 'object') return obj;
   if (obj instanceof Date) return new Date(obj.getTime()) as T;
   if (obj instanceof RegExp) return new RegExp(obj.source, obj.flags) as T;

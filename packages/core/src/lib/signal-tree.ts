@@ -280,6 +280,18 @@ function createCallableProxy<T>(
         };
       }
 
+      // Handle batchUpdate shim: present to align types with runtime when
+      // batching enhancer is not installed. It provides a clear error so
+      // consumers don't rely on an absent implementation.
+      if (prop === 'batchUpdate') {
+        return (_updater: (current: T) => Partial<T>) => {
+          void _updater;
+          throw new Error(
+            'batchUpdate() called but @signaltree/batching is not installed.\nInstall the batching enhancer or use tree.$.update(...) as a fallback.'
+          );
+        };
+      }
+
       // Handle set method - shallow merge with current state
       if (prop === 'set') {
         return (partialObj: Partial<T>) => {

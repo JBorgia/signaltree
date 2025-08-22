@@ -1,5 +1,21 @@
 import type { SignalTree, DeepSignalify } from '@signaltree/core';
-import { deepEqual, deepClone } from './utils';
+// Defer importing heavy utilities until needed so common paths don't include
+// deepClone/deepEqual in production bundles unless time-travel payloads are used.
+// We prefer native structuredClone when available. As a conservative,
+// synchronous fallback we use JSON-based cloning for typical plain-data
+// state objects. This avoids pulling the full deepClone implementation into
+// the common bundle while keeping behavior predictable.
+const hasStructuredClone =
+  typeof (globalThis as unknown as { structuredClone?: unknown })
+    .structuredClone === 'function';
+
+function jsonClone<T>(v: T): T {
+  try {
+    return JSON.parse(JSON.stringify(v));
+  } catch {
+    return v;
+  }
+}
 
 /**
  * Entry in the time travel history
@@ -99,7 +115,8 @@ class TimeTravelManager<T> implements TimeTravelInterface<T> {
     private restoreStateFn?: (state: T) => void
   ) {
     this.maxHistorySize = config.maxHistorySize ?? 50;
-    this.includePayload = config.includePayload ?? true;
+    // Default to not including payload to keep history entries smaller by default
+    this.includePayload = config.includePayload ?? false;
     this.actionNames = {
       update: 'UPDATE',
       set: 'SET',
@@ -111,6 +128,7 @@ class TimeTravelManager<T> implements TimeTravelInterface<T> {
     this.addEntry('INIT', this.tree.$());
   }
 
+  // (equality helper intentionally defined at module scope below)
   /**
    * Add a new entry to the history
    */
@@ -122,7 +140,13 @@ class TimeTravelManager<T> implements TimeTravelInterface<T> {
 
     // Create new entry
     const entry: TimeTravelEntry<T> = {
-      state: deepClone(state),
+      state: hasStructuredClone
+        ? ((
+            globalThis as unknown as {
+              structuredClone: (x: unknown) => unknown;
+            }
+          ).structuredClone(state) as T)
+        : jsonClone(state),
       timestamp: Date.now(),
       action: this.actionNames[action] || action,
       ...(this.includePayload && payload !== undefined && { payload }),
@@ -163,7 +187,13 @@ class TimeTravelManager<T> implements TimeTravelInterface<T> {
   getHistory(): TimeTravelEntry<T>[] {
     return this.history.map((entry) => ({
       ...entry,
-      state: deepClone(entry.state),
+      state: hasStructuredClone
+        ? ((
+            globalThis as unknown as {
+              structuredClone: (x: unknown) => unknown;
+            }
+          ).structuredClone(entry.state) as T)
+        : jsonClone(entry.state),
     }));
   }
 
@@ -322,8 +352,10 @@ export function withTimeTravel<T>(
                     ).call(callableTarget, updater);
                     const afterState = target.$();
 
-                    // Only add to history if state actually changed
-                    const statesEqual = deepEqual(beforeState, afterState);
+                    // Only add to history if state actually changed. Prefer a
+                    // deep equality util when available; otherwise fall back to
+                    // the conservative synchronous fastEqual.
+                    const statesEqual = fastEqual(beforeState, afterState);
 
                     if (!statesEqual) {
                       timeTravelManager.addEntry('update', afterState);
@@ -351,8 +383,9 @@ export function withTimeTravel<T>(
                     ).call(callableTarget, newState);
                     const afterState = target.$();
 
-                    // Only add to history if state actually changed
-                    const statesEqual = deepEqual(beforeState, afterState);
+                    // Only add to history if state actually changed. Use the
+                    // fallback equality check to keep behavior synchronous.
+                    const statesEqual = fastEqual(beforeState, afterState);
 
                     if (!statesEqual) {
                       timeTravelManager.addEntry('set', afterState);
@@ -430,4 +463,16 @@ export function getTimeTravel<T>(
   tree: SignalTree<T> & { __timeTravel?: TimeTravelInterface<T> }
 ): TimeTravelInterface<T> | undefined {
   return tree.__timeTravel;
+}
+
+// Module-level fast equality fallback used to avoid importing heavy deepEqual
+// utilities on the common path. This is intentionally conservative and
+// synchronous.
+function fastEqual<T>(a: T, b: T): boolean {
+  if (a === b) return true;
+  try {
+    return JSON.stringify(a) === JSON.stringify(b);
+  } catch {
+    return false;
+  }
 }

@@ -1,5 +1,9 @@
 import { parsePath } from '@signaltree/core';
-import type { SignalTree } from '@signaltree/core';
+import type { SignalTree, DeepSignalify } from '@signaltree/core';
+
+// NOTE: For consumers who prefer lazy installation, use `installBatching(tree)`
+// which dynamically imports and applies this enhancer at runtime. See
+// `packages/batching/src/install.ts`.
 
 /**
  * Configuration options for intelligent batching behavior.
@@ -284,16 +288,10 @@ export function withBatching<T>(
       return tree as BatchingSignalTree<T>;
     }
 
-    // Store the original update method
-    const originalUpdate = tree.update.bind(tree);
+    // Use the tree's callable signal update method as the underlying updater
+    const originalUpdate = (tree.$ as DeepSignalify<T>).update.bind(tree.$);
 
-    // Override update method with batching
-    tree.update = (updater: (current: T) => Partial<T>) => {
-      // Always use batching for regular updates
-      batchUpdates(() => originalUpdate(updater));
-    };
-
-    // Add batchUpdate method to the tree
+    // Add batchUpdate method to the tree (root-level batching)
     const enhancedTree = tree as BatchingSignalTree<T>;
     enhancedTree.batchUpdate = (updater: (current: T) => Partial<T>) => {
       batchUpdates(() => originalUpdate(updater));

@@ -33,6 +33,25 @@ const tree = signalTree({
 tree.$.user.name.set('John'); // Logs: "State updated: user.name = John"
 ```
 
+## 🧹 Factories Split & Bundle Hygiene
+
+As of v1.1.9, heavy middleware implementations (logging, performance, persistence) are now available via a secondary entrypoint:
+
+- **Factories path:** `@signaltree/middleware/factories`
+- **Main entry:** Only includes lightweight dynamic wrappers; heavy logic is loaded on demand.
+- **Dynamic wrappers:** Logging, performance, and persistence middleware creators are now dynamic wrappers that lazy-load their full implementations.
+- **Bundle-size claims:** All packages now meet their gzipped size claims, including middleware.
+
+**How to use advanced factories:**
+
+```typescript
+import { createLoggingMiddleware } from '@signaltree/middleware/factories';
+```
+
+For most use cases, the main entry is sufficient and keeps your bundle minimal.
+
+---
+
 ## 🎯 Key Features
 
 ### Custom Middleware

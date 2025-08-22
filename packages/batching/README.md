@@ -19,6 +19,23 @@ The batching package unlocks exceptional performance through recursive batching 
 npm install @signaltree/core @signaltree/batching
 ```
 
+## 🧩 Lazy installation (recommended for libraries)
+
+If you want to keep your initial bundle small and install batching only when needed, use `installBatching(tree)` which dynamically imports the batching enhancer and wires it to the tree at runtime:
+
+```ts
+import { signalTree } from '@signaltree/core';
+import { installBatching } from '@signaltree/batching';
+
+const tree = signalTree({ ...initialState });
+
+// Later, when you need batching:
+await installBatching(tree);
+tree.$.batchUpdate((s) => ({ ... }));
+```
+
+Note: Core exposes a small shim for `tree.$.batchUpdate` so IDE/typecheckers will see the method; calling it without installing the enhancer will throw a helpful error directing you to `installBatching` or `withBatching()`.
+
 ## 📖 Getting Started
 
 ### Basic Batching Setup

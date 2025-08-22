@@ -1,4 +1,4 @@
-import { SignalTree, Middleware } from '@signaltree/core';
+import { SignalTree, Middleware, DeepSignalify } from '@signaltree/core';
 
 // Global middleware storage - using unknown for type safety
 const middlewareMap = new WeakMap<object, unknown[]>();
@@ -18,164 +18,109 @@ export function withMiddleware<T>(
     // Initialize middleware array for this tree
     middlewareMap.set(tree, [...middlewares]);
 
-    // Create a wrapper for the $ callable proxy that intercepts update calls
-    const createInterceptedProxy = (
-      originalProxy: Record<string | symbol, unknown>,
-      parentPath = ''
-    ) => {
-      return new Proxy(originalProxy, {
-        get(target, prop) {
-          const value = (target as Record<string | symbol, unknown>)[prop];
-
-          if (prop === 'update') {
-            // Intercept update method
-            return (updater: (current: T) => Partial<T>) => {
-              const action = 'UPDATE';
-              const currentState = tree.$();
-              const updateResult = updater(currentState);
-              const treeMiddlewares =
-                (middlewareMap.get(tree) as Middleware<T>[]) || [];
-
-              // Execute 'before' middleware hooks
-              for (const middleware of treeMiddlewares) {
-                if (
-                  middleware.before &&
-                  !middleware.before(action, updateResult, currentState)
-                ) {
-                  // Middleware blocked the update
-                  return;
-                }
-              }
-
-              // Capture state before update for 'after' hooks
-              const previousState = currentState;
-
-              // Execute the actual update using the original method
-              (value as (updater: (current: T) => Partial<T>) => void).call(
-                target,
-                updater
-              );
-
-              // Get new state after update
-              const newState = tree.$();
-
-              // Execute 'after' middleware hooks
-              for (const middleware of treeMiddlewares) {
-                if (middleware.after) {
-                  middleware.after(
-                    action,
-                    updateResult,
-                    previousState,
-                    newState
-                  );
-                }
-              }
-            };
-          }
-
-          if (prop === 'batchUpdate') {
-            return (updater: (current: T) => Partial<T>) => {
-              const action = 'BATCH_UPDATE';
-              const currentState = tree.$();
-              const updateResult = updater(currentState);
-              const treeMiddlewares =
-                (middlewareMap.get(tree) as Middleware<T>[]) || [];
-
-              // Execute 'before' middleware hooks
-              for (const middleware of treeMiddlewares) {
-                if (
-                  middleware.before &&
-                  !middleware.before(action, updateResult, currentState)
-                ) {
-                  // Middleware blocked the batch update
-                  return;
-                }
-              }
-
-              const previousState = currentState;
-
-              // Call the original batchUpdate on the callable target
-              (value as (updater: (current: T) => Partial<T>) => void).call(
-                target,
-                updater
-              );
-
-              const newState = tree.$();
-
-              // Execute 'after' middleware hooks
-              for (const middleware of treeMiddlewares) {
-                if (middleware.after) {
-                  middleware.after(
-                    action,
-                    updateResult,
-                    previousState,
-                    newState
-                  );
-                }
-              }
-            };
-          }
-
-          if (prop === 'set') {
-            // Intercept set method too
-            return (partial: Partial<T>) => {
-              const action = 'SET';
-              const currentState = tree.$();
-              const treeMiddlewares =
-                (middlewareMap.get(tree) as Middleware<T>[]) || [];
-
-              // Execute 'before' middleware hooks
-              for (const middleware of treeMiddlewares) {
-                if (
-                  middleware.before &&
-                  !middleware.before(action, partial, currentState)
-                ) {
-                  // Middleware blocked the set
-                  return;
-                }
-              }
-
-              // Capture state before update for 'after' hooks
-              const previousState = currentState;
-
-              // Execute the actual set using the original method
-              (value as (partial: Partial<T>) => void).call(target, partial);
-
-              // Get new state after update
-              const newState = tree.$();
-
-              // Execute 'after' middleware hooks
-              for (const middleware of treeMiddlewares) {
-                if (middleware.after) {
-                  middleware.after(action, partial, previousState, newState);
-                }
-              }
-            };
-          }
-
-          // For other properties, check if they're callable proxies and wrap them recursively
-          if (
-            typeof value === 'function' &&
-            (value as unknown as { __isCallableProxy__?: boolean })
-              .__isCallableProxy__
-          ) {
-            return createInterceptedProxy(
-              value as unknown as Record<string | symbol, unknown>,
-              parentPath + '.' + String(prop)
-            );
-          }
-
-          return value;
-        },
-      });
+    // Lightweight root-level wrapper: only intercept update/batchUpdate/set on
+    // the root callable signal and state object. Avoid deep recursion and
+    // avoid creating many proxies for nested nodes which increase bundle size.
+    type CallableRoot = {
+      update: (updater: (current: T) => Partial<T>) => void;
+      batchUpdate: (updater: (current: T) => Partial<T>) => void;
+      set: (partial: Partial<T>) => void;
+      // allow any other properties to be accessed readonly
+      [k: string]: unknown;
     };
 
-    // Create the enhanced tree with intercepted $ proxy
+    const createRootWrapper = (originalProxy: unknown) => {
+      // originalProxy is the callable DeepSignalify<T> from core; cast to
+      // a narrow CallableRoot for runtime access and to satisfy lint rules.
+      const host = originalProxy as unknown as CallableRoot;
+      const wrapper: Partial<CallableRoot> = { ...host };
+
+      wrapper.update = (updater: (current: T) => Partial<T>) => {
+        const action = 'UPDATE';
+        const currentState = tree.$();
+        const updateResult = updater(currentState);
+        const treeMiddlewares =
+          (middlewareMap.get(tree) as Middleware<T>[]) || [];
+
+        for (const middleware of treeMiddlewares) {
+          if (
+            middleware.before &&
+            !middleware.before(action, updateResult, currentState)
+          ) {
+            return;
+          }
+        }
+
+        const previousState = currentState;
+        host.update.call(host, updater);
+        const newState = tree.$();
+
+        for (const middleware of treeMiddlewares) {
+          if (middleware.after)
+            middleware.after(action, updateResult, previousState, newState);
+        }
+      };
+
+      wrapper.batchUpdate = (updater: (current: T) => Partial<T>) => {
+        const action = 'BATCH_UPDATE';
+        const currentState = tree.$();
+        const updateResult = updater(currentState);
+        const treeMiddlewares =
+          (middlewareMap.get(tree) as Middleware<T>[]) || [];
+
+        for (const middleware of treeMiddlewares) {
+          if (
+            middleware.before &&
+            !middleware.before(action, updateResult, currentState)
+          ) {
+            return;
+          }
+        }
+
+        const previousState = currentState;
+        host.batchUpdate.call(host, updater);
+        const newState = tree.$();
+
+        for (const middleware of treeMiddlewares) {
+          if (middleware.after)
+            middleware.after(action, updateResult, previousState, newState);
+        }
+      };
+
+      wrapper.set = (partial: Partial<T>) => {
+        const action = 'SET';
+        const currentState = tree.$();
+        const treeMiddlewares =
+          (middlewareMap.get(tree) as Middleware<T>[]) || [];
+
+        for (const middleware of treeMiddlewares) {
+          if (
+            middleware.before &&
+            !middleware.before(action, partial, currentState)
+          ) {
+            return;
+          }
+        }
+
+        const previousState = currentState;
+        host.set.call(host, partial);
+        const newState = tree.$();
+
+        for (const middleware of treeMiddlewares) {
+          if (middleware.after)
+            middleware.after(action, partial, previousState, newState);
+        }
+      };
+
+      return wrapper as unknown as DeepSignalify<T>;
+    };
+
+    // Create the enhanced tree with root-level intercepted proxies
     const enhancedTree = {
       ...tree,
-      $: createInterceptedProxy(tree.$),
-      state: createInterceptedProxy(tree.state),
-    } as SignalTree<T>;
+      $: createRootWrapper(tree.$),
+      state: createRootWrapper(tree.state),
+    } as unknown as SignalTree<T>;
 
     // Override addTap to work with the middleware system
     enhancedTree.addTap = (middleware: Middleware<T>) => {
@@ -225,22 +170,37 @@ export function withMiddleware<T>(
  * @returns Configured logging middleware
  */
 export function createLoggingMiddleware<T>(treeName: string): Middleware<T> {
+  // Lightweight wrapper - delegate to the factories implementation via dynamic import
+  let real: Middleware<T> | null = null;
+  const ensure = () => {
+    if (real) return;
+    import('./middleware.factories')
+      .then((m) => {
+        real = (
+          m.createLoggingMiddleware as unknown as (
+            name: string
+          ) => Middleware<T>
+        )(treeName);
+      })
+      .catch(() => {
+        real = null;
+      });
+  };
+  ensure();
+
   return {
     id: 'logging',
-    before: (action, payload, state) => {
-      console.group(`🏪 ${treeName}: ${action}`);
-      console.log('Previous state:', state);
-      console.log(
-        'Payload:',
-        typeof payload === 'function' ? 'Function' : payload
-      );
+    before: (action: string, payload: unknown, state: T) => {
+      if (real && real.before) return real.before(action, payload, state);
+      if (typeof console !== 'undefined') console.debug(treeName, action);
       return true;
     },
-    after: (action, payload, state, newState) => {
-      console.log('New state:', newState);
-      console.groupEnd();
+    after: (action: string, payload: unknown, state: T, newState: T) => {
+      if (real && real.after)
+        return real.after(action, payload, state, newState);
+      if (typeof console !== 'undefined') console.debug(newState);
     },
-  };
+  } as Middleware<T>;
 }
 
 /**
@@ -249,16 +209,33 @@ export function createLoggingMiddleware<T>(treeName: string): Middleware<T> {
  * @returns Configured performance middleware
  */
 export function createPerformanceMiddleware<T>(): Middleware<T> {
+  // Lightweight wrapper delegating to factories via dynamic import
+  let real: Middleware<T> | null = null;
+  const ensure = () => {
+    if (real) return;
+    import('./middleware.factories')
+      .then((m) => {
+        real = (
+          m.createPerformanceMiddleware as unknown as () => Middleware<T>
+        )();
+      })
+      .catch(() => (real = null));
+  };
+  ensure();
+
   return {
     id: 'performance',
-    before: (action) => {
-      console.time(`Tree update: ${action}`);
+    before: (action: string, payload: unknown, state: T) => {
+      if (real && real.before) return real.before(action, payload, state);
+      if (typeof console !== 'undefined') console.time(action);
       return true;
     },
-    after: (action) => {
-      console.timeEnd(`Tree update: ${action}`);
+    after: (action: string, payload: unknown, state: T, newState: T) => {
+      if (real && real.after)
+        return real.after(action, payload, state, newState);
+      if (typeof console !== 'undefined') console.timeEnd(action);
     },
-  };
+  } as Middleware<T>;
 }
 
 /**
@@ -270,13 +247,12 @@ export function createPerformanceMiddleware<T>(): Middleware<T> {
 export function createValidationMiddleware<T>(
   validator: (state: T) => string | null
 ): Middleware<T> {
+  // Validation is small; keep inline to avoid extra dynamic import
   return {
     id: 'validation',
     after: (action, payload, state, newState) => {
       const error = validator(newState);
-      if (error) {
-        console.error(`Validation failed after ${action}:`, error);
-      }
+      if (error) console.error(error);
     },
   };
 }
@@ -293,41 +269,45 @@ export function createPersistenceMiddleware<T>(config: {
   debounceMs?: number;
   actions?: string[];
 }): Middleware<T> {
-  const {
-    key,
-    storage = localStorage,
-    debounceMs = 1000,
-    actions = ['UPDATE', 'BATCH_UPDATE'],
-  } = config;
-
-  let timeoutId: ReturnType<typeof setTimeout> | undefined;
-
-  const debouncedSave = (state: T) => {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
-    timeoutId = setTimeout(() => {
-      try {
-        storage.setItem(key, JSON.stringify(state));
-        console.log(`💾 State auto-saved to ${key}`);
-      } catch (error) {
-        console.error('Failed to save state:', error);
-      }
-    }, debounceMs);
+  // Lightweight wrapper that defers heavy persistence logic to factories
+  let real: Middleware<T> | null = null;
+  let initializing = false;
+  const ensure = () => {
+    if (real || initializing) return;
+    initializing = true;
+    import('./middleware.factories')
+      .then((m) => {
+        real = (
+          m.createPersistenceMiddleware as unknown as (
+            c: typeof config
+          ) => Middleware<T>
+        )(config);
+      })
+      .catch(() => {
+        real = null;
+      })
+      .finally(() => {
+        initializing = false;
+      });
   };
 
   return {
     id: 'persistence',
     after: (action, payload, state, newState) => {
-      if (actions.includes(action)) {
-        debouncedSave(newState);
+      if (config.actions && !config.actions.includes(action)) return;
+      ensure();
+      if (real && real.after)
+        return real.after(action, payload, state, newState);
+      try {
+        const s =
+          typeof localStorage !== 'undefined' ? localStorage : config.storage;
+        if (s) s.setItem(config.key, JSON.stringify(newState));
+      } catch (err) {
+        if (typeof console !== 'undefined') console.error(err);
       }
     },
   };
 }
 
 // Re-export the built-in middleware creators with simpler names
-export const loggingMiddleware = createLoggingMiddleware;
-export const performanceMiddleware = createPerformanceMiddleware;
-export const validationMiddleware = createValidationMiddleware;
-export const persistenceMiddleware = createPersistenceMiddleware;
+// Aliases removed to avoid duplicating small symbols in the primary bundle.
