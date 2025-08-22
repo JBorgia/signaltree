@@ -1,3 +1,5 @@
+// packages/serialization/src/lib/serialization.ts
+
 /**
  * SignalTree Serialization Module
  *
@@ -6,7 +8,7 @@
  */
 
 import { SignalTree } from '@signaltree/core';
-import { isSignal, WritableSignal, Signal } from '@angular/core';
+import { isSignal, Signal } from '@angular/core';
 import { TYPE_MARKERS } from '../constants';
 
 /**
@@ -21,11 +23,9 @@ interface SignalTreeWithConfig<T = unknown> extends SignalTree<T> {
 /**
  * Interface for enhanced SignalTree with auto-save functionality
  */
-interface EnhancedSignalTree<T = unknown> extends SerializableSignalTree<T> {
+interface EnhancedSignalTree {
   __flushAutoSave?: () => Promise<void>;
-  save(): Promise<void>;
-  load(): Promise<void>;
-  clear(): Promise<void>;
+  __checkAutoSave?: () => void;
 }
 
 /**
@@ -512,94 +512,10 @@ export function withSerialization<T extends Record<string, unknown>>(
       };
 
       // Restore special types in the data
-      const restoredData = restoreSpecialTypes(data);
+      const restoredData = restoreSpecialTypes(data) as T;
 
-      // Deep update the tree with new data while preserving signal shapes.
-      // The previous implementation attempted to apply partial updates at
-      // nested levels by calling `tree.$.update({ [key]: value })` from a
-      // nested recursion which incorrectly wrote top-level keys instead of
-      // nested paths (e.g. writing `name` instead of `user.name`). To fix
-      // that we collect the path and apply updates at the root using a
-      // path-aware patch that clones only the path being modified.
-
-      const applyUpdateAtPath = (path: string[], value: unknown) => {
-        if (path.length === 0) return;
-
-        tree.$.update((state) => {
-          // Shallow-copy along the path so we don't mutate original state
-          const newState = { ...(state as Record<string, unknown>) } as any;
-          let srcCursor: any = state as any;
-          let dstCursor: any = newState;
-
-          for (let i = 0; i < path.length - 1; i++) {
-            const part = path[i];
-            const nextSrc = srcCursor ? srcCursor[part] : undefined;
-            // Clone arrays or objects along the path
-            if (Array.isArray(nextSrc)) {
-              dstCursor[part] = [...(nextSrc as any[])];
-            } else if (nextSrc && typeof nextSrc === 'object') {
-              dstCursor[part] = { ...(nextSrc as Record<string, unknown>) };
-            } else {
-              // If the path doesn't exist on source, create an object so we can set the leaf
-              dstCursor[part] = {};
-            }
-            // Advance cursors
-            srcCursor = nextSrc;
-            dstCursor = dstCursor[part];
-          }
-
-          const last = path[path.length - 1];
-          dstCursor[last] = value;
-
-          return newState as T;
-        });
-      };
-
-      const updateSignals = (
-        target: Record<string, unknown>,
-        source: Record<string, unknown>,
-        basePath: string[] = []
-      ): void => {
-        if (!target || !source) return;
-
-        for (const key of Object.keys(source)) {
-          const sourceValue = source[key];
-          const targetValue = (target as Record<string, unknown>)[key];
-          const path = [...basePath, key];
-
-          if (isSignal(targetValue)) {
-            // For signals, use set when available.
-            try {
-              (targetValue as WritableSignal<unknown>).set(sourceValue);
-            } catch (e) {
-              // If `set` isn't supported, fall back to a root-level update
-              applyUpdateAtPath(path, sourceValue);
-            }
-          } else if (
-            sourceValue &&
-            typeof sourceValue === 'object' &&
-            !Array.isArray(sourceValue) &&
-            targetValue &&
-            typeof targetValue === 'object' &&
-            !isSignal(targetValue)
-          ) {
-            // Recurse into nested objects
-            updateSignals(
-              targetValue as Record<string, unknown>,
-              sourceValue as Record<string, unknown>,
-              path
-            );
-          } else {
-            // Non-signal leaf: apply update at root with proper path
-            applyUpdateAtPath(path, sourceValue);
-          }
-        }
-      };
-
-      updateSignals(
-        tree.$() as Record<string, unknown>,
-        restoredData as Record<string, unknown>
-      );
+      // Use set with the full object to replace everything at once
+      tree.$.set(restoredData);
     };
 
     /**
@@ -817,6 +733,12 @@ export function withPersistence<T extends Record<string, unknown>>(
       clear(): Promise<void>;
     };
 
+    // Whether auto-save should be suppressed (useful during load)
+    let suppressAutoSave = false;
+    // Baseline snapshot used to diff for auto-save. Promoted to outer
+    // scope so load() can reset it after restoring state.
+    let prevSnapshot: string | undefined;
+
     /**
      * Save current state to storage
      */
@@ -839,6 +761,9 @@ export function withPersistence<T extends Record<string, unknown>>(
      */
     enhanced.load = async (): Promise<void> => {
       try {
+        // Suppress auto-save while we read and restore state to avoid
+        // scheduling a debounced save from the load path.
+        suppressAutoSave = true;
         const data = await Promise.resolve(storage.getItem(key));
         if (data) {
           enhanced.deserialize(data, serializationConfig);
@@ -846,10 +771,21 @@ export function withPersistence<T extends Record<string, unknown>>(
           if ((tree as SignalTreeWithConfig).__config?.debugMode) {
             console.log(`[SignalTree] State loaded from storage key: ${key}`);
           }
+          // After a load, reset the baseline snapshot (without metadata)
+          try {
+            prevSnapshot = serializable.serialize({
+              ...serializationConfig,
+              includeMetadata: false,
+            });
+          } catch {
+            prevSnapshot = undefined;
+          }
         }
       } catch (error) {
         console.error('[SignalTree] Failed to load state:', error);
         throw error; // Re-throw for tests to catch
+      } finally {
+        suppressAutoSave = false;
       }
     };
 
@@ -871,74 +807,85 @@ export function withPersistence<T extends Record<string, unknown>>(
 
     // Auto-load on creation if enabled
     if (autoLoad) {
-      // Use setTimeout to avoid blocking initialization and timing issues
-      setTimeout(() => {
-        enhanced.load().catch((error) => {
+      // Run load immediately (microtask) so tests relying on auto-load don't
+      // need to wait on timers. Errors are caught and logged.
+      (async () => {
+        try {
+          suppressAutoSave = true;
+          await enhanced.load();
+        } catch (error) {
           console.warn('[SignalTree] Auto-load failed:', error);
-        });
-      }, 0);
+        } finally {
+          suppressAutoSave = false;
+        }
+      })();
     }
 
-    // Auto-save on updates if enabled
+    // Auto-save on updates if enabled. Use polling to detect changes
+    // and debounce saves. This approach works reliably with Jest/Zone
+    // without requiring Angular DI setup.
     if (autoSave) {
       let saveTimeout: ReturnType<typeof setTimeout> | undefined;
+      let pollInterval: ReturnType<typeof setInterval> | undefined;
 
-      // Hook into state changes to trigger auto-save
-      const triggerAutoSave = () => {
-        // Debounce saves
-        if (saveTimeout) {
-          clearTimeout(saveTimeout);
-        }
-
+      const triggerSave = () => {
+        if (saveTimeout) clearTimeout(saveTimeout);
         saveTimeout = setTimeout(() => {
           enhanced.save().catch((error) => {
             console.error('[SignalTree] Auto-save failed:', error);
           });
+          saveTimeout = undefined;
         }, debounceMs);
       };
 
-      // Watch for any signal changes in the tree
-      const watchSignals = (obj: Record<string, unknown>, path = ''): void => {
-        if (!obj || typeof obj !== 'object') return;
+      // Initial snapshot to compare (do not include metadata in diff)
+      try {
+        prevSnapshot = serializable.serialize({
+          ...serializationConfig,
+          includeMetadata: false,
+        });
+      } catch {
+        prevSnapshot = undefined;
+      }
 
-        for (const [key, value] of Object.entries(obj)) {
-          if (isSignal(value)) {
-            // Create an effect to watch this signal
-            const signal = value as Signal<unknown>;
-            let previousValue = signal();
-
-            // Periodically check for changes (this is a simplified approach)
-            // In a real implementation, you'd want to use Angular's effect() or similar
-            const checkForChanges = () => {
-              const currentValue = signal();
-              if (currentValue !== previousValue) {
-                previousValue = currentValue;
-                triggerAutoSave();
-              }
-              setTimeout(checkForChanges, 50); // Check every 50ms
-            };
-
-            setTimeout(checkForChanges, 0);
-          } else if (value && typeof value === 'object') {
-            watchSignals(
-              value as Record<string, unknown>,
-              path ? `${path}.${key}` : key
-            );
+      // Poll for changes every 100ms
+      const checkForChanges = () => {
+        try {
+          const current = serializable.serialize({
+            ...serializationConfig,
+            includeMetadata: false,
+          });
+          if (suppressAutoSave) {
+            // If suppression is active (e.g., during load), reset baseline
+            // and avoid scheduling saves triggered by load.
+            prevSnapshot = current;
+            return;
           }
+          if (prevSnapshot === undefined || current !== prevSnapshot) {
+            prevSnapshot = current;
+            triggerSave();
+          }
+        } catch {
+          // swallow serialization errors during polling
         }
       };
 
-      // Start watching signals
-      watchSignals(tree.state as Record<string, unknown>);
+      // Start polling every 100ms
+      pollInterval = setInterval(checkForChanges, 100);
 
-      // Store cleanup function for testing
-      (enhanced as EnhancedSignalTree).__flushAutoSave = () => {
+      // For testing: manually trigger change check
+      (enhanced as EnhancedSignalTree).__checkAutoSave = checkForChanges;
+
+      (enhanced as EnhancedSignalTree).__flushAutoSave = async () => {
         if (saveTimeout) {
           clearTimeout(saveTimeout);
           saveTimeout = undefined;
-          return enhanced.save();
         }
-        return Promise.resolve();
+        if (pollInterval) {
+          clearInterval(pollInterval);
+          pollInterval = undefined;
+        }
+        return enhanced.save();
       };
     }
 
