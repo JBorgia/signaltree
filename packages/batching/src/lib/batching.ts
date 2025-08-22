@@ -1,5 +1,5 @@
 import { parsePath } from '@signaltree/core';
-import type { SignalTree, DeepSignalify } from '@signaltree/core';
+import type { SignalTree } from '@signaltree/core';
 
 /**
  * Configuration options for intelligent batching behavior.
@@ -66,9 +66,9 @@ interface BatchingSignalTree<T> extends SignalTree<T> {
    * @example
    * ```typescript
    * // Instead of multiple individual updates
-   * tree.$.update(() => ({ loading: true }));
-   * tree.$.update(() => ({ error: null }));
-   * tree.$.update(() => ({ users: [] }));
+   * tree.update(() => ({ loading: true }));
+   * tree.update(() => ({ error: null }));
+   * tree.update(() => ({ users: [] }));
    *
    * // Use a single batched update
    * tree.batchUpdate((state) => ({
@@ -103,22 +103,7 @@ let isUpdating = false;
 /** Timeout ID for scheduled flush operations */
 let flushTimeoutId: number | undefined;
 /** Current batching configuration */
-const currentBatchingConfig: BatchingConfig = {};
-
-/** Last active per-instance batching manager (used by exported helpers in tests) */
-let lastBatchingManager: {
-  flush: () => void;
-  getSize: () => number;
-  hasPending: () => boolean;
-  // Optional inspector for tests/debugging
-  getQueue?: () => Array<BatchedUpdate>;
-} | null = null;
-
-// Maps a wrapped callable proxy to its dot-path within the tree
-const proxyPathMap: WeakMap<object, string> = new WeakMap();
-// Cache wrapper proxies for original callable proxies so we don't create
-// a new wrapper on every property access
-const wrapperCache: WeakMap<object, unknown> = new WeakMap();
+let currentBatchingConfig: BatchingConfig = {};
 
 /**
  * Enhanced queue management with priority and deduplication
@@ -210,18 +195,18 @@ function flushUpdates(): void {
  * @example
  * ```typescript
  * // Simple batched update
- * batchUpdates(() => tree.$.update(() => ({ count: 1 })));
+ * batchUpdates(() => tree.update(() => ({ count: 1 })));
  *
  * // Path-aware batching for nested updates
- * batchUpdates(() => tree.$.update(() => ({ user: { name: 'John' } })), 'user.name');
+ * batchUpdates(() => tree.update(() => ({ user: { name: 'John' } })), 'user.name');
  *
  * // Multiple updates get automatically batched
- * batchUpdates(() => tree.$.update(() => ({ loading: true })));
- * batchUpdates(() => tree.$.update(() => ({ error: null })));
+ * batchUpdates(() => tree.update(() => ({ loading: true })));
+ * batchUpdates(() => tree.update(() => ({ error: null })));
  * // Both execute in single microtask
  * ```
  */
-export function batchUpdates(fn: () => void, path?: string): void {
+function batchUpdates(fn: () => void, path?: string): void {
   const startTime = performance.now();
   const depth = path ? parsePath(path).length : 0;
 
@@ -290,279 +275,28 @@ export function withBatching<T>(
   config: BatchingConfig = {}
 ): (tree: SignalTree<T>) => BatchingSignalTree<T> {
   const { enabled = true } = config;
+
+  // Update global config for this batching instance
+  currentBatchingConfig = { ...currentBatchingConfig, ...config };
+
   return (tree: SignalTree<T>): BatchingSignalTree<T> => {
-    // withBatching invoked
     if (!enabled) {
-      // Replace the callable state with a tiny proxy that provides a
-      // `batchUpdate` stub which delegates to the normal `.update`. This is a
-      // best-effort compatibility shim used only when batching is disabled.
-      try {
-        const original = tree.$ as unknown as object;
-        const wrapper = new Proxy(original as object, {
-          get(target, prop, receiver) {
-            if (prop === 'batchUpdate') {
-              return (updater: (current: T) => Partial<T>) => {
-                (tree.$ as DeepSignalify<T>).update(updater);
-              };
-            }
-            const val = Reflect.get(target, prop, receiver);
-            return typeof val === 'function'
-              ? (val as (...a: unknown[]) => unknown).bind(target)
-              : val;
-          },
-          apply(target, thisArg, argArray) {
-            return (target as (...a: unknown[]) => unknown).apply(
-              thisArg,
-              argArray
-            );
-          },
-        }) as unknown as DeepSignalify<T>;
-
-        tree.state = wrapper;
-        tree.$ = wrapper;
-      } catch {
-        // ignore - best-effort only
-      }
-
       return tree as BatchingSignalTree<T>;
     }
-    // Per-instance batching state to avoid cross-tree interference
-    const instanceConfig: BatchingConfig = { ...config };
-    let instanceQueue: Array<BatchedUpdate> = [];
-    let instanceIsUpdating = false;
-    let instanceFlushTimeoutId: number | undefined;
 
-    const originalUpdate = tree.$.update.bind(tree.$);
+    // Store the original update method
+    const originalUpdate = tree.update.bind(tree);
 
-    function instanceScheduleFlush() {
-      // Prefer microtask scheduling so awaiting queueMicrotask in tests works
-      if (instanceFlushTimeoutId !== undefined) {
-        clearTimeout(instanceFlushTimeoutId);
-        instanceFlushTimeoutId = undefined;
-      }
-      // Schedule a fallback timeout flush (do not use microtasks here to keep
-      // imperative updates batched until explicitly requested)
-      // schedule fallback timeout flush
-      const delay = instanceConfig.autoFlushDelay ?? 16;
-      instanceFlushTimeoutId = setTimeout(() => {
-        instanceFlushTimeoutId = undefined;
-        instanceFlushUpdates();
-      }, delay) as unknown as number;
-    }
-
-    function instanceFlushUpdates(): void {
-      if (instanceIsUpdating) return;
-      let q: Array<BatchedUpdate>;
-      do {
-        if (instanceQueue.length === 0) return;
-        // executing instance flush
-        instanceIsUpdating = true;
-        q = instanceQueue;
-        instanceQueue = [];
-        if (instanceFlushTimeoutId !== undefined) {
-          clearTimeout(instanceFlushTimeoutId);
-          instanceFlushTimeoutId = undefined;
-        }
-        q.sort((a, b) => (b.depth ?? 0) - (a.depth ?? 0));
-        try {
-          q.forEach(({ fn }) => fn());
-        } finally {
-          instanceIsUpdating = false;
-        }
-      } while (instanceQueue.length > 0);
-    }
-
-    function instanceAddToQueue(
-      update: BatchedUpdate,
-      scheduleMicrotask = false
-    ): boolean {
-      const maxSize = instanceConfig.maxBatchSize ?? 100;
-
-      if (update.path) {
-        instanceQueue = instanceQueue.filter(
-          (existing) => existing.path !== update.path
-        );
-      }
-
-      instanceQueue.push(update);
-
-      if (instanceQueue.length > maxSize) {
-        instanceFlushUpdates();
-        return true;
-      }
-
-      // Optionally schedule microtask flush (used by batchUpdate)
-      if (scheduleMicrotask) {
-        if (typeof queueMicrotask === 'function') {
-          queueMicrotask(() => instanceFlushUpdates());
-        } else {
-          Promise.resolve().then(() => instanceFlushUpdates());
-        }
-        // also schedule fallback timeout in case microtasks aren't available
-        instanceScheduleFlush();
-      }
-      return false;
-    }
-
-    // We will wrap callable proxies (root and nested) so that .update and
-    // .batchUpdate on any node route through the per-instance queue with a
-    // stable path annotation. Use wrapperCache to avoid double-wrapping.
-    const originalState = tree.$ as unknown as object;
-
-    function createNodeWrapper(node: unknown, path = ''): unknown {
-      if (wrapperCache.has(node as object))
-        return wrapperCache.get(node as object);
-
-      const callable = function wrappedCallable(
-        this: unknown,
-        ...args: unknown[]
-      ) {
-        // If the original node is callable, call it
-        if (typeof node === 'function') {
-          const fn = node as ((...a: unknown[]) => unknown) & {
-            apply?: (...a: unknown[]) => unknown;
-          };
-          return fn.apply ? fn.apply(this, args) : (fn as () => unknown)();
-        }
-        return undefined;
-      } as unknown;
-
-      const nodeObj = node as object;
-      const proxy = new Proxy(callable as object, {
-        apply(_t, thisArg, argArray) {
-          if (typeof node === 'function') {
-            const fn = node as ((...a: unknown[]) => unknown) & {
-              apply?: (...a: unknown[]) => unknown;
-            };
-            return fn.apply
-              ? fn.apply(thisArg, argArray)
-              : (fn as () => unknown)();
-          }
-          return undefined;
-        },
-        get(_t, prop, receiver) {
-          // Provide path-aware update/batchUpdate on the wrapper
-          if (prop === 'update') {
-            return (updater: (current: T) => Partial<T>) => {
-              instanceAddToQueue(
-                {
-                  fn: () => {
-                    const upd = (
-                      node as unknown as { update?: (u: unknown) => unknown }
-                    ).update;
-                    if (typeof upd === 'function') return upd(updater);
-                    return undefined;
-                  },
-                  startTime: performance.now(),
-                  depth: path ? parsePath(path).length : 0,
-                  path,
-                },
-                false
-              );
-            };
-          }
-
-          if (prop === 'batchUpdate') {
-            return (updater: (current: T) => Partial<T>) => {
-              instanceAddToQueue(
-                {
-                  fn: () => {
-                    const upd = (
-                      node as unknown as { update?: (u: unknown) => unknown }
-                    ).update;
-                    if (typeof upd === 'function') return upd(updater);
-                    return undefined;
-                  },
-                  startTime: performance.now(),
-                  depth: path ? parsePath(path).length : 0,
-                  path,
-                },
-                true
-              );
-            };
-          }
-
-          // Expose callable marker
-          if (prop === '__isCallableProxy__') return true;
-
-          // Delegate other properties to the original node
-          const val = Reflect.get(nodeObj, prop, receiver);
-          // If it's a nested callable proxy, wrap it with the proper path
-          if (
-            typeof val === 'function' &&
-            (val as unknown as { __isCallableProxy__?: boolean })
-              .__isCallableProxy__ === true
-          ) {
-            const childPath = path ? `${path}.${String(prop)}` : String(prop);
-            const wrappedChild = createNodeWrapper(val, childPath);
-            return wrappedChild;
-          }
-
-          // If this looks like an Angular signal (callable with `.set`),
-          // return it directly so we don't lose its properties by binding.
-          if (
-            typeof val === 'function' &&
-            typeof (val as unknown as { set?: unknown }).set === 'function'
-          ) {
-            return val;
-          }
-
-          // For other functions, bind to the original node object so `this`
-          // remains correct. For non-functions, return as-is.
-          return typeof val === 'function'
-            ? (val as (...a: unknown[]) => unknown).bind(nodeObj)
-            : val;
-        },
-        has(_t, prop) {
-          return Reflect.has(nodeObj, prop);
-        },
-        ownKeys() {
-          return Reflect.ownKeys(nodeObj);
-        },
-        getOwnPropertyDescriptor(_t, prop) {
-          return Reflect.getOwnPropertyDescriptor(nodeObj, prop as PropertyKey);
-        },
-        set(_t, prop, value) {
-          return Reflect.set(nodeObj as object, prop as PropertyKey, value);
-        },
-      });
-
-      // Record path mapping
-      proxyPathMap.set(proxy as object, path);
-      wrapperCache.set(node as object, proxy);
-      return proxy;
-    }
-
-    // Create wrapped root proxy and replace tree references
-    const stateProxy = createNodeWrapper(originalState, '');
-
-    const enhancedTree = tree as BatchingSignalTree<T>;
-    // Replace the tree's state and $ references with our proxy wrapper
-    enhancedTree.state = stateProxy as unknown as DeepSignalify<T>;
-    enhancedTree.$ = stateProxy as unknown as DeepSignalify<T>;
-
-    // Attach batchUpdate to the callable state proxy so the API lives on `tree.$`
-    (
-      stateProxy as unknown as {
-        batchUpdate?: (u: (current: T) => Partial<T>) => void;
-      }
-    ).batchUpdate = (updater: (current: T) => Partial<T>) => {
-      instanceAddToQueue(
-        {
-          fn: () => originalUpdate(updater),
-          startTime: performance.now(),
-          depth: 0,
-        },
-        true // batchUpdate should schedule microtask flush
-      );
+    // Override update method with batching
+    tree.update = (updater: (current: T) => Partial<T>) => {
+      // Always use batching for regular updates
+      batchUpdates(() => originalUpdate(updater));
     };
 
-    // Register this instance as the last active manager so exported helpers work in tests
-    lastBatchingManager = {
-      flush: instanceFlushUpdates,
-      getSize: () => instanceQueue.length,
-      hasPending: () => instanceQueue.length > 0,
-      getQueue: () => instanceQueue.slice(),
+    // Add batchUpdate method to the tree
+    const enhancedTree = tree as BatchingSignalTree<T>;
+    enhancedTree.batchUpdate = (updater: (current: T) => Partial<T>) => {
+      batchUpdates(() => originalUpdate(updater));
     };
 
     return enhancedTree;
@@ -637,12 +371,12 @@ export function withHighPerformanceBatching<T>() {
  *
  * // In tests, ensure updates are applied immediately
  * flushBatchedUpdates();
- * expect(tree.$().count).toBe(1);
- * expect(tree.$().name).toBe('test');
+ * expect(tree.unwrap().count).toBe(1);
+ * expect(tree.unwrap().name).toBe('test');
  *
  * // Before critical operations that need current state
  * flushBatchedUpdates();
- * const currentState = tree.$(); // Guaranteed to be up-to-date
+ * const currentState = tree.unwrap(); // Guaranteed to be up-to-date
  *
  * // In animation frames for precise timing
  * requestAnimationFrame(() => {
@@ -652,27 +386,28 @@ export function withHighPerformanceBatching<T>() {
  * ```
  */
 export function flushBatchedUpdates(): void {
-  // If an instance-level batching manager exists (created by withBatching), prefer it
-  if (lastBatchingManager) {
-    lastBatchingManager.flush();
-    return;
-  }
-
-  // Fallback to module-level/global queue behavior for older code/tests
-  // global flush invoked
+  console.log(
+    'flushBatchedUpdates called, queue length:',
+    updateQueue.length,
+    'isUpdating:',
+    isUpdating
+  );
   if (updateQueue.length > 0) {
     // Force flush regardless of isUpdating state
     const queue = updateQueue.slice();
     updateQueue = [];
     isUpdating = false; // Reset the updating flag
-    // Flushing queued updates
+    console.log('Flushing', queue.length, 'updates');
 
     // Sort by depth (deepest first) for optimal update propagation
     queue.sort((a, b) => (b.depth ?? 0) - (a.depth ?? 0));
 
-    queue.forEach(({ fn }) => fn());
+    queue.forEach(({ fn }) => {
+      console.log('Executing queued function');
+      fn();
+    });
   } else {
-    // nothing to flush
+    console.log('Flush skipped - queue empty');
   }
 }
 
@@ -709,7 +444,6 @@ export function flushBatchedUpdates(): void {
  * ```
  */
 export function hasPendingUpdates(): boolean {
-  if (lastBatchingManager) return lastBatchingManager.hasPending();
   return updateQueue.length > 0;
 }
 
@@ -752,42 +486,5 @@ export function hasPendingUpdates(): boolean {
  * ```
  */
 export function getBatchQueueSize(): number {
-  if (lastBatchingManager) return lastBatchingManager.getSize();
   return updateQueue.length;
-}
-
-/**
- * Returns a shallow copy of pending queued updates for debugging/tests.
- * This is not part of the public runtime contract, but helps tests inspect
- * internal queue state during development.
- */
-export function getPendingBatchedUpdates(): Array<BatchedUpdate> {
-  if (lastBatchingManager && lastBatchingManager.getQueue) {
-    return lastBatchingManager.getQueue() || [];
-  }
-  return updateQueue.slice();
-}
-
-/**
- * DEV-ONLY: Return friendly node paths for queued batched updates.
- * Uses the internal proxyPathMap to map wrapper proxies to their dot-paths.
- * This helper is intended for debugging and tests only and may be removed
- * or behind a feature flag in production builds.
- */
-export function getPendingBatchedUpdatePaths(): string[] {
-  const queue = getPendingBatchedUpdates();
-  const paths: string[] = [];
-  for (const entry of queue) {
-    if (entry.path) {
-      paths.push(entry.path);
-      continue;
-    }
-    // If path not available, try to infer from queued fn using proxyPathMap:
-    // Some queued functions close over wrapped proxies; attempt a best-effort
-    // string extraction by checking known wrapperCache/proxyPathMap entries.
-    // This is best-effort and primarily useful in tests where we set path
-    // explicitly when scheduling updates.
-    paths.push('<unknown>');
-  }
-  return paths;
 }
