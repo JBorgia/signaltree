@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/core",
-  "version": "1.1.8",
+  "version": "1.1.9",
   "description": "Lightweight, type-safe signal-based state management for Angular. Core package providing hierarchical signal trees, basic entity management, and async actions.",
   "peerDependencies": {
     "@angular/core": "^20.1.0"
