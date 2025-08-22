@@ -208,7 +208,12 @@ export function createFormTree<T extends Record<string, unknown>>(
     let current: unknown = obj;
 
     for (const key of keys) {
-      if (current && typeof current === 'object') {
+      // The SignalTree root and nested nodes can be callable proxies (functions)
+      // so accept both object and function types when traversing properties.
+      if (
+        current &&
+        (typeof current === 'object' || typeof current === 'function')
+      ) {
         current = (current as Record<string, unknown>)[key];
         if (isSignal(current)) {
           current = (current as Signal<unknown>)();
@@ -226,6 +231,7 @@ export function createFormTree<T extends Record<string, unknown>>(
     let current: unknown = flattenedState;
 
     for (let i = 0; i < keys.length - 1; i++) {
+      // Accept callable proxies (functions) as traversable objects
       current = (current as Record<string, unknown>)[keys[i]];
       if (!current) return;
     }
@@ -275,6 +281,8 @@ export function createFormTree<T extends Record<string, unknown>>(
           const value = getNestedValue(flattenedState, fieldPath);
           const result = asyncValidator(value);
 
+          // debug logging removed for production builds
+
           let error: string | null;
           if (result instanceof Observable) {
             // Handle Observable
@@ -312,6 +320,8 @@ export function createFormTree<T extends Record<string, unknown>>(
       (v) => v
     );
 
+    // debug logging removed for production builds
+
     formSignals.valid.set(!hasErrors && !hasAsyncErrors && !isValidating);
   };
 
@@ -347,6 +357,7 @@ export function createFormTree<T extends Record<string, unknown>>(
 
     setValue: (field: string, value: unknown) => {
       setNestedValue(field, value);
+      // debug logging removed for production builds
       formSignals.touched.update((t) => ({ ...t, [field]: true }));
       markDirty();
       void validate(field);

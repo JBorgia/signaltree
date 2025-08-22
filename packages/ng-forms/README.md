@@ -1,3 +1,15 @@
+# Ng-Forms: Callable proxy traversal note
+
+Implementation detail: `@signaltree/core` exposes a `SignalTree` whose root and nested objects are "callable proxies" (functions with attached properties and methods like `update` and `set`). This file documents the requirement for traversal helpers in `ng-forms`.
+
+Key points:
+
+- Traversal helpers (get/set by path) must accept both `object` and `function` types when descending keys.
+- Tests should exercise callable-proxy traversal explicitly (see `src/lib/callable-proxy-traversal.spec.ts`).
+- Avoid assuming plain objects for nested nodes.
+
+This prevents issues where nested values read as `undefined` during validation or updates.
+
 # @signaltree/ng-forms
 
 Angular Forms integration for SignalTree featuring reactive forms binding, validation, form state management, and seamless Angular integration.
