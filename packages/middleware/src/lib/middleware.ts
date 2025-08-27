@@ -94,11 +94,19 @@ export function withMiddleware<T>(
 
               const previousState = currentState;
 
-              // Call the original batchUpdate on the callable target
-              (value as (updater: (current: T) => Partial<T>) => void).call(
-                target,
-                updater
-              );
+              // Call the original batchUpdate if available; otherwise fall back to update
+              const originalFn = (
+                typeof value === 'function'
+                  ? value
+                  : (target as Record<string | symbol, unknown>)['update']
+              ) as ((updater: (current: T) => Partial<T>) => void) | undefined;
+
+              if (originalFn) {
+                originalFn.call(target, updater);
+              } else {
+                // No-op if neither function is available
+                return;
+              }
 
               const newState = tree.$();
 

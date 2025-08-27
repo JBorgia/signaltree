@@ -181,4 +181,138 @@ describe('Middleware', () => {
       consoleErrorSpy.mockRestore();
     });
   });
+
+  describe('additional behaviors', () => {
+    it('should intercept batchUpdate with before/after hooks', () => {
+      const beforeSpy = jest.fn(() => true);
+      const afterSpy = jest.fn();
+
+      const tree = signalTree({ a: 1, b: 2 }).pipe(
+        withMiddleware([{ id: 't', before: beforeSpy, after: afterSpy }])
+      );
+
+      // Provide a minimal batchUpdate implementation on the proxy to exercise interception
+      const proxied = tree.$ as unknown as {
+        update: (
+          u: (s: { a: number; b: number }) => Partial<{ a: number; b: number }>
+        ) => void;
+        batchUpdate?: (
+          u: (s: { a: number; b: number }) => Partial<{ a: number; b: number }>
+        ) => void;
+      };
+      proxied.batchUpdate = (u) => proxied.update(u);
+
+      (
+        tree.$ as unknown as {
+          batchUpdate: (
+            u: (s: {
+              a: number;
+              b: number;
+            }) => Partial<{ a: number; b: number }>
+          ) => void;
+        }
+      ).batchUpdate((s) => ({ a: s.a + 1 }));
+
+      tree.$.batchUpdate((s) => ({ a: s.a + 1 }));
+
+      expect(beforeSpy).toHaveBeenCalledWith(
+        'BATCH_UPDATE',
+        { a: 2 },
+        { a: 1, b: 2 }
+      );
+      expect(afterSpy).toHaveBeenCalledWith(
+        'BATCH_UPDATE',
+        { a: 2 },
+        { a: 1, b: 2 },
+        { a: 2, b: 2 }
+      );
+    });
+    it('should prevent set when middleware returns false', () => {
+      const beforeSpy = jest.fn(() => false);
+      const afterSpy = jest.fn();
+
+      const tree = signalTree({ a: 1, b: 2 }).pipe(
+        withMiddleware([{ id: 't', before: beforeSpy, after: afterSpy }])
+      );
+
+      tree.$.set({ a: 2 });
+
+      expect(tree.$()).toEqual({ a: 1, b: 2 });
+      expect(afterSpy).not.toHaveBeenCalled();
+    });
+
+    it('should prevent batchUpdate when middleware returns false', () => {
+      const beforeSpy = jest.fn(() => false);
+      const afterSpy = jest.fn();
+
+      const tree = signalTree({ a: 1, b: 2 }).pipe(
+        withMiddleware([{ id: 't', before: beforeSpy, after: afterSpy }])
+      );
+
+      const proxied = tree.$ as unknown as {
+        update: (
+          u: (s: { a: number; b: number }) => Partial<{ a: number; b: number }>
+        ) => void;
+        batchUpdate?: (
+          u: (s: { a: number; b: number }) => Partial<{ a: number; b: number }>
+        ) => void;
+      };
+      proxied.batchUpdate = (u) => proxied.update(u);
+
+      (
+        tree.$ as unknown as {
+          batchUpdate: (
+            u: (s: {
+              a: number;
+              b: number;
+            }) => Partial<{ a: number; b: number }>
+          ) => void;
+        }
+      ).batchUpdate((s) => ({ a: s.a + 1 }));
+
+      expect(tree.$()).toEqual({ a: 1, b: 2 });
+      expect(afterSpy).not.toHaveBeenCalled();
+    });
+
+    // no-op test removed to avoid environment-dependent behavior
+
+    it('should intercept set with before/after hooks', () => {
+      const beforeSpy = jest.fn(() => true);
+      const afterSpy = jest.fn();
+
+      const tree = signalTree({ a: 1, b: 2 }).pipe(
+        withMiddleware([{ id: 't', before: beforeSpy, after: afterSpy }])
+      );
+
+      tree.$.set({ b: 3 });
+
+      expect(beforeSpy).toHaveBeenCalledWith('SET', { b: 3 }, { a: 1, b: 2 });
+      expect(afterSpy).toHaveBeenCalledWith(
+        'SET',
+        { b: 3 },
+        { a: 1, b: 2 },
+        { a: 1, b: 3 }
+      );
+    });
+
+    it('should stop invoking middleware after destroy()', () => {
+      const beforeSpy = jest.fn(() => true);
+      const afterSpy = jest.fn();
+
+      const tree = signalTree({ count: 0 }).pipe(
+        withMiddleware([{ id: 't', before: beforeSpy, after: afterSpy }])
+      );
+
+      tree.$.update((s) => ({ count: s.count + 1 }));
+      expect(beforeSpy).toHaveBeenCalledTimes(1);
+      expect(afterSpy).toHaveBeenCalledTimes(1);
+
+      tree.destroy();
+
+      // Further updates should not trigger middleware hooks
+      tree.$.update((s) => ({ count: s.count + 1 }));
+      expect(beforeSpy).toHaveBeenCalledTimes(1);
+      expect(afterSpy).toHaveBeenCalledTimes(1);
+    });
+  });
 });
