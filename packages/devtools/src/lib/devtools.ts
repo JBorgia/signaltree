@@ -34,6 +34,19 @@ export interface ModularPerformanceMetrics {
   moduleCacheStats: Record<string, { hits: number; misses: number }>;
 }
 
+// Small helper to avoid repeating the zeroed metrics literal
+function createDefaultMetrics(): ModularPerformanceMetrics {
+  return {
+    totalUpdates: 0,
+    moduleUpdates: {},
+    modulePerformance: {},
+    compositionChain: [],
+    signalGrowth: {},
+    memoryDelta: {},
+    moduleCacheStats: {},
+  };
+}
+
 /**
  * Module activity tracker for debugging
  */
@@ -88,6 +101,8 @@ export interface CompositionLogger {
  * DevTools interface specifically for modular SignalTree
  */
 export interface ModularDevToolsInterface<T> {
+  /** Phantom type to keep T referenced (type-only, not emitted) */
+  readonly __t?: T;
   /** Activity tracker for all modules */
   activityTracker: ModuleActivityTracker;
   /** Composition-aware logger */
@@ -184,7 +199,6 @@ function createCompositionLogger(): CompositionLogger {
   return {
     logComposition: (modules: string[], action: 'pipe' | 'enhance') => {
       addLog('core', 'composition', { modules, action });
-      console.log('🔗 Composition pipe:', modules.join(' → '));
     },
 
     logMethodExecution: (
@@ -194,7 +208,6 @@ function createCompositionLogger(): CompositionLogger {
       result: unknown
     ) => {
       addLog(module, 'method', { method, args, result });
-      console.debug(`🔧 [${module}] ${method}`, { args, result });
     },
 
     logStateChange: (
@@ -204,10 +217,6 @@ function createCompositionLogger(): CompositionLogger {
       newValue: unknown
     ) => {
       addLog(module, 'state', { path, oldValue, newValue });
-      console.debug(`📝 [${module}] State change at ${path}:`, {
-        from: oldValue,
-        to: newValue,
-      });
     },
 
     logPerformanceWarning: (
@@ -217,11 +226,6 @@ function createCompositionLogger(): CompositionLogger {
       threshold: number
     ) => {
       addLog(module, 'performance', { operation, duration, threshold });
-      console.warn(
-        `⚠️ [${module}] Slow ${operation}: ${duration.toFixed(
-          2
-        )}ms (threshold: ${threshold}ms)`
-      );
     },
 
     exportLogs: () => [...logs],
@@ -232,15 +236,9 @@ function createCompositionLogger(): CompositionLogger {
  * Creates real-time performance metrics for modular architecture
  */
 function createModularMetrics() {
-  const metricsSignal = signal<ModularPerformanceMetrics>({
-    totalUpdates: 0,
-    moduleUpdates: {},
-    modulePerformance: {},
-    compositionChain: [],
-    signalGrowth: {},
-    memoryDelta: {},
-    moduleCacheStats: {},
-  });
+  const metricsSignal = signal<ModularPerformanceMetrics>(
+    createDefaultMetrics()
+  );
 
   return {
     signal: metricsSignal.asReadonly(),
@@ -302,29 +300,13 @@ export function withDevTools<T>(
           logPerformanceWarning: () => undefined,
           exportLogs: () => [],
         },
-        metrics: signal({
-          totalUpdates: 0,
-          moduleUpdates: {},
-          modulePerformance: {},
-          compositionChain: [],
-          signalGrowth: {},
-          memoryDelta: {},
-          moduleCacheStats: {},
-        }).asReadonly(),
+        metrics: signal(createDefaultMetrics()).asReadonly(),
         trackComposition: () => undefined,
         startModuleProfiling: () => '',
         endModuleProfiling: () => undefined,
         connectDevTools: () => undefined,
         exportDebugSession: () => ({
-          metrics: {
-            totalUpdates: 0,
-            moduleUpdates: {},
-            modulePerformance: {},
-            compositionChain: [],
-            signalGrowth: {},
-            memoryDelta: {},
-            moduleCacheStats: {},
-          },
+          metrics: createDefaultMetrics(),
           modules: [],
           logs: [],
           compositionHistory: [],
@@ -351,11 +333,11 @@ export function withDevTools<T>(
     const getImpl = () => {
       if (!heavy) {
         // Inline factory to avoid static import; bundlers can split this out.
-        const activityTracker = createActivityTracker();
+        const activityTracker = /* @__PURE__ */ createActivityTracker();
         // Always create a logger instance so exportLogs and explicit logging
         // in tests work. Honor enableLogging by silencing console side-effects
         // but still record logs for export.
-        const baseLogger = createCompositionLogger();
+        const baseLogger = /* @__PURE__ */ createCompositionLogger();
         const logger: CompositionLogger = config.enableLogging
           ? baseLogger
           : (() => {
@@ -404,7 +386,7 @@ export function withDevTools<T>(
                 exportLogs: () => [...logs],
               } as CompositionLogger;
             })();
-        const metrics = createModularMetrics();
+        const metrics = /* @__PURE__ */ createModularMetrics();
 
         const compositionHistory: Array<{ timestamp: Date; chain: string[] }> =
           [];
@@ -416,7 +398,7 @@ export function withDevTools<T>(
           send: (action: string, state: T) => void;
         } | null = null;
         if (
-          config.enableBrowserDevTools &&
+          enableBrowserDevTools &&
           typeof window !== 'undefined' &&
           '__REDUX_DEVTOOLS_EXTENSION__' in window
         ) {
