@@ -719,13 +719,13 @@ Perfect for:
 ```typescript
 import { signalTree } from '@signaltree/core';
 import { withTimeTravel } from '@signaltree/time-travel';
-import { withDevtools } from '@signaltree/devtools';
+import { withDevTools } from '@signaltree/devtools';
 import { withAsync } from '@signaltree/async';
 
 const tree = signalTree(state).pipe(
   withAsync(), // Enhanced async operations
   withTimeTravel(), // Time travel and history
-  withDevtools() // Additional debugging features
+  withDevTools() // Additional debugging features
 );
 ```
 

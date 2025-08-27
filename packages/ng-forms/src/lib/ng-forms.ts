@@ -105,6 +105,42 @@ function createEmptyStringMap(): Record<string, string> {
   return {} as Record<string, string>;
 }
 
+// Duck-typed observable guard to avoid cross-realm instanceof checks
+function isObservableLike<T = unknown>(
+  val: unknown
+): val is {
+  subscribe: (observer: {
+    next: (v: T) => void;
+    error: (e: unknown) => void;
+    complete?: () => void;
+  }) => { unsubscribe?: () => void };
+} {
+  // Intentionally not checking constructor to support interop
+  return (
+    !!val && typeof (val as { subscribe?: unknown }).subscribe === 'function'
+  );
+}
+
+// Normalize async validator results (Observable or Promise) into a Promise
+function toValidationPromise(
+  result: Observable<string | null> | Promise<string | null> | string | null
+): Promise<string | null> {
+  try {
+    if (isObservableLike<string | null>(result)) {
+      return new Promise<string | null>((resolve) => {
+        // Minimal subscription; tests expect first emission semantics
+        (result as Observable<string | null>).subscribe({
+          next: (val) => resolve(val),
+          error: () => resolve('Validation error'),
+        });
+      });
+    }
+    return Promise.resolve(result as Promise<string | null> | string | null);
+  } catch {
+    return Promise.resolve('Validation error');
+  }
+}
+
 export function createFormTree<T extends Record<string, unknown>>(
   initialValues: T,
   config: {
@@ -279,15 +315,13 @@ export function createFormTree<T extends Record<string, unknown>>(
           try {
             const value = getNestedValue(flattenedState, fieldPath);
             const result = asyncValidator(value);
-            const error =
-              result instanceof Observable
-                ? await new Promise<string | null>((resolve) => {
-                    result.subscribe({
-                      next: (val) => resolve(val),
-                      error: () => resolve('Validation error'),
-                    });
-                  })
-                : await result;
+            const error = await toValidationPromise(
+              result as
+                | Observable<string | null>
+                | Promise<string | null>
+                | string
+                | null
+            );
             if (error) {
               asyncErrors[fieldPath] = error;
             }
@@ -374,40 +408,21 @@ export function createFormTree<T extends Record<string, unknown>>(
         if (fn) {
           const current = getNestedValue(flattenedState, field);
           const res = fn(current);
-          if (
-            res &&
-            typeof (res as unknown as { subscribe?: unknown }).subscribe ===
-              'function'
-          ) {
-            (res as unknown as Observable<string | null>).subscribe({
-              next: (msg) => {
-                if (msg) {
-                  formSignals.asyncErrors.update((cur) => ({
-                    ...cur,
-                    [field]: msg,
-                  }));
-                  formSignals.valid.set(false);
-                }
-              },
-              error: () => {
-                formSignals.asyncErrors.update((cur) => ({
-                  ...cur,
-                  [field]: 'Validation error',
-                }));
-                formSignals.valid.set(false);
-              },
-            });
-          } else {
-            Promise.resolve(res).then((msg) => {
-              if (msg) {
-                formSignals.asyncErrors.update((cur) => ({
-                  ...cur,
-                  [field]: msg as string,
-                }));
-                formSignals.valid.set(false);
-              }
-            });
-          }
+          toValidationPromise(
+            res as
+              | Observable<string | null>
+              | Promise<string | null>
+              | string
+              | null
+          ).then((msg) => {
+            if (msg) {
+              formSignals.asyncErrors.update((cur) => ({
+                ...cur,
+                [field]: msg,
+              }));
+              formSignals.valid.set(false);
+            }
+          });
         }
       }
     },

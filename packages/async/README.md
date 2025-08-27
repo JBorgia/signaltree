@@ -424,14 +424,14 @@ const efficientLoad = tree.asyncAction(async () => await api.getData(), {
 ### With Development Tools
 
 ```typescript
-import { withDevtools } from '@signaltree/devtools';
+import { withDevTools } from '@signaltree/devtools';
 
 const tree = signalTree(state).pipe(
   withAsync({
     enableMetrics: true, // Collect performance metrics
     logActions: true, // Log async actions
   }),
-  withDevtools({
+  withDevTools({
     trackAsync: true, // Track async operations in devtools
   })
 );

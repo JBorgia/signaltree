@@ -22,15 +22,23 @@ npm install @signaltree/core @signaltree/middleware
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withMiddleware, createLoggingMiddleware } from '@signaltree/middleware';
+import { withMiddleware } from '@signaltree/middleware';
+
+// Define your own lightweight middleware inline (recommended public API)
+const loggingMiddleware = {
+  id: 'logger',
+  after: (path: string, value: unknown) => {
+    console.log(`[signalTree] ${path} =`, value);
+  },
+};
 
 const tree = signalTree({
   user: { name: '', email: '' },
   settings: { theme: 'dark' },
-}).pipe(withMiddleware([createLoggingMiddleware({ logLevel: 'info' })]));
+}).pipe(withMiddleware([loggingMiddleware]));
 
 // All state changes now logged automatically
-tree.$.user.name.set('John'); // Logs: "State updated: user.name = John"
+tree.$.user.name.set('John'); // Logs: "[signalTree] user.name = John"
 ```
 
 ## 🎯 Key Features
@@ -68,32 +76,41 @@ const tree = signalTree(state).pipe(withMiddleware([validationMiddleware]));
 ### Built-in Middleware
 
 ```typescript
-import { createLoggingMiddleware, createPerformanceMiddleware, createValidationMiddleware } from '@signaltree/middleware';
+// Custom middleware examples using the public shape
+const performanceMiddleware = {
+  id: 'perf',
+  before: (_path: string, _value: unknown, _state: unknown, ctx: any) => {
+    ctx.startTime = performance.now();
+    return true;
+  },
+  after: (path: string, _value: unknown, _prev: unknown, _curr: unknown, ctx: any) => {
+    const duration = performance.now() - ctx.startTime;
+    if (duration > 16) {
+      console.warn(`Slow update: ${path} took ${duration.toFixed(2)}ms`);
+    }
+  },
+};
 
-const tree = signalTree(state).pipe(
-  withMiddleware([
-    createLoggingMiddleware({
-      logLevel: 'debug',
-      includeTimestamp: true,
-    }),
-    createPerformanceMiddleware({
-      warnThreshold: 16, // Warn if update takes >16ms
-    }),
-    createValidationMiddleware({
-      rules: {
-        'user.email': (value) => value.includes('@') || 'Invalid email',
-        'user.age': (value) => value >= 0 || 'Age must be positive',
-      },
-    }),
-  ])
-);
+const validationMiddleware = {
+  id: 'validation',
+  before: (path: string, value: unknown) => {
+    if (path === 'user.email' && typeof value === 'string' && !value.includes('@')) {
+      console.warn('Invalid email format');
+      return false; // block update
+    }
+    return true;
+  },
+};
+
+const tree = signalTree(state).pipe(withMiddleware([performanceMiddleware, validationMiddleware]));
 ```
 
 ### Runtime Middleware Management
 
 ```typescript
-// Add middleware at runtime
-tree.addMiddleware('audit', {
+// Add/remove at runtime (current API)
+tree.addTap({
+  id: 'audit',
   before: (path, value) => {
     auditLog.record('BEFORE_UPDATE', { path, value, timestamp: Date.now() });
     return true;
@@ -103,21 +120,16 @@ tree.addMiddleware('audit', {
   },
 });
 
-// Remove middleware
-tree.removeMiddleware('audit');
-
-// Replace middleware
-tree.addMiddleware('logging', newLoggingMiddleware); // Replaces existing
+tree.removeTap('audit');
 ```
 
 ## 🔧 Middleware API
 
 ```typescript
 interface Middleware<T> {
-  id?: string; // Optional ID for runtime management
-  before?: (path: string, newValue: any, currentState: T, context: MiddlewareContext) => boolean | void; // Return false to prevent update
-
-  after?: (path: string, newValue: any, previousState: T, currentState: T, context: MiddlewareContext) => void;
+  id?: string;
+  before?: (path: string, newValue: unknown, currentState: T, context: Record<string, unknown>) => boolean | void; // Return false to prevent update
+  after?: (path: string, newValue: unknown, previousState: T, currentState: T, context: Record<string, unknown>) => void;
 }
 ```
 
@@ -126,22 +138,18 @@ interface Middleware<T> {
 ### Audit Logging System
 
 ```typescript
-import { createAuditMiddleware } from '@signaltree/middleware';
-
-const auditMiddleware = createAuditMiddleware({
-  endpoint: '/api/audit',
-  includeUser: true,
-  sensitiveFields: ['password', 'token'],
-  batchSize: 10,
-});
+// Simple audit example without extra helpers
+const audit: Middleware<any> = {
+  id: 'audit',
+  after: (path, value, _prev, _curr) => {
+    auditLog.record('AFTER_UPDATE', { path, value, timestamp: Date.now() });
+  },
+};
 
 const tree = signalTree({
   user: { id: '', name: '', email: '' },
   settings: { theme: 'dark', notifications: true },
-}).pipe(withMiddleware([auditMiddleware]));
-
-// All changes automatically audited
-tree.$.user.name.set('John'); // Audited: { action: 'UPDATE', path: 'user.name', value: 'John', timestamp: ... }
+}).pipe(withMiddleware([audit]));
 ```
 
 ### Permission-Based Updates
@@ -305,12 +313,15 @@ import { withMiddleware } from '@signaltree/middleware';
 import { withBatching } from '@signaltree/batching';
 import { withDevTools } from '@signaltree/devtools';
 
-const tree = signalTree(state).pipe(withBatching(), withMiddleware([loggingMiddleware, auditMiddleware]), withDevTools());
+const tree = signalTree(state).pipe(withBatching(), withMiddleware([loggingMiddleware, audit]), withDevTools());
 ```
 
 ## 📈 Performance Considerations
 
 - **Minimal overhead** - only ~1KB added to bundle
+
+> Note: In this version, only `withMiddleware` is exported from `@signaltree/middleware` to keep bundles small. Helper factories like `createLoggingMiddleware` are not part of the public API. You can define custom middleware inline as shown above.
+
 - **Efficient execution** - middleware only runs when state changes
 - **Conditional middleware** - can be disabled in production
 - **Batching compatible** - works seamlessly with batched updates

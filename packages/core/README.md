@@ -499,7 +499,7 @@ const enhancedTree = tree.pipe(
 let tree = signalTree(initialState);
 
 if (isDevelopment) {
-  tree = tree.pipe(withDevtools());
+  tree = tree.pipe(withDevTools());
 }
 
 if (needsPerformance) {

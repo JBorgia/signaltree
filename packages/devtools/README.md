@@ -23,13 +23,13 @@ npm install @signaltree/core @signaltree/devtools
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withDevtools } from '@signaltree/devtools';
+import { withDevTools } from '@signaltree/devtools';
 
 const tree = signalTree({
   count: 0,
   user: { name: 'John', age: 30 },
 }).pipe(
-  withDevtools({
+  withDevTools({
     name: 'MyApp',
     enabled: true, // automatically detects dev environment
   })
@@ -49,7 +49,7 @@ const tree = signalTree({
   todos: [] as Todo[],
   filter: 'all' as 'all' | 'completed' | 'pending',
 }).pipe(
-  withDevtools({
+  withDevTools({
     name: 'TodoApp',
     maxHistorySize: 50,
   })
@@ -61,7 +61,7 @@ tree.$.filter.set('completed');
 tree.$.todos.update((todos) => todos.filter((t) => t.id !== deletedId));
 
 // Access debugging methods
-const devtools = tree._devtools;
+const devtools = tree.__devTools;
 
 // Travel through state history
 devtools.undo(); // Undo last action
@@ -90,9 +90,9 @@ const tree = signalTree({
     users: [],
     posts: [],
   },
-}).pipe(withDevtools());
+}).pipe(withDevTools());
 
-const devtools = tree._devtools;
+const devtools = tree.__devTools;
 
 // Get formatted state tree
 console.log(devtools.getStateTree());
@@ -119,13 +119,13 @@ const tree = signalTree({
   largeArray: new Array(10000).fill(0),
   computedValues: {},
 }).pipe(
-  withDevtools({
+  withDevTools({
     trackPerformance: true,
     performanceThreshold: 10, // Log operations taking >10ms
   })
 );
 
-const devtools = tree._devtools;
+const devtools = tree.__devTools;
 
 // Monitor performance
 tree.$.largeArray.update((arr) => arr.map((x) => x + 1)); // Automatically timed
@@ -154,7 +154,7 @@ const tree = signalTree({
   counter: 0,
   messages: [] as string[],
 }).pipe(
-  withDevtools({
+  withDevTools({
     logActions: true,
     logLevel: 'detailed', // 'minimal' | 'standard' | 'detailed'
   })
@@ -167,7 +167,7 @@ tree.$.counter.set(5);
 tree.$.messages.update((msgs) => [...msgs, 'Hello']);
 // Log: [14:32:16] ACTION: messages.update | Previous: [] | New: ['Hello']
 
-const devtools = tree._devtools;
+const devtools = tree.__devTools;
 
 // Export action sequence
 const actions = devtools.exportActions();
@@ -188,7 +188,7 @@ devtools.clearActionLog();
 
 ```typescript
 const tree = signalTree(state).pipe(
-  withDevtools({
+  withDevTools({
     // Basic settings
     name: 'MyApplication',
     enabled: process.env.NODE_ENV === 'development',
@@ -235,7 +235,7 @@ const tree = signalTree(state).pipe(
 ```typescript
 // Automatic Redux DevTools Extension support
 const tree = signalTree(state).pipe(
-  withDevtools({
+  withDevTools({
     connectToReduxDevTools: true,
     devToolsOptions: {
       name: 'My SignalTree App',
@@ -296,7 +296,7 @@ const appTree = signalTree<AppState>({
     cache: {},
   },
 }).pipe(
-  withDevtools({
+  withDevTools({
     name: 'Social Media App',
     maxHistorySize: 200,
     logLevel: 'detailed',
@@ -354,7 +354,7 @@ const appTree = signalTree<AppState>({
 })
 class DevToolsComponent {
   isDev = !environment.production;
-  devtools = appTree._devtools;
+  devtools = appTree.__devTools;
 
   currentIndex = computed(() => this.devtools.getCurrentIndex());
   historyLength = computed(() => this.devtools.getHistory().length);
@@ -394,7 +394,7 @@ class DevToolsComponent {
 export class SignalTreeTestUtils {
   static createTestTree<T>(initialState: T) {
     return signalTree(initialState).pipe(
-      withDevtools({
+      withDevTools({
         name: 'Test Tree',
         enabled: true,
         maxHistorySize: 1000,
@@ -403,7 +403,7 @@ export class SignalTreeTestUtils {
   }
 
   static async replayUserSession(tree: any, sessionActions: any[]) {
-    const devtools = tree._devtools;
+    const devtools = tree.__devTools;
 
     // Clear current state
     devtools.reset();
@@ -416,7 +416,7 @@ export class SignalTreeTestUtils {
   }
 
   static captureStateChanges<T>(tree: any, callback: () => void): T[] {
-    const devtools = tree._devtools;
+    const devtools = tree.__devTools;
     const initialIndex = devtools.getCurrentIndex();
 
     callback();
@@ -428,7 +428,7 @@ export class SignalTreeTestUtils {
   }
 
   static assertStateSequence(tree: any, expectedStates: any[]) {
-    const devtools = tree._devtools;
+    const devtools = tree.__devTools;
     const history = devtools.getHistory();
     const recent = history.slice(-expectedStates.length);
 
@@ -474,7 +474,7 @@ describe('User workflow', () => {
 ```typescript
 // Production error tracking with devtools
 const tree = signalTree(state).pipe(
-  withDevtools({
+  withDevTools({
     name: 'Production App',
     enabled: true, // Even in production for error tracking
     logLevel: 'minimal',
@@ -490,8 +490,8 @@ const tree = signalTree(state).pipe(
         errorReportingService.captureException(new Error('State Error'), {
           extra: {
             action,
-            stateSnapshot: tree._devtools.getCurrentState(),
-            history: tree._devtools.getHistory().slice(-5),
+            stateSnapshot: tree.__devTools.getCurrentState(),
+            history: tree.__devTools.getHistory().slice(-5),
           },
         });
       }
@@ -515,14 +515,14 @@ Perfect for:
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withDevtools } from '@signaltree/devtools';
+import { withDevTools } from '@signaltree/devtools';
 import { withTimeTravel } from '@signaltree/time-travel';
 import { withAsync } from '@signaltree/async';
 
 const tree = signalTree(state).pipe(
   withAsync(), // Enhanced async operations
   withTimeTravel(), // Additional time-travel features
-  withDevtools() // Full debugging capabilities
+  withDevTools() // Full debugging capabilities
 );
 ```
 

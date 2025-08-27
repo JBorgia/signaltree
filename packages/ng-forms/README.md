@@ -22,31 +22,43 @@ npm install @signaltree/core @signaltree/ng-forms
 ## 📖 Basic Usage
 
 ```typescript
-import { signalTree } from '@signaltree/core';
-import { withForms } from '@signaltree/ng-forms';
+import { createFormTree, SIGNAL_FORM_DIRECTIVES } from '@signaltree/ng-forms';
 
-const tree = signalTree({
-  user: {
-    name: '',
-    email: '',
-    age: 0,
+// Build a form-specific tree from plain initial values
+const form = createFormTree(
+  {
+    user: { name: '', email: '', age: 0 },
+    preferences: { newsletter: false, theme: 'light' },
   },
-  preferences: {
-    newsletter: false,
-    theme: 'light',
-  },
-}).pipe(withForms());
+  {
+    validators: {
+      'user.email': (v) => (typeof v === 'string' && v.includes('@') ? null : 'Invalid email'),
+    },
+  }
+);
 
-// Automatic form generation
-const userForm = tree.createForm('user');
-const preferencesForm = tree.createForm('preferences');
-
-// Forms automatically sync with SignalTree state
+// Use in Angular components with the provided directive
+@Component({
+  selector: 'user-form',
+  standalone: true,
+  imports: [...SIGNAL_FORM_DIRECTIVES],
+  template: `
+    <input [signalTreeSignalValue]="form.$.user.name" />
+    <div class="error">{{ form.getFieldError('user.email')() }}</div>
+    <button (click)="onSubmit()" [disabled]="!form.valid() || form.submitting()">Submit</button>
+  `,
+})
+export class UserFormComponent {
+  form = form;
+  onSubmit() {
+    form.submit(async (values) => await api.save(values));
+  }
+}
 ```
 
 ## 🎯 Core Features
 
-### Reactive Forms Integration
+### Signal-bound Inputs (Directive)
 
 ```typescript
 import { Component } from '@angular/core';
@@ -72,20 +84,7 @@ import { FormBuilder, Validators } from '@angular/forms';
   `,
 })
 class UserFormComponent {
-  tree = signalTree({
-    user: {
-      name: '',
-      email: '',
-      age: 0,
-    },
-  }).pipe(withForms());
-
-  // Create form with automatic binding
-  userForm = this.tree.createForm('user', {
-    name: ['', [Validators.required, Validators.minLength(2)]],
-    email: ['', [Validators.required, Validators.email]],
-    age: [0, [Validators.required, Validators.min(18)]],
-  });
+  form = createFormTree({ user: { name: '', email: '', age: 0 } });
 
   onSubmit() {
     if (this.userForm.valid) {
@@ -97,7 +96,7 @@ class UserFormComponent {
 }
 ```
 
-### Template-Driven Forms
+### Template-Driven Forms (manual binding)
 
 ```typescript
 @Component({
@@ -115,12 +114,7 @@ class UserFormComponent {
   `,
 })
 class TemplateFormComponent {
-  tree = signalTree({
-    user: {
-      name: '',
-      email: '',
-    },
-  }).pipe(withForms());
+  form = createFormTree({ user: { name: '', email: '' } });
 
   onSubmit(form: NgForm) {
     if (form.valid) {
@@ -141,7 +135,7 @@ const tree = signalTree({
     confirmPassword: '',
     agreeToTerms: false,
   },
-}).pipe(withForms());
+);
 
 // Custom validators that can access SignalTree state
 const usernameAsyncValidator = (control: AbstractControl) => {
@@ -161,23 +155,23 @@ const passwordMatchValidator = (group: AbstractControl) => {
   return password === confirmPassword ? null : { passwordMismatch: true };
 };
 
-const registrationForm = tree.createForm(
-  'registration',
+// Register validators using createFormTree's config
+const registration = createFormTree(
   {
-    username: [
-      '',
-      {
-        validators: [Validators.required, Validators.minLength(3)],
-        asyncValidators: [usernameAsyncValidator],
-      },
-    ],
-    email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(8)]],
-    confirmPassword: ['', Validators.required],
-    agreeToTerms: [false, Validators.requiredTrue],
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    agreeToTerms: false,
   },
   {
-    validators: [passwordMatchValidator], // Form-level validator
+    validators: {
+      username: (v) => (typeof v === 'string' && v.length >= 3 ? null : 'Username too short'),
+      email: (v) => (typeof v === 'string' && Validators.email(new FormControl(v)) == null ? null : 'Invalid email'),
+    },
+    asyncValidators: {
+      username: usernameAsyncValidator,
+    },
   }
 );
 
@@ -257,7 +251,7 @@ const tree = signalTree({
   formConfig: {
     fields: [] as FormField[],
   },
-}).pipe(withForms());
+});
 
 @Injectable()
 class DynamicFormService {
@@ -272,7 +266,8 @@ class DynamicFormService {
       formConfig[field.name] = ['', validators];
     });
 
-    return tree.createForm('dynamicData', formConfig);
+    // Build a form using createFormTree directly from the dynamic config
+    return createFormTree(tree.$.dynamicData(), {});
   }
 }
 
@@ -328,46 +323,18 @@ class DynamicFormComponent {
 ## 🔧 Advanced Configuration
 
 ```typescript
-const tree = signalTree(state).pipe(
-  withForms({
-    // Automatic synchronization settings
-    autoSync: true,
-    syncDirection: 'bidirectional', // 'toForm' | 'toState' | 'bidirectional'
-
-    // Debounce settings for performance
-    debounceTime: 300,
-
-    // Validation settings
-    validateOnChange: true,
-    validateOnBlur: true,
-    showErrorsOnTouched: true,
-
-    // Form state management
-    trackFormState: true, // Track dirty, touched, valid states
-    persistFormState: true, // Persist across navigation
-
-    // Custom error messages
-    errorMessages: {
-      required: 'This field is required',
-      email: 'Please enter a valid email',
-      minlength: 'Minimum length not met',
-      maxlength: 'Maximum length exceeded',
-    },
-
-    // Custom validators
+// Create a form tree with custom validators and async validators
+const form = createFormTree(
+  {
+    password: '',
+    confirmPassword: '',
+  },
+  {
     validators: {
-      strongPassword: (control: AbstractControl) => {
-        const value = control.value;
-        const hasNumber = /[0-9]/.test(value);
-        const hasUpper = /[A-Z]/.test(value);
-        const hasLower = /[a-z]/.test(value);
-        const hasSpecial = /[#?!@$%^&*-]/.test(value);
-
-        const valid = hasNumber && hasUpper && hasLower && hasSpecial;
-        return valid ? null : { strongPassword: true };
-      },
+      password: (v) => (typeof v === 'string' && v.length >= 8 ? null : 'Min 8 chars'),
+      confirmPassword: (v) => (v === form.$.password() ? null : "Passwords don't match"),
     },
-  })
+  }
 );
 ```
 
@@ -430,7 +397,7 @@ const wizardTree = signalTree<WizardState>({
     addressValid: false,
     preferencesValid: false,
   },
-}).pipe(withForms());
+});
 
 @Component({
   template: `
@@ -502,21 +469,21 @@ class WizardComponent {
   ];
 
   // Create forms for each step
-  personalForm = this.wizardTree.createForm('steps.personal', {
+  personalForm = createFormTree(this.wizardTree.$.steps.personal(), {
     firstName: ['', Validators.required],
     lastName: ['', Validators.required],
     email: ['', [Validators.required, Validators.email]],
     phone: ['', Validators.required],
   });
 
-  addressForm = this.wizardTree.createForm('steps.address', {
+  addressForm = createFormTree(this.wizardTree.$.steps.address(), {
     street: ['', Validators.required],
     city: ['', Validators.required],
     state: ['', Validators.required],
     zipCode: ['', [Validators.required, Validators.pattern(/^\d{5}$/)]],
   });
 
-  preferencesForm = this.wizardTree.createForm('steps.preferences');
+  preferencesForm = createFormTree(this.wizardTree.$.steps.preferences(), {});
 
   // Track form validity
   constructor() {
@@ -617,7 +584,7 @@ const surveyTree = signalTree({
   currentQuestion: 0,
   isSubmitting: false,
   submitError: null as string | null,
-}).pipe(withForms());
+});
 
 @Component({
   template: `
@@ -731,7 +698,8 @@ class SurveyComponent implements OnInit {
       formConfig[question.id] = [defaultValue, validators];
     });
 
-    this.surveyForm = this.surveyTree.createForm('responses', formConfig);
+    // Build a Reactive FormGroup here as needed; ng-forms focuses on signal binding helpers.
+    this.surveyForm = new FormGroup({});
   }
 
   nextQuestion() {
@@ -850,15 +818,17 @@ Perfect for:
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withForms } from '@signaltree/ng-forms';
-import { withValidation } from '@signaltree/validation';
-import { withDevtools } from '@signaltree/devtools';
+import { createFormTree } from '@signaltree/ng-forms';
+import { withDevTools } from '@signaltree/devtools';
 
 const tree = signalTree(state).pipe(
-  withValidation(), // Enhanced validation rules
-  withForms(), // Angular forms integration
-  withDevtools() // Debug form state changes
+  withDevTools() // Debug form state changes
 );
+
+// Build a form for a slice of tree state
+const form = createFormTree(tree.$.profile(), {
+  validators: { email: (v) => (typeof v === 'string' && v.includes('@') ? null : 'Invalid email') },
+});
 ```
 
 ## 📈 Performance Benefits

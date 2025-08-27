@@ -193,7 +193,7 @@ import { withMemoization } from '@signaltree/memoization';
 import { withMiddleware } from '@signaltree/middleware';
 import { withAsync } from '@signaltree/async';
 import { withEntities } from '@signaltree/entities';
-import { withDevtools } from '@signaltree/devtools';
+import { withDevTools } from '@signaltree/devtools';
 import { withTimeTravel } from '@signaltree/time-travel';
 
 // Compose multiple features using pipe
@@ -209,7 +209,7 @@ const tree = signalTree({
   withAsync(), // Advanced async operations
   withEntities(), // Enhanced CRUD operations
   withTimeTravel(), // Undo/redo functionality
-  withDevtools() // Development tools (auto-disabled in production)
+  withDevTools() // Development tools (auto-disabled in production)
 );
 
 // Batching: Multiple updates in single render cycle
@@ -1593,6 +1593,7 @@ class FormComponent {
 export class FormService {
   constructor(private formsManager: AkitaNgFormsManager) {}
 
+  // Example service method creating a framework form (illustrative)
   createForm() {
     const form = new FormGroup({
       email: new FormControl('', [Validators.required, Validators.email]),
