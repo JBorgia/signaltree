@@ -28,7 +28,7 @@ import type {
   EntityHelpers,
   DeepPartial,
 } from './types';
-import { createLazySignalTree, equal } from './internal/utils';
+import { createLazySignalTree, equal } from './utils';
 
 // Bundlers can replace __DEV__ at build time (define) so dev logs can be
 // DCE'd in production builds.

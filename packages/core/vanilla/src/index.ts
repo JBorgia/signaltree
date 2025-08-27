@@ -1,3 +1,5 @@
 // Entry point for experimental vanilla engine subpath export
-export { vanillaEngine } from '../../src/lib/vanilla-engine';
-export * from '../../src/lib/neutral-signals';
+// Re-export the vanilla engine and neutral signals via the package public barrel
+// to satisfy NX module boundary rules (avoid relative project imports).
+export { vanillaEngine } from '@signaltree/core';
+export * from '@signaltree/core/vanilla';

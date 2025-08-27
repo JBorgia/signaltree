@@ -15,13 +15,8 @@
 import type { SignalEngine } from './adapter';
 // Type-only imports from Angular for signature compatibility (erased at build time)
 // No runtime '@angular/core' import to keep this engine framework-neutral.
-import type {
-  signal as ngSignal,
-  computed as ngComputed,
-  effect as ngEffect,
-  isSignal as ngIsSignal,
-  inject as ngInject,
-} from '@angular/core';
+// No runtime or type imports from '@angular/core' allowed in core; the
+// vanilla engine implements the minimal SignalEngine interface from './adapter'.
 
 interface BaseSignal<T> {
   (): T;
@@ -122,22 +117,19 @@ function injectStub(): never {
 }
 
 // Use casting to align with Angular's typings while providing vanilla behavior
-export const vanillaEngine: SignalEngine = {
-  signal: ((value: unknown) =>
-    createSignal(value)) as unknown as typeof ngSignal,
-  computed: ((fn: () => unknown) =>
-    createComputed(fn)) as unknown as typeof ngComputed,
-  effect: ((fn: () => void) => createEffect(fn)) as unknown as typeof ngEffect,
-  isSignal: ((value: unknown): value is unknown =>
-    isSignalFn(value)) as unknown as typeof ngIsSignal,
-  inject: ((...args: unknown[]) => {
+export const vanillaEngine = {
+  signal: (value: unknown) => createSignal(value),
+  computed: (fn: () => unknown) => createComputed(fn),
+  effect: (fn: () => void) => createEffect(fn),
+  isSignal: (value: unknown): value is unknown => isSignalFn(value),
+  inject: (...args: unknown[]) => {
     void args; // ensure consistent signature; vanilla cannot inject
     return injectStub();
-  }) as unknown as typeof ngInject,
+  },
   capabilities: {
     di: false,
     cleanup: false,
     batching: false,
   },
   batch: <T>(fn: () => T): T => fn(),
-};
+} as unknown as SignalEngine;

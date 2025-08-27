@@ -104,6 +104,7 @@
     "postbuild": "npm run verify:jsdoc",
     "build:core:normalized": "nx build core --configuration=production && node packages/core/scripts/set-dev-define.mjs",
     "size:check:core": "npm run build:core:normalized && node scripts/size/check-core-size.mjs",
+    "ci:check": "npm run lint:all && npm run test:core && npm run size:check:core",
     "size:validate": "npm run build:production && npm run size:report",
     "// Maintenance": "Workspace maintenance and updates",
     "update:deps": "nx migrate latest && npm install && nx migrate --run-migrations",

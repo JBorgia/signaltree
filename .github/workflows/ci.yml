@@ -1,0 +1,35 @@
+name: CI - Full
+
+on:
+  push:
+    branches: ['main', 'master']
+  pull_request:
+    branches: ['*']
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint all
+        run: npm run lint:all
+
+      - name: Test core
+        run: npm run test:core -- --runInBand
+
+      - name: Core size check
+        run: npm run size:check:core
