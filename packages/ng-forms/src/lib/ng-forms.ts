@@ -100,6 +100,11 @@ export type FormTree<T extends Record<string, unknown>> = {
 // FORM TREE IMPLEMENTATION
 // ============================================
 
+// Small helper to create empty string maps; avoids repeated inline object literals
+function createEmptyStringMap(): Record<string, string> {
+  return {} as Record<string, string>;
+}
+
 export function createFormTree<T extends Record<string, unknown>>(
   initialValues: T,
   config: {
@@ -117,8 +122,8 @@ export function createFormTree<T extends Record<string, unknown>>(
 
   // Create form-specific signals
   const formSignals = {
-    errors: signal<Record<string, string>>({}),
-    asyncErrors: signal<Record<string, string>>({}),
+    errors: signal<Record<string, string>>(createEmptyStringMap()),
+    asyncErrors: signal<Record<string, string>>(createEmptyStringMap()),
     touched: signal<Record<string, boolean>>({}),
     asyncValidating: signal<Record<string, boolean>>({}),
     dirty: signal(false),
