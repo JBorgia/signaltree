@@ -36,14 +36,13 @@ export const appRoutes: Route[] = [
         (c) => c.EntitiesDemoComponent
       ),
   },
-  // Temporarily commented out until components are created
-  // {
-  //   path: 'memoization',
-  //   loadComponent: () =>
-  //     import('./pages/memoization-demo/memoization-demo.component').then(
-  //       (c) => c.MemoizationDemoComponent
-  //     ),
-  // },
+  {
+    path: 'memoization',
+    loadComponent: () =>
+      import('./pages/memoization-demo/memoization-demo.component').then(
+        (c) => c.MemoizationDemoComponent
+      ),
+  },
   {
     path: 'middleware',
     loadComponent: () =>
@@ -65,20 +64,20 @@ export const appRoutes: Route[] = [
   //       (c) => c.PresetsDemoComponent
   //     ),
   // },
-  // {
-  //   path: 'time-travel',
-  //   loadComponent: () =>
-  //     import('./pages/time-travel-demo/time-travel-demo.component').then(
-  //       (c) => c.TimeTravelDemoComponent
-  //     ),
-  // },
-  // {
-  //   path: 'devtools',
-  //   loadComponent: () =>
-  //     import('./pages/devtools-demo/devtools-demo.component').then(
-  //       (c) => c.DevtoolsDemoComponent
-  //     ),
-  // },
+  {
+    path: 'time-travel',
+    loadComponent: () =>
+      import('./pages/time-travel-demo/time-travel-demo.component').then(
+        (c) => c.TimeTravelDemoComponent
+      ),
+  },
+  {
+    path: 'devtools',
+    loadComponent: () =>
+      import('./pages/devtools-demo/devtools-demo.component').then(
+        (c) => c.DevtoolsDemoComponent
+      ),
+  },
   // {
   //   path: 'serialization',
   //   loadComponent: () =>

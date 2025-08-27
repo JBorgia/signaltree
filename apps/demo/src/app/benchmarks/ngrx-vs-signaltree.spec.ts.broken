@@ -1,0 +1,329 @@
+import { TestBed } from '@angular/core/testing';
+import { Store, StoreModule } from '@ngrx/store';
+import { Component, inject } from '@angular/core';
+import { signalTree } from '@signaltree/core';
+import { BenchmarkService } from '../services/benchmarks.service';
+
+interface Todo {
+  id: number;
+  text: string;
+  completed: boolean;
+  priority: 'low' | 'medium' | 'high';
+  tags: string[];
+}
+
+interface TodoState {
+  todos: Todo[];
+  filter: 'all' | 'active' | 'completed';
+  selectedId: number | null;
+}
+
+// NgRx Actions
+const addTodo = (todo: Todo) => ({ type: '[Todo] Add', todo });
+const toggleTodo = (id: number) => ({ type: '[Todo] Toggle', id });
+const updateTodo = (id: number, changes: Partial<Todo>) => ({
+  type: '[Todo] Update',
+  id,
+  changes,
+});
+const deleteTodo = (id: number) => ({ type: '[Todo] Delete', id });
+const setFilter = (filter: TodoState['filter']) => ({
+  type: '[Filter] Set',
+  filter,
+});
+
+interface TodoAction {
+  type: string;
+  [key: string]: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+}
+
+// NgRx Reducer
+function todoReducer(
+  state: TodoState = { todos: [], filter: 'all', selectedId: null },
+  action: TodoAction
+): TodoState {
+  switch (action.type) {
+    case '[Todo] Add':
+      return { ...state, todos: [...state.todos, action.todo] };
+    case '[Todo] Toggle':
+      return {
+        ...state,
+        todos: state.todos.map((todo) =>
+          todo.id === action.id ? { ...todo, completed: !todo.completed } : todo
+        ),
+      };
+    case '[Todo] Update':
+      return {
+        ...state,
+        todos: state.todos.map((todo) =>
+          todo.id === action.id ? { ...todo, ...action.changes } : todo
+        ),
+      };
+    case '[Todo] Delete':
+      return {
+        ...state,
+        todos: state.todos.filter((todo) => todo.id !== action.id),
+      };
+    case '[Filter] Set':
+      return { ...state, filter: action.filter };
+    default:
+      return state;
+  }
+}
+
+@Component({
+  template: '',
+  standalone: true,
+})
+class NgRxTestComponent {
+  private store = inject(Store<{ todos: TodoState }>);
+
+  addTodo(todo: Todo) {
+    this.store.dispatch(addTodo(todo));
+  }
+
+  toggleTodo(id: number) {
+    this.store.dispatch(toggleTodo(id));
+  }
+
+  updateTodo(id: number, changes: Partial<Todo>) {
+    this.store.dispatch(updateTodo(id, changes));
+  }
+
+  deleteTodo(id: number) {
+    this.store.dispatch(deleteTodo(id));
+  }
+
+  setFilter(filter: TodoState['filter']) {
+    this.store.dispatch(setFilter(filter));
+  }
+}
+
+@Component({
+  template: '',
+  standalone: true,
+})
+class SignalTreeTestComponent {
+  private tree = signalTree<TodoState>({
+    todos: [],
+    filter: 'all',
+    selectedId: null,
+  });
+
+  addTodo(todo: Todo) {
+    this.tree.update('todos', (todos) => [...todos, todo]);
+  }
+
+  toggleTodo(id: number) {
+    this.tree.update('todos', (todos) =>
+      todos.map((todo) =>
+        todo.id === id ? { ...todo, completed: !todo.completed } : todo
+      )
+    );
+  }
+
+  updateTodo(id: number, changes: Partial<Todo>) {
+    this.tree.update('todos', (todos) =>
+      todos.map((todo) => (todo.id === id ? { ...todo, ...changes } : todo))
+    );
+  }
+
+  deleteTodo(id: number) {
+    this.tree.update('todos', (todos) =>
+      todos.filter((todo) => todo.id !== id)
+    );
+  }
+
+  setFilter(filter: TodoState['filter']) {
+    this.tree.update('filter', filter);
+  }
+}
+
+describe('NgRx vs SignalTree Performance Benchmarks', () => {
+  function createTestTodo(id: number): Todo {
+    return {
+      id,
+      text: `Todo ${id}`,
+      completed: false,
+      priority: ['low', 'medium', 'high'][id % 3] as Todo['priority'],
+      tags: [`tag${id % 5}`, `category${id % 3}`],
+    };
+  }
+
+  function generateTodos(count: number): Todo[] {
+    return Array.from({ length: count }, (_, i) => createTestTodo(i));
+  }
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [
+        NgRxTestComponent,
+        SignalTreeTestComponent,
+        StoreModule.forRoot({ todos: todoReducer }),
+      ],
+      providers: [BenchmarkService],
+    }).compileComponents();
+  });
+
+  describe('NgRx Performance Tests', () => {
+    let component: NgRxTestComponent;
+
+    beforeEach(() => {
+      const fixture = TestBed.createComponent(NgRxTestComponent);
+      component = fixture.componentInstance;
+    });
+
+    it('should handle bulk todo operations efficiently', () => {
+      const todos = generateTodos(1000);
+
+      const addTime = BenchmarkService.measureTime(() => {
+        todos.forEach((todo) => component.addTodo(todo));
+      }, 1);
+
+      const updateTime = BenchmarkService.measureTime(() => {
+        for (let i = 0; i < 100; i++) {
+          component.toggleTodo(i);
+        }
+      }, 1);
+
+      const deleteTime = BenchmarkService.measureTime(() => {
+        for (let i = 0; i < 50; i++) {
+          component.deleteTodo(i);
+        }
+      }, 1);
+
+      console.log(
+        `NgRx - Add: ${addTime.toFixed(3)}ms, Update: ${updateTime.toFixed(
+          3
+        )}ms, Delete: ${deleteTime.toFixed(3)}ms`
+      );
+
+      expect(addTime).toBeLessThan(1000); // Should complete within 1 second
+      expect(updateTime).toBeLessThan(500);
+      expect(deleteTime).toBeLessThan(500);
+    });
+
+    it('should handle rapid state changes', () => {
+      const todos = generateTodos(100);
+      todos.forEach((todo) => component.addTodo(todo));
+
+      const rapidUpdates = BenchmarkService.measureTime(() => {
+        for (let i = 0; i < 1000; i++) {
+          component.setFilter(i % 2 === 0 ? 'active' : 'completed');
+          component.toggleTodo(i % 100);
+        }
+      }, 1);
+
+      console.log(`NgRx rapid updates: ${rapidUpdates.toFixed(3)}ms`);
+      expect(rapidUpdates).toBeLessThan(2000);
+    });
+  });
+
+  describe('SignalTree Performance Tests', () => {
+    let component: SignalTreeTestComponent;
+
+    beforeEach(() => {
+      const fixture = TestBed.createComponent(SignalTreeTestComponent);
+      component = fixture.componentInstance;
+    });
+
+    it('should handle bulk todo operations efficiently', () => {
+      const todos = generateTodos(1000);
+
+      const addTime = BenchmarkService.measureTime(() => {
+        todos.forEach((todo) => component.addTodo(todo));
+      }, 1);
+
+      const updateTime = BenchmarkService.measureTime(() => {
+        for (let i = 0; i < 100; i++) {
+          component.toggleTodo(i);
+        }
+      }, 1);
+
+      const deleteTime = BenchmarkService.measureTime(() => {
+        for (let i = 0; i < 50; i++) {
+          component.deleteTodo(i);
+        }
+      }, 1);
+
+      console.log(
+        `SignalTree - Add: ${addTime.toFixed(
+          3
+        )}ms, Update: ${updateTime.toFixed(3)}ms, Delete: ${deleteTime.toFixed(
+          3
+        )}ms`
+      );
+
+      expect(addTime).toBeLessThan(1000); // Should complete within 1 second
+      expect(updateTime).toBeLessThan(500);
+      expect(deleteTime).toBeLessThan(500);
+    });
+
+    it('should handle rapid state changes', () => {
+      const todos = generateTodos(100);
+      todos.forEach((todo) => component.addTodo(todo));
+
+      const rapidUpdates = BenchmarkService.measureTime(() => {
+        for (let i = 0; i < 1000; i++) {
+          component.setFilter(i % 2 === 0 ? 'active' : 'completed');
+          component.toggleTodo(i % 100);
+        }
+      }, 1);
+
+      console.log(`SignalTree rapid updates: ${rapidUpdates.toFixed(3)}ms`);
+      expect(rapidUpdates).toBeLessThan(2000);
+    });
+  });
+
+  describe('Direct Performance Comparison', () => {
+    it('should compare NgRx vs SignalTree performance head-to-head', () => {
+      const todos = generateTodos(500);
+
+      // NgRx setup
+      const ngrxFixture = TestBed.createComponent(NgRxTestComponent);
+      const ngrxComponent = ngrxFixture.componentInstance;
+
+      // SignalTree setup
+      const stFixture = TestBed.createComponent(SignalTreeTestComponent);
+      const stComponent = stFixture.componentInstance;
+
+      // Test bulk operations
+      const ngrxTime = BenchmarkService.measureTime(() => {
+        todos.forEach((todo) => ngrxComponent.addTodo(todo));
+        for (let i = 0; i < 100; i++) {
+          ngrxComponent.toggleTodo(i);
+          ngrxComponent.updateTodo(i, { priority: 'high' });
+        }
+      }, 3);
+
+      const signalTreeTime = BenchmarkService.measureTime(() => {
+        todos.forEach((todo) => stComponent.addTodo(todo));
+        for (let i = 0; i < 100; i++) {
+          stComponent.toggleTodo(i);
+          stComponent.updateTodo(i, { priority: 'high' });
+        }
+      }, 3);
+
+      const improvement = (
+        ((ngrxTime - signalTreeTime) / ngrxTime) *
+        100
+      ).toFixed(1);
+
+      console.log('\n=== PERFORMANCE COMPARISON ===');
+      console.log(`NgRx:       ${ngrxTime.toFixed(3)}ms`);
+      console.log(`SignalTree: ${signalTreeTime.toFixed(3)}ms`);
+      console.log(
+        `Improvement: ${improvement}% ${
+          signalTreeTime < ngrxTime ? 'faster' : 'slower'
+        }`
+      );
+
+      // Log for the compare-suite parser
+      console.log(`NgRx performance: ${ngrxTime.toFixed(3)}ms avg`);
+      console.log(`SignalTree performance: ${signalTreeTime.toFixed(3)}ms avg`);
+
+      expect(ngrxTime).toBeGreaterThan(0);
+      expect(signalTreeTime).toBeGreaterThan(0);
+    });
+  });
+});

@@ -12,8 +12,7 @@ const require = createRequire(import.meta.url);
 // Import from built packages
 let signalTree;
 try {
-  signalTree =
-    require('../../dist/packages/core/fesm2022/signaltree-core.mjs').signalTree;
+  signalTree = require('../../dist/packages/core/fesm2022/signaltree-core.mjs').signalTree;
 } catch (e) {
   console.error('❌ SignalTree core not built. Run: pnpm run build:all');
   process.exit(1);
@@ -59,8 +58,7 @@ class RealPerformanceAnalyzer {
 
     return {
       totalTime: operations.reduce((sum, time) => sum + time, 0),
-      avgTime:
-        operations.reduce((sum, time) => sum + time, 0) / operations.length,
+      avgTime: operations.reduce((sum, time) => sum + time, 0) / operations.length,
       operations: operations.length,
     };
   }
@@ -86,8 +84,7 @@ class RealPerformanceAnalyzer {
 
     return {
       totalTime: operations.reduce((sum, time) => sum + time, 0),
-      avgTime:
-        operations.reduce((sum, time) => sum + time, 0) / operations.length,
+      avgTime: operations.reduce((sum, time) => sum + time, 0) / operations.length,
       operations: operations.length,
     };
   }
@@ -119,26 +116,16 @@ class RealPerformanceAnalyzer {
 
   performDeepUpdates(tree, depth, seed) {
     for (let level = 1; level <= depth; level++) {
-      const pathParts = this.buildPathParts(level);
-
-      // Navigate to the nested property and update it
-      let current = tree.$;
-      for (let i = 0; i < pathParts.length - 1; i++) {
-        current = current[pathParts[i]];
-      }
-
-      const lastPart = pathParts[pathParts.length - 1];
-      const currentValue = current[lastPart]();
-
-      current[lastPart].set({
-        ...currentValue,
-        value: `updated-${currentValue.value}-${seed}`,
-        counter: currentValue.counter + 1,
-        items: currentValue.items.map((item) => ({
+      const path = this.buildPath(level);
+      tree.update(path, (current) => ({
+        ...current,
+        value: `updated-${current.value}-${seed}`,
+        counter: current.counter + 1,
+        items: current.items.map(item => ({
           ...item,
           active: !item.active,
         })),
-      });
+      }));
     }
   }
 
@@ -148,7 +135,7 @@ class RealPerformanceAnalyzer {
       if (target) {
         target.value = `updated-${target.value}-${seed}`;
         target.counter = target.counter + 1;
-        target.items = target.items.map((item) => ({
+        target.items = target.items.map(item => ({
           ...item,
           active: !item.active,
         }));
@@ -158,20 +145,12 @@ class RealPerformanceAnalyzer {
 
   accessDeepValues(tree, depth) {
     for (let level = 1; level <= depth; level++) {
-      const pathParts = this.buildPathParts(level);
-
-      // Navigate to the nested property and read it
-      let current = tree.$;
-      for (const part of pathParts) {
-        current = current[part];
-      }
-      const value = current();
-
+      const path = this.buildPath(level);
+      const value = tree.get(path);
       // Simulate computation
       if (value && value.items) {
-        const activeCount = value.items.filter((item) => item.active).length;
-        // Use the computed value
-        void activeCount;
+        const activeCount = value.items.filter(item => item.active).length;
+        const summary = `${value.value}-${activeCount}`;
       }
     }
   }
@@ -181,9 +160,8 @@ class RealPerformanceAnalyzer {
       const value = this.getNestedValue(obj, level);
       // Simulate computation
       if (value && value.items) {
-        const activeCount = value.items.filter((item) => item.active).length;
-        // Use the computed value
-        void activeCount;
+        const activeCount = value.items.filter(item => item.active).length;
+        const summary = `${value.value}-${activeCount}`;
       }
     }
   }
@@ -199,17 +177,6 @@ class RealPerformanceAnalyzer {
     return parts.join('.');
   }
 
-  buildPathParts(level) {
-    const parts = [];
-    for (let i = 1; i <= level; i++) {
-      parts.push(`level${i}`);
-      if (i < level) {
-        parts.push('nested');
-      }
-    }
-    return parts;
-  }
-
   getNestedValue(obj, level) {
     let current = obj;
     for (let i = 1; i <= level; i++) {
@@ -222,6 +189,47 @@ class RealPerformanceAnalyzer {
     return current;
   }
 
+    for (let i = 0; i < iterations; i++) {
+      const start = performance.now();
+
+      // Simulate deep object creation and access
+      const obj = { $: {} };
+      let current = obj.$;
+
+      // Build deep structure
+      for (let level = 1; level <= depth; level++) {
+        current[`l${level}`] = {
+          value: `level-${level}-${i}`,
+        };
+        if (level < depth) {
+          current[`l${level}`].next = {};
+          current = current[`l${level}`].next;
+        }
+      }
+
+      // Simulate access operations
+      let accessor = obj.$;
+      for (let level = 1; level <= depth; level++) {
+        if (accessor[`l${level}`]) {
+          const value = accessor[`l${level}`].value;
+          accessor[`l${level}`].value = `updated-${value}`;
+          if (accessor[`l${level}`].next) {
+            accessor = accessor[`l${level}`].next;
+          }
+        }
+      }
+
+      operations.push(performance.now() - start);
+    }
+
+    return {
+      totalTime: operations.reduce((sum, time) => sum + time, 0),
+      avgTime:
+        operations.reduce((sum, time) => sum + time, 0) / operations.length,
+      operations: operations.length,
+    };
+  }
+
   async testBasicDepth() {
     console.log('🔬 Testing Basic Recursive Depth (5 levels)...');
 
@@ -232,23 +240,13 @@ class RealPerformanceAnalyzer {
       depth: 5,
       signalTree: signalTreeResult,
       plainObject: plainObjectResult,
-      improvement: (
-        ((plainObjectResult.avgTime - signalTreeResult.avgTime) /
-          plainObjectResult.avgTime) *
-        100
-      ).toFixed(1),
+      improvement: ((plainObjectResult.avgTime - signalTreeResult.avgTime) / plainObjectResult.avgTime * 100).toFixed(1),
     };
 
     console.log(`✅ Basic (5 levels):`);
     console.log(`   SignalTree: ${signalTreeResult.avgTime.toFixed(3)}ms avg`);
     console.log(`   Plain JS:   ${plainObjectResult.avgTime.toFixed(3)}ms avg`);
-    console.log(
-      `   Difference: ${this.results.basic.improvement}% ${
-        signalTreeResult.avgTime < plainObjectResult.avgTime
-          ? 'faster'
-          : 'slower'
-      }\n`
-    );
+    console.log(`   Difference: ${this.results.basic.improvement}% ${signalTreeResult.avgTime < plainObjectResult.avgTime ? 'faster' : 'slower'}\n`);
   }
 
   async testMediumDepth() {
@@ -261,23 +259,13 @@ class RealPerformanceAnalyzer {
       depth: 10,
       signalTree: signalTreeResult,
       plainObject: plainObjectResult,
-      improvement: (
-        ((plainObjectResult.avgTime - signalTreeResult.avgTime) /
-          plainObjectResult.avgTime) *
-        100
-      ).toFixed(1),
+      improvement: ((plainObjectResult.avgTime - signalTreeResult.avgTime) / plainObjectResult.avgTime * 100).toFixed(1),
     };
 
     console.log(`✅ Medium (10 levels):`);
     console.log(`   SignalTree: ${signalTreeResult.avgTime.toFixed(3)}ms avg`);
     console.log(`   Plain JS:   ${plainObjectResult.avgTime.toFixed(3)}ms avg`);
-    console.log(
-      `   Difference: ${this.results.medium.improvement}% ${
-        signalTreeResult.avgTime < plainObjectResult.avgTime
-          ? 'faster'
-          : 'slower'
-      }\n`
-    );
+    console.log(`   Difference: ${this.results.medium.improvement}% ${signalTreeResult.avgTime < plainObjectResult.avgTime ? 'faster' : 'slower'}\n`);
   }
 
   async testExtremeDepth() {
@@ -290,23 +278,13 @@ class RealPerformanceAnalyzer {
       depth: 15,
       signalTree: signalTreeResult,
       plainObject: plainObjectResult,
-      improvement: (
-        ((plainObjectResult.avgTime - signalTreeResult.avgTime) /
-          plainObjectResult.avgTime) *
-        100
-      ).toFixed(1),
+      improvement: ((plainObjectResult.avgTime - signalTreeResult.avgTime) / plainObjectResult.avgTime * 100).toFixed(1),
     };
 
     console.log(`🔥 Extreme (15 levels):`);
     console.log(`   SignalTree: ${signalTreeResult.avgTime.toFixed(3)}ms avg`);
     console.log(`   Plain JS:   ${plainObjectResult.avgTime.toFixed(3)}ms avg`);
-    console.log(
-      `   Difference: ${this.results.extreme.improvement}% ${
-        signalTreeResult.avgTime < plainObjectResult.avgTime
-          ? 'faster'
-          : 'slower'
-      }\n`
-    );
+    console.log(`   Difference: ${this.results.extreme.improvement}% ${signalTreeResult.avgTime < plainObjectResult.avgTime ? 'faster' : 'slower'}\n`);
   }
 
   async testUnlimitedDepth() {
@@ -319,23 +297,13 @@ class RealPerformanceAnalyzer {
       depth: 20,
       signalTree: signalTreeResult,
       plainObject: plainObjectResult,
-      improvement: (
-        ((plainObjectResult.avgTime - signalTreeResult.avgTime) /
-          plainObjectResult.avgTime) *
-        100
-      ).toFixed(1),
+      improvement: ((plainObjectResult.avgTime - signalTreeResult.avgTime) / plainObjectResult.avgTime * 100).toFixed(1),
     };
 
     console.log(`🚀 Unlimited (20+ levels):`);
     console.log(`   SignalTree: ${signalTreeResult.avgTime.toFixed(3)}ms avg`);
     console.log(`   Plain JS:   ${plainObjectResult.avgTime.toFixed(3)}ms avg`);
-    console.log(
-      `   Difference: ${this.results.unlimited.improvement}% ${
-        signalTreeResult.avgTime < plainObjectResult.avgTime
-          ? 'faster'
-          : 'slower'
-      }\n`
-    );
+    console.log(`   Difference: ${this.results.unlimited.improvement}% ${signalTreeResult.avgTime < plainObjectResult.avgTime ? 'faster' : 'slower'}\n`);
   }
 
   async runAllTests() {
@@ -355,39 +323,19 @@ class RealPerformanceAnalyzer {
     console.log('='.repeat(70));
 
     console.log('\n📊 RECURSIVE DEPTH PERFORMANCE:');
-    console.log(
-      `- Basic (5 levels):     ${this.results.basic.signalTree.avgTime.toFixed(
-        3
-      )}ms avg`
-    );
-    console.log(
-      `- Medium (10 levels):   ${this.results.medium.signalTree.avgTime.toFixed(
-        3
-      )}ms avg`
-    );
-    console.log(
-      `- Extreme (15 levels):  ${this.results.extreme.signalTree.avgTime.toFixed(
-        3
-      )}ms avg`
-    );
-    console.log(
-      `- Unlimited (20+ levels): ${this.results.unlimited.signalTree.avgTime.toFixed(
-        3
-      )}ms avg`
-    );
+    console.log(`- Basic (5 levels):     ${this.results.basic.signalTree.avgTime.toFixed(3)}ms avg`);
+    console.log(`- Medium (10 levels):   ${this.results.medium.signalTree.avgTime.toFixed(3)}ms avg`);
+    console.log(`- Extreme (15 levels):  ${this.results.extreme.signalTree.avgTime.toFixed(3)}ms avg`);
+    console.log(`- Unlimited (20+ levels): ${this.results.unlimited.signalTree.avgTime.toFixed(3)}ms avg`);
 
-    console.log('\n🏆 PERFORMANCE COMPARISON VS PLAIN JAVASCRIPT:');
+    console.log('\n� PERFORMANCE COMPARISON VS PLAIN JAVASCRIPT:');
     console.log(`- Basic improvement:     ${this.results.basic.improvement}%`);
     console.log(`- Medium improvement:    ${this.results.medium.improvement}%`);
-    console.log(
-      `- Extreme improvement:   ${this.results.extreme.improvement}%`
-    );
-    console.log(
-      `- Unlimited improvement: ${this.results.unlimited.improvement}%`
-    );
+    console.log(`- Extreme improvement:   ${this.results.extreme.improvement}%`);
+    console.log(`- Unlimited improvement: ${this.results.unlimited.improvement}%`);
 
     const memUsage = this.measureMemory();
-    console.log(`\n📊 Memory Usage: ${memUsage}MB`);
+    console.log(`\n� Memory Usage: ${memUsage}MB`);
     console.log('\n✅ Real performance analysis completed!');
   }
 }

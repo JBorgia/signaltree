@@ -253,6 +253,11 @@ export class CoreDemoComponent {
     )
   );
 
+  // Aliases for tests
+  activeTodos = computed(() => this.todos().filter((t) => !t.completed));
+  completedTodos = computed(() => this.todos().filter((t) => t.completed));
+  deleteTodo = (id: number) => this.removeTodo(id);
+
   // UI helpers
   filters: Array<'all' | 'active' | 'completed'> = [
     'all',
