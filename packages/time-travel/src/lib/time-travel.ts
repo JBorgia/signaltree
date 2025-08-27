@@ -99,7 +99,7 @@ class TimeTravelManager<T> implements TimeTravelInterface<T> {
     private restoreStateFn?: (state: T) => void
   ) {
     this.maxHistorySize = config.maxHistorySize ?? 50;
-    this.includePayload = config.includePayload ?? true;
+    this.includePayload = config.includePayload ?? false;
     this.actionNames = {
       update: 'UPDATE',
       set: 'SET',

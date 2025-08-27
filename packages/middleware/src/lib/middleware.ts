@@ -19,9 +19,9 @@ export function withMiddleware<T>(
     middlewareMap.set(tree, [...middlewares]);
 
     // Create a wrapper for the $ callable proxy that intercepts update calls
+    // Root-only interception: do not recursively wrap nested callable proxies.
     const createInterceptedProxy = (
-      originalProxy: Record<string | symbol, unknown>,
-      parentPath = ''
+      originalProxy: Record<string | symbol, unknown>
     ) => {
       return new Proxy(originalProxy, {
         get(target, prop) {
@@ -153,18 +153,7 @@ export function withMiddleware<T>(
             };
           }
 
-          // For other properties, check if they're callable proxies and wrap them recursively
-          if (
-            typeof value === 'function' &&
-            (value as unknown as { __isCallableProxy__?: boolean })
-              .__isCallableProxy__
-          ) {
-            return createInterceptedProxy(
-              value as unknown as Record<string | symbol, unknown>,
-              parentPath + '.' + String(prop)
-            );
-          }
-
+          // For other properties, return as-is to keep interception shallow.
           return value;
         },
       });
@@ -173,8 +162,12 @@ export function withMiddleware<T>(
     // Create the enhanced tree with intercepted $ proxy
     const enhancedTree = {
       ...tree,
-      $: createInterceptedProxy(tree.$),
-      state: createInterceptedProxy(tree.state),
+      $: createInterceptedProxy(
+        tree.$ as unknown as Record<string | symbol, unknown>
+      ),
+      state: createInterceptedProxy(
+        tree.state as unknown as Record<string | symbol, unknown>
+      ),
     } as SignalTree<T>;
 
     // Override addTap to work with the middleware system
@@ -224,110 +217,47 @@ export function withMiddleware<T>(
  * @param treeName - Name to display in console logs
  * @returns Configured logging middleware
  */
-export function createLoggingMiddleware<T>(treeName: string): Middleware<T> {
+export function createLoggingMiddleware<T>(treeName = 'SignalTree') {
   return {
     id: 'logging',
-    before: (action, payload, state) => {
+    before: (action: string, payload: unknown, prev: T) => {
       console.group(`🏪 ${treeName}: ${action}`);
-      console.log('Previous state:', state);
-      console.log(
-        'Payload:',
-        typeof payload === 'function' ? 'Function' : payload
-      );
+      console.log('Previous state:', prev as unknown as object);
+      console.log('Payload:', payload as unknown as object);
       return true;
     },
-    after: (action, payload, state, newState) => {
-      console.log('New state:', newState);
+    after: (action: string, _payload: unknown, _prev: T, next: T) => {
+      console.log('Next state:', next as unknown as object);
       console.groupEnd();
     },
-  };
+  } as Middleware<T>;
 }
 
-/**
- * Creates a performance monitoring middleware.
- *
- * @returns Configured performance middleware
- */
-export function createPerformanceMiddleware<T>(): Middleware<T> {
+/** Performance measurement middleware */
+export function createPerformanceMiddleware<T>() {
   return {
     id: 'performance',
-    before: (action) => {
+    before: (action: string) => {
       console.time(`Tree update: ${action}`);
       return true;
     },
-    after: (action) => {
+    after: (action: string) => {
       console.timeEnd(`Tree update: ${action}`);
     },
-  };
+  } as Middleware<T>;
 }
 
-/**
- * Creates a validation middleware that validates state after updates.
- *
- * @param validator - Function that validates state and returns error message or null
- * @returns Configured validation middleware
- */
+/** Post-update validation middleware */
 export function createValidationMiddleware<T>(
   validator: (state: T) => string | null
-): Middleware<T> {
+) {
   return {
     id: 'validation',
-    after: (action, payload, state, newState) => {
-      const error = validator(newState);
-      if (error) {
-        console.error(`Validation failed after ${action}:`, error);
+    after: (action: string, _payload: unknown, _prev: T, next: T) => {
+      const err = validator(next);
+      if (err) {
+        console.error(`Validation failed after ${action}:`, err);
       }
     },
-  };
+  } as Middleware<T>;
 }
-
-/**
- * Creates a persistence middleware that auto-saves state changes.
- *
- * @param config - Configuration for persistence behavior
- * @returns Configured persistence middleware
- */
-export function createPersistenceMiddleware<T>(config: {
-  key: string;
-  storage?: Storage;
-  debounceMs?: number;
-  actions?: string[];
-}): Middleware<T> {
-  const {
-    key,
-    storage = localStorage,
-    debounceMs = 1000,
-    actions = ['UPDATE', 'BATCH_UPDATE'],
-  } = config;
-
-  let timeoutId: ReturnType<typeof setTimeout> | undefined;
-
-  const debouncedSave = (state: T) => {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
-    timeoutId = setTimeout(() => {
-      try {
-        storage.setItem(key, JSON.stringify(state));
-        console.log(`💾 State auto-saved to ${key}`);
-      } catch (error) {
-        console.error('Failed to save state:', error);
-      }
-    }, debounceMs);
-  };
-
-  return {
-    id: 'persistence',
-    after: (action, payload, state, newState) => {
-      if (actions.includes(action)) {
-        debouncedSave(newState);
-      }
-    },
-  };
-}
-
-// Re-export the built-in middleware creators with simpler names
-export const loggingMiddleware = createLoggingMiddleware;
-export const performanceMiddleware = createPerformanceMiddleware;
-export const validationMiddleware = createValidationMiddleware;
-export const persistenceMiddleware = createPersistenceMiddleware;

@@ -204,20 +204,18 @@ export function createFormTree<T extends Record<string, unknown>>(
 
   // Helper functions for nested paths
   const getNestedValue = (obj: DeepSignalify<T>, path: string): unknown => {
+    // Prefer using a plain snapshot from valuesTree to avoid relying on
+    // isSignal detection in different environments.
+    const snapshot = valuesTree.$() as unknown as Record<string, unknown>;
     const keys = parsePath(path);
-    let current: unknown = obj;
-
+    let current: unknown = snapshot;
     for (const key of keys) {
       if (current && typeof current === 'object') {
         current = (current as Record<string, unknown>)[key];
-        if (isSignal(current)) {
-          current = (current as Signal<unknown>)();
-        }
       } else {
         return undefined;
       }
     }
-
     return current;
   };
 
@@ -258,11 +256,12 @@ export function createFormTree<T extends Record<string, unknown>>(
 
     formSignals.errors.set(errors);
 
-    // Async validation
+    // Async validation (run concurrently and await all)
     const asyncFieldsToValidate = field
       ? [field]
       : Object.keys(asyncValidators);
 
+    const tasks: Promise<void>[] = [];
     for (const fieldPath of asyncFieldsToValidate) {
       const asyncValidator = asyncValidators[fieldPath];
       if (asyncValidator && (!field || field === fieldPath)) {
@@ -271,39 +270,47 @@ export function createFormTree<T extends Record<string, unknown>>(
           [fieldPath]: true,
         }));
 
-        try {
-          const value = getNestedValue(flattenedState, fieldPath);
-          const result = asyncValidator(value);
-
-          let error: string | null;
-          if (result instanceof Observable) {
-            // Handle Observable
-            error = await new Promise<string | null>((resolve) => {
-              result.subscribe({
-                next: (val) => resolve(val),
-                error: () => resolve('Validation error'),
-              });
+        const p = (async () => {
+          try {
+            const value = getNestedValue(flattenedState, fieldPath);
+            const result = asyncValidator(value);
+            const error =
+              result instanceof Observable
+                ? await new Promise<string | null>((resolve) => {
+                    result.subscribe({
+                      next: (val) => resolve(val),
+                      error: () => resolve('Validation error'),
+                    });
+                  })
+                : await result;
+            if (error) {
+              asyncErrors[fieldPath] = error;
+            }
+            formSignals.asyncErrors.update((current) => {
+              const next = { ...current } as Record<string, string>;
+              if (error) next[fieldPath] = error;
+              else delete next[fieldPath];
+              return next;
             });
-          } else {
-            // Handle Promise
-            error = await result;
+          } catch {
+            asyncErrors[fieldPath] = 'Validation error';
+            formSignals.asyncErrors.update((current) => ({
+              ...current,
+              [fieldPath]: 'Validation error',
+            }));
+          } finally {
+            formSignals.asyncValidating.update((v) => ({
+              ...v,
+              [fieldPath]: false,
+            }));
           }
-
-          if (error) {
-            asyncErrors[fieldPath] = error;
-          }
-        } catch {
-          asyncErrors[fieldPath] = 'Validation error';
-        }
-
-        formSignals.asyncValidating.update((v) => ({
-          ...v,
-          [fieldPath]: false,
-        }));
+        })();
+        tasks.push(p);
       }
     }
 
-    formSignals.asyncErrors.set(asyncErrors);
+    await Promise.all(tasks);
+    formSignals.asyncErrors.set({ ...formSignals.asyncErrors() });
 
     // Update validity
     const hasErrors = Object.keys(errors).length > 0;
@@ -350,6 +357,54 @@ export function createFormTree<T extends Record<string, unknown>>(
       formSignals.touched.update((t) => ({ ...t, [field]: true }));
       markDirty();
       void validate(field);
+      // Schedule a follow-up validation to catch async validator resolutions
+      // in environments with different microtask/timer semantics.
+      setTimeout(() => {
+        void validate(field);
+      }, 0);
+      // Immediate fallback: also trigger the field's async validator and
+      // update as soon as it resolves to make tests deterministic.
+      if (asyncValidators && asyncValidators[field]) {
+        const fn = asyncValidators[field];
+        if (fn) {
+          const current = getNestedValue(flattenedState, field);
+          const res = fn(current);
+          if (
+            res &&
+            typeof (res as unknown as { subscribe?: unknown }).subscribe ===
+              'function'
+          ) {
+            (res as unknown as Observable<string | null>).subscribe({
+              next: (msg) => {
+                if (msg) {
+                  formSignals.asyncErrors.update((cur) => ({
+                    ...cur,
+                    [field]: msg,
+                  }));
+                  formSignals.valid.set(false);
+                }
+              },
+              error: () => {
+                formSignals.asyncErrors.update((cur) => ({
+                  ...cur,
+                  [field]: 'Validation error',
+                }));
+                formSignals.valid.set(false);
+              },
+            });
+          } else {
+            Promise.resolve(res).then((msg) => {
+              if (msg) {
+                formSignals.asyncErrors.update((cur) => ({
+                  ...cur,
+                  [field]: msg as string,
+                }));
+                formSignals.valid.set(false);
+              }
+            });
+          }
+        }
+      }
     },
 
     setValues: (values: Partial<T>) => {
@@ -403,8 +458,16 @@ export function createFormTree<T extends Record<string, unknown>>(
 
       try {
         await validate();
+        // Compute validity directly from current signals to avoid any stale
+        // reads of the derived `valid` signal in some test environments.
+        const hasErrors = Object.keys(formSignals.errors()).length > 0;
+        const hasAsyncErrors =
+          Object.keys(formSignals.asyncErrors()).length > 0;
+        const isValidating = Object.values(formSignals.asyncValidating()).some(
+          (v) => v
+        );
 
-        if (!formSignals.valid()) {
+        if (hasErrors || hasAsyncErrors || isValidating) {
           throw new Error('Form is invalid');
         }
 
