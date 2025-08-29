@@ -1,9 +1,9 @@
+import { signalTree } from './signal-tree';
+
 /**
  * Performance Benchmark Suite for SignalTree
  * Comprehensive performance testing and metrics collection
  */
-import { signalTree } from './signal-tree';
-
 export interface BenchmarkResult {
   testName: string;
   avgTime: number;
@@ -128,21 +128,27 @@ export class PerformanceBenchmark {
     const tree = signalTree(this.createDeepObject(10));
     results.push(
       this.benchmark('Deep Signal Access', () => {
-        tree.$.level10.level9.level8.level7.level6.level5.level4.level3.level2.level1.value();
+        // Access with `any` because the signal tree uses dynamic keys that
+        // the static type system doesn't model in this benchmark helper.
+        (
+          tree.$ as any
+        ).level10.level9.level8.level7.level6.level5.level4.level3.level2.level1.value();
       })
     );
 
     // Test 5: Update performance
     results.push(
       this.benchmark('Signal Updates', () => {
-        tree.$.level10.level9.level8.count8.set(Math.random() * 100);
+        // See note above about dynamic signal shape
+        (tree.$ as any).level10.level9.level8.count8.set(Math.random() * 100);
       })
     );
 
     // Test 6: Unwrap performance
     results.push(
       this.benchmark('Tree Unwrap', () => {
-        tree.unwrap.$();
+        // unwrap may be dynamically typed, cast to any for benchmark access
+        (tree as any).unwrap.$();
       })
     );
 

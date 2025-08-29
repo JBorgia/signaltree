@@ -6,7 +6,6 @@ import { isSignal, Signal, signal, WritableSignal } from '@angular/core';
 
 import { SIGNAL_TREE_CONSTANTS } from './constants';
 
-
 import type { DeepSignalify, RemoveSignalMethods } from './types';
 /**
  * Enhanced deep equality function optimized for SignalTree operations.

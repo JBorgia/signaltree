@@ -1,0 +1,18 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/api-extractor/v7/api-extractor.schema.json",
+  "projectFolder": "/Users/jonathanborgia/code/signaltree alt/packages/serialization",
+  "mainEntryPointFilePath": "../../dist/out-tsc/packages/serialization/src/index.d.ts",
+  "apiReport": {
+    "enabled": false
+  },
+  "docModel": {
+    "enabled": false
+  },
+  "dtsRollup": {
+    "enabled": true,
+    "untrimmedFilePath": "dist/packages/serialization/index.d.ts"
+  },
+  "compiler": {
+    "tsconfigFilePath": "/Users/jonathanborgia/code/signaltree alt/packages/serialization/tsconfig.lib.json"
+  }
+}

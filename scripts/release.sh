@@ -3,7 +3,7 @@
 # SignalTree Modular Release Script
 # Handles version bumping, building, tagging, and publishing for all packages
 
-set -e # Exit on any error
+set -euo pipefail # Exit on any error, fail on unset variables
 
 # Colors for output
 RED='\033[0;31m'
@@ -52,6 +52,10 @@ PACKAGES=(
 # Parse command line arguments
 RELEASE_TYPE=${1:-patch}
 SKIP_TESTS=${2:-false}
+NON_INTERACTIVE=false
+if [[ "$*" == *"--yes"* ]] || [[ "$*" == *"-y"* ]]; then
+    NON_INTERACTIVE=true
+fi
 
 if [[ ! "$RELEASE_TYPE" =~ ^(major|minor|patch)$ ]]; then
     print_error "Invalid release type. Use: major, minor, or patch"
@@ -89,26 +93,27 @@ esac
 
 print_step "New version will be: $NEW_VERSION"
 
-# Confirm with user
-echo -e "${YELLOW}Continue with modular release $CURRENT_VERSION → $NEW_VERSION? (y/N)${NC}"
-read -r CONFIRM
-if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
-    print_warning "Release cancelled"
-    exit 0
+# Confirm with user (unless non-interactive)
+if [ "$NON_INTERACTIVE" = false ]; then
+    echo -e "${YELLOW}Continue with modular release $CURRENT_VERSION → $NEW_VERSION? (y/N)${NC}"
+    read -r CONFIRM
+    if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
+        print_warning "Release cancelled"
+        exit 0
+    fi
+else
+    print_step "Non-interactive mode: proceeding without confirmation"
 fi
 
 # Step 1: Run tests for all packages (unless skipped)
 if [ "$SKIP_TESTS" != "skip-tests" ]; then
     print_step "Running tests for all packages..."
 
-    # Run tests for each package individually
-    for package in "${PACKAGES[@]}"; do
-        print_step "Testing package: $package"
-        npx nx test $package || {
-            print_error "Tests failed for package: $package! Aborting release."
-            exit 1
-        }
-    done
+    # Prefer nx run-many to leverage caching and parallelism
+    npx nx run-many -t test --projects=${PACKAGES[*]} || {
+        print_error "Some tests failed! Aborting release."
+        exit 1
+    }
 
     print_success "All package tests passed"
 fi
@@ -164,14 +169,11 @@ done
 # Step 3: Build all packages
 print_step "Building all packages..."
 
-# Build packages one by one (Nx doesn't support multiple projects in one command)
-for package in "${PACKAGES[@]}"; do
-    print_step "Building package: $package"
-    npx nx build $package || {
-        print_error "Build failed for package: $package! Aborting release."
-        exit 1
-    }
-done
+# Use nx run-many so Nx can parallelize and use cache
+npx nx run-many -t build --projects=${PACKAGES[*]} --configuration=production || {
+    print_error "Some package builds failed! Aborting release."
+    exit 1
+}
 
 print_success "All packages built successfully"
 
@@ -189,8 +191,10 @@ git tag "v$NEW_VERSION" || {
     exit 1
 }
 
-print_step "Pushing changes and tag to GitHub..."
-git push origin main
+# Determine current branch and push to it (safer than hardcoding 'main')
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD || echo "main")
+print_step "Pushing changes and tag to GitHub (branch: $CURRENT_BRANCH)..."
+git push origin "$CURRENT_BRANCH"
 git push origin "v$NEW_VERSION"
 print_success "Changes and tag pushed to GitHub"
 

@@ -18,60 +18,66 @@ export const SIGNAL_TREE_CONSTANTS = {
   DEFAULT_BATCH_SIZE: 10,
 } as const;
 
-export const SIGNAL_TREE_MESSAGES = {
-  /** Error messages */
-  NULL_OR_UNDEFINED: 'Cannot create SignalTree from null or undefined',
-  CIRCULAR_REF:
-    '[SignalTree] Circular reference detected, creating reference signal',
-  UPDATER_INVALID: 'Updater must return an object',
-
-  /** Warning messages */
-  LAZY_FALLBACK: '[SignalTree] Lazy creation failed, falling back to eager:',
-  SIGNAL_CREATION_FAILED: '[SignalTree] Failed to create signal for key',
-  UPDATE_PATH_NOT_FOUND: '[SignalTree] Cannot update non-existent path:',
-  UPDATE_FAILED: '[SignalTree] Update failed, attempting rollback:',
-  ROLLBACK_FAILED: '[SignalTree] Rollback failed for path:',
-  CLEANUP_ERROR: '[SignalTree] Error during cleanup:',
-  PRESET_UNKNOWN: 'Unknown preset: %s, using default configuration',
-
-  /** Debug messages */
-  STRATEGY_SELECTION:
-    '[SignalTree] Creating tree with %s strategy (estimated size: %d)',
-  TREE_DESTROYED: '[SignalTree] Tree destroyed',
-  UPDATE_TRANSACTION: '[SignalTree] Update transaction:',
-
-  /** Feature warnings */
-  BATCH_NOT_ENABLED:
-    '⚠️ batchUpdate() called but batching is not enabled.\nTo enable batch updates, install @signaltree/batching',
-  MEMOIZE_NOT_ENABLED:
-    '⚠️ memoize() called but memoization is not enabled.\nTo enable memoized computations, install @signaltree/memoization',
-  MIDDLEWARE_NOT_AVAILABLE:
-    '⚠️ addTap() called but middleware support is not available.',
-  ENTITY_HELPERS_NOT_AVAILABLE:
-    '⚠️ asCrud() called but entity helpers are not available.',
-  ASYNC_ACTIONS_NOT_AVAILABLE:
-    '⚠️ asyncAction() called but async actions are not available.',
-  TIME_TRAVEL_NOT_AVAILABLE:
-    '⚠️ undo() called but time travel is not available.',
-  OPTIMIZE_NOT_AVAILABLE:
-    '⚠️ optimize() called but tree optimization is not available.',
-  CACHE_NOT_AVAILABLE: '⚠️ clearCache() called but caching is not available.',
-  PERFORMANCE_NOT_ENABLED:
-    '⚠️ invalidatePattern() called but performance optimization is not enabled.',
-
-  /** Enhancer messages */
-  ENHANCER_ORDER_FAILED:
-    '[SignalTree] Failed to resolve enhancer order, using provided order',
-  ENHANCER_CYCLE_DETECTED:
-    '[SignalTree] Could not fully order enhancers (cycle detected), falling back to provided order',
-  ENHANCER_REQUIREMENT_MISSING:
-    "[SignalTree] Enhancer '%s' requires '%s' but it is not available",
-  ENHANCER_PROVIDES_MISSING:
-    "[SignalTree] Enhancer '%s' promised '%s' but it was not found on the resulting tree",
-  ENHANCER_FAILED: "[SignalTree] Enhancer '%s' failed:",
-  ENHANCER_NOT_FUNCTION: 'Enhancer at index %d is not a function',
-
-  /** Context messages */
-  EFFECT_NO_CONTEXT: 'Effect requires Angular injection context',
-  SUBSCRIBE_NO_CONTEXT: 'Subscribe requires Angular injection context',
+// Full developer-facing messages
+const DEV_MESSAGES = {
+  NULL_OR_UNDEFINED: 'null/undefined',
+  CIRCULAR_REF: 'circular ref',
+  UPDATER_INVALID: 'updater invalid',
+  LAZY_FALLBACK: 'lazy fallback',
+  SIGNAL_CREATION_FAILED: 'signal creation failed',
+  UPDATE_PATH_NOT_FOUND: 'update path not found',
+  UPDATE_FAILED: 'update failed',
+  ROLLBACK_FAILED: 'rollback failed',
+  CLEANUP_ERROR: 'cleanup error',
+  PRESET_UNKNOWN: 'unknown preset',
+  STRATEGY_SELECTION: 'strategy select',
+  TREE_DESTROYED: 'destroyed',
+  UPDATE_TRANSACTION: 'update tx',
+  BATCH_NOT_ENABLED: 'batching disabled',
+  MEMOIZE_NOT_ENABLED: 'memoize disabled',
+  MIDDLEWARE_NOT_AVAILABLE: 'middleware missing',
+  ENTITY_HELPERS_NOT_AVAILABLE: 'entity helpers missing',
+  ASYNC_ACTIONS_NOT_AVAILABLE: 'async actions missing',
+  TIME_TRAVEL_NOT_AVAILABLE: 'time travel missing',
+  OPTIMIZE_NOT_AVAILABLE: 'optimize missing',
+  CACHE_NOT_AVAILABLE: 'cache missing',
+  PERFORMANCE_NOT_ENABLED: 'performance disabled',
+  ENHANCER_ORDER_FAILED: 'enhancer order failed',
+  ENHANCER_CYCLE_DETECTED: 'enhancer cycle',
+  ENHANCER_REQUIREMENT_MISSING: 'enhancer req missing',
+  ENHANCER_PROVIDES_MISSING: 'enhancer provides missing',
+  ENHANCER_FAILED: 'enhancer failed',
+  ENHANCER_NOT_FUNCTION: 'enhancer not function',
+  EFFECT_NO_CONTEXT: 'no angular context',
+  SUBSCRIBE_NO_CONTEXT: 'no angular context',
 } as const;
+
+// Compact production messages (very short numeric codes) to keep bundles minimal.
+// We map each key to a short numeric string like '0','1','2' to minimize bytes.
+const PROD_MESSAGES = (() => {
+  const out = {} as Record<keyof typeof DEV_MESSAGES, string>;
+  let i = 0;
+  for (const k of Object.keys(DEV_MESSAGES) as Array<
+    keyof typeof DEV_MESSAGES
+  >) {
+    out[k] = String(i++);
+  }
+  return out;
+})();
+
+// Prefer Angular's compile-time `ngDevMode` flag. When `ngDevMode` is false
+// in production builds, DEV_MESSAGES can be tree-shaken. Fallback to
+// process.env when ngDevMode is not present.
+declare const ngDevMode: boolean | undefined;
+// Avoid referencing the bare `process` identifier to keep builds free of Node
+// type assumptions; use globalThis to check env when available.
+const _isProdByEnv = Boolean(
+  (globalThis as any)?.process?.env?.NODE_ENV === 'production'
+);
+
+const _isDev =
+  typeof ngDevMode !== 'undefined' ? Boolean(ngDevMode) : !_isProdByEnv;
+
+export const SIGNAL_TREE_MESSAGES = _isDev
+  ? (DEV_MESSAGES as typeof DEV_MESSAGES)
+  : (PROD_MESSAGES as typeof DEV_MESSAGES);

@@ -118,6 +118,11 @@ npm run analyze:deps           # Visualize dependency graph
 npm run perf:build            # Build + analyze performance
 ```
 
+## 🧰 New helper scripts
+
+- `node scripts/ci-checks.js --jsdoc --sizes` — consolidated CI checks for JSDoc stripping and bundle-size reports. Used by `prepublish` and `postbuild` hooks.
+- `node scripts/sanity-checks.js` — quick workspace smoke/parity checks (core presence, batching, demo integration).
+
 ### Workspace Information
 
 ```bash

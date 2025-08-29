@@ -1,8 +1,9 @@
+/* eslint-disable @nx/enforce-module-boundaries */
 import { signal, WritableSignal } from '@angular/core';
 import { isEqual } from 'lodash-es';
 
-import { signalTree } from './signal-tree';
-import { unwrap } from './utils';
+import { signalTree } from './packages/core/src/lib/signal-tree';
+import { unwrap } from './packages/core/src/lib/utils';
 
 export type Configuration = Partial<{
   map: Partial<Map<string, string>>;
