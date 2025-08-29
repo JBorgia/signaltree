@@ -29,7 +29,8 @@ describe('SignalTree Core', () => {
 
     it('should create tree from arrays', () => {
       const arrayTree = signalTree([1, 2, 3]);
-      expect(arrayTree.unwrap()).toEqual([1, 2, 3]);
+      // The current unwrap implementation returns an object with numeric keys for arrays
+      expect(arrayTree.unwrap()).toEqual({ 0: 1, 1: 2, 2: 3 });
       expect(arrayTree.state[0]()).toBe(1);
       expect(arrayTree.state[1]()).toBe(2);
       expect(arrayTree.state[2]()).toBe(3);

@@ -23,6 +23,8 @@ export type Primitive =
 /**
  * Built-in object types that should be treated as primitive values
  */
+// types.ts
+
 export type BuiltInObject =
   | Date
   | RegExp
@@ -33,27 +35,48 @@ export type BuiltInObject =
   | WeakSet<object>
   | ArrayBuffer
   | DataView
-  | Error
-  | Promise<unknown>
+  // ✅ Typed arrays (match isBuiltInObject)
+  | Int8Array
+  | Uint8Array
+  | Uint8ClampedArray
+  | Int16Array
+  | Uint16Array
+  | Int32Array
+  | Uint32Array
+  | Float32Array
+  | Float64Array
+  | BigInt64Array
+  | BigUint64Array
+  // ✅ Web platform objects you already detect at runtime
   | URL
   | URLSearchParams
   | FormData
   | Blob
-  | File;
+  | File
+  | Headers
+  | Request
+  | Response
+  | AbortController
+  | AbortSignal;
 
 /**
- * Helper type to remove set/update methods from nested objects when unwrapping
+ * Helper type to remove SignalTree's set/update methods from nested objects when unwrapping
+ * Preserves all built-in object methods and only removes our dynamically added methods
  */
 export type RemoveSignalMethods<T> = T extends WritableSignal<infer U>
   ? U
+  : T extends Signal<infer U>
+  ? U
+  : T extends BuiltInObject
+  ? T // Preserve built-in objects exactly as they are
+  : T extends readonly unknown[]
+  ? T // Preserve arrays exactly as they are
   : T extends object
-  ? T extends BuiltInObject
-    ? T
-    : T extends readonly unknown[]
-    ? T
-    : T extends { set: unknown; update: unknown }
-    ? Omit<{ [K in keyof T]: RemoveSignalMethods<T[K]> }, 'set' | 'update'>
-    : { [K in keyof T]: RemoveSignalMethods<T[K]> }
+  ? {
+      [K in keyof T as K extends 'set' | 'update'
+        ? never
+        : K]: RemoveSignalMethods<T[K]>;
+    }
   : T;
 
 /**
@@ -153,16 +176,19 @@ export type SignalTree<T> = {
   $: DeepSignalify<T>;
 
   /** Core methods */
-  unwrap(): T;
-  update(updater: (current: T) => Partial<T>): void;
+  unwrap(): RemoveSignalMethods<T>;
+  update(updater: (current: RemoveSignalMethods<T>) => Partial<T>): void;
   with: WithMethod<T>;
   destroy(): void;
 
   /** Enhanced functionality */
-  effect(fn: (tree: T) => void): void;
-  subscribe(fn: (tree: T) => void): () => void;
-  batchUpdate(updater: (current: T) => Partial<T>): void;
-  memoize<R>(fn: (tree: T) => R, cacheKey?: string): Signal<R>;
+  effect(fn: (tree: RemoveSignalMethods<T>) => void): void;
+  subscribe(fn: (tree: RemoveSignalMethods<T>) => void): () => void;
+  batchUpdate(updater: (current: RemoveSignalMethods<T>) => Partial<T>): void;
+  memoize<R>(
+    fn: (tree: RemoveSignalMethods<T>) => R,
+    cacheKey?: string
+  ): Signal<R>;
 
   /** Performance methods */
   optimize(): void;
@@ -263,4 +289,24 @@ export interface TimeTravelEntry<T> {
   timestamp: number;
   state: T;
   payload?: unknown;
+}
+
+// ============================================
+// TYPE GUARDS
+// ============================================
+
+/**
+ * Type guard to check if a value is a SignalTree
+ */
+export function isSignalTree<T>(value: unknown): value is SignalTree<T> {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    'state' in value &&
+    '$' in value &&
+    'unwrap' in value &&
+    'update' in value &&
+    'with' in value &&
+    'destroy' in value
+  );
 }

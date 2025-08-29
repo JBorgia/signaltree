@@ -1,8 +1,7 @@
-import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree } from '@signaltree/core';
-import { withDevTools } from '@signaltree/devtools';
 
 interface DevtoolsState {
   counter: number;
@@ -33,8 +32,11 @@ interface DevtoolsState {
           <div class="space-y-6">
             <!-- Counter -->
             <div>
-              <label class="block text-sm font-medium mb-2"
+              <label for="counterValue" class="block text-sm font-medium mb-2"
                 >Counter: {{ counter() }}</label
+              >
+              <span id="counterValue" class="sr-only"
+                >Current counter value</span
               >
               <div class="flex gap-2">
                 <button
@@ -68,7 +70,7 @@ interface DevtoolsState {
                 <input
                   id="userName"
                   type="text"
-                  [value]="user().name"
+                  [value]="this.store.$.user.name()"
                   (input)="updateUserName($event)"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md"
                 />
@@ -80,7 +82,7 @@ interface DevtoolsState {
                 <input
                   id="userEmail"
                   type="email"
-                  [value]="user().email"
+                  [value]="this.store.$.user.email()"
                   (input)="updateUserEmail($event)"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md"
                 />
@@ -91,7 +93,7 @@ interface DevtoolsState {
                 >
                 <select
                   id="theme"
-                  [value]="user().preferences.theme"
+                  [value]="this.store.$.user.preferences.theme()"
                   (change)="updateTheme($event)"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md"
                 >
@@ -103,7 +105,7 @@ interface DevtoolsState {
                 <input
                   id="notifications"
                   type="checkbox"
-                  [checked]="user().preferences.notifications"
+                  [checked]="this.store.$.user.preferences.notifications()"
                   (change)="toggleNotifications()"
                   class="mr-2"
                 />
@@ -150,20 +152,18 @@ interface DevtoolsState {
             <div>
               <h3 class="font-medium mb-2">Performance Metrics</h3>
               <div class="text-sm space-y-1">
-                <p>
-                  <strong>Update Count:</strong> {{ getMetrics().updateCount }}
-                </p>
+                <p><strong>Updates:</strong> {{ getMetrics().updates }}</p>
                 <p>
                   <strong>Average Update Time:</strong>
                   {{ getMetrics().averageUpdateTime }}ms
                 </p>
                 <p>
                   <strong>Last Update Time:</strong>
-                  {{ getMetrics().lastUpdateTime }}ms
+                  {{ getMetrics().averageUpdateTime }}ms
                 </p>
                 <p>
                   <strong>Total Execution Time:</strong>
-                  {{ getMetrics().totalExecutionTime }}ms
+                  {{ getMetrics().computations }}
                 </p>
               </div>
             </div>
@@ -235,6 +235,7 @@ interface DevtoolsState {
                     <button
                       (click)="toggleTodo(todo.id)"
                       class="px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 rounded"
+                      aria-pressed="{{ todo.completed }}"
                     >
                       {{ todo.completed ? 'Undo' : 'Done' }}
                     </button>
@@ -258,18 +259,24 @@ export class DevtoolsDemoComponent {
   newTodoText = '';
   lastAction = 'Initial state';
 
-  private store = signalTree<DevtoolsState>({
-    counter: 0,
-    user: {
-      name: 'John Doe',
-      email: 'john@example.com',
-      preferences: {
-        theme: 'light',
-        notifications: true,
+  public store = signalTree<DevtoolsState>(
+    {
+      counter: 0,
+      user: {
+        name: 'John Doe',
+        email: 'john@example.com',
+        preferences: {
+          theme: 'light',
+          notifications: true,
+        },
       },
+      todos: [],
     },
-    todos: [],
-  }).pipe(withDevTools({ name: 'DevtoolsDemo' }));
+    {
+      enableDevTools: true,
+      treeName: 'DevtoolsDemo',
+    }
+  );
 
   // Computed properties
   counter = this.store.$.counter;
@@ -369,16 +376,17 @@ export class DevtoolsDemoComponent {
   getMetrics() {
     return (
       this.store.getMetrics?.() || {
-        updateCount: 0,
+        updates: 0,
+        computations: 0,
+        cacheHits: 0,
+        cacheMisses: 0,
         averageUpdateTime: 0,
-        lastUpdateTime: 0,
-        totalExecutionTime: 0,
       }
     );
   }
 
   logState() {
-    console.log('Current State:', this.store.state());
+    console.log('Current State:', this.store.unwrap());
     this.lastAction = 'Log state to console';
   }
 
@@ -388,12 +396,12 @@ export class DevtoolsDemoComponent {
   }
 
   resetMetrics() {
-    this.store.resetMetrics?.();
+    this.store.clearCache?.();
     this.lastAction = 'Reset performance metrics';
   }
 
   getStateSize(): number {
-    const state = this.store.state();
+    const state = this.store.unwrap();
     return Object.keys(state).length;
   }
 
@@ -405,7 +413,7 @@ export class DevtoolsDemoComponent {
     return JSON.stringify(
       {
         counter: this.counter(),
-        user: this.user(),
+        user: this.store.$.user.unwrap(),
       },
       null,
       2

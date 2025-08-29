@@ -1,9 +1,9 @@
-import { Component, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree } from '@signaltree/core';
-import { withEntities } from '@signaltree/entities';
-import { User, Post, generateUsers, generatePosts } from '../../shared/models';
+
+import { generatePosts, generateUsers, Post, User } from '../../shared/models';
 
 interface EntitiesState {
   users: User[];
@@ -261,7 +261,7 @@ export class EntitiesDemoComponent {
     posts: [],
     selectedUserId: null,
     searchTerm: '',
-  }).pipe(withEntities());
+  });
 
   // Entity helpers using @signaltree/entities
   userHelpers = this.store.asCrud<User>('users');

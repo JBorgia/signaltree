@@ -1,34 +1,34 @@
 {
-  "timestamp": "2025-08-29T18:22:22.942Z",
-  "runs": 2,
+  "timestamp": "2025-08-29T22:29:23.983Z",
+  "runs": 3,
   "summary": {
     "basic": {
-      "runs": 2,
+      "runs": 3,
       "mean": 0.002,
       "min": 0.002,
       "max": 0.002,
       "stddev": 0
     },
     "medium": {
-      "runs": 2,
+      "runs": 3,
       "mean": 0.002,
       "min": 0.002,
       "max": 0.002,
       "stddev": 0
     },
     "extreme": {
-      "runs": 2,
+      "runs": 3,
       "mean": 0.002,
       "min": 0.002,
       "max": 0.002,
       "stddev": 0
     },
     "unlimited": {
-      "runs": 2,
-      "mean": 0.003,
+      "runs": 3,
+      "mean": 0.0030000000000000005,
       "min": 0.003,
       "max": 0.003,
-      "stddev": 0
+      "stddev": 4.336808689942018e-19
     }
   },
   "bundleResults": [
@@ -38,47 +38,47 @@
     },
     {
       "package": "core",
-      "gzippedKB": 6.64
+      "gzippedKB": 7.08
     },
     {
       "package": "batching",
-      "gzippedKB": 1.86
+      "gzippedKB": 1.07
     },
     {
       "package": "memoization",
-      "gzippedKB": 2.3
+      "gzippedKB": 1.69
     },
     {
       "package": "time-travel",
-      "gzippedKB": 2.25
+      "gzippedKB": 1.54
     },
     {
       "package": "async",
-      "gzippedKB": 1.97
+      "gzippedKB": 1.71
     },
     {
       "package": "entities",
-      "gzippedKB": 0.95
+      "gzippedKB": 0.91
     },
     {
       "package": "middleware",
-      "gzippedKB": 2.12
+      "gzippedKB": 1.15
     },
     {
       "package": "devtools",
-      "gzippedKB": 2.98
+      "gzippedKB": 2.28
     },
     {
       "package": "serialization",
-      "gzippedKB": 3.51
+      "gzippedKB": 3.62
     },
     {
       "package": "ng-forms",
-      "gzippedKB": 3.76
+      "gzippedKB": 3.39
     },
     {
       "package": "presets",
-      "gzippedKB": 0.54
+      "gzippedKB": 0.84
     }
   ]
 }

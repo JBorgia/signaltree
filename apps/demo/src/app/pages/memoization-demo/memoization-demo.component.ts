@@ -1,8 +1,7 @@
-import { Component, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree } from '@signaltree/core';
-import { withMemoization } from '@signaltree/memoization';
 
 interface MemoState {
   numbers: number[];
@@ -26,8 +25,13 @@ interface MemoState {
 
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-medium mb-2">Multiplier:</label>
+              <label
+                for="multiplierInput"
+                class="block text-sm font-medium mb-2"
+                >Multiplier:</label
+              >
               <input
+                id="multiplierInput"
                 type="number"
                 [(ngModel)]="multiplier"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md"
@@ -35,8 +39,13 @@ interface MemoState {
             </div>
 
             <div>
-              <label class="block text-sm font-medium mb-2">Search Term:</label>
+              <label
+                for="searchTermInput"
+                class="block text-sm font-medium mb-2"
+                >Search Term:</label
+              >
               <input
+                id="searchTermInput"
                 type="text"
                 [(ngModel)]="searchTerm"
                 placeholder="Filter numbers..."
@@ -99,14 +108,20 @@ interface MemoState {
   `,
 })
 export class MemoizationDemoComponent {
-  private store = signalTree<MemoState>({
-    numbers: Array.from({ length: 100 }, () =>
-      Math.floor(Math.random() * 1000)
-    ),
-    multiplier: 2,
-    searchTerm: '',
-    computeCount: 0,
-  }).pipe(withMemoization());
+  private store = signalTree<MemoState>(
+    {
+      numbers: Array.from({ length: 100 }, () =>
+        Math.floor(Math.random() * 1000)
+      ),
+      multiplier: 2,
+      searchTerm: '',
+      computeCount: 0,
+    },
+    {
+      useMemoization: true,
+      treeName: 'MemoizationDemo',
+    }
+  );
 
   // Computed properties
   numbers = this.store.$.numbers;
@@ -140,10 +155,18 @@ export class MemoizationDemoComponent {
   }
 
   clearMemoCache() {
-    this.store.clearMemoCache();
+    this.store.clearCache();
   }
 
   getCacheStats() {
-    return this.store.getCacheStats();
+    return (
+      this.store.getMetrics?.() || {
+        cacheHits: 0,
+        cacheMisses: 0,
+        updates: 0,
+        computations: 0,
+        averageUpdateTime: 0,
+      }
+    );
   }
 }

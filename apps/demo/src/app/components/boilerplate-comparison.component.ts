@@ -1,5 +1,5 @@
-import { Component, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, computed, signal } from '@angular/core';
 
 interface BoilerplateExample {
   framework: string;
@@ -271,7 +271,7 @@ interface DeveloperMetrics {
               <li>5 minutes to learn vs 4 hours (NgRx)</li>
               <li>1 file vs 7 files (typical feature)</li>
               <li>3 concepts vs 12 concepts</li>
-              <li>15KB vs 85KB bundle size</li>
+              <li>25KB vs 85KB bundle size</li>
               <li>2x better maintenance scores</li>
               <li>10x fewer bugs per feature</li>
             </ul>

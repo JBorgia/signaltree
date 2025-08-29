@@ -1,15 +1,14 @@
+import { computed, DestroyRef, effect, inject, isSignal, Signal, signal, WritableSignal } from '@angular/core';
+
+import { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './constants';
+import { resolveEnhancerOrder } from './enhancers';
+import { createLazySignalTree, equal, isBuiltInObject, unwrap as sharedUnwrap } from './utils';
+
 /**
  * SignalTree Core v1.1.6
  * Copyright (c) 2025 Jonathan D Borgia
  * @see https://github.com/JBorgia/signaltree/blob/main/LICENSE
  */
-import { computed, DestroyRef, effect, inject, isSignal, Signal, signal, WritableSignal } from '@angular/core';
-
-import { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './constants';
-import { resolveEnhancerOrder } from './enhancers';
-import { createLazySignalTree, equal, isBuiltInObject } from './utils';
-
-
 import type {
   SignalTree,
   DeepSignalify,
@@ -24,6 +23,7 @@ import type {
   EnhancerWithMeta,
   ChainResult,
   WithMethod,
+  RemoveSignalMethods,
 } from './types';
 
 // Type alias for internal use
@@ -192,7 +192,7 @@ function createSignalStore<T>(
           const branch = createSignalStore(value, equalityFn);
 
           // Attach set/update methods to branch nodes
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
           if (!('set' in branch)) {
             (branch as any)['set'] = function (partial: Partial<any>) {
               for (const k in partial) {
@@ -217,7 +217,6 @@ function createSignalStore<T>(
             };
           }
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if (!('update' in branch)) {
             (branch as any)['update'] = function (
               updater: (current: any) => Partial<any>
@@ -295,66 +294,12 @@ function enhanceTree<T>(
   const isLazy = config.useLazySignals ?? shouldUseLazy(tree.state, config);
 
   // Implement unwrap method
-  tree.unwrap = (): T => {
-    const unwrapObject = <O>(obj: DeepSignalify<O>): O => {
-      if (typeof obj !== 'object' || obj === null) {
-        return obj as O;
-      }
-
-      if (isSignal(obj)) {
-        return (obj as Signal<O>)();
-      }
-
-      const result = {} as Record<string, unknown>;
-
-      for (const key in obj) {
-        if (!Object.prototype.hasOwnProperty.call(obj, key)) continue;
-
-        const value = (obj as Record<string, unknown>)[key];
-
-        // Skip runtime-attached methods
-        if (
-          (key === 'set' || key === 'update') &&
-          typeof value === 'function'
-        ) {
-          continue;
-        }
-
-        if (isSignal(value)) {
-          result[key] = (value as Signal<unknown>)();
-        } else if (
-          typeof value === 'object' &&
-          value !== null &&
-          !Array.isArray(value) &&
-          !isBuiltInObject(value)
-        ) {
-          result[key] = unwrapObject(value as DeepSignalify<object>);
-        } else {
-          result[key] = value;
-        }
-      }
-
-      // Handle symbol properties
-      const symbols = Object.getOwnPropertySymbols(obj);
-      for (const sym of symbols) {
-        const value = (obj as Record<symbol, unknown>)[sym];
-        if (isSignal(value)) {
-          (result as Record<symbol, unknown>)[sym] = (
-            value as Signal<unknown>
-          )();
-        } else {
-          (result as Record<symbol, unknown>)[sym] = value;
-        }
-      }
-
-      return result as O;
-    };
-
-    return unwrapObject(tree.state as DeepSignalify<T>);
-  };
+  // Use shared utils.unwrap for consistent behavior
+  tree.unwrap = (): RemoveSignalMethods<T> =>
+    sharedUnwrap(tree.state as DeepSignalify<T>);
 
   // Implement update method with transaction support
-  tree.update = (updater: (current: T) => Partial<T>) => {
+  tree.update = (updater: (current: RemoveSignalMethods<T>) => Partial<T>) => {
     const transactionLog: Array<{
       path: string;
       oldValue: unknown;
@@ -599,18 +544,23 @@ function enhanceTree<T>(
  * Adds stub implementations for advanced features
  */
 function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
-  tree.batchUpdate = (updater: (current: T) => Partial<T>) => {
+  tree.batchUpdate = (
+    updater: (current: RemoveSignalMethods<T>) => Partial<T>
+  ) => {
     console.warn(SIGNAL_TREE_MESSAGES.BATCH_NOT_ENABLED);
     tree.update(updater);
   };
 
-  tree.memoize = <R>(fn: (tree: T) => R, cacheKey?: string): Signal<R> => {
+  tree.memoize = <R>(
+    fn: (tree: RemoveSignalMethods<T>) => R,
+    cacheKey?: string
+  ): Signal<R> => {
     console.warn(SIGNAL_TREE_MESSAGES.MEMOIZE_NOT_ENABLED);
     void cacheKey;
     return computed(() => fn(tree.unwrap()));
   };
 
-  tree.effect = (fn: (tree: T) => void) => {
+  tree.effect = (fn: (tree: RemoveSignalMethods<T>) => void) => {
     try {
       effect(() => fn(tree.unwrap()));
     } catch (error) {
@@ -620,7 +570,9 @@ function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
     }
   };
 
-  tree.subscribe = (fn: (tree: T) => void): (() => void) => {
+  tree.subscribe = (
+    fn: (tree: RemoveSignalMethods<T>) => void
+  ): (() => void) => {
     try {
       const destroyRef = inject(DestroyRef);
       let isDestroyed = false;

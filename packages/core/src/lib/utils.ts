@@ -7,6 +7,7 @@ import { isSignal, Signal, signal, WritableSignal } from '@angular/core';
 import { SIGNAL_TREE_CONSTANTS } from './constants';
 
 import type { DeepSignalify, RemoveSignalMethods } from './types';
+
 /**
  * Enhanced deep equality function optimized for SignalTree operations.
  *
@@ -419,6 +420,7 @@ export function createLazySignalTree<T extends object>(
 
 /**
  * Unwraps the current value from a signal or signal tree
+ * Optimized to avoid redundant checks and efficiently handle different value types
  *
  * @param node - A signal, signal tree, or any value to unwrap
  * @returns The unwrapped value(s) with proper type inference
@@ -435,45 +437,76 @@ export function unwrap<T>(node: unknown): RemoveSignalMethods<T> {
     return node as RemoveSignalMethods<T>;
   }
 
-  // Handle signals directly
+  // Handle signals directly - if it's a signal, call it
   if (isSignal(node)) {
-    return (node as Signal<unknown>)() as RemoveSignalMethods<T>;
+    const value = (node as Signal<unknown>)();
+    // The value from a signal might itself need unwrapping if it's an object
+    if (
+      typeof value === 'object' &&
+      value !== null &&
+      !Array.isArray(value) &&
+      !isBuiltInObject(value)
+    ) {
+      return unwrap(value) as RemoveSignalMethods<T>;
+    }
+    return value as RemoveSignalMethods<T>;
   }
 
-  // Handle primitives
+  // Handle non-objects (primitives)
   if (typeof node !== 'object') {
     return node as RemoveSignalMethods<T>;
   }
 
-  // Handle arrays directly
+  // Handle arrays - just return as-is since arrays are stored as single signals
   if (Array.isArray(node)) {
     return node as RemoveSignalMethods<T>;
   }
 
-  // Build result object, filtering out methods
+  // Handle built-in objects - return as-is to preserve their methods
+  if (isBuiltInObject(node)) {
+    return node as RemoveSignalMethods<T>;
+  }
+
+  // Build result object for plain objects, filtering out methods
   const result = {} as Record<string, unknown>;
 
   for (const key in node) {
     if (!Object.prototype.hasOwnProperty.call(node, key)) continue;
 
-    const value = (node as Record<string, unknown>)[key];
-
     // Skip runtime-attached methods
-    if ((key === 'set' || key === 'update') && typeof value === 'function') {
-      continue;
+    if (key === 'set' || key === 'update') {
+      const value = (node as Record<string, unknown>)[key];
+      if (typeof value === 'function') {
+        continue;
+      }
     }
 
+    const value = (node as Record<string, unknown>)[key];
+
     if (isSignal(value)) {
-      result[key] = (value as Signal<unknown>)();
+      // Unwrap the signal to get its value
+      const unwrappedValue = (value as Signal<unknown>)();
+      // If the unwrapped value is an object (but not array or built-in), recursively unwrap it
+      if (
+        typeof unwrappedValue === 'object' &&
+        unwrappedValue !== null &&
+        !Array.isArray(unwrappedValue) &&
+        !isBuiltInObject(unwrappedValue)
+      ) {
+        result[key] = unwrap(unwrappedValue);
+      } else {
+        result[key] = unwrappedValue;
+      }
     } else if (
       typeof value === 'object' &&
       value !== null &&
       !Array.isArray(value) &&
       !isBuiltInObject(value)
     ) {
-      // Nested signal state - recurse
+      // Nested object that's not a signal - recurse
       result[key] = unwrap(value);
     } else {
+      // Primitive, array, or built-in object - use as-is
       result[key] = value;
     }
   }
@@ -483,7 +516,17 @@ export function unwrap<T>(node: unknown): RemoveSignalMethods<T> {
   for (const sym of symbols) {
     const value = (node as Record<symbol, unknown>)[sym];
     if (isSignal(value)) {
-      (result as Record<symbol, unknown>)[sym] = (value as Signal<unknown>)();
+      const unwrappedValue = (value as Signal<unknown>)();
+      if (
+        typeof unwrappedValue === 'object' &&
+        unwrappedValue !== null &&
+        !Array.isArray(unwrappedValue) &&
+        !isBuiltInObject(unwrappedValue)
+      ) {
+        (result as Record<symbol, unknown>)[sym] = unwrap(unwrappedValue);
+      } else {
+        (result as Record<symbol, unknown>)[sym] = unwrappedValue;
+      }
     } else if (
       typeof value === 'object' &&
       value !== null &&

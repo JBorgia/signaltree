@@ -70,22 +70,12 @@ describe('signalTree', () => {
 
     tree.batchUpdate((state) => ({ count: state.count + 1 }));
     expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining(
-        'batchUpdate() called but batching is not enabled'
-      ),
-      expect.stringContaining(
-        'To enable batch updates, install @signaltree/batching'
-      )
+      expect.stringContaining('batching disabled')
     );
 
     tree.memoize((state) => state.count * 2);
     expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining(
-        'memoize() called but memoization is not enabled'
-      ),
-      expect.stringContaining(
-        'To enable memoized computations, install @signaltree/memoization'
-      )
+      expect.stringContaining('memoize disabled')
     );
 
     consoleSpy.mockRestore();

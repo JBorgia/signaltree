@@ -1,12 +1,9 @@
+import { signalTree } from '@signaltree/core';
+
 /**
  * Boilerplate and Code Metrics Analysis
  * Measures developer experience and code quality metrics
  */
-
-import { TestBed } from '@angular/core/testing';
-import { signalTree } from '@signaltree/core';
-import { withBatching } from '@signaltree/batching';
-import { withMemoization } from '@signaltree/memoization';
 
 interface CodeMetrics {
   linesOfCode: number;
@@ -522,21 +519,21 @@ export class UserFormComponent {
     const bundleMetrics = [
       {
         scenario: 'Minimal Setup',
-        signalTree: '5.2KB',
+        signalTree: '7.1KB',
         ngrx: '52KB',
         akita: '28KB',
         treeshaking: '100%',
       },
       {
         scenario: 'With Batching',
-        signalTree: '8.1KB',
+        signalTree: '8.2KB',
         ngrx: '52KB (no built-in)',
         akita: '28KB (manual)',
         treeshaking: '100%',
       },
       {
         scenario: 'Full Featured',
-        signalTree: '15.3KB',
+        signalTree: '25.3KB',
         ngrx: '85KB+',
         akita: '35KB',
         treeshaking: '100%',

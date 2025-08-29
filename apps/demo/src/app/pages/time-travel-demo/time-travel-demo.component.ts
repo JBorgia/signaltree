@@ -1,8 +1,7 @@
-import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree } from '@signaltree/core';
-import { withTimeTravel } from '@signaltree/time-travel';
 
 interface TimeTravelState {
   counter: number;
@@ -126,8 +125,11 @@ interface TimeTravelState {
                 <button
                   *ngFor="let entry of getHistory(); let i = index"
                   (click)="jumpTo(i)"
+                  (keydown.enter)="jumpTo(i)"
+                  (keydown.space)="jumpTo(i)"
                   [class]="getHistoryItemClass(i)"
                   class="w-full text-left px-2 py-1 text-xs rounded"
+                  type="button"
                 >
                   {{ i }}: {{ entry.action || 'Initial' }} ({{
                     entry.timestamp | date : 'medium'
@@ -159,9 +161,15 @@ interface TimeTravelState {
                 [class]="todo.completed ? 'line-through text-gray-500' : ''"
                 class="text-sm"
               >
-                <span (click)="toggleTodo(todo.id)" class="cursor-pointer">
+                <button
+                  (click)="toggleTodo(todo.id)"
+                  (keydown.enter)="toggleTodo(todo.id)"
+                  (keydown.space)="toggleTodo(todo.id)"
+                  class="cursor-pointer text-left w-full bg-transparent border-0 p-0"
+                  type="button"
+                >
                   {{ todo.completed ? '✓' : '○' }} {{ todo.text }}
-                </span>
+                </button>
               </li>
             </ul>
           </div>
@@ -173,11 +181,17 @@ interface TimeTravelState {
 export class TimeTravelDemoComponent {
   newTodoText = '';
 
-  private store = signalTree<TimeTravelState>({
-    counter: 0,
-    todos: [],
-    message: '',
-  }).pipe(withTimeTravel());
+  private store = signalTree<TimeTravelState>(
+    {
+      counter: 0,
+      todos: [],
+      message: '',
+    },
+    {
+      enableTimeTravel: true,
+      treeName: 'TimeTravelDemo',
+    }
+  );
 
   // Computed properties
   counter = this.store.$.counter;
@@ -215,35 +229,35 @@ export class TimeTravelDemoComponent {
 
   // Time travel methods
   undo() {
-    return this.store.$.undo?.() || false;
+    return this.store._timeTravel?.undo() || false;
   }
 
   redo() {
-    return this.store.$.redo?.() || false;
+    return this.store._timeTravel?.redo() || false;
   }
 
   canUndo() {
-    return this.store.$.canUndo?.() || false;
+    return this.store._timeTravel?.canUndo() || false;
   }
 
   canRedo() {
-    return this.store.$.canRedo?.() || false;
+    return this.store._timeTravel?.canRedo() || false;
   }
 
   resetHistory() {
-    this.store.$.resetHistory?.();
+    this.store._timeTravel?.resetHistory();
   }
 
   getCurrentIndex() {
-    return this.store.$.getCurrentIndex?.() || 0;
+    return this.store._timeTravel?.getCurrentIndex() || 0;
   }
 
   getHistory() {
-    return this.store.$.getHistory?.() || [];
+    return this.store._timeTravel?.getHistory() || [];
   }
 
   jumpTo(index: number) {
-    this.store.$.jumpTo?.(index);
+    this.store._timeTravel?.jumpTo(index);
   }
 
   getHistoryItemClass(index: number): string {

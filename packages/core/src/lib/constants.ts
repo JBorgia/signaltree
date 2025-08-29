@@ -72,12 +72,19 @@ declare const ngDevMode: boolean | undefined;
 // Avoid referencing the bare `process` identifier to keep builds free of Node
 // type assumptions; use globalThis to check env when available.
 const _isProdByEnv = Boolean(
-  (globalThis as any)?.process?.env?.NODE_ENV === 'production'
+  typeof globalThis === 'object' &&
+  globalThis !== null &&
+  'process' in globalThis &&
+  typeof (globalThis as any).process === 'object' &&
+  'env' in (globalThis as any).process &&
+  (globalThis as any).process.env.NODE_ENV === 'production'
 );
 
 const _isDev =
   typeof ngDevMode !== 'undefined' ? Boolean(ngDevMode) : !_isProdByEnv;
 
-export const SIGNAL_TREE_MESSAGES = _isDev
-  ? (DEV_MESSAGES as typeof DEV_MESSAGES)
-  : (PROD_MESSAGES as typeof DEV_MESSAGES);
+export const SIGNAL_TREE_MESSAGES = Object.freeze(
+  _isDev
+    ? (DEV_MESSAGES as typeof DEV_MESSAGES)
+    : (PROD_MESSAGES as typeof DEV_MESSAGES)
+);

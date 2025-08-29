@@ -5,7 +5,6 @@
 import { SIGNAL_TREE_MESSAGES } from './constants';
 import { ENHANCER_META } from './types';
 
-
 import type { EnhancerMeta, EnhancerWithMeta } from './types';
 /**
  * Helper to create an enhancer with metadata attached
