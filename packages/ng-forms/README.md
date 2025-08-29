@@ -35,7 +35,7 @@ const tree = signalTree({
     newsletter: false,
     theme: 'light',
   },
-}).pipe(withForms());
+}).with(withForms());
 
 // Automatic form generation
 const userForm = tree.createForm('user');
@@ -78,7 +78,7 @@ class UserFormComponent {
       email: '',
       age: 0,
     },
-  }).pipe(withForms());
+  }).with(withForms());
 
   // Create form with automatic binding
   userForm = this.tree.createForm('user', {
@@ -120,7 +120,7 @@ class TemplateFormComponent {
       name: '',
       email: '',
     },
-  }).pipe(withForms());
+  }).with(withForms());
 
   onSubmit(form: NgForm) {
     if (form.valid) {
@@ -141,11 +141,11 @@ const tree = signalTree({
     confirmPassword: '',
     agreeToTerms: false,
   },
-}).pipe(withForms());
+}).with(withForms());
 
 // Custom validators that can access SignalTree state
 const usernameAsyncValidator = (control: AbstractControl) => {
-  return of(control.value).pipe(
+  return of(control.value).with(
     delay(300), // Debounce
     switchMap((username) =>
       // Check if username exists (can access tree state)
@@ -257,7 +257,7 @@ const tree = signalTree({
   formConfig: {
     fields: [] as FormField[],
   },
-}).pipe(withForms());
+}).with(withForms());
 
 @Injectable()
 class DynamicFormService {
@@ -328,7 +328,7 @@ class DynamicFormComponent {
 ## 🔧 Advanced Configuration
 
 ```typescript
-const tree = signalTree(state).pipe(
+const tree = signalTree(state).with(
   withForms({
     // Automatic synchronization settings
     autoSync: true,
@@ -430,7 +430,7 @@ const wizardTree = signalTree<WizardState>({
     addressValid: false,
     preferencesValid: false,
   },
-}).pipe(withForms());
+}).with(withForms());
 
 @Component({
   template: `
@@ -617,7 +617,7 @@ const surveyTree = signalTree({
   currentQuestion: 0,
   isSubmitting: false,
   submitError: null as string | null,
-}).pipe(withForms());
+}).with(withForms());
 
 @Component({
   template: `
@@ -854,7 +854,7 @@ import { withForms } from '@signaltree/ng-forms';
 import { withValidation } from '@signaltree/validation';
 import { withDevtools } from '@signaltree/devtools';
 
-const tree = signalTree(state).pipe(
+const tree = signalTree(state).with(
   withValidation(), // Enhanced validation rules
   withForms(), // Angular forms integration
   withDevtools() // Debug form state changes

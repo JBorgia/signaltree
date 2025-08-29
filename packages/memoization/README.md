@@ -27,7 +27,7 @@ import { withMemoization } from '@signaltree/memoization';
 const tree = signalTree({
   users: [] as User[],
   filters: { search: '', category: '' },
-}).pipe(withMemoization());
+}).with(withMemoization());
 
 // Memoize expensive computations
 const filteredUsers = tree.memoize((state) => state.users.filter((user) => user.name.includes(state.filters.search) && (state.filters.category === '' || user.category === state.filters.category)), 'filtered-users');
@@ -41,7 +41,7 @@ const filteredUsers = tree.memoize((state) => state.users.filter((user) => user.
 const tree = signalTree({
   products: [] as Product[],
   cart: [] as CartItem[],
-}).pipe(withMemoization());
+}).with(withMemoization());
 
 // Expensive computation cached automatically
 const cartTotal = tree.memoize((state) => {
@@ -85,7 +85,7 @@ tree.optimize();
 ## 🔧 Configuration Options
 
 ```typescript
-const tree = signalTree(state).pipe(
+const tree = signalTree(state).with(
   withMemoization({
     enabled: true,
     maxCacheSize: 100, // Max cached entries
@@ -159,7 +159,7 @@ const shopTree = signalTree({
     inStock: true,
   },
   sortBy: 'name',
-}).pipe(withMemoization({ maxCacheSize: 50 }));
+}).with(withMemoization({ maxCacheSize: 50 }));
 
 // Memoized filtering and sorting
 const filteredProducts = shopTree.memoize((state) => {
@@ -209,7 +209,7 @@ const authTree = signalTree({
   user: null as User | null,
   roles: [] as Role[],
   permissions: [] as Permission[],
-}).pipe(withMemoization());
+}).with(withMemoization());
 
 // Memoized permission checking
 const userPermissions = authTree.memoize((state) => {
@@ -232,7 +232,7 @@ const canViewReports = hasPermission('reports.view');
 ### Debug Mode
 
 ```typescript
-const tree = signalTree(state).pipe(
+const tree = signalTree(state).with(
   withMemoization({
     debugMode: true,
     onCacheHit: (key) => console.log(`Cache HIT: ${key}`),
@@ -274,7 +274,7 @@ import { withMemoization } from '@signaltree/memoization';
 import { withBatching } from '@signaltree/batching';
 import { withDevTools } from '@signaltree/devtools';
 
-const tree = signalTree(state).pipe(withBatching(), withMemoization({ maxCacheSize: 200 }), withDevTools());
+const tree = signalTree(state).with(withBatching(), withMemoization({ maxCacheSize: 200 }), withDevTools());
 ```
 
 ## 📈 Performance Metrics

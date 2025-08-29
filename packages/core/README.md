@@ -485,8 +485,8 @@ const tree = signalTree({
   state: 'initial',
 });
 
-// Extend with additional packages via pipe
-const enhancedTree = tree.pipe(
+// Extend with additional packages via with
+const enhancedTree = tree.with(
   // Add features as needed
   someFeatureFunction()
 );
@@ -499,15 +499,15 @@ const enhancedTree = tree.pipe(
 let tree = signalTree(initialState);
 
 if (isDevelopment) {
-  tree = tree.pipe(withDevtools());
+  tree = tree.with(withDevtools());
 }
 
 if (needsPerformance) {
-  tree = tree.pipe(withBatching(), withMemoization());
+  tree = tree.with(withBatching(), withMemoization());
 }
 
 if (needsTimeTravel) {
-  tree = tree.pipe(withTimeTravel());
+  tree = tree.with(withTimeTravel());
 }
 ```
 
@@ -852,8 +852,8 @@ import { withBatching } from '@signaltree/batching';
 import { withMemoization } from '@signaltree/memoization';
 import { withTimeTravel } from '@signaltree/time-travel';
 
-// Compose features using pipe
-const tree = signalTree(initialState).pipe(withBatching(), withMemoization(), withTimeTravel());
+// Compose features using with
+const tree = signalTree(initialState).with(withBatching(), withMemoization(), withTimeTravel());
 ```
 
 ### Available Extensions
@@ -902,7 +902,7 @@ users = this.tree.$.users;
 // Step 3: Replace effects with manual async operations
 // Before (NgRx)
 loadUsers$ = createEffect(() =>
-  this.actions$.pipe(
+  this.actions$.with(
     ofType(loadUsers),
     switchMap(() => this.api.getUsers())
   )

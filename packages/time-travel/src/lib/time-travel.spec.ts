@@ -33,11 +33,11 @@ function createTimeTravelTree(
   }
 ): TimeTravelTree {
   if (config) {
-    return signalTree(initialState).pipe(
+    return signalTree(initialState).with(
       withTimeTravel(config)
     ) as TimeTravelTree;
   }
-  return signalTree(initialState).pipe(withTimeTravel()) as TimeTravelTree;
+  return signalTree(initialState).with(withTimeTravel()) as TimeTravelTree;
 }
 
 // Helper function for enable time travel
@@ -46,11 +46,11 @@ function createEnabledTimeTravelTree(
   limit?: number
 ): TimeTravelTree {
   if (limit !== undefined) {
-    return signalTree(initialState).pipe(
+    return signalTree(initialState).with(
       enableTimeTravel(limit)
     ) as TimeTravelTree;
   }
-  return signalTree(initialState).pipe(enableTimeTravel()) as TimeTravelTree;
+  return signalTree(initialState).with(enableTimeTravel()) as TimeTravelTree;
 }
 
 describe('Time Travel', () => {

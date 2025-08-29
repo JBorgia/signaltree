@@ -38,7 +38,7 @@ describe('Modular DevTools', () => {
 
   describe('withDevTools', () => {
     it('should enhance tree with devtools interface', () => {
-      const tree = signalTree(initialState).pipe(
+      const tree = signalTree(initialState).with(
         withDevTools({ treeName: 'TestTree' })
       );
 
@@ -49,7 +49,7 @@ describe('Modular DevTools', () => {
     });
 
     it('should track module composition', () => {
-      const tree = signalTree(initialState).pipe(
+      const tree = signalTree(initialState).with(
         withDevTools({ treeName: 'TestTree' })
       );
 
@@ -61,7 +61,7 @@ describe('Modular DevTools', () => {
     });
 
     it('should start and end module profiling', () => {
-      const tree = signalTree(initialState).pipe(
+      const tree = signalTree(initialState).with(
         withDevTools({ treeName: 'TestTree' })
       );
 
@@ -74,7 +74,7 @@ describe('Modular DevTools', () => {
     });
 
     it('should track activity via activity tracker', () => {
-      const tree = signalTree(initialState).pipe(
+      const tree = signalTree(initialState).with(
         withDevTools({ treeName: 'TestTree' })
       );
 
@@ -93,7 +93,7 @@ describe('Modular DevTools', () => {
     });
 
     it('should track errors', () => {
-      const tree = signalTree(initialState).pipe(
+      const tree = signalTree(initialState).with(
         withDevTools({ treeName: 'TestTree' })
       );
 
@@ -111,21 +111,21 @@ describe('Modular DevTools', () => {
     });
 
     it('should log composition events', () => {
-      const tree = signalTree(initialState).pipe(
+      const tree = signalTree(initialState).with(
         withDevTools({ treeName: 'TestTree' })
       );
 
       const modules = ['core', 'async'];
-      tree.__devTools.logger.logComposition(modules, 'pipe');
+      tree.__devTools.logger.logComposition(modules, 'with');
 
       expect(console.log).toHaveBeenCalledWith(
-        '🔗 Composition pipe:',
+        '🔗 Composition with:',
         'core → async'
       );
     });
 
     it('should export debug session', () => {
-      const tree = signalTree(initialState).pipe(
+      const tree = signalTree(initialState).with(
         withDevTools({ treeName: 'TestTree' })
       );
 
@@ -148,7 +148,7 @@ describe('Modular DevTools', () => {
     });
 
     it('should track performance warnings', () => {
-      const tree = signalTree(initialState).pipe(
+      const tree = signalTree(initialState).with(
         withDevTools({ treeName: 'TestTree', performanceThreshold: 10 })
       );
 
@@ -165,7 +165,7 @@ describe('Modular DevTools', () => {
     });
 
     it('should connect to DevTools', () => {
-      const tree = signalTree(initialState).pipe(
+      const tree = signalTree(initialState).with(
         withDevTools({ treeName: 'TestTree', enableBrowserDevTools: false })
       );
 
@@ -178,7 +178,7 @@ describe('Modular DevTools', () => {
 
   describe('withDevTools disabled', () => {
     it('should return noop interface when disabled', () => {
-      const tree = signalTree(initialState).pipe(
+      const tree = signalTree(initialState).with(
         withDevTools({ enabled: false })
       );
 
@@ -190,7 +190,7 @@ describe('Modular DevTools', () => {
         tree.__devTools.activityTracker.trackMethodCall('test', 'test', 1)
       ).not.toThrow();
       expect(() =>
-        tree.__devTools.logger.logComposition(['test'], 'pipe')
+        tree.__devTools.logger.logComposition(['test'], 'with')
       ).not.toThrow();
 
       const metrics = tree.__devTools.metrics();
@@ -201,14 +201,14 @@ describe('Modular DevTools', () => {
 
   describe('convenience functions', () => {
     it('should create basic devtools with enableDevTools', () => {
-      const tree = signalTree(initialState).pipe(enableDevTools('BasicTree'));
+      const tree = signalTree(initialState).with(enableDevTools('BasicTree'));
 
       expect(tree.__devTools).toBeDefined();
       expect(tree.__devTools.metrics).toBeDefined();
     });
 
     it('should create full devtools with withFullDevTools', () => {
-      const tree = signalTree(initialState).pipe(withFullDevTools('FullTree'));
+      const tree = signalTree(initialState).with(withFullDevTools('FullTree'));
 
       expect(tree.__devTools).toBeDefined();
       expect(tree.__devTools.activityTracker).toBeDefined();
@@ -216,7 +216,7 @@ describe('Modular DevTools', () => {
     });
 
     it('should create production devtools with withProductionDevTools', () => {
-      const tree = signalTree(initialState).pipe(withProductionDevTools());
+      const tree = signalTree(initialState).with(withProductionDevTools());
 
       expect(tree.__devTools).toBeDefined();
       // Production devtools should still have the interface but with minimal logging
@@ -226,7 +226,7 @@ describe('Modular DevTools', () => {
 
   describe('performance tracking', () => {
     it('should track update performance', () => {
-      const tree = signalTree(initialState).pipe(
+      const tree = signalTree(initialState).with(
         withDevTools({ treeName: 'PerfTree' })
       );
 
@@ -246,7 +246,7 @@ describe('Modular DevTools', () => {
     });
 
     it('should warn on slow updates', () => {
-      const tree = signalTree(initialState).pipe(
+      const tree = signalTree(initialState).with(
         withDevTools({
           treeName: 'SlowTree',
           performanceThreshold: 0, // Very low threshold to trigger warning
@@ -265,24 +265,24 @@ describe('Modular DevTools', () => {
 
   describe('logging functionality', () => {
     it('should disable logging when enableLogging is false', () => {
-      const tree = signalTree(initialState).pipe(
+      const tree = signalTree(initialState).with(
         withDevTools({
           treeName: 'NoLogTree',
           enableLogging: false,
         })
       );
 
-      tree.__devTools.logger.logComposition(['test'], 'pipe');
+      tree.__devTools.logger.logComposition(['test'], 'with');
 
       expect(console.log).not.toHaveBeenCalled();
     });
 
     it('should export logs', () => {
-      const tree = signalTree(initialState).pipe(
+      const tree = signalTree(initialState).with(
         withDevTools({ treeName: 'LogTree' })
       );
 
-      tree.__devTools.logger.logComposition(['module1', 'module2'], 'pipe');
+      tree.__devTools.logger.logComposition(['module1', 'module2'], 'with');
       tree.__devTools.logger.logMethodExecution(
         'module1',
         'method1',
@@ -299,7 +299,7 @@ describe('Modular DevTools', () => {
 
   describe('module activity tracking', () => {
     it('should track multiple modules', () => {
-      const tree = signalTree(initialState).pipe(
+      const tree = signalTree(initialState).with(
         withDevTools({ treeName: 'MultiModuleTree' })
       );
 
@@ -321,7 +321,7 @@ describe('Modular DevTools', () => {
     });
 
     it('should update average execution time correctly', () => {
-      const tree = signalTree(initialState).pipe(
+      const tree = signalTree(initialState).with(
         withDevTools({ treeName: 'AvgTree' })
       );
 
@@ -335,7 +335,7 @@ describe('Modular DevTools', () => {
     });
 
     it('should track errors per module', () => {
-      const tree = signalTree(initialState).pipe(
+      const tree = signalTree(initialState).with(
         withDevTools({ treeName: 'ErrorTree' })
       );
 

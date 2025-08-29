@@ -32,7 +32,7 @@ const tree = signalTree({
   users: [] as User[],
   loading: false,
   error: null as string | null,
-}).pipe(withAsync());
+}).with(withAsync());
 
 const loadUsers = tree.asyncAction(async () => await api.getUsers(), {
   onStart: () => ({ loading: true, error: null }),
@@ -63,7 +63,7 @@ const tree = signalTree({
     posts: null as string | null,
     comments: null as string | null,
   },
-}).pipe(withAsync());
+}).with(withAsync());
 
 // Structured loading management
 const loadUsers = tree.asyncAction(async () => await api.getUsers(), {
@@ -164,7 +164,7 @@ const tree = signalTree<AsyncState>({
     retryCount: 0,
     totalRequests: 0,
   },
-}).pipe(
+}).with(
   withAsync({
     defaultRetry: {
       attempts: 3,
@@ -404,7 +404,7 @@ import { withAsync } from '@signaltree/async';
 import { withBatching } from '@signaltree/batching';
 import { withMemoization } from '@signaltree/memoization';
 
-const tree = signalTree(state).pipe(
+const tree = signalTree(state).with(
   withBatching(), // Batch async updates
   withMemoization(), // Cache async results
   withAsync() // Advanced async features
@@ -426,7 +426,7 @@ const efficientLoad = tree.asyncAction(async () => await api.getData(), {
 ```typescript
 import { withDevtools } from '@signaltree/devtools';
 
-const tree = signalTree(state).pipe(
+const tree = signalTree(state).with(
   withAsync({
     enableMetrics: true, // Collect performance metrics
     logActions: true, // Log async actions
@@ -546,7 +546,7 @@ const dataTree = signalTree({
     users: null as Date | null,
     products: null as Date | null,
   },
-}).pipe(withAsync());
+}).with(withAsync());
 
 const loadUsers = dataTree.asyncAction(
   async () => {
@@ -602,7 +602,7 @@ const searchTree = signalTree({
   searching: false,
   searchError: null as string | null,
   totalResults: 0,
-}).pipe(withAsync());
+}).with(withAsync());
 
 const performSearch = searchTree.asyncAction(
   async (query: string) => {
@@ -662,7 +662,7 @@ const formTree = signalTree({
   submitting: false,
   submitError: null as string | null,
   submitSuccess: false,
-}).pipe(withAsync());
+}).with(withAsync());
 
 const submitForm = formTree.asyncAction(
   async (formData: FormData) => {
@@ -755,7 +755,7 @@ import { withAsync } from '@signaltree/async';
 import { withBatching } from '@signaltree/batching';
 import { withMemoization } from '@signaltree/memoization';
 
-const tree = signalTree(state).pipe(withBatching(), withMemoization(), withAsync());
+const tree = signalTree(state).with(withBatching(), withMemoization(), withAsync());
 ```
 
 ## 📈 Performance Benefits

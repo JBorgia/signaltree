@@ -53,7 +53,7 @@ export interface ModuleActivityTracker {
  */
 export interface CompositionLogger {
   /** Log module composition events */
-  logComposition: (modules: string[], action: 'pipe' | 'enhance') => void;
+  logComposition: (modules: string[], action: 'with' | 'enhance') => void;
   /** Log method execution with module context */
   logMethodExecution: (
     module: string,
@@ -182,7 +182,7 @@ function createCompositionLogger(): CompositionLogger {
   };
 
   return {
-    logComposition: (modules: string[], action: 'pipe' | 'enhance') => {
+    logComposition: (modules: string[], action: 'with' | 'enhance') => {
       addLog('core', 'composition', { modules, action });
       console.log(`🔗 Composition ${action}:`, modules.join(' → '));
     },
@@ -415,7 +415,7 @@ export function withDevTools<T>(
       trackComposition: (modules: string[]) => {
         compositionHistory.push({ timestamp: new Date(), chain: [...modules] });
         metrics.updateMetrics({ compositionChain: modules });
-        logger.logComposition(modules, 'pipe');
+        logger.logComposition(modules, 'with');
       },
 
       startModuleProfiling: (module: string) => {

@@ -29,7 +29,7 @@ const tree = signalTree({
   count: 0,
   text: '',
   todos: [] as Todo[],
-}).pipe(
+}).with(
   withTimeTravel({
     maxHistorySize: 50,
   })
@@ -62,7 +62,7 @@ const tree = signalTree({
     cursor: 0,
     selection: null,
   },
-}).pipe(
+}).with(
   withTimeTravel({
     maxHistorySize: 100,
     trackChanges: true,
@@ -102,7 +102,7 @@ const tree = signalTree({
     content: '',
     metadata: {},
   },
-}).pipe(withTimeTravel());
+}).with(withTimeTravel());
 
 const timeTravel = tree._timeTravel;
 
@@ -142,7 +142,7 @@ const tree = signalTree({
     shapes: [] as Shape[],
     selectedId: null as string | null,
   },
-}).pipe(
+}).with(
   withTimeTravel({
     enableBranching: true,
   })
@@ -190,7 +190,7 @@ const tree = signalTree({
     projects: [],
     openFiles: [],
   },
-}).pipe(
+}).with(
   withTimeTravel({
     persistence: {
       enabled: true,
@@ -229,7 +229,7 @@ console.log(persistenceInfo);
 ## 🔧 Advanced Configuration
 
 ```typescript
-const tree = signalTree(state).pipe(
+const tree = signalTree(state).with(
   withTimeTravel({
     // History settings
     maxHistorySize: 200,
@@ -322,7 +322,7 @@ const editorTree = signalTree<DocumentState>({
     minor: 0,
     patch: 0,
   },
-}).pipe(
+}).with(
   withTimeTravel({
     maxHistorySize: 500,
     enableBranching: true,
@@ -497,7 +497,7 @@ interface GameState {
   };
 }
 
-const gameTree = signalTree<GameState>(initialGameState).pipe(
+const gameTree = signalTree<GameState>(initialGameState).with(
   withTimeTravel({
     maxHistorySize: 1000,
     enableBranching: true,
@@ -606,7 +606,7 @@ class GameService {
 // Test utilities using time-travel
 export class TimeTravelTestUtils {
   static createTestTreeWithTimeTravel<T>(initialState: T) {
-    return signalTree(initialState).pipe(
+    return signalTree(initialState).with(
       withTimeTravel({
         maxHistorySize: 1000,
         enableBranching: true,
@@ -672,7 +672,7 @@ describe('Shopping Cart with Time Travel', () => {
     const tree = signalTree({
       cart: { items: [], step: 'shopping' },
       checkout: { address: null, payment: null },
-    }).pipe(
+    }).with(
       withTimeTravel({
         snapshots: {
           autoCreateOnMilestones: true,
@@ -722,7 +722,7 @@ import { withTimeTravel } from '@signaltree/time-travel';
 import { withDevtools } from '@signaltree/devtools';
 import { withAsync } from '@signaltree/async';
 
-const tree = signalTree(state).pipe(
+const tree = signalTree(state).with(
   withAsync(), // Enhanced async operations
   withTimeTravel(), // Time travel and history
   withDevtools() // Additional debugging features

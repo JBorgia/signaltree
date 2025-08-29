@@ -28,7 +28,7 @@ import { withDevtools } from '@signaltree/devtools';
 const tree = signalTree({
   count: 0,
   user: { name: 'John', age: 30 },
-}).pipe(
+}).with(
   withDevtools({
     name: 'MyApp',
     enabled: true, // automatically detects dev environment
@@ -48,7 +48,7 @@ tree.$.user.name.set('Jane'); // Logged: "user.name changed from 'John' to 'Jane
 const tree = signalTree({
   todos: [] as Todo[],
   filter: 'all' as 'all' | 'completed' | 'pending',
-}).pipe(
+}).with(
   withDevtools({
     name: 'TodoApp',
     maxHistorySize: 50,
@@ -90,7 +90,7 @@ const tree = signalTree({
     users: [],
     posts: [],
   },
-}).pipe(withDevtools());
+}).with(withDevtools());
 
 const devtools = tree._devtools;
 
@@ -118,7 +118,7 @@ console.log(diff);
 const tree = signalTree({
   largeArray: new Array(10000).fill(0),
   computedValues: {},
-}).pipe(
+}).with(
   withDevtools({
     trackPerformance: true,
     performanceThreshold: 10, // Log operations taking >10ms
@@ -153,7 +153,7 @@ perfLog.forEach((entry) => {
 const tree = signalTree({
   counter: 0,
   messages: [] as string[],
-}).pipe(
+}).with(
   withDevtools({
     logActions: true,
     logLevel: 'detailed', // 'minimal' | 'standard' | 'detailed'
@@ -187,7 +187,7 @@ devtools.clearActionLog();
 ## 🔧 Advanced Configuration
 
 ```typescript
-const tree = signalTree(state).pipe(
+const tree = signalTree(state).with(
   withDevtools({
     // Basic settings
     name: 'MyApplication',
@@ -234,7 +234,7 @@ const tree = signalTree(state).pipe(
 
 ```typescript
 // Automatic Redux DevTools Extension support
-const tree = signalTree(state).pipe(
+const tree = signalTree(state).with(
   withDevtools({
     connectToReduxDevTools: true,
     devToolsOptions: {
@@ -295,7 +295,7 @@ const appTree = signalTree<AppState>({
     comments: [],
     cache: {},
   },
-}).pipe(
+}).with(
   withDevtools({
     name: 'Social Media App',
     maxHistorySize: 200,
@@ -393,7 +393,7 @@ class DevToolsComponent {
 // Test utilities using devtools
 export class SignalTreeTestUtils {
   static createTestTree<T>(initialState: T) {
-    return signalTree(initialState).pipe(
+    return signalTree(initialState).with(
       withDevtools({
         name: 'Test Tree',
         enabled: true,
@@ -473,7 +473,7 @@ describe('User workflow', () => {
 
 ```typescript
 // Production error tracking with devtools
-const tree = signalTree(state).pipe(
+const tree = signalTree(state).with(
   withDevtools({
     name: 'Production App',
     enabled: true, // Even in production for error tracking
@@ -519,7 +519,7 @@ import { withDevtools } from '@signaltree/devtools';
 import { withTimeTravel } from '@signaltree/time-travel';
 import { withAsync } from '@signaltree/async';
 
-const tree = signalTree(state).pipe(
+const tree = signalTree(state).with(
   withAsync(), // Enhanced async operations
   withTimeTravel(), // Additional time-travel features
   withDevtools() // Full debugging capabilities

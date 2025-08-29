@@ -13,7 +13,7 @@ describe('Middleware', () => {
   });
 
   it('should enhance tree with middleware capabilities', () => {
-    const tree = signalTree({ count: 0 }).pipe(withMiddleware());
+    const tree = signalTree({ count: 0 }).with(withMiddleware());
 
     expect(tree.addTap).toBeDefined();
     expect(tree.removeTap).toBeDefined();
@@ -29,7 +29,7 @@ describe('Middleware', () => {
       after: afterSpy,
     };
 
-    const tree = signalTree({ count: 0 }).pipe(
+    const tree = signalTree({ count: 0 }).with(
       withMiddleware([testMiddleware])
     );
 
@@ -54,7 +54,7 @@ describe('Middleware', () => {
       before: () => false,
     };
 
-    const tree = signalTree({ count: 0 }).pipe(
+    const tree = signalTree({ count: 0 }).with(
       withMiddleware([blockingMiddleware])
     );
 
@@ -64,7 +64,7 @@ describe('Middleware', () => {
   });
 
   it('should allow adding middleware at runtime', () => {
-    const tree = signalTree({ count: 0 }).pipe(withMiddleware());
+    const tree = signalTree({ count: 0 }).with(withMiddleware());
 
     const runtimeMiddleware = {
       id: 'runtime',
@@ -84,7 +84,7 @@ describe('Middleware', () => {
       before: middlewareSpy,
     };
 
-    const tree = signalTree({ count: 0 }).pipe(
+    const tree = signalTree({ count: 0 }).with(
       withMiddleware([testMiddleware])
     );
 
@@ -102,7 +102,7 @@ describe('Middleware', () => {
     const firstSpy = jest.fn(() => true);
     const secondSpy = jest.fn(() => true);
 
-    const tree = signalTree({ count: 0 }).pipe(withMiddleware());
+    const tree = signalTree({ count: 0 }).with(withMiddleware());
 
     tree.addTap({ id: 'test', before: firstSpy });
     tree.addTap({ id: 'test', before: secondSpy }); // Should replace
@@ -121,7 +121,7 @@ describe('Middleware', () => {
         .spyOn(console, 'groupEnd')
         .mockImplementation();
 
-      const tree = signalTree({ count: 0 }).pipe(
+      const tree = signalTree({ count: 0 }).with(
         withMiddleware([createLoggingMiddleware('TestTree')])
       );
 
@@ -144,7 +144,7 @@ describe('Middleware', () => {
         .spyOn(console, 'timeEnd')
         .mockImplementation();
 
-      const tree = signalTree({ count: 0 }).pipe(
+      const tree = signalTree({ count: 0 }).with(
         withMiddleware([createPerformanceMiddleware()])
       );
 
@@ -163,7 +163,7 @@ describe('Middleware', () => {
       const validator = (state: { count: number }) =>
         state.count < 0 ? 'Count cannot be negative' : null;
 
-      const tree = signalTree({ count: 0 }).pipe(
+      const tree = signalTree({ count: 0 }).with(
         withMiddleware([createValidationMiddleware(validator)])
       );
 

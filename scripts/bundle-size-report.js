@@ -8,7 +8,7 @@ const zlib = require('zlib');
  */
 
 const packages = [
-  { name: 'core', maxSize: 5300, claimed: 5100 }, // Actual: 5.08KB
+  { name: 'core', maxSize: 7000, claimed: 6800 }, // Actual: 6.74KB (enhanced with runtime methods)
   { name: 'batching', maxSize: 1200, claimed: 1100 }, // Actual: 1.07KB
   { name: 'memoization', maxSize: 1800, claimed: 1700 }, // Actual: 1.69KB
   { name: 'time-travel', maxSize: 1700, claimed: 1600 }, // Actual: 1.54KB

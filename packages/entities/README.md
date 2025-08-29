@@ -27,7 +27,7 @@ import { withEntities } from '@signaltree/entities';
 const tree = signalTree({
   users: [] as User[],
   posts: [] as Post[],
-}).pipe(withEntities());
+}).with(withEntities());
 
 const users = tree.asCrud<User>('users');
 
@@ -52,7 +52,7 @@ const paginatedUsers = users.selectPaginated(1, 10);
 ```typescript
 const todoTree = signalTree({
   todos: [] as Todo[],
-}).pipe(withEntities());
+}).with(withEntities());
 
 const todos = todoTree.asCrud<Todo>('todos');
 
@@ -147,7 +147,7 @@ const totalCount = users.selectTotal();
 ```typescript
 const tree = signalTree({
   products: [] as Product[],
-}).pipe(
+}).with(
   withEntities({
     enableDuplicateDetection: true,
     enableOptimisticUpdates: true,
@@ -184,7 +184,7 @@ const userTree = signalTree({
     pageSize: 20,
     total: 0,
   },
-}).pipe(withEntities());
+}).with(withEntities());
 
 const users = userTree.asCrud<User>('users');
 
@@ -291,7 +291,7 @@ const catalogTree = signalTree({
     field: 'name' as keyof Product,
     direction: 'asc' as 'asc' | 'desc',
   },
-}).pipe(withEntities());
+}).with(withEntities());
 
 const products = catalogTree.asCrud<Product>('products');
 
@@ -382,7 +382,7 @@ const taskTree = signalTree({
   tasks: [] as Task[],
   projects: [] as Project[],
   users: [] as User[],
-}).pipe(withEntities());
+}).with(withEntities());
 
 const tasks = taskTree.asCrud<Task>('tasks');
 const projects = taskTree.asCrud<Project>('projects');
@@ -435,7 +435,7 @@ import { withEntities } from '@signaltree/entities';
 import { withMemoization } from '@signaltree/memoization';
 import { withAsync } from '@signaltree/async';
 
-const tree = signalTree(state).pipe(
+const tree = signalTree(state).with(
   withEntities(),
   withMemoization(), // Cache expensive queries
   withAsync() // Enhanced async operations

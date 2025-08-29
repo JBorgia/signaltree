@@ -40,7 +40,7 @@ const tree = signalTree<AppState>({
   loading: false,
   error: null,
   pagination: { page: 1, total: 0 }
-}).pipe(withBatching());
+}).with(withBatching());
 
 // All updates within a batch are grouped automatically
 tree.batchUpdate((state) => ({
@@ -95,7 +95,7 @@ tree.batchUpdate((state) => ({
 
 ````typescript
 // Conservative batching for stable UIs
-const conservativeTree = signalTree(state).pipe(
+const conservativeTree = signalTree(state).with(
   withBatching({
     maxBatchSize: 10,
     autoFlushDelay: 100
@@ -103,7 +103,7 @@ const conservativeTree = signalTree(state).pipe(
 );
 
 // Aggressive batching for high-performance scenarios
-const aggressiveTree = signalTree(state).pipe(
+const aggressiveTree = signalTree(state).with(
   withBatching({
     maxBatchSize: 200,
     autoFlushDelay: 4,
@@ -113,7 +113,7 @@ const aggressiveTree = signalTree(state).pipe(
 ### Performance Monitoring
 
 ```typescript
-const monitoredTree = signalTree(state).pipe(
+const monitoredTree = signalTree(state).with(
   withBatching({
     maxBatchSize: 50,
     autoFlushDelay: 16
@@ -133,7 +133,7 @@ console.log(`
 ### Error Handling in Batches
 
 ```typescript
-const resilientTree = signalTree(state).pipe(
+const resilientTree = signalTree(state).with(
   withBatching({
     maxBatchSize: 25,
     autoFlushDelay: 50,
@@ -176,7 +176,7 @@ const benchmarkTree = signalTree<BenchmarkState>({
   count: 0,
   users: [],
   metadata: {},
-}).pipe(withBatching());
+}).with(withBatching());
 
 // Individual updates (baseline)
 console.time('Individual Updates (10 operations)');
@@ -328,7 +328,7 @@ import { withAsync } from '@signaltree/async';
 import { withMemoization } from '@signaltree/memoization';
 
 // Optimized async + batching + memoization
-const optimizedTree = signalTree(initialState).pipe(withMemoization(), withBatching({ maxBatchSize: 50 }), withAsync());
+const optimizedTree = signalTree(initialState).with(withMemoization(), withBatching({ maxBatchSize: 50 }), withAsync());
 
 // Batch async operations
 const batchedAsyncAction = optimizedTree.asyncAction(
@@ -365,7 +365,7 @@ interface CartState {
 }
 
 class ShoppingCart {
-  private tree = signalTree<CartState>(initialCartState).pipe(withBatching({ maxBatchSize: 50 }), withAsync());
+  private tree = signalTree<CartState>(initialCartState).with(withBatching({ maxBatchSize: 50 }), withAsync());
 
   // Optimized item operations
   addItems(items: CartItem[]) {
@@ -463,7 +463,7 @@ tree.batchUpdate((currentState) => ({
 ### Configurable Batching
 
 ```typescript
-const tree = signalTree(state).pipe(
+const tree = signalTree(state).with(
   withBatching({
     enabled: true,
     maxBatchSize: 50, // Max updates per batch
@@ -514,7 +514,7 @@ const dataTree = signalTree({
   categories: [] as Category[],
   filters: { search: '', category: '' },
   loading: false,
-}).pipe(withBatching());
+}).with(withBatching());
 
 // Efficiently update multiple related state pieces
 async function loadData() {
@@ -548,7 +548,7 @@ import { withBatching } from '@signaltree/batching';
 import { withMemoization } from '@signaltree/memoization';
 import { withDevTools } from '@signaltree/devtools';
 
-const tree = signalTree(state).pipe(withBatching({ maxBatchSize: 50 }), withMemoization(), withDevTools());
+const tree = signalTree(state).with(withBatching({ maxBatchSize: 50 }), withMemoization(), withDevTools());
 ```
 
 ## 📈 Performance Metrics

@@ -16,7 +16,7 @@ describe('Async', () => {
   });
 
   it('should enhance tree with async capabilities', () => {
-    const tree = signalTree({ count: 0 }).pipe(withAsync());
+    const tree = signalTree({ count: 0 }).with(withAsync());
 
     expect(tree.asyncAction).toBeDefined();
     expect(tree.loadData).toBeDefined();
@@ -24,7 +24,7 @@ describe('Async', () => {
   });
 
   it('should create and execute async actions', async () => {
-    const tree = signalTree({ count: 0, result: null as number | null }).pipe(
+    const tree = signalTree({ count: 0, result: null as number | null }).with(
       withAsync()
     );
 
@@ -55,7 +55,7 @@ describe('Async', () => {
   });
 
   it('should handle async action errors', async () => {
-    const tree = signalTree({ error: null as string | null }).pipe(withAsync());
+    const tree = signalTree({ error: null as string | null }).with(withAsync());
 
     const asyncOperation = tree.asyncAction(
       async () => {
@@ -80,7 +80,7 @@ describe('Async', () => {
   });
 
   it('should call onComplete hook regardless of success or failure', async () => {
-    const tree = signalTree({ completed: false as boolean }).pipe(withAsync());
+    const tree = signalTree({ completed: false as boolean }).with(withAsync());
 
     const onComplete = jest.fn(() => ({ completed: true as boolean }));
 
@@ -118,7 +118,7 @@ describe('Async', () => {
     const tree = signalTree({
       data: null as { users: string[] } | null,
       loading: false as boolean,
-    }).pipe(withAsync());
+    }).with(withAsync());
 
     const loadAction = tree.loadData(
       async () => {
@@ -148,7 +148,7 @@ describe('Async', () => {
     const tree = signalTree({
       submitting: false as boolean,
       submitResult: null as { id: number; name: string } | null,
-    }).pipe(withAsync());
+    }).with(withAsync());
 
     const submitAction = tree.submitForm(
       async (formData: { name: string }) => {
@@ -171,17 +171,17 @@ describe('Async', () => {
   });
 
   it('should work with enableAsync convenience function', () => {
-    const tree = signalTree({ count: 0 }).pipe(enableAsync());
+    const tree = signalTree({ count: 0 }).with(enableAsync());
     expect(tree.asyncAction).toBeDefined();
   });
 
   it('should work with high performance async', () => {
-    const tree = signalTree({ count: 0 }).pipe(withHighPerformanceAsync());
+    const tree = signalTree({ count: 0 }).with(withHighPerformanceAsync());
     expect(tree.asyncAction).toBeDefined();
   });
 
   it('should disable async when enabled is false', () => {
-    const tree = signalTree({ count: 0 }).pipe(withAsync({ enabled: false }));
+    const tree = signalTree({ count: 0 }).with(withAsync({ enabled: false }));
 
     // Should not have enhanced the tree
     expect(tree.loadData).toBeUndefined();

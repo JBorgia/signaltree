@@ -19,7 +19,7 @@ describe('🔥 Recursive Performance Tests', () => {
   };
 
   beforeAll(async () => {
-    console.log('🚀 Starting recursive performance tests...');
+    // // console.log('🚀 Starting recursive performance tests...');
     results = {};
   });
 
