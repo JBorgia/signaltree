@@ -1,14 +1,12 @@
+import { computed, Injectable, signal } from '@angular/core';
+import { withBatching } from '@signaltree/batching';
+import { signalTree } from '@signaltree/core';
+import { withMemoization } from '@signaltree/memoization';
+
 /**
  * @fileoverview Comprehensive benchmarking suite for SignalTree Demo
  * Measures performance, memory usage, and compares with alternatives
  */
-
-import { Injectable } from '@angular/core';
-import { signal, computed } from '@angular/core';
-import { signalTree } from '@signaltree/core';
-import { withBatching } from '@signaltree/batching';
-import { withMemoization } from '@signaltree/memoization';
-
 /**
  * Performance measurement utilities
  */
@@ -133,12 +131,12 @@ export class BenchmarkService {
     const smallState = BenchmarkService.generateNestedState(2, 3);
     results.small.time = BenchmarkService.measureTime(() => {
       const tree = signalTree(smallState);
-      tree.$();
+      tree.unwrap();
     });
 
     const smallMemory = BenchmarkService.profileMemory(() => {
       const tree = signalTree(smallState);
-      tree.$();
+      tree.unwrap();
     });
     results.small.memory = smallMemory?.delta || 0;
 
@@ -146,14 +144,14 @@ export class BenchmarkService {
     const mediumState = BenchmarkService.generateNestedState(3, 5);
     results.medium.time = BenchmarkService.measureTime(() => {
       const tree = signalTree(mediumState);
-      tree.$();
+      tree.unwrap();
     });
 
     // Large tree (1000 nodes)
     const largeState = BenchmarkService.generateNestedState(4, 8);
     results.large.time = BenchmarkService.measureTime(() => {
       const tree = signalTree(largeState);
-      tree.$();
+      tree.unwrap();
     });
 
     return results;
@@ -206,7 +204,7 @@ export class BenchmarkService {
     });
 
     // Batch updates
-    const batchTree = signalTree(state).pipe(withBatching());
+    const batchTree = signalTree(state).with(withBatching());
 
     results.batch10 = BenchmarkService.measureTime(() => {
       batchTree.$.batchUpdate((state) => {
@@ -239,7 +237,7 @@ export class BenchmarkService {
     const tree = signalTree({
       entities,
       filter: { category: 'A', active: true },
-    }).pipe(withMemoization());
+    }).with(withMemoization());
 
     const results = {
       withoutMemo: { first: 0, second: 0 },
@@ -252,7 +250,7 @@ export class BenchmarkService {
       filter: { category: 'A', active: true },
     });
     const computedWithout = computed(() => {
-      const state = regularTree.$();
+      const state = regularTree.unwrap();
       return state.entities.filter(
         (e: any) =>
           e.category === state.filter.category &&
@@ -305,7 +303,7 @@ export class BenchmarkService {
     // Eager loading
     const eagerMemory = BenchmarkService.profileMemory(() => {
       const tree = signalTree(largeState, { useLazySignals: false });
-      tree.$();
+      tree.unwrap();
     });
     results.eager.memory = eagerMemory?.delta || 0;
 
@@ -317,7 +315,7 @@ export class BenchmarkService {
     // Lazy loading
     const lazyMemory = BenchmarkService.profileMemory(() => {
       const tree = signalTree(largeState, { useLazySignals: true });
-      tree.$();
+      tree.unwrap();
     });
     results.lazy.memory = lazyMemory?.delta || 0;
 
@@ -347,7 +345,7 @@ export class BenchmarkService {
     // SignalTree
     const stMemory = BenchmarkService.profileMemory(() => {
       const tree = signalTree(testData);
-      tree.$();
+      tree.unwrap();
     });
     results.signalTree.memory = stMemory?.delta || 0;
 

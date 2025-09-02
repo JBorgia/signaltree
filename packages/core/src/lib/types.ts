@@ -1,9 +1,9 @@
+import { Signal, WritableSignal } from '@angular/core';
+
 /**
  * SignalTree Core Types v1.1.6
  * MIT License - Copyright (c) 2025 Jonathan D Borgia
  */
-import { Signal, WritableSignal } from '@angular/core';
-
 // ============================================
 // CORE TYPE DEFINITIONS
 // ============================================
@@ -22,10 +22,10 @@ export type Primitive =
 
 /**
  * Built-in object types that should be treated as primitive values
+ * (Keep this list in sync with runtime isBuiltInObject)
  */
-// types.ts
-
 export type BuiltInObject =
+  // Core JS
   | Date
   | RegExp
   | ((...args: unknown[]) => unknown)
@@ -35,11 +35,9 @@ export type BuiltInObject =
   | WeakSet<object>
   | ArrayBuffer
   | DataView
-  // ✅ Typed arrays (match isBuiltInObject)
-  | Int8Array
-  | Uint8Array
-  | Uint8ClampedArray
-  | Int16Array
+  | Error
+  | Promise<unknown>
+  // Typed Arrays
   | Uint16Array
   | Int32Array
   | Uint32Array
@@ -47,7 +45,7 @@ export type BuiltInObject =
   | Float64Array
   | BigInt64Array
   | BigUint64Array
-  // ✅ Web platform objects you already detect at runtime
+  // Web APIs
   | URL
   | URLSearchParams
   | FormData
@@ -92,10 +90,12 @@ export type DeepSignalify<T> = {
       ? WritableSignal<T[K]>
       : T[K] extends (...args: unknown[]) => unknown
       ? WritableSignal<T[K]>
-      : DeepSignalify<T[K]> & {
-          set(partial: Partial<T[K]>): void;
-          update(updater: (current: T[K]) => Partial<T[K]>): void;
-        } // Nested objects get recursive treatment
+      : // Nested objects get recursive treatment AND are callable to return unwrapped value
+        (() => RemoveSignalMethods<T[K]>) &
+          DeepSignalify<T[K]> & {
+            set(partial: Partial<T[K]>): void;
+            update(updater: (current: T[K]) => Partial<T[K]>): void;
+          }
     : WritableSignal<T[K]>;
 };
 
@@ -129,10 +129,17 @@ export type ChainResult<
   Start,
   E extends Array<EnhancerWithMeta<unknown, unknown>>
 > = E extends [infer H, ...infer R]
-  ? H extends EnhancerWithMeta<Start, infer O>
+  ? // If enhancer accepts SignalTree<any> (non-generic enhancer), treat it as compatible
+    H extends EnhancerWithMeta<SignalTree<any>, infer O>
     ? R extends Array<EnhancerWithMeta<unknown, unknown>>
       ? ChainResult<O, R>
       : O
+    : H extends EnhancerWithMeta<infer I, infer O>
+    ? Start extends I
+      ? R extends Array<EnhancerWithMeta<unknown, unknown>>
+        ? ChainResult<O, R>
+        : O
+      : any
     : unknown
   : Start;
 
@@ -142,6 +149,7 @@ export type ChainResult<
 export interface WithMethod<T> {
   (): SignalTree<T>;
   <O1>(e1: (input: SignalTree<T>) => O1): O1;
+  // Accept a generic enhancer function like `function <U>(tree: SignalTree<U>): R`
   <O1, O2>(e1: (input: SignalTree<T>) => O1, e2: (input: O1) => O2): O2;
   <O1, O2, O3>(
     e1: (input: SignalTree<T>) => O1,
@@ -154,11 +162,66 @@ export interface WithMethod<T> {
     e3: (input: O2) => O3,
     e4: (input: O3) => O4
   ): O4;
+  // Overloads for EnhancerWithMeta form so enhancers exported with metadata
+  <O1>(e1: EnhancerWithMeta<SignalTree<T>, O1>): O1;
+  // Accept enhancers that operate on SignalTree<any> (helps non-generic enhancers)
+  <O1>(e1: EnhancerWithMeta<SignalTree<any>, O1>): O1;
+  // Generic overload to accept EnhancerWithMeta starting from Start type
+  <O1>(e1: EnhancerWithMeta<SignalTree<T>, O1>): O1;
+  <O1>(
+    e1: EnhancerWithMeta<SignalTree<any>, O1>,
+    e2: EnhancerWithMeta<O1, unknown>
+  ): unknown;
+  <O1, O2>(
+    e1: EnhancerWithMeta<SignalTree<T>, O1>,
+    e2: EnhancerWithMeta<O1, O2>
+  ): O2;
+  <O1, O2>(
+    e1: EnhancerWithMeta<SignalTree<any>, O1>,
+    e2: EnhancerWithMeta<O1, O2>
+  ): O2;
+  <O1, O2, O3>(
+    e1: EnhancerWithMeta<SignalTree<T>, O1>,
+    e2: EnhancerWithMeta<O1, O2>,
+    e3: EnhancerWithMeta<O2, O3>
+  ): O3;
+  <O1, O2, O3>(
+    e1: EnhancerWithMeta<SignalTree<any>, O1>,
+    e2: EnhancerWithMeta<O1, O2>,
+    e3: EnhancerWithMeta<O2, O3>
+  ): O3;
+  <O1, O2, O3, O4>(
+    e1: EnhancerWithMeta<SignalTree<T>, O1>,
+    e2: EnhancerWithMeta<O1, O2>,
+    e3: EnhancerWithMeta<O2, O3>,
+    e4: EnhancerWithMeta<O3, O4>
+  ): O4;
+  <O1, O2, O3, O4>(
+    e1: EnhancerWithMeta<SignalTree<any>, O1>,
+    e2: EnhancerWithMeta<O1, O2>,
+    e3: EnhancerWithMeta<O2, O3>,
+    e4: EnhancerWithMeta<O3, O4>
+  ): O4;
+  <O1, O2>(
+    e1: EnhancerWithMeta<SignalTree<T>, O1>,
+    e2: EnhancerWithMeta<O1, O2>
+  ): O2;
+  <O1, O2, O3>(
+    e1: EnhancerWithMeta<SignalTree<T>, O1>,
+    e2: EnhancerWithMeta<O1, O2>,
+    e3: EnhancerWithMeta<O2, O3>
+  ): O3;
+  <O1, O2, O3, O4>(
+    e1: EnhancerWithMeta<SignalTree<T>, O1>,
+    e2: EnhancerWithMeta<O1, O2>,
+    e3: EnhancerWithMeta<O2, O3>,
+    e4: EnhancerWithMeta<O3, O4>
+  ): O4;
   (
     ...enhancers: Array<
       EnhancerWithMeta<unknown, unknown> | ((...args: unknown[]) => unknown)
     >
-  ): unknown;
+  ): any;
 }
 
 // ============================================
@@ -176,19 +239,16 @@ export type SignalTree<T> = {
   $: DeepSignalify<T>;
 
   /** Core methods */
-  unwrap(): RemoveSignalMethods<T>;
-  update(updater: (current: RemoveSignalMethods<T>) => Partial<T>): void;
+  unwrap(): T; // <-- returns plain T
+  update(updater: (current: T) => Partial<T>): void; // <-- updater sees T
   with: WithMethod<T>;
   destroy(): void;
 
   /** Enhanced functionality */
-  effect(fn: (tree: RemoveSignalMethods<T>) => void): void;
-  subscribe(fn: (tree: RemoveSignalMethods<T>) => void): () => void;
-  batchUpdate(updater: (current: RemoveSignalMethods<T>) => Partial<T>): void;
-  memoize<R>(
-    fn: (tree: RemoveSignalMethods<T>) => R,
-    cacheKey?: string
-  ): Signal<R>;
+  effect(fn: (tree: T) => void): void; // <-- T
+  subscribe(fn: (tree: T) => void): () => void; // <-- T
+  batchUpdate(updater: (current: T) => Partial<T>): void; // <-- T
+  memoize<R>(fn: (tree: T) => R, cacheKey?: string): Signal<R>;
 
   /** Performance methods */
   optimize(): void;

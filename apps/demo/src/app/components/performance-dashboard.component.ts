@@ -1,7 +1,7 @@
-import { Component, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { signalTree } from '@signaltree/core';
+import { Component, computed, signal } from '@angular/core';
 import { withBatching } from '@signaltree/batching';
+import { signalTree } from '@signaltree/core';
 import { withMemoization } from '@signaltree/memoization';
 
 interface BenchmarkResult {
@@ -646,7 +646,7 @@ export class PerformanceDashboardComponent {
     const tree = signalTree({
       counter: 0,
       data: { value: Math.random() },
-    }).pipe(withBatching(), withMemoization());
+    }).with(withBatching(), withMemoization());
 
     const results: number[] = [];
 

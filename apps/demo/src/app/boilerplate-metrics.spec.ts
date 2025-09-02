@@ -1,7 +1,7 @@
-import { signalTree } from '@signaltree/core';
-
 /**
  * Boilerplate and Code Metrics Analysis
+import { signalTree } from '@signaltree/core';
+
  * Measures developer experience and code quality metrics
  */
 
@@ -155,7 +155,7 @@ const userTree = signalTree({
   users: [] as User[],
   loading: false,
   error: null
-}).pipe(withBatching(), withAsync(), withEntities());
+  }).with(withBatching(), withAsync(), withEntities());
 
 // Usage: userTree.async.loadUsers(() => api.getUsers())`,
       },
@@ -219,7 +219,7 @@ import { withForms } from '@signaltree/ng-forms';
 
 const formTree = signalTree({
   user: { name: '', email: '' }
-}).pipe(withForms());
+}).with(withForms());
 
 // Auto-generates FormGroup, validation, dirty tracking`,
         complexity: 2,

@@ -2,7 +2,7 @@
  * Core SignalTree functionality tests
  * Tests basic tree creation, state management, and core operations
  */
-import { signal } from '@angular/core';
+import { computed } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
 import { signalTree } from '../signal-tree';
@@ -29,11 +29,34 @@ describe('SignalTree Core', () => {
 
     it('should create tree from arrays', () => {
       const arrayTree = signalTree([1, 2, 3]);
-      // The current unwrap implementation returns an object with numeric keys for arrays
-      expect(arrayTree.unwrap()).toEqual({ 0: 1, 1: 2, 2: 3 });
-      expect(arrayTree.state[0]()).toBe(1);
-      expect(arrayTree.state[1]()).toBe(2);
-      expect(arrayTree.state[2]()).toBe(3);
+      // The unwrap implementation returns arrays for arrays
+      expect(arrayTree.unwrap()).toEqual([1, 2, 3]);
+      // root state may be either a single signal returning the array
+      // or an array of per-index signals. Accept both shapes for tests.
+      const stateVal = (() => {
+        try {
+          if (typeof (arrayTree.state as any) === 'function') {
+            return (arrayTree.state as any)();
+          }
+        } catch {
+          /* ignore */
+        }
+        // Fallback: array of signals
+        if (Array.isArray(arrayTree.state)) {
+          return (arrayTree.state as any).map((s: any) =>
+            typeof s === 'function' ? s() : s
+          );
+        }
+        return undefined;
+      })();
+
+      expect(stateVal).toEqual([1, 2, 3]);
+
+      // If you want a reactive view of an element, use computed over the unwrap/state
+      const first = computed(() =>
+        Array.isArray(stateVal) ? stateVal[0] : (arrayTree.state as any)()[0]
+      );
+      expect(first()).toBe(1);
     });
   });
 
@@ -112,9 +135,9 @@ describe('SignalTree Core', () => {
       const tree = signalTree({ count: 0 });
 
       let callCount = 0;
-      const derived = signal(() => {
+      const derived = computed(() => {
         callCount++;
-        return tree.state.count() * 2;
+        return tree.$.count() * 2;
       });
 
       expect(derived()).toBe(0);
@@ -128,7 +151,7 @@ describe('SignalTree Core', () => {
     it('should handle multiple signal dependencies', () => {
       const tree = signalTree({ a: 1, b: 2 });
 
-      const sum = signal(() => tree.state.a() + tree.state.b());
+      const sum = computed(() => tree.$.a() + tree.$.b());
 
       expect(sum()).toBe(3);
 

@@ -811,7 +811,7 @@ const userTree = signalTree({
   users: [] as User[],
   loading: false,
   error: null
-}).pipe(
+}).with(
   withBatching(),
   withAsync(),
   withEntities()

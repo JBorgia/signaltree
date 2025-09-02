@@ -8,39 +8,21 @@ import { SIGNAL_TREE_CONSTANTS } from './constants';
 
 import type { DeepSignalify, RemoveSignalMethods } from './types';
 
-/**
- * Enhanced deep equality function optimized for SignalTree operations.
- *
- * @param a - First value to compare
- * @param b - Second value to compare
- * @returns True if values are deeply equal, false otherwise
- */
+/** Deep equality */
 export function equal<T>(a: T, b: T): boolean {
-  // Fast path for reference equality
   if (a === b) return true;
-
-  // Handle null/undefined cases
   if (a == null || b == null) return a === b;
 
-  // Type check first - most efficient early exit
   const typeA = typeof a;
   const typeB = typeof b;
   if (typeA !== typeB) return false;
-
-  // For primitives, === check above is sufficient
   if (typeA !== 'object') return false;
 
-  // Handle Date objects
-  if (a instanceof Date && b instanceof Date) {
+  if (a instanceof Date && b instanceof Date)
     return a.getTime() === b.getTime();
-  }
-
-  // Handle RegExp objects
-  if (a instanceof RegExp && b instanceof RegExp) {
+  if (a instanceof RegExp && b instanceof RegExp)
     return a.source === b.source && a.flags === b.flags;
-  }
 
-  // Handle Map objects
   if (a instanceof Map && b instanceof Map) {
     if (a.size !== b.size) return false;
     for (const [key, value] of a) {
@@ -49,7 +31,6 @@ export function equal<T>(a: T, b: T): boolean {
     return true;
   }
 
-  // Handle Set objects
   if (a instanceof Set && b instanceof Set) {
     if (a.size !== b.size) return false;
     for (const value of a) {
@@ -58,39 +39,24 @@ export function equal<T>(a: T, b: T): boolean {
     return true;
   }
 
-  // Handle arrays
   if (Array.isArray(a)) {
     if (!Array.isArray(b) || a.length !== b.length) return false;
-    return a.every((item, index) => equal(item, b[index]));
+    return a.every((item, i) => equal(item, (b as unknown as unknown[])[i]));
   }
 
-  // Arrays check above handles array vs object mismatch
   if (Array.isArray(b)) return false;
 
-  // Handle regular objects
   const objA = a as Record<string, unknown>;
   const objB = b as Record<string, unknown>;
-
   const keysA = Object.keys(objA);
   const keysB = Object.keys(objB);
-
   if (keysA.length !== keysB.length) return false;
-
-  return keysA.every((key) => key in objB && equal(objA[key], objB[key]));
+  return keysA.every((k) => k in objB && equal(objA[k], objB[k]));
 }
 
-/**
- * Alias for backward compatibility
- */
 export const deepEqual = equal;
 
-/**
- * Creates a terminal signal with deep equality comparison
- *
- * @param value - Initial value for the signal
- * @param customEqual - Optional custom equality function
- * @returns A WritableSignal with deep equality comparison
- */
+/** Terminal signal with deep equality */
 export function terminalSignal<T>(
   value: T,
   customEqual?: (a: T, b: T) => boolean
@@ -100,13 +66,10 @@ export function terminalSignal<T>(
   });
 }
 
-/**
- * Check if a value is a built-in object type
- */
+/** Runtime built-in detection (keep in sync with types BuiltInObject) */
 export function isBuiltInObject(v: unknown): boolean {
   if (v === null || v === undefined) return false;
 
-  // Core JavaScript built-ins
   if (
     v instanceof Date ||
     v instanceof RegExp ||
@@ -123,7 +86,6 @@ export function isBuiltInObject(v: unknown): boolean {
     return true;
   }
 
-  // Typed Arrays
   if (
     v instanceof Int8Array ||
     v instanceof Uint8Array ||
@@ -140,7 +102,6 @@ export function isBuiltInObject(v: unknown): boolean {
     return true;
   }
 
-  // Web APIs (when available)
   if (typeof window !== 'undefined') {
     if (
       v instanceof URL ||
@@ -160,87 +121,56 @@ export function isBuiltInObject(v: unknown): boolean {
     }
   }
 
-  // Node.js built-ins (when available)
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const NodeBuffer = (globalThis as any)?.Buffer;
-    if (NodeBuffer && v instanceof NodeBuffer) {
-      return true;
-    }
+    if (NodeBuffer && v instanceof NodeBuffer) return true;
   } catch {
-    // Ignore if Buffer is not available
+    /* ignore */
   }
 
   return false;
 }
 
-/**
- * LRU Cache implementation for efficient memory management
- */
+/** Small LRU cache used by parsePath */
 class LRUCache<K, V> {
   private cache = new Map<K, V>();
-
   constructor(private maxSize: number) {}
-
   set(key: K, value: V): void {
     if (this.cache.size >= this.maxSize) {
       const firstKey = this.cache.keys().next().value;
-      if (firstKey !== undefined) {
-        this.cache.delete(firstKey);
-      }
+      if (firstKey !== undefined) this.cache.delete(firstKey);
     }
-    // Remove if exists to update position
     this.cache.delete(key);
-    this.cache.set(key, value); // Add to end (most recent)
+    this.cache.set(key, value);
   }
-
   get(key: K): V | undefined {
     const value = this.cache.get(key);
     if (value !== undefined) {
-      // Move to end (mark as recently used)
       this.cache.delete(key);
       this.cache.set(key, value);
     }
     return value;
   }
-
   clear(): void {
     this.cache.clear();
   }
-
   size(): number {
     return this.cache.size;
   }
 }
 
-// Path parsing cache with LRU eviction
 const pathCache = new LRUCache<string, string[]>(
   SIGNAL_TREE_CONSTANTS.MAX_PATH_CACHE_SIZE
 );
 
-/**
- * Parses a dot-notation path into an array of keys
- *
- * @param path - Dot-notation path string
- * @returns Array of property keys
- */
 export function parsePath(path: string): string[] {
   const cached = pathCache.get(path);
-  if (cached) {
-    return cached;
-  }
-
+  if (cached) return cached;
   const parts = path.split('.');
   pathCache.set(path, parts);
   return parts;
 }
 
-/**
- * Compose multiple enhancers into a single enhancer function
- *
- * @param enhancers - Array of enhancer functions
- * @returns Composed enhancer function
- */
 export function composeEnhancers<T>(
   ...enhancers: Array<(tree: T) => T>
 ): (tree: T) => T {
@@ -249,11 +179,6 @@ export function composeEnhancers<T>(
 
 /**
  * Creates a lazy signal tree using Proxy for on-demand signal creation
- *
- * @param obj - Source object to lazily signalify
- * @param equalityFn - Equality function for signal comparison
- * @param basePath - Base path for nested objects
- * @returns Proxied object that creates signals on first access
  */
 export function createLazySignalTree<T extends object>(
   obj: T,
@@ -265,10 +190,9 @@ export function createLazySignalTree<T extends object>(
   const nestedCleanups = new Map<string, () => void>();
 
   const cleanup = () => {
-    // Clean up all nested proxies first
-    nestedCleanups.forEach((cleanupFn) => {
+    nestedCleanups.forEach((fn) => {
       try {
-        cleanupFn();
+        fn();
       } catch (error) {
         console.warn('Error during nested cleanup:', error);
       }
@@ -280,17 +204,12 @@ export function createLazySignalTree<T extends object>(
 
   const proxy = new Proxy(obj, {
     get(target: object, prop: string | symbol) {
-      // Handle cleanup method
-      if (prop === '__cleanup__') {
-        return cleanup;
-      }
+      if (prop === '__cleanup__') return cleanup;
 
-      // Handle symbol properties normally
       if (typeof prop === 'symbol') {
         return (target as Record<string | symbol, unknown>)[prop];
       }
 
-      // Handle inspection methods
       if (prop === 'valueOf' || prop === 'toString') {
         return (target as Record<string | symbol, unknown>)[prop];
       }
@@ -298,28 +217,15 @@ export function createLazySignalTree<T extends object>(
       const key = prop as string;
       const path = basePath ? `${basePath}.${key}` : key;
 
-      // Safety check for property existence
-      if (!(key in target)) {
-        return undefined;
-      }
+      if (!(key in target)) return undefined;
 
       const value = (target as Record<string, unknown>)[key];
 
-      // If it's already a signal, return it
-      if (isSignal(value)) {
-        return value;
-      }
+      if (isSignal(value)) return value;
 
-      // Check cache
-      if (signalCache.has(path)) {
-        return signalCache.get(path);
-      }
+      if (signalCache.has(path)) return signalCache.get(path);
+      if (nestedProxies.has(path)) return nestedProxies.get(path);
 
-      if (nestedProxies.has(path)) {
-        return nestedProxies.get(path);
-      }
-
-      // Handle nested objects - create lazy proxy
       if (
         value &&
         typeof value === 'object' &&
@@ -333,10 +239,8 @@ export function createLazySignalTree<T extends object>(
             equalityFn,
             path
           );
-
           nestedProxies.set(path, nestedProxy);
 
-          // Store cleanup function for nested proxy
           const proxyWithCleanup = nestedProxy as { __cleanup__?: () => void };
           if (typeof proxyWithCleanup.__cleanup__ === 'function') {
             nestedCleanups.set(path, proxyWithCleanup.__cleanup__);
@@ -348,21 +252,19 @@ export function createLazySignalTree<T extends object>(
             `Failed to create lazy proxy for path "${path}":`,
             error
           );
-          // Fallback: create a signal for the object
           const fallbackSignal = signal(value, { equal: equalityFn });
           signalCache.set(path, fallbackSignal);
           return fallbackSignal;
         }
       }
 
-      // Create signal for primitive values, arrays, and built-in objects
       try {
         const newSignal = signal(value, { equal: equalityFn });
         signalCache.set(path, newSignal);
         return newSignal;
       } catch (error) {
         console.warn(`Failed to create signal for path "${path}":`, error);
-        return value; // Return raw value as fallback
+        return value;
       }
     },
 
@@ -376,16 +278,13 @@ export function createLazySignalTree<T extends object>(
       const path = basePath ? `${basePath}.${key}` : key;
 
       try {
-        // Update the original object
         (target as Record<string, unknown>)[key] = value;
 
-        // Update cached signal if exists
         const cachedSignal = signalCache.get(path);
         if (cachedSignal && 'set' in cachedSignal) {
           (cachedSignal as WritableSignal<unknown>).set(value);
         }
 
-        // Clear nested proxy cache if value type changed
         if (nestedProxies.has(path)) {
           const nestedCleanup = nestedCleanups.get(path);
           if (nestedCleanup) {
@@ -419,74 +318,57 @@ export function createLazySignalTree<T extends object>(
 }
 
 /**
- * Unwraps the current value from a signal or signal tree
- * Optimized to avoid redundant checks and efficiently handle different value types
- *
- * @param node - A signal, signal tree, or any value to unwrap
- * @returns The unwrapped value(s) with proper type inference
+ * Unwraps a signal or signal tree into a plain JS value shaped as T.
+ * NOTE: Runtime strips the dynamic set/update helpers; call sites receive T.
  */
-export function unwrap<T>(
-  node: DeepSignalify<T> & Record<string, unknown>
-): RemoveSignalMethods<T>;
-export function unwrap<T>(node: DeepSignalify<T>): RemoveSignalMethods<T>;
+export function unwrap<T>(node: DeepSignalify<T> & Record<string, unknown>): T;
+export function unwrap<T>(node: DeepSignalify<T>): T;
 export function unwrap<T>(node: WritableSignal<T>): T;
-export function unwrap<T>(node: T): RemoveSignalMethods<T>;
-export function unwrap<T>(node: unknown): RemoveSignalMethods<T> {
-  // Handle null/undefined
+export function unwrap<T>(node: T): T;
+export function unwrap<T>(node: unknown): T {
   if (node === null || node === undefined) {
-    return node as RemoveSignalMethods<T>;
+    return node as T;
   }
 
-  // Handle signals directly - if it's a signal, call it
   if (isSignal(node)) {
     const value = (node as Signal<unknown>)();
-    // The value from a signal might itself need unwrapping if it's an object
     if (
       typeof value === 'object' &&
       value !== null &&
       !Array.isArray(value) &&
       !isBuiltInObject(value)
     ) {
-      return unwrap(value) as RemoveSignalMethods<T>;
+      return unwrap(value) as T;
     }
-    return value as RemoveSignalMethods<T>;
+    return value as T;
   }
 
-  // Handle non-objects (primitives)
   if (typeof node !== 'object') {
-    return node as RemoveSignalMethods<T>;
+    return node as T;
   }
 
-  // Handle arrays - just return as-is since arrays are stored as single signals
   if (Array.isArray(node)) {
-    return node as RemoveSignalMethods<T>;
+    return node as T;
   }
 
-  // Handle built-in objects - return as-is to preserve their methods
   if (isBuiltInObject(node)) {
-    return node as RemoveSignalMethods<T>;
+    return node as T;
   }
 
-  // Build result object for plain objects, filtering out methods
   const result = {} as Record<string, unknown>;
 
-  for (const key in node) {
+  for (const key in node as Record<string, unknown>) {
     if (!Object.prototype.hasOwnProperty.call(node, key)) continue;
 
-    // Skip runtime-attached methods
     if (key === 'set' || key === 'update') {
-      const value = (node as Record<string, unknown>)[key];
-      if (typeof value === 'function') {
-        continue;
-      }
+      const v = (node as Record<string, unknown>)[key];
+      if (typeof v === 'function') continue;
     }
 
     const value = (node as Record<string, unknown>)[key];
 
     if (isSignal(value)) {
-      // Unwrap the signal to get its value
       const unwrappedValue = (value as Signal<unknown>)();
-      // If the unwrapped value is an object (but not array or built-in), recursively unwrap it
       if (
         typeof unwrappedValue === 'object' &&
         unwrappedValue !== null &&
@@ -503,16 +385,13 @@ export function unwrap<T>(node: unknown): RemoveSignalMethods<T> {
       !Array.isArray(value) &&
       !isBuiltInObject(value)
     ) {
-      // Nested object that's not a signal - recurse
       result[key] = unwrap(value);
     } else {
-      // Primitive, array, or built-in object - use as-is
       result[key] = value;
     }
   }
 
-  // Handle symbol properties
-  const symbols = Object.getOwnPropertySymbols(node);
+  const symbols = Object.getOwnPropertySymbols(node as object);
   for (const sym of symbols) {
     const value = (node as Record<symbol, unknown>)[sym];
     if (isSignal(value)) {
@@ -539,5 +418,12 @@ export function unwrap<T>(node: unknown): RemoveSignalMethods<T> {
     }
   }
 
-  return result as RemoveSignalMethods<T>;
+  return result as unknown as T;
+}
+
+/**
+ * Optional strict variant for internal use when you want the cleaned structural type.
+ */
+export function cleanUnwrap<T>(node: unknown): RemoveSignalMethods<T> {
+  return unwrap(node) as unknown as RemoveSignalMethods<T>;
 }

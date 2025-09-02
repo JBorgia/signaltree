@@ -1,15 +1,10 @@
-import { Component, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, computed, effect } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { signalTree } from '@signaltree/core';
 import { withBatching } from '@signaltree/batching';
-import {
-  User,
-  Post,
-  generateUsers,
-  generatePosts,
-  sleep,
-} from '../../shared/models';
+import { signalTree } from '@signaltree/core';
+
+import { generatePosts, generateUsers, Post, sleep, User } from '../../shared/models';
 
 interface BatchingState {
   users: User[];
@@ -485,7 +480,7 @@ export class BatchingDemoComponent {
     autoProcess: true,
     batchSize: 5,
     processingDelay: 1000,
-  }).pipe(
+  }).with(
     withBatching({
       enabled: true,
       maxBatchSize: 50,

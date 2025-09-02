@@ -1,10 +1,10 @@
-import { Component, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-
-import { signalTree } from '@signaltree/core';
 import { withAsync } from '@signaltree/async';
-import { User, generateUsers, sleep } from '../../shared/models';
+import { signalTree } from '@signaltree/core';
+
+import { generateUsers, sleep, User } from '../../shared/models';
 
 interface AsyncState {
   users: User[];
@@ -356,7 +356,7 @@ export class AsyncDemoComponent {
     loading: false,
     error: null as string | null,
     searchQuery: '',
-  }).pipe(withAsync());
+  }).with(withAsync());
 
   private apiService = new MockApiService();
 
@@ -517,7 +517,7 @@ export class AsyncDemoComponent {
       this.store.$.update(() => ({
         selectedUser: refreshedUser,
         users: this.store
-          .$()
+          .unwrap()
           .users.map((u: User) =>
             u.id === refreshedUser.id ? refreshedUser : u
           ),
