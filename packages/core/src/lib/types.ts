@@ -83,6 +83,11 @@ export interface NodeAccessor<T> {
 }
 
 /**
+ * Signalified node with callable interface
+ */
+export type SignalifiedNode<T> = NodeAccessor<T> & DeepSignalify<T>;
+
+/**
  * Deep signalification type - converts object properties to signals recursively
  * - Leaves (primitives, arrays, functions, built-ins): Raw Angular WritableSignal<T>
  * - Nested objects: NodeAccessor<T> (callable) + recursive DeepSignalify<T> properties
@@ -97,8 +102,8 @@ export type DeepSignalify<T> = {
       ? WritableSignal<T[K]> // Built-in objects are Angular signals
       : T[K] extends (...args: unknown[]) => unknown
       ? WritableSignal<T[K]> // Functions are Angular signals
-      : // Nested objects: NodeAccessor for the object + recursive signalification
-        NodeAccessor<T[K]> & DeepSignalify<T[K]>
+      : // Nested objects: Use the explicit SignalifiedNode type
+        SignalifiedNode<T[K]>
     : WritableSignal<T[K]>; // Primitives are Angular signals
 };
 

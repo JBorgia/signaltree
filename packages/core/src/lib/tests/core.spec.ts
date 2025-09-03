@@ -3,6 +3,8 @@ import { TestBed } from '@angular/core/testing';
 
 import { signalTree } from '../signal-tree';
 
+import type { NodeAccessor } from '../types';
+
 /**
  * Core SignalTree functionality tests
  * Tests basic tree creation, state management, and core operations
