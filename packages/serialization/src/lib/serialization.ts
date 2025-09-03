@@ -200,27 +200,21 @@ function unwrapObjectSafely(
     return obj;
   }
 
-  // Handle callable wrappers produced by SignalTree (callable branches).
-  // These are functions with own properties like 'set'/'update'. Detect
-  // them and invoke to get the underlying plain branch for serialization.
+  // Handle callable signals (no longer need complex branch wrapper detection)
   if (typeof obj === 'function') {
     try {
-      const maybe = obj as unknown as Record<string, unknown>;
-      if (
-        Object.prototype.hasOwnProperty.call(maybe, 'set') ||
-        Object.prototype.hasOwnProperty.call(maybe, 'update')
-      ) {
-        const inner = (obj as unknown as () => unknown)();
-        return unwrapObjectSafely(
-          inner,
-          visited,
-          depth + 1,
-          maxDepth,
-          preserveTypes
-        );
-      }
+      // Check if it's a callable signal by trying to invoke it
+      const result = (obj as () => unknown)();
+      return unwrapObjectSafely(
+        result,
+        visited,
+        depth + 1,
+        maxDepth,
+        preserveTypes
+      );
     } catch {
-      // Fall through to treat function as non-serializable value
+      // Not a callable signal, treat as regular function (non-serializable)
+      return '[Function]';
     }
   }
 
@@ -299,6 +293,21 @@ function unwrapObjectSafely(
           maxDepth,
           preserveTypes
         );
+      } else if (typeof v === 'function' && k !== 'set' && k !== 'update') {
+        // Handle callable signals - these are functions but not helper methods
+        try {
+          const callResult = (v as () => unknown)();
+          out[k] = unwrapObjectSafely(
+            callResult,
+            visited,
+            depth + 1,
+            maxDepth,
+            preserveTypes
+          );
+        } catch {
+          // If calling fails, skip this property
+          continue;
+        }
       } else {
         out[k] = unwrapObjectSafely(
           v,
@@ -484,7 +493,7 @@ export function withSerialization<T extends Record<string, unknown> = any>(
       // Delegate to the tree's public unwrap() which already strips helper
       // methods like `set`/`update`. Keep unwrapObjectSafely for
       // serialize() where we need type-preserving markers.
-      return tree.unwrap();
+      return tree();
     };
 
     /**
@@ -591,7 +600,13 @@ export function withSerialization<T extends Record<string, unknown> = any>(
             node = node[p];
           }
 
-          if (node && isSignal(node)) {
+          if (
+            node &&
+            (isSignal(node) ||
+              (typeof node === 'function' &&
+                'set' in node &&
+                typeof (node as { set?: unknown }).set === 'function'))
+          ) {
             // Extract the corresponding value from restoredData
             let current: any = restoredData as any;
             for (const p of parts) {
@@ -669,12 +684,29 @@ export function withSerialization<T extends Record<string, unknown> = any>(
           const sourceValue = source[key];
           const direct = target[key];
 
+          console.debug('[updateSignals]', {
+            key,
+            path,
+            directType: typeof direct,
+            hasSet: direct && typeof direct === 'function' && 'set' in direct,
+          });
+
           // Prefer the real signal if present; otherwise resolve from root alias
           const targetSignal = isSignal(direct)
             ? (direct as WritableSignal<unknown>)
+            : // Check if it's a callable signal (function with set method)
+            typeof direct === 'function' &&
+              'set' in direct &&
+              typeof (direct as { set?: unknown }).set === 'function'
+            ? (direct as { set: (value: unknown) => void })
             : resolveAliasSignal(path, key);
 
           if (targetSignal) {
+            console.debug('[updateSignals] Setting signal', {
+              key,
+              path,
+              sourceValue,
+            });
             targetSignal.set(sourceValue);
             continue;
           }
@@ -684,9 +716,11 @@ export function withSerialization<T extends Record<string, unknown> = any>(
             typeof sourceValue === 'object' &&
             !Array.isArray(sourceValue) &&
             direct &&
-            (typeof direct === 'object' || typeof direct === 'function') &&
+            (typeof direct === 'object' ||
+              (typeof direct === 'function' && !('set' in direct))) &&
             !isSignal(direct)
           ) {
+            console.debug('[updateSignals] Recursing into', { key, path });
             updateSignals(
               direct as Record<string, unknown>,
               sourceValue as Record<string, unknown>,
@@ -828,23 +862,13 @@ export function withSerialization<T extends Record<string, unknown> = any>(
         }
 
         const walk = (obj: unknown, path = '') => {
-          if (!obj || (typeof obj !== 'object' && typeof obj !== 'function'))
-            return;
+          if (!obj || typeof obj !== 'object') return;
 
           const maybe = obj as Record<string, unknown>;
 
-          // Mark branch nodes when they have own helper properties
-          if (
-            (Object.prototype.hasOwnProperty.call(maybe, 'set') &&
-              typeof maybe['set'] === 'function') ||
-            (Object.prototype.hasOwnProperty.call(maybe, 'update') &&
-              typeof maybe['update'] === 'function')
-          ) {
-            if (!(path in nodeMap)) nodeMap[path] = 'b';
-          }
-
+          // No longer need to detect helper methods since callables don't have them
+          // Just traverse child properties
           for (const [k, v] of Object.entries(maybe)) {
-            if (k === 'set' || k === 'update') continue;
             const childPath = path ? `${path}.${k}` : k;
             walk(v, childPath);
           }

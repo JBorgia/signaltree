@@ -131,17 +131,17 @@ console.log(userTree.state.user.name()); // 'John Doe'
 console.log(userTree.$.settings.theme()); // 'dark'
 
 // Update individual values
-userTree.state.user.name.set('Jane Doe');
+userTree.state.user.name('Jane Doe');
 userTree.$.settings.theme.set('light');
 
 // Update entire tree
-userTree.update(current => ({
+userTree(current => ({
   ...current,
   user: { ...current.user, age: 31 }
 }));
 
 // Get unwrapped values
-const userData = userTree.unwrap();`;
+const userData = userTree();`;
 
   extremeDepthCode = `import { signalTree } from '@signaltree/signaltree';
 

@@ -62,6 +62,8 @@ export {
 
   // Signal utilities - Signal-specific helpers
   terminalSignal,
+  isNodeAccessor,
+  isAnySignal,
 
   // Helper functions - Path parsing and composition
   parsePath,

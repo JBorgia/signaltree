@@ -386,7 +386,7 @@ export class DevtoolsDemoComponent {
   }
 
   logState() {
-    console.log('Current State:', this.store.unwrap());
+    console.log('Current State:', this.store());
     this.lastAction = 'Log state to console';
   }
 
@@ -401,7 +401,7 @@ export class DevtoolsDemoComponent {
   }
 
   getStateSize(): number {
-    const state = this.store.unwrap();
+    const state = this.store();
     return Object.keys(state).length;
   }
 
@@ -413,7 +413,7 @@ export class DevtoolsDemoComponent {
     return JSON.stringify(
       {
         counter: this.counter(),
-        user: this.store.$.user.unwrap(),
+        user: this.store.$.user(),
       },
       null,
       2

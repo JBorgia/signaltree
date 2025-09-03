@@ -95,9 +95,16 @@ describe('Utils', () => {
         },
       });
 
-      const userUnwrapped = unwrap(tree.state.user);
-      const nestedUnwrapped = unwrap(tree.state.nested);
-      const fullUnwrapped = unwrap(tree.state);
+      const userUnwrapped = unwrap<{ name: string; age: number }>(
+        tree.state.user
+      );
+      const nestedUnwrapped = unwrap<{ settings: { theme: string } }>(
+        tree.state.nested
+      );
+      const fullUnwrapped = unwrap<{
+        user: { name: string; age: number };
+        nested: { settings: { theme: string } };
+      }>(tree.state);
 
       // Check that set/update methods are not present
       expect('set' in userUnwrapped).toBe(false);

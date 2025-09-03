@@ -166,7 +166,7 @@ describe('Entities', () => {
     const enhancedTree = withEntities()(tree);
     const userManager = enhancedTree.asCrud<User>('users');
 
-    userManager.update('user-1', { name: 'John Smith', active: false });
+    userManager('user-1', { name: 'John Smith', active: false });
 
     const allUsers = userManager.selectAll();
     const updatedUser = allUsers()[0];

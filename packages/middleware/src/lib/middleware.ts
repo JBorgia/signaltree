@@ -24,7 +24,7 @@ export function withMiddleware<T>(
     // Override update method to include middleware execution
     tree.update = (updater: (current: T) => Partial<T>) => {
       const action = 'UPDATE';
-      const currentState = tree.unwrap();
+      const currentState = tree();
       const updateResult = updater(currentState);
       const treeMiddlewares =
         (middlewareMap.get(tree) as Middleware<T>[]) || [];
@@ -47,7 +47,7 @@ export function withMiddleware<T>(
       originalUpdate.call(tree, updater);
 
       // Get new state after update
-      const newState = tree.unwrap();
+      const newState = tree();
 
       // Execute 'after' middleware hooks
       for (const middleware of treeMiddlewares) {
@@ -90,7 +90,7 @@ export function withMiddleware<T>(
     // Override batchUpdate to include middleware
     tree.batchUpdate = (updater: (current: T) => Partial<T>) => {
       const action = 'BATCH_UPDATE';
-      const currentState = tree.unwrap();
+      const currentState = tree();
       const updateResult = updater(currentState);
       const treeMiddlewares =
         (middlewareMap.get(tree) as Middleware<T>[]) || [];
@@ -113,7 +113,7 @@ export function withMiddleware<T>(
       originalBatchUpdate.call(tree, updater);
 
       // Get new state after update
-      const newState = tree.unwrap();
+      const newState = tree();
 
       // Execute 'after' middleware hooks
       for (const middleware of treeMiddlewares) {

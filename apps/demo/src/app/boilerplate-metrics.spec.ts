@@ -340,7 +340,7 @@ export class UserFormComponent {
         documentationPages: 5,
         mentalModel: 'Simple tree structure',
         cognitiveLoad: 2,
-        concepts: ['signalTree()', 'tree.$', 'tree.update()'],
+        concepts: ['signalTree()', 'tree.$', 'tree()'],
       },
       {
         framework: 'NgRx',

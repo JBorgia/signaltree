@@ -1,12 +1,12 @@
-/**
- * Core SignalTree functionality tests
- * Tests basic tree creation, state management, and core operations
- */
 import { computed } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
 import { signalTree } from '../signal-tree';
 
+/**
+ * Core SignalTree functionality tests
+ * Tests basic tree creation, state management, and core operations
+ */
 describe('SignalTree Core', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({});
@@ -30,7 +30,7 @@ describe('SignalTree Core', () => {
     it('should create tree from arrays', () => {
       const arrayTree = signalTree([1, 2, 3]);
       // The unwrap implementation returns arrays for arrays
-      expect(arrayTree.unwrap()).toEqual([1, 2, 3]);
+      expect(arrayTree()).toEqual([1, 2, 3]);
       // root state may be either a single signal returning the array
       // or an array of per-index signals. Accept both shapes for tests.
       const stateVal = (() => {
@@ -65,7 +65,7 @@ describe('SignalTree Core', () => {
       const initialState = { count: 0, user: { name: 'John' } };
       const tree = signalTree(initialState);
 
-      const unwrapped = tree.unwrap();
+      const unwrapped = tree();
       expect(unwrapped).toEqual(initialState);
     });
 
@@ -95,9 +95,9 @@ describe('SignalTree Core', () => {
     it('should update state using update method', () => {
       const tree = signalTree({ count: 0, user: { name: 'John' } });
 
-      tree.update((state) => ({ count: state.count + 1 }));
+      tree((state) => ({ ...state, count: state.count + 1 }));
 
-      const unwrapped = tree.unwrap();
+      const unwrapped = tree();
       expect(unwrapped.count).toBe(1);
       expect(unwrapped.user.name).toBe('John');
     });
@@ -115,7 +115,7 @@ describe('SignalTree Core', () => {
     it('should handle nested object updates', () => {
       const tree = signalTree({ user: { name: 'John', age: 30 } });
 
-      tree.state.user.update((user) => ({ ...user, age: 31 }));
+      tree.state.user((user) => ({ ...user, age: 31 }));
 
       expect(tree.state.user.name()).toBe('John');
       expect(tree.state.user.age()).toBe(31);
@@ -124,7 +124,7 @@ describe('SignalTree Core', () => {
     it('should handle array updates', () => {
       const tree = signalTree({ items: [1, 2, 3] });
 
-      tree.state.items.update((items) => [...items, 4]);
+      tree.state.items.update((items: number[]) => [...items, 4]);
 
       expect(tree.state.items()).toEqual([1, 2, 3, 4]);
     });

@@ -514,10 +514,10 @@ export class AsyncDemoComponent {
     );
 
     if (refreshedUser) {
-      this.store.$.update(() => ({
+      this.store.$(() => ({
         selectedUser: refreshedUser,
         users: this.store
-          .unwrap()
+          ()
           .users.map((u: User) =>
             u.id === refreshedUser.id ? refreshedUser : u
           ),

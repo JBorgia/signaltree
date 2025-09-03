@@ -1,9 +1,10 @@
 import { Signal, WritableSignal } from '@angular/core';
 
 /**
- * SignalTree Core Types v1.1.6
+ * SignalTree Core Types v2.0.0
  * MIT License - Copyright (c) 2025 Jonathan D Borgia
  */
+
 // ============================================
 // CORE TYPE DEFINITIONS
 // ============================================
@@ -58,10 +59,9 @@ export type BuiltInObject =
   | AbortSignal;
 
 /**
- * Helper type to remove SignalTree's set/update methods from nested objects when unwrapping
- * Preserves all built-in object methods and only removes our dynamically added methods
+ * Helper type to unwrap signals and remove any signal-specific properties
  */
-export type RemoveSignalMethods<T> = T extends WritableSignal<infer U>
+export type Unwrap<T> = T extends WritableSignal<infer U>
   ? U
   : T extends Signal<infer U>
   ? U
@@ -70,34 +70,43 @@ export type RemoveSignalMethods<T> = T extends WritableSignal<infer U>
   : T extends readonly unknown[]
   ? T // Preserve arrays exactly as they are
   : T extends object
-  ? {
-      [K in keyof T as K extends 'set' | 'update'
-        ? never
-        : K]: RemoveSignalMethods<T[K]>;
-    }
+  ? { [K in keyof T]: Unwrap<T[K]> }
   : T;
 
 /**
+ * Node accessor interface - unified API for get/set/update via function calls
+ */
+export interface NodeAccessor<T> {
+  (): T; // Get value
+  (value: T): void; // Set value
+  (updater: (current: T) => T): void; // Update with function
+}
+
+/**
  * Deep signalification type - converts object properties to signals recursively
+ * - Leaves (primitives, arrays, functions, built-ins): Raw Angular WritableSignal<T>
+ * - Nested objects: NodeAccessor<T> (callable) + recursive DeepSignalify<T> properties
  */
 export type DeepSignalify<T> = {
   [K in keyof T]: T[K] extends readonly unknown[]
-    ? WritableSignal<T[K]> // Arrays become single signals
+    ? WritableSignal<T[K]> // Arrays are Angular signals
     : T[K] extends object
     ? T[K] extends Signal<unknown>
       ? T[K] // Don't double-wrap signals
       : T[K] extends BuiltInObject
-      ? WritableSignal<T[K]>
+      ? WritableSignal<T[K]> // Built-in objects are Angular signals
       : T[K] extends (...args: unknown[]) => unknown
-      ? WritableSignal<T[K]>
-      : // Nested objects get recursive treatment AND are callable to return unwrapped value
-        (() => RemoveSignalMethods<T[K]>) &
-          DeepSignalify<T[K]> & {
-            set(partial: Partial<T[K]>): void;
-            update(updater: (current: T[K]) => Partial<T[K]>): void;
-          }
-    : WritableSignal<T[K]>;
+      ? WritableSignal<T[K]> // Functions are Angular signals
+      : // Nested objects: NodeAccessor for the object + recursive signalification
+        NodeAccessor<T[K]> & DeepSignalify<T[K]>
+    : WritableSignal<T[K]>; // Primitives are Angular signals
 };
+
+/**
+ * Utility type to remove signal-specific methods from a type
+ * Used by cleanUnwrap to return the original type shape
+ */
+export type RemoveSignalMethods<T> = T extends infer U ? U : never;
 
 // ============================================
 // ENHANCER SYSTEM TYPES
@@ -217,11 +226,6 @@ export interface WithMethod<T> {
     e3: EnhancerWithMeta<O2, O3>,
     e4: EnhancerWithMeta<O3, O4>
   ): O4;
-  (
-    ...enhancers: Array<
-      EnhancerWithMeta<unknown, unknown> | ((...args: unknown[]) => unknown)
-    >
-  ): any;
 }
 
 // ============================================
@@ -231,7 +235,7 @@ export interface WithMethod<T> {
 /**
  * Main SignalTree type with all methods
  */
-export type SignalTree<T> = {
+export type SignalTree<T> = NodeAccessor<T> & {
   /** The reactive state object */
   state: DeepSignalify<T>;
 
@@ -239,15 +243,14 @@ export type SignalTree<T> = {
   $: DeepSignalify<T>;
 
   /** Core methods */
-  unwrap(): T; // <-- returns plain T
-  update(updater: (current: T) => Partial<T>): void; // <-- updater sees T
   with: WithMethod<T>;
   destroy(): void;
 
   /** Enhanced functionality */
-  effect(fn: (tree: T) => void): void; // <-- T
-  subscribe(fn: (tree: T) => void): () => void; // <-- T
-  batchUpdate(updater: (current: T) => Partial<T>): void; // <-- T
+  effect(fn: (tree: T) => void): void;
+  subscribe(fn: (tree: T) => void): () => void;
+  batch(updater: (tree: T) => void): void;
+  batchUpdate(updater: (current: T) => Partial<T>): void;
   memoize<R>(fn: (tree: T) => R, cacheKey?: string): Signal<R>;
 
   /** Performance methods */
@@ -276,6 +279,9 @@ export type SignalTree<T> = {
   redo(): void;
   getHistory(): TimeTravelEntry<T>[];
   resetHistory(): void;
+
+  /** Index signature for enhancer compatibility */
+  [key: string]: unknown;
 };
 
 // ============================================
@@ -361,11 +367,9 @@ export interface TimeTravelEntry<T> {
 export function isSignalTree<T>(value: unknown): value is SignalTree<T> {
   return (
     value !== null &&
-    typeof value === 'object' &&
+    typeof value === 'function' && // It's a callable function
     'state' in value &&
     '$' in value &&
-    'unwrap' in value &&
-    'update' in value &&
     'with' in value &&
     'destroy' in value
   );

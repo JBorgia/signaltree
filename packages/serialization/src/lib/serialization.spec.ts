@@ -37,12 +37,29 @@ describe('Serialization', () => {
 
       const tree = applySerialization(signalTree(initialState));
 
+      // Debug the structure
+      console.log('DEBUG: tree.$.user type:', typeof tree.$.user);
+      console.log('DEBUG: tree.$.user():', tree.$.user());
+      console.log('DEBUG: tree.$.user.name type:', typeof tree.$.user.name);
+      console.log('DEBUG: tree.$.user.name():', tree.$.user.name());
+      console.log(
+        'DEBUG: tree.$.user.name.set type:',
+        typeof tree.$.user.name?.set
+      );
+      console.log('DEBUG: Has set property:', 'set' in tree.$.user.name);
+      console.log(
+        'DEBUG: Properties:',
+        Object.getOwnPropertyNames(tree.$.user.name)
+      );
+
       // Update state
       tree.$.count.set(100);
       tree.$.user.name.set('Jane');
 
       // Serialize
       const serialized = tree.serialize();
+      console.log('DEBUG: Serialized data:', serialized);
+
       expect(typeof serialized).toBe('string');
       expect(JSON.parse(serialized)).toBeDefined();
 
@@ -55,7 +72,26 @@ describe('Serialization', () => {
           enabled: false,
         })
       );
+
+      console.log(
+        'DEBUG: Before deserialize - tree2.$.count():',
+        tree2.$.count()
+      );
+      console.log(
+        'DEBUG: Before deserialize - tree2.$.user.name():',
+        tree2.$.user.name()
+      );
+
       tree2.deserialize(serialized);
+
+      console.log(
+        'DEBUG: After deserialize - tree2.$.count():',
+        tree2.$.count()
+      );
+      console.log(
+        'DEBUG: After deserialize - tree2.$.user.name():',
+        tree2.$.user.name()
+      );
 
       // Verify state restored
       expect(tree2.$.count()).toBe(100);
@@ -87,7 +123,7 @@ describe('Serialization', () => {
         Object.keys((tree as any).state)
       );
       // eslint-disable-next-line no-console
-      console.debug('[test-debug] tree.unwrap():', tree.unwrap());
+      console.debug('[test-debug] tree():', tree());
       const serialized = tree.serialize();
       // DEBUG: print serialized payload when running tests to diagnose Map/Set restore
       // eslint-disable-next-line no-console

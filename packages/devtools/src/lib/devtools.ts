@@ -387,7 +387,7 @@ export function withDevTools<T>(
       originalUpdate.call(tree, updater);
 
       const duration = performance.now() - startTime;
-      const newState = tree.unwrap();
+      const newState = tree();
 
       // Track performance
       metrics.trackModuleUpdate('core', duration);
@@ -443,7 +443,7 @@ export function withDevTools<T>(
 
       connectDevTools: (name: string) => {
         if (browserDevTools) {
-          browserDevTools.send('@@INIT', tree.unwrap());
+          browserDevTools.send('@@INIT', tree());
           console.log(`🔗 Connected to Redux DevTools as "${name}"`);
         }
       },

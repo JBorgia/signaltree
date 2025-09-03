@@ -1,6 +1,7 @@
 import { signal } from '@angular/core';
-import type { Signal } from '@angular/core';
 import { parsePath } from '@signaltree/core';
+
+import type { Signal } from '@angular/core';
 import type {
   SignalTree,
   AsyncAction,
@@ -336,7 +337,7 @@ class AsyncActionImpl<TInput, TResult, T>
 
       // Execute onStart hook
       if (onStart) {
-        const startUpdate = onStart(this.tree.unwrap());
+        const startUpdate = onStart(this.tree());
         this.tree.update(() => startUpdate);
       }
 
@@ -348,7 +349,7 @@ class AsyncActionImpl<TInput, TResult, T>
 
       // Execute onSuccess hook
       if (onSuccess) {
-        const successUpdate = onSuccess(result, this.tree.unwrap());
+        const successUpdate = onSuccess(result, this.tree());
         this.tree.update(() => successUpdate);
       }
 
@@ -364,7 +365,7 @@ class AsyncActionImpl<TInput, TResult, T>
 
       // Execute onError hook
       if (onError) {
-        const errorUpdate = onError(err, this.tree.unwrap());
+        const errorUpdate = onError(err, this.tree());
         this.tree.update(() => errorUpdate);
       }
 
@@ -379,13 +380,13 @@ class AsyncActionImpl<TInput, TResult, T>
 
       // Execute onComplete hook
       if (onComplete) {
-        const completeUpdate = onComplete(this.tree.unwrap());
+        const completeUpdate = onComplete(this.tree());
         this.tree.update(() => completeUpdate);
       }
 
       // Execute onFinally hook
       if (onFinally) {
-        const finallyUpdate = onFinally(this.tree.unwrap());
+        const finallyUpdate = onFinally(this.tree());
         this.tree.update(() => finallyUpdate);
       }
     }

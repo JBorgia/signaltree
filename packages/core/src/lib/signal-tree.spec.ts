@@ -21,16 +21,16 @@ describe('signalTree', () => {
     const initialState = { count: 0, user: { name: 'John' } };
     const tree = signalTree(initialState);
 
-    const unwrapped = tree.unwrap();
+    const unwrapped = tree();
     expect(unwrapped).toEqual(initialState);
   });
 
   it('should update state using update method', () => {
     const tree = signalTree({ count: 0, user: { name: 'John' } });
 
-    tree.update((state) => ({ count: state.count + 1 }));
+    tree((state) => ({ ...state, count: state.count + 1 }));
 
-    const unwrapped = tree.unwrap();
+    const unwrapped = tree();
     expect(unwrapped.count).toBe(1);
     expect(unwrapped.user.name).toBe('John');
   });
@@ -60,7 +60,7 @@ describe('signalTree', () => {
     expect(result).toBe(tree);
 
     // Test with with a function
-    const result2 = tree.with((t) => t.unwrap());
+    const result2 = tree.with((t) => t());
     expect(result2).toEqual({ count: 0 });
   });
 
@@ -175,22 +175,26 @@ describe('signalTree', () => {
       expect(tree.state.user.settings.level()).toBe('advanced');
 
       // ✅ Complex updates using the update method
-      tree.update((current) => ({
+      tree((current) => ({
         counter: current.counter + 10,
         user: {
           ...current.user,
+          name: 'Jane', // Preserve the name change
           settings: {
             ...current.user.settings,
             theme: 'dark' as const,
+            level: 'advanced' as const, // Preserve the level change
           },
         },
+        features: current.features,
+        metadata: current.metadata,
       }));
 
       expect(tree.state.counter()).toBe(15);
       expect(tree.state.user.settings.theme()).toBe('dark');
 
       // ✅ Unwrap maintains the original structure
-      const unwrapped = tree.unwrap();
+      const unwrapped = tree();
       expect(unwrapped).toEqual({
         counter: 15,
         user: {
@@ -310,13 +314,14 @@ describe('signalTree', () => {
         settings: { theme: 'dark', notifications: true },
       });
 
-      // Test set method
-      tree.state.user.set({ name: 'Jane', age: 25 });
+      // Test set method on individual properties
+      tree.state.user.name.set('Jane');
+      tree.state.user.age.set(25);
       expect(tree.state.user.name()).toBe('Jane');
       expect(tree.state.user.age()).toBe(25);
 
-      // Test partial set
-      tree.state.settings.set({ theme: 'light' });
+      // Test partial update using update on individual property
+      tree.state.settings.theme.set('light');
       expect(tree.state.settings.theme()).toBe('light');
       expect(tree.state.settings.notifications()).toBe(true); // Should remain unchanged
     });
@@ -328,14 +333,15 @@ describe('signalTree', () => {
       });
 
       // Test update method
-      tree.state.counter.update((current) => ({
+      tree.state.counter((current) => ({
+        ...current,
         value: current.value + current.step,
       }));
       expect(tree.state.counter.value()).toBe(1);
       expect(tree.state.counter.step()).toBe(1);
 
       // Test complex update
-      tree.state.user.update((current) => ({
+      tree.state.user((current) => ({
         ...current,
         age: current.age + 1,
         name: current.name.toUpperCase(),
@@ -357,12 +363,12 @@ describe('signalTree', () => {
       });
 
       // Deep set
-      tree.state.app.user.profile.personal.set({ name: 'Jane', age: 25 });
+      tree.state.app.user.profile.personal({ name: 'Jane', age: 25 });
       expect(tree.state.app.user.profile.personal.name()).toBe('Jane');
       expect(tree.state.app.user.profile.personal.age()).toBe(25);
 
       // Deep update
-      tree.state.app.user.profile.settings.update((current) => ({
+      tree.state.app.user.profile.settings((current) => ({
         ...current,
         theme: current.theme === 'dark' ? 'light' : 'dark',
       }));
@@ -384,11 +390,14 @@ describe('signalTree', () => {
       });
 
       // Update simple array
-      tree.state.items.update((arr) => [...arr, 4, 5]);
+      tree.state.items.update((arr: number[]) => [...arr, 4, 5]);
       expect(tree.state.items()).toEqual([1, 2, 3, 4, 5]);
 
       // Update nested array of arrays
-      tree.state.nested.matrix.update((matrix) => [...matrix, [5, 6]]);
+      tree.state.nested.matrix.update((matrix: number[][]) => [
+        ...matrix,
+        [5, 6],
+      ]);
       expect(tree.state.nested.matrix()).toEqual([
         [1, 2],
         [3, 4],
@@ -396,10 +405,12 @@ describe('signalTree', () => {
       ]);
 
       // Update array of objects
-      tree.state.nested.objects.update((objects) => [
-        ...objects,
-        { id: 2, name: 'second' },
-      ]);
+      tree.state.nested.objects.update(
+        (objects: { id: number; name: string }[]) => [
+          ...objects,
+          { id: 2, name: 'second' },
+        ]
+      );
       expect(tree.state.nested.objects()).toEqual([
         { id: 1, name: 'first' },
         { id: 2, name: 'second' },
@@ -502,7 +513,7 @@ describe('signalTree', () => {
         'updated deep value'
       );
       tree.state.level1.level2.level3.level4.level5.level6.array.update(
-        (arr) => [...arr, 4, 5]
+        (arr: number[]) => [...arr, 4, 5]
       );
 
       expect(tree.state.level1.level2.level3.level4.level5.level6.value()).toBe(
@@ -577,7 +588,7 @@ describe('signalTree', () => {
       });
 
       // Test full unwrap
-      const fullUnwrap = tree.unwrap();
+      const fullUnwrap = tree();
       expect(fullUnwrap).toEqual({
         simple: 'string',
         number: 42,
@@ -699,7 +710,7 @@ describe('signalTree', () => {
 
       // Simulate multiple updates
       tree.state.status.set('running');
-      tree.state.counters.update((counters) =>
+      tree.state.counters.update((counters: { id: number; value: number }[]) =>
         counters.map((counter) => ({ ...counter, value: counter.value + 1 }))
       );
       tree.state.status.set('complete');

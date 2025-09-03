@@ -270,7 +270,7 @@ export function testTypeInference() {
 // Simple computed value for testing TypeScript inference
 export function createPostsComputation() {
   return () => {
-    const state = complexAppTree.unwrap();
+    const state = complexAppTree();
     return state.posts.items
       .filter((post: Post) => post.settings.isPublished)
       .map((post: Post) => ({

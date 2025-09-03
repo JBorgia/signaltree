@@ -1,12 +1,15 @@
-/**
- * SignalTree Utility Functions v1.1.6
- * Core utilities for signal tree operations
- */
 import { isSignal, Signal, signal, WritableSignal } from '@angular/core';
 
 import { SIGNAL_TREE_CONSTANTS } from './constants';
 
-import type { DeepSignalify, RemoveSignalMethods } from './types';
+/** Symbol to mark callable signals - using global symbol to match across files */
+const CALLABLE_SIGNAL_SYMBOL = Symbol.for('NodeAccessor');
+
+/**
+ * SignalTree Utility Functions v1.1.6
+ * Core utilities for signal tree operations
+ */
+import type { DeepSignalify, RemoveSignalMethods, NodeAccessor } from './types';
 
 /** Deep equality */
 export function equal<T>(a: T, b: T): boolean {
@@ -129,6 +132,23 @@ export function isBuiltInObject(v: unknown): boolean {
   }
 
   return false;
+}
+
+/**
+ * Checks if a value is a node accessor created by makeNodeAccessor
+ */
+export function isNodeAccessor(value: unknown): value is NodeAccessor<unknown> {
+  return (
+    typeof value === 'function' && value && CALLABLE_SIGNAL_SYMBOL in value
+  );
+}
+
+/**
+ * Checks if a value is either an Angular signal or a callable signal
+ * This is useful for packages that need to work with both types
+ */
+export function isAnySignal(value: unknown): boolean {
+  return isSignal(value) || isNodeAccessor(value);
 }
 
 /** Small LRU cache used by parsePath */
@@ -321,13 +341,27 @@ export function createLazySignalTree<T extends object>(
  * Unwraps a signal or signal tree into a plain JS value shaped as T.
  * NOTE: Runtime strips the dynamic set/update helpers; call sites receive T.
  */
-export function unwrap<T>(node: DeepSignalify<T> & Record<string, unknown>): T;
 export function unwrap<T>(node: DeepSignalify<T>): T;
-export function unwrap<T>(node: WritableSignal<T>): T;
-export function unwrap<T>(node: T): T;
+export function unwrap<T>(node: NodeAccessor<T> & DeepSignalify<T>): T;
+export function unwrap<T>(node: NodeAccessor<T>): T;
+export function unwrap<T>(node: unknown): T;
 export function unwrap<T>(node: unknown): T {
   if (node === null || node === undefined) {
     return node as T;
+  }
+
+  // Handle callable signals first
+  if (isNodeAccessor(node)) {
+    const value = (node as NodeAccessor<unknown>)();
+    if (
+      typeof value === 'object' &&
+      value !== null &&
+      !Array.isArray(value) &&
+      !isBuiltInObject(value)
+    ) {
+      return unwrap(value) as T;
+    }
+    return value as T;
   }
 
   if (isSignal(node)) {
@@ -367,7 +401,19 @@ export function unwrap<T>(node: unknown): T {
 
     const value = (node as Record<string, unknown>)[key];
 
-    if (isSignal(value)) {
+    if (isNodeAccessor(value)) {
+      const unwrappedValue = value();
+      if (
+        typeof unwrappedValue === 'object' &&
+        unwrappedValue !== null &&
+        !Array.isArray(unwrappedValue) &&
+        !isBuiltInObject(unwrappedValue)
+      ) {
+        result[key] = unwrap(unwrappedValue);
+      } else {
+        result[key] = unwrappedValue;
+      }
+    } else if (isSignal(value)) {
       const unwrappedValue = (value as Signal<unknown>)();
       if (
         typeof unwrappedValue === 'object' &&
@@ -394,7 +440,19 @@ export function unwrap<T>(node: unknown): T {
   const symbols = Object.getOwnPropertySymbols(node as object);
   for (const sym of symbols) {
     const value = (node as Record<symbol, unknown>)[sym];
-    if (isSignal(value)) {
+    if (isNodeAccessor(value)) {
+      const unwrappedValue = value();
+      if (
+        typeof unwrappedValue === 'object' &&
+        unwrappedValue !== null &&
+        !Array.isArray(unwrappedValue) &&
+        !isBuiltInObject(unwrappedValue)
+      ) {
+        (result as Record<symbol, unknown>)[sym] = unwrap(unwrappedValue);
+      } else {
+        (result as Record<symbol, unknown>)[sym] = unwrappedValue;
+      }
+    } else if (isSignal(value)) {
       const unwrappedValue = (value as Signal<unknown>)();
       if (
         typeof unwrappedValue === 'object' &&

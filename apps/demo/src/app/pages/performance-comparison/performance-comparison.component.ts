@@ -372,7 +372,7 @@ export class PerformanceComparisonComponent {
           this.signalTreeStore.$.todos.set(testData.slice(0, 100));
           break;
         case 'update':
-          this.signalTreeStore.$.todos.update((todos) =>
+          this.signalTreeStore.$.todos((todos) =>
             todos.map((todo) => ({ ...todo, completed: !todo.completed }))
           );
           break;
@@ -413,7 +413,7 @@ export class PerformanceComparisonComponent {
           this.nativeStore.todos.set(testData.slice(0, 100));
           break;
         case 'update':
-          this.nativeStore.todos.update((todos) =>
+          this.nativeStore.todos((todos) =>
             todos.map((todo) => ({ ...todo, completed: !todo.completed }))
           );
           break;
@@ -460,14 +460,14 @@ export class PerformanceComparisonComponent {
       const randomIndex = Math.floor(Math.random() * this.liveDataSize);
 
       // SignalTree update
-      this.signalTreeStore.$.todos.update((todos) =>
+      this.signalTreeStore.$.todos((todos) =>
         todos.map((todo, idx) =>
           idx === randomIndex ? { ...todo, completed: !todo.completed } : todo
         )
       );
 
       // Native update
-      this.nativeStore.todos.update((todos) =>
+      this.nativeStore.todos((todos) =>
         todos.map((todo, idx) =>
           idx === randomIndex ? { ...todo, completed: !todo.completed } : todo
         )

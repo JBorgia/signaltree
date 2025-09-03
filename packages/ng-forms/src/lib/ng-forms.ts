@@ -343,7 +343,7 @@ export function createFormTree<T extends Record<string, unknown>>(
     ...formSignals,
 
     // Core methods
-    unwrap: () => valuesTree.unwrap(),
+    unwrap: () => valuesTree(),
 
     setValue: (field: string, value: unknown) => {
       setNestedValue(field, value);
@@ -408,7 +408,7 @@ export function createFormTree<T extends Record<string, unknown>>(
           throw new Error('Form is invalid');
         }
 
-        const currentValues = valuesTree.unwrap();
+        const currentValues = valuesTree();
         const result = await submitFn(currentValues);
         return result;
       } finally {

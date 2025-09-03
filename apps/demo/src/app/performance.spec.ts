@@ -75,17 +75,17 @@ describe('SignalTree Performance Benchmarks', () => {
 
     const smallTime = measureTime(() => {
       const tree = signalTree(smallState);
-      tree.unwrap();
+      tree();
     });
 
     const mediumTime = measureTime(() => {
       const tree = signalTree(mediumState);
-      tree.unwrap();
+      tree();
     });
 
     const largeTime = measureTime(() => {
       const tree = signalTree(largeState);
-      tree.unwrap();
+      tree();
     });
 
     performanceResults.initialization = {
@@ -112,11 +112,11 @@ describe('SignalTree Performance Benchmarks', () => {
     const tree = signalTree(state);
 
     const shallowTime = measureTime(() => {
-      tree.update((state) => ({ ...state, counter: Math.random() }));
+      tree((state) => ({ ...state, counter: Math.random() }));
     });
 
     const deepTime = measureTime(() => {
-      tree.update((state) => {
+      tree((state) => {
         const newState = { ...state };
         if (newState.level_3_item_0) {
           newState.level_3_item_0 = {
@@ -152,7 +152,7 @@ describe('SignalTree Performance Benchmarks', () => {
     const batchTree = signalTree(state).with(withBatching());
 
     const singleUpdateTime = measureTime(() => {
-      regularTree.update((state) => ({ ...state, value: Math.random() }));
+      regularTree((state) => ({ ...state, value: Math.random() }));
     });
 
     const batchedUpdateTime = measureTime(() => {
@@ -201,7 +201,7 @@ describe('SignalTree Performance Benchmarks', () => {
 
     // Without memoization
     const withoutMemoTime = measureTime(() => {
-      heavyComputation(tree.unwrap());
+      heavyComputation(tree());
     }, 100);
 
     // With memoization - first time
@@ -240,12 +240,12 @@ describe('SignalTree Performance Benchmarks', () => {
 
     const eagerTime = measureTime(() => {
       const tree = signalTree(largeState, { useLazySignals: false });
-      tree.unwrap();
+      tree();
     });
 
     const lazyTime = measureTime(() => {
       const tree = signalTree(largeState, { useLazySignals: true });
-      tree.unwrap();
+      tree();
     });
 
     const lazyTree = signalTree(largeState, { useLazySignals: true });

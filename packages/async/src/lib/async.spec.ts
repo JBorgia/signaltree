@@ -45,13 +45,13 @@ describe('Async', () => {
 
     const promise = asyncOperation.execute(5);
     expect(asyncOperation.pending()).toBe(true);
-    expect(tree.unwrap().count).toBe(-1); // onStart was called
+    expect(tree().count).toBe(-1); // onStart was called
 
     const result = await promise;
     expect(result).toBe(10);
     expect(asyncOperation.pending()).toBe(false);
     expect(asyncOperation.result()).toBe(10);
-    expect(tree.unwrap().result).toBe(10); // onSuccess was called
+    expect(tree().result).toBe(10); // onSuccess was called
   });
 
   it('should handle async action errors', async () => {
@@ -76,7 +76,7 @@ describe('Async', () => {
 
     expect(asyncOperation.pending()).toBe(false);
     expect(asyncOperation.error()?.message).toBe('Test error');
-    expect(tree.unwrap().error).toBe('Test error'); // onError was called
+    expect(tree().error).toBe('Test error'); // onError was called
   });
 
   it('should call onComplete hook regardless of success or failure', async () => {
@@ -91,10 +91,10 @@ describe('Async', () => {
 
     await successOperation.execute(undefined);
     expect(onComplete).toHaveBeenCalledTimes(1);
-    expect(tree.unwrap().completed).toBe(true);
+    expect(tree().completed).toBe(true);
 
     // Reset and test failed completion
-    tree.update(() => ({ completed: false }));
+    tree(() => ({ completed: false }));
     onComplete.mockClear();
 
     const failOperation = tree.asyncAction(
@@ -111,7 +111,7 @@ describe('Async', () => {
     }
 
     expect(onComplete).toHaveBeenCalledTimes(1);
-    expect(tree.unwrap().completed).toBe(true);
+    expect(tree().completed).toBe(true);
   });
 
   it('should work with loadData convenience method', async () => {
@@ -135,13 +135,13 @@ describe('Async', () => {
 
     const promise = loadAction.execute();
     expect(loadAction.pending()).toBe(true);
-    expect(tree.unwrap().loading).toBe(true);
+    expect(tree().loading).toBe(true);
 
     const result = await promise;
     expect(result).toEqual({ users: ['Alice', 'Bob'] });
     expect(loadAction.pending()).toBe(false);
-    expect(tree.unwrap().data).toEqual({ users: ['Alice', 'Bob'] });
-    expect(tree.unwrap().loading).toBe(false);
+    expect(tree().data).toEqual({ users: ['Alice', 'Bob'] });
+    expect(tree().loading).toBe(false);
   });
 
   it('should work with submitForm convenience method', async () => {
@@ -166,8 +166,8 @@ describe('Async', () => {
 
     const result = await submitAction.execute({ name: 'John' });
     expect(result).toEqual({ id: 1, name: 'John' });
-    expect(tree.unwrap().submitResult).toEqual({ id: 1, name: 'John' });
-    expect(tree.unwrap().submitting).toBe(false);
+    expect(tree().submitResult).toEqual({ id: 1, name: 'John' });
+    expect(tree().submitting).toBe(false);
   });
 
   it('should work with enableAsync convenience function', () => {

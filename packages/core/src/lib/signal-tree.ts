@@ -4,6 +4,9 @@ import { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './constants';
 import { resolveEnhancerOrder } from './enhancers';
 import { createLazySignalTree, equal, isBuiltInObject, unwrap as sharedUnwrap } from './utils';
 
+// Global symbol for NodeAccessor identification
+const NODE_ACCESSOR_SYMBOL = Symbol.for('NodeAccessor');
+
 import type {
   SignalTree,
   DeepSignalify,
@@ -18,10 +21,95 @@ import type {
   EnhancerWithMeta,
   ChainResult,
   WithMethod,
+  NodeAccessor,
 } from './types';
 
 // Type alias for internal use
 type LocalUnknownEnhancer = EnhancerWithMeta<unknown, unknown>;
+
+/**
+ * Creates a callable NodeAccessor that supports get/set/update via function calls
+ */
+function makeNodeAccessor<T>(
+  readSignal: Signal<T>,
+  writeSignal: WritableSignal<T>
+): NodeAccessor<T> {
+  const accessor = function (arg?: unknown): T | void {
+    if (arguments.length === 0) {
+      return readSignal();
+    }
+
+    if (typeof arg === 'function') {
+      const updater = arg as (current: T) => T;
+      const currentValue = readSignal();
+      const newValue = updater(currentValue);
+      // For objects, update nested signals directly instead of backing signal
+      if (
+        typeof newValue === 'object' &&
+        newValue !== null &&
+        !Array.isArray(newValue)
+      ) {
+        recursiveUpdate(accessor, newValue);
+      } else {
+        // For primitives/arrays, update the backing signal
+        writeSignal.set(newValue);
+      }
+    } else {
+      // For objects, we MUST update the existing signals, not replace them
+      if (typeof arg === 'object' && arg !== null && !Array.isArray(arg)) {
+        const current = readSignal();
+        if (typeof current === 'object' && current !== null) {
+          // Deep update existing structure
+          recursiveUpdate(accessor, arg);
+          return;
+        }
+      }
+      writeSignal.set(arg as T);
+    }
+  } as NodeAccessor<T>;
+
+  (accessor as any)[NODE_ACCESSOR_SYMBOL] = true;
+  return accessor;
+}
+
+function recursiveUpdate(target: any, updates: any) {
+  for (const key in updates) {
+    if (!(key in target)) continue;
+
+    const targetProp = target[key];
+    const updateValue = updates[key];
+
+    if (isSignal(targetProp)) {
+      // Leaf signal - check if it's writable
+      if ('set' in targetProp && typeof targetProp.set === 'function') {
+        (targetProp as WritableSignal<any>).set(updateValue);
+      }
+    } else if (isNodeAccessor(targetProp)) {
+      if (
+        typeof updateValue === 'object' &&
+        updateValue !== null &&
+        !Array.isArray(updateValue)
+      ) {
+        // Nested object update - recurse to update individual signals
+        recursiveUpdate(targetProp, updateValue);
+      } else {
+        // Direct value - call the accessor to set the entire value
+        targetProp(updateValue);
+      }
+    }
+  }
+}
+
+/**
+ * Checks if a value is a NodeAccessor
+ */
+export function isNodeAccessor(value: unknown): value is NodeAccessor<unknown> {
+  return (
+    typeof value === 'function' &&
+    value &&
+    (value as any)[NODE_ACCESSOR_SYMBOL] === true
+  );
+}
 
 // ============================================
 // PERFORMANCE HEURISTICS
@@ -87,6 +175,39 @@ function createEqualityFn(useShallowComparison: boolean) {
 // SIGNAL CREATION
 // ============================================
 
+/**
+ * Unwraps a signal tree by reading from individual signals
+ */
+function unwrapFromSignals(target: any): any {
+  if (isSignal(target)) {
+    return target();
+  }
+
+  if (isNodeAccessor(target)) {
+    const result: any = {};
+    // Read individual properties from the target as an object with attached properties
+    const targetRecord = target as unknown as Record<string, unknown>;
+    for (const key in targetRecord) {
+      if (Object.prototype.hasOwnProperty.call(targetRecord, key)) {
+        const prop = targetRecord[key];
+        result[key] = unwrapFromSignals(prop);
+      }
+    }
+    return result;
+  }
+
+  if (typeof target === 'object' && target !== null) {
+    const result: any = {};
+    for (const key in target) {
+      if (Object.prototype.hasOwnProperty.call(target, key)) {
+        result[key] = unwrapFromSignals(target[key]);
+      }
+    }
+    return result;
+  }
+
+  return target;
+}
 function createSignalStore<T>(
   obj: T,
   equalityFn: (a: unknown, b: unknown) => boolean
@@ -135,66 +256,32 @@ function createSignalStore<T>(
             equal: equalityFn,
           });
         } else {
+          // Nested object - create recursive structure
           const branch = createSignalStore(value, equalityFn);
 
-          if (!('set' in branch)) {
-            (branch as any)['set'] = function (partial: Partial<any>) {
-              for (const k in partial) {
-                if (!Object.prototype.hasOwnProperty.call(partial, k)) continue;
-                const v = (partial as any)[k];
-                const node = (branch as any)[k];
-                if (
-                  typeof node === 'object' &&
-                  node !== null &&
-                  !Array.isArray(node) &&
-                  !isSignal(node)
-                ) {
-                  if (typeof node['set'] === 'function') {
-                    node['set'](v);
-                  }
-                } else if (isSignal(node)) {
-                  (node as WritableSignal<unknown>).set(v);
-                }
+          // Create a NodeAccessor for this nested object
+          const branchRootSignal = signal(value, { equal: equalityFn });
+          const callableBranch = makeNodeAccessor(
+            branchRootSignal,
+            branchRootSignal
+          );
+
+          // Copy all the nested signal properties onto the callable branch
+          for (const branchKey in branch) {
+            if (Object.prototype.hasOwnProperty.call(branch, branchKey)) {
+              try {
+                Object.defineProperty(callableBranch, branchKey, {
+                  value: (branch as Record<string, unknown>)[branchKey],
+                  enumerable: true,
+                  configurable: true,
+                });
+              } catch {
+                // Skip if property can't be defined
               }
-            };
+            }
           }
 
-          if (!('update' in branch)) {
-            (branch as any)['update'] = function (
-              updater: (current: any) => Partial<any>
-            ) {
-              const current = {} as any;
-              for (const k in branch) {
-                if (!Object.prototype.hasOwnProperty.call(branch, k)) continue;
-                const node = (branch as any)[k];
-                if (isSignal(node)) {
-                  current[k] = (node as Signal<unknown>)();
-                }
-              }
-              const partial = updater(current);
-              if (typeof (branch as any)['set'] === 'function') {
-                (branch as any)['set'](partial);
-              }
-            };
-          }
-
-          // Make nested branch callable for backward compatibility:
-          // many consumers expect `tree.$.branch()` to return the plain value.
-          // Create a callable wrapper that returns the unwrapped branch while
-          // preserving signal properties and helper methods (set/update).
-          let resultBranch: unknown = branch;
-          try {
-            const callable = (() =>
-              sharedUnwrap(branch as DeepSignalify<any>)) as any;
-            // copy properties (signals, set/update) onto the callable
-            Object.assign(callable, branch as Record<string, unknown>);
-            resultBranch = callable;
-          } catch {
-            // Fall back to original branch if wrapping fails
-            resultBranch = branch;
-          }
-
-          (store as Record<string, unknown>)[key] = resultBranch;
+          (store as Record<string, unknown>)[key] = callableBranch;
         }
       } catch (error) {
         console.warn(
@@ -243,12 +330,12 @@ function enhanceTree<T>(
 ): SignalTree<T> {
   const isLazy = config.useLazySignals ?? shouldUseLazy(tree.state, config);
 
-  // unwrap returns plain T (runtime still strips helper methods)
-  tree.unwrap = (): T =>
+  // For NodeAccessor compatibility, use bracket notation for methods
+  (tree as any)['unwrap'] = (): T =>
     sharedUnwrap(tree.state as DeepSignalify<T>) as unknown as T;
 
   // update passes T to the updater
-  tree.update = (updater: (current: T) => Partial<T>) => {
+  (tree as any)['update'] = (updater: (current: T) => Partial<T>) => {
     const transactionLog: Array<{
       path: string;
       oldValue: unknown;
@@ -256,7 +343,7 @@ function enhanceTree<T>(
     }> = [];
 
     try {
-      const currentValue = tree.unwrap();
+      const currentValue = (tree as any)['unwrap']();
       const partialObj = updater(currentValue);
 
       if (!partialObj || typeof partialObj !== 'object') {
@@ -488,18 +575,21 @@ function enhanceTree<T>(
 function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
   tree.batchUpdate = (updater: (current: T) => Partial<T>) => {
     console.warn(SIGNAL_TREE_MESSAGES.BATCH_NOT_ENABLED);
-    tree.update(updater);
+    tree((current: T) => {
+      const partial = updater(current);
+      return { ...current, ...partial } as T;
+    });
   };
 
   tree.memoize = <R>(fn: (tree: T) => R, cacheKey?: string): Signal<R> => {
     console.warn(SIGNAL_TREE_MESSAGES.MEMOIZE_NOT_ENABLED);
     void cacheKey;
-    return computed(() => fn(tree.unwrap()));
+    return computed(() => fn(tree()));
   };
 
   tree.effect = (fn: (tree: T) => void) => {
     try {
-      effect(() => fn(tree.unwrap()));
+      effect(() => fn(tree()));
     } catch (error) {
       if (config.debugMode) {
         console.warn(SIGNAL_TREE_MESSAGES.EFFECT_NO_CONTEXT, error);
@@ -514,7 +604,7 @@ function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
 
       const effectRef = effect(() => {
         if (!isDestroyed) {
-          fn(tree.unwrap());
+          fn(tree());
         }
       });
 
@@ -529,7 +619,7 @@ function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
       if (config.debugMode) {
         console.warn(SIGNAL_TREE_MESSAGES.SUBSCRIBE_NO_CONTEXT, error);
       }
-      fn(tree.unwrap());
+      fn(tree());
       return () => {
         // No-op
       };
@@ -641,21 +731,26 @@ function create<T>(obj: T, config: TreeConfig = {}): SignalTree<T> {
   const estimatedSize = estimateObjectSize(obj);
   const equalityFn = createEqualityFn(config.useShallowComparison ?? false);
 
-  // ARRAY ROOT MODE: always expose arrays as a single WritableSignal<T[]>
-  // This ensures callers can call `tree.state()` and treats the root as one
-  // reactive value instead of an array of per-index signals.
+  // ARRAY ROOT MODE: arrays are treated as primitive signals
   if (Array.isArray(obj)) {
     const signalState = signal(obj as unknown as T, {
       equal: equalityFn,
-    }) as unknown as DeepSignalify<T>;
+    }) as DeepSignalify<T>;
 
-    const resultTree = {
-      state: signalState,
-      $: signalState,
-    } as SignalTree<T>;
+    const tree = makeNodeAccessor(
+      signalState as Signal<T>,
+      signalState as WritableSignal<T>
+    ) as SignalTree<T>;
 
-    enhanceTree(resultTree, config);
-    return resultTree;
+    // Add state and $ properties that reference the signal itself
+    Object.defineProperty(tree, 'state', {
+      value: signalState,
+      enumerable: false,
+    });
+    Object.defineProperty(tree, '$', { value: signalState, enumerable: false });
+
+    enhanceTree(tree, config);
+    return tree;
   }
 
   const useLazy = shouldUseLazy(obj, config, estimatedSize);
@@ -678,24 +773,70 @@ function create<T>(obj: T, config: TreeConfig = {}): SignalTree<T> {
         equalityFn
       ) as DeepSignalify<T>;
     } else {
-      signalState = createSignalStore(obj, equalityFn);
+      signalState = createSignalStore(obj, equalityFn) as DeepSignalify<T>;
     }
   } catch (error) {
     if (useLazy) {
       console.warn(SIGNAL_TREE_MESSAGES.LAZY_FALLBACK, error);
-      signalState = createSignalStore(obj, equalityFn);
+      signalState = createSignalStore(obj, equalityFn) as DeepSignalify<T>;
     } else {
       throw error;
     }
   }
 
-  const resultTree = {
-    state: signalState,
-    $: signalState,
+  // Create callable tree function for the root
+  const tree = function (arg?: unknown): T | void {
+    if (arguments.length === 0) {
+      return unwrapFromSignals(signalState);
+    }
+    if (typeof arg === 'function') {
+      const updater = arg as (current: T) => T;
+      const currentValue = unwrapFromSignals(signalState);
+      const newValue = updater(currentValue);
+      // Use recursive update to preserve signals
+      recursiveUpdate(tree, newValue);
+    } else {
+      // Direct set - use recursive update
+      recursiveUpdate(tree, arg);
+    }
   } as SignalTree<T>;
 
-  enhanceTree(resultTree, config);
-  return resultTree;
+  // Mark as NodeAccessor
+  Object.defineProperty(tree, NODE_ACCESSOR_SYMBOL, {
+    value: true,
+    enumerable: false,
+  });
+
+  // Add state and $ properties first (these are safe)
+  Object.defineProperty(tree, 'state', {
+    value: signalState,
+    enumerable: false,
+  });
+  Object.defineProperty(tree, '$', { value: signalState, enumerable: false });
+
+  // Enhance tree with methods
+  enhanceTree(tree, config);
+
+  // Attach signal state properties to the tree AFTER enhancement
+  // This prevents conflicts with built-in methods
+  for (const key in signalState) {
+    if (Object.prototype.hasOwnProperty.call(signalState, key)) {
+      // Skip if the property already exists (from enhancement)
+      if (!(key in tree)) {
+        try {
+          Object.defineProperty(tree, key, {
+            value: (signalState as Record<string, unknown>)[key],
+            enumerable: true,
+            configurable: true,
+          });
+        } catch {
+          // Skip if property can't be defined
+        }
+      }
+    }
+  }
+
+  return tree;
 }
 
 // ============================================

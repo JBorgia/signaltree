@@ -108,7 +108,7 @@ class TimeTravelManager<T> implements TimeTravelInterface<T> {
     };
 
     // Add initial state to history
-    this.addEntry('INIT', this.tree.unwrap());
+    this.addEntry('INIT', this.tree());
   }
 
   /**
@@ -168,7 +168,7 @@ class TimeTravelManager<T> implements TimeTravelInterface<T> {
   }
 
   resetHistory(): void {
-    const currentState = this.tree.unwrap();
+    const currentState = this.tree();
     this.history = [];
     this.currentIndex = -1;
     this.addEntry('RESET', currentState);
@@ -301,9 +301,9 @@ export function withTimeTravel<T>(
         return originalUpdate(updater);
       }
 
-      const beforeState = tree.unwrap();
+      const beforeState = tree();
       originalUpdate(updater);
-      const afterState = tree.unwrap();
+      const afterState = tree();
 
       // Only add to history if state actually changed
       const statesEqual = deepEqual(beforeState, afterState);

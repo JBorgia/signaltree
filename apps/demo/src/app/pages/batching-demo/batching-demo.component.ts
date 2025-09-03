@@ -621,7 +621,7 @@ export class BatchingDemoComponent {
       status: 'completed',
     }));
 
-    this.store.$.completedOperations.update((ops) => [...ops, ...operations]);
+    this.store.$.completedOperations((ops) => [...ops, ...operations]);
   }
 
   addCreatePostOperation() {
@@ -727,7 +727,7 @@ export class BatchingDemoComponent {
       status: 'completed',
     }));
 
-    this.store.$.completedOperations.update((ops) => [...ops, ...operations]);
+    this.store.$.completedOperations((ops) => [...ops, ...operations]);
   }
 
   async processBatch() {
@@ -753,7 +753,7 @@ export class BatchingDemoComponent {
       this.store.$.batchResults.update((results) => [...results, result]);
 
       // Move operations to completed
-      this.store.$.completedOperations.update((completed) => [
+      this.store.$.completedOperations((completed) => [
         ...completed,
         ...result.operations,
       ]);

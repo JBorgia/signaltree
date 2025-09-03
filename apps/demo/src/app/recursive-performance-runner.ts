@@ -126,7 +126,7 @@ export class RecursivePerformanceRunner {
         perfectInference: false,
         zeroCost: false,
       },
-    }).unwrap();
+    })();
   }
 
   /**
@@ -321,14 +321,14 @@ export class RecursivePerformanceRunner {
 
     // Time travel operation cost
     const operationStart = performance.now();
-    const snapshot = timeTree.unwrap();
+    const snapshot = timeTree();
     timeTree.$.history.set([...timeTree.$.history(), snapshot]);
     const operationTime = performance.now() - operationStart;
 
     // Memory overhead per snapshot
     const memoryBefore = this.getMemoryUsage();
     for (let i = 0; i < 100; i++) {
-      const snap = timeTree.unwrap();
+      const snap = timeTree();
       timeTree.$.history.set([...timeTree.$.history(), snap]);
     }
     const memoryAfter = this.getMemoryUsage();
