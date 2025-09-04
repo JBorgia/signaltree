@@ -1,12 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { signalTree } from '@signaltree/core';
+
 import {
-  withBatching,
   enableBatching,
-  withHighPerformanceBatching,
   flushBatchedUpdates,
-  hasPendingUpdates,
   getBatchQueueSize,
+  hasPendingUpdates,
+  withBatching,
+  withHighPerformanceBatching,
 } from './batching';
 
 describe('Batching', () => {
@@ -109,13 +110,13 @@ describe('Batching', () => {
     );
 
     // First 2 updates should be batched
-    tree.update((state) => ({ count: state.count + 1 }));
-    tree.update((state) => ({ count: state.count + 1 }));
+    tree((state) => ({ count: state.count + 1 }));
+    tree((state) => ({ count: state.count + 1 }));
 
     expect(tree.state.count()).toBe(0); // Still batched
 
     // Third update should trigger immediate execution due to maxBatchSize
-    tree.update((state) => ({ count: state.count + 1 }));
+    tree((state) => ({ count: state.count + 1 }));
 
     // Wait for any batched updates
     await new Promise<void>((resolve) => queueMicrotask(resolve));

@@ -1,4 +1,5 @@
-import { parsePath } from '@signaltree/core';
+import { isNodeAccessor, parsePath } from '@signaltree/core';
+
 import type { SignalTree } from '@signaltree/core';
 
 /**
@@ -284,21 +285,64 @@ export function withBatching<T>(
       return tree as BatchingSignalTree<T>;
     }
 
-    // Store the original update method
-    const originalUpdate = tree.update.bind(tree);
+    // Store the original callable tree function
+    const originalTreeCall = tree.bind(tree);
 
-    // Override update method with batching
-    tree.update = (updater: (current: T) => Partial<T>) => {
-      // Always use batching for regular updates
-      batchUpdates(() => originalUpdate(updater));
-    };
+    // Create enhanced tree function that batches update operations
+    const enhancedTree = function (
+      this: SignalTree<T>,
+      ...args: unknown[]
+    ): T | void {
+      if (args.length === 0) {
+        // Get operation - call original directly
+        return originalTreeCall();
+      } else {
+        // Set or update operation - batch it
+        batchUpdates(() => {
+          if (args.length === 1) {
+            const arg = args[0];
+            if (typeof arg === 'function') {
+              originalTreeCall(arg as (current: T) => T);
+            } else {
+              originalTreeCall(arg as T);
+            }
+          }
+        });
+      }
+    } as SignalTree<T>;
 
-    // Add batchUpdate method to the tree
-    const enhancedTree = tree as BatchingSignalTree<T>;
+    // Copy all properties and methods from original tree
+    Object.setPrototypeOf(enhancedTree, Object.getPrototypeOf(tree));
+    Object.assign(enhancedTree, tree);
+
+    // Ensure state property is preserved
+    if ('state' in tree) {
+      Object.defineProperty(enhancedTree, 'state', {
+        value: tree.state,
+        enumerable: false,
+        configurable: true,
+      });
+    }
+
+    // Replace the stub batchUpdate method with actual batching logic
     enhancedTree.batchUpdate = (updater: (current: T) => Partial<T>) => {
-      batchUpdates(() => originalUpdate(updater));
-    };
+      batchUpdates(() => {
+        const current = originalTreeCall();
+        const updates = updater(current);
 
+        // Apply updates to individual properties
+        Object.entries(updates).forEach(([key, value]) => {
+          const property = (enhancedTree.state as Record<string, unknown>)[key];
+          if (property && 'set' in (property as object)) {
+            // It's a WritableSignal - use .set()
+            (property as { set: (value: unknown) => void }).set(value);
+          } else if (isNodeAccessor(property)) {
+            // It's a NodeAccessor - use callable syntax
+            (property as (value: unknown) => void)(value);
+          }
+        });
+      });
+    };
     return enhancedTree;
   };
 }
@@ -386,28 +430,18 @@ export function withHighPerformanceBatching<T>() {
  * ```
  */
 export function flushBatchedUpdates(): void {
-  console.log(
-    'flushBatchedUpdates called, queue length:',
-    updateQueue.length,
-    'isUpdating:',
-    isUpdating
-  );
   if (updateQueue.length > 0) {
     // Force flush regardless of isUpdating state
     const queue = updateQueue.slice();
     updateQueue = [];
     isUpdating = false; // Reset the updating flag
-    console.log('Flushing', queue.length, 'updates');
 
     // Sort by depth (deepest first) for optimal update propagation
     queue.sort((a, b) => (b.depth ?? 0) - (a.depth ?? 0));
 
     queue.forEach(({ fn }) => {
-      console.log('Executing queued function');
       fn();
     });
-  } else {
-    console.log('Flush skipped - queue empty');
   }
 }
 

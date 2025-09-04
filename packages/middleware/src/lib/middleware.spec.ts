@@ -33,7 +33,7 @@ describe('Middleware', () => {
       withMiddleware([testMiddleware])
     );
 
-    tree((state) => ({ count: state.count + 1 }));
+    tree((state: { count: number }) => ({ count: state.count + 1 }));
 
     expect(beforeSpy).toHaveBeenCalledWith(
       'UPDATE',
@@ -58,7 +58,7 @@ describe('Middleware', () => {
       withMiddleware([blockingMiddleware])
     );
 
-    tree((state) => ({ count: state.count + 1 }));
+    tree((state: { count: number }) => ({ count: state.count + 1 }));
 
     expect(tree().count).toBe(0); // Should not have changed
   });
@@ -72,7 +72,7 @@ describe('Middleware', () => {
     };
 
     tree.addTap(runtimeMiddleware);
-    tree((state) => ({ count: state.count + 1 }));
+    tree((state: { count: number }) => ({ count: state.count + 1 }));
 
     expect(runtimeMiddleware.before).toHaveBeenCalled();
   });
@@ -88,11 +88,11 @@ describe('Middleware', () => {
       withMiddleware([testMiddleware])
     );
 
-    tree((state) => ({ count: state.count + 1 }));
+    tree((state: { count: number }) => ({ count: state.count + 1 }));
     expect(middlewareSpy).toHaveBeenCalledTimes(1);
 
     tree.removeTap('removable');
-    tree((state) => ({ count: state.count + 1 }));
+    tree((state: { count: number }) => ({ count: state.count + 1 }));
 
     // Should still be called only once (not twice)
     expect(middlewareSpy).toHaveBeenCalledTimes(1);
@@ -107,7 +107,7 @@ describe('Middleware', () => {
     tree.addTap({ id: 'test', before: firstSpy });
     tree.addTap({ id: 'test', before: secondSpy }); // Should replace
 
-    tree((state) => ({ count: state.count + 1 }));
+    tree((state: { count: number }) => ({ count: state.count + 1 }));
 
     expect(firstSpy).not.toHaveBeenCalled();
     expect(secondSpy).toHaveBeenCalled();
@@ -125,7 +125,7 @@ describe('Middleware', () => {
         withMiddleware([createLoggingMiddleware('TestTree')])
       );
 
-      tree((state) => ({ count: state.count + 1 }));
+      tree((state: { count: number }) => ({ count: state.count + 1 }));
 
       expect(consoleSpy).toHaveBeenCalledWith('🏪 TestTree: UPDATE');
       expect(consoleLogSpy).toHaveBeenCalledWith('Previous state:', {
@@ -148,7 +148,7 @@ describe('Middleware', () => {
         withMiddleware([createPerformanceMiddleware()])
       );
 
-      tree((state) => ({ count: state.count + 1 }));
+      tree((state: { count: number }) => ({ count: state.count + 1 }));
 
       expect(consoleTimeSpy).toHaveBeenCalledWith('Tree update: UPDATE');
       expect(consoleTimeEndSpy).toHaveBeenCalledWith('Tree update: UPDATE');
@@ -168,7 +168,7 @@ describe('Middleware', () => {
       );
 
       // Valid update
-      tree((state) => ({ count: state.count + 1 }));
+      tree((state: { count: number }) => ({ count: state.count + 1 }));
       expect(consoleErrorSpy).not.toHaveBeenCalled();
 
       // Invalid update

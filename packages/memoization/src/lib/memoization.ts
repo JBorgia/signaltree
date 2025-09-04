@@ -1,4 +1,4 @@
-import { SignalTree } from '@signaltree/core';
+import { isNodeAccessor, SignalTree } from '@signaltree/core';
 
 /**
  * Extended SignalTree interface with memoization capabilities
@@ -12,7 +12,9 @@ interface MemoizedSignalTree<T> extends SignalTree<T> {
   clearMemoCache: (key?: string) => void;
   getCacheStats: () => {
     size: number;
+    hitRate: number;
     totalHits: number;
+    totalMisses: number;
     keys: string[];
   };
 }
@@ -209,23 +211,32 @@ export function withMemoization<T>(
       }
     };
 
-    // Store original update method
-    const originalUpdate = tree.update;
+    // Store original callable tree function
+    const originalTreeCall = tree.bind(tree);
 
     // Add memoized update method
-    // Add memoization methods to the tree
     (tree as MemoizedSignalTree<T>).memoizedUpdate = (
       updater: (current: T) => Partial<T>,
       cacheKey?: string
     ) => {
       const key = cacheKey || `update_${Date.now()}`;
-      const currentState = tree();
+      const currentState = originalTreeCall();
 
       // Check cache
       const cached = cache.get(key);
       if (cached && deepEqual(cached.deps, [currentState])) {
-        // Apply cached result
-        originalUpdate.call(tree, () => cached.value as Partial<T>);
+        // Apply cached result - use callable interface to set the partial update
+        const cachedUpdate = cached.value as Partial<T>;
+        Object.entries(cachedUpdate).forEach(([propKey, value]) => {
+          const property = (tree.state as Record<string, unknown>)[propKey];
+          if (property && 'set' in (property as object)) {
+            // It's a WritableSignal - use .set()
+            (property as { set: (value: unknown) => void }).set(value);
+          } else if (isNodeAccessor(property)) {
+            // It's a NodeAccessor - use callable syntax
+            (property as (value: unknown) => void)(value);
+          }
+        });
         return;
       }
 
@@ -240,8 +251,17 @@ export function withMemoization<T>(
         hitCount: 1,
       });
 
-      // Apply update
-      originalUpdate.call(tree, () => result);
+      // Apply update using callable interface
+      Object.entries(result).forEach(([propKey, value]) => {
+        const property = (tree.state as Record<string, unknown>)[propKey];
+        if (property && 'set' in (property as object)) {
+          // It's a WritableSignal - use .set()
+          (property as { set: (value: unknown) => void }).set(value);
+        } else if (isNodeAccessor(property)) {
+          // It's a NodeAccessor - use callable syntax
+          (property as (value: unknown) => void)(value);
+        }
+      });
 
       // Enforce cache limits after adding new entry
       enforceCacheLimit();
@@ -299,14 +319,6 @@ export function withMemoization<T>(
         }
       )._memoCleanupInterval = intervalId;
     }
-
-    // Override update to enforce cache limits
-    const enhancedUpdate = tree.update;
-    tree.update = (updater: (current: T) => Partial<T>) => {
-      const result = enhancedUpdate.call(tree, updater);
-      enforceCacheLimit();
-      return result;
-    };
 
     return tree as MemoizedSignalTree<T>;
   };

@@ -1,11 +1,6 @@
 import { signalTree } from '@signaltree/core';
-import {
-  withDevTools,
-  enableDevTools,
-  withFullDevTools,
-  withProductionDevTools,
-  ModuleMetadata,
-} from './devtools';
+
+import { enableDevTools, ModuleMetadata, withDevTools, withFullDevTools, withProductionDevTools } from './devtools';
 
 describe('Modular DevTools', () => {
   interface TestState {
@@ -234,9 +229,9 @@ describe('Modular DevTools', () => {
       expect(initialMetrics.totalUpdates).toBe(0);
 
       // Perform an update
-      tree.update((state) => ({
+      tree((state: TestState) => ({
         ...state,
-        count: (state as TestState).count + 1,
+        count: state.count + 1,
       }));
 
       // Should track the update
@@ -253,9 +248,9 @@ describe('Modular DevTools', () => {
         })
       );
 
-      tree.update((state) => ({
+      tree((state: TestState) => ({
         ...state,
-        count: (state as TestState).count + 1,
+        count: state.count + 1,
       }));
 
       // Should have logged a performance warning

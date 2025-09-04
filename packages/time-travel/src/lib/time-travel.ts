@@ -1,5 +1,6 @@
-import { type SignalTree } from '@signaltree/core';
-import { deepEqual, deepClone } from './utils';
+import { SignalTree } from '@signaltree/core';
+
+import { deepClone, deepEqual } from './utils';
 
 /**
  * Entry in the time travel history
@@ -205,7 +206,7 @@ class TimeTravelManager<T> implements TimeTravelInterface<T> {
       this.restoreStateFn(state);
     } else {
       // Fallback if no restoration function provided
-      this.tree.update(() => state);
+      this.tree(state);
     }
   }
 }
@@ -274,8 +275,8 @@ export function withTimeTravel<T>(
   tree: SignalTree<T>
 ) => SignalTree<T> & { __timeTravel: TimeTravelInterface<T> } {
   return (tree: SignalTree<T>) => {
-    // Store original update method
-    const originalUpdate = tree.update.bind(tree);
+    // Store the original callable tree function
+    const originalTreeCall = tree.bind(tree);
 
     // Flag to prevent time travel during restoration
     let isRestoring = false;
@@ -287,36 +288,78 @@ export function withTimeTravel<T>(
       (state: T) => {
         isRestoring = true;
         try {
-          originalUpdate(() => state);
+          originalTreeCall(state);
         } finally {
           isRestoring = false;
         }
       }
     );
 
-    // Add middleware to track state changes
-    tree.update = (updater: (current: T) => Partial<T>) => {
-      if (isRestoring) {
-        // During restoration, just call original update
-        return originalUpdate(updater);
+    // Create enhanced tree function that includes time travel tracking
+    const enhancedTree = function (
+      this: SignalTree<T>,
+      ...args: unknown[]
+    ): T | void {
+      if (args.length === 0) {
+        // Get operation - call original directly
+        return originalTreeCall();
+      } else {
+        // Set or update operation - track for time travel
+        if (isRestoring) {
+          // During restoration, just call original update
+          if (args.length === 1) {
+            const arg = args[0];
+            if (typeof arg === 'function') {
+              return originalTreeCall(arg as (current: T) => T);
+            } else {
+              return originalTreeCall(arg as T);
+            }
+          }
+          return;
+        }
+
+        const beforeState = originalTreeCall();
+
+        // Execute the actual update using the original callable interface
+        let result: void;
+        if (args.length === 1) {
+          const arg = args[0];
+          if (typeof arg === 'function') {
+            result = originalTreeCall(arg as (current: T) => T);
+          } else {
+            result = originalTreeCall(arg as T);
+          }
+        }
+
+        const afterState = originalTreeCall();
+
+        // Only add to history if state actually changed
+        const statesEqual = deepEqual(beforeState, afterState);
+
+        if (!statesEqual) {
+          timeTravelManager.addEntry('update', afterState);
+        }
+
+        return result;
       }
+    } as SignalTree<T>;
 
-      const beforeState = tree();
-      originalUpdate(updater);
-      const afterState = tree();
+    // Copy all properties and methods from original tree
+    Object.setPrototypeOf(enhancedTree, Object.getPrototypeOf(tree));
+    Object.assign(enhancedTree, tree);
 
-      // Only add to history if state actually changed
-      const statesEqual = deepEqual(beforeState, afterState);
+    // Ensure state property is preserved
+    if ('state' in tree) {
+      Object.defineProperty(enhancedTree, 'state', {
+        value: tree.state,
+        enumerable: false,
+        configurable: true,
+      });
+    }
 
-      if (!statesEqual) {
-        timeTravelManager.addEntry('update', afterState);
-      }
-    };
-
-    return {
-      ...tree,
+    return Object.assign(enhancedTree, {
       __timeTravel: timeTravelManager,
-    } as SignalTree<T> & { __timeTravel: TimeTravelInterface<T> };
+    }) as SignalTree<T> & { __timeTravel: TimeTravelInterface<T> };
   };
 }
 

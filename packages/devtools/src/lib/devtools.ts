@@ -1,4 +1,4 @@
-import { computed, Signal, signal } from '@angular/core';
+import { Signal, signal } from '@angular/core';
 import { SignalTree } from '@signaltree/core';
 
 /**
@@ -379,33 +379,68 @@ export function withDevTools<T>(
       browserDevTools = { send: connection.send };
     }
 
-    // Wrap tree methods to track activity
-    const originalUpdate = tree.update;
-    tree.update = (updater) => {
-      const startTime = performance.now();
+    // Store the original callable tree function
+    const originalTreeCall = tree.bind(tree);
 
-      originalUpdate.call(tree, updater);
+    // Create enhanced tree function that includes devtools tracking
+    const enhancedTree = function (
+      this: SignalTree<T>,
+      ...args: unknown[]
+    ): T | void {
+      if (args.length === 0) {
+        // Get operation - call original directly (no tracking needed for reads)
+        return originalTreeCall();
+      } else {
+        // Set or update operation - track with devtools
+        const startTime = performance.now();
 
-      const duration = performance.now() - startTime;
-      const newState = tree();
+        // Execute the actual update using the original callable interface
+        let result: void;
+        if (args.length === 1) {
+          const arg = args[0];
+          if (typeof arg === 'function') {
+            result = originalTreeCall(arg as (current: T) => T);
+          } else {
+            result = originalTreeCall(arg as T);
+          }
+        }
 
-      // Track performance
-      metrics.trackModuleUpdate('core', duration);
+        const duration = performance.now() - startTime;
+        const newState = originalTreeCall();
 
-      if (duration > performanceThreshold) {
-        logger.logPerformanceWarning(
-          'core',
-          'update',
-          duration,
-          performanceThreshold
-        );
+        // Track performance
+        metrics.trackModuleUpdate('core', duration);
+
+        if (duration > performanceThreshold) {
+          logger.logPerformanceWarning(
+            'core',
+            'update',
+            duration,
+            performanceThreshold
+          );
+        }
+
+        // Send to browser DevTools
+        if (browserDevTools) {
+          browserDevTools.send('UPDATE', newState);
+        }
+
+        return result;
       }
+    } as SignalTree<T>;
 
-      // Send to browser DevTools
-      if (browserDevTools) {
-        browserDevTools.send('UPDATE', newState);
-      }
-    };
+    // Copy all properties and methods from original tree
+    Object.setPrototypeOf(enhancedTree, Object.getPrototypeOf(tree));
+    Object.assign(enhancedTree, tree);
+
+    // Ensure state property is preserved
+    if ('state' in tree) {
+      Object.defineProperty(enhancedTree, 'state', {
+        value: tree.state,
+        enumerable: false,
+        configurable: true,
+      });
+    }
 
     const devToolsInterface: ModularDevToolsInterface<T> = {
       activityTracker,
@@ -443,7 +478,7 @@ export function withDevTools<T>(
 
       connectDevTools: (name: string) => {
         if (browserDevTools) {
-          browserDevTools.send('@@INIT', tree());
+          browserDevTools.send('@@INIT', originalTreeCall());
           console.log(`🔗 Connected to Redux DevTools as "${name}"`);
         }
       },
@@ -456,7 +491,7 @@ export function withDevTools<T>(
       }),
     };
 
-    return Object.assign(tree, { __devTools: devToolsInterface });
+    return Object.assign(enhancedTree, { __devTools: devToolsInterface });
   };
 }
 

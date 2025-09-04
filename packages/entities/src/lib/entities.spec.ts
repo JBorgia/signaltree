@@ -1,9 +1,6 @@
 import { signalTree } from '@signaltree/core';
-import {
-  withEntities,
-  enableEntities,
-  withHighPerformanceEntities,
-} from './entities';
+
+import { enableEntities, withEntities, withHighPerformanceEntities } from './entities';
 
 // Simple serializable interfaces that are compatible with advanced typing
 interface User {
@@ -166,7 +163,7 @@ describe('Entities', () => {
     const enhancedTree = withEntities()(tree);
     const userManager = enhancedTree.asCrud<User>('users');
 
-    userManager('user-1', { name: 'John Smith', active: false });
+    userManager.update('user-1', { name: 'John Smith', active: false });
 
     const allUsers = userManager.selectAll();
     const updatedUser = allUsers()[0];

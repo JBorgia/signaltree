@@ -1,4 +1,4 @@
-import { SignalTree, Middleware } from '@signaltree/core';
+import { Middleware, SignalTree } from '@signaltree/core';
 
 // Global middleware storage - using unknown for type safety
 const middlewareMap = new WeakMap<object, unknown[]>();
@@ -18,47 +18,91 @@ export function withMiddleware<T>(
     // Initialize middleware array for this tree
     middlewareMap.set(tree, [...middlewares]);
 
-    // Store original update method
-    const originalUpdate = tree.update;
+    // Store the original callable tree function
+    const originalTreeCall = tree.bind(tree);
 
-    // Override update method to include middleware execution
-    tree.update = (updater: (current: T) => Partial<T>) => {
-      const action = 'UPDATE';
-      const currentState = tree();
-      const updateResult = updater(currentState);
-      const treeMiddlewares =
-        (middlewareMap.get(tree) as Middleware<T>[]) || [];
+    // Create enhanced tree function that includes middleware execution
+    const enhancedTree = function (
+      this: SignalTree<T>,
+      ...args: unknown[]
+    ): T | void {
+      if (args.length === 0) {
+        // Get operation - call original directly (no middleware needed for reads)
+        return originalTreeCall();
+      } else {
+        // Set or update operation - apply middleware
+        const action = 'UPDATE';
+        const currentState = originalTreeCall();
+        const treeMiddlewares =
+          (middlewareMap.get(tree) as Middleware<T>[]) || [];
 
-      // Execute 'before' middleware hooks
-      for (const middleware of treeMiddlewares) {
-        if (
-          middleware.before &&
-          !middleware.before(action, updateResult, currentState)
-        ) {
-          // Middleware blocked the update
-          return;
+        let updateResult: Partial<T>;
+        if (args.length === 1) {
+          const arg = args[0];
+          if (typeof arg === 'function') {
+            // Function updater
+            updateResult = (arg as (current: T) => T)(
+              currentState
+            ) as Partial<T>;
+          } else {
+            // Direct value
+            updateResult = arg as Partial<T>;
+          }
+        } else {
+          return; // Invalid call
+        }
+
+        // Execute 'before' middleware hooks
+        for (const middleware of treeMiddlewares) {
+          if (
+            middleware.before &&
+            !middleware.before(action, updateResult, currentState)
+          ) {
+            // Middleware blocked the update
+            return;
+          }
+        }
+
+        // Capture state before update for 'after' hooks
+        const previousState = currentState;
+
+        // Execute the actual update using the original callable interface
+        if (args.length === 1) {
+          const arg = args[0];
+          if (typeof arg === 'function') {
+            originalTreeCall(arg as (current: T) => T);
+          } else {
+            originalTreeCall(arg as T);
+          }
+        }
+
+        // Get new state after update
+        const newState = originalTreeCall();
+
+        // Execute 'after' middleware hooks
+        for (const middleware of treeMiddlewares) {
+          if (middleware.after) {
+            middleware.after(action, updateResult, previousState, newState);
+          }
         }
       }
+    } as SignalTree<T>;
 
-      // Capture state before update for 'after' hooks
-      const previousState = currentState;
+    // Copy all properties and methods from original tree
+    Object.setPrototypeOf(enhancedTree, Object.getPrototypeOf(tree));
+    Object.assign(enhancedTree, tree);
 
-      // Execute the actual update
-      originalUpdate.call(tree, updater);
-
-      // Get new state after update
-      const newState = tree();
-
-      // Execute 'after' middleware hooks
-      for (const middleware of treeMiddlewares) {
-        if (middleware.after) {
-          middleware.after(action, updateResult, previousState, newState);
-        }
-      }
-    };
+    // Ensure state property is preserved
+    if ('state' in tree) {
+      Object.defineProperty(enhancedTree, 'state', {
+        value: tree.state,
+        enumerable: false,
+        configurable: true,
+      });
+    }
 
     // Override addTap to work with the middleware system
-    tree.addTap = (middleware: Middleware<T>) => {
+    enhancedTree.addTap = (middleware: Middleware<T>) => {
       const treeMiddlewares =
         (middlewareMap.get(tree) as Middleware<T>[]) || [];
 
@@ -77,7 +121,7 @@ export function withMiddleware<T>(
     };
 
     // Override removeTap method
-    tree.removeTap = (id: string) => {
+    enhancedTree.removeTap = (id: string) => {
       const treeMiddlewares =
         (middlewareMap.get(tree) as Middleware<T>[]) || [];
       const filtered = treeMiddlewares.filter((m) => m.id !== id);
@@ -88,49 +132,53 @@ export function withMiddleware<T>(
     const originalBatchUpdate = tree.batchUpdate;
 
     // Override batchUpdate to include middleware
-    tree.batchUpdate = (updater: (current: T) => Partial<T>) => {
-      const action = 'BATCH_UPDATE';
-      const currentState = tree();
-      const updateResult = updater(currentState);
-      const treeMiddlewares =
-        (middlewareMap.get(tree) as Middleware<T>[]) || [];
+    if (originalBatchUpdate) {
+      enhancedTree.batchUpdate = (updater: (current: T) => Partial<T>) => {
+        const action = 'BATCH_UPDATE';
+        const currentState = originalTreeCall();
+        const updateResult = updater(currentState);
+        const treeMiddlewares =
+          (middlewareMap.get(tree) as Middleware<T>[]) || [];
 
-      // Execute 'before' middleware hooks
-      for (const middleware of treeMiddlewares) {
-        if (
-          middleware.before &&
-          !middleware.before(action, updateResult, currentState)
-        ) {
-          // Middleware blocked the update
-          return;
+        // Execute 'before' middleware hooks
+        for (const middleware of treeMiddlewares) {
+          if (
+            middleware.before &&
+            !middleware.before(action, updateResult, currentState)
+          ) {
+            // Middleware blocked the update
+            return;
+          }
         }
-      }
 
-      // Capture state before update for 'after' hooks
-      const previousState = currentState;
+        // Capture state before update for 'after' hooks
+        const previousState = currentState;
 
-      // Execute the actual batch update
-      originalBatchUpdate.call(tree, updater);
+        // Execute the actual batch update
+        originalBatchUpdate.call(tree, updater);
 
-      // Get new state after update
-      const newState = tree();
+        // Get new state after update
+        const newState = originalTreeCall();
 
-      // Execute 'after' middleware hooks
-      for (const middleware of treeMiddlewares) {
-        if (middleware.after) {
-          middleware.after(action, updateResult, previousState, newState);
+        // Execute 'after' middleware hooks
+        for (const middleware of treeMiddlewares) {
+          if (middleware.after) {
+            middleware.after(action, updateResult, previousState, newState);
+          }
         }
-      }
-    };
+      };
+    }
 
     // Override destroy to cleanup middleware
     const originalDestroy = tree.destroy;
-    tree.destroy = () => {
+    enhancedTree.destroy = () => {
       middlewareMap.delete(tree);
-      originalDestroy.call(tree);
+      if (originalDestroy) {
+        originalDestroy.call(tree);
+      }
     };
 
-    return tree;
+    return enhancedTree;
   };
 }
 

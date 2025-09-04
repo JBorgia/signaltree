@@ -1,30 +1,31 @@
+import {
+  computed,
+  Directive,
+  effect,
+  ElementRef,
+  EventEmitter,
+  forwardRef,
+  HostListener,
+  inject,
+  Input,
+  isSignal,
+  OnInit,
+  Output,
+  Renderer2,
+  Signal,
+  signal,
+  WritableSignal,
+} from '@angular/core';
+import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { parsePath, signalTree } from '@signaltree/core';
+import { Observable } from 'rxjs';
+
 /**
  * @fileoverview Angular Forms Integration for SignalTree
  *
  * Provides comprehensive Angular form integration including FormTree,
  * directives, validators, enhanced array operations, and RxJS bridge.
  */
-
-import {
-  Signal,
-  WritableSignal,
-  isSignal,
-  signal,
-  computed,
-  effect,
-  inject,
-  Directive,
-  Input,
-  Output,
-  EventEmitter,
-  forwardRef,
-  ElementRef,
-  Renderer2,
-  HostListener,
-  OnInit,
-} from '@angular/core';
-import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
-import { Observable } from 'rxjs';
 
 // Re-export core types needed for forms
 import type {
@@ -33,8 +34,6 @@ import type {
   DeepSignalify,
   Middleware,
 } from '@signaltree/core';
-import { signalTree, parsePath } from '@signaltree/core';
-
 // ============================================
 // FORM TREE TYPES
 // ============================================
@@ -353,7 +352,7 @@ export function createFormTree<T extends Record<string, unknown>>(
     },
 
     setValues: (values: Partial<T>) => {
-      valuesTree.update((v) => ({ ...v, ...values }));
+      valuesTree((v: T) => ({ ...v, ...values }));
       markDirty();
       void validate();
     },
