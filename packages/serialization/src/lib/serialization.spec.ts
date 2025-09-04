@@ -1,11 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { signalTree } from '@signaltree/core';
+
 import {
-  withSerialization,
-  withPersistence,
-  createStorageAdapter,
+  applySerialization,
   createIndexedDBAdapter,
+  createStorageAdapter,
   StorageAdapter,
+  withPersistence,
+  withSerialization,
 } from './serialization';
 
 describe('Serialization', () => {
@@ -15,7 +17,7 @@ describe('Serialization', () => {
 
   describe('withSerialization', () => {
     it('should enhance tree with serialization capabilities', () => {
-      const tree = signalTree({ count: 0 }).pipe(withSerialization());
+      const tree = applySerialization(signalTree({ count: 0 }));
 
       expect(tree.serialize).toBeDefined();
       expect(tree.deserialize).toBeDefined();
@@ -33,7 +35,22 @@ describe('Serialization', () => {
         enabled: true,
       };
 
-      const tree = signalTree(initialState).pipe(withSerialization());
+      const tree = applySerialization(signalTree(initialState));
+
+      // Debug the structure
+      console.log('DEBUG: tree.$.user type:', typeof tree.$.user);
+      console.log('DEBUG: tree.$.user():', tree.$.user());
+      console.log('DEBUG: tree.$.user.name type:', typeof tree.$.user.name);
+      console.log('DEBUG: tree.$.user.name():', tree.$.user.name());
+      console.log(
+        'DEBUG: tree.$.user.name.set type:',
+        typeof tree.$.user.name?.set
+      );
+      console.log('DEBUG: Has set property:', 'set' in tree.$.user.name);
+      console.log(
+        'DEBUG: Properties:',
+        Object.getOwnPropertyNames(tree.$.user.name)
+      );
 
       // Update state
       tree.$.count.set(100);
@@ -41,17 +58,40 @@ describe('Serialization', () => {
 
       // Serialize
       const serialized = tree.serialize();
+      console.log('DEBUG: Serialized data:', serialized);
+
       expect(typeof serialized).toBe('string');
       expect(JSON.parse(serialized)).toBeDefined();
 
       // Create new tree and deserialize
-      const tree2 = signalTree({
-        count: 0,
-        user: { name: '', age: 0 },
-        items: [],
-        enabled: false,
-      }).pipe(withSerialization());
+      const tree2 = applySerialization(
+        signalTree({
+          count: 0,
+          user: { name: '', age: 0 },
+          items: [],
+          enabled: false,
+        })
+      );
+
+      console.log(
+        'DEBUG: Before deserialize - tree2.$.count():',
+        tree2.$.count()
+      );
+      console.log(
+        'DEBUG: Before deserialize - tree2.$.user.name():',
+        tree2.$.user.name()
+      );
+
       tree2.deserialize(serialized);
+
+      console.log(
+        'DEBUG: After deserialize - tree2.$.count():',
+        tree2.$.count()
+      );
+      console.log(
+        'DEBUG: After deserialize - tree2.$.user.name():',
+        tree2.$.user.name()
+      );
 
       // Verify state restored
       expect(tree2.$.count()).toBe(100);
@@ -75,16 +115,32 @@ describe('Serialization', () => {
         },
       };
 
-      const tree = signalTree(complexState).pipe(withSerialization());
+      const tree = applySerialization(signalTree(complexState));
+      // DEBUG: inspect runtime view before serializing
+      // eslint-disable-next-line no-console
+      console.debug(
+        '[test-debug] tree.state keys:',
+        Object.keys((tree as any).state)
+      );
+      // eslint-disable-next-line no-console
+      console.debug('[test-debug] tree():', tree());
       const serialized = tree.serialize();
+      // DEBUG: print serialized payload when running tests to diagnose Map/Set restore
+      // eslint-disable-next-line no-console
+      console.debug(
+        '[test-debug] serialized payload for special types:',
+        serialized
+      );
 
-      const tree2 = signalTree({
-        date: new Date('1900-01-01'),
-        regex: /.*/,
-        map: new Map(),
-        set: new Set(),
-        nested: { date: new Date('1900-01-01') },
-      }).pipe(withSerialization());
+      const tree2 = applySerialization(
+        signalTree({
+          date: new Date('1900-01-01'),
+          regex: /.*/,
+          map: new Map(),
+          set: new Set(),
+          nested: { date: new Date('1900-01-01') },
+        })
+      );
 
       tree2.deserialize(serialized);
 
@@ -113,17 +169,19 @@ describe('Serialization', () => {
         symbol: Symbol('test'),
       };
 
-      const tree = signalTree(specialState).pipe(withSerialization());
+      const tree = applySerialization(signalTree(specialState));
       const serialized = tree.serialize();
 
-      const tree2 = signalTree({
-        undef: null,
-        nan: 0,
-        infinity: 0,
-        negInfinity: 0,
-        bigInt: BigInt(0),
-        symbol: Symbol('other'),
-      }).pipe(withSerialization());
+      const tree2 = applySerialization(
+        signalTree({
+          undef: null,
+          nan: 0,
+          infinity: 0,
+          negInfinity: 0,
+          bigInt: BigInt(0),
+          symbol: Symbol('other'),
+        })
+      );
 
       tree2.deserialize(serialized);
 
@@ -136,7 +194,7 @@ describe('Serialization', () => {
     });
 
     it('should create snapshots with metadata', () => {
-      const tree = signalTree({ count: 42 }).pipe(withSerialization());
+      const tree = applySerialization(signalTree({ count: 42 }));
 
       const snapshot = tree.snapshot();
 
@@ -148,7 +206,7 @@ describe('Serialization', () => {
     });
 
     it('should restore from snapshots', () => {
-      const tree = signalTree({ count: 0, name: '' }).pipe(withSerialization());
+      const tree = applySerialization(signalTree({ count: 0, name: '' }));
 
       const snapshot = {
         data: { count: 100, name: 'test' },
@@ -175,11 +233,7 @@ describe('Serialization', () => {
         },
       };
 
-      const tree = signalTree(simpleState).pipe(
-        withSerialization({
-          handleCircular: true,
-        })
-      );
+      const tree = applySerialization(signalTree(simpleState));
 
       // Should not throw when serializing simple state
       expect(() => {
@@ -187,10 +241,9 @@ describe('Serialization', () => {
         expect(typeof serialized).toBe('string');
 
         // Test deserialization too
-        const tree2 = signalTree({
-          name: '',
-          child: { name: '', parentRef: null },
-        }).pipe(withSerialization({ handleCircular: true }));
+        const tree2 = applySerialization(
+          signalTree({ name: '', child: { name: '', parentRef: null } })
+        );
 
         tree2.deserialize(serialized);
         expect(tree2.$.name()).toBe('root');
@@ -202,7 +255,7 @@ describe('Serialization', () => {
       const tree = signalTree({
         date: new Date(),
         count: 42,
-      }).pipe(
+      }).with(
         withSerialization({
           preserveTypes: false,
           includeMetadata: false,
@@ -222,10 +275,9 @@ describe('Serialization', () => {
 
   describe('toJSON and fromJSON', () => {
     it('should convert to plain object and back', () => {
-      const tree = signalTree({
-        user: { name: 'John', age: 30 },
-        count: 42,
-      }).pipe(withSerialization());
+      const tree = applySerialization(
+        signalTree({ user: { name: 'John', age: 30 }, count: 42 })
+      );
 
       tree.$.count.set(100);
       const json = tree.toJSON();
@@ -235,10 +287,9 @@ describe('Serialization', () => {
         count: 100,
       });
 
-      const tree2 = signalTree({
-        user: { name: '', age: 0 },
-        count: 0,
-      }).pipe(withSerialization());
+      const tree2 = applySerialization(
+        signalTree({ user: { name: '', age: 0 }, count: 0 })
+      );
 
       tree2.fromJSON(json);
 
@@ -273,7 +324,7 @@ describe('Serialization', () => {
     });
 
     it('should add persistence methods to tree', () => {
-      const tree = signalTree({ count: 0 }).pipe(
+      const tree = signalTree({ count: 0 }).with(
         withPersistence({ key: 'test-state' })
       );
 
@@ -283,7 +334,7 @@ describe('Serialization', () => {
     });
 
     it('should save and load state', async () => {
-      const tree = signalTree({ count: 42, name: 'test' }).pipe(
+      const tree = signalTree({ count: 42, name: 'test' }).with(
         withPersistence({ key: 'app-state' })
       );
 
@@ -297,7 +348,7 @@ describe('Serialization', () => {
       );
 
       // Create new tree and load
-      const tree2 = signalTree({ count: 0, name: '' }).pipe(
+      const tree2 = signalTree({ count: 0, name: '' }).with(
         withPersistence({ key: 'app-state' })
       );
 
@@ -310,7 +361,7 @@ describe('Serialization', () => {
     it('should handle auto-save', async () => {
       jest.useFakeTimers();
 
-      const tree = signalTree({ count: 0 }).pipe(
+      const tree = signalTree({ count: 0 }).with(
         withPersistence({
           key: 'auto-save-test',
           autoSave: true,
@@ -343,7 +394,7 @@ describe('Serialization', () => {
         metadata: { timestamp: Date.now(), version: '1.0.0' },
       });
 
-      const tree = signalTree({ count: 0, name: '' }).pipe(
+      const tree = signalTree({ count: 0, name: '' }).with(
         withPersistence({
           key: 'auto-load-test',
           autoLoad: true,
@@ -358,7 +409,7 @@ describe('Serialization', () => {
     });
 
     it('should clear storage', async () => {
-      const tree = signalTree({ count: 42 }).pipe(
+      const tree = signalTree({ count: 42 }).with(
         withPersistence({ key: 'clear-test' })
       );
 
@@ -397,7 +448,7 @@ describe('Serialization', () => {
 
   describe('Error Handling', () => {
     it('should handle invalid JSON gracefully', () => {
-      const tree = signalTree({ count: 0 }).pipe(withSerialization());
+      const tree = applySerialization(signalTree({ count: 0 }));
 
       expect(() => {
         tree.deserialize('invalid json');
@@ -405,11 +456,9 @@ describe('Serialization', () => {
     });
 
     it('should handle missing properties during deserialization', () => {
-      const tree = signalTree({
-        count: 0,
-        user: { name: '', age: 0 },
-        extra: 'value',
-      }).pipe(withSerialization());
+      const tree = applySerialization(
+        signalTree({ count: 0, user: { name: '', age: 0 }, extra: 'value' })
+      );
 
       const partialData = JSON.stringify({
         data: { count: 42 }, // Missing user and extra
@@ -418,6 +467,7 @@ describe('Serialization', () => {
 
       // Should not throw
       expect(() => {
+        tree.deserialize(partialData);
         tree.deserialize(partialData);
       }).not.toThrow();
 
@@ -434,7 +484,7 @@ describe('Serialization', () => {
           .mockRejectedValue(new Error('Storage delete failed')),
       };
 
-      const tree = signalTree({ count: 0 }).pipe(
+      const tree = signalTree({ count: 0 }).with(
         withPersistence({
           key: 'test',
           storage: failingAdapter,

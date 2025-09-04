@@ -1,10 +1,10 @@
+import { signalTree } from '@signaltree/core';
+
 /**
  * TypeScript Compilation Performance Test
  * Measures the impact of SignalTree on TypeScript compilation times
  * Updated to work with constraint-free SignalTree
  */
-
-import { signalTree } from '@signaltree/core';
 
 // This file tests TypeScript's ability to infer complex SignalTree types
 // Run `npx tsc --noEmit` to measure compilation time impact
@@ -200,8 +200,10 @@ export const complexAppTree = signalTree({
     notifications: {
       items: [] as Array<{
         id: string;
-        message: string;
         type: 'info' | 'warning' | 'error';
+        title: string;
+        message: string;
+        timestamp: string;
         isRead: boolean;
       }>,
       unreadCount: 0,
@@ -270,7 +272,7 @@ export function testTypeInference() {
 // Simple computed value for testing TypeScript inference
 export function createPostsComputation() {
   return () => {
-    const state = complexAppTree.unwrap();
+    const state = complexAppTree();
     return state.posts.items
       .filter((post: Post) => post.settings.isPublished)
       .map((post: Post) => ({

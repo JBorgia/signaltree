@@ -1,6 +1,7 @@
-import { computed, Signal, WritableSignal, isSignal } from '@angular/core';
-import type { SignalTree } from '@signaltree/core';
+import { computed, Signal, WritableSignal } from '@angular/core';
+import { isAnySignal, isNodeAccessor } from '@signaltree/core';
 
+import type { SignalTree } from '@signaltree/core';
 /**
  * Entity helpers interface - provides CRUD operations
  */
@@ -40,7 +41,7 @@ function createEntityHelpers<T, E extends { id: string | number }>(
 ): EntityHelpers<E> {
   // Get the signal from the deeply signalified state
   // The state property is of type DeepSignalify<T>
-  const getEntitySignal = (): WritableSignal<E[]> => {
+  const getEntitySignal = () => {
     // Access the state property - it's already a signal due to DeepSignalify
     // We need to use type assertion here because TypeScript can't track the deep signalification
     const stateProperty = (tree.state as any)[entityKey];
@@ -53,7 +54,7 @@ function createEntityHelpers<T, E extends { id: string | number }>(
     }
 
     // Due to DeepSignalify, if the original was an array, it's now WritableSignal<Array>
-    if (!isSignal(stateProperty)) {
+    if (!isAnySignal(stateProperty)) {
       throw new Error(
         `Entity key '${String(
           entityKey
@@ -76,6 +77,20 @@ function createEntityHelpers<T, E extends { id: string | number }>(
     return signal as WritableSignal<E[]>;
   };
 
+  // Helper function to set values on both WritableSignal and callable signals
+  const setSignalValue = (
+    signal: WritableSignal<E[]> | ((value: E[]) => void),
+    value: E[]
+  ) => {
+    if (isNodeAccessor(signal)) {
+      // Callable signal - use function call
+      (signal as (value: E[]) => void)(value);
+    } else {
+      // WritableSignal - use .set() method
+      (signal as WritableSignal<E[]>).set(value);
+    }
+  };
+
   return {
     add: (entity: E) => {
       const entitySignal = getEntitySignal();
@@ -86,7 +101,7 @@ function createEntityHelpers<T, E extends { id: string | number }>(
         throw new Error(`Entity with id '${entity.id}' already exists`);
       }
 
-      entitySignal.set([...currentEntities, entity]);
+      setSignalValue(entitySignal, [...currentEntities, entity]);
     },
 
     update: (id: string | number, updates: Partial<E>) => {
@@ -97,7 +112,7 @@ function createEntityHelpers<T, E extends { id: string | number }>(
         entity.id === id ? { ...entity, ...updates } : entity
       );
 
-      entitySignal.set(updatedEntities);
+      setSignalValue(entitySignal, updatedEntities);
     },
 
     remove: (id: string | number) => {
@@ -107,7 +122,7 @@ function createEntityHelpers<T, E extends { id: string | number }>(
       const filteredEntities = currentEntities.filter(
         (entity) => entity.id !== id
       );
-      entitySignal.set(filteredEntities);
+      setSignalValue(entitySignal, filteredEntities);
     },
 
     upsert: (entity: E) => {
@@ -119,10 +134,10 @@ function createEntityHelpers<T, E extends { id: string | number }>(
         // Update existing
         const updatedEntities = [...currentEntities];
         updatedEntities[index] = entity;
-        entitySignal.set(updatedEntities);
+        setSignalValue(entitySignal, updatedEntities);
       } else {
         // Add new
-        entitySignal.set([...currentEntities, entity]);
+        setSignalValue(entitySignal, [...currentEntities, entity]);
       }
     },
 
@@ -158,7 +173,7 @@ function createEntityHelpers<T, E extends { id: string | number }>(
 
     clear: () => {
       const entitySignal = getEntitySignal();
-      entitySignal.set([]);
+      setSignalValue(entitySignal, []);
     },
   };
 }

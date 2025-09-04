@@ -13,7 +13,7 @@ describe('Middleware', () => {
   });
 
   it('should enhance tree with middleware capabilities', () => {
-    const tree = signalTree({ count: 0 }).pipe(withMiddleware());
+    const tree = signalTree({ count: 0 }).with(withMiddleware());
 
     expect(tree.addTap).toBeDefined();
     expect(tree.removeTap).toBeDefined();
@@ -29,11 +29,11 @@ describe('Middleware', () => {
       after: afterSpy,
     };
 
-    const tree = signalTree({ count: 0 }).pipe(
+    const tree = signalTree({ count: 0 }).with(
       withMiddleware([testMiddleware])
     );
 
-    tree.update((state) => ({ count: state.count + 1 }));
+    tree((state: { count: number }) => ({ count: state.count + 1 }));
 
     expect(beforeSpy).toHaveBeenCalledWith(
       'UPDATE',
@@ -54,17 +54,17 @@ describe('Middleware', () => {
       before: () => false,
     };
 
-    const tree = signalTree({ count: 0 }).pipe(
+    const tree = signalTree({ count: 0 }).with(
       withMiddleware([blockingMiddleware])
     );
 
-    tree.update((state) => ({ count: state.count + 1 }));
+    tree((state: { count: number }) => ({ count: state.count + 1 }));
 
-    expect(tree.unwrap().count).toBe(0); // Should not have changed
+    expect(tree().count).toBe(0); // Should not have changed
   });
 
   it('should allow adding middleware at runtime', () => {
-    const tree = signalTree({ count: 0 }).pipe(withMiddleware());
+    const tree = signalTree({ count: 0 }).with(withMiddleware());
 
     const runtimeMiddleware = {
       id: 'runtime',
@@ -72,7 +72,7 @@ describe('Middleware', () => {
     };
 
     tree.addTap(runtimeMiddleware);
-    tree.update((state) => ({ count: state.count + 1 }));
+    tree((state: { count: number }) => ({ count: state.count + 1 }));
 
     expect(runtimeMiddleware.before).toHaveBeenCalled();
   });
@@ -84,15 +84,15 @@ describe('Middleware', () => {
       before: middlewareSpy,
     };
 
-    const tree = signalTree({ count: 0 }).pipe(
+    const tree = signalTree({ count: 0 }).with(
       withMiddleware([testMiddleware])
     );
 
-    tree.update((state) => ({ count: state.count + 1 }));
+    tree((state: { count: number }) => ({ count: state.count + 1 }));
     expect(middlewareSpy).toHaveBeenCalledTimes(1);
 
     tree.removeTap('removable');
-    tree.update((state) => ({ count: state.count + 1 }));
+    tree((state: { count: number }) => ({ count: state.count + 1 }));
 
     // Should still be called only once (not twice)
     expect(middlewareSpy).toHaveBeenCalledTimes(1);
@@ -102,12 +102,12 @@ describe('Middleware', () => {
     const firstSpy = jest.fn(() => true);
     const secondSpy = jest.fn(() => true);
 
-    const tree = signalTree({ count: 0 }).pipe(withMiddleware());
+    const tree = signalTree({ count: 0 }).with(withMiddleware());
 
     tree.addTap({ id: 'test', before: firstSpy });
     tree.addTap({ id: 'test', before: secondSpy }); // Should replace
 
-    tree.update((state) => ({ count: state.count + 1 }));
+    tree((state: { count: number }) => ({ count: state.count + 1 }));
 
     expect(firstSpy).not.toHaveBeenCalled();
     expect(secondSpy).toHaveBeenCalled();
@@ -121,11 +121,11 @@ describe('Middleware', () => {
         .spyOn(console, 'groupEnd')
         .mockImplementation();
 
-      const tree = signalTree({ count: 0 }).pipe(
+      const tree = signalTree({ count: 0 }).with(
         withMiddleware([createLoggingMiddleware('TestTree')])
       );
 
-      tree.update((state) => ({ count: state.count + 1 }));
+      tree((state: { count: number }) => ({ count: state.count + 1 }));
 
       expect(consoleSpy).toHaveBeenCalledWith('🏪 TestTree: UPDATE');
       expect(consoleLogSpy).toHaveBeenCalledWith('Previous state:', {
@@ -144,11 +144,11 @@ describe('Middleware', () => {
         .spyOn(console, 'timeEnd')
         .mockImplementation();
 
-      const tree = signalTree({ count: 0 }).pipe(
+      const tree = signalTree({ count: 0 }).with(
         withMiddleware([createPerformanceMiddleware()])
       );
 
-      tree.update((state) => ({ count: state.count + 1 }));
+      tree((state: { count: number }) => ({ count: state.count + 1 }));
 
       expect(consoleTimeSpy).toHaveBeenCalledWith('Tree update: UPDATE');
       expect(consoleTimeEndSpy).toHaveBeenCalledWith('Tree update: UPDATE');
@@ -163,16 +163,16 @@ describe('Middleware', () => {
       const validator = (state: { count: number }) =>
         state.count < 0 ? 'Count cannot be negative' : null;
 
-      const tree = signalTree({ count: 0 }).pipe(
+      const tree = signalTree({ count: 0 }).with(
         withMiddleware([createValidationMiddleware(validator)])
       );
 
       // Valid update
-      tree.update((state) => ({ count: state.count + 1 }));
+      tree((state: { count: number }) => ({ count: state.count + 1 }));
       expect(consoleErrorSpy).not.toHaveBeenCalled();
 
       // Invalid update
-      tree.update(() => ({ count: -1 }));
+      tree(() => ({ count: -1 }));
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         'Validation failed after UPDATE:',
         'Count cannot be negative'

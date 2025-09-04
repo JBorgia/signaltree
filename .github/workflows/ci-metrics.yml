@@ -1,0 +1,37 @@
+name: CI - scripts & metrics
+
+on:
+  push:
+    branches: [main, master, v1.1.5-plus-enhancements]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  metrics:
+    name: Scripts & Metrics Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run CI checks (JSDoc + sizes)
+        run: node scripts/ci-checks.js --jsdoc --sizes
+
+      - name: Run metrics unit tests
+        run: npx jest scripts/__tests__/metrics.test.cjs --config '{"testEnvironment":"node"}' --runInBand
+
+      - name: Upload perf artifact (if present)
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-summary
+          path: artifacts/perf-summary.json
+          if-no-files-found: 'ignore'

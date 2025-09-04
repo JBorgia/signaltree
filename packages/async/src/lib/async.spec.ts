@@ -16,7 +16,7 @@ describe('Async', () => {
   });
 
   it('should enhance tree with async capabilities', () => {
-    const tree = signalTree({ count: 0 }).pipe(withAsync());
+    const tree = signalTree({ count: 0 }).with(withAsync());
 
     expect(tree.asyncAction).toBeDefined();
     expect(tree.loadData).toBeDefined();
@@ -24,7 +24,7 @@ describe('Async', () => {
   });
 
   it('should create and execute async actions', async () => {
-    const tree = signalTree({ count: 0, result: null as number | null }).pipe(
+    const tree = signalTree({ count: 0, result: null as number | null }).with(
       withAsync()
     );
 
@@ -45,17 +45,17 @@ describe('Async', () => {
 
     const promise = asyncOperation.execute(5);
     expect(asyncOperation.pending()).toBe(true);
-    expect(tree.unwrap().count).toBe(-1); // onStart was called
+    expect(tree().count).toBe(-1); // onStart was called
 
     const result = await promise;
     expect(result).toBe(10);
     expect(asyncOperation.pending()).toBe(false);
     expect(asyncOperation.result()).toBe(10);
-    expect(tree.unwrap().result).toBe(10); // onSuccess was called
+    expect(tree().result).toBe(10); // onSuccess was called
   });
 
   it('should handle async action errors', async () => {
-    const tree = signalTree({ error: null as string | null }).pipe(withAsync());
+    const tree = signalTree({ error: null as string | null }).with(withAsync());
 
     const asyncOperation = tree.asyncAction(
       async () => {
@@ -76,11 +76,11 @@ describe('Async', () => {
 
     expect(asyncOperation.pending()).toBe(false);
     expect(asyncOperation.error()?.message).toBe('Test error');
-    expect(tree.unwrap().error).toBe('Test error'); // onError was called
+    expect(tree().error).toBe('Test error'); // onError was called
   });
 
   it('should call onComplete hook regardless of success or failure', async () => {
-    const tree = signalTree({ completed: false as boolean }).pipe(withAsync());
+    const tree = signalTree({ completed: false as boolean }).with(withAsync());
 
     const onComplete = jest.fn(() => ({ completed: true as boolean }));
 
@@ -91,10 +91,10 @@ describe('Async', () => {
 
     await successOperation.execute(undefined);
     expect(onComplete).toHaveBeenCalledTimes(1);
-    expect(tree.unwrap().completed).toBe(true);
+    expect(tree().completed).toBe(true);
 
     // Reset and test failed completion
-    tree.update(() => ({ completed: false }));
+    tree(() => ({ completed: false }));
     onComplete.mockClear();
 
     const failOperation = tree.asyncAction(
@@ -111,14 +111,14 @@ describe('Async', () => {
     }
 
     expect(onComplete).toHaveBeenCalledTimes(1);
-    expect(tree.unwrap().completed).toBe(true);
+    expect(tree().completed).toBe(true);
   });
 
   it('should work with loadData convenience method', async () => {
     const tree = signalTree({
       data: null as { users: string[] } | null,
       loading: false as boolean,
-    }).pipe(withAsync());
+    }).with(withAsync());
 
     const loadAction = tree.loadData(
       async () => {
@@ -135,20 +135,20 @@ describe('Async', () => {
 
     const promise = loadAction.execute();
     expect(loadAction.pending()).toBe(true);
-    expect(tree.unwrap().loading).toBe(true);
+    expect(tree().loading).toBe(true);
 
     const result = await promise;
     expect(result).toEqual({ users: ['Alice', 'Bob'] });
     expect(loadAction.pending()).toBe(false);
-    expect(tree.unwrap().data).toEqual({ users: ['Alice', 'Bob'] });
-    expect(tree.unwrap().loading).toBe(false);
+    expect(tree().data).toEqual({ users: ['Alice', 'Bob'] });
+    expect(tree().loading).toBe(false);
   });
 
   it('should work with submitForm convenience method', async () => {
     const tree = signalTree({
       submitting: false as boolean,
       submitResult: null as { id: number; name: string } | null,
-    }).pipe(withAsync());
+    }).with(withAsync());
 
     const submitAction = tree.submitForm(
       async (formData: { name: string }) => {
@@ -166,22 +166,22 @@ describe('Async', () => {
 
     const result = await submitAction.execute({ name: 'John' });
     expect(result).toEqual({ id: 1, name: 'John' });
-    expect(tree.unwrap().submitResult).toEqual({ id: 1, name: 'John' });
-    expect(tree.unwrap().submitting).toBe(false);
+    expect(tree().submitResult).toEqual({ id: 1, name: 'John' });
+    expect(tree().submitting).toBe(false);
   });
 
   it('should work with enableAsync convenience function', () => {
-    const tree = signalTree({ count: 0 }).pipe(enableAsync());
+    const tree = signalTree({ count: 0 }).with(enableAsync());
     expect(tree.asyncAction).toBeDefined();
   });
 
   it('should work with high performance async', () => {
-    const tree = signalTree({ count: 0 }).pipe(withHighPerformanceAsync());
+    const tree = signalTree({ count: 0 }).with(withHighPerformanceAsync());
     expect(tree.asyncAction).toBeDefined();
   });
 
   it('should disable async when enabled is false', () => {
-    const tree = signalTree({ count: 0 }).pipe(withAsync({ enabled: false }));
+    const tree = signalTree({ count: 0 }).with(withAsync({ enabled: false }));
 
     // Should not have enhanced the tree
     expect(tree.loadData).toBeUndefined();

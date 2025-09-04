@@ -7,7 +7,7 @@ export interface DemoExample {
   title: string;
   description: string;
   route: string;
-  category: 'basic' | 'performance' | 'entities' | 'forms' | 'advanced';
+  category: 'basic' | 'performance' | 'entities' | 'advanced';
 }
 
 @Component({
@@ -20,54 +20,59 @@ export interface DemoExample {
 export class NavigationComponent {
   examples: DemoExample[] = [
     // Basic Examples
+    {
+      id: 'core',
+      title: 'Core Features',
+      description: 'Basic SignalTree functionality',
+      route: '/core',
+      category: 'basic',
+    },
+    {
+      id: 'async',
+      title: 'Async Operations',
+      description: 'Async state management patterns',
+      route: '/async',
+      category: 'basic',
+    },
 
     // Performance Examples
     {
-      id: 'metrics',
-      title: 'Performance Metrics',
+      id: 'performance',
+      title: 'Performance Comparison',
       description: 'Real-time benchmarks and performance analysis',
-      route: '/metrics',
+      route: '/performance',
       category: 'performance',
     },
     {
-      id: 'batching-comparison',
-      title: 'Batching Comparison',
+      id: 'performance-dashboard',
+      title: 'Performance Dashboard',
+      description: 'Live performance monitoring and metrics',
+      route: '/performance-dashboard',
+      category: 'performance',
+    },
+    {
+      id: 'batching',
+      title: 'Batching Demo',
       description: 'Compare batched vs unbatched updates',
-      route: '/batching-comparison',
-      category: 'performance',
-    },
-    {
-      id: 'memoization-demo',
-      title: 'Memoization Demo',
-      description: 'Cache performance with computed values',
-      route: '/memoization-demo',
+      route: '/batching',
       category: 'performance',
     },
 
     // Entity Examples
     {
-      id: 'entity-crud',
-      title: 'Entity CRUD',
+      id: 'entities',
+      title: 'Entity Management',
       description: 'Create, read, update, delete entities',
-      route: '/entity-crud',
+      route: '/entities',
       category: 'entities',
-    },
-
-    // Form Examples
-    {
-      id: 'form-validation',
-      title: 'Form Validation',
-      description: 'Synchronous and asynchronous validation',
-      route: '/form-validation',
-      category: 'forms',
     },
 
     // Advanced Examples
     {
-      id: 'time-travel',
-      title: 'Time Travel',
-      description: 'Undo/redo functionality',
-      route: '/time-travel',
+      id: 'middleware',
+      title: 'Middleware',
+      description: 'State management middleware patterns',
+      route: '/middleware',
       category: 'advanced',
     },
     {
@@ -83,7 +88,6 @@ export class NavigationComponent {
     'basic',
     'performance',
     'entities',
-    'forms',
     'advanced',
   ];
 
@@ -96,7 +100,6 @@ export class NavigationComponent {
       basic: 'Basic Features',
       performance: 'Performance',
       entities: 'Entity Tree',
-      forms: 'Form Tree',
       advanced: 'Advanced',
     };
     return labels[category];

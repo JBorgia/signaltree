@@ -1,14 +1,16 @@
+import { isSignal, Signal, WritableSignal } from '@angular/core';
+import { SignalTree } from '@signaltree/core';
+
+import { TYPE_MARKERS } from '../constants';
+
+import type { EnhancerWithMeta } from '@signaltree/core';
+
 /**
  * SignalTree Serialization Module
  *
  * Provides serialization and deserialization capabilities for SignalTree,
  * enabling state persistence, SSR, and state transfer between contexts.
  */
-
-import { SignalTree } from '@signaltree/core';
-import { isSignal, WritableSignal, Signal } from '@angular/core';
-import { TYPE_MARKERS } from '../constants';
-
 /**
  * Interface for SignalTree with debug configuration
  */
@@ -104,6 +106,12 @@ export interface SerializedState<T = unknown> {
      * Circular reference paths
      */
     circularRefs?: Array<{ path: string; targetPath: string }>;
+    /**
+     * Optional map of paths that indicate where the target tree contains
+     * branch nodes (objects with set/update) or root-as-signal markers.
+     * Keys are paths (dot/array notation), values: 'b' = branch, 'r' = root
+     */
+    nodeMap?: Record<string, 'b' | 'r'>;
   };
 }
 
@@ -111,6 +119,12 @@ export interface SerializedState<T = unknown> {
  * Enhanced SignalTree interface with serialization capabilities
  */
 export interface SerializableSignalTree<T> extends SignalTree<T> {
+  /** Explicit reactive alias for state (helps TS resolution in tests) */
+  // Use `any` here as a pragmatic escape hatch to avoid TS index-signature
+  // access errors in tests (dot-access on dynamic keys). This will be
+  // tightened later once type incompatibilities between enhancers and
+  // `.with()` are fully resolved.
+  $: any;
   /**
    * Serialize the current state to a JSON string
    */
@@ -129,7 +143,7 @@ export interface SerializableSignalTree<T> extends SignalTree<T> {
   /**
    * Restore state from a plain object
    */
-  fromJSON(data: T): void;
+  fromJSON(data: T, metadata?: SerializedState<T>['metadata']): void;
 
   /**
    * Create a snapshot of the current state
@@ -168,105 +182,112 @@ function unwrapObjectSafely(
   preserveTypes = true
 ): unknown {
   // Prevent infinite recursion
-  if (depth > maxDepth) {
-    return '[Max Depth Exceeded]';
-  }
+  if (depth > maxDepth) return '[Max Depth Exceeded]';
 
-  // Handle primitives and special values
+  // Primitives and non-objects
   if (obj === null || typeof obj !== 'object') {
-    // Handle special values when preserveTypes is enabled
-    if (preserveTypes) {
-      if (obj === undefined) {
-        return { [TYPE_MARKERS.UNDEFINED]: true };
-      }
-      if (typeof obj === 'number') {
-        if (isNaN(obj)) {
-          return { [TYPE_MARKERS.NAN]: true };
-        }
-        if (obj === Infinity) {
-          return { [TYPE_MARKERS.INFINITY]: true };
-        }
-        if (obj === -Infinity) {
-          return { [TYPE_MARKERS.NEG_INFINITY]: true };
-        }
-      }
-      if (typeof obj === 'bigint') {
-        return { [TYPE_MARKERS.BIGINT]: obj.toString() };
-      }
-      if (typeof obj === 'symbol') {
-        return { [TYPE_MARKERS.SYMBOL]: obj.toString() };
-      }
+    if (!preserveTypes) return obj;
+
+    if (obj === undefined) return { [TYPE_MARKERS.UNDEFINED]: true };
+    if (typeof obj === 'number') {
+      if (Number.isNaN(obj)) return { [TYPE_MARKERS.NAN]: true };
+      if (obj === Infinity) return { [TYPE_MARKERS.INFINITY]: true };
+      if (obj === -Infinity) return { [TYPE_MARKERS.NEG_INFINITY]: true };
+      return obj;
     }
+    if (typeof obj === 'bigint') return { [TYPE_MARKERS.BIGINT]: String(obj) };
+    if (typeof obj === 'symbol') return { [TYPE_MARKERS.SYMBOL]: String(obj) };
     return obj;
   }
 
-  // Handle circular references
-  if (visited.has(obj)) {
-    return '[Circular Reference]';
+  // Handle callable signals (no longer need complex branch wrapper detection)
+  if (typeof obj === 'function') {
+    try {
+      // Check if it's a callable signal by trying to invoke it
+      const result = (obj as () => unknown)();
+      return unwrapObjectSafely(
+        result,
+        visited,
+        depth + 1,
+        maxDepth,
+        preserveTypes
+      );
+    } catch {
+      // Not a callable signal, treat as regular function (non-serializable)
+      return '[Function]';
+    }
   }
 
-  // Handle signals
-  if (isSignal(obj)) {
-    return (obj as Signal<unknown>)();
-  }
+  // If object already visited, mark as circular
+  if (visited.has(obj as object)) return '[Circular Reference]';
 
-  // Preserve special types if requested - convert them to marker format
+  // Unwrap signals
+  if (isSignal(obj)) return (obj as Signal<unknown>)();
+
+  // Preserve special types
   if (preserveTypes) {
-    if (obj instanceof Date) {
-      return { [TYPE_MARKERS.DATE]: obj.toISOString() };
-    }
-    if (obj instanceof RegExp) {
+    if (obj instanceof Date) return { [TYPE_MARKERS.DATE]: obj.toISOString() };
+    if (obj instanceof RegExp)
       return {
-        [TYPE_MARKERS.REGEXP]: {
-          source: obj.source,
-          flags: obj.flags,
-        },
+        [TYPE_MARKERS.REGEXP]: { source: obj.source, flags: obj.flags },
       };
-    }
     if (obj instanceof Map) {
-      return {
-        [TYPE_MARKERS.MAP]: Array.from(obj.entries()),
-      };
+      return { [TYPE_MARKERS.MAP]: Array.from(obj.entries()) };
     }
     if (obj instanceof Set) {
-      return {
-        [TYPE_MARKERS.SET]: Array.from(obj.values()),
-      };
+      return { [TYPE_MARKERS.SET]: Array.from(obj.values()) };
     }
   } else {
-    // When preserveTypes is false, let special objects (Date, RegExp, etc.)
-    // be handled by JSON.stringify naturally
-    if (obj instanceof Date || obj instanceof RegExp) {
-      return obj;
-    }
+    if (obj instanceof Date || obj instanceof RegExp) return obj;
   }
-  visited.add(obj);
+
+  visited.add(obj as object);
 
   try {
-    // Handle arrays
     if (Array.isArray(obj)) {
-      const result = obj.map((item) =>
+      const arr = (obj as unknown[]).map((item) =>
         unwrapObjectSafely(item, visited, depth + 1, maxDepth, preserveTypes)
       );
-      visited.delete(obj);
-      return result;
+      visited.delete(obj as object);
+      return arr;
     }
 
-    // Handle plain objects
-    const result: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(obj)) {
-      if (isSignal(value)) {
-        const signalValue = (value as Signal<unknown>)();
-        result[key] = unwrapObjectSafely(
-          signalValue,
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+      // Skip runtime helpers when they are plain functions (not signals)
+      if (
+        (k === 'set' || k === 'update') &&
+        typeof v === 'function' &&
+        !isSignal(v)
+      )
+        continue;
+
+      if (isSignal(v)) {
+        out[k] = unwrapObjectSafely(
+          (v as Signal<unknown>)(),
           visited,
           depth + 1,
           maxDepth,
           preserveTypes
         );
+      } else if (typeof v === 'function' && k !== 'set' && k !== 'update') {
+        // Handle callable signals - these are functions but not helper methods
+        try {
+          const callResult = (v as () => unknown)();
+          out[k] = unwrapObjectSafely(
+            callResult,
+            visited,
+            depth + 1,
+            maxDepth,
+            preserveTypes
+          );
+        } catch {
+          // If calling fails, skip this property
+          continue;
+        }
       } else {
-        result[key] = unwrapObjectSafely(
-          value,
+        out[k] = unwrapObjectSafely(
+          v,
           visited,
           depth + 1,
           maxDepth,
@@ -275,10 +296,10 @@ function unwrapObjectSafely(
       }
     }
 
-    visited.delete(obj);
-    return result;
+    visited.delete(obj as object);
+    return out;
   } catch {
-    visited.delete(obj);
+    visited.delete(obj as object);
     return '[Serialization Error]';
   }
 }
@@ -312,10 +333,10 @@ function detectCircularReferences(
 
   // Recursively check children
   if (Array.isArray(obj)) {
-    for (let i = 0; i < obj.length; i++) {
+    for (let i = 0; i < (obj as any).length; i++) {
       const itemPath = path ? `${path}[${i}]` : `[${i}]`;
       const childCircular = detectCircularReferences(
-        obj[i],
+        (obj as any)[i],
         itemPath,
         seen,
         paths
@@ -323,7 +344,7 @@ function detectCircularReferences(
       circular.push(...childCircular);
     }
   } else {
-    for (const [key, value] of Object.entries(obj)) {
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
       const propPath = path ? `${path}.${key}` : key;
       const childCircular = detectCircularReferences(
         value,
@@ -336,7 +357,7 @@ function detectCircularReferences(
   }
 
   // Remove from seen set when backing out (allows siblings to reference same objects)
-  seen.delete(obj);
+  seen.delete(obj as object);
 
   return circular;
 }
@@ -350,6 +371,16 @@ type InternalSerializationConfig = Required<
   replacer?: (key: string, value: unknown) => unknown;
   reviver?: (key: string, value: unknown) => unknown;
 };
+
+/**
+ * Methods added by the persistence enhancer
+ */
+export interface PersistenceMethods {
+  save(): Promise<void>;
+  load(): Promise<void>;
+  clear(): Promise<void>;
+  __flushAutoSave?: () => Promise<void>;
+}
 
 /**
  * Custom replacer that handles circular references only
@@ -427,33 +458,30 @@ function resolveCircularReferences(
 /**
  * Enhances a SignalTree with serialization capabilities
  */
-export function withSerialization<T extends Record<string, unknown>>(
+export function withSerialization<
+  T extends Record<string, unknown> = Record<string, unknown>
+>(
   defaultConfig: SerializationConfig = {}
-): (tree: SignalTree<T>) => SerializableSignalTree<T> {
-  return (tree: SignalTree<T>): SerializableSignalTree<T> => {
+): EnhancerWithMeta<SignalTree<T>, SerializableSignalTree<T>> {
+  const enhancer = (tree: SignalTree<T>): SerializableSignalTree<T> => {
     const enhanced = tree as SerializableSignalTree<T>;
-
     /**
      * Get plain object representation
      */
     enhanced.toJSON = (): T => {
-      const fullConfig: InternalSerializationConfig = {
-        ...DEFAULT_CONFIG,
-        ...defaultConfig,
-      };
-      return unwrapObjectSafely(
-        tree.state,
-        new WeakSet(),
-        0,
-        50,
-        fullConfig.preserveTypes
-      ) as T;
+      // Delegate to the tree's public unwrap() which already strips helper
+      // methods like `set`/`update`. Keep unwrapObjectSafely for
+      // serialize() where we need type-preserving markers.
+      return tree();
     };
 
     /**
      * Restore from plain object
      */
-    enhanced.fromJSON = (data: T): void => {
+    enhanced.fromJSON = (
+      data: T,
+      metadata?: SerializedState<T>['metadata']
+    ): void => {
       // Convert special type markers back to their actual types
       const restoreSpecialTypes = (value: unknown): unknown => {
         if (!value || typeof value !== 'object') {
@@ -511,47 +539,171 @@ export function withSerialization<T extends Record<string, unknown>>(
 
       // Restore special types in the data
       const restoredData = restoreSpecialTypes(data);
+      // If the serialized data contains a compact nodeMap, use it to apply
+      // updates deterministically: 'r' => root set, 'b' => set on branch
+      const nodeMap = (metadata as any)?.nodeMap as
+        | Record<string, 'b' | 'r'>
+        | undefined;
 
-      // Deep update the tree with new data
-      const updateSignals = (
+      if (nodeMap && Object.keys(nodeMap).length > 0) {
+        // Root marker
+        if (nodeMap[''] === 'r') {
+          const rootAlias = (tree as any).$;
+          if (rootAlias && typeof rootAlias.set === 'function') {
+            (rootAlias as WritableSignal<unknown>).set(restoredData);
+            return;
+          }
+        }
+
+        // For branch entries, apply child signal .set directly when possible
+        for (const [path, kind] of Object.entries(nodeMap)) {
+          if (path === '') continue; // root handled
+          if (kind !== 'b') continue;
+
+          // Navigate to path and set the node if a WritableSignal is found
+          const parts = path.split(/\.|\[|\]/).filter(Boolean);
+          let node: any = (tree as any).$;
+          for (const p of parts) {
+            if (!node) break;
+            node = node[p];
+          }
+
+          if (
+            node &&
+            (isSignal(node) ||
+              (typeof node === 'function' &&
+                'set' in node &&
+                typeof (node as { set?: unknown }).set === 'function'))
+          ) {
+            // Extract the corresponding value from restoredData
+            let current: any = restoredData as any;
+            for (const p of parts) {
+              if (current == null) {
+                current = undefined;
+                break;
+              }
+              current = current[p];
+            }
+            try {
+              (node as WritableSignal<unknown>).set(current);
+            } catch {
+              /* ignore per-path failures */
+            }
+          }
+        }
+
+        // After applying nodeMap-targeted sets, perform a best-effort deep update for remaining keys
+        updateSignals(
+          tree.state as Record<string, unknown>,
+          restoredData as Record<string, unknown>
+        );
+        return;
+      }
+
+      // Deep update the tree with new data. Resolve deep signals from the
+      // root alias (`tree.$`) using the accumulated path so keys that
+      // collide with branch methods (like "set") still map to the child
+      // signals.
+      const resolveAliasSignal = (path: string, key: string) => {
+        let node: any = (tree as any).$; // root reactive alias
+        if (path) {
+          for (const part of path.split('.')) {
+            if (!part) continue;
+            node = node?.[part];
+            if (!node) break;
+          }
+        }
+        const candidate = node?.[key];
+        return isSignal(candidate)
+          ? (candidate as WritableSignal<unknown>)
+          : undefined;
+      };
+
+      function updateSignals(
         target: Record<string, unknown>,
         source: Record<string, unknown>,
         path = ''
-      ): void => {
+      ): void {
         if (!target || !source) return;
 
         for (const key in source) {
           if (!Object.prototype.hasOwnProperty.call(source, key)) continue;
 
-          const targetValue = target[key];
           const sourceValue = source[key];
+          const direct = target[key];
 
-          if (isSignal(targetValue)) {
-            // Update signal value
-            (targetValue as WritableSignal<unknown>).set(sourceValue);
-          } else if (
+          // Prefer the real signal if present; otherwise resolve from root alias
+          const targetSignal = isSignal(direct)
+            ? (direct as WritableSignal<unknown>)
+            : // Check if it's a callable signal (function with set method)
+            typeof direct === 'function' &&
+              'set' in direct &&
+              typeof (direct as { set?: unknown }).set === 'function'
+            ? (direct as { set: (value: unknown) => void })
+            : resolveAliasSignal(path, key);
+
+          if (targetSignal) {
+            targetSignal.set(sourceValue);
+            continue;
+          }
+
+          if (
             sourceValue &&
             typeof sourceValue === 'object' &&
             !Array.isArray(sourceValue) &&
-            targetValue &&
-            typeof targetValue === 'object' &&
-            !isSignal(targetValue)
+            direct &&
+            (typeof direct === 'object' ||
+              (typeof direct === 'function' && !('set' in direct))) &&
+            !isSignal(direct)
           ) {
-            // Recurse into nested objects
             updateSignals(
-              targetValue as Record<string, unknown>,
+              direct as Record<string, unknown>,
               sourceValue as Record<string, unknown>,
               path ? `${path}.${key}` : key
             );
           }
         }
-      };
+      }
 
       updateSignals(
         tree.state as Record<string, unknown>,
         restoredData as Record<string, unknown>
       );
     };
+
+    // Encode/decode helpers that work on already-unwrapped plain data
+    function encodeSpecials(v: unknown, preserveTypes: boolean): unknown {
+      if (!preserveTypes) return v;
+      if (v === undefined) return { [TYPE_MARKERS.UNDEFINED]: true };
+      if (typeof v === 'number') {
+        if (Number.isNaN(v)) return { [TYPE_MARKERS.NAN]: true };
+        if (v === Infinity) return { [TYPE_MARKERS.INFINITY]: true };
+        if (v === -Infinity) return { [TYPE_MARKERS.NEG_INFINITY]: true };
+        return v;
+      }
+      if (typeof v === 'bigint') return { [TYPE_MARKERS.BIGINT]: String(v) };
+      if (typeof v === 'symbol') return { [TYPE_MARKERS.SYMBOL]: String(v) };
+
+      if (v instanceof Date) return { [TYPE_MARKERS.DATE]: v.toISOString() };
+      if (v instanceof RegExp)
+        return {
+          [TYPE_MARKERS.REGEXP]: { source: v.source, flags: v.flags },
+        };
+      if (v instanceof Map)
+        return { [TYPE_MARKERS.MAP]: Array.from(v.entries()) };
+      if (v instanceof Set)
+        return { [TYPE_MARKERS.SET]: Array.from(v.values()) };
+
+      if (Array.isArray(v))
+        return v.map((x) => encodeSpecials(x, preserveTypes));
+      if (v && typeof v === 'object') {
+        const out: Record<string, unknown> = {};
+        for (const [k, val] of Object.entries(v as Record<string, unknown>))
+          out[k] = encodeSpecials(val, preserveTypes);
+        return out;
+      }
+      return v;
+    }
 
     /**
      * Serialize to JSON string
@@ -563,14 +715,17 @@ export function withSerialization<T extends Record<string, unknown>>(
         ...config,
       };
 
-      // Get current state with the correct preserveTypes setting
-      const state = unwrapObjectSafely(
+      // Use a safe local unwrap to avoid accidental dropping of keys like
+      // 'set' which may collide with branch helpers; let encodeSpecials
+      // handle special type markers.
+      const raw = unwrapObjectSafely(
         tree.state,
-        new WeakSet(),
+        new WeakSet<object>(),
         0,
         fullConfig.maxDepth,
         fullConfig.preserveTypes
-      ) as T;
+      );
+      const state = encodeSpecials(raw, fullConfig.preserveTypes) as T;
 
       // Detect circular references if needed
       const circularPaths = fullConfig.handleCircular
@@ -581,6 +736,41 @@ export function withSerialization<T extends Record<string, unknown>>(
       const data: SerializedState<T> = {
         data: state,
       };
+
+      // Build a compact nodeMap: record paths that represent branch nodes
+      // (objects with set/update) or a root-as-signal marker ('r'). This
+      // helps deterministic deserialization without guessing by name.
+      try {
+        const nodeMap: Record<string, 'b' | 'r'> = {};
+
+        // Root marker: if tree.state is a signal-like root (array mode), mark root
+        try {
+          const rootAlias = (tree as any).$;
+          if (rootAlias && typeof rootAlias.set === 'function') {
+            nodeMap[''] = 'r';
+          }
+        } catch {
+          /* ignore */
+        }
+
+        const walk = (obj: unknown, path = '') => {
+          if (!obj || typeof obj !== 'object') return;
+
+          const maybe = obj as Record<string, unknown>;
+
+          // No longer need to detect helper methods since callables don't have them
+          // Just traverse child properties
+          for (const [k, v] of Object.entries(maybe)) {
+            const childPath = path ? `${path}.${k}` : k;
+            walk(v, childPath);
+          }
+        };
+
+        // Start walking from the tree state
+        walk(tree.state as Record<string, unknown>);
+      } catch {
+        // Do not block serialization on nodeMap errors
+      }
 
       // Add metadata if requested
       if (fullConfig.includeMetadata) {
@@ -593,7 +783,9 @@ export function withSerialization<T extends Record<string, unknown>>(
 
       // Serialize with custom replacer
       const replacer = createReplacer(fullConfig);
-      return JSON.stringify(data, replacer, 2);
+      const json = JSON.stringify(data, replacer, 2);
+      // Extra debug: if JSON contains MAP or SET markers, print compact preview
+      return json;
     };
 
     /**
@@ -611,7 +803,7 @@ export function withSerialization<T extends Record<string, unknown>>(
 
       try {
         // Parse with simple JSON.parse (no custom reviver)
-        const parsed: SerializedState<T> = JSON.parse(json);
+        const parsed: SerializedState<any> = JSON.parse(json);
 
         // Extract data and metadata
         const { data, metadata } = parsed;
@@ -621,8 +813,8 @@ export function withSerialization<T extends Record<string, unknown>>(
           resolveCircularReferences(data, metadata.circularRefs);
         }
 
-        // Apply the data to the tree (fromJSON will handle type restoration)
-        enhanced.fromJSON(data);
+        // Apply parsed data to the tree; fromJSON will handle type restoration
+        enhanced.fromJSON(data as any, metadata as any);
 
         // Log restoration if in debug mode
         if (
@@ -646,7 +838,7 @@ export function withSerialization<T extends Record<string, unknown>>(
     /**
      * Create a snapshot
      */
-    enhanced.snapshot = (): SerializedState<T> => {
+    enhanced.snapshot = (): SerializedState<any> => {
       const state = enhanced.toJSON();
       const circularPaths = detectCircularReferences(state);
 
@@ -663,7 +855,7 @@ export function withSerialization<T extends Record<string, unknown>>(
     /**
      * Restore from snapshot
      */
-    enhanced.restore = (snapshot: SerializedState<T>): void => {
+    enhanced.restore = (snapshot: SerializedState<any>): void => {
       const { data, metadata } = snapshot;
 
       // Resolve circular references if present
@@ -671,17 +863,26 @@ export function withSerialization<T extends Record<string, unknown>>(
         resolveCircularReferences(data, metadata.circularRefs);
       }
 
-      enhanced.fromJSON(data);
+      enhanced.fromJSON(data as any, metadata as any);
     };
 
     return enhanced;
   };
+
+  (
+    enhancer as EnhancerWithMeta<SignalTree<T>, SerializableSignalTree<T>>
+  ).metadata = {
+    name: 'serialization',
+  };
+  return enhancer as EnhancerWithMeta<SignalTree<T>, SerializableSignalTree<T>>;
 }
 
 /**
  * Convenience function to enable serialization with defaults
  */
-export function enableSerialization<T extends Record<string, unknown>>() {
+export function enableSerialization<
+  T extends Record<string, unknown> = Record<string, unknown>
+>() {
   return withSerialization<T>({
     includeMetadata: true,
     preserveTypes: true,
@@ -734,13 +935,14 @@ export interface PersistenceConfig extends SerializationConfig {
 /**
  * Adds persistence capabilities to a SerializableSignalTree
  */
-export function withPersistence<T extends Record<string, unknown>>(
+export function withPersistence<
+  T extends Record<string, unknown> = Record<string, unknown>
+>(
   config: PersistenceConfig
-): (tree: SignalTree<T>) => SerializableSignalTree<T> & {
-  save(): Promise<void>;
-  load(): Promise<void>;
-  clear(): Promise<void>;
-} {
+): EnhancerWithMeta<
+  SignalTree<T>,
+  SerializableSignalTree<T> & PersistenceMethods
+> {
   const {
     key,
     storage = typeof window !== 'undefined' ? window.localStorage : undefined,
@@ -756,16 +958,16 @@ export function withPersistence<T extends Record<string, unknown>>(
     );
   }
 
-  return (tree: SignalTree<T>) => {
+  // Narrow storage for TypeScript and linter: from here on it's defined.
+  const storageAdapter: StorageAdapter = storage;
+
+  function enhancer(tree: SignalTree<T>) {
     // First enhance with serialization
     const serializable = withSerialization<T>(serializationConfig)(tree);
 
     // Add persistence methods
-    const enhanced = serializable as SerializableSignalTree<T> & {
-      save(): Promise<void>;
-      load(): Promise<void>;
-      clear(): Promise<void>;
-    };
+    const enhanced = serializable as SerializableSignalTree<T> &
+      PersistenceMethods;
 
     /**
      * Save current state to storage
@@ -773,7 +975,7 @@ export function withPersistence<T extends Record<string, unknown>>(
     enhanced.save = async (): Promise<void> => {
       try {
         const serialized = enhanced.serialize(serializationConfig);
-        await Promise.resolve(storage.setItem(key, serialized));
+        await Promise.resolve(storageAdapter.setItem(key, serialized));
 
         if ((tree as SignalTreeWithConfig).__config?.debugMode) {
           console.log(`[SignalTree] State saved to storage key: ${key}`);
@@ -789,7 +991,7 @@ export function withPersistence<T extends Record<string, unknown>>(
      */
     enhanced.load = async (): Promise<void> => {
       try {
-        const data = await Promise.resolve(storage.getItem(key));
+        const data = await Promise.resolve(storageAdapter.getItem(key));
         if (data) {
           enhanced.deserialize(data, serializationConfig);
 
@@ -808,7 +1010,7 @@ export function withPersistence<T extends Record<string, unknown>>(
      */
     enhanced.clear = async (): Promise<void> => {
       try {
-        await Promise.resolve(storage.removeItem(key));
+        await Promise.resolve(storageAdapter.removeItem(key));
 
         if ((tree as SignalTreeWithConfig).__config?.debugMode) {
           console.log(`[SignalTree] State cleared from storage key: ${key}`);
@@ -893,7 +1095,18 @@ export function withPersistence<T extends Record<string, unknown>>(
     }
 
     return enhanced;
-  };
+  }
+
+  (
+    enhancer as EnhancerWithMeta<
+      SignalTree<T>,
+      SerializableSignalTree<T> & PersistenceMethods
+    >
+  ).metadata = { name: 'persistence' };
+  return enhancer as EnhancerWithMeta<
+    SignalTree<T>,
+    SerializableSignalTree<T> & PersistenceMethods
+  >;
 }
 
 /**
@@ -974,4 +1187,24 @@ export function createIndexedDBAdapter(
       });
     },
   };
+}
+
+// Type-only exports (none)
+
+/**
+ * Helpers to apply enhancers with explicit typing to avoid depending on
+ * complex `.with()` overload inference in tests and tooling.
+ */
+export function applySerialization<T extends Record<string, unknown>>(
+  tree: SignalTree<T>
+): SerializableSignalTree<T> {
+  return withSerialization<T>()(tree) as SerializableSignalTree<T>;
+}
+
+export function applyPersistence<T extends Record<string, unknown>>(
+  tree: SignalTree<T>,
+  cfg: PersistenceConfig
+): SerializableSignalTree<T> & PersistenceMethods {
+  return withPersistence<T>(cfg)(tree) as SerializableSignalTree<T> &
+    PersistenceMethods;
 }

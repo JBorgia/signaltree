@@ -1,6 +1,7 @@
 import { signal } from '@angular/core';
+import { isNodeAccessor, parsePath } from '@signaltree/core';
+
 import type { Signal } from '@angular/core';
-import { parsePath } from '@signaltree/core';
 import type {
   SignalTree,
   AsyncAction,
@@ -9,7 +10,11 @@ import type {
 
 /**
  * Extended AsyncActionConfig with additional async state management features.
- * Provides path-based state updates and lifecycle hooks for complete async operation control.
+ * Provides path-based state updates and lifecycle hooks for      // Execute onError hook
+      if (onError) {
+        const errorUpdate = onError(error, this.tree());
+        applyPartialUpdate(this.tree, errorUpdate);
+      }lete async operation control.
  *
  * @template T - The state object type
  * @template TResult - The result type of the async operation
@@ -171,6 +176,25 @@ interface AsyncSignalTree<T> extends SignalTree<T> {
  * // Safely creates intermediate objects if they don't exist
  * ```
  */
+/**
+ * Helper function to apply partial updates to the tree using the new callable architecture
+ */
+function applyPartialUpdate<T>(tree: SignalTree<T>, update: Partial<T>): void {
+  Object.entries(update).forEach(([key, value]) => {
+    const property = (tree.state as Record<string, unknown>)[key];
+    if (property && 'set' in (property as object)) {
+      // It's a WritableSignal - use .set()
+      (property as { set: (value: unknown) => void }).set(value);
+    } else if (isNodeAccessor(property)) {
+      // It's a NodeAccessor - use callable syntax
+      (property as (value: unknown) => void)(value);
+    }
+  });
+}
+
+/**
+ * Sets a nested value in the tree using dot notation path
+ */
 function setNestedValue<T>(
   tree: SignalTree<T>,
   path: string,
@@ -178,26 +202,25 @@ function setNestedValue<T>(
 ): void {
   const keys = parsePath(path);
   if (keys.length === 1) {
-    tree.update(() => ({ [path]: value } as Partial<T>));
+    applyPartialUpdate(tree, { [path]: value } as Partial<T>);
   } else {
-    tree.update((state) => {
-      const newState = { ...state } as Record<string, unknown>;
-      let current = newState;
-      for (let i = 0; i < keys.length - 1; i++) {
-        if (
-          current[keys[i]] &&
-          typeof current[keys[i]] === 'object' &&
-          !Array.isArray(current[keys[i]])
-        ) {
-          current[keys[i]] = {
-            ...(current[keys[i]] as Record<string, unknown>),
-          };
-          current = current[keys[i]] as Record<string, unknown>;
-        }
+    const currentState = tree();
+    const newState = { ...currentState } as Record<string, unknown>;
+    let current = newState;
+    for (let i = 0; i < keys.length - 1; i++) {
+      if (
+        current[keys[i]] &&
+        typeof current[keys[i]] === 'object' &&
+        !Array.isArray(current[keys[i]])
+      ) {
+        current[keys[i]] = {
+          ...(current[keys[i]] as Record<string, unknown>),
+        };
+        current = current[keys[i]] as Record<string, unknown>;
       }
-      current[keys[keys.length - 1]] = value;
-      return newState as Partial<T>;
-    });
+    }
+    current[keys[keys.length - 1]] = value;
+    applyPartialUpdate(tree, newState as Partial<T>);
   }
 }
 
@@ -336,8 +359,8 @@ class AsyncActionImpl<TInput, TResult, T>
 
       // Execute onStart hook
       if (onStart) {
-        const startUpdate = onStart(this.tree.unwrap());
-        this.tree.update(() => startUpdate);
+        const startUpdate = onStart(this.tree());
+        applyPartialUpdate(this.tree, startUpdate);
       }
 
       // Execute the operation
@@ -348,8 +371,8 @@ class AsyncActionImpl<TInput, TResult, T>
 
       // Execute onSuccess hook
       if (onSuccess) {
-        const successUpdate = onSuccess(result, this.tree.unwrap());
-        this.tree.update(() => successUpdate);
+        const successUpdate = onSuccess(result, this.tree());
+        applyPartialUpdate(this.tree, successUpdate);
       }
 
       return result;
@@ -364,8 +387,8 @@ class AsyncActionImpl<TInput, TResult, T>
 
       // Execute onError hook
       if (onError) {
-        const errorUpdate = onError(err, this.tree.unwrap());
-        this.tree.update(() => errorUpdate);
+        const errorUpdate = onError(err, this.tree());
+        applyPartialUpdate(this.tree, errorUpdate);
       }
 
       throw err;
@@ -379,14 +402,14 @@ class AsyncActionImpl<TInput, TResult, T>
 
       // Execute onComplete hook
       if (onComplete) {
-        const completeUpdate = onComplete(this.tree.unwrap());
-        this.tree.update(() => completeUpdate);
+        const completeUpdate = onComplete(this.tree());
+        applyPartialUpdate(this.tree, completeUpdate);
       }
 
       // Execute onFinally hook
       if (onFinally) {
-        const finallyUpdate = onFinally(this.tree.unwrap());
-        this.tree.update(() => finallyUpdate);
+        const finallyUpdate = onFinally(this.tree());
+        applyPartialUpdate(this.tree, finallyUpdate);
       }
     }
   }

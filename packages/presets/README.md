@@ -2,7 +2,9 @@
 
 Pre-configured SignalTree setups and common patterns for rapid development featuring popular combinations, best practices, and production-ready configurations.
 
-## ✨ What is @signaltree/presets?
+**Bundle size: 0.84KB gzipped**
+
+## What is @signaltree/presets?
 
 The presets package provides ready-to-use SignalTree configurations:
 
@@ -12,13 +14,13 @@ The presets package provides ready-to-use SignalTree configurations:
 - **Starter templates** for different application types
 - **Opinionated defaults** that work great out of the box
 
-## 🚀 Installation
+## Installation
 
 ```bash
 npm install @signaltree/core @signaltree/presets
 ```
 
-## 📖 Basic Usage
+## Basic usage
 
 ```typescript
 import { createStandardTree, createFullTree, createMinimalTree } from '@signaltree/presets';
@@ -42,7 +44,7 @@ const simpleTree = createMinimalTree({
 });
 ```
 
-## 🎯 Available Presets
+## Available presets
 
 ### Standard Preset
 
@@ -187,7 +189,7 @@ const tree = createDevTree(
 // - Enhanced logging and monitoring
 ```
 
-## 🔧 Preset Configuration
+## Preset configuration
 
 ### Custom Configuration
 
@@ -237,7 +239,7 @@ const tree = createAdaptiveTree(initialState, {
 });
 ```
 
-## 📊 Real-World Examples
+## Real-world examples
 
 ### E-commerce Application
 
@@ -522,18 +524,18 @@ class AppStateService {
 }
 ```
 
-## 🎯 Choosing the Right Preset
+## Choosing the right preset
 
 | Preset       | Best For                   | Bundle Size (gzipped) | Features           |
 | ------------ | -------------------------- | --------------------- | ------------------ |
-| **Minimal**  | Simple components, widgets | ~5.1KB                | Core only          |
+| **Minimal**  | Simple components, widgets | ~7.1KB                | Core only          |
 | **Standard** | Most applications          | ~8.2KB                | Core + performance |
 | **Async**    | API-heavy apps             | ~10.2KB               | Enhanced async     |
 | **Entity**   | Data management            | ~6.9KB                | CRUD operations    |
-| **Full**     | Complex applications       | ~23KB                 | All features       |
+| **Full**     | Complex applications       | ~25KB                 | All features       |
 | **Dev**      | Development/debugging      | ~25.3KB               | All + debugging    |
 
-## 🔗 Composition and Customization
+## Composition and customization
 
 ```typescript
 import { createPreset } from '@signaltree/presets';
@@ -556,7 +558,7 @@ const myCustomPreset = createPreset({
 const tree = myCustomPreset(initialState);
 ```
 
-## 📈 Performance Benefits
+## Performance benefits
 
 - **Optimized combinations**: Packages configured to work together efficiently
 - **Environment awareness**: Different configurations for dev/prod
@@ -564,17 +566,17 @@ const tree = myCustomPreset(initialState);
 - **Tree shaking**: Only includes what you need
 - **Bundle optimization**: Minimized overhead for each preset
 
-## 🔗 Links
+## Links
 
 - [SignalTree Documentation](https://signaltree.io)
 - [Core Package](https://www.npmjs.com/package/@signaltree/core)
 - [GitHub Repository](https://github.com/JBorgia/signaltree)
 - [Preset Examples](https://signaltree.io/examples/presets)
 
-## 📄 License
+## License
 
 MIT License with AI Training Restriction - see the [LICENSE](../../LICENSE) file for details.
 
 ---
 
-**Get started quickly** with battle-tested configurations! 🚀
+Get started quickly with battle-tested configurations.

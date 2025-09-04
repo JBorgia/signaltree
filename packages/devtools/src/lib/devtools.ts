@@ -1,4 +1,4 @@
-import { computed, Signal, signal } from '@angular/core';
+import { Signal, signal } from '@angular/core';
 import { SignalTree } from '@signaltree/core';
 
 /**
@@ -53,7 +53,7 @@ export interface ModuleActivityTracker {
  */
 export interface CompositionLogger {
   /** Log module composition events */
-  logComposition: (modules: string[], action: 'pipe' | 'enhance') => void;
+  logComposition: (modules: string[], action: 'with' | 'enhance') => void;
   /** Log method execution with module context */
   logMethodExecution: (
     module: string,
@@ -87,7 +87,7 @@ export interface CompositionLogger {
 /**
  * DevTools interface specifically for modular SignalTree
  */
-export interface ModularDevToolsInterface<T> {
+export interface ModularDevToolsInterface<T = unknown> {
   /** Activity tracker for all modules */
   activityTracker: ModuleActivityTracker;
   /** Composition-aware logger */
@@ -182,7 +182,7 @@ function createCompositionLogger(): CompositionLogger {
   };
 
   return {
-    logComposition: (modules: string[], action: 'pipe' | 'enhance') => {
+    logComposition: (modules: string[], action: 'with' | 'enhance') => {
       addLog('core', 'composition', { modules, action });
       console.log(`🔗 Composition ${action}:`, modules.join(' → '));
     },
@@ -379,33 +379,77 @@ export function withDevTools<T>(
       browserDevTools = { send: connection.send };
     }
 
-    // Wrap tree methods to track activity
-    const originalUpdate = tree.update;
-    tree.update = (updater) => {
-      const startTime = performance.now();
+    // Store the original callable tree function
+    const originalTreeCall = tree.bind(tree);
 
-      originalUpdate.call(tree, updater);
+    // Create enhanced tree function that includes devtools tracking
+    const enhancedTree = function (
+      this: SignalTree<T>,
+      ...args: unknown[]
+    ): T | void {
+      if (args.length === 0) {
+        // Get operation - call original directly (no tracking needed for reads)
+        return originalTreeCall();
+      } else {
+        // Set or update operation - track with devtools
+        const startTime = performance.now();
 
-      const duration = performance.now() - startTime;
-      const newState = tree.unwrap();
+        // Execute the actual update using the original callable interface
+        let result: void;
+        if (args.length === 1) {
+          const arg = args[0];
+          if (typeof arg === 'function') {
+            result = originalTreeCall(arg as (current: T) => T);
+          } else {
+            result = originalTreeCall(arg as T);
+          }
+        }
 
-      // Track performance
-      metrics.trackModuleUpdate('core', duration);
+        const duration = performance.now() - startTime;
+        const newState = originalTreeCall();
 
-      if (duration > performanceThreshold) {
-        logger.logPerformanceWarning(
-          'core',
-          'update',
-          duration,
-          performanceThreshold
-        );
+        // Track performance
+        metrics.trackModuleUpdate('core', duration);
+
+        if (duration > performanceThreshold) {
+          logger.logPerformanceWarning(
+            'core',
+            'update',
+            duration,
+            performanceThreshold
+          );
+        }
+
+        // Send to browser DevTools
+        if (browserDevTools) {
+          browserDevTools.send('UPDATE', newState);
+        }
+
+        return result;
       }
+    } as SignalTree<T>;
 
-      // Send to browser DevTools
-      if (browserDevTools) {
-        browserDevTools.send('UPDATE', newState);
-      }
-    };
+    // Copy all properties and methods from original tree
+    Object.setPrototypeOf(enhancedTree, Object.getPrototypeOf(tree));
+    Object.assign(enhancedTree, tree);
+
+    // Ensure state and $ properties are preserved
+    if ('state' in tree) {
+      Object.defineProperty(enhancedTree, 'state', {
+        value: tree.state,
+        enumerable: false,
+        configurable: true,
+      });
+    }
+
+    // Ensure $ alias is preserved
+    if ('$' in tree) {
+      Object.defineProperty(enhancedTree, '$', {
+        value: (tree as Record<string, unknown>)['$'],
+        enumerable: false,
+        configurable: true,
+      });
+    }
 
     const devToolsInterface: ModularDevToolsInterface<T> = {
       activityTracker,
@@ -415,7 +459,7 @@ export function withDevTools<T>(
       trackComposition: (modules: string[]) => {
         compositionHistory.push({ timestamp: new Date(), chain: [...modules] });
         metrics.updateMetrics({ compositionChain: modules });
-        logger.logComposition(modules, 'pipe');
+        logger.logComposition(modules, 'with');
       },
 
       startModuleProfiling: (module: string) => {
@@ -443,7 +487,7 @@ export function withDevTools<T>(
 
       connectDevTools: (name: string) => {
         if (browserDevTools) {
-          browserDevTools.send('@@INIT', tree.unwrap());
+          browserDevTools.send('@@INIT', originalTreeCall());
           console.log(`🔗 Connected to Redux DevTools as "${name}"`);
         }
       },
@@ -456,21 +500,29 @@ export function withDevTools<T>(
       }),
     };
 
-    return Object.assign(tree, { __devTools: devToolsInterface });
+    return Object.assign(enhancedTree, { __devTools: devToolsInterface });
   };
 }
 
 /**
  * Simple devtools for development
  */
-export function enableDevTools<T>(treeName = 'SignalTree') {
+export function enableDevTools<T>(
+  treeName = 'SignalTree'
+): (
+  tree: SignalTree<T>
+) => SignalTree<T> & { __devTools: ModularDevToolsInterface<T> } {
   return withDevTools<T>({ treeName, enabled: true });
 }
 
 /**
  * Full-featured devtools for intensive debugging
  */
-export function withFullDevTools<T>(treeName = 'SignalTree') {
+export function withFullDevTools<T>(
+  treeName = 'SignalTree'
+): (
+  tree: SignalTree<T>
+) => SignalTree<T> & { __devTools: ModularDevToolsInterface<T> } {
   return withDevTools<T>({
     treeName,
     enabled: true,
@@ -483,7 +535,9 @@ export function withFullDevTools<T>(treeName = 'SignalTree') {
 /**
  * Lightweight devtools for production
  */
-export function withProductionDevTools<T>() {
+export function withProductionDevTools<T>(): (
+  tree: SignalTree<T>
+) => SignalTree<T> & { __devTools: ModularDevToolsInterface<T> } {
   return withDevTools<T>({
     enabled: true,
     enableBrowserDevTools: false,

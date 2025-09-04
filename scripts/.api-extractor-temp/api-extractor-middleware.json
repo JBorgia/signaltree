@@ -1,0 +1,18 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/api-extractor/v7/api-extractor.schema.json",
+  "projectFolder": "/Users/jonathanborgia/code/signaltree alt/packages/middleware",
+  "mainEntryPointFilePath": "../../dist/out-tsc/packages/middleware/src/index.d.ts",
+  "apiReport": {
+    "enabled": false
+  },
+  "docModel": {
+    "enabled": false
+  },
+  "dtsRollup": {
+    "enabled": true,
+    "untrimmedFilePath": "dist/packages/middleware/index.d.ts"
+  },
+  "compiler": {
+    "tsconfigFilePath": "/Users/jonathanborgia/code/signaltree alt/packages/middleware/tsconfig.lib.json"
+  }
+}

@@ -2,7 +2,9 @@
 
 Advanced time-travel debugging and state history management for SignalTree with undo/redo, snapshots, state persistence, and timeline navigation.
 
-## ✨ What is @signaltree/time-travel?
+**Bundle size: 1.75KB gzipped**
+
+## What is @signaltree/time-travel?
 
 The time-travel package provides sophisticated state history management:
 
@@ -13,13 +15,13 @@ The time-travel package provides sophisticated state history management:
 - **Action replay** and debugging
 - **History compression** for memory efficiency
 
-## 🚀 Installation
+## Installation
 
 ```bash
 npm install @signaltree/core @signaltree/time-travel
 ```
 
-## 📖 Basic Usage
+## Basic usage
 
 ```typescript
 import { signalTree } from '@signaltree/core';
@@ -29,7 +31,7 @@ const tree = signalTree({
   count: 0,
   text: '',
   todos: [] as Todo[],
-}).pipe(
+}).with(
   withTimeTravel({
     maxHistorySize: 50,
   })
@@ -51,7 +53,7 @@ timeTravel.redo(); // Forward to text: 'Hello'
 timeTravel.redo(); // Forward to final state
 ```
 
-## 🎯 Core Features
+## Core features
 
 ### Undo/Redo Operations
 
@@ -62,7 +64,7 @@ const tree = signalTree({
     cursor: 0,
     selection: null,
   },
-}).pipe(
+}).with(
   withTimeTravel({
     maxHistorySize: 100,
     trackChanges: true,
@@ -102,7 +104,7 @@ const tree = signalTree({
     content: '',
     metadata: {},
   },
-}).pipe(withTimeTravel());
+}).with(withTimeTravel());
 
 const timeTravel = tree._timeTravel;
 
@@ -142,7 +144,7 @@ const tree = signalTree({
     shapes: [] as Shape[],
     selectedId: null as string | null,
   },
-}).pipe(
+}).with(
   withTimeTravel({
     enableBranching: true,
   })
@@ -190,7 +192,7 @@ const tree = signalTree({
     projects: [],
     openFiles: [],
   },
-}).pipe(
+}).with(
   withTimeTravel({
     persistence: {
       enabled: true,
@@ -226,10 +228,10 @@ console.log(persistenceInfo);
 // }
 ```
 
-## 🔧 Advanced Configuration
+## Advanced configuration
 
 ```typescript
-const tree = signalTree(state).pipe(
+const tree = signalTree(state).with(
   withTimeTravel({
     // History settings
     maxHistorySize: 200,
@@ -281,7 +283,7 @@ const tree = signalTree(state).pipe(
 );
 ```
 
-## 📊 Real-World Examples
+## Real-world examples
 
 ### Document Editor with Version Control
 
@@ -322,7 +324,7 @@ const editorTree = signalTree<DocumentState>({
     minor: 0,
     patch: 0,
   },
-}).pipe(
+}).with(
   withTimeTravel({
     maxHistorySize: 500,
     enableBranching: true,
@@ -497,7 +499,7 @@ interface GameState {
   };
 }
 
-const gameTree = signalTree<GameState>(initialGameState).pipe(
+const gameTree = signalTree<GameState>(initialGameState).with(
   withTimeTravel({
     maxHistorySize: 1000,
     enableBranching: true,
@@ -606,7 +608,7 @@ class GameService {
 // Test utilities using time-travel
 export class TimeTravelTestUtils {
   static createTestTreeWithTimeTravel<T>(initialState: T) {
-    return signalTree(initialState).pipe(
+    return signalTree(initialState).with(
       withTimeTravel({
         maxHistorySize: 1000,
         enableBranching: true,
@@ -672,7 +674,7 @@ describe('Shopping Cart with Time Travel', () => {
     const tree = signalTree({
       cart: { items: [], step: 'shopping' },
       checkout: { address: null, payment: null },
-    }).pipe(
+    }).with(
       withTimeTravel({
         snapshots: {
           autoCreateOnMilestones: true,
@@ -703,18 +705,18 @@ describe('Shopping Cart with Time Travel', () => {
 });
 ```
 
-## 🎯 When to Use Time Travel
+## When to use time travel
 
 Perfect for:
 
-- ✅ Document editors and content creation tools
-- ✅ Drawing and design applications
-- ✅ Game state management with save/load
-- ✅ Form builders with undo/redo
-- ✅ Testing and debugging complex workflows
-- ✅ Version control systems
+- Document editors and content creation tools
+- Drawing and design applications
+- Game state management with save/load
+- Form builders with undo/redo
+- Testing and debugging complex workflows
+- Version control systems
 
-## 🔗 Composition with Other Packages
+## Composition with other packages
 
 ```typescript
 import { signalTree } from '@signaltree/core';
@@ -722,14 +724,14 @@ import { withTimeTravel } from '@signaltree/time-travel';
 import { withDevtools } from '@signaltree/devtools';
 import { withAsync } from '@signaltree/async';
 
-const tree = signalTree(state).pipe(
+const tree = signalTree(state).with(
   withAsync(), // Enhanced async operations
   withTimeTravel(), // Time travel and history
-  withDevtools() // Additional debugging features
+  withDevTools() // Additional debugging features
 );
 ```
 
-## 📈 Performance Considerations
+## Performance considerations
 
 - **Memory usage**: Configurable history size prevents memory leaks
 - **Storage efficiency**: Built-in compression for large histories
@@ -737,14 +739,14 @@ const tree = signalTree(state).pipe(
 - **Bundle size**: ~1.5KB gzipped, tree-shakeable
 - **Operation speed**: Optimized for fast undo/redo operations
 
-## 🔗 Links
+## Links
 
 - [SignalTree Documentation](https://signaltree.io)
 - [Core Package](https://www.npmjs.com/package/@signaltree/core)
 - [GitHub Repository](https://github.com/JBorgia/signaltree)
 - [Time Travel Examples](https://signaltree.io/examples/time-travel)
 
-## 📄 License
+## License
 
 MIT License with AI Training Restriction - see the [LICENSE](../../LICENSE) file for details.
 

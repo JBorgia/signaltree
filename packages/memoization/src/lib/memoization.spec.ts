@@ -16,7 +16,7 @@ describe('Memoization', () => {
   });
 
   it('should enhance tree with memoization capabilities', () => {
-    const tree = signalTree({ count: 0 }).pipe(withMemoization());
+    const tree = signalTree({ count: 0 }).with(withMemoization());
 
     expect(tree.memoizedUpdate).toBeDefined();
     expect(tree.clearMemoCache).toBeDefined();
@@ -24,7 +24,7 @@ describe('Memoization', () => {
   });
 
   it('should cache memoized updates', () => {
-    const tree = signalTree({ count: 0, computed: 0 }).pipe(withMemoization());
+    const tree = signalTree({ count: 0, computed: 0 }).with(withMemoization());
 
     // Track expensive computation calls
     let computationCalls = 0;
@@ -67,7 +67,7 @@ describe('Memoization', () => {
   });
 
   it('should provide cache statistics', () => {
-    const tree = signalTree({ count: 0 }).pipe(withMemoization());
+    const tree = signalTree({ count: 0 }).with(withMemoization());
 
     tree.memoizedUpdate(() => ({ count: 1 }), 'update1');
     tree.memoizedUpdate(() => ({ count: 2 }), 'update2');
@@ -80,7 +80,7 @@ describe('Memoization', () => {
   });
 
   it('should clear cache correctly', () => {
-    const tree = signalTree({ count: 0 }).pipe(withMemoization());
+    const tree = signalTree({ count: 0 }).with(withMemoization());
 
     tree.memoizedUpdate(() => ({ count: 1 }), 'update1');
     tree.memoizedUpdate(() => ({ count: 2 }), 'update2');
@@ -98,7 +98,7 @@ describe('Memoization', () => {
   });
 
   it('should work with enableMemoization convenience function', () => {
-    const tree = signalTree({ count: 0 }).pipe(enableMemoization());
+    const tree = signalTree({ count: 0 }).with(enableMemoization());
 
     expect(tree.memoizedUpdate).toBeDefined();
     expect(tree.clearCache).toBeDefined();
@@ -106,7 +106,7 @@ describe('Memoization', () => {
   });
 
   it('should work with high performance memoization', () => {
-    const tree = signalTree({ count: 0 }).pipe(
+    const tree = signalTree({ count: 0 }).with(
       withHighPerformanceMemoization()
     );
 
@@ -122,7 +122,7 @@ describe('Memoization', () => {
   });
 
   it('should disable memoization when enabled is false', () => {
-    const tree = signalTree({ count: 0 }).pipe(
+    const tree = signalTree({ count: 0 }).with(
       withMemoization({ enabled: false })
     );
 
@@ -133,7 +133,7 @@ describe('Memoization', () => {
   });
 
   it('should enforce cache size limits', () => {
-    const tree = signalTree({ count: 0 }).pipe(
+    const tree = signalTree({ count: 0 }).with(
       withMemoization({ maxCacheSize: 3 })
     );
 
@@ -206,8 +206,8 @@ describe('Memoization', () => {
       });
 
       it('should clear all caches', () => {
-        const tree1 = signalTree({ count: 0 }).pipe(withMemoization());
-        const tree2 = signalTree({ value: 'test' }).pipe(withMemoization());
+        const tree1 = signalTree({ count: 0 }).with(withMemoization());
+        const tree2 = signalTree({ value: 'test' }).with(withMemoization());
 
         tree1.memoizedUpdate?.(() => ({ count: 1 }), 'update1');
         tree2.memoizedUpdate?.(() => ({ value: 'updated' }), 'update2');
@@ -232,7 +232,7 @@ describe('Memoization', () => {
       });
 
       it('should expire cache entries after TTL', () => {
-        const tree = signalTree({ count: 0 }).pipe(
+        const tree = signalTree({ count: 0 }).with(
           withMemoization({ ttl: 1000 }) // 1 second TTL
         );
 
