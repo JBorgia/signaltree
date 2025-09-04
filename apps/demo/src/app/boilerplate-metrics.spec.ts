@@ -1,10 +1,9 @@
-/**
- * Boilerplate and Code Metrics Analysis
 import { signalTree } from '@signaltree/core';
 
+/**
+ * Boilerplate and Code Metrics Analysis
  * Measures developer experience and code quality metrics
  */
-
 interface CodeMetrics {
   linesOfCode: number;
   imports: number;

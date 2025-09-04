@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree } from '@signaltree/core';
+import { withEntities } from '@signaltree/entities';
 
 import { generatePosts, generateUsers, Post, User } from '../../shared/models';
 
@@ -261,7 +262,7 @@ export class EntitiesDemoComponent {
     posts: [],
     selectedUserId: null,
     searchTerm: '',
-  });
+  }).with(withEntities());
 
   // Entity helpers using @signaltree/entities
   userHelpers = this.store.asCrud<User>('users');
@@ -271,6 +272,10 @@ export class EntitiesDemoComponent {
   searchTerm = '';
   lastOperation = 'None';
   operationCount = 0;
+
+  // Form input properties for tests
+  newUserName = '';
+  newUserEmail = '';
 
   // Entity selectors using entity helpers
   userCount = this.userHelpers.selectTotal();
@@ -415,5 +420,40 @@ export class EntitiesDemoComponent {
 
   trackPost(index: number, post: Post): number {
     return post.id;
+  }
+
+  // CRUD methods for tests
+  addUser() {
+    if (!this.newUserName || !this.newUserEmail) return;
+
+    const users = this.store.$.users();
+    const currentMaxId = Math.max(0, ...users.map((u) => u.id));
+
+    const newUser: User = {
+      id: currentMaxId + 1,
+      name: this.newUserName,
+      email: this.newUserEmail,
+      avatar: `https://i.pravatar.cc/150?u=${this.newUserEmail}`,
+    };
+
+    this.userHelpers.add(newUser);
+    this.newUserName = '';
+    this.newUserEmail = '';
+    this.trackOperation('Add User');
+  }
+
+  updateUser(id: number, updates: Partial<User>) {
+    this.userHelpers.update(id, updates);
+    this.trackOperation('Update User');
+  }
+
+  deleteUser(id: number) {
+    this.userHelpers.remove(id);
+    this.trackOperation('Delete User');
+  }
+
+  // Accessor methods for tests
+  users() {
+    return this.allUsers();
   }
 }

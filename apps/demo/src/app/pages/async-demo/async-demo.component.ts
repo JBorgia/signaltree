@@ -99,13 +99,13 @@ class MockApiService {
               <div class="space-y-2">
                 <input
                   type="text"
-                  [(ngModel)]="searchQuery"
+                  [(ngModel)]="searchQueryValue"
                   placeholder="Search by name or email..."
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <button
                   (click)="searchUsers()"
-                  [disabled]="loading() || !searchQuery.trim()"
+                  [disabled]="loading() || !searchQuery().trim()"
                   class="w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {{ loading() ? 'Searching...' : 'Search' }}
@@ -398,15 +398,28 @@ export class AsyncDemoComponent {
   );
 
   // State signals
-  users = this.store.$.users;
-  loading = this.store.$.loading;
-  error = this.store.$.error;
-  selectedUser = this.store.$.selectedUser;
+  users = this.store.state.users;
+  loading = this.store.state.loading;
+  error = this.store.state.error;
+  selectedUser = this.store.state.selectedUser;
+  searchQuery = this.store.state.searchQuery;
 
   // Form fields
-  searchQuery = '';
   newUserName = '';
   newUserEmail = '';
+
+  // Getter/setter for template two-way binding
+  get searchQueryValue() {
+    return this.searchQuery();
+  }
+
+  set searchQueryValue(value: string) {
+    this.searchQuery.set(value);
+  }
+
+  updateSearchQuery(query: string) {
+    this.searchQuery.set(query);
+  }
 
   // Async action states
   isLoadingUsers = this.loadUsersAction.pending;
@@ -483,9 +496,9 @@ export class AsyncDemoComponent {
   }
 
   async searchUsers() {
-    if (!this.searchQuery.trim()) return;
-    await this.searchUsersAction.execute(this.searchQuery);
-    this.store.$.searchQuery.set(this.searchQuery);
+    if (!this.searchQuery().trim()) return;
+    await this.searchUsersAction.execute(this.searchQuery());
+    // Store already updated via action
   }
 
   async createUser() {
@@ -514,14 +527,10 @@ export class AsyncDemoComponent {
     );
 
     if (refreshedUser) {
-      this.store.$(() => ({
-        selectedUser: refreshedUser,
-        users: this.store
-          ()
-          .users.map((u: User) =>
-            u.id === refreshedUser.id ? refreshedUser : u
-          ),
-      }));
+      this.store.state.selectedUser.set(refreshedUser);
+      this.store.state.users.update((users) =>
+        users.map((u: User) => (u.id === refreshedUser.id ? refreshedUser : u))
+      );
     }
   }
 

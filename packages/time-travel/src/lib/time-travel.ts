@@ -348,10 +348,19 @@ export function withTimeTravel<T>(
     Object.setPrototypeOf(enhancedTree, Object.getPrototypeOf(tree));
     Object.assign(enhancedTree, tree);
 
-    // Ensure state property is preserved
+    // Ensure state and $ properties are preserved
     if ('state' in tree) {
       Object.defineProperty(enhancedTree, 'state', {
         value: tree.state,
+        enumerable: false,
+        configurable: true,
+      });
+    }
+
+    // Ensure $ alias is preserved
+    if ('$' in tree) {
+      Object.defineProperty(enhancedTree, '$', {
+        value: (tree as Record<string, unknown>)['$'],
         enumerable: false,
         configurable: true,
       });

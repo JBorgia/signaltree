@@ -1,8 +1,9 @@
-import { Component, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree } from '@signaltree/core';
-import { Todo, generateTodos } from '../../shared/models';
+
+import { generateTodos, Todo } from '../../shared/models';
 
 interface CoreState {
   todos: Todo[];
@@ -213,8 +214,8 @@ export class CoreDemoComponent {
   });
 
   // State signals
-  todos = this.store.$.todos;
-  filter = this.store.$.filter;
+  todos = this.store.state.todos;
+  filter = this.store.state.filter;
   newTodoTitle = '';
 
   // Computed values
@@ -254,8 +255,10 @@ export class CoreDemoComponent {
   );
 
   // Aliases for tests
-  activeTodos = computed(() => this.todos().filter((t) => !t.completed));
-  completedTodos = computed(() => this.todos().filter((t) => t.completed));
+  activeTodos = computed(() => this.todos().filter((t) => !t.completed).length);
+  completedTodos = computed(
+    () => this.todos().filter((t) => t.completed).length
+  );
   deleteTodo = (id: number) => this.removeTodo(id);
 
   // UI helpers
@@ -282,13 +285,13 @@ export class CoreDemoComponent {
       createdAt: new Date(),
     };
 
-    this.store.$.todos.update((todos) => [...todos, newTodo]);
+    this.store.state.todos.update((todos) => [...todos, newTodo]);
     this.newTodoTitle = '';
     this.trackOperation('Add Todo');
   }
 
   toggleTodo(id: number) {
-    this.store.$.todos.update((todos) =>
+    this.store.state.todos.update((todos) =>
       todos.map((todo) =>
         todo.id === id ? { ...todo, completed: !todo.completed } : todo
       )
@@ -297,19 +300,19 @@ export class CoreDemoComponent {
   }
 
   removeTodo(id: number) {
-    this.store.$.todos.update((todos) =>
+    this.store.state.todos.update((todos) =>
       todos.filter((todo) => todo.id !== id)
     );
     this.trackOperation('Remove Todo');
   }
 
   setFilter(filter: 'all' | 'active' | 'completed') {
-    this.store.$.filter.set(filter);
+    this.store.state.filter.set(filter);
     this.trackOperation('Set Filter');
   }
 
   clearCompleted() {
-    this.store.$.todos.update((todos) =>
+    this.store.state.todos.update((todos) =>
       todos.filter((todo) => !todo.completed)
     );
     this.trackOperation('Clear Completed');
@@ -317,7 +320,7 @@ export class CoreDemoComponent {
 
   loadSampleData() {
     const sampleTodos = generateTodos(10);
-    this.store.$.todos.set(sampleTodos);
+    this.store.state.todos.set(sampleTodos);
     this.trackOperation('Load Sample Data');
   }
 

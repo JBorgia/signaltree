@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree } from '@signaltree/core';
+import { withTimeTravel } from '@signaltree/time-travel';
 
 interface TimeTravelState {
   counter: number;
@@ -188,23 +189,22 @@ export class TimeTravelDemoComponent {
       message: '',
     },
     {
-      enableTimeTravel: true,
       treeName: 'TimeTravelDemo',
     }
-  );
+  ).with(withTimeTravel());
 
   // Computed properties
-  counter = this.store.$.counter;
-  todos = this.store.$.todos;
-  message = this.store.$.message;
+  counter = this.store.state.counter;
+  todos = this.store.state.todos;
+  message = this.store.state.message;
 
   // State actions
   increment() {
-    this.store.$.counter.update((c) => c + 1);
+    this.store((current) => ({ ...current, counter: current.counter + 1 }));
   }
 
   decrement() {
-    this.store.$.counter.update((c) => c - 1);
+    this.store((current) => ({ ...current, counter: current.counter - 1 }));
   }
 
   addTodo() {
@@ -214,50 +214,54 @@ export class TimeTravelDemoComponent {
         text: this.newTodoText.trim(),
         completed: false,
       };
-      this.store.$.todos.update((todos) => [...todos, newTodo]);
+      this.store((current) => ({
+        ...current,
+        todos: [...current.todos, newTodo],
+      }));
       this.newTodoText = '';
     }
   }
 
   toggleTodo(id: number) {
-    this.store.$.todos.update((todos) =>
-      todos.map((todo) =>
+    this.store((current) => ({
+      ...current,
+      todos: current.todos.map((todo) =>
         todo.id === id ? { ...todo, completed: !todo.completed } : todo
-      )
-    );
+      ),
+    }));
   }
 
   // Time travel methods
   undo() {
-    return this.store._timeTravel?.undo() || false;
+    return this.store.__timeTravel?.undo() || false;
   }
 
   redo() {
-    return this.store._timeTravel?.redo() || false;
+    return this.store.__timeTravel?.redo() || false;
   }
 
   canUndo() {
-    return this.store._timeTravel?.canUndo() || false;
+    return this.store.__timeTravel?.canUndo() || false;
   }
 
   canRedo() {
-    return this.store._timeTravel?.canRedo() || false;
+    return this.store.__timeTravel?.canRedo() || false;
   }
 
   resetHistory() {
-    this.store._timeTravel?.resetHistory();
+    this.store.__timeTravel?.resetHistory();
   }
 
   getCurrentIndex() {
-    return this.store._timeTravel?.getCurrentIndex() || 0;
+    return this.store.__timeTravel?.getCurrentIndex() || 0;
   }
 
   getHistory() {
-    return this.store._timeTravel?.getHistory() || [];
+    return this.store.__timeTravel?.getHistory() || [];
   }
 
   jumpTo(index: number) {
-    this.store._timeTravel?.jumpTo(index);
+    this.store.__timeTravel?.jumpTo(index);
   }
 
   getHistoryItemClass(index: number): string {

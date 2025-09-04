@@ -1,6 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { Component } from '@angular/core';
-import { signalTree } from '@signaltree/core';
+
 import { CoreDemoComponent } from '../pages/core-demo/core-demo.component';
 
 describe('Core Demo Component', () => {
@@ -73,12 +72,14 @@ describe('Core Demo Component', () => {
     const component = fixture.componentInstance;
     fixture.detectChanges();
 
-    // Add some todos
+    // Add a couple of todos
     component.newTodoTitle = 'Active Todo';
     component.addTodo();
+    fixture.detectChanges();
 
     component.newTodoTitle = 'Completed Todo';
     component.addTodo();
+    fixture.detectChanges();
 
     // Toggle one to completed
     const todoToComplete = component
@@ -86,16 +87,20 @@ describe('Core Demo Component', () => {
       .find((t) => t.title === 'Completed Todo');
     if (todoToComplete) {
       component.toggleTodo(todoToComplete.id);
+      fixture.detectChanges();
     }
 
     // Test different filters
     component.setFilter('all');
+    fixture.detectChanges();
     const allCount = component.filteredTodos().length;
 
     component.setFilter('active');
+    fixture.detectChanges();
     const activeCount = component.filteredTodos().length;
 
     component.setFilter('completed');
+    fixture.detectChanges();
     const completedCount = component.filteredTodos().length;
 
     expect(allCount).toBe(activeCount + completedCount);

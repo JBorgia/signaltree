@@ -603,12 +603,10 @@ export class BatchingDemoComponent {
       });
     }
 
-    // Use batchUpdate to efficiently update multiple state properties
-    this.store.$.batchUpdate((state) => ({
-      users: [...state.users, ...newUsers],
-      batchQueue: [], // Clear queue after processing
-      processing: false,
-    }));
+    // Use tree update to efficiently update multiple state properties (batched automatically)
+    this.store.$.users.update((users) => [...users, ...newUsers]);
+    this.store.$.batchQueue.set([]);
+    this.store.$.processing.set(false);
 
     // NOTE: SignalTree preserves User[] type perfectly! The 'unknown' conversion
     // is only needed because BatchOperation.data is artificially constrained
@@ -621,7 +619,10 @@ export class BatchingDemoComponent {
       status: 'completed',
     }));
 
-    this.store.$.completedOperations((ops) => [...ops, ...operations]);
+    this.store.$.completedOperations.update((ops) => [
+      ...ops,
+      ...operations,
+    ]);
   }
 
   addCreatePostOperation() {
@@ -709,12 +710,10 @@ export class BatchingDemoComponent {
       });
     }
 
-    // Use batchUpdate to efficiently update multiple state properties
-    this.store.$.batchUpdate((state) => ({
-      posts: [...state.posts, ...newPosts],
-      batchQueue: [], // Clear queue after processing
-      processing: false,
-    }));
+    // Use tree update to efficiently update multiple state properties (batched automatically)
+    this.store.$.posts.update((posts) => [...posts, ...newPosts]);
+    this.store.$.batchQueue.set([]);
+    this.store.$.processing.set(false);
 
     // NOTE: SignalTree preserves Post[] type perfectly! The 'unknown' conversion
     // is only needed because BatchOperation.data is artificially constrained
@@ -727,7 +726,10 @@ export class BatchingDemoComponent {
       status: 'completed',
     }));
 
-    this.store.$.completedOperations((ops) => [...ops, ...operations]);
+    this.store.$.completedOperations.update((ops) => [
+      ...ops,
+      ...operations,
+    ]);
   }
 
   async processBatch() {
@@ -753,7 +755,7 @@ export class BatchingDemoComponent {
       this.store.$.batchResults.update((results) => [...results, result]);
 
       // Move operations to completed
-      this.store.$.completedOperations((completed) => [
+      this.store.$.completedOperations.update((completed) => [
         ...completed,
         ...result.operations,
       ]);

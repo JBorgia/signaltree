@@ -23,9 +23,9 @@ async function testBasicFunctionality() {
     // Check if our core files exist and can be read
     const coreFiles = [
       'packages/core/src/lib/types.ts',
-      'packages/core/src/lib/tree.ts',
+      'packages/core/src/lib/signal-tree.ts',
       'packages/core/src/lib/utils.ts',
-      'packages/core/src/lib/equality.ts',
+      'packages/core/src/lib/constants.ts',
       'packages/core/src/index.ts',
     ];
 

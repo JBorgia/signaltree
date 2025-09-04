@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
+
 import { DevtoolsDemoComponent } from './devtools-demo.component';
 
 describe('DevtoolsDemoComponent', () => {
@@ -109,10 +110,11 @@ describe('DevtoolsDemoComponent', () => {
   it('should provide devtools functionality', () => {
     // Test metrics (basic structure)
     const metrics = component.getMetrics();
-    expect(metrics).toHaveProperty('updateCount');
+    expect(metrics).toHaveProperty('updates');
     expect(metrics).toHaveProperty('averageUpdateTime');
-    expect(metrics).toHaveProperty('lastUpdateTime');
-    expect(metrics).toHaveProperty('totalExecutionTime');
+    expect(metrics).toHaveProperty('computations');
+    expect(metrics).toHaveProperty('cacheHits');
+    expect(metrics).toHaveProperty('cacheMisses');
 
     // Test state information
     expect(component.getStateSize()).toBeGreaterThan(0);

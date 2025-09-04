@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+
 import { AsyncDemoComponent } from '../pages/async-demo/async-demo.component';
 
 describe('Async Demo Component', () => {
@@ -22,7 +23,7 @@ describe('Async Demo Component', () => {
     // Test that async methods exist
     expect(typeof component.loadUsers).toBe('function');
     expect(typeof component.searchUsers).toBe('function');
-    expect(typeof component.loadUserDetails).toBe('function');
+    expect(typeof component.selectUser).toBe('function');
 
     // Initial state should not be loading
     expect(component.loading()).toBeFalsy();
