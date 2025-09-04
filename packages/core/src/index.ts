@@ -25,7 +25,7 @@ export { signalTree } from './lib/signal-tree';
 export type {
   // Core types - Main SignalTree interfaces
   SignalTree,
-  DeepSignalify,
+  TreeNode,
   RemoveSignalMethods,
   Primitive,
   BuiltInObject,
@@ -114,7 +114,7 @@ export { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './lib/constants';
  *
  * **Core Types:**
  * - `SignalTree<T>` - Main interface for signal trees
- * - `DeepSignalify<T>` - Type transformation for nested signals
+ * - `TreeNode<T>` - Type transformation for nested signals
  * - `TreeConfig` - Configuration options
  *
  * **Utilities:**

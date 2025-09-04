@@ -6,18 +6,18 @@ This document outlines the intellectual property protections for the recursive t
 
 ### Protected Innovations
 
-#### 1. DeepSignalify<T> Recursive Type System
+#### 1. TreeNode<T> Recursive Type System
 
 The core recursive type transformation that maintains perfect type inference through unlimited nesting depth:
 
 ```typescript
-export type DeepSignalify<T> = {
+export type TreeNode<T> = {
   [K in keyof T]: T[K] extends (infer U)[]
     ? WritableSignal<U[]>
     : T[K] extends object
     ? T[K] extends Signal<infer TK>
       ? WritableSignal<TK>
-      : DeepSignalify<T[K]> // 🔒 PROTECTED: Recursive type transformation
+      : TreeNode<T[K]> // 🔒 PROTECTED: Recursive type transformation
     : WritableSignal<T[K]>;
 };
 ```
@@ -28,7 +28,7 @@ The approach that mirrors type recursion with runtime recursion:
 
 ```typescript
 // 🔒 PROTECTED: Type-Runtime Alignment Pattern
-function createSignalStore<T>(obj: T): DeepSignalify<T> {
+function createSignalStore<T>(obj: T): TreeNode<T> {
   // Recursive call that mirrors the type recursion exactly
   (result as any)[key] = createSignalStore(value); // PROPRIETARY IMPLEMENTATION
 }

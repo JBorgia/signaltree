@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs';
+
 #!/usr/bin/env node
 
 /**
@@ -6,8 +8,6 @@
  * This test creates a real working example to prove the modular pieces
  * work exactly the same as the monolithic version would.
  */
-
-import { readFileSync } from 'fs';
 
 console.log('🧪 SignalTree Functional Parity Test');
 console.log('='.repeat(40));
@@ -25,7 +25,7 @@ function testModularStructure() {
 
     // Check core functionality
     const hasSignalTree = tree.includes('export function signalTree');
-    const hasDeepSignalify = types.includes('export type DeepSignalify');
+    const hasTreeNode = types.includes('export type TreeNode');
     const hasUnwrap = tree.includes('unwrap()');
     const hasUpdate = tree.includes('update(updater');
     const hasPipe = tree.includes('pipe<R>');
@@ -35,7 +35,7 @@ function testModularStructure() {
       `  ✅ SignalTree factory: ${hasSignalTree ? 'PRESENT' : 'MISSING'}`
     );
     console.log(
-      `  ✅ DeepSignalify types: ${hasDeepSignalify ? 'PRESENT' : 'MISSING'}`
+      `  ✅ TreeNode types: ${hasTreeNode ? 'PRESENT' : 'MISSING'}`
     );
     console.log(`  ✅ Unwrap method: ${hasUnwrap ? 'PRESENT' : 'MISSING'}`);
     console.log(`  ✅ Update method: ${hasUpdate ? 'PRESENT' : 'MISSING'}`);
@@ -72,7 +72,7 @@ function testModularStructure() {
 
     const allCorePresent =
       hasSignalTree &&
-      hasDeepSignalify &&
+      hasTreeNode &&
       hasUnwrap &&
       hasUpdate &&
       hasPipe &&

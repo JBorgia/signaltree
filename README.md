@@ -2669,7 +2669,7 @@ Special thanks to **Christian Moser** - an invaluable tester, colleague, and fri
 
 SignalTree's revolutionary recursive typing system is proprietary intellectual property:
 
-- **DeepSignalify<T>** recursive type transformations
+- **TreeNode<T>** recursive type transformations
 - **Signal-store pattern** with type-runtime alignment
 - **"Initiation defines structure"** paradigm
 - **Built-in object detection** algorithms

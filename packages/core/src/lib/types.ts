@@ -1,7 +1,7 @@
 import { Signal, WritableSignal } from '@angular/core';
 
 /**
- * SignalTree Core Types v1.9.1
+ * SignalTree Core Types v2.0.2
  * MIT License - Copyright (c) 2025 Jonathan D Borgia
  */
 
@@ -85,14 +85,14 @@ export interface NodeAccessor<T> {
 /**
  * Signalified node with callable interface
  */
-export type SignalifiedNode<T> = NodeAccessor<T> & DeepSignalify<T>;
+export type SignalifiedNode<T> = NodeAccessor<T> & TreeNode<T>;
 
 /**
  * Deep signalification type - converts object properties to signals recursively
  * - Leaves (primitives, arrays, functions, built-ins): Raw Angular WritableSignal<T>
- * - Nested objects: NodeAccessor<T> (callable) + recursive DeepSignalify<T> properties
+ * - Nested objects: NodeAccessor<T> (callable) + recursive TreeNode<T> properties
  */
-export type DeepSignalify<T> = {
+export type TreeNode<T> = {
   [K in keyof T]: T[K] extends readonly unknown[]
     ? WritableSignal<T[K]> // Arrays are Angular signals
     : T[K] extends object
@@ -242,10 +242,10 @@ export interface WithMethod<T> {
  */
 export type SignalTree<T> = NodeAccessor<T> & {
   /** The reactive state object */
-  state: DeepSignalify<T>;
+  state: TreeNode<T>;
 
   /** Shorthand alias for state */
-  $: DeepSignalify<T>;
+  $: TreeNode<T>;
 
   /** Core methods */
   with: WithMethod<T>;
