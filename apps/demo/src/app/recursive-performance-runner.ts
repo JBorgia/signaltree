@@ -263,7 +263,8 @@ export class RecursivePerformanceRunner {
 
     // Access speed through self-references
     const accessStart = performance.now();
-    selfRefTree.$.root.children.child1.parent()?.data();
+    const parent = selfRefTree.$.root.children.child1.parent();
+    const data = parent ? (parent as { data: () => string }).data() : undefined;
     const accessTime = performance.now() - accessStart;
 
     // Update speed with circular references
@@ -339,7 +340,7 @@ export class RecursivePerformanceRunner {
     const history = timeTree.$.history();
     if (history.length > 0) {
       const lastSnapshot = history[history.length - 1];
-      timeTree.update(() => lastSnapshot);
+      (timeTree as (value: unknown) => void)(lastSnapshot);
     }
     const replayTime = performance.now() - replayStart;
 
@@ -365,12 +366,12 @@ export class RecursivePerformanceRunner {
 
     // Single update baseline
     const singleStart = performance.now();
-    batchTree.$.data.set({ field1: Math.random() });
+    batchTree((current) => ({ ...current, data: { field1: Math.random() } }));
     const singleTime = performance.now() - singleStart;
 
     // Batch 10 updates
     const batch10Start = performance.now();
-    batchTree.update((current) => {
+    batchTree((current) => {
       const updates: Record<string, unknown> = {};
       for (let i = 0; i < 10; i++) {
         updates[`field_${i}`] = Math.random();
@@ -381,7 +382,7 @@ export class RecursivePerformanceRunner {
 
     // Batch 100 updates
     const batch100Start = performance.now();
-    batchTree.update((current) => {
+    batchTree((current) => {
       const updates: Record<string, unknown> = {};
       for (let i = 0; i < 100; i++) {
         updates[`field_${i}`] = Math.random();
@@ -392,7 +393,7 @@ export class RecursivePerformanceRunner {
 
     // Batch 1000 updates
     const batch1000Start = performance.now();
-    batchTree.update((current) => {
+    batchTree((current) => {
       const updates: Record<string, unknown> = {};
       for (let i = 0; i < 1000; i++) {
         updates[`field_${i}`] = Math.random();
@@ -567,14 +568,17 @@ eliminating traditional constraints through revolutionary recursive typing.
 
     // Create 100 interconnected nodes
     for (let i = 0; i < 100; i++) {
-      tree.$.nodes.set({
-        ...tree.$.nodes(),
-        [`node_${i}`]: {
-          id: i,
-          data: `data_${i}`,
-          connections: [] as number[],
+      tree((current) => ({
+        ...current,
+        nodes: {
+          ...current.nodes,
+          [`node_${i}`]: {
+            id: i,
+            data: `data_${i}`,
+            connections: [] as number[],
+          },
         },
-      });
+      }));
     }
 
     return tree;

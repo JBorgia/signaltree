@@ -174,12 +174,12 @@ export class BenchmarkService {
 
     // Shallow update (top level)
     results.shallow = BenchmarkService.measureTime(() => {
-      tree.$((state) => ({ ...state, topLevel: Math.random() }));
+      tree((state) => ({ ...state, topLevel: Math.random() }));
     });
 
     // Medium depth update
     results.medium = BenchmarkService.measureTime(() => {
-      tree.$((state) => ({
+      tree((state) => ({
         ...state,
         level_4_item_0: {
           ...state.level_4_item_0,
@@ -190,7 +190,7 @@ export class BenchmarkService {
 
     // Deep update
     results.deep = BenchmarkService.measureTime(() => {
-      tree.$((state) => {
+      tree((state) => {
         const newState = { ...state };
         let current = newState;
         for (let i = 4; i > 0; i--) {
@@ -207,13 +207,15 @@ export class BenchmarkService {
     const batchTree = signalTree(state).with(withBatching());
 
     results.batch10 = BenchmarkService.measureTime(() => {
-      batchTree.$.batchUpdate((state) => {
-        const updates: any = {};
-        for (let i = 0; i < 10; i++) {
-          updates[`field_${i}`] = Math.random();
+      (batchTree.$ as Record<string, unknown>)['batchUpdate']?.(
+        (state: Record<string, unknown>) => {
+          const updates: Record<string, unknown> = {};
+          for (let i = 0; i < 10; i++) {
+            updates[`field_${i}`] = Math.random();
+          }
+          return { ...state, ...updates };
         }
-        return { ...state, ...updates };
-      });
+      );
     });
 
     results.batch100 = BenchmarkService.measureTime(() => {
@@ -355,7 +357,7 @@ export class BenchmarkService {
     });
 
     results.signalTree.update = BenchmarkService.measureTime(() => {
-      stTree.$((state) => ({ ...state, value: Math.random() }));
+      stTree((state) => ({ ...state, value: Math.random() }));
     });
 
     // Native Signals

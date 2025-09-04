@@ -507,14 +507,22 @@ export function withDevTools<T>(
 /**
  * Simple devtools for development
  */
-export function enableDevTools<T>(treeName = 'SignalTree') {
+export function enableDevTools<T>(
+  treeName = 'SignalTree'
+): (
+  tree: SignalTree<T>
+) => SignalTree<T> & { __devTools: ModularDevToolsInterface<T> } {
   return withDevTools<T>({ treeName, enabled: true });
 }
 
 /**
  * Full-featured devtools for intensive debugging
  */
-export function withFullDevTools<T>(treeName = 'SignalTree') {
+export function withFullDevTools<T>(
+  treeName = 'SignalTree'
+): (
+  tree: SignalTree<T>
+) => SignalTree<T> & { __devTools: ModularDevToolsInterface<T> } {
   return withDevTools<T>({
     treeName,
     enabled: true,
@@ -527,7 +535,9 @@ export function withFullDevTools<T>(treeName = 'SignalTree') {
 /**
  * Lightweight devtools for production
  */
-export function withProductionDevTools<T>() {
+export function withProductionDevTools<T>(): (
+  tree: SignalTree<T>
+) => SignalTree<T> & { __devTools: ModularDevToolsInterface<T> } {
   return withDevTools<T>({
     enabled: true,
     enableBrowserDevTools: false,

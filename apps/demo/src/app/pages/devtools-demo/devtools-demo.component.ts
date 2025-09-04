@@ -235,7 +235,7 @@ interface DevtoolsState {
                     <button
                       (click)="toggleTodo(todo.id)"
                       class="px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 rounded"
-                      aria-pressed="{{ todo.completed }}"
+                      [attr.aria-pressed]="todo.completed"
                     >
                       {{ todo.completed ? 'Undo' : 'Done' }}
                     </button>
@@ -391,12 +391,21 @@ export class DevtoolsDemoComponent {
   }
 
   triggerSnapshot() {
-    this.store.takeSnapshot?.();
+    // Export current debug session as a snapshot
+    const devTools = (this.store as Record<string, unknown>)['__devTools'];
+    const snapshot = (
+      devTools as { exportDebugSession?: () => unknown }
+    )?.exportDebugSession?.();
+    console.log('State snapshot:', snapshot);
     this.lastAction = 'Take state snapshot';
   }
 
   resetMetrics() {
-    this.store.clearCache?.();
+    // Reset metrics by reconnecting devtools
+    const devTools = (this.store as Record<string, unknown>)['__devTools'];
+    (
+      devTools as { connectDevTools?: (name: string) => void }
+    )?.connectDevTools?.('DevToolsDemo');
     this.lastAction = 'Reset performance metrics';
   }
 

@@ -1,8 +1,9 @@
-import { Component, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree } from '@signaltree/core';
-import { Todo, generateTodos } from '../../shared/models';
+
+import { generateTodos, Todo } from '../../shared/models';
 
 interface BenchmarkResult {
   library: string;
@@ -372,9 +373,13 @@ export class PerformanceComparisonComponent {
           this.signalTreeStore.$.todos.set(testData.slice(0, 100));
           break;
         case 'update':
-          this.signalTreeStore.$.todos((todos) =>
-            todos.map((todo) => ({ ...todo, completed: !todo.completed }))
-          );
+          this.signalTreeStore((current) => ({
+            ...current,
+            todos: current.todos.map((todo) => ({
+              ...todo,
+              completed: !todo.completed,
+            })),
+          }));
           break;
         case 'filter':
           this.signalTreeStore.$.filter.set(
@@ -413,7 +418,7 @@ export class PerformanceComparisonComponent {
           this.nativeStore.todos.set(testData.slice(0, 100));
           break;
         case 'update':
-          this.nativeStore.todos((todos) =>
+          this.nativeStore.todos.update((todos) =>
             todos.map((todo) => ({ ...todo, completed: !todo.completed }))
           );
           break;
@@ -460,14 +465,15 @@ export class PerformanceComparisonComponent {
       const randomIndex = Math.floor(Math.random() * this.liveDataSize);
 
       // SignalTree update
-      this.signalTreeStore.$.todos((todos) =>
-        todos.map((todo, idx) =>
+      this.signalTreeStore((current) => ({
+        ...current,
+        todos: current.todos.map((todo, idx) =>
           idx === randomIndex ? { ...todo, completed: !todo.completed } : todo
-        )
-      );
+        ),
+      }));
 
       // Native update
-      this.nativeStore.todos((todos) =>
+      this.nativeStore.todos.update((todos) =>
         todos.map((todo, idx) =>
           idx === randomIndex ? { ...todo, completed: !todo.completed } : todo
         )
