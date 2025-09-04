@@ -49,7 +49,9 @@ function makeNodeAccessor<T>(): NodeAccessor<T> {
     }
   } as NodeAccessor<T>;
 
-  (accessor as any)[NODE_ACCESSOR_SYMBOL] = true;
+  (accessor as NodeAccessor<T> & Record<symbol, boolean>)[
+    NODE_ACCESSOR_SYMBOL
+  ] = true;
   return accessor;
 }
 
@@ -73,25 +75,51 @@ function makeRootNodeAccessor<T>(
     }
   } as NodeAccessor<T>;
 
-  (accessor as any)[NODE_ACCESSOR_SYMBOL] = true;
+  (accessor as NodeAccessor<T> & Record<symbol, boolean>)[
+    NODE_ACCESSOR_SYMBOL
+  ] = true;
   return accessor;
 }
 
-function recursiveUpdate(target: any, updates: any) {
-  for (const key in updates) {
-    if (!(key in target)) continue;
+function recursiveUpdate(target: unknown, updates: unknown): void {
+  if (!updates || typeof updates !== 'object') {
+    return;
+  }
 
-    const targetProp = target[key];
-    const updateValue = updates[key];
+  let targetObj: Record<string, unknown>;
+
+  // Handle NodeAccessor (function) as target
+  if (isNodeAccessor(target)) {
+    targetObj = target as unknown as Record<string, unknown>;
+  } else if (target && typeof target === 'object') {
+    targetObj = target as Record<string, unknown>;
+  } else {
+    return;
+  }
+
+  const updatesObj = updates as Record<string, unknown>;
+
+  for (const key in updatesObj) {
+    if (!(key in targetObj)) {
+      continue;
+    }
+
+    const targetProp = targetObj[key];
+    const updateValue = updatesObj[key];
 
     if (isSignal(targetProp)) {
       // Leaf signal - check if it's writable
       if ('set' in targetProp && typeof targetProp.set === 'function') {
-        (targetProp as WritableSignal<any>).set(updateValue);
+        (targetProp as WritableSignal<unknown>).set(updateValue);
       }
     } else if (isNodeAccessor(targetProp)) {
-      // Let the NodeAccessor handle it
-      targetProp(updateValue);
+      // For nested objects, check if updateValue is an object for recursive update
+      if (updateValue && typeof updateValue === 'object') {
+        recursiveUpdate(targetProp, updateValue);
+      } else {
+        // Direct value assignment
+        targetProp(updateValue);
+      }
     }
   }
 }
@@ -103,7 +131,7 @@ export function isNodeAccessor(value: unknown): value is NodeAccessor<unknown> {
   return (
     typeof value === 'function' &&
     value &&
-    (value as any)[NODE_ACCESSOR_SYMBOL] === true
+    (value as unknown as Record<symbol, unknown>)[NODE_ACCESSOR_SYMBOL] === true
   );
 }
 
@@ -640,10 +668,10 @@ function create<T>(obj: T, config: TreeConfig = {}): SignalTree<T> {
       const currentValue = unwrap(signalState);
       const newValue = updater(currentValue);
       // Use recursive update to preserve signals
-      recursiveUpdate(tree, newValue);
+      recursiveUpdate(signalState, newValue);
     } else {
       // Direct set - use recursive update
-      recursiveUpdate(tree, arg);
+      recursiveUpdate(signalState, arg);
     }
   } as SignalTree<T>;
 
@@ -755,7 +783,7 @@ export function signalTree<T>(
  */
 export function applyEnhancer<T, O>(
   tree: SignalTree<T>,
-  enhancer: EnhancerWithMeta<SignalTree<any>, O>
+  enhancer: EnhancerWithMeta<SignalTree<T>, O>
 ): O {
   return enhancer(tree) as O;
 }

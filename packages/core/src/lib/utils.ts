@@ -125,8 +125,12 @@ export function isBuiltInObject(v: unknown): boolean {
   }
 
   try {
-    const NodeBuffer = (globalThis as any)?.Buffer;
-    if (NodeBuffer && v instanceof NodeBuffer) return true;
+    const NodeBuffer = (globalThis as { Buffer?: unknown })?.Buffer;
+    if (
+      NodeBuffer &&
+      v instanceof (NodeBuffer as new (...args: unknown[]) => unknown)
+    )
+      return true;
   } catch {
     /* ignore */
   }
