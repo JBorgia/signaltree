@@ -84,7 +84,7 @@ const performance = tree.$.enterprise.divisions.technology.departments.engineeri
 console.log(`Performance: ${performance}ms`); // ~0.098ms (averaged)
 
 // Type-safe updates at unlimited depth
-tree.$.enterprise.divisions.technology.departments.engineering.teams.frontend.projects.signaltree.releases.v1.features.recursiveTyping.validation.tests.extreme.depth.set(25); // Perfect type safety!
+tree.$.enterprise.divisions.technology.departments.engineering.teams.frontend.projects.signaltree.releases.v1.features.recursiveTyping.validation.tests.extreme.depth(25); // Perfect type safety!
 ```
 
 ### Basic usage
@@ -103,8 +103,8 @@ console.log(tree.$.count()); // 0
 console.log(tree.$.message()); // 'Hello World'
 
 // Update values
-tree.$.count.set(5);
-tree.$.message.set('Updated!');
+tree.$.count(5);
+tree.$.message('Updated!');
 
 // Use in an Angular component
 @Component({
@@ -116,7 +116,7 @@ class SimpleComponent {
   tree = tree;
 
   increment() {
-    this.tree.$.count.update((n) => n + 1);
+    this.tree.$.count((n) => n + 1);
   }
 }
 ```
@@ -141,9 +141,9 @@ const tree = signalTree({
 });
 
 // Access nested signals with full type safety
-tree.$.user.name.set('Jane Doe');
-tree.$.user.preferences.theme.set('light');
-tree.$.ui.loading.set(true);
+tree.$.user.name('Jane Doe');
+tree.$.user.preferences.theme('light');
+tree.$.ui.loading(true);
 
 // Computed values from nested state
 const userDisplayName = computed(() => {
@@ -187,33 +187,35 @@ const tree = signalTree<AppState>({
   auth: {
     user: null,
     token: null,
-    isAuthenticated: false
+    isAuthenticated: false,
   },
   data: {
     users: [],
     posts: [],
-    cache: {}
+    cache: {},
   },
   ui: {
     theme: 'light',
     sidebar: { open: true, width: 250 },
-    notifications: []
-  }
+    notifications: [],
+  },
 });
 
 // Complex updates with type safety
-tree.update(state => ({
+tree((state) => ({
   auth: {
     ...state.auth,
     user: { id: '1', name: 'John' },
-    isAuthenticated: true
+    isAuthenticated: true,
   },
   ui: {
     ...state.ui,
-    notifications: [
-      ...state.ui.notifications,
-      // Get entire state as plain object
-const currentState = tree.unwrap();
+    notifications: [...state.ui.notifications, { id: '1', message: 'Welcome!', type: 'success' }],
+  },
+}));
+
+// Get entire state as plain object
+const currentState = tree();
 console.log('Current app state:', currentState);
 ```
 
