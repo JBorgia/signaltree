@@ -59,7 +59,7 @@ async function main() {
   console.table(recursiveTable);
 
   // 2) Bundle size report
-  const bundle = run('node', ['scripts/bundle-size-report.js']);
+  const bundle = run('node', ['scripts/consolidated-bundle-analysis.js']);
   const sizes = metrics.parseBundleReport(bundle.out);
   console.log('\nBundle Sizes (gzipped KB):');
   console.table(sizes);

@@ -298,9 +298,3 @@ export function createPersistenceMiddleware<T>(config: {
     },
   };
 }
-
-// Re-export the built-in middleware creators with simpler names
-export const loggingMiddleware = createLoggingMiddleware;
-export const performanceMiddleware = createPerformanceMiddleware;
-export const validationMiddleware = createValidationMiddleware;
-export const persistenceMiddleware = createPersistenceMiddleware;

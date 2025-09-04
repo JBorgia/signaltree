@@ -2,7 +2,9 @@
 
 Angular Forms integration for SignalTree featuring reactive forms binding, validation, form state management, and seamless Angular integration.
 
-## ✨ What is @signaltree/ng-forms?
+**Bundle size: 3.38KB gzipped**
+
+## What is @signaltree/ng-forms?
 
 The ng-forms package provides deep Angular Forms integration:
 
@@ -13,13 +15,13 @@ The ng-forms package provides deep Angular Forms integration:
 - **Dynamic form generation** from SignalTree state
 - **Cross-field validation** and complex form logic
 
-## 🚀 Installation
+## Installation
 
 ```bash
 npm install @signaltree/core @signaltree/ng-forms
 ```
 
-## 📖 Basic Usage
+## Basic usage
 
 ```typescript
 import { signalTree } from '@signaltree/core';
@@ -44,7 +46,7 @@ const preferencesForm = tree.createForm('preferences');
 // Forms automatically sync with SignalTree state
 ```
 
-## 🎯 Core Features
+## Core features
 
 ### Reactive Forms Integration
 
@@ -325,7 +327,7 @@ class DynamicFormComponent {
 }
 ```
 
-## 🔧 Advanced Configuration
+## Advanced configuration
 
 ```typescript
 const tree = signalTree(state).with(
@@ -371,7 +373,7 @@ const tree = signalTree(state).with(
 );
 ```
 
-## 📊 Real-World Examples
+## Real-world examples
 
 ### Multi-Step Form Wizard
 
@@ -835,18 +837,18 @@ class SurveyComponent implements OnInit {
 }
 ```
 
-## 🎯 When to Use ng-forms
+## When to use ng-forms
 
 Perfect for:
 
-- ✅ Angular applications with complex forms
-- ✅ Real-time form validation and feedback
-- ✅ Multi-step forms and wizards
-- ✅ Dynamic form generation
-- ✅ Forms with cross-field validation
-- ✅ Applications requiring form state persistence
+- Angular applications with complex forms
+- Real-time form validation and feedback
+- Multi-step forms and wizards
+- Dynamic form generation
+- Forms with cross-field validation
+- Applications requiring form state persistence
 
-## 🔗 Composition with Other Packages
+## Composition with other packages
 
 ```typescript
 import { signalTree } from '@signaltree/core';
@@ -857,11 +859,11 @@ import { withDevtools } from '@signaltree/devtools';
 const tree = signalTree(state).with(
   withValidation(), // Enhanced validation rules
   withForms(), // Angular forms integration
-  withDevtools() // Debug form state changes
+  withDevTools() // Debug form state changes
 );
 ```
 
-## 📈 Performance Benefits
+## Performance benefits
 
 - **Automatic synchronization** between forms and state
 - **Debounced updates** prevent excessive state changes
@@ -869,14 +871,14 @@ const tree = signalTree(state).with(
 - **Tree-shakeable** - only includes what you use
 - **Memory efficient** form state management
 
-## 🔗 Links
+## Links
 
 - [SignalTree Documentation](https://signaltree.io)
 - [Core Package](https://www.npmjs.com/package/@signaltree/core)
 - [GitHub Repository](https://github.com/JBorgia/signaltree)
 - [ng-forms Examples](https://signaltree.io/examples/ng-forms)
 
-## 📄 License
+## License
 
 MIT License with AI Training Restriction - see the [LICENSE](../../LICENSE) file for details.
 

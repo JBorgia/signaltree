@@ -373,10 +373,6 @@ export function withBatching<T>(
  * Uses unconstrained recursive typing - no limitations on T
  * ```
  */
-export function enableBatching<T>() {
-  return withBatching<T>({ enabled: true });
-}
-
 /**
  * Creates high-performance batching configuration optimized for demanding applications.
  * Uses aggressive batching settings for maximum performance in high-frequency update scenarios.

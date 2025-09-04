@@ -94,6 +94,13 @@ export const appRoutes: Route[] = [
         './pages/performance-comparison/performance-comparison.component'
       ).then((c) => c.PerformanceComparisonComponent),
   },
+  {
+    path: 'performance-dashboard',
+    loadComponent: () =>
+      import(
+        './components/performance-dashboard/performance-dashboard.component'
+      ).then((c) => c.PerformanceDashboardComponent),
+  },
 
   // Existing pages
   {

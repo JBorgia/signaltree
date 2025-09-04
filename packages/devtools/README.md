@@ -2,7 +2,9 @@
 
 Powerful development and debugging tools for SignalTree featuring time-travel debugging, state visualization, performance monitoring, and comprehensive logging.
 
-## ✨ What is @signaltree/devtools?
+**Bundle size: 2.49KB gzipped**
+
+## What is @signaltree/devtools?
 
 The devtools package provides comprehensive development and debugging capabilities:
 
@@ -13,23 +15,23 @@ The devtools package provides comprehensive development and debugging capabiliti
 - **Dev/prod environment detection**
 - **Browser DevTools integration**
 
-## 🚀 Installation
+## Installation
 
 ```bash
 npm install @signaltree/core @signaltree/devtools
 ```
 
-## 📖 Basic Usage
+## Basic usage
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withDevtools } from '@signaltree/devtools';
+import { withDevTools } from '@signaltree/devtools';
 
 const tree = signalTree({
   count: 0,
   user: { name: 'John', age: 30 },
 }).with(
-  withDevtools({
+  withDevTools({
     name: 'MyApp',
     enabled: true, // automatically detects dev environment
   })
@@ -40,16 +42,16 @@ tree.$.count.set(1); // Logged: "count changed from 0 to 1"
 tree.$.user.name.set('Jane'); // Logged: "user.name changed from 'John' to 'Jane'"
 ```
 
-## 🎯 Core Features
+## Core features
 
-### Time-Travel Debugging
+### Time-travel debugging
 
 ```typescript
 const tree = signalTree({
   todos: [] as Todo[],
   filter: 'all' as 'all' | 'completed' | 'pending',
 }).with(
-  withDevtools({
+  withDevTools({
     name: 'TodoApp',
     maxHistorySize: 50,
   })
@@ -75,7 +77,7 @@ console.log(devtools.canUndo()); // Can undo?
 console.log(devtools.canRedo()); // Can redo?
 ```
 
-### State Visualization
+### State visualization
 
 ```typescript
 const tree = signalTree({
@@ -90,7 +92,7 @@ const tree = signalTree({
     users: [],
     posts: [],
   },
-}).with(withDevtools());
+}).with(withDevTools());
 
 const devtools = tree._devtools;
 
@@ -112,16 +114,16 @@ console.log(diff);
 // Shows what changed between history points 3 and 5
 ```
 
-### Performance Monitoring
+### Performance monitoring
 
 ```typescript
 const tree = signalTree({
   largeArray: new Array(10000).fill(0),
   computedValues: {},
 }).with(
-  withDevtools({
+  withDevTools({
     trackPerformance: true,
-    performanceThreshold: 10, // Log operations taking >10ms
+    performanceThreshold: 1, // Log operations taking >1ms (SignalTree baseline: 0.061-0.109ms)
   })
 );
 
@@ -147,14 +149,14 @@ perfLog.forEach((entry) => {
 });
 ```
 
-### Action Logging and Replay
+### Action logging and replay
 
 ```typescript
 const tree = signalTree({
   counter: 0,
   messages: [] as string[],
 }).with(
-  withDevtools({
+  withDevTools({
     logActions: true,
     logLevel: 'detailed', // 'minimal' | 'standard' | 'detailed'
   })
@@ -184,11 +186,11 @@ devtools.replayActions(actions);
 devtools.clearActionLog();
 ```
 
-## 🔧 Advanced Configuration
+## Advanced configuration
 
 ```typescript
 const tree = signalTree(state).with(
-  withDevtools({
+  withDevTools({
     // Basic settings
     name: 'MyApplication',
     enabled: process.env.NODE_ENV === 'development',
@@ -204,7 +206,7 @@ const tree = signalTree(state).with(
 
     // Performance settings
     trackPerformance: true,
-    performanceThreshold: 5, // ms
+    performanceThreshold: 1, // ms (SignalTree: 0.061-0.109ms baseline)
 
     // Browser DevTools integration
     connectToReduxDevTools: true,
@@ -230,12 +232,12 @@ const tree = signalTree(state).with(
 );
 ```
 
-## 🌐 Browser DevTools Integration
+## Browser DevTools integration
 
 ```typescript
 // Automatic Redux DevTools Extension support
 const tree = signalTree(state).with(
-  withDevtools({
+  withDevTools({
     connectToReduxDevTools: true,
     devToolsOptions: {
       name: 'My SignalTree App',
@@ -253,9 +255,9 @@ const tree = signalTree(state).with(
 // - Export/import state snapshots
 ```
 
-## 📊 Real-World Examples
+## Examples
 
-### Development Dashboard
+### Development dashboard
 
 ```typescript
 interface AppState {
@@ -394,7 +396,7 @@ class DevToolsComponent {
 export class SignalTreeTestUtils {
   static createTestTree<T>(initialState: T) {
     return signalTree(initialState).with(
-      withDevtools({
+      withDevTools({
         name: 'Test Tree',
         enabled: true,
         maxHistorySize: 1000,
@@ -474,7 +476,7 @@ describe('User workflow', () => {
 ```typescript
 // Production error tracking with devtools
 const tree = signalTree(state).with(
-  withDevtools({
+  withDevTools({
     name: 'Production App',
     enabled: true, // Even in production for error tracking
     logLevel: 'minimal',
@@ -500,7 +502,7 @@ const tree = signalTree(state).with(
 );
 ```
 
-## 🎯 When to Use DevTools
+## When to use devtools
 
 Perfect for:
 
@@ -511,39 +513,39 @@ Perfect for:
 - ✅ User session replay
 - ✅ State audit trails
 
-## 🔗 Composition with Other Packages
+## Composition with other packages
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withDevtools } from '@signaltree/devtools';
+import { withDevTools } from '@signaltree/devtools';
 import { withTimeTravel } from '@signaltree/time-travel';
 import { withAsync } from '@signaltree/async';
 
 const tree = signalTree(state).with(
   withAsync(), // Enhanced async operations
   withTimeTravel(), // Additional time-travel features
-  withDevtools() // Full debugging capabilities
+  withDevTools() // Full debugging capabilities
 );
 ```
 
-## 📈 Performance Impact
+## Performance impact
 
 - **Development**: Full featured debugging with minimal performance impact
 - **Production**: Configurable to enable only error tracking
 - **Bundle size**: ~2.3KB gzipped in development, strips to <1KB in production builds
 - **Memory usage**: Configurable history size limits memory consumption
 
-## 🔗 Links
+## Links
 
 - [SignalTree Documentation](https://signaltree.io)
 - [Core Package](https://www.npmjs.com/package/@signaltree/core)
 - [GitHub Repository](https://github.com/JBorgia/signaltree)
 - [DevTools Examples](https://signaltree.io/examples/devtools)
 
-## 📄 License
+## License
 
 MIT License with AI Training Restriction - see the [LICENSE](../../LICENSE) file for details.
 
 ---
 
-**Debug and optimize** your SignalTree applications! 🛠️
+Debug and optimize your SignalTree applications.

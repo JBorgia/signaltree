@@ -34,9 +34,11 @@ if (doJsdoc) {
 
 if (doSizes) {
   console.log('\n\ud83d\udcca Running bundle size report...');
-  const sizeScript = path.join(__dirname, 'bundle-size-report.js');
+  const sizeScript = path.join(__dirname, 'consolidated-bundle-analysis.js');
   if (!fs.existsSync(sizeScript)) {
-    console.warn('   \u26a0 bundle-size-report.js not found, skipping');
+    console.warn(
+      '   \u26a0 consolidated-bundle-analysis.js not found, skipping'
+    );
   } else {
     const ok = run('node', [sizeScript]);
     if (!ok) {

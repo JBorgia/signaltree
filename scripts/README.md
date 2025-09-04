@@ -118,6 +118,37 @@ npm run analyze:deps           # Visualize dependency graph
 npm run perf:build            # Build + analyze performance
 ```
 
+### Performance tools (consolidated)
+
+Location: `scripts/performance/`
+
+- `performance-runner.js` — runs the comprehensive performance suite
+- `recursive-performance.js` — benchmarks recursive typing at 5/10/15/20+ levels
+- `recursive-metrics.ts` — TypeScript performance analysis
+- `bundle-analysis.mjs` — bundle size analysis for recursive typing impact
+- `developer-experience.mjs` — developer productivity metrics
+
+Quick start:
+
+```bash
+# From repo root
+node scripts/performance/performance-runner.js
+
+# Individual analyses
+node scripts/performance/bundle-analysis.mjs
+node scripts/performance/developer-experience.mjs
+```
+
+Expected results (examples):
+
+```
+Recursive performance metrics:
+- 5 levels:    ~0.061–0.109ms
+- 10 levels:   ~0.061–0.109ms
+- 15 levels:   ~0.092–0.098ms
+- 20+ levels:  ~0.100–0.106ms
+```
+
 ## 🧰 New helper scripts
 
 - `node scripts/ci-checks.js --jsdoc --sizes` — consolidated CI checks for JSDoc stripping and bundle-size reports. Used by `prepublish` and `postbuild` hooks.

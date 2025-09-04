@@ -1,8 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree } from '@signaltree/core';
 
+import { PerformanceMonitorService } from '../../services/performance-monitor.service';
 import { generateTodos, Todo } from '../../shared/models';
 
 interface CoreState {
@@ -207,6 +208,8 @@ interface CoreState {
   ],
 })
 export class CoreDemoComponent {
+  private performanceMonitor = inject(PerformanceMonitorService);
+
   private store = signalTree<CoreState>({
     todos: [],
     filter: 'all',
@@ -278,6 +281,7 @@ export class CoreDemoComponent {
   addTodo() {
     if (!this.newTodoTitle.trim()) return;
 
+    const startTime = performance.now();
     const newTodo: Todo = {
       id: Date.now(),
       title: this.newTodoTitle.trim(),
@@ -288,6 +292,13 @@ export class CoreDemoComponent {
     this.store.state.todos.update((todos) => [...todos, newTodo]);
     this.newTodoTitle = '';
     this.trackOperation('Add Todo');
+
+    // Record performance
+    this.performanceMonitor.recordSignalTreeOperation(
+      'addTodo',
+      performance.now() - startTime,
+      { todoCount: this.todos().length }
+    );
   }
 
   toggleTodo(id: number) {

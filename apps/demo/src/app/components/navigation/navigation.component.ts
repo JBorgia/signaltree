@@ -44,6 +44,13 @@ export class NavigationComponent {
       category: 'performance',
     },
     {
+      id: 'performance-dashboard',
+      title: 'Performance Dashboard',
+      description: 'Live performance monitoring and metrics',
+      route: '/performance-dashboard',
+      category: 'performance',
+    },
+    {
       id: 'batching',
       title: 'Batching Demo',
       description: 'Compare batched vs unbatched updates',

@@ -2,7 +2,9 @@
 
 Advanced time-travel debugging and state history management for SignalTree with undo/redo, snapshots, state persistence, and timeline navigation.
 
-## ✨ What is @signaltree/time-travel?
+**Bundle size: 1.75KB gzipped**
+
+## What is @signaltree/time-travel?
 
 The time-travel package provides sophisticated state history management:
 
@@ -13,13 +15,13 @@ The time-travel package provides sophisticated state history management:
 - **Action replay** and debugging
 - **History compression** for memory efficiency
 
-## 🚀 Installation
+## Installation
 
 ```bash
 npm install @signaltree/core @signaltree/time-travel
 ```
 
-## 📖 Basic Usage
+## Basic usage
 
 ```typescript
 import { signalTree } from '@signaltree/core';
@@ -51,7 +53,7 @@ timeTravel.redo(); // Forward to text: 'Hello'
 timeTravel.redo(); // Forward to final state
 ```
 
-## 🎯 Core Features
+## Core features
 
 ### Undo/Redo Operations
 
@@ -226,7 +228,7 @@ console.log(persistenceInfo);
 // }
 ```
 
-## 🔧 Advanced Configuration
+## Advanced configuration
 
 ```typescript
 const tree = signalTree(state).with(
@@ -281,7 +283,7 @@ const tree = signalTree(state).with(
 );
 ```
 
-## 📊 Real-World Examples
+## Real-world examples
 
 ### Document Editor with Version Control
 
@@ -703,18 +705,18 @@ describe('Shopping Cart with Time Travel', () => {
 });
 ```
 
-## 🎯 When to Use Time Travel
+## When to use time travel
 
 Perfect for:
 
-- ✅ Document editors and content creation tools
-- ✅ Drawing and design applications
-- ✅ Game state management with save/load
-- ✅ Form builders with undo/redo
-- ✅ Testing and debugging complex workflows
-- ✅ Version control systems
+- Document editors and content creation tools
+- Drawing and design applications
+- Game state management with save/load
+- Form builders with undo/redo
+- Testing and debugging complex workflows
+- Version control systems
 
-## 🔗 Composition with Other Packages
+## Composition with other packages
 
 ```typescript
 import { signalTree } from '@signaltree/core';
@@ -725,11 +727,11 @@ import { withAsync } from '@signaltree/async';
 const tree = signalTree(state).with(
   withAsync(), // Enhanced async operations
   withTimeTravel(), // Time travel and history
-  withDevtools() // Additional debugging features
+  withDevTools() // Additional debugging features
 );
 ```
 
-## 📈 Performance Considerations
+## Performance considerations
 
 - **Memory usage**: Configurable history size prevents memory leaks
 - **Storage efficiency**: Built-in compression for large histories
@@ -737,14 +739,14 @@ const tree = signalTree(state).with(
 - **Bundle size**: ~1.5KB gzipped, tree-shakeable
 - **Operation speed**: Optimized for fast undo/redo operations
 
-## 🔗 Links
+## Links
 
 - [SignalTree Documentation](https://signaltree.io)
 - [Core Package](https://www.npmjs.com/package/@signaltree/core)
 - [GitHub Repository](https://github.com/JBorgia/signaltree)
 - [Time Travel Examples](https://signaltree.io/examples/time-travel)
 
-## 📄 License
+## License
 
 MIT License with AI Training Restriction - see the [LICENSE](../../LICENSE) file for details.
 

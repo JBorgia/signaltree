@@ -36,7 +36,7 @@ function stats(values) {
 }
 
 function parseBundleReport(out) {
-  // split by package marker used in bundle-size-report.js (\ud83d\udce6)
+  // split by package marker used in consolidated-bundle-analysis.js (📦)
   const blocks = out.split('\ud83d\udce6').slice(1);
   const packages = [];
   for (const block of blocks) {
@@ -74,19 +74,21 @@ async function main() {
   const summary = {};
   for (const k of Object.keys(buckets)) summary[k] = metrics.stats(buckets[k]);
 
-  // Run bundle-size-report if available
+  // Run consolidated bundle analysis if available
   let bundleResults = null;
-  if (fs.existsSync(path.join(__dirname, 'bundle-size-report.js'))) {
-    console.log('\n📦 Running bundle-size-report.js');
-    const bres = run('node', ['scripts/bundle-size-report.js']);
+  if (fs.existsSync(path.join(__dirname, 'consolidated-bundle-analysis.js'))) {
+    console.log('\n📦 Running consolidated-bundle-analysis.js');
+    const bres = run('node', ['scripts/consolidated-bundle-analysis.js']);
     if (bres.code === 0 || bres.out) {
       bundleResults = metrics.parseBundleReport(bres.out + bres.err);
     } else {
-      console.warn('  ⚠ bundle-size-report failed or returned nothing');
+      console.warn(
+        '  ⚠ consolidated-bundle-analysis failed or returned nothing'
+      );
     }
   } else {
     console.warn(
-      '\n⚠ bundle-size-report.js not found, skipping bundle size parse'
+      '\n⚠ consolidated-bundle-analysis.js not found, skipping bundle size parse'
     );
   }
 

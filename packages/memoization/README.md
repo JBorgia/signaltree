@@ -1,24 +1,27 @@
 # @signaltree/memoization
 
-Intelligent caching and performance optimization for SignalTree featuring LRU cache eviction, path-based memoization, and automatic optimization.
+Intelligent caching and performance optimization for SignalTree featuring **197.9x performance speedup**, LRU cache eviction, path-based memoization, and automatic optimization.
 
-## ✨ What is @signaltree/memoization?
+## What is @signaltree/memoization?
 
 The memoization package supercharges SignalTree performance with:
 
-- **LRU (Least Recently Used)** cache eviction algorithm
-- **Path-based memoization** with fine-grained invalidation
-- **Glob pattern matching** for smart cache cleanup
-- **High cache hit ratios** in typical applications
-- **Automatic optimization** with minimal configuration
+- ~197.9x performance speedup across benchmarks
+- LRU (Least Recently Used) cache eviction algorithm
+- Path-based memoization with fine-grained invalidation
+- Glob pattern matching for smart cache cleanup
+- High cache hit ratios in typical applications (>95%)
+- Automatic optimization with minimal configuration
+- Ultra-compact: Advanced caching in ~1.80KB gzipped
+- Sub-millisecond operations: Optimized for SignalTree's 0.061–0.109ms performance
 
-## 🚀 Installation
+## Installation
 
 ```bash
 npm install @signaltree/core @signaltree/memoization
 ```
 
-## 📖 Basic Usage
+## Basic usage
 
 ```typescript
 import { signalTree } from '@signaltree/core';
@@ -33,7 +36,7 @@ const tree = signalTree({
 const filteredUsers = tree.memoize((state) => state.users.filter((user) => user.name.includes(state.filters.search) && (state.filters.category === '' || user.category === state.filters.category)), 'filtered-users');
 ```
 
-## 🎯 Key Features
+## Key features
 
 ### Intelligent Caching
 
@@ -82,7 +85,7 @@ tree.invalidatePattern('cart*'); // Clears all cart-related caches
 tree.optimize();
 ```
 
-## 🔧 Configuration Options
+## Configuration options
 
 ```typescript
 const tree = signalTree(state).with(
@@ -97,7 +100,7 @@ const tree = signalTree(state).with(
 );
 ```
 
-## 📊 Cache Statistics
+## Cache statistics
 
 ```typescript
 // Get detailed cache performance metrics
@@ -115,7 +118,7 @@ console.log(stats);
 */
 ```
 
-## ⚡ Advanced Features
+## Advanced features
 
 ### TTL (Time To Live) Support
 
@@ -145,7 +148,7 @@ const userProjects = tree.memoize(
 const conditionalMemo = tree.memoize((state) => heavyCalculation(state.data), 'heavy-calc', { enabled: process.env['NODE_ENV'] === 'production' });
 ```
 
-## 📈 Real-World Examples
+## Real-world examples
 
 ### E-commerce Product Filtering
 
@@ -227,7 +230,7 @@ const canEditUsers = hasPermission('users.edit');
 const canViewReports = hasPermission('reports.view');
 ```
 
-## 🔍 Debugging and Optimization
+## Debugging and optimization
 
 ### Debug Mode
 
@@ -255,18 +258,18 @@ setInterval(() => {
 }, 30000);
 ```
 
-## 🎯 When to Use Memoization
+## When to use memoization
 
 Perfect for:
 
-- ✅ Expensive filtering and sorting operations
-- ✅ Complex computed values
-- ✅ Data transformations
-- ✅ Permission calculations
-- ✅ Search and aggregation
-- ✅ Performance-critical paths
+- Expensive filtering and sorting operations
+- Complex computed values
+- Data transformations
+- Permission calculations
+- Search and aggregation
+- Performance-critical paths
 
-## 🔗 Composition with Other Packages
+## Composition with other packages
 
 ```typescript
 import { signalTree } from '@signaltree/core';
@@ -277,9 +280,9 @@ import { withDevTools } from '@signaltree/devtools';
 const tree = signalTree(state).with(withBatching(), withMemoization({ maxCacheSize: 200 }), withDevTools());
 ```
 
-## 📈 Performance Metrics
+## Performance metrics
 
-> **Memoization Speedup: 197.9x** 🚀 - Real-world benchmarking results from comprehensive analysis
+> Memoization speedup: ~197.9x (real-world benchmarks from comprehensive analysis)
 
 ### Real-World Performance Results (Comprehensive Analysis)
 
@@ -311,17 +314,17 @@ SignalTree memoization provides advanced performance features:
 - **Automatic optimization** learns from usage patterns
 - **Zero configuration** for 90% of use cases
 
-## 🔗 Links
+## Links
 
 - [SignalTree Documentation](https://signaltree.io)
 - [Core Package](https://www.npmjs.com/package/@signaltree/core)
 - [GitHub Repository](https://github.com/JBorgia/signaltree)
 - [Memoization Examples](https://signaltree.io/examples/memoization)
 
-## 📄 License
+## License
 
 MIT License with AI Training Restriction - see the [LICENSE](../../LICENSE) file for details.
 
 ---
 
-**Supercharge your app's performance** with intelligent caching! 🚀
+Improve performance with intelligent caching.

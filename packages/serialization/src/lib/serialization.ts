@@ -232,19 +232,9 @@ function unwrapObjectSafely(
         [TYPE_MARKERS.REGEXP]: { source: obj.source, flags: obj.flags },
       };
     if (obj instanceof Map) {
-      try {
-        console.debug('[serialization-debug] unwrap detected Map instance');
-      } catch {
-        // ignore
-      }
       return { [TYPE_MARKERS.MAP]: Array.from(obj.entries()) };
     }
     if (obj instanceof Set) {
-      try {
-        console.debug('[serialization-debug] unwrap detected Set instance');
-      } catch {
-        // ignore
-      }
       return { [TYPE_MARKERS.SET]: Array.from(obj.values()) };
     }
   } else {
@@ -264,20 +254,7 @@ function unwrapObjectSafely(
 
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
-      if (k === 'set') {
-        try {
-          console.debug(
-            '[serialization-debug] iterating key=set, typeof v=',
-            typeof v,
-            'isSet?',
-            v instanceof Set
-          );
-        } catch {
-          // ignore
-        }
-      }
-
-      // Skip runtime helpers, but only when they are plain functions (not signals)
+      // Skip runtime helpers when they are plain functions (not signals)
       if (
         (k === 'set' || k === 'update') &&
         typeof v === 'function' &&
@@ -481,7 +458,9 @@ function resolveCircularReferences(
 /**
  * Enhances a SignalTree with serialization capabilities
  */
-export function withSerialization<T extends Record<string, unknown> = any>(
+export function withSerialization<
+  T extends Record<string, unknown> = Record<string, unknown>
+>(
   defaultConfig: SerializationConfig = {}
 ): EnhancerWithMeta<SignalTree<T>, SerializableSignalTree<T>> {
   const enhancer = (tree: SignalTree<T>): SerializableSignalTree<T> => {
@@ -560,17 +539,6 @@ export function withSerialization<T extends Record<string, unknown> = any>(
 
       // Restore special types in the data
       const restoredData = restoreSpecialTypes(data);
-      // DEBUG: trace restoredData for special types diagnostics
-      try {
-        // eslint-disable-next-line no-console
-        console.debug('[serialization-debug] restoredData preview:', {
-          keys: Object.keys(restoredData as Record<string, unknown>),
-          sample: (restoredData as any)?.date,
-        });
-      } catch {
-        /* ignore */
-      }
-
       // If the serialized data contains a compact nodeMap, use it to apply
       // updates deterministically: 'r' => root set, 'b' => set on branch
       const nodeMap = (metadata as any)?.nodeMap as
@@ -617,26 +585,6 @@ export function withSerialization<T extends Record<string, unknown> = any>(
               current = current[p];
             }
             try {
-              try {
-                // eslint-disable-next-line no-console
-                console.debug('[serialization-debug] nodeMap apply', {
-                  path,
-                  currentType: current === null ? 'null' : typeof current,
-                  isSet: current instanceof Set,
-                  setSize:
-                    current instanceof Set
-                      ? (current as Set<unknown>).size
-                      : undefined,
-                  isMap: current instanceof Map,
-                  mapSize:
-                    current instanceof Map
-                      ? (current as Map<unknown, unknown>).size
-                      : undefined,
-                });
-              } catch {
-                console.debug('[serialization-debug] nodeMap apply error');
-              }
-
               (node as WritableSignal<unknown>).set(current);
             } catch {
               /* ignore per-path failures */
@@ -684,13 +632,6 @@ export function withSerialization<T extends Record<string, unknown> = any>(
           const sourceValue = source[key];
           const direct = target[key];
 
-          console.debug('[updateSignals]', {
-            key,
-            path,
-            directType: typeof direct,
-            hasSet: direct && typeof direct === 'function' && 'set' in direct,
-          });
-
           // Prefer the real signal if present; otherwise resolve from root alias
           const targetSignal = isSignal(direct)
             ? (direct as WritableSignal<unknown>)
@@ -702,11 +643,6 @@ export function withSerialization<T extends Record<string, unknown> = any>(
             : resolveAliasSignal(path, key);
 
           if (targetSignal) {
-            console.debug('[updateSignals] Setting signal', {
-              key,
-              path,
-              sourceValue,
-            });
             targetSignal.set(sourceValue);
             continue;
           }
@@ -720,7 +656,6 @@ export function withSerialization<T extends Record<string, unknown> = any>(
               (typeof direct === 'function' && !('set' in direct))) &&
             !isSignal(direct)
           ) {
-            console.debug('[updateSignals] Recursing into', { key, path });
             updateSignals(
               direct as Record<string, unknown>,
               sourceValue as Record<string, unknown>,
@@ -770,34 +705,6 @@ export function withSerialization<T extends Record<string, unknown> = any>(
       return v;
     }
 
-    function decodeSpecials(v: unknown): unknown {
-      if (v === null || v === undefined) return v;
-      if (Array.isArray(v)) return (v as unknown[]).map(decodeSpecials);
-      if (typeof v !== 'object') return v;
-      const o = v as Record<string, unknown>;
-      if (TYPE_MARKERS.UNDEFINED in o) return undefined;
-      if (TYPE_MARKERS.NAN in o) return NaN;
-      if (TYPE_MARKERS.INFINITY in o) return Infinity;
-      if (TYPE_MARKERS.NEG_INFINITY in o) return -Infinity;
-      if (TYPE_MARKERS.BIGINT in o)
-        return BigInt(String(o[TYPE_MARKERS.BIGINT]));
-      if (TYPE_MARKERS.SYMBOL in o)
-        return Symbol.for(String(o[TYPE_MARKERS.SYMBOL]));
-      if (TYPE_MARKERS.DATE in o) return new Date(String(o[TYPE_MARKERS.DATE]));
-      if (TYPE_MARKERS.REGEXP in o) {
-        const r = o[TYPE_MARKERS.REGEXP] as { source: string; flags: string };
-        return new RegExp(r.source, r.flags);
-      }
-      if (TYPE_MARKERS.MAP in o)
-        return new Map(o[TYPE_MARKERS.MAP] as Array<[unknown, unknown]>);
-      if (TYPE_MARKERS.SET in o)
-        return new Set(o[TYPE_MARKERS.SET] as unknown[]);
-
-      const out: Record<string, unknown> = {};
-      for (const [k, val] of Object.entries(o)) out[k] = decodeSpecials(val);
-      return out;
-    }
-
     /**
      * Serialize to JSON string
      */
@@ -818,22 +725,7 @@ export function withSerialization<T extends Record<string, unknown> = any>(
         fullConfig.maxDepth,
         fullConfig.preserveTypes
       );
-      const state = encodeSpecials(raw, fullConfig.preserveTypes) as any;
-      // DEBUG: inspect keys to diagnose missing Set property
-      try {
-        // eslint-disable-next-line no-console
-        console.debug(
-          '[serialization-debug] pre-serialize state keys:',
-          Object.keys(state || {})
-        );
-        // eslint-disable-next-line no-console
-        console.debug(
-          '[serialization-debug] pre-serialize state.set type:',
-          typeof (state || {}).set
-        );
-      } catch {
-        /* ignore */
-      }
+      const state = encodeSpecials(raw, fullConfig.preserveTypes) as T;
 
       // Detect circular references if needed
       const circularPaths = fullConfig.handleCircular
@@ -893,32 +785,6 @@ export function withSerialization<T extends Record<string, unknown> = any>(
       const replacer = createReplacer(fullConfig);
       const json = JSON.stringify(data, replacer, 2);
       // Extra debug: if JSON contains MAP or SET markers, print compact preview
-      try {
-        if (
-          json &&
-          (json.includes(TYPE_MARKERS.MAP) || json.includes(TYPE_MARKERS.SET))
-        ) {
-          // eslint-disable-next-line no-console
-          console.debug(
-            '[serialization-debug] JSON preview for MAP/SET:',
-            json
-          );
-        }
-      } catch {
-        /* ignore */
-      }
-      // DEBUG: log when Set marker present to diagnose test failures
-      try {
-        if (json && json.includes(TYPE_MARKERS.SET)) {
-          // eslint-disable-next-line no-console
-          console.debug(
-            '[serialization-debug] JSON contains SET marker:',
-            json
-          );
-        }
-      } catch {
-        /* ignore */
-      }
       return json;
     };
 
@@ -1014,7 +880,9 @@ export function withSerialization<T extends Record<string, unknown> = any>(
 /**
  * Convenience function to enable serialization with defaults
  */
-export function enableSerialization<T extends Record<string, unknown> = any>() {
+export function enableSerialization<
+  T extends Record<string, unknown> = Record<string, unknown>
+>() {
   return withSerialization<T>({
     includeMetadata: true,
     preserveTypes: true,
@@ -1067,7 +935,9 @@ export interface PersistenceConfig extends SerializationConfig {
 /**
  * Adds persistence capabilities to a SerializableSignalTree
  */
-export function withPersistence<T extends Record<string, unknown> = any>(
+export function withPersistence<
+  T extends Record<string, unknown> = Record<string, unknown>
+>(
   config: PersistenceConfig
 ): EnhancerWithMeta<
   SignalTree<T>,

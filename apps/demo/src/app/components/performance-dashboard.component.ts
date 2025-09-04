@@ -215,10 +215,47 @@ interface PerformanceMetrics {
 
       <!-- Real-time Performance Monitor -->
       <div class="real-time-monitor">
-        <h2>📺 Real-time Performance Monitor</h2>
-        <button (click)="runLiveBenchmark()" class="benchmark-button">
-          Run Live Benchmark
-        </button>
+        <div class="monitor-header">
+          <h2>📺 Real-time Performance Monitor</h2>
+          <div class="monitor-controls">
+            <button
+              (click)="runLiveBenchmark()"
+              class="benchmark-button primary"
+            >
+              Run Live Benchmark (10 tests)
+            </button>
+            <button
+              (click)="runSingleTest()"
+              class="benchmark-button secondary"
+            >
+              Single Test
+            </button>
+            <button (click)="clearResults()" class="benchmark-button clear">
+              Clear Results
+            </button>
+          </div>
+        </div>
+
+        <div class="live-stats-row">
+          <div class="live-stat">
+            <span class="stat-label">Tests Run</span>
+            <span class="stat-value">{{ liveResults().length }}</span>
+          </div>
+          <div class="live-stat">
+            <span class="stat-label">Average Time</span>
+            <span class="stat-value">{{ getAverageTime().toFixed(3) }}ms</span>
+          </div>
+          <div class="live-stat">
+            <span class="stat-label">Best Time</span>
+            <span class="stat-value">{{ getBestTime().toFixed(3) }}ms</span>
+          </div>
+          <div class="live-stat">
+            <span class="stat-label">Ops/sec</span>
+            <span class="stat-value">{{
+              getOpsPerSecond().toLocaleString()
+            }}</span>
+          </div>
+        </div>
         <div class="live-results">
           @if (liveResults().length > 0) {
           <div class="live-chart">
@@ -448,25 +485,89 @@ interface PerformanceMetrics {
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
       }
 
+      .monitor-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+      }
+
+      .monitor-controls {
+        display: flex;
+        gap: 0.75rem;
+      }
+
       .real-time-monitor h2 {
-        margin-bottom: 1rem;
+        margin: 0;
         color: #1f2937;
       }
 
       .benchmark-button {
-        background: #3b82f6;
-        color: white;
         border: none;
         padding: 0.75rem 1.5rem;
         border-radius: 0.5rem;
         font-weight: 600;
         cursor: pointer;
-        margin-bottom: 1.5rem;
-        transition: background-color 0.2s;
+        transition: all 0.2s;
+        font-size: 0.875rem;
       }
 
-      .benchmark-button:hover {
+      .benchmark-button.primary {
+        background: #3b82f6;
+        color: white;
+      }
+
+      .benchmark-button.primary:hover {
         background: #2563eb;
+      }
+
+      .benchmark-button.secondary {
+        background: #f3f4f6;
+        color: #374151;
+      }
+
+      .benchmark-button.secondary:hover {
+        background: #e5e7eb;
+      }
+
+      .benchmark-button.clear {
+        background: #ef4444;
+        color: white;
+      }
+
+      .benchmark-button.clear:hover {
+        background: #dc2626;
+      }
+
+      .live-stats-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        background: #f9fafb;
+        border-radius: 0.5rem;
+      }
+
+      .live-stat {
+        text-align: center;
+      }
+
+      .live-stat .stat-label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: #6b7280;
+        margin-bottom: 0.25rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .live-stat .stat-value {
+        display: block;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #1f2937;
       }
 
       .live-chart {
@@ -563,6 +664,23 @@ export class PerformanceDashboardComponent {
     return results.length > 0 ? Math.max(...results) : 1;
   });
 
+  getAverageTime = computed(() => {
+    const results = this.liveResults();
+    if (results.length === 0) return 0;
+    const sum = results.reduce((acc, val) => acc + val, 0);
+    return sum / results.length;
+  });
+
+  getBestTime = computed(() => {
+    const results = this.liveResults();
+    return results.length > 0 ? Math.min(...results) : 0;
+  });
+
+  getOpsPerSecond = computed(() => {
+    const avgTime = this.getAverageTime();
+    return avgTime > 0 ? Math.round(1000 / avgTime) : 0;
+  });
+
   detailedResults = computed((): BenchmarkResult[] => {
     const metrics = this.metrics();
 
@@ -641,6 +759,34 @@ export class PerformanceDashboardComponent {
       },
     ];
   });
+
+  runSingleTest(): void {
+    const tree = signalTree({
+      counter: 0,
+      data: { value: Math.random() },
+    }).with(withBatching(), withMemoization());
+
+    const start = performance.now();
+
+    // Simulate typical operations
+    const treeState = tree.$ as {
+      counter: { set: (v: number) => void; (): number };
+      data: { value: { set: (v: number) => void; (): number } };
+    };
+    treeState.counter.set(Math.random());
+    treeState.data.value.set(Math.random());
+    treeState.counter();
+    treeState.data.value();
+
+    const duration = performance.now() - start;
+    const current = this.liveResults();
+    const updated = [...current, duration];
+    this.liveResults.set(updated);
+  }
+
+  clearResults(): void {
+    this.liveResults.set([]);
+  }
 
   runLiveBenchmark(): void {
     const tree = signalTree({

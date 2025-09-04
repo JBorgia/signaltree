@@ -2,23 +2,26 @@
 
 Middleware system for SignalTree that intercepts state changes with before/after hooks, logging, performance tracking, and validation middleware.
 
-## ✨ What is @signaltree/middleware?
+## What is @signaltree/middleware?
 
 The middleware package provides powerful interception capabilities:
 
-- **Before/after hooks** for state updates
-- **Can prevent updates** by returning false
+- **Before/after hooks** for state updates with full control
+- **Can prevent updates** by returning false from validation
 - **Built-in middleware** for logging, performance tracking, validation
-- **Runtime middleware** addition/removal
+- **Runtime middleware** addition/removal for dynamic behavior
 - **Tap into state changes** for debugging and validation
+- Compact bundle: Complete middleware system in ~1.38KB gzipped
+- Low overhead: Optimized for SignalTree's 0.061–0.109ms performance
+- Production-ready: Enterprise-grade state interception and validation
 
-## 🚀 Installation
+## Installation
 
 ```bash
 npm install @signaltree/core @signaltree/middleware
 ```
 
-## 📖 Basic Usage
+## Basic usage
 
 ```typescript
 import { signalTree } from '@signaltree/core';
@@ -33,7 +36,7 @@ const tree = signalTree({
 tree.$.user.name.set('John'); // Logs: "State updated: user.name = John"
 ```
 
-## 🎯 Key Features
+## Key features
 
 ### Custom Middleware
 
@@ -110,7 +113,7 @@ tree.removeMiddleware('audit');
 tree.addMiddleware('logging', newLoggingMiddleware); // Replaces existing
 ```
 
-## 🔧 Middleware API
+## Middleware API
 
 ```typescript
 interface Middleware<T> {
@@ -121,7 +124,7 @@ interface Middleware<T> {
 }
 ```
 
-## 📊 Real-World Examples
+## Real-world examples
 
 ### Audit Logging System
 
@@ -222,7 +225,7 @@ const syncMiddleware = {
 };
 ```
 
-## 🎮 Built-in Middleware Options
+## Built-in middleware options
 
 ### Logging Middleware
 
@@ -263,7 +266,7 @@ createValidationMiddleware({
 });
 ```
 
-## 🔍 Debugging with Middleware
+## Debugging with middleware
 
 ```typescript
 const debugMiddleware = {
@@ -285,19 +288,19 @@ const debugMiddleware = {
 const tree = signalTree(state).with(withMiddleware(process.env['NODE_ENV'] === 'development' ? [debugMiddleware] : []));
 ```
 
-## 🎯 When to Use Middleware
+## When to use middleware
 
 Perfect for:
 
-- ✅ Audit logging and compliance
-- ✅ Permission and authorization checks
-- ✅ Performance monitoring
-- ✅ Data validation and sanitization
-- ✅ State synchronization
-- ✅ Debugging and development tools
-- ✅ Analytics and telemetry
+- Audit logging and compliance
+- Permission and authorization checks
+- Performance monitoring
+- Data validation and sanitization
+- State synchronization
+- Debugging and development tools
+- Analytics and telemetry
 
-## 🔗 Composition with Other Packages
+## Composition with other packages
 
 ```typescript
 import { signalTree } from '@signaltree/core';
@@ -308,24 +311,24 @@ import { withDevTools } from '@signaltree/devtools';
 const tree = signalTree(state).with(withBatching(), withMiddleware([loggingMiddleware, auditMiddleware]), withDevTools());
 ```
 
-## 📈 Performance Considerations
+## Performance considerations
 
 - **Minimal overhead** - only ~1KB added to bundle
 - **Efficient execution** - middleware only runs when state changes
 - **Conditional middleware** - can be disabled in production
 - **Batching compatible** - works seamlessly with batched updates
 
-## 🔗 Links
+## Links
 
 - [SignalTree Documentation](https://signaltree.io)
 - [Core Package](https://www.npmjs.com/package/@signaltree/core)
 - [GitHub Repository](https://github.com/JBorgia/signaltree)
 - [Middleware Examples](https://signaltree.io/examples/middleware)
 
-## 📄 License
+## License
 
 MIT License with AI Training Restriction - see the [LICENSE](../../LICENSE) file for details.
 
 ---
 
-**Intercept and enhance** your state changes with powerful middleware! 🚀
+Intercept and enhance state changes with powerful middleware.

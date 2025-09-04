@@ -2,7 +2,6 @@ import { TestBed } from '@angular/core/testing';
 import { signalTree } from '@signaltree/core';
 
 import {
-  enableBatching,
   flushBatchedUpdates,
   getBatchQueueSize,
   hasPendingUpdates,
@@ -69,8 +68,8 @@ describe('Batching', () => {
     expect(tree.state.count()).toBe(5);
     expect(hasPendingUpdates()).toBe(false);
   });
-  it('should work with enableBatching convenience function', () => {
-    const tree = signalTree({ count: 0 }).with(enableBatching());
+  it('should work with batching convenience function', () => {
+    const tree = signalTree({ count: 0 }).with(withBatching());
 
     expect(tree.batchUpdate).toBeDefined();
 
