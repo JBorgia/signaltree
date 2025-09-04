@@ -174,15 +174,18 @@ export class BenchmarkService {
 
     // Shallow update (top level)
     results.shallow = BenchmarkService.measureTime(() => {
-      tree((state) => ({ ...state, topLevel: Math.random() }));
+      tree((state: Record<string, unknown>) => ({
+        ...state,
+        topLevel: Math.random(),
+      }));
     });
 
     // Medium depth update
     results.medium = BenchmarkService.measureTime(() => {
-      tree((state) => ({
+      tree((state: Record<string, unknown>) => ({
         ...state,
         level_4_item_0: {
-          ...state.level_4_item_0,
+          ...((state['level_4_item_0'] as Record<string, unknown>) || {}),
           level_3_item_0: { value: Math.random() },
         },
       }));
@@ -190,15 +193,16 @@ export class BenchmarkService {
 
     // Deep update
     results.deep = BenchmarkService.measureTime(() => {
-      tree((state) => {
+      tree((state: Record<string, unknown>) => {
         const newState = { ...state };
-        let current = newState;
+        let current = newState as Record<string, unknown>;
         for (let i = 4; i > 0; i--) {
           current = current[`level_${i}_item_0`] = {
-            ...current[`level_${i}_item_0`],
+            ...((current[`level_${i}_item_0`] as Record<string, unknown>) ||
+              {}),
           };
         }
-        current.value = Math.random();
+        current['value'] = Math.random();
         return newState;
       });
     });
@@ -207,20 +211,20 @@ export class BenchmarkService {
     const batchTree = signalTree(state).with(withBatching());
 
     results.batch10 = BenchmarkService.measureTime(() => {
-      (batchTree.$ as Record<string, unknown>)['batchUpdate']?.(
-        (state: Record<string, unknown>) => {
-          const updates: Record<string, unknown> = {};
-          for (let i = 0; i < 10; i++) {
-            updates[`field_${i}`] = Math.random();
-          }
-          return { ...state, ...updates };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (batchTree.$ as any).batchUpdate((state: Record<string, unknown>) => {
+        const updates: Record<string, unknown> = {};
+        for (let i = 0; i < 10; i++) {
+          updates[`field_${i}`] = Math.random();
         }
-      );
+        return { ...state, ...updates };
+      });
     });
 
     results.batch100 = BenchmarkService.measureTime(() => {
-      batchTree.$.batchUpdate((state) => {
-        const updates: any = {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (batchTree.$ as any).batchUpdate((state: Record<string, unknown>) => {
+        const updates: Record<string, unknown> = {};
         for (let i = 0; i < 100; i++) {
           updates[`field_${i}`] = Math.random();
         }
@@ -357,7 +361,10 @@ export class BenchmarkService {
     });
 
     results.signalTree.update = BenchmarkService.measureTime(() => {
-      stTree((state) => ({ ...state, value: Math.random() }));
+      stTree((state: Record<string, unknown>) => ({
+        ...state,
+        value: Math.random(),
+      }));
     });
 
     // Native Signals

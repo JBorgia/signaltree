@@ -558,7 +558,11 @@ eliminating traditional constraints through revolutionary recursive typing.
   private accessDeepestValue(
     tree: ReturnType<typeof signalTree>
   ): string | undefined {
-    return tree.$.l1.l2.l3.l4.l5.l6.l7.l8.l9.l10.l11.l12.l13.l14.l15.l16.l17.l18.l19.l20.value();
+    // Access deeply nested value for performance testing
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const deepAccess = (tree.$ as any).l1?.l2?.l3?.l4?.l5?.l6?.l7?.l8?.l9?.l10
+      ?.l11?.l12?.l13?.l14?.l15?.l16?.l17?.l18?.l19?.l20?.value;
+    return typeof deepAccess === 'function' ? deepAccess() : deepAccess;
   }
 
   private createLargeSelfReferencingStructure() {
