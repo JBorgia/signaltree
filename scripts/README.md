@@ -51,6 +51,24 @@ npm run clean              # Clear Nx cache and node_modules cache
 npm run clean:build        # Full clean + reinstall + rebuild
 ```
 
+### Release Script Issues
+
+If a release fails partway through:
+
+```bash
+# The script automatically rolls back version changes for build/git failures
+# For npm publish failures after git push, you may need manual cleanup:
+
+# Check what was published
+npm view @signaltree/core versions --json
+
+# If needed, unpublish specific versions (within 72 hours)
+npm unpublish @signaltree/core@2.0.0
+
+# Or create a patch release to fix issues
+npm run release:patch
+```
+
 ## 🏗️ Build Scripts
 
 ### Core Package Building

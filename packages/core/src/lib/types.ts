@@ -1,7 +1,7 @@
 import { Signal, WritableSignal } from '@angular/core';
 
 /**
- * SignalTree Core Types v2.0.0
+ * SignalTree Core Types v1.9.1
  * MIT License - Copyright (c) 2025 Jonathan D Borgia
  */
 
