@@ -68,7 +68,7 @@ function updateState(path: string[], value: any) {
 }
 
 // SignalTree: Compile-time magic (0KB runtime cost)
-tree.$.user.profile.settings.theme.set('dark'); // ✅ Full type safety, zero runtime cost
+tree.$.user.profile.settings.theme('dark'); // ✅ Full type safety, zero runtime cost
 ```
 
 #### **2. Lazy Signal Creation Architecture**
@@ -207,7 +207,7 @@ console.log(tree.$.user.name()); // 'John Doe'
 tree.$.settings.theme.set('light');
 
 // Update state with type safety
-tree.update((state) => ({
+tree((state) => ({
   user: { ...state.user, name: 'Jane Doe' },
   settings: { ...state.settings, theme: 'light' },
 }));
@@ -375,8 +375,8 @@ SignalTree uses a modular architecture where each feature is an optional package
 
 - **@signaltree/core** (7.08KB) - Base functionality
   - Hierarchical signal trees with type safety
-  - Basic state updates with `.update()` method
-  - Signal unwrapping with `.unwrap()` method
+  - Basic state updates with callable syntax
+  - Signal value access with direct function calls
   - Composition support with `.pipe()` method
   - Stub implementations that warn when features not installed
 
@@ -848,7 +848,7 @@ const tree = signalTree({
 const loadUsers = tree.asyncAction(async () => await api.getUsers(), {
   loadingKey: 'loading', // Auto-managed loading state
   errorKey: 'error', // Auto-managed error state
-  onSuccess: (users, tree) => tree.$.users.set(users),
+  onSuccess: (users) => ({ users }),
 });
 
 // Component unchanged - same template
@@ -1486,14 +1486,14 @@ const form = signalTree({
 
 // Manual validation
 const validateForm = () => {
-  const state = form.unwrap();
+  const state = form();
   const errors: Record<string, string> = {};
 
   if (!state.email.includes('@')) errors.email = 'Invalid email';
   if (state.password.length < 8) errors.password = 'Min 8 characters';
   if (state.password !== state.confirmPassword) errors.confirmPassword = 'Passwords must match';
 
-  form.update(() => ({ errors, valid: Object.keys(errors).length === 0 }));
+  form((state) => ({ ...state, errors, valid: Object.keys(errors).length === 0 }));
 };
 
 // Component
@@ -1510,11 +1510,11 @@ const validateForm = () => {
 class FormComponent {
   form = form;
   updateField(field: string, value: string) {
-    this.form.update((state) => ({ ...state, [field]: value }));
+    this.form((state) => ({ ...state, [field]: value }));
     validateForm();
   }
   async onSubmit() {
-    if (form.$.valid()) await api.register(form.unwrap());
+    if (form.$.valid()) await api.register(form());
   }
 }
 ```
@@ -1769,8 +1769,8 @@ class FormComponent {
   });
 
   updateField(field: string, value: string) {
-    this.form[field].set(value);
-    this.touched.update((t) => ({ ...t, [field]: true }));
+    this.form[field](value);
+    this.touched((t) => ({ ...t, [field]: true }));
     this.validate(field, value);
   }
 
@@ -1789,7 +1789,7 @@ class FormComponent {
       delete newErrors.password;
     }
 
-    this.errors.set(newErrors);
+    this.errors(newErrors);
   }
 
   async onSubmit() {
@@ -1861,12 +1861,13 @@ const tree = signalTree(initialState);
 // Core features always included:
 tree.state.property(); // Read signal value
 tree.$.property(); // Shorthand for state
-tree.state.property.set(value); // Update signal
-tree.unwrap(); // Get plain object
-tree.update(updater); // Update entire tree
+tree.state.property.set(value); // Update individual signal
+tree.state.property.update(fn); // Update individual signal with function
+tree(); // Get plain object (replaces tree.unwrap())
+tree(value); // Set entire tree
+tree((current) => updated); // Update entire tree with function
 tree.effect(fn); // Create reactive effects
 tree.subscribe(fn); // Manual subscriptions
-tree.destroy(); // Cleanup resources
 
 // Basic entity management (lightweight)
 const entities = tree.asCrud('entityKey');
@@ -1986,7 +1987,7 @@ const tree = signalTree(data).pipe(
 const loadData = tree.asyncAction(async (params) => await api.getData(params), {
   loadingKey: 'loading',
   errorKey: 'error',
-  onSuccess: (data, tree) => tree.$.data.set(data),
+  onSuccess: (data) => ({ data }),
 });
 ````
 
@@ -2306,9 +2307,9 @@ const appTree = signalTree({ theme: 'dark', user: null }).pipe(
 );
 ```
 
-### ⚠️ Using unwrap() Efficiently
+### ⚠️ Using Callable Syntax for Object Extraction Efficiently
 
-The `unwrap()` method extracts plain JavaScript objects from SignalTree nodes, but it's an **expensive operation** that should be used thoughtfully:
+Getting full objects from SignalTree nodes using the callable syntax (e.g., `tree()`, `tree.$.nested()`) extracts plain JavaScript objects, but it's an **expensive operation** that should be used thoughtfully:
 
 ```typescript
 const tree = signalTree({
@@ -2316,9 +2317,9 @@ const tree = signalTree({
   settings: { theme: 'dark', notifications: true },
 });
 
-// ❌ AVOID: Frequent unwrapping is expensive
+// ❌ AVOID: Frequent object extraction is expensive
 function badExample() {
-  const userData = tree.$.user.unwrap(); // Expensive operation
+  const userData = tree.$.user(); // Expensive - extracts entire user object
   const userEmail = userData.email;
   const userName = userData.name;
   return `${userName} (${userEmail})`;
@@ -2331,23 +2332,23 @@ function goodExample() {
   return `${userName} (${userEmail})`;
 }
 
-// ✅ ACCEPTABLE: Unwrap when you need the entire object
+// ✅ ACCEPTABLE: Extract full objects when you need the entire structure
 function acceptableExample() {
-  const completeUser = tree.$.user.unwrap(); // OK when you need full object
+  const completeUser = tree.$.user(); // OK when you need full object
   return sendToAPI(completeUser); // Sending to external API
 }
 ```
 
-#### Performance Guidelines for unwrap()
+#### Performance Guidelines for Object Extraction
 
 1. **Prefer Signal Access**: Use `tree.$.path.property()` for individual values
-2. **Unwrap for Integration**: Use `unwrap()` when interfacing with external APIs or libraries
-3. **Consider State Design**: If you find yourself using `unwrap()` frequently, consider restructuring your state
+2. **Extract for Integration**: Use callable syntax when interfacing with external APIs or libraries
+3. **Consider State Design**: If you find yourself extracting objects frequently, consider restructuring your state
 
 ```typescript
 // 🔄 REFACTOR OPPORTUNITY: If you frequently need user data as an object
 const tree = signalTree({
-  // ❌ Before: Nested user object requiring frequent unwrapping
+  // ❌ Before: Nested user object requiring frequent object extraction
   user: { name: 'John', email: 'john@example.com', preferences: {...} },
 
   // ✅ After: Consider making frequently-accessed objects signals themselves
@@ -2355,10 +2356,10 @@ const tree = signalTree({
 });
 
 // Now you can access the complete user object efficiently:
-const userObject = tree.$.currentUser(); // Direct signal access, no unwrapping needed
+const userObject = tree.$.currentUser(); // Direct signal access, no object extraction needed
 ```
 
-#### When unwrap() is Appropriate
+#### When Object Extraction is Appropriate
 
 - **API Integration**: Sending data to external services
 - **Serialization**: Converting state for storage or transmission
@@ -2367,17 +2368,17 @@ const userObject = tree.$.currentUser(); // Direct signal access, no unwrapping 
 - **Performance Profiling**: Measuring state size or structure
 
 ```typescript
-// ✅ Good use cases for unwrap()
+// ✅ Good use cases for object extraction
 const tree = signalTree(complexState);
 
 // API integration
-await apiClient.post('/users', tree.$.user.unwrap());
+await apiClient.post('/users', tree.$.user());
 
 // State persistence
-localStorage.setItem('app-state', JSON.stringify(tree.unwrap()));
+localStorage.setItem('app-state', JSON.stringify(tree()));
 
 // Debugging
-console.log('Current state:', tree.unwrap());
+console.log('Current state:', tree());
 ```
 
 ## 🏗️ Architecture
@@ -2532,7 +2533,7 @@ describe('UserStore', () => {
     expect(deepValue).toBe('test');
 
     // Type-safe updates at any depth
-    tree.$.level1.level2.level3.level4.level5.data.set('updated');
+    tree.$.level1.level2.level3.level4.level5.data('updated');
     expect(tree.$.level1.level2.level3.level4.level5.data()).toBe('updated');
   });
 
@@ -2576,7 +2577,7 @@ loadUsers$ = createEffect(() =>
 );
 
 // After
-loadUsers = tree.asyncAction(() => api.getUsers(), { onSuccess: (users, tree) => tree.$.users.set(users) });
+loadUsers = tree.asyncAction(() => api.getUsers(), { onSuccess: (users, tree) => tree.$.users(users) });
 ````
 
 ### From Native Signals
