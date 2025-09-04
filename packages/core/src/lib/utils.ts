@@ -352,18 +352,55 @@ export function unwrap<T>(node: unknown): T {
 
   // Handle callable signals first
   if (isNodeAccessor(node)) {
-    const value = (node as NodeAccessor<unknown>)();
-    if (
-      typeof value === 'object' &&
-      value !== null &&
-      !Array.isArray(value) &&
-      !isBuiltInObject(value)
-    ) {
-      return unwrap(value) as T;
-    }
-    return value as T;
-  }
+    // For NodeAccessors, don't call them - read from their properties directly
+    // This prevents infinite recursion when NodeAccessor calls unwrap(accessor)
+    const result = {} as Record<string, unknown>;
 
+    for (const key in node as unknown as Record<string, unknown>) {
+      if (!Object.prototype.hasOwnProperty.call(node, key)) continue;
+
+      // Skip function prototype properties only, not user properties
+      if (key === 'length' || key === 'prototype') continue;
+
+      // Special handling for 'name' - if it's a signal or NodeAccessor, include it
+      if (key === 'name') {
+        const value = (node as unknown as Record<string, unknown>)[key];
+        if (!isSignal(value) && !isNodeAccessor(value)) {
+          // Skip if it's just the function name property
+          continue;
+        }
+      }
+
+      const value = (node as unknown as Record<string, unknown>)[key];
+
+      if (isNodeAccessor(value)) {
+        result[key] = unwrap(value);
+      } else if (isSignal(value)) {
+        const unwrappedValue = (value as Signal<unknown>)();
+        if (
+          typeof unwrappedValue === 'object' &&
+          unwrappedValue !== null &&
+          !Array.isArray(unwrappedValue) &&
+          !isBuiltInObject(unwrappedValue)
+        ) {
+          result[key] = unwrap(unwrappedValue);
+        } else {
+          result[key] = unwrappedValue;
+        }
+      } else if (
+        typeof value === 'object' &&
+        value !== null &&
+        !Array.isArray(value) &&
+        !isBuiltInObject(value)
+      ) {
+        result[key] = unwrap(value);
+      } else {
+        result[key] = value;
+      }
+    }
+
+    return result as T;
+  }
   if (isSignal(node)) {
     const value = (node as Signal<unknown>)();
     if (

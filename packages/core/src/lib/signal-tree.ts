@@ -1,13 +1,4 @@
-import {
-  computed,
-  DestroyRef,
-  effect,
-  inject,
-  isSignal,
-  Signal,
-  signal,
-  WritableSignal,
-} from '@angular/core';
+import { computed, DestroyRef, effect, inject, isSignal, Signal, signal, WritableSignal } from '@angular/core';
 
 import { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './constants';
 import { resolveEnhancerOrder } from './enhancers';
@@ -41,20 +32,20 @@ type LocalUnknownEnhancer = EnhancerWithMeta<unknown, unknown>;
  * This accessor reads from and writes to child signals directly
  */
 function makeNodeAccessor<T>(): NodeAccessor<T> {
-  const accessor = function (this: any, arg?: unknown): T | void {
+  const accessor = function (arg?: unknown): T | void {
     if (arguments.length === 0) {
-      // Read from child signals
-      return unwrap(this);
+      // Read from child signals - use the accessor itself as the context
+      return unwrap(accessor);
     }
 
     if (typeof arg === 'function') {
       const updater = arg as (current: T) => T;
-      const currentValue = unwrap(this) as T;
+      const currentValue = unwrap(accessor) as T;
       const newValue = updater(currentValue);
-      recursiveUpdate(this, newValue);
+      recursiveUpdate(accessor, newValue);
     } else {
       // Direct set
-      recursiveUpdate(this, arg);
+      recursiveUpdate(accessor, arg);
     }
   } as NodeAccessor<T>;
 
