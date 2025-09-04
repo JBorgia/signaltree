@@ -31,7 +31,7 @@ import { Observable } from 'rxjs';
 import type {
   SignalTree,
   TreeConfig,
-  DeepSignalify,
+  TreeNode,
   Middleware,
 } from '@signaltree/core';
 // ============================================
@@ -56,8 +56,8 @@ export type EnhancedArraySignal<T> = WritableSignal<T[]> & {
  */
 export type FormTree<T extends Record<string, unknown>> = {
   // Flattened state access - direct access to form values as signals
-  state: DeepSignalify<T>;
-  $: DeepSignalify<T>; // Alias for state
+  state: TreeNode<T>;
+  $: TreeNode<T>; // Alias for state
 
   // Form-specific signals
   errors: WritableSignal<Record<string, string>>;
@@ -112,7 +112,7 @@ export function createFormTree<T extends Record<string, unknown>>(
   const valuesTree = signalTree(initialValues, treeConfig);
 
   // Ensure the state has the correct type - this is the key fix
-  const flattenedState = valuesTree.state as DeepSignalify<T>;
+  const flattenedState = valuesTree.state as TreeNode<T>;
 
   // Create form-specific signals
   const formSignals = {
@@ -202,7 +202,7 @@ export function createFormTree<T extends Record<string, unknown>>(
   enhanceArraysRecursively(flattenedState as Record<string, unknown>);
 
   // Helper functions for nested paths
-  const getNestedValue = (obj: DeepSignalify<T>, path: string): unknown => {
+  const getNestedValue = (obj: TreeNode<T>, path: string): unknown => {
     const keys = parsePath(path);
     let current: unknown = obj;
 
@@ -360,7 +360,7 @@ export function createFormTree<T extends Record<string, unknown>>(
     reset: () => {
       // Reset each field individually to maintain signal reactivity
       const resetSignals = <TReset extends Record<string, unknown>>(
-        current: DeepSignalify<TReset>,
+        current: TreeNode<TReset>,
         initial: TReset
       ): void => {
         for (const [key, initialValue] of Object.entries(initial)) {
@@ -377,7 +377,7 @@ export function createFormTree<T extends Record<string, unknown>>(
             !isSignal(currentValue)
           ) {
             resetSignals(
-              currentValue as DeepSignalify<Record<string, unknown>>,
+              currentValue as TreeNode<Record<string, unknown>>,
               initialValue as Record<string, unknown>
             );
           }

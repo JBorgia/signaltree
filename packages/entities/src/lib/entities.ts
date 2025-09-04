@@ -30,7 +30,7 @@ interface EntityConfig {
 
 /**
  * Creates entity helpers for a specific entity collection
- * This properly handles the SignalTree's DeepSignalify type structure
+ * This properly handles the SignalTree's TreeNode type structure
  *
  * CRITICAL: In SignalTree, arrays become WritableSignal<Array>
  * So `users: User[]` in the original state becomes `users: WritableSignal<User[]>` in tree.state
@@ -40,9 +40,9 @@ function createEntityHelpers<T, E extends { id: string | number }>(
   entityKey: keyof T
 ): EntityHelpers<E> {
   // Get the signal from the deeply signalified state
-  // The state property is of type DeepSignalify<T>
+  // The state property is of type TreeNode<T>
   const getEntitySignal = () => {
-    // Access the state property - it's already a signal due to DeepSignalify
+    // Access the state property - it's already a signal due to TreeNode
     // We need to use type assertion here because TypeScript can't track the deep signalification
     const stateProperty = (tree.state as any)[entityKey];
 
@@ -53,7 +53,7 @@ function createEntityHelpers<T, E extends { id: string | number }>(
       );
     }
 
-    // Due to DeepSignalify, if the original was an array, it's now WritableSignal<Array>
+    // Due to TreeNode, if the original was an array, it's now WritableSignal<Array>
     if (!isAnySignal(stateProperty)) {
       throw new Error(
         `Entity key '${String(
@@ -180,7 +180,7 @@ function createEntityHelpers<T, E extends { id: string | number }>(
 
 /**
  * Enhances a SignalTree with entity management capabilities
- * Works with SignalTree's DeepSignalify type structure
+ * Works with SignalTree's TreeNode type structure
  *
  * The key insight: The state is already deeply signalified, so array properties
  * like `users: User[]` become `users: WritableSignal<User[]>` in tree.state

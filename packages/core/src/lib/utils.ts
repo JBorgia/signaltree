@@ -9,7 +9,7 @@ const CALLABLE_SIGNAL_SYMBOL = Symbol.for('NodeAccessor');
  * SignalTree Utility Functions v1.1.6
  * Core utilities for signal tree operations
  */
-import type { DeepSignalify, RemoveSignalMethods, NodeAccessor } from './types';
+import type { TreeNode, RemoveSignalMethods, NodeAccessor } from './types';
 
 /** Deep equality */
 export function equal<T>(a: T, b: T): boolean {
@@ -208,7 +208,7 @@ export function createLazySignalTree<T extends object>(
   obj: T,
   equalityFn: (a: unknown, b: unknown) => boolean,
   basePath = ''
-): DeepSignalify<T> {
+): TreeNode<T> {
   const signalCache = new Map<string, WritableSignal<unknown>>();
   const nestedProxies = new Map<string, unknown>();
   const nestedCleanups = new Map<string, () => void>();
@@ -338,15 +338,15 @@ export function createLazySignalTree<T extends object>(
     },
   });
 
-  return proxy as DeepSignalify<T>;
+  return proxy as TreeNode<T>;
 }
 
 /**
  * Unwraps a signal or signal tree into a plain JS value shaped as T.
  * NOTE: Runtime strips the dynamic set/update helpers; call sites receive T.
  */
-export function unwrap<T>(node: DeepSignalify<T>): T;
-export function unwrap<T>(node: NodeAccessor<T> & DeepSignalify<T>): T;
+export function unwrap<T>(node: TreeNode<T>): T;
+export function unwrap<T>(node: NodeAccessor<T> & TreeNode<T>): T;
 export function unwrap<T>(node: NodeAccessor<T>): T;
 export function unwrap<T>(node: unknown): T;
 export function unwrap<T>(node: unknown): T {

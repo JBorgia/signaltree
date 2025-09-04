@@ -63,7 +63,7 @@ async function testBasicFunctionality() {
 
     // Check for key type definitions
     if (
-      typesContent.includes('DeepSignalify<T>') &&
+      typesContent.includes('TreeNode<T>') &&
       typesContent.includes('SignalTree<T>') &&
       typesContent.includes('pipe():')
     ) {
@@ -166,7 +166,7 @@ async function testFunctionalityComparison() {
   const requiredFeatures = [
     'Dot notation access (tree.$.user.name.set)',
     'Lazy signal creation',
-    'Type-safe DeepSignalify mapping',
+    'Type-safe TreeNode mapping',
     'Unwrap functionality',
     'Update with partial state',
     'Pipe composition',

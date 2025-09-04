@@ -1,4 +1,13 @@
-import { computed, DestroyRef, effect, inject, isSignal, Signal, signal, WritableSignal } from '@angular/core';
+import {
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  isSignal,
+  Signal,
+  signal,
+  WritableSignal,
+} from '@angular/core';
 
 import { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './constants';
 import { resolveEnhancerOrder } from './enhancers';
@@ -9,7 +18,7 @@ const NODE_ACCESSOR_SYMBOL = Symbol.for('NodeAccessor');
 
 import type {
   SignalTree,
-  DeepSignalify,
+  TreeNode,
   TreeConfig,
   TreePreset,
   Middleware,
@@ -202,25 +211,25 @@ function createEqualityFn(useShallowComparison: boolean) {
 function createSignalStore<T>(
   obj: T,
   equalityFn: (a: unknown, b: unknown) => boolean
-): DeepSignalify<T> {
+): TreeNode<T> {
   if (obj === null || obj === undefined || typeof obj !== 'object') {
-    return signal(obj, { equal: equalityFn }) as unknown as DeepSignalify<T>;
+    return signal(obj, { equal: equalityFn }) as unknown as TreeNode<T>;
   }
 
   if (Array.isArray(obj)) {
-    return signal(obj, { equal: equalityFn }) as unknown as DeepSignalify<T>;
+    return signal(obj, { equal: equalityFn }) as unknown as TreeNode<T>;
   }
 
   if (isBuiltInObject(obj)) {
-    return signal(obj, { equal: equalityFn }) as unknown as DeepSignalify<T>;
+    return signal(obj, { equal: equalityFn }) as unknown as TreeNode<T>;
   }
 
-  const store: Partial<DeepSignalify<T>> = {};
+  const store: Partial<TreeNode<T>> = {};
   const processedObjects = new WeakSet<object>();
 
   if (processedObjects.has(obj as object)) {
     console.warn(SIGNAL_TREE_MESSAGES.CIRCULAR_REF);
-    return signal(obj, { equal: equalityFn }) as unknown as DeepSignalify<T>;
+    return signal(obj, { equal: equalityFn }) as unknown as TreeNode<T>;
   }
   processedObjects.add(obj as object);
 
@@ -304,7 +313,7 @@ function createSignalStore<T>(
     );
   }
 
-  return store as DeepSignalify<T>;
+  return store as TreeNode<T>;
 }
 
 // ============================================
@@ -638,21 +647,21 @@ function create<T>(obj: T, config: TreeConfig = {}): SignalTree<T> {
     );
   }
 
-  let signalState: DeepSignalify<T>;
+  let signalState: TreeNode<T>;
 
   try {
     if (useLazy && typeof obj === 'object') {
       signalState = createLazySignalTree(
         obj as object,
         equalityFn
-      ) as DeepSignalify<T>;
+      ) as TreeNode<T>;
     } else {
-      signalState = createSignalStore(obj, equalityFn) as DeepSignalify<T>;
+      signalState = createSignalStore(obj, equalityFn) as TreeNode<T>;
     }
   } catch (error) {
     if (useLazy) {
       console.warn(SIGNAL_TREE_MESSAGES.LAZY_FALLBACK, error);
-      signalState = createSignalStore(obj, equalityFn) as DeepSignalify<T>;
+      signalState = createSignalStore(obj, equalityFn) as TreeNode<T>;
     } else {
       throw error;
     }
