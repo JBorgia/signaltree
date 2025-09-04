@@ -1,83 +1,31 @@
-/**
- * SignalTree Utility Functions v1.1.1 - Fair Source License
- * @see https://github.com/JBorgia/signaltree/blob/main/LICENSE
- */
+import { isSignal, Signal, signal, WritableSignal } from '@angular/core';
 
-import { signal, WritableSignal, isSignal } from '@angular/core';
-import type { DeepSignalify } from './types';
+import { SIGNAL_TREE_CONSTANTS } from './constants';
+
+/** Symbol to mark callable signals - using global symbol to match across files */
+const CALLABLE_SIGNAL_SYMBOL = Symbol.for('NodeAccessor');
 
 /**
- * Enhanced deep equality function optimized for SignalTree operations.
- *
- * Performs comprehensive equality checking for all JavaScript types including
- * primitives, objects, arrays, Date, RegExp, Map, Set, and other built-ins.
- * Optimized with early exits and type-specific comparisons for maximum performance.
- *
- * @template T - The type of values being compared
- * @param a - First value to compare
- * @param b - Second value to compare
- * @returns True if values are deeply equal, false otherwise
- *
- * @example
- * ```typescript
- * // Primitive comparisons
- * equal(42, 42);           // true
- * equal('hello', 'hello'); // true
- * equal(null, undefined);  // false
- *
- * // Object comparisons
- * equal({ a: 1, b: 2 }, { a: 1, b: 2 }); // true
- * equal({ a: 1 }, { a: 1, b: 2 });       // false
- *
- * // Array comparisons
- * equal([1, 2, 3], [1, 2, 3]);           // true
- * equal([1, [2, 3]], [1, [2, 3]]);       // true (deep)
- *
- * // Complex types
- * equal(new Date('2023-01-01'), new Date('2023-01-01')); // true
- * equal(/abc/gi, /abc/gi);                               // true
- * equal(new Set([1, 2]), new Set([1, 2]));               // true
- * equal(new Map([['a', 1]]), new Map([['a', 1]]));       // true
- * ```
- *
- * @example
- * ```typescript
- * // Usage in SignalTree for change detection
- * const state = signalTree({
- *   user: { name: 'John', age: 30 }
- * });
- *
- * // Internal equal() usage prevents unnecessary updates
- * state.user.set({ name: 'John', age: 30 }); // No change detected
- * state.user.set({ name: 'Jane', age: 30 }); // Change detected
- * ```
+ * SignalTree Utility Functions v1.1.6
+ * Core utilities for signal tree operations
  */
+import type { DeepSignalify, RemoveSignalMethods, NodeAccessor } from './types';
+
+/** Deep equality */
 export function equal<T>(a: T, b: T): boolean {
-  // Fast path for reference equality
   if (a === b) return true;
-
-  // Handle null/undefined cases
   if (a == null || b == null) return a === b;
 
-  // Type check first - most efficient early exit
   const typeA = typeof a;
   const typeB = typeof b;
   if (typeA !== typeB) return false;
-
-  // For primitives, === check above is sufficient
   if (typeA !== 'object') return false;
 
-  // Handle Date objects specifically
-  if (a instanceof Date && b instanceof Date) {
+  if (a instanceof Date && b instanceof Date)
     return a.getTime() === b.getTime();
-  }
-
-  // Handle RegExp objects specifically
-  if (a instanceof RegExp && b instanceof RegExp) {
+  if (a instanceof RegExp && b instanceof RegExp)
     return a.source === b.source && a.flags === b.flags;
-  }
 
-  // Handle other built-in objects that need special comparison
   if (a instanceof Map && b instanceof Map) {
     if (a.size !== b.size) return false;
     for (const [key, value] of a) {
@@ -94,63 +42,24 @@ export function equal<T>(a: T, b: T): boolean {
     return true;
   }
 
-  // Handle arrays with optimized comparison
   if (Array.isArray(a)) {
     if (!Array.isArray(b) || a.length !== b.length) return false;
-    return a.every((item, index) => equal(item, b[index]));
+    return a.every((item, i) => equal(item, (b as unknown as unknown[])[i]));
   }
 
-  // Arrays check above handles array vs object mismatch
   if (Array.isArray(b)) return false;
 
-  // Handle regular objects with optimized comparison
   const objA = a as Record<string, unknown>;
   const objB = b as Record<string, unknown>;
-
   const keysA = Object.keys(objA);
   const keysB = Object.keys(objB);
-
   if (keysA.length !== keysB.length) return false;
-
-  return keysA.every((key) => key in objB && equal(objA[key], objB[key]));
+  return keysA.every((k) => k in objB && equal(objA[k], objB[k]));
 }
 
-/**
- * Creates a terminal signal with enhanced deep equality comparison.
- *
- * Alternative to Angular's signal() that uses SignalTree's deep equality
- * function for change detection. Useful when you need standalone signals
- * with the same equality semantics as SignalTree.
- *
- * @template T - The type of the signal value
- * @param value - Initial value for the signal
- * @param customEqual - Optional custom equality function (defaults to deep equal)
- * @returns A WritableSignal with deep equality comparison
- *
- * @example
- * ```typescript
- * // Standard Angular signal with reference equality
- * const standardSignal = signal({ count: 0 });
- * standardSignal.set({ count: 0 }); // Triggers update (different reference)
- *
- * // Terminal signal with deep equality
- * const terminalSig = terminalSignal({ count: 0 });
- * terminalSig.set({ count: 0 }); // No update (same value)
- * terminalSig.set({ count: 1 }); // Triggers update (different value)
- * ```
- *
- * @example
- * ```typescript
- * // Custom equality function
- * const userSignal = terminalSignal(
- *   { id: 1, name: 'John' },
- *   (a, b) => a.id === b.id // Only compare by ID
- * );
- *
- * userSignal.set({ id: 1, name: 'Jane' }); // No update (same ID)
- * userSignal.set({ id: 2, name: 'Jane' }); // Triggers update (different ID)
- * ```
- */
+export const deepEqual = equal;
+
+/** Terminal signal with deep equality */
 export function terminalSignal<T>(
   value: T,
   customEqual?: (a: T, b: T) => boolean
@@ -160,172 +69,171 @@ export function terminalSignal<T>(
   });
 }
 
+/** Runtime built-in detection (keep in sync with types BuiltInObject) */
+export function isBuiltInObject(v: unknown): boolean {
+  if (v === null || v === undefined) return false;
+
+  if (
+    v instanceof Date ||
+    v instanceof RegExp ||
+    typeof v === 'function' ||
+    v instanceof Map ||
+    v instanceof Set ||
+    v instanceof WeakMap ||
+    v instanceof WeakSet ||
+    v instanceof ArrayBuffer ||
+    v instanceof DataView ||
+    v instanceof Error ||
+    v instanceof Promise
+  ) {
+    return true;
+  }
+
+  if (
+    v instanceof Int8Array ||
+    v instanceof Uint8Array ||
+    v instanceof Uint8ClampedArray ||
+    v instanceof Int16Array ||
+    v instanceof Uint16Array ||
+    v instanceof Int32Array ||
+    v instanceof Uint32Array ||
+    v instanceof Float32Array ||
+    v instanceof Float64Array ||
+    v instanceof BigInt64Array ||
+    v instanceof BigUint64Array
+  ) {
+    return true;
+  }
+
+  if (typeof window !== 'undefined') {
+    if (
+      v instanceof URL ||
+      v instanceof URLSearchParams ||
+      v instanceof FormData ||
+      v instanceof Blob ||
+      (typeof File !== 'undefined' && v instanceof File) ||
+      (typeof FileList !== 'undefined' && v instanceof FileList) ||
+      (typeof Headers !== 'undefined' && v instanceof Headers) ||
+      (typeof Request !== 'undefined' && v instanceof Request) ||
+      (typeof Response !== 'undefined' && v instanceof Response) ||
+      (typeof AbortController !== 'undefined' &&
+        v instanceof AbortController) ||
+      (typeof AbortSignal !== 'undefined' && v instanceof AbortSignal)
+    ) {
+      return true;
+    }
+  }
+
+  try {
+    const NodeBuffer = (globalThis as { Buffer?: unknown })?.Buffer;
+    if (
+      NodeBuffer &&
+      v instanceof (NodeBuffer as new (...args: unknown[]) => unknown)
+    )
+      return true;
+  } catch {
+    /* ignore */
+  }
+
+  return false;
+}
+
 /**
- * LRU Cache implementation for efficient memory management
+ * Checks if a value is a node accessor created by makeNodeAccessor
  */
+export function isNodeAccessor(value: unknown): value is NodeAccessor<unknown> {
+  return (
+    typeof value === 'function' && value && CALLABLE_SIGNAL_SYMBOL in value
+  );
+}
+
+/**
+ * Checks if a value is either an Angular signal or a callable signal
+ * This is useful for packages that need to work with both types
+ */
+export function isAnySignal(value: unknown): boolean {
+  return isSignal(value) || isNodeAccessor(value);
+}
+
+/** Small LRU cache used by parsePath */
 class LRUCache<K, V> {
   private cache = new Map<K, V>();
-
   constructor(private maxSize: number) {}
-
   set(key: K, value: V): void {
     if (this.cache.size >= this.maxSize) {
       const firstKey = this.cache.keys().next().value;
-      if (firstKey !== undefined) {
-        this.cache.delete(firstKey);
-      }
+      if (firstKey !== undefined) this.cache.delete(firstKey);
     }
-    // Remove if exists to update position
     this.cache.delete(key);
-    this.cache.set(key, value); // Add to end (most recent)
+    this.cache.set(key, value);
   }
-
   get(key: K): V | undefined {
     const value = this.cache.get(key);
     if (value !== undefined) {
-      // Move to end (mark as recently used)
       this.cache.delete(key);
       this.cache.set(key, value);
     }
     return value;
   }
-
   clear(): void {
     this.cache.clear();
   }
-
   size(): number {
     return this.cache.size;
   }
 }
 
-// Path parsing cache with proper LRU eviction strategy
-const MAX_CACHE_SIZE = 1000;
-const pathCache = new LRUCache<string, string[]>(MAX_CACHE_SIZE);
+const pathCache = new LRUCache<string, string[]>(
+  SIGNAL_TREE_CONSTANTS.MAX_PATH_CACHE_SIZE
+);
 
-/**
- * Parses a dot-notation path into an array of keys with intelligent caching.
- *
- * Converts string paths like 'user.profile.name' into arrays ['user', 'profile', 'name']
- * for efficient nested property access. Uses LRU caching to optimize performance
- * for frequently accessed paths while preventing memory leaks.
- *
- * @param path - Dot-notation path string to parse
- * @returns Array of property keys for nested access
- *
- * @example
- * ```typescript
- * // Basic path parsing
- * parsePath('user.name');           // ['user', 'name']
- * parsePath('data.items.0.title');  // ['data', 'items', '0', 'title']
- * parsePath('settings');            // ['settings']
- *
- * // Cached for performance
- * parsePath('user.profile.name');   // Parses and caches
- * parsePath('user.profile.name');   // Returns cached result
- * ```
- *
- * @example
- * ```typescript
- * // Used internally for nested state access
- * const store = signalTree({
- *   user: { profile: { name: 'John' } }
- * });
- *
- * // Internally uses parsePath for efficient access
- * store.user.profile.name.set('Jane');
- *
- * // Or with string paths in extensions
- * setNestedValue(store, 'user.profile.name', 'Bob');
- * ```
- */
 export function parsePath(path: string): string[] {
   const cached = pathCache.get(path);
-  if (cached) {
-    return cached;
-  }
-
+  if (cached) return cached;
   const parts = path.split('.');
   pathCache.set(path, parts);
   return parts;
 }
 
+export function composeEnhancers<T>(
+  ...enhancers: Array<(tree: T) => T>
+): (tree: T) => T {
+  return (tree: T) => enhancers.reduce((t, e) => e(t), tree);
+}
+
 /**
- * Creates a lazy signal tree using Proxy for on-demand signal creation.
- * Only creates signals when properties are first accessed.
- *
- * @see https://github.com/JBorgia/signaltree/blob/main/docs/api/create-lazy-signal-tree.md
- * @param obj - Source object to lazily signalify
- * @param equalityFn - Equality function for signal comparison
- * @param basePath - Base path for nested objects (internal use)
- * @returns Proxied object that creates signals on first access
+ * Creates a lazy signal tree using Proxy for on-demand signal creation
  */
 export function createLazySignalTree<T extends object>(
   obj: T,
   equalityFn: (a: unknown, b: unknown) => boolean,
   basePath = ''
 ): DeepSignalify<T> {
-  // Use Map instead of WeakMap for better control over cleanup
   const signalCache = new Map<string, WritableSignal<unknown>>();
   const nestedProxies = new Map<string, unknown>();
-
-  // Track cleanup functions for nested proxies
   const nestedCleanups = new Map<string, () => void>();
 
-  // Enhanced cleanup function
   const cleanup = () => {
-    // Clean up all nested proxies first
-    nestedCleanups.forEach((cleanupFn) => {
+    nestedCleanups.forEach((fn) => {
       try {
-        cleanupFn();
+        fn();
       } catch (error) {
         console.warn('Error during nested cleanup:', error);
       }
     });
     nestedCleanups.clear();
-
-    // Clear caches
     signalCache.clear();
     nestedProxies.clear();
   };
 
-  // Enhanced built-in object detection
-  const isBuiltInObject = (v: unknown): boolean => {
-    if (v === null || v === undefined) return false;
-
-    return (
-      v instanceof Date ||
-      v instanceof RegExp ||
-      typeof v === 'function' ||
-      v instanceof Map ||
-      v instanceof Set ||
-      v instanceof WeakMap ||
-      v instanceof WeakSet ||
-      v instanceof ArrayBuffer ||
-      v instanceof DataView ||
-      v instanceof Error ||
-      v instanceof Promise ||
-      v instanceof URL ||
-      v instanceof URLSearchParams ||
-      v instanceof FormData ||
-      v instanceof Blob ||
-      (typeof File !== 'undefined' && v instanceof File)
-    );
-  };
-
   const proxy = new Proxy(obj, {
     get(target: object, prop: string | symbol) {
-      // Handle cleanup method
-      if (prop === '__cleanup__') {
-        return cleanup;
-      }
+      if (prop === '__cleanup__') return cleanup;
 
-      // Handle symbol properties (like Symbol.iterator) normally
       if (typeof prop === 'symbol') {
         return (target as Record<string | symbol, unknown>)[prop];
       }
 
-      // Handle inspection methods
       if (prop === 'valueOf' || prop === 'toString') {
         return (target as Record<string | symbol, unknown>)[prop];
       }
@@ -333,29 +241,15 @@ export function createLazySignalTree<T extends object>(
       const key = prop as string;
       const path = basePath ? `${basePath}.${key}` : key;
 
-      // Safety check for property existence
-      if (!(key in target)) {
-        return undefined;
-      }
+      if (!(key in target)) return undefined;
 
       const value = (target as Record<string, unknown>)[key];
 
-      // If it's already a signal, return it
-      if (isSignal(value)) {
-        return value;
-      }
+      if (isSignal(value)) return value;
 
-      // Check if we already have a signal for this path
-      if (signalCache.has(path)) {
-        return signalCache.get(path);
-      }
+      if (signalCache.has(path)) return signalCache.get(path);
+      if (nestedProxies.has(path)) return nestedProxies.get(path);
 
-      // Check if we have a nested proxy cached
-      if (nestedProxies.has(path)) {
-        return nestedProxies.get(path);
-      }
-
-      // Handle nested objects - create lazy proxy
       if (
         value &&
         typeof value === 'object' &&
@@ -369,10 +263,8 @@ export function createLazySignalTree<T extends object>(
             equalityFn,
             path
           );
-
           nestedProxies.set(path, nestedProxy);
 
-          // Store cleanup function for nested proxy
           const proxyWithCleanup = nestedProxy as { __cleanup__?: () => void };
           if (typeof proxyWithCleanup.__cleanup__ === 'function') {
             nestedCleanups.set(path, proxyWithCleanup.__cleanup__);
@@ -384,21 +276,19 @@ export function createLazySignalTree<T extends object>(
             `Failed to create lazy proxy for path "${path}":`,
             error
           );
-          // Fallback: create a signal for the object
           const fallbackSignal = signal(value, { equal: equalityFn });
           signalCache.set(path, fallbackSignal);
           return fallbackSignal;
         }
       }
 
-      // Create signal for primitive values, arrays, and built-in objects
       try {
         const newSignal = signal(value, { equal: equalityFn });
         signalCache.set(path, newSignal);
         return newSignal;
       } catch (error) {
         console.warn(`Failed to create signal for path "${path}":`, error);
-        return value; // Return raw value as fallback
+        return value;
       }
     },
 
@@ -412,18 +302,14 @@ export function createLazySignalTree<T extends object>(
       const path = basePath ? `${basePath}.${key}` : key;
 
       try {
-        // Update the original object
         (target as Record<string, unknown>)[key] = value;
 
-        // If we have a cached signal, update it
         const cachedSignal = signalCache.get(path);
         if (cachedSignal && 'set' in cachedSignal) {
           (cachedSignal as WritableSignal<unknown>).set(value);
         }
 
-        // Clear nested proxy cache if the value type changed
         if (nestedProxies.has(path)) {
-          // Clean up the nested proxy
           const nestedCleanup = nestedCleanups.get(path);
           if (nestedCleanup) {
             nestedCleanup();
@@ -456,41 +342,187 @@ export function createLazySignalTree<T extends object>(
 }
 
 /**
- * Native deep equality check for arrays and objects.
- * Alias for the enhanced equal function for backward compatibility.
+ * Unwraps a signal or signal tree into a plain JS value shaped as T.
+ * NOTE: Runtime strips the dynamic set/update helpers; call sites receive T.
  */
-export const deepEqual = equal;
+export function unwrap<T>(node: DeepSignalify<T>): T;
+export function unwrap<T>(node: NodeAccessor<T> & DeepSignalify<T>): T;
+export function unwrap<T>(node: NodeAccessor<T>): T;
+export function unwrap<T>(node: unknown): T;
+export function unwrap<T>(node: unknown): T {
+  if (node === null || node === undefined) {
+    return node as T;
+  }
+
+  // Handle callable signals first
+  if (isNodeAccessor(node)) {
+    // For NodeAccessors, don't call them - read from their properties directly
+    // This prevents infinite recursion when NodeAccessor calls unwrap(accessor)
+    const result = {} as Record<string, unknown>;
+
+    for (const key in node as unknown as Record<string, unknown>) {
+      if (!Object.prototype.hasOwnProperty.call(node, key)) continue;
+
+      // Skip function prototype properties only, not user properties
+      if (key === 'length' || key === 'prototype') continue;
+
+      // Special handling for 'name' - if it's a signal or NodeAccessor, include it
+      if (key === 'name') {
+        const value = (node as unknown as Record<string, unknown>)[key];
+        if (!isSignal(value) && !isNodeAccessor(value)) {
+          // Skip if it's just the function name property
+          continue;
+        }
+      }
+
+      const value = (node as unknown as Record<string, unknown>)[key];
+
+      if (isNodeAccessor(value)) {
+        result[key] = unwrap(value);
+      } else if (isSignal(value)) {
+        const unwrappedValue = (value as Signal<unknown>)();
+        if (
+          typeof unwrappedValue === 'object' &&
+          unwrappedValue !== null &&
+          !Array.isArray(unwrappedValue) &&
+          !isBuiltInObject(unwrappedValue)
+        ) {
+          result[key] = unwrap(unwrappedValue);
+        } else {
+          result[key] = unwrappedValue;
+        }
+      } else if (
+        typeof value === 'object' &&
+        value !== null &&
+        !Array.isArray(value) &&
+        !isBuiltInObject(value)
+      ) {
+        result[key] = unwrap(value);
+      } else {
+        result[key] = value;
+      }
+    }
+
+    return result as T;
+  }
+  if (isSignal(node)) {
+    const value = (node as Signal<unknown>)();
+    if (
+      typeof value === 'object' &&
+      value !== null &&
+      !Array.isArray(value) &&
+      !isBuiltInObject(value)
+    ) {
+      return unwrap(value) as T;
+    }
+    return value as T;
+  }
+
+  if (typeof node !== 'object') {
+    return node as T;
+  }
+
+  if (Array.isArray(node)) {
+    return node as T;
+  }
+
+  if (isBuiltInObject(node)) {
+    return node as T;
+  }
+
+  const result = {} as Record<string, unknown>;
+
+  for (const key in node as Record<string, unknown>) {
+    if (!Object.prototype.hasOwnProperty.call(node, key)) continue;
+
+    if (key === 'set' || key === 'update') {
+      const v = (node as Record<string, unknown>)[key];
+      if (typeof v === 'function') continue;
+    }
+
+    const value = (node as Record<string, unknown>)[key];
+
+    if (isNodeAccessor(value)) {
+      const unwrappedValue = value();
+      if (
+        typeof unwrappedValue === 'object' &&
+        unwrappedValue !== null &&
+        !Array.isArray(unwrappedValue) &&
+        !isBuiltInObject(unwrappedValue)
+      ) {
+        result[key] = unwrap(unwrappedValue);
+      } else {
+        result[key] = unwrappedValue;
+      }
+    } else if (isSignal(value)) {
+      const unwrappedValue = (value as Signal<unknown>)();
+      if (
+        typeof unwrappedValue === 'object' &&
+        unwrappedValue !== null &&
+        !Array.isArray(unwrappedValue) &&
+        !isBuiltInObject(unwrappedValue)
+      ) {
+        result[key] = unwrap(unwrappedValue);
+      } else {
+        result[key] = unwrappedValue;
+      }
+    } else if (
+      typeof value === 'object' &&
+      value !== null &&
+      !Array.isArray(value) &&
+      !isBuiltInObject(value)
+    ) {
+      result[key] = unwrap(value);
+    } else {
+      result[key] = value;
+    }
+  }
+
+  const symbols = Object.getOwnPropertySymbols(node as object);
+  for (const sym of symbols) {
+    const value = (node as Record<symbol, unknown>)[sym];
+    if (isNodeAccessor(value)) {
+      const unwrappedValue = value();
+      if (
+        typeof unwrappedValue === 'object' &&
+        unwrappedValue !== null &&
+        !Array.isArray(unwrappedValue) &&
+        !isBuiltInObject(unwrappedValue)
+      ) {
+        (result as Record<symbol, unknown>)[sym] = unwrap(unwrappedValue);
+      } else {
+        (result as Record<symbol, unknown>)[sym] = unwrappedValue;
+      }
+    } else if (isSignal(value)) {
+      const unwrappedValue = (value as Signal<unknown>)();
+      if (
+        typeof unwrappedValue === 'object' &&
+        unwrappedValue !== null &&
+        !Array.isArray(unwrappedValue) &&
+        !isBuiltInObject(unwrappedValue)
+      ) {
+        (result as Record<symbol, unknown>)[sym] = unwrap(unwrappedValue);
+      } else {
+        (result as Record<symbol, unknown>)[sym] = unwrappedValue;
+      }
+    } else if (
+      typeof value === 'object' &&
+      value !== null &&
+      !Array.isArray(value) &&
+      !isBuiltInObject(value)
+    ) {
+      (result as Record<symbol, unknown>)[sym] = unwrap(value);
+    } else {
+      (result as Record<symbol, unknown>)[sym] = value;
+    }
+  }
+
+  return result as unknown as T;
+}
 
 /**
- * Shallow equality check for objects and arrays.
+ * Optional strict variant for internal use when you want the cleaned structural type.
  */
-export function shallowEqual<T>(a: T, b: T): boolean {
-  if (a === b) return true;
-  if (a == null || b == null) return false;
-
-  if (Array.isArray(a) && Array.isArray(b)) {
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) {
-      if (a[i] !== b[i]) return false;
-    }
-    return true;
-  }
-
-  if (typeof a === 'object' && typeof b === 'object') {
-    const keysA = Object.keys(a as Record<string, unknown>);
-    const keysB = Object.keys(b as Record<string, unknown>);
-
-    if (keysA.length !== keysB.length) return false;
-
-    for (const key of keysA) {
-      if (
-        (a as Record<string, unknown>)[key] !==
-        (b as Record<string, unknown>)[key]
-      )
-        return false;
-    }
-    return true;
-  }
-
-  return false;
+export function cleanUnwrap<T>(node: unknown): RemoveSignalMethods<T> {
+  return unwrap(node) as unknown as RemoveSignalMethods<T>;
 }

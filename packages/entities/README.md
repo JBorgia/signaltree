@@ -2,23 +2,26 @@
 
 Advanced entity collection management for SignalTree featuring enhanced CRUD operations, entity finding, filtering, querying, and duplicate prevention.
 
-## ✨ What is @signaltree/entities?
+## What is @signaltree/entities?
 
 The entities package supercharges SignalTree with advanced entity management:
 
 - **Enhanced CRUD operations** beyond basic core functionality
 - **Advanced filtering and querying** with predicates and sorting
 - **Duplicate prevention** and validation
-- **Bulk operations** for performance
+- **Bulk operations** for optimal performance
 - **Optimized for managing** lists of objects with IDs
+- Ultra-lightweight: Complete entity management in ~0.98KB gzipped
+- High performance: Leverages SignalTree's 0.061–0.109ms core operations
+- Type-safe queries: Strong TypeScript inference for all operations
 
-## 🚀 Installation
+## Installation
 
 ```bash
 npm install @signaltree/core @signaltree/entities
 ```
 
-## 📖 Basic Usage
+## Basic usage
 
 ```typescript
 import { signalTree } from '@signaltree/core';
@@ -27,7 +30,7 @@ import { withEntities } from '@signaltree/entities';
 const tree = signalTree({
   users: [] as User[],
   posts: [] as Post[],
-}).pipe(withEntities());
+}).with(withEntities());
 
 const users = tree.asCrud<User>('users');
 
@@ -45,14 +48,14 @@ const sortedUsers = users.findBy((user) => user, { sortBy: 'name' });
 const paginatedUsers = users.selectPaginated(1, 10);
 ```
 
-## 🎯 Enhanced Features
+## Enhanced features
 
 ### Advanced Filtering and Querying
 
 ```typescript
 const todoTree = signalTree({
   todos: [] as Todo[],
-}).pipe(withEntities());
+}).with(withEntities());
 
 const todos = todoTree.asCrud<Todo>('todos');
 
@@ -147,7 +150,7 @@ const totalCount = users.selectTotal();
 ```typescript
 const tree = signalTree({
   products: [] as Product[],
-}).pipe(
+}).with(
   withEntities({
     enableDuplicateDetection: true,
     enableOptimisticUpdates: true,
@@ -184,7 +187,7 @@ const userTree = signalTree({
     pageSize: 20,
     total: 0,
   },
-}).pipe(withEntities());
+}).with(withEntities());
 
 const users = userTree.asCrud<User>('users');
 
@@ -291,7 +294,7 @@ const catalogTree = signalTree({
     field: 'name' as keyof Product,
     direction: 'asc' as 'asc' | 'desc',
   },
-}).pipe(withEntities());
+}).with(withEntities());
 
 const products = catalogTree.asCrud<Product>('products');
 
@@ -382,7 +385,7 @@ const taskTree = signalTree({
   tasks: [] as Task[],
   projects: [] as Project[],
   users: [] as User[],
-}).pipe(withEntities());
+}).with(withEntities());
 
 const tasks = taskTree.asCrud<Task>('tasks');
 const projects = taskTree.asCrud<Project>('projects');
@@ -416,18 +419,18 @@ const getHighPriorityTasks = () =>
   });
 ```
 
-## 🎯 When to Use Entities
+## When to use entities
 
 Perfect for:
 
-- ✅ User management systems
-- ✅ Product catalogs and inventories
-- ✅ Task and project management
-- ✅ Content management systems
-- ✅ Social media feeds
-- ✅ Any collection-based data
+- User management systems
+- Product catalogs and inventories
+- Task and project management
+- Content management systems
+- Social media feeds
+- Any collection-based data
 
-## 🔗 Composition with Other Packages
+## Composition with other packages
 
 ```typescript
 import { signalTree } from '@signaltree/core';
@@ -435,14 +438,14 @@ import { withEntities } from '@signaltree/entities';
 import { withMemoization } from '@signaltree/memoization';
 import { withAsync } from '@signaltree/async';
 
-const tree = signalTree(state).pipe(
+const tree = signalTree(state).with(
   withEntities(),
   withMemoization(), // Cache expensive queries
   withAsync() // Enhanced async operations
 );
 ```
 
-## 📈 Performance Benefits
+## Performance benefits
 
 - **Optimized bulk operations** for handling large datasets
 - **Efficient filtering** with predicate-based queries
@@ -450,14 +453,14 @@ const tree = signalTree(state).pipe(
 - **Memoization compatible** for caching expensive queries
 - **Minimal overhead** - only ~929B gzipped added to bundle
 
-## 🔗 Links
+## Links
 
 - [SignalTree Documentation](https://signaltree.io)
 - [Core Package](https://www.npmjs.com/package/@signaltree/core)
 - [GitHub Repository](https://github.com/JBorgia/signaltree)
 - [Entity Examples](https://signaltree.io/examples/entities)
 
-## 📄 License
+## License
 
 MIT License with AI Training Restriction - see the [LICENSE](../../LICENSE) file for details.
 

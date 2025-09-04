@@ -1,32 +1,32 @@
-# 🌳 SignalTree Core
+# SignalTree Core
 
-The foundation package for SignalTree - featuring revolutionary recursive typing with deep nesting support and excellent performance.
+Foundation package for SignalTree. Provides recursive typing, deep nesting support, and strong performance.
 
-## ✨ What is @signaltree/core?
+## What is @signaltree/core?
 
-SignalTree Core is the lightweight (5.1KB gzipped) foundation that provides:
+SignalTree Core is a lightweight (about 7.25KB gzipped) package that provides:
 
-- **🔥 Revolutionary Recursive Typing** with deep nesting support and strong type inference
-- **⚡ Excellent Performance** - 0.021ms at 15+ levels with consistent speed
-- **🏆 Strong Type Safety** with TypeScript inference at 25+ recursive levels
-- **💾 Memory Efficient** through structural sharing and lazy signals
-- **🌳 Lightweight Abstractions** for recursive patterns
-- **📦 Compact Bundle Size** - Complete recursive power in just 5.1KB gzipped
+- Recursive typing with deep nesting and accurate type inference
+- Fast operations with sub‑millisecond measurements at 5–20+ levels
+- Strong TypeScript safety across nested structures
+- Memory efficiency via structural sharing and lazy signals
+- Small API surface with zero-cost abstractions
+- Compact bundle size suited for production
 
-### 🔥 Recursive Depth Performance Metrics
+### Depth performance (Sept 2025, averaged)
 
-Core performance scales exceptionally across all depth levels:
+Indicative measurements across different depths:
 
-| **Depth Level**            | **Execution Time** | **Type Safety** | **Performance Grade** |
-| -------------------------- | ------------------ | --------------- | --------------------- |
-| **Basic (5 levels)**       | 0.012ms            | ✅ Perfect      | A+ Excellent          |
-| **Medium (10 levels)**     | 0.015ms            | ✅ Perfect      | A+ Excellent          |
-| **Extreme (15 levels)**    | **0.021ms**        | ✅ Perfect      | A+ **Outstanding** 🔥 |
-| **Unlimited (20+ levels)** | 0.023ms            | ✅ Perfect      | A+ **Exceptional** 🚀 |
+| Depth level | Avg time | Type safety | Range         |
+| ----------- | -------- | ----------- | ------------- |
+| 5 levels    | 0.061ms  | ✅          | 0.041–0.133ms |
+| 10 levels   | 0.109ms  | ✅          | 0.060–0.181ms |
+| 15 levels   | 0.098ms  | ✅          | 0.088–0.126ms |
+| 20+ levels  | 0.103ms  | ✅          | 0.100–0.106ms |
 
-_Revolutionary achievement: Performance remains sub-millisecond with consistent scaling._
+Note: Results vary by environment; figures are averaged across multiple runs.
 
-## 🚀 Quick Start
+## Quick start
 
 ### Installation
 
@@ -34,12 +34,12 @@ _Revolutionary achievement: Performance remains sub-millisecond with consistent 
 npm install @signaltree/core
 ```
 
-### Elegant Usage - Deep Nesting Support
+### Deep nesting example
 
 ```typescript
 import { signalTree } from '@signaltree/core';
 
-// Powerful: Strong type inference at deep nesting levels!
+// Strong type inference at deep nesting levels
 const tree = signalTree({
   enterprise: {
     divisions: {
@@ -58,7 +58,7 @@ const tree = signalTree({
                               tests: {
                                 extreme: {
                                   depth: 15,
-                                  performance: 0.021, // ms - Excellent!
+                                  performance: 0.098, // ms (averaged)
                                   typeInference: true,
                                 },
                               },
@@ -78,19 +78,24 @@ const tree = signalTree({
   },
 });
 
-// Perfect type inference at extreme depth - no 'any' types!
+// Type inference at deep nesting levels
 const performance = tree.$.enterprise.divisions.technology.departments.engineering.teams.frontend.projects.signaltree.releases.v1.features.recursiveTyping.validation.tests.extreme.performance();
 
-console.log(`Excellent performance: ${performance}ms`); // 0.021ms
+console.log(`Performance: ${performance}ms`); // ~0.098ms (averaged)
 
 // Type-safe updates at unlimited depth
 tree.$.enterprise.divisions.technology.departments.engineering.teams.frontend.projects.signaltree.releases.v1.features.recursiveTyping.validation.tests.extreme.depth.set(25); // Perfect type safety!
 ```
 
-### Basic Usage (Perfect for Getting Started)
+### Basic usage
 
-count: 0,
-message: 'Hello World',
+```typescript
+import { signalTree } from '@signaltree/core';
+
+// Create a simple tree
+const tree = signalTree({
+  count: 0,
+  message: 'Hello World',
 });
 
 // Read values (these are Angular signals)
@@ -101,23 +106,22 @@ console.log(tree.$.message()); // 'Hello World'
 tree.$.count.set(5);
 tree.$.message.set('Updated!');
 
-// Use in Angular components
+// Use in an Angular component
 @Component({
-template: `  <div>Count: {{ tree.$.count() }}</div>
+  template: ` <div>Count: {{ tree.$.count() }}</div>
     <div>Message: {{ tree.$.message() }}</div>
     <button (click)="increment()">+1</button>`,
 })
 class SimpleComponent {
-tree = tree;
+  tree = tree;
 
-increment() {
-this.tree.$.count.update((n) => n + 1);
+  increment() {
+    this.tree.$.count.update((n) => n + 1);
+  }
 }
-}
+```
 
-````
-
-### Intermediate Usage (Nested State)
+### Intermediate usage (nested state)
 
 ```typescript
 // Create hierarchical state
@@ -153,9 +157,9 @@ effect(() => {
     console.log('Loading started...');
   }
 });
-````
+```
 
-### Advanced Usage (Full State Tree)
+### Advanced usage (full state tree)
 
 ```typescript
 interface AppState {
@@ -213,9 +217,9 @@ const currentState = tree.unwrap();
 console.log('Current app state:', currentState);
 ```
 
-## 📦 Core Features
+## Core features
 
-### 1. Hierarchical Signal Trees
+### 1) Hierarchical signal trees
 
 Create deeply nested reactive state with automatic type inference:
 
@@ -232,7 +236,7 @@ tree.$.settings.theme.set('light'); // type-checked value
 tree.$.todos.update((todos) => [...todos, newTodo]); // array operations
 ```
 
-### 2. TypeScript Inference Excellence
+### 2) TypeScript inference
 
 SignalTree provides complete type inference without manual typing:
 
@@ -258,7 +262,7 @@ tree.$.config.theme.set('light'); // ❌ Type error ('dark' const)
 tree.$.config.settings.nested.set(false); // ✅ boolean
 ```
 
-### 3. Manual State Management
+### 3) Manual state management
 
 Core provides basic state updates - entity management requires `@signaltree/entities`:
 
@@ -292,7 +296,7 @@ const userById = (id: string) => computed(() => tree.$.users().find((user) => us
 const activeUsers = computed(() => tree.$.users().filter((user) => user.active));
 ```
 
-### 4. Manual Async State Management
+### 4) Manual async state management
 
 Core provides basic state updates - async helpers require `@signaltree/async`:
 
@@ -337,7 +341,35 @@ class UsersComponent {
 }
 ```
 
-### 5. Performance Optimizations
+### 5) Performance considerations
+
+### 6) Enhancers and composition
+
+Enhancers are optional, tree‑shakable extensions that augment a `SignalTree` via `tree.with(...)`.
+
+- `createEnhancer(meta, fn)` attaches metadata to an enhancer function
+- Metadata fields: `name`, `requires`, `provides`
+- Enhancers may mutate the passed tree (preferred) or return a new object
+- A topological sort orders enhancers that declare metadata; on cycles, fallback to user order in debug mode
+
+Examples:
+
+```typescript
+import { signalTree } from '@signaltree/core';
+import { withBatching } from '@signaltree/batching';
+import { withDevtools } from '@signaltree/devtools';
+
+// Apply in explicit order
+const tree = signalTree({ count: 0 }).with(withBatching, withDevtools);
+```
+
+Presets can provide composed enhancers for quicker onboarding:
+
+```typescript
+import { createDevTree } from '@signaltree/presets';
+const { enhancer } = createDevTree();
+const tree = signalTree({ count: 0 }).with(enhancer);
+```
 
 Core includes several performance optimizations:
 
@@ -372,9 +404,9 @@ tree.update((state) => ({
 }));
 ```
 
-## 🚀 Error Handling Examples
+## Error handling examples
 
-### Manual Async Error Handling
+### Manual async error handling
 
 ```typescript
 const tree = signalTree({
@@ -435,7 +467,7 @@ class ErrorHandlingComponent {
 }
 ```
 
-### State Update Error Handling
+### State update error handling
 
 ```typescript
 const tree = signalTree({
@@ -473,7 +505,7 @@ function safeUpdateItem(id: string, updates: Partial<Item>) {
 }
 ```
 
-## 🔗 Package Composition Patterns
+## Package composition patterns
 
 ### Basic Composition
 
@@ -485,33 +517,33 @@ const tree = signalTree({
   state: 'initial',
 });
 
-// Extend with additional packages via pipe
-const enhancedTree = tree.pipe(
+// Extend with additional packages via .with(...)
+const enhancedTree = tree.with(
   // Add features as needed
   someFeatureFunction()
 );
 ```
 
-### Modular Enhancement Pattern
+### Modular enhancement pattern
 
 ```typescript
 // Start minimal, add features as needed
 let tree = signalTree(initialState);
 
 if (isDevelopment) {
-  tree = tree.pipe(withDevtools());
+  tree = tree.with(withDevTools());
 }
 
 if (needsPerformance) {
-  tree = tree.pipe(withBatching(), withMemoization());
+  tree = tree.with(withBatching(), withMemoization());
 }
 
 if (needsTimeTravel) {
-  tree = tree.pipe(withTimeTravel());
+  tree = tree.with(withTimeTravel());
 }
 ```
 
-### Service-Based Pattern
+### Service-based pattern
 
 ```typescript
 @Injectable()
@@ -544,11 +576,11 @@ class AppStateService {
 }
 ```
 
-## ⚡ Performance Benchmarks
+## Performance benchmarks
 
-> **Performance Grade: A+** ⭐ - Sub-millisecond operations across all core functions
+> Sub‑millisecond operations across common core functions
 
-### Recursive Depth Scaling Performance
+### Recursive depth scaling (illustrative)
 
 | **Depth Level**            | **Execution Time** | **Scaling Factor** | **Type Inference** | **Memory Usage** |
 | -------------------------- | ------------------ | ------------------ | ------------------ | ---------------- |
@@ -557,9 +589,9 @@ class AppStateService {
 | **Extreme (15 levels)**    | **0.021ms**        | **1.75x**          | ✅ Perfect         | ~1.3MB           |
 | **Unlimited (20+ levels)** | 0.023ms            | 1.92x              | ✅ Perfect         | ~1.4MB           |
 
-_Exceptional scaling: Only 92% performance overhead for 4x depth increase_
+Note: Scaling depends on state shape and hardware.
 
-### SignalTree Core Performance Results (Measured)
+### Example operation timings
 
 | Operation                   | SignalTree Core | Notes            |
 | --------------------------- | --------------- | ---------------- |
@@ -570,16 +602,16 @@ _Exceptional scaling: Only 92% performance overhead for 4x depth increase_
 | Computation (cached)        | **0.094ms**     | Memoized result  |
 | Memory per 1K entities      | **1.2MB**       | Measured usage   |
 
-### Advanced Performance Features
+### Feature impact
 
 | Feature             | SignalTree Core   | With Extensions        | Notes                  |
 | ------------------- | ----------------- | ---------------------- | ---------------------- |
 | Batching efficiency | Standard          | **455.8x improvement** | vs non-batched         |
 | Memoization speedup | Basic             | **197.9x speedup**     | vs non-memoized        |
 | Memory efficiency   | **Optimized**     | **Further optimized**  | Lazy signals + cleanup |
-| Bundle impact       | **5.1KB gzipped** | **+15KB max**          | Tree-shakeable         |
+| Bundle impact       | **7.1KB gzipped** | **+15KB max**          | Tree-shakeable         |
 
-### Developer Experience (Core Package)
+### Developer experience (core)
 
 | Metric                  | SignalTree Core | Traditional State Mgmt | **Improvement** |
 | ----------------------- | --------------- | ---------------------- | --------------- |
@@ -588,7 +620,7 @@ _Exceptional scaling: Only 92% performance overhead for 4x depth increase_
 | Setup complexity        | **Minimal**     | Complex                | **Simplified**  |
 | API surface             | **Small**       | Large                  | **Focused**     |
 
-### Memory Usage Comparison
+### Memory usage comparison
 
 | Operation                | SignalTree Core | NgRx   | Akita  | Native Signals |
 | ------------------------ | --------------- | ------ | ------ | -------------- |
@@ -596,7 +628,7 @@ _Exceptional scaling: Only 92% performance overhead for 4x depth increase_
 | 10K entities             | 8.1MB           | 28.5MB | 22.1MB | 15.2MB         |
 | Deep nesting (10 levels) | 145KB           | 890KB  | 720KB  | 340KB          |
 
-### TypeScript Inference Speed
+### TypeScript inference speed
 
 ```typescript
 // SignalTree: Instant inference
@@ -610,7 +642,7 @@ interface State { deeply: { nested: { state: { with: { types: string } } } } }
 const store: Store<State> = ...; // Requires manual interface definition
 ```
 
-## 🎯 Real-World Example
+## Example
 
 ```typescript
 // Complete user management component
@@ -735,9 +767,9 @@ console.log('Current app state:', currentState);
 });
 ```
 
-## 📦 Core Features
+## Core features
 
-### Hierarchical Signal Trees
+### Hierarchical signal trees
 
 ```typescript
 const tree = signalTree({
@@ -752,7 +784,7 @@ tree.$.settings.theme.set('light');
 tree.$.todos.update((todos) => [...todos, newTodo]);
 ```
 
-### Manual Entity Management
+### Manual entity management
 
 ```typescript
 // Manual CRUD operations
@@ -778,7 +810,7 @@ const allTodos = computed(() => tree.$.todos());
 const todoCount = computed(() => tree.$.todos().length);
 ```
 
-### Manual Async State Management
+### Manual async state management
 
 ```typescript
 async function loadUsers() {
@@ -800,7 +832,7 @@ async function handleLoadUsers() {
 }
 ```
 
-### Reactive Effects
+### Reactive effects
 
 ```typescript
 // Create reactive effects
@@ -814,7 +846,7 @@ const unsubscribe = tree.subscribe((state) => {
 });
 ```
 
-## 🎯 Core API Reference
+## Core API reference
 
 ### signalTree()
 
@@ -842,7 +874,7 @@ tree.asyncAction(fn, config?); // Async actions (requires @signaltree/async)
 tree.asyncAction(fn, config?); // Create async action
 ```
 
-## 🔌 Extending with Optional Packages
+## Extending with optional packages
 
 SignalTree Core can be extended with additional features:
 
@@ -852,11 +884,11 @@ import { withBatching } from '@signaltree/batching';
 import { withMemoization } from '@signaltree/memoization';
 import { withTimeTravel } from '@signaltree/time-travel';
 
-// Compose features using pipe
-const tree = signalTree(initialState).pipe(withBatching(), withMemoization(), withTimeTravel());
+// Compose features using .with(...)
+const tree = signalTree(initialState).with(withBatching(), withMemoization(), withTimeTravel());
 ```
 
-### Available Extensions
+### Available extensions
 
 - **@signaltree/batching** (+1.1KB gzipped) - Batch multiple updates
 - **@signaltree/memoization** (+1.7KB gzipped) - Intelligent caching & performance
@@ -867,9 +899,9 @@ const tree = signalTree(initialState).pipe(withBatching(), withMemoization(), wi
 - **@signaltree/time-travel** (+1.5KB gzipped) - Undo/redo functionality
 - **@signaltree/ng-forms** (+3.4KB gzipped) - Complete Angular forms integration
 - **@signaltree/serialization** (+3.6KB gzipped) - State persistence & SSR support
-- **@signaltree/presets** (+0.5KB gzipped) - Environment-based configurations
+- **@signaltree/presets** (+0.8KB gzipped) - Environment-based configurations
 
-## 🎯 When to Use Core Only
+## When to use core only
 
 Perfect for:
 
@@ -886,7 +918,7 @@ Consider extensions when you need:
 - 📝 Complex forms (ng-forms)
 - 🔧 Middleware patterns (middleware)
 
-## 🔄 Migration from NgRx
+## Migration from NgRx
 
 ```typescript
 // Step 1: Create parallel tree
@@ -902,7 +934,7 @@ users = this.tree.$.users;
 // Step 3: Replace effects with manual async operations
 // Before (NgRx)
 loadUsers$ = createEffect(() =>
-  this.actions$.pipe(
+  this.actions$.with(
     ofType(loadUsers),
     switchMap(() => this.api.getUsers())
   )
@@ -924,7 +956,7 @@ loadUsers = tree.asyncAction(() => api.getUsers(), {
 });
 ```
 
-## 📖 Examples
+## Examples
 
 ### Simple Counter
 
@@ -994,7 +1026,7 @@ class UsersComponent {
 }
 ```
 
-## � Available Extension Packages
+## Available extension packages
 
 Extend the core with optional feature packages:
 
@@ -1016,7 +1048,7 @@ Extend the core with optional feature packages:
 
 ### Integration & Convenience
 
-- **[@signaltree/presets](../presets)** (+0.5KB gzipped) - Pre-configured setups for common patterns
+- **[@signaltree/presets](../presets)** (+0.8KB gzipped) - Pre-configured setups for common patterns
 - **[@signaltree/ng-forms](../ng-forms)** (+3.4KB gzipped) - Complete Angular Forms integration
 
 ### Quick Start with Extensions
@@ -1032,7 +1064,7 @@ npm install @signaltree/core @signaltree/batching @signaltree/memoization @signa
 npm install @signaltree/core @signaltree/batching @signaltree/memoization @signaltree/middleware @signaltree/async @signaltree/entities @signaltree/devtools @signaltree/time-travel @signaltree/presets @signaltree/ng-forms
 ```
 
-## �🔗 Links
+## Links
 
 - [SignalTree Documentation](https://signaltree.io)
 - [GitHub Repository](https://github.com/JBorgia/signaltree)

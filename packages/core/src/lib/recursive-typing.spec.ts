@@ -1,11 +1,11 @@
+import { TestBed } from '@angular/core/testing';
+
+import { signalTree } from './signal-tree';
+
 /**
  * Recursive Typing Tests for SignalTree
  * Tests the MAGIC recursive pattern that achieves perfect type inference
  */
-
-import { TestBed } from '@angular/core/testing';
-import { signalTree } from './signal-tree';
-import { signal } from '@angular/core';
 
 describe('SignalTree Recursive Typing Magic', () => {
   beforeEach(() => {

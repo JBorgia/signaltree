@@ -3,7 +3,7 @@
 # SignalTree Modular Release Script
 # Handles version bumping, building, tagging, and publishing for all packages
 
-set -e # Exit on any error
+set -euo pipefail # Exit on any error, fail on unset variables
 
 # Colors for output
 RED='\033[0;31m'
@@ -52,6 +52,10 @@ PACKAGES=(
 # Parse command line arguments
 RELEASE_TYPE=${1:-patch}
 SKIP_TESTS=${2:-false}
+NON_INTERACTIVE=false
+if [[ "$*" == *"--yes"* ]] || [[ "$*" == *"-y"* ]]; then
+    NON_INTERACTIVE=true
+fi
 
 if [[ ! "$RELEASE_TYPE" =~ ^(major|minor|patch)$ ]]; then
     print_error "Invalid release type. Use: major, minor, or patch"
@@ -89,31 +93,128 @@ esac
 
 print_step "New version will be: $NEW_VERSION"
 
-# Confirm with user
-echo -e "${YELLOW}Continue with modular release $CURRENT_VERSION → $NEW_VERSION? (y/N)${NC}"
-read -r CONFIRM
-if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
-    print_warning "Release cancelled"
-    exit 0
+# Confirm with user (unless non-interactive)
+if [ "$NON_INTERACTIVE" = false ]; then
+    echo -e "${YELLOW}Continue with modular release $CURRENT_VERSION → $NEW_VERSION? (y/N)${NC}"
+    read -r CONFIRM
+    if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
+        print_warning "Release cancelled"
+        exit 0
+    fi
+else
+    print_step "Non-interactive mode: proceeding without confirmation"
 fi
 
 # Step 1: Run tests for all packages (unless skipped)
 if [ "$SKIP_TESTS" != "skip-tests" ]; then
     print_step "Running tests for all packages..."
 
-    # Run tests for each package individually
-    for package in "${PACKAGES[@]}"; do
-        print_step "Testing package: $package"
-        npx nx test $package || {
-            print_error "Tests failed for package: $package! Aborting release."
-            exit 1
-        }
-    done
+    # Prefer nx run-many to leverage caching and parallelism
+    # Convert array to comma-separated list for Nx
+    PROJECTS_LIST=$(IFS=,; echo "${PACKAGES[*]}")
+    npx nx run-many -t test --projects=$PROJECTS_LIST || {
+        print_error "Some tests failed! Aborting release."
+        exit 1
+    }
 
     print_success "All package tests passed"
 fi
 
-# Step 2: Update versions in all package.json files
+# Step 2: Backup original versions (for rollback if needed)
+print_step "Creating version backup for rollback capability..."
+
+# Backup workspace version
+ORIGINAL_WORKSPACE_VERSION=$(node -p "JSON.parse(require('fs').readFileSync('./package.json', 'utf8')).version")
+
+# Create backup file for rollback
+echo "ORIGINAL_WORKSPACE_VERSION=$ORIGINAL_WORKSPACE_VERSION" > .version_backup
+echo "NEW_VERSION=$NEW_VERSION" >> .version_backup
+echo "PACKAGES=(${PACKAGES[*]})" >> .version_backup
+
+# Backup each package version
+for package in "${PACKAGES[@]}"; do
+    PACKAGE_JSON="./packages/$package/package.json"
+    if [ -f "$PACKAGE_JSON" ]; then
+        ORIGINAL_VERSION=$(node -p "JSON.parse(require('fs').readFileSync('$PACKAGE_JSON', 'utf8')).version")
+        # Convert package name to uppercase using tr for compatibility
+        PACKAGE_UPPER=$(echo "$package" | tr '[:lower:]' '[:upper:]' | tr '-' '_')
+        echo "ORIGINAL_${PACKAGE_UPPER}_VERSION=$ORIGINAL_VERSION" >> .version_backup
+    fi
+done
+
+print_success "Version backup created"
+
+# Rollback function
+rollback_versions() {
+    print_error "Rolling back version changes..."
+
+    if [ -f ".version_backup" ]; then
+        source .version_backup
+
+        # Restore workspace version
+        node -p "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+            pkg.version = '$ORIGINAL_WORKSPACE_VERSION';
+            fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n');
+            'Workspace version restored to $ORIGINAL_WORKSPACE_VERSION'
+        "
+
+        # Restore each package version
+        for package in "${PACKAGES[@]}"; do
+            PACKAGE_JSON="./packages/$package/package.json"
+            if [ -f "$PACKAGE_JSON" ]; then
+                # Convert package name to uppercase using tr for compatibility
+                PACKAGE_UPPER=$(echo "$package" | tr '[:lower:]' '[:upper:]' | tr '-' '_')
+                VAR_NAME="ORIGINAL_${PACKAGE_UPPER}_VERSION"
+                ORIGINAL_VERSION=${!VAR_NAME}
+                if [ -n "$ORIGINAL_VERSION" ]; then
+                    node -p "
+                        const fs = require('fs');
+                        const pkg = JSON.parse(fs.readFileSync('$PACKAGE_JSON', 'utf8'));
+                        pkg.version = '$ORIGINAL_VERSION';
+
+                        // Restore peer dependencies
+                        if (pkg.peerDependencies) {
+                            Object.keys(pkg.peerDependencies).forEach(dep => {
+                                if (dep.startsWith('@signaltree/')) {
+                                    pkg.peerDependencies[dep] = '*';
+                                }
+                            });
+                        }
+
+                        // Restore dependencies
+                        if (pkg.dependencies) {
+                            Object.keys(pkg.dependencies).forEach(dep => {
+                                if (dep.startsWith('@signaltree/')) {
+                                    pkg.dependencies[dep] = '*';
+                                }
+                            });
+                        }
+
+                        fs.writeFileSync('$PACKAGE_JSON', JSON.stringify(pkg, null, 2) + '\n');
+                        'Package $package version restored to $ORIGINAL_VERSION'
+                    "
+                fi
+            fi
+        done
+
+        # Clean up git changes
+        git reset --hard HEAD 2>/dev/null || true
+
+        # Remove backup file
+        rm -f .version_backup
+
+        print_success "Version rollback completed"
+    else
+        print_warning "No version backup found"
+    fi
+}
+
+# Set up trap to rollback on failure
+trap rollback_versions ERR
+
+# Step 3: Update versions in all package.json files
 print_step "Updating versions in all packages..."
 
 # Update workspace version
@@ -161,40 +262,56 @@ for package in "${PACKAGES[@]}"; do
     fi
 done
 
-# Step 3: Build all packages
+# Step 5: Build all packages
 print_step "Building all packages..."
 
-# Build packages one by one (Nx doesn't support multiple projects in one command)
-for package in "${PACKAGES[@]}"; do
-    print_step "Building package: $package"
-    npx nx build $package || {
-        print_error "Build failed for package: $package! Aborting release."
-        exit 1
-    }
-done
+# Use nx run-many so Nx can parallelize and use cache
+# Convert array to comma-separated list for Nx
+PROJECTS_LIST=$(IFS=,; echo "${PACKAGES[*]}")
+npx nx run-many -t build --projects=$PROJECTS_LIST --configuration=production || {
+    print_error "Some package builds failed! Rolling back version changes."
+    rollback_versions
+    exit 1
+}
 
 print_success "All packages built successfully"
 
-# Step 4: Commit changes
+# Step 6: Commit changes
 print_step "Committing version changes..."
 git add package.json packages/*/package.json
 git commit -m "chore: bump all packages to version $NEW_VERSION" || {
     print_warning "Nothing to commit (versions might already be updated)"
 }
 
-# Step 5: Create and push tag
+# Step 7: Create and push tag
 print_step "Creating git tag v$NEW_VERSION..."
 git tag "v$NEW_VERSION" || {
     print_error "Tag v$NEW_VERSION already exists!"
+    rollback_versions
     exit 1
 }
 
-print_step "Pushing changes and tag to GitHub..."
-git push origin main
-git push origin "v$NEW_VERSION"
+# Determine current branch and push to it (safer than hardcoding 'main')
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD || echo "main")
+print_step "Pushing changes and tag to GitHub (branch: $CURRENT_BRANCH)..."
+git push origin "$CURRENT_BRANCH" || {
+    print_error "Failed to push changes to GitHub!"
+    # Remove the tag we just created
+    git tag -d "v$NEW_VERSION" 2>/dev/null || true
+    rollback_versions
+    exit 1
+}
+git push origin "v$NEW_VERSION" || {
+    print_error "Failed to push tag to GitHub!"
+    # Try to delete the remote tag if it was created
+    git push origin --delete "v$NEW_VERSION" 2>/dev/null || true
+    git tag -d "v$NEW_VERSION" 2>/dev/null || true
+    rollback_versions
+    exit 1
+}
 print_success "Changes and tag pushed to GitHub"
 
-# Step 6: Publish all packages to npm
+# Step 8: Publish all packages to npm
 print_step "Publishing all packages to npm..."
 
 for package in "${PACKAGES[@]}"; do
@@ -204,6 +321,10 @@ for package in "${PACKAGES[@]}"; do
         cd "$DIST_PATH"
         npm publish --access public || {
             print_error "npm publish failed for @signaltree/$package!"
+            cd - > /dev/null
+            print_error "Some packages may have been published. Check npm manually."
+            print_warning "Git changes and tags have been pushed and cannot be automatically rolled back."
+            print_warning "You may need to manually unpublish packages or create a patch release."
             exit 1
         }
         cd - > /dev/null
@@ -214,7 +335,12 @@ for package in "${PACKAGES[@]}"; do
 done
 print_success "Published to npm successfully"
 
-# Step 7: Check GitHub Actions
+# Step 9: Clean up backup file (release succeeded)
+rm -f .version_backup
+# Disable trap now that we've succeeded
+trap - ERR
+
+# Step 10: Check GitHub Actions
 print_step "GitHub Actions should now create a release automatically"
 print_step "Check: https://github.com/JBorgia/signaltree/actions"
 

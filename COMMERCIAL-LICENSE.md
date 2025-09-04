@@ -2,7 +2,7 @@
 
 **Licensor:** Jonathan D. Borgia
 **Software:** SignalTree – a modern state management library for TypeScript/JavaScript
-**Effective Date:** ******\_******
+**Effective Date:** **\*\***\_**\*\***
 **Version Covered:** v\_\_\_\_ (and minor/patch updates released during the Term)
 
 > This Agreement grants rights **beyond** the community Fair Source License (seat-based)

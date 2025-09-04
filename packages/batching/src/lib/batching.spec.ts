@@ -1,12 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 import { signalTree } from '@signaltree/core';
+
 import {
-  withBatching,
-  enableBatching,
-  withHighPerformanceBatching,
   flushBatchedUpdates,
-  hasPendingUpdates,
   getBatchQueueSize,
+  hasPendingUpdates,
+  withBatching,
+  withHighPerformanceBatching,
 } from './batching';
 
 describe('Batching', () => {
@@ -15,13 +15,13 @@ describe('Batching', () => {
   });
 
   it('should enhance tree with batching capabilities', () => {
-    const tree = signalTree({ count: 0 }).pipe(withBatching());
+    const tree = signalTree({ count: 0 }).with(withBatching());
 
     expect(tree.batchUpdate).toBeDefined();
   });
 
   it('should batch multiple updates', async () => {
-    const tree = signalTree({ count: 0, name: 'test' }).pipe(withBatching());
+    const tree = signalTree({ count: 0, name: 'test' }).with(withBatching());
 
     // Track how many times signals actually update (for future testing)
     let updateCount = 0;
@@ -53,7 +53,7 @@ describe('Batching', () => {
   });
 
   it('should allow manual flush of batched updates', () => {
-    const tree = signalTree({ count: 0 }).pipe(withBatching());
+    const tree = signalTree({ count: 0 }).with(withBatching());
 
     tree.batchUpdate((state) => ({ count: state.count + 5 }));
 
@@ -68,8 +68,8 @@ describe('Batching', () => {
     expect(tree.state.count()).toBe(5);
     expect(hasPendingUpdates()).toBe(false);
   });
-  it('should work with enableBatching convenience function', () => {
-    const tree = signalTree({ count: 0 }).pipe(enableBatching());
+  it('should work with batching convenience function', () => {
+    const tree = signalTree({ count: 0 }).with(withBatching());
 
     expect(tree.batchUpdate).toBeDefined();
 
@@ -78,7 +78,7 @@ describe('Batching', () => {
   });
 
   it('should work with high performance batching', () => {
-    const tree = signalTree({ count: 0 }).pipe(withHighPerformanceBatching());
+    const tree = signalTree({ count: 0 }).with(withHighPerformanceBatching());
 
     expect(tree.batchUpdate).toBeDefined();
 
@@ -91,7 +91,7 @@ describe('Batching', () => {
   });
 
   it('should disable batching when enabled is false', () => {
-    const tree = signalTree({ count: 0 }).pipe(
+    const tree = signalTree({ count: 0 }).with(
       withBatching({ enabled: false })
     );
 
@@ -104,18 +104,18 @@ describe('Batching', () => {
   });
 
   it('should respect maxBatchSize configuration', async () => {
-    const tree = signalTree({ count: 0 }).pipe(
+    const tree = signalTree({ count: 0 }).with(
       withBatching({ maxBatchSize: 2 })
     );
 
     // First 2 updates should be batched
-    tree.update((state) => ({ count: state.count + 1 }));
-    tree.update((state) => ({ count: state.count + 1 }));
+    tree((state) => ({ count: state.count + 1 }));
+    tree((state) => ({ count: state.count + 1 }));
 
     expect(tree.state.count()).toBe(0); // Still batched
 
     // Third update should trigger immediate execution due to maxBatchSize
-    tree.update((state) => ({ count: state.count + 1 }));
+    tree((state) => ({ count: state.count + 1 }));
 
     // Wait for any batched updates
     await new Promise<void>((resolve) => queueMicrotask(resolve));

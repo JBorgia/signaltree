@@ -51,6 +51,24 @@ npm run clean              # Clear Nx cache and node_modules cache
 npm run clean:build        # Full clean + reinstall + rebuild
 ```
 
+### Release Script Issues
+
+If a release fails partway through:
+
+```bash
+# The script automatically rolls back version changes for build/git failures
+# For npm publish failures after git push, you may need manual cleanup:
+
+# Check what was published
+npm view @signaltree/core versions --json
+
+# If needed, unpublish specific versions (within 72 hours)
+npm unpublish @signaltree/core@2.0.0
+
+# Or create a patch release to fix issues
+npm run release:patch
+```
+
 ## 🏗️ Build Scripts
 
 ### Core Package Building
@@ -117,6 +135,42 @@ npm run analyze:bundle         # Analyze bundle sizes
 npm run analyze:deps           # Visualize dependency graph
 npm run perf:build            # Build + analyze performance
 ```
+
+### Performance tools (consolidated)
+
+Location: `scripts/performance/`
+
+- `performance-runner.js` — runs the comprehensive performance suite
+- `recursive-performance.js` — benchmarks recursive typing at 5/10/15/20+ levels
+- `recursive-metrics.ts` — TypeScript performance analysis
+- `bundle-analysis.mjs` — bundle size analysis for recursive typing impact
+- `developer-experience.mjs` — developer productivity metrics
+
+Quick start:
+
+```bash
+# From repo root
+node scripts/performance/performance-runner.js
+
+# Individual analyses
+node scripts/performance/bundle-analysis.mjs
+node scripts/performance/developer-experience.mjs
+```
+
+Expected results (examples):
+
+```
+Recursive performance metrics:
+- 5 levels:    ~0.061–0.109ms
+- 10 levels:   ~0.061–0.109ms
+- 15 levels:   ~0.092–0.098ms
+- 20+ levels:  ~0.100–0.106ms
+```
+
+## 🧰 New helper scripts
+
+- `node scripts/ci-checks.js --jsdoc --sizes` — consolidated CI checks for JSDoc stripping and bundle-size reports. Used by `prepublish` and `postbuild` hooks.
+- `node scripts/sanity-checks.js` — quick workspace smoke/parity checks (core presence, batching, demo integration).
 
 ### Workspace Information
 

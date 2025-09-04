@@ -1,0 +1,84 @@
+{
+  "timestamp": "2025-08-29T22:29:23.983Z",
+  "runs": 3,
+  "summary": {
+    "basic": {
+      "runs": 3,
+      "mean": 0.002,
+      "min": 0.002,
+      "max": 0.002,
+      "stddev": 0
+    },
+    "medium": {
+      "runs": 3,
+      "mean": 0.002,
+      "min": 0.002,
+      "max": 0.002,
+      "stddev": 0
+    },
+    "extreme": {
+      "runs": 3,
+      "mean": 0.002,
+      "min": 0.002,
+      "max": 0.002,
+      "stddev": 0
+    },
+    "unlimited": {
+      "runs": 3,
+      "mean": 0.0030000000000000005,
+      "min": 0.003,
+      "max": 0.003,
+      "stddev": 4.336808689942018e-19
+    }
+  },
+  "bundleResults": [
+    {
+      "package": "SignalTree Package Bundle Size Report",
+      "gzippedKB": null
+    },
+    {
+      "package": "core",
+      "gzippedKB": 7.08
+    },
+    {
+      "package": "batching",
+      "gzippedKB": 1.07
+    },
+    {
+      "package": "memoization",
+      "gzippedKB": 1.69
+    },
+    {
+      "package": "time-travel",
+      "gzippedKB": 1.54
+    },
+    {
+      "package": "async",
+      "gzippedKB": 1.71
+    },
+    {
+      "package": "entities",
+      "gzippedKB": 0.91
+    },
+    {
+      "package": "middleware",
+      "gzippedKB": 1.15
+    },
+    {
+      "package": "devtools",
+      "gzippedKB": 2.28
+    },
+    {
+      "package": "serialization",
+      "gzippedKB": 3.62
+    },
+    {
+      "package": "ng-forms",
+      "gzippedKB": 3.39
+    },
+    {
+      "package": "presets",
+      "gzippedKB": 0.84
+    }
+  ]
+}

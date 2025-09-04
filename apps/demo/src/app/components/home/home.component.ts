@@ -12,10 +12,10 @@ import { RouterModule } from '@angular/router';
 export class HomeComponent {
   features = [
     {
-      title: '🏪 Basic Tree',
+      title: '🏪 Core Features',
       description:
         'Simple hierarchical signal tree with reactive state management',
-      route: '/basic-tree',
+      route: '/core',
       category: 'Core',
     },
     {
@@ -37,7 +37,7 @@ export class HomeComponent {
       title: '📦 Entity Management',
       description:
         'CRUD operations and entity helpers for managing collections',
-      route: '/entity',
+      route: '/entities',
       category: 'Entity',
       methods: [
         'entities',
@@ -58,23 +58,11 @@ export class HomeComponent {
       methods: ['asyncAction'],
     },
     {
-      title: '⏰ Time Travel',
-      description: 'Undo/redo functionality with state history tracking',
-      route: '/time-travel',
-      category: 'Time Travel',
-      methods: ['undo', 'redo', 'getHistory', 'resetHistory'],
-    },
-    {
-      title: '📝 Form Integration',
-      description: 'Two-way binding and form validation with signals',
-      route: '/forms',
-      category: 'Forms',
-    },
-    {
-      title: '🧪 Testing Utilities',
-      description: 'Specialized testing helpers and utilities',
-      route: '/testing',
-      category: 'Testing',
+      title: '🔄 Batching Demo',
+      description: 'Batched updates and operation processing',
+      route: '/batching',
+      category: 'Performance',
+      methods: ['batch', 'process'],
     },
     {
       title: '🔥 Extreme Depth Testing',
@@ -143,17 +131,17 @@ console.log(userTree.state.user.name()); // 'John Doe'
 console.log(userTree.$.settings.theme()); // 'dark'
 
 // Update individual values
-userTree.state.user.name.set('Jane Doe');
+userTree.state.user.name('Jane Doe');
 userTree.$.settings.theme.set('light');
 
 // Update entire tree
-userTree.update(current => ({
+userTree(current => ({
   ...current,
   user: { ...current.user, age: 31 }
 }));
 
 // Get unwrapped values
-const userData = userTree.unwrap();`;
+const userData = userTree();`;
 
   extremeDepthCode = `import { signalTree } from '@signaltree/signaltree';
 

@@ -37,7 +37,14 @@
               "maximumError": "8kb"
             }
           ],
-          "outputHashing": "all"
+          "outputHashing": "all",
+          "optimization": {
+            "scripts": true,
+            "styles": true,
+            "fonts": true
+          },
+          "aot": true,
+          "namedChunks": false
         },
         "development": {
           "optimization": false,

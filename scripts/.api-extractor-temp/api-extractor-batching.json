@@ -1,0 +1,18 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/api-extractor/v7/api-extractor.schema.json",
+  "projectFolder": "/Users/jonathanborgia/code/signaltree alt/packages/batching",
+  "mainEntryPointFilePath": "../../dist/out-tsc/packages/batching/src/index.d.ts",
+  "apiReport": {
+    "enabled": false
+  },
+  "docModel": {
+    "enabled": false
+  },
+  "dtsRollup": {
+    "enabled": true,
+    "untrimmedFilePath": "dist/packages/batching/index.d.ts"
+  },
+  "compiler": {
+    "tsconfigFilePath": "/Users/jonathanborgia/code/signaltree alt/packages/batching/tsconfig.lib.json"
+  }
+}

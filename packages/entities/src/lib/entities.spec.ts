@@ -1,9 +1,6 @@
 import { signalTree } from '@signaltree/core';
-import {
-  withEntities,
-  enableEntities,
-  withHighPerformanceEntities,
-} from './entities';
+
+import { enableEntities, withEntities, withHighPerformanceEntities } from './entities';
 
 // Simple serializable interfaces that are compatible with advanced typing
 interface User {

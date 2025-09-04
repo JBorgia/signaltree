@@ -1,14 +1,12 @@
+import { computed, Injectable, signal } from '@angular/core';
+import { withBatching } from '@signaltree/batching';
+import { signalTree } from '@signaltree/core';
+import { withMemoization } from '@signaltree/memoization';
+
 /**
  * @fileoverview Comprehensive benchmarking suite for SignalTree Demo
  * Measures performance, memory usage, and compares with alternatives
  */
-
-import { Injectable } from '@angular/core';
-import { signal, computed } from '@angular/core';
-import { signalTree } from '@signaltree/core';
-import { withBatching } from '@signaltree/batching';
-import { withMemoization } from '@signaltree/memoization';
-
 /**
  * Performance measurement utilities
  */
@@ -133,12 +131,12 @@ export class BenchmarkService {
     const smallState = BenchmarkService.generateNestedState(2, 3);
     results.small.time = BenchmarkService.measureTime(() => {
       const tree = signalTree(smallState);
-      tree.unwrap();
+      tree();
     });
 
     const smallMemory = BenchmarkService.profileMemory(() => {
       const tree = signalTree(smallState);
-      tree.unwrap();
+      tree();
     });
     results.small.memory = smallMemory?.delta || 0;
 
@@ -146,14 +144,14 @@ export class BenchmarkService {
     const mediumState = BenchmarkService.generateNestedState(3, 5);
     results.medium.time = BenchmarkService.measureTime(() => {
       const tree = signalTree(mediumState);
-      tree.unwrap();
+      tree();
     });
 
     // Large tree (1000 nodes)
     const largeState = BenchmarkService.generateNestedState(4, 8);
     results.large.time = BenchmarkService.measureTime(() => {
       const tree = signalTree(largeState);
-      tree.unwrap();
+      tree();
     });
 
     return results;
@@ -176,15 +174,18 @@ export class BenchmarkService {
 
     // Shallow update (top level)
     results.shallow = BenchmarkService.measureTime(() => {
-      tree.update((state) => ({ ...state, topLevel: Math.random() }));
+      tree((state: Record<string, unknown>) => ({
+        ...state,
+        topLevel: Math.random(),
+      }));
     });
 
     // Medium depth update
     results.medium = BenchmarkService.measureTime(() => {
-      tree.update((state) => ({
+      tree((state: Record<string, unknown>) => ({
         ...state,
         level_4_item_0: {
-          ...state.level_4_item_0,
+          ...((state['level_4_item_0'] as Record<string, unknown>) || {}),
           level_3_item_0: { value: Math.random() },
         },
       }));
@@ -192,25 +193,27 @@ export class BenchmarkService {
 
     // Deep update
     results.deep = BenchmarkService.measureTime(() => {
-      tree.update((state) => {
+      tree((state: Record<string, unknown>) => {
         const newState = { ...state };
-        let current = newState;
+        let current = newState as Record<string, unknown>;
         for (let i = 4; i > 0; i--) {
           current = current[`level_${i}_item_0`] = {
-            ...current[`level_${i}_item_0`],
+            ...((current[`level_${i}_item_0`] as Record<string, unknown>) ||
+              {}),
           };
         }
-        current.value = Math.random();
+        current['value'] = Math.random();
         return newState;
       });
     });
 
     // Batch updates
-    const batchTree = signalTree(state).pipe(withBatching());
+    const batchTree = signalTree(state).with(withBatching());
 
     results.batch10 = BenchmarkService.measureTime(() => {
-      batchTree.batchUpdate((state) => {
-        const updates: any = {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (batchTree.$ as any).batchUpdate((state: Record<string, unknown>) => {
+        const updates: Record<string, unknown> = {};
         for (let i = 0; i < 10; i++) {
           updates[`field_${i}`] = Math.random();
         }
@@ -219,8 +222,9 @@ export class BenchmarkService {
     });
 
     results.batch100 = BenchmarkService.measureTime(() => {
-      batchTree.batchUpdate((state) => {
-        const updates: any = {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (batchTree.$ as any).batchUpdate((state: Record<string, unknown>) => {
+        const updates: Record<string, unknown> = {};
         for (let i = 0; i < 100; i++) {
           updates[`field_${i}`] = Math.random();
         }
@@ -239,7 +243,7 @@ export class BenchmarkService {
     const tree = signalTree({
       entities,
       filter: { category: 'A', active: true },
-    }).pipe(withMemoization());
+    }).with(withMemoization());
 
     const results = {
       withoutMemo: { first: 0, second: 0 },
@@ -252,7 +256,7 @@ export class BenchmarkService {
       filter: { category: 'A', active: true },
     });
     const computedWithout = computed(() => {
-      const state = regularTree.unwrap();
+      const state = regularTree();
       return state.entities.filter(
         (e: any) =>
           e.category === state.filter.category &&
@@ -305,7 +309,7 @@ export class BenchmarkService {
     // Eager loading
     const eagerMemory = BenchmarkService.profileMemory(() => {
       const tree = signalTree(largeState, { useLazySignals: false });
-      tree.unwrap();
+      tree();
     });
     results.eager.memory = eagerMemory?.delta || 0;
 
@@ -317,7 +321,7 @@ export class BenchmarkService {
     // Lazy loading
     const lazyMemory = BenchmarkService.profileMemory(() => {
       const tree = signalTree(largeState, { useLazySignals: true });
-      tree.unwrap();
+      tree();
     });
     results.lazy.memory = lazyMemory?.delta || 0;
 
@@ -347,7 +351,7 @@ export class BenchmarkService {
     // SignalTree
     const stMemory = BenchmarkService.profileMemory(() => {
       const tree = signalTree(testData);
-      tree.unwrap();
+      tree();
     });
     results.signalTree.memory = stMemory?.delta || 0;
 
@@ -357,7 +361,10 @@ export class BenchmarkService {
     });
 
     results.signalTree.update = BenchmarkService.measureTime(() => {
-      stTree.update((state) => ({ ...state, value: Math.random() }));
+      stTree((state: Record<string, unknown>) => ({
+        ...state,
+        value: Math.random(),
+      }));
     });
 
     // Native Signals
