@@ -736,7 +736,7 @@ const tree = signalTree(state).with(
 - **Memory usage**: Configurable history size prevents memory leaks
 - **Storage efficiency**: Built-in compression for large histories
 - **Persistence optimization**: Debounced saves and size limits
-- **Bundle size**: ~1.5KB gzipped, tree-shakeable
+- **Bundle size**: ~1.75KB gzipped, tree-shakeable
 - **Operation speed**: Optimized for fast undo/redo operations
 
 ## Links

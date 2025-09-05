@@ -61,7 +61,6 @@ export {
   deepEqual,
 
   // Signal utilities - Signal-specific helpers
-  terminalSignal,
   isNodeAccessor,
   isAnySignal,
 
@@ -120,7 +119,6 @@ export { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './lib/constants';
  * **Utilities:**
  * - `unwrap()` - Extract values from signals
  * - `equal()` / `deepEqual()` - Comparison functions
- * - `terminalSignal()` - Create leaf signals
  *
  * **Enhancer System:**
  * - `createEnhancer()` - Create enhancers with metadata

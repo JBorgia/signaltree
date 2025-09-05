@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-08-29T22:29:23.983Z",
+  "timestamp": "2025-09-05T15:20:59.966Z",
   "runs": 3,
   "summary": {
     "basic": {
@@ -11,9 +11,9 @@
     },
     "medium": {
       "runs": 3,
-      "mean": 0.002,
-      "min": 0.002,
-      "max": 0.002,
+      "mean": 0.001,
+      "min": 0.001,
+      "max": 0.001,
       "stddev": 0
     },
     "extreme": {
@@ -33,52 +33,92 @@
   },
   "bundleResults": [
     {
-      "package": "SignalTree Package Bundle Size Report",
+      "package": "🧹 Cleaning previous builds...",
+      "gzippedKB": null
+    },
+    {
+      "package": "Clearing Nx cache...",
+      "gzippedKB": null
+    },
+    {
+      "package": "Removing dist folder...",
+      "gzippedKB": null
+    },
+    {
+      "package": "🔨 Building all packages...",
+      "gzippedKB": null
+    },
+    {
+      "package": "Building SignalTree packages...",
+      "gzippedKB": null
+    },
+    {
+      "package": "Building demo application...",
+      "gzippedKB": null
+    },
+    {
+      "package": "\\n",
+      "gzippedKB": null
+    },
+    {
+      "package": "Analyzing SignalTree Package Bundles",
       "gzippedKB": null
     },
     {
       "package": "core",
-      "gzippedKB": 7.08
+      "gzippedKB": 7.2
     },
     {
       "package": "batching",
-      "gzippedKB": 1.07
+      "gzippedKB": 1.27
     },
     {
       "package": "memoization",
-      "gzippedKB": 1.69
+      "gzippedKB": 1.8
     },
     {
       "package": "time-travel",
-      "gzippedKB": 1.54
+      "gzippedKB": 1.75
     },
     {
       "package": "async",
-      "gzippedKB": 1.71
+      "gzippedKB": 1.8
     },
     {
       "package": "entities",
-      "gzippedKB": 0.91
+      "gzippedKB": 0.97
     },
     {
       "package": "middleware",
-      "gzippedKB": 1.15
+      "gzippedKB": 1.38
     },
     {
       "package": "devtools",
-      "gzippedKB": 2.28
+      "gzippedKB": 2.49
     },
     {
       "package": "serialization",
-      "gzippedKB": 3.62
+      "gzippedKB": 4.62
     },
     {
       "package": "ng-forms",
-      "gzippedKB": 3.39
+      "gzippedKB": 3.38
     },
     {
       "package": "presets",
       "gzippedKB": 0.84
+    },
+    {
+      "package": "\\n🎯 Analyzing Demo Application Bundle",
+      "gzippedKB": null
+    },
+    {
+      "package": "\\n🎯 Bundle Optimization Recommendations",
+      "gzippedKB": null
+    },
+    {
+      "package": "SignalTree Total 27.50KB gzipped",
+      "gzippedKB": null
     }
   ]
 }

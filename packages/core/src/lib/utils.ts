@@ -9,7 +9,7 @@ const CALLABLE_SIGNAL_SYMBOL = Symbol.for('NodeAccessor');
  * SignalTree Utility Functions v1.1.6
  * Core utilities for signal tree operations
  */
-import type { TreeNode, RemoveSignalMethods, NodeAccessor } from './types';
+import type { TreeNode, NodeAccessor } from './types';
 
 /** Deep equality */
 export function equal<T>(a: T, b: T): boolean {
@@ -58,16 +58,6 @@ export function equal<T>(a: T, b: T): boolean {
 }
 
 export const deepEqual = equal;
-
-/** Terminal signal with deep equality */
-export function terminalSignal<T>(
-  value: T,
-  customEqual?: (a: T, b: T) => boolean
-): WritableSignal<T> {
-  return signal(value, {
-    equal: customEqual || equal,
-  });
-}
 
 /** Runtime built-in detection (keep in sync with types BuiltInObject) */
 export function isBuiltInObject(v: unknown): boolean {
@@ -518,11 +508,4 @@ export function unwrap<T>(node: unknown): T {
   }
 
   return result as unknown as T;
-}
-
-/**
- * Optional strict variant for internal use when you want the cleaned structural type.
- */
-export function cleanUnwrap<T>(node: unknown): RemoveSignalMethods<T> {
-  return unwrap(node) as unknown as RemoveSignalMethods<T>;
 }

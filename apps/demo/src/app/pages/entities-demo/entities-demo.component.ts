@@ -265,8 +265,8 @@ export class EntitiesDemoComponent {
   }).with(withEntities());
 
   // Entity helpers using @signaltree/entities
-  userHelpers = this.store.asCrud<User>('users');
-  postHelpers = this.store.asCrud<Post>('posts');
+  userHelpers = this.store.entities<User>('users');
+  postHelpers = this.store.entities<Post>('posts');
 
   // State signals
   searchTerm = '';
@@ -285,7 +285,7 @@ export class EntitiesDemoComponent {
 
   selectedUser = computed(() => {
     const id = this.store.$.selectedUserId();
-    return id ? this.userHelpers.findById(id)() : null;
+    return id ? this.userHelpers.selectById(id)() : null;
   });
 
   filteredUsers = computed(() => {

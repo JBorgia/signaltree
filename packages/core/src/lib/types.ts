@@ -269,7 +269,7 @@ export type SignalTree<T> = NodeAccessor<T> & {
   removeTap(id: string): void;
 
   /** Entity helpers */
-  asCrud<E extends { id: string | number }>(
+  entities<E extends { id: string | number }>(
     entityKey?: keyof T
   ): EntityHelpers<E>;
 
@@ -332,12 +332,11 @@ export interface EntityHelpers<E extends { id: string | number }> {
   update(id: E['id'], updates: Partial<E>): void;
   remove(id: E['id']): void;
   upsert(entity: E): void;
-  findById(id: E['id']): Signal<E | undefined>;
-  findBy(predicate: (entity: E) => boolean): Signal<E[]>;
+  selectById(id: E['id']): Signal<E | undefined>;
+  selectBy(predicate: (entity: E) => boolean): Signal<E[]>;
   selectIds(): Signal<Array<string | number>>;
   selectAll(): Signal<E[]>;
   selectTotal(): Signal<number>;
-  findAll(): Signal<E[]>;
   clear(): void;
 }
 

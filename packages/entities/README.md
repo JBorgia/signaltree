@@ -11,7 +11,7 @@ The entities package supercharges SignalTree with advanced entity management:
 - **Duplicate prevention** and validation
 - **Bulk operations** for optimal performance
 - **Optimized for managing** lists of objects with IDs
-- Ultra-lightweight: Complete entity management in ~0.98KB gzipped
+- Ultra-lightweight: Complete entity management in ~0.97KB gzipped
 - High performance: Leverages SignalTree's 0.061–0.109ms core operations
 - Type-safe queries: Strong TypeScript inference for all operations
 
@@ -32,7 +32,7 @@ const tree = signalTree({
   posts: [] as Post[],
 }).with(withEntities());
 
-const users = tree.asCrud<User>('users');
+const users = tree.entities<User>('users');
 
 // Enhanced entity operations
 users.add({ id: '1', name: 'John', email: 'john@example.com' });
@@ -43,8 +43,8 @@ users.updateMany([
 ]);
 
 // Advanced querying
-const activeUsers = users.findBy((user) => user.active);
-const sortedUsers = users.findBy((user) => user, { sortBy: 'name' });
+const activeUsers = users.selectBy((user) => user.active);
+const sortedUsers = users.selectBy((user) => user, { sortBy: 'name' });
 const paginatedUsers = users.selectPaginated(1, 10);
 ```
 
@@ -57,20 +57,20 @@ const todoTree = signalTree({
   todos: [] as Todo[],
 }).with(withEntities());
 
-const todos = todoTree.asCrud<Todo>('todos');
+const todos = todoTree.entities<Todo>('todos');
 
 // Complex filtering
-const activeTodos = todos.findBy((todo) => !todo.completed);
-const highPriorityTodos = todos.findBy((todo) => todo.priority === 'high');
-const searchResults = todos.findBy((todo) => todo.title.toLowerCase().includes(searchQuery.toLowerCase()));
+const activeTodos = todos.selectBy((todo) => !todo.completed);
+const highPriorityTodos = todos.selectBy((todo) => todo.priority === 'high');
+const searchResults = todos.selectBy((todo) => todo.title.toLowerCase().includes(searchQuery.toLowerCase()));
 
 // Sorting
-const sortedByDate = todos.findBy((todo) => todo, {
+const sortedByDate = todos.selectBy((todo) => todo, {
   sortBy: 'createdAt',
   sortDirection: 'desc',
 });
 
-const sortedByPriority = todos.findBy((todo) => todo, {
+const sortedByPriority = todos.selectBy((todo) => todo, {
   sortBy: (todo) => (todo.priority === 'high' ? 0 : todo.priority === 'medium' ? 1 : 2),
 });
 
@@ -142,7 +142,7 @@ const userNames = users.selectFields(['id', 'name']);
 
 // Count with conditions
 const adminCount = users.count((user) => user.role === 'admin');
-const totalCount = users.selectTotal();
+const totalCount = users.count();
 ```
 
 ## 🔧 Enhanced Configuration
@@ -189,13 +189,13 @@ const userTree = signalTree({
   },
 }).with(withEntities());
 
-const users = userTree.asCrud<User>('users');
+const users = userTree.entities<User>('users');
 
 // Complex filtering based on current filters
 const filteredUsers = computed(() => {
   const filters = userTree.$.filters();
 
-  return users.findBy(
+  return users.selectBy(
     (user) => {
       if (filters.role && user.role !== filters.role) return false;
       if (user.active !== filters.active) return false;
@@ -296,14 +296,14 @@ const catalogTree = signalTree({
   },
 }).with(withEntities());
 
-const products = catalogTree.asCrud<Product>('products');
+const products = catalogTree.entities<Product>('products');
 
 // Advanced product filtering
 const filteredProducts = computed(() => {
   const filters = catalogTree.$.filters();
   const sorting = catalogTree.$.sorting();
 
-  return products.findBy(
+  return products.selectBy(
     (product) => {
       // Category filter
       if (filters.category && product.category !== filters.category) return false;
@@ -341,7 +341,7 @@ const updateInventory = (updates: Array<{ id: string; inStock: boolean; quantity
 
 // Bulk price updates
 const applyDiscount = (categoryId: string, discountPercent: number) => {
-  const categoryProducts = products.findBy((p) => p.category === categoryId)();
+  const categoryProducts = products.selectBy((p) => p.category === categoryId)();
 
   products.updateMany(
     categoryProducts.map((product) => ({
@@ -387,9 +387,9 @@ const taskTree = signalTree({
   users: [] as User[],
 }).with(withEntities());
 
-const tasks = taskTree.asCrud<Task>('tasks');
-const projects = taskTree.asCrud<Project>('projects');
-const users = taskTree.asCrud<User>('users');
+const tasks = taskTree.entities<Task>('tasks');
+const projects = taskTree.entities<Project>('projects');
+const users = taskTree.entities<User>('users');
 
 // Complex queries with relationships
 const getTasksWithDetails = computed(() => {
@@ -405,15 +405,15 @@ const getTasksWithDetails = computed(() => {
 });
 
 // Project-specific task queries
-const getTasksByProject = (projectId: string) => tasks.findBy((task) => task.projectId === projectId);
+const getTasksByProject = (projectId: string) => tasks.selectBy((task) => task.projectId === projectId);
 
-const getTasksByUser = (userId: string) => tasks.findBy((task) => task.assigneeId === userId);
+const getTasksByUser = (userId: string) => tasks.selectBy((task) => task.assigneeId === userId);
 
 // Advanced filtering
-const getOverdueTasks = () => tasks.findBy((task) => task.dueDate && task.dueDate < new Date() && task.status !== 'done');
+const getOverdueTasks = () => tasks.selectBy((task) => task.dueDate && task.dueDate < new Date() && task.status !== 'done');
 
 const getHighPriorityTasks = () =>
-  tasks.findBy((task) => task.priority === 'high', {
+  tasks.selectBy((task) => task.priority === 'high', {
     sortBy: 'dueDate',
     sortDirection: 'asc',
   });
@@ -451,7 +451,7 @@ const tree = signalTree(state).with(
 - **Efficient filtering** with predicate-based queries
 - **Smart duplicate detection** prevents data corruption
 - **Memoization compatible** for caching expensive queries
-- **Minimal overhead** - only ~929B gzipped added to bundle
+- **Minimal overhead** - only ~0.97KB gzipped added to bundle
 
 ## Links
 

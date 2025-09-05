@@ -1,24 +1,7 @@
 import { computed, Signal, WritableSignal } from '@angular/core';
 import { isAnySignal, isNodeAccessor } from '@signaltree/core';
 
-import type { SignalTree } from '@signaltree/core';
-/**
- * Entity helpers interface - provides CRUD operations
- */
-export interface EntityHelpers<E extends { id: string | number }> {
-  add: (entity: E) => void;
-  update: (id: string | number, updates: Partial<E>) => void;
-  remove: (id: string | number) => void;
-  upsert: (entity: E) => void;
-  findById: (id: string | number) => Signal<E | undefined>;
-  findBy: (predicate: (entity: E) => boolean) => Signal<E[]>;
-  selectIds: () => Signal<Array<string | number>>;
-  selectAll: () => Signal<E[]>;
-  selectTotal: () => Signal<number>;
-  findAll: () => Signal<E[]>;
-  clear: () => void;
-}
-
+import type { SignalTree, EntityHelpers } from '@signaltree/core';
 /**
  * Entity configuration options
  */
@@ -141,12 +124,12 @@ function createEntityHelpers<T, E extends { id: string | number }>(
       }
     },
 
-    findById: (id: string | number) => {
+    selectById: (id: string | number) => {
       const entitySignal = getEntitySignal();
       return computed(() => entitySignal().find((entity) => entity.id === id));
     },
 
-    findBy: (predicate: (entity: E) => boolean) => {
+    selectBy: (predicate: (entity: E) => boolean) => {
       const entitySignal = getEntitySignal();
       return computed(() => entitySignal().filter(predicate));
     },
@@ -164,11 +147,6 @@ function createEntityHelpers<T, E extends { id: string | number }>(
     selectTotal: () => {
       const entitySignal = getEntitySignal();
       return computed(() => entitySignal().length);
-    },
-
-    findAll: () => {
-      const entitySignal = getEntitySignal();
-      return entitySignal as Signal<E[]>;
     },
 
     clear: () => {
@@ -189,7 +167,7 @@ export function withEntities(config: EntityConfig = {}) {
   const { enabled = true } = config;
 
   return function enhanceWithEntities<T>(tree: SignalTree<T>): SignalTree<T> & {
-    asCrud<E extends { id: string | number }>(
+    entities<E extends { id: string | number }>(
       entityKey: keyof T
     ): EntityHelpers<E>;
   } {
@@ -197,16 +175,16 @@ export function withEntities(config: EntityConfig = {}) {
       // When disabled, return the original tree object unchanged
       // Cast is safe here because we're not actually adding the method
       return tree as SignalTree<T> & {
-        asCrud<E extends { id: string | number }>(
+        entities<E extends { id: string | number }>(
           entityKey: keyof T
         ): EntityHelpers<E>;
       };
     }
 
-    // Type-safe enhancement that adds asCrud method using Object.assign
+    // Type-safe enhancement that adds entities method using Object.assign
     // This approach preserves the generic method signature better than direct property assignment
     const enhancedTree = Object.assign(tree, {
-      asCrud<E extends { id: string | number }>(
+      entities<E extends { id: string | number }>(
         entityKey: keyof T
       ): EntityHelpers<E> {
         return createEntityHelpers<T, E>(tree, entityKey);

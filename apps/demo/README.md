@@ -179,7 +179,7 @@ const persistentDemo = signalTree({
 // SignalTree vs Traditional State Management
 const comparisonResults = {
   signalTree: {
-    bundleSize: '27.56KB',
+    bundleSize: '27.50KB',
     performance: '0.061-0.109ms (Sept 2025 averaged)',
     typeInference: 'Perfect',
     depth: 'Unlimited',
@@ -279,7 +279,7 @@ export class PerformanceDashboardComponent {
 │ ├── Batching:     455.8x improvement ⚡                        │
 │ ├── Memoization:  197.9x speedup ⚡                            │
 │ ├── Memory:       85% reduction 💾                             │
-│ └── Bundle:       27.56KB total 📦                             │
+│ └── Bundle:       27.50KB total 📦                             │
 │                                                                 │
 │ Developer Experience: 98.5/100 🎯                              │
 │ Type Safety: Perfect at unlimited depth 🏆                     │

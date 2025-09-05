@@ -307,15 +307,15 @@ const ecommerceTree = createEntityTree(
 );
 
 // Ready-to-use CRUD operations
-const products = ecommerceTree.asCrud<Product>('products');
-const users = ecommerceTree.asCrud<User>('users');
+const products = ecommerceTree.entities<Product>('products');
+const users = ecommerceTree.entities<User>('users');
 
 // Enhanced operations work out of the box
 const searchResults = computed(() => {
   const query = ecommerceTree.$.ui.searchQuery();
   const category = ecommerceTree.$.ui.selectedCategory();
 
-  return products.findBy((product) => {
+  return products.selectBy((product) => {
     const matchesSearch = !query || product.name.toLowerCase().includes(query.toLowerCase());
     const matchesCategory = !category || product.category === category;
     return matchesSearch && matchesCategory;
@@ -528,12 +528,12 @@ class AppStateService {
 
 | Preset       | Best For                   | Bundle Size (gzipped) | Features           |
 | ------------ | -------------------------- | --------------------- | ------------------ |
-| **Minimal**  | Simple components, widgets | ~7.1KB                | Core only          |
-| **Standard** | Most applications          | ~8.2KB                | Core + performance |
-| **Async**    | API-heavy apps             | ~10.2KB               | Enhanced async     |
-| **Entity**   | Data management            | ~6.9KB                | CRUD operations    |
-| **Full**     | Complex applications       | ~25KB                 | All features       |
-| **Dev**      | Development/debugging      | ~25.3KB               | All + debugging    |
+| **Minimal**  | Simple components, widgets | ~7.20KB               | Core only          |
+| **Standard** | Most applications          | ~8.47KB               | Core + performance |
+| **Async**    | API-heavy apps             | ~10.27KB              | Enhanced async     |
+| **Entity**   | Data management            | ~8.17KB               | CRUD operations    |
+| **Full**     | Complex applications       | ~27.50KB              | All features       |
+| **Dev**      | Development/debugging      | ~29.99KB              | All + debugging    |
 
 ## Composition and customization
 
