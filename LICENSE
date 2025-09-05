@@ -1,96 +1,54 @@
-Fair Source License, version 0.9 (Seat-Based)
+BUSINESS SOURCE LICENSE 1.1
 
 Copyright (c) 2025 Jonathan D Borgia
-Licensor: Jonathan D Borgia
-Software: SignalTree — A modern state management library for TypeScript/JavaScript applications
+
+This Business Source License 1.1 ("License") governs the use of the software and associated documentation files (the "Software"). You are granted a limited license to use the Software under the terms of this License.
+
+1. Definitions
+
+"Change Date" means the date on which the Change License set out in section 6 will apply to the Software. The Change Date for this release is 2028-09-05.
+
+"Change License" means the open source license that will apply to the Software on and after the Change Date. The Change License for this release is the MIT License.
+
+"Licensor" means the copyright owner granting rights under this License (Jonathan D Borgia).
+
+"You" ("Licensee") means an individual or legal entity exercising rights under this License who has not violated the terms of this License or had their rights terminated.
+
+2. License Grant
+
+Subject to the terms and conditions of this License, Licensor hereby grants You a non-exclusive, non-transferable, worldwide license to use, reproduce, display, perform, and distribute the Software, and to make modifications and derivative works for internal use, until the Change Date.
+
+3. Commercial Use
+
+You may use the Software in commercial applications, including for providing services, selling products that include the Software, or otherwise exploiting the Software commercially, subject to the other terms of this License.
+
+4. Limitations and Conditions
+
+a. You may not remove or alter this License, the copyright notice, or notices of the Change Date.
+
+b. You may not publicly offer a modified version of the Software that would directly compete with Licensor's public offering of the Software if doing so would circumvent the intent of this License.
+
+c. Except as expressly provided in this License, no rights are granted to You under any patent or trademark of Licensor.
+
+5. Disclaimer and Limitation of Liability
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. TO THE FULLEST EXTENT PERMITTED BY LAW, LICENSOR WILL NOT BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM OR RELATING TO THE SOFTWARE.
+
+6. Change License
+
+On and after the Change Date specified above, the Software will be licensed under the Change License (MIT License) on the same terms and conditions as set forth by that Change License.
+
+7. Governing Law
+
+This License will be governed by and construed in accordance with the laws of the State of New York, USA, without regard to conflict of law principles.
+
+8. Accepting this License
+
+You accept this License by copying, modifying, or distributing the Software or any portion thereof.
 
 ---
 
-## Use Limitation (Seat-Based)
+LICENSE NOTE
 
-You may use, copy, modify, and distribute this Software at no charge provided that,
-in any rolling ninety (90) day period, no more than ten (10) individual developers
-within your Organization work on, modify, or integrate the Software (“Developer Seats”).
-
-A paid Commercial License is required if any of the following apply:
-(a) More than ten (10) Developer Seats are used in any rolling 90-day period; or
-(b) You Redistribute the Software to third parties (as defined below), including as
-part of a managed/hosted service that exposes the Software’s functionality; or
-(c) You embed the Software in a library, SDK, plugin, or developer tool offered to
-third parties (whether paid or free).
-
-Internal distribution within your Organization is permitted and is not Redistribution.
-
----
-
-## Free Use Carve-outs
-
-The Use Limitation above does not apply to:
-
-- Educational institutions and students using the Software for learning purposes
-- Nonprofit organizations with 501(c)(3) or equivalent status
-- Open-source applications under OSI-approved licenses that depend on (but do not
-  vendorize or redistribute) this Software
-- Personal projects with no commercial activity
-- Evaluation and testing for up to ninety (90) days
-
----
-
-## Definitions
-
-“Organization” means a single legal entity and its controlled subsidiaries.
-
-“Developer Seat” means a natural person who, during a 90-day period, writes, modifies,
-or reviews code that directly integrates with, configures, or changes the Software.
-
-“Redistribute” means providing the Software, or substantial portions of its source or
-compiled form, to any third party as part of a development kit, library, SDK, plugin,
-or service that exposes the Software’s functionality. Ordinary distribution of your
-end-user applications that merely depend on the Software is not Redistribution.
-
-“Managed/Hosted Service” means making the Software’s functionality available to third
-parties over a network as a primary feature of your service.
-
----
-
-## Change Date and Change License
-
-For each version of the Software, on the date thirty-six (36) months after its first
-public release (the “Change Date” for that version), the “Change License” for that
-version becomes the Apache License, Version 2.0.
-
----
-
-## Additional Terms
-
-1. Attribution. You must retain all copyright notices and this license in all copies.
-
-2. No Warranty. THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
-   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-   FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
-
-3. Commercial License. For use beyond the limits above (including additional Developer
-   Seats, Redistribution, or Managed/Hosted Service use), purchase a commercial license at
-   https://signaltree.dev/pricing or contact licensing@signaltree.dev.
-
-4. Exemptions. The Licensor may grant written exemptions from commercial licensing
-   requirements at their discretion (e.g., hardship or special cases). Exemptions must
-   be in writing to be effective.
-
-5. Good Faith. If you are unsure whether your use requires a commercial license,
-   please reach out to discuss in good faith.
-
-6. Intellectual Property. Except as expressly licensed, the Licensor retains all rights
-   in the Software. No trademark rights are granted. This license does not grant any
-   patent rights. (Commercial licenses may include additional rights and support/SLA.)
-
-7. Enforcement. The Licensor reserves all rights to enforce these terms, including but
-   not limited to injunctive relief, damages, and recovery of reasonable attorney fees.
-
----
-
-## References
-
-Fair Source background: https://fair.io/
-For the most up-to-date version of this license, see:
-https://github.com/tsofist/signaltree/blob/main/LICENSE
+- Original license file replaced on 2025-09-05 to Business Source License 1.1. Change Date: 2028-09-05. Change License: MIT.
+  or standard modifications for your own applications.

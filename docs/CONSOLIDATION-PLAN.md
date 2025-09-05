@@ -39,7 +39,7 @@ Goal: Reduce duplication, centralize canonical docs, and make navigation clear.
 
 - Legal (no consolidation)
 
-  - Keep: LICENSE, COMMERCIAL-LICENSE.md, INTELLECTUAL_PROPERTY.md
+  - Keep: LICENSE, INTELLECTUAL_PROPERTY.md
   - Optional move: docs/legal/ with separate files. Keep as separate docs due to legal nature.
 
 - Per-package docs
