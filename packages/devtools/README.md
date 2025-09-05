@@ -532,7 +532,7 @@ const tree = signalTree(state).with(
 
 - **Development**: Full featured debugging with minimal performance impact
 - **Production**: Configurable to enable only error tracking
-- **Bundle size**: ~2.3KB gzipped in development, strips to <1KB in production builds
+- **Bundle size**: ~2.49KB gzipped in development, strips to <1KB in production builds
 - **Memory usage**: Configurable history size limits memory consumption
 
 ## Links

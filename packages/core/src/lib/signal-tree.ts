@@ -555,7 +555,7 @@ function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
   };
 
   // Entity helpers stub
-  tree.asCrud = <E extends { id: string | number }>(): EntityHelpers<E> => {
+  tree.entities = <E extends { id: string | number }>(): EntityHelpers<E> => {
     if (config.debugMode) {
       console.warn(SIGNAL_TREE_MESSAGES.ENTITY_HELPERS_NOT_AVAILABLE);
     }

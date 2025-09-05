@@ -1,6 +1,10 @@
 import { signalTree } from '@signaltree/core';
 
-import { enableEntities, withEntities, withHighPerformanceEntities } from './entities';
+import {
+  enableEntities,
+  withEntities,
+  withHighPerformanceEntities,
+} from './entities';
 
 // Simple serializable interfaces that are compatible with advanced typing
 interface User {
@@ -27,8 +31,8 @@ describe('Entities', () => {
     const enhancer = withEntities();
     const enhancedTree = enhancer(tree);
 
-    expect(enhancedTree.asCrud).toBeDefined();
-    expect(typeof enhancedTree.asCrud).toBe('function');
+    expect(enhancedTree.entities).toBeDefined();
+    expect(typeof enhancedTree.entities).toBe('function');
   });
 
   it('should create entity helpers with CRUD operations', () => {
@@ -39,7 +43,7 @@ describe('Entities', () => {
     });
 
     const enhancedTree = withEntities()(tree);
-    const userManager = enhancedTree.asCrud<User>('users');
+    const userManager = enhancedTree.entities<User>('users');
 
     const user: User = {
       id: 'user-1',
@@ -70,7 +74,7 @@ describe('Entities', () => {
     });
 
     const enhancedTree = withEntities()(tree);
-    const userManager = enhancedTree.asCrud<User>('users');
+    const userManager = enhancedTree.entities<User>('users');
 
     const duplicateUser: User = {
       id: 'user-1',
@@ -109,14 +113,14 @@ describe('Entities', () => {
     });
 
     const enhancedTree = withEntities()(tree);
-    const userManager = enhancedTree.asCrud<User>('users');
+    const userManager = enhancedTree.entities<User>('users');
 
     expect(userManager.add).toBeDefined();
     expect(userManager.update).toBeDefined();
     expect(userManager.remove).toBeDefined();
     expect(userManager.upsert).toBeDefined();
-    expect(userManager.findById).toBeDefined();
-    expect(userManager.findBy).toBeDefined();
+    expect(userManager.selectById).toBeDefined();
+    expect(userManager.selectBy).toBeDefined();
     expect(userManager.selectIds).toBeDefined();
     expect(userManager.selectAll).toBeDefined();
     expect(userManager.selectTotal).toBeDefined();
@@ -130,7 +134,7 @@ describe('Entities', () => {
     });
 
     const enhancedTree = withEntities()(tree);
-    const userManager = enhancedTree.asCrud<User>('users');
+    const userManager = enhancedTree.entities<User>('users');
 
     const user: User = {
       id: 'user-1',
@@ -161,7 +165,7 @@ describe('Entities', () => {
     });
 
     const enhancedTree = withEntities()(tree);
-    const userManager = enhancedTree.asCrud<User>('users');
+    const userManager = enhancedTree.entities<User>('users');
 
     userManager.update('user-1', { name: 'John Smith', active: false });
 
@@ -193,7 +197,7 @@ describe('Entities', () => {
     });
 
     const enhancedTree = withEntities()(tree);
-    const userManager = enhancedTree.asCrud<User>('users');
+    const userManager = enhancedTree.entities<User>('users');
 
     userManager.remove('user-1');
 
@@ -217,7 +221,7 @@ describe('Entities', () => {
     });
 
     const enhancedTree = withEntities()(tree);
-    const userManager = enhancedTree.asCrud<User>('users');
+    const userManager = enhancedTree.entities<User>('users');
 
     // Update existing
     userManager.upsert({
@@ -262,10 +266,10 @@ describe('Entities', () => {
     });
 
     const enhancedTree = withEntities()(tree);
-    const userManager = enhancedTree.asCrud<User>('users');
+    const userManager = enhancedTree.entities<User>('users');
 
-    const user1 = userManager.findById('user-1');
-    const user3 = userManager.findById('user-3');
+    const user1 = userManager.selectById('user-1');
+    const user3 = userManager.selectById('user-3');
 
     expect(user1()?.name).toBe('John Doe');
     expect(user3()).toBeUndefined();
@@ -298,10 +302,10 @@ describe('Entities', () => {
     });
 
     const enhancedTree = withEntities()(tree);
-    const userManager = enhancedTree.asCrud<User>('users');
+    const userManager = enhancedTree.entities<User>('users');
 
-    const activeUsers = userManager.findBy((user) => user.active);
-    const doeUsers = userManager.findBy((user) => user.name.includes('Doe'));
+    const activeUsers = userManager.selectBy((user) => user.active);
+    const doeUsers = userManager.selectBy((user) => user.name.includes('Doe'));
 
     expect(activeUsers().length).toBe(2);
     expect(activeUsers().every((u) => u.active)).toBe(true);
@@ -330,7 +334,7 @@ describe('Entities', () => {
     });
 
     const enhancedTree = withEntities()(tree);
-    const userManager = enhancedTree.asCrud<User>('users');
+    const userManager = enhancedTree.entities<User>('users');
 
     const userIds = userManager.selectIds();
     expect(userIds()).toEqual(['user-1', 'user-2']);
@@ -363,7 +367,7 @@ describe('Entities', () => {
     });
 
     const enhancedTree = withEntities()(tree);
-    const userManager = enhancedTree.asCrud<User>('users');
+    const userManager = enhancedTree.entities<User>('users');
 
     const totalUsers = userManager.selectTotal();
     expect(totalUsers()).toBe(3);
@@ -384,7 +388,7 @@ describe('Entities', () => {
     });
 
     const enhancedTree = withEntities()(tree);
-    const userManager = enhancedTree.asCrud<User>('users');
+    const userManager = enhancedTree.entities<User>('users');
 
     expect(() => {
       userManager.add({
@@ -404,7 +408,7 @@ describe('Entities', () => {
     });
 
     const enhancedTree = enableEntities()(tree);
-    expect(enhancedTree.asCrud).toBeDefined();
+    expect(enhancedTree.entities).toBeDefined();
   });
 
   it('should work with high performance entities', () => {
@@ -415,7 +419,7 @@ describe('Entities', () => {
     });
 
     const enhancedTree = withHighPerformanceEntities()(tree);
-    expect(enhancedTree.asCrud).toBeDefined();
+    expect(enhancedTree.entities).toBeDefined();
   });
 
   it('should disable entities when enabled is false', () => {

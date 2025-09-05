@@ -45,8 +45,8 @@ export class HomeComponent {
         'update',
         'remove',
         'upsert',
-        'findById',
-        'findBy',
+        'selectById',
+        'selectBy',
       ],
     },
     {
