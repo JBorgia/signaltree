@@ -3032,7 +3032,7 @@ Special thanks to **Christian Moser** - an invaluable tester, colleague, and fri
 
 ## 📄 License & Intellectual Property
 
-**Fair Source License** - see the [LICENSE](LICENSE) file for complete terms.
+**MIT License** - see the [LICENSE](LICENSE) file for complete terms.
 
 ### 🔒 Recursive Typing System - Protected Innovation
 

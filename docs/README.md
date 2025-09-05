@@ -38,7 +38,6 @@ Use this index to navigate the canonical documentation.
 ## Legal
 
 - License: ../../LICENSE
-- Commercial license: ../../COMMERCIAL-LICENSE.md
 - Intellectual property: ../../INTELLECTUAL_PROPERTY.md
 
 ## Other

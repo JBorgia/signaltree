@@ -65,7 +65,7 @@ Advanced proxy-based system that creates signals on-demand while maintaining per
 
 #### ✅ PERMITTED USES:
 
-- Using SignalTree as provided under the Fair Source License
+- Using SignalTree as provided under the MIT License
 - Building applications that consume the public API
 - Contributing improvements back to this project (under CLA)
 
