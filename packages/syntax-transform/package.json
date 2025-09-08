@@ -1,0 +1,50 @@
+{
+  "name": "@signaltree/syntax-transform",
+  "version": "0.0.1",
+  "description": "Optional zero-runtime syntax transform for SignalTree unified callable leaf API.",
+  "license": "BSL-1.1",
+  "type": "commonjs",
+  "main": "./dist/packages/syntax-transform/src/index.js",
+  "module": "./dist/packages/syntax-transform/src/index.js",
+  "types": "./dist/packages/syntax-transform/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/packages/syntax-transform/src/index.d.ts",
+      "require": "./dist/packages/syntax-transform/src/index.js",
+      "import": "./dist/packages/syntax-transform/src/index.js"
+    },
+    "./vite": {
+      "types": "./dist/packages/syntax-transform/src/lib/vite-plugin.d.ts",
+      "require": "./dist/packages/syntax-transform/src/lib/vite-plugin.js",
+      "import": "./dist/packages/syntax-transform/src/lib/vite-plugin.js"
+    },
+    "./webpack": {
+      "types": "./dist/packages/syntax-transform/src/lib/webpack-plugin.d.ts",
+      "require": "./dist/packages/syntax-transform/src/lib/webpack-plugin.js",
+      "import": "./dist/packages/syntax-transform/src/lib/webpack-plugin.js"
+    },
+    "./augmentation": {
+      "types": "./dist/packages/syntax-transform/src/augmentation.d.ts",
+      "require": "./dist/packages/syntax-transform/src/augmentation.js",
+      "import": "./dist/packages/syntax-transform/src/augmentation.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "dependencies": {
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@babel/parser": "^7.25.0",
+    "@babel/traverse": "^7.25.0",
+    "@babel/generator": "^7.25.0",
+    "@babel/types": "^7.25.0",
+    "@types/babel__traverse": "^7.20.0",
+    "@types/babel__generator": "^7.20.0",
+    "vite": "^5.0.0",
+    "webpack": "^5.90.0",
+    "@types/webpack": "^5.28.0"
+  }
+}
