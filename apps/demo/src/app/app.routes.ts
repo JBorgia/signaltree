@@ -16,6 +16,13 @@ export const appRoutes: Route[] = [
       ),
   },
   {
+    path: 'callable-syntax',
+    loadComponent: () =>
+      import(
+        './pages/callable-syntax-demo/callable-syntax-demo.component'
+      ).then((c) => c.CallableSyntaxDemoComponent),
+  },
+  {
     path: 'async',
     loadComponent: () =>
       import('./pages/async-demo/async-demo.component').then(

@@ -1,7 +1,7 @@
 {
-  "name": "syntax-transform",
+  "name": "callable-syntax",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "packages/syntax-transform/src",
+  "sourceRoot": "packages/callable-syntax/src",
   "projectType": "library",
   "release": {
     "version": {
@@ -16,10 +16,10 @@
       "executor": "@nx/js:tsc",
       "outputs": ["{options.outputPath}"],
       "options": {
-        "outputPath": "dist/packages/syntax-transform",
-        "main": "packages/syntax-transform/src/index.ts",
-        "tsConfig": "packages/syntax-transform/tsconfig.lib.json",
-        "assets": ["packages/syntax-transform/*.md"]
+        "outputPath": "dist/packages/callable-syntax",
+        "main": "packages/callable-syntax/src/index.ts",
+        "tsConfig": "packages/callable-syntax/tsconfig.lib.json",
+        "assets": ["packages/callable-syntax/*.md"]
       }
     },
     "nx-release-publish": {
@@ -31,7 +31,7 @@
       "executor": "@nx/jest:jest",
       "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
       "options": {
-        "jestConfig": "packages/syntax-transform/jest.config.ts"
+        "jestConfig": "packages/callable-syntax/jest.config.ts"
       }
     }
   }

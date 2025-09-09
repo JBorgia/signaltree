@@ -56,7 +56,6 @@ export type {
 
 export {
   // Core utilities - Primary helper functions
-  unwrap,
   equal,
   deepEqual,
 
@@ -117,7 +116,6 @@ export { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './lib/constants';
  * - `TreeConfig` - Configuration options
  *
  * **Utilities:**
- * - `unwrap()` - Extract values from signals
  * - `equal()` / `deepEqual()` - Comparison functions
  *
  * **Enhancer System:**

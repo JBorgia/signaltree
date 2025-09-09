@@ -1,0 +1,548 @@
+<div class="container mx-auto p-6">
+  <h1 class="text-3xl font-bold mb-6">🚀 SignalTree Callable Syntax</h1>
+
+  <!-- Info Banner -->
+  <div
+    class="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 rounded-lg mb-8"
+  >
+    <h3 class="text-xl font-semibold mb-3">
+      ✨ Comprehensive Callable Syntax with &#64;signaltree/callable-syntax
+    </h3>
+    <p class="mb-4">
+      This demo showcases the complete callable syntax that transforms at build
+      time:
+    </p>
+    <ul class="space-y-2 mb-4">
+      <li>
+        <code class="bg-white bg-opacity-20 px-2 py-1 rounded"
+          >tree.$.name('value')</code
+        >
+        →
+        <code class="bg-white bg-opacity-20 px-2 py-1 rounded"
+          >tree.$.name.set('value')</code
+        >
+      </li>
+      <li>
+        <code class="bg-white bg-opacity-20 px-2 py-1 rounded"
+          >tree.$.age(n => n + 1)</code
+        >
+        →
+        <code class="bg-white bg-opacity-20 px-2 py-1 rounded"
+          >tree.$.age.update(n => n + 1)</code
+        >
+      </li>
+      <li>
+        <code class="bg-white bg-opacity-20 px-2 py-1 rounded"
+          >tree.$.profile.email('new&#64;email.com')</code
+        >
+        →
+        <code class="bg-white bg-opacity-20 px-2 py-1 rounded"
+          >tree.$.profile.email.set('new&#64;email.com')</code
+        >
+      </li>
+      <li>
+        <code class="bg-white bg-opacity-20 px-2 py-1 rounded"
+          >tree.$.items(arr => [...arr, item])</code
+        >
+        →
+        <code class="bg-white bg-opacity-20 px-2 py-1 rounded"
+          >tree.$.items.update(arr => [...arr, item])</code
+        >
+      </li>
+    </ul>
+    <p>
+      <strong>Note:</strong> TypeScript may show errors in the IDE - that's
+      expected! The &#64;signaltree/callable-syntax transform fixes them at
+      build time.
+    </p>
+  </div>
+
+  <!-- Section Tabs -->
+  <div class="flex justify-center mb-8 border-b">
+    <button
+      [class]="
+        activeSection === 'basic'
+          ? 'border-b-2 border-blue-500 text-blue-600'
+          : 'text-gray-600 hover:text-gray-900'
+      "
+      (click)="activeSection = 'basic'"
+      class="px-6 py-3 font-semibold transition-colors"
+    >
+      Basic Patterns
+    </button>
+    <button
+      [class]="
+        activeSection === 'complex'
+          ? 'border-b-2 border-blue-500 text-blue-600'
+          : 'text-gray-600 hover:text-gray-900'
+      "
+      (click)="activeSection = 'complex'"
+      class="px-6 py-3 font-semibold transition-colors"
+    >
+      Complex Objects
+    </button>
+    <button
+      [class]="
+        activeSection === 'arrays'
+          ? 'border-b-2 border-blue-500 text-blue-600'
+          : 'text-gray-600 hover:text-gray-900'
+      "
+      (click)="activeSection = 'arrays'"
+      class="px-6 py-3 font-semibold transition-colors"
+    >
+      Array Operations
+    </button>
+    <button
+      [class]="
+        activeSection === 'performance'
+          ? 'border-b-2 border-blue-500 text-blue-600'
+          : 'text-gray-600 hover:text-gray-900'
+      "
+      (click)="activeSection = 'performance'"
+      class="px-6 py-3 font-semibold transition-colors"
+    >
+      Performance Demo
+    </button>
+  </div>
+
+  <!-- Basic Patterns Section -->
+  <div
+    *ngIf="activeSection === 'basic'"
+    class="grid grid-cols-1 lg:grid-cols-2 gap-6"
+  >
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <h3 class="text-lg font-semibold mb-4 flex items-center">
+        👤 Basic Profile
+      </h3>
+      <div class="bg-gray-50 p-4 rounded-md mb-4 font-mono text-sm space-y-1">
+        <p><strong>Name:</strong> {{ basicProfile.$.name() }}</p>
+        <p><strong>Age:</strong> {{ basicProfile.$.age() }}</p>
+        <p><strong>Email:</strong> {{ basicProfile.$.profile.email() }}</p>
+        <p>
+          <strong>Active:</strong> {{ basicProfile.$.active() ? 'Yes' : 'No' }}
+        </p>
+        <p><strong>Tags:</strong> {{ basicProfile.$.tags().join(', ') }}</p>
+        <p>
+          <strong>Theme:</strong> {{ basicProfile.$.profile.settings.theme() }}
+        </p>
+      </div>
+      <div class="flex gap-2 flex-wrap">
+        <button
+          (click)="updateBasicProfile()"
+          class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+        >
+          Update Profile
+        </button>
+        <button
+          (click)="incrementAge()"
+          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+        >
+          +1 Age
+        </button>
+        <button
+          (click)="addTag()"
+          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+        >
+          Add Tag
+        </button>
+        <button
+          (click)="toggleTheme()"
+          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+        >
+          Toggle Theme
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Complex Objects Section -->
+  <div
+    *ngIf="activeSection === 'complex'"
+    class="grid grid-cols-1 lg:grid-cols-2 gap-6"
+  >
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <h3 class="text-lg font-semibold mb-4 flex items-center">
+        🏢 Professional Profile
+      </h3>
+      <div class="bg-gray-50 p-4 rounded-md mb-4 font-mono text-sm space-y-1">
+        <p>
+          <strong>Name:</strong>
+          {{ complexTree.$.user.profile.personal.firstName() }}
+          {{ complexTree.$.user.profile.personal.lastName() }}
+        </p>
+        <p>
+          <strong>Age:</strong> {{ complexTree.$.user.profile.personal.age() }}
+        </p>
+        <p>
+          <strong>Title:</strong>
+          {{ complexTree.$.user.profile.professional.title() }}
+        </p>
+        <p>
+          <strong>Company:</strong>
+          {{ complexTree.$.user.profile.professional.company() }}
+        </p>
+        <p>
+          <strong>Skills:</strong>
+          {{ complexTree.$.user.profile.professional.skills().join(', ') }}
+        </p>
+      </div>
+      <div class="flex gap-2 flex-wrap">
+        <button
+          (click)="updateProfessional()"
+          class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+        >
+          Promote
+        </button>
+        <button
+          (click)="addSkill()"
+          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+        >
+          Add Skill
+        </button>
+        <button
+          (click)="agePerson()"
+          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+        >
+          Birthday
+        </button>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <h3 class="text-lg font-semibold mb-4 flex items-center">
+        🎨 UI Preferences
+      </h3>
+      <div class="bg-gray-50 p-4 rounded-md mb-4 font-mono text-sm space-y-1">
+        <p>
+          <strong>Theme:</strong>
+          {{ complexTree.$.user.preferences.ui.theme() }}
+        </p>
+        <p>
+          <strong>Language:</strong>
+          {{ complexTree.$.user.preferences.ui.language() }}
+        </p>
+        <p>
+          <strong>Sidebar Width:</strong>
+          {{ complexTree.$.user.preferences.ui.sidebar.width() }}px
+        </p>
+        <p>
+          <strong>Collapsed:</strong>
+          {{
+            complexTree.$.user.preferences.ui.sidebar.collapsed() ? 'Yes' : 'No'
+          }}
+        </p>
+        <p>
+          <strong>Notification Frequency:</strong>
+          {{ complexTree.$.user.preferences.notifications.frequency() }}
+        </p>
+      </div>
+      <div class="flex gap-2 flex-wrap">
+        <button
+          (click)="toggleComplexTheme()"
+          class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+        >
+          Toggle Theme
+        </button>
+        <button
+          (click)="toggleSidebar()"
+          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+        >
+          Toggle Sidebar
+        </button>
+        <button
+          (click)="changeNotificationFreq()"
+          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+        >
+          Change Frequency
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Array Operations Section -->
+  <div
+    *ngIf="activeSection === 'arrays'"
+    class="grid grid-cols-1 lg:grid-cols-3 gap-6"
+  >
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <h3 class="text-lg font-semibold mb-4 flex items-center">
+        🔢 Number Array
+      </h3>
+      <div class="bg-gray-50 p-4 rounded-md mb-4 font-mono text-sm space-y-1">
+        <p>
+          <strong>Numbers:</strong> [{{ arrayTree.$.numbers().join(', ') }}]
+        </p>
+        <p><strong>Count:</strong> {{ arrayTree.$.numbers().length }}</p>
+        <p><strong>Sum:</strong> {{ getSum() }}</p>
+      </div>
+      <div class="flex gap-2 flex-wrap">
+        <button
+          (click)="replaceNumbers()"
+          class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+        >
+          Replace All
+        </button>
+        <button
+          (click)="addNumbers()"
+          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+        >
+          Add Numbers
+        </button>
+        <button
+          (click)="filterNumbers()"
+          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+        >
+          Filter > 25
+        </button>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <h3 class="text-lg font-semibold mb-4 flex items-center">
+        👥 User Array
+      </h3>
+      <div class="bg-gray-50 p-4 rounded-md mb-4 font-mono text-sm">
+        <div class="space-y-2">
+          <div
+            *ngFor="let user of arrayTree.$.users(); trackBy: trackUser"
+            class="p-2 bg-white rounded border"
+          >
+            <strong>{{ user.name }}</strong> - {{ user.role }}
+          </div>
+        </div>
+      </div>
+      <div class="flex gap-2 flex-wrap">
+        <button
+          (click)="addUser()"
+          class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+        >
+          Add User
+        </button>
+        <button
+          (click)="promoteUser()"
+          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+        >
+          Promote First
+        </button>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <h3 class="text-lg font-semibold mb-4 flex items-center">
+        🗂️ Nested Collections
+      </h3>
+      <div class="bg-gray-50 p-4 rounded-md mb-4 font-mono text-sm space-y-1">
+        <p>
+          <strong>Tags:</strong>
+          {{ arrayTree.$.nested.collections.tags().join(', ') }}
+        </p>
+        <p>
+          <strong>Categories:</strong>
+          {{ arrayTree.$.nested.collections.categories().join(', ') }}
+        </p>
+        <p><strong>Matrix:</strong></p>
+        <div
+          *ngFor="let row of arrayTree.$.nested.matrix(); trackBy: trackRow"
+          class="text-xs text-gray-600"
+        >
+          [{{ row.join(', ') }}]
+        </div>
+      </div>
+      <div class="flex gap-2 flex-wrap">
+        <button
+          (click)="addMatrixTag()"
+          class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+        >
+          Add Tag
+        </button>
+        <button
+          (click)="sortTags()"
+          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+        >
+          Sort Tags
+        </button>
+        <button
+          (click)="addMatrixRow()"
+          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+        >
+          Add Row
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Performance Section -->
+  <div
+    *ngIf="activeSection === 'performance'"
+    class="grid grid-cols-1 lg:grid-cols-2 gap-6"
+  >
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <h3 class="text-lg font-semibold mb-4 flex items-center">
+        ⚡ Performance Counter
+      </h3>
+      <div class="bg-gray-50 p-4 rounded-md mb-4 font-mono text-sm space-y-1">
+        <p><strong>Counter:</strong> {{ performanceDemo.$.counter() }}</p>
+        <p>
+          <strong>Batch Operations:</strong>
+          {{ performanceDemo.$.batchCount() }}
+        </p>
+        <p>
+          <strong>Last Update:</strong>
+          {{ performanceDemo.$.lastUpdate().toLocaleTimeString() }}
+        </p>
+        <p>
+          <strong>Update History:</strong>
+          {{ performanceDemo.$.updateHistory().length }} entries
+        </p>
+      </div>
+      <div class="flex gap-2 flex-wrap">
+        <button
+          (click)="incrementCounter()"
+          class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+        >
+          +1 Counter
+        </button>
+        <button
+          (click)="batchUpdate()"
+          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+        >
+          Batch +100
+        </button>
+        <button
+          (click)="resetCounter()"
+          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+        >
+          Reset All
+        </button>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <h3 class="text-lg font-semibold mb-4 flex items-center">
+        📊 Stress Test
+      </h3>
+      <div class="bg-gray-50 p-4 rounded-md mb-4 font-mono text-sm space-y-1">
+        <p><strong>Operations:</strong> {{ stressTest.$.operations() }}</p>
+        <p>
+          <strong>Deep Value:</strong>
+          {{ stressTest.$.deep.level1.level2.level3.value() }}
+        </p>
+        <p>
+          <strong>Array Length:</strong> {{ stressTest.$.largeArray().length }}
+        </p>
+      </div>
+      <div class="flex gap-2 flex-wrap">
+        <button
+          (click)="runStressTest()"
+          class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+        >
+          Run Stress Test
+        </button>
+        <button
+          (click)="updateDeepValue()"
+          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+        >
+          Update Deep
+        </button>
+        <button
+          (click)="growArray()"
+          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+        >
+          Grow Array
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Code Examples -->
+  <div class="bg-white rounded-lg shadow-md mt-8 overflow-hidden">
+    <div class="p-6 border-b">
+      <h3 class="text-lg font-semibold">💻 Code Examples</h3>
+    </div>
+
+    <div class="flex border-b">
+      <button
+        [class]="
+          activeTab === 'callable'
+            ? 'border-b-2 border-blue-500 text-blue-600 bg-blue-50'
+            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+        "
+        (click)="activeTab = 'callable'"
+        class="px-6 py-3 font-medium transition-colors"
+      >
+        New Callable Syntax
+      </button>
+      <button
+        [class]="
+          activeTab === 'current'
+            ? 'border-b-2 border-blue-500 text-blue-600 bg-blue-50'
+            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+        "
+        (click)="activeTab = 'current'"
+        class="px-6 py-3 font-medium transition-colors"
+      >
+        Current Explicit Syntax
+      </button>
+    </div>
+
+    <div class="p-6">
+      <pre
+        *ngIf="activeTab === 'callable'"
+        class="bg-gray-900 text-gray-100 p-6 rounded-lg overflow-x-auto text-sm leading-relaxed"
+      ><code>// ✨ New Callable Syntax (transforms at build time)
+
+// Basic value setting
+tree.$.name('Jane');                           // → .set('Jane')
+tree.$.age(25);                               // → .set(25)
+tree.$.active(true);                          // → .set(true)
+
+// Functional updates
+tree.$.age(current => current + 1);          // → .update(fn)
+tree.$.tags(tags => [...tags, 'new']);       // → .update(fn)
+
+// Deep nested objects
+tree.$.user.profile.email('new&#64;email.com');  // → .set('new&#64;email.com')
+tree.$.settings.ui.theme('dark');            // → .set('dark')
+
+// Complex updates
+tree.$.user.profile(profile => updateProfile(profile));  // → .update(fn)
+
+// Array operations
+tree.$.numbers([10, 20, 30]);                // → .set([10, 20, 30])
+tree.$.users(users => users.filter(u => u.active)); // → .update(fn)
+
+// Reading values (unchanged)
+const name = tree.$.name();                  // Always works
+const age = tree.$.user.profile.age();      // Deep access</code></pre>
+
+      <pre
+        *ngIf="activeTab === 'current'"
+        class="bg-gray-900 text-gray-100 p-6 rounded-lg overflow-x-auto text-sm leading-relaxed"
+      ><code>// 🔧 Current Explicit Syntax (always works)
+
+// Basic value setting
+tree.$.name.set('Jane');
+tree.$.age.set(25);
+tree.$.active.set(true);
+
+// Functional updates
+tree.$.age.update(current => current + 1);
+tree.$.tags.update(tags => [...tags, 'new']);
+
+// Deep nested objects
+tree.$.user.profile.email.set('new&#64;email.com');
+tree.$.settings.ui.theme.set('dark');
+
+// Complex updates
+tree.$.user.profile.update(profile => updateProfile(profile));
+
+// Array operations
+tree.$.numbers.set([10, 20, 30]);
+tree.$.users.update(users => users.filter(u => u.active));
+
+// Reading values
+const name = tree.$.name();
+const age = tree.$.user.profile.age();</code></pre>
+    </div>
+  </div>
+</div>

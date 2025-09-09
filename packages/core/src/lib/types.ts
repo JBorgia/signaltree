@@ -85,7 +85,7 @@ export interface NodeAccessor<T> {
 /**
  * Signalified node with callable interface
  */
-export type SignalifiedNode<T> = NodeAccessor<T> & TreeNode<T>;
+export type AccessibleTreeNode<T> = NodeAccessor<T> & TreeNode<T>;
 
 /**
  * Deep signalification type - converts object properties to signals recursively
@@ -103,7 +103,7 @@ export type TreeNode<T> = {
       : T[K] extends (...args: unknown[]) => unknown
       ? WritableSignal<T[K]> // Functions are Angular signals
       : // Nested objects: Use the explicit SignalifiedNode type
-        SignalifiedNode<T[K]>
+        AccessibleTreeNode<T[K]>
     : WritableSignal<T[K]>; // Primitives are Angular signals
 };
 

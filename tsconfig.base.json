@@ -28,9 +28,7 @@
       "@signaltree/ng-forms": ["packages/ng-forms/src/index.ts"],
       "@signaltree/presets": ["packages/presets/src/index.ts"],
       "@signaltree/serialization": ["packages/serialization/src/index.ts"],
-      "@signaltree/syntax-transform": [
-        "packages/syntax-transform/src/index.ts"
-      ],
+      "@signaltree/callable-syntax": ["packages/callable-syntax/src/index.ts"],
       "@signaltree/time-travel": ["packages/time-travel/src/index.ts"]
     }
   },
