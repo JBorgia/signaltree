@@ -29,6 +29,7 @@ export type {
   RemoveSignalMethods,
   Primitive,
   BuiltInObject,
+  NotFn,
 
   // Configuration types
   TreeConfig,

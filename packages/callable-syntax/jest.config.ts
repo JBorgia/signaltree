@@ -1,10 +1,10 @@
 export default {
-  displayName: 'syntax-transform',
+  displayName: 'callable-syntax',
   preset: '../../jest.preset.js',
   testEnvironment: 'node',
   transform: {
     '^.+\\.[tj]s$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.spec.json' }],
   },
   moduleFileExtensions: ['ts', 'js', 'html'],
-  coverageDirectory: '../../coverage/packages/syntax-transform',
+  coverageDirectory: '../../coverage/packages/callable-syntax',
 };

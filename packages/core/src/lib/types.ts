@@ -74,37 +74,54 @@ export type Unwrap<T> = T extends WritableSignal<infer U>
   : T;
 
 /**
- * Node accessor interface - unified API for get/set/update via function calls
+ * Helper type preventing ambiguity when a node itself stores a function value.
+ * In that case direct callable set(fn) would clash with the update(fn) signature.
+ * We exclude raw function values from the direct-set overload so users must use .set(fn)
+ * (after transform) instead of callable form, while updater form still works.
+ */
+export type NotFn<T> = T extends (...args: unknown[]) => unknown ? never : T;
+
+/**
+ * Node accessor interface - unified API for get/set/update via function calls.
+ * Overloads:
+ *  (): T                     - getter
+ *  (value: NotFn<T>): void   - direct set (blocked when T is itself a function)
+ *  (updater: (T)=>T): void   - functional update
  */
 export interface NodeAccessor<T> {
-  (): T; // Get value
-  (value: T): void; // Set value
-  (updater: (current: T) => T): void; // Update with function
+  (): T;
+  (value: NotFn<T>): void;
+  (updater: (current: T) => T): void;
 }
 
 /**
  * Signalified node with callable interface
  */
-export type AccessibleTreeNode<T> = NodeAccessor<T> & TreeNode<T>;
+export type AccessibleNode<T> = NodeAccessor<T> & TreeNode<T>;
 
 /**
  * Deep signalification type - converts object properties to signals recursively
  * - Leaves (primitives, arrays, functions, built-ins): Raw Angular WritableSignal<T>
  * - Nested objects: NodeAccessor<T> (callable) + recursive TreeNode<T> properties
  */
+// WritableSignal with callable set/update overloads (purely type-level augmentation)
+export type CallableWritableSignal<T> = WritableSignal<T> & {
+  (value: NotFn<T>): void;
+  (updater: (current: T) => T): void;
+};
+
 export type TreeNode<T> = {
   [K in keyof T]: T[K] extends readonly unknown[]
-    ? WritableSignal<T[K]> // Arrays are Angular signals
+    ? CallableWritableSignal<T[K]> // Arrays get callable overloads
     : T[K] extends object
     ? T[K] extends Signal<unknown>
-      ? T[K] // Don't double-wrap signals
+      ? T[K]
       : T[K] extends BuiltInObject
-      ? WritableSignal<T[K]> // Built-in objects are Angular signals
+      ? CallableWritableSignal<T[K]> // Built-ins as callable writable signals
       : T[K] extends (...args: unknown[]) => unknown
-      ? WritableSignal<T[K]> // Functions are Angular signals
-      : // Nested objects: Use the explicit SignalifiedNode type
-        AccessibleTreeNode<T[K]>
-    : WritableSignal<T[K]>; // Primitives are Angular signals
+      ? CallableWritableSignal<T[K]> // Function leaves as callable writable signals
+      : AccessibleNode<T[K]> // Nested objects
+    : CallableWritableSignal<T[K]>; // Primitives
 };
 
 /**
