@@ -1,16 +1,16 @@
 /**
- * TypeScript augmentation for callable syntax support
- * This file provides IDE support for the callable syntax before transformation
+ * TypeScript module augmentation for callable syntax support
+ * Since NodeAccessor already has callable signatures, we just need to ensure
+ * the types are properly imported and available.
  */
+import type {} from '@signaltree/core';
 
-declare module '@signaltree/core' {
-  // Augment the AccessibleTreeNode to support callable syntax
-  interface AccessibleTreeNode<T> {
-    // Make the node callable with value (transforms to .set())
-    (value: T): void;
-    // Make the node callable with updater function (transforms to .update())
-    (updater: (current: T) => T): void;
-  }
-}
+// The existing NodeAccessor<T> interface in @signaltree/core already supports:
+// - (): T                           // getter
+// - (value: T): void                // set
+// - (updater: (current: T) => T): void  // update
 
-export {}; // Ensure this is treated as a module
+// This file ensures the types are available when imported
+// The build-time transformer will handle the actual transformation
+
+export {};

@@ -21,7 +21,7 @@ export function signalTreeSyntaxTransform(
   const exclude = options.exclude ?? /node_modules|\.spec\.|\.test\./;
 
   return {
-    name: 'signaltree-syntax-transform',
+    name: 'signaltree-callable-syntax',
     enforce: 'pre',
     transform(code: string, id: string) {
       if (!include.test(id) || exclude.test(id)) return null;

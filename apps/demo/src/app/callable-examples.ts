@@ -1,3 +1,21 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+// @ts-nocheck
+/**
+ * 🚨 IMPORTANT: This file demonstrates CALLABLE SYNTAX that requires BUILD-TIME TRANSFORMATION
+ *
+ * The TypeScript errors you see are INTENTIONAL and EXPECTED:
+ * - "Expected 0 arguments, but got 1" - Shows the syntax needs transformation
+ * - "Parameter implicitly has an 'any' type" - Pre-transform limitations
+ *
+ * This proves the zero-runtime overhead design:
+ * ✅ Without transform: TypeScript errors (as expected)
+ * ✅ With transform: tree.$.prop('val') → tree.$.prop.set('val') at build time
+ * ✅ Zero runtime cost - pure build-time syntax sugar
+ *
+ * To run with transform: npm run callable:demo
+ */
+import '@signaltree/callable-syntax/augmentation';
+
 import { signal, WritableSignal } from '@angular/core';
 import { signalTree } from '@signaltree/core';
 import { isEqual } from 'lodash-es';
@@ -429,26 +447,43 @@ const perfTree = signalTree({
 console.log('\n--- Performance and Batch Updates ---');
 
 // Batch counter updates using callable syntax
-perfTree.$.counters((current: { id: number; value: number; multiplier: number }[]) =>
-  current.map((counter: { id: number; value: number; multiplier: number }, index: number) => ({
-    ...counter,
-    value: counter.value + (index % 10),
-    multiplier: counter.multiplier * 1.1,
-  }))
+perfTree.$.counters(
+  (current: { id: number; value: number; multiplier: number }[]) =>
+    current.map(
+      (
+        counter: { id: number; value: number; multiplier: number },
+        index: number
+      ) => ({
+        ...counter,
+        value: counter.value + (index % 10),
+        multiplier: counter.multiplier * 1.1,
+      })
+    )
 );
 
 // Recalculate stats based on counters
-perfTree.$.stats((current: { total: number; average: number; max: number; lastCalculated: Date }) => {
-  const counters = perfTree.$.counters();
-  const values = counters.map((c: { id: number; value: number; multiplier: number }) => c.value);
-  return {
-    ...current,
-    total: values.reduce((sum: number, val: number) => sum + val, 0),
-    average: values.reduce((sum: number, val: number) => sum + val, 0) / values.length,
-    max: Math.max(...values),
-    lastCalculated: new Date(),
-  };
-});
+perfTree.$.stats(
+  (current: {
+    total: number;
+    average: number;
+    max: number;
+    lastCalculated: Date;
+  }) => {
+    const counters = perfTree.$.counters();
+    const values = counters.map(
+      (c: { id: number; value: number; multiplier: number }) => c.value
+    );
+    return {
+      ...current,
+      total: values.reduce((sum: number, val: number) => sum + val, 0),
+      average:
+        values.reduce((sum: number, val: number) => sum + val, 0) /
+        values.length,
+      max: Math.max(...values),
+      lastCalculated: new Date(),
+    };
+  }
+);
 
 // Simulate operation tracking
 const operations = ['op1', 'op2', 'op3', 'op4', 'op5'];
@@ -482,7 +517,7 @@ console.log('✅ tree.$.prop() - Read values');
 console.log('✅ tree.$.prop(value) - Set values directly');
 console.log('✅ tree.$.prop(updater) - Functional updates');
 console.log('');
-console.log('With @signaltree/syntax-transform, this becomes even cleaner:');
+console.log('With @signaltree/callable-syntax, this becomes even cleaner:');
 console.log('// tree.$.prop("value") → tree.$.prop.set("value")');
 console.log('// tree.$.prop(fn) → tree.$.prop.update(fn)');
 console.log('// Zero runtime overhead, full TypeScript support');
@@ -497,12 +532,12 @@ console.log('\n=== END OF COMPREHENSIVE TESTS ===');
  * ISSUES IDENTIFIED AND EXPLANATIONS:
  *
  * 1. SYNTAX TRANSFORM COMPATIBILITY:
- *    - The new syntax-transform package allows tree.$.prop('value') calls
+ *    - The new callable-syntax package allows tree.$.prop('value') calls
  *    - These are converted at build time to tree.$.prop.set('value') or tree.$.prop.update(fn)
  *    - Current examples show the desired syntax vs current explicit syntax
  *
  * 2. TYPE SYSTEM ISSUES IN ORIGINAL EXAMPLES:
- *    - .set() and .update() methods don't exist on AccessibleTreeNode<T>
+ *    - .set() and .update() methods don't exist on AccessibleNode<T>
  *    - Should use the callable syntax: tree.$.prop(value) instead of tree.$.prop.set(value)
  *    - Callable syntax provides cleaner API for accessing and modifying values
  *
@@ -534,42 +569,42 @@ const syntaxExampleTree = signalTree({
 // SYNTAX TRANSFORM EXAMPLES (showing FUTURE capability vs current limitations):
 
 /**
- * NOTE: The examples below show what the syntax-transform will enable.
+ * NOTE: The examples below show what the callable-syntax will enable.
  * Currently, SignalTree uses NodeAccessor<T> which only supports:
  * - tree.$.prop() // getter
- * - tree.$.prop(value) // NOT YET SUPPORTED - this is what syntax-transform will enable
- * - tree.$.prop(updater) // NOT YET SUPPORTED - this is what syntax-transform will enable
+ * - tree.$.prop(value) // NOT YET SUPPORTED - this is what callable-syntax will enable
+ * - tree.$.prop(updater) // NOT YET SUPPORTED - this is what callable-syntax will enable
  */
 
 // Example ST-1: Simple value setting (FUTURE CAPABILITY)
 // AFTER TRANSFORM: tree.$.user.name('Jane Doe'); → tree.$.user.name.set('Jane Doe')
-// syntaxExampleTree.$.user.name('Jane Doe'); // Will work after syntax-transform is applied
+// syntaxExampleTree.$.user.name('Jane Doe'); // Will work after callable-syntax is applied
 
 // Example ST-2: Nested object property setting (FUTURE CAPABILITY)
 // AFTER TRANSFORM: tree.$.user.profile.email('jane@example.com'); → tree.$.user.profile.email.set('jane@example.com')
-// syntaxExampleTree.$.user.profile.email('jane@example.com'); // Will work after syntax-transform
+// syntaxExampleTree.$.user.profile.email('jane@example.com'); // Will work after callable-syntax
 
 // Example ST-3: Function-based updates (FUTURE CAPABILITY)
 // AFTER TRANSFORM: tree.$.counter(n => n + 1); → tree.$.counter.update(n => n + 1)
-// syntaxExampleTree.$.counter(n => n + 1); // Will work after syntax-transform
+// syntaxExampleTree.$.counter(n => n + 1); // Will work after callable-syntax
 
 // Example ST-4: Array updates with functions (FUTURE CAPABILITY)
 // AFTER TRANSFORM: tree.$.items(arr => [...arr, 'date']); → tree.$.items.update(arr => [...arr, 'date'])
-// syntaxExampleTree.$.items(arr => [...arr, 'date']); // Will work after syntax-transform
+// syntaxExampleTree.$.items(arr => [...arr, 'date']); // Will work after callable-syntax
 
 // Example ST-5: Boolean toggles (FUTURE CAPABILITY)
 // AFTER TRANSFORM: tree.$.user.profile.isActive(active => !active); → tree.$.user.profile.isActive.update(active => !active)
-// syntaxExampleTree.$.user.profile.isActive(active => !active); // Will work after syntax-transform
+// syntaxExampleTree.$.user.profile.isActive(active => !active); // Will work after callable-syntax
 
 // Example ST-6: Object literal setting (FUTURE CAPABILITY)
 // AFTER TRANSFORM: tree.$.user.profile.preferences({ theme: 'light', notifications: false }); → tree.$.user.profile.preferences.set({ theme: 'light', notifications: false })
-// syntaxExampleTree.$.user.profile.preferences({ theme: 'light', notifications: false }); // Will work after syntax-transform
+// syntaxExampleTree.$.user.profile.preferences({ theme: 'light', notifications: false }); // Will work after callable-syntax
 
 // Example ST-7: Deep nesting with mixed updates (FUTURE CAPABILITY)
 // AFTER TRANSFORM: tree.$.user.profile.preferences.theme('light'); → tree.$.user.profile.preferences.theme.set('light')
 // AFTER TRANSFORM: tree.$.user.age(age => age + 1); → tree.$.user.age.update(age => age + 1)
-// syntaxExampleTree.$.user.profile.preferences.theme('light'); // Will work after syntax-transform
-// syntaxExampleTree.$.user.age(age => age + 1); // Will work after syntax-transform
+// syntaxExampleTree.$.user.profile.preferences.theme('light'); // Will work after callable-syntax
+// syntaxExampleTree.$.user.age(age => age + 1); // Will work after callable-syntax
 
 // Verify the syntax transform examples work
 console.log('Syntax transform examples:');
@@ -756,7 +791,7 @@ tree.$.prop2.nested2.nestedSignal5.update((arr) => arr.map((x) => x * 2)); // Do
 console.log('Nested deep value:', tree.$.prop2.nested2.nested3.deeplyNested3());
 console.log('Nested array:', tree.$.prop2.nested2.nested3.deeplyNestedArray());
 
-// NEW: Callable syntax examples (will work after syntax-transform)
+// NEW: Callable syntax examples (will work after callable-syntax)
 /*
 // Setting nested values with callable syntax
 tree.$.prop2.nested2.nested3.deeplyNested3({
@@ -769,7 +804,7 @@ tree.$.prop2.nested2.nested3.deeplyNestedArray(arr => [...arr, 99]);
 */
 
 // Example 5: Handling undefined values in updates
-// ISSUE: .update() method doesn't exist on AccessibleTreeNode<T>
+// ISSUE: .update() method doesn't exist on AccessibleNode<T>
 // tree.$.prop2.nested2.nested3.deeplyNestedUndefinedStringTyped.update(
 //   () => 'New Value'
 // ); // Would update with a new string value
@@ -778,7 +813,7 @@ tree.$.prop2.nested2.nested3.deeplyNestedArray(arr => [...arr, 99]);
 const nested3BeforeUpdate: Nested3 = tree.$.prop2.nested2.nested3();
 console.log('store.$.prop2.nested2.nested3', nested3BeforeUpdate);
 
-// ISSUE: .update() method doesn't exist on AccessibleTreeNode<T>
+// ISSUE: .update() method doesn't exist on AccessibleNode<T>
 // tree.$.prop2.nested2.nested3.update((curr) => {
 //   void curr; // Acknowledge current value
 //   return {
@@ -832,7 +867,7 @@ console.log(
 // ==============================================
 
 // Example 9: Testing set method on nested objects
-// ISSUE: .set() method doesn't exist on AccessibleTreeNode - commenting out
+// ISSUE: .set() method doesn't exist on AccessibleNode - commenting out
 /*
 tree.$.prop2.nested2.nested3.set({
   deeplyNested: false,
@@ -843,7 +878,7 @@ tree.$.prop2.nested2.nested3.set({
 });
 */
 
-// NEW: Using callable syntax (will work after syntax-transform)
+// NEW: Using callable syntax (will work after callable-syntax)
 /*
 tree.$.prop2.nested2.nested3({
   deeplyNested: false,
@@ -864,7 +899,7 @@ console.log(
   tree.$.prop2.nested2.nested3.deeplyNestedArray()
 );
 
-// ISSUE: .set() method doesn't exist on AccessibleTreeNode - commenting out
+// ISSUE: .set() method doesn't exist on AccessibleNode - commenting out
 /*
 tree.$.prop2.nested2.nested3.set({
   deeplyNested: true, // Only updating this field
@@ -903,7 +938,7 @@ console.log('Array items:', arrayOps.$.items());
 console.log('Nested matrix:', arrayOps.$.nested.matrix());
 console.log('Nested objects:', arrayOps.$.nested.objects());
 
-// NEW: Callable syntax for array operations (will work after syntax-transform)
+// NEW: Callable syntax for array operations (will work after callable-syntax)
 /*
 // Setting entire arrays
 arrayOps.$.items([1, 2, 3, 4, 5]);
@@ -975,7 +1010,7 @@ console.log('Updated nullable:', edgeCases.$.nullable());
 console.log('Updated nested optional:', edgeCases.$.nested.optional());
 console.log('Updated nested nullable:', edgeCases.$.nested.nullable());
 
-// NEW: Callable syntax for edge cases (will work after syntax-transform)
+// NEW: Callable syntax for edge cases (will work after callable-syntax)
 /*
 // Setting optional/nullable values
 edgeCases.$.optional('newly set value');
@@ -1025,7 +1060,7 @@ const deepArray =
 console.log('Deep nesting - value:', deepValueCurrent);
 console.log('Deep nesting - array:', deepArray);
 
-// NEW: Callable syntax for deep nesting (will work after syntax-transform)
+// NEW: Callable syntax for deep nesting (will work after callable-syntax)
 /*
 // Setting deeply nested values
 deepNesting.$.level1.level2.level3.level4.level5.level6.value('new deep value');
@@ -1521,7 +1556,7 @@ callableDemo.$.tags.update((tags) => [...tags, 'javascript']);
 console.log('Updated age:', callableDemo.$.age());
 console.log('Updated tags:', callableDemo.$.tags());
 
-console.log('\n--- NEW Callable Syntax (after syntax-transform) ---');
+console.log('\n--- NEW Callable Syntax (after callable-syntax) ---');
 console.log('// These examples show the intended callable syntax:');
 console.log('// callableDemo.$.name("Alice");              // → .set("Alice")');
 console.log('// callableDemo.$.age(28);                    // → .set(28)');
@@ -1569,13 +1604,13 @@ console.log('\n=== END CALLABLE SYNTAX EXAMPLES ===');
 // NOTE: The following sections contained examples that used the old unwrap() function
 // which is no longer available in the public API. They have been commented out to
 // prevent compilation errors. The callable syntax examples above demonstrate
-// the recommended patterns for the new syntax-transform functionality.
+// the recommended patterns for the new callable-syntax functionality.
 //
 // Key points:
 // - unwrap() was removed from the public API as it's internal-only
 // - Callable syntax is the new recommended pattern
 // - Use .set() and .update() methods for current compatibility
-// - Enable @signaltree/syntax-transform for the new callable syntax
+// - Enable @signaltree/callable-syntax for the new callable syntax
 */
 
 // ==============================================

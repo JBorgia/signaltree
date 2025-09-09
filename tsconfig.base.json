@@ -16,6 +16,7 @@
     "allowSyntheticDefaultImports": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
+    "types": ["@angular/core", "@signaltree/callable-syntax/augmentation"],
     "paths": {
       "@signaltree/async": ["packages/async/src/index.ts"],
       "@signaltree/batching": ["packages/batching/src/index.ts"],
@@ -29,6 +30,7 @@
       "@signaltree/presets": ["packages/presets/src/index.ts"],
       "@signaltree/serialization": ["packages/serialization/src/index.ts"],
       "@signaltree/callable-syntax": ["packages/callable-syntax/src/index.ts"],
+      "@signaltree/callable-syntax/*": ["packages/callable-syntax/src/*"],
       "@signaltree/time-travel": ["packages/time-travel/src/index.ts"]
     }
   },

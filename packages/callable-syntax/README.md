@@ -1,4 +1,4 @@
-## @signaltree/syntax-transform
+## @signaltree/callable-syntax
 
 Zero-runtime optional syntax transform for SignalTree that lets you write:
 
@@ -15,7 +15,7 @@ Unified callable syntax without wrapping Angular signals or adding runtime overh
 ### Installation
 
 ```bash
-pnpm add -D @signaltree/syntax-transform
+pnpm add -D @signaltree/callable-syntax
 ```
 
 ### Vite
@@ -23,7 +23,7 @@ pnpm add -D @signaltree/syntax-transform
 ```ts
 // vite.config.ts
 import { defineConfig } from 'vite';
-import { signalTreeSyntaxTransform } from '@signaltree/syntax-transform/vite';
+import { signalTreeSyntaxTransform } from '@signaltree/callable-syntax/vite';
 
 export default defineConfig({
   plugins: [signalTreeSyntaxTransform()],
@@ -34,7 +34,7 @@ export default defineConfig({
 
 ```ts
 // webpack.config.js
-const { SignalTreeSyntaxWebpackPlugin } = require('@signaltree/syntax-transform/webpack');
+const { SignalTreeSyntaxWebpackPlugin } = require('@signaltree/callable-syntax/webpack');
 
 module.exports = {
   plugins: [new SignalTreeSyntaxWebpackPlugin()],
@@ -46,7 +46,7 @@ module.exports = {
 Add once in your app entry:
 
 ```ts
-import '@signaltree/syntax-transform/augmentation';
+import '@signaltree/callable-syntax/augmentation';
 ```
 
 ### Configuration Options

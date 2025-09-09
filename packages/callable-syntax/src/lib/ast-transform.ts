@@ -60,7 +60,7 @@ export function transformCode(
 
   if (options.debug && transformCount > 0) {
     console.log(
-      `[signaltree syntax-transform] transformed ${transformCount} calls`
+      `[signaltree callable-syntax] transformed ${transformCount} calls`
     );
   }
 
