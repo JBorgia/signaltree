@@ -28,6 +28,13 @@ export class NavigationComponent {
       category: 'basic',
     },
     {
+      id: 'callable-syntax',
+      title: 'Callable Syntax',
+      description: 'Unified callable API: tree.$.user.name("value")',
+      route: '/callable-syntax',
+      category: 'basic',
+    },
+    {
       id: 'async',
       title: 'Async Operations',
       description: 'Async state management patterns',
