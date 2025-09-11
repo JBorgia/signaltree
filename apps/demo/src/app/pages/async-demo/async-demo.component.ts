@@ -63,13 +63,13 @@ class MockApiService {
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="container mx-auto p-6">
-      <h1 class="text-3xl font-bold mb-6">SignalTree Async Demo</h1>
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <h1 class="text-2xl sm:text-3xl font-bold mb-6">SignalTree Async Demo</h1>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         <!-- API Operations -->
-        <div class="bg-white rounded-lg shadow p-6">
-          <h2 class="text-xl font-semibold mb-4">API Operations</h2>
+        <div class="bg-white rounded-lg shadow p-4 sm:p-6">
+          <h2 class="text-lg sm:text-xl font-semibold mb-4">API Operations</h2>
 
           <div class="space-y-4">
             <!-- Load Users -->
@@ -129,15 +129,24 @@ class MockApiService {
                   placeholder="User email..."
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <button
-                  (click)="createUser()"
-                  [disabled]="
-                    loading() || !newUserName.trim() || !newUserEmail.trim()
-                  "
-                  class="w-full px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {{ loading() ? 'Creating...' : 'Create User' }}
-                </button>
+                <div class="flex gap-2">
+                  <button
+                    (click)="generateRandomUser()"
+                    [disabled]="loading()"
+                    class="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Generate
+                  </button>
+                  <button
+                    (click)="createUser()"
+                    [disabled]="
+                      loading() || !newUserName.trim() || !newUserEmail.trim()
+                    "
+                    class="flex-1 px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {{ loading() ? 'Creating...' : 'Create User' }}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -499,6 +508,39 @@ export class AsyncDemoComponent {
     if (!this.searchQuery().trim()) return;
     await this.searchUsersAction.execute(this.searchQuery());
     // Store already updated via action
+  }
+
+  generateRandomUser() {
+    const firstNames = [
+      'Alex',
+      'Jordan',
+      'Casey',
+      'Taylor',
+      'Morgan',
+      'Avery',
+      'Riley',
+      'Jamie',
+      'Drew',
+      'Blake',
+    ];
+    const lastNames = [
+      'Smith',
+      'Johnson',
+      'Williams',
+      'Brown',
+      'Jones',
+      'Garcia',
+      'Miller',
+      'Davis',
+      'Rodriguez',
+      'Martinez',
+    ];
+
+    const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+    const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+
+    this.newUserName = `${firstName} ${lastName}`;
+    this.newUserEmail = `${firstName.toLowerCase()}.${lastName.toLowerCase()}@example.com`;
   }
 
   async createUser() {

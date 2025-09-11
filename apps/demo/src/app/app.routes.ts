@@ -108,6 +108,20 @@ export const appRoutes: Route[] = [
         './components/performance-dashboard/performance-dashboard.component'
       ).then((c) => c.PerformanceDashboardComponent),
   },
+  {
+    path: 'library-comparison',
+    loadComponent: () =>
+      import('./library-comparison.component').then(
+        (c) => c.LibraryComparisonComponent
+      ),
+  },
+  {
+    path: 'realistic-comparison',
+    loadComponent: () =>
+      import(
+        './pages/realistic-comparison/realistic-comparison.component'
+      ).then((c) => c.RealisticComparisonComponent),
+  },
 
   // Existing pages
   {

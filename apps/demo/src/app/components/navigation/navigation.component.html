@@ -1,24 +1,25 @@
 <nav class="bg-blue-900 text-white p-4">
   <div class="container mx-auto">
-    <h1 class="text-2xl font-bold mb-4">🚀 Signal Tree Demo</h1>
+    <h1 class="text-xl sm:text-2xl font-bold mb-4">🚀 Signal Tree Demo</h1>
 
-    <div class="grid grid-cols-3 md:grid-cols-2 lg:grid-cols-5 gap-4">
+    <div class="flex flex-wrap gap-6">
       <div *ngFor="let category of categories" class="space-y-2">
-        <h3 class="font-semibold text-blue-200 uppercase text-sm tracking-wide">
+        <h3
+          class="font-semibold text-blue-200 uppercase text-sm tracking-wide px-3"
+        >
           {{ getCategoryLabel(category) }}
         </h3>
-        <ul class="space-y-1">
-          <li *ngFor="let example of getExamplesByCategory(category)">
-            <a
-              [routerLink]="example.route"
-              routerLinkActive="bg-blue-700"
-              class="block px-3 py-2 rounded text-sm hover:bg-blue-800 transition-colors"
-              [attr.title]="example.description"
-            >
-              {{ example.title }}
-            </a>
-          </li>
-        </ul>
+        <div class="space-y-1">
+          <a
+            *ngFor="let example of getExamplesByCategory(category)"
+            [routerLink]="example.route"
+            routerLinkActive="bg-blue-700"
+            class="block px-3 py-2 rounded text-sm hover:bg-blue-800 transition-colors min-h-touch"
+            [attr.title]="example.description"
+          >
+            {{ example.title }}
+          </a>
+        </div>
       </div>
     </div>
   </div>

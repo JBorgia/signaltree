@@ -21,7 +21,7 @@ SignalTree's recursive typing system isn't just about developer experience—it'
 | ----------------------------- | ----------------------------------- | ------------------------------- | --------------- |
 | **Type Resolution**           | Runtime type checking (~15-25KB)    | Compile-time resolution (0KB)   | **100% saving** |
 | **Deep Nesting Support**      | Manual typing definitions (~5-10KB) | Generated type inference (0KB)  | **100% saving** |
-| **Proxy-based Architecture**  | Heavy runtime proxies (~8-15KB)     | Lazy signal creation (~7.1KB)   | **50% saving**  |
+| **Proxy-based Architecture**  | Heavy runtime proxies (~8-15KB)     | Lazy signal creation (~7.20KB)  | **50% saving**  |
 | **State Management Overhead** | Boilerplate + runtime (~20-30KB)    | Zero-cost abstractions (~3KB)   | **85% saving**  |
 
 #### Type-level optimization and performance
@@ -166,10 +166,10 @@ _Performance scales predictably and remains sub-millisecond even at unlimited de
 Choose the packages you need:
 
 ```bash
-# Core package (required) - 7.25KB with deep recursive typing!
+# Core package (required) - 7.20KB with deep recursive typing!
 npm install @signaltree/core
 
-# Optional feature packages - Total ecosystem 27.55KB!
+# Optional feature packages - Total ecosystem 27.50KB!
 npm install @signaltree/batching        # +1.27KB - Batch updates
 npm install @signaltree/memoization     # +1.80KB - Deep caching
 npm install @signaltree/time-travel     # +1.75KB - History management
@@ -181,7 +181,7 @@ npm install @signaltree/async           # +1.80KB - Async operations
 npm install @signaltree/presets         # +0.84KB - Configuration presets
 npm install @signaltree/serialization   # +4.62KB - State serialization
 
-# Or install the complete ecosystem (27.55KB total)
+# Or install the complete ecosystem (27.50KB total)
 npm install @signaltree/core @signaltree/batching @signaltree/memoization @signaltree/time-travel @signaltree/ng-forms
 ```
 
@@ -398,7 +398,7 @@ SignalTree uses a modular architecture where each feature is an optional package
 
 ### Core Package (Required)
 
-- **@signaltree/core** (7.25KB) - Base functionality
+- **@signaltree/core** (7.20KB) - Base functionality
   - Hierarchical signal trees with type safety
   - Basic state updates with callable syntax
   - Signal value access with direct function calls
@@ -418,12 +418,12 @@ SignalTree uses a modular architecture where each feature is an optional package
 - **@signaltree/presets** (+0.84KB gzipped) - Pre-configured setups & common patterns
 - **@signaltree/ng-forms** (+3.38KB gzipped) - Complete Angular Forms integration
 
-**Total Ecosystem: 27.55KB gzipped** - Mix and match only what you need!
+**Total Ecosystem: 27.50KB gzipped** - Mix and match only what you need!
 
 ### Installation Examples
 
 ```bash
-# Minimal setup (7.25KB)
+# Minimal setup (7.20KB)
 npm install @signaltree/core
 
 # Performance-focused (13.3KB)
@@ -435,7 +435,7 @@ npm install @signaltree/core @signaltree/serialization
 # Development-enhanced (15KB)
 npm install @signaltree/core @signaltree/batching @signaltree/memoization @signaltree/devtools @signaltree/time-travel
 
-# Full-featured (27.55KB) - All packages
+# Full-featured (27.50KB) - All packages
 npm install @signaltree/core @signaltree/serialization @signaltree/batching @signaltree/memoization @signaltree/middleware @signaltree/async @signaltree/entities @signaltree/devtools @signaltree/time-travel @signaltree/presets @signaltree/ng-forms
 
 # Use presets for common combinations
@@ -446,7 +446,7 @@ npm install @signaltree/core @signaltree/presets
 
 | Package                                                   | Size    | Purpose          | Key Features                                     |
 | --------------------------------------------------------- | ------- | ---------------- | ------------------------------------------------ |
-| **[@signaltree/core](./packages/core)**                   | 7.25KB  | Foundation       | Hierarchical signals, state updates, composition |
+| **[@signaltree/core](./packages/core)**                   | 7.20KB  | Foundation       | Hierarchical signals, state updates, composition |
 | **[@signaltree/serialization](./packages/serialization)** | +4.62KB | Persistence      | State serialization, SSR, time-travel debugging  |
 | **[@signaltree/batching](./packages/batching)**           | +1.27KB | Performance      | Batch updates, reduce re-renders                 |
 | **[@signaltree/memoization](./packages/memoization)**     | +1.80KB | Caching          | Intelligent caching, performance optimization    |
@@ -853,8 +853,8 @@ The API remains 100% compatible - only the import statements change!
 | **Philosophy**             |        Tree-based, Signal-first        |      Redux pattern      |     Entity-focused      |          Functional           |     RxJS-centric      |     Observable objects      |         Decorator-based          |     Primitive signals      |
 | **Learning Curve**         |       ⭐⭐⭐⭐⭐<br/>_Very Easy_       |    ⭐⭐<br/>_Steep_     |  ⭐⭐⭐<br/>_Moderate_  |      ⭐⭐⭐⭐<br/>_Easy_      | ⭐⭐⭐<br/>_Moderate_ |     ⭐⭐⭐⭐<br/>_Easy_     |      ⭐⭐⭐<br/>_Moderate_       | ⭐⭐⭐⭐⭐<br/>_Very Easy_ |
 | **Boilerplate**            |         🏆<br/>_Very Minimal_          |   ❌<br/>_Extensive_    |    ⚠️<br/>_Moderate_    |       🏆<br/>_Minimal_        |   ⚠️<br/>_Moderate_   |      🏆<br/>_Minimal_       |        ⚠️<br/>_Moderate_         |       ✅<br/>_None_        |
-| **Bundle Size (min)**      |         🏆<br/>_~7.25KB core_          |     ❌<br/>_~25KB_      |     ❌<br/>_~20KB_      |         ✅<br/>_~2KB_         |    ❌<br/>_~25KB_     |       ❌<br/>_~30KB_        |          ❌<br/>_~25KB_          |        🏆<br/>_0KB_        |
-| **Bundle Size (full)**     |           🏆<br/>_~27.55KB_            |     ❌<br/>_~50KB+_     |     ❌<br/>_~30KB_      |        ✅<br/>_~10KB_         |    ❌<br/>_~25KB_     |       ❌<br/>_~40KB_        |          ❌<br/>_~35KB_          |        🏆<br/>_0KB_        |
+| **Bundle Size (min)**      |         🏆<br/>_~7.20KB core_          |     ❌<br/>_~25KB_      |     ❌<br/>_~20KB_      |         ✅<br/>_~2KB_         |    ❌<br/>_~25KB_     |       ❌<br/>_~30KB_        |          ❌<br/>_~25KB_          |        🏆<br/>_0KB_        |
+| **Bundle Size (full)**     |           🏆<br/>_~27.50KB_            |     ❌<br/>_~50KB+_     |     ❌<br/>_~30KB_      |        ✅<br/>_~10KB_         |    ❌<br/>_~25KB_     |       ❌<br/>_~40KB_        |          ❌<br/>_~35KB_          |        🏆<br/>_0KB_        |
 | **Memory Efficiency**      |           🏆<br/>_Excellent_           |    ⚠️<br/>_Standard_    |    ⚠️<br/>_Standard_    |         ✅<br/>_Good_         |   ⚠️<br/>_Standard_   |        ✅<br/>_Good_        |        ⚠️<br/>_Standard_         |       ✅<br/>_Good_        |
 | **Type Safety**            |        🏆<br/>_Full inference_         | ✅<br/>_Manual typing_  |      ✅<br/>_Good_      |      🏆<br/>_Excellent_       |     ✅<br/>_Good_     |      ⚠️<br/>_Limited_       |          ✅<br/>_Good_           |      ✅<br/>_Native_       |
 | **Performance**            |          🏆<br/>_Exceptional_          |      🔄<br/>_Good_      |      🔄<br/>_Good_      |      ⚡<br/>_Excellent_       |     🔄<br/>_Good_     |     ⚡<br/>_Excellent_      |          🔄<br/>_Good_           |     ⚡<br/>_Excellent_     |
@@ -2242,7 +2242,7 @@ class FormComponent {
 
 ## 📚 API Reference
 
-### Core Package (@signaltree/core - 7.25KB)
+### Core Package (@signaltree/core - 7.20KB)
 
 ```typescript
 import { signalTree } from '@signaltree/core';
@@ -2534,7 +2534,7 @@ import { signalTree } from '@signaltree/core';
 import { withEntities } from '@signaltree/entities';
 import { withAsync } from '@signaltree/async';
 
-// Just 7.25KB core + entities + async - perfect for simple applications
+// Just 7.20KB core + entities + async - perfect for simple applications
 const appTree = signalTree({
   user: { name: '', email: '' },
   todos: [] as Todo[],
@@ -2698,7 +2698,7 @@ SignalTree is built with a modular architecture that allows you to choose exactl
 
 ### Core Principles
 
-- **Incremental Adoption**: Start with `@signaltree/core` (7.25KB) and add features as needed
+- **Incremental Adoption**: Start with `@signaltree/core` (7.20KB) and add features as needed
 - **Tree Shaking**: Only bundle what you use
 - **Type Safety**: Full TypeScript support with intelligent inference
 - **Performance**: Optimized for minimal re-renders and memory usage

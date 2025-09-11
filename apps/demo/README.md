@@ -67,7 +67,8 @@ pnpm nx test core --testNamePattern="recursive performance"
 ```
 apps/demo/src/app/
 ├── components/
-│   ├── performance-dashboard.component.ts    # Main performance dashboard
+│   ├── performance-dashboard/
+│   │   └── performance-dashboard.component.ts # Main performance dashboard
 │   ├── comparison-demo.component.ts          # Framework comparisons
 │   ├── features-showcase.component.ts        # Feature demonstrations
 │   └── interactive-examples.component.ts     # Hands-on examples

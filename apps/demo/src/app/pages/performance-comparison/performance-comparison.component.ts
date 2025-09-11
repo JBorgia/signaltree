@@ -90,7 +90,7 @@ interface TestState {
             <button
               (click)="runBenchmarks()"
               [disabled]="isRunning"
-              class="w-full px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="w-full px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed min-h-touch"
             >
               {{ isRunning ? 'Running...' : 'Run Benchmarks' }}
             </button>
@@ -98,7 +98,7 @@ interface TestState {
             <button
               (click)="clearResults()"
               [disabled]="results().length === 0"
-              class="w-full px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="w-full px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed min-h-touch"
             >
               Clear Results
             </button>
@@ -106,8 +106,10 @@ interface TestState {
         </div>
 
         <!-- Live Performance -->
-        <div class="bg-white rounded-lg shadow p-6">
-          <h2 class="text-xl font-semibold mb-4">Live Performance Demo</h2>
+        <div class="bg-white rounded-lg shadow p-4 sm:p-6">
+          <h2 class="text-lg sm:text-xl font-semibold mb-4">
+            Live Performance Demo
+          </h2>
 
           <div class="space-y-4">
             <div>

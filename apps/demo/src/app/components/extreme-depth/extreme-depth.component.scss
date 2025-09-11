@@ -7,21 +7,26 @@
 
 .header {
   text-align: center;
-  margin-bottom: 3rem;
+  margin-bottom: var(--space-12);
 
   h1 {
     font-size: 3rem;
     font-weight: 700;
-    background: linear-gradient(135deg, #ff6b6b, #ee5a24, #ff9ff3);
+    background: linear-gradient(
+      135deg,
+      var(--color-error-500),
+      var(--color-warning-500),
+      var(--color-purple-400)
+    );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    margin-bottom: 1rem;
+    margin-bottom: var(--space-4);
   }
 
   .subtitle {
     font-size: 1.2rem;
-    color: #6b7280;
+    color: var(--color-neutral-500);
     max-width: 600px;
     margin: 0 auto;
     line-height: 1.6;
@@ -29,15 +34,15 @@
 }
 
 .demo-section {
-  background: #f8fafc;
-  border-radius: 12px;
-  padding: 2rem;
-  margin-bottom: 3rem;
-  border: 1px solid #e2e8f0;
+  background: var(--color-neutral-50);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8);
+  margin-bottom: var(--space-12);
+  border: 1px solid var(--color-neutral-200);
 
   h2 {
-    color: #1f2937;
-    margin-bottom: 1.5rem;
+    color: var(--color-neutral-900);
+    margin-bottom: var(--space-6);
     font-size: 1.5rem;
     font-weight: 600;
   }
@@ -45,9 +50,9 @@
 
 .structure-demo {
   .path-display {
-    background: #ffffff;
-    padding: 1.5rem;
-    border-radius: 8px;
+    background: white;
+    padding: var(--space-6);
+    border-radius: var(--radius-lg);
     margin-bottom: 2rem;
     border: 1px solid #d1d5db;
 
@@ -59,40 +64,44 @@
     }
 
     .path {
-      background: #f3f4f6;
-      color: #1f2937;
-      padding: 1rem;
-      border-radius: 6px;
-      font-family: 'Fira Code', 'Courier New', monospace;
+      background: var(--color-neutral-100);
+      color: var(--color-neutral-900);
+      padding: var(--space-4);
+      border-radius: var(--radius-md);
+      font-family: var(--font-family-mono);
       font-size: 0.875rem;
       display: block;
       overflow-x: auto;
-      border: 1px solid #d1d5db;
+      border: 1px solid var(--color-neutral-300);
     }
   }
 
   .controls {
     display: flex;
-    gap: 1rem;
-    margin-bottom: 2rem;
+    gap: var(--space-4);
+    margin-bottom: var(--space-8);
     flex-wrap: wrap;
 
     .btn {
-      padding: 0.75rem 1.5rem;
-      border-radius: 8px;
+      padding: var(--space-3) var(--space-6);
+      border-radius: var(--radius-lg);
       font-weight: 500;
       border: none;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all var(--transition-fast);
       font-size: 0.875rem;
 
       &.primary {
-        background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+        background: linear-gradient(
+          135deg,
+          var(--color-error-500),
+          var(--color-warning-500)
+        );
         color: white;
 
         &:hover:not(:disabled) {
           transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+          box-shadow: var(--shadow-lg);
         }
 
         &:disabled {

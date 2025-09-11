@@ -1,7 +1,12 @@
 .container {
   max-width: 1200px;
 }
+
 a:-webkit-any-link {
   font-weight: bold;
-  color: white !important;
+  color: var(--color-neutral-900) !important;
+
+  &:hover {
+    color: var(--color-primary-700) !important;
+  }
 }

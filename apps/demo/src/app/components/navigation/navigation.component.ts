@@ -58,6 +58,20 @@ export class NavigationComponent {
       category: 'performance',
     },
     {
+      id: 'library-comparison',
+      title: 'Library Comparison',
+      description: 'Compare SignalTree vs other state libraries',
+      route: '/library-comparison',
+      category: 'performance',
+    },
+    {
+      id: 'realistic-comparison',
+      title: 'Realistic Comparison',
+      description: 'Real-world scenarios where SignalTree excels',
+      route: '/realistic-comparison',
+      category: 'performance',
+    },
+    {
       id: 'batching',
       title: 'Batching Demo',
       description: 'Compare batched vs unbatched updates',
@@ -75,6 +89,27 @@ export class NavigationComponent {
     },
 
     // Advanced Examples
+    {
+      id: 'memoization',
+      title: 'Memoization',
+      description: 'Performance optimization with memoization',
+      route: '/memoization',
+      category: 'advanced',
+    },
+    {
+      id: 'time-travel',
+      title: 'Time Travel',
+      description: 'State history and debugging',
+      route: '/time-travel',
+      category: 'advanced',
+    },
+    {
+      id: 'devtools',
+      title: 'DevTools',
+      description: 'Developer tools and debugging',
+      route: '/devtools',
+      category: 'advanced',
+    },
     {
       id: 'middleware',
       title: 'Middleware',
