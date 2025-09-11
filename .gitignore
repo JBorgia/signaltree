@@ -57,6 +57,10 @@ simple-memory-test.mjs
 *_SUMMARY.md
 OPTIMIZATION_*.md
 
+# Performance logs (stored in artifacts/performance-logs/)
+*-performance.log
+*-bundle-size.log
+
 # Temporary files
 error.log
 *.tmp
