@@ -157,6 +157,25 @@ node scripts/performance/bundle-analysis.mjs
 node scripts/performance/developer-experience.mjs
 ```
 
+### Performance Shell Scripts
+
+Location: `scripts/` (root level)
+
+- `comprehensive-performance-test.sh` — Complete performance test suite
+- `performance-analysis.sh` — Performance analysis and reporting
+- `performance-comparison.sh` — Branch-to-branch performance comparison
+
+```bash
+# Run comprehensive performance tests
+./scripts/comprehensive-performance-test.sh
+
+# Analyze performance metrics
+./scripts/performance-analysis.sh
+
+# Compare performance between branches
+./scripts/performance-comparison.sh
+```
+
 #### Perf suite (recommended)
 
 Run the unified suite that benchmarks recursive performance, measures callable Proxy overhead, and analyzes gzipped bundle sizes. It writes structured artifacts under `artifacts/` and enforces soft constraints.
