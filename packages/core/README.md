@@ -13,6 +13,36 @@ SignalTree Core is a lightweight (about 7.20KB gzipped) package that provides:
 - Small API surface with zero-cost abstractions
 - Compact bundle size suited for production
 
+### Callable leaf signals (DX sugar only)
+
+SignalTree provides TypeScript support for callable syntax on leaf signals as developer experience sugar:
+
+```typescript
+// TypeScript accepts this syntax (with proper tooling):
+tree.$.name('Jane'); // Set value
+tree.$.count((n) => n + 1); // Update with function
+
+// At build time, transforms convert to:
+tree.$.name.set('Jane'); // Direct Angular signal API
+tree.$.count.update((n) => n + 1); // Direct Angular signal API
+
+// Reading always works directly:
+const name = tree.$.name(); // No transform needed
+```
+
+**Key Points:**
+
+- **Zero runtime overhead**: No Proxy wrappers or runtime hooks
+- **Build-time only**: AST transform converts callable syntax to direct `.set/.update` calls
+- **Optional**: Use `@signaltree/callable-syntax` transform or stick with direct `.set/.update`
+- **Type-safe**: Full TypeScript support via module augmentation
+
+**Function-valued leaves:**
+When a leaf stores a function as its value, use direct `.set(fn)` to assign. Callable `sig(fn)` is treated as an updater.
+
+**Setup:**
+Install `@signaltree/callable-syntax` and configure your build tool to apply the transform. Without the transform, use `.set/.update` directly.
+
 ### Depth performance (Sept 2025, averaged)
 
 Indicative measurements across different depths:

@@ -213,6 +213,31 @@ tree((state) => ({
 }));
 ```
 
+### Optional Callable Syntax (Zero Runtime Cost)
+
+For enhanced developer experience, install the optional transform package:
+
+```bash
+npm install -D @signaltree/callable-syntax
+```
+
+This enables elegant callable syntax that compiles away completely:
+
+```typescript
+// With transform (elegant DX) → compiles to direct calls (zero overhead)
+tree.$.user.name('Jane Doe'); // → tree.$.user.name.set('Jane Doe');
+tree.$.count((n) => n + 1); // → tree.$.count.update(n => n + 1);
+
+// Getters work the same either way:
+const name = tree.$.user.name(); // No transformation needed
+```
+
+✅ **Pure DX Enhancement**: Zero runtime overhead, compiles away completely  
+✅ **TypeScript Support**: Full type checking and IntelliSense  
+✅ **Build-Time Only**: No impact on bundle size or performance
+
+See [`@signaltree/callable-syntax`](./packages/callable-syntax/README.md) for setup guides.
+
 ### Composed Usage (Modular Features)
 
 ```typescript

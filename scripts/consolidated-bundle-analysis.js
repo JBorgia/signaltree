@@ -58,14 +58,18 @@ class BundleAnalyzer {
     return zlib.gzipSync(buffer).length;
   }
 
-  execCommand(command, description) {
+  execCommand(
+    command,
+    description,
+    { continueOnError } = { continueOnError: false }
+  ) {
     this.log(`${description}...`);
     try {
       execSync(command, { stdio: 'pipe', cwd: process.cwd() });
       this.log(`${description} completed`, 'success');
     } catch (error) {
       this.log(`${description} failed: ${error.message}`, 'error');
-      throw error;
+      if (!continueOnError) throw error;
     }
   }
 
@@ -73,7 +77,7 @@ class BundleAnalyzer {
     this.log('🧹 Cleaning previous builds...');
 
     // Clear Nx cache and dist folder
-    this.execCommand('npx nx reset', 'Clearing Nx cache');
+    this.execCommand('pnpm nx reset', 'Clearing Nx cache');
     this.execCommand('rm -rf dist', 'Removing dist folder');
 
     this.log('🔨 Building all packages...');
@@ -81,14 +85,15 @@ class BundleAnalyzer {
     // Build all packages
     const packageNames = packages.map((p) => p.name).join(',');
     this.execCommand(
-      `npx nx run-many --target=build --projects=${packageNames} --configuration=production`,
+      `pnpm nx run-many --target=build --projects=${packageNames} --configuration=production`,
       'Building SignalTree packages'
     );
 
     // Build demo app
     this.execCommand(
-      'npx nx build demo --configuration=production',
-      'Building demo application'
+      'pnpm nx build demo --configuration=production',
+      'Building demo application',
+      { continueOnError: true }
     );
   }
 

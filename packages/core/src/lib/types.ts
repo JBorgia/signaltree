@@ -10,6 +10,33 @@ import { Signal, WritableSignal } from '@angular/core';
 // ============================================
 
 /**
+ * Helper type preventing ambiguity when a node itself stores a function value.
+ * In that case direct callable set(fn) would clash with the update(fn) signature.
+ * We exclude raw function values from the direct-set overload so users must use .set(fn)
+ * (after transform) instead of callable form, while updater form still works.
+ */
+export type NotFn<T> = T extends (...args: unknown[]) => unknown ? never : T;
+
+// ============================================
+// TYPESCRIPT AUGMENTATIONS FOR DX SUGAR
+// ============================================
+
+/**
+ * Augment Angular's WritableSignal to support callable syntax for DX.
+ * This is purely TypeScript-level - the transform converts these calls to .set/.update
+ */
+declare module '@angular/core' {
+  interface WritableSignal<T> {
+    (value: NotFn<T>): void;
+    (updater: (current: T) => T): void;
+  }
+}
+
+// ============================================
+// CORE TYPE DEFINITIONS
+// ============================================
+
+/**
  * Primitive types for type checking
  */
 export type Primitive =
@@ -74,14 +101,6 @@ export type Unwrap<T> = T extends WritableSignal<infer U>
   : T;
 
 /**
- * Helper type preventing ambiguity when a node itself stores a function value.
- * In that case direct callable set(fn) would clash with the update(fn) signature.
- * We exclude raw function values from the direct-set overload so users must use .set(fn)
- * (after transform) instead of callable form, while updater form still works.
- */
-export type NotFn<T> = T extends (...args: unknown[]) => unknown ? never : T;
-
-/**
  * Node accessor interface - unified API for get/set/update via function calls.
  * Overloads:
  *  (): T                     - getter
@@ -90,7 +109,7 @@ export type NotFn<T> = T extends (...args: unknown[]) => unknown ? never : T;
  */
 export interface NodeAccessor<T> {
   (): T;
-  (value: NotFn<T>): void;
+  (value: T): void;
   (updater: (current: T) => T): void;
 }
 

@@ -13,49 +13,24 @@ interface CoreState {
 }
 
 /**
- * CoreDemoComponent - Demonstrates SignalTree with Callable Syntax
+ * SignalTree Core Demo - Real Implementation Example
  *
- * 🚀 CALLABLE SYNTAX LIVE DEMO WITH TYPE SAFETY:
- * This component uses the @signaltree/callable-syntax with full TypeScript support!
+ * This demonstrates how a real development team would use SignalTree:
  *
- * ✅ NO @ts-nocheck needed - TypeScript understands the callable patterns
- * ✅ Full type safety with NotFn<T> helper preventing function conflicts
- * ✅ Seamless DX - write clean syntax, get transformed output
+ * 1. Install: npm install @signaltree/core
+ * 2. Optional: npm install -D @signaltree/callable-syntax (for enhanced DX)
+ * 3. Configure transform in build pipeline (Vite/Webpack/Angular)
+ * 4. Use callable syntax in development, transforms to .set/.update at build time
  *
- * 🎯 What you're seeing:
- * - tree.$.prop('value') - Direct value setting (clean & type-safe)
- * - tree.$.prop(fn) - Function updates (clean & type-safe)
- * - Full IntelliSense support with proper error checking
+ * Benefits:
+ * - Zero runtime overhead (pure Angular signals)
+ * - Enhanced developer experience with callable syntax
+ * - Full TypeScript safety
+ * - Transforms compile away completely
  *
- * 🔧 Transform Examples (build-time magic):
-
-import { PerformanceMonitorService } from '../../services/performance-monitor.service';
-import { generateTodos, Todo } from '../../shared/models';
-
-interface CoreState {
-  todos: Todo[];
-  filter: 'all' | 'active' | 'completed';
-  newTodoTitle: string;
-}
-
-/**
- * CoreDemoComponent - Demonstrates SignalTree with Callable Syntax
- *
- * 🚀 CALLABLE SYNTAX LIVE DEMO:
- * This component uses the actual @signaltree/callable-syntax in a real component.
- *
- * ⚠️  @ts-nocheck is required because this shows pre-transform callable syntax.
- *
- * 🎯 What you're seeing:
- * - tree.$.prop('value') - Direct value setting (transforms to .set())
- * - tree.$.prop(fn) - Function updates (transforms to .update())
- * - TypeScript errors are EXPECTED and INTENTIONAL
- * - Build-time transform would convert these to working .set()/.update() calls
- *
- * � Transform Examples:
- * - this.store.state.todos(sampleTodos)           → this.store.state.todos.set(sampleTodos)
- * - this.store.state.filter(filter)               → this.store.state.filter.set(filter)
- * - this.store.state.todos(todos => [...todos])   → this.store.state.todos.update(todos => [...todos])
+ * This demo shows both patterns:
+ * - Callable syntax (tree.$.prop('value')) - what developers write
+ * - Direct syntax (tree.$.prop.set('value')) - what runs at runtime
  */
 @Component({
   selector: 'app-core-demo',
@@ -319,6 +294,8 @@ interface CoreState {
 })
 export class CoreDemoComponent {
   private performanceMonitor = inject(PerformanceMonitorService);
+  // Use a monotonic counter for IDs to avoid collisions in fast test runs
+  private nextId = 1;
 
   private store = signalTree<CoreState>({
     todos: [],
@@ -393,14 +370,18 @@ export class CoreDemoComponent {
 
     const startTime = performance.now();
     const newTodo: Todo = {
-      id: Date.now(),
+      id: this.nextId++,
       title: this.newTodoTitle.trim(),
       completed: false,
       createdAt: new Date(),
     };
 
-    // 🔥 CALLABLE SYNTAX: Function argument transforms to .update()
-    this.store.state.todos((todos) => [...todos, newTodo]);
+    // Real team usage with transform enabled:
+    // this.store.state.todos(todos => [...todos, newTodo]);
+    //
+    // Transforms at build time to:
+    this.store.state.todos.update((todos) => [...todos, newTodo]);
+
     this.newTodoTitle = '';
     this.trackOperation('Add Todo');
 
@@ -413,8 +394,13 @@ export class CoreDemoComponent {
   }
 
   toggleTodo(id: number) {
-    // 🔥 CALLABLE SYNTAX: Function argument transforms to .update()
-    this.store.state.todos((todos) =>
+    // Real team usage with transform:
+    // this.store.state.todos(todos => todos.map(todo =>
+    //   todo.id === id ? { ...todo, completed: !todo.completed } : todo
+    // ));
+    //
+    // Transforms to:
+    this.store.state.todos.update((todos) =>
       todos.map((todo) =>
         todo.id === id ? { ...todo, completed: !todo.completed } : todo
       )
@@ -423,27 +409,43 @@ export class CoreDemoComponent {
   }
 
   removeTodo(id: number) {
-    // 🔥 CALLABLE SYNTAX: Function argument transforms to .update()
-    this.store.state.todos((todos) => todos.filter((todo) => todo.id !== id));
+    // Real team usage:
+    // this.store.state.todos(todos => todos.filter(todo => todo.id !== id));
+    //
+    // Transforms to:
+    this.store.state.todos.update((todos) =>
+      todos.filter((todo) => todo.id !== id)
+    );
     this.trackOperation('Remove Todo');
   }
 
   setFilter(filter: 'all' | 'active' | 'completed') {
-    // 🔥 CALLABLE SYNTAX: Value argument transforms to .set()
-    this.store.state.filter(filter);
+    // Real team usage:
+    // this.store.state.filter(filter);
+    //
+    // Transforms to:
+    this.store.state.filter.set(filter);
     this.trackOperation('Set Filter');
   }
 
   clearCompleted() {
-    // 🔥 CALLABLE SYNTAX: Function argument transforms to .update()
-    this.store.state.todos((todos) => todos.filter((todo) => !todo.completed));
+    // Real team usage:
+    // this.store.state.todos(todos => todos.filter(todo => !todo.completed));
+    //
+    // Transforms to:
+    this.store.state.todos.update((todos) =>
+      todos.filter((todo) => !todo.completed)
+    );
     this.trackOperation('Clear Completed');
   }
 
   loadSampleData() {
     const sampleTodos = generateTodos(10);
-    // 🔥 CALLABLE SYNTAX: Value argument transforms to .set()
-    this.store.state.todos(sampleTodos);
+    // Real team usage:
+    // this.store.state.todos(sampleTodos);
+    //
+    // Transforms to:
+    this.store.state.todos.set(sampleTodos);
     this.trackOperation('Load Sample Data');
   }
 

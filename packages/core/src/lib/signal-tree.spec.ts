@@ -52,6 +52,53 @@ describe('signalTree', () => {
     expect(tree.state.user.name()).toBe('Jane');
   });
 
+  it('supports leaf get and direct .set/.update (callable via transform)', () => {
+    const tree = signalTree({
+      n: 1,
+      user: { name: 'A' },
+      items: [] as number[],
+    });
+
+    // getter
+    expect(tree.$.n()).toBe(1);
+    expect(tree.$.user.name()).toBe('A');
+    expect(tree.$.items()).toEqual([]);
+
+    // setter (callable form requires transform; direct API used here)
+    tree.$.n.set(2);
+    tree.$.user.name.set('B');
+    tree.$.items.set([1]);
+
+    expect(tree.$.n()).toBe(2);
+    expect(tree.$.user.name()).toBe('B');
+    expect(tree.$.items()).toEqual([1]);
+
+    // updater
+    tree.$.n.update((v) => v + 1);
+    tree.$.items.update((arr) => arr.concat(2));
+
+    expect(tree.$.n()).toBe(3);
+    expect(tree.$.items()).toEqual([1, 2]);
+  });
+
+  it('preserves external writable signals (callable via transform)', () => {
+    const external = signal(10);
+    const tree = signalTree({ external });
+
+    // getter
+    expect(tree.$.external()).toBe(10);
+    // setter (callable form requires transform; direct API still available)
+    tree.$.external.set(20);
+    expect(tree.$.external()).toBe(20);
+    // updater
+    tree.$.external.update((v: number) => v + 1);
+    expect(tree.$.external()).toBe(21);
+
+    // original signal still updates
+    external.set(30);
+    expect(tree.$.external()).toBe(30);
+  });
+
   it('should provide with method for composition', () => {
     const tree = signalTree({ count: 0 });
 
@@ -546,7 +593,7 @@ describe('signalTree', () => {
   });
 
   describe('Signal Preservation', () => {
-    it('should preserve existing signals in initial state', () => {
+    it('should preserve existing signals behavior in initial state (identity may differ due to callable wrapper)', () => {
       const existingSignal = signal('signal value');
       const existingNestedSignal = signal({ deep: 'signal object' });
 
@@ -567,9 +614,11 @@ describe('signalTree', () => {
         deep: 'signal object',
       });
 
-      // Test that the original signals are preserved
+      // Identity preserved for existing signals (no runtime wrapping)
       expect(tree.state.existingSignal).toBe(existingSignal);
+      expect('set' in tree.state.existingSignal).toBe(true);
       expect(tree.state.nested.existingNestedSignal).toBe(existingNestedSignal);
+      expect('set' in tree.state.nested.existingNestedSignal).toBe(true);
     });
   });
 

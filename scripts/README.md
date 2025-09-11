@@ -157,6 +157,42 @@ node scripts/performance/bundle-analysis.mjs
 node scripts/performance/developer-experience.mjs
 ```
 
+#### Perf suite (recommended)
+
+Run the unified suite that benchmarks recursive performance, measures callable Proxy overhead, and analyzes gzipped bundle sizes. It writes structured artifacts under `artifacts/` and enforces soft constraints.
+
+```bash
+# Fast path from repo root
+npm run perf:run
+
+# Or directly
+node scripts/perf-suite.js
+```
+
+Artifacts:
+
+- `artifacts/perf-summary.json` — latest run: perf means, proxy overhead, package gzip sizes, deltas vs baseline, and constraint pass/fail
+- `artifacts/perf-baseline.json` — stored baseline snapshot used for delta/constraint comparison
+
+Environment flags:
+
+- `PERF_UPDATE_BASELINE=1` — overwrite baseline with current results
+- `PERF_OVERHEAD_BUDGET_PCT=NN` — allowed regression percent vs baseline (default 25)
+- `PERF_ENFORCE_CLAIMS=1` — also fail constraints if any package exceeds its claimed size (not just max allowed)
+
+Typical workflow:
+
+```bash
+# Update baseline after an intentional perf/size improvement
+PERF_UPDATE_BASELINE=1 npm run perf:run
+
+# Tighten regression budget in CI
+PERF_OVERHEAD_BUDGET_PCT=15 npm run perf:run
+
+# Enforce claims in addition to hard caps
+PERF_ENFORCE_CLAIMS=1 npm run perf:run
+```
+
 Expected results (examples):
 
 ```

@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-09-05T15:20:59.966Z",
+  "timestamp": "2025-09-11T14:30:11.708Z",
   "runs": 3,
   "summary": {
     "basic": {
@@ -11,9 +11,9 @@
     },
     "medium": {
       "runs": 3,
-      "mean": 0.001,
-      "min": 0.001,
-      "max": 0.001,
+      "mean": 0.002,
+      "min": 0.002,
+      "max": 0.002,
       "stddev": 0
     },
     "extreme": {
@@ -25,100 +25,417 @@
     },
     "unlimited": {
       "runs": 3,
-      "mean": 0.0030000000000000005,
+      "mean": 0.0033333333333333335,
       "min": 0.003,
-      "max": 0.003,
-      "stddev": 4.336808689942018e-19
+      "max": 0.004,
+      "stddev": 0.0004714045207910317
     }
   },
-  "bundleResults": [
-    {
-      "package": "🧹 Cleaning previous builds...",
-      "gzippedKB": null
+  "proxyOverhead": {
+    "set": {
+      "mean": 65.26355,
+      "min": 0,
+      "max": 27958
     },
-    {
-      "package": "Clearing Nx cache...",
-      "gzippedKB": null
-    },
-    {
-      "package": "Removing dist folder...",
-      "gzippedKB": null
-    },
-    {
-      "package": "🔨 Building all packages...",
-      "gzippedKB": null
-    },
-    {
-      "package": "Building SignalTree packages...",
-      "gzippedKB": null
-    },
-    {
-      "package": "Building demo application...",
-      "gzippedKB": null
-    },
-    {
-      "package": "\\n",
-      "gzippedKB": null
-    },
-    {
-      "package": "Analyzing SignalTree Package Bundles",
-      "gzippedKB": null
-    },
-    {
-      "package": "core",
-      "gzippedKB": 7.2
-    },
-    {
-      "package": "batching",
-      "gzippedKB": 1.27
-    },
-    {
-      "package": "memoization",
-      "gzippedKB": 1.8
-    },
-    {
-      "package": "time-travel",
-      "gzippedKB": 1.75
-    },
-    {
-      "package": "async",
-      "gzippedKB": 1.8
-    },
-    {
-      "package": "entities",
-      "gzippedKB": 0.97
-    },
-    {
-      "package": "middleware",
-      "gzippedKB": 1.38
-    },
-    {
-      "package": "devtools",
-      "gzippedKB": 2.49
-    },
-    {
-      "package": "serialization",
-      "gzippedKB": 4.62
-    },
-    {
-      "package": "ng-forms",
-      "gzippedKB": 3.38
-    },
-    {
-      "package": "presets",
-      "gzippedKB": 0.84
-    },
-    {
-      "package": "\\n🎯 Analyzing Demo Application Bundle",
-      "gzippedKB": null
-    },
-    {
-      "package": "\\n🎯 Bundle Optimization Recommendations",
-      "gzippedKB": null
-    },
-    {
-      "package": "SignalTree Total 27.50KB gzipped",
-      "gzippedKB": null
+    "update": {
+      "mean": 77.1165,
+      "min": 0,
+      "max": 180542
     }
-  ]
+  },
+  "bundleResults": {
+    "packages": [
+      {
+        "name": "core",
+        "rawSize": 37311,
+        "gzipSize": 7368,
+        "claimed": 7250,
+        "maxAllowed": 7800,
+        "passed": true,
+        "claimMet": false
+      },
+      {
+        "name": "batching",
+        "rawSize": 4918,
+        "gzipSize": 1303,
+        "claimed": 1270,
+        "maxAllowed": 1400,
+        "passed": true,
+        "claimMet": false
+      },
+      {
+        "name": "memoization",
+        "rawSize": 7207,
+        "gzipSize": 1848,
+        "claimed": 1800,
+        "maxAllowed": 1900,
+        "passed": true,
+        "claimMet": false
+      },
+      {
+        "name": "time-travel",
+        "rawSize": 7702,
+        "gzipSize": 1788,
+        "claimed": 1750,
+        "maxAllowed": 1800,
+        "passed": true,
+        "claimMet": false
+      },
+      {
+        "name": "async",
+        "rawSize": 7888,
+        "gzipSize": 1847,
+        "claimed": 1800,
+        "maxAllowed": 1900,
+        "passed": true,
+        "claimMet": false
+      },
+      {
+        "name": "entities",
+        "rawSize": 4247,
+        "gzipSize": 990,
+        "claimed": 980,
+        "maxAllowed": 1000,
+        "passed": true,
+        "claimMet": false
+      },
+      {
+        "name": "middleware",
+        "rawSize": 6661,
+        "gzipSize": 1415,
+        "claimed": 1380,
+        "maxAllowed": 1450,
+        "passed": true,
+        "claimMet": false
+      },
+      {
+        "name": "devtools",
+        "rawSize": 10962,
+        "gzipSize": 2549,
+        "claimed": 2490,
+        "maxAllowed": 2600,
+        "passed": true,
+        "claimMet": false
+      },
+      {
+        "name": "serialization",
+        "rawSize": 24691,
+        "gzipSize": 4727,
+        "claimed": 4620,
+        "maxAllowed": 5000,
+        "passed": true,
+        "claimMet": false
+      },
+      {
+        "name": "ng-forms",
+        "rawSize": 15027,
+        "gzipSize": 3462,
+        "claimed": 3380,
+        "maxAllowed": 3600,
+        "passed": true,
+        "claimMet": false
+      },
+      {
+        "name": "presets",
+        "rawSize": 3281,
+        "gzipSize": 859,
+        "claimed": 840,
+        "maxAllowed": 900,
+        "passed": true,
+        "claimMet": false
+      }
+    ],
+    "demoApp": null,
+    "recommendations": [
+      {
+        "category": "General Optimization",
+        "items": [
+          "Enable tree shaking for all packages",
+          "Use dynamic imports for optional features",
+          "Consider lazy loading non-critical components",
+          "Implement bundle splitting for vendor dependencies",
+          "Add compression middleware (gzip/brotli) for serving"
+        ]
+      }
+    ],
+    "exitCode": 1
+  },
+  "baseline": {
+    "timestamp": "2025-09-11T06:29:49.324Z",
+    "proxyOverhead": {
+      "set": {
+        "mean": 63.8315,
+        "min": 0,
+        "max": 15917
+      },
+      "update": {
+        "mean": 79.6733,
+        "min": 0,
+        "max": 171500
+      }
+    },
+    "summary": {
+      "basic": {
+        "runs": 3,
+        "mean": 0.002,
+        "min": 0.002,
+        "max": 0.002,
+        "stddev": 0
+      },
+      "medium": {
+        "runs": 3,
+        "mean": 0.0016666666666666668,
+        "min": 0.001,
+        "max": 0.002,
+        "stddev": 0.0004714045207910317
+      },
+      "extreme": {
+        "runs": 3,
+        "mean": 0.002,
+        "min": 0.002,
+        "max": 0.002,
+        "stddev": 0
+      },
+      "unlimited": {
+        "runs": 3,
+        "mean": 0.0030000000000000005,
+        "min": 0.003,
+        "max": 0.003,
+        "stddev": 4.336808689942018e-19
+      }
+    },
+    "packages": [
+      {
+        "name": "core",
+        "rawSize": 38995,
+        "gzipSize": 7705,
+        "claimed": 7250,
+        "maxAllowed": 7800,
+        "passed": true,
+        "claimMet": false
+      },
+      {
+        "name": "batching",
+        "rawSize": 4918,
+        "gzipSize": 1303,
+        "claimed": 1270,
+        "maxAllowed": 1400,
+        "passed": true,
+        "claimMet": false
+      },
+      {
+        "name": "memoization",
+        "rawSize": 7207,
+        "gzipSize": 1848,
+        "claimed": 1800,
+        "maxAllowed": 1900,
+        "passed": true,
+        "claimMet": false
+      },
+      {
+        "name": "time-travel",
+        "rawSize": 7702,
+        "gzipSize": 1788,
+        "claimed": 1750,
+        "maxAllowed": 1800,
+        "passed": true,
+        "claimMet": false
+      },
+      {
+        "name": "async",
+        "rawSize": 7888,
+        "gzipSize": 1847,
+        "claimed": 1800,
+        "maxAllowed": 1900,
+        "passed": true,
+        "claimMet": false
+      },
+      {
+        "name": "entities",
+        "rawSize": 4247,
+        "gzipSize": 990,
+        "claimed": 980,
+        "maxAllowed": 1000,
+        "passed": true,
+        "claimMet": false
+      },
+      {
+        "name": "middleware",
+        "rawSize": 6661,
+        "gzipSize": 1415,
+        "claimed": 1380,
+        "maxAllowed": 1450,
+        "passed": true,
+        "claimMet": false
+      },
+      {
+        "name": "devtools",
+        "rawSize": 10962,
+        "gzipSize": 2549,
+        "claimed": 2490,
+        "maxAllowed": 2600,
+        "passed": true,
+        "claimMet": false
+      },
+      {
+        "name": "serialization",
+        "rawSize": 24691,
+        "gzipSize": 4727,
+        "claimed": 4620,
+        "maxAllowed": 5000,
+        "passed": true,
+        "claimMet": false
+      },
+      {
+        "name": "ng-forms",
+        "rawSize": 15027,
+        "gzipSize": 3462,
+        "claimed": 3380,
+        "maxAllowed": 3600,
+        "passed": true,
+        "claimMet": false
+      },
+      {
+        "name": "presets",
+        "rawSize": 3281,
+        "gzipSize": 859,
+        "claimed": 840,
+        "maxAllowed": 900,
+        "passed": true,
+        "claimMet": false
+      }
+    ]
+  },
+  "deltas": {
+    "proxyOverhead": {
+      "set": {
+        "mean": 65.26355,
+        "baseline": 63.8315,
+        "pct": 2.2434847998245333
+      },
+      "update": {
+        "mean": 77.1165,
+        "baseline": 79.6733,
+        "pct": -3.209105183292264
+      }
+    },
+    "perf": {
+      "basic": {
+        "mean": 0.002,
+        "baseline": 0.002,
+        "pct": 0
+      },
+      "medium": {
+        "mean": 0.002,
+        "baseline": 0.0016666666666666668,
+        "pct": 19.999999999999996
+      },
+      "extreme": {
+        "mean": 0.002,
+        "baseline": 0.002,
+        "pct": 0
+      },
+      "unlimited": {
+        "mean": 0.0033333333333333335,
+        "baseline": 0.0030000000000000005,
+        "pct": 11.1111111111111
+      }
+    },
+    "packages": [
+      {
+        "name": "core",
+        "gzipSize": 7368,
+        "gzipSizeBaseline": 7705,
+        "gzipSizePct": -4.373783257624919,
+        "passed": true,
+        "maxAllowed": 7800
+      },
+      {
+        "name": "batching",
+        "gzipSize": 1303,
+        "gzipSizeBaseline": 1303,
+        "gzipSizePct": 0,
+        "passed": true,
+        "maxAllowed": 1400
+      },
+      {
+        "name": "memoization",
+        "gzipSize": 1848,
+        "gzipSizeBaseline": 1848,
+        "gzipSizePct": 0,
+        "passed": true,
+        "maxAllowed": 1900
+      },
+      {
+        "name": "time-travel",
+        "gzipSize": 1788,
+        "gzipSizeBaseline": 1788,
+        "gzipSizePct": 0,
+        "passed": true,
+        "maxAllowed": 1800
+      },
+      {
+        "name": "async",
+        "gzipSize": 1847,
+        "gzipSizeBaseline": 1847,
+        "gzipSizePct": 0,
+        "passed": true,
+        "maxAllowed": 1900
+      },
+      {
+        "name": "entities",
+        "gzipSize": 990,
+        "gzipSizeBaseline": 990,
+        "gzipSizePct": 0,
+        "passed": true,
+        "maxAllowed": 1000
+      },
+      {
+        "name": "middleware",
+        "gzipSize": 1415,
+        "gzipSizeBaseline": 1415,
+        "gzipSizePct": 0,
+        "passed": true,
+        "maxAllowed": 1450
+      },
+      {
+        "name": "devtools",
+        "gzipSize": 2549,
+        "gzipSizeBaseline": 2549,
+        "gzipSizePct": 0,
+        "passed": true,
+        "maxAllowed": 2600
+      },
+      {
+        "name": "serialization",
+        "gzipSize": 4727,
+        "gzipSizeBaseline": 4727,
+        "gzipSizePct": 0,
+        "passed": true,
+        "maxAllowed": 5000
+      },
+      {
+        "name": "ng-forms",
+        "gzipSize": 3462,
+        "gzipSizeBaseline": 3462,
+        "gzipSizePct": 0,
+        "passed": true,
+        "maxAllowed": 3600
+      },
+      {
+        "name": "presets",
+        "gzipSize": 859,
+        "gzipSizeBaseline": 859,
+        "gzipSizePct": 0,
+        "passed": true,
+        "maxAllowed": 900
+      }
+    ]
+  },
+  "constraints": {
+    "overheadBudgetPct": 25,
+    "enforceClaims": false,
+    "violations": [],
+    "pass": true
+  }
 }

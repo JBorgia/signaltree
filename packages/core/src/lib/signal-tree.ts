@@ -36,6 +36,9 @@ import type {
 // Type alias for internal use
 type LocalUnknownEnhancer = EnhancerWithMeta<unknown, unknown>;
 
+// Note: Callable syntax is supported via optional build-time transform only.
+// No runtime Proxy wrapping is applied to writable signals to keep zero-cost semantics.
+
 /**
  * Creates a callable NodeAccessor for nested objects WITHOUT a backing signal
  * This accessor reads from and writes to child signals directly
@@ -239,6 +242,7 @@ function createSignalStore<T>(
         if (typeof key === 'symbol') continue;
 
         if (isSignal(value)) {
+          // Preserve existing signals as-is
           (store as Record<string, unknown>)[key] = value;
           continue;
         }
