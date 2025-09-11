@@ -37,28 +37,30 @@ interface CoreState {
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="container mx-auto p-6">
-      <h1 class="text-3xl font-bold mb-6">SignalTree Core Demo</h1>
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <h1 class="text-2xl sm:text-3xl font-bold mb-6">SignalTree Core Demo</h1>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         <!-- Todo App -->
-        <div class="bg-white rounded-lg shadow p-6">
-          <h2 class="text-xl font-semibold mb-4">Todo Application</h2>
+        <div class="bg-white rounded-lg shadow p-4 sm:p-6">
+          <h2 class="text-lg sm:text-xl font-semibold mb-4">
+            Todo Application
+          </h2>
 
           <!-- Add new todo -->
           <div class="mb-4">
-            <div class="flex gap-2">
+            <div class="flex flex-col sm:flex-row gap-2">
               <input
                 type="text"
                 [(ngModel)]="newTodoTitle"
                 (keyup.enter)="addTodo()"
                 placeholder="Add a new todo..."
-                class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="flex-1 px-3 py-2 form-input min-h-touch"
               />
               <button
                 (click)="addTodo()"
                 [disabled]="!newTodoTitle.trim()"
-                class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed min-h-touch whitespace-nowrap"
               >
                 Add
               </button>
@@ -67,11 +69,12 @@ interface CoreState {
 
           <!-- Filters -->
           <div class="mb-4">
-            <div class="flex gap-2">
+            <div class="flex flex-wrap gap-2">
               <button
                 *ngFor="let f of filters"
                 (click)="setFilter(f)"
                 [class]="getFilterClass(f)"
+                class="min-h-touch"
               >
                 {{ f | titlecase }} ({{ getFilterCount(f) }})
               </button>
@@ -117,17 +120,17 @@ interface CoreState {
           </div>
 
           <!-- Actions -->
-          <div class="mt-4 flex gap-2">
+          <div class="mt-4 flex flex-col sm:flex-row gap-2">
             <button
               (click)="loadSampleData()"
-              class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
+              class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 min-h-touch"
             >
               Load Sample Data
             </button>
             <button
               (click)="clearCompleted()"
               [disabled]="completedCount() === 0"
-              class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed min-h-touch"
             >
               Clear Completed
             </button>
@@ -135,8 +138,8 @@ interface CoreState {
         </div>
 
         <!-- State Inspector -->
-        <div class="bg-white rounded-lg shadow p-6">
-          <h2 class="text-xl font-semibold mb-4">State Inspector</h2>
+        <div class="bg-white rounded-lg shadow p-4 sm:p-6">
+          <h2 class="text-lg sm:text-xl font-semibold mb-4">State Inspector</h2>
 
           <div class="space-y-4">
             <div>

@@ -6,7 +6,7 @@ This directory contains comprehensive examples demonstrating SignalTree usage pa
 
 ### 📁 **Core Examples**
 
-#### `callable-examples.ts`
+#### `callable-syntax-examples.ts`
 
 Demonstrates the **callable syntax** that requires the `@signaltree/callable-syntax` build-time transform:
 

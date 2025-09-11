@@ -296,13 +296,13 @@ interface DeveloperMetrics {
 
       .comparison-header h1 {
         font-size: 2.5rem;
-        color: #1f2937;
+        color: var(--color-neutral-900);
         margin-bottom: 0.5rem;
       }
 
       .subtitle {
         font-size: 1.25rem;
-        color: #6b7280;
+        color: var(--color-neutral-500);
         margin: 0;
       }
 
@@ -319,23 +319,23 @@ interface DeveloperMetrics {
         border-radius: 1rem;
         text-align: center;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        border: 1px solid #e5e7eb;
+        border: 1px solid var(--color-neutral-200);
       }
 
       .stat-card.positive {
-        border-left: 4px solid #10b981;
+        border-left: 4px solid var(--color-secondary-600);
       }
 
       .stat-number {
         font-size: 3rem;
         font-weight: 700;
-        color: #10b981;
+        color: var(--color-secondary-600);
         margin-bottom: 0.5rem;
       }
 
       .stat-label {
         font-size: 1rem;
-        color: #6b7280;
+        color: var(--color-neutral-500);
         font-weight: 500;
       }
 
@@ -345,7 +345,7 @@ interface DeveloperMetrics {
 
       .use-case-selector h2 {
         margin-bottom: 1rem;
-        color: #1f2937;
+        color: var(--color-neutral-900);
       }
 
       .use-case-buttons {
@@ -356,7 +356,7 @@ interface DeveloperMetrics {
 
       .use-case-button {
         padding: 0.75rem 1.5rem;
-        border: 2px solid #e5e7eb;
+        border: 2px solid var(--color-neutral-200);
         background: white;
         border-radius: 0.5rem;
         cursor: pointer;
@@ -365,13 +365,13 @@ interface DeveloperMetrics {
       }
 
       .use-case-button:hover {
-        border-color: #3b82f6;
+        border-color: var(--color-primary-600);
       }
 
       .use-case-button.active {
-        background: #3b82f6;
+        background: var(--color-primary-600);
         color: white;
-        border-color: #3b82f6;
+        border-color: var(--color-primary-600);
       }
 
       .comparison-grid {
