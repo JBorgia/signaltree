@@ -36,12 +36,17 @@ export class SignalTreeSyntaxWebpackPlugin {
           if (!test.test(filename) || exclude.test(filename)) continue;
           const asset = compilation.assets[filename];
           const raw = asset.source();
-          const source =
-            typeof raw === 'string'
-              ? raw
-              : raw instanceof Buffer
-              ? raw.toString('utf8')
-              : String(raw);
+
+          // Handle different source types from webpack assets
+          let source: string;
+          if (typeof raw === 'string') {
+            source = raw;
+          } else if (Buffer.isBuffer(raw)) {
+            source = raw.toString('utf8');
+          } else {
+            source = String(raw);
+          }
+
           const { code, transformed } = transformCode(source, {
             rootIdentifiers: this.options.rootIdentifiers,
             debug: this.options.debug,

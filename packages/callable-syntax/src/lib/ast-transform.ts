@@ -17,7 +17,7 @@ export interface TransformResult {
   transformed: number;
 }
 
-const DEFAULT_ROOT_IDENTIFIERS = ['tree'];
+export const DEFAULT_ROOT_IDENTIFIERS = ['tree'];
 
 /**
  * Transforms SignalTree callable syntax to explicit .set/.update method calls

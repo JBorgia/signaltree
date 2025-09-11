@@ -267,14 +267,17 @@ export function createLazySignalTree<T extends object>(
             error
           );
           const fallbackSignal = signal(value, { equal: equalityFn });
-          signalCache.set(path, fallbackSignal);
+          signalCache.set(
+            path,
+            fallbackSignal as unknown as WritableSignal<unknown>
+          );
           return fallbackSignal;
         }
       }
 
       try {
         const newSignal = signal(value, { equal: equalityFn });
-        signalCache.set(path, newSignal);
+        signalCache.set(path, newSignal as unknown as WritableSignal<unknown>);
         return newSignal;
       } catch (error) {
         console.warn(`Failed to create signal for path "${path}":`, error);

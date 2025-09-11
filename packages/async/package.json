@@ -4,7 +4,7 @@
   "description": "Advanced async state management for SignalTree. Features retry logic, timeouts, cancellation, debouncing, and enhanced loading/error states.",
   "peerDependencies": {
     "@angular/core": "^20.1.0",
-    "@signaltree/core": "1.1.5"
+    "@signaltree/core": "2.0.5"
   },
   "sideEffects": false
 }
