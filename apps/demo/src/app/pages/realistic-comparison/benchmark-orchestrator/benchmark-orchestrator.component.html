@@ -382,29 +382,54 @@
   <!-- Scenario Selection Section -->
   <section class="scenarios-section">
     <h2>Test Scenarios</h2>
-    <div class="scenarios-grid">
-      <div
-        class="scenario-card"
-        *ngFor="let scenario of scenarios"
-        [class.selected]="scenario.selected"
-        (click)="toggleScenario(scenario)"
-        (keydown)="onScenarioCardKeydown($event, scenario)"
-        tabindex="0"
-        role="button"
-        [attr.aria-pressed]="scenario.selected"
+
+    <!-- Category tabs -->
+    <div class="category-tabs">
+      <button
+        *ngFor="let category of categories"
+        class="category-tab"
+        [class.active]="selectedCategory === category.id"
+        (click)="selectedCategory = category.id"
       >
-        <div class="scenario-header">
-          <input
-            type="checkbox"
-            [checked]="scenario.selected"
-            (click)="$event.stopPropagation()"
-          />
-          <h3>{{ scenario.name }}</h3>
+        {{ category.name }}
+        <span class="scenario-count"
+          >({{ getScenariosForCategory(category.id).length }})</span
+        >
+      </button>
+    </div>
+
+    <!-- Scenarios for selected category -->
+    <div class="category-content" *ngFor="let category of categories">
+      <div *ngIf="selectedCategory === category.id">
+        <div class="category-description">
+          <p>{{ category.description }}</p>
         </div>
-        <p>{{ scenario.description }}</p>
-        <div class="scenario-details">
-          <span class="detail">Operations: {{ scenario.operations }}</span>
-          <span class="detail">Complexity: {{ scenario.complexity }}</span>
+
+        <div class="scenarios-grid">
+          <div
+            class="scenario-card"
+            *ngFor="let scenario of getScenariosForCategory(category.id)"
+            [class.selected]="scenario.selected"
+            (click)="toggleScenario(scenario)"
+            (keydown)="onScenarioCardKeydown($event, scenario)"
+            tabindex="0"
+            role="button"
+            [attr.aria-pressed]="scenario.selected"
+          >
+            <div class="scenario-header">
+              <input
+                type="checkbox"
+                [checked]="scenario.selected"
+                (click)="$event.stopPropagation()"
+              />
+              <h3>{{ scenario.name }}</h3>
+            </div>
+            <p>{{ scenario.description }}</p>
+            <div class="scenario-details">
+              <span class="detail">Operations: {{ scenario.operations }}</span>
+              <span class="detail">Complexity: {{ scenario.complexity }}</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -492,15 +517,6 @@
   <!-- Results Section -->
   <section class="results-section" *ngIf="hasResults()">
     <h2>Benchmark Results</h2>
-
-    <!-- Winner Card -->
-    <div class="winner-card" *ngIf="overallWinner() as winner">
-      <div class="winner-trophy">🏆</div>
-      <div class="winner-info">
-        <h3>{{ winner.name }} is the Fastest!</h3>
-        <p>{{ winner.summary }}</p>
-      </div>
-    </div>
 
     <!-- Summary Cards -->
     <div class="summary-grid">

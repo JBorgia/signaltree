@@ -534,4 +534,429 @@ export class SignalTreeBenchmarkService {
 
     return performance.now() - start;
   }
+
+  // ================================
+  // ASYNC OPERATIONS BENCHMARKS
+  // ================================
+
+  async runAsyncWorkflowBenchmark(dataSize: number): Promise<number> {
+    const tree = signalTree({
+      items: [] as any[],
+      loading: false,
+      error: null as string | null,
+    });
+
+    // Simulate async loading function
+    const fetchItems = async () => {
+      await new Promise((r) => setTimeout(r, 10)); // 10ms async delay
+      return Array.from({ length: dataSize }, (_, i) => ({ id: i, value: i }));
+    };
+
+    const start = performance.now();
+
+    // Run multiple async operations with loading state management
+    for (let i = 0; i < 100; i++) {
+      tree.state.loading.set(true);
+      tree.state.error.set(null);
+
+      try {
+        const items = await fetchItems();
+        tree.state.items.set(items);
+      } catch (error) {
+        tree.state.error.set(error as string);
+      } finally {
+        tree.state.loading.set(false);
+      }
+
+      if ((i & 15) === 0) await this.yieldToUI();
+    }
+
+    return performance.now() - start;
+  }
+
+  async runConcurrentAsyncBenchmark(concurrency: number): Promise<number> {
+    const tree = signalTree({
+      results: [] as any[],
+      activeOperations: 0,
+    });
+
+    const asyncOperation = async (id: number) => {
+      tree.state.activeOperations.update((count) => count + 1);
+
+      await new Promise((r) => setTimeout(r, Math.random() * 20)); // Random delay
+
+      const result = { id, value: Math.random() };
+      tree.state.results.update((results) => [...results, result]);
+      tree.state.activeOperations.update((count) => count - 1);
+    };
+
+    const start = performance.now();
+
+    // Run concurrent async operations
+    const promises = Array.from({ length: concurrency }, (_, i) =>
+      asyncOperation(i)
+    );
+    await Promise.all(promises);
+
+    return performance.now() - start;
+  }
+
+  async runAsyncCancellationBenchmark(operations: number): Promise<number> {
+    const tree = signalTree({
+      activeRequest: null as AbortController | null,
+      result: null as any,
+      cancelled: 0,
+    });
+
+    const start = performance.now();
+
+    for (let i = 0; i < operations; i++) {
+      // Cancel previous request if exists
+      const activeRequest = tree.state.activeRequest();
+      if (activeRequest) {
+        activeRequest.abort();
+        tree.state.cancelled.update((count) => count + 1);
+      }
+
+      // Start new request
+      const controller = new AbortController();
+      tree.state.activeRequest.set(controller);
+
+      try {
+        await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            if (!controller.signal.aborted) {
+              tree.state.result.set({ id: i, data: 'completed' });
+              resolve(null);
+            }
+          }, 5);
+
+          controller.signal.addEventListener('abort', () => {
+            clearTimeout(timeout);
+            reject(new Error('Cancelled'));
+          });
+        });
+      } catch {
+        // Request was cancelled
+      }
+
+      if ((i & 15) === 0) await this.yieldToUI();
+    }
+
+    return performance.now() - start;
+  }
+
+  // ================================
+  // TIME TRAVEL BENCHMARKS
+  // ================================
+
+  async runUndoRedoBenchmark(operations: number): Promise<number> {
+    // Note: SignalTree time-travel would need to be imported
+    // For now, simulate with manual history tracking
+    const tree = signalTree({
+      counter: 0,
+      history: [] as number[],
+      historyIndex: -1,
+    });
+
+    const makeChange = (value: number) => {
+      const currentHistory = tree.state.history();
+      const newHistory = currentHistory.slice(0, tree.state.historyIndex() + 1);
+      newHistory.push(value);
+
+      tree.state.history.set(newHistory);
+      tree.state.historyIndex.set(newHistory.length - 1);
+      tree.state.counter.set(value);
+    };
+
+    const undo = () => {
+      const index = tree.state.historyIndex();
+      if (index > 0) {
+        tree.state.historyIndex.set(index - 1);
+        tree.state.counter.set(tree.state.history()[index - 1]);
+      }
+    };
+
+    const redo = () => {
+      const index = tree.state.historyIndex();
+      const history = tree.state.history();
+      if (index < history.length - 1) {
+        tree.state.historyIndex.set(index + 1);
+        tree.state.counter.set(history[index + 1]);
+      }
+    };
+
+    const start = performance.now();
+
+    // Make changes
+    for (let i = 0; i < operations; i++) {
+      makeChange(i);
+    }
+
+    // Undo half
+    for (let i = 0; i < operations / 2; i++) {
+      undo();
+    }
+
+    // Redo quarter
+    for (let i = 0; i < operations / 4; i++) {
+      redo();
+    }
+
+    return performance.now() - start;
+  }
+
+  async runHistorySizeBenchmark(historySize: number): Promise<number> {
+    const tree = signalTree({
+      value: 0,
+      history: [] as number[],
+    });
+
+    const start = performance.now();
+
+    // Build large history
+    for (let i = 0; i < historySize; i++) {
+      tree.state.value.set(i);
+      tree.state.history.update((h) => {
+        const newHistory = [...h, i];
+        // Keep history size bounded
+        return newHistory.length > historySize
+          ? newHistory.slice(-historySize)
+          : newHistory;
+      });
+
+      if ((i & 255) === 0) await this.yieldToUI();
+    }
+
+    return performance.now() - start;
+  }
+
+  async runJumpToStateBenchmark(operations: number): Promise<number> {
+    const tree = signalTree({
+      currentState: 0,
+      states: Array.from({ length: operations }, (_, i) => ({
+        id: i,
+        data: `state_${i}`,
+      })),
+    });
+
+    const start = performance.now();
+
+    // Jump to random states
+    for (let i = 0; i < operations; i++) {
+      const randomIndex = Math.floor(
+        Math.random() * tree.state.states().length
+      );
+      const targetState = tree.state.states()[randomIndex];
+      tree.state.currentState.set(targetState.id);
+
+      if ((i & 31) === 0) await this.yieldToUI();
+    }
+
+    return performance.now() - start;
+  }
+
+  // ================================
+  // MIDDLEWARE BENCHMARKS
+  // ================================
+
+  async runSingleMiddlewareBenchmark(operations: number): Promise<number> {
+    // Note: This would use SignalTree middleware package when available
+    // For now, simulate middleware overhead
+    const tree = signalTree({
+      value: 0,
+      middlewareLog: [] as string[],
+    });
+
+    const middleware = (action: string, value: any) => {
+      // Lightweight middleware operation
+      tree.state.middlewareLog.update((log) => [
+        ...log.slice(-100),
+        `${action}:${value}`,
+      ]);
+    };
+
+    const start = performance.now();
+
+    for (let i = 0; i < operations; i++) {
+      middleware('setValue', i);
+      tree.state.value.set(i);
+
+      if ((i & 255) === 0) await this.yieldToUI();
+    }
+
+    return performance.now() - start;
+  }
+
+  async runMultipleMiddlewareBenchmark(
+    middlewareCount: number,
+    operations: number
+  ): Promise<number> {
+    const tree = signalTree({
+      value: 0,
+      logs: Array.from({ length: middlewareCount }, () => [] as string[]),
+    });
+
+    const middlewares = Array.from(
+      { length: middlewareCount },
+      (_, index) => (action: string, value: any) => {
+        tree.state.logs()[index].push(`MW${index}:${action}:${value}`);
+      }
+    );
+
+    const start = performance.now();
+
+    for (let i = 0; i < operations; i++) {
+      // Run through all middleware
+      middlewares.forEach((mw) => mw('setValue', i));
+      tree.state.value.set(i);
+
+      if ((i & 255) === 0) await this.yieldToUI();
+    }
+
+    return performance.now() - start;
+  }
+
+  async runConditionalMiddlewareBenchmark(operations: number): Promise<number> {
+    const tree = signalTree({
+      value: 0,
+      conditionalLog: [] as string[],
+      condition: true,
+    });
+
+    const conditionalMiddleware = (action: string, value: any) => {
+      if (tree.state.condition()) {
+        tree.state.conditionalLog.update((log) => [
+          ...log.slice(-50),
+          `${action}:${value}`,
+        ]);
+      }
+    };
+
+    const start = performance.now();
+
+    for (let i = 0; i < operations; i++) {
+      // Toggle condition periodically
+      if (i % 10 === 0) {
+        tree.state.condition.set(!tree.state.condition());
+      }
+
+      conditionalMiddleware('setValue', i);
+      tree.state.value.set(i);
+
+      if ((i & 255) === 0) await this.yieldToUI();
+    }
+
+    return performance.now() - start;
+  }
+
+  // ================================
+  // FULL STACK BENCHMARKS
+  // ================================
+
+  async runAllFeaturesEnabledBenchmark(dataSize: number): Promise<number> {
+    // Combine all SignalTree features with proper typing
+    const tree = signalTree({
+      data: [] as Array<{ id: number; value: number }>,
+      loading: false,
+      history: [] as Array<{ action: string; id: number }>,
+      middlewareLog: [] as string[],
+    }).with(withMemoization(), withBatching(), withSerialization());
+
+    const start = performance.now();
+
+    // Mixed workload: async, sync updates, history, middleware simulation
+    const iterations = Math.min(dataSize / 100, 50); // Scale with dataSize but cap at 50
+    for (let i = 0; i < iterations; i++) {
+      // Simulate async load
+      (tree.state as any).loading.set(true);
+      await new Promise((r) => setTimeout(r, 5));
+
+      // Update data
+      (tree.state as any).data.update((data: any[]) => [
+        ...data,
+        { id: i, value: Math.random() },
+      ]);
+      (tree.state as any).loading.set(false);
+
+      // History tracking
+      (tree.state as any).history.update((h: any[]) => [
+        ...h.slice(-20),
+        { action: 'update', id: i },
+      ]);
+
+      // Middleware simulation
+      (tree.state as any).middlewareLog.update((log: string[]) => [
+        ...log.slice(-30),
+        `action_${i}`,
+      ]);
+
+      if ((i & 7) === 0) await this.yieldToUI();
+    }
+
+    return performance.now() - start;
+  }
+
+  async runProductionSetupBenchmark(dataSize: number): Promise<number> {
+    // Realistic production configuration with proper typing
+    const tree = signalTree({
+      entities: {} as Record<
+        string,
+        { id: number; data: string; timestamp: number }
+      >,
+      ui: {
+        loading: false,
+        errors: [] as string[],
+        notifications: [] as Array<{
+          id: number;
+          message: string;
+          type: string;
+        }>,
+      },
+      cache: {} as Record<string, { result: number; computed: number }>,
+      metadata: {
+        lastUpdated: Date.now(),
+        version: 1,
+      },
+    }).with(
+      withShallowMemoization(), // Balanced performance
+      withHighPerformanceBatching(), // Production batching
+      withSerialization()
+    );
+
+    const start = performance.now();
+
+    // Realistic workload
+    for (let i = 0; i < dataSize / 10; i++) {
+      // Entity updates
+      (tree.state as any).entities.update((entities: any) => ({
+        ...entities,
+        [`entity_${i}`]: { id: i, data: `data_${i}`, timestamp: Date.now() },
+      }));
+
+      // UI state updates
+      if (i % 20 === 0) {
+        (tree.state as any).ui.notifications.update((n: any[]) => [
+          ...n.slice(-5),
+          { id: i, message: `Update ${i}`, type: 'info' },
+        ]);
+      }
+
+      // Cache updates
+      if (i % 10 === 0) {
+        (tree.state as any).cache.update((cache: any) => ({
+          ...cache,
+          [`cache_${i}`]: { result: Math.random(), computed: Date.now() },
+        }));
+      }
+
+      // Metadata
+      (tree.state as any).metadata.lastUpdated.set(Date.now());
+      (tree.state as any).metadata.version.update((v: number) => v + 1);
+
+      if ((i & 31) === 0) await this.yieldToUI();
+    }
+
+    return performance.now() - start;
+  }
 }
