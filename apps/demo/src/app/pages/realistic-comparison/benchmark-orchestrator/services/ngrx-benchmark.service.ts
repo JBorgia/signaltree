@@ -167,7 +167,8 @@ export class NgRxBenchmarkService {
     );
 
     let state = initialState;
-    for (let i = 0; i < dataSize; i++) {
+    // Match NgXs cap of 1000 iterations for fair comparison
+    for (let i = 0; i < Math.min(dataSize, 1000); i++) {
       state = reducer(state, updateValue({ value: i }));
       if ((i & 1023) === 0) await this.yieldToUI();
     }
@@ -243,7 +244,8 @@ export class NgRxBenchmarkService {
       return acc;
     };
 
-    for (let i = 0; i < dataSize; i++) {
+    // Match NgXs cap of 500 iterations for fair comparison
+    for (let i = 0; i < Math.min(dataSize, 500); i++) {
       state = reducer(state, updateValue({ value: i }));
       compute(state);
       if ((i & 1023) === 0) await this.yieldToUI();

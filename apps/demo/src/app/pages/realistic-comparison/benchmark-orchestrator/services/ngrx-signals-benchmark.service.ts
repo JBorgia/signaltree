@@ -31,7 +31,8 @@ export class NgRxSignalsBenchmarkService {
     deepAccess();
 
     const start = performance.now();
-    for (let i = 0; i < dataSize; i++) {
+    // Match NgXs cap of 1000 iterations for fair comparison
+    for (let i = 0; i < Math.min(dataSize, 1000); i++) {
       // immutably patch deep path
       patchState(state, (s: any) => {
         const updateDeep = (obj: any, lvl: number): any =>
@@ -84,7 +85,8 @@ export class NgRxSignalsBenchmarkService {
     compute();
 
     const start = performance.now();
-    for (let i = 0; i < dataSize; i++) {
+    // Match NgXs cap of 500 iterations for fair comparison
+    for (let i = 0; i < Math.min(dataSize, 500); i++) {
       patchState(state, (s) => ({ ...s, value: i }));
       compute();
       if ((i & 1023) === 0) await this.yieldToUI();

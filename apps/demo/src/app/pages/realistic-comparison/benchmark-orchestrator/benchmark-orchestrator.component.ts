@@ -104,9 +104,9 @@ interface StatisticalComparison {
 
 // Benchmark service contract used by orchestrator
 interface BenchmarkService {
-  runDeepNestedBenchmark(dataSize: number, depth?: number): Promise<number>;
-  runArrayBenchmark(dataSize: number): Promise<number>;
-  runComputedBenchmark(dataSize: number): Promise<number>;
+  runDeepNestedBenchmark?(dataSize: number, depth?: number): Promise<number>;
+  runArrayBenchmark?(dataSize: number): Promise<number>;
+  runComputedBenchmark?(dataSize: number): Promise<number>;
   runBatchUpdatesBenchmark?(
     batches?: number,
     batchSize?: number
@@ -766,26 +766,10 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
     if (libraries.length === 0 || scenarios.length === 0) return '0s';
 
-    // Calculate realistic duration based on actual benchmark behavior
-    let totalMs = 0;
-    for (const lib of libraries) {
-      for (const sc of scenarios) {
-        // Base time is ms per 1000 operations at basic complexity
-        const baseTimePerThousand = this.getRealisticBaseTime(lib.id, sc.id);
-        const operationsPerIteration = this.getOperationsPerIteration(
-          sc.id,
-          cfg.dataSize
-        );
-
-        // Time per single iteration = (operations / 1000) * baseTime * complexity
-        const iterationTimeMs =
-          (operationsPerIteration / 1000) * baseTimePerThousand * complexity;
-
-        // Total time for this lib+scenario = iterations * time per iteration
-        // Include warmups too
-        totalMs += iterationTimeMs * (cfg.warmupRuns + cfg.iterations);
-      }
-    }
+    // Calculate simple estimated duration
+    const totalBenchmarks = libraries.length * scenarios.length;
+    const avgBenchmarkTimeMs = 15; // assume ~15ms per benchmark scenario
+    let totalMs = totalBenchmarks * avgBenchmarkTimeMs * complexity;
 
     // Add modest overhead for UI updates, yielding, and orchestration (not 2.5x!)
     totalMs *= 1.3;
@@ -1085,9 +1069,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
       const recommendedIterations =
         cpuResult > 500
-          ? 200
-          : cpuResult > 200
           ? 100
+          : cpuResult > 200
+          ? 75
           : cpuResult > 100
           ? 50
           : 25;
@@ -1167,41 +1151,70 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     scenarioId: string,
     config: BenchmarkConfig
   ): Promise<number> {
-    // Prefer real library benchmarks when available; otherwise fallback to simulated
+    // Use only real library benchmarks - check for capability support
     const svc = this.getBenchmarkService(libraryId);
-    if (svc) {
+    if (!svc) {
+      console.warn(`No benchmark service found for library: ${libraryId}`);
+      return -1; // Indicates library not available
+    }
+
+    try {
       switch (scenarioId) {
         case 'deep-nested':
-          return (
-            svc.runDeepNestedBenchmark?.(config.dataSize) ??
-            this.simulatedDuration(libraryId, scenarioId, config)
-          );
+          if (!svc.runDeepNestedBenchmark) {
+            console.warn(
+              `${libraryId} does not support deep-nested benchmarks`
+            );
+            return -1;
+          }
+          return await svc.runDeepNestedBenchmark(config.dataSize);
         case 'large-array':
-          return (
-            svc.runArrayBenchmark?.(config.dataSize) ??
-            this.simulatedDuration(libraryId, scenarioId, config)
-          );
+          if (!svc.runArrayBenchmark) {
+            console.warn(
+              `${libraryId} does not support large-array benchmarks`
+            );
+            return -1;
+          }
+          return await svc.runArrayBenchmark(config.dataSize);
         case 'computed-chains':
-          return (
-            svc.runComputedBenchmark?.(config.dataSize) ??
-            this.simulatedDuration(libraryId, scenarioId, config)
-          );
+          if (!svc.runComputedBenchmark) {
+            console.warn(
+              `${libraryId} does not support computed-chains benchmarks`
+            );
+            return -1;
+          }
+          return await svc.runComputedBenchmark(config.dataSize);
         case 'batch-updates':
-          return (
-            svc.runBatchUpdatesBenchmark?.() ??
-            this.simulatedDuration(libraryId, scenarioId, config)
-          );
+          if (!svc.runBatchUpdatesBenchmark) {
+            console.warn(
+              `${libraryId} does not support batch-updates benchmarks`
+            );
+            return -1;
+          }
+          return await svc.runBatchUpdatesBenchmark(config.dataSize, 1000);
         case 'selector-memoization':
-          return (
-            svc.runSelectorBenchmark?.(config.dataSize) ??
-            this.simulatedDuration(libraryId, scenarioId, config)
-          );
+          if (!svc.runSelectorBenchmark) {
+            console.warn(
+              `${libraryId} does not support selector-memoization benchmarks`
+            );
+            return -1;
+          }
+          return await svc.runSelectorBenchmark(config.dataSize);
         case 'serialization':
-          return (
-            svc.runSerializationBenchmark?.(config.dataSize) ??
-            this.simulatedDuration(libraryId, scenarioId, config)
-          );
+          if (!svc.runSerializationBenchmark) {
+            console.warn(
+              `${libraryId} does not support serialization benchmarks`
+            );
+            return -1;
+          }
+          return await svc.runSerializationBenchmark(config.dataSize);
         case 'concurrent-updates': {
+          if (!svc.runConcurrentUpdatesBenchmark) {
+            console.warn(
+              `${libraryId} does not support concurrent-updates benchmarks`
+            );
+            return -1;
+          }
           // Derive modest params from config to keep runtime reasonable
           const concurrency = Math.max(
             10,
@@ -1211,36 +1224,56 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             50,
             Math.min(500, Math.floor(config.iterations * 4))
           );
-          return (
-            svc.runConcurrentUpdatesBenchmark?.(
-              concurrency,
-              updatesPerWorker
-            ) ?? this.simulatedDuration(libraryId, scenarioId, config)
+          return await svc.runConcurrentUpdatesBenchmark(
+            concurrency,
+            updatesPerWorker
           );
         }
         case 'memory-efficiency':
-          return (
-            svc.runMemoryEfficiencyBenchmark?.(config.dataSize) ??
-            this.simulatedDuration(libraryId, scenarioId, config)
-          );
+          if (!svc.runMemoryEfficiencyBenchmark) {
+            console.warn(
+              `${libraryId} does not support memory-efficiency benchmarks`
+            );
+            return -1;
+          }
+          return await svc.runMemoryEfficiencyBenchmark(config.dataSize);
         case 'data-fetching':
-          return (
-            svc.runDataFetchingBenchmark?.(config.dataSize) ??
-            this.simulatedDuration(libraryId, scenarioId, config)
-          );
+          if (!svc.runDataFetchingBenchmark) {
+            console.warn(
+              `${libraryId} does not support data-fetching benchmarks`
+            );
+            return -1;
+          }
+          return await svc.runDataFetchingBenchmark(config.dataSize);
         case 'real-time-updates':
-          return (
-            svc.runRealTimeUpdatesBenchmark?.(config.dataSize) ??
-            this.simulatedDuration(libraryId, scenarioId, config)
-          );
+          if (!svc.runRealTimeUpdatesBenchmark) {
+            console.warn(
+              `${libraryId} does not support real-time-updates benchmarks`
+            );
+            return -1;
+          }
+          return await svc.runRealTimeUpdatesBenchmark(config.dataSize);
         case 'state-size-scaling':
-          return (
-            svc.runStateSizeScalingBenchmark?.(config.dataSize) ??
-            this.simulatedDuration(libraryId, scenarioId, config)
+          if (!svc.runStateSizeScalingBenchmark) {
+            console.warn(
+              `${libraryId} does not support state-size-scaling benchmarks`
+            );
+            return -1;
+          }
+          return await svc.runStateSizeScalingBenchmark(config.dataSize);
+        default:
+          console.warn(
+            `Unknown scenario: ${scenarioId} for library: ${libraryId}`
           );
+          return -1;
       }
+    } catch (error) {
+      console.error(
+        `Error running ${scenarioId} benchmark for ${libraryId}:`,
+        error
+      );
+      return -1; // Indicates benchmark failed
     }
-    return this.simulatedDuration(libraryId, scenarioId, config);
   }
 
   private getBenchmarkService(libraryId: string): BenchmarkService | null {
@@ -1261,24 +1294,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         return null;
     }
   }
-
-  private async simulatedDuration(
-    libraryId: string,
-    scenarioId: string,
-    config: BenchmarkConfig
-  ): Promise<number> {
-    const baseTime = this.getBaseTime(libraryId, scenarioId);
-    const complexity = this.getComplexityMultiplier(config.complexity);
-    const sizeMultiplier = config.dataSize / 1000;
-    const duration = baseTime * complexity * sizeMultiplier;
-    const start = performance.now();
-    await this.simulateWork(duration);
-    const actual = performance.now() - start;
-    const variance = (Math.random() - 0.5) * 0.2;
-    return actual * (1 + variance);
-  }
-
-  // simulateWork defined once later in the file
 
   private checkMemory(): number {
     const perfEx = performance as Performance & {
@@ -1506,148 +1521,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     };
   }
 
-  private getBaseTime(libraryId: string, scenarioId: string): number {
-    // Simulated base times for different library/scenario combinations
-    const times: Record<string, Record<string, number>> = {
-      signaltree: {
-        'deep-nested': 0.5,
-        'large-array': 0.8,
-        'computed-chains': 0.6,
-        'batch-updates': 0.4,
-        'selector-memoization': 0.3,
-        'concurrent-updates': 1.2,
-        'memory-efficiency': 0.7,
-        'data-fetching': 0.9, // API parsing + state hydration
-        'real-time-updates': 0.6, // Live WebSocket-like updates
-        'state-size-scaling': 1.1, // Large dataset operations
-      },
-      'ngrx-store': {
-        'deep-nested': 2.5,
-        'large-array': 1.5,
-        'computed-chains': 1.8,
-        'batch-updates': 2.0,
-        'selector-memoization': 0.5,
-        'concurrent-updates': 2.5,
-        'memory-efficiency': 1.2,
-        'data-fetching': 2.1, // Heavier action dispatching
-        'real-time-updates': 2.8, // Action overhead for live updates
-        'state-size-scaling': 3.2, // Selector performance with large state
-      },
-      'ngrx-signals': {
-        'deep-nested': 1.5,
-        'large-array': 1.2,
-        'computed-chains': 1.0,
-        'batch-updates': 1.3,
-        'selector-memoization': 0.4,
-        'concurrent-updates': 1.8,
-        'memory-efficiency': 0.9,
-        'data-fetching': 1.4, // Signal store hydration
-        'real-time-updates': 1.6, // Signal-based live updates
-        'state-size-scaling': 1.9, // Good scaling with signals
-      },
-      akita: {
-        'deep-nested': 2.0,
-        'large-array': 1.0,
-        'computed-chains': 1.5,
-        'batch-updates': 1.7,
-        'selector-memoization': 0.7,
-        'concurrent-updates': 2.2,
-        'memory-efficiency': 1.0,
-        'data-fetching': 1.8, // Store-based data loading
-        'real-time-updates': 2.1, // Entity updates
-        'state-size-scaling': 2.5, // Entity scaling challenges
-      },
-      elf: {
-        'deep-nested': 1.2,
-        'large-array': 0.9,
-        'computed-chains': 0.8,
-        'batch-updates': 1.0,
-        'selector-memoization': 0.4,
-        'concurrent-updates': 1.5,
-        'memory-efficiency': 0.6,
-        'data-fetching': 1.1, // Efficient store management
-        'real-time-updates': 1.3, // Good real-time performance
-        'state-size-scaling': 1.7, // Decent scaling
-      },
-    };
-
-    return times[libraryId]?.[scenarioId] || 1.0;
-  }
-
-  private getRealisticBaseTime(libraryId: string, scenarioId: string): number {
-    // Realistic base times based on actual benchmark performance (ms per 1000 operations at basic complexity)
-    // Calibrated to match real-world benchmark durations
-    const times: Record<string, Record<string, number>> = {
-      signaltree: {
-        'deep-nested': 8.0, // Deep nesting with 15 levels + signal updates
-        'large-array': 12.0, // Array mutations with reactivity
-        'computed-chains': 10.0, // Complex computed dependencies
-        'batch-updates': 6.0, // Batched operations
-        'selector-memoization': 4.0, // Memoized selectors
-        serialization: 15.0, // JSON serialization
-        'concurrent-updates': 18.0, // Parallel operations overhead
-        'memory-efficiency': 9.0, // Memory tracking + operations
-        'data-fetching': 12.0, // API parsing + hydration
-        'real-time-updates': 8.0, // Live WebSocket updates
-        'state-size-scaling': 14.0, // Large dataset operations
-      },
-      'ngrx-store': {
-        'deep-nested': 35.0, // Immutable deep updates
-        'large-array': 20.0, // Immutable array operations
-        'computed-chains': 25.0, // Selector chains
-        'batch-updates': 30.0, // Multiple actions/dispatches
-        'selector-memoization': 7.0, // Memoized selectors
-        serialization: 18.0, // State serialization
-        'concurrent-updates': 40.0, // Action serialization overhead
-        'memory-efficiency': 16.0, // Object creation overhead
-        'data-fetching': 28.0, // Heavy action dispatching for data
-        'real-time-updates': 35.0, // Action overhead for live updates
-        'state-size-scaling': 42.0, // Selector performance with large state
-      },
-      'ngrx-signals': {
-        'deep-nested': 20.0, // Signal-based deep updates
-        'large-array': 16.0, // Signal array operations
-        'computed-chains': 14.0, // Computed signals
-        'batch-updates': 18.0, // Signal batching
-        'selector-memoization': 5.0, // Signal memoization
-        serialization: 16.0, // Signal state serialization
-        'concurrent-updates': 25.0, // Signal concurrency
-        'memory-efficiency': 12.0, // Signal memory efficiency
-        'data-fetching': 19.0, // Signal store hydration
-        'real-time-updates': 22.0, // Signal-based live updates
-        'state-size-scaling': 26.0, // Good scaling with signals
-      },
-      akita: {
-        'deep-nested': 28.0, // Entity-based deep updates
-        'large-array': 14.0, // Entity array operations
-        'computed-chains': 22.0, // Query chains
-        'batch-updates': 24.0, // Transaction batching
-        'selector-memoization': 9.0, // Query memoization
-        serialization: 18.0, // Store serialization
-        'concurrent-updates': 32.0, // Transaction overhead
-        'memory-efficiency': 14.0, // Entity overhead
-        'data-fetching': 24.0, // Store-based data loading
-        'real-time-updates': 30.0, // Entity updates
-        'state-size-scaling': 38.0, // Entity scaling challenges
-      },
-      elf: {
-        'deep-nested': 16.0, // Modular deep updates
-        'large-array': 13.0, // Repository array ops
-        'computed-chains': 11.0, // Computed properties
-        'batch-updates': 14.0, // Repository batching
-        'selector-memoization': 4.5, // Query memoization
-        serialization: 15.0, // Repository serialization
-        'concurrent-updates': 20.0, // Repository concurrency
-        'memory-efficiency': 10.0, // Repository efficiency
-        'data-fetching': 16.0, // Efficient store management
-        'real-time-updates': 18.0, // Good real-time performance
-        'state-size-scaling': 23.0, // Decent scaling
-      },
-    };
-
-    return times[libraryId]?.[scenarioId] || 15.0; // Default for unknown combinations
-  }
-
   private getComplexityMultiplier(complexity: string): number {
     switch (complexity) {
       case 'basic':
@@ -1660,22 +1533,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         return 8.0;
       default:
         return 1.0;
-    }
-  }
-
-  private async simulateWork(targetMs: number) {
-    const start = performance.now();
-    let acc = 0;
-    while (performance.now() - start < targetMs) {
-      for (let i = 0; i < 1000; i++) {
-        acc += Math.sqrt(i) * Math.sin(i) * Math.cos(i);
-      }
-      if (performance.now() - start > 10) {
-        await new Promise((resolve) => setTimeout(resolve, 0));
-      }
-    }
-    if (acc === Number.MIN_VALUE) {
-      // prevent DCE
     }
   }
 

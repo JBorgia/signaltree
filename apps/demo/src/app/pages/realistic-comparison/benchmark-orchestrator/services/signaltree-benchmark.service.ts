@@ -34,7 +34,8 @@ export class SignalTreeBenchmarkService {
       withMemoization()
     );
 
-    for (let i = 0; i < dataSize; i++) {
+    // Match NgXs cap of 1000 iterations for fair comparison
+    for (let i = 0; i < Math.min(dataSize, 1000); i++) {
       let current: any = tree.state;
       for (let j = 0; j < depth; j++) {
         if (!current?.level) break;
@@ -92,7 +93,7 @@ export class SignalTreeBenchmarkService {
       return acc;
     });
 
-    for (let i = 0; i < dataSize; i++) {
+    for (let i = 0; i < Math.min(dataSize, 500); i++) {
       tree.state.value.set(i);
       compute(); // Now this is properly memoized!
       if ((i & 1023) === 0) await this.yieldToUI();
