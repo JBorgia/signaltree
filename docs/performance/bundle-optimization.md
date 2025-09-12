@@ -4,7 +4,7 @@ Consolidated guidance and reports for bundle size analysis and optimization acro
 
 ## Current status
 
-- Total ecosystem: ~27.56KB gzipped (packages)
+- Total ecosystem: ~27.57KB gzipped (packages)
 - All packages meeting realistic targets per consolidated analysis scripts
 
 ## Canonical tools

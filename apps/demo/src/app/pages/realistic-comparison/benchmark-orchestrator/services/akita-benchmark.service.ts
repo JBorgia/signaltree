@@ -256,4 +256,308 @@ export class AkitaBenchmarkService {
     }
     return performance.now() - start;
   }
+
+  async runDataFetchingBenchmark(dataSize: number): Promise<number> {
+    const start = performance.now();
+
+    // Simulate API data structure for Akita entities
+    type FetchedItem = {
+      id: number;
+      title: string;
+      description: string;
+      tags: string[];
+      meta: {
+        createdAt: Date;
+        updatedAt: Date;
+        views: number;
+        rating: number;
+      };
+      relations: {
+        authorId: number;
+        parentId: number | null;
+        childIds: number[];
+      };
+    };
+
+    type FetchedItemsState = EntityState<FetchedItem>;
+
+    @StoreConfig({ name: 'akita-fetched-items', idKey: 'id' })
+    class FetchedItemsStore extends EntityStore<
+      FetchedItemsState,
+      FetchedItem,
+      number
+    > {
+      constructor() {
+        super({});
+      }
+    }
+
+    const itemsStore = new FetchedItemsStore();
+
+    // Mock API data
+    const mockApiData: FetchedItem[] = Array.from(
+      { length: Math.min(dataSize, 1000) },
+      (_, i) => ({
+        id: i,
+        title: `Item ${i}`,
+        description: `Description for item ${i}`,
+        tags: [`tag${i % 10}`, `category${i % 5}`],
+        meta: {
+          createdAt: new Date(2023, 0, 1 + (i % 365)),
+          updatedAt: new Date(2023, 6, 1 + (i % 180)),
+          views: Math.floor(Math.random() * 1000),
+          rating: Math.random() * 5,
+        },
+        relations: {
+          authorId: Math.floor(i / 10),
+          parentId: i > 0 ? i - 1 : null,
+          childIds: i < dataSize - 1 ? [i + 1] : [],
+        },
+      })
+    );
+
+    // Simulate data fetching and hydration
+    itemsStore.set(mockApiData);
+
+    // Simulate filtering operations (common after data fetch)
+    for (let i = 0; i < Math.min(100, dataSize / 10); i++) {
+      const searchTerm = `search${i}`;
+      const categoryFilter = `cat${i % 5}`;
+
+      // Akita doesn't have built-in filtering like SignalTree, so we simulate the overhead
+      const filteredIds = mockApiData
+        .filter(
+          (item) =>
+            item.title.includes(searchTerm) ||
+            item.tags.includes(categoryFilter)
+        )
+        .map((item) => item.id);
+
+      // Update store with filtered results (simulate what would happen)
+      if (filteredIds.length > 0) {
+        itemsStore.setActive(filteredIds[0]);
+      }
+
+      if ((i & 15) === 0) await this.yieldToUI();
+    }
+
+    return performance.now() - start;
+  }
+
+  async runRealTimeUpdatesBenchmark(dataSize: number): Promise<number> {
+    const start = performance.now();
+
+    // Create stores for different aspects of real-time data
+    type LiveMetric = {
+      id: string;
+      activeUsers: number;
+      totalSessions: number;
+      pageViews: number;
+      serverLoad: number;
+      responseTime: number;
+    };
+
+    type Event = {
+      id: number;
+      type: string;
+      timestamp: number;
+      data: string;
+    };
+
+    type Notification = {
+      id: number;
+      message: string;
+      priority: string;
+      timestamp: number;
+    };
+
+    @StoreConfig({ name: 'akita-metrics', idKey: 'id' })
+    class MetricsStore extends EntityStore<
+      EntityState<LiveMetric>,
+      LiveMetric,
+      string
+    > {
+      constructor() {
+        super({});
+        this.add({
+          id: 'main',
+          activeUsers: 0,
+          totalSessions: 0,
+          pageViews: 0,
+          serverLoad: 0.0,
+          responseTime: 0,
+        });
+      }
+    }
+
+    @StoreConfig({ name: 'akita-events', idKey: 'id' })
+    class EventsStore extends EntityStore<EntityState<Event>, Event, number> {
+      constructor() {
+        super({});
+      }
+    }
+
+    @StoreConfig({ name: 'akita-notifications', idKey: 'id' })
+    class NotificationsStore extends EntityStore<
+      EntityState<Notification>,
+      Notification,
+      number
+    > {
+      constructor() {
+        super({});
+      }
+    }
+
+    const metricsStore = new MetricsStore();
+    const eventsStore = new EventsStore();
+    const notificationsStore = new NotificationsStore();
+
+    // Simulate real-time updates
+    const updateFrequency = Math.min(500, dataSize);
+    for (let i = 0; i < updateFrequency; i++) {
+      // Update live metrics (requires creating new objects due to immutability)
+      const currentMetrics = metricsStore.getValue().entities?.['main'];
+      if (currentMetrics) {
+        metricsStore.update('main', {
+          activeUsers:
+            currentMetrics.activeUsers + Math.floor(Math.random() * 10 - 5),
+          pageViews: currentMetrics.pageViews + Math.floor(Math.random() * 20),
+          serverLoad: Math.random(),
+          responseTime: 50 + Math.random() * 200,
+        });
+      }
+
+      // Add new events (with size limit simulation)
+      if (i % 10 === 0) {
+        eventsStore.add({
+          id: i,
+          type: 'user_action',
+          timestamp: Date.now(),
+          data: `event${i}`,
+        });
+
+        // Keep only last 100 events (simulate cleanup)
+        const entities = eventsStore.getValue().entities;
+        if (entities) {
+          const allEvents = Object.values(entities);
+          if (allEvents.length > 100) {
+            const toRemove = allEvents
+              .slice(0, allEvents.length - 100)
+              .map((e) => e.id);
+            eventsStore.remove(toRemove);
+          }
+        }
+      }
+
+      // Add notifications occasionally
+      if (i % 25 === 0) {
+        notificationsStore.add({
+          id: i,
+          message: `Notification ${i}`,
+          priority: 'normal',
+          timestamp: Date.now(),
+        });
+
+        // Keep only last 10 notifications
+        const entities = notificationsStore.getValue().entities;
+        if (entities) {
+          const allNotifications = Object.values(entities);
+          if (allNotifications.length > 10) {
+            const toRemove = allNotifications
+              .slice(0, allNotifications.length - 10)
+              .map((n) => n.id);
+            notificationsStore.remove(toRemove);
+          }
+        }
+      }
+
+      if ((i & 31) === 0) await this.yieldToUI();
+    }
+
+    return performance.now() - start;
+  }
+
+  async runStateSizeScalingBenchmark(dataSize: number): Promise<number> {
+    const start = performance.now();
+
+    // Test how Akita handles large entity collections
+    type LargeEntity = {
+      id: number;
+      name: string;
+      properties: Array<{
+        key: string;
+        value: string;
+        metadata: { type: string; indexed: boolean };
+      }>;
+      relations: Array<{
+        targetId: number;
+        type: string;
+      }>;
+    };
+
+    @StoreConfig({ name: 'akita-large-entities', idKey: 'id' })
+    class LargeEntitiesStore extends EntityStore<
+      EntityState<LargeEntity>,
+      LargeEntity,
+      number
+    > {
+      constructor() {
+        super({});
+      }
+    }
+
+    const entitiesStore = new LargeEntitiesStore();
+
+    // Create large dataset
+    const largeDataSet: LargeEntity[] = Array.from(
+      { length: Math.min(dataSize * 10, 10000) },
+      (_, i) => ({
+        id: i,
+        name: `Entity ${i}`,
+        properties: Array.from({ length: 20 }, (_, j) => ({
+          key: `prop_${j}`,
+          value: `value_${i}_${j}`,
+          metadata: { type: 'string', indexed: j % 3 === 0 },
+        })),
+        relations: Array.from({ length: Math.min(5, i) }, (_, k) => ({
+          targetId: i - k - 1,
+          type: 'reference',
+        })),
+      })
+    );
+
+    // Add all entities to store
+    entitiesStore.set(largeDataSet);
+
+    // Perform scaling operations
+    const operations = Math.min(200, dataSize / 5);
+    for (let i = 0; i < operations; i++) {
+      const entityId = i % largeDataSet.length;
+
+      // Update entity (requires immutable update)
+      entitiesStore.update(entityId, (entity) => ({
+        ...entity,
+        properties: entity.properties.map((prop, idx) =>
+          idx === 0 ? { ...prop, value: `updated_${Date.now()}` } : prop
+        ),
+      }));
+
+      // Simulate cache/index operations (Akita doesn't have built-in caching like SignalTree)
+      if (i % 20 === 0) {
+        // Simulate some indexing work
+        const entities = entitiesStore.getValue().entities;
+        if (entities) {
+          const entity = entities[entityId];
+          if (entity) {
+            // This simulates the overhead of maintaining indices manually
+            entity.properties.filter((p) => p.metadata.indexed);
+          }
+        }
+      }
+
+      if ((i & 31) === 0) await this.yieldToUI();
+    }
+
+    return performance.now() - start;
+  }
 }
