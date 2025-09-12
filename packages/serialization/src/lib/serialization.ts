@@ -930,6 +930,12 @@ export interface PersistenceConfig extends SerializationConfig {
    * @default true
    */
   autoLoad?: boolean;
+
+  /**
+   * Whether to skip caching and force storage writes even if unchanged
+   * @default false
+   */
+  skipCache?: boolean;
 }
 
 /**
@@ -969,16 +975,29 @@ export function withPersistence<
     const enhanced = serializable as SerializableSignalTree<T> &
       PersistenceMethods;
 
+    // Cache to avoid redundant storage writes
+    let lastSerializedString: string | null = null;
+
     /**
      * Save current state to storage
      */
     enhanced.save = async (): Promise<void> => {
       try {
         const serialized = enhanced.serialize(serializationConfig);
-        await Promise.resolve(storageAdapter.setItem(key, serialized));
 
-        if ((tree as SignalTreeWithConfig).__config?.debugMode) {
-          console.log(`[SignalTree] State saved to storage key: ${key}`);
+        // Only write to storage if the serialized state has changed, unless skipCache is true
+        // This optimization reduces I/O operations and improves performance
+        if (config.skipCache || serialized !== lastSerializedString) {
+          await Promise.resolve(storageAdapter.setItem(key, serialized));
+          lastSerializedString = serialized;
+
+          if ((tree as SignalTreeWithConfig).__config?.debugMode) {
+            console.log(`[SignalTree] State saved to storage key: ${key}`);
+          }
+        } else if ((tree as SignalTreeWithConfig).__config?.debugMode) {
+          console.log(
+            `[SignalTree] State unchanged, skipping storage write for key: ${key}`
+          );
         }
       } catch (error) {
         console.error('[SignalTree] Failed to save state:', error);
@@ -994,6 +1013,8 @@ export function withPersistence<
         const data = await Promise.resolve(storageAdapter.getItem(key));
         if (data) {
           enhanced.deserialize(data, serializationConfig);
+          // Reset cache after loading new data
+          lastSerializedString = data;
 
           if ((tree as SignalTreeWithConfig).__config?.debugMode) {
             console.log(`[SignalTree] State loaded from storage key: ${key}`);
