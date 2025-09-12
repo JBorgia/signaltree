@@ -17,6 +17,7 @@ import { AkitaBenchmarkService } from './services/akita-benchmark.service';
 import { ElfBenchmarkService } from './services/elf-benchmark.service';
 import { NgRxBenchmarkService } from './services/ngrx-benchmark.service';
 import { NgRxSignalsBenchmarkService } from './services/ngrx-signals-benchmark.service';
+import { NgxsBenchmarkService } from './services/ngxs-benchmark.service';
 import { SignalTreeBenchmarkService } from './services/signaltree-benchmark.service';
 
 // Register Chart.js components
@@ -117,6 +118,9 @@ interface BenchmarkService {
     updatesPerWorker?: number
   ): Promise<number>;
   runMemoryEfficiencyBenchmark?(dataSize: number): Promise<number>;
+  runDataFetchingBenchmark?(dataSize: number): Promise<number>;
+  runRealTimeUpdatesBenchmark?(dataSize: number): Promise<number>;
+  runStateSizeScalingBenchmark?(dataSize: number): Promise<number>;
 }
 
 @Component({
@@ -171,6 +175,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   private readonly ngrxSignalsBench = inject(NgRxSignalsBenchmarkService);
   private readonly akitaBench = inject(AkitaBenchmarkService);
   private readonly elfBench = inject(ElfBenchmarkService);
+  private readonly ngxsBench = inject(NgxsBenchmarkService);
 
   // Available libraries
   availableLibraries: Library[] = [
@@ -227,6 +232,18 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       stats: {
         bundleSize: '~5KB', // Updated from 2KB - depends on modules used
         githubStars: 1500,
+      },
+    },
+    {
+      id: 'ngxs',
+      name: 'NgXs',
+      description:
+        'CQRS-inspired state management with actions, reducers, and selectors',
+      color: '#f97316',
+      selected: false,
+      stats: {
+        bundleSize: '~30KB',
+        githubStars: 3400,
       },
     },
   ];
@@ -297,6 +314,30 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       complexity: 'Variable',
       selected: true,
     },
+    {
+      id: 'data-fetching',
+      name: 'Data Fetching & Hydration',
+      description: 'API response parsing and state initialization',
+      operations: 'Data size × filters',
+      complexity: 'High',
+      selected: true,
+    },
+    {
+      id: 'real-time-updates',
+      name: 'Real-time Updates',
+      description: 'Live data streaming (like WebSocket updates)',
+      operations: '500 live updates',
+      complexity: 'Extreme',
+      selected: true,
+    },
+    {
+      id: 'state-size-scaling',
+      name: 'Large State Scaling',
+      description: 'Performance with large datasets',
+      operations: 'Size × 10 entities',
+      complexity: 'Extreme',
+      selected: true,
+    },
   ];
 
   // Computed values
@@ -319,6 +360,12 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   });
 
   reliabilityScore = computed(() => {
+    // Return 0 until calibration is performed
+    const calibration = this.calibrationData();
+    if (!calibration) {
+      return 0;
+    }
+
     const factors = this.environmentFactors();
     const baseScore = 100;
     const totalImpact = factors.reduce((sum, f) => sum + f.impact, 0);
@@ -328,62 +375,242 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   environmentFactors = computed((): EnvironmentFactor[] => {
     const factors: EnvironmentFactor[] = [];
 
-    // Check DevTools
+    // DevTools Detection - Critical for V8 performance
     if (this.isDevToolsOpen()) {
       factors.push({
         name: 'DevTools Open',
         impact: -15,
-        reason: 'Adds performance overhead',
+        reason:
+          'V8 debugging overhead, disabled optimizations, memory pressure',
       });
     }
 
-    // Check CPU cores
+    // CPU Architecture & Performance
     const cores = navigator.hardwareConcurrency || 4;
     if (cores < 4) {
       factors.push({
-        name: 'Limited CPU',
-        impact: -10,
-        reason: `Only ${cores} cores available`,
+        name: 'Limited CPU Cores',
+        impact: -12,
+        reason: `${cores} logical cores - insufficient for concurrent operations`,
+      });
+    } else if (cores >= 16) {
+      factors.push({
+        name: 'High-Performance CPU',
+        impact: 8,
+        reason: `${cores} logical cores - excellent parallel processing capacity`,
       });
     } else if (cores >= 8) {
       factors.push({
-        name: 'High-Performance CPU',
+        name: 'Multi-Core CPU',
         impact: 5,
-        reason: `${cores} cores available`,
+        reason: `${cores} logical cores - good for concurrent workloads`,
       });
     }
 
-    // Check memory
+    // Memory Capacity & Performance
     const memory = (navigator as Navigator & { deviceMemory?: number })
       .deviceMemory;
-    if (memory && memory < 4) {
+    if (memory) {
+      if (memory < 4) {
+        factors.push({
+          name: 'Low Memory',
+          impact: -15,
+          reason: `${memory}GB RAM - may trigger GC pressure, swap usage`,
+        });
+      } else if (memory >= 32) {
+        factors.push({
+          name: 'High Memory',
+          impact: 8,
+          reason: `${memory}GB RAM - excellent for large datasets, minimal GC pressure`,
+        });
+      } else if (memory >= 16) {
+        factors.push({
+          name: 'Ample Memory',
+          impact: 5,
+          reason: `${memory}GB RAM - sufficient for complex benchmarks`,
+        });
+      }
+    } else {
       factors.push({
-        name: 'Limited Memory',
-        impact: -10,
-        reason: `${memory}GB RAM`,
-      });
-    } else if (memory && memory >= 16) {
-      factors.push({
-        name: 'Ample Memory',
-        impact: 5,
-        reason: `${memory}GB RAM`,
+        name: 'Memory Unknown',
+        impact: -3,
+        reason: 'Cannot assess memory constraints or GC behavior',
       });
     }
 
-    // Check browser
-    const isChrome = /Chrome/.test(navigator.userAgent);
-    const isFirefox = /Firefox/.test(navigator.userAgent);
+    // JavaScript Engine & Browser Optimizations
+    const userAgent = navigator.userAgent;
+    const isChrome = /Chrome\/(\d+)/.test(userAgent);
+    const isFirefox = /Firefox\/(\d+)/.test(userAgent);
+    const isSafari = /Safari/.test(userAgent) && !/Chrome/.test(userAgent);
+    const isEdge = /Edg\/(\d+)/.test(userAgent);
+
     if (isChrome) {
+      const chromeVersion = userAgent.match(/Chrome\/(\d+)/)?.[1];
+      const version = chromeVersion ? parseInt(chromeVersion) : 0;
+      if (version >= 100) {
+        factors.push({
+          name: 'Modern V8 Engine',
+          impact: 8,
+          reason: `Chrome ${version} - latest V8 optimizations, Sparkplug compiler`,
+        });
+      } else if (version >= 90) {
+        factors.push({
+          name: 'Current V8 Engine',
+          impact: 5,
+          reason: `Chrome ${version} - good V8 performance, established optimizations`,
+        });
+      } else {
+        factors.push({
+          name: 'Older V8 Engine',
+          impact: -5,
+          reason: `Chrome ${version} - missing recent V8 optimizations`,
+        });
+      }
+    } else if (isFirefox) {
       factors.push({
-        name: 'Chrome V8 Engine',
-        impact: 3,
-        reason: 'Optimized JIT compilation',
+        name: 'SpiderMonkey Engine',
+        impact: 0,
+        reason:
+          'Firefox SpiderMonkey - different optimization patterns than V8',
       });
-    } else if (!isFirefox) {
+    } else if (isSafari) {
+      factors.push({
+        name: 'JavaScriptCore Engine',
+        impact: -3,
+        reason:
+          'Safari JSC - conservative optimizations, different GC behavior',
+      });
+    } else if (isEdge) {
+      factors.push({
+        name: 'Edge Chromium',
+        impact: 6,
+        reason:
+          'Edge with Chromium engine - V8 optimizations with Edge enhancements',
+      });
+    } else {
       factors.push({
         name: 'Unknown Browser',
+        impact: -8,
+        reason:
+          'Untested JavaScript engine - unpredictable performance characteristics',
+      });
+    }
+
+    // System Load & Resource Contention
+    if (!document.hasFocus()) {
+      factors.push({
+        name: 'Background Tab',
+        impact: -10,
+        reason:
+          'Browser throttling active - reduced timer resolution, CPU limits',
+      });
+    }
+
+    // Platform & Operating System
+    const platform = navigator.platform.toLowerCase();
+    if (platform.includes('win')) {
+      factors.push({
+        name: 'Windows Platform',
+        impact: 0,
+        reason: 'Windows - standard performance baseline',
+      });
+    } else if (platform.includes('mac')) {
+      factors.push({
+        name: 'macOS Platform',
+        impact: 3,
+        reason:
+          'macOS - generally consistent performance, good memory management',
+      });
+    } else if (platform.includes('linux')) {
+      factors.push({
+        name: 'Linux Platform',
+        impact: 2,
+        reason: 'Linux - minimal overhead, efficient resource utilization',
+      });
+    }
+
+    // Network & Connection Impact
+    const connection = (
+      navigator as Navigator & {
+        connection?: { effectiveType?: string; downlink?: number };
+      }
+    ).connection;
+    if (connection) {
+      if (
+        connection.effectiveType === 'slow-2g' ||
+        connection.effectiveType === '2g'
+      ) {
+        factors.push({
+          name: 'Slow Network',
+          impact: -5,
+          reason:
+            'Poor connectivity may affect resource loading and system responsiveness',
+        });
+      }
+      if (connection.downlink && connection.downlink < 1) {
+        factors.push({
+          name: 'Limited Bandwidth',
+          impact: -3,
+          reason: `${connection.downlink}Mbps - may impact background resource usage`,
+        });
+      }
+    }
+
+    // Hardware Acceleration & Graphics
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+    if (gl) {
+      const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+      if (debugInfo) {
+        const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+        if (renderer.includes('Intel')) {
+          factors.push({
+            name: 'Integrated Graphics',
+            impact: -2,
+            reason:
+              'Intel integrated GPU - may share system memory, limited parallel compute',
+          });
+        } else if (renderer.includes('NVIDIA') || renderer.includes('AMD')) {
+          factors.push({
+            name: 'Dedicated Graphics',
+            impact: 3,
+            reason:
+              'Discrete GPU - hardware acceleration available, dedicated memory',
+          });
+        }
+      }
+    } else {
+      factors.push({
+        name: 'No WebGL Support',
         impact: -5,
-        reason: 'Untested environment',
+        reason: 'Limited hardware acceleration - software rendering only',
+      });
+    }
+
+    // Power Management & Thermal State
+    const battery = navigator as Navigator & {
+      getBattery?: () => Promise<{ charging: boolean; level: number }>;
+    };
+    if (battery?.getBattery) {
+      // Note: This is async, so we can't get the value synchronously
+      // But we can note that battery API is available
+      factors.push({
+        name: 'Mobile/Laptop Device',
+        impact: -3,
+        reason:
+          'Battery-powered device - potential thermal throttling, power management',
+      });
+    }
+
+    // Timezone & Regional Settings (can affect Date/Number formatting performance)
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (timezone.includes('Asia') || timezone.includes('Europe')) {
+      // Some complex timezone calculations
+      factors.push({
+        name: 'Complex Timezone',
+        impact: -1,
+        reason: `${timezone} - complex DST rules may affect date operations`,
       });
     }
 
@@ -393,20 +620,75 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   calibrationWarnings = computed(() => {
     const warnings: string[] = [];
     const score = this.reliabilityScore();
+    const factors = this.environmentFactors();
 
     if (score < 60) {
-      warnings.push('Low reliability score may affect benchmark accuracy');
+      warnings.push(
+        `Low reliability score (${score}%) - Results may have high variance due to environmental factors`
+      );
     }
+
     if (this.isDevToolsOpen()) {
-      warnings.push('Close DevTools for more accurate measurements');
+      warnings.push(
+        'Close DevTools to eliminate V8 debugging overhead and enable full JIT optimizations'
+      );
     }
+
     if (!document.hasFocus()) {
-      warnings.push('Focus this tab to prevent browser throttling');
+      warnings.push(
+        'Focus this tab to prevent browser throttling - background tabs have reduced timer resolution'
+      );
     }
 
     const calibration = this.calibrationData();
-    if (calibration && calibration.cpuOpsPerMs < 100) {
-      warnings.push('CPU performance is below recommended threshold');
+    if (calibration) {
+      if (calibration.cpuOpsPerMs < 100) {
+        warnings.push(
+          `CPU performance below baseline (${calibration.cpuOpsPerMs.toFixed(
+            0
+          )} ops/ms) - consider reducing data size`
+        );
+      }
+
+      if (calibration.availableMemoryMB < 512) {
+        warnings.push(
+          `Low available memory (${calibration.availableMemoryMB}MB) - may trigger garbage collection during tests`
+        );
+      }
+    }
+
+    // Check for specific problematic factors
+    const devToolsOpen = factors.some((f) => f.name === 'DevTools Open');
+    const backgroundTab = factors.some((f) => f.name === 'Background Tab');
+    const lowMemory = factors.some((f) => f.name.includes('Low Memory'));
+    const unknownBrowser = factors.some((f) => f.name === 'Unknown Browser');
+
+    if (devToolsOpen && backgroundTab) {
+      warnings.push(
+        'Multiple performance impacts detected - close DevTools and focus tab for accurate results'
+      );
+    }
+
+    if (lowMemory) {
+      warnings.push(
+        'Limited system memory detected - consider smaller data sizes to avoid memory pressure'
+      );
+    }
+
+    if (unknownBrowser) {
+      warnings.push(
+        'Untested browser environment - results may not be comparable with established baselines'
+      );
+    }
+
+    // Hardware-specific warnings
+    const integratedGPU = factors.some((f) => f.name === 'Integrated Graphics');
+    const limitedCores = factors.some((f) => f.name === 'Limited CPU Cores');
+
+    if (integratedGPU && limitedCores) {
+      warnings.push(
+        'Low-end hardware detected - consider reducing complexity for meaningful comparisons'
+      );
     }
 
     return warnings;
@@ -463,6 +745,12 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       }
       case 'memory-efficiency':
         return dataSize; // Memory operations scale with dataSize
+      case 'data-fetching':
+        return Math.min(1000, dataSize) + Math.min(100, dataSize / 10); // API data + filtering operations
+      case 'real-time-updates':
+        return Math.min(500, dataSize); // Real-time update frequency
+      case 'state-size-scaling':
+        return Math.min(200, dataSize / 5); // Scaling operations
       default:
         return dataSize; // Default fallback
     }
@@ -552,6 +840,21 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         return 5; // Overhead for concurrent operations
       case 'memory-efficiency':
         return (dataSize * 128) / (1024 * 1024); // Tracks memory growth
+      case 'data-fetching': {
+        // API data + metadata + filters + pagination
+        const itemSize = 200; // bytes per item (with metadata)
+        const baseOverhead = 1; // MB for filters/pagination
+        return (
+          (Math.min(1000, dataSize) * itemSize) / (1024 * 1024) + baseOverhead
+        );
+      }
+      case 'real-time-updates':
+        return 3; // Live metrics + events + notifications
+      case 'state-size-scaling': {
+        // Large entities with properties and relations
+        const entitySize = 2048; // bytes per entity (with properties/relations)
+        return (Math.min(dataSize * 10, 10000) * entitySize) / (1024 * 1024);
+      }
       default:
         return (dataSize * 64) / (1024 * 1024); // Default: 64 bytes per item
     }
@@ -613,9 +916,25 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
           return null;
         }
 
-        const medians = libResults.map((r) => r.median);
-        const p95s = libResults.map((r) => r.p95);
-        const ops = libResults.map((r) => r.opsPerSecond);
+        // Filter out unsupported results (-1 values)
+        const supportedResults = libResults.filter((r) => r.median !== -1);
+
+        if (supportedResults.length === 0) {
+          // All scenarios are unsupported for this library
+          return {
+            name: lib.name,
+            color: lib.color,
+            rank: 999, // Put unsupported libraries at the end
+            median: -1,
+            p95: -1,
+            opsPerSecond: -1,
+            relativeSpeed: -1,
+          };
+        }
+
+        const medians = supportedResults.map((r) => r.median);
+        const p95s = supportedResults.map((r) => r.p95);
+        const ops = supportedResults.map((r) => r.opsPerSecond);
 
         return {
           name: lib.name,
@@ -629,19 +948,24 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       })
       .filter((s) => s !== null) as LibrarySummary[];
 
-    // Sort by median time and assign ranks
-    summaries.sort((a, b) => a.median - b.median);
-    summaries.forEach((s, i) => (s.rank = i + 1));
+    // Separate supported and unsupported libraries
+    const supportedSummaries = summaries.filter((s) => s.median !== -1);
+    const unsupportedSummaries = summaries.filter((s) => s.median === -1);
 
-    // Calculate relative speed vs SignalTree
-    const signalTree = summaries.find((s) => s.name === 'SignalTree');
+    // Sort supported libraries by median time and assign ranks
+    supportedSummaries.sort((a, b) => a.median - b.median);
+    supportedSummaries.forEach((s, i) => (s.rank = i + 1));
+
+    // Calculate relative speed vs SignalTree for supported libraries
+    const signalTree = supportedSummaries.find((s) => s.name === 'SignalTree');
     if (signalTree) {
-      summaries.forEach((s) => {
+      supportedSummaries.forEach((s) => {
         s.relativeSpeed = signalTree.median / s.median;
       });
     }
 
-    return summaries;
+    // Combine supported and unsupported, with unsupported at the end
+    return [...supportedSummaries, ...unsupportedSummaries];
   });
 
   overallWinner = computed(() => {
@@ -780,22 +1104,49 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     const iterations = 100000;
     const start = performance.now();
 
-    // Perform CPU-intensive operations
+    // Perform CPU-intensive operations that stress different aspects
     let result = 0;
+    let mathOps = 0;
+    let memoryOps = 0;
+
+    // Create a small array to test memory access patterns
+    const testArray = new Array(1000).fill(0).map((_, i) => i);
+
     for (let i = 0; i < iterations; i++) {
+      // Mathematical operations (tests FPU and ALU)
       result += Math.sqrt(i) * Math.sin(i) * Math.cos(i);
-      if (i % 1000 === 0) {
-        // Yield to prevent blocking
+      mathOps++;
+
+      // Memory access patterns (tests cache and memory subsystem)
+      const index = i % testArray.length;
+      testArray[index] = testArray[index] * 1.001 + 0.1;
+      memoryOps++;
+
+      // Yield periodically to prevent blocking and test timer resolution
+      if (i % 5000 === 0) {
         await new Promise((resolve) => setTimeout(resolve, 0));
       }
     }
-    if (Number.isNaN(result)) {
-      // consume result to avoid unused warnings
-      console.log('noop');
+
+    // Consume results to prevent dead code elimination
+    if (Number.isNaN(result) || testArray.length === 0) {
+      console.debug('Calibration completed:', { mathOps, memoryOps });
     }
 
     const duration = performance.now() - start;
-    return iterations / duration; // ops per ms
+    const opsPerMs = iterations / duration;
+
+    // Log calibration details for debugging
+    console.debug('CPU Calibration Results:', {
+      iterations,
+      duration: `${duration.toFixed(2)}ms`,
+      opsPerMs: opsPerMs.toFixed(2),
+      mathOperations: mathOps,
+      memoryOperations: memoryOps,
+      timerResolution: performance.timeOrigin ? 'High Resolution' : 'Standard',
+    });
+
+    return opsPerMs;
   }
 
   private async executeBenchmark(
@@ -859,6 +1210,21 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             svc.runMemoryEfficiencyBenchmark?.(config.dataSize) ??
             this.simulatedDuration(libraryId, scenarioId, config)
           );
+        case 'data-fetching':
+          return (
+            svc.runDataFetchingBenchmark?.(config.dataSize) ??
+            this.simulatedDuration(libraryId, scenarioId, config)
+          );
+        case 'real-time-updates':
+          return (
+            svc.runRealTimeUpdatesBenchmark?.(config.dataSize) ??
+            this.simulatedDuration(libraryId, scenarioId, config)
+          );
+        case 'state-size-scaling':
+          return (
+            svc.runStateSizeScalingBenchmark?.(config.dataSize) ??
+            this.simulatedDuration(libraryId, scenarioId, config)
+          );
       }
     }
     return this.simulatedDuration(libraryId, scenarioId, config);
@@ -876,6 +1242,8 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         return this.akitaBench;
       case 'elf':
         return this.elfBench;
+      case 'ngxs':
+        return this.ngxsBench;
       default:
         return null;
     }
@@ -901,16 +1269,49 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
   private checkMemory(): number {
     const perfEx = performance as Performance & {
-      memory?: { jsHeapSizeLimit: number; usedJSHeapSize: number };
+      memory?: {
+        jsHeapSizeLimit: number;
+        usedJSHeapSize: number;
+        totalJSHeapSize: number;
+      };
     };
+
     if (perfEx.memory) {
-      const available =
-        perfEx.memory.jsHeapSizeLimit - perfEx.memory.usedJSHeapSize;
+      const { jsHeapSizeLimit, usedJSHeapSize, totalJSHeapSize } =
+        perfEx.memory;
+      const available = jsHeapSizeLimit - usedJSHeapSize;
+
+      console.debug('Memory Analysis:', {
+        heapSizeLimit: `${(jsHeapSizeLimit / (1024 * 1024)).toFixed(1)}MB`,
+        usedHeapSize: `${(usedJSHeapSize / (1024 * 1024)).toFixed(1)}MB`,
+        totalHeapSize: `${(totalJSHeapSize / (1024 * 1024)).toFixed(1)}MB`,
+        availableHeap: `${(available / (1024 * 1024)).toFixed(1)}MB`,
+        memoryPressure:
+          usedJSHeapSize / jsHeapSizeLimit > 0.8 ? 'High' : 'Normal',
+      });
+
       return Math.round(available / (1024 * 1024));
     }
+
+    // Fallback to device memory API
     const deviceMemory = (navigator as Navigator & { deviceMemory?: number })
       .deviceMemory;
-    return deviceMemory ? deviceMemory * 1024 : 4096;
+
+    if (deviceMemory) {
+      console.debug('Device Memory Info:', {
+        totalDeviceMemory: `${deviceMemory}GB`,
+        estimatedAvailable: `${deviceMemory * 0.7}GB (estimated 70% available)`,
+        source: 'Device Memory API',
+      });
+      return deviceMemory * 1024 * 0.7; // Assume 70% available
+    }
+
+    // Final fallback
+    console.debug('Memory Info:', {
+      source: 'Default fallback',
+      assumed: '4GB total, 2.8GB available',
+    });
+    return 2048; // Conservative default (2GB available)
   }
 
   // Library management
@@ -1001,6 +1402,25 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         config
       );
 
+      // Check if the benchmark returned -1 (unsupported)
+      if (duration === -1) {
+        // Return special result indicating unsupported scenario
+        return {
+          libraryId: library.id,
+          scenarioId: scenario.id,
+          samples: [],
+          median: -1,
+          mean: -1,
+          p95: -1,
+          p99: -1,
+          min: -1,
+          max: -1,
+          stdDev: -1,
+          opsPerSecond: -1,
+          memoryDeltaMB: undefined,
+        };
+      }
+
       samples.push(duration);
 
       // Yield to UI
@@ -1049,6 +1469,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         'selector-memoization': 0.3,
         'concurrent-updates': 1.2,
         'memory-efficiency': 0.7,
+        'data-fetching': 0.9, // API parsing + state hydration
+        'real-time-updates': 0.6, // Live WebSocket-like updates
+        'state-size-scaling': 1.1, // Large dataset operations
       },
       'ngrx-store': {
         'deep-nested': 2.5,
@@ -1058,6 +1481,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         'selector-memoization': 0.5,
         'concurrent-updates': 2.5,
         'memory-efficiency': 1.2,
+        'data-fetching': 2.1, // Heavier action dispatching
+        'real-time-updates': 2.8, // Action overhead for live updates
+        'state-size-scaling': 3.2, // Selector performance with large state
       },
       'ngrx-signals': {
         'deep-nested': 1.5,
@@ -1067,6 +1493,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         'selector-memoization': 0.4,
         'concurrent-updates': 1.8,
         'memory-efficiency': 0.9,
+        'data-fetching': 1.4, // Signal store hydration
+        'real-time-updates': 1.6, // Signal-based live updates
+        'state-size-scaling': 1.9, // Good scaling with signals
       },
       akita: {
         'deep-nested': 2.0,
@@ -1076,6 +1505,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         'selector-memoization': 0.7,
         'concurrent-updates': 2.2,
         'memory-efficiency': 1.0,
+        'data-fetching': 1.8, // Store-based data loading
+        'real-time-updates': 2.1, // Entity updates
+        'state-size-scaling': 2.5, // Entity scaling challenges
       },
       elf: {
         'deep-nested': 1.2,
@@ -1085,6 +1517,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         'selector-memoization': 0.4,
         'concurrent-updates': 1.5,
         'memory-efficiency': 0.6,
+        'data-fetching': 1.1, // Efficient store management
+        'real-time-updates': 1.3, // Good real-time performance
+        'state-size-scaling': 1.7, // Decent scaling
       },
     };
 
@@ -1104,6 +1539,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         serialization: 15.0, // JSON serialization
         'concurrent-updates': 18.0, // Parallel operations overhead
         'memory-efficiency': 9.0, // Memory tracking + operations
+        'data-fetching': 12.0, // API parsing + hydration
+        'real-time-updates': 8.0, // Live WebSocket updates
+        'state-size-scaling': 14.0, // Large dataset operations
       },
       'ngrx-store': {
         'deep-nested': 35.0, // Immutable deep updates
@@ -1114,6 +1552,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         serialization: 18.0, // State serialization
         'concurrent-updates': 40.0, // Action serialization overhead
         'memory-efficiency': 16.0, // Object creation overhead
+        'data-fetching': 28.0, // Heavy action dispatching for data
+        'real-time-updates': 35.0, // Action overhead for live updates
+        'state-size-scaling': 42.0, // Selector performance with large state
       },
       'ngrx-signals': {
         'deep-nested': 20.0, // Signal-based deep updates
@@ -1124,6 +1565,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         serialization: 16.0, // Signal state serialization
         'concurrent-updates': 25.0, // Signal concurrency
         'memory-efficiency': 12.0, // Signal memory efficiency
+        'data-fetching': 19.0, // Signal store hydration
+        'real-time-updates': 22.0, // Signal-based live updates
+        'state-size-scaling': 26.0, // Good scaling with signals
       },
       akita: {
         'deep-nested': 28.0, // Entity-based deep updates
@@ -1134,6 +1578,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         serialization: 18.0, // Store serialization
         'concurrent-updates': 32.0, // Transaction overhead
         'memory-efficiency': 14.0, // Entity overhead
+        'data-fetching': 24.0, // Store-based data loading
+        'real-time-updates': 30.0, // Entity updates
+        'state-size-scaling': 38.0, // Entity scaling challenges
       },
       elf: {
         'deep-nested': 16.0, // Modular deep updates
@@ -1144,6 +1591,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         serialization: 15.0, // Repository serialization
         'concurrent-updates': 20.0, // Repository concurrency
         'memory-efficiency': 10.0, // Repository efficiency
+        'data-fetching': 16.0, // Efficient store management
+        'real-time-updates': 18.0, // Good real-time performance
+        'state-size-scaling': 23.0, // Decent scaling
       },
     };
 

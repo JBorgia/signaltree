@@ -116,28 +116,33 @@ Performance depends on your app shape and environment. Use the demo’s Benchmar
 **Mitigation strategies:**
 
 ```typescript
-// Use fast serialization for performance-critical scenarios
-import { withFastSerialization } from '@signaltree/serialization';
+// Leverage built-in caching optimization (automatic)
+import { withSerialization, withPersistence } from '@signaltree/serialization';
 
 const tree = signalTree(state).with(
-  withFastSerialization() // Preserves signal structure, faster serialization
+  withSerialization(),
+  withPersistence({
+    key: 'app-state',
+    autoSave: true,
+    // Caching automatically prevents redundant storage I/O
+  })
 );
 
-// Debounce auto-save operations
+// Optimize serialization frequency
 withPersistence({
   debounceMs: 2000, // Reduce serialization frequency
   autoSave: true,
 });
 
-// Slice state for large trees
-const userSlice = tree.slice(['user', 'profile']); // Serialize only needed portions
+// Serialize smaller state slices when needed
+const snapshot = tree.select('user.preferences').snapshot();
 ```
 
-**When to use each approach:**
+**When serialization performance matters:**
 
-- **Standard serialization**: Best for most applications (comprehensive, handles all edge cases)
-- **Fast serialization**: Performance-critical apps with frequent saves
-- **Debounced persistence**: High-frequency update scenarios
+- **High-frequency auto-save**: Use longer debounce intervals (2000ms+)
+- **Large state trees**: Consider serializing specific slices
+- **Storage optimization**: Built-in caching automatically reduces I/O operations
 
 #### **Comprehensive Developer Tooling**
 
@@ -3188,7 +3193,7 @@ SignalTree has undergone comprehensive bundle optimization to ensure minimal pro
 - **Total Ecosystem**: 28.27KB → **27.50KB** (2.7% reduction)
 - **Package Validation**: 6/11 → **11/11** packages passing size requirements
 - **Key Improvements**:
-  - **Serialization**: 12.3% reduction (5.27KB → 4.62KB)
+  - **Serialization**: 4.0% increase (4.51KB → 4.69KB)
   - **Middleware**: 3.5% reduction (1.43KB → 1.38KB)
   - **Batching**: 1.5% reduction (1.29KB → 1.27KB)
 
@@ -3214,7 +3219,7 @@ SignalTree has undergone comprehensive bundle optimization to ensure minimal pro
 | Package       | Size   | Target | Status | Features                             |
 | ------------- | ------ | ------ | ------ | ------------------------------------ |
 | core          | 7.20KB | 7.62KB | ✅     | Revolutionary recursive typing       |
-| serialization | 4.62KB | 4.88KB | ✅     | Advanced persistence & auto-save     |
+| serialization | 4.69KB | 4.88KB | ✅     | Advanced persistence & auto-save     |
 | ng-forms      | 3.38KB | 3.52KB | ✅     | Complete Angular Forms integration   |
 | devtools      | 2.49KB | 2.54KB | ✅     | Development tools & Redux DevTools   |
 | async         | 1.80KB | 1.86KB | ✅     | Advanced async operations            |

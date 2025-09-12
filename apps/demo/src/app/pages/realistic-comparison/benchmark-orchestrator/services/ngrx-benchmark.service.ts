@@ -1,6 +1,135 @@
 import { Injectable } from '@angular/core';
 import { createAction, createReducer, on, props } from '@ngrx/store';
 
+// State interface for complex benchmarks
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  isActive: boolean;
+  department: string;
+  lastLogin: string;
+}
+
+interface Message {
+  id: number;
+  content: string;
+  timestamp: number;
+  priority: 'high' | 'normal';
+}
+
+interface LargeDataItem {
+  id: number;
+  title: string;
+  description: string;
+  category: string;
+  status: 'active' | 'inactive';
+  metadata: {
+    createdAt: string;
+    tags: string[];
+    score: number;
+    lastModified?: string;
+  };
+}
+
+interface NgRxState {
+  groups: unknown[];
+  posts: unknown[];
+  users: User[];
+  metrics?: {
+    activeUsers: number;
+    messagesPerSecond: number;
+    systemLoad: number;
+  };
+  messages?: Message[];
+  largeDataset?: LargeDataItem[];
+  filteredUsers?: User[];
+  departmentGroups?: Record<string, User[]>;
+  activeItems?: LargeDataItem[];
+  sortedItems?: LargeDataItem[];
+}
+
+// Actions for new benchmark scenarios
+const setUsers = createAction(
+  '[Benchmark] Set Users',
+  props<{ payload: User[] }>()
+);
+const setFilteredUsers = createAction(
+  '[Benchmark] Set Filtered Users',
+  props<{ payload: User[] }>()
+);
+const setDepartmentGroups = createAction(
+  '[Benchmark] Set Department Groups',
+  props<{ payload: Record<string, User[]> }>()
+);
+const updateMetrics = createAction(
+  '[Benchmark] Update Metrics',
+  props<{
+    payload: {
+      activeUsers: number;
+      messagesPerSecond: number;
+      systemLoad: number;
+    };
+  }>()
+);
+const addMessage = createAction(
+  '[Benchmark] Add Message',
+  props<{ payload: Message }>()
+);
+const setLargeDataset = createAction(
+  '[Benchmark] Set Large Dataset',
+  props<{ payload: LargeDataItem[] }>()
+);
+const setActiveItems = createAction(
+  '[Benchmark] Set Active Items',
+  props<{ payload: LargeDataItem[] }>()
+);
+const setSortedItems = createAction(
+  '[Benchmark] Set Sorted Items',
+  props<{ payload: LargeDataItem[] }>()
+);
+const updateItem = createAction(
+  '[Benchmark] Update Item',
+  props<{ payload: { index: number; item: LargeDataItem } }>()
+);
+
+// Reducer for new benchmark scenarios
+const benchmarkReducer = createReducer(
+  { groups: [], posts: [], users: [] } as NgRxState,
+  on(setUsers, (state, { payload }) => ({ ...state, users: payload })),
+  on(setFilteredUsers, (state, { payload }) => ({
+    ...state,
+    filteredUsers: payload,
+  })),
+  on(setDepartmentGroups, (state, { payload }) => ({
+    ...state,
+    departmentGroups: payload,
+  })),
+  on(updateMetrics, (state, { payload }) => ({ ...state, metrics: payload })),
+  on(addMessage, (state, { payload }) => ({
+    ...state,
+    messages: [...(state.messages || []), payload],
+  })),
+  on(setLargeDataset, (state, { payload }) => ({
+    ...state,
+    largeDataset: payload,
+  })),
+  on(setActiveItems, (state, { payload }) => ({
+    ...state,
+    activeItems: payload,
+  })),
+  on(setSortedItems, (state, { payload }) => ({
+    ...state,
+    sortedItems: payload,
+  })),
+  on(updateItem, (state, { payload }) => ({
+    ...state,
+    largeDataset: state.largeDataset?.map((item, index) =>
+      index === payload.index ? payload.item : item
+    ),
+  }))
+);
+
 @Injectable({ providedIn: 'root' })
 export class NgRxBenchmarkService {
   // Narrow typing for performance.memory when available
@@ -342,6 +471,207 @@ export class NgRxBenchmarkService {
 
     // consume to avoid DCE
     if (state.groups.length === -1) console.log('noop');
+    return duration;
+  }
+
+  async runDataFetchingBenchmark(): Promise<number> {
+    // Simulate data fetching with NgRx Store pattern
+    const initialState: NgRxState = { groups: [], posts: [], users: [] };
+    let state = initialState;
+
+    const beforeMem =
+      (performance as typeof NgRxBenchmarkService.PerfWithMemory).memory
+        ?.usedJSHeapSize ?? null;
+    const start = performance.now();
+
+    // Simulate fetching 1000 user records from API
+    const users = Array.from({ length: 1000 }, (_, i) => ({
+      id: i + 1,
+      name: `User ${i + 1}`,
+      email: `user${i + 1}@example.com`,
+      isActive: Math.random() > 0.3,
+      department: `Dept ${Math.floor(Math.random() * 10) + 1}`,
+      lastLogin: new Date().toISOString(),
+    }));
+
+    // Dispatch action to hydrate users
+    state = benchmarkReducer(state, setUsers({ payload: users }));
+    await this.yieldToUI();
+
+    // Simulate filtering active users (realistic business logic)
+    const activeUsers = users.filter((user) => user.isActive);
+    state = benchmarkReducer(state, setFilteredUsers({ payload: activeUsers }));
+    await this.yieldToUI();
+
+    // Simulate additional processing - group by department
+    const departmentGroups = activeUsers.reduce((acc, user) => {
+      if (!acc[user.department]) {
+        acc[user.department] = [];
+      }
+      acc[user.department].push(user);
+      return acc;
+    }, {} as Record<string, User[]>);
+
+    // Update state with grouped data
+    state = benchmarkReducer(
+      state,
+      setDepartmentGroups({ payload: departmentGroups })
+    );
+
+    const duration = performance.now() - start;
+    const afterMem =
+      (performance as typeof NgRxBenchmarkService.PerfWithMemory).memory
+        ?.usedJSHeapSize ?? null;
+    if (beforeMem != null && afterMem != null) {
+      const deltaMB = (afterMem - beforeMem) / (1024 * 1024);
+      console.debug(
+        '[NgRx][DataFetching][memory] usedJSHeapSize ΔMB ~',
+        deltaMB.toFixed(2)
+      );
+    }
+
+    // consume to avoid DCE
+    if (state.users?.length === -1) console.log('noop');
+    return duration;
+  }
+
+  async runRealTimeUpdatesBenchmark(): Promise<number> {
+    // Simulate real-time updates (WebSocket-like) with NgRx Store
+    const initialState: NgRxState = {
+      groups: [],
+      posts: [],
+      users: [],
+      metrics: { activeUsers: 0, messagesPerSecond: 0, systemLoad: 0.0 },
+    };
+    let state = initialState;
+
+    const beforeMem =
+      (performance as typeof NgRxBenchmarkService.PerfWithMemory).memory
+        ?.usedJSHeapSize ?? null;
+    const start = performance.now();
+
+    // Simulate 500 real-time metric updates
+    for (let i = 0; i < 500; i++) {
+      const metrics = {
+        activeUsers: Math.floor(Math.random() * 1000) + 100,
+        messagesPerSecond: Math.floor(Math.random() * 50) + 10,
+        systemLoad: Math.random() * 0.8 + 0.1,
+      };
+
+      state = benchmarkReducer(state, updateMetrics({ payload: metrics }));
+
+      // Simulate incoming messages (like chat or notifications)
+      if (i % 10 === 0) {
+        const newMessage: Message = {
+          id: i,
+          content: `Real-time message ${i}`,
+          timestamp: Date.now(),
+          priority: Math.random() > 0.7 ? 'high' : 'normal',
+        };
+        state = benchmarkReducer(state, addMessage({ payload: newMessage }));
+      }
+
+      // Yield occasionally to simulate real-time processing
+      if (i % 25 === 0) await this.yieldToUI();
+    }
+
+    const duration = performance.now() - start;
+    const afterMem =
+      (performance as typeof NgRxBenchmarkService.PerfWithMemory).memory
+        ?.usedJSHeapSize ?? null;
+    if (beforeMem != null && afterMem != null) {
+      const deltaMB = (afterMem - beforeMem) / (1024 * 1024);
+      console.debug(
+        '[NgRx][RealTimeUpdates][memory] usedJSHeapSize ΔMB ~',
+        deltaMB.toFixed(2)
+      );
+    }
+
+    // consume to avoid DCE
+    if (state.metrics && Object.keys(state.metrics).length === -1)
+      console.log('noop');
+    return duration;
+  }
+
+  async runStateSizeScalingBenchmark(): Promise<number> {
+    // Test performance with large state size (10,000 items)
+    const initialState: NgRxState = { groups: [], posts: [], users: [] };
+    let state = initialState;
+
+    const beforeMem =
+      (performance as typeof NgRxBenchmarkService.PerfWithMemory).memory
+        ?.usedJSHeapSize ?? null;
+    const start = performance.now();
+
+    // Create large dataset (10,000 items)
+    const largeDataset: LargeDataItem[] = Array.from(
+      { length: 10000 },
+      (_, i) => ({
+        id: i + 1,
+        title: `Item ${i + 1}`,
+        description: `Description for item ${
+          i + 1
+        } with some additional text to make it realistic`,
+        category: `Category ${Math.floor(i / 100) + 1}`,
+        status: Math.random() > 0.5 ? 'active' : 'inactive',
+        metadata: {
+          createdAt: new Date().toISOString(),
+          tags: [`tag${i % 10}`, `tag${i % 7}`, `tag${i % 5}`],
+          score: Math.random() * 100,
+        },
+      })
+    );
+
+    // Hydrate the large dataset
+    state = benchmarkReducer(state, setLargeDataset({ payload: largeDataset }));
+    await this.yieldToUI();
+
+    // Perform operations that would be common with large datasets
+    // 1. Filter by status
+    const activeItems = largeDataset.filter((item) => item.status === 'active');
+    state = benchmarkReducer(state, setActiveItems({ payload: activeItems }));
+    await this.yieldToUI();
+
+    // 2. Sort by score (expensive operation)
+    const sortedItems = [...activeItems].sort(
+      (a, b) => b.metadata.score - a.metadata.score
+    );
+    state = benchmarkReducer(state, setSortedItems({ payload: sortedItems }));
+    await this.yieldToUI();
+
+    // 3. Update multiple items (batch update simulation)
+    for (let i = 0; i < 100; i++) {
+      const randomIndex = Math.floor(Math.random() * largeDataset.length);
+      const updatedItem: LargeDataItem = {
+        ...largeDataset[randomIndex],
+        metadata: {
+          ...largeDataset[randomIndex].metadata,
+          score: Math.random() * 100,
+          lastModified: new Date().toISOString(),
+        },
+      };
+      state = benchmarkReducer(
+        state,
+        updateItem({ payload: { index: randomIndex, item: updatedItem } })
+      );
+
+      if (i % 20 === 0) await this.yieldToUI();
+    }
+
+    const duration = performance.now() - start;
+    const afterMem =
+      (performance as typeof NgRxBenchmarkService.PerfWithMemory).memory
+        ?.usedJSHeapSize ?? null;
+    if (beforeMem != null && afterMem != null) {
+      const deltaMB = (afterMem - beforeMem) / (1024 * 1024);
+      console.debug(
+        '[NgRx][StateSizeScaling][memory] usedJSHeapSize ΔMB ~',
+        deltaMB.toFixed(2)
+      );
+    }
+
+    // consume to avoid DCE
+    if (state.largeDataset?.length === -1) console.log('noop');
     return duration;
   }
 }

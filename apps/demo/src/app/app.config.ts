@@ -4,6 +4,7 @@ import {
   provideZoneChangeDetection,
 } from '@angular/core';
 import { provideRouter } from '@angular/router';
+import { provideStore } from '@ngxs/store';
 import { LineChart } from 'echarts/charts';
 import {
   GridComponent,
@@ -16,6 +17,7 @@ import { CanvasRenderer } from 'echarts/renderers';
 import { provideEchartsCore } from 'ngx-echarts';
 
 import { appRoutes } from './app.routes';
+import { BenchmarkState } from './pages/realistic-comparison/benchmark-orchestrator/services/ngxs-benchmark.service';
 
 // Register only what we need for our charts
 echarts.use([
@@ -34,5 +36,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(appRoutes),
     // Provide ECharts core for ngx-echarts
     provideEchartsCore({ echarts }),
+    // Provide NgXs store for state management benchmarks
+    provideStore([BenchmarkState]),
   ],
 };

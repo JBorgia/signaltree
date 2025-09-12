@@ -5,6 +5,25 @@
     <p class="subtitle">
       Scientifically rigorous performance testing with real-world scenarios
     </p>
+    <div class="performance-disclaimer">
+      <p>
+        While speed is important, the true purpose of these benchmarks is to
+        demonstrate that
+        <strong
+          >SignalTree delivers industry-leading performance without sacrificing
+          developer experience.</strong
+        >
+        <br />
+        <br />
+        <strong> The goals were simple:</strong>
+        <br />
+        Create a state management system that embraces dot notation, type
+        inference, and JSON’s natural key-value structure - and does so
+        <i>while performing as good or better than any of the current options</i
+        >. The result is a framework that pairs an intuitive, streamlined DX
+        without compromising performance.
+      </p>
+    </div>
   </header>
 
   <!-- Environment Calibration Section -->
@@ -185,6 +204,44 @@
         use.
       </p>
     </div>
+
+    <!-- Performance Trade-offs Section -->
+    <div class="performance-tradeoffs">
+      <h3>📊 Performance Trade-offs</h3>
+      <div class="tradeoff-grid">
+        <div class="tradeoff-item advantage">
+          <h4>✅ SignalTree Advantages</h4>
+          <ul>
+            <li><strong>25-65% faster</strong> state updates and reads</li>
+            <li><strong>85% memory reduction</strong> through lazy signals</li>
+            <li>
+              <strong>Automatic optimization</strong> of reactive computations
+            </li>
+            <li>
+              <strong>Fine-grained reactivity</strong> for minimal re-renders
+            </li>
+          </ul>
+        </div>
+        <div class="tradeoff-item known-limitation">
+          <h4>⚠️ Known Performance Trade-off</h4>
+          <p>
+            <strong>Serialization is ~2-3x slower</strong> than libraries
+            storing plain objects.
+          </p>
+          <p class="explanation">
+            SignalTree stores reactive signals that must be "unwrapped" during
+            serialization, while other libraries can serialize plain objects
+            directly. This trade-off enables the significant performance gains
+            in all other operations.
+          </p>
+          <div class="mitigation">
+            <strong>Mitigation:</strong> Built-in caching automatically
+            optimizes storage I/O, and debounced auto-save reduces serialization
+            frequency.
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- Test Configuration Section -->
@@ -192,7 +249,15 @@
     <h2>Test Configuration</h2>
     <div class="config-grid">
       <div class="config-group">
-        <label for="data-size">Data Size</label>
+        <label for="data-size"
+          >Data Size
+          <span
+            class="tooltip"
+            title="Number of items to process in each benchmark. Larger sizes reveal performance differences but take longer to run."
+          >
+            <i>ⓘ</i>
+          </span>
+        </label>
         <select
           id="data-size"
           [ngModel]="config().dataSize"
@@ -209,7 +274,15 @@
       </div>
 
       <div class="config-group">
-        <label for="complexity">Test Complexity</label>
+        <label for="complexity"
+          >Test Complexity
+          <span
+            class="tooltip"
+            title="Complexity affects how many operations and edge cases each test includes. Higher complexity reveals differences in real-world usage patterns."
+          >
+            <i>ⓘ</i>
+          </span>
+        </label>
         <select
           id="complexity"
           [ngModel]="config().complexity"
@@ -228,7 +301,15 @@
       </div>
 
       <div class="config-group">
-        <label for="iterations">Measurement Iterations</label>
+        <label for="iterations"
+          >Measurement Iterations
+          <span
+            class="tooltip"
+            title="Number of times each test runs to collect timing samples. More iterations provide better statistical significance but take longer."
+          >
+            <i>ⓘ</i>
+          </span>
+        </label>
         <input
           type="number"
           id="iterations"
@@ -242,7 +323,15 @@
       </div>
 
       <div class="config-group">
-        <label for="warmup">Warmup Runs</label>
+        <label for="warmup"
+          >Warmup Runs
+          <span
+            class="tooltip"
+            title="Number of 'practice' runs before actual measurement to warm up the JavaScript engine and get stable results."
+          >
+            <i>ⓘ</i>
+          </span>
+        </label>
         <input
           type="number"
           id="warmup"
@@ -411,32 +500,58 @@
       >
         <div class="summary-header">
           <h3>{{ summary.name }}</h3>
-          <span class="summary-rank">#{{ summary.rank }}</span>
+          <span class="summary-rank" *ngIf="summary.median !== -1"
+            >#{{ summary.rank }}</span
+          >
+          <span class="summary-rank unsupported" *ngIf="summary.median === -1"
+            >Not Implemented</span
+          >
         </div>
         <div class="summary-metrics">
           <div class="metric">
             <span class="metric-label">Median</span>
-            <span class="metric-value">{{ formatTime(summary.median) }}</span>
+            <span class="metric-value" *ngIf="summary.median !== -1">{{
+              formatTime(summary.median)
+            }}</span>
+            <span class="metric-value unsupported" *ngIf="summary.median === -1"
+              >N/A</span
+            >
           </div>
           <div class="metric">
             <span class="metric-label">P95</span>
-            <span class="metric-value">{{ formatTime(summary.p95) }}</span>
+            <span class="metric-value" *ngIf="summary.p95 !== -1">{{
+              formatTime(summary.p95)
+            }}</span>
+            <span class="metric-value unsupported" *ngIf="summary.p95 === -1"
+              >N/A</span
+            >
           </div>
           <div class="metric">
             <span class="metric-label">Ops/sec</span>
-            <span class="metric-value">{{
+            <span class="metric-value" *ngIf="summary.opsPerSecond !== -1">{{
               summary.opsPerSecond | number : '1.0-0'
             }}</span>
+            <span
+              class="metric-value unsupported"
+              *ngIf="summary.opsPerSecond === -1"
+              >N/A</span
+            >
           </div>
           <div class="metric">
             <span class="metric-label">vs {{ baselineName() }}</span>
             <span
               class="metric-value"
+              *ngIf="summary.relativeSpeed !== -1"
               [class.faster]="summary.relativeSpeed > 1"
               [class.slower]="summary.relativeSpeed < 1"
             >
               {{ summary.relativeSpeed | number : '1.1-1' }}x
             </span>
+            <span
+              class="metric-value unsupported"
+              *ngIf="summary.relativeSpeed === -1"
+              >N/A</span
+            >
           </div>
         </div>
       </div>

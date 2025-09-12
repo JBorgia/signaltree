@@ -378,6 +378,101 @@ $border: #e5e7eb;
       }
     }
   }
+
+  // Performance trade-offs section
+  .performance-tradeoffs {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: rgba($dark, 0.02);
+    border: 1px solid $border;
+    border-radius: 12px;
+
+    h3 {
+      margin: 0 0 1.5rem 0;
+      color: $dark;
+      font-size: 1.25rem;
+    }
+
+    .tradeoff-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+
+      @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .tradeoff-item {
+      padding: 1.25rem;
+      border-radius: 8px;
+
+      &.advantage {
+        background: rgba($success, 0.05);
+        border: 1px solid rgba($success, 0.2);
+
+        h4 {
+          color: color.adjust($success, $lightness: -20%);
+          margin: 0 0 1rem 0;
+          font-size: 1rem;
+        }
+
+        ul {
+          margin: 0;
+          padding-left: 1.25rem;
+
+          li {
+            margin-bottom: 0.5rem;
+            color: color.adjust($success, $lightness: -30%);
+            font-size: 0.875rem;
+
+            strong {
+              font-weight: 600;
+            }
+          }
+        }
+      }
+
+      &.known-limitation {
+        background: rgba($warning, 0.05);
+        border: 1px solid rgba($warning, 0.2);
+
+        h4 {
+          color: color.adjust($warning, $lightness: -20%);
+          margin: 0 0 1rem 0;
+          font-size: 1rem;
+        }
+
+        p {
+          margin: 0 0 0.75rem 0;
+          color: color.adjust($warning, $lightness: -30%);
+          font-size: 0.875rem;
+          line-height: 1.5;
+
+          &.explanation {
+            margin-bottom: 1rem;
+          }
+
+          strong {
+            font-weight: 600;
+          }
+        }
+
+        .mitigation {
+          padding: 0.75rem;
+          background: rgba($primary, 0.05);
+          border: 1px solid rgba($primary, 0.15);
+          border-radius: 6px;
+          font-size: 0.8rem;
+          color: color.adjust($primary, $lightness: -10%);
+
+          strong {
+            font-weight: 600;
+          }
+        }
+      }
+    }
+  }
 }
 
 // Config Section
@@ -533,6 +628,7 @@ $border: #e5e7eb;
 
 // Controls Section
 .controls-section {
+  display: block;
   text-align: center;
   margin-bottom: 2rem;
 
@@ -1017,4 +1113,94 @@ $border: #e5e7eb;
       }
     }
   }
+}
+
+// Tooltips
+.tooltip {
+  position: relative;
+  cursor: help;
+
+  i {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: $primary;
+    color: white;
+    text-align: center;
+    line-height: 16px;
+    font-size: 12px;
+    font-style: normal;
+    margin-left: 4px;
+  }
+
+  &:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: $dark;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    max-width: 250px;
+    white-space: normal;
+    width: max-content;
+    max-width: 300px;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  &:hover::before {
+    content: '';
+    position: absolute;
+    bottom: 115%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: $dark;
+    z-index: 1000;
+  }
+}
+
+// Performance disclaimer
+.performance-disclaimer {
+  margin-top: 1rem;
+  padding: 1rem;
+  text-align: start;
+  background: color.adjust($primary, $lightness: 45%);
+  border: 1px solid color.adjust($primary, $lightness: 20%);
+  border-radius: 8px;
+
+  p {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: color.adjust($primary, $lightness: -20%);
+  }
+
+  strong {
+    color: color.adjust($primary, $lightness: -30%);
+  }
+}
+
+// Unsupported scenario styles
+.unsupported {
+  color: $warning !important;
+  font-style: italic;
+}
+
+.summary-rank.unsupported {
+  background: $warning;
+  color: white;
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.metric-value.unsupported {
+  opacity: 0.6;
 }

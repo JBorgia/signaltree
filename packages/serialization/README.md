@@ -7,11 +7,18 @@ Advanced state serialization, persistence, and SSR support for SignalTree with a
 - Advanced serialization: Handles complex types (Date, RegExp, Map, Set) with circular reference support
 - Auto-save persistence: Debounced automatic state persistence with configurable intervals
 - Multiple storage adapters: localStorage, sessionStorage, IndexedDB, and custom storage backends
-- SSR compatibility: Server-side rendering support with hydration
-- Snapshot management: Point-in-time state capture and restoration
+- SSR compatibility: Server-side rendering support with hydratio```
+  @signaltree/serialization: 4.69KB gzipped
+  ├── Core serialization: ~2.1KB
+  ├── Persistence layer: ~1.2KB
+  ├── Storage adapters: ~0.8KB
+  ├── Type handlers: ~0.4KB
+  └── Utils & helpers: ~0.39KB
+
+````shot management: Point-in-time state capture and restoration
 - Circular reference handling for complex object graphs
 - Performance optimized: Efficient serialization designed for low overhead
-- Compact bundle: Advanced persistence in ~4.62KB gzipped
+- Compact bundle: Advanced persistence in ~4.69KB gzipped
 
 ## Quick start
 
@@ -19,7 +26,7 @@ Advanced state serialization, persistence, and SSR support for SignalTree with a
 
 ```bash
 npm install @signaltree/serialization @signaltree/core
-```
+````
 
 ### Basic serialization
 
@@ -347,7 +354,7 @@ try {
 
 ## Performance and bundle size
 
-- **Bundle Size**: ~4.6KB gzipped (approximate; varies by build/tooling)
+- **Bundle Size**: ~4.69KB gzipped (approximate; varies by build/tooling)
 - **Serialization**: Optimized for speed; actual performance depends on data shapes and environment
 - **Auto-Save**: Debounced to prevent excessive storage operations
 - **Memory Usage**: Efficient handling of large state trees
@@ -532,7 +539,7 @@ Enhances SignalTree with persistence capabilities.
 ## Bundle size breakdown
 
 ```
-@signaltree/serialization: 4.62KB gzipped
+@signaltree/serialization: 4.69KB gzipped
 ├── Core serialization: ~2.1KB
 ├── Persistence layer: ~1.2KB
 ├── Storage adapters: ~0.8KB
