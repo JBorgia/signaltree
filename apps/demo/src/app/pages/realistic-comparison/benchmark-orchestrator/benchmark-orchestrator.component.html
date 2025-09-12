@@ -152,9 +152,12 @@
         <div class="library-checkbox">
           <input
             type="checkbox"
-            [checked]="lib.selected"
+            [ngModel]="lib.selected"
+            (ngModelChange)="onLibraryCheckboxChange(lib, $event)"
             [disabled]="lib.id === 'signaltree'"
             (click)="$event.stopPropagation()"
+            (change)="$event.stopPropagation()"
+            [attr.aria-label]="lib.name + ' selection'"
           />
         </div>
         <div class="library-info">
@@ -171,6 +174,16 @@
           Baseline
         </div>
       </div>
+    </div>
+
+    <!-- Bundle Size Disclaimer -->
+    <div class="bundle-disclaimer">
+      <p>
+        <strong>Note:</strong> Bundle sizes are approximate and depend on usage
+        patterns, tree-shaking, and build configuration. Actual production
+        bundles may vary significantly based on which features you import and
+        use.
+      </p>
     </div>
   </section>
 
@@ -323,7 +336,7 @@
     <div class="controls-info" *ngIf="!canRunBenchmarks()">
       <p *ngIf="!calibrationData()">Please calibrate environment first</p>
       <p *ngIf="selectedLibraries().length < 2">
-        Select at least one library to compare with SignalTree
+        Select at least one library to compare with {{ baselineName() }}
       </p>
       <p *ngIf="selectedScenarios().length === 0">
         Select at least one test scenario
@@ -416,7 +429,7 @@
             }}</span>
           </div>
           <div class="metric">
-            <span class="metric-label">vs SignalTree</span>
+            <span class="metric-label">vs {{ baselineName() }}</span>
             <span
               class="metric-value"
               [class.faster]="summary.relativeSpeed > 1"
@@ -435,6 +448,13 @@
         <div class="chart-toolbar">
           <button
             class="btn btn-export"
+            [class.active]="chartMode() === 'scenarios'"
+            (click)="setChartMode('scenarios')"
+          >
+            Scenarios
+          </button>
+          <button
+            class="btn btn-export"
             [class.active]="chartMode() === 'distribution'"
             (click)="setChartMode('distribution')"
           >
@@ -446,13 +466,6 @@
             (click)="setChartMode('percentiles')"
           >
             Percentiles
-          </button>
-          <button
-            class="btn btn-export"
-            [class.active]="chartMode() === 'scenarios'"
-            (click)="setChartMode('scenarios')"
-          >
-            Scenarios
           </button>
           <button
             class="btn btn-export"
@@ -499,7 +512,8 @@
                 >{{ getScenarioOps(scenario.id, lib.id) }} ops/s</span
               >
               <span class="relative" *ngIf="lib.id !== 'signaltree'">
-                {{ getRelativePerformance(scenario.id, lib.id) }}x vs SignalTree
+                {{ getRelativePerformance(scenario.id, lib.id) }}x vs
+                {{ baselineName() }}
               </span>
             </td>
           </tr>

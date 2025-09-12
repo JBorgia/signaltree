@@ -1,3 +1,5 @@
+@use 'sass:color';
+
 // Variables
 $primary: #3b82f6;
 $secondary: #8b5cf6;
@@ -355,6 +357,25 @@ $border: #e5e7eb;
       border-radius: 4px;
       font-size: 0.75rem;
       font-weight: 600;
+    }
+  }
+
+  // Bundle size disclaimer
+  .bundle-disclaimer {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: rgba($primary, 0.05);
+    border: 1px solid rgba($primary, 0.2);
+    border-radius: 8px;
+
+    p {
+      margin: 0;
+      font-size: 0.875rem;
+      color: color.adjust($primary, $lightness: -10%);
+
+      strong {
+        font-weight: 600;
+      }
     }
   }
 }

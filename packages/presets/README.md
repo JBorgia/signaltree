@@ -2,7 +2,7 @@
 
 Pre-configured SignalTree setups and common patterns for rapid development featuring popular combinations, best practices, and production-ready configurations.
 
-**Bundle size: 0.84KB gzipped**
+**Bundle size: ~0.84KB gzipped (measured in this repo); run the bundle analysis script for your exact build**
 
 ## What is @signaltree/presets?
 
@@ -526,14 +526,14 @@ class AppStateService {
 
 ## Choosing the right preset
 
-| Preset       | Best For                   | Bundle Size (gzipped) | Features           |
-| ------------ | -------------------------- | --------------------- | ------------------ |
-| **Minimal**  | Simple components, widgets | ~7.20KB               | Core only          |
-| **Standard** | Most applications          | ~8.47KB               | Core + performance |
-| **Async**    | API-heavy apps             | ~10.27KB              | Enhanced async     |
-| **Entity**   | Data management            | ~8.17KB               | CRUD operations    |
-| **Full**     | Complex applications       | ~27.50KB              | All features       |
-| **Dev**      | Development/debugging      | ~29.99KB              | All + debugging    |
+| Preset       | Best For                   | Bundle Size (gzipped, approx.) | Features           |
+| ------------ | -------------------------- | ------------------------------ | ------------------ |
+| **Minimal**  | Simple components, widgets | ~7–8KB                         | Core only          |
+| **Standard** | Most applications          | ~8–9KB                         | Core + performance |
+| **Async**    | API-heavy apps             | ~10–11KB                       | Enhanced async     |
+| **Entity**   | Data management            | ~8–9KB                         | CRUD operations    |
+| **Full**     | Complex applications       | ~27–30KB                       | All features       |
+| **Dev**      | Development/debugging      | ~30KB                          | All + debugging    |
 
 ## Composition and customization
 
@@ -558,13 +558,16 @@ const myCustomPreset = createPreset({
 const tree = myCustomPreset(initialState);
 ```
 
-## Performance benefits
+## Notes on size and performance
 
 - **Optimized combinations**: Packages configured to work together efficiently
 - **Environment awareness**: Different configurations for dev/prod
 - **Best practices**: Pre-configured with proven patterns
 - **Tree shaking**: Only includes what you need
 - **Bundle optimization**: Minimized overhead for each preset
+- **Bundle sizes vary** by build tools and configuration. To measure precisely in this repo, run the consolidated bundle analysis script.
+
+Optional: from the repo root, run the analysis script to generate current sizes.
 
 ## Links
 

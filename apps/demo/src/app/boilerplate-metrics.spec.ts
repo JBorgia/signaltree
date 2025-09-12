@@ -518,7 +518,7 @@ export class UserFormComponent {
     const bundleMetrics = [
       {
         scenario: 'Minimal Setup',
-        signalTree: '7.1KB',
+        signalTree: '7.2KB',
         ngrx: '52KB',
         akita: '28KB',
         treeshaking: '100%',

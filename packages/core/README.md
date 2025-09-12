@@ -4,7 +4,7 @@ Foundation package for SignalTree. Provides recursive typing, deep nesting suppo
 
 ## What is @signaltree/core?
 
-SignalTree Core is a lightweight (about 7.20KB gzipped) package that provides:
+SignalTree Core is a lightweight package that provides:
 
 - Recursive typing with deep nesting and accurate type inference
 - Fast operations with sub‑millisecond measurements at 5–20+ levels
@@ -43,18 +43,12 @@ When a leaf stores a function as its value, use direct `.set(fn)` to assign. Cal
 **Setup:**
 Install `@signaltree/callable-syntax` and configure your build tool to apply the transform. Without the transform, use `.set/.update` directly.
 
-### Depth performance (Sept 2025, averaged)
+### Measuring performance and size
 
-Indicative measurements across different depths:
+Performance and bundle size vary by app shape, build tooling, device, and runtime. To get meaningful results for your environment:
 
-| Depth level | Avg time | Type safety | Range         |
-| ----------- | -------- | ----------- | ------------- |
-| 5 levels    | 0.061ms  | ✅          | 0.041–0.133ms |
-| 10 levels   | 0.109ms  | ✅          | 0.060–0.181ms |
-| 15 levels   | 0.098ms  | ✅          | 0.088–0.126ms |
-| 20+ levels  | 0.103ms  | ✅          | 0.100–0.106ms |
-
-Note: Results vary by environment; figures are averaged across multiple runs.
+- Use the Benchmark Orchestrator in the demo app to run calibrated, scenario-based benchmarks across supported libraries. It reports statistical summaries (median/p95/p99/stddev), alternates runs to reduce bias, and can export CSV/JSON. When available, memory usage is also reported.
+- Use the bundle analysis scripts in `scripts/` to measure your min+gz sizes. Sizes are approximate and depend on tree-shaking and configuration.
 
 ## Quick start
 
@@ -88,7 +82,6 @@ const tree = signalTree({
                               tests: {
                                 extreme: {
                                   depth: 15,
-                                  performance: 0.098, // ms (averaged)
                                   typeInference: true,
                                 },
                               },
@@ -109,9 +102,8 @@ const tree = signalTree({
 });
 
 // Type inference at deep nesting levels
-const performance = tree.$.enterprise.divisions.technology.departments.engineering.teams.frontend.projects.signaltree.releases.v1.features.recursiveTyping.validation.tests.extreme.performance();
-
-console.log(`Performance: ${performance}ms`); // ~0.098ms (averaged)
+const depth = tree.$.enterprise.divisions.technology.departments.engineering.teams.frontend.projects.signaltree.releases.v1.features.recursiveTyping.validation.tests.extreme.depth();
+console.log(`Depth: ${depth}`);
 
 // Type-safe updates at unlimited depth
 tree.$.enterprise.divisions.technology.departments.engineering.teams.frontend.projects.signaltree.releases.v1.features.recursiveTyping.validation.tests.extreme.depth(25); // Perfect type safety!
@@ -383,25 +375,25 @@ SignalTree Core provides the foundation, but its real power comes from composabl
 
 **Performance Enhancers:**
 
-- `@signaltree/batching` (+1.27KB) - Batch updates for 455.8x performance improvement
-- `@signaltree/memoization` (+1.80KB) - Intelligent caching with 197.9x speedup
+- `@signaltree/batching` - Batch updates to reduce recomputation and rendering
+- `@signaltree/memoization` - Intelligent caching for expensive computations
 
 **Data Management:**
 
-- `@signaltree/entities` (+0.97KB) - Advanced CRUD operations for collections
-- `@signaltree/async` (+1.80KB) - Async actions with loading states
-- `@signaltree/serialization` (+4.62KB) - State persistence and SSR support
+- `@signaltree/entities` - Advanced CRUD operations for collections
+- `@signaltree/async` - Async actions with loading states
+- `@signaltree/serialization` - State persistence and SSR support
 
 **Development Tools:**
 
-- `@signaltree/devtools` (+2.49KB) - Redux DevTools integration
-- `@signaltree/time-travel` (+1.75KB) - Undo/redo functionality
+- `@signaltree/devtools` - Redux DevTools integration
+- `@signaltree/time-travel` - Undo/redo functionality
 
 **Integration:**
 
-- `@signaltree/ng-forms` (+3.38KB) - Angular Forms integration
-- `@signaltree/middleware` (+1.38KB) - State interceptors and logging
-- `@signaltree/presets` (+0.84KB) - Pre-configured common patterns
+- `@signaltree/ng-forms` - Angular Forms integration
+- `@signaltree/middleware` - State interceptors and logging
+- `@signaltree/presets` - Pre-configured common patterns
 
 #### Composition Patterns
 
@@ -672,7 +664,7 @@ SignalTree Core is designed for modular composition. Start minimal and add featu
 ```typescript
 import { signalTree } from '@signaltree/core';
 
-// Core provides the foundation (7.25KB)
+// Core provides the foundation
 const tree = signalTree({
   users: [] as User[],
   ui: { loading: false },
@@ -691,13 +683,13 @@ import { signalTree } from '@signaltree/core';
 import { withBatching } from '@signaltree/batching';
 import { withMemoization } from '@signaltree/memoization';
 
-// Add performance optimizations (+3.07KB total)
+// Add performance optimizations
 const tree = signalTree({
   products: [] as Product[],
   filters: { category: '', search: '' },
 }).with(
-  withBatching(), // 455.8x performance gain for multiple updates
-  withMemoization() // 197.9x speedup for expensive computations
+  withBatching(), // Batch updates for optimal rendering
+  withMemoization() // Cache expensive computations
 );
 
 // Now supports batched updates
@@ -756,7 +748,7 @@ import { withSerialization } from '@signaltree/serialization';
 import { withTimeTravel } from '@signaltree/time-travel';
 import { withDevtools } from '@signaltree/devtools';
 
-// Full development stack (~22KB total)
+// Full development stack (example)
 const tree = signalTree({
   app: {
     user: null as User | null,
@@ -859,16 +851,9 @@ const dashboardTree = dashboardPreset({
 // Includes: batching, memoization, devtools
 ```
 
-### Bundle Size Planning
+### Measuring bundle size
 
-| Composition Strategy     | Bundle Size | Use Case                       |
-| ------------------------ | ----------- | ------------------------------ |
-| Core only                | 7.25KB      | Simple state, prototypes       |
-| + Batching + Memoization | 10.32KB     | Performance-critical apps      |
-| + Entities + Async       | 13.09KB     | Data-driven applications       |
-| + Serialization          | 17.71KB     | Persistent state, SSR          |
-| + DevTools + TimeTravel  | 21.95KB     | Development (disabled in prod) |
-| Full ecosystem           | 27.55KB     | Feature-rich applications      |
+Bundle sizes depend on your build, tree-shaking, and which enhancers you include. Use the scripts in `scripts/` to analyze min+gz for your configuration.
 
 ### Migration Strategy
 
@@ -940,71 +925,9 @@ class AppStateService {
 }
 ```
 
-## Performance benchmarks
+## Measuring performance
 
-> Sub‑millisecond operations across common core functions
-
-### Recursive depth scaling (illustrative)
-
-| **Depth Level**            | **Execution Time** | **Scaling Factor** | **Type Inference** | **Memory Usage** |
-| -------------------------- | ------------------ | ------------------ | ------------------ | ---------------- |
-| **Basic (5 levels)**       | 0.012ms            | 1.0x (baseline)    | ✅ Perfect         | ~1.1MB           |
-| **Medium (10 levels)**     | 0.015ms            | 1.25x              | ✅ Perfect         | ~1.2MB           |
-| **Extreme (15 levels)**    | **0.021ms**        | **1.75x**          | ✅ Perfect         | ~1.3MB           |
-| **Unlimited (20+ levels)** | 0.023ms            | 1.92x              | ✅ Perfect         | ~1.4MB           |
-
-Note: Scaling depends on state shape and hardware.
-
-### Example operation timings
-
-| Operation                   | SignalTree Core | Notes            |
-| --------------------------- | --------------- | ---------------- |
-| Tree initialization (small) | **0.031ms**     | 27 nodes         |
-| Tree initialization (large) | **0.745ms**     | 341 nodes        |
-| Single update               | **0.188ms**     | Property update  |
-| Nested update (5 levels)    | **0.188ms**     | Deep tree update |
-| Computation (cached)        | **0.094ms**     | Memoized result  |
-| Memory per 1K entities      | **1.2MB**       | Measured usage   |
-
-### Feature impact
-
-| Feature             | SignalTree Core    | With Extensions        | Notes                  |
-| ------------------- | ------------------ | ---------------------- | ---------------------- |
-| Batching efficiency | Standard           | **455.8x improvement** | vs non-batched         |
-| Memoization speedup | Basic              | **197.9x speedup**     | vs non-memoized        |
-| Memory efficiency   | **Optimized**      | **Further optimized**  | Lazy signals + cleanup |
-| Bundle impact       | **7.25KB gzipped** | **+20KB max**          | Tree-shakeable         |
-
-### Developer experience (core)
-
-| Metric                  | SignalTree Core | Traditional State Mgmt | **Improvement** |
-| ----------------------- | --------------- | ---------------------- | --------------- |
-| Lines of code (counter) | **4 lines**     | 18-32 lines            | **68-88% less** |
-| Files required          | **1 file**      | 3-4 files              | **75% fewer**   |
-| Setup complexity        | **Minimal**     | Complex                | **Simplified**  |
-| API surface             | **Small**       | Large                  | **Focused**     |
-
-### Memory usage comparison
-
-| Operation                | SignalTree Core | NgRx   | Akita  | Native Signals |
-| ------------------------ | --------------- | ------ | ------ | -------------- |
-| 1K entities              | 1.2MB           | 4.2MB  | 3.5MB  | 2.3MB          |
-| 10K entities             | 8.1MB           | 28.5MB | 22.1MB | 15.2MB         |
-| Deep nesting (10 levels) | 145KB           | 890KB  | 720KB  | 340KB          |
-
-### TypeScript inference speed
-
-```typescript
-// SignalTree: Instant inference
-const tree = signalTree({
-  deeply: { nested: { state: { with: { types: 'instant' } } } }
-});
-tree.$.deeply.nested.state.with.types.set('updated'); // ✅ <1ms
-
-// Manual typing required with other solutions
-interface State { deeply: { nested: { state: { with: { types: string } } } } }
-const store: Store<State> = ...; // Requires manual interface definition
-```
+For fair, reproducible measurements that reflect your app and hardware, use the Benchmark Orchestrator in the demo. It calibrates runs per scenario and library, reports robust statistics, and supports CSV/JSON export. Avoid copying fixed numbers from docs; results vary.
 
 ## Example
 
@@ -1254,16 +1177,16 @@ const tree = signalTree(initialState).with(withBatching(), withMemoization(), wi
 
 ### Available extensions
 
-- **@signaltree/batching** (+1.27KB gzipped) - Batch multiple updates
-- **@signaltree/memoization** (+1.80KB gzipped) - Intelligent caching & performance
-- **@signaltree/middleware** (+1.38KB gzipped) - Middleware system & taps
-- **@signaltree/async** (+1.80KB gzipped) - Advanced async actions & states
-- **@signaltree/entities** (+929B gzipped) - Advanced entity management
-- **@signaltree/devtools** (+2.49KB gzipped) - Redux DevTools integration
-- **@signaltree/time-travel** (+1.75KB gzipped) - Undo/redo functionality
-- **@signaltree/ng-forms** (+3.38KB gzipped) - Complete Angular forms integration
-- **@signaltree/serialization** (+4.62KB gzipped) - State persistence & SSR support
-- **@signaltree/presets** (+0.84KB gzipped) - Environment-based configurations
+- **@signaltree/batching** - Batch multiple updates
+- **@signaltree/memoization** - Intelligent caching & performance
+- **@signaltree/middleware** - Middleware system & taps
+- **@signaltree/async** - Advanced async actions & states
+- **@signaltree/entities** - Advanced entity management
+- **@signaltree/devtools** - Redux DevTools integration
+- **@signaltree/time-travel** - Undo/redo functionality
+- **@signaltree/ng-forms** - Complete Angular forms integration
+- **@signaltree/serialization** - State persistence & SSR support
+- **@signaltree/presets** - Environment-based configurations
 
 ## When to use core only
 
@@ -1401,19 +1324,19 @@ Extend the core with optional feature packages:
 
 ### Advanced Features
 
-- **[@signaltree/middleware](../middleware)** (+1.2KB gzipped) - Middleware system & state interceptors
-- **[@signaltree/async](../async)** (+1.7KB gzipped) - Advanced async operations & loading states
-- **[@signaltree/entities](../entities)** (+929B gzipped) - Enhanced CRUD operations & entity management
+- **[@signaltree/middleware](../middleware)** (+1.38KB gzipped) - Middleware system & state interceptors
+- **[@signaltree/async](../async)** (+1.80KB gzipped) - Advanced async operations & loading states
+- **[@signaltree/entities](../entities)** (+0.97KB gzipped) - Enhanced CRUD operations & entity management
 
 ### Development Tools
 
-- **[@signaltree/devtools](../devtools)** (+2.3KB gzipped) - Development tools & Redux DevTools integration
-- **[@signaltree/time-travel](../time-travel)** (+1.5KB gzipped) - Undo/redo functionality & state history
+- **[@signaltree/devtools](../devtools)** (+2.49KB gzipped) - Development tools & Redux DevTools integration
+- **[@signaltree/time-travel](../time-travel)** (+1.75KB gzipped) - Undo/redo functionality & state history
 
 ### Integration & Convenience
 
-- **[@signaltree/presets](../presets)** (+0.8KB gzipped) - Pre-configured setups for common patterns
-- **[@signaltree/ng-forms](../ng-forms)** (+3.4KB gzipped) - Complete Angular Forms integration
+- **[@signaltree/presets](../presets)** (+0.84KB gzipped) - Pre-configured setups for common patterns
+- **[@signaltree/ng-forms](../ng-forms)** (+3.38KB gzipped) - Complete Angular Forms integration
 
 ### Quick Start with Extensions
 

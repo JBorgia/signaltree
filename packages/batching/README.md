@@ -1,6 +1,6 @@
 # @signaltree/batching
 
-Advanced recursive batching extension for SignalTree that intelligently groups multiple state updates across unlimited recursive depth, delivering breakthrough **455.8x performance improvement** with zero overhead.
+Advanced recursive batching extension for SignalTree that intelligently groups multiple state updates across unlimited recursive depth, delivering significant performance improvements with minimal overhead.
 
 ## What is @signaltree/batching?
 
@@ -9,7 +9,7 @@ The batching package unlocks exceptional performance through recursive batching 
 - Recursive batch optimization - Groups updates across unlimited depth levels
 - Zero recursive overhead - Efficient batching at any nesting level
 - Depth-aware batching - Optimizes through recursive hierarchies
-- 455.8x performance improvement - Measured gains across benchmarks
+- Significant performance improvement via grouped updates (magnitude depends on workload)
 - Real-time performance metrics - Batching insights and optimization data
 - Seamless integration - Works with SignalTree's recursive typing model
 - Ultra-compact - Advanced batching in ~1.27KB gzipped
@@ -159,7 +159,7 @@ try {
 
 ## Performance benchmarks
 
-> Batching efficiency: ~455.8x improvement (real-world benchmarks across comprehensive scenarios)
+> Batching efficiency is workload- and device-dependent. For calibrated results on your setup, use the Demo app's Benchmark Orchestrator to compare batched vs. individual updates and export metrics.
 
 ### Comprehensive Batch Performance Analysis
 
@@ -187,7 +187,7 @@ for (let i = 0; i < 10; i++) {
     count: state.count + 1,
   }));
 }
-console.timeEnd('Individual Updates'); // ~1.09ms total (0.109ms × 10 - averaged)
+console.timeEnd('Individual Updates'); // Device-dependent
 
 // Batched updates (optimized)
 console.time('Batched Updates (10 operations)');
@@ -198,23 +198,14 @@ benchmarkTree.batchUpdate((state) => {
     count: state.count + 10,
   };
 });
-console.timeEnd('Batched Updates'); // ~0.004ms total
+console.timeEnd('Batched Updates'); // Device-dependent
 
-// Performance improvement: ~273x faster than individual updates in this test
-// Real-world comprehensive benchmarking shows 455.8x improvement overall
-// Enables efficient bulk operations
-// Memory efficient: Reduces intermediate allocations
+// Performance improvement varies by environment and data; batching reduces intermediate work and coordinates updates.
 ```
 
-### SignalTree Batching Performance Results (Measured)
+### Measuring batching on your setup
 
-| Scenario               | Without Batching | With Batching | **Improvement**        | **Benefit**         |
-| ---------------------- | ---------------- | ------------- | ---------------------- | ------------------- |
-| 10 updates             | 1.09ms total     | 0.004ms total | **273x** (benchmarked) | **Sub-ms response** |
-| 100 updates            | 18.8ms total     | 0.004ms total | **4,700x**             | **Constant time**   |
-| Complex state changes  | Linear growth    | Constant time | **Exponential**        | **Predictable**     |
-| Form validation (bulk) | 5.2ms            | 0.003ms       | **1,733x**             | **Real-time feel**  |
-| Data table updates     | 12.4ms           | 0.005ms       | **2,480x**             | **Smooth updates**  |
+Use the Demo app's Benchmark Orchestrator to run calibrated comparisons between individual and batched updates across scenarios and data sizes. Results include distribution charts, percentiles, and CSV/JSON exports.
 
 ### Developer Experience Benefits
 
@@ -555,13 +546,7 @@ const tree = signalTree(state).with(withBatching({ maxBatchSize: 50 }), withMemo
 
 ## Performance metrics
 
-The batching package delivers breakthrough performance improvements:
-
-- **455.8x performance improvement** over individual updates (measured)
-- **Faster nested state updates** through recursive batching optimization
-- **Ultra-compact bundle** - only 1.27KB gzipped added to bundle
-- **Frame-rate aware** batching for smooth animations
-- **Zero overhead abstractions** with SignalTree's 0.061-0.109ms baseline
+The batching package significantly improves throughput by grouping related updates and minimizing recomputation and rendering. The exact gains depend on your data and workload.
 
 ## Links
 

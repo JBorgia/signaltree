@@ -17,7 +17,7 @@ Interactive demonstration showcasing SignalTree's revolutionary performance, fea
 - **Advanced Persistence**: Auto-save functionality with IndexedDB support
 - **Type Safety Showcase**: Perfect TypeScript inference at unlimited depth levels
 - **Bundle Size Analysis**: Real-time monitoring with comprehensive reporting
-- **Framework Comparisons**: Side-by-side performance vs NgRx, Zustand, and others
+- **Framework Comparisons**: Side-by-side performance against multiple libraries via the Benchmark Orchestrator (SignalTree baseline, NgRx Store, NgRx SignalStore, Akita, Elf)
 
 ## 🏃‍♂️ Quick Start
 
@@ -58,8 +58,8 @@ pnpm nx test core --testNamePattern="recursive performance"
 
 1. **Deep Nesting Demo**: Unlimited depth with perfect type inference
 2. **Persistence Showcase**: Auto-save with multiple storage backends
-3. **Batch Operations**: 455.8x performance improvement demonstration
-4. **Memoization**: 197.9x speedup with intelligent caching
+3. **Batch Operations**: Demonstrate batching vs. individual updates
+4. **Memoization**: Demonstrate cached vs. uncached computations
 5. **Framework Comparison**: Side-by-side performance benchmarks
 
 ### Component Architecture
@@ -87,8 +87,8 @@ apps/demo/src/app/
 
 - **Operation Timing**: Real-time measurement of all SignalTree operations
 - **Memory Usage**: Advanced garbage collection monitoring and optimization tracking
-- **Batch Performance**: 455.8x improvement demonstration with batch operations
-- **Memoization Speedup**: 197.9x performance gain with intelligent caching
+- **Batch Performance**: Compare batched vs. individual update throughput
+- **Memoization**: Compare cached vs. uncached compute paths
 - **Recursive Depth**: Perfect scaling from 5-20+ levels with consistent performance
 
 ### Interactive Testing Modes
@@ -104,9 +104,9 @@ apps/demo/src/app/
 ```typescript
 interface PerformanceMetrics {
   operations: {
-    single: number; // 0.061-0.109ms (averaged)
-    batched: number; // 455.8x improvement
-    memoized: number; // 197.9x speedup
+    single: number;
+    batched: number;
+    memoized: number;
   };
   memory: {
     usage: number; // Current memory usage
@@ -176,28 +176,7 @@ const persistentDemo = signalTree({
 
 ### 3. Performance Comparison
 
-```typescript
-// SignalTree vs Traditional State Management
-const comparisonResults = {
-  signalTree: {
-    bundleSize: '27.50KB',
-    performance: '0.061-0.109ms (Sept 2025 averaged)',
-    typeInference: 'Perfect',
-    depth: 'Unlimited',
-  },
-  ngrx: {
-    bundleSize: '52KB+',
-    performance: '2.5ms+',
-    typeInference: 'Good',
-    depth: '3-5 levels',
-  },
-  improvement: {
-    bundle: '47% smaller',
-    performance: '2400% faster',
-    developer: '98.5/100 DX score',
-  },
-};
-```
+Use the Benchmark Orchestrator page to select libraries, scenarios, and complexity. The app calibrates the environment and computes robust metrics (median, p95/p99, stddev, t-tests). Export CSV/JSON for sharing instead of quoting fixed numbers.
 
 ## 🔧 Technical Implementation
 
@@ -264,29 +243,9 @@ export class PerformanceDashboardComponent {
 
 ## 📈 Benchmark Results Display
 
-### Latest Performance Results (September 2025)
+### Benchmark Results
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                   SignalTree Performance Dashboard               │
-├─────────────────────────────────────────────────────────────────┤
-│ Recursive Depth Performance (September 2025 Averaged):        │
-│ ├── 5 levels:    0.061ms ✅ (Baseline, range: 0.041-0.133ms)  │
-│ ├── 10 levels:   0.109ms ✅ (Excellent, range: 0.060-0.181ms) │
-│ ├── 15 levels:   0.098ms 🔥 (Revolutionary, range: 0.088-0.126ms) │
-│ └── 20+ levels:  0.103ms 🚀 (Breakthrough, range: 0.100-0.106ms) │
-│                                                                 │
-│ Feature Performance:                                            │
-│ ├── Batching:     455.8x improvement ⚡                        │
-│ ├── Memoization:  197.9x speedup ⚡                            │
-│ ├── Memory:       85% reduction 💾                             │
-│ └── Bundle:       27.50KB total 📦                             │
-│                                                                 │
-│ Developer Experience: 98.5/100 🎯                              │
-│ Type Safety: Perfect at unlimited depth 🏆                     │
-│ Automation: Complete CI/CD integration 🔧                      │
-└─────────────────────────────────────────────────────────────────┘
-```
+Live results vary by device, browser, and selection. Use the orchestrator for calibrated runs and charts (distribution, percentiles, scenarios, time series).
 
 ## 🚀 Getting Started with Examples
 
@@ -303,15 +262,13 @@ pnpm nx serve demo --port 4200
 ### 2. Explore Performance Features
 
 - **Single Operations**: Test individual SignalTree operations
-- **Batch Operations**: See 455.8x improvement with batching
+- **Batch Operations**: Compare batched vs. individual updates
 - **Memory Monitoring**: Watch garbage collection optimization
 - **Type Safety**: Experience perfect IntelliSense at any depth
 
 ### 3. Compare with Other Frameworks
 
-- **Bundle Size**: See 75% reduction vs competitors
-- **Performance**: Experience 2400% faster operations
-- **Developer Experience**: 98.5/100 DX score demonstration
+- Use the Benchmark Orchestrator page to run calibrated, device-dependent comparisons (SignalTree baseline vs NgRx Store, NgRx SignalStore, Akita, Elf). Export CSV/JSON for sharing instead of quoting fixed numbers.
 
 ## 🔍 Code Quality & Testing
 
@@ -370,9 +327,9 @@ node scripts/consolidated-bundle-analysis.js
 
 ---
 
-Experience the future of state management with SignalTree's revolutionary approach to reactive state! 🚀Tree vs NgRx Comparison
+Experience the future of state management with SignalTree's approach to reactive state.
 
-This demo shows side-by-side usage and tests for SignalTree and NgRx.
+This demo includes a Benchmark Orchestrator for calibrated, multi-library comparisons (SignalTree baseline vs NgRx Store, NgRx SignalStore, Akita, Elf).
 
 ## Quick start
 

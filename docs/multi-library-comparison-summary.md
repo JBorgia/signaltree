@@ -269,7 +269,7 @@ The comparison is accessible through:
 
 ### Multi-Library Comparison
 
-- ✅ Head-to-head comparisons across real libraries (SignalTree vs NgRx)
+- ✅ Head-to-head comparisons across real libraries (SignalTree baseline vs NgRx Store, NgRx SignalStore, Akita, Elf)
 - ✅ **Baseline Comparison**: Simple state management baseline
 - ✅ **Fair Methodology**: Equivalent scenarios across libraries
 - ✅ **Comprehensive Metrics**: Init, read, write, subscription, memory

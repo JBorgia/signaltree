@@ -123,7 +123,7 @@ const tree = signalTree({
 }).with(
   withDevTools({
     trackPerformance: true,
-    performanceThreshold: 1, // Log operations taking >1ms (SignalTree baseline: 0.061-0.109ms)
+    performanceThreshold: 1, // Log operations taking >1ms (tune per app)
   })
 );
 
@@ -206,7 +206,7 @@ const tree = signalTree(state).with(
 
     // Performance settings
     trackPerformance: true,
-    performanceThreshold: 1, // ms (SignalTree: 0.061-0.109ms baseline)
+    performanceThreshold: 1, // ms (tune per environment and workloads)
 
     // Browser DevTools integration
     connectToReduxDevTools: true,
