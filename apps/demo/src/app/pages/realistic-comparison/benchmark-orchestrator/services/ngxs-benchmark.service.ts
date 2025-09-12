@@ -251,7 +251,7 @@ export class NgxsBenchmarkService {
 
   async runBatchUpdatesBenchmark(
     batches = 100,
-    batchSize = 10
+    batchSize = 1000
   ): Promise<number> {
     const start = performance.now();
 

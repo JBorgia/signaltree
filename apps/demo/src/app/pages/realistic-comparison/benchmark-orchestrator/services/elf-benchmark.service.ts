@@ -28,7 +28,8 @@ export class ElfBenchmarkService {
         : { ...obj, level: updateDeep(obj.level ?? {}, lvl - 1, value) };
 
     const start = performance.now();
-    for (let i = 0; i < dataSize; i++) {
+    // Match NgXs cap of 1000 iterations for fair comparison
+    for (let i = 0; i < Math.min(dataSize, 1000); i++) {
       state = updateDeep(state, depth - 1, i);
       if ((i & 1023) === 0) await this.yieldToUI();
     }
@@ -79,7 +80,8 @@ export class ElfBenchmarkService {
     };
 
     const start = performance.now();
-    for (let i = 0; i < dataSize; i++) {
+    // Match NgXs cap of 500 iterations for fair comparison
+    for (let i = 0; i < Math.min(dataSize, 500); i++) {
       state = { ...state, value: i };
       compute();
       if ((i & 1023) === 0) await this.yieldToUI();
