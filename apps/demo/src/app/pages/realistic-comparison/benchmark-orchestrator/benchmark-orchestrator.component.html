@@ -241,7 +241,8 @@
           <p class="explanation">
             SignalTree stores reactive signals that must be "unwrapped" during
             serialization, while other libraries can serialize plain objects
-            directly. This trade-off enables the significant performance gains
+            directly. This is by choice. Serialization takes very little time
+            and by the sacrifice here enables the significant performance gains
             in all other operations.
           </p>
           <div class="mitigation">

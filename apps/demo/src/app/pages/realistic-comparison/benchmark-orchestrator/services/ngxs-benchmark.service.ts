@@ -202,14 +202,14 @@ export class NgxsBenchmarkService {
 
   async runArrayBenchmark(dataSize: number): Promise<number> {
     const start = performance.now();
-    const maxOperations = Math.min(dataSize * 10, 1000);
+    const updates = Math.min(1000, dataSize); // Match other libraries' cap
 
     const promises: Promise<void>[] = [];
-    for (let i = 0; i < maxOperations; i++) {
-      const index = Math.floor(Math.random() * dataSize);
+    for (let i = 0; i < updates; i++) {
+      const index = i % dataSize; // Match other libraries' pattern
       const value: ArrayItem = {
         id: i,
-        value: Math.random() * 100,
+        value: Math.random() * 1000, // Match range
         timestamp: Date.now(),
       };
       const promise = this.store
@@ -321,26 +321,30 @@ export class NgxsBenchmarkService {
     return performance.now() - start;
   }
 
-  async runConcurrentUpdatesBenchmark(
-    concurrency = 50,
-    updatesPerWorker = 200
-  ): Promise<number> {
+  async runConcurrentUpdatesBenchmark(dataSize: number): Promise<number> {
     const start = performance.now();
+    const iterations = 200; // Match other libraries
 
-    // Simulate concurrent updates by dispatching multiple actions rapidly
-    const promises = Array.from(
-      { length: concurrency },
-      async (_, workerId) => {
-        for (let i = 0; i < updatesPerWorker; i++) {
-          const path = [`worker${workerId}`, `item${i}`];
-          this.store.dispatch(new UpdateDeepNested(path, Math.random() * 100));
-
-          if (i % 20 === 0) await this.yieldToUI();
-        }
+    for (let i = 0; i < iterations; i++) {
+      const promises: Promise<void>[] = [];
+      for (let j = 0; j < 10; j++) {
+        // 10 concurrent updates per iteration
+        const id = (i * 10 + j) % dataSize;
+        const path = [`item${id}`];
+        const value = Math.random() * 1000; // Match other libraries' range
+        const promise = this.store
+          .dispatch(new UpdateDeepNested(path, value))
+          .toPromise();
+        promises.push(promise);
       }
-    );
 
-    await Promise.all(promises);
+      await Promise.all(promises); // Wait for this batch
+
+      if (i % 20 === 0) {
+        await this.yieldToUI();
+      }
+    }
+
     return performance.now() - start;
   }
 

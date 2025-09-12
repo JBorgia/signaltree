@@ -258,6 +258,104 @@ setInterval(() => {
 }, 30000);
 ```
 
+## Performance Measurement and Validation
+
+### Measuring Cache Effectiveness
+
+Monitor your cache performance to validate strategy choices:
+
+```typescript
+const tree = signalTree(state).with(withMemoization());
+
+// Check cache statistics
+const stats = tree.getCacheStats();
+console.log(`Hit rate: ${(stats.hitRate * 100).toFixed(1)}%`);
+console.log(`Cache size: ${stats.size} entries`);
+
+// Thresholds for optimization:
+// - Hit rate < 30%: Consider removing memoization
+// - Hit rate 30-70%: Try different equality strategy
+// - Hit rate > 70%: Good memoization candidate
+```
+
+### Benchmark Before and After
+
+```typescript
+// Test without memoization
+const start1 = performance.now();
+for (let i = 0; i < 1000; i++) {
+  expensiveComputation(data);
+}
+const baseline = performance.now() - start1;
+
+// Test with memoization
+const memoized = memoizeShallow(expensiveComputation);
+const start2 = performance.now();
+for (let i = 0; i < 1000; i++) {
+  memoized(data);
+}
+const optimized = performance.now() - start2;
+
+console.log(`Speedup: ${(baseline / optimized).toFixed(1)}x`);
+```
+
+### Global Cache Monitoring
+
+```typescript
+import { getGlobalCacheStats } from '@signaltree/memoization';
+
+// Monitor all caches across your application
+const globalStats = getGlobalCacheStats();
+console.log(`Total trees: ${globalStats.treeCount}`);
+console.log(`Average cache size: ${globalStats.averageCacheSize.toFixed(1)}`);
+console.log(`Total cached items: ${globalStats.totalSize}`);
+```
+
+### Red Flags to Watch For
+
+Signs your memoization strategy needs adjustment:
+
+```typescript
+// 1. Low hit rates indicate wasted overhead
+const stats = tree.getCacheStats();
+if (stats.hitRate < 0.3) {
+  console.warn('Low cache hit rate - consider removing memoization');
+}
+
+// 2. Large cache sizes may indicate memory leaks
+if (stats.size > 1000) {
+  console.warn('Large cache size - check TTL and maxCacheSize settings');
+}
+
+// 3. Performance regression on simple operations
+const start = performance.now();
+tree.state.simpleProperty.set('value'); // Should be < 1ms
+const duration = performance.now() - start;
+if (duration > 1) {
+  console.warn('Memoization overhead detected on simple operations');
+}
+```
+
+### A/B Testing Different Strategies
+
+```typescript
+// Test multiple strategies to find the best fit
+const strategies = [
+  { name: 'None', tree: signalTree(state) },
+  { name: 'Lightweight', tree: signalTree(state).with(withLightweightMemoization()) },
+  { name: 'Shallow', tree: signalTree(state).with(withShallowMemoization()) },
+  { name: 'Deep', tree: signalTree(state).with(withMemoization()) },
+];
+
+strategies.forEach(({ name, tree }) => {
+  const start = performance.now();
+  // Run your typical workload
+  performTypicalOperations(tree);
+  const duration = performance.now() - start;
+  console.log(`${name}: ${duration.toFixed(2)}ms`);
+});
+```
+
 ## When to use memoization
 
 Perfect for:
@@ -303,6 +401,260 @@ SignalTree memoization provides advanced performance features:
 - **Pattern matching** for intelligent cache management
 - **Automatic optimization** learns from usage patterns
 - **Zero configuration** for 90% of use cases
+
+## Smart Strategy Selection Guide
+
+Choose the right memoization strategy based on your data patterns and performance needs:
+
+### 🎯 Decision Framework
+
+```typescript
+// 1. RAPID UPDATES (values change frequently)
+// ❌ DON'T: Heavy memoization when cache rarely hits
+const badTree = signalTree({
+  timestamp: Date.now(),
+}).with(withMemoization()); // Wasted overhead!
+
+// ✅ DO: Lightweight or no memoization
+const goodTree = signalTree({
+  timestamp: Date.now(),
+}).with(withLightweightMemoization()); // Minimal overhead
+
+// 2. STABLE OBJECTS (settings, preferences)
+// ✅ DO: Shallow equality for primitive properties
+const settingsTree = signalTree({
+  user: { name: 'John', theme: 'dark', lang: 'en' },
+}).with(withShallowMemoization()); // Perfect balance
+
+// 3. COMPLEX COMPUTATIONS (expensive operations)
+// ✅ DO: Deep equality for thorough comparison
+const analyticsTree = signalTree({
+  events: largeDataSet,
+}).with(withHighPerformanceMemoization()); // Large cache, optimized
+
+// 4. UNKNOWN PATTERNS (new features, prototypes)
+// ✅ DO: Start with shallow equality (good default)
+const prototypeTree = signalTree(state).with(withShallowMemoization());
+```
+
+### 📊 Performance Measurement Tools
+
+```typescript
+// Measure cache effectiveness
+const tree = signalTree(state).with(withMemoization());
+const stats = tree.getCacheStats();
+
+console.log(`Hit rate: ${(stats.hitRate * 100).toFixed(1)}%`);
+console.log(`Cache size: ${stats.size} entries`);
+
+// Optimization thresholds:
+if (stats.hitRate < 0.3) {
+  console.log('❌ Consider removing memoization - low hit rate');
+} else if (stats.hitRate > 0.7) {
+  console.log('✅ Good memoization candidate - high hit rate');
+} else {
+  console.log('⚡ Try different equality strategy');
+}
+```
+
+### 🎯 Benchmark-Specific Strategies
+
+Based on SignalTree performance analysis, here's when to use memoization:
+
+```typescript
+// Hot paths: Values change rapidly - minimal overhead
+const rapidTree = signalTree(state).with(withLightweightMemoization());
+
+// Deep nested: Object properties change occasionally
+const nestedTree = signalTree(state).with(withShallowMemoization());
+
+// Array mutations: Values always change - skip memoization
+const arrayTree = signalTree({ items: [] }); // No memoization
+
+// Complex selectors: Let Angular computed() handle it
+const tree = signalTree(state);
+const complexSelector = computed(() => tree.state.data().filter(/* complex logic */));
+```
+
+The choice of equality strategy fundamentally impacts performance:
+
+```typescript
+// Reference equality (fastest) - only for immutable data
+equality: 'reference'; // ~1-2μs per comparison
+
+// Shallow equality (balanced) - good for objects with primitives
+equality: 'shallow'; // ~5-15μs per comparison
+
+// Deep equality (thorough) - when structure matters
+equality: 'deep'; // ~50-200μs per comparison
+```
+
+### Benchmark-Specific Recommendations
+
+Different scenarios need different memoization strategies:
+
+```typescript
+// Rapid Sequential Updates - values constantly change
+// Use minimal or no memoization to avoid cache overhead
+const rapidUpdatesTree = signalTree({
+  counters: Array.from({ length: 50 }, () => ({ value: 0 })),
+}).with(withLightweightMemoization()); // Reference equality, no overhead
+
+// Deep Nested Updates - structure matters but changes slowly
+const nestedTree = signalTree({
+  user: { profile: { settings: { theme: 'dark' } } },
+}).with(withShallowMemoization()); // Good balance for object updates
+
+// Array Mutations - values always change
+// Skip memoization entirely, let core signals handle updates
+const arrayTree = signalTree({
+  items: [] as Item[],
+}); // No memoization - direct mutations invalidate cache anyway
+
+// Computed Selectors - expensive calculations, stable inputs
+const selectorTree = signalTree({
+  data: [] as DataPoint[],
+}).with(withHighPerformanceMemoization()); // Large cache, shallow equality
+```
+
+### Performance-Critical Scenarios
+
+#### Hot Path Optimization
+
+For code that runs hundreds of times per second:
+
+```typescript
+import { withLightweightMemoization } from '@signaltree/memoization';
+
+const realTimeTree = signalTree({
+  metrics: { cpu: 0, memory: 0, network: 0 },
+}).with(withLightweightMemoization());
+
+// Configuration optimizes for speed:
+// - Reference equality only (1-2μs vs 50-200μs for deep)
+// - No LRU tracking overhead
+// - No TTL timestamp checks
+// - Small cache (100 entries) for minimal management
+```
+
+#### Memory-Constrained Environments
+
+```typescript
+const mobileTree = signalTree(state).with(
+  withMemoization({
+    maxCacheSize: 50, // Small memory footprint
+    ttl: 30000, // 30-second expiration
+    equality: 'reference', // Fastest comparison
+    enableLRU: false, // No tracking overhead
+  })
+);
+```
+
+#### High-Throughput Processing
+
+```typescript
+const batchTree = signalTree(state).with(
+  withMemoization({
+    maxCacheSize: 10000, // Large cache for batch processing
+    equality: 'shallow', // Good performance/correctness balance
+    ttl: undefined, // No expiration overhead
+    enableLRU: true, // Sophisticated cache management
+  })
+);
+```
+
+### When NOT to Use Memoization
+
+Avoid memoization when:
+
+- Values change on every access (cache hit rate < 20%)
+- Simple computations (faster than cache lookup)
+- Memory is extremely constrained
+- Working with constantly mutating arrays
+
+```typescript
+// BAD: Memoizing rapidly changing values
+const badTree = signalTree({
+  timestamp: Date.now(),
+}).with(withMemoization()); // Cache never hits!
+
+// GOOD: Let signals handle direct updates
+const goodTree = signalTree({
+  timestamp: Date.now(),
+}); // Direct signal updates are already optimized
+```
+
+### Lightweight Memoization for Critical Paths
+
+For performance-critical scenarios where speed is more important than cache sophistication:
+
+```typescript
+import { withLightweightMemoization } from '@signaltree/memoization';
+
+const tree = signalTree({
+  realTimeData: [] as DataPoint[],
+}).with(withLightweightMemoization());
+
+// Optimized for maximum speed:
+// - Reference equality only (fastest comparison)
+// - No LRU tracking overhead
+// - No TTL timestamp checks
+// - Smaller cache size to reduce management overhead
+```
+
+### Shallow Equality Memoization
+
+For objects with primitive values where deep equality is unnecessary:
+
+```typescript
+import { withShallowMemoization } from '@signaltree/memoization';
+
+const tree = signalTree({
+  userPreferences: { theme: 'dark', language: 'en' },
+  settings: { autoSave: true, notifications: false },
+}).with(withShallowMemoization());
+
+// Balanced approach:
+// - Shallow equality (faster than deep, safer than reference)
+// - Reasonable cache management overhead
+// - Good for objects with primitive properties
+```
+
+### High-Performance Memoization
+
+For applications with abundant memory and complex computations:
+
+```typescript
+import { withHighPerformanceMemoization } from '@signaltree/memoization';
+
+const tree = signalTree({
+  largeDatasets: [] as ComplexData[],
+}).with(withHighPerformanceMemoization());
+
+// Maximizes cache effectiveness:
+// - Large cache size (10,000 entries)
+// - Shallow equality for speed
+// - 5-minute TTL
+// - Full LRU management
+```
+
+### Standalone Memoization Functions
+
+For memoizing individual functions outside of SignalTree:
+
+```typescript
+import { memoizeShallow, memoizeReference } from '@signaltree/memoization';
+
+// Shallow equality memoization
+const expensiveComputation = memoizeShallow((data: UserData) => {
+  return computeUserMetrics(data);
+});
+
+// Reference equality memoization (fastest)
+const simpleTransform = memoizeReference((input: string) => {
+  return input.toUpperCase();
+});
+```
 
 ## Links
 

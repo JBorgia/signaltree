@@ -163,8 +163,8 @@ export class NgRxSignalsBenchmarkService {
     }
 
     const t0 = performance.now();
-    // Align with ST snapshot + stringify by explicitly reading values
-    const plain = { users: state().users, settings: state().settings };
+    // Read current store state and stringify (matches other POJO stores)
+    const plain = state();
     const t1 = performance.now();
     JSON.stringify({ data: plain });
     const t2 = performance.now();

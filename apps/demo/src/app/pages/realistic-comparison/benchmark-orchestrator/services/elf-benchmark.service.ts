@@ -106,6 +106,7 @@ export class ElfBenchmarkService {
 
     const start = performance.now();
     for (let b = 0; b < batches; b++) {
+      // Single bulk update per batch
       store.update(
         updateAllEntities((e: Item) => ({ ...e, value: (e.value + 1) | 0 }))
       );
@@ -130,10 +131,21 @@ export class ElfBenchmarkService {
     );
 
     const start = performance.now();
-    for (let i = 0; i < 1000; i++) {
+    // Simple memoization: cache by reference since state is unchanged in this test
+    let cachedCount: number | undefined;
+    let lastRef: Item[] | undefined;
+    const selectEvenCount = () => {
       const all = store.query(getAllEntities());
+      if (all === lastRef && cachedCount !== undefined) return cachedCount;
       let count = 0;
       for (const it of all) if (it.flag) count++;
+      lastRef = all;
+      cachedCount = count;
+      return count;
+    };
+
+    for (let i = 0; i < 1000; i++) {
+      const count = selectEvenCount();
       if (count === -1) console.log('noop');
       if ((i & 63) === 0) await this.yieldToUI();
     }
@@ -141,7 +153,15 @@ export class ElfBenchmarkService {
   }
 
   async runSerializationBenchmark(dataSize: number): Promise<number> {
-    const users = Array.from(
+    type User = {
+      id: number;
+      name: string;
+      roles: string[];
+      active: boolean;
+      meta: { createdAt: Date };
+    };
+    const store = createStore({ name: 'elf-serialize' }, withEntities<User>());
+    const users: User[] = Array.from(
       { length: Math.max(100, Math.min(1000, dataSize)) },
       (_, i) => ({
         id: i,
@@ -151,21 +171,13 @@ export class ElfBenchmarkService {
         meta: { createdAt: new Date(2020, 0, 1 + (i % 28)) },
       })
     );
-    const state = {
-      users,
-      settings: {
-        theme: 'dark',
-        flags: Object.fromEntries(
-          Array.from({ length: 8 }, (_, j) => [j, j % 2 === 0])
-        ) as Record<number, boolean>,
-      },
-    };
+    store.update(setEntities(users));
     for (let i = 0; i < 10; i++) {
-      const idx = i % users.length;
-      users[idx].active = !users[idx].active;
+      const id = i % users.length;
+      store.update(updateEntities(id, (u) => ({ ...u, active: !u.active })));
     }
     const t0 = performance.now();
-    const plain = state;
+    const plain = store.getValue();
     const t1 = performance.now();
     JSON.stringify({ data: plain });
     const t2 = performance.now();

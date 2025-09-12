@@ -65,8 +65,36 @@ interface MemoizationConfig {
   enabled?: boolean;
   maxCacheSize?: number;
   ttl?: number; // Time to live in milliseconds
+  equality?: 'deep' | 'shallow' | 'reference'; // Equality comparison strategy
+  enableLRU?: boolean; // Enable LRU eviction (has overhead)
 }
 
+/**
+ * Shallow equality check for dependency comparison
+ * Much faster than deep equality for objects with primitive values
+ */
+function shallowEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (a == null || b == null) return false;
+  if (typeof a !== typeof b) return false;
+
+  if (typeof a === 'object' && typeof b === 'object') {
+    const objA = a as Record<string, unknown>;
+    const objB = b as Record<string, unknown>;
+
+    const keysA = Object.keys(objA);
+    const keysB = Object.keys(objB);
+
+    if (keysA.length !== keysB.length) return false;
+
+    for (const key of keysA) {
+      if (objA[key] !== objB[key]) return false;
+    }
+    return true;
+  }
+
+  return false;
+}
 /**
  * Deep equality check for dependency comparison
  */
@@ -109,6 +137,23 @@ function generateCacheKey(
 }
 
 /**
+ * Get equality function based on strategy
+ */
+function getEqualityFn(
+  strategy: 'deep' | 'shallow' | 'reference'
+): (a: unknown, b: unknown) => boolean {
+  switch (strategy) {
+    case 'shallow':
+      return shallowEqual;
+    case 'reference':
+      return (a, b) => a === b;
+    case 'deep':
+    default:
+      return deepEqual;
+  }
+}
+
+/**
  * Memoization function that caches expensive computations with enhanced cache management
  */
 export function memoize<TArgs extends unknown[], TReturn>(
@@ -119,8 +164,11 @@ export function memoize<TArgs extends unknown[], TReturn>(
   const cache = new Map<string, CacheEntry<TReturn>>();
   const maxSize = config.maxCacheSize ?? MAX_CACHE_SIZE;
   const ttl = config.ttl ?? DEFAULT_TTL;
+  const equality = getEqualityFn(config.equality ?? 'deep');
+  const enableLRU = config.enableLRU ?? true;
 
   const cleanExpiredEntries = () => {
+    if (!ttl) return; // Skip if TTL is disabled
     const now = Date.now();
     for (const [key, entry] of cache.entries()) {
       if (now - entry.timestamp > ttl) {
@@ -130,27 +178,29 @@ export function memoize<TArgs extends unknown[], TReturn>(
   };
 
   const evictLRUEntries = () => {
-    if (cache.size >= maxSize) {
-      // Find the least recently used entry (lowest hitCount)
-      let lruKey = '';
-      let minHitCount = Infinity;
+    if (!enableLRU || cache.size < maxSize) return;
 
-      for (const [key, entry] of cache.entries()) {
-        if (entry.hitCount < minHitCount) {
-          minHitCount = entry.hitCount;
-          lruKey = key;
-        }
-      }
+    // Find the least recently used entry (lowest hitCount)
+    let lruKey = '';
+    let minHitCount = Infinity;
 
-      if (lruKey) {
-        cache.delete(lruKey);
+    for (const [key, entry] of cache.entries()) {
+      if (entry.hitCount < minHitCount) {
+        minHitCount = entry.hitCount;
+        lruKey = key;
       }
+    }
+
+    if (lruKey) {
+      cache.delete(lruKey);
     }
   };
 
   return (...args: TArgs): TReturn => {
-    // Clean expired entries periodically
-    cleanExpiredEntries();
+    // Clean expired entries periodically (only if TTL is enabled)
+    if (ttl) {
+      cleanExpiredEntries();
+    }
 
     const key = keyFn
       ? keyFn(...args)
@@ -160,14 +210,18 @@ export function memoize<TArgs extends unknown[], TReturn>(
         );
     const cached = cache.get(key);
 
-    // If using custom key function, trust the key; otherwise check deep equality
-    if (cached && (keyFn || deepEqual(cached.deps, args))) {
-      cached.hitCount += 1;
+    // If using custom key function, trust the key; otherwise check equality
+    if (cached && (keyFn || equality(cached.deps, args))) {
+      if (enableLRU) {
+        cached.hitCount += 1;
+      }
       return cached.value;
     }
 
-    // Evict entries if cache is too large
-    evictLRUEntries();
+    // Evict entries if cache is too large (only if LRU is enabled)
+    if (enableLRU) {
+      evictLRUEntries();
+    }
 
     const result = fn(...args);
     cache.set(key, {
@@ -180,6 +234,37 @@ export function memoize<TArgs extends unknown[], TReturn>(
     return result;
   };
 }
+/**
+ * High-performance memoization function optimized for speed
+ * Uses shallow equality and minimal cache management overhead
+ */
+export function memoizeShallow<TArgs extends unknown[], TReturn>(
+  fn: (...args: TArgs) => TReturn,
+  keyFn?: (...args: TArgs) => string
+): (...args: TArgs) => TReturn {
+  return memoize(fn, keyFn, {
+    equality: 'shallow',
+    enableLRU: false,
+    ttl: undefined,
+    maxCacheSize: 100,
+  });
+}
+
+/**
+ * Lightweight memoization function with reference equality only
+ * Maximum performance for scenarios where exact reference matches are sufficient
+ */
+export function memoizeReference<TArgs extends unknown[], TReturn>(
+  fn: (...args: TArgs) => TReturn,
+  keyFn?: (...args: TArgs) => string
+): (...args: TArgs) => TReturn {
+  return memoize(fn, keyFn, {
+    equality: 'reference',
+    enableLRU: false,
+    ttl: undefined,
+    maxCacheSize: 50,
+  });
+}
 
 /**
  * Enhances a SignalTree with memoization capabilities
@@ -188,7 +273,13 @@ export function memoize<TArgs extends unknown[], TReturn>(
 export function withMemoization<T>(
   config: MemoizationConfig = {}
 ): (tree: SignalTree<T>) => MemoizedSignalTree<T> {
-  const { enabled = true, maxCacheSize = 1000, ttl } = config;
+  const {
+    enabled = true,
+    maxCacheSize = 1000,
+    ttl,
+    equality = 'deep',
+    enableLRU = true,
+  } = config;
 
   return (tree: SignalTree<T>): MemoizedSignalTree<T> => {
     if (!enabled) {
@@ -199,16 +290,18 @@ export function withMemoization<T>(
     const cache = new Map<string, CacheEntry<unknown>>();
     memoizationCache.set(tree as object, cache);
 
+    const equalityFn = getEqualityFn(equality);
+
     // Limit cache size function
     const enforceCacheLimit = () => {
-      if (cache.size > maxCacheSize) {
-        // Remove oldest entries (simple LRU)
-        const entries = Array.from(cache.entries());
-        entries.sort((a, b) => (a[1].timestamp || 0) - (b[1].timestamp || 0));
+      if (!enableLRU || cache.size <= maxCacheSize) return;
 
-        const toRemove = entries.slice(0, cache.size - maxCacheSize + 1);
-        toRemove.forEach(([key]) => cache.delete(key));
-      }
+      // Remove oldest entries (simple LRU)
+      const entries = Array.from(cache.entries());
+      entries.sort((a, b) => (a[1].timestamp || 0) - (b[1].timestamp || 0));
+
+      const toRemove = entries.slice(0, cache.size - maxCacheSize + 1);
+      toRemove.forEach(([key]) => cache.delete(key));
     };
 
     // Store original callable tree function
@@ -224,7 +317,7 @@ export function withMemoization<T>(
 
       // Check cache
       const cached = cache.get(key);
-      if (cached && deepEqual(cached.deps, [currentState])) {
+      if (cached && equalityFn(cached.deps, [currentState])) {
         // Apply cached result - use callable interface to set the partial update
         const cachedUpdate = cached.value as Partial<T>;
         Object.entries(cachedUpdate).forEach(([propKey, value]) => {
@@ -341,6 +434,36 @@ export function withHighPerformanceMemoization<T>() {
     enabled: true,
     maxCacheSize: 10000,
     ttl: 300000, // 5 minutes
+    equality: 'shallow', // Faster than deep equality
+    enableLRU: true,
+  });
+}
+
+/**
+ * Lightweight memoization optimized for performance-critical scenarios
+ * Disables expensive cache management features for maximum speed
+ */
+export function withLightweightMemoization<T>() {
+  return withMemoization<T>({
+    enabled: true,
+    maxCacheSize: 100, // Smaller cache to reduce management overhead
+    ttl: undefined, // No TTL to avoid timestamp checks
+    equality: 'reference', // Fastest equality check
+    enableLRU: false, // No LRU to avoid hit count tracking
+  });
+}
+
+/**
+ * Shallow equality memoization for objects with primitive values
+ * Good balance between performance and correctness
+ */
+export function withShallowMemoization<T>() {
+  return withMemoization<T>({
+    enabled: true,
+    maxCacheSize: 1000,
+    ttl: 60000, // 1 minute
+    equality: 'shallow',
+    enableLRU: true,
   });
 }
 
