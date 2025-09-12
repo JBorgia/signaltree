@@ -5,6 +5,8 @@ import { signalTree } from '@signaltree/core';
 
 import { generateTodos, Todo } from '../../shared/models';
 
+// DEPRECATED: This page compared SignalTree to native signals in ways that can be misleading.
+// Kept for reference only and no longer routed in the app.
 interface BenchmarkResult {
   library: string;
   operation: string;

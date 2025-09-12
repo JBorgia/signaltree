@@ -21,12 +21,13 @@ This document outlines the comprehensive performance comparison platform created
 
 ### 3. **Multi-Library Comparison Framework**
 
-- ✅ Built `LibraryComparisonComponent` for head-to-head performance comparisons
+> Legacy comparison content below has been superseded by the new Benchmark Orchestrator. We now focus on real state libraries (SignalTree, NgRx Store) rather than Native Signals.
+
+- ✅ Built Benchmark Orchestrator for head-to-head performance comparisons
 - ✅ Implemented comparison against:
-  - **SignalTree** (enhanced with batching and memoization)
-  - **Native Angular Signals** (baseline framework comparison)
-  - **Simple State Management** (vanilla object-based approach)
-- ✅ Added route and navigation for easy access at `/library-comparison`
+  - **SignalTree** (with batching, memoization, serialization)
+  - **NgRx Store** (immutable updates)
+- ✅ Added route and navigation for easy access at `/realistic-comparison`
 
 ## 🏗️ Architecture
 
@@ -43,7 +44,7 @@ This document outlines the comprehensive performance comparison platform created
   - JSON export functionality for detailed analysis
   - Responsive UI with winner determination and detailed breakdowns
 
-#### 2. **Enhanced BenchmarkService** (`/apps/demo/src/app/services/benchmarks.service.ts`)
+#### 2. **Benchmark Orchestrator** (`/apps/demo/src/app/pages/realistic-comparison/benchmark-orchestrator`)
 
 - **Reliability Assessment**: Environment detection, DevTools detection, power state monitoring
 - **Statistical Rigor**: Outlier detection, median calculations, confidence intervals
@@ -268,7 +269,7 @@ The comparison is accessible through:
 
 ### Multi-Library Comparison
 
-- ✅ **SignalTree vs Native Signals**: Head-to-head comparison
+- ✅ Head-to-head comparisons across real libraries (SignalTree vs NgRx)
 - ✅ **Baseline Comparison**: Simple state management baseline
 - ✅ **Fair Methodology**: Equivalent scenarios across libraries
 - ✅ **Comprehensive Metrics**: Init, read, write, subscription, memory

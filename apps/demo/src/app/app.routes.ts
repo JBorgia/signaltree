@@ -95,25 +95,11 @@ export const appRoutes: Route[] = [
 
   // Performance comparisons
   {
-    path: 'performance',
-    loadComponent: () =>
-      import(
-        './pages/performance-comparison/performance-comparison.component'
-      ).then((c) => c.PerformanceComparisonComponent),
-  },
-  {
     path: 'performance-dashboard',
     loadComponent: () =>
       import(
         './components/performance-dashboard/performance-dashboard.component'
       ).then((c) => c.PerformanceDashboardComponent),
-  },
-  {
-    path: 'library-comparison',
-    loadComponent: () =>
-      import('./library-comparison.component').then(
-        (c) => c.LibraryComparisonComponent
-      ),
   },
   {
     path: 'realistic-comparison',
