@@ -157,6 +157,8 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   currentIteration = signal(0);
   startTime = signal(0);
   completedTests = signal(0);
+  private elapsedTimeTimer = signal(0); // Timer signal to trigger elapsed time updates
+  private timerInterval?: number; // Store interval ID for cleanup
 
   results = signal<BenchmarkResult[]>([]);
   // Bump when library selection changes to trigger recomputation
@@ -872,6 +874,8 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
   elapsedTime = computed(() => {
     if (!this.isRunning()) return '0s';
+    // Include timer signal as dependency to trigger updates
+    this.elapsedTimeTimer();
     const elapsed = Date.now() - this.startTime();
     return this.formatDuration(elapsed);
   });
@@ -880,6 +884,8 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     const progress = this.progressPercent();
     if (progress === 0) return 'Calculating...';
 
+    // Include timer signal as dependency to trigger updates
+    this.elapsedTimeTimer();
     const elapsed = Date.now() - this.startTime();
     const total = elapsed / (progress / 100);
     const remaining = total - elapsed;
@@ -972,10 +978,16 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     const summaries = this.librarySummaries();
     if (summaries.length === 0) return null;
 
-    const winner = summaries[0];
-    const second = summaries[1];
+    // Find the actual fastest library (lowest median time, excluding unsupported -1 values)
+    const supportedSummaries = summaries.filter((s) => s.median !== -1);
+    if (supportedSummaries.length < 2) return null;
 
-    if (!second) return null;
+    // Sort by median time to get the fastest
+    const sortedSummaries = [...supportedSummaries].sort(
+      (a, b) => a.median - b.median
+    );
+    const winner = sortedSummaries[0];
+    const second = sortedSummaries[1];
 
     const improvement = ((second.median - winner.median) / second.median) * 100;
 
@@ -1043,6 +1055,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
     this.charts.forEach((chart) => chart.destroy());
+    this.stopElapsedTimer(); // Clean up timer when component is destroyed
   }
 
   // Calibration
@@ -1327,8 +1340,41 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     this.selectionVersion.update((v) => v + 1);
   }
 
+  toggleAllLibraries() {
+    const allSelected = this.allLibrariesSelected();
+    // Toggle all libraries except SignalTree (which is always selected)
+    this.availableLibraries.forEach((library) => {
+      if (library.id !== 'signaltree') {
+        library.selected = !allSelected;
+      }
+    });
+    this.selectionVersion.update((v) => v + 1);
+  }
+
+  allLibrariesSelected(): boolean {
+    // Check if all non-SignalTree libraries are selected
+    return this.availableLibraries
+      .filter((lib) => lib.id !== 'signaltree')
+      .every((lib) => lib.selected);
+  }
+
   toggleScenario(scenario: Scenario) {
     scenario.selected = !scenario.selected;
+  }
+
+  // Timer management for elapsed time updates
+  private startElapsedTimer() {
+    this.stopElapsedTimer(); // Clear any existing timer
+    this.timerInterval = window.setInterval(() => {
+      this.elapsedTimeTimer.update((v) => v + 1);
+    }, 500); // Update every 500ms for smooth display
+  }
+
+  private stopElapsedTimer() {
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = undefined;
+    }
   }
 
   // Benchmark execution
@@ -1339,6 +1385,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     this.startTime.set(Date.now());
     this.completedTests.set(0);
     this.results.set([]);
+    this.startElapsedTimer(); // Start timer for elapsed time updates
 
     const libraries = this.selectedLibraries();
     const scenarios = this.selectedScenarios();
@@ -1364,6 +1411,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       }
     } finally {
       this.isRunning.set(false);
+      this.stopElapsedTimer(); // Stop timer when benchmarks finish
     }
   }
 
@@ -1633,6 +1681,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
   cancelBenchmarks() {
     this.isRunning.set(false);
+    this.stopElapsedTimer(); // Stop timer when benchmarks are cancelled
   }
 
   // Template handlers for config updates (avoid arrow functions in templates)

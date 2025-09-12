@@ -177,16 +177,26 @@ export class NgxsBenchmarkService {
     const start = performance.now();
 
     // Initialize deep nested structure
+    const promises: Promise<void>[] = [];
     for (let i = 0; i < Math.min(dataSize, 1000); i++) {
       const path = Array.from(
         { length: depth },
         (_, d) => `level${d}_${i % 10}`
       );
-      this.store.dispatch(new UpdateDeepNested(path, Math.random() * 100));
+      // Wait for action to complete by converting to promise
+      const promise = this.store
+        .dispatch(new UpdateDeepNested(path, Math.random() * 100))
+        .toPromise();
+      promises.push(promise);
 
-      if (i % 100 === 0) await this.yieldToUI();
+      if (i % 100 === 0) {
+        await Promise.all(promises.splice(0)); // Wait for batch to complete
+        await this.yieldToUI();
+      }
     }
 
+    // Wait for any remaining actions
+    await Promise.all(promises);
     return performance.now() - start;
   }
 
@@ -194,6 +204,7 @@ export class NgxsBenchmarkService {
     const start = performance.now();
     const maxOperations = Math.min(dataSize * 10, 1000);
 
+    const promises: Promise<void>[] = [];
     for (let i = 0; i < maxOperations; i++) {
       const index = Math.floor(Math.random() * dataSize);
       const value: ArrayItem = {
@@ -201,26 +212,40 @@ export class NgxsBenchmarkService {
         value: Math.random() * 100,
         timestamp: Date.now(),
       };
-      this.store.dispatch(new UpdateArray(index, value));
+      const promise = this.store
+        .dispatch(new UpdateArray(index, value))
+        .toPromise();
+      promises.push(promise);
 
-      if (i % 50 === 0) await this.yieldToUI();
+      if (i % 50 === 0) {
+        await Promise.all(promises.splice(0)); // Wait for batch to complete
+        await this.yieldToUI();
+      }
     }
 
+    // Wait for any remaining actions
+    await Promise.all(promises);
     return performance.now() - start;
   }
 
   async runComputedBenchmark(dataSize: number): Promise<number> {
     const start = performance.now();
 
+    const promises: Promise<void>[] = [];
     for (let i = 0; i < Math.min(dataSize, 500); i++) {
-      this.store.dispatch(new ComputeValues(i));
+      promises.push(this.store.dispatch(new ComputeValues(i)).toPromise());
 
       // Force selector computation by selecting the computed result
       this.store.selectOnce(BenchmarkState.getComputedResult).subscribe();
 
-      if (i % 25 === 0) await this.yieldToUI();
+      if (i % 25 === 0) {
+        await Promise.all(promises.splice(0)); // Wait for batch to complete
+        await this.yieldToUI();
+      }
     }
 
+    // Wait for any remaining actions
+    await Promise.all(promises);
     return performance.now() - start;
   }
 
@@ -230,6 +255,7 @@ export class NgxsBenchmarkService {
   ): Promise<number> {
     const start = performance.now();
 
+    const promises: Promise<void>[] = [];
     for (let batch = 0; batch < batches; batch++) {
       const updates: BatchUpdateItem[] = Array.from(
         { length: batchSize },
@@ -239,11 +265,16 @@ export class NgxsBenchmarkService {
         })
       );
 
-      this.store.dispatch(new BatchUpdate(updates));
+      promises.push(this.store.dispatch(new BatchUpdate(updates)).toPromise());
 
-      if (batch % 10 === 0) await this.yieldToUI();
+      if (batch % 10 === 0) {
+        await Promise.all(promises.splice(0)); // Wait for batch to complete
+        await this.yieldToUI();
+      }
     }
 
+    // Wait for any remaining actions
+    await Promise.all(promises);
     return performance.now() - start;
   }
 
@@ -271,15 +302,21 @@ export class NgxsBenchmarkService {
     const start = performance.now();
 
     // Populate state with data
+    const promises: Promise<void>[] = [];
     for (let i = 0; i < Math.min(dataSize / 100, 50); i++) {
-      this.store.dispatch(new ComputeValues(i));
-      this.store.dispatch(
-        new UpdateArray(i, { id: i, value: i, data: `item_${i}` })
+      promises.push(this.store.dispatch(new ComputeValues(i)).toPromise());
+      promises.push(
+        this.store
+          .dispatch(new UpdateArray(i, { id: i, value: i, data: `item_${i}` }))
+          .toPromise()
       );
     }
 
-    // Perform serialization
-    this.store.dispatch(new SerializeState());
+    // Wait for all data population to complete
+    await Promise.all(promises);
+
+    // Perform serialization and wait for it to complete
+    await this.store.dispatch(new SerializeState()).toPromise();
 
     return performance.now() - start;
   }
