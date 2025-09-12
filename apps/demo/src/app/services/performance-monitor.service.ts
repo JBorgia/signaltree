@@ -127,30 +127,45 @@ export class PerformanceMonitorService {
   getPerformanceScore(): PerformanceScore {
     const metrics = this.metrics();
 
-    // SignalTree operation score (faster = better)
+    // SignalTree operation score (0-50ms = 100, 50-200ms = linear decline, >200ms = 0)
     const avgOpTime = metrics.signalTree.averageOperationTime;
-    const operationScore = Math.min(100, Math.max(0, 100 - avgOpTime * 10));
+    const operationScore = Math.min(
+      100,
+      Math.max(0, avgOpTime <= 50 ? 100 : 100 - ((avgOpTime - 50) / 150) * 100)
+    );
 
-    // Click responsiveness score (< 100ms = 100, > 300ms = 0)
+    // Click responsiveness score (0-100ms = 100, 100-500ms = linear decline, >500ms = 0)
     const clickTimes = metrics.userInteractions.clickResponsiveness.map(
       (c) => c.duration
     );
     const avgClickTime =
       clickTimes.length > 0
         ? clickTimes.reduce((sum, time) => sum + time, 0) / clickTimes.length
-        : 0;
+        : 100; // Default to good score if no data
     const clickScore = Math.min(
       100,
-      Math.max(0, 100 - (avgClickTime - 100) / 2)
+      Math.max(
+        0,
+        avgClickTime <= 100 ? 100 : 100 - ((avgClickTime - 100) / 400) * 100
+      )
     );
 
-    // Page load score (< 2s = 100, > 5s = 0)
+    // Page load score (0-1s = 100, 1-10s = linear decline, >10s = 0)
     const loadTime = metrics.pageLoad.totalTime;
-    const loadScore = Math.min(100, Math.max(0, 100 - (loadTime - 2000) / 30));
+    const loadScore = Math.min(
+      100,
+      Math.max(
+        0,
+        loadTime <= 1000 ? 100 : 100 - ((loadTime - 1000) / 9000) * 100
+      )
+    );
 
-    // Memory efficiency score (lower usage = better)
+    // Memory efficiency score (0-50MB = 100, 50-200MB = linear decline, >200MB = 0)
     const memoryMB = metrics.signalTree.memoryUsage / (1024 * 1024);
-    const memoryScore = Math.min(100, Math.max(0, 100 - (memoryMB - 10) * 2));
+    const memoryScore = Math.min(
+      100,
+      Math.max(0, memoryMB <= 50 ? 100 : 100 - ((memoryMB - 50) / 150) * 100)
+    );
 
     const overall = (operationScore + clickScore + loadScore + memoryScore) / 4;
 

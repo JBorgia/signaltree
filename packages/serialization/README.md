@@ -10,7 +10,7 @@ Advanced state serialization, persistence, and SSR support for SignalTree with a
 - SSR compatibility: Server-side rendering support with hydration
 - Snapshot management: Point-in-time state capture and restoration
 - Circular reference handling for complex object graphs
-- Performance optimized: Efficient serialization leveraging SignalTree's 0.061–0.109ms operations
+- Performance optimized: Efficient serialization designed for low overhead
 - Compact bundle: Advanced persistence in ~4.62KB gzipped
 
 ## Quick start
@@ -289,8 +289,8 @@ try {
 
 ## Performance and bundle size
 
-- **Bundle Size**: 4.62KB gzipped
-- **Serialization**: Optimized for speed with SignalTree's 0.061-0.109ms baseline performance
+- **Bundle Size**: ~4.6KB gzipped (approximate; varies by build/tooling)
+- **Serialization**: Optimized for speed; actual performance depends on data shapes and environment
 - **Auto-Save**: Debounced to prevent excessive storage operations
 - **Memory Usage**: Efficient handling of large state trees
 - **Tree-Shaking**: Only used features included in bundle

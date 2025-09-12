@@ -1,19 +1,19 @@
 # @signaltree/memoization
 
-Intelligent caching and performance optimization for SignalTree featuring **197.9x performance speedup**, LRU cache eviction, path-based memoization, and automatic optimization.
+Intelligent caching and performance optimization for SignalTree featuring LRU cache eviction, path-based memoization, and automatic optimization.
 
 ## What is @signaltree/memoization?
 
 The memoization package supercharges SignalTree performance with:
 
-- ~197.9x performance speedup across benchmarks
+- Significant speedups across typical workloads (magnitude depends on workload)
 - LRU (Least Recently Used) cache eviction algorithm
 - Path-based memoization with fine-grained invalidation
 - Glob pattern matching for smart cache cleanup
 - High cache hit ratios in typical applications (>95%)
 - Automatic optimization with minimal configuration
 - Ultra-compact: Advanced caching in ~1.80KB gzipped
-- Sub-millisecond operations: Optimized for SignalTree's 0.061–0.109ms performance
+- Low overhead design suitable for frequent computations
 
 ## Installation
 
@@ -280,19 +280,9 @@ import { withDevTools } from '@signaltree/devtools';
 const tree = signalTree(state).with(withBatching(), withMemoization({ maxCacheSize: 200 }), withDevTools());
 ```
 
-## Performance metrics
+## Measuring impact
 
-> Memoization speedup: ~197.9x (real-world benchmarks from comprehensive analysis)
-
-### Real-World Performance Results (Comprehensive Analysis)
-
-| Operation              | Without Memoization | First Computation | Cached Access | **Speedup**    | **DX Impact**           |
-| ---------------------- | ------------------- | ----------------- | ------------- | -------------- | ----------------------- |
-| Heavy computation      | 0.041ms             | 0.041ms           | 0.000ms       | **197.9x**     | **Instant feedback**    |
-| Complex data filtering | 15-50ms             | 15-50ms           | <0.1ms        | **150-500x**   | **Real-time UX**        |
-| Expensive calculations | 5-100ms             | 5-100ms           | <0.1ms        | **50-1000x**   | **Smooth interactions** |
-| Database queries       | 100-500ms           | 100-500ms         | <0.1ms        | **1000-5000x** | **Offline-like speed**  |
-| Chart rendering        | 20-80ms             | 20-80ms           | <0.1ms        | **200-800x**   | **Fluid animations**    |
+Use the Demo app's Benchmark Orchestrator to compare cached vs. uncached computations across scenarios. Results are calibrated to your device and include distribution charts and percentiles.
 
 ### Developer Experience Benefits
 

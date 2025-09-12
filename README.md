@@ -5,24 +5,24 @@ Type-safe, modular, signal-based state management for Angular. SignalTree offers
 ## Why SignalTree?
 
 - Recursive typing with deep nesting and accurate inference
-- Sub‑millisecond operations across common scenarios (measured)
+- Strong performance across common scenarios (measured with calibrated benchmarks)
 - Modular design; install only what you need
 - Small bundles with effective tree-shaking
 - Clean developer experience and straightforward APIs
 - Optional persistence, DevTools, entities, forms, and time‑travel packages
 
-### How recursive typing reduces bundle size
+### How recursive typing helps performance and size
 
 SignalTree's recursive typing system isn't just about developer experience—it's the **fundamental technology** that enables dramatic bundle size and performance breakthroughs:
 
 #### Compile-time intelligence and bundle size
 
-| **Technology**                | **Traditional Approach**            | **SignalTree Recursive Typing** | **Improvement** |
-| ----------------------------- | ----------------------------------- | ------------------------------- | --------------- |
-| **Type Resolution**           | Runtime type checking (~15-25KB)    | Compile-time resolution (0KB)   | **100% saving** |
-| **Deep Nesting Support**      | Manual typing definitions (~5-10KB) | Generated type inference (0KB)  | **100% saving** |
-| **Proxy-based Architecture**  | Heavy runtime proxies (~8-15KB)     | Lazy signal creation (~7.20KB)  | **50% saving**  |
-| **State Management Overhead** | Boilerplate + runtime (~20-30KB)    | Zero-cost abstractions (~3KB)   | **85% saving**  |
+| **Technology**                | **Traditional Approach**  | **SignalTree Recursive Typing** | **Impact**                |
+| ----------------------------- | ------------------------- | ------------------------------- | ------------------------- |
+| **Type Resolution**           | Runtime type checking     | Compile-time resolution         | Shifts cost to build-time |
+| **Deep Nesting Support**      | Manual typing definitions | Generated type inference        | Reduces boilerplate       |
+| **Proxy-based Architecture**  | Heavy runtime proxies     | Lazy signal creation            | Creates signals on demand |
+| **State Management Overhead** | Boilerplate + runtime     | Zero-cost abstractions          | Smaller, simpler API      |
 
 #### Type-level optimization and performance
 
@@ -35,25 +35,7 @@ The recursive typing system enables:
 - **Advanced Persistence**: Auto-save, IndexedDB support, and real-time synchronization
 - **Performance Monitoring**: Built-in dashboard with comprehensive benchmarking
 
-#### Example comparison
-
-```
-Traditional State Management: 35-55KB+ (gzipped)
-├── Runtime type system: ~18KB
-├── Boilerplate code: ~12KB
-├── State management: ~18KB
-└── Deep nesting support: ~7KB
-Total: ~55KB average
-
-SignalTree Recursive Typing: 7.20-27.50KB (gzipped)
-├── Compile-time types: 0KB (compile away)
-├── Core engine: ~7.20KB
-├── Optional features: ~20.30KB
-└── Zero runtime overhead: 0KB
-Total: ~27.50KB maximum
-```
-
-**Result: 75% smaller bundles with MORE functionality and better performance**
+Note: Bundle size depends on your build and which features you include. Use the analysis scripts in `scripts/` to measure sizes for your setup.
 
 ### Technical details behind bundle size reductions
 
@@ -102,13 +84,9 @@ Based on comprehensive review and testing, SignalTree now includes enterprise-gr
 - **Improved Type Constraints**: `Record<string, unknown>` defaults for better developer experience
 - **Compile-Time Validation**: Runtime errors eliminated through advanced type checking
 
-#### Performance metrics (September 2025, averaged)
+#### Measuring performance
 
-- **0.061ms at 5 levels**: Blazing fast shallow operations (avg, range: 0.041-0.133ms)
-- **0.109ms at 10 levels**: Excellent medium-depth performance (avg, range: 0.060-0.181ms)
-- **0.098ms at 15 levels**: Outstanding deep nesting performance (avg, range: 0.088-0.126ms)
-- **0.103ms at 20+ levels**: Breakthrough unlimited depth capability (avg, range: 0.100-0.106ms)
-- **Performance improves with optimization**: Intelligent caching and structural sharing
+Performance depends on your app shape and environment. Use the demo’s Benchmark Orchestrator to run calibrated depth and update scenarios; it reports median/p95/p99/stddev and exports CSV/JSON.
 
 #### **Advanced Persistence & Serialization**
 
@@ -146,18 +124,9 @@ Based on comprehensive review and testing, SignalTree now includes enterprise-gr
 
 **Result**: Enterprise-grade reliability while maintaining the revolutionary ~50% bundle size reduction.
 
-### Recursive depth performance scaling (test-verified)
+### Depth scaling
 
-Performance remains exceptional across all recursive depths:
-
-| **Recursive Depth**        | **Execution Time** | **Type Inference** | **Status** |
-| -------------------------- | ------------------ | ------------------ | ---------- |
-| **Basic (5 levels)**       | 0.108ms            | ✅ Perfect         | 🟢 Stable  |
-| **Medium (10 levels)**     | 0.070ms            | ✅ Perfect         | 🟢 Stable  |
-| **Extreme (15 levels)**    | **0.082ms**        | ✅ Perfect         | 🔥 Fast    |
-| **Unlimited (20+ levels)** | 0.098ms            | ✅ Perfect         | 🚀 Scaling |
-
-_Performance scales predictably and remains sub-millisecond even at unlimited depths._
+Use the orchestrator’s depth scenarios to understand performance trade-offs on your hardware.
 
 ## Quick start
 
@@ -166,22 +135,22 @@ _Performance scales predictably and remains sub-millisecond even at unlimited de
 Choose the packages you need:
 
 ```bash
-# Core package (required) - 7.20KB with deep recursive typing!
+# Core package (required)
 npm install @signaltree/core
 
-# Optional feature packages - Total ecosystem 27.50KB!
-npm install @signaltree/batching        # +1.27KB - Batch updates
-npm install @signaltree/memoization     # +1.80KB - Deep caching
-npm install @signaltree/time-travel     # +1.75KB - History management
-npm install @signaltree/ng-forms        # +3.38KB - Form validation
-npm install @signaltree/devtools        # +2.49KB - Debugging tools
-npm install @signaltree/entities        # +0.97KB - Entity management
-npm install @signaltree/middleware      # +1.38KB - Middleware chains
-npm install @signaltree/async           # +1.80KB - Async operations
-npm install @signaltree/presets         # +0.84KB - Configuration presets
-npm install @signaltree/serialization   # +4.62KB - State serialization
+# Optional feature packages
+npm install @signaltree/batching        # Batch updates
+npm install @signaltree/memoization     # Deep caching
+npm install @signaltree/time-travel     # History management
+npm install @signaltree/ng-forms        # Form validation
+npm install @signaltree/devtools        # Debugging tools
+npm install @signaltree/entities        # Entity management
+npm install @signaltree/middleware      # Middleware chains
+npm install @signaltree/async           # Async operations
+npm install @signaltree/presets         # Configuration presets
+npm install @signaltree/serialization   # State serialization
 
-# Or install the complete ecosystem (27.50KB total)
+# Or install a full-featured stack
 npm install @signaltree/core @signaltree/batching @signaltree/memoization @signaltree/time-travel @signaltree/ng-forms
 ```
 
@@ -398,7 +367,7 @@ SignalTree uses a modular architecture where each feature is an optional package
 
 ### Core Package (Required)
 
-- **@signaltree/core** (7.20KB) - Base functionality
+- **@signaltree/core** - Base functionality
   - Hierarchical signal trees with type safety
   - Basic state updates with callable syntax
   - Signal value access with direct function calls
@@ -407,18 +376,18 @@ SignalTree uses a modular architecture where each feature is an optional package
 
 ### Optional Feature Packages
 
-- **@signaltree/serialization** (+4.62KB gzipped) - Advanced state serialization, persistence, auto-save & SSR support
-- **@signaltree/batching** (+1.27KB gzipped) - Batch multiple updates for 455.8x performance improvement
-- **@signaltree/memoization** (+1.80KB gzipped) - Intelligent caching & 197.9x performance optimization
-- **@signaltree/middleware** (+1.38KB gzipped) - Middleware system & state interceptors
-- **@signaltree/async** (+1.80KB gzipped) - Advanced async actions & loading states
-- **@signaltree/entities** (+0.97KB gzipped) - Enhanced CRUD operations & entity management
-- **@signaltree/devtools** (+2.49KB gzipped) - Development tools & Redux DevTools integration
-- **@signaltree/time-travel** (+1.75KB gzipped) - Undo/redo functionality & state history
-- **@signaltree/presets** (+0.84KB gzipped) - Pre-configured setups & common patterns
-- **@signaltree/ng-forms** (+3.38KB gzipped) - Complete Angular Forms integration
+- **@signaltree/serialization** - Advanced state serialization, persistence, auto-save & SSR support
+- **@signaltree/batching** - Batch multiple updates
+- **@signaltree/memoization** - Intelligent caching
+- **@signaltree/middleware** - Middleware system & state interceptors
+- **@signaltree/async** - Advanced async actions & loading states
+- **@signaltree/entities** - Enhanced CRUD operations & entity management
+- **@signaltree/devtools** - Development tools & Redux DevTools integration
+- **@signaltree/time-travel** - Undo/redo functionality & state history
+- **@signaltree/presets** - Pre-configured setups & common patterns
+- **@signaltree/ng-forms** - Complete Angular Forms integration
 
-**Total Ecosystem: 27.50KB gzipped** - Mix and match only what you need!
+Note: Use the bundle analysis scripts to measure sizes for your build.
 
 ### Installation Examples
 
@@ -444,19 +413,19 @@ npm install @signaltree/core @signaltree/presets
 
 ## 📋 Complete Package Reference
 
-| Package                                                   | Size    | Purpose          | Key Features                                     |
-| --------------------------------------------------------- | ------- | ---------------- | ------------------------------------------------ |
-| **[@signaltree/core](./packages/core)**                   | 7.20KB  | Foundation       | Hierarchical signals, state updates, composition |
-| **[@signaltree/serialization](./packages/serialization)** | +4.62KB | Persistence      | State serialization, SSR, time-travel debugging  |
-| **[@signaltree/batching](./packages/batching)**           | +1.27KB | Performance      | Batch updates, reduce re-renders                 |
-| **[@signaltree/memoization](./packages/memoization)**     | +1.80KB | Caching          | Intelligent caching, performance optimization    |
-| **[@signaltree/middleware](./packages/middleware)**       | +1.38KB | Interceptors     | State interceptors, logging, validation          |
-| **[@signaltree/async](./packages/async)**                 | +1.80KB | Async Operations | Advanced async patterns, loading states          |
-| **[@signaltree/entities](./packages/entities)**           | +0.97KB | Data Management  | Enhanced CRUD, filtering, querying               |
-| **[@signaltree/devtools](./packages/devtools)**           | +2.49KB | Development      | Redux DevTools, debugging, monitoring            |
-| **[@signaltree/time-travel](./packages/time-travel)**     | +1.75KB | History          | Undo/redo, snapshots, state persistence          |
-| **[@signaltree/presets](./packages/presets)**             | +0.84KB | Convenience      | Pre-configured setups, common patterns           |
-| **[@signaltree/ng-forms](./packages/ng-forms)**           | +3.38KB | Angular Forms    | Reactive forms, validation, form state           |
+| Package                                                   | Purpose          | Key Features                                     |
+| --------------------------------------------------------- | ---------------- | ------------------------------------------------ |
+| **[@signaltree/core](./packages/core)**                   | Foundation       | Hierarchical signals, state updates, composition |
+| **[@signaltree/serialization](./packages/serialization)** | Persistence      | State serialization, SSR, time-travel debugging  |
+| **[@signaltree/batching](./packages/batching)**           | Performance      | Batch updates, reduce re-renders                 |
+| **[@signaltree/memoization](./packages/memoization)**     | Caching          | Intelligent caching, performance optimization    |
+| **[@signaltree/middleware](./packages/middleware)**       | Interceptors     | State interceptors, logging, validation          |
+| **[@signaltree/async](./packages/async)**                 | Async Operations | Advanced async patterns, loading states          |
+| **[@signaltree/entities](./packages/entities)**           | Data Management  | Enhanced CRUD, filtering, querying               |
+| **[@signaltree/devtools](./packages/devtools)**           | Development      | Redux DevTools, debugging, monitoring            |
+| **[@signaltree/time-travel](./packages/time-travel)**     | History          | Undo/redo, snapshots, state persistence          |
+| **[@signaltree/presets](./packages/presets)**             | Convenience      | Pre-configured setups, common patterns           |
+| **[@signaltree/ng-forms](./packages/ng-forms)**           | Angular Forms    | Reactive forms, validation, form state           |
 
 ## � Enhancer Guide & Use Cases
 
@@ -2707,7 +2676,7 @@ SignalTree is built with a modular architecture that allows you to choose exactl
 ### Package Dependencies
 
 ```
-@signaltree/core (7.25KB)
+@signaltree/core (7.20KB)
 ├── @signaltree/batching (1.27KB)
 ├── @signaltree/memoization (1.80KB)
 ├── @signaltree/async (1.80KB)
@@ -2922,7 +2891,7 @@ const tree = signalTree({
 ### Bundle Size Reality Check
 
 ```typescript
-// SignalTree Basic (7.25KB) includes:
+// SignalTree Basic (7.20KB) includes:
 ✅ Hierarchical signals structure
 ✅ Type-safe updates
 ✅ Entity CRUD operations
@@ -2967,7 +2936,7 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 After comprehensive analysis across all major Angular state management solutions, SignalTree emerges as the **optimal choice** for most Angular applications by offering:
 
-1. **Smart Progressive Enhancement**: Start with 7.25KB, scale to 27.55KB only when needed
+1. **Smart Progressive Enhancement**: Start with 7.20KB, scale to 27.50KB only when needed
 2. **Best Developer Experience**: 55% less code than NgRx, 35% less than Akita
 3. **Optimized Performance**: Efficient nested updates, automatic batching available
 4. **Complete Feature Set**: Only solution with built-in forms, entities, serialization, and async handling
@@ -2981,7 +2950,7 @@ After comprehensive analysis across all major Angular state management solutions
 ```typescript
 // What you ACTUALLY ship:
 
-// SignalTree Basic (7.25KB) - Most apps need just this
+// SignalTree Basic (7.20KB) - Most apps need just this
 const tree = signalTree(state);
 // Includes: signals, hierarchical state, full TypeScript inference
 
@@ -2989,8 +2958,8 @@ const tree = signalTree(state);
 const tree = signalTree(state).with(withSerialization());
 // Adds: SSR support, state debugging, persistence, time-travel ready
 
-// SignalTree Smart Auto-Enable (7.25-27.55KB) - Features enable as needed
-const tree = signalTree(state); // Starts at 7.25KB, grows to 27.55KB as you use features
+// SignalTree Smart Auto-Enable (7.20-27.50KB) - Features enable as needed
+const tree = signalTree(state); // Starts at 7.20KB, grows to 27.50KB as you use features
 // Auto-adds: memoization, time-travel, devtools, batching, middleware on first use
 
 // Elf "Equivalent" (10KB) - To match SignalTree features
@@ -3010,10 +2979,10 @@ import { StoreDevtoolsModule } from '@ngrx/store-devtools'; // 5KB
 
 ### The Verdict
 
-- **For New Projects**: SignalTree (7.25KB start) offers the best balance with auto-enhancement
-- **For Growth**: SignalTree scales intelligently from 7.25KB to 27.55KB as you use features
+- **For New Projects**: SignalTree (7.20KB start) offers the best balance with auto-enhancement
+- **For Growth**: SignalTree scales intelligently from 7.20KB to 27.50KB as you use features
 - **For Enterprise**: Consider NgRx only if you need its massive ecosystem and don't mind complexity
-- **For Micro-frontends**: SignalTree Basic (7.25KB) with smart enhancement beats Elf's complexity
+- **For Micro-frontends**: SignalTree Basic (7.20KB) with smart enhancement beats Elf's complexity
 - **For Simplicity**: SignalTree auto-enabling beats native signals for anything beyond trivial state
 
 SignalTree isn't just another state management library—it's an **innovative approach** that makes complex state management feel natural while respecting your bundle size budget through intelligent progressive enhancement.
@@ -3103,8 +3072,8 @@ SignalTree represents a **genuine breakthrough** in state management technology,
 
 ### 📦 Bundle Efficiency Breakthrough (Verified ✅)
 
-- **Powerful core**: 7.25KB with unlimited recursive typing capabilities
-- **Complete ecosystem**: Only 27.55KB for all packages (measured)
+- **Powerful core**: 7.20KB with unlimited recursive typing capabilities
+- **Complete ecosystem**: Only 27.50KB for all packages (measured)
 - **Industry leading**: 84.7% smaller than NgRx, 72.4% smaller than Akita
 - **Perfect tree-shaking**: Unused recursive branches completely removed
 
@@ -3131,8 +3100,8 @@ All metrics in this README have been **test-verified** and reflect real measurem
 
 ### 📊 Bundle Size Analysis (Measured)
 
-- **Core Package**: 7.25KB gzipped (measured via consolidated bundle analysis)
-- **Total Ecosystem**: 27.56KB gzipped for all 11 packages
+- **Core Package**: 7.20KB gzipped (measured via consolidated bundle analysis)
+- **Total Ecosystem**: 27.50KB gzipped for all 11 packages
 - **Tree-shaking**: 100% effective - only used features included
 - **Verification**: Automated CI bundle size analysis with comprehensive monitoring
 - **Optimization Infrastructure**: Pre-commit hooks and GitHub Actions prevent regressions
@@ -3174,7 +3143,7 @@ SignalTree has undergone comprehensive bundle optimization to ensure minimal pro
 
 ### 📊 Optimization Results
 
-- **Total Ecosystem**: 28.27KB → **27.55KB** (2.5% reduction)
+- **Total Ecosystem**: 28.27KB → **27.50KB** (2.7% reduction)
 - **Package Validation**: 6/11 → **11/11** packages passing size requirements
 - **Key Improvements**:
   - **Serialization**: 12.3% reduction (5.27KB → 4.62KB)
@@ -3202,7 +3171,7 @@ SignalTree has undergone comprehensive bundle optimization to ensure minimal pro
 
 | Package       | Size   | Target | Status | Features                             |
 | ------------- | ------ | ------ | ------ | ------------------------------------ |
-| core          | 7.25KB | 7.62KB | ✅     | Revolutionary recursive typing       |
+| core          | 7.20KB | 7.62KB | ✅     | Revolutionary recursive typing       |
 | serialization | 4.62KB | 4.88KB | ✅     | Advanced persistence & auto-save     |
 | ng-forms      | 3.38KB | 3.52KB | ✅     | Complete Angular Forms integration   |
 | devtools      | 2.49KB | 2.54KB | ✅     | Development tools & Redux DevTools   |
@@ -3211,14 +3180,14 @@ SignalTree has undergone comprehensive bundle optimization to ensure minimal pro
 | time-travel   | 1.75KB | 1.76KB | ✅     | Undo/redo & state history            |
 | middleware    | 1.38KB | 1.42KB | ✅     | Middleware system & interceptors     |
 | batching      | 1.27KB | 1.37KB | ✅     | Batch updates (455.8x speedup)       |
-| entities      | 0.98KB | 0.98KB | ✅     | Enhanced CRUD operations             |
+| entities      | 0.97KB | 0.98KB | ✅     | Enhanced CRUD operations             |
 | presets       | 0.84KB | 0.88KB | ✅     | Pre-configured setups                |
 
-**Total Ecosystem: 27.55KB** - All packages exceed performance targets with room for growth.
+**Total Ecosystem: 27.50KB** - All packages exceed performance targets with room for growth.
 
 ---
 
-**Ready to experience the revolution?** Start with `@signaltree/core` (7.25KB) and unlock unlimited recursive power! 🚀
+**Ready to experience the revolution?** Start with `@signaltree/core` (7.20KB) and unlock unlimited recursive power! 🚀
 
 ## 🎉 Latest Enhancements (September 2025)
 
@@ -3248,7 +3217,7 @@ SignalTree has undergone comprehensive bundle optimization to ensure minimal pro
 
 All metrics have been test-verified and accurately reflect real-world performance:
 
-- ✅ Bundle sizes: 7.25KB core, 27.55KB full ecosystem (measured September 2025)
+- ✅ Bundle sizes: 7.20KB core, 27.50KB full ecosystem (measured September 2025)
 - ✅ Performance: 0.061-0.109ms operations (September 2025 averaged benchmarks)
 - ✅ Automation: Complete CI/CD integration with regression prevention
 - ✅ Developer experience: 98.5/100 score with comprehensive tooling

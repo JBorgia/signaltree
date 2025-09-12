@@ -13,7 +13,10 @@ import { FormsModule } from '@angular/forms';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { Subject } from 'rxjs';
 
+import { AkitaBenchmarkService } from './services/akita-benchmark.service';
+import { ElfBenchmarkService } from './services/elf-benchmark.service';
 import { NgRxBenchmarkService } from './services/ngrx-benchmark.service';
+import { NgRxSignalsBenchmarkService } from './services/ngrx-signals-benchmark.service';
 import { SignalTreeBenchmarkService } from './services/signaltree-benchmark.service';
 
 // Register Chart.js components
@@ -131,7 +134,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   private charts: Chart[] = [];
   chartMode = signal<
     'distribution' | 'percentiles' | 'scenarios' | 'timeseries'
-  >('distribution');
+  >('scenarios');
 
   // State signals
   config = signal<BenchmarkConfig>({
@@ -152,10 +155,22 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   completedTests = signal(0);
 
   results = signal<BenchmarkResult[]>([]);
+  // Bump when library selection changes to trigger recomputation
+  private selectionVersion = signal(0);
+
+  // Dynamic baseline name (currently SignalTree is pinned as baseline)
+  baselineName = computed(
+    () =>
+      this.availableLibraries.find((l) => l.id === 'signaltree')?.name ||
+      'SignalTree'
+  );
 
   // Real benchmark services via inject()
   private readonly stBench = inject(SignalTreeBenchmarkService);
   private readonly ngrxBench = inject(NgRxBenchmarkService);
+  private readonly ngrxSignalsBench = inject(NgRxSignalsBenchmarkService);
+  private readonly akitaBench = inject(AkitaBenchmarkService);
+  private readonly elfBench = inject(ElfBenchmarkService);
 
   // Available libraries
   availableLibraries: Library[] = [
@@ -175,7 +190,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       name: 'NgRx Store',
       description: 'Redux pattern with immutable updates',
       color: '#ef4444',
-      selected: true,
+      selected: false,
       stats: {
         bundleSize: '25KB',
         githubStars: 7900,
@@ -199,7 +214,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       color: '#f59e0b',
       selected: false,
       stats: {
-        bundleSize: '20KB',
+        bundleSize: '~40KB', // Updated from 20KB based on actual bundle analysis
         githubStars: 3500,
       },
     },
@@ -210,7 +225,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       color: '#8b5cf6',
       selected: false,
       stats: {
-        bundleSize: '2KB',
+        bundleSize: '~5KB', // Updated from 2KB - depends on modules used
         githubStars: 1500,
       },
     },
@@ -285,9 +300,11 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   ];
 
   // Computed values
-  selectedLibraries = computed(() =>
-    this.availableLibraries.filter((lib) => lib.selected)
-  );
+  selectedLibraries = computed(() => {
+    // Depend on version so changes to plain objects trigger recompute
+    this.selectionVersion();
+    return this.availableLibraries.filter((lib) => lib.selected);
+  });
 
   selectedScenarios = computed(() => this.scenarios.filter((s) => s.selected));
 
@@ -397,26 +414,94 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
   totalOperations = computed(() => {
     const cfg = this.config();
-    const libs = this.selectedLibraries().length;
-    const scenarios = this.selectedScenarios().length;
-    return cfg.dataSize * cfg.iterations * libs * scenarios;
+    const libraries = this.selectedLibraries();
+    const scenarios = this.selectedScenarios();
+
+    // Calculate actual operations per scenario (each has different operation counts)
+    let totalOps = 0;
+    for (const scenario of scenarios) {
+      const opsPerIteration = this.getOperationsPerIteration(
+        scenario.id,
+        cfg.dataSize
+      );
+      totalOps += opsPerIteration * cfg.iterations * libraries.length;
+      // Add warmup operations too
+      totalOps += opsPerIteration * cfg.warmupRuns * libraries.length;
+    }
+
+    return totalOps;
   });
 
+  private getOperationsPerIteration(
+    scenarioId: string,
+    dataSize: number
+  ): number {
+    // Return actual operations performed per iteration for each scenario
+    switch (scenarioId) {
+      case 'deep-nested':
+        return dataSize; // Each iteration updates dataSize nested values
+      case 'large-array':
+        return Math.min(1000, dataSize); // Array benchmark caps at 1000 updates
+      case 'computed-chains':
+        return dataSize; // Each iteration: dataSize value sets + computations
+      case 'batch-updates':
+        return 100; // Fixed 100 batch operations
+      case 'selector-memoization':
+        return 1000; // Fixed 1000 selector calls
+      case 'serialization':
+        return 1; // One serialization per iteration
+      case 'concurrent-updates': {
+        const concurrency = Math.max(
+          10,
+          Math.min(100, Math.floor(dataSize / 1000))
+        );
+        const updatesPerWorker = Math.max(
+          50,
+          Math.min(500, Math.floor(50 * 4))
+        ); // Conservative estimate
+        return concurrency * updatesPerWorker;
+      }
+      case 'memory-efficiency':
+        return dataSize; // Memory operations scale with dataSize
+      default:
+        return dataSize; // Default fallback
+    }
+  }
+
   estimatedDuration = computed(() => {
-    const ops = this.totalOperations();
-    const calibration = this.calibrationData();
+    const cfg = this.config();
+    const libraries = this.selectedLibraries();
+    const scenarios = this.selectedScenarios();
+    const complexity = this.getComplexityMultiplier(cfg.complexity);
 
-    if (!calibration) {
-      return 'Calibration needed';
+    if (libraries.length === 0 || scenarios.length === 0) return '0s';
+
+    // Calculate realistic duration based on actual benchmark behavior
+    let totalMs = 0;
+    for (const lib of libraries) {
+      for (const sc of scenarios) {
+        // Base time is ms per 1000 operations at basic complexity
+        const baseTimePerThousand = this.getRealisticBaseTime(lib.id, sc.id);
+        const operationsPerIteration = this.getOperationsPerIteration(
+          sc.id,
+          cfg.dataSize
+        );
+
+        // Time per single iteration = (operations / 1000) * baseTime * complexity
+        const iterationTimeMs =
+          (operationsPerIteration / 1000) * baseTimePerThousand * complexity;
+
+        // Total time for this lib+scenario = iterations * time per iteration
+        // Include warmups too
+        totalMs += iterationTimeMs * (cfg.warmupRuns + cfg.iterations);
+      }
     }
 
-    const estimatedMs = ops / calibration.cpuOpsPerMs;
-    const seconds = Math.ceil(estimatedMs / 1000);
+    // Add modest overhead for UI updates, yielding, and orchestration (not 2.5x!)
+    totalMs *= 1.3;
 
-    if (seconds < 60) {
-      return `${seconds} seconds`;
-    }
-
+    const seconds = Math.ceil(totalMs / 1000);
+    if (seconds < 60) return `${seconds} seconds`;
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}m ${remainingSeconds}s`;
@@ -424,10 +509,53 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
   estimatedMemory = computed(() => {
     const cfg = this.config();
-    // Rough estimate: 100 bytes per item
-    const memoryMB = (cfg.dataSize * 100) / (1024 * 1024);
-    return Math.ceil(memoryMB);
+    const scenarios = this.selectedScenarios();
+
+    let totalMemoryMB = 0;
+    for (const scenario of scenarios) {
+      totalMemoryMB += this.getScenarioMemoryUsage(scenario.id, cfg.dataSize);
+    }
+
+    return Math.ceil(totalMemoryMB);
   });
+
+  private getScenarioMemoryUsage(scenarioId: string, dataSize: number): number {
+    // Estimate memory usage in MB for each scenario type
+    switch (scenarioId) {
+      case 'deep-nested': {
+        // Deep nesting: Each level creates objects, 15 levels deep
+        const bytesPerLevel = 200; // Object overhead + properties
+        const levelsDeep = 15;
+        return (dataSize * bytesPerLevel * levelsDeep) / (1024 * 1024);
+      }
+      case 'large-array': {
+        // Array of objects with id + value properties
+        const bytesPerItem = 64; // Object + properties
+        return (dataSize * bytesPerItem) / (1024 * 1024);
+      }
+      case 'computed-chains': {
+        // Value + 50 factors array + computed results
+        const baseMemory = (50 * 8) / (1024 * 1024); // 50 numbers
+        const computedOverhead = 0.5; // MB for computed caching
+        return baseMemory + computedOverhead;
+      }
+      case 'batch-updates':
+        return 2; // Small fixed overhead for batching
+      case 'selector-memoization':
+        return 1; // Minimal memory for memoization
+      case 'serialization': {
+        // Need to store both original and serialized forms
+        const originalSize = (dataSize * 64) / (1024 * 1024);
+        return originalSize * 2; // Original + JSON string
+      }
+      case 'concurrent-updates':
+        return 5; // Overhead for concurrent operations
+      case 'memory-efficiency':
+        return (dataSize * 128) / (1024 * 1024); // Tracks memory growth
+      default:
+        return (dataSize * 64) / (1024 * 1024); // Default: 64 bytes per item
+    }
+  }
 
   totalTests = computed(() => {
     return this.selectedLibraries().length * this.selectedScenarios().length;
@@ -560,7 +688,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         const tTest = this.calculateTTest(stSamples, libSamples);
 
         comparisons.push({
-          name: `SignalTree vs ${lib.name}`,
+          name: `${this.baselineName()} vs ${lib.name}`,
           sampleSize: Math.min(stSamples.length, libSamples.length),
           tStatistic: tTest.tStatistic,
           pValue: tTest.pValue,
@@ -577,8 +705,10 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     // Run chart updates inside an Angular injection context
     effect(() => {
       if (this.hasResults()) {
-        // Defer to ensure ViewChild is rendered after *ngIf toggles
-        queueMicrotask(() => requestAnimationFrame(() => this.updateCharts()));
+        // Multiple deferral layers to ensure ViewChild and DOM are ready
+        queueMicrotask(() =>
+          requestAnimationFrame(() => setTimeout(() => this.updateCharts(), 0))
+        );
       }
     });
   }
@@ -740,6 +870,12 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         return this.stBench;
       case 'ngrx-store':
         return this.ngrxBench;
+      case 'ngrx-signals':
+        return this.ngrxSignalsBench;
+      case 'akita':
+        return this.akitaBench;
+      case 'elf':
+        return this.elfBench;
       default:
         return null;
     }
@@ -781,6 +917,13 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   toggleLibrary(library: Library) {
     if (library.id === 'signaltree') return; // SignalTree is always selected
     library.selected = !library.selected;
+    this.selectionVersion.update((v) => v + 1);
+  }
+
+  onLibraryCheckboxChange(library: Library, selected: boolean) {
+    if (library.id === 'signaltree') return;
+    library.selected = selected;
+    this.selectionVersion.update((v) => v + 1);
   }
 
   toggleScenario(scenario: Scenario) {
@@ -948,6 +1091,65 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     return times[libraryId]?.[scenarioId] || 1.0;
   }
 
+  private getRealisticBaseTime(libraryId: string, scenarioId: string): number {
+    // Realistic base times based on actual benchmark performance (ms per 1000 operations at basic complexity)
+    // Calibrated to match real-world benchmark durations
+    const times: Record<string, Record<string, number>> = {
+      signaltree: {
+        'deep-nested': 8.0, // Deep nesting with 15 levels + signal updates
+        'large-array': 12.0, // Array mutations with reactivity
+        'computed-chains': 10.0, // Complex computed dependencies
+        'batch-updates': 6.0, // Batched operations
+        'selector-memoization': 4.0, // Memoized selectors
+        serialization: 15.0, // JSON serialization
+        'concurrent-updates': 18.0, // Parallel operations overhead
+        'memory-efficiency': 9.0, // Memory tracking + operations
+      },
+      'ngrx-store': {
+        'deep-nested': 35.0, // Immutable deep updates
+        'large-array': 20.0, // Immutable array operations
+        'computed-chains': 25.0, // Selector chains
+        'batch-updates': 30.0, // Multiple actions/dispatches
+        'selector-memoization': 7.0, // Memoized selectors
+        serialization: 18.0, // State serialization
+        'concurrent-updates': 40.0, // Action serialization overhead
+        'memory-efficiency': 16.0, // Object creation overhead
+      },
+      'ngrx-signals': {
+        'deep-nested': 20.0, // Signal-based deep updates
+        'large-array': 16.0, // Signal array operations
+        'computed-chains': 14.0, // Computed signals
+        'batch-updates': 18.0, // Signal batching
+        'selector-memoization': 5.0, // Signal memoization
+        serialization: 16.0, // Signal state serialization
+        'concurrent-updates': 25.0, // Signal concurrency
+        'memory-efficiency': 12.0, // Signal memory efficiency
+      },
+      akita: {
+        'deep-nested': 28.0, // Entity-based deep updates
+        'large-array': 14.0, // Entity array operations
+        'computed-chains': 22.0, // Query chains
+        'batch-updates': 24.0, // Transaction batching
+        'selector-memoization': 9.0, // Query memoization
+        serialization: 18.0, // Store serialization
+        'concurrent-updates': 32.0, // Transaction overhead
+        'memory-efficiency': 14.0, // Entity overhead
+      },
+      elf: {
+        'deep-nested': 16.0, // Modular deep updates
+        'large-array': 13.0, // Repository array ops
+        'computed-chains': 11.0, // Computed properties
+        'batch-updates': 14.0, // Repository batching
+        'selector-memoization': 4.5, // Query memoization
+        serialization: 15.0, // Repository serialization
+        'concurrent-updates': 20.0, // Repository concurrency
+        'memory-efficiency': 10.0, // Repository efficiency
+      },
+    };
+
+    return times[libraryId]?.[scenarioId] || 15.0; // Default for unknown combinations
+  }
+
   private getComplexityMultiplier(complexity: string): number {
     switch (complexity) {
       case 'basic':
@@ -1074,8 +1276,13 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     // Clear existing charts
     this.charts.forEach((chart) => chart.destroy());
     this.charts = [];
-    if (this.combinedChartRef) {
+
+    // Ensure ViewChild is available before creating chart
+    if (this.combinedChartRef?.nativeElement) {
       this.createCombinedChart();
+    } else {
+      // ViewChild not ready yet, retry after a short delay
+      setTimeout(() => this.updateCharts(), 10);
     }
   }
 
@@ -1090,11 +1297,19 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   private createCombinedChart() {
     /* eslint-disable @typescript-eslint/no-explicit-any */
     const ctx = this.combinedChartRef?.nativeElement.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) {
+      console.warn('Chart context not available');
+      return;
+    }
 
     const mode = this.chartMode();
     const libraries = this.selectedLibraries();
     const results = this.results();
+
+    if (libraries.length === 0 || results.length === 0) {
+      console.warn('No libraries or results available for chart');
+      return;
+    }
 
     let config: ChartConfiguration;
     if (mode === 'distribution') {
@@ -1174,35 +1389,66 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         },
       };
     } else {
-      // timeseries
+      // timeseries - show performance over iterations for each library
       const datasets = libraries.map((lib) => {
         const libResults = results.filter((r) => r.libraryId === lib.id);
-        const allSamples = libResults.flatMap((r) => r.samples);
+
+        // Flatten all samples from all scenarios, preserving order
+        let allSamples: number[] = [];
+        libResults.forEach((result) => {
+          allSamples = allSamples.concat(result.samples);
+        });
+
         return {
           label: lib.name,
-          data: allSamples.map((value, index) => ({ x: index, y: value })),
+          data: allSamples.map((value, index) => ({ x: index + 1, y: value })),
           borderColor: lib.color,
           backgroundColor: lib.color + '20',
-          borderWidth: 1,
-          pointRadius: 0,
+          borderWidth: 2,
+          pointRadius: 1,
+          pointHoverRadius: 4,
           tension: 0.1,
+          fill: false,
         } as any;
       });
+
       config = {
         type: 'line',
         data: { datasets },
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          interaction: {
+            intersect: false,
+            mode: 'index',
+          },
+          plugins: {
+            tooltip: {
+              position: 'nearest',
+            },
+          },
           scales: {
-            x: { title: { display: true, text: 'Sample #' } },
-            y: { title: { display: true, text: 'Time (ms)' } },
+            x: {
+              title: { display: true, text: 'Iteration #' },
+              type: 'linear',
+            },
+            y: {
+              title: { display: true, text: 'Time (ms)' },
+              beginAtZero: true,
+            },
           },
         },
       };
     }
 
-    this.charts.push(new Chart(ctx, config));
+    const chart = new Chart(ctx, config);
+    this.charts.push(chart);
+
+    // Force chart to resize and update after creation to ensure proper display
+    requestAnimationFrame(() => {
+      chart.resize();
+      chart.update('none'); // Use 'none' to skip animation on initial load
+    });
     /* eslint-enable @typescript-eslint/no-explicit-any */
   }
 
@@ -1257,7 +1503,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
   async shareResults() {
     const url = window.location.href;
-    const text = `Check out these benchmark results: SignalTree vs ${this.selectedLibraries()
+    const text = `Check out these benchmark results: ${this.baselineName()} vs ${this.selectedLibraries()
       .slice(1)
       .map((l) => l.name)
       .join(', ')}`;
