@@ -1,5 +1,11 @@
 import { Injectable } from '@angular/core';
-import { createAction, createReducer, on, props } from '@ngrx/store';
+import {
+  createAction,
+  createReducer,
+  createSelector,
+  on,
+  props,
+} from '@ngrx/store';
 
 // State interface for complex benchmarks
 interface User {
@@ -260,7 +266,11 @@ export class NgRxBenchmarkService {
   ): Promise<number> {
     const start = performance.now();
 
-    const bump = createAction('[Test] Bump', props<{ index: number }>());
+    // Single reducer call per batch to exercise batching capability
+    const applyBatch = createAction(
+      '[Test] Apply Batch',
+      props<{ items: number[] }>()
+    );
 
     type State = { items: number[] };
     const initialState: State = {
@@ -269,18 +279,15 @@ export class NgRxBenchmarkService {
 
     const reducer = createReducer(
       initialState,
-      on(bump, (state, { index }) => ({
-        ...state,
-        items: state.items.map((v, i) => (i === index ? v + 1 : v)),
-      }))
+      on(applyBatch, (state, { items }) => ({ ...state, items }))
     );
 
     let state = initialState;
 
     for (let b = 0; b < batches; b++) {
-      for (let i = 0; i < batchSize; i++) {
-        state = reducer(state, bump({ index: i }));
-      }
+      // prepare next items in one pass
+      const next = state.items.map((v) => (v + 1) | 0);
+      state = reducer(state, applyBatch({ items: next }));
       if ((b & 7) === 0) await this.yieldToUI();
     }
 
@@ -293,17 +300,24 @@ export class NgRxBenchmarkService {
     type Item = { id: number; flag: boolean };
     type State = { items: Item[] };
 
-    const initialState: State = {
+    const state: State = {
       items: Array.from({ length: dataSize }, (_, i) => ({
         id: i,
         flag: i % 2 === 0,
       })),
     };
 
-    const selectEven = (s: State) => s.items.filter((x) => x.flag).length;
+    // Memoized selectors similar to NgRx store usage
+    const selectFeature = (s: State) => s;
+    const selectItems = createSelector(selectFeature, (s: State) => s.items);
+    const selectEvenCount = createSelector(
+      selectItems,
+      (items) => items.filter((x) => x.flag).length
+    );
 
     for (let i = 0; i < 1000; i++) {
-      selectEven(initialState);
+      // With no state changes, selector should return cached result after first call
+      selectEvenCount(state);
       if ((i & 63) === 0) await this.yieldToUI();
     }
 

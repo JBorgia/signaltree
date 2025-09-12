@@ -302,8 +302,8 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     },
     {
       id: 'concurrent-updates',
-      name: 'Concurrent Updates',
-      description: 'Parallel state modifications',
+      name: 'Rapid Sequential Updates',
+      description: 'High-frequency sequential modifications',
       operations: '50 concurrent',
       complexity: 'Extreme',
       selected: true,
@@ -723,13 +723,15 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     // Return actual operations performed per iteration for each scenario
     switch (scenarioId) {
       case 'deep-nested':
-        return dataSize; // Each iteration updates dataSize nested values
+        // Capped at 1000 across services for fairness
+        return Math.min(dataSize, 1000);
       case 'large-array':
         return Math.min(1000, dataSize); // Array benchmark caps at 1000 updates
       case 'computed-chains':
-        return dataSize; // Each iteration: dataSize value sets + computations
+        // Capped at 500 across services for fairness
+        return Math.min(dataSize, 500);
       case 'batch-updates':
-        return 100; // Fixed 100 batch operations
+        return Math.min(dataSize, 100); // Capped at 100 across services for fairness
       case 'selector-memoization':
         return 1000; // Fixed 1000 selector calls
       case 'serialization':
@@ -1191,7 +1193,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             );
             return -1;
           }
-          return await svc.runBatchUpdatesBenchmark(config.dataSize, 1000);
+          return await svc.runBatchUpdatesBenchmark(100, 1000);
         case 'selector-memoization':
           if (!svc.runSelectorBenchmark) {
             console.warn(
@@ -1597,7 +1599,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       (r) => r.scenarioId === scenarioId && r.libraryId === libraryId
     );
 
-    return result ? this.formatTime(result.median) : '-';
+    if (!result) return '-';
+    if (result.median === -1) return 'N/A';
+    return this.formatTime(result.median);
   }
 
   getScenarioOps(scenarioId: string, libraryId: string): string {
@@ -1605,7 +1609,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       (r) => r.scenarioId === scenarioId && r.libraryId === libraryId
     );
 
-    return result ? Math.round(result.opsPerSecond).toLocaleString() : '-';
+    if (!result) return '-';
+    if (result.opsPerSecond === -1) return 'N/A';
+    return Math.round(result.opsPerSecond).toLocaleString();
   }
 
   getRelativePerformance(scenarioId: string, libraryId: string): string {
@@ -1617,7 +1623,13 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       (r) => r.scenarioId === scenarioId && r.libraryId === 'signaltree'
     );
 
-    if (!libResult || !stResult) return '-';
+    if (
+      !libResult ||
+      !stResult ||
+      libResult.median === -1 ||
+      stResult.median === -1
+    )
+      return '-';
 
     // Show how many times the given library compares to SignalTree by time.
     // If the library is slower (higher median), this yields > 1 (e.g., 2.00x vs SignalTree).
