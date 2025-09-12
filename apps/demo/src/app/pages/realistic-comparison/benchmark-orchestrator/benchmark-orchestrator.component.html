@@ -3,7 +3,7 @@
   <header class="benchmark-header">
     <h1>State Management Performance Benchmarks</h1>
     <p class="subtitle">
-      Scientifically rigorous performance testing with real-world scenarios
+      Rigorous performance testing with real-world scenarios
     </p>
     <div class="performance-disclaimer">
       <p>
@@ -154,7 +154,17 @@
 
   <!-- Library Selection Section -->
   <section class="library-section">
-    <h2>Select Libraries to Compare</h2>
+    <div class="library-selection-header">
+      <h2>Select Libraries to Compare</h2>
+      <button
+        class="btn btn-select-all"
+        (click)="toggleAllLibraries()"
+        [disabled]="isRunning()"
+        type="button"
+      >
+        {{ allLibrariesSelected() ? 'Deselect All' : 'Select All' }}
+      </button>
+    </div>
     <div class="library-grid">
       <div
         class="library-card"

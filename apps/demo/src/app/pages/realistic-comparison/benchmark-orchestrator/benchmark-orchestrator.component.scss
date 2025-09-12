@@ -274,6 +274,32 @@ $border: #e5e7eb;
 .library-section {
   margin-bottom: 2rem;
 
+  .library-selection-header {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+
+    h2 {
+      margin: 0;
+      color: $dark;
+    }
+
+    .btn-select-all {
+      @include button;
+      background: $primary;
+      color: white;
+      font-size: 0.875rem;
+      padding: 0.5rem 1rem;
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+    }
+  }
+
   h2 {
     margin-bottom: 1.5rem;
     color: $dark;
@@ -628,7 +654,8 @@ $border: #e5e7eb;
 
 // Controls Section
 .controls-section {
-  display: block;
+  display: flex;
+  flex-direction: column;
   text-align: center;
   margin-bottom: 2rem;
 
@@ -1076,6 +1103,19 @@ $border: #e5e7eb;
 @media (max-width: 768px) {
   .benchmark-container {
     padding: 1rem;
+  }
+
+  .library-section {
+    .library-selection-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+
+      .btn-select-all {
+        align-self: stretch;
+        text-align: center;
+      }
+    }
   }
 
   .library-grid,
