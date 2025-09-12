@@ -43,6 +43,14 @@ interface Scenario {
   operations: string;
   complexity: string;
   selected: boolean;
+  category: 'core' | 'async' | 'time-travel' | 'middleware' | 'full-stack';
+}
+
+interface BenchmarkCategory {
+  name: string;
+  id: string;
+  description: string;
+  scenarios: string[]; // scenario IDs
 }
 
 interface BenchmarkConfig {
@@ -104,6 +112,7 @@ interface StatisticalComparison {
 
 // Benchmark service contract used by orchestrator
 interface BenchmarkService {
+  // Core performance benchmarks
   runDeepNestedBenchmark?(dataSize: number, depth?: number): Promise<number>;
   runArrayBenchmark?(dataSize: number): Promise<number>;
   runComputedBenchmark?(dataSize: number): Promise<number>;
@@ -121,6 +130,28 @@ interface BenchmarkService {
   runDataFetchingBenchmark?(dataSize: number): Promise<number>;
   runRealTimeUpdatesBenchmark?(dataSize: number): Promise<number>;
   runStateSizeScalingBenchmark?(dataSize: number): Promise<number>;
+
+  // Async operations benchmarks
+  runAsyncWorkflowBenchmark?(dataSize: number): Promise<number>;
+  runConcurrentAsyncBenchmark?(concurrency: number): Promise<number>;
+  runAsyncCancellationBenchmark?(operations: number): Promise<number>;
+
+  // Time-travel benchmarks
+  runUndoRedoBenchmark?(operations: number): Promise<number>;
+  runHistorySizeBenchmark?(historySize: number): Promise<number>;
+  runJumpToStateBenchmark?(operations: number): Promise<number>;
+
+  // Middleware benchmarks
+  runSingleMiddlewareBenchmark?(operations: number): Promise<number>;
+  runMultipleMiddlewareBenchmark?(
+    middlewareCount: number,
+    operations: number
+  ): Promise<number>;
+  runConditionalMiddlewareBenchmark?(operations: number): Promise<number>;
+
+  // Full-stack benchmarks
+  runAllFeaturesEnabledBenchmark?(dataSize: number): Promise<number>;
+  runProductionSetupBenchmark?(dataSize: number): Promise<number>;
 }
 
 @Component({
@@ -159,6 +190,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   completedTests = signal(0);
   private elapsedTimeTimer = signal(0); // Timer signal to trigger elapsed time updates
   private timerInterval?: number; // Store interval ID for cleanup
+
+  // Category selection
+  selectedCategory = 'core'; // Default to core scenarios
 
   results = signal<BenchmarkResult[]>([]);
   // Bump when library selection changes to trigger recomputation
@@ -250,8 +284,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     },
   ];
 
-  // Test scenarios
+  // Test scenarios organized by category
   scenarios: Scenario[] = [
+    // Core Performance
     {
       id: 'deep-nested',
       name: 'Deep Nested Updates',
@@ -259,6 +294,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       operations: '1000 updates',
       complexity: 'High',
       selected: true,
+      category: 'core',
     },
     {
       id: 'large-array',
@@ -267,6 +303,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       operations: 'Size × 10',
       complexity: 'Medium',
       selected: true,
+      category: 'core',
     },
     {
       id: 'computed-chains',
@@ -275,6 +312,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       operations: '500 computations',
       complexity: 'High',
       selected: true,
+      category: 'core',
     },
     {
       id: 'batch-updates',
@@ -283,6 +321,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       operations: '100 batches',
       complexity: 'Medium',
       selected: true,
+      category: 'core',
     },
     {
       id: 'selector-memoization',
@@ -291,6 +330,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       operations: '1000 selections',
       complexity: 'Low',
       selected: true,
+      category: 'core',
     },
     {
       id: 'serialization',
@@ -299,6 +339,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       operations: 'Per iteration',
       complexity: 'Medium',
       selected: true,
+      category: 'core',
     },
     {
       id: 'concurrent-updates',
@@ -307,6 +348,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       operations: '50 concurrent',
       complexity: 'Extreme',
       selected: true,
+      category: 'core',
     },
     {
       id: 'memory-efficiency',
@@ -315,6 +357,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       operations: 'Continuous',
       complexity: 'Variable',
       selected: true,
+      category: 'core',
     },
     {
       id: 'data-fetching',
@@ -323,6 +366,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       operations: 'Data size × filters',
       complexity: 'High',
       selected: true,
+      category: 'core',
     },
     {
       id: 'real-time-updates',
@@ -331,6 +375,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       operations: '500 live updates',
       complexity: 'Extreme',
       selected: true,
+      category: 'core',
     },
     {
       id: 'state-size-scaling',
@@ -339,6 +384,164 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       operations: 'Size × 10 entities',
       complexity: 'Extreme',
       selected: true,
+      category: 'core',
+    },
+
+    // Async Operations
+    {
+      id: 'async-workflow',
+      name: 'Async Workflow',
+      description: 'Multiple async operations with loading states',
+      operations: '100 async calls',
+      complexity: 'High',
+      selected: false,
+      category: 'async',
+    },
+    {
+      id: 'concurrent-async',
+      name: 'Concurrent Async',
+      description: 'Multiple simultaneous async operations',
+      operations: '10 concurrent',
+      complexity: 'High',
+      selected: false,
+      category: 'async',
+    },
+    {
+      id: 'async-cancellation',
+      name: 'Async Cancellation',
+      description: 'Cancelling and restarting async operations',
+      operations: '50 cancel/restart',
+      complexity: 'Medium',
+      selected: false,
+      category: 'async',
+    },
+
+    // Time Travel
+    {
+      id: 'undo-redo',
+      name: 'Undo/Redo Operations',
+      description: 'Time-travel through state history',
+      operations: '100 undo/redo',
+      complexity: 'Medium',
+      selected: false,
+      category: 'time-travel',
+    },
+    {
+      id: 'history-size',
+      name: 'Large History Size',
+      description: 'Performance with large history buffers',
+      operations: '1000 history entries',
+      complexity: 'High',
+      selected: false,
+      category: 'time-travel',
+    },
+    {
+      id: 'jump-to-state',
+      name: 'Jump to State',
+      description: 'Jumping to arbitrary points in history',
+      operations: '50 jumps',
+      complexity: 'Medium',
+      selected: false,
+      category: 'time-travel',
+    },
+
+    // Middleware
+    {
+      id: 'single-middleware',
+      name: 'Single Middleware',
+      description: 'Performance impact of one middleware',
+      operations: '1000 operations',
+      complexity: 'Low',
+      selected: false,
+      category: 'middleware',
+    },
+    {
+      id: 'multiple-middleware',
+      name: 'Multiple Middleware',
+      description: 'Stack of multiple middleware layers',
+      operations: '1000 operations',
+      complexity: 'Medium',
+      selected: false,
+      category: 'middleware',
+    },
+    {
+      id: 'conditional-middleware',
+      name: 'Conditional Middleware',
+      description: 'Middleware with conditional logic',
+      operations: '1000 operations',
+      complexity: 'Medium',
+      selected: false,
+      category: 'middleware',
+    },
+
+    // Full Stack
+    {
+      id: 'all-features-enabled',
+      name: 'All Features Enabled',
+      description: 'All features: async, time-travel, middleware, memoization',
+      operations: 'Mixed workload',
+      complexity: 'Extreme',
+      selected: false,
+      category: 'full-stack',
+    },
+    {
+      id: 'production-setup',
+      name: 'Production Configuration',
+      description: 'Realistic production-ready configuration',
+      operations: 'Real-world workload',
+      complexity: 'High',
+      selected: false,
+      category: 'full-stack',
+    },
+  ];
+
+  // Benchmark categories
+  categories: BenchmarkCategory[] = [
+    {
+      id: 'core',
+      name: 'Core Performance',
+      description: 'Fundamental state management operations',
+      scenarios: [
+        'deep-nested',
+        'large-array',
+        'computed-chains',
+        'batch-updates',
+        'selector-memoization',
+        'serialization',
+        'concurrent-updates',
+        'memory-efficiency',
+        'data-fetching',
+        'real-time-updates',
+        'state-size-scaling',
+      ],
+    },
+    {
+      id: 'async',
+      name: 'Async Operations',
+      description: 'Asynchronous state updates and loading management',
+      scenarios: ['async-workflow', 'concurrent-async', 'async-cancellation'],
+    },
+    {
+      id: 'time-travel',
+      name: 'Time Travel',
+      description: 'Undo/redo and state history management',
+      scenarios: ['undo-redo', 'history-size', 'jump-to-state'],
+    },
+    {
+      id: 'middleware',
+      name: 'Middleware',
+      description: 'Interceptors, logging, and state modification hooks',
+      scenarios: [
+        'single-middleware',
+        'multiple-middleware',
+        'conditional-middleware',
+      ],
+    },
+    {
+      id: 'full-stack',
+      name: 'Full Stack',
+      description: 'Real-world production scenarios with all features',
+      scenarios: ['all-features-enabled', 'production-setup'],
     },
   ];
 
@@ -350,6 +553,25 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   });
 
   selectedScenarios = computed(() => this.scenarios.filter((s) => s.selected));
+
+  // Group scenarios by category
+  scenariosByCategory = computed(() => {
+    const grouped = new Map<string, Scenario[]>();
+
+    for (const category of this.categories) {
+      const categoryScenarios = this.scenarios.filter(
+        (s) => s.category === category.id
+      );
+      grouped.set(category.id, categoryScenarios);
+    }
+
+    return grouped;
+  });
+
+  // Get scenarios for a specific category
+  getScenariosForCategory(categoryId: string) {
+    return this.scenarios.filter((s) => s.category === categoryId);
+  }
 
   // Libraries that actually have results (ensures table shows all measured libs)
   librariesWithResults = computed(() => {
@@ -960,29 +1182,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     return [...supportedSummaries, ...unsupportedSummaries];
   });
 
-  overallWinner = computed(() => {
-    const summaries = this.librarySummaries();
-    if (summaries.length === 0) return null;
-
-    // Find the actual fastest library (lowest median time, excluding unsupported -1 values)
-    const supportedSummaries = summaries.filter((s) => s.median !== -1);
-    if (supportedSummaries.length < 2) return null;
-
-    // Sort by median time to get the fastest
-    const sortedSummaries = [...supportedSummaries].sort(
-      (a, b) => a.median - b.median
-    );
-    const winner = sortedSummaries[0];
-    const second = sortedSummaries[1];
-
-    const improvement = ((second.median - winner.median) / second.median) * 100;
-
-    return {
-      name: winner.name,
-      summary: `${improvement.toFixed(1)}% faster overall than ${second.name}`,
-    };
-  });
-
   statisticalComparisons = computed((): StatisticalComparison[] => {
     const results = this.results();
     const libraries = this.selectedLibraries();
@@ -1263,6 +1462,101 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             return -1;
           }
           return await svc.runStateSizeScalingBenchmark(config.dataSize);
+
+        // Async Operations
+        case 'async-workflow':
+          if (!svc.runAsyncWorkflowBenchmark) {
+            console.warn(
+              `${libraryId} does not support async-workflow benchmarks`
+            );
+            return -1;
+          }
+          return await svc.runAsyncWorkflowBenchmark(config.dataSize);
+        case 'concurrent-async':
+          if (!svc.runConcurrentAsyncBenchmark) {
+            console.warn(
+              `${libraryId} does not support concurrent-async benchmarks`
+            );
+            return -1;
+          }
+          return await svc.runConcurrentAsyncBenchmark(10); // 10 concurrent operations
+        case 'async-cancellation':
+          if (!svc.runAsyncCancellationBenchmark) {
+            console.warn(
+              `${libraryId} does not support async-cancellation benchmarks`
+            );
+            return -1;
+          }
+          return await svc.runAsyncCancellationBenchmark(50); // 50 cancel/restart cycles
+
+        // Time Travel
+        case 'undo-redo':
+          if (!svc.runUndoRedoBenchmark) {
+            console.warn(`${libraryId} does not support undo-redo benchmarks`);
+            return -1;
+          }
+          return await svc.runUndoRedoBenchmark(100); // 100 undo/redo operations
+        case 'history-size':
+          if (!svc.runHistorySizeBenchmark) {
+            console.warn(
+              `${libraryId} does not support history-size benchmarks`
+            );
+            return -1;
+          }
+          return await svc.runHistorySizeBenchmark(1000); // 1000 history entries
+        case 'jump-to-state':
+          if (!svc.runJumpToStateBenchmark) {
+            console.warn(
+              `${libraryId} does not support jump-to-state benchmarks`
+            );
+            return -1;
+          }
+          return await svc.runJumpToStateBenchmark(50); // 50 state jumps
+
+        // Middleware
+        case 'single-middleware':
+          if (!svc.runSingleMiddlewareBenchmark) {
+            console.warn(
+              `${libraryId} does not support single-middleware benchmarks`
+            );
+            return -1;
+          }
+          return await svc.runSingleMiddlewareBenchmark(1000); // 1000 operations
+        case 'multiple-middleware':
+          if (!svc.runMultipleMiddlewareBenchmark) {
+            console.warn(
+              `${libraryId} does not support multiple-middleware benchmarks`
+            );
+            return -1;
+          }
+          return await svc.runMultipleMiddlewareBenchmark(5, 1000); // 5 middleware, 1000 operations
+        case 'conditional-middleware':
+          if (!svc.runConditionalMiddlewareBenchmark) {
+            console.warn(
+              `${libraryId} does not support conditional-middleware benchmarks`
+            );
+            return -1;
+          }
+          return await svc.runConditionalMiddlewareBenchmark(1000); // 1000 operations
+
+        // Full Stack
+        case 'all-features-enabled':
+          if (!svc.runAllFeaturesEnabledBenchmark) {
+            console.warn(
+              `${libraryId} does not support all-features-enabled benchmarks`
+            );
+            return -1;
+          }
+          return await svc.runAllFeaturesEnabledBenchmark(config.dataSize);
+        case 'production-setup':
+          if (!svc.runProductionSetupBenchmark) {
+            console.warn(
+              `${libraryId} does not support production-setup benchmarks`
+            );
+            return -1;
+          }
+          return await svc.runProductionSetupBenchmark(config.dataSize);
+
         default:
           console.warn(
             `Unknown scenario: ${scenarioId} for library: ${libraryId}`

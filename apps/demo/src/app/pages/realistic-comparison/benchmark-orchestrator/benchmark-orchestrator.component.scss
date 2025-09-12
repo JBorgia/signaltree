@@ -594,6 +594,72 @@ $border: #e5e7eb;
     color: $dark;
   }
 
+  .category-tabs {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+
+    .category-tab {
+      @include button;
+      background: white;
+      border: 2px solid $border;
+      border-radius: 12px;
+      color: #6b7280;
+      padding: 0.75rem 1.25rem;
+      white-space: nowrap;
+      font-weight: 600;
+      transition: all 0.2s;
+
+      &:hover:not(.active) {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border-color: $primary;
+        color: $primary;
+      }
+
+      &.active {
+        background: $primary;
+        color: white;
+        border-color: $primary;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba($primary, 0.25);
+      }
+
+      .scenario-count {
+        font-size: 0.75rem;
+        opacity: 0.8;
+        margin-left: 0.5rem;
+        padding: 0.25rem 0.5rem;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        font-weight: 500;
+      }
+
+      &:not(.active) .scenario-count {
+        background: rgba($primary, 0.1);
+        color: $primary;
+      }
+    }
+  }
+
+  .category-content {
+    .category-description {
+      @include card;
+      margin-bottom: 1.5rem;
+      border: 2px solid rgba($primary, 0.2);
+      background: rgba($primary, 0.02);
+      border-left: 4px solid $primary;
+
+      p {
+        margin: 0;
+        color: #4b5563;
+        font-size: 0.875rem;
+        line-height: 1.5;
+      }
+    }
+  }
+
   .scenarios-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
