@@ -1,11 +1,17 @@
-import { Injectable } from '@angular/core';
+import { computed, Injectable } from '@angular/core';
 import {
   withBatching,
   withHighPerformanceBatching,
 } from '@signaltree/batching';
 import { signalTree } from '@signaltree/core';
 import { withMemoization } from '@signaltree/memoization';
-import { withSerialization } from '@signaltree/serialization';
+import {
+  withFastSerialization,
+  withSerialization,
+} from '@signaltree/serialization';
+
+// Consider importing performance preset for consistency
+// import { createPresetConfig } from '@signaltree/presets';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 @Injectable({ providedIn: 'root' })
@@ -80,18 +86,18 @@ export class SignalTreeBenchmarkService {
       factors: Array.from({ length: 50 }, (_, i) => i + 1),
     }).with(withBatching(), withMemoization());
 
-    // simple computed-style workload
-    const compute = () => {
+    // FIX: Use Angular's computed() for proper memoization like NgRx SignalStore
+    const compute = computed(() => {
       const v = tree.state.value();
       let acc = 0;
       for (const f of tree.state.factors())
         acc += Math.sin(v * f) * Math.cos(f);
       return acc;
-    };
+    });
 
     for (let i = 0; i < dataSize; i++) {
       tree.state.value.set(i);
-      compute();
+      compute(); // Now this is properly memoized!
       if ((i & 1023) === 0) await this.yieldToUI();
     }
 
@@ -131,10 +137,13 @@ export class SignalTreeBenchmarkService {
       })),
     }).with(withMemoization());
 
-    const selectEven = () => tree.state.items().filter((x) => x.flag).length;
+    // FIX: Use Angular's computed() for proper memoization like NgRx SignalStore
+    const selectEven = computed(
+      () => tree.state.items().filter((x) => x.flag).length
+    );
 
     for (let i = 0; i < 1000; i++) {
-      selectEven();
+      selectEven(); // Now this is properly memoized!
       if ((i & 63) === 0) await this.yieldToUI();
     }
 
@@ -195,6 +204,62 @@ export class SignalTreeBenchmarkService {
     // Log split timings for investigation
     console.debug(
       '[SignalTree][serialization] snapshot(ms)=',
+      (t1 - t0).toFixed(2),
+      ' stringify(ms)=',
+      (t2 - t1).toFixed(2)
+    );
+
+    return t2 - t0;
+  }
+
+  async runFastSerializationBenchmark(dataSize: number): Promise<number> {
+    // Build identical structure to regular serialization for fair comparison
+    const tree = signalTree({
+      users: Array.from(
+        { length: Math.max(100, Math.min(1000, dataSize)) },
+        (_, i) => ({
+          id: i,
+          name: `User ${i}`,
+          roles: i % 5 === 0 ? ['admin', 'user'] : ['user'],
+          active: i % 3 === 0,
+          meta: { createdAt: new Date(2020, 0, 1 + (i % 28)) },
+        })
+      ),
+      settings: {
+        theme: 'dark',
+        flags: {
+          a: true,
+          b: false,
+          c: Array.from({ length: 8 }, (_, j) => j).reduce(
+            (o, j) => ({ ...o, [j]: j % 2 === 0 }),
+            {} as Record<number, boolean>
+          ),
+        },
+      },
+    }).with(
+      withMemoization(),
+      withHighPerformanceBatching(),
+      withFastSerialization({ includeMetadata: false })
+    );
+
+    // Apply same mutations for consistency
+    for (let i = 0; i < 10; i++) {
+      (tree.state as any)['users'].update((arr: any[]) => {
+        const idx = i % arr.length;
+        (arr[idx] as any).active = !(arr[idx] as any).active;
+        return arr;
+      });
+    }
+
+    // Measure fast serialization
+    const t0 = performance.now();
+    const snapshot = tree.fastSnapshot();
+    const t1 = performance.now();
+    JSON.stringify({ data: snapshot.data });
+    const t2 = performance.now();
+
+    console.debug(
+      '[SignalTree][fast-serialization] fastSnapshot(ms)=',
       (t1 - t0).toFixed(2),
       ' stringify(ms)=',
       (t2 - t1).toFixed(2)

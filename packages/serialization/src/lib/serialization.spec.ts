@@ -497,5 +497,104 @@ describe('Serialization', () => {
       await expect(tree.load()).rejects.toThrow('Storage read failed');
       await expect(tree.clear()).rejects.toThrow('Storage delete failed');
     });
+
+    it('should cache serialized state and avoid redundant storage writes', async () => {
+      // Mock storage to track write operations
+      const mockStorage: {
+        data: Record<string, string>;
+        writeCount: number;
+        setItem: jest.Mock<Promise<void>, [string, string]>;
+        getItem: jest.Mock<Promise<string | null>, [string]>;
+        removeItem: jest.Mock<Promise<void>, [string]>;
+      } = {
+        data: {} as Record<string, string>,
+        writeCount: 0,
+        setItem: jest.fn<Promise<void>, [string, string]>(
+          (key: string, value: string) => {
+            mockStorage.writeCount++;
+            mockStorage.data[key] = value;
+            return Promise.resolve();
+          }
+        ),
+        getItem: jest.fn<Promise<string | null>, [string]>((key: string) =>
+          Promise.resolve(mockStorage.data[key] ?? null)
+        ),
+        removeItem: jest.fn<Promise<void>, [string]>((key: string) => {
+          delete mockStorage.data[key];
+          return Promise.resolve();
+        }),
+      };
+
+      const tree = signalTree({ count: 0, name: 'test' }).with(
+        withPersistence({
+          key: 'test-cache',
+          storage: mockStorage,
+          autoLoad: false,
+        })
+      );
+
+      // First save should write to storage
+      await tree.save();
+      expect(mockStorage.writeCount).toBe(1);
+
+      // Second save without changes should NOT write to storage (cached)
+      await tree.save();
+      expect(mockStorage.writeCount).toBe(1); // Still 1!
+
+      // Change state and save - should write to storage
+      tree.state.count.set(42);
+      await tree.save();
+      expect(mockStorage.writeCount).toBe(2);
+
+      // Save again without changes - should be cached again
+      await tree.save();
+      expect(mockStorage.writeCount).toBe(2); // Still 2!
+    });
+
+    it('should respect skipCache option to force storage writes', async () => {
+      const mockStorage: {
+        data: Record<string, string>;
+        writeCount: number;
+        setItem: jest.Mock<Promise<void>, [string, string]>;
+        getItem: jest.Mock<Promise<string | null>, [string]>;
+        removeItem: jest.Mock<Promise<void>, [string]>;
+      } = {
+        data: {} as Record<string, string>,
+        writeCount: 0,
+        setItem: jest.fn<Promise<void>, [string, string]>(
+          (key: string, value: string) => {
+            mockStorage.writeCount++;
+            mockStorage.data[key] = value;
+            return Promise.resolve();
+          }
+        ),
+        getItem: jest.fn<Promise<string | null>, [string]>((key: string) =>
+          Promise.resolve(mockStorage.data[key] ?? null)
+        ),
+        removeItem: jest.fn<Promise<void>, [string]>((key: string) => {
+          delete mockStorage.data[key];
+          return Promise.resolve();
+        }),
+      };
+
+      const tree = signalTree({ count: 0 }).with(
+        withPersistence({
+          key: 'test-skip-cache',
+          storage: mockStorage,
+          autoLoad: false,
+          skipCache: true, // Force writes even if unchanged
+        })
+      );
+
+      // Multiple saves should all write to storage when skipCache is true
+      await tree.save();
+      expect(mockStorage.writeCount).toBe(1);
+
+      await tree.save(); // Same state
+      expect(mockStorage.writeCount).toBe(2); // Should write anyway!
+
+      await tree.save(); // Same state again
+      expect(mockStorage.writeCount).toBe(3); // Should write anyway!
+    });
   });
 });

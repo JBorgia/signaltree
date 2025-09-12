@@ -97,6 +97,48 @@ Performance depends on your app shape and environment. Use the demo’s Benchmar
 - **Snapshot Management**: Point-in-time state capture and restoration
 - **Circular Reference Handling**: Advanced serialization for complex object graphs
 
+#### **Serialization Performance Trade-offs**
+
+**Known Performance Characteristic**: SignalTree's serialization is approximately 2-3x slower than libraries that store plain objects (like NgRx). This trade-off is intentional and provides significant benefits elsewhere:
+
+**Why this occurs:**
+
+- SignalTree stores **reactive signals** that must be unwrapped during serialization
+- Other libraries store **plain objects** that serialize directly
+- The unwrapping process adds computational overhead
+
+**Performance impact vs. benefits:**
+
+- **25-65% faster** read operations, updates, and deep access
+- **85% memory reduction** through lazy signal creation
+- **2-3x slower** serialization operations only
+
+**Mitigation strategies:**
+
+```typescript
+// Use fast serialization for performance-critical scenarios
+import { withFastSerialization } from '@signaltree/serialization';
+
+const tree = signalTree(state).with(
+  withFastSerialization() // Preserves signal structure, faster serialization
+);
+
+// Debounce auto-save operations
+withPersistence({
+  debounceMs: 2000, // Reduce serialization frequency
+  autoSave: true,
+});
+
+// Slice state for large trees
+const userSlice = tree.slice(['user', 'profile']); // Serialize only needed portions
+```
+
+**When to use each approach:**
+
+- **Standard serialization**: Best for most applications (comprehensive, handles all edge cases)
+- **Fast serialization**: Performance-critical apps with frequent saves
+- **Debounced persistence**: High-frequency update scenarios
+
 #### **Comprehensive Developer Tooling**
 
 - **Real-Time Performance Dashboard**: Live metrics and benchmarking

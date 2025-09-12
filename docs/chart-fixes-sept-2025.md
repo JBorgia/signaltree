@@ -37,6 +37,17 @@
   - Changed `darken($primary, 10%)` to `color.adjust($primary, $lightness: -10%)`
 - **File**: `benchmark-orchestrator.component.scss`
 
+### 5. **Chart Initial Load Display** ✅
+
+- **Problem**: Charts didn't display correctly on initial data load, only worked after clicking chart mode buttons
+- **Root Cause**: Timing issue between Angular's `*ngIf` DOM creation, ViewChild availability, and Chart.js initialization
+- **Fix**: Multi-layered chart initialization improvements:
+  - Enhanced effect deferral: `queueMicrotask → requestAnimationFrame → setTimeout`
+  - Added ViewChild availability checks with retry logic in `updateCharts()`
+  - Added safety checks and error handling in `createCombinedChart()`
+  - Force chart resize and update after creation to ensure proper display
+- **Files**: `benchmark-orchestrator.component.ts` constructor and chart methods
+
 ## Result
 
 - ✅ Scenarios chart shows as default (most useful overview)

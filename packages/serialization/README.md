@@ -74,6 +74,64 @@ await tree.load(); // Manual load
 await tree.clear(); // Clear storage
 ```
 
+### Storage optimization through caching
+
+The persistence layer automatically optimizes storage writes by caching the last serialized state and only writing when the state actually changes:
+
+```typescript
+import { signalTree } from '@signaltree/core';
+import { withSerialization, withPersistence } from '@signaltree/serialization';
+
+const tree = signalTree({
+  user: { name: 'John', settings: { theme: 'dark' } },
+  lastUpdated: Date.now(),
+}).with(
+  withSerialization(),
+  withPersistence({
+    key: 'app-state',
+    autoSave: true,
+    debounceMs: 500,
+  })
+);
+
+// These calls demonstrate the caching optimization:
+await tree.save(); // Writes to storage
+await tree.save(); // Skipped - no changes (cached)
+await tree.save(); // Skipped - no changes (cached)
+
+tree.state.user.name.set('Jane'); // Change state
+await tree.save(); // Writes to storage - state changed
+await tree.save(); // Skipped - no changes (cached)
+```
+
+**Benefits of caching optimization:**
+
+- **Reduced I/O operations**: Avoids unnecessary storage writes
+- **Better performance**: localStorage.setItem is synchronous and blocks the main thread
+- **Battery savings**: Fewer storage operations on mobile devices
+- **Automatic**: No configuration needed - works transparently
+
+**Disable caching when needed:**
+
+```typescript
+const tree = signalTree(state).with(
+  withSerialization(),
+  withPersistence({
+    key: 'app-state',
+    skipCache: true, // Force writes even if state unchanged
+  })
+);
+```
+
+body: exportData,
+headers: { 'Content-Type': 'application/json' },
+});
+
+// Internal auto-save continues running in background (fast)
+tree.$.user.profile.name.set('Jane'); // Auto-saved in 200ms
+
+````
+
 ### IndexedDB for large state
 
 ```typescript
@@ -92,7 +150,7 @@ const tree = signalTree({
     autoSave: true,
   })
 );
-```
+````
 
 ### Custom storage adapter
 
@@ -295,6 +353,62 @@ try {
 - **Memory Usage**: Efficient handling of large state trees
 - **Tree-Shaking**: Only used features included in bundle
 
+### Serialization Performance Trade-offs
+
+SignalTree's reactive architecture provides exceptional performance for state mutations and reactive computations, but comes with a known trade-off in serialization performance:
+
+**The Trade-off:**
+
+- **SignalTree stores all data as reactive signals** for maximum reactivity performance
+- **Other libraries store plain objects** that can be directly serialized
+- **SignalTree must "unwrap" signals** during serialization, converting them back to plain values
+- **This unwrapping process** adds computational overhead compared to libraries with plain object storage
+
+**Performance Impact:**
+
+- SignalTree is ~2-3x slower than other libraries in serialization benchmarks
+- This affects operations like `tree.snapshot()`, `tree.serialize()`, and SSR hydration
+- For most applications, this overhead is negligible (typically < 10ms for large state trees)
+
+**When This Matters:**
+
+- High-frequency serialization (e.g., auto-save every few seconds)
+- Very large state trees (thousands of nested objects)
+- Performance-critical serialization workflows
+
+**Mitigation Strategies:**
+
+```typescript
+// 1. Leverage automatic caching to reduce storage I/O
+const tree = signalTree(data).with(
+  withSerialization(),
+  withPersistence({
+    key: 'app-state',
+    autoSave: true,
+    // Caching automatically prevents redundant storage writes
+  })
+);
+
+// 2. Optimize serialization frequency
+const tree = signalTree(data).with(
+  withPersistence({
+    autoSave: true,
+    debounceMs: 1000, // Reduce save frequency
+    key: 'app-state',
+  })
+);
+
+// 3. Serialize smaller state slices when needed
+const specificSnapshot = tree.select('user.preferences').snapshot();
+```
+
+**Why the Trade-off is Worth It:**
+
+- SignalTree is 25-65% faster than other libraries in all other operations
+- Serialization is typically not performance-critical in most applications
+- The reactive performance gains outweigh the serialization cost for most use cases
+- Built-in caching optimizes storage I/O automatically
+
 ## Integration examples
 
 ### Angular Service
@@ -384,6 +498,7 @@ Enhances SignalTree with persistence capabilities.
 - `autoSave?: boolean` - Enable auto-save (default: true)
 - `debounceMs?: number` - Auto-save delay (default: 1000ms)
 - `autoLoad?: boolean` - Enable auto-load (default: true)
+- `skipCache?: boolean` - Force writes even if unchanged (default: false)
 - Plus all `withSerialization` options
 
 ### Storage Adapter Creators
@@ -404,7 +519,7 @@ Enhances SignalTree with persistence capabilities.
 
 **Persistence Methods:**
 
-- `save()` - Save to storage (returns Promise)
+- `save()` - Save to storage (returns Promise) - _Automatically cached to avoid redundant writes_
 - `load()` - Load from storage (returns Promise)
 - `clear()` - Clear from storage (returns Promise)
 

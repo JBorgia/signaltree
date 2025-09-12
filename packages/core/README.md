@@ -181,6 +181,99 @@ effect(() => {
 });
 ```
 
+### Reactive computations with computed()
+
+SignalTree works seamlessly with Angular's `computed()` for creating efficient reactive computations. These computations automatically update when their dependencies change and are memoized for optimal performance.
+
+```typescript
+import { computed, effect } from '@angular/core';
+import { signalTree } from '@signaltree/core';
+
+const tree = signalTree({
+  users: [
+    { id: '1', name: 'Alice', active: true, role: 'admin' },
+    { id: '2', name: 'Bob', active: false, role: 'user' },
+    { id: '3', name: 'Charlie', active: true, role: 'user' },
+  ],
+  filters: {
+    showActive: true,
+    role: 'all' as 'all' | 'admin' | 'user',
+  },
+});
+
+// Basic computed - automatically memoized
+const userCount = computed(() => tree.$.users().length);
+
+// Complex filtering computation
+const filteredUsers = computed(() => {
+  const users = tree.$.users();
+  const filters = tree.$.filters();
+
+  return users.filter((user) => {
+    if (filters.showActive && !user.active) return false;
+    if (filters.role !== 'all' && user.role !== filters.role) return false;
+    return true;
+  });
+});
+
+// Derived computation from other computed values
+const activeAdminCount = computed(() => filteredUsers().filter((user) => user.role === 'admin' && user.active).length);
+
+// Performance-critical computation with complex logic
+const userStatistics = computed(() => {
+  const users = tree.$.users();
+
+  return {
+    total: users.length,
+    active: users.filter((u) => u.active).length,
+    admins: users.filter((u) => u.role === 'admin').length,
+    averageNameLength: users.reduce((acc, u) => acc + u.name.length, 0) / users.length,
+  };
+});
+
+// Dynamic computed functions (factory pattern)
+const userById = (id: string) => computed(() => tree.$.users().find((user) => user.id === id));
+
+// Usage in effects
+effect(() => {
+  console.log(`Filtered users: ${filteredUsers().length}`);
+  console.log(`Statistics:`, userStatistics());
+});
+
+// Best Practices:
+// 1. Use computed() for derived state that depends on signals
+// 2. Keep computations pure - no side effects
+// 3. Leverage automatic memoization for expensive operations
+// 4. Chain computed values for complex transformations
+// 5. Use factory functions for parameterized computations
+```
+
+### Performance optimization with memoization
+
+When combined with `@signaltree/memoization`, computed values become even more powerful:
+
+```typescript
+import { withMemoization } from '@signaltree/memoization';
+
+const tree = signalTree({
+  items: Array.from({ length: 10000 }, (_, i) => ({
+    id: i,
+    value: Math.random(),
+    category: `cat-${i % 10}`,
+  })),
+}).with(withMemoization());
+
+// Expensive computation - automatically cached by memoization enhancer
+const expensiveComputation = computed(() => {
+  return tree.$.items()
+    .filter((item) => item.value > 0.5)
+    .reduce((acc, item) => acc + Math.sin(item.value * Math.PI), 0);
+});
+
+// The computation only runs when tree.$.items() actually changes
+// Subsequent calls return cached result
+```
+
 ### Advanced usage (full state tree)
 
 ```typescript
