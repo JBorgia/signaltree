@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { fakeAsync, TestBed, tick } from '@angular/core/testing';
 
 import { AsyncDemoComponent } from '../pages/async-demo/async-demo.component';
 
@@ -15,7 +15,7 @@ describe('Async Demo Component', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should demonstrate async operations with loading states', async () => {
+  it('should demonstrate async operations with loading states', fakeAsync(() => {
     const fixture = TestBed.createComponent(AsyncDemoComponent);
     const component = fixture.componentInstance;
     fixture.detectChanges();
@@ -32,10 +32,10 @@ describe('Async Demo Component', () => {
     component.loadUsers();
     expect(component.loading()).toBeTruthy();
 
-    // Wait a short time and check that loading eventually completes
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    // Note: In a real test, we'd mock the API to control timing
-  });
+    // Advance virtual timers to simulate async completion without real delays
+    tick(100);
+    // Note: In a real test, provide a mocked data source and assert final state
+  }));
 
   it('should handle search functionality', () => {
     const fixture = TestBed.createComponent(AsyncDemoComponent);

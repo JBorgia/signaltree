@@ -44,30 +44,17 @@ export class NavigationComponent {
 
     // Performance Examples
     {
-      id: 'performance',
-      title: 'Performance Comparison',
-      description: 'Real-time benchmarks and performance analysis',
-      route: '/performance',
-      category: 'performance',
-    },
-    {
       id: 'performance-dashboard',
       title: 'Performance Dashboard',
       description: 'Live performance monitoring and metrics',
       route: '/performance-dashboard',
       category: 'performance',
     },
-    {
-      id: 'library-comparison',
-      title: 'Library Comparison',
-      description: 'Compare SignalTree vs other state libraries',
-      route: '/library-comparison',
-      category: 'performance',
-    },
+    // Removed outdated comparisons to native signals and mock libraries
     {
       id: 'realistic-comparison',
       title: 'Realistic Comparison',
-      description: 'Real-world scenarios where SignalTree excels',
+      description: 'SignalTree vs NgRx Store and NgRx SignalStore',
       route: '/realistic-comparison',
       category: 'performance',
     },

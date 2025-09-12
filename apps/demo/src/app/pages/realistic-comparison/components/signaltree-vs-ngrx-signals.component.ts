@@ -1,9 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { patchState, signalState } from '@ngrx/signals';
 import { withBatching } from '@signaltree/batching';
 import { signalTree } from '@signaltree/core';
 import { withMemoization } from '@signaltree/memoization';
+
+import { PerformanceGraphComponent } from '../../../shared/performance-graph/performance-graph.component';
+import { BenchmarkCalibrationService } from '../benchmark-calibration.service';
 
 interface BenchmarkResult {
   scenario: string;
@@ -55,8 +58,26 @@ interface DeepNestedState {
 @Component({
   selector: 'app-signaltree-vs-ngrx-signals',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, PerformanceGraphComponent],
   template: `
+    <!-- Running overlay with spinner and progress -->
+    @if(isRunning()){
+    <div class="overlay">
+      <div class="overlay-card">
+        <div class="spinner" aria-hidden="true"></div>
+        <div class="overlay-text">
+          <div class="label">Running</div>
+          <div class="scenario">
+            {{ currentTask() }} — {{ currentLibrary() }}
+          </div>
+          <div class="progress">
+            {{ currentIteration() }} / {{ totalIterations() }}
+          </div>
+        </div>
+      </div>
+    </div>
+    }
+
     <div class="comparison-section">
       <h3>SignalTree vs NgRx SignalStore</h3>
       <p>
@@ -66,78 +87,21 @@ interface DeepNestedState {
 
       <div class="benchmarks">
         <div class="benchmark-group">
-          <h4>Deep Nested Updates Performance</h4>
-          <button (click)="runDeepNestedBenchmark()" [disabled]="isRunning()">
-            {{ isRunning() ? 'Running...' : 'Run Deep Nested Benchmark' }}
+          <h4>Full Benchmark Battery</h4>
+          <button
+            (click)="runFullBattery()"
+            [disabled]="isRunning() || !hasCalibration()"
+          >
+            {{ isRunning() ? 'Running…' : 'Run Full Battery' }}
           </button>
-          <div *ngIf="deepNestedResult() as result" class="results">
-            <div class="result-item">
-              <strong>SignalTree:</strong> p50: {{ result.signaltree.p50 }}ms,
-              p95: {{ result.signaltree.p95 }}ms
-            </div>
-            <div class="result-item">
-              <strong>NgRx SignalStore:</strong> p50:
-              {{ result.ngrxSignals.p50 }}ms, p95:
-              {{ result.ngrxSignals.p95 }}ms
-            </div>
-            <div class="performance-analysis">
-              <strong>Winner:</strong>
-              {{ getWinner(result.signaltree.p50, result.ngrxSignals.p50) }}
-              ({{
-                getSpeedupRatio(result.signaltree.p50, result.ngrxSignals.p50)
-              }}x faster)
-            </div>
-          </div>
-        </div>
-
-        <div class="benchmark-group">
-          <h4>Large Array Updates Performance</h4>
-          <button (click)="runArrayBenchmark()" [disabled]="isRunning()">
-            {{ isRunning() ? 'Running...' : 'Run Array Benchmark' }}
-          </button>
-          <div *ngIf="arrayResult() as result" class="results">
-            <div class="result-item">
-              <strong>SignalTree:</strong> p50: {{ result.signaltree.p50 }}ms,
-              p95: {{ result.signaltree.p95 }}ms
-            </div>
-            <div class="result-item">
-              <strong>NgRx SignalStore:</strong> p50:
-              {{ result.ngrxSignals.p50 }}ms, p95:
-              {{ result.ngrxSignals.p95 }}ms
-            </div>
-            <div class="performance-analysis">
-              <strong>Winner:</strong>
-              {{ getWinner(result.signaltree.p50, result.ngrxSignals.p50) }}
-              ({{
-                getSpeedupRatio(result.signaltree.p50, result.ngrxSignals.p50)
-              }}x faster)
-            </div>
-          </div>
-        </div>
-
-        <div class="benchmark-group">
-          <h4>Computed/Derived Performance</h4>
-          <button (click)="runComputedBenchmark()" [disabled]="isRunning()">
-            {{ isRunning() ? 'Running...' : 'Run Computed Benchmark' }}
-          </button>
-          <div *ngIf="computedResult() as result" class="results">
-            <div class="result-item">
-              <strong>SignalTree:</strong> p50: {{ result.signaltree.p50 }}ms,
-              p95: {{ result.signaltree.p95 }}ms
-            </div>
-            <div class="result-item">
-              <strong>NgRx SignalStore:</strong> p50:
-              {{ result.ngrxSignals.p50 }}ms, p95:
-              {{ result.ngrxSignals.p95 }}ms
-            </div>
-            <div class="performance-analysis">
-              <strong>Winner:</strong>
-              {{ getWinner(result.signaltree.p50, result.ngrxSignals.p50) }}
-              ({{
-                getSpeedupRatio(result.signaltree.p50, result.ngrxSignals.p50)
-              }}x faster)
-            </div>
-          </div>
+          <p class="hint" *ngIf="!hasCalibration()">
+            Calibrate environment above to enable runs.
+          </p>
+          <app-performance-graph
+            [title]="'All Scenarios: per-iteration (ms)'"
+            [series]="allSeries()"
+            [height]="360"
+          />
         </div>
       </div>
 
@@ -165,6 +129,62 @@ interface DeepNestedState {
   `,
   styles: [
     `
+      /* Overlay styles */
+      .overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(255, 255, 255, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+      .overlay-card {
+        background: #fff;
+        border: 1px solid #e5e5e5;
+        border-radius: 8px;
+        padding: 16px 20px;
+        display: flex;
+        align-items: center;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        min-width: 280px;
+        gap: 12px;
+      }
+      .spinner {
+        width: 28px;
+        height: 28px;
+        border: 3px solid #e0e0e0;
+        border-top-color: #007acc;
+        border-radius: 50%;
+        animation: spin 0.9s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .overlay-text {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica,
+          Arial, Apple Color Emoji, Segoe UI Emoji;
+      }
+      .overlay-text .label {
+        font-size: 12px;
+        color: #666;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .overlay-text .scenario {
+        font-weight: 600;
+        color: #111;
+      }
+      .overlay-text .progress {
+        font-variant-numeric: tabular-nums;
+        color: #333;
+      }
+
       .comparison-section {
         padding: 20px;
         border: 1px solid #ddd;
@@ -224,6 +244,18 @@ interface DeepNestedState {
         border: 1px solid #ddd;
         border-radius: 4px;
       }
+      .benchmark-group app-performance-graph {
+        display: block;
+      }
+      .benchmark-group .chart-block {
+        height: 420px;
+      }
+      .benchmark-group echarts,
+      .benchmark-group .chart {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
 
       .table-header {
         display: grid;
@@ -247,11 +279,30 @@ interface DeepNestedState {
       .table-row:nth-child(even) {
         background-color: #f9f9f9;
       }
+      .hint {
+        margin-top: 0.5rem;
+        color: #6b7280;
+        font-size: 0.9rem;
+      }
     `,
   ],
 })
 export class SignalTreeVsNgrxSignalsComponent {
+  private readonly calibration = inject(BenchmarkCalibrationService);
+  readonly hasCalibration = computed(() => !!this.calibration.plan());
   readonly isRunning = signal(false);
+  // Progress/overlay state
+  readonly currentTask = signal<string>('');
+  readonly currentLibrary = signal<string>('');
+  readonly currentIteration = signal<number>(0);
+  readonly totalIterations = signal<number>(0);
+  // Live series for graphs
+  readonly deepSeriesSignalTree = signal<number[]>([]);
+  readonly deepSeriesNgrx = signal<number[]>([]);
+  readonly arraySeriesSignalTree = signal<number[]>([]);
+  readonly arraySeriesNgrx = signal<number[]>([]);
+  readonly computedSeriesSignalTree = signal<number[]>([]);
+  readonly computedSeriesNgrx = signal<number[]>([]);
   readonly deepNestedResult = signal<{
     signaltree: BenchmarkResult;
     ngrxSignals: BenchmarkResult;
@@ -265,6 +316,29 @@ export class SignalTreeVsNgrxSignalsComponent {
     ngrxSignals: BenchmarkResult;
   } | null>(null);
   readonly allResults = signal<BenchmarkResult[]>([]);
+
+  private beginTask(scenario: string, library: string, total: number) {
+    this.currentTask.set(scenario);
+    this.currentLibrary.set(library);
+    this.totalIterations.set(total);
+    this.currentIteration.set(0);
+  }
+
+  private tickProgress() {
+    this.currentIteration.update((i) => i + 1);
+  }
+
+  // Build many-series payload for the combined graph with legend toggling
+  allSeries() {
+    return [
+      { name: 'Deep — SignalTree', data: this.deepSeriesSignalTree() },
+      { name: 'Deep — NgRx SignalStore', data: this.deepSeriesNgrx() },
+      { name: 'Array — SignalTree', data: this.arraySeriesSignalTree() },
+      { name: 'Array — NgRx SignalStore', data: this.arraySeriesNgrx() },
+      { name: 'Computed — SignalTree', data: this.computedSeriesSignalTree() },
+      { name: 'Computed — NgRx SignalStore', data: this.computedSeriesNgrx() },
+    ];
+  }
 
   private createInitialState(): DeepNestedState {
     return {
@@ -303,16 +377,42 @@ export class SignalTreeVsNgrxSignalsComponent {
     };
   }
 
-  async runDeepNestedBenchmark() {
+  async runDeepNestedBenchmark(resetSeries = true) {
     if (this.isRunning()) return;
     this.isRunning.set(true);
 
     try {
+      // reset live series
+      if (resetSeries) {
+        this.deepSeriesSignalTree.set([]);
+        this.deepSeriesNgrx.set([]);
+      }
+      const plan = this.calibration.getPlan('deepNested');
+      this.beginTask('Deep Nested Updates', 'SignalTree', plan.iterations);
       // Test SignalTree deep nested updates
-      const signaltreeResult = await this.benchmarkSignalTreeDeepNested();
+      const signaltreeResult = await this.benchmarkSignalTreeDeepNested(
+        plan.innerOps,
+        plan.iterations,
+        (ms) => {
+          this.deepSeriesSignalTree.update((s) => [...s, ms]);
+          this.tickProgress();
+        }
+      );
 
       // Test NgRx SignalStore deep nested updates
-      const ngrxSignalsResult = await this.benchmarkNgrxSignalsDeepNested();
+      this.beginTask(
+        'Deep Nested Updates',
+        'NgRx SignalStore',
+        plan.iterations
+      );
+      const ngrxSignalsResult = await this.benchmarkNgrxSignalsDeepNested(
+        plan.innerOps,
+        plan.iterations,
+        (ms) => {
+          this.deepSeriesNgrx.update((s) => [...s, ms]);
+          this.tickProgress();
+        }
+      );
 
       this.deepNestedResult.set({
         signaltree: signaltreeResult,
@@ -328,7 +428,11 @@ export class SignalTreeVsNgrxSignalsComponent {
     }
   }
 
-  private async benchmarkSignalTreeDeepNested(): Promise<BenchmarkResult> {
+  private async benchmarkSignalTreeDeepNested(
+    innerOps = 10,
+    iterations = 100,
+    onSample?: (ms: number) => void
+  ): Promise<BenchmarkResult> {
     const initialState = this.createInitialState();
     const tree = signalTree(initialState).with(
       withBatching(),
@@ -353,26 +457,36 @@ export class SignalTreeVsNgrxSignalsComponent {
     renderCount = 0;
 
     // Benchmark with multiple operations per iteration
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < iterations; i++) {
       const start = performance.now();
 
-      // Perform 10 operations per iteration for measurable work
-      for (let j = 0; j < 10; j++) {
+      // Perform N operations per iteration for measurable work
+      for (let j = 0; j < innerOps; j++) {
         tree.state.level1.level2.level3.level4.level5.counter(i * 10 + j);
         tree.state.level1.level2.level3.level4.level5.data(`updated-${i}-${j}`);
         computation(); // Trigger computation
       }
 
       const end = performance.now();
-      samples.push(end - start);
+      const ms = end - start;
+      samples.push(ms);
+      onSample?.(ms);
     }
 
     const sorted = samples.sort((a, b) => a - b);
+    const n = sorted.length;
+    const low = n >= 50 ? Math.floor(n * 0.02) : 0;
+    const high = n >= 50 ? Math.ceil(n * 0.98) : n;
+    const trimmed = sorted.slice(low, high);
     return {
       scenario: 'Deep Nested Updates',
       library: 'SignalTree',
-      p50: sorted[Math.floor(sorted.length * 0.5)],
-      p95: sorted[Math.floor(sorted.length * 0.95)],
+      p50:
+        trimmed[Math.floor(trimmed.length * 0.5)] ??
+        sorted[Math.floor(n * 0.5)],
+      p95:
+        trimmed[Math.floor(trimmed.length * 0.95)] ??
+        sorted[Math.floor(n * 0.95)],
       min: sorted[0],
       max: sorted[sorted.length - 1],
       samples,
@@ -381,7 +495,11 @@ export class SignalTreeVsNgrxSignalsComponent {
     };
   }
 
-  private async benchmarkNgrxSignalsDeepNested(): Promise<BenchmarkResult> {
+  private async benchmarkNgrxSignalsDeepNested(
+    innerOps = 10,
+    iterations = 100,
+    onSample?: (ms: number) => void
+  ): Promise<BenchmarkResult> {
     const initialState = this.createInitialState();
     const state = signalState(initialState);
 
@@ -421,11 +539,11 @@ export class SignalTreeVsNgrxSignalsComponent {
     renderCount = 0;
 
     // Benchmark with multiple operations per iteration
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < iterations; i++) {
       const start = performance.now();
 
-      // Perform 10 operations per iteration for measurable work
-      for (let j = 0; j < 10; j++) {
+      // Perform N operations per iteration for measurable work
+      for (let j = 0; j < innerOps; j++) {
         patchState(state, (currentState) => ({
           ...currentState,
           level1: {
@@ -450,15 +568,25 @@ export class SignalTreeVsNgrxSignalsComponent {
       }
 
       const end = performance.now();
-      samples.push(end - start);
+      const ms = end - start;
+      samples.push(ms);
+      onSample?.(ms);
     }
 
     const sorted = samples.sort((a, b) => a - b);
+    const n = sorted.length;
+    const low = n >= 50 ? Math.floor(n * 0.02) : 0;
+    const high = n >= 50 ? Math.ceil(n * 0.98) : n;
+    const trimmed = sorted.slice(low, high);
     return {
       scenario: 'Deep Nested Updates',
       library: 'NgRx SignalStore',
-      p50: sorted[Math.floor(sorted.length * 0.5)],
-      p95: sorted[Math.floor(sorted.length * 0.95)],
+      p50:
+        trimmed[Math.floor(trimmed.length * 0.5)] ??
+        sorted[Math.floor(n * 0.5)],
+      p95:
+        trimmed[Math.floor(trimmed.length * 0.95)] ??
+        sorted[Math.floor(n * 0.95)],
       min: sorted[0],
       max: sorted[sorted.length - 1],
       samples,
@@ -467,13 +595,39 @@ export class SignalTreeVsNgrxSignalsComponent {
     };
   }
 
-  async runArrayBenchmark() {
+  async runArrayBenchmark(resetSeries = true) {
     if (this.isRunning()) return;
     this.isRunning.set(true);
 
     try {
-      const signaltreeResult = await this.benchmarkSignalTreeArray();
-      const ngrxSignalsResult = await this.benchmarkNgrxSignalsArray();
+      // reset live series
+      if (resetSeries) {
+        this.arraySeriesSignalTree.set([]);
+        this.arraySeriesNgrx.set([]);
+      }
+      const plan = this.calibration.getPlan('arrayUpdates');
+      this.beginTask('Large Array Updates', 'SignalTree', plan.iterations);
+      const signaltreeResult = await this.benchmarkSignalTreeArray(
+        plan.innerOps,
+        plan.iterations,
+        (ms) => {
+          this.arraySeriesSignalTree.update((s) => [...s, ms]);
+          this.tickProgress();
+        }
+      );
+      this.beginTask(
+        'Large Array Updates',
+        'NgRx SignalStore',
+        plan.iterations
+      );
+      const ngrxSignalsResult = await this.benchmarkNgrxSignalsArray(
+        plan.innerOps,
+        plan.iterations,
+        (ms) => {
+          this.arraySeriesNgrx.update((s) => [...s, ms]);
+          this.tickProgress();
+        }
+      );
 
       this.arrayResult.set({
         signaltree: signaltreeResult,
@@ -489,7 +643,11 @@ export class SignalTreeVsNgrxSignalsComponent {
     }
   }
 
-  private async benchmarkSignalTreeArray(): Promise<BenchmarkResult> {
+  private async benchmarkSignalTreeArray(
+    innerOps = 10,
+    iterations = 100,
+    onSample?: (ms: number) => void
+  ): Promise<BenchmarkResult> {
     const initialState = this.createInitialState();
     const tree = signalTree(initialState).with(
       withBatching(),
@@ -516,13 +674,13 @@ export class SignalTreeVsNgrxSignalsComponent {
     renderCount = 0;
 
     // Benchmark array updates with multiple operations per iteration
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < iterations; i++) {
       const start = performance.now();
 
-      // Perform 10 operations per iteration for measurable work
-      for (let j = 0; j < 10; j++) {
+      // Perform N operations per iteration for measurable work
+      for (let j = 0; j < innerOps; j++) {
         tree.state.users.update((users) => {
-          const index = (i * 10 + j) % 100;
+          const index = (i * innerOps + j) % 100;
           users[index].name = `Updated User ${index}`;
           users[index].email = `updated${index}@example.com`;
           users[index].profile.settings.theme =
@@ -533,15 +691,25 @@ export class SignalTreeVsNgrxSignalsComponent {
       }
 
       const end = performance.now();
-      samples.push(end - start);
+      const ms = end - start;
+      samples.push(ms);
+      onSample?.(ms);
     }
 
     const sorted = samples.sort((a, b) => a - b);
+    const n = sorted.length;
+    const low = n >= 50 ? Math.floor(n * 0.02) : 0;
+    const high = n >= 50 ? Math.ceil(n * 0.98) : n;
+    const trimmed = sorted.slice(low, high);
     return {
       scenario: 'Large Array Updates',
       library: 'SignalTree',
-      p50: sorted[Math.floor(sorted.length * 0.5)],
-      p95: sorted[Math.floor(sorted.length * 0.95)],
+      p50:
+        trimmed[Math.floor(trimmed.length * 0.5)] ??
+        sorted[Math.floor(n * 0.5)],
+      p95:
+        trimmed[Math.floor(trimmed.length * 0.95)] ??
+        sorted[Math.floor(n * 0.95)],
       min: sorted[0],
       max: sorted[sorted.length - 1],
       samples,
@@ -550,7 +718,11 @@ export class SignalTreeVsNgrxSignalsComponent {
     };
   }
 
-  private async benchmarkNgrxSignalsArray(): Promise<BenchmarkResult> {
+  private async benchmarkNgrxSignalsArray(
+    innerOps = 10,
+    iterations = 100,
+    onSample?: (ms: number) => void
+  ): Promise<BenchmarkResult> {
     const initialState = this.createInitialState();
     const state = signalState(initialState);
 
@@ -576,12 +748,12 @@ export class SignalTreeVsNgrxSignalsComponent {
     renderCount = 0;
 
     // Benchmark array updates with multiple operations per iteration
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < iterations; i++) {
       const start = performance.now();
 
-      // Perform 10 operations per iteration for measurable work
-      for (let j = 0; j < 10; j++) {
-        const index = (i * 10 + j) % 100;
+      // Perform N operations per iteration for measurable work
+      for (let j = 0; j < innerOps; j++) {
+        const index = (i * innerOps + j) % 100;
         patchState(state, (currentState) => ({
           ...currentState,
           users: currentState.users.map((user, userIndex) =>
@@ -605,15 +777,25 @@ export class SignalTreeVsNgrxSignalsComponent {
       }
 
       const end = performance.now();
-      samples.push(end - start);
+      const ms = end - start;
+      samples.push(ms);
+      onSample?.(ms);
     }
 
     const sorted = samples.sort((a, b) => a - b);
+    const n = sorted.length;
+    const low = n >= 50 ? Math.floor(n * 0.02) : 0;
+    const high = n >= 50 ? Math.ceil(n * 0.98) : n;
+    const trimmed = sorted.slice(low, high);
     return {
       scenario: 'Large Array Updates',
       library: 'NgRx SignalStore',
-      p50: sorted[Math.floor(sorted.length * 0.5)],
-      p95: sorted[Math.floor(sorted.length * 0.95)],
+      p50:
+        trimmed[Math.floor(trimmed.length * 0.5)] ??
+        sorted[Math.floor(n * 0.5)],
+      p95:
+        trimmed[Math.floor(trimmed.length * 0.95)] ??
+        sorted[Math.floor(n * 0.95)],
       min: sorted[0],
       max: sorted[sorted.length - 1],
       samples,
@@ -622,13 +804,43 @@ export class SignalTreeVsNgrxSignalsComponent {
     };
   }
 
-  async runComputedBenchmark() {
+  async runComputedBenchmark(resetSeries = true) {
     if (this.isRunning()) return;
     this.isRunning.set(true);
 
     try {
-      const signaltreeResult = await this.benchmarkSignalTreeComputed();
-      const ngrxSignalsResult = await this.benchmarkNgrxSignalsComputed();
+      // reset live series
+      if (resetSeries) {
+        this.computedSeriesSignalTree.set([]);
+        this.computedSeriesNgrx.set([]);
+      }
+      const plan = this.calibration.getPlan('computedPerf');
+      this.beginTask(
+        'Complex Computed Performance',
+        'SignalTree',
+        plan.iterations
+      );
+      const signaltreeResult = await this.benchmarkSignalTreeComputed(
+        plan.innerOps,
+        plan.iterations,
+        (ms) => {
+          this.computedSeriesSignalTree.update((s) => [...s, ms]);
+          this.tickProgress();
+        }
+      );
+      this.beginTask(
+        'Complex Computed Performance',
+        'NgRx SignalStore',
+        plan.iterations
+      );
+      const ngrxSignalsResult = await this.benchmarkNgrxSignalsComputed(
+        plan.innerOps,
+        plan.iterations,
+        (ms) => {
+          this.computedSeriesNgrx.update((s) => [...s, ms]);
+          this.tickProgress();
+        }
+      );
 
       this.computedResult.set({
         signaltree: signaltreeResult,
@@ -644,7 +856,29 @@ export class SignalTreeVsNgrxSignalsComponent {
     }
   }
 
-  private async benchmarkSignalTreeComputed(): Promise<BenchmarkResult> {
+  // One-click runner for all three scenarios in sequence, using calibration plans
+  async runFullBattery() {
+    if (this.isRunning()) return;
+    if (!this.hasCalibration()) return;
+    this.isRunning.set(true);
+    const rounds = 3;
+    try {
+      for (let r = 0; r < rounds; r++) {
+        const reset = r === 0;
+        await this.runDeepNestedBenchmark(reset);
+        await this.runArrayBenchmark(reset);
+        await this.runComputedBenchmark(reset);
+      }
+    } finally {
+      this.isRunning.set(false);
+    }
+  }
+
+  private async benchmarkSignalTreeComputed(
+    innerOps = 1,
+    iterations = 100,
+    onSample?: (ms: number) => void
+  ): Promise<BenchmarkResult> {
     const initialState = this.createInitialState();
     const tree = signalTree(initialState).with(
       withBatching(),
@@ -658,15 +892,15 @@ export class SignalTreeVsNgrxSignalsComponent {
     const complexComputed = computed(() => {
       renderCount++;
       const users = tree.state.users();
-      const metadata = tree.state.metadata();
+      const metadata = tree.state.metadata; // metadata is the object, not a function
       const counter = tree.state.level1.level2.level3.level4.level5.counter();
 
       return {
         totalUsers: users.length,
         activeUsers: users.filter((u) => u.profile.settings.notifications)
           .length,
-        configSum: metadata.config.maxItems + counter,
-        timestamp: metadata.timestamp,
+        configSum: metadata.config.maxItems() + counter, // maxItems is the signal
+        timestamp: metadata.timestamp(), // timestamp is the signal
       };
     });
 
@@ -678,23 +912,36 @@ export class SignalTreeVsNgrxSignalsComponent {
     renderCount = 0;
 
     // Benchmark computed performance
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < iterations; i++) {
       const start = performance.now();
 
       tree.state.level1.level2.level3.level4.level5.counter(i);
       tree.state.metadata.config.maxItems(100 + i);
-      complexComputed(); // Read the computed value
+      // Read the computed multiple times to scale work
+      for (let j = 0; j < innerOps; j++) {
+        complexComputed();
+      }
 
       const end = performance.now();
-      samples.push(end - start);
+      const ms = end - start;
+      samples.push(ms);
+      onSample?.(ms);
     }
 
     const sorted = samples.sort((a, b) => a - b);
+    const n = sorted.length;
+    const low = n >= 50 ? Math.floor(n * 0.02) : 0;
+    const high = n >= 50 ? Math.ceil(n * 0.98) : n;
+    const trimmed = sorted.slice(low, high);
     return {
       scenario: 'Complex Computed Performance',
       library: 'SignalTree',
-      p50: sorted[Math.floor(sorted.length * 0.5)],
-      p95: sorted[Math.floor(sorted.length * 0.95)],
+      p50:
+        trimmed[Math.floor(trimmed.length * 0.5)] ??
+        sorted[Math.floor(n * 0.5)],
+      p95:
+        trimmed[Math.floor(trimmed.length * 0.95)] ??
+        sorted[Math.floor(n * 0.95)],
       min: sorted[0],
       max: sorted[sorted.length - 1],
       samples,
@@ -703,7 +950,11 @@ export class SignalTreeVsNgrxSignalsComponent {
     };
   }
 
-  private async benchmarkNgrxSignalsComputed(): Promise<BenchmarkResult> {
+  private async benchmarkNgrxSignalsComputed(
+    innerOps = 1,
+    iterations = 100,
+    onSample?: (ms: number) => void
+  ): Promise<BenchmarkResult> {
     const initialState = this.createInitialState();
     const state = signalState(initialState);
 
@@ -752,7 +1003,7 @@ export class SignalTreeVsNgrxSignalsComponent {
     renderCount = 0;
 
     // Benchmark computed performance
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < iterations; i++) {
       const start = performance.now();
 
       patchState(state, (currentState) => ({
@@ -781,18 +1032,31 @@ export class SignalTreeVsNgrxSignalsComponent {
           },
         },
       }));
-      complexComputed(); // Read the computed value
+      // Read the computed multiple times to scale work
+      for (let j = 0; j < innerOps; j++) {
+        complexComputed();
+      }
 
       const end = performance.now();
-      samples.push(end - start);
+      const ms = end - start;
+      samples.push(ms);
+      onSample?.(ms);
     }
 
     const sorted = samples.sort((a, b) => a - b);
+    const n = sorted.length;
+    const low = n >= 50 ? Math.floor(n * 0.02) : 0;
+    const high = n >= 50 ? Math.ceil(n * 0.98) : n;
+    const trimmed = sorted.slice(low, high);
     return {
       scenario: 'Complex Computed Performance',
       library: 'NgRx SignalStore',
-      p50: sorted[Math.floor(sorted.length * 0.5)],
-      p95: sorted[Math.floor(sorted.length * 0.95)],
+      p50:
+        trimmed[Math.floor(trimmed.length * 0.5)] ??
+        sorted[Math.floor(n * 0.5)],
+      p95:
+        trimmed[Math.floor(trimmed.length * 0.95)] ??
+        sorted[Math.floor(n * 0.95)],
       min: sorted[0],
       max: sorted[sorted.length - 1],
       samples,
@@ -827,5 +1091,10 @@ export class SignalTreeVsNgrxSignalsComponent {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }
+
+  // Expose results to parent orchestrator for aggregation/export
+  getResultsSnapshot() {
+    return this.allResults();
   }
 }

@@ -10,7 +10,7 @@ Consolidated guidance and reports for bundle size analysis and optimization acro
 ## Canonical tools
 
 - scripts/consolidated-bundle-analysis.js — single source of truth
-- npm run size:report — full analysis with rebuild
+- npm run size:report — consolidated bundle analysis
 
 ## Workflow
 

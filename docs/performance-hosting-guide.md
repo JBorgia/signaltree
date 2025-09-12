@@ -91,10 +91,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run Puppeteer Benchmarks
         run: |
-          npm run build:prod
-          npm run benchmark:headless
+          npm run build:production
+          # headless benchmark runner can be added via Playwright if desired
       - name: Store Results
-        run: npm run store-results
+  run: echo "Store results step placeholder"
 ```
 
 #### Puppeteer Automation

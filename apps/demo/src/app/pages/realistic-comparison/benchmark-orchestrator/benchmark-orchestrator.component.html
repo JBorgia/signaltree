@@ -1,0 +1,572 @@
+<div class="benchmark-container" [attr.aria-busy]="isRunning()">
+  <!-- Header Section -->
+  <header class="benchmark-header">
+    <h1>State Management Performance Benchmarks</h1>
+    <p class="subtitle">
+      Scientifically rigorous performance testing with real-world scenarios
+    </p>
+  </header>
+
+  <!-- Environment Calibration Section -->
+  <section class="calibration-section">
+    <div class="calibration-header">
+      <h2>Environment Calibration</h2>
+      <div
+        class="reliability-indicator"
+        [attr.data-score]="reliabilityScore()"
+        [class.excellent]="reliabilityScore() >= 90"
+        [class.good]="reliabilityScore() >= 75"
+        [class.fair]="reliabilityScore() >= 60"
+        [class.poor]="reliabilityScore() < 60"
+      >
+        <div class="score-circle">
+          <svg viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="45" class="score-bg" />
+            <circle
+              cx="50"
+              cy="50"
+              r="45"
+              class="score-fill"
+              [style.stroke-dasharray]="scoreCircumference()"
+              [style.stroke-dashoffset]="scoreOffset()"
+            />
+          </svg>
+          <div class="score-text">
+            <span class="score-value">{{ reliabilityScore() }}</span>
+            <span class="score-label">Reliability</span>
+          </div>
+        </div>
+        <div class="score-details">
+          <div class="detail-item" *ngFor="let factor of environmentFactors()">
+            <span class="factor-name">{{ factor.name }}</span>
+            <span
+              class="factor-impact"
+              [class.positive]="factor.impact > 0"
+              [class.negative]="factor.impact < 0"
+            >
+              {{ factor.impact > 0 ? '+' : '' }}{{ factor.impact }}
+            </span>
+            <span class="factor-reason">{{ factor.reason }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="calibration-controls">
+      <button
+        class="btn btn-calibrate"
+        (click)="runCalibration()"
+        [disabled]="isCalibrating()"
+      >
+        <svg class="btn-icon" viewBox="0 0 24 24" *ngIf="!isCalibrating()">
+          <path
+            d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41"
+          />
+        </svg>
+        <div class="spinner" *ngIf="isCalibrating()"></div>
+        {{ isCalibrating() ? 'Calibrating...' : 'Calibrate Environment' }}
+      </button>
+
+      <div class="calibration-results" *ngIf="calibrationData()">
+        <h3>Calibration Results</h3>
+        <div class="calibration-grid">
+          <div class="calibration-metric">
+            <span class="metric-label">CPU Performance</span>
+            <span class="metric-value"
+              >{{
+                calibrationData()?.cpuOpsPerMs | number : '1.0-0'
+              }}
+              ops/ms</span
+            >
+            <div class="metric-bar">
+              <div
+                class="metric-fill"
+                [style.width.%]="calibrationData()?.cpuScore"
+              ></div>
+            </div>
+          </div>
+          <div class="calibration-metric">
+            <span class="metric-label">Memory Available</span>
+            <span class="metric-value"
+              >{{
+                calibrationData()?.availableMemoryMB | number : '1.0-0'
+              }}
+              MB</span
+            >
+            <div class="metric-bar">
+              <div
+                class="metric-fill"
+                [style.width.%]="calibrationData()?.memoryScore"
+              ></div>
+            </div>
+          </div>
+          <div class="calibration-metric">
+            <span class="metric-label">Recommended Test Size</span>
+            <span class="metric-value"
+              >{{ calibrationData()?.recommendedSize | number }} items</span
+            >
+          </div>
+          <div class="calibration-metric">
+            <span class="metric-label">Recommended Iterations</span>
+            <span class="metric-value">{{
+              calibrationData()?.recommendedIterations
+            }}</span>
+          </div>
+        </div>
+        <div
+          class="calibration-warnings"
+          *ngIf="calibrationWarnings().length > 0"
+        >
+          <div
+            class="warning-item"
+            *ngFor="let warning of calibrationWarnings()"
+          >
+            <svg class="warning-icon" viewBox="0 0 24 24">
+              <path
+                d="M12 2L2 22h20L12 2zm0 6l1.5 7h-3L12 8zm0 9.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"
+              />
+            </svg>
+            {{ warning }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Library Selection Section -->
+  <section class="library-section">
+    <h2>Select Libraries to Compare</h2>
+    <div class="library-grid">
+      <div
+        class="library-card"
+        *ngFor="let lib of availableLibraries"
+        [class.selected]="lib.selected"
+        [class.disabled]="lib.id === 'signaltree'"
+        [style.--lib-color]="lib.color"
+        (click)="toggleLibrary(lib)"
+        (keydown)="onLibraryCardKeydown($event, lib)"
+        tabindex="0"
+        role="button"
+        [attr.aria-pressed]="lib.selected"
+      >
+        <div class="library-checkbox">
+          <input
+            type="checkbox"
+            [checked]="lib.selected"
+            [disabled]="lib.id === 'signaltree'"
+            (click)="$event.stopPropagation()"
+          />
+        </div>
+        <div class="library-info">
+          <h3>{{ lib.name }}</h3>
+          <p>{{ lib.description }}</p>
+          <div class="library-stats" *ngIf="lib.stats">
+            <span class="stat">Bundle: {{ lib.stats.bundleSize }}</span>
+            <span class="stat"
+              >Stars: {{ lib.stats.githubStars | number }}</span
+            >
+          </div>
+        </div>
+        <div class="library-badge" *ngIf="lib.id === 'signaltree'">
+          Baseline
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Test Configuration Section -->
+  <section class="config-section">
+    <h2>Test Configuration</h2>
+    <div class="config-grid">
+      <div class="config-group">
+        <label for="data-size">Data Size</label>
+        <select
+          id="data-size"
+          [ngModel]="config().dataSize"
+          (ngModelChange)="onDataSizeChange($event)"
+        >
+          <option [value]="1000">Small (1,000 items) - Quick test</option>
+          <option [value]="10000">Medium (10,000 items) - Balanced</option>
+          <option [value]="50000">Large (50,000 items) - Thorough</option>
+          <option [value]="100000">
+            Extreme (100,000 items) - Stress test
+          </option>
+        </select>
+        <small>Larger datasets provide more accurate measurements</small>
+      </div>
+
+      <div class="config-group">
+        <label for="complexity">Test Complexity</label>
+        <select
+          id="complexity"
+          [ngModel]="config().complexity"
+          (ngModelChange)="onComplexityChange($event)"
+        >
+          <option value="basic">Basic - Simple state updates</option>
+          <option value="moderate">
+            Moderate - Nested updates + computeds
+          </option>
+          <option value="complex">Complex - Deep nesting + selectors</option>
+          <option value="extreme">
+            Extreme - All features + stress patterns
+          </option>
+        </select>
+        <small>Higher complexity tests more realistic scenarios</small>
+      </div>
+
+      <div class="config-group">
+        <label for="iterations">Measurement Iterations</label>
+        <input
+          type="number"
+          id="iterations"
+          [ngModel]="config().iterations"
+          (ngModelChange)="onIterationsChange($event)"
+          min="10"
+          max="1000"
+          (change)="updateEstimates()"
+        />
+        <small>More iterations improve statistical significance</small>
+      </div>
+
+      <div class="config-group">
+        <label for="warmup">Warmup Runs</label>
+        <input
+          type="number"
+          id="warmup"
+          [ngModel]="config().warmupRuns"
+          (ngModelChange)="onWarmupChange($event)"
+          min="5"
+          max="50"
+          (change)="updateEstimates()"
+        />
+        <small>Warmup runs allow JIT optimization</small>
+      </div>
+    </div>
+
+    <div class="test-estimates">
+      <h3>Test Estimates (≈{{ estimatedDuration() }})</h3>
+      <div class="estimate-grid">
+        <div class="estimate">
+          <span class="estimate-label">Total Operations</span>
+          <span class="estimate-value">{{ totalOperations() | number }}</span>
+        </div>
+        <div class="estimate">
+          <span class="estimate-label">Estimated Duration</span>
+          <span class="estimate-value">{{ estimatedDuration() }}</span>
+        </div>
+        <div class="estimate">
+          <span class="estimate-label">Memory Required</span>
+          <span class="estimate-value">~{{ estimatedMemory() }} MB</span>
+        </div>
+        <div class="estimate">
+          <span class="estimate-label">Scenarios to Run</span>
+          <span class="estimate-value">{{ selectedScenarios().length }}</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Scenario Selection Section -->
+  <section class="scenarios-section">
+    <h2>Test Scenarios</h2>
+    <div class="scenarios-grid">
+      <div
+        class="scenario-card"
+        *ngFor="let scenario of scenarios"
+        [class.selected]="scenario.selected"
+        (click)="toggleScenario(scenario)"
+        (keydown)="onScenarioCardKeydown($event, scenario)"
+        tabindex="0"
+        role="button"
+        [attr.aria-pressed]="scenario.selected"
+      >
+        <div class="scenario-header">
+          <input
+            type="checkbox"
+            [checked]="scenario.selected"
+            (click)="$event.stopPropagation()"
+          />
+          <h3>{{ scenario.name }}</h3>
+        </div>
+        <p>{{ scenario.description }}</p>
+        <div class="scenario-details">
+          <span class="detail">Operations: {{ scenario.operations }}</span>
+          <span class="detail">Complexity: {{ scenario.complexity }}</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Run Controls Section -->
+  <section class="controls-section">
+    <button
+      class="btn btn-run"
+      (click)="runBenchmarks()"
+      [disabled]="!canRunBenchmarks()"
+    >
+      <svg class="btn-icon" viewBox="0 0 24 24">
+        <path d="M8 5v14l11-7z" />
+      </svg>
+      Run Benchmarks
+    </button>
+
+    <div class="controls-running" *ngIf="isRunning()" aria-live="polite">
+      <span class="dot"></span>
+      <span
+        >Benchmarks running… {{ completedTests() }}/{{
+          totalTests()
+        }}
+        complete</span
+      >
+    </div>
+
+    <div class="controls-info" *ngIf="!canRunBenchmarks()">
+      <p *ngIf="!calibrationData()">Please calibrate environment first</p>
+      <p *ngIf="selectedLibraries().length < 2">
+        Select at least one library to compare with SignalTree
+      </p>
+      <p *ngIf="selectedScenarios().length === 0">
+        Select at least one test scenario
+      </p>
+    </div>
+  </section>
+
+  <!-- Progress Modal -->
+  <div class="progress-modal" *ngIf="isRunning()">
+    <div class="progress-content">
+      <h2>Running Benchmarks</h2>
+
+      <div class="progress-current">
+        <span class="current-library">{{ currentLibrary() }}</span>
+        <span class="current-scenario">{{ currentScenario() }}</span>
+        <span class="current-iteration"
+          >Iteration {{ currentIteration() }} / {{ config().iterations }}</span
+        >
+      </div>
+
+      <div class="progress-bar-container">
+        <div class="progress-bar">
+          <div class="progress-fill" [style.width.%]="progressPercent()"></div>
+        </div>
+        <span class="progress-text"
+          >{{ progressPercent() | number : '1.0-0' }}%</span
+        >
+      </div>
+
+      <div class="progress-stats">
+        <div class="stat">
+          <span class="stat-label">Elapsed</span>
+          <span class="stat-value">{{ elapsedTime() }}</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Remaining</span>
+          <span class="stat-value">{{ remainingTime() }}</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Tests Complete</span>
+          <span class="stat-value"
+            >{{ completedTests() }} / {{ totalTests() }}</span
+          >
+        </div>
+      </div>
+
+      <button class="btn btn-cancel" (click)="cancelBenchmarks()">
+        Cancel
+      </button>
+    </div>
+  </div>
+
+  <!-- Results Section -->
+  <section class="results-section" *ngIf="hasResults()">
+    <h2>Benchmark Results</h2>
+
+    <!-- Winner Card -->
+    <div class="winner-card" *ngIf="overallWinner() as winner">
+      <div class="winner-trophy">🏆</div>
+      <div class="winner-info">
+        <h3>{{ winner.name }} is the Fastest!</h3>
+        <p>{{ winner.summary }}</p>
+      </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="summary-grid">
+      <div
+        class="summary-card"
+        *ngFor="let summary of librarySummaries()"
+        [style.--card-color]="summary.color"
+      >
+        <div class="summary-header">
+          <h3>{{ summary.name }}</h3>
+          <span class="summary-rank">#{{ summary.rank }}</span>
+        </div>
+        <div class="summary-metrics">
+          <div class="metric">
+            <span class="metric-label">Median</span>
+            <span class="metric-value">{{ formatTime(summary.median) }}</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">P95</span>
+            <span class="metric-value">{{ formatTime(summary.p95) }}</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Ops/sec</span>
+            <span class="metric-value">{{
+              summary.opsPerSecond | number : '1.0-0'
+            }}</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">vs SignalTree</span>
+            <span
+              class="metric-value"
+              [class.faster]="summary.relativeSpeed > 1"
+              [class.slower]="summary.relativeSpeed < 1"
+            >
+              {{ summary.relativeSpeed | number : '1.1-1' }}x
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Section (Single Combined) -->
+    <div class="charts-grid">
+      <div class="chart-container">
+        <div class="chart-toolbar">
+          <button
+            class="btn btn-export"
+            [class.active]="chartMode() === 'distribution'"
+            (click)="setChartMode('distribution')"
+          >
+            Distribution
+          </button>
+          <button
+            class="btn btn-export"
+            [class.active]="chartMode() === 'percentiles'"
+            (click)="setChartMode('percentiles')"
+          >
+            Percentiles
+          </button>
+          <button
+            class="btn btn-export"
+            [class.active]="chartMode() === 'scenarios'"
+            (click)="setChartMode('scenarios')"
+          >
+            Scenarios
+          </button>
+          <button
+            class="btn btn-export"
+            [class.active]="chartMode() === 'timeseries'"
+            (click)="setChartMode('timeseries')"
+          >
+            Time Series
+          </button>
+        </div>
+        <canvas #combinedChart></canvas>
+      </div>
+    </div>
+
+    <!-- Detailed Results Table -->
+    <div class="results-table">
+      <h3>Detailed Results by Scenario</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Scenario</th>
+            <th
+              *ngFor="let lib of librariesWithResults()"
+              [style.color]="lib.color"
+            >
+              {{ lib.name }}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let scenario of completedScenarios()">
+            <td class="scenario-name">
+              {{ scenario.name }}
+              <small>{{ scenario.description }}</small>
+            </td>
+            <td
+              *ngFor="let lib of librariesWithResults()"
+              [class.winner]="isScenarioWinner(scenario.id, lib.id)"
+              [style.--cell-color]="lib.color"
+            >
+              <span class="time">{{
+                getScenarioTime(scenario.id, lib.id)
+              }}</span>
+              <span class="ops"
+                >{{ getScenarioOps(scenario.id, lib.id) }} ops/s</span
+              >
+              <span class="relative" *ngIf="lib.id !== 'signaltree'">
+                {{ getRelativePerformance(scenario.id, lib.id) }}x vs SignalTree
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Statistical Analysis -->
+    <div class="statistics-section">
+      <h3>Statistical Analysis</h3>
+      <div class="statistics-grid">
+        <div
+          class="stat-card"
+          *ngFor="let comparison of statisticalComparisons()"
+        >
+          <h4>{{ comparison.name }}</h4>
+          <div class="stat-row">
+            <span>Sample Size:</span>
+            <span>{{ comparison.sampleSize }}</span>
+          </div>
+          <div class="stat-row">
+            <span>T-Statistic:</span>
+            <span>{{ comparison.tStatistic | number : '1.2-2' }}</span>
+          </div>
+          <div class="stat-row">
+            <span>P-Value:</span>
+            <span [class.significant]="comparison.pValue < 0.05">
+              {{ comparison.pValue | number : '1.4-4' }}
+            </span>
+          </div>
+          <div class="stat-row conclusion">
+            <span>Conclusion:</span>
+            <span>{{ comparison.conclusion }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Export Section -->
+    <div class="export-section">
+      <h3>Export Results</h3>
+      <div class="export-buttons">
+        <button class="btn btn-export" (click)="exportCSV()">
+          <svg class="btn-icon" viewBox="0 0 24 24">
+            <path
+              d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20M12,19L8,15H10.5V12H13.5V15H16L12,19Z"
+            />
+          </svg>
+          Export CSV
+        </button>
+        <button class="btn btn-export" (click)="exportJSON()">
+          <svg class="btn-icon" viewBox="0 0 24 24">
+            <path
+              d="M5,3H7V5H5V10A2,2 0 0,1 3,12A2,2 0 0,1 5,14V19H7V21H5C3.93,20.73 3,20.1 3,19V15A2,2 0 0,0 1,13H0V11H1A2,2 0 0,0 3,9V5A2,2 0 0,1 5,3M19,3A2,2 0 0,1 21,5V9A2,2 0 0,0 23,11H24V13H23A2,2 0 0,0 21,15V19A2,2 0 0,1 19,21H17V19H19V14A2,2 0 0,1 21,12A2,2 0 0,1 19,10V5H17V3H19M12,15A1,1 0 0,1 13,16A1,1 0 0,1 12,17A1,1 0 0,1 11,16A1,1 0 0,1 12,15M8,15A1,1 0 0,1 9,16A1,1 0 0,1 8,17A1,1 0 0,1 7,16A1,1 0 0,1 8,15M16,15A1,1 0 0,1 17,16A1,1 0 0,1 16,17A1,1 0 0,1 15,16A1,1 0 0,1 16,15Z"
+            />
+          </svg>
+          Export JSON
+        </button>
+        <button class="btn btn-export" (click)="shareResults()">
+          <svg class="btn-icon" viewBox="0 0 24 24">
+            <path
+              d="M18,16.08C17.24,16.08 16.56,16.38 16.04,16.85L8.91,12.7C8.96,12.47 9,12.24 9,12C9,11.76 8.96,11.53 8.91,11.3L15.96,7.19C16.5,7.69 17.21,8 18,8A3,3 0 0,0 21,5A3,3 0 0,0 18,2A3,3 0 0,0 15,5C15,5.24 15.04,5.47 15.09,5.7L8.04,9.81C7.5,9.31 6.79,9 6,9A3,3 0 0,0 3,12A3,3 0 0,0 6,15C6.79,15 7.5,14.69 8.04,14.19L15.16,18.34C15.11,18.55 15.08,18.77 15.08,19C15.08,20.61 16.39,21.91 18,21.91C19.61,21.91 20.92,20.61 20.92,19A2.92,2.92 0 0,0 18,16.08Z"
+            />
+          </svg>
+          Share Results
+        </button>
+      </div>
+    </div>
+  </section>
+</div>
