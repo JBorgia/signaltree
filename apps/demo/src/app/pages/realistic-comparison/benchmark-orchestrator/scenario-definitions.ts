@@ -17,6 +17,9 @@ export interface BenchmarkTestCase {
   selected: boolean;
   category: 'core' | 'async' | 'time-travel' | 'middleware' | 'full-stack';
   purpose: string; // What this test specifically measures
+  frequencyWeight?: number; // Multiplier for real-world frequency (0.1 = very rare, 3.0 = very common)
+  realWorldFrequency?: string; // Human-readable frequency description
+  architecturalTradeOffs?: string; // Explanation of when this operation helps vs hurts
   enhancers: {
     required: string[]; // SignalTree enhancers required for this test
     optional: string[]; // SignalTree enhancers that could be beneficial
@@ -42,6 +45,10 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     category: 'core',
     purpose:
       'Measures surgical update performance in complex object hierarchies',
+    frequencyWeight: 2.5, // Very common in forms, configuration objects, complex UI state
+    realWorldFrequency: 'Very High - Forms, settings, nested UI components',
+    architecturalTradeOffs:
+      'Direct mutation excels with deep updates vs immutable rebuilding',
     enhancers: {
       required: ['withBatching'],
       optional: ['withShallowMemoization'],

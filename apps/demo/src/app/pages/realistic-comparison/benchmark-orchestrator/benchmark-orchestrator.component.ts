@@ -2267,4 +2267,159 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     link.click();
     URL.revokeObjectURL(url);
   }
+
+  // Frequency weighting methods
+  applyWeightingPreset(presetId: string) {
+    const presets: Record<string, Record<string, number>> = {
+      'crud-app': {
+        'selector-memoization': 3.0, // Very common
+        'computed-chains': 2.5, // Common
+        'data-fetching': 2.0,
+        'large-array': 1.5,
+        serialization: 0.5, // Rare
+        'concurrent-updates': 0.3, // Very rare
+        'memory-efficiency': 1.0,
+      },
+      'real-time': {
+        'large-array': 3.0, // Very common
+        'concurrent-updates': 2.5, // Common
+        'real-time-updates': 3.0,
+        'batch-updates': 2.0,
+        serialization: 0.2, // Very rare
+        'deep-nested': 1.5,
+        'memory-efficiency': 2.0,
+      },
+      forms: {
+        'deep-nested': 3.0, // Very common
+        'computed-chains': 2.5, // Common
+        'selector-memoization': 2.0,
+        serialization: 1.5, // For form persistence
+        'large-array': 1.0,
+        'concurrent-updates': 0.5,
+        'memory-efficiency': 1.0,
+      },
+      enterprise: {
+        serialization: 2.5, // Important for audit trails
+        'time-travel-debugging': 3.0, // Critical feature
+        'computed-chains': 2.0,
+        'selector-memoization': 2.0,
+        'large-array': 1.5,
+        'deep-nested': 1.5,
+        'memory-efficiency': 1.0,
+      },
+      equal: {
+        // All scenarios get equal weight
+      },
+    };
+
+    const preset = presets[presetId];
+    if (!preset) return;
+
+    // Update test case weights
+    this.testCases = this.testCases.map((testCase) => ({
+      ...testCase,
+      frequencyWeight: presetId === 'equal' ? 1.0 : preset[testCase.id] || 1.0,
+    }));
+  }
+
+  updateTestCaseWeight(testCaseId: string, event: Event) {
+    const target = event.target as HTMLInputElement;
+    const weight = parseFloat(target.value);
+
+    this.testCases = this.testCases.map((testCase) =>
+      testCase.id === testCaseId
+        ? { ...testCase, frequencyWeight: weight }
+        : testCase
+    );
+  }
+
+  getFrequencyLabel(weight: number): string {
+    if (weight >= 2.5) return 'Very High';
+    if (weight >= 2.0) return 'High';
+    if (weight >= 1.5) return 'Medium';
+    if (weight >= 1.0) return 'Normal';
+    if (weight >= 0.5) return 'Low';
+    return 'Very Low';
+  }
+
+  weightedLibrarySummaries() {
+    const results = this.results();
+    if (!results || results.length === 0) return [];
+
+    // Group results by library
+    const libraryResults = new Map<string, BenchmarkResult[]>();
+    results.forEach((result: BenchmarkResult) => {
+      if (!libraryResults.has(result.libraryId)) {
+        libraryResults.set(result.libraryId, []);
+      }
+      const existing = libraryResults.get(result.libraryId);
+      if (existing) {
+        existing.push(result);
+      }
+    });
+
+    // Calculate weighted scores for each library
+    const summaries = Array.from(libraryResults.entries()).map(
+      ([libraryId, libResults]) => {
+        const library = this.selectedLibraries().find(
+          (lib: Library) => lib.id === libraryId
+        );
+        let totalWeightedScore = 0;
+        let totalWeight = 0;
+        const breakdown: Array<{
+          scenarioId: string;
+          scenarioName: string;
+          weight: number;
+          median: number;
+          weightedScore: number;
+          contribution: number;
+          opsPerSecond: number;
+        }> = [];
+
+        libResults.forEach((result) => {
+          const testCase = this.testCases.find(
+            (tc) => tc.id === result.scenarioId
+          );
+          if (!testCase) return;
+
+          const weight = testCase.frequencyWeight || 1.0;
+          const normalizedScore =
+            result.opsPerSecond > 0 ? result.opsPerSecond : 0;
+          const contribution = normalizedScore * weight;
+
+          totalWeightedScore += contribution;
+          totalWeight += weight;
+
+          breakdown.push({
+            scenarioId: result.scenarioId,
+            scenarioName: testCase.name,
+            weight,
+            median: result.median,
+            weightedScore: contribution,
+            contribution,
+            opsPerSecond: result.opsPerSecond,
+          });
+        });
+
+        return {
+          name: library?.name || libraryId,
+          color: library?.color || '#666',
+          weightedScore:
+            totalWeight > 0 ? totalWeightedScore / totalWeight : -1,
+          breakdown,
+          rank: 0, // Will be set after sorting
+        };
+      }
+    );
+
+    // Sort by weighted score and assign ranks
+    summaries
+      .filter((s) => s.weightedScore !== -1)
+      .sort((a, b) => b.weightedScore - a.weightedScore)
+      .forEach((summary, index) => {
+        summary.rank = index + 1;
+      });
+
+    return summaries;
+  }
 }

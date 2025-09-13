@@ -769,6 +769,7 @@ $border: #e5e7eb;
 
     .scenario-details {
       display: flex;
+      flex-direction: column;
       gap: 1rem;
 
       .detail {
@@ -1370,4 +1371,397 @@ $border: #e5e7eb;
 
 .metric-value.unsupported {
   opacity: 0.6;
+}
+
+// Frequency Weighting Styles
+.frequency-weighting-section {
+  @include card;
+  margin: 2rem 0;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border: 2px solid $primary;
+
+  h3 {
+    color: $primary;
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+  }
+
+  .weighting-explanation {
+    margin-bottom: 1.5rem;
+    color: $dark;
+    line-height: 1.6;
+  }
+
+  .weighting-presets {
+    margin-bottom: 2rem;
+
+    h4 {
+      margin-bottom: 1rem;
+      color: $dark;
+    }
+
+    .preset-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+
+      .btn-preset {
+        @include button;
+        background: white;
+        color: $primary;
+        border: 2px solid $primary;
+        flex-direction: column;
+        text-align: center;
+        min-width: 160px;
+
+        &:hover {
+          background: $primary;
+          color: white;
+        }
+
+        small {
+          font-size: 0.8rem;
+          font-weight: normal;
+          opacity: 0.8;
+        }
+      }
+    }
+  }
+
+  .architectural-insights {
+    h4 {
+      margin-bottom: 1rem;
+      color: $dark;
+    }
+
+    .insights-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1rem;
+
+      .insight-card {
+        @include card;
+        border-left: 4px solid $secondary;
+
+        h5 {
+          color: $secondary;
+          margin-bottom: 0.5rem;
+        }
+
+        .pros-cons {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 1rem;
+
+          .pros,
+          .cons {
+            ul {
+              margin: 0.5rem 0;
+              padding-left: 1.2rem;
+
+              li {
+                margin-bottom: 0.3rem;
+                font-size: 0.9rem;
+              }
+            }
+          }
+
+          .pros strong {
+            color: $success;
+          }
+
+          .cons strong {
+            color: $danger;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Enhanced scenario cards with frequency indicators
+.scenario-card {
+  .frequency-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+    font-size: 0.8rem;
+
+    .frequency-label {
+      color: $dark;
+      font-weight: 500;
+    }
+
+    .frequency-bar {
+      width: 60px;
+      height: 8px;
+      background: $border;
+      border-radius: 4px;
+      overflow: hidden;
+
+      .frequency-fill {
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          $success 0%,
+          $warning 50%,
+          $danger 100%
+        );
+        transition: width 0.3s ease;
+      }
+    }
+
+    .frequency-text {
+      font-weight: 600;
+      min-width: 50px;
+    }
+  }
+
+  .architectural-note {
+    margin: 1rem 0;
+    padding: 0.75rem;
+    background: rgba($secondary, 0.1);
+    border-radius: 6px;
+    border-left: 3px solid $secondary;
+
+    h5 {
+      margin: 0 0 0.5rem 0;
+      color: $secondary;
+      font-size: 0.9rem;
+    }
+
+    .tradeoff-text {
+      margin: 0;
+      font-size: 0.85rem;
+      line-height: 1.4;
+      color: $dark;
+    }
+  }
+
+  .weight-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background: rgba($primary, 0.05);
+    border-radius: 4px;
+
+    label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: $dark;
+    }
+
+    input[type='range'] {
+      flex: 1;
+      height: 6px;
+      -webkit-appearance: none;
+      background: $border;
+      border-radius: 3px;
+      outline: none;
+
+      &::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        background: $primary;
+        border-radius: 50%;
+        cursor: pointer;
+      }
+
+      &::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        background: $primary;
+        border-radius: 50%;
+        border: none;
+        cursor: pointer;
+      }
+    }
+
+    .weight-value {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: $primary;
+      min-width: 35px;
+    }
+  }
+}
+
+// Weighted results styling
+.weighted-results-section {
+  @include card;
+  margin: 2rem 0;
+  background: linear-gradient(135deg, #fef7cd 0%, #fbbf24 20%, #f59e0b 100%);
+  border: 2px solid $warning;
+
+  h3 {
+    color: color.adjust($warning, $lightness: -40%);
+    margin-bottom: 1rem;
+  }
+
+  .weighting-note {
+    background: rgba(white, 0.8);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    border-left: 4px solid $warning;
+  }
+
+  .weighted-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+
+    .weighted-summary-card {
+      @include card;
+      border: 2px solid transparent;
+
+      &.weighted-winner {
+        border-color: $success;
+        background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+
+        .summary-header h4 {
+          color: $success;
+        }
+
+        .weighted-rank {
+          background: $success;
+          color: white;
+          font-weight: bold;
+        }
+      }
+
+      .summary-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+
+        h4 {
+          margin: 0;
+          color: $dark;
+        }
+
+        .weighted-rank {
+          padding: 0.3rem 0.8rem;
+          border-radius: 12px;
+          background: var(--card-color, $primary);
+          color: white;
+          font-size: 0.8rem;
+          font-weight: 600;
+        }
+      }
+
+      .weighted-breakdown {
+        .breakdown-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 0.3rem 0;
+          border-bottom: 1px solid $border;
+          font-size: 0.85rem;
+
+          &:last-child {
+            border-bottom: none;
+          }
+
+          .scenario-name {
+            flex: 1;
+            color: $dark;
+          }
+
+          .weight {
+            color: $warning;
+            font-weight: 600;
+            margin: 0 0.5rem;
+          }
+
+          .contribution {
+            color: $primary;
+            font-weight: 600;
+            min-width: 50px;
+            text-align: right;
+          }
+        }
+      }
+    }
+  }
+
+  .weighting-transparency {
+    h4 {
+      margin-bottom: 1rem;
+      color: color.adjust($warning, $lightness: -40%);
+    }
+
+    .weight-display {
+      background: rgba(white, 0.8);
+      padding: 1rem;
+      border-radius: 8px;
+
+      .weight-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid rgba($border, 0.5);
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        .scenario {
+          flex: 1;
+          font-weight: 500;
+          color: $dark;
+        }
+
+        .weight-value {
+          font-weight: 600;
+          color: $warning;
+          min-width: 40px;
+        }
+
+        .weight-bar {
+          width: 100px;
+          height: 8px;
+          background: rgba($border, 0.5);
+          border-radius: 4px;
+          overflow: hidden;
+
+          .weight-fill {
+            height: 100%;
+            background: $warning;
+            transition: width 0.3s ease;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Update disclaimer points styling
+.disclaimer-points {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+
+  li {
+    padding: 0.5rem 0;
+    border-left: 3px solid $primary;
+    padding-left: 1rem;
+    margin: 0.5rem 0;
+  }
+}
+
+.key-insight {
+  background: rgba($primary, 0.1);
+  padding: 1rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+  border-left: 4px solid $primary;
+  font-style: italic;
 }

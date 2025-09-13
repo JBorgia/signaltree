@@ -6,23 +6,45 @@ import { withSerialization } from '@signaltree/serialization';
 import { withTimeTravel } from '@signaltree/time-travel';
 
 /**
- * SignalTree Benchmark Service
+ * SignalTree Architecture Trade-offs Analysis
  *
- * These benchmarks reveal the true architectural trade-offs of SignalTree:
+ * This service demonstrates different state management architectures and their trade-offs.
+ * Rather than declaring winners, it helps developers understand when each approach excels.
  *
- * ✅ SIGNALTREE WINS:
- * - Array Updates: 173x faster (O(1) direct mutation vs O(n) array rebuilding)
- * - Deep Nested: Surgical updates without rebuilding parent objects
- * - Rapid Sequential: Removed memoization overhead for better performance
+ * 🎯 ARCHITECTURAL PATTERNS:
  *
- * ❌ SIGNALTREE COSTS:
- * - Serialization: 3x slower due to signal unwrapping overhead
- * - Memory: Higher due to signal wrappers (signal per value)
+ * SignalTree: Direct mutation with fine-grained reactivity
+ * - Best for: Frequent, targeted updates to large state trees
+ * - Trade-offs: Higher memory overhead, slower serialization
+ * - Use when: Building interactive editors, real-time dashboards, forms with complex validation
  *
- * 🎯 ARCHITECTURAL INSIGHT:
- * SignalTree trades serialization/memory efficiency for mutation performance.
- * Choose SignalTree when you need frequent targeted updates to large state trees.
- * Choose NgRx/Signals when you prioritize immutability and predictable performance.
+ * NgRx/Redux: Immutable updates with predictable state flow
+ * - Best for: Complex apps requiring time-travel debugging and predictable state transitions
+ * - Trade-offs: More boilerplate, full object recreation on updates
+ * - Use when: Large teams, complex business logic, audit requirements
+ *
+ * Entity Stores (Akita/Elf): Specialized for entity collections
+ * - Best for: Managing normalized data with relationships
+ * - Trade-offs: Domain-specific, less general-purpose
+ * - Use when: CRUD apps, data-heavy applications
+ *
+ * NgXs: CQRS pattern with action-based flow
+ * - Best for: Clear separation of commands and queries
+ * - Trade-offs: Learning curve, action overhead
+ * - Use when: Event-sourced architectures, complex workflows
+ *
+ * 📊 MEASUREMENT CONSIDERATIONS:
+ * - Performance varies significantly based on data patterns and usage frequency
+ * - Memory measurements are Chrome-specific and affected by GC timing
+ * - Real-world performance depends on your specific use case patterns
+ * - Consider developer experience, maintainability, and team familiarity
+ *
+ * 🔍 FREQUENCY MATTERS:
+ * These benchmarks don't weight operations by real-world frequency. Consider:
+ * - How often do you update vs serialize state?
+ * - Are your updates targeted or bulk operations?
+ * - Do you need time-travel debugging in production?
+ * - What's your team's experience with different patterns?
  */
 
 // Consider importing performance preset for consistency
@@ -31,10 +53,6 @@ import { withTimeTravel } from '@signaltree/time-travel';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 @Injectable({ providedIn: 'root' })
 export class SignalTreeBenchmarkService {
-  // Narrow typing for performance.memory when available
-  private static PerfWithMemory = {} as Performance & {
-    memory?: { jsHeapSizeLimit: number; usedJSHeapSize: number };
-  };
   private yieldToUI() {
     return new Promise<void>((r) => setTimeout(r));
   }
@@ -47,10 +65,11 @@ export class SignalTreeBenchmarkService {
         ? { value: 0, data: 'test' }
         : { level: createNested(level - 1) };
 
-    // Use shallow memoization for nested object updates
+    // ARCHITECTURAL ADVANTAGE: Surgical updates without parent rebuilding
+    // Use case: Complex forms, nested configuration objects, tree-like data
     const tree = signalTree(createNested(depth)).with(
       withBatching(),
-      withShallowMemoization() // Better for object structures than deep equality
+      withShallowMemoization() // Optimal for nested object structures
     );
 
     // Match NgXs cap of 1000 iterations for fair comparison
@@ -76,16 +95,15 @@ export class SignalTreeBenchmarkService {
   async runArrayBenchmark(dataSize: number): Promise<number> {
     const start = performance.now();
 
-    // SignalTree Architecture: O(1) direct mutation
-    // vs NgRx: O(n) array rebuilding for immutability
-    // This demonstrates SignalTree's surgical update advantage
-    // NO MEMOIZATION: Array values constantly change, cache never hits
+    // ARCHITECTURAL SHOWCASE: Direct mutation vs immutable rebuilding
+    // SignalTree: O(1) targeted updates | NgRx: O(n) array reconstruction
+    // Use case: Real-time dashboards, live data grids, gaming score boards
     const tree = signalTree({
       items: Array.from({ length: dataSize }, (_, i) => ({
         id: i,
         value: Math.random() * 1000,
       })),
-    }).with(withHighPerformanceBatching()); // Only batching, no memoization
+    }).with(withHighPerformanceBatching()); // Only batching, no memoization needed
 
     const updates = Math.min(1000, dataSize);
     for (let i = 0; i < updates; i++) {
@@ -204,9 +222,9 @@ export class SignalTreeBenchmarkService {
   }
 
   async runSerializationBenchmark(dataSize: number): Promise<number> {
-    // SignalTree trades serialization speed for fine-grained reactivity
-    // 3x slower than NgRx due to signal unwrapping overhead
-    // This is the architectural cost of direct mutation capability
+    // ARCHITECTURAL TRADE-OFF: SignalTree's signal unwrapping creates serialization overhead
+    // This is the cost of fine-grained reactivity vs immutable snapshots
+    // Consider: How often does your app serialize state vs perform updates?
     const tree = signalTree({
       users: Array.from(
         { length: Math.max(100, Math.min(1000, dataSize)) },
@@ -289,14 +307,12 @@ export class SignalTreeBenchmarkService {
   }
 
   async runMemoryEfficiencyBenchmark(dataSize: number): Promise<number> {
-    // Build a sizable hierarchical tree; perform limited churn and log memory deltas
+    // NOTE: Memory measurements are unreliable across browsers and affected by GC timing.
+    // This benchmark focuses on operational performance rather than heap measurements.
     const itemsCount = Math.max(1_000, Math.min(50_000, dataSize));
     const groups = Math.max(10, Math.min(200, Math.floor(itemsCount / 250)));
 
-    const beforeMem =
-      (performance as typeof SignalTreeBenchmarkService.PerfWithMemory).memory
-        ?.usedJSHeapSize ?? null;
-
+    // SignalTree's memory trade-off: more wrappers, but efficient targeted updates
     const tree = signalTree({
       groups: Array.from({ length: groups }, (_, g) => ({
         id: g,
@@ -313,7 +329,7 @@ export class SignalTreeBenchmarkService {
 
     const start = performance.now();
 
-    // Touch ~1% of items across groups
+    // Demonstrate SignalTree's efficiency: targeted updates without full rebuilds
     const touches = Math.max(100, Math.floor(itemsCount * 0.01));
     for (let t = 0; t < touches; t++) {
       const g = t % groups;
@@ -349,7 +365,7 @@ export class SignalTreeBenchmarkService {
       if ((t & 63) === 0) await this.yieldToUI();
     }
 
-    // Return elapsed time as a placeholder (or you could return memory delta if desired)
+    // Return operational time (memory measurement would be unreliable across environments)
     return performance.now() - start;
   }
 

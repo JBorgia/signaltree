@@ -1,9 +1,9 @@
 <div class="benchmark-container" [attr.aria-busy]="isRunning()">
   <!-- Header Section -->
   <header class="benchmark-header">
-    <h1>State Management Performance Benchmarks</h1>
+    <h1>State Management Architecture Comparison</h1>
     <p class="subtitle">
-      Rigorous performance testing with real-world scenarios
+      Understanding trade-offs with real-world usage weighting
     </p>
     <div class="performance-disclaimer">
       <p>
@@ -419,6 +419,131 @@
       </p>
     </div>
 
+    <!-- Frequency Weighting Section -->
+    <div class="frequency-weighting-section">
+      <h3>🎯 Real-World Usage Weighting</h3>
+      <p class="weighting-explanation">
+        Different operations happen at different frequencies in real
+        applications. Adjust weights based on your app's usage patterns, or use
+        preset scenarios.
+      </p>
+
+      <div class="weighting-presets">
+        <h4>Quick Presets:</h4>
+        <div class="preset-buttons">
+          <button
+            class="btn btn-preset"
+            (click)="applyWeightingPreset('crud-app')"
+          >
+            📊 CRUD App
+            <small>Heavy reads, occasional updates</small>
+          </button>
+          <button
+            class="btn btn-preset"
+            (click)="applyWeightingPreset('real-time')"
+          >
+            ⚡ Real-time Dashboard
+            <small>Frequent targeted updates</small>
+          </button>
+          <button
+            class="btn btn-preset"
+            (click)="applyWeightingPreset('forms')"
+          >
+            📝 Complex Forms
+            <small>Deep nested updates, validation</small>
+          </button>
+          <button
+            class="btn btn-preset"
+            (click)="applyWeightingPreset('enterprise')"
+          >
+            🏢 Enterprise App
+            <small>Audit trails, time-travel debugging</small>
+          </button>
+          <button
+            class="btn btn-preset"
+            (click)="applyWeightingPreset('equal')"
+          >
+            ⚖️ Equal Weight
+            <small>No frequency bias</small>
+          </button>
+        </div>
+      </div>
+
+      <div class="architectural-insights">
+        <h4>🏗️ Architectural Trade-offs to Consider:</h4>
+        <div class="insights-grid">
+          <div class="insight-card">
+            <h5>Direct Mutation (SignalTree)</h5>
+            <div class="pros-cons">
+              <div class="pros">
+                <strong>✅ Helps when:</strong>
+                <ul>
+                  <li>Frequent targeted updates</li>
+                  <li>Large nested objects</li>
+                  <li>Real-time data streams</li>
+                  <li>Interactive editors</li>
+                </ul>
+              </div>
+              <div class="cons">
+                <strong>❌ Costs:</strong>
+                <ul>
+                  <li>Higher memory usage</li>
+                  <li>Slower serialization</li>
+                  <li>Less predictable</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="insight-card">
+            <h5>Immutable Updates (NgRx/Redux)</h5>
+            <div class="pros-cons">
+              <div class="pros">
+                <strong>✅ Helps when:</strong>
+                <ul>
+                  <li>Predictable state flow needed</li>
+                  <li>Time-travel debugging</li>
+                  <li>Large team coordination</li>
+                  <li>Audit requirements</li>
+                </ul>
+              </div>
+              <div class="cons">
+                <strong>❌ Costs:</strong>
+                <ul>
+                  <li>More boilerplate</li>
+                  <li>Full object recreation</li>
+                  <li>Learning curve</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="insight-card">
+            <h5>Entity Stores (Akita/Elf)</h5>
+            <div class="pros-cons">
+              <div class="pros">
+                <strong>✅ Helps when:</strong>
+                <ul>
+                  <li>Managing entity collections</li>
+                  <li>CRUD operations</li>
+                  <li>Normalized data</li>
+                  <li>Caching patterns</li>
+                </ul>
+              </div>
+              <div class="cons">
+                <strong>❌ Costs:</strong>
+                <ul>
+                  <li>Domain-specific</li>
+                  <li>Less general-purpose</li>
+                  <li>Learning overhead</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Test Cases Grid -->
     <div class="all-scenarios">
       <div class="scenarios-grid">
@@ -440,10 +565,48 @@
             />
             <h3>{{ testCase.name }}</h3>
           </div>
+          <div
+            class="frequency-indicator"
+            [attr.data-frequency]="testCase.frequencyWeight"
+          >
+            <span class="frequency-label">Usage</span>
+            <div class="frequency-bar">
+              <div
+                class="frequency-fill"
+                [style.width.%]="(testCase.frequencyWeight || 1.0) * 20"
+              ></div>
+            </div>
+            <span class="frequency-text">{{
+              getFrequencyLabel(testCase.frequencyWeight || 1.0)
+            }}</span>
+          </div>
           <p>{{ testCase.description }}</p>
+
+          <div
+            class="architectural-note"
+            *ngIf="testCase.architecturalTradeOffs"
+          >
+            <h5>🏗️ Architecture Impact:</h5>
+            <p class="tradeoff-text">{{ testCase.architecturalTradeOffs }}</p>
+          </div>
+
           <div class="scenario-details">
             <span class="detail">Operations: {{ testCase.operations }}</span>
             <span class="detail">Complexity: {{ testCase.complexity }}</span>
+            <div class="weight-control">
+              <label for="weight-{{ testCase.id }}">Impact Weight:</label>
+              <input
+                type="range"
+                id="weight-{{ testCase.id }}"
+                min="0"
+                max="3"
+                step="0.1"
+                [value]="testCase.frequencyWeight"
+                (input)="updateTestCaseWeight(testCase.id, $event)"
+                (click)="$event.stopPropagation()"
+              />
+              <span class="weight-value">{{ testCase.frequencyWeight }}x</span>
+            </div>
           </div>
         </div>
       </div>
@@ -532,6 +695,70 @@
   <!-- Results Section -->
   <section class="results-section" *ngIf="hasResults()">
     <h2>Benchmark Results</h2>
+
+    <!-- Weighted Results Summary -->
+    <div class="weighted-results-section">
+      <h3>🎯 Real-World Weighted Performance</h3>
+      <p class="weighting-note">
+        Results below are weighted by real-world usage frequency.
+        <strong
+          >This reflects how different architectures perform in typical
+          applications.</strong
+        >
+      </p>
+
+      <div class="weighted-summary-grid">
+        <div
+          class="weighted-summary-card"
+          *ngFor="let summary of weightedLibrarySummaries()"
+          [style.--card-color]="summary.color"
+          [class.weighted-winner]="summary.rank === 1"
+        >
+          <div class="summary-header">
+            <h4>{{ summary.name }}</h4>
+            <span class="weighted-rank" *ngIf="summary.weightedScore !== -1">
+              #{{ summary.rank }} ({{
+                summary.weightedScore | number : '1.1-1'
+              }}
+              pts)
+            </span>
+            <span
+              class="weighted-rank unsupported"
+              *ngIf="summary.weightedScore === -1"
+            >
+              Incomplete
+            </span>
+          </div>
+          <div class="weighted-breakdown">
+            <div class="breakdown-item" *ngFor="let item of summary.breakdown">
+              <span class="scenario-name">{{ item.scenarioName }}</span>
+              <span class="weight">{{ item.weight }}x</span>
+              <span class="contribution"
+                >{{ item.contribution | number : '1.1-1' }} pts</span
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="weighting-transparency">
+        <h4>📊 Current Weights Applied:</h4>
+        <div class="weight-display">
+          <div class="weight-item" *ngFor="let scenario of selectedScenarios()">
+            <span class="scenario">{{ scenario.name }}</span>
+            <span class="weight-value">{{ scenario.frequencyWeight }}x</span>
+            <div class="weight-bar">
+              <div
+                class="weight-fill"
+                [style.width.%]="((scenario.frequencyWeight || 1.0) / 3) * 100"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Raw Performance Results -->
 
     <!-- Summary Cards -->
     <div class="summary-grid">
