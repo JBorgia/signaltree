@@ -1,14 +1,14 @@
 /**
- * Enhanced scenario definitions with enhancer specifications
+ * Enhanced test case definitions with enhancer specifications
  *
- * Each scenario includes:
+ * Each test case includes:
  * - Purpose: What the test specifically measures
  * - Enhancers: Required and optional SignalTree enhancers
  * - Data requirements: Size scaling and complexity
  * - Rationale: Why specific enhancers are chosen
  */
 
-export interface Scenario {
+export interface BenchmarkTestCase {
   id: string;
   name: string;
   description: string;
@@ -30,7 +30,7 @@ export interface Scenario {
   };
 }
 
-export const ENHANCED_SCENARIOS: Scenario[] = [
+export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
   // Core Performance Tests
   {
     id: 'deep-nested',

@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { Subject } from 'rxjs';
 
-import { ENHANCED_SCENARIOS, Scenario } from './scenario-definitions';
+import { BenchmarkTestCase, ENHANCED_TEST_CASES } from './scenario-definitions';
 import { AkitaBenchmarkService } from './services/akita-benchmark.service';
 import { ElfBenchmarkService } from './services/elf-benchmark.service';
 import { NgRxBenchmarkService } from './services/ngrx-benchmark.service';
@@ -26,13 +26,6 @@ interface Library {
     bundleSize: string;
     githubStars: number;
   };
-}
-
-interface BenchmarkCategory {
-  name: string;
-  id: string;
-  description: string;
-  scenarios: string[]; // scenario IDs
 }
 
 interface BenchmarkConfig {
@@ -325,58 +318,8 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     },
   ];
 
-  // Test scenarios organized by category
-  scenarios: Scenario[] = ENHANCED_SCENARIOS;
-
-  // Benchmark categories
-  categories: BenchmarkCategory[] = [
-    {
-      id: 'core',
-      name: 'Core Performance',
-      description: 'Fundamental state management operations',
-      scenarios: [
-        'deep-nested',
-        'large-array',
-        'computed-chains',
-        'batch-updates',
-        'selector-memoization',
-        'serialization',
-        'concurrent-updates',
-        'memory-efficiency',
-        'data-fetching',
-        'real-time-updates',
-        'state-size-scaling',
-      ],
-    },
-    {
-      id: 'async',
-      name: 'Async Operations',
-      description: 'Asynchronous state updates and loading management',
-      scenarios: ['async-workflow', 'concurrent-async', 'async-cancellation'],
-    },
-    {
-      id: 'time-travel',
-      name: 'Time Travel',
-      description: 'Undo/redo and state history management',
-      scenarios: ['undo-redo', 'history-size', 'jump-to-state'],
-    },
-    {
-      id: 'middleware',
-      name: 'Middleware',
-      description: 'Interceptors, logging, and state modification hooks',
-      scenarios: [
-        'single-middleware',
-        'multiple-middleware',
-        'conditional-middleware',
-      ],
-    },
-    {
-      id: 'full-stack',
-      name: 'Full Stack',
-      description: 'Real-world production scenarios with all features',
-      scenarios: ['all-features-enabled', 'production-setup'],
-    },
-  ];
+  // Test cases organized by category
+  testCases: BenchmarkTestCase[] = ENHANCED_TEST_CASES;
 
   // Computed values
   selectedLibraries = computed(() => {
@@ -530,17 +473,17 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     const preset = this.scenarioPresets.find((p) => p.id === presetId);
     if (!preset) return;
 
-    // Deselect all scenarios first
-    this.scenarios.forEach((scenario) => (scenario.selected = false));
+    // Deselect all test cases first
+    this.testCases.forEach((testCase) => (testCase.selected = false));
 
-    // Select scenarios for this preset
+    // Select test cases for this preset
     if (presetId === 'all-tests') {
-      // Select all scenarios
-      this.scenarios.forEach((scenario) => (scenario.selected = true));
+      // Select all test cases
+      this.testCases.forEach((testCase) => (testCase.selected = true));
     } else {
       preset.scenarios.forEach((scenarioId) => {
-        const scenario = this.scenarios.find((s) => s.id === scenarioId);
-        if (scenario) scenario.selected = true;
+        const testCase = this.testCases.find((s) => s.id === scenarioId);
+        if (testCase) testCase.selected = true;
       });
     }
 
@@ -551,28 +494,8 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   selectedScenarios = computed(() => {
     // Depend on scenarioSelectionVersion to trigger recompute when scenarios change
     this.scenarioSelectionVersion();
-    return this.scenarios.filter((s) => s.selected);
+    return this.testCases.filter((s) => s.selected);
   });
-
-  // Remove category-based grouping since we're showing all scenarios
-  // Group scenarios by category for display organization
-  scenariosByCategory = computed(() => {
-    const grouped = new Map<string, Scenario[]>();
-
-    for (const category of this.categories) {
-      const categoryScenarios = this.scenarios.filter(
-        (s) => s.category === category.id
-      );
-      grouped.set(category.id, categoryScenarios);
-    }
-
-    return grouped;
-  });
-
-  // Get scenarios for a specific category
-  getScenariosForCategory(categoryId: string) {
-    return this.scenarios.filter((s) => s.category === categoryId);
-  }
 
   // Libraries that actually have results (ensures table shows all measured libs)
   librariesWithResults = computed(() => {
@@ -1116,7 +1039,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   completedScenarios = computed(() => {
     const results = this.results();
     const scenarioIds = [...new Set(results.map((r) => r.scenarioId))];
-    return this.scenarios.filter((s) => scenarioIds.includes(s.id));
+    return this.testCases.filter((s) => scenarioIds.includes(s.id));
   });
 
   librarySummaries = computed((): LibrarySummary[] => {
@@ -1229,7 +1152,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       (p) => p.id === 'all-tests'
     );
     if (allTestsPreset) {
-      allTestsPreset.scenarios = this.scenarios.map((s) => s.id);
+      allTestsPreset.scenarios = this.testCases.map((s) => s.id);
     }
 
     // Run chart updates inside an Angular injection context
@@ -1678,7 +1601,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       .every((lib) => lib.selected);
   }
 
-  toggleScenario(scenario: Scenario) {
+  toggleScenario(scenario: BenchmarkTestCase) {
     scenario.selected = !scenario.selected;
     // Trigger recomputation of selectedScenarios and dependent computeds
     this.scenarioSelectionVersion.update((v) => v + 1);
@@ -1739,7 +1662,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
   private async runSingleBenchmark(
     library: Library,
-    scenario: Scenario,
+    scenario: BenchmarkTestCase,
     config: BenchmarkConfig
   ): Promise<BenchmarkResult> {
     const samples: number[] = [];
@@ -1880,7 +1803,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     }
   }
 
-  onScenarioCardKeydown(event: KeyboardEvent, scenario: Scenario) {
+  onScenarioCardKeydown(event: KeyboardEvent, scenario: BenchmarkTestCase) {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       this.toggleScenario(scenario);
