@@ -64,13 +64,13 @@ export const appRoutes: Route[] = [
   //       (c) => c.NgFormsDemoComponent
   //     ),
   // },
-  // {
-  //   path: 'presets',
-  //   loadComponent: () =>
-  //     import('./pages/presets-demo/presets-demo.component').then(
-  //       (c) => c.PresetsDemoComponent
-  //     ),
-  // },
+  {
+    path: 'presets',
+    loadComponent: () =>
+      import('./pages/presets-demo/presets-demo.component').then(
+        (c) => c.PresetsDemoComponent
+      ),
+  },
   {
     path: 'time-travel',
     loadComponent: () =>

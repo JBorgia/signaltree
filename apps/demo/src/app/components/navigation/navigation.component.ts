@@ -105,6 +105,13 @@ export class NavigationComponent {
       category: 'advanced',
     },
     {
+      id: 'presets',
+      title: 'Presets',
+      description: 'Pre-configured SignalTree setups for common use cases',
+      route: '/presets',
+      category: 'basic',
+    },
+    {
       id: 'extreme-depth',
       title: '🔥 Extreme Depth',
       description: 'Push recursive typing to 15+ levels',
