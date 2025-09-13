@@ -1,14 +1,7 @@
 import { computed, Injectable } from '@angular/core';
-import {
-  withBatching,
-  withHighPerformanceBatching,
-} from '@signaltree/batching';
+import { withBatching, withHighPerformanceBatching } from '@signaltree/batching';
 import { signalTree } from '@signaltree/core';
-import {
-  withLightweightMemoization,
-  withMemoization,
-  withShallowMemoization,
-} from '@signaltree/memoization';
+import { withLightweightMemoization, withMemoization, withShallowMemoization } from '@signaltree/memoization';
 import { withSerialization } from '@signaltree/serialization';
 import { withTimeTravel } from '@signaltree/time-travel';
 
@@ -97,8 +90,11 @@ export class SignalTreeBenchmarkService {
     const updates = Math.min(1000, dataSize);
     for (let i = 0; i < updates; i++) {
       const idx = i % dataSize;
-      // Use direct item update for fairer comparison (instead of mutating within update callback)
-      (tree.state as any)['items'][idx]['value'].set(Math.random() * 1000);
+      // Use update method to properly modify the items array signal
+      tree.state.items.update((items) => {
+        items[idx].value = Math.random() * 1000;
+        return items;
+      });
       if ((i & 255) === 0) await this.yieldToUI();
     }
 
