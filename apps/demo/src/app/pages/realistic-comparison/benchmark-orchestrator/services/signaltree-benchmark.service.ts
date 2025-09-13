@@ -1,14 +1,7 @@
 import { computed, Injectable } from '@angular/core';
-import {
-  withBatching,
-  withHighPerformanceBatching,
-} from '@signaltree/batching';
+import { withBatching, withHighPerformanceBatching } from '@signaltree/batching';
 import { signalTree } from '@signaltree/core';
-import {
-  withLightweightMemoization,
-  withMemoization,
-  withShallowMemoization,
-} from '@signaltree/memoization';
+import { withLightweightMemoization, withMemoization, withShallowMemoization } from '@signaltree/memoization';
 import { withSerialization } from '@signaltree/serialization';
 import { withTimeTravel } from '@signaltree/time-travel';
 
@@ -210,10 +203,7 @@ export class SignalTreeBenchmarkService {
     return performance.now() - start;
   }
 
-  async runSerializationBenchmark(
-    dataSize: number,
-    enableDetailedLogging = false
-  ): Promise<number> {
+  async runSerializationBenchmark(dataSize: number): Promise<number> {
     // SignalTree trades serialization speed for fine-grained reactivity
     // 3x slower than NgRx due to signal unwrapping overhead
     // This is the architectural cost of direct mutation capability
@@ -262,19 +252,8 @@ export class SignalTreeBenchmarkService {
     // Measure snapshot (unwrap) separately from stringify for fairness
     const t0 = performance.now();
     const snapshot = tree.snapshot();
-    const t1 = performance.now();
     JSON.stringify({ data: snapshot.data });
     const t2 = performance.now();
-
-    // Optional detailed timing logs (disabled by default to avoid impacting benchmark results)
-    if (enableDetailedLogging) {
-      console.debug(
-        '[SignalTree][serialization] snapshot(ms)=',
-        (t1 - t0).toFixed(2),
-        ' stringify(ms)=',
-        (t2 - t1).toFixed(2)
-      );
-    }
 
     return t2 - t0;
   }
