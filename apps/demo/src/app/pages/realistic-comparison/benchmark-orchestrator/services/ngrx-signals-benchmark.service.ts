@@ -1,6 +1,8 @@
 import { computed, Injectable } from '@angular/core';
 import { patchState, signalState } from '@ngrx/signals';
 
+import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 @Injectable({ providedIn: 'root' })
 export class NgRxSignalsBenchmarkService {
@@ -10,10 +12,15 @@ export class NgRxSignalsBenchmarkService {
   };
 
   private yieldToUI() {
-    return new Promise<void>((r) => setTimeout(r, 0));
+    return new Promise<void>((r) =>
+      setTimeout(r, BENCHMARK_CONSTANTS.TIMING.YIELD_DELAY_MS)
+    );
   }
 
-  async runDeepNestedBenchmark(dataSize: number, depth = 15): Promise<number> {
+  async runDeepNestedBenchmark(
+    dataSize: number,
+    depth = BENCHMARK_CONSTANTS.DATA_GENERATION.NESTED_DEPTH
+  ): Promise<number> {
     const createNested = (level: number): any =>
       level === 0
         ? { value: 0, data: 'test' }
@@ -32,7 +39,11 @@ export class NgRxSignalsBenchmarkService {
 
     const start = performance.now();
     // Match NgXs cap of 1000 iterations for fair comparison
-    for (let i = 0; i < Math.min(dataSize, 1000); i++) {
+    for (
+      let i = 0;
+      i < Math.min(dataSize, BENCHMARK_CONSTANTS.ITERATIONS.DEEP_NESTED);
+      i++
+    ) {
       // immutably patch deep path
       patchState(state, (s: any) => {
         const updateDeep = (obj: any, lvl: number): any =>
@@ -41,7 +52,8 @@ export class NgRxSignalsBenchmarkService {
             : { ...obj, level: updateDeep(obj.level ?? {}, lvl - 1) };
         return updateDeep(s, depth - 1);
       });
-      if ((i & 1023) === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DEEP_NESTED) === 0)
+        await this.yieldToUI();
     }
     return performance.now() - start;
   }
