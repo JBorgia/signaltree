@@ -510,57 +510,89 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     }> = [];
 
     // CRUD app detection
-    const crudScenarios = ['selector-memoization', 'computed-chains', 'data-fetching', 'large-array'];
-    const crudMatches = selected.filter(s => crudScenarios.includes(s.id)).length;
+    const crudScenarios = [
+      'selector-memoization',
+      'computed-chains',
+      'data-fetching',
+      'large-array',
+    ];
+    const crudMatches = selected.filter((s) =>
+      crudScenarios.includes(s.id)
+    ).length;
     if (crudMatches >= 2) {
       suggestions.push({
         presetId: 'crud-app',
         presetName: 'CRUD Application',
         confidence: Math.min(95, (crudMatches / crudScenarios.length) * 100),
-        reason: `${crudMatches} scenarios match typical CRUD app patterns`
+        reason: `${crudMatches} scenarios match typical CRUD app patterns`,
       });
     }
 
     // Real-time app detection
-    const realTimeScenarios = ['large-array', 'concurrent-updates', 'real-time-updates', 'batch-updates'];
-    const realTimeMatches = selected.filter(s => realTimeScenarios.includes(s.id)).length;
+    const realTimeScenarios = [
+      'large-array',
+      'concurrent-updates',
+      'real-time-updates',
+      'batch-updates',
+    ];
+    const realTimeMatches = selected.filter((s) =>
+      realTimeScenarios.includes(s.id)
+    ).length;
     if (realTimeMatches >= 2) {
       suggestions.push({
         presetId: 'real-time',
         presetName: 'Real-Time Application',
-        confidence: Math.min(95, (realTimeMatches / realTimeScenarios.length) * 100),
-        reason: `${realTimeMatches} scenarios match real-time app patterns`
+        confidence: Math.min(
+          95,
+          (realTimeMatches / realTimeScenarios.length) * 100
+        ),
+        reason: `${realTimeMatches} scenarios match real-time app patterns`,
       });
     }
 
     // Forms app detection
-    const formsScenarios = ['deep-nested', 'computed-chains', 'selector-memoization', 'serialization'];
-    const formsMatches = selected.filter(s => formsScenarios.includes(s.id)).length;
+    const formsScenarios = [
+      'deep-nested',
+      'computed-chains',
+      'selector-memoization',
+      'serialization',
+    ];
+    const formsMatches = selected.filter((s) =>
+      formsScenarios.includes(s.id)
+    ).length;
     if (formsMatches >= 2) {
       suggestions.push({
         presetId: 'forms',
         presetName: 'Forms-Heavy Application',
         confidence: Math.min(95, (formsMatches / formsScenarios.length) * 100),
-        reason: `${formsMatches} scenarios match forms-heavy patterns`
+        reason: `${formsMatches} scenarios match forms-heavy patterns`,
       });
     }
 
     // Enterprise app detection
-    const enterpriseScenarios = ['serialization', 'undo-redo', 'computed-chains', 'selector-memoization'];
-    const enterpriseMatches = selected.filter(s => enterpriseScenarios.includes(s.id)).length;
+    const enterpriseScenarios = [
+      'serialization',
+      'undo-redo',
+      'computed-chains',
+      'selector-memoization',
+    ];
+    const enterpriseMatches = selected.filter((s) =>
+      enterpriseScenarios.includes(s.id)
+    ).length;
     if (enterpriseMatches >= 2) {
       suggestions.push({
         presetId: 'enterprise',
         presetName: 'Enterprise Application',
-        confidence: Math.min(95, (enterpriseMatches / enterpriseScenarios.length) * 100),
-        reason: `${enterpriseMatches} scenarios match enterprise patterns`
+        confidence: Math.min(
+          95,
+          (enterpriseMatches / enterpriseScenarios.length) * 100
+        ),
+        reason: `${enterpriseMatches} scenarios match enterprise patterns`,
       });
     }
 
     // Sort by confidence and return top suggestions
-    return suggestions
-      .sort((a, b) => b.confidence - a.confidence)
-      .slice(0, 2); // Show max 2 suggestions
+    return suggestions.sort((a, b) => b.confidence - a.confidence).slice(0, 2); // Show max 2 suggestions
   });
 
   // Libraries that actually have results (ensures table shows all measured libs)
@@ -1176,42 +1208,50 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   weightedResultsAnalysis = computed(() => {
     const results = this.results();
     const libraries = this.selectedLibraries();
-    
+
     if (results.length === 0 || libraries.length === 0) return null;
 
     // Calculate both raw and weighted scores for comparison
-    const libraryAnalysis = libraries.map(lib => {
-      const libResults = results.filter(r => r.libraryId === lib.id);
-      
+    const libraryAnalysis = libraries.map((lib) => {
+      const libResults = results.filter((r) => r.libraryId === lib.id);
+
       let rawTotalScore = 0;
       let weightedTotalScore = 0;
       let totalWeight = 0;
-      
-      const scenarioBreakdown = libResults.map(result => {
-        const testCase = this.testCases.find(tc => tc.id === result.scenarioId);
+
+      const scenarioBreakdown = libResults.map((result) => {
+        const testCase = this.testCases.find(
+          (tc) => tc.id === result.scenarioId
+        );
         const weight = testCase?.frequencyWeight || 1.0;
         const rawScore = result.opsPerSecond > 0 ? result.opsPerSecond : 0;
         const weightedScore = rawScore * weight;
-        
+
         rawTotalScore += rawScore;
         weightedTotalScore += weightedScore;
         totalWeight += weight;
-        
+
         return {
           scenarioId: result.scenarioId,
           scenarioName: testCase?.name || result.scenarioId,
           weight: weight,
           rawScore: rawScore,
           weightedScore: weightedScore,
-          impactOnTotal: totalWeight > 0 ? (weightedScore / totalWeight) * 100 : 0,
+          impactOnTotal:
+            totalWeight > 0 ? (weightedScore / totalWeight) * 100 : 0,
           realWorldFrequency: testCase?.realWorldFrequency || 'Unknown',
         };
       });
-      
-      const rawAverage = libResults.length > 0 ? rawTotalScore / libResults.length : 0;
-      const weightedAverage = totalWeight > 0 ? weightedTotalScore / totalWeight : 0;
-      const weightingImpact = rawAverage > 0 ? ((weightedAverage - rawAverage) / rawAverage) * 100 : 0;
-      
+
+      const rawAverage =
+        libResults.length > 0 ? rawTotalScore / libResults.length : 0;
+      const weightedAverage =
+        totalWeight > 0 ? weightedTotalScore / totalWeight : 0;
+      const weightingImpact =
+        rawAverage > 0
+          ? ((weightedAverage - rawAverage) / rawAverage) * 100
+          : 0;
+
       return {
         libraryId: lib.id,
         libraryName: lib.name,
@@ -1223,17 +1263,21 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         rank: 0, // Will be set after sorting
       };
     });
-    
+
     // Sort by weighted average and assign ranks
     libraryAnalysis.sort((a, b) => b.weightedAverage - a.weightedAverage);
     libraryAnalysis.forEach((analysis, index) => {
       analysis.rank = index + 1;
     });
-    
+
     // Calculate how much rankings changed due to weighting
-    const rawRanking = [...libraryAnalysis].sort((a, b) => b.rawAverage - a.rawAverage);
-    const rankingChanges = libraryAnalysis.map(lib => {
-      const rawRank = rawRanking.findIndex(rawLib => rawLib.libraryId === lib.libraryId) + 1;
+    const rawRanking = [...libraryAnalysis].sort(
+      (a, b) => b.rawAverage - a.rawAverage
+    );
+    const rankingChanges = libraryAnalysis.map((lib) => {
+      const rawRank =
+        rawRanking.findIndex((rawLib) => rawLib.libraryId === lib.libraryId) +
+        1;
       const weightedRank = lib.rank;
       return {
         libraryName: lib.libraryName,
@@ -1242,18 +1286,24 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         rankChange: rawRank - weightedRank, // Positive means moved up due to weighting
       };
     });
-    
+
     return {
       libraryAnalysis,
       rankingChanges,
-      totalScenariosAnalyzed: results.length > 0 ? new Set(results.map(r => r.scenarioId)).size : 0,
-      weightingSignificance: this.calculateWeightingSignificance(libraryAnalysis),
+      totalScenariosAnalyzed:
+        results.length > 0 ? new Set(results.map((r) => r.scenarioId)).size : 0,
+      weightingSignificance:
+        this.calculateWeightingSignificance(libraryAnalysis),
     };
   });
-  
+
   // Calculate how significant the weighting impact is
-  private calculateWeightingSignificance(analysis: Array<{weightingImpact: number}>): 'low' | 'medium' | 'high' {
-    const avgImpact = analysis.reduce((sum, lib) => sum + Math.abs(lib.weightingImpact), 0) / analysis.length;
+  private calculateWeightingSignificance(
+    analysis: Array<{ weightingImpact: number }>
+  ): 'low' | 'medium' | 'high' {
+    const avgImpact =
+      analysis.reduce((sum, lib) => sum + Math.abs(lib.weightingImpact), 0) /
+      analysis.length;
     if (avgImpact < 5) return 'low'; // Less than 5% change
     if (avgImpact < 15) return 'medium'; // 5-15% change
     return 'high'; // More than 15% change
@@ -2504,21 +2554,21 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       'batch-updates': 2.0, // 65% of apps batch updates (form submissions, bulk operations)
       'async-workflow': 2.3, // 74% of apps heavily use async operations (APIs, loading states)
       'memory-efficiency': 1.8, // 58% of apps run on mobile/resource-constrained devices
-      
+
       // Less common but important operations
       'concurrent-updates': 0.6, // 18% of apps need high-frequency updates (real-time, gaming)
-      'serialization': 0.9, // 28% of apps need state persistence/SSR
-      
+      serialization: 0.9, // 28% of apps need state persistence/SSR
+
       // Advanced features - usage based on library adoption patterns
       'single-middleware': 1.3, // 42% of apps use logging/analytics middleware
       'multiple-middleware': 0.7, // 22% of apps have complex middleware stacks
       'conditional-middleware': 0.4, // 12% of apps use advanced middleware patterns
-      
+
       // Time-travel features - based on development tool usage
       'undo-redo': 0.8, // 25% of apps need undo/redo (editors, design tools)
       'history-size': 0.3, // 9% of apps need large history buffers
       'jump-to-state': 0.2, // 6% of apps use advanced debugging features
-      
+
       // Production configurations
       'production-setup': 3.0, // 100% of apps eventually go to production
       'all-features-enabled': 0.3, // 9% of apps use comprehensive feature sets
@@ -2527,22 +2577,29 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     // Apply research-based weights with smart category adjustments
     this.testCases = this.testCases.map((testCase) => {
       let baseWeight = researchBasedWeights[testCase.id] || 1.0;
-      
+
       // Apply category-based adjustments based on application type detection
       const selectedScenarios = this.selectedScenarios();
-      const categoryDistribution = this.analyzeCategoryDistribution(selectedScenarios);
-      
+      const categoryDistribution =
+        this.analyzeCategoryDistribution(selectedScenarios);
+
       // Boost weights for categories that are heavily represented in selection
       if (categoryDistribution['core'] > 0.5 && testCase.category === 'core') {
         baseWeight *= 1.1; // 10% boost for core operations in core-heavy workloads
       }
-      if (categoryDistribution['async'] > 0.3 && testCase.category === 'async') {
+      if (
+        categoryDistribution['async'] > 0.3 &&
+        testCase.category === 'async'
+      ) {
         baseWeight *= 1.2; // 20% boost for async operations in async-heavy workloads
       }
-      if (categoryDistribution['time-travel'] > 0.2 && testCase.category === 'time-travel') {
+      if (
+        categoryDistribution['time-travel'] > 0.2 &&
+        testCase.category === 'time-travel'
+      ) {
         baseWeight *= 1.3; // 30% boost for time-travel in debugging-focused workloads
       }
-      
+
       return {
         ...testCase,
         frequencyWeight: Math.round(baseWeight * 10) / 10, // Round to 1 decimal place
@@ -2551,19 +2608,22 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   }
 
   // Analyze the distribution of selected scenario categories
-  private analyzeCategoryDistribution(scenarios: BenchmarkTestCase[]): Record<string, number> {
+  private analyzeCategoryDistribution(
+    scenarios: BenchmarkTestCase[]
+  ): Record<string, number> {
     if (scenarios.length === 0) return {};
-    
+
     const categoryCount: Record<string, number> = {};
-    scenarios.forEach(scenario => {
-      categoryCount[scenario.category] = (categoryCount[scenario.category] || 0) + 1;
+    scenarios.forEach((scenario) => {
+      categoryCount[scenario.category] =
+        (categoryCount[scenario.category] || 0) + 1;
     });
-    
+
     const distribution: Record<string, number> = {};
-    Object.keys(categoryCount).forEach(category => {
+    Object.keys(categoryCount).forEach((category) => {
       distribution[category] = categoryCount[category] / scenarios.length;
     });
-    
+
     return distribution;
   }
 
@@ -2583,9 +2643,12 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
   // Track scenario selection changes to show preset suggestions
   private lastScenarioSelectionHash = '';
-  
+
   checkForScenarioChanges() {
-    const selectedIds = this.selectedScenarios().map(s => s.id).sort().join(',');
+    const selectedIds = this.selectedScenarios()
+      .map((s) => s.id)
+      .sort()
+      .join(',');
     const hasChanged = selectedIds !== this.lastScenarioSelectionHash;
     this.lastScenarioSelectionHash = selectedIds;
     return hasChanged;
@@ -2597,7 +2660,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     if (suggestions.length === 0) return false;
 
     // Check if current weights differ significantly from any suggested preset
-    return suggestions.some(suggestion => {
+    return suggestions.some((suggestion) => {
       const preset = this.getPresetWeights(suggestion.presetId);
       if (!preset) return false;
 
@@ -2606,7 +2669,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       let totalDiff = 0;
       let count = 0;
 
-      selectedScenarios.forEach(scenario => {
+      selectedScenarios.forEach((scenario) => {
         const currentWeight = scenario.frequencyWeight || 1.0;
         const presetWeight = preset[scenario.id] || 1.0;
         totalDiff += Math.abs(currentWeight - presetWeight);
