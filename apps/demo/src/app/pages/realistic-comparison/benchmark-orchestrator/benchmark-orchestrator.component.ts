@@ -1,18 +1,10 @@
 import { CommonModule, NgFor, NgIf } from '@angular/common';
-import {
-  Component,
-  computed,
-  effect,
-  ElementRef,
-  inject,
-  OnDestroy,
-  signal,
-  ViewChild,
-} from '@angular/core';
+import { Component, computed, effect, ElementRef, inject, OnDestroy, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { Subject } from 'rxjs';
 
+import { ENHANCED_SCENARIOS, Scenario } from './scenario-definitions';
 import { AkitaBenchmarkService } from './services/akita-benchmark.service';
 import { ElfBenchmarkService } from './services/elf-benchmark.service';
 import { NgRxBenchmarkService } from './services/ngrx-benchmark.service';
@@ -34,16 +26,6 @@ interface Library {
     bundleSize: string;
     githubStars: number;
   };
-}
-
-interface Scenario {
-  id: string;
-  name: string;
-  description: string;
-  operations: string;
-  complexity: string;
-  selected: boolean;
-  category: 'core' | 'async' | 'time-travel' | 'middleware' | 'full-stack';
 }
 
 interface BenchmarkCategory {
@@ -344,215 +326,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   ];
 
   // Test scenarios organized by category
-  scenarios: Scenario[] = [
-    // Core Performance
-    {
-      id: 'deep-nested',
-      name: 'Deep Nested Updates',
-      description: 'Updates to deeply nested state (15 levels)',
-      operations: '1000 updates',
-      complexity: 'High',
-      selected: true, // Keep basic test selected
-      category: 'core',
-    },
-    {
-      id: 'large-array',
-      name: 'Large Array Mutations',
-      description: 'Array operations on large datasets',
-      operations: 'Size × 10',
-      complexity: 'Medium',
-      selected: false, // Changed to false
-      category: 'core',
-    },
-    {
-      id: 'computed-chains',
-      name: 'Complex Computed Chains',
-      description: 'Cascading computed values with dependencies',
-      operations: '500 computations',
-      complexity: 'High',
-      selected: false, // Changed to false
-      category: 'core',
-    },
-    {
-      id: 'batch-updates',
-      name: 'Batched Operations',
-      description: 'Multiple simultaneous state updates',
-      operations: '100 batches',
-      complexity: 'Medium',
-      selected: false, // Changed to false
-      category: 'core',
-    },
-    {
-      id: 'selector-memoization',
-      name: 'Selector/Memoization',
-      description: 'Memoized selector performance',
-      operations: '1000 selections',
-      complexity: 'Low',
-      selected: false, // Changed to false
-      category: 'core',
-    },
-    {
-      id: 'serialization',
-      name: 'Serialization (Snapshot + JSON)',
-      description: 'Convert state to plain JSON (unwrap + stringify)',
-      operations: 'Per iteration',
-      complexity: 'Medium',
-      selected: false, // Changed to false
-      category: 'core',
-    },
-    {
-      id: 'concurrent-updates',
-      name: 'Rapid Sequential Updates',
-      description: 'High-frequency sequential modifications',
-      operations: '50 concurrent',
-      complexity: 'Extreme',
-      selected: false, // Changed to false
-      category: 'core',
-    },
-    {
-      id: 'memory-efficiency',
-      name: 'Memory Usage',
-      description: 'Memory consumption patterns',
-      operations: 'Continuous',
-      complexity: 'Variable',
-      selected: false, // Changed to false
-      category: 'core',
-    },
-    {
-      id: 'data-fetching',
-      name: 'Data Fetching & Hydration',
-      description: 'API response parsing and state initialization',
-      operations: 'Data size × filters',
-      complexity: 'High',
-      selected: false, // Changed to false
-      category: 'core',
-    },
-    {
-      id: 'real-time-updates',
-      name: 'Real-time Updates',
-      description: 'Live data streaming (like WebSocket updates)',
-      operations: '500 live updates',
-      complexity: 'Extreme',
-      selected: false, // Changed to false
-      category: 'core',
-    },
-    {
-      id: 'state-size-scaling',
-      name: 'Large State Scaling',
-      description: 'Performance with large datasets',
-      operations: 'Size × 10 entities',
-      complexity: 'Extreme',
-      selected: false, // Changed to false
-      category: 'core',
-    },
-
-    // Async Operations
-    {
-      id: 'async-workflow',
-      name: 'Async Workflow',
-      description: 'Multiple async operations with loading states',
-      operations: '100 async calls',
-      complexity: 'High',
-      selected: false,
-      category: 'async',
-    },
-    {
-      id: 'concurrent-async',
-      name: 'Concurrent Async',
-      description: 'Multiple simultaneous async operations',
-      operations: '10 concurrent',
-      complexity: 'High',
-      selected: false,
-      category: 'async',
-    },
-    {
-      id: 'async-cancellation',
-      name: 'Async Cancellation',
-      description: 'Cancelling and restarting async operations',
-      operations: '50 cancel/restart',
-      complexity: 'Medium',
-      selected: false,
-      category: 'async',
-    },
-
-    // Time Travel
-    {
-      id: 'undo-redo',
-      name: 'Undo/Redo Operations',
-      description: 'Time-travel through state history',
-      operations: '100 undo/redo',
-      complexity: 'Medium',
-      selected: false,
-      category: 'time-travel',
-    },
-    {
-      id: 'history-size',
-      name: 'Large History Size',
-      description: 'Performance with large history buffers',
-      operations: '1000 history entries',
-      complexity: 'High',
-      selected: false,
-      category: 'time-travel',
-    },
-    {
-      id: 'jump-to-state',
-      name: 'Jump to State',
-      description: 'Jumping to arbitrary points in history',
-      operations: '50 jumps',
-      complexity: 'Medium',
-      selected: false,
-      category: 'time-travel',
-    },
-
-    // Middleware
-    {
-      id: 'single-middleware',
-      name: 'Single Middleware',
-      description: 'Performance impact of one middleware',
-      operations: '1000 operations',
-      complexity: 'Low',
-      selected: false,
-      category: 'middleware',
-    },
-    {
-      id: 'multiple-middleware',
-      name: 'Multiple Middleware',
-      description: 'Stack of multiple middleware layers',
-      operations: '1000 operations',
-      complexity: 'Medium',
-      selected: false,
-      category: 'middleware',
-    },
-    {
-      id: 'conditional-middleware',
-      name: 'Conditional Middleware',
-      description: 'Middleware with conditional logic',
-      operations: '1000 operations',
-      complexity: 'Medium',
-      selected: false,
-      category: 'middleware',
-    },
-
-    // Full Stack
-    {
-      id: 'all-features-enabled',
-      name: 'All Features Enabled',
-      description: 'All features: async, time-travel, middleware, memoization',
-      operations: 'Mixed workload',
-      complexity: 'Extreme',
-      selected: false,
-      category: 'full-stack',
-    },
-    {
-      id: 'production-setup',
-      name: 'Production Configuration',
-      description: 'Realistic production-ready configuration',
-      operations: 'Real-world workload',
-      complexity: 'High',
-      selected: false,
-      category: 'full-stack',
-    },
-  ];
+  scenarios: Scenario[] = ENHANCED_SCENARIOS;
 
   // Benchmark categories
   categories: BenchmarkCategory[] = [
@@ -659,28 +433,58 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   };
 
   activeEnhancers = computed(() => {
-    const selected = this.selectedScenarios();
-    const scenarioIds = selected.map((s) => s.id);
+    const selectedScenarios = this.selectedScenarios();
+    const enhancerMap = new Map<
+      string,
+      {
+        count: number;
+        required: number;
+        optional: number;
+        scenarios: string[];
+        rationales: string[];
+      }
+    >();
 
-    console.log('🔧 Computing enhancers for scenarios:', scenarioIds);
+    selectedScenarios.forEach((scenario) => {
+      // Process required enhancers
+      scenario.enhancers.required.forEach((enhancer) => {
+        const current = enhancerMap.get(enhancer) || {
+          count: 0,
+          required: 0,
+          optional: 0,
+          scenarios: [],
+          rationales: [],
+        };
+        current.count++;
+        current.required++;
+        current.scenarios.push(scenario.name);
+        if (!current.rationales.includes(scenario.enhancers.rationale)) {
+          current.rationales.push(scenario.enhancers.rationale);
+        }
+        enhancerMap.set(enhancer, current);
+      });
 
-    if (scenarioIds.length === 0) {
-      console.log('🔧 No scenarios selected');
-      return [];
-    }
-
-    // Collect all unique enhancers used across selected scenarios
-    const allEnhancers = new Set<string>();
-
-    scenarioIds.forEach((scenarioId) => {
-      const enhancers = this.scenarioEnhancerMap[scenarioId] || [];
-      enhancers.forEach((enhancer) => allEnhancers.add(enhancer));
+      // Process optional enhancers
+      scenario.enhancers.optional.forEach((enhancer) => {
+        const current = enhancerMap.get(enhancer) || {
+          count: 0,
+          required: 0,
+          optional: 0,
+          scenarios: [],
+          rationales: [],
+        };
+        current.count++;
+        current.optional++;
+        current.scenarios.push(scenario.name);
+        enhancerMap.set(enhancer, current);
+      });
     });
 
-    const finalEnhancers = Array.from(allEnhancers);
-    console.log('🔧 Enhancers used in selected tests:', finalEnhancers);
-
-    return finalEnhancers;
+    return Array.from(enhancerMap.entries()).map(([name, data]) => ({
+      name,
+      ...data,
+      priority: data.required > 0 ? 'required' : 'optional',
+    }));
   });
 
   // Get explanation for the current enhancer combination
@@ -705,12 +509,20 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       withLightweightMemoization:
         'minimal caching overhead for intensive workloads',
       withSerialization: 'state persistence and snapshot capabilities',
+      withTimeTravel: 'undo/redo functionality with history management',
+      withAsync: 'async operation management and loading states',
     };
 
-    const descriptions = enhancers
-      .map((e) => enhancerDescriptions[e] || e)
+    const enhancerSummary = enhancers
+      .map(
+        (e) =>
+          `${e.name} (${e.priority === 'required' ? 'required' : 'optional'})`
+      )
       .join(', ');
-    return `Active enhancers: ${descriptions}.`;
+
+    return `Active enhancers: ${enhancerSummary}. These enhance SignalTree with ${enhancers
+      .map((e) => enhancerDescriptions[e.name] || e.name)
+      .join(', ')}.`;
   });
 
   // Method to apply scenario preset
