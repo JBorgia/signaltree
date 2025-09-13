@@ -1496,7 +1496,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
     try {
       switch (scenarioId) {
-        case 'deep-nested':
+        case 'deep-nested': {
           if (!svc.runDeepNestedBenchmark) {
             console.warn(
               `${libraryId} does not support deep-nested benchmarks`
@@ -1504,7 +1504,8 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             return -1;
           }
           return await svc.runDeepNestedBenchmark(config.dataSize);
-        case 'large-array':
+        }
+        case 'large-array': {
           if (!svc.runArrayBenchmark) {
             console.warn(
               `${libraryId} does not support large-array benchmarks`
@@ -1512,6 +1513,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             return -1;
           }
           return await svc.runArrayBenchmark(config.dataSize);
+        }
         case 'computed-chains':
           if (!svc.runComputedBenchmark) {
             console.warn(
@@ -1839,6 +1841,11 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     const scenarios = this.selectedScenarios();
     const config = this.config();
 
+    console.log('Starting benchmarks with:', {
+      libraries: libraries.map((l) => l.name),
+      scenarios: scenarios.map((s) => s.name),
+    });
+
     try {
       for (const scenario of scenarios) {
         if (!this.isRunning()) break;
@@ -1857,9 +1864,12 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
           this.completedTests.update((c) => c + 1);
         }
       }
+    } catch (error) {
+      console.error('Benchmark execution failed:', error);
     } finally {
       this.isRunning.set(false);
       this.stopElapsedTimer(); // Stop timer when benchmarks finish
+      console.log('Benchmarks completed');
     }
   }
 
@@ -1868,6 +1878,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     scenario: BenchmarkTestCase,
     config: BenchmarkConfig
   ): Promise<BenchmarkResult> {
+    console.log(
+      `Starting single benchmark: ${library.name} - ${scenario.name}`
+    );
     const samples: number[] = [];
     // Capture heap usage before measurement runs for memory-efficiency scenario
     const perfWithMem = performance as Performance & {
@@ -1880,6 +1893,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         ? perfWithMem.memory.usedJSHeapSize
         : undefined;
 
+    console.log(`Starting warmup runs: ${config.warmupRuns}`);
     // Warmup runs
     for (let i = 0; i < config.warmupRuns; i++) {
       if (!this.isRunning()) break;
@@ -1887,6 +1901,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       this.currentIteration.set(i + 1);
     }
 
+    console.log(`Starting measurement runs: ${config.iterations}`);
     // Measurement runs
     for (let i = 0; i < config.iterations; i++) {
       if (!this.isRunning()) break;
@@ -1898,8 +1913,13 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         config
       );
 
+      console.log(`Iteration ${i + 1} duration: ${duration}ms`);
+
       // Check if the benchmark returned -1 (unsupported)
       if (duration === -1) {
+        console.log(
+          `Benchmark unsupported for ${library.name} - ${scenario.name}`
+        );
         // Return special result indicating unsupported scenario
         return {
           libraryId: library.id,

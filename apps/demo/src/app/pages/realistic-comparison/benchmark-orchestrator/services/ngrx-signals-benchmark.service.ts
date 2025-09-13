@@ -10,7 +10,7 @@ export class NgRxSignalsBenchmarkService {
   };
 
   private yieldToUI() {
-    return new Promise<void>((r) => setTimeout(r));
+    return new Promise<void>((r) => setTimeout(r, 0));
   }
 
   async runDeepNestedBenchmark(dataSize: number, depth = 15): Promise<number> {

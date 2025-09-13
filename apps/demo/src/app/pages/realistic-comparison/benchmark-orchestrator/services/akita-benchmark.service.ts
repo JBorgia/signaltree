@@ -6,7 +6,7 @@ import { EntityState, EntityStore, ID, StoreConfig } from '@datorama/akita';
 export class AkitaBenchmarkService {
   // Akita is entity-centric; we will use plain objects for nested/other cases
   private yieldToUI() {
-    return new Promise<void>((r) => setTimeout(r));
+    return new Promise<void>((r) => setTimeout(r, 0));
   }
 
   async runDeepNestedBenchmark(dataSize: number, depth = 15): Promise<number> {

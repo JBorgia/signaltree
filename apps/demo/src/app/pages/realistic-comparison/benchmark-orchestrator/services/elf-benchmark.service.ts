@@ -1,18 +1,12 @@
 import { Injectable } from '@angular/core';
 import { createStore } from '@ngneat/elf';
-import {
-  getAllEntities,
-  setEntities,
-  updateAllEntities,
-  updateEntities,
-  withEntities,
-} from '@ngneat/elf-entities';
+import { getAllEntities, setEntities, updateAllEntities, updateEntities, withEntities } from '@ngneat/elf-entities';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 @Injectable({ providedIn: 'root' })
 export class ElfBenchmarkService {
   private yieldToUI() {
-    return new Promise<void>((r) => setTimeout(r));
+    return new Promise<void>((r) => setTimeout(r, 0));
   }
 
   async runDeepNestedBenchmark(dataSize: number, depth = 15): Promise<number> {

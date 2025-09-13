@@ -1,11 +1,7 @@
 import { Injectable } from '@angular/core';
-import {
-  createAction,
-  createReducer,
-  createSelector,
-  on,
-  props,
-} from '@ngrx/store';
+import { createAction, createReducer, createSelector, on, props } from '@ngrx/store';
+
+import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
 
 // State interface for complex benchmarks
 interface User {
@@ -142,41 +138,83 @@ export class NgRxBenchmarkService {
   private static PerfWithMemory = {} as Performance & {
     memory?: { jsHeapSizeLimit: number; usedJSHeapSize: number };
   };
+
   private yieldToUI() {
-    return new Promise<void>((r) => setTimeout(r));
+    return new Promise<void>((r) =>
+      setTimeout(r, BENCHMARK_CONSTANTS.TIMING.YIELD_DELAY_MS)
+    );
   }
 
-  async runDeepNestedBenchmark(dataSize: number, depth = 15): Promise<number> {
+  async runDeepNestedBenchmark(
+    dataSize: number,
+    depth = BENCHMARK_CONSTANTS.DATA_GENERATION.NESTED_DEPTH
+  ): Promise<number> {
+    console.log(
+      `NgRx Deep Nested: Starting with dataSize=${dataSize}, depth=${depth}`
+    );
+
     const start = performance.now();
 
-    const updateValue = createAction(
-      '[Test] Update',
-      props<{ value: number }>()
-    );
+    try {
+      const updateValue = createAction(
+        '[Test] Update',
+        props<{ value: number }>()
+      );
 
-    type Nested = { value?: number; data?: string; level?: Nested };
-    const createNested = (level: number): Nested =>
-      level === 0
-        ? { value: 0, data: 'test' }
-        : { level: createNested(level - 1) };
+      type Nested = { value?: number; data?: string; level?: Nested };
+      const createNested = (level: number): Nested =>
+        level === 0
+          ? { value: 0, data: 'test' }
+          : { level: createNested(level - 1) };
 
-    const initialState: Nested = createNested(depth);
+      console.log(
+        `NgRx Deep Nested: Creating initial state with depth ${depth}`
+      );
+      const initialState: Nested = createNested(depth);
 
-    const updateDeep = (obj: Nested, level: number, value: number): Nested => {
-      if (level === 0) return { ...obj, value };
-      return { ...obj, level: updateDeep(obj.level ?? {}, level - 1, value) };
-    };
+      const updateDeep = (
+        obj: Nested,
+        level: number,
+        value: number
+      ): Nested => {
+        if (level === 0) return { ...obj, value };
+        return { ...obj, level: updateDeep(obj.level ?? {}, level - 1, value) };
+      };
 
-    const reducer = createReducer(
-      initialState,
-      on(updateValue, (state, { value }) => updateDeep(state, depth - 1, value))
-    );
+      const reducer = createReducer(
+        initialState,
+        on(updateValue, (state, { value }) =>
+          updateDeep(state, depth - 1, value)
+        )
+      );
 
-    let state = initialState;
-    // Match NgXs cap of 1000 iterations for fair comparison
-    for (let i = 0; i < Math.min(dataSize, 1000); i++) {
-      state = reducer(state, updateValue({ value: i }));
-      if ((i & 1023) === 0) await this.yieldToUI();
+      let state = initialState;
+      const iterations = Math.min(
+        dataSize,
+        BENCHMARK_CONSTANTS.ITERATIONS.DEEP_NESTED
+      );
+      console.log(`NgRx Deep Nested: Starting ${iterations} iterations`);
+
+      // Use same iteration count and yielding pattern as SignalTree for fair comparison
+      for (let i = 0; i < iterations; i++) {
+        if (i % 100 === 0) {
+          console.log(`NgRx Deep Nested: Iteration ${i}/${iterations}`);
+        }
+        state = reducer(state, updateValue({ value: i }));
+        // Match SignalTree's yielding pattern exactly: every 1024 iterations
+        if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DEEP_NESTED) === 0) {
+          await this.yieldToUI();
+        }
+      }
+
+      const duration = performance.now() - start;
+      console.log(`NgRx Deep Nested: Completed in ${duration}ms`);
+      return duration;
+    } catch (error) {
+      console.error('NgRx Deep Nested: Error occurred:', error);
+      const duration = performance.now() - start;
+      console.log(`NgRx Deep Nested: Failed after ${duration}ms`);
+      throw error;
     }
 
     return performance.now() - start;
@@ -211,13 +249,17 @@ export class NgRxBenchmarkService {
     );
 
     let state = initialState;
-    const updates = Math.min(1000, dataSize);
+    const updates = Math.min(
+      BENCHMARK_CONSTANTS.ITERATIONS.ARRAY_UPDATES,
+      dataSize
+    );
     for (let i = 0; i < updates; i++) {
       state = reducer(
         state,
         updateItem({ index: i % dataSize, value: Math.random() * 1000 })
       );
-      if ((i & 255) === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.ARRAY_UPDATES) === 0)
+        await this.yieldToUI();
     }
 
     return performance.now() - start;
@@ -234,7 +276,10 @@ export class NgRxBenchmarkService {
     type State = { value: number; factors: number[] };
     const initialState: State = {
       value: 0,
-      factors: Array.from({ length: 50 }, (_, i) => i + 1),
+      factors: Array.from(
+        { length: BENCHMARK_CONSTANTS.DATA_GENERATION.FACTOR_COUNT },
+        (_, i) => i + 1
+      ),
     };
 
     const reducer = createReducer(
@@ -251,10 +296,15 @@ export class NgRxBenchmarkService {
     };
 
     // Match NgXs cap of 500 iterations for fair comparison
-    for (let i = 0; i < Math.min(dataSize, 500); i++) {
+    for (
+      let i = 0;
+      i < Math.min(dataSize, BENCHMARK_CONSTANTS.ITERATIONS.COMPUTED);
+      i++
+    ) {
       state = reducer(state, updateValue({ value: i }));
       compute(state);
-      if ((i & 1023) === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.COMPUTED) === 0)
+        await this.yieldToUI();
     }
 
     return performance.now() - start;
