@@ -117,16 +117,16 @@ describe('Serialization', () => {
 
       const tree = applySerialization(signalTree(complexState));
       // DEBUG: inspect runtime view before serializing
-      // eslint-disable-next-line no-console
       console.debug(
         '[test-debug] tree.state keys:',
-        Object.keys((tree as any).state)
+        Object.keys(
+          (tree as Record<string, unknown> & { state: unknown })
+            .state as Record<string, unknown>
+        )
       );
-      // eslint-disable-next-line no-console
       console.debug('[test-debug] tree():', tree());
       const serialized = tree.serialize();
       // DEBUG: print serialized payload when running tests to diagnose Map/Set restore
-      // eslint-disable-next-line no-console
       console.debug(
         '[test-debug] serialized payload for special types:',
         serialized
