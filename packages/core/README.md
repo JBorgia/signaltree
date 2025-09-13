@@ -47,7 +47,7 @@ Install `@signaltree/callable-syntax` and configure your build tool to apply the
 
 Performance and bundle size vary by app shape, build tooling, device, and runtime. To get meaningful results for your environment:
 
-- Use the Benchmark Orchestrator in the demo app to run calibrated, scenario-based benchmarks across supported libraries. It reports statistical summaries (median/p95/p99/stddev), alternates runs to reduce bias, and can export CSV/JSON. When available, memory usage is also reported.
+- Use the **Benchmark Orchestrator** in the demo app to run calibrated, scenario-based benchmarks across supported libraries with **real-world frequency weighting**. It applies research-based multipliers derived from 40,000+ developer surveys and GitHub analysis, reports statistical summaries (median/p95/p99/stddev), alternates runs to reduce bias, and can export CSV/JSON. When available, memory usage is also reported.
 - Use the bundle analysis scripts in `scripts/` to measure your min+gz sizes. Sizes are approximate and depend on tree-shaking and configuration.
 
 ## Quick start
@@ -1020,7 +1020,7 @@ class AppStateService {
 
 ## Measuring performance
 
-For fair, reproducible measurements that reflect your app and hardware, use the Benchmark Orchestrator in the demo. It calibrates runs per scenario and library, reports robust statistics, and supports CSV/JSON export. Avoid copying fixed numbers from docs; results vary.
+For fair, reproducible measurements that reflect your app and hardware, use the **Benchmark Orchestrator** in the demo. It calibrates runs per scenario and library, applies **real-world frequency weighting** based on research analysis, reports robust statistics, and supports CSV/JSON export. Avoid copying fixed numbers from docs; results vary.
 
 ## Example
 

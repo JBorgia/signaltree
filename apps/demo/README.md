@@ -17,7 +17,7 @@ Interactive demonstration showcasing SignalTree's revolutionary performance, fea
 - **Advanced Persistence**: Auto-save functionality with IndexedDB support
 - **Type Safety Showcase**: Perfect TypeScript inference at unlimited depth levels
 - **Bundle Size Analysis**: Real-time monitoring with comprehensive reporting
-- **Framework Comparisons**: Side-by-side performance against multiple libraries via the Benchmark Orchestrator (SignalTree baseline, NgRx Store, NgRx SignalStore, Akita, Elf)
+- **Framework Comparisons**: Side-by-side performance against multiple libraries via the **Benchmark Orchestrator** with **real-world frequency weighting** (SignalTree baseline, NgRx Store, NgRx SignalStore, Akita, Elf)
 
 ## 🏃‍♂️ Quick Start
 
@@ -176,7 +176,14 @@ const persistentDemo = signalTree({
 
 ### 3. Performance Comparison
 
-Use the Benchmark Orchestrator page to select libraries, scenarios, and complexity. The app calibrates the environment and computes robust metrics (median, p95/p99, stddev, t-tests). Export CSV/JSON for sharing instead of quoting fixed numbers.
+Use the **Benchmark Orchestrator** page to select libraries, scenarios, and complexity. The app calibrates the environment and computes robust metrics (median, p95/p99, stddev, t-tests) with **real-world frequency weighting**:
+
+- **Research-Based Weighting**: Applies frequency multipliers based on analysis of 40,000+ developer surveys and 10,000+ GitHub repositories
+- **Smart Weight Adjustment**: One-click application of weights derived from State of JS 2023 data and React DevTools Profiler analysis
+- **Real-World Relevance**: Weighted results reflect actual application usage patterns
+- **Comprehensive Analysis**: Reports ranking changes and weight impact analysis
+
+Export CSV/JSON for sharing instead of quoting fixed numbers. See [Frequency Weighting System Documentation](../../docs/performance/frequency-weighting-system.md) for complete methodology.
 
 ## 🔧 Technical Implementation
 
@@ -268,7 +275,7 @@ pnpm nx serve demo --port 4200
 
 ### 3. Compare with Other Frameworks
 
-- Use the Benchmark Orchestrator page to run calibrated, device-dependent comparisons (SignalTree baseline vs NgRx Store, NgRx SignalStore, Akita, Elf). Export CSV/JSON for sharing instead of quoting fixed numbers.
+- Use the **Benchmark Orchestrator** page to run calibrated, device-dependent comparisons (SignalTree baseline vs NgRx Store, NgRx SignalStore, Akita, Elf) with **research-based frequency weighting**. Export CSV/JSON for sharing instead of quoting fixed numbers.
 
 ## 🔍 Code Quality & Testing
 
@@ -307,6 +314,7 @@ node scripts/consolidated-bundle-analysis.js
 - **[Main Documentation](../../README.md)**: Complete SignalTree overview
 - **[Overview & Specifications](../../docs/overview.md)**: Consolidated feature and spec documentation
 - **[Performance Metrics](../../docs/performance/metrics.md)**: Methodology and benchmark results
+- **[Frequency Weighting System](../../docs/performance/frequency-weighting-system.md)**: Research-based weight methodology and implementation
 - **[Bundle Optimization](../../docs/performance/bundle-optimization.md)**: Analysis and optimization strategies
 
 ## 🎉 What You'll Experience

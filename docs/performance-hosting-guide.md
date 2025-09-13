@@ -65,11 +65,12 @@ class ReliableBenchmark {
 
 #### Features
 
-- Live benchmark runner with real-time charts
+- Live benchmark runner with real-time charts and **frequency weighting**
+- **Research-Based Weighting**: Applies multipliers based on real-world usage patterns from 40,000+ developer surveys
 - Environment fingerprinting and warnings
-- Export results as CSV/JSON
+- Export results as CSV/JSON with weighted and unweighted metrics
 - Historical trending (store in Supabase)
-- Comparison charts vs other state libraries
+- Comparison charts vs other state libraries with relevance weighting
 
 ### 3. **Lab Mode for Authoritative Results**
 
