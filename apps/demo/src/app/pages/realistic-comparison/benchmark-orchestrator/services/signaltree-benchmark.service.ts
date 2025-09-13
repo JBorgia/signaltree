@@ -282,9 +282,14 @@ export class SignalTreeBenchmarkService {
     for (let u = 0; u < updatesPerWorker; u++) {
       for (let w = 0; w < concurrency; w++) {
         const target = w;
-        (tree.state as any)['counters'][target]['value'].update(
-          (v: number) => (v + 1) | 0
-        );
+        tree.state.counters.update((counters) => {
+          // Use immutable update to avoid potential issues with object mutation
+          return counters.map((counter, index) =>
+            index === target
+              ? { ...counter, value: (counter.value + 1) | 0 }
+              : counter
+          );
+        });
       }
       if ((u & 31) === 0) await this.yieldToUI();
     }

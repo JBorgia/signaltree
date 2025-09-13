@@ -419,38 +419,31 @@
       </p>
     </div>
 
-    <!-- All Scenarios Grid (organized by category) -->
+    <!-- Test Cases Grid -->
     <div class="all-scenarios">
-      <div class="category-section" *ngFor="let category of categories">
-        <h3 class="category-title">{{ category.name }}</h3>
-        <div class="category-description">
-          <p>{{ category.description }}</p>
-        </div>
-
-        <div class="scenarios-grid">
-          <div
-            class="scenario-card"
-            *ngFor="let scenario of getScenariosForCategory(category.id)"
-            [class.selected]="scenario.selected"
-            (click)="toggleScenario(scenario)"
-            (keydown)="onScenarioCardKeydown($event, scenario)"
-            tabindex="0"
-            role="button"
-            [attr.aria-pressed]="scenario.selected"
-          >
-            <div class="scenario-header">
-              <input
-                type="checkbox"
-                [checked]="scenario.selected"
-                (click)="$event.stopPropagation()"
-              />
-              <h3>{{ scenario.name }}</h3>
-            </div>
-            <p>{{ scenario.description }}</p>
-            <div class="scenario-details">
-              <span class="detail">Operations: {{ scenario.operations }}</span>
-              <span class="detail">Complexity: {{ scenario.complexity }}</span>
-            </div>
+      <div class="scenarios-grid">
+        <div
+          class="scenario-card"
+          *ngFor="let testCase of testCases"
+          [class.selected]="testCase.selected"
+          (click)="toggleScenario(testCase)"
+          (keydown)="onScenarioCardKeydown($event, testCase)"
+          tabindex="0"
+          role="button"
+          [attr.aria-pressed]="testCase.selected"
+        >
+          <div class="scenario-header">
+            <input
+              type="checkbox"
+              [checked]="testCase.selected"
+              (click)="$event.stopPropagation()"
+            />
+            <h3>{{ testCase.name }}</h3>
+          </div>
+          <p>{{ testCase.description }}</p>
+          <div class="scenario-details">
+            <span class="detail">Operations: {{ testCase.operations }}</span>
+            <span class="detail">Complexity: {{ testCase.complexity }}</span>
           </div>
         </div>
       </div>
