@@ -36,8 +36,6 @@ export class AkitaBenchmarkService {
       i++
     ) {
       state = updateDeep(state, depth - 1, i);
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DEEP_NESTED) === 0)
-        await this.yieldToUI();
     }
     // consume
     if (state?.level?.level === null) console.log('noop');
@@ -70,8 +68,6 @@ export class AkitaBenchmarkService {
     for (let i = 0; i < updates; i++) {
       const id = i % dataSize;
       store.update(id, { value: Math.random() * 1000 });
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.ARRAY_UPDATES) === 0)
-        await this.yieldToUI();
     }
     // consume state so it isn't DCE'd
     const v = store.getValue();
@@ -104,8 +100,6 @@ export class AkitaBenchmarkService {
     ) {
       state = { ...state, value: i };
       compute();
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.COMPUTED) === 0)
-        await this.yieldToUI();
     }
     return performance.now() - start;
   }
@@ -134,8 +128,6 @@ export class AkitaBenchmarkService {
         Array.from({ length: batchSize }, (_, i) => i),
         (entity) => ({ value: (entity.value + 1) | 0 })
       );
-      if ((b & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.BATCH_UPDATES) === 0)
-        await this.yieldToUI();
     }
     return performance.now() - start;
   }
@@ -178,8 +170,6 @@ export class AkitaBenchmarkService {
     for (let i = 0; i < BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR; i++) {
       const c = computeCount();
       if (c === -1) console.log('noop');
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0)
-        await this.yieldToUI();
     }
     return performance.now() - start;
   }
@@ -256,8 +246,6 @@ export class AkitaBenchmarkService {
         Array.from({ length: concurrency }, (_, i) => i),
         (entity) => ({ value: (entity.value + 1) | 0 })
       );
-      if ((u & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.ASYNC_WORKFLOW) === 0)
-        await this.yieldToUI();
     }
     // consume
     const v2 = store.getValue();
@@ -306,8 +294,6 @@ export class AkitaBenchmarkService {
               : ['hot']
             : e.tags,
       }));
-      if ((t & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.MEMORY_EFFICIENCY) === 0)
-        await this.yieldToUI();
     }
     return performance.now() - start;
   }
@@ -397,9 +383,6 @@ export class AkitaBenchmarkService {
       if (filteredIds.length > 0) {
         itemsStore.setActive(filteredIds[0]);
       }
-
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DATA_FETCHING) === 0)
-        await this.yieldToUI();
     }
 
     return performance.now() - start;
@@ -534,9 +517,6 @@ export class AkitaBenchmarkService {
           }
         }
       }
-
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.REAL_TIME_UPDATES) === 0)
-        await this.yieldToUI();
     }
 
     return performance.now() - start;
@@ -619,9 +599,6 @@ export class AkitaBenchmarkService {
           }
         }
       }
-
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.STATE_SIZE_SCALING) === 0)
-        await this.yieldToUI();
     }
 
     return performance.now() - start;

@@ -52,8 +52,6 @@ export class NgRxSignalsBenchmarkService {
             : { ...obj, level: updateDeep(obj.level ?? {}, lvl - 1) };
         return updateDeep(s, depth - 1);
       });
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DEEP_NESTED) === 0)
-        await this.yieldToUI();
     }
     return performance.now() - start;
   }
@@ -79,8 +77,6 @@ export class NgRxSignalsBenchmarkService {
           j === idx ? { ...item, value: Math.random() * 1000 } : item
         ),
       }));
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.ARRAY_UPDATES) === 0)
-        await this.yieldToUI();
     }
     return performance.now() - start;
   }
@@ -112,8 +108,6 @@ export class NgRxSignalsBenchmarkService {
     ) {
       patchState(state, (s) => ({ ...s, value: i }));
       compute();
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.COMPUTED) === 0)
-        await this.yieldToUI();
     }
     return performance.now() - start;
   }
@@ -131,8 +125,6 @@ export class NgRxSignalsBenchmarkService {
         ...s,
         items: s.items.map((v) => (v + 1) | 0),
       }));
-      if ((b & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.BATCH_UPDATES) === 0)
-        await this.yieldToUI();
     }
     return performance.now() - start;
   }
@@ -151,8 +143,6 @@ export class NgRxSignalsBenchmarkService {
     const start = performance.now();
     for (let i = 0; i < BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR; i++) {
       selectEven();
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0)
-        await this.yieldToUI();
     }
     return performance.now() - start;
   }
@@ -230,8 +220,6 @@ export class NgRxSignalsBenchmarkService {
           ),
         }));
       }
-      if ((u & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.ASYNC_WORKFLOW) === 0)
-        await this.yieldToUI();
     }
 
     // consume
@@ -296,8 +284,6 @@ export class NgRxSignalsBenchmarkService {
               }
         ),
       }));
-      if ((t & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.MEMORY_EFFICIENCY) === 0)
-        await this.yieldToUI();
     }
 
     const duration = performance.now() - start;
@@ -366,12 +352,10 @@ export class NgRxSignalsBenchmarkService {
 
     // Update state with users
     patchState(state, { users });
-    await this.yieldToUI();
 
     // Simulate filtering active users (realistic business logic)
     const activeUsers = users.filter((user) => user.isActive);
     patchState(state, { filteredUsers: activeUsers });
-    await this.yieldToUI();
 
     // Simulate additional processing - group by department
     const departmentGroups = activeUsers.reduce((acc, user) => {
@@ -448,8 +432,6 @@ export class NgRxSignalsBenchmarkService {
       }
 
       // Yield occasionally to simulate real-time processing
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DATA_FETCHING) === 0)
-        await this.yieldToUI();
     }
 
     const duration = performance.now() - start;
@@ -540,20 +522,17 @@ export class NgRxSignalsBenchmarkService {
 
     // Hydrate the large dataset
     patchState(state, { largeDataset });
-    await this.yieldToUI();
 
     // Perform operations that would be common with large datasets
     // 1. Filter by status
     const activeItems = largeDataset.filter((item) => item.status === 'active');
     patchState(state, { activeItems });
-    await this.yieldToUI();
 
     // 2. Sort by score (expensive operation)
     const sortedItems = [...activeItems].sort(
       (a, b) => b.metadata.score - a.metadata.score
     );
     patchState(state, { sortedItems });
-    await this.yieldToUI();
 
     // 3. Update multiple items (batch update simulation)
     for (
@@ -577,8 +556,6 @@ export class NgRxSignalsBenchmarkService {
         ),
       }));
 
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.STATE_SIZE_SCALING) === 0)
-        await this.yieldToUI();
     }
 
     const duration = performance.now() - start;

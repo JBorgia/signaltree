@@ -197,14 +197,15 @@ export class NgRxBenchmarkService {
 
       // Use same iteration count and yielding pattern as SignalTree for fair comparison
       for (let i = 0; i < iterations; i++) {
-        if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0) {
-          console.log(`NgRx Deep Nested: Iteration ${i}/${iterations}`);
-        }
+        // REMOVED: Console logging during measurement for accuracy
+        // if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0) {
+        //   console.log(`NgRx Deep Nested: Iteration ${i}/${iterations}`);
+        // }
         state = reducer(state, updateValue({ value: i }));
-        // Match SignalTree's yielding pattern exactly: every 1024 iterations
-        if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DEEP_NESTED) === 0) {
-          await this.yieldToUI();
-        }
+        // REMOVED: Yielding during measurement for accuracy
+        // if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DEEP_NESTED) === 0) {
+        //   // REMOVED: Yielding during measurement for accuracy
+        // }
       }
 
       const duration = performance.now() - start;
@@ -258,8 +259,9 @@ export class NgRxBenchmarkService {
         state,
         updateItem({ index: i % dataSize, value: Math.random() * 1000 })
       );
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.ARRAY_UPDATES) === 0)
-        await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.ARRAY_UPDATES) === 0) {
+        // REMOVED: Yielding during measurement for accuracy
+      }
     }
 
     return performance.now() - start;
@@ -303,8 +305,9 @@ export class NgRxBenchmarkService {
     ) {
       state = reducer(state, updateValue({ value: i }));
       compute(state);
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.COMPUTED) === 0)
-        await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.COMPUTED) === 0) {
+        // REMOVED: Yielding during measurement for accuracy
+      }
     }
 
     return performance.now() - start;
@@ -338,7 +341,7 @@ export class NgRxBenchmarkService {
       // prepare next items in one pass
       const next = state.items.map((v) => (v + 1) | 0);
       state = reducer(state, applyBatch({ items: next }));
-      if ((b & 7) === 0) await this.yieldToUI();
+      // REMOVED: Yielding during measurement for accuracy
     }
 
     return performance.now() - start;
@@ -365,10 +368,10 @@ export class NgRxBenchmarkService {
       (items) => items.filter((x) => x.flag).length
     );
 
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 0; i < BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR; i++) {
       // With no state changes, selector should return cached result after first call
       selectEvenCount(state);
-      if ((i & 63) === 0) await this.yieldToUI();
+      // REMOVED: Yielding during measurement for accuracy
     }
 
     return performance.now() - start;
@@ -449,7 +452,9 @@ export class NgRxBenchmarkService {
       for (let w = 0; w < concurrency; w++) {
         state = reducer(state, bump({ index: w }));
       }
-      if ((u & 31) === 0) await this.yieldToUI();
+      if ((u & 31) === 0) {
+        // REMOVED: Yielding during measurement for accuracy
+      }
     }
 
     // consume to avoid DCE
@@ -523,7 +528,9 @@ export class NgRxBenchmarkService {
       const g = t % groups;
       const idx = t % state.groups[g].items.length;
       state = reducer(state, touch({ group: g, index: idx }));
-      if ((t & 63) === 0) await this.yieldToUI();
+      if ((t & 63) === 0) {
+        // REMOVED: Yielding during measurement for accuracy
+      }
     }
 
     const duration = performance.now() - start;
@@ -562,12 +569,12 @@ export class NgRxBenchmarkService {
 
     // Dispatch action to hydrate users
     state = benchmarkReducer(state, setUsers({ payload: users }));
-    await this.yieldToUI();
+    // REMOVED: Yielding during measurement for accuracy
 
     // Simulate filtering active users (realistic business logic)
     const activeUsers = users.filter((user) => user.isActive);
     state = benchmarkReducer(state, setFilteredUsers({ payload: activeUsers }));
-    await this.yieldToUI();
+    // REMOVED: Yielding during measurement for accuracy
 
     // Simulate additional processing - group by department
     const departmentGroups = activeUsers.reduce((acc, user) => {
@@ -616,8 +623,8 @@ export class NgRxBenchmarkService {
         ?.usedJSHeapSize ?? null;
     const start = performance.now();
 
-    // Simulate 500 real-time metric updates
-    for (let i = 0; i < 500; i++) {
+    // Simulate real-time metric updates using consistent iteration count
+    for (let i = 0; i < BENCHMARK_CONSTANTS.ITERATIONS.REAL_TIME_UPDATES; i++) {
       const metrics = {
         activeUsers: Math.floor(Math.random() * 1000) + 100,
         messagesPerSecond: Math.floor(Math.random() * 50) + 10,
@@ -637,9 +644,8 @@ export class NgRxBenchmarkService {
         state = benchmarkReducer(state, addMessage({ payload: newMessage }));
       }
 
-      // Yield occasionally to simulate real-time processing
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.REAL_TIME_UPDATES) === 0)
-        await this.yieldToUI();
+      // REMOVED: Yielding during measurement for accuracy
+      // if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.REAL_TIME_UPDATES) === 0)
     }
 
     const duration = performance.now() - start;
@@ -691,23 +697,23 @@ export class NgRxBenchmarkService {
 
     // Hydrate the large dataset
     state = benchmarkReducer(state, setLargeDataset({ payload: largeDataset }));
-    await this.yieldToUI();
+    // REMOVED: Yielding during measurement for accuracy
 
     // Perform operations that would be common with large datasets
     // 1. Filter by status
     const activeItems = largeDataset.filter((item) => item.status === 'active');
     state = benchmarkReducer(state, setActiveItems({ payload: activeItems }));
-    await this.yieldToUI();
+    // REMOVED: Yielding during measurement for accuracy
 
     // 2. Sort by score (expensive operation)
     const sortedItems = [...activeItems].sort(
       (a, b) => b.metadata.score - a.metadata.score
     );
     state = benchmarkReducer(state, setSortedItems({ payload: sortedItems }));
-    await this.yieldToUI();
+    // REMOVED: Yielding during measurement for accuracy
 
     // 3. Update multiple items (batch update simulation)
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < BENCHMARK_CONSTANTS.ITERATIONS.BATCH_UPDATES; i++) {
       const randomIndex = Math.floor(Math.random() * largeDataset.length);
       const updatedItem: LargeDataItem = {
         ...largeDataset[randomIndex],
@@ -722,8 +728,8 @@ export class NgRxBenchmarkService {
         updateItem({ payload: { index: randomIndex, item: updatedItem } })
       );
 
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.REAL_TIME_UPDATES) === 0)
-        await this.yieldToUI();
+      // REMOVED: Yielding during measurement for accuracy
+      // if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.REAL_TIME_UPDATES) === 0)
     }
 
     const duration = performance.now() - start;

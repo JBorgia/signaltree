@@ -202,7 +202,6 @@ export class NgxsBenchmarkService {
 
       if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DEEP_NESTED) === 0) {
         await Promise.all(promises.splice(0)); // Wait for batch to complete
-        await this.yieldToUI();
       }
     }
 
@@ -233,7 +232,6 @@ export class NgxsBenchmarkService {
 
       if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.ARRAY_UPDATES) === 0) {
         await Promise.all(promises.splice(0)); // Wait for batch to complete
-        await this.yieldToUI();
       }
     }
 
@@ -258,7 +256,6 @@ export class NgxsBenchmarkService {
 
       if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.COMPUTED) === 0) {
         await Promise.all(promises.splice(0)); // Wait for batch to complete
-        await this.yieldToUI();
       }
     }
 
@@ -287,7 +284,6 @@ export class NgxsBenchmarkService {
 
       if ((batch & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.BATCH_UPDATES) === 0) {
         await Promise.all(promises.splice(0)); // Wait for batch to complete
-        await this.yieldToUI();
       }
     }
 
@@ -310,8 +306,6 @@ export class NgxsBenchmarkService {
       this.store.selectOnce(BenchmarkState.getDeepNested).subscribe();
       this.store.selectOnce(BenchmarkState.getLargeArray).subscribe();
 
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0)
-        await this.yieldToUI();
     }
 
     return performance.now() - start;
@@ -360,7 +354,6 @@ export class NgxsBenchmarkService {
       await Promise.all(promises); // Wait for this batch
 
       if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.REAL_TIME_UPDATES) === 0) {
-        await this.yieldToUI();
       }
     }
 
@@ -388,8 +381,6 @@ export class NgxsBenchmarkService {
         })
       );
 
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.MEMORY_EFFICIENCY) === 0)
-        await this.yieldToUI();
     }
 
     return performance.now() - start;
@@ -431,8 +422,6 @@ export class NgxsBenchmarkService {
     for (let i = 0; i < mockApiData.length; i++) {
       this.store.dispatch(new UpdateArray(i, mockApiData[i]));
 
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DATA_FETCHING) === 0)
-        await this.yieldToUI();
     }
 
     return performance.now() - start;
@@ -492,8 +481,6 @@ export class NgxsBenchmarkService {
           break;
       }
 
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.REAL_TIME_UPDATES) === 0)
-        await this.yieldToUI();
     }
 
     return performance.now() - start;
@@ -537,8 +524,6 @@ export class NgxsBenchmarkService {
         new UpdateDeepNested(['entities', i.toString()], entity)
       );
 
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.STATE_SIZE_SCALING) === 0)
-        await this.yieldToUI();
     }
 
     return performance.now() - start;

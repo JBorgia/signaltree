@@ -6,6 +6,13 @@ import { withSerialization } from '@signaltree/serialization';
 import { withTimeTravel } from '@signaltree/time-travel';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
+import {
+  BenchmarkComparison,
+  EnhancedBenchmarkOptions,
+  EnhancedBenchmarkResult,
+  PerformanceEnvironment,
+  runEnhancedBenchmark,
+} from './benchmark-runner';
 
 /**
  * SignalTree Architecture Trade-offs Analysis
@@ -55,6 +62,25 @@ import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 @Injectable({ providedIn: 'root' })
 export class SignalTreeBenchmarkService {
+  // ==========================================
+  // YIELD STRATEGY: HYBRID APPROACH
+  // ==========================================
+
+  /**
+   * UI yield between benchmarks - maintains responsiveness without affecting measurement accuracy
+   */
+  private async yieldBetweenBenchmarks(): Promise<void> {
+    return new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        setTimeout(resolve, 0);
+      });
+    });
+  }
+
+  /**
+   * DEPRECATED: Legacy yield method that interferes with measurement accuracy
+   * @deprecated Use yieldBetweenBenchmarks() instead
+   */
   private yieldToUI() {
     return new Promise<void>((r) =>
       setTimeout(r, BENCHMARK_CONSTANTS.TIMING.YIELD_DELAY_MS)
@@ -94,7 +120,7 @@ export class SignalTreeBenchmarkService {
         // Fallback in case of different signal shape
         current.value(i);
       }
-      if ((i & 1023) === 0) await this.yieldToUI();
+      // REMOVED: yielding during measurement for accuracy
     }
 
     return performance.now() - start;
@@ -124,7 +150,7 @@ export class SignalTreeBenchmarkService {
         items[idx].value = Math.random() * 1000;
         return items;
       });
-      if ((i & 255) === 0) await this.yieldToUI();
+      // REMOVED: yielding during measurement for accuracy
     }
 
     return performance.now() - start;
@@ -155,7 +181,10 @@ export class SignalTreeBenchmarkService {
     ) {
       tree.state.value.set(i);
       compute(); // Now this is properly memoized!
-      if ((i & 1023) === 0) await this.yieldToUI();
+      if ((i & 1023) === 0) {
+        // REMOVED: yielding during measurement for accuracy
+        // REMOVED: yielding during measurement for accuracy
+      }
     }
 
     return performance.now() - start;
@@ -178,7 +207,7 @@ export class SignalTreeBenchmarkService {
         }
         return arr;
       });
-      if ((b & 7) === 0) await this.yieldToUI();
+      // REMOVED: yielding during measurement for accuracy
     }
 
     return performance.now() - start;
@@ -230,7 +259,7 @@ export class SignalTreeBenchmarkService {
         });
       }
 
-      if ((i & 63) === 0) await this.yieldToUI();
+      // REMOVED: yielding during measurement for accuracy
     }
 
     return performance.now() - start;
@@ -323,7 +352,7 @@ export class SignalTreeBenchmarkService {
           );
         });
       }
-      if ((u & 31) === 0) await this.yieldToUI();
+      // REMOVED: yielding during measurement for accuracy
     }
 
     return performance.now() - start;
@@ -388,7 +417,7 @@ export class SignalTreeBenchmarkService {
         }
         return newGroups;
       });
-      if ((t & 63) === 0) await this.yieldToUI();
+      // REMOVED: yielding during measurement for accuracy
     }
 
     // Return operational time (memory measurement would be unreliable across environments)
@@ -460,7 +489,7 @@ export class SignalTreeBenchmarkService {
       // Update pagination based on filtered results
       tree.state.pagination.total.set(filteredItems.length);
 
-      if ((i & 15) === 0) await this.yieldToUI();
+      // REMOVED: yielding during measurement for accuracy
     }
 
     return performance.now() - start;
@@ -526,7 +555,7 @@ export class SignalTreeBenchmarkService {
         ]);
       }
 
-      if ((i & 31) === 0) await this.yieldToUI();
+      // REMOVED: yielding during measurement for accuracy
     }
 
     return performance.now() - start;
@@ -595,7 +624,7 @@ export class SignalTreeBenchmarkService {
         }));
       }
 
-      if ((i & 31) === 0) await this.yieldToUI();
+      // REMOVED: yielding during measurement for accuracy
     }
 
     return performance.now() - start;
@@ -636,7 +665,7 @@ export class SignalTreeBenchmarkService {
         tree.state.loading.set(false);
       }
 
-      if ((i & 15) === 0) await this.yieldToUI();
+      // REMOVED: yielding during measurement for accuracy
     }
 
     return performance.now() - start;
@@ -713,7 +742,7 @@ export class SignalTreeBenchmarkService {
         // Request was cancelled
       }
 
-      if ((i & 15) === 0) await this.yieldToUI();
+      // REMOVED: yielding during measurement for accuracy
     }
 
     return performance.now() - start;
@@ -764,7 +793,7 @@ export class SignalTreeBenchmarkService {
       tree.state.value.set(i);
       tree.state.data({ content: `step_${i}` });
 
-      if ((i & 255) === 0) await this.yieldToUI();
+      // REMOVED: yielding during measurement for accuracy
     }
 
     return performance.now() - start;
@@ -789,7 +818,7 @@ export class SignalTreeBenchmarkService {
       const randomStep = Math.floor(Math.random() * operations);
       (tree as any).jumpToStep?.(randomStep);
 
-      if ((i & 31) === 0) await this.yieldToUI();
+      // REMOVED: yielding during measurement for accuracy
     }
 
     return performance.now() - start;
@@ -821,7 +850,7 @@ export class SignalTreeBenchmarkService {
       middleware('setValue', i);
       tree.state.value.set(i);
 
-      if ((i & 255) === 0) await this.yieldToUI();
+      // REMOVED: yielding during measurement for accuracy
     }
 
     return performance.now() - start;
@@ -850,7 +879,7 @@ export class SignalTreeBenchmarkService {
       middlewares.forEach((mw) => mw('setValue', i));
       tree.state.value.set(i);
 
-      if ((i & 255) === 0) await this.yieldToUI();
+      // REMOVED: yielding during measurement for accuracy
     }
 
     return performance.now() - start;
@@ -883,7 +912,7 @@ export class SignalTreeBenchmarkService {
       conditionalMiddleware('setValue', i);
       tree.state.value.set(i);
 
-      if ((i & 255) === 0) await this.yieldToUI();
+      // REMOVED: yielding during measurement for accuracy
     }
 
     return performance.now() - start;
@@ -935,7 +964,7 @@ export class SignalTreeBenchmarkService {
         `action_${i}`,
       ]);
 
-      if ((i & 7) === 0) await this.yieldToUI();
+      // REMOVED: yielding during measurement for accuracy
     }
 
     return performance.now() - start;
@@ -998,9 +1027,451 @@ export class SignalTreeBenchmarkService {
       (tree.state as any).metadata.lastUpdated.set(Date.now());
       (tree.state as any).metadata.version.update((v: number) => v + 1);
 
-      if ((i & 31) === 0) await this.yieldToUI();
+      // REMOVED: yielding during measurement for accuracy
     }
 
     return performance.now() - start;
+  }
+
+  // ==========================================
+  // ENHANCED BENCHMARK METHODS
+  // ==========================================
+
+  /**
+   * Enhanced array benchmark with statistical analysis
+   */
+  async runEnhancedArrayBenchmark(
+    dataSize: number
+  ): Promise<EnhancedBenchmarkResult> {
+    const options: EnhancedBenchmarkOptions = {
+      operations: Math.min(
+        BENCHMARK_CONSTANTS.ITERATIONS.ARRAY_UPDATES,
+        dataSize
+      ),
+      warmup: 10,
+      measurementSamples: 30,
+      yieldEvery: BENCHMARK_CONSTANTS.YIELD_FREQUENCY.ARRAY_UPDATES,
+      trackMemory: true,
+      removeOutliers: true,
+      forceGC: true,
+      label: 'SignalTree Array Updates',
+      minDurationMs: 100,
+    };
+
+    const tree = signalTree({
+      items: Array.from({ length: dataSize }, (_, i) => ({
+        id: i,
+        value: Math.random() * 1000,
+      })),
+    }).with(withHighPerformanceBatching());
+
+    return runEnhancedBenchmark(async (iteration) => {
+      const idx = iteration % dataSize;
+      tree.state.items.update((items) => {
+        const newItems = [...items];
+        newItems[idx] = { ...newItems[idx], value: Math.random() * 1000 };
+        return newItems;
+      });
+    }, options);
+  }
+
+  /**
+   * Enhanced selector benchmark with memoization analysis
+   */
+  async runEnhancedSelectorBenchmark(
+    dataSize: number
+  ): Promise<EnhancedBenchmarkResult> {
+    const tree = signalTree({
+      items: Array.from({ length: dataSize }, (_, i) => ({
+        id: i,
+        flag: i % 2 === 0,
+      })),
+    }).with(withLightweightMemoization());
+
+    // Create computed selector matching NgRx pattern
+    const selectEven = computed(
+      () => tree.state.items().filter((x) => x.flag).length
+    );
+
+    const options: EnhancedBenchmarkOptions = {
+      operations: 1000,
+      warmup: 5,
+      measurementSamples: 50,
+      yieldEvery: 64,
+      trackMemory: false,
+      removeOutliers: true,
+      label: 'SignalTree Selector (Memoized)',
+      minDurationMs: 50,
+    };
+
+    return runEnhancedBenchmark(async () => {
+      // This should hit memoization cache most of the time
+      selectEven();
+    }, options);
+  }
+
+  /**
+   * Enhanced deep nested benchmark with proper signal traversal
+   */
+  async runEnhancedDeepNestedBenchmark(
+    dataSize: number,
+    depth = 15
+  ): Promise<EnhancedBenchmarkResult> {
+    const createNested = (level: number): any =>
+      level === 0
+        ? { value: 0, data: 'test' }
+        : { level: createNested(level - 1) };
+
+    const tree = signalTree(createNested(depth)).with(
+      withBatching(),
+      withShallowMemoization()
+    );
+
+    const options: EnhancedBenchmarkOptions = {
+      operations: Math.min(dataSize, 1000),
+      warmup: 5,
+      measurementSamples: 20,
+      yieldEvery: 1024,
+      trackMemory: true,
+      removeOutliers: true,
+      forceGC: true,
+      label: 'SignalTree Deep Nested Updates',
+      minDurationMs: 100,
+    };
+
+    return runEnhancedBenchmark(async (iteration) => {
+      // Use proper deep update method - access via bracket notation for signal tree
+      (tree as any)['update']((state: any) => {
+        const updateDeep = (obj: any, lvl: number): any =>
+          lvl === 0
+            ? { ...obj, value: iteration }
+            : { ...obj, level: updateDeep(obj.level ?? {}, lvl - 1) };
+        return updateDeep(state, depth - 1);
+      });
+    }, options);
+  }
+
+  // ==========================================
+  // PURE BENCHMARK METHODS (NO YIELDING)
+  // ==========================================
+
+  /**
+   * Pure array benchmark - NO yielding during measurement for maximum accuracy
+   */
+  async runPureArrayBenchmark(dataSize: number): Promise<number> {
+    // Setup before measurement
+    const tree = signalTree({
+      items: Array.from({ length: dataSize }, (_, i) => ({
+        id: i,
+        value: Math.random() * 1000,
+      })),
+    }).with(withHighPerformanceBatching());
+
+    const updates = Math.min(
+      BENCHMARK_CONSTANTS.ITERATIONS.ARRAY_UPDATES,
+      dataSize
+    );
+
+    // Pure measurement - NO yielding
+    const start = performance.now();
+
+    for (let i = 0; i < updates; i++) {
+      const idx = i % dataSize;
+      tree.state.items.update((items) => {
+        const newItems = [...items];
+        newItems[idx] = { ...newItems[idx], value: Math.random() * 1000 };
+        return newItems;
+      });
+      // NO YIELDING during measurement
+    }
+
+    return performance.now() - start;
+  }
+
+  /**
+   * Pure selector benchmark - NO yielding during measurement
+   */
+  async runPureSelectorBenchmark(dataSize: number): Promise<number> {
+    // Setup before measurement
+    const tree = signalTree({
+      items: Array.from({ length: dataSize }, (_, i) => ({
+        id: i,
+        flag: i % 2 === 0,
+      })),
+    }).with(withLightweightMemoization());
+
+    const selectEven = computed(
+      () => tree.state.items().filter((x) => x.flag).length
+    );
+
+    // Pure measurement - NO yielding
+    const start = performance.now();
+
+    for (let i = 0; i < 1000; i++) {
+      selectEven(); // Should hit memoization cache
+      // NO YIELDING during measurement
+    }
+
+    return performance.now() - start;
+  }
+
+  /**
+   * Pure deep nested benchmark - NO yielding during measurement
+   */
+  async runPureDeepNestedBenchmark(
+    dataSize: number,
+    depth = 15
+  ): Promise<number> {
+    // Setup before measurement
+    const createNested = (level: number): any =>
+      level === 0
+        ? { value: 0, data: 'test' }
+        : { level: createNested(level - 1) };
+
+    const tree = signalTree(createNested(depth)).with(
+      withBatching(),
+      withShallowMemoization()
+    );
+
+    const operations = Math.min(dataSize, 1000);
+
+    // Pure measurement - NO yielding
+    const start = performance.now();
+
+    for (let i = 0; i < operations; i++) {
+      (tree as any)['update']((state: any) => {
+        const updateDeep = (obj: any, lvl: number): any =>
+          lvl === 0
+            ? { ...obj, value: i }
+            : { ...obj, level: updateDeep(obj.level ?? {}, lvl - 1) };
+        return updateDeep(state, depth - 1);
+      });
+      // NO YIELDING during measurement
+    }
+
+    return performance.now() - start;
+  }
+
+  /**
+   * Run benchmark suite with hybrid approach - UI responsiveness between benchmarks only
+   */
+  async runPureBenchmarkSuite(dataSize: number): Promise<{
+    arrayBenchmark: number;
+    selectorBenchmark: number;
+    deepNestedBenchmark: number;
+    totalTime: number;
+  }> {
+    const suiteStart = performance.now();
+
+    // Update UI before each benchmark
+    await this.yieldBetweenBenchmarks();
+    console.log('🎯 Starting Pure Array Benchmark...');
+    const arrayResult = await this.runPureArrayBenchmark(dataSize);
+
+    await this.yieldBetweenBenchmarks();
+    console.log('🎯 Starting Pure Selector Benchmark...');
+    const selectorResult = await this.runPureSelectorBenchmark(dataSize);
+
+    await this.yieldBetweenBenchmarks();
+    console.log('🎯 Starting Pure Deep Nested Benchmark...');
+    const deepNestedResult = await this.runPureDeepNestedBenchmark(dataSize);
+
+    const totalTime = performance.now() - suiteStart;
+
+    console.log(`✅ Pure Benchmark Suite Complete:
+      • Array: ${arrayResult.toFixed(2)}ms
+      • Selector: ${selectorResult.toFixed(2)}ms
+      • Deep Nested: ${deepNestedResult.toFixed(2)}ms
+      • Total: ${totalTime.toFixed(2)}ms`);
+
+    return {
+      arrayBenchmark: arrayResult,
+      selectorBenchmark: selectorResult,
+      deepNestedBenchmark: deepNestedResult,
+      totalTime,
+    };
+  }
+
+  /**
+   * Performance environment validation
+   */
+  async validateBenchmarkEnvironment(): Promise<{
+    isReady: boolean;
+    issues: string[];
+    recommendations: string[];
+    performanceMetrics: {
+      isThrottled: boolean;
+      opsPerMs: number;
+    };
+  }> {
+    const envCheck = await PerformanceEnvironment.validateEnvironment();
+    const throttleCheck =
+      await PerformanceEnvironment.detectPerformanceThrottling();
+
+    return {
+      ...envCheck,
+      performanceMetrics: {
+        isThrottled: throttleCheck.isThrottled,
+        opsPerMs: throttleCheck.opsPerMs,
+      },
+    };
+  }
+
+  /**
+   * Compare SignalTree results with another library using statistical analysis
+   */
+  static compareWithLibrary(
+    signalTreeResult: EnhancedBenchmarkResult,
+    otherLibraryResult: EnhancedBenchmarkResult,
+    otherLibraryName: string
+  ) {
+    return BenchmarkComparison.compareBenchmarks(
+      signalTreeResult,
+      'SignalTree',
+      otherLibraryResult,
+      otherLibraryName,
+      0.95 // 95% confidence level
+    );
+  }
+
+  /**
+   * Run comprehensive benchmark suite with enhanced analysis
+   */
+  async runComprehensiveBenchmarkSuite(dataSize: number): Promise<{
+    arrayBenchmark: EnhancedBenchmarkResult;
+    selectorBenchmark: EnhancedBenchmarkResult;
+    deepNestedBenchmark: EnhancedBenchmarkResult;
+    environment: {
+      isReady: boolean;
+      issues: string[];
+      recommendations: string[];
+      performanceMetrics: {
+        isThrottled: boolean;
+        opsPerMs: number;
+      };
+    };
+    summary: {
+      overallReliability: 'high' | 'medium' | 'low';
+      totalSamples: number;
+      totalRuntime: number;
+      recommendations: string[];
+    };
+  }> {
+    // Validate environment first
+    const environment = await this.validateBenchmarkEnvironment();
+
+    if (!environment.isReady) {
+      console.warn(
+        'Benchmark environment validation failed:',
+        environment.issues
+      );
+    }
+
+    // Run enhanced benchmarks
+    const [arrayResult, selectorResult, deepNestedResult] = await Promise.all([
+      this.runEnhancedArrayBenchmark(dataSize),
+      this.runEnhancedSelectorBenchmark(dataSize),
+      this.runEnhancedDeepNestedBenchmark(dataSize),
+    ]);
+
+    // Analyze overall reliability
+    const allResults = [arrayResult, selectorResult, deepNestedResult];
+    const reliabilities = allResults.map((r) => r.reliability);
+    const overallReliability = reliabilities.includes('low')
+      ? 'low'
+      : reliabilities.includes('medium')
+      ? 'medium'
+      : 'high';
+
+    const totalSamples = allResults.reduce((sum, r) => sum + r.sampleCount, 0);
+    const totalRuntime = allResults.reduce(
+      (sum, r) => sum + r.totalRuntimeMs,
+      0
+    );
+
+    // Generate recommendations
+    const recommendations: string[] = [];
+    allResults.forEach((result) => {
+      if (result.reliability === 'low') {
+        recommendations.push(result.recommendation);
+      }
+      if (result.anomalyRate > 0.1) {
+        recommendations.push(
+          `High anomaly rate in ${
+            result.samples.length > 0 ? 'benchmark' : 'unknown benchmark'
+          } - check for interference`
+        );
+      }
+    });
+
+    if (environment.performanceMetrics.isThrottled) {
+      recommendations.push(
+        'Performance throttling detected - results may not reflect optimal performance'
+      );
+    }
+
+    return {
+      arrayBenchmark: arrayResult,
+      selectorBenchmark: selectorResult,
+      deepNestedBenchmark: deepNestedResult,
+      environment,
+      summary: {
+        overallReliability,
+        totalSamples,
+        totalRuntime,
+        recommendations: [...new Set(recommendations)], // Remove duplicates
+      },
+    };
+  }
+
+  /**
+   * Example: How to use enhanced benchmarks for performance analysis
+   */
+  async demonstrateEnhancedBenchmarking(dataSize = 1000): Promise<void> {
+    console.log('🚀 Starting Enhanced SignalTree Benchmark Demonstration');
+
+    // 1. Validate environment
+    const envCheck = await this.validateBenchmarkEnvironment();
+    console.log('Environment Check:', envCheck);
+
+    if (!envCheck.isReady) {
+      console.warn('⚠️ Environment issues detected:', envCheck.issues);
+      console.log('💡 Recommendations:', envCheck.recommendations);
+    }
+
+    // 2. Run enhanced array benchmark
+    console.log('\n📊 Running Enhanced Array Benchmark...');
+    const arrayResult = await this.runEnhancedArrayBenchmark(dataSize);
+    console.log(`✅ Array Benchmark Complete:
+      • Median: ${arrayResult.median.toFixed(2)}ms
+      • Reliability: ${arrayResult.reliability}
+      • CV: ${(arrayResult.coefficientOfVariation * 100).toFixed(1)}%
+      • Samples: ${arrayResult.sampleCount}
+      • Memory Δ: ${arrayResult.memoryDeltaMB?.toFixed(2) ?? 'N/A'}MB`);
+
+    // 3. Run enhanced selector benchmark
+    console.log('\n🎯 Running Enhanced Selector Benchmark...');
+    const selectorResult = await this.runEnhancedSelectorBenchmark(dataSize);
+    console.log(`✅ Selector Benchmark Complete:
+      • Median: ${selectorResult.median.toFixed(2)}ms
+      • Reliability: ${selectorResult.reliability}
+      • CV: ${(selectorResult.coefficientOfVariation * 100).toFixed(1)}%
+      • Samples: ${selectorResult.sampleCount}`);
+
+    // 4. Example statistical comparison (comparing with itself for demo)
+    console.log('\n📈 Statistical Comparison Example:');
+    const comparison = SignalTreeBenchmarkService.compareWithLibrary(
+      arrayResult,
+      selectorResult,
+      'Selector Benchmark'
+    );
+    console.log(`Comparison Result:
+      • Difference: ${comparison.medianDifference.toFixed(2)}ms
+      • Improvement: ${comparison.percentageImprovement.toFixed(1)}%
+      • Significant: ${comparison.isStatisticallySignificant}
+      • Effect Size: ${comparison.effectSizeInterpretation}
+      • Conclusion: ${comparison.conclusion}`);
+
+    console.log('\n🎉 Enhanced Benchmark Demonstration Complete!');
   }
 }
