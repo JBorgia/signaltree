@@ -722,7 +722,8 @@ export class NgRxBenchmarkService {
         updateItem({ payload: { index: randomIndex, item: updatedItem } })
       );
 
-      if (i % 20 === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.REAL_TIME_UPDATES) === 0)
+        await this.yieldToUI();
     }
 
     const duration = performance.now() - start;

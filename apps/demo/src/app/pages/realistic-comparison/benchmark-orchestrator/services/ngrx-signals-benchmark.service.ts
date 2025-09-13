@@ -434,7 +434,7 @@ export class NgRxSignalsBenchmarkService {
       patchState(state, { metrics });
 
       // Simulate incoming messages (like chat or notifications)
-      if (i % 10 === 0) {
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DATA_FETCHING) === 0) {
         const newMessage = {
           id: i,
           content: `Real-time message ${i}`,

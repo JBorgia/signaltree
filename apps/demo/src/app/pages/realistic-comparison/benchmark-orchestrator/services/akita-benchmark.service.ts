@@ -492,7 +492,7 @@ export class AkitaBenchmarkService {
       }
 
       // Add new events (with size limit simulation)
-      if (i % 10 === 0) {
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DATA_FETCHING) === 0) {
         eventsStore.add({
           id: i,
           type: 'user_action',
@@ -514,7 +514,7 @@ export class AkitaBenchmarkService {
       }
 
       // Add notifications occasionally
-      if (i % 25 === 0) {
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.REAL_TIME_UPDATES) === 0) {
         notificationsStore.add({
           id: i,
           message: `Notification ${i}`,
@@ -608,7 +608,7 @@ export class AkitaBenchmarkService {
       }));
 
       // Simulate cache/index operations (Akita doesn't have built-in caching like SignalTree)
-      if (i % 20 === 0) {
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.REAL_TIME_UPDATES) === 0) {
         // Simulate some indexing work
         const entities = entitiesStore.getValue().entities;
         if (entities) {

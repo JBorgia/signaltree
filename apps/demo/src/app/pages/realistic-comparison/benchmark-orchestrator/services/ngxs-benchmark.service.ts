@@ -359,7 +359,7 @@ export class NgxsBenchmarkService {
 
       await Promise.all(promises); // Wait for this batch
 
-      if (i % 20 === 0) {
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.REAL_TIME_UPDATES) === 0) {
         await this.yieldToUI();
       }
     }
