@@ -36,8 +36,6 @@ export class ElfBenchmarkService {
       i++
     ) {
       state = updateDeep(state, depth - 1, i);
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DEEP_NESTED) === 0)
-        await this.yieldToUI();
     }
     if (state?.level?.value === -1) console.log('noop');
     return performance.now() - start;
@@ -68,8 +66,6 @@ export class ElfBenchmarkService {
       store.update(
         updateEntities(id, (e: Item) => ({ ...e, value: Math.random() * 1000 }))
       );
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.ARRAY_UPDATES) === 0)
-        await this.yieldToUI();
     }
     // consume
     const all = store.query(getAllEntities());
@@ -101,8 +97,6 @@ export class ElfBenchmarkService {
     ) {
       state = { ...state, value: i };
       compute();
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.COMPUTED) === 0)
-        await this.yieldToUI();
     }
     return performance.now() - start;
   }
@@ -128,8 +122,6 @@ export class ElfBenchmarkService {
       store.update(
         updateAllEntities((e: Item) => ({ ...e, value: (e.value + 1) | 0 }))
       );
-      if ((b & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.BATCH_UPDATES) === 0)
-        await this.yieldToUI();
     }
     return performance.now() - start;
   }
@@ -166,8 +158,6 @@ export class ElfBenchmarkService {
     for (let i = 0; i < BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR; i++) {
       const count = selectEvenCount();
       if (count === -1) console.log('noop');
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0)
-        await this.yieldToUI();
     }
     return performance.now() - start;
   }
@@ -235,8 +225,6 @@ export class ElfBenchmarkService {
       store.update(
         updateAllEntities((e: Item) => ({ ...e, value: (e.value + 1) | 0 }))
       );
-      if ((u & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.ASYNC_WORKFLOW) === 0)
-        await this.yieldToUI();
     }
     // consume
     const first = store.query(getAllEntities())[0];
@@ -279,8 +267,6 @@ export class ElfBenchmarkService {
               : e.tags,
         }))
       );
-      if ((t & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.MEMORY_EFFICIENCY) === 0)
-        await this.yieldToUI();
     }
     return performance.now() - start;
   }
@@ -315,7 +301,6 @@ export class ElfBenchmarkService {
 
     // Hydrate users into store
     userStore.update(setEntities(users));
-    await this.yieldToUI();
 
     // Simulate filtering active users (realistic business logic)
     const allUsers = userStore.query(getAllEntities());
@@ -327,7 +312,6 @@ export class ElfBenchmarkService {
       withEntities<User>()
     );
     activeUserStore.update(setEntities(activeUsers));
-    await this.yieldToUI();
 
     // Simulate additional processing - group by department
     const departmentGroups = activeUsers.reduce((acc, user) => {
@@ -416,8 +400,6 @@ export class ElfBenchmarkService {
       }
 
       // Yield occasionally to simulate real-time processing
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DATA_FETCHING) === 0)
-        await this.yieldToUI();
     }
 
     const duration = performance.now() - start;
@@ -468,7 +450,6 @@ export class ElfBenchmarkService {
 
     // Hydrate the large dataset
     largeDataStore.update(setEntities(largeDataset));
-    await this.yieldToUI();
 
     // Perform operations that would be common with large datasets
     // 1. Filter by status (creating new store for active items)
@@ -480,7 +461,6 @@ export class ElfBenchmarkService {
       withEntities<LargeDataItem>()
     );
     activeItemStore.update(setEntities(activeItems));
-    await this.yieldToUI();
 
     // 2. Sort by score (expensive operation)
     const sortedItems = [...activeItems].sort(
@@ -492,7 +472,6 @@ export class ElfBenchmarkService {
       withEntities<LargeDataItem>()
     );
     sortedItemStore.update(setEntities(sortedItems));
-    await this.yieldToUI();
 
     // 3. Update multiple items (batch update simulation)
     for (
@@ -512,8 +491,6 @@ export class ElfBenchmarkService {
         }))
       );
 
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.STATE_SIZE_SCALING) === 0)
-        await this.yieldToUI();
     }
 
     const duration = performance.now() - start;
