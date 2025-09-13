@@ -124,6 +124,7 @@ export interface SerializableSignalTree<T> extends SignalTree<T> {
   // access errors in tests (dot-access on dynamic keys). This will be
   // tightened later once type incompatibilities between enhancers and
   // `.with()` are fully resolved.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   $: any;
   /**
    * Serialize the current state to a JSON string
@@ -333,10 +334,11 @@ function detectCircularReferences(
 
   // Recursively check children
   if (Array.isArray(obj)) {
-    for (let i = 0; i < (obj as any).length; i++) {
+    const arrObj = obj as unknown[];
+    for (let i = 0; i < arrObj.length; i++) {
       const itemPath = path ? `${path}[${i}]` : `[${i}]`;
       const childCircular = detectCircularReferences(
-        (obj as any)[i],
+        arrObj[i],
         itemPath,
         seen,
         paths
@@ -539,85 +541,35 @@ export function withSerialization<
 
       // Restore special types in the data
       const restoredData = restoreSpecialTypes(data);
-      // If the serialized data contains a compact nodeMap, use it to apply
-      // updates deterministically: 'r' => root set, 'b' => set on branch
-      const nodeMap = (metadata as any)?.nodeMap as
-        | Record<string, 'b' | 'r'>
-        | undefined;
 
-      if (nodeMap && Object.keys(nodeMap).length > 0) {
-        // Root marker
-        if (nodeMap[''] === 'r') {
-          const rootAlias = (tree as any).$;
-          if (rootAlias && typeof rootAlias.set === 'function') {
-            (rootAlias as WritableSignal<unknown>).set(restoredData);
-            return;
+      // Helper to resolve a signal from the root alias (`tree.$`) using the
+      // accumulated path so keys that collide with branch methods (like "set")
+      // still map to the child signals.
+      function resolveAliasSignal(path: string, key: string) {
+        let node: { [k: string]: unknown } | undefined = (
+          tree as unknown as {
+            $?: { [k: string]: unknown };
           }
-        }
-
-        // For branch entries, apply child signal .set directly when possible
-        for (const [path, kind] of Object.entries(nodeMap)) {
-          if (path === '') continue; // root handled
-          if (kind !== 'b') continue;
-
-          // Navigate to path and set the node if a WritableSignal is found
-          const parts = path.split(/\.|\[|\]/).filter(Boolean);
-          let node: any = (tree as any).$;
-          for (const p of parts) {
-            if (!node) break;
-            node = node[p];
-          }
-
-          if (
-            node &&
-            (isSignal(node) ||
-              (typeof node === 'function' &&
-                'set' in node &&
-                typeof (node as { set?: unknown }).set === 'function'))
-          ) {
-            // Extract the corresponding value from restoredData
-            let current: any = restoredData as any;
-            for (const p of parts) {
-              if (current == null) {
-                current = undefined;
-                break;
-              }
-              current = current[p];
-            }
-            try {
-              (node as WritableSignal<unknown>).set(current);
-            } catch {
-              /* ignore per-path failures */
-            }
-          }
-        }
-
-        // After applying nodeMap-targeted sets, perform a best-effort deep update for remaining keys
-        updateSignals(
-          tree.state as Record<string, unknown>,
-          restoredData as Record<string, unknown>
-        );
-        return;
-      }
-
-      // Deep update the tree with new data. Resolve deep signals from the
-      // root alias (`tree.$`) using the accumulated path so keys that
-      // collide with branch methods (like "set") still map to the child
-      // signals.
-      const resolveAliasSignal = (path: string, key: string) => {
-        let node: any = (tree as any).$; // root reactive alias
-        if (path) {
+        ).$;
+        if (path && node) {
           for (const part of path.split('.')) {
             if (!part) continue;
-            node = node?.[part];
-            if (!node) break;
+            const next = node[part];
+            if (
+              !next ||
+              (typeof next !== 'object' && typeof next !== 'function')
+            ) {
+              node = undefined;
+              break;
+            }
+            node = next as { [k: string]: unknown };
           }
         }
-        const candidate = node?.[key];
+        const candidate = node?.[key] as unknown;
         return isSignal(candidate)
           ? (candidate as WritableSignal<unknown>)
           : undefined;
-      };
+      }
 
       function updateSignals(
         target: Record<string, unknown>,
@@ -663,6 +615,80 @@ export function withSerialization<
             );
           }
         }
+      }
+
+      // If the serialized data contains a compact nodeMap, use it to apply
+      // updates deterministically: 'r' => root set, 'b' => set on branch
+      const nodeMap = (
+        metadata as unknown as {
+          nodeMap?: Record<string, 'b' | 'r'>;
+        }
+      )?.nodeMap;
+
+      if (nodeMap && Object.keys(nodeMap).length > 0) {
+        // Root marker
+        if (nodeMap[''] === 'r') {
+          type Alias = { set?: (v: unknown) => void } & Record<string, unknown>;
+          const rootAlias = (tree as unknown as { $?: Alias }).$;
+          if (rootAlias && typeof rootAlias.set === 'function') {
+            (rootAlias as unknown as WritableSignal<unknown>).set(restoredData);
+            // Don't return; still perform targeted updates below to ensure
+            // type-preserving restoration for all branches.
+          }
+        }
+
+        // For branch entries, apply child signal .set directly when possible
+        for (const [path, kind] of Object.entries(nodeMap)) {
+          if (path === '') continue; // root handled
+          if (kind !== 'b') continue;
+
+          // Navigate to path and set the node if a WritableSignal is found
+          const parts = path.split(/\.|\[|\]/).filter(Boolean);
+          type Alias = Record<string, unknown> & { set?: (v: unknown) => void };
+          let node: Record<string, unknown> | undefined = (
+            tree as unknown as { $?: Alias }
+          ).$;
+          for (const p of parts) {
+            if (!node) break;
+            node =
+              (node[p] as Record<string, unknown> | undefined) ?? undefined;
+          }
+
+          if (
+            node &&
+            (isSignal(node) ||
+              (typeof node === 'function' &&
+                'set' in node &&
+                typeof (node as { set?: unknown }).set === 'function'))
+          ) {
+            // Extract the corresponding value from restoredData
+            let current: unknown = restoredData as unknown;
+            for (const p of parts) {
+              if (current == null) {
+                current = undefined;
+                break;
+              }
+              if (typeof current === 'object') {
+                current = (current as Record<string, unknown>)[p];
+              } else {
+                current = undefined;
+                break;
+              }
+            }
+            try {
+              (node as unknown as WritableSignal<unknown>).set(current);
+            } catch {
+              /* ignore per-path failures */
+            }
+          }
+        }
+
+        // After applying nodeMap-targeted sets, perform a best-effort deep update for remaining keys
+        updateSignals(
+          tree.state as Record<string, unknown>,
+          restoredData as Record<string, unknown>
+        );
+        return;
       }
 
       updateSignals(
@@ -737,37 +763,43 @@ export function withSerialization<
         data: state,
       };
 
-      // Build a compact nodeMap: record paths that represent branch nodes
-      // (objects with set/update) or a root-as-signal marker ('r'). This
-      // helps deterministic deserialization without guessing by name.
+      // Build a compact nodeMap by traversing the callable proxy alias (tree.$)
+      // and marking any signal-like branch node we encounter. Also mark a
+      // root-as-signal marker ('r') if the root alias exposes a .set().
+      const nodeMap: Record<string, 'b' | 'r'> = {};
       try {
-        const nodeMap: Record<string, 'b' | 'r'> = {};
-
-        // Root marker: if tree.state is a signal-like root (array mode), mark root
-        try {
-          const rootAlias = (tree as any).$;
-          if (rootAlias && typeof rootAlias.set === 'function') {
-            nodeMap[''] = 'r';
-          }
-        } catch {
-          /* ignore */
+        type Alias = { set?: (v: unknown) => void } & Record<string, unknown>;
+        const rootAlias = (tree as unknown as { $?: Alias }).$;
+        if (rootAlias && typeof rootAlias.set === 'function') {
+          nodeMap[''] = 'r';
         }
 
-        const walk = (obj: unknown, path = '') => {
-          if (!obj || typeof obj !== 'object') return;
+        const visited = new WeakSet<object>();
+        const isBranch = (v: unknown): boolean =>
+          isSignal(v) ||
+          (typeof v === 'function' &&
+            'set' in (v as object) &&
+            typeof (v as { set?: unknown }).set === 'function');
 
-          const maybe = obj as Record<string, unknown>;
+        const walkAlias = (obj: unknown, path = '') => {
+          if (!obj || (typeof obj !== 'object' && typeof obj !== 'function'))
+            return;
+          const ref = obj as object;
+          if (visited.has(ref)) return;
+          visited.add(ref);
 
-          // No longer need to detect helper methods since callables don't have them
-          // Just traverse child properties
-          for (const [k, v] of Object.entries(maybe)) {
+          if (path && isBranch(obj)) {
+            nodeMap[path] = 'b';
+          }
+
+          // Traverse own enumerable properties (callable proxies expose children here)
+          for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
             const childPath = path ? `${path}.${k}` : k;
-            walk(v, childPath);
+            walkAlias(v, childPath);
           }
         };
 
-        // Start walking from the tree state
-        walk(tree.state as Record<string, unknown>);
+        if (rootAlias) walkAlias(rootAlias);
       } catch {
         // Do not block serialization on nodeMap errors
       }
@@ -778,6 +810,7 @@ export function withSerialization<
           timestamp: Date.now(),
           version: '1.0.0',
           ...(circularPaths.length > 0 && { circularRefs: circularPaths }),
+          ...(Object.keys(nodeMap).length > 0 && { nodeMap }),
         };
       }
 
@@ -803,18 +836,24 @@ export function withSerialization<
 
       try {
         // Parse with simple JSON.parse (no custom reviver)
-        const parsed: SerializedState<any> = JSON.parse(json);
+        const parsed = JSON.parse(json) as SerializedState<unknown>;
 
         // Extract data and metadata
         const { data, metadata } = parsed;
 
         // Resolve circular references if present
         if (metadata?.circularRefs && fullConfig.handleCircular) {
-          resolveCircularReferences(data, metadata.circularRefs);
+          resolveCircularReferences(
+            data as unknown as Record<string, unknown>,
+            metadata.circularRefs
+          );
         }
 
         // Apply parsed data to the tree; fromJSON will handle type restoration
-        enhanced.fromJSON(data as any, metadata as any);
+        enhanced.fromJSON(
+          data as T,
+          metadata as SerializedState<T>['metadata']
+        );
 
         // Log restoration if in debug mode
         if (
@@ -838,12 +877,12 @@ export function withSerialization<
     /**
      * Create a snapshot
      */
-    enhanced.snapshot = (): SerializedState<any> => {
+    enhanced.snapshot = (): SerializedState<T> => {
       const state = enhanced.toJSON();
       const circularPaths = detectCircularReferences(state);
 
       return {
-        data: JSON.parse(JSON.stringify(state)), // Deep clone
+        data: JSON.parse(JSON.stringify(state)) as T, // Deep clone
         metadata: {
           timestamp: Date.now(),
           version: '1.0.0',
@@ -855,7 +894,7 @@ export function withSerialization<
     /**
      * Restore from snapshot
      */
-    enhanced.restore = (snapshot: SerializedState<any>): void => {
+    enhanced.restore = (snapshot: SerializedState<T>): void => {
       const { data, metadata } = snapshot;
 
       // Resolve circular references if present
@@ -863,7 +902,7 @@ export function withSerialization<
         resolveCircularReferences(data, metadata.circularRefs);
       }
 
-      enhanced.fromJSON(data as any, metadata as any);
+      enhanced.fromJSON(data as T, metadata as SerializedState<T>['metadata']);
     };
 
     return enhanced;
