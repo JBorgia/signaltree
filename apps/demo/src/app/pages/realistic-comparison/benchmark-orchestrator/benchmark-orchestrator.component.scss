@@ -730,6 +730,9 @@ $border: #e5e7eb;
   .scenario-card {
     @include card;
     cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
     border: 2px solid $border;
     transition: all 0.2s;
 
@@ -1487,6 +1490,7 @@ $border: #e5e7eb;
     gap: 0.5rem;
     margin-left: auto;
     font-size: 0.8rem;
+    width: 100%;
 
     .frequency-label {
       color: $dark;
@@ -1494,7 +1498,7 @@ $border: #e5e7eb;
     }
 
     .frequency-bar {
-      width: 60px;
+      width: 100%;
       height: 8px;
       background: $border;
       border-radius: 4px;
