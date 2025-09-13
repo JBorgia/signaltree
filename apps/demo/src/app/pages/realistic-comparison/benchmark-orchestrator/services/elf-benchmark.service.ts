@@ -272,7 +272,7 @@ export class ElfBenchmarkService {
           ...e,
           score: (e.score + 1) | 0,
           tags:
-            (t & 63) === 0
+            (t & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.MEMORY_EFFICIENCY) === 0
               ? e.tags.includes('hot')
                 ? ['cold']
                 : ['hot']
@@ -301,14 +301,17 @@ export class ElfBenchmarkService {
     const start = performance.now();
 
     // Simulate fetching 1000 user records from API
-    const users = Array.from({ length: 1000 }, (_, i) => ({
-      id: i + 1,
-      name: `User ${i + 1}`,
-      email: `user${i + 1}@example.com`,
-      isActive: Math.random() > 0.3,
-      department: `Dept ${Math.floor(Math.random() * 10) + 1}`,
-      lastLogin: new Date().toISOString(),
-    }));
+    const users = Array.from(
+      { length: BENCHMARK_CONSTANTS.ITERATIONS.DATA_FETCHING },
+      (_, i) => ({
+        id: i + 1,
+        name: `User ${i + 1}`,
+        email: `user${i + 1}@example.com`,
+        isActive: Math.random() > 0.3,
+        department: `Dept ${Math.floor(Math.random() * 10) + 1}`,
+        lastLogin: new Date().toISOString(),
+      })
+    );
 
     // Hydrate users into store
     userStore.update(setEntities(users));
@@ -382,7 +385,7 @@ export class ElfBenchmarkService {
     const start = performance.now();
 
     // Simulate 500 real-time metric updates
-    for (let i = 0; i < 500; i++) {
+    for (let i = 0; i < BENCHMARK_CONSTANTS.ITERATIONS.REAL_TIME_UPDATES; i++) {
       const metric: Metric = {
         id: i,
         activeUsers: Math.floor(Math.random() * 1000) + 100,
@@ -492,7 +495,11 @@ export class ElfBenchmarkService {
     await this.yieldToUI();
 
     // 3. Update multiple items (batch update simulation)
-    for (let i = 0; i < 100; i++) {
+    for (
+      let i = 0;
+      i < BENCHMARK_CONSTANTS.ITERATIONS.STATE_SIZE_SCALING;
+      i++
+    ) {
       const randomIndex = Math.floor(Math.random() * largeDataset.length);
       largeDataStore.update(
         updateEntities(randomIndex + 1, (item) => ({
