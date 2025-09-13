@@ -278,8 +278,8 @@ export class AkitaBenchmarkService {
     }
 
     const itemsCount = Math.max(
-      BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.MIN_MEMORY_ITEMS,
-      Math.min(BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.MAX_MEMORY_ITEMS, dataSize)
+      BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.ENTITY_COUNT.MIN,
+      Math.min(BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.ENTITY_COUNT.MAX, dataSize)
     );
     const groups = Math.max(10, Math.min(200, Math.floor(itemsCount / 250)));
 
