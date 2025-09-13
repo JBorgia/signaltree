@@ -1,15 +1,22 @@
 import { Injectable } from '@angular/core';
 import { EntityState, EntityStore, ID, StoreConfig } from '@datorama/akita';
 
+import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 @Injectable({ providedIn: 'root' })
 export class AkitaBenchmarkService {
   // Akita is entity-centric; we will use plain objects for nested/other cases
   private yieldToUI() {
-    return new Promise<void>((r) => setTimeout(r, 0));
+    return new Promise<void>((r) =>
+      setTimeout(r, BENCHMARK_CONSTANTS.TIMING.YIELD_DELAY_MS)
+    );
   }
 
-  async runDeepNestedBenchmark(dataSize: number, depth = 15): Promise<number> {
+  async runDeepNestedBenchmark(
+    dataSize: number,
+    depth = BENCHMARK_CONSTANTS.DATA_GENERATION.NESTED_DEPTH
+  ): Promise<number> {
     const createNested = (level: number): any =>
       level === 0
         ? { value: 0, data: 'test' }
@@ -23,9 +30,14 @@ export class AkitaBenchmarkService {
 
     const start = performance.now();
     // Match NgXs cap of 1000 iterations for fair comparison
-    for (let i = 0; i < Math.min(dataSize, 1000); i++) {
+    for (
+      let i = 0;
+      i < Math.min(dataSize, BENCHMARK_CONSTANTS.ITERATIONS.DEEP_NESTED);
+      i++
+    ) {
       state = updateDeep(state, depth - 1, i);
-      if ((i & 1023) === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DEEP_NESTED) === 0)
+        await this.yieldToUI();
     }
     // consume
     if (state?.level?.level === null) console.log('noop');
@@ -51,11 +63,15 @@ export class AkitaBenchmarkService {
     );
 
     const start = performance.now();
-    const updates = Math.min(1000, dataSize);
+    const updates = Math.min(
+      BENCHMARK_CONSTANTS.ITERATIONS.ARRAY_UPDATES,
+      dataSize
+    );
     for (let i = 0; i < updates; i++) {
       const id = i % dataSize;
       store.update(id, { value: Math.random() * 1000 });
-      if ((i & 255) === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.ARRAY_UPDATES) === 0)
+        await this.yieldToUI();
     }
     // consume state so it isn't DCE'd
     const v = store.getValue();
@@ -67,7 +83,10 @@ export class AkitaBenchmarkService {
     // Akita has queries; we simulate derived computation over plain object state
     let state = {
       value: 0,
-      factors: Array.from({ length: 50 }, (_, i) => i + 1),
+      factors: Array.from(
+        { length: BENCHMARK_CONSTANTS.DATA_GENERATION.FACTOR_COUNT },
+        (_, i) => i + 1
+      ),
     };
     const compute = () => {
       let acc = 0;
@@ -78,17 +97,22 @@ export class AkitaBenchmarkService {
 
     const start = performance.now();
     // Match NgXs cap of 500 iterations for fair comparison
-    for (let i = 0; i < Math.min(dataSize, 500); i++) {
+    for (
+      let i = 0;
+      i < Math.min(dataSize, BENCHMARK_CONSTANTS.ITERATIONS.COMPUTED);
+      i++
+    ) {
       state = { ...state, value: i };
       compute();
-      if ((i & 1023) === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.COMPUTED) === 0)
+        await this.yieldToUI();
     }
     return performance.now() - start;
   }
 
   async runBatchUpdatesBenchmark(
-    batches = 100,
-    batchSize = 1000
+    batches = BENCHMARK_CONSTANTS.ITERATIONS.BATCH_UPDATES,
+    batchSize = BENCHMARK_CONSTANTS.ITERATIONS.BATCH_SIZE
   ): Promise<number> {
     type Item = { id: ID; value: number };
     type ItemsState = EntityState<Item>;
@@ -110,7 +134,8 @@ export class AkitaBenchmarkService {
         Array.from({ length: batchSize }, (_, i) => i),
         (entity) => ({ value: (entity.value + 1) | 0 })
       );
-      if ((b & 7) === 0) await this.yieldToUI();
+      if ((b & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.BATCH_UPDATES) === 0)
+        await this.yieldToUI();
     }
     return performance.now() - start;
   }
@@ -150,10 +175,11 @@ export class AkitaBenchmarkService {
       return c;
     };
 
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 0; i < BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR; i++) {
       const c = computeCount();
       if (c === -1) console.log('noop');
-      if ((i & 63) === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0)
+        await this.yieldToUI();
     }
     return performance.now() - start;
   }
@@ -208,7 +234,7 @@ export class AkitaBenchmarkService {
   }
 
   async runConcurrentUpdatesBenchmark(
-    concurrency = 50,
+    concurrency = BENCHMARK_CONSTANTS.ITERATIONS.ASYNC_WORKFLOW,
     updatesPerWorker = 200
   ): Promise<number> {
     type Item = { id: ID; value: number };
@@ -230,7 +256,8 @@ export class AkitaBenchmarkService {
         Array.from({ length: concurrency }, (_, i) => i),
         (entity) => ({ value: (entity.value + 1) | 0 })
       );
-      if ((u & 31) === 0) await this.yieldToUI();
+      if ((u & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.ASYNC_WORKFLOW) === 0)
+        await this.yieldToUI();
     }
     // consume
     const v2 = store.getValue();
@@ -250,7 +277,10 @@ export class AkitaBenchmarkService {
       }
     }
 
-    const itemsCount = Math.max(1_000, Math.min(50_000, dataSize));
+    const itemsCount = Math.max(
+      BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.MIN_MEMORY_ITEMS,
+      Math.min(BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.MAX_MEMORY_ITEMS, dataSize)
+    );
     const groups = Math.max(10, Math.min(200, Math.floor(itemsCount / 250)));
 
     const store = new ItemsStore();
@@ -270,13 +300,14 @@ export class AkitaBenchmarkService {
       store.update(id, (e) => ({
         score: (e.score + 1) | 0,
         tags:
-          (t & 63) === 0
+          (t & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.MEMORY_EFFICIENCY) === 0
             ? e.tags.includes('hot')
               ? ['cold']
               : ['hot']
             : e.tags,
       }));
-      if ((t & 63) === 0) await this.yieldToUI();
+      if ((t & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.MEMORY_EFFICIENCY) === 0)
+        await this.yieldToUI();
     }
     return performance.now() - start;
   }
@@ -320,7 +351,12 @@ export class AkitaBenchmarkService {
 
     // Mock API data
     const mockApiData: FetchedItem[] = Array.from(
-      { length: Math.min(dataSize, 1000) },
+      {
+        length: Math.min(
+          dataSize,
+          BENCHMARK_CONSTANTS.ITERATIONS.DATA_FETCHING
+        ),
+      },
       (_, i) => ({
         id: i,
         title: `Item ${i}`,
@@ -362,7 +398,8 @@ export class AkitaBenchmarkService {
         itemsStore.setActive(filteredIds[0]);
       }
 
-      if ((i & 15) === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DATA_FETCHING) === 0)
+        await this.yieldToUI();
     }
 
     return performance.now() - start;
@@ -437,7 +474,10 @@ export class AkitaBenchmarkService {
     const notificationsStore = new NotificationsStore();
 
     // Simulate real-time updates
-    const updateFrequency = Math.min(500, dataSize);
+    const updateFrequency = Math.min(
+      BENCHMARK_CONSTANTS.ITERATIONS.REAL_TIME_UPDATES,
+      dataSize
+    );
     for (let i = 0; i < updateFrequency; i++) {
       // Update live metrics (requires creating new objects due to immutability)
       const currentMetrics = metricsStore.getValue().entities?.['main'];
@@ -495,7 +535,8 @@ export class AkitaBenchmarkService {
         }
       }
 
-      if ((i & 31) === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.REAL_TIME_UPDATES) === 0)
+        await this.yieldToUI();
     }
 
     return performance.now() - start;
@@ -554,7 +595,7 @@ export class AkitaBenchmarkService {
     entitiesStore.set(largeDataSet);
 
     // Perform scaling operations
-    const operations = Math.min(200, dataSize / 5);
+    const operations = BENCHMARK_CONSTANTS.ITERATIONS.STATE_SIZE_SCALING;
     for (let i = 0; i < operations; i++) {
       const entityId = i % largeDataSet.length;
 
@@ -579,7 +620,8 @@ export class AkitaBenchmarkService {
         }
       }
 
-      if ((i & 31) === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.STATE_SIZE_SCALING) === 0)
+        await this.yieldToUI();
     }
 
     return performance.now() - start;

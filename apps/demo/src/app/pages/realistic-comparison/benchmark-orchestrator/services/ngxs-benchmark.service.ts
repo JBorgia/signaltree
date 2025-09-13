@@ -400,11 +400,18 @@ export class NgxsBenchmarkService {
 
     // Simulate API data fetching and state hydration
     const mockApiData: ArrayItem[] = Array.from(
-      { length: Math.min(dataSize, 1000) },
+      {
+        length: Math.min(
+          dataSize,
+          BENCHMARK_CONSTANTS.ITERATIONS.DATA_FETCHING
+        ),
+      },
       (_, i) => ({
         id: i,
         name: `Item ${i}`,
-        category: `Category ${i % 10}`,
+        category: `Category ${
+          i % BENCHMARK_CONSTANTS.DATA_GENERATION.CATEGORY_COUNT
+        }`,
         price: Math.random() * 100,
         inStock: Math.random() > 0.5,
         value: i,
@@ -412,7 +419,10 @@ export class NgxsBenchmarkService {
           created: new Date(
             Date.now() - Math.random() * 1000000000
           ).toISOString(),
-          tags: [`tag${i % 5}`, `category${i % 3}`],
+          tags: [
+            `tag${i % BENCHMARK_CONSTANTS.DATA_GENERATION.TAG_COUNT}`,
+            `category${i % 3}`,
+          ],
         },
       })
     );
@@ -421,7 +431,8 @@ export class NgxsBenchmarkService {
     for (let i = 0; i < mockApiData.length; i++) {
       this.store.dispatch(new UpdateArray(i, mockApiData[i]));
 
-      if ((i & 15) === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DATA_FETCHING) === 0)
+        await this.yieldToUI();
     }
 
     return performance.now() - start;
@@ -431,7 +442,10 @@ export class NgxsBenchmarkService {
     const start = performance.now();
 
     // Simulate real-time updates (like WebSocket messages)
-    const updateCount = Math.min(dataSize, 500);
+    const updateCount = Math.min(
+      dataSize,
+      BENCHMARK_CONSTANTS.ITERATIONS.REAL_TIME_UPDATES
+    );
 
     for (let i = 0; i < updateCount; i++) {
       // Simulate different types of real-time updates
@@ -478,7 +492,8 @@ export class NgxsBenchmarkService {
           break;
       }
 
-      if ((i & 31) === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.REAL_TIME_UPDATES) === 0)
+        await this.yieldToUI();
     }
 
     return performance.now() - start;
@@ -488,7 +503,10 @@ export class NgxsBenchmarkService {
     const start = performance.now();
 
     // Test performance with large state by creating many entities with relationships
-    const entityCount = Math.min(dataSize * 10, 2000);
+    const entityCount = Math.min(
+      dataSize * BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.LARGE_DATASET.MULTIPLIER,
+      BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.MEMORY_TEST.MAX
+    );
 
     for (let i = 0; i < entityCount; i++) {
       const entity = {
@@ -519,7 +537,8 @@ export class NgxsBenchmarkService {
         new UpdateDeepNested(['entities', i.toString()], entity)
       );
 
-      if ((i & 31) === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.STATE_SIZE_SCALING) === 0)
+        await this.yieldToUI();
     }
 
     return performance.now() - start;
