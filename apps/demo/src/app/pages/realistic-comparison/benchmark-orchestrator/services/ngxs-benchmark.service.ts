@@ -1,5 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Action, Selector, State, StateContext, Store } from '@ngxs/store';
+
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
 
 // Type definitions
@@ -171,15 +172,24 @@ export class NgxsBenchmarkService {
   private readonly store = inject(Store);
 
   private yieldToUI() {
-    return new Promise<void>((r) => setTimeout(r, BENCHMARK_CONSTANTS.TIMING.YIELD_DELAY_MS));
+    return new Promise<void>((r) =>
+      setTimeout(r, BENCHMARK_CONSTANTS.TIMING.YIELD_DELAY_MS)
+    );
   }
 
-  async runDeepNestedBenchmark(dataSize: number, depth = BENCHMARK_CONSTANTS.DATA_GENERATION.NESTED_DEPTH): Promise<number> {
+  async runDeepNestedBenchmark(
+    dataSize: number,
+    depth = BENCHMARK_CONSTANTS.DATA_GENERATION.NESTED_DEPTH
+  ): Promise<number> {
     const start = performance.now();
 
     // Initialize deep nested structure
     const promises: Promise<void>[] = [];
-    for (let i = 0; i < Math.min(dataSize, BENCHMARK_CONSTANTS.ITERATIONS.DEEP_NESTED); i++) {
+    for (
+      let i = 0;
+      i < Math.min(dataSize, BENCHMARK_CONSTANTS.ITERATIONS.DEEP_NESTED);
+      i++
+    ) {
       const path = Array.from(
         { length: depth },
         (_, d) => `level${d}_${i % 10}`
@@ -203,7 +213,10 @@ export class NgxsBenchmarkService {
 
   async runArrayBenchmark(dataSize: number): Promise<number> {
     const start = performance.now();
-    const updates = Math.min(BENCHMARK_CONSTANTS.ITERATIONS.ARRAY_UPDATES, dataSize); // Match other libraries' cap
+    const updates = Math.min(
+      BENCHMARK_CONSTANTS.ITERATIONS.ARRAY_UPDATES,
+      dataSize
+    ); // Match other libraries' cap
 
     const promises: Promise<void>[] = [];
     for (let i = 0; i < updates; i++) {
@@ -233,7 +246,11 @@ export class NgxsBenchmarkService {
     const start = performance.now();
 
     const promises: Promise<void>[] = [];
-    for (let i = 0; i < Math.min(dataSize, BENCHMARK_CONSTANTS.ITERATIONS.COMPUTED); i++) {
+    for (
+      let i = 0;
+      i < Math.min(dataSize, BENCHMARK_CONSTANTS.ITERATIONS.COMPUTED);
+      i++
+    ) {
       promises.push(this.store.dispatch(new ComputeValues(i)).toPromise());
 
       // Force selector computation by selecting the computed result
@@ -293,7 +310,8 @@ export class NgxsBenchmarkService {
       this.store.selectOnce(BenchmarkState.getDeepNested).subscribe();
       this.store.selectOnce(BenchmarkState.getLargeArray).subscribe();
 
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0)
+        await this.yieldToUI();
     }
 
     return performance.now() - start;
@@ -353,18 +371,25 @@ export class NgxsBenchmarkService {
     const start = performance.now();
 
     // Create and update large amounts of data to test memory efficiency
-    for (let i = 0; i < Math.min(dataSize, BENCHMARK_CONSTANTS.ITERATIONS.MEMORY_EFFICIENCY); i++) {
+    for (
+      let i = 0;
+      i < Math.min(dataSize, BENCHMARK_CONSTANTS.ITERATIONS.MEMORY_EFFICIENCY);
+      i++
+    ) {
       // Create nested data
       const path = [`memory_test`, `item_${i}`];
       this.store.dispatch(
         new UpdateDeepNested(path, {
           id: i,
-          data: new Array(BENCHMARK_CONSTANTS.DATA_GENERATION.ARRAY_SIZE_100).fill(0).map(() => Math.random()),
+          data: new Array(BENCHMARK_CONSTANTS.DATA_GENERATION.ARRAY_SIZE_100)
+            .fill(0)
+            .map(() => Math.random()),
           metadata: { created: Date.now(), index: i },
         })
       );
 
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.MEMORY_EFFICIENCY) === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.MEMORY_EFFICIENCY) === 0)
+        await this.yieldToUI();
     }
 
     return performance.now() - start;
