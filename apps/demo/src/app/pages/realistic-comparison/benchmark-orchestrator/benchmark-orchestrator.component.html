@@ -383,24 +383,48 @@
   <section class="scenarios-section">
     <h2>Test Scenarios</h2>
 
-    <!-- Category tabs -->
-    <div class="category-tabs">
-      <button
-        *ngFor="let category of categories"
-        class="category-tab"
-        [class.active]="selectedCategory === category.id"
-        (click)="selectedCategory = category.id"
-      >
-        {{ category.name }}
-        <span class="scenario-count"
-          >({{ getScenariosForCategory(category.id).length }})</span
+    <!-- Scenario Presets -->
+    <div class="preset-section">
+      <h3>Quick Select Presets</h3>
+      <div class="presets-grid">
+        <div
+          class="preset-card"
+          *ngFor="let preset of scenarioPresets"
+          (click)="applyScenarioPreset(preset.id)"
+          tabindex="0"
+          role="button"
         >
-      </button>
+          <h4>{{ preset.name }}</h4>
+          <p>{{ preset.description }}</p>
+          <div class="preset-count">
+            {{
+              preset.id === 'all-tests'
+                ? scenarios.length
+                : preset.scenarios.length
+            }}
+            tests
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Scenarios for selected category -->
-    <div class="category-content" *ngFor="let category of categories">
-      <div *ngIf="selectedCategory === category.id">
+    <!-- Active Enhancers Display -->
+    <div class="enhancers-display" *ngIf="selectedScenarios().length > 0">
+      <h3>Active SignalTree Enhancers</h3>
+      <div class="enhancers-list">
+        <span class="enhancer-tag" *ngFor="let enhancer of activeEnhancers()">
+          {{ enhancer }}
+        </span>
+      </div>
+      <p class="enhancers-note">
+        {{ enhancerExplanation() }}
+      </p>
+    </div>
+
+    <!-- All Scenarios Grid (organized by category) -->
+    <div class="all-scenarios">
+      <div class="category-section" *ngFor="let category of categories">
+        <h3 class="category-title">{{ category.name }}</h3>
         <div class="category-description">
           <p>{{ category.description }}</p>
         </div>

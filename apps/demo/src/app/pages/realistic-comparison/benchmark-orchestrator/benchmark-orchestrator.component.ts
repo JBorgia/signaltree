@@ -191,12 +191,71 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   private elapsedTimeTimer = signal(0); // Timer signal to trigger elapsed time updates
   private timerInterval?: number; // Store interval ID for cleanup
 
-  // Category selection
-  selectedCategory = 'core'; // Default to core scenarios
+  // Scenario presets for quick selection
+  scenarioPresets = [
+    {
+      id: 'core-performance',
+      name: 'Core Performance',
+      description: 'Essential state management operations',
+      scenarios: [
+        'deep-nested',
+        'large-array',
+        'computed-chains',
+        'batch-updates',
+        'selector-memoization',
+        'serialization',
+        'concurrent-updates',
+      ],
+    },
+    {
+      id: 'real-world',
+      name: 'Real-World Usage',
+      description: 'Common application patterns',
+      scenarios: [
+        'data-fetching',
+        'real-time-updates',
+        'memory-efficiency',
+        'async-workflow',
+        'production-setup',
+      ],
+    },
+    {
+      id: 'advanced-features',
+      name: 'Advanced Features',
+      description: 'Time travel, middleware, and complex workflows',
+      scenarios: [
+        'undo-redo',
+        'single-middleware',
+        'multiple-middleware',
+        'all-features-enabled',
+        'async-cancellation',
+      ],
+    },
+    {
+      id: 'performance-stress',
+      name: 'Performance Stress',
+      description: 'Heavy load and scaling tests',
+      scenarios: [
+        'state-size-scaling',
+        'concurrent-updates',
+        'concurrent-async',
+        'history-size',
+        'conditional-middleware',
+      ],
+    },
+    {
+      id: 'all-tests',
+      name: 'All Tests',
+      description: 'Complete benchmark suite',
+      scenarios: [], // Will be populated with all scenario IDs
+    },
+  ];
 
   results = signal<BenchmarkResult[]>([]);
   // Bump when library selection changes to trigger recomputation
   private selectionVersion = signal(0);
+  // Track scenario selection changes
+  private scenarioSelectionVersion = signal(0);
 
   // Dynamic baseline name (currently SignalTree is pinned as baseline)
   baselineName = computed(
@@ -293,7 +352,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       description: 'Updates to deeply nested state (15 levels)',
       operations: '1000 updates',
       complexity: 'High',
-      selected: true,
+      selected: true, // Keep basic test selected
       category: 'core',
     },
     {
@@ -302,7 +361,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       description: 'Array operations on large datasets',
       operations: 'Size × 10',
       complexity: 'Medium',
-      selected: true,
+      selected: false, // Changed to false
       category: 'core',
     },
     {
@@ -311,7 +370,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       description: 'Cascading computed values with dependencies',
       operations: '500 computations',
       complexity: 'High',
-      selected: true,
+      selected: false, // Changed to false
       category: 'core',
     },
     {
@@ -320,7 +379,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       description: 'Multiple simultaneous state updates',
       operations: '100 batches',
       complexity: 'Medium',
-      selected: true,
+      selected: false, // Changed to false
       category: 'core',
     },
     {
@@ -329,7 +388,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       description: 'Memoized selector performance',
       operations: '1000 selections',
       complexity: 'Low',
-      selected: true,
+      selected: false, // Changed to false
       category: 'core',
     },
     {
@@ -338,7 +397,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       description: 'Convert state to plain JSON (unwrap + stringify)',
       operations: 'Per iteration',
       complexity: 'Medium',
-      selected: true,
+      selected: false, // Changed to false
       category: 'core',
     },
     {
@@ -347,7 +406,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       description: 'High-frequency sequential modifications',
       operations: '50 concurrent',
       complexity: 'Extreme',
-      selected: true,
+      selected: false, // Changed to false
       category: 'core',
     },
     {
@@ -356,7 +415,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       description: 'Memory consumption patterns',
       operations: 'Continuous',
       complexity: 'Variable',
-      selected: true,
+      selected: false, // Changed to false
       category: 'core',
     },
     {
@@ -365,7 +424,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       description: 'API response parsing and state initialization',
       operations: 'Data size × filters',
       complexity: 'High',
-      selected: true,
+      selected: false, // Changed to false
       category: 'core',
     },
     {
@@ -374,7 +433,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       description: 'Live data streaming (like WebSocket updates)',
       operations: '500 live updates',
       complexity: 'Extreme',
-      selected: true,
+      selected: false, // Changed to false
       category: 'core',
     },
     {
@@ -383,7 +442,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       description: 'Performance with large datasets',
       operations: 'Size × 10 entities',
       complexity: 'Extreme',
-      selected: true,
+      selected: false, // Changed to false
       category: 'core',
     },
 
@@ -552,9 +611,139 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     return this.availableLibraries.filter((lib) => lib.selected);
   });
 
-  selectedScenarios = computed(() => this.scenarios.filter((s) => s.selected));
+  // Computed enhancer configuration based on selected scenarios
+  // Mapping of test scenarios to the exact enhancers used in SignalTree benchmark service
+  private scenarioEnhancerMap: Record<string, string[]> = {
+    // Core performance benchmarks
+    'deep-nested': ['withBatching', 'withShallowMemoization'],
+    'large-array': ['withHighPerformanceBatching'],
+    'computed-chains': ['withBatching', 'withShallowMemoization'],
+    'batch-updates': ['withHighPerformanceBatching'],
+    'selector-memoization': ['withLightweightMemoization'],
+    serialization: ['withMemoization', 'withHighPerformanceBatching'],
+    'concurrent-updates': ['withBatching'],
+    'memory-efficiency': ['withLightweightMemoization', 'withBatching'],
+    'data-fetching': ['withBatching', 'withShallowMemoization'],
+    'real-time-updates': [
+      'withHighPerformanceBatching',
+      'withLightweightMemoization',
+    ],
+    'state-size-scaling': ['withLightweightMemoization', 'withBatching'],
 
-  // Group scenarios by category
+    // Async operations - currently use no enhancers in implementation
+    'async-workflow': [],
+    'concurrent-async': [],
+    'async-cancellation': [],
+
+    // Time travel - now use withTimeTravel enhancer
+    'undo-redo': ['withTimeTravel'],
+    'history-size': ['withTimeTravel'],
+    'jump-to-state': ['withTimeTravel'],
+
+    // Middleware - currently use no enhancers in implementation
+    'single-middleware': [],
+    'multiple-middleware': [],
+    'conditional-middleware': [],
+
+    // Full stack benchmarks
+    'all-features-enabled': [
+      'withMemoization',
+      'withBatching',
+      'withSerialization',
+    ],
+    'production-setup': [
+      'withShallowMemoization',
+      'withHighPerformanceBatching',
+      'withSerialization',
+    ],
+  };
+
+  activeEnhancers = computed(() => {
+    const selected = this.selectedScenarios();
+    const scenarioIds = selected.map((s) => s.id);
+
+    console.log('🔧 Computing enhancers for scenarios:', scenarioIds);
+
+    if (scenarioIds.length === 0) {
+      console.log('🔧 No scenarios selected');
+      return [];
+    }
+
+    // Collect all unique enhancers used across selected scenarios
+    const allEnhancers = new Set<string>();
+
+    scenarioIds.forEach((scenarioId) => {
+      const enhancers = this.scenarioEnhancerMap[scenarioId] || [];
+      enhancers.forEach((enhancer) => allEnhancers.add(enhancer));
+    });
+
+    const finalEnhancers = Array.from(allEnhancers);
+    console.log('🔧 Enhancers used in selected tests:', finalEnhancers);
+
+    return finalEnhancers;
+  });
+
+  // Get explanation for the current enhancer combination
+  enhancerExplanation = computed(() => {
+    const enhancers = this.activeEnhancers();
+    const scenarios = this.selectedScenarios();
+
+    if (scenarios.length === 0) {
+      return 'Select scenarios to see which enhancers will be used in the actual tests.';
+    }
+
+    if (enhancers.length === 0) {
+      return 'Selected tests use bare SignalTree instances without enhancers for optimal performance comparison.';
+    }
+
+    const enhancerDescriptions: Record<string, string> = {
+      withBatching: 'groups multiple state updates for better performance',
+      withHighPerformanceBatching:
+        'optimized batching for high-frequency operations',
+      withMemoization: 'full memoization with deep equality checks',
+      withShallowMemoization: 'lightweight memoization for object structures',
+      withLightweightMemoization:
+        'minimal caching overhead for intensive workloads',
+      withSerialization: 'state persistence and snapshot capabilities',
+    };
+
+    const descriptions = enhancers
+      .map((e) => enhancerDescriptions[e] || e)
+      .join(', ');
+    return `Active enhancers: ${descriptions}.`;
+  });
+
+  // Method to apply scenario preset
+  applyScenarioPreset(presetId: string) {
+    const preset = this.scenarioPresets.find((p) => p.id === presetId);
+    if (!preset) return;
+
+    // Deselect all scenarios first
+    this.scenarios.forEach((scenario) => (scenario.selected = false));
+
+    // Select scenarios for this preset
+    if (presetId === 'all-tests') {
+      // Select all scenarios
+      this.scenarios.forEach((scenario) => (scenario.selected = true));
+    } else {
+      preset.scenarios.forEach((scenarioId) => {
+        const scenario = this.scenarios.find((s) => s.id === scenarioId);
+        if (scenario) scenario.selected = true;
+      });
+    }
+
+    // Trigger recomputation after bulk changes
+    this.scenarioSelectionVersion.update((v) => v + 1);
+  }
+
+  selectedScenarios = computed(() => {
+    // Depend on scenarioSelectionVersion to trigger recompute when scenarios change
+    this.scenarioSelectionVersion();
+    return this.scenarios.filter((s) => s.selected);
+  });
+
+  // Remove category-based grouping since we're showing all scenarios
+  // Group scenarios by category for display organization
   scenariosByCategory = computed(() => {
     const grouped = new Map<string, Scenario[]>();
 
@@ -1223,6 +1412,14 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     return comparisons;
   });
   constructor() {
+    // Initialize 'all-tests' preset with all scenario IDs
+    const allTestsPreset = this.scenarioPresets.find(
+      (p) => p.id === 'all-tests'
+    );
+    if (allTestsPreset) {
+      allTestsPreset.scenarios = this.scenarios.map((s) => s.id);
+    }
+
     // Run chart updates inside an Angular injection context
     effect(() => {
       if (this.hasResults()) {
@@ -1671,6 +1868,8 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
   toggleScenario(scenario: Scenario) {
     scenario.selected = !scenario.selected;
+    // Trigger recomputation of selectedScenarios and dependent computeds
+    this.scenarioSelectionVersion.update((v) => v + 1);
   }
 
   // Timer management for elapsed time updates
