@@ -2,14 +2,21 @@ import { Injectable } from '@angular/core';
 import { createStore } from '@ngneat/elf';
 import { getAllEntities, setEntities, updateAllEntities, updateEntities, withEntities } from '@ngneat/elf-entities';
 
+import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 @Injectable({ providedIn: 'root' })
 export class ElfBenchmarkService {
   private yieldToUI() {
-    return new Promise<void>((r) => setTimeout(r, 0));
+    return new Promise<void>((r) =>
+      setTimeout(r, BENCHMARK_CONSTANTS.TIMING.YIELD_DELAY_MS)
+    );
   }
 
-  async runDeepNestedBenchmark(dataSize: number, depth = 15): Promise<number> {
+  async runDeepNestedBenchmark(
+    dataSize: number,
+    depth = BENCHMARK_CONSTANTS.DATA_GENERATION.NESTED_DEPTH
+  ): Promise<number> {
     // Elf targets entity stores; for nested we simulate with plain object and immutable updates
     const createNested = (level: number): any =>
       level === 0
@@ -23,9 +30,14 @@ export class ElfBenchmarkService {
 
     const start = performance.now();
     // Match NgXs cap of 1000 iterations for fair comparison
-    for (let i = 0; i < Math.min(dataSize, 1000); i++) {
+    for (
+      let i = 0;
+      i < Math.min(dataSize, BENCHMARK_CONSTANTS.ITERATIONS.DEEP_NESTED);
+      i++
+    ) {
       state = updateDeep(state, depth - 1, i);
-      if ((i & 1023) === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DEEP_NESTED) === 0)
+        await this.yieldToUI();
     }
     if (state?.level?.value === -1) console.log('noop');
     return performance.now() - start;
@@ -47,13 +59,17 @@ export class ElfBenchmarkService {
     );
 
     const start = performance.now();
-    const updates = Math.min(1000, dataSize);
+    const updates = Math.min(
+      BENCHMARK_CONSTANTS.ITERATIONS.ARRAY_UPDATES,
+      dataSize
+    );
     for (let i = 0; i < updates; i++) {
       const id = i % dataSize;
       store.update(
         updateEntities(id, (e: Item) => ({ ...e, value: Math.random() * 1000 }))
       );
-      if ((i & 255) === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.ARRAY_UPDATES) === 0)
+        await this.yieldToUI();
     }
     // consume
     const all = store.query(getAllEntities());
@@ -64,7 +80,10 @@ export class ElfBenchmarkService {
   async runComputedBenchmark(dataSize: number): Promise<number> {
     let state = {
       value: 0,
-      factors: Array.from({ length: 50 }, (_, i) => i + 1),
+      factors: Array.from(
+        { length: BENCHMARK_CONSTANTS.DATA_GENERATION.FACTOR_COUNT },
+        (_, i) => i + 1
+      ),
     };
     const compute = () => {
       let acc = 0;
@@ -75,17 +94,22 @@ export class ElfBenchmarkService {
 
     const start = performance.now();
     // Match NgXs cap of 500 iterations for fair comparison
-    for (let i = 0; i < Math.min(dataSize, 500); i++) {
+    for (
+      let i = 0;
+      i < Math.min(dataSize, BENCHMARK_CONSTANTS.ITERATIONS.COMPUTED);
+      i++
+    ) {
       state = { ...state, value: i };
       compute();
-      if ((i & 1023) === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.COMPUTED) === 0)
+        await this.yieldToUI();
     }
     return performance.now() - start;
   }
 
   async runBatchUpdatesBenchmark(
-    batches = 100,
-    batchSize = 1000
+    batches = BENCHMARK_CONSTANTS.ITERATIONS.BATCH_UPDATES,
+    batchSize = BENCHMARK_CONSTANTS.ITERATIONS.BATCH_SIZE
   ): Promise<number> {
     type Item = { id: number; value: number };
     const store = createStore(
@@ -104,7 +128,8 @@ export class ElfBenchmarkService {
       store.update(
         updateAllEntities((e: Item) => ({ ...e, value: (e.value + 1) | 0 }))
       );
-      if ((b & 7) === 0) await this.yieldToUI();
+      if ((b & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.BATCH_UPDATES) === 0)
+        await this.yieldToUI();
     }
     return performance.now() - start;
   }
@@ -138,10 +163,11 @@ export class ElfBenchmarkService {
       return count;
     };
 
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 0; i < BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR; i++) {
       const count = selectEvenCount();
       if (count === -1) console.log('noop');
-      if ((i & 63) === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0)
+        await this.yieldToUI();
     }
     return performance.now() - start;
   }
@@ -156,7 +182,15 @@ export class ElfBenchmarkService {
     };
     const store = createStore({ name: 'elf-serialize' }, withEntities<User>());
     const users: User[] = Array.from(
-      { length: Math.max(100, Math.min(1000, dataSize)) },
+      {
+        length: Math.max(
+          BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.USER_SIMULATION.MIN,
+          Math.min(
+            BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.USER_SIMULATION.MAX,
+            dataSize
+          )
+        ),
+      },
       (_, i) => ({
         id: i,
         name: `User ${i}`,
@@ -185,7 +219,7 @@ export class ElfBenchmarkService {
   }
 
   async runConcurrentUpdatesBenchmark(
-    concurrency = 50,
+    concurrency = BENCHMARK_CONSTANTS.ITERATIONS.ASYNC_WORKFLOW,
     updatesPerWorker = 200
   ): Promise<number> {
     type Item = { id: number; value: number };
@@ -201,7 +235,8 @@ export class ElfBenchmarkService {
       store.update(
         updateAllEntities((e: Item) => ({ ...e, value: (e.value + 1) | 0 }))
       );
-      if ((u & 31) === 0) await this.yieldToUI();
+      if ((u & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.ASYNC_WORKFLOW) === 0)
+        await this.yieldToUI();
     }
     // consume
     const first = store.query(getAllEntities())[0];
@@ -212,7 +247,10 @@ export class ElfBenchmarkService {
   async runMemoryEfficiencyBenchmark(dataSize: number): Promise<number> {
     type Item = { id: number; score: number; tags: string[]; group: number };
     const store = createStore({ name: 'elf-bench-mem' }, withEntities<Item>());
-    const itemsCount = Math.max(1_000, Math.min(50_000, dataSize));
+    const itemsCount = Math.max(
+      BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.ENTITY_COUNT.MIN,
+      Math.min(BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.ENTITY_COUNT.MAX, dataSize)
+    );
     const groups = Math.max(10, Math.min(200, Math.floor(itemsCount / 250)));
     store.update(
       setEntities(
@@ -241,7 +279,8 @@ export class ElfBenchmarkService {
               : e.tags,
         }))
       );
-      if ((t & 63) === 0) await this.yieldToUI();
+      if ((t & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.MEMORY_EFFICIENCY) === 0)
+        await this.yieldToUI();
     }
     return performance.now() - start;
   }
@@ -374,7 +413,8 @@ export class ElfBenchmarkService {
       }
 
       // Yield occasionally to simulate real-time processing
-      if (i % 25 === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DATA_FETCHING) === 0)
+        await this.yieldToUI();
     }
 
     const duration = performance.now() - start;
@@ -465,7 +505,8 @@ export class ElfBenchmarkService {
         }))
       );
 
-      if (i % 20 === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.STATE_SIZE_SCALING) === 0)
+        await this.yieldToUI();
     }
 
     const duration = performance.now() - start;
