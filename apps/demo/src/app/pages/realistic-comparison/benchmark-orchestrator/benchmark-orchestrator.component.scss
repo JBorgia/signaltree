@@ -4,6 +4,7 @@
 $primary: #3b82f6;
 $secondary: #8b5cf6;
 $success: #10b981;
+$info: #06b6d4;
 $warning: #f59e0b;
 $danger: #ef4444;
 $dark: #1f2937;
@@ -1395,6 +1396,118 @@ $border: #e5e7eb;
     line-height: 1.6;
   }
 
+  .weighting-details {
+    margin-bottom: 2rem;
+
+    .weight-categories {
+      margin-bottom: 1.5rem;
+
+      h4 {
+        color: $primary;
+        margin-bottom: 1rem;
+        font-size: 1.2rem;
+      }
+
+      .category-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 0.75rem;
+
+        .category-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 0.75rem;
+          border-radius: 8px;
+          text-align: center;
+          border: 2px solid transparent;
+
+          .weight-range {
+            font-weight: 700;
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+          }
+
+          .frequency {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+          }
+
+          .examples {
+            font-size: 0.8rem;
+            opacity: 0.8;
+            line-height: 1.3;
+          }
+
+          &.very-high {
+            background: color.scale($success, $lightness: 45%);
+            border-color: $success;
+
+            .weight-range,
+            .frequency {
+              color: color.scale($success, $lightness: -20%);
+            }
+          }
+
+          &.high {
+            background: color.scale($info, $lightness: 45%);
+            border-color: $info;
+
+            .weight-range,
+            .frequency {
+              color: color.scale($info, $lightness: -20%);
+            }
+          }
+
+          &.medium {
+            background: color.scale($warning, $lightness: 45%);
+            border-color: $warning;
+
+            .weight-range,
+            .frequency {
+              color: color.scale($warning, $lightness: -25%);
+            }
+          }
+
+          &.low {
+            background: color.scale($secondary, $lightness: 45%);
+            border-color: $secondary;
+
+            .weight-range,
+            .frequency {
+              color: color.scale($secondary, $lightness: -20%);
+            }
+          }
+
+          &.rare {
+            background: color.scale($danger, $lightness: 45%);
+            border-color: $danger;
+
+            .weight-range,
+            .frequency {
+              color: color.scale($danger, $lightness: -20%);
+            }
+          }
+        }
+      }
+    }
+
+    .methodology-note {
+      background: rgba($primary, 0.1);
+      padding: 1rem;
+      border-radius: 6px;
+      border-left: 4px solid $primary;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: $dark;
+      margin-top: 1rem;
+
+      strong {
+        color: $primary;
+      }
+    }
+  }
+
   .weighting-presets {
     margin-bottom: 2rem;
 
@@ -1584,9 +1697,10 @@ $border: #e5e7eb;
         height: 100%;
         background: linear-gradient(
           90deg,
-          $success 0%,
-          $warning 50%,
-          $danger 100%
+          $danger 0%,
+          $warning 35%,
+          $info 65%,
+          $success 100%
         );
         transition: width 0.3s ease;
       }

@@ -15,7 +15,7 @@ import { withTimeTravel } from '@signaltree/time-travel';
  *
  * SignalTree: Direct mutation with fine-grained reactivity
  * - Best for: Frequent, targeted updates to large state trees
- * - Trade-offs: Higher memory overhead, slower serialization
+ * - Trade-offs: Slower serialization (signals must be unwrapped)
  * - Use when: Building interactive editors, real-time dashboards, forms with complex validation
  *
  * NgRx/Redux: Immutable updates with predictable state flow
