@@ -429,6 +429,32 @@
       </p>
 
       <div class="weighting-presets">
+        <!-- Smart Preset Suggestions -->
+        <div 
+          class="smart-suggestions" 
+          *ngIf="shouldShowSuggestions() && suggestedPresets().length > 0"
+        >
+          <h4>💡 Suggested Presets for Your Selection:</h4>
+          <div class="suggestion-cards">
+            <div 
+              class="suggestion-card"
+              *ngFor="let suggestion of suggestedPresets()"
+            >
+              <div class="suggestion-header">
+                <strong>{{ suggestion.presetName }}</strong>
+                <span class="confidence-badge">{{ suggestion.confidence | number:'1.0-0' }}% match</span>
+              </div>
+              <p class="suggestion-reason">{{ suggestion.reason }}</p>
+              <button 
+                class="btn btn-suggestion"
+                (click)="applySuggestedPreset(suggestion.presetId)"
+              >
+                Apply {{ suggestion.presetName }} Weights
+              </button>
+            </div>
+          </div>
+        </div>
+
         <h4>Quick Presets:</h4>
         <div class="preset-buttons">
           <button

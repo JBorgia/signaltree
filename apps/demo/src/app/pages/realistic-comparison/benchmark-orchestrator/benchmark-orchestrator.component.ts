@@ -497,6 +497,72 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     return this.testCases.filter((s) => s.selected);
   });
 
+  // Smart preset suggestions based on selected scenarios
+  suggestedPresets = computed(() => {
+    const selected = this.selectedScenarios();
+    if (selected.length === 0) return [];
+
+    const suggestions: Array<{
+      presetId: string;
+      presetName: string;
+      confidence: number;
+      reason: string;
+    }> = [];
+
+    // CRUD app detection
+    const crudScenarios = ['selector-memoization', 'computed-chains', 'data-fetching', 'large-array'];
+    const crudMatches = selected.filter(s => crudScenarios.includes(s.id)).length;
+    if (crudMatches >= 2) {
+      suggestions.push({
+        presetId: 'crud-app',
+        presetName: 'CRUD Application',
+        confidence: Math.min(95, (crudMatches / crudScenarios.length) * 100),
+        reason: `${crudMatches} scenarios match typical CRUD app patterns`
+      });
+    }
+
+    // Real-time app detection
+    const realTimeScenarios = ['large-array', 'concurrent-updates', 'real-time-updates', 'batch-updates'];
+    const realTimeMatches = selected.filter(s => realTimeScenarios.includes(s.id)).length;
+    if (realTimeMatches >= 2) {
+      suggestions.push({
+        presetId: 'real-time',
+        presetName: 'Real-Time Application',
+        confidence: Math.min(95, (realTimeMatches / realTimeScenarios.length) * 100),
+        reason: `${realTimeMatches} scenarios match real-time app patterns`
+      });
+    }
+
+    // Forms app detection
+    const formsScenarios = ['deep-nested', 'computed-chains', 'selector-memoization', 'serialization'];
+    const formsMatches = selected.filter(s => formsScenarios.includes(s.id)).length;
+    if (formsMatches >= 2) {
+      suggestions.push({
+        presetId: 'forms',
+        presetName: 'Forms-Heavy Application',
+        confidence: Math.min(95, (formsMatches / formsScenarios.length) * 100),
+        reason: `${formsMatches} scenarios match forms-heavy patterns`
+      });
+    }
+
+    // Enterprise app detection
+    const enterpriseScenarios = ['serialization', 'undo-redo', 'computed-chains', 'selector-memoization'];
+    const enterpriseMatches = selected.filter(s => enterpriseScenarios.includes(s.id)).length;
+    if (enterpriseMatches >= 2) {
+      suggestions.push({
+        presetId: 'enterprise',
+        presetName: 'Enterprise Application',
+        confidence: Math.min(95, (enterpriseMatches / enterpriseScenarios.length) * 100),
+        reason: `${enterpriseMatches} scenarios match enterprise patterns`
+      });
+    }
+
+    // Sort by confidence and return top suggestions
+    return suggestions
+      .sort((a, b) => b.confidence - a.confidence)
+      .slice(0, 2); // Show max 2 suggestions
+  });
+
   // Libraries that actually have results (ensures table shows all measured libs)
   librariesWithResults = computed(() => {
     const results = this.results();
@@ -2340,6 +2406,91 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     if (weight >= 1.0) return 'Normal';
     if (weight >= 0.5) return 'Low';
     return 'Very Low';
+  }
+
+  // Apply suggested preset based on smart analysis
+  applySuggestedPreset(presetId: string) {
+    this.applyWeightingPreset(presetId);
+  }
+
+  // Track scenario selection changes to show preset suggestions
+  private lastScenarioSelectionHash = '';
+  
+  checkForScenarioChanges() {
+    const selectedIds = this.selectedScenarios().map(s => s.id).sort().join(',');
+    const hasChanged = selectedIds !== this.lastScenarioSelectionHash;
+    this.lastScenarioSelectionHash = selectedIds;
+    return hasChanged;
+  }
+
+  // Check if preset suggestions are available and different from current weights
+  shouldShowSuggestions = computed(() => {
+    const suggestions = this.suggestedPresets();
+    if (suggestions.length === 0) return false;
+
+    // Check if current weights differ significantly from any suggested preset
+    return suggestions.some(suggestion => {
+      const preset = this.getPresetWeights(suggestion.presetId);
+      if (!preset) return false;
+
+      // Check if current weights differ from this preset by more than 0.2 on average
+      const selectedScenarios = this.selectedScenarios();
+      let totalDiff = 0;
+      let count = 0;
+
+      selectedScenarios.forEach(scenario => {
+        const currentWeight = scenario.frequencyWeight || 1.0;
+        const presetWeight = preset[scenario.id] || 1.0;
+        totalDiff += Math.abs(currentWeight - presetWeight);
+        count++;
+      });
+
+      const avgDiff = count > 0 ? totalDiff / count : 0;
+      return avgDiff > 0.2; // Show suggestions if average difference > 0.2
+    });
+  });
+
+  private getPresetWeights(presetId: string): Record<string, number> | null {
+    const presets: Record<string, Record<string, number>> = {
+      'crud-app': {
+        'selector-memoization': 3.0,
+        'computed-chains': 2.5,
+        'data-fetching': 2.0,
+        'large-array': 1.5,
+        serialization: 0.5,
+        'concurrent-updates': 0.3,
+        'memory-efficiency': 1.0,
+      },
+      'real-time': {
+        'large-array': 3.0,
+        'concurrent-updates': 2.5,
+        'real-time-updates': 3.0,
+        'batch-updates': 2.0,
+        serialization: 0.2,
+        'deep-nested': 1.5,
+        'memory-efficiency': 2.0,
+      },
+      forms: {
+        'deep-nested': 3.0,
+        'computed-chains': 2.5,
+        'selector-memoization': 2.0,
+        serialization: 1.5,
+        'large-array': 1.0,
+        'concurrent-updates': 0.5,
+        'memory-efficiency': 1.0,
+      },
+      enterprise: {
+        serialization: 2.5,
+        'undo-redo': 3.0,
+        'computed-chains': 2.0,
+        'selector-memoization': 2.0,
+        'large-array': 1.5,
+        'deep-nested': 1.5,
+        'memory-efficiency': 1.0,
+      },
+    };
+
+    return presets[presetId] || null;
   }
 
   weightedLibrarySummaries() {

@@ -71,6 +71,10 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     selected: false,
     category: 'core',
     purpose: 'Tests O(1) direct mutation vs O(n) immutable array rebuilding',
+    frequencyWeight: 1.8, // High - Lists, tables, collections are very common
+    realWorldFrequency: 'High - Lists, tables, data grids, search results',
+    architecturalTradeOffs:
+      'Direct mutation provides massive advantages for large arrays vs immutable rebuilding',
     enhancers: {
       required: ['withHighPerformanceBatching'],
       optional: [],
@@ -94,6 +98,11 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     category: 'core',
     purpose:
       'Evaluates dependency graph resolution and computed value performance',
+    frequencyWeight: 2.2, // High - Computed values are fundamental to reactive apps
+    realWorldFrequency:
+      'High - Derived state, calculated fields, data transformations',
+    architecturalTradeOffs:
+      'Granular reactivity prevents unnecessary recalculations vs coarse invalidation',
     enhancers: {
       required: ['withBatching', 'withShallowMemoization'],
       optional: [],
@@ -116,6 +125,11 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     selected: false,
     category: 'core',
     purpose: 'Tests batching system efficiency and transaction-like behavior',
+    frequencyWeight: 2.0, // Common - Form submissions, bulk operations, data synchronization
+    realWorldFrequency:
+      'Common - Form saves, bulk edits, transaction-like updates',
+    architecturalTradeOffs:
+      'Batching reduces render thrashing vs individual update overhead',
     enhancers: {
       required: ['withHighPerformanceBatching'],
       optional: [],
@@ -138,6 +152,11 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     selected: false,
     category: 'core',
     purpose: 'Evaluates memoization effectiveness and cache hit rates',
+    frequencyWeight: 2.8, // Very High - Selectors are used everywhere in modern apps
+    realWorldFrequency:
+      'Very High - Data filtering, searching, computed UI state',
+    architecturalTradeOffs:
+      'Memoization prevents expensive recalculations vs memory overhead',
     enhancers: {
       required: ['withLightweightMemoization'],
       optional: ['withBatching'],
@@ -160,6 +179,11 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     selected: false,
     category: 'core',
     purpose: 'Measures serialization overhead and JSON conversion performance',
+    frequencyWeight: 0.8, // Below normal - Only needed for persistence, debugging, SSR
+    realWorldFrequency:
+      'Low - State persistence, debugging, server-side rendering',
+    architecturalTradeOffs:
+      'Direct JSON serialization vs complex immutable structure traversal',
     enhancers: {
       required: [
         'withSerialization',
@@ -186,6 +210,11 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     selected: false,
     category: 'core',
     purpose: 'Tests performance under high-frequency update pressure',
+    frequencyWeight: 0.4, // Rare - Only in specific scenarios like gaming, real-time data
+    realWorldFrequency:
+      'Rare - Gaming, real-time data streams, intensive animations',
+    architecturalTradeOffs:
+      'Direct mutation handles rapid updates vs immutable bottlenecks',
     enhancers: {
       required: ['withBatching'],
       optional: [],
@@ -208,6 +237,11 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     selected: false,
     category: 'core',
     purpose: 'Measures memory overhead and garbage collection impact',
+    frequencyWeight: 1.5, // Above normal - Memory efficiency matters for all apps
+    realWorldFrequency:
+      'Medium-High - Mobile apps, long-running sessions, large datasets',
+    architecturalTradeOffs:
+      'Direct mutation reduces garbage collection vs immutable allocation pressure',
     enhancers: {
       required: ['withLightweightMemoization', 'withBatching'],
       optional: [],
@@ -233,6 +267,10 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     category: 'time-travel',
     purpose:
       'Tests time-travel functionality and history navigation performance',
+    frequencyWeight: 0.6, // Low - Only design tools, editors, debugging scenarios
+    realWorldFrequency: 'Low - Text editors, design tools, debugging workflows',
+    architecturalTradeOffs:
+      'Time-travel requires immutable snapshots vs direct mutation benefits',
     enhancers: {
       required: ['withTimeTravel'],
       optional: ['withBatching'],
@@ -255,6 +293,10 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     selected: false,
     category: 'time-travel',
     purpose: 'Tests time-travel performance with large history buffers',
+    frequencyWeight: 0.3, // Rare - Only specific debugging/development scenarios
+    realWorldFrequency: 'Rare - Development tools, complex debugging workflows',
+    architecturalTradeOffs:
+      'Large history requires significant memory vs lightweight state tracking',
     enhancers: {
       required: ['withTimeTravel'],
       optional: [],
@@ -276,6 +318,10 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     selected: false,
     category: 'time-travel',
     purpose: 'Tests random access performance in time-travel history',
+    frequencyWeight: 0.2, // Very rare - Only advanced debugging/development tools
+    realWorldFrequency: 'Very Rare - Advanced debugging, development tools',
+    architecturalTradeOffs:
+      'Random state access requires indexed history vs linear traversal',
     enhancers: {
       required: ['withTimeTravel'],
       optional: [],
@@ -299,6 +345,10 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     selected: false,
     category: 'middleware',
     purpose: 'Measures overhead of middleware layer on performance',
+    frequencyWeight: 1.2, // Slightly above normal - Logging, analytics are common
+    realWorldFrequency: 'Medium - Logging, analytics, error tracking',
+    architecturalTradeOffs:
+      'Middleware adds flexibility vs direct performance overhead',
     enhancers: {
       required: [],
       optional: ['withBatching'],
@@ -320,6 +370,10 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     selected: false,
     category: 'middleware',
     purpose: 'Tests performance impact of middleware stack depth',
+    frequencyWeight: 0.7, // Below normal - Only complex enterprise applications
+    realWorldFrequency: 'Low - Enterprise apps with complex middleware stacks',
+    architecturalTradeOffs:
+      'Middleware composition flexibility vs cumulative performance overhead',
     enhancers: {
       required: [],
       optional: ['withBatching'],
@@ -342,6 +396,10 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     selected: false,
     category: 'middleware',
     purpose: 'Tests performance of conditional middleware execution paths',
+    frequencyWeight: 0.5, // Rare - Only sophisticated middleware implementations
+    realWorldFrequency: 'Rare - Advanced middleware with conditional logic',
+    architecturalTradeOffs:
+      'Conditional middleware provides smart optimization vs branching overhead',
     enhancers: {
       required: [],
       optional: ['withBatching'],
@@ -365,6 +423,11 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     selected: false,
     category: 'async',
     purpose: 'Tests async state management and loading state handling',
+    frequencyWeight: 2.3, // High - API calls, data fetching are fundamental
+    realWorldFrequency:
+      'High - API calls, data loading, asynchronous operations',
+    architecturalTradeOffs:
+      'Direct async state mutation vs immutable loading state management',
     enhancers: {
       required: ['withBatching'],
       optional: ['withAsync'],
@@ -389,6 +452,11 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     selected: false,
     category: 'full-stack',
     purpose: 'Tests performance with all SignalTree features enabled',
+    frequencyWeight: 0.3, // Rare - Only specific enterprise or development scenarios
+    realWorldFrequency:
+      'Rare - Development environments, feature-complete demos',
+    architecturalTradeOffs:
+      'Full feature integration overhead vs individual feature performance',
     enhancers: {
       required: ['withMemoization', 'withBatching', 'withSerialization'],
       optional: ['withTimeTravel', 'withAsync'],
@@ -411,6 +479,10 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     selected: false,
     category: 'full-stack',
     purpose: 'Tests realistic production setup performance',
+    frequencyWeight: 3.0, // Very High - This represents real-world production usage
+    realWorldFrequency: 'Very High - Actual production application performance',
+    architecturalTradeOffs:
+      'Production-optimized configuration vs development convenience features',
     enhancers: {
       required: ['withMemoization', 'withBatching', 'withSerialization'],
       optional: [],
