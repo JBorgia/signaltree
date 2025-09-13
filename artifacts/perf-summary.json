@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-09-11T14:30:11.708Z",
+  "timestamp": "2025-09-13T18:39:31.044Z",
   "runs": 3,
   "summary": {
     "basic": {
@@ -18,29 +18,29 @@
     },
     "extreme": {
       "runs": 3,
-      "mean": 0.002,
+      "mean": 0.0023333333333333335,
       "min": 0.002,
-      "max": 0.002,
-      "stddev": 0
+      "max": 0.003,
+      "stddev": 0.0004714045207910317
     },
     "unlimited": {
       "runs": 3,
-      "mean": 0.0033333333333333335,
+      "mean": 0.0036666666666666666,
       "min": 0.003,
-      "max": 0.004,
-      "stddev": 0.0004714045207910317
+      "max": 0.005,
+      "stddev": 0.0009428090415820634
     }
   },
   "proxyOverhead": {
     "set": {
-      "mean": 65.26355,
+      "mean": 37.42675,
       "min": 0,
-      "max": 27958
+      "max": 5333
     },
     "update": {
-      "mean": 77.1165,
+      "mean": 28.02995,
       "min": 0,
-      "max": 180542
+      "max": 1500
     }
   },
   "bundleResults": {
@@ -65,11 +65,11 @@
       },
       {
         "name": "memoization",
-        "rawSize": 7207,
-        "gzipSize": 1848,
+        "rawSize": 9323,
+        "gzipSize": 2159,
         "claimed": 1800,
         "maxAllowed": 1900,
-        "passed": true,
+        "passed": false,
         "claimMet": false
       },
       {
@@ -119,8 +119,8 @@
       },
       {
         "name": "serialization",
-        "rawSize": 24691,
-        "gzipSize": 4727,
+        "rawSize": 25125,
+        "gzipSize": 4804,
         "claimed": 4620,
         "maxAllowed": 5000,
         "passed": true,
@@ -147,6 +147,12 @@
     ],
     "demoApp": null,
     "recommendations": [
+      {
+        "category": "Package Optimization",
+        "items": [
+          "Optimize memoization: 2.11KB > 1.86KB (13.6% over)"
+        ]
+      },
       {
         "category": "General Optimization",
         "items": [
@@ -309,14 +315,14 @@
   "deltas": {
     "proxyOverhead": {
       "set": {
-        "mean": 65.26355,
+        "mean": 37.42675,
         "baseline": 63.8315,
-        "pct": 2.2434847998245333
+        "pct": -41.36633167010019
       },
       "update": {
-        "mean": 77.1165,
+        "mean": 28.02995,
         "baseline": 79.6733,
-        "pct": -3.209105183292264
+        "pct": -64.81889164877067
       }
     },
     "perf": {
@@ -331,14 +337,14 @@
         "pct": 19.999999999999996
       },
       "extreme": {
-        "mean": 0.002,
+        "mean": 0.0023333333333333335,
         "baseline": 0.002,
-        "pct": 0
+        "pct": 16.666666666666675
       },
       "unlimited": {
-        "mean": 0.0033333333333333335,
+        "mean": 0.0036666666666666666,
         "baseline": 0.0030000000000000005,
-        "pct": 11.1111111111111
+        "pct": 22.2222222222222
       }
     },
     "packages": [
@@ -360,10 +366,10 @@
       },
       {
         "name": "memoization",
-        "gzipSize": 1848,
+        "gzipSize": 2159,
         "gzipSizeBaseline": 1848,
-        "gzipSizePct": 0,
-        "passed": true,
+        "gzipSizePct": 16.82900432900433,
+        "passed": false,
         "maxAllowed": 1900
       },
       {
@@ -408,9 +414,9 @@
       },
       {
         "name": "serialization",
-        "gzipSize": 4727,
+        "gzipSize": 4804,
         "gzipSizeBaseline": 4727,
-        "gzipSizePct": 0,
+        "gzipSizePct": 1.6289401311614133,
         "passed": true,
         "maxAllowed": 5000
       },
@@ -435,7 +441,9 @@
   "constraints": {
     "overheadBudgetPct": 25,
     "enforceClaims": false,
-    "violations": [],
-    "pass": true
+    "violations": [
+      "package size budget failed"
+    ],
+    "pass": false
   }
 }
