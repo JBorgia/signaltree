@@ -197,7 +197,7 @@ export class NgRxBenchmarkService {
 
       // Use same iteration count and yielding pattern as SignalTree for fair comparison
       for (let i = 0; i < iterations; i++) {
-        if (i % 100 === 0) {
+        if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0) {
           console.log(`NgRx Deep Nested: Iteration ${i}/${iterations}`);
         }
         state = reducer(state, updateValue({ value: i }));
@@ -627,7 +627,7 @@ export class NgRxBenchmarkService {
       state = benchmarkReducer(state, updateMetrics({ payload: metrics }));
 
       // Simulate incoming messages (like chat or notifications)
-      if (i % 10 === 0) {
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DATA_FETCHING) === 0) {
         const newMessage: Message = {
           id: i,
           content: `Real-time message ${i}`,
@@ -638,7 +638,8 @@ export class NgRxBenchmarkService {
       }
 
       // Yield occasionally to simulate real-time processing
-      if (i % 25 === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.REAL_TIME_UPDATES) === 0)
+        await this.yieldToUI();
     }
 
     const duration = performance.now() - start;
