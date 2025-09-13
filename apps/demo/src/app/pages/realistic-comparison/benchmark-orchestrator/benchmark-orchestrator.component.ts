@@ -1,14 +1,5 @@
 import { CommonModule, NgFor, NgIf } from '@angular/common';
-import {
-  Component,
-  computed,
-  effect,
-  ElementRef,
-  inject,
-  OnDestroy,
-  signal,
-  ViewChild,
-} from '@angular/core';
+import { Component, computed, effect, ElementRef, inject, OnDestroy, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { Subject } from 'rxjs';
@@ -105,10 +96,7 @@ interface BenchmarkService {
     batchSize?: number
   ): Promise<number>;
   runSelectorBenchmark?(dataSize: number): Promise<number>;
-  runSerializationBenchmark?(
-    dataSize: number,
-    enableDetailedLogging?: boolean
-  ): Promise<number>;
+  runSerializationBenchmark?(dataSize: number): Promise<number>;
   runConcurrentUpdatesBenchmark?(
     concurrency?: number,
     updatesPerWorker?: number
