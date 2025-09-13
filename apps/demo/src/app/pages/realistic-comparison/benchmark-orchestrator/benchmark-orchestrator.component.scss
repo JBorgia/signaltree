@@ -1845,3 +1845,249 @@ $border: #e5e7eb;
   border-left: 4px solid $primary;
   font-style: italic;
 }
+
+// Smart weighting tools
+.smart-weighting-tools {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: rgba($success, 0.1);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+
+  .smart-adjust-btn {
+    @include button;
+    background: $success;
+    color: white;
+    font-size: 0.9rem;
+
+    &:hover {
+      background: color.adjust($success, $lightness: -10%);
+    }
+  }
+
+  .smart-help {
+    color: #065f46;
+    font-size: 0.875rem;
+    font-style: italic;
+  }
+}
+
+// Weight impact analysis
+.weight-impact-analysis {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: rgba($secondary, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba($secondary, 0.2);
+
+  h4 {
+    margin-bottom: 1rem;
+    color: $dark;
+  }
+
+  .impact-summary {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    margin-bottom: 1.5rem;
+
+    .impact-level {
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.875rem;
+
+      &.impact-low {
+        background: rgba($success, 0.2);
+        color: #065f46;
+      }
+
+      &.impact-medium {
+        background: rgba($warning, 0.2);
+        color: #92400e;
+      }
+
+      &.impact-high {
+        background: rgba($danger, 0.2);
+        color: #991b1b;
+      }
+    }
+
+    .scenarios-count {
+      color: #6b7280;
+      font-size: 0.875rem;
+    }
+  }
+
+  .ranking-changes {
+    h5 {
+      margin-bottom: 1rem;
+      color: $dark;
+    }
+
+    .ranking-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+
+      .ranking-change-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        background: white;
+        border-radius: 8px;
+        border: 1px solid $border;
+
+        &.ranking-improved {
+          border-left: 4px solid $success;
+          background: rgba($success, 0.05);
+        }
+
+        &.ranking-declined {
+          border-left: 4px solid $warning;
+          background: rgba($warning, 0.05);
+        }
+
+        .library-name {
+          font-weight: 600;
+          color: $dark;
+        }
+
+        .rank-change {
+          font-size: 0.875rem;
+          color: #6b7280;
+
+          .change-indicator {
+            margin-left: 0.5rem;
+            font-weight: 600;
+            color: $dark;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Detailed library analysis
+.detailed-analysis {
+  margin-top: 2rem;
+
+  h3 {
+    margin-bottom: 1.5rem;
+    color: $dark;
+  }
+
+  .library-analysis-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+
+    .library-analysis-card {
+      @include card;
+      border-left: 4px solid var(--card-color);
+
+      .analysis-header {
+        margin-bottom: 1.5rem;
+
+        h4 {
+          margin-bottom: 1rem;
+          color: $dark;
+        }
+
+        .score-comparison {
+          display: grid;
+          grid-template-columns: 1fr 1fr auto;
+          gap: 1rem;
+          font-size: 0.875rem;
+
+          .raw-score,
+          .weighted-score {
+            padding: 0.5rem;
+            background: rgba($border, 0.3);
+            border-radius: 6px;
+            text-align: center;
+          }
+
+          .weighted-score {
+            background: rgba(var(--card-color), 0.1);
+            font-weight: 600;
+          }
+
+          .impact {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem;
+            border-radius: 6px;
+            font-weight: 600;
+            min-width: 80px;
+
+            &.positive-impact {
+              background: rgba($success, 0.2);
+              color: #065f46;
+            }
+
+            &.negative-impact {
+              background: rgba($danger, 0.2);
+              color: #991b1b;
+            }
+          }
+        }
+      }
+
+      .scenario-breakdown {
+        .scenario-item {
+          display: grid;
+          grid-template-columns: 1fr auto auto auto;
+          gap: 1rem;
+          padding: 0.75rem 0;
+          border-bottom: 1px solid $border;
+          align-items: center;
+
+          &:last-child {
+            border-bottom: none;
+          }
+
+          .scenario-info {
+            .scenario-name {
+              display: block;
+              font-weight: 600;
+              color: $dark;
+              margin-bottom: 0.25rem;
+            }
+
+            .frequency-note {
+              font-size: 0.75rem;
+              color: #6b7280;
+              font-style: italic;
+            }
+          }
+
+          .scenario-scores {
+            display: contents;
+
+            .weight {
+              color: $warning;
+              font-weight: 600;
+              font-size: 0.875rem;
+            }
+
+            .raw,
+            .weighted {
+              font-size: 0.875rem;
+              text-align: right;
+            }
+
+            .weighted {
+              font-weight: 600;
+              color: var(--card-color);
+            }
+          }
+        }
+      }
+    }
+  }
+}
