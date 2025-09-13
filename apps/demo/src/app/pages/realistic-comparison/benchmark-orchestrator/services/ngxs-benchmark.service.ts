@@ -1,5 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Action, Selector, State, StateContext, Store } from '@ngxs/store';
+import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
 
 // Type definitions
 type ArrayItem = {
@@ -170,15 +171,15 @@ export class NgxsBenchmarkService {
   private readonly store = inject(Store);
 
   private yieldToUI() {
-    return new Promise<void>((r) => setTimeout(r));
+    return new Promise<void>((r) => setTimeout(r, BENCHMARK_CONSTANTS.TIMING.YIELD_DELAY_MS));
   }
 
-  async runDeepNestedBenchmark(dataSize: number, depth = 15): Promise<number> {
+  async runDeepNestedBenchmark(dataSize: number, depth = BENCHMARK_CONSTANTS.DATA_GENERATION.NESTED_DEPTH): Promise<number> {
     const start = performance.now();
 
     // Initialize deep nested structure
     const promises: Promise<void>[] = [];
-    for (let i = 0; i < Math.min(dataSize, 1000); i++) {
+    for (let i = 0; i < Math.min(dataSize, BENCHMARK_CONSTANTS.ITERATIONS.DEEP_NESTED); i++) {
       const path = Array.from(
         { length: depth },
         (_, d) => `level${d}_${i % 10}`
@@ -189,7 +190,7 @@ export class NgxsBenchmarkService {
         .toPromise();
       promises.push(promise);
 
-      if (i % 100 === 0) {
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DEEP_NESTED) === 0) {
         await Promise.all(promises.splice(0)); // Wait for batch to complete
         await this.yieldToUI();
       }
@@ -202,7 +203,7 @@ export class NgxsBenchmarkService {
 
   async runArrayBenchmark(dataSize: number): Promise<number> {
     const start = performance.now();
-    const updates = Math.min(1000, dataSize); // Match other libraries' cap
+    const updates = Math.min(BENCHMARK_CONSTANTS.ITERATIONS.ARRAY_UPDATES, dataSize); // Match other libraries' cap
 
     const promises: Promise<void>[] = [];
     for (let i = 0; i < updates; i++) {
@@ -217,7 +218,7 @@ export class NgxsBenchmarkService {
         .toPromise();
       promises.push(promise);
 
-      if (i % 50 === 0) {
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.ARRAY_UPDATES) === 0) {
         await Promise.all(promises.splice(0)); // Wait for batch to complete
         await this.yieldToUI();
       }
@@ -232,13 +233,13 @@ export class NgxsBenchmarkService {
     const start = performance.now();
 
     const promises: Promise<void>[] = [];
-    for (let i = 0; i < Math.min(dataSize, 500); i++) {
+    for (let i = 0; i < Math.min(dataSize, BENCHMARK_CONSTANTS.ITERATIONS.COMPUTED); i++) {
       promises.push(this.store.dispatch(new ComputeValues(i)).toPromise());
 
       // Force selector computation by selecting the computed result
       this.store.selectOnce(BenchmarkState.getComputedResult).subscribe();
 
-      if (i % 25 === 0) {
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.COMPUTED) === 0) {
         await Promise.all(promises.splice(0)); // Wait for batch to complete
         await this.yieldToUI();
       }
@@ -250,8 +251,8 @@ export class NgxsBenchmarkService {
   }
 
   async runBatchUpdatesBenchmark(
-    batches = 100,
-    batchSize = 1000
+    batches = BENCHMARK_CONSTANTS.ITERATIONS.BATCH_UPDATES,
+    batchSize = BENCHMARK_CONSTANTS.ITERATIONS.BATCH_SIZE
   ): Promise<number> {
     const start = performance.now();
 
@@ -267,7 +268,7 @@ export class NgxsBenchmarkService {
 
       promises.push(this.store.dispatch(new BatchUpdate(updates)).toPromise());
 
-      if (batch % 10 === 0) {
+      if ((batch & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.BATCH_UPDATES) === 0) {
         await Promise.all(promises.splice(0)); // Wait for batch to complete
         await this.yieldToUI();
       }
@@ -287,12 +288,12 @@ export class NgxsBenchmarkService {
     }
 
     // Then run selector benchmark
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 0; i < BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR; i++) {
       this.store.selectOnce(BenchmarkState.getComputedResult).subscribe();
       this.store.selectOnce(BenchmarkState.getDeepNested).subscribe();
       this.store.selectOnce(BenchmarkState.getLargeArray).subscribe();
 
-      if (i % 100 === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0) await this.yieldToUI();
     }
 
     return performance.now() - start;
@@ -363,7 +364,7 @@ export class NgxsBenchmarkService {
         })
       );
 
-      if (i % 50 === 0) await this.yieldToUI();
+      if ((i & 63) === 0) await this.yieldToUI();
     }
 
     return performance.now() - start;
@@ -395,7 +396,7 @@ export class NgxsBenchmarkService {
     for (let i = 0; i < mockApiData.length; i++) {
       this.store.dispatch(new UpdateArray(i, mockApiData[i]));
 
-      if (i % 100 === 0) await this.yieldToUI();
+      if ((i & 15) === 0) await this.yieldToUI();
     }
 
     return performance.now() - start;
@@ -452,7 +453,7 @@ export class NgxsBenchmarkService {
           break;
       }
 
-      if (i % 25 === 0) await this.yieldToUI();
+      if ((i & 31) === 0) await this.yieldToUI();
     }
 
     return performance.now() - start;
@@ -493,7 +494,7 @@ export class NgxsBenchmarkService {
         new UpdateDeepNested(['entities', i.toString()], entity)
       );
 
-      if (i % 100 === 0) await this.yieldToUI();
+      if ((i & 31) === 0) await this.yieldToUI();
     }
 
     return performance.now() - start;
