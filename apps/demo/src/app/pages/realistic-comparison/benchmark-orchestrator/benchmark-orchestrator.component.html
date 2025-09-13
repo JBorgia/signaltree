@@ -430,22 +430,24 @@
 
       <div class="weighting-presets">
         <!-- Smart Preset Suggestions -->
-        <div 
-          class="smart-suggestions" 
+        <div
+          class="smart-suggestions"
           *ngIf="shouldShowSuggestions() && suggestedPresets().length > 0"
         >
           <h4>💡 Suggested Presets for Your Selection:</h4>
           <div class="suggestion-cards">
-            <div 
+            <div
               class="suggestion-card"
               *ngFor="let suggestion of suggestedPresets()"
             >
               <div class="suggestion-header">
                 <strong>{{ suggestion.presetName }}</strong>
-                <span class="confidence-badge">{{ suggestion.confidence | number:'1.0-0' }}% match</span>
+                <span class="confidence-badge"
+                  >{{ suggestion.confidence | number : '1.0-0' }}% match</span
+                >
               </div>
               <p class="suggestion-reason">{{ suggestion.reason }}</p>
-              <button 
+              <button
                 class="btn btn-suggestion"
                 (click)="applySuggestedPreset(suggestion.presetId)"
               >
@@ -772,7 +774,9 @@
         <div class="weight-display">
           <div class="weight-item" *ngFor="let scenario of selectedScenarios()">
             <span class="scenario">{{ scenario.name }}</span>
-            <span class="weight-value">{{ scenario.frequencyWeight || 1.0 }}x</span>
+            <span class="weight-value"
+              >{{ scenario.frequencyWeight || 1.0 }}x</span
+            >
             <div class="weight-bar">
               <div
                 class="weight-fill"
@@ -781,45 +785,58 @@
             </div>
           </div>
         </div>
-        
+
         <!-- Smart Weighting Tools -->
         <div class="smart-weighting-tools">
-          <button 
+          <button
             class="smart-adjust-btn"
             (click)="applySmartWeightAdjustments()"
-            type="button">
+            type="button"
+          >
             🧠 Apply Research-Based Weights
           </button>
           <span class="smart-help">Based on real-world usage studies</span>
         </div>
       </div>
-      
+
       <!-- Detailed Weight Impact Analysis -->
-      <div class="weight-impact-analysis" *ngIf="weightedResultsAnalysis() as analysis">
+      <div
+        class="weight-impact-analysis"
+        *ngIf="weightedResultsAnalysis() as analysis"
+      >
         <h4>🔬 Weight Impact Analysis</h4>
         <div class="impact-summary">
-          <div class="impact-level" [class]="'impact-' + analysis.weightingSignificance">
-            <strong>{{ analysis.weightingSignificance | uppercase }}</strong> impact from frequency weighting
+          <div
+            class="impact-level"
+            [class]="'impact-' + analysis.weightingSignificance"
+          >
+            <strong>{{ analysis.weightingSignificance | uppercase }}</strong>
+            impact from frequency weighting
           </div>
           <div class="scenarios-count">
             {{ analysis.totalScenariosAnalyzed }} scenarios analyzed
           </div>
         </div>
-        
+
         <div class="ranking-changes" *ngIf="analysis.rankingChanges">
           <h5>📈 Ranking Changes Due to Weighting:</h5>
           <div class="ranking-grid">
-            <div 
+            <div
               class="ranking-change-item"
               *ngFor="let change of analysis.rankingChanges"
               [class.ranking-improved]="change.rankChange > 0"
-              [class.ranking-declined]="change.rankChange < 0">
+              [class.ranking-declined]="change.rankChange < 0"
+            >
               <span class="library-name">{{ change.libraryName }}</span>
               <span class="rank-change">
                 #{{ change.rawRank }} → #{{ change.weightedRank }}
                 <span class="change-indicator" *ngIf="change.rankChange !== 0">
                   {{ change.rankChange > 0 ? '↗️' : '↘️' }}
-                  {{ change.rankChange > 0 ? change.rankChange : -change.rankChange }}
+                  {{
+                    change.rankChange > 0
+                      ? change.rankChange
+                      : -change.rankChange
+                  }}
                 </span>
               </span>
             </div>
@@ -829,39 +846,55 @@
     </div>
 
     <!-- Detailed Library Analysis -->
-    <div class="detailed-analysis" *ngIf="weightedResultsAnalysis() as analysis">
+    <div
+      class="detailed-analysis"
+      *ngIf="weightedResultsAnalysis() as analysis"
+    >
       <h3>📋 Detailed Performance Breakdown</h3>
       <div class="library-analysis-grid">
-        <div 
+        <div
           class="library-analysis-card"
           *ngFor="let lib of analysis.libraryAnalysis"
-          [style.--card-color]="lib.color">
+          [style.--card-color]="lib.color"
+        >
           <div class="analysis-header">
             <h4>{{ lib.libraryName }}</h4>
             <div class="score-comparison">
               <div class="raw-score">
-                Raw: {{ lib.rawAverage | number:'1.0-0' }} ops/sec
+                Raw: {{ lib.rawAverage | number : '1.0-0' }} ops/sec
               </div>
               <div class="weighted-score">
-                Weighted: {{ lib.weightedAverage | number:'1.0-0' }} ops/sec
+                Weighted: {{ lib.weightedAverage | number : '1.0-0' }} ops/sec
               </div>
-              <div class="impact" [class.positive-impact]="lib.weightingImpact > 0" [class.negative-impact]="lib.weightingImpact < 0">
-                {{ lib.weightingImpact > 0 ? '+' : '' }}{{ lib.weightingImpact | number:'1.1-1' }}%
+              <div
+                class="impact"
+                [class.positive-impact]="lib.weightingImpact > 0"
+                [class.negative-impact]="lib.weightingImpact < 0"
+              >
+                {{ lib.weightingImpact > 0 ? '+' : ''
+                }}{{ lib.weightingImpact | number : '1.1-1' }}%
               </div>
             </div>
           </div>
           <div class="scenario-breakdown">
-            <div 
+            <div
               class="scenario-item"
-              *ngFor="let scenario of lib.scenarioBreakdown">
+              *ngFor="let scenario of lib.scenarioBreakdown"
+            >
               <div class="scenario-info">
                 <span class="scenario-name">{{ scenario.scenarioName }}</span>
-                <span class="frequency-note">{{ scenario.realWorldFrequency }}</span>
+                <span class="frequency-note">{{
+                  scenario.realWorldFrequency
+                }}</span>
               </div>
               <div class="scenario-scores">
                 <span class="weight">{{ scenario.weight }}x</span>
-                <span class="raw">{{ scenario.rawScore | number:'1.0-0' }}</span>
-                <span class="weighted">{{ scenario.weightedScore | number:'1.0-0' }}</span>
+                <span class="raw">{{
+                  scenario.rawScore | number : '1.0-0'
+                }}</span>
+                <span class="weighted">{{
+                  scenario.weightedScore | number : '1.0-0'
+                }}</span>
               </div>
             </div>
           </div>
