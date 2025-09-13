@@ -1413,7 +1413,7 @@ Extend the core with optional feature packages:
 ### Performance & Optimization
 
 - **[@signaltree/batching](../batching)** (+1.27KB gzipped) - Batch multiple updates for better performance
-- **[@signaltree/memoization](../memoization)** (+1.80KB gzipped) - Intelligent caching & performance optimization
+- **[@signaltree/memoization](../memoization)** (+2.11KB gzipped) - Intelligent caching & performance optimization
 
 ### Advanced Features
 
