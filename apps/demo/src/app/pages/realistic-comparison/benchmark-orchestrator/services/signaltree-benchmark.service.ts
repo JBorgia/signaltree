@@ -663,7 +663,7 @@ export class SignalTreeBenchmarkService {
     // Make changes
     for (let i = 0; i < operations; i++) {
       tree.state.counter.set(i);
-      tree.state.data.set({ value: `step_${i}` });
+      tree.state.data({ value: `step_${i}` });
     }
 
     // Undo half
@@ -690,7 +690,7 @@ export class SignalTreeBenchmarkService {
     // Make changes to build history
     for (let i = 0; i < historySize; i++) {
       tree.state.value.set(i);
-      tree.state.data.set({ content: `step_${i}` });
+      tree.state.data({ content: `step_${i}` });
 
       if ((i & 255) === 0) await this.yieldToUI();
     }
@@ -709,7 +709,7 @@ export class SignalTreeBenchmarkService {
     // Build history first
     for (let i = 0; i < operations; i++) {
       tree.state.currentState.set(i);
-      tree.state.data.set({ value: `state_${i}` });
+      tree.state.data({ value: `state_${i}` });
     }
 
     // Now test jumping to random historical states
