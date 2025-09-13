@@ -614,7 +614,9 @@ export class SignalTreeBenchmarkService {
 
     // Simulate async loading function
     const fetchItems = async () => {
-      await new Promise((r) => setTimeout(r, 10)); // 10ms async delay
+      await new Promise((r) =>
+        setTimeout(r, BENCHMARK_CONSTANTS.TIMING.ASYNC_DELAY_MS)
+      ); // 10ms async delay
       return Array.from({ length: dataSize }, (_, i) => ({ id: i, value: i }));
     };
 
@@ -649,7 +651,12 @@ export class SignalTreeBenchmarkService {
     const asyncOperation = async (id: number) => {
       tree.state.activeOperations.update((count) => count + 1);
 
-      await new Promise((r) => setTimeout(r, Math.random() * 20)); // Random delay
+      await new Promise((r) =>
+        setTimeout(
+          r,
+          Math.random() * BENCHMARK_CONSTANTS.TIMING.RANDOM_DELAY_MAX_MS
+        )
+      ); // Random delay
 
       const result = { id, value: Math.random() };
       tree.state.results.update((results) => [...results, result]);
@@ -905,7 +912,9 @@ export class SignalTreeBenchmarkService {
     for (let i = 0; i < iterations; i++) {
       // Simulate async load
       (tree.state as any).loading.set(true);
-      await new Promise((r) => setTimeout(r, 5));
+      await new Promise((r) =>
+        setTimeout(r, BENCHMARK_CONSTANTS.TIMING.TIMEOUT_DELAY_MS)
+      );
 
       // Update data
       (tree.state as any).data.update((data: any[]) => [
