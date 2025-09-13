@@ -57,7 +57,7 @@ import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
 export class SignalTreeBenchmarkService {
   private yieldToUI() {
     return new Promise<void>((r) =>
-      setTimeout(r, BENCHMARK_CONSTANTS.TIMING.YIELD_DELAY)
+      setTimeout(r, BENCHMARK_CONSTANTS.TIMING.YIELD_DELAY_MS)
     );
   }
 
@@ -77,7 +77,11 @@ export class SignalTreeBenchmarkService {
     );
 
     // Match NgXs cap of 1000 iterations for fair comparison
-    for (let i = 0; i < Math.min(dataSize, 1000); i++) {
+    for (
+      let i = 0;
+      i < Math.min(dataSize, BENCHMARK_CONSTANTS.ITERATIONS.DEEP_NESTED);
+      i++
+    ) {
       let current: any = tree.state;
       for (let j = 0; j < depth; j++) {
         if (!current?.level) break;
@@ -109,7 +113,10 @@ export class SignalTreeBenchmarkService {
       })),
     }).with(withHighPerformanceBatching()); // Only batching, no memoization needed
 
-    const updates = Math.min(1000, dataSize);
+    const updates = Math.min(
+      BENCHMARK_CONSTANTS.ITERATIONS.ARRAY_UPDATES,
+      dataSize
+    );
     for (let i = 0; i < updates; i++) {
       const idx = i % dataSize;
       // Use update method to properly modify the items array signal
@@ -141,7 +148,11 @@ export class SignalTreeBenchmarkService {
       return acc;
     });
 
-    for (let i = 0; i < Math.min(dataSize, 500); i++) {
+    for (
+      let i = 0;
+      i < Math.min(dataSize, BENCHMARK_CONSTANTS.ITERATIONS.COMPUTED);
+      i++
+    ) {
       tree.state.value.set(i);
       compute(); // Now this is properly memoized!
       if ((i & 1023) === 0) await this.yieldToUI();
@@ -205,13 +216,13 @@ export class SignalTreeBenchmarkService {
       }, {} as Record<number, number>);
     });
 
-    for (let i = 0; i < BENCHMARK_CONSTANTS.ITERATIONS.MEMOIZATION_TEST; i++) {
+    for (let i = 0; i < BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR; i++) {
       selectEven(); // Now this is properly memoized!
       selectHighValue(); // Test cache hit rate
       selectByCategory(); // More complex computation
 
       // Occasionally update to test cache invalidation
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.MEMOIZATION_TEST) === 0) {
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0) {
         tree.state.items.update((items) => {
           const idx = i % items.length;
           items[idx].flag = !items[idx].flag;
@@ -231,7 +242,15 @@ export class SignalTreeBenchmarkService {
     // Consider: How often does your app serialize state vs perform updates?
     const tree = signalTree({
       users: Array.from(
-        { length: Math.max(100, Math.min(1000, dataSize)) },
+        {
+          length: Math.max(
+            BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.USER_SIMULATION.MIN,
+            Math.min(
+              BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.USER_SIMULATION.MAX,
+              dataSize
+            )
+          ),
+        },
         (_, i) => ({
           id: i,
           name: `User ${i}`,
@@ -313,7 +332,10 @@ export class SignalTreeBenchmarkService {
   async runMemoryEfficiencyBenchmark(dataSize: number): Promise<number> {
     // NOTE: Memory measurements are unreliable across browsers and affected by GC timing.
     // This benchmark focuses on operational performance rather than heap measurements.
-    const itemsCount = Math.max(1_000, Math.min(50_000, dataSize));
+    const itemsCount = Math.max(
+      BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.ENTITY_COUNT.MIN,
+      Math.min(BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.ENTITY_COUNT.MAX, dataSize)
+    );
     const groups = Math.max(10, Math.min(200, Math.floor(itemsCount / 250)));
 
     // SignalTree's memory trade-off: more wrappers, but efficient targeted updates
@@ -378,7 +400,12 @@ export class SignalTreeBenchmarkService {
 
     // Simulate fetching data and hydrating state
     const mockApiData = Array.from(
-      { length: Math.min(dataSize, 1000) },
+      {
+        length: Math.min(
+          dataSize,
+          BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.USER_SIMULATION.MAX
+        ),
+      },
       (_, i) => ({
         id: i,
         title: `Item ${i}`,
@@ -413,7 +440,11 @@ export class SignalTreeBenchmarkService {
     tree.state.metadata.loaded.set(true);
 
     // Simulate filtering operations (common after data fetch)
-    for (let i = 0; i < Math.min(100, dataSize / 10); i++) {
+    for (
+      let i = 0;
+      i < Math.min(BENCHMARK_CONSTANTS.ITERATIONS.BATCH_UPDATES, dataSize / 10);
+      i++
+    ) {
       tree.state.filters.search.set(`search${i}`);
       tree.state.filters.category.set(`cat${i % 5}`);
 
@@ -454,7 +485,10 @@ export class SignalTreeBenchmarkService {
     }).with(withHighPerformanceBatching(), withLightweightMemoization());
 
     // Simulate real-time updates (like WebSocket messages)
-    const updateFrequency = Math.min(500, dataSize);
+    const updateFrequency = Math.min(
+      BENCHMARK_CONSTANTS.ITERATIONS.REAL_TIME_UPDATES,
+      dataSize
+    );
     for (let i = 0; i < updateFrequency; i++) {
       // Live metrics updates
       tree.state.liveMetrics.activeUsers.update(
@@ -503,7 +537,13 @@ export class SignalTreeBenchmarkService {
 
     // Test how well each library handles increasing state size
     const largeDataSet = Array.from(
-      { length: Math.min(dataSize * 10, 10000) },
+      {
+        length: Math.min(
+          dataSize *
+            BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.LARGE_DATASET.MULTIPLIER,
+          BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.LARGE_DATASET.MAX
+        ),
+      },
       (_, i) => ({
         id: i,
         name: `Entity ${i}`,
@@ -531,7 +571,10 @@ export class SignalTreeBenchmarkService {
     tree.state.stats.lastUpdate.set(new Date());
 
     // Build indices (simulate common large-scale operations)
-    const operations = Math.min(200, dataSize / 5);
+    const operations = Math.min(
+      BENCHMARK_CONSTANTS.ITERATIONS.STATE_SIZE_SCALING,
+      dataSize / 5
+    );
     for (let i = 0; i < operations; i++) {
       const entityId = i % largeDataSet.length;
 
@@ -545,7 +588,7 @@ export class SignalTreeBenchmarkService {
       });
 
       // Update cache/index occasionally
-      if (i % 20 === 0) {
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.REAL_TIME_UPDATES) === 0) {
         (tree.state.cache as any).update((cache: any) => ({
           ...cache,
           [`cache_${i}`]: { computed: Math.random(), timestamp: Date.now() },
@@ -826,7 +869,7 @@ export class SignalTreeBenchmarkService {
 
     for (let i = 0; i < operations; i++) {
       // Toggle condition periodically
-      if (i % 10 === 0) {
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DATA_FETCHING) === 0) {
         tree.state.condition.set(!tree.state.condition());
       }
 
@@ -855,7 +898,10 @@ export class SignalTreeBenchmarkService {
     const start = performance.now();
 
     // Mixed workload: async, sync updates, history, middleware simulation
-    const iterations = Math.min(dataSize / 100, 50); // Scale with dataSize but cap at 50
+    const iterations = Math.min(
+      dataSize / 100,
+      BENCHMARK_CONSTANTS.ITERATIONS.ASYNC_WORKFLOW
+    ); // Scale with dataSize but cap at 50
     for (let i = 0; i < iterations; i++) {
       // Simulate async load
       (tree.state as any).loading.set(true);
@@ -924,7 +970,7 @@ export class SignalTreeBenchmarkService {
       }));
 
       // UI state updates
-      if (i % 20 === 0) {
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.REAL_TIME_UPDATES) === 0) {
         (tree.state as any).ui.notifications.update((n: any[]) => [
           ...n.slice(-5),
           { id: i, message: `Update ${i}`, type: 'info' },
@@ -932,7 +978,7 @@ export class SignalTreeBenchmarkService {
       }
 
       // Cache updates
-      if (i % 10 === 0) {
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DATA_FETCHING) === 0) {
         (tree.state as any).cache.update((cache: any) => ({
           ...cache,
           [`cache_${i}`]: { result: Math.random(), computed: Date.now() },
