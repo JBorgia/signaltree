@@ -10,6 +10,7 @@ import {
   withShallowMemoization,
 } from '@signaltree/memoization';
 import { withSerialization } from '@signaltree/serialization';
+import { withTimeTravel } from '@signaltree/time-travel';
 
 /**
  * SignalTree Benchmark Service
@@ -651,56 +652,28 @@ export class SignalTreeBenchmarkService {
   // ================================
 
   async runUndoRedoBenchmark(operations: number): Promise<number> {
-    // Note: SignalTree time-travel would need to be imported
-    // For now, simulate with manual history tracking
+    // Use actual SignalTree time-travel enhancer
     const tree = signalTree({
       counter: 0,
-      history: [] as number[],
-      historyIndex: -1,
-    });
-
-    const makeChange = (value: number) => {
-      const currentHistory = tree.state.history();
-      const newHistory = currentHistory.slice(0, tree.state.historyIndex() + 1);
-      newHistory.push(value);
-
-      tree.state.history.set(newHistory);
-      tree.state.historyIndex.set(newHistory.length - 1);
-      tree.state.counter.set(value);
-    };
-
-    const undo = () => {
-      const index = tree.state.historyIndex();
-      if (index > 0) {
-        tree.state.historyIndex.set(index - 1);
-        tree.state.counter.set(tree.state.history()[index - 1]);
-      }
-    };
-
-    const redo = () => {
-      const index = tree.state.historyIndex();
-      const history = tree.state.history();
-      if (index < history.length - 1) {
-        tree.state.historyIndex.set(index + 1);
-        tree.state.counter.set(history[index + 1]);
-      }
-    };
+      data: { value: 'initial' },
+    }).with(withTimeTravel());
 
     const start = performance.now();
 
     // Make changes
     for (let i = 0; i < operations; i++) {
-      makeChange(i);
+      tree.state.counter.set(i);
+      tree.state.data.set({ value: `step_${i}` });
     }
 
     // Undo half
     for (let i = 0; i < operations / 2; i++) {
-      undo();
+      (tree as any).undo?.();
     }
 
     // Redo quarter
     for (let i = 0; i < operations / 4; i++) {
-      redo();
+      (tree as any).redo?.();
     }
 
     return performance.now() - start;
@@ -709,21 +682,15 @@ export class SignalTreeBenchmarkService {
   async runHistorySizeBenchmark(historySize: number): Promise<number> {
     const tree = signalTree({
       value: 0,
-      history: [] as number[],
-    });
+      data: { content: 'initial' },
+    }).with(withTimeTravel({ maxHistorySize: historySize }));
 
     const start = performance.now();
 
-    // Build large history
+    // Make changes to build history
     for (let i = 0; i < historySize; i++) {
       tree.state.value.set(i);
-      tree.state.history.update((h) => {
-        const newHistory = [...h, i];
-        // Keep history size bounded
-        return newHistory.length > historySize
-          ? newHistory.slice(-historySize)
-          : newHistory;
-      });
+      tree.state.data.set({ content: `step_${i}` });
 
       if ((i & 255) === 0) await this.yieldToUI();
     }
@@ -734,21 +701,21 @@ export class SignalTreeBenchmarkService {
   async runJumpToStateBenchmark(operations: number): Promise<number> {
     const tree = signalTree({
       currentState: 0,
-      states: Array.from({ length: operations }, (_, i) => ({
-        id: i,
-        data: `state_${i}`,
-      })),
-    });
+      data: { value: 'initial' },
+    }).with(withTimeTravel());
 
     const start = performance.now();
 
-    // Jump to random states
+    // Build history first
     for (let i = 0; i < operations; i++) {
-      const randomIndex = Math.floor(
-        Math.random() * tree.state.states().length
-      );
-      const targetState = tree.state.states()[randomIndex];
-      tree.state.currentState.set(targetState.id);
+      tree.state.currentState.set(i);
+      tree.state.data.set({ value: `state_${i}` });
+    }
+
+    // Now test jumping to random historical states
+    for (let i = 0; i < operations; i++) {
+      const randomStep = Math.floor(Math.random() * operations);
+      (tree as any).jumpToStep?.(randomStep);
 
       if ((i & 31) === 0) await this.yieldToUI();
     }
