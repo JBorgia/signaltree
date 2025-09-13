@@ -353,18 +353,18 @@ export class NgxsBenchmarkService {
     const start = performance.now();
 
     // Create and update large amounts of data to test memory efficiency
-    for (let i = 0; i < Math.min(dataSize, 1000); i++) {
+    for (let i = 0; i < Math.min(dataSize, BENCHMARK_CONSTANTS.ITERATIONS.MEMORY_EFFICIENCY); i++) {
       // Create nested data
       const path = [`memory_test`, `item_${i}`];
       this.store.dispatch(
         new UpdateDeepNested(path, {
           id: i,
-          data: new Array(100).fill(0).map(() => Math.random()),
+          data: new Array(BENCHMARK_CONSTANTS.DATA_GENERATION.ARRAY_SIZE_100).fill(0).map(() => Math.random()),
           metadata: { created: Date.now(), index: i },
         })
       );
 
-      if ((i & 63) === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.MEMORY_EFFICIENCY) === 0) await this.yieldToUI();
     }
 
     return performance.now() - start;
