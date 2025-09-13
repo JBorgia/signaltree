@@ -2725,7 +2725,7 @@ SignalTree is built with a modular architecture that allows you to choose exactl
 ```
 @signaltree/core (7.20KB)
 ├── @signaltree/batching (1.27KB)
-├── @signaltree/memoization (1.80KB)
+├── @signaltree/memoization (2.11KB)
 ├── @signaltree/async (1.80KB)
 ├── @signaltree/entities (0.97KB)
 ├── @signaltree/middleware (1.38KB)
@@ -3222,15 +3222,15 @@ SignalTree has undergone comprehensive bundle optimization to ensure minimal pro
 | serialization | 4.69KB | 4.88KB | ✅     | Advanced persistence & auto-save     |
 | ng-forms      | 3.38KB | 3.52KB | ✅     | Complete Angular Forms integration   |
 | devtools      | 2.49KB | 2.54KB | ✅     | Development tools & Redux DevTools   |
+| memoization   | 2.11KB | 2.20KB | ✅     | Intelligent caching (197.9x speedup) |
 | async         | 1.80KB | 1.86KB | ✅     | Advanced async operations            |
-| memoization   | 1.80KB | 1.86KB | ✅     | Intelligent caching (197.9x speedup) |
 | time-travel   | 1.75KB | 1.76KB | ✅     | Undo/redo & state history            |
 | middleware    | 1.38KB | 1.42KB | ✅     | Middleware system & interceptors     |
 | batching      | 1.27KB | 1.37KB | ✅     | Batch updates (455.8x speedup)       |
 | entities      | 0.97KB | 0.98KB | ✅     | Enhanced CRUD operations             |
 | presets       | 0.84KB | 0.88KB | ✅     | Pre-configured setups                |
 
-**Total Ecosystem: 27.50KB** - All packages exceed performance targets with room for growth.
+**Total Ecosystem: 27.88KB** - All packages exceed performance targets with room for growth.
 
 ---
 
