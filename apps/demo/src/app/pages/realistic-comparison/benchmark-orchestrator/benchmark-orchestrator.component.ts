@@ -2636,6 +2636,13 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     return 'Very Low';
   }
 
+  getFrequencyBarWidth(weight: number): number {
+    // Map frequency weights (0.1 to 3.0) to bar width percentages (10% to 100%)
+    // 0.1 (very rare) -> 10%, 3.0 (very high) -> 100%
+    const clampedWeight = Math.max(0.1, Math.min(3.0, weight));
+    return Math.round(((clampedWeight - 0.1) / (3.0 - 0.1)) * 90 + 10);
+  }
+
   // Apply suggested preset based on smart analysis
   applySuggestedPreset(presetId: string) {
     this.applyWeightingPreset(presetId);
