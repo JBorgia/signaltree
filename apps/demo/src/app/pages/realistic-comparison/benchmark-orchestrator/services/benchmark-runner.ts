@@ -52,70 +52,89 @@ export async function runTimed(
     options.label
   );
 
-  // Warmup phase (not timed)
-  for (let i = 0; i < warmup; i++) {
-    await runOnce(i);
-    if (yieldEvery && (i + 1) % yieldEvery === 0) {
-      await yieldToUI();
-    }
-  }
+  // Track active timeouts for cleanup
+  const activeTimeouts = new Set<ReturnType<typeof setTimeout>>();
 
-  const memBefore =
-    options.trackMemory && PerfWithMemory.memory
-      ? PerfWithMemory.memory.usedJSHeapSize
-      : undefined;
-
-  // Small idle to reduce GC overlap with timing
-  if (options.trackMemory) {
-    await yieldToUI();
-    if ('requestIdleCallback' in window) {
-      await new Promise<void>((resolve) =>
-        (
-          window as unknown as {
-            requestIdleCallback: (
-              cb: () => void,
-              opts?: { timeout?: number }
-            ) => void;
-          }
-        ).requestIdleCallback(() => resolve(), { timeout: 50 })
-      );
-    }
-  }
-
-  // Optionally repeat the operation block to reach a minimum timing window
-  let repeats = 1;
-  let durationAccum = 0;
-  const minDurationMs = Math.max(0, options.minDurationMs ?? 0);
-  let continueLoop = true;
-  do {
-    const t0 = performance.now();
-    for (let i = 0; i < operations; i++) {
+  try {
+    // Warmup phase (not timed)
+    for (let i = 0; i < warmup; i++) {
       await runOnce(i);
       if (yieldEvery && (i + 1) % yieldEvery === 0) {
         await yieldToUI();
       }
     }
-    const t1 = performance.now();
-    durationAccum += t1 - t0;
-    if (durationAccum < minDurationMs) {
-      repeats++;
-      // Guard to avoid runaway loops
-      if (repeats > 64) continueLoop = false;
-    } else {
-      continueLoop = false;
+
+    const memBefore =
+      options.trackMemory && PerfWithMemory.memory
+        ? PerfWithMemory.memory.usedJSHeapSize
+        : undefined;
+
+    // Small idle to reduce GC overlap with timing
+    if (options.trackMemory) {
+      await yieldToUI();
+      if ('requestIdleCallback' in window) {
+        await new Promise<void>((resolve) => {
+          const callback = () => resolve();
+          const timeout = setTimeout(callback, 50);
+          activeTimeouts.add(timeout);
+          (
+            window as unknown as {
+              requestIdleCallback: (
+                cb: () => void,
+                opts?: { timeout?: number }
+              ) => void;
+            }
+          ).requestIdleCallback(
+            () => {
+              activeTimeouts.delete(timeout);
+              clearTimeout(timeout);
+              callback();
+            },
+            { timeout: 50 }
+          );
+        });
+      }
     }
-  } while (continueLoop);
 
-  const memAfter =
-    options.trackMemory && PerfWithMemory.memory
-      ? PerfWithMemory.memory.usedJSHeapSize
-      : undefined;
+    // Optionally repeat the operation block to reach a minimum timing window
+    let repeats = 1;
+    let durationAccum = 0;
+    const minDurationMs = Math.max(0, options.minDurationMs ?? 0);
+    let continueLoop = true;
+    do {
+      const t0 = performance.now();
+      for (let i = 0; i < operations; i++) {
+        await runOnce(i);
+        if (yieldEvery && (i + 1) % yieldEvery === 0) {
+          await yieldToUI();
+        }
+      }
+      const t1 = performance.now();
+      durationAccum += t1 - t0;
+      if (durationAccum < minDurationMs) {
+        repeats++;
+        // Guard to avoid runaway loops
+        if (repeats > 64) continueLoop = false;
+      } else {
+        continueLoop = false;
+      }
+    } while (continueLoop);
 
-  const memoryDeltaMB =
-    memBefore !== undefined && memAfter !== undefined
-      ? (memAfter - memBefore) / (1024 * 1024)
-      : undefined;
+    const memAfter =
+      options.trackMemory && PerfWithMemory.memory
+        ? PerfWithMemory.memory.usedJSHeapSize
+        : undefined;
 
-  // Normalize duration to a single block of `operations` by dividing repeats
-  return { durationMs: durationAccum / repeats, memoryDeltaMB };
+    const memoryDeltaMB =
+      memBefore !== undefined && memAfter !== undefined
+        ? (memAfter - memBefore) / (1024 * 1024)
+        : undefined;
+
+    // Normalize duration to a single block of `operations` by dividing repeats
+    return { durationMs: durationAccum / repeats, memoryDeltaMB };
+  } finally {
+    // Clean up any remaining timeouts
+    activeTimeouts.forEach((timeout) => clearTimeout(timeout));
+    activeTimeouts.clear();
+  }
 }

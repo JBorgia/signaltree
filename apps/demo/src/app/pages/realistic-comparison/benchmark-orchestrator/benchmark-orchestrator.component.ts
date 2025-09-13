@@ -1,5 +1,14 @@
 import { CommonModule, NgFor, NgIf } from '@angular/common';
-import { Component, computed, effect, ElementRef, inject, OnDestroy, signal, ViewChild } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  inject,
+  OnDestroy,
+  signal,
+  ViewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { Subject } from 'rxjs';
@@ -96,7 +105,10 @@ interface BenchmarkService {
     batchSize?: number
   ): Promise<number>;
   runSelectorBenchmark?(dataSize: number): Promise<number>;
-  runSerializationBenchmark?(dataSize: number): Promise<number>;
+  runSerializationBenchmark?(
+    dataSize: number,
+    enableDetailedLogging?: boolean
+  ): Promise<number>;
   runConcurrentUpdatesBenchmark?(
     concurrency?: number,
     updatesPerWorker?: number
@@ -1869,12 +1881,23 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   private updateCharts() {
     if (!this.hasResults()) return;
 
-    // Clear existing charts
-    this.charts.forEach((chart) => chart.destroy());
+    // Clear existing charts with proper cleanup
+    this.charts.forEach((chart) => {
+      try {
+        chart.destroy();
+      } catch (error) {
+        console.warn('Error destroying chart:', error);
+      }
+    });
     this.charts = [];
 
     // Ensure ViewChild is available before creating chart
     if (this.combinedChartRef?.nativeElement) {
+      // Clear any residual chart data from canvas
+      const ctx = this.combinedChartRef.nativeElement.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      }
       this.createCombinedChart();
     } else {
       // ViewChild not ready yet, retry after a short delay

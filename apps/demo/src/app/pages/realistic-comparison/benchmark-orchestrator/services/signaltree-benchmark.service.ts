@@ -1,7 +1,14 @@
 import { computed, Injectable } from '@angular/core';
-import { withBatching, withHighPerformanceBatching } from '@signaltree/batching';
+import {
+  withBatching,
+  withHighPerformanceBatching,
+} from '@signaltree/batching';
 import { signalTree } from '@signaltree/core';
-import { withLightweightMemoization, withMemoization, withShallowMemoization } from '@signaltree/memoization';
+import {
+  withLightweightMemoization,
+  withMemoization,
+  withShallowMemoization,
+} from '@signaltree/memoization';
 import { withSerialization } from '@signaltree/serialization';
 import { withTimeTravel } from '@signaltree/time-travel';
 
@@ -203,7 +210,10 @@ export class SignalTreeBenchmarkService {
     return performance.now() - start;
   }
 
-  async runSerializationBenchmark(dataSize: number): Promise<number> {
+  async runSerializationBenchmark(
+    dataSize: number,
+    enableDetailedLogging = false
+  ): Promise<number> {
     // SignalTree trades serialization speed for fine-grained reactivity
     // 3x slower than NgRx due to signal unwrapping overhead
     // This is the architectural cost of direct mutation capability
@@ -256,13 +266,15 @@ export class SignalTreeBenchmarkService {
     JSON.stringify({ data: snapshot.data });
     const t2 = performance.now();
 
-    // Log split timings for investigation
-    console.debug(
-      '[SignalTree][serialization] snapshot(ms)=',
-      (t1 - t0).toFixed(2),
-      ' stringify(ms)=',
-      (t2 - t1).toFixed(2)
-    );
+    // Optional detailed timing logs (disabled by default to avoid impacting benchmark results)
+    if (enableDetailedLogging) {
+      console.debug(
+        '[SignalTree][serialization] snapshot(ms)=',
+        (t1 - t0).toFixed(2),
+        ' stringify(ms)=',
+        (t2 - t1).toFixed(2)
+      );
+    }
 
     return t2 - t0;
   }
@@ -326,30 +338,40 @@ export class SignalTreeBenchmarkService {
     const touches = Math.max(100, Math.floor(itemsCount * 0.01));
     for (let t = 0; t < touches; t++) {
       const g = t % groups;
-      (tree.state as any)['groups'][g]['items'].update((arr: any[]) => {
-        const idx = t % arr.length;
-        const it = arr[idx];
-        it.score = (it.score + 1) | 0;
-        if ((t & 63) === 0)
-          it.tags = it.tags.includes('hot') ? ['cold'] : ['hot'];
-        return arr;
+      // Update the entire groups array to modify nested items
+      tree.state.groups.update((groupsArray) => {
+        // Clone the array to maintain immutability
+        const newGroups = [...groupsArray];
+        const group = newGroups[g];
+        if (group && group.items) {
+          // Clone the group and its items array
+          newGroups[g] = {
+            ...group,
+            items: group.items.map((item, index) => {
+              const idx = t % group.items.length;
+              if (index === idx) {
+                return {
+                  ...item,
+                  score: (item.score + 1) | 0,
+                  tags:
+                    (t & 63) === 0
+                      ? item.tags.includes('hot')
+                        ? ['cold']
+                        : ['hot']
+                      : item.tags,
+                };
+              }
+              return item;
+            }),
+          };
+        }
+        return newGroups;
       });
       if ((t & 63) === 0) await this.yieldToUI();
     }
 
-    const duration = performance.now() - start;
-    const afterMem =
-      (performance as typeof SignalTreeBenchmarkService.PerfWithMemory).memory
-        ?.usedJSHeapSize ?? null;
-    if (beforeMem != null && afterMem != null) {
-      const deltaMB = (afterMem - beforeMem) / (1024 * 1024);
-      console.debug(
-        '[SignalTree][memory] usedJSHeapSize ΔMB ~',
-        deltaMB.toFixed(2)
-      );
-    }
-
-    return duration;
+    // Return elapsed time as a placeholder (or you could return memory delta if desired)
+    return performance.now() - start;
   }
 
   async runDataFetchingBenchmark(dataSize: number): Promise<number> {
