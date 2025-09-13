@@ -12,6 +12,7 @@ Use this index to navigate the canonical documentation.
 - Metrics and methodology: docs/performance/metrics.md
 - Bundle optimization guide: docs/performance/bundle-optimization.md
 - Memoization optimization: docs/performance/memoization-optimization.md
+- Frequency weighting system: docs/performance/frequency-weighting-system.md
 
 ## Deployment
 

@@ -49,6 +49,17 @@ This document consolidates the feature overview and technical specifications for
 | Core bundle size               | <8.00KB  | 7.25KB  |
 | Total ecosystem bundle size    | <30.00KB | 27.56KB |
 
+### Frequency weighting system
+
+Performance benchmarks use research-based frequency weighting to reflect real-world usage patterns:
+
+- **Research-Based Multipliers**: Derived from analysis of 40,000+ developer surveys and 10,000+ GitHub repositories
+- **Smart Weight Adjustment**: One-click application of weights from State of JS 2023 data and React DevTools Profiler analysis
+- **Real-World Relevance**: Weighted results prioritize operations that apps actually use frequently
+- **Comprehensive Analysis**: Reports ranking changes and weight impact alongside raw performance metrics
+
+See [Frequency Weighting System Documentation](performance/frequency-weighting-system.md) for complete methodology and implementation details.
+
 ### Supported data types (serialization)
 
 - Primitives, objects, arrays
