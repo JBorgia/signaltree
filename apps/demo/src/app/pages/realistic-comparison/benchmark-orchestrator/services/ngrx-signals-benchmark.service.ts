@@ -67,7 +67,10 @@ export class NgRxSignalsBenchmarkService {
     });
 
     const start = performance.now();
-    const updates = Math.min(BENCHMARK_CONSTANTS.ITERATIONS.ARRAY_UPDATES, dataSize);
+    const updates = Math.min(
+      BENCHMARK_CONSTANTS.ITERATIONS.ARRAY_UPDATES,
+      dataSize
+    );
     for (let i = 0; i < updates; i++) {
       const idx = i % dataSize;
       patchState(state, (s) => ({
@@ -76,7 +79,8 @@ export class NgRxSignalsBenchmarkService {
           j === idx ? { ...item, value: Math.random() * 1000 } : item
         ),
       }));
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.ARRAY_UPDATES) === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.ARRAY_UPDATES) === 0)
+        await this.yieldToUI();
     }
     return performance.now() - start;
   }
@@ -84,7 +88,10 @@ export class NgRxSignalsBenchmarkService {
   async runComputedBenchmark(dataSize: number): Promise<number> {
     const state = signalState({
       value: 0,
-      factors: Array.from({ length: BENCHMARK_CONSTANTS.DATA_GENERATION.FACTOR_COUNT }, (_, i) => i + 1),
+      factors: Array.from(
+        { length: BENCHMARK_CONSTANTS.DATA_GENERATION.FACTOR_COUNT },
+        (_, i) => i + 1
+      ),
     });
 
     const compute = computed(() => {
@@ -98,10 +105,15 @@ export class NgRxSignalsBenchmarkService {
 
     const start = performance.now();
     // Match NgXs cap of 500 iterations for fair comparison
-    for (let i = 0; i < Math.min(dataSize, BENCHMARK_CONSTANTS.ITERATIONS.COMPUTED); i++) {
+    for (
+      let i = 0;
+      i < Math.min(dataSize, BENCHMARK_CONSTANTS.ITERATIONS.COMPUTED);
+      i++
+    ) {
       patchState(state, (s) => ({ ...s, value: i }));
       compute();
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.COMPUTED) === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.COMPUTED) === 0)
+        await this.yieldToUI();
     }
     return performance.now() - start;
   }
@@ -119,7 +131,8 @@ export class NgRxSignalsBenchmarkService {
         ...s,
         items: s.items.map((v) => (v + 1) | 0),
       }));
-      if ((b & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.BATCH_UPDATES) === 0) await this.yieldToUI();
+      if ((b & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.BATCH_UPDATES) === 0)
+        await this.yieldToUI();
     }
     return performance.now() - start;
   }
@@ -138,7 +151,8 @@ export class NgRxSignalsBenchmarkService {
     const start = performance.now();
     for (let i = 0; i < BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR; i++) {
       selectEven();
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0)
+        await this.yieldToUI();
     }
     return performance.now() - start;
   }
@@ -146,7 +160,15 @@ export class NgRxSignalsBenchmarkService {
   async runSerializationBenchmark(dataSize: number): Promise<number> {
     const state = signalState({
       users: Array.from(
-        { length: Math.max(BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.USER_SIMULATION.MIN, Math.min(BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.USER_SIMULATION.MAX, dataSize)) },
+        {
+          length: Math.max(
+            BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.USER_SIMULATION.MIN,
+            Math.min(
+              BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.USER_SIMULATION.MAX,
+              dataSize
+            )
+          ),
+        },
         (_, i) => ({
           id: i,
           name: `User ${i}`,
@@ -208,7 +230,8 @@ export class NgRxSignalsBenchmarkService {
           ),
         }));
       }
-      if ((u & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.ASYNC_WORKFLOW) === 0) await this.yieldToUI();
+      if ((u & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.ASYNC_WORKFLOW) === 0)
+        await this.yieldToUI();
     }
 
     // consume
@@ -217,7 +240,10 @@ export class NgRxSignalsBenchmarkService {
   }
 
   async runMemoryEfficiencyBenchmark(dataSize: number): Promise<number> {
-    const itemsCount = Math.max(BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.ENTITY_COUNT.MIN, Math.min(BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.ENTITY_COUNT.MAX, dataSize));
+    const itemsCount = Math.max(
+      BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.ENTITY_COUNT.MIN,
+      Math.min(BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.ENTITY_COUNT.MAX, dataSize)
+    );
     const groups = Math.max(10, Math.min(200, Math.floor(itemsCount / 250)));
 
     const beforeMem =
@@ -257,7 +283,10 @@ export class NgRxSignalsBenchmarkService {
                         ...it,
                         score: (it.score + 1) | 0,
                         tags:
-                          (t & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.MEMORY_EFFICIENCY) === 0
+                          (t &
+                            BENCHMARK_CONSTANTS.YIELD_FREQUENCY
+                              .MEMORY_EFFICIENCY) ===
+                          0
                             ? it.tags.includes('hot')
                               ? ['cold']
                               : ['hot']
@@ -267,7 +296,8 @@ export class NgRxSignalsBenchmarkService {
               }
         ),
       }));
-      if ((t & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.MEMORY_EFFICIENCY) === 0) await this.yieldToUI();
+      if ((t & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.MEMORY_EFFICIENCY) === 0)
+        await this.yieldToUI();
     }
 
     const duration = performance.now() - start;
@@ -322,14 +352,17 @@ export class NgRxSignalsBenchmarkService {
     const start = performance.now();
 
     // Simulate fetching 1000 user records from API
-    const users = Array.from({ length: BENCHMARK_CONSTANTS.ITERATIONS.DATA_FETCHING }, (_, i) => ({
-      id: i + 1,
-      name: `User ${i + 1}`,
-      email: `user${i + 1}@example.com`,
-      isActive: Math.random() > 0.3,
-      department: `Dept ${Math.floor(Math.random() * 10) + 1}`,
-      lastLogin: new Date().toISOString(),
-    }));
+    const users = Array.from(
+      { length: BENCHMARK_CONSTANTS.ITERATIONS.DATA_FETCHING },
+      (_, i) => ({
+        id: i + 1,
+        name: `User ${i + 1}`,
+        email: `user${i + 1}@example.com`,
+        isActive: Math.random() > 0.3,
+        department: `Dept ${Math.floor(Math.random() * 10) + 1}`,
+        lastLogin: new Date().toISOString(),
+      })
+    );
 
     // Update state with users
     patchState(state, { users });
@@ -415,7 +448,8 @@ export class NgRxSignalsBenchmarkService {
       }
 
       // Yield occasionally to simulate real-time processing
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DATA_FETCHING) === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DATA_FETCHING) === 0)
+        await this.yieldToUI();
     }
 
     const duration = performance.now() - start;
@@ -485,20 +519,24 @@ export class NgRxSignalsBenchmarkService {
     const start = performance.now();
 
     // Create large dataset (10,000 items)
-    const largeDataset = Array.from({ length: BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.LARGE_DATASET.MAX }, (_, i) => ({
-      id: i + 1,
-      title: `Item ${i + 1}`,
-      description: `Description for item ${
-        i + 1
-      } with some additional text to make it realistic`,
-      category: `Category ${Math.floor(i / 100) + 1}`,
-      status: Math.random() > 0.5 ? ('active' as const) : ('inactive' as const),
-      metadata: {
-        createdAt: new Date().toISOString(),
-        tags: [`tag${i % 10}`, `tag${i % 7}`, `tag${i % 5}`],
-        score: Math.random() * 100,
-      },
-    }));
+    const largeDataset = Array.from(
+      { length: BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.LARGE_DATASET.MAX },
+      (_, i) => ({
+        id: i + 1,
+        title: `Item ${i + 1}`,
+        description: `Description for item ${
+          i + 1
+        } with some additional text to make it realistic`,
+        category: `Category ${Math.floor(i / 100) + 1}`,
+        status:
+          Math.random() > 0.5 ? ('active' as const) : ('inactive' as const),
+        metadata: {
+          createdAt: new Date().toISOString(),
+          tags: [`tag${i % 10}`, `tag${i % 7}`, `tag${i % 5}`],
+          score: Math.random() * 100,
+        },
+      })
+    );
 
     // Hydrate the large dataset
     patchState(state, { largeDataset });
@@ -518,7 +556,11 @@ export class NgRxSignalsBenchmarkService {
     await this.yieldToUI();
 
     // 3. Update multiple items (batch update simulation)
-    for (let i = 0; i < BENCHMARK_CONSTANTS.ITERATIONS.STATE_SIZE_SCALING; i++) {
+    for (
+      let i = 0;
+      i < BENCHMARK_CONSTANTS.ITERATIONS.STATE_SIZE_SCALING;
+      i++
+    ) {
       const randomIndex = Math.floor(Math.random() * largeDataset.length);
       patchState(state, (currentState) => ({
         largeDataset: currentState.largeDataset.map((item, index) =>
@@ -535,7 +577,8 @@ export class NgRxSignalsBenchmarkService {
         ),
       }));
 
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.STATE_SIZE_SCALING) === 0) await this.yieldToUI();
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.STATE_SIZE_SCALING) === 0)
+        await this.yieldToUI();
     }
 
     const duration = performance.now() - start;

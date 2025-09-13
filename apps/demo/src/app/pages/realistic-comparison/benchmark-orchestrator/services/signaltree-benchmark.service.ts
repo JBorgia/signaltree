@@ -5,6 +5,8 @@ import { withLightweightMemoization, withMemoization, withShallowMemoization } f
 import { withSerialization } from '@signaltree/serialization';
 import { withTimeTravel } from '@signaltree/time-travel';
 
+import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
+
 /**
  * SignalTree Architecture Trade-offs Analysis
  *
@@ -54,7 +56,9 @@ import { withTimeTravel } from '@signaltree/time-travel';
 @Injectable({ providedIn: 'root' })
 export class SignalTreeBenchmarkService {
   private yieldToUI() {
-    return new Promise<void>((r) => setTimeout(r, 0));
+    return new Promise<void>((r) =>
+      setTimeout(r, BENCHMARK_CONSTANTS.TIMING.YIELD_DELAY)
+    );
   }
 
   async runDeepNestedBenchmark(dataSize: number, depth = 15): Promise<number> {
@@ -201,13 +205,13 @@ export class SignalTreeBenchmarkService {
       }, {} as Record<number, number>);
     });
 
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 0; i < BENCHMARK_CONSTANTS.ITERATIONS.MEMOIZATION_TEST; i++) {
       selectEven(); // Now this is properly memoized!
       selectHighValue(); // Test cache hit rate
       selectByCategory(); // More complex computation
 
       // Occasionally update to test cache invalidation
-      if (i % 100 === 0) {
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.MEMOIZATION_TEST) === 0) {
         tree.state.items.update((items) => {
           const idx = i % items.length;
           items[idx].flag = !items[idx].flag;
@@ -463,7 +467,7 @@ export class SignalTreeBenchmarkService {
       tree.state.liveMetrics.responseTime.set(50 + Math.random() * 200);
 
       // Add new events (with size limit)
-      if (i % 10 === 0) {
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DATA_FETCHING) === 0) {
         tree.state.recentEvents.update((events) => [
           ...events.slice(-99), // Keep last 100 events
           {
@@ -476,7 +480,7 @@ export class SignalTreeBenchmarkService {
       }
 
       // Add notifications occasionally
-      if (i % 25 === 0) {
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.REAL_TIME_UPDATES) === 0) {
         tree.state.notifications.update((notifs) => [
           ...notifs.slice(-9), // Keep last 10 notifications
           {
