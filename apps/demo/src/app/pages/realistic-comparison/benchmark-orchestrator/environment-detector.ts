@@ -10,12 +10,41 @@ export interface EnvironmentFactor {
   impact: number; // Estimated performance impact percentage (negative = slower)
   reason: string;
   confidence: 'low' | 'medium' | 'high';
+  category: 'browser' | 'system' | 'network' | 'hardware';
+  severity: 'info' | 'warning' | 'critical';
+}
+
+export interface DetailedEnvironmentReport {
+  factors: EnvironmentFactor[];
+  overallReliability: number; // 0-100 score
+  recommendedActions: string[];
+  systemInfo: {
+    userAgent: string;
+    hardwareConcurrency: number;
+    deviceMemory?: number;
+    connection?: {
+      effectiveType: string;
+      downlink: number;
+    };
+  };
+  performanceBaseline: {
+    cpuScore: number;
+    memoryScore: number;
+    timestamp: Date;
+  };
 }
 
 export class EnvironmentDetector {
   private devToolsOpen = false;
   private initialViewport = { width: 0, height: 0 };
   private isInitialized = false;
+  private performanceBaseline: {
+    cpuScore: number;
+    memoryScore: number;
+    timestamp: Date;
+  } | null = null;
+  private lastCPUCheck = 0;
+  private cpuBusyRatio = 0;
 
   constructor() {
     this.initialViewport = {
@@ -23,6 +52,7 @@ export class EnvironmentDetector {
       height: window.innerHeight,
     };
     this.setupDetection();
+    this.runPerformanceBaseline();
   }
 
   private setupDetection() {
@@ -97,6 +127,8 @@ export class EnvironmentDetector {
         reason:
           'Developer tools detected - V8 debugging overhead may affect measurements',
         confidence: 'medium',
+        category: 'browser',
+        severity: 'warning',
       });
     }
 
@@ -116,65 +148,167 @@ export class EnvironmentDetector {
             1
           )}%) - GC overhead likely`,
           confidence: 'high',
+          category: 'system',
+          severity: 'warning',
         });
       }
     }
 
-    // CPU throttling detection
+    // Tab focus detection
     if (!document.hasFocus()) {
       factors.push({
         name: 'Background Tab',
         impact: -20,
         reason: 'Tab is not focused - browser throttling active',
         confidence: 'high',
+        category: 'browser',
+        severity: 'critical',
       });
     }
 
-    // Battery/power mode detection (Chrome)
-    if ('getBattery' in navigator) {
-      // This is async, so we'd need to cache the result
-      // For now, just detect if we're likely on battery
+    // Battery/mobile device detection
+    const isMobile = navigator.userAgent.includes('Mobile');
+    const isBatteryDevice = 'getBattery' in navigator;
+    if (isMobile || isBatteryDevice) {
       factors.push({
         name: 'Mobile/Battery Device',
         impact: -5,
         reason: 'Device may be power-constrained',
         confidence: 'low',
+        category: 'hardware',
+        severity: 'info',
       });
     }
 
-    // High DPI detection (can affect rendering performance)
+    // High DPI detection
     if (window.devicePixelRatio > 2) {
       factors.push({
         name: 'High DPI Display',
         impact: -5,
         reason: `High pixel ratio (${window.devicePixelRatio}x) may affect rendering benchmarks`,
         confidence: 'medium',
+        category: 'hardware',
+        severity: 'info',
       });
     }
 
-    // Browser engine detection
+    // Browser engine differences
     const userAgent = navigator.userAgent;
-    if (userAgent.includes('Chrome')) {
-      // Chrome usually has the best performance for benchmarks
-    } else if (userAgent.includes('Firefox')) {
+    if (userAgent.includes('Firefox')) {
       factors.push({
         name: 'Firefox Browser',
         impact: 0,
         reason:
           'Different JavaScript engine - results may not be comparable to Chrome',
         confidence: 'high',
+        category: 'browser',
+        severity: 'info',
       });
-    } else if (userAgent.includes('Safari')) {
+    } else if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) {
       factors.push({
         name: 'Safari Browser',
         impact: 0,
         reason:
           'Different JavaScript engine - results may not be comparable to Chrome',
         confidence: 'high',
+        category: 'browser',
+        severity: 'info',
       });
     }
 
     return factors;
+  }
+
+  private async runPerformanceBaseline(): Promise<void> {
+    // Quick CPU benchmark
+    const cpuStart = performance.now();
+    let cpuOps = 0;
+    while (performance.now() - cpuStart < 100) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+      Math.random() * Math.random();
+      cpuOps++;
+    }
+    const cpuScore = cpuOps / 100; // Operations per millisecond
+
+    // Memory score based on available heap
+    const memory = (
+      performance as unknown as { memory?: { jsHeapSizeLimit: number } }
+    ).memory;
+    const memoryScore = memory
+      ? Math.min(100, (memory.jsHeapSizeLimit / (1024 * 1024 * 1024)) * 20) // GB to score
+      : 50; // Default if not available
+
+    this.performanceBaseline = {
+      cpuScore,
+      memoryScore,
+      timestamp: new Date(),
+    };
+  }
+  getDetailedReport(): DetailedEnvironmentReport {
+    const factors = this.getEnvironmentFactors();
+
+    // Calculate overall reliability (0-100)
+    let reliabilityScore = 100;
+    factors.forEach((factor) => {
+      if (factor.severity === 'critical') {
+        reliabilityScore -= Math.abs(factor.impact) * 2;
+      } else if (factor.severity === 'warning') {
+        reliabilityScore -= Math.abs(factor.impact);
+      } else {
+        reliabilityScore -= Math.abs(factor.impact) * 0.5;
+      }
+    });
+    reliabilityScore = Math.max(0, Math.min(100, reliabilityScore));
+
+    // Generate recommendations
+    const recommendedActions: string[] = [];
+    if (factors.some((f) => f.name === 'DevTools Open')) {
+      recommendedActions.push(
+        'Close developer tools for accurate measurements'
+      );
+    }
+    if (factors.some((f) => f.name === 'Background Tab')) {
+      recommendedActions.push('Keep tab focused during benchmarks');
+    }
+    if (factors.some((f) => f.name === 'Memory Pressure')) {
+      recommendedActions.push('Close other applications to free memory');
+    }
+    if (reliabilityScore < 70) {
+      recommendedActions.push(
+        'Consider running benchmarks in optimal conditions'
+      );
+    }
+
+    // System info
+    const connection = (
+      navigator as unknown as {
+        connection?: { effectiveType: string; downlink: number };
+      }
+    ).connection;
+    const systemInfo = {
+      userAgent: navigator.userAgent,
+      hardwareConcurrency: navigator.hardwareConcurrency,
+      deviceMemory: (navigator as unknown as { deviceMemory?: number })
+        .deviceMemory,
+      connection: connection
+        ? {
+            effectiveType: connection.effectiveType,
+            downlink: connection.downlink,
+          }
+        : undefined,
+    };
+
+    return {
+      factors,
+      overallReliability: reliabilityScore,
+      recommendedActions,
+      systemInfo,
+      performanceBaseline: this.performanceBaseline || {
+        cpuScore: 0,
+        memoryScore: 0,
+        timestamp: new Date(),
+      },
+    };
   }
 
   getReliabilityScore(): number {
