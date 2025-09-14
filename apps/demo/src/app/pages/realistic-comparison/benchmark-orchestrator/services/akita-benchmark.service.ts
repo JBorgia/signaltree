@@ -366,7 +366,11 @@ export class AkitaBenchmarkService {
     itemsStore.set(mockApiData);
 
     // Simulate filtering operations (common after data fetch)
-    for (let i = 0; i < Math.min(100, dataSize / 10); i++) {
+    for (
+      let i = 0;
+      i < Math.min(dataSize / 10, BENCHMARK_CONSTANTS.ITERATIONS.DATA_FETCHING);
+      i++
+    ) {
       const searchTerm = `search${i}`;
       const categoryFilter = `cat${i % 5}`;
 
@@ -555,7 +559,12 @@ export class AkitaBenchmarkService {
 
     // Create large dataset
     const largeDataSet: LargeEntity[] = Array.from(
-      { length: Math.min(dataSize * 10, 10000) },
+      {
+        length: Math.min(
+          dataSize * 10,
+          BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.ENTITY_COUNT.MAX
+        ),
+      },
       (_, i) => ({
         id: i,
         name: `Entity ${i}`,
