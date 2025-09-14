@@ -11,6 +11,7 @@ import { NgRxBenchmarkService } from './services/ngrx-benchmark.service';
 import { NgRxSignalsBenchmarkService } from './services/ngrx-signals-benchmark.service';
 import { NgxsBenchmarkService } from './services/ngxs-benchmark.service';
 import { SignalTreeBenchmarkService } from './services/signaltree-benchmark.service';
+import { BENCHMARK_CONSTANTS } from './shared/benchmark-constants';
 
 // Register Chart.js components
 Chart.register(...registerables);
@@ -1529,7 +1530,10 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             );
             return -1;
           }
-          return await svc.runBatchUpdatesBenchmark(100, 1000);
+          return await svc.runBatchUpdatesBenchmark(
+            BENCHMARK_CONSTANTS.ITERATIONS.BATCH_UPDATES,
+            BENCHMARK_CONSTANTS.ITERATIONS.BATCH_SIZE
+          );
         case 'selector-memoization':
           if (!svc.runSelectorBenchmark) {
             console.warn(
@@ -1616,7 +1620,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             );
             return -1;
           }
-          return await svc.runConcurrentAsyncBenchmark(10); // 10 concurrent operations
+          return await svc.runConcurrentAsyncBenchmark(
+            BENCHMARK_CONSTANTS.ITERATIONS.ASYNC_WORKFLOW
+          );
         case 'async-cancellation':
           if (!svc.runAsyncCancellationBenchmark) {
             console.warn(
@@ -1624,7 +1630,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             );
             return -1;
           }
-          return await svc.runAsyncCancellationBenchmark(50); // 50 cancel/restart cycles
+          return await svc.runAsyncCancellationBenchmark(
+            BENCHMARK_CONSTANTS.ITERATIONS.ASYNC_WORKFLOW
+          );
 
         // Time Travel
         case 'undo-redo':
@@ -1632,7 +1640,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             console.warn(`${libraryId} does not support undo-redo benchmarks`);
             return -1;
           }
-          return await svc.runUndoRedoBenchmark(100); // 100 undo/redo operations
+          return await svc.runUndoRedoBenchmark(
+            BENCHMARK_CONSTANTS.ITERATIONS.BATCH_UPDATES
+          );
         case 'history-size':
           if (!svc.runHistorySizeBenchmark) {
             console.warn(
@@ -1640,7 +1650,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             );
             return -1;
           }
-          return await svc.runHistorySizeBenchmark(1000); // 1000 history entries
+          return await svc.runHistorySizeBenchmark(
+            BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR
+          );
         case 'jump-to-state':
           if (!svc.runJumpToStateBenchmark) {
             console.warn(
@@ -1648,7 +1660,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             );
             return -1;
           }
-          return await svc.runJumpToStateBenchmark(50); // 50 state jumps
+          return await svc.runJumpToStateBenchmark(
+            BENCHMARK_CONSTANTS.ITERATIONS.ASYNC_WORKFLOW
+          );
 
         // Middleware
         case 'single-middleware':
@@ -1658,7 +1672,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             );
             return -1;
           }
-          return await svc.runSingleMiddlewareBenchmark(1000); // 1000 operations
+          return await svc.runSingleMiddlewareBenchmark(
+            BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR
+          );
         case 'multiple-middleware':
           if (!svc.runMultipleMiddlewareBenchmark) {
             console.warn(
@@ -1666,7 +1682,10 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             );
             return -1;
           }
-          return await svc.runMultipleMiddlewareBenchmark(5, 1000); // 5 middleware, 1000 operations
+          return await svc.runMultipleMiddlewareBenchmark(
+            5,
+            BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR
+          );
         case 'conditional-middleware':
           if (!svc.runConditionalMiddlewareBenchmark) {
             console.warn(
@@ -1674,7 +1693,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             );
             return -1;
           }
-          return await svc.runConditionalMiddlewareBenchmark(1000); // 1000 operations
+          return await svc.runConditionalMiddlewareBenchmark(
+            BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR
+          );
 
         // Full Stack
         case 'all-features-enabled':

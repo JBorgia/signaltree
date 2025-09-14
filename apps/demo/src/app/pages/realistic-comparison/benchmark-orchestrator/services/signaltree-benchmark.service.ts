@@ -652,7 +652,11 @@ export class SignalTreeBenchmarkService {
     const start = performance.now();
 
     // Run multiple async operations with loading state management
-    for (let i = 0; i < 100; i++) {
+    for (
+      let i = 0;
+      i < Math.min(dataSize / 10, BENCHMARK_CONSTANTS.ITERATIONS.DATA_FETCHING);
+      i++
+    ) {
       tree.state.loading.set(true);
       tree.state.error.set(null);
 
@@ -1000,7 +1004,12 @@ export class SignalTreeBenchmarkService {
     const start = performance.now();
 
     // Realistic workload
-    for (let i = 0; i < dataSize / 10; i++) {
+    for (
+      let i = 0;
+      i <
+      Math.min(dataSize / 10, BENCHMARK_CONSTANTS.ITERATIONS.REAL_TIME_UPDATES);
+      i++
+    ) {
       // Entity updates
       (tree.state as any).entities.update((entities: any) => ({
         ...entities,
@@ -1207,7 +1216,7 @@ export class SignalTreeBenchmarkService {
     // Pure measurement - NO yielding
     const start = performance.now();
 
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 0; i < BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR; i++) {
       selectEven(); // Should hit memoization cache
       // NO YIELDING during measurement
     }
@@ -1233,7 +1242,10 @@ export class SignalTreeBenchmarkService {
       withShallowMemoization()
     );
 
-    const operations = Math.min(dataSize, 1000);
+    const operations = Math.min(
+      dataSize,
+      BENCHMARK_CONSTANTS.ITERATIONS.DEEP_NESTED
+    );
 
     // Pure measurement - NO yielding
     const start = performance.now();

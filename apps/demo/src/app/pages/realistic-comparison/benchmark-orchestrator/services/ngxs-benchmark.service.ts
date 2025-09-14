@@ -296,7 +296,11 @@ export class NgxsBenchmarkService {
     const start = performance.now();
 
     // First populate some data
-    for (let i = 0; i < Math.min(dataSize / 10, 100); i++) {
+    for (
+      let i = 0;
+      i < Math.min(dataSize / 10, BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR);
+      i++
+    ) {
       this.store.dispatch(new ComputeValues(i));
     }
 
@@ -305,7 +309,6 @@ export class NgxsBenchmarkService {
       this.store.selectOnce(BenchmarkState.getComputedResult).subscribe();
       this.store.selectOnce(BenchmarkState.getDeepNested).subscribe();
       this.store.selectOnce(BenchmarkState.getLargeArray).subscribe();
-
     }
 
     return performance.now() - start;
@@ -316,7 +319,12 @@ export class NgxsBenchmarkService {
 
     // Populate state with data
     const promises: Promise<void>[] = [];
-    for (let i = 0; i < Math.min(dataSize / 100, 50); i++) {
+    for (
+      let i = 0;
+      i <
+      Math.min(dataSize / 100, BENCHMARK_CONSTANTS.ITERATIONS.BATCH_UPDATES);
+      i++
+    ) {
       promises.push(this.store.dispatch(new ComputeValues(i)).toPromise());
       promises.push(
         this.store
@@ -352,9 +360,6 @@ export class NgxsBenchmarkService {
       }
 
       await Promise.all(promises); // Wait for this batch
-
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.REAL_TIME_UPDATES) === 0) {
-      }
     }
 
     return performance.now() - start;
@@ -380,7 +385,6 @@ export class NgxsBenchmarkService {
           metadata: { created: Date.now(), index: i },
         })
       );
-
     }
 
     return performance.now() - start;
@@ -421,7 +425,6 @@ export class NgxsBenchmarkService {
     // Hydrate state with fetched data
     for (let i = 0; i < mockApiData.length; i++) {
       this.store.dispatch(new UpdateArray(i, mockApiData[i]));
-
     }
 
     return performance.now() - start;
@@ -480,7 +483,6 @@ export class NgxsBenchmarkService {
           );
           break;
       }
-
     }
 
     return performance.now() - start;
@@ -523,7 +525,6 @@ export class NgxsBenchmarkService {
       this.store.dispatch(
         new UpdateDeepNested(['entities', i.toString()], entity)
       );
-
     }
 
     return performance.now() - start;
