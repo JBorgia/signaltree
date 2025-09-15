@@ -2772,8 +2772,11 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     return presets[presetId] || null;
   }
 
-  weightedLibrarySummaries() {
+  weightedLibrarySummaries = computed(() => {
     const results = this.results();
+    // Include scenarioSelectionVersion to track testCases changes
+    this.scenarioSelectionVersion();
+
     if (!results || results.length === 0) return [];
 
     // Group results by library
@@ -2851,5 +2854,5 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       });
 
     return summaries;
-  }
+  });
 }
