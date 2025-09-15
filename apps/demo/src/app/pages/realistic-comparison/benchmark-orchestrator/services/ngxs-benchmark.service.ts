@@ -83,6 +83,60 @@ export class BenchmarkState {
     return state.deepNested;
   }
 
+  // --- Middleware Benchmarks (NGXS - plugin simulation) ---
+  async runSingleMiddlewareBenchmark(operations: number): Promise<number> {
+    const start = performance.now();
+
+    const plugin = (ctx: string, payload?: unknown) => {
+      void ctx;
+      void payload;
+      let acc = 0;
+      for (let i = 0; i < 10; i++) acc += i;
+      return acc > -1;
+    };
+
+    for (let i = 0; i < operations; i++) plugin('noop', i);
+
+    return performance.now() - start;
+  }
+
+  async runMultipleMiddlewareBenchmark(
+    middlewareCount: number,
+    operations: number
+  ): Promise<number> {
+    const start = performance.now();
+
+    const plugins = Array.from({ length: middlewareCount }, () => {
+      return (ctx: string, payload?: unknown) => {
+        void ctx;
+        void payload;
+        let s = 0;
+        for (let i = 0; i < 20; i++) s += i;
+        return s > -1;
+      };
+    });
+
+    for (let i = 0; i < operations; i++) plugins.forEach((p) => p('noop', i));
+
+    return performance.now() - start;
+  }
+
+  async runConditionalMiddlewareBenchmark(operations: number): Promise<number> {
+    const start = performance.now();
+
+    const conditional = (ctx: string, payload?: unknown) => {
+      void ctx;
+      if ((payload as number) % 2 === 0) return true;
+      let s = 0;
+      for (let i = 0; i < 30; i++) s += i;
+      return s > -1;
+    };
+
+    for (let i = 0; i < operations; i++) conditional('noop', i);
+
+    return performance.now() - start;
+  }
+
   @Selector()
   static getLargeArray(state: BenchmarkStateModel) {
     return state.largeArray;
@@ -527,6 +581,47 @@ export class NgxsBenchmarkService {
       );
     }
 
+    return performance.now() - start;
+  }
+
+  // --- Async Workflows (Effects simulation for NGXS) ---
+  async runAsyncWorkflowBenchmark(dataSize: number): Promise<number> {
+    const start = performance.now();
+
+    const promises: Promise<void>[] = [];
+    const ops = Math.min(
+      dataSize,
+      BENCHMARK_CONSTANTS.ITERATIONS.ASYNC_WORKFLOW || 1000
+    );
+    for (let i = 0; i < ops; i++) {
+      promises.push(new Promise((res) => setTimeout(res, 0)));
+    }
+
+    await Promise.all(promises);
+    return performance.now() - start;
+  }
+
+  async runAsyncCancellationBenchmark(operations: number): Promise<number> {
+    const start = performance.now();
+
+    const tasks: Array<{ cancelled: boolean; timer: number | null }> = [];
+    for (let i = 0; i < operations; i++) {
+      const t = setTimeout(() => {
+        /* noop */
+      }, 10);
+      tasks.push({ cancelled: false, timer: t });
+    }
+
+    for (let i = 0; i < Math.floor(operations / 2); i++) {
+      const t = tasks[i];
+      if (t.timer) {
+        clearTimeout(t.timer);
+        t.cancelled = true;
+        t.timer = null;
+      }
+    }
+
+    await new Promise((r) => setTimeout(r, 10));
     return performance.now() - start;
   }
 }
