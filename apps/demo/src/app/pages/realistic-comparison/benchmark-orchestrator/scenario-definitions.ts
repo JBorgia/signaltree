@@ -15,6 +15,8 @@ export interface BenchmarkTestCase {
   operations: string;
   complexity: string;
   selected: boolean;
+  signalTreeOnly?: boolean; // True if this scenario is only supported by SignalTree
+  disabledReason?: string; // Optional explanation why a scenario was auto-disabled
   category: 'core' | 'async' | 'time-travel' | 'middleware' | 'full-stack';
   purpose: string; // What this test specifically measures
   frequencyWeight?: number; // Multiplier for real-world frequency (0.1 = very rare, 3.0 = very common)
@@ -265,6 +267,8 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     complexity: 'Medium',
     selected: false,
     category: 'time-travel',
+    // This scenario is only supported by SignalTree (uses @signaltree/time-travel)
+    signalTreeOnly: true,
     purpose:
       'Tests time-travel functionality and history navigation performance',
     frequencyWeight: 0.6, // Low - Only design tools, editors, debugging scenarios
@@ -292,6 +296,8 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     complexity: 'High',
     selected: false,
     category: 'time-travel',
+    // This scenario is only supported by SignalTree (uses @signaltree/time-travel)
+    signalTreeOnly: true,
     purpose: 'Tests time-travel performance with large history buffers',
     frequencyWeight: 0.3, // Rare - Only specific debugging/development scenarios
     realWorldFrequency: 'Rare - Development tools, complex debugging workflows',
@@ -317,6 +323,8 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     complexity: 'Medium',
     selected: false,
     category: 'time-travel',
+    // This scenario is only supported by SignalTree (uses @signaltree/time-travel)
+    signalTreeOnly: true,
     purpose: 'Tests random access performance in time-travel history',
     frequencyWeight: 0.2, // Very rare - Only advanced debugging/development tools
     realWorldFrequency: 'Very Rare - Advanced debugging, development tools',
@@ -443,57 +451,5 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
   },
 
   // Full-stack Tests
-  {
-    id: 'all-features-enabled',
-    name: 'All Features Enabled',
-    description: 'All features: async, time-travel, middleware, memoization',
-    operations: 'Mixed workload',
-    complexity: 'Extreme',
-    selected: false,
-    category: 'full-stack',
-    purpose: 'Tests performance with all SignalTree features enabled',
-    frequencyWeight: 0.3, // Rare - Only specific enterprise or development scenarios
-    realWorldFrequency:
-      'Rare - Development environments, feature-complete demos',
-    architecturalTradeOffs:
-      'Full feature integration overhead vs individual feature performance',
-    enhancers: {
-      required: ['withMemoization', 'withBatching', 'withSerialization'],
-      optional: ['withTimeTravel', 'withAsync'],
-      rationale:
-        'Full feature test - all enhancers active to test integration overhead',
-    },
-    dataRequirements: {
-      minSize: 1000,
-      maxSize: 50000,
-      defaultSize: 10000,
-      scalesWith: 'exponential',
-    },
-  },
-  {
-    id: 'production-setup',
-    name: 'Production Configuration',
-    description: 'Realistic production-ready configuration',
-    operations: 'Real-world workload',
-    complexity: 'High',
-    selected: false,
-    category: 'full-stack',
-    purpose: 'Tests realistic production setup performance',
-    frequencyWeight: 3.0, // Very High - This represents real-world production usage
-    realWorldFrequency: 'Very High - Actual production application performance',
-    architecturalTradeOffs:
-      'Production-optimized configuration vs development convenience features',
-    enhancers: {
-      required: ['withMemoization', 'withBatching', 'withSerialization'],
-      optional: [],
-      rationale:
-        'Production-ready configuration - stable, performant enhancer combination',
-    },
-    dataRequirements: {
-      minSize: 5000,
-      maxSize: 100000,
-      defaultSize: 25000,
-      scalesWith: 'linear',
-    },
-  },
+  // Full-stack Tests
 ];

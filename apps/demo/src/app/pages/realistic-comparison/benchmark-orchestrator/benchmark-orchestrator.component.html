@@ -401,7 +401,7 @@
   </section>
 
   <!-- Scenario Selection Section -->
-  <section class="scenarios-section">
+  <section class="benchmarks-section">
     <h2>Test Scenarios</h2>
 
     <!-- Scenario Presets -->
@@ -417,14 +417,7 @@
         >
           <h4>{{ preset.name }}</h4>
           <p>{{ preset.description }}</p>
-          <div class="preset-count">
-            {{
-              preset.id === 'all-tests'
-                ? scenarioPresets.length
-                : preset.scenarios.length
-            }}
-            tests
-          </div>
+          <div class="preset-count">{{ presetCount(preset) }} tests</div>
         </div>
       </div>
     </div>
@@ -635,25 +628,30 @@
     </div>
 
     <!-- Test Cases Grid -->
-    <div class="all-scenarios">
-      <div class="scenarios-grid">
+    <div class="all-benchmarks">
+      <h3>Benchmarks</h3>
+      <div class="benchmarks-grid">
         <div
-          class="scenario-card"
-          *ngFor="let testCase of testCases"
+          class="benchmark-card"
+          *ngFor="let testCase of visibleScenarios()"
           [class.selected]="testCase.selected"
+          [class.disabled]="testCase.disabledReason"
           (click)="toggleScenario(testCase)"
           (keydown)="onScenarioCardKeydown($event, testCase)"
           tabindex="0"
           role="button"
           [attr.aria-pressed]="testCase.selected"
         >
-          <div class="scenario-header">
+          <div class="benchmark-header">
             <input
               type="checkbox"
               [checked]="testCase.selected"
               (click)="$event.stopPropagation()"
             />
             <h3>{{ testCase.name }}</h3>
+            <span class="unsupported-badge" *ngIf="testCase.disabledReason">
+              {{ testCase.disabledReason }}
+            </span>
           </div>
           <div
             class="frequency-indicator"
@@ -682,7 +680,7 @@
             <p class="tradeoff-text">{{ testCase.architecturalTradeOffs }}</p>
           </div>
 
-          <div class="scenario-details">
+          <div class="benchmark-details">
             <span class="detail">Operations: {{ testCase.operations }}</span>
             <span class="detail">Complexity: {{ testCase.complexity }}</span>
             <div class="weight-control">
@@ -836,11 +834,21 @@
       <div class="weighting-transparency">
         <h4>📊 Current Weights Applied:</h4>
         <div class="weight-display">
-          <div class="weight-item" *ngFor="let scenario of selectedScenarios()">
+          <div
+            class="weight-item"
+            *ngFor="let scenario of visibleScenarios()"
+            [class.disabled]="scenario.disabledReason"
+          >
             <span class="scenario">{{ scenario.name }}</span>
             <span class="weight-value"
               >{{ scenario.frequencyWeight || 1.0 }}x</span
             >
+            <div class="scenario-disabled" *ngIf="scenario.disabledReason">
+              <span class="unsupported-label">Unsupported</span>
+              <small class="unsupported-reason">{{
+                scenario.disabledReason
+              }}</small>
+            </div>
             <div class="weight-bar">
               <div
                 class="weight-fill"

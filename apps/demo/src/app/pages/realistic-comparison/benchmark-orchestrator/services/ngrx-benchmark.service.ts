@@ -145,6 +145,123 @@ export class NgRxBenchmarkService {
     );
   }
 
+  // --- Middleware Benchmarks (simulated via wrapper functions / meta-reducer pattern) ---
+  async runSingleMiddlewareBenchmark(operations: number): Promise<number> {
+    const start = performance.now();
+
+    // lightweight middleware function
+    const middleware = (action: string, payload?: unknown) => {
+      // reference params to satisfy lint
+      void action;
+      void payload;
+      // simulate small overhead
+      let x = 0;
+      for (let i = 0; i < 10; i++) x += i;
+      return x > -1;
+    };
+
+    for (let i = 0; i < operations; i++) {
+      middleware('noop', i);
+    }
+
+    return performance.now() - start;
+  }
+
+  async runMultipleMiddlewareBenchmark(
+    middlewareCount: number,
+    operations: number
+  ): Promise<number> {
+    const start = performance.now();
+
+    const middlewares: Array<(action: string, payload?: unknown) => boolean> =
+      Array.from({ length: middlewareCount }, () => {
+        return (action: string, payload?: unknown) => {
+          void action;
+          void payload;
+          let s = 0;
+          for (let i = 0; i < 20; i++) s += i;
+          return s > -1;
+        };
+      });
+
+    for (let i = 0; i < operations; i++) {
+      middlewares.forEach((mw) => mw('noop', i));
+    }
+
+    return performance.now() - start;
+  }
+
+  async runConditionalMiddlewareBenchmark(operations: number): Promise<number> {
+    const start = performance.now();
+
+    const conditional = (action: string, payload?: unknown) => {
+      void action;
+      if ((payload as number) % 2 === 0) {
+        // quick path
+        return true;
+      }
+      // slower path
+      let s = 0;
+      for (let i = 0; i < 30; i++) s += i;
+      return s > -1;
+    };
+
+    for (let i = 0; i < operations; i++) {
+      conditional('noop', i);
+    }
+
+    return performance.now() - start;
+  }
+
+  // --- Async Workflows (Effects simulation) ---
+  async runAsyncWorkflowBenchmark(dataSize: number): Promise<number> {
+    const start = performance.now();
+
+    // Simulate async operations with microtasks and small delays
+    const promises: Promise<void>[] = [];
+    const ops = Math.min(
+      dataSize,
+      BENCHMARK_CONSTANTS.ITERATIONS.ASYNC_WORKFLOW
+    );
+    for (let i = 0; i < ops; i++) {
+      promises.push(
+        new Promise((res) => setTimeout(res, 0)) // yield to event loop
+      );
+    }
+
+    await Promise.all(promises);
+
+    return performance.now() - start;
+  }
+
+  async runAsyncCancellationBenchmark(operations: number): Promise<number> {
+    const start = performance.now();
+
+    // Simulate launching async tasks and cancelling half of them
+    const tasks: Array<{ cancelled: boolean; timer: number | null }> = [];
+    for (let i = 0; i < operations; i++) {
+      const t = setTimeout(() => {
+        /* noop */
+      }, 10);
+      tasks.push({ cancelled: false, timer: t });
+    }
+
+    // Cancel half
+    for (let i = 0; i < Math.floor(operations / 2); i++) {
+      const t = tasks[i];
+      if (t.timer) {
+        clearTimeout(t.timer);
+        t.cancelled = true;
+        t.timer = null;
+      }
+    }
+
+    // Wait briefly to let non-cancelled run
+    await new Promise((r) => setTimeout(r, 10));
+
+    return performance.now() - start;
+  }
+
   async runDeepNestedBenchmark(
     dataSize: number,
     depth = BENCHMARK_CONSTANTS.DATA_GENERATION.NESTED_DEPTH
