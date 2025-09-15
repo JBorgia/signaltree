@@ -1005,12 +1005,18 @@
           </div>
           <div class="metric">
             <span class="metric-label">Ops/sec</span>
-            <span class="metric-value" *ngIf="summary.opsPerSecond !== -1">{{
-              summary.opsPerSecond | number : '1.0-0'
-            }}</span>
+            <span
+              class="metric-value"
+              *ngIf="
+                summary.opsPerSecond !== -1 && isFinite(summary.opsPerSecond)
+              "
+              >{{ summary.opsPerSecond | number : '1.0-0' }}</span
+            >
             <span
               class="metric-value unsupported"
-              *ngIf="summary.opsPerSecond === -1"
+              *ngIf="
+                summary.opsPerSecond === -1 || !isFinite(summary.opsPerSecond)
+              "
               >N/A</span
             >
           </div>

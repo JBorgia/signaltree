@@ -187,13 +187,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       id: 'real-world',
       name: 'Real-World Usage',
       description: 'Common application patterns',
-      scenarios: [
-        'data-fetching',
-        'real-time-updates',
-        'memory-efficiency',
-        'async-workflow',
-        'production-setup',
-      ],
+      scenarios: ['memory-efficiency', 'async-workflow', 'production-setup'],
     },
     {
       id: 'advanced-features',
@@ -201,10 +195,12 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       description: 'Time travel, middleware, and complex workflows',
       scenarios: [
         'undo-redo',
+        'history-size',
+        'jump-to-state',
         'single-middleware',
         'multiple-middleware',
+        'conditional-middleware',
         'all-features-enabled',
-        'async-cancellation',
       ],
     },
     {
@@ -212,9 +208,8 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       name: 'Performance Stress',
       description: 'Heavy load and scaling tests',
       scenarios: [
-        'state-size-scaling',
         'concurrent-updates',
-        'concurrent-async',
+        'memory-efficiency',
         'history-size',
         'conditional-middleware',
       ],
@@ -1829,8 +1824,13 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
   toggleScenario(scenario: BenchmarkTestCase) {
     scenario.selected = !scenario.selected;
+    console.log(`Toggled ${scenario.name} to ${scenario.selected}`);
     // Trigger recomputation of selectedScenarios and dependent computeds
     this.scenarioSelectionVersion.update((v) => v + 1);
+    console.log(
+      'Updated scenarioSelectionVersion to',
+      this.scenarioSelectionVersion()
+    );
   }
 
   // Timer management for elapsed time updates
@@ -1865,6 +1865,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     console.log('Starting benchmarks with:', {
       libraries: libraries.map((l) => l.name),
       scenarios: scenarios.map((s) => s.name),
+      scenarioIds: scenarios.map((s) => s.id),
     });
 
     try {
@@ -1979,18 +1980,19 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         ? (memAfter - memBefore) / (1024 * 1024)
         : undefined;
 
+    const median = this.percentile(samples, 50);
     return {
       libraryId: library.id,
       scenarioId: scenario.id,
       samples,
-      median: this.percentile(samples, 50),
+      median,
       mean: this.average(samples),
       p95: this.percentile(samples, 95),
       p99: this.percentile(samples, 99),
       min: samples[0],
       max: samples[samples.length - 1],
       stdDev: this.standardDeviation(samples),
-      opsPerSecond: 1000 / this.percentile(samples, 50),
+      opsPerSecond: median > 0 ? Math.round(1000 / median) : 0,
       memoryDeltaMB,
     };
   }
@@ -2083,7 +2085,12 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
     if (!result) return '-';
     if (result.opsPerSecond === -1) return 'N/A';
+    if (!isFinite(result.opsPerSecond)) return 'N/A';
     return Math.round(result.opsPerSecond).toLocaleString();
+  }
+
+  isFinite(value: number): boolean {
+    return Number.isFinite(value);
   }
 
   getRelativePerformance(scenarioId: string, libraryId: string): string {
@@ -2316,11 +2323,23 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       const lib = libraries.find((l) => l.id === result.libraryId);
       const scenario = scenarios.find((s) => s.id === result.scenarioId);
 
-      csv += `${lib?.name},${scenario?.name},${result.median.toFixed(3)},`;
-      csv += `${result.mean.toFixed(3)},${result.p95.toFixed(3)},`;
-      csv += `${result.p99.toFixed(3)},${result.min.toFixed(3)},`;
-      csv += `${result.max.toFixed(3)},${result.stdDev.toFixed(3)},`;
-      csv += `${Math.round(result.opsPerSecond)},`;
+      csv += `${lib?.name},${scenario?.name},${
+        result.median === -1 ? -1 : result.median.toFixed(3)
+      },`;
+      csv += `${result.mean === -1 ? -1 : result.mean.toFixed(3)},${
+        result.p95 === -1 ? -1 : result.p95.toFixed(3)
+      },`;
+      csv += `${result.p99 === -1 ? -1 : result.p99.toFixed(3)},${
+        result.min === -1 ? -1 : result.min.toFixed(3)
+      },`;
+      csv += `${result.max === -1 ? -1 : result.max.toFixed(3)},${
+        result.stdDev === -1 ? -1 : result.stdDev.toFixed(3)
+      },`;
+      csv += `${
+        result.opsPerSecond === -1 || !isFinite(result.opsPerSecond)
+          ? -1
+          : Math.round(result.opsPerSecond)
+      },`;
       csv += `${
         typeof result.memoryDeltaMB === 'number'
           ? result.memoryDeltaMB.toFixed(2)
@@ -2814,6 +2833,20 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             (tc) => tc.id === result.scenarioId
           );
           if (!testCase) return;
+
+          // Skip unavailable results (marked with -1)
+          if (result.median === -1 || result.opsPerSecond === -1) {
+            breakdown.push({
+              scenarioId: result.scenarioId,
+              scenarioName: testCase.name,
+              weight: testCase.frequencyWeight || 1.0,
+              median: -1,
+              weightedScore: 0,
+              contribution: 0,
+              opsPerSecond: -1,
+            });
+            return;
+          }
 
           const weight = testCase.frequencyWeight || 1.0;
           const normalizedScore =
