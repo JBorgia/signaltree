@@ -2,16 +2,13 @@ import { Injectable } from '@angular/core';
 import { EntityState, EntityStore, ID, StoreConfig } from '@datorama/akita';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
+import { createYieldToUI } from '../shared/benchmark-utils';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 @Injectable({ providedIn: 'root' })
 export class AkitaBenchmarkService {
   // Akita is entity-centric; we will use plain objects for nested/other cases
-  private yieldToUI() {
-    return new Promise<void>((r) =>
-      setTimeout(r, BENCHMARK_CONSTANTS.TIMING.YIELD_DELAY_MS)
-    );
-  }
+  private yieldToUI = createYieldToUI();
 
   // --- Middleware Benchmarks (Akita - hook/plugin simulation) ---
   async runSingleMiddlewareBenchmark(operations: number): Promise<number> {

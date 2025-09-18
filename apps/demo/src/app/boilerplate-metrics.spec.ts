@@ -147,14 +147,14 @@ const count = signal(0);
         example: `
 import { signalTree } from '@signaltree/core';
 import { withBatching } from '@signaltree/batching';
-import { withAsync } from '@signaltree/async';
+// async removed: recommend middleware/manual helpers for loading/error states
 import { withEntities } from '@signaltree/entities';
 
 const userTree = signalTree({
   users: [] as User[],
   loading: false,
   error: null
-  }).with(withBatching(), withAsync(), withEntities());
+  }).with(withBatching() /*, withEntities() */);
 
 // Usage: userTree.async.loadUsers(() => api.getUsers())`,
       },

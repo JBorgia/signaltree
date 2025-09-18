@@ -2,6 +2,8 @@ import { Injectable } from '@angular/core';
 import { createAction, createReducer, createSelector, on, props } from '@ngrx/store';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
+import { createYieldToUI } from '../shared/benchmark-utils';
+import { EnhancedBenchmarkOptions, runEnhancedBenchmark } from './benchmark-runner';
 
 // State interface for complex benchmarks
 interface User {
@@ -139,78 +141,82 @@ export class NgRxBenchmarkService {
     memory?: { jsHeapSizeLimit: number; usedJSHeapSize: number };
   };
 
-  private yieldToUI() {
-    return new Promise<void>((r) =>
-      setTimeout(r, BENCHMARK_CONSTANTS.TIMING.YIELD_DELAY_MS)
-    );
-  }
+  private yieldToUI = createYieldToUI();
 
   // --- Middleware Benchmarks (simulated via wrapper functions / meta-reducer pattern) ---
   async runSingleMiddlewareBenchmark(operations: number): Promise<number> {
-    const start = performance.now();
-
-    // lightweight middleware function
-    const middleware = (action: string, payload?: unknown) => {
-      // reference params to satisfy lint
-      void action;
-      void payload;
-      // simulate small overhead
-      let x = 0;
-      for (let i = 0; i < 10; i++) x += i;
-      return x > -1;
+    const options: EnhancedBenchmarkOptions = {
+      operations,
+      warmup: 5,
+      measurementSamples: 30,
+      yieldEvery: BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR,
+      trackMemory: false,
+      label: 'NgRx Single Middleware',
+      minDurationMs: 50,
     };
 
-    for (let i = 0; i < operations; i++) {
-      middleware('noop', i);
-    }
+    const result = await runEnhancedBenchmark(async () => {
+      // lightweight middleware function simulated per operation
+      let x = 0;
+      for (let i = 0; i < 10; i++) x += i;
+      // Use the result in a trivial way to avoid unused variable lint
+      void x;
+    }, options);
 
-    return performance.now() - start;
+    return result.median;
   }
 
   async runMultipleMiddlewareBenchmark(
     middlewareCount: number,
     operations: number
   ): Promise<number> {
-    const start = performance.now();
+    const options: EnhancedBenchmarkOptions = {
+      operations,
+      warmup: 5,
+      measurementSamples: 30,
+      yieldEvery: BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR,
+      trackMemory: false,
+      label: `NgRx Multiple Middleware (count=${middlewareCount})`,
+      minDurationMs: 50,
+    };
 
-    const middlewares: Array<(action: string, payload?: unknown) => boolean> =
-      Array.from({ length: middlewareCount }, () => {
-        return (action: string, payload?: unknown) => {
-          void action;
-          void payload;
-          let s = 0;
-          for (let i = 0; i < 20; i++) s += i;
-          return s > -1;
-        };
-      });
+    const result = await runEnhancedBenchmark(async () => {
+      // Simulate middleware stack overhead per operation
+      let total = 0;
+      for (let m = 0; m < middlewareCount; m++) {
+        let s = 0;
+        for (let i = 0; i < 20; i++) s += i;
+        total += s;
+      }
+      void total;
+    }, options);
 
-    for (let i = 0; i < operations; i++) {
-      middlewares.forEach((mw) => mw('noop', i));
-    }
-
-    return performance.now() - start;
+    return result.median;
   }
 
   async runConditionalMiddlewareBenchmark(operations: number): Promise<number> {
-    const start = performance.now();
+    const options: EnhancedBenchmarkOptions = {
+      operations,
+      warmup: 5,
+      measurementSamples: 30,
+      yieldEvery: BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR,
+      trackMemory: false,
+      label: 'NgRx Conditional Middleware',
+      minDurationMs: 50,
+    };
 
-    const conditional = (action: string, payload?: unknown) => {
-      void action;
-      if ((payload as number) % 2 === 0) {
-        // quick path
-        return true;
+    const result = await runEnhancedBenchmark(async (i: number) => {
+      if ((i as number) % 2 === 0) {
+        // quick path - trivial
+        return;
       }
       // slower path
       let s = 0;
-      for (let i = 0; i < 30; i++) s += i;
-      return s > -1;
-    };
+      for (let k = 0; k < 30; k++) s += k;
+      void s;
+    }, options);
 
-    for (let i = 0; i < operations; i++) {
-      conditional('noop', i);
-    }
-
-    return performance.now() - start;
+    return result.median;
   }
 
   // --- Async Workflows (Effects simulation) ---
@@ -238,7 +244,10 @@ export class NgRxBenchmarkService {
     const start = performance.now();
 
     // Simulate launching async tasks and cancelling half of them
-    const tasks: Array<{ cancelled: boolean; timer: number | null }> = [];
+    const tasks: Array<{
+      cancelled: boolean;
+      timer: ReturnType<typeof setTimeout> | null;
+    }> = [];
     for (let i = 0; i < operations; i++) {
       const t = setTimeout(() => {
         /* noop */

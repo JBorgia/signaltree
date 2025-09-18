@@ -1,3 +1,5 @@
+import { composeEnhancers } from '@signaltree/core';
+
 /**
  * @fileoverview SignalTree Presets
  *
@@ -6,8 +8,6 @@
  */
 
 import type { TreeConfig } from '@signaltree/core';
-import { composeEnhancers } from '@signaltree/core';
-
 export type TreePreset = 'basic' | 'performance' | 'development' | 'production';
 
 /**
@@ -187,17 +187,6 @@ export function createDevTree(overrides: Partial<TreeConfig> = {}) {
     const withTimeTravel = mod && (mod.withTimeTravel ?? mod.default ?? mod);
     if (typeof withTimeTravel === 'function')
       enhancers.push(withTimeTravel as (t: unknown) => unknown);
-  } catch (e) {
-    void e;
-  }
-
-  try {
-    const mod = tryRequire('@signaltree/async') as
-      | { withAsync?: unknown; default?: unknown }
-      | undefined;
-    const withAsync = mod && (mod.withAsync ?? mod.default ?? mod);
-    if (typeof withAsync === 'function')
-      enhancers.push(withAsync as (t: unknown) => unknown);
   } catch (e) {
     void e;
   }

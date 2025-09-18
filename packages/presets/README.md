@@ -91,7 +91,7 @@ const tree = createFullTree(
 // - @signaltree/core
 // - @signaltree/memoization
 // - @signaltree/batching
-// - @signaltree/async
+// - async helpers moved to @signaltree/middleware
 // - @signaltree/entities
 // - @signaltree/middleware
 // - @signaltree/devtools (dev only)
@@ -134,7 +134,7 @@ const tree = createAsyncTree({
 
 // Includes:
 // - @signaltree/core
-// - @signaltree/async (enhanced async operations)
+// - async helpers moved to @signaltree/middleware (enhanced async operations)
 // - @signaltree/memoization (cache expensive operations)
 // - @signaltree/batching (batch API calls)
 // - Pre-configured for: API-heavy applications

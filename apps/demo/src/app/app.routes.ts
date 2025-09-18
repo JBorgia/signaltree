@@ -22,13 +22,7 @@ export const appRoutes: Route[] = [
         './pages/callable-syntax-demo/callable-syntax-demo.component'
       ).then((c) => c.CallableSyntaxDemoComponent),
   },
-  {
-    path: 'async',
-    loadComponent: () =>
-      import('./pages/async-demo/async-demo.component').then(
-        (c) => c.AsyncDemoComponent
-      ),
-  },
+  // 'async' demo removed (replaced by middleware helpers)
   {
     path: 'batching',
     loadComponent: () =>

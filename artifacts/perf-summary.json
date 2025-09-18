@@ -1,46 +1,46 @@
 {
-  "timestamp": "2025-09-13T18:39:31.044Z",
-  "runs": 3,
+  "timestamp": "2025-09-16T15:25:24.999Z",
+  "runs": null,
   "summary": {
     "basic": {
-      "runs": 3,
-      "mean": 0.002,
-      "min": 0.002,
-      "max": 0.002,
-      "stddev": 0
+      "runs": 0,
+      "mean": null,
+      "min": null,
+      "max": null,
+      "stddev": null
     },
     "medium": {
-      "runs": 3,
-      "mean": 0.002,
-      "min": 0.002,
-      "max": 0.002,
-      "stddev": 0
+      "runs": 0,
+      "mean": null,
+      "min": null,
+      "max": null,
+      "stddev": null
     },
     "extreme": {
-      "runs": 3,
-      "mean": 0.0023333333333333335,
-      "min": 0.002,
-      "max": 0.003,
-      "stddev": 0.0004714045207910317
+      "runs": 0,
+      "mean": null,
+      "min": null,
+      "max": null,
+      "stddev": null
     },
     "unlimited": {
-      "runs": 3,
-      "mean": 0.0036666666666666666,
-      "min": 0.003,
-      "max": 0.005,
-      "stddev": 0.0009428090415820634
+      "runs": 0,
+      "mean": null,
+      "min": null,
+      "max": null,
+      "stddev": null
     }
   },
   "proxyOverhead": {
     "set": {
-      "mean": 37.42675,
+      "mean": 47.49445,
       "min": 0,
-      "max": 5333
+      "max": 173334
     },
     "update": {
-      "mean": 28.02995,
+      "mean": 29.2916,
       "min": 0,
-      "max": 1500
+      "max": 1417
     }
   },
   "bundleResults": {
@@ -65,10 +65,10 @@
       },
       {
         "name": "memoization",
-        "rawSize": 9323,
-        "gzipSize": 2159,
-        "claimed": 1800,
-        "maxAllowed": 1900,
+        "rawSize": 9685,
+        "gzipSize": 2227,
+        "claimed": 2110,
+        "maxAllowed": 2200,
         "passed": false,
         "claimMet": false
       },
@@ -78,15 +78,6 @@
         "gzipSize": 1788,
         "claimed": 1750,
         "maxAllowed": 1800,
-        "passed": true,
-        "claimMet": false
-      },
-      {
-        "name": "async",
-        "rawSize": 7888,
-        "gzipSize": 1847,
-        "claimed": 1800,
-        "maxAllowed": 1900,
         "passed": true,
         "claimMet": false
       },
@@ -101,11 +92,11 @@
       },
       {
         "name": "middleware",
-        "rawSize": 6661,
-        "gzipSize": 1415,
+        "rawSize": 9415,
+        "gzipSize": 1931,
         "claimed": 1380,
         "maxAllowed": 1450,
-        "passed": true,
+        "passed": false,
         "claimMet": false
       },
       {
@@ -119,8 +110,8 @@
       },
       {
         "name": "serialization",
-        "rawSize": 25125,
-        "gzipSize": 4804,
+        "rawSize": 26146,
+        "gzipSize": 4964,
         "claimed": 4620,
         "maxAllowed": 5000,
         "passed": true,
@@ -137,12 +128,12 @@
       },
       {
         "name": "presets",
-        "rawSize": 3281,
-        "gzipSize": 859,
+        "rawSize": 3018,
+        "gzipSize": 834,
         "claimed": 840,
         "maxAllowed": 900,
         "passed": true,
-        "claimMet": false
+        "claimMet": true
       }
     ],
     "demoApp": null,
@@ -150,7 +141,8 @@
       {
         "category": "Package Optimization",
         "items": [
-          "Optimize memoization: 2.11KB > 1.86KB (13.6% over)"
+          "Optimize memoization: 2.17KB > 2.15KB (1.2% over)",
+          "Optimize middleware: 1.89KB > 1.42KB (33.2% over)"
         ]
       },
       {
@@ -315,36 +307,36 @@
   "deltas": {
     "proxyOverhead": {
       "set": {
-        "mean": 37.42675,
+        "mean": 47.49445,
         "baseline": 63.8315,
-        "pct": -41.36633167010019
+        "pct": -25.594024893665352
       },
       "update": {
-        "mean": 28.02995,
+        "mean": 29.2916,
         "baseline": 79.6733,
-        "pct": -64.81889164877067
+        "pct": -63.23536241124692
       }
     },
     "perf": {
       "basic": {
-        "mean": 0.002,
+        "mean": null,
         "baseline": 0.002,
-        "pct": 0
+        "pct": null
       },
       "medium": {
-        "mean": 0.002,
+        "mean": null,
         "baseline": 0.0016666666666666668,
-        "pct": 19.999999999999996
+        "pct": null
       },
       "extreme": {
-        "mean": 0.0023333333333333335,
+        "mean": null,
         "baseline": 0.002,
-        "pct": 16.666666666666675
+        "pct": null
       },
       "unlimited": {
-        "mean": 0.0036666666666666666,
+        "mean": null,
         "baseline": 0.0030000000000000005,
-        "pct": 22.2222222222222
+        "pct": null
       }
     },
     "packages": [
@@ -366,11 +358,11 @@
       },
       {
         "name": "memoization",
-        "gzipSize": 2159,
+        "gzipSize": 2227,
         "gzipSizeBaseline": 1848,
-        "gzipSizePct": 16.82900432900433,
+        "gzipSizePct": 20.50865800865801,
         "passed": false,
-        "maxAllowed": 1900
+        "maxAllowed": 2200
       },
       {
         "name": "time-travel",
@@ -379,14 +371,6 @@
         "gzipSizePct": 0,
         "passed": true,
         "maxAllowed": 1800
-      },
-      {
-        "name": "async",
-        "gzipSize": 1847,
-        "gzipSizeBaseline": 1847,
-        "gzipSizePct": 0,
-        "passed": true,
-        "maxAllowed": 1900
       },
       {
         "name": "entities",
@@ -398,10 +382,10 @@
       },
       {
         "name": "middleware",
-        "gzipSize": 1415,
+        "gzipSize": 1931,
         "gzipSizeBaseline": 1415,
-        "gzipSizePct": 0,
-        "passed": true,
+        "gzipSizePct": 36.46643109540636,
+        "passed": false,
         "maxAllowed": 1450
       },
       {
@@ -414,9 +398,9 @@
       },
       {
         "name": "serialization",
-        "gzipSize": 4804,
+        "gzipSize": 4964,
         "gzipSizeBaseline": 4727,
-        "gzipSizePct": 1.6289401311614133,
+        "gzipSizePct": 5.013750793314999,
         "passed": true,
         "maxAllowed": 5000
       },
@@ -430,11 +414,17 @@
       },
       {
         "name": "presets",
-        "gzipSize": 859,
+        "gzipSize": 834,
         "gzipSizeBaseline": 859,
-        "gzipSizePct": 0,
+        "gzipSizePct": -2.910360884749709,
         "passed": true,
         "maxAllowed": 900
+      },
+      {
+        "name": "async",
+        "gzipSize": null,
+        "gzipSizeBaseline": 1847,
+        "gzipSizePct": null
       }
     ]
   },

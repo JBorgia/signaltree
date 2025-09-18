@@ -31,30 +31,28 @@ interface CacheEntry<T> {
 const MAX_CACHE_SIZE = 1000;
 const DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes
 
-// Use Map for global cache management (WeakMap doesn't support iteration)
+// Use Map for global cache management (we keep iteration for diagnostics).
+// Note: we avoid starting any global timers at module import to prevent
+// background timer leaks in long-running processes; cleanup is performed
+// opportunistically inside hot paths (probabilistic) or via explicit APIs.
 const memoizationCache = new Map<object, Map<string, CacheEntry<unknown>>>();
 
-// Track cache for cleanup
-const cacheCleanupInterval = setInterval(() => {
-  const now = Date.now();
-  for (const [obj, cache] of memoizationCache.entries()) {
-    for (const [key, entry] of cache.entries()) {
-      if (now - entry.timestamp > DEFAULT_TTL) {
-        cache.delete(key);
-      }
-    }
-    // Remove empty caches
-    if (cache.size === 0) {
-      memoizationCache.delete(obj);
-    }
-  }
-}, 60000); // Clean up every minute
+// Optional module-level handle for any externally-created cleanup interval.
+// Declared so references elsewhere (cleanup helpers) type-check across Node/browser.
+let cacheCleanupInterval: ReturnType<typeof setInterval> | undefined;
 
 /**
  * Cleanup the cache interval on app shutdown
  */
 export function cleanupMemoizationCache(): void {
-  clearInterval(cacheCleanupInterval);
+  if (cacheCleanupInterval) {
+    try {
+      clearInterval(cacheCleanupInterval as unknown as number);
+    } catch {
+      /* best-effort cleanup */
+    }
+    cacheCleanupInterval = undefined;
+  }
   memoizationCache.clear();
 }
 
@@ -133,7 +131,12 @@ function generateCacheKey(
   fn: (...args: unknown[]) => unknown,
   args: unknown[]
 ): string {
-  return `${fn.name || 'anonymous'}_${JSON.stringify(args)}`;
+  try {
+    return `${fn.name || 'anonymous'}_${JSON.stringify(args)}`;
+  } catch {
+    // Fallback for cyclic or non-serializable args
+    return `${fn.name || 'anonymous'}_${args.length}`;
+  }
 }
 
 /**
@@ -164,14 +167,16 @@ export function memoize<TArgs extends unknown[], TReturn>(
   const cache = new Map<string, CacheEntry<TReturn>>();
   const maxSize = config.maxCacheSize ?? MAX_CACHE_SIZE;
   const ttl = config.ttl ?? DEFAULT_TTL;
-  const equality = getEqualityFn(config.equality ?? 'deep');
-  const enableLRU = config.enableLRU ?? true;
+  // Use shallow equality by default to avoid expensive deep comparisons
+  const equality = getEqualityFn(config.equality ?? 'shallow');
+  // Disable LRU by default to avoid hidden CPU overhead
+  const enableLRU = config.enableLRU ?? false;
 
   const cleanExpiredEntries = () => {
     if (!ttl) return; // Skip if TTL is disabled
     const now = Date.now();
     for (const [key, entry] of cache.entries()) {
-      if (now - entry.timestamp > ttl) {
+      if (entry.timestamp && now - entry.timestamp > ttl) {
         cache.delete(key);
       }
     }
@@ -197,8 +202,9 @@ export function memoize<TArgs extends unknown[], TReturn>(
   };
 
   return (...args: TArgs): TReturn => {
-    // Clean expired entries periodically (only if TTL is enabled)
-    if (ttl) {
+    // Probabilistic cleanup to avoid paying cleanup cost on every hot call.
+    // Runs ~1% of the time when TTL is enabled.
+    if (ttl && Math.random() < 0.01) {
       cleanExpiredEntries();
     }
 
@@ -277,6 +283,8 @@ export function withMemoization<T>(
     enabled = true,
     maxCacheSize = 1000,
     ttl,
+    // Default behavior: deep equality and LRU enabled to preserve
+    // memoization semantics expected by existing consumers/tests.
     equality = 'deep',
     enableLRU = true,
   } = config;
@@ -312,8 +320,14 @@ export function withMemoization<T>(
       updater: (current: T) => Partial<T>,
       cacheKey?: string
     ) => {
-      const key = cacheKey || `update_${Date.now()}`;
       const currentState = originalTreeCall();
+
+      // Determine cache key: prefer explicit keyFn-like behavior if not provided
+      const key =
+        cacheKey ||
+        generateCacheKey(updater as (...args: unknown[]) => unknown, [
+          currentState,
+        ]);
 
       // Check cache
       const cached = cache.get(key);
@@ -390,6 +404,27 @@ export function withMemoization<T>(
         keys: Array.from(cache.keys()),
       };
     };
+
+    // If we created a periodic cleanup for this tree, ensure callers can clear it
+    const maybeInterval = (
+      tree as unknown as {
+        _memoCleanupInterval?: ReturnType<typeof setInterval>;
+      }
+    )._memoCleanupInterval;
+    if (maybeInterval && typeof maybeInterval === 'number') {
+      // When the tree cache is cleared, also clear the interval
+      const origClear = (tree as MemoizedSignalTree<T>).clearMemoCache.bind(
+        tree as MemoizedSignalTree<T>
+      );
+      (tree as MemoizedSignalTree<T>).clearMemoCache = (key?: string) => {
+        origClear(key);
+        try {
+          clearInterval(maybeInterval as unknown as number);
+        } catch {
+          /* best-effort */
+        }
+      };
+    }
 
     // Also expose these helpers on the callable state proxy (`tree.$`) so
     // consumer code can call `tree.$.memoizedUpdate(...)` and related methods
@@ -492,20 +527,39 @@ export function withShallowMemoization<T>() {
  */
 export function clearAllCaches(): void {
   // Clear all tree caches
-  memoizationCache.forEach((cache: Map<string, CacheEntry<unknown>>) => {
+  memoizationCache.forEach((cache: Map<string, CacheEntry<unknown>>, tree) => {
     cache.clear();
+    try {
+      const interval = (
+        tree as unknown as {
+          _memoCleanupInterval?: ReturnType<typeof setInterval>;
+        }
+      )._memoCleanupInterval;
+      if (interval) {
+        clearInterval(interval as unknown as number);
+      }
+    } catch {
+      /* best-effort */
+    }
   });
+  memoizationCache.clear();
 }
 
 /**
  * Get global cache statistics
  */
-export function getGlobalCacheStats() {
+export function getGlobalCacheStats(): {
+  treeCount: number;
+  totalSize: number;
+  totalHits: number;
+  averageCacheSize: number;
+} {
+  // Note: We keep a Map keyed by tree objects to allow listing and diagnostics
+  // (WeakMap would prevent traversal). This function summarizes those diagnostics.
   let totalSize = 0;
   let totalHits = 0;
   let treeCount = 0;
 
-  // Type the cache parameter properly
   memoizationCache.forEach((cache: Map<string, CacheEntry<unknown>>) => {
     treeCount++;
     totalSize += cache.size;
