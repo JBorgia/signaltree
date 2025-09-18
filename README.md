@@ -2741,7 +2741,7 @@ SignalTree is built with a modular architecture that allows you to choose exactl
 ```
 @signaltree/core (7.20KB)
 ├── @signaltree/batching (1.27KB)
-├── @signaltree/memoization (2.27KB)
+├── @signaltree/memoization (2.33KB)
 // async package removed from monorepo
 ├── @signaltree/entities (0.97KB)
 ├── @signaltree/middleware (1.89KB)
