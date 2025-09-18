@@ -354,7 +354,7 @@ try {
 
 ## Performance and bundle size
 
-- **Bundle Size**: ~4.69KB gzipped (approximate; varies by build/tooling)
+- **Bundle Size**: ~4.85KB gzipped (approximate; varies by build/tooling)
 - **Serialization**: Optimized for speed; actual performance depends on data shapes and environment
 - **Auto-Save**: Debounced to prevent excessive storage operations
 - **Memory Usage**: Efficient handling of large state trees
