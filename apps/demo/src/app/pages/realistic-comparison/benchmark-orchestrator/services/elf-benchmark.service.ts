@@ -1,6 +1,12 @@
 import { Injectable } from '@angular/core';
 import { createStore } from '@ngneat/elf';
-import { getAllEntities, setEntities, updateAllEntities, updateEntities, withEntities } from '@ngneat/elf-entities';
+import {
+  getAllEntities,
+  setEntities,
+  updateAllEntities,
+  updateEntities,
+  withEntities,
+} from '@ngneat/elf-entities';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
 import { createYieldToUI } from '../shared/benchmark-utils';

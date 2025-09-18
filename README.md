@@ -2741,10 +2741,10 @@ SignalTree is built with a modular architecture that allows you to choose exactl
 ```
 @signaltree/core (7.20KB)
 ├── @signaltree/batching (1.27KB)
-├── @signaltree/memoization (2.11KB)
+├── @signaltree/memoization (2.27KB)
 // async package removed from monorepo
 ├── @signaltree/entities (0.97KB)
-├── @signaltree/middleware (1.38KB)
+├── @signaltree/middleware (1.89KB)
 ├── @signaltree/devtools (2.49KB)
 ├── @signaltree/time-travel (1.75KB)
 ├── @signaltree/ng-forms (3.38KB)
@@ -3209,8 +3209,8 @@ SignalTree has undergone comprehensive bundle optimization to ensure minimal pro
 - **Total Ecosystem**: 28.27KB → **27.50KB** (2.7% reduction)
 - **Package Validation**: 6/11 → **11/11** packages passing size requirements
 - **Key Improvements**:
-  - **Serialization**: 4.0% increase (4.51KB → 4.69KB)
-  - **Middleware**: 3.5% reduction (1.43KB → 1.38KB)
+  - **Serialization**: measured at 4.85KB (previous claim 4.62KB)
+  - **Middleware**: measured at 1.89KB (previous claim 1.38KB)
   - **Batching**: 1.5% reduction (1.29KB → 1.27KB)
 
 ### 🛠️ Optimization Infrastructure & Automation
@@ -3235,13 +3235,13 @@ SignalTree has undergone comprehensive bundle optimization to ensure minimal pro
 | Package       | Size   | Target | Status | Features                            |
 | ------------- | ------ | ------ | ------ | ----------------------------------- |
 | core          | 7.20KB | 7.62KB | ✅     | Revolutionary recursive typing      |
-| serialization | 4.69KB | 4.88KB | ✅     | Advanced persistence & auto-save    |
+| serialization | 4.85KB | 4.88KB | ✅     | Advanced persistence & auto-save    |
 | ng-forms      | 3.38KB | 3.52KB | ✅     | Complete Angular Forms integration  |
 | devtools      | 2.49KB | 2.54KB | ✅     | Development tools & Redux DevTools  |
-| memoization   | 2.11KB | 2.20KB | ✅     | Intelligent caching & optimization  |
+| memoization   | 2.27KB | 2.30KB | ✅     | Intelligent caching & optimization  |
 | async         | 1.80KB | 1.86KB | ✅     | Advanced async operations           |
 | time-travel   | 1.75KB | 1.76KB | ✅     | Undo/redo & state history           |
-| middleware    | 1.38KB | 1.42KB | ✅     | Middleware system & interceptors    |
+| middleware    | 1.89KB | 2.00KB | ⚠️     | Middleware system & interceptors    |
 | batching      | 1.27KB | 1.37KB | ✅     | Batch updates & render optimization |
 | entities      | 0.97KB | 0.98KB | ✅     | Enhanced CRUD operations            |
 | presets       | 0.84KB | 0.88KB | ✅     | Pre-configured setups               |

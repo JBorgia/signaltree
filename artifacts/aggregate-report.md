@@ -7,5 +7,3 @@
 - mode=off n=1900 p50=4.200 mean=3.299
 
 **Compare light vs full:** n1=1900 n2=2100 p=3.313e-1 z=-0.972 delta=-0.018 magnitude=negligible
-
-

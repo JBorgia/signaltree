@@ -4,7 +4,13 @@ import { FormsModule } from '@angular/forms';
 import { withBatching } from '@signaltree/batching';
 import { signalTree } from '@signaltree/core';
 
-import { generatePosts, generateUsers, Post, sleep, User } from '../../shared/models';
+import {
+  generatePosts,
+  generateUsers,
+  Post,
+  sleep,
+  User,
+} from '../../shared/models';
 
 interface BatchingState {
   users: User[];
@@ -619,10 +625,7 @@ export class BatchingDemoComponent {
       status: 'completed',
     }));
 
-    this.store.$.completedOperations.update((ops) => [
-      ...ops,
-      ...operations,
-    ]);
+    this.store.$.completedOperations.update((ops) => [...ops, ...operations]);
   }
 
   addCreatePostOperation() {
@@ -726,10 +729,7 @@ export class BatchingDemoComponent {
       status: 'completed',
     }));
 
-    this.store.$.completedOperations.update((ops) => [
-      ...ops,
-      ...operations,
-    ]);
+    this.store.$.completedOperations.update((ops) => [...ops, ...operations]);
   }
 
   async processBatch() {

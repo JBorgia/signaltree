@@ -1,9 +1,18 @@
 import { Injectable } from '@angular/core';
-import { createAction, createReducer, createSelector, on, props } from '@ngrx/store';
+import {
+  createAction,
+  createReducer,
+  createSelector,
+  on,
+  props,
+} from '@ngrx/store';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
 import { createYieldToUI } from '../shared/benchmark-utils';
-import { EnhancedBenchmarkOptions, runEnhancedBenchmark } from './benchmark-runner';
+import {
+  EnhancedBenchmarkOptions,
+  runEnhancedBenchmark,
+} from './benchmark-runner';
 
 // State interface for complex benchmarks
 interface User {

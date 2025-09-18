@@ -2,11 +2,14 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree } from '@signaltree/core';
-import { createDevTree, createPresetConfig, getAvailablePresets, TreePreset } from '@signaltree/presets';
-
 import {
-  SignalTreeBenchmarkService,
-} from '../realistic-comparison/benchmark-orchestrator/services/signaltree-benchmark.service';
+  createDevTree,
+  createPresetConfig,
+  getAvailablePresets,
+  TreePreset,
+} from '@signaltree/presets';
+
+import { SignalTreeBenchmarkService } from '../realistic-comparison/benchmark-orchestrator/services/signaltree-benchmark.service';
 
 interface AppState extends Record<string, unknown> {
   user: {

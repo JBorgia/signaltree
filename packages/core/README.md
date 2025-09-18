@@ -1408,11 +1408,11 @@ Extend the core with optional feature packages:
 ### Performance & Optimization
 
 - **[@signaltree/batching](../batching)** (+1.27KB gzipped) - Batch multiple updates for better performance
-- **[@signaltree/memoization](../memoization)** (+2.11KB gzipped) - Intelligent caching & performance optimization
+- **[@signaltree/memoization](../memoization)** (+2.33KB gzipped) - Intelligent caching & performance optimization
 
 ### Advanced Features
 
-- **[@signaltree/middleware](../middleware)** (+1.38KB gzipped) - Middleware system & state interceptors
+- **[@signaltree/middleware](../middleware)** (+1.89KB gzipped) - Middleware system & state interceptors
 - Async helpers moved to middleware package (see `packages/middleware`)
 - **[@signaltree/entities](../entities)** (+0.97KB gzipped) - Enhanced CRUD operations & entity management
 

@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-09-11T06:29:49.324Z",
+  "timestamp": "2025-09-18T18:28:41.736Z",
   "summary": {
     "basic": {
       "runs": 3,
@@ -10,10 +10,10 @@
     },
     "medium": {
       "runs": 3,
-      "mean": 0.0016666666666666668,
-      "min": 0.001,
+      "mean": 0.002,
+      "min": 0.002,
       "max": 0.002,
-      "stddev": 0.0004714045207910317
+      "stddev": 0
     },
     "extreme": {
       "runs": 3,
@@ -32,21 +32,21 @@
   },
   "proxyOverhead": {
     "set": {
-      "mean": 63.8315,
+      "mean": 63.5774,
       "min": 0,
-      "max": 15917
+      "max": 212791
     },
     "update": {
-      "mean": 79.6733,
+      "mean": 40.77975,
       "min": 0,
-      "max": 171500
+      "max": 5917
     }
   },
   "packages": [
     {
       "name": "core",
-      "rawSize": 38995,
-      "gzipSize": 7705,
+      "rawSize": 37311,
+      "gzipSize": 7368,
       "claimed": 7250,
       "maxAllowed": 7800,
       "passed": true,
@@ -63,11 +63,11 @@
     },
     {
       "name": "memoization",
-      "rawSize": 7207,
-      "gzipSize": 1848,
-      "claimed": 1800,
-      "maxAllowed": 1900,
-      "passed": true,
+      "rawSize": 10304,
+      "gzipSize": 2328,
+      "claimed": 2270,
+      "maxAllowed": 2300,
+      "passed": false,
       "claimMet": false
     },
     {
@@ -76,15 +76,6 @@
       "gzipSize": 1788,
       "claimed": 1750,
       "maxAllowed": 1800,
-      "passed": true,
-      "claimMet": false
-    },
-    {
-      "name": "async",
-      "rawSize": 7888,
-      "gzipSize": 1847,
-      "claimed": 1800,
-      "maxAllowed": 1900,
       "passed": true,
       "claimMet": false
     },
@@ -99,10 +90,10 @@
     },
     {
       "name": "middleware",
-      "rawSize": 6661,
-      "gzipSize": 1415,
-      "claimed": 1380,
-      "maxAllowed": 1450,
+      "rawSize": 9415,
+      "gzipSize": 1931,
+      "claimed": 1890,
+      "maxAllowed": 2000,
       "passed": true,
       "claimMet": false
     },
@@ -117,10 +108,10 @@
     },
     {
       "name": "serialization",
-      "rawSize": 24691,
-      "gzipSize": 4727,
-      "claimed": 4620,
-      "maxAllowed": 5000,
+      "rawSize": 26146,
+      "gzipSize": 4964,
+      "claimed": 4850,
+      "maxAllowed": 5200,
       "passed": true,
       "claimMet": false
     },
@@ -135,12 +126,12 @@
     },
     {
       "name": "presets",
-      "rawSize": 3281,
-      "gzipSize": 859,
+      "rawSize": 3018,
+      "gzipSize": 834,
       "claimed": 840,
       "maxAllowed": 900,
       "passed": true,
-      "claimMet": false
+      "claimMet": true
     }
   ]
 }

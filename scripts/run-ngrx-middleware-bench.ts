@@ -1,8 +1,6 @@
 import 'zone.js/dist/zone-node';
 
-import {
-  NgRxBenchmarkService,
-} from '../apps/demo/src/app/pages/realistic-comparison/benchmark-orchestrator/services/ngrx-benchmark.service';
+import { NgRxBenchmarkService } from '../apps/demo/src/app/pages/realistic-comparison/benchmark-orchestrator/services/ngrx-benchmark.service';
 
 (async function main() {
   const svc = new NgRxBenchmarkService();

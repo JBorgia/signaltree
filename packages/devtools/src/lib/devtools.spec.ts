@@ -1,6 +1,12 @@
 import { signalTree } from '@signaltree/core';
 
-import { enableDevTools, ModuleMetadata, withDevTools, withFullDevTools, withProductionDevTools } from './devtools';
+import {
+  enableDevTools,
+  ModuleMetadata,
+  withDevTools,
+  withFullDevTools,
+  withProductionDevTools,
+} from './devtools';
 
 describe('Modular DevTools', () => {
   interface TestState {
