@@ -109,6 +109,9 @@ interface BenchmarkService {
 
   // Async operations benchmarks
   runAsyncWorkflowBenchmark?(dataSize: number): Promise<number>;
+  // Optional separate hydration-focused benchmark (some services implement
+  // a distinct hydration runner to measure full-state application cost).
+  runAsyncWorkflowHydrationBenchmark?(dataSize: number): Promise<number>;
   runConcurrentAsyncBenchmark?(concurrency: number): Promise<number>;
   runAsyncCancellationBenchmark?(operations: number): Promise<number>;
 
@@ -127,7 +130,6 @@ interface BenchmarkService {
 
   // Full-stack benchmarks
   runAllFeaturesEnabledBenchmark?(dataSize: number): Promise<number>;
-  runProductionSetupBenchmark?(dataSize: number): Promise<number>;
 }
 
 @Component({
@@ -230,20 +232,18 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       id: 'real-world',
       name: 'Real-World Usage',
       description: 'Common application patterns',
-      scenarios: ['memory-efficiency', 'async-workflow', 'production-setup'],
+      scenarios: ['memory-efficiency'],
     },
     {
       id: 'advanced-features',
       name: 'Advanced Features',
       description: 'Time travel, middleware, and complex workflows',
+      // Note: undo/history/jump are SignalTree-only features (time-travel package).
+      // Keep middleware scenarios here; other libraries will implement middleware.
       scenarios: [
-        'undo-redo',
-        'history-size',
-        'jump-to-state',
         'single-middleware',
         'multiple-middleware',
         'conditional-middleware',
-        'all-features-enabled',
       ],
     },
     {
@@ -360,11 +360,121 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   // Test cases organized by category
   testCases: BenchmarkTestCase[] = ENHANCED_TEST_CASES;
 
+  // Scenarios to hide from the UI (SignalTree-only or intentionally removed)
+  private hiddenScenarioIds = new Set<string>([
+    'undo-redo',
+    'history-size',
+    'jump-to-state',
+  ]);
+
   // Computed values
   selectedLibraries = computed(() => {
     // Depend on version so changes to plain objects trigger recompute
     this.selectionVersion();
     return this.availableLibraries.filter((lib) => lib.selected);
+  });
+
+  // When selected libraries change, automatically deselect scenarios that are
+  // not supported by all selected libraries and annotate them with a reason.
+  // This avoids running partial comparisons which would make results unreliable.
+  private readonly _autoDisableUnsupportedScenarios = effect(() => {
+    type MutableTestCase = BenchmarkTestCase & {
+      selected?: boolean;
+      disabledReason?: string;
+    };
+    const libs = this.selectedLibraries();
+
+    // map library id to service instance (use BenchmarkService type)
+    const svcMap: Record<string, BenchmarkService | undefined> = {
+      signaltree: this.stBench,
+      'ngrx-store': this.ngrxBench,
+      'ngrx-signals': this.ngrxSignalsBench,
+      akita: this.akitaBench,
+      elf: this.elfBench,
+      ngxs: this.ngxsBench,
+    };
+
+    // explicit mapping from scenario id to service method name
+    const scenarioMethodMap: Record<string, string | null> = {
+      'deep-nested': 'runDeepNestedBenchmark',
+      'large-array': 'runArrayBenchmark',
+      'computed-chains': 'runComputedBenchmark',
+      'batch-updates': 'runBatchUpdatesBenchmark',
+      'selector-memoization': 'runSelectorBenchmark',
+      serialization: 'runSerializationBenchmark',
+      'concurrent-updates': 'runConcurrentUpdatesBenchmark',
+      'memory-efficiency': 'runMemoryEfficiencyBenchmark',
+      'data-fetching': 'runDataFetchingBenchmark',
+      'real-time-updates': 'runRealTimeUpdatesBenchmark',
+      'state-size-scaling': 'runStateSizeScalingBenchmark',
+
+      // Time-travel (SignalTree-only)
+      'undo-redo': 'runUndoRedoBenchmark',
+      'history-size': 'runHistorySizeBenchmark',
+      'jump-to-state': 'runJumpToStateBenchmark',
+
+      // Middleware
+      'single-middleware': 'runSingleMiddlewareBenchmark',
+      'multiple-middleware': 'runMultipleMiddlewareBenchmark',
+      'conditional-middleware': 'runConditionalMiddlewareBenchmark',
+
+      // Async (behavior folded into middleware helpers)
+      'async-workflow': 'runAsyncWorkflowBenchmark',
+      'async-workflow-scheduling': 'runAsyncWorkflowBenchmark',
+      'async-workflow-hydration': 'runAsyncWorkflowHydrationBenchmark',
+      'concurrent-async': 'runConcurrentAsyncBenchmark',
+      'async-cancellation': 'runAsyncCancellationBenchmark',
+
+      // Full-stack
+      // production-setup intentionally removed
+    };
+
+    // For each scenario, check all selected libraries for method presence.
+    // We annotate unsupported scenarios with `disabledReason` but do NOT
+    // automatically mutate the user's explicit selection. This keeps the UX
+    // visual-only: disabled scenarios remain visible in the list but won't run.
+    this.testCases.forEach((testCase) => {
+      const method = scenarioMethodMap[testCase.id] || null;
+      if (!method) {
+        // No explicit mapping; clear any previous annotation and continue
+        delete (testCase as unknown as { disabledReason?: string })
+          .disabledReason;
+        return;
+      }
+
+      const missingLibs: string[] = [];
+      libs.forEach((lib) => {
+        const svc = svcMap[lib.id];
+        if (!svc) return; // unknown lib mapping
+        const fn = (
+          svc as unknown as Record<string, (...args: unknown[]) => unknown>
+        )[method];
+        if (!fn) missingLibs.push(lib.name);
+      });
+
+      // If scenario is intentionally hidden, mark and deselect it
+      if (this.hiddenScenarioIds.has(testCase.id)) {
+        const tc = testCase as MutableTestCase;
+        tc.disabledReason = 'Hidden (SignalTree-only)';
+        if (tc.selected) tc.selected = false;
+        return;
+      }
+
+      if (missingLibs.length > 0) {
+        const dr = `Unsupported by ${missingLibs.join(', ')}`;
+        const tc = testCase as MutableTestCase;
+        tc.disabledReason = dr;
+        // Auto-deselect if it was selected so users don't accidentally run unsupported tests
+        if (tc.selected) tc.selected = false;
+      } else {
+        // Clear any previous annotation if now supported
+        delete (testCase as unknown as { disabledReason?: string })
+          .disabledReason;
+      }
+    });
+
+    // trigger recompute for UI bindings that read selectedScenarios
+    this.scenarioSelectionVersion.update((v) => v + 1);
   });
 
   // Computed enhancer configuration based on selected scenarios
@@ -386,10 +496,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     ],
     'state-size-scaling': ['withLightweightMemoization', 'withBatching'],
 
-    // Async operations - currently use no enhancers in implementation
-    'async-workflow': [],
-    'concurrent-async': [],
-    'async-cancellation': [],
+    // Async operations: runtime implementations still exist but the demo page was removed; async behavior is tested via middleware helpers
 
     // Time travel - now use withTimeTravel enhancer
     'undo-redo': ['withTimeTravel'],
@@ -402,16 +509,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     'conditional-middleware': [],
 
     // Full stack benchmarks
-    'all-features-enabled': [
-      'withMemoization',
-      'withBatching',
-      'withSerialization',
-    ],
-    'production-setup': [
-      'withShallowMemoization',
-      'withHighPerformanceBatching',
-      'withSerialization',
-    ],
   };
 
   activeEnhancers = computed(() => {
@@ -492,7 +589,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         'minimal caching overhead for intensive workloads',
       withSerialization: 'state persistence and snapshot capabilities',
       withTimeTravel: 'undo/redo functionality with history management',
-      withAsync: 'async operation management and loading states',
+      // withAsync removed — async behavior handled by middleware helpers
     };
 
     const enhancerSummary = enhancers
@@ -509,6 +606,10 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
   // Method to apply scenario preset
   applyScenarioPreset(presetId: string) {
+    type MutableTestCase = BenchmarkTestCase & {
+      selected?: boolean;
+      disabledReason?: string;
+    };
     const preset = this.scenarioPresets.find((p) => p.id === presetId);
     if (!preset) return;
 
@@ -517,8 +618,12 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
     // Select test cases for this preset
     if (presetId === 'all-tests') {
-      // Select all test cases
-      this.testCases.forEach((testCase) => (testCase.selected = true));
+      // Select all supported test cases only. Keep unsupported tests visible
+      // but do not select them so users can still see which tests exist.
+      this.testCases.forEach((testCase) => {
+        const tc = testCase as MutableTestCase;
+        tc.selected = !tc.disabledReason;
+      });
     } else {
       preset.scenarios.forEach((scenarioId) => {
         const testCase = this.testCases.find((s) => s.id === scenarioId);
@@ -530,10 +635,35 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     this.scenarioSelectionVersion.update((v) => v + 1);
   }
 
+  // Return count of scenarios for a preset, respecting hidden scenarios.
+  presetCount(preset: { id: string; scenarios?: string[] }): number {
+    if (preset.id === 'all-tests') {
+      // All visible scenarios (hidden ones excluded)
+      return this.visibleScenarios().length;
+    }
+    const ids = preset.scenarios || [];
+    return ids.filter(
+      (id) =>
+        !this.hiddenScenarioIds.has(id) &&
+        this.testCases.some((t) => t.id === id)
+    ).length;
+  }
+
   selectedScenarios = computed(() => {
     // Depend on scenarioSelectionVersion to trigger recompute when scenarios change
     this.scenarioSelectionVersion();
-    return this.testCases.filter((s) => s.selected);
+    // Exclude any scenarios that were auto-marked as unsupported so they remain
+    // visible (via visibleScenarios) but are not included in runs.
+    return this.testCases.filter((s) => s.selected && !s.disabledReason);
+  });
+
+  // Visible scenarios includes currently selected scenarios plus any
+  // auto-disabled scenarios so users can see which were removed and why.
+  visibleScenarios = computed(() => {
+    // ensure we depend on selection changes
+    this.scenarioSelectionVersion();
+    // Hide intentionally removed or SignalTree-only scenarios from the UI.
+    return this.testCases.filter((s) => !this.hiddenScenarioIds.has(s.id));
   });
 
   // Smart preset suggestions based on selected scenarios
@@ -588,7 +718,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         reason: `${realTimeMatches} scenarios match real-time app patterns`,
       });
     }
-
     // Forms app detection
     const formsScenarios = [
       'deep-nested',
@@ -1533,6 +1662,22 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       return -1; // Indicates library not available
     }
 
+    // If scenario is SignalTree-only, skip for non-SignalTree libraries
+    type ScenarioWithFlag = BenchmarkTestCase & { signalTreeOnly?: boolean };
+    const scenarioObj = this.testCases.find((s) => s.id === scenarioId) as
+      | ScenarioWithFlag
+      | undefined;
+    if (
+      scenarioObj &&
+      scenarioObj.signalTreeOnly &&
+      libraryId !== 'signaltree'
+    ) {
+      console.info(
+        `Skipping ${scenarioId} for ${libraryId}: scenario requires SignalTree-only features`
+      );
+      return -1;
+    }
+
     try {
       switch (scenarioId) {
         case 'deep-nested': {
@@ -1642,15 +1787,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
           }
           return await svc.runStateSizeScalingBenchmark(config.dataSize);
 
-        // Async Operations
-        case 'async-workflow':
-          if (!svc.runAsyncWorkflowBenchmark) {
-            console.warn(
-              `${libraryId} does not support async-workflow benchmarks`
-            );
-            return -1;
-          }
-          return await svc.runAsyncWorkflowBenchmark(config.dataSize);
+        // Async benchmark cases remain runnable via service methods; the demo UI no longer exposes a separate async page
         case 'concurrent-async':
           if (!svc.runConcurrentAsyncBenchmark) {
             console.warn(
@@ -1736,23 +1873,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
           );
 
         // Full Stack
-        case 'all-features-enabled':
-          if (!svc.runAllFeaturesEnabledBenchmark) {
-            console.warn(
-              `${libraryId} does not support all-features-enabled benchmarks`
-            );
-            return -1;
-          }
-          return await svc.runAllFeaturesEnabledBenchmark(config.dataSize);
-        case 'production-setup':
-          if (!svc.runProductionSetupBenchmark) {
-            console.warn(
-              `${libraryId} does not support production-setup benchmarks`
-            );
-            return -1;
-          }
-          return await svc.runProductionSetupBenchmark(config.dataSize);
-
         default:
           console.warn(
             `Unknown scenario: ${scenarioId} for library: ${libraryId}`
@@ -2655,7 +2775,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       'computed-chains': 2.4, // 76% of apps use reactive computations
       'large-array': 2.1, // 68% of apps manage lists/tables (but less frequent than selectors)
       'batch-updates': 2.0, // 65% of apps batch updates (form submissions, bulk operations)
-      'async-workflow': 2.3, // 74% of apps heavily use async operations (APIs, loading states)
+      'async-via-middleware': 2.3, // 74% of apps heavily use async operations (APIs, loading states) - folded into middleware helpers
       'memory-efficiency': 1.8, // 58% of apps run on mobile/resource-constrained devices
 
       // Less common but important operations
@@ -2673,8 +2793,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       'jump-to-state': 0.2, // 6% of apps use advanced debugging features
 
       // Production configurations
-      'production-setup': 3.0, // 100% of apps eventually go to production
-      'all-features-enabled': 0.3, // 9% of apps use comprehensive feature sets
     };
 
     // Apply research-based weights with smart category adjustments
@@ -2691,10 +2809,10 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         baseWeight *= 1.1; // 10% boost for core operations in core-heavy workloads
       }
       if (
-        categoryDistribution['async'] > 0.3 &&
-        testCase.category === 'async'
+        categoryDistribution['middleware'] > 0.3 &&
+        testCase.category === 'middleware'
       ) {
-        baseWeight *= 1.2; // 20% boost for async operations in async-heavy workloads
+        baseWeight *= 1.2; // 20% boost for middleware (including async) in middleware-heavy workloads
       }
       if (
         categoryDistribution['time-travel'] > 0.2 &&

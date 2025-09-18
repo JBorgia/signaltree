@@ -1,13 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree } from '@signaltree/core';
+import { createDevTree, createPresetConfig, getAvailablePresets, TreePreset } from '@signaltree/presets';
+
 import {
-  createDevTree,
-  createPresetConfig,
-  getAvailablePresets,
-  TreePreset,
-} from '@signaltree/presets';
+  SignalTreeBenchmarkService,
+} from '../realistic-comparison/benchmark-orchestrator/services/signaltree-benchmark.service';
 
 interface AppState extends Record<string, unknown> {
   user: {
@@ -310,6 +309,31 @@ interface AppState extends Record<string, unknown> {
             </div>
           </div>
 
+          <!-- SignalTree Showcase (All Features) -->
+          <div class="bg-white rounded-lg shadow p-4 sm:p-6 mt-6">
+            <h3 class="text-lg font-semibold mb-4">SignalTree Showcase</h3>
+            <div class="text-sm text-gray-600 mb-3">
+              Run a SignalTree-only combined features workload (memoization,
+              batching, serialization + async/history/middleware simulation).
+              This is a SignalTree-only showcase and is not comparable across
+              other libraries.
+            </div>
+            <div class="flex items-center gap-3">
+              <button
+                (click)="runAllFeaturesShowcase()"
+                class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              >
+                Run Showcase
+              </button>
+              <div class="text-sm text-gray-700">
+                <span *ngIf="showcasePending">Running...</span>
+                <span *ngIf="showcaseResult !== null">
+                  Completed: {{ showcaseResult }} ms
+                </span>
+              </div>
+            </div>
+          </div>
+
           <!-- Performance Metrics -->
           <div class="bg-white rounded-lg shadow p-4 sm:p-6 mt-6">
             <h3 class="text-lg font-semibold mb-4">Performance Metrics</h3>
@@ -388,6 +412,26 @@ export class PresetsDemoComponent {
 
   // Performance tracking
   updateCount = signal(0);
+
+  // SignalTree showcase state
+  showcasePending = false;
+  showcaseResult: number | null = null;
+
+  private readonly signalTreeBench = inject(SignalTreeBenchmarkService);
+
+  async runAllFeaturesShowcase() {
+    try {
+      this.showcasePending = true;
+      this.showcaseResult = null;
+      // Use a modest data size to keep demo runs quick
+      const ms = await this.signalTreeBench.runAllFeaturesEnabledBenchmark(
+        1000
+      );
+      this.showcaseResult = Math.round(ms);
+    } finally {
+      this.showcasePending = false;
+    }
+  }
 
   // Current tree instance (will be recreated when preset changes)
   tree = this.createTreeWithPreset('basic') as any;

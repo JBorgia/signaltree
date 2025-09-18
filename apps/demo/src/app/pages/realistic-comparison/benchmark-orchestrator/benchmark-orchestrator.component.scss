@@ -587,7 +587,7 @@ $border: #e5e7eb;
 }
 
 // Test Scenarios Section
-.scenarios-section {
+.benchmarks-section {
   margin-bottom: 2rem;
 
   h2 {
@@ -688,8 +688,8 @@ $border: #e5e7eb;
     }
   }
 
-  // All scenarios display
-  .all-scenarios {
+  // All benchmarks display
+  .all-benchmarks {
     .category-section {
       margin-bottom: 3rem;
 
@@ -722,13 +722,13 @@ $border: #e5e7eb;
 
   // Removed old category-content styles - now using all-scenarios structure
 
-  .scenarios-grid {
+  .benchmarks-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 1rem;
   }
 
-  .scenario-card {
+  .benchmark-card {
     @include card;
     cursor: pointer;
     display: flex;
@@ -747,7 +747,22 @@ $border: #e5e7eb;
       background: rgba($primary, 0.05);
     }
 
-    .scenario-header {
+    &.disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      pointer-events: none; // prevent clicks on the card itself
+      background: rgba($dark, 0.02);
+
+      .benchmark-header h3 {
+        color: color.adjust($dark, $lightness: -20%);
+      }
+
+      input {
+        cursor: not-allowed;
+      }
+    }
+
+    .benchmark-header {
       display: flex;
       align-items: center;
       gap: 0.75rem;
@@ -763,6 +778,15 @@ $border: #e5e7eb;
         color: $dark;
         font-size: 1.125rem;
       }
+      .unsupported-badge {
+        margin-left: auto;
+        background: rgba($danger, 0.06);
+        color: $danger;
+        font-weight: 800;
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+      }
     }
 
     p {
@@ -771,7 +795,7 @@ $border: #e5e7eb;
       margin-bottom: 1rem;
     }
 
-    .scenario-details {
+    .benchmark-details {
       display: flex;
       flex-direction: column;
       gap: 1rem;
@@ -1252,7 +1276,7 @@ $border: #e5e7eb;
 
   .library-grid,
   .config-grid,
-  .scenarios-grid,
+  .benchmarks-grid,
   .summary-grid,
   .charts-grid,
   .statistics-grid {
@@ -1672,7 +1696,8 @@ $border: #e5e7eb;
 }
 
 // Enhanced scenario cards with frequency indicators
-.scenario-card {
+.scenario-card,
+.benchmark-card {
   .frequency-indicator {
     display: flex;
     align-items: center;
@@ -1752,12 +1777,14 @@ $border: #e5e7eb;
       flex: 1;
       height: 6px;
       -webkit-appearance: none;
+      appearance: none;
       background: $border;
       border-radius: 3px;
       outline: none;
 
       &::-webkit-slider-thumb {
         -webkit-appearance: none;
+        appearance: none;
         width: 16px;
         height: 16px;
         background: $primary;
@@ -1766,6 +1793,7 @@ $border: #e5e7eb;
       }
 
       &::-moz-range-thumb {
+        appearance: none;
         width: 16px;
         height: 16px;
         background: $primary;
@@ -1907,7 +1935,8 @@ $border: #e5e7eb;
           border-bottom: none;
         }
 
-        .scenario {
+        .scenario,
+        .benchmark {
           flex: 1;
           font-weight: 500;
           color: $dark;
@@ -2029,7 +2058,8 @@ $border: #e5e7eb;
       }
     }
 
-    .scenarios-count {
+    .scenarios-count,
+    .benchmarks-count {
       color: #6b7280;
       font-size: 0.875rem;
     }
@@ -2152,7 +2182,8 @@ $border: #e5e7eb;
         }
       }
 
-      .scenario-breakdown {
+      .scenario-breakdown,
+      .benchmark-breakdown {
         .scenario-item {
           display: grid;
           grid-template-columns: 1fr auto auto auto;
@@ -2165,8 +2196,10 @@ $border: #e5e7eb;
             border-bottom: none;
           }
 
-          .scenario-info {
-            .scenario-name {
+          .scenario-info,
+          .benchmark-info {
+            .scenario-name,
+            .benchmark-name {
               display: block;
               font-weight: 600;
               color: $dark;
@@ -2180,7 +2213,8 @@ $border: #e5e7eb;
             }
           }
 
-          .scenario-scores {
+          .scenario-scores,
+          .benchmark-scores {
             display: contents;
 
             .weight {
