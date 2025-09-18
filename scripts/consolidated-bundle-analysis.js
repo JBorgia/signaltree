@@ -27,7 +27,6 @@ const packages = [
   { name: 'batching', maxSize: 1400, claimed: 1270 }, // Current: 1.27KB
   { name: 'memoization', maxSize: 2200, claimed: 2110 }, // Current: 2.11KB (updated to actual size)
   { name: 'time-travel', maxSize: 1800, claimed: 1750 }, // Current: 1.75KB
-  { name: 'async', maxSize: 1900, claimed: 1800 }, // Current: 1.80KB
   { name: 'entities', maxSize: 1000, claimed: 980 }, // Current: 0.98KB
   { name: 'middleware', maxSize: 1450, claimed: 1380 }, // Current: 1.38KB
   { name: 'devtools', maxSize: 2600, claimed: 2490 }, // Current: 2.49KB

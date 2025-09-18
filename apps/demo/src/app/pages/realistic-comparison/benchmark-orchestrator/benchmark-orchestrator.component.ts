@@ -155,6 +155,49 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     warmupRuns: 10,
   });
 
+  // Runtime memoization mode for in-browser A/B testing. Read from URL or
+  // controlled via the small UI selector below. Possible values: 'off',
+  // 'light', 'shallow', 'full'. Default is 'light'. This writes a global
+  // so other demo services can pick it up as a fallback.
+  memoMode = signal<'off' | 'light' | 'shallow' | 'full'>(
+    this._readMemoModeFromUrl()
+  );
+
+  private _memoModeEffect = effect(() => {
+    // Keep a global for other modules that may read it directly
+    (window as any).__SIGNALTREE_MEMO_MODE = this.memoMode();
+  });
+
+  private _readMemoModeFromUrl(): 'off' | 'light' | 'shallow' | 'full' {
+    try {
+      const p = new URLSearchParams(window.location.search);
+      const m = p.get('memo');
+      if (m === 'off' || m === 'light' || m === 'shallow' || m === 'full')
+        return m;
+    } catch (e) {
+      // ignore and fallthrough to default
+    }
+    return 'light';
+  }
+
+  // Allow changing the memo mode at runtime via the UI select. This updates
+  // the URL so exporter automation can drive A/B using query params.
+  setMemoMode(mode: string | EventTarget | null) {
+    const m = typeof mode === 'string' ? mode : (mode as any)?.value;
+    if (!(m === 'off' || m === 'light' || m === 'shallow' || m === 'full'))
+      return;
+    this.memoMode(m as any);
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('memo', m);
+      history.replaceState(null, '', url.toString());
+      // reflect to global for services reading it directly
+      (window as any).__SIGNALTREE_MEMO_MODE = m;
+    } catch (err) {
+      // ignore URL update failures
+    }
+  }
+
   calibrationData = signal<CalibrationData | null>(null);
   isCalibrating = signal(false);
   isRunning = signal(false);

@@ -48,7 +48,6 @@ print_status "Verified npm authentication"
 # Define packages in dependency order (core first, then others)
 PACKAGES=(
     "core"
-    "async"
     "batching"
     "memoization"
     "devtools"

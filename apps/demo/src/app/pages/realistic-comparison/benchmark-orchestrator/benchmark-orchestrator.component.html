@@ -167,6 +167,7 @@
       <div
         class="library-card"
         *ngFor="let lib of availableLibraries"
+        [attr.data-test-id]="'lib-' + lib.id + '-card'"
         [class.selected]="lib.selected"
         [class.disabled]="lib.id === 'signaltree'"
         [style.--lib-color]="lib.color"
@@ -179,6 +180,7 @@
         <div class="library-checkbox">
           <input
             type="checkbox"
+            [attr.data-test-id]="'lib-' + lib.id + '-checkbox'"
             [ngModel]="lib.selected"
             (ngModelChange)="onLibraryCheckboxChange(lib, $event)"
             [disabled]="lib.id === 'signaltree'"
@@ -375,6 +377,33 @@
         />
         <small>Warmup runs allow JIT optimization</small>
       </div>
+
+      <div class="config-group">
+        <label for="memo-mode"
+          >Memoization Mode
+          <span
+            class="tooltip"
+            title="Switch memoization strategy for in-browser A/B tests"
+          >
+            <i>?</i>
+          </span>
+        </label>
+        <select
+          id="memo-mode"
+          [ngModel]="memoMode()"
+          (ngModelChange)="setMemoMode($event)"
+          [disabled]="isRunning()"
+        >
+          <option value="light">Light (default)</option>
+          <option value="off">Off</option>
+          <option value="shallow">Shallow</option>
+          <option value="full">Full</option>
+        </select>
+        <small
+          >Toggle memoization strategy for exporter A/B testing (updates URL
+          param)</small
+        >
+      </div>
     </div>
 
     <div class="test-estimates">
@@ -464,7 +493,9 @@
             <div class="category-item high">
               <span class="weight-range">2.0-2.4x</span>
               <span class="frequency"> High</span>
-              <span class="examples"> Arrays, async operations, batching</span>
+              <span class="examples">
+                Arrays, batching, async (via middleware)</span
+              >
             </div>
             <div class="category-item medium">
               <span class="weight-range">1.0-1.9x</span>
@@ -709,6 +740,7 @@
   <section class="controls-section">
     <button
       class="btn btn-run"
+      data-test-id="run-benchmarks"
       (click)="runBenchmarks()"
       [disabled]="!canRunBenchmarks()"
     >
@@ -740,14 +772,22 @@
   </section>
 
   <!-- Progress Modal -->
-  <div class="progress-modal" *ngIf="isRunning()">
+  <div class="progress-modal" *ngIf="isRunning()" data-test-id="progress-modal">
     <div class="progress-content">
       <h2>Running Benchmarks</h2>
 
       <div class="progress-current">
-        <span class="current-library">{{ currentLibrary() }}</span>
-        <span class="current-scenario">{{ currentScenario() }}</span>
-        <span class="current-iteration"
+        <span class="current-library" data-test-id="progress-current-library">{{
+          currentLibrary()
+        }}</span>
+        <span
+          class="current-scenario"
+          data-test-id="progress-current-scenario"
+          >{{ currentScenario() }}</span
+        >
+        <span
+          class="current-iteration"
+          data-test-id="progress-current-iteration"
           >Iteration {{ currentIteration() }} / {{ config().iterations }}</span
         >
       </div>
@@ -778,7 +818,11 @@
         </div>
       </div>
 
-      <button class="btn btn-cancel" (click)="cancelBenchmarks()">
+      <button
+        class="btn btn-cancel"
+        data-test-id="progress-cancel"
+        (click)="cancelBenchmarks()"
+      >
         Cancel
       </button>
     </div>
@@ -1046,6 +1090,7 @@
         <div class="chart-toolbar">
           <button
             class="btn btn-export"
+            data-test-id="chart-scenarios"
             [class.active]="chartMode() === 'scenarios'"
             (click)="setChartMode('scenarios')"
           >
@@ -1053,6 +1098,7 @@
           </button>
           <button
             class="btn btn-export"
+            data-test-id="chart-distribution"
             [class.active]="chartMode() === 'distribution'"
             (click)="setChartMode('distribution')"
           >
@@ -1060,6 +1106,7 @@
           </button>
           <button
             class="btn btn-export"
+            data-test-id="chart-percentiles"
             [class.active]="chartMode() === 'percentiles'"
             (click)="setChartMode('percentiles')"
           >
@@ -1067,6 +1114,7 @@
           </button>
           <button
             class="btn btn-export"
+            data-test-id="chart-timeseries"
             [class.active]="chartMode() === 'timeseries'"
             (click)="setChartMode('timeseries')"
           >
@@ -1154,7 +1202,11 @@
     <div class="export-section">
       <h3>Export Results</h3>
       <div class="export-buttons">
-        <button class="btn btn-export" (click)="exportCSV()">
+        <button
+          class="btn btn-export"
+          data-test-id="export-csv"
+          (click)="exportCSV()"
+        >
           <svg class="btn-icon" viewBox="0 0 24 24">
             <path
               d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20M12,19L8,15H10.5V12H13.5V15H16L12,19Z"
@@ -1162,7 +1214,11 @@
           </svg>
           Export CSV
         </button>
-        <button class="btn btn-export" (click)="exportJSON()">
+        <button
+          class="btn btn-export"
+          data-test-id="export-json"
+          (click)="exportJSON()"
+        >
           <svg class="btn-icon" viewBox="0 0 24 24">
             <path
               d="M5,3H7V5H5V10A2,2 0 0,1 3,12A2,2 0 0,1 5,14V19H7V21H5C3.93,20.73 3,20.1 3,19V15A2,2 0 0,0 1,13H0V11H1A2,2 0 0,0 3,9V5A2,2 0 0,1 5,3M19,3A2,2 0 0,1 21,5V9A2,2 0 0,0 23,11H24V13H23A2,2 0 0,0 21,15V19A2,2 0 0,1 19,21H17V19H19V14A2,2 0 0,1 21,12A2,2 0 0,1 19,10V5H17V3H19M12,15A1,1 0 0,1 13,16A1,1 0 0,1 12,17A1,1 0 0,1 11,16A1,1 0 0,1 12,15M8,15A1,1 0 0,1 9,16A1,1 0 0,1 8,17A1,1 0 0,1 7,16A1,1 0 0,1 8,15M16,15A1,1 0 0,1 17,16A1,1 0 0,1 16,17A1,1 0 0,1 15,16A1,1 0 0,1 16,15Z"
@@ -1170,7 +1226,11 @@
           </svg>
           Export JSON
         </button>
-        <button class="btn btn-export" (click)="shareResults()">
+        <button
+          class="btn btn-export"
+          data-test-id="share-results"
+          (click)="shareResults()"
+        >
           <svg class="btn-icon" viewBox="0 0 24 24">
             <path
               d="M18,16.08C17.24,16.08 16.56,16.38 16.04,16.85L8.91,12.7C8.96,12.47 9,12.24 9,12C9,11.76 8.96,11.53 8.91,11.3L15.96,7.19C16.5,7.69 17.21,8 18,8A3,3 0 0,0 21,5A3,3 0 0,0 18,2A3,3 0 0,0 15,5C15,5.24 15.04,5.47 15.09,5.7L8.04,9.81C7.5,9.31 6.79,9 6,9A3,3 0 0,0 3,12A3,3 0 0,0 6,15C6.79,15 7.5,14.69 8.04,14.19L15.16,18.34C15.11,18.55 15.08,18.77 15.08,19C15.08,20.61 16.39,21.91 18,21.91C19.61,21.91 20.92,20.61 20.92,19A2.92,2.92 0 0,0 18,16.08Z"

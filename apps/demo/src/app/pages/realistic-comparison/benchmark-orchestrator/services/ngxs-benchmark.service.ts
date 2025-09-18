@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { Action, Selector, State, StateContext, Store } from '@ngxs/store';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
+import { createYieldToUI } from '../shared/benchmark-utils';
 
 // Type definitions
 type ArrayItem = {
@@ -171,11 +172,7 @@ export class BenchmarkState {
 export class NgxsBenchmarkService {
   private readonly store = inject(Store);
 
-  private yieldToUI() {
-    return new Promise<void>((r) =>
-      setTimeout(r, BENCHMARK_CONSTANTS.TIMING.YIELD_DELAY_MS)
-    );
-  }
+  private yieldToUI = createYieldToUI();
 
   async runDeepNestedBenchmark(
     dataSize: number,
@@ -527,6 +524,50 @@ export class NgxsBenchmarkService {
       );
     }
 
+    return performance.now() - start;
+  }
+
+  // --- Async Workflows (Effects simulation for NGXS) ---
+  async runAsyncWorkflowBenchmark(dataSize: number): Promise<number> {
+    const start = performance.now();
+
+    const promises: Promise<void>[] = [];
+    const ops = Math.min(
+      dataSize,
+      BENCHMARK_CONSTANTS.ITERATIONS.ASYNC_WORKFLOW || 1000
+    );
+    for (let i = 0; i < ops; i++) {
+      promises.push(new Promise((res) => setTimeout(res, 0)));
+    }
+
+    await Promise.all(promises);
+    return performance.now() - start;
+  }
+
+  async runAsyncCancellationBenchmark(operations: number): Promise<number> {
+    const start = performance.now();
+
+    const tasks: Array<{
+      cancelled: boolean;
+      timer: ReturnType<typeof setTimeout> | null;
+    }> = [];
+    for (let i = 0; i < operations; i++) {
+      const t = setTimeout(() => {
+        /* noop */
+      }, 10);
+      tasks.push({ cancelled: false, timer: t });
+    }
+
+    for (let i = 0; i < Math.floor(operations / 2); i++) {
+      const t = tasks[i];
+      if (t.timer) {
+        clearTimeout(t.timer);
+        t.cancelled = true;
+        t.timer = null;
+      }
+    }
+
+    await new Promise((r) => setTimeout(r, 10));
     return performance.now() - start;
   }
 }

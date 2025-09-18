@@ -16,9 +16,8 @@
     "allowSyntheticDefaultImports": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
-    "types": ["@angular/core", "@signaltree/callable-syntax/augmentation"],
+    "types": ["@angular/core", "jest"],
     "paths": {
-      "@signaltree/async": ["packages/async/src/index.ts"],
       "@signaltree/batching": ["packages/batching/src/index.ts"],
       "@signaltree/core": ["packages/core/src/index.ts"],
       "@signaltree/devtools": ["packages/devtools/src/index.ts"],

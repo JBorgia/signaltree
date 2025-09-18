@@ -436,12 +436,12 @@ Perfect for:
 import { signalTree } from '@signaltree/core';
 import { withEntities } from '@signaltree/entities';
 import { withMemoization } from '@signaltree/memoization';
-import { withAsync } from '@signaltree/async';
+// withAsync removed — async behavior now demonstrated via middleware helpers
 
 const tree = signalTree(state).with(
   withEntities(),
-  withMemoization(), // Cache expensive queries
-  withAsync() // Enhanced async operations
+  withMemoization() // Cache expensive queries
+  // withAsync removed — use middleware helpers (createAsyncOperation/trackAsync) for loading/error states
 );
 ```
 

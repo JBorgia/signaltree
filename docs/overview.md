@@ -21,7 +21,7 @@ This document consolidates the feature overview and technical specifications for
 
 - @signaltree/core: foundational signals, typing, and performance
 - @signaltree/serialization: persistence, snapshots, SSR hydration
-- @signaltree/async: async orchestration, retries, cancellation, debouncing
+  // async helpers moved to middleware package
 - @signaltree/batching: recursive batching across deep trees
 - @signaltree/memoization: path-based memoization and cache management
 - @signaltree/time-travel: history, undo/redo, snapshots

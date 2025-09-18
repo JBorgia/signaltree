@@ -13,7 +13,6 @@ try {
 
 const packages = [
   'core',
-  'async',
   'batching',
   'memoization',
   'time-travel',

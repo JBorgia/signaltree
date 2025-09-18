@@ -1,4 +1,8 @@
-#!/usr/bin/env node
+import { execSync } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import { gzipSync } from 'zlib';
+
 /**
  * 🚀 Revolutionary Recursive Typing Bundle Analysis
  * SignalTree Dynamic Bundle Size & Performance Analysis
@@ -8,11 +12,6 @@
  * - Perfect tree-shaking at any depth
  * - Memory efficiency that scales with complexity
  */
-
-import fs from 'fs';
-import path from 'path';
-import { execSync } from 'child_process';
-import { gzipSync } from 'zlib';
 
 console.log('📦 SignalTree Revolutionary Bundle Analysis');
 console.log(
@@ -59,11 +58,6 @@ const packages = [
     name: 'middleware',
     path: 'packages/middleware',
     features: ['Recursive Middleware Chains'],
-  },
-  {
-    name: 'async',
-    path: 'packages/async',
-    features: ['Recursive Async Operations'],
   },
   {
     name: 'presets',
@@ -194,7 +188,6 @@ class RecursiveBundleAnalyzer {
       devtools: 2560, // 2.5KB - Recursive debugging
       entities: 2048, // 2KB - Entity management
       middleware: 1536, // 1.5KB - Middleware chains
-      async: 1024, // 1KB - Async operations
       presets: 512, // 0.5KB - Configuration presets
     };
 
