@@ -10,6 +10,90 @@ import { createYieldToUI } from '../shared/benchmark-utils';
 export class ElfBenchmarkService {
   private yieldToUI = createYieldToUI();
 
+  // --- Middleware Benchmarks (Elf - operator/effect simulation) ---
+  async runSingleMiddlewareBenchmark(operations: number): Promise<number> {
+    const start = performance.now();
+    const op = (ctx: string, payload?: unknown) => {
+      void ctx;
+      void payload;
+      let acc = 0;
+      for (let i = 0; i < 10; i++) acc += i;
+      return acc > -1;
+    };
+
+    for (let i = 0; i < operations; i++) op('noop', i);
+    return performance.now() - start;
+  }
+
+  async runMultipleMiddlewareBenchmark(
+    middlewareCount: number,
+    operations: number
+  ): Promise<number> {
+    const start = performance.now();
+    const ops = Array.from(
+      { length: middlewareCount },
+      () => (ctx: string, payload?: unknown) => {
+        void ctx;
+        void payload;
+        let s = 0;
+        for (let i = 0; i < 20; i++) s += i;
+        return s > -1;
+      }
+    );
+
+    for (let i = 0; i < operations; i++) ops.forEach((o) => o('noop', i));
+    return performance.now() - start;
+  }
+
+  async runConditionalMiddlewareBenchmark(operations: number): Promise<number> {
+    const start = performance.now();
+    const conditional = (ctx: string, payload?: unknown) => {
+      void ctx;
+      if ((payload as number) % 2 === 0) return true;
+      let s = 0;
+      for (let i = 0; i < 30; i++) s += i;
+      return s > -1;
+    };
+
+    for (let i = 0; i < operations; i++) conditional('noop', i);
+    return performance.now() - start;
+  }
+
+  // --- Async Workflows (lightweight simulations) ---
+  async runAsyncWorkflowBenchmark(dataSize: number): Promise<number> {
+    const start = performance.now();
+    const ops = Math.min(
+      dataSize,
+      BENCHMARK_CONSTANTS.ITERATIONS.ASYNC_WORKFLOW
+    );
+    const promises: Promise<void>[] = [];
+    for (let i = 0; i < ops; i++)
+      promises.push(new Promise((r) => setTimeout(r, 0)));
+    await Promise.all(promises);
+    return performance.now() - start;
+  }
+
+  async runConcurrentAsyncBenchmark(concurrency: number): Promise<number> {
+    const start = performance.now();
+    const tasks = Array.from(
+      { length: concurrency },
+      () => new Promise((r) => setTimeout(r, 0))
+    );
+    await Promise.all(tasks);
+    return performance.now() - start;
+  }
+
+  async runAsyncCancellationBenchmark(operations: number): Promise<number> {
+    const start = performance.now();
+    const timers: number[] = [];
+    for (let i = 0; i < operations; i++)
+      timers.push(setTimeout(() => void 0, 10) as unknown as number);
+    for (let i = 0; i < Math.floor(operations / 2); i++)
+      clearTimeout(timers[i]);
+    await new Promise((r) => setTimeout(r, 10));
+    return performance.now() - start;
+  }
+
   async runDeepNestedBenchmark(
     dataSize: number,
     depth = BENCHMARK_CONSTANTS.DATA_GENERATION.NESTED_DEPTH
@@ -487,7 +571,6 @@ export class ElfBenchmarkService {
           },
         }))
       );
-
     }
 
     const duration = performance.now() - start;

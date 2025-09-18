@@ -1,38 +1,31 @@
 {
-  "generatedAt": "2025-09-17T21:49:17.324Z",
+  "generated": "2025-09-18T14:51:43.448Z",
   "scenarios": {
     "deep-nested": {
-      "scenario": "deep-nested",
-      "libraries": {
-        "SignalTree": {
-          "median": 0.10000002384185791,
-          "p95": 0.20000004768371582,
-          "opsPerSecond": 10000,
-          "sampleCount": 100,
-          "zeros": 21,
-          "manyZeros": false,
-          "quantized": true,
-          "stdDev": 0.09165151884171156,
-          "relStd": 0.9165149699029188,
-          "highVariance": false
-        }
-      }
-    },
-    "large-array": {
-      "scenario": "large-array",
-      "libraries": {
-        "SignalTree": {
-          "median": 1.4000000953674316,
-          "p95": 1.600000023841858,
-          "opsPerSecond": 714,
-          "sampleCount": 100,
-          "zeros": 0,
-          "manyZeros": false,
-          "quantized": false,
-          "stdDev": 0.41538415425419256,
-          "relStd": 0.29670294711313894,
-          "highVariance": false
-        }
+      "full": {
+        "n": 1900,
+        "p50": 4.199999928474426,
+        "mean": 3.245789475001787
+      },
+      "light": {
+        "n": 1900,
+        "p50": 4.100000023841858,
+        "mean": 3.221526318223853
+      },
+      "off": {
+        "n": 1900,
+        "p50": 4.200000047683716,
+        "mean": 3.2989473689857283
+      },
+      "comparison": {
+        "left": "light",
+        "right": "full",
+        "n1": 1900,
+        "n2": 1900,
+        "p": 0.5524571666535532,
+        "z": -0.5940820165250253,
+        "delta": -0.011129916897506925,
+        "magnitude": "negligible"
       }
     }
   }

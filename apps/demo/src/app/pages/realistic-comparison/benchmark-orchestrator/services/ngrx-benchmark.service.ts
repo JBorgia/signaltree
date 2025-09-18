@@ -159,12 +159,12 @@ export class NgRxBenchmarkService {
       // lightweight middleware function simulated per operation
       let x = 0;
       for (let i = 0; i < 10; i++) x += i;
-      // Use the result in a trivial way to avoid unused variable lint
       void x;
     }, options);
 
     return result.median;
   }
+  // --- Middleware Benchmarks (simulated via wrapper functions / meta-reducer pattern) ---
 
   async runMultipleMiddlewareBenchmark(
     middlewareCount: number,
