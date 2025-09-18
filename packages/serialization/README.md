@@ -8,7 +8,7 @@ Advanced state serialization, persistence, and SSR support for SignalTree with a
 - Auto-save persistence: Debounced automatic state persistence with configurable intervals
 - Multiple storage adapters: localStorage, sessionStorage, IndexedDB, and custom storage backends
 - SSR compatibility: Server-side rendering support with hydratio```
-  @signaltree/serialization: 4.69KB gzipped
+  @signaltree/serialization: 4.85KB gzipped
   ├── Core serialization: ~2.1KB
   ├── Persistence layer: ~1.2KB
   ├── Storage adapters: ~0.8KB
@@ -18,7 +18,7 @@ Advanced state serialization, persistence, and SSR support for SignalTree with a
 ````shot management: Point-in-time state capture and restoration
 - Circular reference handling for complex object graphs
 - Performance optimized: Efficient serialization designed for low overhead
-- Compact bundle: Advanced persistence in ~4.69KB gzipped
+- Compact bundle: Advanced persistence in ~4.85KB gzipped
 
 ## Quick start
 
