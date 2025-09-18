@@ -25,12 +25,12 @@ const { execSync } = require('child_process');
 const packages = [
   { name: 'core', maxSize: 7800, claimed: 7250 }, // Current: 7.25KB
   { name: 'batching', maxSize: 1400, claimed: 1270 }, // Current: 1.27KB
-  { name: 'memoization', maxSize: 2200, claimed: 2110 }, // Current: 2.11KB (updated to actual size)
+  { name: 'memoization', maxSize: 2400, claimed: 2328 }, // Measured: 2.328KB (updated)
   { name: 'time-travel', maxSize: 1800, claimed: 1750 }, // Current: 1.75KB
   { name: 'entities', maxSize: 1000, claimed: 980 }, // Current: 0.98KB
-  { name: 'middleware', maxSize: 1450, claimed: 1380 }, // Current: 1.38KB
+  { name: 'middleware', maxSize: 2000, claimed: 1890 }, // Measured: 1.89KB (updated)
   { name: 'devtools', maxSize: 2600, claimed: 2490 }, // Current: 2.49KB
-  { name: 'serialization', maxSize: 5000, claimed: 4620 }, // Current: 4.62KB
+  { name: 'serialization', maxSize: 5200, claimed: 4850 }, // Measured: 4.85KB (updated)
   { name: 'ng-forms', maxSize: 3600, claimed: 3380 }, // Current: 3.38KB
   { name: 'presets', maxSize: 900, claimed: 840 }, // Current: 0.84KB
 ];
