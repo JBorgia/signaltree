@@ -1,14 +1,5 @@
 import { CommonModule, NgFor, NgIf } from '@angular/common';
-import {
-  Component,
-  computed,
-  effect,
-  ElementRef,
-  inject,
-  OnDestroy,
-  signal,
-  ViewChild,
-} from '@angular/core';
+import { Component, computed, effect, ElementRef, inject, OnDestroy, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { Subject } from 'rxjs';
@@ -22,6 +13,12 @@ import { NgxsBenchmarkService } from './services/ngxs-benchmark.service';
 import { SignalTreeBenchmarkService } from './services/signaltree-benchmark.service';
 import { BENCHMARK_CONSTANTS } from './shared/benchmark-constants';
 
+// Extend Window interface for custom global property
+declare global {
+  interface Window {
+    __SIGNALTREE_MEMO_MODE?: 'off' | 'light' | 'shallow' | 'full';
+  }
+}
 // Register Chart.js components
 Chart.register(...registerables);
 
