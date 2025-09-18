@@ -156,9 +156,11 @@ function main() {
       try {
         const text = fs.readFileSync(fp, 'utf8');
         const obj = JSON.parse(text);
-        // extract memo mode from filename (off, light, full) if present
+        // extract memo mode from filename (accept off, light, full, shallow, deep)
         const base = path.basename(fp);
-        const mMatch = base.match(/-(off|light|full)-results\.json$/i);
+        const mMatch = base.match(
+          /-(off|light|full|shallow|deep)-results\.json$/i
+        );
         const memoMode = mMatch
           ? mMatch[1].toLowerCase()
           : obj.configuration?.memoMode || 'unknown';
@@ -203,20 +205,18 @@ function main() {
       md += `## ${scenario}\n\n`;
       for (const mode of Object.keys(modes)) {
         const pooled = flatten(modes[mode]);
+        const p50 = pooled.length ? median(pooled) : null;
+        const mean = pooled.length
+          ? pooled.reduce((s, v) => s + v, 0) / pooled.length
+          : null;
         report.scenarios[scenario][mode] = {
           n: pooled.length,
-          p50: median(pooled),
-          mean: pooled.length
-            ? pooled.reduce((s, v) => s + v, 0) / pooled.length
-            : 0,
+          p50,
+          mean,
         };
-        md += `- mode=${mode} n=${pooled.length} p50=${median(pooled).toFixed(
-          3
-        )} mean=${
-          pooled.length
-            ? (pooled.reduce((s, v) => s + v, 0) / pooled.length).toFixed(3)
-            : 'N/A'
-        }\n`;
+        const p50Str = p50 !== null ? p50.toFixed(3) : 'N/A';
+        const meanStr = mean !== null ? mean.toFixed(3) : 'N/A';
+        md += `- mode=${mode} n=${pooled.length} p50=${p50Str} mean=${meanStr}\n`;
       }
       const modeKeys = Object.keys(modes);
       if (modeKeys.length >= 2) {
@@ -261,7 +261,6 @@ function main() {
   }
   const files = args;
   const results = readNdjsonFiles(files);
-  const grouped = groupByScenario(results);
   // For demo, compare first repeat group vs rest grouped by something? We'll assume files include a metadata `mode` field like memo mode.
 
   // Build per scenario pools by mode

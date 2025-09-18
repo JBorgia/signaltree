@@ -2531,6 +2531,19 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       statistics: this.statisticalComparisons(),
     };
     const json = JSON.stringify(data, null, 2);
+    try {
+      // Expose last benchmark results on window as a deterministic fallback
+      // for external automation (Playwright) that may miss the browser
+      // download event triggered via programmatic anchor clicks.
+      (window as any).__LAST_BENCHMARK_RESULTS__ = json;
+      // Also expose the parsed object for convenience in some runners
+      (window as any).__LAST_BENCHMARK_RESULTS_OBJ__ = data;
+      (window as any).__LAST_BENCHMARK_RESULTS_TS__ = new Date().toISOString();
+    } catch (err) {
+      // Non-fatal: if window cannot be written to for some reason, continue
+      console.warn('Failed to set global benchmark shim:', err);
+    }
+
     this.downloadFile(json, 'benchmark-results.json', 'application/json');
   }
 
