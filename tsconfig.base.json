@@ -19,6 +19,8 @@
     "types": ["@angular/core", "jest"],
     "paths": {
       "@signaltree/batching": ["packages/batching/src/index.ts"],
+      "@signaltree/callable-syntax": ["packages/callable-syntax/src/index.ts"],
+      "@signaltree/callable-syntax/*": ["packages/callable-syntax/src/*"],
       "@signaltree/core": ["packages/core/src/index.ts"],
       "@signaltree/devtools": ["packages/devtools/src/index.ts"],
       "@signaltree/entities": ["packages/entities/src/index.ts"],
@@ -28,8 +30,6 @@
       "@signaltree/ng-forms": ["packages/ng-forms/src/index.ts"],
       "@signaltree/presets": ["packages/presets/src/index.ts"],
       "@signaltree/serialization": ["packages/serialization/src/index.ts"],
-      "@signaltree/callable-syntax": ["packages/callable-syntax/src/index.ts"],
-      "@signaltree/callable-syntax/*": ["packages/callable-syntax/src/*"],
       "@signaltree/time-travel": ["packages/time-travel/src/index.ts"]
     }
   },

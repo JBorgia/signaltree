@@ -1,7 +1,14 @@
 import { computed, Injectable } from '@angular/core';
-import { withBatching, withHighPerformanceBatching } from '@signaltree/batching';
+import {
+  withBatching,
+  withHighPerformanceBatching,
+} from '@signaltree/batching';
 import { signalTree } from '@signaltree/core';
-import { withLightweightMemoization, withMemoization, withShallowMemoization } from '@signaltree/memoization';
+import {
+  withLightweightMemoization,
+  withMemoization,
+  withShallowMemoization,
+} from '@signaltree/memoization';
 import { withSerialization } from '@signaltree/serialization';
 import { withTimeTravel } from '@signaltree/time-travel';
 
@@ -85,7 +92,7 @@ export class SignalTreeBenchmarkService {
   // Read runtime memo mode set by the orchestrator (or URL param)
   private getRuntimeMemoMode(): 'off' | 'light' | 'shallow' | 'full' {
     try {
-      const g = (window as any).__SIGNALTREE_MEMO_MODE;
+      const g = window.__SIGNALTREE_MEMO_MODE;
       if (g === 'off' || g === 'light' || g === 'shallow' || g === 'full')
         return g;
     } catch {

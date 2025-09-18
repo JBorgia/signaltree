@@ -40,6 +40,17 @@ describe('SignalTree Performance Benchmarks', () => {
     return trimmed[Math.floor(trimmed.length / 2)];
   }
 
+  interface NestedState {
+    [key: string]:
+      | NestedState
+      | {
+          value: number;
+          timestamp: number;
+          id: string;
+          counter?: number;
+        };
+  }
+
   function generateNestedState(depth: number, breadth: number): any {
     if (depth === 0) {
       return {
@@ -113,11 +124,11 @@ describe('SignalTree Performance Benchmarks', () => {
     const tree = signalTree(state);
 
     const shallowTime = measureTime(() => {
-      tree((state) => ({ ...state, counter: Math.random() }));
+      tree((state: NestedState) => ({ ...state, counter: Math.random() }));
     });
 
     const deepTime = measureTime(() => {
-      tree((state) => {
+      tree((state: any) => {
         const newState = { ...state };
         if (newState.level_3_item_0) {
           newState.level_3_item_0 = {
@@ -153,7 +164,7 @@ describe('SignalTree Performance Benchmarks', () => {
     const batchTree = signalTree(state).with(withBatching());
 
     const singleUpdateTime = measureTime(() => {
-      regularTree((state) => ({ ...state, value: Math.random() }));
+      regularTree((state: any) => ({ ...state, value: Math.random() }));
     });
 
     const batchedUpdateTime = measureTime(() => {

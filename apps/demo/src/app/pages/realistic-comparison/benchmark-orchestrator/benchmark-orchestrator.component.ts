@@ -1,5 +1,14 @@
 import { CommonModule, NgFor, NgIf } from '@angular/common';
-import { Component, computed, effect, ElementRef, inject, OnDestroy, signal, ViewChild } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  inject,
+  OnDestroy,
+  signal,
+  ViewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { Subject } from 'rxjs';
@@ -167,7 +176,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
   private _memoModeEffect = effect(() => {
     // Keep a global for other modules that may read it directly
-    (window as any).__SIGNALTREE_MEMO_MODE = this.memoMode();
+    window.__SIGNALTREE_MEMO_MODE = this.memoMode();
   });
 
   private _readMemoModeFromUrl(): 'off' | 'light' | 'shallow' | 'full' {
@@ -194,7 +203,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       url.searchParams.set('memo', m);
       history.replaceState(null, '', url.toString());
       // reflect to global for services reading it directly
-      (window as any).__SIGNALTREE_MEMO_MODE = m;
+      window.__SIGNALTREE_MEMO_MODE = m;
     } catch (_err) {
       // ignore URL update failures
     }
@@ -2535,10 +2544,10 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       // Expose last benchmark results on window as a deterministic fallback
       // for external automation (Playwright) that may miss the browser
       // download event triggered via programmatic anchor clicks.
-      (window as any).__LAST_BENCHMARK_RESULTS__ = json;
+      window.__LAST_BENCHMARK_RESULTS__ = json;
       // Also expose the parsed object for convenience in some runners
-      (window as any).__LAST_BENCHMARK_RESULTS_OBJ__ = data;
-      (window as any).__LAST_BENCHMARK_RESULTS_TS__ = new Date().toISOString();
+      window.__LAST_BENCHMARK_RESULTS_OBJ__ = data;
+      window.__LAST_BENCHMARK_RESULTS_TS__ = new Date().toISOString();
     } catch (err) {
       // Non-fatal: if window cannot be written to for some reason, continue
       console.warn('Failed to set global benchmark shim:', err);

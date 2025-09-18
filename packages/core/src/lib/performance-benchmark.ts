@@ -182,8 +182,7 @@ export class PerformanceBenchmark {
     results.push(
       this.benchmark('Tree Unwrap', () => {
         try {
-          const plain =
-            typeof tree.unwrap === 'function' ? tree() : undefined;
+          const plain = typeof tree.unwrap === 'function' ? tree() : undefined;
           // touch a nested field to prevent DCE
           // eslint-disable-next-line @typescript-eslint/no-unused-expressions
           plain && (plain as any).level10?.level9;

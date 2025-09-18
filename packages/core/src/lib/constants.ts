@@ -73,11 +73,11 @@ declare const ngDevMode: boolean | undefined;
 // type assumptions; use globalThis to check env when available.
 const _isProdByEnv = Boolean(
   typeof globalThis === 'object' &&
-  globalThis !== null &&
-  'process' in globalThis &&
-  typeof (globalThis as any).process === 'object' &&
-  'env' in (globalThis as any).process &&
-  (globalThis as any).process.env.NODE_ENV === 'production'
+    globalThis !== null &&
+    'process' in globalThis &&
+    typeof (globalThis as any).process === 'object' &&
+    'env' in (globalThis as any).process &&
+    (globalThis as any).process.env.NODE_ENV === 'production'
 );
 
 const _isDev =

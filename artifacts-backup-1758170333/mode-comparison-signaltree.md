@@ -22,4 +22,3 @@
 - mean delta (light - off): 0.107000 ms (7.32%)
 - Mann–Whitney U: U1=3405.500, U2=6594.500, z=-3.897, p=9.735e-5
 - Cliff's Delta: -0.3189 (small)
-

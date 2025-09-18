@@ -1,15 +1,7 @@
 {
   "meta": {
-    "offRuns": [
-      1,
-      2,
-      3
-    ],
-    "lightRuns": [
-      1,
-      2,
-      3
-    ]
+    "offRuns": [1, 2, 3],
+    "lightRuns": [1, 2, 3]
   },
   "pooled": {
     "off": {
