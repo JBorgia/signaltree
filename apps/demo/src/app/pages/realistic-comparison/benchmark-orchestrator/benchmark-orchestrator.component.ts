@@ -176,7 +176,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       const m = p.get('memo');
       if (m === 'off' || m === 'light' || m === 'shallow' || m === 'full')
         return m;
-    } catch (e) {
+    } catch (_e) {
       // ignore and fallthrough to default
     }
     return 'light';
@@ -195,7 +195,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       history.replaceState(null, '', url.toString());
       // reflect to global for services reading it directly
       (window as any).__SIGNALTREE_MEMO_MODE = m;
-    } catch (err) {
+    } catch (_err) {
       // ignore URL update failures
     }
   }
