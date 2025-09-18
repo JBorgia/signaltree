@@ -2,6 +2,8 @@ import { Injectable } from '@angular/core';
 import { createAction, createReducer, createSelector, on, props } from '@ngrx/store';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
+import { createYieldToUI } from '../shared/benchmark-utils';
+import { EnhancedBenchmarkOptions, runEnhancedBenchmark } from './benchmark-runner';
 
 // State interface for complex benchmarks
 interface User {
@@ -139,12 +141,135 @@ export class NgRxBenchmarkService {
     memory?: { jsHeapSizeLimit: number; usedJSHeapSize: number };
   };
 
-  private yieldToUI() {
-    return new Promise<void>((r) =>
-      setTimeout(r, BENCHMARK_CONSTANTS.TIMING.YIELD_DELAY_MS)
-    );
+  private yieldToUI = createYieldToUI();
+
+  // --- Middleware Benchmarks (simulated via wrapper functions / meta-reducer pattern) ---
+  async runSingleMiddlewareBenchmark(operations: number): Promise<number> {
+    const options: EnhancedBenchmarkOptions = {
+      operations,
+      warmup: 5,
+      measurementSamples: 30,
+      yieldEvery: BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR,
+      trackMemory: false,
+      label: 'NgRx Single Middleware',
+      minDurationMs: 50,
+    };
+
+    const result = await runEnhancedBenchmark(async () => {
+      // lightweight middleware function simulated per operation
+      let x = 0;
+      for (let i = 0; i < 10; i++) x += i;
+      // Use the result in a trivial way to avoid unused variable lint
+      void x;
+    }, options);
+
+    return result.median;
   }
 
+  async runMultipleMiddlewareBenchmark(
+    middlewareCount: number,
+    operations: number
+  ): Promise<number> {
+    const options: EnhancedBenchmarkOptions = {
+      operations,
+      warmup: 5,
+      measurementSamples: 30,
+      yieldEvery: BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR,
+      trackMemory: false,
+      label: `NgRx Multiple Middleware (count=${middlewareCount})`,
+      minDurationMs: 50,
+    };
+
+    const result = await runEnhancedBenchmark(async () => {
+      // Simulate middleware stack overhead per operation
+      let total = 0;
+      for (let m = 0; m < middlewareCount; m++) {
+        let s = 0;
+        for (let i = 0; i < 20; i++) s += i;
+        total += s;
+      }
+      void total;
+    }, options);
+
+    return result.median;
+  }
+
+  async runConditionalMiddlewareBenchmark(operations: number): Promise<number> {
+    const options: EnhancedBenchmarkOptions = {
+      operations,
+      warmup: 5,
+      measurementSamples: 30,
+      yieldEvery: BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR,
+      trackMemory: false,
+      label: 'NgRx Conditional Middleware',
+      minDurationMs: 50,
+    };
+
+    const result = await runEnhancedBenchmark(async (i: number) => {
+      if ((i as number) % 2 === 0) {
+        // quick path - trivial
+        return;
+      }
+      // slower path
+      let s = 0;
+      for (let k = 0; k < 30; k++) s += k;
+      void s;
+    }, options);
+
+    return result.median;
+  }
+
+  // --- Async Workflows (Effects simulation) ---
+  async runAsyncWorkflowBenchmark(dataSize: number): Promise<number> {
+    const start = performance.now();
+
+    // Simulate async operations with microtasks and small delays
+    const promises: Promise<void>[] = [];
+    const ops = Math.min(
+      dataSize,
+      BENCHMARK_CONSTANTS.ITERATIONS.ASYNC_WORKFLOW
+    );
+    for (let i = 0; i < ops; i++) {
+      promises.push(
+        new Promise((res) => setTimeout(res, 0)) // yield to event loop
+      );
+    }
+
+    await Promise.all(promises);
+
+    return performance.now() - start;
+  }
+
+  async runAsyncCancellationBenchmark(operations: number): Promise<number> {
+    const start = performance.now();
+
+    // Simulate launching async tasks and cancelling half of them
+    const tasks: Array<{
+      cancelled: boolean;
+      timer: ReturnType<typeof setTimeout> | null;
+    }> = [];
+    for (let i = 0; i < operations; i++) {
+      const t = setTimeout(() => {
+        /* noop */
+      }, 10);
+      tasks.push({ cancelled: false, timer: t });
+    }
+
+    // Cancel half
+    for (let i = 0; i < Math.floor(operations / 2); i++) {
+      const t = tasks[i];
+      if (t.timer) {
+        clearTimeout(t.timer);
+        t.cancelled = true;
+        t.timer = null;
+      }
+    }
+
+    // Wait briefly to let non-cancelled run
+    await new Promise((r) => setTimeout(r, 10));
+
+    return performance.now() - start;
+  }
   async runDeepNestedBenchmark(
     dataSize: number,
     depth = BENCHMARK_CONSTANTS.DATA_GENERATION.NESTED_DEPTH

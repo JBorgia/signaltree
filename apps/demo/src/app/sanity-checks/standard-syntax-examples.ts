@@ -1,3 +1,5 @@
+import { signalTree } from '@signaltree/core';
+
 /**
  * 📚 STANDARD SYNTAX EXAMPLES
  *
@@ -12,8 +14,6 @@
  * ✅ No transforms required - works immediately
  * ✅ Zero runtime overhead - pure Angular signals
  */
-import { signalTree } from '@signaltree/core';
-
 console.log('📚 STANDARD SYNTAX EXAMPLES\n');
 
 // ==============================================
@@ -161,7 +161,12 @@ stateTree.$.ui.error.set(null);
 // Simulate data loading
 setTimeout(() => {
   stateTree.$.ui.loading.set(false);
-  stateTree.$.ui.data.set({ results: ['item1', 'item2', 'item3'] });
+  // Demo-local narrow cast to allow .set() on optional data node
+  (
+    stateTree.$.ui.data as unknown as {
+      set: (v: { results: string[] }) => void;
+    }
+  ).set({ results: ['item1', 'item2', 'item3'] });
 }, 100);
 
 // Update filters based on conditions

@@ -1,0 +1,1552 @@
+CPU Calibration Results: {iterations: 100000, duration: 83.00ms, opsPerMs: 1204.82, mathOperations: 100000, memoryOperations: 100000}
+Memory Analysis: {heapSizeLimit: 4095.8MB, usedHeapSize: 25.1MB, totalHeapSize: 30.3MB, availableHeap: 4070.7MB, memoryPressure: Normal}
+[vite] connecting...
+Angular is running in development mode.
+[vite] connected.
+CPU Calibration Results: {iterations: 100000, duration: 83.80ms, opsPerMs: 1193.32, mathOperations: 100000, memoryOperations: 100000}
+Memory Analysis: {heapSizeLimit: 4095.8MB, usedHeapSize: 34.6MB, totalHeapSize: 38.9MB, availableHeap: 4061.1MB, memoryPressure: Normal}
+Starting benchmarks with: {libraries: Array(6), scenarios: Array(16), scenarioIds: Array(16)}
+Starting single benchmark: SignalTree - Deep Nested Updates
+Starting warmup runs: 10
+Starting measurement runs: 100
+Iteration 1 duration: 0.20000004768371582ms
+Iteration 2 duration: 0.10000002384185791ms
+Iteration 3 duration: 0.19999992847442627ms
+Iteration 4 duration: 0.10000002384185791ms
+Iteration 5 duration: 0.09999990463256836ms
+Iteration 6 duration: 0.20000004768371582ms
+Iteration 7 duration: 0.10000002384185791ms
+Iteration 8 duration: 0.09999990463256836ms
+Iteration 9 duration: 0.10000002384185791ms
+Iteration 10 duration: 0.09999990463256836ms
+Iteration 11 duration: 0.10000002384185791ms
+Iteration 12 duration: 0.20000004768371582ms
+Iteration 13 duration: 0.10000002384185791ms
+Iteration 14 duration: 0.09999990463256836ms
+Iteration 15 duration: 0.20000004768371582ms
+Iteration 16 duration: 0.10000002384185791ms
+Iteration 17 duration: 0.10000002384185791ms
+Iteration 18 duration: 0.10000002384185791ms
+Iteration 19 duration: 0.20000004768371582ms
+Iteration 20 duration: 0.10000002384185791ms
+Iteration 21 duration: 0ms
+Iteration 22 duration: 0.10000002384185791ms
+Iteration 23 duration: 0ms
+Iteration 24 duration: 0.10000002384185791ms
+Iteration 25 duration: 0ms
+Iteration 26 duration: 0.09999990463256836ms
+Iteration 27 duration: 0ms
+Iteration 28 duration: 0.10000002384185791ms
+Iteration 29 duration: 0.10000002384185791ms
+Iteration 30 duration: 0.09999990463256836ms
+Iteration 31 duration: 0ms
+Iteration 32 duration: 0ms
+Iteration 33 duration: 0.10000002384185791ms
+Iteration 34 duration: 0.10000002384185791ms
+Iteration 35 duration: 0.10000002384185791ms
+Iteration 36 duration: 0ms
+Iteration 37 duration: 0.10000002384185791ms
+Iteration 38 duration: 0.10000002384185791ms
+Iteration 39 duration: 0.10000002384185791ms
+Iteration 40 duration: 0.09999990463256836ms
+Iteration 41 duration: 0.20000004768371582ms
+Iteration 42 duration: 0.09999990463256836ms
+Iteration 43 duration: 0.20000004768371582ms
+Iteration 44 duration: 0.10000002384185791ms
+Iteration 45 duration: 0.10000002384185791ms
+Iteration 46 duration: 0.8999999761581421ms
+Iteration 47 duration: 0.10000002384185791ms
+Iteration 48 duration: 0.10000002384185791ms
+Iteration 49 duration: 0.10000002384185791ms
+Iteration 50 duration: 0.10000002384185791ms
+Iteration 51 duration: 0.10000002384185791ms
+Iteration 52 duration: 0.10000002384185791ms
+Iteration 53 duration: 0ms
+Iteration 54 duration: 0.19999992847442627ms
+Iteration 55 duration: 0.10000002384185791ms
+Iteration 56 duration: 0.10000002384185791ms
+Iteration 57 duration: 0ms
+Iteration 58 duration: 0.10000002384185791ms
+Iteration 59 duration: 0.20000004768371582ms
+Iteration 60 duration: 0.10000002384185791ms
+Iteration 61 duration: 0.09999990463256836ms
+Iteration 62 duration: 0.10000002384185791ms
+Iteration 63 duration: 0.10000002384185791ms
+Iteration 64 duration: 0.10000002384185791ms
+Iteration 65 duration: 0.09999990463256836ms
+Iteration 66 duration: 0.10000002384185791ms
+Iteration 67 duration: 0.10000002384185791ms
+Iteration 68 duration: 0.20000004768371582ms
+Iteration 69 duration: 0.09999990463256836ms
+Iteration 70 duration: 0.10000002384185791ms
+Iteration 71 duration: 0.20000004768371582ms
+Iteration 72 duration: 0.3999999761581421ms
+Iteration 73 duration: 0.19999992847442627ms
+Iteration 74 duration: 0.20000004768371582ms
+Iteration 75 duration: 0.10000002384185791ms
+Iteration 76 duration: 0.30000007152557373ms
+Iteration 77 duration: 0.19999992847442627ms
+Iteration 78 duration: 0.30000007152557373ms
+Iteration 79 duration: 0.09999990463256836ms
+Iteration 80 duration: 0.20000004768371582ms
+Iteration 81 duration: 0ms
+Iteration 82 duration: 0.10000002384185791ms
+Iteration 83 duration: 0ms
+Iteration 84 duration: 0.09999990463256836ms
+Iteration 85 duration: 0.10000002384185791ms
+Iteration 86 duration: 0ms
+Iteration 87 duration: 0ms
+Iteration 88 duration: 0.09999990463256836ms
+Iteration 89 duration: 0.10000002384185791ms
+Iteration 90 duration: 0.20000004768371582ms
+Iteration 91 duration: 0ms
+Iteration 92 duration: 0.10000002384185791ms
+Iteration 93 duration: 0.09999990463256836ms
+Iteration 94 duration: 0.10000002384185791ms
+Iteration 95 duration: 0ms
+Iteration 96 duration: 0.10000002384185791ms
+Iteration 97 duration: 0ms
+Iteration 98 duration: 0.10000002384185791ms
+Iteration 99 duration: 0ms
+Iteration 100 duration: 0.10000002384185791ms
+Starting single benchmark: NgRx Store - Deep Nested Updates
+Starting warmup runs: 10
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 5.599999904632568ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 5.100000023841858ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.600000023841858ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.600000023841858ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.600000023841858ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.400000095367432ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.600000023841858ms
+Starting measurement runs: 100
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.600000023841858ms
+Iteration 1 duration: 4.600000023841858ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.800000071525574ms
+Iteration 2 duration: 4.800000071525574ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.700000047683716ms
+Iteration 3 duration: 4.700000047683716ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.600000023841858ms
+Iteration 4 duration: 4.600000023841858ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 5 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 6 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.400000095367432ms
+Iteration 7 duration: 4.400000095367432ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.399999976158142ms
+Iteration 8 duration: 4.399999976158142ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.600000023841858ms
+Iteration 9 duration: 4.600000023841858ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 10 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 11 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 5.200000047683716ms
+Iteration 12 duration: 5.200000047683716ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 13 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.400000095367432ms
+Iteration 14 duration: 4.400000095367432ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 15 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 16 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 17 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 18 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 19 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 20 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.600000023841858ms
+Iteration 21 duration: 4.600000023841858ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.700000047683716ms
+Iteration 22 duration: 4.700000047683716ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 23 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.600000023841858ms
+Iteration 24 duration: 4.600000023841858ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 25 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.399999976158142ms
+Iteration 26 duration: 4.399999976158142ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.399999976158142ms
+Iteration 27 duration: 4.399999976158142ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 28 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.399999976158142ms
+Iteration 29 duration: 4.399999976158142ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 30 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.399999976158142ms
+Iteration 31 duration: 4.399999976158142ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.600000023841858ms
+Iteration 32 duration: 4.600000023841858ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.600000023841858ms
+Iteration 33 duration: 4.600000023841858ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.400000095367432ms
+Iteration 34 duration: 4.400000095367432ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 35 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 36 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.299999952316284ms
+Iteration 37 duration: 4.299999952316284ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.399999976158142ms
+Iteration 38 duration: 4.399999976158142ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 39 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 40 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 41 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 42 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 43 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.600000023841858ms
+Iteration 44 duration: 4.600000023841858ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 45 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 46 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 47 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 48 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 49 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.399999976158142ms
+Iteration 50 duration: 4.399999976158142ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 51 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.600000023841858ms
+Iteration 52 duration: 4.600000023841858ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 53 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.599999904632568ms
+Iteration 54 duration: 4.599999904632568ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.300000071525574ms
+Iteration 55 duration: 4.300000071525574ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 56 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 57 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.400000095367432ms
+Iteration 58 duration: 4.400000095367432ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 59 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.600000023841858ms
+Iteration 60 duration: 4.600000023841858ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.399999976158142ms
+Iteration 61 duration: 4.399999976158142ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.600000023841858ms
+Iteration 62 duration: 4.600000023841858ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 63 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.399999976158142ms
+Iteration 64 duration: 4.399999976158142ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 65 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 66 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 67 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.399999976158142ms
+Iteration 68 duration: 4.399999976158142ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 69 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 70 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 71 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.600000023841858ms
+Iteration 72 duration: 4.600000023841858ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.399999976158142ms
+Iteration 73 duration: 4.399999976158142ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 74 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.399999976158142ms
+Iteration 75 duration: 4.399999976158142ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.399999976158142ms
+Iteration 76 duration: 4.399999976158142ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.399999976158142ms
+Iteration 77 duration: 4.399999976158142ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 78 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 79 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.399999976158142ms
+Iteration 80 duration: 4.399999976158142ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 81 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.900000095367432ms
+Iteration 82 duration: 4.900000095367432ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.600000023841858ms
+Iteration 83 duration: 4.600000023841858ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 84 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 85 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 86 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 87 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.599999904632568ms
+Iteration 88 duration: 4.599999904632568ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 89 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 90 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.600000023841858ms
+Iteration 91 duration: 4.600000023841858ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 92 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 93 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.299999952316284ms
+Iteration 94 duration: 4.299999952316284ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.399999976158142ms
+Iteration 95 duration: 4.399999976158142ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.399999976158142ms
+Iteration 96 duration: 4.399999976158142ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 97 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.399999976158142ms
+Iteration 98 duration: 4.399999976158142ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.5ms
+Iteration 99 duration: 4.5ms
+NgRx Deep Nested: Starting with dataSize=50000, depth=15
+NgRx Deep Nested: Creating initial state with depth 15
+NgRx Deep Nested: Starting 1000 iterations
+NgRx Deep Nested: Completed in 4.399999976158142ms
+Iteration 100 duration: 4.399999976158142ms
+Starting single benchmark: NgRx SignalStore - Deep Nested Updates
+Starting warmup runs: 10
+Starting measurement runs: 100
+Iteration 1 duration: 4.899999976158142ms
+Iteration 2 duration: 5.100000023841858ms
+Iteration 3 duration: 4.899999976158142ms
+Iteration 4 duration: 4.899999976158142ms
+Iteration 5 duration: 4.799999952316284ms
+Iteration 6 duration: 5ms
+Iteration 7 duration: 4.700000047683716ms
+Iteration 8 duration: 4.800000071525574ms
+Iteration 9 duration: 4.799999952316284ms
+Iteration 10 duration: 4.600000023841858ms
+Iteration 11 duration: 4.700000047683716ms
+Iteration 12 duration: 6.400000095367432ms
+Iteration 13 duration: 6.5ms
+Iteration 14 duration: 6.600000023841858ms
+Iteration 15 duration: 6.699999928474426ms
+Iteration 16 duration: 8.200000047683716ms
+Iteration 17 duration: 4.899999976158142ms
+Iteration 18 duration: 4.799999952316284ms
+Iteration 19 duration: 4.600000023841858ms
+Iteration 20 duration: 4.800000071525574ms
+Iteration 21 duration: 4.699999928474426ms
+Iteration 22 duration: 5ms
+Iteration 23 duration: 4.700000047683716ms
+Iteration 24 duration: 4.799999952316284ms
+Iteration 25 duration: 4.800000071525574ms
+Iteration 26 duration: 4.800000071525574ms
+Iteration 27 duration: 4.600000023841858ms
+Iteration 28 duration: 4.800000071525574ms
+Iteration 29 duration: 4.799999952316284ms
+Iteration 30 duration: 4.700000047683716ms
+Iteration 31 duration: 4.600000023841858ms
+Iteration 32 duration: 4.800000071525574ms
+Iteration 33 duration: 4.799999952316284ms
+Iteration 34 duration: 4.799999952316284ms
+Iteration 35 duration: 4.799999952316284ms
+Iteration 36 duration: 4.700000047683716ms
+Iteration 37 duration: 4.799999952316284ms
+Iteration 38 duration: 4.800000071525574ms
+Iteration 39 duration: 4.699999928474426ms
+Iteration 40 duration: 4.899999976158142ms
+Iteration 41 duration: 4.800000071525574ms
+Iteration 42 duration: 4.899999976158142ms
+Iteration 43 duration: 4.699999928474426ms
+Iteration 44 duration: 5ms
+Iteration 45 duration: 4.700000047683716ms
+Iteration 46 duration: 4.800000071525574ms
+Iteration 47 duration: 4.699999928474426ms
+Iteration 48 duration: 4.700000047683716ms
+Iteration 49 duration: 4.699999928474426ms
+Iteration 50 duration: 4.700000047683716ms
+Iteration 51 duration: 4.700000047683716ms
+Iteration 52 duration: 4.700000047683716ms
+Iteration 53 duration: 4.899999976158142ms
+Iteration 54 duration: 4.799999952316284ms
+Iteration 55 duration: 4.600000023841858ms
+Iteration 56 duration: 4.699999928474426ms
+Iteration 57 duration: 4.799999952316284ms
+Iteration 58 duration: 4.700000047683716ms
+Iteration 59 duration: 4.699999928474426ms
+Iteration 60 duration: 4.700000047683716ms
+Iteration 61 duration: 4.799999952316284ms
+Iteration 62 duration: 4.800000071525574ms
+Iteration 63 duration: 4.700000047683716ms
+Iteration 64 duration: 4.799999952316284ms
+Iteration 65 duration: 4.700000047683716ms
+Iteration 66 duration: 4.700000047683716ms
+Iteration 67 duration: 4.799999952316284ms
+Iteration 68 duration: 4.800000071525574ms
+Iteration 69 duration: 4.699999928474426ms
+Iteration 70 duration: 4.800000071525574ms
+Iteration 71 duration: 4.699999928474426ms
+Iteration 72 duration: 4.700000047683716ms
+Iteration 73 duration: 4.700000047683716ms
+Iteration 74 duration: 4.899999976158142ms
+Iteration 75 duration: 4.700000047683716ms
+Iteration 76 duration: 4.700000047683716ms
+Iteration 77 duration: 4.899999976158142ms
+Iteration 78 duration: 4.700000047683716ms
+Iteration 79 duration: 4.599999904632568ms
+Iteration 80 duration: 4.700000047683716ms
+Iteration 81 duration: 4.699999928474426ms
+Iteration 82 duration: 4.800000071525574ms
+Iteration 83 duration: 4.799999952316284ms
+Iteration 84 duration: 4.799999952316284ms
+Iteration 85 duration: 4.700000047683716ms
+Iteration 86 duration: 4.699999928474426ms
+Iteration 87 duration: 4.800000071525574ms
+Iteration 88 duration: 4.699999928474426ms
+Iteration 89 duration: 4.799999952316284ms
+Iteration 90 duration: 4.800000071525574ms
+Iteration 91 duration: 4.699999928474426ms
+Iteration 92 duration: 4.700000047683716ms
+Iteration 93 duration: 4.699999928474426ms
+Iteration 94 duration: 4.800000071525574ms
+Iteration 95 duration: 4.799999952316284ms
+Iteration 96 duration: 4.700000047683716ms
+Iteration 97 duration: 4.700000047683716ms
+Iteration 98 duration: 4.599999904632568ms
+Iteration 99 duration: 4.700000047683716ms
+Iteration 100 duration: 4.799999952316284ms
+Starting single benchmark: Akita - Deep Nested Updates
+Starting warmup runs: 10
+Starting measurement runs: 100
+Iteration 1 duration: 4ms
+Iteration 2 duration: 4.199999928474426ms
+Iteration 3 duration: 4ms
+Iteration 4 duration: 4.200000047683716ms
+Iteration 5 duration: 4.300000071525574ms
+Iteration 6 duration: 3.9000000953674316ms
+Iteration 7 duration: 4.100000023841858ms
+Iteration 8 duration: 4ms
+Iteration 9 duration: 4ms
+Iteration 10 duration: 4ms
+Iteration 11 duration: 4ms
+Iteration 12 duration: 4.200000047683716ms
+Iteration 13 duration: 4.099999904632568ms
+Iteration 14 duration: 4ms
+Iteration 15 duration: 4ms
+Iteration 16 duration: 4.200000047683716ms
+Iteration 17 duration: 4.099999904632568ms
+Iteration 18 duration: 4ms
+Iteration 19 duration: 4ms
+Iteration 20 duration: 4.100000023841858ms
+Iteration 21 duration: 4ms
+Iteration 22 duration: 4ms
+Iteration 23 duration: 4.099999904632568ms
+Iteration 24 duration: 4.100000023841858ms
+Iteration 25 duration: 4.100000023841858ms
+Iteration 26 duration: 4.100000023841858ms
+Iteration 27 duration: 4ms
+Iteration 28 duration: 4ms
+Iteration 29 duration: 4.100000023841858ms
+Iteration 30 duration: 4ms
+Iteration 31 duration: 4.099999904632568ms
+Iteration 32 duration: 4.100000023841858ms
+Iteration 33 duration: 4.100000023841858ms
+Iteration 34 duration: 4.100000023841858ms
+Iteration 35 duration: 4.100000023841858ms
+Iteration 36 duration: 4.300000071525574ms
+Iteration 37 duration: 4.099999904632568ms
+Iteration 38 duration: 4.300000071525574ms
+Iteration 39 duration: 4.100000023841858ms
+Iteration 40 duration: 4.100000023841858ms
+Iteration 41 duration: 4.100000023841858ms
+Iteration 42 duration: 4.299999952316284ms
+Iteration 43 duration: 3.899999976158142ms
+Iteration 44 duration: 4.199999928474426ms
+Iteration 45 duration: 4ms
+Iteration 46 duration: 4.100000023841858ms
+Iteration 47 duration: 4.100000023841858ms
+Iteration 48 duration: 4ms
+Iteration 49 duration: 4.199999928474426ms
+Iteration 50 duration: 4ms
+Iteration 51 duration: 4.100000023841858ms
+Iteration 52 duration: 4.100000023841858ms
+Iteration 53 duration: 3.899999976158142ms
+Iteration 54 duration: 4.099999904632568ms
+Iteration 55 duration: 4.200000047683716ms
+Iteration 56 duration: 4ms
+Iteration 57 duration: 4.100000023841858ms
+Iteration 58 duration: 4ms
+Iteration 59 duration: 4.100000023841858ms
+Iteration 60 duration: 4.100000023841858ms
+Iteration 61 duration: 3.899999976158142ms
+Iteration 62 duration: 4ms
+Iteration 63 duration: 4.100000023841858ms
+Iteration 64 duration: 4.100000023841858ms
+Iteration 65 duration: 4.099999904632568ms
+Iteration 66 duration: 4.100000023841858ms
+Iteration 67 duration: 4ms
+Iteration 68 duration: 4.100000023841858ms
+Iteration 69 duration: 4ms
+Iteration 70 duration: 4ms
+Iteration 71 duration: 4.200000047683716ms
+Iteration 72 duration: 4.200000047683716ms
+Iteration 73 duration: 4.200000047683716ms
+Iteration 74 duration: 4.199999928474426ms
+Iteration 75 duration: 4ms
+Iteration 76 duration: 4.100000023841858ms
+Iteration 77 duration: 4.100000023841858ms
+Iteration 78 duration: 4.200000047683716ms
+Iteration 79 duration: 4ms
+Iteration 80 duration: 4ms
+Iteration 81 duration: 4ms
+Iteration 82 duration: 4.299999952316284ms
+Iteration 83 duration: 4ms
+Iteration 84 duration: 4.100000023841858ms
+Iteration 85 duration: 4ms
+Iteration 86 duration: 4.199999928474426ms
+Iteration 87 duration: 4ms
+Iteration 88 duration: 4ms
+Iteration 89 duration: 4.100000023841858ms
+Iteration 90 duration: 4ms
+Iteration 91 duration: 4.100000023841858ms
+Iteration 92 duration: 4.100000023841858ms
+Iteration 93 duration: 4ms
+Iteration 94 duration: 4.100000023841858ms
+Iteration 95 duration: 4.100000023841858ms
+Iteration 96 duration: 4.099999904632568ms
+Iteration 97 duration: 4.100000023841858ms
+Iteration 98 duration: 4.100000023841858ms
+Iteration 99 duration: 4ms
+Iteration 100 duration: 4.099999904632568ms
+Starting single benchmark: Elf - Deep Nested Updates
+Starting warmup runs: 10
+Starting measurement runs: 100
+Iteration 1 duration: 4ms
+Iteration 2 duration: 4ms
+Iteration 3 duration: 4.100000023841858ms
+Iteration 4 duration: 4ms
+Iteration 5 duration: 4.199999928474426ms
+Iteration 6 duration: 4ms
+Iteration 7 duration: 4.100000023841858ms
+Iteration 8 duration: 4ms
+Iteration 9 duration: 4.100000023841858ms
+Iteration 10 duration: 4ms
+Iteration 11 duration: 4.100000023841858ms
+Iteration 12 duration: 4ms
+Iteration 13 duration: 4.100000023841858ms
+Iteration 14 duration: 4.100000023841858ms
+Iteration 15 duration: 4ms
+Iteration 16 duration: 4ms
+Iteration 17 duration: 4.100000023841858ms
+Iteration 18 duration: 4.100000023841858ms
+Iteration 19 duration: 4.099999904632568ms
+Iteration 20 duration: 4ms
+Iteration 21 duration: 4.100000023841858ms
+Iteration 22 duration: 4ms
+Iteration 23 duration: 3.899999976158142ms
+Iteration 24 duration: 4ms
+Iteration 25 duration: 4.100000023841858ms
+Iteration 26 duration: 4.199999928474426ms
+Iteration 27 duration: 4.100000023841858ms
+Iteration 28 duration: 4.200000047683716ms
+Iteration 29 duration: 4.199999928474426ms
+Iteration 30 duration: 4.200000047683716ms
+Iteration 31 duration: 4ms
+Iteration 32 duration: 4.200000047683716ms
+Iteration 33 duration: 4ms
+Iteration 34 duration: 4.100000023841858ms
+Iteration 35 duration: 4.100000023841858ms
+Iteration 36 duration: 4ms
+Iteration 37 duration: 4ms
+Iteration 38 duration: 4.100000023841858ms
+Iteration 39 duration: 4.100000023841858ms
+Iteration 40 duration: 4ms
+Iteration 41 duration: 4ms
+Iteration 42 duration: 4.100000023841858ms
+Iteration 43 duration: 4.100000023841858ms
+Iteration 44 duration: 4ms
+Iteration 45 duration: 4.200000047683716ms
+Iteration 46 duration: 4.200000047683716ms
+Iteration 47 duration: 4.099999904632568ms
+Iteration 48 duration: 4ms
+Iteration 49 duration: 4ms
+Iteration 50 duration: 4.100000023841858ms
+Iteration 51 duration: 4.100000023841858ms
+Iteration 52 duration: 4.099999904632568ms
+Iteration 53 duration: 4.100000023841858ms
+Iteration 54 duration: 4.099999904632568ms
+Iteration 55 duration: 4ms
+Iteration 56 duration: 4ms
+Iteration 57 duration: 4ms
+Iteration 58 duration: 4.100000023841858ms
+Iteration 59 duration: 4.099999904632568ms
+Iteration 60 duration: 4ms
+Iteration 61 duration: 4ms
+Iteration 62 duration: 4.199999928474426ms
+Iteration 63 duration: 4.100000023841858ms
+Iteration 64 duration: 4.100000023841858ms
+Iteration 65 duration: 4ms
+Iteration 66 duration: 4ms
+Iteration 67 duration: 4.100000023841858ms
+Iteration 68 duration: 4ms
+Iteration 69 duration: 4ms
+Iteration 70 duration: 3.899999976158142ms
+Iteration 71 duration: 4.100000023841858ms
+Iteration 72 duration: 4.100000023841858ms
+Iteration 73 duration: 3.899999976158142ms
+Iteration 74 duration: 4.199999928474426ms
+Iteration 75 duration: 4.300000071525574ms
+Iteration 76 duration: 4ms
+Iteration 77 duration: 4.099999904632568ms
+Iteration 78 duration: 4.100000023841858ms
+Iteration 79 duration: 4.100000023841858ms
+Iteration 80 duration: 4.099999904632568ms
+Iteration 81 duration: 4ms
+Iteration 82 duration: 4ms
+Iteration 83 duration: 4.200000047683716ms
+Iteration 84 duration: 4.100000023841858ms
+Iteration 85 duration: 4ms
+Iteration 86 duration: 4ms
+Iteration 87 duration: 4.100000023841858ms
+Iteration 88 duration: 4.100000023841858ms
+Iteration 89 duration: 4ms
+Iteration 90 duration: 4.100000023841858ms
+Iteration 91 duration: 4ms
+Iteration 92 duration: 4ms
+Iteration 93 duration: 4.100000023841858ms
+Iteration 94 duration: 4ms
+Iteration 95 duration: 4.100000023841858ms
+Iteration 96 duration: 4.199999928474426ms
+Iteration 97 duration: 3.899999976158142ms
+Iteration 98 duration: 4.100000023841858ms
+Iteration 99 duration: 4ms
+Iteration 100 duration: 4ms
+Starting single benchmark: NgXs - Deep Nested Updates
+Starting warmup runs: 10
+Starting measurement runs: 100
+Iteration 1 duration: 8.399999976158142ms
+Iteration 2 duration: 18ms
+Iteration 3 duration: 19.899999976158142ms
+Iteration 4 duration: 15.900000095367432ms
+Iteration 5 duration: 9.200000047683716ms
+Iteration 6 duration: 7.899999976158142ms
+Iteration 7 duration: 8.699999928474426ms
+Iteration 8 duration: 7.600000023841858ms
+Iteration 9 duration: 8.399999976158142ms
+Iteration 10 duration: 6.899999976158142ms
+Iteration 11 duration: 7.400000095367432ms
+Iteration 12 duration: 7.5ms
+Iteration 13 duration: 6.899999976158142ms
+Iteration 14 duration: 7.799999952316284ms
+Iteration 15 duration: 12.299999952316284ms
+Iteration 16 duration: 8ms
+Iteration 17 duration: 13.600000023841858ms
+Iteration 18 duration: 8ms
+Iteration 19 duration: 7.800000071525574ms
+Iteration 20 duration: 7ms
+Iteration 21 duration: 11.600000023841858ms
+Iteration 22 duration: 8.299999952316284ms
+Iteration 23 duration: 8.399999976158142ms
+Iteration 24 duration: 7ms
+Iteration 25 duration: 8.299999952316284ms
+Iteration 26 duration: 7.199999928474426ms
+Iteration 27 duration: 12ms
+Iteration 28 duration: 7.700000047683716ms
+Iteration 29 duration: 7.100000023841858ms
+Iteration 30 duration: 7.800000071525574ms
+Iteration 31 duration: 6.800000071525574ms
+Iteration 32 duration: 7.600000023841858ms
+Iteration 33 duration: 7ms
+Iteration 34 duration: 7.399999976158142ms
+Iteration 35 duration: 7.299999952316284ms
+Iteration 36 duration: 7.100000023841858ms
+Iteration 37 duration: 7.300000071525574ms
+Iteration 38 duration: 6.899999976158142ms
+Iteration 39 duration: 7.399999976158142ms
+Iteration 40 duration: 7.099999904632568ms
+Iteration 41 duration: 7.399999976158142ms
+Iteration 42 duration: 7.099999904632568ms
+Iteration 43 duration: 7.5ms
+Iteration 44 duration: 7.299999952316284ms
+Iteration 45 duration: 7ms
+Iteration 46 duration: 7.399999976158142ms
+Iteration 47 duration: 6.799999952316284ms
+Iteration 48 duration: 7.400000095367432ms
+Iteration 49 duration: 6.900000095367432ms
+Iteration 50 duration: 7.300000071525574ms
+Iteration 51 duration: 6.899999976158142ms
+Iteration 52 duration: 6.800000071525574ms
+Iteration 53 duration: 7.099999904632568ms
+Iteration 54 duration: 7.100000023841858ms
+Iteration 55 duration: 7.799999952316284ms
+Iteration 56 duration: 7ms
+Iteration 57 duration: 7.299999952316284ms
+Iteration 58 duration: 6.899999976158142ms
+Iteration 59 duration: 7.399999976158142ms
+Iteration 60 duration: 6.800000071525574ms
+Iteration 61 duration: 7.399999976158142ms
+Iteration 62 duration: 7.299999952316284ms
+Iteration 63 duration: 6.800000071525574ms
+Iteration 64 duration: 7.300000071525574ms
+Iteration 65 duration: 6.899999976158142ms
+Iteration 66 duration: 7.399999976158142ms
+Iteration 67 duration: 6.799999952316284ms
+Iteration 68 duration: 7.300000071525574ms
+Iteration 69 duration: 6.700000047683716ms
+Iteration 70 duration: 7.200000047683716ms
+Iteration 71 duration: 7.399999976158142ms
+Iteration 72 duration: 7ms
+Iteration 73 duration: 7.399999976158142ms
+Iteration 74 duration: 8.600000023841858ms
+Iteration 75 duration: 7.5ms
+Iteration 76 duration: 7ms
+Iteration 77 duration: 7.5ms
+Iteration 78 duration: 7.5ms
+Iteration 79 duration: 8.299999952316284ms
+Iteration 80 duration: 7.600000023841858ms
+Iteration 81 duration: 8.800000071525574ms
+Iteration 82 duration: 7.800000071525574ms
+Iteration 83 duration: 7ms
+Iteration 84 duration: 7.400000095367432ms
+Iteration 85 duration: 6.700000047683716ms
+Iteration 86 duration: 7.5ms
+Iteration 87 duration: 6.900000095367432ms
+Iteration 88 duration: 7.299999952316284ms
+Iteration 89 duration: 7.299999952316284ms
+Iteration 90 duration: 6.700000047683716ms
+Iteration 91 duration: 7.400000095367432ms
+Iteration 92 duration: 7ms
+Iteration 93 duration: 7.299999952316284ms
+Iteration 94 duration: 6.899999976158142ms
+Iteration 95 duration: 7.299999952316284ms
+Iteration 96 duration: 6.899999976158142ms
+Iteration 97 duration: 7.399999976158142ms
+Iteration 98 duration: 7.600000023841858ms
+Iteration 99 duration: 7.100000023841858ms
+Iteration 100 duration: 7.299999952316284ms
+Starting single benchmark: SignalTree - Large Array Mutations
+Starting warmup runs: 10
+Starting measurement runs: 100
+Iteration 1 duration: 1.4000000953674316ms
+Iteration 2 duration: 6.200000047683716ms
+Iteration 3 duration: 1.7000000476837158ms
+Iteration 4 duration: 1.5ms
+Iteration 5 duration: 1.600000023841858ms
+Iteration 6 duration: 1.600000023841858ms
+Iteration 7 duration: 1.5ms
+Iteration 8 duration: 1.6999999284744263ms
+Iteration 9 duration: 1.5ms
+Iteration 10 duration: 1.399999976158142ms
+Iteration 11 duration: 1.600000023841858ms
+Iteration 12 duration: 1.5ms
+Iteration 13 duration: 1.600000023841858ms
+Iteration 14 duration: 1.600000023841858ms
+Iteration 15 duration: 1.600000023841858ms
+Iteration 16 duration: 1.399999976158142ms
+Iteration 17 duration: 1.600000023841858ms
+Iteration 18 duration: 1.5999999046325684ms
+Iteration 19 duration: 1.600000023841858ms
+Iteration 20 duration: 1.5ms
+Iteration 21 duration: 1.399999976158142ms
+Iteration 22 duration: 1.5999999046325684ms
+Iteration 23 duration: 1.5ms
+Iteration 24 duration: 1.5ms
+Iteration 25 duration: 1.5ms
+Iteration 26 duration: 1.5ms
+Iteration 27 duration: 1.5ms
+Iteration 28 duration: 1.399999976158142ms
+Iteration 29 duration: 1.600000023841858ms
+Iteration 30 duration: 1.5999999046325684ms
+Iteration 31 duration: 1.600000023841858ms
+Iteration 32 duration: 1.5ms
+Iteration 33 duration: 1.5ms
+Iteration 34 duration: 2.100000023841858ms
+Iteration 35 duration: 1.5ms
+Iteration 36 duration: 1.5ms
+Iteration 37 duration: 1.600000023841858ms
+Iteration 38 duration: 1.5ms
+Iteration 39 duration: 1.600000023841858ms
+Iteration 40 duration: 1.5ms
+Iteration 41 duration: 1.5ms
+Iteration 42 duration: 1.5ms
+Iteration 43 duration: 1.6999999284744263ms
+Iteration 44 duration: 1.399999976158142ms
+Iteration 45 duration: 1.399999976158142ms
+Iteration 46 duration: 1.600000023841858ms
+Iteration 47 duration: 1.600000023841858ms
+Iteration 48 duration: 1.5ms
+Iteration 49 duration: 1.5ms
+Iteration 50 duration: 1.600000023841858ms
+Iteration 51 duration: 1.5ms
+Iteration 52 duration: 1.600000023841858ms
+Iteration 53 duration: 1.5ms
+Iteration 54 duration: 1.6999999284744263ms
+Iteration 55 duration: 1.5ms
+Iteration 56 duration: 1.7999999523162842ms
+Iteration 57 duration: 1.5ms
+Iteration 58 duration: 1.600000023841858ms
+Iteration 59 duration: 1.5ms
+Iteration 60 duration: 1.5ms
+Iteration 61 duration: 1.5ms
+Iteration 62 duration: 1.899999976158142ms
+Iteration 63 duration: 1.600000023841858ms
+Iteration 64 duration: 1.7000000476837158ms
+Iteration 65 duration: 1.600000023841858ms
+Iteration 66 duration: 1.5ms
+Iteration 67 duration: 1.600000023841858ms
+Iteration 68 duration: 1.600000023841858ms
+Iteration 69 duration: 1.6999999284744263ms
+Iteration 70 duration: 1.600000023841858ms
+Iteration 71 duration: 1.600000023841858ms
+Iteration 72 duration: 1.600000023841858ms
+Iteration 73 duration: 1.7999999523162842ms
+Iteration 74 duration: 1.600000023841858ms
+Iteration 75 duration: 1.600000023841858ms
+Iteration 76 duration: 1.600000023841858ms
+Iteration 77 duration: 1.5ms
+Iteration 78 duration: 1.7000000476837158ms
+Iteration 79 duration: 1.6999999284744263ms
+Iteration 80 duration: 1.600000023841858ms
+Iteration 81 duration: 1.600000023841858ms
+Iteration 82 duration: 1.600000023841858ms
+Iteration 83 duration: 1.5999999046325684ms
+Iteration 84 duration: 1.7000000476837158ms
+Iteration 85 duration: 1.5ms
+Iteration 86 duration: 1.5ms
+Iteration 87 duration: 1.5999999046325684ms
+Iteration 88 duration: 1.5ms
+Iteration 89 duration: 1.600000023841858ms
+Iteration 90 duration: 1.7000000476837158ms
+Iteration 91 duration: 1.399999976158142ms
+Iteration 92 duration: 1.5999999046325684ms
+Iteration 93 duration: 1.600000023841858ms
+Iteration 94 duration: 1.5ms
+Iteration 95 duration: 1.5ms
+Iteration 96 duration: 1.6999999284744263ms
+Iteration 97 duration: 1.7000000476837158ms
+Iteration 98 duration: 2.1999999284744263ms
+Iteration 99 duration: 1.899999976158142ms
+Iteration 100 duration: 1.5ms
+Starting single benchmark: NgRx Store - Large Array Mutations
+Starting warmup runs: 10
+Starting measurement runs: 100
+Iteration 1 duration: 261.1999999284744ms
+Iteration 2 duration: 265.2999999523163ms
+Iteration 3 duration: 262.59999990463257ms
+Iteration 4 duration: 262.10000002384186ms
+Iteration 5 duration: 261.2000000476837ms
+Iteration 6 duration: 263.60000002384186ms
+Iteration 7 duration: 264.60000002384186ms
+Iteration 8 duration: 265.2999999523163ms
+Iteration 9 duration: 263.7999999523163ms
+Iteration 10 duration: 262.5ms
+Iteration 11 duration: 261.5ms
+Iteration 12 duration: 267.90000009536743ms
+Iteration 13 duration: 261.89999997615814ms
+Iteration 14 duration: 262.2000000476837ms
+Iteration 15 duration: 261.5ms
+Iteration 16 duration: 261.2999999523163ms
+Iteration 17 duration: 264.10000002384186ms
+Iteration 18 duration: 263.5ms
+Iteration 19 duration: 262.7000000476837ms
+Iteration 20 duration: 261.2000000476837ms
+Iteration 21 duration: 264ms
+Iteration 22 duration: 262.6999999284744ms
+Iteration 23 duration: 261.2000000476837ms
+Iteration 24 duration: 263.10000002384186ms
+Iteration 25 duration: 263.6999999284744ms
+Iteration 26 duration: 261.60000002384186ms
+Iteration 27 duration: 281ms
+Iteration 28 duration: 275.10000002384186ms
+Iteration 29 duration: 268.5ms
+Iteration 30 duration: 266ms
+Iteration 31 duration: 264.39999997615814ms
+Iteration 32 duration: 275.6999999284744ms
+Iteration 33 duration: 263.7999999523163ms
+Iteration 34 duration: 261ms
+Iteration 35 duration: 262.10000002384186ms
+Iteration 36 duration: 261.6999999284744ms
+Iteration 37 duration: 261.5ms
+Iteration 38 duration: 261.6999999284744ms
+Iteration 39 duration: 260.6999999284744ms
+Iteration 40 duration: 262.89999997615814ms
+Iteration 41 duration: 262.7999999523163ms
+Iteration 42 duration: 262.2000000476837ms
+Iteration 43 duration: 261.60000002384186ms
+Iteration 44 duration: 265.1999999284744ms
+Iteration 45 duration: 269.7999999523163ms
+Iteration 46 duration: 266.89999997615814ms
+Iteration 47 duration: 263.5ms
+Iteration 48 duration: 270ms
+Iteration 49 duration: 262.89999997615814ms
+Iteration 50 duration: 261.2000000476837ms
+Iteration 51 duration: 263.3000000715256ms
+Iteration 52 duration: 265ms
+Iteration 53 duration: 262.60000002384186ms
+Iteration 54 duration: 260.39999997615814ms
+Iteration 55 duration: 262.39999997615814ms
+Iteration 56 duration: 265.5ms
+Iteration 57 duration: 262.60000002384186ms
+Iteration 58 duration: 260ms
+Iteration 59 duration: 266.7999999523163ms
+Iteration 60 duration: 265.2999999523163ms
+Iteration 61 duration: 272.7999999523163ms
+Iteration 62 duration: 274.3000000715256ms
+Iteration 63 duration: 268.1999999284744ms
+Iteration 64 duration: 262.89999997615814ms
+Iteration 65 duration: 261.5ms
+Iteration 66 duration: 262.2999999523163ms
+Iteration 67 duration: 262.2999999523163ms
+Iteration 68 duration: 262.60000002384186ms
+Iteration 69 duration: 261.40000009536743ms
+Iteration 70 duration: 263.3000000715256ms
+Iteration 71 duration: 261.8000000715256ms
+Iteration 72 duration: 274.7999999523163ms
+Iteration 73 duration: 269.7999999523163ms
+Iteration 74 duration: 270.39999997615814ms
+Iteration 75 duration: 263.89999997615814ms
+Iteration 76 duration: 261.39999997615814ms
+Iteration 77 duration: 263.89999997615814ms
+Iteration 78 duration: 263.2000000476837ms
+Iteration 79 duration: 270.10000002384186ms
+Iteration 80 duration: 261.6999999284744ms
+Iteration 81 duration: 261.60000002384186ms
+Iteration 82 duration: 268.90000009536743ms
+Iteration 83 duration: 265.3000000715256ms
+Iteration 84 duration: 264.90000009536743ms
+Iteration 85 duration: 267ms
+Iteration 86 duration: 296.89999997615814ms
+Iteration 87 duration: 270.10000002384186ms
+Iteration 88 duration: 291.3000000715256ms
+Iteration 89 duration: 283.8000000715256ms
+Iteration 90 duration: 283.10000002384186ms
+Iteration 91 duration: 283.2999999523163ms
+Iteration 92 duration: 277.5ms
+Iteration 93 duration: 275.10000002384186ms
+Iteration 94 duration: 278.39999997615814ms
+Iteration 95 duration: 280ms
+Iteration 96 duration: 280.7000000476837ms
+Iteration 97 duration: 272.2000000476837ms
+Iteration 98 duration: 275.6999999284744ms
+Iteration 99 duration: 279.89999997615814ms
+Iteration 100 duration: 276.90000009536743ms
+Starting single benchmark: NgRx SignalStore - Large Array Mutations
+Starting warmup runs: 10
+Starting measurement runs: 100
+Iteration 1 duration: 273.3000000715256ms
+Iteration 2 duration: 273.89999997615814ms
+Iteration 3 duration: 262.60000002384186ms
+Iteration 4 duration: 263.6999999284744ms
+Iteration 5 duration: 261.5ms
+Iteration 6 duration: 265.89999997615814ms
+Iteration 7 duration: 267.7000000476837ms
+Iteration 8 duration: 271.8000000715256ms
+Iteration 9 duration: 270.6999999284744ms
+Iteration 10 duration: 267.60000002384186ms
+Iteration 11 duration: 263.5ms
+Iteration 12 duration: 277.60000002384186ms
+Iteration 13 duration: 266.60000002384186ms
+Iteration 14 duration: 270.7999999523163ms
+Iteration 15 duration: 267.7999999523163ms
+Iteration 16 duration: 263.60000002384186ms
+Iteration 17 duration: 261ms
+Iteration 18 duration: 263.2000000476837ms
+Iteration 19 duration: 271.89999997615814ms
+Iteration 20 duration: 270ms
+Iteration 21 duration: 263.10000002384186ms
+Iteration 22 duration: 263.89999997615814ms
+Iteration 23 duration: 262.10000002384186ms
+Iteration 24 duration: 261.89999997615814ms
+Iteration 25 duration: 261.5ms
+Iteration 26 duration: 264.2000000476837ms
+Iteration 27 duration: 289.10000002384186ms
+Iteration 28 duration: 263.5ms
+Iteration 29 duration: 260.7000000476837ms
+Iteration 30 duration: 264.1999999284744ms
+Iteration 31 duration: 263.39999997615814ms
+Iteration 32 duration: 271.2999999523163ms
+Iteration 33 duration: 327.1999999284744ms
+Iteration 34 duration: 279.5ms
+Iteration 35 duration: 278.60000002384186ms
+Iteration 36 duration: 271.8000000715256ms
+Iteration 37 duration: 272.89999997615814ms
+Iteration 38 duration: 272.39999997615814ms
+Iteration 39 duration: 270.7999999523163ms
+Iteration 40 duration: 273.40000009536743ms
+Iteration 41 duration: 271.5ms
+Iteration 42 duration: 270.60000002384186ms
+Iteration 43 duration: 271.89999997615814ms
+Iteration 44 duration: 275.2000000476837ms
+Iteration 45 duration: 274.7000000476837ms
+Iteration 46 duration: 272.60000002384186ms
+Iteration 47 duration: 270ms
+Iteration 48 duration: 270.1999999284744ms
+Iteration 49 duration: 270.39999997615814ms
+Iteration 50 duration: 267.1999999284744ms
+Iteration 51 duration: 264.39999997615814ms
+Iteration 52 duration: 275.7000000476837ms
+Iteration 53 duration: 276.10000002384186ms
+Iteration 54 duration: 274.6999999284744ms
+Iteration 55 duration: 272ms
+Iteration 56 duration: 274.7999999523163ms
+Iteration 57 duration: 271.6999999284744ms
+Iteration 58 duration: 266.7999999523163ms
+Iteration 59 duration: 263.3000000715256ms
+Iteration 60 duration: 261.39999997615814ms
+Iteration 61 duration: 265.7999999523163ms
+Iteration 62 duration: 278.09999990463257ms
+Iteration 63 duration: 278.10000002384186ms
+Iteration 64 duration: 273.2999999523163ms
+Iteration 65 duration: 272.89999997615814ms
+Iteration 66 duration: 266ms
+Iteration 67 duration: 263.1999999284744ms
+Iteration 68 duration: 262.2000000476837ms
+Iteration 69 duration: 262ms
+Iteration 70 duration: 264ms
+Iteration 71 duration: 263.60000002384186ms
+Iteration 72 duration: 289.60000002384186ms
+Iteration 73 duration: 284.2000000476837ms
+Iteration 74 duration: 289.5ms
+Iteration 75 duration: 280.39999997615814ms
+Iteration 76 duration: 278.1999999284744ms
+Iteration 77 duration: 280ms
+Iteration 78 duration: 277.89999997615814ms
+Iteration 79 duration: 280.10000002384186ms
+Iteration 80 duration: 277.60000002384186ms
+Iteration 81 duration: 278.7999999523163ms
+Iteration 82 duration: 286.39999997615814ms
+Iteration 83 duration: 277.5ms
+Iteration 84 duration: 292.2000000476837ms
+Iteration 85 duration: 276.7000000476837ms
+Iteration 86 duration: 275.40000009536743ms
+Iteration 87 duration: 274.89999997615814ms
+Iteration 88 duration: 274.60000002384186ms
+Iteration 89 duration: 277.10000002384186ms
+Iteration 90 duration: 279.1999999284744ms
+Iteration 91 duration: 273.89999997615814ms
+Iteration 92 duration: 275.2999999523163ms
+Iteration 93 duration: 275.89999997615814ms
+Iteration 94 duration: 275.39999997615814ms
+Iteration 95 duration: 271.5ms
+Iteration 96 duration: 273.7000000476837ms
+Iteration 97 duration: 277.1999999284744ms
+Iteration 98 duration: 281ms
+Iteration 99 duration: 274ms
+Iteration 100 duration: 277.09999990463257ms
+Starting single benchmark: Akita - Large Array Mutations
+Starting warmup runs: 10
+Starting measurement runs: 100
+Iteration 1 duration: 4309.599999904633ms
+Iteration 2 duration: 4120.800000071526ms
+Iteration 3 duration: 4111ms
+Iteration 4 duration: 4134.799999952316ms
+Iteration 5 duration: 4235ms
+Iteration 6 duration: 4246.100000023842ms
+Iteration 7 duration: 4063.5ms
+Iteration 8 duration: 4083.3000000715256ms
+Iteration 9 duration: 4056.1999999284744ms
+Iteration 10 duration: 4061.6999999284744ms
+Iteration 11 duration: 4248.600000023842ms
+Iteration 12 duration: 4102ms
+Iteration 13 duration: 4087.100000023842ms
+Iteration 14 duration: 4123.899999976158ms
+Iteration 15 duration: 4150.299999952316ms
+Iteration 16 duration: 4097.100000023842ms
+Iteration 17 duration: 4067.600000023842ms
+Iteration 18 duration: 4137ms
+Iteration 19 duration: 4081.100000023842ms
+Iteration 20 duration: 4167.700000047684ms
+Iteration 21 duration: 4107.200000047684ms
+Iteration 22 duration: 4073.7000000476837ms
+Iteration 23 duration: 4071.2999999523163ms
+Iteration 24 duration: 4133.899999976158ms
+Iteration 25 duration: 4353.100000023842ms
+Iteration 26 duration: 4372.699999928474ms
+Iteration 27 duration: 4322.399999976158ms
+Iteration 28 duration: 4187ms
+Iteration 29 duration: 4324ms
+Iteration 30 duration: 4182.600000023842ms
+Iteration 31 duration: 4120.199999928474ms
+Iteration 32 duration: 4138.700000047684ms
+Iteration 33 duration: 4092.8000000715256ms
+Iteration 34 duration: 4105.399999976158ms
+Iteration 35 duration: 4100ms
+Iteration 36 duration: 4087.899999976158ms
+Iteration 37 duration: 4089ms
+Iteration 38 duration: 4076.2999999523163ms
+Iteration 39 duration: 4124.600000023842ms
+Iteration 40 duration: 4213ms
+Iteration 41 duration: 4227.900000095367ms
+Iteration 42 duration: 4321.299999952316ms
+Iteration 43 duration: 4340.5ms
+Iteration 44 duration: 4406.700000047684ms
+Iteration 45 duration: 4239.299999952316ms
+Iteration 46 duration: 4377.200000047684ms
+Iteration 47 duration: 4508.299999952316ms
+Iteration 48 duration: 4547.799999952316ms
+Iteration 49 duration: 4257.100000023842ms
+Iteration 50 duration: 4191.399999976158ms
+Iteration 51 duration: 4177.699999928474ms
+Iteration 52 duration: 4182.800000071526ms
+Iteration 53 duration: 4171.700000047684ms
+Iteration 54 duration: 4332.700000047684ms
+Iteration 55 duration: 4253.299999952316ms
+Iteration 56 duration: 4314.399999976158ms
+Iteration 57 duration: 4201.899999976158ms
+Iteration 58 duration: 4274.199999928474ms
+Iteration 59 duration: 4326.800000071526ms
+Iteration 60 duration: 4335.700000047684ms
+Iteration 61 duration: 4186ms
+Iteration 62 duration: 4141.800000071526ms
+Iteration 63 duration: 4254.299999952316ms
+Iteration 64 duration: 4511ms
+Iteration 65 duration: 4650.200000047684ms
+Iteration 66 duration: 4329.900000095367ms
+Iteration 67 duration: 4339.600000023842ms
+Iteration 68 duration: 4431.600000023842ms
+Iteration 69 duration: 4191.199999928474ms
+Iteration 70 duration: 4167.899999976158ms
+Iteration 71 duration: 4171.5ms
+Iteration 72 duration: 4106.399999976158ms
+Iteration 73 duration: 4079.100000023842ms
+Iteration 74 duration: 4087.399999976158ms
+Iteration 75 duration: 4076.1999999284744ms
+Iteration 76 duration: 4066.7000000476837ms
+Iteration 77 duration: 4070.600000023842ms
+Iteration 78 duration: 4057.5ms
+Iteration 79 duration: 4059ms
+Iteration 80 duration: 4068.4000000953674ms
+Iteration 81 duration: 4068.8000000715256ms
+Iteration 82 duration: 4149.700000047684ms
+Iteration 83 duration: 4147.399999976158ms
+Iteration 84 duration: 4083.4000000953674ms
+Iteration 85 duration: 4057.2999999523163ms
+Iteration 86 duration: 4069.2000000476837ms
+Iteration 87 duration: 4067.5ms
+Iteration 88 duration: 4048.1999999284744ms
+Iteration 89 duration: 4068.7000000476837ms
+Iteration 90 duration: 4054.8000000715256ms
+Iteration 91 duration: 4081.7999999523163ms
+Iteration 92 duration: 4062.5ms
+Iteration 93 duration: 4055.2999999523163ms
+Iteration 94 duration: 4055.1999999284744ms
+Iteration 95 duration: 4056.1999999284744ms
+Iteration 96 duration: 4066.399999976158ms
+Iteration 97 duration: 4151.600000023842ms
+Iteration 98 duration: 4075ms
+Iteration 99 duration: 4065.7000000476837ms
+Iteration 100 duration: 4058.7000000476837ms
+Starting single benchmark: Elf - Large Array Mutations
+Starting warmup runs: 10
+Starting measurement runs: 100
+Iteration 1 duration: 1534.1000000238419ms
+Iteration 2 duration: 1533.8000000715256ms
+Iteration 3 duration: 1535.1999999284744ms
+Iteration 4 duration: 1529.3999999761581ms
+Iteration 5 duration: 1529.7000000476837ms
+Iteration 6 duration: 1521.5ms
+Iteration 7 duration: 1517.0999999046326ms
+Iteration 8 duration: 1524.6000000238419ms
+Iteration 9 duration: 1524.2999999523163ms
+Iteration 10 duration: 1518.1000000238419ms
+Iteration 11 duration: 1520.6999999284744ms
+Iteration 12 duration: 1524.5999999046326ms
+Iteration 13 duration: 1523.6000000238419ms
+Iteration 14 duration: 1522ms
+Iteration 15 duration: 1525ms
+Iteration 16 duration: 1507.6000000238419ms
+Iteration 17 duration: 1521.2000000476837ms
+Iteration 18 duration: 1525.8000000715256ms
+Iteration 19 duration: 1563ms
+Iteration 20 duration: 1556.5ms
+Iteration 21 duration: 1521.8999999761581ms
+Iteration 22 duration: 1516.0999999046326ms
+Iteration 23 duration: 1517.8000000715256ms
+Iteration 24 duration: 1519.7999999523163ms
+Iteration 25 duration: 1525.6999999284744ms
+Iteration 26 duration: 1521.2000000476837ms
+Iteration 27 duration: 1518.7999999523163ms
+Iteration 28 duration: 1528.2000000476837ms
+Iteration 29 duration: 1523.2999999523163ms
+Iteration 30 duration: 1527.8000000715256ms
+Iteration 31 duration: 1528.4000000953674ms
+Iteration 32 duration: 1523.8999999761581ms
+Iteration 33 duration: 1518.2000000476837ms
+Iteration 34 duration: 1521.4000000953674ms
+Iteration 35 duration: 1522.9000000953674ms
+Iteration 36 duration: 1516ms
+Iteration 37 duration: 1523.2999999523163ms
+Iteration 38 duration: 1533.2999999523163ms
+Iteration 39 duration: 1521.6000000238419ms
+Iteration 40 duration: 1525.3000000715256ms
+Iteration 41 duration: 1522.3000000715256ms
+Iteration 42 duration: 1519ms
+Iteration 43 duration: 1512ms
+Iteration 44 duration: 1528.6000000238419ms
+Iteration 45 duration: 1531.1999999284744ms
+Iteration 46 duration: 1531ms
+Iteration 47 duration: 1524.6999999284744ms
+Iteration 48 duration: 1514ms
+Iteration 49 duration: 1518.8999999761581ms
+Iteration 50 duration: 1523.7000000476837ms
+Iteration 51 duration: 1533.3999999761581ms
+Iteration 52 duration: 1522.7000000476837ms
+Iteration 53 duration: 1515.3999999761581ms
+Iteration 54 duration: 1520.7999999523163ms
+Iteration 55 duration: 1527.2999999523163ms
+Iteration 56 duration: 1521.6000000238419ms
+Iteration 57 duration: 1522.3999999761581ms
+Iteration 58 duration: 1531ms
+Iteration 59 duration: 1590.9000000953674ms
+Iteration 60 duration: 1519.0999999046326ms
+Iteration 61 duration: 1522.8000000715256ms
+Iteration 62 duration: 1524.7999999523163ms
+Iteration 63 duration: 1516.3999999761581ms
+Iteration 64 duration: 1531.3000000715256ms
+Iteration 65 duration: 1517.5ms
+Iteration 66 duration: 1520.2000000476837ms
+Iteration 67 duration: 1527.1000000238419ms
+Iteration 68 duration: 1520.3999999761581ms
+Iteration 69 duration: 1523.0999999046326ms
+Iteration 70 duration: 1522.8999999761581ms
+Iteration 71 duration: 1530.3000000715256ms

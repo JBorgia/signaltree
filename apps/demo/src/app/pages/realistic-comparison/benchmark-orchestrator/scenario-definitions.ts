@@ -413,34 +413,7 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     },
   },
 
-  // Async Tests
-  {
-    id: 'async-workflow',
-    name: 'Async Workflow',
-    description: 'Multiple async operations with loading states',
-    operations: '100 async calls',
-    complexity: 'High',
-    selected: false,
-    category: 'async',
-    purpose: 'Tests async state management and loading state handling',
-    frequencyWeight: 2.3, // High - API calls, data fetching are fundamental
-    realWorldFrequency:
-      'High - API calls, data loading, asynchronous operations',
-    architecturalTradeOffs:
-      'Direct async state mutation vs immutable loading state management',
-    enhancers: {
-      required: ['withBatching'],
-      optional: ['withAsync'],
-      rationale:
-        'Batching for state updates; async enhancer if available for workflow management',
-    },
-    dataRequirements: {
-      minSize: 50,
-      maxSize: 500,
-      defaultSize: 100,
-      scalesWith: 'linear',
-    },
-  },
+  // (Async scenarios removed - demo no longer includes the async workflow page)
 
   // Full-stack Tests
   {

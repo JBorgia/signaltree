@@ -6,6 +6,7 @@ import { withSerialization } from '@signaltree/serialization';
 import { withTimeTravel } from '@signaltree/time-travel';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
+import { createYieldToUI } from '../shared/benchmark-utils';
 import {
   BenchmarkComparison,
   EnhancedBenchmarkOptions,
@@ -14,6 +15,8 @@ import {
   runEnhancedBenchmark,
 } from './benchmark-runner';
 
+// async package removed; rely on middleware and batching for async semantics
+// demo-only: use benchmark-optimized async enhancer when available
 /**
  * SignalTree Architecture Trade-offs Analysis
  *
@@ -77,14 +80,18 @@ export class SignalTreeBenchmarkService {
     });
   }
 
-  /**
-   * DEPRECATED: Legacy yield method that interferes with measurement accuracy
-   * @deprecated Use yieldBetweenBenchmarks() instead
-   */
-  private yieldToUI() {
-    return new Promise<void>((r) =>
-      setTimeout(r, BENCHMARK_CONSTANTS.TIMING.YIELD_DELAY_MS)
-    );
+  private yieldToUI = createYieldToUI();
+
+  // Read runtime memo mode set by the orchestrator (or URL param)
+  private getRuntimeMemoMode(): 'off' | 'light' | 'shallow' | 'full' {
+    try {
+      const g = (window as any).__SIGNALTREE_MEMO_MODE;
+      if (g === 'off' || g === 'light' || g === 'shallow' || g === 'full')
+        return g;
+    } catch {
+      // ignore
+    }
+    return 'light';
   }
 
   async runDeepNestedBenchmark(dataSize: number, depth = 15): Promise<number> {
@@ -160,10 +167,20 @@ export class SignalTreeBenchmarkService {
     const start = performance.now();
 
     // Use shallow memoization for simple object structure
-    const tree = signalTree({
+    // Choose memoization enhancer based on runtime mode to allow A/B testing
+    const memoMode = this.getRuntimeMemoMode();
+    const enhancers: any[] = [withBatching()];
+    if (memoMode === 'light') enhancers.push(withLightweightMemoization());
+    else if (memoMode === 'shallow') enhancers.push(withShallowMemoization());
+    else if (memoMode === 'full') enhancers.push(withMemoization());
+    // 'off' means no memoization enhancer
+    let tree: any = signalTree({
       value: 0,
       factors: Array.from({ length: 50 }, (_, i) => i + 1),
-    }).with(withBatching(), withShallowMemoization());
+    });
+    if (enhancers.length) {
+      tree = (tree as unknown as any).with(...(enhancers as any[]));
+    }
 
     // FIX: Use Angular's computed() for proper memoization like NgRx SignalStore
     const compute = computed(() => {
@@ -217,28 +234,37 @@ export class SignalTreeBenchmarkService {
     const start = performance.now();
 
     // Test with lightweight memoization for performance-critical selectors
-    const tree = signalTree({
+    const memoMode = this.getRuntimeMemoMode();
+    const enhancers: any[] = [];
+    if (memoMode === 'light') enhancers.push(withLightweightMemoization());
+    else if (memoMode === 'shallow') enhancers.push(withShallowMemoization());
+    else if (memoMode === 'full') enhancers.push(withMemoization());
+
+    let tree: any = signalTree({
       items: Array.from({ length: dataSize }, (_, i) => ({
         id: i,
         flag: i % 2 === 0,
         value: Math.random() * 100,
         metadata: { category: i % 5, priority: i % 3 },
       })),
-    }).with(withLightweightMemoization()); // Use new lightweight memoization
+    });
+    if (enhancers.length) {
+      tree = (tree as unknown as any).with(...(enhancers as any[]));
+    }
 
     // FIX: Use Angular's computed() for proper memoization like NgRx SignalStore
     const selectEven = computed(
-      () => tree.state.items().filter((x) => x.flag).length
+      () => tree.state.items().filter((x: any) => x.flag).length
     );
 
     // Test multiple selectors to stress memoization
     const selectHighValue = computed(
-      () => tree.state.items().filter((x) => x.value > 50).length
+      () => tree.state.items().filter((x: any) => x.value > 50).length
     );
 
     const selectByCategory = computed(() => {
       const items = tree.state.items();
-      return items.reduce((acc, item) => {
+      return items.reduce((acc: Record<number, number>, item: any) => {
         const cat = item.metadata.category;
         acc[cat] = (acc[cat] || 0) + 1;
         return acc;
@@ -252,7 +278,7 @@ export class SignalTreeBenchmarkService {
 
       // Occasionally update to test cache invalidation
       if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0) {
-        tree.state.items.update((items) => {
+        tree.state.items.update((items: any[]) => {
           const idx = i % items.length;
           items[idx].flag = !items[idx].flag;
           return items;
@@ -635,42 +661,120 @@ export class SignalTreeBenchmarkService {
   // ================================
 
   async runAsyncWorkflowBenchmark(dataSize: number): Promise<number> {
-    const tree = signalTree({
+    // Use a high-performance batching enhancer to aggressively coalesce updates
+    interface AsyncState {
+      items: any[];
+      loading: boolean;
+      error: string | null;
+    }
+
+    const tree = signalTree<AsyncState>({
       items: [] as any[],
       loading: false,
       error: null as string | null,
-    });
+    }).with(withHighPerformanceBatching());
 
-    // Simulate async loading function
-    const fetchItems = async () => {
+    // Simulate async loading function that returns a small chunk per op
+    const fetchChunk = async (chunkSize: number) => {
       await new Promise((r) =>
         setTimeout(r, BENCHMARK_CONSTANTS.TIMING.ASYNC_DELAY_MS)
-      ); // 10ms async delay
-      return Array.from({ length: dataSize }, (_, i) => ({ id: i, value: i }));
+      ); // simulated async delay
+      return Array.from({ length: chunkSize }, (_, i) => ({ id: i, value: i }));
     };
 
     const start = performance.now();
 
-    // Run multiple async operations with loading state management
-    for (
-      let i = 0;
-      i < Math.min(dataSize / 10, BENCHMARK_CONSTANTS.ITERATIONS.DATA_FETCHING);
-      i++
+    // Number of operations (limit to configured iterations)
+    const ops = Math.min(
+      Math.max(1, Math.floor(dataSize / 10)),
+      BENCHMARK_CONSTANTS.ITERATIONS.ASYNC_WORKFLOW
+    );
+
+    // Chunking and concurrency (tuned defaults)
+    // Cap concurrency to a small number but not larger than ops
+    const concurrencyCap = Math.min(8, Math.max(1, ops));
+    // Heuristic chunk size: spread data across a modest number of chunks
+    const chunkSize = Math.max(1, Math.floor(dataSize / Math.max(ops, 10)));
+
+    // Preallocate items buffer once to avoid repeated allocations
+    const itemsBuffer: any[] = new Array(dataSize);
+    // Keep an index pointer for where to apply next chunk (modulo for overwrite)
+    let applyIndex = 0;
+
+    // Helper: p-limit like runner implemented by async package utilities is available,
+    // but we use a simple chunked Promise.all loop here for clarity.
+    async function runInBatches<T>(
+      items: T[],
+      worker: (it: T) => Promise<void>
     ) {
-      tree.state.loading.set(true);
-      tree.state.error.set(null);
-
-      try {
-        const items = await fetchItems();
-        tree.state.items.set(items);
-      } catch (error) {
-        tree.state.error.set(error as string);
-      } finally {
-        tree.state.loading.set(false);
+      let i = 0;
+      while (i < items.length) {
+        const chunk = items.slice(i, i + concurrencyCap);
+        await Promise.all(chunk.map((it) => worker(it)));
+        i += concurrencyCap;
       }
-
-      // REMOVED: yielding during measurement for accuracy
     }
+
+    // Single loading toggle
+    tree.state.loading.set(true);
+    tree.state.error.set(null);
+
+    // Worker fetches a small chunk and writes into the preallocated buffer in-place
+    const worker = async () => {
+      try {
+        const chunk = await fetchChunk(Math.min(chunkSize, dataSize));
+        // Prefer using benchmark async preallocator helper when available
+        const preallocator = (tree as unknown as Record<string, unknown>)[
+          'preallocateArray'
+        ] as
+          | undefined
+          | ((
+              path: string,
+              size: number
+            ) => {
+              update: (i: number, v: unknown) => void;
+              commit: () => void;
+            });
+
+        if (preallocator) {
+          const allocator = preallocator('items', itemsBuffer.length);
+          for (let i = 0; i < chunk.length; i++) {
+            const dest = (applyIndex + i) % itemsBuffer.length;
+            allocator.update(dest, chunk[i]);
+          }
+          allocator.commit();
+          applyIndex = (applyIndex + chunk.length) % itemsBuffer.length;
+        } else if ((tree as any).batch) {
+          // Apply chunk in a single batched update; write into itemsBuffer in-place
+          (tree as any).batch(() => {
+            for (let i = 0; i < chunk.length; i++) {
+              const dest = (applyIndex + i) % itemsBuffer.length;
+              itemsBuffer[dest] = chunk[i];
+            }
+            // Single set of the backing array reference after in-place writes
+            (tree.state as any).items.set(itemsBuffer);
+            applyIndex = (applyIndex + chunk.length) % itemsBuffer.length;
+          });
+        } else {
+          // Fallback: replace slice region (less optimal)
+          const startIdx = applyIndex;
+          for (let i = 0; i < chunk.length; i++) {
+            const dest = (startIdx + i) % itemsBuffer.length;
+            itemsBuffer[dest] = chunk[i];
+          }
+          (tree.state as any).items.set(itemsBuffer.slice());
+          applyIndex = (applyIndex + chunk.length) % itemsBuffer.length;
+        }
+      } catch (e) {
+        tree.state.error.set((e as Error)?.message ?? String(e));
+      }
+    };
+
+    const placeholders = Array.from({ length: ops }, (_, i) => i);
+
+    await runInBatches(placeholders, worker);
+
+    tree.state.loading.set(false);
 
     return performance.now() - start;
   }

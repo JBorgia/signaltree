@@ -36,9 +36,9 @@ export class NavigationComponent {
     },
     {
       id: 'async',
-      title: 'Async Operations',
-      description: 'Async state management patterns',
-      route: '/async',
+      title: 'Async (via Middleware)',
+      description: 'Async state patterns handled by middleware helpers',
+      route: '/middleware',
       category: 'basic',
     },
 

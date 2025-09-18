@@ -259,7 +259,10 @@ export function testTypeInference() {
 
   // Simple property updates
   complexAppTree.$.ui.sidebar.isOpen.set(false);
-  complexAppTree.$.auth.currentUser.set(userItems[0]);
+  // Narrow-cast for demo to allow .set on optional node
+  (
+    complexAppTree.$.auth.currentUser as unknown as { set: (v: User) => void }
+  ).set(userItems[0]);
 
   return {
     userItems,

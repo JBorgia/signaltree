@@ -20,11 +20,6 @@
     "name": "@signaltree/memoization"
   },
   {
-    "path": "packages/async/dist/index.js",
-    "limit": "1.9 KB",
-    "name": "@signaltree/async"
-  },
-  {
     "path": "packages/entities/dist/index.js",
     "limit": "1.0 KB",
     "name": "@signaltree/entities"

@@ -317,11 +317,10 @@ productLoader(fetchedProducts); // Fully typed
 ```typescript
 import { signalTree } from '@signaltree/core';
 import { withBatching } from '@signaltree/batching';
-import { withAsync } from '@signaltree/async';
 import { withMemoization } from '@signaltree/memoization';
 
 // Optimized async + batching + memoization
-const optimizedTree = signalTree(initialState).with(withMemoization(), withBatching({ maxBatchSize: 50 }), withAsync());
+const optimizedTree = signalTree(initialState).with(withMemoization(), withBatching({ maxBatchSize: 50 }));
 
 // Batch async operations
 const batchedAsyncAction = optimizedTree.asyncAction(
@@ -358,7 +357,7 @@ interface CartState {
 }
 
 class ShoppingCart {
-  private tree = signalTree<CartState>(initialCartState).with(withBatching({ maxBatchSize: 50 }), withAsync());
+  private tree = signalTree<CartState>(initialCartState).with(withBatching({ maxBatchSize: 50 }));
 
   // Optimized item operations
   addItems(items: CartItem[]) {
@@ -427,7 +426,7 @@ class ShoppingCart {
 
 ## Next steps
 
-- Explore **[@signaltree/async](../async)** for advanced async state management
+- Async helper features moved to `@signaltree/middleware` (see `packages/middleware`)
 - Try **[@signaltree/memoization](../memoization)** for computed value optimization
 - Check out **[@signaltree/middleware](../middleware)** for extensible state management
 - View **[complete examples](../../apps/demo)** in our demo application

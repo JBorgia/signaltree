@@ -689,7 +689,7 @@ export class BoilerplateComparisonComponent {
     'Simple Counter',
     'User Management',
     'Form Validation',
-    'Async Operations',
+    'Async (via Middleware)',
   ]);
 
   private readonly exampleData: Record<string, BoilerplateExample[]> = {
@@ -804,7 +804,7 @@ count$ = this.query.select(state => state.count);`,
         maintainability: 9,
         code: `import { signalTree } from '@signaltree/core';
 import { withBatching } from '@signaltree/batching';
-import { withAsync } from '@signaltree/async';
+// async behavior: use middleware helpers (e.g. createAsyncOperation / trackAsync)
 import { withEntities } from '@signaltree/entities';
 
 const userTree = signalTree({
@@ -813,7 +813,6 @@ const userTree = signalTree({
   error: null
 }).with(
   withBatching(),
-  withAsync(),
   withEntities()
 );
 
