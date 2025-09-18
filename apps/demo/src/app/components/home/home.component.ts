@@ -50,12 +50,12 @@ export class HomeComponent {
       ],
     },
     {
-      title: '🌐 Async Operations',
+      title: '🌐 Async (via Middleware)',
       description:
-        'Handle async operations with loading states and error management',
-      route: '/async',
-      category: 'Async',
-      methods: ['asyncAction'],
+        'Handle async operations using middleware helpers (createAsyncOperation / trackAsync)',
+      route: '/middleware',
+      category: 'Middleware',
+      methods: ['createAsyncOperation', 'trackAsync'],
     },
     {
       title: '🔄 Batching Demo',

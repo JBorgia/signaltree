@@ -1,10 +1,10 @@
+import { TestBed } from '@angular/core/testing';
+import { signalTree } from '@signaltree/core';
+
 /**
  * Advanced SignalTree Performance Benchmarks
  * Comprehensive performance testing with detailed metrics
  */
-
-import { TestBed } from '@angular/core/testing';
-import { signalTree } from '@signaltree/core';
 
 interface DeepDataNode {
   value?: number;
@@ -181,7 +181,8 @@ describe('Advanced SignalTree Performance Benchmarks', () => {
 
     // Test partial state updates
     const partialUpdateTime = measureTime(() => {
-      tree(() => ({ sum: Math.random() * 10000 }));
+      // Use the updater form and preserve other properties.
+      tree((current) => ({ ...current, sum: Math.random() * 10000 }));
     }, 1000);
 
     console.log(
@@ -339,7 +340,8 @@ describe('Advanced SignalTree Performance Benchmarks', () => {
     // Test rapid counter updates
     const rapidUpdates = measureTime(() => {
       for (let i = 0; i < 100; i++) {
-        tree(() => ({ filter: 'Item 1' }));
+        // Use the updater form to avoid losing other required fields.
+        tree((current) => ({ ...current, filter: 'Item 1' }));
       }
     }, 100);
 

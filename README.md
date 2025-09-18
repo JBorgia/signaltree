@@ -209,7 +209,7 @@ npm install @signaltree/ng-forms        # Form validation
 npm install @signaltree/devtools        # Debugging tools
 npm install @signaltree/entities        # Entity management
 npm install @signaltree/middleware      # Middleware chains
-npm install @signaltree/async           # Async operations
+// @signaltree/async removed; use middleware helpers in demos
 npm install @signaltree/presets         # Configuration presets
 npm install @signaltree/serialization   # State serialization
 
@@ -277,7 +277,7 @@ import { signalTree } from '@signaltree/core';
 import { withBatching } from '@signaltree/batching';
 import { withMemoization } from '@signaltree/memoization';
 import { withMiddleware } from '@signaltree/middleware';
-import { withAsync } from '@signaltree/async';
+// withAsync removed — async helpers moved to middleware package
 import { withEntities } from '@signaltree/entities';
 import { withDevtools } from '@signaltree/devtools';
 import { withTimeTravel } from '@signaltree/time-travel';
@@ -292,7 +292,7 @@ const tree = signalTree({
   withBatching(), // Batch updates for performance
   withMemoization(), // Intelligent caching
   withMiddleware(), // State interceptors
-  withAsync(), // Advanced async operations
+  // withAsync removed — use middleware helpers for async operations
   withEntities(), // Enhanced CRUD operations
   withTimeTravel(), // Undo/redo functionality
   withDevTools() // Development tools (auto-disabled in production)
@@ -443,7 +443,7 @@ SignalTree uses a modular architecture where each feature is an optional package
 - **@signaltree/batching** - Batch multiple updates
 - **@signaltree/memoization** - Intelligent caching
 - **@signaltree/middleware** - Middleware system & state interceptors
-- **@signaltree/async** - Advanced async actions & loading states
+  // @signaltree/async removed; async helpers moved to middleware
 - **@signaltree/entities** - Enhanced CRUD operations & entity management
 - **@signaltree/devtools** - Development tools & Redux DevTools integration
 - **@signaltree/time-travel** - Undo/redo functionality & state history
@@ -468,7 +468,7 @@ npm install @signaltree/core @signaltree/serialization
 npm install @signaltree/core @signaltree/batching @signaltree/memoization @signaltree/devtools @signaltree/time-travel
 
 # Full-featured (27.50KB) - All packages
-npm install @signaltree/core @signaltree/serialization @signaltree/batching @signaltree/memoization @signaltree/middleware @signaltree/async @signaltree/entities @signaltree/devtools @signaltree/time-travel @signaltree/presets @signaltree/ng-forms
+npm install @signaltree/core @signaltree/serialization @signaltree/batching @signaltree/memoization @signaltree/middleware @signaltree/entities @signaltree/devtools @signaltree/time-travel @signaltree/presets @signaltree/ng-forms
 
 # Use presets for common combinations
 npm install @signaltree/core @signaltree/presets
@@ -483,7 +483,7 @@ npm install @signaltree/core @signaltree/presets
 | **[@signaltree/batching](./packages/batching)**           | Performance      | Batch updates, reduce re-renders                 |
 | **[@signaltree/memoization](./packages/memoization)**     | Caching          | Intelligent caching, performance optimization    |
 | **[@signaltree/middleware](./packages/middleware)**       | Interceptors     | State interceptors, logging, validation          |
-| **[@signaltree/async](./packages/async)**                 | Async Operations | Advanced async patterns, loading states          |
+| **[async helpers moved to middleware]**                   | Async Operations | Use `packages/middleware` helpers for async UX   |
 | **[@signaltree/entities](./packages/entities)**           | Data Management  | Enhanced CRUD, filtering, querying               |
 | **[@signaltree/devtools](./packages/devtools)**           | Development      | Redux DevTools, debugging, monitoring            |
 | **[@signaltree/time-travel](./packages/time-travel)**     | History          | Undo/redo, snapshots, state persistence          |
@@ -588,7 +588,7 @@ const adminUsers = users.selectBy((user) => user.role === 'admin');
 const userCount = users.selectTotal();
 ```
 
-### 🌊 **@signaltree/async** - Async State Management
+### 🌊 **Async helpers moved to `@signaltree/middleware`**
 
 _Use when: API calls, loading states, error handling_
 
@@ -600,12 +600,12 @@ _Use when: API calls, loading states, error handling_
 - Any async operations with state management
 
 ```typescript
-import { withAsync } from '@signaltree/async';
+// withAsync removed — use middleware helpers for async operations
 
 const tree = signalTree({
   user: null as User | null,
   ui: { loading: false, error: null as string | null },
-}).with(withAsync());
+}).with(/* withAsync removed; see middleware helpers */);
 
 // Advanced async action with lifecycle hooks
 const fetchUser = tree.asyncAction(async (id: string) => userApi.getUser(id), {
@@ -842,7 +842,7 @@ const tree = signalTree(state).with(
 const tree = signalTree(state).with(
   withBatching(),         // Performance
   withMemoization(),      // Caching
-  withAsync(),           // API calls
+  // withAsync removed — use middleware helpers for API calls
   withEntities(),        // Data management
   withSerialization(),   // Persistence
   withTimeTravel(),      // Debugging
@@ -854,7 +854,7 @@ const tree = signalTree(state).with(
 **Production-ready stack:**
 
 ```typescript
-const tree = signalTree(state).with(withBatching(), withMemoization(), withAsync(), withEntities(), withSerialization({ autoSave: true }), ...(environment.production ? [] : [withDevtools(), withTimeTravel()]));
+const tree = signalTree(state).with(withBatching(), withMemoization(), withEntities(), withSerialization({ autoSave: true }), ...(environment.production ? [] : [withDevtools(), withTimeTravel()]));
 ```
 
 ## �🔄 Migration from signaltree
@@ -1263,7 +1263,7 @@ class UsersComponent {
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withAsync } from '@signaltree/async';
+// withAsync removed — use middleware helpers for async operations
 
 const tree = signalTree({
   users: [] as User[],
@@ -2564,14 +2564,14 @@ class RegistrationComponent {
 ```typescript
 import { signalTree } from '@signaltree/core';
 import { withEntities } from '@signaltree/entities';
-import { withAsync } from '@signaltree/async';
+// withAsync removed — use middleware helpers for async operations
 
 // Just 7.20KB core + entities + async - perfect for simple applications
 const appTree = signalTree({
   user: { name: '', email: '' },
   todos: [] as Todo[],
   loading: false,
-}).with(withEntities(), withAsync());
+}).with(withEntities() /* withAsync removed; use middleware helpers */);
 
 // Entity management (via entities enhancer)
 const todos = appTree.entities<Todo>('todos');
@@ -2742,7 +2742,7 @@ SignalTree is built with a modular architecture that allows you to choose exactl
 @signaltree/core (7.20KB)
 ├── @signaltree/batching (1.27KB)
 ├── @signaltree/memoization (2.11KB)
-├── @signaltree/async (1.80KB)
+// async package removed from monorepo
 ├── @signaltree/entities (0.97KB)
 ├── @signaltree/middleware (1.38KB)
 ├── @signaltree/devtools (2.49KB)
@@ -3077,7 +3077,7 @@ Special thanks to **Christian Moser** - an invaluable tester, colleague, and fri
 
 ### Feature Packages
 
-- [@signaltree/async](https://www.npmjs.com/package/@signaltree/async) - Async operations and state management
+- Async helpers moved to middleware package (see `packages/middleware`)
 - [@signaltree/batching](https://www.npmjs.com/package/@signaltree/batching) - Performance optimization through batching
 - [@signaltree/memoization](https://www.npmjs.com/package/@signaltree/memoization) - Caching and computed values
 - [@signaltree/middleware](https://www.npmjs.com/package/@signaltree/middleware) - Extensible middleware system

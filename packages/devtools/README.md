@@ -519,10 +519,10 @@ Perfect for:
 import { signalTree } from '@signaltree/core';
 import { withDevTools } from '@signaltree/devtools';
 import { withTimeTravel } from '@signaltree/time-travel';
-import { withAsync } from '@signaltree/async';
+// withAsync removed — async features now via middleware helpers
 
 const tree = signalTree(state).with(
-  withAsync(), // Enhanced async operations
+  // withAsync removed — use middleware helpers where needed
   withTimeTravel(), // Additional time-travel features
   withDevTools() // Full debugging capabilities
 );

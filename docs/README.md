@@ -21,7 +21,6 @@ Use this index to navigate the canonical documentation.
 ## Packages
 
 - Core: ../../packages/core/README.md
-- Async: ../../packages/async/README.md
 - Batching: ../../packages/batching/README.md
 - Devtools: ../../packages/devtools/README.md
 - Entities: ../../packages/entities/README.md

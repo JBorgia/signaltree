@@ -31,6 +31,11 @@ export interface EnhancedBenchmarkOptions extends RunOptions {
   forceGC?: boolean;
   // Statistical confidence level for comparisons
   confidenceLevel?: number;
+  // Optional non-blocking progress callback invoked with { samplesCollected, elapsedMs }
+  onProgress?: (progress: {
+    samplesCollected: number;
+    elapsedMs: number;
+  }) => void;
 }
 
 // Enhanced result with statistical metrics
@@ -78,9 +83,68 @@ function applyCap(value: number, cap: number | undefined, label?: string) {
   return capped;
 }
 
-function yieldToUI(): Promise<void> {
-  return new Promise((r) => setTimeout(r, 0));
+// Lightweight scheduler util: prefers queueMicrotask, falls back to MessageChannel, then setTimeout
+function scheduleNextTick(fn: () => void) {
+  if (typeof queueMicrotask === 'function') {
+    queueMicrotask(fn);
+    return;
+  }
+
+  if (typeof MessageChannel !== 'undefined') {
+    const ch = new MessageChannel();
+    ch.port1.onmessage = () => {
+      fn();
+    };
+    ch.port2.postMessage(0);
+    return;
+  }
+
+  setTimeout(fn, 0);
 }
+
+export function yieldToUI(): Promise<void> {
+  // Prefer requestIdleCallback when the caller wants background idle time
+  const ric = (
+    window as unknown as {
+      requestIdleCallback?: (
+        cb: () => void,
+        opts?: { timeout?: number }
+      ) => void;
+    }
+  ).requestIdleCallback;
+
+  if (typeof ric === 'function') {
+    return new Promise<void>((resolve) => {
+      ric(() => resolve(), { timeout: 50 });
+    });
+  }
+
+  return new Promise((resolve) => scheduleNextTick(resolve));
+}
+
+// Coalesced UI update queue: schedule non-blocking progress callbacks using RAF
+function createUIUpdateQueue() {
+  let pending = false;
+  let payload: unknown = undefined;
+
+  function schedule(p: unknown, cb?: (p: unknown) => void) {
+    payload = p;
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(() => {
+      pending = false;
+      try {
+        cb?.(payload);
+      } finally {
+        payload = undefined;
+      }
+    });
+  }
+
+  return { schedule };
+}
+
+const uiUpdateQueue = createUIUpdateQueue();
 
 // Enhanced statistical utilities
 export class BenchmarkStatistics {
@@ -351,6 +415,7 @@ export async function runEnhancedBenchmark(
     forceGC = false,
     operationsCap,
     minDurationMs = 100,
+    onProgress,
   } = options;
 
   const effectiveOperations = applyCap(operations, operationsCap, label);
@@ -404,6 +469,14 @@ export async function runEnhancedBenchmark(
     samples.push(duration);
     totalRuntime += duration;
     totalIterations += effectiveOperations;
+
+    // Schedule a non-blocking progress update via RAF (coalesced)
+    if (typeof onProgress === 'function') {
+      uiUpdateQueue.schedule(
+        { samplesCollected: samples.length, elapsedMs: totalRuntime },
+        (p) => onProgress(p as { samplesCollected: number; elapsedMs: number })
+      );
+    }
 
     // Yield between samples (not during measurement) for UI responsiveness
     if (samples.length % 10 === 0) {
@@ -471,6 +544,62 @@ export async function runEnhancedBenchmark(
     anomalyRate: anomalyAnalysis.anomalyRate,
     recommendation: reliabilityAssessment.recommendation,
   };
+
+  // Detect quantization / measurement-floor issues and attempt one adaptive rerun
+  function detectQuantization(samplesToCheck: number[], medianVal: number) {
+    if (!samplesToCheck || samplesToCheck.length === 0) return false;
+    const n = samplesToCheck.length;
+    const zeroCount = samplesToCheck.filter((s) => s === 0).length;
+    if (zeroCount / n >= 0.25) return true; // lots of exact zeros
+
+    // Check for a dominant identical low-value cluster (quantization)
+    const freq = new Map<number, number>();
+    for (const s of samplesToCheck) {
+      // Round to 0.1ms to bucket near-identical values
+      const key = Math.round(s * 10) / 10;
+      freq.set(key, (freq.get(key) ?? 0) + 1);
+    }
+    let maxFreq = 0;
+    for (const v of freq.values()) if (v > maxFreq) maxFreq = v;
+    if (maxFreq / n >= 0.35 && medianVal < 0.5) return true;
+
+    return false;
+  }
+
+  try {
+    // Local typed wrapper to track adaptive attempts without leaking to public API
+    type AdaptiveOptions = EnhancedBenchmarkOptions & {
+      __adaptiveAttempted?: boolean;
+    };
+    const castOpts = options as AdaptiveOptions;
+    const alreadyAdaptive = !!castOpts.__adaptiveAttempted;
+    if (!alreadyAdaptive && detectQuantization(samples, result.median)) {
+      // Conservative increase: larger timing window and more samples
+      const increasedMin = Math.max(minDurationMs * 4, 500);
+      const increasedSamples = Math.max(
+        measurementSamples * 2,
+        measurementSamples + 10
+      );
+      console.warn(
+        `[${label}] Quantization detected in samples — rerunning with minDurationMs=${increasedMin} and measurementSamples=${increasedSamples}`
+      );
+
+      const newOptions: AdaptiveOptions = {
+        ...(options as AdaptiveOptions),
+        minDurationMs: increasedMin,
+        measurementSamples: increasedSamples,
+        __adaptiveAttempted: true,
+      };
+
+      // Single adaptive re-run: return the improved measurement
+      return await runEnhancedBenchmark(runOnce, newOptions);
+    }
+  } catch (e) {
+    // If adaptive rerun fails for any reason, continue with the original result
+    console.warn(
+      `[${label}] Adaptive re-measure failed: ${(e as Error).message}`
+    );
+  }
 
   console.debug(
     `[${label}] Completed: ${totalIterations} total iterations, ` +

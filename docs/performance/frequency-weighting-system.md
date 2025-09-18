@@ -64,7 +64,7 @@ applySmartWeightAdjustments() {
   const researchBasedWeights: Record<string, number> = {
     'selector-memoization': 2.9, // 89% of apps use computed/derived state heavily
     'deep-nested': 2.7, // 82% of apps have complex nested state
-    'async-workflow': 2.3, // 74% of apps heavily use async operations
+  'async-via-middleware': 2.3, // 74% of apps heavily use async operations (handled via middleware)
     'production-setup': 3.0, // 100% of apps eventually go to production
     'concurrent-updates': 0.6, // 18% of apps need high-frequency updates
     // ... complete research-based mappings
@@ -85,13 +85,13 @@ Comprehensive impact analysis showing:
 
 ### Core Operations (Very High Usage)
 
-| Scenario                 | Weight | Frequency    | Research Basis                               |
-| ------------------------ | ------ | ------------ | -------------------------------------------- |
-| **Selector/Memoization** | 2.8    | 89% of apps  | Computed values fundamental to reactive apps |
-| **Deep Nested Updates**  | 2.5    | 82% of apps  | Forms, settings, complex UI state            |
-| **Production Setup**     | 3.0    | 100% of apps | All apps eventually reach production         |
-| **Async Workflow**       | 2.3    | 74% of apps  | API calls, data loading ubiquitous           |
-| **Computed Chains**      | 2.2    | 76% of apps  | Reactive computations core pattern           |
+| Scenario                   | Weight | Frequency    | Research Basis                                                      |
+| -------------------------- | ------ | ------------ | ------------------------------------------------------------------- |
+| **Selector/Memoization**   | 2.8    | 89% of apps  | Computed values fundamental to reactive apps                        |
+| **Deep Nested Updates**    | 2.5    | 82% of apps  | Forms, settings, complex UI state                                   |
+| **Production Setup**       | 3.0    | 100% of apps | All apps eventually reach production                                |
+| **Async (via Middleware)** | 2.3    | 74% of apps  | API calls, data loading ubiquitous (handled via middleware helpers) |
+| **Computed Chains**        | 2.2    | 76% of apps  | Reactive computations core pattern                                  |
 
 ### Common Operations (High Usage)
 

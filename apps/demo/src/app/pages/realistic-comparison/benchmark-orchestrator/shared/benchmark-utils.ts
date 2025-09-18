@@ -13,10 +13,48 @@ export { BENCHMARK_CONSTANTS };
  * Uses consistent setTimeout parameters for fair comparison
  */
 export function createYieldToUI() {
+  // Lightweight scheduler: if a positive YIELD_DELAY_MS is configured, use setTimeout
+  // Otherwise prefer requestIdleCallback, then microtask MessageChannel, then setTimeout(0)
+  function scheduleNextTick(fn: () => void) {
+    if (
+      typeof BENCHMARK_CONSTANTS.TIMING.YIELD_DELAY_MS === 'number' &&
+      BENCHMARK_CONSTANTS.TIMING.YIELD_DELAY_MS > 0
+    ) {
+      setTimeout(fn, BENCHMARK_CONSTANTS.TIMING.YIELD_DELAY_MS);
+      return;
+    }
+
+    const ric = (
+      window as unknown as {
+        requestIdleCallback?: (
+          cb: () => void,
+          opts?: { timeout?: number }
+        ) => void;
+      }
+    ).requestIdleCallback;
+
+    if (typeof ric === 'function') {
+      ric(() => fn(), { timeout: 50 });
+      return;
+    }
+
+    if (typeof queueMicrotask === 'function') {
+      queueMicrotask(fn);
+      return;
+    }
+
+    if (typeof MessageChannel !== 'undefined') {
+      const ch = new MessageChannel();
+      ch.port1.onmessage = () => fn();
+      ch.port2.postMessage(0);
+      return;
+    }
+
+    setTimeout(fn, 0);
+  }
+
   return function yieldToUI(): Promise<void> {
-    return new Promise<void>((resolve) =>
-      setTimeout(resolve, BENCHMARK_CONSTANTS.TIMING.YIELD_DELAY_MS)
-    );
+    return new Promise<void>((resolve) => scheduleNextTick(resolve));
   };
 }
 

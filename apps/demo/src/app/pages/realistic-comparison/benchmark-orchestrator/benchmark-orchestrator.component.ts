@@ -109,6 +109,9 @@ interface BenchmarkService {
 
   // Async operations benchmarks
   runAsyncWorkflowBenchmark?(dataSize: number): Promise<number>;
+  // Optional separate hydration-focused benchmark (some services implement
+  // a distinct hydration runner to measure full-state application cost).
+  runAsyncWorkflowHydrationBenchmark?(dataSize: number): Promise<number>;
   runConcurrentAsyncBenchmark?(concurrency: number): Promise<number>;
   runAsyncCancellationBenchmark?(operations: number): Promise<number>;
 
@@ -186,7 +189,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       id: 'real-world',
       name: 'Real-World Usage',
       description: 'Common application patterns',
-      scenarios: ['memory-efficiency', 'async-workflow'],
+      scenarios: ['memory-efficiency'],
     },
     {
       id: 'advanced-features',
@@ -372,8 +375,10 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       'multiple-middleware': 'runMultipleMiddlewareBenchmark',
       'conditional-middleware': 'runConditionalMiddlewareBenchmark',
 
-      // Async
+      // Async (behavior folded into middleware helpers)
       'async-workflow': 'runAsyncWorkflowBenchmark',
+      'async-workflow-scheduling': 'runAsyncWorkflowBenchmark',
+      'async-workflow-hydration': 'runAsyncWorkflowHydrationBenchmark',
       'concurrent-async': 'runConcurrentAsyncBenchmark',
       'async-cancellation': 'runAsyncCancellationBenchmark',
 
@@ -448,10 +453,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     ],
     'state-size-scaling': ['withLightweightMemoization', 'withBatching'],
 
-    // Async operations - currently use no enhancers in implementation
-    'async-workflow': [],
-    'concurrent-async': [],
-    'async-cancellation': [],
+    // Async operations: runtime implementations still exist but the demo page was removed; async behavior is tested via middleware helpers
 
     // Time travel - now use withTimeTravel enhancer
     'undo-redo': ['withTimeTravel'],
@@ -544,7 +546,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         'minimal caching overhead for intensive workloads',
       withSerialization: 'state persistence and snapshot capabilities',
       withTimeTravel: 'undo/redo functionality with history management',
-      withAsync: 'async operation management and loading states',
+      // withAsync removed — async behavior handled by middleware helpers
     };
 
     const enhancerSummary = enhancers
@@ -1742,15 +1744,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
           }
           return await svc.runStateSizeScalingBenchmark(config.dataSize);
 
-        // Async Operations
-        case 'async-workflow':
-          if (!svc.runAsyncWorkflowBenchmark) {
-            console.warn(
-              `${libraryId} does not support async-workflow benchmarks`
-            );
-            return -1;
-          }
-          return await svc.runAsyncWorkflowBenchmark(config.dataSize);
+        // Async benchmark cases remain runnable via service methods; the demo UI no longer exposes a separate async page
         case 'concurrent-async':
           if (!svc.runConcurrentAsyncBenchmark) {
             console.warn(
@@ -2738,7 +2732,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       'computed-chains': 2.4, // 76% of apps use reactive computations
       'large-array': 2.1, // 68% of apps manage lists/tables (but less frequent than selectors)
       'batch-updates': 2.0, // 65% of apps batch updates (form submissions, bulk operations)
-      'async-workflow': 2.3, // 74% of apps heavily use async operations (APIs, loading states)
+      'async-via-middleware': 2.3, // 74% of apps heavily use async operations (APIs, loading states) - folded into middleware helpers
       'memory-efficiency': 1.8, // 58% of apps run on mobile/resource-constrained devices
 
       // Less common but important operations
@@ -2772,10 +2766,10 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         baseWeight *= 1.1; // 10% boost for core operations in core-heavy workloads
       }
       if (
-        categoryDistribution['async'] > 0.3 &&
-        testCase.category === 'async'
+        categoryDistribution['middleware'] > 0.3 &&
+        testCase.category === 'middleware'
       ) {
-        baseWeight *= 1.2; // 20% boost for async operations in async-heavy workloads
+        baseWeight *= 1.2; // 20% boost for middleware (including async) in middleware-heavy workloads
       }
       if (
         categoryDistribution['time-travel'] > 0.2 &&

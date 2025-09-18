@@ -2,6 +2,7 @@ import { computed, Injectable } from '@angular/core';
 import { patchState, signalState } from '@ngrx/signals';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
+import { createYieldToUI } from '../shared/benchmark-utils';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 @Injectable({ providedIn: 'root' })
@@ -11,11 +12,7 @@ export class NgRxSignalsBenchmarkService {
     memory?: { jsHeapSizeLimit: number; usedJSHeapSize: number };
   };
 
-  private yieldToUI() {
-    return new Promise<void>((r) =>
-      setTimeout(r, BENCHMARK_CONSTANTS.TIMING.YIELD_DELAY_MS)
-    );
-  }
+  private yieldToUI = createYieldToUI();
 
   // --- Middleware Benchmarks (NgRx Signals - withHooks simulation) ---
   async runSingleMiddlewareBenchmark(operations: number): Promise<number> {

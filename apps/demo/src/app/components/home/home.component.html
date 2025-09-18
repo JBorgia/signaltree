@@ -34,174 +34,156 @@
         <h3 class="feature-name">{{ feature.name }}</h3>
         <p class="feature-description">{{ feature.description }}</p>
       </div>
-    </div>
-  </section>
 
-  <!-- API Categories -->
-  <section class="api-categories-section">
-    <h2 class="section-title">📚 API Reference</h2>
-
-    <!-- Core -->
-    <div class="category-section">
-      <h3 class="category-title">Core API</h3>
-      <div class="category-grid">
-        <div
-          *ngFor="let feature of getFeaturesByCategory('Core')"
-          class="category-card"
-        >
-          <h4 class="card-title">{{ feature.title }}</h4>
-          <p class="card-description">{{ feature.description }}</p>
-          <a [routerLink]="feature.route" class="card-link">
-            Explore Example →
-          </a>
+      <!-- Performance -->
+      <div class="category-section">
+        <h3 class="category-title">⚡ Performance</h3>
+        <div class="method-list">
+          <span
+            *ngFor="
+              let method of getFeaturesByCategory('Performance')[0]?.methods
+            "
+            class="method-tag"
+          >
+            {{ method }}()
+          </span>
+        </div>
+        <div class="category-grid">
+          <div
+            *ngFor="let feature of getFeaturesByCategory('Performance')"
+            class="category-card"
+          >
+            <h4 class="card-title">{{ feature.title }}</h4>
+            <p class="card-description">{{ feature.description }}</p>
+            <a [routerLink]="feature.route" class="card-link">
+              View Performance Examples →
+            </a>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Performance -->
-    <div class="category-section">
-      <h3 class="category-title">⚡ Performance</h3>
-      <div class="method-list">
-        <span
-          *ngFor="
-            let method of getFeaturesByCategory('Performance')[0]?.methods
-          "
-          class="method-tag"
-        >
-          {{ method }}()
-        </span>
-      </div>
-      <div class="category-grid">
-        <div
-          *ngFor="let feature of getFeaturesByCategory('Performance')"
-          class="category-card"
-        >
-          <h4 class="card-title">{{ feature.title }}</h4>
-          <p class="card-description">{{ feature.description }}</p>
-          <a [routerLink]="feature.route" class="card-link">
-            View Performance Examples →
-          </a>
+      <!-- Middleware -->
+      <div class="category-section">
+        <h3 class="category-title">🔌 Middleware</h3>
+        <div class="method-list">
+          <span
+            *ngFor="
+              let method of getFeaturesByCategory('Middleware')[0]?.methods
+            "
+            class="method-tag"
+          >
+            {{ method }}()
+          </span>
+        </div>
+        <div class="category-grid">
+          <div
+            *ngFor="let feature of getFeaturesByCategory('Middleware')"
+            class="category-card"
+          >
+            <h4 class="card-title">{{ feature.title }}</h4>
+            <p class="card-description">{{ feature.description }}</p>
+            <a [routerLink]="feature.route" class="card-link">
+              Learn Middleware →
+            </a>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Middleware -->
-    <div class="category-section">
-      <h3 class="category-title">🔌 Middleware</h3>
-      <div class="method-list">
-        <span
-          *ngFor="let method of getFeaturesByCategory('Middleware')[0]?.methods"
-          class="method-tag"
-        >
-          {{ method }}()
-        </span>
-      </div>
-      <div class="category-grid">
-        <div
-          *ngFor="let feature of getFeaturesByCategory('Middleware')"
-          class="category-card"
-        >
-          <h4 class="card-title">{{ feature.title }}</h4>
-          <p class="card-description">{{ feature.description }}</p>
-          <a [routerLink]="feature.route" class="card-link">
-            Learn Middleware →
-          </a>
+      <!-- Entity Management -->
+      <div class="category-section">
+        <h3 class="category-title">📦 Entity Management</h3>
+        <div class="method-list">
+          <span
+            *ngFor="let method of getFeaturesByCategory('Entity')[0]?.methods"
+            class="method-tag"
+          >
+            {{ method }}()
+          </span>
+        </div>
+        <div class="category-grid">
+          <div
+            *ngFor="let feature of getFeaturesByCategory('Entity')"
+            class="category-card"
+          >
+            <h4 class="card-title">{{ feature.title }}</h4>
+            <p class="card-description">{{ feature.description }}</p>
+            <a [routerLink]="feature.route" class="card-link">
+              Explore Entity CRUD →
+            </a>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Entity Management -->
-    <div class="category-section">
-      <h3 class="category-title">📦 Entity Management</h3>
-      <div class="method-list">
-        <span
-          *ngFor="let method of getFeaturesByCategory('Entity')[0]?.methods"
-          class="method-tag"
-        >
-          {{ method }}()
-        </span>
-      </div>
-      <div class="category-grid">
-        <div
-          *ngFor="let feature of getFeaturesByCategory('Entity')"
-          class="category-card"
-        >
-          <h4 class="card-title">{{ feature.title }}</h4>
-          <p class="card-description">{{ feature.description }}</p>
-          <a [routerLink]="feature.route" class="card-link">
-            Explore Entity CRUD →
-          </a>
+      <!-- Async (via Middleware) -->
+      <div class="category-section">
+        <h3 class="category-title">🌐 Async (via Middleware)</h3>
+        <div class="method-list">
+          <span
+            *ngFor="
+              let method of getFeaturesByCategory('Middleware')[0]?.methods
+            "
+            class="method-tag"
+          >
+            {{ method }}()
+          </span>
+        </div>
+        <div class="category-grid">
+          <div
+            *ngFor="let feature of getFeaturesByCategory('Middleware')"
+            class="category-card"
+          >
+            <h4 class="card-title">{{ feature.title }}</h4>
+            <p class="card-description">{{ feature.description }}</p>
+            <a [routerLink]="feature.route" class="card-link">
+              Learn Middleware →
+            </a>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Async Operations -->
-    <div class="category-section">
-      <h3 class="category-title">🌐 Async Operations</h3>
-      <div class="method-list">
-        <span
-          *ngFor="let method of getFeaturesByCategory('Async')[0]?.methods"
-          class="method-tag"
-        >
-          {{ method }}()
-        </span>
-      </div>
-      <div class="category-grid">
-        <div
-          *ngFor="let feature of getFeaturesByCategory('Async')"
-          class="category-card"
-        >
-          <h4 class="card-title">{{ feature.title }}</h4>
-          <p class="card-description">{{ feature.description }}</p>
-          <a [routerLink]="feature.route" class="card-link">
-            Handle Async Actions →
-          </a>
+      <!-- Time Travel -->
+      <div class="category-section">
+        <h3 class="category-title">⏰ Time Travel</h3>
+        <div class="method-list">
+          <span
+            *ngFor="
+              let method of getFeaturesByCategory('Time Travel')[0]?.methods
+            "
+            class="method-tag"
+          >
+            {{ method }}()
+          </span>
+        </div>
+        <div class="category-grid">
+          <div
+            *ngFor="let feature of getFeaturesByCategory('Time Travel')"
+            class="category-card"
+          >
+            <h4 class="card-title">{{ feature.title }}</h4>
+            <p class="card-description">{{ feature.description }}</p>
+            <a [routerLink]="feature.route" class="card-link">
+              Time Travel Demo →
+            </a>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Time Travel -->
-    <div class="category-section">
-      <h3 class="category-title">⏰ Time Travel</h3>
-      <div class="method-list">
-        <span
-          *ngFor="
-            let method of getFeaturesByCategory('Time Travel')[0]?.methods
-          "
-          class="method-tag"
-        >
-          {{ method }}()
-        </span>
-      </div>
-      <div class="category-grid">
-        <div
-          *ngFor="let feature of getFeaturesByCategory('Time Travel')"
-          class="category-card"
-        >
-          <h4 class="card-title">{{ feature.title }}</h4>
-          <p class="card-description">{{ feature.description }}</p>
-          <a [routerLink]="feature.route" class="card-link">
-            Time Travel Demo →
-          </a>
-        </div>
-      </div>
-    </div>
-
-    <!-- Additional Features -->
-    <div class="category-section">
-      <h3 class="category-title">🛠️ Additional Features</h3>
-      <div class="category-grid">
-        <div
-          *ngFor="
-            let feature of getFeaturesByCategory('Forms').concat(
-              getFeaturesByCategory('Testing')
-            )
-          "
-          class="category-card"
-        >
-          <h4 class="card-title">{{ feature.title }}</h4>
-          <p class="card-description">{{ feature.description }}</p>
-          <a [routerLink]="feature.route" class="card-link"> Explore → </a>
+      <!-- Additional Features -->
+      <div class="category-section">
+        <h3 class="category-title">🛠️ Additional Features</h3>
+        <div class="category-grid">
+          <div
+            *ngFor="
+              let feature of getFeaturesByCategory('Forms').concat(
+                getFeaturesByCategory('Testing')
+              )
+            "
+            class="category-card"
+          >
+            <h4 class="card-title">{{ feature.title }}</h4>
+            <p class="card-description">{{ feature.description }}</p>
+            <a [routerLink]="feature.route" class="card-link"> Explore → </a>
+          </div>
         </div>
       </div>
     </div>

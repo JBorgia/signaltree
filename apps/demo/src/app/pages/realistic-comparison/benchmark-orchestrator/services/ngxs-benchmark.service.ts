@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { Action, Selector, State, StateContext, Store } from '@ngxs/store';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
+import { createYieldToUI } from '../shared/benchmark-utils';
 
 // Type definitions
 type ArrayItem = {
@@ -225,11 +226,7 @@ export class BenchmarkState {
 export class NgxsBenchmarkService {
   private readonly store = inject(Store);
 
-  private yieldToUI() {
-    return new Promise<void>((r) =>
-      setTimeout(r, BENCHMARK_CONSTANTS.TIMING.YIELD_DELAY_MS)
-    );
-  }
+  private yieldToUI = createYieldToUI();
 
   async runDeepNestedBenchmark(
     dataSize: number,
@@ -604,7 +601,10 @@ export class NgxsBenchmarkService {
   async runAsyncCancellationBenchmark(operations: number): Promise<number> {
     const start = performance.now();
 
-    const tasks: Array<{ cancelled: boolean; timer: number | null }> = [];
+    const tasks: Array<{
+      cancelled: boolean;
+      timer: ReturnType<typeof setTimeout> | null;
+    }> = [];
     for (let i = 0; i < operations; i++) {
       const t = setTimeout(() => {
         /* noop */
