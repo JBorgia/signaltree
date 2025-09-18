@@ -1,3 +1,5 @@
+/* eslint-disable no-useless-catch */
+/* eslint-disable no-empty */
 // Playwright-based exporter for demo app.
 // Supports MEMO_MODES (comma separated) or MEMO_MODE (single) env var to iterate memoization modes.
 // Optional environment variables:
@@ -46,11 +48,10 @@ async function clickWithRetry(
         }
       } catch (innerErr) {
         try {
-          console.debug &&
-            console.debug(
-              'clickWithRetry inner error',
-              innerErr && innerErr.message
-            );
+          console.debug(
+            'clickWithRetry inner error',
+            innerErr && innerErr.message
+          );
         } catch (e) {}
       }
       await sleep(300);
@@ -295,12 +296,38 @@ async function run() {
 
           try {
             await sleep(600);
-            const selectedScenarios = await page.evaluate(
-              () => document.querySelectorAll('.benchmark-card.selected').length
+            // Prefer selected, non-disabled scenarios. Some libraries mark
+            // unsupported scenarios as `.disabled selected` which the UI
+            // treats as not runnable. Ensure at least one runnable scenario
+            // is selected; otherwise click the first non-disabled one.
+            const selectedRunnable = await page.evaluate(
+              () =>
+                document.querySelectorAll(
+                  '.benchmark-card.selected:not(.disabled)'
+                ).length
             );
-            if (!selectedScenarios) {
-              const first = await page.$('.benchmark-card');
-              if (first) await clickWithRetry(first, 3);
+            if (!selectedRunnable) {
+              const firstRunnable = await page.$(
+                '.benchmark-card:not(.disabled)'
+              );
+              if (firstRunnable) {
+                await clickWithRetry(firstRunnable, 3);
+                // wait briefly for UI to update
+                await page
+                  .waitForFunction(
+                    () =>
+                      document.querySelectorAll(
+                        '.benchmark-card.selected:not(.disabled)'
+                      ).length > 0,
+                    { timeout: 5000 }
+                  )
+                  .catch(() => {
+                    // intentionally ignored
+                  });
+              } else {
+                // no runnable scenarios found; leave existing selections and
+                // let the run step handle the disabled state (we will capture)
+              }
             }
           } catch (e) {}
 
@@ -320,7 +347,38 @@ async function run() {
               const runEnabled = page.locator('button.btn-run:not([disabled])');
               await runEnabled.waitFor({ timeout: 120000 });
               await clickWithRetry(runEnabled.first(), 3);
-            } catch (e) {}
+            } catch (e) {
+              // If Run remains disabled, capture some debug info to help
+              // diagnose why (e.g. no runnable scenarios, UI validation)
+              try {
+                const dbg = await page.evaluate(() => {
+                  return {
+                    selectedAll: Array.from(
+                      document.querySelectorAll('.benchmark-card.selected')
+                    ).map((el) => ({
+                      text: el.innerText && el.innerText.split('\n')[0],
+                      disabled: el.classList.contains('disabled'),
+                    })),
+                    runnableCount: document.querySelectorAll(
+                      '.benchmark-card:not(.disabled)'
+                    ).length,
+                    runnableSelected: document.querySelectorAll(
+                      '.benchmark-card.selected:not(.disabled)'
+                    ).length,
+                    runBtnDisabled: !!document.querySelector(
+                      'button.btn-run[disabled]'
+                    ),
+                    helpText:
+                      document.querySelector('.controls-info p') &&
+                      document.querySelector('.controls-info p').innerText,
+                  };
+                });
+                console.warn(
+                  'Run button stayed disabled; UI state:',
+                  JSON.stringify(dbg, null, 2)
+                );
+              } catch (ee) {}
+            }
 
             try {
               await page.waitForSelector('[data-test-id="export-json"]', {
@@ -359,23 +417,86 @@ async function run() {
                     .first()
                     .waitFor({ state: 'visible', timeout: 120000 });
                   await exportBtn.first().scrollIntoViewIfNeeded();
-                  await clickWithRetry(exportBtn.first(), 5, {
-                    timeout: 10000,
-                  });
+                  // Start waiting for the download event before clicking to avoid
+                  // race conditions where the download fires too quickly.
+                  try {
+                    const dlPromise = page.waitForEvent('download', {
+                      timeout: 300000,
+                    });
+                    await clickWithRetry(exportBtn.first(), 5, {
+                      timeout: 10000,
+                    });
+                    download = await dlPromise;
+                  } catch (evt) {
+                    // fallthrough to retry logic below
+                    download = null;
+                  }
                 } else {
                   const fallback = page.locator('button.btn-export');
                   if ((await fallback.count()) > 0) {
                     await fallback
                       .first()
                       .waitFor({ state: 'visible', timeout: 120000 });
-                    await clickWithRetry(fallback.first(), 5, {
-                      timeout: 10000,
-                    });
+                    try {
+                      const dlPromise = page.waitForEvent('download', {
+                        timeout: 300000,
+                      });
+                      await clickWithRetry(fallback.first(), 5, {
+                        timeout: 10000,
+                      });
+                      download = await dlPromise;
+                    } catch (evt) {
+                      download = null;
+                    }
                   } else throw new Error('No export button found');
                 }
-                download = await page.waitForEvent('download', {
-                  timeout: 300000,
-                });
+                // If we still don't have a download, attempt a direct evaluation
+                // fallback: call the export function and return its payload.
+                if (!download) {
+                  try {
+                    const exported = await page.evaluate(() => {
+                      try {
+                        // call component exportJSON if available
+                        // eslint-disable-next-line no-undef
+                        if (window && window.ng && window.ng.probe) {
+                          // Can't reliably access Angular component; fallback to
+                        }
+                        // Try to call a global helper if app exposes it
+                        // Some builds attach last results to window.__LAST_BENCHMARK_RESULTS__
+                        // Return it if present
+                        // eslint-disable-next-line no-undef
+                        return (
+                          (window.__LAST_BENCHMARK_RESULTS__ &&
+                            JSON.stringify(
+                              window.__LAST_BENCHMARK_RESULTS__
+                            )) ||
+                          null
+                        );
+                      } catch (e) {
+                        return null;
+                      }
+                    });
+                    if (exported) {
+                      // write to artifacts directly
+                      const modeSuffix =
+                        currentMemoMode && currentMemoMode.length
+                          ? `-${safeFileName(currentMemoMode)}`
+                          : '';
+                      const outName = safeFileName(
+                        `${lib}${modeSuffix}-results.json`
+                      );
+                      const outPath = path.join(artifactsDir, outName);
+                      fs.writeFileSync(outPath, exported, 'utf8');
+                      // Create a fake download object shape so downstream code can proceed
+                      download = {
+                        path: async () => outPath,
+                        text: async () => exported,
+                      };
+                    }
+                  } catch (e) {
+                    // ignore fallback failures
+                  }
+                }
                 break;
               } catch (err) {
                 try {
