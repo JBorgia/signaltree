@@ -2,7 +2,7 @@
 /*
   Measures callable Proxy overhead vs direct .set/.update for Angular signals.
 */
-const { performance } = require('perf_hooks');
+// perf_hooks.performance not used after switching to hrtime; keep require for compatibility if needed later
 
 function stats(times) {
   const n = times.length;
@@ -24,6 +24,7 @@ async function main() {
 
   const tree = signalTree({ n: 0, arr: [0] });
   const nIters = Number(process.env.ITER || 20000);
+  const BATCH = Number(process.env.BATCH || 100);
 
   // Warm-up
   for (let i = 0; i < 1000; i++) {
@@ -31,34 +32,28 @@ async function main() {
     tree.$.n((v) => v + 1);
   }
 
-  const setTimes = [];
-  for (let i = 0; i < nIters; i++) {
-    const s = performance.now();
-    tree.$.n(i);
-    setTimes.push(performance.now() - s);
+  function hrNowNs() {
+    return Number(process.hrtime.bigint()); // nanoseconds
   }
 
-  const updateTimes = [];
-  for (let i = 0; i < nIters; i++) {
-    const s = performance.now();
-    tree.$.n((v) => v + 1);
-    updateTimes.push(performance.now() - s);
+  // Helper to sample per-op ns by batching multiple ops per sample
+  function samplePerOp(fn) {
+    const times = [];
+    for (let i = 0; i < nIters; i++) {
+      const s = hrNowNs();
+      for (let j = 0; j < BATCH; j++) fn(i);
+      const dt = hrNowNs() - s;
+      times.push(dt / BATCH);
+    }
+    return times; // ns per-op
   }
+
+  const setTimes = samplePerOp(() => tree.$.n(0));
+  const updateTimes = samplePerOp(() => tree.$.n((v) => v + 1));
 
   // Direct API comparisons
-  const directSetTimes = [];
-  for (let i = 0; i < nIters; i++) {
-    const s = performance.now();
-    tree.$.n.set(i);
-    directSetTimes.push(performance.now() - s);
-  }
-
-  const directUpdateTimes = [];
-  for (let i = 0; i < nIters; i++) {
-    const s = performance.now();
-    tree.$.n.update((v) => v + 1);
-    directUpdateTimes.push(performance.now() - s);
-  }
+  const directSetTimes = samplePerOp(() => tree.$.n.set(0));
+  const directUpdateTimes = samplePerOp(() => tree.$.n.update((v) => v + 1));
 
   console.log('\nCallable Proxy Overhead (ns/op approx):');
   const st = stats(setTimes);
@@ -66,24 +61,24 @@ async function main() {
   const dst = stats(directSetTimes);
   const dut = stats(directUpdateTimes);
   console.log(
-    ` set() via call  : mean=${pad(st.mean * 1e6)} ns min=${pad(
-      st.min * 1e6
-    )} max=${pad(st.max * 1e6)}`
+    ` set() via call  : mean=${pad(st.mean)} ns min=${pad(st.min)} max=${pad(
+      st.max
+    )}`
   );
   console.log(
-    ` update() via call: mean=${pad(ut.mean * 1e6)} ns min=${pad(
-      ut.min * 1e6
-    )} max=${pad(ut.max * 1e6)}`
+    ` update() via call: mean=${pad(ut.mean)} ns min=${pad(ut.min)} max=${pad(
+      ut.max
+    )}`
   );
   console.log(
-    ` set() direct     : mean=${pad(dst.mean * 1e6)} ns min=${pad(
-      dst.min * 1e6
-    )} max=${pad(dst.max * 1e6)}`
+    ` set() direct     : mean=${pad(dst.mean)} ns min=${pad(dst.min)} max=${pad(
+      dst.max
+    )}`
   );
   console.log(
-    ` update() direct  : mean=${pad(dut.mean * 1e6)} ns min=${pad(
-      dut.min * 1e6
-    )} max=${pad(dut.max * 1e6)}`
+    ` update() direct  : mean=${pad(dut.mean)} ns min=${pad(dut.min)} max=${pad(
+      dut.max
+    )}`
   );
   const setOver = st.mean && dst.mean ? (st.mean / dst.mean - 1) * 100 : null;
   const updOver = ut.mean && dut.mean ? (ut.mean / dut.mean - 1) * 100 : null;
