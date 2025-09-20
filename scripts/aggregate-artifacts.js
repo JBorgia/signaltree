@@ -31,6 +31,14 @@ function analyzeSamples(samples) {
   const stddev = Math.sqrt(variance);
   const sorted = samples.slice().sort((a, b) => a - b);
   const median = sorted[Math.floor(n / 2)];
+  // Compute median/p95 on non-zero samples when many zeros are present to avoid
+  // reporting misleading 0 medians caused by timer quantization.
+  const nonZero = samples.filter((x) => x !== 0);
+  let medianNonZero = null;
+  if (nonZero.length) {
+    const s2 = nonZero.slice().sort((a, b) => a - b);
+    medianNonZero = s2[Math.floor(s2.length / 2)];
+  }
   const manyZeros = zeros / n >= 0.25; // heuristic
   const quantized = maxSame / n >= 0.35 && median < 0.5; // many identical low values
   const relStd = median ? stddev / Math.max(1e-12, median) : null;
@@ -42,7 +50,8 @@ function analyzeSamples(samples) {
     quantized,
     maxSame,
     stddev,
-    median,
+    median: medianNonZero !== null && manyZeros ? medianNonZero : median,
+    medianNonZero: medianNonZero,
     relStd,
     highVariance,
   };
