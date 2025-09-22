@@ -474,6 +474,59 @@ function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
     return computed(() => fn(tree()));
   };
 
+  // Memoization helper stubs (overridden by withMemoization)
+  (
+    tree as unknown as {
+      memoizedUpdate: (
+        updater: (current: T) => Partial<T>,
+        cacheKey?: string
+      ) => void;
+      clearMemoCache: (key?: string) => void;
+      getCacheStats: () => {
+        size: number;
+        hitRate: number;
+        totalHits: number;
+        totalMisses: number;
+        keys: string[];
+      };
+    }
+  ).memoizedUpdate = (updater: (current: T) => Partial<T>): void => {
+    if (config.debugMode) {
+      console.warn(SIGNAL_TREE_MESSAGES.MEMOIZE_NOT_ENABLED);
+    }
+    // Fallback: apply the update without caching
+    tree((current: T) => ({ ...current, ...updater(current) }));
+  };
+
+  (
+    tree as unknown as { clearMemoCache: (key?: string) => void }
+  ).clearMemoCache = () => {
+    if (config.debugMode) {
+      console.warn(SIGNAL_TREE_MESSAGES.MEMOIZE_NOT_ENABLED);
+    }
+    // no-op
+  };
+
+  (
+    tree as unknown as {
+      getCacheStats: () => {
+        size: number;
+        hitRate: number;
+        totalHits: number;
+        totalMisses: number;
+        keys: string[];
+      };
+    }
+  ).getCacheStats = () => ({
+    size: 0,
+    hitRate: 0,
+    totalHits: 0,
+    totalMisses: 0,
+    keys: [],
+  });
+
+  // Memoization helper methods are only present when withMemoization is applied
+
   tree.effect = (fn: (tree: T) => void) => {
     try {
       effect(() => fn(tree()));

@@ -72,17 +72,10 @@ tree.$.user.name.set('John'); // Does NOT invalidate 'cart-total' ✅
 
 ```typescript
 // Clear specific cache entries
-tree.clearCache('filtered-users');
+tree.clearMemoCache('filtered-users');
 
 // Clear all caches
-tree.clearCache();
-
-// Pattern-based invalidation (glob patterns)
-tree.invalidatePattern('user.*'); // Clears all user-related caches
-tree.invalidatePattern('cart*'); // Clears all cart-related caches
-
-// Smart optimization (removes least frequently used)
-tree.optimize();
+tree.clearMemoCache();
 ```
 
 ## Configuration options
@@ -251,9 +244,9 @@ const tree = signalTree(state).with(
 // Monitor cache performance over time
 setInterval(() => {
   const stats = tree.getCacheStats();
-  if (stats.hitRatio < 0.7) {
-    console.warn('Low cache hit ratio:', stats.hitRatio);
-    tree.optimize(); // Clean up least used entries
+  if (stats.hitRate < 0.7) {
+    console.warn('Low cache hit rate:', stats.hitRate);
+    // Consider reducing cache size or changing equality strategy
   }
 }, 30000);
 ```

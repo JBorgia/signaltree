@@ -298,7 +298,7 @@ const appTree = signalTree<AppState>({
     cache: {},
   },
 }).with(
-  withDevtools({
+  withDevTools({
     name: 'Social Media App',
     maxHistorySize: 200,
     logLevel: 'detailed',
