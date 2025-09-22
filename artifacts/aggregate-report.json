@@ -1,31 +1,21 @@
 {
-  "generated": "2025-09-18T17:35:04.738Z",
+  "generatedAt": "2025-09-20T16:19:24.888Z",
   "scenarios": {
     "deep-nested": {
-      "full": {
-        "n": 2100,
-        "p50": 4.199999928474426,
-        "mean": 3.2925714294683366
-      },
-      "light": {
-        "n": 1900,
-        "p50": 4.100000023841858,
-        "mean": 3.221526318223853
-      },
-      "off": {
-        "n": 1900,
-        "p50": 4.200000047683716,
-        "mean": 3.2989473689857283
-      },
-      "comparison": {
-        "left": "light",
-        "right": "full",
-        "n1": 1900,
-        "n2": 2100,
-        "p": 0.3312614468140014,
-        "z": -0.9715761561691518,
-        "delta": -0.017763157894736842,
-        "magnitude": "negligible"
+      "scenario": "deep-nested",
+      "libraries": {
+        "SignalTree": {
+          "median": 0.10000002384185791,
+          "p95": 0.20000004768371582,
+          "opsPerSecond": 10000,
+          "sampleCount": 100,
+          "zeros": 33,
+          "manyZeros": true,
+          "quantized": true,
+          "stdDev": 0.0672011913739034,
+          "relStd": 0.6720117535189466,
+          "highVariance": false
+        }
       }
     }
   }
