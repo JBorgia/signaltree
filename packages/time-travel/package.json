@@ -3,7 +3,7 @@
   "version": "3.0.0",
   "description": "Undo/redo functionality for SignalTree. State history management with snapshots, branching support, and patch-based storage for 95% memory reduction.",
   "peerDependencies": {
-    "@signaltree/core": "2.0.5"
+    "@signaltree/core": "^3.0.0"
   },
   "sideEffects": false
 }
