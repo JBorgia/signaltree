@@ -77,7 +77,7 @@
     "dev:check": "npm run test:core && npm run lint:core",
     "dev:callable-syntax": "npm run build:callable-syntax && npm run test:callable-syntax",
     "clean": "nx reset && rm -rf dist node_modules/.cache",
-    "clean:build": "npm run clean && npm install && npm run build:all",
+    "clean:build": "npm run clean && pnpm install && npm run build:all",
     "// Publishing & Release": "Streamlined publishing workflows",
     "prepublish": "node scripts/ci-checks.js --jsdoc --sizes && npm run quality:check && npm run build:production",
     "publish:packages": "npm run prepublish && nx run-many -t build --configuration=production",
