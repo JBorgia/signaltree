@@ -233,35 +233,37 @@ export class TimeTravelDemoComponent {
 
   // Time travel methods
   undo() {
-    return this.store.__timeTravel?.undo() || false;
+    this.store.undo();
+    return true;
   }
 
   redo() {
-    return this.store.__timeTravel?.redo() || false;
+    this.store.redo();
+    return true;
   }
 
   canUndo() {
-    return this.store.__timeTravel?.canUndo() || false;
+    return this.store.canUndo?.() || false;
   }
 
   canRedo() {
-    return this.store.__timeTravel?.canRedo() || false;
+    return this.store.canRedo?.() || false;
   }
 
   resetHistory() {
-    this.store.__timeTravel?.resetHistory();
+    this.store.resetHistory();
   }
 
   getCurrentIndex() {
-    return this.store.__timeTravel?.getCurrentIndex() || 0;
+    return this.store.getCurrentIndex?.() || 0;
   }
 
   getHistory() {
-    return this.store.__timeTravel?.getHistory() || [];
+    return this.store.getHistory();
   }
 
   jumpTo(index: number) {
-    this.store.__timeTravel?.jumpTo(index);
+    this.store.jumpTo?.(index);
   }
 
   getHistoryItemClass(index: number): string {

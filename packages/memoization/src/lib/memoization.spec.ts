@@ -1,12 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { signalTree } from '@signaltree/core';
+
 import {
-  withMemoization,
-  enableMemoization,
-  withHighPerformanceMemoization,
-  memoize,
   clearAllCaches,
+  enableMemoization,
   getGlobalCacheStats,
+  memoize,
+  withHighPerformanceMemoization,
+  withMemoization,
 } from './memoization';
 
 describe('Memoization', () => {
@@ -121,15 +122,29 @@ describe('Memoization', () => {
     expect(stats?.size).toBe(100);
   });
 
-  it('should disable memoization when enabled is false', () => {
-    const tree = signalTree({ count: 0 }).with(
+  it('should not cache when enabled is false (stubs remain)', () => {
+    const tree = signalTree({ count: 0, computed: 0 }).with(
       withMemoization({ enabled: false })
     );
 
-    // Should not have memoization methods
-    expect(tree.memoizedUpdate).toBeUndefined();
-    expect(tree.clearMemoCache).toBeUndefined();
-    expect(tree.getCacheStats).toBeUndefined();
+    // Methods still exist via core stubs (DX contract), but no caching occurs
+    expect(typeof tree.memoizedUpdate).toBe('function');
+    expect(typeof tree.clearMemoCache).toBe('function');
+    expect(typeof tree.getCacheStats).toBe('function');
+
+    let calls = 0;
+    const expensive = (x: number) => {
+      calls++;
+      return x * 2;
+    };
+
+    tree.memoizedUpdate?.((s) => ({ computed: expensive(s.count) }), 'k1');
+    tree.memoizedUpdate?.((s) => ({ computed: expensive(s.count) }), 'k1');
+
+    // Without memoization enabled, we applied updates directly but didn't cache
+    expect(calls).toBe(2);
+    const stats = tree.getCacheStats?.();
+    expect(stats?.size).toBe(0);
   });
 
   it('should enforce cache size limits', () => {

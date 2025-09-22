@@ -36,16 +36,18 @@ const users = tree.entities<User>('users');
 
 // Enhanced entity operations
 users.add({ id: '1', name: 'John', email: 'john@example.com' });
-users.addMany([user1, user2, user3]); // Bulk operations
-users.updateMany([
+// Add many (recipe)
+[user1, user2, user3].forEach((u) => users.add(u));
+
+// Update many (recipe)
+[
   { id: '1', changes: { name: 'John Doe' } },
   { id: '2', changes: { email: 'new@email.com' } },
-]);
+].forEach(({ id, changes }) => users.update(id, changes));
 
 // Advanced querying
 const activeUsers = users.selectBy((user) => user.active);
-const sortedUsers = users.selectBy((user) => user, { sortBy: 'name' });
-const paginatedUsers = users.selectPaginated(1, 10);
+// For sorting and pagination, see recipes below.
 ```
 
 ## Enhanced features
@@ -64,45 +66,40 @@ const activeTodos = todos.selectBy((todo) => !todo.completed);
 const highPriorityTodos = todos.selectBy((todo) => todo.priority === 'high');
 const searchResults = todos.selectBy((todo) => todo.title.toLowerCase().includes(searchQuery.toLowerCase()));
 
-// Sorting
-const sortedByDate = todos.selectBy((todo) => todo, {
-  sortBy: 'createdAt',
-  sortDirection: 'desc',
-});
+// Sorting (via computed + Array.sort)
+const sortedByDate = computed(() => [...todos.selectAll()()].sort((a, b) => (b.createdAt?.getTime?.() ?? 0) - (a.createdAt?.getTime?.() ?? 0)));
 
-const sortedByPriority = todos.selectBy((todo) => todo, {
-  sortBy: (todo) => (todo.priority === 'high' ? 0 : todo.priority === 'medium' ? 1 : 2),
-});
+const sortedByPriority = computed(() => [...todos.selectAll()()].sort((a, b) => (a.priority === 'high' ? 0 : a.priority === 'medium' ? 1 : 2) - (b.priority === 'high' ? 0 : b.priority === 'medium' ? 1 : 2)));
 
-// Pagination
-const page1 = todos.selectPaginated(1, 10); // Page 1, 10 items per page
-const page2 = todos.selectPaginated(2, 10); // Page 2, 10 items per page
+// Pagination (via computed + slice)
+const page1 = computed(() => todos.selectAll()().slice(0, 10));
+const page2 = computed(() => todos.selectAll()().slice(10, 20));
 ```
 
 ### Bulk Operations
 
 ```typescript
 // Add multiple entities efficiently
-users.addMany([
+[
   { id: '1', name: 'Alice', role: 'admin' },
   { id: '2', name: 'Bob', role: 'user' },
   { id: '3', name: 'Carol', role: 'user' },
-]);
+].forEach(users.add);
 
 // Update multiple entities
-users.updateMany([
+[
   { id: '1', changes: { lastLogin: new Date() } },
   { id: '2', changes: { lastLogin: new Date() } },
-]);
+].forEach(({ id, changes }) => users.update(id, changes));
 
 // Remove multiple entities
-users.removeMany(['1', '2', '3']);
+['1', '2', '3'].forEach(users.remove);
 
 // Upsert multiple (add or update)
-users.upsertMany([
+[
   { id: '1', name: 'Alice Updated', role: 'admin' },
   { id: '4', name: 'David', role: 'user' }, // New user
-]);
+].forEach(users.upsert);
 ```
 
 ### Duplicate Prevention
@@ -128,21 +125,22 @@ console.log(wasAdded); // true if added, false if already exists
 
 ```typescript
 // Select with computed properties
-const usersWithComputedProps = users.selectAll((user) => ({
-  ...user,
-  displayName: `${user.firstName} ${user.lastName}`,
-  isAdmin: user.role === 'admin',
-}));
+const usersWithComputedProps = computed(() =>
+  users
+    .selectAll()()
+    .map((user) => ({
+      ...user,
+      displayName: `${user.firstName} ${user.lastName}`,
+      isAdmin: user.role === 'admin',
+    }))
+);
 
 // Select IDs only
 const userIds = users.selectIds();
 
-// Select specific fields
-const userNames = users.selectFields(['id', 'name']);
-
 // Count with conditions
-const adminCount = users.count((user) => user.role === 'admin');
-const totalCount = users.count();
+const adminCount = computed(() => users.selectBy((user) => user.role === 'admin')().length);
+const totalCount = users.selectTotal();
 ```
 
 ## 🔧 Enhanced Configuration
@@ -152,10 +150,9 @@ const tree = signalTree({
   products: [] as Product[],
 }).with(
   withEntities({
-    enableDuplicateDetection: true,
-    enableOptimisticUpdates: true,
-    enableBulkOperations: true,
-    defaultSortDirection: 'asc' as 'asc' | 'desc',
+    enabled: true,
+    validateIds: true,
+    trackChanges: true,
   })
 );
 ```
@@ -211,10 +208,10 @@ const filteredUsers = computed(() => {
 
 // Paginated view
 const paginatedUsers = computed(() => {
-  const pagination = userTree.$.pagination();
+  const { page, pageSize } = userTree.$.pagination();
   const filtered = filteredUsers();
-
-  return users.paginate(filtered, pagination.page, pagination.pageSize);
+  const start = (page - 1) * pageSize;
+  return filtered.slice(start, start + pageSize);
 });
 
 // Component usage

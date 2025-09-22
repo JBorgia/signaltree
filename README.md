@@ -681,13 +681,13 @@ const tree = signalTree({
 tree.$.document.content('New content...');
 tree.$.document.title('My Document');
 
-// User wants to undo
+// User wants to undo/redo
 tree.undo(); // Reverts last change
 tree.redo(); // Re-applies change
 
 // Access history
 const history = tree.getHistory();
-tree.goToSnapshot(history[5]); // Jump to specific point
+tree.jumpTo(5); // Jump to specific point (by index)
 ```
 
 ### 🛠️ **@signaltree/devtools** - Development & Debugging
@@ -766,33 +766,27 @@ _Use when: Angular reactive forms, form validation, form state management_
 - Form state persistence and auto-save
 
 ```typescript
-import { withNgForms } from '@signaltree/ng-forms';
+import { createFormTree, validators } from '@signaltree/ng-forms';
 
-const tree = signalTree({
-  form: {
-    user: { name: '', email: '', age: 0 },
-    validation: { errors: {}, touched: {}, dirty: false }
+// Create a form tree directly (no enhancer required)
+const formTree = createFormTree(
+  { name: '', email: '', age: 0 },
+  {
+    validators: {
+      name: validators.minLength(2),
+      email: validators.email(),
+      age: (v) => (Number(v) < 18 ? 'Must be 18+' : null),
+    },
   }
-}).with(withNgForms());
+);
 
-// Automatic form binding and validation
-const formTree = tree.createForm('user', {
-  validators: {
-    name: [Validators.required, Validators.minLength(2)],
-    email: [Validators.required, Validators.email],
-    age: [Validators.min(18)]
-  }
-});
-
-// Use in Angular component
+// Use in Angular component as signals
 @Component({
   template: `
-    <form [formGroup]="formTree.formGroup">
-      <input formControlName="name" />
-      <input formControlName="email" />
-      <input formControlName="age" type="number" />
-    </form>
-  `
+    <input signalTreeSignalValue [signal]="formTree.$.name" />
+    <input signalTreeSignalValue [signal]="formTree.$.email" />
+    <input signalTreeSignalValue [signal]="formTree.$.age" type="number" />
+  `,
 })
 ```
 
@@ -1599,11 +1593,14 @@ const todos = todoTree.entities<Todo>('todos');
 // Advanced entity operations
 const activeTodos = todos.selectBy((todo) => !todo.done); // Advanced filtering
 const sortedTodos = todos.selectBy((todo) => todo, { sortBy: 'createdAt' }); // Sorting
-const paginatedTodos = todos.selectPaginated(1, 10); // Pagination
+// Pagination example
+// See Entities README for a pagination recipe using selectAll() + slice()
+// const page1 = computed(() => todos.selectAll()().slice(0, 10));
 
 // Bulk operations
-todos.addMany([todo1, todo2, todo3]);
-todos.updateMany([{ id: '1', changes: { done: true } }]);
+// Use loops or batchUpdate() to add/update multiple items
+// [todo1, todo2, todo3].forEach(t => todos.add(t));
+// ids.forEach(id => todos.update(id, { done: true }));
 
 // Component unchanged - same template
 ```
@@ -2330,10 +2327,10 @@ const tree = signalTree(data).with(withMemoization());
 const expensiveComputation = tree.memoize((state) => heavyCalculation(state.data), 'cache-key');
 
 // Cache management
-tree.clearCache('specific-key');
-tree.clearCache(); // Clear all
-tree.invalidatePattern('user.*'); // Glob patterns
-tree.optimize(); // Selective cleanup
+tree.clearMemoCache('specific-key');
+tree.clearMemoCache(); // Clear all
+// For cache metrics:
+// const stats = tree.getCacheStats();
 ```
 
 ### Time Travel Package (@signaltree/time-travel)
@@ -2400,10 +2397,10 @@ const prodConfig = createPresetConfig('production', {
   treeName: 'MyApp'
 });
 
-// Apply via composition (requires installing preset packages)
-const tree = signalTree(data).with(
-  ...applyPreset('development')
-);
+// Apply via composition (dev preset helper)
+import { createDevTree } from '@signaltree/presets';
+const { enhancer } = createDevTree({ treeName: 'MyApp' });
+const tree = signalTree(data).with(enhancer);
 
 ### Async Operations
 
@@ -2418,16 +2415,12 @@ const loadData = tree.asyncAction(async (params) => await api.getData(params), {
 ### Time Travel
 
 ```typescript
-const tree = signalTree(data); // No config needed!
+const tree = signalTree(data).with(withTimeTravel());
 
-// Time travel auto-enables on first use
-tree.undo(); // ✅ Auto-enabled!
+tree.undo();
 tree.redo();
 const history = tree.getHistory();
 tree.resetHistory();
-
-// Or explicit control
-const devTree = signalTree(data, { enableTimeTravel: true });
 ```
 
 ## 📖 Real-World Examples
@@ -2617,7 +2610,8 @@ appTree.jumpTo(0); // count: 0
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withBatching, withMemoization } from '@signaltree/batching';
+import { withBatching } from '@signaltree/batching';
+import { withMemoization } from '@signaltree/memoization';
 
 const optimizedTree = signalTree({
   users: [] as User[],
@@ -2638,10 +2632,11 @@ optimizedTree.batchUpdate((state) => ({
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withLogging, withPersistence } from '@signaltree/middleware';
+import { withMiddleware, createLoggingMiddleware } from '@signaltree/middleware';
+import { withPersistence } from '@signaltree/serialization';
 
 const appTree = signalTree({ theme: 'dark', user: null }).with(
-  withLogging({ logLevel: 'debug' }),
+  withMiddleware([createLoggingMiddleware('AppState')]),
   withPersistence({
     key: 'app-state',
     storage: localStorage,

@@ -495,12 +495,12 @@ SignalTree Core provides the foundation, but its real power comes from composabl
 ```typescript
 import { signalTree } from '@signaltree/core';
 import { withBatching } from '@signaltree/batching';
-import { withDevtools } from '@signaltree/devtools';
+import { withDevTools } from '@signaltree/devtools';
 
 // Apply enhancers in order
 const tree = signalTree({ count: 0 }).with(
   withBatching(), // Performance optimization
-  withDevtools() // Development tools
+  withDevTools() // Development tools
 );
 ```
 
@@ -569,7 +569,7 @@ Enhancers can declare metadata for automatic dependency resolution:
 ```typescript
 // Enhancers are automatically ordered based on requirements
 const tree = signalTree(state).with(
-  withDevtools(), // Requires: core, provides: debugging
+  withDevTools(), // Requires: core, provides: debugging
   withBatching(), // Requires: core, provides: batching
   withMemoization() // Requires: batching, provides: caching
 );
@@ -835,7 +835,7 @@ import { withBatching } from '@signaltree/batching';
 import { withEntities } from '@signaltree/entities';
 import { withSerialization } from '@signaltree/serialization';
 import { withTimeTravel } from '@signaltree/time-travel';
-import { withDevtools } from '@signaltree/devtools';
+import { withDevTools } from '@signaltree/devtools';
 
 // Full development stack (example)
 const tree = signalTree({
@@ -857,7 +857,7 @@ const tree = signalTree({
     // Undo/redo
     maxHistory: 50,
   }),
-  withDevtools({
+  withDevTools({
     // Debug tools (dev only)
     name: 'MyApp',
     trace: true,
@@ -899,7 +899,7 @@ const tree = signalTree(initialState).with(
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withDevtools } from '@signaltree/devtools';
+import { withDevTools } from '@signaltree/devtools';
 import { withTimeTravel } from '@signaltree/time-travel';
 
 const isDevelopment = process.env['NODE_ENV'] === 'development';
@@ -911,7 +911,7 @@ const tree = signalTree(state).with(
   ...(isDevelopment
     ? [
         // Development-only features
-        withDevtools(),
+        withDevTools(),
         withTimeTravel(),
       ]
     : [])

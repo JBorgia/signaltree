@@ -721,7 +721,7 @@ Perfect for:
 ```typescript
 import { signalTree } from '@signaltree/core';
 import { withTimeTravel } from '@signaltree/time-travel';
-import { withDevtools } from '@signaltree/devtools';
+import { withDevTools } from '@signaltree/devtools';
 // withAsync removed — async handling now via middleware helpers
 
 const tree = signalTree(state).with(

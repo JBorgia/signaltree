@@ -293,6 +293,16 @@ export type SignalTree<T> = NodeAccessor<T> & {
   batch(updater: (tree: T) => void): void;
   batchUpdate(updater: (current: T) => Partial<T>): void;
   memoize<R>(fn: (tree: T) => R, cacheKey?: string): Signal<R>;
+  // Memoization helpers (stubs in core; real impl by withMemoization)
+  memoizedUpdate(updater: (current: T) => Partial<T>, cacheKey?: string): void;
+  clearMemoCache(key?: string): void;
+  getCacheStats(): {
+    size: number;
+    hitRate: number;
+    totalHits: number;
+    totalMisses: number;
+    keys: string[];
+  };
 
   /** Performance methods */
   optimize(): void;
@@ -320,6 +330,11 @@ export type SignalTree<T> = NodeAccessor<T> & {
   redo(): void;
   getHistory(): TimeTravelEntry<T>[];
   resetHistory(): void;
+  // Optional convenience helpers provided by time-travel enhancer
+  jumpTo?: (index: number) => void;
+  canUndo?: () => boolean;
+  canRedo?: () => boolean;
+  getCurrentIndex?: () => number;
 
   /** Index signature for enhancer compatibility */
   [key: string]: unknown;

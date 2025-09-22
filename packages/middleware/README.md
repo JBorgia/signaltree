@@ -95,8 +95,9 @@ const tree = signalTree(state).with(
 ### Runtime Middleware Management
 
 ```typescript
-// Add middleware at runtime
-tree.addMiddleware('audit', {
+// Add a tap (middleware) at runtime
+tree.addTap({
+  id: 'audit',
   before: (path, value) => {
     auditLog.record('BEFORE_UPDATE', { path, value, timestamp: Date.now() });
     return true;
@@ -106,11 +107,11 @@ tree.addMiddleware('audit', {
   },
 });
 
-// Remove middleware
-tree.removeMiddleware('audit');
+// Remove a tap
+tree.removeTap('audit');
 
-// Replace middleware
-tree.addMiddleware('logging', newLoggingMiddleware); // Replaces existing
+// Replace a tap by re-adding with the same id
+tree.addTap({ id: 'logging', ...newLoggingMiddleware }); // Replaces existing by id
 ```
 
 ## Middleware API
