@@ -518,21 +518,21 @@ export class UserFormComponent {
     const bundleMetrics = [
       {
         scenario: 'Minimal Setup',
-        signalTree: '7.2KB',
+        signalTree: '7.3KB',
         ngrx: '52KB',
         akita: '28KB',
         treeshaking: '100%',
       },
       {
         scenario: 'With Batching',
-        signalTree: '8.2KB',
+        signalTree: '8.6KB', // Core 7.3KB + Batching 1.3KB
         ngrx: '52KB (no built-in)',
         akita: '28KB (manual)',
         treeshaking: '100%',
       },
       {
         scenario: 'Full Featured',
-        signalTree: '25.3KB',
+        signalTree: '27.0KB', // Updated to actual measured total
         ngrx: '85KB+',
         akita: '35KB',
         treeshaking: '100%',
