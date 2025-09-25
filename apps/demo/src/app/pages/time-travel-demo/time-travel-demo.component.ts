@@ -182,16 +182,11 @@ interface TimeTravelState {
 export class TimeTravelDemoComponent {
   newTodoText = '';
 
-  private store = signalTree<TimeTravelState>(
-    {
-      counter: 0,
-      todos: [],
-      message: '',
-    },
-    {
-      treeName: 'TimeTravelDemo',
-    }
-  ).with(withTimeTravel());
+  private store = signalTree<TimeTravelState>({
+    counter: 0,
+    todos: [],
+    message: '',
+  }).with(withTimeTravel({}));
 
   // Computed properties
   counter = this.store.state.counter;

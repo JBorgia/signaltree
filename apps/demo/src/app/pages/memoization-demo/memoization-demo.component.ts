@@ -2,7 +2,11 @@ import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree } from '@signaltree/core';
-import { memoizeReference, memoizeShallow } from '@signaltree/memoization';
+import {
+  memoizeReference,
+  memoizeShallow,
+  withMemoization,
+} from '@signaltree/memoization';
 
 interface MemoState {
   numbers: number[];
@@ -154,21 +158,15 @@ export class MemoizationDemoComponent {
   selectedStrategy: 'deep' | 'shallow' | 'reference' = 'deep';
   performanceResults: { strategy: string; duration: number }[] = [];
 
-  private store = signalTree<MemoState>(
-    {
-      numbers: Array.from({ length: 100 }, () =>
-        Math.floor(Math.random() * 1000)
-      ),
-      multiplier: 2,
-      searchTerm: '',
-      computeCount: 0,
-      strategy: 'deep',
-    },
-    {
-      useMemoization: true,
-      treeName: 'MemoizationDemo',
-    }
-  );
+  private store = signalTree<MemoState>({
+    numbers: Array.from({ length: 100 }, () =>
+      Math.floor(Math.random() * 1000)
+    ),
+    multiplier: 2,
+    searchTerm: '',
+    computeCount: 0,
+    strategy: 'deep',
+  }).with(withMemoization());
 
   // Current memoization functions based on strategy
   private filterFunction = memoizeShallow((numbers: number[], term: string) => {
