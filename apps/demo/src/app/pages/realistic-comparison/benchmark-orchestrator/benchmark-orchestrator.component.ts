@@ -1,5 +1,14 @@
 import { CommonModule, NgFor, NgIf } from '@angular/common';
-import { Component, computed, effect, ElementRef, inject, OnDestroy, signal, ViewChild } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  inject,
+  OnDestroy,
+  signal,
+  ViewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { Subject } from 'rxjs';
@@ -301,7 +310,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       color: '#3b82f6',
       selected: true,
       stats: {
-        bundleSize: '7.2KB',
+        bundleSize: '7.3KB', // Updated to match actual core bundle size
         githubStars: 2800,
       },
     },
