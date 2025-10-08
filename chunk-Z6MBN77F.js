@@ -20,4 +20,4 @@ import{a as H}from"./chunk-MORA62GP.js";import{a as b,b as oe}from"./chunk-X4WEG
       \u2022 Significant: ${e.isStatisticallySignificant}
       \u2022 Effect Size: ${e.effectSizeInterpretation}
       \u2022 Conclusion: ${e.conclusion}`),console.log(`
-\u{1F389} Enhanced Benchmark Demonstration Complete!`)})}static \u0275fac=function(r){return new(r||l)};static \u0275prov=ae({token:l,factory:l.\u0275fac,providedIn:"root"})};export{G as a,ue as b};
+\u{1F389} Enhanced Benchmark Demonstration Complete!`)})}static \u0275fac=function(r){return new(r||l)};static \u0275prov=ae({token:l,factory:l.\u0275fac,providedIn:"root"})};export{ue as a};
