@@ -84,59 +84,8 @@ export class BenchmarkState {
     return state.deepNested;
   }
 
-  // --- Middleware Benchmarks (NGXS - plugin simulation) ---
-  async runSingleMiddlewareBenchmark(operations: number): Promise<number> {
-    const start = performance.now();
-
-    const plugin = (ctx: string, payload?: unknown) => {
-      void ctx;
-      void payload;
-      let acc = 0;
-      for (let i = 0; i < 10; i++) acc += i;
-      return acc > -1;
-    };
-
-    for (let i = 0; i < operations; i++) plugin('noop', i);
-
-    return performance.now() - start;
-  }
-
-  async runMultipleMiddlewareBenchmark(
-    middlewareCount: number,
-    operations: number
-  ): Promise<number> {
-    const start = performance.now();
-
-    const plugins = Array.from({ length: middlewareCount }, () => {
-      return (ctx: string, payload?: unknown) => {
-        void ctx;
-        void payload;
-        let s = 0;
-        for (let i = 0; i < 20; i++) s += i;
-        return s > -1;
-      };
-    });
-
-    for (let i = 0; i < operations; i++) plugins.forEach((p) => p('noop', i));
-
-    return performance.now() - start;
-  }
-
-  async runConditionalMiddlewareBenchmark(operations: number): Promise<number> {
-    const start = performance.now();
-
-    const conditional = (ctx: string, payload?: unknown) => {
-      void ctx;
-      if ((payload as number) % 2 === 0) return true;
-      let s = 0;
-      for (let i = 0; i < 30; i++) s += i;
-      return s > -1;
-    };
-
-    for (let i = 0; i < operations; i++) conditional('noop', i);
-
-    return performance.now() - start;
-  }
+  // Middleware benchmarks removed - NgXs has NgxsPlugin system but
+  // synthetic function call simulations don't represent actual plugin architecture
 
   @Selector()
   static getLargeArray(state: BenchmarkStateModel) {

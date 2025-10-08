@@ -16,54 +16,8 @@ import { createYieldToUI } from '../shared/benchmark-utils';
 export class ElfBenchmarkService {
   private yieldToUI = createYieldToUI();
 
-  // --- Middleware Benchmarks (Elf - operator/effect simulation) ---
-  async runSingleMiddlewareBenchmark(operations: number): Promise<number> {
-    const start = performance.now();
-    const op = (ctx: string, payload?: unknown) => {
-      void ctx;
-      void payload;
-      let acc = 0;
-      for (let i = 0; i < 10; i++) acc += i;
-      return acc > -1;
-    };
-
-    for (let i = 0; i < operations; i++) op('noop', i);
-    return performance.now() - start;
-  }
-
-  async runMultipleMiddlewareBenchmark(
-    middlewareCount: number,
-    operations: number
-  ): Promise<number> {
-    const start = performance.now();
-    const ops = Array.from(
-      { length: middlewareCount },
-      () => (ctx: string, payload?: unknown) => {
-        void ctx;
-        void payload;
-        let s = 0;
-        for (let i = 0; i < 20; i++) s += i;
-        return s > -1;
-      }
-    );
-
-    for (let i = 0; i < operations; i++) ops.forEach((o) => o('noop', i));
-    return performance.now() - start;
-  }
-
-  async runConditionalMiddlewareBenchmark(operations: number): Promise<number> {
-    const start = performance.now();
-    const conditional = (ctx: string, payload?: unknown) => {
-      void ctx;
-      if ((payload as number) % 2 === 0) return true;
-      let s = 0;
-      for (let i = 0; i < 30; i++) s += i;
-      return s > -1;
-    };
-
-    for (let i = 0; i < operations; i++) conditional('noop', i);
-    return performance.now() - start;
-  }
+  // Middleware benchmarks removed - Elf uses RxJS effects/operators which
+  // operate differently than SignalTree's before/after middleware hooks
 
   // --- Async Workflows (lightweight simulations) ---
   async runAsyncWorkflowBenchmark(dataSize: number): Promise<number> {
