@@ -1,6 +1,51 @@
 # Missing Benchmark Implementations - Realistic Analysis
 
-**⚠️ NOTE: This document is now outdated.** As of October 2025, synthetic middleware benchmarks have been removed from all libraries except SignalTree. See [MIDDLEWARE_CLEANUP.md](./MIDDLEWARE_CLEANUP.md) for details.
+**⚠️ NOTE: This document is now outdated.** As of October 2025, synthetic middleware benchmarks have been removed from all libraries except SignalTree. See [MIDDL| ------------------- | ---------------- | ------------- | -------------- | ------------- | ------------- |
+| **Middleware** | ✅ Meta-reducers | ✅ Plugins | ✅ Hooks | ❌ Not impl | ❌ No support |
+| **Async Workflows** | ✅ Effects | ✅ Actions | ⚠️ Limited | ⚠️ Limited | ❌ No support |
+| **Time Travel** | ⚠️ Manual only | ❌ No support | ⚠️ Plugin only | ⚠️ Addon only | ❌ No support |
+
+### **Total Feasible Implementations (Updated Oct 7, 2025):**
+
+- **NgRx Store**: 6/10 methods (3 middleware + 3 async) - **✅ BOTH RE-IMPLEMENTED**
+- **NgXs**: 6/10 methods (3 middleware + 3 async) - **✅ BOTH RE-IMPLEMENTED**
+- **Akita**: 3/10 methods (3 middleware only) - **✅ MIDDLEWARE RE-IMPLEMENTED**
+- **Elf**: 0/10 methods (no comparable implementations)
+- **NgRx Signals**: 0/10 methods (lifecycle hooks only, no async support)
+
+### **Effort Estimation (Realistic - Updated):**
+
+- **Middleware implementations**: ✅ **COMPLETED** - 4 hours (NgRx Store, NgXs, Akita using actual APIs)
+- **Async workflows**: ✅ **COMPLETED** - 3 hours (NgRx Store, NgXs using actual @ngrx/effects and Actions APIs)
+- **Time Travel**: NOT RECOMMENDED (would require massive custom implementations)
+
+**🎉 All feasible implementations are now complete!**
+
+---
+
+## 🎯 **Recommendations (Updated Oct 7, 2025)**
+
+### ✅ **Priority 1: Middleware - COMPLETED**
+
+Middleware benchmarks have been **properly implemented** for all libraries with comparable middleware/plugin systems:
+
+- Uses actual library APIs (meta-reducers, plugins, hooks)
+- Measures real middleware overhead
+- Fair comparison of different architectural approaches
+
+See [MIDDLEWARE_CLEANUP.md](./MIDDLEWARE_CLEANUP.md) for implementation details.
+
+### ✅ **Priority 2: Async Workflows - COMPLETED**
+
+Async workflow benchmarks have been **properly implemented** for libraries with Effects/Actions systems:
+
+- **NgRx Store**: Uses actual `@ngrx/effects` with Actions, ofType, mergeMap
+- **NgXs**: Uses actual Actions observable with ofActionDispatched
+- **Akita/Elf**: Remain as lightweight simulations (no effects/actions systems)
+- Measures real async overhead for applicable libraries
+- Fair comparison respecting architectural differences
+
+See [ASYNC_WORKFLOW_IMPLEMENTATIONS.md](./ASYNC_WORKFLOW_IMPLEMENTATIONS.md) for full details.E_CLEANUP.md](./MIDDLEWARE_CLEANUP.md) for details.
 
 Based on the analysis of all benchmark services and **actual library capabilities**, here's a comprehensive list of **feasible missing implementations** across the state management libraries.
 
@@ -36,7 +81,7 @@ These methods exist in all 6 services:
 
 These exist only in SignalTree. **Feasibility varies by library architecture:**
 
-#### 1. **Middleware Methods (3 missing)** ❌ REMOVED
+#### 1. **Middleware Methods (3 methods)** ✅ RE-IMPLEMENTED
 
 ```typescript
 runSingleMiddlewareBenchmark(operations: number): Promise<number>
@@ -44,19 +89,20 @@ runMultipleMiddlewareBenchmark(middlewareCount: number, operations: number): Pro
 runConditionalMiddlewareBenchmark(operations: number): Promise<number>
 ```
 
-**Status: REMOVED (Oct 2025)**
+**Status: PROPERLY IMPLEMENTED (Oct 7, 2025)**
 
-These synthetic implementations have been removed because they didn't use actual library middleware architecture. Only SignalTree retains these benchmarks as it has native `withMiddleware()` support.
+After initially being removed for using synthetic implementations, these have been **properly re-implemented** using actual library middleware/plugin APIs.
 
-**Previous Status by Library:**
+**Current Status by Library:**
 
-- ❌ **NgRx Store**: Has meta-reducers but synthetic impl removed
-- ❌ **NgXs**: Has plugin system but synthetic impl removed
-- ❌ **Akita**: Has akitaPreUpdate hooks but synthetic impl removed
-- ❌ **Elf**: Has RxJS effects/operators but synthetic impl removed
-- ❌ **NgRx Signals**: Has lifecycle hooks (NOT middleware) - synthetic impl removed
+- ✅ **SignalTree**: Native `withMiddleware()` - IMPLEMENTED
+- ✅ **NgRx Store**: Actual meta-reducers (ActionReducer) - RE-IMPLEMENTED
+- ✅ **NgXs**: Actual NgxsPlugin interface - RE-IMPLEMENTED
+- ✅ **Akita**: Actual akitaPreUpdate hooks - RE-IMPLEMENTED
+- ❌ **Elf**: RxJS effects/operators (different paradigm) - NOT IMPLEMENTED
+- ❌ **NgRx Signals**: Lifecycle hooks only, not middleware - NOT IMPLEMENTED
 
-See [MIDDLEWARE_CLEANUP.md](./MIDDLEWARE_CLEANUP.md) for full analysis.
+See [MIDDLEWARE_CLEANUP.md](./MIDDLEWARE_CLEANUP.md) for implementation details and history.
 
 #### 2. **Time Travel / History Methods (4 missing)**
 
@@ -75,7 +121,7 @@ runAllFeaturesEnabledBenchmark(dataSize: number): Promise<number>
 - ⚠️ **Elf**: History addon available (LIMITED - requires external addon)
 - ❌ **NgRx Signals**: No built-in history (NOT FEASIBLE without major custom implementation)
 
-#### 3. **Async Workflow Methods (3 missing)**
+#### 3. **Async Workflow Methods (3 methods)** ✅ PROPERLY IMPLEMENTED
 
 ```typescript
 runAsyncWorkflowBenchmark(dataSize: number): Promise<number>
@@ -83,13 +129,20 @@ runConcurrentAsyncBenchmark(concurrency: number): Promise<number>
 runAsyncCancellationBenchmark(operations: number): Promise<number>
 ```
 
-**Status by Library:**
+**Status: PROPERLY IMPLEMENTED (Oct 7, 2025)**
 
-- ✅ **NgRx Store**: Effects system (FEASIBLE)
-- ✅ **NgXs**: Actions/effects (FEASIBLE)
-- ⚠️ **Akita**: Limited async patterns (PARTIALLY FEASIBLE)
-- ⚠️ **Elf**: Observable effects (PARTIALLY FEASIBLE)
-- ❌ **NgRx Signals**: No async primitives (NOT FEASIBLE without major custom implementation)
+After using synthetic `setTimeout` implementations, these have been **properly re-implemented** using actual library async APIs where available.
+
+**Current Status by Library:**
+
+- ✅ **SignalTree**: Native async capabilities - IMPLEMENTED
+- ✅ **NgRx Store**: Actual @ngrx/effects with Actions, ofType, mergeMap - RE-IMPLEMENTED
+- ✅ **NgXs**: Actual Actions observable with ofActionDispatched - RE-IMPLEMENTED
+- ⚠️ **Akita**: Lightweight simulation (no effects/actions system) - INTENTIONAL
+- ⚠️ **Elf**: Lightweight simulation (no effects/actions system) - INTENTIONAL
+- ❌ **NgRx Signals**: No async primitives - NOT IMPLEMENTED
+
+See [ASYNC_WORKFLOW_IMPLEMENTATIONS.md](./ASYNC_WORKFLOW_IMPLEMENTATIONS.md) for full implementation details and rationale.
 
 ---
 

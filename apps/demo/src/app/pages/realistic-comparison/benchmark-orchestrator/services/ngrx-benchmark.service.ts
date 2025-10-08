@@ -1,11 +1,16 @@
 import { Injectable } from '@angular/core';
+import { Actions, ofType } from '@ngrx/effects';
 import {
+  Action,
+  ActionReducer,
   createAction,
   createReducer,
   createSelector,
   on,
   props,
 } from '@ngrx/store';
+import { race, Subject, timer } from 'rxjs';
+import { map, mergeMap, switchMap, take, tap } from 'rxjs/operators';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
 import { createYieldToUI } from '../shared/benchmark-utils';
@@ -148,57 +153,267 @@ export class NgRxBenchmarkService {
 
   private yieldToUI = createYieldToUI();
 
-  // Middleware benchmarks removed - NgRx Store has meta-reducers but
-  // synthetic function call simulations don't represent actual meta-reducer architecture
+  // --- Middleware Benchmarks (NgRx Meta-Reducers) ---
 
-  // --- Async Workflows (Effects simulation) ---
-  async runAsyncWorkflowBenchmark(dataSize: number): Promise<number> {
+  async runSingleMiddlewareBenchmark(operations: number): Promise<number> {
+    // Create a simple state and action
+    interface TestState {
+      counter: number;
+      data: string;
+    }
+    const incrementAction = createAction('[Test] Increment');
+
+    const testReducer = createReducer<TestState>(
+      { counter: 0, data: 'test' },
+      on(incrementAction, (state) => ({ ...state, counter: state.counter + 1 }))
+    );
+
+    // Create a meta-reducer (NgRx's middleware)
+    const singleMetaReducer = (
+      reducer: ActionReducer<TestState>
+    ): ActionReducer<TestState> => {
+      return (state: TestState | undefined, action: Action) => {
+        // Middleware work: simple state inspection
+        if (state) {
+          const _check = state.counter > -1; // Minimal overhead check
+          void _check;
+        }
+        return reducer(state, action);
+      };
+    };
+
+    // Apply meta-reducer
+    const reducerWithMiddleware = singleMetaReducer(testReducer);
+
     const start = performance.now();
+    let currentState: TestState = { counter: 0, data: 'test' };
 
-    // Simulate async operations with microtasks and small delays
-    const promises: Promise<void>[] = [];
+    for (let i = 0; i < operations; i++) {
+      currentState = reducerWithMiddleware(currentState, incrementAction());
+    }
+
+    return performance.now() - start;
+  }
+
+  async runMultipleMiddlewareBenchmark(
+    middlewareCount: number,
+    operations: number
+  ): Promise<number> {
+    interface TestState {
+      counter: number;
+      data: string;
+    }
+    const incrementAction = createAction('[Test] Increment');
+
+    const testReducer = createReducer<TestState>(
+      { counter: 0, data: 'test' },
+      on(incrementAction, (state) => ({ ...state, counter: state.counter + 1 }))
+    );
+
+    // Create multiple meta-reducers to compose
+    const createMetaReducer = () => {
+      return (reducer: ActionReducer<TestState>): ActionReducer<TestState> => {
+        return (state: TestState | undefined, action: Action) => {
+          if (state) {
+            // Each middleware does minimal work
+            let sum = 0;
+            for (let i = 0; i < 10; i++) sum += i;
+            void sum;
+          }
+          return reducer(state, action);
+        };
+      };
+    };
+
+    // Compose multiple meta-reducers (NgRx applies them in sequence)
+    let composedReducer = testReducer;
+    for (let i = 0; i < middlewareCount; i++) {
+      composedReducer = createMetaReducer()(composedReducer);
+    }
+
+    const start = performance.now();
+    let currentState: TestState = { counter: 0, data: 'test' };
+
+    for (let i = 0; i < operations; i++) {
+      currentState = composedReducer(currentState, incrementAction());
+    }
+
+    return performance.now() - start;
+  }
+
+  async runConditionalMiddlewareBenchmark(operations: number): Promise<number> {
+    interface TestState {
+      counter: number;
+      data: string;
+    }
+    const incrementAction = createAction('[Test] Increment');
+    const otherAction = createAction('[Test] Other');
+
+    const testReducer = createReducer<TestState>(
+      { counter: 0, data: 'test' },
+      on(incrementAction, (state) => ({
+        ...state,
+        counter: state.counter + 1,
+      })),
+      on(otherAction, (state) => ({ ...state, data: 'modified' }))
+    );
+
+    // Conditional meta-reducer
+    const conditionalMetaReducer = (
+      reducer: ActionReducer<TestState>
+    ): ActionReducer<TestState> => {
+      return (state: TestState | undefined, action: Action) => {
+        // Conditional middleware logic
+        if (
+          action.type === incrementAction.type &&
+          state &&
+          state.counter % 2 === 0
+        ) {
+          // Do extra work on even counters
+          let sum = 0;
+          for (let i = 0; i < 20; i++) sum += i;
+          void sum;
+        }
+        return reducer(state, action);
+      };
+    };
+
+    const reducerWithMiddleware = conditionalMetaReducer(testReducer);
+
+    const start = performance.now();
+    let currentState: TestState = { counter: 0, data: 'test' };
+
+    for (let i = 0; i < operations; i++) {
+      const action = i % 2 === 0 ? incrementAction() : otherAction();
+      currentState = reducerWithMiddleware(currentState, action);
+    }
+
+    return performance.now() - start;
+  }
+
+  // --- Async Workflows (NgRx Effects) ---
+  async runAsyncWorkflowBenchmark(dataSize: number): Promise<number> {
+    // Create actions for async workflow
+    const triggerAsync = createAction(
+      '[Async] Trigger',
+      props<{ id: number }>()
+    );
+    const asyncComplete = createAction(
+      '[Async] Complete',
+      props<{ id: number }>()
+    );
+
+    // Create an Actions instance manually for benchmark
+    const actionsSubject = new Subject<Action>();
+    const actions$ = actionsSubject as Actions;
+
+    // Create effect using actual @ngrx/effects API
+    const asyncEffect$ = actions$.pipe(
+      ofType(triggerAsync),
+      mergeMap((action) =>
+        // Simulate async operation with timer
+        timer(0).pipe(
+          map(() => asyncComplete({ id: action.id })),
+          take(1)
+        )
+      )
+    );
+
     const ops = Math.min(
       dataSize,
       BENCHMARK_CONSTANTS.ITERATIONS.ASYNC_WORKFLOW
     );
+
+    // Track completions
+    let completedCount = 0;
+    const completionPromise = new Promise<void>((resolve) => {
+      asyncEffect$.subscribe((completionAction: Action) => {
+        if (completionAction.type === asyncComplete.type) {
+          completedCount++;
+          if (completedCount >= ops) {
+            resolve();
+          }
+        }
+      });
+    });
+
+    const start = performance.now();
+
+    // Dispatch async actions
     for (let i = 0; i < ops; i++) {
-      promises.push(
-        new Promise((res) => setTimeout(res, 0)) // yield to event loop
-      );
+      actionsSubject.next(triggerAsync({ id: i }));
     }
 
-    await Promise.all(promises);
+    await completionPromise;
 
     return performance.now() - start;
   }
 
   async runAsyncCancellationBenchmark(operations: number): Promise<number> {
+    // Create actions for cancellation workflow
+    const startTask = createAction('[Task] Start', props<{ id: number }>());
+    const cancelTask = createAction('[Task] Cancel', props<{ id: number }>());
+    const taskComplete = createAction(
+      '[Task] Complete',
+      props<{ id: number }>()
+    );
+
+    // Create Actions instance manually
+    const actionsSubject = new Subject<Action>();
+    const actions$ = actionsSubject as Actions;
+
+    // Track which tasks are cancelled
+    const cancelledIds = new Set<number>();
+
+    // Effect that handles task cancellation using takeUntil
+    const taskEffect$ = actions$.pipe(
+      ofType(startTask),
+      mergeMap((action) => {
+        const cancelSignal$ = actions$.pipe(
+          ofType(cancelTask),
+          tap((cancel) => {
+            if (cancel.id === action.id) {
+              cancelledIds.add(action.id);
+            }
+          })
+        );
+
+        return race(
+          timer(10).pipe(map(() => taskComplete({ id: action.id }))),
+          cancelSignal$.pipe(
+            take(1),
+            switchMap(() => []) // Cancel by emitting nothing
+          )
+        );
+      })
+    );
+
+    let completedCount = 0;
+    const allDonePromise = new Promise<void>((resolve) => {
+      taskEffect$.subscribe((action: Action) => {
+        if (action.type === taskComplete.type) {
+          completedCount++;
+          // We expect only half to complete (the non-cancelled ones)
+          if (completedCount + cancelledIds.size >= operations) {
+            resolve();
+          }
+        }
+      });
+    });
+
     const start = performance.now();
 
-    // Simulate launching async tasks and cancelling half of them
-    const tasks: Array<{
-      cancelled: boolean;
-      timer: ReturnType<typeof setTimeout> | null;
-    }> = [];
+    // Start all tasks
     for (let i = 0; i < operations; i++) {
-      const t = setTimeout(() => {
-        /* noop */
-      }, 10);
-      tasks.push({ cancelled: false, timer: t });
+      actionsSubject.next(startTask({ id: i }));
     }
 
-    // Cancel half
+    // Cancel half of them immediately
     for (let i = 0; i < Math.floor(operations / 2); i++) {
-      const t = tasks[i];
-      if (t.timer) {
-        clearTimeout(t.timer);
-        t.cancelled = true;
-        t.timer = null;
-      }
+      actionsSubject.next(cancelTask({ id: i }));
     }
 
-    // Wait briefly to let non-cancelled run
-    await new Promise((r) => setTimeout(r, 10));
+    await allDonePromise;
 
     return performance.now() - start;
   }

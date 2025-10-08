@@ -1,25 +1,33 @@
 # State Management Middleware Capabilities Analysis
 
-**⚠️ UPDATED (Oct 2025):** This analysis led to the removal of synthetic middleware benchmarks. See [MIDDLEWARE_CLEANUP.md](./MIDDLEWARE_CLEANUP.md).
+**✅ UPDATED (Oct 7, 2025):** Middleware benchmarks have been properly re-implemented using actual library APIs. See [MIDDLEWARE_CLEANUP.md](./MIDDLEWARE_CLEANUP.md).
 
-## Current Status: Only SignalTree Has Middleware Benchmarks ✅
+## Current Status: 4 Libraries with Middleware Benchmarks ✅
 
-The benchmarks correctly show only SignalTree has middleware support because:
+The benchmarks now properly measure middleware/plugin overhead for:
 
-1. **SignalTree** has native `withMiddleware()` with before/after state update interception
-2. **Other libraries** have different plugin/hook systems that don't directly compare to SignalTree's middleware architecture
-3. **Previous synthetic implementations** were removed because they didn't use actual library middleware APIs
+1. **SignalTree** - Native `withMiddleware()` with before/after state update interception ✅
+2. **NgRx Store** - Meta-reducers wrapping reducers for action interception ✅
+3. **NgXs** - Plugin system with `NgxsPlugin` interface for action lifecycle hooks ✅
+4. **Akita** - Store hooks with `akitaPreUpdate()` override for state transition interception ✅
 
-## Why Other Libraries Don't Have Middleware Benchmarks
+**Not Implemented:**
 
-While other libraries have plugin/hook systems, they operate differently than SignalTree's before/after middleware:
+- **Elf** - Uses RxJS effects/operators (different paradigm)
+- **NgRx SignalStore** - Lifecycle hooks only, not middleware
+
+## Implementation Approach
+
+After initially being removed, middleware benchmarks were **properly re-implemented** using actual library middleware APIs:
 
 ## What Each Library Actually Supports:
 
-### 🟢 NgRx Store - Meta-Reducers (COULD be implemented)
+### 🟢 NgRx Store - Meta-Reducers (✅ IMPLEMENTED)
+
+**Implementation Status:** Properly implemented using actual `ActionReducer<T>` wrapper pattern.
 
 ```typescript
-// NgRx Meta-Reducer (Middleware Equivalent)
+// NgRx Meta-Reducer (Middleware Equivalent) - ACTUAL IMPLEMENTATION
 const loggingMetaReducer = (reducer: ActionReducer<any>): ActionReducer<any> => {
   return (state, action) => {
     console.time(`Action: ${action.type}`);
@@ -47,7 +55,15 @@ StoreModule.forRoot(reducers, {
 });
 ```
 
-### 🟢 NgXs - Plugin System (COULD be implemented)
+**Benchmark Implementation:**
+
+- `runSingleMiddlewareBenchmark()`: Wraps reducer with single meta-reducer
+- `runMultipleMiddlewareBenchmark()`: Composes multiple meta-reducers into chain
+- `runConditionalMiddlewareBenchmark()`: Conditional logic based on action type
+
+### 🟢 NgXs - Plugin System (✅ IMPLEMENTED)
+
+**Implementation Status:** Properly implemented using actual `NgxsPlugin` interface.
 
 ```typescript
 @Injectable()
@@ -82,42 +98,51 @@ NgxsModule.forRoot([MyState], {
 });
 ```
 
-### 🟢 Akita - Store Hooks & Transaction System (COULD be implemented)
+**Benchmark Implementation:**
+
+- `runSingleMiddlewareBenchmark()`: Creates single plugin implementing `NgxsPlugin.handle()`
+- `runMultipleMiddlewareBenchmark()`: Composes array of plugins into chain
+- `runConditionalMiddlewareBenchmark()`: Conditional plugin logic based on action type
+
+### 🟢 Akita - Store Hooks (✅ IMPLEMENTED)
+
+**Implementation Status:** Properly implemented using actual `Store.akitaPreUpdate()` override.
 
 ```typescript
-// Akita Store Hooks
+// Akita Store Hooks - ACTUAL IMPLEMENTATION
 class MyStore extends Store<MyState> {
   constructor() {
     super(initialState);
+  }
 
-    // Hook into all updates
-    this.akitaPreUpdate = (previousState, nextState) => {
-      console.log('State changing:', { previousState, nextState });
-      return nextState; // Can modify or reject
-    };
+  // Hook into all updates
+  override akitaPreUpdate(previousState: MyState, nextState: MyState): MyState {
+    console.log('State changing:', { previousState, nextState });
+    return nextState; // Can modify or reject
   }
 }
 
-// Transaction middleware
-import { transaction } from '@datorama/akita';
-
 // Performance tracking
-const performanceTransaction = <T>(fn: () => T): T => {
-  const start = performance.now();
-  const result = transaction(fn);
-  const duration = performance.now() - start;
-  console.log(`Transaction took ${duration}ms`);
-  return result;
-};
-
-// Validation middleware
-const validationTransaction = <T>(validateFn: () => boolean, fn: () => T): T => {
-  if (!validateFn()) {
-    throw new Error('Validation failed');
+class PerformanceStore extends Store<MyState> {
+  override akitaPreUpdate(prev: MyState, next: MyState): MyState {
+    const start = performance.now();
+    const result = super.akitaPreUpdate(prev, next);
+    const duration = performance.now() - start;
+    if (duration > 1) {
+      console.warn(`Slow state update took ${duration}ms`);
+    }
+    return result;
   }
-  return transaction(fn);
-};
+}
 ```
+
+**Benchmark Implementation:**
+
+- `runSingleMiddlewareBenchmark()`: Single Store with `akitaPreUpdate` override
+- `runMultipleMiddlewareBenchmark()`: Simulates multiple middleware in single hook (Akita limitation)
+- `runConditionalMiddlewareBenchmark()`: Conditional logic based on state properties
+
+**Note:** Akita only supports one `akitaPreUpdate` hook per store, so multiple middleware must be simulated within a single hook implementation.
 
 ### 🟢 Elf - Effects & Operators (COULD be implemented)
 
