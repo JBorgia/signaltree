@@ -2999,7 +2999,19 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       }
     });
 
-    // Calculate weighted scores for each library
+    // First, collect all results by scenario to find max ops/sec for normalization
+    const scenarioMaxOps = new Map<string, number>();
+    results.forEach((result) => {
+      if (result.median !== -1 && result.opsPerSecond > 0) {
+        const currentMax = scenarioMaxOps.get(result.scenarioId) || 0;
+        scenarioMaxOps.set(
+          result.scenarioId,
+          Math.max(currentMax, result.opsPerSecond)
+        );
+      }
+    });
+
+    // Calculate weighted scores for each library using normalized scores
     const summaries = Array.from(libraryResults.entries()).map(
       ([libraryId, libResults]) => {
         const library = this.selectedLibraries().find(
@@ -3023,8 +3035,12 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
           );
           if (!testCase) return;
 
-          // Skip unavailable results (marked with -1)
-          if (result.median === -1 || result.opsPerSecond === -1) {
+          // Skip unavailable results (marked with -1 or 0)
+          if (
+            result.median === -1 ||
+            result.opsPerSecond === -1 ||
+            result.opsPerSecond === 0
+          ) {
             breakdown.push({
               scenarioId: result.scenarioId,
               scenarioName: testCase.name,
@@ -3034,12 +3050,16 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
               contribution: 0,
               opsPerSecond: -1,
             });
+            // Don't add to total weight - missing tests shouldn't count
             return;
           }
 
           const weight = testCase.frequencyWeight || 1.0;
-          const normalizedScore =
-            result.opsPerSecond > 0 ? result.opsPerSecond : 0;
+          const maxOps = scenarioMaxOps.get(result.scenarioId) || 1;
+
+          // Normalize to 0-100 scale based on best performance in this scenario
+          // This prevents fast operations from dominating the score
+          const normalizedScore = (result.opsPerSecond / maxOps) * 100;
           const contribution = normalizedScore * weight;
 
           totalWeightedScore += contribution;
@@ -3050,7 +3070,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             scenarioName: testCase.name,
             weight,
             median: result.median,
-            weightedScore: contribution,
+            weightedScore: normalizedScore, // Show normalized score in breakdown
             contribution,
             opsPerSecond: result.opsPerSecond,
           });
