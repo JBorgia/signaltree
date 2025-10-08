@@ -1,5 +1,11 @@
 import { Injectable } from '@angular/core';
-import { EntityState, EntityStore, ID, StoreConfig } from '@datorama/akita';
+import {
+  EntityState,
+  EntityStore,
+  ID,
+  Store,
+  StoreConfig,
+} from '@datorama/akita';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
 import { createYieldToUI } from '../shared/benchmark-utils';
@@ -10,8 +16,124 @@ export class AkitaBenchmarkService {
   // Akita is entity-centric; we will use plain objects for nested/other cases
   private yieldToUI = createYieldToUI();
 
-  // Middleware benchmarks removed - Akita akitaPreUpdate hooks exist but
-  // synthetic function call simulations don't represent actual middleware architecture
+  // --- Middleware Benchmarks (Akita akitaPreUpdate Hooks) ---
+
+  async runSingleMiddlewareBenchmark(operations: number): Promise<number> {
+    // Create a store with akitaPreUpdate hook (Akita's middleware)
+    interface TestState {
+      counter: number;
+      data: string;
+    }
+
+    class SingleMiddlewareStore extends Store<TestState> {
+      constructor() {
+        super({ counter: 0, data: 'test' });
+      }
+
+      override akitaPreUpdate(
+        previousState: TestState,
+        nextState: TestState
+      ): TestState {
+        // Middleware work: simple state inspection
+        const _check = nextState.counter > -1;
+        void _check;
+        return nextState;
+      }
+    }
+
+    const store = new SingleMiddlewareStore();
+
+    const start = performance.now();
+
+    for (let i = 0; i < operations; i++) {
+      store.update((state) => ({ ...state, counter: state.counter + 1 }));
+    }
+
+    return performance.now() - start;
+  }
+
+  async runMultipleMiddlewareBenchmark(
+    middlewareCount: number,
+    operations: number
+  ): Promise<number> {
+    // Akita only supports one akitaPreUpdate hook per store, so we simulate
+    // multiple middleware by doing multiple operations in the hook
+    interface TestState {
+      counter: number;
+      data: string;
+    }
+
+    class MultipleMiddlewareStore extends Store<TestState> {
+      constructor(private middlewareCount: number) {
+        super({ counter: 0, data: 'test' });
+      }
+
+      override akitaPreUpdate(
+        previousState: TestState,
+        nextState: TestState
+      ): TestState {
+        // Simulate multiple middleware running
+        for (let m = 0; m < this.middlewareCount; m++) {
+          let sum = 0;
+          for (let i = 0; i < 10; i++) sum += i;
+          void sum;
+        }
+        return nextState;
+      }
+    }
+
+    const store = new MultipleMiddlewareStore(middlewareCount);
+
+    const start = performance.now();
+
+    for (let i = 0; i < operations; i++) {
+      store.update((state) => ({ ...state, counter: state.counter + 1 }));
+    }
+
+    return performance.now() - start;
+  }
+
+  async runConditionalMiddlewareBenchmark(operations: number): Promise<number> {
+    // Conditional middleware logic in akitaPreUpdate
+    interface TestState {
+      counter: number;
+      data: string;
+    }
+
+    class ConditionalMiddlewareStore extends Store<TestState> {
+      constructor() {
+        super({ counter: 0, data: 'test' });
+      }
+
+      override akitaPreUpdate(
+        previousState: TestState,
+        nextState: TestState
+      ): TestState {
+        // Conditional middleware: do extra work on even counters
+        if (nextState.counter % 2 === 0) {
+          let sum = 0;
+          for (let i = 0; i < 20; i++) sum += i;
+          void sum;
+        }
+        return nextState;
+      }
+    }
+
+    const store = new ConditionalMiddlewareStore();
+
+    const start = performance.now();
+
+    for (let i = 0; i < operations; i++) {
+      const updateData = i % 2 === 0;
+      if (updateData) {
+        store.update((state) => ({ ...state, counter: state.counter + 1 }));
+      } else {
+        store.update((state) => ({ ...state, data: 'modified' }));
+      }
+    }
+
+    return performance.now() - start;
+  }
 
   // --- Async Workflows (lightweight simulations) ---
   async runAsyncWorkflowBenchmark(dataSize: number): Promise<number> {

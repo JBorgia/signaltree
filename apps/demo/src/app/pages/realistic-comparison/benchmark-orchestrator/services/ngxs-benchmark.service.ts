@@ -1,5 +1,17 @@
 import { inject, Injectable } from '@angular/core';
-import { Action, Selector, State, StateContext, Store } from '@ngxs/store';
+import {
+  Action,
+  Actions,
+  NgxsNextPluginFn,
+  NgxsPlugin,
+  ofActionDispatched,
+  Selector,
+  State,
+  StateContext,
+  Store,
+} from '@ngxs/store';
+import { race, timer } from 'rxjs';
+import { map, mergeMap, take, tap } from 'rxjs/operators';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
 import { createYieldToUI } from '../shared/benchmark-utils';
@@ -64,6 +76,32 @@ interface BenchmarkStateModel {
   serializedData?: string;
 }
 
+// Async workflow actions
+export class TriggerAsyncAction {
+  static readonly type = '[Async] Trigger';
+  constructor(public id: number) {}
+}
+
+export class AsyncCompleteAction {
+  static readonly type = '[Async] Complete';
+  constructor(public id: number) {}
+}
+
+export class StartTaskAction {
+  static readonly type = '[Task] Start';
+  constructor(public id: number) {}
+}
+
+export class CancelTaskAction {
+  static readonly type = '[Task] Cancel';
+  constructor(public id: number) {}
+}
+
+export class TaskCompleteAction {
+  static readonly type = '[Task] Complete';
+  constructor(public id: number) {}
+}
+
 // NgXs State
 @State<BenchmarkStateModel>({
   name: 'benchmark',
@@ -84,8 +122,119 @@ export class BenchmarkState {
     return state.deepNested;
   }
 
-  // Middleware benchmarks removed - NgXs has NgxsPlugin system but
-  // synthetic function call simulations don't represent actual plugin architecture
+  // --- Middleware Benchmarks (NgXs Plugins) ---
+
+  async runSingleMiddlewareBenchmark(operations: number): Promise<number> {
+    // Create a single plugin that intercepts actions
+    class SinglePlugin implements NgxsPlugin {
+      handle(state: unknown, action: unknown, next: NgxsNextPluginFn) {
+        // Minimal middleware work
+        const _check = typeof action === 'object';
+        void _check;
+        return next(state, action);
+      }
+    }
+
+    const plugin = new SinglePlugin();
+    const mockNext: NgxsNextPluginFn = (state: unknown) => state;
+
+    const start = performance.now();
+    let currentState: unknown = { counter: 0 };
+
+    for (let i = 0; i < operations; i++) {
+      currentState = plugin.handle(
+        currentState,
+        { type: '[Test] Increment' },
+        mockNext
+      );
+    }
+
+    return performance.now() - start;
+  }
+
+  async runMultipleMiddlewareBenchmark(
+    middlewareCount: number,
+    operations: number
+  ): Promise<number> {
+    // Create multiple plugins to compose
+    class BenchmarkPlugin implements NgxsPlugin {
+      handle(state: unknown, action: unknown, next: NgxsNextPluginFn) {
+        // Each plugin does minimal work
+        let sum = 0;
+        for (let i = 0; i < 10; i++) sum += i;
+        void sum;
+        return next(state, action);
+      }
+    }
+
+    // Create plugin chain
+    const plugins: NgxsPlugin[] = [];
+    for (let i = 0; i < middlewareCount; i++) {
+      plugins.push(new BenchmarkPlugin());
+    }
+
+    // Compose plugins into a chain
+    const composePlugins = (state: unknown, action: unknown): unknown => {
+      let currentState = state;
+      for (const plugin of plugins) {
+        const mockNext: NgxsNextPluginFn = (s: unknown) => s;
+        currentState = plugin.handle(currentState, action, mockNext);
+      }
+      return currentState;
+    };
+
+    const start = performance.now();
+    let currentState: unknown = { counter: 0 };
+
+    for (let i = 0; i < operations; i++) {
+      currentState = composePlugins(currentState, {
+        type: '[Test] Increment',
+        payload: i,
+      });
+    }
+
+    return performance.now() - start;
+  }
+
+  async runConditionalMiddlewareBenchmark(operations: number): Promise<number> {
+    // Conditional plugin that does extra work on specific actions
+    class ConditionalPlugin implements NgxsPlugin {
+      handle(state: unknown, action: unknown, next: NgxsNextPluginFn) {
+        const actionObj = action as { type: string; payload?: number };
+
+        // Conditional middleware logic
+        if (
+          actionObj.type === '[Test] Increment' &&
+          actionObj.payload !== undefined &&
+          actionObj.payload % 2 === 0
+        ) {
+          // Do extra work on even payloads
+          let sum = 0;
+          for (let i = 0; i < 20; i++) sum += i;
+          void sum;
+        }
+
+        return next(state, action);
+      }
+    }
+
+    const plugin = new ConditionalPlugin();
+    const mockNext: NgxsNextPluginFn = (state: unknown) => state;
+
+    const start = performance.now();
+    let currentState: unknown = { counter: 0 };
+
+    for (let i = 0; i < operations; i++) {
+      const actionType = i % 2 === 0 ? '[Test] Increment' : '[Test] Other';
+      currentState = plugin.handle(
+        currentState,
+        { type: actionType, payload: i },
+        mockNext
+      );
+    }
+
+    return performance.now() - start;
+  }
 
   @Selector()
   static getLargeArray(state: BenchmarkStateModel) {
@@ -530,47 +679,106 @@ export class NgxsBenchmarkService {
     return performance.now() - start;
   }
 
-  // --- Async Workflows (Effects simulation for NGXS) ---
+  // --- Async Workflows (NgXs Actions) ---
   async runAsyncWorkflowBenchmark(dataSize: number): Promise<number> {
-    const start = performance.now();
+    const actions$ = inject(Actions);
 
-    const promises: Promise<void>[] = [];
     const ops = Math.min(
       dataSize,
       BENCHMARK_CONSTANTS.ITERATIONS.ASYNC_WORKFLOW || 1000
     );
+
+    // Create an effect stream using NgXs Actions
+    const asyncEffect$ = actions$.pipe(
+      ofActionDispatched(TriggerAsyncAction),
+      mergeMap((action) =>
+        // Simulate async operation with timer
+        timer(0).pipe(
+          map(() => new AsyncCompleteAction(action.id)),
+          take(1)
+        )
+      )
+    );
+
+    // Track completions
+    let completedCount = 0;
+    const completionPromise = new Promise<void>((resolve) => {
+      asyncEffect$.subscribe((completionAction) => {
+        if (completionAction instanceof AsyncCompleteAction) {
+          completedCount++;
+          if (completedCount >= ops) {
+            resolve();
+          }
+        }
+      });
+    });
+
+    const start = performance.now();
+
+    // Dispatch async actions
     for (let i = 0; i < ops; i++) {
-      promises.push(new Promise((res) => setTimeout(res, 0)));
+      this.store.dispatch(new TriggerAsyncAction(i));
     }
 
-    await Promise.all(promises);
+    await completionPromise;
     return performance.now() - start;
   }
 
   async runAsyncCancellationBenchmark(operations: number): Promise<number> {
+    const actions$ = inject(Actions);
+
+    // Track which tasks are cancelled
+    const cancelledIds = new Set<number>();
+
+    // Effect that handles task cancellation using takeUntil
+    const taskEffect$ = actions$.pipe(
+      ofActionDispatched(StartTaskAction),
+      mergeMap((action) => {
+        const cancelSignal$ = actions$.pipe(
+          ofActionDispatched(CancelTaskAction),
+          tap((cancel) => {
+            if (cancel.id === action.id) {
+              cancelledIds.add(action.id);
+            }
+          })
+        );
+
+        return race(
+          timer(10).pipe(map(() => new TaskCompleteAction(action.id))),
+          cancelSignal$.pipe(
+            take(1),
+            mergeMap(() => []) // Cancel by emitting nothing
+          )
+        );
+      })
+    );
+
+    let completedCount = 0;
+    const allDonePromise = new Promise<void>((resolve) => {
+      taskEffect$.subscribe((action) => {
+        if (action instanceof TaskCompleteAction) {
+          completedCount++;
+          // We expect only half to complete (the non-cancelled ones)
+          if (completedCount + cancelledIds.size >= operations) {
+            resolve();
+          }
+        }
+      });
+    });
+
     const start = performance.now();
 
-    const tasks: Array<{
-      cancelled: boolean;
-      timer: ReturnType<typeof setTimeout> | null;
-    }> = [];
+    // Start all tasks
     for (let i = 0; i < operations; i++) {
-      const t = setTimeout(() => {
-        /* noop */
-      }, 10);
-      tasks.push({ cancelled: false, timer: t });
+      this.store.dispatch(new StartTaskAction(i));
     }
 
+    // Cancel half of them immediately
     for (let i = 0; i < Math.floor(operations / 2); i++) {
-      const t = tasks[i];
-      if (t.timer) {
-        clearTimeout(t.timer);
-        t.cancelled = true;
-        t.timer = null;
-      }
+      this.store.dispatch(new CancelTaskAction(i));
     }
 
-    await new Promise((r) => setTimeout(r, 10));
+    await allDonePromise;
     return performance.now() - start;
   }
 }

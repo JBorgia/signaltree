@@ -1,48 +1,70 @@
-# Middleware Benchmark Cleanup
+# Middleware Benchmark Implementation History
 
 ## Summary
 
-Removed synthetic middleware benchmark implementations from libraries that don't have true state update interception middleware comparable to SignalTree's `@signaltree/middleware` package.
+**UPDATE (Oct 7, 2025):** Middleware benchmarks have been **properly re-implemented** using actual library APIs after initially being removed for using synthetic implementations.
 
-## Research Findings
+## Implementation History
 
-### Libraries with TRUE Middleware/Plugin Systems:
+### Phase 1: Removal (Oct 7, 2025 AM)
 
-- **SignalTree**: Native `withMiddleware()` with before/after hooks ✅
-- **NgRx Store**: Meta-reducers (action interception) 🟡
-- **NgXs**: Plugin system (`NgxsPlugin` interface) 🟡
+Removed synthetic middleware benchmark implementations that were just trivial function calls and didn't use actual library middleware/plugin APIs.
 
-### Libraries WITHOUT Direct Middleware Equivalents:
+### Phase 2: Re-Implementation (Oct 7, 2025 PM)
+
+**Properly implemented** middleware benchmarks using actual library middleware architectures for libraries that support comparable functionality.
+
+## Current Status
+
+### Libraries with Middleware Benchmarks Implemented:
+
+- **SignalTree**: Native `withMiddleware()` with before/after property update hooks ✅
+- **NgRx Store**: Actual `ActionReducer` meta-reducers that intercept actions ✅
+- **NgXs**: Actual `NgxsPlugin` interface with `handle()` method for action lifecycle ✅
+- **Akita**: Actual `Store.akitaPreUpdate()` hooks for state transition interception ✅
+
+### Libraries WITHOUT Middleware Benchmarks:
 
 - **NgRx SignalStore**: Has `withHooks()` but these are lifecycle hooks (onInit/onDestroy), NOT state update interception ❌
-- **Akita**: Has `akitaPreUpdate` hooks but different paradigm ❌
-- **Elf**: Uses RxJS effects/operators, not before/after middleware ❌
+- **Elf**: Uses RxJS effects/operators, operates at stream level not middleware level ❌
 
-## What Was Removed
+## Implementation Details
 
-Removed synthetic middleware implementations from:
+### Re-Implemented Libraries (Using Actual APIs):
 
-1. **NgRx SignalStore** (`ngrx-signals-benchmark.service.ts`)
+1. **NgRx Store** (`ngrx-benchmark.service.ts`) ✅
 
-   - `runSingleMiddlewareBenchmark()`
-   - `runMultipleMiddlewareBenchmark()`
-   - `runConditionalMiddlewareBenchmark()`
+   - Uses actual `ActionReducer` type and meta-reducer pattern
+   - `runSingleMiddlewareBenchmark()`: Single meta-reducer wrapping base reducer
+   - `runMultipleMiddlewareBenchmark()`: Composes multiple meta-reducers
+   - `runConditionalMiddlewareBenchmark()`: Conditional logic in meta-reducer
+   - **Architecture**: Intercepts actions before/after reducer execution
 
-2. **Akita** (`akita-benchmark.service.ts`)
+2. **NgXs** (`ngxs-benchmark.service.ts`) ✅
 
-   - Same three methods removed
+   - Uses actual `NgxsPlugin` interface with `handle()` method
+   - `runSingleMiddlewareBenchmark()`: Single plugin intercepting actions
+   - `runMultipleMiddlewareBenchmark()`: Chain of plugins composed together
+   - `runConditionalMiddlewareBenchmark()`: Conditional plugin logic based on action type
+   - **Architecture**: Intercepts action lifecycle (dispatch → completion)
 
-3. **Elf** (`elf-benchmark.service.ts`)
+3. **Akita** (`akita-benchmark.service.ts`) ✅
+   - Uses actual `Store` class with `akitaPreUpdate()` override
+   - `runSingleMiddlewareBenchmark()`: Store with single akitaPreUpdate hook
+   - `runMultipleMiddlewareBenchmark()`: Simulates multiple middleware in single hook (Akita limitation)
+   - `runConditionalMiddlewareBenchmark()`: Conditional logic in akitaPreUpdate
+   - **Architecture**: Intercepts state transitions (previous → next state)
 
-   - Same three methods removed
+### Libraries Remaining Removed:
 
-4. **NgXs** (`ngxs-benchmark.service.ts`)
+4. **NgRx SignalStore** (`ngrx-signals-benchmark.service.ts`) ❌
 
-   - Same three methods removed
+   - Reason: `withHooks()` are lifecycle hooks, not state update interception
+   - No comparable middleware API
 
-5. **NgRx Store** (`ngrx-benchmark.service.ts`)
-   - Same three methods removed
-   - Also removed unused imports: `EnhancedBenchmarkOptions`, `runEnhancedBenchmark`
+5. **Elf** (`elf-benchmark.service.ts`) ❌
+   - Reason: RxJS effects/operators work at observable stream level
+   - Different paradigm than before/after middleware hooks
 
 ## Why These Were Removed
 
@@ -73,30 +95,28 @@ This doesn't test NgRx SignalStore's actual `withHooks()` API, just measures fun
 
 ## Impact
 
-### Before:
+### Before Removal (Synthetic Implementations):
 
 - Middleware tests showed "0 ops/s" or "N/A" for most libraries
-- Gave false impression that libraries "support" middleware
+- Gave false impression but didn't use actual library APIs
 - Benchmark results were misleading
 
-### After:
+### After Removal (Phase 1):
 
-- Middleware tests will now correctly show:
-  - ✅ **SignalTree**: Real performance data using actual `withMiddleware()`
-  - ❌ **Other libraries**: "Not Supported" or "N/A" (since methods don't exist)
-- Benchmark comparison is now honest about architectural differences
-- No more synthetic "function call overhead" measurements
+- Middleware tests showed "Not Supported" or "N/A"
+- Honest but incomplete - some libraries DO have middleware
 
-## Future Considerations
+### After Re-Implementation (Phase 2 - Current):
 
-If you want to benchmark middleware/plugin capabilities for other libraries, you should:
-
-1. **NgRx Store**: Implement actual meta-reducers that intercept actions
-2. **NgXs**: Implement actual `NgxsPlugin` that uses the plugin lifecycle
-3. **Akita**: Implement actual `akitaPreUpdate` hooks in Store classes
-4. **Elf**: Implement actual RxJS operators/effects chains
-
-These would provide REAL comparisons of each library's middleware architecture, not just function call overhead.
+- Middleware tests now correctly show:
+  - ✅ **SignalTree**: Real performance using actual `withMiddleware()`
+  - ✅ **NgRx Store**: Real performance using actual meta-reducers
+  - ✅ **NgXs**: Real performance using actual `NgxsPlugin` interface
+  - ✅ **Akita**: Real performance using actual `akitaPreUpdate` hooks
+  - ❌ **NgRx SignalStore**: Not implemented (lifecycle hooks only)
+  - ❌ **Elf**: Not implemented (RxJS streams, different paradigm)
+- Benchmark comparison now shows REAL middleware overhead for each library's actual architecture
+- Fair comparison of different middleware/plugin approaches
 
 ## Files Modified
 

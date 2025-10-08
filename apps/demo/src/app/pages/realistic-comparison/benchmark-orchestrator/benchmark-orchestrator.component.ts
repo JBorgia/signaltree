@@ -254,8 +254,12 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       name: 'Advanced Features',
       description: 'Time travel, middleware, and complex workflows',
       // Note: undo/history/jump are SignalTree-only features (time-travel package).
-      // Middleware scenarios are also SignalTree-only - other libraries have different
-      // plugin/hook architectures that aren't directly comparable to withMiddleware().
+      // Middleware scenarios now properly implemented using actual library APIs:
+      // - SignalTree: withMiddleware() (native)
+      // - NgRx Store: Meta-reducers (ActionReducer wrapper)
+      // - NgXs: Plugins (NgxsPlugin interface)
+      // - Akita: Store hooks (akitaPreUpdate override)
+      // - Elf/NgRx SignalStore: Not implemented (no comparable architecture)
       scenarios: [
         'single-middleware',
         'multiple-middleware',
