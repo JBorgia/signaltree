@@ -2236,7 +2236,15 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
   // Results processing
   isScenarioWinner(scenarioId: string, libraryId: string): boolean {
-    const results = this.results().filter((r) => r.scenarioId === scenarioId);
+    // Filter out unavailable results (missing tests, unsupported features)
+    const results = this.results().filter(
+      (r) =>
+        r.scenarioId === scenarioId &&
+        r.median !== -1 &&
+        r.opsPerSecond > 0 &&
+        isFinite(r.opsPerSecond)
+    );
+
     if (results.length === 0) return false;
 
     const winner = results.reduce((min, r) =>
@@ -2262,7 +2270,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     );
 
     if (!result) return '-';
-    if (result.opsPerSecond === -1) return 'N/A';
+    if (result.opsPerSecond === -1 || result.opsPerSecond === 0) return 'N/A';
     if (!isFinite(result.opsPerSecond)) return 'N/A';
     return Math.round(result.opsPerSecond).toLocaleString();
   }
@@ -2284,9 +2292,11 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       !libResult ||
       !stResult ||
       libResult.median === -1 ||
-      stResult.median === -1
+      stResult.median === -1 ||
+      libResult.opsPerSecond === 0 ||
+      libResult.opsPerSecond === -1
     )
-      return '-';
+      return 'N/A';
 
     // Show how many times the given library compares to SignalTree by time.
     // If the library is slower (higher median), this yields > 1 (e.g., 2.00x vs SignalTree).
