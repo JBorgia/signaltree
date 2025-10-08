@@ -9,10 +9,6 @@ import {
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
 import { createYieldToUI } from '../shared/benchmark-utils';
-import {
-  EnhancedBenchmarkOptions,
-  runEnhancedBenchmark,
-} from './benchmark-runner';
 
 // State interface for complex benchmarks
 interface User {
@@ -152,81 +148,8 @@ export class NgRxBenchmarkService {
 
   private yieldToUI = createYieldToUI();
 
-  // --- Middleware Benchmarks (simulated via wrapper functions / meta-reducer pattern) ---
-  async runSingleMiddlewareBenchmark(operations: number): Promise<number> {
-    const options: EnhancedBenchmarkOptions = {
-      operations,
-      warmup: 5,
-      measurementSamples: 30,
-      yieldEvery: BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR,
-      trackMemory: false,
-      label: 'NgRx Single Middleware',
-      minDurationMs: 50,
-    };
-
-    const result = await runEnhancedBenchmark(async () => {
-      // lightweight middleware function simulated per operation
-      let x = 0;
-      for (let i = 0; i < 10; i++) x += i;
-      void x;
-    }, options);
-
-    return result.median;
-  }
-  // --- Middleware Benchmarks (simulated via wrapper functions / meta-reducer pattern) ---
-
-  async runMultipleMiddlewareBenchmark(
-    middlewareCount: number,
-    operations: number
-  ): Promise<number> {
-    const options: EnhancedBenchmarkOptions = {
-      operations,
-      warmup: 5,
-      measurementSamples: 30,
-      yieldEvery: BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR,
-      trackMemory: false,
-      label: `NgRx Multiple Middleware (count=${middlewareCount})`,
-      minDurationMs: 50,
-    };
-
-    const result = await runEnhancedBenchmark(async () => {
-      // Simulate middleware stack overhead per operation
-      let total = 0;
-      for (let m = 0; m < middlewareCount; m++) {
-        let s = 0;
-        for (let i = 0; i < 20; i++) s += i;
-        total += s;
-      }
-      void total;
-    }, options);
-
-    return result.median;
-  }
-
-  async runConditionalMiddlewareBenchmark(operations: number): Promise<number> {
-    const options: EnhancedBenchmarkOptions = {
-      operations,
-      warmup: 5,
-      measurementSamples: 30,
-      yieldEvery: BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR,
-      trackMemory: false,
-      label: 'NgRx Conditional Middleware',
-      minDurationMs: 50,
-    };
-
-    const result = await runEnhancedBenchmark(async (i: number) => {
-      if ((i as number) % 2 === 0) {
-        // quick path - trivial
-        return;
-      }
-      // slower path
-      let s = 0;
-      for (let k = 0; k < 30; k++) s += k;
-      void s;
-    }, options);
-
-    return result.median;
-  }
+  // Middleware benchmarks removed - NgRx Store has meta-reducers but
+  // synthetic function call simulations don't represent actual meta-reducer architecture
 
   // --- Async Workflows (Effects simulation) ---
   async runAsyncWorkflowBenchmark(dataSize: number): Promise<number> {

@@ -10,54 +10,8 @@ export class AkitaBenchmarkService {
   // Akita is entity-centric; we will use plain objects for nested/other cases
   private yieldToUI = createYieldToUI();
 
-  // --- Middleware Benchmarks (Akita - hook/plugin simulation) ---
-  async runSingleMiddlewareBenchmark(operations: number): Promise<number> {
-    const start = performance.now();
-    const hook = (ctx: string, payload?: unknown) => {
-      void ctx;
-      void payload;
-      let acc = 0;
-      for (let i = 0; i < 10; i++) acc += i;
-      return acc > -1;
-    };
-
-    for (let i = 0; i < operations; i++) hook('noop', i);
-    return performance.now() - start;
-  }
-
-  async runMultipleMiddlewareBenchmark(
-    middlewareCount: number,
-    operations: number
-  ): Promise<number> {
-    const start = performance.now();
-    const hooks = Array.from(
-      { length: middlewareCount },
-      () => (ctx: string, payload?: unknown) => {
-        void ctx;
-        void payload;
-        let s = 0;
-        for (let i = 0; i < 20; i++) s += i;
-        return s > -1;
-      }
-    );
-
-    for (let i = 0; i < operations; i++) hooks.forEach((h) => h('noop', i));
-    return performance.now() - start;
-  }
-
-  async runConditionalMiddlewareBenchmark(operations: number): Promise<number> {
-    const start = performance.now();
-    const conditional = (ctx: string, payload?: unknown) => {
-      void ctx;
-      if ((payload as number) % 2 === 0) return true;
-      let s = 0;
-      for (let i = 0; i < 30; i++) s += i;
-      return s > -1;
-    };
-
-    for (let i = 0; i < operations; i++) conditional('noop', i);
-    return performance.now() - start;
-  }
+  // Middleware benchmarks removed - Akita akitaPreUpdate hooks exist but
+  // synthetic function call simulations don't represent actual middleware architecture
 
   // --- Async Workflows (lightweight simulations) ---
   async runAsyncWorkflowBenchmark(dataSize: number): Promise<number> {

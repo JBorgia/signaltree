@@ -14,54 +14,8 @@ export class NgRxSignalsBenchmarkService {
 
   private yieldToUI = createYieldToUI();
 
-  // --- Middleware Benchmarks (NgRx Signals - withHooks simulation) ---
-  async runSingleMiddlewareBenchmark(operations: number): Promise<number> {
-    const start = performance.now();
-    const hook = (ctx: string, payload?: unknown) => {
-      void ctx;
-      void payload;
-      let acc = 0;
-      for (let i = 0; i < 10; i++) acc += i;
-      return acc > -1;
-    };
-
-    for (let i = 0; i < operations; i++) hook('noop', i);
-    return performance.now() - start;
-  }
-
-  async runMultipleMiddlewareBenchmark(
-    middlewareCount: number,
-    operations: number
-  ): Promise<number> {
-    const start = performance.now();
-    const hooks = Array.from(
-      { length: middlewareCount },
-      () => (ctx: string, payload?: unknown) => {
-        void ctx;
-        void payload;
-        let s = 0;
-        for (let i = 0; i < 20; i++) s += i;
-        return s > -1;
-      }
-    );
-
-    for (let i = 0; i < operations; i++) hooks.forEach((h) => h('noop', i));
-    return performance.now() - start;
-  }
-
-  async runConditionalMiddlewareBenchmark(operations: number): Promise<number> {
-    const start = performance.now();
-    const conditional = (ctx: string, payload?: unknown) => {
-      void ctx;
-      if ((payload as number) % 2 === 0) return true;
-      let s = 0;
-      for (let i = 0; i < 30; i++) s += i;
-      return s > -1;
-    };
-
-    for (let i = 0; i < operations; i++) conditional('noop', i);
-    return performance.now() - start;
-  }
+  // Middleware benchmarks removed - NgRx SignalStore withHooks are lifecycle hooks,
+  // not state update interception middleware like SignalTree's withMiddleware
 
   // --- Async Workflows (lightweight simulations) ---
   async runAsyncWorkflowBenchmark(dataSize: number): Promise<number> {
