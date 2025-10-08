@@ -254,7 +254,8 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       name: 'Advanced Features',
       description: 'Time travel, middleware, and complex workflows',
       // Note: undo/history/jump are SignalTree-only features (time-travel package).
-      // Keep middleware scenarios here; other libraries will implement middleware.
+      // Middleware scenarios are also SignalTree-only - other libraries have different
+      // plugin/hook architectures that aren't directly comparable to withMiddleware().
       scenarios: [
         'single-middleware',
         'multiple-middleware',

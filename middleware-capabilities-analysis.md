@@ -1,8 +1,18 @@
 # State Management Middleware Capabilities Analysis
 
-## Current Status: Only SignalTree Implemented ❌
+**⚠️ UPDATED (Oct 2025):** This analysis led to the removal of synthetic middleware benchmarks. See [MIDDLEWARE_CLEANUP.md](./MIDDLEWARE_CLEANUP.md).
 
-The benchmarks currently show "N/A" for all libraries except SignalTree, but this is **misleading**. Most of these libraries DO have middleware-like capabilities that just haven't been implemented in the benchmark services.
+## Current Status: Only SignalTree Has Middleware Benchmarks ✅
+
+The benchmarks correctly show only SignalTree has middleware support because:
+
+1. **SignalTree** has native `withMiddleware()` with before/after state update interception
+2. **Other libraries** have different plugin/hook systems that don't directly compare to SignalTree's middleware architecture
+3. **Previous synthetic implementations** were removed because they didn't use actual library middleware APIs
+
+## Why Other Libraries Don't Have Middleware Benchmarks
+
+While other libraries have plugin/hook systems, they operate differently than SignalTree's before/after middleware:
 
 ## What Each Library Actually Supports:
 

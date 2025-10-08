@@ -1,5 +1,7 @@
 # Missing Benchmark Implementations - Realistic Analysis
 
+**⚠️ NOTE: This document is now outdated.** As of October 2025, synthetic middleware benchmarks have been removed from all libraries except SignalTree. See [MIDDLEWARE_CLEANUP.md](./MIDDLEWARE_CLEANUP.md) for details.
+
 Based on the analysis of all benchmark services and **actual library capabilities**, here's a comprehensive list of **feasible missing implementations** across the state management libraries.
 
 ## 📊 Implementation Gap Summary
@@ -9,6 +11,8 @@ Based on the analysis of all benchmark services and **actual library capabilitie
 ## ⚠️ **Reality Check: What's Actually Possible**
 
 Many libraries lack the core architectural features needed for certain benchmarks. This analysis separates **feasible implementations** from **impossible ones**.
+
+**UPDATE (Oct 2025):** Middleware benchmarks have been removed from all libraries except SignalTree because the synthetic implementations didn't represent actual middleware architecture.
 
 ## 🔍 Complete Method Comparison
 
@@ -32,7 +36,7 @@ These methods exist in all 6 services:
 
 These exist only in SignalTree. **Feasibility varies by library architecture:**
 
-#### 1. **Middleware Methods (3 missing)**
+#### 1. **Middleware Methods (3 missing)** ❌ REMOVED
 
 ```typescript
 runSingleMiddlewareBenchmark(operations: number): Promise<number>
@@ -40,13 +44,19 @@ runMultipleMiddlewareBenchmark(middlewareCount: number, operations: number): Pro
 runConditionalMiddlewareBenchmark(operations: number): Promise<number>
 ```
 
-**Status by Library:**
+**Status: REMOVED (Oct 2025)**
 
-- ✅ **NgRx Store**: Meta-reducers (FEASIBLE)
-- ✅ **NgXs**: Plugin system (FEASIBLE)
-- ✅ **Akita**: Store hooks (FEASIBLE)
-- ✅ **Elf**: Effects/operators (FEASIBLE)
-- ✅ **NgRx Signals**: withHooks (FEASIBLE)
+These synthetic implementations have been removed because they didn't use actual library middleware architecture. Only SignalTree retains these benchmarks as it has native `withMiddleware()` support.
+
+**Previous Status by Library:**
+
+- ❌ **NgRx Store**: Has meta-reducers but synthetic impl removed
+- ❌ **NgXs**: Has plugin system but synthetic impl removed
+- ❌ **Akita**: Has akitaPreUpdate hooks but synthetic impl removed
+- ❌ **Elf**: Has RxJS effects/operators but synthetic impl removed
+- ❌ **NgRx Signals**: Has lifecycle hooks (NOT middleware) - synthetic impl removed
+
+See [MIDDLEWARE_CLEANUP.md](./MIDDLEWARE_CLEANUP.md) for full analysis.
 
 #### 2. **Time Travel / History Methods (4 missing)**
 
@@ -206,38 +216,42 @@ async runUndoRedoBenchmark(operations: number): Promise<number> {
 
 ### **What CAN be implemented:**
 
-| Feature             | NgRx Store       | NgXs          | Akita          | Elf           | NgRx Signals  |
-| ------------------- | ---------------- | ------------- | -------------- | ------------- | ------------- |
-| **Middleware**      | ✅ Meta-reducers | ✅ Plugins    | ✅ Hooks       | ✅ Effects    | ✅ withHooks  |
-| **Async Workflows** | ✅ Effects       | ✅ Actions    | ⚠️ Limited     | ⚠️ Limited    | ❌ No support |
-| **Time Travel**     | ⚠️ Manual only   | ❌ No support | ⚠️ Plugin only | ⚠️ Addon only | ❌ No support |
+| Feature             | NgRx Store     | NgXs          | Akita          | Elf           | NgRx Signals  |
+| ------------------- | -------------- | ------------- | -------------- | ------------- | ------------- |
+| **Middleware**      | ❌ Removed     | ❌ Removed    | ❌ Removed     | ❌ Removed    | ❌ Removed    |
+| **Async Workflows** | ✅ Effects     | ✅ Actions    | ⚠️ Limited     | ⚠️ Limited    | ❌ No support |
+| **Time Travel**     | ⚠️ Manual only | ❌ No support | ⚠️ Plugin only | ⚠️ Addon only | ❌ No support |
 
-### **Total Feasible Implementations:**
+### **Total Feasible Implementations (Updated Oct 2025):**
 
-- **NgRx Store**: 6/10 methods (3 middleware + 3 async)
-- **NgXs**: 6/10 methods (3 middleware + 3 async)
-- **Akita**: 4/10 methods (3 middleware + 1 partial async)
-- **Elf**: 4/10 methods (3 middleware + 1 partial async)
-- **NgRx Signals**: 3/10 methods (3 middleware only)
+- **NgRx Store**: 3/10 methods (3 async only - middleware removed)
+- **NgXs**: 3/10 methods (3 async only - middleware removed)
+- **Akita**: 1/10 methods (1 partial async - middleware removed)
+- **Elf**: 1/10 methods (1 partial async - middleware removed)
+- **NgRx Signals**: 0/10 methods (middleware removed, no async support)
 
-### **Effort Estimation (Realistic):**
+### **Effort Estimation (Realistic - Updated):**
 
-- **Middleware implementations**: 8-12 hours total (high value, all libraries)
+- ~~**Middleware implementations**: 8-12 hours total (high value, all libraries)~~ **REMOVED - Not comparable architectures**
 - **Async workflows**: 12-16 hours total (NgRx/NgXs only)
 - **Time travel**: NOT RECOMMENDED (would require massive custom implementations)
 
-**Total realistic effort: 20-28 hours** for meaningful feature parity improvements.
+**Total realistic effort: 12-16 hours** for remaining feature parity improvements.
 
 ---
 
-## 🎯 **Recommendations**
+## 🎯 **Recommendations (Updated Oct 2025)**
 
-### **Priority 1: Implement Middleware (Universal Support)**
+### ~~**Priority 1: Implement Middleware (Universal Support)**~~ ❌ REMOVED
 
-All libraries can implement the 3 middleware benchmarks using their native patterns:
+Middleware benchmarks have been removed because:
 
-- Immediate value for fair middleware comparison
-- Showcases each library's middleware approach
+- Libraries have fundamentally different plugin/hook architectures
+- Synthetic implementations didn't represent real middleware behavior
+- Only SignalTree has before/after state update interception comparable to middleware
+
+See [MIDDLEWARE_CLEANUP.md](./MIDDLEWARE_CLEANUP.md) for details.
+
 - Relatively quick implementation
 
 ### **Priority 2: Implement Async Workflows (NgRx/NgXs Only)**
