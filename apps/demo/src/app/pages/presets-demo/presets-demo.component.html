@@ -1,0 +1,278 @@
+<div class="container">
+  <h1>SignalTree Presets Demo</h1>
+
+  <div class="demo-grid-3col">
+    <!-- Preset Selection -->
+    <div class="presets-sidebar">
+      <div class="card selector-card">
+        <h2>Select Preset</h2>
+
+        <div class="preset-buttons">
+          @for (preset of availablePresets; track preset) {
+          <button
+            (click)="switchPreset(preset)"
+            class="preset-button"
+            [class.active]="currentPreset() === preset"
+          >
+            <div class="preset-name">{{ preset }}</div>
+            <div class="preset-description">
+              {{ getPresetDescription(preset) }}
+            </div>
+          </button>
+          }
+        </div>
+      </div>
+
+      <!-- Preset Configuration -->
+      <div class="card">
+        <h3>Current Configuration</h3>
+
+        <div class="button-group">
+          @for (config of currentConfigDisplay(); track config.key) {
+          <div class="flex-between">
+            <span class="config-label">{{ config.label }}</span>
+            <span class="config-value" [class.enabled]="config.value">
+              {{ config.value ? 'Enabled' : 'Disabled' }}
+            </span>
+          </div>
+          }
+        </div>
+
+        <!-- Dev Tree Special Section -->
+        @if (showDevTreeExample()) {
+        <div class="info-box info">
+          <h4>Development Enhancers</h4>
+          <div class="info-text">
+            Using
+            <code class="code-inline">createDevTree()</code>
+            automatically includes devtools, time-travel, and async enhancers
+            when available.
+          </div>
+        </div>
+        }
+      </div>
+    </div>
+
+    <!-- Interactive Demo -->
+    <div class="presets-main">
+      <div class="card">
+        <h2>Interactive Demo - {{ currentPreset() | titlecase }} Preset</h2>
+
+        <!-- User Profile Section -->
+        <div class="section user-section">
+          <h3 class="section-title">User Profile</h3>
+          <div class="input-grid">
+            <div>
+              <label for="user-name" class="input-label"> Name </label>
+              <input
+                id="user-name"
+                type="text"
+                [value]="tree.state.user.name()"
+                (input)="updateUserName($event)"
+                class="input-field"
+              />
+            </div>
+            <div>
+              <label for="user-email" class="input-label"> Email </label>
+              <input
+                id="user-email"
+                type="email"
+                [value]="tree.state.user.email()"
+                (input)="updateUserEmail($event)"
+                class="input-field"
+              />
+            </div>
+          </div>
+
+          <div class="preferences-row">
+            <label class="flex items-center">
+              <input
+                type="checkbox"
+                [checked]="tree.state.user.preferences.notifications()"
+                (change)="toggleNotifications()"
+              />
+              <span class="small-text">Enable Notifications</span>
+            </label>
+            <label class="flex items-center">
+              <input
+                type="radio"
+                [checked]="tree.state.user.preferences.theme() === 'light'"
+                (change)="setTheme('light')"
+                name="theme"
+              />
+              <span class="small-text spaced">Light</span>
+              <input
+                type="radio"
+                [checked]="tree.state.user.preferences.theme() === 'dark'"
+                (change)="setTheme('dark')"
+                name="theme"
+              />
+              <span class="small-text">Dark</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Todo Section -->
+        <div class="section todos-section">
+          <h3 class="section-title">Todos</h3>
+          <div class="add-todo-row">
+            <input
+              type="text"
+              [(ngModel)]="newTodoTitle"
+              placeholder="Add a new todo..."
+              class="input-field flex-grow"
+              (keyup.enter)="addTodo()"
+            />
+            <select [(ngModel)]="newTodoPriority" class="input-field">
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+            <button (click)="addTodo()" class="btn-primary">Add</button>
+          </div>
+
+          <div class="todos-list">
+            @for (todo of tree.state.todos(); track todo.id) {
+            <div class="todo-item">
+              <div class="todo-content">
+                <input
+                  type="checkbox"
+                  [checked]="todo.completed"
+                  (change)="toggleTodo(todo.id)"
+                  class="checkbox-input"
+                />
+                <span class="todo-title" [class.completed]="todo.completed">
+                  {{ todo.title }}
+                </span>
+                <span
+                  class="priority-badge"
+                  [class.high]="todo.priority === 'high'"
+                  [class.medium]="todo.priority === 'medium'"
+                  [class.low]="todo.priority === 'low'"
+                >
+                  {{ todo.priority }}
+                </span>
+              </div>
+              <button (click)="removeTodo(todo.id)" class="delete-icon">
+                ✕
+              </button>
+            </div>
+            }
+          </div>
+        </div>
+
+        <!-- UI State -->
+        <div>
+          <h3>UI State</h3>
+          <div class="ui-controls">
+            <label class="flex items-center">
+              <input
+                type="checkbox"
+                [checked]="tree.state.ui.loading()"
+                (change)="toggleLoading()"
+              />
+              <span class="small-text">Loading State</span>
+            </label>
+            <label class="flex items-center">
+              <input
+                type="checkbox"
+                [checked]="tree.state.ui.sidebarOpen()"
+                (change)="toggleSidebar()"
+              />
+              <span class="small-text">Sidebar Open</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+          <button (click)="performBulkUpdates()" class="btn-success">
+            Bulk Updates Test
+          </button>
+          <button (click)="resetToDefaults()" class="btn-secondary">
+            Reset to Defaults
+          </button>
+          @if (currentPreset() === 'development' || currentPreset() === 'basic')
+          {
+          <button (click)="demonstratePresetFeatures()" class="btn-purple">
+            Demo {{ currentPreset() | titlecase }} Features
+          </button>
+          }
+        </div>
+      </div>
+
+      <!-- SignalTree Showcase (All Features) -->
+      <div class="card metrics-card">
+        <h3>SignalTree Showcase</h3>
+        <div class="description-text">
+          Run a SignalTree-only combined features workload (memoization,
+          batching, serialization + async/history/middleware simulation). This
+          is a SignalTree-only showcase and is not comparable across other
+          libraries.
+        </div>
+        <div class="showcase-controls">
+          <button (click)="runAllFeaturesShowcase()" class="btn-primary">
+            Run Showcase
+          </button>
+          <div class="description-text">
+            <span *ngIf="showcasePending">Running...</span>
+            <span *ngIf="showcaseResult !== null">
+              Completed: {{ showcaseResult }} ms
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Performance Metrics -->
+      <div class="card metrics-card">
+        <h3>Performance Metrics</h3>
+
+        <div class="metrics-grid">
+          <div class="stat-box info">
+            <div class="stat-label info">Update Count</div>
+            <div class="stat-value info">
+              {{ updateCount() }}
+            </div>
+          </div>
+          <div class="stat-box success">
+            <div class="stat-label success">Preset</div>
+            <div class="stat-value success">
+              {{ currentPreset() }}
+            </div>
+          </div>
+          <div class="stat-box purple">
+            <div class="stat-label purple">Features</div>
+            <div class="stat-value purple">
+              {{ activeFeatureCount() }}
+            </div>
+          </div>
+        </div>
+
+        <div class="info-box">
+          <div class="description-text">
+            <strong>Note:</strong> Different presets optimize for different
+            scenarios:
+          </div>
+          <ul class="feature-list">
+            <li>
+              • <strong>Basic:</strong> Minimal overhead, direct signal access
+            </li>
+            <li>
+              • <strong>Performance:</strong> Batching + memoization for
+              high-frequency updates
+            </li>
+            <li>
+              • <strong>Development:</strong> Full debugging features
+              (time-travel, devtools)
+            </li>
+            <li>
+              • <strong>Production:</strong> Optimized performance without debug
+              overhead
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`,

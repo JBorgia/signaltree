@@ -1,0 +1,200 @@
+<div class="core-demo-container">
+  <h1>SignalTree Core Demo</h1>
+
+  <div class="demo-grid">
+    <!-- Todo App -->
+    <div class="card">
+      <h2>
+        Todo Application
+        <span class="item-count">({{ todos().length }} items)</span>
+      </h2>
+
+      <!-- Add new todo -->
+      <div class="add-todo-section">
+        <label for="new-todo-input">
+          <span class="label-text">New Todo</span>
+          <span class="hint">(Press Enter to add)</span>
+        </label>
+        <div class="input-group">
+          <input
+            id="new-todo-input"
+            type="text"
+            [(ngModel)]="newTodoTitle"
+            (keyup.enter)="addTodo()"
+            placeholder="Add a new todo..."
+            class="todo-input"
+          />
+          <button
+            (click)="addTodo()"
+            [disabled]="!newTodoTitle.trim()"
+            class="btn-primary"
+          >
+            Add
+          </button>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filters-section">
+        <button
+          *ngFor="let f of filters"
+          (click)="setFilter(f)"
+          [class]="getFilterClass(f)"
+          class="filter-btn"
+        >
+          {{ f | titlecase }} ({{ getFilterCount(f) }})
+        </button>
+      </div>
+
+      <!-- Bulk Actions -->
+      <div class="bulk-actions" *ngIf="todos().length > 0">
+        <button (click)="selectAll()" class="btn-primary">
+          Select All
+        </button>
+        <button (click)="selectNone()" class="btn-secondary">
+          Select None
+        </button>
+        <div class="stats">
+          <span class="stat-active">{{ activeCount() }} active</span>
+          <span class="separator">•</span>
+          <span class="stat-completed">{{ completedCount() }} done</span>
+        </div>
+      </div>
+
+      <!-- Todo list -->
+      <div class="todo-list">
+        <div
+          *ngFor="let todo of filteredTodos(); trackBy: trackTodo"
+          class="todo-item"
+        >
+          <input
+            type="checkbox"
+            [checked]="todo.completed"
+            (change)="toggleTodo(todo.id)"
+            class="todo-checkbox"
+          />
+          <div class="todo-content">
+            <div [class.completed]="todo.completed" class="todo-title">
+              {{ todo.title }}
+            </div>
+            <div class="todo-meta">
+              <span>{{ formatDate(todo.createdAt) }}</span>
+              <span
+                *ngIf="todo.priority"
+                class="priority-badge"
+                [attr.data-priority]="todo.priority"
+              >
+                {{ todo.priority }}
+              </span>
+            </div>
+          </div>
+          <button (click)="removeTodo(todo.id)" class="btn-delete">✕</button>
+        </div>
+
+        <!-- Empty states -->
+        <div
+          *ngIf="filteredTodos().length === 0 && todos().length > 0"
+          class="empty-state"
+        >
+          <div class="empty-icon">🔍</div>
+          <div class="empty-text">No {{ filter() }} todos found</div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="action-buttons">
+        <button (click)="loadSampleData()" class="btn-success">
+          Load Sample Data
+        </button>
+        <button
+          (click)="clearCompleted()"
+          [disabled]="completedCount() === 0"
+          class="btn-danger"
+        >
+          Clear Completed
+        </button>
+      </div>
+    </div>
+
+    <!-- State Inspector -->
+    <div class="card">
+      <h2>State Inspector</h2>
+
+      <div class="inspector-grid">
+        <div class="inspector-section">
+          <h3>Computed Values</h3>
+          <div class="values-display">
+            <div><strong>Total Todos:</strong> {{ todos().length }}</div>
+            <div><strong>Active:</strong> {{ activeCount() }}</div>
+            <div><strong>Completed:</strong> {{ completedCount() }}</div>
+            <div><strong>Current Filter:</strong> {{ filter() }}</div>
+            <div>
+              <strong>Filtered Count:</strong>
+              {{ filteredTodos().length }}
+            </div>
+          </div>
+        </div>
+
+        <div class="inspector-section">
+          <h3>Raw State</h3>
+          <pre class="raw-state">{{ stateJson() }}</pre>
+        </div>
+      </div>
+
+      <!-- Performance Metrics -->
+      <div class="performance-section">
+        <h3>
+          <span class="icon">⚡</span>
+          <span>Performance Metrics</span>
+        </h3>
+        <div class="metrics-container">
+          <div class="metrics-grid">
+            <div class="metric-card metric-purple">
+              <div class="metric-value">{{ operationCount }}</div>
+              <div class="metric-label">Total Operations</div>
+            </div>
+
+            <div class="metric-card metric-blue">
+              <div class="metric-value">{{ signalUpdateCount }}</div>
+              <div class="metric-label">Signal Updates</div>
+            </div>
+
+            <div class="metric-card metric-green">
+              <div class="metric-value">{{ renderCount }}</div>
+              <div class="metric-label">Component Renders</div>
+            </div>
+
+            <div class="metric-card metric-orange">
+              <div class="metric-value">{{ getAverageOperationTime() }}</div>
+              <div class="metric-label">Avg Time (ms)</div>
+            </div>
+          </div>
+
+          <div class="last-operation">
+            <div class="operation-label">Last Operation</div>
+            <div class="operation-name">{{ lastOperation }}</div>
+            <div class="operation-time">{{ getLastOperationTime() }}</div>
+          </div>
+
+          <div class="efficiency-score">
+            <div class="efficiency-header">
+              <span>Efficiency Score</span>
+              <span class="score-value">{{ getEfficiencyScore() }}%</span>
+            </div>
+            <div class="progress-bar">
+              <div
+                class="progress-fill"
+                [style.width.%]="getEfficiencyScore()"
+                [ngClass]="getEfficiencyColor()"
+              ></div>
+            </div>
+            <div class="efficiency-explanation">
+              Measures render efficiency: 100% = optimal (1 render per
+              operation). Lower scores indicate unnecessary re-renders.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

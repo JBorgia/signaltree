@@ -16,248 +16,33 @@ interface DevtoolsState {
   todos: Array<{ id: number; text: string; completed: boolean }>;
 }
 
+interface StateSnapshot {
+  state: DevtoolsState;
+  timestamp: number;
+}
+
+interface ActionRecord {
+  name: string;
+  timestamp: number;
+  duration: number;
+  action: () => void;
+}
+
 @Component({
   selector: 'app-devtools-demo',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  template: `
-    <div class="container mx-auto p-6">
-      <h1 class="text-3xl font-bold mb-6">SignalTree DevTools Demo</h1>
-
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <!-- State Controls -->
-        <div class="bg-white rounded-lg shadow p-6">
-          <h2 class="text-xl font-semibold mb-4">State Management</h2>
-
-          <div class="space-y-6">
-            <!-- Counter -->
-            <div>
-              <label for="counterValue" class="block text-sm font-medium mb-2"
-                >Counter: {{ counter() }}</label
-              >
-              <span id="counterValue" class="sr-only"
-                >Current counter value</span
-              >
-              <div class="flex gap-2">
-                <button
-                  (click)="increment()"
-                  class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                >
-                  +1
-                </button>
-                <button
-                  (click)="decrement()"
-                  class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
-                >
-                  -1
-                </button>
-                <button
-                  (click)="reset()"
-                  class="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
-                >
-                  Reset
-                </button>
-              </div>
-            </div>
-
-            <!-- User Info -->
-            <div class="space-y-3">
-              <h3 class="font-medium">User Information</h3>
-              <div>
-                <label for="userName" class="block text-sm font-medium mb-1"
-                  >Name:</label
-                >
-                <input
-                  id="userName"
-                  type="text"
-                  [value]="this.store.$.user.name()"
-                  (input)="updateUserName($event)"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md"
-                />
-              </div>
-              <div>
-                <label for="userEmail" class="block text-sm font-medium mb-1"
-                  >Email:</label
-                >
-                <input
-                  id="userEmail"
-                  type="email"
-                  [value]="this.store.$.user.email()"
-                  (input)="updateUserEmail($event)"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md"
-                />
-              </div>
-              <div>
-                <label for="theme" class="block text-sm font-medium mb-1"
-                  >Theme:</label
-                >
-                <select
-                  id="theme"
-                  [value]="this.store.$.user.preferences.theme()"
-                  (change)="updateTheme($event)"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md"
-                >
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
-                </select>
-              </div>
-              <div class="flex items-center">
-                <input
-                  id="notifications"
-                  type="checkbox"
-                  [checked]="this.store.$.user.preferences.notifications()"
-                  (change)="toggleNotifications()"
-                  class="mr-2"
-                />
-                <label for="notifications" class="text-sm font-medium"
-                  >Enable Notifications</label
-                >
-              </div>
-            </div>
-
-            <!-- Todo Management -->
-            <div>
-              <h3 class="font-medium mb-2">Todos</h3>
-              <div class="flex gap-2 mb-3">
-                <input
-                  type="text"
-                  [(ngModel)]="newTodoText"
-                  placeholder="Enter todo..."
-                  class="flex-1 px-3 py-2 border border-gray-300 rounded-md"
-                />
-                <button
-                  (click)="addTodo()"
-                  [disabled]="!newTodoText.trim()"
-                  class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:opacity-50"
-                >
-                  Add
-                </button>
-              </div>
-              <button
-                (click)="addMultipleTodos()"
-                class="px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600"
-              >
-                Add 5 Random Todos
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- DevTools Info -->
-        <div class="bg-white rounded-lg shadow p-6">
-          <h2 class="text-xl font-semibold mb-4">DevTools Information</h2>
-
-          <div class="space-y-4">
-            <!-- Performance Metrics -->
-            <div>
-              <h3 class="font-medium mb-2">Performance Metrics</h3>
-              <div class="text-sm space-y-1">
-                <p><strong>Updates:</strong> {{ getMetrics().updates }}</p>
-                <p>
-                  <strong>Average Update Time:</strong>
-                  {{ getMetrics().averageUpdateTime }}ms
-                </p>
-                <p>
-                  <strong>Last Update Time:</strong>
-                  {{ getMetrics().averageUpdateTime }}ms
-                </p>
-                <p>
-                  <strong>Total Execution Time:</strong>
-                  {{ getMetrics().computations }}
-                </p>
-              </div>
-            </div>
-
-            <!-- State Info -->
-            <div>
-              <h3 class="font-medium mb-2">State Information</h3>
-              <div class="text-sm space-y-1">
-                <p>
-                  <strong>State Size:</strong> {{ getStateSize() }} properties
-                </p>
-                <p><strong>Deep Update Path:</strong> {{ getDeepestPath() }}</p>
-                <p><strong>Last Action:</strong> {{ lastAction }}</p>
-              </div>
-            </div>
-
-            <!-- DevTools Actions -->
-            <div>
-              <h3 class="font-medium mb-2">DevTools Actions</h3>
-              <div class="flex flex-col gap-2">
-                <button
-                  (click)="logState()"
-                  class="px-4 py-2 bg-cyan-500 text-white rounded-md hover:bg-cyan-600"
-                >
-                  Log Current State
-                </button>
-                <button
-                  (click)="triggerSnapshot()"
-                  class="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600"
-                >
-                  Take Snapshot
-                </button>
-                <button
-                  (click)="resetMetrics()"
-                  class="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600"
-                >
-                  Reset Metrics
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Current State Display -->
-      <div class="mt-8 bg-white rounded-lg shadow p-6">
-        <h2 class="text-xl font-semibold mb-4">Live State View</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h3 class="font-medium mb-2">User & Counter</h3>
-            <div class="bg-gray-50 p-4 rounded">
-              <pre class="text-sm">{{ formatUserState() }}</pre>
-            </div>
-          </div>
-          <div>
-            <h3 class="font-medium mb-2">Todos ({{ todos().length }})</h3>
-            <div class="bg-gray-50 p-4 rounded max-h-48 overflow-y-auto">
-              <ul class="space-y-1">
-                <li
-                  *ngFor="let todo of todos(); let i = index"
-                  class="flex items-center justify-between text-sm"
-                >
-                  <span
-                    [class]="todo.completed ? 'line-through text-gray-500' : ''"
-                  >
-                    {{ todo.text }}
-                  </span>
-                  <div class="flex gap-1">
-                    <button
-                      (click)="toggleTodo(todo.id)"
-                      class="px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 rounded"
-                      [attr.aria-pressed]="todo.completed"
-                    >
-                      {{ todo.completed ? 'Undo' : 'Done' }}
-                    </button>
-                    <button
-                      (click)="removeTodo(todo.id)"
-                      class="px-2 py-1 text-xs bg-red-100 hover:bg-red-200 rounded"
-                    >
-                      ×
-                    </button>
-                  </div>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `,
+  templateUrl: './devtools-demo.component.html',
+  styleUrls: ['./devtools-demo.component.scss'],
 })
 export class DevtoolsDemoComponent {
   newTodoText = '';
   lastAction = 'Initial state';
+
+  // Snapshot & History features
+  snapshots: StateSnapshot[] = [];
+  actionHistory: ActionRecord[] = [];
+  replaying = false;
 
   public store = signalTree<DevtoolsState>(
     {
@@ -427,5 +212,82 @@ export class DevtoolsDemoComponent {
       null,
       2
     );
+  }
+
+  // Snapshot & Restore methods
+  takeSnapshot() {
+    const currentState = JSON.parse(JSON.stringify(this.store()));
+    this.snapshots.push({
+      state: currentState,
+      timestamp: Date.now(),
+    });
+    this.lastAction = `Snapshot taken (#${this.snapshots.length})`;
+  }
+
+  restoreSnapshot(index: number) {
+    const snapshot = this.snapshots[index];
+    if (snapshot) {
+      // Restore the entire state
+      this.store.$.counter.set(snapshot.state.counter);
+      this.store.$.user.name.set(snapshot.state.user.name);
+      this.store.$.user.email.set(snapshot.state.user.email);
+      this.store.$.user.preferences.theme.set(
+        snapshot.state.user.preferences.theme
+      );
+      this.store.$.user.preferences.notifications.set(
+        snapshot.state.user.preferences.notifications
+      );
+      this.store.$.todos.set(snapshot.state.todos);
+      this.lastAction = `Restored snapshot #${index + 1}`;
+    }
+  }
+
+  deleteSnapshot(index: number) {
+    this.snapshots.splice(index, 1);
+    this.lastAction = `Deleted snapshot #${index + 1}`;
+  }
+
+  // Action History & Replay methods
+  private recordAction(name: string, action: () => void, duration = 0) {
+    this.actionHistory.push({
+      name,
+      timestamp: Date.now(),
+      duration,
+      action,
+    });
+  }
+
+  async replayActions() {
+    if (this.actionHistory.length === 0 || this.replaying) return;
+
+    this.replaying = true;
+    this.lastAction = 'Replaying all actions...';
+
+    for (let i = 0; i < this.actionHistory.length; i++) {
+      const action = this.actionHistory[i];
+      action.action();
+      await new Promise((resolve) => setTimeout(resolve, 300)); // Delay between actions
+    }
+
+    this.replaying = false;
+    this.lastAction = 'Replay completed';
+  }
+
+  replaySingleAction(index: number) {
+    const action = this.actionHistory[index];
+    if (action) {
+      action.action();
+      this.lastAction = `Replayed: ${action.name}`;
+    }
+  }
+
+  clearHistory() {
+    this.actionHistory = [];
+    this.lastAction = 'Action history cleared';
+  }
+
+  formatTimestamp(timestamp: number): string {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString();
   }
 }

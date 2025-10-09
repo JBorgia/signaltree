@@ -239,28 +239,28 @@ export class BenchmarkService {
       const smallState = BenchmarkService.generateNestedState(2, 2);
       results.small.time = BenchmarkService.measureTime(() => {
         const tree = signalTree(smallState);
-        tree();
+        tree(); // Force tree access
       });
 
       // Medium tree (100 nodes)
       const mediumState = BenchmarkService.generateNestedState(3, 4);
       results.medium.time = BenchmarkService.measureTime(() => {
         const tree = signalTree(mediumState);
-        tree();
+        tree(); // Force tree access
       });
 
       // Large tree (1000 nodes)
       const largeState = BenchmarkService.generateNestedState(4, 8);
       results.large.time = BenchmarkService.measureTime(() => {
         const tree = signalTree(largeState);
-        tree();
+        tree(); // Force tree access
       });
 
       // XLarge tree (simplified for stability)
       const xlargeState = BenchmarkService.generateNestedState(3, 10);
       results.xlarge.time = BenchmarkService.measureTime(() => {
         const tree = signalTree(xlargeState);
-        tree();
+        tree(); // Force tree access
       });
 
       console.log('Initialization results:', results);
@@ -294,7 +294,7 @@ export class BenchmarkService {
 
     // Shallow update (top level)
     results.shallow = BenchmarkService.measureTime(() => {
-      tree((state: Record<string, unknown>) => ({
+      tree['update']((state: Record<string, unknown>) => ({
         ...state,
         topLevel: Math.random(),
       }));
@@ -302,7 +302,7 @@ export class BenchmarkService {
 
     // Medium depth update
     results.medium = BenchmarkService.measureTime(() => {
-      tree((state: Record<string, unknown>) => ({
+      tree['update']((state: Record<string, unknown>) => ({
         ...state,
         level_4_item_0: {
           ...((state['level_4_item_0'] as Record<string, unknown>) || {}),
@@ -313,7 +313,7 @@ export class BenchmarkService {
 
     // Deep update
     results.deep = BenchmarkService.measureTime(() => {
-      tree((state: Record<string, unknown>) => {
+      tree['update']((state: Record<string, unknown>) => {
         const newState = { ...state };
         let current = newState as Record<string, unknown>;
         for (let i = 4; i > 0; i--) {
@@ -344,7 +344,7 @@ export class BenchmarkService {
             });
           } else {
             // Fallback to regular update
-            batchTree((state: Record<string, unknown>) => {
+            batchTree['update']((state: Record<string, unknown>) => {
               const updates: Record<string, unknown> = {};
               for (let i = 0; i < 10; i++) {
                 updates[`field_${i}`] = Math.random();
@@ -370,7 +370,7 @@ export class BenchmarkService {
             });
           } else {
             // Fallback to regular update
-            batchTree((state: Record<string, unknown>) => {
+            batchTree['update']((state: Record<string, unknown>) => {
               const updates: Record<string, unknown> = {};
               for (let i = 0; i < 100; i++) {
                 updates[`field_${i}`] = Math.random();

@@ -52,10 +52,10 @@ export class NavigationComponent {
     },
     // Removed outdated comparisons to native signals and mock libraries
     {
-      id: 'realistic-comparison',
-      title: 'Realistic Comparison',
+      id: 'benchmarks',
+      title: 'Benchmarks vs Alternatives',
       description: 'SignalTree vs NgRx Store and NgRx SignalStore',
-      route: '/realistic-comparison',
+      route: '/benchmarks',
       category: 'performance',
     },
     {

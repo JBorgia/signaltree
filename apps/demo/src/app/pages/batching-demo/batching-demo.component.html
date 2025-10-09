@@ -1,0 +1,350 @@
+<div class="batching-demo-container">
+  <h1 class="">SignalTree Batching Demo</h1>
+
+  <!-- Info Banner about Failures -->
+  <div class="info-banner">
+    <h3>💡 Understanding Batch Operation Results</h3>
+    <p>
+      When you see <strong>"Failed"</strong> operations in the Batch Processing
+      History, it means some operations in the batch encountered errors during
+      execution. This demo simulates real-world scenarios where API calls or
+      async operations might fail.
+    </p>
+    <ul>
+      <li><strong>Success:</strong> Operations completed without errors</li>
+      <li>
+        <strong>Failed:</strong> Operations that threw errors or were rejected
+        (simulated randomly)
+      </li>
+    </ul>
+    <p>
+      <strong>Handling Failures:</strong> SignalTree's batching system ensures
+      failed operations don't prevent successful ones from completing. You can
+      implement error handling using try-catch blocks in your batch operations,
+      and track failures separately for retry logic or user notifications.
+    </p>
+  </div>
+
+  <div class="main-grid">
+    <!-- Batch Operations Panel -->
+    <div class="card">
+      <h2 class="">Batch Operations</h2>
+
+      <!-- Batch Settings -->
+      <div class="batch-settings">
+        <h3 class="">Batch Settings</h3>
+        <div class="settings-grid">
+          <div>
+            <label for="batchSize" class="">Batch Size</label>
+            <input
+              id="batchSize"
+              type="number"
+              [(ngModel)]="batchSize"
+              min="1"
+              max="50"
+              class=""
+            />
+          </div>
+          <div>
+            <label for="processingDelay" class="">Delay (ms)</label>
+            <input
+              id="processingDelay"
+              type="number"
+              [(ngModel)]="processingDelay"
+              min="100"
+              max="5000"
+              step="100"
+              class=""
+            />
+          </div>
+        </div>
+        <div class="">
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="autoProcess" class="" />
+            <span class="">Auto-process when batch is full</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <div class="action-group">
+          <h3 class="">User Operations</h3>
+          <div class="action-grid">
+            <button (click)="addCreateUserOperation()" class="btn btn-success">
+              + Create User
+            </button>
+            <button
+              (click)="addUpdateUserOperation()"
+              [disabled]="users().length === 0"
+              class="btn btn-primary"
+            >
+              ↻ Update User
+            </button>
+            <button
+              (click)="addDeleteUserOperation()"
+              [disabled]="users().length === 0"
+              class="btn btn-danger"
+            >
+              × Delete User
+            </button>
+            <button (click)="addBulkUserOperations()" class="btn btn-purple">
+              ⚡ Bulk Users
+            </button>
+          </div>
+        </div>
+
+        <div class="action-group">
+          <h3 class="">Post Operations</h3>
+          <div class="action-grid">
+            <button
+              (click)="addCreatePostOperation()"
+              [disabled]="users().length === 0"
+              class="btn btn-success"
+            >
+              + Create Post
+            </button>
+            <button
+              (click)="addUpdatePostOperation()"
+              [disabled]="posts().length === 0"
+              class="btn btn-primary"
+            >
+              ↻ Update Post
+            </button>
+            <button
+              (click)="addDeletePostOperation()"
+              [disabled]="posts().length === 0"
+              class="btn btn-danger"
+            >
+              × Delete Post
+            </button>
+            <button
+              (click)="addBulkPostOperations()"
+              [disabled]="users().length === 0"
+              class="btn btn-purple"
+            >
+              ⚡ Bulk Posts
+            </button>
+          </div>
+        </div>
+
+        <div class="action-group">
+          <h3 class="">Batch Control</h3>
+          <div class="control-buttons">
+            <button
+              (click)="processBatch()"
+              [disabled]="batchQueue().length === 0 || processing()"
+              class="btn btn-orange"
+            >
+              {{ processing() ? 'Processing...' : 'Process Batch' }} ({{
+                batchQueue().length
+              }})
+            </button>
+            <button
+              (click)="clearBatch()"
+              [disabled]="batchQueue().length === 0 || processing()"
+              class="btn btn-secondary"
+            >
+              Clear Batch
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Batch Queue & Status -->
+    <div class="card">
+      <h2 class="">Batch Queue</h2>
+
+      <!-- Queue Status -->
+      <div class="queue-status">
+        <div class="status-grid">
+          <div class="">
+            <div class="stat-value">
+              {{ batchQueue().length }}
+            </div>
+            <div class="stat-label">Queued</div>
+          </div>
+          <div class="">
+            <div class="stat-value">
+              {{ pendingOperationsCount() }}
+            </div>
+            <div class="stat-label">Pending</div>
+          </div>
+          <div class="">
+            <div class="stat-value">
+              {{ completedOperations().length }}
+            </div>
+            <div class="stat-label">Completed</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Processing Indicator -->
+      <div *ngIf="processing()" class="processing-indicator">
+        <div class="spinner"></div>
+        <span class="">Processing batch...</span>
+      </div>
+
+      <!-- Batch Queue Items -->
+      <div class="queue-list">
+        <div
+          *ngFor="let operation of batchQueue(); trackBy: trackOperation"
+          class="queue-item"
+          [class]="getOperationStatusClass(operation)"
+        >
+          <div class="queue-item-content">
+            <div
+              class="status-dot"
+              [class]="getOperationStatusDot(operation)"
+            ></div>
+            <div>
+              <div class="operation-title">
+                {{ operation.type | titlecase }}
+                {{ operation.entity | titlecase }}
+              </div>
+              <div class="operation-time">
+                {{ operation.id }} •
+                {{ formatTimestamp(operation.timestamp) }}
+              </div>
+            </div>
+          </div>
+          <button
+            (click)="removeOperation(operation.id)"
+            [disabled]="processing() || operation.status === 'processing'"
+            class="remove-button"
+          >
+            Remove
+          </button>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="batchQueue().length === 0" class="empty-state">
+        No operations in queue. Add some operations to get started.
+      </div>
+    </div>
+  </div>
+
+  <!-- Data Display -->
+  <div class="data-grid">
+    <!-- Users -->
+    <div class="card">
+      <h2 class="">Users ({{ users().length }})</h2>
+      <div class="data-list">
+        <div *ngFor="let user of users(); trackBy: trackUser" class="user-item">
+          <img [src]="user.avatar" [alt]="user.name" class="" />
+          <div class="user-info">
+            <div class="operation-title">{{ user.name }}</div>
+            <div class="operation-time">{{ user.email }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="users().length === 0" class="empty-state">
+        No users yet. Create some users to see them here.
+      </div>
+    </div>
+
+    <!-- Posts -->
+    <div class="card">
+      <h2 class="">Posts ({{ posts().length }})</h2>
+      <div class="data-list">
+        <div *ngFor="let post of posts(); trackBy: trackPost" class="post-item">
+          <div class="operation-title">{{ post.title }}</div>
+          <div class="post-meta">
+            by {{ getUserName(post.authorId) }} •
+            {{ post.content.length }} chars
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="posts().length === 0" class="empty-state">
+        No posts yet. Create some posts to see them here.
+      </div>
+    </div>
+  </div>
+
+  <!-- Batch Results History -->
+  <div class="card batch-history">
+    <h2 class="">Batch Processing History</h2>
+
+    <div class="history-list">
+      <div
+        *ngFor="
+          let result of batchResults().slice().reverse();
+          trackBy: trackBatchResult
+        "
+        class="action-group"
+      >
+        <div class="history-header">
+          <div class="history-id">{{ result.batchId }}</div>
+          <div class="history-time">
+            {{ formatTimestamp(result.timestamp) }}
+          </div>
+        </div>
+
+        <div class="history-stats">
+          <div>
+            <div class="stat-label">Operations</div>
+            <div>{{ result.operations.length }}</div>
+          </div>
+          <div>
+            <div class="stat-label success">Success</div>
+            <div>{{ result.successCount }}</div>
+          </div>
+          <div>
+            <div class="stat-label failed">Failed</div>
+            <div>{{ result.failureCount }}</div>
+          </div>
+          <div>
+            <div class="stat-label duration">Duration</div>
+            <div>{{ result.duration.toFixed(0) }}ms</div>
+          </div>
+        </div>
+
+        <div class="history-summary">
+          {{ getOperationsSummary(result.operations) }}
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="batchResults().length === 0" class="empty-state">
+      No batch processing history yet. Process some batches to see results here.
+    </div>
+  </div>
+
+  <!-- Features Explanation -->
+  <div class="features-section">
+    <h2 class="">Batching Features Demonstrated</h2>
+    <div class="features-grid">
+      <div>
+        <h3 class="">Operation Queuing</h3>
+        <p class="">
+          Operations are queued in memory and processed together for efficiency.
+        </p>
+      </div>
+      <div>
+        <h3 class="">Configurable Batching</h3>
+        <p class="">
+          Batch size and processing delays can be configured for optimal
+          performance.
+        </p>
+      </div>
+      <div>
+        <h3 class="">Auto-Processing</h3>
+        <p class="">
+          Batches can be automatically processed when they reach the configured
+          size.
+        </p>
+      </div>
+      <div>
+        <h3 class="">Error Handling</h3>
+        <p class="">
+          Individual operation failures don't block the entire batch from
+          processing.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
