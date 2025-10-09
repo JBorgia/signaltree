@@ -1,0 +1,248 @@
+<div class="container">
+  <h1>📝 SignalTree Core</h1>
+
+  <!-- Explanation Card -->
+  <div class="explanation-card">
+    <h2>🌳 What is SignalTree Core?</h2>
+    <p class="intro-text">
+      <strong>SignalTree</strong> is a <em>reactive state management library</em> for Angular that combines the power of signals with an intuitive API. It provides a simple way to manage application state with automatic reactivity and computed values.
+    </p>
+
+    <div class="how-it-works">
+      <h3>💡 How It Works</h3>
+      <ol class="instruction-list">
+        <li><strong>Create a SignalTree:</strong> Define your state structure with <code>signalTree(initialState)</code></li>
+        <li><strong>Access State:</strong> Use <code>tree.state.property()</code> to read values reactively</li>
+        <li><strong>Update State:</strong> Use <code>tree.state.property.set(newValue)</code> to update values</li>
+        <li><strong>Computed Values:</strong> Use Angular's <code>computed()</code> for derived state that updates automatically</li>
+      </ol>
+    </div>
+
+    <div class="key-features">
+      <h3>✨ Key Features</h3>
+      <div class="feature-tags">
+        <span class="feature-tag">🔄 Automatic Reactivity</span>
+        <span class="feature-tag">📊 Computed Signals</span>
+        <span class="feature-tag">🎯 Type-Safe API</span>
+        <span class="feature-tag">⚡ Zero Boilerplate</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Demo Grid -->
+  <div class="demo-grid">
+    <!-- Todo Management Card -->
+    <div class="card todos-card">
+      <h2>📋 Todo Management</h2>
+      <p class="card-description">
+        Add, toggle, and manage todos with reactive state updates
+      </p>
+
+      <!-- Add Todo Section -->
+      <div class="add-todo-section">
+        <label for="new-todo">Add New Todo</label>
+        <div class="input-group">
+          <input
+            id="new-todo"
+            type="text"
+            [(ngModel)]="newTodoTitle"
+            (keyup.enter)="addTodo()"
+            placeholder="What needs to be done?"
+            class="form-input"
+          />
+          <button
+            (click)="addTodo()"
+            [disabled]="!newTodoTitle.trim()"
+            class="btn-primary"
+          >
+            Add
+          </button>
+        </div>
+      </div>
+
+      <!-- Filter Section -->
+      <div class="filter-section">
+        <button
+          (click)="setFilter('all')"
+          [class.active]="filter() === 'all'"
+          class="btn-filter"
+        >
+          All ({{ totalCount() }})
+        </button>
+        <button
+          (click)="setFilter('active')"
+          [class.active]="filter() === 'active'"
+          class="btn-filter"
+        >
+          Active ({{ activeCount() }})
+        </button>
+        <button
+          (click)="setFilter('completed')"
+          [class.active]="filter() === 'completed'"
+          class="btn-filter"
+        >
+          Completed ({{ completedCount() }})
+        </button>
+      </div>
+
+      <!-- Todos List -->
+      <div class="todos-list">
+        @if (filteredTodos().length === 0) {
+          <div class="empty-state">
+            <p>
+              @if (filter() === 'all') {
+                🎉 No todos yet! Add one above to get started.
+              } @else if (filter() === 'active') {
+                ✨ No active todos! You're all caught up.
+              } @else {
+                📭 No completed todos yet.
+              }
+            </p>
+          </div>
+        } @else {
+          @for (todo of filteredTodos(); track trackByTodoId($index, todo)) {
+            <div class="todo-item" [class.completed]="todo.completed">
+              <input
+                type="checkbox"
+                [checked]="todo.completed"
+                (change)="toggleTodo(todo.id)"
+              />
+              <span class="todo-title">{{ todo.title }}</span>
+              <button
+                (click)="deleteTodo(todo.id)"
+                class="btn-delete btn-xs"
+                title="Delete todo"
+              >
+                🗑️
+              </button>
+            </div>
+          }
+        }
+      </div>
+
+      <!-- Bulk Actions -->
+      @if (hasAnyTodos()) {
+        <div class="bulk-actions">
+          <button
+            (click)="toggleAll()"
+            class="btn-secondary btn-sm"
+            [title]="allCompleted() ? 'Mark all as active' : 'Mark all as completed'"
+          >
+            {{ allCompleted() ? '↩️ Uncheck All' : '✅ Check All' }}
+          </button>
+
+          @if (hasCompletedTodos()) {
+            <button
+              (click)="clearCompleted()"
+              class="btn-warning btn-sm"
+            >
+              🧹 Clear Completed
+            </button>
+          }
+
+          <button
+            (click)="clearAll()"
+            class="btn-danger btn-sm"
+          >
+            🗑️ Clear All
+          </button>
+        </div>
+      }
+
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <button
+          (click)="addRandomTodos()"
+          class="btn-success btn-sm"
+        >
+          🎲 Add 5 Random Todos
+        </button>
+      </div>
+    </div>
+
+    <!-- Statistics Card -->
+    <div class="card stats-card">
+      <h2>📊 Statistics</h2>
+      <p class="card-description">
+        Real-time computed values that update automatically
+      </p>
+
+      <div class="stats-grid">
+        <div class="stat-item total">
+          <div class="stat-icon">📝</div>
+          <div class="stat-content">
+            <div class="stat-label">Total Todos</div>
+            <div class="stat-value">{{ totalCount() }}</div>
+          </div>
+        </div>
+
+        <div class="stat-item active">
+          <div class="stat-icon">⏳</div>
+          <div class="stat-content">
+            <div class="stat-label">Active</div>
+            <div class="stat-value">{{ activeCount() }}</div>
+          </div>
+        </div>
+
+        <div class="stat-item completed">
+          <div class="stat-icon">✅</div>
+          <div class="stat-content">
+            <div class="stat-label">Completed</div>
+            <div class="stat-value">{{ completedCount() }}</div>
+          </div>
+        </div>
+
+        <div class="stat-item progress">
+          <div class="stat-icon">��</div>
+          <div class="stat-content">
+            <div class="stat-label">Progress</div>
+            <div class="stat-value">
+              @if (totalCount() === 0) {
+                0%
+              } @else {
+                {{ ((completedCount() / totalCount()) * 100).toFixed(0) }}%
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress Bar -->
+      @if (hasAnyTodos()) {
+        <div class="progress-section">
+          <div class="progress-label">
+            Completion Progress
+          </div>
+          <div class="progress-bar">
+            <div
+              class="progress-fill"
+              [style.width.%]="(completedCount() / totalCount()) * 100"
+            ></div>
+          </div>
+        </div>
+      }
+
+      <!-- Code Example -->
+      <div class="code-example">
+        <h3>💻 Example Code</h3>
+        <pre><code>// Create a SignalTree
+const tree = signalTree(&#123;
+  todos: [],
+  filter: 'all'
+&#125;);
+
+// Access state signals
+const todos = tree.state.todos;
+const filter = tree.state.filter;
+
+// Update state
+tree.state.todos.set([...todos(), newTodo]);
+
+// Computed values
+const activeCount = computed(() =>
+  todos().filter(t => !t.completed).length
+);</code></pre>
+      </div>
+    </div>
+  </div>
+</div>

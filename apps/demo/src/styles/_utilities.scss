@@ -1,0 +1,101 @@
+/* Utility Classes */
+
+// Spacing Utilities
+.m-0 {
+  margin: 0;
+}
+.p-0 {
+  padding: 0;
+}
+
+@each $space in (1, 2, 3, 4, 6, 8) {
+  .m-#{$space} {
+    margin: var(--space-#{$space});
+  }
+  .mt-#{$space} {
+    margin-top: var(--space-#{$space});
+  }
+  .mb-#{$space} {
+    margin-bottom: var(--space-#{$space});
+  }
+  .ml-#{$space} {
+    margin-left: var(--space-#{$space});
+  }
+  .mr-#{$space} {
+    margin-right: var(--space-#{$space});
+  }
+
+  .p-#{$space} {
+    padding: var(--space-#{$space});
+  }
+  .pt-#{$space} {
+    padding-top: var(--space-#{$space});
+  }
+  .pb-#{$space} {
+    padding-bottom: var(--space-#{$space});
+  }
+  .pl-#{$space} {
+    padding-left: var(--space-#{$space});
+  }
+  .pr-#{$space} {
+    padding-right: var(--space-#{$space});
+  }
+}
+
+// Display Utilities
+.block {
+  display: block;
+}
+.inline-block {
+  display: inline-block;
+}
+.hidden {
+  display: none;
+}
+
+// Position Utilities
+.relative {
+  position: relative;
+}
+.absolute {
+  position: absolute;
+}
+.fixed {
+  position: fixed;
+}
+
+// Width/Height
+.w-full {
+  width: 100%;
+}
+.h-full {
+  height: 100%;
+}
+
+// Border Radius
+.rounded-sm {
+  border-radius: var(--radius-sm);
+}
+.rounded {
+  border-radius: var(--radius-md);
+}
+.rounded-lg {
+  border-radius: var(--radius-lg);
+}
+.rounded-full {
+  border-radius: var(--radius-full);
+}
+
+// Shadow Utilities
+.shadow-sm {
+  box-shadow: var(--shadow-sm);
+}
+.shadow {
+  box-shadow: var(--shadow-md);
+}
+.shadow-lg {
+  box-shadow: var(--shadow-lg);
+}
+.shadow-xl {
+  box-shadow: var(--shadow-xl);
+}

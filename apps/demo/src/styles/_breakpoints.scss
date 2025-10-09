@@ -1,0 +1,62 @@
+// Breakpoint tokens
+$breakpoints: (
+  'xs': 320px,
+  'sm': 640px,
+  'md': 768px,
+  'lg': 1024px,
+  'xl': 1280px,
+  '2xl': 1536px,
+);
+
+// Breakpoint mixins
+@mixin mobile {
+  @media (max-width: #{map-get($breakpoints, 'md') - 1px}) {
+    @content;
+  }
+}
+
+@mixin tablet {
+  @media (min-width: #{map-get($breakpoints, 'md')}) and (max-width: #{map-get($breakpoints, 'lg') - 1px}) {
+    @content;
+  }
+}
+
+@mixin desktop {
+  @media (min-width: #{map-get($breakpoints, 'lg')}) {
+    @content;
+  }
+}
+
+// Responsive breakpoint mixin
+@mixin respond-to($breakpoint) {
+  @if map-has-key($breakpoints, $breakpoint) {
+    @media (min-width: #{map-get($breakpoints, $breakpoint)}) {
+      @content;
+    }
+  } @else {
+    @warn "No breakpoint found for '#{$breakpoint}'. Available breakpoints are: #{map-keys($breakpoints)}.";
+  }
+}
+
+// Usage Examples:
+// .example {
+//   // Mobile-first approach
+//   padding: 1rem;
+//
+//   @include respond-to('md') {
+//     padding: 2rem;
+//   }
+//
+//   @include respond-to('lg') {
+//     padding: 3rem;
+//   }
+// }
+
+// Responsive Container Widths
+$container-max-widths: (
+  'sm': map-get($breakpoints, 'sm'),
+  'md': map-get($breakpoints, 'md'),
+  'lg': map-get($breakpoints, 'lg'),
+  'xl': map-get($breakpoints, 'xl'),
+  '2xl': map-get($breakpoints, '2xl'),
+);

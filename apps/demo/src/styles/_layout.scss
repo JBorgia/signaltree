@@ -1,0 +1,85 @@
+/* Layout System */
+
+// Breakpoint Mixins
+@mixin mobile {
+  @media (max-width: 767px) {
+    @content;
+  }
+}
+
+@mixin tablet {
+  @media (min-width: 768px) and (max-width: 1023px) {
+    @content;
+  }
+}
+
+@mixin desktop {
+  @media (min-width: 1024px) {
+    @content;
+  }
+}
+
+// Container
+.container {
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 var(--space-4);
+
+  @include tablet {
+    padding: 0 var(--space-6);
+  }
+
+  @include desktop {
+    padding: 0 var(--space-8);
+  }
+
+  &.sm {
+    max-width: 640px;
+  }
+  &.md {
+    max-width: 768px;
+  }
+  &.lg {
+    max-width: 1024px;
+  }
+  &.xl {
+    max-width: 1280px;
+  }
+}
+
+// Grid System
+.grid {
+  display: grid;
+  gap: var(--space-4);
+
+  &.cols-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  &.cols-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  &.cols-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  &.auto-fit {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+}
+
+// Flex Utilities
+.flex {
+  display: flex;
+}
+.flex-col {
+  flex-direction: column;
+}
+.items-center {
+  align-items: center;
+}
+.justify-center {
+  justify-content: center;
+}
+.justify-between {
+  justify-content: space-between;
+}
