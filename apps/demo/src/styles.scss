@@ -899,30 +899,41 @@ code {
   }
 }
 
-/* Button compatibility - map old classes to new button system */
-.bg-blue-600,
-.bg-blue-500 {
-  @extend .btn-primary;
+/* Button System */
+.btn-primary {
+  background-color: var(--color-primary-600);
+  color: white;
+
+  &:hover {
+    background-color: var(--color-primary-700);
+  }
 }
 
-.bg-green-600,
-.bg-green-500 {
-  @extend .btn-secondary;
+.btn-secondary {
+  background-color: var(--color-secondary-600);
+  color: white;
+
+  &:hover {
+    background-color: var(--color-secondary-700);
+  }
 }
 
-.bg-red-600,
-.bg-red-500 {
-  @extend .btn-danger;
+.btn-danger {
+  background-color: var(--color-error-600);
+  color: white;
+
+  &:hover {
+    background-color: var(--color-error-700);
+  }
 }
 
-.bg-yellow-500,
-.bg-yellow-600 {
-  @extend .btn-warning;
-}
+.btn-warning {
+  background-color: var(--color-warning-600);
+  color: var(--color-neutral-900);
 
-.bg-purple-600,
-.bg-purple-500 {
-  @extend .btn-purple;
+  &:hover {
+    background-color: var(--color-warning-700);
+  }
 }
 
 /* Legacy responsive classes */
@@ -950,46 +961,65 @@ code {
   }
 }
 
-/* Legacy spacing that maps to new system */
-.px-4 {
-  padding-left: var(--space-4);
-  padding-right: var(--space-4);
-}
-.px-6 {
-  padding-left: var(--space-6);
-  padding-right: var(--space-6);
-}
-.py-2 {
-  padding-top: var(--space-2);
-  padding-bottom: var(--space-2);
-}
-.py-3 {
-  padding-top: var(--space-3);
-  padding-bottom: var(--space-3);
-}
-.py-4 {
-  padding-top: var(--space-4);
-  padding-bottom: var(--space-4);
+/* Spacing Utilities */
+.padding {
+  &-x {
+    &-2 {
+      padding-left: var(--space-2);
+      padding-right: var(--space-2);
+    }
+    &-3 {
+      padding-left: var(--space-3);
+      padding-right: var(--space-3);
+    }
+    &-4 {
+      padding-left: var(--space-4);
+      padding-right: var(--space-4);
+    }
+    &-6 {
+      padding-left: var(--space-6);
+      padding-right: var(--space-6);
+    }
+  }
+
+  &-y {
+    &-2 {
+      padding-top: var(--space-2);
+      padding-bottom: var(--space-2);
+    }
+    &-3 {
+      padding-top: var(--space-3);
+      padding-bottom: var(--space-3);
+    }
+    &-4 {
+      padding-top: var(--space-4);
+      padding-bottom: var(--space-4);
+    }
+    &-6 {
+      padding-top: var(--space-6);
+      padding-bottom: var(--space-6);
+    }
+  }
 }
 
-/* Legacy text colors */
-.text-blue-600 {
-  @extend .text-primary;
+/* Text Colors */
+.text-primary {
+  color: var(--color-primary-600);
 }
-.text-green-600 {
-  @extend .text-secondary;
+.text-secondary {
+  color: var(--color-secondary-600);
 }
-.text-red-600 {
-  @extend .text-error;
+.text-error {
+  color: var(--color-error-600);
 }
-.text-yellow-600 {
-  @extend .text-warning;
+.text-warning {
+  color: var(--color-warning-600);
 }
-.text-gray-600 {
-  @extend .text-neutral-700;
+.text-neutral-700 {
+  color: var(--color-neutral-700);
 }
-.text-gray-500 {
-  @extend .text-neutral-500;
+.text-neutral-500 {
+  color: var(--color-neutral-500);
 }
 
 /* Legacy hover states */

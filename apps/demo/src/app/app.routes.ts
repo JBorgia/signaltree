@@ -79,22 +79,7 @@ export const appRoutes: Route[] = [
         (c) => c.DevtoolsDemoComponent
       ),
   },
-  // {
-  //   path: 'serialization',
-  //   loadComponent: () =>
-  //     import('./pages/serialization-demo/serialization-demo.component').then(
-  //       (c) => c.SerializationDemoComponent
-  //     ),
-  // },
-
   // Performance comparisons
-  {
-    path: 'performance-dashboard',
-    loadComponent: () =>
-      import(
-        './components/performance-dashboard/performance-dashboard.component'
-      ).then((c) => c.PerformanceDashboardComponent),
-  },
   {
     path: 'benchmarks',
     loadComponent: () =>

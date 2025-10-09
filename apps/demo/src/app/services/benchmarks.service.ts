@@ -294,7 +294,7 @@ export class BenchmarkService {
 
     // Shallow update (top level)
     results.shallow = BenchmarkService.measureTime(() => {
-      tree['update']((state: Record<string, unknown>) => ({
+      (tree as any)['update']((state: Record<string, unknown>) => ({
         ...state,
         topLevel: Math.random(),
       }));
@@ -302,7 +302,7 @@ export class BenchmarkService {
 
     // Medium depth update
     results.medium = BenchmarkService.measureTime(() => {
-      tree['update']((state: Record<string, unknown>) => ({
+      (tree as any)['update']((state: Record<string, unknown>) => ({
         ...state,
         level_4_item_0: {
           ...((state['level_4_item_0'] as Record<string, unknown>) || {}),
@@ -313,7 +313,7 @@ export class BenchmarkService {
 
     // Deep update
     results.deep = BenchmarkService.measureTime(() => {
-      tree['update']((state: Record<string, unknown>) => {
+      (tree as any)['update']((state: Record<string, unknown>) => {
         const newState = { ...state };
         let current = newState as Record<string, unknown>;
         for (let i = 4; i > 0; i--) {
@@ -344,7 +344,7 @@ export class BenchmarkService {
             });
           } else {
             // Fallback to regular update
-            batchTree['update']((state: Record<string, unknown>) => {
+            (batchTree as any)['update']((state: Record<string, unknown>) => {
               const updates: Record<string, unknown> = {};
               for (let i = 0; i < 10; i++) {
                 updates[`field_${i}`] = Math.random();
@@ -370,7 +370,7 @@ export class BenchmarkService {
             });
           } else {
             // Fallback to regular update
-            batchTree['update']((state: Record<string, unknown>) => {
+            (batchTree as any)['update']((state: Record<string, unknown>) => {
               const updates: Record<string, unknown> = {};
               for (let i = 0; i < 100; i++) {
                 updates[`field_${i}`] = Math.random();

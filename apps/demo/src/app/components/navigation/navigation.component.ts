@@ -44,14 +44,6 @@ export class NavigationComponent {
 
     // Performance Examples
     {
-      id: 'performance-dashboard',
-      title: 'Performance Dashboard',
-      description: 'Live performance monitoring and metrics',
-      route: '/performance-dashboard',
-      category: 'performance',
-    },
-    // Removed outdated comparisons to native signals and mock libraries
-    {
       id: 'benchmarks',
       title: 'Benchmarks vs Alternatives',
       description: 'SignalTree vs NgRx Store and NgRx SignalStore',
