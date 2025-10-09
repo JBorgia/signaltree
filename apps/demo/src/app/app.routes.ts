@@ -96,11 +96,17 @@ export const appRoutes: Route[] = [
       ).then((c) => c.PerformanceDashboardComponent),
   },
   {
-    path: 'realistic-comparison',
+    path: 'benchmarks',
     loadComponent: () =>
       import(
         './pages/realistic-comparison/realistic-comparison.component'
       ).then((c) => c.RealisticComparisonComponent),
+  },
+  // Redirect old route to new one
+  {
+    path: 'realistic-comparison',
+    redirectTo: 'benchmarks',
+    pathMatch: 'full',
   },
 
   // Existing pages

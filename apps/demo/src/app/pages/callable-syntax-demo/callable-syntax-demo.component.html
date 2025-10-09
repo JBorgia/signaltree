@@ -1,53 +1,35 @@
-<div class="container mx-auto p-6">
-  <h1 class="text-3xl font-bold mb-6">🚀 SignalTree Callable Syntax</h1>
+<div class="container">
+  <h1>🚀 SignalTree Callable Syntax</h1>
 
   <!-- Info Banner -->
-  <div
-    class="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 rounded-lg mb-8"
-  >
-    <h3 class="text-xl font-semibold mb-3">
+  <div class="info-banner">
+    <h3>
       ✨ Comprehensive Callable Syntax with &#64;signaltree/callable-syntax
     </h3>
-    <p class="mb-4">
+    <p>
       This demo showcases the complete callable syntax that transforms at build
       time:
     </p>
-    <ul class="space-y-2 mb-4">
+    <ul>
       <li>
-        <code class="bg-white bg-opacity-20 px-2 py-1 rounded"
-          >tree.$.name('value')</code
-        >
+        <code>tree.$.name('value')</code>
         →
-        <code class="bg-white bg-opacity-20 px-2 py-1 rounded"
-          >tree.$.name.set('value')</code
-        >
+        <code>tree.$.name.set('value')</code>
       </li>
       <li>
-        <code class="bg-white bg-opacity-20 px-2 py-1 rounded"
-          >tree.$.age(n => n + 1)</code
-        >
+        <code>tree.$.age(n => n + 1)</code>
         →
-        <code class="bg-white bg-opacity-20 px-2 py-1 rounded"
-          >tree.$.age.update(n => n + 1)</code
-        >
+        <code>tree.$.age.update(n => n + 1)</code>
       </li>
       <li>
-        <code class="bg-white bg-opacity-20 px-2 py-1 rounded"
-          >tree.$.profile.email('new&#64;email.com')</code
-        >
+        <code>tree.$.profile.email('new&#64;email.com')</code>
         →
-        <code class="bg-white bg-opacity-20 px-2 py-1 rounded"
-          >tree.$.profile.email.set('new&#64;email.com')</code
-        >
+        <code>tree.$.profile.email.set('new&#64;email.com')</code>
       </li>
       <li>
-        <code class="bg-white bg-opacity-20 px-2 py-1 rounded"
-          >tree.$.items(arr => [...arr, item])</code
-        >
+        <code>tree.$.items(arr => [...arr, item])</code>
         →
-        <code class="bg-white bg-opacity-20 px-2 py-1 rounded"
-          >tree.$.items.update(arr => [...arr, item])</code
-        >
+        <code>tree.$.items.update(arr => [...arr, item])</code>
       </li>
     </ul>
     <p>
@@ -58,63 +40,38 @@
   </div>
 
   <!-- Section Tabs -->
-  <div class="flex justify-center mb-8 border-b">
+  <div class="section-tabs">
     <button
-      [class]="
-        activeSection === 'basic'
-          ? 'border-b-2 border-blue-500 text-blue-600'
-          : 'text-gray-600 hover:text-gray-900'
-      "
+      [class.active]="activeSection === 'basic'"
       (click)="activeSection = 'basic'"
-      class="px-6 py-3 font-semibold transition-colors"
     >
       Basic Patterns
     </button>
     <button
-      [class]="
-        activeSection === 'complex'
-          ? 'border-b-2 border-blue-500 text-blue-600'
-          : 'text-gray-600 hover:text-gray-900'
-      "
+      [class.active]="activeSection === 'complex'"
       (click)="activeSection = 'complex'"
-      class="px-6 py-3 font-semibold transition-colors"
     >
       Complex Objects
     </button>
     <button
-      [class]="
-        activeSection === 'arrays'
-          ? 'border-b-2 border-blue-500 text-blue-600'
-          : 'text-gray-600 hover:text-gray-900'
-      "
+      [class.active]="activeSection === 'arrays'"
       (click)="activeSection = 'arrays'"
-      class="px-6 py-3 font-semibold transition-colors"
     >
       Array Operations
     </button>
     <button
-      [class]="
-        activeSection === 'performance'
-          ? 'border-b-2 border-blue-500 text-blue-600'
-          : 'text-gray-600 hover:text-gray-900'
-      "
+      [class.active]="activeSection === 'performance'"
       (click)="activeSection = 'performance'"
-      class="px-6 py-3 font-semibold transition-colors"
     >
       Performance Demo
     </button>
   </div>
 
   <!-- Basic Patterns Section -->
-  <div
-    *ngIf="activeSection === 'basic'"
-    class="grid grid-cols-1 lg:grid-cols-2 gap-6"
-  >
-    <div class="bg-white rounded-lg shadow-md p-6">
-      <h3 class="text-lg font-semibold mb-4 flex items-center">
-        👤 Basic Profile
-      </h3>
-      <div class="bg-gray-50 p-4 rounded-md mb-4 font-mono text-sm space-y-1">
+  <div *ngIf="activeSection === 'basic'" class="demo-grid">
+    <div class="card">
+      <h3>👤 Basic Profile</h3>
+      <div class="state-display">
         <p><strong>Name:</strong> {{ basicProfile.$.name() }}</p>
         <p><strong>Age:</strong> {{ basicProfile.$.age() }}</p>
         <p><strong>Email:</strong> {{ basicProfile.$.profile.email() }}</p>
@@ -126,45 +83,22 @@
           <strong>Theme:</strong> {{ basicProfile.$.profile.settings.theme() }}
         </p>
       </div>
-      <div class="flex gap-2 flex-wrap">
-        <button
-          (click)="updateBasicProfile()"
-          class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-        >
+      <div class="action-buttons">
+        <button (click)="updateBasicProfile()" class="btn-primary">
           Update Profile
         </button>
-        <button
-          (click)="incrementAge()"
-          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
-        >
-          +1 Age
-        </button>
-        <button
-          (click)="addTag()"
-          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
-        >
-          Add Tag
-        </button>
-        <button
-          (click)="toggleTheme()"
-          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
-        >
-          Toggle Theme
-        </button>
+        <button (click)="incrementAge()" class="btn-secondary">+1 Age</button>
+        <button (click)="addTag()" class="btn-success">Add Tag</button>
+        <button (click)="toggleTheme()" class="btn-purple">Toggle Theme</button>
       </div>
     </div>
   </div>
 
   <!-- Complex Objects Section -->
-  <div
-    *ngIf="activeSection === 'complex'"
-    class="grid grid-cols-1 lg:grid-cols-2 gap-6"
-  >
-    <div class="bg-white rounded-lg shadow-md p-6">
-      <h3 class="text-lg font-semibold mb-4 flex items-center">
-        🏢 Professional Profile
-      </h3>
-      <div class="bg-gray-50 p-4 rounded-md mb-4 font-mono text-sm space-y-1">
+  <div *ngIf="activeSection === 'complex'" class="demo-grid">
+    <div class="card">
+      <h3>🏢 Professional Profile</h3>
+      <div class="state-display">
         <p>
           <strong>Name:</strong>
           {{ complexTree.$.user.profile.personal.firstName() }}
@@ -186,33 +120,18 @@
           {{ complexTree.$.user.profile.professional.skills().join(', ') }}
         </p>
       </div>
-      <div class="flex gap-2 flex-wrap">
-        <button
-          (click)="updateProfessional()"
-          class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-        >
+      <div class="action-buttons">
+        <button (click)="updateProfessional()" class="btn-primary">
           Promote
         </button>
-        <button
-          (click)="addSkill()"
-          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
-        >
-          Add Skill
-        </button>
-        <button
-          (click)="agePerson()"
-          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
-        >
-          Birthday
-        </button>
+        <button (click)="addSkill()" class="btn-secondary">Add Skill</button>
+        <button (click)="agePerson()" class="btn-secondary">Birthday</button>
       </div>
     </div>
 
-    <div class="bg-white rounded-lg shadow-md p-6">
-      <h3 class="text-lg font-semibold mb-4 flex items-center">
-        🎨 UI Preferences
-      </h3>
-      <div class="bg-gray-50 p-4 rounded-md mb-4 font-mono text-sm space-y-1">
+    <div class="card">
+      <h3>🎨 UI Preferences</h3>
+      <div class="state-display">
         <p>
           <strong>Theme:</strong>
           {{ complexTree.$.user.preferences.ui.theme() }}
@@ -236,23 +155,14 @@
           {{ complexTree.$.user.preferences.notifications.frequency() }}
         </p>
       </div>
-      <div class="flex gap-2 flex-wrap">
-        <button
-          (click)="toggleComplexTheme()"
-          class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-        >
+      <div class="action-buttons">
+        <button (click)="toggleComplexTheme()" class="btn-primary">
           Toggle Theme
         </button>
-        <button
-          (click)="toggleSidebar()"
-          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
-        >
+        <button (click)="toggleSidebar()" class="btn-secondary">
           Toggle Sidebar
         </button>
-        <button
-          (click)="changeNotificationFreq()"
-          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
-        >
+        <button (click)="changeNotificationFreq()" class="btn-secondary">
           Change Frequency
         </button>
       </div>
@@ -260,78 +170,50 @@
   </div>
 
   <!-- Array Operations Section -->
-  <div
-    *ngIf="activeSection === 'arrays'"
-    class="grid grid-cols-1 lg:grid-cols-3 gap-6"
-  >
-    <div class="bg-white rounded-lg shadow-md p-6">
-      <h3 class="text-lg font-semibold mb-4 flex items-center">
-        🔢 Number Array
-      </h3>
-      <div class="bg-gray-50 p-4 rounded-md mb-4 font-mono text-sm space-y-1">
+  <div *ngIf="activeSection === 'arrays'" class="performance-stats">
+    <div class="card">
+      <h3>🔢 Number Array</h3>
+      <div class="state-display">
         <p>
           <strong>Numbers:</strong> [{{ arrayTree.$.numbers().join(', ') }}]
         </p>
         <p><strong>Count:</strong> {{ arrayTree.$.numbers().length }}</p>
         <p><strong>Sum:</strong> {{ getSum() }}</p>
       </div>
-      <div class="flex gap-2 flex-wrap">
-        <button
-          (click)="replaceNumbers()"
-          class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-        >
+      <div class="action-buttons">
+        <button (click)="replaceNumbers()" class="btn-primary">
           Replace All
         </button>
-        <button
-          (click)="addNumbers()"
-          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
-        >
+        <button (click)="addNumbers()" class="btn-secondary">
           Add Numbers
         </button>
-        <button
-          (click)="filterNumbers()"
-          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
-        >
+        <button (click)="filterNumbers()" class="btn-secondary">
           Filter > 25
         </button>
       </div>
     </div>
 
-    <div class="bg-white rounded-lg shadow-md p-6">
-      <h3 class="text-lg font-semibold mb-4 flex items-center">
-        👥 User Array
-      </h3>
-      <div class="bg-gray-50 p-4 rounded-md mb-4 font-mono text-sm">
-        <div class="space-y-2">
-          <div
-            *ngFor="let user of arrayTree.$.users(); trackBy: trackUser"
-            class="p-2 bg-white rounded border"
-          >
-            <strong>{{ user.name }}</strong> - {{ user.role }}
-          </div>
+    <div class="card">
+      <h3>👥 User Array</h3>
+      <div class="user-list">
+        <div
+          *ngFor="let user of arrayTree.$.users(); trackBy: trackUser"
+          class="user-item"
+        >
+          <strong>{{ user.name }}</strong> - {{ user.role }}
         </div>
       </div>
-      <div class="flex gap-2 flex-wrap">
-        <button
-          (click)="addUser()"
-          class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-        >
-          Add User
-        </button>
-        <button
-          (click)="promoteUser()"
-          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
-        >
+      <div class="action-buttons">
+        <button (click)="addUser()" class="btn-primary">Add User</button>
+        <button (click)="promoteUser()" class="btn-secondary">
           Promote First
         </button>
       </div>
     </div>
 
-    <div class="bg-white rounded-lg shadow-md p-6">
-      <h3 class="text-lg font-semibold mb-4 flex items-center">
-        🗂️ Nested Collections
-      </h3>
-      <div class="bg-gray-50 p-4 rounded-md mb-4 font-mono text-sm space-y-1">
+    <div class="card">
+      <h3>🗂️ Nested Collections</h3>
+      <div class="state-display">
         <p>
           <strong>Tags:</strong>
           {{ arrayTree.$.nested.collections.tags().join(', ') }}
@@ -343,44 +225,24 @@
         <p><strong>Matrix:</strong></p>
         <div
           *ngFor="let row of arrayTree.$.nested.matrix(); trackBy: trackRow"
-          class="text-xs text-gray-600"
+          class="matrix-row"
         >
           [{{ row.join(', ') }}]
         </div>
       </div>
-      <div class="flex gap-2 flex-wrap">
-        <button
-          (click)="addMatrixTag()"
-          class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-        >
-          Add Tag
-        </button>
-        <button
-          (click)="sortTags()"
-          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
-        >
-          Sort Tags
-        </button>
-        <button
-          (click)="addMatrixRow()"
-          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
-        >
-          Add Row
-        </button>
+      <div class="action-buttons">
+        <button (click)="addMatrixTag()" class="btn-primary">Add Tag</button>
+        <button (click)="sortTags()" class="btn-secondary">Sort Tags</button>
+        <button (click)="addMatrixRow()" class="btn-secondary">Add Row</button>
       </div>
     </div>
   </div>
 
   <!-- Performance Section -->
-  <div
-    *ngIf="activeSection === 'performance'"
-    class="grid grid-cols-1 lg:grid-cols-2 gap-6"
-  >
-    <div class="bg-white rounded-lg shadow-md p-6">
-      <h3 class="text-lg font-semibold mb-4 flex items-center">
-        ⚡ Performance Counter
-      </h3>
-      <div class="bg-gray-50 p-4 rounded-md mb-4 font-mono text-sm space-y-1">
+  <div *ngIf="activeSection === 'performance'" class="demo-grid">
+    <div class="card">
+      <h3>⚡ Performance Counter</h3>
+      <div class="state-display">
         <p><strong>Counter:</strong> {{ performanceDemo.$.counter() }}</p>
         <p>
           <strong>Batch Operations:</strong>
@@ -395,33 +257,22 @@
           {{ performanceDemo.$.updateHistory().length }} entries
         </p>
       </div>
-      <div class="flex gap-2 flex-wrap">
-        <button
-          (click)="incrementCounter()"
-          class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-        >
+      <div class="action-buttons">
+        <button (click)="incrementCounter()" class="btn-primary">
           +1 Counter
         </button>
-        <button
-          (click)="batchUpdate()"
-          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
-        >
+        <button (click)="batchUpdate()" class="btn-secondary">
           Batch +100
         </button>
-        <button
-          (click)="resetCounter()"
-          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
-        >
+        <button (click)="resetCounter()" class="btn-secondary">
           Reset All
         </button>
       </div>
     </div>
 
-    <div class="bg-white rounded-lg shadow-md p-6">
-      <h3 class="text-lg font-semibold mb-4 flex items-center">
-        📊 Stress Test
-      </h3>
-      <div class="bg-gray-50 p-4 rounded-md mb-4 font-mono text-sm space-y-1">
+    <div class="card">
+      <h3>📊 Stress Test</h3>
+      <div class="state-display">
         <p><strong>Operations:</strong> {{ stressTest.$.operations() }}</p>
         <p>
           <strong>Deep Value:</strong>
@@ -431,64 +282,41 @@
           <strong>Array Length:</strong> {{ stressTest.$.largeArray().length }}
         </p>
       </div>
-      <div class="flex gap-2 flex-wrap">
-        <button
-          (click)="runStressTest()"
-          class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-        >
+      <div class="action-buttons">
+        <button (click)="runStressTest()" class="btn-primary">
           Run Stress Test
         </button>
-        <button
-          (click)="updateDeepValue()"
-          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
-        >
+        <button (click)="updateDeepValue()" class="btn-secondary">
           Update Deep
         </button>
-        <button
-          (click)="growArray()"
-          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
-        >
-          Grow Array
-        </button>
+        <button (click)="growArray()" class="btn-secondary">Grow Array</button>
       </div>
     </div>
   </div>
 
   <!-- Code Examples -->
-  <div class="bg-white rounded-lg shadow-md mt-8 overflow-hidden">
-    <div class="p-6 border-b">
-      <h3 class="text-lg font-semibold">💻 Code Examples</h3>
-    </div>
+  <div class="example-section">
+    <h3>💻 Code Examples</h3>
 
-    <div class="flex border-b">
+    <div class="code-tabs">
       <button
-        [class]="
-          activeTab === 'callable'
-            ? 'border-b-2 border-blue-500 text-blue-600 bg-blue-50'
-            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-        "
+        [class.active]="activeTab === 'callable'"
         (click)="activeTab = 'callable'"
-        class="px-6 py-3 font-medium transition-colors"
       >
         New Callable Syntax
       </button>
       <button
-        [class]="
-          activeTab === 'current'
-            ? 'border-b-2 border-blue-500 text-blue-600 bg-blue-50'
-            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-        "
+        [class.active]="activeTab === 'current'"
         (click)="activeTab = 'current'"
-        class="px-6 py-3 font-medium transition-colors"
       >
         Current Explicit Syntax
       </button>
     </div>
 
-    <div class="p-6">
+    <div>
       <pre
         *ngIf="activeTab === 'callable'"
-        class="bg-gray-900 text-gray-100 p-6 rounded-lg overflow-x-auto text-sm leading-relaxed"
+        class="code-block"
       ><code>// ✨ New Callable Syntax (transforms at build time)
 
 // Basic value setting
@@ -517,7 +345,7 @@ const age = tree.$.user.profile.age();      // Deep access</code></pre>
 
       <pre
         *ngIf="activeTab === 'current'"
-        class="bg-gray-900 text-gray-100 p-6 rounded-lg overflow-x-auto text-sm leading-relaxed"
+        class="code-block"
       ><code>// 🔧 Current Explicit Syntax (always works)
 
 // Basic value setting

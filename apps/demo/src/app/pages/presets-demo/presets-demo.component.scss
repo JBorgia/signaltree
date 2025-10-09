@@ -1,0 +1,458 @@
+@import '../../../styles.scss';
+
+// ================================
+// PRESETS DEMO - LAYOUT
+// ================================
+
+.presets-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.presets-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+// ================================
+// PRESET SELECTION
+// ================================
+
+.presets-panel {
+  .panel-title {
+    margin-bottom: var(--space-md);
+  }
+}
+
+.preset-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.preset-button {
+  width: 100%;
+  padding: var(--space-md);
+  text-align: left;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  transition: all 0.2s ease;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--color-primary);
+    transform: translateY(-1px);
+  }
+
+  &.active {
+    border-color: var(--color-primary);
+    background: var(--color-primary-light);
+    color: var(--color-primary-dark);
+  }
+}
+
+.preset-name {
+  font-weight: 600;
+  text-transform: capitalize;
+  margin-bottom: var(--space-xs);
+}
+
+.preset-description {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+// ================================
+// CONFIGURATION PANEL
+// ================================
+
+.config-panel {
+  .panel-subtitle {
+    margin-bottom: var(--space-md);
+  }
+}
+
+.config-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.config-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-xs) 0;
+}
+
+.config-label {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.config-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+
+  &.enabled {
+    color: var(--color-success);
+  }
+}
+
+// Dev Tree Info Box
+.dev-tree-info {
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  background: var(--color-primary-light);
+  border-radius: var(--radius-md);
+}
+
+.dev-tree-title {
+  font-weight: 600;
+  color: var(--color-primary-dark);
+  margin-bottom: var(--space-sm);
+}
+
+.dev-tree-description {
+  font-size: 0.875rem;
+  color: var(--color-primary-dark);
+  line-height: 1.5;
+
+  code {
+    background: var(--color-primary);
+    color: white;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-family: 'Courier New', monospace;
+  }
+}
+
+// ================================
+// DEMO PANEL SECTIONS
+// ================================
+
+.demo-panel {
+  .panel-title {
+    margin-bottom: var(--space-lg);
+  }
+}
+
+.section {
+  margin-bottom: var(--space-xl);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.section-title {
+  font-weight: 600;
+  margin-bottom: var(--space-md);
+  color: var(--color-text);
+}
+
+// ================================
+// USER SECTION
+// ================================
+
+.user-section {
+  .input-grid {
+    margin-bottom: var(--space-md);
+  }
+}
+
+.input-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-md);
+
+  @include desktop {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.preferences-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  flex-wrap: wrap;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.checkbox-input {
+  cursor: pointer;
+}
+
+.radio-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  font-size: 0.875rem;
+}
+
+.radio-input {
+  cursor: pointer;
+}
+
+.radio-label {
+  cursor: pointer;
+}
+
+// ================================
+// TODOS SECTION
+// ================================
+
+.todos-section {
+  .add-todo-row {
+    margin-bottom: var(--space-md);
+  }
+
+  .flex-1 {
+    flex: 1;
+  }
+}
+
+.add-todo-row {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.todos-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  max-height: 12rem;
+  overflow-y: auto;
+}
+
+.todo-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-sm);
+  background: var(--color-card);
+  border-radius: var(--radius-sm);
+}
+
+.todo-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex: 1;
+}
+
+.todo-title {
+  flex: 1;
+
+  &.completed {
+    text-decoration: line-through;
+    color: var(--color-text-secondary);
+  }
+}
+
+.priority-badge {
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+
+  &.high {
+    background: #fee;
+    color: #c33;
+  }
+
+  &.medium {
+    background: #ffa;
+    color: #883;
+  }
+
+  &.low {
+    background: #efe;
+    color: #383;
+  }
+}
+
+.btn-remove {
+  padding: var(--space-xs);
+  background: none;
+  border: none;
+  color: var(--color-danger);
+  cursor: pointer;
+  font-size: 1.125rem;
+  line-height: 1;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: var(--color-danger-dark);
+  }
+}
+
+// ================================
+// UI STATE SECTION
+// ================================
+
+.ui-controls {
+  display: flex;
+  gap: var(--space-lg);
+  align-items: center;
+}
+
+// ================================
+// ACTION BUTTONS
+// ================================
+
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-lg);
+}
+
+// ================================
+// SHOWCASE PANEL
+// ================================
+
+.showcase-panel {
+  .panel-subtitle {
+    margin-bottom: var(--space-md);
+  }
+}
+
+.showcase-description {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin-bottom: var(--space-md);
+}
+
+.showcase-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.showcase-status {
+  font-size: 0.875rem;
+  color: var(--color-text);
+}
+
+.btn-indigo {
+  background: #4f46e5;
+  color: white;
+  border: none;
+
+  &:hover {
+    background: #4338ca;
+  }
+}
+
+// ================================
+// METRICS PANEL
+// ================================
+
+.metrics-panel {
+  .panel-subtitle {
+    margin-bottom: var(--space-md);
+  }
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+
+  @include desktop {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.metric-card {
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-card);
+
+  &.blue {
+    background: var(--color-primary-light);
+  }
+
+  &.green {
+    background: #d1fae5;
+  }
+
+  &.purple {
+    background: #e9d5ff;
+  }
+}
+
+.metric-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: var(--space-xs);
+  opacity: 0.8;
+}
+
+.metric-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+
+  &.capitalize {
+    text-transform: capitalize;
+  }
+}
+
+// Presets Info Box
+.presets-info {
+  padding: var(--space-md);
+  background: var(--color-card);
+  border-radius: var(--radius-md);
+}
+
+.info-note {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-sm);
+
+  strong {
+    color: var(--color-text);
+  }
+}
+
+.info-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  li {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+    margin-bottom: var(--space-xs);
+
+    strong {
+      color: var(--color-text);
+    }
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}

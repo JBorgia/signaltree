@@ -11,257 +11,39 @@ interface EntitiesState {
   posts: Post[];
   selectedUserId: number | null;
   searchTerm: string;
+  // Pagination & Sorting
+  usersPage: number;
+  usersPerPage: number;
+  usersSortBy: 'name' | 'email' | 'id';
+  usersSortAsc: boolean;
+  postsPage: number;
+  postsPerPage: number;
+  postsSortBy: 'title' | 'likes' | 'id';
+  postsSortAsc: boolean;
 }
 
 @Component({
   selector: 'app-entities-demo',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  template: `
-    <div class="container mx-auto p-6">
-      <h1 class="text-3xl font-bold mb-6">SignalTree Entities Demo</h1>
-
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Users Panel -->
-        <div class="bg-white rounded-lg shadow p-6">
-          <div class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-semibold">Users ({{ userCount() }})</h2>
-            <button
-              (click)="loadUsers()"
-              class="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
-            >
-              Load Users
-            </button>
-          </div>
-
-          <div class="mb-4">
-            <input
-              type="text"
-              [(ngModel)]="searchTerm"
-              (input)="updateSearchTerm($event)"
-              placeholder="Search users..."
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div class="space-y-2 max-h-64 overflow-y-auto">
-            <div
-              *ngFor="let user of filteredUsers(); trackBy: trackUser"
-              (click)="selectUser(user.id)"
-              (keyup.enter)="selectUser(user.id)"
-              (keyup.space)="selectUser(user.id)"
-              [class]="getUserClass(user.id)"
-              class="p-3 rounded-md cursor-pointer transition-colors"
-              tabindex="0"
-              role="button"
-            >
-              >
-              <div class="flex items-center gap-3">
-                <img
-                  [src]="user.avatar"
-                  [alt]="user.name"
-                  class="w-8 h-8 rounded-full"
-                />
-                <div>
-                  <div class="font-medium text-sm">{{ user.name }}</div>
-                  <div class="text-xs text-gray-500">{{ user.email }}</div>
-                </div>
-              </div>
-            </div>
-
-            <div
-              *ngIf="filteredUsers().length === 0"
-              class="text-center text-gray-500 py-4"
-            >
-              No users found
-            </div>
-          </div>
-
-          <div class="mt-4 pt-4 border-t">
-            <button
-              (click)="addRandomUser()"
-              class="w-full px-3 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-            >
-              Add Random User
-            </button>
-          </div>
-        </div>
-
-        <!-- Posts Panel -->
-        <div class="bg-white rounded-lg shadow p-6">
-          <div class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-semibold">
-              Posts
-              <span *ngIf="selectedUser()" class="text-sm text-gray-500">
-                by {{ selectedUser()?.name }}
-              </span>
-              ({{ displayedPosts().length }})
-            </h2>
-            <button
-              (click)="loadPosts()"
-              class="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
-            >
-              Load Posts
-            </button>
-          </div>
-
-          <div class="space-y-3 max-h-80 overflow-y-auto">
-            <div
-              *ngFor="let post of displayedPosts(); trackBy: trackPost"
-              class="p-3 bg-gray-50 rounded-md"
-            >
-              <h3 class="font-medium text-sm mb-1">{{ post.title }}</h3>
-              <p class="text-xs text-gray-600 mb-2">{{ post.content }}</p>
-              <div
-                class="flex justify-between items-center text-xs text-gray-500"
-              >
-                <span>{{
-                  getPostAuthor(post.authorId)?.name || 'Unknown'
-                }}</span>
-                <span>{{ post.likes }} likes</span>
-              </div>
-              <div class="flex gap-1 mt-2">
-                <span
-                  *ngFor="let tag of post.tags"
-                  class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs"
-                >
-                  {{ tag }}
-                </span>
-              </div>
-            </div>
-
-            <div
-              *ngIf="displayedPosts().length === 0"
-              class="text-center text-gray-500 py-4"
-            >
-              No posts found
-            </div>
-          </div>
-
-          <div class="mt-4 pt-4 border-t">
-            <button
-              (click)="addRandomPost()"
-              [disabled]="userCount() === 0"
-              class="w-full px-3 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Add Random Post
-            </button>
-          </div>
-        </div>
-
-        <!-- Stats & Inspector -->
-        <div class="bg-white rounded-lg shadow p-6">
-          <h2 class="text-xl font-semibold mb-4">Entity Statistics</h2>
-
-          <div class="space-y-4">
-            <div>
-              <h3 class="font-medium text-gray-700 mb-2">Counts</h3>
-              <div class="bg-gray-50 p-3 rounded text-sm space-y-1">
-                <div><strong>Total Users:</strong> {{ userCount() }}</div>
-                <div>
-                  <strong>Filtered Users:</strong> {{ filteredUsers().length }}
-                </div>
-                <div><strong>Total Posts:</strong> {{ postCount() }}</div>
-                <div>
-                  <strong>User's Posts:</strong> {{ userPosts().length }}
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 class="font-medium text-gray-700 mb-2">Selected User</h3>
-              <div class="bg-gray-50 p-3 rounded text-sm">
-                <div *ngIf="selectedUser(); else noUser">
-                  <div><strong>Name:</strong> {{ selectedUser()?.name }}</div>
-                  <div><strong>Email:</strong> {{ selectedUser()?.email }}</div>
-                  <div><strong>Posts:</strong> {{ userPosts().length }}</div>
-                  <div>
-                    <strong>Total Likes:</strong> {{ userTotalLikes() }}
-                  </div>
-                </div>
-                <ng-template #noUser>
-                  <div class="text-gray-500">No user selected</div>
-                </ng-template>
-              </div>
-            </div>
-
-            <div>
-              <h3 class="font-medium text-gray-700 mb-2">Performance</h3>
-              <div class="bg-gray-50 p-3 rounded text-sm space-y-1">
-                <div><strong>Last Operation:</strong> {{ lastOperation }}</div>
-                <div><strong>Operations:</strong> {{ operationCount }}</div>
-                <div>
-                  <strong>Search Active:</strong>
-                  {{ searchTerm.length > 0 ? 'Yes' : 'No' }}
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 class="font-medium text-gray-700 mb-2">Entity Operations</h3>
-              <div class="space-y-2">
-                <button
-                  (click)="bulkUpdatePosts()"
-                  [disabled]="postCount() === 0"
-                  class="w-full px-3 py-2 bg-purple-500 text-white rounded text-sm hover:bg-purple-600 disabled:opacity-50"
-                >
-                  Bulk Update Posts (+10 likes)
-                </button>
-                <button
-                  (click)="removeInactivePosts()"
-                  [disabled]="postCount() === 0"
-                  class="w-full px-3 py-2 bg-red-500 text-white rounded text-sm hover:bg-red-600 disabled:opacity-50"
-                >
-                  Remove Low-Engagement Posts
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Features Explanation -->
-      <div class="mt-8 bg-green-50 rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4">Entity Features Demonstrated</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <h3 class="font-medium text-green-800 mb-2">Normalized State</h3>
-            <p class="text-sm text-green-700">
-              Entities are stored as arrays with reactive updates through
-              SignalTree. This example shows CRUD operations, filtering, and
-            </p>
-          </div>
-          <div>
-            <h3 class="font-medium text-green-800 mb-2">Relational Queries</h3>
-            <p class="text-sm text-green-700">
-              Complex queries across related entities (users and their posts)
-              are computed efficiently.
-            </p>
-          </div>
-          <div>
-            <h3 class="font-medium text-green-800 mb-2">Filtered Views</h3>
-            <p class="text-sm text-green-700">
-              Search and filtering maintain reactivity while preserving
-              performance.
-            </p>
-          </div>
-          <div>
-            <h3 class="font-medium text-green-800 mb-2">Bulk Operations</h3>
-            <p class="text-sm text-green-700">
-              Efficient bulk updates and deletions with minimal re-computation.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  `,
+  templateUrl: './entities-demo.component.html',
+  styleUrls: ['./entities-demo.component.scss'],
 })
 export class EntitiesDemoComponent {
-  private store = signalTree<EntitiesState>({
+  store = signalTree<EntitiesState>({
     users: [],
     posts: [],
     selectedUserId: null,
     searchTerm: '',
+    // Pagination & Sorting defaults
+    usersPage: 1,
+    usersPerPage: 10,
+    usersSortBy: 'name',
+    usersSortAsc: true,
+    postsPage: 1,
+    postsPerPage: 10,
+    postsSortBy: 'likes',
+    postsSortAsc: false,
   }).with(withEntities());
 
   // Entity helpers using @signaltree/entities
@@ -273,9 +55,24 @@ export class EntitiesDemoComponent {
   lastOperation = 'None';
   operationCount = 0;
 
+  // Bulk selection & filtering
+  selectedPostIds = new Set<number>();
+  tagFilter = '';
+  statusFilter: 'all' | 'popular' | 'unpopular' = 'all';
+  dateRangeFilter: 'all' | 'today' | 'week' | 'month' = 'all';
+  showDeleteConfirmation = false;
+
   // Form input properties for tests
   newUserName = '';
   newUserEmail = '';
+
+  // Editing state
+  editingPostId: number | null = null;
+  editingPostTitle = '';
+  editingPostContent = '';
+  editingUserId: number | null = null;
+  editingUserName = '';
+  editingUserEmail = '';
 
   // Entity selectors using entity helpers
   userCount = this.userHelpers.selectTotal();
@@ -301,6 +98,107 @@ export class EntitiesDemoComponent {
     );
   });
 
+  sortedUsers = computed(() => {
+    const users = [...this.filteredUsers()];
+    const sortBy = this.store.$.usersSortBy();
+    const sortAsc = this.store.$.usersSortAsc();
+
+    users.sort((a, b) => {
+      let comparison = 0;
+      if (sortBy === 'name' || sortBy === 'email') {
+        comparison = a[sortBy].localeCompare(b[sortBy]);
+      } else {
+        comparison = a[sortBy] - b[sortBy];
+      }
+      return sortAsc ? comparison : -comparison;
+    });
+
+    return users;
+  });
+
+  paginatedUsers = computed(() => {
+    const users = this.sortedUsers();
+    const page = this.store.$.usersPage();
+    const perPage = this.store.$.usersPerPage();
+    const start = (page - 1) * perPage;
+    return users.slice(start, start + perPage);
+  });
+
+  totalUserPages = computed(() => {
+    return Math.ceil(this.sortedUsers().length / this.store.$.usersPerPage());
+  });
+
+  sortedPosts = computed(() => {
+    let posts = [...this.displayedPosts()];
+
+    // Multi-criteria filtering
+
+    // Filter by tag if tag filter is active
+    if (this.tagFilter.trim()) {
+      const filterLower = this.tagFilter.toLowerCase();
+      posts = posts.filter((post) =>
+        post.tags.some((tag) => tag.toLowerCase().includes(filterLower))
+      );
+    }
+
+    // Filter by status (popularity)
+    if (this.statusFilter === 'popular') {
+      posts = posts.filter((post) => post.likes >= 10);
+    } else if (this.statusFilter === 'unpopular') {
+      posts = posts.filter((post) => post.likes < 10);
+    }
+
+    // Filter by date range
+    if (this.dateRangeFilter !== 'all') {
+      const now = Date.now();
+      const oneDayMs = 24 * 60 * 60 * 1000;
+      let cutoffDate: number;
+
+      switch (this.dateRangeFilter) {
+        case 'today':
+          cutoffDate = now - oneDayMs;
+          break;
+        case 'week':
+          cutoffDate = now - 7 * oneDayMs;
+          break;
+        case 'month':
+          cutoffDate = now - 30 * oneDayMs;
+          break;
+        default:
+          cutoffDate = 0;
+      }
+
+      posts = posts.filter((post) => post.createdAt.getTime() >= cutoffDate);
+    }
+
+    const sortBy = this.store.$.postsSortBy();
+    const sortAsc = this.store.$.postsSortAsc();
+
+    posts.sort((a, b) => {
+      let comparison = 0;
+      if (sortBy === 'title') {
+        comparison = a.title.localeCompare(b.title);
+      } else {
+        comparison = a[sortBy] - b[sortBy];
+      }
+      return sortAsc ? comparison : -comparison;
+    });
+
+    return posts;
+  });
+
+  paginatedPosts = computed(() => {
+    const posts = this.sortedPosts();
+    const page = this.store.$.postsPage();
+    const perPage = this.store.$.postsPerPage();
+    const start = (page - 1) * perPage;
+    return posts.slice(start, start + perPage);
+  });
+
+  totalPostPages = computed(() => {
+    return Math.ceil(this.sortedPosts().length / this.store.$.postsPerPage());
+  });
+
   userPosts = computed(() => {
     const selectedId = this.store.$.selectedUserId();
     if (!selectedId) return [];
@@ -320,6 +218,99 @@ export class EntitiesDemoComponent {
   userTotalLikes = computed(() => {
     return this.userPosts().reduce((sum, post) => sum + post.likes, 0);
   });
+
+  // User stats methods
+  getUserPostsCount(): number {
+    return this.userPosts().length;
+  }
+
+  getUserAvgPostLength(): number {
+    const posts = this.userPosts();
+    if (posts.length === 0) return 0;
+    const totalLength = posts.reduce(
+      (sum, post) => sum + post.content.length,
+      0
+    );
+    return Math.round(totalLength / posts.length);
+  }
+
+  getUserActivityStatus(): string {
+    const postsCount = this.getUserPostsCount();
+    const totalLikes = this.userTotalLikes();
+
+    if (postsCount === 0) return 'Inactive';
+    if (postsCount >= 5 && totalLikes >= 20) return 'Very Active';
+    if (postsCount >= 3 || totalLikes >= 10) return 'Active';
+    return 'Low Activity';
+  }
+
+  getUserActivityClass(): string {
+    const status = this.getUserActivityStatus();
+    if (status === 'Very Active') return 'text-green-600';
+    if (status === 'Active') return 'text-blue-600';
+    if (status === 'Low Activity') return 'text-yellow-600';
+    return 'text-gray-500';
+  }
+
+  // Filter methods
+  clearAllFilters() {
+    this.tagFilter = '';
+    this.statusFilter = 'all';
+    this.dateRangeFilter = 'all';
+  }
+
+  // Export methods
+  exportUserData() {
+    const user = this.selectedUser();
+    if (!user) return;
+
+    const userPosts = this.userPosts();
+    const exportData = {
+      user,
+      posts: userPosts,
+      stats: {
+        totalPosts: this.getUserPostsCount(),
+        totalLikes: this.userTotalLikes(),
+        avgPostLength: this.getUserAvgPostLength(),
+        activityStatus: this.getUserActivityStatus(),
+      },
+      exportedAt: new Date().toISOString(),
+    };
+
+    this.downloadJSON(exportData, `user-${user.id}-data.json`);
+  }
+
+  exportSelectedPosts() {
+    const selectedPosts = this.allPosts().filter((post) =>
+      this.selectedPostIds.has(post.id)
+    );
+
+    if (selectedPosts.length === 0) return;
+
+    const exportData = {
+      posts: selectedPosts,
+      count: selectedPosts.length,
+      exportedAt: new Date().toISOString(),
+    };
+
+    this.downloadJSON(
+      exportData,
+      `selected-posts-${selectedPosts.length}.json`
+    );
+  }
+
+  private downloadJSON(data: unknown, filename: string) {
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
 
   private trackOperation(operation: string) {
     this.lastOperation = operation;
@@ -422,6 +413,67 @@ export class EntitiesDemoComponent {
     return post.id;
   }
 
+  // Pagination methods
+  prevUsersPage() {
+    const page = this.store.$.usersPage();
+    if (page > 1) {
+      this.store.$.usersPage.set(page - 1);
+    }
+  }
+
+  nextUsersPage() {
+    const page = this.store.$.usersPage();
+    if (page < this.totalUserPages()) {
+      this.store.$.usersPage.set(page + 1);
+    }
+  }
+
+  setUsersPerPage(perPage: number) {
+    this.store.$.usersPerPage.set(perPage);
+    this.store.$.usersPage.set(1); // Reset to first page
+  }
+
+  setUsersSortBy(sortBy: 'name' | 'email' | 'id') {
+    const current = this.store.$.usersSortBy();
+    if (current === sortBy) {
+      // Toggle direction
+      this.store.$.usersSortAsc.set(!this.store.$.usersSortAsc());
+    } else {
+      this.store.$.usersSortBy.set(sortBy);
+      this.store.$.usersSortAsc.set(true);
+    }
+  }
+
+  prevPostsPage() {
+    const page = this.store.$.postsPage();
+    if (page > 1) {
+      this.store.$.postsPage.set(page - 1);
+    }
+  }
+
+  nextPostsPage() {
+    const page = this.store.$.postsPage();
+    if (page < this.totalPostPages()) {
+      this.store.$.postsPage.set(page + 1);
+    }
+  }
+
+  setPostsPerPage(perPage: number) {
+    this.store.$.postsPerPage.set(perPage);
+    this.store.$.postsPage.set(1); // Reset to first page
+  }
+
+  setPostsSortBy(sortBy: 'title' | 'likes' | 'id') {
+    const current = this.store.$.postsSortBy();
+    if (current === sortBy) {
+      // Toggle direction
+      this.store.$.postsSortAsc.set(!this.store.$.postsSortAsc());
+    } else {
+      this.store.$.postsSortBy.set(sortBy);
+      this.store.$.postsSortAsc.set(true);
+    }
+  }
+
   // CRUD methods for tests
   addUser() {
     if (!this.newUserName || !this.newUserEmail) return;
@@ -455,5 +507,96 @@ export class EntitiesDemoComponent {
   // Accessor methods for tests
   users() {
     return this.allUsers();
+  }
+
+  // Post interaction methods
+  likePost(postId: number) {
+    const post = this.postHelpers.selectById(postId)();
+    if (post) {
+      this.postHelpers.update(postId, { likes: post.likes + 1 });
+      this.trackOperation('Like Post');
+    }
+  }
+
+  startEditingPost(post: Post) {
+    this.editingPostId = post.id;
+    this.editingPostTitle = post.title;
+    this.editingPostContent = post.content;
+  }
+
+  savePost() {
+    if (this.editingPostId && this.editingPostTitle.trim()) {
+      this.postHelpers.update(this.editingPostId, {
+        title: this.editingPostTitle.trim(),
+        content: this.editingPostContent.trim(),
+      });
+      this.trackOperation('Update Post');
+      this.cancelEditPost();
+    }
+  }
+
+  cancelEditPost() {
+    this.editingPostId = null;
+    this.editingPostTitle = '';
+    this.editingPostContent = '';
+  }
+
+  // User editing methods
+  startEditingUser(user: User) {
+    this.editingUserId = user.id;
+    this.editingUserName = user.name;
+    this.editingUserEmail = user.email;
+  }
+
+  saveUser() {
+    if (
+      this.editingUserId &&
+      this.editingUserName.trim() &&
+      this.editingUserEmail.trim()
+    ) {
+      this.userHelpers.update(this.editingUserId, {
+        name: this.editingUserName.trim(),
+        email: this.editingUserEmail.trim(),
+      });
+      this.trackOperation('Update User');
+      this.cancelEditUser();
+    }
+  }
+
+  cancelEditUser() {
+    this.editingUserId = null;
+    this.editingUserName = '';
+    this.editingUserEmail = '';
+  }
+
+  // Bulk selection methods
+  togglePostSelection(postId: number) {
+    if (this.selectedPostIds.has(postId)) {
+      this.selectedPostIds.delete(postId);
+    } else {
+      this.selectedPostIds.add(postId);
+    }
+  }
+
+  selectAllPosts() {
+    this.paginatedPosts().forEach((post) => {
+      this.selectedPostIds.add(post.id);
+    });
+  }
+
+  deselectAllPosts() {
+    this.selectedPostIds.clear();
+  }
+
+  confirmDeleteSelected() {
+    if (this.selectedPostIds.size === 0) return;
+
+    if (confirm(`Delete ${this.selectedPostIds.size} selected posts?`)) {
+      this.selectedPostIds.forEach((postId) => {
+        this.postHelpers.remove(postId);
+      });
+      this.selectedPostIds.clear();
+      this.trackOperation(`Bulk Delete ${this.selectedPostIds.size} Posts`);
+    }
   }
 }

@@ -2,11 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree } from '@signaltree/core';
-import {
-  memoizeReference,
-  memoizeShallow,
-  withMemoization,
-} from '@signaltree/memoization';
+import { memoizeReference, memoizeShallow, withMemoization } from '@signaltree/memoization';
 
 interface MemoState {
   numbers: number[];
@@ -20,145 +16,32 @@ interface MemoState {
   selector: 'app-memoization-demo',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  template: `
-    <div class="container mx-auto p-6">
-      <h1 class="text-3xl font-bold mb-6">SignalTree Memoization Demo</h1>
-
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <!-- Input Controls -->
-        <div class="bg-white rounded-lg shadow p-6">
-          <h2 class="text-xl font-semibold mb-4">Controls</h2>
-
-          <div class="space-y-4">
-            <div>
-              <label for="strategySelect" class="block text-sm font-medium mb-2"
-                >Memoization Strategy:</label
-              >
-              <select
-                id="strategySelect"
-                [(ngModel)]="selectedStrategy"
-                (ngModelChange)="onStrategyChange()"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md"
-              >
-                <option value="deep">Deep Equality (Default)</option>
-                <option value="shallow">Shallow Equality (Fast)</option>
-                <option value="reference">Reference Equality (Fastest)</option>
-              </select>
-              <p class="text-xs text-gray-600 mt-1">
-                {{ getStrategyDescription() }}
-              </p>
-            </div>
-
-            <div>
-              <label
-                for="multiplierInput"
-                class="block text-sm font-medium mb-2"
-                >Multiplier:</label
-              >
-              <input
-                id="multiplierInput"
-                type="number"
-                [(ngModel)]="multiplier"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md"
-              />
-            </div>
-
-            <div>
-              <label
-                for="searchTermInput"
-                class="block text-sm font-medium mb-2"
-                >Search Term:</label
-              >
-              <input
-                id="searchTermInput"
-                type="text"
-                [(ngModel)]="searchTerm"
-                placeholder="Filter numbers..."
-                class="w-full px-3 py-2 border border-gray-300 rounded-md"
-              />
-            </div>
-
-            <div class="flex space-x-2">
-              <button
-                (click)="addRandomNumbers()"
-                class="flex-1 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-              >
-                Add Random Numbers
-              </button>
-
-              <button
-                (click)="runPerformanceTest()"
-                class="flex-1 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
-              >
-                Performance Test
-              </button>
-            </div>
-
-            <button
-              (click)="clearMemoCache()"
-              class="w-full px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
-            >
-              Clear Memo Cache
-            </button>
-          </div>
-        </div>
-
-        <!-- Results -->
-        <div class="bg-white rounded-lg shadow p-6">
-          <h2 class="text-xl font-semibold mb-4">Memoized Computations</h2>
-
-          <div class="space-y-4">
-            <div><strong>Current Strategy:</strong> {{ selectedStrategy }}</div>
-            <div><strong>Compute Count:</strong> {{ computeCount() }}</div>
-            <div><strong>Numbers Count:</strong> {{ numbers().length }}</div>
-
-            <div>
-              <strong>Filtered & Multiplied Sum:</strong>
-              {{ expensiveComputation() }}
-            </div>
-
-            <div *ngIf="performanceResults.length > 0">
-              <strong>Performance Test Results:</strong>
-              <div class="bg-gray-100 p-3 rounded mt-2">
-                <div
-                  *ngFor="let result of performanceResults"
-                  class="flex justify-between"
-                >
-                  <span>{{ result.strategy }}:</span>
-                  <span>{{ result.duration.toFixed(2) }}ms</span>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <strong>Cache Stats:</strong>
-              <pre class="bg-gray-100 p-2 rounded text-sm mt-2">{{
-                getCacheStats() | json
-              }}</pre>
-            </div>
-
-            <div class="max-h-64 overflow-y-auto">
-              <strong>Filtered Numbers:</strong>
-              <div class="grid grid-cols-4 gap-2 mt-2">
-                <span
-                  *ngFor="let num of filteredNumbers()"
-                  class="bg-blue-100 px-2 py-1 rounded text-sm"
-                >
-                  {{ num }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `,
+  templateUrl: './memoization-demo.component.html',
+  styleUrls: ['./memoization-demo.component.scss'],
 })
 export class MemoizationDemoComponent {
   selectedStrategy: 'deep' | 'shallow' | 'reference' = 'deep';
   performanceResults: { strategy: string; duration: number }[] = [];
 
-  private store = signalTree<MemoState>({
+  // Comparison mode properties
+  memoizedTime = 0;
+  nonMemoizedTime = 0;
+  nonMemoizedCount = 0;
+
+  // Cache control properties
+  maxCacheSize = 100;
+
+  // Fibonacci properties
+  fibInput = 10;
+  fibResults: {
+    result: number;
+    memoizedTime: number;
+    nonMemoizedTime: number;
+    memoizedCalls: number;
+    nonMemoizedCalls: number;
+  } | null = null;
+
+  store = signalTree<MemoState>({
     numbers: Array.from({ length: 100 }, () =>
       Math.floor(Math.random() * 1000)
     ),
@@ -192,11 +75,17 @@ export class MemoizationDemoComponent {
 
   // Expensive memoized computation using current strategy
   expensiveComputation = this.store.memoize((state) => {
-    // Increment compute count to track how often this runs
-    this.store.$.computeCount.set(state.computeCount + 1);
-
+    // Track computation - increment happens via effect
     const filtered = this.filteredNumbers();
-    return this.computeFunction(filtered, state.multiplier);
+    const result = this.computeFunction(filtered, state.multiplier);
+
+    // Schedule count increment outside the computed
+    // Use update() to avoid reading the signal value inside the computed
+    setTimeout(() => {
+      this.store.$.computeCount.update((count) => count + 1);
+    }, 0);
+
+    return result;
   }, 'expensiveComputation');
 
   onStrategyChange() {
@@ -298,5 +187,142 @@ export class MemoizationDemoComponent {
         averageUpdateTime: 0,
       }
     );
+  }
+
+  getCacheHitRate(): number {
+    const stats = this.getCacheStats();
+    const total = stats.cacheHits + stats.cacheMisses;
+    if (total === 0) return 0;
+    return Math.round((stats.cacheHits / total) * 100);
+  }
+
+  getCacheEfficiencyColor(): string {
+    const rate = this.getCacheHitRate();
+    if (rate >= 80) return 'success';
+    if (rate >= 60) return 'info';
+    if (rate >= 40) return 'warning';
+    return 'danger';
+  }
+
+  // Memory estimation methods
+  getEstimatedMemoryUsage(): string {
+    const stats = this.getCacheStats();
+    const cacheEntries = stats.cacheHits + stats.cacheMisses;
+
+    // Estimate: each cache entry ≈ 500 bytes (rough estimate for array + metadata)
+    const estimatedBytes = cacheEntries * 500;
+    const estimatedKB = estimatedBytes / 1024;
+
+    if (estimatedKB < 1) return estimatedKB.toFixed(2);
+    if (estimatedKB < 1000) return estimatedKB.toFixed(1);
+    return (estimatedKB / 1024).toFixed(2) + ' MB';
+  }
+
+  getCacheUsagePercentage(): number {
+    const stats = this.getCacheStats();
+    const cacheEntries = stats.cacheHits + stats.cacheMisses;
+    if (this.maxCacheSize === 0) return 0;
+    return Math.min(100, Math.round((cacheEntries / this.maxCacheSize) * 100));
+  }
+
+  getStrategyBadgeClass(strategy: string): string {
+    switch (strategy) {
+      case 'deep':
+        return 'badge-purple';
+      case 'shallow':
+        return 'badge-blue';
+      case 'reference':
+        return 'badge-green';
+      default:
+        return 'badge-gray';
+    }
+  }
+
+  // Comparison mode methods
+  runComparison() {
+    const iterations = 1000;
+    const nums = this.numbers();
+    const mult = this.multiplier();
+
+    // Test memoized version
+    const memoizedStart = performance.now();
+    for (let i = 0; i < iterations; i++) {
+      this.expensiveComputation();
+    }
+    this.memoizedTime = performance.now() - memoizedStart;
+
+    // Test non-memoized version
+    this.nonMemoizedCount = 0;
+    const nonMemoizedStart = performance.now();
+    for (let i = 0; i < iterations; i++) {
+      this.nonMemoizedCount++;
+      nums.map((n) => n * mult);
+    }
+    this.nonMemoizedTime = performance.now() - nonMemoizedStart;
+  }
+
+  getMemoizedPercentage(): number {
+    const max = Math.max(this.memoizedTime, this.nonMemoizedTime);
+    if (max === 0) return 0;
+    return (this.memoizedTime / max) * 100;
+  }
+
+  getNonMemoizedPercentage(): number {
+    const max = Math.max(this.memoizedTime, this.nonMemoizedTime);
+    if (max === 0) return 0;
+    return (this.nonMemoizedTime / max) * 100;
+  }
+
+  getSpeedup(): string {
+    if (this.memoizedTime === 0) return '0.00';
+    return (this.nonMemoizedTime / this.memoizedTime).toFixed(2);
+  }
+
+  // Fibonacci calculation methods
+  calculateFibonacci() {
+    if (this.fibInput < 0 || this.fibInput > 40) return;
+
+    const n = this.fibInput;
+
+    // Memoized version
+    const memoCache = new Map<number, number>();
+    let memoizedCalls = 0;
+
+    const fibMemoized = (num: number): number => {
+      memoizedCalls++;
+      if (num <= 1) return num;
+
+      const cached = memoCache.get(num);
+      if (cached !== undefined) return cached;
+
+      const result = fibMemoized(num - 1) + fibMemoized(num - 2);
+      memoCache.set(num, result);
+      return result;
+    };
+
+    const memoStart = performance.now();
+    const memoResult = fibMemoized(n);
+    const memoTime = performance.now() - memoStart;
+
+    // Non-memoized version
+    let nonMemoizedCalls = 0;
+
+    const fibNonMemoized = (num: number): number => {
+      nonMemoizedCalls++;
+      if (num <= 1) return num;
+      return fibNonMemoized(num - 1) + fibNonMemoized(num - 2);
+    };
+
+    const nonMemoStart = performance.now();
+    fibNonMemoized(n); // Run for timing, result should match memoResult
+    const nonMemoTime = performance.now() - nonMemoStart;
+
+    this.fibResults = {
+      result: memoResult,
+      memoizedTime: memoTime,
+      nonMemoizedTime: nonMemoTime,
+      memoizedCalls: memoizedCalls,
+      nonMemoizedCalls: nonMemoizedCalls,
+    };
   }
 }

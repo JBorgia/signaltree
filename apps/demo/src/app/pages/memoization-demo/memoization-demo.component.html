@@ -1,0 +1,354 @@
+<div class="container">
+  <h1>SignalTree Memoization Demo</h1>
+
+  <div class="demo-grid">
+    <!-- Input Controls -->
+    <div class="card">
+      <h2>Controls</h2>
+
+      <div class="controls-section">
+        <div>
+          <label for="strategySelect" class="label"
+            >Memoization Strategy:</label
+          >
+          <select
+            id="strategySelect"
+            [(ngModel)]="selectedStrategy"
+            (ngModelChange)="onStrategyChange()"
+            class="form-select"
+          >
+            <option value="deep">Deep Equality (Default)</option>
+            <option value="shallow">Shallow Equality (Fast)</option>
+            <option value="reference">Reference Equality (Fastest)</option>
+          </select>
+          <p class="hint">
+            {{ getStrategyDescription() }}
+          </p>
+        </div>
+
+        <div class="input-row">
+          <div class="input-col">
+            <label for="multiplierInput" class="label">Multiplier:</label>
+            <input
+              id="multiplierInput"
+              type="number"
+              [(ngModel)]="multiplier"
+              class="form-input"
+            />
+          </div>
+
+          <div class="input-col">
+            <label for="searchTermInput" class="label">Search Term:</label>
+            <input
+              id="searchTermInput"
+              type="text"
+              [(ngModel)]="searchTerm"
+              placeholder="Filter numbers..."
+              class="form-input"
+            />
+          </div>
+        </div>
+
+        <div class="button-group">
+          <button (click)="addRandomNumbers()" class="btn-primary">
+            Add Random Numbers
+          </button>
+
+          <button (click)="runPerformanceTest()" class="btn-success">
+            Performance Test
+          </button>
+        </div>
+
+        <!-- Cache Controls -->
+        <div class="cache-controls">
+          <div class="cache-header">🎛️ Cache Controls</div>
+
+          <!-- Max Cache Size Control -->
+          <div class="cache-size-control">
+            <label for="maxCacheSize" class="label-sm">
+              Max Cache Size: {{ maxCacheSize }}
+            </label>
+            <input
+              id="maxCacheSize"
+              type="range"
+              [(ngModel)]="maxCacheSize"
+              min="10"
+              max="1000"
+              step="10"
+              class="range-input"
+            />
+            <div class="range-labels">
+              <span>10</span>
+              <span>1000</span>
+            </div>
+          </div>
+
+          <button (click)="clearMemoCache()" class="btn-danger">
+            Clear Memo Cache
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="card">
+      <h2>Memoized Computations</h2>
+
+      <div class="results-section">
+        <!-- Strategy Badge -->
+        <div class="strategy-display">
+          <strong>Current Strategy:</strong>
+          <span
+            class="strategy-badge"
+            [class]="getStrategyBadgeClass(selectedStrategy)"
+          >
+            {{ selectedStrategy }}
+          </span>
+        </div>
+
+        <!-- Cache Performance Metrics -->
+        <div class="cache-performance">
+          <h3>Cache Performance</h3>
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-value success">
+                {{ getCacheStats().cacheHits || 0 }}
+              </div>
+              <div class="metric-label">
+                <span class="icon success">✓</span> Cache Hits
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value warning">
+                {{ getCacheStats().cacheMisses || 0 }}
+              </div>
+              <div class="metric-label">
+                <span class="icon warning">✗</span> Cache Misses
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value info">{{ getCacheHitRate() }}%</div>
+              <div class="metric-label">Hit Rate</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value purple">
+                {{ computeCount() }}
+              </div>
+              <div class="metric-label">Computations</div>
+            </div>
+          </div>
+
+          <!-- Cache Hit Rate Progress Bar -->
+          <div class="progress-section">
+            <div class="progress-header">
+              <span>Cache Efficiency</span>
+              <span>{{ getCacheHitRate() }}%</span>
+            </div>
+            <div class="progress-bar">
+              <div
+                class="progress-fill"
+                [class]="getCacheEfficiencyColor()"
+                [style.width.%]="getCacheHitRate()"
+              ></div>
+            </div>
+          </div>
+
+          <!-- Memory Estimation -->
+          <div class="memory-info">
+            <div class="memory-row">
+              <span>💾 Estimated Cache Memory:</span>
+              <span class="memory-value">
+                {{ getEstimatedMemoryUsage() }} KB
+              </span>
+            </div>
+            <div class="memory-details">
+              {{ getCacheStats().cacheHits + getCacheStats().cacheMisses }}
+              / {{ maxCacheSize }} entries
+            </div>
+            <div class="progress-bar">
+              <div
+                class="progress-fill purple"
+                [style.width.%]="getCacheUsagePercentage()"
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Computation Result -->
+        <div class="computation-result">
+          <strong>Filtered & Multiplied Sum:</strong>
+          <div class="result-value">
+            {{ expensiveComputation() }}
+          </div>
+          <div class="result-meta">
+            {{ numbers().length }} numbers ×
+            {{ store.$.multiplier() }} multiplier
+          </div>
+        </div>
+
+        <div *ngIf="performanceResults.length > 0">
+          <strong>Performance Test Results:</strong>
+          <div class="performance-results">
+            <div
+              *ngFor="let result of performanceResults"
+              class="performance-result-item"
+            >
+              <span>{{ result.strategy }}:</span>
+              <span>{{ result.duration.toFixed(2) }}ms</span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <strong>Cache Stats:</strong>
+          <pre class="code-display">{{ getCacheStats() | json }}</pre>
+        </div>
+
+        <div class="filtered-numbers-section">
+          <strong>Filtered Numbers:</strong>
+          <div class="numbers-grid">
+            <span *ngFor="let num of filteredNumbers()" class="number-badge">
+              {{ num }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comparison Mode & Fibonacci -->
+  <div class="comparison-section">
+    <!-- Non-Memoized Comparison -->
+    <div class="card">
+      <h2>Memoized vs Non-Memoized</h2>
+
+      <div class="comparison-content">
+        <div class="comparison-panel">
+          <h3 class="comparison-title">Performance Comparison</h3>
+          <div class="comparison-results">
+            <!-- Memoized -->
+            <div class="result-box memoized">
+              <div class="result-header">
+                <span>✓ Memoized</span>
+                <span class="result-time">{{ memoizedTime }}ms</span>
+              </div>
+              <div class="result-details">
+                Computation count: {{ computeCount() }}
+              </div>
+              <div class="progress-bar">
+                <div
+                  class="progress-fill success"
+                  [style.width.%]="getMemoizedPercentage()"
+                ></div>
+              </div>
+            </div>
+
+            <!-- Non-Memoized -->
+            <div class="result-box non-memoized">
+              <div class="result-header">
+                <span>✗ Non-Memoized</span>
+                <span class="result-time">{{ nonMemoizedTime }}ms</span>
+              </div>
+              <div class="result-details">
+                Computation count: {{ nonMemoizedCount }}
+              </div>
+              <div class="progress-bar">
+                <div
+                  class="progress-fill danger"
+                  [style.width.%]="getNonMemoizedPercentage()"
+                ></div>
+              </div>
+            </div>
+
+            <!-- Speedup -->
+            <div class="speedup-display">
+              <div class="speedup-value">{{ getSpeedup() }}x</div>
+              <div class="speedup-label">Speedup Factor</div>
+            </div>
+          </div>
+
+          <button (click)="runComparison()" class="btn-primary full-width">
+            Run Comparison Test
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fibonacci Calculation -->
+    <div class="card">
+      <h2>Fibonacci Calculator</h2>
+
+      <div class="fibonacci-content">
+        <div>
+          <label for="fibInput" class="label">Calculate Fibonacci(n):</label>
+          <input
+            id="fibInput"
+            type="number"
+            [(ngModel)]="fibInput"
+            min="0"
+            max="40"
+            class="form-input"
+          />
+          <p class="hint">
+            Max recommended: 40 (to avoid long computation times)
+          </p>
+        </div>
+
+        <button
+          (click)="calculateFibonacci()"
+          [disabled]="fibInput < 0 || fibInput > 40"
+          class="btn-purple full-width"
+        >
+          Calculate
+        </button>
+
+        <!-- Results Comparison -->
+        <div *ngIf="fibResults" class="fibonacci-results">
+          <div class="fibonacci-result-box">
+            <h3>Result</h3>
+            <div class="fib-value">
+              {{ fibResults.result }}
+            </div>
+            <div class="fib-meta">Fibonacci({{ fibInput }})</div>
+          </div>
+
+          <!-- Performance Metrics -->
+          <div class="fib-metrics">
+            <div class="fib-metric success">
+              <div class="fib-metric-title">✓ Memoized</div>
+              <div class="fib-metric-value">
+                {{ fibResults.memoizedTime.toFixed(3) }}
+              </div>
+              <div class="fib-metric-unit">ms</div>
+              <div class="fib-metric-calls">
+                Calls: {{ fibResults.memoizedCalls }}
+              </div>
+            </div>
+
+            <div class="fib-metric danger">
+              <div class="fib-metric-title">✗ Non-Memoized</div>
+              <div class="fib-metric-value">
+                {{ fibResults.nonMemoizedTime.toFixed(3) }}
+              </div>
+              <div class="fib-metric-unit">ms</div>
+              <div class="fib-metric-calls">
+                Calls: {{ fibResults.nonMemoizedCalls }}
+              </div>
+            </div>
+          </div>
+
+          <div class="fib-speedup">
+            <div class="fib-speedup-value">
+              {{
+                (fibResults.nonMemoizedTime / fibResults.memoizedTime).toFixed(
+                  2
+                )
+              }}x
+            </div>
+            <div class="fib-speedup-label">Faster with Memoization</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,402 @@
+<div class="container">
+  <h1>SignalTree Middleware Demo</h1>
+
+  <div class="demo-grid-3col">
+    <!-- Middleware Controls -->
+    <div class="card">
+      <h2>Middleware Controls</h2>
+
+      <div class="middleware-panel">
+        <h3>Enable Middleware</h3>
+        <div class="middleware-toggles">
+          <label class="middleware-toggle" [class.active]="enableLogging">
+            <div class="toggle-content">
+              <input type="checkbox" [(ngModel)]="enableLogging" />
+              <span>🔍 Logging Middleware</span>
+            </div>
+            <span
+              class="toggle-badge"
+              [class.on]="enableLogging"
+              [class.off]="!enableLogging"
+            >
+              {{ enableLogging ? 'ON' : 'OFF' }}
+            </span>
+          </label>
+
+          <label class="middleware-toggle" [class.active]="enableValidation">
+            <div class="toggle-content">
+              <input type="checkbox" [(ngModel)]="enableValidation" />
+              <span>✅ Validation Middleware</span>
+            </div>
+            <span
+              class="toggle-badge"
+              [class.on]="enableValidation"
+              [class.off]="!enableValidation"
+            >
+              {{ enableValidation ? 'ON' : 'OFF' }}
+            </span>
+          </label>
+
+          <label class="middleware-toggle" [class.active]="enablePersistence">
+            <div class="toggle-content">
+              <input type="checkbox" [(ngModel)]="enablePersistence" />
+              <span>💾 Persistence Middleware</span>
+            </div>
+            <span
+              class="toggle-badge"
+              [class.on]="enablePersistence"
+              [class.off]="!enablePersistence"
+            >
+              {{ enablePersistence ? 'ON' : 'OFF' }}
+            </span>
+          </label>
+
+          <label class="middleware-toggle" [class.active]="enableUndo">
+            <div class="toggle-content">
+              <input type="checkbox" [(ngModel)]="enableUndo" />
+              <span>↶ Undo/Redo Middleware</span>
+            </div>
+            <span
+              class="toggle-badge"
+              [class.on]="enableUndo"
+              [class.off]="!enableUndo"
+            >
+              {{ enableUndo ? 'ON' : 'OFF' }}
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Middleware Chain Visualization -->
+      <div class="chain-panel">
+        <h3>Middleware Execution Chain</h3>
+        <div class="action-buttons">
+          <div class="chain-info">
+            Order: {{ getActiveMiddlewareCount() }} middleware active
+          </div>
+
+          <!-- Start -->
+          <div class="chain-step">
+            <div class="chain-badge start">Action Start</div>
+            <div class="arrow">→</div>
+          </div>
+
+          <!-- Logging -->
+          <div *ngIf="enableLogging" class="chain-step indent-1">
+            <div class="chain-badge middleware">🔍 Logging (Before)</div>
+            <div class="arrow">→</div>
+          </div>
+
+          <!-- Validation -->
+          <div *ngIf="enableValidation" class="chain-step indent-2">
+            <div class="chain-badge middleware">✅ Validation</div>
+            <div class="arrow">→</div>
+          </div>
+
+          <!-- Core Action -->
+          <div
+            class="chain-step"
+            [class.ml-12]="enableLogging || enableValidation"
+          >
+            <div class="chain-badge core">Core Action</div>
+            <div class="arrow">→</div>
+          </div>
+
+          <!-- Persistence -->
+          <div *ngIf="enablePersistence" class="chain-step indent-2">
+            <div class="chain-badge middleware">💾 Persistence</div>
+            <div class="arrow">→</div>
+          </div>
+
+          <!-- Undo -->
+          <div *ngIf="enableUndo" class="chain-step indent-1">
+            <div class="chain-badge middleware">↶ Undo Tracking</div>
+            <div class="arrow">→</div>
+          </div>
+
+          <!-- Logging After -->
+          <div *ngIf="enableLogging" class="chain-step">
+            <div class="chain-badge middleware">🔍 Logging (After)</div>
+            <div class="arrow">→</div>
+          </div>
+
+          <!-- End -->
+          <div class="chain-step">
+            <div class="chain-badge start">Action Complete</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="middleware-panel">
+        <h3>Quick Actions</h3>
+        <div class="action-buttons">
+          <button (click)="addRandomTodo()" class="btn-success">
+            + Add Random Todo
+          </button>
+
+          <button (click)="addInvalidTodo()" class="btn-danger">
+            + Add Invalid Todo (Test Validation)
+          </button>
+
+          <button
+            (click)="toggleRandomTodo()"
+            [disabled]="todos().length === 0"
+            class="btn-primary"
+          >
+            ↻ Toggle Random Todo
+          </button>
+
+          <button
+            (click)="deleteRandomTodo()"
+            [disabled]="todos().length === 0"
+            class="btn-warning"
+          >
+            × Delete Random Todo
+          </button>
+        </div>
+      </div>
+
+      <div class="middleware-panel" *ngIf="enableUndo">
+        <h3>Undo/Redo</h3>
+        <div class="undo-controls">
+          <button
+            (click)="undo()"
+            [disabled]="undoStack().length === 0"
+            class="btn-secondary btn-sm"
+          >
+            ↶ Undo ({{ undoStack().length }})
+          </button>
+
+          <button
+            (click)="redo()"
+            [disabled]="redoStack().length === 0"
+            class="btn-secondary btn-sm"
+          >
+            ↷ Redo ({{ redoStack().length }})
+          </button>
+        </div>
+      </div>
+
+      <div class="middleware-panel">
+        <h3>State Actions</h3>
+        <div class="action-buttons">
+          <button
+            (click)="clearAllTodos()"
+            [disabled]="todos().length === 0"
+            class="btn-danger"
+          >
+            Clear All Todos
+          </button>
+
+          <button
+            (click)="clearLogs()"
+            [disabled]="middlewareLogs().length === 0"
+            class="btn-warning"
+          >
+            Clear Logs
+          </button>
+
+          <button (click)="loadFromStorage()" class="btn-purple">
+            Load from Storage
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Todo List -->
+  <div class="card">
+    <h2>Todo List</h2>
+
+    <!-- Filter Tabs -->
+    <div class="filter-tabs">
+      <button
+        *ngFor="let f of ['all', 'active', 'completed']"
+        (click)="setFilterFromString(f)"
+        [class]="
+          filter() === f
+            ? 'border-blue-500 text-blue-600'
+            : 'border-transparent text-gray-500'
+        "
+        class="filter-tab"
+      >
+        {{ f | titlecase }} ({{ getFilteredCount(f) }})
+      </button>
+    </div>
+
+    <!-- Add Todo Form -->
+    <div class="mb-4">
+      <div class="undo-controls">
+        <input
+          type="text"
+          [(ngModel)]="newTodoText"
+          (keyup.enter)="addTodo()"
+          placeholder="Add a new todo..."
+        />
+        <button
+          (click)="addTodo()"
+          [disabled]="!newTodoText.trim()"
+          class="btn-primary"
+        >
+          Add
+        </button>
+      </div>
+    </div>
+
+    <!-- Todo Items -->
+    <div class="todos-list">
+      <div
+        *ngFor="let todo of filteredTodos(); trackBy: trackTodo"
+        class="todo-item"
+      >
+        <input
+          type="checkbox"
+          [checked]="todo.completed"
+          (change)="toggleTodo(todo.id)"
+        />
+
+        <span
+          [class]="
+            todo.completed ? 'line-through text-gray-500' : 'text-gray-900'
+          "
+        >
+          {{ todo.title }}
+        </span>
+
+        <button (click)="deleteTodo(todo.id)" class="btn-danger btn-sm">
+          Delete
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="filteredTodos().length === 0" class="empty-state">
+      {{ filter() === 'all' ? 'No todos yet.' : 'No ' + filter() + ' todos.' }}
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-section">
+      <div class="stats-grid">
+        <div>
+          <div class="stat-value primary">
+            {{ todos().length }}
+          </div>
+          <div class="stat-label">Total</div>
+        </div>
+        <div>
+          <div class="stat-value success">
+            {{ completedCount() }}
+          </div>
+          <div class="stat-label">Completed</div>
+        </div>
+        <div>
+          <div class="stat-value warning">
+            {{ activeCount() }}
+          </div>
+          <div class="stat-label">Active</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Middleware Logs -->
+  <div class="card">
+    <h2>Middleware Logs</h2>
+
+    <div class="logs-list">
+      <div
+        *ngFor="
+          let log of middlewareLogs().slice().reverse();
+          trackBy: trackLog
+        "
+        class="log-item"
+        [class]="getLogClass(log)"
+      >
+        <div class="log-header">
+          <span class="log-action">{{ log.action }}</span>
+          <span class="log-time">{{ formatTime(log.timestamp) }}</span>
+        </div>
+
+        <div class="log-details">
+          {{ log.type | titlecase }}
+          <span *ngIf="log.duration"> • {{ log.duration.toFixed(1) }}ms</span>
+          <span *ngIf="log.error"> • {{ log.error }}</span>
+        </div>
+
+        <div *ngIf="log.data && log.data['message']" class="log-message">
+          {{ log.data['message'] }}
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="middlewareLogs().length === 0" class="empty-state">
+      No middleware logs yet. Enable logging and perform some actions.
+    </div>
+  </div>
+</div>
+
+<!-- Undo Stack Visualization -->
+<div class="section-card" *ngIf="enableUndo && undoStack().length > 0">
+  <h2>Undo Stack Visualization</h2>
+
+  <div class="action-buttons">
+    <div
+      *ngFor="
+        let entry of undoStack().slice().reverse();
+        let i = index;
+        trackBy: trackUndoEntry
+      "
+      class="undo-entry"
+    >
+      <div class="entry-badge">
+        {{ undoStack().length - i }}
+      </div>
+
+      <div class="entry-content">
+        <div class="entry-action">{{ entry.action }}</div>
+        <div class="entry-details">
+          {{ formatTime(entry.timestamp) }} • {{ entry.previousState.length }} →
+          {{ entry.newState.length }} todos
+        </div>
+      </div>
+
+      <div class="entry-change">
+        {{ getUndoChangeDescription(entry) }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Features Explanation -->
+<div class="section-card features-card">
+  <h2>Middleware Features Demonstrated</h2>
+  <div class="features-grid">
+    <div>
+      <h3 class="feature-title">Logging Middleware</h3>
+      <p class="feature-description">
+        Automatically logs all state changes with timing information and action
+        details.
+      </p>
+    </div>
+    <div>
+      <h3 class="feature-title">Validation Middleware</h3>
+      <p class="feature-description">
+        Validates data before state changes, preventing invalid operations and
+        maintaining data integrity.
+      </p>
+    </div>
+    <div>
+      <h3 class="feature-title">Persistence Middleware</h3>
+      <p class="feature-description">
+        Automatically saves state changes to local storage for data persistence
+        across sessions.
+      </p>
+    </div>
+    <div>
+      <h3 class="feature-title">Undo/Redo Middleware</h3>
+      <p class="feature-description">
+        Tracks state changes and provides undo/redo functionality with
+        configurable history limits.
+      </p>
+    </div>
+  </div>
+</div>
