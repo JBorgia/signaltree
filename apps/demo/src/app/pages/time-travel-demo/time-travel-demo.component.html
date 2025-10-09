@@ -1,308 +1,165 @@
 <div class="container">
-  <h1>SignalTree Time Travel Demo</h1>
+  <h1>Time Travel Demo</h1>
 
-  <div class="demo-grid">
-    <!-- Controls -->
-    <div class="card">
-      <h2>State Controls</h2>
-
-      <div class="controls-section">
-        <!-- Counter -->
-        <div>
-          <label for="counter" class="label">Counter: {{ counter() }}</label>
-          <div class="button-group">
-            <button (click)="increment()" class="btn-primary">+1</button>
-            <button (click)="decrement()" class="btn-danger">-1</button>
-          </div>
-        </div>
-
-        <!-- Message -->
-        <div>
-          <label for="message" class="label">Message:</label>
-          <input
-            id="message"
-            type="text"
-            [(ngModel)]="message"
-            class="form-input"
-          />
-        </div>
-
-        <!-- Todo -->
-        <div>
-          <label for="newTodo" class="label">Add Todo:</label>
-          <div class="input-group">
-            <input
-              id="newTodo"
-              type="text"
-              [(ngModel)]="newTodoText"
-              placeholder="Enter todo..."
-              class="form-input"
-            />
-            <button
-              (click)="addTodo()"
-              [disabled]="!newTodoText.trim()"
-              class="btn-success"
-            >
-              Add
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Time Travel Controls -->
-    <div class="card">
-      <h2>Time Travel</h2>
-
-      <div class="time-travel-section">
-        <!-- Navigation -->
-        <div class="navigation-buttons">
-          <button (click)="undo()" [disabled]="!canUndo()" class="btn-warning">
-            ↶ Undo
-          </button>
-          <button (click)="redo()" [disabled]="!canRedo()" class="btn-purple">
-            ↷ Redo
-          </button>
-        </div>
-
-        <!-- Keyboard Shortcuts Info -->
-        <div class="shortcuts-info">
-          <div class="shortcuts-header">⌨️ Keyboard Shortcuts</div>
-          <div class="shortcuts-list">
-            <div>← → : Navigate history</div>
-            <div>Ctrl/Cmd+Z : Undo</div>
-            <div>Ctrl+Y / Cmd+Shift+Z : Redo</div>
-          </div>
-        </div>
-
-        <button (click)="resetHistory()" class="btn-danger full-width">
-          Reset History
-        </button>
-
-        <!-- History Search -->
-        <div class="search-panel">
-          <div class="search-header">🔍 Search History</div>
-          <div class="search-input-group">
-            <input
-              type="text"
-              [(ngModel)]="searchTerm"
-              placeholder="Filter by action..."
-              class="search-input"
-            />
-            <button
-              *ngIf="hasSearchResults()"
-              (click)="clearSearch()"
-              class="btn-secondary btn-sm"
-            >
-              ✕
-            </button>
-          </div>
-          <div class="search-results" *ngIf="hasSearchResults()">
-            {{ getFilteredHistory().length }} result(s) found
-          </div>
-        </div>
-
-        <!-- Bookmarks -->
-        <div class="bookmarks-panel">
-          <div class="bookmarks-header">
-            <span>🔖 Bookmarks</span>
-            <button
-              (click)="clearAllBookmarks()"
-              [disabled]="bookmarks.size === 0"
-              class="btn-warning btn-xs"
-            >
-              Clear All
-            </button>
-          </div>
-          <div class="bookmarks-count">{{ bookmarks.size }} bookmark(s)</div>
-        </div>
-
-        <!-- History Info -->
-        <div class="history-info">
-          <p><strong>Current Index:</strong> {{ getCurrentIndex() }}</p>
-          <p><strong>History Length:</strong> {{ getHistory().length }}</p>
-        </div>
-
-        <!-- Timeline Visualization -->
-        <div class="timeline-section">
-          <h3>Timeline:</h3>
-          <div class="timeline-container">
-            <!-- Timeline bar -->
-            <div class="timeline-nodes">
-              <div
-                *ngFor="let entry of getHistory(); let i = index"
-                class="timeline-node-wrapper"
-              >
-                <button
-                  (click)="jumpTo(i)"
-                  [class]="getTimelineNodeClass(i)"
-                  class="timeline-node"
-                  [title]="'#' + i + ': ' + (entry.action || 'Initial')"
-                  type="button"
-                >
-                  <span class="node-label">{{ i }}</span>
-                  <!-- Bookmark indicator -->
-                  <span
-                    *ngIf="isBookmarked(i)"
-                    class="bookmark-indicator"
-                    title="Bookmarked"
-                  >
-                    🔖
-                  </span>
-                </button>
-                <!-- Connector line -->
-                <div
-                  *ngIf="i < getHistory().length - 1"
-                  class="timeline-connector"
-                ></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- History List -->
-        <div class="history-list">
-          <h3>
-            History Log:
-            <span class="filter-indicator" *ngIf="hasSearchResults()">
-              (filtered)
-            </span>
-          </h3>
-          <div class="history-items">
-            <div
-              *ngFor="let entry of getFilteredHistory(); let i = index"
-              class="history-item"
-            >
-              <button
-                (click)="jumpTo(i)"
-                (keydown.enter)="jumpTo(i)"
-                (keydown.space)="jumpTo(i)"
-                [class]="getHistoryItemClass(i)"
-                class="history-item-button"
-                type="button"
-              >
-                <span class="history-index">{{ i }}:</span>
-                {{ entry.action || 'Initial' }}
-                <span class="history-timestamp"
-                  >({{ entry.timestamp | date : 'short' }})</span
-                >
-              </button>
-              <button
-                (click)="toggleBookmark(i)"
-                [class]="
-                  isBookmarked(i) ? 'bookmark-active' : 'bookmark-inactive'
-                "
-                class="bookmark-button"
-                title="Toggle bookmark"
-                type="button"
-              >
-                🔖
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+  <div class="explanation-card">
+    <h2>What is Time Travel?</h2>
+    <p class="intro-text">
+      <strong>Time Travel</strong> allows you to
+      <em>undo and redo state changes</em>, navigate through your application's
+      history, and replay user actions. Perfect for debugging, testing, and
+      providing undo/redo functionality.
+    </p>
+    <div class="how-it-works">
+      <h3>How It Works</h3>
+      <ol class="instruction-list">
+        <li>
+          <strong>Automatic Tracking:</strong> Every state change is recorded in
+          history
+        </li>
+        <li>
+          <strong>Navigate History:</strong> Move backward and forward through
+          state snapshots
+        </li>
+        <li>
+          <strong>Jump to State:</strong> Click any history item to instantly
+          restore that state
+        </li>
+        <li>
+          <strong>Undo/Redo:</strong> Built-in undo and redo functionality
+        </li>
+        <li>
+          <strong>Quick Test:</strong> Click "Generate Sample Actions" to see
+          time travel in action instantly!
+        </li>
+      </ol>
     </div>
   </div>
 
-  <!-- Current State Display with Diff -->
-  <div class="state-display-grid">
-    <!-- Current State -->
-    <div class="card">
-      <h2>Current State</h2>
-      <div class="state-content">
-        <div>
-          <h3>Counter:</h3>
-          <p class="counter-value">{{ counter() }}</p>
+  <div class="demo-grid">
+    <div class="card actions-card">
+      <h2>Make State Changes</h2>
+      <p class="card-description">
+        Each action below creates a new entry in history. Click "Generate Sample
+        Actions" to quickly populate history, then use Undo/Redo to navigate!
+      </p>
+
+      <div class="control-section">
+        <h3>Counter: {{ counter() }}</h3>
+        <p style="font-size: 0.875rem; color: #6b7280; margin: 0.5rem 0">
+          Increment or decrement to add history entries
+        </p>
+        <div class="button-group">
+          <button (click)="increment()" class="btn-primary btn-sm">
+            +1 Increment
+          </button>
+          <button (click)="decrement()" class="btn-danger btn-sm">
+            -1 Decrement
+          </button>
+          <button (click)="reset()" class="btn-secondary btn-sm">
+            Reset to 0
+          </button>
         </div>
-        <div>
-          <h3>Message:</h3>
-          <p class="message-value">{{ message() || '(empty)' }}</p>
+      </div>
+
+      <div class="control-section">
+        <h3>Message</h3>
+        <input
+          type="text"
+          [value]="message()"
+          (input)="updateMessage($any($event.target).value)"
+          class="form-input"
+        />
+      </div>
+
+      <div class="control-section">
+        <h3>Todos</h3>
+        <div class="input-group">
+          <input
+            type="text"
+            [(ngModel)]="newTodoText"
+            (keyup.enter)="addTodo()"
+            placeholder="Add a todo..."
+            class="form-input"
+          />
+          <button
+            (click)="addTodo()"
+            [disabled]="!newTodoText.trim()"
+            class="btn-primary btn-sm"
+          >
+            Add
+          </button>
         </div>
-        <div>
-          <h3>Todos ({{ todos().length }}):</h3>
-          <ul class="todos-list">
-            <li
-              *ngFor="let todo of todos()"
-              [class.completed]="todo.completed"
-              class="todo-item"
-            >
-              <button
-                (click)="toggleTodo(todo.id)"
-                (keydown.enter)="toggleTodo(todo.id)"
-                (keydown.space)="toggleTodo(todo.id)"
-                class="todo-button"
-                type="button"
-              >
-                {{ todo.completed ? '✓' : '○' }} {{ todo.text }}
-              </button>
-            </li>
-          </ul>
+        <div class="todos-list">
+          @for (todo of todos(); track todo.id) {
+          <div class="todo-item" [class.completed]="todo.completed">
+            <input
+              type="checkbox"
+              [checked]="todo.completed"
+              (change)="toggleTodo(todo.id)"
+            />
+            <span>{{ todo.title }}</span>
+            <button (click)="deleteTodo(todo.id)" class="btn-delete">X</button>
+          </div>
+          }
         </div>
       </div>
     </div>
 
-    <!-- State Diff Viewer -->
-    <div class="card">
-      <h2>
-        State Diff
-        <span class="subtitle">(vs previous)</span>
-      </h2>
-      <div *ngIf="getStateDiff() as diff" class="diff-content">
-        <!-- Counter diff -->
-        <div
-          *ngIf="diff.counter"
-          class="diff-item"
-          [class.added]="diff.counter.type === 'added'"
-          [class.modified]="diff.counter.type === 'modified'"
-        >
-          <div class="diff-label">Counter:</div>
-          <div class="diff-values">
-            <span
-              *ngIf="diff.counter.oldValue !== undefined"
-              class="old-value"
-              >{{ diff.counter.oldValue }}</span
-            >
-            <span class="new-value">{{ diff.counter.newValue }}</span>
-          </div>
-        </div>
+    <div class="card time-travel-card">
+      <h2>Time Travel Controls</h2>
+      <p class="card-description">Navigate through state history</p>
 
-        <!-- Message diff -->
+      <div class="tt-controls">
+        <button (click)="undo()" [disabled]="!canUndo()" class="btn-warning">
+          Undo
+        </button>
+        <button (click)="redo()" [disabled]="!canRedo()" class="btn-success">
+          Redo
+        </button>
+        <button (click)="generateSampleActions()" class="btn-primary btn-sm">
+          🎬 Generate Sample Actions
+        </button>
+        <button (click)="clearHistory()" class="btn-danger btn-sm">
+          Clear History
+        </button>
+      </div>
+
+      <div class="history-info">
+        <div class="info-item">
+          <span class="label">History Length:</span>
+          <span class="value">{{ historyLength() }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Current Position:</span>
+          <span class="value"
+            >{{ currentIndex() + 1 }} / {{ historyLength() }}</span
+          >
+        </div>
+      </div>
+
+      <div class="history-list">
+        <h3>State History</h3>
+        @for (state of history(); track $index) {
         <div
-          *ngIf="diff.message"
-          class="diff-item"
-          [class.added]="diff.message.type === 'added'"
-          [class.modified]="diff.message.type === 'modified'"
+          class="history-item"
+          [class.active]="$index === currentIndex()"
+          (click)="goToState($index)"
+          tabindex="0"
+          (keyup)="onHistoryItemKeyup($event, $index)"
+          role="button"
+          [attr.aria-pressed]="$index === currentIndex()"
         >
-          <div class="diff-label">Message:</div>
-          <div class="diff-values">
-            <div *ngIf="diff.message.oldValue" class="old-value">
-              "{{ diff.message.oldValue }}"
+          <div class="history-index">{{ $index + 1 }}</div>
+          <div class="history-content">
+            <div class="history-time">
+              {{ formatTimestamp(state.timestamp) }}
             </div>
-            <div class="new-value">"{{ diff.message.newValue }}"</div>
+            <div class="history-preview">
+              {{ getStatePreview(state.state) }}
+            </div>
           </div>
         </div>
-
-        <!-- Todos diff -->
-        <div
-          *ngIf="diff.todos"
-          class="diff-item"
-          [class.added]="diff.todos.type === 'added'"
-          [class.modified]="diff.todos.type === 'modified'"
-        >
-          <div class="diff-label">Todos: {{ diff.todos.description }}</div>
-          <div class="diff-count">
-            Count: {{ diff.todos.oldCount }} → {{ diff.todos.newCount }}
-          </div>
-        </div>
-
-        <!-- No changes -->
-        <div
-          *ngIf="!diff.counter && !diff.message && !diff.todos"
-          class="no-changes"
-        >
-          No changes detected
-        </div>
+        }
       </div>
     </div>
   </div>

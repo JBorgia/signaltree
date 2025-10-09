@@ -1,21 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed } from '@angular/core';
+import { Component, computed, effect } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree } from '@signaltree/core';
 
 import { generateTodos, Todo } from '../../shared/models';
-
-interface MiddlewareState {
-  todos: Todo[];
-  filter: 'all' | 'active' | 'completed';
-  middlewareLogs: MiddlewareLog[];
-  enableLogging: boolean;
-  enableValidation: boolean;
-  enablePersistence: boolean;
-  enableUndo: boolean;
-  undoStack: UndoEntry[];
-  redoStack: UndoEntry[];
-}
 
 interface MiddlewareLog {
   id: string;
@@ -30,144 +18,19 @@ interface MiddlewareLog {
 interface UndoEntry {
   action: string;
   previousState: Todo[];
-  newState: Todo[];
   timestamp: number;
 }
 
-// Middleware functions
-const loggingMiddleware = (logs: MiddlewareLog[]) => {
-  return (action: string, next: () => unknown) => {
-    const logId = `log_${Date.now()}_${Math.random()
-      .toString(36)
-      .substr(2, 9)}`;
-    const startTime = performance.now();
+interface MiddlewareState {
+  todos: Todo[];
+  filter: 'all' | 'active' | 'completed';
+  logs: MiddlewareLog[];
+  undoStack: UndoEntry[];
+  redoStack: UndoEntry[];
+  lastSaved: number;
+}
 
-    logs.push({
-      id: logId,
-      timestamp: Date.now(),
-      type: 'before',
-      action,
-      data: { message: `Starting ${action}` },
-    });
-
-    try {
-      const result = next();
-      const duration = performance.now() - startTime;
-
-      logs.push({
-        id: logId,
-        timestamp: Date.now(),
-        type: 'after',
-        action,
-        data: { message: `Completed ${action}` },
-        duration,
-      });
-
-      return result;
-    } catch (error) {
-      logs.push({
-        id: logId,
-        timestamp: Date.now(),
-        type: 'error',
-        action,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-      throw error;
-    }
-  };
-};
-
-const validationMiddleware = () => {
-  return (action: string, next: () => unknown, ...args: unknown[]) => {
-    // Validate todo operations
-    const data = args[0] as Record<string, unknown> | undefined;
-    if (action.includes('todo') && data) {
-      if (
-        action.includes('add') &&
-        (!data['title'] || (data['title'] as string).trim().length === 0)
-      ) {
-        throw new Error('Todo title cannot be empty');
-      }
-
-      if (action.includes('add') && (data['title'] as string).length > 200) {
-        throw new Error('Todo title cannot exceed 200 characters');
-      }
-
-      if (
-        action.includes('update') &&
-        data['id'] &&
-        typeof data['id'] !== 'number'
-      ) {
-        throw new Error('Todo ID must be a number');
-      }
-    }
-
-    return next();
-  };
-};
-
-const persistenceMiddleware = () => {
-  return (action: string, next: () => unknown, ...args: unknown[]) => {
-    const result = next();
-
-    // Simulate saving to localStorage
-    if (action.includes('todo') && args[0]) {
-      try {
-        const state = args[0] as Record<string, unknown>;
-        localStorage.setItem(
-          'signaltree_demo_todos',
-          JSON.stringify(state['todos'])
-        );
-      } catch (error) {
-        console.warn('Failed to persist state:', error);
-      }
-    }
-
-    return result;
-  };
-};
-
-const undoMiddleware = (undoStack: UndoEntry[], redoStack: UndoEntry[]) => {
-  return (action: string, next: () => unknown, ...args: unknown[]) => {
-    if (action === 'undo' || action === 'redo') {
-      return next(); // Don't track undo/redo actions
-    }
-
-    const result = next();
-
-    const [previousState, newStateGetter] = args as [
-      Todo[] | undefined,
-      (() => Todo[]) | undefined
-    ];
-
-    if (previousState && newStateGetter) {
-      const newState = newStateGetter();
-
-      // Only add to undo stack if state actually changed and newState is valid
-      if (
-        newState &&
-        JSON.stringify(previousState) !== JSON.stringify(newState)
-      ) {
-        undoStack.push({
-          action,
-          previousState: [...previousState],
-          newState: [...newState],
-          timestamp: Date.now(),
-        });
-
-        // Limit undo stack size
-        if (undoStack.length > 20) {
-          undoStack.shift();
-        }
-
-        // Clear redo stack when new action is performed
-        redoStack.splice(0, redoStack.length);
-      }
-    }
-
-    return result;
-  };
-};
+const STORAGE_KEY = 'signaltree-middleware-todos';
 
 @Component({
   selector: 'app-middleware-demo',
@@ -177,363 +40,293 @@ const undoMiddleware = (undoStack: UndoEntry[], redoStack: UndoEntry[]) => {
   styleUrls: ['./middleware-demo.component.scss'],
 })
 export class MiddlewareDemoComponent {
-  private store = signalTree<MiddlewareState>({
-    todos: generateTodos(5),
+  enableLogging = true;
+  enableValidation = true;
+  enablePersistence = false;
+  enableUndo = false;
+  newTodoTitle = '';
+
+  private tree = signalTree<MiddlewareState>({
+    todos: generateTodos(3),
     filter: 'all',
-    middlewareLogs: [],
-    enableLogging: true,
-    enableValidation: true,
-    enablePersistence: false,
-    enableUndo: true,
+    logs: [],
     undoStack: [],
     redoStack: [],
+    lastSaved: Date.now(),
   });
 
-  // State signals
-  todos = this.store.$.todos;
-  filter = this.store.$.filter;
-  middlewareLogs = this.store.$.middlewareLogs;
-  undoStack = this.store.$.undoStack;
-  redoStack = this.store.$.redoStack;
-
-  // Form fields
-  newTodoText = '';
-  enableLogging = this.store.$.enableLogging();
-  enableValidation = this.store.$.enableValidation();
-  enablePersistence = this.store.$.enablePersistence();
-  enableUndo = this.store.$.enableUndo();
-
-  // Computed values
-  filteredTodos = computed(() => {
-    const todos = this.todos();
-    const filter = this.filter();
-
-    switch (filter) {
-      case 'active':
-        return todos.filter((t) => !t.completed);
-      case 'completed':
-        return todos.filter((t) => t.completed);
-      default:
-        return todos;
-    }
-  });
-
-  completedCount = computed(
-    () => this.todos().filter((t) => t.completed).length
+  todos = computed(() => this.tree.state.todos());
+  filter = computed(() => this.tree.state.filter());
+  middlewareLogs = computed(() => this.tree.state.logs());
+  undoStack = computed(() => this.tree.state.undoStack());
+  redoStack = computed(() => this.tree.state.redoStack());
+  allTodos = computed(() => this.todos());
+  activeTodos = computed(() => this.todos().filter((todo) => !todo.completed));
+  completedTodos = computed(() =>
+    this.todos().filter((todo) => todo.completed)
   );
-  activeCount = computed(() => this.todos().filter((t) => !t.completed).length);
+  filteredTodos = computed(() => {
+    const filter = this.filter();
+    const todos = this.todos();
+    if (filter === 'active') return todos.filter((t) => !t.completed);
+    if (filter === 'completed') return todos.filter((t) => t.completed);
+    return todos;
+  });
 
-  private executeWithMiddleware(
+  constructor() {
+    this.loadFromStorage();
+    effect(() => {
+      if (this.enablePersistence) {
+        const todos = this.todos();
+        this.saveToStorage(todos);
+      }
+    });
+  }
+
+  private log(
+    type: 'before' | 'after' | 'error',
     action: string,
-    operation: () => void,
-    data?: Record<string, unknown>
+    data?: Record<string, unknown>,
+    error?: string,
+    duration?: number
   ) {
-    const logs = this.middlewareLogs();
-    const previousTodos = [...this.todos()];
+    if (!this.enableLogging) return;
+    const log: MiddlewareLog = {
+      id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: Date.now(),
+      type,
+      action,
+      data,
+      error,
+      duration,
+    };
+    this.tree.state.logs.set([log, ...this.tree.state.logs()].slice(0, 50));
+  }
 
-    // Build middleware chain
-    const middlewares: Array<
-      (action: string, next: () => unknown, ...args: unknown[]) => unknown
-    > = [];
-
-    if (this.enableLogging) {
-      middlewares.push(loggingMiddleware(logs));
+  private validate(action: string, data?: unknown): void {
+    if (!this.enableValidation) return;
+    if (action === 'addTodo') {
+      const title = (data as { title: string })?.title;
+      if (!title || title.trim().length === 0) {
+        throw new Error('Todo title cannot be empty');
+      }
+      if (title.length > 200) {
+        throw new Error('Todo title cannot exceed 200 characters');
+      }
     }
+  }
 
-    if (this.enableValidation) {
-      middlewares.push(validationMiddleware());
-    }
-
-    if (this.enableUndo) {
-      middlewares.push(undoMiddleware(this.undoStack(), this.redoStack()));
-    }
-
-    if (this.enablePersistence) {
-      middlewares.push(persistenceMiddleware());
-    }
-
-    // Execute with middleware chain
-    let next = operation;
-
-    // Apply middleware in reverse order
-    for (let i = middlewares.length - 1; i >= 0; i--) {
-      const middleware = middlewares[i];
-      const currentNext = next;
-
-      next = () =>
-        middleware(action, currentNext, data, previousTodos, () =>
-          this.todos()
-        );
-    }
-
+  private saveToStorage(todos: Todo[]) {
+    if (!this.enablePersistence) return;
     try {
-      next();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
+      this.tree.state.lastSaved.set(Date.now());
+    } catch (error) {
+      console.error('Failed to save to storage:', error);
+    }
+  }
 
-      // Update logs in store if logging was enabled
-      if (this.enableLogging) {
-        this.store.$.middlewareLogs.set([...logs]);
+  private loadFromStorage() {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const todos = JSON.parse(stored) as Todo[];
+        this.tree.state.todos.set(todos);
       }
     } catch (error) {
-      // Update logs even on error if logging was enabled
-      if (this.enableLogging) {
-        this.store.$.middlewareLogs.set([...logs]);
-      }
+      console.error('Failed to load from storage:', error);
+    }
+  }
 
-      // Show error to user
-      alert(error instanceof Error ? error.message : 'Unknown error occurred');
+  private saveToUndoStack(action: string) {
+    if (!this.enableUndo) return;
+    const entry: UndoEntry = {
+      action,
+      previousState: [...this.tree.state.todos()],
+      timestamp: Date.now(),
+    };
+    this.tree.state.undoStack.set(
+      [entry, ...this.tree.state.undoStack()].slice(0, 50)
+    );
+    this.tree.state.redoStack.set([]);
+  }
+
+  private executeAction<T>(
+    action: string,
+    fn: () => T,
+    data?: unknown
+  ): T | undefined {
+    const startTime = performance.now();
+    try {
+      this.log('before', action, { message: `Starting ${action}` });
+      this.validate(action, data);
+      this.saveToUndoStack(action);
+      const result = fn();
+      const duration = performance.now() - startTime;
+      this.log(
+        'after',
+        action,
+        { message: `Completed ${action}` },
+        undefined,
+        duration
+      );
+      return result;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.log('error', action, undefined, errorMessage);
+      alert('Error: ' + errorMessage);
+      return undefined;
     }
   }
 
   addTodo() {
-    if (!this.newTodoText.trim()) return;
-
-    this.executeWithMiddleware(
-      'add_todo',
+    if (!this.newTodoTitle.trim()) return;
+    this.executeAction(
+      'addTodo',
       () => {
         const newTodo: Todo = {
-          id: Math.max(...this.todos().map((t) => t.id), 0) + 1,
-          title: this.newTodoText.trim(),
+          id: Date.now(),
+          title: this.newTodoTitle.trim(),
           completed: false,
           createdAt: new Date(),
-          priority: 'medium',
         };
-
-        this.store.$.todos.update((todos) => [...todos, newTodo]);
-        this.newTodoText = '';
+        this.tree.state.todos.set([...this.tree.state.todos(), newTodo]);
+        this.newTodoTitle = '';
       },
-      { title: this.newTodoText.trim() }
-    );
-  }
-
-  addRandomTodo() {
-    const randomTexts = [
-      'Learn SignalTree middleware',
-      'Build awesome Angular apps',
-      'Write unit tests',
-      'Review pull requests',
-      'Plan next sprint',
-      'Update documentation',
-      'Refactor legacy code',
-      'Implement new features',
-    ];
-
-    const randomText =
-      randomTexts[Math.floor(Math.random() * randomTexts.length)];
-
-    this.executeWithMiddleware(
-      'add_random_todo',
-      () => {
-        const newTodo: Todo = {
-          id: Math.max(...this.todos().map((t) => t.id), 0) + 1,
-          title: randomText,
-          completed: false,
-          createdAt: new Date(),
-          priority: ['low', 'medium', 'high'][Math.floor(Math.random() * 3)] as
-            | 'low'
-            | 'medium'
-            | 'high',
-        };
-
-        this.store.$.todos.update((todos) => [...todos, newTodo]);
-      },
-      { title: randomText }
-    );
-  }
-
-  addInvalidTodo() {
-    // This should trigger validation middleware
-    this.executeWithMiddleware(
-      'add_invalid_todo',
-      () => {
-        const newTodo: Todo = {
-          id: Math.max(...this.todos().map((t) => t.id), 0) + 1,
-          title: '', // Empty text should fail validation
-          completed: false,
-          createdAt: new Date(),
-          priority: 'medium',
-        };
-
-        this.store.$.todos.update((todos) => [...todos, newTodo]);
-      },
-      { title: '' }
+      { title: this.newTodoTitle }
     );
   }
 
   toggleTodo(id: number) {
-    this.executeWithMiddleware(
-      'toggle_todo',
-      () => {
-        this.store.$.todos.update((todos) =>
-          todos.map((t) =>
-            t.id === id ? { ...t, completed: !t.completed } : t
-          )
-        );
-      },
-      { id }
-    );
-  }
-
-  toggleRandomTodo() {
-    const todos = this.todos();
-    if (todos.length === 0) return;
-
-    const randomTodo = todos[Math.floor(Math.random() * todos.length)];
-    this.toggleTodo(randomTodo.id);
+    this.executeAction('toggleTodo', () => {
+      const todos = this.tree.state.todos();
+      const updated = todos.map((todo) =>
+        todo.id === id ? { ...todo, completed: !todo.completed } : todo
+      );
+      this.tree.state.todos.set(updated);
+    });
   }
 
   deleteTodo(id: number) {
-    this.executeWithMiddleware(
-      'delete_todo',
-      () => {
-        this.store.$.todos.update((todos) => todos.filter((t) => t.id !== id));
-      },
-      { id }
-    );
+    this.executeAction('deleteTodo', () => {
+      const todos = this.tree.state.todos();
+      this.tree.state.todos.set(todos.filter((todo) => todo.id !== id));
+    });
   }
 
-  deleteRandomTodo() {
-    const todos = this.todos();
-    if (todos.length === 0) return;
+  addRandomTodos() {
+    this.executeAction('addRandomTodos', () => {
+      const newTodos = generateTodos(3);
+      this.tree.state.todos.set([...this.tree.state.todos(), ...newTodos]);
+    });
+  }
 
-    const randomTodo = todos[Math.floor(Math.random() * todos.length)];
-    this.deleteTodo(randomTodo.id);
+  clearCompleted() {
+    this.executeAction('clearCompleted', () => {
+      const todos = this.tree.state.todos();
+      this.tree.state.todos.set(todos.filter((todo) => !todo.completed));
+    });
   }
 
   clearAllTodos() {
-    this.executeWithMiddleware('clear_all_todos', () => {
-      this.store.$.todos.set([]);
-    });
-  }
-
-  undo() {
-    const undoStack = this.undoStack();
-    const redoStack = this.redoStack();
-
-    if (undoStack.length === 0) return;
-
-    this.executeWithMiddleware('undo', () => {
-      const lastEntry = undoStack[undoStack.length - 1];
-
-      // Move to redo stack
-      redoStack.push(lastEntry);
-      this.store.$.redoStack.set([...redoStack]);
-
-      // Remove from undo stack
-      this.store.$.undoStack.set(undoStack.slice(0, -1));
-
-      // Restore previous state
-      this.store.$.todos.set([...lastEntry.previousState]);
-    });
-  }
-
-  redo() {
-    const redoStack = this.redoStack();
-    const undoStack = this.undoStack();
-
-    if (redoStack.length === 0) return;
-
-    this.executeWithMiddleware('redo', () => {
-      const lastEntry = redoStack[redoStack.length - 1];
-
-      // Move to undo stack
-      undoStack.push(lastEntry);
-      this.store.$.undoStack.set([...undoStack]);
-
-      // Remove from redo stack
-      this.store.$.redoStack.set(redoStack.slice(0, -1));
-
-      // Restore new state
-      this.store.$.todos.set([...lastEntry.newState]);
+    if (!confirm('Are you sure you want to delete all todos?')) return;
+    this.executeAction('clearAllTodos', () => {
+      this.tree.state.todos.set([]);
     });
   }
 
   setFilter(filter: 'all' | 'active' | 'completed') {
-    this.store.$.filter.set(filter);
-  }
-
-  setFilterFromString(filter: string) {
-    if (filter === 'all' || filter === 'active' || filter === 'completed') {
-      this.setFilter(filter);
-    }
+    this.tree.state.filter.set(filter);
   }
 
   clearLogs() {
-    this.store.$.middlewareLogs.set([]);
+    this.tree.state.logs.set([]);
   }
 
-  loadFromStorage() {
-    this.executeWithMiddleware('load_from_storage', () => {
-      try {
-        const stored = localStorage.getItem('signaltree_demo_todos');
-        if (stored) {
-          const todos = JSON.parse(stored);
-          this.store.$.todos.set(todos);
-        }
-      } catch (error) {
-        console.warn('Failed to load from storage:', error);
-      }
-    });
+  clearStorage() {
+    localStorage.removeItem(STORAGE_KEY);
+    alert('Storage cleared!');
   }
 
-  getFilteredCount(filter: string): number {
-    const todos = this.todos();
-    switch (filter) {
-      case 'active':
-        return todos.filter((t) => !t.completed).length;
-      case 'completed':
-        return todos.filter((t) => t.completed).length;
-      default:
-        return todos.length;
+  handleUndo() {
+    if (!this.canUndo()) return;
+    const undoStack = this.tree.state.undoStack();
+    const entry = undoStack[0];
+    if (entry) {
+      const redoEntry: UndoEntry = {
+        action: `redo_${entry.action}`,
+        previousState: [...this.tree.state.todos()],
+        timestamp: Date.now(),
+      };
+      this.tree.state.redoStack.set([
+        redoEntry,
+        ...this.tree.state.redoStack(),
+      ]);
+      this.tree.state.todos.set(entry.previousState);
+      this.tree.state.undoStack.set(undoStack.slice(1));
+      this.log('after', 'undo', { message: `Undid: ${entry.action}` });
     }
   }
 
-  getLogClass(log: MiddlewareLog): string {
-    switch (log.type) {
-      case 'before':
-        return 'bg-blue-50 border border-blue-200';
-      case 'after':
-        return 'bg-green-50 border border-green-200';
-      case 'error':
-        return 'bg-red-50 border border-red-200';
-      default:
-        return 'bg-gray-50 border border-gray-200';
+  handleRedo() {
+    if (!this.canRedo()) return;
+    const redoStack = this.tree.state.redoStack();
+    const entry = redoStack[0];
+    if (entry) {
+      const undoEntry: UndoEntry = {
+        action: entry.action.replace('redo_', ''),
+        previousState: [...this.tree.state.todos()],
+        timestamp: Date.now(),
+      };
+      this.tree.state.undoStack.set([
+        undoEntry,
+        ...this.tree.state.undoStack(),
+      ]);
+      this.tree.state.todos.set(entry.previousState);
+      this.tree.state.redoStack.set(redoStack.slice(1));
+      this.log('after', 'redo', { message: `Redid: ${entry.action}` });
     }
   }
 
-  getUndoChangeDescription(entry: UndoEntry): string {
-    if (entry.previousState.length !== entry.newState.length) {
-      const change = Math.abs(
-        entry.newState.length - entry.previousState.length
-      );
-      const sign =
-        entry.newState.length > entry.previousState.length ? '+' : '-';
-      return `${sign}${change}`;
-    }
-    return 'modified';
+  canUndo(): boolean {
+    return this.undoStack().length > 0;
   }
 
-  formatTime(timestamp: number): string {
-    return new Date(timestamp).toLocaleTimeString();
+  canRedo(): boolean {
+    return this.redoStack().length > 0;
   }
 
-  trackTodo(index: number, todo: Todo): number {
-    return todo.id;
+  getUndoCount(): number {
+    return this.undoStack().length;
   }
 
-  trackLog(index: number, log: MiddlewareLog): string {
-    return log.id;
-  }
-
-  trackUndoEntry(index: number, entry: UndoEntry): number {
-    return entry.timestamp;
+  getRedoCount(): number {
+    return this.redoStack().length;
   }
 
   getActiveMiddlewareCount(): number {
-    let count = 0;
-    if (this.enableLogging) count++;
-    if (this.enableValidation) count++;
-    if (this.enablePersistence) count++;
-    if (this.enableUndo) count++;
-    return count;
+    return [
+      this.enableLogging,
+      this.enableValidation,
+      this.enablePersistence,
+      this.enableUndo,
+    ].filter(Boolean).length;
+  }
+
+  formatTime(timestamp: number): string {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString();
+  }
+
+  getLastSavedTime(): string {
+    const lastSaved = this.tree.state.lastSaved();
+    if (!lastSaved) return 'Never';
+    const seconds = Math.floor((Date.now() - lastSaved) / 1000);
+    if (seconds < 5) return 'Just now';
+    if (seconds < 60) return `${seconds} seconds ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+    return new Date(lastSaved).toLocaleTimeString();
   }
 }

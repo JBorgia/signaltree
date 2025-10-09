@@ -1,57 +1,128 @@
 <div class="container">
-  <h1>SignalTree DevTools Demo</h1>
+  <h1>🛠️ SignalTree DevTools Demo</h1>
+
+  <!-- Explanation Section -->
+  <div class="explanation-card">
+    <h2>📖 What This Demo Shows</h2>
+    <p class="intro-text">
+      This demo showcases <strong>SignalTree's DevTools integration</strong> for
+      debugging and monitoring your application state. Learn how to track state
+      changes, replay actions, take snapshots, and analyze performance metrics
+      in real-time.
+    </p>
+
+    <div class="how-to-use">
+      <h3>🎯 How to Use This Demo:</h3>
+      <ol class="instruction-list">
+        <li>
+          <strong>Modify State:</strong> Use the controls on the left to change
+          counter, user info, and todos
+        </li>
+        <li>
+          <strong>Monitor Performance:</strong> Watch metrics update in
+          real-time on the right panel
+        </li>
+        <li>
+          <strong>Take Snapshots:</strong> Save current state and restore it
+          later
+        </li>
+        <li>
+          <strong>Review History:</strong> See all actions in the timeline and
+          replay them
+        </li>
+        <li>
+          <strong>Inspect State:</strong> View live state data at the bottom
+        </li>
+      </ol>
+    </div>
+
+    <div class="key-features">
+      <h3>✨ Key Features:</h3>
+      <div class="feature-tags">
+        <span class="feature-tag">Time-Travel Debugging</span>
+        <span class="feature-tag">State Snapshots</span>
+        <span class="feature-tag">Action History</span>
+        <span class="feature-tag">Performance Metrics</span>
+        <span class="feature-tag">Live State Inspection</span>
+      </div>
+    </div>
+  </div>
 
   <div class="demo-grid">
     <!-- State Controls -->
-    <div class="card">
-      <h2>State Management</h2>
+    <div class="card state-card">
+      <h2>⚡ State Controls</h2>
+      <p class="card-description">
+        Modify state and watch DevTools track changes
+      </p>
 
       <div class="controls-section">
         <!-- Counter -->
-        <div>
-          <label for="counterValue" class="label"
-            >Counter: {{ counter() }}</label
-          >
+        <div class="control-group">
+          <h3>🔢 Counter</h3>
+          <div class="counter-display">
+            Current value: <strong>{{ counter() }}</strong>
+          </div>
           <div class="button-group">
-            <button (click)="increment()" class="btn-primary">+1</button>
-            <button (click)="decrement()" class="btn-danger">-1</button>
-            <button (click)="reset()" class="btn-secondary">Reset</button>
+            <button
+              (click)="increment()"
+              class="btn-primary"
+              title="Increment counter"
+            >
+              ➕ Increment
+            </button>
+            <button
+              (click)="decrement()"
+              class="btn-danger"
+              title="Decrement counter"
+            >
+              ➖ Decrement
+            </button>
+            <button
+              (click)="reset()"
+              class="btn-secondary"
+              title="Reset counter to 0"
+            >
+              ↻ Reset
+            </button>
           </div>
         </div>
 
         <!-- User Info -->
-        <div class="user-info-section">
-          <h3>User Information</h3>
-          <div>
-            <label for="userName" class="label">Name:</label>
+        <div class="control-group user-info-section">
+          <h3>👤 User Information</h3>
+          <div class="form-group">
+            <label for="userName" class="label">Name</label>
             <input
               id="userName"
               type="text"
               [value]="this.store.$.user.name()"
               (input)="updateUserName($event)"
               class="form-input"
+              placeholder="Enter user name..."
             />
           </div>
-          <div>
-            <label for="userEmail" class="label">Email:</label>
+          <div class="form-group">
+            <label for="userEmail" class="label">Email</label>
             <input
               id="userEmail"
               type="email"
               [value]="this.store.$.user.email()"
               (input)="updateUserEmail($event)"
               class="form-input"
+              placeholder="Enter email address..."
             />
           </div>
-          <div>
-            <label for="theme" class="label">Theme:</label>
+          <div class="form-group">
+            <label for="theme" class="label">Theme</label>
             <select
               id="theme"
               [value]="this.store.$.user.preferences.theme()"
               (change)="updateTheme($event)"
               class="form-select"
             >
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
+              <option value="light" selected>🌞 Light Theme</option>
+              <option value="dark">🌙 Dark Theme</option>
             </select>
           </div>
           <div class="checkbox-group">
@@ -61,43 +132,50 @@
               [checked]="this.store.$.user.preferences.notifications()"
               (change)="toggleNotifications()"
             />
-            <label for="notifications">Enable Notifications</label>
+            <label for="notifications">🔔 Enable Notifications</label>
           </div>
         </div>
 
         <!-- Todo Management -->
-        <div>
-          <h3>Todos</h3>
+        <div class="control-group">
+          <h3>✅ Todo Management</h3>
           <div class="input-group">
             <input
               type="text"
               [(ngModel)]="newTodoText"
-              placeholder="Enter todo..."
+              placeholder="Enter a new todo..."
               class="form-input"
+              (keyup.enter)="addTodo()"
             />
             <button
               (click)="addTodo()"
               [disabled]="!newTodoText.trim()"
               class="btn-success"
+              title="Add new todo"
             >
-              Add
+              ➕ Add
             </button>
           </div>
-          <button (click)="addMultipleTodos()" class="btn-purple full-width">
-            Add 5 Random Todos
+          <button
+            (click)="addMultipleTodos()"
+            class="btn-purple full-width"
+            title="Add 5 random todos for testing"
+          >
+            🎲 Add 5 Random Todos
           </button>
         </div>
       </div>
     </div>
 
     <!-- DevTools Info -->
-    <div class="card">
-      <h2>DevTools Information</h2>
+    <div class="card devtools-card">
+      <h2>📊 DevTools Information</h2>
+      <p class="card-description">Real-time monitoring and debugging tools</p>
 
       <div class="devtools-section">
         <!-- Performance Metrics -->
-        <div>
-          <h3>Performance Metrics</h3>
+        <div class="metrics-group">
+          <h3>⚡ Performance Metrics</h3>
           <div class="metrics-list">
             <p><strong>Updates:</strong> {{ getMetrics().updates }}</p>
             <p>
@@ -116,8 +194,8 @@
         </div>
 
         <!-- State Info -->
-        <div>
-          <h3>State Information</h3>
+        <div class="metrics-group">
+          <h3>🗂️ State Information</h3>
           <div class="metrics-list">
             <p><strong>State Size:</strong> {{ getStateSize() }} properties</p>
             <p><strong>Deep Update Path:</strong> {{ getDeepestPath() }}</p>
@@ -126,24 +204,36 @@
         </div>
 
         <!-- DevTools Actions -->
-        <div>
-          <h3>DevTools Actions</h3>
+        <div class="actions-group">
+          <h3>🔧 DevTools Actions</h3>
           <div class="action-buttons">
-            <button (click)="logState()" class="btn-info">
-              Log Current State
+            <button
+              (click)="logState()"
+              class="btn-info"
+              title="Log current state to console"
+            >
+              📋 Log Current State
             </button>
-            <button (click)="takeSnapshot()" class="btn-purple">
+            <button
+              (click)="takeSnapshot()"
+              class="btn-purple"
+              title="Save a snapshot of current state"
+            >
               📸 Take Snapshot ({{ snapshots.length }})
             </button>
-            <button (click)="resetMetrics()" class="btn-orange">
-              Reset Metrics
+            <button
+              (click)="resetMetrics()"
+              class="btn-warning"
+              title="Reset all performance metrics"
+            >
+              ↻ Reset Metrics
             </button>
           </div>
         </div>
 
         <!-- State Snapshots -->
-        <div *ngIf="snapshots.length > 0">
-          <h3>Saved Snapshots</h3>
+        <div *ngIf="snapshots.length > 0" class="snapshots-group">
+          <h3>💾 Saved Snapshots</h3>
           <div class="snapshots-list">
             <div
               *ngFor="let snapshot of snapshots; let i = index"
@@ -179,8 +269,9 @@
   </div>
 
   <!-- Action History Timeline -->
-  <div class="section-card">
-    <h2>Action History Timeline</h2>
+  <div class="section-card history-card">
+    <h2>⏱️ Action History Timeline</h2>
+    <p class="card-description">Track and replay all state changes</p>
     <div class="history-section">
       <div class="history-header">
         <span class="history-count"
@@ -232,8 +323,9 @@
   </div>
 
   <!-- Current State Display -->
-  <div class="section-card">
-    <h2>Live State View</h2>
+  <div class="section-card state-view-card">
+    <h2>🔍 Live State View</h2>
+    <p class="card-description">Inspect current state in real-time</p>
     <div class="state-grid">
       <div>
         <h3>User & Counter</h3>

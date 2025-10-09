@@ -1,354 +1,220 @@
 <div class="container">
-  <h1>SignalTree Memoization Demo</h1>
+  <h1>🧠 Memoization Demo</h1>
 
+  <!-- Explanation Card -->
+  <div class="explanation-card">
+    <h2>💾 What is Memoization?</h2>
+    <p class="intro-text">
+      <strong>Memoization</strong> is an <em>optimization technique</em> that stores the results of expensive function calls and returns the cached result when the same inputs occur again. This dramatically improves performance by avoiding redundant calculations.
+    </p>
+
+    <div class="how-it-works">
+      <h3>⚡ How It Works</h3>
+      <ol class="instruction-list">
+        <li><strong>First Call:</strong> Compute the result and store it in cache along with the input values</li>
+        <li><strong>Subsequent Calls:</strong> Check if inputs match cached values - if yes, return cached result instantly</li>
+        <li><strong>Cache Miss:</strong> If inputs changed, recompute the result and update the cache</li>
+        <li><strong>Performance Gain:</strong> Cached results return in microseconds vs milliseconds for computation</li>
+      </ol>
+    </div>
+
+    <div class="key-features">
+      <h3>✨ Key Benefits</h3>
+      <div class="feature-tags">
+        <span class="feature-tag">⚡ Faster Rendering</span>
+        <span class="feature-tag">💾 Reduced CPU Usage</span>
+        <span class="feature-tag">🔄 Automatic Caching</span>
+        <span class="feature-tag">📊 Improved UX</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Demo Grid -->
   <div class="demo-grid">
-    <!-- Input Controls -->
-    <div class="card">
-      <h2>Controls</h2>
+    <!-- Controls Card -->
+    <div class="card controls-card">
+      <h2>🎛️ Controls</h2>
+      <p class="card-description">
+        Adjust values to see how memoization caches results
+      </p>
 
-      <div class="controls-section">
-        <div>
-          <label for="strategySelect" class="label"
-            >Memoization Strategy:</label
-          >
-          <select
-            id="strategySelect"
-            [(ngModel)]="selectedStrategy"
-            (ngModelChange)="onStrategyChange()"
-            class="form-select"
-          >
-            <option value="deep">Deep Equality (Default)</option>
-            <option value="shallow">Shallow Equality (Fast)</option>
-            <option value="reference">Reference Equality (Fastest)</option>
-          </select>
-          <p class="hint">
-            {{ getStrategyDescription() }}
-          </p>
+      <!-- Input Value -->
+      <div class="control-group">
+        <label for="input-value">
+          Input Value: <strong>{{ inputValue() }}</strong>
+        </label>
+        <input
+          id="input-value"
+          type="range"
+          min="1"
+          max="20"
+          [value]="inputValue()"
+          (input)="updateInput(+$any($event.target).value)"
+          class="range-input"
+        />
+      </div>
+
+      <!-- Multiplier -->
+      <div class="control-group">
+        <label for="multiplier">
+          Multiplier: <strong>{{ multiplier() }}</strong>
+        </label>
+        <input
+          id="multiplier"
+          type="range"
+          min="1"
+          max="10"
+          [value]="multiplier()"
+          (input)="updateMultiplier(+$any($event.target).value)"
+          class="range-input"
+        />
+      </div>
+
+      <!-- Results Display -->
+      <div class="results-section">
+        <div class="result-item expensive">
+          <div class="result-label">Memoized Result</div>
+          <div class="result-value">{{ expensiveResult() }}</div>
+          <div class="result-hint">With caching</div>
         </div>
 
-        <div class="input-row">
-          <div class="input-col">
-            <label for="multiplierInput" class="label">Multiplier:</label>
-            <input
-              id="multiplierInput"
-              type="number"
-              [(ngModel)]="multiplier"
-              class="form-input"
-            />
-          </div>
-
-          <div class="input-col">
-            <label for="searchTermInput" class="label">Search Term:</label>
-            <input
-              id="searchTermInput"
-              type="text"
-              [(ngModel)]="searchTerm"
-              placeholder="Filter numbers..."
-              class="form-input"
-            />
-          </div>
+        <div class="result-item simple">
+          <div class="result-label">Simple Result</div>
+          <div class="result-value">{{ simpleResult() }}</div>
+          <div class="result-hint">No caching</div>
         </div>
+      </div>
 
-        <div class="button-group">
-          <button (click)="addRandomNumbers()" class="btn-primary">
-            Add Random Numbers
-          </button>
-
-          <button (click)="runPerformanceTest()" class="btn-success">
-            Performance Test
-          </button>
-        </div>
-
-        <!-- Cache Controls -->
-        <div class="cache-controls">
-          <div class="cache-header">🎛️ Cache Controls</div>
-
-          <!-- Max Cache Size Control -->
-          <div class="cache-size-control">
-            <label for="maxCacheSize" class="label-sm">
-              Max Cache Size: {{ maxCacheSize }}
-            </label>
-            <input
-              id="maxCacheSize"
-              type="range"
-              [(ngModel)]="maxCacheSize"
-              min="10"
-              max="1000"
-              step="10"
-              class="range-input"
-            />
-            <div class="range-labels">
-              <span>10</span>
-              <span>1000</span>
-            </div>
-          </div>
-
-          <button (click)="clearMemoCache()" class="btn-danger">
-            Clear Memo Cache
-          </button>
-        </div>
+      <!-- Action Buttons -->
+      <div class="button-group">
+        <button
+          (click)="triggerRecompute()"
+          class="btn-primary btn-sm"
+        >
+          Trigger Recompute
+        </button>
+        <button
+          (click)="clearCache()"
+          class="btn-warning btn-sm"
+        >
+          Clear Cache
+        </button>
+        <button
+          (click)="resetStats()"
+          class="btn-danger btn-sm"
+        >
+          Reset All
+        </button>
       </div>
     </div>
 
-    <!-- Results -->
-    <div class="card">
-      <h2>Memoized Computations</h2>
+    <!-- Statistics Card -->
+    <div class="card stats-card">
+      <h2>📊 Statistics</h2>
+      <p class="card-description">
+        Real-time performance metrics
+      </p>
 
-      <div class="results-section">
-        <!-- Strategy Badge -->
-        <div class="strategy-display">
-          <strong>Current Strategy:</strong>
-          <span
-            class="strategy-badge"
-            [class]="getStrategyBadgeClass(selectedStrategy)"
-          >
-            {{ selectedStrategy }}
-          </span>
-        </div>
-
-        <!-- Cache Performance Metrics -->
-        <div class="cache-performance">
-          <h3>Cache Performance</h3>
-          <div class="metrics-grid">
-            <div class="metric-card">
-              <div class="metric-value success">
-                {{ getCacheStats().cacheHits || 0 }}
-              </div>
-              <div class="metric-label">
-                <span class="icon success">✓</span> Cache Hits
-              </div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-value warning">
-                {{ getCacheStats().cacheMisses || 0 }}
-              </div>
-              <div class="metric-label">
-                <span class="icon warning">✗</span> Cache Misses
-              </div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-value info">{{ getCacheHitRate() }}%</div>
-              <div class="metric-label">Hit Rate</div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-value purple">
-                {{ computeCount() }}
-              </div>
-              <div class="metric-label">Computations</div>
-            </div>
-          </div>
-
-          <!-- Cache Hit Rate Progress Bar -->
-          <div class="progress-section">
-            <div class="progress-header">
-              <span>Cache Efficiency</span>
-              <span>{{ getCacheHitRate() }}%</span>
-            </div>
-            <div class="progress-bar">
-              <div
-                class="progress-fill"
-                [class]="getCacheEfficiencyColor()"
-                [style.width.%]="getCacheHitRate()"
-              ></div>
-            </div>
-          </div>
-
-          <!-- Memory Estimation -->
-          <div class="memory-info">
-            <div class="memory-row">
-              <span>💾 Estimated Cache Memory:</span>
-              <span class="memory-value">
-                {{ getEstimatedMemoryUsage() }} KB
-              </span>
-            </div>
-            <div class="memory-details">
-              {{ getCacheStats().cacheHits + getCacheStats().cacheMisses }}
-              / {{ maxCacheSize }} entries
-            </div>
-            <div class="progress-bar">
-              <div
-                class="progress-fill purple"
-                [style.width.%]="getCacheUsagePercentage()"
-              ></div>
-            </div>
+      <div class="stats-grid">
+        <div class="stat-item computations">
+          <div class="stat-icon">🔢</div>
+          <div class="stat-content">
+            <div class="stat-label">Total Computations</div>
+            <div class="stat-value">{{ totalComputations() }}</div>
           </div>
         </div>
 
-        <!-- Computation Result -->
-        <div class="computation-result">
-          <strong>Filtered & Multiplied Sum:</strong>
-          <div class="result-value">
-            {{ expensiveComputation() }}
-          </div>
-          <div class="result-meta">
-            {{ numbers().length }} numbers ×
-            {{ store.$.multiplier() }} multiplier
+        <div class="stat-item cache-hits">
+          <div class="stat-icon">💾</div>
+          <div class="stat-content">
+            <div class="stat-label">Cache Hits</div>
+            <div class="stat-value">{{ cacheHitCount() }}</div>
           </div>
         </div>
 
-        <div *ngIf="performanceResults.length > 0">
-          <strong>Performance Test Results:</strong>
-          <div class="performance-results">
-            <div
-              *ngFor="let result of performanceResults"
-              class="performance-result-item"
-            >
-              <span>{{ result.strategy }}:</span>
-              <span>{{ result.duration.toFixed(2) }}ms</span>
-            </div>
+        <div class="stat-item new-computations">
+          <div class="stat-icon">⚡</div>
+          <div class="stat-content">
+            <div class="stat-label">New Computations</div>
+            <div class="stat-value">{{ computationCount() }}</div>
           </div>
         </div>
 
-        <div>
-          <strong>Cache Stats:</strong>
-          <pre class="code-display">{{ getCacheStats() | json }}</pre>
-        </div>
-
-        <div class="filtered-numbers-section">
-          <strong>Filtered Numbers:</strong>
-          <div class="numbers-grid">
-            <span *ngFor="let num of filteredNumbers()" class="number-badge">
-              {{ num }}
-            </span>
+        <div class="stat-item hit-rate">
+          <div class="stat-icon">📈</div>
+          <div class="stat-content">
+            <div class="stat-label">Cache Hit Rate</div>
+            <div class="stat-value">{{ cacheHitRate().toFixed(1) }}%</div>
           </div>
+        </div>
+      </div>
+
+      <!-- Performance Indicator -->
+      <div class="performance-section">
+        <div class="perf-label">Average Duration (Last 10)</div>
+        <div class="perf-value">
+          {{ formatDuration(averageDuration()) }}
+        </div>
+        <div class="perf-bar">
+          <div
+            class="perf-fill"
+            [class.fast]="averageDuration() < 1"
+            [class.slow]="averageDuration() >= 1"
+            [style.width.%]="Math.min((averageDuration() / 10) * 100, 100)"
+          ></div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Comparison Mode & Fibonacci -->
-  <div class="comparison-section">
-    <!-- Non-Memoized Comparison -->
-    <div class="card">
-      <h2>Memoized vs Non-Memoized</h2>
-
-      <div class="comparison-content">
-        <div class="comparison-panel">
-          <h3 class="comparison-title">Performance Comparison</h3>
-          <div class="comparison-results">
-            <!-- Memoized -->
-            <div class="result-box memoized">
-              <div class="result-header">
-                <span>✓ Memoized</span>
-                <span class="result-time">{{ memoizedTime }}ms</span>
-              </div>
-              <div class="result-details">
-                Computation count: {{ computeCount() }}
-              </div>
-              <div class="progress-bar">
-                <div
-                  class="progress-fill success"
-                  [style.width.%]="getMemoizedPercentage()"
-                ></div>
-              </div>
-            </div>
-
-            <!-- Non-Memoized -->
-            <div class="result-box non-memoized">
-              <div class="result-header">
-                <span>✗ Non-Memoized</span>
-                <span class="result-time">{{ nonMemoizedTime }}ms</span>
-              </div>
-              <div class="result-details">
-                Computation count: {{ nonMemoizedCount }}
-              </div>
-              <div class="progress-bar">
-                <div
-                  class="progress-fill danger"
-                  [style.width.%]="getNonMemoizedPercentage()"
-                ></div>
-              </div>
-            </div>
-
-            <!-- Speedup -->
-            <div class="speedup-display">
-              <div class="speedup-value">{{ getSpeedup() }}x</div>
-              <div class="speedup-label">Speedup Factor</div>
-            </div>
-          </div>
-
-          <button (click)="runComparison()" class="btn-primary full-width">
-            Run Comparison Test
-          </button>
-        </div>
-      </div>
+  <!-- Computation Logs Card -->
+  <div class="section-card logs-card">
+    <div class="logs-header">
+      <h2>📝 Computation Logs</h2>
+      <button
+        (click)="clearLogs()"
+        class="btn-secondary btn-sm"
+        [disabled]="logs().length === 0"
+      >
+        Clear Logs
+      </button>
     </div>
+    <p class="card-description">
+      Real-time log of all computations showing cache hits and misses
+    </p>
 
-    <!-- Fibonacci Calculation -->
-    <div class="card">
-      <h2>Fibonacci Calculator</h2>
-
-      <div class="fibonacci-content">
-        <div>
-          <label for="fibInput" class="label">Calculate Fibonacci(n):</label>
-          <input
-            id="fibInput"
-            type="number"
-            [(ngModel)]="fibInput"
-            min="0"
-            max="40"
-            class="form-input"
-          />
-          <p class="hint">
-            Max recommended: 40 (to avoid long computation times)
-          </p>
-        </div>
-
-        <button
-          (click)="calculateFibonacci()"
-          [disabled]="fibInput < 0 || fibInput > 40"
-          class="btn-purple full-width"
-        >
-          Calculate
-        </button>
-
-        <!-- Results Comparison -->
-        <div *ngIf="fibResults" class="fibonacci-results">
-          <div class="fibonacci-result-box">
-            <h3>Result</h3>
-            <div class="fib-value">
-              {{ fibResults.result }}
-            </div>
-            <div class="fib-meta">Fibonacci({{ fibInput }})</div>
-          </div>
-
-          <!-- Performance Metrics -->
-          <div class="fib-metrics">
-            <div class="fib-metric success">
-              <div class="fib-metric-title">✓ Memoized</div>
-              <div class="fib-metric-value">
-                {{ fibResults.memoizedTime.toFixed(3) }}
-              </div>
-              <div class="fib-metric-unit">ms</div>
-              <div class="fib-metric-calls">
-                Calls: {{ fibResults.memoizedCalls }}
-              </div>
-            </div>
-
-            <div class="fib-metric danger">
-              <div class="fib-metric-title">✗ Non-Memoized</div>
-              <div class="fib-metric-value">
-                {{ fibResults.nonMemoizedTime.toFixed(3) }}
-              </div>
-              <div class="fib-metric-unit">ms</div>
-              <div class="fib-metric-calls">
-                Calls: {{ fibResults.nonMemoizedCalls }}
-              </div>
-            </div>
-          </div>
-
-          <div class="fib-speedup">
-            <div class="fib-speedup-value">
-              {{
-                (fibResults.nonMemoizedTime / fibResults.memoizedTime).toFixed(
-                  2
-                )
-              }}x
-            </div>
-            <div class="fib-speedup-label">Faster with Memoization</div>
-          </div>
-        </div>
+    @if (logs().length === 0) {
+      <div class="empty-logs">
+        <p>No computations logged yet.</p>
+        <p class="empty-hint">Adjust the sliders above to trigger computations</p>
       </div>
-    </div>
+    } @else {
+      <div class="logs-list">
+        @for (log of logs(); track log.id) {
+          <div class="log-entry" [class.cached]="log.cached" [class.computed]="!log.cached">
+            <div class="log-icon">
+              {{ log.cached ? '💾' : '⚡' }}
+            </div>
+            <div class="log-content">
+              <div class="log-header">
+                <div class="log-type">{{ log.type }}</div>
+                <div class="log-time">{{ formatTime(log.timestamp) }}</div>
+              </div>
+              <div class="log-details">
+                <span class="log-input">Input: {{ log.input }}</span>
+                <span class="log-separator">→</span>
+                <span class="log-output">Output: {{ log.output }}</span>
+              </div>
+              <div class="log-footer">
+                <span class="log-status" [class.cached]="log.cached">
+                  {{ log.cached ? 'CACHED' : 'COMPUTED' }}
+                </span>
+                <span class="log-duration">{{ formatDuration(log.duration) }}</span>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
   </div>
 </div>

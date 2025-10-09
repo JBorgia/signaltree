@@ -1,13 +1,19 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener } from '@angular/core';
+import { Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree } from '@signaltree/core';
 import { withTimeTravel } from '@signaltree/time-travel';
 
-interface TimeTravelState {
+interface Todo {
+  id: number;
+  title: string;
+  completed: boolean;
+}
+
+interface AppState {
   counter: number;
-  todos: Array<{ id: number; text: string; completed: boolean }>;
   message: string;
+  todos: Todo[];
 }
 
 @Component({
@@ -20,259 +26,249 @@ interface TimeTravelState {
 export class TimeTravelDemoComponent {
   newTodoText = '';
 
-  // Bookmarks and search
-  bookmarks: Set<number> = new Set();
-  searchTerm = '';
-  bookmarkName = '';
-
-  private store = signalTree<TimeTravelState>({
+  private tree = signalTree<AppState>({
     counter: 0,
-    todos: [],
-    message: '',
-  }).with(withTimeTravel({}));
+    message: 'Hello SignalTree!',
+    todos: [
+      { id: 1, title: 'Learn SignalTree', completed: true },
+      { id: 2, title: 'Try Time Travel', completed: false },
+      { id: 3, title: 'Build Something Amazing', completed: false },
+    ],
+  }).with(withTimeTravel({ maxHistorySize: 50 }));
 
-  // Computed properties
-  counter = this.store.state.counter;
-  todos = this.store.state.todos;
-  message = this.store.state.message;
+  // Type-safe tree updater
+  private updateTree = this.tree as unknown as (
+    updater: (state: AppState) => AppState
+  ) => void;
 
-  // Keyboard navigation
-  @HostListener('window:keydown', ['$event'])
-  handleKeyboard(event: KeyboardEvent) {
-    // Ignore if typing in an input
-    if (
-      event.target instanceof HTMLInputElement ||
-      event.target instanceof HTMLTextAreaElement
-    ) {
-      return;
-    }
+  // State signals
+  counter = this.tree.state.counter;
+  message = this.tree.state.message;
+  todos = this.tree.state.todos;
 
-    // Ctrl+Z / Cmd+Z for Undo
-    if (
-      (event.ctrlKey || event.metaKey) &&
-      event.key === 'z' &&
-      !event.shiftKey
-    ) {
-      event.preventDefault();
-      if (this.canUndo()) this.undo();
-      return;
-    }
+  // Time travel interface
+  private timeTravel = this.tree.__timeTravel;
 
-    // Ctrl+Y / Cmd+Shift+Z for Redo
-    if (
-      ((event.ctrlKey || event.metaKey) && event.key === 'y') ||
-      ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'z')
-    ) {
-      event.preventDefault();
-      if (this.canRedo()) this.redo();
-      return;
-    }
+  // Time travel signals - need to be writable to trigger updates
+  history = signal(this.timeTravel.getHistory());
+  currentIndex = signal(this.timeTravel.getCurrentIndex());
+  canUndo = signal(this.timeTravel.canUndo());
+  canRedo = signal(this.timeTravel.canRedo());
 
-    // Arrow keys for navigation
-    if (event.key === 'ArrowLeft') {
-      event.preventDefault();
-      if (this.canUndo()) this.undo();
-    } else if (event.key === 'ArrowRight') {
-      event.preventDefault();
-      if (this.canRedo()) this.redo();
-    }
+  // Helper to refresh time travel state
+  private refreshTimeTravelState() {
+    this.history.set(this.timeTravel.getHistory());
+    this.refreshTimeTravelState();
+    this.canUndo.set(this.timeTravel.canUndo());
+    this.canRedo.set(this.timeTravel.canRedo());
   }
 
-  // State actions
+  // Computed signals
+  activeTodos = computed(() => this.todos().filter((t) => !t.completed));
+  completedTodos = computed(() => this.todos().filter((t) => t.completed));
+
+  historyLength = computed(() => this.history().length);
+  currentState = computed(() => this.history()[this.currentIndex()]);
+
+  // Counter actions
   increment() {
-    this.store((current) => ({ ...current, counter: current.counter + 1 }));
+    this.updateTree((state: AppState) => ({
+      ...state,
+      counter: state.counter + 1,
+    }));
+    this.refreshTimeTravelState();
   }
 
   decrement() {
-    this.store((current) => ({ ...current, counter: current.counter - 1 }));
+    this.updateTree((state: AppState) => ({
+      ...state,
+      counter: state.counter - 1,
+    }));
+    this.refreshTimeTravelState();
   }
 
+  reset() {
+    this.updateTree((state: AppState) => ({
+      ...state,
+      counter: 0,
+    }));
+    this.refreshTimeTravelState();
+  }
+
+  // Message actions
+  updateMessage(value: string) {
+    this.updateTree((state: AppState) => ({
+      ...state,
+      message: value,
+    }));
+    this.refreshTimeTravelState();
+  }
+
+  // Todo actions
   addTodo() {
-    if (this.newTodoText.trim()) {
-      const newTodo = {
-        id: Date.now(),
-        text: this.newTodoText.trim(),
-        completed: false,
-      };
-      this.store((current) => ({
-        ...current,
-        todos: [...current.todos, newTodo],
-      }));
-      this.newTodoText = '';
-    }
+    const text = this.newTodoText.trim();
+    if (!text) return;
+
+    const newTodo: Todo = {
+      id: Date.now(),
+      title: text,
+      completed: false,
+    };
+
+    this.updateTree((state: AppState) => ({
+      ...state,
+      todos: [...state.todos, newTodo],
+    }));
+    this.newTodoText = '';
+    this.refreshTimeTravelState();
   }
 
   toggleTodo(id: number) {
-    this.store((current) => ({
-      ...current,
-      todos: current.todos.map((todo) =>
+    this.updateTree((state: AppState) => ({
+      ...state,
+      todos: state.todos.map((todo) =>
         todo.id === id ? { ...todo, completed: !todo.completed } : todo
       ),
     }));
+    this.refreshTimeTravelState();
   }
 
-  // Time travel methods
+  deleteTodo(id: number) {
+    this.updateTree((state: AppState) => ({
+      ...state,
+      todos: state.todos.filter((t) => t.id !== id),
+    }));
+    this.refreshTimeTravelState();
+  }
+
+  // Time travel actions
   undo() {
-    this.store.undo();
-    return true;
+    this.timeTravel.undo();
+    this.refreshTimeTravelState();
   }
 
   redo() {
-    this.store.redo();
-    return true;
+    this.timeTravel.redo();
+    this.refreshTimeTravelState();
   }
 
-  canUndo() {
-    return this.store.canUndo?.() || false;
+  goToState(index: number) {
+    this.timeTravel.jumpTo(index);
+    this.refreshTimeTravelState();
   }
 
-  canRedo() {
-    return this.store.canRedo?.() || false;
-  }
-
-  resetHistory() {
-    this.store.resetHistory();
-  }
-
-  getCurrentIndex() {
-    return this.store.getCurrentIndex?.() || 0;
-  }
-
-  getHistory() {
-    return this.store.getHistory();
-  }
-
-  jumpTo(index: number) {
-    this.store.jumpTo?.(index);
-  }
-
-  getHistoryItemClass(index: number): string {
-    const current = this.getCurrentIndex();
-    if (index === current) {
-      return 'active';
-    }
-    return '';
-  }
-
-  getTimelineNodeClass(index: number): string {
-    const current = this.getCurrentIndex();
-
-    if (index === current) {
-      return 'active';
-    }
-    if (index < current) {
-      return 'past';
-    }
-    return 'future';
-  }
-
-  getStateDiff() {
-    const history = this.getHistory();
-    const currentIndex = this.getCurrentIndex();
-
-    if (currentIndex === 0 || history.length < 2) {
-      return { counter: null, message: null, todos: null };
-    }
-
-    const currentState = history[currentIndex].state as TimeTravelState;
-    const previousState = history[currentIndex - 1].state as TimeTravelState;
-
-    const diff: {
-      counter?: { type: string; oldValue: number; newValue: number };
-      message?: { type: string; oldValue: string; newValue: string };
-      todos?: {
-        type: string;
-        description: string;
-        oldCount: number;
-        newCount: number;
-      };
-    } = {};
-
-    // Counter diff
-    if (currentState.counter !== previousState.counter) {
-      diff.counter = {
-        type: previousState.counter === 0 ? 'added' : 'modified',
-        oldValue: previousState.counter,
-        newValue: currentState.counter,
-      };
-    }
-
-    // Message diff
-    if (currentState.message !== previousState.message) {
-      diff.message = {
-        type: !previousState.message ? 'added' : 'modified',
-        oldValue: previousState.message,
-        newValue: currentState.message,
-      };
-    }
-
-    // Todos diff
-    if (currentState.todos.length !== previousState.todos.length) {
-      const added = currentState.todos.length > previousState.todos.length;
-      diff.todos = {
-        type: added ? 'added' : 'modified',
-        description: added ? 'Todo added' : 'Todo removed or modified',
-        oldCount: previousState.todos.length,
-        newCount: currentState.todos.length,
-      };
-    } else {
-      // Check for completed status changes
-      const changed = currentState.todos.some((todo, i) => {
-        const prevTodo = previousState.todos[i];
-        return prevTodo && todo.completed !== prevTodo.completed;
-      });
-      if (changed) {
-        diff.todos = {
-          type: 'modified',
-          description: 'Todo status changed',
-          oldCount: previousState.todos.length,
-          newCount: currentState.todos.length,
-        };
-      }
-    }
-
-    return diff;
-  }
-
-  // Bookmark methods
-  toggleBookmark(index: number) {
-    if (this.bookmarks.has(index)) {
-      this.bookmarks.delete(index);
-    } else {
-      this.bookmarks.add(index);
+  onHistoryItemKeyup(event: KeyboardEvent, index: number) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.goToState(index);
     }
   }
 
-  isBookmarked(index: number): boolean {
-    return this.bookmarks.has(index);
+  clearHistory() {
+    this.timeTravel.resetHistory();
+    this.refreshTimeTravelState();
   }
 
-  getBookmarkedEntries() {
-    return this.getHistory().filter((_, i) => this.bookmarks.has(i));
+  // Generate sample actions for easy testing
+  generateSampleActions() {
+    // Reset history first
+    this.timeTravel.resetHistory();
+
+    // Create a sequence of actions with delays for better history visualization
+    setTimeout(() => {
+      this.updateTree((state: AppState) => ({
+        ...state,
+        message: 'Starting demo...',
+      }));
+      this.refreshTimeTravelState();
+    }, 100);
+
+    setTimeout(() => {
+      this.updateTree((state: AppState) => ({
+        ...state,
+        counter: 1,
+      }));
+      this.refreshTimeTravelState();
+    }, 200);
+
+    setTimeout(() => {
+      this.updateTree((state: AppState) => ({
+        ...state,
+        todos: [{ id: Date.now(), title: 'First task', completed: false }],
+      }));
+      this.refreshTimeTravelState();
+    }, 300);
+
+    setTimeout(() => {
+      this.updateTree((state: AppState) => ({
+        ...state,
+        counter: 5,
+      }));
+      this.refreshTimeTravelState();
+    }, 400);
+
+    setTimeout(() => {
+      this.updateTree((state: AppState) => ({
+        ...state,
+        message: 'Making more changes...',
+      }));
+      this.refreshTimeTravelState();
+    }, 500);
+
+    setTimeout(() => {
+      this.updateTree((state: AppState) => ({
+        ...state,
+        todos: [
+          ...state.todos,
+          { id: Date.now() + 1, title: 'Second task', completed: false },
+        ],
+      }));
+      this.refreshTimeTravelState();
+    }, 600);
+
+    setTimeout(() => {
+      this.updateTree((state: AppState) => ({
+        ...state,
+        counter: 10,
+      }));
+      this.refreshTimeTravelState();
+    }, 700);
+
+    setTimeout(() => {
+      this.updateTree((state: AppState) => ({
+        ...state,
+        todos: state.todos.map((todo, i) =>
+          i === 0 ? { ...todo, completed: true } : todo
+        ),
+      }));
+      this.refreshTimeTravelState();
+    }, 800);
+
+    setTimeout(() => {
+      this.updateTree((state: AppState) => ({
+        ...state,
+        message: 'Demo complete! Try undo/redo now.',
+      }));
+      this.refreshTimeTravelState();
+    }, 900);
+
+    setTimeout(() => {
+      this.updateTree((state: AppState) => ({
+        ...state,
+        counter: 15,
+      }));
+      this.refreshTimeTravelState();
+    }, 1000);
   }
 
-  clearAllBookmarks() {
-    this.bookmarks.clear();
+  formatTimestamp(timestamp: number): string {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString();
   }
 
-  // Search/filter methods
-  getFilteredHistory() {
-    const history = this.getHistory();
-    if (!this.searchTerm.trim()) return history;
-
-    const term = this.searchTerm.toLowerCase();
-    return history.filter(
-      (entry, index) =>
-        (entry.action && entry.action.toLowerCase().includes(term)) ||
-        index.toString().includes(term)
-    );
-  }
-
-  hasSearchResults(): boolean {
-    return this.searchTerm.trim().length > 0;
-  }
-
-  clearSearch() {
-    this.searchTerm = '';
+  getStatePreview(state: AppState): string {
+    return `Counter: ${state.counter}, Todos: ${
+      state.todos.length
+    }, Message: "${state.message.substring(0, 20)}..."`;
   }
 }

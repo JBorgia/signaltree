@@ -14,8 +14,16 @@
             class="preset-button"
             [class.active]="currentPreset() === preset"
           >
-            <div class="preset-name">{{ preset }}</div>
-            <div class="preset-description">
+            <div
+              class="preset-name"
+              [class.active]="currentPreset() === preset"
+            >
+              {{ preset }}
+            </div>
+            <div
+              class="preset-description"
+              [class.active]="currentPreset() === preset"
+            >
               {{ getPresetDescription(preset) }}
             </div>
           </button>
@@ -123,12 +131,17 @@
               class="input-field flex-grow"
               (keyup.enter)="addTodo()"
             />
-            <select [(ngModel)]="newTodoPriority" class="input-field">
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
+            <select
+              [(ngModel)]="newTodoPriority"
+              class="select-field priority-select"
+            >
+              <option value="low">Low Priority</option>
+              <option value="medium" selected>Medium Priority</option>
+              <option value="high">High Priority</option>
             </select>
-            <button (click)="addTodo()" class="btn-primary">Add</button>
+            <button (click)="addTodo()" class="btn-primary btn-add">
+              ➕ Add Todo
+            </button>
           </div>
 
           <div class="todos-list">
