@@ -13,6 +13,10 @@ import { FormsModule } from '@angular/forms';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { Subject } from 'rxjs';
 
+import {
+  RealisticBenchmarkService,
+  RealisticBenchmarkSubmission,
+} from '../../../services/realistic-benchmark.service';
 import { BenchmarkTestCase, ENHANCED_TEST_CASES } from './scenario-definitions';
 import { AkitaBenchmarkService } from './services/akita-benchmark.service';
 import { ElfBenchmarkService } from './services/elf-benchmark.service';
@@ -305,6 +309,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   private readonly akitaBench = inject(AkitaBenchmarkService);
   private readonly elfBench = inject(ElfBenchmarkService);
   private readonly ngxsBench = inject(NgxsBenchmarkService);
+  private readonly realisticBenchmarkService = inject(
+    RealisticBenchmarkService
+  );
 
   // Available libraries
   availableLibraries: Library[] = [
@@ -1670,6 +1677,232 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     return opsPerMs;
   }
 
+  /**
+   * Submit benchmark results to backend after completion
+   */
+  private async submitBenchmarkResults(): Promise<void> {
+    if (!this.realisticBenchmarkService.hasConsent()) {
+      console.log('Skipping benchmark submission: no consent');
+      return;
+    }
+
+    try {
+      console.log('Building benchmark submission...');
+
+      // Calculate total duration
+      const endTime = performance.now();
+      const totalDuration = (endTime - this.startTime()) / 1000; // seconds
+
+      // Get battery info (async)
+      const batteryInfo = await this.realisticBenchmarkService.getBatteryInfo();
+
+      // Build machine info
+      const machineInfo = this.realisticBenchmarkService.getMachineInfo();
+      if (batteryInfo) {
+        machineInfo.battery = batteryInfo;
+      }
+
+      // Build calibration data from calibrationData signal
+      const calData = this.calibrationData();
+      if (!calData) {
+        console.warn('No calibration data available, skipping submission');
+        return;
+      }
+
+      const calibration = {
+        reliabilityScore: this.reliabilityScore(),
+        mathOpsPerMs: calData.cpuOpsPerMs,
+        memoryOpsPerMs: calData.availableMemoryMB, // Using available memory as proxy
+        environmentFactors: this.environmentFactors(),
+        throttlingDetected: this.environmentFactors().some(
+          (f) => f.name.includes('throttl') || f.name.includes('Thermal')
+        ),
+        backgroundLoad: Math.max(0, 100 - this.reliabilityScore()),
+        timestamp: calData.timestamp.toISOString(),
+      };
+
+      // Build config
+      const selectedLibs = this.selectedLibraries().map((lib) => lib.id);
+      const selectedScens = this.testCases
+        .filter((tc) => tc.selected)
+        .map((tc) => tc.id);
+
+      const config = {
+        dataSize: this.config().dataSize,
+        iterations: this.config().iterations,
+        samplesPerTest: this.config().iterations,
+        selectedLibraries: selectedLibs,
+        selectedScenarios: selectedScens,
+        weightingPreset: 'custom', // TODO: Detect actual preset
+      };
+
+      // Build results structure (simplified to avoid type errors)
+      const results = {
+        libraries: {} as Record<
+          string,
+          {
+            name: string;
+            enabled: boolean;
+            scenarios: Record<
+              string,
+              {
+                scenarioId: string;
+                scenarioName: string;
+                samples: number[];
+                median: number;
+                mean: number;
+                min: number;
+                max: number;
+                p95: number;
+                p99: number;
+                stdDev: number;
+                opsPerSec: number;
+                heapBefore?: number;
+                heapAfter?: number;
+                heapDelta?: number;
+                relativeToBaseline: number;
+                rank: number;
+              }
+            >;
+          }
+        >,
+      };
+
+      this.selectedLibraries().forEach((lib) => {
+        const libResults: Record<string, unknown> = {};
+
+        this.results().forEach((result) => {
+          if (result.libraryId === lib.id) {
+            const scenario = this.testCases.find(
+              (tc) => tc.id === result.scenarioId
+            );
+            if (scenario) {
+              libResults[result.scenarioId] = {
+                scenarioId: result.scenarioId,
+                scenarioName: scenario.name,
+                samples: result.samples,
+                median: result.median,
+                mean: result.mean,
+                min: result.min,
+                max: result.max,
+                p95: result.p95,
+                p99: result.p99,
+                stdDev: result.stdDev,
+                opsPerSec: result.opsPerSecond,
+                heapDelta: result.memoryDeltaMB,
+                relativeToBaseline: 100,
+                rank: this.getScenarioRank(result.scenarioId, lib.id),
+              };
+            }
+          }
+        });
+
+        results.libraries[lib.id] = {
+          name: lib.name,
+          enabled: true,
+          scenarios: libResults as Record<
+            string,
+            {
+              scenarioId: string;
+              scenarioName: string;
+              samples: number[];
+              median: number;
+              mean: number;
+              min: number;
+              max: number;
+              p95: number;
+              p99: number;
+              stdDev: number;
+              opsPerSec: number;
+              relativeToBaseline: number;
+              rank: number;
+            }
+          >,
+        };
+      });
+
+      // Build weighted results from existing computed
+      const weightedLibs = this.weightedLibrarySummaries();
+      const weightedResults = {
+        libraries: {} as Record<
+          string,
+          {
+            rawScore: number;
+            weightedScore: number;
+            rank: number;
+            scenarioBreakdown: Array<{
+              scenarioName: string;
+              weight: number;
+              rawScore: number;
+              weightedContribution: number;
+            }>;
+          }
+        >,
+        totalScenariosRun: this.completedScenarios().length,
+        totalTestsExecuted: this.completedTests(),
+        totalDuration: totalDuration,
+      };
+
+      // Map summaries to weighted results
+      weightedLibs.forEach((summary) => {
+        // Find library ID by matching name
+        const lib = this.selectedLibraries().find(
+          (l) => l.name === summary.name
+        );
+        if (lib) {
+          weightedResults.libraries[lib.id] = {
+            rawScore: summary.weightedScore,
+            weightedScore: summary.weightedScore,
+            rank: summary.rank,
+            scenarioBreakdown: summary.breakdown.map((item) => ({
+              scenarioName: item.scenarioName,
+              weight: item.weight,
+              rawScore: item.opsPerSecond,
+              weightedContribution: item.contribution,
+            })),
+          };
+        }
+      });
+
+      // Build weights map
+      const weights: Record<string, number> = {};
+      this.testCases.forEach((tc) => {
+        if (tc.selected) {
+          weights[tc.id] = tc.frequencyWeight || 1.0;
+        }
+      });
+
+      // Build complete submission
+      const submission: RealisticBenchmarkSubmission = {
+        id: this.realisticBenchmarkService.getSessionId() + '-' + Date.now(),
+        timestamp: new Date().toISOString(),
+        version: '3.0.1',
+        sessionId: this.realisticBenchmarkService.getSessionId(),
+        consentGiven: true,
+        calibration,
+        machineInfo,
+        config,
+        results,
+        weightedResults,
+        weights,
+      };
+
+      console.log('Submitting benchmark results...', submission);
+
+      const result = await this.realisticBenchmarkService.submitBenchmark(
+        submission
+      );
+
+      if (result.success) {
+        console.log('✅ Benchmark results submitted successfully!', result.id);
+      } else {
+        console.error('❌ Failed to submit benchmark results:', result.error);
+      }
+    } catch (error) {
+      console.error('Error submitting benchmark results:', error);
+    }
+  }
+
   private async executeBenchmark(
     libraryId: string,
     scenarioId: string,
@@ -2075,6 +2308,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       this.isRunning.set(false);
       this.stopElapsedTimer(); // Stop timer when benchmarks finish
       console.log('Benchmarks completed');
+
+      // Submit results to backend if consent given
+      await this.submitBenchmarkResults();
     }
   }
 
