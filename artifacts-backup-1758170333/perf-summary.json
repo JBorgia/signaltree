@@ -240,15 +240,6 @@
         "claimMet": false
       },
       {
-        "name": "async",
-        "rawSize": 7888,
-        "gzipSize": 1847,
-        "claimed": 1800,
-        "maxAllowed": 1900,
-        "passed": true,
-        "claimMet": false
-      },
-      {
         "name": "entities",
         "rawSize": 4247,
         "gzipSize": 990,
@@ -419,12 +410,6 @@
         "gzipSizePct": -2.910360884749709,
         "passed": true,
         "maxAllowed": 900
-      },
-      {
-        "name": "async",
-        "gzipSize": null,
-        "gzipSizeBaseline": 1847,
-        "gzipSizePct": null
       }
     ]
   },
