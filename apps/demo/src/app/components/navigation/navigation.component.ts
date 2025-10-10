@@ -34,13 +34,6 @@ export class NavigationComponent {
       route: '/callable-syntax',
       category: 'basic',
     },
-    {
-      id: 'async',
-      title: 'Async (via Middleware)',
-      description: 'Async state patterns handled by middleware helpers',
-      route: '/middleware',
-      category: 'basic',
-    },
 
     // Performance Examples
     {
@@ -57,6 +50,27 @@ export class NavigationComponent {
       route: '/batching',
       category: 'performance',
     },
+    {
+      id: 'memoization',
+      title: 'Memoization',
+      description: 'Performance optimization with memoization',
+      route: '/memoization',
+      category: 'performance',
+    },
+    {
+      id: 'extreme-depth',
+      title: '🔥 Extreme Depth',
+      description: 'Push recursive typing to 15+ levels',
+      route: '/extreme-depth',
+      category: 'performance',
+    },
+    {
+      id: 'benchmark-history',
+      title: '📊 Benchmark History',
+      description: 'View real-world performance data from users',
+      route: '/benchmark-history',
+      category: 'performance',
+    },
 
     // Entity Examples
     {
@@ -69,10 +83,17 @@ export class NavigationComponent {
 
     // Advanced Examples
     {
-      id: 'memoization',
-      title: 'Memoization',
-      description: 'Performance optimization with memoization',
-      route: '/memoization',
+      id: 'presets',
+      title: 'Presets',
+      description: 'Pre-configured SignalTree setups for common use cases',
+      route: '/presets',
+      category: 'advanced',
+    },
+    {
+      id: 'middleware',
+      title: 'Middleware',
+      description: 'State management middleware patterns',
+      route: '/middleware',
       category: 'advanced',
     },
     {
@@ -87,34 +108,6 @@ export class NavigationComponent {
       title: 'DevTools',
       description: 'Developer tools and debugging',
       route: '/devtools',
-      category: 'advanced',
-    },
-    {
-      id: 'middleware',
-      title: 'Middleware',
-      description: 'State management middleware patterns',
-      route: '/middleware',
-      category: 'advanced',
-    },
-    {
-      id: 'presets',
-      title: 'Presets',
-      description: 'Pre-configured SignalTree setups for common use cases',
-      route: '/presets',
-      category: 'basic',
-    },
-    {
-      id: 'extreme-depth',
-      title: '🔥 Extreme Depth',
-      description: 'Push recursive typing to 15+ levels',
-      route: '/extreme-depth',
-      category: 'advanced',
-    },
-    {
-      id: 'benchmark-history',
-      title: '📊 Benchmark History',
-      description: 'View real-world performance data from users',
-      route: '/benchmark-history',
       category: 'advanced',
     },
   ];

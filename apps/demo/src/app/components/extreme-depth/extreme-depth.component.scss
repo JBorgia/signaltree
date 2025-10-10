@@ -73,6 +73,29 @@
   font-weight: 600;
   text-align: center;
   animation: slideInDown 0.3s ease-out;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: center;
+
+  .view-history-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: #059669;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: var(--space-2) var(--space-4);
+    background: rgba(16, 185, 129, 0.1);
+    border-radius: var(--radius-md);
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: rgba(16, 185, 129, 0.2);
+      transform: translateX(4px);
+    }
+  }
 }
 
 @keyframes slideInDown {
