@@ -385,7 +385,7 @@ export class AkitaBenchmarkService {
       if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0) {
         const idx = i % dataSize;
         const entities = store.getValue().entities as Record<ID, Item>;
-        const item = entities[idx];
+        const item = entities?.[idx];
         if (item) {
           store.update(idx, { flag: !item.flag });
           // Invalidate cache on update

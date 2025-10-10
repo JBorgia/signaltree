@@ -11,6 +11,38 @@ a:-webkit-any-link {
   }
 }
 
+.home-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  &:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
 .nav-blocks {
   justify-content: space-around;
+
+  > div {
+    min-width: 180px;
+  }
+}
+
+@media (max-width: 768px) {
+  .home-button {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .nav-blocks > div {
+    min-width: 100%;
+  }
 }

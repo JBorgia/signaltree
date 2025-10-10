@@ -1,10 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { signalTree } from '@signaltree/core';
-
-import { BenchmarkService } from '../../services/benchmark.service';
 
 interface ExtremeDepthStructure {
   enterprise: {
@@ -106,8 +104,6 @@ export class ExtremeDepthComponent implements OnInit {
     'enterprise.divisions.technology.departments.engineering.teams.frontend.projects.signaltree.releases.v1.features.recursiveTyping.validation.tests.extreme';
   extensionPath: string[] = [];
   isUpdating = false;
-  showConsentBanner = false;
-  benchmarkSubmitted = false;
 
   performanceMetrics = {
     creation: 0.8,
@@ -345,40 +341,8 @@ extremeTree.$.enterprise.divisions.technology.departments
 
 // TypeScript validates the type at every level`;
 
-  benchmarkService = inject(BenchmarkService);
-
   ngOnInit() {
     this.measurePerformance();
-    this.showConsentBanner = !this.benchmarkService.hasConsent();
-  }
-
-  giveConsent() {
-    this.benchmarkService.giveConsent();
-    this.showConsentBanner = false;
-    this.submitBenchmark();
-  }
-
-  declineConsent() {
-    this.showConsentBanner = false;
-  }
-
-  async submitBenchmark() {
-    const success = await this.benchmarkService.submitBenchmark(
-      this.currentDepth,
-      {
-        creationTime: this.performanceMetrics.creation,
-        accessTime: this.performanceMetrics.access,
-        updateTime: this.performanceMetrics.update,
-        totalTests: this.totalTestsPassing,
-      }
-    );
-
-    if (success) {
-      this.benchmarkSubmitted = true;
-      setTimeout(() => {
-        this.benchmarkSubmitted = false;
-      }, 3000);
-    }
   }
 
   updateStatus() {

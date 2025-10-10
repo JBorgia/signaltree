@@ -1,0 +1,164 @@
+<div class="history-container">
+  <div class="header">
+    <h1>📊 Benchmark History</h1>
+    <p class="subtitle">
+      Historical results from realistic comparison benchmarks across different
+      machines
+    </p>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading()" class="loading">
+    <div class="spinner"></div>
+    <p>Loading benchmark history...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error()" class="error-banner">
+    <span class="error-icon">⚠️</span>
+    {{ error() }}
+    <button class="btn secondary" (click)="loadBenchmarks()">Retry</button>
+  </div>
+
+  <!-- Filters and Controls -->
+  <div *ngIf="!loading() && !error()" class="controls">
+    <div class="filters">
+      <div class="filter-group">
+        <label>Library Winner:</label>
+        <select
+          [(ngModel)]="selectedLibrary"
+          (change)="selectedLibrary.set($any($event.target).value)"
+        >
+          <option value="all">All Libraries</option>
+          <option *ngFor="let lib of uniqueLibraries" [value]="lib">
+            {{ lib }}
+          </option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Machine Type:</label>
+        <select
+          [(ngModel)]="selectedMachineType"
+          (change)="selectedMachineType.set($any($event.target).value)"
+        >
+          <option value="all">All Machines</option>
+          <option *ngFor="let type of uniqueMachineTypes" [value]="type">
+            {{ type }}
+          </option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Min Reliability:</label>
+        <input
+          type="number"
+          [(ngModel)]="minReliability"
+          (change)="
+            minReliability.set($any($event.target).value); loadBenchmarks()
+          "
+          min="0"
+          max="100"
+          placeholder="0-100"
+        />
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn secondary" (click)="exportResults()">
+        📥 Export JSON
+      </button>
+      <button class="btn secondary" (click)="exportCSV()">📊 Export CSV</button>
+      <button class="btn primary" (click)="loadBenchmarks()">🔄 Refresh</button>
+    </div>
+  </div>
+
+  <!-- Results Count -->
+  <div *ngIf="!loading() && !error()" class="results-info">
+    <p>
+      Showing <strong>{{ filteredBenchmarks.length }}</strong> of
+      <strong>{{ benchmarks().length }}</strong> benchmarks
+    </p>
+  </div>
+
+  <!-- Benchmarks Table -->
+  <div
+    *ngIf="!loading() && !error() && filteredBenchmarks.length > 0"
+    class="table-container"
+  >
+    <table class="benchmarks-table">
+      <thead>
+        <tr>
+          <th (click)="toggleSort('date')" class="sortable">
+            Date {{ getSortIcon('date') }}
+          </th>
+          <th>Winner</th>
+          <th (click)="toggleSort('score')" class="sortable">
+            Score {{ getSortIcon('score') }}
+          </th>
+          <th (click)="toggleSort('reliability')" class="sortable">
+            Reliability {{ getSortIcon('reliability') }}
+          </th>
+          <th>Machine Type</th>
+          <th>Tests</th>
+          <th>Duration</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let benchmark of filteredBenchmarks" class="benchmark-row">
+          <td class="date">{{ formatDate(benchmark.createdAt) }}</td>
+          <td>
+            <span
+              class="library-badge"
+              [ngClass]="getLibraryColor(benchmark.summary.winnerLibrary)"
+            >
+              {{ benchmark.summary.winnerLibrary }}
+            </span>
+          </td>
+          <td class="score">
+            {{ benchmark.summary.winnerScore.toFixed(1) }} pts
+          </td>
+          <td>
+            <span
+              class="reliability-badge"
+              [ngClass]="
+                getReliabilityColor(benchmark.summary.reliabilityScore)
+              "
+            >
+              {{ benchmark.summary.reliabilityScore }}%
+            </span>
+          </td>
+          <td class="machine-type">{{ benchmark.summary.machineType }}</td>
+          <td class="tests">{{ benchmark.summary.totalTests }}</td>
+          <td class="duration">
+            {{ formatDuration(benchmark.summary.duration) }}
+          </td>
+          <td class="actions">
+            <button class="btn-small primary" (click)="viewDetails(benchmark)">
+              View Details
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Empty State -->
+  <div
+    *ngIf="!loading() && !error() && filteredBenchmarks.length === 0"
+    class="empty-state"
+  >
+    <div class="empty-icon">📊</div>
+    <h3>No Benchmarks Found</h3>
+    <p *ngIf="benchmarks().length === 0">
+      No benchmark results have been submitted yet. Run the
+      <a routerLink="/benchmarks">realistic comparison benchmarks</a> to
+      contribute!
+    </p>
+    <p *ngIf="benchmarks().length > 0">
+      No benchmarks match your current filters. Try adjusting your filter
+      criteria.
+    </p>
+  </div>
+</div>

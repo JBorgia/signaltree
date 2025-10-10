@@ -7,7 +7,7 @@ export interface DemoExample {
   title: string;
   description: string;
   route: string;
-  category: 'basic' | 'performance' | 'entities' | 'advanced';
+  category: 'getting-started' | 'benchmarks' | 'performance' | 'features';
 }
 
 @Component({
@@ -19,104 +19,104 @@ export interface DemoExample {
 })
 export class NavigationComponent {
   examples: DemoExample[] = [
-    // Basic Examples
+    // Getting Started
     {
       id: 'core',
       title: 'Core Features',
-      description: 'Basic SignalTree functionality',
+      description: 'Basic SignalTree functionality and API',
       route: '/core',
-      category: 'basic',
+      category: 'getting-started',
     },
     {
       id: 'callable-syntax',
       title: 'Callable Syntax',
       description: 'Unified callable API: tree.$.user.name("value")',
       route: '/callable-syntax',
-      category: 'basic',
+      category: 'getting-started',
     },
 
-    // Performance Examples
+    // Benchmarks
     {
       id: 'benchmarks',
-      title: 'Benchmarks vs Alternatives',
-      description: 'SignalTree vs NgRx Store and NgRx SignalStore',
+      title: 'Library Comparison',
+      description: 'Compare SignalTree vs NgRx, Akita, Elf, NgXs',
       route: '/benchmarks',
-      category: 'performance',
+      category: 'benchmarks',
     },
     {
+      id: 'benchmark-history',
+      title: 'Benchmark History',
+      description: 'View historical results across machines',
+      route: '/realistic-benchmark-history',
+      category: 'benchmarks',
+    },
+
+    // Performance
+    {
       id: 'batching',
-      title: 'Batching Demo',
-      description: 'Compare batched vs unbatched updates',
+      title: 'Batching',
+      description: 'Batch multiple updates for optimal performance',
       route: '/batching',
       category: 'performance',
     },
     {
       id: 'memoization',
       title: 'Memoization',
-      description: 'Performance optimization with memoization',
+      description: 'Cache expensive computations',
       route: '/memoization',
       category: 'performance',
     },
     {
       id: 'extreme-depth',
-      title: '🔥 Extreme Depth',
-      description: 'Push recursive typing to 15+ levels',
+      title: 'Extreme Depth',
+      description: 'Test recursive typing at 15+ levels',
       route: '/extreme-depth',
       category: 'performance',
     },
-    {
-      id: 'benchmark-history',
-      title: '📊 Benchmark History',
-      description: 'View real-world performance data from users',
-      route: '/benchmark-history',
-      category: 'performance',
-    },
 
-    // Entity Examples
+    // Features
     {
       id: 'entities',
       title: 'Entity Management',
-      description: 'Create, read, update, delete entities',
+      description: 'CRUD operations for entity collections',
       route: '/entities',
-      category: 'entities',
+      category: 'features',
     },
-
-    // Advanced Examples
     {
       id: 'presets',
       title: 'Presets',
-      description: 'Pre-configured SignalTree setups for common use cases',
+      description: 'Pre-configured patterns for common use cases',
       route: '/presets',
-      category: 'advanced',
+      category: 'features',
     },
     {
       id: 'middleware',
       title: 'Middleware',
-      description: 'State management middleware patterns',
+      description: 'Extend functionality with middleware hooks',
       route: '/middleware',
-      category: 'advanced',
+      category: 'features',
     },
     {
       id: 'time-travel',
       title: 'Time Travel',
-      description: 'State history and debugging',
+      description: 'Undo/redo and state history',
       route: '/time-travel',
-      category: 'advanced',
+      category: 'features',
     },
     {
       id: 'devtools',
       title: 'DevTools',
-      description: 'Developer tools and debugging',
+      description: 'Developer tools and debugging utilities',
       route: '/devtools',
-      category: 'advanced',
+      category: 'features',
     },
   ];
 
   categories: DemoExample['category'][] = [
-    'basic',
+    'getting-started',
+    'benchmarks',
     'performance',
-    'entities',
-    'advanced',
+    'features',
   ];
 
   getExamplesByCategory(category: DemoExample['category']): DemoExample[] {
@@ -125,10 +125,10 @@ export class NavigationComponent {
 
   getCategoryLabel(category: DemoExample['category']): string {
     const labels: Record<DemoExample['category'], string> = {
-      basic: 'Basic Features',
-      performance: 'Performance',
-      entities: 'Entity Tree',
-      advanced: 'Advanced',
+      'getting-started': '🚀 Getting Started',
+      benchmarks: '📊 Benchmarks',
+      performance: '⚡ Performance',
+      features: '✨ Features',
     };
     return labels[category];
   }

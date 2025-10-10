@@ -444,7 +444,7 @@ export class NgxsBenchmarkService {
 
   async runSelectorBenchmark(dataSize: number): Promise<number> {
     // First populate array with data matching SignalTree test
-    const items = Array.from({ length: dataSize }, (_, i) => ({
+    const items: ArrayItem[] = Array.from({ length: dataSize }, (_, i) => ({
       id: i,
       value: Math.random() * 100,
       flag: i % 2 === 0,
@@ -469,12 +469,14 @@ export class NgxsBenchmarkService {
         const idx = i % dataSize;
         const currentItem = items[idx];
         if (currentItem) {
+          const updatedItem = {
+            ...currentItem,
+            flag: !currentItem.flag,
+          } as ArrayItem;
           await this.store
-            .dispatch(
-              new UpdateArray(idx, { ...currentItem, flag: !currentItem.flag })
-            )
+            .dispatch(new UpdateArray(idx, updatedItem))
             .toPromise();
-          items[idx] = { ...currentItem, flag: !currentItem.flag };
+          items[idx] = updatedItem;
         }
       }
     }
