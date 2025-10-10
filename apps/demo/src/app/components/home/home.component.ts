@@ -72,6 +72,48 @@ export class HomeComponent {
       category: 'Advanced',
       highlight: true,
     },
+    {
+      title: '⏰ Time Travel',
+      description: 'Undo/redo functionality and state history management',
+      route: '/time-travel',
+      category: 'Time Travel',
+      methods: ['undo', 'redo', 'goToState', 'getHistory', 'clearHistory'],
+    },
+    {
+      title: '📝 Forms Integration',
+      description:
+        'Seamless Angular Forms integration with reactive validation',
+      route: '/ng-forms',
+      category: 'Forms',
+    },
+    {
+      title: '🧪 Memoization',
+      description:
+        'Intelligent caching and performance optimization for expensive computations',
+      route: '/memoization',
+      category: 'Performance',
+      methods: ['memoize', 'clearCache', 'getCacheStats'],
+    },
+    {
+      title: '🎨 Presets',
+      description: 'Pre-configured setups for common patterns and use cases',
+      route: '/presets',
+      category: 'Advanced',
+    },
+    {
+      title: '🛠️ DevTools',
+      description:
+        'Redux DevTools integration for powerful debugging and state inspection',
+      route: '/devtools',
+      category: 'Testing',
+    },
+    {
+      title: '📞 Callable Syntax',
+      description:
+        'Optional enhanced developer experience with callable node syntax',
+      route: '/callable-syntax',
+      category: 'Advanced',
+    },
   ];
 
   coreFeatures = [

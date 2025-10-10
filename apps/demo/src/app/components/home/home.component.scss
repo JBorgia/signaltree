@@ -66,6 +66,31 @@
   display: inline-block;
 }
 
+/* Description Section */
+.description-section {
+  margin-bottom: var(--space-12);
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  padding: var(--space-8);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-primary-200);
+}
+
+.description-content {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.description-content p {
+  font-size: 1.125rem;
+  line-height: 1.8;
+  color: var(--color-neutral-700);
+  margin-bottom: var(--space-4);
+}
+
+.description-content p:last-child {
+  margin-bottom: 0;
+}
+
 /* Quick Start */
 .quick-start-section {
   margin-bottom: var(--space-12);
