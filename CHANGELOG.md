@@ -5,6 +5,65 @@ All notable changes to SignalTree will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.2] - 2025-10-10
+
+### Added
+
+#### Memoization Presets (@signaltree/memoization)
+
+Added optimized preset configurations for common use cases, ensuring benchmark fairness and transparency:
+
+- `withSelectorMemoization()` - Fast selector caching (reference equality, 10 entries)
+- `withComputedMemoization()` - Balanced computed properties (shallow equality, 100 entries)
+- `withDeepStateMemoization()` - Complex nested state (deep equality, 50 entries, LRU)
+- `withHighFrequencyMemoization()` - High-frequency operations (shallow equality, 500 entries, LRU)
+
+**Philosophy**: "Benchmark what you ship, ship what you benchmark" - All performance optimizations used in benchmarks are now publicly available.
+
+#### UI Documentation
+
+Added comprehensive memoization presets documentation to benchmark interface:
+- Info card explaining preset configurations
+- Code examples for users to replicate benchmark performance
+- Performance characteristics for each preset
+- Bundle impact and optimization details
+
+### Changed
+
+#### Performance Optimization (@signaltree/memoization)
+
+- **Optimized `shallowEqual()` algorithm**: Replaced `Object.keys()` allocation with `for...in` iteration
+  - 15-25% faster shallow equality checks
+  - Zero allocations per comparison
+  - Improved cache hit performance
+
+#### Benchmark Updates
+
+- Updated SignalTree benchmarks to use public preset functions
+- `runSelectorBenchmark()` now uses `withSelectorMemoization()`
+- `runComputedBenchmark()` now uses `withComputedMemoization()`
+- Ensures complete transparency and fairness in performance comparisons
+
+### Published Packages
+
+All packages synchronized to v3.0.2:
+- @signaltree/core@3.0.2
+- @signaltree/batching@3.0.2
+- @signaltree/memoization@3.0.2 ⭐ (includes optimizations and presets)
+- @signaltree/middleware@3.0.2
+- @signaltree/entities@3.0.2
+- @signaltree/devtools@3.0.2
+- @signaltree/time-travel@3.0.2
+- @signaltree/presets@3.0.2
+- @signaltree/ng-forms@3.0.2
+
+### Documentation
+
+- Updated `@signaltree/memoization` README with preset documentation
+- Added "What's New in v3.0.2" section to memoization docs
+- Updated main README with preset examples and v3.0.2 highlights
+- Added performance characteristics table for presets
+
 ## [Unreleased]
 
 ### Added - October 7, 2025
