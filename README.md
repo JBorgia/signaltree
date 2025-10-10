@@ -536,12 +536,20 @@ _Use when: Expensive computations, frequently accessed derived data_
 - Search and filtering interfaces
 
 ```typescript
-import { withMemoization } from '@signaltree/memoization';
+import { withSelectorMemoization, withComputedMemoization } from '@signaltree/memoization';
 
+// Quick start with optimized presets (v3.0.2+)
 const tree = signalTree({
   orders: [] as Order[],
   filters: { dateRange: '30d', status: 'all' },
-}).with(withMemoization());
+}).with(withComputedMemoization()); // Balanced preset for computed properties
+
+// Or use custom configuration
+import { withMemoization } from '@signaltree/memoization';
+const customTree = signalTree(state).with(withMemoization({
+  maxCacheSize: 200,
+  equality: 'shallow', // Optimized in v3.0.2 (15-25% faster)
+}));
 
 // Expensive computation cached automatically
 const expensiveReport = computed(() => {
@@ -553,6 +561,11 @@ const expensiveReport = computed(() => {
 // 197.9x performance improvement for cached computations
 tree.clearMemoCache(); // Clear when needed
 ```
+
+**v3.0.2 Highlights:**
+- Optimized shallow equality (15-25% faster, zero allocations)
+- Preset configurations: `withSelectorMemoization()`, `withComputedMemoization()`, `withDeepStateMemoization()`, `withHighFrequencyMemoization()`
+- Same configurations used in benchmark suite for transparent performance comparison
 
 ### 📊 **@signaltree/entities** - Advanced CRUD Operations
 

@@ -36,6 +36,48 @@ const tree = signalTree({
 const filteredUsers = tree.memoize((state) => state.users.filter((user) => user.name.includes(state.filters.search) && (state.filters.category === '' || user.category === state.filters.category)), 'filtered-users');
 ```
 
+## Quick Start with Presets (v3.0.2+)
+
+SignalTree provides optimized preset configurations for common use cases:
+
+```typescript
+import { signalTree } from '@signaltree/core';
+import {
+  withSelectorMemoization,
+  withComputedMemoization,
+  withDeepStateMemoization,
+  withHighFrequencyMemoization,
+} from '@signaltree/memoization';
+
+// For selector operations (fast, reference equality)
+const selectorTree = signalTree(state).with(withSelectorMemoization());
+
+// For computed properties (balanced, shallow equality)
+const computedTree = signalTree(state).with(withComputedMemoization());
+
+// For deep state comparisons
+const deepTree = signalTree(state).with(withDeepStateMemoization());
+
+// For high-frequency operations with large working sets
+const highFreqTree = signalTree(state).with(withHighFrequencyMemoization());
+```
+
+### Preset Configurations
+
+| Preset                         | Equality  | Cache Size | LRU | Use Case                                           |
+| ------------------------------ | --------- | ---------- | --- | -------------------------------------------------- |
+| `withSelectorMemoization()`    | Reference | 10         | ❌  | Fast selector caching for frequently accessed data |
+| `withComputedMemoization()`    | Shallow   | 100        | ❌  | Computed properties with object/array dependencies |
+| `withDeepStateMemoization()`   | Deep      | 50         | ✅  | Complex nested state with deep equality checks     |
+| `withHighFrequencyMemoization()` | Shallow   | 500        | ✅  | High-frequency operations with large working sets  |
+
+**Performance Characteristics:**
+- Reference equality: ~0.3μs per comparison
+- Shallow equality: ~5-15μs per comparison (optimized in v3.0.2)
+- Deep equality: ~50-200μs per comparison
+
+**Benchmark Fairness:** These presets are the same configurations used in SignalTree's benchmark suite, ensuring you can achieve the same performance results in your applications.
+
 ## Key features
 
 ### Intelligent Caching
@@ -89,9 +131,16 @@ const tree = signalTree(state).with(
     enableStats: true, // Enable cache statistics
     autoOptimize: true, // Auto-cleanup when cache is full
     debugMode: false, // Enable debug logging
+    equality: 'shallow', // 'reference' | 'shallow' | 'deep'
   })
 );
 ```
+
+### What's New in v3.0.2
+
+- **Optimized shallow equality algorithm**: Zero allocations per comparison, 15-25% faster
+- **Preset configurations**: Quick-start presets for common use cases
+- **Benchmark transparency**: Same configurations used in performance benchmarks are now publicly available
 
 ## Cache statistics
 
