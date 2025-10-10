@@ -1,5 +1,17 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
+/**
+ * @deprecated This API endpoint is no longer actively used.
+ *
+ * It was originally created for the "Extreme Depth" typing demo benchmark,
+ * but that demo is not a competitive comparison and doesn't need historical tracking.
+ *
+ * This endpoint is kept for backward compatibility to access any existing historical data.
+ *
+ * For NEW benchmark data, see /api/realistic-benchmark.ts which handles the
+ * "Realistic Comparison" benchmarks (SignalTree vs NgRx vs Akita vs Elf vs NgXs).
+ */
+
 interface BenchmarkSubmission {
   timestamp: string;
   depth: number;

@@ -6,35 +6,6 @@
     </p>
   </div>
 
-  <!-- Benchmark Consent Banner -->
-  <div class="consent-banner" *ngIf="showConsentBanner">
-    <div class="consent-content">
-      <h3>📊 Help Improve SignalTree</h3>
-      <p>
-        Share your anonymous benchmark results to help us understand real-world
-        performance across different systems? We collect: browser, OS, CPU
-        cores, and test results. No personal data.
-      </p>
-      <div class="consent-actions">
-        <button class="btn primary" (click)="giveConsent()">
-          ✓ Yes, Share Results
-        </button>
-        <button class="btn secondary" (click)="declineConsent()">
-          No Thanks
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Benchmark Submitted Confirmation -->
-  <div class="benchmark-submitted" *ngIf="benchmarkSubmitted">
-    ✓ Benchmark submitted! Thank you for contributing to SignalTree's
-    improvement.
-    <a routerLink="/benchmark-history" class="view-history-link">
-      📊 View Benchmark History →
-    </a>
-  </div>
-
   <!-- Explanation Section -->
   <div class="explanation-section">
     <h2>📖 What This Page Tests</h2>
@@ -197,14 +168,6 @@
           />
           <button class="btn primary" (click)="setDepthToTarget()">
             Go to {{ targetDepth | number }} Levels
-          </button>
-          <button
-            class="btn secondary"
-            (click)="submitBenchmark()"
-            *ngIf="benchmarkService.hasConsent()"
-            title="Submit current benchmark to help improve SignalTree"
-          >
-            📊 Submit Benchmark
           </button>
         </div>
         <p class="input-hint">

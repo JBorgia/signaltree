@@ -75,9 +75,9 @@ export class HomeComponent {
     {
       title: '📊 Benchmark History',
       description:
-        'View real-world performance data from users across different systems',
-      route: '/benchmark-history',
-      category: 'Advanced',
+        'View historical benchmark results comparing SignalTree vs NgRx vs other libraries',
+      route: '/realistic-benchmark-history',
+      category: 'Performance',
     },
     {
       title: '⏰ Time Travel',

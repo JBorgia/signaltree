@@ -103,11 +103,11 @@ export const appRoutes: Route[] = [
       ),
   },
   {
-    path: 'benchmark-history',
+    path: 'realistic-benchmark-history',
     loadComponent: () =>
-      import('./pages/benchmark-history/benchmark-history.component').then(
-        (c) => c.BenchmarkHistoryComponent
-      ),
+      import(
+        './pages/realistic-benchmark-history/realistic-benchmark-history.component'
+      ).then((c) => c.RealisticBenchmarkHistoryComponent),
   },
 
   // Redirect any unknown routes to home
