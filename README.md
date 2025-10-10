@@ -546,10 +546,12 @@ const tree = signalTree({
 
 // Or use custom configuration
 import { withMemoization } from '@signaltree/memoization';
-const customTree = signalTree(state).with(withMemoization({
-  maxCacheSize: 200,
-  equality: 'shallow', // Optimized in v3.0.2 (15-25% faster)
-}));
+const customTree = signalTree(state).with(
+  withMemoization({
+    maxCacheSize: 200,
+    equality: 'shallow', // Optimized in v3.0.2 (15-25% faster)
+  })
+);
 
 // Expensive computation cached automatically
 const expensiveReport = computed(() => {
@@ -563,6 +565,7 @@ tree.clearMemoCache(); // Clear when needed
 ```
 
 **v3.0.2 Highlights:**
+
 - Optimized shallow equality (15-25% faster, zero allocations)
 - Preset configurations: `withSelectorMemoization()`, `withComputedMemoization()`, `withDeepStateMemoization()`, `withHighFrequencyMemoization()`
 - Same configurations used in benchmark suite for transparent performance comparison
