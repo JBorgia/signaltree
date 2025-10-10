@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { signalTree } from '@signaltree/core';
 
 import { BenchmarkService } from '../../services/benchmark.service';
@@ -51,7 +52,7 @@ interface ExtremeDepthStructure {
 @Component({
   selector: 'app-extreme-depth',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './extreme-depth.component.html',
   styleUrls: ['./extreme-depth.component.scss'],
 })
