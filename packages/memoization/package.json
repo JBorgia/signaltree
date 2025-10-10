@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/memoization",
-  "version": "3.0.1",
+  "version": "3.1.0",
   "description": "Intelligent caching and performance optimization for SignalTree. Features LFU cache eviction, path-based memoization, and 85-95% cache hit ratios.",
   "peerDependencies": {
     "@signaltree/core": "^3.0.0"
