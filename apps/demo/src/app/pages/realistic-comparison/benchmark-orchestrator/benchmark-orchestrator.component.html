@@ -1182,8 +1182,15 @@
             <td
               *ngFor="let lib of librariesWithResults()"
               [class.winner]="isScenarioWinner(scenario.id, lib.id)"
+              [class]="getScenarioRankClass(scenario.id, lib.id)"
               [style.--cell-color]="lib.color"
             >
+              <span
+                class="rank-badge"
+                *ngIf="getScenarioRankEmoji(scenario.id, lib.id)"
+              >
+                {{ getScenarioRankEmoji(scenario.id, lib.id) }}
+              </span>
               <span class="time">{{
                 getScenarioTime(scenario.id, lib.id)
               }}</span>

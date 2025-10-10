@@ -1130,6 +1130,40 @@ $border: #e5e7eb;
           }
         }
 
+        &.rank-first {
+          background: linear-gradient(
+            135deg,
+            rgba(255, 215, 0, 0.15) 0%,
+            rgba(255, 215, 0, 0.05) 100%
+          );
+          border-left: 3px solid #ffd700;
+        }
+
+        &.rank-second {
+          background: linear-gradient(
+            135deg,
+            rgba(192, 192, 192, 0.15) 0%,
+            rgba(192, 192, 192, 0.05) 100%
+          );
+          border-left: 3px solid #c0c0c0;
+        }
+
+        &.rank-third {
+          background: linear-gradient(
+            135deg,
+            rgba(205, 127, 50, 0.15) 0%,
+            rgba(205, 127, 50, 0.05) 100%
+          );
+          border-left: 3px solid #cd7f32;
+        }
+
+        .rank-badge {
+          display: inline-block;
+          font-size: 1.25rem;
+          margin-right: 0.5rem;
+          vertical-align: middle;
+        }
+
         .time {
           display: block;
           font-weight: 600;

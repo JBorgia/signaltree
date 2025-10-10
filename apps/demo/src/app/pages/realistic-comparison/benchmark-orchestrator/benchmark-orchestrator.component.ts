@@ -2241,6 +2241,10 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
   // Results processing
   isScenarioWinner(scenarioId: string, libraryId: string): boolean {
+    return this.getScenarioRank(scenarioId, libraryId) === 1;
+  }
+
+  getScenarioRank(scenarioId: string, libraryId: string): number {
     // Filter out unavailable results (missing tests, unsupported features)
     const results = this.results().filter(
       (r) =>
@@ -2250,13 +2254,33 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         isFinite(r.opsPerSecond)
     );
 
-    if (results.length === 0) return false;
+    if (results.length === 0) return 0;
 
-    const winner = results.reduce((min, r) =>
-      r.median < min.median ? r : min
-    );
+    // Sort by median time (lower is better)
+    const sortedResults = [...results].sort((a, b) => a.median - b.median);
 
-    return winner.libraryId === libraryId;
+    // Find the position of this library
+    const position = sortedResults.findIndex((r) => r.libraryId === libraryId);
+
+    // Return rank (1-based) or 0 if not found
+    return position >= 0 ? position + 1 : 0;
+  }
+
+  getScenarioRankClass(scenarioId: string, libraryId: string): string {
+    const rank = this.getScenarioRank(scenarioId, libraryId);
+    if (rank === 0) return '';
+    if (rank === 1) return 'rank-first';
+    if (rank === 2) return 'rank-second';
+    if (rank === 3) return 'rank-third';
+    return '';
+  }
+
+  getScenarioRankEmoji(scenarioId: string, libraryId: string): string {
+    const rank = this.getScenarioRank(scenarioId, libraryId);
+    if (rank === 1) return '🥇';
+    if (rank === 2) return '🥈';
+    if (rank === 3) return '🥉';
+    return '';
   }
 
   getScenarioTime(scenarioId: string, libraryId: string): string {
