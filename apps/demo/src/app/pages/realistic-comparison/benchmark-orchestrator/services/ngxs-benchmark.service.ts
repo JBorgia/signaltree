@@ -20,6 +20,7 @@ import { createYieldToUI } from '../shared/benchmark-utils';
 type ArrayItem = {
   id: number;
   value: number;
+  flag?: boolean;
   timestamp?: number;
   data?: string;
   name?: string;
@@ -442,22 +443,40 @@ export class NgxsBenchmarkService {
   }
 
   async runSelectorBenchmark(dataSize: number): Promise<number> {
-    const start = performance.now();
+    // First populate array with data matching SignalTree test
+    const items = Array.from({ length: dataSize }, (_, i) => ({
+      id: i,
+      value: Math.random() * 100,
+      flag: i % 2 === 0,
+      metadata: { category: i % 5, priority: i % 3 },
+    }));
 
-    // First populate some data
-    for (
-      let i = 0;
-      i < Math.min(dataSize / 10, BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR);
-      i++
-    ) {
-      this.store.dispatch(new ComputeValues(i));
+    for (const item of items) {
+      await this.store.dispatch(new UpdateArray(item.id, item)).toPromise();
     }
 
-    // Then run selector benchmark
+    const start = performance.now();
+
+    // Run selector benchmark with three selectors
     for (let i = 0; i < BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR; i++) {
+      // Three selector accesses per iteration to match SignalTree
+      this.store.selectOnce(BenchmarkState.getLargeArray).subscribe();
       this.store.selectOnce(BenchmarkState.getComputedResult).subscribe();
       this.store.selectOnce(BenchmarkState.getDeepNested).subscribe();
-      this.store.selectOnce(BenchmarkState.getLargeArray).subscribe();
+
+      // Occasionally update to test cache invalidation (same as SignalTree/NgRx)
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0) {
+        const idx = i % dataSize;
+        const currentItem = items[idx];
+        if (currentItem) {
+          await this.store
+            .dispatch(
+              new UpdateArray(idx, { ...currentItem, flag: !currentItem.flag })
+            )
+            .toPromise();
+          items[idx] = { ...currentItem, flag: !currentItem.flag };
+        }
+      }
     }
 
     return performance.now() - start;

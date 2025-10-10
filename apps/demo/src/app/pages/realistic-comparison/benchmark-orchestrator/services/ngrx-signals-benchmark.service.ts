@@ -173,15 +173,42 @@ export class NgRxSignalsBenchmarkService {
       items: Array.from({ length: dataSize }, (_, i) => ({
         id: i,
         flag: i % 2 === 0,
+        value: Math.random() * 100,
+        metadata: { category: i % 5, priority: i % 3 },
       })),
     });
+
+    // Multiple selectors to match SignalTree test
     const selectEven = computed(
       () => state().items.filter((x) => x.flag).length
     );
+    const selectHighValue = computed(
+      () => state().items.filter((x) => x.value > 50).length
+    );
+    const selectByCategory = computed(() => {
+      const items = state().items;
+      return items.reduce((acc: Record<number, number>, item) => {
+        const cat = item.metadata.category;
+        acc[cat] = (acc[cat] || 0) + 1;
+        return acc;
+      }, {} as Record<number, number>);
+    });
 
     const start = performance.now();
     for (let i = 0; i < BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR; i++) {
       selectEven();
+      selectHighValue();
+      selectByCategory();
+
+      // Occasionally update to test cache invalidation (same as SignalTree/NgRx)
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0) {
+        const idx = i % state().items.length;
+        patchState(state, (s) => ({
+          items: s.items.map((item, index) =>
+            index === idx ? { ...item, flag: !item.flag } : item
+          ),
+        }));
+      }
     }
     return performance.now() - start;
   }

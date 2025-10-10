@@ -240,7 +240,8 @@ export class SignalTreeBenchmarkService {
   async runSelectorBenchmark(dataSize: number): Promise<number> {
     const start = performance.now();
 
-    // Test with lightweight memoization for performance-critical selectors
+    // SHOWCASING SIGNALTREE: Use memoization enhancer for optimal selector performance
+    // This demonstrates SignalTree's built-in memoization capabilities
     const memoMode = this.getRuntimeMemoMode();
     const enhancers: any[] = [];
     if (memoMode === 'light') enhancers.push(withLightweightMemoization());
@@ -255,11 +256,14 @@ export class SignalTreeBenchmarkService {
         metadata: { category: i % 5, priority: i % 3 },
       })),
     });
+
+    // Apply memoization enhancer - this is SignalTree's strength!
     if (enhancers.length) {
       tree = (tree as unknown as any).with(...(enhancers as any[]));
     }
 
-    // FIX: Use Angular's computed() for proper memoization like NgRx SignalStore
+    // Use Angular's computed() for proper memoization - works with SignalTree's signals
+    // SignalTree's memoization enhancer optimizes the underlying signal access
     const selectEven = computed(
       () => tree.state.items().filter((x: any) => x.flag).length
     );
@@ -279,11 +283,11 @@ export class SignalTreeBenchmarkService {
     });
 
     for (let i = 0; i < BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR; i++) {
-      selectEven(); // Now this is properly memoized!
-      selectHighValue(); // Test cache hit rate
+      selectEven(); // Memoized - returns cached result if no changes
+      selectHighValue(); // Test cache hit rate with multiple selectors
       selectByCategory(); // More complex computation
 
-      // Occasionally update to test cache invalidation
+      // Occasionally update to test cache invalidation (same frequency as NgRx)
       if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0) {
         tree.state.items.update((items: any[]) => {
           const idx = i % items.length;
@@ -291,8 +295,6 @@ export class SignalTreeBenchmarkService {
           return items;
         });
       }
-
-      // REMOVED: yielding during measurement for accuracy
     }
 
     return performance.now() - start;

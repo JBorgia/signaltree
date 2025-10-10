@@ -622,13 +622,20 @@ export class NgRxBenchmarkService {
   async runSelectorBenchmark(dataSize: number): Promise<number> {
     const start = performance.now();
 
-    type Item = { id: number; flag: boolean };
+    type Item = {
+      id: number;
+      flag: boolean;
+      value: number;
+      metadata: { category: number; priority: number };
+    };
     type State = { items: Item[] };
 
-    const state: State = {
+    let state: State = {
       items: Array.from({ length: dataSize }, (_, i) => ({
         id: i,
         flag: i % 2 === 0,
+        value: Math.random() * 100,
+        metadata: { category: i % 5, priority: i % 3 },
       })),
     };
 
@@ -639,11 +646,34 @@ export class NgRxBenchmarkService {
       selectItems,
       (items) => items.filter((x) => x.flag).length
     );
+    const selectHighValue = createSelector(
+      selectItems,
+      (items) => items.filter((x) => x.value > 50).length
+    );
+    const selectByCategory = createSelector(selectItems, (items) =>
+      items.reduce((acc: Record<number, number>, item) => {
+        const cat = item.metadata.category;
+        acc[cat] = (acc[cat] || 0) + 1;
+        return acc;
+      }, {} as Record<number, number>)
+    );
 
     for (let i = 0; i < BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR; i++) {
-      // With no state changes, selector should return cached result after first call
+      // Test multiple selectors to stress memoization
       selectEvenCount(state);
-      // REMOVED: Yielding during measurement for accuracy
+      selectHighValue(state);
+      selectByCategory(state);
+
+      // Occasionally update to test cache invalidation (same as SignalTree)
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0) {
+        const idx = i % state.items.length;
+        state = {
+          ...state,
+          items: state.items.map((item, index) =>
+            index === idx ? { ...item, flag: !item.flag } : item
+          ),
+        };
+      }
     }
 
     return performance.now() - start;
