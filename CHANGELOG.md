@@ -23,6 +23,7 @@ Added optimized preset configurations for common use cases, ensuring benchmark f
 #### UI Documentation
 
 Added comprehensive memoization presets documentation to benchmark interface:
+
 - Info card explaining preset configurations
 - Code examples for users to replicate benchmark performance
 - Performance characteristics for each preset
@@ -47,6 +48,7 @@ Added comprehensive memoization presets documentation to benchmark interface:
 ### Published Packages
 
 All packages synchronized to v3.0.2:
+
 - @signaltree/core@3.0.2
 - @signaltree/batching@3.0.2
 - @signaltree/memoization@3.0.2 ⭐ (includes optimizations and presets)

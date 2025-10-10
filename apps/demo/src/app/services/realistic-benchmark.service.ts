@@ -175,8 +175,12 @@ export interface RealisticBenchmarkQueryParams {
   providedIn: 'root',
 })
 export class RealisticBenchmarkService {
-  private readonly API_URL =
-    'https://signaltree-7i4pozzuz-jonathan-d-borgias-projects.vercel.app/api/realistic-benchmark';
+  // API is optional - deployed separately to Vercel
+  // Set to empty string to disable API features
+  private readonly API_URL = '';
+  // Production API URL (when deployed):
+  // 'https://signaltree-api.vercel.app/api/realistic-benchmark';
+
   private readonly CONSENT_KEY = 'signaltree_benchmark_consent';
   private readonly SESSION_KEY = 'signaltree_session_id';
 
@@ -350,6 +354,12 @@ export class RealisticBenchmarkService {
   async submitBenchmark(
     submission: RealisticBenchmarkSubmission
   ): Promise<{ success: boolean; id?: string; error?: string }> {
+    // API disabled - skip submission
+    if (!this.API_URL) {
+      console.log('Benchmark submission skipped: API disabled');
+      return { success: false, error: 'API not configured' };
+    }
+
     if (!this.hasConsent()) {
       console.log('Benchmark submission skipped: no consent');
       return { success: false, error: 'No consent given' };
@@ -384,6 +394,11 @@ export class RealisticBenchmarkService {
   async getBenchmarkHistory(
     params?: RealisticBenchmarkQueryParams
   ): Promise<{ success: boolean; benchmarks: RealisticBenchmarkHistory[] }> {
+    // API disabled - return empty results
+    if (!this.API_URL) {
+      return { success: false, benchmarks: [] };
+    }
+
     try {
       const queryString = params
         ? '?' +
@@ -418,6 +433,11 @@ export class RealisticBenchmarkService {
   async getBenchmarkDetails(
     id: string
   ): Promise<{ success: boolean; data?: RealisticBenchmarkSubmission }> {
+    // API disabled - return empty result
+    if (!this.API_URL) {
+      return { success: false };
+    }
+
     try {
       const response = await fetch(`${this.API_URL}/${id}`);
 

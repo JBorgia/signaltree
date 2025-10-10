@@ -42,12 +42,7 @@ SignalTree provides optimized preset configurations for common use cases:
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import {
-  withSelectorMemoization,
-  withComputedMemoization,
-  withDeepStateMemoization,
-  withHighFrequencyMemoization,
-} from '@signaltree/memoization';
+import { withSelectorMemoization, withComputedMemoization, withDeepStateMemoization, withHighFrequencyMemoization } from '@signaltree/memoization';
 
 // For selector operations (fast, reference equality)
 const selectorTree = signalTree(state).with(withSelectorMemoization());
@@ -64,14 +59,15 @@ const highFreqTree = signalTree(state).with(withHighFrequencyMemoization());
 
 ### Preset Configurations
 
-| Preset                         | Equality  | Cache Size | LRU | Use Case                                           |
-| ------------------------------ | --------- | ---------- | --- | -------------------------------------------------- |
-| `withSelectorMemoization()`    | Reference | 10         | ❌  | Fast selector caching for frequently accessed data |
-| `withComputedMemoization()`    | Shallow   | 100        | ❌  | Computed properties with object/array dependencies |
-| `withDeepStateMemoization()`   | Deep      | 50         | ✅  | Complex nested state with deep equality checks     |
+| Preset                           | Equality  | Cache Size | LRU | Use Case                                           |
+| -------------------------------- | --------- | ---------- | --- | -------------------------------------------------- |
+| `withSelectorMemoization()`      | Reference | 10         | ❌  | Fast selector caching for frequently accessed data |
+| `withComputedMemoization()`      | Shallow   | 100        | ❌  | Computed properties with object/array dependencies |
+| `withDeepStateMemoization()`     | Deep      | 50         | ✅  | Complex nested state with deep equality checks     |
 | `withHighFrequencyMemoization()` | Shallow   | 500        | ✅  | High-frequency operations with large working sets  |
 
 **Performance Characteristics:**
+
 - Reference equality: ~0.3μs per comparison
 - Shallow equality: ~5-15μs per comparison (optimized in v3.0.2)
 - Deep equality: ~50-200μs per comparison
