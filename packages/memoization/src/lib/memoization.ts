@@ -70,6 +70,7 @@ interface MemoizationConfig {
 /**
  * Shallow equality check for dependency comparison
  * Much faster than deep equality for objects with primitive values
+ * Optimized: Uses for...in instead of Object.keys() to avoid array allocations
  */
 function shallowEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
@@ -80,15 +81,22 @@ function shallowEqual(a: unknown, b: unknown): boolean {
     const objA = a as Record<string, unknown>;
     const objB = b as Record<string, unknown>;
 
-    const keysA = Object.keys(objA);
-    const keysB = Object.keys(objB);
-
-    if (keysA.length !== keysB.length) return false;
-
-    for (const key of keysA) {
-      if (objA[key] !== objB[key]) return false;
+    // Count properties in objA and check equality
+    let countA = 0;
+    for (const key in objA) {
+      if (!Object.prototype.hasOwnProperty.call(objA, key)) continue;
+      countA++;
+      // Early exit if key missing or value different
+      if (!(key in objB) || objA[key] !== objB[key]) return false;
     }
-    return true;
+
+    // Count properties in objB to ensure same number
+    let countB = 0;
+    for (const key in objB) {
+      if (Object.prototype.hasOwnProperty.call(objB, key)) countB++;
+    }
+
+    return countA === countB;
   }
 
   return false;
@@ -270,6 +278,129 @@ export function memoizeReference<TArgs extends unknown[], TReturn>(
     ttl: undefined,
     maxCacheSize: 50,
   });
+}
+
+/**
+ * Preset memoization configurations optimized for common use cases
+ * These presets are the same ones used in SignalTree's benchmarks
+ */
+export const MEMOIZATION_PRESETS = {
+  /**
+   * Optimized for selectors and frequently-accessed computed values
+   * - Fast reference-only equality checks (~0.3μs)
+   * - Small cache (10 entries) for minimal overhead
+   * - No LRU management (eliminates bookkeeping cost)
+   * - Best for: Selectors, derived values, stable references
+   */
+  selector: {
+    equality: 'reference' as const,
+    maxCacheSize: 10,
+    enableLRU: false,
+    ttl: undefined,
+  },
+
+  /**
+   * Balanced configuration for general computed values
+   * - Shallow equality checks (~5-15μs) for object comparisons
+   * - Medium cache (100 entries) for reasonable coverage
+   * - No LRU (good performance/memory balance)
+   * - Best for: General computations, objects with primitives
+   */
+  computed: {
+    equality: 'shallow' as const,
+    maxCacheSize: 100,
+    enableLRU: false,
+    ttl: undefined,
+  },
+
+  /**
+   * Thorough configuration for complex nested state
+   * - Deep equality checks (~50-200μs) for nested objects
+   * - Large cache (1000 entries) for complex scenarios
+   * - LRU enabled for intelligent cache management
+   * - 5-minute TTL to prevent stale data
+   * - Best for: Complex nested objects, thorough comparisons needed
+   */
+  deepState: {
+    equality: 'deep' as const,
+    maxCacheSize: 1000,
+    enableLRU: true,
+    ttl: 5 * 60 * 1000,
+  },
+
+  /**
+   * Minimal overhead for high-frequency operations
+   * - Reference-only equality (fastest possible)
+   * - Tiny cache (5 entries) for minimal memory
+   * - No bells and whistles
+   * - Best for: Hot paths, microseconds matter, immutable data
+   */
+  highFrequency: {
+    equality: 'reference' as const,
+    maxCacheSize: 5,
+    enableLRU: false,
+    ttl: undefined,
+  },
+} as const;
+
+/**
+ * Convenience function: Memoization optimized for selectors
+ * Uses reference equality and small cache for maximum performance
+ *
+ * @example
+ * ```typescript
+ * const tree = signalTree(state).with(withSelectorMemoization());
+ * const activeUsers = computed(() =>
+ *   tree.state.users().filter(u => u.active)
+ * );
+ * ```
+ */
+export function withSelectorMemoization<T>() {
+  return withMemoization<T>(MEMOIZATION_PRESETS.selector);
+}
+
+/**
+ * Convenience function: Memoization optimized for computed values
+ * Uses shallow equality for balanced performance
+ *
+ * @example
+ * ```typescript
+ * const tree = signalTree(state).with(withComputedMemoization());
+ * const metrics = computed(() =>
+ *   calculateExpensiveMetrics(tree.state.data())
+ * );
+ * ```
+ */
+export function withComputedMemoization<T>() {
+  return withMemoization<T>(MEMOIZATION_PRESETS.computed);
+}
+
+/**
+ * Convenience function: Memoization for complex nested state
+ * Uses deep equality and LRU management
+ *
+ * @example
+ * ```typescript
+ * const tree = signalTree(state).with(withDeepStateMemoization());
+ * // Handles complex nested object comparisons
+ * ```
+ */
+export function withDeepStateMemoization<T>() {
+  return withMemoization<T>(MEMOIZATION_PRESETS.deepState);
+}
+
+/**
+ * Convenience function: Minimal memoization for hot paths
+ * Maximum performance with minimal overhead
+ *
+ * @example
+ * ```typescript
+ * const tree = signalTree(state).with(withHighFrequencyMemoization());
+ * // For operations called thousands of times per second
+ * ```
+ */
+export function withHighFrequencyMemoization<T>() {
+  return withMemoization<T>(MEMOIZATION_PRESETS.highFrequency);
 }
 
 /**

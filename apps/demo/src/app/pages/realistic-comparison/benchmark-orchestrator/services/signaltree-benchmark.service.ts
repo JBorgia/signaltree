@@ -5,8 +5,10 @@ import {
 } from '@signaltree/batching';
 import { signalTree } from '@signaltree/core';
 import {
+  withComputedMemoization,
   withLightweightMemoization,
   withMemoization,
+  withSelectorMemoization,
   withShallowMemoization,
 } from '@signaltree/memoization';
 import { withSerialization } from '@signaltree/serialization';
@@ -173,21 +175,16 @@ export class SignalTreeBenchmarkService {
   async runComputedBenchmark(dataSize: number): Promise<number> {
     const start = performance.now();
 
-    // Use shallow memoization for simple object structure
-    // Choose memoization enhancer based on runtime mode to allow A/B testing
-    const memoMode = this.getRuntimeMemoMode();
-    const enhancers: any[] = [withBatching()];
-    if (memoMode === 'light') enhancers.push(withLightweightMemoization());
-    else if (memoMode === 'shallow') enhancers.push(withShallowMemoization());
-    else if (memoMode === 'full') enhancers.push(withMemoization());
-    // 'off' means no memoization enhancer
-    let tree: any = signalTree({
+    // SHOWCASING SIGNALTREE: Use computed-optimized memoization preset
+    // This preset is publicly available - users can import and use:
+    // import { withComputedMemoization } from '@signaltree/memoization';
+    // const tree = signalTree(state).with(withComputedMemoization());
+    const tree: any = signalTree({
       value: 0,
       factors: Array.from({ length: 50 }, (_, i) => i + 1),
-    });
-    if (enhancers.length) {
-      tree = (tree as unknown as any).with(...(enhancers as any[]));
-    }
+    })
+      .with(withBatching())
+      .with(withComputedMemoization()); // Public API - same as users get!
 
     // FIX: Use Angular's computed() for proper memoization like NgRx SignalStore
     const compute = computed(() => {
@@ -240,27 +237,18 @@ export class SignalTreeBenchmarkService {
   async runSelectorBenchmark(dataSize: number): Promise<number> {
     const start = performance.now();
 
-    // SHOWCASING SIGNALTREE: Use memoization enhancer for optimal selector performance
-    // This demonstrates SignalTree's built-in memoization capabilities
-    const memoMode = this.getRuntimeMemoMode();
-    const enhancers: any[] = [];
-    if (memoMode === 'light') enhancers.push(withLightweightMemoization());
-    else if (memoMode === 'shallow') enhancers.push(withShallowMemoization());
-    else if (memoMode === 'full') enhancers.push(withMemoization());
-
-    let tree: any = signalTree({
+    // SHOWCASING SIGNALTREE: Use selector-optimized memoization preset
+    // This preset is publicly available - users can import and use:
+    // import { withSelectorMemoization } from '@signaltree/memoization';
+    // const tree = signalTree(state).with(withSelectorMemoization());
+    const tree: any = signalTree({
       items: Array.from({ length: dataSize }, (_, i) => ({
         id: i,
         flag: i % 2 === 0,
         value: Math.random() * 100,
         metadata: { category: i % 5, priority: i % 3 },
       })),
-    });
-
-    // Apply memoization enhancer - this is SignalTree's strength!
-    if (enhancers.length) {
-      tree = (tree as unknown as any).with(...(enhancers as any[]));
-    }
+    }).with(withSelectorMemoization()); // Public API - same as users get!
 
     // Use Angular's computed() for proper memoization - works with SignalTree's signals
     // SignalTree's memoization enhancer optimizes the underlying signal access
