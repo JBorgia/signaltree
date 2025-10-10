@@ -111,7 +111,23 @@ export class HomeComponent {
     return this.features.filter((f) => f.category === category);
   }
 
-  quickStartCode = `import { signalTree } from '@signaltree/signaltree';
+  quickStartCode = `// Install the core package (required)
+npm install @signaltree/core
+
+// Optional feature packages
+npm install @signaltree/batching        # Batch updates
+npm install @signaltree/memoization     # Deep caching
+npm install @signaltree/time-travel     # History management
+npm install @signaltree/entities        # Entity management
+npm install @signaltree/middleware      # Middleware chains
+npm install @signaltree/serialization   # State persistence
+npm install @signaltree/devtools        # Debugging tools
+npm install @signaltree/ng-forms        # Form integration
+npm install @signaltree/presets         # Configuration presets
+npm install @signaltree/callable-syntax # Optional DX enhancement
+
+// Basic Usage
+import { signalTree } from '@signaltree/core';
 
 // Create a signal tree
 const userTree = signalTree({
@@ -131,11 +147,11 @@ console.log(userTree.state.user.name()); // 'John Doe'
 console.log(userTree.$.settings.theme()); // 'dark'
 
 // Update individual values
-userTree.state.user.name('Jane Doe');
+userTree.state.user.name.set('Jane Doe');
 userTree.$.settings.theme.set('light');
 
 // Update entire tree
-userTree(current => ({
+userTree((current) => ({
   ...current,
   user: { ...current.user, age: 31 }
 }));
@@ -143,7 +159,7 @@ userTree(current => ({
 // Get unwrapped values
 const userData = userTree();`;
 
-  extremeDepthCode = `import { signalTree } from '@signaltree/signaltree';
+  extremeDepthCode = `import { signalTree } from '@signaltree/core';
 
 // 15+ Level Deep Enterprise Structure with Perfect Type Inference
 const extremeDepth = signalTree({
