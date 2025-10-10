@@ -39,7 +39,6 @@ PACKAGES=(
     "batching"
     "memoization"
     "middleware"
-    "async"
     "entities"
     "devtools"
     "time-travel"
