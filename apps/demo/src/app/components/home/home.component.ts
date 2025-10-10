@@ -73,6 +73,13 @@ export class HomeComponent {
       highlight: true,
     },
     {
+      title: '📊 Benchmark History',
+      description:
+        'View real-world performance data from users across different systems',
+      route: '/benchmark-history',
+      category: 'Advanced',
+    },
+    {
       title: '⏰ Time Travel',
       description: 'Undo/redo functionality and state history management',
       route: '/time-travel',

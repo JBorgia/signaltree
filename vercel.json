@@ -1,0 +1,4 @@
+{
+  "installCommand": "echo 'Skipping install for API-only deployment'",
+  "buildCommand": "echo 'Skipping build for API-only deployment'"
+}

@@ -65,3 +65,4 @@ OPTIMIZATION_*.md
 error.log
 *.tmp
 tmp/
+.vercel

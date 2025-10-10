@@ -110,6 +110,13 @@ export class NavigationComponent {
       route: '/extreme-depth',
       category: 'advanced',
     },
+    {
+      id: 'benchmark-history',
+      title: '📊 Benchmark History',
+      description: 'View real-world performance data from users',
+      route: '/benchmark-history',
+      category: 'advanced',
+    },
   ];
 
   categories: DemoExample['category'][] = [
