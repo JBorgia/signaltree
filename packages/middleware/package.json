@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/middleware",
-  "version": "3.1.0",
+  "version": "3.0.2",
   "description": "Middleware system for SignalTree. Intercept state changes with before/after hooks, logging, performance tracking, and validation middleware.",
   "peerDependencies": {
     "@signaltree/core": "^3.0.0",

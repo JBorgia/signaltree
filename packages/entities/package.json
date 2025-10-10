@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/entities",
-  "version": "3.1.0",
+  "version": "3.0.2",
   "description": "Advanced entity collection management for SignalTree. Enhanced CRUD operations, entity finding, filtering, querying, and duplicate prevention.",
   "peerDependencies": {
     "@angular/core": "^20.1.0",
