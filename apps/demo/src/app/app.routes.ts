@@ -102,6 +102,13 @@ export const appRoutes: Route[] = [
         (c) => c.ExtremeDepthComponent
       ),
   },
+  {
+    path: 'benchmark-history',
+    loadComponent: () =>
+      import('./pages/benchmark-history/benchmark-history.component').then(
+        (c) => c.BenchmarkHistoryComponent
+      ),
+  },
 
   // Redirect any unknown routes to home
   {

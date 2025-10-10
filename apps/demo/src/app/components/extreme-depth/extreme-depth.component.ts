@@ -1,7 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree } from '@signaltree/core';
+
+import { BenchmarkService } from '../../services/benchmark.service';
 
 interface ExtremeDepthStructure {
   enterprise: {
@@ -103,6 +105,8 @@ export class ExtremeDepthComponent implements OnInit {
     'enterprise.divisions.technology.departments.engineering.teams.frontend.projects.signaltree.releases.v1.features.recursiveTyping.validation.tests.extreme';
   extensionPath: string[] = [];
   isUpdating = false;
+  showConsentBanner = false;
+  benchmarkSubmitted = false;
 
   performanceMetrics = {
     creation: 0.8,
@@ -111,30 +115,22 @@ export class ExtremeDepthComponent implements OnInit {
   };
 
   get treeObjectPreview(): string {
-    // Force reactivity by accessing currentDepth
-    const depth = this.currentDepth;
-    const pathLength = this.extensionPath.length;
     // Access the signal to trigger change detection
     const baseObj = this.extremeTree();
-    const simplified = this.simplifyForDisplay(baseObj, depth, pathLength);
+    const simplified = this.simplifyForDisplay(baseObj);
     return JSON.stringify(simplified, null, 2);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
   private simplifyForDisplay(
-    obj: any,
-    _depth: number,
-    _pathLength: number
-  ): any {
-    // _depth and _pathLength parameters force Angular to re-evaluate the getter when these values change
+    obj: ExtremeDepthStructure
+  ): Record<string, unknown> {
     // Create a visual representation showing the depth
     const current =
       obj.enterprise.divisions.technology.departments.engineering.teams.frontend
         .projects.signaltree.releases.v1.features.recursiveTyping.validation
         .tests.extreme;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result: any = {
+    const result: Record<string, unknown> = {
       enterprise: {
         divisions: {
           technology: {
@@ -175,11 +171,32 @@ export class ExtremeDepthComponent implements OnInit {
 
     // Add extension levels if they exist
     if (this.extensionPath.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let pointer: any =
-        result.enterprise.divisions.technology.departments.engineering.teams
-          .frontend.projects.signaltree.releases.v1.features.recursiveTyping
-          .validation.tests.extreme;
+      let pointer = (result as Record<string, unknown>)['enterprise'] as Record<
+        string,
+        unknown
+      >;
+      pointer = (pointer['divisions'] as Record<string, unknown>)[
+        'technology'
+      ] as Record<string, unknown>;
+      pointer = (pointer['departments'] as Record<string, unknown>)[
+        'engineering'
+      ] as Record<string, unknown>;
+      pointer = (pointer['teams'] as Record<string, unknown>)[
+        'frontend'
+      ] as Record<string, unknown>;
+      pointer = (pointer['projects'] as Record<string, unknown>)[
+        'signaltree'
+      ] as Record<string, unknown>;
+      pointer = (pointer['releases'] as Record<string, unknown>)[
+        'v1'
+      ] as Record<string, unknown>;
+      pointer = (pointer['features'] as Record<string, unknown>)[
+        'recursiveTyping'
+      ] as Record<string, unknown>;
+      pointer = (pointer['validation'] as Record<string, unknown>)[
+        'tests'
+      ] as Record<string, unknown>;
+      pointer = pointer['extreme'] as Record<string, unknown>;
 
       this.extensionPath.forEach((pathName, index) => {
         if (index === this.extensionPath.length - 1) {
@@ -190,7 +207,7 @@ export class ExtremeDepthComponent implements OnInit {
           };
         } else {
           pointer[pathName] = {};
-          pointer = pointer[pathName];
+          pointer = pointer[pathName] as Record<string, unknown>;
         }
       });
     }
@@ -327,8 +344,40 @@ extremeTree.$.enterprise.divisions.technology.departments
 
 // TypeScript validates the type at every level`;
 
+  benchmarkService = inject(BenchmarkService);
+
   ngOnInit() {
     this.measurePerformance();
+    this.showConsentBanner = !this.benchmarkService.hasConsent();
+  }
+
+  giveConsent() {
+    this.benchmarkService.giveConsent();
+    this.showConsentBanner = false;
+    this.submitBenchmark();
+  }
+
+  declineConsent() {
+    this.showConsentBanner = false;
+  }
+
+  async submitBenchmark() {
+    const success = await this.benchmarkService.submitBenchmark(
+      this.currentDepth,
+      {
+        creationTime: this.performanceMetrics.creation,
+        accessTime: this.performanceMetrics.access,
+        updateTime: this.performanceMetrics.update,
+        totalTests: this.totalTestsPassing,
+      }
+    );
+
+    if (success) {
+      this.benchmarkSubmitted = true;
+      setTimeout(() => {
+        this.benchmarkSubmitted = false;
+      }, 3000);
+    }
   }
 
   updateStatus() {
