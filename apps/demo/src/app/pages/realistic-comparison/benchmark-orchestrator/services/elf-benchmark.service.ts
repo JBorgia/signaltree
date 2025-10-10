@@ -168,7 +168,12 @@ export class ElfBenchmarkService {
   }
 
   async runSelectorBenchmark(dataSize: number): Promise<number> {
-    type Item = { id: number; flag: boolean };
+    type Item = {
+      id: number;
+      flag: boolean;
+      value: number;
+      metadata: { category: number; priority: number };
+    };
     const store = createStore(
       { name: 'elf-bench-select' },
       withEntities<Item>()
@@ -178,27 +183,71 @@ export class ElfBenchmarkService {
         Array.from({ length: dataSize }, (_, i) => ({
           id: i,
           flag: i % 2 === 0,
+          value: Math.random() * 100,
+          metadata: { category: i % 5, priority: i % 3 },
         }))
       )
     );
 
     const start = performance.now();
-    // Simple memoization: cache by reference since state is unchanged in this test
-    let cachedCount: number | undefined;
+
+    // Three memoized selectors to match SignalTree test
+    let cachedEvenCount: number | undefined;
+    let cachedHighValueCount: number | undefined;
+    let cachedCategoryMap: Record<number, number> | undefined;
     let lastRef: Item[] | undefined;
+
     const selectEvenCount = () => {
       const all = store.query(getAllEntities());
-      if (all === lastRef && cachedCount !== undefined) return cachedCount;
+      if (all === lastRef && cachedEvenCount !== undefined)
+        return cachedEvenCount;
       let count = 0;
       for (const it of all) if (it.flag) count++;
       lastRef = all;
-      cachedCount = count;
+      cachedEvenCount = count;
       return count;
     };
 
+    const selectHighValueCount = () => {
+      const all = store.query(getAllEntities());
+      if (all === lastRef && cachedHighValueCount !== undefined)
+        return cachedHighValueCount;
+      let count = 0;
+      for (const it of all) if (it.value > 50) count++;
+      cachedHighValueCount = count;
+      return count;
+    };
+
+    const selectByCategory = () => {
+      const all = store.query(getAllEntities());
+      if (all === lastRef && cachedCategoryMap !== undefined)
+        return cachedCategoryMap;
+      const result: Record<number, number> = {};
+      for (const it of all) {
+        const cat = it.metadata.category;
+        result[cat] = (result[cat] || 0) + 1;
+      }
+      cachedCategoryMap = result;
+      return result;
+    };
+
     for (let i = 0; i < BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR; i++) {
-      const count = selectEvenCount();
-      if (count === -1) console.log('noop');
+      selectEvenCount();
+      selectHighValueCount();
+      selectByCategory();
+
+      // Occasionally update to test cache invalidation (same as SignalTree/NgRx)
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0) {
+        const idx = i % dataSize;
+        store.update(
+          updateEntities(idx, (item) => ({ ...item, flag: !item.flag }))
+        );
+        // Invalidate cache on update
+        cachedEvenCount = undefined;
+        cachedHighValueCount = undefined;
+        cachedCategoryMap = undefined;
+        lastRef = undefined;
+      }
     }
     return performance.now() - start;
   }

@@ -290,7 +290,12 @@ export class AkitaBenchmarkService {
   }
 
   async runSelectorBenchmark(dataSize: number): Promise<number> {
-    type Item = { id: ID; flag: boolean };
+    type Item = {
+      id: ID;
+      flag: boolean;
+      value: number;
+      metadata: { category: number; priority: number };
+    };
     type ItemsState = EntityState<Item>;
     @StoreConfig({ name: 'akita-bench-select', idKey: 'id' })
     class ItemsStore extends EntityStore<ItemsState, Item, number> {
@@ -300,33 +305,96 @@ export class AkitaBenchmarkService {
     }
     const store = new ItemsStore();
     store.add(
-      Array.from({ length: dataSize }, (_, i) => ({ id: i, flag: i % 2 === 0 }))
+      Array.from({ length: dataSize }, (_, i) => ({
+        id: i,
+        flag: i % 2 === 0,
+        value: Math.random() * 100,
+        metadata: { category: i % 5, priority: i % 3 },
+      }))
     );
 
     const start = performance.now();
-    // Mimic memoized query behavior: cache computed value while state unchanged
-    let cachedCount: number | undefined;
+
+    // Three memoized selectors to match SignalTree test
+    let cachedEvenCount: number | undefined;
+    let cachedHighValueCount: number | undefined;
+    let cachedCategoryMap: Record<number, number> | undefined;
     let lastVersion = 0;
-    const computeCount = () => {
-      // use store versioning via shallow ids reference change
+
+    const computeEvenCount = () => {
       const val = store.getValue();
       const ids = (val.ids as ID[]) ?? [];
       const ents =
         (val.entities as Record<ID, Item>) ?? ({} as Record<ID, Item>);
-      const currentVersion = ids.length; // simple proxy (unchanged in this test)
-      if (cachedCount !== undefined && currentVersion === lastVersion) {
-        return cachedCount;
+      const currentVersion = ids.length;
+      if (cachedEvenCount !== undefined && currentVersion === lastVersion) {
+        return cachedEvenCount;
       }
       let c = 0;
       for (const id of ids) if (ents[id]?.flag) c++;
-      cachedCount = c;
+      cachedEvenCount = c;
       lastVersion = currentVersion;
       return c;
     };
 
+    const computeHighValueCount = () => {
+      const val = store.getValue();
+      const ids = (val.ids as ID[]) ?? [];
+      const ents =
+        (val.entities as Record<ID, Item>) ?? ({} as Record<ID, Item>);
+      const currentVersion = ids.length;
+      if (
+        cachedHighValueCount !== undefined &&
+        currentVersion === lastVersion
+      ) {
+        return cachedHighValueCount;
+      }
+      let c = 0;
+      for (const id of ids) if (ents[id]?.value && ents[id].value > 50) c++;
+      cachedHighValueCount = c;
+      return c;
+    };
+
+    const computeCategoryMap = () => {
+      const val = store.getValue();
+      const ids = (val.ids as ID[]) ?? [];
+      const ents =
+        (val.entities as Record<ID, Item>) ?? ({} as Record<ID, Item>);
+      const currentVersion = ids.length;
+      if (cachedCategoryMap !== undefined && currentVersion === lastVersion) {
+        return cachedCategoryMap;
+      }
+      const result: Record<number, number> = {};
+      for (const id of ids) {
+        const item = ents[id];
+        if (item?.metadata) {
+          const cat = item.metadata.category;
+          result[cat] = (result[cat] || 0) + 1;
+        }
+      }
+      cachedCategoryMap = result;
+      return result;
+    };
+
     for (let i = 0; i < BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR; i++) {
-      const c = computeCount();
-      if (c === -1) console.log('noop');
+      computeEvenCount();
+      computeHighValueCount();
+      computeCategoryMap();
+
+      // Occasionally update to test cache invalidation (same as SignalTree/NgRx)
+      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0) {
+        const idx = i % dataSize;
+        const entities = store.getValue().entities as Record<ID, Item>;
+        const item = entities[idx];
+        if (item) {
+          store.update(idx, { flag: !item.flag });
+          // Invalidate cache on update
+          cachedEvenCount = undefined;
+          cachedHighValueCount = undefined;
+          cachedCategoryMap = undefined;
+          lastVersion++;
+        }
+      }
     }
     return performance.now() - start;
   }

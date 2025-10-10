@@ -1,4 +1,4 @@
-import { CommonModule, NgFor, NgIf } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import {
   Component,
   computed,
@@ -150,7 +150,7 @@ interface BenchmarkService {
 @Component({
   selector: 'app-benchmark-orchestrator',
   standalone: true,
-  imports: [CommonModule, FormsModule, NgIf, NgFor],
+  imports: [CommonModule, FormsModule],
   templateUrl: './benchmark-orchestrator.component.html',
   styleUrls: ['./benchmark-orchestrator.component.scss'],
 })
