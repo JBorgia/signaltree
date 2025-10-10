@@ -18,11 +18,22 @@
     </div>
   </section>
 
-  <!-- Quick Start -->
-  <section class="quick-start-section">
-    <h2 class="section-title">🚀 Quick Start</h2>
-    <div class="code-example">
-      <pre><code>{{ quickStartCode }}</code></pre>
+  <!-- What is SignalTree? -->
+  <section class="description-section">
+    <h2 class="section-title">� What is SignalTree?</h2>
+    <div class="description-content">
+      <p>
+        SignalTree is a revolutionary hierarchical state management library
+        built on Angular Signals, delivering breakthrough performance and
+        developer experience. With perfect type inference at 15+ nesting levels
+        and industry-leading 0.036ms performance, SignalTree makes complex state
+        management simple, fast, and type-safe.
+      </p>
+      <p>
+        Designed with modularity in mind, install only what you need - from the
+        lightweight 7.3KB core to powerful optional features like middleware,
+        time-travel debugging, entity management, and more.
+      </p>
     </div>
   </section>
 
@@ -189,6 +200,14 @@
     </div>
   </section>
 
+  <!-- Quick Start -->
+  <section class="quick-start-section">
+    <h2 class="section-title">🚀 Quick Start</h2>
+    <div class="code-example">
+      <pre><code>{{ quickStartCode }}</code></pre>
+    </div>
+  </section>
+
   <!-- Extreme Depth Showcase -->
   <section class="extreme-depth-section">
     <h2 class="section-title">🔥 Extreme Depth Testing</h2>
@@ -249,26 +268,9 @@
         </a>
       </div>
     </div>
-
-    <!-- Additional Features -->
-    <div class="category-section">
-      <h3 class="category-title">🛠️ Additional Features</h3>
-      <div class="category-grid">
-        <div
-          *ngFor="
-            let feature of getFeaturesByCategory('Forms').concat(
-              getFeaturesByCategory('Testing')
-            )
-          "
-          class="category-card"
-        >
-          <h4 class="card-title">{{ feature.title }}</h4>
-          <p class="card-description">{{ feature.description }}</p>
-          <a [routerLink]="feature.route" class="card-link"> Explore → </a>
-        </div>
-      </div>
-    </div>
   </section>
+
+  <!-- Getting Started -->
   <section class="getting-started-section">
     <h2 class="section-title">🏁 Getting Started</h2>
     <div class="steps-grid">
