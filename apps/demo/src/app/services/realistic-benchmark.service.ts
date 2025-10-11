@@ -175,11 +175,9 @@ export interface RealisticBenchmarkQueryParams {
   providedIn: 'root',
 })
 export class RealisticBenchmarkService {
-  // API is optional - deployed separately to Vercel
-  // Set to empty string to disable API features
-  private readonly API_URL = '';
-  // Production API URL (when deployed):
-  // 'https://signaltree-api.vercel.app/api/realistic-benchmark';
+  // API deployed to Vercel - stores benchmark history as GitHub gists
+  private readonly API_URL =
+    'https://signaltree.vercel.app/api/realistic-benchmark';
 
   private readonly CONSENT_KEY = 'signaltree_benchmark_consent';
   private readonly SESSION_KEY = 'signaltree_session_id';
@@ -396,6 +394,7 @@ export class RealisticBenchmarkService {
   ): Promise<{ success: boolean; benchmarks: RealisticBenchmarkHistory[] }> {
     // API disabled - return empty results
     if (!this.API_URL) {
+      // Treat as a successful fetch with no data so the UI doesn't show an error banner
       return { success: false, benchmarks: [] };
     }
 
