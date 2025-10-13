@@ -1,22 +1,10 @@
 import { CommonModule } from '@angular/common';
-import {
-  Component,
-  computed,
-  effect,
-  ElementRef,
-  inject,
-  OnDestroy,
-  signal,
-  ViewChild,
-} from '@angular/core';
+import { Component, computed, effect, ElementRef, inject, OnDestroy, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { Subject } from 'rxjs';
 
-import {
-  RealisticBenchmarkService,
-  RealisticBenchmarkSubmission,
-} from '../../../services/realistic-benchmark.service';
+import { RealisticBenchmarkService, RealisticBenchmarkSubmission } from '../../../services/realistic-benchmark.service';
 import { BenchmarkTestCase, ENHANCED_TEST_CASES } from './scenario-definitions';
 import { AkitaBenchmarkService } from './services/akita-benchmark.service';
 import { ElfBenchmarkService } from './services/elf-benchmark.service';
@@ -1681,11 +1669,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
    * Submit benchmark results to backend after completion
    */
   private async submitBenchmarkResults(): Promise<void> {
-    if (!this.realisticBenchmarkService.hasConsent()) {
-      console.log('Skipping benchmark submission: no consent');
-      return;
-    }
-
     try {
       console.log('Building benchmark submission...');
 
@@ -1876,7 +1859,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       const submission: RealisticBenchmarkSubmission = {
         id: this.realisticBenchmarkService.getSessionId() + '-' + Date.now(),
         timestamp: new Date().toISOString(),
-        version: '3.0.1',
+        version: '3.0.2',
         sessionId: this.realisticBenchmarkService.getSessionId(),
         consentGiven: true,
         calibration,
