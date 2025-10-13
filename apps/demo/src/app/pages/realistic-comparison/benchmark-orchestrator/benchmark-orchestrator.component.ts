@@ -2252,7 +2252,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     if (!this.canRunBenchmarks()) return;
 
     this.isRunning.set(true);
-    this.startTime.set(Date.now());
+    this.startTime.set(performance.now());
     this.completedTests.set(0);
     this.results.set([]);
     this.startElapsedTimer(); // Start timer for elapsed time updates
