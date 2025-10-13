@@ -1,10 +1,22 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, effect, ElementRef, inject, OnDestroy, signal, ViewChild } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  inject,
+  OnDestroy,
+  signal,
+  ViewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { Subject } from 'rxjs';
 
-import { RealisticBenchmarkService, RealisticBenchmarkSubmission } from '../../../services/realistic-benchmark.service';
+import {
+  RealisticBenchmarkService,
+  RealisticBenchmarkSubmission,
+} from '../../../services/realistic-benchmark.service';
 import { BenchmarkTestCase, ENHANCED_TEST_CASES } from './scenario-definitions';
 import { AkitaBenchmarkService } from './services/akita-benchmark.service';
 import { ElfBenchmarkService } from './services/elf-benchmark.service';
@@ -1289,7 +1301,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     if (!this.isRunning()) return '0s';
     // Include timer signal as dependency to trigger updates
     this.elapsedTimeTimer();
-    const elapsed = Date.now() - this.startTime();
+    const elapsed = performance.now() - this.startTime();
     return this.formatDuration(elapsed);
   });
 
@@ -1299,7 +1311,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
     // Include timer signal as dependency to trigger updates
     this.elapsedTimeTimer();
-    const elapsed = Date.now() - this.startTime();
+    const elapsed = performance.now() - this.startTime();
     const total = elapsed / (progress / 100);
     const remaining = total - elapsed;
 
