@@ -24,8 +24,9 @@
   <div *ngIf="!loading() && !error()" class="controls">
     <div class="filters">
       <div class="filter-group">
-        <label>Library Winner:</label>
+        <label for="library-winner-select">Library Winner:</label>
         <select
+          id="library-winner-select"
           [(ngModel)]="selectedLibrary"
           (change)="selectedLibrary.set($any($event.target).value)"
         >
@@ -37,8 +38,9 @@
       </div>
 
       <div class="filter-group">
-        <label>Machine Type:</label>
+        <label for="machine-type-select">Machine Type:</label>
         <select
+          id="machine-type-select"
           [(ngModel)]="selectedMachineType"
           (change)="selectedMachineType.set($any($event.target).value)"
         >
@@ -50,8 +52,9 @@
       </div>
 
       <div class="filter-group">
-        <label>Min Reliability:</label>
+        <label for="min-reliability-input">Min Reliability:</label>
         <input
+          id="min-reliability-input"
           type="number"
           [(ngModel)]="minReliability"
           (change)="
