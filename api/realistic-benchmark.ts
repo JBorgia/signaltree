@@ -1,5 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
+// Vercel API handler for SignalTree realistic benchmarks
+// Stores benchmarks as GitHub gists and retrieves them for history
 interface RealisticBenchmarkSubmission {
   id: string;
   timestamp: string;
