@@ -198,15 +198,16 @@ export class RealisticBenchmarkService {
   }
 
   hasConsent(): boolean {
-    return localStorage.getItem(this.CONSENT_KEY) === 'true';
+    // Always return true - benchmarks are always saved
+    return true;
   }
 
   giveConsent(): void {
-    localStorage.setItem(this.CONSENT_KEY, 'true');
+    // No-op: consent is always granted
   }
 
   revokeConsent(): void {
-    localStorage.removeItem(this.CONSENT_KEY);
+    // No-op: consent is always granted
   }
 
   /**
@@ -356,11 +357,6 @@ export class RealisticBenchmarkService {
     if (!this.API_URL) {
       console.log('Benchmark submission skipped: API disabled');
       return { success: false, error: 'API not configured' };
-    }
-
-    if (!this.hasConsent()) {
-      console.log('Benchmark submission skipped: no consent');
-      return { success: false, error: 'No consent given' };
     }
 
     try {
