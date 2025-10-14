@@ -1,4 +1,87 @@
 .history-container {
+  // Details Modal Styles
+  .details-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .details-modal {
+    background: var(--card-background);
+    color: var(--text);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+    padding: 2rem 2.5rem 1.5rem 2.5rem;
+    min-width: 350px;
+    max-width: 90vw;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+    z-index: 1001;
+  }
+
+  .close-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: none;
+    border: none;
+    font-size: 2rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color 0.2s;
+    z-index: 1002;
+    line-height: 1;
+  }
+  .close-btn:hover {
+    color: var(--primary);
+  }
+
+  .details-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem 2rem;
+    margin-bottom: 1.5rem;
+    font-size: 1rem;
+  }
+
+  .details-loading {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+
+  .details-error {
+    color: #d32f2f;
+    background: #fee;
+    border: 1px solid #fcc;
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    margin: 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .details-json {
+    background: var(--background-secondary);
+    color: var(--text-secondary);
+    border-radius: 6px;
+    padding: 1rem;
+    font-size: 0.95rem;
+    max-height: 300px;
+    overflow: auto;
+    margin-bottom: 1rem;
+  }
+
   max-width: 1400px;
   margin: 0 auto;
   padding: 2rem;
