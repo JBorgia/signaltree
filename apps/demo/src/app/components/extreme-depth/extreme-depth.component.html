@@ -95,36 +95,8 @@
     <h2>🏗️ Live Enterprise Structure</h2>
     <div class="structure-demo">
       <div class="path-display">
-        <h3>Current Path ({{ currentDepth }} levels deep):</h3>
-        <code class="path">{{ currentPath }}</code>
-
-        <div class="path-visualizer">
-          <div class="depth-indicator">
-            <span class="depth-label">Visual Depth Map:</span>
-            <div class="segments-container">
-              <span
-                *ngFor="let segment of pathSegments; let i = index"
-                class="segment"
-                [class.base]="i < 15"
-                [class.extended]="i >= 15"
-                [title]="segment"
-              >
-                {{ segment }}
-              </span>
-            </div>
-          </div>
-          <div class="depth-stats">
-            <span class="stat-item">
-              <strong>Base Path:</strong> 15 levels
-            </span>
-            <span class="stat-item" *ngIf="extensionPath.length > 0">
-              <strong>Extended:</strong> +{{ extensionPath.length }} levels
-            </span>
-            <span class="stat-item total">
-              <strong>Total:</strong> {{ pathSegments.length }} levels
-            </span>
-          </div>
-        </div>
+        <h3>Current Depth: {{ targetDepth }} levels</h3>
+        <p class="depth-description">{{ depthDescription }}</p>
       </div>
 
       <div class="controls">
@@ -154,12 +126,12 @@
       </div>
 
       <div class="depth-input-section">
-        <label for="targetDepth" class="depth-label">
+        <label for="depth-input" class="depth-label">
           🎯 Jump to Specific Depth:
         </label>
         <div class="input-group">
           <input
-            id="targetDepth"
+            id="depth-input"
             type="number"
             [(ngModel)]="targetDepth"
             min="15"
@@ -215,10 +187,11 @@
       </div>
 
       <div class="json-display">
-        <h3>📦 Live Object Structure ({{ currentDepth }} levels)</h3>
+        <h3>📦 Live Object Structure ({{ targetDepth }} levels)</h3>
         <p class="json-description">
-          Watch the object grow as you increase depth. The JSON below shows the
-          actual structure with full type safety at every level.
+          This shows the complete live state object with full type safety at
+          every level. Watch it update in real-time as you interact with the
+          controls!
         </p>
         <div class="code-example">
           <pre><code>{{ treeObjectPreview }}</code></pre>
@@ -272,7 +245,7 @@
           >Including {{ extremeDepthTests }} Extreme Depth Tests</span
         >
         <span class="current-depth-badge">
-          Current Depth: {{ currentDepth }} Levels ({{ depthCategory }})
+          Target Depth: {{ targetDepth }} Levels ({{ depthCategory }})
         </span>
         <span class="test-status-message">
           {{ testStatusMessage }}
@@ -284,7 +257,7 @@
         <p>
           Our test suite validates SignalTree's recursive typing across multiple
           depth ranges.
-          <strong>Current depth: {{ currentDepth }} levels</strong> -
+          <strong>Target depth: {{ targetDepth }} levels</strong> -
           {{ depthDescription }}
         </p>
         <p class="performance-note">

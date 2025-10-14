@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="public/signaltree.svg" alt="SignalTree Logo" width="100" height="100" />
+</div>
+
 # 🎯 SignalTree Demo Application
 
 Interactive demonstration showcasing SignalTree's revolutionary performance, features, and real-time monitoring capabilities. Includes comprehensive benchmarking, performance dashboard, and practical examples.

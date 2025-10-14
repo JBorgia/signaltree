@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="../apps/demo/public/signaltree.svg" alt="SignalTree Logo" width="100" height="100" />
+</div>
+
 # SignalTree Overview and Specifications
 
 This document consolidates the feature overview and technical specifications for the SignalTree ecosystem (September 2025).

@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="../../apps/demo/public/signaltree.svg" alt="SignalTree Logo" width="80" height="80" />
+</div>
+
 # SignalTree Core
 
 Foundation package for SignalTree. Provides recursive typing, deep nesting support, and strong performance.

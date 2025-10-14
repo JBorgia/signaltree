@@ -52,12 +52,24 @@ export class CoreDemoComponent {
   activeCount = computed(() => this.activeTodos().length);
   completedCount = computed(() => this.completedTodos().length);
   totalCount = computed(() => this.todos().length);
+  completionPercentage = computed(() => {
+    const total = this.totalCount();
+    if (total === 0) return 0;
+    return Math.round((this.completedCount() / total) * 100);
+  });
 
   hasAnyTodos = computed(() => this.totalCount() > 0);
   hasCompletedTodos = computed(() => this.completedCount() > 0);
-  allCompleted = computed(
-    () => this.hasAnyTodos() && this.activeCount() === 0
-  );
+  allCompleted = computed(() => this.hasAnyTodos() && this.activeCount() === 0);
+
+  // Get the raw state for code example display
+  get rawState() {
+    return this.tree();
+  }
+
+  get statePreview(): string {
+    return JSON.stringify(this.rawState, null, 2);
+  }
 
   // Actions
   addTodo() {

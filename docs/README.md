@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="../apps/demo/public/signaltree.svg" alt="SignalTree Logo" width="100" height="100" />
+</div>
+
 # Documentation Index
 
 Use this index to navigate the canonical documentation.
