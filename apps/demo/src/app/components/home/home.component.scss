@@ -31,15 +31,15 @@
 }
 
 .hero-logo {
-  width: 150px;
-  height: 150px;
+  width: 80px;
+  height: 80px;
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
   animation: float 3s ease-in-out infinite;
   background: transparent;
 
   @media (min-width: 768px) {
-    width: 180px;
-    height: 180px;
+    width: 100px;
+    height: 100px;
   }
 }
 
