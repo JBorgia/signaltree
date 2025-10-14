@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import {
   RealisticBenchmarkHistory,
   RealisticBenchmarkService,
+  RealisticBenchmarkSubmission,
 } from '../../services/realistic-benchmark.service';
 
 @Component({
@@ -20,6 +21,13 @@ export class RealisticBenchmarkHistoryComponent implements OnInit {
   benchmarks = signal<RealisticBenchmarkHistory[]>([]);
   loading = signal(true);
   error = signal('');
+
+  // Details panel state
+  detailsOpen = signal(false);
+  detailsLoading = signal(false);
+  detailsError = signal('');
+  selectedBenchmark = signal<RealisticBenchmarkHistory | null>(null);
+  selectedBenchmarkFull = signal<RealisticBenchmarkSubmission | null>(null);
 
   // Filters
   selectedLibrary = signal('all');
@@ -174,35 +182,44 @@ export class RealisticBenchmarkHistoryComponent implements OnInit {
   }
 
   async viewDetails(benchmark: RealisticBenchmarkHistory) {
+    // Open details panel and fetch full details (with caching)
+    this.selectedBenchmark.set(benchmark);
+    this.detailsOpen.set(true);
+    // If we already have full data attached to the history item, use it
+    if (benchmark.fullData) {
+      this.selectedBenchmarkFull.set(benchmark.fullData);
+      return;
+    }
+
+    this.detailsLoading.set(true);
+    this.detailsError.set('');
+
     try {
       const result = await this.benchmarkService.getBenchmarkDetails(
         benchmark.id
       );
 
       if (result.success && result.data) {
-        console.log('Full benchmark details:', result.data);
-        // TODO: Show in modal or detail view
-        const winner = Object.entries(
-          result.data.weightedResults.libraries
-        ).find(([, lib]) => lib.rank === 1);
-
-        if (winner) {
-          alert(
-            `Full details logged to console.\n\nWinner: ${
-              winner[0]
-            }\nScore: ${winner[1].weightedScore.toFixed(
-              1
-            )} points\nReliability: ${
-              result.data.calibration.reliabilityScore
-            }%`
-          );
-        }
+        // attach to the history item for caching
+        benchmark.fullData = result.data;
+        this.selectedBenchmarkFull.set(result.data);
       } else {
-        alert('Failed to load benchmark details');
+        this.detailsError.set('Failed to load benchmark details');
+        this.selectedBenchmarkFull.set(null);
       }
     } catch (err) {
       console.error('Error loading details:', err);
-      alert('Failed to load benchmark details');
+      this.detailsError.set('Failed to load benchmark details');
+      this.selectedBenchmarkFull.set(null);
+    } finally {
+      this.detailsLoading.set(false);
     }
+  }
+
+  closeDetails() {
+    this.detailsOpen.set(false);
+    this.selectedBenchmark.set(null);
+    this.selectedBenchmarkFull.set(null);
+    this.detailsError.set('');
   }
 }

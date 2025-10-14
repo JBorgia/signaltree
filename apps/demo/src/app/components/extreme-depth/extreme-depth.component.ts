@@ -105,6 +105,103 @@ export class ExtremeDepthComponent implements OnInit {
   extensionPath: string[] = [];
   isUpdating = false;
 
+  // Symbol used by SignalTree to mark node accessors
+  private NODE_ACCESSOR_SYMBOL = Symbol.for('NodeAccessor');
+
+  /**
+   * Walk the base path and create nested empty node accessors for each
+   * segment in `extensionPath` so the live signal tree contains the added
+   * nested properties. This uses the tree's callable accessors and the
+   * library's pattern of attaching child properties directly to node
+   * accessors.
+   */
+  private ensureExtensionPathInTree() {
+    if (!this.extensionPath || this.extensionPath.length === 0) return;
+
+    // Start at the deep 'extreme' node accessor. We'll treat accessors as
+    // plain objects for attachment of child accessors.
+    let cursor = this.extremeTree as unknown as Record<string, unknown>;
+    const segments = this.currentPath.split('.');
+
+    // Walk to the deepest known accessor (extreme). If something is missing,
+    // abort safely.
+    for (const seg of segments) {
+      if (seg === '') continue;
+      const next = cursor[seg];
+      if (!next || typeof next !== 'object') {
+        return;
+      }
+      cursor = next as Record<string, unknown>;
+    }
+
+    // For each extension segment, attach a new node accessor if missing
+    for (const seg of this.extensionPath) {
+      if (!cursor[seg]) {
+        // Create a minimal callable accessor. SignalTree recognizes accessors
+        // by the NODE_ACCESSOR_SYMBOL, so set it.
+        const newAccessor = function () {
+          return {};
+        } as unknown as Record<string, unknown>;
+
+        try {
+          Object.defineProperty(
+            newAccessor as object,
+            this.NODE_ACCESSOR_SYMBOL,
+            {
+              value: true,
+              enumerable: false,
+            }
+          );
+        } catch {
+          // ignore failures defining symbol
+        }
+
+        try {
+          Object.defineProperty(cursor as object, seg, {
+            value: newAccessor,
+            enumerable: true,
+            configurable: true,
+          });
+        } catch {
+          // Fallback assignment
+          (cursor as Record<string, unknown>)[seg] = newAccessor;
+        }
+      }
+      cursor = cursor[seg] as Record<string, unknown>;
+    }
+  }
+
+  /** Remove the dynamically added extension nodes from the live tree. */
+  private removeExtensionNodesFromTree(removedSegments: string[]) {
+    if (!removedSegments || removedSegments.length === 0) return;
+
+    // Walk to the extreme accessor
+    let cursor = this.extremeTree as unknown as Record<string, unknown>;
+    const segments = this.basePath.split('.');
+    for (const seg of segments) {
+      if (seg === '') continue;
+      const next = cursor[seg];
+      if (!next || typeof next !== 'object') return;
+      cursor = next as Record<string, unknown>;
+    }
+
+    // Remove in reverse order if they exist
+    for (let i = removedSegments.length - 1; i >= 0; i--) {
+      const seg = removedSegments[i];
+      if (seg in cursor) {
+        try {
+          delete cursor[seg];
+        } catch {
+          try {
+            Object.defineProperty(cursor, seg, { value: undefined });
+          } catch {
+            // ignore
+          }
+        }
+      }
+    }
+  }
+
   performanceMetrics = {
     creation: 0.8,
     access: 0.2,
@@ -309,15 +406,22 @@ extremeTree.$.enterprise.divisions.technology.departments
       extensionNames[extensionIndex] +
         (Math.floor(this.extensionPath.length / extensionNames.length) + 1)
     );
+
+    // Ensure the new extension segment exists in the live signal tree
+    this.ensureExtensionPathInTree();
   }
 
   resetDepth() {
+    const prev = [...this.extensionPath];
     this.extensionPath = [];
     this.currentDepth = 15;
     this.targetDepth = 15;
     this.extremeTree.$.enterprise.divisions.technology.departments.engineering.teams.frontend.projects.signaltree.releases.v1.features.recursiveTyping.validation.tests.extreme.depth.set(
       15
     );
+
+    // Remove any dynamically added extension nodes from the live tree
+    this.removeExtensionNodesFromTree(prev);
   }
 
   setDepthToTarget() {
@@ -354,6 +458,9 @@ extremeTree.$.enterprise.divisions.technology.departments
       );
       this.currentDepth++;
     }
+
+    // Ensure the newly built extension path is reflected in the live signal tree
+    this.ensureExtensionPathInTree();
 
     this.extremeTree.$.enterprise.divisions.technology.departments.engineering.teams.frontend.projects.signaltree.releases.v1.features.recursiveTyping.validation.tests.extreme.depth.set(
       target
