@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="public/signaltree.svg" alt="SignalTree Logo" width="100" height="100" />
+  <img src="public/signaltree.svg" alt="SignalTree Logo" width="80" height="80" style="background: transparent;" />
 </div>
 
 # 🎯 SignalTree Demo Application

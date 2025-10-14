@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="apps/demo/public/signaltree.svg" alt="SignalTree Logo" width="200" height="200" />
+  <img src="apps/demo/public/signaltree.svg" alt="SignalTree Logo" width="120" height="120" style="background: transparent;" />
   <h1>SignalTree</h1>
   <p>Type-safe, modular, signal-based state management for Angular. SignalTree offers a lightweight alternative to traditional solutions with a composable API and solid performance.</p>
 </div>
