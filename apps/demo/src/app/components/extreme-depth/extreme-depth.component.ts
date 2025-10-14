@@ -112,104 +112,9 @@ export class ExtremeDepthComponent implements OnInit {
   };
 
   get treeObjectPreview(): string {
-    // Access the signal to trigger change detection
-    const baseObj = this.extremeTree();
-    const simplified = this.simplifyForDisplay(baseObj);
-    return JSON.stringify(simplified, null, 2);
-  }
-
-  private simplifyForDisplay(
-    obj: ExtremeDepthStructure
-  ): Record<string, unknown> {
-    // Create a visual representation showing the depth
-    const current =
-      obj.enterprise.divisions.technology.departments.engineering.teams.frontend
-        .projects.signaltree.releases.v1.features.recursiveTyping.validation
-        .tests.extreme;
-
-    const result: Record<string, unknown> = {
-      enterprise: {
-        divisions: {
-          technology: {
-            departments: {
-              engineering: {
-                teams: {
-                  frontend: {
-                    projects: {
-                      signaltree: {
-                        releases: {
-                          v1: {
-                            features: {
-                              recursiveTyping: {
-                                validation: {
-                                  tests: {
-                                    extreme: {
-                                      status: current.status,
-                                      depth: current.depth,
-                                      performance: current.performance,
-                                      metadata: current.metadata,
-                                    },
-                                  },
-                                },
-                              },
-                            },
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    };
-
-    // Add extension levels if they exist
-    if (this.extensionPath.length > 0) {
-      let pointer = (result as Record<string, unknown>)['enterprise'] as Record<
-        string,
-        unknown
-      >;
-      pointer = (pointer['divisions'] as Record<string, unknown>)[
-        'technology'
-      ] as Record<string, unknown>;
-      pointer = (pointer['departments'] as Record<string, unknown>)[
-        'engineering'
-      ] as Record<string, unknown>;
-      pointer = (pointer['teams'] as Record<string, unknown>)[
-        'frontend'
-      ] as Record<string, unknown>;
-      pointer = (pointer['projects'] as Record<string, unknown>)[
-        'signaltree'
-      ] as Record<string, unknown>;
-      pointer = (pointer['releases'] as Record<string, unknown>)[
-        'v1'
-      ] as Record<string, unknown>;
-      pointer = (pointer['features'] as Record<string, unknown>)[
-        'recursiveTyping'
-      ] as Record<string, unknown>;
-      pointer = (pointer['validation'] as Record<string, unknown>)[
-        'tests'
-      ] as Record<string, unknown>;
-      pointer = pointer['extreme'] as Record<string, unknown>;
-
-      this.extensionPath.forEach((pathName, index) => {
-        if (index === this.extensionPath.length - 1) {
-          pointer[pathName] = {
-            level: 15 + index + 1,
-            message: `Extended depth level ${15 + index + 1}`,
-            type: 'extension',
-          };
-        } else {
-          pointer[pathName] = {};
-          pointer = pointer[pathName] as Record<string, unknown>;
-        }
-      });
-    }
-
-    return result;
+    // Access the signal to trigger change detection and show the whole live object
+    const fullObj = this.extremeTree();
+    return JSON.stringify(fullObj, null, 2);
   }
 
   get currentPath(): string {
@@ -245,32 +150,36 @@ export class ExtremeDepthComponent implements OnInit {
   }
 
   get totalTestsPassing(): number {
+    // Use targetDepth to calculate passing tests
+    const depth = this.targetDepth;
+
     // Base tests cover standard depths
     // 8 basic (3-5 levels) + 10 medium (6-10 levels) + 5 performance = 23 base tests
     const baseTests = 23;
 
     // Extreme depth tests: at least 5 tests, +1 for every 5 levels beyond 15
-    const extremeTests =
-      5 + Math.floor(Math.max(0, this.currentDepth - 15) / 5);
+    const extremeTests = 5 + Math.floor(Math.max(0, depth - 15) / 5);
 
     return baseTests + extremeTests;
   }
 
   get extremeDepthTests(): number {
     // 5 base extreme depth tests, +1 for every 5 additional levels
-    return 5 + Math.floor(Math.max(0, this.currentDepth - 15) / 5);
+    // Use targetDepth for calculations
+    return 5 + Math.floor(Math.max(0, this.targetDepth - 15) / 5);
   }
 
   get testStatusMessage(): string {
-    return `Live testing and verification at ${this.currentDepth} levels deep`;
+    return `Live testing and verification at ${this.targetDepth} levels deep`;
   }
 
   get testCategories() {
+    const depth = this.targetDepth;
     return [
       {
         name: 'Basic Depth (3-5 levels)',
         status: '✅ 8 Tests Passing',
-        active: this.currentDepth >= 3,
+        active: depth >= 3,
         description: 'Standard object nesting (user.profile.settings.theme)',
         tests: [
           'Standard object nesting',
@@ -283,7 +192,7 @@ export class ExtremeDepthComponent implements OnInit {
       {
         name: `Medium Depth (6-10 levels)`,
         status: `✅ 10 Tests Passing`,
-        active: this.currentDepth >= 6,
+        active: depth >= 6,
         description:
           'Complex enterprise structures with organizational hierarchies',
         tests: [
@@ -297,33 +206,33 @@ export class ExtremeDepthComponent implements OnInit {
       {
         name: `Extreme Depth (15+ levels)`,
         status: `✅ ${this.extremeDepthTests} Tests Passing`,
-        active: this.currentDepth >= 15,
-        description: `Type inference at ${this.currentDepth}+ levels without 'any' degradation`,
+        active: depth >= 15,
+        description: `Type inference at ${depth}+ levels without 'any' degradation`,
         tests: [
-          `Type inference at ${this.currentDepth}+ levels without 'any' degradation`,
+          `Type inference at ${depth}+ levels without 'any' degradation`,
           'Sub-millisecond access/update times at maximum depth',
           'Correct signal reactivity through deep chains',
           'Memory efficiency with lazy signal creation',
           'IDE IntelliSense accuracy at extreme depths',
         ],
         relevance:
-          this.currentDepth > 15
-            ? `Pushing beyond limits - validating ${this.currentDepth} level depth`
+          depth > 15
+            ? `Pushing beyond limits - validating ${depth} level depth`
             : 'Proves the recursive typing system works at scale',
       },
       {
         name: 'Performance Validation',
         status: '✅ 5 Tests Passing',
         active: true,
-        description: `All operations at ${this.currentDepth} levels complete in < 1ms`,
+        description: `All operations at ${depth} levels complete in < 1ms`,
         tests: [
-          `Tree creation time at ${this.currentDepth} levels`,
+          `Tree creation time at ${depth} levels`,
           'Signal access latency measurements',
           'Update propagation speed',
           'Memory footprint comparisons',
           'Batch operation performance',
         ],
-        relevance: `Median: 0.036ms at ${this.currentDepth} levels`,
+        relevance: `Median: 0.036ms at ${depth} levels`,
       },
     ];
   }

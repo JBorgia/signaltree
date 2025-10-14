@@ -24,6 +24,29 @@
   margin: 0 auto;
 }
 
+.hero-logo-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--space-8);
+}
+
+.hero-logo {
+  width: 120px;
+  height: 120px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
 .hero-title {
   font-size: 3.5rem;
   font-weight: 700;
