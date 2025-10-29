@@ -91,6 +91,20 @@ export {
 } from './lib/security/security-validator';
 
 // ============================================
+// MEMORY MANAGEMENT EXPORTS
+// ============================================
+
+/**
+ * Memory management utilities for lazy-loaded signal trees
+ * @see {@link SignalMemoryManager} for automatic cleanup and leak prevention
+ */
+export {
+  SignalMemoryManager,
+  type MemoryStats,
+  type MemoryManagerConfig,
+} from './lib/memory/memory-manager';
+
+// ============================================
 // ENHANCER EXPORTS
 // ============================================
 

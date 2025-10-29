@@ -32,12 +32,12 @@ This document consolidates the feature overview and technical specifications for
 - @signaltree/entities: enhanced CRUD, querying, and pagination
 - @signaltree/middleware: state interceptors (before/after), validation, logging
 - @signaltree/devtools: inspection, action replay, performance tracking
-- @signaltree/ng-forms: Angular Forms integration
+- @signaltree/ng-forms: Signal-first Angular forms (createFormTree, persistence, wizard flows)
 - @signaltree/presets: preconfigured tree setups
 
 ## Technical specifications
 
-- Angular 18+, TypeScript 5+, Node 18+ (development)
+- Angular 20.3+, TypeScript 5.5+, Node 18.17+ (development)
 - Browser: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
 - Baseline core bundle ~7.25KB gzipped; total ecosystem ~27.56KB gzipped
 - Performance targets: operations maintain sub‑millisecond times across common depths
