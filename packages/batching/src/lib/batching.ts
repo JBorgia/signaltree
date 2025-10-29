@@ -1,4 +1,5 @@
-import { isNodeAccessor, parsePath } from '@signaltree/core';
+import { isNodeAccessor } from '@signaltree/core';
+import { parsePath } from '@signaltree/shared';
 
 import type { SignalTree } from '@signaltree/core';
 

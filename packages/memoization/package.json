@@ -5,5 +5,8 @@
   "peerDependencies": {
     "@signaltree/core": "^3.0.0"
   },
+  "dependencies": {
+    "@signaltree/shared": "workspace:*"
+  },
   "sideEffects": false
 }

@@ -1,6 +1,7 @@
 import { isSignal, Signal, signal, WritableSignal } from '@angular/core';
+import { deepEqual, isBuiltInObject, parsePath } from '@signaltree/shared';
 
-import { SIGNAL_TREE_CONSTANTS } from './constants';
+import type { TreeNode, NodeAccessor } from './types';
 
 /** Symbol to mark callable signals - using global symbol to match across files */
 const CALLABLE_SIGNAL_SYMBOL = Symbol.for('NodeAccessor');
@@ -9,125 +10,11 @@ const CALLABLE_SIGNAL_SYMBOL = Symbol.for('NodeAccessor');
  * SignalTree Utility Functions v1.1.6
  * Core utilities for signal tree operations
  */
-import type { TreeNode, NodeAccessor } from './types';
 
-/** Deep equality */
-export function equal<T>(a: T, b: T): boolean {
-  if (a === b) return true;
-  if (a == null || b == null) return a === b;
-
-  const typeA = typeof a;
-  const typeB = typeof b;
-  if (typeA !== typeB) return false;
-  if (typeA !== 'object') return false;
-
-  if (a instanceof Date && b instanceof Date)
-    return a.getTime() === b.getTime();
-  if (a instanceof RegExp && b instanceof RegExp)
-    return a.source === b.source && a.flags === b.flags;
-
-  if (a instanceof Map && b instanceof Map) {
-    if (a.size !== b.size) return false;
-    for (const [key, value] of a) {
-      if (!b.has(key) || !equal(value, b.get(key))) return false;
-    }
-    return true;
-  }
-
-  if (a instanceof Set && b instanceof Set) {
-    if (a.size !== b.size) return false;
-    for (const value of a) {
-      if (!b.has(value)) return false;
-    }
-    return true;
-  }
-
-  if (Array.isArray(a)) {
-    if (!Array.isArray(b) || a.length !== b.length) return false;
-    return a.every((item, i) => equal(item, (b as unknown as unknown[])[i]));
-  }
-
-  if (Array.isArray(b)) return false;
-
-  const objA = a as Record<string, unknown>;
-  const objB = b as Record<string, unknown>;
-  const keysA = Object.keys(objA);
-  const keysB = Object.keys(objB);
-  if (keysA.length !== keysB.length) return false;
-  return keysA.every((k) => k in objB && equal(objA[k], objB[k]));
-}
-
-export const deepEqual = equal;
-
-/** Runtime built-in detection (keep in sync with types BuiltInObject) */
-export function isBuiltInObject(v: unknown): boolean {
-  if (v === null || v === undefined) return false;
-
-  if (
-    v instanceof Date ||
-    v instanceof RegExp ||
-    typeof v === 'function' ||
-    v instanceof Map ||
-    v instanceof Set ||
-    v instanceof WeakMap ||
-    v instanceof WeakSet ||
-    v instanceof ArrayBuffer ||
-    v instanceof DataView ||
-    v instanceof Error ||
-    v instanceof Promise
-  ) {
-    return true;
-  }
-
-  if (
-    v instanceof Int8Array ||
-    v instanceof Uint8Array ||
-    v instanceof Uint8ClampedArray ||
-    v instanceof Int16Array ||
-    v instanceof Uint16Array ||
-    v instanceof Int32Array ||
-    v instanceof Uint32Array ||
-    v instanceof Float32Array ||
-    v instanceof Float64Array ||
-    v instanceof BigInt64Array ||
-    v instanceof BigUint64Array
-  ) {
-    return true;
-  }
-
-  if (typeof window !== 'undefined') {
-    if (
-      v instanceof URL ||
-      v instanceof URLSearchParams ||
-      v instanceof FormData ||
-      v instanceof Blob ||
-      (typeof File !== 'undefined' && v instanceof File) ||
-      (typeof FileList !== 'undefined' && v instanceof FileList) ||
-      (typeof Headers !== 'undefined' && v instanceof Headers) ||
-      (typeof Request !== 'undefined' && v instanceof Request) ||
-      (typeof Response !== 'undefined' && v instanceof Response) ||
-      (typeof AbortController !== 'undefined' &&
-        v instanceof AbortController) ||
-      (typeof AbortSignal !== 'undefined' && v instanceof AbortSignal)
-    ) {
-      return true;
-    }
-  }
-
-  try {
-    const NodeBuffer = (globalThis as { Buffer?: unknown })?.Buffer;
-    if (
-      NodeBuffer &&
-      v instanceof (NodeBuffer as new (...args: unknown[]) => unknown)
-    )
-      return true;
-  } catch {
-    /* ignore */
-  }
-
-  return false;
-}
-
+export { deepEqual };
+export { deepEqual as equal };
+export { isBuiltInObject };
+export { parsePath };
 /**
  * Checks if a value is a node accessor created by makeNodeAccessor
  */
@@ -143,46 +30,6 @@ export function isNodeAccessor(value: unknown): value is NodeAccessor<unknown> {
  */
 export function isAnySignal(value: unknown): boolean {
   return isSignal(value) || isNodeAccessor(value);
-}
-
-/** Small LRU cache used by parsePath */
-class LRUCache<K, V> {
-  private cache = new Map<K, V>();
-  constructor(private maxSize: number) {}
-  set(key: K, value: V): void {
-    if (this.cache.size >= this.maxSize) {
-      const firstKey = this.cache.keys().next().value;
-      if (firstKey !== undefined) this.cache.delete(firstKey);
-    }
-    this.cache.delete(key);
-    this.cache.set(key, value);
-  }
-  get(key: K): V | undefined {
-    const value = this.cache.get(key);
-    if (value !== undefined) {
-      this.cache.delete(key);
-      this.cache.set(key, value);
-    }
-    return value;
-  }
-  clear(): void {
-    this.cache.clear();
-  }
-  size(): number {
-    return this.cache.size;
-  }
-}
-
-const pathCache = new LRUCache<string, string[]>(
-  SIGNAL_TREE_CONSTANTS.MAX_PATH_CACHE_SIZE
-);
-
-export function parsePath(path: string): string[] {
-  const cached = pathCache.get(path);
-  if (cached) return cached;
-  const parts = path.split('.');
-  pathCache.set(path, parts);
-  return parts;
 }
 
 export function composeEnhancers<T>(

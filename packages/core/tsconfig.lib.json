@@ -1,11 +1,16 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "baseUrl": "../..",
     "outDir": "../../dist/out-tsc",
     "declaration": true,
     "declarationMap": true,
-    "inlineSources": true,
-    "types": []
+    "inlineSources": false,
+    "types": ["node"],
+    "paths": {
+      "@signaltree/shared": ["packages/shared/src/index.ts"],
+      "@signaltree/shared/*": ["packages/shared/src/lib/*"]
+    }
   },
   "exclude": [
     "src/**/*.spec.ts",
@@ -13,5 +18,10 @@
     "jest.config.ts",
     "src/**/*.test.ts"
   ],
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts"],
+  "references": [
+    {
+      "path": "../shared/tsconfig.lib.json"
+    }
+  ]
 }

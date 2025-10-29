@@ -4,7 +4,7 @@
   "description": "serialization system for SignalTree. Intercept state changes with before/after hooks, logging, performance tracking, and validation serialization.",
   "peerDependencies": {
     "@signaltree/core": "^3.0.0",
-    "@angular/core": "~20.1.0"
+    "@angular/core": "^20.3.0"
   },
   "sideEffects": false
 }

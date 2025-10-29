@@ -1,13 +1,8 @@
-import {
-  createFormTree,
-  SignalValueDirective,
-  validators,
-  asyncValidators,
-  toObservable,
-  createAuditMiddleware,
-  SIGNAL_FORM_DIRECTIVES,
-  type AuditEntry,
-} from './ng-forms';
+import { AuditEntry, createAuditMiddleware } from '../audit/audit';
+import { toObservable } from '../rxjs/rxjs-bridge';
+import { unique } from './async-validators';
+import { createFormTree, SIGNAL_FORM_DIRECTIVES, SignalValueDirective } from './ng-forms';
+import { email as emailValidator, minLength, pattern, required } from './validators';
 
 interface TestFormData extends Record<string, unknown> {
   username: string;
@@ -54,8 +49,8 @@ describe('NgForms', () => {
     it('should support field validation', async () => {
       const form = createFormTree(initialFormData, {
         validators: {
-          username: validators.required('Username is required'),
-          email: validators.email('Invalid email format'),
+          username: required('Username is required'),
+          email: emailValidator('Invalid email'),
         },
       });
 
@@ -105,8 +100,8 @@ describe('NgForms', () => {
     it('should support async validation', async () => {
       const form = createFormTree(initialFormData, {
         asyncValidators: {
-          username: asyncValidators.unique(
-            async (value) => value === 'taken',
+          username: unique(
+            async (value: unknown) => value === 'taken',
             'Username already exists'
           ),
         },
@@ -122,7 +117,7 @@ describe('NgForms', () => {
     it('should support form submission', async () => {
       const form = createFormTree(initialFormData, {
         validators: {
-          username: validators.required(),
+          username: required(),
         },
       });
 
@@ -147,43 +142,43 @@ describe('NgForms', () => {
 
   describe('validators', () => {
     it('should provide required validator', () => {
-      const required = validators.required('Field is required');
+      const requiredValidator = required('This field is required');
 
-      expect(required('')).toBe('Field is required');
-      expect(required('value')).toBe(null);
+      expect(requiredValidator('')).toBe('This field is required');
+      expect(requiredValidator('value')).toBe(null);
     });
 
     it('should provide email validator', () => {
-      const email = validators.email();
+      const emailValidatorFn = emailValidator();
 
-      expect(email('invalid-email')).toBe('Invalid email');
-      expect(email('test@example.com')).toBe(null);
+      expect(emailValidatorFn('notanemail')).toBe('Invalid email');
+      expect(emailValidatorFn('test@example.com')).toBe(null);
     });
 
     it('should provide minLength validator', () => {
-      const minLength = validators.minLength(5);
+      const minLengthValidator = minLength(5);
 
-      expect(minLength('abc')).toBe('Min 5 characters');
-      expect(minLength('abcdef')).toBe(null);
+      expect(minLengthValidator('abc')).toBe('Min 5 characters');
+      expect(minLengthValidator('abcdef')).toBe(null);
     });
 
     it('should provide pattern validator', () => {
-      const pattern = validators.pattern(/^\d+$/, 'Must be numeric');
+      const patternValidator = pattern(/^\d+$/, 'Must be numeric');
 
-      expect(pattern('abc')).toBe('Must be numeric');
-      expect(pattern('123')).toBe(null);
+      expect(patternValidator('abc')).toBe('Must be numeric');
+      expect(patternValidator('123')).toBe(null);
     });
   });
 
   describe('asyncValidators', () => {
     it('should provide unique validator', async () => {
-      const unique = asyncValidators.unique(
-        async (value) => value === 'taken',
+      const uniqueValidator = unique(
+        async (value: unknown) => value === 'taken',
         'Already exists'
       );
 
-      expect(await unique('available')).toBe(null);
-      expect(await unique('taken')).toBe('Already exists');
+      expect(await uniqueValidator('available')).toBe(null);
+      expect(await uniqueValidator('taken')).toBe('Already exists');
     });
   });
 

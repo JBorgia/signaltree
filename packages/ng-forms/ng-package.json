@@ -3,5 +3,6 @@
   "dest": "../../dist/packages/ng-forms",
   "lib": {
     "entryFile": "src/index.ts"
-  }
+  },
+  "allowedNonPeerDependencies": ["@signaltree/shared", "@signaltree/core"]
 }

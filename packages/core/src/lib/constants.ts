@@ -1,3 +1,5 @@
+import { DEFAULT_PATH_CACHE_SIZE } from '@signaltree/shared';
+
 /**
  * SignalTree Constants
  * Centralized configuration values and messages
@@ -5,7 +7,7 @@
 
 export const SIGNAL_TREE_CONSTANTS = {
   /** Cache configuration */
-  MAX_PATH_CACHE_SIZE: 1000,
+  MAX_PATH_CACHE_SIZE: DEFAULT_PATH_CACHE_SIZE,
 
   /** Performance thresholds */
   LAZY_THRESHOLD: 50,
@@ -75,8 +77,11 @@ const _isProdByEnv = Boolean(
   typeof globalThis === 'object' &&
     globalThis !== null &&
     'process' in globalThis &&
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     typeof (globalThis as any).process === 'object' &&
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     'env' in (globalThis as any).process &&
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (globalThis as any).process.env.NODE_ENV === 'production'
 );
 
