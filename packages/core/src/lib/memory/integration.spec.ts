@@ -182,9 +182,14 @@ describe('Memory Manager Integration', () => {
       expect(tree()).toBeDefined();
     });
 
-        it('should work with array mutations', () => {
+    it('should work with array mutations', () => {
       const tree = signalTree(
-        { items: Array.from({ length: 50 }, (_, i) => ({ id: i, name: `Item ${i}` })) },
+        {
+          items: Array.from({ length: 50 }, (_, i) => ({
+            id: i,
+            name: `Item ${i}`,
+          })),
+        },
         { useLazySignals: true }
       );
 
@@ -224,7 +229,7 @@ describe('Memory Manager Integration', () => {
       // Frozen objects will fall back to eager mode
       // Just verify the tree is created without error
       const tree = signalTree(frozenData, { useLazySignals: true });
-      
+
       expect(tree).toBeDefined();
 
       if (tree.dispose) {
