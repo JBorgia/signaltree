@@ -1,0 +1,1 @@
+import { foo } from './tmp-cjs.cjs';console.log(foo);

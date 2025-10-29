@@ -2,8 +2,8 @@
   "name": "@signaltree/time-travel",
   "version": "0.0.1",
   "peerDependencies": {
-    "@angular/common": "^20.1.0",
-    "@angular/core": "^20.1.0"
+    "@angular/common": "^20.2.0",
+    "@angular/core": "^20.2.0"
   },
   "sideEffects": false
 }

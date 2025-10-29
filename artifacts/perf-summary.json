@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-09-18T18:28:41.737Z",
+  "timestamp": "2025-10-29T05:56:57.469Z",
   "runs": 3,
   "summary": {
     "basic": {
@@ -11,10 +11,10 @@
     },
     "medium": {
       "runs": 3,
-      "mean": 0.002,
-      "min": 0.002,
+      "mean": 0.0016666666666666668,
+      "min": 0.001,
       "max": 0.002,
-      "stddev": 0
+      "stddev": 0.0004714045207910317
     },
     "extreme": {
       "runs": 3,
@@ -25,39 +25,39 @@
     },
     "unlimited": {
       "runs": 3,
-      "mean": 0.0030000000000000005,
+      "mean": 0.0036666666666666666,
       "min": 0.003,
-      "max": 0.003,
-      "stddev": 4.336808689942018e-19
+      "max": 0.005,
+      "stddev": 0.0009428090415820634
     }
   },
   "proxyOverhead": {
     "set": {
-      "mean": 63.5774,
-      "min": 0,
-      "max": 212791
+      "mean": 2.413381,
+      "min": 1.25,
+      "max": 115.42
     },
     "update": {
-      "mean": 40.77975,
-      "min": 0,
-      "max": 5917
+      "mean": 4.662866,
+      "min": 3.33,
+      "max": 1601.67
     }
   },
   "bundleResults": {
     "packages": [
       {
         "name": "core",
-        "rawSize": 37311,
-        "gzipSize": 7368,
+        "rawSize": 33673,
+        "gzipSize": 6521,
         "claimed": 7250,
         "maxAllowed": 7800,
         "passed": true,
-        "claimMet": false
+        "claimMet": true
       },
       {
         "name": "batching",
-        "rawSize": 4918,
-        "gzipSize": 1303,
+        "rawSize": 4955,
+        "gzipSize": 1313,
         "claimed": 1270,
         "maxAllowed": 1400,
         "passed": true,
@@ -65,21 +65,21 @@
       },
       {
         "name": "memoization",
-        "rawSize": 10304,
-        "gzipSize": 2328,
-        "claimed": 2270,
-        "maxAllowed": 2300,
-        "passed": false,
+        "rawSize": 11902,
+        "gzipSize": 2641,
+        "claimed": 2580,
+        "maxAllowed": 2650,
+        "passed": true,
         "claimMet": false
       },
       {
         "name": "time-travel",
-        "rawSize": 7702,
-        "gzipSize": 1788,
-        "claimed": 1750,
-        "maxAllowed": 1800,
+        "rawSize": 6157,
+        "gzipSize": 1396,
+        "claimed": 1860,
+        "maxAllowed": 1950,
         "passed": true,
-        "claimMet": false
+        "claimMet": true
       },
       {
         "name": "entities",
@@ -110,8 +110,8 @@
       },
       {
         "name": "serialization",
-        "rawSize": 26146,
-        "gzipSize": 4964,
+        "rawSize": 26448,
+        "gzipSize": 5001,
         "claimed": 4850,
         "maxAllowed": 5200,
         "passed": true,
@@ -119,10 +119,10 @@
       },
       {
         "name": "ng-forms",
-        "rawSize": 15027,
-        "gzipSize": 3462,
-        "claimed": 3380,
-        "maxAllowed": 3600,
+        "rawSize": 32319,
+        "gzipSize": 6571,
+        "claimed": 6270,
+        "maxAllowed": 6600,
         "passed": true,
         "claimMet": false
       },
@@ -136,12 +136,19 @@
         "claimMet": true
       }
     ],
-    "demoApp": null,
+    "demoApp": {
+      "totalSize": 2268776,
+      "jsFiles": 26,
+      "cssFiles": 1,
+      "largeJsFiles": 3,
+      "largeCssFiles": 0
+    },
     "recommendations": [
       {
-        "category": "Package Optimization",
+        "category": "Demo App Optimization",
         "items": [
-          "Optimize memoization: 2.27KB > 2.25KB (1.2% over)"
+          "Consider reducing demo complexity or implementing more aggressive code splitting",
+          "Split large JavaScript chunks using dynamic imports"
         ]
       },
       {
@@ -297,14 +304,14 @@
   "deltas": {
     "proxyOverhead": {
       "set": {
-        "mean": 63.5774,
+        "mean": 2.413381,
         "baseline": 63.5774,
-        "pct": 0
+        "pct": -96.2040269026415
       },
       "update": {
-        "mean": 40.77975,
+        "mean": 4.662866,
         "baseline": 40.77975,
-        "pct": 0
+        "pct": -88.56573176637914
       }
     },
     "perf": {
@@ -314,9 +321,9 @@
         "pct": 0
       },
       "medium": {
-        "mean": 0.002,
+        "mean": 0.0016666666666666668,
         "baseline": 0.002,
-        "pct": 0
+        "pct": -16.666666666666664
       },
       "extreme": {
         "mean": 0.002,
@@ -324,43 +331,43 @@
         "pct": 0
       },
       "unlimited": {
-        "mean": 0.0030000000000000005,
+        "mean": 0.0036666666666666666,
         "baseline": 0.0030000000000000005,
-        "pct": 0
+        "pct": 22.2222222222222
       }
     },
     "packages": [
       {
         "name": "core",
-        "gzipSize": 7368,
+        "gzipSize": 6521,
         "gzipSizeBaseline": 7368,
-        "gzipSizePct": 0,
+        "gzipSizePct": -11.495656894679696,
         "passed": true,
         "maxAllowed": 7800
       },
       {
         "name": "batching",
-        "gzipSize": 1303,
+        "gzipSize": 1313,
         "gzipSizeBaseline": 1303,
-        "gzipSizePct": 0,
+        "gzipSizePct": 0.7674597083653107,
         "passed": true,
         "maxAllowed": 1400
       },
       {
         "name": "memoization",
-        "gzipSize": 2328,
+        "gzipSize": 2641,
         "gzipSizeBaseline": 2328,
-        "gzipSizePct": 0,
-        "passed": false,
-        "maxAllowed": 2300
+        "gzipSizePct": 13.445017182130584,
+        "passed": true,
+        "maxAllowed": 2650
       },
       {
         "name": "time-travel",
-        "gzipSize": 1788,
+        "gzipSize": 1396,
         "gzipSizeBaseline": 1788,
-        "gzipSizePct": 0,
+        "gzipSizePct": -21.92393736017897,
         "passed": true,
-        "maxAllowed": 1800
+        "maxAllowed": 1950
       },
       {
         "name": "entities",
@@ -388,19 +395,19 @@
       },
       {
         "name": "serialization",
-        "gzipSize": 4964,
+        "gzipSize": 5001,
         "gzipSizeBaseline": 4964,
-        "gzipSizePct": 0,
+        "gzipSizePct": 0.7453666398066076,
         "passed": true,
         "maxAllowed": 5200
       },
       {
         "name": "ng-forms",
-        "gzipSize": 3462,
+        "gzipSize": 6571,
         "gzipSizeBaseline": 3462,
-        "gzipSizePct": 0,
+        "gzipSizePct": 89.80358174465627,
         "passed": true,
-        "maxAllowed": 3600
+        "maxAllowed": 6600
       },
       {
         "name": "presets",
@@ -415,9 +422,7 @@
   "constraints": {
     "overheadBudgetPct": 25,
     "enforceClaims": false,
-    "violations": [
-      "package size budget failed"
-    ],
-    "pass": false
+    "violations": [],
+    "pass": true
   }
 }
