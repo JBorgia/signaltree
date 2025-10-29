@@ -1,5 +1,7 @@
 import { Signal, WritableSignal } from '@angular/core';
 
+import type { SecurityValidatorConfig } from './security/security-validator';
+
 /**
  * SignalTree Core Types v2.0.2
  * MIT License - Copyright (c) 2025 Jonathan D Borgia
@@ -358,6 +360,35 @@ export interface TreeConfig {
   enableDevTools?: boolean;
   debugMode?: boolean;
   useStructuralSharing?: boolean;
+
+  /**
+   * Security validation configuration
+   * When enabled, validates keys and values during tree construction and updates
+   * to prevent prototype pollution, XSS, and function values.
+   *
+   * @default undefined (no security validation)
+   * @see SecurityValidator for configuration options
+   *
+   * @example
+   * ```ts
+   * // Enable all security features
+   * const tree = signalTree(state, {
+   *   security: {
+   *     preventPrototypePollution: true,
+   *     preventXSS: true,
+   *     preventFunctions: true,
+   *     onSecurityEvent: (event) => console.warn('Security event:', event)
+   *   }
+   * });
+   *
+   * // Or use a preset
+   * import { SecurityPresets } from '@signaltree/core';
+   * const tree = signalTree(state, {
+   *   security: SecurityPresets.strict().getConfig()
+   * });
+   * ```
+   */
+  security?: SecurityValidatorConfig;
 }
 
 // ============================================
