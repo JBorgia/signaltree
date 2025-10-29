@@ -74,6 +74,23 @@ export {
 } from './lib/utils';
 
 // ============================================
+// SECURITY EXPORTS
+// ============================================
+
+/**
+ * Security utilities for preventing common vulnerabilities
+ * @see {@link SecurityValidator} for validation and sanitization
+ * @see {@link SecurityPresets} for common security configurations
+ */
+export {
+  SecurityValidator,
+  SecurityPresets,
+  type SecurityEvent,
+  type SecurityEventType,
+  type SecurityValidatorConfig,
+} from './lib/security/security-validator';
+
+// ============================================
 // ENHANCER EXPORTS
 // ============================================
 
