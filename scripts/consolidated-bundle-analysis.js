@@ -23,7 +23,7 @@ const { execSync } = require('child_process');
 
 // Package configuration with size targets
 const packages = [
-  { name: 'core', maxSize: 7800, claimed: 7250 }, // Current: 7.25KB
+  { name: 'core', maxSize: 12500, claimed: 11890 }, // Phase 2: 11.89KB (+4.64KB for PathIndex, DiffEngine, OptimizedUpdateEngine)
   { name: 'batching', maxSize: 1400, claimed: 1270 }, // Current: 1.27KB
   { name: 'memoization', maxSize: 2650, claimed: 2580 }, // Current: 2.58KB (10% over original target, feature-complete)
   { name: 'time-travel', maxSize: 1950, claimed: 1860 }, // Updated: measured ~1.84KB
