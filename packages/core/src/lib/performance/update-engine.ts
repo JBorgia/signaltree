@@ -329,7 +329,27 @@ export class OptimizedUpdateEngine {
    */
   private applyPatch(patch: Patch, tree: unknown): boolean {
     try {
-      // Navigate to parent object
+      // First, try to update via signal if available
+      if (patch.signal && this.isWritableSignal(patch.signal)) {
+        const currentValue = patch.signal();
+
+        // Only update if value actually changed
+        if (this.isEqual(currentValue, patch.value)) {
+          return false;
+        }
+
+        // Update the signal - this will handle reactivity
+        patch.signal.set(patch.value);
+
+        // After successful ADD, update the index
+        if (patch.type === ChangeType.ADD && patch.value !== undefined) {
+          this.pathIndex.set(patch.path, patch.signal);
+        }
+
+        return true;
+      }
+
+      // Fallback: Navigate to parent object and update directly
       let current: Record<string, unknown> = tree as Record<string, unknown>;
       for (let i = 0; i < patch.path.length - 1; i++) {
         const key = patch.path[i];
@@ -346,13 +366,24 @@ export class OptimizedUpdateEngine {
         return false;
       }
 
-      // Apply update
+      // Apply update directly to object
       current[lastKey] = patch.value;
       return true;
     } catch (error) {
       console.error(`Failed to apply patch at ${patch.path.join('.')}:`, error);
       return false;
     }
+  }
+
+  /**
+   * Type guard to check if value is a WritableSignal
+   */
+  private isWritableSignal(value: unknown): value is WritableSignal<unknown> {
+    return (
+      typeof value === 'function' &&
+      'set' in value &&
+      typeof (value as WritableSignal<unknown>).set === 'function'
+    );
   }
   /**
    * Check equality
