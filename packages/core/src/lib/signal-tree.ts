@@ -1,16 +1,8 @@
-import {
-  computed,
-  DestroyRef,
-  effect,
-  inject,
-  isSignal,
-  Signal,
-  signal,
-  WritableSignal,
-} from '@angular/core';
+import { computed, DestroyRef, effect, inject, isSignal, Signal, signal, WritableSignal } from '@angular/core';
 
 import { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './constants';
 import { resolveEnhancerOrder } from './enhancers';
+import { SecurityValidator } from './security/security-validator';
 import { createLazySignalTree, equal, isBuiltInObject, unwrap } from './utils';
 
 // Global symbol for NodeAccessor identification
@@ -201,6 +193,92 @@ function shouldUseLazy(
   if (config.batchUpdates && config.useMemoization) return true;
   const estimatedSize = precomputedSize ?? estimateObjectSize(obj);
   return estimatedSize > SIGNAL_TREE_CONSTANTS.LAZY_THRESHOLD;
+}
+
+// ============================================
+// SECURITY VALIDATION
+// ============================================
+
+/**
+ * Validates an object tree using SecurityValidator if configured
+ * Throws if validation fails
+ */
+function validateTree<T>(
+  obj: T,
+  config: TreeConfig,
+  path: string[] = []
+): void {
+  if (!config.security) {
+    return; // No validation needed
+  }
+
+  const validator = new SecurityValidator(config.security);
+
+  function validate(value: unknown, currentPath: string[]): void {
+    // Validate primitives and null/undefined
+    if (value === null || value === undefined) {
+      return;
+    }
+
+    if (typeof value !== 'object') {
+      // Validate the value (this will catch functions)
+      validator.validateValue(value);
+      return;
+    }
+
+    // Skip built-in objects
+    if (isBuiltInObject(value)) {
+      return;
+    }
+
+    // Validate arrays
+    if (Array.isArray(value)) {
+      value.forEach((item, index) => {
+        validate(item, [...currentPath, String(index)]);
+      });
+      return;
+    }
+
+    // Validate object keys and values
+    // Use Reflect.ownKeys to catch all keys including __proto__
+    const keys = [
+      ...Object.keys(value as Record<string, unknown>),
+      ...Object.getOwnPropertyNames(value),
+    ];
+    const uniqueKeys = [...new Set(keys)];
+
+    for (const key of uniqueKeys) {
+      if (typeof key === 'symbol') continue;
+
+      // Validate the key
+      try {
+        validator.validateKey(key);
+      } catch (error) {
+        const err = error as Error;
+        throw new Error(
+          `${err.message}\nPath: ${[...currentPath, key].join('.')}`
+        );
+      }
+
+      // Get the value
+      const val = (value as Record<string, unknown>)[key];
+
+      // Validate the value
+      try {
+        validator.validateValue(val);
+      } catch (error) {
+        const err = error as Error;
+        throw new Error(
+          `${err.message}\nPath: ${[...currentPath, key].join('.')}`
+        );
+      }
+
+      // Recursively validate nested objects
+      validate(val, [...currentPath, key]);
+    }
+  }
+
+  validate(obj, path);
 }
 
 function createEqualityFn(useShallowComparison: boolean) {
@@ -667,6 +745,9 @@ function create<T>(obj: T, config: TreeConfig = {}): SignalTree<T> {
   if (obj === null || obj === undefined) {
     throw new Error(SIGNAL_TREE_MESSAGES.NULL_OR_UNDEFINED);
   }
+
+  // Validate the tree if security is configured
+  validateTree(obj, config);
 
   const estimatedSize = estimateObjectSize(obj);
   const equalityFn = createEqualityFn(config.useShallowComparison ?? false);
