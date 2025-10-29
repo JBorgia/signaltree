@@ -1,0 +1,20 @@
+{
+  "name": "@signaltree/shared",
+  "version": "0.0.1",
+  "description": "Internal shared utilities for SignalTree packages.",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "types": "./index.d.ts",
+  "sideEffects": false,
+  "dependencies": {
+    "tslib": "^2.3.0"
+  }
+}

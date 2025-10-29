@@ -1,3 +1,6 @@
+packages:
+  - apps/*
+  - packages/*
 ignoredBuiltDependencies:
   - '@parcel/watcher'
   - '@swc/core'

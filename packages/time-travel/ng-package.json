@@ -3,5 +3,6 @@
   "dest": "../../dist/packages/time-travel",
   "lib": {
     "entryFile": "src/index.ts"
-  }
+  },
+  "allowedNonPeerDependencies": ["@signaltree/shared"]
 }

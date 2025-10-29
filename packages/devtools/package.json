@@ -3,7 +3,7 @@
   "version": "3.0.2",
   "description": "Development and debugging tools for SignalTree. Redux DevTools integration, performance profiling, module tracking, and production-safe debugging.",
   "peerDependencies": {
-    "@angular/core": "^20.1.0",
+    "@angular/core": "^20.3.0",
     "@signaltree/core": "^3.0.0"
   },
   "sideEffects": false

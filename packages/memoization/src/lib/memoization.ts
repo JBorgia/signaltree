@@ -1,10 +1,11 @@
 import { isNodeAccessor, SignalTree } from '@signaltree/core';
+import { deepEqual, LRUCache } from '@signaltree/shared';
 
 /**
  * Extended SignalTree interface with memoization capabilities
  * Uses the same unconstrained recursive typing approach as core
  */
-interface MemoizedSignalTree<T> extends SignalTree<T> {
+export interface MemoizedSignalTree<T> extends SignalTree<T> {
   memoizedUpdate: (
     updater: (current: T) => Partial<T>,
     cacheKey?: string
@@ -31,35 +32,151 @@ interface CacheEntry<T> {
 const MAX_CACHE_SIZE = 1000;
 const DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes
 
+type MemoCacheStore<V> = {
+  get: (key: string) => V | undefined;
+  set: (key: string, value: V) => void;
+  delete: (key: string) => void;
+  clear: () => void;
+  size: () => number;
+  forEach: (callback: (value: V, key: string) => void) => void;
+  keys: () => IterableIterator<string>;
+};
+
 // Use Map for global cache management (we keep iteration for diagnostics).
 // Note: we avoid starting any global timers at module import to prevent
 // background timer leaks in long-running processes; cleanup is performed
 // opportunistically inside hot paths (probabilistic) or via explicit APIs.
-const memoizationCache = new Map<object, Map<string, CacheEntry<unknown>>>();
+const memoizationCache = new Map<object, MemoCacheStore<CacheEntry<unknown>>>();
 
-// Optional module-level handle for any externally-created cleanup interval.
-// Declared so references elsewhere (cleanup helpers) type-check across Node/browser.
-let cacheCleanupInterval: ReturnType<typeof setInterval> | undefined;
+function createMemoCacheStore<V>(
+  maxSize: number,
+  enableLRU: boolean
+): MemoCacheStore<V> {
+  if (enableLRU) {
+    const cache = new LRUCache<string, V>(maxSize);
+    const shadow = new Map<string, V>();
+
+    const pruneShadow = () => {
+      while (shadow.size > cache.size()) {
+        const oldestKey = shadow.keys().next().value;
+        if (oldestKey === undefined) {
+          break;
+        }
+        shadow.delete(oldestKey);
+      }
+    };
+
+    return {
+      get: (key) => {
+        const value = cache.get(key);
+        if (value !== undefined) {
+          shadow.set(key, value);
+        } else if (shadow.has(key)) {
+          shadow.delete(key);
+        }
+        return value;
+      },
+      set: (key, value) => {
+        cache.set(key, value);
+        shadow.set(key, value);
+        pruneShadow();
+      },
+      delete: (key) => {
+        cache.delete(key);
+        shadow.delete(key);
+      },
+      clear: () => {
+        cache.clear();
+        shadow.clear();
+      },
+      size: () => shadow.size,
+      forEach: (callback) => {
+        shadow.forEach((value, key) => callback(value, key));
+      },
+      keys: () => shadow.keys(),
+    };
+  }
+
+  const store = new Map<string, V>();
+  return {
+    get: (key) => store.get(key),
+    set: (key, value) => {
+      store.set(key, value);
+    },
+    delete: (key) => store.delete(key),
+    clear: () => store.clear(),
+    size: () => store.size,
+    forEach: (callback) => {
+      store.forEach((value, key) => callback(value, key));
+    },
+    keys: () => store.keys(),
+  };
+}
+
+function getCleanupInterval(
+  tree: object
+): ReturnType<typeof setInterval> | undefined {
+  return (
+    tree as {
+      _memoCleanupInterval?: ReturnType<typeof setInterval>;
+    }
+  )._memoCleanupInterval;
+}
+
+function setCleanupInterval(
+  tree: object,
+  interval?: ReturnType<typeof setInterval>
+): void {
+  if (interval === undefined) {
+    delete (
+      tree as {
+        _memoCleanupInterval?: ReturnType<typeof setInterval>;
+      }
+    )._memoCleanupInterval;
+    return;
+  }
+
+  (
+    tree as {
+      _memoCleanupInterval?: ReturnType<typeof setInterval>;
+    }
+  )._memoCleanupInterval = interval;
+}
+
+function clearCleanupInterval(tree: object): void {
+  const interval = getCleanupInterval(tree);
+  if (!interval) {
+    return;
+  }
+
+  try {
+    clearInterval(interval as unknown as number);
+  } catch {
+    /* best-effort cleanup */
+  }
+
+  setCleanupInterval(tree);
+}
+
+function resetMemoizationCaches(): void {
+  memoizationCache.forEach((cache, tree) => {
+    cache.clear();
+    clearCleanupInterval(tree);
+  });
+  memoizationCache.clear();
+}
 
 /**
  * Cleanup the cache interval on app shutdown
  */
 export function cleanupMemoizationCache(): void {
-  if (cacheCleanupInterval) {
-    try {
-      clearInterval(cacheCleanupInterval as unknown as number);
-    } catch {
-      /* best-effort cleanup */
-    }
-    cacheCleanupInterval = undefined;
-  }
-  memoizationCache.clear();
+  resetMemoizationCaches();
 }
 
 /**
  * Memoization configuration options
  */
-interface MemoizationConfig {
+export interface MemoizationConfig {
   enabled?: boolean;
   maxCacheSize?: number;
   ttl?: number; // Time to live in milliseconds
@@ -102,37 +219,6 @@ function shallowEqual(a: unknown, b: unknown): boolean {
   return false;
 }
 /**
- * Deep equality check for dependency comparison
- */
-function deepEqual(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-  if (a == null || b == null) return false;
-  if (typeof a !== typeof b) return false;
-
-  if (typeof a === 'object') {
-    const keysA = Object.keys(a as Record<string, unknown>);
-    const keysB = Object.keys(b as Record<string, unknown>);
-
-    if (keysA.length !== keysB.length) return false;
-
-    for (const key of keysA) {
-      if (!keysB.includes(key)) return false;
-      if (
-        !deepEqual(
-          (a as Record<string, unknown>)[key],
-          (b as Record<string, unknown>)[key]
-        )
-      ) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  return false;
-}
-
-/**
  * Generate cache key for memoization
  */
 function generateCacheKey(
@@ -172,41 +258,22 @@ export function memoize<TArgs extends unknown[], TReturn>(
   keyFn?: (...args: TArgs) => string,
   config: MemoizationConfig = {}
 ): (...args: TArgs) => TReturn {
-  const cache = new Map<string, CacheEntry<TReturn>>();
   const maxSize = config.maxCacheSize ?? MAX_CACHE_SIZE;
   const ttl = config.ttl ?? DEFAULT_TTL;
   // Use shallow equality by default to avoid expensive deep comparisons
   const equality = getEqualityFn(config.equality ?? 'shallow');
   // Disable LRU by default to avoid hidden CPU overhead
   const enableLRU = config.enableLRU ?? false;
+  const cache = createMemoCacheStore<CacheEntry<TReturn>>(maxSize, enableLRU);
 
   const cleanExpiredEntries = () => {
     if (!ttl) return; // Skip if TTL is disabled
     const now = Date.now();
-    for (const [key, entry] of cache.entries()) {
+    cache.forEach((entry, key) => {
       if (entry.timestamp && now - entry.timestamp > ttl) {
         cache.delete(key);
       }
-    }
-  };
-
-  const evictLRUEntries = () => {
-    if (!enableLRU || cache.size < maxSize) return;
-
-    // Find the least recently used entry (lowest hitCount)
-    let lruKey = '';
-    let minHitCount = Infinity;
-
-    for (const [key, entry] of cache.entries()) {
-      if (entry.hitCount < minHitCount) {
-        minHitCount = entry.hitCount;
-        lruKey = key;
-      }
-    }
-
-    if (lruKey) {
-      cache.delete(lruKey);
-    }
+    });
   };
 
   return (...args: TArgs): TReturn => {
@@ -230,11 +297,6 @@ export function memoize<TArgs extends unknown[], TReturn>(
         cached.hitCount += 1;
       }
       return cached.value;
-    }
-
-    // Evict entries if cache is too large (only if LRU is enabled)
-    if (enableLRU) {
-      evictLRUEntries();
     }
 
     const result = fn(...args);
@@ -421,30 +483,54 @@ export function withMemoization<T>(
   } = config;
 
   return (tree: SignalTree<T>): MemoizedSignalTree<T> => {
+    const originalTreeCall = tree.bind(tree);
+
+    const applyUpdateResult = (result: Partial<T>) => {
+      Object.entries(result).forEach(([propKey, value]) => {
+        const property = (tree.state as Record<string, unknown>)[propKey];
+        if (property && 'set' in (property as object)) {
+          (property as { set: (value: unknown) => void }).set(value);
+        } else if (isNodeAccessor(property)) {
+          (property as (value: unknown) => void)(value);
+        }
+      });
+    };
+
     if (!enabled) {
-      return tree as MemoizedSignalTree<T>;
+      const memoTree = tree as MemoizedSignalTree<T>;
+
+      memoTree.memoizedUpdate = (updater) => {
+        const currentState = originalTreeCall();
+        const result = updater(currentState);
+        applyUpdateResult(result);
+      };
+
+      memoTree.clearMemoCache = () => {
+        /* no-op when memoization disabled */
+      };
+
+      memoTree.getCacheStats = () => ({
+        size: 0,
+        hitRate: 0,
+        totalHits: 0,
+        totalMisses: 0,
+        keys: [],
+      });
+
+      return memoTree;
     }
 
     // Initialize cache for this tree
-    const cache = new Map<string, CacheEntry<unknown>>();
-    memoizationCache.set(tree as object, cache);
+    const cache = createMemoCacheStore<CacheEntry<Partial<T>>>(
+      maxCacheSize,
+      enableLRU
+    );
+    memoizationCache.set(
+      tree as object,
+      cache as unknown as MemoCacheStore<CacheEntry<unknown>>
+    );
 
     const equalityFn = getEqualityFn(equality);
-
-    // Limit cache size function
-    const enforceCacheLimit = () => {
-      if (!enableLRU || cache.size <= maxCacheSize) return;
-
-      // Remove oldest entries (simple LRU)
-      const entries = Array.from(cache.entries());
-      entries.sort((a, b) => (a[1].timestamp || 0) - (b[1].timestamp || 0));
-
-      const toRemove = entries.slice(0, cache.size - maxCacheSize + 1);
-      toRemove.forEach(([key]) => cache.delete(key));
-    };
-
-    // Store original callable tree function
-    const originalTreeCall = tree.bind(tree);
 
     // Add memoized update method
     (tree as MemoizedSignalTree<T>).memoizedUpdate = (
@@ -465,16 +551,7 @@ export function withMemoization<T>(
       if (cached && equalityFn(cached.deps, [currentState])) {
         // Apply cached result - use callable interface to set the partial update
         const cachedUpdate = cached.value as Partial<T>;
-        Object.entries(cachedUpdate).forEach(([propKey, value]) => {
-          const property = (tree.state as Record<string, unknown>)[propKey];
-          if (property && 'set' in (property as object)) {
-            // It's a WritableSignal - use .set()
-            (property as { set: (value: unknown) => void }).set(value);
-          } else if (isNodeAccessor(property)) {
-            // It's a NodeAccessor - use callable syntax
-            (property as (value: unknown) => void)(value);
-          }
-        });
+        applyUpdateResult(cachedUpdate);
         return;
       }
 
@@ -490,19 +567,7 @@ export function withMemoization<T>(
       });
 
       // Apply update using callable interface
-      Object.entries(result).forEach(([propKey, value]) => {
-        const property = (tree.state as Record<string, unknown>)[propKey];
-        if (property && 'set' in (property as object)) {
-          // It's a WritableSignal - use .set()
-          (property as { set: (value: unknown) => void }).set(value);
-        } else if (isNodeAccessor(property)) {
-          // It's a NodeAccessor - use callable syntax
-          (property as (value: unknown) => void)(value);
-        }
-      });
-
-      // Enforce cache limits after adding new entry
-      enforceCacheLimit();
+      applyUpdateResult(result);
     };
 
     // Add cache management methods
@@ -518,17 +583,17 @@ export function withMemoization<T>(
       let totalHits = 0;
       let totalMisses = 0;
 
-      for (const entry of cache.values()) {
+      cache.forEach((entry) => {
         totalHits += entry.hitCount || 0;
         // For simplicity, we'll estimate misses as half of hits
         totalMisses += Math.floor((entry.hitCount || 0) / 2);
-      }
+      });
 
       const hitRate =
         totalHits + totalMisses > 0 ? totalHits / (totalHits + totalMisses) : 0;
 
       return {
-        size: cache.size,
+        size: cache.size(),
         hitRate,
         totalHits,
         totalMisses,
@@ -537,23 +602,15 @@ export function withMemoization<T>(
     };
 
     // If we created a periodic cleanup for this tree, ensure callers can clear it
-    const maybeInterval = (
-      tree as unknown as {
-        _memoCleanupInterval?: ReturnType<typeof setInterval>;
-      }
-    )._memoCleanupInterval;
-    if (maybeInterval && typeof maybeInterval === 'number') {
+    const maybeInterval = getCleanupInterval(tree as object);
+    if (maybeInterval) {
       // When the tree cache is cleared, also clear the interval
       const origClear = (tree as MemoizedSignalTree<T>).clearMemoCache.bind(
         tree as MemoizedSignalTree<T>
       );
       (tree as MemoizedSignalTree<T>).clearMemoCache = (key?: string) => {
         origClear(key);
-        try {
-          clearInterval(maybeInterval as unknown as number);
-        } catch {
-          /* best-effort */
-        }
+        clearCleanupInterval(tree as object);
       };
     }
 
@@ -564,22 +621,18 @@ export function withMemoization<T>(
     if (ttl) {
       const cleanup = () => {
         const now = Date.now();
-        for (const [key, entry] of cache.entries()) {
+        cache.forEach((entry, key) => {
           if (entry.timestamp && now - entry.timestamp > ttl) {
             cache.delete(key);
           }
-        }
+        });
       };
 
       // Run cleanup periodically
       const intervalId = setInterval(cleanup, ttl);
 
       // Store interval ID for cleanup (handle Node.js vs browser differences)
-      (
-        tree as unknown as {
-          _memoCleanupInterval?: ReturnType<typeof setInterval>;
-        }
-      )._memoCleanupInterval = intervalId;
+      setCleanupInterval(tree as object, intervalId);
     }
 
     return tree as MemoizedSignalTree<T>;
@@ -640,23 +693,7 @@ export function withShallowMemoization<T>() {
  * Clear all memoization caches
  */
 export function clearAllCaches(): void {
-  // Clear all tree caches
-  memoizationCache.forEach((cache: Map<string, CacheEntry<unknown>>, tree) => {
-    cache.clear();
-    try {
-      const interval = (
-        tree as unknown as {
-          _memoCleanupInterval?: ReturnType<typeof setInterval>;
-        }
-      )._memoCleanupInterval;
-      if (interval) {
-        clearInterval(interval as unknown as number);
-      }
-    } catch {
-      /* best-effort */
-    }
-  });
-  memoizationCache.clear();
+  resetMemoizationCaches();
 }
 
 /**
@@ -674,13 +711,13 @@ export function getGlobalCacheStats(): {
   let totalHits = 0;
   let treeCount = 0;
 
-  memoizationCache.forEach((cache: Map<string, CacheEntry<unknown>>) => {
+  memoizationCache.forEach((cache) => {
     treeCount++;
-    totalSize += cache.size;
+    totalSize += cache.size();
 
-    for (const entry of cache.values()) {
+    cache.forEach((entry) => {
       totalHits += entry.hitCount || 0;
-    }
+    });
   });
 
   return {
