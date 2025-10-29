@@ -1,3 +1,5 @@
+import { isSignal } from '@angular/core';
+
 /**
  * PathIndex - Fast signal lookup using Trie data structure
  * @packageDocumentation
@@ -74,9 +76,9 @@ export class PathIndex<T extends object = WritableSignal<any>> {
    * @param path - Path segments
    * @param value - Value to store
    */
-  set(path: Path, value: T): void {
+  set(path: Path, signal: T): void {
     const pathStr = this.pathToString(path);
-    const ref = new WeakRef(value);
+    const ref = new WeakRef(signal);
 
     // Update trie
     let node = this.root;
@@ -266,13 +268,18 @@ export class PathIndex<T extends object = WritableSignal<any>> {
    * @param path - Current path (for recursion)
    */
   buildFromTree(tree: unknown, path: Path = []): void {
-    if (!tree || typeof tree !== 'object') {
+    if (!tree) {
       return;
     }
 
-    // Check if it's a signal
-    if (typeof tree === 'function' && 'set' in tree) {
+    // Check if it's a signal using Angular's isSignal
+    if (isSignal(tree)) {
       this.set(path, tree as T);
+      return;
+    }
+
+    // Only continue if it's an object (not a signal or primitive)
+    if (typeof tree !== 'object') {
       return;
     }
 
