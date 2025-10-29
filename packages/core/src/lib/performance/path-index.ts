@@ -57,7 +57,7 @@ class TrieNode<T> {
  * }
  * ```
  */
-export class PathIndex<T = WritableSignal<unknown>> {
+export class PathIndex<T extends object = WritableSignal<unknown>> {
   private root = new TrieNode<WeakRef<T>>();
   private pathCache = new Map<string, WeakRef<T>>();
   private stats = {
@@ -121,7 +121,7 @@ export class PathIndex<T = WritableSignal<unknown>> {
     }
 
     // Try trie
-    let node = this.root;
+    let node: TrieNode<WeakRef<T>> | undefined = this.root;
     for (const segment of path) {
       const key = String(segment);
       node = node.children.get(key);
@@ -168,7 +168,7 @@ export class PathIndex<T = WritableSignal<unknown>> {
     const results = new Map<string, T>();
 
     // Find the node at prefix
-    let node = this.root;
+    let node: TrieNode<WeakRef<T>> | undefined = this.root;
     for (const segment of prefix) {
       const key = String(segment);
       node = node.children.get(key);
@@ -196,7 +196,7 @@ export class PathIndex<T = WritableSignal<unknown>> {
     this.pathCache.delete(pathStr);
 
     // Remove from trie
-    let node = this.root;
+    let node: TrieNode<WeakRef<T>> | undefined = this.root;
     const nodes: TrieNode<WeakRef<T>>[] = [node];
 
     for (const segment of path) {

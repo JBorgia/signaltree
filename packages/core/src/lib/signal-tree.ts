@@ -3,6 +3,7 @@ import { computed, DestroyRef, effect, inject, isSignal, Signal, signal, Writabl
 import { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './constants';
 import { resolveEnhancerOrder } from './enhancers';
 import { SignalMemoryManager } from './memory/memory-manager';
+import { OptimizedUpdateEngine } from './performance/update-engine';
 import { SecurityValidator } from './security/security-validator';
 import { createLazySignalTree, equal, isBuiltInObject, unwrap } from './utils';
 
@@ -663,6 +664,26 @@ function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
       console.warn(SIGNAL_TREE_MESSAGES.PERFORMANCE_NOT_ENABLED);
     }
     return 0;
+  };
+
+  // Optimized update engine
+  let updateEngine: OptimizedUpdateEngine | null = null;
+
+  tree.updateOptimized = (updates: Partial<T>, options = {}) => {
+    // Lazy initialize the update engine
+    if (!updateEngine) {
+      updateEngine = new OptimizedUpdateEngine(tree.state);
+    }
+
+    // Perform optimized update
+    const result = updateEngine.update(tree.state, updates, options);
+
+    // If changes were made, rebuild the index
+    if (result.changed && result.stats) {
+      updateEngine.rebuildIndex(tree.state);
+    }
+
+    return result;
   };
 
   tree.getMetrics = (): PerformanceMetrics => {

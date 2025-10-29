@@ -328,6 +328,48 @@ export type SignalTree<T> = NodeAccessor<T> & {
   optimize(): void;
   clearCache(): void;
   invalidatePattern(pattern: string): number;
+
+  /**
+   * Optimized update using diff-based patching and batching.
+   * Only updates signals that actually changed, providing significant
+   * performance improvements for large trees and partial updates.
+   *
+   * @param updates - Partial updates to apply
+   * @param options - Update options (batching, equality, etc.)
+   * @returns Update result with performance metrics
+   *
+   * @example
+   * ```typescript
+   * const tree = signalTree({ users: largeUserList });
+   *
+   * // Only updates what changed
+   * const result = tree.updateOptimized({
+   *   users: { 0: { name: 'Updated' } }
+   * });
+   *
+   * console.log(result.changedPaths); // ['users.0.name']
+   * console.log(result.duration); // ~2ms
+   * ```
+   */
+  updateOptimized?(
+    updates: Partial<T>,
+    options?: {
+      batch?: boolean;
+      batchSize?: number;
+      maxDepth?: number;
+      ignoreArrayOrder?: boolean;
+      equalityFn?: (a: unknown, b: unknown) => boolean;
+    }
+  ): {
+    changed: boolean;
+    duration: number;
+    changedPaths: string[];
+    stats?: {
+      totalPaths: number;
+      optimizedPaths: number;
+      batchedUpdates: number;
+    };
+  };
   getMetrics(): PerformanceMetrics;
 
   /** Middleware */

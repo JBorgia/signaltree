@@ -1,14 +1,13 @@
-import { batch } from '../batching/batching';
-import { Change, ChangeType, DiffEngine, DiffOptions, type, type } from './diff-engine';
+import { ChangeType, DiffEngine } from './diff-engine';
 import { PathIndex } from './path-index';
 
+import type { WritableSignal } from '@angular/core';
+import type { Change, DiffOptions } from './diff-engine';
+import type { Path } from './path-index';
 /**
  * OptimizedUpdateEngine - High-performance tree updates
  * @packageDocumentation
  */
-
-import type { WritableSignal } from '@angular/core';
-import type { Path } from './path-index';
 /**
  * Update options
  */
@@ -117,11 +116,14 @@ export class OptimizedUpdateEngine {
     const startTime = performance.now();
 
     // Step 1: Generate diff to find actual changes
-    const diff = this.diffEngine.diff(tree, updates, {
-      maxDepth: options.maxDepth,
-      ignoreArrayOrder: options.ignoreArrayOrder,
-      equalityFn: options.equalityFn,
-    });
+    const diffOptions: Partial<DiffOptions> = {};
+    if (options.maxDepth !== undefined) diffOptions.maxDepth = options.maxDepth;
+    if (options.ignoreArrayOrder !== undefined)
+      diffOptions.ignoreArrayOrder = options.ignoreArrayOrder;
+    if (options.equalityFn !== undefined)
+      diffOptions.equalityFn = options.equalityFn;
+
+    const diff = this.diffEngine.diff(tree, updates, diffOptions);
 
     if (diff.changes.length === 0) {
       // No actual changes, skip update entirely
@@ -301,15 +303,14 @@ export class OptimizedUpdateEngine {
     const appliedPaths: string[] = [];
     let updateCount = 0;
 
+    // Process patches in batches
     for (const currentBatch of batches) {
-      batch(() => {
-        for (const patch of currentBatch) {
-          if (this.applyPatch(patch)) {
-            appliedPaths.push(patch.path.join('.'));
-            updateCount++;
-          }
+      for (const patch of currentBatch) {
+        if (this.applyPatch(patch)) {
+          appliedPaths.push(patch.path.join('.'));
+          updateCount++;
         }
-      });
+      }
     }
 
     return {
