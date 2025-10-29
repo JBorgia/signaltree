@@ -289,6 +289,24 @@ export type SignalTree<T> = NodeAccessor<T> & {
   with: WithMethod<T>;
   destroy(): void;
 
+  /**
+   * Dispose of the signal tree and clean up memory resources.
+   * Only available when using lazy signals (useLazySignals: true).
+   *
+   * This method:
+   * - Clears the memory manager cache (releases WeakRef references)
+   * - Calls the cleanup function on the lazy proxy
+   * - Allows garbage collection of unused signals
+   *
+   * @example
+   * ```typescript
+   * const tree = signalTree({ users: largeUserList }, { useLazySignals: true });
+   * // ... use tree
+   * tree.dispose(); // Clean up when done
+   * ```
+   */
+  dispose?(): void;
+
   /** Enhanced functionality */
   effect(fn: (tree: T) => void): void;
   subscribe(fn: (tree: T) => void): () => void;
