@@ -58,7 +58,17 @@ export interface DiffOptions {
 
   /** Custom equality function */
   equalityFn?: (a: unknown, b: unknown) => boolean;
+
+  /** Optional key validator for security (e.g., to prevent prototype pollution) */
+  keyValidator?: (key: string) => boolean;
 }
+
+/**
+ * Internal resolved options with required fields
+ */
+type ResolvedDiffOptions = Required<Omit<DiffOptions, 'keyValidator'>> & {
+  keyValidator?: (key: string) => boolean;
+};
 
 /**
  * DiffEngine
@@ -86,11 +96,12 @@ export interface DiffOptions {
  * ```
  */
 export class DiffEngine {
-  private defaultOptions: Required<DiffOptions> = {
+  private defaultOptions: ResolvedDiffOptions = {
     maxDepth: 100,
     detectDeletions: false,
     ignoreArrayOrder: false,
     equalityFn: (a, b) => a === b,
+    keyValidator: undefined,
   };
 
   /**
@@ -123,7 +134,7 @@ export class DiffEngine {
     path: Path,
     changes: Change[],
     visited: WeakSet<object>,
-    opts: Required<DiffOptions>,
+    opts: ResolvedDiffOptions,
     depth: number
   ): void {
     // Depth limit
@@ -174,6 +185,12 @@ export class DiffEngine {
 
     for (const key in updObj) {
       if (Object.prototype.hasOwnProperty.call(updObj, key)) {
+        // Validate key for security (e.g., prevent prototype pollution)
+        if (opts.keyValidator && !opts.keyValidator(key)) {
+          // Skip dangerous keys silently
+          continue;
+        }
+
         this.traverse(
           currObj[key],
           updObj[key],
@@ -212,7 +229,7 @@ export class DiffEngine {
     path: Path,
     changes: Change[],
     visited: WeakSet<object>,
-    opts: Required<DiffOptions>,
+    opts: ResolvedDiffOptions,
     depth: number
   ): void {
     if (!Array.isArray(curr)) {
@@ -242,7 +259,7 @@ export class DiffEngine {
     path: Path,
     changes: Change[],
     visited: WeakSet<object>,
-    opts: Required<DiffOptions>,
+    opts: ResolvedDiffOptions,
     depth: number
   ): void {
     // Check each index
@@ -288,7 +305,7 @@ export class DiffEngine {
     upd: unknown[],
     path: Path,
     changes: Change[],
-    opts: Required<DiffOptions>
+    opts: ResolvedDiffOptions
   ): void {
     // Build value sets
     const currSet = new Set(curr.map((v) => this.stringify(v)));

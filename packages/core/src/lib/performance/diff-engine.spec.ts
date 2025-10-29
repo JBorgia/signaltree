@@ -336,16 +336,6 @@ describe('DiffEngine', () => {
       expect(diff.hasChanges).toBe(true);
       expect(diff.changes[0].oldValue).toBeUndefined();
     });
-
-    it('should handle undefined values', () => {
-      const current = { value: undefined };
-      const updates = { value: 'defined' };
-
-      const diff = engine.diff(current, updates);
-
-      expect(diff.hasChanges).toBe(true);
-      expect(diff.changes[0].oldValue).toBeUndefined();
-    });
   });
 
   describe('performance', () => {
