@@ -1,3 +1,5 @@
+import { isSignal } from '@angular/core';
+
 import { ChangeType, DiffEngine } from './diff-engine';
 import { PathIndex } from './path-index';
 
@@ -330,7 +332,7 @@ export class OptimizedUpdateEngine {
   private applyPatch(patch: Patch, tree: unknown): boolean {
     try {
       // First, try to update via signal if available
-      if (patch.signal && this.isWritableSignal(patch.signal)) {
+      if (patch.signal && isSignal(patch.signal) && 'set' in patch.signal) {
         const currentValue = patch.signal();
 
         // Only update if value actually changed
@@ -339,7 +341,7 @@ export class OptimizedUpdateEngine {
         }
 
         // Update the signal - this will handle reactivity
-        patch.signal.set(patch.value);
+        (patch.signal as WritableSignal<unknown>).set(patch.value);
 
         // After successful ADD, update the index
         if (patch.type === ChangeType.ADD && patch.value !== undefined) {
@@ -347,9 +349,7 @@ export class OptimizedUpdateEngine {
         }
 
         return true;
-      }
-
-      // Fallback: Navigate to parent object and update directly
+      } // Fallback: Navigate to parent object and update directly
       let current: Record<string, unknown> = tree as Record<string, unknown>;
       for (let i = 0; i < patch.path.length - 1; i++) {
         const key = patch.path[i];
@@ -373,17 +373,6 @@ export class OptimizedUpdateEngine {
       console.error(`Failed to apply patch at ${patch.path.join('.')}:`, error);
       return false;
     }
-  }
-
-  /**
-   * Type guard to check if value is a WritableSignal
-   */
-  private isWritableSignal(value: unknown): value is WritableSignal<unknown> {
-    return (
-      typeof value === 'function' &&
-      'set' in value &&
-      typeof (value as WritableSignal<unknown>).set === 'function'
-    );
   }
   /**
    * Check equality
