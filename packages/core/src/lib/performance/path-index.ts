@@ -57,7 +57,8 @@ class TrieNode<T> {
  * }
  * ```
  */
-export class PathIndex<T extends object = WritableSignal<unknown>> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export class PathIndex<T extends object = WritableSignal<any>> {
   private root = new TrieNode<WeakRef<T>>();
   private pathCache = new Map<string, WeakRef<T>>();
   private stats = {

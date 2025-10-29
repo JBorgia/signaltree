@@ -142,8 +142,8 @@ export class OptimizedUpdateEngine {
 
     // Step 4: Apply patches with optional batching
     const result = options.batch
-      ? this.batchApplyPatches(sortedPatches, options.batchSize)
-      : this.applyPatches(sortedPatches);
+      ? this.batchApplyPatches(tree, sortedPatches, options.batchSize)
+      : this.applyPatches(tree, sortedPatches);
 
     const duration = performance.now() - startTime;
 
@@ -272,12 +272,12 @@ export class OptimizedUpdateEngine {
   /**
    * Applies patches directly (no batching)
    */
-  private applyPatches(patches: Patch[]): ApplyResult {
+  private applyPatches(tree: unknown, patches: Patch[]): ApplyResult {
     const appliedPaths: string[] = [];
     let updateCount = 0;
 
     for (const patch of patches) {
-      if (this.applyPatch(patch)) {
+      if (this.applyPatch(patch, tree)) {
         appliedPaths.push(patch.path.join('.'));
         updateCount++;
       }
@@ -293,7 +293,11 @@ export class OptimizedUpdateEngine {
   /**
    * Applies patches with batching for better performance
    */
-  private batchApplyPatches(patches: Patch[], batchSize = 50): ApplyResult {
+  private batchApplyPatches(
+    tree: unknown,
+    patches: Patch[],
+    batchSize = 50
+  ): ApplyResult {
     const batches: Patch[][] = [];
 
     for (let i = 0; i < patches.length; i += batchSize) {
@@ -306,7 +310,7 @@ export class OptimizedUpdateEngine {
     // Process patches in batches
     for (const currentBatch of batches) {
       for (const patch of currentBatch) {
-        if (this.applyPatch(patch)) {
+        if (this.applyPatch(patch, tree)) {
           appliedPaths.push(patch.path.join('.'));
           updateCount++;
         }
@@ -321,32 +325,35 @@ export class OptimizedUpdateEngine {
   }
 
   /**
-   * Applies a single patch
+   * Applies a single patch to the tree object
    */
-  private applyPatch(patch: Patch): boolean {
+  private applyPatch(patch: Patch, tree: unknown): boolean {
     try {
-      const signal = patch.signal || this.pathIndex.get(patch.path);
-
-      if (!signal) {
-        console.warn(`Signal not found for path: ${patch.path.join('.')}`);
-        return false;
+      // Navigate to parent object
+      let current: Record<string, unknown> = tree as Record<string, unknown>;
+      for (let i = 0; i < patch.path.length - 1; i++) {
+        const key = patch.path[i];
+        current = current[key] as Record<string, unknown>;
+        if (!current || typeof current !== 'object') {
+          return false;
+        }
       }
 
+      const lastKey = patch.path[patch.path.length - 1];
+
       // Only update if value actually changed
-      const currentValue = signal();
-      if (this.isEqual(currentValue, patch.value)) {
+      if (this.isEqual(current[lastKey], patch.value)) {
         return false;
       }
 
       // Apply update
-      signal.set(patch.value);
+      current[lastKey] = patch.value;
       return true;
     } catch (error) {
       console.error(`Failed to apply patch at ${patch.path.join('.')}:`, error);
       return false;
     }
   }
-
   /**
    * Check equality
    */
