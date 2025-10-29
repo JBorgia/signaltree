@@ -1,8 +1,9 @@
 import { isSignal, Signal, signal, WritableSignal } from '@angular/core';
 import { deepEqual, isBuiltInObject, parsePath } from '@signaltree/shared';
 
-import type { TreeNode, NodeAccessor } from './types';
+import { SignalMemoryManager } from './memory/memory-manager';
 
+import type { TreeNode, NodeAccessor } from './types';
 /** Symbol to mark callable signals - using global symbol to match across files */
 const CALLABLE_SIGNAL_SYMBOL = Symbol.for('NodeAccessor');
 
@@ -44,7 +45,8 @@ export function composeEnhancers<T>(
 export function createLazySignalTree<T extends object>(
   obj: T,
   equalityFn: (a: unknown, b: unknown) => boolean,
-  basePath = ''
+  basePath = '',
+  memoryManager?: SignalMemoryManager
 ): TreeNode<T> {
   const signalCache = new Map<string, WritableSignal<unknown>>();
   const nestedProxies = new Map<string, unknown>();
@@ -61,6 +63,11 @@ export function createLazySignalTree<T extends object>(
     nestedCleanups.clear();
     signalCache.clear();
     nestedProxies.clear();
+
+    // Clear from memory manager if provided
+    if (memoryManager) {
+      memoryManager.dispose();
+    }
   };
 
   const proxy = new Proxy(obj, {
@@ -84,6 +91,12 @@ export function createLazySignalTree<T extends object>(
 
       if (isSignal(value)) return value;
 
+      // Check memory manager cache first
+      if (memoryManager) {
+        const cached = memoryManager.getSignal(path);
+        if (cached) return cached;
+      }
+
       if (signalCache.has(path)) return signalCache.get(path);
       if (nestedProxies.has(path)) return nestedProxies.get(path);
 
@@ -98,7 +111,8 @@ export function createLazySignalTree<T extends object>(
           const nestedProxy = createLazySignalTree(
             value as Record<string, unknown>,
             equalityFn,
-            path
+            path,
+            memoryManager
           );
           nestedProxies.set(path, nestedProxy);
 
@@ -118,6 +132,12 @@ export function createLazySignalTree<T extends object>(
             path,
             fallbackSignal as unknown as WritableSignal<unknown>
           );
+
+          // Cache in memory manager
+          if (memoryManager) {
+            memoryManager.cacheSignal(path, fallbackSignal);
+          }
+
           return fallbackSignal;
         }
       }
@@ -125,6 +145,12 @@ export function createLazySignalTree<T extends object>(
       try {
         const newSignal = signal(value, { equal: equalityFn });
         signalCache.set(path, newSignal as unknown as WritableSignal<unknown>);
+
+        // Cache in memory manager
+        if (memoryManager) {
+          memoryManager.cacheSignal(path, newSignal);
+        }
+
         return newSignal;
       } catch (error) {
         console.warn(`Failed to create signal for path "${path}":`, error);

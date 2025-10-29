@@ -2,6 +2,7 @@ import { computed, DestroyRef, effect, inject, isSignal, Signal, signal, Writabl
 
 import { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './constants';
 import { resolveEnhancerOrder } from './enhancers';
+import { SignalMemoryManager } from './memory/memory-manager';
 import { SecurityValidator } from './security/security-validator';
 import { createLazySignalTree, equal, isBuiltInObject, unwrap } from './utils';
 
@@ -786,12 +787,17 @@ function create<T>(obj: T, config: TreeConfig = {}): SignalTree<T> {
   }
 
   let signalState: TreeNode<T>;
+  let memoryManager: SignalMemoryManager | undefined;
 
   try {
     if (useLazy && typeof obj === 'object') {
+      // Instantiate memory manager for lazy trees to enable automatic cleanup
+      memoryManager = new SignalMemoryManager();
       signalState = createLazySignalTree(
         obj as object,
-        equalityFn
+        equalityFn,
+        '', // basePath
+        memoryManager
       ) as TreeNode<T>;
     } else {
       signalState = createSignalStore(obj, equalityFn) as TreeNode<T>;
@@ -800,6 +806,7 @@ function create<T>(obj: T, config: TreeConfig = {}): SignalTree<T> {
     if (useLazy) {
       console.warn(SIGNAL_TREE_MESSAGES.LAZY_FALLBACK, error);
       signalState = createSignalStore(obj, equalityFn) as TreeNode<T>;
+      memoryManager = undefined; // Reset memory manager on fallback
     } else {
       throw error;
     }
@@ -834,6 +841,23 @@ function create<T>(obj: T, config: TreeConfig = {}): SignalTree<T> {
     enumerable: false,
   });
   Object.defineProperty(tree, '$', { value: signalState, enumerable: false });
+
+  // Add dispose() method for manual cleanup when using lazy signals
+  if (memoryManager) {
+    Object.defineProperty(tree, 'dispose', {
+      value: () => {
+        memoryManager?.dispose();
+        const cleanup = (
+          signalState as TreeNode<T> & { __cleanup__?: () => void }
+        ).__cleanup__;
+        if (typeof cleanup === 'function') {
+          cleanup();
+        }
+      },
+      enumerable: false,
+      writable: false,
+    });
+  }
 
   // Enhance tree with methods
   enhanceTree(tree, config);
