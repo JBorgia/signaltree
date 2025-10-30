@@ -1,8 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, effect } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { withBatching } from '@signaltree/batching';
-import { signalTree } from '@signaltree/core';
+import { signalTree, withBatching } from '@signaltree/core';
 
 import { generatePosts, generateUsers, Post, sleep, User } from '../../shared/models';
 

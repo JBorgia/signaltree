@@ -1,7 +1,5 @@
 import { computed, Injectable, signal } from '@angular/core';
-import { withBatching } from '@signaltree/batching';
-import { signalTree } from '@signaltree/core';
-import { withMemoization } from '@signaltree/memoization';
+import { signalTree, withBatching, withMemoization } from '@signaltree/core';
 
 /**
  * @fileoverview Comprehensive benchmarking suite for SignalTree Demo

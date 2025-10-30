@@ -803,9 +803,9 @@ count$ = this.query.select(state => state.count);`,
         complexity: 3,
         maintainability: 9,
         code: `import { signalTree } from '@signaltree/core';
-import { withBatching } from '@signaltree/batching';
+import { withBatching } from '@signaltree/core';
 // async behavior: use middleware helpers (e.g. createAsyncOperation / trackAsync)
-import { withEntities } from '@signaltree/entities';
+import { withEntities } from '@signaltree/core';
 
 const userTree = signalTree({
   users: [] as User[],

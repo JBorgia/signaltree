@@ -1,8 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { signalTree } from '@signaltree/core';
-import { createDevTree, createPresetConfig, getAvailablePresets, TreePreset } from '@signaltree/presets';
+import { createDevTree, createPresetConfig, getAvailablePresets, signalTree, TreePreset } from '@signaltree/core';
 
 import {
   SignalTreeBenchmarkService,

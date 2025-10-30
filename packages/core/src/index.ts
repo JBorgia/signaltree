@@ -93,18 +93,6 @@ export {
 // ============================================
 // MEMORY MANAGEMENT EXPORTS
 // ============================================
-
-/**
- * Memory management utilities for lazy-loaded signal trees
- * @see {@link SignalMemoryManager} for automatic cleanup and leak prevention
- */
-export {
-  SignalMemoryManager,
-  type MemoryStats,
-  type MemoryManagerConfig,
-} from './lib/memory/memory-manager';
-
-// ============================================
 // ENHANCER EXPORTS
 // ============================================
 
@@ -113,12 +101,97 @@ export {
  * @see {@link createEnhancer} for creating enhancers with metadata
  * @see {@link resolveEnhancerOrder} for dependency resolution
  */
-export { createEnhancer, resolveEnhancerOrder } from './lib/enhancers';
+export { createEnhancer, resolveEnhancerOrder } from './enhancers/index';
 
 /**
  * Enhancer metadata symbol for third-party compatibility
  */
 export { ENHANCER_META } from './lib/types';
+
+// ============================================
+// INDIVIDUAL ENHANCER EXPORTS
+// ============================================
+
+/**
+ * Batching enhancer for high-performance state updates
+ * @see {@link withBatching} for intelligent batching capabilities
+ */
+export {
+  withBatching,
+  withHighPerformanceBatching,
+  flushBatchedUpdates,
+  hasPendingUpdates,
+  getBatchQueueSize,
+} from './enhancers/batching/lib/batching';
+
+/**
+ * Memoization enhancer for performance optimization
+ * @see {@link withMemoization} for intelligent memoization capabilities
+ */
+export {
+  withMemoization,
+  withSelectorMemoization,
+  withComputedMemoization,
+  withDeepStateMemoization,
+  withHighFrequencyMemoization,
+  withHighPerformanceMemoization,
+  withLightweightMemoization,
+  withShallowMemoization,
+  memoize,
+  memoizeShallow,
+  memoizeReference,
+  cleanupMemoizationCache,
+  clearAllCaches,
+  getGlobalCacheStats,
+} from './enhancers/memoization/lib/memoization';
+
+/**
+ * Time travel enhancer for debugging and undo/redo functionality
+ * @see {@link withTimeTravel} for time travel capabilities
+ */
+export {
+  withTimeTravel,
+  enableTimeTravel,
+  getTimeTravel,
+  type TimeTravelInterface,
+} from './enhancers/time-travel/lib/time-travel';
+
+/**
+ * Entities enhancer for normalized collection helpers
+ * @see {@link withEntities}
+ */
+export {
+  withEntities,
+  enableEntities,
+  withHighPerformanceEntities,
+} from './enhancers/entities/lib/entities';
+
+/**
+ * Serialization enhancer for state persistence and restoration
+ * @see {@link withSerialization} for serialization capabilities
+ */
+export {
+  withSerialization,
+  enableSerialization,
+  withPersistence,
+  createStorageAdapter,
+  createIndexedDBAdapter,
+  applySerialization,
+  applyPersistence,
+} from './enhancers/serialization/lib/serialization';
+
+/**
+ * Preset configurations for common use cases
+ * @see {@link createPresetConfig} for preset configuration
+ */
+export {
+  TREE_PRESETS,
+  createPresetConfig,
+  validatePreset,
+  getAvailablePresets,
+  combinePresets,
+  createDevTree,
+} from './enhancers/presets/lib/presets';
 
 // ============================================
 // CONSTANTS EXPORTS

@@ -1,9 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { createSelector } from '@ngrx/store';
-import { withBatching } from '@signaltree/batching';
-import { signalTree } from '@signaltree/core';
-import { withMemoization } from '@signaltree/memoization';
+import { signalTree, withBatching, withMemoization } from '@signaltree/core';
 
 import { PerformanceGraphComponent } from '../../../shared/performance-graph/performance-graph.component';
 import { BenchmarkCalibrationService } from '../benchmark-calibration.service';

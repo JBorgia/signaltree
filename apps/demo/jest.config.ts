@@ -3,6 +3,13 @@ export default {
   preset: '../../jest.preset.js',
   setupFilesAfterEnv: ['<rootDir>/src/test-setup.ts'],
   coverageDirectory: '../../coverage/apps/demo',
+  testPathIgnorePatterns: ['demo-e2e'],
+  moduleNameMapper: {
+    '^@signaltree/(.*)$': '<rootDir>/../../packages/$1/dist/index.cjs',
+    '^@signaltree/core$': '<rootDir>/../../packages/core/dist/index.cjs',
+    '^@signaltree/core/(.*)$':
+      '<rootDir>/../../packages/core/dist/$1/index.cjs',
+  },
   transform: {
     '^.+\\.(ts|mjs|js|html)$': [
       'jest-preset-angular',

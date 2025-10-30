@@ -10,7 +10,8 @@
     "importHelpers": true,
     "target": "es2015",
     "module": "esnext",
-    "lib": ["es2021", "dom"],
+    "lib": ["es2015", "dom", "es2021"],
+    "downlevelIteration": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
@@ -18,22 +19,38 @@
     "baseUrl": ".",
     "types": ["@angular/core", "jest"],
     "paths": {
-      "@signaltree/batching": ["packages/batching/src/index.ts"],
+      "@signaltree/batching": ["packages/core/enhancers/batching/src/index.ts"],
       "@signaltree/callable-syntax": ["packages/callable-syntax/src/index.ts"],
       "@signaltree/callable-syntax/*": ["packages/callable-syntax/src/*"],
       "@signaltree/core": ["packages/core/src/index.ts"],
-      "@signaltree/devtools": ["packages/devtools/src/index.ts"],
-      "@signaltree/entities": ["packages/entities/src/index.ts"],
-      "@signaltree/memoization": ["packages/memoization/src/index.ts"],
-      "@signaltree/middleware": ["packages/middleware/src/index.ts"],
+      "@signaltree/core/enhancers": ["packages/core/enhancers/index.ts"],
+      "@signaltree/core/enhancers/*": [
+        "packages/core/enhancers/*/src/index.ts"
+      ],
+      "@signaltree/devtools": ["packages/core/enhancers/devtools/src/index.ts"],
+      "@signaltree/enterprise": ["packages/enterprise/src/index.ts"],
+      "@signaltree/entities": ["packages/core/enhancers/entities/src/index.ts"],
+      "@signaltree/memoization": [
+        "packages/core/enhancers/memoization/src/index.ts"
+      ],
+      "@signaltree/middleware": [
+        "packages/core/enhancers/middleware/src/index.ts"
+      ],
       "@signaltree/monolith": ["signaltree/src/index.ts"],
       "@signaltree/ng-forms": ["packages/ng-forms/src/index.ts"],
-      "@signaltree/presets": ["packages/presets/src/index.ts"],
-      "@signaltree/serialization": ["packages/serialization/src/index.ts"],
+      "@signaltree/presets": ["packages/core/enhancers/presets/src/index.ts"],
+      "@signaltree/serialization": [
+        "packages/core/enhancers/serialization/src/index.ts"
+      ],
       "@signaltree/shared": ["packages/shared/src/index.ts"],
       "@signaltree/shared/*": ["packages/shared/src/*"],
-      "@signaltree/time-travel": ["packages/time-travel/src/index.ts"]
+      "@signaltree/time-travel": [
+        "packages/core/enhancers/time-travel/src/index.ts"
+      ],
+      "@signaltree/types": ["packages/types/src/index.ts"],
+      "@signaltree/utils": ["packages/utils/src/index.ts"]
     }
   },
+  "include": ["types.d.ts"],
   "exclude": ["node_modules", "tmp"]
 }

@@ -1,7 +1,7 @@
 import { computed, DestroyRef, effect, inject, isSignal, Signal, signal, WritableSignal } from '@angular/core';
 
+import { resolveEnhancerOrder } from '../enhancers';
 import { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './constants';
-import { resolveEnhancerOrder } from './enhancers';
 import { SignalMemoryManager } from './memory/memory-manager';
 import { OptimizedUpdateEngine } from './performance/update-engine';
 import { SecurityValidator } from './security/security-validator';
@@ -29,6 +29,11 @@ import type {
 
 // Type alias for internal use
 type LocalUnknownEnhancer = EnhancerWithMeta<unknown, unknown>;
+
+// Extended tree type with optional updateEngine
+interface SignalTreeWithEngine<T> extends SignalTree<T> {
+  updateEngine?: OptimizedUpdateEngine;
+}
 
 // Note: Callable syntax is supported via optional build-time transform only.
 // No runtime Proxy wrapping is applied to writable signals to keep zero-cost semantics.
@@ -407,7 +412,7 @@ function createSignalStore<T>(
 function enhanceTree<T>(
   tree: SignalTree<T>,
   config: TreeConfig = {}
-): SignalTree<T> {
+): SignalTreeWithEngine<T> {
   const isLazy = config.useLazySignals ?? shouldUseLazy(tree.state, config);
 
   // with() enhancer composition
@@ -666,24 +671,30 @@ function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
     return 0;
   };
 
-  // Optimized update engine
-  let updateEngine: OptimizedUpdateEngine | null = null;
+  // Initialize optimized update engine
+  const treeWithEngine = tree as SignalTreeWithEngine<T>;
+  if (!treeWithEngine.updateEngine) {
+    treeWithEngine.updateEngine = new OptimizedUpdateEngine(tree);
+  }
 
   tree.updateOptimized = (updates: Partial<T>, options = {}) => {
-    // Lazy initialize the update engine
-    if (!updateEngine) {
-      updateEngine = new OptimizedUpdateEngine(tree.state);
+    const treeWithEngine = tree as SignalTreeWithEngine<T>;
+    const engine = treeWithEngine.updateEngine;
+    if (!engine) {
+      // Fallback to basic update
+      if (config.debugMode) {
+        console.warn(SIGNAL_TREE_MESSAGES.UPDATE_OPTIMIZED_NOT_AVAILABLE);
+      }
+      tree((current: T) => ({ ...current, ...updates }));
+      return {
+        changed: true,
+        duration: 0,
+        changedPaths: Object.keys(updates),
+        stats: undefined,
+      };
     }
 
-    // Perform optimized update
-    const result = updateEngine.update(tree.state, updates, options);
-
-    // If changes were made, rebuild the index
-    if (result.changed && result.stats) {
-      updateEngine.rebuildIndex(tree.state);
-    }
-
-    return result;
+    return engine.update(tree(), updates, options);
   };
 
   tree.getMetrics = (): PerformanceMetrics => {
@@ -812,7 +823,6 @@ function create<T>(obj: T, config: TreeConfig = {}): SignalTree<T> {
 
   try {
     if (useLazy && typeof obj === 'object') {
-      // Instantiate memory manager for lazy trees to enable automatic cleanup
       memoryManager = new SignalMemoryManager();
       signalState = createLazySignalTree(
         obj as object,
@@ -863,7 +873,7 @@ function create<T>(obj: T, config: TreeConfig = {}): SignalTree<T> {
   });
   Object.defineProperty(tree, '$', { value: signalState, enumerable: false });
 
-  // Add dispose() method for manual cleanup when using lazy signals
+  // Add dispose() method for manual cleanup when using lazy signals (stub)
   if (memoryManager) {
     Object.defineProperty(tree, 'dispose', {
       value: () => {

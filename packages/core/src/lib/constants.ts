@@ -42,6 +42,7 @@ const DEV_MESSAGES = {
   ASYNC_ACTIONS_NOT_AVAILABLE: 'async actions missing',
   TIME_TRAVEL_NOT_AVAILABLE: 'time travel missing',
   OPTIMIZE_NOT_AVAILABLE: 'optimize missing',
+  UPDATE_OPTIMIZED_NOT_AVAILABLE: 'update optimized missing',
   CACHE_NOT_AVAILABLE: 'cache missing',
   PERFORMANCE_NOT_ENABLED: 'performance disabled',
   ENHANCER_ORDER_FAILED: 'enhancer order failed',

@@ -182,7 +182,7 @@ export type ChainResult<
   E extends Array<EnhancerWithMeta<unknown, unknown>>
 > = E extends [infer H, ...infer R]
   ? // If enhancer accepts SignalTree<any> (non-generic enhancer), treat it as compatible
-    H extends EnhancerWithMeta<SignalTree<any>, infer O>
+    H extends EnhancerWithMeta<SignalTree<unknown>, infer O>
     ? R extends Array<EnhancerWithMeta<unknown, unknown>>
       ? ChainResult<O, R>
       : O
@@ -191,69 +191,26 @@ export type ChainResult<
       ? R extends Array<EnhancerWithMeta<unknown, unknown>>
         ? ChainResult<O, R>
         : O
-      : any
+      : unknown
     : unknown
   : Start;
 
 /**
- * Overload set for .with() method
+ * Simplified overload set for .with() method
+ * Reduced from 20+ complex overloads to basic patterns that TypeScript can infer.
+ * For complex enhancer chains, use applyEnhancer() helper or type assertions.
  */
 export interface WithMethod<T> {
   (): SignalTree<T>;
-  <O1>(e1: (input: SignalTree<T>) => O1): O1;
-  // Accept a generic enhancer function like `function <U>(tree: SignalTree<U>): R`
+  <O>(enhancer: (input: SignalTree<T>) => O): O;
   <O1, O2>(e1: (input: SignalTree<T>) => O1, e2: (input: O1) => O2): O2;
   <O1, O2, O3>(
     e1: (input: SignalTree<T>) => O1,
     e2: (input: O1) => O2,
     e3: (input: O2) => O3
   ): O3;
-  <O1, O2, O3, O4>(
-    e1: (input: SignalTree<T>) => O1,
-    e2: (input: O1) => O2,
-    e3: (input: O2) => O3,
-    e4: (input: O3) => O4
-  ): O4;
-  // Overloads for EnhancerWithMeta form so enhancers exported with metadata
-  <O1>(e1: EnhancerWithMeta<SignalTree<T>, O1>): O1;
-  // Accept enhancers that operate on SignalTree<any> (helps non-generic enhancers)
-  <O1>(e1: EnhancerWithMeta<SignalTree<any>, O1>): O1;
-  // Generic overload to accept EnhancerWithMeta starting from Start type
-  <O1>(e1: EnhancerWithMeta<SignalTree<T>, O1>): O1;
-  <O1>(
-    e1: EnhancerWithMeta<SignalTree<any>, O1>,
-    e2: EnhancerWithMeta<O1, unknown>
-  ): unknown;
-  <O1, O2>(
-    e1: EnhancerWithMeta<SignalTree<T>, O1>,
-    e2: EnhancerWithMeta<O1, O2>
-  ): O2;
-  <O1, O2>(
-    e1: EnhancerWithMeta<SignalTree<any>, O1>,
-    e2: EnhancerWithMeta<O1, O2>
-  ): O2;
-  <O1, O2, O3>(
-    e1: EnhancerWithMeta<SignalTree<T>, O1>,
-    e2: EnhancerWithMeta<O1, O2>,
-    e3: EnhancerWithMeta<O2, O3>
-  ): O3;
-  <O1, O2, O3>(
-    e1: EnhancerWithMeta<SignalTree<any>, O1>,
-    e2: EnhancerWithMeta<O1, O2>,
-    e3: EnhancerWithMeta<O2, O3>
-  ): O3;
-  <O1, O2, O3, O4>(
-    e1: EnhancerWithMeta<SignalTree<T>, O1>,
-    e2: EnhancerWithMeta<O1, O2>,
-    e3: EnhancerWithMeta<O2, O3>,
-    e4: EnhancerWithMeta<O3, O4>
-  ): O4;
-  <O1, O2, O3, O4>(
-    e1: EnhancerWithMeta<SignalTree<any>, O1>,
-    e2: EnhancerWithMeta<O1, O2>,
-    e3: EnhancerWithMeta<O2, O3>,
-    e4: EnhancerWithMeta<O3, O4>
-  ): O4;
+  // Basic EnhancerWithMeta overloads
+  <O>(enhancer: EnhancerWithMeta<SignalTree<T>, O>): O;
   <O1, O2>(
     e1: EnhancerWithMeta<SignalTree<T>, O1>,
     e2: EnhancerWithMeta<O1, O2>
@@ -263,12 +220,6 @@ export interface WithMethod<T> {
     e2: EnhancerWithMeta<O1, O2>,
     e3: EnhancerWithMeta<O2, O3>
   ): O3;
-  <O1, O2, O3, O4>(
-    e1: EnhancerWithMeta<SignalTree<T>, O1>,
-    e2: EnhancerWithMeta<O1, O2>,
-    e3: EnhancerWithMeta<O2, O3>,
-    e4: EnhancerWithMeta<O3, O4>
-  ): O4;
 }
 
 // ============================================

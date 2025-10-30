@@ -1,7 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { withBatching } from '@signaltree/batching';
-import { signalTree } from '@signaltree/core';
-import { withMemoization } from '@signaltree/memoization';
+import { signalTree, withBatching, withMemoization } from '@signaltree/core';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**

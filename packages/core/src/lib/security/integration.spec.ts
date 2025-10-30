@@ -1,5 +1,5 @@
 import { signalTree } from '../signal-tree';
-import { SecurityPresets } from './security-validator';
+import { SecurityEvent, SecurityPresets } from './security-validator';
 
 /**
  * Integration tests for SecurityValidator with signalTree
@@ -327,7 +327,7 @@ describe('SecurityValidator Integration', () => {
           {
             security: {
               preventFunctions: true,
-              onSecurityEvent: (event) => {
+              onSecurityEvent: (event: SecurityEvent) => {
                 events.push({
                   type: event.type,
                   reason: event.reason,
@@ -358,7 +358,8 @@ describe('SecurityValidator Integration', () => {
               preventPrototypePollution: true,
               preventXSS: false,
               preventFunctions: true,
-              onSecurityEvent: (event) => events.push({ type: event.type }),
+              onSecurityEvent: (event: SecurityEvent) =>
+                events.push({ type: event.type }),
             },
           }
         );

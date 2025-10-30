@@ -1,0 +1,24 @@
+{
+  "name": "@signaltree/types",
+  "version": "1.0.0",
+  "description": "TypeScript type definitions for SignalTree.",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "keywords": [
+    "signaltree",
+    "types",
+    "typescript"
+  ],
+  "author": "SignalTree",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.3.0"
+  }
+}
