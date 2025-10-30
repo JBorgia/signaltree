@@ -43,16 +43,16 @@ describe('Core Demo Component', () => {
     fixture.detectChanges();
 
     // Initial state
-    const initialActive = component.activeTodos();
-    const initialCompleted = component.completedTodos();
+    const initialActive = component.activeCount();
+    const initialCompleted = component.completedCount();
 
     // Add a todo
     component.newTodoTitle = 'Reactive Test';
     component.addTodo();
 
     // Should have one more active todo
-    expect(component.activeTodos()).toBe(initialActive + 1);
-    expect(component.completedTodos()).toBe(initialCompleted);
+    expect(component.activeCount()).toBe(initialActive + 1);
+    expect(component.completedCount()).toBe(initialCompleted);
 
     // Toggle the todo
     const newTodo = component
@@ -62,8 +62,8 @@ describe('Core Demo Component', () => {
       component.toggleTodo(newTodo.id);
 
       // Should now have one more completed todo and one less active
-      expect(component.activeTodos()).toBe(initialActive);
-      expect(component.completedTodos()).toBe(initialCompleted + 1);
+      expect(component.activeCount()).toBe(initialActive);
+      expect(component.completedCount()).toBe(initialCompleted + 1);
     }
   });
 
