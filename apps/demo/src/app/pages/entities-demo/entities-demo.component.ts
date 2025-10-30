@@ -1,8 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { signalTree } from '@signaltree/core';
-import { withEntities } from '@signaltree/entities';
+import { signalTree, withEntities } from '@signaltree/core';
 
 import { generatePosts, generateUsers, Post, User } from '../../shared/models';
 

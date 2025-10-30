@@ -1,18 +1,16 @@
 import { computed, Injectable } from '@angular/core';
 import {
+  signalTree,
   withBatching,
-  withHighPerformanceBatching,
-} from '@signaltree/batching';
-import { signalTree } from '@signaltree/core';
-import {
   withComputedMemoization,
+  withHighPerformanceBatching,
   withLightweightMemoization,
   withMemoization,
   withSelectorMemoization,
+  withSerialization,
   withShallowMemoization,
-} from '@signaltree/memoization';
-import { withSerialization } from '@signaltree/serialization';
-import { withTimeTravel } from '@signaltree/time-travel';
+  withTimeTravel,
+} from '@signaltree/core';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
 import { createYieldToUI } from '../shared/benchmark-utils';

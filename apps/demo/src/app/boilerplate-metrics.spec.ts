@@ -146,9 +146,9 @@ const count = signal(0);
         maintainabilityScore: 9,
         example: `
 import { signalTree } from '@signaltree/core';
-import { withBatching } from '@signaltree/batching';
+import { withBatching } from '@signaltree/core';
 // async removed: recommend middleware/manual helpers for loading/error states
-import { withEntities } from '@signaltree/entities';
+import { withEntities } from '@signaltree/core';
 
 const userTree = signalTree({
   users: [] as User[],

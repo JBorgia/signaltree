@@ -8,13 +8,23 @@
     ".": {
       "types": "./index.d.ts",
       "import": "./index.js",
+      "require": "./index.cjs",
       "default": "./index.js"
     },
     "./package.json": "./package.json"
   },
   "types": "./index.d.ts",
+  "main": "./index.cjs",
+  "module": "./index.js",
   "sideEffects": false,
   "dependencies": {
     "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-typescript": "^11.1.5",
+    "rollup": "^4.9.6",
+    "rollup-plugin-dts": "^6.1.0"
   }
 }

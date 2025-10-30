@@ -1,8 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { signalTree } from '@signaltree/core';
-import { withTimeTravel } from '@signaltree/time-travel';
+import { signalTree, withTimeTravel } from '@signaltree/core';
 
 interface Todo {
   id: number;
@@ -14,6 +13,36 @@ interface AppState {
   counter: number;
   message: string;
   todos: Todo[];
+}
+
+interface TimeTravelEntry {
+  action: string;
+  timestamp: number;
+  state: AppState;
+  payload?: unknown;
+}
+
+interface TimeTravelInterface {
+  undo(): boolean;
+  redo(): boolean;
+  getHistory(): TimeTravelEntry[];
+  resetHistory(): void;
+  jumpTo(index: number): boolean;
+  getCurrentIndex(): number;
+  canUndo(): boolean;
+  canRedo(): boolean;
+}
+
+interface TimeTravelTree {
+  state: {
+    counter: { (): number; set(value: number): void };
+    message: { (): string; set(value: string): void };
+    todos: { (): Todo[]; set(value: Todo[]): void };
+  };
+  __timeTravel: TimeTravelInterface;
+  undo(): void;
+  redo(): void;
+  jumpTo(index: number): void;
 }
 
 @Component({
@@ -34,7 +63,7 @@ export class TimeTravelDemoComponent {
       { id: 2, title: 'Try Time Travel', completed: false },
       { id: 3, title: 'Build Something Amazing', completed: false },
     ],
-  }).with(withTimeTravel({ maxHistorySize: 50 }));
+  }).with(withTimeTravel({ maxHistorySize: 50 })) as TimeTravelTree;
 
   // Type-safe tree updater
   private updateTree = this.tree as unknown as (
@@ -64,8 +93,10 @@ export class TimeTravelDemoComponent {
   }
 
   // Computed signals
-  activeTodos = computed(() => this.todos().filter((t) => !t.completed));
-  completedTodos = computed(() => this.todos().filter((t) => t.completed));
+  activeTodos = computed(() => this.todos().filter((t: Todo) => !t.completed));
+  completedTodos = computed(() =>
+    this.todos().filter((t: Todo) => t.completed)
+  );
 
   historyLength = computed(() => this.history().length);
   currentState = computed(() => this.history()[this.currentIndex()]);
