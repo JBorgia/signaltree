@@ -6,12 +6,12 @@
   "tags": ["npm:private", "scope:shared"],
   "targets": {
     "build": {
-      "executor": "@nx/rollup:rollup",
+      "executor": "@nx/js:tsc",
       "outputs": ["{options.outputPath}"],
       "options": {
-        "main": "packages/shared/src/index.ts",
         "outputPath": "dist/packages/shared",
-        "rollupConfig": "packages/shared/rollup.config.js"
+        "main": "packages/shared/src/index.ts",
+        "tsConfig": "packages/shared/tsconfig.lib.json"
       }
     },
     "test": {

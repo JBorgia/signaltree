@@ -4,9 +4,64 @@ import { patchState, signalState } from '@ngrx/signals';
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
 import { createYieldToUI } from '../shared/benchmark-utils';
 
+// ...existing code...
 /* eslint-disable @typescript-eslint/no-explicit-any */
 @Injectable({ providedIn: 'root' })
 export class NgRxSignalsBenchmarkService {
+  /**
+   * Standardized cold start and memory profiling
+   */
+  async runInitializationBenchmark(): Promise<{
+    durationMs: number;
+    memoryDeltaMB: number | 'N/A';
+  }> {
+    const { runTimed } = await import('./benchmark-runner');
+    const stateFactory = () => ({
+      deepNested: {},
+      largeArray: [],
+      computedValues: { base: 0, factors: [] },
+      batchData: {},
+    });
+    const result = await runTimed(
+      () => {
+        // Simulate NgRx Signals store initialization
+        signalState(stateFactory());
+      },
+      { operations: 1, trackMemory: true, label: 'ngrx-signals-init' }
+    );
+    return {
+      durationMs: result.durationMs,
+      memoryDeltaMB:
+        typeof result.memoryDeltaMB === 'number' ? result.memoryDeltaMB : 'N/A',
+    };
+  }
+  /**
+   * Standardized cold start and memory profiling
+   */
+  async runInitializationBenchmark(): Promise<{
+    durationMs: number;
+    memoryDeltaMB: number | 'N/A';
+  }> {
+    const { runTimed } = await import('./benchmark-runner');
+    const stateFactory = () => ({
+      deepNested: {},
+      largeArray: [],
+      computedValues: { base: 0, factors: [] },
+      batchData: {},
+    });
+    const result = await runTimed(
+      () => {
+        // Simulate NgRx Signals store initialization
+        signalState(stateFactory());
+      },
+      { operations: 1, trackMemory: true, label: 'ngrx-signals-init' }
+    );
+    return {
+      durationMs: result.durationMs,
+      memoryDeltaMB:
+        typeof result.memoryDeltaMB === 'number' ? result.memoryDeltaMB : 'N/A',
+    };
+  }
   // Narrow typing for performance.memory when available
   private static PerfWithMemory = {} as Performance & {
     memory?: { jsHeapSizeLimit: number; usedJSHeapSize: number };

@@ -197,27 +197,19 @@ Use the orchestrator’s depth scenarios to understand performance trade-offs on
 
 ### Installation
 
-Choose the packages you need:
+Install the core package (all enhancers included):
 
 ```bash
-# Core package (required)
+# Core package (required, includes all enhancers)
 npm install @signaltree/core
 
-# Optional feature packages
-npm install @signaltree/batching        # Batch updates
-npm install @signaltree/memoization     # Deep caching
-npm install @signaltree/time-travel     # History management
-npm install @signaltree/ng-forms        # Form validation
-npm install @signaltree/devtools        # Debugging tools
-npm install @signaltree/entities        # Entity management
-npm install @signaltree/middleware      # Middleware chains
-// @signaltree/async removed; use middleware helpers in demos
-npm install @signaltree/presets         # Configuration presets
-npm install @signaltree/serialization   # State serialization
-
-# Or install a full-featured stack
-npm install @signaltree/core @signaltree/batching @signaltree/memoization @signaltree/time-travel @signaltree/ng-forms
+# Optional: Serialization, Angular forms, or callable syntax
+npm install @signaltree/serialization   # State persistence & SSR
+npm install @signaltree/ng-forms        # Angular forms integration
+npm install @signaltree/callable-syntax # Optional DX enhancement
 ```
+
+All enhancers (batching, memoization, middleware, entities, devtools, time-travel, presets) are now included in @signaltree/core. Import them from `@signaltree/core/enhancers/*` as needed.
 
 ### Usage example (deep nesting)
 
@@ -276,15 +268,9 @@ See [`@signaltree/callable-syntax`](./packages/callable-syntax/README.md) for se
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withBatching } from '@signaltree/batching';
-import { withMemoization } from '@signaltree/memoization';
-import { withMiddleware } from '@signaltree/middleware';
-// withAsync removed — async helpers moved to middleware package
-import { withEntities } from '@signaltree/entities';
-import { withDevtools } from '@signaltree/devtools';
-import { withTimeTravel } from '@signaltree/time-travel';
+import { withBatching, withMemoization, withEntities, withMiddleware, withDevTools, withTimeTravel, withPresets } from '@signaltree/core/enhancers';
 
-// Compose multiple features using pipe
+// Compose multiple features using .with()
 const tree = signalTree({
   users: [] as User[],
   posts: [] as Post[],
@@ -294,10 +280,10 @@ const tree = signalTree({
   withBatching(), // Batch updates for performance
   withMemoization(), // Intelligent caching
   withMiddleware(), // State interceptors
-  // withAsync removed — use middleware helpers for async operations
   withEntities(), // Enhanced CRUD operations
   withTimeTravel(), // Undo/redo functionality
-  withDevTools() // Development tools (auto-disabled in production)
+  withDevTools(), // Development tools (auto-disabled in production)
+  withPresets() // Pre-configured setups
 );
 
 // Batching: Multiple updates in single render cycle
@@ -449,6 +435,7 @@ SignalTree uses a modular architecture where each feature is an optional package
 - **@signaltree/entities** - Enhanced CRUD operations & entity management
 - **@signaltree/devtools** - Development tools & Redux DevTools integration
 - **@signaltree/time-travel** - Undo/redo functionality & state history
+- **@signaltree/enterprise** - Enterprise-grade optimizations for large-scale applications
 - **@signaltree/presets** - Pre-configured setups & common patterns
 - **@signaltree/ng-forms** - Complete Angular Forms integration
 
@@ -470,7 +457,7 @@ npm install @signaltree/core @signaltree/serialization
 npm install @signaltree/core @signaltree/batching @signaltree/memoization @signaltree/devtools @signaltree/time-travel
 
 # Full-featured (27.50KB) - All packages
-npm install @signaltree/core @signaltree/serialization @signaltree/batching @signaltree/memoization @signaltree/middleware @signaltree/entities @signaltree/devtools @signaltree/time-travel @signaltree/presets @signaltree/ng-forms
+npm install @signaltree/core @signaltree/serialization @signaltree/batching @signaltree/memoization @signaltree/middleware @signaltree/entities @signaltree/devtools @signaltree/time-travel @signaltree/enterprise @signaltree/presets @signaltree/ng-forms
 
 # Use presets for common combinations
 npm install @signaltree/core @signaltree/presets
@@ -489,6 +476,7 @@ npm install @signaltree/core @signaltree/presets
 | **[@signaltree/entities](./packages/entities)**           | Data Management  | Enhanced CRUD, filtering, querying               |
 | **[@signaltree/devtools](./packages/devtools)**           | Development      | Redux DevTools, debugging, monitoring            |
 | **[@signaltree/time-travel](./packages/time-travel)**     | History          | Undo/redo, snapshots, state persistence          |
+| **[@signaltree/enterprise](./packages/enterprise)**       | Enterprise       | Large-scale optimizations, bulk operations       |
 | **[@signaltree/presets](./packages/presets)**             | Convenience      | Pre-configured setups, common patterns           |
 | **[@signaltree/ng-forms](./packages/ng-forms)**           | Angular Forms    | Reactive forms, validation, form state           |
 
@@ -538,7 +526,7 @@ _Use when: Expensive computations, frequently accessed derived data_
 - Search and filtering interfaces
 
 ```typescript
-import { withSelectorMemoization, withComputedMemoization } from '@signaltree/memoization';
+import { withSelectorMemoization, withComputedMemoization } from '@signaltree/core';
 
 // Quick start with optimized presets (v3.0.2+)
 const tree = signalTree({
@@ -547,7 +535,7 @@ const tree = signalTree({
 }).with(withComputedMemoization()); // Balanced preset for computed properties
 
 // Or use custom configuration
-import { withMemoization } from '@signaltree/memoization';
+import { withMemoization } from '@signaltree/core';
 const customTree = signalTree(state).with(
   withMemoization({
     maxCacheSize: 200,
@@ -584,7 +572,7 @@ _Use when: Managing collections of data with IDs_
 - Any collection-based data
 
 ```typescript
-import { withEntities } from '@signaltree/entities';
+import { withEntities } from '@signaltree/core';
 
 const tree = signalTree({
   users: [] as User[],
@@ -720,7 +708,7 @@ _Use when: Development, debugging, monitoring_
 - Production monitoring (with careful configuration)
 
 ```typescript
-import { withDevtools } from '@signaltree/devtools';
+import { withDevtools } from '@signaltree/core';
 
 const tree = signalTree({
   app: { version: '1.0.0', environment: 'dev' },
@@ -2322,7 +2310,7 @@ const action = tree.asyncAction(async () => api.call());
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withBatching } from '@signaltree/batching';
+import { withBatching } from '@signaltree/core';
 
 const tree = signalTree(data).with(withBatching());
 
@@ -2354,7 +2342,7 @@ tree.clearMemoCache(); // Clear all
 ### Time Travel Package (@signaltree/time-travel)
 
 ```typescript
-import { withTimeTravel } from '@signaltree/time-travel';
+import { withTimeTravel } from '@signaltree/core';
 
 const tree = signalTree(data).with(withTimeTravel());
 

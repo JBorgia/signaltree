@@ -63,6 +63,7 @@ Based on SignalTree benchmark analysis:
 
 ```typescript
 // DON'T: Memoization adds overhead when values always change
+import { withMemoization } from '@signaltree/core/enhancers';
 const rapidTree = signalTree({
   counters: Array.from({ length: 50 }, () => ({ value: 0 })),
 }).with(withMemoization()); // ❌ Cache never hits
@@ -91,6 +92,7 @@ const directTree = signalTree({
 
 ```typescript
 // DO: Use shallow equality for object properties
+import { withShallowMemoization } from '@signaltree/core/enhancers';
 const nestedTree = signalTree({
   user: {
     profile: { settings: { theme: 'dark', lang: 'en' } },
@@ -201,6 +203,7 @@ const mobileTree = signalTree(state).with(
 
 ```typescript
 // More aggressive caching in production
+import { withHighPerformanceMemoization, withLightweightMemoization } from '@signaltree/core/enhancers';
 const productionTree = signalTree(state).with(isProduction ? withHighPerformanceMemoization() : withLightweightMemoization());
 ```
 

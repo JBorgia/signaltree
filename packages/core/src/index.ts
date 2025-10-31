@@ -181,6 +181,36 @@ export {
 } from './enhancers/serialization/lib/serialization';
 
 /**
+ * DevTools enhancer for development and debugging
+ * @see {@link withDevTools} for development tools and Redux DevTools integration
+ */
+export {
+  withDevTools,
+  enableDevTools,
+  withFullDevTools,
+  withProductionDevTools,
+} from './enhancers/devtools/lib/devtools';
+
+/**
+ * Middleware enhancer for state interceptors and async operations
+ * @see {@link withMiddleware} for middleware system and state interceptors
+ */
+export {
+  withMiddleware,
+  createLoggingMiddleware,
+  createValidationMiddleware,
+} from './enhancers/middleware/lib/middleware';
+
+/**
+ * Async operation helpers for middleware
+ * @see {@link createAsyncOperation} for async operation management
+ */
+export {
+  createAsyncOperation,
+  trackAsync,
+} from './enhancers/middleware/lib/async-helpers';
+
+/**
  * Preset configurations for common use cases
  * @see {@link createPresetConfig} for preset configuration
  */
