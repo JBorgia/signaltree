@@ -19,17 +19,17 @@
     "baseUrl": ".",
     "types": ["@angular/core", "jest"],
     "paths": {
-      "@signaltree/batching": ["packages/core/enhancers/batching/src/index.ts"],
+      "@signaltree/batching": ["packages/core/src/enhancers/batching/index.ts"],
       "@signaltree/callable-syntax": ["packages/callable-syntax/src/index.ts"],
       "@signaltree/callable-syntax/*": ["packages/callable-syntax/src/*"],
       "@signaltree/core": ["packages/core/src/index.ts"],
       "@signaltree/core/enhancers": ["packages/core/enhancers/index.ts"],
       "@signaltree/core/enhancers/*": [
-        "packages/core/enhancers/*/src/index.ts"
+        "packages/core/src/enhancers/*/index.ts"
       ],
-      "@signaltree/devtools": ["packages/core/enhancers/devtools/src/index.ts"],
+      "@signaltree/devtools": ["packages/core/src/enhancers/devtools/index.ts"],
       "@signaltree/enterprise": ["packages/enterprise/src/index.ts"],
-      "@signaltree/entities": ["packages/core/enhancers/entities/src/index.ts"],
+      "@signaltree/entities": ["packages/core/src/enhancers/entities/index.ts"],
       "@signaltree/memoization": [
         "packages/core/enhancers/memoization/src/index.ts"
       ],

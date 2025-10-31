@@ -483,10 +483,6 @@ export class BenchmarkService {
    */
   benchmarkComputations() {
     const entities = BenchmarkService.generateEntities(1000);
-    const tree = signalTree({
-      entities,
-      filter: { category: 'A', active: true },
-    }).with(withMemoization());
 
     const results = {
       withoutMemo: { first: 0, second: 0 },
@@ -518,7 +514,12 @@ export class BenchmarkService {
     });
 
     // With memoization
-    const memoizedCompute = tree.memoize(
+    const memoTree = signalTree({
+      entities,
+      filter: { category: 'A', active: true },
+    }).with(withMemoization());
+
+    const memoizedCompute = memoTree.memoize(
       (state: {
         entities: Array<Record<string, unknown>>;
         filter: { category: string; active: boolean };
