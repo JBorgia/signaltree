@@ -1,7 +1,5 @@
 import { computed, Injectable, signal } from '@angular/core';
-import { signalTree } from '@signaltree/core';
-import { withBatching } from '@signaltree/core/enhancers/batching';
-import { withMemoization } from '@signaltree/core/enhancers/memoization';
+import { signalTree, withBatching, withMemoization } from '@signaltree/core';
 
 /**
  * @fileoverview Comprehensive benchmarking suite for SignalTree Demo
@@ -51,11 +49,7 @@ export class BenchmarkService {
       os: nav.platform,
       cpu: nav.hardwareConcurrency || 4,
       memory: nav.deviceMemory,
-      powerState: (nav.getBattery?.() || Promise.resolve({ charging: true }))
-        .then((battery: { charging: boolean }) =>
-          battery.charging ? 'charging' : 'discharging'
-        )
-        .catch(() => 'unknown'),
+      powerState: 'unknown', // Will be resolved asynchronously
       isVisible: !document.hidden,
       devToolsOpen: this.detectDevTools(),
       timestamp: Date.now(),
@@ -318,7 +312,7 @@ export class BenchmarkService {
     // Shallow update (top level)
     results.shallow = BenchmarkService.measureTime(() => {
       (
-        tree as {
+        tree as unknown as {
           update: (
             fn: (state: Record<string, unknown>) => Record<string, unknown>
           ) => void;
@@ -332,7 +326,7 @@ export class BenchmarkService {
     // Medium depth update
     results.medium = BenchmarkService.measureTime(() => {
       (
-        tree as {
+        tree as unknown as {
           update: (
             fn: (state: Record<string, unknown>) => Record<string, unknown>
           ) => void;
@@ -349,7 +343,7 @@ export class BenchmarkService {
     // Deep update
     results.deep = BenchmarkService.measureTime(() => {
       (
-        tree as {
+        tree as unknown as {
           update: (
             fn: (state: Record<string, unknown>) => Record<string, unknown>
           ) => void;
@@ -377,7 +371,7 @@ export class BenchmarkService {
           // Try different batch methods
           if (
             typeof (
-              batchTree as {
+              batchTree as unknown as {
                 batchUpdate?: (
                   fn: (
                     state: Record<string, unknown>
@@ -387,7 +381,7 @@ export class BenchmarkService {
             ).batchUpdate === 'function'
           ) {
             (
-              batchTree as {
+              batchTree as unknown as {
                 batchUpdate: (
                   fn: (
                     state: Record<string, unknown>
@@ -404,7 +398,7 @@ export class BenchmarkService {
           } else {
             // Fallback to regular update
             (
-              batchTree as {
+              batchTree as unknown as {
                 update: (
                   fn: (
                     state: Record<string, unknown>
@@ -429,7 +423,7 @@ export class BenchmarkService {
           // Try different batch methods
           if (
             typeof (
-              batchTree as {
+              batchTree as unknown as {
                 batchUpdate?: (
                   fn: (
                     state: Record<string, unknown>
@@ -439,7 +433,7 @@ export class BenchmarkService {
             ).batchUpdate === 'function'
           ) {
             (
-              batchTree as {
+              batchTree as unknown as {
                 batchUpdate: (
                   fn: (
                     state: Record<string, unknown>
@@ -456,7 +450,7 @@ export class BenchmarkService {
           } else {
             // Fallback to regular update
             (
-              batchTree as {
+              batchTree as unknown as {
                 update: (
                   fn: (
                     state: Record<string, unknown>
@@ -507,9 +501,11 @@ export class BenchmarkService {
     const computedWithout = computed(() => {
       const state = regularTree();
       return state.entities.filter(
-        (e: unknown) =>
-          e.category === state.filter.category &&
-          e.active === state.filter.active
+        (e: Record<string, unknown>) =>
+          (e as { category: string }).category ===
+            (state.filter as { category: string }).category &&
+          (e as { active: boolean }).active ===
+            (state.filter as { active: boolean }).active
       );
     });
 
@@ -529,8 +525,8 @@ export class BenchmarkService {
       }) => {
         return state.entities.filter(
           (e: Record<string, unknown>) =>
-            e.category === state.filter.category &&
-            e.active === state.filter.active
+            (e as { category: string }).category === state.filter.category &&
+            (e as { active: boolean }).active === state.filter.active
         );
       },
       'filtered-entities'
@@ -573,11 +569,16 @@ export class BenchmarkService {
       results.eager.accessTime = BenchmarkService.measureTime(() => {
         try {
           // Safely access nested properties
-          const level5 = (eagerTree.$ as { [key: string]: unknown })
-            .level_5_item_0;
-          const level4 = level5?.level_4_item_0;
-          const level3 = level4?.level_3_item_0;
-          if (level3) level3();
+          const level5 = (eagerTree.$ as Record<string, unknown>)[
+            'level_5_item_0'
+          ];
+          const level4 = (level5 as Record<string, unknown>)?.[
+            'level_4_item_0'
+          ];
+          const level3 = (level4 as Record<string, unknown>)?.[
+            'level_3_item_0'
+          ];
+          if (level3 && typeof level3 === 'function') level3();
         } catch (e) {
           console.warn('Eager access failed:', e);
         }
@@ -594,11 +595,16 @@ export class BenchmarkService {
       results.lazy.accessTime = BenchmarkService.measureTime(() => {
         try {
           // Safely access nested properties
-          const level5 = (lazyTree.$ as { [key: string]: unknown })
-            .level_5_item_0;
-          const level4 = level5?.level_4_item_0;
-          const level3 = level4?.level_3_item_0;
-          if (level3) level3();
+          const level5 = (lazyTree.$ as Record<string, unknown>)[
+            'level_5_item_0'
+          ];
+          const level4 = (level5 as Record<string, unknown>)?.[
+            'level_4_item_0'
+          ];
+          const level3 = (level4 as Record<string, unknown>)?.[
+            'level_3_item_0'
+          ];
+          if (level3 && typeof level3 === 'function') level3();
         } catch (e) {
           console.warn('Lazy access failed:', e);
         }
@@ -607,11 +613,16 @@ export class BenchmarkService {
       results.lazy.secondAccess = BenchmarkService.measureTime(() => {
         try {
           // Safely access nested properties
-          const level5 = (lazyTree.$ as { [key: string]: unknown })
-            .level_5_item_0;
-          const level4 = level5?.level_4_item_0;
-          const level3 = level4?.level_3_item_0;
-          if (level3) level3();
+          const level5 = (lazyTree.$ as Record<string, unknown>)[
+            'level_5_item_0'
+          ];
+          const level4 = (level5 as Record<string, unknown>)?.[
+            'level_4_item_0'
+          ];
+          const level3 = (level4 as Record<string, unknown>)?.[
+            'level_3_item_0'
+          ];
+          if (level3 && typeof level3 === 'function') level3();
         } catch (e) {
           console.warn('Lazy second access failed:', e);
         }
@@ -664,8 +675,8 @@ export class BenchmarkService {
           return signal(obj);
         }
         const signals: Record<string, unknown> = {};
-        for (const key in obj) {
-          signals[key] = createSignals(obj[key]);
+        for (const key in obj as Record<string, unknown>) {
+          signals[key] = createSignals((obj as Record<string, unknown>)[key]);
         }
         return signals;
       };
@@ -679,8 +690,8 @@ export class BenchmarkService {
           return signal(obj);
         }
         const signals: Record<string, unknown> = {};
-        for (const key in obj) {
-          signals[key] = createSignals(obj[key]);
+        for (const key in obj as Record<string, unknown>) {
+          signals[key] = createSignals((obj as Record<string, unknown>)[key]);
         }
         return signals;
       };
@@ -746,11 +757,14 @@ export class BenchmarkService {
     };
 
     // Performance analysis
+    const initialization = results['initialization'] as Record<
+      string,
+      Record<string, number>
+    >;
     const avgInitTime =
-      (results.initialization.small.time +
-        results.initialization.medium.time +
-        results.initialization.large.time) /
-      3;
+      initialization['small']['time'] +
+      initialization['medium']['time'] +
+      initialization['large']['time'] / 3;
 
     if (avgInitTime < 5) {
       analysis.performance.grade = 'A+';
@@ -769,10 +783,15 @@ export class BenchmarkService {
     }
 
     // Memory analysis
-    if (results.lazyLoading.eager.memory > 0) {
+    const lazyLoading = results['lazyLoading'] as Record<
+      string,
+      Record<string, number>
+    >;
+    const eager = lazyLoading['eager'];
+    if (eager['memory'] > 0) {
+      const lazy = lazyLoading['lazy'];
       const memorySavings =
-        (results.lazyLoading.eager.memory - results.lazyLoading.lazy.memory) /
-        results.lazyLoading.eager.memory;
+        (eager['memory'] - lazy['memory']) / eager['memory'];
 
       if (memorySavings > 0.3) {
         analysis.memory.grade = 'A+';
@@ -791,14 +810,21 @@ export class BenchmarkService {
     }
 
     // Memoization effectiveness
-    if (results.computations.withMemo.cacheHitRate < 0.2) {
+    const computations = results['computations'] as Record<
+      string,
+      Record<string, number>
+    >;
+    const withMemo = computations['withMemo'];
+    if (withMemo['cacheHitRate'] < 0.2) {
       analysis.performance.insights.push('Excellent memoization efficiency');
     }
 
     // Batching effectiveness
-    if (results.updates.batch100 && results.updates.shallow) {
-      const batchEfficiency =
-        results.updates.batch100 / (results.updates.shallow * 100);
+    const updates = results['updates'] as Record<string, number>;
+    const batch100 = updates['batch100'];
+    const shallow = updates['shallow'];
+    if (batch100 && shallow) {
+      const batchEfficiency = batch100 / (shallow * 100);
       if (batchEfficiency < 0.1) {
         analysis.performance.insights.push(
           `Batching is ${(1 / batchEfficiency).toFixed(

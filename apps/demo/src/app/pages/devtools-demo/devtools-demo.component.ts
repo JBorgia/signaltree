@@ -1,8 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { signalTree } from '@signaltree/core';
-import { withDevTools } from '@signaltree/core/enhancers/devtools';
+import { signalTree, withDevTools } from '@signaltree/core';
 
 interface DevtoolsState {
   counter: number;

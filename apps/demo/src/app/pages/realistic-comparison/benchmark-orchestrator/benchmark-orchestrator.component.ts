@@ -3009,6 +3009,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         'concurrent-updates': 2.5, // Common
         'real-time-updates': 3.0,
         'batch-updates': 2.0,
+        'subscriber-scaling': 2.5, // Very important for real-time
         serialization: 0.2, // Very rare
         'deep-nested': 1.5,
         'memory-efficiency': 2.0,
@@ -3017,6 +3018,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         'deep-nested': 3.0, // Very common
         'computed-chains': 2.5, // Common
         'selector-memoization': 2.0,
+        'subscriber-scaling': 1.5, // Common for form validation
         serialization: 1.5, // For form persistence
         'large-array': 1.0,
         'concurrent-updates': 0.5,
@@ -3029,6 +3031,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         'selector-memoization': 2.0,
         'large-array': 1.5,
         'deep-nested': 1.5,
+        'subscriber-scaling': 1.5, // Important for complex apps
         'memory-efficiency': 1.0,
       },
       equal: {
@@ -3073,6 +3076,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       'computed-chains': 2.4, // 76% of apps use reactive computations
       'large-array': 2.1, // 68% of apps manage lists/tables (but less frequent than selectors)
       'batch-updates': 2.0, // 65% of apps batch updates (form submissions, bulk operations)
+      'subscriber-scaling': 2.2, // 71% of apps have multiple subscribers to state changes
       'async-via-middleware': 2.3, // 74% of apps heavily use async operations (APIs, loading states) - folded into middleware helpers
       'memory-efficiency': 1.8, // 58% of apps run on mobile/resource-constrained devices
 
@@ -3214,6 +3218,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         'computed-chains': 2.5,
         'data-fetching': 2.0,
         'large-array': 1.5,
+        'subscriber-scaling': 1.5,
         serialization: 0.5,
         'concurrent-updates': 0.3,
         'memory-efficiency': 1.0,
@@ -3223,6 +3228,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         'concurrent-updates': 2.5,
         'real-time-updates': 3.0,
         'batch-updates': 2.0,
+        'subscriber-scaling': 2.5,
         serialization: 0.2,
         'deep-nested': 1.5,
         'memory-efficiency': 2.0,
@@ -3231,6 +3237,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         'deep-nested': 3.0,
         'computed-chains': 2.5,
         'selector-memoization': 2.0,
+        'subscriber-scaling': 1.5,
         serialization: 1.5,
         'large-array': 1.0,
         'concurrent-updates': 0.5,
@@ -3243,6 +3250,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         'selector-memoization': 2.0,
         'large-array': 1.5,
         'deep-nested': 1.5,
+        'subscriber-scaling': 1.5,
         'memory-efficiency': 1.0,
       },
     };

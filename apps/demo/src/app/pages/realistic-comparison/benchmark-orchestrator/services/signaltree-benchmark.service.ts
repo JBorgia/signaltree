@@ -1517,4 +1517,47 @@ export class SignalTreeBenchmarkService {
 
     console.log('\n🎉 Enhanced Benchmark Demonstration Complete!');
   }
+
+  async runSubscriberScalingBenchmark(
+    subscriberCount: number
+  ): Promise<number> {
+    const start = performance.now();
+
+    // Create a signal tree with a simple counter state
+    const tree = signalTree({
+      counter: 0,
+      data: { value: 'initial' },
+    }).with(withBatching()); // Use batching for efficient updates
+
+    // Create multiple computed subscribers that depend on the counter
+    const subscribers: any[] = [];
+    for (let i = 0; i < subscriberCount; i++) {
+      // Each subscriber computes something based on the counter
+      const subscriber = computed(() => {
+        const counter = tree.state.counter();
+        // Simulate different computation patterns
+        return counter * (i + 1) + Math.sin(counter * 0.1);
+      });
+      subscribers.push(subscriber);
+    }
+
+    // Perform updates and measure fanout performance
+    const updates = Math.min(
+      1000,
+      BENCHMARK_CONSTANTS.ITERATIONS.SUBSCRIBER_SCALING || 1000
+    );
+    for (let i = 0; i < updates; i++) {
+      // Update the counter
+      tree.state.counter.set(i);
+
+      // Force all subscribers to recompute (simulate reading their values)
+      for (const subscriber of subscribers) {
+        subscriber();
+      }
+
+      // REMOVED: yielding during measurement for accuracy
+    }
+
+    return performance.now() - start;
+  }
 }

@@ -7,36 +7,14 @@ import {
   updateEntities,
   withEntities,
 } from '@ngneat/elf-entities';
+import { map } from 'rxjs';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
 import { createYieldToUI } from '../shared/benchmark-utils';
 
-// ...existing code...
 /* eslint-disable @typescript-eslint/no-explicit-any */
 @Injectable({ providedIn: 'root' })
 export class ElfBenchmarkService {
-  /**
-   * Standardized cold start and memory profiling
-   */
-  async runInitializationBenchmark(): Promise<{
-    durationMs: number;
-    memoryDeltaMB: number | 'N/A';
-  }> {
-    const { runTimed } = await import('./benchmark-runner');
-    // stateFactory removed (was unused)
-    const result = await runTimed(
-      () => {
-        // Simulate Elf store initialization
-        createStore({ name: 'elf-init' }, withEntities<any>());
-      },
-      { operations: 1, trackMemory: true, label: 'elf-init' }
-    );
-    return {
-      durationMs: result.durationMs,
-      memoryDeltaMB:
-        typeof result.memoryDeltaMB === 'number' ? result.memoryDeltaMB : 'N/A',
-    };
-  }
   /**
    * Standardized cold start and memory profiling
    */
@@ -633,5 +611,65 @@ export class ElfBenchmarkService {
     if (largeDataStore.query(getAllEntities()).length === -1)
       console.log('noop');
     return duration;
+  }
+
+  async runSubscriberScalingBenchmark(
+    subscriberCount: number
+  ): Promise<number> {
+    // Create a simple store for subscriber scaling test
+    interface SubscriberState {
+      id: number;
+      counter: number;
+      data: { value: string };
+    }
+
+    const store = createStore(
+      { name: 'elf-subscriber-scaling' },
+      withEntities<SubscriberState>()
+    );
+
+    // Initialize with one entity
+    store.update(
+      setEntities([{ id: 1, counter: 0, data: { value: 'initial' } }])
+    );
+
+    // Create multiple subscribers (RxJS subscriptions to queries)
+    const subscribers: any[] = [];
+    for (let i = 0; i < subscriberCount; i++) {
+      // Each subscriber computes something based on the counter
+      const subscription = store
+        .pipe(
+          // Select the counter from the first entity
+          map(() => store.query(getAllEntities())[0]?.counter || 0)
+        )
+        .subscribe((counter: number) => {
+          // Simulate computation work
+          const result = counter * (i + 1) + Math.sin(counter * 0.1);
+          // Prevent DCE
+          if (result === -1) console.log('noop');
+        });
+      subscribers.push(subscription);
+    }
+
+    const start = performance.now();
+
+    // Perform updates and measure fanout performance
+    const updates = Math.min(1000, 1000); // Use default since constant doesn't exist
+    for (let i = 0; i < updates; i++) {
+      // Update the counter (this will trigger all subscribers)
+      store.update(
+        updateEntities(1, (entity: SubscriberState) => ({
+          ...entity,
+          counter: i,
+        }))
+      );
+
+      // REMOVED: yielding during measurement for accuracy
+    }
+
+    // Clean up subscriptions
+    subscribers.forEach((sub) => sub.unsubscribe());
+
+    return performance.now() - start;
   }
 }
