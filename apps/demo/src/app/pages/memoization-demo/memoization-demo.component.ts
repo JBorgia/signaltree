@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { signalTree } from '@signaltree/core';
+import { signalTree, withMemoization } from '@signaltree/core';
 
 interface ComputationLog {
   id: number;
@@ -35,14 +35,21 @@ export class MemoizationDemoComponent {
     logs: [],
     computationCount: 0,
     cacheHitCount: 0,
-  });
+  }).with(
+    withMemoization({
+      enabled: true,
+      maxCacheSize: 100,
+      equality: 'shallow',
+      enableLRU: false,
+    })
+  );
 
   // State signals
-  inputValue = this.tree.state.inputValue;
-  multiplier = this.tree.state.multiplier;
-  logs = this.tree.state.logs;
-  computationCount = this.tree.state.computationCount;
-  cacheHitCount = this.tree.state.cacheHitCount;
+  inputValue = this.tree.$.inputValue;
+  multiplier = this.tree.$.multiplier;
+  logs = this.tree.$.logs;
+  computationCount = this.tree.$.computationCount;
+  cacheHitCount = this.tree.$.cacheHitCount;
 
   // Track previous values to detect cache hits
   private previousInput = signal<number | null>(null);
@@ -65,7 +72,7 @@ export class MemoizationDemoComponent {
     if (isCached) {
       // Use cached result
       result = this.previousResult() ?? 0;
-      this.tree.state.cacheHitCount.set(this.cacheHitCount() + 1);
+      this.tree.$.cacheHitCount.set(this.cacheHitCount() + 1);
     } else {
       // Simulate expensive computation
       let sum = 0;
@@ -73,7 +80,7 @@ export class MemoizationDemoComponent {
         sum += Math.sqrt(i);
       }
       result = input * mult + sum * 0; // Use sum to prevent optimization
-      this.tree.state.computationCount.set(this.computationCount() + 1);
+      this.tree.$.computationCount.set(this.computationCount() + 1);
 
       // Cache the values
       this.previousInput.set(input);
@@ -121,19 +128,19 @@ export class MemoizationDemoComponent {
 
   // Actions
   updateInput(value: number) {
-    this.tree.state.inputValue.set(value);
+    this.tree.$.inputValue.set(value);
   }
 
   updateMultiplier(value: number) {
-    this.tree.state.multiplier.set(value);
+    this.tree.$.multiplier.set(value);
   }
 
   triggerRecompute() {
     // Force a recompute by changing and reverting
     const current = this.inputValue();
-    this.tree.state.inputValue.set(current + 1);
+    this.tree.$.inputValue.set(current + 1);
     setTimeout(() => {
-      this.tree.state.inputValue.set(current);
+      this.tree.$.inputValue.set(current);
     }, 100);
   }
 
@@ -144,12 +151,12 @@ export class MemoizationDemoComponent {
   }
 
   clearLogs() {
-    this.tree.state.logs.set([]);
+    this.tree.$.logs.set([]);
   }
 
   resetStats() {
-    this.tree.state.computationCount.set(0);
-    this.tree.state.cacheHitCount.set(0);
+    this.tree.$.computationCount.set(0);
+    this.tree.$.cacheHitCount.set(0);
     this.clearLogs();
     this.clearCache();
   }
@@ -160,7 +167,7 @@ export class MemoizationDemoComponent {
       id: Date.now(),
       timestamp: Date.now(),
     };
-    this.tree.state.logs.set([newLog, ...this.logs()].slice(0, 50));
+    this.tree.$.logs.set([newLog, ...this.logs()].slice(0, 50));
   }
 
   formatDuration(ms: number): string {

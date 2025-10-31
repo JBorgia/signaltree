@@ -11,9 +11,54 @@ import {
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
 import { createYieldToUI } from '../shared/benchmark-utils';
 
+// ...existing code...
 /* eslint-disable @typescript-eslint/no-explicit-any */
 @Injectable({ providedIn: 'root' })
 export class ElfBenchmarkService {
+  /**
+   * Standardized cold start and memory profiling
+   */
+  async runInitializationBenchmark(): Promise<{
+    durationMs: number;
+    memoryDeltaMB: number | 'N/A';
+  }> {
+    const { runTimed } = await import('./benchmark-runner');
+    // stateFactory removed (was unused)
+    const result = await runTimed(
+      () => {
+        // Simulate Elf store initialization
+        createStore({ name: 'elf-init' }, withEntities<any>());
+      },
+      { operations: 1, trackMemory: true, label: 'elf-init' }
+    );
+    return {
+      durationMs: result.durationMs,
+      memoryDeltaMB:
+        typeof result.memoryDeltaMB === 'number' ? result.memoryDeltaMB : 'N/A',
+    };
+  }
+  /**
+   * Standardized cold start and memory profiling
+   */
+  async runInitializationBenchmark(): Promise<{
+    durationMs: number;
+    memoryDeltaMB: number | 'N/A';
+  }> {
+    const { runTimed } = await import('./benchmark-runner');
+    // stateFactory removed (was unused)
+    const result = await runTimed(
+      () => {
+        // Simulate Elf store initialization
+        createStore({ name: 'elf-init' }, withEntities<any>());
+      },
+      { operations: 1, trackMemory: true, label: 'elf-init' }
+    );
+    return {
+      durationMs: result.durationMs,
+      memoryDeltaMB:
+        typeof result.memoryDeltaMB === 'number' ? result.memoryDeltaMB : 'N/A',
+    };
+  }
   private yieldToUI = createYieldToUI();
 
   // Middleware benchmarks removed - Elf uses RxJS effects/operators which

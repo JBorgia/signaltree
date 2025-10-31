@@ -23,17 +23,11 @@ This document consolidates the feature overview and technical specifications for
 
 ## Package ecosystem (selected)
 
-- @signaltree/core: foundational signals, typing, and performance
+- @signaltree/core: foundational signals, typing, performance, and all enhancers (batching, memoization, middleware, entities, devtools, time-travel, presets)
 - @signaltree/serialization: persistence, snapshots, SSR hydration
-  // async helpers moved to middleware package
-- @signaltree/batching: recursive batching across deep trees
-- @signaltree/memoization: path-based memoization and cache management
-- @signaltree/time-travel: history, undo/redo, snapshots
-- @signaltree/entities: enhanced CRUD, querying, and pagination
-- @signaltree/middleware: state interceptors (before/after), validation, logging
-- @signaltree/devtools: inspection, action replay, performance tracking
 - @signaltree/ng-forms: Signal-first Angular forms (createFormTree, persistence, wizard flows)
-- @signaltree/presets: preconfigured tree setups
+
+// All enhancers are now included in @signaltree/core/enhancers/\* and should be imported from there.
 
 ## Technical specifications
 

@@ -13,6 +13,72 @@ import { createYieldToUI } from '../shared/benchmark-utils';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 @Injectable({ providedIn: 'root' })
 export class AkitaBenchmarkService {
+  /**
+   * Standardized cold start and memory profiling
+   */
+  async runInitializationBenchmark(): Promise<{
+    durationMs: number;
+    memoryDeltaMB: number | 'N/A';
+  }> {
+    const { runTimed } = await import('./benchmark-runner');
+    const stateFactory = () => ({
+      deepNested: {},
+      largeArray: [],
+      computedValues: { base: 0, factors: [] },
+      batchData: {},
+    });
+    const result = await runTimed(
+      () => {
+        // Simulate Akita store initialization
+        class InitStore extends Store<any> {
+          constructor() {
+            super(stateFactory());
+          }
+        }
+        const store = new InitStore();
+        void store;
+      },
+      { operations: 1, trackMemory: true, label: 'akita-init' }
+    );
+    return {
+      durationMs: result.durationMs,
+      memoryDeltaMB:
+        typeof result.memoryDeltaMB === 'number' ? result.memoryDeltaMB : 'N/A',
+    };
+  }
+  /**
+   * Standardized cold start and memory profiling
+   */
+  async runInitializationBenchmark(): Promise<{
+    durationMs: number;
+    memoryDeltaMB: number | 'N/A';
+  }> {
+    const { runTimed } = await import('./benchmark-runner');
+    const stateFactory = () => ({
+      deepNested: {},
+      largeArray: [],
+      computedValues: { base: 0, factors: [] },
+      batchData: {},
+    });
+    const result = await runTimed(
+      () => {
+        // Simulate Akita store initialization
+        class InitStore extends Store<any> {
+          constructor() {
+            super(stateFactory());
+          }
+        }
+        const store = new InitStore();
+        void store;
+      },
+      { operations: 1, trackMemory: true, label: 'akita-init' }
+    );
+    return {
+      durationMs: result.durationMs,
+      memoryDeltaMB:
+        typeof result.memoryDeltaMB === 'number' ? result.memoryDeltaMB : 'N/A',
+    };
+  }
   // Akita is entity-centric; we will use plain objects for nested/other cases
   private yieldToUI = createYieldToUI();
 

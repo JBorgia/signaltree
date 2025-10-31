@@ -5,6 +5,15 @@ export default {
   coverageDirectory: '../../coverage/apps/demo',
   testPathIgnorePatterns: ['demo-e2e'],
   moduleNameMapper: {
+    // Map enhancers root to its index.js
+    '^@signaltree/core/enhancers$':
+      '<rootDir>/../../packages/core/dist/enhancers/index.js',
+    // Map enhancers/devtools to its own index.js for named exports
+    '^@signaltree/core/enhancers/devtools$':
+      '<rootDir>/../../packages/core/dist/enhancers/devtools/index.js',
+    // Map any other enhancer submodule to its own index.js
+    '^@signaltree/core/enhancers/(.*)$':
+      '<rootDir>/../../packages/core/dist/enhancers/$1/index.js',
     '^@signaltree/(.*)$': '<rootDir>/../../packages/$1/dist/index.cjs',
     '^@signaltree/core$': '<rootDir>/../../packages/core/dist/index.cjs',
     '^@signaltree/core/(.*)$':

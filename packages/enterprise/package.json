@@ -5,9 +5,11 @@
   "type": "commonjs",
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
-  "dependencies": {
+  "peerDependencies": {
     "@angular/core": "^20.3.0",
-    "@signaltree/core": "workspace:*",
+    "@signaltree/core": "^3.0.0"
+  },
+  "dependencies": {
     "tslib": "^2.3.0"
   }
 }

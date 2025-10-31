@@ -15,6 +15,7 @@ import { map, mergeMap, switchMap, take, tap } from 'rxjs/operators';
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
 import { createYieldToUI } from '../shared/benchmark-utils';
 
+// ...existing code...
 // State interface for complex benchmarks
 interface User {
   id: number;
@@ -146,6 +147,58 @@ const benchmarkReducer = createReducer(
 
 @Injectable({ providedIn: 'root' })
 export class NgRxBenchmarkService {
+  /**
+   * Standardized cold start and memory profiling
+   */
+  async runInitializationBenchmark(): Promise<{
+    durationMs: number;
+    memoryDeltaMB: number | 'N/A';
+  }> {
+    const { runTimed } = await import('./benchmark-runner');
+    const stateFactory = () => ({
+      groups: [],
+      posts: [],
+      users: [],
+    });
+    const result = await runTimed(
+      () => {
+        // Simulate NgRx store initialization
+        createReducer(stateFactory());
+      },
+      { operations: 1, trackMemory: true, label: 'ngrx-init' }
+    );
+    return {
+      durationMs: result.durationMs,
+      memoryDeltaMB:
+        typeof result.memoryDeltaMB === 'number' ? result.memoryDeltaMB : 'N/A',
+    };
+  }
+  /**
+   * Standardized cold start and memory profiling
+   */
+  async runInitializationBenchmark(): Promise<{
+    durationMs: number;
+    memoryDeltaMB: number | 'N/A';
+  }> {
+    const { runTimed } = await import('./benchmark-runner');
+    const stateFactory = () => ({
+      groups: [],
+      posts: [],
+      users: [],
+    });
+    const result = await runTimed(
+      () => {
+        // Simulate NgRx store initialization
+        createReducer(stateFactory());
+      },
+      { operations: 1, trackMemory: true, label: 'ngrx-init' }
+    );
+    return {
+      durationMs: result.durationMs,
+      memoryDeltaMB:
+        typeof result.memoryDeltaMB === 'number' ? result.memoryDeltaMB : 'N/A',
+    };
+  }
   // Narrow typing for performance.memory when available
   private static PerfWithMemory = {} as Performance & {
     memory?: { jsHeapSizeLimit: number; usedJSHeapSize: number };

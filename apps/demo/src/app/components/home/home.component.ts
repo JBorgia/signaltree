@@ -160,25 +160,22 @@ export class HomeComponent {
     return this.features.filter((f) => f.category === category);
   }
 
-  quickStartCode = `// Install the core package (required)
+  quickStartCode = `# Install the core package (all enhancers included)
 npm install @signaltree/core
 
-// Optional feature packages
-npm install @signaltree/batching        # Batch updates
-npm install @signaltree/memoization     # Deep caching
-npm install @signaltree/time-travel     # History management
-npm install @signaltree/entities        # Entity management
-npm install @signaltree/middleware      # Middleware chains
-npm install @signaltree/serialization   # State persistence
-npm install @signaltree/devtools        # Debugging tools
-npm install @signaltree/ng-forms        # Form integration
-npm install @signaltree/presets         # Configuration presets
+# Optional: Serialization, Angular forms, or callable syntax
+npm install @signaltree/serialization   # State persistence & SSR
+npm install @signaltree/ng-forms        # Angular forms integration
 npm install @signaltree/callable-syntax # Optional DX enhancement
+
+# All enhancers (batching, memoization, middleware, entities, devtools, time-travel, presets) are now included in @signaltree/core.
+# Import them from '@signaltree/core/enhancers/*' as needed.
 
 // Basic Usage
 import { signalTree } from '@signaltree/core';
+import { withBatching, withMemoization, withEntities, withMiddleware, withDevTools, withTimeTravel, withPresets } from '@signaltree/core/enhancers';
 
-// Create a signal tree
+// Create a signal tree with enhancers
 const userTree = signalTree({
   user: {
     name: 'John Doe',
@@ -189,7 +186,15 @@ const userTree = signalTree({
     theme: 'dark',
     notifications: true
   }
-});
+}).with(
+  withBatching(),
+  withMemoization(),
+  withEntities(),
+  withMiddleware(),
+  withDevTools(),
+  withTimeTravel(),
+  withPresets()
+);
 
 // Access signals directly through state or $ (shorthand)
 console.log(userTree.state.user.name()); // 'John Doe'

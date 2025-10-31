@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree } from '@signaltree/core';
+import { withDevTools } from '@signaltree/core/enhancers/devtools';
 
 interface DevtoolsState {
   counter: number;
@@ -44,23 +45,23 @@ export class DevtoolsDemoComponent {
   actionHistory: ActionRecord[] = [];
   replaying = false;
 
-  public store = signalTree<DevtoolsState>(
-    {
-      counter: 0,
-      user: {
-        name: 'John Doe',
-        email: 'john@example.com',
-        preferences: {
-          theme: 'light',
-          notifications: true,
-        },
+  public store = signalTree<DevtoolsState>({
+    counter: 0,
+    user: {
+      name: 'John Doe',
+      email: 'john@example.com',
+      preferences: {
+        theme: 'light',
+        notifications: true,
       },
-      todos: [],
     },
-    {
-      enableDevTools: true,
-      treeName: 'DevtoolsDemo',
-    }
+    todos: [],
+  }).with(
+    withDevTools({
+      treeName: 'DevToolsDemo',
+      enableBrowserDevTools: true,
+      enableLogging: true,
+    })
   );
 
   // Computed properties

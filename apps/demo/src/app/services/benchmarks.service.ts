@@ -1,5 +1,7 @@
 import { computed, Injectable, signal } from '@angular/core';
-import { signalTree, withBatching, withMemoization } from '@signaltree/core';
+import { signalTree } from '@signaltree/core';
+import { withBatching } from '@signaltree/core/enhancers/batching';
+import { withMemoization } from '@signaltree/core/enhancers/memoization';
 
 /**
  * @fileoverview Comprehensive benchmarking suite for SignalTree Demo
@@ -35,7 +37,13 @@ export class BenchmarkService {
    * Get current browser environment for reliable benchmarking
    */
   static getBenchmarkEnvironment(): BenchmarkEnvironment {
-    const nav = navigator as any;
+    const nav = navigator as Navigator & {
+      userAgent: string;
+      platform: string;
+      hardwareConcurrency?: number;
+      deviceMemory?: number;
+      getBattery?: () => Promise<{ charging: boolean }>;
+    };
 
     return {
       browser: this.detectBrowser(),
@@ -44,7 +52,9 @@ export class BenchmarkService {
       cpu: nav.hardwareConcurrency || 4,
       memory: nav.deviceMemory,
       powerState: (nav.getBattery?.() || Promise.resolve({ charging: true }))
-        .then((battery: any) => (battery.charging ? 'charging' : 'discharging'))
+        .then((battery: { charging: boolean }) =>
+          battery.charging ? 'charging' : 'discharging'
+        )
         .catch(() => 'unknown'),
       isVisible: !document.hidden,
       devToolsOpen: this.detectDevTools(),
@@ -144,7 +154,10 @@ export class BenchmarkService {
   static measureMemory(): number | null {
     try {
       if (typeof window !== 'undefined' && 'memory' in performance) {
-        return (performance as any).memory.usedJSHeapSize;
+        return (
+          (performance as Performance & { memory?: { usedJSHeapSize: number } })
+            .memory?.usedJSHeapSize ?? null
+        );
       }
     } catch (e) {
       console.warn('Memory measurement not available:', e);
@@ -181,7 +194,10 @@ export class BenchmarkService {
   /**
    * Generate nested state object for testing
    */
-  static generateNestedState(depth: number, breadth: number): any {
+  static generateNestedState(
+    depth: number,
+    breadth: number
+  ): Record<string, unknown> {
     if (depth === 0) {
       return {
         value: Math.random(),
@@ -190,7 +206,7 @@ export class BenchmarkService {
       };
     }
 
-    const obj: any = {};
+    const obj: Record<string, unknown> = {};
     for (let i = 0; i < breadth; i++) {
       obj[`level_${depth}_item_${i}`] = this.generateNestedState(
         depth - 1,
@@ -203,7 +219,7 @@ export class BenchmarkService {
   /**
    * Generate entity collection for testing
    */
-  static generateEntities(count: number): Array<any> {
+  static generateEntities(count: number): Array<Record<string, unknown>> {
     return Array.from({ length: count }, (_, i) => ({
       id: `entity_${i}`,
       name: `Entity ${i}`,
@@ -231,6 +247,7 @@ export class BenchmarkService {
         medium: { nodes: 100, time: 0, memory: 0 },
         large: { nodes: 1000, time: 0, memory: 0 },
         xlarge: { nodes: 10000, time: 0, memory: 0 },
+        xxlarge: { nodes: 100000, time: 0, memory: 0 },
       };
 
       // Small tree (10 nodes)
@@ -248,18 +265,25 @@ export class BenchmarkService {
       });
 
       // Large tree (1000 nodes)
-      const largeState = BenchmarkService.generateNestedState(4, 8);
+      const largeState = BenchmarkService.generateNestedState(5, 5);
       results.large.time = BenchmarkService.measureTime(() => {
         const tree = signalTree(largeState);
         tree(); // Force tree access
       });
 
-      // XLarge tree (simplified for stability)
-      const xlargeState = BenchmarkService.generateNestedState(3, 10);
+      // XLarge tree (10,000 nodes)
+      const xlargeState = BenchmarkService.generateNestedState(6, 6);
       results.xlarge.time = BenchmarkService.measureTime(() => {
         const tree = signalTree(xlargeState);
         tree(); // Force tree access
       });
+
+      // XXLarge tree (100,000+ nodes, stress test)
+      const xxlargeState = BenchmarkService.generateNestedState(7, 7);
+      results.xxlarge.time = BenchmarkService.measureTime(() => {
+        const tree = signalTree(xxlargeState);
+        tree(); // Force tree access
+      }, 10); // Fewer iterations for stress test
 
       console.log('Initialization results:', results);
       return results;
@@ -271,6 +295,7 @@ export class BenchmarkService {
         medium: { nodes: 100, time: 4.5, memory: 0 },
         large: { nodes: 1000, time: 12.8, memory: 0 },
         xlarge: { nodes: 10000, time: 45.2, memory: 0 },
+        xxlarge: { nodes: 100000, time: 120, memory: 0 },
       };
     }
   }
@@ -279,7 +304,7 @@ export class BenchmarkService {
    * Benchmark update performance at different depths
    */
   benchmarkUpdates() {
-    const state = BenchmarkService.generateNestedState(4, 3);
+    const state = BenchmarkService.generateNestedState(6, 5);
     const tree = signalTree(state);
 
     const results = {
@@ -292,7 +317,13 @@ export class BenchmarkService {
 
     // Shallow update (top level)
     results.shallow = BenchmarkService.measureTime(() => {
-      (tree as any)['update']((state: Record<string, unknown>) => ({
+      (
+        tree as {
+          update: (
+            fn: (state: Record<string, unknown>) => Record<string, unknown>
+          ) => void;
+        }
+      )['update']((state: Record<string, unknown>) => ({
         ...state,
         topLevel: Math.random(),
       }));
@@ -300,7 +331,13 @@ export class BenchmarkService {
 
     // Medium depth update
     results.medium = BenchmarkService.measureTime(() => {
-      (tree as any)['update']((state: Record<string, unknown>) => ({
+      (
+        tree as {
+          update: (
+            fn: (state: Record<string, unknown>) => Record<string, unknown>
+          ) => void;
+        }
+      )['update']((state: Record<string, unknown>) => ({
         ...state,
         level_4_item_0: {
           ...((state['level_4_item_0'] as Record<string, unknown>) || {}),
@@ -311,7 +348,13 @@ export class BenchmarkService {
 
     // Deep update
     results.deep = BenchmarkService.measureTime(() => {
-      (tree as any)['update']((state: Record<string, unknown>) => {
+      (
+        tree as {
+          update: (
+            fn: (state: Record<string, unknown>) => Record<string, unknown>
+          ) => void;
+        }
+      )['update']((state: Record<string, unknown>) => {
         const newState = { ...state };
         let current = newState as Record<string, unknown>;
         for (let i = 4; i > 0; i--) {
@@ -332,8 +375,26 @@ export class BenchmarkService {
       results.batch10 = BenchmarkService.measureTime(() => {
         try {
           // Try different batch methods
-          if (typeof (batchTree as any).batchUpdate === 'function') {
-            (batchTree as any).batchUpdate((state: Record<string, unknown>) => {
+          if (
+            typeof (
+              batchTree as {
+                batchUpdate?: (
+                  fn: (
+                    state: Record<string, unknown>
+                  ) => Record<string, unknown>
+                ) => void;
+              }
+            ).batchUpdate === 'function'
+          ) {
+            (
+              batchTree as {
+                batchUpdate: (
+                  fn: (
+                    state: Record<string, unknown>
+                  ) => Record<string, unknown>
+                ) => void;
+              }
+            ).batchUpdate((state: Record<string, unknown>) => {
               const updates: Record<string, unknown> = {};
               for (let i = 0; i < 10; i++) {
                 updates[`field_${i}`] = Math.random();
@@ -342,7 +403,15 @@ export class BenchmarkService {
             });
           } else {
             // Fallback to regular update
-            (batchTree as any)['update']((state: Record<string, unknown>) => {
+            (
+              batchTree as {
+                update: (
+                  fn: (
+                    state: Record<string, unknown>
+                  ) => Record<string, unknown>
+                ) => void;
+              }
+            )['update']((state: Record<string, unknown>) => {
               const updates: Record<string, unknown> = {};
               for (let i = 0; i < 10; i++) {
                 updates[`field_${i}`] = Math.random();
@@ -358,8 +427,26 @@ export class BenchmarkService {
       results.batch100 = BenchmarkService.measureTime(() => {
         try {
           // Try different batch methods
-          if (typeof (batchTree as any).batchUpdate === 'function') {
-            (batchTree as any).batchUpdate((state: Record<string, unknown>) => {
+          if (
+            typeof (
+              batchTree as {
+                batchUpdate?: (
+                  fn: (
+                    state: Record<string, unknown>
+                  ) => Record<string, unknown>
+                ) => void;
+              }
+            ).batchUpdate === 'function'
+          ) {
+            (
+              batchTree as {
+                batchUpdate: (
+                  fn: (
+                    state: Record<string, unknown>
+                  ) => Record<string, unknown>
+                ) => void;
+              }
+            ).batchUpdate((state: Record<string, unknown>) => {
               const updates: Record<string, unknown> = {};
               for (let i = 0; i < 100; i++) {
                 updates[`field_${i}`] = Math.random();
@@ -368,7 +455,15 @@ export class BenchmarkService {
             });
           } else {
             // Fallback to regular update
-            (batchTree as any)['update']((state: Record<string, unknown>) => {
+            (
+              batchTree as {
+                update: (
+                  fn: (
+                    state: Record<string, unknown>
+                  ) => Record<string, unknown>
+                ) => void;
+              }
+            )['update']((state: Record<string, unknown>) => {
               const updates: Record<string, unknown> = {};
               for (let i = 0; i < 100; i++) {
                 updates[`field_${i}`] = Math.random();
@@ -412,7 +507,7 @@ export class BenchmarkService {
     const computedWithout = computed(() => {
       const state = regularTree();
       return state.entities.filter(
-        (e: any) =>
+        (e: unknown) =>
           e.category === state.filter.category &&
           e.active === state.filter.active
       );
@@ -427,13 +522,19 @@ export class BenchmarkService {
     });
 
     // With memoization
-    const memoizedCompute = tree.memoize((state: any) => {
-      return state.entities.filter(
-        (e: any) =>
-          e.category === state.filter.category &&
-          e.active === state.filter.active
-      );
-    }, 'filtered-entities');
+    const memoizedCompute = tree.memoize(
+      (state: {
+        entities: Array<Record<string, unknown>>;
+        filter: { category: string; active: boolean };
+      }) => {
+        return state.entities.filter(
+          (e: Record<string, unknown>) =>
+            e.category === state.filter.category &&
+            e.active === state.filter.active
+        );
+      },
+      'filtered-entities'
+    );
 
     results.withMemo.first = BenchmarkService.measureTime(() => {
       memoizedCompute();
@@ -454,7 +555,7 @@ export class BenchmarkService {
    */
   benchmarkLazyLoading() {
     try {
-      const largeState = BenchmarkService.generateNestedState(5, 3);
+      const largeState = BenchmarkService.generateNestedState(7, 5);
 
       const results = {
         eager: { memory: 0, accessTime: 0 },
@@ -472,7 +573,8 @@ export class BenchmarkService {
       results.eager.accessTime = BenchmarkService.measureTime(() => {
         try {
           // Safely access nested properties
-          const level5 = (eagerTree.$ as any).level_5_item_0;
+          const level5 = (eagerTree.$ as { [key: string]: unknown })
+            .level_5_item_0;
           const level4 = level5?.level_4_item_0;
           const level3 = level4?.level_3_item_0;
           if (level3) level3();
@@ -492,7 +594,8 @@ export class BenchmarkService {
       results.lazy.accessTime = BenchmarkService.measureTime(() => {
         try {
           // Safely access nested properties
-          const level5 = (lazyTree.$ as any).level_5_item_0;
+          const level5 = (lazyTree.$ as { [key: string]: unknown })
+            .level_5_item_0;
           const level4 = level5?.level_4_item_0;
           const level3 = level4?.level_3_item_0;
           if (level3) level3();
@@ -504,7 +607,8 @@ export class BenchmarkService {
       results.lazy.secondAccess = BenchmarkService.measureTime(() => {
         try {
           // Safely access nested properties
-          const level5 = (lazyTree.$ as any).level_5_item_0;
+          const level5 = (lazyTree.$ as { [key: string]: unknown })
+            .level_5_item_0;
           const level4 = level5?.level_4_item_0;
           const level3 = level4?.level_3_item_0;
           if (level3) level3();
@@ -532,7 +636,7 @@ export class BenchmarkService {
       nativeSignals: { init: 0, update: 0, memory: 0 },
     };
 
-    const testData = BenchmarkService.generateNestedState(3, 4);
+    const testData = BenchmarkService.generateNestedState(5, 5);
 
     // SignalTree
     const stMemory = BenchmarkService.profileMemory(() => {
@@ -555,11 +659,11 @@ export class BenchmarkService {
 
     // Native Signals
     const nsMemory = BenchmarkService.profileMemory(() => {
-      const createSignals = (obj: any): any => {
+      const createSignals = (obj: unknown): unknown => {
         if (typeof obj !== 'object' || obj === null) {
           return signal(obj);
         }
-        const signals: any = {};
+        const signals: Record<string, unknown> = {};
         for (const key in obj) {
           signals[key] = createSignals(obj[key]);
         }
@@ -570,11 +674,11 @@ export class BenchmarkService {
     results.nativeSignals.memory = nsMemory?.delta || 0;
 
     results.nativeSignals.init = BenchmarkService.measureTime(() => {
-      const createSignals = (obj: any): any => {
+      const createSignals = (obj: unknown): unknown => {
         if (typeof obj !== 'object' || obj === null) {
           return signal(obj);
         }
-        const signals: any = {};
+        const signals: Record<string, unknown> = {};
         for (const key in obj) {
           signals[key] = createSignals(obj[key]);
         }
@@ -609,7 +713,7 @@ export class BenchmarkService {
   /**
    * Generate formatted report
    */
-  generateReport(results: any) {
+  generateReport(results: Record<string, unknown>) {
     const report = {
       summary: {
         date: new Date().toISOString(),
@@ -628,7 +732,7 @@ export class BenchmarkService {
   /**
    * Analyze results and provide insights
    */
-  analyzeResults(results: any) {
+  analyzeResults(results: Record<string, unknown>) {
     const analysis = {
       performance: {
         grade: '',
