@@ -46,39 +46,6 @@ export class AkitaBenchmarkService {
         typeof result.memoryDeltaMB === 'number' ? result.memoryDeltaMB : 'N/A',
     };
   }
-  /**
-   * Standardized cold start and memory profiling
-   */
-  async runInitializationBenchmark(): Promise<{
-    durationMs: number;
-    memoryDeltaMB: number | 'N/A';
-  }> {
-    const { runTimed } = await import('./benchmark-runner');
-    const stateFactory = () => ({
-      deepNested: {},
-      largeArray: [],
-      computedValues: { base: 0, factors: [] },
-      batchData: {},
-    });
-    const result = await runTimed(
-      () => {
-        // Simulate Akita store initialization
-        class InitStore extends Store<any> {
-          constructor() {
-            super(stateFactory());
-          }
-        }
-        const store = new InitStore();
-        void store;
-      },
-      { operations: 1, trackMemory: true, label: 'akita-init' }
-    );
-    return {
-      durationMs: result.durationMs,
-      memoryDeltaMB:
-        typeof result.memoryDeltaMB === 'number' ? result.memoryDeltaMB : 'N/A',
-    };
-  }
   // Akita is entity-centric; we will use plain objects for nested/other cases
   private yieldToUI = createYieldToUI();
 
@@ -900,6 +867,58 @@ export class AkitaBenchmarkService {
         }
       }
     }
+
+    return performance.now() - start;
+  }
+
+  async runSubscriberScalingBenchmark(
+    subscriberCount: number
+  ): Promise<number> {
+    // Create a simple store for subscriber scaling test
+    interface SubscriberState {
+      counter: number;
+      data: { value: string };
+    }
+
+    class SubscriberStore extends Store<SubscriberState> {
+      constructor() {
+        super({ counter: 0, data: { value: 'initial' } });
+      }
+    }
+
+    const store = new SubscriberStore();
+
+    // Create multiple subscribers (RxJS subscriptions)
+    const subscribers: any[] = [];
+    for (let i = 0; i < subscriberCount; i++) {
+      // Each subscriber computes something based on the counter
+      const subscription = store
+        ._select((state) => state.counter)
+        .subscribe((counter: any) => {
+          // Simulate computation work
+          const result = counter * (i + 1) + Math.sin(counter * 0.1);
+          // Prevent DCE
+          if (result === -1) console.log('noop');
+        });
+      subscribers.push(subscription);
+    }
+
+    const start = performance.now();
+
+    // Perform updates and measure fanout performance
+    const updates = Math.min(
+      1000,
+      BENCHMARK_CONSTANTS.ITERATIONS.SUBSCRIBER_SCALING || 1000
+    );
+    for (let i = 0; i < updates; i++) {
+      // Update the counter (this will trigger all subscribers)
+      store.update((state) => ({ ...state, counter: i }));
+
+      // REMOVED: yielding during measurement for accuracy
+    }
+
+    // Clean up subscriptions
+    subscribers.forEach((sub) => sub.unsubscribe());
 
     return performance.now() - start;
   }

@@ -231,30 +231,32 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     },
   },
   {
-    id: 'memory-efficiency',
-    name: 'Memory Usage',
-    description: 'Memory consumption patterns',
-    operations: 'Continuous',
-    complexity: 'Variable',
-    selected: false,
+    id: 'subscriber-scaling',
+    name: 'Subscriber Scaling',
+    description:
+      'Performance with increasing numbers of subscribers to a single state node',
+    operations: '1000 updates with N subscribers',
+    complexity: 'High',
+    selected: true,
     category: 'core',
-    purpose: 'Measures memory overhead and garbage collection impact',
-    frequencyWeight: 1.5, // Above normal - Memory efficiency matters for all apps
+    purpose:
+      'Measures update fanout performance and scalability as subscriber count increases',
+    frequencyWeight: 1.5, // Medium-High - Reactive apps often have multiple subscribers
     realWorldFrequency:
-      'Medium-High - Mobile apps, long-running sessions, large datasets',
+      'Medium-High - Reactive UIs, data binding, multiple components',
     architecturalTradeOffs:
-      'Direct mutation reduces garbage collection vs immutable allocation pressure',
+      'Direct mutation scales better with many subscribers vs immutable notification overhead',
     enhancers: {
-      required: ['withLightweightMemoization', 'withBatching'],
-      optional: [],
+      required: [],
+      optional: ['withBatching'],
       rationale:
-        'Lightweight memoization minimizes memory overhead; batching reduces allocation pressure',
+        'Testing core reactivity scaling; batching may help with fanout',
     },
     dataRequirements: {
-      minSize: 1000,
-      maxSize: 50000,
-      defaultSize: 10000,
-      scalesWith: 'exponential',
+      minSize: 10,
+      maxSize: 1000,
+      defaultSize: 100,
+      scalesWith: 'linear',
     },
   },
 

@@ -56,6 +56,7 @@ export class MiddlewareDemoComponent {
   }).with(
     withMiddleware([
       {
+        id: 'logging-middleware',
         before: (action: string, payload: unknown) => {
           if (!this.enableLogging) return true;
           const log: MiddlewareLog = {
@@ -82,6 +83,7 @@ export class MiddlewareDemoComponent {
         },
       },
       {
+        id: 'validation-middleware',
         before: (action: string, payload: unknown) => {
           if (!this.enableValidation) return true;
           if (action === 'addTodo') {
@@ -99,6 +101,7 @@ export class MiddlewareDemoComponent {
         },
       },
       {
+        id: 'persistence-middleware',
         after: (
           action: string,
           payload: unknown,
@@ -115,6 +118,7 @@ export class MiddlewareDemoComponent {
         },
       },
       {
+        id: 'undo-middleware',
         before: (action: string, payload: unknown, state: MiddlewareState) => {
           if (!this.enableUndo) return true;
           const entry: UndoEntry = {

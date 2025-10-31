@@ -15,7 +15,6 @@ import { map, mergeMap, switchMap, take, tap } from 'rxjs/operators';
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
 import { createYieldToUI } from '../shared/benchmark-utils';
 
-// ...existing code...
 // State interface for complex benchmarks
 interface User {
   id: number;
@@ -147,32 +146,6 @@ const benchmarkReducer = createReducer(
 
 @Injectable({ providedIn: 'root' })
 export class NgRxBenchmarkService {
-  /**
-   * Standardized cold start and memory profiling
-   */
-  async runInitializationBenchmark(): Promise<{
-    durationMs: number;
-    memoryDeltaMB: number | 'N/A';
-  }> {
-    const { runTimed } = await import('./benchmark-runner');
-    const stateFactory = () => ({
-      groups: [],
-      posts: [],
-      users: [],
-    });
-    const result = await runTimed(
-      () => {
-        // Simulate NgRx store initialization
-        createReducer(stateFactory());
-      },
-      { operations: 1, trackMemory: true, label: 'ngrx-init' }
-    );
-    return {
-      durationMs: result.durationMs,
-      memoryDeltaMB:
-        typeof result.memoryDeltaMB === 'number' ? result.memoryDeltaMB : 'N/A',
-    };
-  }
   /**
    * Standardized cold start and memory profiling
    */
@@ -969,7 +942,7 @@ export class NgRxBenchmarkService {
       groups: [],
       posts: [],
       users: [],
-      metrics: { activeUsers: 0, messagesPerSecond: 0, systemLoad: 0.0 },
+      metrics: { activeUsers: 0, messagesPerSecond: 0.0, systemLoad: 0.0 },
     };
     let state = initialState;
 
@@ -1102,5 +1075,61 @@ export class NgRxBenchmarkService {
     // consume to avoid DCE
     if (state.largeDataset?.length === -1) console.log('noop');
     return duration;
+  }
+
+  async runSubscriberScalingBenchmark(
+    subscriberCount: number
+  ): Promise<number> {
+    // Create a simple state with counter
+    interface SubscriberState {
+      counter: number;
+      data: { value: string };
+    }
+
+    const updateCounter = createAction(
+      '[Subscriber] Update Counter',
+      props<{ value: number }>()
+    );
+
+    const initialState: SubscriberState = {
+      counter: 0,
+      data: { value: 'initial' },
+    };
+
+    const reducer = createReducer(
+      initialState,
+      on(updateCounter, (state, { value }) => ({ ...state, counter: value }))
+    );
+
+    // Create multiple selectors that depend on the counter
+    const selectCounter = (state: SubscriberState) => state.counter;
+    const subscribers: ((state: SubscriberState) => number)[] = [];
+    for (let i = 0; i < subscriberCount; i++) {
+      // Each subscriber computes something based on the counter
+      const subscriber = createSelector(
+        selectCounter,
+        (counter) => counter * (i + 1) + Math.sin(counter * 0.1)
+      );
+      subscribers.push(subscriber);
+    }
+
+    let state = initialState;
+    const start = performance.now();
+
+    // Perform updates and measure fanout performance
+    const updates = BENCHMARK_CONSTANTS.ITERATIONS.SUBSCRIBER_SCALING;
+    for (let i = 0; i < updates; i++) {
+      // Update the counter
+      state = reducer(state, updateCounter({ value: i }));
+
+      // Force all subscribers to recompute (simulate reading their values)
+      for (const subscriber of subscribers) {
+        subscriber(state);
+      }
+
+      // REMOVED: yielding during measurement for accuracy
+    }
+
+    return performance.now() - start;
   }
 }

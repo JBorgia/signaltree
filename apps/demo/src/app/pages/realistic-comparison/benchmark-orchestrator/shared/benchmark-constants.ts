@@ -17,6 +17,7 @@ export const BENCHMARK_CONSTANTS = {
     DATA_FETCHING: 1000,
     ASYNC_WORKFLOW: 50, // Scale with dataSize but cap at 50
     STATE_SIZE_SCALING: 200, // Scale as dataSize / 5
+    SUBSCRIBER_SCALING: 1000, // Subscriber scaling benchmark iterations
   },
 
   // Yielding frequencies (bitwise patterns for consistent timing)
@@ -38,6 +39,7 @@ export const BENCHMARK_CONSTANTS = {
 
     // Very high frequency (small operations)
     ASYNC_WORKFLOW: 7, // (i & 7) === 0 -> every 8 iterations
+    SUBSCRIBER_SCALING: 31, // (i & 31) === 0 -> every 32 iterations
   },
 
   // Data size limits for consistency

@@ -10,7 +10,7 @@ import {
   StateContext,
   Store,
 } from '@ngxs/store';
-import { race, timer } from 'rxjs';
+import { Observable, race, timer } from 'rxjs';
 import { map, mergeMap, take, tap } from 'rxjs/operators';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
@@ -800,6 +800,45 @@ export class NgxsBenchmarkService {
     }
 
     await allDonePromise;
+    return performance.now() - start;
+  }
+
+  async runSubscriberScalingBenchmark(subscriberCount: number): Promise<number> {
+    // Use existing BenchmarkState and computedValues.base as counter
+    // Create multiple selectors that depend on the counter
+    const subscribers: Observable<number>[] = [];
+    for (let i = 0; i < subscriberCount; i++) {
+      // Each subscriber computes something based on the counter (computedValues.base)
+      const subscriber = this.store
+        .select(BenchmarkState.getComputedResult)
+        .pipe(map((result) => result * (i + 1) + Math.sin(result * 0.1)));
+      subscribers.push(subscriber);
+    }
+
+    const start = performance.now();
+
+    // Perform updates and measure fanout performance
+    const updates = Math.min(1000, 1000); // Use default since constant doesn't exist
+    for (let i = 0; i < updates; i++) {
+      // Update the counter (use ComputeValues action to update computedValues.base)
+      this.store.dispatch(new ComputeValues(i));
+
+      // Force all subscribers to recompute (simulate reading their values)
+      // In NgXs, selectors are automatically updated when state changes
+      // We just need to ensure the computation happens
+      for (const subscriber of subscribers) {
+        // Subscribe once to trigger computation
+        let value: number | undefined;
+        subscriber.subscribe((val) => {
+          value = val;
+          // Prevent DCE
+          if (value === -1) console.log('noop');
+        }).unsubscribe(); // Unsubscribe immediately
+      }
+
+      // REMOVED: yielding during measurement for accuracy
+    }
+
     return performance.now() - start;
   }
 }
