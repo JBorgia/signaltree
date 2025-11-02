@@ -110,6 +110,22 @@ export const appRoutes: Route[] = [
       ).then((c) => c.RealisticBenchmarkHistoryComponent),
   },
 
+  // Architecture and bundle analysis pages
+  {
+    path: 'architecture',
+    loadComponent: () =>
+      import(
+        './pages/architecture-overview/architecture-overview.component'
+      ).then((c) => c.ArchitectureOverviewComponent),
+  },
+  {
+    path: 'enterprise-enhancer',
+    loadComponent: () =>
+      import('./pages/enterprise-enhancer/enterprise-enhancer.component').then(
+        (c) => c.EnterpriseEnhancerComponent
+      ),
+  },
+
   // Redirect any unknown routes to home
   {
     path: '**',

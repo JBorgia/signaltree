@@ -14,6 +14,7 @@ import {
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
 import { createYieldToUI } from '../shared/benchmark-utils';
+import { BenchmarkResult } from './_types';
 import {
   BenchmarkComparison,
   EnhancedBenchmarkOptions,
@@ -72,6 +73,14 @@ import {
 /* eslint-disable @typescript-eslint/no-explicit-any */
 @Injectable({ providedIn: 'root' })
 export class SignalTreeBenchmarkService {
+  // Helper to produce standardized BenchmarkResult
+  private toResult(durationMs: number, memoryDeltaMB?: number, notes?: string) {
+    return {
+      durationMs: Math.round(durationMs * 100) / 100,
+      memoryDeltaMB,
+      notes,
+    } as BenchmarkResult;
+  }
   // ==========================================
   // YIELD STRATEGY: HYBRID APPROACH
   // ==========================================
@@ -101,7 +110,67 @@ export class SignalTreeBenchmarkService {
     return 'light';
   }
 
-  async runDeepNestedBenchmark(dataSize: number, depth = 15): Promise<number> {
+  /**
+   * Apply the set of enhancers requested by the orchestrator UI (if any).
+   * The orchestrator exposes an array of enhancer names on
+   * `window.__SIGNALTREE_ACTIVE_ENHANCERS` before invoking SignalTree
+   * benchmarks so the service can apply the exact same set programmatically.
+   */
+  private applyConfiguredEnhancers(tree: any): any {
+    try {
+      const requested = window.__SIGNALTREE_ACTIVE_ENHANCERS__ as
+        | string[]
+        | undefined;
+      if (!requested || !Array.isArray(requested) || requested.length === 0)
+        return tree;
+
+      const enhancers: any[] = [];
+      for (const name of requested) {
+        switch (name) {
+          case 'withBatching':
+            enhancers.push(withBatching());
+            break;
+          case 'withHighPerformanceBatching':
+            enhancers.push(withHighPerformanceBatching());
+            break;
+          case 'withLightweightMemoization':
+            enhancers.push(withLightweightMemoization());
+            break;
+          case 'withShallowMemoization':
+            enhancers.push(withShallowMemoization());
+            break;
+          case 'withMemoization':
+            enhancers.push(withMemoization());
+            break;
+          case 'withComputedMemoization':
+            enhancers.push(withComputedMemoization());
+            break;
+          case 'withSelectorMemoization':
+            enhancers.push(withSelectorMemoization());
+            break;
+          case 'withSerialization':
+            enhancers.push(withSerialization());
+            break;
+          case 'withTimeTravel':
+            enhancers.push(withTimeTravel());
+            break;
+          default:
+            // Unknown enhancer name — ignore to maintain robustness
+            break;
+        }
+      }
+
+      if (enhancers.length > 0) return tree.with(...enhancers);
+    } catch {
+      // ignore errors and return tree unchanged
+    }
+    return tree;
+  }
+
+  async runDeepNestedBenchmark(
+    dataSize: number,
+    depth = 15
+  ): Promise<number | BenchmarkResult> {
     const start = performance.now();
 
     const createNested = (level: number): any =>
@@ -137,10 +206,11 @@ export class SignalTreeBenchmarkService {
       // REMOVED: yielding during measurement for accuracy
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'SignalTree deep nested updates');
   }
 
-  async runArrayBenchmark(dataSize: number): Promise<number> {
+  async runArrayBenchmark(dataSize: number): Promise<number | BenchmarkResult> {
     const start = performance.now();
 
     // ARCHITECTURAL SHOWCASE: Direct mutation vs immutable rebuilding
@@ -167,10 +237,13 @@ export class SignalTreeBenchmarkService {
       // REMOVED: yielding during measurement for accuracy
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'SignalTree array updates');
   }
 
-  async runComputedBenchmark(dataSize: number): Promise<number> {
+  async runComputedBenchmark(
+    dataSize: number
+  ): Promise<number | BenchmarkResult> {
     const start = performance.now();
 
     // SHOWCASING SIGNALTREE: Use computed-optimized memoization preset
@@ -206,13 +279,14 @@ export class SignalTreeBenchmarkService {
       }
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'SignalTree computed chains');
   }
 
   async runBatchUpdatesBenchmark(
     batches = 100,
     batchSize = 1000
-  ): Promise<number> {
+  ): Promise<number | BenchmarkResult> {
     const start = performance.now();
 
     const tree = signalTree({
@@ -229,10 +303,13 @@ export class SignalTreeBenchmarkService {
       // REMOVED: yielding during measurement for accuracy
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'SignalTree batch updates');
   }
 
-  async runSelectorBenchmark(dataSize: number): Promise<number> {
+  async runSelectorBenchmark(
+    dataSize: number
+  ): Promise<number | BenchmarkResult> {
     const start = performance.now();
 
     // SHOWCASING SIGNALTREE: Use selector-optimized memoization preset
@@ -283,10 +360,17 @@ export class SignalTreeBenchmarkService {
       }
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(
+      duration,
+      undefined,
+      'SignalTree selector memoization'
+    );
   }
 
-  async runSerializationBenchmark(dataSize: number): Promise<number> {
+  async runSerializationBenchmark(
+    dataSize: number
+  ): Promise<number | BenchmarkResult> {
     // ARCHITECTURAL TRADE-OFF: SignalTree's signal unwrapping creates serialization overhead
     // This is the cost of fine-grained reactivity vs immutable snapshots
     // Consider: How often does your app serialize state vs perform updates?
@@ -345,14 +429,14 @@ export class SignalTreeBenchmarkService {
     const snapshot = tree.snapshot();
     JSON.stringify({ data: snapshot.data });
     const t2 = performance.now();
-
-    return t2 - t0;
+    const duration = t2 - t0;
+    return this.toResult(duration, undefined, 'SignalTree serialization');
   }
 
   async runConcurrentUpdatesBenchmark(
     concurrency = 50,
     updatesPerWorker = 200
-  ): Promise<number> {
+  ): Promise<number | BenchmarkResult> {
     // Remove memoization overhead for rapid unique updates - just use basic batching
     const tree = signalTree({
       counters: Array.from({ length: concurrency }, () => ({ value: 0 })),
@@ -376,10 +460,13 @@ export class SignalTreeBenchmarkService {
       // REMOVED: yielding during measurement for accuracy
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'SignalTree concurrent updates');
   }
 
-  async runMemoryEfficiencyBenchmark(dataSize: number): Promise<number> {
+  async runMemoryEfficiencyBenchmark(
+    dataSize: number
+  ): Promise<number | BenchmarkResult> {
     // NOTE: Memory measurements are unreliable across browsers and affected by GC timing.
     // This benchmark focuses on operational performance rather than heap measurements.
     const itemsCount = Math.max(
@@ -442,10 +529,13 @@ export class SignalTreeBenchmarkService {
     }
 
     // Return operational time (memory measurement would be unreliable across environments)
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'SignalTree memory efficiency');
   }
 
-  async runDataFetchingBenchmark(dataSize: number): Promise<number> {
+  async runDataFetchingBenchmark(
+    dataSize: number
+  ): Promise<number | BenchmarkResult> {
     const start = performance.now();
 
     // Simulate fetching data and hydrating state
@@ -513,10 +603,13 @@ export class SignalTreeBenchmarkService {
       // REMOVED: yielding during measurement for accuracy
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'SignalTree data fetching');
   }
 
-  async runRealTimeUpdatesBenchmark(dataSize: number): Promise<number> {
+  async runRealTimeUpdatesBenchmark(
+    dataSize: number
+  ): Promise<number | BenchmarkResult> {
     const start = performance.now();
 
     // Simulate real-time dashboard or live data scenario
@@ -579,10 +672,13 @@ export class SignalTreeBenchmarkService {
       // REMOVED: yielding during measurement for accuracy
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'SignalTree real-time updates');
   }
 
-  async runStateSizeScalingBenchmark(dataSize: number): Promise<number> {
+  async runStateSizeScalingBenchmark(
+    dataSize: number
+  ): Promise<number | BenchmarkResult> {
     const start = performance.now();
 
     // Test how well each library handles increasing state size
@@ -648,14 +744,17 @@ export class SignalTreeBenchmarkService {
       // REMOVED: yielding during measurement for accuracy
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'SignalTree state size scaling');
   }
 
   // ================================
   // ASYNC OPERATIONS BENCHMARKS
   // ================================
 
-  async runAsyncWorkflowBenchmark(dataSize: number): Promise<number> {
+  async runAsyncWorkflowBenchmark(
+    dataSize: number
+  ): Promise<number | BenchmarkResult> {
     // Use a high-performance batching enhancer to aggressively coalesce updates
     interface AsyncState {
       items: any[];
@@ -771,10 +870,13 @@ export class SignalTreeBenchmarkService {
 
     tree.state.loading.set(false);
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'SignalTree async workflow');
   }
 
-  async runConcurrentAsyncBenchmark(concurrency: number): Promise<number> {
+  async runConcurrentAsyncBenchmark(
+    concurrency: number
+  ): Promise<number | BenchmarkResult> {
     const tree = signalTree({
       results: [] as any[],
       activeOperations: 0,
@@ -803,10 +905,13 @@ export class SignalTreeBenchmarkService {
     );
     await Promise.all(promises);
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'SignalTree concurrent async');
   }
 
-  async runAsyncCancellationBenchmark(operations: number): Promise<number> {
+  async runAsyncCancellationBenchmark(
+    operations: number
+  ): Promise<number | BenchmarkResult> {
     const tree = signalTree({
       activeRequest: null as AbortController | null,
       result: null as any,
@@ -848,14 +953,17 @@ export class SignalTreeBenchmarkService {
       // REMOVED: yielding during measurement for accuracy
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'SignalTree async cancellation');
   }
 
   // ================================
   // TIME TRAVEL BENCHMARKS
   // ================================
 
-  async runUndoRedoBenchmark(operations: number): Promise<number> {
+  async runUndoRedoBenchmark(
+    operations: number
+  ): Promise<number | BenchmarkResult> {
     // Use actual SignalTree time-travel enhancer
     const tree = signalTree({
       counter: 0,
@@ -880,10 +988,13 @@ export class SignalTreeBenchmarkService {
       (tree as any).redo?.();
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'SignalTree undo/redo');
   }
 
-  async runHistorySizeBenchmark(historySize: number): Promise<number> {
+  async runHistorySizeBenchmark(
+    historySize: number
+  ): Promise<number | BenchmarkResult> {
     const tree = signalTree({
       value: 0,
       data: { content: 'initial' },
@@ -899,10 +1010,13 @@ export class SignalTreeBenchmarkService {
       // REMOVED: yielding during measurement for accuracy
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'SignalTree history size');
   }
 
-  async runJumpToStateBenchmark(operations: number): Promise<number> {
+  async runJumpToStateBenchmark(
+    operations: number
+  ): Promise<number | BenchmarkResult> {
     const tree = signalTree({
       currentState: 0,
       data: { value: 'initial' },
@@ -924,14 +1038,17 @@ export class SignalTreeBenchmarkService {
       // REMOVED: yielding during measurement for accuracy
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'SignalTree jump-to-state');
   }
 
   // ================================
   // MIDDLEWARE BENCHMARKS
   // ================================
 
-  async runSingleMiddlewareBenchmark(operations: number): Promise<number> {
+  async runSingleMiddlewareBenchmark(
+    operations: number
+  ): Promise<number | BenchmarkResult> {
     // Note: This would use SignalTree middleware package when available
     // For now, simulate middleware overhead
     const tree = signalTree({
@@ -956,13 +1073,14 @@ export class SignalTreeBenchmarkService {
       // REMOVED: yielding during measurement for accuracy
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'SignalTree single middleware');
   }
 
   async runMultipleMiddlewareBenchmark(
     middlewareCount: number,
     operations: number
-  ): Promise<number> {
+  ): Promise<number | BenchmarkResult> {
     const tree = signalTree({
       value: 0,
       logs: Array.from({ length: middlewareCount }, () => [] as string[]),
@@ -985,10 +1103,13 @@ export class SignalTreeBenchmarkService {
       // REMOVED: yielding during measurement for accuracy
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'SignalTree multiple middleware');
   }
 
-  async runConditionalMiddlewareBenchmark(operations: number): Promise<number> {
+  async runConditionalMiddlewareBenchmark(
+    operations: number
+  ): Promise<number | BenchmarkResult> {
     const tree = signalTree({
       value: 0,
       conditionalLog: [] as string[],
@@ -1018,14 +1139,21 @@ export class SignalTreeBenchmarkService {
       // REMOVED: yielding during measurement for accuracy
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(
+      duration,
+      undefined,
+      'SignalTree conditional middleware'
+    );
   }
 
   // ================================
   // FULL STACK BENCHMARKS
   // ================================
 
-  async runAllFeaturesEnabledBenchmark(dataSize: number): Promise<number> {
+  async runAllFeaturesEnabledBenchmark(
+    dataSize: number
+  ): Promise<number | BenchmarkResult> {
     // Combine all SignalTree features with proper typing
     const tree = signalTree({
       data: [] as Array<{ id: number; value: number }>,
@@ -1070,7 +1198,12 @@ export class SignalTreeBenchmarkService {
       // REMOVED: yielding during measurement for accuracy
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(
+      duration,
+      undefined,
+      'SignalTree all features enabled'
+    );
   }
 
   // ==========================================
@@ -1559,5 +1692,83 @@ export class SignalTreeBenchmarkService {
     }
 
     return performance.now() - start;
+  }
+
+  /**
+   * Measure cold-start / initialization time for SignalTree with a common
+   * enhancer set and a few selectors wired up. Returns milliseconds.
+   */
+  async runColdStartBenchmark(config?: {
+    warmup?: number;
+  }): Promise<BenchmarkResult> {
+    const warmup = Math.max(0, config?.warmup ?? 0);
+
+    // Optional warmup: create and drop a few instances to avoid first-time JIT noise
+    for (let i = 0; i < warmup; i++) {
+      const tmp = signalTree({ v: i }).with(withBatching());
+      // quick access
+      tmp.state.v.set(i);
+    }
+
+    const perfEx = performance as Performance & {
+      memory?: { usedJSHeapSize: number };
+    };
+
+    const memBefore = perfEx.memory?.usedJSHeapSize;
+
+    const t0 = performance.now();
+
+    // Create a realistic-ish initial state. Apply enhancers selected by the
+    // orchestrator UI (if any) so benchmark runs reflect the configured
+    // optimization presets.
+    const base = signalTree({
+      items: Array.from({ length: 100 }, (_, i) => ({ id: i, value: i })),
+      meta: { createdAt: new Date(), loaded: true },
+    });
+
+    const tree = this.applyConfiguredEnhancers(base);
+
+    // Wire a few computed selectors to simulate real startup work
+    const c1 = computed(() => tree.state.items().length);
+    const c2 = computed(
+      () => tree.state.items().filter((x: any) => x.id % 2 === 0).length
+    );
+
+    // Touch selectors to ensure they are initialized
+    c1();
+    c2();
+
+    const t1 = performance.now();
+
+    // Small synchronous teardown to avoid retaining large structures in demo
+    try {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore - snapshot may be optional in some builds
+      tree.snapshot?.();
+    } catch {
+      // ignore snapshot errors
+    }
+
+    const duration = Math.round((t1 - t0) * 100) / 100;
+    const memAfter = perfEx.memory?.usedJSHeapSize;
+    const memoryDeltaMB =
+      typeof memBefore === 'number' && typeof memAfter === 'number'
+        ? Math.round(((memAfter - memBefore) / (1024 * 1024)) * 100) / 100
+        : undefined;
+
+    const result: BenchmarkResult = {
+      durationMs: duration,
+      memoryDeltaMB,
+      notes:
+        'SignalTree cold-start: created tree, applied enhancers, initialized selectors',
+    };
+
+    try {
+      window.__SIGNALTREE_LAST_COLDSTART_METRICS__ = result;
+    } catch {
+      // ignore
+    }
+
+    return result;
   }
 }

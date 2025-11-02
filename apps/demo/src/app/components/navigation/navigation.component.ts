@@ -50,6 +50,13 @@ export class NavigationComponent {
       route: '/realistic-benchmark-history',
       category: 'benchmarks',
     },
+    {
+      id: 'architecture',
+      title: 'Architecture Overview',
+      description: 'Consolidated architecture and tree-shaking benefits',
+      route: '/architecture',
+      category: 'features',
+    },
 
     // Performance
     {
@@ -108,6 +115,13 @@ export class NavigationComponent {
       title: 'DevTools',
       description: 'Developer tools and debugging utilities',
       route: '/devtools',
+      category: 'features',
+    },
+    {
+      id: 'enterprise-enhancer',
+      title: 'Enterprise Enhancer',
+      description: 'Audit, time-travel and enterprise presets',
+      route: '/enterprise-enhancer',
       category: 'features',
     },
   ];

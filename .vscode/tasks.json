@@ -1,0 +1,50 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Serve Demo App",
+			"type": "shell",
+			"command": "nx serve demo --port 4200"
+		},
+		{
+			"label": "Serve Demo App",
+			"type": "shell",
+			"command": "nx serve demo --port 4200"
+		},
+		{
+			"label": "Serve Demo App",
+			"type": "shell",
+			"command": "nx serve demo --port 4200"
+		},
+		{
+			"label": "Serve Demo App",
+			"type": "shell",
+			"command": "nx serve demo --port 4200"
+		},
+		{
+			"label": "Serve Demo App",
+			"type": "shell",
+			"command": "nx serve demo --port 4200"
+		},
+		{
+			"label": "Serve Demo App",
+			"type": "shell",
+			"command": "nx serve demo --port 4200"
+		},
+		{
+			"label": "Serve Demo App",
+			"type": "shell",
+			"command": "nx serve demo --port 4200"
+		},
+		{
+			"label": "Serve Demo App",
+			"type": "shell",
+			"command": "nx serve demo --port 4200"
+		},
+		{
+			"label": "Serve Demo App",
+			"type": "shell",
+			"command": "nx serve demo --port 4200"
+		}
+	]
+}

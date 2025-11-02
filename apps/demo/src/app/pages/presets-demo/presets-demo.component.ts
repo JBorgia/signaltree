@@ -1,11 +1,15 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { createDevTree, createPresetConfig, getAvailablePresets, signalTree, TreePreset } from '@signaltree/core';
-
 import {
-  SignalTreeBenchmarkService,
-} from '../realistic-comparison/benchmark-orchestrator/services/signaltree-benchmark.service';
+  createDevTree,
+  createPresetConfig,
+  getAvailablePresets,
+  signalTree,
+  TreePreset,
+} from '@signaltree/core';
+
+import { SignalTreeBenchmarkService } from '../realistic-comparison/benchmark-orchestrator/services/signaltree-benchmark.service';
 
 interface AppState extends Record<string, unknown> {
   user: {
@@ -71,10 +75,13 @@ export class PresetsDemoComponent {
       this.showcasePending = true;
       this.showcaseResult = null;
       // Use a modest data size to keep demo runs quick
-      const ms = await this.signalTreeBench.runAllFeaturesEnabledBenchmark(
+      let ms: any = await this.signalTreeBench.runAllFeaturesEnabledBenchmark(
         1000
       );
-      this.showcaseResult = Math.round(ms);
+      if (ms && typeof ms === 'object' && typeof ms.durationMs === 'number') {
+        ms = ms.durationMs;
+      }
+      this.showcaseResult = Math.round(ms as number);
     } finally {
       this.showcasePending = false;
     }
