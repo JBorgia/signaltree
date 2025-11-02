@@ -429,6 +429,22 @@
           param)</small
         >
       </div>
+
+      <div class="config-group">
+        <label for="include-enterprise">Include Enterprise Enhancer</label>
+        <input
+          type="checkbox"
+          id="include-enterprise"
+          [ngModel]="includeEnterpriseEnhancer()"
+          (ngModelChange)="setIncludeEnterpriseEnhancer($event)"
+          [disabled]="isRunning()"
+        />
+        <small>
+          When enabled, the 'enterprise' enhancer is added to SignalTree runs
+          (audit/time-travel features). For fair baseline comparisons, run
+          benchmarks with this disabled and then enabled to compare overhead.
+        </small>
+      </div>
     </div>
 
     <div class="test-estimates">

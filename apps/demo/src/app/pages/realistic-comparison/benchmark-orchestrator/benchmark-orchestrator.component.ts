@@ -18,6 +18,7 @@ import {
   RealisticBenchmarkSubmission,
 } from '../../../services/realistic-benchmark.service';
 import { BenchmarkTestCase, ENHANCED_TEST_CASES } from './scenario-definitions';
+import { BenchmarkResult as ServiceBenchmarkResult } from './services/_types';
 import { AkitaBenchmarkService } from './services/akita-benchmark.service';
 import { ElfBenchmarkService } from './services/elf-benchmark.service';
 import { NgRxBenchmarkService } from './services/ngrx-benchmark.service';
@@ -106,49 +107,98 @@ interface StatisticalComparison {
 }
 
 // Benchmark service contract used by orchestrator
+// Services MAY return a numeric duration (legacy) or a standardized
+// ServiceBenchmarkResult object with durationMs + optional memoryDeltaMB
 interface BenchmarkService {
+  // Cold start / initialization time measurement (ms) or standardized result
+  runColdStartBenchmark?: (config?: {
+    warmup?: number;
+  }) => Promise<number | ServiceBenchmarkResult>;
+  // Subscriber scaling test: number of subscribers to attach
+  runSubscriberScalingBenchmark?: (
+    subscriberCount: number
+  ) => Promise<number | ServiceBenchmarkResult>;
   // Core performance benchmarks
-  runDeepNestedBenchmark?(dataSize: number, depth?: number): Promise<number>;
-  runArrayBenchmark?(dataSize: number): Promise<number>;
-  runComputedBenchmark?(dataSize: number): Promise<number>;
+  runDeepNestedBenchmark?(
+    dataSize: number,
+    depth?: number
+  ): Promise<number | ServiceBenchmarkResult>;
+  runArrayBenchmark?(
+    dataSize: number
+  ): Promise<number | ServiceBenchmarkResult>;
+  runComputedBenchmark?(
+    dataSize: number
+  ): Promise<number | ServiceBenchmarkResult>;
   runBatchUpdatesBenchmark?(
     batches?: number,
     batchSize?: number
-  ): Promise<number>;
-  runSelectorBenchmark?(dataSize: number): Promise<number>;
-  runSerializationBenchmark?(dataSize: number): Promise<number>;
+  ): Promise<number | ServiceBenchmarkResult>;
+  runSelectorBenchmark?(
+    dataSize: number
+  ): Promise<number | ServiceBenchmarkResult>;
+  runSerializationBenchmark?(
+    dataSize: number
+  ): Promise<number | ServiceBenchmarkResult>;
   runConcurrentUpdatesBenchmark?(
     concurrency?: number,
     updatesPerWorker?: number
-  ): Promise<number>;
-  runMemoryEfficiencyBenchmark?(dataSize: number): Promise<number>;
-  runDataFetchingBenchmark?(dataSize: number): Promise<number>;
-  runRealTimeUpdatesBenchmark?(dataSize: number): Promise<number>;
-  runStateSizeScalingBenchmark?(dataSize: number): Promise<number>;
+  ): Promise<number | ServiceBenchmarkResult>;
+  runMemoryEfficiencyBenchmark?(
+    dataSize: number
+  ): Promise<number | ServiceBenchmarkResult>;
+  runDataFetchingBenchmark?(
+    dataSize: number
+  ): Promise<number | ServiceBenchmarkResult>;
+  runRealTimeUpdatesBenchmark?(
+    dataSize: number
+  ): Promise<number | ServiceBenchmarkResult>;
+  runStateSizeScalingBenchmark?(
+    dataSize: number
+  ): Promise<number | ServiceBenchmarkResult>;
 
   // Async operations benchmarks
-  runAsyncWorkflowBenchmark?(dataSize: number): Promise<number>;
+  runAsyncWorkflowBenchmark?(
+    dataSize: number
+  ): Promise<number | ServiceBenchmarkResult>;
   // Optional separate hydration-focused benchmark (some services implement
   // a distinct hydration runner to measure full-state application cost).
-  runAsyncWorkflowHydrationBenchmark?(dataSize: number): Promise<number>;
-  runConcurrentAsyncBenchmark?(concurrency: number): Promise<number>;
-  runAsyncCancellationBenchmark?(operations: number): Promise<number>;
+  runAsyncWorkflowHydrationBenchmark?(
+    dataSize: number
+  ): Promise<number | ServiceBenchmarkResult>;
+  runConcurrentAsyncBenchmark?(
+    concurrency: number
+  ): Promise<number | ServiceBenchmarkResult>;
+  runAsyncCancellationBenchmark?(
+    operations: number
+  ): Promise<number | ServiceBenchmarkResult>;
 
   // Time-travel benchmarks
-  runUndoRedoBenchmark?(operations: number): Promise<number>;
-  runHistorySizeBenchmark?(historySize: number): Promise<number>;
-  runJumpToStateBenchmark?(operations: number): Promise<number>;
+  runUndoRedoBenchmark?(
+    operations: number
+  ): Promise<number | ServiceBenchmarkResult>;
+  runHistorySizeBenchmark?(
+    historySize: number
+  ): Promise<number | ServiceBenchmarkResult>;
+  runJumpToStateBenchmark?(
+    operations: number
+  ): Promise<number | ServiceBenchmarkResult>;
 
   // Middleware benchmarks
-  runSingleMiddlewareBenchmark?(operations: number): Promise<number>;
+  runSingleMiddlewareBenchmark?(
+    operations: number
+  ): Promise<number | ServiceBenchmarkResult>;
   runMultipleMiddlewareBenchmark?(
     middlewareCount: number,
     operations: number
-  ): Promise<number>;
-  runConditionalMiddlewareBenchmark?(operations: number): Promise<number>;
+  ): Promise<number | ServiceBenchmarkResult>;
+  runConditionalMiddlewareBenchmark?(
+    operations: number
+  ): Promise<number | ServiceBenchmarkResult>;
 
   // Full-stack benchmarks
-  runAllFeaturesEnabledBenchmark?(dataSize: number): Promise<number>;
+  runAllFeaturesEnabledBenchmark?(
+    dataSize: number
+  ): Promise<number | ServiceBenchmarkResult>;
 }
 
 @Component({
@@ -183,6 +233,29 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   memoMode = signal<'off' | 'light' | 'shallow' | 'full'>(
     this._readMemoModeFromUrl()
   );
+
+  // Optional toggle to include the Enterprise enhancer during SignalTree
+  // benchmark runs. This is exposed in the UI and when enabled the
+  // orchestrator will add the 'enterprise' enhancer id to
+  // `window.__SIGNALTREE_ACTIVE_ENHANCERS` prior to invoking SignalTree
+  // benchmarks. Default is false.
+  includeEnterpriseEnhancer = signal(false);
+
+  setIncludeEnterpriseEnhancer(v: boolean | EventTarget | null) {
+    const val = typeof v === 'boolean' ? v : (v as any)?.value === 'true';
+    this.includeEnterpriseEnhancer(!!val);
+  }
+
+  // Optional automation mode: when enabled, SignalTree benchmarks will be
+  // executed twice per scenario: baseline (no enterprise enhancer) and
+  // enterprise (with the enterprise enhancer). This is useful for
+  // automated comparisons without toggling the UI manually.
+  includeEnterpriseAutoRun = signal(false);
+
+  setIncludeEnterpriseAutoRun(v: boolean | EventTarget | null) {
+    const val = typeof v === 'boolean' ? v : (v as any)?.value === 'true';
+    this.includeEnterpriseAutoRun(!!val);
+  }
 
   private _memoModeEffect = effect(() => {
     // Keep a global for other modules that may read it directly
@@ -434,6 +507,8 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       'data-fetching': 'runDataFetchingBenchmark',
       'real-time-updates': 'runRealTimeUpdatesBenchmark',
       'state-size-scaling': 'runStateSizeScalingBenchmark',
+      'subscriber-scaling': 'runSubscriberScalingBenchmark',
+      'cold-start': 'runColdStartBenchmark',
 
       // Time-travel (SignalTree-only)
       'undo-redo': 'runUndoRedoBenchmark',
@@ -1901,7 +1976,8 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   private async executeBenchmark(
     libraryId: string,
     scenarioId: string,
-    config: BenchmarkConfig
+    config: BenchmarkConfig,
+    options?: { overrideEnterprise?: boolean }
   ): Promise<number> {
     // Use only real library benchmarks - check for capability support
     const svc = this.getBenchmarkService(libraryId);
@@ -1926,6 +2002,58 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       return -1;
     }
 
+    // Helper: normalize service return into numeric duration and persist
+    // structured result under window.__LAST_BENCHMARK_EXTENDED_RESULTS__.
+    const maybeNormalize = async (
+      p: Promise<any> | undefined
+    ): Promise<number> => {
+      if (!p) return -1;
+      const res = await p;
+      if (typeof res === 'number') return res;
+      if (res && typeof res.durationMs === 'number') {
+        try {
+          window.__LAST_BENCHMARK_EXTENDED_RESULTS__ =
+            window.__LAST_BENCHMARK_EXTENDED_RESULTS__ || {};
+          window.__LAST_BENCHMARK_EXTENDED_RESULTS__[libraryId] =
+            window.__LAST_BENCHMARK_EXTENDED_RESULTS__[libraryId] || {};
+          window.__LAST_BENCHMARK_EXTENDED_RESULTS__[libraryId][scenarioId] =
+            res;
+        } catch (e) {
+          // non-fatal
+          void e;
+        }
+        return res.durationMs;
+      }
+      return -1;
+    };
+
+    // If we're about to run a SignalTree benchmark, expose the selected
+    // enhancer set (or an override) on `window` so the SignalTree service can
+    // apply the exact same enhancers.
+    if (libraryId === 'signaltree') {
+      try {
+        const enhancers = (this.activeEnhancers() || []).map(
+          (e: { name: string }) => e.name
+        );
+        const useEnterprise =
+          options?.overrideEnterprise ?? this.includeEnterpriseEnhancer?.();
+        if (useEnterprise) enhancers.push('enterprise');
+        // Maintain backwards-compatible global name and typed variant
+        try {
+          // Legacy name used elsewhere in the codebase — write using a typed cast
+          (
+            window as unknown as { __SIGNALTREE_ACTIVE_ENHANCERS?: string[] }
+          ).__SIGNALTREE_ACTIVE_ENHANCERS = enhancers;
+        } catch {
+          // ignore
+        }
+        window.__SIGNALTREE_ACTIVE_ENHANCERS__ = enhancers;
+      } catch (err) {
+        // ignore any failures reading the computed
+        void err;
+      }
+    }
+
     try {
       switch (scenarioId) {
         case 'deep-nested': {
@@ -1935,7 +2063,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             );
             return -1;
           }
-          return await svc.runDeepNestedBenchmark(config.dataSize);
+          return await maybeNormalize(
+            svc.runDeepNestedBenchmark(config.dataSize)
+          );
         }
         case 'large-array': {
           if (!svc.runArrayBenchmark) {
@@ -1944,7 +2074,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             );
             return -1;
           }
-          return await svc.runArrayBenchmark(config.dataSize);
+          return await maybeNormalize(svc.runArrayBenchmark(config.dataSize));
         }
         case 'computed-chains':
           if (!svc.runComputedBenchmark) {
@@ -1953,7 +2083,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             );
             return -1;
           }
-          return await svc.runComputedBenchmark(config.dataSize);
+          return await maybeNormalize(
+            svc.runComputedBenchmark(config.dataSize)
+          );
         case 'batch-updates':
           if (!svc.runBatchUpdatesBenchmark) {
             console.warn(
@@ -1961,9 +2093,11 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             );
             return -1;
           }
-          return await svc.runBatchUpdatesBenchmark(
-            BENCHMARK_CONSTANTS.ITERATIONS.BATCH_UPDATES,
-            BENCHMARK_CONSTANTS.ITERATIONS.BATCH_SIZE
+          return await maybeNormalize(
+            svc.runBatchUpdatesBenchmark(
+              BENCHMARK_CONSTANTS.ITERATIONS.BATCH_UPDATES,
+              BENCHMARK_CONSTANTS.ITERATIONS.BATCH_SIZE
+            )
           );
         case 'selector-memoization':
           if (!svc.runSelectorBenchmark) {
@@ -1972,7 +2106,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             );
             return -1;
           }
-          return await svc.runSelectorBenchmark(config.dataSize);
+          return await maybeNormalize(
+            svc.runSelectorBenchmark(config.dataSize)
+          );
         case 'serialization':
           if (!svc.runSerializationBenchmark) {
             console.warn(
@@ -1980,7 +2116,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             );
             return -1;
           }
-          return await svc.runSerializationBenchmark(config.dataSize);
+          return await maybeNormalize(
+            svc.runSerializationBenchmark(config.dataSize)
+          );
         case 'concurrent-updates': {
           if (!svc.runConcurrentUpdatesBenchmark) {
             console.warn(
@@ -1997,9 +2135,8 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             50,
             Math.min(500, Math.floor(config.iterations * 4))
           );
-          return await svc.runConcurrentUpdatesBenchmark(
-            concurrency,
-            updatesPerWorker
+          return await maybeNormalize(
+            svc.runConcurrentUpdatesBenchmark(concurrency, updatesPerWorker)
           );
         }
         case 'memory-efficiency':
@@ -2009,7 +2146,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             );
             return -1;
           }
-          return await svc.runMemoryEfficiencyBenchmark(config.dataSize);
+          return await maybeNormalize(
+            svc.runMemoryEfficiencyBenchmark(config.dataSize)
+          );
         case 'data-fetching':
           if (!svc.runDataFetchingBenchmark) {
             console.warn(
@@ -2017,7 +2156,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             );
             return -1;
           }
-          return await svc.runDataFetchingBenchmark(config.dataSize);
+          return await maybeNormalize(
+            svc.runDataFetchingBenchmark(config.dataSize)
+          );
         case 'real-time-updates':
           if (!svc.runRealTimeUpdatesBenchmark) {
             console.warn(
@@ -2025,7 +2166,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             );
             return -1;
           }
-          return await svc.runRealTimeUpdatesBenchmark(config.dataSize);
+          return await maybeNormalize(
+            svc.runRealTimeUpdatesBenchmark(config.dataSize)
+          );
         case 'state-size-scaling':
           if (!svc.runStateSizeScalingBenchmark) {
             console.warn(
@@ -2033,7 +2176,33 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             );
             return -1;
           }
-          return await svc.runStateSizeScalingBenchmark(config.dataSize);
+          return await maybeNormalize(
+            svc.runStateSizeScalingBenchmark(config.dataSize)
+          );
+
+        case 'subscriber-scaling': {
+          if (!svc.runSubscriberScalingBenchmark) {
+            console.warn(
+              `${libraryId} does not support subscriber-scaling benchmarks`
+            );
+            return -1;
+          }
+          // Cap subscriber count to a reasonable maximum derived from dataSize
+          const subs = Math.max(
+            10,
+            Math.min(2000, Math.floor(config.dataSize / 10))
+          );
+          return await maybeNormalize(svc.runSubscriberScalingBenchmark(subs));
+        }
+
+        case 'cold-start': {
+          if (!svc.runColdStartBenchmark) {
+            console.warn(`${libraryId} does not support cold-start benchmarks`);
+            return -1;
+          }
+          // A single short warmup run helps avoid first-time JIT noise
+          return await maybeNormalize(svc.runColdStartBenchmark({ warmup: 1 }));
+        }
 
         // Async benchmark cases remain runnable via service methods; the demo UI no longer exposes a separate async page
         case 'concurrent-async':
@@ -2043,8 +2212,10 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             );
             return -1;
           }
-          return await svc.runConcurrentAsyncBenchmark(
-            BENCHMARK_CONSTANTS.ITERATIONS.ASYNC_WORKFLOW
+          return await maybeNormalize(
+            svc.runConcurrentAsyncBenchmark(
+              BENCHMARK_CONSTANTS.ITERATIONS.ASYNC_WORKFLOW
+            )
           );
         case 'async-cancellation':
           if (!svc.runAsyncCancellationBenchmark) {
@@ -2053,8 +2224,10 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             );
             return -1;
           }
-          return await svc.runAsyncCancellationBenchmark(
-            BENCHMARK_CONSTANTS.ITERATIONS.ASYNC_WORKFLOW
+          return await maybeNormalize(
+            svc.runAsyncCancellationBenchmark(
+              BENCHMARK_CONSTANTS.ITERATIONS.ASYNC_WORKFLOW
+            )
           );
 
         // Time Travel
@@ -2063,8 +2236,10 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             console.warn(`${libraryId} does not support undo-redo benchmarks`);
             return -1;
           }
-          return await svc.runUndoRedoBenchmark(
-            BENCHMARK_CONSTANTS.ITERATIONS.BATCH_UPDATES
+          return await maybeNormalize(
+            svc.runUndoRedoBenchmark(
+              BENCHMARK_CONSTANTS.ITERATIONS.BATCH_UPDATES
+            )
           );
         case 'history-size':
           if (!svc.runHistorySizeBenchmark) {
@@ -2073,8 +2248,8 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             );
             return -1;
           }
-          return await svc.runHistorySizeBenchmark(
-            BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR
+          return await maybeNormalize(
+            svc.runHistorySizeBenchmark(BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR)
           );
         case 'jump-to-state':
           if (!svc.runJumpToStateBenchmark) {
@@ -2083,8 +2258,10 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             );
             return -1;
           }
-          return await svc.runJumpToStateBenchmark(
-            BENCHMARK_CONSTANTS.ITERATIONS.ASYNC_WORKFLOW
+          return await maybeNormalize(
+            svc.runJumpToStateBenchmark(
+              BENCHMARK_CONSTANTS.ITERATIONS.ASYNC_WORKFLOW
+            )
           );
 
         // Middleware
@@ -2095,8 +2272,10 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             );
             return -1;
           }
-          return await svc.runSingleMiddlewareBenchmark(
-            BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR
+          return await maybeNormalize(
+            svc.runSingleMiddlewareBenchmark(
+              BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR
+            )
           );
         case 'multiple-middleware':
           if (!svc.runMultipleMiddlewareBenchmark) {
@@ -2105,9 +2284,11 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             );
             return -1;
           }
-          return await svc.runMultipleMiddlewareBenchmark(
-            5,
-            BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR
+          return await maybeNormalize(
+            svc.runMultipleMiddlewareBenchmark(
+              5,
+              BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR
+            )
           );
         case 'conditional-middleware':
           if (!svc.runConditionalMiddlewareBenchmark) {
@@ -2116,8 +2297,10 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             );
             return -1;
           }
-          return await svc.runConditionalMiddlewareBenchmark(
-            BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR
+          return await maybeNormalize(
+            svc.runConditionalMiddlewareBenchmark(
+              BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR
+            )
           );
 
         // Full Stack
@@ -2287,14 +2470,41 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
           this.currentLibrary.set(library.name);
           this.currentScenario.set(scenario.name);
 
-          const result = await this.runSingleBenchmark(
-            library,
-            scenario,
-            config
-          );
+          // If auto-run for enterprise compare is enabled for SignalTree,
+          // run baseline (no enterprise enhancer) then enterprise (with enhancer)
+          if (library.id === 'signaltree' && this.includeEnterpriseAutoRun()) {
+            const base = await this.runSingleBenchmark(
+              library,
+              scenario,
+              config,
+              {
+                overrideEnterprise: false,
+                variantLabel: 'baseline',
+              }
+            );
+            this.results.update((r) => [...r, base]);
+            this.completedTests.update((c) => c + 1);
 
-          this.results.update((r) => [...r, result]);
-          this.completedTests.update((c) => c + 1);
+            const ent = await this.runSingleBenchmark(
+              library,
+              scenario,
+              config,
+              {
+                overrideEnterprise: true,
+                variantLabel: 'enterprise',
+              }
+            );
+            this.results.update((r) => [...r, ent]);
+            this.completedTests.update((c) => c + 1);
+          } else {
+            const result = await this.runSingleBenchmark(
+              library,
+              scenario,
+              config
+            );
+            this.results.update((r) => [...r, result]);
+            this.completedTests.update((c) => c + 1);
+          }
         }
       }
     } catch (error) {
@@ -2312,7 +2522,8 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   private async runSingleBenchmark(
     library: Library,
     scenario: BenchmarkTestCase,
-    config: BenchmarkConfig
+    config: BenchmarkConfig,
+    options?: { overrideEnterprise?: boolean; variantLabel?: string }
   ): Promise<BenchmarkResult> {
     console.log(
       `Starting single benchmark: ${library.name} - ${scenario.name}`
@@ -2333,7 +2544,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     // Warmup runs
     for (let i = 0; i < config.warmupRuns; i++) {
       if (!this.isRunning()) break;
-      await this.executeBenchmark(library.id, scenario.id, config);
+      await this.executeBenchmark(library.id, scenario.id, config, {
+        overrideEnterprise: options?.overrideEnterprise,
+      });
       this.currentIteration.set(i + 1);
     }
 
@@ -2346,7 +2559,10 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       const duration = await this.executeBenchmark(
         library.id,
         scenario.id,
-        config
+        config,
+        {
+          overrideEnterprise: options?.overrideEnterprise,
+        }
       );
 
       console.log(`Iteration ${i + 1} duration: ${duration}ms`);
@@ -2395,9 +2611,24 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         : undefined;
 
     const median = this.percentile(samples, 50);
+    // For cold-start scenarios some services return structured metrics
+    // exposed on window.__LAST_COLDSTART_RESULTS__ - include memoryDeltaMB
+    let coldMemoryDelta: number | undefined = undefined;
+    try {
+      const last = window.__LAST_COLDSTART_RESULTS__ || {};
+      const libMetrics = last?.[library.id];
+      if (libMetrics && typeof libMetrics.memoryDeltaMB === 'number') {
+        coldMemoryDelta = libMetrics.memoryDeltaMB;
+      }
+    } catch {
+      // ignore
+    }
+
     return {
       libraryId: library.id,
-      scenarioId: scenario.id,
+      scenarioId: options?.variantLabel
+        ? `${scenario.id}::${options.variantLabel}`
+        : scenario.id,
       samples,
       median,
       mean: this.average(samples),
@@ -2407,7 +2638,8 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       max: samples[samples.length - 1],
       stdDev: this.standardDeviation(samples),
       opsPerSecond: median > 0 ? Math.round(1000 / median) : 0,
-      memoryDeltaMB,
+      memoryDeltaMB:
+        scenario.id === 'cold-start' ? coldMemoryDelta : memoryDeltaMB,
     };
   }
 

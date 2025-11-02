@@ -14,6 +14,7 @@ import { map, mergeMap, switchMap, take, tap } from 'rxjs/operators';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
 import { createYieldToUI } from '../shared/benchmark-utils';
+import { BenchmarkResult } from './_types';
 
 // State interface for complex benchmarks
 interface User {
@@ -146,6 +147,19 @@ const benchmarkReducer = createReducer(
 
 @Injectable({ providedIn: 'root' })
 export class NgRxBenchmarkService {
+  // Helper to return standardized BenchmarkResult
+  private toResult(
+    durationMs: number,
+    memoryDeltaMB?: number | 'N/A' | undefined,
+    notes?: string
+  ) {
+    return {
+      durationMs: Math.round(durationMs * 100) / 100,
+      memoryDeltaMB:
+        typeof memoryDeltaMB === 'number' ? memoryDeltaMB : undefined,
+      notes,
+    } as BenchmarkResult;
+  }
   /**
    * Standardized cold start and memory profiling
    */
@@ -172,6 +186,23 @@ export class NgRxBenchmarkService {
         typeof result.memoryDeltaMB === 'number' ? result.memoryDeltaMB : 'N/A',
     };
   }
+
+  // Adapter to satisfy orchestrator naming: return standardized BenchmarkResult
+  async runColdStartBenchmark(): Promise<number | BenchmarkResult> {
+    const res = await this.runInitializationBenchmark();
+    const result: BenchmarkResult = {
+      durationMs: typeof res.durationMs === 'number' ? res.durationMs : -1,
+      memoryDeltaMB:
+        typeof res.memoryDeltaMB === 'number' ? res.memoryDeltaMB : undefined,
+      notes: 'NgRx initialization via runTimed',
+    };
+    try {
+      window.__NGRX_LAST_COLDSTART_METRICS__ = result;
+    } catch {
+      // ignore
+    }
+    return result;
+  }
   // Narrow typing for performance.memory when available
   private static PerfWithMemory = {} as Performance & {
     memory?: { jsHeapSizeLimit: number; usedJSHeapSize: number };
@@ -181,7 +212,9 @@ export class NgRxBenchmarkService {
 
   // --- Middleware Benchmarks (NgRx Meta-Reducers) ---
 
-  async runSingleMiddlewareBenchmark(operations: number): Promise<number> {
+  async runSingleMiddlewareBenchmark(
+    operations: number
+  ): Promise<number | BenchmarkResult> {
     // Create a simple state and action
     interface TestState {
       counter: number;
@@ -218,13 +251,14 @@ export class NgRxBenchmarkService {
       currentState = reducerWithMiddleware(currentState, incrementAction());
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'NgRx single middleware');
   }
 
   async runMultipleMiddlewareBenchmark(
     middlewareCount: number,
     operations: number
-  ): Promise<number> {
+  ): Promise<number | BenchmarkResult> {
     interface TestState {
       counter: number;
       data: string;
@@ -264,10 +298,13 @@ export class NgRxBenchmarkService {
       currentState = composedReducer(currentState, incrementAction());
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'NgRx multiple middleware');
   }
 
-  async runConditionalMiddlewareBenchmark(operations: number): Promise<number> {
+  async runConditionalMiddlewareBenchmark(
+    operations: number
+  ): Promise<number | BenchmarkResult> {
     interface TestState {
       counter: number;
       data: string;
@@ -314,11 +351,14 @@ export class NgRxBenchmarkService {
       currentState = reducerWithMiddleware(currentState, action);
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'NgRx conditional middleware');
   }
 
   // --- Async Workflows (NgRx Effects) ---
-  async runAsyncWorkflowBenchmark(dataSize: number): Promise<number> {
+  async runAsyncWorkflowBenchmark(
+    dataSize: number
+  ): Promise<number | BenchmarkResult> {
     // Create actions for async workflow
     const triggerAsync = createAction(
       '[Async] Trigger',
@@ -372,10 +412,13 @@ export class NgRxBenchmarkService {
 
     await completionPromise;
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'NgRx async workflow');
   }
 
-  async runAsyncCancellationBenchmark(operations: number): Promise<number> {
+  async runAsyncCancellationBenchmark(
+    operations: number
+  ): Promise<number | BenchmarkResult> {
     // Create actions for cancellation workflow
     const startTask = createAction('[Task] Start', props<{ id: number }>());
     const cancelTask = createAction('[Task] Cancel', props<{ id: number }>());
@@ -441,12 +484,13 @@ export class NgRxBenchmarkService {
 
     await allDonePromise;
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'NgRx async cancellation');
   }
   async runDeepNestedBenchmark(
     dataSize: number,
     depth = BENCHMARK_CONSTANTS.DATA_GENERATION.NESTED_DEPTH
-  ): Promise<number> {
+  ): Promise<number | BenchmarkResult> {
     console.log(
       `NgRx Deep Nested: Starting with dataSize=${dataSize}, depth=${depth}`
     );
@@ -508,18 +552,16 @@ export class NgRxBenchmarkService {
 
       const duration = performance.now() - start;
       console.log(`NgRx Deep Nested: Completed in ${duration}ms`);
-      return duration;
+      return this.toResult(duration, undefined, 'NgRx deep nested');
     } catch (error) {
       console.error('NgRx Deep Nested: Error occurred:', error);
       const duration = performance.now() - start;
       console.log(`NgRx Deep Nested: Failed after ${duration}ms`);
       throw error;
     }
-
-    return performance.now() - start;
   }
 
-  async runArrayBenchmark(dataSize: number): Promise<number> {
+  async runArrayBenchmark(dataSize: number): Promise<number | BenchmarkResult> {
     const start = performance.now();
 
     const updateItem = createAction(
@@ -562,10 +604,13 @@ export class NgRxBenchmarkService {
       }
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'NgRx array updates');
   }
 
-  async runComputedBenchmark(dataSize: number): Promise<number> {
+  async runComputedBenchmark(
+    dataSize: number
+  ): Promise<number | BenchmarkResult> {
     const start = performance.now();
 
     const updateValue = createAction(
@@ -608,13 +653,14 @@ export class NgRxBenchmarkService {
       }
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'NgRx computed chains');
   }
 
   async runBatchUpdatesBenchmark(
     batches = 100,
     batchSize = 1000
-  ): Promise<number> {
+  ): Promise<number | BenchmarkResult> {
     const start = performance.now();
 
     // Single reducer call per batch to exercise batching capability
@@ -642,10 +688,13 @@ export class NgRxBenchmarkService {
       // REMOVED: Yielding during measurement for accuracy
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'NgRx batch updates');
   }
 
-  async runSelectorBenchmark(dataSize: number): Promise<number> {
+  async runSelectorBenchmark(
+    dataSize: number
+  ): Promise<number | BenchmarkResult> {
     const start = performance.now();
 
     type Item = {
@@ -702,10 +751,13 @@ export class NgRxBenchmarkService {
       }
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'NgRx selector memoization');
   }
 
-  async runSerializationBenchmark(dataSize: number): Promise<number> {
+  async runSerializationBenchmark(
+    dataSize: number
+  ): Promise<number | BenchmarkResult> {
     // Plain POJO structure similar to SignalTree test
     const users = Array.from(
       { length: Math.max(100, Math.min(1000, dataSize)) },
@@ -746,13 +798,14 @@ export class NgRxBenchmarkService {
       ' stringify(ms)=',
       (t2 - t1).toFixed(2)
     );
-    return t2 - t0;
+    const duration = t2 - t0;
+    return this.toResult(duration, undefined, 'NgRx serialization');
   }
 
   async runConcurrentUpdatesBenchmark(
     concurrency = 50,
     updatesPerWorker = 200
-  ): Promise<number> {
+  ): Promise<number | BenchmarkResult> {
     type Counter = { value: number };
     type State = { counters: Counter[] };
 
@@ -787,10 +840,13 @@ export class NgRxBenchmarkService {
 
     // consume to avoid DCE
     if (state.counters[0].value === -1) console.log('noop');
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'NgRx concurrent updates');
   }
 
-  async runMemoryEfficiencyBenchmark(dataSize: number): Promise<number> {
+  async runMemoryEfficiencyBenchmark(
+    dataSize: number
+  ): Promise<number | BenchmarkResult> {
     type Item = { id: number; score: number; tags: string[] };
     type Group = { id: number; items: Item[] };
     type State = { groups: Group[] };
@@ -872,10 +928,10 @@ export class NgRxBenchmarkService {
 
     // consume to avoid DCE
     if (state.groups.length === -1) console.log('noop');
-    return duration;
+    return this.toResult(duration, undefined, 'NgRx memory efficiency');
   }
 
-  async runDataFetchingBenchmark(): Promise<number> {
+  async runDataFetchingBenchmark(): Promise<number | BenchmarkResult> {
     // Simulate data fetching with NgRx Store pattern
     const initialState: NgRxState = { groups: [], posts: [], users: [] };
     let state = initialState;
@@ -933,10 +989,10 @@ export class NgRxBenchmarkService {
 
     // consume to avoid DCE
     if (state.users?.length === -1) console.log('noop');
-    return duration;
+    return this.toResult(duration, undefined, 'NgRx data fetching');
   }
 
-  async runRealTimeUpdatesBenchmark(): Promise<number> {
+  async runRealTimeUpdatesBenchmark(): Promise<number | BenchmarkResult> {
     // Simulate real-time updates (WebSocket-like) with NgRx Store
     const initialState: NgRxState = {
       groups: [],
@@ -991,10 +1047,10 @@ export class NgRxBenchmarkService {
     // consume to avoid DCE
     if (state.metrics && Object.keys(state.metrics).length === -1)
       console.log('noop');
-    return duration;
+    return this.toResult(duration, undefined, 'NgRx real-time updates');
   }
 
-  async runStateSizeScalingBenchmark(): Promise<number> {
+  async runStateSizeScalingBenchmark(): Promise<number | BenchmarkResult> {
     // Test performance with large state size (10,000 items)
     const initialState: NgRxState = { groups: [], posts: [], users: [] };
     let state = initialState;
@@ -1074,12 +1130,12 @@ export class NgRxBenchmarkService {
 
     // consume to avoid DCE
     if (state.largeDataset?.length === -1) console.log('noop');
-    return duration;
+    return this.toResult(duration, undefined, 'NgRx state size scaling');
   }
 
   async runSubscriberScalingBenchmark(
     subscriberCount: number
-  ): Promise<number> {
+  ): Promise<number | BenchmarkResult> {
     // Create a simple state with counter
     interface SubscriberState {
       counter: number;
@@ -1130,6 +1186,7 @@ export class NgRxBenchmarkService {
       // REMOVED: yielding during measurement for accuracy
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'NgRx subscriber scaling');
   }
 }

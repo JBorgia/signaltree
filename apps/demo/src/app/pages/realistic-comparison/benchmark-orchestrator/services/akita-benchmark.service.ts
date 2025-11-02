@@ -9,10 +9,23 @@ import {
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
 import { createYieldToUI } from '../shared/benchmark-utils';
+import { BenchmarkResult, safeGetHeapUsed } from './_types';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 @Injectable({ providedIn: 'root' })
 export class AkitaBenchmarkService {
+  private toResult(
+    durationMs: number,
+    memoryDeltaMB?: number | 'N/A' | undefined,
+    notes?: string
+  ) {
+    return {
+      durationMs: Math.round(durationMs * 100) / 100,
+      memoryDeltaMB:
+        typeof memoryDeltaMB === 'number' ? memoryDeltaMB : undefined,
+      notes,
+    } as BenchmarkResult;
+  }
   /**
    * Standardized cold start and memory profiling
    */
@@ -46,12 +59,31 @@ export class AkitaBenchmarkService {
         typeof result.memoryDeltaMB === 'number' ? result.memoryDeltaMB : 'N/A',
     };
   }
+
+  // Adapter to satisfy orchestrator naming: return standardized BenchmarkResult
+  async runColdStartBenchmark(): Promise<number | BenchmarkResult> {
+    const res = await this.runInitializationBenchmark();
+    const result: BenchmarkResult = {
+      durationMs: typeof res.durationMs === 'number' ? res.durationMs : -1,
+      memoryDeltaMB:
+        typeof res.memoryDeltaMB === 'number' ? res.memoryDeltaMB : undefined,
+      notes: 'Akita initialization via runTimed',
+    };
+    try {
+      window.__AKITA_LAST_COLDSTART_METRICS__ = result;
+    } catch {
+      // ignore
+    }
+    return result;
+  }
   // Akita is entity-centric; we will use plain objects for nested/other cases
   private yieldToUI = createYieldToUI();
 
   // --- Middleware Benchmarks (Akita akitaPreUpdate Hooks) ---
 
-  async runSingleMiddlewareBenchmark(operations: number): Promise<number> {
+  async runSingleMiddlewareBenchmark(
+    operations: number
+  ): Promise<number | BenchmarkResult> {
     // Create a store with akitaPreUpdate hook (Akita's middleware)
     interface TestState {
       counter: number;
@@ -82,13 +114,14 @@ export class AkitaBenchmarkService {
       store.update((state) => ({ ...state, counter: state.counter + 1 }));
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration);
   }
 
   async runMultipleMiddlewareBenchmark(
     middlewareCount: number,
     operations: number
-  ): Promise<number> {
+  ): Promise<number | BenchmarkResult> {
     // Akita only supports one akitaPreUpdate hook per store, so we simulate
     // multiple middleware by doing multiple operations in the hook
     interface TestState {
@@ -123,10 +156,13 @@ export class AkitaBenchmarkService {
       store.update((state) => ({ ...state, counter: state.counter + 1 }));
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration);
   }
 
-  async runConditionalMiddlewareBenchmark(operations: number): Promise<number> {
+  async runConditionalMiddlewareBenchmark(
+    operations: number
+  ): Promise<number | BenchmarkResult> {
     // Conditional middleware logic in akitaPreUpdate
     interface TestState {
       counter: number;
@@ -165,11 +201,14 @@ export class AkitaBenchmarkService {
       }
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration);
   }
 
   // --- Async Workflows (lightweight simulations) ---
-  async runAsyncWorkflowBenchmark(dataSize: number): Promise<number> {
+  async runAsyncWorkflowBenchmark(
+    dataSize: number
+  ): Promise<number | BenchmarkResult> {
     const start = performance.now();
     const ops = Math.min(
       dataSize,
@@ -179,20 +218,26 @@ export class AkitaBenchmarkService {
     for (let i = 0; i < ops; i++)
       promises.push(new Promise((r) => setTimeout(r, 0)));
     await Promise.all(promises);
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration);
   }
 
-  async runConcurrentAsyncBenchmark(concurrency: number): Promise<number> {
+  async runConcurrentAsyncBenchmark(
+    concurrency: number
+  ): Promise<number | BenchmarkResult> {
     const start = performance.now();
     const tasks = Array.from(
       { length: concurrency },
       () => new Promise((r) => setTimeout(r, 0))
     );
     await Promise.all(tasks);
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration);
   }
 
-  async runAsyncCancellationBenchmark(operations: number): Promise<number> {
+  async runAsyncCancellationBenchmark(
+    operations: number
+  ): Promise<number | BenchmarkResult> {
     const start = performance.now();
     const timers: number[] = [];
     for (let i = 0; i < operations; i++)
@@ -200,13 +245,14 @@ export class AkitaBenchmarkService {
     for (let i = 0; i < Math.floor(operations / 2); i++)
       clearTimeout(timers[i]);
     await new Promise((r) => setTimeout(r, 10));
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration);
   }
 
   async runDeepNestedBenchmark(
     dataSize: number,
     depth = BENCHMARK_CONSTANTS.DATA_GENERATION.NESTED_DEPTH
-  ): Promise<number> {
+  ): Promise<number | BenchmarkResult> {
     const createNested = (level: number): any =>
       level === 0
         ? { value: 0, data: 'test' }
@@ -229,10 +275,11 @@ export class AkitaBenchmarkService {
     }
     // consume
     if (state?.level?.level === null) console.log('noop');
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration);
   }
 
-  async runArrayBenchmark(dataSize: number): Promise<number> {
+  async runArrayBenchmark(dataSize: number): Promise<number | BenchmarkResult> {
     type Item = { id: ID; value: number };
     type ItemsState = EntityState<Item>;
 
@@ -262,10 +309,13 @@ export class AkitaBenchmarkService {
     // consume state so it isn't DCE'd
     const v = store.getValue();
     if ((v.ids?.length ?? 0) === -1) console.log('noop');
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration);
   }
 
-  async runComputedBenchmark(dataSize: number): Promise<number> {
+  async runComputedBenchmark(
+    dataSize: number
+  ): Promise<number | BenchmarkResult> {
     // Akita has queries; we simulate derived computation over plain object state
     let state = {
       value: 0,
@@ -291,13 +341,14 @@ export class AkitaBenchmarkService {
       state = { ...state, value: i };
       compute();
     }
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration);
   }
 
   async runBatchUpdatesBenchmark(
     batches = BENCHMARK_CONSTANTS.ITERATIONS.BATCH_UPDATES,
     batchSize = BENCHMARK_CONSTANTS.ITERATIONS.BATCH_SIZE
-  ): Promise<number> {
+  ): Promise<number | BenchmarkResult> {
     type Item = { id: ID; value: number };
     type ItemsState = EntityState<Item>;
     @StoreConfig({ name: 'akita-bench-batch', idKey: 'id' })
@@ -319,10 +370,13 @@ export class AkitaBenchmarkService {
         (entity) => ({ value: (entity.value + 1) | 0 })
       );
     }
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration);
   }
 
-  async runSelectorBenchmark(dataSize: number): Promise<number> {
+  async runSelectorBenchmark(
+    dataSize: number
+  ): Promise<number | BenchmarkResult> {
     type Item = {
       id: ID;
       flag: boolean;
@@ -429,10 +483,13 @@ export class AkitaBenchmarkService {
         }
       }
     }
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration);
   }
 
-  async runSerializationBenchmark(dataSize: number): Promise<number> {
+  async runSerializationBenchmark(
+    dataSize: number
+  ): Promise<number | BenchmarkResult> {
     // Create an entity store and populate it to reflect actual in-store serialization
     type User = {
       id: number;
@@ -478,13 +535,14 @@ export class AkitaBenchmarkService {
       ' stringify(ms)=',
       (t2 - t1).toFixed(2)
     );
-    return t2 - t0;
+    const duration = t2 - t0;
+    return this.toResult(duration);
   }
 
   async runConcurrentUpdatesBenchmark(
     concurrency = BENCHMARK_CONSTANTS.ITERATIONS.ASYNC_WORKFLOW,
     updatesPerWorker = 200
-  ): Promise<number> {
+  ): Promise<number | BenchmarkResult> {
     type Item = { id: ID; value: number };
     type ItemsState = EntityState<Item>;
     @StoreConfig({ name: 'akita-bench-conc', idKey: 'id' })
@@ -510,10 +568,14 @@ export class AkitaBenchmarkService {
     const ents2 = (v2.entities as Record<ID, Item>) ?? ({} as Record<ID, Item>);
     const first = ents2[0 as unknown as ID];
     if ((first?.value ?? 0) === -1) console.log('noop');
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    return this.toResult(duration);
   }
 
-  async runMemoryEfficiencyBenchmark(dataSize: number): Promise<number> {
+  async runMemoryEfficiencyBenchmark(
+    dataSize: number
+  ): Promise<number | BenchmarkResult> {
+    const beforeMem = safeGetHeapUsed();
     type Item = { id: ID; score: number; tags: string[]; group: number };
     type ItemsState = EntityState<Item>;
     @StoreConfig({ name: 'akita-bench-mem', idKey: 'id' })
@@ -553,10 +615,20 @@ export class AkitaBenchmarkService {
             : e.tags,
       }));
     }
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    const afterMem = safeGetHeapUsed();
+    let deltaMB: number | undefined = undefined;
+    if (beforeMem != null && afterMem != null) {
+      deltaMB = (afterMem - beforeMem) / (1024 * 1024);
+      console.debug('[Akita][memory] usedJSHeapSize ΔMB ~', deltaMB.toFixed(2));
+    }
+    return this.toResult(duration, deltaMB);
   }
 
-  async runDataFetchingBenchmark(dataSize: number): Promise<number> {
+  async runDataFetchingBenchmark(
+    dataSize: number
+  ): Promise<number | BenchmarkResult> {
+    const beforeMem = safeGetHeapUsed();
     const start = performance.now();
 
     // Simulate API data structure for Akita entities
@@ -647,10 +719,23 @@ export class AkitaBenchmarkService {
       }
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    const afterMem = safeGetHeapUsed();
+    let deltaMB: number | undefined = undefined;
+    if (beforeMem != null && afterMem != null) {
+      deltaMB = (afterMem - beforeMem) / (1024 * 1024);
+      console.debug(
+        '[Akita][DataFetching][memory] usedJSHeapSize ΔMB ~',
+        deltaMB.toFixed(2)
+      );
+    }
+    return this.toResult(duration, deltaMB);
   }
 
-  async runRealTimeUpdatesBenchmark(dataSize: number): Promise<number> {
+  async runRealTimeUpdatesBenchmark(
+    dataSize: number
+  ): Promise<number | BenchmarkResult> {
+    const beforeMem = safeGetHeapUsed();
     const start = performance.now();
 
     // Create stores for different aspects of real-time data
@@ -781,10 +866,23 @@ export class AkitaBenchmarkService {
       }
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    const afterMem = safeGetHeapUsed();
+    let deltaMB: number | undefined = undefined;
+    if (beforeMem != null && afterMem != null) {
+      deltaMB = (afterMem - beforeMem) / (1024 * 1024);
+      console.debug(
+        '[Akita][RealTimeUpdates][memory] usedJSHeapSize ΔMB ~',
+        deltaMB.toFixed(2)
+      );
+    }
+    return this.toResult(duration, deltaMB);
   }
 
-  async runStateSizeScalingBenchmark(dataSize: number): Promise<number> {
+  async runStateSizeScalingBenchmark(
+    dataSize: number
+  ): Promise<number | BenchmarkResult> {
+    const beforeMem = (performance as any).memory?.usedJSHeapSize ?? null;
     const start = performance.now();
 
     // Test how Akita handles large entity collections
@@ -868,7 +966,17 @@ export class AkitaBenchmarkService {
       }
     }
 
-    return performance.now() - start;
+    const duration = performance.now() - start;
+    const afterMem = (performance as any).memory?.usedJSHeapSize ?? null;
+    let deltaMB: number | undefined = undefined;
+    if (beforeMem != null && afterMem != null) {
+      deltaMB = (afterMem - beforeMem) / (1024 * 1024);
+      console.debug(
+        '[Akita][StateSizeScaling][memory] usedJSHeapSize ΔMB ~',
+        deltaMB.toFixed(2)
+      );
+    }
+    return this.toResult(duration, deltaMB);
   }
 
   async runSubscriberScalingBenchmark(
