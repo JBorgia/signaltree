@@ -153,8 +153,9 @@ export class BenchmarkService {
             .memory?.usedJSHeapSize ?? null
         );
       }
-    } catch (e) {
-      console.warn('Memory measurement not available:', e);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (_e) {
+      // Ignore memory measurement errors in unsupported environments
     }
     return null;
   }
@@ -179,8 +180,8 @@ export class BenchmarkService {
         after,
         delta: after - before,
       };
-    } catch (e) {
-      console.warn('Memory profiling failed:', e);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (_e) {
       return null;
     }
   }
@@ -279,10 +280,9 @@ export class BenchmarkService {
         tree(); // Force tree access
       }, 10); // Fewer iterations for stress test
 
-      console.log('Initialization results:', results);
       return results;
-    } catch (e) {
-      console.error('Initialization benchmark failed:', e);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (_e) {
       // Return fallback data
       return {
         small: { nodes: 10, time: 1.2, memory: 0 },
@@ -413,8 +413,9 @@ export class BenchmarkService {
               return { ...state, ...updates };
             });
           }
-        } catch (e) {
-          console.warn('Batch10 update failed:', e);
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (_e) {
+          // Ignore batch method errors and continue with fallback
         }
       });
 
@@ -465,12 +466,13 @@ export class BenchmarkService {
               return { ...state, ...updates };
             });
           }
-        } catch (e) {
-          console.warn('Batch100 update failed:', e);
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (_e) {
+          // Ignore batch method errors and continue with fallback
         }
       });
-    } catch (e) {
-      console.warn('Batching not available:', e);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (_e) {
       results.batch10 = results.shallow;
       results.batch100 = results.shallow;
     }
@@ -580,8 +582,9 @@ export class BenchmarkService {
             'level_3_item_0'
           ];
           if (level3 && typeof level3 === 'function') level3();
-        } catch (e) {
-          console.warn('Eager access failed:', e);
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (_e) {
+          // Ignore property access errors in benchmark
         }
       });
 
@@ -606,8 +609,9 @@ export class BenchmarkService {
             'level_3_item_0'
           ];
           if (level3 && typeof level3 === 'function') level3();
-        } catch (e) {
-          console.warn('Lazy access failed:', e);
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (_e) {
+          // Ignore property access errors in benchmark
         }
       }, 100);
 
@@ -624,14 +628,15 @@ export class BenchmarkService {
             'level_3_item_0'
           ];
           if (level3 && typeof level3 === 'function') level3();
-        } catch (e) {
-          console.warn('Lazy second access failed:', e);
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (_e) {
+          // Ignore property access errors in benchmark
         }
       });
 
       return results;
-    } catch (e) {
-      console.error('Lazy loading benchmark failed:', e);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (_e) {
       return {
         eager: { memory: 0, accessTime: 0 },
         lazy: { memory: 0, accessTime: 0, secondAccess: 0 },

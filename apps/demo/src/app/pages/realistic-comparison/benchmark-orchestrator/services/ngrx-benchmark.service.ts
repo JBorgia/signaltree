@@ -1,14 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Actions, ofType } from '@ngrx/effects';
-import {
-  Action,
-  ActionReducer,
-  createAction,
-  createReducer,
-  createSelector,
-  on,
-  props,
-} from '@ngrx/store';
+import { Action, ActionReducer, createAction, createReducer, createSelector, on, props } from '@ngrx/store';
 import { race, Subject, timer } from 'rxjs';
 import { map, mergeMap, switchMap, take, tap } from 'rxjs/operators';
 
@@ -161,47 +153,18 @@ export class NgRxBenchmarkService {
     } as BenchmarkResult;
   }
   /**
-   * Standardized cold start and memory profiling
+   * Standardized cold-start and memory profiling
    */
-  async runInitializationBenchmark(): Promise<{
-    durationMs: number;
-    memoryDeltaMB: number | 'N/A';
-  }> {
-    const { runTimed } = await import('./benchmark-runner');
-    const stateFactory = () => ({
-      groups: [],
-      posts: [],
-      users: [],
-    });
-    const result = await runTimed(
-      () => {
-        // Simulate NgRx store initialization
-        createReducer(stateFactory());
-      },
-      { operations: 1, trackMemory: true, label: 'ngrx-init' }
-    );
-    return {
-      durationMs: result.durationMs,
-      memoryDeltaMB:
-        typeof result.memoryDeltaMB === 'number' ? result.memoryDeltaMB : 'N/A',
-    };
-  }
+  // Initialization helper moved to
+  // `services/initialization-harness.ts` for dedicated/nightly profiling.
 
   // Adapter to satisfy orchestrator naming: return standardized BenchmarkResult
   async runColdStartBenchmark(): Promise<number | BenchmarkResult> {
-    const res = await this.runInitializationBenchmark();
-    const result: BenchmarkResult = {
-      durationMs: typeof res.durationMs === 'number' ? res.durationMs : -1,
-      memoryDeltaMB:
-        typeof res.memoryDeltaMB === 'number' ? res.memoryDeltaMB : undefined,
-      notes: 'NgRx initialization via runTimed',
-    };
-    try {
-      window.__NGRX_LAST_COLDSTART_METRICS__ = result;
-    } catch {
-      // ignore
-    }
-    return result;
+    return {
+      durationMs: -1,
+      memoryDeltaMB: undefined,
+      notes: 'Disabled in demo orchestrator',
+    } as BenchmarkResult;
   }
   // Narrow typing for performance.memory when available
   private static PerfWithMemory = {} as Performance & {
@@ -491,74 +454,44 @@ export class NgRxBenchmarkService {
     dataSize: number,
     depth = BENCHMARK_CONSTANTS.DATA_GENERATION.NESTED_DEPTH
   ): Promise<number | BenchmarkResult> {
-    console.log(
-      `NgRx Deep Nested: Starting with dataSize=${dataSize}, depth=${depth}`
-    );
-
     const start = performance.now();
 
-    try {
-      const updateValue = createAction(
-        '[Test] Update',
-        props<{ value: number }>()
-      );
+    const updateValue = createAction(
+      '[Test] Update',
+      props<{ value: number }>()
+    );
 
-      type Nested = { value?: number; data?: string; level?: Nested };
-      const createNested = (level: number): Nested =>
-        level === 0
-          ? { value: 0, data: 'test' }
-          : { level: createNested(level - 1) };
+    type Nested = { value?: number; data?: string; level?: Nested };
+    const createNested = (level: number): Nested =>
+      level === 0
+        ? { value: 0, data: 'test' }
+        : { level: createNested(level - 1) };
 
-      console.log(
-        `NgRx Deep Nested: Creating initial state with depth ${depth}`
-      );
-      const initialState: Nested = createNested(depth);
+    const initialState: Nested = createNested(depth);
 
-      const updateDeep = (
-        obj: Nested,
-        level: number,
-        value: number
-      ): Nested => {
-        if (level === 0) return { ...obj, value };
-        return { ...obj, level: updateDeep(obj.level ?? {}, level - 1, value) };
-      };
+    const updateDeep = (obj: Nested, level: number, value: number): Nested => {
+      if (level === 0) return { ...obj, value };
+      return { ...obj, level: updateDeep(obj.level ?? {}, level - 1, value) };
+    };
 
-      const reducer = createReducer(
-        initialState,
-        on(updateValue, (state, { value }) =>
-          updateDeep(state, depth - 1, value)
-        )
-      );
+    const reducer = createReducer(
+      initialState,
+      on(updateValue, (state, { value }) => updateDeep(state, depth - 1, value))
+    );
 
-      let state = initialState;
-      const iterations = Math.min(
-        dataSize,
-        BENCHMARK_CONSTANTS.ITERATIONS.DEEP_NESTED
-      );
-      console.log(`NgRx Deep Nested: Starting ${iterations} iterations`);
+    let state = initialState;
+    const iterations = Math.min(
+      dataSize,
+      BENCHMARK_CONSTANTS.ITERATIONS.DEEP_NESTED
+    );
 
-      // Use same iteration count and yielding pattern as SignalTree for fair comparison
-      for (let i = 0; i < iterations; i++) {
-        // REMOVED: Console logging during measurement for accuracy
-        // if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0) {
-        //   console.log(`NgRx Deep Nested: Iteration ${i}/${iterations}`);
-        // }
-        state = reducer(state, updateValue({ value: i }));
-        // REMOVED: Yielding during measurement for accuracy
-        // if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DEEP_NESTED) === 0) {
-        //   // REMOVED: Yielding during measurement for accuracy
-        // }
-      }
-
-      const duration = performance.now() - start;
-      console.log(`NgRx Deep Nested: Completed in ${duration}ms`);
-      return this.toResult(duration, undefined, 'NgRx deep nested');
-    } catch (error) {
-      console.error('NgRx Deep Nested: Error occurred:', error);
-      const duration = performance.now() - start;
-      console.log(`NgRx Deep Nested: Failed after ${duration}ms`);
-      throw error;
+    // Use same iteration count and yielding pattern as SignalTree for fair comparison
+    for (let i = 0; i < iterations; i++) {
+      state = reducer(state, updateValue({ value: i }));
     }
+
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'NgRx deep nested');
   }
 
   async runArrayBenchmark(dataSize: number): Promise<number | BenchmarkResult> {
@@ -599,9 +532,6 @@ export class NgRxBenchmarkService {
         state,
         updateItem({ index: i % dataSize, value: Math.random() * 1000 })
       );
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.ARRAY_UPDATES) === 0) {
-        // REMOVED: Yielding during measurement for accuracy
-      }
     }
 
     const duration = performance.now() - start;
@@ -648,9 +578,6 @@ export class NgRxBenchmarkService {
     ) {
       state = reducer(state, updateValue({ value: i }));
       compute(state);
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.COMPUTED) === 0) {
-        // REMOVED: Yielding during measurement for accuracy
-      }
     }
 
     const duration = performance.now() - start;
@@ -685,7 +612,6 @@ export class NgRxBenchmarkService {
       // prepare next items in one pass
       const next = state.items.map((v) => (v + 1) | 0);
       state = reducer(state, applyBatch({ items: next }));
-      // REMOVED: Yielding during measurement for accuracy
     }
 
     const duration = performance.now() - start;
@@ -788,16 +714,9 @@ export class NgRxBenchmarkService {
     const t0 = performance.now();
     // NgRx state is already plain; align with ST snapshot + stringify path
     const plain = state;
-    const t1 = performance.now();
     JSON.stringify({ data: plain });
     const t2 = performance.now();
 
-    console.debug(
-      '[NgRx][serialization] toPlain(ms)=',
-      (t1 - t0).toFixed(2),
-      ' stringify(ms)=',
-      (t2 - t1).toFixed(2)
-    );
     const duration = t2 - t0;
     return this.toResult(duration, undefined, 'NgRx serialization');
   }
@@ -838,8 +757,8 @@ export class NgRxBenchmarkService {
       }
     }
 
-    // consume to avoid DCE
-    if (state.counters[0].value === -1) console.log('noop');
+    // consume state so it isn't DCE'd
+    void (state.counters[0].value === -1);
     const duration = performance.now() - start;
     return this.toResult(duration, undefined, 'NgRx concurrent updates');
   }
@@ -901,9 +820,7 @@ export class NgRxBenchmarkService {
       }))
     );
 
-    const beforeMem =
-      (performance as typeof NgRxBenchmarkService.PerfWithMemory).memory
-        ?.usedJSHeapSize ?? null;
+    // Memory measurement removed for consistency
 
     let state = initialState;
     const start = performance.now();
@@ -912,33 +829,23 @@ export class NgRxBenchmarkService {
       const g = t % groups;
       const idx = t % state.groups[g].items.length;
       state = reducer(state, touch({ group: g, index: idx }));
-      if ((t & 63) === 0) {
-        // REMOVED: Yielding during measurement for accuracy
-      }
     }
 
     const duration = performance.now() - start;
-    const afterMem =
-      (performance as typeof NgRxBenchmarkService.PerfWithMemory).memory
-        ?.usedJSHeapSize ?? null;
-    if (beforeMem != null && afterMem != null) {
-      const deltaMB = (afterMem - beforeMem) / (1024 * 1024);
-      console.debug('[NgRx][memory] usedJSHeapSize ΔMB ~', deltaMB.toFixed(2));
-    }
 
-    // consume to avoid DCE
-    if (state.groups.length === -1) console.log('noop');
+    void (state.groups.length === -1);
     return this.toResult(duration, undefined, 'NgRx memory efficiency');
   }
 
-  async runDataFetchingBenchmark(): Promise<number | BenchmarkResult> {
+  async runDataFetchingBenchmark(
+    _dataSize?: number
+  ): Promise<number | BenchmarkResult> {
+    void _dataSize;
     // Simulate data fetching with NgRx Store pattern
     const initialState: NgRxState = { groups: [], posts: [], users: [] };
     let state = initialState;
 
-    const beforeMem =
-      (performance as typeof NgRxBenchmarkService.PerfWithMemory).memory
-        ?.usedJSHeapSize ?? null;
+    // Memory measurement removed for consistency
     const start = performance.now();
 
     // Simulate fetching 1000 user records from API
@@ -976,23 +883,16 @@ export class NgRxBenchmarkService {
     );
 
     const duration = performance.now() - start;
-    const afterMem =
-      (performance as typeof NgRxBenchmarkService.PerfWithMemory).memory
-        ?.usedJSHeapSize ?? null;
-    if (beforeMem != null && afterMem != null) {
-      const deltaMB = (afterMem - beforeMem) / (1024 * 1024);
-      console.debug(
-        '[NgRx][DataFetching][memory] usedJSHeapSize ΔMB ~',
-        deltaMB.toFixed(2)
-      );
-    }
+    // Memory measurement removed for consistency
 
-    // consume to avoid DCE
-    if (state.users?.length === -1) console.log('noop');
+    void (state.users?.length === -1);
     return this.toResult(duration, undefined, 'NgRx data fetching');
   }
 
-  async runRealTimeUpdatesBenchmark(): Promise<number | BenchmarkResult> {
+  async runRealTimeUpdatesBenchmark(
+    _dataSize?: number
+  ): Promise<number | BenchmarkResult> {
+    void _dataSize;
     // Simulate real-time updates (WebSocket-like) with NgRx Store
     const initialState: NgRxState = {
       groups: [],
@@ -1002,9 +902,7 @@ export class NgRxBenchmarkService {
     };
     let state = initialState;
 
-    const beforeMem =
-      (performance as typeof NgRxBenchmarkService.PerfWithMemory).memory
-        ?.usedJSHeapSize ?? null;
+    // Memory measurement removed for consistency
     const start = performance.now();
 
     // Simulate real-time metric updates using consistent iteration count
@@ -1033,31 +931,21 @@ export class NgRxBenchmarkService {
     }
 
     const duration = performance.now() - start;
-    const afterMem =
-      (performance as typeof NgRxBenchmarkService.PerfWithMemory).memory
-        ?.usedJSHeapSize ?? null;
-    if (beforeMem != null && afterMem != null) {
-      const deltaMB = (afterMem - beforeMem) / (1024 * 1024);
-      console.debug(
-        '[NgRx][RealTimeUpdates][memory] usedJSHeapSize ΔMB ~',
-        deltaMB.toFixed(2)
-      );
-    }
+    // Memory measurement removed for consistency
 
-    // consume to avoid DCE
-    if (state.metrics && Object.keys(state.metrics).length === -1)
-      console.log('noop');
+    void (state.metrics && Object.keys(state.metrics).length === -1);
     return this.toResult(duration, undefined, 'NgRx real-time updates');
   }
 
-  async runStateSizeScalingBenchmark(): Promise<number | BenchmarkResult> {
+  async runStateSizeScalingBenchmark(
+    _dataSize?: number
+  ): Promise<number | BenchmarkResult> {
+    void _dataSize;
     // Test performance with large state size (10,000 items)
     const initialState: NgRxState = { groups: [], posts: [], users: [] };
     let state = initialState;
 
-    const beforeMem =
-      (performance as typeof NgRxBenchmarkService.PerfWithMemory).memory
-        ?.usedJSHeapSize ?? null;
+    // Memory measurement removed for consistency
     const start = performance.now();
 
     // Create large dataset (10,000 items)
@@ -1117,19 +1005,9 @@ export class NgRxBenchmarkService {
     }
 
     const duration = performance.now() - start;
-    const afterMem =
-      (performance as typeof NgRxBenchmarkService.PerfWithMemory).memory
-        ?.usedJSHeapSize ?? null;
-    if (beforeMem != null && afterMem != null) {
-      const deltaMB = (afterMem - beforeMem) / (1024 * 1024);
-      console.debug(
-        '[NgRx][StateSizeScaling][memory] usedJSHeapSize ΔMB ~',
-        deltaMB.toFixed(2)
-      );
-    }
+    // Memory measurement removed for consistency
 
-    // consume to avoid DCE
-    if (state.largeDataset?.length === -1) console.log('noop');
+    void (state.largeDataset?.length === -1);
     return this.toResult(duration, undefined, 'NgRx state size scaling');
   }
 

@@ -272,8 +272,9 @@ export class RealisticBenchmarkService {
           level: battery.level,
         };
       }
-    } catch (error) {
-      console.debug('Battery API not available:', error);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (_error) {
+      // Ignore battery API errors in unsupported environments
     }
     return undefined;
   }
@@ -355,7 +356,6 @@ export class RealisticBenchmarkService {
   ): Promise<{ success: boolean; id?: string; error?: string }> {
     // API disabled - skip submission
     if (!this.API_URL) {
-      console.log('Benchmark submission skipped: API disabled');
       return { success: false, error: 'API not configured' };
     }
 
@@ -371,14 +371,12 @@ export class RealisticBenchmarkService {
       const result = await response.json();
 
       if (!response.ok) {
-        console.error('Failed to submit benchmark:', result);
         return { success: false, error: result.error || 'Unknown error' };
       }
 
       return { success: true, id: result.id };
-    } catch (error) {
-      console.error('Failed to submit benchmark:', error);
-      return { success: false, error: String(error) };
+    } catch (_error) {
+      return { success: false, error: String(_error) };
     }
   }
 
@@ -416,8 +414,7 @@ export class RealisticBenchmarkService {
         success: true,
         benchmarks: result.benchmarks || [],
       };
-    } catch (error) {
-      console.error('Failed to fetch benchmark history:', error);
+    } catch {
       return { success: false, benchmarks: [] };
     }
   }
@@ -445,8 +442,7 @@ export class RealisticBenchmarkService {
         success: true,
         data: result.benchmark,
       };
-    } catch (error) {
-      console.error('Failed to fetch benchmark details:', error);
+    } catch {
       return { success: false };
     }
   }

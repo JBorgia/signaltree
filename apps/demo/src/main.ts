@@ -38,6 +38,7 @@ if (typeof window !== 'undefined') {
   });
 }
 
-bootstrapApplication(AppComponent, appConfig).catch((err) =>
-  console.error(err)
-);
+bootstrapApplication(AppComponent, appConfig).catch((err) => {
+  // Log error in development but don't crash the app
+  console.error('Application bootstrap failed:', err);
+});

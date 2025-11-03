@@ -4,14 +4,6 @@ import { signalTree } from '@signaltree/core';
  * Boilerplate and Code Metrics Analysis
  * Measures developer experience and code quality metrics
  */
-interface CodeMetrics {
-  linesOfCode: number;
-  imports: number;
-  boilerplateRatio: number;
-  typeAnnotations: number;
-  complexityScore: number;
-  readabilityScore: number;
-}
 
 interface BoilerplateComparison {
   framework: string;
@@ -25,9 +17,6 @@ interface BoilerplateComparison {
 
 describe('SignalTree Boilerplate & Code Metrics', () => {
   it('should measure counter example boilerplate', () => {
-    console.log('\n📝 COUNTER EXAMPLE BOILERPLATE COMPARISON');
-    console.log('==========================================');
-
     const counterExamples: BoilerplateComparison[] = [
       {
         framework: 'SignalTree',
@@ -117,25 +106,12 @@ const count = signal(0);
     ];
 
     counterExamples.forEach((example) => {
-      console.log(`\\n${example.framework}:`);
-      console.log(`  Lines of Code: ${example.linesOfCode}`);
-      console.log(`  Imports: ${example.imports}`);
-      console.log(`  Setup Complexity: ${example.setupComplexity}/10`);
-      console.log(`  Maintainability: ${example.maintainabilityScore}/10`);
-      console.log(
-        `  Boilerplate Ratio: ${((example.linesOfCode / 4) * 100).toFixed(0)}%`
-      );
+      expect(example.framework).toBeDefined();
+      expect(example.linesOfCode).toBeGreaterThan(0);
     });
-
-    console.log(
-      '\\n🏆 Winner: SignalTree - Minimal boilerplate with maximum functionality'
-    );
   });
 
   it('should measure complex state management boilerplate', () => {
-    console.log('\\n🏗️  COMPLEX STATE MANAGEMENT COMPARISON');
-    console.log('=========================================');
-
     const complexExamples: BoilerplateComparison[] = [
       {
         framework: 'SignalTree (Full Featured)',
@@ -190,24 +166,12 @@ const userTree = signalTree({
     ];
 
     complexExamples.forEach((example) => {
-      console.log(`\\n${example.framework}:`);
-      console.log(`  Lines of Code: ${example.linesOfCode}`);
-      console.log(`  Imports: ${example.imports}`);
-      console.log(`  Setup Complexity: ${example.setupComplexity}/10`);
-      console.log(`  Maintainability: ${example.maintainabilityScore}/10`);
-      console.log(
-        `  Boilerplate Reduction: ${(
-          100 -
-          (example.linesOfCode / 85) * 100
-        ).toFixed(0)}% vs NgRx`
-      );
+      expect(example.framework).toBeDefined();
+      expect(example.linesOfCode).toBeGreaterThan(0);
     });
   });
 
   it('should measure form integration boilerplate', () => {
-    console.log('\\n📋 FORM INTEGRATION COMPARISON');
-    console.log('===============================');
-
     const formExamples = [
       {
         framework: 'SignalTree + ng-forms',
@@ -253,19 +217,12 @@ export class UserFormComponent {
     ];
 
     formExamples.forEach((example) => {
-      console.log(`\\n${example.framework}:`);
-      console.log(`  Lines of Code: ${example.linesOfCode}`);
-      console.log(`  Setup Complexity: ${example.complexity}/10`);
-      console.log(`  Maintainability: ${example.maintainability}/10`);
+      expect(example.framework).toBeDefined();
+      expect(example.linesOfCode).toBeGreaterThan(0);
     });
-
-    console.log('\\n✨ SignalTree reduces form boilerplate by 68%');
   });
 
   it('should measure type safety and inference', () => {
-    console.log('\\n🔒 TYPE SAFETY & INFERENCE COMPARISON');
-    console.log('=====================================');
-
     // Test TypeScript inference quality
     const signalTreeState = signalTree({
       user: {
@@ -307,12 +264,8 @@ export class UserFormComponent {
     };
 
     Object.entries(typeInferenceMetrics).forEach(([framework, metrics]) => {
-      console.log(`\\n${framework.toUpperCase()}:`);
-      console.log(`  Nested Access: ${metrics.nestedAccess}`);
-      console.log(`  Update Safety: ${metrics.updateSafety}`);
-      console.log(`  Autocompletion: ${metrics.autocompletion}`);
-      console.log(`  Error Detection: ${metrics.errorDetection}`);
-      console.log(`  Type Safety Score: ${metrics.score}/10`);
+      expect(framework).toBeDefined();
+      expect(metrics.score).toBeGreaterThan(0);
     });
 
     // Test actual type inference
@@ -321,16 +274,9 @@ export class UserFormComponent {
 
     expect(typeof userTheme).toBe('string');
     expect(typeof userId).toBe('number');
-
-    console.log(
-      '\\n✅ SignalTree provides superior type safety with zero configuration'
-    );
   });
 
   it('should measure learning curve and documentation needs', () => {
-    console.log('\\n📚 LEARNING CURVE ANALYSIS');
-    console.log('===========================');
-
     const learningMetrics = [
       {
         framework: 'SignalTree',
@@ -393,21 +339,12 @@ export class UserFormComponent {
     ];
 
     learningMetrics.forEach((metric) => {
-      console.log(`\\n${metric.framework}:`);
-      console.log(`  Concepts to Learn: ${metric.conceptsToLearn}`);
-      console.log(`  Time to Productivity: ${metric.timeToProductivity}`);
-      console.log(`  Documentation Pages: ${metric.documentationPages}`);
-      console.log(`  Cognitive Load: ${metric.cognitiveLoad}/10`);
-      console.log(`  Mental Model: ${metric.mentalModel}`);
+      expect(metric.framework).toBeDefined();
+      expect(metric.conceptsToLearn).toBeGreaterThan(0);
     });
-
-    console.log('\\n🎯 SignalTree: Best balance of simplicity and power');
   });
 
   it('should measure code maintainability metrics', () => {
-    console.log('\\n🔧 CODE MAINTAINABILITY METRICS');
-    console.log('================================');
-
     const maintainabilityMetrics = {
       signalTree: {
         cyclomaticComplexity: 2,
@@ -445,23 +382,12 @@ export class UserFormComponent {
     };
 
     Object.entries(maintainabilityMetrics).forEach(([framework, metrics]) => {
-      console.log(`\\n${framework.toUpperCase()}:`);
-      console.log(`  Cyclomatic Complexity: ${metrics.cyclomaticComplexity}`);
-      console.log(`  Coupling Level: ${metrics.couplingLevel}`);
-      console.log(`  Cohesion: ${metrics.cohesion}`);
-      console.log(`  Testability: ${metrics.testability}/10`);
-      console.log(`  Refactorability: ${metrics.refactorability}/10`);
-      console.log(`  Debuggability: ${metrics.debuggability}/10`);
-      console.log(`  File Count: ${metrics.fileCount} files`);
-      console.log(`  Avg Method Length: ${metrics.avgMethodLength} lines`);
-      console.log(`  Code Duplication: ${metrics.duplicatedCode}`);
+      expect(framework).toBeDefined();
+      expect(metrics.testability).toBeGreaterThan(0);
     });
   });
 
   it('should measure development velocity impact', () => {
-    console.log('\\n⚡ DEVELOPMENT VELOCITY METRICS');
-    console.log('===============================');
-
     const velocityMetrics = [
       {
         task: 'Add new feature',
@@ -501,20 +427,12 @@ export class UserFormComponent {
     ];
 
     velocityMetrics.forEach((metric) => {
-      console.log(`\\n${metric.task}:`);
-      console.log(`  SignalTree: ${metric.signalTree}`);
-      console.log(`  NgRx: ${metric.ngrx}`);
-      console.log(`  Akita: ${metric.akita}`);
-      console.log(`  📈 Improvement: ${metric.improvement} vs NgRx`);
+      expect(metric.task).toBeDefined();
+      expect(metric.signalTree).toBeDefined();
     });
-
-    console.log('\\n🚀 SignalTree dramatically improves development velocity');
   });
 
   it('should measure bundle impact and tree-shaking', () => {
-    console.log('\\n📦 BUNDLE SIZE & TREE-SHAKING ANALYSIS');
-    console.log('=======================================');
-
     const bundleMetrics = [
       {
         scenario: 'Minimal Setup',
@@ -540,27 +458,8 @@ export class UserFormComponent {
     ];
 
     bundleMetrics.forEach((metric) => {
-      console.log(`\\n${metric.scenario}:`);
-      console.log(`  SignalTree: ${metric.signalTree}`);
-      console.log(`  NgRx: ${metric.ngrx}`);
-      console.log(`  Akita: ${metric.akita}`);
-      console.log(`  Tree-shaking: ${metric.treeshaking}`);
+      expect(metric.scenario).toBeDefined();
+      expect(metric.signalTree).toBeDefined();
     });
-
-    console.log(
-      '\\n✨ SignalTree: 70% smaller bundles with perfect tree-shaking'
-    );
-  });
-
-  afterAll(() => {
-    console.log('\\n🎉 BOILERPLATE & CODE METRICS COMPLETE!');
-    console.log('========================================');
-    console.log('SignalTree Winner in all categories:');
-    console.log('✅ 68% less boilerplate code');
-    console.log('✅ 6x faster development velocity');
-    console.log('✅ Superior type safety');
-    console.log('✅ 70% smaller bundle sizes');
-    console.log('✅ 85% less learning curve');
-    console.log('✅ 3x better maintainability scores');
   });
 });

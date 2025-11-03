@@ -56,11 +56,10 @@ export class RealisticBenchmarkHistoryComponent implements OnInit {
       } else {
         this.error.set('Failed to load benchmark history.');
       }
-    } catch (err) {
+    } catch {
       this.error.set(
         'Failed to load benchmark history. Please try again later.'
       );
-      console.error('Error loading benchmarks:', err);
     } finally {
       this.loading.set(false);
     }
@@ -207,8 +206,7 @@ export class RealisticBenchmarkHistoryComponent implements OnInit {
         this.detailsError.set('Failed to load benchmark details');
         this.selectedBenchmarkFull.set(null);
       }
-    } catch (err) {
-      console.error('Error loading details:', err);
+    } catch {
       this.detailsError.set('Failed to load benchmark details');
       this.selectedBenchmarkFull.set(null);
     } finally {

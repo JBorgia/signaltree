@@ -1,22 +1,10 @@
 import { CommonModule } from '@angular/common';
-import {
-  Component,
-  computed,
-  effect,
-  ElementRef,
-  inject,
-  OnDestroy,
-  signal,
-  ViewChild,
-} from '@angular/core';
+import { Component, computed, effect, ElementRef, inject, OnDestroy, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { Subject } from 'rxjs';
 
-import {
-  RealisticBenchmarkService,
-  RealisticBenchmarkSubmission,
-} from '../../../services/realistic-benchmark.service';
+import { RealisticBenchmarkService, RealisticBenchmarkSubmission } from '../../../services/realistic-benchmark.service';
 import { BenchmarkTestCase, ENHANCED_TEST_CASES } from './scenario-definitions';
 import { BenchmarkResult as ServiceBenchmarkResult } from './services/_types';
 import { AkitaBenchmarkService } from './services/akita-benchmark.service';
@@ -242,7 +230,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   includeEnterpriseEnhancer = signal(false);
 
   setIncludeEnterpriseEnhancer(v: boolean | EventTarget | null) {
-    const val = typeof v === 'boolean' ? v : (v as any)?.value === 'true';
+    const val = typeof v === 'boolean' ? v : (v as any)?.value === 'true'; // eslint-disable-line @typescript-eslint/no-explicit-any
     this.includeEnterpriseEnhancer(!!val);
   }
 
@@ -253,7 +241,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   includeEnterpriseAutoRun = signal(false);
 
   setIncludeEnterpriseAutoRun(v: boolean | EventTarget | null) {
-    const val = typeof v === 'boolean' ? v : (v as any)?.value === 'true';
+    const val = typeof v === 'boolean' ? v : (v as any)?.value === 'true'; // eslint-disable-line @typescript-eslint/no-explicit-any
     this.includeEnterpriseAutoRun(!!val);
   }
 
@@ -268,7 +256,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       const m = p.get('memo');
       if (m === 'off' || m === 'light' || m === 'shallow' || m === 'full')
         return m;
-    } catch (_e) {
+    } catch {
       // ignore and fallthrough to default
     }
     return 'light';
@@ -277,17 +265,17 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   // Allow changing the memo mode at runtime via the UI select. This updates
   // the URL so exporter automation can drive A/B using query params.
   setMemoMode(mode: string | EventTarget | null) {
-    const m = typeof mode === 'string' ? mode : (mode as any)?.value;
+    const m = typeof mode === 'string' ? mode : (mode as any)?.value; // eslint-disable-line @typescript-eslint/no-explicit-any
     if (!(m === 'off' || m === 'light' || m === 'shallow' || m === 'full'))
       return;
-    this.memoMode(m as any);
+    this.memoMode(m as any); // eslint-disable-line @typescript-eslint/no-explicit-any
     try {
       const url = new URL(window.location.href);
       url.searchParams.set('memo', m);
       history.replaceState(null, '', url.toString());
       // reflect to global for services reading it directly
       window.__SIGNALTREE_MEMO_MODE = m;
-    } catch (_err) {
+    } catch {
       // ignore URL update failures
     }
   }
@@ -508,7 +496,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       'real-time-updates': 'runRealTimeUpdatesBenchmark',
       'state-size-scaling': 'runStateSizeScalingBenchmark',
       'subscriber-scaling': 'runSubscriberScalingBenchmark',
-      'cold-start': 'runColdStartBenchmark',
 
       // Time-travel (SignalTree-only)
       'undo-redo': 'runUndoRedoBenchmark',
@@ -531,11 +518,41 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       // production-setup intentionally removed
     };
 
+    // Static support matrix for methods that exist but return -1 at runtime
+    // This prevents users from selecting scenarios that will immediately fail
+    const staticUnsupportedScenarios: Record<string, string[]> = {
+      akita: [
+        'multiple-middleware', // Single akitaPreUpdate hook only
+        'data-fetching', // No built-in filtering capability
+        'state-size-scaling', // No built-in indexing/caching
+      ],
+    };
+
     // For each scenario, check all selected libraries for method presence.
     // We annotate unsupported scenarios with `disabledReason` but do NOT
     // automatically mutate the user's explicit selection. This keeps the UX
     // visual-only: disabled scenarios remain visible in the list but won't run.
     this.testCases.forEach((testCase) => {
+      // First check the static support matrix. Some libraries implement
+      // methods but intentionally return -1 at runtime to indicate the
+      // scenario is not fairly supported (no native capability). We pre-
+      // annotate these so the UI disables them before running.
+      const staticallyUnsupportedBy: string[] = [];
+      libs.forEach((lib) => {
+        const unsupported = staticUnsupportedScenarios[lib.id];
+        if (unsupported?.includes(testCase.id))
+          staticallyUnsupportedBy.push(lib.name);
+      });
+
+      if (staticallyUnsupportedBy.length > 0) {
+        const tc = testCase as MutableTestCase;
+        tc.disabledReason = `Not supported by ${staticallyUnsupportedBy.join(
+          ', '
+        )}`;
+        if (tc.selected) tc.selected = false;
+        return; // Skip further checks for this scenario
+      }
+
       const method = scenarioMethodMap[testCase.id] || null;
       if (!method) {
         // No explicit mapping; clear any previous annotation and continue
@@ -1709,8 +1726,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
     // Perform CPU-intensive operations that stress different aspects
     let result = 0;
-    let mathOps = 0;
-    let memoryOps = 0;
 
     // Create a small array to test memory access patterns
     const testArray = new Array(1000).fill(0).map((_, i) => i);
@@ -1718,12 +1733,10 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     for (let i = 0; i < iterations; i++) {
       // Mathematical operations (tests FPU and ALU)
       result += Math.sqrt(i) * Math.sin(i) * Math.cos(i);
-      mathOps++;
 
       // Memory access patterns (tests cache and memory subsystem)
       const index = i % testArray.length;
       testArray[index] = testArray[index] * 1.001 + 0.1;
-      memoryOps++;
 
       // Yield periodically to prevent blocking and test timer resolution
       if (i % 5000 === 0) {
@@ -1733,21 +1746,12 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
     // Consume results to prevent dead code elimination
     if (Number.isNaN(result) || testArray.length === 0) {
-      console.debug('Calibration completed:', { mathOps, memoryOps });
+      // Prevent dead code elimination by consuming result
+      void result;
     }
 
     const duration = performance.now() - start;
     const opsPerMs = iterations / duration;
-
-    // Log calibration details for debugging
-    console.debug('CPU Calibration Results:', {
-      iterations,
-      duration: `${duration.toFixed(2)}ms`,
-      opsPerMs: opsPerMs.toFixed(2),
-      mathOperations: mathOps,
-      memoryOperations: memoryOps,
-      timerResolution: performance.timeOrigin ? 'High Resolution' : 'Standard',
-    });
 
     return opsPerMs;
   }
@@ -1757,8 +1761,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
    */
   private async submitBenchmarkResults(): Promise<void> {
     try {
-      console.log('Building benchmark submission...');
-
       // Calculate total duration
       const endTime = performance.now();
       const totalDuration = (endTime - this.startTime()) / 1000; // seconds
@@ -1775,7 +1777,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       // Build calibration data from calibrationData signal
       const calData = this.calibrationData();
       if (!calData) {
-        console.warn('No calibration data available, skipping submission');
         return;
       }
 
@@ -1803,7 +1804,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         samplesPerTest: this.config().iterations,
         selectedLibraries: selectedLibs,
         selectedScenarios: selectedScens,
-        weightingPreset: 'custom', // TODO: Detect actual preset
+        weightingPreset: this.detectCurrentPreset(), // Detect actual preset based on current weights
       };
 
       // Build results structure (simplified to avoid type errors)
@@ -1957,19 +1958,20 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         weights,
       };
 
-      console.log('Submitting benchmark results...', submission);
-
       const result = await this.realisticBenchmarkService.submitBenchmark(
         submission
       );
 
       if (result.success) {
-        console.log('✅ Benchmark results submitted successfully!', result.id);
+        // Benchmark submitted successfully
+        void result;
       } else {
-        console.error('❌ Failed to submit benchmark results:', result.error);
+        // Benchmark submission failed
+        void result;
       }
     } catch (error) {
-      console.error('Error submitting benchmark results:', error);
+      // Log submission errors but don't block the UI
+      console.warn('Benchmark submission failed:', error);
     }
   }
 
@@ -1982,7 +1984,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     // Use only real library benchmarks - check for capability support
     const svc = this.getBenchmarkService(libraryId);
     if (!svc) {
-      console.warn(`No benchmark service found for library: ${libraryId}`);
       return -1; // Indicates library not available
     }
 
@@ -1996,34 +1997,65 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       scenarioObj.signalTreeOnly &&
       libraryId !== 'signaltree'
     ) {
-      console.info(
-        `Skipping ${scenarioId} for ${libraryId}: scenario requires SignalTree-only features`
-      );
       return -1;
     }
 
     // Helper: normalize service return into numeric duration and persist
     // structured result under window.__LAST_BENCHMARK_EXTENDED_RESULTS__.
     const maybeNormalize = async (
-      p: Promise<any> | undefined
+      p: Promise<any> | undefined // eslint-disable-line @typescript-eslint/no-explicit-any
     ): Promise<number> => {
       if (!p) return -1;
       const res = await p;
+
+      // If the service returned a raw number, that's the duration
       if (typeof res === 'number') return res;
-      if (res && typeof res.durationMs === 'number') {
+
+      // If the service returned a structured result, persist an extended
+      // representation including which enhancers were active and raw samples
+      // so automation can audit the run accurately.
+      if (
+        res &&
+        (typeof res.durationMs === 'number' ||
+          Array.isArray(res.samples) ||
+          Array.isArray(res.rawSamples))
+      ) {
         try {
-          window.__LAST_BENCHMARK_EXTENDED_RESULTS__ =
-            window.__LAST_BENCHMARK_EXTENDED_RESULTS__ || {};
-          window.__LAST_BENCHMARK_EXTENDED_RESULTS__[libraryId] =
-            window.__LAST_BENCHMARK_EXTENDED_RESULTS__[libraryId] || {};
-          window.__LAST_BENCHMARK_EXTENDED_RESULTS__[libraryId][scenarioId] =
-            res;
+          const ext = (window as any).__LAST_BENCHMARK_EXTENDED_RESULTS__ || {}; // eslint-disable-line @typescript-eslint/no-explicit-any
+          (window as any).__LAST_BENCHMARK_EXTENDED_RESULTS__ = ext; // eslint-disable-line @typescript-eslint/no-explicit-any
+          ext[libraryId] = ext[libraryId] || {};
+
+          // Normalize a rawSamples array if present or derive from durationMs
+          const samplesArray: number[] = Array.isArray(res.samples)
+            ? res.samples.slice()
+            : Array.isArray(res.rawSamples)
+            ? res.rawSamples.slice()
+            : typeof res.durationMs === 'number'
+            ? [res.durationMs]
+            : [];
+
+          ext[libraryId][scenarioId] = {
+            ...(typeof res === 'object' ? res : { durationMs: res }),
+            // capture the orchestrator-requested enhancers (SignalTree only)
+            appliedEnhancers:
+              (window as any).__SIGNALTREE_ACTIVE_ENHANCERS__ || [], // eslint-disable-line @typescript-eslint/no-explicit-any
+            rawSamples: samplesArray,
+            persistedAt: new Date().toISOString(),
+          };
         } catch (e) {
           // non-fatal
           void e;
         }
-        return res.durationMs;
+
+        // Prefer explicit durationMs, fall back to median of samples if available
+        if (typeof res.durationMs === 'number') return res.durationMs;
+        if (typeof res.median === 'number') return res.median;
+        if (Array.isArray(res.samples) && res.samples.length)
+          return this.percentile(res.samples, 50);
+        if (Array.isArray(res.rawSamples) && res.rawSamples.length)
+          return this.percentile(res.rawSamples, 50);
       }
+
       return -1;
     };
 
@@ -2058,9 +2090,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       switch (scenarioId) {
         case 'deep-nested': {
           if (!svc.runDeepNestedBenchmark) {
-            console.warn(
-              `${libraryId} does not support deep-nested benchmarks`
-            );
             return -1;
           }
           return await maybeNormalize(
@@ -2069,18 +2098,12 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         }
         case 'large-array': {
           if (!svc.runArrayBenchmark) {
-            console.warn(
-              `${libraryId} does not support large-array benchmarks`
-            );
             return -1;
           }
           return await maybeNormalize(svc.runArrayBenchmark(config.dataSize));
         }
         case 'computed-chains':
           if (!svc.runComputedBenchmark) {
-            console.warn(
-              `${libraryId} does not support computed-chains benchmarks`
-            );
             return -1;
           }
           return await maybeNormalize(
@@ -2088,9 +2111,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
           );
         case 'batch-updates':
           if (!svc.runBatchUpdatesBenchmark) {
-            console.warn(
-              `${libraryId} does not support batch-updates benchmarks`
-            );
             return -1;
           }
           return await maybeNormalize(
@@ -2101,9 +2121,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
           );
         case 'selector-memoization':
           if (!svc.runSelectorBenchmark) {
-            console.warn(
-              `${libraryId} does not support selector-memoization benchmarks`
-            );
             return -1;
           }
           return await maybeNormalize(
@@ -2111,9 +2128,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
           );
         case 'serialization':
           if (!svc.runSerializationBenchmark) {
-            console.warn(
-              `${libraryId} does not support serialization benchmarks`
-            );
             return -1;
           }
           return await maybeNormalize(
@@ -2121,9 +2135,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
           );
         case 'concurrent-updates': {
           if (!svc.runConcurrentUpdatesBenchmark) {
-            console.warn(
-              `${libraryId} does not support concurrent-updates benchmarks`
-            );
             return -1;
           }
           // Derive modest params from config to keep runtime reasonable
@@ -2141,9 +2152,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         }
         case 'memory-efficiency':
           if (!svc.runMemoryEfficiencyBenchmark) {
-            console.warn(
-              `${libraryId} does not support memory-efficiency benchmarks`
-            );
             return -1;
           }
           return await maybeNormalize(
@@ -2151,9 +2159,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
           );
         case 'data-fetching':
           if (!svc.runDataFetchingBenchmark) {
-            console.warn(
-              `${libraryId} does not support data-fetching benchmarks`
-            );
             return -1;
           }
           return await maybeNormalize(
@@ -2161,9 +2166,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
           );
         case 'real-time-updates':
           if (!svc.runRealTimeUpdatesBenchmark) {
-            console.warn(
-              `${libraryId} does not support real-time-updates benchmarks`
-            );
             return -1;
           }
           return await maybeNormalize(
@@ -2171,9 +2173,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
           );
         case 'state-size-scaling':
           if (!svc.runStateSizeScalingBenchmark) {
-            console.warn(
-              `${libraryId} does not support state-size-scaling benchmarks`
-            );
             return -1;
           }
           return await maybeNormalize(
@@ -2182,9 +2181,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
         case 'subscriber-scaling': {
           if (!svc.runSubscriberScalingBenchmark) {
-            console.warn(
-              `${libraryId} does not support subscriber-scaling benchmarks`
-            );
             return -1;
           }
           // Cap subscriber count to a reasonable maximum derived from dataSize
@@ -2195,21 +2191,12 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
           return await maybeNormalize(svc.runSubscriberScalingBenchmark(subs));
         }
 
-        case 'cold-start': {
-          if (!svc.runColdStartBenchmark) {
-            console.warn(`${libraryId} does not support cold-start benchmarks`);
-            return -1;
-          }
-          // A single short warmup run helps avoid first-time JIT noise
-          return await maybeNormalize(svc.runColdStartBenchmark({ warmup: 1 }));
-        }
+        // 'cold-start' scenario removed from orchestrator: startup/init timings
+        // are disabled by default and should be run via a dedicated harness/nightly job.
 
         // Async benchmark cases remain runnable via service methods; the demo UI no longer exposes a separate async page
         case 'concurrent-async':
           if (!svc.runConcurrentAsyncBenchmark) {
-            console.warn(
-              `${libraryId} does not support concurrent-async benchmarks`
-            );
             return -1;
           }
           return await maybeNormalize(
@@ -2219,9 +2206,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
           );
         case 'async-cancellation':
           if (!svc.runAsyncCancellationBenchmark) {
-            console.warn(
-              `${libraryId} does not support async-cancellation benchmarks`
-            );
             return -1;
           }
           return await maybeNormalize(
@@ -2233,7 +2217,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         // Time Travel
         case 'undo-redo':
           if (!svc.runUndoRedoBenchmark) {
-            console.warn(`${libraryId} does not support undo-redo benchmarks`);
             return -1;
           }
           return await maybeNormalize(
@@ -2243,9 +2226,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
           );
         case 'history-size':
           if (!svc.runHistorySizeBenchmark) {
-            console.warn(
-              `${libraryId} does not support history-size benchmarks`
-            );
             return -1;
           }
           return await maybeNormalize(
@@ -2253,9 +2233,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
           );
         case 'jump-to-state':
           if (!svc.runJumpToStateBenchmark) {
-            console.warn(
-              `${libraryId} does not support jump-to-state benchmarks`
-            );
             return -1;
           }
           return await maybeNormalize(
@@ -2267,9 +2244,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         // Middleware
         case 'single-middleware':
           if (!svc.runSingleMiddlewareBenchmark) {
-            console.warn(
-              `${libraryId} does not support single-middleware benchmarks`
-            );
             return -1;
           }
           return await maybeNormalize(
@@ -2279,9 +2253,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
           );
         case 'multiple-middleware':
           if (!svc.runMultipleMiddlewareBenchmark) {
-            console.warn(
-              `${libraryId} does not support multiple-middleware benchmarks`
-            );
             return -1;
           }
           return await maybeNormalize(
@@ -2292,9 +2263,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
           );
         case 'conditional-middleware':
           if (!svc.runConditionalMiddlewareBenchmark) {
-            console.warn(
-              `${libraryId} does not support conditional-middleware benchmarks`
-            );
             return -1;
           }
           return await maybeNormalize(
@@ -2305,16 +2273,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
         // Full Stack
         default:
-          console.warn(
-            `Unknown scenario: ${scenarioId} for library: ${libraryId}`
-          );
           return -1;
       }
-    } catch (error) {
-      console.error(
-        `Error running ${scenarioId} benchmark for ${libraryId}:`,
-        error
-      );
+    } catch {
       return -1; // Indicates benchmark failed
     }
   }
@@ -2348,18 +2309,8 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     };
 
     if (perfEx.memory) {
-      const { jsHeapSizeLimit, usedJSHeapSize, totalJSHeapSize } =
-        perfEx.memory;
+      const { jsHeapSizeLimit, usedJSHeapSize } = perfEx.memory;
       const available = jsHeapSizeLimit - usedJSHeapSize;
-
-      console.debug('Memory Analysis:', {
-        heapSizeLimit: `${(jsHeapSizeLimit / (1024 * 1024)).toFixed(1)}MB`,
-        usedHeapSize: `${(usedJSHeapSize / (1024 * 1024)).toFixed(1)}MB`,
-        totalHeapSize: `${(totalJSHeapSize / (1024 * 1024)).toFixed(1)}MB`,
-        availableHeap: `${(available / (1024 * 1024)).toFixed(1)}MB`,
-        memoryPressure:
-          usedJSHeapSize / jsHeapSizeLimit > 0.8 ? 'High' : 'Normal',
-      });
 
       return Math.round(available / (1024 * 1024));
     }
@@ -2369,19 +2320,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       .deviceMemory;
 
     if (deviceMemory) {
-      console.debug('Device Memory Info:', {
-        totalDeviceMemory: `${deviceMemory}GB`,
-        estimatedAvailable: `${deviceMemory * 0.7}GB (estimated 70% available)`,
-        source: 'Device Memory API',
-      });
       return deviceMemory * 1024 * 0.7; // Assume 70% available
     }
 
-    // Final fallback
-    console.debug('Memory Info:', {
-      source: 'Default fallback',
-      assumed: '4GB total, 2.8GB available',
-    });
     return 2048; // Conservative default (2GB available)
   }
 
@@ -2418,13 +2359,8 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
   toggleScenario(scenario: BenchmarkTestCase) {
     scenario.selected = !scenario.selected;
-    console.log(`Toggled ${scenario.name} to ${scenario.selected}`);
     // Trigger recomputation of selectedScenarios and dependent computeds
     this.scenarioSelectionVersion.update((v) => v + 1);
-    console.log(
-      'Updated scenarioSelectionVersion to',
-      this.scenarioSelectionVersion()
-    );
   }
 
   // Timer management for elapsed time updates
@@ -2455,12 +2391,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     const libraries = this.selectedLibraries();
     const scenarios = this.selectedScenarios();
     const config = this.config();
-
-    console.log('Starting benchmarks with:', {
-      libraries: libraries.map((l) => l.name),
-      scenarios: scenarios.map((s) => s.name),
-      scenarioIds: scenarios.map((s) => s.id),
-    });
 
     try {
       for (const scenario of scenarios) {
@@ -2508,11 +2438,11 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         }
       }
     } catch (error) {
-      console.error('Benchmark execution failed:', error);
+      // Log benchmark execution errors but continue with results submission
+      console.warn('Benchmark execution failed:', error);
     } finally {
       this.isRunning.set(false);
       this.stopElapsedTimer(); // Stop timer when benchmarks finish
-      console.log('Benchmarks completed');
 
       // Submit results to backend if consent given
       await this.submitBenchmarkResults();
@@ -2525,9 +2455,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     config: BenchmarkConfig,
     options?: { overrideEnterprise?: boolean; variantLabel?: string }
   ): Promise<BenchmarkResult> {
-    console.log(
-      `Starting single benchmark: ${library.name} - ${scenario.name}`
-    );
     const samples: number[] = [];
     // Capture heap usage before measurement runs for memory-efficiency scenario
     const perfWithMem = performance as Performance & {
@@ -2540,7 +2467,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         ? perfWithMem.memory.usedJSHeapSize
         : undefined;
 
-    console.log(`Starting warmup runs: ${config.warmupRuns}`);
     // Warmup runs
     for (let i = 0; i < config.warmupRuns; i++) {
       if (!this.isRunning()) break;
@@ -2550,7 +2476,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       this.currentIteration.set(i + 1);
     }
 
-    console.log(`Starting measurement runs: ${config.iterations}`);
     // Measurement runs
     for (let i = 0; i < config.iterations; i++) {
       if (!this.isRunning()) break;
@@ -2565,13 +2490,8 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         }
       );
 
-      console.log(`Iteration ${i + 1} duration: ${duration}ms`);
-
       // Check if the benchmark returned -1 (unsupported)
       if (duration === -1) {
-        console.log(
-          `Benchmark unsupported for ${library.name} - ${scenario.name}`
-        );
         // Return special result indicating unsupported scenario
         return {
           libraryId: library.id,
@@ -2611,20 +2531,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         : undefined;
 
     const median = this.percentile(samples, 50);
-    // For cold-start scenarios some services return structured metrics
-    // exposed on window.__LAST_COLDSTART_RESULTS__ - include memoryDeltaMB
-    let coldMemoryDelta: number | undefined = undefined;
-    try {
-      const last = window.__LAST_COLDSTART_RESULTS__ || {};
-      const libMetrics = last?.[library.id];
-      if (libMetrics && typeof libMetrics.memoryDeltaMB === 'number') {
-        coldMemoryDelta = libMetrics.memoryDeltaMB;
-      }
-    } catch {
-      // ignore
-    }
-
-    return {
+    const finalResult: BenchmarkResult = {
       libraryId: library.id,
       scenarioId: options?.variantLabel
         ? `${scenario.id}::${options.variantLabel}`
@@ -2638,9 +2545,32 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       max: samples[samples.length - 1],
       stdDev: this.standardDeviation(samples),
       opsPerSecond: median > 0 ? Math.round(1000 / median) : 0,
-      memoryDeltaMB:
-        scenario.id === 'cold-start' ? coldMemoryDelta : memoryDeltaMB,
+      memoryDeltaMB: memoryDeltaMB,
     };
+
+    // Persist an extended, per-run object on window so automation (Playwright)
+    // and debug flows can inspect exactly which enhancers were active and
+    // obtain raw, unrounded sample arrays for post-analysis.
+    try {
+      const ext = window.__LAST_BENCHMARK_EXTENDED_RESULTS__ || {};
+      window.__LAST_BENCHMARK_EXTENDED_RESULTS__ = ext;
+      ext[library.id] = ext[library.id] || {};
+      // Store a minimal extended payload beside the normal structured result.
+      ext[library.id][finalResult.scenarioId] = {
+        // copy the formal result
+        ...finalResult,
+        // runtime metadata useful for auditing
+        appliedEnhancers: window.__SIGNALTREE_ACTIVE_ENHANCERS__ || [],
+        // unrounded raw samples for high-resolution analysis
+        rawSamples: samples.slice(),
+        timestamp: new Date().toISOString(),
+      } as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+    } catch (e) {
+      // non-fatal — don't block benchmark return on persistence errors
+      void e;
+    }
+
+    return finalResult;
   }
 
   private getComplexityMultiplier(complexity: string): number {
@@ -2805,7 +2735,8 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       try {
         chart.destroy();
       } catch (error) {
-        console.warn('Error destroying chart:', error);
+        // Log chart cleanup errors but continue
+        console.warn('Chart cleanup failed:', error);
       }
     });
     this.charts = [];
@@ -2836,7 +2767,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     /* eslint-disable @typescript-eslint/no-explicit-any */
     const ctx = this.combinedChartRef?.nativeElement.getContext('2d');
     if (!ctx) {
-      console.warn('Chart context not available');
       return;
     }
 
@@ -2845,7 +2775,6 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     const results = this.results();
 
     if (libraries.length === 0 || results.length === 0) {
-      console.warn('No libraries or results available for chart');
       return;
     }
 
@@ -3047,18 +2976,28 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       summaries: this.librarySummaries(),
       statistics: this.statisticalComparisons(),
     };
+    try {
+      // Include extended per-run metadata (applied enhancers + raw samples)
+      // so Playwright/exporter captures it even if the UI export flow misses
+      // component internals.
+      (data as any).extendedResults = // eslint-disable-line @typescript-eslint/no-explicit-any
+        (window as any).__LAST_BENCHMARK_EXTENDED_RESULTS__ || {}; // eslint-disable-line @typescript-eslint/no-explicit-any
+    } catch (e) {
+      // non-fatal
+      void e;
+    }
     const json = JSON.stringify(data, null, 2);
     try {
       // Expose last benchmark results on window as a deterministic fallback
       // for external automation (Playwright) that may miss the browser
       // download event triggered via programmatic anchor clicks.
-      window.__LAST_BENCHMARK_RESULTS__ = json;
+      (window as any).__LAST_BENCHMARK_RESULTS__ = json; // eslint-disable-line @typescript-eslint/no-explicit-any
       // Also expose the parsed object for convenience in some runners
-      window.__LAST_BENCHMARK_RESULTS_OBJ__ = data;
+      (window as any).__LAST_BENCHMARK_RESULTS_OBJ__ = data; // eslint-disable-line @typescript-eslint/no-explicit-any
       window.__LAST_BENCHMARK_RESULTS_TS__ = new Date().toISOString();
     } catch (err) {
-      // Non-fatal: if window cannot be written to for some reason, continue
-      console.warn('Failed to set global benchmark shim:', err);
+      // Log window property assignment errors but continue
+      console.warn('Failed to set window benchmark results:', err);
     }
 
     this.downloadFile(json, 'benchmark-results.json', 'application/json');
@@ -3075,7 +3014,8 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       try {
         await navigator.share({ title: 'Benchmark Results', text, url });
       } catch (err) {
-        console.error('Share failed:', err);
+        // Log share errors but continue with fallback
+        console.warn('Failed to share results:', err);
       }
     } else {
       // Fallback: Copy to clipboard
@@ -3488,6 +3428,72 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     };
 
     return presets[presetId] || null;
+  }
+
+  // Detect which preset matches the current test case weights
+  private detectCurrentPreset(): string {
+    const presets: Record<string, Record<string, number>> = {
+      'crud-app': {
+        'selector-memoization': 3.0,
+        'computed-chains': 2.5,
+        'data-fetching': 2.0,
+        'large-array': 1.5,
+        serialization: 0.5,
+        'concurrent-updates': 0.3,
+        'memory-efficiency': 1.0,
+      },
+      'real-time': {
+        'large-array': 3.0,
+        'concurrent-updates': 2.5,
+        'real-time-updates': 3.0,
+        'batch-updates': 2.0,
+        'subscriber-scaling': 2.5,
+        serialization: 0.2,
+        'deep-nested': 1.5,
+        'memory-efficiency': 2.0,
+      },
+      forms: {
+        'deep-nested': 3.0,
+        'computed-chains': 2.5,
+        'selector-memoization': 2.0,
+        'subscriber-scaling': 1.5,
+        serialization: 1.5,
+        'large-array': 1.0,
+        'concurrent-updates': 0.5,
+        'memory-efficiency': 1.0,
+      },
+      enterprise: {
+        serialization: 2.5,
+        'undo-redo': 3.0,
+        'computed-chains': 2.0,
+        'selector-memoization': 2.0,
+        'large-array': 1.5,
+        'deep-nested': 1.5,
+        'subscriber-scaling': 1.5,
+        'memory-efficiency': 1.0,
+      },
+      equal: {}, // All weights are 1.0
+    };
+
+    // Check each preset to see if it matches current weights
+    for (const [presetId, presetWeights] of Object.entries(presets)) {
+      let matches = true;
+      for (const testCase of this.testCases) {
+        const currentWeight = testCase.frequencyWeight || 1.0;
+        const presetWeight =
+          presetWeights[testCase.id] || (presetId === 'equal' ? 1.0 : 1.0);
+        // Allow small tolerance for floating point comparison
+        if (Math.abs(currentWeight - presetWeight) > 0.01) {
+          matches = false;
+          break;
+        }
+      }
+      if (matches) {
+        return presetId;
+      }
+    }
+
+    return 'custom'; // No preset matches
   }
 
   weightedLibrarySummaries = computed(() => {

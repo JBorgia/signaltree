@@ -32,6 +32,12 @@ export {};
 
 // Safe helper to read heap used size without spreading `(performance as any)` across the codebase
 export function safeGetHeapUsed(): number | null {
-  // Use an any-cast only inside this single helper to centralize the unsafe cast
-  return (performance as any)?.memory?.usedJSHeapSize ?? null;
+  // Use a proper interface for the extended performance object
+  interface ExtendedPerformance extends Performance {
+    memory?: {
+      usedJSHeapSize: number;
+    };
+  }
+
+  return (performance as ExtendedPerformance)?.memory?.usedJSHeapSize ?? null;
 }

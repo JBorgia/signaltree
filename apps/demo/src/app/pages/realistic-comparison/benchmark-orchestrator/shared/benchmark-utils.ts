@@ -219,15 +219,8 @@ export async function measurePerformance<T>(
 ): Promise<{ result: T; duration: number }> {
   const start = performance.now();
 
-  try {
-    const result = await operation();
-    const duration = performance.now() - start;
+  const result = await operation();
+  const duration = performance.now() - start;
 
-    console.log(`${name}: Completed in ${duration.toFixed(2)}ms`);
-    return { result, duration };
-  } catch (error) {
-    const duration = performance.now() - start;
-    console.error(`${name}: Failed after ${duration.toFixed(2)}ms`, error);
-    throw error;
-  }
+  return { result, duration };
 }

@@ -112,8 +112,8 @@ export class MiddlewareDemoComponent {
           try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(newState.todos));
             this.tree.$.lastSaved.set(Date.now());
-          } catch (error) {
-            console.error('Failed to save to storage:', error);
+          } catch {
+            // Ignore localStorage errors (e.g., quota exceeded, private browsing)
           }
         },
       },
@@ -214,15 +214,13 @@ export class MiddlewareDemoComponent {
   }
 
   handleUndo() {
-    // Undo functionality is now handled by the withMiddleware enhancer
-    // This would typically call this.tree.undo() if available
-    console.log('Undo functionality handled by middleware');
+    // Undo functionality is handled by the withMiddleware enhancer
+    // This method is kept for potential future UI integration
   }
 
   handleRedo() {
-    // Redo functionality is now handled by the withMiddleware enhancer
-    // This would typically call this.tree.redo() if available
-    console.log('Redo functionality handled by middleware');
+    // Redo functionality is handled by the withMiddleware enhancer
+    // This method is kept for potential future UI integration
   }
 
   canUndo(): boolean {

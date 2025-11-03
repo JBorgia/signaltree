@@ -1,12 +1,6 @@
 import { Injectable } from '@angular/core';
 import { createStore } from '@ngneat/elf';
-import {
-  getAllEntities,
-  setEntities,
-  updateAllEntities,
-  updateEntities,
-  withEntities,
-} from '@ngneat/elf-entities';
+import { getAllEntities, setEntities, updateAllEntities, updateEntities, withEntities } from '@ngneat/elf-entities';
 import { map } from 'rxjs';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
@@ -31,41 +25,16 @@ export class ElfBenchmarkService {
   /**
    * Standardized cold start and memory profiling
    */
-  async runInitializationBenchmark(): Promise<{
-    durationMs: number;
-    memoryDeltaMB: number | 'N/A';
-  }> {
-    const { runTimed } = await import('./benchmark-runner');
-    // stateFactory removed (was unused)
-    const result = await runTimed(
-      () => {
-        // Simulate Elf store initialization
-        createStore({ name: 'elf-init' }, withEntities<any>());
-      },
-      { operations: 1, trackMemory: true, label: 'elf-init' }
-    );
-    return {
-      durationMs: result.durationMs,
-      memoryDeltaMB:
-        typeof result.memoryDeltaMB === 'number' ? result.memoryDeltaMB : 'N/A',
-    };
-  }
+  // Initialization helper moved to
+  // `services/initialization-harness.ts` for dedicated/nightly profiling.
 
   // Adapter to satisfy orchestrator naming: return standardized BenchmarkResult
   async runColdStartBenchmark(): Promise<number | BenchmarkResult> {
-    const res = await this.runInitializationBenchmark();
-    const result: BenchmarkResult = {
-      durationMs: typeof res.durationMs === 'number' ? res.durationMs : -1,
-      memoryDeltaMB:
-        typeof res.memoryDeltaMB === 'number' ? res.memoryDeltaMB : undefined,
-      notes: 'Elf initialization via runTimed',
-    };
-    try {
-      window.__ELF_LAST_COLDSTART_METRICS__ = result;
-    } catch {
-      // ignore
-    }
-    return result;
+    return {
+      durationMs: -1,
+      memoryDeltaMB: undefined,
+      notes: 'Disabled in demo orchestrator',
+    } as BenchmarkResult;
   }
   private yieldToUI = createYieldToUI();
 
@@ -140,7 +109,8 @@ export class ElfBenchmarkService {
     ) {
       state = updateDeep(state, depth - 1, i);
     }
-    if (state?.level?.value === -1) console.log('noop');
+    // consume state so it isn't DCE'd
+    void (state?.level?.value === -1);
     const duration = performance.now() - start;
     return this.toResult(duration);
   }
@@ -173,7 +143,7 @@ export class ElfBenchmarkService {
     }
     // consume
     const all = store.query(getAllEntities());
-    if (all.length === -1) console.log('noop');
+    void (all.length === -1);
     const duration = performance.now() - start;
     return this.toResult(duration);
   }
@@ -359,15 +329,8 @@ export class ElfBenchmarkService {
     }
     const t0 = performance.now();
     const plain = store.getValue();
-    const t1 = performance.now();
     JSON.stringify({ data: plain });
     const t2 = performance.now();
-    console.debug(
-      '[Elf][serialization] toPlain(ms)=',
-      (t1 - t0).toFixed(2),
-      ' stringify(ms)=',
-      (t2 - t1).toFixed(2)
-    );
     const duration = t2 - t0;
     return this.toResult(duration);
   }
@@ -392,7 +355,7 @@ export class ElfBenchmarkService {
     }
     // consume
     const first = store.query(getAllEntities())[0];
-    if (first && first.value === -1) console.log('noop');
+    void (first && first.value === -1);
     const duration = performance.now() - start;
     return this.toResult(duration);
   }
@@ -439,7 +402,10 @@ export class ElfBenchmarkService {
     return this.toResult(duration);
   }
 
-  async runDataFetchingBenchmark(): Promise<number | BenchmarkResult> {
+  async runDataFetchingBenchmark(
+    _dataSize?: number
+  ): Promise<number | BenchmarkResult> {
+    void _dataSize;
     // Simulate data fetching with Elf entity store
     type User = {
       id: number;
@@ -502,12 +468,14 @@ export class ElfBenchmarkService {
 
     const durationMs = performance.now() - start;
 
-    // consume to avoid DCE
-    if (userStore.query(getAllEntities()).length === -1) console.log('noop');
+    void (userStore.query(getAllEntities()).length === -1);
     return this.toResult(durationMs);
   }
 
-  async runRealTimeUpdatesBenchmark(): Promise<number | BenchmarkResult> {
+  async runRealTimeUpdatesBenchmark(
+    _dataSize?: number
+  ): Promise<number | BenchmarkResult> {
+    void _dataSize;
     // Simulate real-time updates with Elf stores
     type Metric = {
       id: number;
@@ -572,12 +540,14 @@ export class ElfBenchmarkService {
 
     const duration = performance.now() - start;
 
-    // consume to avoid DCE
-    if (metricStore.query(getAllEntities()).length === -1) console.log('noop');
+    void (metricStore.query(getAllEntities()).length === -1);
     return this.toResult(duration);
   }
 
-  async runStateSizeScalingBenchmark(): Promise<number | BenchmarkResult> {
+  async runStateSizeScalingBenchmark(
+    _dataSize?: number
+  ): Promise<number | BenchmarkResult> {
+    void _dataSize;
     // Test performance with large state size (10,000 items)
     type LargeDataItem = {
       id: number;
@@ -662,9 +632,7 @@ export class ElfBenchmarkService {
 
     const duration = performance.now() - start;
 
-    // consume to avoid DCE
-    if (largeDataStore.query(getAllEntities()).length === -1)
-      console.log('noop');
+    void (largeDataStore.query(getAllEntities()).length === -1);
     return this.toResult(duration);
   }
 
@@ -700,8 +668,7 @@ export class ElfBenchmarkService {
         .subscribe((counter: number) => {
           // Simulate computation work
           const result = counter * (i + 1) + Math.sin(counter * 0.1);
-          // Prevent DCE
-          if (result === -1) console.log('noop');
+          void (result === -1);
         });
       subscribers.push(subscription);
     }

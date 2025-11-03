@@ -133,8 +133,6 @@ export class RecursivePerformanceRunner {
    * Test recursive depth capabilities using self-referencing approach
    */
   async testRecursiveDepth(): Promise<void> {
-    console.log('🔬 Testing Recursive Depth Performance...');
-
     // Basic depth (5 levels) - Traditional approach baseline
     const basicStart = performance.now();
     const basic = signalTree({
@@ -233,16 +231,12 @@ export class RecursivePerformanceRunner {
       time: unlimitedTime,
       typeInference: unlimitedAccess !== undefined,
     };
-
-    console.log('✅ Recursive Depth Tests Complete');
   }
 
   /**
    * Test self-referencing capabilities that enable unlimited recursion
    */
   async testSelfReference(): Promise<void> {
-    console.log('🔄 Testing Self-Reference Performance...');
-
     // Creation speed with self-referencing structures
     const creationStart = performance.now();
     const selfRefTree = signalTree({
@@ -263,8 +257,7 @@ export class RecursivePerformanceRunner {
 
     // Access speed through self-references
     const accessStart = performance.now();
-    const parent = selfRefTree.$.root.children.child1.parent();
-    const data = parent ? (parent as { data: () => string }).data() : undefined;
+    selfRefTree.$.root.children.child1.parent();
     const accessTime = performance.now() - accessStart;
 
     // Update speed with circular references
@@ -284,16 +277,12 @@ export class RecursivePerformanceRunner {
       updates: updateTime,
       memory: memoryUsage,
     };
-
-    console.log('✅ Self-Reference Tests Complete');
   }
 
   /**
    * Compare with other frameworks - highlighting recursive advantages
    */
   async testFrameworkComparison(): Promise<void> {
-    console.log('⚔️  Testing Framework Comparisons...');
-
     // vs NgRx - Complex state management
     const ngrxComparison = await this.compareWithNgRx();
     this.results.comparison.vsNgRx = ngrxComparison;
@@ -305,16 +294,12 @@ export class RecursivePerformanceRunner {
     // vs Akita - Entity management
     const akitaComparison = await this.compareWithAkita();
     this.results.comparison.vsAkita = akitaComparison;
-
-    console.log('✅ Framework Comparison Complete');
   }
 
   /**
    * Test time travel with recursive structures
    */
   async testTimeTravel(): Promise<void> {
-    console.log('⏰ Testing Time Travel with Recursive Structures...');
-
     const timeTree = signalTree({
       user: { name: 'John', profile: { settings: { theme: 'dark' } } },
       history: [] as unknown[],
@@ -350,16 +335,12 @@ export class RecursivePerformanceRunner {
       replaySpeed: replayTime,
       maxHistorySize: 1000, // Theoretical limit
     };
-
-    console.log('✅ Time Travel Tests Complete');
   }
 
   /**
    * Test batching efficiency with recursive structures
    */
   async testBatching(): Promise<void> {
-    console.log('📦 Testing Batching with Recursive Structures...');
-
     const batchTree = signalTree({
       data: {} as Record<string, unknown>,
     });
@@ -409,8 +390,6 @@ export class RecursivePerformanceRunner {
       batch1000: batch1000Time,
       efficiency: (singleTime * 1000) / batch1000Time, // How much more efficient batching is
     };
-
-    console.log('✅ Batching Tests Complete');
   }
 
   /**
@@ -435,8 +414,6 @@ export class RecursivePerformanceRunner {
    * Run all performance tests
    */
   async runAllTests(): Promise<PerformanceMetrics> {
-    console.log('🚀 Starting recursive performance tests...');
-
     await this.testRecursiveDepth();
     await this.testSelfReference();
     await this.testFrameworkComparison();
@@ -444,7 +421,6 @@ export class RecursivePerformanceRunner {
     await this.testBatching();
     this.documentRecursiveBenefits();
 
-    console.log('🎉 All Tests Complete! Breakthrough results achieved.');
     return this.results;
   }
 

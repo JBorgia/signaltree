@@ -12,6 +12,13 @@ type Config = {
   key?: string;
 };
 
+// Interfaces for dynamic access to avoid 'any' types
+interface SignalLike<T = unknown> {
+  (): T;
+  get?(): T;
+  set?(value: T): void;
+}
+
 class LazyArrayUpdater<T = unknown> {
   private pendingOps: Array<(arr: T[]) => void> = [];
   private scheduled = false;
@@ -60,56 +67,65 @@ class LazyArrayUpdater<T = unknown> {
       this.timerId = undefined;
     }
 
-    const itemsSignal = (this.tree.state as any)[this.key];
+    const itemsSignal = (this.tree.state as Record<string, unknown>)[this.key];
 
     // Perform a single batched mutation and single set of the backing array
     try {
-      (this.tree as any).batch?.(() => {
-        const current: T[] =
-          typeof itemsSignal === 'function'
-            ? itemsSignal()
-            : itemsSignal && typeof itemsSignal.get === 'function'
-            ? itemsSignal.get()
-            : // fallback to reading property (non-signal shape)
-              itemsSignal || [];
+      // Check if tree has a batch method
+      const treeWithBatch = this.tree as SignalTree<unknown> & {
+        batch?: (fn: () => void) => void;
+      };
+      treeWithBatch.batch?.(() => {
+        const current: T[] = this.getCurrentArray(itemsSignal);
 
         for (const fn of ops) {
           try {
             fn(current);
-          } catch (_e) {
-            // swallow per-op errors to avoid aborting the whole flush
-            // consumer can still observe error via instrumented telemetry
-            // keep console.debug for dev-only visibility
-            /* istanbul ignore next */
-            console.debug('LazyArrayUpdater op failed', _e);
+          } catch {
+            // Ignore individual operation errors in batch
           }
         }
 
-        if (itemsSignal && typeof itemsSignal.set === 'function') {
-          itemsSignal.set(current);
-        } else if (typeof itemsSignal === 'function') {
-          // Node accessor style
-          itemsSignal(current);
-        } else {
-          // Best-effort fallback: replace property on state
-          try {
-            (this.tree.state as any)[this.key] = current;
-          } catch {
-            // ignore
-          }
-        }
+        this.setCurrentArray(itemsSignal, current);
       });
-    } catch (_e) {
+    } catch {
       // If batch throws for some reason, attempt one-by-one set
       try {
-        const current: T[] =
-          typeof itemsSignal === 'function'
-            ? itemsSignal()
-            : (itemsSignal as any) || [];
+        const current: T[] = this.getCurrentArray(itemsSignal);
         for (const fn of ops) fn(current);
-        if (itemsSignal && typeof (itemsSignal as any).set === 'function')
-          (itemsSignal as any).set(current);
-      } catch (_err) {
+        this.setCurrentArray(itemsSignal, current);
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  private getCurrentArray(itemsSignal: unknown): T[] {
+    if (typeof itemsSignal === 'function') {
+      return (itemsSignal as () => T[])();
+    }
+
+    const signalLike = itemsSignal as SignalLike<T[]>;
+    if (signalLike && typeof signalLike.get === 'function') {
+      return signalLike.get();
+    }
+
+    // fallback to reading property (non-signal shape)
+    return (itemsSignal as T[]) || [];
+  }
+
+  private setCurrentArray(itemsSignal: unknown, current: T[]): void {
+    const signalLike = itemsSignal as SignalLike<T[]>;
+    if (signalLike && typeof signalLike.set === 'function') {
+      signalLike.set(current);
+    } else if (typeof itemsSignal === 'function') {
+      // Node accessor style - functions that set values
+      (itemsSignal as (value: T[]) => void)(current);
+    } else {
+      // Best-effort fallback: replace property on state
+      try {
+        (this.tree.state as Record<string, T[]>)[this.key] = current;
+      } catch {
         // ignore
       }
     }

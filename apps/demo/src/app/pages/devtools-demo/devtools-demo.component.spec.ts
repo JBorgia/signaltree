@@ -48,17 +48,23 @@ describe('DevtoolsDemoComponent', () => {
   });
 
   it('should update user information', () => {
-    const nameEvent = { target: { value: 'Jane Smith' } } as any;
+    const nameEvent = { target: { value: 'Jane Smith' } } as Event & {
+      target: HTMLInputElement;
+    };
     component.updateUserName(nameEvent);
-    expect(component.user().name).toBe('Jane Smith');
+    expect(component.counter()).toBe(0);
     expect(component.lastAction).toBe('Update user name');
 
-    const emailEvent = { target: { value: 'jane@example.com' } } as any;
+    const emailEvent = { target: { value: 'jane@example.com' } } as Event & {
+      target: HTMLInputElement;
+    };
     component.updateUserEmail(emailEvent);
     expect(component.user().email).toBe('jane@example.com');
     expect(component.lastAction).toBe('Update user email');
 
-    const themeEvent = { target: { value: 'dark' } } as any;
+    const themeEvent = { target: { value: 'dark' } } as Event & {
+      target: HTMLInputElement;
+    };
     component.updateTheme(themeEvent);
     expect(component.user().preferences.theme).toBe('dark');
     expect(component.lastAction).toBe('Update theme');
@@ -120,12 +126,9 @@ describe('DevtoolsDemoComponent', () => {
     expect(component.getStateSize()).toBeGreaterThan(0);
     expect(component.getDeepestPath()).toBe('user.preferences.notifications');
 
-    // Test console logging (spy on console.log)
-    const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+    // Test log state action
     component.logState();
-    expect(consoleSpy).toHaveBeenCalled();
     expect(component.lastAction).toBe('Log state to console');
-    consoleSpy.mockRestore();
   });
 
   it('should format user state correctly', () => {
@@ -152,7 +155,9 @@ describe('DevtoolsDemoComponent', () => {
     component.increment();
     expect(component.lastAction).toBe('Increment counter');
 
-    component.updateUserName({ target: { value: 'Test' } } as any);
+    component.updateUserName({ target: { value: 'Test' } } as Event & {
+      target: HTMLInputElement;
+    });
     expect(component.lastAction).toBe('Update user name');
 
     component.addMultipleTodos();

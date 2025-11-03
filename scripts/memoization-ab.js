@@ -84,7 +84,7 @@ async function run() {
   }
 
   // Run pattern: many repeated calls with occasional mutation
-  for (let mode of ['none', 'ref', 'shallow']) {
+  for (const mode of ['none', 'ref', 'shallow']) {
     const arr = results[mode];
     for (let i = 0; i < iterations; i++) {
       if (i % updateEvery === 0) {

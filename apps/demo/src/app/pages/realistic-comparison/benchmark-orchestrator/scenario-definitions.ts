@@ -64,32 +64,9 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
       scalesWith: 'linear',
     },
   },
-  {
-    id: 'cold-start',
-    name: 'Cold Start / Initialization',
-    description: 'Measure store/library initialization and cold-start time',
-    operations: 'single measurement',
-    complexity: 'Low',
-    selected: true,
-    category: 'core',
-    purpose:
-      'Measure initialization time for store setup, enhancers and initial selector wiring (important for SSR and app startup)',
-    frequencyWeight: 1.0,
-    realWorldFrequency: 'Occasional - App startup, SSR',
-    architecturalTradeOffs:
-      'Some libraries favor fast startup while others optimize runtime throughput; this measures that trade-off',
-    enhancers: {
-      required: [],
-      optional: [],
-      rationale: 'No enhancers required; measure raw initialization cost',
-    },
-    dataRequirements: {
-      minSize: 0,
-      maxSize: 1,
-      defaultSize: 0,
-      scalesWith: 'linear',
-    },
-  },
+  // 'cold-start' scenario removed: startup/init timings are no longer
+  // collected by default in the orchestrator. Use a dedicated harness or
+  // enable it explicitly for nightly/manual profiling.
   {
     id: 'large-array',
     name: 'Large Array Mutations',
