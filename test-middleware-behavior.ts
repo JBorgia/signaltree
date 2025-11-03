@@ -1,5 +1,4 @@
-import { signalTree } from '@signaltree/core';
-import { withMiddleware } from '@signaltree/middleware';
+import { signalTree, withMiddleware } from '@signaltree/core';
 
 // Test file to verify SignalTree middleware functionality
 console.log('=== TESTING SIGNALTREE MIDDLEWARE ===');

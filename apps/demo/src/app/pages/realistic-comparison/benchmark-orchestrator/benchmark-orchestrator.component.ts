@@ -746,7 +746,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     } else {
       preset.scenarios.forEach((scenarioId) => {
         const testCase = this.testCases.find((s) => s.id === scenarioId);
-        if (testCase) testCase.selected = true;
+        if (testCase && !testCase.disabledReason) testCase.selected = true;
       });
     }
 

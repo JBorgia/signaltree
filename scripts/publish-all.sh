@@ -48,14 +48,7 @@ print_status "Verified npm authentication"
 # Define packages in dependency order (core first, then others)
 PACKAGES=(
     "core"
-    "batching"
-    "memoization"
-    "devtools"
-    "entities"
-    "middleware"
     "ng-forms"
-    "presets"
-    "time-travel"
 )
 
 # Check if dry-run flag is passed

@@ -4,12 +4,6 @@ export default {
   setupFilesAfterEnv: ['<rootDir>/src/test-setup.ts'],
   coverageDirectory: '../../coverage/apps/demo',
   testPathIgnorePatterns: ['demo-e2e'],
-  extensionsToTreatAsEsm: ['.ts'],
-  globals: {
-    'ts-jest': {
-      useESM: true,
-    },
-  },
   moduleNameMapper: {
     // Map enhancers root to its index.js
     '^@signaltree/core/enhancers$':
@@ -24,6 +18,15 @@ export default {
     '^@signaltree/core$': '<rootDir>/../../packages/core/dist/index.cjs',
     '^@signaltree/core/(.*)$':
       '<rootDir>/../../packages/core/dist/$1/index.cjs',
+    '^@app/(.*)$': '<rootDir>/src/app/$1',
+    '^@benchmark/(.*)$': '<rootDir>/src/app/services/benchmark/$1',
+    '^@api/(.*)$': '<rootDir>/../../api/$1',
+    '^@packages/(.*)$': '<rootDir>/../../packages/$1',
+    '^@types/(.*)$': '<rootDir>/../../types/$1',
+    '^(akita-benchmark-service|elf-benchmark-service|ngrx-benchmark-service|ngrx-signals-benchmark-service|ngxs-benchmark-service|signaltree-benchmark-service|realistic-benchmark-service)$':
+      '<rootDir>/src/app/tests/__mocks__/$1.ts',
+    '^\\.\\./services/realistic-benchmark\\.service$':
+      '<rootDir>/src/app/tests/__mocks__/realistic-benchmark.service.ts',
   },
   transform: {
     '^.+\\.(ts|mjs|js|html)$': [
@@ -35,7 +38,7 @@ export default {
     ],
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(@datorama|@ngrx|@ngxs|elf|@signaltree|.*\\.mjs$))',
+    'node_modules/(?!(@ngrx|@ngxs|elf|@signaltree|.*\\.mjs$|@angular|@angular/.*))',
   ],
   snapshotSerializers: [
     'jest-preset-angular/build/serializers/no-ng-attributes',

@@ -1,7 +1,13 @@
 import { computed, Signal, signal } from '@angular/core';
-import { createFormTree } from '@signaltree/ng-forms';
 
-import type { FormTree, FormTreeOptions } from '@signaltree/ng-forms';
+import { createFormTree } from '..';
+
+// Local type definitions to avoid circular imports in secondary entry points
+type FormTreeOptions = Record<string, unknown>;
+
+interface FormTree<T extends Record<string, unknown>> {
+  unwrap(): T;
+}
 /**
  * Defines a step in a wizard form
  */
@@ -42,7 +48,7 @@ export interface FormStep<T extends Record<string, unknown>> {
 export function createWizardForm<T extends Record<string, unknown>>(
   steps: FormStep<T>[],
   initialValues: T,
-  config: FormTreeOptions<T> = {}
+  config: FormTreeOptions = {}
 ): FormTree<T> & {
   currentStep: Signal<number>;
   nextStep: () => Promise<boolean>;
