@@ -1,11 +1,11 @@
 {
-  "timestamp": "2025-10-31T00:17:24.078Z",
+  "timestamp": "2025-11-03T06:29:39.626Z",
   "architecture": "consolidated",
   "packages": [
     {
       "name": "core",
-      "rawSize": 1584,
-      "gzipSize": 617,
+      "rawSize": 1929,
+      "gzipSize": 709,
       "claimed": 22000,
       "maxAllowed": 25000,
       "passed": true,
@@ -94,24 +94,24 @@
     },
     {
       "name": "ng-forms",
-      "rawSize": 32319,
-      "gzipSize": 6571,
-      "claimed": 6270,
-      "maxAllowed": 6600,
+      "rawSize": 35791,
+      "gzipSize": 7165,
+      "claimed": 7200,
+      "maxAllowed": 7700,
       "passed": true,
-      "claimMet": false
+      "claimMet": true
     }
   ],
   "demoApp": {
-    "totalSize": 2280910,
-    "jsFiles": 24,
+    "totalSize": 2296823,
+    "jsFiles": 29,
     "cssFiles": 1,
     "largeJsFiles": 3,
     "largeCssFiles": 0
   },
   "summary": {
-    "totalActualSize": 23064,
-    "totalClaimedSize": 45780,
+    "totalActualSize": 23750,
+    "totalClaimedSize": 46710,
     "packagesPassed": 11,
     "packagesFailed": 0
   },

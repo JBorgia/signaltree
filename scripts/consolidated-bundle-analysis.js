@@ -78,7 +78,7 @@ const packages = [
     maxSize: 800,
     claimed: 750,
   },
-  { name: 'ng-forms', maxSize: 6600, claimed: 6270 }, // Modular validators + RxJS secondary entry (6.27KB actual)
+  { name: 'ng-forms', maxSize: 7700, claimed: 7200 }, // Angular forms integration with history and wizard (7.20KB actual)
 ];
 
 class BundleAnalyzer {

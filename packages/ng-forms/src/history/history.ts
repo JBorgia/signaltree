@@ -1,7 +1,14 @@
 import { Signal, signal } from '@angular/core';
 import { deepClone, snapshotsEqual } from '@signaltree/shared';
 
-import type { FormTree } from '@signaltree/ng-forms';
+// Local type definition to avoid circular imports in secondary entry points
+interface FormTree<T extends Record<string, unknown>> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  form: any; // FormGroup
+  unwrap(): T;
+  destroy(): void;
+  setValues(values: Partial<T>): void;
+}
 
 /**
  * Form history state structure

@@ -68,7 +68,7 @@ import {
  */
 
 // Consider importing performance preset for consistency
-// import { createPresetConfig } from '@signaltree/presets';
+// import { createPresetConfig } from '@signaltree/core';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 @Injectable({ providedIn: 'root' })
@@ -261,7 +261,7 @@ export class SignalTreeBenchmarkService {
 
     // SHOWCASING SIGNALTREE: Use computed-optimized memoization preset
     // This preset is publicly available - users can import and use:
-    // import { withComputedMemoization } from '@signaltree/memoization';
+    // import { withComputedMemoization } from '@signaltree/core';
     // const tree = signalTree(state).with(withComputedMemoization());
     const base: any = signalTree({
       value: 0,
@@ -332,7 +332,7 @@ export class SignalTreeBenchmarkService {
 
     // SHOWCASING SIGNALTREE: Use selector-optimized memoization preset
     // This preset is publicly available - users can import and use:
-    // import { withSelectorMemoization } from '@signaltree/memoization';
+    // import { withSelectorMemoization } from '@signaltree/core';
     // const tree = signalTree(state).with(withSelectorMemoization());
     const base: any = signalTree({
       items: Array.from({ length: dataSize }, (_, i) => ({

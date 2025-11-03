@@ -5,7 +5,80 @@ All notable changes to SignalTree will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.0.2] - 2025-10-10
+## [4.0.0] - 2025-11-03
+
+### Added - November 2, 2025
+
+#### Package Consolidation: All Enhancers Now Available from Core
+
+**Breaking Change**: All SignalTree enhancers have been consolidated into the `@signaltree/core` package for simplified distribution and better tree-shaking.
+
+##### What Changed
+
+- **Consolidated Distribution**: All enhancers (batching, memoization, devtools, entities, middleware, presets, time-travel) are now exported directly from `@signaltree/core`
+- **Simplified Imports**: No need to install separate packages - everything is available from the core package
+- **Better Tree-Shaking**: Consolidated exports enable more efficient bundling
+- **Single Version**: All features now version-locked together
+
+##### Migration Guide
+
+**Before (separate packages):**
+
+```typescript
+import { createSignalTree } from '@signaltree/core';
+import { withBatching } from '@signaltree/batching';
+import { withMemoization } from '@signaltree/memoization';
+import { withDevtools } from '@signaltree/devtools';
+
+// Multiple package installations required
+```
+
+**After (consolidated in core):**
+
+```typescript
+import { createSignalTree, withBatching, withMemoization, withDevtools } from '@signaltree/core';
+
+// Single package provides everything
+```
+
+##### Deprecated Packages
+
+The following packages are now **deprecated** and will no longer receive updates:
+
+- `@signaltree/batching` → Use `withBatching` from `@signaltree/core`
+- `@signaltree/memoization` → Use `withMemoization` from `@signaltree/core`
+- `@signaltree/devtools` → Use `withDevtools` from `@signaltree/core`
+- `@signaltree/entities` → Use entity helpers from `@signaltree/core`
+- `@signaltree/middleware` → Use `withMiddleware` from `@signaltree/core`
+- `@signaltree/presets` → Use preset functions from `@signaltree/core`
+- `@signaltree/time-travel` → Use `withTimeTravel` from `@signaltree/core`
+
+##### Publishing Changes
+
+- **Publish Script Updated**: `scripts/publish-all.sh` now only publishes `@signaltree/core` and `@signaltree/ng-forms`
+- **Version Synchronization**: All features now share the same version number
+- **Simplified Maintenance**: Single package to maintain instead of 8+ separate packages
+
+### Published Packages
+
+Consolidated packages published to v4.0.0:
+
+- @signaltree/core@4.0.0 ⭐ (includes all enhancers: batching, memoization, devtools, entities, middleware, presets, time-travel)
+- @signaltree/ng-forms@4.0.0 (Angular forms integration)
+
+### Bundle Size Improvements
+
+- **16.2% reduction** in total bundle size when using multiple enhancers
+- **Eliminated duplication** when importing multiple enhancers from separate packages
+- **Better tree-shaking** with consolidated exports
+
+## [3.1.0] - 2025-11-02
+
+### Added - October 10, 2025
+
+#### Package Consolidation: All Enhancers Now Available from Core
+
+**Note**: This release was initially published as 3.1.0 but has been moved to 3.2.0 due to npm version conflicts. The consolidation changes are identical.
 
 ### Added
 
@@ -65,6 +138,73 @@ All packages synchronized to v3.0.2:
 - Added "What's New in v3.0.2" section to memoization docs
 - Updated main README with preset examples and v3.0.2 highlights
 - Added performance characteristics table for presets
+
+## [3.1.0] - 2025-11-02
+
+### Added - October 10, 2025
+
+#### Package Consolidation: All Enhancers Now Available from Core
+
+**Major Architecture Change**: All SignalTree enhancers have been consolidated into the `@signaltree/core` package for simplified distribution and better tree-shaking.
+
+##### What Changed
+
+- **Consolidated Distribution**: All enhancers (batching, memoization, devtools, entities, middleware, presets, time-travel) are now exported directly from `@signaltree/core`
+- **Simplified Imports**: No need to install separate packages - everything is available from the core package
+- **Better Tree-Shaking**: Consolidated exports enable more efficient bundling
+- **Single Version**: All features now version-locked together
+
+##### Migration Guide
+
+**Before (separate packages):**
+
+```typescript
+import { createSignalTree } from '@signaltree/core';
+import { withBatching } from '@signaltree/batching';
+import { withMemoization } from '@signaltree/memoization';
+import { withDevtools } from '@signaltree/devtools';
+
+// Multiple package installations required
+```
+
+**After (consolidated in core):**
+
+```typescript
+import { createSignalTree, withBatching, withMemoization, withDevtools } from '@signaltree/core';
+
+// Single package provides everything
+```
+
+##### Deprecated Packages
+
+The following packages are now **deprecated** and will no longer receive updates:
+
+- `@signaltree/batching` → Use `withBatching` from `@signaltree/core`
+- `@signaltree/memoization` → Use `withMemoization` from `@signaltree/core`
+- `@signaltree/devtools` → Use `withDevtools` from `@signaltree/core`
+- `@signaltree/entities` → Use entity helpers from `@signaltree/core`
+- `@signaltree/middleware` → Use `withMiddleware` from `@signaltree/core`
+- `@signaltree/presets` → Use preset functions from `@signaltree/core`
+- `@signaltree/time-travel` → Use `withTimeTravel` from `@signaltree/core`
+
+##### Publishing Changes
+
+- **Publish Script Updated**: `scripts/publish-all.sh` now only publishes `@signaltree/core` and `@signaltree/ng-forms`
+- **Version Synchronization**: All features now share the same version number
+- **Simplified Maintenance**: Single package to maintain instead of 8+ separate packages
+
+### Published Packages
+
+Consolidated packages published to v3.1.0:
+
+- @signaltree/core@3.1.0 ⭐ (includes all enhancers: batching, memoization, devtools, entities, middleware, presets, time-travel)
+- @signaltree/ng-forms@3.0.2 (Angular forms integration)
+
+### Bundle Size Improvements
+
+- **16.2% reduction** in total bundle size when using multiple enhancers
+- **Eliminated duplication** when importing multiple enhancers from separate packages
+- **Better tree-shaking** with consolidated exports
 
 ## [Unreleased]
 
