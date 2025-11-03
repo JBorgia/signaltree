@@ -75,9 +75,6 @@ function applyCap(value: number, cap: number | undefined, label?: string) {
   if (cap == null) return value;
   const capped = Math.min(value, cap);
   if (capped < value && label && !warnedCaps.has(label)) {
-    console.warn(
-      `[BenchRunner] Cap applied to ${label}: requested=${value}, cap=${cap}. You can raise this in configuration for scaling tests.`
-    );
     warnedCaps.add(label);
   }
   return capped;
@@ -425,8 +422,6 @@ export async function runEnhancedBenchmark(
     await attemptGarbageCollection();
   }
 
-  // Warmup phase
-  console.debug(`[${label}] Starting warmup (${warmup} iterations)`);
   for (let i = 0; i < warmup; i++) {
     await runOnce(i);
     if (yieldEvery && (i + 1) % yieldEvery === 0) {
@@ -447,8 +442,6 @@ export async function runEnhancedBenchmark(
 
   let totalRuntime = 0;
   let totalIterations = 0;
-
-  console.debug(`[${label}] Starting measurement phase`);
 
   while (
     (samples.length < measurementSamples && totalRuntime < maxRuntimeMs) ||
@@ -496,9 +489,6 @@ export async function runEnhancedBenchmark(
 
   // Ensure minimum sample size
   if (processedSamples.length < minSamples) {
-    console.warn(
-      `[${label}] Insufficient samples after outlier removal, using raw samples`
-    );
     processedSamples = samples;
   }
 
@@ -580,9 +570,6 @@ export async function runEnhancedBenchmark(
         measurementSamples * 2,
         measurementSamples + 10
       );
-      console.warn(
-        `[${label}] Quantization detected in samples — rerunning with minDurationMs=${increasedMin} and measurementSamples=${increasedSamples}`
-      );
 
       const newOptions: AdaptiveOptions = {
         ...(options as AdaptiveOptions),
@@ -594,20 +581,9 @@ export async function runEnhancedBenchmark(
       // Single adaptive re-run: return the improved measurement
       return await runEnhancedBenchmark(runOnce, newOptions);
     }
-  } catch (e) {
-    // If adaptive rerun fails for any reason, continue with the original result
-    console.warn(
-      `[${label}] Adaptive re-measure failed: ${(e as Error).message}`
-    );
+  } catch {
+    // Ignore errors during adaptive re-run
   }
-
-  console.debug(
-    `[${label}] Completed: ${totalIterations} total iterations, ` +
-      `${samples.length} samples, ${totalRuntime.toFixed(1)}ms total, ` +
-      `reliability: ${result.reliability}, CV: ${(
-        result.coefficientOfVariation * 100
-      ).toFixed(1)}%`
-  );
 
   return result;
 }
@@ -874,8 +850,7 @@ export class PerformanceEnvironment {
       recommendation = 'Good performance environment detected.';
     }
 
-    // Keep sum alive to prevent optimization
-    if (sum === Infinity) console.log('Calibration complete');
+    void (sum === Infinity);
 
     return { isThrottled, opsPerMs, recommendation };
   }

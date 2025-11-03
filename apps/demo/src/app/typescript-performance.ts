@@ -188,7 +188,7 @@ export const complexAppTree = signalTree({
       createdAt: string;
     }>,
     loading: false,
-    groupedByPost: {} as Record<number, any[]>,
+    groupedByPost: {} as Record<number, Comment[]>,
   },
   ui: {
     theme: 'auto' as 'light' | 'dark' | 'auto',

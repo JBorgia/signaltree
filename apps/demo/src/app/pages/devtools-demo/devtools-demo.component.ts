@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { signalTree, withDevTools } from '@signaltree/core';
+import { signalTree } from '@signaltree/core';
 
 interface DevtoolsState {
   counter: number;
@@ -55,13 +55,7 @@ export class DevtoolsDemoComponent {
       },
     },
     todos: [],
-  }).with(
-    withDevTools({
-      treeName: 'DevToolsDemo',
-      enableBrowserDevTools: true,
-      enableLogging: true,
-    })
-  );
+  });
 
   // Computed properties
   counter = this.store.$.counter;
@@ -171,17 +165,15 @@ export class DevtoolsDemoComponent {
   }
 
   logState() {
-    console.log('Current State:', this.store());
     this.lastAction = 'Log state to console';
   }
 
   triggerSnapshot() {
     // Export current debug session as a snapshot
     const devTools = (this.store as Record<string, unknown>)['__devTools'];
-    const snapshot = (
+    (
       devTools as { exportDebugSession?: () => unknown }
     )?.exportDebugSession?.();
-    console.log('State snapshot:', snapshot);
     this.lastAction = 'Take state snapshot';
   }
 

@@ -373,6 +373,7 @@ export class BatchingDemoComponent {
       // Clear the queue
       this.store.$.batchQueue.set([]);
     } catch (error) {
+      // Log batch processing error but continue
       console.error('Batch processing failed:', error);
     } finally {
       this.store.$.processing.set(false);

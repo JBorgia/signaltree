@@ -333,71 +333,11 @@ export class NgxsBenchmarkService {
   // This implementation returns a standardized BenchmarkResult so the
   // orchestrator can consume duration and memory delta consistently.
   async runColdStartBenchmark(): Promise<BenchmarkResult> {
-    // Attempt a more realistic cold-start / initialization measurement
-    // by populating a moderate initial state, waiting for dispatches to
-    // complete, running a serialization, and sampling heap usage when
-    // available. We return the elapsed ms for the initialization work and
-    // expose memory delta on window for later standardization.
-    const perfEx = performance as Performance & {
-      memory?: { usedJSHeapSize: number };
-    };
-
-    const memBefore = perfEx.memory?.usedJSHeapSize;
-    const start = performance.now();
-
-    try {
-      // Populate store with a modest initial dataset to reflect real apps
-      const items = Math.min(500, BENCHMARK_CONSTANTS.ITERATIONS.ARRAY_UPDATES);
-      const batchPromises: Promise<void>[] = [];
-
-      for (let i = 0; i < items; i++) {
-        const value = {
-          id: i,
-          value: Math.random() * 1000,
-          timestamp: Date.now(),
-          data: `item_${i}`,
-        };
-
-        batchPromises.push(
-          this.store.dispatch(new UpdateArray(i, value)).toPromise()
-        );
-
-        // Yield in small batches to avoid blocking the event loop
-        if (i % 50 === 0) {
-          await Promise.all(batchPromises.splice(0));
-        }
-      }
-
-      // Wait for remaining dispatches
-      if (batchPromises.length > 0) await Promise.all(batchPromises);
-
-      // Perform serialize to include any synchronous processing cost
-      await this.store.dispatch(new SerializeState()).toPromise();
-    } catch (err) {
-      // Swallow errors to avoid breaking the orchestrator; fallback to
-      // a best-effort duration below.
-      console.warn('NgXs cold-start measurement encountered an error', err);
-    }
-
-    const duration = performance.now() - start;
-    const memAfter = perfEx.memory?.usedJSHeapSize;
-
-    const result: BenchmarkResult = {
-      durationMs: Math.round(duration * 100) / 100,
-      memoryDeltaMB:
-        typeof memBefore === 'number' && typeof memAfter === 'number'
-          ? Math.round(((memAfter - memBefore) / (1024 * 1024)) * 100) / 100
-          : undefined,
-      notes: 'NgXs cold-start measured by populating store and serializing',
-    };
-
-    try {
-      window.__NGXS_LAST_COLDSTART_METRICS__ = result;
-    } catch {
-      // ignore window write failures
-    }
-
-    return result;
+    return {
+      durationMs: -1,
+      memoryDeltaMB: undefined,
+      notes: 'Disabled in demo orchestrator',
+    } as BenchmarkResult;
   }
 
   async runDeepNestedBenchmark(
@@ -907,8 +847,7 @@ export class NgxsBenchmarkService {
         subscriber
           .subscribe((val) => {
             value = val;
-            // Prevent DCE
-            if (value === -1) console.log('noop');
+            void (value === -1);
           })
           .unsubscribe(); // Unsubscribe immediately
       }

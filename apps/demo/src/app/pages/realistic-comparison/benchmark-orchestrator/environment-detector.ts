@@ -97,9 +97,6 @@ export class EnvironmentDetector {
     const detectConsole = () => {
       const before = performance.now();
 
-      // This will trigger DevTools if open
-      console.table({});
-
       const after = performance.now();
 
       // If console operation took too long, DevTools might be open

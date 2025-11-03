@@ -1,6 +1,7 @@
-import { TestBed } from '@angular/core/testing';
 import { Component } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
 import { signalTree } from '@signaltree/core';
+
 import { BenchmarkService } from '../services/benchmarks.service';
 
 interface Todo {
@@ -177,14 +178,6 @@ describe('SignalTree Performance Benchmarks', () => {
         }
       }, 10);
 
-      console.log(
-        `SignalTree - Add: ${addTime.toFixed(
-          3
-        )}ms, Update: ${updateTime.toFixed(3)}ms, Delete: ${deleteTime.toFixed(
-          3
-        )}ms`
-      );
-
       expect(addTime).toBeLessThan(2000); // Should complete within 2 seconds
       expect(updateTime).toBeLessThan(1000);
       expect(deleteTime).toBeLessThan(1000);
@@ -202,7 +195,6 @@ describe('SignalTree Performance Benchmarks', () => {
         }
       }, 10); // Use 10 iterations instead of 1
 
-      console.log(`SignalTree rapid updates: ${rapidUpdates.toFixed(3)}ms`);
       expect(rapidUpdates).toBeLessThan(3000);
     });
   });
@@ -243,24 +235,6 @@ describe('SignalTree Performance Benchmarks', () => {
         plainStore.getTodoCount();
         plainStore.getCompletedCount();
       }, 10); // Increased from 3
-
-      const overhead = (
-        ((signalTreeTime - plainJSTime) / plainJSTime) *
-        100
-      ).toFixed(1);
-
-      console.log('\n=== PERFORMANCE COMPARISON ===');
-      console.log(`Plain JS:   ${plainJSTime.toFixed(3)}ms`);
-      console.log(`SignalTree: ${signalTreeTime.toFixed(3)}ms`);
-      console.log(
-        `Overhead: ${overhead}% ${
-          signalTreeTime > plainJSTime ? 'slower' : 'faster'
-        }`
-      );
-
-      // Log for the compare-suite parser
-      console.log(`PlainJS performance: ${plainJSTime.toFixed(3)}ms avg`);
-      console.log(`SignalTree performance: ${signalTreeTime.toFixed(3)}ms avg`);
 
       expect(plainJSTime).toBeGreaterThan(0);
       expect(signalTreeTime).toBeGreaterThan(0);

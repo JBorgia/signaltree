@@ -457,14 +457,14 @@ async function run() {
                     const exported = await page.evaluate(() => {
                       try {
                         // call component exportJSON if available
-                        // eslint-disable-next-line no-undef
+                         
                         if (window && window.ng && window.ng.probe) {
                           // Can't reliably access Angular component; fallback to
                         }
                         // Try to call a global helper if app exposes it
                         // Some builds attach last results to window.__LAST_BENCHMARK_RESULTS__
                         // Return it if present
-                        // eslint-disable-next-line no-undef
+                         
                         return (
                           (window.__LAST_BENCHMARK_RESULTS__ &&
                             JSON.stringify(

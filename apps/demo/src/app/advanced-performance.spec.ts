@@ -9,11 +9,11 @@ import { signalTree } from '@signaltree/core';
 interface DeepDataNode {
   value?: number;
   id?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface WideStateNode {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface ComputedTestState {
@@ -90,9 +90,6 @@ describe('Advanced SignalTree Performance Benchmarks', () => {
   }
 
   it('should benchmark scalability with deep nesting', () => {
-    console.log('\n🏗️  SCALABILITY BENCHMARKS');
-    console.log('==========================');
-
     // Test extremely deep nesting (10+ levels)
     const createDeepData = (depth: number): DeepDataNode => {
       if (depth === 0) return { value: Math.random(), id: generateCryptoId() };
@@ -108,23 +105,12 @@ describe('Advanced SignalTree Performance Benchmarks', () => {
         signalTree(deepData);
       }, 10);
 
-      const updateTime = measureTime(() => {
-        tree(() => ({ lastUpdated: Date.now() }));
-      }, 100);
-
-      console.log(
-        `Depth ${depth}: Init ${initTime.toFixed(
-          3
-        )}ms, Update ${updateTime.toFixed(3)}ms`
-      );
       expect(initTime).toBeLessThan(20);
+      expect(tree).toBeDefined();
     });
   });
 
   it('should benchmark wide state trees', () => {
-    console.log('\n📊 WIDE STATE BENCHMARKS');
-    console.log('========================');
-
     // Test wide state trees (many properties at same level)
     const widths = [100, 500, 1000, 2000];
 
@@ -140,16 +126,12 @@ describe('Advanced SignalTree Performance Benchmarks', () => {
         signalTree(wideState);
       }, 10);
 
-      console.log(`Width ${width.toLocaleString()}: ${initTime.toFixed(3)}ms`);
       expect(initTime).toBeLessThan(50);
       expect(tree).toBeDefined();
     });
   });
 
   it('should benchmark reactive computation performance', () => {
-    console.log('\n🔄 REACTIVE COMPUTATION BENCHMARKS');
-    console.log('==================================');
-
     // Test complex computations with cascading updates
     const computedData: ComputedTestState = {
       numbers: Array.from({ length: 1000 }, () =>
@@ -185,21 +167,11 @@ describe('Advanced SignalTree Performance Benchmarks', () => {
       tree((current) => ({ ...current, sum: Math.random() * 10000 }));
     }, 1000);
 
-    console.log(
-      `Cascading updates:               ${cascadingUpdateTime.toFixed(3)}ms`
-    );
-    console.log(
-      `Partial updates:                 ${partialUpdateTime.toFixed(3)}ms`
-    );
-
     expect(cascadingUpdateTime).toBeLessThan(10);
     expect(partialUpdateTime).toBeLessThan(1);
   });
 
   it('should benchmark array handling and nested structures', () => {
-    console.log('\n📋 ARRAY HANDLING BENCHMARKS');
-    console.log('============================');
-
     const nestedArrayData: NestedArrayState = {
       matrix: Array.from({ length: 100 }, () =>
         Array.from({ length: 100 }, () => Math.random())
@@ -224,16 +196,10 @@ describe('Advanced SignalTree Performance Benchmarks', () => {
       }));
     }, 50);
 
-    console.log(
-      `Array updates:                   ${arrayUpdateTime.toFixed(3)}ms`
-    );
     expect(arrayUpdateTime).toBeLessThan(10);
   });
 
   it('should benchmark tree search and traversal', () => {
-    console.log('\n🔍 TREE SEARCH BENCHMARKS');
-    console.log('=========================');
-
     // Create a complex tree structure
     const createTreeNode = (id: string, depth: number): TreeNode => ({
       id,
@@ -274,14 +240,10 @@ describe('Advanced SignalTree Performance Benchmarks', () => {
       }));
     }, 100);
 
-    console.log(`Tree search and update:          ${searchTime.toFixed(3)}ms`);
     expect(searchTime).toBeLessThan(5);
   });
 
   it('should benchmark memory pressure scenarios', () => {
-    console.log('\n💾 MEMORY PRESSURE BENCHMARKS');
-    console.log('=============================');
-
     // Create multiple large trees
     const trees = Array.from({ length: 10 }, () => {
       const data = {
@@ -313,21 +275,12 @@ describe('Advanced SignalTree Performance Benchmarks', () => {
 
     const memoryAfterUpdates = measureMemory();
 
-    console.log(
-      `Memory after creation:           ${memoryAfterCreation.toLocaleString()} bytes`
-    );
-    console.log(
-      `Memory after updates:            ${memoryAfterUpdates.toLocaleString()} bytes`
-    );
-    console.log(`Mass updates:                    ${updateTime.toFixed(3)}ms`);
-
     expect(updateTime).toBeLessThan(100);
+    expect(memoryAfterCreation).toBeGreaterThan(0);
+    expect(memoryAfterUpdates).toBeGreaterThan(0);
   });
 
   it('should benchmark rapid change detection scenarios', () => {
-    console.log('\n⚡ CHANGE DETECTION BENCHMARKS');
-    console.log('==============================');
-
     const changeDetectionData: ChangeDetectionState = {
       counters: Object.fromEntries(
         Array.from({ length: 100 }, (_, i) => [`counter_${i}`, 0])
@@ -345,25 +298,10 @@ describe('Advanced SignalTree Performance Benchmarks', () => {
       }
     }, 100);
 
-    console.log(
-      `Rapid updates:                   ${rapidUpdates.toFixed(3)}ms`
-    );
     expect(rapidUpdates).toBeLessThan(50);
   });
 
   afterAll(() => {
-    console.log('\n===========================================');
-    console.log('🏆 ALL PERFORMANCE BENCHMARKS COMPLETED!');
-    console.log('===========================================');
-    console.log('✅ Scalability testing');
-    console.log('✅ Wide state management');
-    console.log('✅ Reactive computations');
-    console.log('✅ Array handling');
-    console.log('✅ Tree traversal');
-    console.log('✅ Memory pressure');
-    console.log('✅ Change detection');
-    console.log(
-      '✅ SignalTree demonstrates excellent performance across all scenarios!'
-    );
+    // Cleanup after all tests
   });
 });

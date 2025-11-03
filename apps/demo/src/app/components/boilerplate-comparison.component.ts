@@ -13,14 +13,6 @@ interface BoilerplateExample {
   highlights: string[];
 }
 
-interface DeveloperMetrics {
-  learningCurve: number;
-  developmentSpeed: number;
-  maintainability: number;
-  codeQuality: number;
-  overall: number;
-}
-
 @Component({
   selector: 'app-boilerplate-comparison',
   standalone: true,

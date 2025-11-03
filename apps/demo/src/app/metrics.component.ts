@@ -874,8 +874,7 @@ export class MetricsComponent implements OnInit {
       const assessment = BenchmarkService.assessReliability();
       this.reliabilityScore.set(assessment.reliabilityScore);
       this.reliabilityWarnings.set(assessment.warnings);
-    } catch (error) {
-      console.warn('Failed to assess reliability:', error);
+    } catch {
       this.reliabilityScore.set(50);
       this.reliabilityWarnings.set([
         'Unable to assess environment reliability',
@@ -927,27 +926,19 @@ export class MetricsComponent implements OnInit {
     this.error.set(null);
 
     try {
-      console.log('Starting benchmarks...');
-
       // Check if required APIs are available
       if (!performance.now) {
         throw new Error('High-resolution timer not available');
       }
 
-      // Run core benchmarks with error handling
-      console.log('Running initialization benchmark...');
       const initialization = this.benchmarkService.benchmarkInitialization();
 
-      console.log('Running updates benchmark...');
       const updates = this.benchmarkService.benchmarkUpdates();
 
-      console.log('Running computations benchmark...');
       const computations = this.benchmarkService.benchmarkComputations();
 
-      console.log('Running lazy loading benchmark...');
       const lazyLoading = this.benchmarkService.benchmarkLazyLoading();
 
-      console.log('Running comparison benchmark...');
       const comparison = this.benchmarkService.compareWithNativeSignals();
 
       const results = {
@@ -958,11 +949,9 @@ export class MetricsComponent implements OnInit {
         comparison,
       };
 
-      console.log('Benchmark results:', results);
       this.results.set(results);
       this.comparisonData.set(comparison);
     } catch (err) {
-      console.error('Benchmark error:', err);
       this.error.set(
         err instanceof Error ? err.message : 'Unknown error occurred'
       );

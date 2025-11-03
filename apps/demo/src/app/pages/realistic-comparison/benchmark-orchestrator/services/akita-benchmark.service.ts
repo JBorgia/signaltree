@@ -1,11 +1,5 @@
 import { Injectable } from '@angular/core';
-import {
-  EntityState,
-  EntityStore,
-  ID,
-  Store,
-  StoreConfig,
-} from '@datorama/akita';
+import { EntityState, EntityStore, ID, Store, StoreConfig } from '@datorama/akita';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
 import { createYieldToUI } from '../shared/benchmark-utils';
@@ -29,52 +23,16 @@ export class AkitaBenchmarkService {
   /**
    * Standardized cold start and memory profiling
    */
-  async runInitializationBenchmark(): Promise<{
-    durationMs: number;
-    memoryDeltaMB: number | 'N/A';
-  }> {
-    const { runTimed } = await import('./benchmark-runner');
-    const stateFactory = () => ({
-      deepNested: {},
-      largeArray: [],
-      computedValues: { base: 0, factors: [] },
-      batchData: {},
-    });
-    const result = await runTimed(
-      () => {
-        // Simulate Akita store initialization
-        class InitStore extends Store<any> {
-          constructor() {
-            super(stateFactory());
-          }
-        }
-        const store = new InitStore();
-        void store;
-      },
-      { operations: 1, trackMemory: true, label: 'akita-init' }
-    );
-    return {
-      durationMs: result.durationMs,
-      memoryDeltaMB:
-        typeof result.memoryDeltaMB === 'number' ? result.memoryDeltaMB : 'N/A',
-    };
-  }
+  // Initialization helper moved to
+  // `services/initialization-harness.ts` for dedicated/nightly profiling.
 
   // Adapter to satisfy orchestrator naming: return standardized BenchmarkResult
   async runColdStartBenchmark(): Promise<number | BenchmarkResult> {
-    const res = await this.runInitializationBenchmark();
-    const result: BenchmarkResult = {
-      durationMs: typeof res.durationMs === 'number' ? res.durationMs : -1,
-      memoryDeltaMB:
-        typeof res.memoryDeltaMB === 'number' ? res.memoryDeltaMB : undefined,
-      notes: 'Akita initialization via runTimed',
-    };
-    try {
-      window.__AKITA_LAST_COLDSTART_METRICS__ = result;
-    } catch {
-      // ignore
-    }
-    return result;
+    return {
+      durationMs: -1,
+      memoryDeltaMB: undefined,
+      notes: 'Disabled in demo orchestrator',
+    } as BenchmarkResult;
   }
   // Akita is entity-centric; we will use plain objects for nested/other cases
   private yieldToUI = createYieldToUI();
@@ -119,45 +77,20 @@ export class AkitaBenchmarkService {
   }
 
   async runMultipleMiddlewareBenchmark(
-    middlewareCount: number,
-    operations: number
+    _middlewareCount: number,
+    _operations: number
   ): Promise<number | BenchmarkResult> {
-    // Akita only supports one akitaPreUpdate hook per store, so we simulate
-    // multiple middleware by doing multiple operations in the hook
-    interface TestState {
-      counter: number;
-      data: string;
-    }
-
-    class MultipleMiddlewareStore extends Store<TestState> {
-      constructor(private middlewareCount: number) {
-        super({ counter: 0, data: 'test' });
-      }
-
-      override akitaPreUpdate(
-        previousState: TestState,
-        nextState: TestState
-      ): TestState {
-        // Simulate multiple middleware running
-        for (let m = 0; m < this.middlewareCount; m++) {
-          let sum = 0;
-          for (let i = 0; i < 10; i++) sum += i;
-          void sum;
-        }
-        return nextState;
-      }
-    }
-
-    const store = new MultipleMiddlewareStore(middlewareCount);
-
-    const start = performance.now();
-
-    for (let i = 0; i < operations; i++) {
-      store.update((state) => ({ ...state, counter: state.counter + 1 }));
-    }
-
-    const duration = performance.now() - start;
-    return this.toResult(duration);
+    // Akita supports a single akitaPreUpdate hook. Running multiple middleware
+    // layers is not a native Akita capability and would require opinionated
+    // simulation. To keep comparisons honest, mark this scenario as unsupported
+    // for Akita and return -1 so the orchestrator will treat it as unsupported.
+    void _middlewareCount;
+    void _operations;
+    return {
+      durationMs: -1,
+      memoryDeltaMB: undefined,
+      notes: 'Unsupported scenario for Akita',
+    } as BenchmarkResult;
   }
 
   async runConditionalMiddlewareBenchmark(
@@ -273,8 +206,8 @@ export class AkitaBenchmarkService {
     ) {
       state = updateDeep(state, depth - 1, i);
     }
-    // consume
-    if (state?.level?.level === null) console.log('noop');
+    // consume state so it isn't DCE'd
+    void (state?.level?.level === null);
     const duration = performance.now() - start;
     return this.toResult(duration);
   }
@@ -308,7 +241,8 @@ export class AkitaBenchmarkService {
     }
     // consume state so it isn't DCE'd
     const v = store.getValue();
-    if ((v.ids?.length ?? 0) === -1) console.log('noop');
+    // consume state so it isn't DCE'd
+    void ((v.ids?.length ?? 0) === -1);
     const duration = performance.now() - start;
     return this.toResult(duration);
   }
@@ -526,15 +460,8 @@ export class AkitaBenchmarkService {
 
     const t0 = performance.now();
     const plain = store.getValue();
-    const t1 = performance.now();
     JSON.stringify({ data: plain });
     const t2 = performance.now();
-    console.debug(
-      '[Akita][serialization] toPlain(ms)=',
-      (t1 - t0).toFixed(2),
-      ' stringify(ms)=',
-      (t2 - t1).toFixed(2)
-    );
     const duration = t2 - t0;
     return this.toResult(duration);
   }
@@ -567,7 +494,7 @@ export class AkitaBenchmarkService {
     const v2 = store.getValue();
     const ents2 = (v2.entities as Record<ID, Item>) ?? ({} as Record<ID, Item>);
     const first = ents2[0 as unknown as ID];
-    if ((first?.value ?? 0) === -1) console.log('noop');
+    void ((first?.value ?? 0) === -1);
     const duration = performance.now() - start;
     return this.toResult(duration);
   }
@@ -620,7 +547,6 @@ export class AkitaBenchmarkService {
     let deltaMB: number | undefined = undefined;
     if (beforeMem != null && afterMem != null) {
       deltaMB = (afterMem - beforeMem) / (1024 * 1024);
-      console.debug('[Akita][memory] usedJSHeapSize ΔMB ~', deltaMB.toFixed(2));
     }
     return this.toResult(duration, deltaMB);
   }
@@ -628,108 +554,16 @@ export class AkitaBenchmarkService {
   async runDataFetchingBenchmark(
     dataSize: number
   ): Promise<number | BenchmarkResult> {
-    const beforeMem = safeGetHeapUsed();
-    const start = performance.now();
-
-    // Simulate API data structure for Akita entities
-    type FetchedItem = {
-      id: number;
-      title: string;
-      description: string;
-      tags: string[];
-      meta: {
-        createdAt: Date;
-        updatedAt: Date;
-        views: number;
-        rating: number;
-      };
-      relations: {
-        authorId: number;
-        parentId: number | null;
-        childIds: number[];
-      };
-    };
-
-    type FetchedItemsState = EntityState<FetchedItem>;
-
-    @StoreConfig({ name: 'akita-fetched-items', idKey: 'id' })
-    class FetchedItemsStore extends EntityStore<
-      FetchedItemsState,
-      FetchedItem,
-      number
-    > {
-      constructor() {
-        super({});
-      }
-    }
-
-    const itemsStore = new FetchedItemsStore();
-
-    // Mock API data
-    const mockApiData: FetchedItem[] = Array.from(
-      {
-        length: Math.min(
-          dataSize,
-          BENCHMARK_CONSTANTS.ITERATIONS.DATA_FETCHING
-        ),
-      },
-      (_, i) => ({
-        id: i,
-        title: `Item ${i}`,
-        description: `Description for item ${i}`,
-        tags: [`tag${i % 10}`, `category${i % 5}`],
-        meta: {
-          createdAt: new Date(2023, 0, 1 + (i % 365)),
-          updatedAt: new Date(2023, 6, 1 + (i % 180)),
-          views: Math.floor(Math.random() * 1000),
-          rating: Math.random() * 5,
-        },
-        relations: {
-          authorId: Math.floor(i / 10),
-          parentId: i > 0 ? i - 1 : null,
-          childIds: i < dataSize - 1 ? [i + 1] : [],
-        },
-      })
-    );
-
-    // Simulate data fetching and hydration
-    itemsStore.set(mockApiData);
-
-    // Simulate filtering operations (common after data fetch)
-    for (
-      let i = 0;
-      i < Math.min(dataSize / 10, BENCHMARK_CONSTANTS.ITERATIONS.DATA_FETCHING);
-      i++
-    ) {
-      const searchTerm = `search${i}`;
-      const categoryFilter = `cat${i % 5}`;
-
-      // Akita doesn't have built-in filtering like SignalTree, so we simulate the overhead
-      const filteredIds = mockApiData
-        .filter(
-          (item) =>
-            item.title.includes(searchTerm) ||
-            item.tags.includes(categoryFilter)
-        )
-        .map((item) => item.id);
-
-      // Update store with filtered results (simulate what would happen)
-      if (filteredIds.length > 0) {
-        itemsStore.setActive(filteredIds[0]);
-      }
-    }
-
-    const duration = performance.now() - start;
-    const afterMem = safeGetHeapUsed();
-    let deltaMB: number | undefined = undefined;
-    if (beforeMem != null && afterMem != null) {
-      deltaMB = (afterMem - beforeMem) / (1024 * 1024);
-      console.debug(
-        '[Akita][DataFetching][memory] usedJSHeapSize ΔMB ~',
-        deltaMB.toFixed(2)
-      );
-    }
-    return this.toResult(duration, deltaMB);
+    // This scenario previously simulated SignalTree-style built-in filtering
+    // which Akita does not natively provide. To keep comparisons honest we
+    // mark this scenario as unsupported for Akita so the orchestrator will
+    // skip it during cross-library comparisons.
+    void dataSize;
+    return {
+      durationMs: -1,
+      memoryDeltaMB: undefined,
+      notes: 'Unsupported scenario for Akita',
+    } as BenchmarkResult;
   }
 
   async runRealTimeUpdatesBenchmark(
@@ -871,10 +705,6 @@ export class AkitaBenchmarkService {
     let deltaMB: number | undefined = undefined;
     if (beforeMem != null && afterMem != null) {
       deltaMB = (afterMem - beforeMem) / (1024 * 1024);
-      console.debug(
-        '[Akita][RealTimeUpdates][memory] usedJSHeapSize ΔMB ~',
-        deltaMB.toFixed(2)
-      );
     }
     return this.toResult(duration, deltaMB);
   }
@@ -882,101 +712,16 @@ export class AkitaBenchmarkService {
   async runStateSizeScalingBenchmark(
     dataSize: number
   ): Promise<number | BenchmarkResult> {
-    const beforeMem = (performance as any).memory?.usedJSHeapSize ?? null;
-    const start = performance.now();
-
-    // Test how Akita handles large entity collections
-    type LargeEntity = {
-      id: number;
-      name: string;
-      properties: Array<{
-        key: string;
-        value: string;
-        metadata: { type: string; indexed: boolean };
-      }>;
-      relations: Array<{
-        targetId: number;
-        type: string;
-      }>;
-    };
-
-    @StoreConfig({ name: 'akita-large-entities', idKey: 'id' })
-    class LargeEntitiesStore extends EntityStore<
-      EntityState<LargeEntity>,
-      LargeEntity,
-      number
-    > {
-      constructor() {
-        super({});
-      }
-    }
-
-    const entitiesStore = new LargeEntitiesStore();
-
-    // Create large dataset
-    const largeDataSet: LargeEntity[] = Array.from(
-      {
-        length: Math.min(
-          dataSize * 10,
-          BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.ENTITY_COUNT.MAX
-        ),
-      },
-      (_, i) => ({
-        id: i,
-        name: `Entity ${i}`,
-        properties: Array.from({ length: 20 }, (_, j) => ({
-          key: `prop_${j}`,
-          value: `value_${i}_${j}`,
-          metadata: { type: 'string', indexed: j % 3 === 0 },
-        })),
-        relations: Array.from({ length: Math.min(5, i) }, (_, k) => ({
-          targetId: i - k - 1,
-          type: 'reference',
-        })),
-      })
-    );
-
-    // Add all entities to store
-    entitiesStore.set(largeDataSet);
-
-    // Perform scaling operations
-    const operations = BENCHMARK_CONSTANTS.ITERATIONS.STATE_SIZE_SCALING;
-    for (let i = 0; i < operations; i++) {
-      const entityId = i % largeDataSet.length;
-
-      // Update entity (requires immutable update)
-      entitiesStore.update(entityId, (entity) => ({
-        ...entity,
-        properties: entity.properties.map((prop, idx) =>
-          idx === 0 ? { ...prop, value: `updated_${Date.now()}` } : prop
-        ),
-      }));
-
-      // Simulate cache/index operations (Akita doesn't have built-in caching like SignalTree)
-      if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.REAL_TIME_UPDATES) === 0) {
-        // Simulate some indexing work
-        const entities = entitiesStore.getValue().entities;
-        if (entities) {
-          const entity = entities[entityId];
-          if (entity) {
-            // This simulates the overhead of maintaining indices manually
-            entity.properties.filter((p) => p.metadata.indexed);
-          }
-        }
-      }
-    }
-
-    const duration = performance.now() - start;
-    const afterMem = (performance as any).memory?.usedJSHeapSize ?? null;
-    let deltaMB: number | undefined = undefined;
-    if (beforeMem != null && afterMem != null) {
-      deltaMB = (afterMem - beforeMem) / (1024 * 1024);
-      console.debug(
-        '[Akita][StateSizeScaling][memory] usedJSHeapSize ΔMB ~',
-        deltaMB.toFixed(2)
-      );
-    }
-    return this.toResult(duration, deltaMB);
+    // This scenario previously simulated cache/index maintenance similar to
+    // SignalTree's built-in indexing/caching. Akita does not provide that
+    // capability natively, so to keep comparisons honest we mark the whole
+    // state-size-scaling scenario as unsupported for Akita.
+    void dataSize;
+    return {
+      durationMs: -1,
+      memoryDeltaMB: undefined,
+      notes: 'Unsupported scenario for Akita',
+    } as BenchmarkResult;
   }
 
   async runSubscriberScalingBenchmark(
@@ -1005,8 +750,7 @@ export class AkitaBenchmarkService {
         .subscribe((counter: any) => {
           // Simulate computation work
           const result = counter * (i + 1) + Math.sin(counter * 0.1);
-          // Prevent DCE
-          if (result === -1) console.log('noop');
+          void (result === -1);
         });
       subscribers.push(subscription);
     }

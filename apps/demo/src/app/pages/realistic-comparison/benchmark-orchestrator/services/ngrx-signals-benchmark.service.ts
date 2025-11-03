@@ -51,19 +51,12 @@ export class NgRxSignalsBenchmarkService {
 
   // Adapter to satisfy orchestrator naming: return standardized BenchmarkResult
   async runColdStartBenchmark(): Promise<BenchmarkResult> {
-    const res = await this.runInitializationBenchmark();
-    const result: BenchmarkResult = {
-      durationMs: typeof res.durationMs === 'number' ? res.durationMs : -1,
-      memoryDeltaMB:
-        typeof res.memoryDeltaMB === 'number' ? res.memoryDeltaMB : undefined,
-      notes: 'NgRx Signals initialization via runTimed',
-    };
-    try {
-      window.__NGRX_SIGNALS_LAST_COLDSTART_METRICS__ = result;
-    } catch {
-      // ignore
-    }
-    return result;
+    // Return a minimal BenchmarkResult-like sentinel (-1 handled by orchestrator)
+    return {
+      durationMs: -1,
+      memoryDeltaMB: undefined,
+      notes: 'Disabled in demo orchestrator',
+    } as BenchmarkResult;
   }
   // Narrow typing for performance.memory when available
   private static PerfWithMemory = {} as Performance & {
@@ -333,15 +326,8 @@ export class NgRxSignalsBenchmarkService {
     const t0 = performance.now();
     // Read current store state and stringify (matches other POJO stores)
     const plain = state();
-    const t1 = performance.now();
     JSON.stringify({ data: plain });
     const t2 = performance.now();
-    console.debug(
-      '[NgRxSignals][serialization] toPlain(ms)=',
-      (t1 - t0).toFixed(2),
-      ' stringify(ms)=',
-      (t2 - t1).toFixed(2)
-    );
     const duration = t2 - t0;
     return this.toResult(duration);
   }
@@ -367,8 +353,7 @@ export class NgRxSignalsBenchmarkService {
       }
     }
 
-    // consume
-    if (state().counters[0].value === -1) console.log('noop');
+    void (state().counters[0].value === -1);
     const duration = performance.now() - start;
     return this.toResult(duration);
   }
@@ -437,15 +422,14 @@ export class NgRxSignalsBenchmarkService {
     let deltaMB: number | undefined = undefined;
     if (beforeMem != null && afterMem != null) {
       deltaMB = (afterMem - beforeMem) / (1024 * 1024);
-      console.debug(
-        '[NgRxSignals][memory] usedJSHeapSize ΔMB ~',
-        deltaMB.toFixed(2)
-      );
     }
     return this.toResult(duration, deltaMB);
   }
 
-  async runDataFetchingBenchmark(): Promise<number | BenchmarkResult> {
+  async runDataFetchingBenchmark(
+    _dataSize?: number
+  ): Promise<number | BenchmarkResult> {
+    void _dataSize;
     // Simulate data fetching with NgRx SignalStore
     const state = signalState({
       users: [] as Array<{
@@ -517,18 +501,16 @@ export class NgRxSignalsBenchmarkService {
     let deltaMB: number | undefined = undefined;
     if (beforeMem != null && afterMem != null) {
       deltaMB = (afterMem - beforeMem) / (1024 * 1024);
-      console.debug(
-        '[NgRxSignals][DataFetching][memory] usedJSHeapSize ΔMB ~',
-        deltaMB.toFixed(2)
-      );
     }
 
-    // consume to avoid DCE
-    if (state.users().length === -1) console.log('noop');
+    void (state.users().length === -1);
     return this.toResult(duration, deltaMB);
   }
 
-  async runRealTimeUpdatesBenchmark(): Promise<number | BenchmarkResult> {
+  async runRealTimeUpdatesBenchmark(
+    _dataSize?: number
+  ): Promise<number | BenchmarkResult> {
+    void _dataSize;
     // Simulate real-time updates with NgRx SignalStore
     const state = signalState({
       metrics: {
@@ -579,18 +561,16 @@ export class NgRxSignalsBenchmarkService {
     let deltaMB: number | undefined = undefined;
     if (beforeMem != null && afterMem != null) {
       deltaMB = (afterMem - beforeMem) / (1024 * 1024);
-      console.debug(
-        '[NgRxSignals][RealTimeUpdates][memory] usedJSHeapSize ΔMB ~',
-        deltaMB.toFixed(2)
-      );
     }
 
-    // consume to avoid DCE
-    if (state.metrics().activeUsers === -1) console.log('noop');
+    void (state.metrics().activeUsers === -1);
     return this.toResult(duration, deltaMB);
   }
 
-  async runStateSizeScalingBenchmark(): Promise<number | BenchmarkResult> {
+  async runStateSizeScalingBenchmark(
+    _dataSize?: number
+  ): Promise<number | BenchmarkResult> {
+    void _dataSize;
     // Test performance with large state size (10,000 items)
     const state = signalState({
       largeDataset: [] as Array<{
@@ -699,14 +679,9 @@ export class NgRxSignalsBenchmarkService {
     let deltaMB: number | undefined = undefined;
     if (beforeMem != null && afterMem != null) {
       deltaMB = (afterMem - beforeMem) / (1024 * 1024);
-      console.debug(
-        '[NgRxSignals][StateSizeScaling][memory] usedJSHeapSize ΔMB ~',
-        deltaMB.toFixed(2)
-      );
     }
 
-    // consume to avoid DCE
-    if (state.largeDataset().length === -1) console.log('noop');
+    void (state.largeDataset().length === -1);
     return this.toResult(duration, deltaMB);
   }
 }

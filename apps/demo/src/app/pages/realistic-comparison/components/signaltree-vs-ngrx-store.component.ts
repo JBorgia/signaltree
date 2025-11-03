@@ -546,8 +546,7 @@ export class SignalTreeVsNgrxStoreComponent {
         const result1 = computed1();
         const result2 = computed2();
         const result3 = computed3();
-        // Use results to prevent dead code elimination
-        if (result1 + result2 + result3 < -Infinity) console.log('impossible');
+        void (result1 + result2 + result3 < -Infinity);
       }
 
       const endTime = performance.now();
@@ -637,8 +636,7 @@ export class SignalTreeVsNgrxStoreComponent {
         const result1 = computed1();
         const result2 = computed2();
         const result3 = computed3();
-        // Use results to prevent dead code elimination
-        if (result1 + result2 + result3 < -Infinity) console.log('impossible');
+        void (result1 + result2 + result3 < -Infinity);
       }
 
       const endTime = performance.now();
@@ -800,8 +798,7 @@ export class SignalTreeVsNgrxStoreComponent {
         const result1 = totalComputed();
         const result2 = filteredComputed();
         const result3 = aggregatedComputed();
-        // Use results to prevent optimization
-        if (result1 + result2 + result3 < -Infinity) console.log('impossible');
+        void (result1 + result2 + result3 < -Infinity);
       }
 
       const endTime = performance.now();
