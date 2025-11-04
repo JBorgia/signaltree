@@ -1,0 +1,81 @@
+<article
+  class="card"
+  [attr.data-category]="example.category.toLowerCase()"
+  [attr.data-difficulty]="example.difficulty"
+>
+  <div class="card__accent"></div>
+
+  <header class="card__header">
+    <div class="card__top">
+      <div
+        class="card__category"
+        [attr.data-category]="example.category.toLowerCase()"
+      >
+        <svg
+          class="card__category-icon"
+          fill="currentColor"
+          viewBox="0 0 20 20"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+            clip-rule="evenodd"
+          />
+        </svg>
+        {{ example.category }}
+      </div>
+      <span
+        class="card__difficulty"
+        [attr.data-difficulty]="example.difficulty"
+      >
+        {{ example.difficulty }}
+      </span>
+    </div>
+
+    <h3 class="card__title">{{ example.title }}</h3>
+    <p class="card__description">{{ example.description }}</p>
+
+    @if (example.tags.length > 0) {
+    <div class="card__tags">
+      @for (tag of example.tags; track tag) {
+      <span class="card__tag"> #{{ tag }} </span>
+      }
+    </div>
+    }
+  </header>
+
+  <div class="card__demo">
+    <div class="card__demo-label">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+        />
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+      </svg>
+      Live Demo
+    </div>
+    <ng-container #componentContainer></ng-container>
+  </div>
+
+  <footer class="card__footer">
+    @if (example.focusAreas.length > 0) {
+    <div class="card__meta">
+      <span class="card__meta-label">Focus:</span>
+      <span class="card__meta-value">{{ example.focusAreas.join(', ') }}</span>
+    </div>
+    } @if (example.enhancers.length > 0) {
+    <div class="card__meta">
+      <span class="card__meta-label">Enhancers:</span>
+      <span class="card__meta-value">{{ example.enhancers.join(', ') }}</span>
+    </div>
+    }
+  </footer>
+</article>

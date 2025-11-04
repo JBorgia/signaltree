@@ -1,0 +1,11 @@
+// Main entry point for shared example styles
+// Import this in your component SCSS files with: @use '../shared/styles' as *;
+
+// Core system - must be loaded first for variables/mixins to be available
+@forward './_variables';
+@forward './_mixins';
+@forward './_utilities';
+
+// Page-specific styles
+@forward './_fundamentals';
+@forward './_example-card';

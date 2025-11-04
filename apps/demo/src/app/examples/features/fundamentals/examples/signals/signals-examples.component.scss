@@ -1,0 +1,126 @@
+@use '../../../../shared/styles' as *;
+
+.doc {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: $spacing-2xl;
+  color: $dark;
+  font-family: $font-family;
+
+  @include respond-to('md') {
+    padding: $spacing-lg;
+  }
+}
+
+.lead {
+  color: $text;
+  margin: $spacing-sm 0 $spacing-lg;
+  font-size: $text-lg;
+  line-height: 1.6;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-xl;
+
+  @include respond-to('lg') {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card {
+  @include card;
+
+  h3 {
+    font-size: $text-xl;
+    font-weight: $font-semibold;
+    color: $dark;
+    margin: 0 0 $spacing-sm 0;
+  }
+}
+
+.desc {
+  color: $text-light;
+  margin-bottom: $spacing-md;
+  font-size: $text-sm;
+  line-height: 1.5;
+}
+
+.controls {
+  @include flex-row($spacing-sm);
+  flex-wrap: wrap;
+  margin: $spacing-md 0;
+}
+
+input,
+select {
+  @include input-base;
+  padding: $spacing-sm $spacing-md;
+}
+
+.btn {
+  @include button-base;
+  padding: $spacing-sm $spacing-md;
+  background: $bg-white;
+  border: 1px solid $border;
+  color: $text;
+
+  &:hover {
+    border-color: $primary;
+    color: $primary;
+  }
+
+  &.primary {
+    background: $primary;
+    color: white;
+    border-color: $primary;
+
+    &:hover {
+      background: darken($primary, 5%);
+    }
+  }
+}
+
+.badges {
+  @include flex-row($spacing-sm);
+  flex-wrap: wrap;
+  margin: $spacing-sm 0 $spacing-md;
+}
+
+.badge {
+  @include badge($bg-light, $dark);
+  border: 1px solid $border;
+}
+
+pre.code {
+  @extend .code-block;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: $text-sm;
+
+  th,
+  td {
+    border: 1px solid $border;
+    padding: $spacing-sm $spacing-md;
+    text-align: left;
+  }
+
+  th {
+    background: $bg-light;
+    font-weight: $font-semibold;
+    color: $dark;
+  }
+
+  tr:hover {
+    background: $bg-light;
+  }
+}
+
+.stat {
+  font-weight: $font-bold;
+  color: $primary;
+}

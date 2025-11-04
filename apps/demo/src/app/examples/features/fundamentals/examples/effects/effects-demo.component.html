@@ -1,0 +1,150 @@
+<div class="demo-container">
+  <h2 class="demo-title">⚡ Effects & Side Effects</h2>
+
+  <div class="intro">
+    <p>
+      <strong>Effects</strong> let you run side effects whenever signals change.
+      This example shows auto-save, theme syncing, and notifications.
+    </p>
+  </div>
+
+  <div class="examples-grid">
+    <!-- Auto-Save Example -->
+    <div class="example-section">
+      <h3>📝 Auto-Save Effect</h3>
+      <p class="description">
+        The document auto-saves 1 second after any change using an effect.
+      </p>
+
+      <div class="form-group">
+        <label for="doc-title">Title:</label>
+        <input
+          id="doc-title"
+          type="text"
+          [(ngModel)]="documentTitle"
+          placeholder="Enter document title..."
+          class="input-field"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="doc-content">Content:</label>
+        <textarea
+          id="doc-content"
+          [(ngModel)]="documentContent"
+          placeholder="Start typing..."
+          rows="4"
+          class="input-field"
+        ></textarea>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <span class="stat-label">Last Saved:</span>
+          <span class="stat-value">{{ getLastSavedText() }}</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Save Count:</span>
+          <span class="stat-value">{{ saveCount() }}</span>
+        </div>
+      </div>
+
+      <button (click)="resetDocument()" class="btn btn-secondary">
+        🗑️ Reset Document
+      </button>
+    </div>
+
+    <!-- Theme Sync Example -->
+    <div class="example-section" [attr.data-theme]="theme()">
+      <h3>🎨 Theme Sync Effect</h3>
+      <p class="description">
+        Theme preference is synced to localStorage via an effect.
+      </p>
+
+      <div class="theme-preview">
+        <div class="theme-box" [class.active]="theme() === 'light'">
+          ☀️ Light
+        </div>
+        <div class="theme-box" [class.active]="theme() === 'dark'">🌙 Dark</div>
+      </div>
+
+      <button (click)="toggleTheme()" class="btn btn-primary">
+        Switch to {{ theme() === 'light' ? 'Dark' : 'Light' }} Mode
+      </button>
+
+      <div class="info-box">
+        <strong>Current:</strong> {{ theme() }} mode
+        <br />
+        <small>Persisted in localStorage</small>
+      </div>
+    </div>
+
+    <!-- Notifications Example -->
+    <div class="example-section">
+      <h3>🔔 Notification System</h3>
+      <p class="description">
+        Notifications auto-dismiss after 3 seconds using timeouts in effects.
+      </p>
+
+      <div class="button-group">
+        <button
+          (click)="addNotification('Information message', 'info')"
+          class="btn btn-info btn-sm"
+        >
+          ℹ️ Info
+        </button>
+        <button
+          (click)="addNotification('Success message!', 'success')"
+          class="btn btn-success btn-sm"
+        >
+          ✅ Success
+        </button>
+        <button
+          (click)="addNotification('Warning message', 'warning')"
+          class="btn btn-warning btn-sm"
+        >
+          ⚠️ Warning
+        </button>
+        <button
+          (click)="addNotification('Error occurred', 'error')"
+          class="btn btn-danger btn-sm"
+        >
+          ❌ Error
+        </button>
+      </div>
+
+      <div class="notifications-container">
+        @if (notifications().length === 0) {
+        <div class="empty-state">No active notifications</div>
+        } @for (notification of notifications(); track notification.id) {
+        <div class="notification" [attr.data-type]="notification.type">
+          <span class="notification-message">{{ notification.message }}</span>
+          <button
+            (click)="dismissNotification(notification.id)"
+            class="notification-close"
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
+        </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Code Example -->
+  <div class="code-section">
+    <h3>💻 How It Works</h3>
+    <pre><code>{{`effect(() => {
+  const title = this.documentTitle();
+  const content = this.documentContent();
+
+  if (title || content) {
+    setTimeout(() => {
+      this.lastSaved.set(new Date());
+      console.log('Auto-saved!');
+    }, 1000);
+  }
+});`}}</code></pre>
+  </div>
+</div>

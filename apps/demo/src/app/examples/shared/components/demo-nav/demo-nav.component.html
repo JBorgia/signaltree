@@ -1,0 +1,19 @@
+<nav class="demo-nav">
+  <a
+    *ngIf="prev"
+    [routerLink]="prev.link"
+    class="demo-nav__link demo-nav__link--prev"
+  >
+    <span class="demo-nav__arrow">←</span>
+    {{ prev.label }}
+  </a>
+  <span class="demo-nav__spacer"></span>
+  <a
+    *ngIf="next"
+    [routerLink]="next.link"
+    class="demo-nav__link demo-nav__link--next"
+  >
+    {{ next.label }}
+    <span class="demo-nav__arrow">→</span>
+  </a>
+</nav>

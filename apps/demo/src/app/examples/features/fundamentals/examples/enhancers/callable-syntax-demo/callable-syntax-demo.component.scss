@@ -1,0 +1,328 @@
+// Callable Syntax Demo - Using Global Design System
+
+// Global styles are imported at the app level
+
+// Responsive breakpoint mixin
+@mixin mobile {
+  @media (max-width: 768px) {
+    @content;
+  }
+}
+
+// Stat card mixin
+@mixin stat-card {
+  background: white;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-neutral-200);
+}
+
+// Button mixin
+@mixin button($bg, $color, $hover-bg) {
+  background: $bg;
+  color: $color;
+  border: none;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-weight: 500;
+  transition: background var(--transition-fast);
+
+  &:hover {
+    background: $hover-bg;
+  }
+
+  &.active {
+    background: var(--color-primary-600);
+    color: white;
+  }
+}
+
+// Card Component
+@mixin card {
+  background: white;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-6);
+  transition: transform var(--transition-fast),
+    box-shadow var(--transition-fast);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+// Override container for demo-specific needs
+.container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-4);
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: var(--space-6);
+    color: var(--color-neutral-900);
+  }
+}
+
+// Info Banner
+.info-banner {
+  @include card;
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-500),
+    var(--color-purple-600)
+  );
+  color: white;
+  margin-bottom: var(--space-8);
+  transform: none; // Disable hover transform for banner
+
+  &:hover {
+    transform: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  h3 {
+    color: white;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: var(--space-3);
+  }
+
+  p {
+    margin-bottom: var(--space-4);
+    line-height: 1.6;
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+    margin-bottom: var(--space-4);
+
+    li {
+      margin-bottom: var(--space-2);
+      line-height: 1.8;
+    }
+  }
+
+  code {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-family-mono);
+    font-size: 0.875rem;
+  }
+
+  strong {
+    font-weight: 600;
+  }
+}
+
+// Section Tabs
+.section-tabs {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding-bottom: var(--space-8);
+  margin-bottom: var(--space-8);
+  border-bottom: 2px solid var(--color-neutral-200);
+
+  button {
+    padding: var(--space-3) var(--space-6);
+    font-weight: 600;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    color: var(--color-neutral-600);
+
+    &:hover {
+      color: var(--color-neutral-900);
+    }
+
+    &.active {
+      border-bottom-color: var(--color-primary-500);
+      color: var(--color-primary-600);
+    }
+  }
+}
+
+// Code Tabs (Callable vs Current)
+.code-tabs {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+
+  button {
+    @include button(
+      var(--color-neutral-100),
+      var(--color-neutral-700),
+      var(--color-neutral-200)
+    );
+    padding: var(--space-2) var(--space-4);
+    font-size: 0.875rem;
+    border: 2px solid var(--color-neutral-200);
+
+    &.active {
+      @include button(
+        var(--color-primary-500),
+        white,
+        var(--color-primary-600)
+      );
+      border-color: var(--color-primary-600);
+    }
+  }
+}
+
+// Demo Grid
+.demo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 500px), 1fr));
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
+
+  @include mobile {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+}
+
+// Card (using global mixin)
+.card {
+  @include card;
+  display: flex;
+  flex-direction: column;
+
+  h2,
+  h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: var(--space-4);
+    color: var(--color-neutral-900);
+  }
+}
+
+// Code Block
+.code-block {
+  background-color: var(--color-neutral-900);
+  color: var(--color-neutral-100);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  font-family: var(--font-family-mono);
+  font-size: 0.875rem;
+  overflow-x: auto;
+  margin-bottom: var(--space-4);
+}
+
+// State Display
+.state-display {
+  background: var(--color-neutral-50);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-neutral-200);
+  margin-bottom: var(--space-4);
+
+  pre {
+    margin: 0;
+    font-family: var(--font-family-mono);
+    font-size: 0.875rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+}
+
+// Action Buttons
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: auto; // Push to bottom of card
+  padding-top: var(--space-4);
+
+  button {
+    margin-bottom: var(--space-2); // Ensure vertical spacing on wrap
+  }
+} // Performance Stats
+.performance-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+
+  .stat {
+    @include stat-card;
+
+    .stat-value {
+      color: var(--color-primary-600);
+    }
+  }
+}
+
+// Example Section
+.example-section {
+  @include card;
+  margin-bottom: var(--space-8);
+}
+
+// Note/Warning Box
+.note-box {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-warning-200);
+  background-color: var(--color-warning-50);
+  color: var(--color-warning-800);
+  border-left: 4px solid var(--color-warning-500);
+  margin-bottom: var(--space-4);
+
+  p {
+    margin: 0;
+  }
+
+  &.info {
+    background-color: var(--color-primary-50);
+    color: var(--color-primary-800);
+    border-color: var(--color-primary-200);
+    border-left-color: var(--color-primary-500);
+  }
+
+  &.success {
+    background-color: var(--color-secondary-50);
+    color: var(--color-secondary-800);
+    border-color: var(--color-secondary-200);
+    border-left-color: var(--color-success-500);
+  }
+}
+
+// User List
+.user-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.user-item {
+  padding: var(--space-3);
+  background: white;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-neutral-200);
+  font-family: var(--font-family-mono);
+  font-size: 0.875rem;
+
+  strong {
+    color: var(--color-neutral-900);
+  }
+}
+
+// Matrix Row
+.matrix-row {
+  font-size: 0.75rem;
+  color: var(--color-neutral-600);
+  font-family: var(--font-family-mono);
+}

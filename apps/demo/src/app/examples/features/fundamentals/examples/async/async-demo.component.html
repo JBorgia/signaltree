@@ -1,0 +1,137 @@
+<div class="demo-container">
+  <h2 class="demo-title">⚡ Async Operations</h2>
+
+  <div class="intro">
+    <p>
+      Handle <strong>async operations</strong> with signals - loading states,
+      error handling, debounced search, and optimistic updates.
+    </p>
+  </div>
+
+  <div class="grid-2col">
+    <!-- Data Loading Section -->
+    <div class="section-card">
+      <h3>📥 Data Loading</h3>
+      <p class="description">Fetch users with loading and error states.</p>
+
+      @if (!hasUsers() && !isLoading() && !loadError()) {
+      <div class="empty-state">
+        <p>No users loaded</p>
+        <button (click)="loadUsers()" class="btn btn-primary">
+          Load Users
+        </button>
+      </div>
+      } @if (isLoading()) {
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading users...</p>
+      </div>
+      } @if (loadError()) {
+      <div class="error-state">
+        <p>❌ {{ loadError() }}</p>
+        <button (click)="retry()" class="btn btn-warning btn-sm">
+          🔄 Retry
+        </button>
+      </div>
+      } @if (hasUsers() && !isLoading()) {
+      <div class="users-list">
+        @for (user of users(); track user.id) {
+        <div class="user-item">
+          <span class="user-avatar">{{ user.avatar }}</span>
+          <div class="user-info">
+            <div class="user-name">{{ user.name }}</div>
+            <div class="user-email">{{ user.email }}</div>
+          </div>
+          <button
+            (click)="deleteUser(user.id)"
+            class="btn-icon"
+            title="Delete user"
+          >
+            🗑️
+          </button>
+        </div>
+        }
+      </div>
+
+      <div class="button-group">
+        <button (click)="loadUsers()" class="btn btn-secondary btn-sm">
+          🔄 Reload
+        </button>
+        <button (click)="addUser()" class="btn btn-success btn-sm">
+          ➕ Add User (Optimistic)
+        </button>
+      </div>
+      }
+    </div>
+
+    <!-- Debounced Search Section -->
+    <div class="section-card">
+      <h3>🔍 Debounced Search</h3>
+      <p class="description">
+        Search updates after 500ms of inactivity (debounced).
+      </p>
+
+      <div class="search-box">
+        <input
+          type="text"
+          [value]="searchTerm()"
+          (input)="onSearchInput($any($event.target).value)"
+          placeholder="Search users..."
+          class="search-input"
+        />
+        @if (searchTerm()) {
+        <button (click)="clearSearch()" class="search-clear">×</button>
+        }
+      </div>
+
+      @if (isSearching()) {
+      <div class="searching-state">
+        <div class="spinner-sm"></div>
+        <span>Searching...</span>
+      </div>
+      } @if (searchError()) {
+      <div class="error-message">
+        {{ searchError() }}
+      </div>
+      } @if (searchTerm() && !isSearching() && !searchError()) {
+      <div class="search-results">
+        @if (hasResults()) {
+        <p class="results-count">
+          Found {{ searchResults().length }} result(s)
+        </p>
+        @for (user of searchResults(); track user.id) {
+        <div class="result-item">
+          <span class="result-avatar">{{ user.avatar }}</span>
+          <div class="result-info">
+            <div class="result-name">{{ user.name }}</div>
+            <div class="result-email">{{ user.email }}</div>
+          </div>
+        </div>
+        } } @else {
+        <p class="no-results">No users found</p>
+        }
+      </div>
+      } @if (!searchTerm()) {
+      <div class="hint">💡 Start typing to search users</div>
+      }
+    </div>
+  </div>
+
+  <!-- Code Example -->
+  <div class="code-section">
+    <h3>💻 Async Pattern</h3>
+    <pre><code>{{`async loadUsers() {
+  this.isLoading.set(true);
+  this.loadError.set(null);
+
+  try {
+    const data = await fetch('/api/users');
+    this.users.set(await data.json());
+  } catch (error) {
+    this.loadError.set(error.message);
+  } finally {
+    this.isLoading.set(false);
+  }
+}`}}</code></pre>
+  </div>
+</div>

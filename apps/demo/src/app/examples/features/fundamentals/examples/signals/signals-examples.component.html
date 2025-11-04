@@ -1,0 +1,47 @@
+<section class="doc">
+  <header>
+    <h2>Signals — Fundamentals</h2>
+    <p class="lead">
+      Minimal, focused examples demonstrating <strong>signal()</strong> basics
+      and UI reactivity.
+    </p>
+  </header>
+
+  <div class="grid">
+    <article class="card">
+      <h3>Basic Counter</h3>
+      <p class="desc">The smallest possible signal + updater pattern.</p>
+      <div class="badges">
+        <span class="badge">#signals</span
+        ><span class="badge">#state-management</span
+        ><span class="badge">#basic</span>
+      </div>
+      <div class="controls">
+        <button class="btn" (click)="dec()">−</button>
+        <span class="stat">{{ count() }}</span>
+        <button class="btn" (click)="inc()">＋</button>
+        <button class="btn" (click)="reset()">Reset</button>
+      </div>
+      <pre class="code"><code>const count = signal(0);
+count.update(v => v + 1);</code></pre>
+    </article>
+
+    <article class="card">
+      <h3>Reactive Form Control</h3>
+      <p class="desc">Bind an input to a signal and derive a greeting.</p>
+      <div class="badges">
+        <span class="badge">#signals</span><span class="badge">#forms</span>
+      </div>
+      <div class="controls">
+        <input
+          placeholder="Type your name…"
+          [ngModel]="name()"
+          (ngModelChange)="name.set($event)"
+        />
+        <span>{{ greeting() }}</span>
+      </div>
+      <pre class="code"><code>const name = signal('');
+const greeting = computed(() => `Hello, &#36;&#123;name().trim() || 'friend'&#125;!`);</code></pre>
+    </article>
+  </div>
+</section>

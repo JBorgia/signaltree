@@ -1,0 +1,9 @@
+<nav class="demo-nav">
+  @if (prev) {
+  <a [routerLink]="prev.link" class="prev">← {{ prev.label }}</a>
+  }
+  <span class="spacer"></span>
+  @if (next) {
+  <a [routerLink]="next.link" class="next">{{ next.label }} →</a>
+  }
+</nav>

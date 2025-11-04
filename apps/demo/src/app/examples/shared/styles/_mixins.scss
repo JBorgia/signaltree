@@ -1,0 +1,188 @@
+// Shared mixins for all example components
+@use './variables' as *;
+
+// Card styling
+@mixin card($padding: $spacing-xl) {
+  background: $bg-white;
+  border-radius: $radius-xl;
+  box-shadow: $shadow-md;
+  padding: $padding;
+  border: 1px solid $border;
+}
+
+// Button base styling
+@mixin button-base {
+  padding: 0.625rem 1.25rem;
+  border-radius: $radius-md;
+  font-weight: $font-semibold;
+  border: none;
+  cursor: pointer;
+  font-size: $text-sm;
+  transition: all $transition-normal;
+  font-family: $font-family;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: $shadow-lg;
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $primary;
+    outline-offset: 2px;
+  }
+}
+
+// Input field styling
+@mixin input-base {
+  width: 100%;
+  padding: $spacing-md $spacing-lg;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  font-size: $text-sm;
+  font-family: $font-family;
+  transition: all $transition-fast;
+  background: $bg-white;
+  color: $text;
+
+  &:focus {
+    outline: none;
+    border-color: $primary;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  &::placeholder {
+    color: $text-light;
+  }
+
+  &:disabled {
+    background: $bg-light;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+// Panel with accent border
+@mixin panel-accent($color) {
+  border-top: 4px solid $color;
+
+  h2,
+  h3 {
+    color: $color;
+  }
+}
+
+// Gradient background
+@mixin gradient-bg($color1, $color2) {
+  background: linear-gradient(135deg, $color1 0%, $color2 100%);
+}
+
+// Scrollbar styling
+@mixin custom-scrollbar {
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: $bg-light;
+    border-radius: $radius-sm;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, $border 90%, black);
+    border-radius: $radius-sm;
+
+    &:hover {
+      background: color-mix(in srgb, $border 80%, black);
+    }
+  }
+}
+
+// Responsive breakpoints
+@mixin respond-to($breakpoint) {
+  @if $breakpoint == 'sm' {
+    @media (max-width: #{$breakpoint-sm}) {
+      @content;
+    }
+  } @else if $breakpoint == 'md' {
+    @media (max-width: #{$breakpoint-md}) {
+      @content;
+    }
+  } @else if $breakpoint == 'lg' {
+    @media (max-width: #{$breakpoint-lg}) {
+      @content;
+    }
+  } @else if $breakpoint == 'xl' {
+    @media (max-width: #{$breakpoint-xl}) {
+      @content;
+    }
+  }
+}
+
+// Truncate text with ellipsis
+@mixin truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// Center content
+@mixin center-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// Flex row with gap
+@mixin flex-row($gap: $spacing-md) {
+  display: flex;
+  gap: $gap;
+  align-items: center;
+}
+
+// Flex column with gap
+@mixin flex-column($gap: $spacing-md) {
+  display: flex;
+  flex-direction: column;
+  gap: $gap;
+}
+
+// Empty state
+@mixin empty-state {
+  text-align: center;
+  padding: $spacing-3xl $spacing-lg;
+  color: $text-light;
+  font-size: $text-sm;
+  background: $bg-light;
+  border-radius: $radius-lg;
+  border: 1px dashed $border;
+}
+
+// Badge/tag styling
+@mixin badge($bg-color: null, $text-color: null) {
+  padding: 0.25rem 0.75rem;
+  @if $bg-color {
+    background: $bg-color;
+  }
+  @if $text-color {
+    color: $text-color;
+  }
+  border-radius: $radius-full;
+  font-size: $text-xs;
+  font-weight: $font-semibold;
+  display: inline-block;
+  white-space: nowrap;
+}
