@@ -1,0 +1,69 @@
+@use './styles' as *;
+
+.demo-nav {
+  margin-top: $spacing-3xl;
+  padding: $spacing-2xl 0;
+  border-top: 1px solid $border;
+
+  .nav-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 $spacing-2xl;
+    gap: $spacing-lg;
+
+    @include respond-to('md') {
+      padding: 0 $spacing-lg;
+      flex-direction: column;
+      gap: $spacing-md;
+    }
+  }
+
+  a {
+    text-decoration: none;
+    color: $dark;
+    font-weight: $font-semibold;
+    padding: 0.5rem 1rem;
+    border: 1px solid $border;
+    border-radius: $radius-md;
+    background: $bg-white;
+    transition: all $transition-fast;
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-sm;
+
+    &:hover {
+      background: $bg-light;
+      border-color: $primary;
+      color: $primary;
+      transform: translateY(-1px);
+      box-shadow: $shadow-sm;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $primary;
+      outline-offset: 2px;
+    }
+  }
+
+  .prev::before {
+    content: '←';
+    font-weight: $font-bold;
+  }
+
+  .next::after {
+    content: '→';
+    font-weight: $font-bold;
+  }
+
+  .spacer,
+  .nav-spacer {
+    flex: 1;
+
+    @include respond-to('md') {
+      display: none;
+    }
+  }
+}

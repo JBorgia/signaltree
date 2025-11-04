@@ -1,0 +1,472 @@
+// Utility classes for common patterns
+@use './variables' as *;
+@use './mixins' as *;
+
+// Container
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: $spacing-2xl;
+  font-family: $font-family;
+
+  @include respond-to('lg') {
+    padding: $spacing-xl;
+  }
+
+  @include respond-to('md') {
+    padding: $spacing-lg;
+  }
+}
+
+// Typography
+.heading-1 {
+  font-size: $text-4xl;
+  font-weight: $font-bold;
+  color: $dark;
+  margin-bottom: $spacing-xl;
+  text-align: center;
+
+  @include respond-to('md') {
+    font-size: $text-3xl;
+  }
+}
+
+.heading-2 {
+  font-size: $text-2xl;
+  font-weight: $font-bold;
+  color: $dark;
+  margin-bottom: $spacing-lg;
+}
+
+.heading-3 {
+  font-size: $text-xl;
+  font-weight: $font-semibold;
+  color: $dark;
+  margin-bottom: $spacing-md;
+}
+
+// Explanation card (used in most examples)
+.explanation-card {
+  @include card;
+  @include gradient-bg(#f8fafc, #f1f5f9);
+  margin-bottom: $spacing-2xl;
+  border-left: 4px solid $primary;
+
+  h2 {
+    font-size: $text-2xl;
+    font-weight: $font-bold;
+    color: $primary;
+    margin-bottom: $spacing-lg;
+  }
+
+  h3 {
+    font-size: $text-lg;
+    font-weight: $font-semibold;
+    color: $dark;
+    margin: $spacing-xl 0 $spacing-md 0;
+  }
+
+  .intro-text {
+    font-size: $text-base;
+    line-height: 1.7;
+    color: $text;
+    margin-bottom: $spacing-xl;
+
+    strong {
+      color: $primary;
+      font-weight: $font-semibold;
+    }
+
+    em {
+      font-style: italic;
+      color: $secondary;
+    }
+  }
+
+  .how-it-works,
+  .key-features {
+    background: $bg-white;
+    padding: $spacing-lg;
+    border-radius: $radius-lg;
+    border: 1px solid $border;
+    margin-bottom: $spacing-xl;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  .instruction-list {
+    margin: 0;
+    padding-left: $spacing-xl;
+
+    li {
+      font-size: $text-sm;
+      line-height: 1.7;
+      color: $text;
+      margin-bottom: $spacing-md;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      strong {
+        color: $dark;
+        font-weight: $font-semibold;
+      }
+    }
+  }
+
+  .feature-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-md;
+  }
+
+  .feature-tag {
+    @include badge(linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%), #1e40af);
+    border: 1px solid #93c5fd;
+    padding: $spacing-sm $spacing-lg;
+    transition: all $transition-fast;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(59, 130, 246, 0.2);
+    }
+  }
+}
+
+// Demo grids
+.demo-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $spacing-xl;
+
+  @include respond-to('lg') {
+    grid-template-columns: 1fr;
+  }
+}
+
+.demo-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $spacing-xl;
+
+  @include respond-to('xl') {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @include respond-to('md') {
+    grid-template-columns: 1fr;
+  }
+}
+
+// Cards
+.card {
+  @include card;
+
+  &.primary-accent {
+    @include panel-accent($primary);
+  }
+
+  &.secondary-accent {
+    @include panel-accent($secondary);
+  }
+
+  &.success-accent {
+    @include panel-accent($success);
+  }
+
+  &.warning-accent {
+    @include panel-accent($warning);
+  }
+
+  &.info-accent {
+    @include panel-accent($info);
+  }
+}
+
+.card-header {
+  margin-bottom: $spacing-xl;
+  padding-bottom: $spacing-lg;
+  border-bottom: 2px solid $border;
+
+  h2,
+  h3 {
+    margin: 0;
+  }
+}
+
+.card-description {
+  font-size: $text-sm;
+  color: $text-light;
+  margin-bottom: $spacing-xl;
+  margin-top: -$spacing-xs;
+}
+
+// Buttons
+.btn {
+  @include button-base;
+
+  &.btn-primary {
+    background: $primary;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, $primary 95%, black);
+    }
+  }
+
+  &.btn-secondary {
+    background: $secondary;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, $secondary 95%, black);
+    }
+  }
+
+  &.btn-success {
+    background: $success;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, $success 95%, black);
+    }
+  }
+
+  &.btn-warning {
+    background: $warning;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, $warning 95%, black);
+    }
+  }
+
+  &.btn-danger {
+    background: $danger;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, $danger 95%, black);
+    }
+  }
+
+  &.btn-info {
+    background: $info;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, $info 95%, black);
+    }
+  }
+
+  &.btn-outline {
+    background: transparent;
+    color: $text;
+    border: 1px solid $border;
+
+    &:hover:not(:disabled) {
+      background: $bg-light;
+      border-color: $medium;
+    }
+  }
+
+  &.btn-xs {
+    padding: 0.25rem 0.625rem;
+    font-size: $text-xs;
+  }
+
+  &.btn-sm {
+    padding: 0.375rem 0.875rem;
+    font-size: $text-sm;
+  }
+
+  &.btn-lg {
+    padding: 0.875rem 1.5rem;
+    font-size: $text-base;
+  }
+
+  &.btn-full {
+    width: 100%;
+  }
+}
+
+.button-group {
+  @include flex-row($spacing-md);
+  flex-wrap: wrap;
+}
+
+// Inputs
+.input-field,
+.textarea-field,
+.select-field {
+  @include input-base;
+}
+
+.textarea-field {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.select-field {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+  background-position: right $spacing-md center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+  padding-right: 2.5rem;
+}
+
+.input-group {
+  @include flex-row($spacing-md);
+
+  .input-field {
+    flex: 1;
+  }
+}
+
+// Empty states
+.empty-state {
+  @include empty-state;
+}
+
+// Help text
+.help-text {
+  @include gradient-bg(#fef3c7, #fde68a);
+  border: 2px solid $warning;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-lg;
+  text-align: center;
+  font-size: $text-sm;
+  font-weight: $font-semibold;
+  color: #78350f;
+}
+
+// Stats
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: $spacing-lg;
+}
+
+.stat-card {
+  @include card($spacing-lg);
+  text-align: center;
+  transition: all $transition-fast;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: $shadow-lg;
+  }
+
+  .stat-value {
+    font-size: $text-3xl;
+    font-weight: $font-bold;
+    color: $primary;
+    margin-bottom: $spacing-sm;
+  }
+
+  .stat-label {
+    font-size: $text-xs;
+    font-weight: $font-semibold;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: $text-light;
+  }
+}
+
+// Pagination
+.pagination {
+  @include flex-row;
+  justify-content: space-between;
+  padding: $spacing-lg 0;
+  border-top: 1px solid $border;
+
+  .page-info {
+    font-size: $text-sm;
+    font-weight: $font-semibold;
+    color: $text;
+  }
+}
+
+// Code blocks
+.code-block {
+  background: $bg-dark;
+  color: #e5e7eb;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  overflow-x: auto;
+  font-family: $font-family-mono;
+  font-size: $text-sm;
+  line-height: 1.5;
+  @include custom-scrollbar;
+}
+
+// Utility classes
+.text-center {
+  text-align: center;
+}
+
+.text-left {
+  text-align: left;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.mb-0 {
+  margin-bottom: 0;
+}
+.mb-1 {
+  margin-bottom: $spacing-xs;
+}
+.mb-2 {
+  margin-bottom: $spacing-sm;
+}
+.mb-3 {
+  margin-bottom: $spacing-md;
+}
+.mb-4 {
+  margin-bottom: $spacing-lg;
+}
+.mb-5 {
+  margin-bottom: $spacing-xl;
+}
+.mb-6 {
+  margin-bottom: $spacing-2xl;
+}
+
+.mt-0 {
+  margin-top: 0;
+}
+.mt-1 {
+  margin-top: $spacing-xs;
+}
+.mt-2 {
+  margin-top: $spacing-sm;
+}
+.mt-3 {
+  margin-top: $spacing-md;
+}
+.mt-4 {
+  margin-top: $spacing-lg;
+}
+.mt-5 {
+  margin-top: $spacing-xl;
+}
+.mt-6 {
+  margin-top: $spacing-2xl;
+}

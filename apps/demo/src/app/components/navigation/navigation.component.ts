@@ -21,10 +21,11 @@ export class NavigationComponent {
   examples: DemoExample[] = [
     // Getting Started
     {
-      id: 'core',
-      title: 'Core Features',
-      description: 'Basic SignalTree functionality and API',
-      route: '/core',
+      id: 'fundamentals',
+      title: 'Fundamentals',
+      description:
+        'Interactive examples demonstrating core SignalTree concepts with filtering',
+      route: '/examples/fundamentals',
       category: 'getting-started',
     },
     {

@@ -1,0 +1,406 @@
+// Fundamentals Page Styles
+// Clean, instructive, modular learning environment
+@use './_variables' as *;
+@use './_mixins' as *;
+
+.fundamentals-page {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: $spacing-2xl $spacing-xl;
+  font-family: $font-family;
+
+  @include respond-to('md') {
+    padding: $spacing-xl $spacing-lg;
+  }
+
+  // Cross-link bar to SignalQuest
+  .cross-link-bar {
+    @include flex-row($spacing-md);
+    justify-content: flex-end;
+    margin-bottom: $spacing-xl;
+    padding: $spacing-md $spacing-lg;
+    background: linear-gradient(
+      135deg,
+      rgba(59, 130, 246, 0.05) 0%,
+      rgba(139, 92, 246, 0.05) 100%
+    );
+    border-radius: $radius-lg;
+    border: 1px solid rgba(59, 130, 246, 0.1);
+
+    a {
+      @include flex-row($spacing-sm);
+      color: $primary;
+      text-decoration: none;
+      font-weight: $font-semibold;
+      font-size: $text-sm;
+      transition: all $transition-fast;
+
+      &:hover {
+        color: color-mix(in srgb, $primary 90%, black);
+        transform: translateX(4px);
+      }
+
+      &:focus-visible {
+        outline: 2px solid $primary;
+        outline-offset: 4px;
+        border-radius: $radius-sm;
+      }
+    }
+  }
+
+  // Page header
+  .page-header {
+    margin-bottom: $spacing-2xl;
+    text-align: center;
+
+    h1 {
+      font-size: $text-4xl;
+      font-weight: $font-bold;
+      color: $dark;
+      margin-bottom: $spacing-md;
+
+      @include respond-to('md') {
+        font-size: $text-3xl;
+      }
+    }
+
+    .tagline {
+      font-size: $text-lg;
+      color: $text;
+      line-height: 1.6;
+      max-width: 800px;
+      margin: 0 auto;
+
+      @include respond-to('md') {
+        font-size: $text-base;
+      }
+    }
+  }
+}
+
+// Filters section
+.filters-section {
+  @include card;
+  margin-bottom: $spacing-2xl;
+  background: $bg-white;
+
+  .section-header {
+    @include flex-row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: $spacing-xl;
+    padding-bottom: $spacing-lg;
+    border-bottom: 2px solid $border;
+
+    h2 {
+      font-size: $text-2xl;
+      font-weight: $font-bold;
+      color: $dark;
+      margin: 0;
+    }
+
+    .filter-count {
+      font-size: $text-sm;
+      color: $text-light;
+      font-weight: $font-medium;
+
+      &.has-filters {
+        color: $primary;
+        font-weight: $font-semibold;
+      }
+    }
+  }
+
+  .filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: $spacing-xl;
+    margin-bottom: $spacing-xl;
+
+    @include respond-to('md') {
+      grid-template-columns: 1fr;
+      gap: $spacing-lg;
+    }
+  }
+
+  .filter-group {
+    @include flex-column($spacing-sm);
+
+    .filter-label {
+      font-size: $text-sm;
+      font-weight: $font-semibold;
+      color: $dark;
+      display: flex;
+      align-items: center;
+      gap: $spacing-xs;
+
+      .filter-count-badge {
+        @include badge($bg-light, $text-light);
+        font-size: $text-xs;
+      }
+    }
+
+    // Search input
+    .filter-input {
+      @include input-base;
+
+      &::placeholder {
+        color: $text-light;
+        font-style: italic;
+      }
+    }
+
+    // Select dropdown
+    .filter-select {
+      @include input-base;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+      background-position: right $spacing-md center;
+      background-repeat: no-repeat;
+      background-size: 1.5em 1.5em;
+      padding-right: 2.5rem;
+    }
+
+    // Checkbox grid
+    .checkbox-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: $spacing-sm;
+
+      @include respond-to('md') {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .checkbox-label {
+      @include flex-row($spacing-sm);
+      cursor: pointer;
+      padding: $spacing-sm;
+      border-radius: $radius-md;
+      transition: background-color $transition-fast;
+
+      &:hover {
+        background-color: $bg-light;
+      }
+
+      .checkbox-input {
+        width: 1.125rem;
+        height: 1.125rem;
+        color: $primary;
+        border: 2px solid $border;
+        border-radius: $radius-sm;
+        cursor: pointer;
+        transition: all $transition-fast;
+
+        &:checked {
+          background-color: $primary;
+          border-color: $primary;
+        }
+
+        &:focus-visible {
+          outline: 2px solid $primary;
+          outline-offset: 2px;
+        }
+      }
+
+      .checkbox-text {
+        font-size: $text-sm;
+        color: $text;
+        user-select: none;
+      }
+    }
+  }
+
+  // Filter actions bar
+  .filters-actions {
+    @include flex-row;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: $spacing-lg;
+    border-top: 1px solid $border;
+
+    @include respond-to('md') {
+      flex-direction: column;
+      gap: $spacing-md;
+      align-items: stretch;
+    }
+
+    .active-filters-info {
+      font-size: $text-sm;
+
+      .filter-count-text {
+        color: $text;
+        font-weight: $font-medium;
+
+        &.no-filters {
+          color: $text-light;
+        }
+
+        &.has-filters {
+          color: $primary;
+          font-weight: $font-semibold;
+        }
+      }
+    }
+
+    .clear-filters-btn {
+      @include button-base;
+      background: $bg-light;
+      color: $text;
+      border: 1px solid $border;
+      padding: $spacing-sm $spacing-lg;
+
+      &:hover:not(:disabled) {
+        background: color-mix(in srgb, $bg-light 97%, black);
+        border-color: $medium;
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      @include respond-to('md') {
+        width: 100%;
+      }
+    }
+  }
+}
+
+// Results section
+.results-section {
+  .results-header {
+    @include flex-row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: $spacing-xl;
+    padding-bottom: $spacing-lg;
+    border-bottom: 2px solid $border;
+
+    h2 {
+      font-size: $text-2xl;
+      font-weight: $font-bold;
+      color: $dark;
+      margin: 0;
+
+      .count {
+        color: $primary;
+      }
+    }
+
+    .view-options {
+      @include flex-row($spacing-sm);
+
+      button {
+        padding: $spacing-sm;
+        border: 1px solid $border;
+        background: $bg-white;
+        border-radius: $radius-md;
+        cursor: pointer;
+        transition: all $transition-fast;
+
+        &:hover {
+          background: $bg-light;
+          border-color: $primary;
+        }
+
+        &.active {
+          background: $primary;
+          border-color: $primary;
+          color: white;
+        }
+      }
+    }
+  }
+
+  // Examples grid
+  .examples-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: $spacing-2xl;
+
+    @include respond-to('xl') {
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    }
+
+    @include respond-to('lg') {
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    }
+
+    @include respond-to('md') {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  // Empty state
+  .no-results {
+    @include card;
+    text-align: center;
+    padding: $spacing-3xl $spacing-2xl;
+    background: linear-gradient(135deg, $bg-white 0%, $bg-light 100%);
+
+    .empty-icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto $spacing-xl;
+      color: lighten($text-light, 10%);
+
+      svg {
+        width: 100%;
+        height: 100%;
+      }
+    }
+
+    h3 {
+      font-size: $text-xl;
+      font-weight: $font-semibold;
+      color: $dark;
+      margin-bottom: $spacing-md;
+    }
+
+    p {
+      font-size: $text-base;
+      color: $text-light;
+      line-height: 1.6;
+      margin-bottom: $spacing-xl;
+      max-width: 400px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    button {
+      @include button-base;
+      background: $primary;
+      color: white;
+      padding: $spacing-sm $spacing-lg;
+      border-radius: $radius-md;
+
+      &:hover:not(:disabled) {
+        background: color-mix(in srgb, $primary 95%, black);
+      }
+    }
+  }
+}
+
+// Loading state
+.loading-state {
+  @include center-content;
+  padding: $spacing-3xl;
+
+  .spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid $bg-light;
+    border-top-color: $primary;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

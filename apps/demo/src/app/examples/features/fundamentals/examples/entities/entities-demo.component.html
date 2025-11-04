@@ -1,0 +1,562 @@
+<div class="container">
+  <h1>🗂️ SignalTree Entities Demo</h1>
+
+  <!-- Explanation Section -->
+  <div class="explanation-card">
+    <h2>📖 What This Demo Shows</h2>
+    <p class="intro-text">
+      This demo showcases
+      <strong>SignalTree's entity management</strong> capabilities for building
+      complex data-driven applications. It demonstrates how to manage related
+      entities (Users, Posts) with computed relationships, filtering, sorting,
+      and pagination.
+    </p>
+
+    <div class="how-to-use">
+      <h3>🎯 How to Use This Demo:</h3>
+      <ol class="instruction-list">
+        <li>
+          <strong>Load Data:</strong> Click "Load Users" to populate with sample
+          users
+        </li>
+        <li>
+          <strong>Select a User:</strong> Click any user card in the left panel
+          to view their posts
+        </li>
+        <li>
+          <strong>Manage Posts:</strong> The middle panel shows posts for the
+          selected user - you can filter, sort, and select multiple posts
+        </li>
+        <li>
+          <strong>View Stats:</strong> The right panel displays statistics for
+          the selected user and performance metrics
+        </li>
+        <li>
+          <strong>Edit & Create:</strong> Use the edit buttons or "Add Random"
+          buttons to modify data
+        </li>
+      </ol>
+    </div>
+
+    <div class="key-features">
+      <h3>✨ Key Features:</h3>
+      <div class="feature-tags">
+        <span class="feature-tag">Entity Relationships</span>
+        <span class="feature-tag">Computed Queries</span>
+        <span class="feature-tag">Multi-Criteria Filtering</span>
+        <span class="feature-tag">Pagination</span>
+        <span class="feature-tag">Bulk Operations</span>
+        <span class="feature-tag">Live Statistics</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="demo-grid-3col">
+    <!-- Users Panel -->
+    <div class="card users-panel">
+      <div class="panel-header">
+        <h2>👥 Users ({{ userCount() }})</h2>
+        <button
+          (click)="loadUsers()"
+          class="btn-primary btn-sm"
+          title="Load sample users from API"
+        >
+          📥 Load Sample Users
+        </button>
+      </div>
+
+      @if (userCount() === 0) {
+      <div class="help-text">👆 Click "Load Sample Users" to get started</div>
+      }
+
+      <div class="search-section">
+        <input
+          type="text"
+          [(ngModel)]="searchTerm"
+          (input)="updateSearchTerm($event)"
+          placeholder="Search users..."
+          class="input-field"
+        />
+      </div>
+
+      <!-- Sort & Items per page -->
+      <div class="controls-row">
+        <select
+          [value]="store.$.usersSortBy()"
+          (change)="setUsersSortBy($any($event.target).value)"
+          class="select-field"
+          title="Choose how to sort users"
+        >
+          <option value="name" selected>Sort by Name</option>
+          <option value="email">Sort by Email</option>
+          <option value="id">Sort by ID</option>
+        </select>
+        <button
+          (click)="store.$.usersSortAsc.set(!store.$.usersSortAsc())"
+          class="btn-secondary btn-sm"
+          title="Toggle sort direction"
+        >
+          {{ store.$.usersSortAsc() ? '↑' : '↓' }}
+        </button>
+        <select
+          [value]="store.$.usersPerPage()"
+          (change)="setUsersPerPage(+$any($event.target).value)"
+          class="select-field per-page"
+          title="Items per page"
+        >
+          <option [value]="5">5/page</option>
+          <option [value]="10" selected>10/page</option>
+          <option [value]="25">25/page</option>
+          <option [value]="50">50/page</option>
+        </select>
+      </div>
+
+      <div class="users-grid">
+        @for (user of paginatedUsers(); track user.id) {
+        <div
+          [class]="getUserClass(user.id)"
+          class="user-card"
+          [class.selected]="store.$.selectedUserId() === user.id"
+        >
+          <!-- Edit Mode -->
+          @if (editingUserId === user.id) {
+          <div class="edit-mode">
+            <input
+              type="text"
+              [(ngModel)]="editingUserName"
+              class="input-field"
+              placeholder="Name"
+            />
+            <input
+              type="email"
+              [(ngModel)]="editingUserEmail"
+              class="input-field input-sm"
+              placeholder="Email"
+            />
+            <div class="button-group">
+              <button (click)="saveUser()" class="btn-success btn-sm">
+                ✓ Save
+              </button>
+              <button (click)="cancelEditUser()" class="btn-secondary btn-sm">
+                ✗ Cancel
+              </button>
+            </div>
+          </div>
+          }
+
+          <!-- View Mode -->
+          @if (editingUserId !== user.id) {
+          <div class="view-mode">
+            <div
+              (click)="selectUser(user.id)"
+              (keyup.enter)="selectUser(user.id)"
+              (keyup.space)="selectUser(user.id)"
+              class="user-info"
+              tabindex="0"
+              role="button"
+            >
+              <div class="user-details">
+                <img [src]="user.avatar" [alt]="user.name" class="avatar" />
+                <div class="user-text">
+                  <div class="user-name">{{ user.name }}</div>
+                  <div class="user-email">{{ user.email }}</div>
+                </div>
+              </div>
+            </div>
+            <button
+              (click)="startEditingUser(user)"
+              class="btn-info btn-sm full-width"
+              title="Edit user"
+            >
+              ✏️ Edit
+            </button>
+          </div>
+          }
+        </div>
+        } @if (paginatedUsers().length === 0) {
+        <div class="empty-state">No users found</div>
+        }
+      </div>
+
+      <!-- Pagination Controls -->
+      <div class="pagination">
+        <button
+          (click)="prevUsersPage()"
+          [disabled]="store.$.usersPage() === 1"
+          class="btn-secondary btn-sm"
+        >
+          ← Prev
+        </button>
+        <span class="page-info">
+          Page {{ store.$.usersPage() }} of {{ totalUserPages() }}
+        </span>
+        <button
+          (click)="nextUsersPage()"
+          [disabled]="store.$.usersPage() >= totalUserPages()"
+          class="btn-secondary btn-sm"
+        >
+          Next →
+        </button>
+      </div>
+
+      <div class="add-section">
+        <button
+          (click)="addRandomUser()"
+          class="btn-success full-width"
+          title="Generate and add a new random user"
+        >
+          ➕ Add Random User
+        </button>
+      </div>
+    </div>
+
+    <!-- Posts Panel -->
+    <div class="card posts-panel">
+      <div class="panel-header">
+        <h2>
+          📝 Posts @if (selectedUser()) {
+          <span class="subtitle"> by {{ selectedUser()?.name }} </span>
+          } ({{ sortedPosts().length }})
+        </h2>
+        <button
+          (click)="loadPosts()"
+          class="btn-primary btn-sm"
+          title="Load sample posts from API"
+        >
+          📥 Load Sample Posts
+        </button>
+      </div>
+
+      @if (sortedPosts().length === 0) {
+      <div class="help-text">
+        👈 Select a user from the left panel, then click "Load Sample Posts"
+      </div>
+      }
+
+      <!-- Multi-Criteria Filters -->
+      <div class="filter-panel">
+        <div class="filter-title">🔍 Advanced Filters (Multi-Criteria)</div>
+        <p class="filter-description">
+          Combine multiple filters to find specific posts
+        </p>
+        <div class="filter-controls">
+          <!-- Tag Filter -->
+          <input
+            type="text"
+            [(ngModel)]="tagFilter"
+            placeholder="Filter by tag..."
+            class="input-field input-sm"
+          />
+
+          <!-- Status Filter -->
+          <select [(ngModel)]="statusFilter" class="select-field select-sm">
+            <option value="" disabled selected>Filter by popularity...</option>
+            <option value="all">All Posts</option>
+            <option value="popular">Popular (10+ likes)</option>
+            <option value="unpopular">Unpopular (&lt;10 likes)</option>
+          </select>
+
+          <!-- Date Range Filter -->
+          <div class="date-filter">
+            <select
+              [(ngModel)]="dateRangeFilter"
+              class="select-field select-sm flex-1"
+            >
+              <option value="" disabled selected>Filter by date...</option>
+              <option value="all">All time</option>
+              <option value="today">Today</option>
+              <option value="week">Last 7 days</option>
+              <option value="month">Last 30 days</option>
+            </select>
+            <button
+              (click)="clearAllFilters()"
+              class="btn-secondary btn-sm"
+              title="Clear all filters"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sort & Items per page -->
+      <div class="controls-row">
+        <select
+          [value]="store.$.postsSortBy()"
+          (change)="setPostsSortBy($any($event.target).value)"
+          class="select-field"
+          title="Choose how to sort posts"
+        >
+          <option value="title" selected>Sort by Title</option>
+          <option value="likes">Sort by Likes</option>
+          <option value="id">Sort by ID</option>
+        </select>
+        <button
+          (click)="store.$.postsSortAsc.set(!store.$.postsSortAsc())"
+          class="btn-secondary btn-sm"
+          title="Toggle sort direction"
+        >
+          {{ store.$.postsSortAsc() ? '↑' : '↓' }}
+        </button>
+        <select
+          [value]="store.$.postsPerPage()"
+          (change)="setPostsPerPage(+$any($event.target).value)"
+          class="select-field per-page"
+          title="Items per page"
+        >
+          <option [value]="5">5/page</option>
+          <option [value]="10" selected>10/page</option>
+          <option [value]="25">25/page</option>
+          <option [value]="50">50/page</option>
+        </select>
+      </div>
+
+      <!-- Bulk Actions -->
+      <div *ngIf="selectedPostIds.size > 0" class="bulk-actions">
+        <span class="bulk-count"
+          >✓ {{ selectedPostIds.size }} post{{
+            selectedPostIds.size === 1 ? '' : 's'
+          }}
+          selected</span
+        >
+        <div class="bulk-buttons">
+          <button
+            (click)="selectAllPosts()"
+            class="btn-primary btn-sm"
+            title="Select all visible posts"
+          >
+            ☑️ Select All
+          </button>
+          <button
+            (click)="exportSelectedPosts()"
+            class="btn-success btn-sm"
+            title="Export selected posts as JSON"
+          >
+            💾 Export JSON
+          </button>
+          <button
+            (click)="confirmDeleteSelected()"
+            class="btn-danger btn-sm"
+            title="Delete all selected posts"
+          >
+            🗑️ Delete Selected
+          </button>
+          <button
+            (click)="deselectAllPosts()"
+            class="btn-secondary btn-sm"
+            title="Clear selection"
+          >
+            ✕ Clear Selection
+          </button>
+        </div>
+      </div>
+
+      <div class="posts-list">
+        <div
+          *ngFor="let post of paginatedPosts(); trackBy: trackPost"
+          class="post-card"
+          [class.selected]="selectedPostIds.has(post.id)"
+        >
+          <!-- Edit Mode -->
+          <div *ngIf="editingPostId === post.id" class="edit-mode">
+            <input
+              type="text"
+              [(ngModel)]="editingPostTitle"
+              class="input-field"
+              placeholder="Title"
+            />
+            <textarea
+              [(ngModel)]="editingPostContent"
+              class="textarea-field"
+              rows="3"
+              placeholder="Body"
+            ></textarea>
+            <div class="button-group">
+              <button (click)="savePost()" class="btn-success btn-sm">
+                ✓ Save
+              </button>
+              <button (click)="cancelEditPost()" class="btn-secondary btn-sm">
+                ✗ Cancel
+              </button>
+            </div>
+          </div>
+
+          <!-- View Mode -->
+          <div *ngIf="editingPostId !== post.id" class="view-mode">
+            <div class="post-header">
+              <input
+                type="checkbox"
+                [checked]="selectedPostIds.has(post.id)"
+                (change)="togglePostSelection(post.id)"
+                class="checkbox"
+              />
+              <h3 class="post-title">
+                {{ post.title }}
+              </h3>
+            </div>
+            <p class="post-body">{{ post.content }}</p>
+            <div class="post-meta">
+              <span>{{ getPostAuthor(post.authorId)?.name || 'Unknown' }}</span>
+              <div class="post-actions">
+                <button
+                  (click)="likePost(post.id)"
+                  class="btn-like"
+                  title="Like this post"
+                >
+                  ❤️ {{ post.likes }}
+                </button>
+                <button
+                  (click)="startEditingPost(post)"
+                  class="btn-info btn-sm"
+                  title="Edit post"
+                >
+                  ✏️ Edit
+                </button>
+              </div>
+            </div>
+            <div class="tag-list">
+              <span *ngFor="let tag of post.tags" class="tag">{{ tag }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="paginatedPosts().length === 0" class="empty-state">
+          No posts found
+        </div>
+      </div>
+
+      <!-- Pagination Controls -->
+      <div class="pagination">
+        <button
+          (click)="prevPostsPage()"
+          [disabled]="store.$.postsPage() === 1"
+          class="btn-secondary btn-sm"
+        >
+          ← Prev
+        </button>
+        <span class="page-info">
+          Page {{ store.$.postsPage() }} of {{ totalPostPages() }}
+        </span>
+        <button
+          (click)="nextPostsPage()"
+          [disabled]="store.$.postsPage() >= totalPostPages()"
+          class="btn-secondary btn-sm"
+        >
+          Next →
+        </button>
+      </div>
+
+      <div class="add-section">
+        <button
+          (click)="addRandomPost()"
+          class="btn-success full-width"
+          title="Generate and add a new random post for the selected user"
+          [disabled]="!selectedUser()"
+        >
+          ➕ Add Random Post
+        </button>
+        <div class="help-text-small" *ngIf="!selectedUser()">
+          Select a user first to add posts
+        </div>
+      </div>
+    </div>
+
+    <!-- Comments/Stats Panel -->
+    <div class="card stats-panel">
+      <h2>📊 User Statistics & Operations</h2>
+
+      <!-- Comments Section -->
+      <!-- Comments Panel - Feature not yet implemented -->
+      <!-- <div class="panel comments-panel">
+        <div class="panel-header">
+          <h3>
+            Comments
+          </h3>
+        </div>
+
+        <div class="comments-list">
+          <div class="empty-state">
+            Comments feature coming soon
+          </div>
+        </div>
+      </div> -->
+
+      <!-- User Stats -->
+      <div class="stats-section">
+        <h3>📈 Selected User Statistics</h3>
+        <div *ngIf="selectedUser(); else noUser" class="stats-content">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-value stat-blue">
+                {{ getUserPostsCount() }}
+              </div>
+              <div class="stat-label">Posts</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value stat-pink">
+                {{ userTotalLikes() }}
+              </div>
+              <div class="stat-label">Total Likes</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value stat-purple">
+                {{ getUserAvgPostLength() }}
+              </div>
+              <div class="stat-label">Avg Length</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-status" [class]="getUserActivityClass()">
+                {{ getUserActivityStatus() }}
+              </div>
+              <div class="stat-label">Status</div>
+            </div>
+          </div>
+
+          <!-- Export Button -->
+          <button
+            (click)="exportUserData()"
+            class="btn-primary btn-sm full-width export-btn"
+          >
+            💾 Export User Data (JSON)
+          </button>
+        </div>
+        <ng-template #noUser>
+          <div class="empty-state">No user selected</div>
+        </ng-template>
+      </div>
+
+      <!-- Performance Section -->
+      <div class="performance-section">
+        <h3>⚡ Performance Tracking</h3>
+        <div class="info-panel">
+          <div>
+            <strong>Last Action:</strong> {{ lastOperation || 'None yet' }}
+          </div>
+          <div><strong>Total Operations:</strong> {{ operationCount }}</div>
+          <div>
+            <strong>Active Search:</strong>
+            {{ searchTerm.length > 0 ? 'Yes (' + searchTerm + ')' : 'No' }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Entity Operations -->
+      <div class="operations-section">
+        <h3>🔧 Bulk Operations</h3>
+        <div class="operation-buttons">
+          <button
+            (click)="bulkUpdatePosts()"
+            class="btn-warning btn-sm full-width"
+            title="Update all posts at once to demonstrate batch operations"
+          >
+            🔄 Batch Update All Posts
+          </button>
+          <!-- Reset feature not yet implemented -->
+          <!-- <button (click)="resetAllData()" class="btn-danger btn-sm full-width">
+            ♻️ Reset All Data
+          </button> -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

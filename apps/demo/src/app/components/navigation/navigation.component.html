@@ -21,15 +21,16 @@
 
     <!-- Navigation Categories -->
     <div class="flex flex-wrap gap-6 nav-blocks">
-      <div *ngFor="let category of categories" class="space-y-2">
+      @for (category of categories; track category) {
+      <div class="space-y-2">
         <h3
           class="font-semibold text-blue-200 text-sm tracking-wide px-3 pb-1 border-b border-blue-700"
         >
           {{ getCategoryLabel(category) }}
         </h3>
         <div class="space-y-1">
+          @for (example of getExamplesByCategory(category); track example.id) {
           <a
-            *ngFor="let example of getExamplesByCategory(category)"
             [routerLink]="example.route"
             routerLinkActive="bg-blue-700"
             class="block px-3 py-2 rounded text-sm hover:bg-blue-800 transition-colors min-h-touch"
@@ -37,8 +38,10 @@
           >
             {{ example.title }}
           </a>
+          }
         </div>
       </div>
+      }
     </div>
   </div>
 </nav>

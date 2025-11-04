@@ -7,77 +7,83 @@ export const appRoutes: Route[] = [
       import('./components/home/home.component').then((c) => c.HomeComponent),
   },
 
-  // Core SignalTree modules
+  // Examples section - new structure
+  {
+    path: 'examples',
+    loadChildren: () =>
+      import('./examples/examples.routes').then((r) => r.examplesRoutes),
+  },
+
+  // Redirect old core route to new examples
   {
     path: 'core',
-    loadComponent: () =>
-      import('./pages/core-demo/core-demo.component').then(
-        (c) => c.CoreDemoComponent
-      ),
+    redirectTo: '/examples/fundamentals',
+    pathMatch: 'full',
   },
+
+  // Redirect old examples route to fundamentals
+  {
+    path: 'examples',
+    redirectTo: '/examples/fundamentals',
+    pathMatch: 'full',
+  },
+
+  // Core SignalTree modules - now under examples/features
   {
     path: 'callable-syntax',
     loadComponent: () =>
       import(
-        './pages/callable-syntax-demo/callable-syntax-demo.component'
+        './examples/features/fundamentals/examples/enhancers/callable-syntax-demo/callable-syntax-demo.component'
       ).then((c) => c.CallableSyntaxDemoComponent),
   },
-  // 'async' demo removed (replaced by middleware helpers)
   {
     path: 'batching',
     loadComponent: () =>
-      import('./pages/batching-demo/batching-demo.component').then(
-        (c) => c.BatchingDemoComponent
-      ),
+      import(
+        './examples/features/fundamentals/examples/enhancers/batching-demo/batching-demo.component'
+      ).then((c) => c.BatchingDemoComponent),
   },
   {
     path: 'entities',
     loadComponent: () =>
-      import('./pages/entities-demo/entities-demo.component').then(
-        (c) => c.EntitiesDemoComponent
-      ),
+      import(
+        './examples/features/fundamentals/examples/entities/entities-demo.component'
+      ).then((c) => c.EntitiesDemoComponent),
   },
   {
     path: 'memoization',
     loadComponent: () =>
-      import('./pages/memoization-demo/memoization-demo.component').then(
-        (c) => c.MemoizationDemoComponent
-      ),
+      import(
+        './examples/features/fundamentals/examples/memoization/memoization-demo.component'
+      ).then((c) => c.MemoizationDemoComponent),
   },
   {
     path: 'middleware',
     loadComponent: () =>
-      import('./pages/middleware-demo/middleware-demo.component').then(
-        (c) => c.MiddlewareDemoComponent
-      ),
+      import(
+        './examples/features/fundamentals/examples/enhancers/middleware-demo/middleware-demo.component'
+      ).then((c) => c.MiddlewareDemoComponent),
   },
-  // {
-  //   path: 'ng-forms',
-  //   loadComponent: () =>
-  //     import('./pages/ng-forms-demo/ng-forms-demo.component').then(
-  //       (c) => c.NgFormsDemoComponent
-  //     ),
-  // },
   {
     path: 'presets',
     loadComponent: () =>
-      import('./pages/presets-demo/presets-demo.component').then(
-        (c) => c.PresetsDemoComponent
-      ),
+      import(
+        './examples/features/fundamentals/examples/enhancers/presets-demo/presets-demo.component'
+      ).then((c) => c.PresetsDemoComponent),
   },
   {
     path: 'time-travel',
     loadComponent: () =>
-      import('./pages/time-travel-demo/time-travel-demo.component').then(
-        (c) => c.TimeTravelDemoComponent
-      ),
+      import(
+        './examples/features/fundamentals/examples/time-travel/time-travel-demo.component'
+      ).then((c) => c.TimeTravelDemoComponent),
   },
   {
     path: 'devtools',
     loadComponent: () =>
-      import('./pages/devtools-demo/devtools-demo.component').then(
-        (c) => c.DevtoolsDemoComponent
-      ),
+      import(
+        './examples/features/fundamentals/examples/enhancers/devtools-demo/devtools-demo.component'
+      ).then((c) => c.DevtoolsDemoComponent),
   },
   // Performance comparisons
   {

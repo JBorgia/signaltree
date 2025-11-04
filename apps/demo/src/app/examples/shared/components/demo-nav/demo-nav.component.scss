@@ -1,0 +1,110 @@
+@use '../../styles' as *;
+
+.demo-nav {
+  margin-top: 48px;
+  padding: 32px 0 0;
+  border-top: 2px solid #f3f4f6;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+
+  &__link {
+    text-decoration: none;
+    color: #1a202c;
+    font-weight: 700;
+    padding: 14px 28px;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    background: white;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 15px;
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 0;
+    }
+
+    span {
+      position: relative;
+      z-index: 1;
+    }
+
+    &:hover {
+      border-color: #6366f1;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.25);
+      color: white;
+
+      &::before {
+        opacity: 1;
+      }
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+
+    &--prev {
+      margin-right: auto;
+    }
+
+    &--next {
+      margin-left: auto;
+    }
+  }
+
+  &__arrow {
+    font-weight: 700;
+    font-size: 18px;
+    transition: transform 0.3s ease;
+    position: relative;
+    z-index: 1;
+  }
+
+  &__link:hover &__arrow {
+    &--prev {
+      transform: translateX(-4px);
+    }
+
+    &--next {
+      transform: translateX(4px);
+    }
+  }
+
+  &__spacer {
+    flex: 1;
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 16px;
+
+    &__link {
+      width: 100%;
+      justify-content: center;
+
+      &--prev,
+      &--next {
+        margin: 0;
+      }
+    }
+
+    &__spacer {
+      display: none;
+    }
+  }
+}

@@ -1,0 +1,360 @@
+<div class="fundamentals-page">
+  <!-- Hero Section -->
+  <header class="hero">
+    <div class="hero__container">
+      <div class="hero__badge" role="status" aria-label="Interactive Examples">
+        <svg
+          class="hero__badge-icon"
+          fill="currentColor"
+          viewBox="0 0 20 20"
+          aria-hidden="true"
+        >
+          <path
+            d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
+          />
+        </svg>
+        <span>{{ filteredExamples().length }} Interactive Examples</span>
+      </div>
+      <h1 class="hero__title">
+        <span class="hero__title-main">SignalTree</span>
+        <span class="hero__title-sub">Fundamentals</span>
+      </h1>
+      <p class="hero__description">
+        Master SignalTree through hands-on, interactive examples. Start with the
+        basics or dive deep into advanced patterns.
+      </p>
+      <div class="hero__quick-actions">
+        <button
+          class="hero__quick-btn hero__quick-btn--beginner"
+          (click)="filterByDifficulty('Beginner')"
+          type="button"
+          aria-label="Show beginner examples"
+        >
+          <svg fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fill-rule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+              clip-rule="evenodd"
+            />
+          </svg>
+          Start Learning
+        </button>
+        <button
+          class="hero__quick-btn hero__quick-btn--advanced"
+          (click)="filterByDifficulty('Advanced')"
+          type="button"
+          aria-label="Show advanced examples"
+        >
+          <svg fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fill-rule="evenodd"
+              d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"
+              clip-rule="evenodd"
+            />
+          </svg>
+          Advanced
+        </button>
+      </div>
+      <div class="hero__stats">
+        <div class="hero__stat">
+          <span class="hero__stat-number">{{ filteredExamples().length }}</span>
+          <span class="hero__stat-label">Examples</span>
+        </div>
+        <div class="hero__stat">
+          <span class="hero__stat-number">{{
+            availableCategories.length
+          }}</span>
+          <span class="hero__stat-label">Categories</span>
+        </div>
+        <div class="hero__stat">
+          <span class="hero__stat-number">3</span>
+          <span class="hero__stat-label">Levels</span>
+        </div>
+      </div>
+      <div class="hero__cta-group">
+        <a href="#filters" class="hero__cta hero__cta--primary">
+          <svg
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+          Browse Examples
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Filters Section -->
+  <section class="filters" id="filters">
+    <div class="filters__container">
+      <div class="filters__header">
+        <div class="filters__header-left">
+          <svg
+            class="filters__icon"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+            />
+          </svg>
+          <h2 class="filters__title">Filter & Search</h2>
+        </div>
+        <div class="filters__status">
+          <span class="filters__count"
+            >{{ filteredExamples().length }} of
+            {{ availableCategories.length * 3 }} shown</span
+          >
+          <button
+            (click)="clearFilters()"
+            [disabled]="activeFilterCount() === 0"
+            class="filters__reset"
+          >
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+            Reset
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Search -->
+      <div class="search-bar">
+        <svg
+          class="search-bar__icon"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
+        </svg>
+        <input
+          id="search-input"
+          type="search"
+          [(ngModel)]="searchTerm"
+          placeholder="Search by name, description, or tags..."
+          class="search-bar__input"
+          autocomplete="off"
+          spellcheck="false"
+          aria-label="Search examples"
+        />
+        <kbd class="search-bar__shortcut" aria-hidden="true">⌘K</kbd>
+      </div>
+
+      <!-- Quick Filters -->
+      <div class="quick-filters">
+        <div class="quick-filters__group">
+          <label class="quick-filters__label" for="difficulty-all-btn"
+            >Difficulty</label
+          >
+          <div class="pill-group">
+            <button
+              id="difficulty-all-btn"
+              [class.pill-group__pill--active]="difficulty === ''"
+              (click)="setDifficulty('')"
+              class="pill-group__pill"
+            >
+              All
+            </button>
+            <button
+              [class.pill-group__pill--active]="difficulty === 'beginner'"
+              (click)="setDifficulty('beginner')"
+              class="pill-group__pill pill-group__pill--success"
+            >
+              Beginner
+            </button>
+            <button
+              [class.pill-group__pill--active]="difficulty === 'intermediate'"
+              (click)="setDifficulty('intermediate')"
+              class="pill-group__pill pill-group__pill--warning"
+            >
+              Intermediate
+            </button>
+            <button
+              [class.pill-group__pill--active]="difficulty === 'advanced'"
+              (click)="setDifficulty('advanced')"
+              class="pill-group__pill pill-group__pill--danger"
+            >
+              Advanced
+            </button>
+          </div>
+        </div>
+
+        <div class="quick-filters__group">
+          <label class="quick-filters__label" for="category-select"
+            >Category</label
+          >
+          <select
+            id="category-select"
+            [(ngModel)]="category"
+            class="quick-filters__select"
+          >
+            <option value="">All Categories</option>
+            @for (category of availableCategories; track category) {
+            <option [value]="category">
+              {{ category }}
+            </option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <!-- Advanced Filters (Collapsible) -->
+      <details class="advanced-filters">
+        <summary class="advanced-filters__toggle">
+          <svg
+            class="advanced-filters__icon"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+            />
+          </svg>
+          <span>Advanced Filters</span>
+          @if (activeFilterCount() > 0) {
+          <span class="advanced-filters__badge">{{ activeFilterCount() }}</span>
+          }
+        </summary>
+
+        <div class="advanced-filters__content">
+          <div class="filter-section">
+            <h3 class="filter-section__title">Focus Areas</h3>
+            <div class="tag-cloud">
+              @for (area of availableFocusAreas; track area) {
+              <button
+                [class.tag-cloud__tag--active]="
+                  filters().focusAreas.includes(area)
+                "
+                (click)="toggleFocusArea(area)"
+                class="tag-cloud__tag"
+              >
+                {{ area }}
+              </button>
+              }
+            </div>
+          </div>
+
+          <div class="filter-section">
+            <h3 class="filter-section__title">Functional Use</h3>
+            <div class="tag-cloud">
+              @for (use of availableFunctionalUses; track use) {
+              <button
+                [class.tag-cloud__tag--active]="
+                  filters().functionalUse.includes(use)
+                "
+                (click)="toggleFunctionalUse(use)"
+                class="tag-cloud__tag"
+              >
+                {{ use }}
+              </button>
+              }
+            </div>
+          </div>
+
+          <div class="filter-section">
+            <h3 class="filter-section__title">Enhancers</h3>
+            <div class="tag-cloud">
+              @for (enhancer of availableEnhancers; track enhancer) {
+              <button
+                [class.tag-cloud__tag--active]="
+                  filters().enhancers.includes(enhancer)
+                "
+                (click)="toggleEnhancer(enhancer)"
+                class="tag-cloud__tag"
+              >
+                {{ enhancer }}
+              </button>
+              }
+            </div>
+          </div>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- Results Section -->
+  <section class="results">
+    <div class="results__container">
+      @if (filteredExamples().length === 0) {
+      <div class="empty-state">
+        <div class="empty-state__animation">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+        </div>
+        <h3 class="empty-state__title">No examples found</h3>
+        <p class="empty-state__description">
+          Try adjusting your filters or search terms
+        </p>
+        <button (click)="clearFilters()" class="empty-state__button">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
+          </svg>
+          Reset All Filters
+        </button>
+      </div>
+      } @if (filteredExamples().length > 0) {
+      <div class="examples-grid">
+        @for (example of filteredExamples(); track example.id) {
+        <app-example-card [example]="example"></app-example-card>
+        }
+      </div>
+      }
+    </div>
+  </section>
+
+  <!-- Scroll to Top Button -->
+  <button
+    class="scroll-to-top"
+    (click)="scrollToTop()"
+    type="button"
+    aria-label="Scroll to top"
+    title="Back to top"
+  >
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="M5 10l7-7m0 0l7 7m-7-7v18"
+      />
+    </svg>
+  </button>
+</div>
