@@ -5,6 +5,21 @@ All notable changes to SignalTree will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.6] - 2025-01-04
+
+### Changed
+
+- **Version Alignment**: Aligned all packages to v4.0.6 for consistency
+  - `@signaltree/core@4.0.6`
+  - `@signaltree/ng-forms@4.0.6`
+  - `@signaltree/enterprise@4.0.6`
+  - `@signaltree/callable-syntax@4.0.6`
+
+### Fixed
+
+- Fixed export paths for `@signaltree/enterprise` and `@signaltree/callable-syntax` packages
+- Corrected package.json files array to match build output structure
+
 ## [4.0.2] - 2025-11-04
 
 ### Added
