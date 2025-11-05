@@ -76,18 +76,7 @@ import { withSerialization } from '@signaltree/serialization';
 
 ```typescript
 // ✅ New way - single package import
-import {
-  signalTree,
-  withBatching,
-  withMemoization,
-  withDevtools,
-  withEntities,
-  withMiddleware,
-  withTimeTravel,
-  withSerialization,
-  ecommercePreset,
-  dashboardPreset,
-} from '@signaltree/core';
+import { signalTree, withBatching, withMemoization, withDevtools, withEntities, withMiddleware, withTimeTravel, withSerialization, ecommercePreset, dashboardPreset } from '@signaltree/core';
 ```
 
 ### Step 3: Verify Functionality
@@ -96,11 +85,7 @@ The **API remains 100% compatible** - only import statements change. Your existi
 
 ```typescript
 // Your existing code works exactly the same
-const tree = signalTree(state).with(
-  withBatching(),
-  withMemoization(),
-  withDevtools()
-);
+const tree = signalTree(state).with(withBatching(), withMemoization(), withDevtools());
 ```
 
 ---
@@ -142,35 +127,16 @@ import { withDevtools } from '@signaltree/devtools';
 import { withTimeTravel } from '@signaltree/time-travel';
 import { withEntities } from '@signaltree/entities';
 
-const tree = signalTree(state).with(
-  withBatching(),
-  withMemoization(),
-  withEntities(),
-  withTimeTravel(),
-  withDevtools()
-);
+const tree = signalTree(state).with(withBatching(), withMemoization(), withEntities(), withTimeTravel(), withDevtools());
 ```
 
 **After:**
 
 ```typescript
 // ✅ v4.0.0+
-import {
-  signalTree,
-  withBatching,
-  withMemoization,
-  withDevtools,
-  withTimeTravel,
-  withEntities,
-} from '@signaltree/core';
+import { signalTree, withBatching, withMemoization, withDevtools, withTimeTravel, withEntities } from '@signaltree/core';
 
-const tree = signalTree(state).with(
-  withBatching(),
-  withMemoization(),
-  withEntities(),
-  withTimeTravel(),
-  withDevtools()
-);
+const tree = signalTree(state).with(withBatching(), withMemoization(), withEntities(), withTimeTravel(), withDevtools());
 ```
 
 ### Example 3: E-commerce Preset

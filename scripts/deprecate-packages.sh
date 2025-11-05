@@ -91,7 +91,7 @@ deprecate_package() {
         if [ -n "$OTP_CODE" ]; then
             npm_cmd="$npm_cmd --otp=$OTP_CODE"
         fi
-        
+
         if eval "$npm_cmd" 2>&1; then
             print_success "Successfully deprecated $full_package"
         else
