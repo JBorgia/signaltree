@@ -94,17 +94,18 @@ export class AsyncDemoComponent {
 
     if (this.searchTimeout !== null) {
       clearTimeout(this.searchTimeout);
+      this.isSearching.set(false);
     }
 
     if (!term.trim()) {
       this.searchResults.set([]);
       this.searchError.set(null);
+      this.isSearching.set(false);
       return;
     }
 
-    this.isSearching.set(true);
-
     this.searchTimeout = setTimeout(() => {
+      this.isSearching.set(true);
       this.performSearch(term);
     }, 500); // 500ms debounce
   }
