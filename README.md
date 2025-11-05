@@ -513,9 +513,9 @@ SignalTree uses a modular architecture where each feature is an optional package
   - Composition support with `.with()` method
   - Stub implementations that warn when features not installed
 
-### Optional Feature Packages
+### Core Package Features
 
-All SignalTree enhancers are now consolidated into the core package for simplified distribution and better tree-shaking. The following features are available directly from `@signaltree/core`:
+SignalTree enhancers are consolidated into the core package for simplified distribution and better tree-shaking. The following features are available directly from `@signaltree/core`:
 
 - **Serialization** - Advanced state serialization, persistence, auto-save & SSR support
 - **Batching** - Batch multiple updates for optimal performance
@@ -525,7 +525,12 @@ All SignalTree enhancers are now consolidated into the core package for simplifi
 - **DevTools** - Development tools & Redux DevTools integration
 - **Time Travel** - Undo/redo functionality & state history
 - **Presets** - Pre-configured setups & common patterns
-- **Enterprise** - Enterprise-grade optimizations for large-scale applications
+
+### Optional Add-on Packages
+
+- **[@signaltree/enterprise](./packages/enterprise)** - Enterprise-grade optimizations for large-scale applications (500+ signals, high-frequency bulk updates)
+- **[@signaltree/ng-forms](./packages/ng-forms)** - Angular forms integration with validation and form state
+- **[@signaltree/callable-syntax](./packages/callable-syntax)** - Build-time transform for elegant callable syntax
 
 Note: Use the bundle analysis scripts to measure sizes for your build.
 
@@ -553,19 +558,20 @@ npm install @signaltree/core @signaltree/ng-forms
 
 ## 📋 Complete Package Reference
 
-| Package                                         | Purpose         | Key Features                                     |
-| ----------------------------------------------- | --------------- | ------------------------------------------------ |
-| **[@signaltree/core](./packages/core)**         | Foundation      | Hierarchical signals, state updates, composition |
-|                                                 | + Serialization | State serialization, SSR, time-travel debugging  |
-|                                                 | + Batching      | Batch updates, reduce re-renders                 |
-|                                                 | + Memoization   | Intelligent caching, performance optimization    |
-|                                                 | + Middleware    | State interceptors, logging, validation          |
-|                                                 | + Entities      | Enhanced CRUD, filtering, querying               |
-|                                                 | + DevTools      | Redux DevTools, debugging, monitoring            |
-|                                                 | + Time Travel   | Undo/redo, snapshots, state persistence          |
-|                                                 | + Presets       | Pre-configured setups, common patterns           |
-|                                                 | + Enterprise    | Large-scale optimizations, bulk operations       |
-| **[@signaltree/ng-forms](./packages/ng-forms)** | Angular Forms   | Reactive forms, validation, form state           |
+| Package                                                 | Purpose           | Key Features                                     |
+| ------------------------------------------------------- | ----------------- | ------------------------------------------------ |
+| **[@signaltree/core](./packages/core)**                 | Foundation        | Hierarchical signals, state updates, composition |
+|                                                         | + Serialization   | State serialization, SSR, time-travel debugging  |
+|                                                         | + Batching        | Batch updates, reduce re-renders                 |
+|                                                         | + Memoization     | Intelligent caching, performance optimization    |
+|                                                         | + Middleware      | State interceptors, logging, validation          |
+|                                                         | + Entities        | Enhanced CRUD, filtering, querying               |
+|                                                         | + DevTools        | Redux DevTools, debugging, monitoring            |
+|                                                         | + Time Travel     | Undo/redo, snapshots, state persistence          |
+|                                                         | + Presets         | Pre-configured setups, common patterns           |
+| **[@signaltree/enterprise](./packages/enterprise)**     | Enterprise Scale  | Diff-based updates, bulk optimization, monitoring|
+| **[@signaltree/ng-forms](./packages/ng-forms)**         | Angular Forms     | Reactive forms, validation, form state           |
+| **[@signaltree/callable-syntax](./packages/callable-syntax)** | Developer UX | Build-time transform for callable syntax    |
 
 ## � Enhancer Guide & Use Cases
 

@@ -29,7 +29,7 @@ import type { Enhancer } from '@signaltree/core';
  * @example
  * ```typescript
  * import { signalTree } from '@signaltree/core';
- * import { withEnterprise } from '@signaltree/core/enterprise';
+ * import { withEnterprise } from '@signaltree/enterprise';
  *
  * const tree = signalTree(largeState).with(withEnterprise());
  *
