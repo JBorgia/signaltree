@@ -7,14 +7,6 @@ import { isSignal } from '@angular/core';
 
 import type { WritableSignal } from '@angular/core';
 
-// Type declarations for WeakRef if not available
-declare global {
-  class WeakRef<T extends object = object> {
-    constructor(target: T);
-    deref(): T | undefined;
-  }
-}
-
 /**
  * Path segment (string or number for array indices)
  */
