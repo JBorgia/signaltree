@@ -23,29 +23,25 @@
       "@signaltree/callable-syntax": ["packages/callable-syntax/src/index.ts"],
       "@signaltree/callable-syntax/*": ["packages/callable-syntax/src/*"],
       "@signaltree/core": ["packages/core/src/index.ts"],
-      "@signaltree/core/enhancers": ["packages/core/enhancers/index.ts"],
-      "@signaltree/core/enhancers/*": [
-        "packages/core/src/enhancers/*/index.ts"
-      ],
       "@signaltree/devtools": ["packages/core/src/enhancers/devtools/index.ts"],
       "@signaltree/enterprise": ["packages/enterprise/src/index.ts"],
       "@signaltree/entities": ["packages/core/src/enhancers/entities/index.ts"],
       "@signaltree/memoization": [
-        "packages/core/enhancers/memoization/src/index.ts"
+        "packages/core/src/enhancers/memoization/index.ts"
       ],
       "@signaltree/middleware": [
-        "packages/core/enhancers/middleware/src/index.ts"
+        "packages/core/src/enhancers/middleware/index.ts"
       ],
       "@signaltree/monolith": ["signaltree/src/index.ts"],
       "@signaltree/ng-forms": ["packages/ng-forms/src/index.ts"],
-      "@signaltree/presets": ["packages/core/enhancers/presets/src/index.ts"],
+      "@signaltree/presets": ["packages/core/src/enhancers/presets/index.ts"],
       "@signaltree/serialization": [
-        "packages/core/enhancers/serialization/src/index.ts"
+        "packages/core/src/enhancers/serialization/index.ts"
       ],
       "@signaltree/shared": ["packages/shared/src/index.ts"],
       "@signaltree/shared/*": ["packages/shared/src/*"],
       "@signaltree/time-travel": [
-        "packages/core/enhancers/time-travel/src/index.ts"
+        "packages/core/src/enhancers/time-travel/index.ts"
       ],
       "@signaltree/types": ["packages/types/src/index.ts"],
       "@signaltree/utils": ["packages/utils/src/index.ts"]
