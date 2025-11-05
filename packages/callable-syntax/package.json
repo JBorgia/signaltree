@@ -42,11 +42,11 @@
   },
   "peerDependencies": {
     "@angular/core": ">=20.0.0",
-    "@signaltree/core": ">=3.0.0"
+    "@signaltree/core": ">=4.0.0"
   },
   "devDependencies": {
     "@angular/core": "~20.3.0",
-    "@signaltree/core": "3.0.0",
+    "@signaltree/core": "4.0.2",
     "@types/babel__traverse": "^7.20.0",
     "@types/babel__generator": "^7.20.0",
     "@types/node": "^20.0.0",
