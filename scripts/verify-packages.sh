@@ -31,16 +31,13 @@ print_error() {
 print_step "Verifying package configurations for NPM publishing..."
 echo ""
 
+# Note: batching, memoization, middleware, entities, devtools, time-travel, presets
+# were consolidated into @signaltree/core in v4.0.0
 PACKAGES=(
     "core"
-    "batching"
-    "memoization"
-    "middleware"
-    "entities"
-    "devtools"
-    "time-travel"
-    "presets"
     "ng-forms"
+    "callable-syntax"
+    "enterprise"
 )
 
 ISSUES_FOUND=0
@@ -130,5 +127,8 @@ done
 
 echo ""
 print_step "Users will install with:"
-echo "  npm install @signaltree/core @signaltree/batching @signaltree/memoization"
+echo "  npm install @signaltree/core                    # Core with all enhancers"
+echo "  npm install @signaltree/ng-forms                # Angular forms integration"
+echo "  npm install @signaltree/enterprise              # Enterprise optimizations"
+echo "  npm install -D @signaltree/callable-syntax      # Build-time transform (dev)"
 echo ""

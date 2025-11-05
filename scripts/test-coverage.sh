@@ -34,16 +34,13 @@ print_coverage() {
 }
 
 # List of packages to test
+# Note: batching, memoization, middleware, entities, devtools, time-travel, presets
+# were consolidated into @signaltree/core in v4.0.0
 PACKAGES=(
     "core"
-    "batching"
-    "memoization"
-    "middleware"
-    "entities"
-    "devtools"
-    "time-travel"
-    "presets"
     "ng-forms"
+    "enterprise"
+    "callable-syntax"
 )
 
 print_step "Starting comprehensive test coverage analysis..."
