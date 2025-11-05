@@ -299,27 +299,24 @@
 
       <div class="history-list">
         @for (action of actionHistory; track action.timestamp; let i = $index) {
-          <div class="history-item">
-            <div class="history-badge">{{ i + 1 }}</div>
-            <div class="history-details">
-              <div class="history-name">{{ action.name }}</div>
-              <div class="history-meta">
-                {{ formatTimestamp(action.timestamp) }} • {{ action.duration }}ms
-              </div>
+        <div class="history-item">
+          <div class="history-badge">{{ i + 1 }}</div>
+          <div class="history-details">
+            <div class="history-name">{{ action.name }}</div>
+            <div class="history-meta">
+              {{ formatTimestamp(action.timestamp) }} • {{ action.duration }}ms
             </div>
-            <button
-              (click)="replaySingleAction(i)"
-              class="btn-info btn-xs"
-              title="Replay this action"
-            >
-              ↻
-            </button>
           </div>
-        }
-        @if (actionHistory.length === 0) {
-          <div class="no-history">
-            No actions recorded yet
-          </div>
+          <button
+            (click)="replaySingleAction(i)"
+            class="btn-info btn-xs"
+            title="Replay this action"
+          >
+            ↻
+          </button>
+        </div>
+        } @if (actionHistory.length === 0) {
+        <div class="no-history">No actions recorded yet</div>
         }
       </div>
     </div>
