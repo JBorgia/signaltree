@@ -1,36 +1,37 @@
 {
   "name": "@signaltree/callable-syntax",
-  "version": "4.0.3",
+  "version": "4.0.5",
   "description": "Optional zero-runtime callable syntax transform for SignalTree unified leaf API.",
   "license": "BSL-1.1",
   "type": "commonjs",
-  "main": "./dist/packages/callable-syntax/src/index.js",
-  "module": "./dist/packages/callable-syntax/src/index.js",
-  "types": "./dist/packages/callable-syntax/src/index.d.ts",
+  "main": "./src/index.js",
+  "module": "./src/index.js",
+  "types": "./src/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/packages/callable-syntax/src/index.d.ts",
-      "require": "./dist/packages/callable-syntax/src/index.js",
-      "import": "./dist/packages/callable-syntax/src/index.js"
+      "types": "./src/index.d.ts",
+      "require": "./src/index.js",
+      "import": "./src/index.js"
     },
     "./vite": {
-      "types": "./dist/packages/callable-syntax/src/lib/vite-plugin.d.ts",
-      "require": "./dist/packages/callable-syntax/src/lib/vite-plugin.js",
-      "import": "./dist/packages/callable-syntax/src/lib/vite-plugin.js"
+      "types": "./src/lib/vite-plugin.d.ts",
+      "require": "./src/lib/vite-plugin.js",
+      "import": "./src/lib/vite-plugin.js"
     },
     "./webpack": {
-      "types": "./dist/packages/callable-syntax/src/lib/webpack-plugin.d.ts",
-      "require": "./dist/packages/callable-syntax/src/lib/webpack-plugin.js",
-      "import": "./dist/packages/callable-syntax/src/lib/webpack-plugin.js"
+      "types": "./src/lib/webpack-plugin.d.ts",
+      "require": "./src/lib/webpack-plugin.js",
+      "import": "./src/lib/webpack-plugin.js"
     },
     "./augmentation": {
-      "types": "./dist/packages/callable-syntax/src/augmentation.d.ts",
-      "require": "./dist/packages/callable-syntax/src/augmentation.js",
-      "import": "./dist/packages/callable-syntax/src/augmentation.js"
+      "types": "./src/augmentation.d.ts",
+      "require": "./src/augmentation.js",
+      "import": "./src/augmentation.js"
     }
   },
   "files": [
-    "dist"
+    "src",
+    "packages/callable-syntax/README.md"
   ],
   "sideEffects": false,
   "dependencies": {
