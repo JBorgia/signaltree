@@ -63,6 +63,7 @@ if [ -z "$DRY_RUN" ] && [ -z "$OTP_CODE" ]; then
 fi
 
 # Define deprecated packages (package_name:message format)
+# Note: serialization was never published to npm, so it's excluded
 PACKAGES=(
     "batching:This package has been consolidated into @signaltree/core. Please use: import { withBatching } from '@signaltree/core'"
     "memoization:This package has been consolidated into @signaltree/core. Please use: import { withMemoization } from '@signaltree/core'"
@@ -71,7 +72,6 @@ PACKAGES=(
     "middleware:This package has been consolidated into @signaltree/core. Please use: import { withMiddleware } from '@signaltree/core'"
     "presets:This package has been consolidated into @signaltree/core. Please use preset functions from '@signaltree/core'"
     "time-travel:This package has been consolidated into @signaltree/core. Please use: import { withTimeTravel } from '@signaltree/core'"
-    "serialization:This package has been consolidated into @signaltree/core. Please use: import { withSerialization } from '@signaltree/core'"
 )
 
 # Function to deprecate a single package
