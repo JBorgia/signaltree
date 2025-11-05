@@ -211,13 +211,13 @@ Install the core package (all enhancers included):
 # Core package (required, includes all enhancers)
 npm install @signaltree/core
 
-# Optional: Serialization, Angular forms, or callable syntax
-npm install @signaltree/serialization   # State persistence & SSR
+# Optional: Angular forms, enterprise optimizations, or callable syntax
 npm install @signaltree/ng-forms        # Angular forms integration
-npm install @signaltree/callable-syntax # Optional DX enhancement
+npm install @signaltree/enterprise      # Enterprise-scale optimizations
+npm install -D @signaltree/callable-syntax # Build-time DX enhancement
 ```
 
-All enhancers (batching, memoization, middleware, entities, devtools, time-travel, presets) are now included in @signaltree/core. Import them from `@signaltree/core/enhancers/*` as needed.
+All enhancers (batching, memoization, middleware, entities, devtools, time-travel, presets, serialization) are now included in @signaltree/core. Import them directly from `@signaltree/core` as needed.
 
 ---
 
@@ -719,7 +719,7 @@ const fetchUser = tree.asyncAction(async (id: string) => userApi.getUser(id), {
 const saveUser = tree.submitForm(async (userData: UserForm) => userApi.save(userData), { loadingKey: 'ui.saving' });
 ```
 
-### 📚 **@signaltree/serialization** - State Persistence
+### 📚 **Serialization** - State Persistence (Built into Core)
 
 _Use when: State persistence, SSR, data synchronization_
 
@@ -732,7 +732,7 @@ _Use when: State persistence, SSR, data synchronization_
 - Cross-tab synchronization
 
 ```typescript
-import { withSerialization } from '@signaltree/core';
+import { signalTree, withSerialization } from '@signaltree/core';
 
 const tree = signalTree({
   cart: { items: [], total: 0 },
@@ -1023,29 +1023,29 @@ The API remains 100% compatible - only the import statements change!
 
 ### SignalTree vs All Major Angular Solutions
 
-| Feature                    |               SignalTree               |          NgRx           |          Akita          |              Elf              |       RxAngular       |            MobX             |               NGXS               |       Native Signals       |
-| :------------------------- | :------------------------------------: | :---------------------: | :---------------------: | :---------------------------: | :-------------------: | :-------------------------: | :------------------------------: | :------------------------: |
-| **Philosophy**             |        Tree-based, Signal-first        |      Redux pattern      |     Entity-focused      |          Functional           |     RxJS-centric      |     Observable objects      |         Decorator-based          |     Primitive signals      |
-| **Learning Curve**         |       ⭐⭐⭐⭐⭐<br/>_Very Easy_       |    ⭐⭐<br/>_Steep_     |  ⭐⭐⭐<br/>_Moderate_  |      ⭐⭐⭐⭐<br/>_Easy_      | ⭐⭐⭐<br/>_Moderate_ |     ⭐⭐⭐⭐<br/>_Easy_     |      ⭐⭐⭐<br/>_Moderate_       | ⭐⭐⭐⭐⭐<br/>_Very Easy_ |
-| **Boilerplate**            |         🏆<br/>_Very Minimal_          |   ❌<br/>_Extensive_    |    ⚠️<br/>_Moderate_    |       🏆<br/>_Minimal_        |   ⚠️<br/>_Moderate_   |      🏆<br/>_Minimal_       |        ⚠️<br/>_Moderate_         |       ✅<br/>_None_        |
-| **Bundle Size (min)**      |         🏆<br/>_~7.20KB core_          |     ❌<br/>_~25KB_      |     ❌<br/>_~20KB_      |       ✅<br/>_~2.33KB_        |    ❌<br/>_~25KB_     |       ❌<br/>_~30KB_        |          ❌<br/>_~25KB_          |        🏆<br/>_0KB_        |
-| **Bundle Size (full)**     |           🏆<br/>_~27.50KB_            |     ❌<br/>_~50KB+_     |     ❌<br/>_~30KB_      |        ✅<br/>_~10KB_         |    ❌<br/>_~25KB_     |       ❌<br/>_~40KB_        |          ❌<br/>_~35KB_          |        🏆<br/>_0KB_        |
-| **Memory Efficiency**      |           🏆<br/>_Excellent_           |    ⚠️<br/>_Standard_    |    ⚠️<br/>_Standard_    |         ✅<br/>_Good_         |   ⚠️<br/>_Standard_   |        ✅<br/>_Good_        |        ⚠️<br/>_Standard_         |       ✅<br/>_Good_        |
-| **Type Safety**            |        🏆<br/>_Full inference_         | ✅<br/>_Manual typing_  |      ✅<br/>_Good_      |      🏆<br/>_Excellent_       |     ✅<br/>_Good_     |      ⚠️<br/>_Limited_       |          ✅<br/>_Good_           |      ✅<br/>_Native_       |
-| **Performance**            |          🏆<br/>_Exceptional_          |      🔄<br/>_Good_      |      🔄<br/>_Good_      |      ⚡<br/>_Excellent_       |     🔄<br/>_Good_     |     ⚡<br/>_Excellent_      |          🔄<br/>_Good_           |     ⚡<br/>_Excellent_     |
-| **DevTools**               |    ✅<br/>_Redux DevTools (opt-in)_    | ✅<br/>_Redux DevTools_ | ✅<br/>_Redux DevTools_ |    ✅<br/>_Redux DevTools_    |   ⚠️<br/>_Limited_    |   ✅<br/>_MobX DevTools_    |     ✅<br/>_Redux DevTools_      |       ❌<br/>_None_        |
-| **Time Travel**            |  🏆<br/>_Via @signaltree/time-travel_  |    🏆<br/>_Built-in_    |   ✅<br/>_Via plugin_   |      ✅<br/>_Via plugin_      |      ❌<br/>_No_      |    ✅<br/>_Via DevTools_    |       ✅<br/>_Via plugin_        |        ❌<br/>_No_         |
-| **Entity Management**      |   ✅<br/>_Via @signaltree/entities_    |  ✅<br/>_@ngrx/entity_  |  🏆<br/>_Core feature_  | ✅<br/>_@ngneat/elf-entities_ |    ❌<br/>_Manual_    |       ❌<br/>_Manual_       | ✅<br/>_@ngxs-labs/entity-state_ |      ❌<br/>_Manual_       |
-| **Batching**               |   🏆<br/>_Via @signaltree/batching_    |     ❌<br/>_Manual_     |     ❌<br/>_Manual_     |       🏆<br/>_emitOnce_       |  🏆<br/>_schedulers_  | 🏆<br/>_action/runInAction_ |         ❌<br/>_Manual_          |     ✅<br/>_Automatic_     |
-| **Form Integration**       |   🏆<br/>_Via @signaltree/ng-forms_    |    ⚠️<br/>_Separate_    |    ⚠️<br/>_Separate_    |        ❌<br/>_Manual_        |    ❌<br/>_Manual_    |    ⚠️<br/>_Third-party_     |    ✅<br/>_@ngxs/form-plugin_    |      ❌<br/>_Manual_       |
-| **State Serialization**    | 🏆<br/>_Via @signaltree/serialization_ |     ⚠️<br/>_Custom_     |     ⚠️<br/>_Custom_     |        ❌<br/>_Manual_        |    ❌<br/>_Manual_    |       ❌<br/>_Manual_       |         ⚠️<br/>_Custom_          |      ❌<br/>_Manual_       |
-| **SSR Support**            |    🏆<br/>_Built-in serialization_     |     ⚠️<br/>_Manual_     |     ⚠️<br/>_Manual_     |        ⚠️<br/>_Manual_        |    ⚠️<br/>_Manual_    |       ⚠️<br/>_Manual_       |         ⚠️<br/>_Manual_          |      ⚠️<br/>_Manual_       |
-| **State Persistence**      |    🏆<br/>_Auto-save with adapters_    |     ⚠️<br/>_Manual_     |     ⚠️<br/>_Manual_     |        ❌<br/>_Manual_        |    ❌<br/>_Manual_    |       ❌<br/>_Manual_       |         ⚠️<br/>_Plugin_          |      ❌<br/>_Manual_       |
-| **Lazy Loading**           |          🏆<br/>_Proxy-based_          |      ❌<br/>_None_      |      ❌<br/>_None_      |         ❌<br/>_None_         |     ❌<br/>_None_     |      ⚠️<br/>_Partial_       |          ❌<br/>_None_           |       ❌<br/>_None_        |
-| **Smart Cache Eviction**   |  ✅<br/>_Via @signaltree/memoization_  |      ❌<br/>_None_      |      ❌<br/>_None_      |         ❌<br/>_None_         |     ❌<br/>_None_     |       ⚠️<br/>_Basic_        |          ❌<br/>_None_           |       ❌<br/>_None_        |
-| **Path-based Memoization** |         🏆<br/>_Fine-grained_          |      ❌<br/>_None_      |      ❌<br/>_None_      |        ⚠️<br/>_Basic_         |     ❌<br/>_None_     |       ⚠️<br/>_Basic_        |          ❌<br/>_None_           |       ❌<br/>_None_        |
-| **Pattern Invalidation**   |         🏆<br/>_Glob patterns_         |      ❌<br/>_None_      |      ❌<br/>_None_      |         ❌<br/>_None_         |     ❌<br/>_None_     |        ❌<br/>_None_        |          ❌<br/>_None_           |       ❌<br/>_None_        |
-| **Debug Mode**             |   🏆<br/>_Via @signaltree/devtools_    |  ⚠️<br/>_Via DevTools_  |  ⚠️<br/>_Via DevTools_  |     ⚠️<br/>_Via DevTools_     |     ❌<br/>_None_     |    ⚠️<br/>_Via DevTools_    |      ⚠️<br/>_Via DevTools_       |       ❌<br/>_None_        |
+| Feature                    |            SignalTree             |          NgRx           |          Akita          |              Elf              |       RxAngular       |            MobX             |               NGXS               |       Native Signals       |
+| :------------------------- | :-------------------------------: | :---------------------: | :---------------------: | :---------------------------: | :-------------------: | :-------------------------: | :------------------------------: | :------------------------: |
+| **Philosophy**             |     Tree-based, Signal-first      |      Redux pattern      |     Entity-focused      |          Functional           |     RxJS-centric      |     Observable objects      |         Decorator-based          |     Primitive signals      |
+| **Learning Curve**         |    ⭐⭐⭐⭐⭐<br/>_Very Easy_     |    ⭐⭐<br/>_Steep_     |  ⭐⭐⭐<br/>_Moderate_  |      ⭐⭐⭐⭐<br/>_Easy_      | ⭐⭐⭐<br/>_Moderate_ |     ⭐⭐⭐⭐<br/>_Easy_     |      ⭐⭐⭐<br/>_Moderate_       | ⭐⭐⭐⭐⭐<br/>_Very Easy_ |
+| **Boilerplate**            |       🏆<br/>_Very Minimal_       |   ❌<br/>_Extensive_    |    ⚠️<br/>_Moderate_    |       🏆<br/>_Minimal_        |   ⚠️<br/>_Moderate_   |      🏆<br/>_Minimal_       |        ⚠️<br/>_Moderate_         |       ✅<br/>_None_        |
+| **Bundle Size (min)**      |       🏆<br/>_~7.20KB core_       |     ❌<br/>_~25KB_      |     ❌<br/>_~20KB_      |       ✅<br/>_~2.33KB_        |    ❌<br/>_~25KB_     |       ❌<br/>_~30KB_        |          ❌<br/>_~25KB_          |        🏆<br/>_0KB_        |
+| **Bundle Size (full)**     |         🏆<br/>_~27.50KB_         |     ❌<br/>_~50KB+_     |     ❌<br/>_~30KB_      |        ✅<br/>_~10KB_         |    ❌<br/>_~25KB_     |       ❌<br/>_~40KB_        |          ❌<br/>_~35KB_          |        🏆<br/>_0KB_        |
+| **Memory Efficiency**      |        🏆<br/>_Excellent_         |    ⚠️<br/>_Standard_    |    ⚠️<br/>_Standard_    |         ✅<br/>_Good_         |   ⚠️<br/>_Standard_   |        ✅<br/>_Good_        |        ⚠️<br/>_Standard_         |       ✅<br/>_Good_        |
+| **Type Safety**            |      🏆<br/>_Full inference_      | ✅<br/>_Manual typing_  |      ✅<br/>_Good_      |      🏆<br/>_Excellent_       |     ✅<br/>_Good_     |      ⚠️<br/>_Limited_       |          ✅<br/>_Good_           |      ✅<br/>_Native_       |
+| **Performance**            |       🏆<br/>_Exceptional_        |      🔄<br/>_Good_      |      🔄<br/>_Good_      |      ⚡<br/>_Excellent_       |     🔄<br/>_Good_     |     ⚡<br/>_Excellent_      |          🔄<br/>_Good_           |     ⚡<br/>_Excellent_     |
+| **DevTools**               | ✅<br/>_Redux DevTools (opt-in)_  | ✅<br/>_Redux DevTools_ | ✅<br/>_Redux DevTools_ |    ✅<br/>_Redux DevTools_    |   ⚠️<br/>_Limited_    |   ✅<br/>_MobX DevTools_    |     ✅<br/>_Redux DevTools_      |       ❌<br/>_None_        |
+| **Time Travel**            |     🏆<br/>_Built-in (core)_      |    🏆<br/>_Built-in_    |   ✅<br/>_Via plugin_   |      ✅<br/>_Via plugin_      |      ❌<br/>_No_      |    ✅<br/>_Via DevTools_    |       ✅<br/>_Via plugin_        |        ❌<br/>_No_         |
+| **Entity Management**      |     🏆<br/>_Built-in (core)_      |  ✅<br/>_@ngrx/entity_  |  🏆<br/>_Core feature_  | ✅<br/>_@ngneat/elf-entities_ |    ❌<br/>_Manual_    |       ❌<br/>_Manual_       | ✅<br/>_@ngxs-labs/entity-state_ |      ❌<br/>_Manual_       |
+| **Batching**               |     🏆<br/>_Built-in (core)_      |     ❌<br/>_Manual_     |     ❌<br/>_Manual_     |       🏆<br/>_emitOnce_       |  🏆<br/>_schedulers_  | 🏆<br/>_action/runInAction_ |         ❌<br/>_Manual_          |     ✅<br/>_Automatic_     |
+| **Form Integration**       | 🏆<br/>_Via @signaltree/ng-forms_ |    ⚠️<br/>_Separate_    |    ⚠️<br/>_Separate_    |        ❌<br/>_Manual_        |    ❌<br/>_Manual_    |    ⚠️<br/>_Third-party_     |    ✅<br/>_@ngxs/form-plugin_    |      ❌<br/>_Manual_       |
+| **State Serialization**    |     🏆<br/>_Built-in (core)_      |     ⚠️<br/>_Custom_     |     ⚠️<br/>_Custom_     |        ❌<br/>_Manual_        |    ❌<br/>_Manual_    |       ❌<br/>_Manual_       |         ⚠️<br/>_Custom_          |      ❌<br/>_Manual_       |
+| **SSR Support**            |  🏆<br/>_Built-in serialization_  |     ⚠️<br/>_Manual_     |     ⚠️<br/>_Manual_     |        ⚠️<br/>_Manual_        |    ⚠️<br/>_Manual_    |       ⚠️<br/>_Manual_       |         ⚠️<br/>_Manual_          |      ⚠️<br/>_Manual_       |
+| **State Persistence**      | 🏆<br/>_Auto-save with adapters_  |     ⚠️<br/>_Manual_     |     ⚠️<br/>_Manual_     |        ❌<br/>_Manual_        |    ❌<br/>_Manual_    |       ❌<br/>_Manual_       |         ⚠️<br/>_Plugin_          |      ❌<br/>_Manual_       |
+| **Lazy Loading**           |       🏆<br/>_Proxy-based_        |      ❌<br/>_None_      |      ❌<br/>_None_      |         ❌<br/>_None_         |     ❌<br/>_None_     |      ⚠️<br/>_Partial_       |          ❌<br/>_None_           |       ❌<br/>_None_        |
+| **Smart Cache Eviction**   |     🏆<br/>_Built-in (core)_      |      ❌<br/>_None_      |      ❌<br/>_None_      |         ❌<br/>_None_         |     ❌<br/>_None_     |       ⚠️<br/>_Basic_        |          ❌<br/>_None_           |       ❌<br/>_None_        |
+| **Path-based Memoization** |       🏆<br/>_Fine-grained_       |      ❌<br/>_None_      |      ❌<br/>_None_      |        ⚠️<br/>_Basic_         |     ❌<br/>_None_     |       ⚠️<br/>_Basic_        |          ❌<br/>_None_           |       ❌<br/>_None_        |
+| **Pattern Invalidation**   |      🏆<br/>_Glob patterns_       |      ❌<br/>_None_      |      ❌<br/>_None_      |         ❌<br/>_None_         |     ❌<br/>_None_     |        ❌<br/>_None_        |          ❌<br/>_None_           |       ❌<br/>_None_        |
+| **Debug Mode**             |     🏆<br/>_Built-in (core)_      |  ⚠️<br/>_Via DevTools_  |  ⚠️<br/>_Via DevTools_  |     ⚠️<br/>_Via DevTools_     |     ❌<br/>_None_     |    ⚠️<br/>_Via DevTools_    |      ⚠️<br/>_Via DevTools_       |       ❌<br/>_None_        |
 
 ### Performance Benchmarks (Measured SignalTree Results)
 
