@@ -292,10 +292,13 @@ import { signalTree, withBatching, withMemoization, withDevtools } from '@signal
 - ✅ **Version synchronization**: All features share the same version
 - ✅ **Reduced duplication**: No duplicate code between packages
 
-### Still Maintained Separately
+### Optional Add-on Packages (Maintained Separately)
 
-- ✅ `@signaltree/ng-forms` - Angular forms integration (still separate)
-- ✅ `@signaltree/callable-syntax` - Optional DX enhancement (still separate)
+These packages remain separate for flexibility and bundle size optimization:
+
+- ✅ `@signaltree/ng-forms` - Angular forms integration
+- ✅ `@signaltree/callable-syntax` - Build-time DX enhancement (dev dependency)
+- ✅ `@signaltree/enterprise` - Enterprise-scale optimizations (500+ signals)
 
 ---
 
@@ -537,41 +540,39 @@ Note: Use the bundle analysis scripts to measure sizes for your build.
 ### Installation Examples
 
 ```bash
-# Minimal setup (7.20KB)
+# Minimal setup (~7KB gzipped)
 npm install @signaltree/core
 
-# Performance-focused (13.3KB) - All enhancers now included in core
-npm install @signaltree/core
-
-# State persistence (10.4KB) - All enhancers now included in core
-npm install @signaltree/core
-
-# Development-enhanced (15KB) - All enhancers now included in core
-npm install @signaltree/core
-
-# Full-featured (27.50KB) - Everything in one package
+# With Angular forms integration
 npm install @signaltree/core @signaltree/ng-forms
 
-# Use presets for common combinations - Now available from core
-npm install @signaltree/core @signaltree/ng-forms
+# With callable syntax transform (dev dependency)
+npm install @signaltree/core
+npm install -D @signaltree/callable-syntax
+
+# Enterprise-scale applications (500+ signals, bulk updates)
+npm install @signaltree/core @signaltree/enterprise
+
+# Full stack (core + forms + enterprise)
+npm install @signaltree/core @signaltree/ng-forms @signaltree/enterprise
 ```
 
 ## 📋 Complete Package Reference
 
-| Package                                                 | Purpose           | Key Features                                     |
-| ------------------------------------------------------- | ----------------- | ------------------------------------------------ |
-| **[@signaltree/core](./packages/core)**                 | Foundation        | Hierarchical signals, state updates, composition |
-|                                                         | + Serialization   | State serialization, SSR, time-travel debugging  |
-|                                                         | + Batching        | Batch updates, reduce re-renders                 |
-|                                                         | + Memoization     | Intelligent caching, performance optimization    |
-|                                                         | + Middleware      | State interceptors, logging, validation          |
-|                                                         | + Entities        | Enhanced CRUD, filtering, querying               |
-|                                                         | + DevTools        | Redux DevTools, debugging, monitoring            |
-|                                                         | + Time Travel     | Undo/redo, snapshots, state persistence          |
-|                                                         | + Presets         | Pre-configured setups, common patterns           |
-| **[@signaltree/enterprise](./packages/enterprise)**     | Enterprise Scale  | Diff-based updates, bulk optimization, monitoring|
-| **[@signaltree/ng-forms](./packages/ng-forms)**         | Angular Forms     | Reactive forms, validation, form state           |
-| **[@signaltree/callable-syntax](./packages/callable-syntax)** | Developer UX | Build-time transform for callable syntax    |
+| Package                                                       | Purpose          | Key Features                                      |
+| ------------------------------------------------------------- | ---------------- | ------------------------------------------------- |
+| **[@signaltree/core](./packages/core)**                       | Foundation       | Hierarchical signals, state updates, composition  |
+|                                                               | + Serialization  | State serialization, SSR, time-travel debugging   |
+|                                                               | + Batching       | Batch updates, reduce re-renders                  |
+|                                                               | + Memoization    | Intelligent caching, performance optimization     |
+|                                                               | + Middleware     | State interceptors, logging, validation           |
+|                                                               | + Entities       | Enhanced CRUD, filtering, querying                |
+|                                                               | + DevTools       | Redux DevTools, debugging, monitoring             |
+|                                                               | + Time Travel    | Undo/redo, snapshots, state persistence           |
+|                                                               | + Presets        | Pre-configured setups, common patterns            |
+| **[@signaltree/enterprise](./packages/enterprise)**           | Enterprise Scale | Diff-based updates, bulk optimization, monitoring |
+| **[@signaltree/ng-forms](./packages/ng-forms)**               | Angular Forms    | Reactive forms, validation, form state            |
+| **[@signaltree/callable-syntax](./packages/callable-syntax)** | Developer UX     | Build-time transform for callable syntax          |
 
 ## � Enhancer Guide & Use Cases
 
@@ -852,6 +853,56 @@ const tree = signalTree({
   ])
 );
 ```
+
+### 🏢 **@signaltree/enterprise** - Enterprise-Scale Optimizations
+
+_Use when: Large state trees (500+ signals), high-frequency bulk updates_
+
+**Best for:**
+
+- Real-time dashboards with hundreds of metrics
+- Data grids with thousands of rows
+- Enterprise applications with complex state
+- High-frequency data feeds (60Hz+)
+- Monitoring and observability platforms
+
+```typescript
+import { signalTree } from '@signaltree/core';
+import { withEnterprise } from '@signaltree/enterprise';
+
+const tree = signalTree({
+  metrics: {} as Record<string, number>,
+  alerts: [] as Alert[],
+  users: [] as User[],
+  // ... hundreds more properties
+}).with(withEnterprise());
+
+// Optimized bulk updates with diff-based change detection
+const result = tree.updateOptimized(newData, {
+  ignoreArrayOrder: true,
+  maxDepth: 10,
+  autoBatch: true,
+});
+
+console.log(result.stats);
+// { totalChanges: 45, adds: 10, updates: 30, deletes: 5 }
+
+// 2-5x performance improvement for large state updates
+```
+
+**Features:**
+
+- Diff-based updates (only update changed signals)
+- Bulk operation optimization
+- Advanced change tracking and statistics
+- Path indexing for optimized lookups
+- Bundle cost: +2.4KB gzipped
+
+**Skip when:**
+
+- Small to medium apps (<100 signals)
+- Infrequent state updates
+- Bundle size is critical
 
 ### 📝 **@signaltree/ng-forms** - Angular Forms Integration
 

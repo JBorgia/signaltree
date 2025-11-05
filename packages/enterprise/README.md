@@ -27,7 +27,7 @@ const tree = signalTree(largeState).with(withEnterprise());
 // Use optimized bulk updates
 const result = tree.updateOptimized(newData, {
   ignoreArrayOrder: true,
-  maxDepth: 10
+  maxDepth: 10,
 });
 
 console.log(result.stats);
@@ -37,6 +37,7 @@ console.log(result.stats);
 ## When to Use
 
 ### ✅ Use @signaltree/enterprise when:
+
 - You have 500+ signals in your state tree
 - Bulk updates happen at high frequency (60Hz+)
 - You need real-time dashboards or data feeds
@@ -44,6 +45,7 @@ console.log(result.stats);
 - You need detailed update monitoring and statistics
 
 ### ❌ Skip @signaltree/enterprise when:
+
 - Small to medium apps (<100 signals)
 - Infrequent state updates
 - Startup/prototype projects
@@ -67,10 +69,12 @@ const tree = signalTree(initialState).with(withEnterprise());
 Performs optimized bulk updates using diff-based change detection.
 
 **Parameters:**
+
 - `updates: Partial<T>` - The new state values
 - `options?: UpdateOptions` - Configuration options
 
 **Options:**
+
 ```typescript
 {
   maxDepth?: number;              // Maximum depth to traverse (default: 100)
@@ -82,15 +86,16 @@ Performs optimized bulk updates using diff-based change detection.
 ```
 
 **Returns:**
+
 ```typescript
 {
-  changed: boolean;           // Whether any changes were made
+  changed: boolean; // Whether any changes were made
   stats: {
-    totalChanges: number;     // Total number of changes
-    adds: number;             // New properties added
-    updates: number;          // Properties updated
-    deletes: number;          // Properties deleted
-  };
+    totalChanges: number; // Total number of changes
+    adds: number; // New properties added
+    updates: number; // Properties updated
+    deletes: number; // Properties deleted
+  }
 }
 ```
 
@@ -120,17 +125,12 @@ interface DashboardState {
   // ... hundreds more properties
 }
 
-const dashboard = signalTree<DashboardState>(initialState).with(
-  withEnterprise()
-);
+const dashboard = signalTree<DashboardState>(initialState).with(withEnterprise());
 
 // High-frequency updates from WebSocket
 socket.on('metrics', (newMetrics) => {
-  const result = dashboard.updateOptimized(
-    { metrics: newMetrics },
-    { ignoreArrayOrder: true }
-  );
-  
+  const result = dashboard.updateOptimized({ metrics: newMetrics }, { ignoreArrayOrder: true });
+
   console.log(`Updated ${result.stats.updates} metrics`);
 });
 ```
@@ -145,18 +145,18 @@ const grid = signalTree({
   rows: [] as GridRow[],
   columns: [] as GridColumn[],
   filters: {} as FilterState,
-  selection: new Set<string>()
+  selection: new Set<string>(),
 }).with(withEnterprise());
 
 // Bulk update from API
 async function loadData() {
   const data = await fetchGridData();
-  
+
   const result = grid.updateOptimized(data, {
     maxDepth: 5,
-    autoBatch: true
+    autoBatch: true,
   });
-  
+
   console.log(`Loaded ${result.stats.adds} rows in bulk`);
 }
 ```
@@ -173,17 +173,19 @@ tree.updateOptimized(newState, {
       return a.getTime() === b.getTime();
     }
     return a === b;
-  }
+  },
 });
 ```
 
 ## Performance
 
 **Bundle Size:**
+
 - Adds +2.4KB gzipped to your bundle
 - Zero overhead until first `updateOptimized()` call (lazy initialization)
 
 **Performance Gains:**
+
 - 2-5x faster for bulk updates on large state trees
 - Scales efficiently with tree depth and complexity
 - Minimal memory overhead with path indexing
