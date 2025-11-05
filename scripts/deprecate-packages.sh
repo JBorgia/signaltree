@@ -39,11 +39,27 @@ fi
 
 print_status "Verified npm authentication as: $(npm whoami)"
 
-# Check if dry-run flag is passed
+# Check for flags
 DRY_RUN=""
-if [ "$1" = "--dry-run" ]; then
-    DRY_RUN="true"
-    print_warning "Running in DRY RUN mode - no packages will actually be deprecated"
+OTP_CODE=""
+
+for arg in "$@"; do
+    if [ "$arg" = "--dry-run" ]; then
+        DRY_RUN="true"
+        print_warning "Running in DRY RUN mode - no packages will actually be deprecated"
+    elif [[ "$arg" == --otp=* ]]; then
+        OTP_CODE="${arg#--otp=}"
+        print_status "Using provided OTP code"
+    fi
+done
+
+# Prompt for OTP if not provided and not in dry-run mode
+if [ -z "$DRY_RUN" ] && [ -z "$OTP_CODE" ]; then
+    echo
+    print_warning "This operation requires 2FA authentication"
+    echo "Please enter your OTP code from your authenticator app:"
+    read -r OTP_CODE
+    echo
 fi
 
 # Define deprecated packages (package_name:message format)
@@ -70,7 +86,13 @@ deprecate_package() {
         print_warning "DRY RUN: Would deprecate $full_package"
         echo "  Message: $message"
     else
-        if npm deprecate "$full_package" "$message" 2>&1; then
+        # Build npm command with OTP if provided
+        local npm_cmd="npm deprecate \"$full_package\" \"$message\""
+        if [ -n "$OTP_CODE" ]; then
+            npm_cmd="$npm_cmd --otp=$OTP_CODE"
+        fi
+        
+        if eval "$npm_cmd" 2>&1; then
             print_success "Successfully deprecated $full_package"
         else
             print_error "Failed to deprecate $full_package"
