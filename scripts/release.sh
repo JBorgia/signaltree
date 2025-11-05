@@ -36,13 +36,13 @@ if [ ! -f "package.json" ] || [ ! -d "packages" ]; then
 fi
 
 # List of packages to release
-# Note: batching, memoization, middleware, entities, devtools, time-travel, presets
-# were consolidated into @signaltree/core in v4.0.0
+# Note: batching, memoization, middleware, entities, devtools, time-travel, presets, serialization
+# were consolidated into @signaltree/core in v4.0.0 and are no longer separate packages
 PACKAGES=(
-    "core"
-    "ng-forms"
-    "callable-syntax"
-    # "enterprise" - not published to npm (internal/private package)
+    "core"            # Main package with all enhancers (batching, memoization, etc.)
+    "ng-forms"        # Angular forms integration
+    "callable-syntax" # Build-time transform for callable DX syntax
+    "enterprise"      # Enterprise-grade optimizations for large-scale apps
 )
 
 # Parse command line arguments

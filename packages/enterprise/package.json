@@ -1,15 +1,51 @@
 {
   "name": "@signaltree/enterprise",
-  "version": "0.0.1",
-  "private": true,
-  "type": "commonjs",
-  "main": "./src/index.js",
-  "types": "./src/index.d.ts",
+  "version": "4.0.2",
+  "description": "Enterprise-grade optimizations for SignalTree. Provides diff-based updates, bulk operation optimization, and advanced change tracking for large-scale applications.",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "keywords": [
+    "angular",
+    "signals",
+    "state-management",
+    "enterprise",
+    "performance",
+    "optimization",
+    "bulk-updates",
+    "diff",
+    "monitoring"
+  ],
+  "author": "Jonathan D Borgia",
+  "license": "BSL-1.1",
+  "homepage": "https://github.com/JBorgia/signaltree#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JBorgia/signaltree.git",
+    "directory": "packages/enterprise"
+  },
+  "bugs": {
+    "url": "https://github.com/JBorgia/signaltree/issues"
+  },
   "peerDependencies": {
     "@angular/core": "^20.3.0",
-    "@signaltree/core": "^3.0.0"
+    "@signaltree/core": "^4.0.0"
   },
   "dependencies": {
     "tslib": "^2.3.0"
-  }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "package.json"
+  ]
 }
