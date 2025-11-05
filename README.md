@@ -219,16 +219,17 @@ All enhancers (batching, memoization, middleware, entities, devtools, time-trave
 
 ### Deprecated Packages (No Longer Maintained)
 
-The following standalone packages are **deprecated** and will no longer receive updates:
+The following standalone packages are **deprecated on npm** and will no longer receive updates:
 
-- ❌ `@signaltree/batching`
-- ❌ `@signaltree/memoization`
-- ❌ `@signaltree/devtools`
-- ❌ `@signaltree/entities`
-- ❌ `@signaltree/middleware`
-- ❌ `@signaltree/presets`
-- ❌ `@signaltree/time-travel`
-- ❌ `@signaltree/serialization`
+- ❌ `@signaltree/batching` ✅ **Deprecated**
+- ❌ `@signaltree/memoization` ✅ **Deprecated**
+- ❌ `@signaltree/devtools` ✅ **Deprecated**
+- ❌ `@signaltree/entities` ✅ **Deprecated**
+- ❌ `@signaltree/middleware` ✅ **Deprecated**
+- ❌ `@signaltree/presets` ✅ **Deprecated**
+- ❌ `@signaltree/time-travel` ✅ **Deprecated**
+
+> **Note**: All users installing these packages will see deprecation warnings directing them to `@signaltree/core`.
 
 ### Migration Guide
 

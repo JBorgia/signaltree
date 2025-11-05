@@ -14,14 +14,15 @@ This guide will help you migrate from the old separate package structure to the 
 
 The following standalone packages are **no longer maintained** and have been consolidated into `@signaltree/core`:
 
-- ❌ `@signaltree/batching` → Use `withBatching` from `@signaltree/core`
-- ❌ `@signaltree/memoization` → Use `withMemoization` from `@signaltree/core`
-- ❌ `@signaltree/devtools` → Use `withDevtools` from `@signaltree/core`
-- ❌ `@signaltree/entities` → Use entity helpers from `@signaltree/core`
-- ❌ `@signaltree/middleware` → Use `withMiddleware` from `@signaltree/core`
-- ❌ `@signaltree/presets` → Use preset functions from `@signaltree/core`
-- ❌ `@signaltree/time-travel` → Use `withTimeTravel` from `@signaltree/core`
-- ❌ `@signaltree/serialization` → Use `withSerialization` from `@signaltree/core`
+- ❌ `@signaltree/batching` → Use `withBatching` from `@signaltree/core` ✅ **Deprecated on npm**
+- ❌ `@signaltree/memoization` → Use `withMemoization` from `@signaltree/core` ✅ **Deprecated on npm**
+- ❌ `@signaltree/devtools` → Use `withDevtools` from `@signaltree/core` ✅ **Deprecated on npm**
+- ❌ `@signaltree/entities` → Use entity helpers from `@signaltree/core` ✅ **Deprecated on npm**
+- ❌ `@signaltree/middleware` → Use `withMiddleware` from `@signaltree/core` ✅ **Deprecated on npm**
+- ❌ `@signaltree/presets` → Use preset functions from `@signaltree/core` ✅ **Deprecated on npm**
+- ❌ `@signaltree/time-travel` → Use `withTimeTravel` from `@signaltree/core` ✅ **Deprecated on npm**
+
+> **Note**: `@signaltree/serialization` was never published as a standalone package - serialization features are available directly in `@signaltree/core`.
 
 ### Still Maintained Separately
 
