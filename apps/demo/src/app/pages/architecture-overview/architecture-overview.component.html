@@ -2,7 +2,8 @@
   <div class="hero-section">
     <h1 class="hero-title">SignalTree v2: Consolidated Architecture</h1>
     <p class="hero-description">
-      Experience the power of a unified, optimized state management solution that combines all features into a single, tree-shakable package.
+      Experience the power of a unified, optimized state management solution
+      that combines all features into a single, tree-shakable package.
     </p>
   </div>
 
@@ -17,12 +18,14 @@
           <div class="benefit-column">Key Benefit</div>
         </div>
         <div class="table-body">
-          <div *ngFor="let comparison of comparisons" class="comparison-row">
+          @for (comparison of comparisons; track comparison.aspect) {
+          <div class="comparison-row">
             <div class="aspect-column">{{ comparison.aspect }}</div>
             <div class="separate-column">{{ comparison.separate }}</div>
             <div class="consolidated-column">{{ comparison.consolidated }}</div>
             <div class="benefit-column">{{ comparison.benefit }}</div>
           </div>
+          }
         </div>
       </div>
     </div>
@@ -30,11 +33,13 @@
     <div class="savings-section">
       <h2 class="section-title">Measurable Benefits</h2>
       <div class="savings-grid">
-        <div *ngFor="let metric of savingsMetrics" class="savings-card">
+        @for (metric of savingsMetrics; track metric.label) {
+        <div class="savings-card">
           <div class="metric-value">{{ metric.value }}</div>
           <div class="metric-label">{{ metric.label }}</div>
           <div class="metric-description">{{ metric.description }}</div>
         </div>
+        }
       </div>
     </div>
 
@@ -59,32 +64,44 @@
         <div class="feature-card">
           <div class="feature-icon">🌳</div>
           <h3 class="feature-title">Signal Tree</h3>
-          <p class="feature-description">Reactive state management with automatic dependency tracking</p>
+          <p class="feature-description">
+            Reactive state management with automatic dependency tracking
+          </p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">🧮</div>
           <h3 class="feature-title">Computed Values</h3>
-          <p class="feature-description">Reactive computed properties that update automatically</p>
+          <p class="feature-description">
+            Reactive computed properties that update automatically
+          </p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">📊</div>
           <h3 class="feature-title">Entity Management</h3>
-          <p class="feature-description">CRUD operations for entity collections with type safety</p>
+          <p class="feature-description">
+            CRUD operations for entity collections with type safety
+          </p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">🔧</div>
           <h3 class="feature-title">Middleware</h3>
-          <p class="feature-description">Extensible hooks for logging, persistence, and more</p>
+          <p class="feature-description">
+            Extensible hooks for logging, persistence, and more
+          </p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">⏰</div>
           <h3 class="feature-title">Time Travel</h3>
-          <p class="feature-description">Undo/redo functionality with state history</p>
+          <p class="feature-description">
+            Undo/redo functionality with state history
+          </p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">🎯</div>
           <h3 class="feature-title">DevTools</h3>
-          <p class="feature-description">Developer tools for debugging and inspection</p>
+          <p class="feature-description">
+            Developer tools for debugging and inspection
+          </p>
         </div>
       </div>
     </div>

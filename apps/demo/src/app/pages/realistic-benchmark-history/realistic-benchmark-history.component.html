@@ -8,20 +8,25 @@
   </div>
 
   <!-- Loading State -->
-  <div *ngIf="loading()" class="loading">
+  @if (loading()) {
+  <div class="loading">
     <div class="spinner"></div>
     <p>Loading benchmark history...</p>
   </div>
+  }
 
   <!-- Error State -->
-  <div *ngIf="error()" class="error-banner">
+  @if (error()) {
+  <div class="error-banner">
     <span class="error-icon">⚠️</span>
     {{ error() }}
     <button class="btn secondary" (click)="loadBenchmarks()">Retry</button>
   </div>
+  }
 
   <!-- Filters and Controls -->
-  <div *ngIf="!loading() && !error()" class="controls">
+  @if (!loading() && !error()) {
+  <div class="controls">
     <div class="filters">
       <div class="filter-group">
         <label for="library-winner-select">Library Winner:</label>
@@ -31,9 +36,11 @@
           (change)="selectedLibrary.set($any($event.target).value)"
         >
           <option value="all">All Libraries</option>
-          <option *ngFor="let lib of uniqueLibraries" [value]="lib">
+          @for (lib of uniqueLibraries; track lib) {
+          <option [value]="lib">
             {{ lib }}
           </option>
+          }
         </select>
       </div>
 
@@ -45,9 +52,11 @@
           (change)="selectedMachineType.set($any($event.target).value)"
         >
           <option value="all">All Machines</option>
-          <option *ngFor="let type of uniqueMachineTypes" [value]="type">
+          @for (type of uniqueMachineTypes; track type) {
+          <option [value]="type">
             {{ type }}
           </option>
+          }
         </select>
       </div>
 
@@ -75,20 +84,21 @@
       <button class="btn primary" (click)="loadBenchmarks()">🔄 Refresh</button>
     </div>
   </div>
+  }
 
   <!-- Results Count -->
-  <div *ngIf="!loading() && !error()" class="results-info">
+  @if (!loading() && !error()) {
+  <div class="results-info">
     <p>
       Showing <strong>{{ filteredBenchmarks.length }}</strong> of
       <strong>{{ benchmarks().length }}</strong> benchmarks
     </p>
   </div>
+  }
 
   <!-- Benchmarks Table -->
-  <div
-    *ngIf="!loading() && !error() && filteredBenchmarks.length > 0"
-    class="table-container"
-  >
+  @if (!loading() && !error() && filteredBenchmarks.length > 0) {
+  <div class="table-container">
     <table class="benchmarks-table">
       <thead>
         <tr>
@@ -109,7 +119,8 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let benchmark of filteredBenchmarks" class="benchmark-row">
+        @for (benchmark of filteredBenchmarks; track benchmark.createdAt) {
+        <tr class="benchmark-row">
           <td class="date">{{ formatDate(benchmark.createdAt) }}</td>
           <td>
             <span
@@ -143,72 +154,75 @@
             </button>
           </td>
         </tr>
+        }
       </tbody>
     </table>
   </div>
+  }
 
   <!-- Empty State -->
-  <div
-    *ngIf="!loading() && !error() && filteredBenchmarks.length === 0"
-    class="empty-state"
-  >
+  @if (!loading() && !error() && filteredBenchmarks.length === 0) {
+  <div class="empty-state">
     <div class="empty-icon">📊</div>
     <h3>No Benchmarks Found</h3>
-    <p *ngIf="benchmarks().length === 0">
+    @if (benchmarks().length === 0) {
+    <p>
       No benchmark results have been submitted yet. Run the
       <a routerLink="/benchmarks">realistic comparison benchmarks</a> to
       contribute!
     </p>
-    <p *ngIf="benchmarks().length > 0">
+    } @if (benchmarks().length > 0) {
+    <p>
       No benchmarks match your current filters. Try adjusting your filter
       criteria.
     </p>
+    }
   </div>
+  }
 </div>
 
 <!-- Details Modal -->
-<div *ngIf="detailsOpen()" class="details-modal-backdrop">
+@if (detailsOpen()) {
+<div class="details-modal-backdrop">
   <div class="details-modal">
     <button class="close-btn" (click)="closeDetails()" title="Close">×</button>
 
-    <ng-container *ngIf="selectedBenchmark() as benchmark">
-      <h2>Benchmark Details</h2>
-      <div class="details-meta">
-        <div><strong>Date:</strong> {{ formatDate(benchmark.createdAt) }}</div>
-        <div>
-          <strong>Winner:</strong> {{ benchmark.summary.winnerLibrary }}
-        </div>
-        <div>
-          <strong>Score:</strong> {{ benchmark.summary.winnerScore.toFixed(1) }}
-        </div>
-        <div>
-          <strong>Reliability:</strong>
-          {{ benchmark.summary.reliabilityScore }}%
-        </div>
-        <div>
-          <strong>Machine Type:</strong> {{ benchmark.summary.machineType }}
-        </div>
-        <div>
-          <strong>Total Tests:</strong> {{ benchmark.summary.totalTests }}
-        </div>
-        <div>
-          <strong>Duration:</strong>
-          {{ formatDuration(benchmark.summary.duration) }}
-        </div>
+    @if (selectedBenchmark(); as benchmark) {
+    <h2>Benchmark Details</h2>
+    <div class="details-meta">
+      <div><strong>Date:</strong> {{ formatDate(benchmark.createdAt) }}</div>
+      <div><strong>Winner:</strong> {{ benchmark.summary.winnerLibrary }}</div>
+      <div>
+        <strong>Score:</strong> {{ benchmark.summary.winnerScore.toFixed(1) }}
       </div>
-    </ng-container>
-
-    <div *ngIf="detailsLoading()" class="details-loading">
+      <div>
+        <strong>Reliability:</strong>
+        {{ benchmark.summary.reliabilityScore }}%
+      </div>
+      <div>
+        <strong>Machine Type:</strong> {{ benchmark.summary.machineType }}
+      </div>
+      <div>
+        <strong>Total Tests:</strong> {{ benchmark.summary.totalTests }}
+      </div>
+      <div>
+        <strong>Duration:</strong>
+        {{ formatDuration(benchmark.summary.duration) }}
+      </div>
+    </div>
+    } @if (detailsLoading()) {
+    <div class="details-loading">
       <div class="spinner"></div>
       <p>Loading details...</p>
     </div>
-    <div *ngIf="detailsError()" class="details-error">
+    } @if (detailsError()) {
+    <div class="details-error">
       <span class="error-icon">⚠️</span> {{ detailsError() }}
     </div>
-
-    <ng-container *ngIf="selectedBenchmarkFull() as full">
-      <h3>Submission Metadata</h3>
-      <pre class="details-json">{{ full | json }}</pre>
-    </ng-container>
+    } @if (selectedBenchmarkFull(); as full) {
+    <h3>Submission Metadata</h3>
+    <pre class="details-json">{{ full | json }}</pre>
+    }
   </div>
 </div>
+}
