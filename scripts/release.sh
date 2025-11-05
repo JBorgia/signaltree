@@ -36,16 +36,13 @@ if [ ! -f "package.json" ] || [ ! -d "packages" ]; then
 fi
 
 # List of packages to release
+# Note: batching, memoization, middleware, entities, devtools, time-travel, presets
+# were consolidated into @signaltree/core in v4.0.0
 PACKAGES=(
     "core"
-    "batching"
-    "memoization"
-    "middleware"
-    "entities"
-    "devtools"
-    "time-travel"
-    "presets"
     "ng-forms"
+    "callable-syntax"
+    # "enterprise" - not published to npm (internal/private package)
 )
 
 # Parse command line arguments
