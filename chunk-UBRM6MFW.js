@@ -1,0 +1,1 @@
+import{a}from"./chunk-CUA6LDNO.js";import"./chunk-U72C5XCM.js";import"./chunk-UWEITHFZ.js";import"./chunk-X4J5B7J5.js";import"./chunk-RPO4BTFL.js";import"./chunk-A3ECCK3J.js";export{a as EntitiesDemoComponent};
