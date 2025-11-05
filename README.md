@@ -2,6 +2,14 @@
   <img src="apps/demo/public/signaltree.svg" alt="SignalTree Logo" width="120" height="120" style="background: transparent;" />
   <h1>SignalTree</h1>
   <p>Type-safe, modular, signal-based state management for Angular. SignalTree offers a lightweight alternative to traditional solutions with a composable API and solid performance.</p>
+  
+  <p>
+    <a href="https://jborgia.github.io/signaltree/" target="_blank"><strong>🎮 Live Demo & Benchmarks</strong></a>
+    &nbsp;|&nbsp;
+    <a href="https://www.npmjs.com/package/@signaltree/core" target="_blank">📦 npm</a>
+    &nbsp;|&nbsp;
+    <a href="https://github.com/JBorgia/signaltree" target="_blank">⭐ GitHub</a>
+  </p>
 </div>
 
 ## Why SignalTree?
