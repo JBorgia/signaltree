@@ -5,6 +5,74 @@ All notable changes to SignalTree will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.2] - 2025-11-04
+
+### Added
+
+#### 🏢 @signaltree/enterprise Package (First Publication)
+
+Introduced enterprise-grade optimizations for large-scale applications as a separate optional package.
+
+**Features:**
+
+- **Diff-Based Updates**: Intelligent change detection that only updates what actually changed
+- **Bulk Optimization**: 2-5x faster when updating multiple values simultaneously
+- **Change Tracking**: Detailed statistics on adds, updates, and deletes
+- **Path Indexing**: Debug helper for understanding signal hierarchy
+- **Smart Defaults**: Works out-of-the-box with sensible presets
+
+**Use Cases:**
+
+- Real-time dashboards with 500+ signals
+- Data grids with thousands of rows
+- Enterprise applications with complex state
+- High-frequency data feeds (60Hz+)
+
+**Bundle Cost:** +2.4KB gzipped
+
+**Installation:**
+
+```bash
+npm install @signaltree/enterprise
+```
+
+**Example:**
+
+```typescript
+import { signalTree } from '@signaltree/core';
+import { withEnterprise } from '@signaltree/enterprise';
+
+const tree = signalTree(largeState).with(withEnterprise());
+const result = tree.updateOptimized(newData, { ignoreArrayOrder: true });
+console.log(result.stats); // { totalChanges: 15, adds: 3, updates: 10, deletes: 2 }
+```
+
+### Changed
+
+#### Documentation Updates
+
+- **README.md**: Added enterprise section to Enhancer Guide with comprehensive examples
+- **Installation Examples**: Updated to include enterprise package options
+- **Migration Notice**: Clarified that enterprise is a separate optional package
+- **Package Structure**: Documented enterprise alongside ng-forms and callable-syntax as optional add-ons
+- **docs/overview.md**: Added enterprise to package ecosystem section
+
+#### Release Script
+
+- Updated `scripts/release.sh` to include enterprise package in publish workflow
+- Removed deprecated packages (batching, memoization, etc.) that were consolidated into core
+
+### Fixed
+
+- Fixed duplicate WeakRef declaration in enterprise package that caused TypeScript compilation errors
+- Corrected import paths in enterprise documentation from `@signaltree/core/enterprise` to `@signaltree/enterprise`
+
+### Published Packages
+
+- @signaltree/core@4.0.2 (includes all enhancers + updated README)
+- @signaltree/ng-forms@4.0.2 (updated README)
+- @signaltree/enterprise@4.0.2 ⭐ **NEW** (first publication)
+
 ## [4.0.0] - 2025-11-03
 
 ### Added - November 2, 2025

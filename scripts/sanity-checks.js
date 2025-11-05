@@ -23,10 +23,18 @@ checks.push(() => {
 });
 
 checks.push(() => {
-  const p = 'packages/batching/src/lib/batching.ts';
+  const p = 'packages/core/src/enhancers/batching/index.ts';
   const c = fileHas(p);
   return c && c.includes('withBatching')
-    ? [true, 'batching module present']
+    ? [true, 'batching enhancer present in core']
+    : [false, `missing or incomplete ${p}`];
+});
+
+checks.push(() => {
+  const p = 'packages/enterprise/src/lib/enterprise-enhancer.ts';
+  const c = fileHas(p);
+  return c && c.includes('withEnterprise')
+    ? [true, 'enterprise package present']
     : [false, `missing or incomplete ${p}`];
 });
 
