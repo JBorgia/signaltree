@@ -85,6 +85,8 @@
     "prepublish": "node scripts/ci-checks.js --jsdoc --sizes && npm run quality:check && npm run build:production",
     "publish:packages": "npm run prepublish && nx run-many -t build --configuration=production",
     "publish:all": "npm run prepublish && ./scripts/publish-all.sh",
+    "deprecate:packages": "./scripts/deprecate-packages.sh",
+    "deprecate:dry-run": "./scripts/deprecate-packages.sh --dry-run",
     "// Performance & Analysis": "Performance testing and bundle analysis",
     "perf:test": "npm run test:performance",
     "perf:build": "npm run build:production && npm run analyze:bundle",

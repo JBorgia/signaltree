@@ -211,6 +211,85 @@ npm install @signaltree/callable-syntax # Optional DX enhancement
 
 All enhancers (batching, memoization, middleware, entities, devtools, time-travel, presets) are now included in @signaltree/core. Import them from `@signaltree/core/enhancers/*` as needed.
 
+---
+
+## ⚠️ Migration Notice: Package Consolidation (v4.0.0+)
+
+**Important**: As of v4.0.0, all enhancer packages have been **consolidated into `@signaltree/core`** for better tree-shaking and simplified maintenance.
+
+### Deprecated Packages (No Longer Maintained)
+
+The following standalone packages are **deprecated** and will no longer receive updates:
+
+- ❌ `@signaltree/batching`
+- ❌ `@signaltree/memoization`
+- ❌ `@signaltree/devtools`
+- ❌ `@signaltree/entities`
+- ❌ `@signaltree/middleware`
+- ❌ `@signaltree/presets`
+- ❌ `@signaltree/time-travel`
+- ❌ `@signaltree/serialization`
+
+### Migration Guide
+
+**Before (v3.x - separate packages):**
+
+```typescript
+// ❌ Old way - multiple package installations
+import { signalTree } from '@signaltree/core';
+import { withBatching } from '@signaltree/batching';
+import { withMemoization } from '@signaltree/memoization';
+import { withDevtools } from '@signaltree/devtools';
+```
+
+**After (v4.0.0+ - consolidated):**
+
+```typescript
+// ✅ New way - single package import
+import { signalTree, withBatching, withMemoization, withDevtools } from '@signaltree/core';
+
+// All enhancers available from @signaltree/core
+```
+
+### Migration Steps
+
+1. **Uninstall deprecated packages:**
+
+   ```bash
+   npm uninstall @signaltree/batching @signaltree/memoization @signaltree/devtools \
+                 @signaltree/entities @signaltree/middleware @signaltree/presets \
+                 @signaltree/time-travel @signaltree/serialization
+   ```
+
+2. **Update imports in your code:**
+
+   ```bash
+   # Find all files with old imports
+   grep -r "@signaltree/(batching|memoization|devtools|entities|middleware|presets|time-travel|serialization)" src/
+
+   # Update imports to use @signaltree/core
+   ```
+
+3. **Update to latest version:**
+   ```bash
+   npm install @signaltree/core@latest
+   ```
+
+### Benefits of Consolidation
+
+- ✅ **Smaller bundle size**: 16.2% reduction when using multiple enhancers
+- ✅ **Better tree-shaking**: Unused features completely eliminated
+- ✅ **Simplified dependencies**: Single package to manage
+- ✅ **Version synchronization**: All features share the same version
+- ✅ **Reduced duplication**: No duplicate code between packages
+
+### Still Maintained Separately
+
+- ✅ `@signaltree/ng-forms` - Angular forms integration (still separate)
+- ✅ `@signaltree/callable-syntax` - Optional DX enhancement (still separate)
+
+---
+
 ### Usage example (deep nesting)
 
 ```typescript
