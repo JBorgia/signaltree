@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # SignalTree Package Deprecation Script
 # Marks deprecated packages on npm with migration instructions
@@ -46,16 +46,16 @@ if [ "$1" = "--dry-run" ]; then
     print_warning "Running in DRY RUN mode - no packages will actually be deprecated"
 fi
 
-# Define deprecated packages with their migration messages
-declare -A PACKAGES=(
-    ["batching"]="This package has been consolidated into @signaltree/core. Please use: import { withBatching } from '@signaltree/core'"
-    ["memoization"]="This package has been consolidated into @signaltree/core. Please use: import { withMemoization } from '@signaltree/core'"
-    ["devtools"]="This package has been consolidated into @signaltree/core. Please use: import { withDevtools } from '@signaltree/core'"
-    ["entities"]="This package has been consolidated into @signaltree/core. Please use entity helpers from '@signaltree/core'"
-    ["middleware"]="This package has been consolidated into @signaltree/core. Please use: import { withMiddleware } from '@signaltree/core'"
-    ["presets"]="This package has been consolidated into @signaltree/core. Please use preset functions from '@signaltree/core'"
-    ["time-travel"]="This package has been consolidated into @signaltree/core. Please use: import { withTimeTravel } from '@signaltree/core'"
-    ["serialization"]="This package has been consolidated into @signaltree/core. Please use: import { withSerialization } from '@signaltree/core'"
+# Define deprecated packages (package_name:message format)
+PACKAGES=(
+    "batching:This package has been consolidated into @signaltree/core. Please use: import { withBatching } from '@signaltree/core'"
+    "memoization:This package has been consolidated into @signaltree/core. Please use: import { withMemoization } from '@signaltree/core'"
+    "devtools:This package has been consolidated into @signaltree/core. Please use: import { withDevtools } from '@signaltree/core'"
+    "entities:This package has been consolidated into @signaltree/core. Please use entity helpers from '@signaltree/core'"
+    "middleware:This package has been consolidated into @signaltree/core. Please use: import { withMiddleware } from '@signaltree/core'"
+    "presets:This package has been consolidated into @signaltree/core. Please use preset functions from '@signaltree/core'"
+    "time-travel:This package has been consolidated into @signaltree/core. Please use: import { withTimeTravel } from '@signaltree/core'"
+    "serialization:This package has been consolidated into @signaltree/core. Please use: import { withSerialization } from '@signaltree/core'"
 )
 
 # Function to deprecate a single package
@@ -88,8 +88,10 @@ echo
 FAILED_PACKAGES=()
 SUCCESSFUL_PACKAGES=()
 
-for package_name in "${!PACKAGES[@]}"; do
-    message="${PACKAGES[$package_name]}"
+for entry in "${PACKAGES[@]}"; do
+    # Split entry on colon
+    package_name="${entry%%:*}"
+    message="${entry#*:}"
 
     if deprecate_package "$package_name" "$message"; then
         SUCCESSFUL_PACKAGES+=("$package_name")
