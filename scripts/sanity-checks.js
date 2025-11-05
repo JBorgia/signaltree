@@ -15,7 +15,7 @@ console.log('\n\ud83e\uddea Running workspace sanity checks (smoke/parity)');
 const checks = [];
 
 checks.push(() => {
-  const p = 'packages/core/src/lib/tree.ts';
+  const p = 'packages/core/src/lib/signal-tree.ts';
   const c = fileHas(p);
   return c && c.includes('signalTree')
     ? [true, 'core tree exists']
@@ -23,7 +23,7 @@ checks.push(() => {
 });
 
 checks.push(() => {
-  const p = 'packages/core/src/enhancers/batching/index.ts';
+  const p = 'packages/core/src/enhancers/batching/lib/batching.ts';
   const c = fileHas(p);
   return c && c.includes('withBatching')
     ? [true, 'batching enhancer present in core']
@@ -39,8 +39,7 @@ checks.push(() => {
 });
 
 checks.push(() => {
-  const p =
-    'apps/demo/src/app/components/modular-examples/modular-examples.component.ts';
+  const p = 'apps/demo/src/app/pages/core-demo/core-demo.component.ts';
   const c = fileHas(p);
   return c && c.includes('signalTree')
     ? [true, 'demo integration present']
