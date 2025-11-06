@@ -11,5 +11,8 @@
   "dependencies": {
     "@signaltree/shared": "workspace:*"
   },
+  "devDependencies": {
+    "@signaltree/core": "workspace:*"
+  },
   "sideEffects": false
 }

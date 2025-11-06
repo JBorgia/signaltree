@@ -5,7 +5,11 @@
     "declaration": true,
     "declarationMap": true,
     "inlineSources": true,
-    "types": []
+    "types": [],
+    "paths": {
+      "@signaltree/core": ["../../dist/packages/core/src"],
+      "@signaltree/core/*": ["../../dist/packages/core/src/*"]
+    }
   },
   "exclude": [
     "src/**/*.spec.ts",

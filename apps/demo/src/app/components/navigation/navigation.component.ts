@@ -21,6 +21,13 @@ export class NavigationComponent {
   examples: DemoExample[] = [
     // Getting Started
     {
+      id: 'docs',
+      title: '📚 Documentation',
+      description: 'Package documentation and READMEs',
+      route: '/docs',
+      category: 'getting-started',
+    },
+    {
       id: 'fundamentals',
       title: 'Fundamentals',
       description:

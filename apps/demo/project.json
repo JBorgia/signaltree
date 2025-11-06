@@ -19,6 +19,26 @@
           {
             "glob": "**/*",
             "input": "apps/demo/public"
+          },
+          {
+            "glob": "README.md",
+            "input": "packages/core",
+            "output": "assets/docs/core"
+          },
+          {
+            "glob": "README.md",
+            "input": "packages/ng-forms",
+            "output": "assets/docs/ng-forms"
+          },
+          {
+            "glob": "README.md",
+            "input": "packages/enterprise",
+            "output": "assets/docs/enterprise"
+          },
+          {
+            "glob": "README.md",
+            "input": "packages/callable-syntax",
+            "output": "assets/docs/callable-syntax"
           }
         ],
         "styles": ["apps/demo/src/styles.scss"]

@@ -4,7 +4,12 @@
     "outDir": "../../dist/out-tsc",
     "declaration": true,
     "moduleResolution": "node",
-    "types": ["node"]
+    "types": ["node"],
+    "skipLibCheck": true,
+    "paths": {
+      "@signaltree/core": ["../../dist/packages/core/src"],
+      "@signaltree/core/*": ["../../dist/packages/core/src/*"]
+    }
   },
   "include": ["src/**/*.ts"],
   "exclude": ["jest.config.ts", "src/**/*.spec.ts", "src/**/*.test.ts"]

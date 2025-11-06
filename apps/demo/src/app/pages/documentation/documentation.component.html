@@ -1,0 +1,32 @@
+<div class="documentation-container">
+  <div class="documentation-sidebar">
+    <h2>📚 Documentation</h2>
+    <div class="package-list">
+      @for (pkg of packages; track pkg.id) {
+        <button
+          class="package-button"
+          [class.active]="selectedPackage().id === pkg.id"
+          (click)="selectPackage(pkg)"
+        >
+          <div class="package-name">{{ pkg.name }}</div>
+          <div class="package-description">{{ pkg.description }}</div>
+        </button>
+      }
+    </div>
+  </div>
+
+  <div class="documentation-content">
+    @if (loading()) {
+      <div class="loading-spinner">
+        <div class="spinner"></div>
+        <p>Loading documentation...</p>
+      </div>
+    } @else if (error()) {
+      <div class="error-message">
+        <p>{{ error() }}</p>
+      </div>
+    } @else {
+      <div class="markdown-content" [innerHTML]="markdownContent()"></div>
+    }
+  </div>
+</div>
