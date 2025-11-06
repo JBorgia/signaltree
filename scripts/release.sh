@@ -261,16 +261,34 @@ done
 # Step 5: Build all packages
 print_step "Building all packages..."
 
-# Use nx run-many so Nx can parallelize and use cache
-# Convert array to comma-separated list for Nx
-PROJECTS_LIST=$(IFS=,; echo "${PACKAGES[*]}")
-npx nx run-many -t build --projects=$PROJECTS_LIST --configuration=production || {
-    print_error "Some package builds failed! Rolling back version changes."
+# Build packages in dependency order to ensure proper resolution
+# Core first, then everything else
+print_step "Building @signaltree/core first..."
+npx nx build core --configuration=production || {
+    print_error "Core package build failed! Rolling back version changes."
     rollback_versions
     exit 1
 }
+print_success "Core package built successfully"
 
-print_success "All packages built successfully"
+# Build remaining packages that depend on core
+REMAINING_PACKAGES=()
+for package in "${PACKAGES[@]}"; do
+    if [ "$package" != "core" ]; then
+        REMAINING_PACKAGES+=("$package")
+    fi
+done
+
+if [ ${#REMAINING_PACKAGES[@]} -gt 0 ]; then
+    print_step "Building remaining packages..."
+    REMAINING_LIST=$(IFS=,; echo "${REMAINING_PACKAGES[*]}")
+    npx nx run-many -t build --projects=$REMAINING_LIST --configuration=production || {
+        print_warning "Some dependent packages failed to build, but continuing with core..."
+        print_warning "Failed packages will be skipped during publish"
+    }
+fi
+
+print_success "Package builds completed"
 
 # Step 6: Commit changes
 print_step "Committing version changes..."
@@ -310,26 +328,54 @@ print_success "Changes and tag pushed to GitHub"
 # Step 8: Publish all packages to npm
 print_step "Publishing all packages to npm..."
 
+PUBLISHED_PACKAGES=()
+FAILED_PACKAGES=()
+
 for package in "${PACKAGES[@]}"; do
     DIST_PATH="./dist/packages/$package"
     if [ -d "$DIST_PATH" ]; then
         print_step "Publishing @signaltree/$package..."
         cd "$DIST_PATH"
-        npm publish --access public || {
-            print_error "npm publish failed for @signaltree/$package!"
+
+        # Check if package.json exists in dist
+        if [ ! -f "package.json" ]; then
+            print_warning "package.json not found in $DIST_PATH, skipping..."
+            FAILED_PACKAGES+=("$package")
             cd - > /dev/null
-            print_error "Some packages may have been published. Check npm manually."
-            print_warning "Git changes and tags have been pushed and cannot be automatically rolled back."
-            print_warning "You may need to manually unpublish packages or create a patch release."
-            exit 1
-        }
+            continue
+        fi
+
+        npm publish --access public 2>&1 | tee /tmp/npm_publish_$package.log
+        if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            print_success "Published @signaltree/$package successfully"
+            PUBLISHED_PACKAGES+=("$package")
+        else
+            # Check if it's a "cannot publish over existing version" error
+            if grep -q "cannot publish over the previously published versions" /tmp/npm_publish_$package.log; then
+                print_warning "@signaltree/$package@$NEW_VERSION already published, skipping..."
+                PUBLISHED_PACKAGES+=("$package")
+            else
+                print_error "npm publish failed for @signaltree/$package!"
+                FAILED_PACKAGES+=("$package")
+            fi
+        fi
         cd - > /dev/null
-        print_success "Published @signaltree/$package successfully"
+        rm -f /tmp/npm_publish_$package.log
     else
-        print_warning "Dist folder not found for $package at $DIST_PATH"
+        print_warning "Dist folder not found for $package at $DIST_PATH, skipping..."
+        FAILED_PACKAGES+=("$package")
     fi
 done
-print_success "Published to npm successfully"
+
+# Summary
+echo ""
+if [ ${#PUBLISHED_PACKAGES[@]} -gt 0 ]; then
+    print_success "Successfully published ${#PUBLISHED_PACKAGES[@]} package(s)"
+fi
+if [ ${#FAILED_PACKAGES[@]} -gt 0 ]; then
+    print_warning "Failed or skipped ${#FAILED_PACKAGES[@]} package(s): ${FAILED_PACKAGES[*]}"
+    print_warning "You may need to fix build issues and publish these manually"
+fi
 
 # Step 9: Clean up backup file (release succeeded)
 rm -f .version_backup

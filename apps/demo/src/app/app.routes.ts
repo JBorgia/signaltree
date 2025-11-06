@@ -132,6 +132,15 @@ export const appRoutes: Route[] = [
       ),
   },
 
+  // Documentation
+  {
+    path: 'docs',
+    loadComponent: () =>
+      import('./pages/documentation/documentation.component').then(
+        (c) => c.DocumentationComponent
+      ),
+  },
+
   // Redirect any unknown routes to home
   {
     path: '**',
