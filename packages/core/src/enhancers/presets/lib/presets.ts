@@ -155,7 +155,7 @@ export function createDevTree(overrides: Partial<TreeConfig> = {}) {
     withHighPerformanceMemoization(),
     withMiddleware(),
     withTimeTravel(),
-    withDevTools({ name: config.treeName ?? 'SignalTree Dev' })
+    withDevTools({ treeName: config.treeName ?? 'SignalTree Dev' })
   );
 
   return {
