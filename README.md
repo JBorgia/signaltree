@@ -578,7 +578,7 @@ npm install @signaltree/core @signaltree/ng-forms @signaltree/enterprise
 
 SignalTree's modular architecture allows you to compose exactly the features you need. Here's a comprehensive guide to each enhancer with real-world use cases:
 
-### 🎯 **@signaltree/batching** - Performance Optimization
+### 🎯 Batching Enhancer (built into @signaltree/core)
 
 _Use when: High-frequency updates, complex UI re-renders_
 
@@ -608,7 +608,7 @@ tree.batchUpdate((state) => ({
 // 455.8x performance improvement measured
 ```
 
-### ⚡ **@signaltree/memoization** - Intelligent Caching
+### ⚡ Memoization Enhancer (built into @signaltree/core)
 
 _Use when: Expensive computations, frequently accessed derived data_
 
@@ -654,7 +654,7 @@ tree.clearMemoCache(); // Clear when needed
 - Preset configurations: `withSelectorMemoization()`, `withComputedMemoization()`, `withDeepStateMemoization()`, `withHighFrequencyMemoization()`
 - Same configurations used in benchmark suite for transparent performance comparison
 
-### 📊 **@signaltree/entities** - Advanced CRUD Operations
+### 📊 Entities Enhancer (built into @signaltree/core)
 
 _Use when: Managing collections of data with IDs_
 
@@ -688,7 +688,7 @@ const adminUsers = users.selectBy((user) => user.role === 'admin');
 const userCount = users.selectTotal();
 ```
 
-### 🌊 **Async helpers moved to `@signaltree/middleware`**
+### 🌊 Async helpers via withMiddleware (built into @signaltree/core)
 
 _Use when: API calls, loading states, error handling_
 
@@ -754,7 +754,7 @@ await tree.load(); // Load from storage
 await tree.clear(); // Clear storage
 ```
 
-### 🕰️ **@signaltree/time-travel** - Undo/Redo & History
+### 🕰️ Time-Travel Enhancer (built into @signaltree/core)
 
 _Use when: User-controlled state changes, debugging, audit trails_
 
@@ -790,7 +790,7 @@ const history = tree.getHistory();
 tree.jumpTo(5); // Jump to specific point (by index)
 ```
 
-### 🛠️ **@signaltree/devtools** - Development & Debugging
+### 🛠️ DevTools Enhancer (built into @signaltree/core)
 
 _Use when: Development, debugging, monitoring_
 
@@ -821,7 +821,7 @@ console.log(`Total updates: ${metrics.totalUpdates}`);
 console.log(`Average update time: ${metrics.averageUpdateTime}ms`);
 ```
 
-### 🔧 **@signaltree/middleware** - State Interceptors
+### 🔧 Middleware Enhancer (withMiddleware)
 
 _Use when: Logging, validation, transformation, security_
 
@@ -940,7 +940,7 @@ const formTree = createFormTree(
 })
 ```
 
-### 🎨 **@signaltree/presets** - Pre-configured Setups
+### 🎨 TREE_PRESETS (built into @signaltree/core)
 
 _Use when: Common patterns, quick setup, standard configurations_
 
@@ -1074,27 +1074,27 @@ The API remains 100% compatible - only the import statements change!
 
 ### Memory Optimization Metrics (New!)
 
-| Feature                    |              SignalTree              | NgRx | Akita | Elf | MobX | NGXS | Native |
-| :------------------------- | :----------------------------------: | :--: | :---: | :-: | :--: | :--: | :----: |
-| **Lazy Signal Creation**   |      🏆<br/>_✅ 60-80% savings_      |  ❌  |  ❌   | ❌  |  ⚠️  |  ❌  |   ❌   |
-| **Structural Sharing**     |      🏆<br/>_✅ 90% reduction_       |  ⚠️  |  ❌   | ⚠️  |  ✅  |  ❌  |   ❌   |
-| **Patch-based History**    |      🏆<br/>_✅ 95% reduction_       |  ❌  |  ❌   | ❌  |  ❌  |  ❌  |   ❌   |
-| **Smart Cache Eviction**   | ✅<br/>_Via @signaltree/memoization_ |  ❌  |  ❌   | ❌  |  ⚠️  |  ❌  |   ❌   |
-| **Proxy Caching**          |      🏆<br/>_✅ WeakMap-based_       |  ❌  |  ❌   | ❌  |  ❌  |  ❌  |   ❌   |
-| **Memory Leak Prevention** |      🏆<br/>_✅ Comprehensive_       |  ⚠️  |  ⚠️   | ✅  |  ✅  |  ⚠️  |   ✅   |
-| **Resource Cleanup**       |        🏆<br/>_✅ destroy()_         |  ⚠️  |  ✅   | ✅  |  ✅  |  ⚠️  |   ⚠️   |
+| Feature                    |          SignalTree           | NgRx | Akita | Elf | MobX | NGXS | Native |
+| :------------------------- | :---------------------------: | :--: | :---: | :-: | :--: | :--: | :----: |
+| **Lazy Signal Creation**   |  🏆<br/>_✅ 60-80% savings_   |  ❌  |  ❌   | ❌  |  ⚠️  |  ❌  |   ❌   |
+| **Structural Sharing**     |   🏆<br/>_✅ 90% reduction_   |  ⚠️  |  ❌   | ⚠️  |  ✅  |  ❌  |   ❌   |
+| **Patch-based History**    |   🏆<br/>_✅ 95% reduction_   |  ❌  |  ❌   | ❌  |  ❌  |  ❌  |   ❌   |
+| **Smart Cache Eviction**   | ✅<br/>_Built-in memoization_ |  ❌  |  ❌   | ❌  |  ⚠️  |  ❌  |   ❌   |
+| **Proxy Caching**          |   🏆<br/>_✅ WeakMap-based_   |  ❌  |  ❌   | ❌  |  ❌  |  ❌  |   ❌   |
+| **Memory Leak Prevention** |   🏆<br/>_✅ Comprehensive_   |  ⚠️  |  ⚠️   | ✅  |  ✅  |  ⚠️  |   ✅   |
+| **Resource Cleanup**       |     🏆<br/>_✅ destroy()_     |  ⚠️  |  ✅   | ✅  |  ✅  |  ⚠️  |   ⚠️   |
 
 ### Advanced Features Comparison (New!)
 
-| Feature                    |              SignalTree              |  NgRx   |  Akita  |   Elf   |  MobX   |  NGXS   | Native |
-| :------------------------- | :----------------------------------: | :-----: | :-----: | :-----: | :-----: | :-----: | :----: |
-| **Path-based Memoization** |   🏆<br/>_80% fewer invalidations_   |   ❌    |   ❌    |   ❌    |   ❌    |   ❌    |   ❌   |
-| **Pattern Matching**       |         🏆<br/>_Glob-style_          |   ❌    |   ❌    |   ❌    |   ❌    |   ❌    |   ❌   |
-| **Debug Mode**             |        🏆<br/>_Configurable_         | Limited | Limited | Limited | Limited | Limited |   ❌   |
-| **Memory Profiling**       |  🏆<br/>_Via @signaltree/devtools_   |   ❌    |   ❌    |   ❌    | Limited |   ❌    |   ❌   |
-| **Cache Metrics**          |      🏆<br/>_Hit/miss tracking_      |   ❌    |   ❌    |   ❌    |   ❌    |   ❌    |   ❌   |
-| **Smart Optimization**     |         🏆<br/>_optimize()_          |   ❌    |   ❌    |   ❌    |   ❌    |   ❌    |   ❌   |
-| **Selective Cleanup**      | ✅<br/>_Via @signaltree/memoization_ |   ❌    |   ❌    |   ❌    |   ❌    |   ❌    |   ❌   |
+| Feature                    |            SignalTree            |  NgRx   |  Akita  |   Elf   |  MobX   |  NGXS   | Native |
+| :------------------------- | :------------------------------: | :-----: | :-----: | :-----: | :-----: | :-----: | :----: |
+| **Path-based Memoization** | 🏆<br/>_80% fewer invalidations_ |   ❌    |   ❌    |   ❌    |   ❌    |   ❌    |   ❌   |
+| **Pattern Matching**       |       🏆<br/>_Glob-style_        |   ❌    |   ❌    |   ❌    |   ❌    |   ❌    |   ❌   |
+| **Debug Mode**             |      🏆<br/>_Configurable_       | Limited | Limited | Limited | Limited | Limited |   ❌   |
+| **Memory Profiling**       |    🏆<br/>_Built-in devtools_    |   ❌    |   ❌    |   ❌    | Limited |   ❌    |   ❌   |
+| **Cache Metrics**          |    🏆<br/>_Hit/miss tracking_    |   ❌    |   ❌    |   ❌    |   ❌    |   ❌    |   ❌   |
+| **Smart Optimization**     |       🏆<br/>_optimize()_        |   ❌    |   ❌    |   ❌    |   ❌    |   ❌    |   ❌   |
+| **Selective Cleanup**      |  ✅<br/>_Built-in memoization_   |   ❌    |   ❌    |   ❌    |   ❌    |   ❌    |   ❌   |
 
 ### 🚀 Why SignalTree Wins
 
@@ -2448,7 +2448,7 @@ entities.remove(id);
 const action = tree.asyncAction(async () => api.call());
 ```
 
-### Batching Package (@signaltree/batching)
+### Batching Enhancer (Included in @signaltree/core)
 
 ```typescript
 import { signalTree } from '@signaltree/core';
@@ -2464,7 +2464,7 @@ tree.batchUpdate((state) => ({
 }));
 ```
 
-### Memoization Package (@signaltree/memoization)
+### Memoization Enhancer (Included in @signaltree/core)
 
 ```typescript
 import { withMemoization } from '@signaltree/core';
@@ -2481,7 +2481,7 @@ tree.clearMemoCache(); // Clear all
 // const stats = tree.getCacheStats();
 ```
 
-### Time Travel Package (@signaltree/time-travel)
+### Time Travel Enhancer (Included in @signaltree/core)
 
 ```typescript
 import { withTimeTravel } from '@signaltree/core';
@@ -2877,15 +2877,14 @@ SignalTree is built with a modular architecture that allows you to choose exactl
 
 ```
 @signaltree/core (7.20KB)
-├── @signaltree/batching (1.27KB)
-├── @signaltree/memoization (2.33KB)
-// async package removed from monorepo
-├── @signaltree/entities (0.97KB)
-├── @signaltree/middleware (1.89KB)
-├── @signaltree/devtools (2.49KB)
-├── @signaltree/time-travel (1.75KB)
-├── @signaltree/ng-forms (3.38KB)
-└── @signaltree/presets (0.84KB)
+├── Includes batching, memoization, middleware, entities,
+│   devtools, time-travel, serialization, presets (tree-shakeable)
+└── Depends on @signaltree/shared for shared utilities
+
+Optional add-ons:
+├── @signaltree/enterprise (7.5KB)
+├── @signaltree/ng-forms (3.6KB)
+└── @signaltree/callable-syntax (dev-only transform ~2.5KB)
 ```
 
 ## 🧪 Testing & Validation
@@ -3214,15 +3213,11 @@ Special thanks to **Christian Moser** - an invaluable tester, colleague, and fri
 
 ### Feature Packages
 
-- Async helpers moved to middleware package (see `packages/middleware`)
-- [@signaltree/batching](https://www.npmjs.com/package/@signaltree/batching) - Performance optimization through batching
-- [@signaltree/memoization](https://www.npmjs.com/package/@signaltree/memoization) - Caching and computed values
-- [@signaltree/middleware](https://www.npmjs.com/package/@signaltree/middleware) - Extensible middleware system
-- [@signaltree/entities](https://www.npmjs.com/package/@signaltree/entities) - Entity and collection management
-- [@signaltree/devtools](https://www.npmjs.com/package/@signaltree/devtools) - Development and debugging tools
-- [@signaltree/time-travel](https://www.npmjs.com/package/@signaltree/time-travel) - Undo/redo functionality
-- [@signaltree/presets](https://www.npmjs.com/package/@signaltree/presets) - Pre-configured setups
+- All enhancers (batching, memoization, middleware, entities, devtools, time-travel, serialization, presets) ship **inside `@signaltree/core`**
+- [@signaltree/enterprise](https://www.npmjs.com/package/@signaltree/enterprise) - Enterprise-scale optimization bundle
 - [@signaltree/ng-forms](https://www.npmjs.com/package/@signaltree/ng-forms) - Angular forms integration
+- [@signaltree/callable-syntax](https://www.npmjs.com/package/@signaltree/callable-syntax) - Callable syntax TypeScript transform (dev dependency)
+- Deprecated packages (`@signaltree/batching`, `@signaltree/middleware`, etc.) now redirect to the core package and should be removed from your dependencies
 
 ## 📄 License & Intellectual Property
 

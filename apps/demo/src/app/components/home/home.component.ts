@@ -163,17 +163,24 @@ export class HomeComponent {
   quickStartCode = `# Install the core package (all enhancers included)
 npm install @signaltree/core
 
-# Optional: Serialization, Angular forms, or callable syntax
-npm install @signaltree/serialization   # State persistence & SSR
+# Optional add-on packages
 npm install @signaltree/ng-forms        # Angular forms integration
+npm install @signaltree/enterprise      # Enterprise-scale optimizations
 npm install @signaltree/callable-syntax # Optional DX enhancement
 
-# All enhancers (batching, memoization, middleware, entities, devtools, time-travel, presets) are now included in @signaltree/core.
-# Import them from '@signaltree/core/enhancers/*' as needed.
+# All enhancers (batching, memoization, middleware, entities, devtools,
+# time-travel, serialization, presets) are built into @signaltree/core
 
 // Basic Usage
-import { signalTree } from '@signaltree/core';
-import { withBatching, withMemoization, withEntities, withMiddleware, withDevTools, withTimeTravel, withPresets } from '@signaltree/core/enhancers';
+import {
+  signalTree,
+  withBatching,
+  withMemoization,
+  withEntities,
+  withMiddleware,
+  withDevTools,
+  withTimeTravel
+} from '@signaltree/core';
 
 // Create a signal tree with enhancers
 const userTree = signalTree({

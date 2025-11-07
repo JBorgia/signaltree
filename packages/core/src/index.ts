@@ -223,6 +223,17 @@ export {
   createDevTree,
 } from './enhancers/presets/lib/presets';
 
+/**
+ * Computed enhancer for derived signal creation
+ */
+export {
+  computedEnhancer,
+  createComputed,
+  type ComputedConfig,
+  type ComputedSignal,
+  type ComputedSignalTree,
+} from './enhancers/computed/lib/computed';
+
 // ============================================
 // CONSTANTS EXPORTS
 // ============================================

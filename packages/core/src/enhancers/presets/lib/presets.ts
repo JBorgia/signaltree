@@ -1,4 +1,9 @@
 import { composeEnhancers } from '../../../lib/utils';
+import { withBatching, withHighPerformanceBatching } from '../../batching/lib/batching';
+import { withDevTools } from '../../devtools/lib/devtools';
+import { withHighPerformanceMemoization, withMemoization } from '../../memoization/lib/memoization';
+import { withMiddleware } from '../../middleware/lib/middleware';
+import { withTimeTravel } from '../../time-travel/lib/time-travel';
 
 import type { TreeConfig } from '../../../lib/types';
 export type TreePreset = 'basic' | 'performance' | 'development' | 'production';
@@ -143,49 +148,14 @@ export function combinePresets(
 export function createDevTree(overrides: Partial<TreeConfig> = {}) {
   const config = createPresetConfig('development', overrides);
 
-  // Compose enhancers in a predictable left-to-right order. We import the
-  // enhancers lazily so consumers who don't install dev packages won't fail at
-  // module-eval time.
-  const enhancers: Array<(tree: unknown) => unknown> = [];
-
-  // Helper to access CommonJS-style require at runtime without forcing Node types
-  function tryRequire(id: string): unknown | undefined {
-    const maybeReq = (
-      globalThis as unknown as { require?: (id: string) => unknown }
-    ).require;
-    if (typeof maybeReq !== 'function') return undefined;
-    try {
-      return maybeReq(id);
-    } catch {
-      return undefined;
-    }
-  }
-
-  try {
-    const mod = tryRequire('@signaltree/devtools') as
-      | { withDevtools?: unknown; withDevTools?: unknown; default?: unknown }
-      | undefined;
-    const withDevtools =
-      mod && (mod.withDevtools ?? mod.withDevTools ?? mod.default ?? mod);
-    if (typeof withDevtools === 'function')
-      enhancers.push(withDevtools as (t: unknown) => unknown);
-  } catch (e) {
-    void e;
-  }
-
-  try {
-    const mod = tryRequire('@signaltree/time-travel') as
-      | { withTimeTravel?: unknown; default?: unknown }
-      | undefined;
-    const withTimeTravel = mod && (mod.withTimeTravel ?? mod.default ?? mod);
-    if (typeof withTimeTravel === 'function')
-      enhancers.push(withTimeTravel as (t: unknown) => unknown);
-  } catch (e) {
-    void e;
-  }
-
   const composed = composeEnhancers(
-    ...(enhancers as Array<(t: unknown) => unknown>)
+    withBatching(),
+    withHighPerformanceBatching(),
+    withMemoization(),
+    withHighPerformanceMemoization(),
+    withMiddleware(),
+    withTimeTravel(),
+    withDevTools({ name: config.treeName ?? 'SignalTree Dev' })
   );
 
   return {
