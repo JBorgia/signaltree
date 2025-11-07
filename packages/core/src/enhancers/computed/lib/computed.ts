@@ -39,12 +39,11 @@ export interface ComputedSignalTree<T extends Record<string, unknown>>
  *
  * @example
  * ```typescript
- * import { signalTree } from '@signaltree/core';
- * import { computed } from '@signaltree/core/enhancers/computed';
+ * import { signalTree, computedEnhancer } from '@signaltree/core';
  *
  * const state = signalTree(
  *   { count: 0, multiplier: 2 },
- *   { enhancers: [computed()] }
+ *   { enhancers: [computedEnhancer()] }
  * );
  *
  * // Create a computed signal
@@ -55,7 +54,8 @@ export interface ComputedSignalTree<T extends Record<string, unknown>>
  * console.log(doubled()); // 10
  * ```
  */
-export function computedEnhancer(config: ComputedConfig = {}) {
+export function computedEnhancer(_config: ComputedConfig = {}) {
+  void _config;
   return createEnhancer<
     SignalTree<Record<string, unknown>>,
     ComputedSignalTree<Record<string, unknown>>
@@ -89,7 +89,7 @@ export function computedEnhancer(config: ComputedConfig = {}) {
  * @example
  * ```typescript
  * import { signal } from '@angular/core';
- * import { createComputed } from '@signaltree/core/enhancers/computed';
+ * import { createComputed } from '@signaltree/core';
  *
  * const a = signal(1);
  * const b = signal(2);

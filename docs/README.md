@@ -24,16 +24,11 @@ Use this index to navigate the canonical documentation.
 
 ## Packages
 
-- Core: ../../packages/core/README.md
-- Batching: ../../packages/batching/README.md
-- Devtools: ../../packages/devtools/README.md
-- Entities: ../../packages/entities/README.md
-- Memoization: ../../packages/memoization/README.md
-- Middleware: ../../packages/middleware/README.md
-- ng-forms: ../../packages/ng-forms/README.md
-- Presets: ../../packages/presets/README.md
-- Serialization: ../../packages/serialization/README.md
-- Time travel: ../../packages/time-travel/README.md
+- Core (all enhancers included): ../../packages/core/README.md
+- Enterprise add-ons: ../../packages/enterprise/README.md
+- Angular forms integration: ../../packages/ng-forms/README.md
+- Callable syntax transform: ../../packages/callable-syntax/README.md
+- Shared utilities: ../../packages/shared/README.md
 
 ## Scripts
 

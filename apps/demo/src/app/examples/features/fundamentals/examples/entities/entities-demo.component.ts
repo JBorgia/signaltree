@@ -3,12 +3,7 @@ import { Component, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree, withEntities } from '@signaltree/core';
 
-import {
-  generatePosts,
-  generateUsers,
-  Post,
-  User,
-} from '../../../../../shared/models';
+import { generatePosts, generateUsers, Post, User } from '../../../../../shared/models';
 
 interface EntitiesState {
   users: User[];
@@ -50,7 +45,7 @@ export class EntitiesDemoComponent {
     postsSortAsc: false,
   }).with(withEntities());
 
-  // Entity helpers using @signaltree/entities
+  // Entity helpers from withEntities enhancer (@signaltree/core)
   userHelpers = this.store.entities<User>('users');
   postHelpers = this.store.entities<Post>('posts');
 

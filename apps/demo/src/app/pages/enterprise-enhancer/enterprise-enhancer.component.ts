@@ -15,7 +15,7 @@ export class EnterpriseEnhancerComponent {
 
   public example = `
 import { signalTree } from '@signaltree/core';
-import { withTimeTravel, withSerialization, withMiddleware } from '@signaltree/core/enhancers';
+import { withTimeTravel, withSerialization, withMiddleware } from '@signaltree/core';
 
 const tree = signalTree(state).with(withTimeTravel(), withSerialization(), withMiddleware());
 `;

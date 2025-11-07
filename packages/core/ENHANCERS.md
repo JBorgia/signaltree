@@ -1,8 +1,10 @@
-# Enhancer System (Core) — Overview
+# Enhancer System — Overview
 
-This document describes the enhancer system introduced in `@signaltree/core`.
-Enhancers are optional, tree-shakable extensions that augment a `SignalTree` at runtime
+This document describes the enhancer system in `@signaltree/core`.
+Enhancers are built-in, tree-shakable extensions that augment a `SignalTree` at runtime
 via `tree.with(...)`.
+
+All enhancers are exported from `@signaltree/core` — no separate packages needed.
 
 Key pieces
 
@@ -27,46 +29,43 @@ Behavior
 - A topological sort orders enhancers that declare metadata. On cycles the system falls back to
   the user-provided order and warns in debug mode.
 
-Examples (Angular-first)
+## Examples
 
-The preferred pattern is to import small, focused enhancers from their packages and compose them explicitly.
+All enhancers are imported from `@signaltree/core`:
 
-Simple composition using `composeEnhancers` from `@signaltree/core`:
+### Simple composition using `composeEnhancers`:
 
 ```typescript
-import { signalTree, composeEnhancers } from '@signaltree/core';
-import { withBatching } from '@signaltree/core';
-import { withDevTools } from '@signaltree/core';
+import { signalTree, composeEnhancers, withBatching, withDevTools } from '@signaltree/core';
 
 const composed = composeEnhancers(withBatching, withDevTools);
 
 const tree = signalTree({ count: 0 }).with(composed);
 ```
 
-Or apply enhancers directly in explicit order (recommended for predictability):
+### Or apply enhancers directly in explicit order (recommended for predictability):
 
 ```typescript
-import { signalTree } from '@signaltree/core';
-import { withBatching } from '@signaltree/core';
-import { withDevTools } from '@signaltree/core';
+import { signalTree, withBatching, withDevTools } from '@signaltree/core';
 
 const enhanced = signalTree({ count: 0 }).with(withBatching, withDevTools);
 ```
 
-Use a preset for convenient developer onboarding. `@signaltree/presets` exposes helpers such as `createDevTree` which
-returns a `config` and a composed `enhancer` that you can apply:
+### Use presets for convenient developer setup:
+
+`createDevTree` provides a pre-configured development setup:
 
 ```typescript
-import { signalTree } from '@signaltree/core';
 import { createDevTree } from '@signaltree/core';
 
-const { enhancer } = createDevTree();
-const tree = signalTree({ count: 0 }).with(enhancer);
+const tree = createDevTree({ count: 0 });
+// Includes: batching, memoization, devtools, time-travel
 ```
 
-Best practices
+## Best practices
 
 - Prefer mutation (augment `tree` and return it). This preserves identity for consumers holding
   references to the original tree.
 - Provide `name` and `provides` for any enhancer that adds public capabilities.
 - Use `requires` for enhancers that depend on other features (core or other enhancers).
+- All built-in enhancers are available from `@signaltree/core` — no need for separate packages.

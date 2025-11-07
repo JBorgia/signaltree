@@ -32,7 +32,6 @@
       "@signaltree/middleware": [
         "packages/core/src/enhancers/middleware/index.ts"
       ],
-      "@signaltree/monolith": ["signaltree/src/index.ts"],
       "@signaltree/ng-forms": ["packages/ng-forms/src/index.ts"],
       "@signaltree/presets": ["packages/core/src/enhancers/presets/index.ts"],
       "@signaltree/serialization": [

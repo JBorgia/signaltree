@@ -21,15 +21,16 @@ This document consolidates the feature overview and technical specifications for
 - Structural sharing for immutable updates
 - Compact bundle sizes across the ecosystem
 
-## Package ecosystem (selected)
+## Package ecosystem
 
-- @signaltree/core: foundational signals, typing, performance, and all enhancers (batching, memoization, middleware, entities, devtools, time-travel, presets, serialization)
-- @signaltree/ng-forms: Signal-first Angular forms (createFormTree, persistence, wizard flows)
-- @signaltree/enterprise: Enterprise-scale optimizations for large applications (500+ signals, bulk updates, diff-based changes)
-- @signaltree/callable-syntax: Build-time transform for callable signal syntax (dev dependency)
+SignalTree consists of one core package with all enhancers built-in, plus three optional add-on packages:
 
-// All enhancers are now included in @signaltree/core and should be imported from there.
-// Optional add-on packages (@signaltree/enterprise, @signaltree/ng-forms, @signaltree/callable-syntax) remain separate for flexibility.
+- **@signaltree/core**: Complete state management solution including all enhancers (batching, memoization, middleware, entities, devtools, time-travel, serialization, presets)
+- **@signaltree/ng-forms**: Angular Forms integration (separate package)
+- **@signaltree/enterprise**: Enterprise-scale optimizations for 500+ signals (separate package)
+- **@signaltree/callable-syntax**: Build-time transform for callable signal syntax (dev dependency, separate package)
+
+**All enhancers are exported from `@signaltree/core`** — no need for separate enhancer packages.
 
 ## Technical specifications
 

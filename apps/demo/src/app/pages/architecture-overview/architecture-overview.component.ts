@@ -31,8 +31,8 @@ export class ArchitectureOverviewComponent {
     },
     {
       aspect: 'Dependencies',
-      separate: '@signaltree/core + @signaltree/computed + @signaltree/entities',
-      consolidated: '@signaltree/core (includes all features)',
+      separate: 'Multiple packages (fictional old approach)',
+      consolidated: '@signaltree/core (includes all enhancers)',
       benefit: 'Simplified dependency management',
     },
     {
@@ -79,10 +79,15 @@ export class ArchitectureOverviewComponent {
   ];
 
   importExamples = {
-    separate: `import { createSignalTree } from '@signaltree/core';
-import { computed } from '@signaltree/computed';
-import { entities } from '@signaltree/entities';
-import { middleware } from '@signaltree/middleware';`,
-    consolidated: `import { createSignalTree, computed, entities, middleware } from '@signaltree/core';`,
+    separate: `// Legacy (pre-v4) approach required multiple installs and manual wiring
+// e.g. separate batching/entities packages + core
+// (deprecated in favor of single-package exports)`,
+    consolidated: `// Current approach - all enhancers in core
+import {
+  signalTree,
+  withBatching,
+  withEntities,
+  withMiddleware
+} from '@signaltree/core';`,
   };
 }

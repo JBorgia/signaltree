@@ -3,13 +3,7 @@ import { Component, computed, effect } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree, withBatching } from '@signaltree/core';
 
-import {
-  generatePosts,
-  generateUsers,
-  Post,
-  sleep,
-  User,
-} from '../../../../../../shared/models';
+import { generatePosts, generateUsers, Post, sleep, User } from '../../../../../../shared/models';
 
 interface BatchingState {
   users: User[];
@@ -214,7 +208,7 @@ export class BatchingDemoComponent {
   }
 
   addBulkUserOperations() {
-    // Use proper batching from @signaltree/batching
+    // Use batching from withBatching enhancer (@signaltree/core)
     const newUsers: User[] = [];
     for (let i = 0; i < 3; i++) {
       newUsers.push({
@@ -314,7 +308,7 @@ export class BatchingDemoComponent {
     const users = this.users();
     if (users.length === 0) return;
 
-    // Use proper batching from @signaltree/batching
+    // Use batching from withBatching enhancer (@signaltree/core)
     const newPosts: Post[] = [];
     for (let i = 0; i < 4; i++) {
       const randomUser = users[Math.floor(Math.random() * users.length)];
