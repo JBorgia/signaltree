@@ -382,7 +382,7 @@ After initially removing synthetic implementations, benchmarks have been **prope
 
 This changelog was created on October 7, 2025. Prior changes were not formally tracked in a changelog format but can be found in git commit history.
 
-## [4.0.8] - 2025-11-07
+## [4.0.9] - 2025-11-07
 
 ### Added
 

@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/callable-syntax",
-  "version": "4.0.8",
+  "version": "4.0.9",
   "description": "Optional zero-runtime callable syntax transform for SignalTree unified leaf API.",
   "license": "BSL-1.1",
   "type": "commonjs",
