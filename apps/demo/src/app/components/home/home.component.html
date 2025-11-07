@@ -23,7 +23,7 @@
 
   <!-- What is SignalTree? -->
   <section class="description-section">
-    <h2 class="section-title">� What is SignalTree?</h2>
+    <h2 class="section-title">❓ What is SignalTree?</h2>
     <div class="description-content">
       <p>
         SignalTree is a revolutionary hierarchical state management library
@@ -33,9 +33,9 @@
         management simple, fast, and type-safe.
       </p>
       <p>
-        Designed with modularity in mind, install only what you need - from the
-        lightweight 7.3KB core to powerful optional features like middleware,
-        time-travel debugging, entity management, and more.
+        Designed with modularity in mind, install only what you need—from the
+        lightweight core to optional packages like callable syntax, Angular
+        forms integration, and the enterprise optimizer.
       </p>
     </div>
   </section>
@@ -44,162 +44,170 @@
   <section class="core-features-section">
     <h2 class="section-title">✨ Core Features</h2>
     <div class="features-grid">
-      <div *ngFor="let feature of coreFeatures" class="feature-card">
-        <h3 class="feature-name">{{ feature.name }}</h3>
-        <p class="feature-description">{{ feature.description }}</p>
-      </div>
+      @for (feature of coreFeatures; track feature.name) {
+        <div class="feature-card">
+          <h3 class="feature-name">{{ feature.name }}</h3>
+          <p class="feature-description">{{ feature.description }}</p>
+        </div>
+      }
 
       <!-- Performance -->
-      <div class="category-section">
-        <h3 class="category-title">⚡ Performance</h3>
-        <div class="method-list">
-          <span
-            *ngFor="
-              let method of getFeaturesByCategory('Performance')[0]?.methods
-            "
-            class="method-tag"
-          >
-            {{ method }}()
-          </span>
-        </div>
-        <div class="category-grid">
-          <div
-            *ngFor="let feature of getFeaturesByCategory('Performance')"
-            class="category-card"
-          >
-            <h4 class="card-title">{{ feature.title }}</h4>
-            <p class="card-description">{{ feature.description }}</p>
-            <a [routerLink]="feature.route" class="card-link">
-              View Performance Examples →
-            </a>
+      @let performanceFeatures = getFeaturesByCategory('Performance');
+      @if (performanceFeatures.length > 0) {
+        <div class="category-section">
+          <h3 class="category-title">⚡ Performance</h3>
+          @if (performanceFeatures[0]?.methods?.length) {
+            <div class="method-list">
+              @for (method of performanceFeatures[0].methods; track method) {
+                <span class="method-tag">
+                  {{ method }}()
+                </span>
+              }
+            </div>
+          }
+          <div class="category-grid">
+            @for (feature of performanceFeatures; track feature.title) {
+              <div class="category-card">
+                <h4 class="card-title">{{ feature.title }}</h4>
+                <p class="card-description">{{ feature.description }}</p>
+                <a [routerLink]="feature.route" class="card-link">
+                  View Performance Examples →
+                </a>
+              </div>
+            }
           </div>
         </div>
-      </div>
+      }
 
       <!-- Middleware -->
-      <div class="category-section">
-        <h3 class="category-title">🔌 Middleware</h3>
-        <div class="method-list">
-          <span
-            *ngFor="
-              let method of getFeaturesByCategory('Middleware')[0]?.methods
-            "
-            class="method-tag"
-          >
-            {{ method }}()
-          </span>
-        </div>
-        <div class="category-grid">
-          <div
-            *ngFor="let feature of getFeaturesByCategory('Middleware')"
-            class="category-card"
-          >
-            <h4 class="card-title">{{ feature.title }}</h4>
-            <p class="card-description">{{ feature.description }}</p>
-            <a [routerLink]="feature.route" class="card-link">
-              Learn Middleware →
-            </a>
+      @let middlewareFeatures = getFeaturesByCategory('Middleware');
+      @if (middlewareFeatures.length > 0) {
+        <div class="category-section">
+          <h3 class="category-title">🔌 Middleware</h3>
+          @if (middlewareFeatures[0]?.methods?.length) {
+            <div class="method-list">
+              @for (method of middlewareFeatures[0].methods; track method) {
+                <span class="method-tag">
+                  {{ method }}()
+                </span>
+              }
+            </div>
+          }
+          <div class="category-grid">
+            @for (feature of middlewareFeatures; track feature.title) {
+              <div class="category-card">
+                <h4 class="card-title">{{ feature.title }}</h4>
+                <p class="card-description">{{ feature.description }}</p>
+                <a [routerLink]="feature.route" class="card-link">
+                  Learn Middleware →
+                </a>
+              </div>
+            }
           </div>
         </div>
-      </div>
+      }
 
       <!-- Entity Management -->
-      <div class="category-section">
-        <h3 class="category-title">📦 Entity Management</h3>
-        <div class="method-list">
-          <span
-            *ngFor="let method of getFeaturesByCategory('Entity')[0]?.methods"
-            class="method-tag"
-          >
-            {{ method }}()
-          </span>
-        </div>
-        <div class="category-grid">
-          <div
-            *ngFor="let feature of getFeaturesByCategory('Entity')"
-            class="category-card"
-          >
-            <h4 class="card-title">{{ feature.title }}</h4>
-            <p class="card-description">{{ feature.description }}</p>
-            <a [routerLink]="feature.route" class="card-link">
-              Explore Entity CRUD →
-            </a>
+      @let entityFeatures = getFeaturesByCategory('Entity');
+      @if (entityFeatures.length > 0) {
+        <div class="category-section">
+          <h3 class="category-title">📦 Entity Management</h3>
+          @if (entityFeatures[0]?.methods?.length) {
+            <div class="method-list">
+              @for (method of entityFeatures[0].methods; track method) {
+                <span class="method-tag">
+                  {{ method }}()
+                </span>
+              }
+            </div>
+          }
+          <div class="category-grid">
+            @for (feature of entityFeatures; track feature.title) {
+              <div class="category-card">
+                <h4 class="card-title">{{ feature.title }}</h4>
+                <p class="card-description">{{ feature.description }}</p>
+                <a [routerLink]="feature.route" class="card-link">
+                  Explore Entity CRUD →
+                </a>
+              </div>
+            }
           </div>
         </div>
-      </div>
+      }
 
       <!-- Async (via Middleware) -->
-      <div class="category-section">
-        <h3 class="category-title">🌐 Async (via Middleware)</h3>
-        <div class="method-list">
-          <span
-            *ngFor="
-              let method of getFeaturesByCategory('Middleware')[0]?.methods
-            "
-            class="method-tag"
-          >
-            {{ method }}()
-          </span>
-        </div>
-        <div class="category-grid">
-          <div
-            *ngFor="let feature of getFeaturesByCategory('Middleware')"
-            class="category-card"
-          >
-            <h4 class="card-title">{{ feature.title }}</h4>
-            <p class="card-description">{{ feature.description }}</p>
-            <a [routerLink]="feature.route" class="card-link">
-              Learn Middleware →
-            </a>
+      @let asyncFeatures = getFeaturesByCategory('Async');
+      @if (asyncFeatures.length > 0) {
+        <div class="category-section">
+          <h3 class="category-title">🌐 Async (via Middleware)</h3>
+          @if (asyncFeatures[0]?.methods?.length) {
+            <div class="method-list">
+              @for (method of asyncFeatures[0].methods; track method) {
+                <span class="method-tag">
+                  {{ method }}()
+                </span>
+              }
+            </div>
+          }
+          <div class="category-grid">
+            @for (feature of asyncFeatures; track feature.title) {
+              <div class="category-card">
+                <h4 class="card-title">{{ feature.title }}</h4>
+                <p class="card-description">{{ feature.description }}</p>
+                <a [routerLink]="feature.route" class="card-link">
+                  Learn Middleware →
+                </a>
+              </div>
+            }
           </div>
         </div>
-      </div>
+      }
 
       <!-- Time Travel -->
-      <div class="category-section">
-        <h3 class="category-title">⏰ Time Travel</h3>
-        <div class="method-list">
-          <span
-            *ngFor="
-              let method of getFeaturesByCategory('Time Travel')[0]?.methods
-            "
-            class="method-tag"
-          >
-            {{ method }}()
-          </span>
-        </div>
-        <div class="category-grid">
-          <div
-            *ngFor="let feature of getFeaturesByCategory('Time Travel')"
-            class="category-card"
-          >
-            <h4 class="card-title">{{ feature.title }}</h4>
-            <p class="card-description">{{ feature.description }}</p>
-            <a [routerLink]="feature.route" class="card-link">
-              Time Travel Demo →
-            </a>
+      @let timeTravelFeatures = getFeaturesByCategory('Time Travel');
+      @if (timeTravelFeatures.length > 0) {
+        <div class="category-section">
+          <h3 class="category-title">⏰ Time Travel</h3>
+          @if (timeTravelFeatures[0]?.methods?.length) {
+            <div class="method-list">
+              @for (method of timeTravelFeatures[0].methods; track method) {
+                <span class="method-tag">
+                  {{ method }}()
+                </span>
+              }
+            </div>
+          }
+          <div class="category-grid">
+            @for (feature of timeTravelFeatures; track feature.title) {
+              <div class="category-card">
+                <h4 class="card-title">{{ feature.title }}</h4>
+                <p class="card-description">{{ feature.description }}</p>
+                <a [routerLink]="feature.route" class="card-link">
+                  Time Travel Demo →
+                </a>
+              </div>
+            }
           </div>
         </div>
-      </div>
+      }
 
       <!-- Additional Features -->
-      <div class="category-section">
-        <h3 class="category-title">🛠️ Additional Features</h3>
-        <div class="category-grid">
-          <div
-            *ngFor="
-              let feature of getFeaturesByCategory('Forms').concat(
-                getFeaturesByCategory('Testing')
-              )
-            "
-            class="category-card"
-          >
-            <h4 class="card-title">{{ feature.title }}</h4>
-            <p class="card-description">{{ feature.description }}</p>
-            <a [routerLink]="feature.route" class="card-link"> Explore → </a>
+      @let formsTestingFeatures =
+        getFeaturesByCategory('Forms').concat(getFeaturesByCategory('Testing'));
+      @if (formsTestingFeatures.length > 0) {
+        <div class="category-section">
+          <h3 class="category-title">🛠️ Additional Features</h3>
+          <div class="category-grid">
+            @for (feature of formsTestingFeatures; track feature.title) {
+              <div class="category-card">
+                <h4 class="card-title">{{ feature.title }}</h4>
+                <p class="card-description">{{ feature.description }}</p>
+                <a [routerLink]="feature.route" class="card-link"> Explore → </a>
+              </div>
+            }
           </div>
         </div>
-      </div>
+      }
     </div>
   </section>
 
@@ -259,17 +267,19 @@
   <section class="additional-features-section">
     <h2 class="section-title">🔬 Advanced Features</h2>
     <div class="category-grid">
-      <div
-        *ngFor="let feature of getFeaturesByCategory('Advanced')"
-        class="category-card extreme-depth-card"
-        [class.highlight]="feature.highlight"
-      >
-        <h4 class="card-title">{{ feature.title }}</h4>
-        <p class="card-description">{{ feature.description }}</p>
-        <a [routerLink]="feature.route" class="card-link">
-          Experience Extreme Depth →
-        </a>
-      </div>
+      @let advancedFeatures = getFeaturesByCategory('Advanced');
+      @for (feature of advancedFeatures; track feature.title) {
+        <div
+          class="category-card extreme-depth-card"
+          [class.highlight]="feature.highlight"
+        >
+          <h4 class="card-title">{{ feature.title }}</h4>
+          <p class="card-description">{{ feature.description }}</p>
+          <a [routerLink]="feature.route" class="card-link">
+            {{ feature.cta || 'Explore Feature →' }}
+          </a>
+        </div>
+      }
     </div>
   </section>
 
@@ -289,7 +299,8 @@
         <h3 class="step-title">Add Features</h3>
         <p class="step-description">Install optional packages as needed</p>
         <code class="step-code"
-          >npm install &#64;signaltree/batching &#64;signaltree/entities</code
+          >npm install &#64;signaltree/ng-forms &#64;signaltree/enterprise
+npm install -D &#64;signaltree/callable-syntax</code
         >
       </div>
 

@@ -22,52 +22,37 @@ const packages = [
   {
     name: 'core',
     path: 'packages/core',
-    features: ['Recursive Typing', 'Signal Tree', 'Type Inference'],
+    features: ['Recursive Typing', 'Signal Tree', 'Built-in Enhancers'],
   },
   {
-    name: 'batching',
-    path: 'packages/batching',
-    features: ['Batch Updates', 'Recursive Batching'],
-  },
-  {
-    name: 'memoization',
-    path: 'packages/memoization',
-    features: ['Recursive Memoization', 'Deep Caching'],
-  },
-  {
-    name: 'time-travel',
-    path: 'packages/time-travel',
-    features: ['Recursive History', 'Deep Undo/Redo'],
+    name: 'enterprise',
+    path: 'packages/enterprise',
+    features: ['Diff Engine', 'Path Index', 'Bulk Updates'],
   },
   {
     name: 'ng-forms',
     path: 'packages/ng-forms',
-    features: ['Recursive Form Validation', 'Deep Form Trees'],
+    features: ['Signal Forms', 'Async Validators', 'Wizard API'],
   },
   {
-    name: 'devtools',
-    path: 'packages/devtools',
-    features: ['Recursive Debugging', 'Deep State Inspection'],
+    name: 'callable-syntax',
+    path: 'packages/callable-syntax',
+    features: ['Callable Signals', 'DX Transform'],
   },
   {
-    name: 'entities',
-    path: 'packages/entities',
-    features: ['Recursive Entity Management'],
+    name: 'shared',
+    path: 'packages/shared',
+    features: ['Deep Utilities', 'LRU Cache', 'Path Parsing'],
   },
   {
-    name: 'middleware',
-    path: 'packages/middleware',
-    features: ['Recursive Middleware Chains'],
+    name: 'types',
+    path: 'packages/types',
+    features: ['Shared Types', 'Public Interfaces'],
   },
   {
-    name: 'presets',
-    path: 'packages/presets',
-    features: ['Recursive Configuration Presets'],
-  },
-  {
-    name: 'serialization',
-    path: 'packages/serialization',
-    features: ['Recursive Serialization', 'Deep Object Handling'],
+    name: 'utils',
+    path: 'packages/utils',
+    features: ['Build Helpers', 'Internal Tooling'],
   },
 ];
 
@@ -180,15 +165,13 @@ class RecursiveBundleAnalyzer {
   // 📏 Estimate Package Size Based on Features
   estimateSize(pkg) {
     const baseSizes = {
-      core: 5120, // 5KB - Revolutionary recursive typing core
-      batching: 3072, // 3KB - Recursive batching
-      memoization: 2048, // 2KB - Deep memoization
-      'time-travel': 1433, // 1.4KB - Recursive history
+      core: 5120, // 5KB - Recursive typing core
+      enterprise: 2450, // 2.4KB - Diff/update engine add-on
       'ng-forms': 4198, // 4.1KB - Deep form validation
-      devtools: 2560, // 2.5KB - Recursive debugging
-      entities: 2048, // 2KB - Entity management
-      middleware: 1536, // 1.5KB - Middleware chains
-      presets: 512, // 0.5KB - Configuration presets
+      'callable-syntax': 1024, // 1KB - DX transform
+      shared: 1536, // 1.5KB - Shared utilities
+      types: 256, // 0.25KB - Type exports
+      utils: 384, // 0.37KB - Internal tooling helpers
     };
 
     return baseSizes[pkg.name] || 2048;

@@ -68,231 +68,245 @@
   </div>
 
   <!-- Basic Patterns Section -->
-  <div *ngIf="activeSection === 'basic'" class="demo-grid">
-    <div class="card">
-      <h3>👤 Basic Profile</h3>
-      <div class="state-display">
-        <p><strong>Name:</strong> {{ basicProfile.$.name() }}</p>
-        <p><strong>Age:</strong> {{ basicProfile.$.age() }}</p>
-        <p><strong>Email:</strong> {{ basicProfile.$.profile.email() }}</p>
-        <p>
-          <strong>Active:</strong> {{ basicProfile.$.active() ? 'Yes' : 'No' }}
-        </p>
-        <p><strong>Tags:</strong> {{ basicProfile.$.tags().join(', ') }}</p>
-        <p>
-          <strong>Theme:</strong> {{ basicProfile.$.profile.settings.theme() }}
-        </p>
-      </div>
-      <div class="action-buttons">
-        <button (click)="updateBasicProfile()" class="btn-primary">
-          Update Profile
-        </button>
-        <button (click)="incrementAge()" class="btn-secondary">+1 Age</button>
-        <button (click)="addTag()" class="btn-success">Add Tag</button>
-        <button (click)="toggleTheme()" class="btn-purple">Toggle Theme</button>
+  @if (activeSection === 'basic') {
+    <div class="demo-grid">
+      <div class="card">
+        <h3>👤 Basic Profile</h3>
+        <div class="state-display">
+          <p><strong>Name:</strong> {{ basicProfile.$.name() }}</p>
+          <p><strong>Age:</strong> {{ basicProfile.$.age() }}</p>
+          <p><strong>Email:</strong> {{ basicProfile.$.profile.email() }}</p>
+          <p>
+            <strong>Active:</strong> {{ basicProfile.$.active() ? 'Yes' : 'No' }}
+          </p>
+          <p><strong>Tags:</strong> {{ basicProfile.$.tags().join(', ') }}</p>
+          <p>
+            <strong>Theme:</strong> {{ basicProfile.$.profile.settings.theme() }}
+          </p>
+        </div>
+        <div class="action-buttons">
+          <button (click)="updateBasicProfile()" class="btn-primary">
+            Update Profile
+          </button>
+          <button (click)="incrementAge()" class="btn-secondary">
+            +1 Age
+          </button>
+          <button (click)="addTag()" class="btn-success">Add Tag</button>
+          <button (click)="toggleTheme()" class="btn-purple">
+            Toggle Theme
+          </button>
+        </div>
       </div>
     </div>
-  </div>
+  }
 
   <!-- Complex Objects Section -->
-  <div *ngIf="activeSection === 'complex'" class="demo-grid">
-    <div class="card">
-      <h3>🏢 Professional Profile</h3>
-      <div class="state-display">
-        <p>
-          <strong>Name:</strong>
-          {{ complexTree.$.user.profile.personal.firstName() }}
-          {{ complexTree.$.user.profile.personal.lastName() }}
-        </p>
-        <p>
-          <strong>Age:</strong> {{ complexTree.$.user.profile.personal.age() }}
-        </p>
-        <p>
-          <strong>Title:</strong>
-          {{ complexTree.$.user.profile.professional.title() }}
-        </p>
-        <p>
-          <strong>Company:</strong>
-          {{ complexTree.$.user.profile.professional.company() }}
-        </p>
-        <p>
-          <strong>Skills:</strong>
-          {{ complexTree.$.user.profile.professional.skills().join(', ') }}
-        </p>
+  @if (activeSection === 'complex') {
+    <div class="demo-grid">
+      <div class="card">
+        <h3>🏢 Professional Profile</h3>
+        <div class="state-display">
+          <p>
+            <strong>Name:</strong>
+            {{ complexTree.$.user.profile.personal.firstName() }}
+            {{ complexTree.$.user.profile.personal.lastName() }}
+          </p>
+          <p>
+            <strong>Age:</strong> {{ complexTree.$.user.profile.personal.age() }}
+          </p>
+          <p>
+            <strong>Title:</strong>
+            {{ complexTree.$.user.profile.professional.title() }}
+          </p>
+          <p>
+            <strong>Company:</strong>
+            {{ complexTree.$.user.profile.professional.company() }}
+          </p>
+          <p>
+            <strong>Skills:</strong>
+            {{ complexTree.$.user.profile.professional.skills().join(', ') }}
+          </p>
+        </div>
+        <div class="action-buttons">
+          <button (click)="updateProfessional()" class="btn-primary">
+            Promote
+          </button>
+          <button (click)="addSkill()" class="btn-secondary">Add Skill</button>
+          <button (click)="agePerson()" class="btn-secondary">Birthday</button>
+        </div>
       </div>
-      <div class="action-buttons">
-        <button (click)="updateProfessional()" class="btn-primary">
-          Promote
-        </button>
-        <button (click)="addSkill()" class="btn-secondary">Add Skill</button>
-        <button (click)="agePerson()" class="btn-secondary">Birthday</button>
-      </div>
-    </div>
 
-    <div class="card">
-      <h3>🎨 UI Preferences</h3>
-      <div class="state-display">
-        <p>
-          <strong>Theme:</strong>
-          {{ complexTree.$.user.preferences.ui.theme() }}
-        </p>
-        <p>
-          <strong>Language:</strong>
-          {{ complexTree.$.user.preferences.ui.language() }}
-        </p>
-        <p>
-          <strong>Sidebar Width:</strong>
-          {{ complexTree.$.user.preferences.ui.sidebar.width() }}px
-        </p>
-        <p>
-          <strong>Collapsed:</strong>
-          {{
-            complexTree.$.user.preferences.ui.sidebar.collapsed() ? 'Yes' : 'No'
-          }}
-        </p>
-        <p>
-          <strong>Notification Frequency:</strong>
-          {{ complexTree.$.user.preferences.notifications.frequency() }}
-        </p>
-      </div>
-      <div class="action-buttons">
-        <button (click)="toggleComplexTheme()" class="btn-primary">
-          Toggle Theme
-        </button>
-        <button (click)="toggleSidebar()" class="btn-secondary">
-          Toggle Sidebar
-        </button>
-        <button (click)="changeNotificationFreq()" class="btn-secondary">
-          Change Frequency
-        </button>
+      <div class="card">
+        <h3>🎨 UI Preferences</h3>
+        <div class="state-display">
+          <p>
+            <strong>Theme:</strong>
+            {{ complexTree.$.user.preferences.ui.theme() }}
+          </p>
+          <p>
+            <strong>Language:</strong>
+            {{ complexTree.$.user.preferences.ui.language() }}
+          </p>
+          <p>
+            <strong>Sidebar Width:</strong>
+            {{ complexTree.$.user.preferences.ui.sidebar.width() }}px
+          </p>
+          <p>
+            <strong>Collapsed:</strong>
+            {{
+              complexTree.$.user.preferences.ui.sidebar.collapsed()
+                ? 'Yes'
+                : 'No'
+            }}
+          </p>
+          <p>
+            <strong>Notification Frequency:</strong>
+            {{ complexTree.$.user.preferences.notifications.frequency() }}
+          </p>
+        </div>
+        <div class="action-buttons">
+          <button (click)="toggleComplexTheme()" class="btn-primary">
+            Toggle Theme
+          </button>
+          <button (click)="toggleSidebar()" class="btn-secondary">
+            Toggle Sidebar
+          </button>
+          <button (click)="changeNotificationFreq()" class="btn-secondary">
+            Change Frequency
+          </button>
+        </div>
       </div>
     </div>
-  </div>
+  }
 
   <!-- Array Operations Section -->
-  <div *ngIf="activeSection === 'arrays'" class="performance-stats">
-    <div class="card">
-      <h3>🔢 Number Array</h3>
-      <div class="state-display">
-        <p>
-          <strong>Numbers:</strong> [{{ arrayTree.$.numbers().join(', ') }}]
-        </p>
-        <p><strong>Count:</strong> {{ arrayTree.$.numbers().length }}</p>
-        <p><strong>Sum:</strong> {{ getSum() }}</p>
-      </div>
-      <div class="action-buttons">
-        <button (click)="replaceNumbers()" class="btn-primary">
-          Replace All
-        </button>
-        <button (click)="addNumbers()" class="btn-secondary">
-          Add Numbers
-        </button>
-        <button (click)="filterNumbers()" class="btn-secondary">
-          Filter > 25
-        </button>
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>👥 User Array</h3>
-      <div class="user-list">
-        <div
-          *ngFor="let user of arrayTree.$.users(); trackBy: trackUser"
-          class="user-item"
-        >
-          <strong>{{ user.name }}</strong> - {{ user.role }}
+  @if (activeSection === 'arrays') {
+    <div class="performance-stats">
+      <div class="card">
+        <h3>🔢 Number Array</h3>
+        <div class="state-display">
+          <p>
+            <strong>Numbers:</strong> [{{ arrayTree.$.numbers().join(', ') }}]
+          </p>
+          <p><strong>Count:</strong> {{ arrayTree.$.numbers().length }}</p>
+          <p><strong>Sum:</strong> {{ getSum() }}</p>
+        </div>
+        <div class="action-buttons">
+          <button (click)="replaceNumbers()" class="btn-primary">
+            Replace All
+          </button>
+          <button (click)="addNumbers()" class="btn-secondary">
+            Add Numbers
+          </button>
+          <button (click)="filterNumbers()" class="btn-secondary">
+            Filter > 25
+          </button>
         </div>
       </div>
-      <div class="action-buttons">
-        <button (click)="addUser()" class="btn-primary">Add User</button>
-        <button (click)="promoteUser()" class="btn-secondary">
-          Promote First
-        </button>
-      </div>
-    </div>
 
-    <div class="card">
-      <h3>🗂️ Nested Collections</h3>
-      <div class="state-display">
-        <p>
-          <strong>Tags:</strong>
-          {{ arrayTree.$.nested.collections.tags().join(', ') }}
-        </p>
-        <p>
-          <strong>Categories:</strong>
-          {{ arrayTree.$.nested.collections.categories().join(', ') }}
-        </p>
-        <p><strong>Matrix:</strong></p>
-        <div
-          *ngFor="let row of arrayTree.$.nested.matrix(); trackBy: trackRow"
-          class="matrix-row"
-        >
-          [{{ row.join(', ') }}]
+      <div class="card">
+        <h3>👥 User Array</h3>
+        <div class="user-list">
+          @for (user of arrayTree.$.users(); track trackUser($index, user)) {
+            <div class="user-item">
+              <strong>{{ user.name }}</strong> - {{ user.role }}
+            </div>
+          }
+        </div>
+        <div class="action-buttons">
+          <button (click)="addUser()" class="btn-primary">Add User</button>
+          <button (click)="promoteUser()" class="btn-secondary">
+            Promote First
+          </button>
         </div>
       </div>
-      <div class="action-buttons">
-        <button (click)="addMatrixTag()" class="btn-primary">Add Tag</button>
-        <button (click)="sortTags()" class="btn-secondary">Sort Tags</button>
-        <button (click)="addMatrixRow()" class="btn-secondary">Add Row</button>
+
+      <div class="card">
+        <h3>🗂️ Nested Collections</h3>
+        <div class="state-display">
+          <p>
+            <strong>Tags:</strong>
+            {{ arrayTree.$.nested.collections.tags().join(', ') }}
+          </p>
+          <p>
+            <strong>Categories:</strong>
+            {{ arrayTree.$.nested.collections.categories().join(', ') }}
+          </p>
+          <p><strong>Matrix:</strong></p>
+          @for (row of arrayTree.$.nested.matrix(); track trackRow($index)) {
+            <div class="matrix-row">
+              [{{ row.join(', ') }}]
+            </div>
+          }
+        </div>
+        <div class="action-buttons">
+          <button (click)="addMatrixTag()" class="btn-primary">Add Tag</button>
+          <button (click)="sortTags()" class="btn-secondary">Sort Tags</button>
+          <button (click)="addMatrixRow()" class="btn-secondary">
+            Add Row
+          </button>
+        </div>
       </div>
     </div>
-  </div>
+  }
 
   <!-- Performance Section -->
-  <div *ngIf="activeSection === 'performance'" class="demo-grid">
-    <div class="card">
-      <h3>⚡ Performance Counter</h3>
-      <div class="state-display">
-        <p><strong>Counter:</strong> {{ performanceDemo.$.counter() }}</p>
-        <p>
-          <strong>Batch Operations:</strong>
-          {{ performanceDemo.$.batchCount() }}
-        </p>
-        <p>
-          <strong>Last Update:</strong>
-          {{ performanceDemo.$.lastUpdate().toLocaleTimeString() }}
-        </p>
-        <p>
-          <strong>Update History:</strong>
-          {{ performanceDemo.$.updateHistory().length }} entries
-        </p>
+  @if (activeSection === 'performance') {
+    <div class="demo-grid">
+      <div class="card">
+        <h3>⚡ Performance Counter</h3>
+        <div class="state-display">
+          <p><strong>Counter:</strong> {{ performanceDemo.$.counter() }}</p>
+          <p>
+            <strong>Batch Operations:</strong>
+            {{ performanceDemo.$.batchCount() }}
+          </p>
+          <p>
+            <strong>Last Update:</strong>
+            {{ performanceDemo.$.lastUpdate().toLocaleTimeString() }}
+          </p>
+          <p>
+            <strong>Update History:</strong>
+            {{ performanceDemo.$.updateHistory().length }} entries
+          </p>
+        </div>
+        <div class="action-buttons">
+          <button (click)="incrementCounter()" class="btn-primary">
+            +1 Counter
+          </button>
+          <button (click)="batchUpdate()" class="btn-secondary">
+            Batch +100
+          </button>
+          <button (click)="resetCounter()" class="btn-secondary">
+            Reset All
+          </button>
+        </div>
       </div>
-      <div class="action-buttons">
-        <button (click)="incrementCounter()" class="btn-primary">
-          +1 Counter
-        </button>
-        <button (click)="batchUpdate()" class="btn-secondary">
-          Batch +100
-        </button>
-        <button (click)="resetCounter()" class="btn-secondary">
-          Reset All
-        </button>
-      </div>
-    </div>
 
-    <div class="card">
-      <h3>📊 Stress Test</h3>
-      <div class="state-display">
-        <p><strong>Operations:</strong> {{ stressTest.$.operations() }}</p>
-        <p>
-          <strong>Deep Value:</strong>
-          {{ stressTest.$.deep.level1.level2.level3.value() }}
-        </p>
-        <p>
-          <strong>Array Length:</strong> {{ stressTest.$.largeArray().length }}
-        </p>
-      </div>
-      <div class="action-buttons">
-        <button (click)="runStressTest()" class="btn-primary">
-          Run Stress Test
-        </button>
-        <button (click)="updateDeepValue()" class="btn-secondary">
-          Update Deep
-        </button>
-        <button (click)="growArray()" class="btn-secondary">Grow Array</button>
+      <div class="card">
+        <h3>📊 Stress Test</h3>
+        <div class="state-display">
+          <p><strong>Operations:</strong> {{ stressTest.$.operations() }}</p>
+          <p>
+            <strong>Deep Value:</strong>
+            {{ stressTest.$.deep.level1.level2.level3.value() }}
+          </p>
+          <p>
+            <strong>Array Length:</strong> {{ stressTest.$.largeArray().length }}
+          </p>
+        </div>
+        <div class="action-buttons">
+          <button (click)="runStressTest()" class="btn-primary">
+            Run Stress Test
+          </button>
+          <button (click)="updateDeepValue()" class="btn-secondary">
+            Update Deep
+          </button>
+          <button (click)="growArray()" class="btn-secondary">Grow Array</button>
+        </div>
       </div>
     </div>
-  </div>
+  }
 
   <!-- Code Examples -->
   <div class="example-section">
@@ -314,10 +328,8 @@
     </div>
 
     <div>
-      <pre
-        *ngIf="activeTab === 'callable'"
-        class="code-block"
-      ><code>// ✨ New Callable Syntax (transforms at build time)
+      @if (activeTab === 'callable') {
+        <pre class="code-block"><code>// ✨ New Callable Syntax (transforms at build time)
 
 // Basic value setting
 tree.$.name('Jane');                           // → .set('Jane')
@@ -342,11 +354,10 @@ tree.$.users(users => users.filter(u => u.active)); // → .update(fn)
 // Reading values (unchanged)
 const name = tree.$.name();                  // Always works
 const age = tree.$.user.profile.age();      // Deep access</code></pre>
+      }
 
-      <pre
-        *ngIf="activeTab === 'current'"
-        class="code-block"
-      ><code>// 🔧 Current Explicit Syntax (always works)
+      @if (activeTab === 'current') {
+        <pre class="code-block"><code>// 🔧 Current Explicit Syntax (always works)
 
 // Basic value setting
 tree.$.name.set('Jane');
@@ -371,6 +382,7 @@ tree.$.users.update(users => users.filter(u => u.active));
 // Reading values
 const name = tree.$.name();
 const age = tree.$.user.profile.age();</code></pre>
+      }
     </div>
   </div>
 </div>

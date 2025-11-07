@@ -6,9 +6,13 @@
     "declarationMap": true,
     "inlineSources": true,
     "types": [],
+    "typeRoots": [
+      "./src/types",
+      "../../node_modules/@types"
+    ],
     "paths": {
-      "@signaltree/core": ["../../dist/packages/core/src"],
-      "@signaltree/core/*": ["../../dist/packages/core/src/*"]
+      "@signaltree/core": ["packages/core/src/index.ts"],
+      "@signaltree/core/*": ["packages/core/src/*"]
     }
   },
   "exclude": [

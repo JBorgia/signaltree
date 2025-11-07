@@ -88,38 +88,64 @@
           <div class="chain-step start">
             <div class="step-label">▶️ Action Start</div>
           </div>
-          <div *ngIf="enableLogging" class="chain-step middleware">
-            <div class="step-label">🔍 Logging (before)</div>
-          </div>
-          <div *ngIf="enableValidation" class="chain-step middleware">
-            <div class="step-label">✅ Validation</div>
-          </div>
+          @if (enableLogging) {
+            <div class="chain-step middleware">
+              <div class="step-label">🔍 Logging (before)</div>
+            </div>
+          }
+          @if (enableValidation) {
+            <div class="chain-step middleware">
+              <div class="step-label">✅ Validation</div>
+            </div>
+          }
           <div class="chain-step core">
             <div class="step-label">⚡ Core Action</div>
           </div>
-          <div *ngIf="enablePersistence" class="chain-step middleware">
-            <div class="step-label">💾 Persistence</div>
-          </div>
-          <div *ngIf="enableUndo" class="chain-step middleware">
-            <div class="step-label">↶ Undo Stack</div>
-          </div>
-          <div *ngIf="enableLogging" class="chain-step middleware">
-            <div class="step-label">🔍 Logging (after)</div>
-          </div>
+          @if (enablePersistence) {
+            <div class="chain-step middleware">
+              <div class="step-label">💾 Persistence</div>
+            </div>
+          }
+          @if (enableUndo) {
+            <div class="chain-step middleware">
+              <div class="step-label">↶ Undo Stack</div>
+            </div>
+          }
+          @if (enableLogging) {
+            <div class="chain-step middleware">
+              <div class="step-label">🔍 Logging (after)</div>
+            </div>
+          }
           <div class="chain-step end">
             <div class="step-label">✓ Complete</div>
           </div>
         </div>
       </div>
 
-      <div *ngIf="enableUndo" class="undo-controls">
-        <h3>↶ Undo/Redo</h3>
-        <div class="button-group">
-          <button class="btn-secondary" (click)="handleUndo()" [disabled]="!canUndo()">↶ Undo</button>
-          <button class="btn-secondary" (click)="handleRedo()" [disabled]="!canRedo()">↷ Redo</button>
+      @if (enableUndo) {
+        <div class="undo-controls">
+          <h3>↶ Undo/Redo</h3>
+          <div class="button-group">
+            <button
+              class="btn-secondary"
+              (click)="handleUndo()"
+              [disabled]="!canUndo()"
+            >
+              ↶ Undo
+            </button>
+            <button
+              class="btn-secondary"
+              (click)="handleRedo()"
+              [disabled]="!canRedo()"
+            >
+              ↷ Redo
+            </button>
+          </div>
+          <p class="undo-stats">
+            Undo: {{ getUndoCount() }} | Redo: {{ getRedoCount() }}
+          </p>
         </div>
-        <p class="undo-stats">Undo: {{ getUndoCount() }} | Redo: {{ getRedoCount() }}</p>
-      </div>
+      }
     </div>
 
     <div class="card todos-card">
@@ -143,14 +169,24 @@
       </div>
 
       <div class="todos-list">
-        <div *ngIf="filteredTodos().length === 0" class="empty-state">
-          <p>📝 No todos</p>
-        </div>
-        <div *ngFor="let todo of filteredTodos()" class="todo-item" [class.completed]="todo.completed">
-          <input type="checkbox" [checked]="todo.completed" (change)="toggleTodo(todo.id)" />
-          <span class="todo-title">{{ todo.title }}</span>
-          <button class="btn-danger btn-xs" (click)="deleteTodo(todo.id)">🗑️</button>
-        </div>
+        @if (filteredTodos().length === 0) {
+          <div class="empty-state">
+            <p>📝 No todos</p>
+          </div>
+        }
+        @for (todo of filteredTodos(); track todo.id) {
+          <div class="todo-item" [class.completed]="todo.completed">
+            <input
+              type="checkbox"
+              [checked]="todo.completed"
+              (change)="toggleTodo(todo.id)"
+            />
+            <span class="todo-title">{{ todo.title }}</span>
+            <button class="btn-danger btn-xs" (click)="deleteTodo(todo.id)">
+              🗑️
+            </button>
+          </div>
+        }
       </div>
 
       <div class="quick-actions">
@@ -167,43 +203,65 @@
     </div>
     <p class="card-description">Real-time middleware activity</p>
 
-    <div *ngIf="middlewareLogs().length === 0" class="empty-logs">
-      <p>📝 No logs yet</p>
-      <p class="empty-hint">Enable logging and perform actions</p>
-    </div>
+    @if (middlewareLogs().length === 0) {
+      <div class="empty-logs">
+        <p>📝 No logs yet</p>
+        <p class="empty-hint">Enable logging and perform actions</p>
+      </div>
+    }
 
-    <div *ngIf="middlewareLogs().length > 0" class="logs-list">
-      <div *ngFor="let log of middlewareLogs()" class="log-entry" [class]="log.type">
-        <div class="log-icon">
-          <span *ngIf="log.type === 'before'">▶️</span>
-          <span *ngIf="log.type === 'after'">✓</span>
-          <span *ngIf="log.type === 'error'">❌</span>
-        </div>
-        <div class="log-content">
-          <div class="log-header">
-            <span class="log-action">{{ log.action }}</span>
-            <span class="log-time">{{ formatTime(log.timestamp) }}</span>
+    @if (middlewareLogs().length > 0) {
+      <div class="logs-list">
+        @for (log of middlewareLogs(); track $index) {
+          <div class="log-entry" [class]="log.type">
+            <div class="log-icon">
+              @if (log.type === 'before') {
+                <span>▶️</span>
+              }
+              @if (log.type === 'after') {
+                <span>✓</span>
+              }
+              @if (log.type === 'error') {
+                <span>❌</span>
+              }
+            </div>
+            <div class="log-content">
+              <div class="log-header">
+                <span class="log-action">{{ log.action }}</span>
+                <span class="log-time">{{ formatTime(log.timestamp) }}</span>
+              </div>
+              <div class="log-message">
+                {{ log.data?.['message'] || log.error }}
+              </div>
+              @if (log.duration) {
+                <div class="log-duration">
+                  ⏱️ {{ log.duration.toFixed(2) }}ms
+                </div>
+              }
+            </div>
           </div>
-          <div class="log-message">{{ log.data?.['message'] || log.error }}</div>
-          <div *ngIf="log.duration" class="log-duration">⏱️ {{ log.duration.toFixed(2) }}ms</div>
-        </div>
+        }
       </div>
-    </div>
+    }
   </div>
 
-  <div *ngIf="enablePersistence" class="section-card persistence-card">
-    <h2>💾 Persistence Status</h2>
-    <p class="card-description">Auto-saved to localStorage</p>
-    <div class="persistence-info">
-      <div class="info-item">
-        <span class="info-label">Last Saved:</span>
-        <span>{{ getLastSavedTime() }}</span>
+  @if (enablePersistence) {
+    <div class="section-card persistence-card">
+      <h2>💾 Persistence Status</h2>
+      <p class="card-description">Auto-saved to localStorage</p>
+      <div class="persistence-info">
+        <div class="info-item">
+          <span class="info-label">Last Saved:</span>
+          <span>{{ getLastSavedTime() }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Items:</span>
+          <span>{{ allTodos().length }} todos</span>
+        </div>
       </div>
-      <div class="info-item">
-        <span class="info-label">Items:</span>
-        <span>{{ allTodos().length }} todos</span>
-      </div>
+      <button class="btn-warning btn-sm" (click)="clearStorage()">
+        🗑️ Clear Storage
+      </button>
     </div>
-    <button class="btn-warning btn-sm" (click)="clearStorage()">🗑️ Clear Storage</button>
-  </div>
+  }
 </div>

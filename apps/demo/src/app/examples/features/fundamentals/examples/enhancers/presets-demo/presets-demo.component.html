@@ -228,10 +228,14 @@
             Run Showcase
           </button>
           <div class="description-text">
-            <span *ngIf="showcasePending">Running...</span>
-            <span *ngIf="showcaseResult !== null">
-              Completed: {{ showcaseResult }} ms
-            </span>
+            @if (showcasePending) {
+              <span>Running...</span>
+            }
+            @if (showcaseResult !== null) {
+              <span>
+                Completed: {{ showcaseResult }} ms
+              </span>
+            }
           </div>
         </div>
       </div>

@@ -39,10 +39,11 @@ checks.push(() => {
 });
 
 checks.push(() => {
-  const p = 'apps/demo/src/app/pages/core-demo/core-demo.component.ts';
+  const p =
+    'apps/demo/src/app/examples/features/fundamentals/pages/fundamentals-page/fundamentals-page.component.ts';
   const c = fileHas(p);
-  return c && c.includes('signalTree')
-    ? [true, 'demo integration present']
+  return c && c.includes('FundamentalsPageComponent')
+    ? [true, 'fundamentals examples page present']
     : [false, `missing demo component ${p}`];
 });
 

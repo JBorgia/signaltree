@@ -1,3 +1,4 @@
+@use 'sass:color';
 @use '../../../../shared/styles' as *;
 
 .doc {
@@ -77,7 +78,7 @@ select {
     border-color: $primary;
 
     &:hover {
-      background: darken($primary, 5%);
+      background: color.adjust($primary, $lightness: -5%);
     }
   }
 }

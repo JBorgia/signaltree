@@ -23,7 +23,42 @@ const { execSync } = require('child_process');
 
 // Package configuration with size targets
 const packages = [
-  { name: 'core', maxSize: 25000, claimed: 22000 }, // Consolidated: core + all enhancers (22KB target)
+  { name: 'core', maxSize: 25000, claimed: 22000 },
+  {
+    name: 'enterprise',
+    path: 'dist/packages/enterprise/src/index.js',
+    maxSize: 3200,
+    claimed: 2700,
+  },
+  {
+    name: 'ng-forms',
+    maxSize: 7700,
+    claimed: 7200,
+  },
+  {
+    name: 'callable-syntax',
+    path: 'dist/packages/callable-syntax/src/index.js',
+    maxSize: 4200,
+    claimed: 3600,
+  },
+  {
+    name: 'shared',
+    path: 'dist/packages/shared/src/index.js',
+    maxSize: 3000,
+    claimed: 2600,
+  },
+  {
+    name: 'types',
+    path: 'dist/packages/types/src/index.js',
+    maxSize: 500,
+    claimed: 400,
+  },
+  {
+    name: 'utils',
+    path: 'dist/packages/utils/src/index.js',
+    maxSize: 800,
+    claimed: 650,
+  },
   {
     name: 'core/enhancers/batching',
     path: 'dist/packages/core/src/enhancers/batching/lib/batching.js',
@@ -78,7 +113,16 @@ const packages = [
     maxSize: 800,
     claimed: 750,
   },
-  { name: 'ng-forms', maxSize: 7700, claimed: 7200 }, // Angular forms integration with history and wizard (7.20KB actual)
+];
+
+const nxProjects = [
+  'core',
+  'enterprise',
+  'ng-forms',
+  'callable-syntax',
+  'shared',
+  'types',
+  'utils',
 ];
 
 class BundleAnalyzer {
@@ -128,7 +172,7 @@ class BundleAnalyzer {
     this.log('🔨 Building all packages...');
 
     // Build all packages
-    const packageNames = packages.map((p) => p.name).join(',');
+    const packageNames = nxProjects.join(',');
     this.execCommand(
       `pnpm nx run-many --target=build --projects=${packageNames} --configuration=production`,
       'Building SignalTree packages',

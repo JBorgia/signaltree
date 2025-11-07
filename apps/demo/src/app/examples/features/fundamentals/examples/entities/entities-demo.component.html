@@ -312,117 +312,128 @@
       </div>
 
       <!-- Bulk Actions -->
-      <div *ngIf="selectedPostIds.size > 0" class="bulk-actions">
-        <span class="bulk-count"
-          >✓ {{ selectedPostIds.size }} post{{
-            selectedPostIds.size === 1 ? '' : 's'
-          }}
-          selected</span
-        >
-        <div class="bulk-buttons">
-          <button
-            (click)="selectAllPosts()"
-            class="btn-primary btn-sm"
-            title="Select all visible posts"
+      @if (selectedPostIds.size > 0) {
+        <div class="bulk-actions">
+          <span class="bulk-count"
+            >✓ {{ selectedPostIds.size }} post{{
+              selectedPostIds.size === 1 ? '' : 's'
+            }}
+            selected</span
           >
-            ☑️ Select All
-          </button>
-          <button
-            (click)="exportSelectedPosts()"
-            class="btn-success btn-sm"
-            title="Export selected posts as JSON"
-          >
-            💾 Export JSON
-          </button>
-          <button
-            (click)="confirmDeleteSelected()"
-            class="btn-danger btn-sm"
-            title="Delete all selected posts"
-          >
-            🗑️ Delete Selected
-          </button>
-          <button
-            (click)="deselectAllPosts()"
-            class="btn-secondary btn-sm"
-            title="Clear selection"
-          >
-            ✕ Clear Selection
-          </button>
+          <div class="bulk-buttons">
+            <button
+              (click)="selectAllPosts()"
+              class="btn-primary btn-sm"
+              title="Select all visible posts"
+            >
+              ☑️ Select All
+            </button>
+            <button
+              (click)="exportSelectedPosts()"
+              class="btn-success btn-sm"
+              title="Export selected posts as JSON"
+            >
+              💾 Export JSON
+            </button>
+            <button
+              (click)="confirmDeleteSelected()"
+              class="btn-danger btn-sm"
+              title="Delete all selected posts"
+            >
+              🗑️ Delete Selected
+            </button>
+            <button
+              (click)="deselectAllPosts()"
+              class="btn-secondary btn-sm"
+              title="Clear selection"
+            >
+              ✕ Clear Selection
+            </button>
+          </div>
         </div>
-      </div>
+      }
 
       <div class="posts-list">
-        <div
-          *ngFor="let post of paginatedPosts(); trackBy: trackPost"
-          class="post-card"
-          [class.selected]="selectedPostIds.has(post.id)"
-        >
-          <!-- Edit Mode -->
-          <div *ngIf="editingPostId === post.id" class="edit-mode">
-            <input
-              type="text"
-              [(ngModel)]="editingPostTitle"
-              class="input-field"
-              placeholder="Title"
-            />
-            <textarea
-              [(ngModel)]="editingPostContent"
-              class="textarea-field"
-              rows="3"
-              placeholder="Body"
-            ></textarea>
-            <div class="button-group">
-              <button (click)="savePost()" class="btn-success btn-sm">
-                ✓ Save
-              </button>
-              <button (click)="cancelEditPost()" class="btn-secondary btn-sm">
-                ✗ Cancel
-              </button>
-            </div>
-          </div>
-
-          <!-- View Mode -->
-          <div *ngIf="editingPostId !== post.id" class="view-mode">
-            <div class="post-header">
-              <input
-                type="checkbox"
-                [checked]="selectedPostIds.has(post.id)"
-                (change)="togglePostSelection(post.id)"
-                class="checkbox"
-              />
-              <h3 class="post-title">
-                {{ post.title }}
-              </h3>
-            </div>
-            <p class="post-body">{{ post.content }}</p>
-            <div class="post-meta">
-              <span>{{ getPostAuthor(post.authorId)?.name || 'Unknown' }}</span>
-              <div class="post-actions">
-                <button
-                  (click)="likePost(post.id)"
-                  class="btn-like"
-                  title="Like this post"
-                >
-                  ❤️ {{ post.likes }}
-                </button>
-                <button
-                  (click)="startEditingPost(post)"
-                  class="btn-info btn-sm"
-                  title="Edit post"
-                >
-                  ✏️ Edit
-                </button>
+        @for (post of paginatedPosts(); track trackPost($index, post)) {
+          <div
+            class="post-card"
+            [class.selected]="selectedPostIds.has(post.id)"
+          >
+            <!-- Edit Mode -->
+            @if (editingPostId === post.id) {
+              <div class="edit-mode">
+                <input
+                  type="text"
+                  [(ngModel)]="editingPostTitle"
+                  class="input-field"
+                  placeholder="Title"
+                />
+                <textarea
+                  [(ngModel)]="editingPostContent"
+                  class="textarea-field"
+                  rows="3"
+                  placeholder="Body"
+                ></textarea>
+                <div class="button-group">
+                  <button (click)="savePost()" class="btn-success btn-sm">
+                    ✓ Save
+                  </button>
+                  <button (click)="cancelEditPost()" class="btn-secondary btn-sm">
+                    ✗ Cancel
+                  </button>
+                </div>
               </div>
-            </div>
-            <div class="tag-list">
-              <span *ngFor="let tag of post.tags" class="tag">{{ tag }}</span>
-            </div>
-          </div>
-        </div>
+            }
 
-        <div *ngIf="paginatedPosts().length === 0" class="empty-state">
-          No posts found
-        </div>
+            <!-- View Mode -->
+            @if (editingPostId !== post.id) {
+              <div class="view-mode">
+                <div class="post-header">
+                  <input
+                    type="checkbox"
+                    [checked]="selectedPostIds.has(post.id)"
+                    (change)="togglePostSelection(post.id)"
+                    class="checkbox"
+                  />
+                  <h3 class="post-title">
+                    {{ post.title }}
+                  </h3>
+                </div>
+                <p class="post-body">{{ post.content }}</p>
+                <div class="post-meta">
+                  <span>{{ getPostAuthor(post.authorId)?.name || 'Unknown' }}</span>
+                  <div class="post-actions">
+                    <button
+                      (click)="likePost(post.id)"
+                      class="btn-like"
+                      title="Like this post"
+                    >
+                      ❤️ {{ post.likes }}
+                    </button>
+                    <button
+                      (click)="startEditingPost(post)"
+                      class="btn-info btn-sm"
+                      title="Edit post"
+                    >
+                      ✏️ Edit
+                    </button>
+                  </div>
+                </div>
+                <div class="tag-list">
+                  @for (tag of post.tags; track tag) {
+                    <span class="tag">{{ tag }}</span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        @if (paginatedPosts().length === 0) {
+          <div class="empty-state">
+            No posts found
+          </div>
+        }
       </div>
 
       <!-- Pagination Controls -->
@@ -455,9 +466,11 @@
         >
           ➕ Add Random Post
         </button>
-        <div class="help-text-small" *ngIf="!selectedUser()">
-          Select a user first to add posts
-        </div>
+        @if (!selectedUser()) {
+          <div class="help-text-small">
+            Select a user first to add posts
+          </div>
+        }
       </div>
     </div>
 
@@ -484,45 +497,46 @@
       <!-- User Stats -->
       <div class="stats-section">
         <h3>📈 Selected User Statistics</h3>
-        <div *ngIf="selectedUser(); else noUser" class="stats-content">
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-value stat-blue">
-                {{ getUserPostsCount() }}
+        @if (selectedUser()) {
+          <div class="stats-content">
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-value stat-blue">
+                  {{ getUserPostsCount() }}
+                </div>
+                <div class="stat-label">Posts</div>
               </div>
-              <div class="stat-label">Posts</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value stat-pink">
-                {{ userTotalLikes() }}
+              <div class="stat-card">
+                <div class="stat-value stat-pink">
+                  {{ userTotalLikes() }}
+                </div>
+                <div class="stat-label">Total Likes</div>
               </div>
-              <div class="stat-label">Total Likes</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value stat-purple">
-                {{ getUserAvgPostLength() }}
+              <div class="stat-card">
+                <div class="stat-value stat-purple">
+                  {{ getUserAvgPostLength() }}
+                </div>
+                <div class="stat-label">Avg Length</div>
               </div>
-              <div class="stat-label">Avg Length</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-status" [class]="getUserActivityClass()">
-                {{ getUserActivityStatus() }}
+              <div class="stat-card">
+                <div class="stat-status" [class]="getUserActivityClass()">
+                  {{ getUserActivityStatus() }}
+                </div>
+                <div class="stat-label">Status</div>
               </div>
-              <div class="stat-label">Status</div>
             </div>
-          </div>
 
-          <!-- Export Button -->
-          <button
-            (click)="exportUserData()"
-            class="btn-primary btn-sm full-width export-btn"
-          >
-            💾 Export User Data (JSON)
-          </button>
-        </div>
-        <ng-template #noUser>
+            <!-- Export Button -->
+            <button
+              (click)="exportUserData()"
+              class="btn-primary btn-sm full-width export-btn"
+            >
+              💾 Export User Data (JSON)
+            </button>
+          </div>
+        } @else {
           <div class="empty-state">No user selected</div>
-        </ng-template>
+        }
       </div>
 
       <!-- Performance Section -->

@@ -225,7 +225,7 @@ Recursive performance metrics:
 ## 🧰 New helper scripts
 
 - `node scripts/ci-checks.js --jsdoc --sizes` — consolidated CI checks for JSDoc stripping and bundle-size reports. Used by `prepublish` and `postbuild` hooks.
-- `node scripts/sanity-checks.js` — quick workspace smoke/parity checks (core presence, batching, demo integration).
+- `node scripts/sanity-checks.js` — quick workspace smoke/parity checks (core presence, enterprise build, demo integration).
 
 ### Workspace Information
 

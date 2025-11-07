@@ -3,7 +3,15 @@
   "compilerOptions": {
     "outDir": "../../dist/out-tsc",
     "declaration": true,
-    "types": ["node"]
+    "types": ["node"],
+    "typeRoots": [
+      "./src/types",
+      "../../node_modules/@types"
+    ],
+    "paths": {
+      "@signaltree/core": ["packages/core/src/index.ts"],
+      "@signaltree/core/*": ["packages/core/src/*"]
+    }
   },
   "include": ["src/**/*.ts"],
   "exclude": ["jest.config.ts", "src/**/*.spec.ts", "src/**/*.test.ts"]
