@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/enterprise",
-  "version": "4.0.8",
+  "version": "4.0.9",
   "description": "Enterprise-grade optimizations for SignalTree. Provides diff-based updates, bulk operation optimization, and advanced change tracking for large-scale applications.",
   "type": "module",
   "sideEffects": false,
