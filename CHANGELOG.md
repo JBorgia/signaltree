@@ -381,3 +381,22 @@ After initially removing synthetic implementations, benchmarks have been **prope
 ## Historical Note
 
 This changelog was created on October 7, 2025. Prior changes were not formally tracked in a changelog format but can be found in git commit history.
+
+## [4.0.8] - 2025-11-07
+
+### Added
+
+- Home page now highlights Time Travel debugging and splits feature cards by category using the Angular 18 block syntax helpers.
+- Local type shims for cross-package builds (`packages/enterprise/src/types/signaltree-core.d.ts`, `packages/ng-forms/src/types/signaltree-core.d.ts`) so enterprise and ng-forms can compile against the consolidated core sources.
+
+### Changed
+
+- Converted the remaining demo templates to Angular 18 block syntax, including the benchmark orchestrator, entities demo, comparison components, metrics dashboard, and shared navigation.
+- Reworked the demo home template to use `@if`/`@for` blocks with guard clauses, added async/time travel sections, and refreshed copy to match the v4 package lineup.
+- Updated Sass usage in the fundamentals examples to replace deprecated `darken()` helpers with `color.adjust()` and imported `sass:color` where needed.
+- Adjusted Jest and Nx TypeScript configs to resolve `@signaltree/*` imports from source (`apps/demo/jest.config.ts`, enterprise/ng-forms tsconfigs) and declared workspace dev dependencies for local packages in `package.json`.
+
+### Fixed
+
+- Ensured `@signaltree/ng-forms` and `@signaltree/enterprise` builds succeed by referencing Angular core symbols explicitly and mapping core exports during compilation.
+- Resolved demo unit tests failing to locate `@signaltree/core` by updating moduleNameMapper settings.

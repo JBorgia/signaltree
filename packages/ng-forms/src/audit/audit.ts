@@ -1,3 +1,4 @@
+/// <reference path="../types/signaltree-core.d.ts" />
 import { getChanges } from '@signaltree/shared';
 
 import type { Middleware } from '@signaltree/core';

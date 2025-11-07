@@ -61,56 +61,64 @@ interface BenchmarkResult {
           >
             {{ running() ? 'Running…' : 'Run Full Battery' }}
           </button>
-          <p class="hint" *ngIf="!hasCalibration()">
-            Calibrate environment above to enable runs.
-          </p>
+          @if (!hasCalibration()) {
+            <p class="hint">
+              Calibrate environment above to enable runs.
+            </p>
+          }
         </div>
       </div>
 
-      <div class="results" *ngIf="results().length > 0">
-        <h3>Performance Results</h3>
-        <div class="charts">
-          <div class="chart-block">
-            <app-performance-graph
-              [title]="'All Scenarios: per-iteration (ms)'"
-              [series]="allSeries()"
-              [height]="360"
-            />
-          </div>
-        </div>
-        <table class="results-table">
-          <thead>
-            <tr>
-              <th>Scenario</th>
-              <th>Library</th>
-              <th>P50 (ms)</th>
-              <th>P95 (ms)</th>
-              <th>Samples</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              *ngFor="let result of results()"
-              [class.faster]="isFaster(result)"
-            >
-              <td>{{ result.scenario }}</td>
-              <td>{{ result.library }}</td>
-              <td>{{ result.p50.toFixed(3) }}</td>
-              <td>{{ result.p95.toFixed(3) }}</td>
-              <td>{{ result.samples.length }}</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div class="insights" *ngIf="getInsights().length > 0">
-          <h4>Key Insights</h4>
-          <div class="insight-list">
-            <div class="insight" *ngFor="let insight of getInsights()">
-              <strong>{{ insight.scenario }}:</strong> {{ insight.comparison }}
+      @if (results().length > 0) {
+        <div class="results">
+          <h3>Performance Results</h3>
+          <div class="charts">
+            <div class="chart-block">
+              <app-performance-graph
+                [title]="'All Scenarios: per-iteration (ms)'"
+                [series]="allSeries()"
+                [height]="360"
+              />
             </div>
           </div>
+          <table class="results-table">
+            <thead>
+              <tr>
+                <th>Scenario</th>
+                <th>Library</th>
+                <th>P50 (ms)</th>
+                <th>P95 (ms)</th>
+                <th>Samples</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (result of results(); track result.scenario + '-' + result.library) {
+                <tr [class.faster]="isFaster(result)">
+                  <td>{{ result.scenario }}</td>
+                  <td>{{ result.library }}</td>
+                  <td>{{ result.p50.toFixed(3) }}</td>
+                  <td>{{ result.p95.toFixed(3) }}</td>
+                  <td>{{ result.samples.length }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+
+          @if (getInsights().length > 0) {
+            <div class="insights">
+              <h4>Key Insights</h4>
+              <div class="insight-list">
+                @for (insight of getInsights(); track insight.scenario) {
+                  <div class="insight">
+                    <strong>{{ insight.scenario }}:</strong>
+                    {{ insight.comparison }}
+                  </div>
+                }
+              </div>
+            </div>
+          }
         </div>
-      </div>
+      }
 
       <div class="architecture-explanation">
         <h3>Architectural Differences</h3>

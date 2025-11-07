@@ -92,9 +92,11 @@ interface DeepNestedState {
           >
             {{ isRunning() ? 'Running…' : 'Run Full Battery' }}
           </button>
-          <p class="hint" *ngIf="!hasCalibration()">
-            Calibrate environment above to enable runs.
-          </p>
+          @if (!hasCalibration()) {
+            <p class="hint">
+              Calibrate environment above to enable runs.
+            </p>
+          }
           <app-performance-graph
             [title]="'All Scenarios: per-iteration (ms)'"
             [series]="allSeries()"
@@ -103,26 +105,30 @@ interface DeepNestedState {
         </div>
       </div>
 
-      <div class="all-results" *ngIf="allResults().length > 0">
-        <h4>All Benchmark Results</h4>
-        <button (click)="exportResults()">Export Results (NDJSON)</button>
-        <div class="results-table">
-          <div class="table-header">
-            <span>Scenario</span>
-            <span>Library</span>
-            <span>p50 (ms)</span>
-            <span>p95 (ms)</span>
-            <span>Samples</span>
-          </div>
-          <div class="table-row" *ngFor="let result of allResults()">
-            <span>{{ result.scenario }}</span>
-            <span>{{ result.library }}</span>
-            <span>{{ result.p50 }}</span>
-            <span>{{ result.p95 }}</span>
-            <span>{{ result.samples.length }}</span>
+      @if (allResults().length > 0) {
+        <div class="all-results">
+          <h4>All Benchmark Results</h4>
+          <button (click)="exportResults()">Export Results (NDJSON)</button>
+          <div class="results-table">
+            <div class="table-header">
+              <span>Scenario</span>
+              <span>Library</span>
+              <span>p50 (ms)</span>
+              <span>p95 (ms)</span>
+              <span>Samples</span>
+            </div>
+            @for (result of allResults(); track result.scenario + '-' + result.library) {
+              <div class="table-row">
+                <span>{{ result.scenario }}</span>
+                <span>{{ result.library }}</span>
+                <span>{{ result.p50 }}</span>
+                <span>{{ result.p95 }}</span>
+                <span>{{ result.samples.length }}</span>
+              </div>
+            }
           </div>
         </div>
-      </div>
+      }
     </div>
   `,
   styles: [

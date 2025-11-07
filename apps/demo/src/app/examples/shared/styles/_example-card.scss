@@ -1,5 +1,6 @@
 // Example Card Component Styles
 // Shared card layout for all examples in the fundamentals grid
+@use 'sass:color';
 @use './_variables' as *;
 @use './_mixins' as *;
 
@@ -33,7 +34,7 @@
     background: linear-gradient(
       90deg,
       var(--card-accent-color, #{$primary}) 0%,
-      lighten($primary, 10%) 100%
+      #{color.adjust($primary, $lightness: 10%)} 100%
     );
   }
 
@@ -125,7 +126,7 @@
         background: linear-gradient(
           135deg,
           var(--card-accent-color, #{$primary}) 0%,
-          lighten($primary, 5%) 100%
+          #{color.adjust($primary, $lightness: 5%)} 100%
         );
         color: white;
         border-color: transparent;
@@ -216,7 +217,7 @@
         background: linear-gradient(
           135deg,
           $primary 0%,
-          lighten($primary, 5%) 100%
+          #{color.adjust($primary, $lightness: 5%)} 100%
         );
         color: white;
         border-color: $primary;

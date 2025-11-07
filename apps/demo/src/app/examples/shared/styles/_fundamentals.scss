@@ -1,5 +1,6 @@
 // Fundamentals Page Styles
 // Clean, instructive, modular learning environment
+@use 'sass:color';
 @use './_variables' as *;
 @use './_mixins' as *;
 
@@ -345,7 +346,7 @@
       width: 80px;
       height: 80px;
       margin: 0 auto $spacing-xl;
-      color: lighten($text-light, 10%);
+      color: color.adjust($text-light, $lightness: 10%);
 
       svg {
         width: 100%;

@@ -39,23 +39,29 @@ interface ComparisonResults {
           <span class="label">Reliability Score</span>
         </div>
         <div class="reliability-details">
-          <div *ngIf="reliabilityWarnings().length > 0" class="warnings">
-            <h4>⚠️ Environment Warnings:</h4>
-            <ul>
-              <li *ngFor="let warning of reliabilityWarnings()">
-                {{ warning }}
-              </li>
-            </ul>
-            <p>
-              <small
-                >Results may be less accurate. For best results, close DevTools,
-                focus this tab, and ensure stable power.</small
-              >
-            </p>
-          </div>
-          <div *ngIf="reliabilityWarnings().length === 0" class="optimal">
-            ✅ Optimal environment for reliable benchmarks
-          </div>
+          @if (reliabilityWarnings().length > 0) {
+            <div class="warnings">
+              <h4>⚠️ Environment Warnings:</h4>
+              <ul>
+                @for (warning of reliabilityWarnings(); track warning) {
+                  <li>
+                    {{ warning }}
+                  </li>
+                }
+              </ul>
+              <p>
+                <small
+                  >Results may be less accurate. For best results, close DevTools,
+                  focus this tab, and ensure stable power.</small
+                >
+              </p>
+            </div>
+          }
+          @if (reliabilityWarnings().length === 0) {
+            <div class="optimal">
+              ✅ Optimal environment for reliable benchmarks
+            </div>
+          }
         </div>
       </div>
 

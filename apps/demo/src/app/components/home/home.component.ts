@@ -15,13 +15,14 @@ export class HomeComponent {
       title: '🏪 Core Features',
       description:
         'Simple hierarchical signal tree with reactive state management',
-      route: '/core',
+      route: '/examples/fundamentals',
       category: 'Core',
     },
     {
       title: '⚡ Performance',
-      description: 'Batched updates, memoization, and performance optimization',
-      route: '/performance',
+      description:
+        'Batched updates, memoization, and performance optimization',
+      route: '/benchmarks',
       category: 'Performance',
       methods: ['batch', 'computed', 'optimize', 'clearCache', 'getMetrics'],
     },
@@ -50,11 +51,11 @@ export class HomeComponent {
       ],
     },
     {
-      title: '🌐 Async (via Middleware)',
+      title: '🌐 Async Pipelines',
       description:
         'Handle async operations using middleware helpers (createAsyncOperation / trackAsync)',
       route: '/middleware',
-      category: 'Middleware',
+      category: 'Async',
       methods: ['createAsyncOperation', 'trackAsync'],
     },
     {
@@ -65,35 +66,6 @@ export class HomeComponent {
       methods: ['batch', 'process'],
     },
     {
-      title: '🔥 Extreme Depth Testing',
-      description:
-        'Push recursive typing to 15+ levels with perfect type inference',
-      route: '/extreme-depth',
-      category: 'Advanced',
-      highlight: true,
-    },
-    {
-      title: '📊 Benchmark History',
-      description:
-        'View historical benchmark results comparing SignalTree vs NgRx vs other libraries',
-      route: '/realistic-benchmark-history',
-      category: 'Performance',
-    },
-    {
-      title: '⏰ Time Travel',
-      description: 'Undo/redo functionality and state history management',
-      route: '/time-travel',
-      category: 'Time Travel',
-      methods: ['undo', 'redo', 'goToState', 'getHistory', 'clearHistory'],
-    },
-    {
-      title: '📝 Forms Integration',
-      description:
-        'Seamless Angular Forms integration with reactive validation',
-      route: '/ng-forms',
-      category: 'Forms',
-    },
-    {
       title: '🧪 Memoization',
       description:
         'Intelligent caching and performance optimization for expensive computations',
@@ -102,10 +74,51 @@ export class HomeComponent {
       methods: ['memoize', 'clearCache', 'getCacheStats'],
     },
     {
-      title: '🎨 Presets',
-      description: 'Pre-configured setups for common patterns and use cases',
-      route: '/presets',
+      title: '📊 Benchmark History',
+      description:
+        'View historical benchmark results comparing SignalTree and competitors',
+      route: '/realistic-benchmark-history',
+      category: 'Performance',
+    },
+    {
+      title: '🔥 Extreme Depth Testing',
+      description:
+        'Push recursive typing to 15+ levels with perfect type inference',
+      route: '/extreme-depth',
       category: 'Advanced',
+      highlight: true,
+      cta: 'Experience Extreme Depth →',
+    },
+    {
+      title: '🚀 Enterprise Optimizer',
+      description:
+        'Enable diff-based updates, path indexes, and live update metrics',
+      route: '/enterprise-enhancer',
+      category: 'Advanced',
+      cta: 'Explore Enterprise Enhancer →',
+    },
+    {
+      title: '🏛 Architecture Overview',
+      description:
+        'Explore memory management, security guardrails, and shared utilities',
+      route: '/architecture',
+      category: 'Advanced',
+      cta: 'View Architecture Overview →',
+    },
+    {
+      title: '📚 Docs & Guides',
+      description:
+        'Read package guides, migration notes, and API documentation in-app',
+      route: '/docs',
+      category: 'Advanced',
+      cta: 'Read Documentation →',
+    },
+    {
+      title: '📝 Forms Integration',
+      description:
+        'Seamless Angular Forms integration with reactive validation',
+      route: '/examples/fundamentals',
+      category: 'Forms',
     },
     {
       title: '🛠️ DevTools',
@@ -120,6 +133,15 @@ export class HomeComponent {
         'Optional enhanced developer experience with callable node syntax',
       route: '/callable-syntax',
       category: 'Advanced',
+      cta: 'Try Callable Syntax →',
+    },
+    {
+      title: '⏰ Time Travel Debugging',
+      description:
+        'Navigate state history with undo/redo controls and timeline insights',
+      route: '/time-travel',
+      category: 'Time Travel',
+      methods: ['withTimeTravel', 'undo', 'redo', 'jumpTo'],
     },
   ];
 

@@ -181,48 +181,56 @@
       </div>
 
       <!-- Processing Indicator -->
-      <div *ngIf="processing()" class="processing-indicator">
-        <div class="spinner"></div>
-        <span class="">Processing batch...</span>
-      </div>
+      @if (processing()) {
+        <div class="processing-indicator">
+          <div class="spinner"></div>
+          <span class="">Processing batch...</span>
+        </div>
+      }
 
       <!-- Batch Queue Items -->
       <div class="queue-list">
-        <div
-          *ngFor="let operation of batchQueue(); trackBy: trackOperation"
-          class="queue-item"
-          [class]="getOperationStatusClass(operation)"
-        >
-          <div class="queue-item-content">
-            <div
-              class="status-dot"
-              [class]="getOperationStatusDot(operation)"
-            ></div>
-            <div>
-              <div class="operation-title">
-                {{ operation.type | titlecase }}
-                {{ operation.entity | titlecase }}
-              </div>
-              <div class="operation-time">
-                {{ operation.id }} •
-                {{ formatTimestamp(operation.timestamp) }}
+        @for (
+          operation of batchQueue();
+          track trackOperation($index, operation)
+        ) {
+          <div
+            class="queue-item"
+            [class]="getOperationStatusClass(operation)"
+          >
+            <div class="queue-item-content">
+              <div
+                class="status-dot"
+                [class]="getOperationStatusDot(operation)"
+              ></div>
+              <div>
+                <div class="operation-title">
+                  {{ operation.type | titlecase }}
+                  {{ operation.entity | titlecase }}
+                </div>
+                <div class="operation-time">
+                  {{ operation.id }} •
+                  {{ formatTimestamp(operation.timestamp) }}
+                </div>
               </div>
             </div>
+            <button
+              (click)="removeOperation(operation.id)"
+              [disabled]="processing() || operation.status === 'processing'"
+              class="remove-button"
+            >
+              Remove
+            </button>
           </div>
-          <button
-            (click)="removeOperation(operation.id)"
-            [disabled]="processing() || operation.status === 'processing'"
-            class="remove-button"
-          >
-            Remove
-          </button>
-        </div>
+        }
       </div>
 
       <!-- Empty State -->
-      <div *ngIf="batchQueue().length === 0" class="empty-state">
-        No operations in queue. Add some operations to get started.
-      </div>
+      @if (batchQueue().length === 0) {
+        <div class="empty-state">
+          No operations in queue. Add some operations to get started.
+        </div>
+      }
     </div>
   </div>
 
@@ -232,36 +240,44 @@
     <div class="card">
       <h2 class="">Users ({{ users().length }})</h2>
       <div class="data-list">
-        <div *ngFor="let user of users(); trackBy: trackUser" class="user-item">
-          <img [src]="user.avatar" [alt]="user.name" class="" />
-          <div class="user-info">
-            <div class="operation-title">{{ user.name }}</div>
-            <div class="operation-time">{{ user.email }}</div>
+        @for (user of users(); track trackUser($index, user)) {
+          <div class="user-item">
+            <img [src]="user.avatar" [alt]="user.name" class="" />
+            <div class="user-info">
+              <div class="operation-title">{{ user.name }}</div>
+              <div class="operation-time">{{ user.email }}</div>
+            </div>
           </div>
-        </div>
+        }
       </div>
 
-      <div *ngIf="users().length === 0" class="empty-state">
-        No users yet. Create some users to see them here.
-      </div>
+      @if (users().length === 0) {
+        <div class="empty-state">
+          No users yet. Create some users to see them here.
+        </div>
+      }
     </div>
 
     <!-- Posts -->
     <div class="card">
       <h2 class="">Posts ({{ posts().length }})</h2>
       <div class="data-list">
-        <div *ngFor="let post of posts(); trackBy: trackPost" class="post-item">
-          <div class="operation-title">{{ post.title }}</div>
-          <div class="post-meta">
-            by {{ getUserName(post.authorId) }} •
-            {{ post.content.length }} chars
+        @for (post of posts(); track trackPost($index, post)) {
+          <div class="post-item">
+            <div class="operation-title">{{ post.title }}</div>
+            <div class="post-meta">
+              by {{ getUserName(post.authorId) }} •
+              {{ post.content.length }} chars
+            </div>
           </div>
-        </div>
+        }
       </div>
 
-      <div *ngIf="posts().length === 0" class="empty-state">
-        No posts yet. Create some posts to see them here.
-      </div>
+      @if (posts().length === 0) {
+        <div class="empty-state">
+          No posts yet. Create some posts to see them here.
+        </div>
+      }
     </div>
   </div>
 
@@ -270,48 +286,49 @@
     <h2 class="">Batch Processing History</h2>
 
     <div class="history-list">
-      <div
-        *ngFor="
-          let result of batchResults().slice().reverse();
-          trackBy: trackBatchResult
-        "
-        class="action-group"
-      >
-        <div class="history-header">
-          <div class="history-id">{{ result.batchId }}</div>
-          <div class="history-time">
-            {{ formatTimestamp(result.timestamp) }}
+      @for (
+        result of batchResults().slice().reverse();
+        track trackBatchResult($index, result)
+      ) {
+        <div class="action-group">
+          <div class="history-header">
+            <div class="history-id">{{ result.batchId }}</div>
+            <div class="history-time">
+              {{ formatTimestamp(result.timestamp) }}
+            </div>
           </div>
-        </div>
 
-        <div class="history-stats">
-          <div>
-            <div class="stat-label">Operations</div>
-            <div>{{ result.operations.length }}</div>
+          <div class="history-stats">
+            <div>
+              <div class="stat-label">Operations</div>
+              <div>{{ result.operations.length }}</div>
+            </div>
+            <div>
+              <div class="stat-label success">Success</div>
+              <div>{{ result.successCount }}</div>
+            </div>
+            <div>
+              <div class="stat-label failed">Failed</div>
+              <div>{{ result.failureCount }}</div>
+            </div>
+            <div>
+              <div class="stat-label duration">Duration</div>
+              <div>{{ result.duration.toFixed(0) }}ms</div>
+            </div>
           </div>
-          <div>
-            <div class="stat-label success">Success</div>
-            <div>{{ result.successCount }}</div>
-          </div>
-          <div>
-            <div class="stat-label failed">Failed</div>
-            <div>{{ result.failureCount }}</div>
-          </div>
-          <div>
-            <div class="stat-label duration">Duration</div>
-            <div>{{ result.duration.toFixed(0) }}ms</div>
-          </div>
-        </div>
 
-        <div class="history-summary">
-          {{ getOperationsSummary(result.operations) }}
+          <div class="history-summary">
+            {{ getOperationsSummary(result.operations) }}
+          </div>
         </div>
+      }
+    </div>
+
+    @if (batchResults().length === 0) {
+      <div class="empty-state">
+        No batch processing history yet. Process some batches to see results here.
       </div>
-    </div>
-
-    <div *ngIf="batchResults().length === 0" class="empty-state">
-      No batch processing history yet. Process some batches to see results here.
-    </div>
+    }
   </div>
 
   <!-- Features Explanation -->

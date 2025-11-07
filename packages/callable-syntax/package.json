@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/callable-syntax",
-  "version": "4.0.7",
+  "version": "4.0.8",
   "description": "Optional zero-runtime callable syntax transform for SignalTree unified leaf API.",
   "license": "BSL-1.1",
   "type": "commonjs",
@@ -47,7 +47,7 @@
   },
   "devDependencies": {
     "@angular/core": "~20.3.0",
-    "@signaltree/core": "4.0.2",
+    "@signaltree/core": "workspace:*",
     "@types/babel__traverse": "^7.20.0",
     "@types/babel__generator": "^7.20.0",
     "@types/node": "^20.0.0",

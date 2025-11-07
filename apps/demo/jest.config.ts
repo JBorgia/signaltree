@@ -5,10 +5,10 @@ export default {
   coverageDirectory: '../../coverage/apps/demo',
   testPathIgnorePatterns: ['demo-e2e'],
   moduleNameMapper: {
-    '^@signaltree/(.*)$': '<rootDir>/../../packages/$1/dist/index.cjs',
-    '^@signaltree/core$': '<rootDir>/../../packages/core/dist/index.cjs',
+    '^@signaltree/core$': '<rootDir>/../../packages/core/src/index.ts',
     '^@signaltree/core/(.*)$':
-      '<rootDir>/../../packages/core/dist/$1/index.cjs',
+      '<rootDir>/../../packages/core/src/$1/index.ts',
+    '^@signaltree/(.*)$': '<rootDir>/../../packages/$1/src/index.ts',
     '^@app/(.*)$': '<rootDir>/src/app/$1',
     '^@benchmark/(.*)$': '<rootDir>/src/app/services/benchmark/$1',
     '^@api/(.*)$': '<rootDir>/../../api/$1',
