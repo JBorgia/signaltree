@@ -184,6 +184,7 @@ export class RealisticBenchmarkHistoryComponent implements OnInit {
     // Open details panel and fetch full details (with caching)
     this.selectedBenchmark.set(benchmark);
     this.detailsOpen.set(true);
+    this.selectedBenchmarkFull.set(null);
     // If we already have full data attached to the history item, use it
     if (benchmark.fullData) {
       this.selectedBenchmarkFull.set(benchmark.fullData);
