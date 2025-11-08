@@ -21,6 +21,12 @@
 - Clean developer experience and straightforward APIs
 - **Optional add-ons**: Callable syntax transform, Angular forms integration, enterprise-grade optimizer
 
+## Detailed guide
+
+> Continue here after the [Quick Start (TL;DR)](#quick-start-tl-dr) section for full examples and advanced usage.
+
+## Deep Dive: Performance & Architecture
+
 ### How recursive typing helps performance and size
 
 SignalTree's recursive typing system isn't just about developer experience—it's the **fundamental technology** that enables dramatic bundle size and performance breakthroughs:
