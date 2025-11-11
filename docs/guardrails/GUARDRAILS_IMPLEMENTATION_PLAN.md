@@ -1,9 +1,27 @@
 # SignalTree Guardrails v1.1 – Comprehensive Implementation & Adoption Guide
 
+> **Complete documentation set**: See [INDEX.md](./INDEX.md) for deliverable map and [README.md](./README.md) for quick start.
+
 ## 1. Executive Summary
 SignalTree Guardrails v1.1 delivers a dev-only, zero–production-cost instrumentation layer that enforces performance standards, detects architectural anti‑patterns early, and guides teams toward healthy state management practices. It extends the v1.0 foundation (budgets, hot path analysis, memory heuristics, custom rules, intent-aware suppression) with real recomputation tracking, percentile timing (P50/P95/P99), robust disposal, unread memory retention, diff ratio warnings, improved noise control, and multi-tree correlation.
 
 Goal: Provide actionable, low-noise insight (<5% false positives) while keeping median overhead <0.5ms/update and P95 overhead <0.8ms.
+
+## 1.1 Document Set
+
+| File | Purpose |
+|------|---------|
+| [README.md](./README.md) | Quick start & feature overview |
+| [INDEX.md](./INDEX.md) | Master deliverable index |
+| **This file** | Complete implementation & rollout plan |
+| [core-extensions-proposal.md](./core-extensions-proposal.md) | Upstream dev hooks proposal |
+| [guardrails-v1-implementation.ts](./guardrails-v1-implementation.ts) | v1.0 reference implementation |
+| [guardrails-v1.1-enhanced.ts](./guardrails-v1.1-enhanced.ts) | v1.1 enhanced implementation |
+| [factory-patterns.ts](./factory-patterns.ts) | Integration factories |
+| [guardrails.spec.ts](./guardrails.spec.ts) | Comprehensive test plan |
+| [benchmark-harness.ts](./benchmark-harness.ts) | Performance validation |
+| [package.json](./package.json) | Packaging with conditional exports |
+| [RESPONSE_SUMMARY.md](./RESPONSE_SUMMARY.md) | Gap analysis response |
 
 ## 2. Core Principles
 - Zero production overhead: Fully gated behind `__DEV__` and conditional exports.
@@ -118,9 +136,19 @@ security (planned extension): { redactPaths[]; maxValueSizeKB }
 - Mature usage: targeted rule evolution (team tags, fix suggestions).
 
 ## 12. Benchmarks & Validation
+
+**See [benchmark-harness.ts](./benchmark-harness.ts)** for complete runnable harness.
+
 Scenarios (Harness): rapid counter, deep structural diffs, burst writes, large payload swap, compute-heavy derivations, memory growth simulation, idle baseline, mixed suppressed updates.
+
 Metrics: P50, P95, P99, max, overhead ratio vs baseline, recompute counts, false positive rate (manual sampling), memory growth slope.
+
 Pass Criteria: All timing targets met; false positives <5%; no self-leaks; disposal test passes.
+
+Running the harness:
+```bash
+npx ts-node docs/guardrails/benchmark-harness.ts
+```
 
 ## 13. Reporting & Output
 `GuardrailsReport` contains:
@@ -164,6 +192,9 @@ Console Modes:
 - Optional addition: diff ratio thresholds & percentile reporting.
 
 ## 18. Integration Patterns
+
+**See [factory-patterns.ts](./factory-patterns.ts)** for complete implementations.
+
 Factories:
 - `createFeatureTree` – general purpose with environment gating
 - `createAppShellTree` – strict budgets & persistence include list
@@ -244,5 +275,16 @@ if (dashboardTree.__guardrails) {
 - Silent Mode: Guardrails gathering metrics without emitting logs.
 - Thrashing: Excess recomputations indicating unstable dependency patterns.
 
+## 27. Navigation & Resources
+
+For quick reference:
+- **Quick start**: [README.md](./README.md)
+- **Deliverables index**: [INDEX.md](./INDEX.md)
+- **Implementation code**: [guardrails-v1.1-enhanced.ts](./guardrails-v1.1-enhanced.ts)
+- **Upstream proposal**: [core-extensions-proposal.md](./core-extensions-proposal.md)
+- **Factories**: [factory-patterns.ts](./factory-patterns.ts)
+- **Benchmark**: [benchmark-harness.ts](./benchmark-harness.ts)
+- **Tests**: [guardrails.spec.ts](./guardrails.spec.ts)
+
 ---
-This document centralizes every aspect of SignalTree Guardrails v1.1—use it as the authoritative guide for rollout, tuning, and ongoing evolution.
+**This document centralizes every aspect of SignalTree Guardrails v1.1**—use it as the authoritative guide for rollout, tuning, and ongoing evolution.
