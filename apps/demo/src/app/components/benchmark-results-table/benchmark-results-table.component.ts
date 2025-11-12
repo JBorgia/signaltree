@@ -31,7 +31,16 @@ export class BenchmarkResultsTableComponent {
         Object.keys(result.libraryResults).forEach(lib => libraries.add(lib));
       }
     });
-    return Array.from(libraries).sort();
+    const libsArray = Array.from(libraries).sort();
+    
+    // Always put signaltree first (it's the baseline)
+    const signaltreeIndex = libsArray.indexOf('signaltree');
+    if (signaltreeIndex > 0) {
+      libsArray.splice(signaltreeIndex, 1);
+      libsArray.unshift('signaltree');
+    }
+    
+    return libsArray;
   }
 
   getLibraryColorValue(library: string): string {
