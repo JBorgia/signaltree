@@ -8,6 +8,7 @@ import javascript from 'highlight.js/lib/languages/javascript';
 import json from 'highlight.js/lib/languages/json';
 import typescript from 'highlight.js/lib/languages/typescript';
 import { marked } from 'marked';
+import { lastValueFrom } from 'rxjs';
 
 interface DocPackage {
   id: string;
@@ -24,8 +25,8 @@ interface DocPackage {
   styleUrls: ['./documentation.component.scss'],
 })
 export class DocumentationComponent implements OnInit {
-  private http = inject(HttpClient);
-  private route = inject(ActivatedRoute);
+  private readonly http = inject(HttpClient);
+  private readonly route = inject(ActivatedRoute);
 
   packages: DocPackage[] = [
     {
@@ -45,6 +46,12 @@ export class DocumentationComponent implements OnInit {
       name: '@signaltree/enterprise',
       description: 'Enterprise features and audit logging',
       readmePath: '/assets/docs/enterprise/README.md',
+    },
+    {
+      id: 'guardrails',
+      name: '@signaltree/guardrails',
+      description: 'Development-only performance guardrails',
+      readmePath: '/assets/docs/guardrails/README.md',
     },
     {
       id: 'callable-syntax',
@@ -99,49 +106,17 @@ export class DocumentationComponent implements OnInit {
     this.error.set(null);
 
     try {
-      const markdown = await this.http
-        .get(pkg.readmePath, { responseType: 'text' })
-        .toPromise();
+      const markdown = await lastValueFrom(
+        this.http.get(pkg.readmePath, { responseType: 'text' })
+      );
 
-      if (markdown) {
-        let html = await marked.parse(markdown);
-
-        // Apply syntax highlighting to code blocks
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = html;
-
-        const codeBlocks = tempDiv.querySelectorAll('pre code');
-        codeBlocks.forEach((block) => {
-          const codeElement = block as HTMLElement;
-          const language = codeElement.className.match(/language-(\w+)/)?.[1];
-
-          if (language && hljs.getLanguage(language)) {
-            try {
-              codeElement.innerHTML = hljs.highlight(
-                codeElement.textContent || '',
-                {
-                  language,
-                }
-              ).value;
-              codeElement.classList.add('hljs');
-            } catch (err) {
-              console.warn('Could not highlight code block:', err);
-            }
-          } else {
-            // Auto-detect language
-            try {
-              const result = hljs.highlightAuto(codeElement.textContent || '');
-              codeElement.innerHTML = result.value;
-              codeElement.classList.add('hljs');
-            } catch (err) {
-              console.warn('Could not auto-highlight code block:', err);
-            }
-          }
-        });
-
-        html = tempDiv.innerHTML;
-        this.markdownContent.set(html);
+      if (!markdown) {
+        this.markdownContent.set('');
+        return;
       }
+
+      const html = await marked.parse(markdown);
+      this.markdownContent.set(this.highlightCodeBlocks(html));
     } catch (err) {
       console.error('Error loading README:', err);
       this.error.set(`Failed to load documentation for ${pkg.name}`);
@@ -149,5 +124,36 @@ export class DocumentationComponent implements OnInit {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  private highlightCodeBlocks(html: string): string {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+
+    const codeBlocks = Array.from(tempDiv.querySelectorAll('pre code'));
+    for (const block of codeBlocks) {
+      const codeElement = block as HTMLElement;
+      const languageMatch = /language-(\w+)/.exec(codeElement.className);
+      const language = languageMatch?.[1];
+
+      try {
+        if (language && hljs.getLanguage(language)) {
+          codeElement.innerHTML = hljs.highlight(
+            codeElement.textContent || '',
+            {
+              language,
+            }
+          ).value;
+        } else {
+          const result = hljs.highlightAuto(codeElement.textContent || '');
+          codeElement.innerHTML = result.value;
+        }
+        codeElement.classList.add('hljs');
+      } catch (error) {
+        console.warn('Could not highlight code block:', error);
+      }
+    }
+
+    return tempDiv.innerHTML;
   }
 }

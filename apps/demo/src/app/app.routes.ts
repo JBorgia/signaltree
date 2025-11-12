@@ -116,6 +116,14 @@ export const appRoutes: Route[] = [
       ).then((c) => c.RealisticBenchmarkHistoryComponent),
   },
 
+  {
+    path: 'guardrails',
+    loadComponent: () =>
+      import(
+        './pages/guardrails-monitoring/guardrails-monitoring.component'
+      ).then((c) => c.GuardrailsMonitoringComponent),
+  },
+
   // Architecture and bundle analysis pages
   {
     path: 'architecture',
