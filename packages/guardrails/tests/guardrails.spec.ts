@@ -442,4 +442,76 @@ describe('Guardrails Enhancer', () => {
 
     enhanced.__guardrails?.dispose();
   });
+
+  it('exceeds recomputation budget when nested updates spike recomputations', () => {
+    const tree = createMockTree({
+      nested: { a: 1, b: 1, c: 1 },
+    });
+
+    const enhancer = withGuardrails({
+      budgets: { maxRecomputations: 1 },
+      reporting: { console: false, interval: 50 },
+    });
+
+    const enhanced = enhancer(
+      tree as unknown as SignalTree<{ nested: Record<string, number> }>
+    ) as unknown as GuardrailsTree<{ nested: Record<string, number> }>;
+
+    enhanced({
+      nested: { a: 2, b: 3, c: 4 },
+    });
+
+    jest.advanceTimersByTime(60);
+
+    const report = enhanced.__guardrails?.getReport();
+    if (!report) {
+      throw new Error('Guardrails report unavailable');
+    }
+
+    expect(report.budgets.recomputations.status).toBe('exceeded');
+
+    enhanced.__guardrails?.dispose();
+  });
+
+  it('flags memory leak conditions and exceeds memory budget', () => {
+    const tree = createMockTree({ metrics: {} as Record<string, number> });
+
+    const enhancer = withGuardrails({
+      budgets: { maxMemory: 2 },
+      memoryLeaks: {
+        enabled: true,
+        checkInterval: 50,
+        retentionThreshold: 1,
+        growthRate: 0.1,
+      },
+      reporting: { console: false, interval: 50 },
+    });
+
+    const enhanced = enhancer(
+      tree as unknown as SignalTree<{ metrics: Record<string, number> }>
+    ) as unknown as GuardrailsTree<{ metrics: Record<string, number> }>;
+
+    for (let i = 0; i < 3; i++) {
+      enhanced((current) => ({
+        metrics: {
+          ...(current.metrics as Record<string, number>),
+          [`k${i}`]: i,
+        },
+      }));
+    }
+
+    jest.advanceTimersByTime(60);
+
+    const report = enhanced.__guardrails?.getReport();
+    if (!report) {
+      throw new Error('Guardrails report unavailable');
+    }
+
+    expect(report.budgets.memory.status).toBe('exceeded');
+    const memoryIssue = report.issues.find((issue) => issue.type === 'memory');
+    expect(memoryIssue).toBeDefined();
+    expect(memoryIssue?.message).toContain('Potential memory leak');
+
+    enhanced.__guardrails?.dispose();
+  });
 });

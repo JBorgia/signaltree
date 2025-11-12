@@ -124,11 +124,15 @@ interface GuardrailsContext<
     { count: number; lastUpdate: number; durations: number[] }
   >;
   issueMap: Map<string, GuardrailIssue>;
+  signalUsage: Map<string, { updates: number; lastSeen: number }>;
+  memoryHistory: Array<{ timestamp: number; count: number }>;
+  recomputationLog: number[];
   middlewareId?: string;
   disposed: boolean;
 }
 
 const MAX_TIMING_SAMPLES = 1000;
+const RECOMPUTATION_WINDOW_MS = 1000;
 
 /**
  * Creates a guardrails enhancer for dev-only monitoring
@@ -162,6 +166,9 @@ export function withGuardrails<T extends Record<string, unknown>>(
       timings: [],
       hotPathData: new Map(),
       issueMap: new Map(),
+      signalUsage: new Map(),
+      memoryHistory: [],
+      recomputationLog: [],
       disposed: false,
     };
 
@@ -264,6 +271,8 @@ function createGuardrailsMiddleware<T extends Record<string, unknown>>(
       if (!pending) return;
 
       const duration = Math.max(0, performance.now() - pending.startTime);
+      const timestamp = Date.now();
+      const recomputations = Math.max(0, pending.details.length - 1);
       updateTimingStats(context, duration);
 
       for (const [index, detail] of pending.details.entries()) {
@@ -271,7 +280,11 @@ function createGuardrailsMiddleware<T extends Record<string, unknown>>(
         const diffRatio = calculateDiffRatio(detail.oldValue, latest);
         analyzePostUpdate(context, detail, duration, diffRatio, index === 0);
         trackHotPath(context, detail.path, duration);
+        trackSignalUsage(context, detail.path, timestamp);
       }
+
+      updateSignalStats(context, timestamp);
+      recordRecomputations(context, recomputations, timestamp);
 
       context.currentUpdate = null;
     },
@@ -418,6 +431,69 @@ function trackHotPath<T extends Record<string, unknown>>(
   }
 }
 
+function trackSignalUsage<T extends Record<string, unknown>>(
+  context: GuardrailsContext<T>,
+  path: string,
+  timestamp: number
+): void {
+  const key = Array.isArray(path) ? path.join('.') : path;
+  const entry = context.signalUsage.get(key) ?? {
+    updates: 0,
+    lastSeen: timestamp,
+  };
+  entry.updates += 1;
+  entry.lastSeen = timestamp;
+  context.signalUsage.set(key, entry);
+}
+
+function updateSignalStats<T extends Record<string, unknown>>(
+  context: GuardrailsContext<T>,
+  timestamp: number
+): void {
+  const retentionWindow = context.config.memoryLeaks?.checkInterval ?? 5000;
+  const historyWindow = Math.max(retentionWindow, 1000);
+
+  const signalCount = context.signalUsage.size;
+  context.stats.signalCount = signalCount;
+
+  const staleCount = [...context.signalUsage.values()].filter(
+    (entry) => timestamp - entry.lastSeen > retentionWindow
+  ).length;
+  context.stats.signalRetention = staleCount;
+  context.stats.unreadSignalCount = 0;
+
+  context.memoryHistory.push({ timestamp, count: signalCount });
+  context.memoryHistory = context.memoryHistory.filter(
+    (entry) => timestamp - entry.timestamp <= historyWindow
+  );
+
+  const baseline = context.memoryHistory[0]?.count ?? signalCount;
+  const growth =
+    baseline === 0 ? 0 : (signalCount - baseline) / Math.max(1, baseline);
+  context.stats.memoryGrowthRate = growth;
+}
+
+function recordRecomputations<T extends Record<string, unknown>>(
+  context: GuardrailsContext<T>,
+  count: number,
+  timestamp: number
+): void {
+  if (count > 0) {
+    context.stats.recomputationCount += count;
+    for (let i = 0; i < count; i++) {
+      context.recomputationLog.push(timestamp);
+    }
+  }
+
+  if (context.recomputationLog.length) {
+    context.recomputationLog = context.recomputationLog.filter(
+      (value) => timestamp - value <= RECOMPUTATION_WINDOW_MS
+    );
+  }
+
+  context.stats.recomputationsPerSecond = context.recomputationLog.length;
+}
+
 function updateHotPath<T extends Record<string, unknown>>(
   context: GuardrailsContext<T>,
   hotPath: HotPath
@@ -550,8 +626,35 @@ function checkMemory<T extends Record<string, unknown>>(
 ): void {
   if (!context.config.memoryLeaks?.enabled) return;
 
-  // Memory checks would go here
-  // Would need access to signal count, unread signals, etc.
+  const now = Date.now();
+  const retentionWindow = context.config.memoryLeaks?.checkInterval ?? 5000;
+  const retentionThreshold =
+    context.config.memoryLeaks?.retentionThreshold ?? 100;
+  const growthThreshold = context.config.memoryLeaks?.growthRate ?? 0.2;
+
+  const staleCount = [...context.signalUsage.values()].filter(
+    (entry) => now - entry.lastSeen > retentionWindow
+  ).length;
+  context.stats.signalRetention = staleCount;
+
+  const exceedsRetention = context.stats.signalCount > retentionThreshold;
+  const exceedsGrowth = context.stats.memoryGrowthRate > growthThreshold;
+
+  if (exceedsRetention || exceedsGrowth) {
+    addIssue(context, {
+      type: 'memory',
+      severity: 'warning',
+      message: `Potential memory leak detected (signals: ${
+        context.stats.signalCount
+      }, growth ${(context.stats.memoryGrowthRate * 100).toFixed(1)}%)`,
+      path: 'root',
+      count: 1,
+      metadata: {
+        signalCount: context.stats.signalCount,
+        growth: context.stats.memoryGrowthRate,
+      },
+    });
+  }
 }
 
 function maybeReport<T extends Record<string, unknown>>(
@@ -620,16 +723,18 @@ function getSeverityPrefix(severity: GuardrailIssue['severity']): string {
 function generateReport<T extends Record<string, unknown>>(
   context: GuardrailsContext<T>
 ): GuardrailsReport {
+  const memoryCurrent = context.stats.signalCount;
+  const memoryLimit = context.config.budgets?.maxMemory ?? 50;
+  const recomputationCurrent = context.stats.recomputationsPerSecond;
+  const recomputationLimit = context.config.budgets?.maxRecomputations ?? 100;
+
   const budgets: BudgetStatus = {
     updateTime: createBudgetItem(
       context.stats.avgUpdateTime,
       context.config.budgets?.maxUpdateTime || 16
     ),
-    memory: createBudgetItem(0, context.config.budgets?.maxMemory || 50),
-    recomputations: createBudgetItem(
-      context.stats.recomputationsPerSecond,
-      context.config.budgets?.maxRecomputations || 100
-    ),
+    memory: createBudgetItem(memoryCurrent, memoryLimit),
+    recomputations: createBudgetItem(recomputationCurrent, recomputationLimit),
   };
 
   return {
@@ -644,7 +749,16 @@ function generateReport<T extends Record<string, unknown>>(
 }
 
 function createBudgetItem(current: number, limit: number): BudgetItem {
-  const usage = limit > 0 ? (current / limit) * 100 : 0;
+  if (limit <= 0) {
+    return {
+      current,
+      limit,
+      usage: 0,
+      status: 'ok',
+    };
+  }
+
+  const usage = (current / limit) * 100;
   const threshold = 80;
   let status: BudgetItem['status'];
   if (usage > 100) {

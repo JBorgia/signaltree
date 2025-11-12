@@ -69,19 +69,19 @@
 
 - [ ] Expand test coverage:
   - [x] Budget enforcement tests (maxUpdateTime)
-  - [ ] Budget enforcement tests (maxMemory, maxUpdates)
+  - [x] Budget enforcement tests (maxMemory, maxUpdates)
   - [x] Hot path tracking tests (heat score, threshold)
   - [x] Percentile calculation tests (rolling window, P50/P95/P99)
   - [x] Diff ratio tests (structural changes, recomputation)
   - [x] Rule evaluation tests (async rules)
   - [x] Suppression tests (intent-based, path-based)
   - [x] Disposal tests (cleanup, timer clearing)
-  - [ ] Memory leak tests
+  - [x] Memory leak tests
   - [ ] Integration tests with actual SignalTree
 
 ### Build & Integration
 
-- [ ] Run build (`pnpm run build` in packages/guardrails)
+- [x] Run build (`pnpm run build` in packages/guardrails)
 - [ ] Verify conditional exports:
   - Development build includes full implementation
   - Production build uses no-op exports
@@ -153,15 +153,15 @@
 | ----------------------- | -------------- | ----- | ---- |
 | Environment detection   | ✅             | ✅    | ✅   |
 | Middleware pattern      | ✅             | ✅    | ✅   |
-| P50/P95/P99 percentiles | ✅             | ⚠️    | ✅   |
-| Diff ratio analysis     | ✅             | ⚠️    | ✅   |
-| Hot path tracking       | ✅             | ⚠️    | ✅   |
-| Budget enforcement      | ✅             | ⚠️    | ✅   |
+| P50/P95/P99 percentiles | ✅             | ✅    | ✅   |
+| Diff ratio analysis     | ✅             | ✅    | ✅   |
+| Hot path tracking       | ✅             | ✅    | ✅   |
+| Budget enforcement      | ✅             | ✅    | ✅   |
 | Custom rules            | ✅             | ✅    | ✅   |
 | Issue aggregation       | ✅             | ⚠️    | ✅   |
-| Intent suppression      | ✅             | ⚠️    | ✅   |
+| Intent suppression      | ✅             | ✅    | ✅   |
 | Periodic monitoring     | ✅             | ⚠️    | ✅   |
-| Disposal API            | ✅             | ⚠️    | ✅   |
+| Disposal API            | ✅             | ✅    | ✅   |
 | Production no-op        | ✅             | ⚠️    | ✅   |
 | Factory patterns        | ✅             | ⚠️    | ✅   |
 
@@ -170,8 +170,8 @@
 ## 🐛 Known Issues
 
 1. **Test coverage gaps**
-   - Need scenarios for diff ratio analysis, async rule handling, and memory leak detection
    - Add hot path decay coverage and end-to-end integration tests with real SignalTree instances
+   - Verify production no-op behaviour with bundle-level smoke test
 
 2. **Performance validation outstanding**
    - Benchmark harness has not been exercised against v1.1 code
@@ -185,7 +185,7 @@
 - Optional dev hooks integration for deeper instrumentation
 - Follows SignalTree monorepo conventions (workspace deps, tsup build)
 - Added Jest coverage for hot path tracking, percentile stats, suppression metadata, and disposal cleanup
-- Added Jest coverage for diff ratio warnings and asynchronous custom rules
+- Added Jest coverage for diff ratio warnings, asynchronous custom rules, recomputation budgets, and memory leak detection
 
 ## 🚀 Quick Commands
 
