@@ -1,22 +1,21 @@
 // Details Modal Styles - at root level for fixed positioning to work
-:host ::ng-deep {
-  .details-modal-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem;
-    overflow-y: auto;
-  }
+.details-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  overflow-y: auto;
+}
 
-  .details-modal {
+.details-modal {
     background: var(--card-background);
     color: var(--text);
     border-radius: 16px;
@@ -229,7 +228,6 @@
       }
     }
   }
-}
 
 .history-container {
   .details-meta {

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, ViewEncapsulation } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import {
@@ -15,6 +15,7 @@ import { BenchmarkResultsTableComponent } from '../../components/benchmark-resul
   imports: [CommonModule, FormsModule, BenchmarkResultsTableComponent],
   templateUrl: './realistic-benchmark-history.component.html',
   styleUrls: ['./realistic-benchmark-history.component.scss'],
+  encapsulation: ViewEncapsulation.None, // Disable view encapsulation for modal to work
 })
 export class RealisticBenchmarkHistoryComponent implements OnInit {
   private readonly benchmarkService = inject(RealisticBenchmarkService);
