@@ -254,10 +254,10 @@ effect(() => {
 
 ### Performance optimization with memoization
 
-When combined with `@signaltree/memoization`, computed values become even more powerful:
+Computed values become even more powerful with the built-in memoization enhancer:
 
 ```typescript
-import { withMemoization } from '@signaltree/core';
+import { signalTree, withMemoization } from '@signaltree/core';
 
 const tree = signalTree({
   items: Array.from({ length: 10000 }, (_, i) => ({
@@ -385,7 +385,7 @@ tree.$.config.settings.nested.set(false); // ✅ boolean
 
 ### 3) Manual state management
 
-Core provides basic state updates - entity management requires `@signaltree/entities`:
+Core provides basic state updates. For advanced entity management, use the built-in `withEntities` enhancer:
 
 ```typescript
 interface User {
@@ -419,7 +419,7 @@ const activeUsers = computed(() => tree.$.users().filter((user) => user.active))
 
 ### 4) Manual async state management
 
-Core provides basic state updates - async helpers are now provided via `@signaltree/middleware` helpers:
+Core provides basic state updates. For advanced async helpers, use the built-in middleware functions (`createAsyncOperation`, `trackAsync`):
 
 ```typescript
 const tree = signalTree({
@@ -466,40 +466,57 @@ class UsersComponent {
 
 ### 6) Enhancers and composition
 
-SignalTree Core provides the foundation, but its real power comes from composable enhancers. Each enhancer is a focused, tree-shakeable extension that adds specific functionality.
+SignalTree Core provides a complete set of built-in enhancers. Each enhancer is a focused, tree-shakeable extension that adds specific functionality.
 
-#### Available Enhancers
+#### Available Enhancers (All in @signaltree/core)
+
+All enhancers are exported directly from `@signaltree/core`:
 
 **Performance Enhancers:**
 
-- `@signaltree/batching` - Batch updates to reduce recomputation and rendering
-- `@signaltree/memoization` - Intelligent caching for expensive computations
+- `withBatching()` - Batch updates to reduce recomputation and rendering
+- `withMemoization()` - Intelligent caching for expensive computations
+- `withHighPerformanceBatching()` - Advanced batching for high-frequency updates
+- `withHighPerformanceMemoization()` - Optimized memoization for large state trees
 
 **Data Management:**
 
-- `@signaltree/entities` - Advanced CRUD operations for collections
-- Async helpers are provided via `@signaltree/middleware` (createAsyncOperation / trackAsync)
-- `@signaltree/serialization` - State persistence and SSR support
+- `withEntities()` - Advanced CRUD operations for collections
+- `createAsyncOperation()` - Async operation management with loading/error states
+- `trackAsync()` - Track async operations in your state
+- `withSerialization()` - State persistence and SSR support
+- `withPersistence()` - Auto-save to localStorage/IndexedDB
 
 **Development Tools:**
 
-- `@signaltree/devtools` - Redux DevTools integration
-- `@signaltree/time-travel` - Undo/redo functionality
+- `withDevTools()` - Redux DevTools integration
+- `withTimeTravel()` - Undo/redo functionality
 
 **Integration:**
 
-- `@signaltree/ng-forms` - Angular Forms integration
-- `@signaltree/middleware` - State interceptors and logging
-- `@signaltree/presets` - Pre-configured common patterns
+- `withMiddleware()` - State interceptors and logging
+- `createLoggingMiddleware()` - Built-in logging middleware
+- `createValidationMiddleware()` - Built-in validation middleware
+
+**Presets:**
+
+- `createDevTree()` - Pre-configured development setup
+- `TREE_PRESETS` - Common configuration patterns
+
+#### Additional Packages
+
+These are the **only** separate packages in the SignalTree ecosystem:
+
+- **`@signaltree/ng-forms`** - Angular Forms integration (separate package)
+- **`@signaltree/enterprise`** - Enterprise-scale optimizations for 500+ signals (separate package)
+- **`@signaltree/callable-syntax`** - Build-time transform for callable syntax (dev dependency, separate package)
 
 #### Composition Patterns
 
 **Basic Enhancement:**
 
 ```typescript
-import { signalTree } from '@signaltree/core';
-import { withBatching } from '@signaltree/core';
-import { withDevTools } from '@signaltree/core';
+import { signalTree, withBatching, withDevTools } from '@signaltree/core';
 
 // Apply enhancers in order
 const tree = signalTree({ count: 0 }).with(
@@ -511,9 +528,7 @@ const tree = signalTree({ count: 0 }).with(
 **Performance-Focused Stack:**
 
 ```typescript
-import { signalTree, withBatching } from '@signaltree/core';
-import { withMemoization } from '@signaltree/core';
-import { withEntities } from '@signaltree/core';
+import { signalTree, withBatching, withMemoization, withEntities } from '@signaltree/core';
 
 const tree = signalTree({
   products: [] as Product[],
@@ -537,8 +552,7 @@ products.selectBy((p) => p.category === 'electronics');
 **Full-Stack Application:**
 
 ```typescript
-import { withSerialization } from '@signaltree/core';
-import { withTimeTravel } from '@signaltree/core';
+import { signalTree, withSerialization, withTimeTravel } from '@signaltree/core';
 
 const tree = signalTree({
   user: null as User | null,
@@ -585,36 +599,34 @@ const tree = signalTree(state).with(
 For common patterns, use presets that combine multiple enhancers:
 
 ```typescript
-import { ecommercePreset, dashboardPreset } from '@signaltree/core';
+import { createDevTree, TREE_PRESETS } from '@signaltree/core';
 
-// E-commerce preset includes: entities, async, batching, serialization
-const ecommerceTree = ecommercePreset({
+// Development preset includes: batching, memoization, devtools, time-travel
+const devTree = createDevTree({
   products: [] as Product[],
   cart: { items: [], total: 0 },
 });
 
-// Dashboard preset includes: batching, memoization, devtools
-const dashboardTree = dashboardPreset({
-  metrics: { users: 0, revenue: 0 },
-  charts: { data: [] },
-});
+// Or use preset configurations
+const customTree = signalTree(state, TREE_PRESETS.DASHBOARD);
 ```
 
 #### Core Stubs
 
-SignalTree Core includes lightweight stubs for all enhancer methods. This allows you to write code that uses advanced features, and the methods will warn when the actual enhancer isn't installed:
+SignalTree Core includes all enhancer functionality built-in. No separate packages needed:
 
 ```typescript
+import { signalTree, withEntities } from '@signaltree/core';
+
 const tree = signalTree({ users: [] as User[] });
 
-// Works but warns: "Feature requires @signaltree/entities"
-const users = tree.entities<User>('users');
-users.add(newUser); // Warns: "Method requires @signaltree/entities"
+// Without enhancer - use manual CRUD
+tree.$.users.update((users) => [...users, newUser]);
 
-// Install the enhancer to enable full functionality
+// With enhancer - use entity helpers
 const enhanced = tree.with(withEntities());
-const realUsers = enhanced.entities<User>('users');
-realUsers.add(newUser); // ✅ Works perfectly
+const users = enhanced.entities<User>('users');
+users.add(newUser); // ✅ Advanced CRUD operations
 ```
 
 Core includes several performance optimizations:
@@ -775,9 +787,7 @@ tree.effect(() => console.log('State changed'));
 ### Performance-Enhanced Composition
 
 ```typescript
-import { signalTree } from '@signaltree/core';
-import { withBatching } from '@signaltree/core';
-import { withMemoization } from '@signaltree/core';
+import { signalTree, withBatching, withMemoization } from '@signaltree/core';
 
 // Add performance optimizations
 const tree = signalTree({
@@ -805,8 +815,7 @@ const filteredProducts = computed(() => {
 ### Data Management Composition
 
 ```typescript
-import { signalTree } from '@signaltree/core';
-import { withEntities } from '@signaltree/core';
+import { signalTree, withEntities } from '@signaltree/core';
 
 // Add data management capabilities (+2.77KB total)
 const tree = signalTree({
@@ -834,12 +843,7 @@ const fetchUsers = tree.asyncAction(async () => api.getUsers(), {
 ### Full-Featured Development Composition
 
 ```typescript
-import { signalTree } from '@signaltree/core';
-import { withBatching } from '@signaltree/core';
-import { withEntities } from '@signaltree/core';
-import { withSerialization } from '@signaltree/core';
-import { withTimeTravel } from '@signaltree/core';
-import { withDevTools } from '@signaltree/core';
+import { signalTree, withBatching, withEntities, withSerialization, withTimeTravel, withDevTools } from '@signaltree/core';
 
 // Full development stack (example)
 const tree = signalTree({
@@ -878,10 +882,7 @@ tree.save(); // Persistence
 ### Production-Ready Composition
 
 ```typescript
-import { signalTree } from '@signaltree/core';
-import { withBatching } from '@signaltree/core';
-import { withEntities } from '@signaltree/core';
-import { withSerialization } from '@signaltree/core';
+import { signalTree, withBatching, withEntities, withSerialization } from '@signaltree/core';
 
 // Production build (no dev tools)
 const tree = signalTree(initialState).with(
@@ -902,9 +903,7 @@ const tree = signalTree(initialState).with(
 ### Conditional Enhancement
 
 ```typescript
-import { signalTree } from '@signaltree/core';
-import { withDevTools } from '@signaltree/core';
-import { withTimeTravel } from '@signaltree/core';
+import { signalTree, withBatching, withEntities, withDevTools, withTimeTravel } from '@signaltree/core';
 
 const isDevelopment = process.env['NODE_ENV'] === 'development';
 
@@ -925,22 +924,19 @@ const tree = signalTree(state).with(
 ### Preset-Based Composition
 
 ```typescript
-import { ecommercePreset, dashboardPreset } from '@signaltree/core';
+import { createDevTree, TREE_PRESETS } from '@signaltree/core';
 
 // Use presets for common patterns
-const ecommerceTree = ecommercePreset({
+const devTree = createDevTree({
   products: [],
   cart: { items: [], total: 0 },
   user: null,
 });
-// Includes: entities, async, batching, serialization
+// Includes: batching, memoization, devtools, time-travel
 
-const dashboardTree = dashboardPreset({
-  metrics: {},
-  charts: [],
-  filters: {},
-});
-// Includes: batching, memoization, devtools
+// Or use preset configurations directly
+const customTree = signalTree(state, TREE_PRESETS.PERFORMANCE);
+// Includes: batching, memoization optimizations
 ```
 
 ### Measuring bundle size
@@ -1247,29 +1243,25 @@ tree.effect(fn); // Create reactive effects
 tree.subscribe(fn); // Manual subscriptions
 tree.destroy(); // Cleanup resources
 
-// Extended features (require additional packages)
-tree.entities<T>(key); // Entity helpers (requires @signaltree/entities)
-// tree.asyncAction(fn, config?) example removed — use middleware helpers instead
-tree.asyncAction(fn, config?); // Create async action
+// Extended features (built into @signaltree/core)
+tree.entities<T>(key); // Entity helpers (use withEntities enhancer)
+tree.asyncAction(fn, config?); // Async operations (use createAsyncOperation helper)
 ```
 
-## Extending with optional packages
+## Extending with enhancers
 
-SignalTree Core can be extended with additional features:
+SignalTree Core includes all enhancers built-in:
 
 ```typescript
-import { signalTree } from '@signaltree/core';
-import { withBatching } from '@signaltree/core';
-import { withMemoization } from '@signaltree/core';
-import { withTimeTravel } from '@signaltree/core';
+import { signalTree, withBatching, withMemoization, withTimeTravel } from '@signaltree/core';
 
-// Compose features using .with(...)
+// All enhancers available from @signaltree/core
 const tree = signalTree(initialState).with(withBatching(), withMemoization(), withTimeTravel());
 ```
 
-### Available extensions
+### Available enhancers
 
-All enhancers are now consolidated in the core package:
+All enhancers are included in `@signaltree/core`:
 
 - **withBatching()** - Batch multiple updates for better performance
 - **withMemoization()** - Intelligent caching & performance optimization
@@ -1278,8 +1270,8 @@ All enhancers are now consolidated in the core package:
 - **withDevTools()** - Redux DevTools integration for debugging
 - **withTimeTravel()** - Undo/redo functionality & state history
 - **withSerialization()** - State persistence & SSR support
-- **ecommercePreset()** - Pre-configured setup for e-commerce applications
-- **dashboardPreset()** - Pre-configured setup for dashboard applications
+- **createDevTree()** - Pre-configured development setup
+- **TREE_PRESETS** - Common configuration patterns (PERFORMANCE, DASHBOARD, etc.)
 
 ## When to use core only
 
@@ -1291,12 +1283,18 @@ Perfect for:
 - ✅ Learning signal-based state management
 - ✅ Applications with basic state needs
 
-Consider extensions when you need:
+Consider enhancers when you need:
 
-- ⚡ Performance optimization (batching, memoization)
-- 🐛 Advanced debugging (devtools, time-travel)
-- 📝 Complex forms (ng-forms)
-- 🔧 Middleware patterns (middleware)
+- ⚡ Performance optimization (withBatching, withMemoization)
+- 🐛 Advanced debugging (withDevTools, withTimeTravel)
+- � Entity management (withEntities)
+- 🔌 Middleware patterns (withMiddleware)
+
+Consider separate packages when you need:
+
+- 📝 Angular forms integration (@signaltree/ng-forms)
+- 🏢 Enterprise-scale optimizations (@signaltree/enterprise)
+- 🎯 Callable syntax transform (@signaltree/callable-syntax)
 
 ## Migration from NgRx
 
