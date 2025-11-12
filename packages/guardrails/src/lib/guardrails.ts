@@ -29,11 +29,68 @@ declare const process:
     }
   | undefined;
 
+type EnabledOption = boolean | (() => boolean);
+
+type MiddlewareCapableTree<T extends Record<string, unknown>> = SignalTree<T> & {
+  addTap: (middleware: Middleware<T>) => void;
+  removeTap: (id: string) => void;
+};
+
+function isFunction<T extends (...args: never[]) => unknown>(
+  value: unknown
+): value is T {
+  return typeof value === 'function';
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === 'string';
+}
+
+function isObjectLike(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function resolveEnabledFlag(option?: EnabledOption): boolean {
+  if (option === undefined) {
+    return true;
+  }
+  if (isFunction<() => boolean>(option)) {
+    try {
+      return option();
+    } catch {
+      return true;
+    }
+  }
+  return option;
+}
+
+function supportsMiddleware<T extends Record<string, unknown>>(
+  tree: SignalTree<T>
+): tree is MiddlewareCapableTree<T> {
+  const candidate = tree as Partial<MiddlewareCapableTree<T>>;
+  return isFunction(candidate.addTap) && isFunction(candidate.removeTap);
+}
+
+function tryStructuredClone<T>(value: T): T {
+  const cloneFn = (globalThis as typeof globalThis & {
+    structuredClone?: <U>(input: U) => U;
+  }).structuredClone;
+
+  if (isFunction(cloneFn)) {
+    try {
+      return cloneFn(value);
+    } catch {
+      // Fall through to return original value.
+    }
+  }
+
+  return value;
+}
+
 function isDevEnvironment(): boolean {
   if (__DEV__ !== undefined) return __DEV__;
-  if (process !== undefined && process.env?.['NODE_ENV'] === 'production')
-    return false;
-  if (ngDevMode !== undefined) return ngDevMode;
+  if (process?.env?.['NODE_ENV'] === 'production') return false;
+  if (ngDevMode != null) return Boolean(ngDevMode);
   return true;
 }
 
@@ -80,19 +137,13 @@ export function withGuardrails<T extends Record<string, unknown>>(
   config: GuardrailsConfig<T> = {}
 ): (tree: SignalTree<T>) => SignalTree<T> {
   return (tree: SignalTree<T>) => {
-    const enabled =
-      typeof config.enabled === 'function'
-        ? config.enabled()
-        : config.enabled !== false;
+    const enabled = resolveEnabledFlag(config.enabled);
 
     if (!isDevEnvironment() || !enabled) {
       return tree;
     }
 
-    if (
-      typeof tree.addTap !== 'function' ||
-      typeof tree.removeTap !== 'function'
-    ) {
+    if (!supportsMiddleware(tree)) {
       console.warn(
         '[Guardrails] Tree does not expose middleware hooks; guardrails disabled.'
       );
@@ -390,26 +441,39 @@ function evaluateRule<T extends Record<string, unknown>>(
   rule: GuardrailRule<T>,
   ruleContext: RuleContext<T>
 ): void {
+  const handleFailure = () => {
+    const message =
+      typeof rule.message === 'function'
+        ? rule.message(ruleContext)
+        : rule.message;
+
+    addIssue(context, {
+      type: 'rule',
+      severity: rule.severity || 'warning',
+      message,
+      path: ruleContext.path.join('.'),
+      count: 1,
+      metadata: { rule: rule.name },
+    });
+  };
+
   try {
     const result = rule.test(ruleContext);
     if (result instanceof Promise) {
-      result.catch(() => {
-        // Async rule failed, don't halt
-      });
-    } else if (!result) {
-      const message =
-        typeof rule.message === 'function'
-          ? rule.message(ruleContext)
-          : rule.message;
+      result
+        .then((outcome) => {
+          if (!outcome) {
+            handleFailure();
+          }
+        })
+        .catch((error) => {
+          console.warn(`[Guardrails] Rule ${rule.name} rejected:`, error);
+        });
+      return;
+    }
 
-      addIssue(context, {
-        type: 'rule',
-        severity: rule.severity || 'warning',
-        message,
-        path: ruleContext.path.join('.'),
-        count: 1,
-        metadata: { rule: rule.name },
-      });
+    if (!result) {
+      handleFailure();
     }
   } catch (error) {
     // Rule threw, log but don't halt
@@ -457,21 +521,13 @@ function shouldSuppressUpdate<T extends Record<string, unknown>>(
     return true;
   }
 
-  const autoSuppress = context.config.suppression?.autoSuppress || [];
-  if (
-    metadata.intent &&
-    autoSuppress.includes(metadata.intent as (typeof autoSuppress)[number])
-  ) {
-    return true;
-  }
-  if (
-    metadata.source &&
-    autoSuppress.includes(metadata.source as (typeof autoSuppress)[number])
-  ) {
-    return true;
-  }
+  const autoSuppress = new Set<string>(
+    context.config.suppression?.autoSuppress ?? []
+  );
 
-  return false;
+  return [metadata.intent, metadata.source].some(
+    (value) => isString(value) && autoSuppress.has(value)
+  );
 }
 
 function startMonitoring<T extends Record<string, unknown>>(
@@ -654,12 +710,9 @@ function createAPI<T extends Record<string, unknown>>(
 }
 
 function extractMetadata(payload: unknown): UpdateMetadata | undefined {
-  if (!payload || typeof payload !== 'object') return undefined;
+  if (!isObjectLike(payload)) return undefined;
   const candidate = (payload as Record<string, unknown>)['metadata'];
-  if (candidate && typeof candidate === 'object') {
-    return candidate as UpdateMetadata;
-  }
-  return undefined;
+  return isObjectLike(candidate) ? (candidate as UpdateMetadata) : undefined;
 }
 
 function collectUpdateDetails(
@@ -672,7 +725,7 @@ function collectUpdateDetails(
     const path = segments.length ? segments.join('.') : 'root';
     const oldValue = captureValue(currentState);
 
-    if (isPlainObject(value)) {
+    if (isObjectLike(value)) {
       details.push({
         path,
         segments: [...segments],
@@ -683,7 +736,7 @@ function collectUpdateDetails(
         visit(
           child,
           [...segments, key],
-          currentState
+          isObjectLike(currentState)
             ? (currentState as Record<string, unknown>)[key]
             : undefined
         );
@@ -694,7 +747,7 @@ function collectUpdateDetails(
     details.push({ path, segments: [...segments], newValue: value, oldValue });
   };
 
-  if (isPlainObject(payload)) {
+  if (isObjectLike(payload)) {
     visit(payload, [], stateSnapshot);
   } else {
     details.push({
@@ -720,7 +773,7 @@ function collectUpdateDetails(
 function getValueAtPath(source: unknown, segments: string[]): unknown {
   let current = source;
   for (const segment of segments) {
-    if (!current || typeof current !== 'object') {
+    if (!isObjectLike(current)) {
       return undefined;
     }
     current = (current as Record<string, unknown>)[segment];
@@ -729,14 +782,7 @@ function getValueAtPath(source: unknown, segments: string[]): unknown {
 }
 
 function captureValue<T>(value: T): T {
-  if (typeof structuredClone === 'function') {
-    try {
-      return structuredClone(value);
-    } catch {
-      // fall through
-    }
-  }
-  return value;
+  return tryStructuredClone(value);
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

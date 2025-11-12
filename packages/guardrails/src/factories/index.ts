@@ -35,6 +35,12 @@ interface FeatureTreeOptions<T extends Record<string, unknown>> {
   enhancers?: EnhancerFn<T>[];
 }
 
+function isGuardrailsConfig<T extends Record<string, unknown>>(
+  value: unknown
+): value is GuardrailsConfig<T> {
+  return Boolean(value) && typeof value === 'object';
+}
+
 function resolveGuardrailsConfig<T extends Record<string, unknown>>(
   guardrails: FeatureTreeOptions<T>['guardrails']
 ): GuardrailsConfig<T> | undefined {
@@ -42,8 +48,8 @@ function resolveGuardrailsConfig<T extends Record<string, unknown>>(
     return undefined;
   }
 
-  if (guardrails && typeof guardrails === 'object') {
-    return guardrails as GuardrailsConfig<T>;
+  if (isGuardrailsConfig<T>(guardrails)) {
+    return guardrails;
   }
 
   return {
