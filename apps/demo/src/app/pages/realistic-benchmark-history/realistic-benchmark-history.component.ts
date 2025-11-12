@@ -188,7 +188,7 @@ export class RealisticBenchmarkHistoryComponent implements OnInit {
     this.selectedBenchmarkFull.set(null);
     // If we already have full data attached to the history item, use it
     if (benchmark.fullData) {
-      this.selectedBenchmarkFull.set(benchmark.fullData);
+      this.selectedBenchmarkFull.set(this.transformResults(benchmark.fullData));
       return;
     }
 
@@ -201,9 +201,10 @@ export class RealisticBenchmarkHistoryComponent implements OnInit {
       );
 
       if (result.success && result.data) {
-        // attach to the history item for caching
+        // Transform and attach to the history item for caching
+        const transformed = this.transformResults(result.data);
         benchmark.fullData = result.data;
-        this.selectedBenchmarkFull.set(result.data);
+        this.selectedBenchmarkFull.set(transformed);
       } else {
         this.detailsError.set('Failed to load benchmark details');
         this.selectedBenchmarkFull.set(null);
@@ -214,6 +215,75 @@ export class RealisticBenchmarkHistoryComponent implements OnInit {
     } finally {
       this.detailsLoading.set(false);
     }
+  }
+
+  // Transform the nested library→scenarios structure to flat results array with libraryResults
+  private transformResults(data: RealisticBenchmarkSubmission): any {
+    const scenarioMap = new Map<string, any>();
+
+    // First pass: collect all scenarios and their library results
+    Object.entries(data.results.libraries).forEach(([libName, libData]) => {
+      Object.entries(libData.scenarios).forEach(([scenarioId, scenarioData]) => {
+        if (!scenarioMap.has(scenarioId)) {
+          scenarioMap.set(scenarioId, {
+            name: scenarioData.scenarioName,
+            winner: '',
+            marginOfVictory: 0,
+            reliable: true,
+            libraryResults: {}
+          });
+        }
+
+        const scenario = scenarioMap.get(scenarioId);
+        scenario.libraryResults[libName] = {
+          opsPerSec: scenarioData.opsPerSec,
+          time: scenarioData.median
+        };
+      });
+    });
+
+    // Second pass: determine winners and margins
+    const results = Array.from(scenarioMap.values()).map(scenario => {
+      const libs = Object.entries(scenario.libraryResults) as [string, any][];
+      libs.sort((a, b) => b[1].opsPerSec - a[1].opsPerSec);
+
+      if (libs.length > 0) {
+        scenario.winner = libs[0][0];
+        if (libs.length > 1) {
+          const winnerOps = libs[0][1].opsPerSec;
+          const secondOps = libs[1][1].opsPerSec;
+          scenario.marginOfVictory = ((winnerOps - secondOps) / secondOps) * 100;
+        }
+      }
+
+      return scenario;
+    });
+
+    return {
+      ...data,
+      results,
+      metadata: {
+        environment: {
+          browser: data.machineInfo.browser,
+          os: data.machineInfo.os,
+          cpuCores: data.machineInfo.cpuCores,
+          memory: `${data.machineInfo.memory} GB`,
+          userAgent: data.machineInfo.userAgent
+        }
+      },
+      scores: data.weightedResults?.libraries ? 
+        Object.fromEntries(
+          Object.entries(data.weightedResults.libraries).map(([name, data]: [string, any]) => [
+            name,
+            data.weightedScore || data.rawScore || 0
+          ])
+        ) : {},
+      summary: {
+        winnerLibrary: Object.entries(data.weightedResults?.libraries || {})
+          .sort((a: any, b: any) => (b[1].weightedScore || 0) - (a[1].weightedScore || 0))[0]?.[0] || 'signaltree',
+        reliabilityScore: data.calibration.reliabilityScore
+      }
+    };
   }
 
   closeDetails() {
