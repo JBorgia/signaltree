@@ -16,8 +16,8 @@
 }
 
 .details-modal {
-    background: var(--background-secondary, #f5f5f5);
-    color: var(--text);
+    background: #f5f5f5; // Use explicit color instead of CSS variable
+    color: #212121;
     border-radius: 16px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     max-width: 1200px;
@@ -43,10 +43,10 @@
       align-items: center;
       justify-content: space-between;
       padding: 1.5rem 2rem;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid #e0e0e0;
       position: sticky;
       top: 0;
-      background: var(--background-secondary, #f5f5f5);
+      background: #f5f5f5;
       border-radius: 16px 16px 0 0;
       z-index: 10;
 
