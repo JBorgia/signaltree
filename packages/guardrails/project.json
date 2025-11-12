@@ -1,0 +1,8 @@
+{
+  "name": "guardrails",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "packages/guardrails/src",
+  "targets": {}
+}
+

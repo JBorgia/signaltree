@@ -48,7 +48,10 @@ print_status "Verified npm authentication"
 # Define packages in dependency order (core first, then others)
 PACKAGES=(
     "core"
+    "enterprise"
     "ng-forms"
+    "callable-syntax"
+    "guardrails"
 )
 
 # Check if dry-run flag is passed
@@ -66,10 +69,24 @@ publish_package() {
 
     print_status "Building package: @signaltree/$package_name"
 
-    # Build the package
-    if ! nx build "$package_name" --configuration=production; then
-        print_error "Failed to build package: $package_name"
-        return 1
+    if [ "$package_name" = "guardrails" ]; then
+        if ! pnpm --filter @signaltree/guardrails build; then
+            print_error "Failed to build package: $package_name"
+            return 1
+        fi
+        mkdir -p dist/packages
+        rm -rf "$dist_path"
+        mkdir -p "$dist_path"
+        cp -R "$package_path/dist" "$dist_path/"
+        cp "$package_path/README.md" "$dist_path/" 2>/dev/null || true
+        cp "$package_path/CHANGELOG.md" "$dist_path/" 2>/dev/null || true
+        cp "$package_path/package.json" "$dist_path/"
+    else
+        # Build the package via Nx
+        if ! nx build "$package_name" --configuration=production; then
+            print_error "Failed to build package: $package_name"
+            return 1
+        fi
     fi
 
     # Check if dist directory exists

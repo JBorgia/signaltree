@@ -38,6 +38,7 @@ PACKAGES=(
     "ng-forms"
     "callable-syntax"
     "enterprise"
+    "guardrails"
 )
 
 ISSUES_FOUND=0
@@ -131,4 +132,5 @@ echo "  npm install @signaltree/core                    # Core with all enhancer
 echo "  npm install @signaltree/ng-forms                # Angular forms integration"
 echo "  npm install @signaltree/enterprise              # Enterprise optimizations"
 echo "  npm install -D @signaltree/callable-syntax      # Build-time transform (dev)"
+echo "  npm install -D @signaltree/guardrails           # Development-only guardrails"
 echo ""

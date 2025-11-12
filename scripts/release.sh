@@ -43,6 +43,7 @@ PACKAGES=(
     "ng-forms"        # Angular forms integration
     "callable-syntax" # Build-time transform for callable DX syntax
     "enterprise"      # Enterprise-grade optimizations for large-scale apps
+    "guardrails"      # Dev-only performance guardrails with tsup build
 )
 
 # Parse command line arguments
@@ -105,13 +106,31 @@ fi
 if [ "$SKIP_TESTS" != "skip-tests" ]; then
     print_step "Running tests for all packages..."
 
-    # Prefer nx run-many to leverage caching and parallelism
-    # Convert array to comma-separated list for Nx
-    PROJECTS_LIST=$(IFS=,; echo "${PACKAGES[*]}")
-    npx nx run-many -t test --projects=$PROJECTS_LIST || {
-        print_error "Some tests failed! Aborting release."
-        exit 1
-    }
+    NX_TEST_PACKAGES=()
+    RUN_GUARDRAILS_TEST=false
+    for package in "${PACKAGES[@]}"; do
+        if [ "$package" = "guardrails" ]; then
+            RUN_GUARDRAILS_TEST=true
+        else
+            NX_TEST_PACKAGES+=("$package")
+        fi
+    done
+
+    if [ ${#NX_TEST_PACKAGES[@]} -gt 0 ]; then
+        PROJECTS_LIST=$(IFS=,; echo "${NX_TEST_PACKAGES[*]}")
+        npx nx run-many -t test --projects=$PROJECTS_LIST || {
+            print_error "Some tests failed! Aborting release."
+            exit 1
+        }
+    fi
+
+    if [ "$RUN_GUARDRAILS_TEST" = true ]; then
+        print_step "Running guardrails tests with coverage..."
+        if ! pnpm --filter @signaltree/guardrails test --runInBand; then
+            print_error "@signaltree/guardrails tests failed! Aborting release."
+            exit 1
+        fi
+    fi
 
     print_success "All package tests passed"
 fi
@@ -279,13 +298,40 @@ for package in "${PACKAGES[@]}"; do
     fi
 done
 
-if [ ${#REMAINING_PACKAGES[@]} -gt 0 ]; then
-    print_step "Building remaining packages..."
-    REMAINING_LIST=$(IFS=,; echo "${REMAINING_PACKAGES[*]}")
+NX_REMAINING_PACKAGES=()
+BUILD_GUARDRAILS=false
+for package in "${REMAINING_PACKAGES[@]}"; do
+    if [ "$package" = "guardrails" ]; then
+        BUILD_GUARDRAILS=true
+    else
+        NX_REMAINING_PACKAGES+=("$package")
+    fi
+done
+
+if [ ${#NX_REMAINING_PACKAGES[@]} -gt 0 ]; then
+    print_step "Building remaining Nx packages..."
+    REMAINING_LIST=$(IFS=,; echo "${NX_REMAINING_PACKAGES[*]}")
     npx nx run-many -t build --projects=$REMAINING_LIST --configuration=production || {
         print_warning "Some dependent packages failed to build, but continuing with core..."
         print_warning "Failed packages will be skipped during publish"
     }
+fi
+
+if [ "$BUILD_GUARDRAILS" = true ]; then
+    print_step "Building @signaltree/guardrails with tsup..."
+    if ! pnpm --filter @signaltree/guardrails build; then
+        print_error "Guardrails package build failed! Rolling back version changes."
+        rollback_versions
+        exit 1
+    fi
+    mkdir -p dist/packages
+    rm -rf dist/packages/guardrails
+    mkdir -p dist/packages/guardrails
+    cp -R packages/guardrails/dist dist/packages/guardrails/
+    cp packages/guardrails/README.md dist/packages/guardrails/ 2>/dev/null || true
+    cp packages/guardrails/CHANGELOG.md dist/packages/guardrails/ 2>/dev/null || true
+    cp packages/guardrails/package.json dist/packages/guardrails/
+    print_success "Guardrails package built successfully"
 fi
 
 print_success "Package builds completed"

@@ -4,6 +4,7 @@ const config: Config = {
   displayName: 'guardrails',
   preset: '../../jest.preset.js',
   testEnvironment: 'node',
+  testSequencer: '<rootDir>/tests/jest-test-sequencer.stub.ts',
   transform: {
     '^.+\\.[tj]s$': [
       'ts-jest',

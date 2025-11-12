@@ -13,6 +13,8 @@ BLUE='\033[0;34m'
 PURPLE='\033[0;35m'
 NC='\033[0m' # No Color
 
+export NX_IGNORE_LOCKFILE_HASH=1
+
 print_step() {
     echo -e "${BLUE}🧪 $1${NC}"
 }
@@ -41,6 +43,7 @@ PACKAGES=(
     "ng-forms"
     "enterprise"
     "callable-syntax"
+    "guardrails"
 )
 
 print_step "Starting comprehensive test coverage analysis..."
@@ -63,7 +66,15 @@ for i in "${!PACKAGES[@]}"; do
 
     print_step "[$current/$TOTAL_PACKAGES] Testing package: $pkg"
 
-    if nx test "$pkg" --coverage --silent; then
+    if [ "$pkg" = "guardrails" ]; then
+        if pnpm --filter @signaltree/guardrails test --runInBand --coverage --coverageDirectory=coverage/packages/guardrails --silent; then
+            print_success "✓ $pkg - Tests passed"
+            ((SUCCESSFUL_TESTS++))
+        else
+            print_error "✗ $pkg - Tests failed"
+            ((FAILED_TESTS++))
+        fi
+    elif nx test "$pkg" --coverage --silent; then
         print_success "✓ $pkg - Tests passed"
         ((SUCCESSFUL_TESTS++))
     else

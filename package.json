@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/workspace",
-  "version": "4.0.11",
+  "version": "4.0.12",
   "license": "BSL-1.1",
   "funding": {
     "type": "github",
@@ -148,6 +148,7 @@
     "@babel/traverse": "^7.28.4",
     "@babel/types": "^7.28.4",
     "@eslint/js": "^9.8.0",
+    "@jest/test-sequencer": "30.0.5",
     "@microsoft/api-extractor": "^7.36.0",
     "@nx/angular": "21.3.9",
     "@nx/devkit": "21.3.9",

@@ -120,6 +120,9 @@ importers:
       '@eslint/js':
         specifier: ^9.8.0
         version: 9.32.0
+      '@jest/test-sequencer':
+        specifier: 30.0.5
+        version: 30.0.5
       '@microsoft/api-extractor':
         specifier: ^7.36.0
         version: 7.52.11(@types/node@22.18.1)

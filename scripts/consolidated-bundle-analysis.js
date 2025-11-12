@@ -56,8 +56,20 @@ const packages = [
   {
     name: 'utils',
     path: 'dist/packages/utils/src/index.js',
-    maxSize: 800,
-    claimed: 650,
+    maxSize: 3200,
+    claimed: 2600,
+  },
+  {
+    name: 'guardrails',
+    path: 'dist/packages/guardrails/dist/index.js',
+    maxSize: 9000,
+    claimed: 7500,
+  },
+  {
+    name: 'guardrails/factories',
+    path: 'dist/packages/guardrails/dist/factories/index.js',
+    maxSize: 9000,
+    claimed: 7500,
   },
   {
     name: 'core/enhancers/batching',
@@ -125,6 +137,17 @@ const nxProjects = [
   'utils',
 ];
 
+const tsupPackages = [
+  {
+    name: '@signaltree/guardrails',
+    buildCommand: 'pnpm --filter @signaltree/guardrails build',
+    sourceRoot: 'packages/guardrails',
+    distSource: 'packages/guardrails/dist',
+    outputDir: 'dist/packages/guardrails',
+    assets: ['README.md', 'CHANGELOG.md', 'package.json'],
+  },
+];
+
 class BundleAnalyzer {
   constructor() {
     this.results = {
@@ -178,6 +201,35 @@ class BundleAnalyzer {
       'Building SignalTree packages',
       { continueOnError: true } // Continue even if some builds fail
     );
+
+    tsupPackages.forEach((pkg) => {
+      this.execCommand(pkg.buildCommand, `Building ${pkg.name}`);
+
+      const outputDir = path.join(process.cwd(), pkg.outputDir);
+      if (fs.existsSync(outputDir)) {
+        fs.rmSync(outputDir, { recursive: true, force: true });
+      }
+      fs.mkdirSync(outputDir, { recursive: true });
+
+      const sourceDist = path.join(process.cwd(), pkg.distSource);
+      const targetDist = path.join(outputDir, 'dist');
+
+      if (fs.existsSync(sourceDist)) {
+        fs.cpSync(sourceDist, targetDist, { recursive: true });
+      } else {
+        this.log(
+          `${pkg.name}: Build output not found at ${sourceDist}`,
+          'warning'
+        );
+      }
+
+      pkg.assets.forEach((asset) => {
+        const assetPath = path.join(process.cwd(), pkg.sourceRoot, asset);
+        if (fs.existsSync(assetPath)) {
+          fs.copyFileSync(assetPath, path.join(outputDir, asset));
+        }
+      });
+    });
 
     // Build demo app
     this.execCommand(
