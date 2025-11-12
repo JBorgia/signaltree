@@ -1,0 +1,64 @@
+<div class="results-table-wrapper" [class.compact]="compact">
+  @if (results.length > 0) {
+  <table class="results-table">
+    <thead>
+      <tr>
+        <th>Scenario</th>
+        @for (lib of getUniqueLibraries(); track lib) {
+        <th [style.color]="getLibraryColorValue(lib)">
+          {{ lib }}
+        </th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @for (result of results; track result.name) {
+      <tr>
+        <td class="scenario-name">
+          <strong>{{ result.name }}</strong>
+        </td>
+        @for (lib of getUniqueLibraries(); track lib) {
+        <td
+          [class.winner]="result.winner === lib"
+          [class.second]="getLibraryRank(result, lib) === 2"
+          [class.third]="getLibraryRank(result, lib) === 3"
+          [style.--cell-color]="getLibraryColorValue(lib)"
+        >
+          @if (getLibraryRank(result, lib) === 1) {
+          <span class="rank-badge">🥇</span>
+          }
+          @if (getLibraryRank(result, lib) === 2) {
+          <span class="rank-badge">🥈</span>
+          }
+          @if (getLibraryRank(result, lib) === 3) {
+          <span class="rank-badge">🥉</span>
+          }
+          <div class="cell-content">
+            <span class="ops-value">
+              {{ formatOpsPerSec(getLibraryOps(result, lib)) }} ops/s
+            </span>
+            @if (lib !== result.winner && result.winner === 'signaltree') {
+            <span class="relative">
+              {{ getRelativePerformance(result, lib) }}x vs SignalTree
+            </span>
+            }
+            @if (result.winner === lib && lib !== 'signaltree') {
+            <span class="relative winner-margin">
+              +{{ result.marginOfVictory?.toFixed(1) || '0' }}% faster
+            </span>
+            }
+          </div>
+          @if (!result.reliable && result.winner === lib) {
+          <span class="unreliable-badge">⚠ Unstable</span>
+          }
+        </td>
+        }
+      </tr>
+      }
+    </tbody>
+  </table>
+  } @else {
+  <p class="no-data">No test results available</p>
+  }
+</div>
+

@@ -7,11 +7,12 @@ import {
   RealisticBenchmarkService,
   RealisticBenchmarkSubmission,
 } from '../../services/realistic-benchmark.service';
+import { BenchmarkResultsTableComponent } from '../../components/benchmark-results-table/benchmark-results-table.component';
 
 @Component({
   selector: 'app-realistic-benchmark-history',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, BenchmarkResultsTableComponent],
   templateUrl: './realistic-benchmark-history.component.html',
   styleUrls: ['./realistic-benchmark-history.component.scss'],
 })
@@ -254,57 +255,4 @@ export class RealisticBenchmarkHistoryComponent implements OnInit {
     return results.filter((r) => r.winner !== library).length;
   }
 
-  getUniqueLibraries(results: any[]): string[] {
-    if (!results || results.length === 0) return [];
-    const libraries = new Set<string>();
-    results.forEach((result: any) => {
-      if (result.libraryResults) {
-        Object.keys(result.libraryResults).forEach(lib => libraries.add(lib));
-      }
-    });
-    return Array.from(libraries).sort();
-  }
-
-  getLibraryColorValue(library: string): string {
-    const colorMap: Record<string, string> = {
-      signaltree: '#1976d2',
-      ngrx: '#7b1fa2',
-      'ngrx-signals': '#0097a7',
-      akita: '#ef6c00',
-      elf: '#2e7d32',
-      ngxs: '#6a1b9a',
-    };
-    return colorMap[library.toLowerCase()] || '#757575';
-  }
-
-  getLibraryOps(result: any, library: string): number {
-    if (!result.libraryResults || !result.libraryResults[library]) {
-      return 0;
-    }
-    return result.libraryResults[library].opsPerSec || 0;
-  }
-
-  getLibraryRank(result: any, library: string): number {
-    if (!result.libraryResults) return 999;
-    const libs = Object.entries(result.libraryResults)
-      .map(([name, data]: [string, any]) => ({
-        name,
-        ops: data.opsPerSec || 0
-      }))
-      .sort((a, b) => b.ops - a.ops);
-    
-    const rank = libs.findIndex(l => l.name === library) + 1;
-    return rank;
-  }
-
-  getRelativePerformance(result: any, library: string): string {
-    if (!result.libraryResults || !result.libraryResults.signaltree || !result.libraryResults[library]) {
-      return 'N/A';
-    }
-    const baselineOps = result.libraryResults.signaltree.opsPerSec;
-    const libraryOps = result.libraryResults[library].opsPerSec;
-    if (baselineOps === 0) return 'N/A';
-    const ratio = baselineOps / libraryOps;
-    return ratio.toFixed(2);
-  }
 }

@@ -1,0 +1,208 @@
+.results-table-wrapper {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid var(--border, #e0e0e0);
+
+  &.compact {
+    font-size: 0.8125rem;
+
+    .results-table {
+      td, th {
+        padding: 0.625rem 0.75rem;
+      }
+    }
+  }
+}
+
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+
+  thead {
+    background: var(--background-secondary, #f5f5f5);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+
+    th {
+      padding: 1rem;
+      text-align: center;
+      font-size: 0.875rem;
+      font-weight: 600;
+      white-space: nowrap;
+      border-bottom: 2px solid var(--border, #e0e0e0);
+
+      &:first-child {
+        text-align: left;
+        position: sticky;
+        left: 0;
+        background: var(--background-secondary, #f5f5f5);
+        z-index: 6;
+      }
+    }
+  }
+
+  tbody {
+    tr {
+      border-bottom: 1px solid var(--border, #e0e0e0);
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.02);
+      }
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      td {
+        padding: 1rem;
+        text-align: center;
+        vertical-align: middle;
+
+        &.scenario-name {
+          text-align: left;
+          font-weight: 500;
+          color: var(--text, #212121);
+          position: sticky;
+          left: 0;
+          background: var(--card-background, #ffffff);
+          z-index: 1;
+          min-width: 200px;
+
+          strong {
+            display: block;
+            margin-bottom: 0.25rem;
+          }
+
+          small {
+            color: var(--text-secondary, #757575);
+            display: block;
+          }
+        }
+
+        &.winner {
+          background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.05) 100%);
+          border-left: 3px solid #ffd700;
+          font-weight: 600;
+        }
+
+        &.second {
+          background: linear-gradient(135deg, rgba(192, 192, 192, 0.12) 0%, rgba(192, 192, 192, 0.03) 100%);
+        }
+
+        &.third {
+          background: linear-gradient(135deg, rgba(205, 127, 50, 0.12) 0%, rgba(205, 127, 50, 0.03) 100%);
+        }
+
+        .rank-badge {
+          display: inline-block;
+          font-size: 1.25rem;
+          margin-bottom: 0.25rem;
+        }
+
+        .cell-content {
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+          align-items: center;
+
+          .ops-value {
+            font-family: 'Courier New', monospace;
+            font-weight: 700;
+            font-size: 0.9375rem;
+            color: var(--cell-color, var(--text, #212121));
+          }
+
+          .relative {
+            font-size: 0.75rem;
+            color: var(--text-secondary, #757575);
+            font-weight: 500;
+
+            &.winner-margin {
+              color: #2e7d32;
+              font-weight: 600;
+            }
+          }
+        }
+
+        .unreliable-badge {
+          display: inline-block;
+          margin-top: 0.25rem;
+          padding: 0.125rem 0.5rem;
+          background: #fff3e0;
+          color: #ef6c00;
+          border-radius: 8px;
+          font-size: 0.7rem;
+          font-weight: 600;
+        }
+      }
+    }
+  }
+}
+
+.no-data {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-secondary, #757575);
+  font-style: italic;
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  .results-table-wrapper {
+    border-color: #404040;
+  }
+
+  .results-table {
+    thead th {
+      background: #2a2a2a;
+      border-color: #404040;
+
+      &:first-child {
+        background: #2a2a2a;
+      }
+    }
+
+    tbody tr {
+      border-color: #404040;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      td.scenario-name {
+        background: #2a2a2a;
+        color: #e0e0e0;
+
+        small {
+          color: #b0b0b0;
+        }
+      }
+    }
+  }
+
+  .no-data {
+    color: #b0b0b0;
+  }
+}
+
+@media (max-width: 768px) {
+  .results-table {
+    font-size: 0.75rem;
+
+    thead th,
+    tbody td {
+      padding: 0.5rem;
+    }
+
+    .rank-badge {
+      font-size: 1rem !important;
+    }
+
+    .cell-content .ops-value {
+      font-size: 0.8125rem !important;
+    }
+  }
+}
+
