@@ -29,7 +29,7 @@ export class RealisticBenchmarkHistoryComponent implements OnInit {
   detailsLoading = signal(false);
   detailsError = signal('');
   selectedBenchmark = signal<RealisticBenchmarkHistory | null>(null);
-  selectedBenchmarkFull = signal<RealisticBenchmarkSubmission | null>(null);
+  selectedBenchmarkFull = signal<(RealisticBenchmarkSubmission & { transformedResults?: any[] }) | null>(null);
 
   // Filters
   selectedLibrary = signal('all');
@@ -262,28 +262,7 @@ export class RealisticBenchmarkHistoryComponent implements OnInit {
 
     return {
       ...data,
-      results,
-      metadata: {
-        environment: {
-          browser: data.machineInfo.browser,
-          os: data.machineInfo.os,
-          cpuCores: data.machineInfo.cpuCores,
-          memory: `${data.machineInfo.memory} GB`,
-          userAgent: data.machineInfo.userAgent
-        }
-      },
-      scores: data.weightedResults?.libraries ? 
-        Object.fromEntries(
-          Object.entries(data.weightedResults.libraries).map(([name, data]: [string, any]) => [
-            name,
-            data.weightedScore || data.rawScore || 0
-          ])
-        ) : {},
-      summary: {
-        winnerLibrary: Object.entries(data.weightedResults?.libraries || {})
-          .sort((a: any, b: any) => (b[1].weightedScore || 0) - (a[1].weightedScore || 0))[0]?.[0] || 'signaltree',
-        reliabilityScore: data.calibration.reliabilityScore
-      }
+      transformedResults: results, // Use transformedResults for the table component
     };
   }
 
@@ -310,20 +289,11 @@ export class RealisticBenchmarkHistoryComponent implements OnInit {
     return 'low';
   }
 
-  getScoresArray(scores: Record<string, number>): Array<{library: string, score: number}> {
-    return Object.entries(scores)
-      .map(([library, score]) => ({ library, score }))
-      .sort((a, b) => b.score - a.score);
-  }
-
-  getWinsForLibrary(results: any[], library: string): number {
-    if (!results) return 0;
-    return results.filter((r) => r.winner === library).length;
-  }
-
-  getLossesForLibrary(results: any[], library: string): number {
-    if (!results) return 0;
-    return results.filter((r) => r.winner !== library).length;
+  getWeightedResultsArray(libraries: Record<string, any>): Array<any> {
+    return Object.entries(libraries).map(([name, data]) => ({
+      name,
+      ...data
+    })).sort((a, b) => a.rank - b.rank);
   }
 
 }

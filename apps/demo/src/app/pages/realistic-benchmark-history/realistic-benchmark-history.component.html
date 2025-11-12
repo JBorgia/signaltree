@@ -264,38 +264,38 @@
 
       @if (selectedBenchmarkFull(); as full) {
       <!-- Environment Section -->
-      @if (full.metadata?.environment) {
+      @if (full.machineInfo) {
       <section class="details-section">
         <h3>💻 Environment</h3>
         <div class="details-grid">
-          @if (full.metadata.environment.browser) {
+          @if (full.machineInfo.browser) {
           <div class="detail-item">
             <span class="detail-label">Browser</span>
-            <span class="detail-value">{{ full.metadata.environment.browser }}</span>
+            <span class="detail-value">{{ full.machineInfo.browser }}</span>
           </div>
           }
-          @if (full.metadata.environment.os) {
+          @if (full.machineInfo.os) {
           <div class="detail-item">
             <span class="detail-label">Operating System</span>
-            <span class="detail-value">{{ full.metadata.environment.os }}</span>
+            <span class="detail-value">{{ full.machineInfo.os }}</span>
           </div>
           }
-          @if (full.metadata.environment.cpuCores) {
+          @if (full.machineInfo.cpuCores) {
           <div class="detail-item">
             <span class="detail-label">CPU Cores</span>
-            <span class="detail-value">{{ full.metadata.environment.cpuCores }}</span>
+            <span class="detail-value">{{ full.machineInfo.cpuCores }}</span>
           </div>
           }
-          @if (full.metadata.environment.memory) {
+          @if (full.machineInfo.memory) {
           <div class="detail-item">
             <span class="detail-label">Memory</span>
-            <span class="detail-value">{{ full.metadata.environment.memory }}</span>
+            <span class="detail-value">{{ full.machineInfo.memory }}</span>
           </div>
           }
-          @if (full.metadata.environment.userAgent) {
+          @if (full.machineInfo.userAgent) {
           <div class="detail-item full-width">
             <span class="detail-label">User Agent</span>
-            <span class="detail-value user-agent">{{ full.metadata.environment.userAgent }}</span>
+            <span class="detail-value user-agent">{{ full.machineInfo.userAgent }}</span>
           </div>
           }
         </div>
@@ -303,38 +303,38 @@
       }
 
       <!-- Results Section -->
-      @if (full.results) {
+      @if (full.transformedResults && full.transformedResults.length > 0) {
       <section class="details-section">
         <h3>🏆 Test Results</h3>
-        <app-benchmark-results-table [results]="full.results" />
+        <app-benchmark-results-table [results]="full.transformedResults" />
       </section>
       }
 
       <!-- Library Scores Section -->
-      @if (full.scores) {
+      @if (full.weightedResults?.libraries) {
       <section class="details-section">
         <h3>📈 Library Scores</h3>
         <div class="scores-grid">
-          @for (score of getScoresArray(full.scores); track score.library) {
-          <div class="score-card" [ngClass]="score.library === full.summary?.winnerLibrary ? 'winner' : ''">
+          @for (entry of getWeightedResultsArray(full.weightedResults.libraries); track entry.name) {
+          <div class="score-card" [ngClass]="entry.rank === 1 ? 'winner' : ''">
             <div class="score-header">
               <span
                 class="library-badge"
-                [ngClass]="getLibraryColor(score.library)"
+                [ngClass]="getLibraryColor(entry.name)"
               >
-                {{ score.library }}
+                {{ entry.name }}
               </span>
-              @if (score.library === full.summary?.winnerLibrary) {
+              @if (entry.rank === 1) {
               <span class="winner-badge">🏆 Winner</span>
               }
             </div>
-            <div class="score-value">{{ score.score.toFixed(2) }} pts</div>
+            <div class="score-value">{{ entry.weightedScore.toFixed(2) }} pts</div>
             <div class="score-details">
               <span class="score-stat">
-                {{ getWinsForLibrary(full.results, score.library) }} wins
+                Rank #{{ entry.rank }}
               </span>
               <span class="score-stat">
-                {{ getLossesForLibrary(full.results, score.library) }} losses
+                Raw: {{ entry.rawScore.toFixed(2) }}
               </span>
             </div>
           </div>

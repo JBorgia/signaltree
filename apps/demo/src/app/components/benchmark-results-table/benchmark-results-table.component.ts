@@ -67,10 +67,10 @@ export class BenchmarkResultsTableComponent {
   }
 
   getRelativePerformance(result: BenchmarkResult, library: string): string {
-    if (!result.libraryResults || !result.libraryResults.signaltree || !result.libraryResults[library]) {
+    if (!result.libraryResults || !result.libraryResults['signaltree'] || !result.libraryResults[library]) {
       return 'N/A';
     }
-    const baselineOps = result.libraryResults.signaltree.opsPerSec;
+    const baselineOps = result.libraryResults['signaltree'].opsPerSec;
     const libraryOps = result.libraryResults[library].opsPerSec;
     if (baselineOps === 0) return 'N/A';
     const ratio = baselineOps / libraryOps;
