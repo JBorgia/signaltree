@@ -1,4 +1,3 @@
-/// <reference path="../types/signaltree-core.d.ts" />
 import {
   computed,
   effect,
@@ -14,7 +13,6 @@ import {
   Input,
   Output,
   EventEmitter,
-  Injectable,
   isSignal,
   forwardRef,
   OnInit,

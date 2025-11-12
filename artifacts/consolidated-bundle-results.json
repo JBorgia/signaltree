@@ -1,13 +1,85 @@
 {
-  "timestamp": "2025-11-05T20:53:37.555Z",
+  "timestamp": "2025-11-12T04:57:45.161Z",
   "architecture": "consolidated",
   "packages": [
     {
       "name": "core",
-      "rawSize": 1929,
-      "gzipSize": 709,
+      "rawSize": 2016,
+      "gzipSize": 727,
       "claimed": 22000,
       "maxAllowed": 25000,
+      "passed": true,
+      "claimMet": true
+    },
+    {
+      "name": "enterprise",
+      "rawSize": 518,
+      "gzipSize": 230,
+      "claimed": 2700,
+      "maxAllowed": 3200,
+      "passed": true,
+      "claimMet": true
+    },
+    {
+      "name": "ng-forms",
+      "rawSize": 35791,
+      "gzipSize": 7165,
+      "claimed": 7200,
+      "maxAllowed": 7700,
+      "passed": true,
+      "claimMet": true
+    },
+    {
+      "name": "callable-syntax",
+      "rawSize": 507,
+      "gzipSize": 273,
+      "claimed": 3600,
+      "maxAllowed": 4200,
+      "passed": true,
+      "claimMet": true
+    },
+    {
+      "name": "shared",
+      "rawSize": 415,
+      "gzipSize": 172,
+      "claimed": 2600,
+      "maxAllowed": 3000,
+      "passed": true,
+      "claimMet": true
+    },
+    {
+      "name": "types",
+      "rawSize": 441,
+      "gzipSize": 276,
+      "claimed": 400,
+      "maxAllowed": 500,
+      "passed": true,
+      "claimMet": true
+    },
+    {
+      "name": "utils",
+      "rawSize": 11028,
+      "gzipSize": 2150,
+      "claimed": 2600,
+      "maxAllowed": 3200,
+      "passed": true,
+      "claimMet": true
+    },
+    {
+      "name": "guardrails",
+      "rawSize": 25046,
+      "gzipSize": 6567,
+      "claimed": 7500,
+      "maxAllowed": 9000,
+      "passed": true,
+      "claimMet": true
+    },
+    {
+      "name": "guardrails/factories",
+      "rawSize": 28485,
+      "gzipSize": 7236,
+      "claimed": 7500,
+      "maxAllowed": 9000,
       "passed": true,
       "claimMet": true
     },
@@ -76,8 +148,8 @@
     },
     {
       "name": "core/enhancers/presets",
-      "rawSize": 2899,
-      "gzipSize": 788,
+      "rawSize": 2589,
+      "gzipSize": 718,
       "claimed": 840,
       "maxAllowed": 900,
       "passed": true,
@@ -85,22 +157,35 @@
     },
     {
       "name": "core/enhancers/computed",
-      "rawSize": 547,
-      "gzipSize": 257,
+      "rawSize": 566,
+      "gzipSize": 266,
       "claimed": 750,
       "maxAllowed": 800,
       "passed": true,
       "claimMet": true
     }
   ],
-  "demoApp": null,
+  "demoApp": {
+    "totalSize": 2752353,
+    "jsFiles": 37,
+    "cssFiles": 1,
+    "largeJsFiles": 5,
+    "largeCssFiles": 0
+  },
   "summary": {
-    "totalActualSize": 16585,
-    "totalClaimedSize": 39510,
-    "packagesPassed": 10,
+    "totalActualSize": 40611,
+    "totalClaimedSize": 73610,
+    "packagesPassed": 18,
     "packagesFailed": 0
   },
   "recommendations": [
+    {
+      "category": "Demo App Optimization",
+      "items": [
+        "Consider reducing demo complexity or implementing more aggressive code splitting",
+        "Split large JavaScript chunks using dynamic imports"
+      ]
+    },
     {
       "category": "General Optimization",
       "items": [
