@@ -31,10 +31,11 @@ declare const process:
 
 type EnabledOption = boolean | (() => boolean);
 
-type MiddlewareCapableTree<T extends Record<string, unknown>> = SignalTree<T> & {
-  addTap: (middleware: Middleware<T>) => void;
-  removeTap: (id: string) => void;
-};
+type MiddlewareCapableTree<T extends Record<string, unknown>> =
+  SignalTree<T> & {
+    addTap: (middleware: Middleware<T>) => void;
+    removeTap: (id: string) => void;
+  };
 
 function isFunction<T extends (...args: never[]) => unknown>(
   value: unknown
@@ -72,9 +73,11 @@ function supportsMiddleware<T extends Record<string, unknown>>(
 }
 
 function tryStructuredClone<T>(value: T): T {
-  const cloneFn = (globalThis as typeof globalThis & {
-    structuredClone?: <U>(input: U) => U;
-  }).structuredClone;
+  const cloneFn = (
+    globalThis as typeof globalThis & {
+      structuredClone?: <U>(input: U) => U;
+    }
+  ).structuredClone;
 
   if (isFunction(cloneFn)) {
     try {
@@ -637,7 +640,7 @@ function checkMemory<T extends Record<string, unknown>>(
   ).length;
   context.stats.signalRetention = staleCount;
 
-  const exceedsRetention = context.stats.signalCount > retentionThreshold;
+  const exceedsRetention = context.stats.signalRetention > retentionThreshold;
   const exceedsGrowth = context.stats.memoryGrowthRate > growthThreshold;
 
   if (exceedsRetention || exceedsGrowth) {
