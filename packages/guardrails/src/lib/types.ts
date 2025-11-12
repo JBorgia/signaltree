@@ -3,13 +3,17 @@
  * @packageDocumentation
  */
 
-export interface GuardrailsConfig {
+import type { SignalTree } from '@signaltree/core';
+
+export interface GuardrailsConfig<
+  T extends Record<string, unknown> = Record<string, unknown>
+> {
   /** Behavior mode: warn (console), throw (errors), or silent (collect only) */
   mode?: 'warn' | 'throw' | 'silent';
-  
+
   /** Enable/disable guardrails */
   enabled?: boolean | (() => boolean);
-  
+
   /** Performance budget limits */
   budgets?: {
     /** Max milliseconds per update (default: 16) */
@@ -23,7 +27,7 @@ export interface GuardrailsConfig {
     /** Alert when % of budget used (default: 0.8) */
     alertThreshold?: number;
   };
-  
+
   /** Hot path analysis configuration */
   hotPaths?: {
     /** Enable hot path detection */
@@ -37,7 +41,7 @@ export interface GuardrailsConfig {
     /** Time window for rate calculation in ms (default: 1000) */
     windowMs?: number;
   };
-  
+
   /** Memory leak detection */
   memoryLeaks?: {
     /** Enable memory leak detection */
@@ -51,18 +55,25 @@ export interface GuardrailsConfig {
     /** Track signals never read */
     trackUnread?: boolean;
   };
-  
+
   /** Custom rules */
-  customRules?: GuardrailRule[];
-  
+  customRules?: GuardrailRule<T>[];
+
   /** Intent-aware suppression */
   suppression?: {
     /** Auto-suppress for these intents */
-    autoSuppress?: Array<'hydrate' | 'reset' | 'bulk' | 'migration' | 'time-travel' | 'serialization'>;
+    autoSuppress?: Array<
+      | 'hydrate'
+      | 'reset'
+      | 'bulk'
+      | 'migration'
+      | 'time-travel'
+      | 'serialization'
+    >;
     /** Honor suppressGuardrails metadata flag */
     respectMetadata?: boolean;
   };
-  
+
   /** Read/write analysis */
   analysis?: {
     /** Forbid reading entire tree root */
@@ -80,7 +91,7 @@ export interface GuardrailsConfig {
     /** Max reruns per second before thrashing */
     maxRerunsPerSecond?: number;
   };
-  
+
   /** Reporting configuration */
   reporting?: {
     /** Report interval in ms (default: 5000) */
@@ -94,7 +105,7 @@ export interface GuardrailsConfig {
     /** Max issues per report */
     maxIssuesPerReport?: number;
   };
-  
+
   /** Tree identifier for multi-tree scenarios */
   treeId?: string;
 }
@@ -114,24 +125,28 @@ export interface UpdateMetadata {
   [key: string]: unknown;
 }
 
-export interface GuardrailRule {
+export interface GuardrailRule<
+  T extends Record<string, unknown> = Record<string, unknown>
+> {
   /** Rule name */
   name: string;
   /** Description */
   description?: string;
   /** Test function */
-  test: (context: RuleContext) => boolean | Promise<boolean>;
+  test: (context: RuleContext<T>) => boolean | Promise<boolean>;
   /** Error message or message function */
-  message: string | ((context: RuleContext) => string);
+  message: string | ((context: RuleContext<T>) => string);
   /** Severity level */
   severity?: 'error' | 'warning' | 'info';
   /** Optional fix function */
-  fix?: (context: RuleContext) => void;
+  fix?: (context: RuleContext<T>) => void;
   /** Tags for filtering/grouping */
   tags?: string[];
 }
 
-export interface RuleContext {
+export interface RuleContext<
+  T extends Record<string, unknown> = Record<string, unknown>
+> {
   /** Path to the value */
   path: string[];
   /** New value */
@@ -141,7 +156,7 @@ export interface RuleContext {
   /** Update metadata */
   metadata?: UpdateMetadata;
   /** The tree instance */
-  tree: any;
+  tree: SignalTree<T>;
   /** Update duration in ms */
   duration?: number;
   /** Diff ratio (0-1) */
@@ -171,22 +186,22 @@ export interface RuntimeStats {
   p99UpdateTime: number;
   /** Max update time in ms */
   maxUpdateTime: number;
-  
+
   /** Total recomputation count */
   recomputationCount: number;
   /** Recomputations per second */
   recomputationsPerSecond: number;
-  
+
   /** Total signal count */
   signalCount: number;
   /** Signal retention */
   signalRetention: number;
   /** Unread signal count */
   unreadSignalCount: number;
-  
+
   /** Memory growth rate */
   memoryGrowthRate: number;
-  
+
   /** Hot path count */
   hotPathCount: number;
   /** Violation count */

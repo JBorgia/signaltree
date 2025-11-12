@@ -51,9 +51,11 @@ interface PendingUpdate {
   details: UpdateDetail[];
 }
 
-interface GuardrailsContext<T = unknown> {
+interface GuardrailsContext<
+  T extends Record<string, unknown> = Record<string, unknown>
+> {
   tree: SignalTree<T>;
-  config: GuardrailsConfig;
+  config: GuardrailsConfig<T>;
   stats: RuntimeStats;
   issues: GuardrailIssue[];
   hotPaths: HotPath[];
@@ -75,7 +77,7 @@ const MAX_TIMING_SAMPLES = 1000;
  * Creates a guardrails enhancer for dev-only monitoring
  */
 export function withGuardrails<T extends Record<string, unknown>>(
-  config: GuardrailsConfig = {}
+  config: GuardrailsConfig<T> = {}
 ): (tree: SignalTree<T>) => SignalTree<T> {
   return (tree: SignalTree<T>) => {
     const enabled =
@@ -170,7 +172,7 @@ function createRuntimeStats(): RuntimeStats {
   };
 }
 
-function createGuardrailsMiddleware<T>(
+function createGuardrailsMiddleware<T extends Record<string, unknown>>(
   context: GuardrailsContext<T>
 ): Middleware<T> {
   return {
@@ -225,7 +227,9 @@ function createGuardrailsMiddleware<T>(
   };
 }
 
-function updatePercentiles(context: GuardrailsContext): void {
+function updatePercentiles<T extends Record<string, unknown>>(
+  context: GuardrailsContext<T>
+): void {
   if (context.timings.length === 0) return;
 
   const sorted = [...context.timings].sort((a, b) => a - b);
@@ -258,7 +262,7 @@ function calculateDiffRatio(oldValue: unknown, newValue: unknown): number {
   return allKeys.size === 0 ? 0 : changed / allKeys.size;
 }
 
-function analyzePreUpdate<T>(
+function analyzePreUpdate<T extends Record<string, unknown>>(
   context: GuardrailsContext<T>,
   detail: UpdateDetail,
   metadata?: UpdateMetadata
@@ -277,8 +281,8 @@ function analyzePreUpdate<T>(
   }
 }
 
-function analyzePostUpdate(
-  context: GuardrailsContext,
+function analyzePostUpdate<T extends Record<string, unknown>>(
+  context: GuardrailsContext<T>,
   detail: UpdateDetail,
   duration: number,
   diffRatio: number,
@@ -315,8 +319,8 @@ function analyzePostUpdate(
   }
 }
 
-function trackHotPath(
-  context: GuardrailsContext,
+function trackHotPath<T extends Record<string, unknown>>(
+  context: GuardrailsContext<T>,
   path: string,
   duration: number
 ): void {
@@ -363,7 +367,10 @@ function trackHotPath(
   }
 }
 
-function updateHotPath(context: GuardrailsContext, hotPath: HotPath): void {
+function updateHotPath<T extends Record<string, unknown>>(
+  context: GuardrailsContext<T>,
+  hotPath: HotPath
+): void {
   const existing = context.hotPaths.find((h) => h.path === hotPath.path);
   if (existing) {
     Object.assign(existing, hotPath);
@@ -378,10 +385,10 @@ function updateHotPath(context: GuardrailsContext, hotPath: HotPath): void {
   context.stats.hotPathCount = context.hotPaths.length;
 }
 
-function evaluateRule(
-  context: GuardrailsContext,
-  rule: GuardrailRule,
-  ruleContext: RuleContext
+function evaluateRule<T extends Record<string, unknown>>(
+  context: GuardrailsContext<T>,
+  rule: GuardrailRule<T>,
+  ruleContext: RuleContext<T>
 ): void {
   try {
     const result = rule.test(ruleContext);
@@ -410,7 +417,10 @@ function evaluateRule(
   }
 }
 
-function addIssue(context: GuardrailsContext, issue: GuardrailIssue): void {
+function addIssue<T extends Record<string, unknown>>(
+  context: GuardrailsContext<T>,
+  issue: GuardrailIssue
+): void {
   if (context.suppressed) return;
 
   // Aggregate similar issues
@@ -433,8 +443,8 @@ function addIssue(context: GuardrailsContext, issue: GuardrailIssue): void {
   }
 }
 
-function shouldSuppressUpdate(
-  context: GuardrailsContext,
+function shouldSuppressUpdate<T extends Record<string, unknown>>(
+  context: GuardrailsContext<T>,
   metadata?: UpdateMetadata
 ): boolean {
   if (context.suppressed) return true;
@@ -464,7 +474,9 @@ function shouldSuppressUpdate(
   return false;
 }
 
-function startMonitoring(context: GuardrailsContext): () => void {
+function startMonitoring<T extends Record<string, unknown>>(
+  context: GuardrailsContext<T>
+): () => void {
   const interval = setInterval(() => {
     if (context.disposed) {
       clearInterval(interval);
@@ -477,14 +489,18 @@ function startMonitoring(context: GuardrailsContext): () => void {
   return () => clearInterval(interval);
 }
 
-function checkMemory(context: GuardrailsContext): void {
+function checkMemory<T extends Record<string, unknown>>(
+  context: GuardrailsContext<T>
+): void {
   if (!context.config.memoryLeaks?.enabled) return;
 
   // Memory checks would go here
   // Would need access to signal count, unread signals, etc.
 }
 
-function maybeReport(context: GuardrailsContext): void {
+function maybeReport<T extends Record<string, unknown>>(
+  context: GuardrailsContext<T>
+): void {
   if (context.config.reporting?.console === false) return;
 
   const report = generateReport(context);
@@ -545,7 +561,9 @@ function getSeverityPrefix(severity: GuardrailIssue['severity']): string {
   return 'ℹ️';
 }
 
-function generateReport(context: GuardrailsContext): GuardrailsReport {
+function generateReport<T extends Record<string, unknown>>(
+  context: GuardrailsContext<T>
+): GuardrailsReport {
   const budgets: BudgetStatus = {
     updateTime: createBudgetItem(
       context.stats.avgUpdateTime,
@@ -588,7 +606,9 @@ function createBudgetItem(current: number, limit: number): BudgetItem {
   };
 }
 
-function generateRecommendations(context: GuardrailsContext): string[] {
+function generateRecommendations<T extends Record<string, unknown>>(
+  context: GuardrailsContext<T>
+): string[] {
   const recommendations: string[] = [];
 
   if (context.hotPaths.length > 0) {
@@ -604,8 +624,8 @@ function generateRecommendations(context: GuardrailsContext): string[] {
   return recommendations;
 }
 
-function createAPI(
-  context: GuardrailsContext,
+function createAPI<T extends Record<string, unknown>>(
+  context: GuardrailsContext<T>,
   teardown: () => void
 ): GuardrailsAPI {
   return {
@@ -725,7 +745,10 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return proto === Object.prototype || proto === null;
 }
 
-function updateTimingStats(context: GuardrailsContext, duration: number): void {
+function updateTimingStats<T extends Record<string, unknown>>(
+  context: GuardrailsContext<T>,
+  duration: number
+): void {
   context.timings.push(duration);
   if (context.timings.length > MAX_TIMING_SAMPLES) {
     context.timings.shift();
