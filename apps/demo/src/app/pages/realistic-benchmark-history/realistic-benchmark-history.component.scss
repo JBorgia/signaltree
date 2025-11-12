@@ -16,8 +16,8 @@
 }
 
 .details-modal {
-    background: var(--card-background, #1e1e1e);
-    color: var(--text, #ffffff);
+    background: var(--background-secondary, #f5f5f5);
+    color: var(--text);
     border-radius: 16px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     max-width: 1200px;
@@ -43,10 +43,10 @@
       align-items: center;
       justify-content: space-between;
       padding: 1.5rem 2rem;
-      border-bottom: 1px solid var(--border, #333);
+      border-bottom: 1px solid var(--border);
       position: sticky;
       top: 0;
-      background: var(--card-background, #1e1e1e);
+      background: var(--background-secondary, #f5f5f5);
       border-radius: 16px 16px 0 0;
       z-index: 10;
 
