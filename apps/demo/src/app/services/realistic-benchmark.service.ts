@@ -645,10 +645,15 @@ export class RealisticBenchmarkService {
   async getBenchmarkDetails(
     id: string
   ): Promise<{ success: boolean; data?: RealisticBenchmarkSubmission }> {
-    // API disabled - return empty result
+    // Always try fallback first for demo purposes
+    const fallback = SAMPLE_BENCHMARK_HISTORY.find((b) => b.id === id)?.fullData;
+    if (fallback) {
+      return { success: true, data: fallback };
+    }
+
+    // API disabled - return fallback only
     if (!this.API_URL) {
-      const fallback = SAMPLE_BENCHMARK_HISTORY.find((b) => b.id === id)?.fullData;
-      return fallback ? { success: true, data: fallback } : { success: false };
+      return { success: false };
     }
 
     try {
@@ -662,8 +667,7 @@ export class RealisticBenchmarkService {
       const data: RealisticBenchmarkSubmission | undefined = result.benchmark;
 
       if (!data) {
-        const fallback = SAMPLE_BENCHMARK_HISTORY.find((b) => b.id === id)?.fullData;
-        return fallback ? { success: true, data: fallback } : { success: false };
+        return { success: false };
       }
 
       return {
@@ -671,8 +675,7 @@ export class RealisticBenchmarkService {
         data,
       };
     } catch {
-      const fallback = SAMPLE_BENCHMARK_HISTORY.find((b) => b.id === id)?.fullData;
-      return fallback ? { success: true, data: fallback } : { success: false };
+      return { success: false };
     }
   }
 
