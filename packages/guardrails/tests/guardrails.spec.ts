@@ -9,10 +9,13 @@ type Middleware<T> = {
   after?: (action: string, payload: unknown, state: T, newState: T) => void;
 };
 
+type UpdatePayload<T extends Record<string, unknown>> = Partial<T> &
+  Record<string, unknown>;
+
 type MockTree<T extends Record<string, unknown>> = {
   (): T;
-  (value: Partial<T>): T;
-  (updater: (current: T) => Partial<T>): T;
+  (value: UpdatePayload<T>): T;
+  (updater: (current: T) => UpdatePayload<T>): T;
   state: T;
   $: T;
   addTap: (middleware: Middleware<T>) => void;
@@ -45,7 +48,9 @@ function createMockTree<T extends Record<string, unknown>>(
   let state = structuredClone(initial);
   const middlewares: Middleware<T>[] = [];
 
-  const tree = ((arg?: Partial<T> | ((current: T) => Partial<T>)) => {
+  const tree = ((
+    arg?: UpdatePayload<T> | ((current: T) => UpdatePayload<T>)
+  ) => {
     if (arguments.length === 0) {
       return state;
     }
@@ -53,8 +58,8 @@ function createMockTree<T extends Record<string, unknown>>(
     const currentState = structuredClone(state);
     const payload =
       typeof arg === 'function'
-        ? (arg as (current: T) => Partial<T>)(currentState)
-        : (arg as Partial<T>);
+        ? (arg as (current: T) => UpdatePayload<T>)(currentState)
+        : (arg as UpdatePayload<T>);
 
     for (const middleware of middlewares) {
       if (
@@ -239,5 +244,202 @@ describe('Guardrails Enhancer', () => {
     expect(report.issues).toHaveLength(0);
 
     api.dispose();
+  });
+
+  it('tracks hot paths when threshold is exceeded', () => {
+    const tree = createMockTree({ count: 0 });
+    const enhancer = withGuardrails({
+      hotPaths: { enabled: true, threshold: 1, windowMs: 1000, topN: 5 },
+      reporting: { console: false },
+    });
+    const enhanced = enhancer(
+      tree as unknown as SignalTree<{ count: number }>
+    ) as unknown as GuardrailsTree<{ count: number }>;
+
+    const nowValues = [0, 1, 1, 2];
+    jest
+      .spyOn(performance, 'now')
+      .mockImplementation(() => nowValues.shift() ?? 2);
+
+    enhanced({ count: 1 });
+    enhanced({ count: 2 });
+
+    const report = enhanced.__guardrails?.getReport();
+    if (!report) {
+      throw new Error('Guardrails report unavailable');
+    }
+
+    expect(report.hotPaths.length).toBeGreaterThan(0);
+    const hotPathTargets = report.hotPaths.map((entry) => entry.path);
+    expect(hotPathTargets).toContain('root');
+    const [hotPath] = report.hotPaths;
+    expect(hotPath.updatesPerSecond).toBeGreaterThan(1);
+
+    enhanced.__guardrails?.dispose();
+  });
+
+  it('updates percentile stats across multiple samples', () => {
+    const tree = createMockTree({ count: 0 });
+    const enhancer = withGuardrails({
+      reporting: { console: false },
+    });
+    const enhanced = enhancer(
+      tree as unknown as SignalTree<{ count: number }>
+    ) as unknown as GuardrailsTree<{ count: number }>;
+
+    const nowValues = [0, 5, 10, 30, 35, 70];
+    jest
+      .spyOn(performance, 'now')
+      .mockImplementation(() => nowValues.shift() ?? 70);
+
+    enhanced({ count: 1 });
+    enhanced({ count: 2 });
+    enhanced({ count: 3 });
+
+    const report = enhanced.__guardrails?.getReport();
+    if (!report) {
+      throw new Error('Guardrails report unavailable');
+    }
+
+    expect(report.stats.updateCount).toBe(3);
+    expect(report.stats.p50UpdateTime).toBeGreaterThan(0);
+    expect(report.stats.p95UpdateTime).toBeGreaterThanOrEqual(
+      report.stats.p50UpdateTime
+    );
+    expect(report.stats.p99UpdateTime).toBeGreaterThanOrEqual(
+      report.stats.p95UpdateTime
+    );
+
+    enhanced.__guardrails?.dispose();
+  });
+
+  it('auto suppresses updates based on metadata intent', () => {
+    const tree = createMockTree({ count: 0 });
+    const enhancer = withGuardrails({
+      budgets: { maxUpdateTime: 5 },
+      suppression: { autoSuppress: ['bulk'] },
+      reporting: { console: false },
+    });
+    const enhanced = enhancer(
+      tree as unknown as SignalTree<{ count: number }>
+    ) as unknown as GuardrailsTree<{ count: number }>;
+
+    jest
+      .spyOn(performance, 'now')
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(25)
+      .mockReturnValue(25);
+
+    enhanced({ count: 1, metadata: { intent: 'bulk' } });
+
+    const report = enhanced.__guardrails?.getReport();
+    if (!report) {
+      throw new Error('Guardrails report unavailable');
+    }
+    expect(report.issues).toHaveLength(0);
+
+    enhanced.__guardrails?.dispose();
+  });
+
+  it('disposes middleware and clears monitoring interval', () => {
+    const tree = createMockTree({ count: 0 });
+    const removeSpy = jest.spyOn(tree, 'removeTap');
+    const clearSpy = jest.spyOn(globalThis, 'clearInterval');
+    const enhancer = withGuardrails({
+      reporting: { console: false },
+    });
+    const enhanced = enhancer(
+      tree as unknown as SignalTree<{ count: number }>
+    ) as unknown as GuardrailsTree<{ count: number }>;
+
+    const api = enhanced.__guardrails;
+    if (!api) {
+      throw new Error('Guardrails API unavailable');
+    }
+
+    api.dispose();
+
+    expect(removeSpy).toHaveBeenCalledTimes(1);
+    expect(removeSpy.mock.calls[0]?.[0]).toContain('guardrails:');
+    expect(clearSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports analysis issues when diff ratio exceeds threshold', () => {
+    const tree = createMockTree({
+      profile: {
+        name: 'Alice',
+        location: { city: 'Denver', state: 'CO' },
+      },
+    });
+
+    const enhancer = withGuardrails({
+      analysis: { warnParentReplace: true, minDiffForParentReplace: 0.5 },
+      reporting: { console: false },
+    });
+
+    const enhanced = enhancer(
+      tree as unknown as SignalTree<{
+        profile: { name: string; location: Record<string, string> };
+      }>
+    ) as unknown as GuardrailsTree<{
+      profile: { name: string; location: Record<string, string> };
+    }>;
+
+    enhanced({
+      profile: {
+        name: 'Alice',
+        location: { country: 'USA', timezone: 'MST' },
+      },
+    });
+
+    const report = enhanced.__guardrails?.getReport();
+    if (!report) {
+      throw new Error('Guardrails report unavailable');
+    }
+
+    const analysisIssues = report.issues.filter(
+      (issue) => issue.type === 'analysis'
+    );
+    expect(analysisIssues.length).toBeGreaterThan(0);
+    expect(analysisIssues[0]?.message).toContain('High diff ratio');
+
+    enhanced.__guardrails?.dispose();
+  });
+
+  it('handles asynchronous guardrail rules that resolve to false', async () => {
+    const tree = createMockTree({ count: 0 });
+    const enhancer = withGuardrails({
+      customRules: [
+        {
+          name: 'async-test',
+          test: async () => {
+            await Promise.resolve();
+            return false;
+          },
+          message: 'Async rule failed',
+          severity: 'warning',
+        },
+      ],
+      reporting: { console: false },
+    });
+
+    const enhanced = enhancer(
+      tree as unknown as SignalTree<{ count: number }>
+    ) as unknown as GuardrailsTree<{ count: number }>;
+
+    enhanced({ count: 1 });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const report = enhanced.__guardrails?.getReport();
+    if (!report) {
+      throw new Error('Guardrails report unavailable');
+    }
+
+    const ruleIssues = report.issues.filter((issue) => issue.type === 'rule');
+    expect(ruleIssues.length).toBeGreaterThan(0);
+    expect(ruleIssues[0]?.metadata?.['rule']).toBe('async-test');
+
+    enhanced.__guardrails?.dispose();
   });
 });

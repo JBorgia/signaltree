@@ -60,23 +60,24 @@
 
 ### Code Quality
 
-- [ ] Resolve TypeScript/lint errors:
-  - `guardrails.ts`: typeof checks (3×), nested ternary, cognitive complexity
-  - `factories/index.ts`: any type (2×), typeof checks (2×)
-  - Minor lint warnings acceptable for initial implementation
+- [x] Resolve TypeScript/lint errors:
+  - `guardrails.ts`: replaced ad-hoc `typeof` checks with type guards, simplified suppression logic
+  - `factories/index.ts`: added explicit type guard for guardrails config detection
+  - Minor lint warnings remain acceptable for initial implementation
 
 ### Testing
 
 - [ ] Expand test coverage:
-  - Budget enforcement tests (maxUpdateTime, maxMemory, maxUpdates)
-  - Hot path tracking tests (heat score, threshold, decay)
-  - Percentile calculation tests (rolling window, P50/P95/P99)
-  - Diff ratio tests (structural changes, recomputation)
-  - Rule evaluation tests (async rules, error handling)
-  - Suppression tests (intent-based, path-based)
-  - Disposal tests (cleanup, timer clearing)
-  - Memory leak tests
-  - Integration tests with actual SignalTree
+  - [x] Budget enforcement tests (maxUpdateTime)
+  - [ ] Budget enforcement tests (maxMemory, maxUpdates)
+  - [x] Hot path tracking tests (heat score, threshold)
+  - [x] Percentile calculation tests (rolling window, P50/P95/P99)
+  - [x] Diff ratio tests (structural changes, recomputation)
+  - [x] Rule evaluation tests (async rules)
+  - [x] Suppression tests (intent-based, path-based)
+  - [x] Disposal tests (cleanup, timer clearing)
+  - [ ] Memory leak tests
+  - [ ] Integration tests with actual SignalTree
 
 ### Build & Integration
 
@@ -107,48 +108,41 @@
 
 ## 🎯 Next Steps
 
-1. **Fix lint errors** (5 min)
-
-   - Use type guards instead of typeof checks
-   - Refactor nested ternary into if-else
-   - Extract complex logic to reduce cognitive complexity
-   - Replace `any` types with proper generics
-
-2. **Run tests** (2 min)
+1. **Run tests** (2 min)
 
    ```bash
    cd packages/guardrails
    pnpm test
    ```
 
-3. **Build package** (2 min)
+2. **Build package** (2 min)
 
    ```bash
    cd packages/guardrails
    pnpm build
    ```
 
-4. **Verify outputs** (5 min)
+3. **Verify outputs** (5 min)
 
    - Check `dist/` folder for proper exports
    - Verify `.d.ts` files generated correctly
    - Test conditional exports in demo app
 
-5. **Expand tests** (30-60 min)
+4. **Expand tests** (30-60 min)
 
    - Add comprehensive budget tests
    - Add hot path tracking tests
    - Add percentile calculation tests
    - Add integration tests
 
-6. **Run benchmarks** (10 min)
+5. **Run benchmarks** (10 min)
 
    ```bash
    cd docs/guardrails
    # Run benchmark harness
    ```
 
-7. **Production validation** (15 min)
+6. **Production validation** (15 min)
    - Bundle analysis to confirm zero production cost
    - Integration test in actual app
    - Performance profiling
@@ -175,23 +169,13 @@
 
 ## 🐛 Known Issues
 
-1. **Lint errors** (minor, fixable)
+1. **Test coverage gaps**
+   - Need scenarios for diff ratio analysis, async rule handling, and memory leak detection
+   - Add hot path decay coverage and end-to-end integration tests with real SignalTree instances
 
-   - 3× typeof checks should use type guards
-   - 1× nested ternary should be if-else
-   - 1× cognitive complexity (17 vs 15 max)
-   - 2× any types should use generics
-
-2. **Missing dependencies** (will resolve on workspace-level install)
-
-   - jest types warnings (already configured)
-   - tsup module not found (dev dependency)
-
-3. **Test coverage gaps**
-   - No budget violation integration tests
-   - No hot path decay tests
-   - No percentile accuracy tests
-   - No disposal cleanup tests
+2. **Performance validation outstanding**
+   - Benchmark harness has not been exercised against v1.1 code
+   - Production bundle analysis and profiling still pending
 
 ## 📝 Notes
 
@@ -200,6 +184,8 @@
 - Framework-agnostic (works with any SignalTree setup)
 - Optional dev hooks integration for deeper instrumentation
 - Follows SignalTree monorepo conventions (workspace deps, tsup build)
+- Added Jest coverage for hot path tracking, percentile stats, suppression metadata, and disposal cleanup
+- Added Jest coverage for diff ratio warnings and asynchronous custom rules
 
 ## 🚀 Quick Commands
 
