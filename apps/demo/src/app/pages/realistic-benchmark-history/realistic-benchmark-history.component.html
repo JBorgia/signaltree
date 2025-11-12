@@ -183,46 +183,217 @@
 
 <!-- Details Modal -->
 @if (detailsOpen()) {
-<div class="details-modal-backdrop">
-  <div class="details-modal">
-    <button class="close-btn" (click)="closeDetails()" title="Close">×</button>
+<div class="details-modal-backdrop" (click)="closeDetails()">
+  <div class="details-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Benchmark Details</h2>
+      <button class="close-btn" (click)="closeDetails()" title="Close">×</button>
+    </div>
 
-    @if (selectedBenchmark(); as benchmark) {
-    <h2>Benchmark Details</h2>
-    <div class="details-meta">
-      <div><strong>Date:</strong> {{ formatDate(benchmark.createdAt) }}</div>
-      <div><strong>Winner:</strong> {{ benchmark.summary.winnerLibrary }}</div>
-      <div>
-        <strong>Score:</strong> {{ benchmark.summary.winnerScore.toFixed(1) }}
+    <div class="modal-body">
+      @if (selectedBenchmark(); as benchmark) {
+      <!-- Summary Section -->
+      <section class="details-section">
+        <h3>📊 Summary</h3>
+        <div class="details-grid">
+          <div class="detail-item">
+            <span class="detail-label">Date</span>
+            <span class="detail-value">{{ formatDate(benchmark.createdAt) }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Winner</span>
+            <span class="detail-value">
+              <span
+                class="library-badge"
+                [ngClass]="getLibraryColor(benchmark.summary.winnerLibrary)"
+              >
+                {{ benchmark.summary.winnerLibrary }}
+              </span>
+            </span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Score</span>
+            <span class="detail-value score-highlight">
+              {{ benchmark.summary.winnerScore.toFixed(2) }} pts
+            </span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Reliability</span>
+            <span class="detail-value">
+              <span
+                class="reliability-badge"
+                [ngClass]="
+                  getReliabilityColor(benchmark.summary.reliabilityScore)
+                "
+              >
+                {{ benchmark.summary.reliabilityScore }}%
+              </span>
+            </span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Machine Type</span>
+            <span class="detail-value">{{ benchmark.summary.machineType }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Total Tests</span>
+            <span class="detail-value">{{ benchmark.summary.totalTests }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Duration</span>
+            <span class="detail-value">
+              {{ formatDuration(benchmark.summary.duration) }}
+            </span>
+          </div>
+        </div>
+      </section>
+      }
+
+      @if (detailsLoading()) {
+      <div class="details-loading">
+        <div class="spinner"></div>
+        <p>Loading detailed results...</p>
       </div>
-      <div>
-        <strong>Reliability:</strong>
-        {{ benchmark.summary.reliabilityScore }}%
+      }
+
+      @if (detailsError()) {
+      <div class="details-error">
+        <span class="error-icon">⚠️</span>
+        <span>{{ detailsError() }}</span>
       </div>
-      <div>
-        <strong>Machine Type:</strong> {{ benchmark.summary.machineType }}
-      </div>
-      <div>
-        <strong>Total Tests:</strong> {{ benchmark.summary.totalTests }}
-      </div>
-      <div>
-        <strong>Duration:</strong>
-        {{ formatDuration(benchmark.summary.duration) }}
-      </div>
+      }
+
+      @if (selectedBenchmarkFull(); as full) {
+      <!-- Environment Section -->
+      @if (full.metadata?.environment) {
+      <section class="details-section">
+        <h3>💻 Environment</h3>
+        <div class="details-grid">
+          @if (full.metadata.environment.browser) {
+          <div class="detail-item">
+            <span class="detail-label">Browser</span>
+            <span class="detail-value">{{ full.metadata.environment.browser }}</span>
+          </div>
+          }
+          @if (full.metadata.environment.os) {
+          <div class="detail-item">
+            <span class="detail-label">Operating System</span>
+            <span class="detail-value">{{ full.metadata.environment.os }}</span>
+          </div>
+          }
+          @if (full.metadata.environment.cpuCores) {
+          <div class="detail-item">
+            <span class="detail-label">CPU Cores</span>
+            <span class="detail-value">{{ full.metadata.environment.cpuCores }}</span>
+          </div>
+          }
+          @if (full.metadata.environment.memory) {
+          <div class="detail-item">
+            <span class="detail-label">Memory</span>
+            <span class="detail-value">{{ full.metadata.environment.memory }}</span>
+          </div>
+          }
+          @if (full.metadata.environment.userAgent) {
+          <div class="detail-item full-width">
+            <span class="detail-label">User Agent</span>
+            <span class="detail-value user-agent">{{ full.metadata.environment.userAgent }}</span>
+          </div>
+          }
+        </div>
+      </section>
+      }
+
+      <!-- Results Section -->
+      @if (full.results) {
+      <section class="details-section">
+        <h3>🏆 Test Results</h3>
+        @if (full.results.length > 0) {
+        <div class="results-table-wrapper">
+          <table class="results-table">
+            <thead>
+              <tr>
+                <th>Test Name</th>
+                <th>Winner</th>
+                <th>Operations/sec</th>
+                <th>Margin</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (result of full.results; track result.name) {
+              <tr>
+                <td class="test-name">{{ result.name }}</td>
+                <td>
+                  <span
+                    class="library-badge small"
+                    [ngClass]="getLibraryColor(result.winner)"
+                  >
+                    {{ result.winner }}
+                  </span>
+                </td>
+                <td class="ops-value">
+                  {{ formatOpsPerSec(result.fastestOpsPerSec) }}
+                </td>
+                <td class="margin-value">
+                  @if (result.marginOfVictory) {
+                  <span class="margin-badge" [ngClass]="getMarginClass(result.marginOfVictory)">
+                    {{ result.marginOfVictory.toFixed(1) }}%
+                  </span>
+                  } @else {
+                  <span class="margin-badge neutral">N/A</span>
+                  }
+                </td>
+                <td>
+                  @if (result.reliable) {
+                  <span class="status-badge success">✓ Reliable</span>
+                  } @else {
+                  <span class="status-badge warning">⚠ Unreliable</span>
+                  }
+                </td>
+              </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        } @else {
+        <p class="no-data">No test results available</p>
+        }
+      </section>
+      }
+
+      <!-- Library Scores Section -->
+      @if (full.scores) {
+      <section class="details-section">
+        <h3>📈 Library Scores</h3>
+        <div class="scores-grid">
+          @for (score of getScoresArray(full.scores); track score.library) {
+          <div class="score-card" [ngClass]="score.library === full.summary?.winnerLibrary ? 'winner' : ''">
+            <div class="score-header">
+              <span
+                class="library-badge"
+                [ngClass]="getLibraryColor(score.library)"
+              >
+                {{ score.library }}
+              </span>
+              @if (score.library === full.summary?.winnerLibrary) {
+              <span class="winner-badge">🏆 Winner</span>
+              }
+            </div>
+            <div class="score-value">{{ score.score.toFixed(2) }} pts</div>
+            <div class="score-details">
+              <span class="score-stat">
+                {{ getWinsForLibrary(full.results, score.library) }} wins
+              </span>
+              <span class="score-stat">
+                {{ getLossesForLibrary(full.results, score.library) }} losses
+              </span>
+            </div>
+          </div>
+          }
+        </div>
+      </section>
+      }
+      }
     </div>
-    } @if (detailsLoading()) {
-    <div class="details-loading">
-      <div class="spinner"></div>
-      <p>Loading details...</p>
-    </div>
-    } @if (detailsError()) {
-    <div class="details-error">
-      <span class="error-icon">⚠️</span> {{ detailsError() }}
-    </div>
-    } @if (selectedBenchmarkFull(); as full) {
-    <h3>Submission Metadata</h3>
-    <pre class="details-json">{{ full | json }}</pre>
-    }
   </div>
 </div>
 }

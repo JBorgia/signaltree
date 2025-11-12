@@ -221,4 +221,36 @@ export class RealisticBenchmarkHistoryComponent implements OnInit {
     this.selectedBenchmarkFull.set(null);
     this.detailsError.set('');
   }
+
+  formatOpsPerSec(ops: number): string {
+    if (ops >= 1000000) {
+      return `${(ops / 1000000).toFixed(2)}M`;
+    }
+    if (ops >= 1000) {
+      return `${(ops / 1000).toFixed(2)}K`;
+    }
+    return ops.toFixed(0);
+  }
+
+  getMarginClass(margin: number): string {
+    if (margin >= 50) return 'high';
+    if (margin >= 20) return 'medium';
+    return 'low';
+  }
+
+  getScoresArray(scores: Record<string, number>): Array<{library: string, score: number}> {
+    return Object.entries(scores)
+      .map(([library, score]) => ({ library, score }))
+      .sort((a, b) => b.score - a.score);
+  }
+
+  getWinsForLibrary(results: any[], library: string): number {
+    if (!results) return 0;
+    return results.filter((r) => r.winner === library).length;
+  }
+
+  getLossesForLibrary(results: any[], library: string): number {
+    if (!results) return 0;
+    return results.filter((r) => r.winner !== library).length;
+  }
 }
