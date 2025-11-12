@@ -311,44 +311,56 @@
           <table class="results-table">
             <thead>
               <tr>
-                <th>Test Name</th>
-                <th>Winner</th>
-                <th>Operations/sec</th>
-                <th>Margin</th>
-                <th>Status</th>
+                <th>Scenario</th>
+                @for (lib of getUniqueLibraries(full.results); track lib) {
+                <th [style.color]="getLibraryColorValue(lib)">
+                  {{ lib }}
+                </th>
+                }
               </tr>
             </thead>
             <tbody>
               @for (result of full.results; track result.name) {
               <tr>
-                <td class="test-name">{{ result.name }}</td>
-                <td>
-                  <span
-                    class="library-badge small"
-                    [ngClass]="getLibraryColor(result.winner)"
-                  >
-                    {{ result.winner }}
-                  </span>
+                <td class="scenario-name">
+                  <strong>{{ result.name }}</strong>
                 </td>
-                <td class="ops-value">
-                  {{ formatOpsPerSec(result.fastestOpsPerSec) }}
-                </td>
-                <td class="margin-value">
-                  @if (result.marginOfVictory) {
-                  <span class="margin-badge" [ngClass]="getMarginClass(result.marginOfVictory)">
-                    {{ result.marginOfVictory.toFixed(1) }}%
-                  </span>
-                  } @else {
-                  <span class="margin-badge neutral">N/A</span>
+                @for (lib of getUniqueLibraries(full.results); track lib) {
+                <td
+                  [class.winner]="result.winner === lib"
+                  [class.second]="getLibraryRank(result, lib) === 2"
+                  [class.third]="getLibraryRank(result, lib) === 3"
+                  [style.--cell-color]="getLibraryColorValue(lib)"
+                >
+                  @if (getLibraryRank(result, lib) === 1) {
+                  <span class="rank-badge">🥇</span>
+                  }
+                  @if (getLibraryRank(result, lib) === 2) {
+                  <span class="rank-badge">🥈</span>
+                  }
+                  @if (getLibraryRank(result, lib) === 3) {
+                  <span class="rank-badge">🥉</span>
+                  }
+                  <div class="cell-content">
+                    <span class="ops-value">
+                      {{ formatOpsPerSec(getLibraryOps(result, lib)) }} ops/s
+                    </span>
+                    @if (lib !== result.winner && result.winner === 'signaltree') {
+                    <span class="relative">
+                      {{ getRelativePerformance(result, lib) }}x vs SignalTree
+                    </span>
+                    }
+                    @if (result.winner === lib && lib !== 'signaltree') {
+                    <span class="relative winner-margin">
+                      +{{ result.marginOfVictory?.toFixed(1) || '0' }}% faster
+                    </span>
+                    }
+                  </div>
+                  @if (!result.reliable && result.winner === lib) {
+                  <span class="unreliable-badge">⚠ Unstable</span>
                   }
                 </td>
-                <td>
-                  @if (result.reliable) {
-                  <span class="status-badge success">✓ Reliable</span>
-                  } @else {
-                  <span class="status-badge warning">⚠ Unreliable</span>
-                  }
-                </td>
+                }
               </tr>
               }
             </tbody>
