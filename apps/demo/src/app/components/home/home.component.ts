@@ -20,8 +20,7 @@ export class HomeComponent {
     },
     {
       title: '⚡ Performance',
-      description:
-        'Batched updates, memoization, and performance optimization',
+      description: 'Batched updates, memoization, and performance optimization',
       route: '/benchmarks',
       category: 'Performance',
       methods: ['batch', 'computed', 'optimize', 'clearCache', 'getMetrics'],
@@ -96,6 +95,14 @@ export class HomeComponent {
       route: '/enterprise-enhancer',
       category: 'Advanced',
       cta: 'Explore Enterprise Enhancer →',
+    },
+    {
+      title: '🛡️ Guardrails Monitoring',
+      description:
+        'Visualise dev-only performance budgets, hot paths, and custom rule violations',
+      route: '/guardrails',
+      category: 'Advanced',
+      cta: 'Open Guardrails Monitoring →',
     },
     {
       title: '🏛 Architecture Overview',
@@ -189,6 +196,7 @@ npm install @signaltree/core
 npm install @signaltree/ng-forms        # Angular forms integration
 npm install @signaltree/enterprise      # Enterprise-scale optimizations
 npm install @signaltree/callable-syntax # Optional DX enhancement
+npm install -D @signaltree/guardrails     # Dev-only performance guardrails
 
 # All enhancers (batching, memoization, middleware, entities, devtools,
 # time-travel, serialization, presets) are built into @signaltree/core
@@ -201,8 +209,27 @@ import {
   withEntities,
   withMiddleware,
   withDevTools,
-  withTimeTravel
+  withTimeTravel,
+  withPresets
 } from '@signaltree/core';
+import { withGuardrails } from '@signaltree/guardrails';
+
+const baseEnhancers = [
+  withBatching(),
+  withMemoization(),
+  withEntities(),
+  withMiddleware(),
+  withDevTools(),
+  withTimeTravel(),
+  withPresets()
+];
+
+const isDev =
+  typeof ngDevMode !== 'undefined'
+    ? ngDevMode
+    : typeof process !== 'undefined'
+      ? process.env?.NODE_ENV !== 'production'
+      : true;
 
 // Create a signal tree with enhancers
 const userTree = signalTree({
@@ -216,13 +243,8 @@ const userTree = signalTree({
     notifications: true
   }
 }).with(
-  withBatching(),
-  withMemoization(),
-  withEntities(),
-  withMiddleware(),
-  withDevTools(),
-  withTimeTravel(),
-  withPresets()
+  ...baseEnhancers,
+  ...(isDev ? [withGuardrails()] : [])
 );
 
 // Access signals directly through state or $ (shorthand)

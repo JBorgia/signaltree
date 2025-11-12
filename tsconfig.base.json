@@ -26,6 +26,8 @@
       "@signaltree/devtools": ["packages/core/src/enhancers/devtools/index.ts"],
       "@signaltree/enterprise": ["packages/enterprise/src/index.ts"],
       "@signaltree/entities": ["packages/core/src/enhancers/entities/index.ts"],
+      "@signaltree/guardrails": ["packages/guardrails/src/index.ts"],
+      "@signaltree/guardrails/*": ["packages/guardrails/src/*"],
       "@signaltree/memoization": [
         "packages/core/src/enhancers/memoization/index.ts"
       ],

@@ -1,0 +1,282 @@
+.guardrails-page {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding: 2rem 1.5rem 4rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  color: #0f172a;
+}
+
+.page-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  p {
+    margin: 0;
+    color: #334155;
+    line-height: 1.6;
+  }
+
+  .report-timestamp {
+    font-size: 0.9rem;
+    color: #1d4ed8;
+  }
+}
+
+.action-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+
+  button {
+    padding: 0.6rem 1.2rem;
+    border-radius: 0.6rem;
+    border: 1px solid #1d4ed8;
+    background: #1d4ed8;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px rgba(29, 78, 216, 0.15);
+    }
+
+    &.secondary {
+      background: #e2e8f0;
+      color: #0f172a;
+      border-color: #cbd5f5;
+    }
+  }
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+
+  .metric-card {
+    background: #f8fafc;
+    border-radius: 0.9rem;
+    padding: 1.1rem;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+
+    .metric-label {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      color: #475569;
+      letter-spacing: 0.03em;
+    }
+
+    .metric-value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+  }
+}
+
+.budget-section {
+  h2 {
+    margin-bottom: 0.75rem;
+    font-size: 1.4rem;
+  }
+}
+
+.budget-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.budget-card {
+  background: #f1f5f9;
+  border-radius: 0.85rem;
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+
+  &.budget-warning {
+    border-color: #fbbf24;
+    background: #fef3c7;
+  }
+
+  &.budget-error {
+    border-color: #f87171;
+    background: #fee2e2;
+  }
+
+  .budget-label {
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  .budget-usage {
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+
+  .budget-detail {
+    font-size: 0.85rem;
+    color: #475569;
+  }
+}
+
+.issues-section,
+.hotpaths-section,
+.scenario-log {
+  background: #f8fafc;
+  border-radius: 1rem;
+  padding: 1.25rem;
+  border: 1px solid #e2e8f0;
+
+  h2 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    font-size: 1.3rem;
+  }
+}
+
+.issues-list,
+.hotpaths-list,
+.scenario-log ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.issues-list {
+  list-style: none;
+  padding-left: 0;
+
+  li {
+    border-radius: 0.75rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid transparent;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+
+    .issue-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.4rem;
+    }
+
+    .issue-message {
+      font-weight: 600;
+    }
+
+    .issue-count {
+      font-size: 0.85rem;
+      color: #475569;
+    }
+
+    .issue-meta {
+      font-size: 0.85rem;
+      color: #475569;
+    }
+  }
+
+  .issue-warning {
+    border-color: #fbbf24;
+    background: #fefce8;
+  }
+
+  .issue-error {
+    border-color: #f87171;
+    background: #fef2f2;
+  }
+
+  .issue-info {
+    border-color: #93c5fd;
+    background: #eff6ff;
+  }
+}
+
+.hotpaths-list {
+  list-style: none;
+  padding-left: 0;
+
+  li {
+    padding: 0.85rem 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+
+    .hotpath-title {
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+    }
+
+    .hotpath-meta {
+      font-size: 0.9rem;
+      color: #475569;
+    }
+  }
+}
+
+.prod-message {
+  background: #eff6ff;
+  border: 1px dashed #60a5fa;
+  border-radius: 0.9rem;
+  padding: 1.2rem;
+  color: #1d4ed8;
+  line-height: 1.6;
+
+  code {
+    background: rgba(59, 130, 246, 0.12);
+    padding: 0.15rem 0.35rem;
+    border-radius: 0.4rem;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85rem;
+  }
+}
+
+.empty-state {
+  margin: 0;
+  color: #64748b;
+  font-style: italic;
+}
+
+.scenario-log ul {
+  list-style: none;
+  padding-left: 0;
+
+  li {
+    padding: 0.6rem 0.75rem;
+    border-left: 3px solid #1d4ed8;
+    background: #fff;
+    border-radius: 0.5rem;
+    margin-left: 0;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  }
+}
+
+@media (max-width: 768px) {
+  .guardrails-page {
+    padding: 1.5rem 1rem 3rem;
+  }
+
+  .action-panel {
+    button {
+      flex: 1 1 100%;
+    }
+  }
+}

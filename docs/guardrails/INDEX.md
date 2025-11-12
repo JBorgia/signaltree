@@ -11,7 +11,9 @@
 ## 🎯 Core Implementation
 
 ### 1. Production-Ready Guardrails Enhancer (v1.0)
+
 **[guardrails-v1-implementation.ts](./guardrails-v1-implementation.ts)**
+
 - Framework-agnostic (no Angular dependencies)
 - Proper middleware integration
 - v1.0 features:
@@ -23,7 +25,9 @@
 - Zero production cost
 
 ### 1a. Enhanced v1.1 Implementation (NEW)
+
 **[guardrails-v1.1-enhanced.ts](./guardrails-v1.1-enhanced.ts)**
+
 - All v1.0 features plus:
   - ✅ Real recomputation tracking (not placeholders)
   - ✅ P50/P95/P99/max duration reporting
@@ -34,7 +38,9 @@
   - ✅ Multi-tree support (treeId)
 
 ### 2. Core Extensions Proposal
+
 **[core-extensions-proposal.md](./core-extensions-proposal.md)**
+
 - Minimal dev hooks for zero-cost tracing
 - Update metadata plumbing
 - Branch-scoped configuration
@@ -43,7 +49,9 @@
 ## 🧪 Testing & Quality
 
 ### 3. Comprehensive Test Suite
+
 **[guardrails.spec.ts](./guardrails.spec.ts)**
+
 - 100% feature coverage
 - Integration scenarios
 - Bundle size verification
@@ -52,7 +60,9 @@
 ## 🏭 Integration Patterns
 
 ### 4. Factory Patterns
+
 **[factory-patterns.ts](./factory-patterns.ts)**
+
 - Angular-specific factory
 - Framework-agnostic factory
 - Specialized factories:
@@ -65,14 +75,18 @@
 ## 🔬 Validation & Testing
 
 ### 5. Benchmark Harness (NEW)
+
 **[benchmark-harness.ts](./benchmark-harness.ts)**
+
 - 6 realistic scenarios
 - Statistical metrics (P50, P95, P99)
 - Validates <1ms overhead target
 - Generates detailed performance reports
 
 ### 6. Comprehensive Test Suite
+
 **[guardrails.spec.ts](./guardrails.spec.ts)**
+
 - 100% feature coverage
 - Integration scenarios
 - Bundle size verification
@@ -81,14 +95,18 @@
 ## 📦 Package Configuration
 
 ### 7. Package Setup
+
 **[package.json](./package.json)**
+
 - Conditional exports (dev/prod)
 - Proper bundling configuration
 - Size limits
 - Test and build scripts
 
 ### 8. Production No-op Module
+
 Zero-byte production build via conditional exports:
+
 ```json
 {
   "exports": {
@@ -115,13 +133,15 @@ const tree = signalTree(initial).with(withGuardrails());
 // 3. Or use a factory
 import { createFeatureTree } from '@signaltree/guardrails/factories';
 
-const tree = createFeatureTree(initial, {
+const tree = createFeatureTree(signalTree, initial, {
   name: 'dashboard',
   guardrails: true,
   persistence: true
 });
 
 // 4. It just works! (dev-only, zero prod cost)
+
+// Visit /guardrails in the demo app to see live guardrail metrics rendered in the UI.
 ```
 
 ## ✅ v1.1 Enhancements Summary
@@ -129,7 +149,7 @@ const tree = createFeatureTree(initial, {
 All 13 critical gaps addressed:
 
 1. **Recomputation tracking** - Real implementation with downstream effects
-2. **Memory heuristics** - Per-path tracking with unread detection  
+2. **Memory heuristics** - Per-path tracking with unread detection
 3. **Diff ratio** - Integrated for parent replacement warnings
 4. **P95 reporting** - Rolling window with percentiles
 5. **Noise control** - Frequency weighting and max limits
@@ -146,7 +166,7 @@ All 13 critical gaps addressed:
 
 ```
 Average Overhead:  <0.4ms (4%)  ✅
-P95 Overhead:      <0.6ms        ✅  
+P95 Overhead:      <0.6ms        ✅
 Max Overhead:      <1.0ms        ✅
 Meets Target:      YES
 ```

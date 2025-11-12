@@ -22,6 +22,7 @@ Interactive demonstration showcasing SignalTree's revolutionary performance, fea
 - **Type Safety Showcase**: Perfect TypeScript inference at unlimited depth levels
 - **Bundle Size Analysis**: Real-time monitoring with comprehensive reporting
 - **Framework Comparisons**: Side-by-side performance against multiple libraries via the **Benchmark Orchestrator** with **real-world frequency weighting** (SignalTree baseline, NgRx Store, NgRx SignalStore, Akita, Elf)
+- **Guardrails Monitoring**: Visualise dev-only performance budgets, hot paths, and policy violations on the new `/guardrails` page
 
 ## 🏃‍♂️ Quick Start
 
@@ -276,6 +277,7 @@ pnpm nx serve demo --port 4200
 - **Batch Operations**: Compare batched vs. individual updates
 - **Memory Monitoring**: Watch garbage collection optimization
 - **Type Safety**: Experience perfect IntelliSense at any depth
+- **Guardrails Monitoring**: Open `/guardrails` to inspect performance budgets, hot paths, and custom rule violations in real time
 
 ### 3. Compare with Other Frameworks
 
