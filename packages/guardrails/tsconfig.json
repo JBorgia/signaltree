@@ -10,7 +10,8 @@
     "noFallthroughCasesInSwitch": true,
     "module": "ESNext",
     "outDir": "./dist",
-    "rootDir": "../.."
+    "rootDir": "../..",
+    "types": []
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "tests"]
