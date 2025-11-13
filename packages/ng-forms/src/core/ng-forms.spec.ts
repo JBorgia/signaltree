@@ -1,3 +1,4 @@
+import { TestBed } from '@angular/core/testing';
 import { AuditEntry, createAuditMiddleware } from '../audit/audit';
 import { toObservable } from '../rxjs/rxjs-bridge';
 import { unique } from './async-validators';
