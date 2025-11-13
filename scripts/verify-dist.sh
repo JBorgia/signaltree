@@ -9,13 +9,16 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m'
 
-PACKAGES=("core" "ng-forms" "callable-syntax" "enterprise" "guardrails")
+# Only verify packages that were actually built during validation
+# enterprise and ng-forms are skipped during validation
+PACKAGES=("core" "callable-syntax" "guardrails" "shared" "types" "utils")
 ERRORS=0
 
-echo "Verifying distribution files..."
+echo "Verifying distribution files for independent packages..."
+echo "(Note: enterprise and ng-forms are built during release, not validation)"
 
 for package in "${PACKAGES[@]}"; do
-    DIST_DIR="./packages/$package/dist"
+    DIST_DIR="./dist/packages/$package"
     
     echo "Checking $package..."
     
