@@ -64,9 +64,6 @@
     "rollup-plugin-dts": "*",
     "tslib": "*"
   },
-  "dependencies": {
-    "@signaltree/shared": "workspace:*"
-  },
   "files": [
     "dist",
     "README.md",
