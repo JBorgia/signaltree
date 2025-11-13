@@ -9,8 +9,8 @@
       "../../node_modules/@types"
     ],
     "paths": {
-      "@signaltree/core": ["packages/core/src/index.ts"],
-      "@signaltree/core/*": ["packages/core/src/*"]
+      "@signaltree/core": ["../../packages/core/src/index.ts", "../../dist/packages/core/index.d.ts"],
+      "@signaltree/core/*": ["../../packages/core/src/*"]
     }
   },
   "include": ["src/**/*.ts"],
