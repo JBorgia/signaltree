@@ -1,4 +1,3 @@
-import { TestBed } from '@angular/core/testing';
 import { AuditEntry, createAuditMiddleware } from '../audit/audit';
 import { toObservable } from '../rxjs/rxjs-bridge';
 import { unique } from './async-validators';
@@ -82,18 +81,18 @@ describe('NgForms', () => {
       expect(form.dirty()).toBe(true);
     });
 
-    it('should support form reset', () => {
+    it('should support form reset', async () => {
       const form = createFormTree(initialFormData);
 
       form.setValue('username', 'test');
       form.setValue('email', 'test@example.com');
-      TestBed.flushEffects(); // Ensure signal updates are processed
+      await new Promise((resolve) => setTimeout(resolve, 0)); // Allow signal updates
 
       expect(form.dirty()).toBe(true);
       expect(form.state.username()).toBe('test');
 
       form.reset();
-      TestBed.flushEffects(); // Ensure reset updates are processed
+      await new Promise((resolve) => setTimeout(resolve, 0)); // Allow reset updates
 
       expect(form.dirty()).toBe(false);
       expect(form.state.username()).toBe('');
