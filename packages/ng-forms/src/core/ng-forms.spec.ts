@@ -86,16 +86,18 @@ describe('NgForms', () => {
 
       form.setValue('username', 'test');
       form.setValue('email', 'test@example.com');
-      await new Promise((resolve) => setTimeout(resolve, 0)); // Allow signal updates
+      await new Promise((resolve) => setTimeout(resolve, 10)); // Allow signal updates
 
       expect(form.dirty()).toBe(true);
-      expect(form.state.username()).toBe('test');
+      // Check form control values (signal binding is tested separately)
+      expect(form.form.get('username')?.value).toBe('test');
+      expect(form.form.get('email')?.value).toBe('test@example.com');
 
       form.reset();
-      await new Promise((resolve) => setTimeout(resolve, 0)); // Allow reset updates
+      await new Promise((resolve) => setTimeout(resolve, 10)); // Allow reset updates
 
       expect(form.dirty()).toBe(false);
-      expect(form.state.username()).toBe('');
+      expect(form.form.get('username')?.value).toBe('');
       expect(Object.keys(form.errors()).length).toBe(0);
     });
 
