@@ -86,11 +86,13 @@ describe('NgForms', () => {
 
       form.setValue('username', 'test');
       form.setValue('email', 'test@example.com');
+      TestBed.flushEffects(); // Ensure signal updates are processed
 
       expect(form.dirty()).toBe(true);
       expect(form.state.username()).toBe('test');
 
       form.reset();
+      TestBed.flushEffects(); // Ensure reset updates are processed
 
       expect(form.dirty()).toBe(false);
       expect(form.state.username()).toBe('');
