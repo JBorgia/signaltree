@@ -1,0 +1,654 @@
+# SignalTree Repository Rules & Context
+
+This file provides comprehensive context for AI assistants working on the SignalTree codebase.
+
+## Repository Overview
+
+**SignalTree** is a type-safe, modular, signal-based state management library for Angular with revolutionary recursive typing that enables unlimited nesting depth with perfect type inference.
+
+- **Language**: TypeScript
+- **Framework**: Angular (for ng-forms, demo)
+- **Package Manager**: pnpm
+- **Monorepo Tool**: Nx
+- **Build Tools**: Rollup (packages), tsup (guardrails), Angular CLI (demo)
+- **Testing**: Jest
+- **Linting**: ESLint
+- **License**: BSL-1.1 (Business Source License)
+
+## Architecture
+
+### Monorepo Structure
+
+```
+signaltree/
+├── packages/              # All npm packages
+│   ├── core/             # Main package with recursive typing
+│   ├── ng-forms/         # Angular forms integration
+│   ├── callable-syntax/  # Build-time transform for callable DX
+│   ├── enterprise/       # Enterprise optimizations
+│   ├── guardrails/       # Dev-only performance monitoring (tsup)
+│   ├── shared/           # Internal shared utilities (PRIVATE - not published)
+│   ├── types/            # Internal TypeScript types (PRIVATE)
+│   └── utils/            # Internal utilities (PRIVATE)
+├── apps/
+│   └── demo/             # Demo application (Angular 19+)
+├── scripts/              # Build, release, and validation scripts
+├── dist/                 # Build output (gitignored)
+└── docs/                 # Documentation
+```
+
+### Package Dependencies
+
+**Published Packages** (public on npm):
+- `@signaltree/core` - Main package, no external deps
+- `@signaltree/ng-forms` - Depends on `@signaltree/core` (peerDep)
+- `@signaltree/callable-syntax` - Independent build transform
+- `@signaltree/enterprise` - Depends on `@signaltree/core` (peerDep)
+- `@signaltree/guardrails` - Dev-only, conditional exports (noop.js for prod)
+
+**Private Packages** (internal only):
+- `@signaltree/shared` - Bundled into other packages at build time
+- `@signaltree/types` - Internal type definitions
+- `@signaltree/utils` - Internal utilities
+
+**CRITICAL**: `@signaltree/shared`, `types`, and `utils` are marked `"private": true` and must NEVER be listed as runtime dependencies. They are bundled at build time via Rollup.
+
+## Critical Build Details
+
+### Package Build Systems
+
+1. **Core, ng-forms, callable-syntax, enterprise**: Nx + Rollup
+   - Entry: `src/index.ts`
+   - Output: `dist/` with CJS, ESM, and type definitions
+   - Build: `nx build <package>`
+
+2. **Guardrails**: pnpm + tsup
+   - Entry: `src/index.ts`, `src/noop.ts`, `src/factories/index.ts`
+   - Output: `dist/` with CJS, ESM for each entry
+   - Build: `pnpm --filter @signaltree/guardrails build`
+   - Special: Conditional exports (noop.js for production)
+
+3. **Demo**: Angular CLI
+   - Build: `nx build demo --configuration=production`
+   - Deploy: GitHub Pages and Vercel
+
+### Build Commands
+
+```bash
+# Build all packages
+pnpm run build:all
+
+# Build specific package
+nx build core
+pnpm --filter @signaltree/guardrails build
+
+# Build for production
+pnpm run build:production
+```
+
+### Test Commands
+
+```bash
+# All tests
+pnpm run test:all
+
+# Specific package
+nx test core
+
+# Guardrails (requires special handling)
+pnpm --filter @signaltree/guardrails test --runInBand
+
+# Coverage
+bash scripts/test-coverage.sh
+```
+
+## Release Process & Validation
+
+### Release Commands
+
+```bash
+npm run release        # patch (4.0.12 → 4.0.13)
+npm run release:minor  # minor (4.0.12 → 4.1.0)
+npm run release:major  # major (4.0.12 → 5.0.0)
+```
+
+### 13-Step Pre-Publish Validation
+
+The release script **automatically runs** comprehensive validation:
+
+1. ✅ Clean working directory (git status)
+2. ✅ Dependencies installed (pnpm install --frozen-lockfile)
+3. ✅ TypeScript configs exist
+4. ✅ Linting passes (npm run lint:all)
+5. ✅ All tests pass (npm run test:all)
+6. ✅ Coverage meets thresholds (80%/75%/80%/80%)
+7. ✅ All packages build (npm run build:all)
+8. ✅ Package configs valid (scripts/verify-packages.sh)
+9. ✅ Distribution files present (scripts/verify-dist.sh)
+10. ✅ Bundle sizes within limits (consolidated-bundle-analysis.js)
+11. ✅ Sanity checks pass
+12. ⚠️ Performance benchmarks (warning only)
+13. ⚠️ Documentation complete (warning only)
+
+**Run validation manually**:
+```bash
+npm run validate
+```
+
+### Automatic Rollback
+
+If validation fails, the release script **automatically**:
+- Restores original package versions
+- Cleans build artifacts
+- Removes git tags (local and remote)
+- Resets working directory
+
+**Documentation**:
+- `RELEASE_PROCESS.md` - Comprehensive release guide
+- `.github/VALIDATION_GUIDE.md` - Quick reference
+- `docs/VALIDATION_SYSTEM.md` - Implementation details
+- `.release-rules.json` - Configuration
+
+## Bundle Size Limits
+
+**CRITICAL**: These are enforced in validation:
+
+| Package | Max Size | Max Gzipped |
+|---------|----------|-------------|
+| core | 15KB | 5KB |
+| ng-forms | 10KB | 4KB |
+| callable-syntax | 5KB | 2KB |
+| enterprise | 8KB | 3KB |
+| guardrails | 12KB | 4KB |
+
+Check sizes: `npm run analyze:bundle`
+
+## Common Issues & Solutions
+
+### 1. Build Failures
+
+**Issue**: `@signaltree/core` module not found during build for enterprise/ng-forms
+
+**Solution**: 
+- Add `@signaltree/core` to `devDependencies` (NOT dependencies!)
+- Fix `tsconfig.lib.json` paths to use `../../packages/core/src/index.ts`
+
+**Issue**: `@signaltree/shared` not found
+
+**Solution**:
+- NEVER add to `dependencies` or `peerDependencies`
+- It's bundled at build time via Rollup configuration
+- Only use in `devDependencies` if needed for development
+
+### 2. Test Failures
+
+**Issue**: Jest `Cannot find module '@jest/test-sequencer'`
+
+**Solution**:
+- Guardrails uses local stub: `packages/guardrails/tests/jest-test-sequencer.stub.ts`
+- Config: `testSequencer: '<rootDir>/tests/jest-test-sequencer.stub.ts'`
+
+**Issue**: Guardrails tests fail in parallel
+
+**Solution**:
+- Always run with `--runInBand` flag
+- Command: `pnpm --filter @signaltree/guardrails test --runInBand`
+
+### 3. Linting Issues
+
+**Issue**: `@nx/dependency-checks` errors
+
+**Common causes**:
+- Package in `devDependencies` but used as runtime dependency
+- Package in `dependencies` but not actually used
+- Private packages (`@signaltree/shared`) incorrectly listed
+
+**Solution**:
+- Runtime deps → `dependencies` or `peerDependencies`
+- Build-time deps → `devDependencies`
+- Private packages → bundled, not listed as deps
+
+### 4. Nx Daemon Issues
+
+**Issue**: `Failed to start plugin worker`, `EPERM` errors
+
+**Solution**:
+```bash
+pnpm nx reset
+# Then run commands with daemon disabled
+NX_DAEMON=false pnpm run build:all
+```
+
+### 5. Deployment Issues
+
+**Issue**: Vercel deployment fails with `ERR_PNPM_OUTDATED_LOCKFILE`
+
+**Solution**:
+```bash
+pnpm install  # Regenerate lockfile
+git add pnpm-lock.yaml
+git commit -m "chore: update lockfile"
+git push
+```
+
+### 6. npm Publishing Issues
+
+**Issue**: `EOTP` (One-Time Password required)
+
+**Solution**:
+- Use **Automation Token** (not Publish token)
+- Create at: https://www.npmjs.com/settings/<username>/tokens
+- Configure: `npm config set //registry.npmjs.org/:_authToken=YOUR_TOKEN`
+
+## Code Style & Conventions
+
+### TypeScript
+
+- **Strict mode**: Enabled
+- **No `any`**: Use `unknown` instead
+- **Recursive types**: Leverage TypeScript's recursive type system
+- **Generics**: Use for type safety, not runtime behavior
+
+### Naming Conventions
+
+- **Files**: kebab-case (`signal-tree.ts`)
+- **Classes**: PascalCase (`SignalTree`)
+- **Functions**: camelCase (`createSignal`)
+- **Constants**: SCREAMING_SNAKE_CASE (`MAX_DEPTH`)
+- **Types/Interfaces**: PascalCase (`SignalTreeConfig`)
+
+### Import Order
+
+1. External dependencies (node_modules)
+2. Internal workspace packages (`@signaltree/*`)
+3. Relative imports (`./*`, `../*`)
+
+### Comments
+
+- **JSDoc**: All public APIs
+- **Implementation comments**: Complex logic only
+- **TODO**: Use `TODO:` prefix with context
+
+## Testing Guidelines
+
+### Test Structure
+
+```typescript
+describe('FeatureName', () => {
+  describe('method', () => {
+    it('should do something', () => {
+      // Arrange
+      const input = ...;
+      
+      // Act
+      const result = ...;
+      
+      // Assert
+      expect(result).toBe(...);
+    });
+  });
+});
+```
+
+### Coverage Requirements
+
+- Statements: 80%
+- Branches: 75%
+- Functions: 80%
+- Lines: 80%
+
+### Test Naming
+
+- Descriptive: "should update nested state when parent signal changes"
+- Not: "test1" or "works"
+
+## Performance Considerations
+
+### Benchmarking
+
+- Script: `scripts/perf-suite.js`
+- Run: `npm run perf:run`
+- Results tracked in demo app
+
+### Bundle Size
+
+- Always check after changes: `npm run analyze:bundle`
+- Tree-shaking: Ensure proper ESM exports
+- Side effects: Mark in `package.json` (`"sideEffects": false`)
+
+### Memory
+
+- Lazy signal creation (core architecture)
+- Avoid eager initialization
+- Clean up subscriptions
+
+## Angular-Specific (ng-forms, demo)
+
+### Angular Version
+
+- **Target**: Angular 19+
+- **Signals**: Use Angular signals throughout
+- **Forms**: Reactive forms with signal integration
+
+### Component Structure
+
+```typescript
+@Component({
+  selector: 'app-feature',
+  standalone: true,
+  imports: [...],
+  templateUrl: './feature.component.html',
+  styleUrl: './feature.component.scss'
+})
+export class FeatureComponent {
+  // Signals
+  state = signal(initialValue);
+  
+  // Computed
+  derived = computed(() => ...);
+  
+  // Effects
+  constructor() {
+    effect(() => {
+      // React to signal changes
+    });
+  }
+}
+```
+
+### Styling
+
+- **SCSS**: Preferred
+- **ViewEncapsulation**: Default (Emulated), only use `None` when absolutely necessary
+- **CSS Variables**: Be careful with global leakage when `ViewEncapsulation.None`
+- **BEM**: Use for complex components
+
+## Git Workflow
+
+### Commit Messages
+
+Follow conventional commits:
+- `feat:` - New feature
+- `fix:` - Bug fix
+- `chore:` - Maintenance
+- `docs:` - Documentation
+- `refactor:` - Code refactoring
+- `test:` - Testing
+- `perf:` - Performance improvement
+
+### Branch Strategy
+
+- **main**: Production-ready code
+- **feature/***: New features
+- **fix/***: Bug fixes
+- **chore/***: Maintenance
+
+### Pre-Commit
+
+- Linting runs automatically
+- Format with Prettier
+- Type checking
+
+## Scripts Reference
+
+### Development
+
+```bash
+pnpm start                    # Start demo app
+pnpm dev                      # Alias for start
+pnpm run dev:check            # Quick check (test + lint core)
+```
+
+### Building
+
+```bash
+pnpm run build:all            # Build all packages
+pnpm run build:production     # Production builds
+pnpm run build:core           # Build core only
+```
+
+### Testing
+
+```bash
+pnpm run test:all             # All tests
+pnpm run test:core            # Core tests
+pnpm run test:coverage        # With coverage
+bash scripts/test-coverage.sh # Coverage script
+```
+
+### Quality
+
+```bash
+pnpm run lint:all             # Lint all packages
+pnpm run lint:fix:all         # Auto-fix linting
+pnpm run quality:check        # Full quality check
+npm run validate              # Pre-publish validation
+```
+
+### Analysis
+
+```bash
+npm run analyze:bundle        # Bundle size analysis
+npm run perf:run              # Performance benchmarks
+npm run size:report           # Size report
+```
+
+### Publishing
+
+```bash
+npm run release               # Patch release with validation
+npm run release:minor         # Minor release
+npm run release:major         # Major release
+npm run validate              # Run validation only
+```
+
+## Environment Setup
+
+### Required Tools
+
+- **Node.js**: 18+ (LTS recommended)
+- **pnpm**: 8.0+
+- **Nx CLI**: Installed via pnpm
+
+### Initial Setup
+
+```bash
+# Clone repo
+git clone https://github.com/JBorgia/signaltree.git
+cd signaltree
+
+# Install dependencies
+pnpm install
+
+# Verify setup
+pnpm run quality:check
+```
+
+### IDE Configuration
+
+**VSCode Extensions** (recommended):
+- Angular Language Service
+- ESLint
+- Prettier
+- TypeScript and JavaScript Language Features
+
+**Settings**:
+```json
+{
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  }
+}
+```
+
+## Important Files
+
+### Configuration
+
+- `nx.json` - Nx workspace configuration
+- `package.json` - Workspace scripts and dependencies
+- `tsconfig.base.json` - Base TypeScript configuration
+- `.eslintrc.json` - ESLint configuration
+- `jest.config.ts` - Jest root configuration
+- `.release-rules.json` - Validation rules and thresholds
+
+### Build
+
+- `packages/*/project.json` - Nx project configuration
+- `packages/*/tsconfig.lib.json` - Package TypeScript config
+- `packages/*/rollup.config.js` - Rollup configuration
+- `packages/guardrails/tsup.config.ts` - tsup configuration
+
+### Documentation
+
+- `README.md` - Main documentation
+- `CHANGELOG.md` - Release history
+- `RELEASE_PROCESS.md` - Release guide
+- `.github/VALIDATION_GUIDE.md` - Validation quick reference
+- `docs/VALIDATION_SYSTEM.md` - Validation implementation
+
+## Key Concepts
+
+### Recursive Typing
+
+The core innovation of SignalTree:
+```typescript
+// Unlimited depth with perfect type inference
+const tree = signalTree({ user: { profile: { settings: { theme: 'dark' } } } });
+tree.$.user.profile.settings.theme(); // Fully typed!
+```
+
+### Lazy Signal Creation
+
+- Signals created on-demand via Proxies
+- 85% memory reduction vs eager creation
+- Core architectural principle
+
+### Conditional Exports (Guardrails)
+
+```json
+{
+  "exports": {
+    ".": {
+      "development": "./dist/index.js",
+      "production": "./dist/noop.js"
+    }
+  }
+}
+```
+
+Production builds get no-op functions, dev gets full monitoring.
+
+### Private Packages
+
+`@signaltree/shared`, `types`, `utils` are:
+- Marked `"private": true` in package.json
+- NOT published to npm
+- Bundled into other packages via Rollup
+- Used internally during development/build
+
+## Troubleshooting Checklist
+
+Before asking for help:
+
+1. ✅ Clean install: `rm -rf node_modules pnpm-lock.yaml && pnpm install`
+2. ✅ Reset Nx: `pnpm nx reset`
+3. ✅ Clean build: `rm -rf dist && pnpm run build:all`
+4. ✅ Check validation: `npm run validate`
+5. ✅ Review error logs in `/tmp/` directory
+6. ✅ Check recent commits: `git log --oneline -10`
+7. ✅ Verify Node version: `node --version` (should be 18+)
+8. ✅ Check pnpm version: `pnpm --version` (should be 8+)
+
+## Emergency Procedures
+
+### Rollback a Release
+
+```bash
+# If release script failed and didn't auto-rollback
+bash scripts/release.sh   # Will auto-rollback on any error
+
+# Manual rollback if needed
+git reset --hard HEAD~1
+git tag -d v4.0.X
+git push origin --delete v4.0.X
+```
+
+### Unpublish from npm (72-hour window)
+
+```bash
+npm unpublish @signaltree/core@4.0.X
+```
+
+⚠️ **Last resort only** - breaks dependent projects!
+
+### Deprecate Instead
+
+```bash
+npm deprecate @signaltree/core@4.0.X "Critical bug, use 4.0.Y instead"
+```
+
+## Performance Targets
+
+### Bundle Sizes (Current)
+
+- Total ecosystem: ~27-28KB
+- Core: ~7KB
+- All packages under limits (see bundle size table above)
+
+### Operations
+
+- State updates: < 0.1ms average
+- Deep nesting: < 0.2ms average
+- Memory: 85% less than eager signal creation
+
+### Coverage
+
+- All packages: > 80% coverage
+- Core: > 85% coverage
+
+## Links
+
+- **Website**: https://signaltree.io
+- **Demo**: https://signaltree.io (GitHub Pages)
+- **npm**: https://www.npmjs.com/org/signaltree
+- **GitHub**: https://github.com/JBorgia/signaltree
+- **Issues**: https://github.com/JBorgia/signaltree/issues
+
+## Final Notes
+
+### When Making Changes
+
+1. **Always run validation**: `npm run validate`
+2. **Check bundle sizes**: `npm run analyze:bundle`
+3. **Update tests**: Maintain coverage
+4. **Update docs**: Keep README and CHANGELOG current
+5. **Test locally**: Before pushing to CI
+6. **Never skip validation**: Even for "small" changes
+
+### When Releasing
+
+1. **Update CHANGELOG.md**: Add version entry
+2. **Run validation**: `npm run validate`
+3. **Use release script**: `npm run release`
+4. **Verify on npm**: Check published packages
+5. **Test installation**: `npm install @signaltree/core` in fresh project
+
+### When Things Break
+
+1. **Don't panic**: Rollback is automatic
+2. **Check validation output**: Detailed error messages
+3. **Review logs**: `/tmp/` directory has full output
+4. **Check documentation**: RELEASE_PROCESS.md, VALIDATION_GUIDE.md
+5. **Ask for help**: Open a GitHub issue with context
+
+---
+
+**Last Updated**: 2024-11-13
+**Document Version**: 1.0.0
+**Maintained by**: SignalTree Core Team
+
+This document should be the **first thing** loaded when working on SignalTree.
+
