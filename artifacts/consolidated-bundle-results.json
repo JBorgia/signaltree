@@ -1,70 +1,7 @@
 {
-  "timestamp": "2025-11-12T04:57:45.161Z",
+  "timestamp": "2025-11-13T18:30:03.911Z",
   "architecture": "consolidated",
   "packages": [
-    {
-      "name": "core",
-      "rawSize": 2016,
-      "gzipSize": 727,
-      "claimed": 22000,
-      "maxAllowed": 25000,
-      "passed": true,
-      "claimMet": true
-    },
-    {
-      "name": "enterprise",
-      "rawSize": 518,
-      "gzipSize": 230,
-      "claimed": 2700,
-      "maxAllowed": 3200,
-      "passed": true,
-      "claimMet": true
-    },
-    {
-      "name": "ng-forms",
-      "rawSize": 35791,
-      "gzipSize": 7165,
-      "claimed": 7200,
-      "maxAllowed": 7700,
-      "passed": true,
-      "claimMet": true
-    },
-    {
-      "name": "callable-syntax",
-      "rawSize": 507,
-      "gzipSize": 273,
-      "claimed": 3600,
-      "maxAllowed": 4200,
-      "passed": true,
-      "claimMet": true
-    },
-    {
-      "name": "shared",
-      "rawSize": 415,
-      "gzipSize": 172,
-      "claimed": 2600,
-      "maxAllowed": 3000,
-      "passed": true,
-      "claimMet": true
-    },
-    {
-      "name": "types",
-      "rawSize": 441,
-      "gzipSize": 276,
-      "claimed": 400,
-      "maxAllowed": 500,
-      "passed": true,
-      "claimMet": true
-    },
-    {
-      "name": "utils",
-      "rawSize": 11028,
-      "gzipSize": 2150,
-      "claimed": 2600,
-      "maxAllowed": 3200,
-      "passed": true,
-      "claimMet": true
-    },
     {
       "name": "guardrails",
       "rawSize": 25046,
@@ -82,110 +19,16 @@
       "maxAllowed": 9000,
       "passed": true,
       "claimMet": true
-    },
-    {
-      "name": "core/enhancers/batching",
-      "rawSize": 4828,
-      "gzipSize": 1275,
-      "claimed": 1270,
-      "maxAllowed": 1400,
-      "passed": true,
-      "claimMet": false
-    },
-    {
-      "name": "core/enhancers/memoization",
-      "rawSize": 11599,
-      "gzipSize": 2568,
-      "claimed": 2580,
-      "maxAllowed": 2650,
-      "passed": true,
-      "claimMet": true
-    },
-    {
-      "name": "core/enhancers/time-travel",
-      "rawSize": 6053,
-      "gzipSize": 1345,
-      "claimed": 1860,
-      "maxAllowed": 1950,
-      "passed": true,
-      "claimMet": true
-    },
-    {
-      "name": "core/enhancers/entities",
-      "rawSize": 4149,
-      "gzipSize": 957,
-      "claimed": 980,
-      "maxAllowed": 1000,
-      "passed": true,
-      "claimMet": true
-    },
-    {
-      "name": "core/enhancers/middleware",
-      "rawSize": 6506,
-      "gzipSize": 1359,
-      "claimed": 1890,
-      "maxAllowed": 2000,
-      "passed": true,
-      "claimMet": true
-    },
-    {
-      "name": "core/enhancers/devtools",
-      "rawSize": 10800,
-      "gzipSize": 2469,
-      "claimed": 2490,
-      "maxAllowed": 2600,
-      "passed": true,
-      "claimMet": true
-    },
-    {
-      "name": "core/enhancers/serialization",
-      "rawSize": 26060,
-      "gzipSize": 4858,
-      "claimed": 4850,
-      "maxAllowed": 5200,
-      "passed": true,
-      "claimMet": false
-    },
-    {
-      "name": "core/enhancers/presets",
-      "rawSize": 2589,
-      "gzipSize": 718,
-      "claimed": 840,
-      "maxAllowed": 900,
-      "passed": true,
-      "claimMet": true
-    },
-    {
-      "name": "core/enhancers/computed",
-      "rawSize": 566,
-      "gzipSize": 266,
-      "claimed": 750,
-      "maxAllowed": 800,
-      "passed": true,
-      "claimMet": true
     }
   ],
-  "demoApp": {
-    "totalSize": 2752353,
-    "jsFiles": 37,
-    "cssFiles": 1,
-    "largeJsFiles": 5,
-    "largeCssFiles": 0
-  },
+  "demoApp": null,
   "summary": {
-    "totalActualSize": 40611,
-    "totalClaimedSize": 73610,
-    "packagesPassed": 18,
+    "totalActualSize": 13803,
+    "totalClaimedSize": 15000,
+    "packagesPassed": 2,
     "packagesFailed": 0
   },
   "recommendations": [
-    {
-      "category": "Demo App Optimization",
-      "items": [
-        "Consider reducing demo complexity or implementing more aggressive code splitting",
-        "Split large JavaScript chunks using dynamic imports"
-      ]
-    },
     {
       "category": "General Optimization",
       "items": [
