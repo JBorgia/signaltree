@@ -11,7 +11,15 @@ export default [
         {
           ignoredFiles: ['{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}'],
           // @signaltree/shared is bundled at build time via Rollup, not a runtime dependency
-          ignoredDependencies: ['@signaltree/shared'],
+          ignoredDependencies: [
+            '@signaltree/shared',
+            // Build-time dependencies (not runtime peer dependencies)
+            '@rollup/plugin-commonjs',
+            '@rollup/plugin-node-resolve',
+            '@rollup/plugin-typescript',
+            'rollup',
+            'rollup-plugin-dts',
+          ],
         },
       ],
     },
