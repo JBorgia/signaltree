@@ -22,7 +22,7 @@
       "@signaltree/batching": ["packages/core/src/enhancers/batching/index.ts"],
       "@signaltree/callable-syntax": ["packages/callable-syntax/src/index.ts"],
       "@signaltree/callable-syntax/*": ["packages/callable-syntax/src/*"],
-      "@signaltree/core": ["packages/core/src/index.ts", "dist/packages/core/index.d.ts"],
+      "@signaltree/core": ["packages/core/src/index.ts", "dist/packages/core/src/index.d.ts"],
       "@signaltree/devtools": ["packages/core/src/enhancers/devtools/index.ts"],
       "@signaltree/enterprise": ["packages/enterprise/src/index.ts"],
       "@signaltree/entities": ["packages/core/src/enhancers/entities/index.ts"],
