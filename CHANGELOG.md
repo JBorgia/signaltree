@@ -5,6 +5,28 @@ All notable changes to SignalTree will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.14] - 2025-11-13
+
+### Fixed
+
+- **Peer Dependencies**: Removed build-time dependencies (rollup packages, jest-preset-angular) from `@signaltree/core` peerDependencies
+  - Users no longer need `--legacy-peer-deps` flag to install SignalTree
+  - Changed `tslib` from `"*"` to `"^2.0.0"` for more flexible version range
+  - Only runtime dependencies (`@angular/core`, `tslib`) are now required as peers
+
+### Added
+
+- **Documentation**: Added comprehensive "Companion Packages" section to `@signaltree/core` README
+  - Detailed descriptions of `@signaltree/ng-forms`, `@signaltree/enterprise`, `@signaltree/guardrails`, and `@signaltree/callable-syntax`
+  - Installation instructions, features, bundle impact, and when to use each package
+  - Package selection guide with typical installation patterns
+
+### Fixed
+
+- Fixed flaky ng-forms test by updating form reset test to check form control values
+- Fixed guardrails TypeScript configuration to exclude Angular types
+- Removed unnecessary TestBed usage from core enhancer tests
+
 ## [4.0.6] - 2025-01-04
 
 ### Changed
