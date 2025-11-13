@@ -183,8 +183,16 @@
 
 <!-- Details Modal -->
 @if (detailsOpen()) {
-<div class="details-modal-backdrop" (click)="closeDetails()">
-  <div class="details-modal" (click)="$event.stopPropagation()">
+<div class="details-modal-backdrop" 
+     (click)="closeDetails()" 
+     (keydown.escape)="closeDetails()"
+     role="dialog"
+     aria-modal="true"
+     tabindex="0">
+  <div class="details-modal" 
+       (click)="$event.stopPropagation()" 
+       (keydown)="$event.stopPropagation()"
+       role="document">
     <div class="modal-header">
       <h2>Benchmark Details</h2>
       <button class="close-btn" (click)="closeDetails()" title="Close">×</button>
