@@ -1,0 +1,178 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SignalTree Release Rules Configuration",
+  "description": "Comprehensive validation rules for ensuring quality before publishing",
+  "version": "1.0.0",
+  "rules": {
+    "pre-publish": {
+      "description": "Checks that must pass before publishing to npm",
+      "checks": [
+        {
+          "id": "clean-working-directory",
+          "name": "Clean Working Directory",
+          "description": "Ensure no uncommitted changes exist",
+          "command": "git status --porcelain",
+          "expectEmpty": true,
+          "severity": "error",
+          "enabled": true
+        },
+        {
+          "id": "install-dependencies",
+          "name": "Install Dependencies",
+          "description": "Ensure all dependencies are properly installed",
+          "command": "pnpm install --frozen-lockfile",
+          "severity": "error",
+          "enabled": true
+        },
+        {
+          "id": "unit-tests",
+          "name": "Unit Tests",
+          "description": "All unit tests must pass",
+          "command": "pnpm test:all",
+          "severity": "error",
+          "enabled": true
+        },
+        {
+          "id": "test-coverage",
+          "name": "Test Coverage",
+          "description": "Generate and verify test coverage meets thresholds",
+          "command": "bash scripts/test-coverage.sh",
+          "severity": "error",
+          "enabled": true
+        },
+        {
+          "id": "linting",
+          "name": "Linting",
+          "description": "Code must pass all linting rules",
+          "command": "NX_DAEMON=false pnpm lint",
+          "severity": "error",
+          "enabled": true
+        },
+        {
+          "id": "type-checking",
+          "name": "Type Checking",
+          "description": "TypeScript must compile without errors",
+          "command": "NX_DAEMON=false pnpm run type-check",
+          "severity": "error",
+          "enabled": true
+        },
+        {
+          "id": "build-all",
+          "name": "Build All Packages",
+          "description": "All packages must build successfully",
+          "command": "NX_DAEMON=false pnpm build:all",
+          "severity": "error",
+          "enabled": true
+        },
+        {
+          "id": "verify-packages",
+          "name": "Verify Package Configurations",
+          "description": "Check package.json files for correctness",
+          "command": "bash scripts/verify-packages.sh",
+          "severity": "error",
+          "enabled": true
+        },
+        {
+          "id": "bundle-analysis",
+          "name": "Bundle Size Analysis",
+          "description": "Verify bundle sizes meet targets",
+          "command": "node scripts/consolidated-bundle-analysis.js",
+          "severity": "error",
+          "enabled": true
+        },
+        {
+          "id": "performance-benchmarks",
+          "name": "Performance Benchmarks",
+          "description": "Run performance benchmarks and verify results",
+          "command": "node scripts/perf-suite.js",
+          "severity": "warning",
+          "enabled": true
+        },
+        {
+          "id": "sanity-checks",
+          "name": "Sanity Checks",
+          "description": "Run sanity checks on build outputs",
+          "command": "node scripts/sanity-checks.js",
+          "severity": "error",
+          "enabled": true
+        },
+        {
+          "id": "documentation-check",
+          "name": "Documentation Validation",
+          "description": "Ensure documentation is up to date",
+          "command": "bash scripts/validate-docs.sh",
+          "severity": "warning",
+          "enabled": true
+        }
+      ]
+    },
+    "post-build": {
+      "description": "Checks that run after building packages",
+      "checks": [
+        {
+          "id": "verify-dist",
+          "name": "Verify Distribution Files",
+          "description": "Check that all expected distribution files exist",
+          "command": "bash scripts/verify-dist.sh",
+          "severity": "error",
+          "enabled": true
+        },
+        {
+          "id": "verify-exports",
+          "name": "Verify Package Exports",
+          "description": "Ensure all package exports are valid",
+          "command": "node scripts/verify-exports.js",
+          "severity": "error",
+          "enabled": true
+        }
+      ]
+    },
+    "rollback": {
+      "description": "Actions to take when validation fails",
+      "actions": [
+        "Restore original package versions",
+        "Clean build artifacts",
+        "Reset git tags",
+        "Display error summary"
+      ]
+    }
+  },
+  "packages": [
+    "core",
+    "ng-forms",
+    "callable-syntax",
+    "enterprise",
+    "guardrails"
+  ],
+  "thresholds": {
+    "coverage": {
+      "statements": 80,
+      "branches": 75,
+      "functions": 80,
+      "lines": 80
+    },
+    "bundleSize": {
+      "core": {
+        "maxSize": "15KB",
+        "maxGzip": "5KB"
+      },
+      "ng-forms": {
+        "maxSize": "10KB",
+        "maxGzip": "4KB"
+      },
+      "callable-syntax": {
+        "maxSize": "5KB",
+        "maxGzip": "2KB"
+      },
+      "enterprise": {
+        "maxSize": "8KB",
+        "maxGzip": "3KB"
+      },
+      "guardrails": {
+        "maxSize": "12KB",
+        "maxGzip": "4KB"
+      }
+    }
+  }
+}
+

@@ -62,6 +62,20 @@ fi
 
 print_step "Starting modular release process with type: $RELEASE_TYPE"
 
+# Step 0: Run comprehensive pre-publish validation
+print_step "Running comprehensive pre-publish validation..."
+if [ "$SKIP_TESTS" != "skip-tests" ]; then
+    if bash scripts/pre-publish-validation.sh; then
+        print_success "Pre-publish validation passed"
+    else
+        print_error "Pre-publish validation failed!"
+        print_error "Please fix the errors above before proceeding with the release"
+        exit 1
+    fi
+else
+    print_warning "Skipping pre-publish validation (tests disabled)"
+fi
+
 # Get current workspace version
 CURRENT_VERSION=$(node -p "require('./package.json').version")
 print_step "Current workspace version: $CURRENT_VERSION"
@@ -102,40 +116,7 @@ else
     print_step "Non-interactive mode: proceeding without confirmation"
 fi
 
-# Step 1: Run tests for all packages (unless skipped)
-if [ "$SKIP_TESTS" != "skip-tests" ]; then
-    print_step "Running tests for all packages..."
-
-    NX_TEST_PACKAGES=()
-    RUN_GUARDRAILS_TEST=false
-    for package in "${PACKAGES[@]}"; do
-        if [ "$package" = "guardrails" ]; then
-            RUN_GUARDRAILS_TEST=true
-        else
-            NX_TEST_PACKAGES+=("$package")
-        fi
-    done
-
-    if [ ${#NX_TEST_PACKAGES[@]} -gt 0 ]; then
-        PROJECTS_LIST=$(IFS=,; echo "${NX_TEST_PACKAGES[*]}")
-        npx nx run-many -t test --projects=$PROJECTS_LIST || {
-            print_error "Some tests failed! Aborting release."
-            exit 1
-        }
-    fi
-
-    if [ "$RUN_GUARDRAILS_TEST" = true ]; then
-        print_step "Running guardrails tests with coverage..."
-        if ! pnpm --filter @signaltree/guardrails test --runInBand; then
-            print_error "@signaltree/guardrails tests failed! Aborting release."
-            exit 1
-        fi
-    fi
-
-    print_success "All package tests passed"
-fi
-
-# Step 2: Backup original versions (for rollback if needed)
+# Step 1: Backup original versions (for rollback if needed)
 print_step "Creating version backup for rollback capability..."
 
 # Backup workspace version
@@ -214,6 +195,21 @@ rollback_versions() {
             fi
         done
 
+        # Clean up build artifacts
+        print_step "Cleaning up build artifacts..."
+        rm -rf dist/packages 2>/dev/null || true
+        for package in "${PACKAGES[@]}"; do
+            rm -rf "packages/$package/dist" 2>/dev/null || true
+        done
+
+        # Delete the git tag if it was created
+        if [ -n "$NEW_VERSION" ]; then
+            print_step "Removing git tag v$NEW_VERSION..."
+            git tag -d "v$NEW_VERSION" 2>/dev/null || true
+            # Try to remove from remote if it was pushed
+            git push origin --delete "v$NEW_VERSION" 2>/dev/null || true
+        fi
+
         # Clean up git changes
         git reset --hard HEAD 2>/dev/null || true
 
@@ -221,6 +217,7 @@ rollback_versions() {
         rm -f .version_backup
 
         print_success "Version rollback completed"
+        print_error "Release failed - all changes have been reverted"
     else
         print_warning "No version backup found"
     fi
@@ -229,7 +226,7 @@ rollback_versions() {
 # Set up trap to rollback on failure
 trap rollback_versions ERR
 
-# Step 3: Update versions in all package.json files
+# Step 2: Update versions in all package.json files
 print_step "Updating versions in all packages..."
 
 # Update workspace version
@@ -277,7 +274,7 @@ for package in "${PACKAGES[@]}"; do
     fi
 done
 
-# Step 5: Build all packages
+# Step 3: Build all packages
 print_step "Building all packages..."
 
 # Build packages in dependency order to ensure proper resolution
@@ -336,14 +333,14 @@ fi
 
 print_success "Package builds completed"
 
-# Step 6: Commit changes
+# Step 4: Commit changes
 print_step "Committing version changes..."
 git add package.json packages/*/package.json
 git commit -m "chore: bump all packages to version $NEW_VERSION" || {
     print_warning "Nothing to commit (versions might already be updated)"
 }
 
-# Step 7: Create and push tag
+# Step 5: Create and push tag
 print_step "Creating git tag v$NEW_VERSION..."
 git tag "v$NEW_VERSION" || {
     print_error "Tag v$NEW_VERSION already exists!"
@@ -371,7 +368,7 @@ git push origin "v$NEW_VERSION" || {
 }
 print_success "Changes and tag pushed to GitHub"
 
-# Step 8: Publish all packages to npm
+# Step 6: Publish all packages to npm
 print_step "Publishing all packages to npm..."
 
 PUBLISHED_PACKAGES=()
@@ -423,12 +420,12 @@ if [ ${#FAILED_PACKAGES[@]} -gt 0 ]; then
     print_warning "You may need to fix build issues and publish these manually"
 fi
 
-# Step 9: Clean up backup file (release succeeded)
+# Step 7: Clean up backup file (release succeeded)
 rm -f .version_backup
 # Disable trap now that we've succeeded
 trap - ERR
 
-# Step 10: Check GitHub Actions
+# Step 8: Check GitHub Actions
 print_step "GitHub Actions should now create a release automatically"
 print_step "Check: https://github.com/JBorgia/signaltree/actions"
 
