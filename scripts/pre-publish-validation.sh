@@ -198,35 +198,11 @@ fi
 # 9. Verify Distribution Files
 print_header "9. Verifying Distribution Files"
 print_step "Checking that all expected dist files exist"
-
-PACKAGES=("core" "ng-forms" "callable-syntax" "enterprise" "guardrails")
-MISSING_FILES=0
-
-for package in "${PACKAGES[@]}"; do
-    DIST_DIR="./packages/$package/dist"
-    
-    if [ ! -d "$DIST_DIR" ]; then
-        print_error "Distribution directory missing for $package"
-        ((MISSING_FILES++))
-        continue
-    fi
-    
-    # Check for essential files
-    if [ ! -f "$DIST_DIR/index.js" ] && [ ! -f "$DIST_DIR/index.cjs" ]; then
-        print_error "Missing index.js/index.cjs for $package"
-        ((MISSING_FILES++))
-    fi
-    
-    if [ ! -f "$DIST_DIR/index.d.ts" ]; then
-        print_error "Missing type definitions for $package"
-        ((MISSING_FILES++))
-    fi
-done
-
-if [ $MISSING_FILES -eq 0 ]; then
-    print_success "All distribution files present"
+if bash scripts/verify-dist.sh 2>&1 | tee /tmp/verify-dist.log; then
+    print_success "All distribution files verified"
 else
-    print_error "Missing $MISSING_FILES distribution files"
+    print_error "Distribution verification failed"
+    cat /tmp/verify-dist.log
     exit 1
 fi
 
