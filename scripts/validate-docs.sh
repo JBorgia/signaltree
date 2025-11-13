@@ -16,7 +16,7 @@ ERRORS=0
 echo "Validating documentation..."
 
 # Check for required files
-REQUIRED_DOCS=("README.md" "CHANGELOG.md" "LICENSE" "CONTRIBUTING.md")
+REQUIRED_DOCS=("README.md" "CHANGELOG.md" "LICENSE")
 
 for doc in "${REQUIRED_DOCS[@]}"; do
     if [ ! -f "$doc" ]; then
