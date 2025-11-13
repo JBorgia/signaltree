@@ -1,4 +1,3 @@
-import { TestBed } from '@angular/core/testing';
 import { signalTree } from '../../../lib/signal-tree';
 
 import {
@@ -10,9 +9,6 @@ import {
 } from './batching';
 
 describe('Batching', () => {
-  beforeEach(() => {
-    TestBed.configureTestingModule({});
-  });
 
   it('should enhance tree with batching capabilities', () => {
     const tree = signalTree({ count: 0 }).with(withBatching());

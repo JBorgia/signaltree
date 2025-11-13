@@ -1,4 +1,3 @@
-import { TestBed } from '@angular/core/testing';
 import { signalTree } from '../../../lib/signal-tree';
 
 import {
@@ -11,9 +10,6 @@ import {
 } from './serialization';
 
 describe('Serialization', () => {
-  beforeEach(() => {
-    TestBed.configureTestingModule({});
-  });
 
   describe('withSerialization', () => {
     it('should enhance tree with serialization capabilities', () => {

@@ -1,4 +1,3 @@
-import { TestBed } from '@angular/core/testing';
 import { signalTree } from '../../../lib/signal-tree';
 import {
   withMiddleware,
@@ -8,9 +7,6 @@ import {
 } from './middleware';
 
 describe('Middleware', () => {
-  beforeEach(() => {
-    TestBed.configureTestingModule({});
-  });
 
   it('should enhance tree with middleware capabilities', () => {
     const tree = signalTree({ count: 0 }).with(withMiddleware());

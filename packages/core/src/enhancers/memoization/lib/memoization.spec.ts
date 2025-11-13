@@ -1,4 +1,3 @@
-import { TestBed } from '@angular/core/testing';
 import { signalTree } from '../../../lib/signal-tree';
 
 import {
@@ -12,7 +11,6 @@ import {
 
 describe('Memoization', () => {
   beforeEach(() => {
-    TestBed.configureTestingModule({});
     clearAllCaches();
   });
 
