@@ -230,31 +230,11 @@ else
     print_warning "Sanity checks script not found (skipping)"
 fi
 
-# 12. Performance Benchmarks (Warning Only)
+# 12. Performance Benchmarks (Skipped - Run Separately)
 print_header "12. Performance Benchmarks"
-print_step "Running performance benchmarks (warning only)"
-if [ -f "scripts/perf-suite.js" ]; then
-    print_info "Running benchmarks (this may take a few minutes)..."
-    # Use gtimeout on macOS (brew install coreutils) or skip if not available
-    if command -v timeout > /dev/null || command -v gtimeout > /dev/null; then
-        TIMEOUT_CMD=$(command -v timeout || command -v gtimeout)
-        if $TIMEOUT_CMD 300 node scripts/perf-suite.js 2>&1 | tee /tmp/perf.log; then
-            print_success "Performance benchmarks completed"
-        else
-            print_warning "Performance benchmarks failed or timed out"
-        fi
-    else
-        print_warning "timeout command not available (install coreutils on macOS)"
-        print_info "Running without timeout..."
-        if node scripts/perf-suite.js 2>&1 | tee /tmp/perf.log; then
-            print_success "Performance benchmarks completed"
-        else
-            print_warning "Performance benchmarks failed"
-        fi
-    fi
-else
-    print_warning "Performance suite not found (skipping)"
-fi
+print_warning "Performance benchmarks skipped during validation"
+print_info "Run separately with: npm run perf:run"
+print_info "Benchmarks are monitored but not blocking for releases"
 
 # 13. Documentation Validation
 print_header "13. Documentation Validation"
