@@ -29,6 +29,7 @@ node_modules
 /.sass-cache
 /connect.lock
 /coverage
+**/coverage
 /libpeerconnection.log
 npm-debug.log
 yarn-error.log
@@ -57,9 +58,11 @@ simple-memory-test.mjs
 *_SUMMARY.md
 OPTIMIZATION_*.md
 
-# Performance logs (stored in artifacts/performance-logs/)
+# Performance logs and artifacts
 *-performance.log
 *-bundle-size.log
+artifacts/
+**/artifacts/
 
 # Temporary files
 error.log
