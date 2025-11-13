@@ -162,10 +162,24 @@ fi
 # 7. Build All Packages
 print_header "7. Building All Packages"
 print_step "Running production builds"
-if NX_DAEMON=false pnpm run build:all 2>&1 | tee /tmp/build.log; then
-    print_success "All packages built successfully"
+print_info "Building independent packages (core, callable-syntax, guardrails, shared, types, utils)"
+print_info "Note: enterprise and ng-forms will be built during release after core is published"
+
+# Build core and other independent packages
+if NX_DAEMON=false npx nx run-many -t build --projects=core,callable-syntax,shared,types,utils 2>&1 | tee /tmp/build.log; then
+    print_success "Independent packages built successfully"
 else
     print_error "Build failed"
+    cat /tmp/build.log
+    exit 1
+fi
+
+# Build guardrails separately (uses tsup, not Nx)
+print_step "Building guardrails package"
+if pnpm --filter @signaltree/guardrails build 2>&1 | tee -a /tmp/build.log; then
+    print_success "Guardrails package built successfully"
+else
+    print_error "Guardrails build failed"
     cat /tmp/build.log
     exit 1
 fi
