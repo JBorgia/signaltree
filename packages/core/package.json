@@ -56,13 +56,7 @@
   },
   "peerDependencies": {
     "@angular/core": "^20.3.0",
-    "jest-preset-angular": "*",
-    "@rollup/plugin-commonjs": "*",
-    "@rollup/plugin-node-resolve": "*",
-    "@rollup/plugin-typescript": "*",
-    "rollup": "*",
-    "rollup-plugin-dts": "*",
-    "tslib": "*"
+    "tslib": "^2.0.0"
   },
   "files": [
     "dist",
