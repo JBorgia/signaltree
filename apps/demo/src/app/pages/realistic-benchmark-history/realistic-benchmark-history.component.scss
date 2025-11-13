@@ -173,6 +173,25 @@
           justify-content: space-between;
           margin-bottom: 0.5rem;
 
+          .library-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+          }
+
+          .version-badge-small {
+            display: inline-block;
+            padding: 0.125rem 0.375rem;
+            background: rgba(0, 0, 0, 0.08);
+            color: var(--text-secondary, #757575);
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-weight: 500;
+            font-family: 'Courier New', monospace;
+            margin-left: 0.25rem;
+          }
+
           .winner-badge {
             font-size: 0.875rem;
             color: #ffd700;

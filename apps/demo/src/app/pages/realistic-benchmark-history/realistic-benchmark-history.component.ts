@@ -238,8 +238,15 @@ export class RealisticBenchmarkHistoryComponent implements OnInit {
         const scenario = scenarioMap.get(scenarioId);
         scenario.libraryResults[libName] = {
           opsPerSec: scenarioData.opsPerSec,
-          time: scenarioData.median
+          time: scenarioData.median,
+          version: libData.version || data.results.libraryVersions?.[libName] || undefined
         };
+        
+        // Store library versions at the result level for easy access
+        if (!scenario.libraryVersions) {
+          scenario.libraryVersions = {};
+        }
+        scenario.libraryVersions[libName] = libData.version || data.results.libraryVersions?.[libName] || 'unknown';
       });
     });
 
@@ -294,6 +301,36 @@ export class RealisticBenchmarkHistoryComponent implements OnInit {
       name,
       ...data
     })).sort((a, b) => a.rank - b.rank);
+  }
+
+  getLibraryVersion(libraryName: string): string | null {
+    const full = this.selectedBenchmarkFull();
+    if (!full) return null;
+    
+    // Try to get from libraryVersions
+    if (full.results.libraryVersions) {
+      // Map library name to ID
+      const libraryIdMap: Record<string, string> = {
+        'SignalTree': 'signaltree',
+        'NgRx Store': 'ngrx-store',
+        'NgRx Signals': 'ngrx-signals',
+        'Akita': 'akita',
+        'Elf': 'elf',
+        'NGXS': 'ngxs',
+      };
+      const libraryId = libraryIdMap[libraryName] || libraryName.toLowerCase();
+      return full.results.libraryVersions[libraryId] || null;
+    }
+    
+    // Try to get from library data
+    const libraryEntry = Object.entries(full.results.libraries).find(
+      ([, lib]) => lib.name === libraryName
+    );
+    if (libraryEntry && libraryEntry[1].version) {
+      return libraryEntry[1].version;
+    }
+    
+    return null;
   }
 
 }

@@ -9,7 +9,9 @@ export interface BenchmarkResult {
   libraryResults: Record<string, {
     opsPerSec: number;
     time: number;
+    version?: string;
   }>;
+  libraryVersions?: Record<string, string>;
 }
 
 @Component({
@@ -94,6 +96,25 @@ export class BenchmarkResultsTableComponent {
       return `${(ops / 1000).toFixed(2)}K`;
     }
     return ops.toFixed(0);
+  }
+
+  getLibraryVersion(library: string): string | null {
+    if (!this.results || this.results.length === 0) return null;
+    
+    // Check if any result has library versions
+    const firstResult = this.results[0];
+    if (firstResult.libraryVersions?.[library]) {
+      return firstResult.libraryVersions[library];
+    }
+    
+    // Fallback: check libraryResults for version
+    for (const result of this.results) {
+      if (result.libraryResults[library]?.version) {
+        return result.libraryResults[library].version || null;
+      }
+    }
+    
+    return null;
   }
 }
 

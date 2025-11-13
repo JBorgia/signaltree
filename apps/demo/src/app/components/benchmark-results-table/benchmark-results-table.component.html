@@ -6,7 +6,10 @@
         <th>Scenario</th>
         @for (lib of getUniqueLibraries(); track lib) {
         <th [style.color]="getLibraryColorValue(lib)">
-          {{ lib }}
+          <div>{{ lib }}</div>
+          @if (getLibraryVersion(lib)) {
+          <div class="version-badge">{{ getLibraryVersion(lib) }}</div>
+          }
         </th>
         }
       </tr>

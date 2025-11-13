@@ -79,6 +79,7 @@ export interface RealisticBenchmarkSubmission {
       {
         name: string;
         enabled: boolean;
+        version?: string;
         scenarios: Record<
           string,
           {
@@ -110,6 +111,7 @@ export interface RealisticBenchmarkSubmission {
         >;
       }
     >;
+    libraryVersions?: Record<string, string>;
   };
 
   // Weighted Analysis

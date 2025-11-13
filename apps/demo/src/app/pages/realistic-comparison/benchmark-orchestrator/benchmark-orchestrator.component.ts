@@ -231,7 +231,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
   setIncludeEnterpriseEnhancer(v: boolean | EventTarget | null) {
     const val = typeof v === 'boolean' ? v : (v as any)?.value === 'true'; // eslint-disable-line @typescript-eslint/no-explicit-any
-    this.includeEnterpriseEnhancer(!!val);
+    this.includeEnterpriseEnhancer.set(!!val);
   }
 
   // Optional automation mode: when enabled, SignalTree benchmarks will be
@@ -242,7 +242,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
   setIncludeEnterpriseAutoRun(v: boolean | EventTarget | null) {
     const val = typeof v === 'boolean' ? v : (v as any)?.value === 'true'; // eslint-disable-line @typescript-eslint/no-explicit-any
-    this.includeEnterpriseAutoRun(!!val);
+    this.includeEnterpriseAutoRun.set(!!val);
   }
 
   private _memoModeEffect = effect(() => {
@@ -268,7 +268,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     const m = typeof mode === 'string' ? mode : (mode as any)?.value; // eslint-disable-line @typescript-eslint/no-explicit-any
     if (!(m === 'off' || m === 'light' || m === 'shallow' || m === 'full'))
       return;
-    this.memoMode(m as any); // eslint-disable-line @typescript-eslint/no-explicit-any
+    this.memoMode.set(m as any); // eslint-disable-line @typescript-eslint/no-explicit-any
     try {
       const url = new URL(window.location.href);
       url.searchParams.set('memo', m);
@@ -1685,19 +1685,19 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         cpuResult > 500
           ? 50000
           : cpuResult > 200
-          ? 10000
-          : cpuResult > 100
-          ? 5000
-          : 1000;
+            ? 10000
+            : cpuResult > 100
+              ? 5000
+              : 1000;
 
       const recommendedIterations =
         cpuResult > 500
           ? 100
           : cpuResult > 200
-          ? 75
-          : cpuResult > 100
-          ? 50
-          : 25;
+            ? 75
+            : cpuResult > 100
+              ? 50
+              : 25;
 
       this.calibrationData.set({
         cpuOpsPerMs: cpuResult,
@@ -1807,6 +1807,27 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         weightingPreset: this.detectCurrentPreset(), // Detect actual preset based on current weights
       };
 
+      // Get library versions
+      const { getLibraryVersionsSync } = await import(
+        './shared/library-versions'
+      );
+      const libraryVersions = getLibraryVersionsSync(
+        this.selectedLibraries().map((lib) => lib.id)
+      );
+
+      // Ensure all selected libraries have versions
+      this.selectedLibraries().forEach((lib) => {
+        if (!libraryVersions[lib.id] || libraryVersions[lib.id] === 'unknown') {
+          // Try to get from window as fallback
+          const windowWithVersions = window as unknown as {
+            __LIBRARY_VERSIONS__?: Record<string, string>;
+          };
+          if (windowWithVersions.__LIBRARY_VERSIONS__?.[lib.id]) {
+            libraryVersions[lib.id] = windowWithVersions.__LIBRARY_VERSIONS__[lib.id];
+          }
+        }
+      });
+
       // Build results structure (simplified to avoid type errors)
       const results = {
         libraries: {} as Record<
@@ -1814,6 +1835,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
           {
             name: string;
             enabled: boolean;
+            version?: string;
             scenarios: Record<
               string,
               {
@@ -1837,6 +1859,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             >;
           }
         >,
+        libraryVersions,
       };
 
       this.selectedLibraries().forEach((lib) => {
@@ -1871,6 +1894,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         results.libraries[lib.id] = {
           name: lib.name,
           enabled: true,
+          version: libraryVersions[lib.id] || 'unknown',
           scenarios: libResults as Record<
             string,
             {
@@ -2029,10 +2053,10 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
           const samplesArray: number[] = Array.isArray(res.samples)
             ? res.samples.slice()
             : Array.isArray(res.rawSamples)
-            ? res.rawSamples.slice()
-            : typeof res.durationMs === 'number'
-            ? [res.durationMs]
-            : [];
+              ? res.rawSamples.slice()
+              : typeof res.durationMs === 'number'
+                ? [res.durationMs]
+                : [];
 
           ext[libraryId][scenarioId] = {
             ...(typeof res === 'object' ? res : { durationMs: res }),
@@ -2932,28 +2956,22 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       const lib = libraries.find((l) => l.id === result.libraryId);
       const scenario = scenarios.find((s) => s.id === result.scenarioId);
 
-      csv += `${lib?.name},${scenario?.name},${
-        result.median === -1 ? -1 : result.median.toFixed(3)
-      },`;
-      csv += `${result.mean === -1 ? -1 : result.mean.toFixed(3)},${
-        result.p95 === -1 ? -1 : result.p95.toFixed(3)
-      },`;
-      csv += `${result.p99 === -1 ? -1 : result.p99.toFixed(3)},${
-        result.min === -1 ? -1 : result.min.toFixed(3)
-      },`;
-      csv += `${result.max === -1 ? -1 : result.max.toFixed(3)},${
-        result.stdDev === -1 ? -1 : result.stdDev.toFixed(3)
-      },`;
-      csv += `${
-        result.opsPerSecond === -1 || !isFinite(result.opsPerSecond)
-          ? -1
-          : Math.round(result.opsPerSecond)
-      },`;
-      csv += `${
-        typeof result.memoryDeltaMB === 'number'
-          ? result.memoryDeltaMB.toFixed(2)
-          : ''
-      }\n`;
+      csv += `${lib?.name},${scenario?.name},${result.median === -1 ? -1 : result.median.toFixed(3)
+        },`;
+      csv += `${result.mean === -1 ? -1 : result.mean.toFixed(3)},${result.p95 === -1 ? -1 : result.p95.toFixed(3)
+        },`;
+      csv += `${result.p99 === -1 ? -1 : result.p99.toFixed(3)},${result.min === -1 ? -1 : result.min.toFixed(3)
+        },`;
+      csv += `${result.max === -1 ? -1 : result.max.toFixed(3)},${result.stdDev === -1 ? -1 : result.stdDev.toFixed(3)
+        },`;
+      csv += `${result.opsPerSecond === -1 || !isFinite(result.opsPerSecond)
+        ? -1
+        : Math.round(result.opsPerSecond)
+        },`;
+      csv += `${typeof result.memoryDeltaMB === 'number'
+        ? result.memoryDeltaMB.toFixed(2)
+        : ''
+        }\n`;
     }
 
     this.downloadFile(csv, 'benchmark-results.csv', 'text/csv');

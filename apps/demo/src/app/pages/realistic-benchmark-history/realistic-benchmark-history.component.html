@@ -331,6 +331,9 @@
                 [ngClass]="getLibraryColor(entry.name)"
               >
                 {{ entry.name }}
+                @if (getLibraryVersion(entry.name)) {
+                <span class="version-badge-small">{{ getLibraryVersion(entry.name) }}</span>
+                }
               </span>
               @if (entry.rank === 1) {
               <span class="winner-badge">🏆 Winner</span>
