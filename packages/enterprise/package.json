@@ -43,6 +43,9 @@
   "dependencies": {
     "tslib": "^2.3.0"
   },
+  "devDependencies": {
+    "@signaltree/core": "workspace:*"
+  },
   "files": [
     "src",
     "README.md",

@@ -370,12 +370,13 @@ importers:
       '@angular/core':
         specifier: ^20.3.0
         version: 20.3.7(@angular/compiler@20.3.7)(rxjs@7.8.2)(zone.js@0.15.1)
-      '@signaltree/core':
-        specifier: ^4.0.0
-        version: 4.0.2(3c828a9576ff825982da709826e7c885)
       tslib:
         specifier: ^2.3.0
         version: 2.8.1
+    devDependencies:
+      '@signaltree/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/guardrails:
     devDependencies:
@@ -3415,18 +3416,6 @@ packages:
 
   '@shikijs/vscode-textmate@10.0.2':
     resolution: {integrity: sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==}
-
-  '@signaltree/core@4.0.2':
-    resolution: {integrity: sha512-Ibgv2T5s647Zv5ApiH5gtziiP+gQD1G2TcwAih7d5ool1g6X6FtJftWPjpgATyMRWIre6gNLXCuHALq95K0WkA==}
-    peerDependencies:
-      '@angular/core': ^20.3.0
-      '@rollup/plugin-commonjs': '*'
-      '@rollup/plugin-node-resolve': '*'
-      '@rollup/plugin-typescript': '*'
-      jest-preset-angular: '*'
-      rollup: '*'
-      rollup-plugin-dts: '*'
-      tslib: '*'
 
   '@sigstore/bundle@3.1.0':
     resolution: {integrity: sha512-Mm1E3/CmDDCz3nDhFKTuYdB47EdRFRQMOE/EAbiG1MJW77/w1b3P7Qx7JSrVJs8PfwOLOVcKQCHErIwCTyPbag==}
@@ -14018,18 +14007,6 @@ snapshots:
       '@types/hast': 3.0.4
 
   '@shikijs/vscode-textmate@10.0.2': {}
-
-  '@signaltree/core@4.0.2(3c828a9576ff825982da709826e7c885)':
-    dependencies:
-      '@angular/core': 20.3.7(@angular/compiler@20.3.7)(rxjs@7.8.2)(zone.js@0.15.1)
-      '@rollup/plugin-commonjs': 25.0.8(rollup@4.52.3)
-      '@rollup/plugin-node-resolve': 15.3.1(rollup@4.52.3)
-      '@rollup/plugin-typescript': 12.3.0(rollup@4.52.3)(tslib@2.8.1)(typescript@5.9.3)
-      '@signaltree/shared': link:packages/shared
-      jest-preset-angular: 15.0.0(@angular/compiler-cli@20.3.7(@angular/compiler@20.3.7)(typescript@5.9.3))(@angular/core@20.3.7(@angular/compiler@20.3.7)(rxjs@7.8.2)(zone.js@0.15.1))(@angular/platform-browser-dynamic@20.3.7(@angular/common@20.3.7(@angular/core@20.3.7(@angular/compiler@20.3.7)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/compiler@20.3.7)(@angular/core@20.3.7(@angular/compiler@20.3.7)(rxjs@7.8.2)(zone.js@0.15.1))(@angular/platform-browser@20.3.7(@angular/common@20.3.7(@angular/core@20.3.7(@angular/compiler@20.3.7)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@20.3.7(@angular/compiler@20.3.7)(rxjs@7.8.2)(zone.js@0.15.1))))(@babel/core@7.28.3)(@jest/transform@30.0.5)(@jest/types@30.0.5)(babel-jest@30.0.5(@babel/core@7.28.3))(jest-environment-jsdom@30.0.5)(jest@30.0.5(@types/node@22.18.1)(babel-plugin-macros@3.1.0)(ts-node@10.9.1(@swc/core@1.5.29(@swc/helpers@0.5.17))(@types/node@22.18.1)(typescript@5.9.3)))(jsdom@26.1.0)(typescript@5.9.3)
-      rollup: 4.52.3
-      rollup-plugin-dts: 6.2.1(rollup@4.52.3)(typescript@5.9.3)
-      tslib: 2.8.1
 
   '@sigstore/bundle@3.1.0':
     dependencies:
