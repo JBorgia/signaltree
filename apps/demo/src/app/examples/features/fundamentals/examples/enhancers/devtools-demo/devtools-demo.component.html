@@ -113,18 +113,6 @@
               placeholder="Enter email address..."
             />
           </div>
-          <div class="form-group">
-            <label for="theme" class="label">Theme</label>
-            <select
-              id="theme"
-              [value]="this.store.$.user.preferences.theme()"
-              (change)="updateTheme($event)"
-              class="form-select"
-            >
-              <option value="light" selected>🌞 Light Theme</option>
-              <option value="dark">🌙 Dark Theme</option>
-            </select>
-          </div>
           <div class="checkbox-group">
             <input
               id="notifications"

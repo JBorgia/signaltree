@@ -25,7 +25,6 @@ describe('DevtoolsDemoComponent', () => {
     expect(component.counter()).toBe(0);
     expect(component.user().name).toBe('John Doe');
     expect(component.user().email).toBe('john@example.com');
-    expect(component.user().preferences.theme).toBe('light');
     expect(component.user().preferences.notifications).toBe(true);
     expect(component.todos()).toEqual([]);
   });
@@ -61,13 +60,6 @@ describe('DevtoolsDemoComponent', () => {
     component.updateUserEmail(emailEvent);
     expect(component.user().email).toBe('jane@example.com');
     expect(component.lastAction).toBe('Update user email');
-
-    const themeEvent = { target: { value: 'dark' } } as Event & {
-      target: HTMLInputElement;
-    };
-    component.updateTheme(themeEvent);
-    expect(component.user().preferences.theme).toBe('dark');
-    expect(component.lastAction).toBe('Update theme');
 
     component.toggleNotifications();
     expect(component.user().preferences.notifications).toBe(false);

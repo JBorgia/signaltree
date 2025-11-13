@@ -45,7 +45,7 @@ export class ComputedExampleComponent {
   // SignalTree with computed values
   tree = signalTree({
     user: { firstName: 'John', lastName: 'Doe', age: 30 },
-    preferences: { theme: 'light', language: 'en' },
+    preferences: { language: 'en' },
   });
 
   // Reactive access to tree state

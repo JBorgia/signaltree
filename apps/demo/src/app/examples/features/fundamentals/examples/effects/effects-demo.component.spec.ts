@@ -29,10 +29,6 @@ describe('EffectsDemoComponent', () => {
     expect(component.saveCount()).toBe(0);
   });
 
-  it('should initialize with light theme', () => {
-    expect(component.theme()).toBe('light');
-  });
-
   it('should initialize with empty notifications', () => {
     expect(component.notifications()).toEqual([]);
   });
@@ -42,14 +38,6 @@ describe('EffectsDemoComponent', () => {
     expect(component.lastSaved()).toBeNull();
     expect(component.saveCount()).toBe(0);
   }));
-
-  it('should toggle theme', () => {
-    expect(component.theme()).toBe('light');
-    component.toggleTheme();
-    expect(component.theme()).toBe('dark');
-    component.toggleTheme();
-    expect(component.theme()).toBe('light');
-  });
 
   it('should add notifications with different types', () => {
     component.addNotification('Info test', 'info');

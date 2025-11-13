@@ -116,29 +116,6 @@ textarea.input-field {
   }
 }
 
-.theme-preview {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.theme-box {
-  padding: 24px;
-  text-align: center;
-  border-radius: 8px;
-  border: 2px solid #e5e7eb;
-  font-weight: 600;
-  transition: all 0.3s;
-  cursor: pointer;
-
-  &.active {
-    border-color: #3b82f6;
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-    transform: scale(1.05);
-  }
-}
-
 .info-box {
   margin-top: 16px;
   padding: 12px;

@@ -148,45 +148,6 @@
   font-style: italic;
 }
 
-// Dark mode support
-@media (prefers-color-scheme: dark) {
-  .results-table-wrapper {
-    border-color: #404040;
-  }
-
-  .results-table {
-    thead th {
-      background: #2a2a2a;
-      border-color: #404040;
-
-      &:first-child {
-        background: #2a2a2a;
-      }
-    }
-
-    tbody tr {
-      border-color: #404040;
-
-      &:hover {
-        background: rgba(255, 255, 255, 0.05);
-      }
-
-      td.scenario-name {
-        background: #2a2a2a;
-        color: #e0e0e0;
-
-        small {
-          color: #b0b0b0;
-        }
-      }
-    }
-  }
-
-  .no-data {
-    color: #b0b0b0;
-  }
-}
-
 @media (max-width: 768px) {
   .results-table {
     font-size: 0.75rem;

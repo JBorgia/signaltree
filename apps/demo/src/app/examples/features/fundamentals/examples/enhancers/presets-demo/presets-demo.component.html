@@ -101,22 +101,6 @@
               />
               <span class="small-text">Enable Notifications</span>
             </label>
-            <label class="flex items-center">
-              <input
-                type="radio"
-                [checked]="tree.state.user.preferences.theme() === 'light'"
-                (change)="setTheme('light')"
-                name="theme"
-              />
-              <span class="small-text spaced">Light</span>
-              <input
-                type="radio"
-                [checked]="tree.state.user.preferences.theme() === 'dark'"
-                (change)="setTheme('dark')"
-                name="theme"
-              />
-              <span class="small-text">Dark</span>
-            </label>
           </div>
         </div>
 

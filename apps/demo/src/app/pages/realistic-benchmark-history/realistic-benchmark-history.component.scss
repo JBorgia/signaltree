@@ -603,23 +603,6 @@
   }
 }
 
-// Dark mode support
-@media (prefers-color-scheme: dark) {
-  .history-container {
-    --primary: #64b5f6;
-    --primary-dark: #42a5f5;
-    --secondary: #ba68c8;
-    --secondary-dark: #ab47bc;
-    --background: #1e1e1e;
-    --background-secondary: #2a2a2a;
-    --card-background: #2a2a2a;
-    --border: #404040;
-    --text: #e0e0e0;
-    --text-secondary: #b0b0b0;
-    --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  }
-}
-
 // Light mode (default)
 .history-container {
   --primary: #1976d2;

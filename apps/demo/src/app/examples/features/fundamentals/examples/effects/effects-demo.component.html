@@ -4,7 +4,7 @@
   <div class="intro">
     <p>
       <strong>Effects</strong> let you run side effects whenever signals change.
-      This example shows auto-save, theme syncing, and notifications.
+      This example shows auto-save and notifications.
     </p>
   </div>
 
@@ -52,31 +52,6 @@
       <button (click)="resetDocument()" class="btn btn-secondary">
         🗑️ Reset Document
       </button>
-    </div>
-
-    <!-- Theme Sync Example -->
-    <div class="example-section" [attr.data-theme]="theme()">
-      <h3>🎨 Theme Sync Effect</h3>
-      <p class="description">
-        Theme preference is synced to localStorage via an effect.
-      </p>
-
-      <div class="theme-preview">
-        <div class="theme-box" [class.active]="theme() === 'light'">
-          ☀️ Light
-        </div>
-        <div class="theme-box" [class.active]="theme() === 'dark'">🌙 Dark</div>
-      </div>
-
-      <button (click)="toggleTheme()" class="btn btn-primary">
-        Switch to {{ theme() === 'light' ? 'Dark' : 'Light' }} Mode
-      </button>
-
-      <div class="info-box">
-        <strong>Current:</strong> {{ theme() }} mode
-        <br />
-        <small>Persisted in localStorage</small>
-      </div>
     </div>
 
     <!-- Notifications Example -->

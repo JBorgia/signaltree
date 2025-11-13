@@ -29,7 +29,6 @@ export class CallableSyntaxDemoComponent {
     profile: {
       email: 'john@example.com',
       settings: {
-        theme: 'dark' as 'light' | 'dark',
         notifications: true,
       },
     },
@@ -53,7 +52,6 @@ export class CallableSyntaxDemoComponent {
       },
       preferences: {
         ui: {
-          theme: 'dark' as 'light' | 'dark',
           language: 'en',
           sidebar: {
             collapsed: false,
@@ -143,12 +141,6 @@ export class CallableSyntaxDemoComponent {
     ]);
   }
 
-  toggleTheme() {
-    this.basicProfile.$.profile.settings.theme.update(
-      (current: 'light' | 'dark') => (current === 'dark' ? 'light' : 'dark')
-    );
-  }
-
   updateEmail() {
     const emails = ['john@example.com', 'jane@test.com', 'user@demo.com'];
     const current = this.basicProfile.$.profile.email();
@@ -186,12 +178,6 @@ export class CallableSyntaxDemoComponent {
   agePerson() {
     this.complexTree.$.user.profile.personal.age.update(
       (current: number) => current + 1
-    );
-  }
-
-  toggleComplexTheme() {
-    this.complexTree.$.user.preferences.ui.theme.update(
-      (current: 'light' | 'dark') => (current === 'dark' ? 'light' : 'dark')
     );
   }
 

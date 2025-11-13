@@ -8,7 +8,6 @@ interface AppState extends Record<string, unknown> {
     name: string;
     email: string;
     preferences: {
-      theme: 'light' | 'dark';
       notifications: boolean;
     };
   };
@@ -126,7 +125,6 @@ export class PresetsDemoComponent {
         name: 'John Doe',
         email: 'john@example.com',
         preferences: {
-          theme: 'light',
           notifications: true,
         },
       },
@@ -171,9 +169,6 @@ export class PresetsDemoComponent {
     // Copy over the current state
     (this.tree.state as any).user.name.set((currentState as any).user.name());
     (this.tree.state as any).user.email.set((currentState as any).user.email());
-    (this.tree.state as any).user.preferences.theme.set(
-      (currentState as any).user.preferences.theme()
-    );
     (this.tree.state as any).user.preferences.notifications.set(
       (currentState as any).user.preferences.notifications()
     );
@@ -213,11 +208,6 @@ export class PresetsDemoComponent {
     (this.tree.state as any).user.preferences.notifications.update(
       (current: boolean) => !current
     );
-    this.incrementUpdateCount();
-  }
-
-  setTheme(theme: 'light' | 'dark') {
-    (this.tree.state as any).user.preferences.theme.set(theme);
     this.incrementUpdateCount();
   }
 
@@ -291,7 +281,6 @@ export class PresetsDemoComponent {
   resetToDefaults() {
     (this.tree.state as any).user.name.set('John Doe');
     (this.tree.state as any).user.email.set('john@example.com');
-    (this.tree.state as any).user.preferences.theme.set('light');
     (this.tree.state as any).user.preferences.notifications.set(true);
     (this.tree.state as any).todos.set([
       {

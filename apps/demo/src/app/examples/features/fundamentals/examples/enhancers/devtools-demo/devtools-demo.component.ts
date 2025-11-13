@@ -9,7 +9,6 @@ interface DevtoolsState {
     name: string;
     email: string;
     preferences: {
-      theme: 'light' | 'dark';
       notifications: boolean;
     };
   };
@@ -50,7 +49,6 @@ export class DevtoolsDemoComponent {
       name: 'John Doe',
       email: 'john@example.com',
       preferences: {
-        theme: 'light',
         notifications: true,
       },
     },
@@ -89,12 +87,6 @@ export class DevtoolsDemoComponent {
     const target = event.target as HTMLInputElement;
     this.store.$.user.email.set(target.value);
     this.lastAction = 'Update user email';
-  }
-
-  updateTheme(event: Event) {
-    const target = event.target as HTMLSelectElement;
-    this.store.$.user.preferences.theme.set(target.value as 'light' | 'dark');
-    this.lastAction = 'Update theme';
   }
 
   toggleNotifications() {
@@ -223,9 +215,6 @@ export class DevtoolsDemoComponent {
       this.store.$.counter.set(snapshot.state.counter);
       this.store.$.user.name.set(snapshot.state.user.name);
       this.store.$.user.email.set(snapshot.state.user.email);
-      this.store.$.user.preferences.theme.set(
-        snapshot.state.user.preferences.theme
-      );
       this.store.$.user.preferences.notifications.set(
         snapshot.state.user.preferences.notifications
       );

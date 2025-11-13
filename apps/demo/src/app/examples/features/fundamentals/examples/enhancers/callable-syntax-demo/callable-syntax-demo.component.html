@@ -80,9 +80,6 @@
             <strong>Active:</strong> {{ basicProfile.$.active() ? 'Yes' : 'No' }}
           </p>
           <p><strong>Tags:</strong> {{ basicProfile.$.tags().join(', ') }}</p>
-          <p>
-            <strong>Theme:</strong> {{ basicProfile.$.profile.settings.theme() }}
-          </p>
         </div>
         <div class="action-buttons">
           <button (click)="updateBasicProfile()" class="btn-primary">
@@ -92,9 +89,6 @@
             +1 Age
           </button>
           <button (click)="addTag()" class="btn-success">Add Tag</button>
-          <button (click)="toggleTheme()" class="btn-purple">
-            Toggle Theme
-          </button>
         </div>
       </div>
     </div>
@@ -140,10 +134,6 @@
         <h3>🎨 UI Preferences</h3>
         <div class="state-display">
           <p>
-            <strong>Theme:</strong>
-            {{ complexTree.$.user.preferences.ui.theme() }}
-          </p>
-          <p>
             <strong>Language:</strong>
             {{ complexTree.$.user.preferences.ui.language() }}
           </p>
@@ -165,9 +155,6 @@
           </p>
         </div>
         <div class="action-buttons">
-          <button (click)="toggleComplexTheme()" class="btn-primary">
-            Toggle Theme
-          </button>
           <button (click)="toggleSidebar()" class="btn-secondary">
             Toggle Sidebar
           </button>
@@ -342,7 +329,6 @@ tree.$.tags(tags => [...tags, 'new']);       // → .update(fn)
 
 // Deep nested objects
 tree.$.user.profile.email('new&#64;email.com');  // → .set('new&#64;email.com')
-tree.$.settings.ui.theme('dark');            // → .set('dark')
 
 // Complex updates
 tree.$.user.profile(profile => updateProfile(profile));  // → .update(fn)
@@ -370,7 +356,6 @@ tree.$.tags.update(tags => [...tags, 'new']);
 
 // Deep nested objects
 tree.$.user.profile.email.set('new&#64;email.com');
-tree.$.settings.ui.theme.set('dark');
 
 // Complex updates
 tree.$.user.profile.update(profile => updateProfile(profile));

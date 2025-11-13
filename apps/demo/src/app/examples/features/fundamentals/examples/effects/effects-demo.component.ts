@@ -31,9 +31,6 @@ export class EffectsDemoComponent {
   lastSaved = signal<Date | null>(null);
   saveCount = signal(0);
 
-  // Theme sync example
-  theme = signal<'light' | 'dark'>('light');
-
   // Notification system
   notifications = signal<Notification[]>([]);
   nextNotificationId = 0;
@@ -54,24 +51,11 @@ export class EffectsDemoComponent {
       }
     });
 
-    // Effect 2: Sync theme to localStorage
-    effect(() => {
-      const currentTheme = this.theme();
-      localStorage.setItem('demo-theme', currentTheme);
-      console.log('[Theme Sync] Theme saved:', currentTheme);
-    });
-
-    // Effect 3: Log notification changes
+    // Effect 2: Log notification changes
     effect(() => {
       const notifs = this.notifications();
       console.log('[Notifications] Count:', notifs.length);
     });
-
-    // Load theme on init
-    const savedTheme = localStorage.getItem('demo-theme');
-    if (savedTheme === 'dark' || savedTheme === 'light') {
-      this.theme.set(savedTheme);
-    }
   }
 
   resetDocument() {
@@ -79,10 +63,6 @@ export class EffectsDemoComponent {
     this.documentContent.set('');
     this.lastSaved.set(null);
     this.saveCount.set(0);
-  }
-
-  toggleTheme() {
-    this.theme.update((t) => (t === 'light' ? 'dark' : 'light'));
   }
 
   addNotification(message: string, type: Notification['type'] = 'info') {
