@@ -285,6 +285,12 @@ npx nx build core --configuration=production || {
     rollback_versions
     exit 1
 }
+print_step "Running post-build step for @signaltree/core..."
+npx nx run core:postbuild || {
+    print_error "Core package post-build failed! Rolling back version changes."
+    rollback_versions
+    exit 1
+}
 print_success "Core package built successfully"
 
 # Build remaining packages that depend on core

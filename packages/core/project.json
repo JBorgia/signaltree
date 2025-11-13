@@ -39,6 +39,15 @@
       },
       "defaultConfiguration": "production"
     },
+    "postbuild": {
+      "executor": "nx:run-commands",
+      "outputs": [],
+      "options": {
+        "command": "node packages/core/post-build.cjs",
+        "cwd": "{workspaceRoot}"
+      },
+      "dependsOn": ["build"]
+    },
     "nx-release-publish": {
       "options": {
         "packageRoot": "dist/{projectRoot}"
