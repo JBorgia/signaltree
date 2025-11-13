@@ -206,13 +206,17 @@ else
     exit 1
 fi
 
-# 10. Bundle Size Analysis
+# 10. Bundle Size Analysis (Warning Only)
 print_header "10. Bundle Size Analysis"
 print_step "Analyzing bundle sizes"
-if node scripts/consolidated-bundle-analysis.js 2>&1 | tee /tmp/bundle-analysis.log; then
+set +e  # Temporarily disable exit on error for bundle analysis
+node scripts/consolidated-bundle-analysis.js 2>&1 | tee /tmp/bundle-analysis.log
+BUNDLE_EXIT=$?
+set -e  # Re-enable exit on error
+if [ $BUNDLE_EXIT -eq 0 ]; then
     print_success "Bundle sizes verified"
 else
-    print_warning "Bundle size analysis encountered issues"
+    print_warning "Bundle size analysis encountered issues (non-blocking)"
 fi
 
 # 11. Sanity Checks
@@ -230,9 +234,9 @@ else
     print_warning "Sanity checks script not found (skipping)"
 fi
 
-# 12. Performance Benchmarks
+# 12. Performance Benchmarks (Warning Only)
 print_header "12. Performance Benchmarks"
-print_step "Running performance benchmarks"
+print_step "Running performance benchmarks (warning only)"
 if [ -f "scripts/perf-suite.js" ]; then
     print_info "Running benchmarks (this may take a few minutes)..."
     # Use gtimeout on macOS, timeout on Linux
@@ -245,7 +249,12 @@ if [ -f "scripts/perf-suite.js" ]; then
         exit 1
     fi
     
-    if $TIMEOUT_CMD 300 node scripts/perf-suite.js 2>&1 | tee /tmp/perf.log; then
+    set +e  # Temporarily disable exit on error
+    $TIMEOUT_CMD 300 node scripts/perf-suite.js 2>&1 | tee /tmp/perf.log
+    PERF_EXIT=$?
+    set -e  # Re-enable exit on error
+    
+    if [ $PERF_EXIT -eq 0 ]; then
         print_success "Performance benchmarks completed"
     else
         print_warning "Performance benchmarks failed or timed out (non-blocking)"
