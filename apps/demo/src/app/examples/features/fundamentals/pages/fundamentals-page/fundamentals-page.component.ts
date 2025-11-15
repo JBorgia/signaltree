@@ -49,7 +49,7 @@ export class FundamentalsPageComponent {
     const currentFilters = this._filters();
     const allExamples = this.examplesRegistry.getAllExamples();
 
-    return allExamples.filter((example) => {
+    const filtered = allExamples.filter((example) => {
       // Category filter
       if (
         currentFilters.category &&
@@ -116,6 +116,16 @@ export class FundamentalsPageComponent {
       }
 
       return true;
+    });
+
+    // Pin What's New to the top regardless of other ordering
+    return filtered.sort((a, b) => {
+      if (a.id === 'whats-new' && b.id !== 'whats-new') return -1;
+      if (b.id === 'whats-new' && a.id !== 'whats-new') return 1;
+      // Secondary sort: category then title for stable display
+      const cat = a.category.localeCompare(b.category);
+      if (cat !== 0) return cat;
+      return a.title.localeCompare(b.title);
     });
   });
 
