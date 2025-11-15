@@ -43,15 +43,23 @@ API Extractor / copy-declarations → rolls type definitions
 
 **TSC + Nx publishes unbundled ESM** → Consumer bundlers (esbuild/Rollup in Angular build) perform tree-shaking with **full application context**.
 
-**Example:** App using only `batching` + `computed`:
+**⚠️ CORRECTION:** The barrel export (`index.ts`) re-exports ALL enhancers:
 
 ```typescript
-import { signalTree } from '@signaltree/core';
-import { batching } from '@signaltree/core/enhancers/batching';
-import { computed } from '@signaltree/core/enhancers/computed';
+// ❌ Imports ENTIRE package (~40KB)
+import { signalTree, batching, computed } from '@signaltree/core';
 ```
 
-→ **Bundle includes only:** 0.26 KB + 1.20 KB = **1.46 KB** (not the full 40.16 KB)
+**Use subpath imports for granular control:**
+
+```typescript
+// ✅ Tree-shakeable with subpath imports
+import { signalTree } from '@signaltree/core'; // ~8-10 KB core runtime
+import { batching } from '@signaltree/core/enhancers/batching'; // +0.26 KB
+import { computed } from '@signaltree/core/enhancers/computed'; // +1.20 KB
+```
+
+→ **Realistic minimal bundle:** ~9-11 KB (not 0.26 KB, but significantly less than the full 40 KB)
 
 ### Advantages of TSC + Nx
 
