@@ -53,13 +53,17 @@ import { signalTree, batching, computed } from '@signaltree/core';
 **Use subpath imports for granular control:**
 
 ```typescript
-// ✅ Tree-shakeable with subpath imports
-import { signalTree } from '@signaltree/core'; // ~8-10 KB core runtime
-import { batching } from '@signaltree/core/enhancers/batching'; // +0.26 KB
-import { computed } from '@signaltree/core/enhancers/computed'; // +1.20 KB
+// ✅ Absolute minimum - just core SignalTree (no enhancers)
+import { signalTree } from '@signaltree/core';
+// → 6.7 KB gzipped (measured)
+
+// ✅ Add only what you need
+import { batching } from '@signaltree/core/enhancers/batching'; // +1.3 KB
+import { computed } from '@signaltree/core/enhancers/computed'; // +1.2 KB
 ```
 
-→ **Realistic minimal bundle:** ~9-11 KB (not 0.26 KB, but significantly less than the full 40 KB)
+→ **Actual minimal bundle:** **6.7 KB gzipped** (core only, zero enhancers)  
+→ **With enhancers:** Add 1-5 KB per enhancer as needed (not the full 40 KB)
 
 ### Advantages of TSC + Nx
 

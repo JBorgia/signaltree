@@ -17,6 +17,23 @@ SignalTree Core is a lightweight package that provides:
 - Small API surface with zero-cost abstractions
 - Compact bundle size suited for production
 
+## Import guidance (tree-shaking)
+
+To keep bundles minimal, prefer subpath imports for enhancers and advanced utilities rather than importing them from the root barrel:
+
+```ts
+// Good: pulls in only the batching enhancer
+import { withBatching } from '@signaltree/core/enhancers/batching';
+
+// Also good: core-only API
+import { signalTree } from '@signaltree/core';
+
+// Avoid in apps: importing many enhancers from the root barrel
+// import { withBatching, withMemoization } from '@signaltree/core';
+```
+
+This repo enforces the above via ESLint to help maintain optimal app bundle sizes.
+
 ### Callable leaf signals (DX sugar only)
 
 SignalTree provides TypeScript support for callable syntax on leaf signals as developer experience sugar:

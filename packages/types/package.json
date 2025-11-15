@@ -11,6 +11,15 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "package.json",
+    "dist"
+  ],
   "keywords": [
     "signaltree",
     "types",

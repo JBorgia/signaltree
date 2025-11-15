@@ -29,9 +29,13 @@
       "import": "./src/augmentation.js"
     }
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
     "src",
-    "packages/callable-syntax/README.md"
+    "README.md",
+    "package.json"
   ],
   "sideEffects": false,
   "dependencies": {

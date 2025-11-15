@@ -46,6 +46,9 @@
   "devDependencies": {
     "@signaltree/core": "workspace:*"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
     "src",
     "README.md",

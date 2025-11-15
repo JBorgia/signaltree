@@ -29,6 +29,7 @@
           }
         ]
       },
+      "postTargets": ["postbuild"],
       "configurations": {
         "production": {
           "tsConfig": "packages/core/tsconfig.lib.prod.json"
