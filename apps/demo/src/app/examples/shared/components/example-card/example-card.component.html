@@ -32,7 +32,12 @@
       </span>
     </div>
 
-    <h3 class="card__title">{{ example.title }}</h3>
+    <h3 class="card__title">
+      {{ example.title }}
+      @if (example.id === 'whats-new') {
+      <span class="card__badge card__badge--new" aria-label="New">New</span>
+      }
+    </h3>
     <p class="card__description">{{ example.description }}</p>
 
     @if (example.tags.length > 0) {

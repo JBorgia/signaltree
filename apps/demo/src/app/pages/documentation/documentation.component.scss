@@ -39,6 +39,15 @@
   transition: all 0.2s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 
+  .package-name {
+    color: #ffffff;
+    font-size: 1.05rem;
+  }
+
+  .package-description {
+    color: #cbd5e0;
+  }
+
   &:hover {
     background-color: #f7fafc;
     border-color: #4299e1;
@@ -50,15 +59,6 @@
     background-color: #2d3748;
     border-color: #2d3748;
     box-shadow: 0 4px 12px rgba(45, 55, 72, 0.4);
-
-    .package-name {
-      color: #ffffff;
-      font-size: 1.05rem;
-    }
-
-    .package-description {
-      color: #cbd5e0;
-    }
   }
 
   .package-name {
