@@ -1,32 +1,32 @@
 import {
-  computed,
-  effect,
-  inject,
-  signal,
-  Signal,
-  WritableSignal,
-  DestroyRef,
-  Directive,
-  ElementRef,
-  Renderer2,
-  HostListener,
-  Input,
-  Output,
-  EventEmitter,
-  isSignal,
-  forwardRef,
-  OnInit,
+    computed,
+    DestroyRef,
+    Directive,
+    effect,
+    ElementRef,
+    EventEmitter,
+    forwardRef,
+    HostListener,
+    inject,
+    Input,
+    isSignal,
+    OnInit,
+    Output,
+    Renderer2,
+    Signal,
+    signal,
+    WritableSignal,
 } from '@angular/core';
 import {
-  AbstractControl,
-  AsyncValidatorFn as AngularAsyncValidatorFn,
-  ControlValueAccessor,
-  FormArray,
-  FormControl,
-  FormGroup,
-  NG_VALUE_ACCESSOR,
-  ValidationErrors,
-  ValidatorFn as AngularValidatorFn,
+    AbstractControl,
+    AsyncValidatorFn as AngularAsyncValidatorFn,
+    ControlValueAccessor,
+    FormArray,
+    FormControl,
+    FormGroup,
+    NG_VALUE_ACCESSOR,
+    ValidationErrors,
+    ValidatorFn as AngularValidatorFn,
 } from '@angular/forms';
 import { signalTree } from '@signaltree/core';
 import { deepClone, matchPath, mergeDeep, parsePath } from '@signaltree/shared';
@@ -688,12 +688,45 @@ function createAbstractControl(
   });
 }
 
+/**
+ * Connects a FormControl to a WritableSignal with bidirectional sync.
+ * Prefers Angular 20+ Signal Forms connect() API when available.
+ *
+ * @deprecated Manual bridge support (fallback for Angular 17-19) will be removed
+ * when Angular 21 is released. Upgrade to Angular 20.3+ to use native Signal Forms.
+ */
 function connectControlAndSignal(
   control: FormControl,
   valueSignal: WritableSignal<unknown>,
   cleanupCallbacks: Array<() => void>,
   fieldConfig?: FieldConfig
 ): void {
+  // Try Angular 20+ Signal Forms connect() API first
+  const maybeConnect = (
+    control as unknown as {
+      connect?: (sig: WritableSignal<unknown>) => unknown;
+    }
+  ).connect;
+
+  if (typeof maybeConnect === 'function') {
+    try {
+      const res = maybeConnect.call(control, valueSignal);
+      if (
+        res &&
+        typeof (res as { unsubscribe?: () => void }).unsubscribe === 'function'
+      ) {
+        cleanupCallbacks.push(() =>
+          (res as { unsubscribe: () => void }).unsubscribe()
+        );
+      }
+      return; // Connected via native API
+    } catch {
+      // Fall through to manual bridge
+    }
+  }
+
+  // Fallback: Manual bidirectional bridge for Angular 17-19
+  // @deprecated Will be removed when Angular 21 is released
   let updatingFromControl = false;
   let updatingFromSignal = false;
   let versionCounter = 0;
@@ -771,6 +804,13 @@ function connectControlAndSignal(
   });
 }
 
+/**
+ * Connects a FormArray to an EnhancedArraySignal with bidirectional sync.
+ * Prefers Angular 20+ Signal Forms connect() API when available.
+ *
+ * @deprecated Manual bridge support (fallback for Angular 17-19) will be removed
+ * when Angular 21 is released. Upgrade to Angular 20.3+ to use native Signal Forms.
+ */
 function connectFormArrayAndSignal(
   formArray: FormArray,
   arraySignal: EnhancedArraySignal<unknown>,
@@ -780,6 +820,35 @@ function connectFormArrayAndSignal(
   cleanupCallbacks: Array<() => void>,
   connectControlRecursive: (control: AbstractControl, path: string) => void
 ): void {
+  // Try Angular 20+ Signal Forms connect() API first
+  const maybeConnect = (
+    formArray as unknown as {
+      connect?: (sig: WritableSignal<unknown[]>) => unknown;
+    }
+  ).connect;
+
+  if (typeof maybeConnect === 'function') {
+    try {
+      const res = maybeConnect.call(
+        formArray,
+        arraySignal as unknown as WritableSignal<unknown[]>
+      );
+      if (
+        res &&
+        typeof (res as { unsubscribe?: () => void }).unsubscribe === 'function'
+      ) {
+        cleanupCallbacks.push(() =>
+          (res as { unsubscribe: () => void }).unsubscribe()
+        );
+      }
+      return; // Connected via native API
+    } catch {
+      // Fall through to manual bridge
+    }
+  }
+
+  // Fallback: Manual bidirectional bridge for Angular 17-19
+  // @deprecated Will be removed when Angular 21 is released
   let updatingFromControl = false;
   let updatingFromSignal = false;
 
@@ -834,6 +903,12 @@ function connectFormArrayAndSignal(
   );
 }
 
+/**
+ * Syncs a FormArray structure with a signal array value.
+ * Used by the manual bridge fallback for Angular 17-19.
+ *
+ * @deprecated Will be removed when Angular 21 is released and manual bridge support is dropped.
+ */
 function syncFormArrayFromValue(
   formArray: FormArray,
   nextValue: unknown[],

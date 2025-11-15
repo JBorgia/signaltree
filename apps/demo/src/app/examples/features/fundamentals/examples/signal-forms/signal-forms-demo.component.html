@@ -1,0 +1,290 @@
+<div class="demo-container">
+  <h2 class="demo-title">🔗 Angular Signal Forms Integration</h2>
+
+  <div class="intro">
+    <p>
+      <strong>Angular Signal Forms</strong> (Angular 20.3+) with SignalTree
+      using <code>toWritableSignal()</code> for slices and direct
+      <code>connect()</code> for leaves.
+    </p>
+    <div class="sync-status">
+      <span>Status: {{ statusIcon }} {{ syncStatus() }}</span>
+    </div>
+  </div>
+
+  <div class="examples-grid">
+    <!-- Example 1: Individual Leaf Signals -->
+    <div class="example-card">
+      <h3>📄 Example 1: Leaf Signals</h3>
+      <p class="description">
+        Leaves are <code>WritableSignal&lt;T&gt;</code> and work directly with
+        <code>connect()</code>
+      </p>
+
+      <div class="form-section">
+        <div class="form-group">
+          <label for="firstNameInput">First Name (leaf signal)</label>
+          <input
+            id="firstNameInput"
+            [formControl]="firstNameControl"
+            class="input-field"
+          />
+          <code class="code-hint"
+            >control.connect(tree.$.personal.firstName)</code
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="lastNameInput">Last Name (leaf signal)</label>
+          <input
+            id="lastNameInput"
+            [formControl]="lastNameControl"
+            class="input-field"
+          />
+          <code class="code-hint"
+            >control.connect(tree.$.personal.lastName)</code
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="emailInput">Email (leaf signal)</label>
+          <input
+            id="emailInput"
+            [formControl]="emailControl"
+            type="email"
+            class="input-field"
+          />
+          <code class="code-hint">control.connect(tree.$.contact.email)</code>
+        </div>
+      </div>
+
+      <div class="state-display">
+        <strong>Tree State:</strong>
+        <pre>{{
+          {
+            firstName: profile.$.personal.firstName(),
+            lastName: profile.$.personal.lastName(),
+            email: profile.$.contact.email()
+          } | json
+        }}</pre>
+      </div>
+    </div>
+
+    <!-- Example 2: Object Slice with toWritableSignal -->
+    <div class="example-card">
+      <h3>🔄 Example 2: Object Slice</h3>
+      <p class="description">
+        Slices are <code>NodeAccessor&lt;T&gt;</code> and need
+        <code>toWritableSignal()</code>
+      </p>
+
+      <div class="form-section">
+        <div [formGroup]="personalFormGroup">
+          <div class="form-group">
+            <label for="personalFirstNameInput">First Name (via slice)</label>
+            <input
+              id="personalFirstNameInput"
+              formControlName="firstName"
+              class="input-field"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="personalLastNameInput">Last Name (via slice)</label>
+            <input
+              id="personalLastNameInput"
+              formControlName="lastName"
+              class="input-field"
+            />
+          </div>
+        </div>
+        <code class="code-hint">
+          const personalSignal = toWritableSignal(tree.$.personal);<br />
+          formGroup.connect(personalSignal);
+        </code>
+      </div>
+
+      <div class="state-display">
+        <strong>Personal Slice:</strong>
+        <pre>{{
+          {
+            firstName: profile.$.personal.firstName(),
+            lastName: profile.$.personal.lastName()
+          } | json
+        }}</pre>
+      </div>
+    </div>
+
+    <!-- Example 3: Contact Form -->
+    <div class="example-card">
+      <h3>📧 Example 3: Contact Slice</h3>
+      <p class="description">
+        Another slice converted with <code>toWritableSignal()</code>
+      </p>
+
+      <div class="form-section">
+        <div [formGroup]="contactFormGroup">
+          <div class="form-group">
+            <label for="contactEmailInput">Email</label>
+            <input
+              id="contactEmailInput"
+              formControlName="email"
+              type="email"
+              class="input-field"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="contactPhoneInput">Phone</label>
+            <input
+              id="contactPhoneInput"
+              formControlName="phone"
+              type="tel"
+              class="input-field"
+            />
+          </div>
+        </div>
+        <code class="code-hint">
+          const contactSignal = toWritableSignal(tree.$.contact);<br />
+          contactForm.connect(contactSignal);
+        </code>
+      </div>
+
+      <div class="state-display">
+        <strong>Contact Slice:</strong>
+        <pre>{{
+          {
+            email: profile.$.contact.email(),
+            phone: profile.$.contact.phone()
+          } | json
+        }}</pre>
+      </div>
+    </div>
+
+    <!-- Example 4: Preferences -->
+    <div class="example-card">
+      <h3>⚙️ Example 4: Preferences Slice</h3>
+      <p class="description">Boolean flags in a converted slice</p>
+
+      <div class="form-section">
+        <div [formGroup]="preferencesFormGroup">
+          <div class="form-group">
+            <label for="preferencesNewsletterInput" class="checkbox-label">
+              <input
+                id="preferencesNewsletterInput"
+                formControlName="newsletter"
+                type="checkbox"
+              />
+              Subscribe to newsletter
+            </label>
+          </div>
+
+          <div class="form-group">
+            <label for="preferencesNotificationsInput" class="checkbox-label">
+              <input
+                id="preferencesNotificationsInput"
+                formControlName="notifications"
+                type="checkbox"
+              />
+              Enable notifications
+            </label>
+          </div>
+        </div>
+        <code class="code-hint">
+          const prefsSignal = toWritableSignal(tree.$.preferences);<br />
+          prefsForm.connect(prefsSignal);
+        </code>
+      </div>
+
+      <div class="state-display">
+        <strong>Preferences Slice:</strong>
+        <pre>{{
+          {
+            newsletter: profile.$.preferences.newsletter(),
+            notifications: profile.$.preferences.notifications()
+          } | json
+        }}</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="actions-section">
+    <h3>🎮 Actions</h3>
+    <div class="button-group">
+      <button class="btn btn-primary" (click)="updateViaTree()">
+        Update via Tree
+      </button>
+      <button class="btn btn-secondary" (click)="updateViaForm()">
+        Update via Form
+      </button>
+      <button class="btn btn-danger" (click)="resetAll()">Reset All</button>
+    </div>
+  </div>
+
+  <!-- Full State View -->
+  <div class="full-state">
+    <h3>📊 Complete State Tree</h3>
+    <div class="state-card">
+      <div class="state-row">
+        <strong>Full Name:</strong>
+        <span>{{ fullName }}</span>
+      </div>
+      <pre class="json-display">{{
+        {
+          personal: {
+            firstName: profile.$.personal.firstName(),
+            lastName: profile.$.personal.lastName()
+          },
+          contact: {
+            email: profile.$.contact.email(),
+            phone: profile.$.contact.phone()
+          },
+          preferences: {
+            newsletter: profile.$.preferences.newsletter(),
+            notifications: profile.$.preferences.notifications()
+          }
+        } | json
+      }}</pre>
+    </div>
+  </div>
+
+  <!-- Code Examples -->
+  <div class="code-examples">
+    <h3>💻 Key Code Patterns</h3>
+
+    <div class="code-block">
+      <h4>1. Direct Leaf Connection</h4>
+      <pre><code>// Leaves are WritableSignal&lt;T&gt; - use directly
+const tree = signalTree(&#123; user: &#123; name: '' &#125; &#125;);
+const nameControl = new FormControl('');
+
+// Works because tree.$.user.name is WritableSignal&lt;string&gt;
+nameControl.connect(tree.$.user.name);</code></pre>
+    </div>
+
+    <div class="code-block">
+      <h4>2. Slice Conversion with toWritableSignal()</h4>
+      <pre><code>// Slices are NodeAccessor&lt;T&gt; - need conversion
+const tree = signalTree(&#123; user: &#123; name: '', email: '' &#125; &#125;);
+const userFormGroup = new FormGroup(&#123;
+  name: new FormControl(''),
+  email: new FormControl('')
+&#125;);
+
+// Convert slice to WritableSignal&lt;T&gt;
+const userSignal = toWritableSignal(tree.$.user);
+userFormGroup.connect(userSignal);</code></pre>
+    </div>
+
+    <div class="code-block">
+      <h4>3. Two-Way Sync</h4>
+      <pre><code>// Changes flow both ways automatically:
+tree.$.user.name.set('John');     // → Form updates
+nameControl.setValue('Jane');     // → Tree updates
+
+// Real-time reactivity in templates:
+profile.$.personal.firstName()  // Always current</code></pre>
+    </div>
+  </div>
+</div>

@@ -1457,20 +1457,44 @@ While `@signaltree/core` includes comprehensive built-in enhancers for most use 
 
 ### 📝 @signaltree/ng-forms
 
-**Angular Reactive Forms integration for SignalTree**
+**Angular Forms integration for SignalTree (Angular 17+)**
 
-Seamlessly connect Angular Reactive Forms with your SignalTree state for two-way data binding, validation, and form control.
+Seamlessly connect Angular Forms with your SignalTree state for two-way data binding, validation, and form control.
 
 ```bash
 npm install @signaltree/ng-forms
 ```
 
 **Features:**
+
 - 🔗 Two-way binding between forms and SignalTree state
 - ✅ Built-in validation integration
 - 🎯 Type-safe form controls
 - 🔄 Automatic sync between form state and tree state
 - 📊 Form status tracking (valid, pristine, touched, etc.)
+- ⚡ Native Signal Forms support (Angular 20.3+)
+- 🔧 Legacy bridge for Angular 17-19 (deprecated, will be removed with Angular 21)
+
+**Signal Forms (Angular 20.3+ recommended)**
+
+Use Angular's Signal Forms `connect()` API directly with SignalTree:
+
+```ts
+import { toWritableSignal } from '@signaltree/core';
+
+const tree = signalTree({
+  user: { name: '', email: '' },
+});
+
+// Leaves are WritableSignal<T>
+nameControl.connect(tree.$.user.name);
+
+// Convert a slice to a WritableSignal<T>
+const userSignal = toWritableSignal(tree.$.user);
+userGroupControl.connect(userSignal);
+```
+
+The `@signaltree/ng-forms` package supports Angular 17+ and will prefer `connect()` when available (Angular 20.3+). Angular 17-19 uses a legacy bridge that will be deprecated when Angular 21 is released.
 
 **Quick Example:**
 
@@ -1479,7 +1503,7 @@ import { signalTree } from '@signaltree/core';
 import { bindFormToTree } from '@signaltree/ng-forms';
 
 const tree = signalTree({
-  user: { name: '', email: '', age: 0 }
+  user: { name: '', email: '', age: 0 },
 });
 
 @Component({
@@ -1489,13 +1513,13 @@ const tree = signalTree({
       <input formControlName="email" type="email" />
       <input formControlName="age" type="number" />
     </form>
-  `
+  `,
 })
 class UserFormComponent {
   form = new FormGroup({
     name: new FormControl(''),
     email: new FormControl(''),
-    age: new FormControl(0)
+    age: new FormControl(0),
   });
 
   constructor() {
@@ -1506,6 +1530,7 @@ class UserFormComponent {
 ```
 
 **When to use:**
+
 - Building forms with Angular Reactive Forms
 - Need validation integration
 - Two-way data binding between forms and state
@@ -1526,6 +1551,7 @@ npm install @signaltree/enterprise
 ```
 
 **Features:**
+
 - ⚡ PathIndex for O(k) lookup time regardless of tree size
 - 🗜️ Advanced memory optimization algorithms
 - 📊 Performance profiling and monitoring
@@ -1541,24 +1567,34 @@ import { withEnterpriseOptimizations } from '@signaltree/enterprise';
 const tree = signalTree({
   // Large application state with hundreds of signals
   modules: {
-    auth: { /* ... */ },
-    data: { /* ... */ },
-    ui: { /* ... */ },
+    auth: {
+      /* ... */
+    },
+    data: {
+      /* ... */
+    },
+    ui: {
+      /* ... */
+    },
     // ... many more modules
-  }
-}).with(withEnterpriseOptimizations({
-  enablePathIndex: true,
-  enableMemoryOptimizations: true,
-  enablePerformanceMonitoring: true
-}));
+  },
+}).with(
+  withEnterpriseOptimizations({
+    enablePathIndex: true,
+    enableMemoryOptimizations: true,
+    enablePerformanceMonitoring: true,
+  })
+);
 ```
 
 **Performance Benefits:**
+
 - **Constant-time lookups:** O(k) lookup where k is path depth, not total signal count
 - **Memory efficiency:** Up to 40% reduction in memory usage for large trees
 - **Faster updates:** Optimized update batching for high-frequency scenarios
 
 **When to use:**
+
 - Applications with 500+ signals
 - Complex nested state structures (10+ levels deep)
 - High-frequency state updates
@@ -1580,6 +1616,7 @@ npm install --save-dev @signaltree/guardrails
 ```
 
 **Features:**
+
 - 🔥 Hot-path detection - identifies frequently accessed signals
 - 💾 Memory leak detection - tracks signal cleanup issues
 - 📊 Performance budgets - enforces performance thresholds
@@ -1595,15 +1632,17 @@ import { withGuardrails } from '@signaltree/guardrails';
 
 const tree = signalTree({
   users: [] as User[],
-  posts: [] as Post[]
-}).with(withGuardrails({
-  hotPathThreshold: 100,        // Warn if signal accessed >100 times/sec
-  memoryLeakThreshold: 50,      // Warn if >50 uncleaned signals
-  budgets: {
-    updateTime: 16,             // Warn if updates take >16ms
-    signalCount: 1000           // Warn if >1000 signals created
-  }
-}));
+  posts: [] as Post[],
+}).with(
+  withGuardrails({
+    hotPathThreshold: 100, // Warn if signal accessed >100 times/sec
+    memoryLeakThreshold: 50, // Warn if >50 uncleaned signals
+    budgets: {
+      updateTime: 16, // Warn if updates take >16ms
+      signalCount: 1000, // Warn if >1000 signals created
+    },
+  })
+);
 
 // Development warnings will appear in console
 // Production builds get no-op functions (0 overhead)
@@ -1646,6 +1685,7 @@ if (leaks.length > 0) {
 In production builds, all guardrails functions become no-ops with zero runtime cost.
 
 **When to use:**
+
 - During active development
 - Performance optimization phase
 - Debugging state management issues
@@ -1667,6 +1707,7 @@ npm install --save-dev @signaltree/callable-syntax
 ```
 
 **Features:**
+
 - 🍬 Syntactic sugar for signal updates
 - ⚡ Zero runtime overhead (build-time transform)
 - ✅ Full TypeScript type safety
@@ -1677,11 +1718,11 @@ npm install --save-dev @signaltree/callable-syntax
 
 ```typescript
 // With callable-syntax transform
-tree.$.name('Jane');              // Transformed to: tree.$.name.set('Jane')
-tree.$.count((n) => n + 1);       // Transformed to: tree.$.count.update((n) => n + 1)
+tree.$.name('Jane'); // Transformed to: tree.$.name.set('Jane')
+tree.$.count((n) => n + 1); // Transformed to: tree.$.count.update((n) => n + 1)
 
 // Reading always works directly (no transform needed)
-const name = tree.$.name();       // Direct Angular signal API
+const name = tree.$.name(); // Direct Angular signal API
 ```
 
 **Setup (tsconfig.json):**
@@ -1689,9 +1730,7 @@ const name = tree.$.name();       // Direct Angular signal API
 ```json
 {
   "compilerOptions": {
-    "plugins": [
-      { "transform": "@signaltree/callable-syntax" }
-    ]
+    "plugins": [{ "transform": "@signaltree/callable-syntax" }]
   }
 }
 ```
@@ -1702,25 +1741,26 @@ const name = tree.$.name();       // Direct Angular signal API
 import { callableSyntaxTransform } from '@signaltree/callable-syntax/rollup';
 
 export default {
-  plugins: [
-    callableSyntaxTransform()
-  ]
+  plugins: [callableSyntaxTransform()],
 };
 ```
 
 **Important Notes:**
+
 - **Optional:** You can always use direct `.set(value)` or `.update(fn)` syntax
 - **Build-time only:** No runtime code is added to your bundle
 - **Function-valued leaves:** When storing functions, use `.set(fn)` directly
 - **Type-safe:** Full TypeScript support via module augmentation
 
 **When to use:**
+
 - Prefer shorter, more concise syntax
 - Team convention favors callable style
 - Migrating from other signal libraries with similar syntax
 - Want familiar DX without runtime overhead
 
 **When to skip:**
+
 - Team prefers explicit `.set/.update` syntax
 - Build pipeline doesn't support transformers
 - Storing functions as signal values (use direct `.set`)
@@ -1732,6 +1772,7 @@ export default {
 ## Package Selection Guide
 
 **Start with just `@signaltree/core`** - it includes comprehensive enhancers for most applications:
+
 - Performance optimization (batching, memoization)
 - Data management (entities, async operations)
 - Development tools (devtools, time-travel)
@@ -1739,12 +1780,12 @@ export default {
 
 **Add companion packages when you need:**
 
-| Package | When to Add | Bundle Impact |
-|---------|------------|---------------|
-| `@signaltree/ng-forms` | Angular Reactive Forms integration | ~10KB gzipped |
-| `@signaltree/enterprise` | 500+ signals, large-scale apps | ~8KB gzipped |
-| `@signaltree/guardrails` | Development performance monitoring | 0KB (dev-only) |
-| `@signaltree/callable-syntax` | Prefer callable syntax sugar | 0KB (build-time) |
+| Package                       | When to Add                        | Bundle Impact    |
+| ----------------------------- | ---------------------------------- | ---------------- |
+| `@signaltree/ng-forms`        | Angular Reactive Forms integration | ~10KB gzipped    |
+| `@signaltree/enterprise`      | 500+ signals, large-scale apps     | ~8KB gzipped     |
+| `@signaltree/guardrails`      | Development performance monitoring | 0KB (dev-only)   |
+| `@signaltree/callable-syntax` | Prefer callable syntax sugar       | 0KB (build-time) |
 
 **Typical Installation Patterns:**
 

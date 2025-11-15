@@ -10,7 +10,7 @@ Angular 20 signal forms meet SignalTree. `@signaltree/ng-forms` keeps your form 
 pnpm add @signaltree/core @signaltree/ng-forms
 ```
 
-> The package targets Angular 20.3+ and TypeScript 5.5+. For Angular 17–19 support use the 0.10.x line.
+> This package supports Angular 17+ with TypeScript 5.5+. Angular 17-19 support uses a legacy bridge that will be deprecated when Angular 21 is released. For the best experience, upgrade to Angular 20.3+ to use native Signal Forms.
 
 ## Quick start
 
@@ -96,6 +96,31 @@ The returned `FormTree` exposes:
 - **Wizard & history helpers**: Higher-level APIs for multi-step flows and undo/redo stacks
 - **Signal ↔ Observable bridge**: Convert signals to RxJS streams for interoperability
 - **Template-driven adapter**: `SignalValueDirective` bridges standalone signals with `ngModel`
+
+## Signal Forms (Angular 20+)
+
+`@signaltree/ng-forms` now prefers Angular's experimental Signal Forms `connect()` API when available.
+
+- Leaves in a SignalTree are native `WritableSignal<T>` and can be connected directly
+- For object slices, convert to a `WritableSignal<T>` via `toWritableSignal()` from `@signaltree/core`
+
+```ts
+import { toWritableSignal } from '@signaltree/core';
+
+const values = createFormTree({
+  user: { name: '', email: '' },
+});
+
+// Connect leaves directly
+nameControl.connect(values.$.user.name);
+emailControl.connect(values.$.user.email);
+
+// Or connect a whole slice
+const userSignal = toWritableSignal(values.values.$.user);
+userGroupControl.connect(userSignal);
+```
+
+Angular 20.3+ is preferred for native Signal Forms `connect()`. Angular 17-19 is supported via a legacy bridge that will be deprecated when Angular 21 is released.
 
 ## Form tree configuration
 

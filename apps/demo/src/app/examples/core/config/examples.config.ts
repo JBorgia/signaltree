@@ -3,16 +3,17 @@ import { ComputedExampleComponent } from '../../features/fundamentals/examples/c
 import { EffectsDemoComponent } from '../../features/fundamentals/examples/effects/effects-demo.component';
 import { BatchingDemoComponent } from '../../features/fundamentals/examples/enhancers/batching-demo/batching-demo.component';
 import {
-    CallableSyntaxDemoComponent,
+  CallableSyntaxDemoComponent,
 } from '../../features/fundamentals/examples/enhancers/callable-syntax-demo/callable-syntax-demo.component';
 import { DevtoolsDemoComponent } from '../../features/fundamentals/examples/enhancers/devtools-demo/devtools-demo.component';
 import {
-    MiddlewareDemoComponent,
+  MiddlewareDemoComponent,
 } from '../../features/fundamentals/examples/enhancers/middleware-demo/middleware-demo.component';
 import { PresetsDemoComponent } from '../../features/fundamentals/examples/enhancers/presets-demo/presets-demo.component';
 import { EntitiesDemoComponent } from '../../features/fundamentals/examples/entities/entities-demo.component';
 import { FormsDemoComponent } from '../../features/fundamentals/examples/forms/forms-demo.component';
 import { MemoizationDemoComponent } from '../../features/fundamentals/examples/memoization/memoization-demo.component';
+import { SignalFormsDemoComponent } from '../../features/fundamentals/examples/signal-forms/signal-forms-demo.component';
 import { SignalsExamplesComponent } from '../../features/fundamentals/examples/signals/signals-examples.component';
 import { TimeTravelDemoComponent } from '../../features/fundamentals/examples/time-travel/time-travel-demo.component';
 
@@ -247,6 +248,30 @@ export const formsExampleMeta: ExampleMeta = {
 };
 
 /**
+ * Signal Forms (Angular 20+) Examples
+ */
+export const signalFormsExampleMeta: ExampleMeta = {
+  id: 'signal-forms',
+  title: 'Signal Forms (Angular 20+)',
+  description:
+    'Angular Signal Forms integration with toWritableSignal() for slices and direct connect() for leaves.',
+  category: 'Angular',
+  focusAreas: ['signal-forms', 'forms', 'angular-20'],
+  functionalUse: ['form-binding', 'two-way-sync', 'toWritableSignal'],
+  enhancers: [],
+  route: '/examples/fundamentals/signal-forms',
+  component: SignalFormsDemoComponent,
+  difficulty: 'intermediate',
+  tags: [
+    'angular',
+    'signal-forms',
+    'connect',
+    'toWritableSignal',
+    'reactive-forms',
+  ],
+};
+
+/**
  * Async Examples
  */
 export const asyncExampleMeta: ExampleMeta = {
@@ -280,5 +305,6 @@ export const EXAMPLES_REGISTRY: ExampleMeta[] = [
   timeTravelExampleMeta,
   effectsExampleMeta,
   formsExampleMeta,
+  signalFormsExampleMeta,
   asyncExampleMeta,
 ];

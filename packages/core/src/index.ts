@@ -63,6 +63,7 @@ export {
   // Signal utilities - Signal-specific helpers
   isNodeAccessor,
   isAnySignal,
+  toWritableSignal,
 
   // Helper functions - Path parsing and composition
   parsePath,

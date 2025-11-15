@@ -1,4 +1,4 @@
-import { isSignal, Signal, signal, WritableSignal } from '@angular/core';
+import { effect, isSignal, Signal, signal, WritableSignal } from '@angular/core';
 import { deepEqual, isBuiltInObject, parsePath } from '@signaltree/shared';
 
 /** Symbol to mark callable signals - using global symbol to match across files */
@@ -61,6 +61,59 @@ export function isNodeAccessor(value: unknown): value is NodeAccessor<unknown> {
  */
 export function isAnySignal(value: unknown): boolean {
   return isSignal(value) || isNodeAccessor(value);
+}
+
+/**
+ * Converts a NodeAccessor (SignalTree slice or whole tree) into a WritableSignal
+ * compatible with Angular's Signal Forms connect() API and other APIs that expect WritableSignal.
+ *
+ * Creates a two-way binding between the NodeAccessor and a WritableSignal:
+ * - Reads all leaf values from the NodeAccessor and exposes them as a signal
+ * - Writes to the WritableSignal update the underlying NodeAccessor
+ *
+ * @template T - The type of the node value
+ * @param node - The NodeAccessor to convert (can be a slice or whole tree)
+ * @returns A WritableSignal that stays in sync with the NodeAccessor
+ *
+ * @example
+ * ```typescript
+ * const tree = signalTree({
+ *   user: { name: '', email: '' }
+ * });
+ *
+ * // Convert slice to WritableSignal for Angular Signal Forms
+ * const userSignal = toWritableSignal(tree.$.user);
+ * formControl.connect(userSignal); // ✅ Works with connect()
+ *
+ * // Leaves are already WritableSignal - no conversion needed
+ * nameControl.connect(tree.$.user.name); // ✅ Already a WritableSignal
+ * ```
+ */
+export function toWritableSignal<T>(node: NodeAccessor<T>): WritableSignal<T> {
+  // Create a signal initialized with the current node value
+  const sig = signal(node());
+
+  // Sync node changes to signal
+  // This ensures the signal reflects any updates made to the NodeAccessor
+  effect(() => {
+    sig.set(node());
+  });
+
+  // Override set to write back to the NodeAccessor
+  const originalSet = sig.set.bind(sig);
+  sig.set = (value: T) => {
+    node(value); // Update the SignalTree node
+    originalSet(value); // Update the local signal
+  };
+
+  // Override update to write back to the NodeAccessor
+  const originalUpdate = sig.update.bind(sig);
+  sig.update = (updater: (current: T) => T) => {
+    const newValue = updater(sig());
+    sig.set(newValue);
+  };
+
+  return sig;
 }
 
 export function composeEnhancers<T>(

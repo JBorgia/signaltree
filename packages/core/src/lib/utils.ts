@@ -1,4 +1,4 @@
-import { isSignal, Signal, signal, WritableSignal } from '@angular/core';
+import { effect, Injector, isSignal, runInInjectionContext, Signal, signal, WritableSignal } from '@angular/core';
 import { deepEqual, isBuiltInObject, parsePath } from '@signaltree/shared';
 
 /** Symbol to mark callable signals - using global symbol to match across files */
@@ -61,6 +61,79 @@ export function isNodeAccessor(value: unknown): value is NodeAccessor<unknown> {
  */
 export function isAnySignal(value: unknown): boolean {
   return isSignal(value) || isNodeAccessor(value);
+}
+
+/**
+ * Converts a NodeAccessor (SignalTree slice or whole tree) into a WritableSignal
+ * compatible with Angular's Signal Forms connect() API and other APIs that expect WritableSignal.
+ *
+ * Creates a two-way binding between the NodeAccessor and a WritableSignal:
+ * - Reads all leaf values from the NodeAccessor and exposes them as a signal
+ * - Writes to the WritableSignal update the underlying NodeAccessor
+ *
+ * **Important**: This function uses `effect()` internally for synchronization, which requires
+ * an injection context. It can be called in:
+ * - Component/directive/pipe class field initializers
+ * - Component/directive/pipe constructors
+ * - Functions called from within an injection context
+ *
+ * @template T - The type of the node value
+ * @param node - The NodeAccessor to convert (can be a slice or whole tree)
+ * @returns A WritableSignal that stays in sync with the NodeAccessor
+ *
+ * @example
+ * ```typescript
+ * const tree = signalTree({
+ *   user: { name: '', email: '' }
+ * });
+ *
+ * // Convert slice to WritableSignal for Angular Signal Forms
+ * const userSignal = toWritableSignal(tree.$.user);
+ * formControl.connect(userSignal); // ✅ Works with connect()
+ *
+ * // Leaves are already WritableSignal - no conversion needed
+ * nameControl.connect(tree.$.user.name); // ✅ Already a WritableSignal
+ * ```
+ */
+export function toWritableSignal<T>(
+  node: NodeAccessor<T>,
+  injector?: unknown
+): WritableSignal<T> {
+  // Create a signal initialized with the current node value
+  const sig = signal(node());
+
+  // Capture original setter before overriding so tree->signal sync doesn't write back and loop
+  const originalSet = sig.set.bind(sig);
+
+  // Effect to sync tree (NodeAccessor) changes into the writable signal
+  // We intentionally track dependencies inside node() so updates to any leaf propagate.
+  const runner = () => {
+    originalSet(node() as T);
+  };
+  if (injector) {
+    runInInjectionContext(injector as Injector, () => effect(runner));
+  } else {
+    try {
+      effect(runner);
+    } catch {
+      console.warn(
+        '[SignalTree] toWritableSignal called without injection context; pass Injector for reactivity.'
+      );
+    }
+  }
+
+  // Override set to write back to the NodeAccessor, then update local signal
+  sig.set = (value: T) => {
+    node(value);
+    originalSet(value);
+  };
+
+  // Override update to write back using set pathway
+  sig.update = (updater: (current: T) => T) => {
+    sig.set(updater(sig()));
+  };
+
+  return sig;
 }
 
 export function composeEnhancers<T>(
