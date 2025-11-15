@@ -1,4 +1,5 @@
 import nx from '@nx/eslint-plugin';
+
 import baseConfig from '../../eslint.config.mjs';
 
 export default [
@@ -11,7 +12,7 @@ export default [
         {
           ignoredFiles: ['{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}'],
           // @signaltree/shared is bundled at build time via Rollup, not a runtime dependency
-          ignoredDependencies: ['@signaltree/shared'],
+          ignoredDependencies: ['@signaltree/shared', '@angular/forms'],
         },
       ],
     },

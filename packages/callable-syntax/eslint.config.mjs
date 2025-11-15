@@ -9,6 +9,13 @@ export default [
         'error',
         {
           ignoredFiles: ['{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}'],
+          ignoredDependencies: [
+            '@babel/generator',
+            '@babel/parser',
+            '@babel/traverse',
+            '@babel/types',
+            '@angular/core'
+          ],
         },
       ],
     },
