@@ -14,7 +14,7 @@ export default [
             '@babel/parser',
             '@babel/traverse',
             '@babel/types',
-            '@angular/core'
+            '@angular/core',
           ],
         },
       ],
