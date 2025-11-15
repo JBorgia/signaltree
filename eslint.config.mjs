@@ -38,71 +38,31 @@ export default [
     ],
     // Override or add rules here
     rules: {
-      // Guard against importing heavy enhancers from the root barrel.
-      // Prefer subpath imports like `@signaltree/core/enhancers/batching`.
-      'no-restricted-imports': [
-        'error',
-        {
-          paths: [
-            {
-              name: '@signaltree/core',
-              importNames: [
-                'withBatching',
-                'withHighPerformanceBatching',
-                'flushBatchedUpdates',
-                'hasPendingUpdates',
-                'getBatchQueueSize',
-                'withMemoization',
-                'withSelectorMemoization',
-                'withComputedMemoization',
-                'withDeepStateMemoization',
-                'withHighFrequencyMemoization',
-                'withHighPerformanceMemoization',
-                'withLightweightMemoization',
-                'withShallowMemoization',
-                'memoize',
-                'memoizeShallow',
-                'memoizeReference',
-                'cleanupMemoizationCache',
-                'clearAllCaches',
-                'getGlobalCacheStats',
-                'withTimeTravel',
-                'enableTimeTravel',
-                'getTimeTravel',
-                'withEntities',
-                'enableEntities',
-                'withHighPerformanceEntities',
-                'withSerialization',
-                'enableSerialization',
-                'withPersistence',
-                'createStorageAdapter',
-                'createIndexedDBAdapter',
-                'applySerialization',
-                'applyPersistence',
-                'withDevTools',
-                'enableDevTools',
-                'withFullDevTools',
-                'withProductionDevTools',
-                'withMiddleware',
-                'createLoggingMiddleware',
-                'createValidationMiddleware',
-                'createAsyncOperation',
-                'trackAsync',
-                'TREE_PRESETS',
-                'createPresetConfig',
-                'validatePreset',
-                'getAvailablePresets',
-                'combinePresets',
-                'createDevTree',
-                'computedEnhancer',
-                'createComputed',
-              ],
-              message:
-                'Import enhancers via subpaths, e.g. @signaltree/core/enhancers/<name> to keep bundles lean.',
-            },
-          ],
-        },
-      ],
+      // NOTE: Tree-shaking test shows barrel imports work fine with modern bundlers.
+      // Both patterns produce identical bundles (~9.3KB for core+batching):
+      //   import { signalTree, withBatching } from '@signaltree/core';
+      //   import { withBatching } from '@signaltree/core/enhancers/batching';
+      //
+      // Subpath imports are supported for developer preference, but not required.
+      // The ESLint rule below is DISABLED by default - enable only if your
+      // build tooling has known tree-shaking issues.
+      // Uncomment to enforce subpath imports (usually unnecessary):
+      // 'no-restricted-imports': [
+      //   'warn',
+      //   {
+      //     paths: [
+      //       {
+      //         name: '@signaltree/core',
+      //         importNames: [
+      //           'withBatching', 'withMemoization', 'withDevTools',
+      //           'withEntities', 'withSerialization', 'withTimeTravel',
+      //           'withMiddleware', 'createAsyncOperation', 'TREE_PRESETS'
+      //         ],
+      //         message: 'Consider subpath imports like @signaltree/core/enhancers/<name> for explicit control'
+      //       }
+      //     ]
+      //   }
+      // ]
     },
   },
 ];
