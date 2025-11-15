@@ -12,6 +12,18 @@
   </p>
 </div>
 
+## 🚀 What's New (November 2025)
+
+- Angular Signal Forms demo added with clear patterns:
+  - Leaves: use `connect()` directly.
+  - Slices: use `toWritableSignal(slice)` to bridge to `WritableSignal<T>`.
+- `toWritableSignal()` improved: reactive slice→signal sync without feedback loops; supports `Injector` context when needed.
+- Demo accessibility polish: proper label associations and template fixes.
+- Deprecation note: legacy manual forms bridge is planned for removal when Angular 21 lands; prefer `connect()` + `toWritableSignal()`.
+- All demo tests updated and passing for Angular 20.3.x.
+
+Explore it in the demo under “Signal Forms (Angular 20+)”.
+
 ## Why SignalTree?
 
 - Recursive typing with deep nesting and accurate inference
@@ -737,7 +749,7 @@ const tree = signalTree(initialState).with(withBatching(), withMemoization({ max
 
 ### Preset Configurations
 
-```typescript
+````typescript
 import { signalTree } from '@signaltree/core';
 import { createPresetConfig } from '@signaltree/core';
 
@@ -760,7 +772,7 @@ const loadData = tree.asyncAction(async (params) => await api.getData(params), {
   errorKey: 'error',
   onSuccess: (data) => ({ data }),
 });
-```
+````
 
 ### Time Travel
 

@@ -16,6 +16,7 @@ import { MemoizationDemoComponent } from '../../features/fundamentals/examples/m
 import { SignalFormsDemoComponent } from '../../features/fundamentals/examples/signal-forms/signal-forms-demo.component';
 import { SignalsExamplesComponent } from '../../features/fundamentals/examples/signals/signals-examples.component';
 import { TimeTravelDemoComponent } from '../../features/fundamentals/examples/time-travel/time-travel-demo.component';
+import { WhatsNewComponent } from '../../features/fundamentals/examples/whats-new/whats-new.component';
 
 import type { ExampleMeta } from '../models';
 // Import example components from the new features structure
@@ -293,6 +294,20 @@ export const asyncExampleMeta: ExampleMeta = {
  * Central registry of all examples
  */
 export const EXAMPLES_REGISTRY: ExampleMeta[] = [
+  {
+    id: 'whats-new',
+    title: "What's New",
+    description:
+      'Latest changes: Signal Forms demo, toWritableSignal improvements, accessibility fixes, and deprecations.',
+    category: 'General',
+    focusAreas: ['news', 'changelog'],
+    functionalUse: ['release-notes'],
+    enhancers: [],
+    route: '/examples/fundamentals/whats-new',
+    component: WhatsNewComponent,
+    difficulty: 'beginner',
+    tags: ['news', 'readme', 'updates'],
+  },
   signalsExampleMeta,
   computedExampleMeta,
   entitiesExampleMeta,

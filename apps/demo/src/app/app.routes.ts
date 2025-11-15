@@ -7,11 +7,13 @@ export const appRoutes: Route[] = [
       import('./components/home/home.component').then((c) => c.HomeComponent),
   },
 
-  // Examples section - new structure
+  // Fundamentals examples page (embedded demos on one page)
   {
-    path: 'examples',
-    loadChildren: () =>
-      import('./examples/examples.routes').then((r) => r.examplesRoutes),
+    path: 'examples/fundamentals',
+    loadComponent: () =>
+      import(
+        './examples/features/fundamentals/pages/fundamentals-page/fundamentals-page.component'
+      ).then((c) => c.FundamentalsPageComponent),
   },
 
   // Redirect old core route to new examples
@@ -21,12 +23,8 @@ export const appRoutes: Route[] = [
     pathMatch: 'full',
   },
 
-  // Redirect old examples route to fundamentals
-  {
-    path: 'examples',
-    redirectTo: '/examples/fundamentals',
-    pathMatch: 'full',
-  },
+  // Redirect examples root to fundamentals
+  { path: 'examples', redirectTo: '/examples/fundamentals', pathMatch: 'full' },
 
   // Core SignalTree modules - now under examples/features
   {
