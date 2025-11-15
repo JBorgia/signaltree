@@ -51,7 +51,7 @@ const packages = [
     name: 'types',
     path: 'dist/packages/types/src/index.js',
     maxSize: 500,
-    claimed: 300,
+    claimed: 270,
   },
   {
     name: 'utils',
@@ -170,6 +170,35 @@ class BundleAnalyzer {
     return zlib.gzipSync(buffer).length;
   }
 
+  /**
+   * Get total gzipped size of ALL files in a package directory
+   * This gives the TRUE package size consumers will download
+   */
+  getFullPackageSize(packageName) {
+    const packageDir = path.join(process.cwd(), `dist/packages/${packageName}`);
+
+    if (!fs.existsSync(packageDir)) {
+      return null;
+    }
+
+    // Find all .js files recursively
+    const jsFiles = this.findFiles(packageDir, '.js');
+
+    if (jsFiles.length === 0) {
+      return null;
+    }
+
+    // Concatenate all JS content and gzip
+    const allContent = jsFiles.map((file) => fs.readFileSync(file)).join('\\n');
+    const buffer = Buffer.from(allContent);
+
+    return {
+      fileCount: jsFiles.length,
+      rawSize: buffer.length,
+      gzipSize: this.getGzipSize(buffer),
+    };
+  }
+
   execCommand(
     command,
     description,
@@ -250,6 +279,7 @@ class BundleAnalyzer {
 
     packages.forEach((pkg) => {
       let distPath;
+      let measurementType = 'single-file'; // Track what we're measuring
 
       if (pkg.path) {
         // Custom path specified
@@ -276,6 +306,20 @@ class BundleAnalyzer {
       const content = fs.readFileSync(distPath);
       const rawSize = content.length;
       const gzipSize = this.getGzipSize(content);
+
+      // SANITY CHECK: Warn if measuring a tiny barrel file (likely wrong)
+      if (
+        rawSize < 3000 &&
+        !pkg.name.includes('types') &&
+        !pkg.name.includes('computed')
+      ) {
+        this.log(
+          `⚠️  WARNING: ${pkg.name} measures only ${rawSize} bytes raw - ` +
+            `this may be a re-export barrel, not the full package. ` +
+            `Consider measuring all package files instead.`,
+          'warning'
+        );
+      }
 
       const passed = gzipSize <= pkg.maxSize;
       const claimMet = gzipSize <= pkg.claimed;
@@ -337,12 +381,94 @@ class BundleAnalyzer {
       }`
     );
     console.log('\\n📋 What This Measures:');
-    console.log('   • Core package: Re-export overhead only (~0.6KB)');
-    console.log('   • Individual enhancers: Actual implementation sizes');
-    console.log('   • ng-forms: Complete bundled package');
-    console.log('   • Total: Sum of all measured components');
+    console.log(
+      '   • Core package: Single barrel file (0.7KB) - NOT full implementation'
+    );
+    console.log(
+      '   • Individual enhancers: Single implementation file per enhancer'
+    );
+    console.log('   • ng-forms: Complete bundled package (ng-packagr output)');
+    console.log(
+      '   • Total: Sum of measured components (NOT what consumers download)'
+    );
+    console.log('\\n⚠️  MEASUREMENT LIMITATION:');
+    console.log(
+      '   This script measures individual files, not complete package contents.'
+    );
+    console.log(
+      '   Actual consumer bundle size = all transitive dependencies included.'
+    );
+    console.log(
+      '   For accurate total package size, measure all .js files in dist/packages/<name>/'
+    );
 
     return { totalPassed, totalFailed, totalActualSize, totalClaimedSize };
+  }
+
+  /**
+   * NEW: Analyze FULL package contents (all JS files)
+   * This prevents the "measuring barrel only" mistake
+   */
+  analyzeFullPackages() {
+    this.log('\\n📊 Full Package Analysis (All Files)');
+    console.log('==========================================\\n');
+
+    const packageDirs = [
+      'core',
+      'enterprise',
+      'callable-syntax',
+      'shared',
+      'types',
+      'utils',
+    ];
+    const fullSizes = [];
+
+    packageDirs.forEach((pkgName) => {
+      const fullSize = this.getFullPackageSize(pkgName);
+
+      if (!fullSize) {
+        this.log(`${pkgName}: No build output found`, 'warning');
+        return;
+      }
+
+      fullSizes.push({
+        name: pkgName,
+        ...fullSize,
+      });
+
+      console.log(`📦 ${pkgName}:`);
+      console.log(`   Files: ${fullSize.fileCount} JS files`);
+      console.log(`   Raw Total: ${this.formatSize(fullSize.rawSize)}`);
+      console.log(`   Gzipped Total: ${this.formatSize(fullSize.gzipSize)}`);
+
+      // Cross-check against claimed size
+      const pkgConfig = packages.find((p) => p.name === pkgName);
+      if (pkgConfig) {
+        const claimDiff = fullSize.gzipSize - pkgConfig.claimed;
+        const claimStatus = claimDiff <= 0 ? '✅' : '⚠️';
+        console.log(
+          `   Claimed: ${this.formatSize(pkgConfig.claimed)} ${claimStatus}`
+        );
+        if (Math.abs(claimDiff) > 500) {
+          console.log(
+            `   ⚠️  Claim off by ${this.formatSize(Math.abs(claimDiff))} (${
+              claimDiff > 0 ? 'under-claimed' : 'over-claimed'
+            })`
+          );
+        }
+      }
+      console.log();
+    });
+
+    console.log('==========================================');
+    console.log(
+      '📋 This measures the COMPLETE package contents that npm publishes.'
+    );
+    console.log(
+      '   Use these values for accurate size claims in documentation.\\n'
+    );
+
+    return fullSizes;
   }
 
   analyzeDemoApp() {
@@ -662,6 +788,9 @@ class BundleAnalyzer {
 
       // Analyze packages
       const packageResults = this.analyzePackages();
+
+      // NEW: Analyze full package contents for validation
+      const fullPackageSizes = this.analyzeFullPackages();
 
       // Show architecture comparison
       this.showArchitectureComparison();
