@@ -9,7 +9,7 @@
     "rxjs": "^7.0.0"
   },
   "devDependencies": {
-    "@signaltree/core": "^4.1.0"
+    "@signaltree/core": "workspace:*"
   },
   "sideEffects": false,
   "publishConfig": {
