@@ -180,7 +180,7 @@ export interface RealisticBenchmarkQueryParams {
 const SAMPLE_BENCHMARK_DETAILS: RealisticBenchmarkSubmission = {
   id: 'sample-benchmark-001',
   timestamp: new Date('2024-08-15T14:32:05.000Z').toISOString(),
-  version: '4.0.9',
+  version: '4.1.0',
   sessionId: 'sample-session',
   consentGiven: true,
   calibration: {
@@ -216,11 +216,7 @@ const SAMPLE_BENCHMARK_DETAILS: RealisticBenchmarkSubmission = {
     iterations: 60,
     samplesPerTest: 25,
     selectedLibraries: ['signaltree', 'ngrx-store', 'ngrx-signals'],
-    selectedScenarios: [
-      'selectors-heavy',
-      'forms-deep',
-      'async-pipeline',
-    ],
+    selectedScenarios: ['selectors-heavy', 'forms-deep', 'async-pipeline'],
     weightingPreset: 'mid-range-desktop',
   },
   results: {
@@ -648,7 +644,9 @@ export class RealisticBenchmarkService {
     id: string
   ): Promise<{ success: boolean; data?: RealisticBenchmarkSubmission }> {
     // Always try fallback first for demo purposes
-    const fallback = SAMPLE_BENCHMARK_HISTORY.find((b) => b.id === id)?.fullData;
+    const fallback = SAMPLE_BENCHMARK_HISTORY.find(
+      (b) => b.id === id
+    )?.fullData;
     if (fallback) {
       return { success: true, data: fallback };
     }

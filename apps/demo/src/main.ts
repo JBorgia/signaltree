@@ -6,8 +6,10 @@ import { appConfig } from './app/app.config';
 // Inject library versions into window for benchmark tracking
 // These versions are read from package.json files at build time
 if (typeof window !== 'undefined') {
-  (window as unknown as { __LIBRARY_VERSIONS__?: Record<string, string> }).__LIBRARY_VERSIONS__ = {
-    signaltree: '4.0.15', // @signaltree/core
+  (
+    window as unknown as { __LIBRARY_VERSIONS__?: Record<string, string> }
+  ).__LIBRARY_VERSIONS__ = {
+    signaltree: '4.1.0', // @signaltree/core
     'ngrx-store': '20.1.0', // @ngrx/store
     'ngrx-signals': '20.1.0', // @ngrx/signals
     akita: '8.0.1', // @datorama/akita
