@@ -2,17 +2,22 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "target": "es2022",
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "strict": true,
     "noImplicitOverride": true,
     "noPropertyAccessFromIndexSignature": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-    "module": "ESNext",
-    "outDir": "./dist",
-    "rootDir": "../..",
-    "types": []
+    "module": "preserve"
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "tests"]
+  "files": [],
+  "include": [],
+  "references": [
+    {
+      "path": "./tsconfig.lib.json"
+    },
+    {
+      "path": "./tsconfig.spec.json"
+    }
+  ]
 }

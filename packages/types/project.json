@@ -6,13 +6,30 @@
   "tags": ["npm:public", "scope:types"],
   "targets": {
     "build": {
-      "executor": "@nx/js:tsc",
-      "outputs": ["{options.outputPath}"],
+      "executor": "@nx/rollup:rollup",
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
       "options": {
-        "outputPath": "dist/packages/types",
         "main": "packages/types/src/index.ts",
-        "tsConfig": "packages/types/tsconfig.lib.json",
-        "assets": ["packages/types/*.md"]
+        "tsConfig": "packages/types/tsconfig.lib.prod.json",
+        "outputPath": "dist/packages/types",
+        "format": ["esm"],
+        "assets": [
+          {
+            "input": "packages/types",
+            "glob": "README.md",
+            "output": "."
+          },
+          {
+            "input": "packages/types",
+            "glob": "package.json",
+            "output": "."
+          }
+        ],
+        "rollupConfig": "packages/types/rollup.config.mjs",
+        "deleteOutputPath": true,
+        "buildLibsFromSource": false,
+        "useLegacyTypescriptPlugin": false,
+        "generatePackageJson": false
       }
     }
   }

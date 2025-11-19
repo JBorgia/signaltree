@@ -63,7 +63,7 @@
 **[package.json](./package.json)**
 
 - Conditional exports (development vs production)
-- tsup build with `__DEV__` define
+- Nx Rollup build with `preserveModules` + `__DEV__` define
 - Size limits and analysis scripts
 
 ## 🚀 Quick Start

@@ -104,44 +104,59 @@ class RecursiveBundleAnalyzer {
     };
 
     try {
-      // Check if package exists and is built
-      const fesmPath = path.join(distPath, 'fesm2022');
-      if (fs.existsSync(fesmPath)) {
-        const files = fs.readdirSync(fesmPath);
+      const candidates = [
+        path.join(distPath, 'dist'),
+        path.join(distPath, 'fesm2022'),
+      ];
+      const outputDir = candidates.find((dir) => fs.existsSync(dir));
 
-        // Calculate bundle sizes using actual compression for .mjs files
-        files.forEach((file) => {
-          if (
-            typeof file === 'string' &&
-            file.endsWith('.mjs') &&
-            !file.endsWith('.map')
-          ) {
-            const filePath = path.join(fesmPath, file);
-            if (fs.existsSync(filePath)) {
-              const content = fs.readFileSync(filePath);
-              const stats = fs.statSync(filePath);
-              bundleMetrics.size.raw += stats.size;
+      if (outputDir) {
+        const files = [];
 
-              // Calculate actual gzipped size
-              const gzipped = gzipSync(content);
-              bundleMetrics.size.gzipped += gzipped.length;
-
-              // Estimate brotli (usually ~15% better than gzip)
-              bundleMetrics.size.brotli += Math.round(gzipped.length * 0.85);
+        const walk = (dir) => {
+          for (const entry of fs.readdirSync(dir)) {
+            const fullPath = path.join(dir, entry);
+            const stat = fs.statSync(fullPath);
+            if (stat.isDirectory()) {
+              walk(fullPath);
+            } else if (entry.endsWith('.js') || entry.endsWith('.mjs')) {
+              files.push(fullPath);
             }
           }
-        }); // Performance metrics based on recursive typing optimizations
-        bundleMetrics.performance = {
-          loadTime: bundleMetrics.size.gzipped / 1000, // Estimated load time in ms per KB
-          parseTime: bundleMetrics.size.raw / 5000, // Estimated parse time
-          executionTime: pkg.features.length * 0.1, // Based on recursive feature count
         };
 
-        console.log(
-          `  ✅ ${pkg.name}: ${this.formatBytes(
-            bundleMetrics.size.raw
-          )} (${this.formatBytes(bundleMetrics.size.gzipped)} gzipped)`
-        );
+        walk(outputDir);
+
+        if (files.length > 0) {
+          files.forEach((filePath) => {
+            const content = fs.readFileSync(filePath);
+            const stats = fs.statSync(filePath);
+            bundleMetrics.size.raw += stats.size;
+
+            const gzipped = gzipSync(content);
+            bundleMetrics.size.gzipped += gzipped.length;
+            bundleMetrics.size.brotli += Math.round(gzipped.length * 0.85);
+          });
+
+          bundleMetrics.performance = {
+            loadTime: bundleMetrics.size.gzipped / 1000,
+            parseTime: bundleMetrics.size.raw / 5000,
+            executionTime: pkg.features.length * 0.1,
+          };
+
+          const layout = path.relative(distPath, outputDir) || '.';
+          console.log(
+            `  ✅ ${pkg.name}: ${this.formatBytes(
+              bundleMetrics.size.raw
+            )} (${this.formatBytes(
+              bundleMetrics.size.gzipped
+            )} gzipped) [${layout}]`
+          );
+        } else {
+          console.log(
+            `  ⚠️  ${pkg.name}: No JS modules found under ${outputDir}`
+          );
+        }
       } else {
         console.log(`  ❌ ${pkg.name}: Build output not found at ${distPath}`);
         bundleMetrics.size = {

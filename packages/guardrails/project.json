@@ -3,6 +3,67 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "library",
   "sourceRoot": "packages/guardrails/src",
-  "targets": {}
+  "implicitDependencies": ["core"],
+  "release": {
+    "version": {
+      "manifestRootsToUpdate": ["dist/{projectRoot}"],
+      "currentVersionResolver": "git-tag",
+      "fallbackCurrentVersionResolver": "disk"
+    }
+  },
+  "targets": {
+    "build": {
+      "executor": "@nx/rollup:rollup",
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
+      "dependsOn": ["^build"],
+      "options": {
+        "main": "packages/guardrails/src/index.ts",
+        "tsConfig": "packages/guardrails/tsconfig.lib.prod.json",
+        "outputPath": "dist/packages/guardrails",
+        "format": ["esm"],
+        "additionalEntryPoints": [
+          "packages/guardrails/src/index.ts",
+          "packages/guardrails/src/factories/index.ts",
+          "packages/guardrails/src/noop.ts"
+        ],
+        "assets": [
+          {
+            "input": "packages/guardrails",
+            "glob": "README.md",
+            "output": "."
+          },
+          {
+            "input": "packages/guardrails",
+            "glob": "CHANGELOG.md",
+            "output": "."
+          },
+          {
+            "input": "packages/guardrails",
+            "glob": "package.json",
+            "output": "."
+          }
+        ],
+        "rollupConfig": "packages/guardrails/rollup.config.mjs",
+        "deleteOutputPath": true,
+        "buildLibsFromSource": true,
+        "useLegacyTypescriptPlugin": false,
+        "generatePackageJson": false
+      }
+    },
+    "nx-release-publish": {
+      "options": {
+        "packageRoot": "dist/{projectRoot}"
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "packages/guardrails/jest.config.ts"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  }
 }
-

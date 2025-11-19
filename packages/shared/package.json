@@ -6,16 +6,15 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./index.d.ts",
-      "import": "./index.js",
-      "require": "./index.cjs",
-      "default": "./index.js"
+      "types": "./src/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./package.json": "./package.json"
   },
-  "types": "./index.d.ts",
-  "main": "./index.cjs",
-  "module": "./index.js",
+  "types": "./src/index.d.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "sideEffects": false,
   "dependencies": {
     "tslib": "^2.3.0"

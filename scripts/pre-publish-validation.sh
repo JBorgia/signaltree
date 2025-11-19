@@ -52,9 +52,9 @@ run_check() {
     local check_name=$1
     local command=$2
     local severity=${3:-error}
-    
+
     print_step "Running: $check_name"
-    
+
     if eval "$command" > /dev/null 2>&1; then
         print_success "$check_name passed"
         return 0
@@ -141,7 +141,7 @@ print_header "6. Test Coverage"
 print_step "Generating test coverage reports"
 if bash scripts/test-coverage.sh 2>&1 | tee /tmp/coverage.log; then
     print_success "Test coverage generated"
-    
+
     # Check coverage thresholds
     if [ -f "coverage/coverage-summary.json" ]; then
         print_info "Coverage summary:"
@@ -166,20 +166,10 @@ print_info "Building independent packages (core, callable-syntax, guardrails, sh
 print_info "Note: enterprise and ng-forms will be built during release after core is published"
 
 # Build core and other independent packages
-if NX_DAEMON=false npx nx run-many -t build --projects=core,callable-syntax,shared,types,utils 2>&1 | tee /tmp/build.log; then
+if NX_DAEMON=false npx nx run-many -t build --projects=core,callable-syntax,shared,types,utils,guardrails 2>&1 | tee /tmp/build.log; then
     print_success "Independent packages built successfully"
 else
     print_error "Build failed"
-    cat /tmp/build.log
-    exit 1
-fi
-
-# Build guardrails separately (uses tsup, not Nx)
-print_step "Building guardrails package"
-if pnpm --filter @signaltree/guardrails build 2>&1 | tee -a /tmp/build.log; then
-    print_success "Guardrails package built successfully"
-else
-    print_error "Guardrails build failed"
     cat /tmp/build.log
     exit 1
 fi
@@ -248,12 +238,12 @@ if [ -f "scripts/perf-suite.js" ]; then
         print_error "timeout command not found (install coreutils: brew install coreutils)"
         exit 1
     fi
-    
+
     set +e  # Temporarily disable exit on error
     $TIMEOUT_CMD 300 node scripts/perf-suite.js 2>&1 | tee /tmp/perf.log
     PERF_EXIT=$?
     set -e  # Re-enable exit on error
-    
+
     if [ $PERF_EXIT -eq 0 ]; then
         print_success "Performance benchmarks completed"
     else
@@ -280,7 +270,7 @@ done
 
 if [ $MISSING_DOCS -eq 0 ]; then
     print_success "All required documentation files present"
-    
+
     # Check if CHANGELOG has an entry for the current version
     if [ -f "CHANGELOG.md" ]; then
         CURRENT_VERSION=$(node -p "require('./package.json').version")
@@ -314,11 +304,11 @@ if [ $VALIDATION_ERRORS -gt 0 ]; then
 else
     echo ""
     print_success "All validation checks PASSED! ✨"
-    
+
     if [ $VALIDATION_WARNINGS -gt 0 ]; then
         print_warning "Note: $VALIDATION_WARNINGS warning(s) were found"
     fi
-    
+
     echo ""
     print_info "Ready to publish to npm 🚀"
     exit 0

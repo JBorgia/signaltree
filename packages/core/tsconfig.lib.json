@@ -2,10 +2,12 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "baseUrl": "../..",
-    "outDir": "../../dist/out-tsc",
+    "outDir": "../../dist/packages/core/dist",
+    "declarationDir": "../../dist/packages/core/dist",
     "declaration": true,
     "declarationMap": true,
     "inlineSources": false,
+    "module": "ESNext",
     "types": ["node"],
     "paths": {
       "@signaltree/shared": ["packages/shared/src/index.ts"],

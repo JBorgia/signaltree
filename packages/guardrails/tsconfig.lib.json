@@ -2,8 +2,8 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "baseUrl": "../..",
-    "outDir": "../../dist/packages/enterprise/dist",
-    "declarationDir": "../../dist/packages/enterprise/dist",
+    "outDir": "../../dist/packages/guardrails/dist",
+    "declarationDir": "../../dist/packages/guardrails/dist",
     "declaration": true,
     "declarationMap": true,
     "inlineSources": false,
@@ -15,10 +15,10 @@
     }
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["jest.config.ts", "src/**/*.spec.ts", "src/**/*.test.ts"],
-  "references": [
-    {
-      "path": "../core/tsconfig.lib.json"
-    }
+  "exclude": [
+    "jest.config.ts",
+    "src/**/*.spec.ts",
+    "src/**/*.test.ts",
+    "tests/**/*.ts"
   ]
 }

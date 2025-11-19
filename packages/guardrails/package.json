@@ -4,38 +4,44 @@
   "description": "Development-only performance monitoring and anti-pattern detection for SignalTree",
   "type": "module",
   "sideEffects": false,
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/lib/guardrails.js",
+  "module": "./dist/lib/guardrails.js",
+  "types": "./src/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./src/index.d.ts",
       "development": {
-        "import": "./dist/index.js",
-        "require": "./dist/index.cjs"
+        "import": "./dist/lib/guardrails.js",
+        "default": "./dist/lib/guardrails.js"
       },
       "production": {
         "import": "./dist/noop.js",
-        "require": "./dist/noop.cjs"
+        "default": "./dist/noop.js"
       },
       "default": "./dist/noop.js"
     },
     "./factories": {
-      "types": "./dist/factories/index.d.ts",
+      "types": "./src/factories/index.d.ts",
       "development": {
         "import": "./dist/factories/index.js",
-        "require": "./dist/factories/index.cjs"
+        "default": "./dist/factories/index.js"
       },
       "production": {
         "import": "./dist/noop.js",
-        "require": "./dist/noop.cjs"
+        "default": "./dist/noop.js"
       },
+      "default": "./dist/noop.js"
+    },
+    "./noop": {
+      "types": "./src/noop.d.ts",
+      "import": "./dist/noop.js",
       "default": "./dist/noop.js"
     },
     "./package.json": "./package.json"
   },
   "files": [
     "dist",
+    "src",
     "README.md",
     "CHANGELOG.md"
   ],
@@ -43,21 +49,21 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsup",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "lint": "eslint src --ext .ts",
-    "type-check": "tsc --noEmit"
+    "build": "nx build guardrails",
+    "test": "nx test guardrails",
+    "lint": "nx lint guardrails",
+    "test:watch": "nx test guardrails --watch",
+    "test:coverage": "nx test guardrails --coverage",
+    "type-check": "tsc --project tsconfig.lib.json --noEmit"
   },
   "peerDependencies": {
-    "@signaltree/core": "^4.0.0"
+    "@signaltree/core": "^4.0.0",
+    "tslib": "^2.0.0"
   },
   "devDependencies": {
     "@signaltree/core": "workspace:*",
     "@signaltree/shared": "workspace:*",
-    "@signaltree/types": "workspace:*",
-    "tsup": "^8.0.0"
+    "@signaltree/types": "workspace:*"
   },
   "keywords": [
     "signaltree",

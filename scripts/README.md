@@ -71,6 +71,8 @@ npm run release:patch
 
 ## 🏗️ Build Scripts
 
+> **Note:** Every publishable SignalTree package (including `@signaltree/guardrails`) now builds through the shared Nx Rollup pipeline with `preserveModules`. Use `nx build <package>` or the workspace scripts below—no separate tsup step is required.
+
 ### Core Package Building
 
 ```bash

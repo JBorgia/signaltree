@@ -23,10 +23,15 @@ const { execSync } = require('child_process');
 
 // Package configuration with size targets
 const packages = [
-  { name: 'core', maxSize: 30000, claimed: 27000 },
+  {
+    name: 'core',
+    path: 'dist/packages/core/dist/index.js',
+    maxSize: 30000,
+    claimed: 27000,
+  },
   {
     name: 'enterprise',
-    path: 'dist/packages/enterprise/src/index.js',
+    path: 'dist/packages/enterprise/dist/index.js',
     maxSize: 8000,
     claimed: 7100,
   },
@@ -37,31 +42,31 @@ const packages = [
   },
   {
     name: 'callable-syntax',
-    path: 'dist/packages/callable-syntax/src/index.js',
+    path: 'dist/packages/callable-syntax/dist/index.js',
     maxSize: 3000,
     claimed: 2500,
   },
   {
     name: 'shared',
-    path: 'dist/packages/shared/src/index.js',
+    path: 'dist/packages/shared/dist/index.js',
     maxSize: 4200,
     claimed: 3800,
   },
   {
     name: 'types',
-    path: 'dist/packages/types/src/index.js',
+    path: 'dist/packages/types/dist/index.js',
     maxSize: 500,
-    claimed: 270,
+    claimed: 350,
   },
   {
     name: 'utils',
-    path: 'dist/packages/utils/src/index.js',
+    path: 'dist/packages/utils/dist/index.js',
     maxSize: 3200,
-    claimed: 2800,
+    claimed: 3400,
   },
   {
     name: 'guardrails',
-    path: 'dist/packages/guardrails/dist/index.js',
+    path: 'dist/packages/guardrails/dist/lib/guardrails.js',
     maxSize: 9000,
     claimed: 7500,
   },
@@ -73,55 +78,55 @@ const packages = [
   },
   {
     name: 'core/enhancers/batching',
-    path: 'dist/packages/core/src/enhancers/batching/lib/batching.js',
+    path: 'dist/packages/core/dist/enhancers/batching/lib/batching.js',
     maxSize: 1400,
     claimed: 1280,
   },
   {
     name: 'core/enhancers/memoization',
-    path: 'dist/packages/core/src/enhancers/memoization/lib/memoization.js',
+    path: 'dist/packages/core/dist/enhancers/memoization/lib/memoization.js',
     maxSize: 2650,
     claimed: 2570,
   },
   {
     name: 'core/enhancers/time-travel',
-    path: 'dist/packages/core/src/enhancers/time-travel/lib/time-travel.js',
+    path: 'dist/packages/core/dist/enhancers/time-travel/lib/time-travel.js',
     maxSize: 1950,
     claimed: 1350,
   },
   {
     name: 'core/enhancers/entities',
-    path: 'dist/packages/core/src/enhancers/entities/lib/entities.js',
+    path: 'dist/packages/core/dist/enhancers/entities/lib/entities.js',
     maxSize: 1000,
     claimed: 960,
   },
   {
     name: 'core/enhancers/middleware',
-    path: 'dist/packages/core/src/enhancers/middleware/lib/middleware.js',
+    path: 'dist/packages/core/dist/enhancers/middleware/lib/middleware.js',
     maxSize: 2000,
     claimed: 1360,
   },
   {
     name: 'core/enhancers/devtools',
-    path: 'dist/packages/core/src/enhancers/devtools/lib/devtools.js',
+    path: 'dist/packages/core/dist/enhancers/devtools/lib/devtools.js',
     maxSize: 2600,
     claimed: 2470,
   },
   {
     name: 'core/enhancers/serialization',
-    path: 'dist/packages/core/src/enhancers/serialization/lib/serialization.js',
+    path: 'dist/packages/core/dist/enhancers/serialization/lib/serialization.js',
     maxSize: 5200,
     claimed: 4860,
   },
   {
     name: 'core/enhancers/presets',
-    path: 'dist/packages/core/src/enhancers/presets/lib/presets.js',
+    path: 'dist/packages/core/dist/enhancers/presets/lib/presets.js',
     maxSize: 900,
     claimed: 720,
   },
   {
     name: 'core/enhancers/computed',
-    path: 'dist/packages/core/src/enhancers/computed/lib/computed.js',
+    path: 'dist/packages/core/dist/enhancers/computed/lib/computed.js',
     maxSize: 800,
     claimed: 270,
   },
@@ -135,17 +140,7 @@ const nxProjects = [
   'shared',
   'types',
   'utils',
-];
-
-const tsupPackages = [
-  {
-    name: '@signaltree/guardrails',
-    buildCommand: 'pnpm --filter @signaltree/guardrails build',
-    sourceRoot: 'packages/guardrails',
-    distSource: 'packages/guardrails/dist',
-    outputDir: 'dist/packages/guardrails',
-    assets: ['README.md', 'CHANGELOG.md', 'package.json'],
-  },
+  'guardrails',
 ];
 
 class BundleAnalyzer {
@@ -231,35 +226,6 @@ class BundleAnalyzer {
       { continueOnError: true } // Continue even if some builds fail
     );
 
-    tsupPackages.forEach((pkg) => {
-      this.execCommand(pkg.buildCommand, `Building ${pkg.name}`);
-
-      const outputDir = path.join(process.cwd(), pkg.outputDir);
-      if (fs.existsSync(outputDir)) {
-        fs.rmSync(outputDir, { recursive: true, force: true });
-      }
-      fs.mkdirSync(outputDir, { recursive: true });
-
-      const sourceDist = path.join(process.cwd(), pkg.distSource);
-      const targetDist = path.join(outputDir, 'dist');
-
-      if (fs.existsSync(sourceDist)) {
-        fs.cpSync(sourceDist, targetDist, { recursive: true });
-      } else {
-        this.log(
-          `${pkg.name}: Build output not found at ${sourceDist}`,
-          'warning'
-        );
-      }
-
-      pkg.assets.forEach((asset) => {
-        const assetPath = path.join(process.cwd(), pkg.sourceRoot, asset);
-        if (fs.existsSync(assetPath)) {
-          fs.copyFileSync(assetPath, path.join(outputDir, asset));
-        }
-      });
-    });
-
     // Build demo app
     this.execCommand(
       'pnpm nx build demo --configuration=production',
@@ -279,26 +245,27 @@ class BundleAnalyzer {
 
     packages.forEach((pkg) => {
       let distPath;
-      let measurementType = 'single-file'; // Track what we're measuring
 
       if (pkg.path) {
-        // Custom path specified
-        distPath = path.join(process.cwd(), pkg.path);
-      } else if (pkg.name === 'core') {
-        // Core uses @nx/js:tsc, outputs to src/index.js
-        distPath = path.join(
-          process.cwd(),
-          `dist/packages/${pkg.name}/src/index.js`
-        );
+        const customPaths = Array.isArray(pkg.path) ? pkg.path : [pkg.path];
+        distPath = customPaths
+          .map((rel) => path.join(process.cwd(), rel))
+          .find((candidate) => fs.existsSync(candidate));
+
+        if (!distPath && customPaths.length > 0) {
+          distPath = path.join(process.cwd(), customPaths[0]);
+        }
       } else {
-        // Other packages use ng-packagr, outputs to fesm2022/*.mjs
-        distPath = path.join(
-          process.cwd(),
-          `dist/packages/${pkg.name}/fesm2022/signaltree-${pkg.name}.mjs`
-        );
+        const candidatePaths = [
+          `dist/packages/${pkg.name}/dist/index.js`,
+          `dist/packages/${pkg.name}/src/index.js`,
+          `dist/packages/${pkg.name}/fesm2022/signaltree-${pkg.name}.mjs`,
+        ].map((rel) => path.join(process.cwd(), rel));
+
+        distPath = candidatePaths.find((candidate) => fs.existsSync(candidate));
       }
 
-      if (!fs.existsSync(distPath)) {
+      if (!distPath || !fs.existsSync(distPath)) {
         this.log(`${pkg.name}: Build not found at ${distPath}`, 'warning');
         return;
       }

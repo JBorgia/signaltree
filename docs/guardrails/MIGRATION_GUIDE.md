@@ -9,7 +9,7 @@ pnpm add -D @signaltree/guardrails
 ```
 
 - Remove any references to the docs-only package (`docs/guardrails/package.json`); the publishable package now lives at `packages/guardrails`.
-- Ensure the new build target (`pnpm --filter @signaltree/guardrails build`) is part of your CI workflow.
+- Ensure the new build target (`pnpm nx build guardrails`) is part of your CI workflow.
 
 ## 2. Update Imports
 
@@ -88,4 +88,3 @@ If you maintain forks or downstream pipelines, pull the updated scripts to make 
 - [ ] Run `pnpm nx test guardrails --coverage`
 - [ ] Run `node scripts/perf-suite.js`
 - [ ] Publish via `./scripts/release.sh`
-

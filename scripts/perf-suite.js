@@ -39,10 +39,7 @@ async function main() {
   // Run proxy callable overhead microbench
   console.log('\n⏱ Running proxy-call-overhead microbench');
   // Ensure core ESM bundle exists for the microbench import
-  const coreEsm = path.join(
-    process.cwd(),
-    'dist/packages/core/fesm2022/signaltree-core.mjs'
-  );
+  const coreEsm = path.join(process.cwd(), 'dist/packages/core/dist/index.js');
   if (!fs.existsSync(coreEsm)) {
     const buildMsg =
       '  ⏳ building @signaltree/core (production) for microbench...';

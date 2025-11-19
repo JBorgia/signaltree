@@ -6,10 +6,7 @@
     "declaration": true,
     "stripInternal": true,
     "sourceMap": false,
-    "outDir": "../../dist/packages/core/dist",
-    "declarationDir": "../../dist/packages/core/dist"
-  },
-  "angularCompilerOptions": {
-    "compilationMode": "partial"
+    "outDir": "../../dist/packages/enterprise/dist",
+    "declarationDir": "../../dist/packages/enterprise/dist"
   }
 }

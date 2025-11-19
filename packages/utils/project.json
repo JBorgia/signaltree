@@ -7,13 +7,31 @@
   "implicitDependencies": ["types"],
   "targets": {
     "build": {
-      "executor": "@nx/js:tsc",
-      "outputs": ["{options.outputPath}"],
+      "executor": "@nx/rollup:rollup",
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
+      "dependsOn": ["^build"],
       "options": {
-        "outputPath": "dist/packages/utils",
         "main": "packages/utils/src/index.ts",
-        "tsConfig": "packages/utils/tsconfig.lib.json",
-        "assets": ["packages/utils/*.md"]
+        "tsConfig": "packages/utils/tsconfig.lib.prod.json",
+        "outputPath": "dist/packages/utils",
+        "format": ["esm"],
+        "assets": [
+          {
+            "input": "packages/utils",
+            "glob": "README.md",
+            "output": "."
+          },
+          {
+            "input": "packages/utils",
+            "glob": "package.json",
+            "output": "."
+          }
+        ],
+        "rollupConfig": "packages/utils/rollup.config.mjs",
+        "deleteOutputPath": true,
+        "buildLibsFromSource": true,
+        "useLegacyTypescriptPlugin": false,
+        "generatePackageJson": false
       }
     }
   }

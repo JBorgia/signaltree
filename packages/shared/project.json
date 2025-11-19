@@ -6,12 +6,40 @@
   "tags": ["npm:private", "scope:shared"],
   "targets": {
     "build": {
-      "executor": "@nx/js:tsc",
-      "outputs": ["{options.outputPath}"],
+      "executor": "@nx/rollup:rollup",
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
       "options": {
-        "outputPath": "dist/packages/shared",
         "main": "packages/shared/src/index.ts",
-        "tsConfig": "packages/shared/tsconfig.lib.json"
+        "tsConfig": "packages/shared/tsconfig.lib.prod.json",
+        "outputPath": "dist/packages/shared",
+        "format": ["esm"],
+        "assets": [
+          {
+            "input": "packages/shared",
+            "glob": "README.md",
+            "output": "."
+          },
+          {
+            "input": "packages/shared",
+            "glob": "package.json",
+            "output": "."
+          },
+          {
+            "input": "packages/shared",
+            "glob": "index.d.ts",
+            "output": "."
+          },
+          {
+            "input": "packages/shared",
+            "glob": "index.js",
+            "output": "."
+          }
+        ],
+        "rollupConfig": "packages/shared/rollup.config.mjs",
+        "deleteOutputPath": true,
+        "buildLibsFromSource": false,
+        "useLegacyTypescriptPlugin": false,
+        "generatePackageJson": false
       }
     },
     "test": {

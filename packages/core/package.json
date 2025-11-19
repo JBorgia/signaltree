@@ -4,54 +4,64 @@
   "description": "Lightweight, type-safe signal-based state management for Angular. Core package providing hierarchical signal trees, basic entity management, and async actions.",
   "type": "module",
   "sideEffects": false,
-  "main": "./dist/index.cjs",
+  "main": "./dist/index.js",
   "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "types": "./src/index.d.ts",
   "exports": {
     ".": {
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs",
-      "types": "./dist/index.d.ts"
+      "default": "./dist/index.js",
+      "types": "./src/index.d.ts"
     },
     "./enhancers": {
       "import": "./dist/enhancers/index.js",
-      "types": "./dist/enhancers/index.d.ts"
+      "default": "./dist/enhancers/index.js",
+      "types": "./src/enhancers/index.d.ts"
     },
     "./enhancers/batching": {
       "import": "./dist/enhancers/batching/index.js",
-      "types": "./dist/enhancers/batching/index.d.ts"
+      "default": "./dist/enhancers/batching/index.js",
+      "types": "./src/enhancers/batching/index.d.ts"
     },
     "./enhancers/computed": {
       "import": "./dist/enhancers/computed/index.js",
-      "types": "./dist/enhancers/computed/index.d.ts"
+      "default": "./dist/enhancers/computed/index.js",
+      "types": "./src/enhancers/computed/index.d.ts"
     },
     "./enhancers/middleware": {
       "import": "./dist/enhancers/middleware/index.js",
-      "types": "./dist/enhancers/middleware/index.d.ts"
+      "default": "./dist/enhancers/middleware/index.js",
+      "types": "./src/enhancers/middleware/index.d.ts"
     },
     "./enhancers/memoization": {
       "import": "./dist/enhancers/memoization/index.js",
-      "types": "./dist/enhancers/memoization/index.d.ts"
+      "default": "./dist/enhancers/memoization/index.js",
+      "types": "./src/enhancers/memoization/index.d.ts"
     },
     "./enhancers/time-travel": {
       "import": "./dist/enhancers/time-travel/index.js",
-      "types": "./dist/enhancers/time-travel/index.d.ts"
+      "default": "./dist/enhancers/time-travel/index.js",
+      "types": "./src/enhancers/time-travel/index.d.ts"
     },
     "./enhancers/devtools": {
       "import": "./dist/enhancers/devtools/index.js",
-      "types": "./dist/enhancers/devtools/index.d.ts"
+      "default": "./dist/enhancers/devtools/index.js",
+      "types": "./src/enhancers/devtools/index.d.ts"
     },
     "./enhancers/presets": {
       "import": "./dist/enhancers/presets/index.js",
-      "types": "./dist/enhancers/presets/index.d.ts"
+      "default": "./dist/enhancers/presets/index.js",
+      "types": "./src/enhancers/presets/index.d.ts"
     },
     "./enhancers/entities": {
       "import": "./dist/enhancers/entities/index.js",
-      "types": "./dist/enhancers/entities/index.d.ts"
+      "default": "./dist/enhancers/entities/index.js",
+      "types": "./src/enhancers/entities/index.d.ts"
     },
     "./enhancers/serialization": {
       "import": "./dist/enhancers/serialization/index.js",
-      "types": "./dist/enhancers/serialization/index.d.ts"
+      "default": "./dist/enhancers/serialization/index.js",
+      "types": "./src/enhancers/serialization/index.d.ts"
     }
   },
   "peerDependencies": {
@@ -63,6 +73,7 @@
   },
   "files": [
     "dist",
+    "src",
     "README.md",
     "package.json"
   ]

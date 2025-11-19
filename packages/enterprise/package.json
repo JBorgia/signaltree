@@ -4,14 +4,44 @@
   "description": "Enterprise-grade optimizations for SignalTree. Provides diff-based updates, bulk operation optimization, and advanced change tracking for large-scale applications.",
   "type": "module",
   "sideEffects": false,
-  "main": "./src/index.js",
-  "module": "./src/index.js",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "types": "./src/index.d.ts",
   "exports": {
     ".": {
-      "import": "./src/index.js",
-      "require": "./src/index.js",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js",
       "types": "./src/index.d.ts"
+    },
+    "./diff-engine": {
+      "import": "./dist/lib/diff-engine.js",
+      "default": "./dist/lib/diff-engine.js",
+      "types": "./src/lib/diff-engine.d.ts"
+    },
+    "./path-index": {
+      "import": "./dist/lib/path-index.js",
+      "default": "./dist/lib/path-index.js",
+      "types": "./src/lib/path-index.d.ts"
+    },
+    "./update-engine": {
+      "import": "./dist/lib/update-engine.js",
+      "default": "./dist/lib/update-engine.js",
+      "types": "./src/lib/update-engine.d.ts"
+    },
+    "./enterprise-enhancer": {
+      "import": "./dist/lib/enterprise-enhancer.js",
+      "default": "./dist/lib/enterprise-enhancer.js",
+      "types": "./src/lib/enterprise-enhancer.d.ts"
+    },
+    "./scheduler": {
+      "import": "./dist/lib/scheduler.js",
+      "default": "./dist/lib/scheduler.js",
+      "types": "./src/lib/scheduler.d.ts"
+    },
+    "./thread-pools": {
+      "import": "./dist/lib/thread-pools.js",
+      "default": "./dist/lib/thread-pools.js",
+      "types": "./src/lib/thread-pools.d.ts"
     }
   },
   "keywords": [
@@ -38,10 +68,8 @@
   },
   "peerDependencies": {
     "@angular/core": "^20.3.0",
-    "@signaltree/core": "^4.0.0"
-  },
-  "dependencies": {
-    "tslib": "^2.3.0"
+    "@signaltree/core": "^4.0.0",
+    "tslib": "^2.0.0"
   },
   "devDependencies": {
     "@signaltree/core": "workspace:*"
@@ -50,6 +78,7 @@
     "access": "public"
   },
   "files": [
+    "dist",
     "src",
     "README.md",
     "package.json"

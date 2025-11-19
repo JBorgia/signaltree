@@ -10,7 +10,7 @@ This file provides comprehensive context for AI assistants working on the Signal
 - **Framework**: Angular (for ng-forms, demo)
 - **Package Manager**: pnpm
 - **Monorepo Tool**: Nx
-- **Build Tools**: Rollup (packages), tsup (guardrails), Angular CLI (demo)
+- **Build Tools**: Rollup (packages & guardrails), Angular CLI (demo)
 - **Testing**: Jest
 - **Linting**: ESLint
 - **License**: BSL-1.1 (Business Source License)
@@ -26,7 +26,7 @@ signaltree/
 │   ├── ng-forms/         # Angular forms integration
 │   ├── callable-syntax/  # Build-time transform for callable DX
 │   ├── enterprise/       # Enterprise optimizations
-│   ├── guardrails/       # Dev-only performance monitoring (tsup)
+│   ├── guardrails/       # Dev-only performance monitoring (Rollup build)
 │   ├── shared/           # Internal shared utilities (PRIVATE - not published)
 │   ├── types/            # Internal TypeScript types (PRIVATE)
 │   └── utils/            # Internal utilities (PRIVATE)
@@ -40,6 +40,7 @@ signaltree/
 ### Package Dependencies
 
 **Published Packages** (public on npm):
+
 - `@signaltree/core` - Main package, no external deps
 - `@signaltree/ng-forms` - Depends on `@signaltree/core` (peerDep)
 - `@signaltree/callable-syntax` - Independent build transform
@@ -47,6 +48,7 @@ signaltree/
 - `@signaltree/guardrails` - Dev-only, conditional exports (noop.js for prod)
 
 **Private Packages** (internal only):
+
 - `@signaltree/shared` - Bundled into other packages at build time
 - `@signaltree/types` - Internal type definitions
 - `@signaltree/utils` - Internal utilities
@@ -58,14 +60,16 @@ signaltree/
 ### Package Build Systems
 
 1. **Core, ng-forms, callable-syntax, enterprise**: Nx + Rollup
+
    - Entry: `src/index.ts`
    - Output: `dist/` with CJS, ESM, and type definitions
    - Build: `nx build <package>`
 
-2. **Guardrails**: pnpm + tsup
+2. **Guardrails**: Nx + Rollup (shared preserveModules configuration)
+
    - Entry: `src/index.ts`, `src/noop.ts`, `src/factories/index.ts`
-   - Output: `dist/` with CJS, ESM for each entry
-   - Build: `pnpm --filter @signaltree/guardrails build`
+   - Output: `dist/` with ESM per module and declarations in `src/`
+   - Build: `pnpm nx build guardrails`
    - Special: Conditional exports (noop.js for production)
 
 3. **Demo**: Angular CLI
@@ -80,7 +84,7 @@ pnpm run build:all
 
 # Build specific package
 nx build core
-pnpm --filter @signaltree/guardrails build
+pnpm nx build guardrails
 
 # Build for production
 pnpm run build:production
@@ -94,9 +98,7 @@ pnpm run test:all
 
 # Specific package
 nx test core
-
-# Guardrails (requires special handling)
-pnpm --filter @signaltree/guardrails test --runInBand
+pnpm nx test guardrails --runInBand
 
 # Coverage
 bash scripts/test-coverage.sh
@@ -131,6 +133,7 @@ The release script **automatically runs** comprehensive validation:
 13. ⚠️ Documentation complete (warning only)
 
 **Run validation manually**:
+
 ```bash
 npm run validate
 ```
@@ -138,12 +141,14 @@ npm run validate
 ### Automatic Rollback
 
 If validation fails, the release script **automatically**:
+
 - Restores original package versions
 - Cleans build artifacts
 - Removes git tags (local and remote)
 - Resets working directory
 
 **Documentation**:
+
 - `RELEASE_PROCESS.md` - Comprehensive release guide
 - `.github/VALIDATION_GUIDE.md` - Quick reference
 - `docs/VALIDATION_SYSTEM.md` - Implementation details
@@ -153,13 +158,13 @@ If validation fails, the release script **automatically**:
 
 **CRITICAL**: These are enforced in validation:
 
-| Package | Max Size | Max Gzipped |
-|---------|----------|-------------|
-| core | 15KB | 5KB |
-| ng-forms | 10KB | 4KB |
-| callable-syntax | 5KB | 2KB |
-| enterprise | 8KB | 3KB |
-| guardrails | 12KB | 4KB |
+| Package         | Max Size | Max Gzipped |
+| --------------- | -------- | ----------- |
+| core            | 15KB     | 5KB         |
+| ng-forms        | 10KB     | 4KB         |
+| callable-syntax | 5KB      | 2KB         |
+| enterprise      | 8KB      | 3KB         |
+| guardrails      | 12KB     | 4KB         |
 
 Check sizes: `npm run analyze:bundle`
 
@@ -169,13 +174,15 @@ Check sizes: `npm run analyze:bundle`
 
 **Issue**: `@signaltree/core` module not found during build for enterprise/ng-forms
 
-**Solution**: 
+**Solution**:
+
 - Add `@signaltree/core` to `devDependencies` (NOT dependencies!)
 - Fix `tsconfig.lib.json` paths to use `../../packages/core/src/index.ts`
 
 **Issue**: `@signaltree/shared` not found
 
 **Solution**:
+
 - NEVER add to `dependencies` or `peerDependencies`
 - It's bundled at build time via Rollup configuration
 - Only use in `devDependencies` if needed for development
@@ -185,25 +192,29 @@ Check sizes: `npm run analyze:bundle`
 **Issue**: Jest `Cannot find module '@jest/test-sequencer'`
 
 **Solution**:
+
 - Guardrails uses local stub: `packages/guardrails/tests/jest-test-sequencer.stub.ts`
 - Config: `testSequencer: '<rootDir>/tests/jest-test-sequencer.stub.ts'`
 
 **Issue**: Guardrails tests fail in parallel
 
 **Solution**:
+
 - Always run with `--runInBand` flag
-- Command: `pnpm --filter @signaltree/guardrails test --runInBand`
+- Command: `pnpm nx test guardrails --runInBand`
 
 ### 3. Linting Issues
 
 **Issue**: `@nx/dependency-checks` errors
 
 **Common causes**:
+
 - Package in `devDependencies` but used as runtime dependency
 - Package in `dependencies` but not actually used
 - Private packages (`@signaltree/shared`) incorrectly listed
 
 **Solution**:
+
 - Runtime deps → `dependencies` or `peerDependencies`
 - Build-time deps → `devDependencies`
 - Private packages → bundled, not listed as deps
@@ -213,6 +224,7 @@ Check sizes: `npm run analyze:bundle`
 **Issue**: `Failed to start plugin worker`, `EPERM` errors
 
 **Solution**:
+
 ```bash
 pnpm nx reset
 # Then run commands with daemon disabled
@@ -224,6 +236,7 @@ NX_DAEMON=false pnpm run build:all
 **Issue**: Vercel deployment fails with `ERR_PNPM_OUTDATED_LOCKFILE`
 
 **Solution**:
+
 ```bash
 pnpm install  # Regenerate lockfile
 git add pnpm-lock.yaml
@@ -236,6 +249,7 @@ git push
 **Issue**: `EOTP` (One-Time Password required)
 
 **Solution**:
+
 - Use **Automation Token** (not Publish token)
 - Create at: https://www.npmjs.com/settings/<username>/tokens
 - Configure: `npm config set //registry.npmjs.org/:_authToken=YOUR_TOKEN`
@@ -261,15 +275,10 @@ git push
 
 1. External dependencies (node_modules)
 2. Internal workspace packages (`@signaltree/*`)
-3. Relative imports (`./*`, `../*`)
-
-### Comments
-
-- **JSDoc**: All public APIs
-- **Implementation comments**: Complex logic only
-- **TODO**: Use `TODO:` prefix with context
 
 ## Testing Guidelines
+
+**Build Tools**: Rollup (packages & guardrails), Angular CLI (demo)
 
 ### Test Structure
 
@@ -279,10 +288,10 @@ describe('FeatureName', () => {
     it('should do something', () => {
       // Arrange
       const input = ...;
-      
+
       // Act
       const result = ...;
-      
+
       // Assert
       expect(result).toBe(...);
     });
@@ -296,6 +305,9 @@ describe('FeatureName', () => {
 - Branches: 75%
 - Functions: 80%
 - Lines: 80%
+
+2. **Guardrails**: pnpm + Nx (Rollup)
+   `packages/guardrails/rollup.config.mjs` - shared Rollup configuration
 
 ### Test Naming
 
@@ -343,10 +355,10 @@ describe('FeatureName', () => {
 export class FeatureComponent {
   // Signals
   state = signal(initialValue);
-  
+
   // Computed
   derived = computed(() => ...);
-  
+
   // Effects
   constructor() {
     effect(() => {
@@ -368,6 +380,7 @@ export class FeatureComponent {
 ### Commit Messages
 
 Follow conventional commits:
+
 - `feat:` - New feature
 - `fix:` - Bug fix
 - `chore:` - Maintenance
@@ -379,9 +392,9 @@ Follow conventional commits:
 ### Branch Strategy
 
 - **main**: Production-ready code
-- **feature/***: New features
-- **fix/***: Bug fixes
-- **chore/***: Maintenance
+- **feature/\***: New features
+- **fix/\***: Bug fixes
+- **chore/\***: Maintenance
 
 ### Pre-Commit
 
@@ -467,12 +480,14 @@ pnpm run quality:check
 ### IDE Configuration
 
 **VSCode Extensions** (recommended):
+
 - Angular Language Service
 - ESLint
 - Prettier
 - TypeScript and JavaScript Language Features
 
 **Settings**:
+
 ```json
 {
   "typescript.tsdk": "node_modules/typescript/lib",
@@ -498,8 +513,8 @@ pnpm run quality:check
 
 - `packages/*/project.json` - Nx project configuration
 - `packages/*/tsconfig.lib.json` - Package TypeScript config
-- `packages/*/rollup.config.js` - Rollup configuration
-- `packages/guardrails/tsup.config.ts` - tsup configuration
+- `packages/*/rollup.config.mjs` - Rollup configuration (shared helper)
+- `packages/guardrails/rollup.config.mjs` - Guardrails Rollup entry point
 
 ### Documentation
 
@@ -514,6 +529,7 @@ pnpm run quality:check
 ### Recursive Typing
 
 The core innovation of SignalTree:
+
 ```typescript
 // Unlimited depth with perfect type inference
 const tree = signalTree({ user: { profile: { settings: { theme: 'dark' } } } });
@@ -544,6 +560,7 @@ Production builds get no-op functions, dev gets full monitoring.
 ### Private Packages
 
 `@signaltree/shared`, `types`, `utils` are:
+
 - Marked `"private": true` in package.json
 - NOT published to npm
 - Bundled into other packages via Rollup
@@ -651,4 +668,3 @@ npm deprecate @signaltree/core@4.0.X "Critical bug, use 4.0.Y instead"
 **Maintained by**: SignalTree Core Team
 
 This document should be the **first thing** loaded when working on SignalTree.
-

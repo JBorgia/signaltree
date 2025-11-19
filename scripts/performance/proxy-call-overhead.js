@@ -17,9 +17,7 @@ function pad(n, w = 8) {
 }
 
 async function main() {
-  const core = await import(
-    '../../dist/packages/core/fesm2022/signaltree-core.mjs'
-  );
+  const core = await import('../../dist/packages/core/dist/index.js');
   const { signalTree } = core;
 
   const tree = signalTree({ n: 0, arr: [0] });

@@ -4,15 +4,45 @@
   "sourceRoot": "packages/enterprise/src",
   "projectType": "library",
   "tags": ["scope:enterprise", "type:feature"],
+  "implicitDependencies": ["core"],
+  "release": {
+    "version": {
+      "manifestRootsToUpdate": ["dist/{projectRoot}"],
+      "currentVersionResolver": "git-tag",
+      "fallbackCurrentVersionResolver": "disk"
+    }
+  },
   "targets": {
     "build": {
-      "executor": "@nx/js:tsc",
-      "outputs": ["{options.outputPath}"],
+      "executor": "@nx/rollup:rollup",
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
       "options": {
-        "outputPath": "dist/packages/enterprise",
         "main": "packages/enterprise/src/index.ts",
-        "tsConfig": "packages/enterprise/tsconfig.lib.json",
-        "assets": ["packages/enterprise/*.md"]
+        "tsConfig": "packages/enterprise/tsconfig.lib.prod.json",
+        "outputPath": "dist/packages/enterprise",
+        "format": ["esm"],
+        "assets": [
+          {
+            "input": "packages/enterprise",
+            "glob": "README.md",
+            "output": "."
+          },
+          {
+            "input": "packages/enterprise",
+            "glob": "package.json",
+            "output": "."
+          }
+        ],
+        "rollupConfig": "packages/enterprise/rollup.config.mjs",
+        "deleteOutputPath": true,
+        "buildLibsFromSource": false,
+        "useLegacyTypescriptPlugin": false,
+        "generatePackageJson": false
+      }
+    },
+    "nx-release-publish": {
+      "options": {
+        "packageRoot": "dist/{projectRoot}"
       }
     },
     "test": {
@@ -21,6 +51,9 @@
       "options": {
         "jestConfig": "packages/enterprise/jest.config.ts"
       }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
     }
   }
 }

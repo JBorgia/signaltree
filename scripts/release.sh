@@ -43,7 +43,7 @@ PACKAGES=(
     "ng-forms"        # Angular forms integration
     "callable-syntax" # Build-time transform for callable DX syntax
     "enterprise"      # Enterprise-grade optimizations for large-scale apps
-    "guardrails"      # Dev-only performance guardrails with tsup build
+    "guardrails"      # Dev-only performance guardrails (Rollup build)
 )
 
 # Parse command line arguments
@@ -301,40 +301,13 @@ for package in "${PACKAGES[@]}"; do
     fi
 done
 
-NX_REMAINING_PACKAGES=()
-BUILD_GUARDRAILS=false
-for package in "${REMAINING_PACKAGES[@]}"; do
-    if [ "$package" = "guardrails" ]; then
-        BUILD_GUARDRAILS=true
-    else
-        NX_REMAINING_PACKAGES+=("$package")
-    fi
-done
-
-if [ ${#NX_REMAINING_PACKAGES[@]} -gt 0 ]; then
+if [ ${#REMAINING_PACKAGES[@]} -gt 0 ]; then
     print_step "Building remaining Nx packages..."
-    REMAINING_LIST=$(IFS=,; echo "${NX_REMAINING_PACKAGES[*]}")
+    REMAINING_LIST=$(IFS=,; echo "${REMAINING_PACKAGES[*]}")
     npx nx run-many -t build --projects=$REMAINING_LIST --configuration=production || {
         print_warning "Some dependent packages failed to build, but continuing with core..."
         print_warning "Failed packages will be skipped during publish"
     }
-fi
-
-if [ "$BUILD_GUARDRAILS" = true ]; then
-    print_step "Building @signaltree/guardrails with tsup..."
-    if ! pnpm --filter @signaltree/guardrails build; then
-        print_error "Guardrails package build failed! Rolling back version changes."
-        rollback_versions
-        exit 1
-    fi
-    mkdir -p dist/packages
-    rm -rf dist/packages/guardrails
-    mkdir -p dist/packages/guardrails
-    cp -R packages/guardrails/dist dist/packages/guardrails/
-    cp packages/guardrails/README.md dist/packages/guardrails/ 2>/dev/null || true
-    cp packages/guardrails/CHANGELOG.md dist/packages/guardrails/ 2>/dev/null || true
-    cp packages/guardrails/package.json dist/packages/guardrails/
-    print_success "Guardrails package built successfully"
 fi
 
 print_success "Package builds completed"

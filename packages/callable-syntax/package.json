@@ -3,36 +3,37 @@
   "version": "4.0.16",
   "description": "Optional zero-runtime callable syntax transform for SignalTree unified leaf API.",
   "license": "BSL-1.1",
-  "type": "commonjs",
-  "main": "./src/index.js",
-  "module": "./src/index.js",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "types": "./src/index.d.ts",
   "exports": {
     ".": {
       "types": "./src/index.d.ts",
-      "require": "./src/index.js",
-      "import": "./src/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./vite": {
       "types": "./src/lib/vite-plugin.d.ts",
-      "require": "./src/lib/vite-plugin.js",
-      "import": "./src/lib/vite-plugin.js"
+      "import": "./dist/lib/vite-plugin.js",
+      "default": "./dist/lib/vite-plugin.js"
     },
     "./webpack": {
       "types": "./src/lib/webpack-plugin.d.ts",
-      "require": "./src/lib/webpack-plugin.js",
-      "import": "./src/lib/webpack-plugin.js"
+      "import": "./dist/lib/webpack-plugin.js",
+      "default": "./dist/lib/webpack-plugin.js"
     },
     "./augmentation": {
       "types": "./src/augmentation.d.ts",
-      "require": "./src/augmentation.js",
-      "import": "./src/augmentation.js"
+      "import": "./dist/augmentation.js",
+      "default": "./dist/augmentation.js"
     }
   },
   "publishConfig": {
     "access": "public"
   },
   "files": [
+    "dist",
     "src",
     "README.md",
     "package.json"

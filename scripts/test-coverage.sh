@@ -67,7 +67,7 @@ for i in "${!PACKAGES[@]}"; do
     print_step "[$current/$TOTAL_PACKAGES] Testing package: $pkg"
 
     if [ "$pkg" = "guardrails" ]; then
-        if pnpm --filter @signaltree/guardrails test --runInBand --coverage --coverageDirectory=coverage/packages/guardrails --silent; then
+        if pnpm nx test guardrails --runInBand --coverage --coverageDirectory=coverage/packages/guardrails --silent; then
             print_success "✓ $pkg - Tests passed"
             ((SUCCESSFUL_TESTS++))
         else

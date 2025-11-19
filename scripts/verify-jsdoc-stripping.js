@@ -22,11 +22,20 @@ let allPassed = true;
 packages.forEach((pkg) => {
   console.log(`📦 ${pkg}:`);
 
-  const jsFile = path.join(
-    __dirname,
-    `../dist/packages/${pkg}/fesm2022/signaltree-${pkg}.mjs`
-  );
-  const dtsFile = path.join(__dirname, `../dist/packages/${pkg}/index.d.ts`);
+  const jsCandidates = [
+    path.join(__dirname, `../dist/packages/${pkg}/dist/index.js`),
+    path.join(
+      __dirname,
+      `../dist/packages/${pkg}/fesm2022/signaltree-${pkg}.mjs`
+    ),
+  ];
+  const dtsCandidates = [
+    path.join(__dirname, `../dist/packages/${pkg}/src/index.d.ts`),
+    path.join(__dirname, `../dist/packages/${pkg}/index.d.ts`),
+  ];
+
+  const jsFile = jsCandidates.find((candidate) => fs.existsSync(candidate));
+  const dtsFile = dtsCandidates.find((candidate) => fs.existsSync(candidate));
 
   let jsExists = false;
   let dtsExists = false;
@@ -37,7 +46,7 @@ packages.forEach((pkg) => {
 
   // Check if files exist
   try {
-    if (fs.existsSync(jsFile)) {
+    if (jsFile && fs.existsSync(jsFile)) {
       jsExists = true;
       const jsContent = fs.readFileSync(jsFile, 'utf8');
       jsHasJSDoc = jsContent.includes('/**') && jsContent.includes('*/');
@@ -49,7 +58,7 @@ packages.forEach((pkg) => {
   }
 
   try {
-    if (fs.existsSync(dtsFile)) {
+    if (dtsFile && fs.existsSync(dtsFile)) {
       dtsExists = true;
       const dtsContent = fs.readFileSync(dtsFile, 'utf8');
       dtsHasJSDoc = dtsContent.includes('/**') && dtsContent.includes('*/');
@@ -63,18 +72,22 @@ packages.forEach((pkg) => {
     const gzipInfo = gzipSize
       ? `, ${(gzippedSize / 1024).toFixed(2)}KB gzipped`
       : '';
+    const rel = path.relative(process.cwd(), jsFile);
     console.log(
-      `   .mjs file: ${jsHasJSDoc ? '❌ Contains JSDoc' : '✅ No JSDoc'} (${(
-        jsSize / 1024
-      ).toFixed(2)}KB raw${gzipInfo})`
+      `   bundle file (${rel}): ${
+        jsHasJSDoc ? '❌ Contains JSDoc' : '✅ No JSDoc'
+      } (${(jsSize / 1024).toFixed(2)}KB raw${gzipInfo})`
     );
   } else {
-    console.log(`   .mjs file: ⚠️  Not found`);
+    console.log(`   bundle file: ⚠️  Not found`);
   }
 
   if (dtsExists) {
+    const relDts = path.relative(process.cwd(), dtsFile);
     console.log(
-      `   .d.ts file: ${dtsHasJSDoc ? '✅ Has JSDoc' : '❌ Missing JSDoc'}`
+      `   .d.ts file (${relDts}): ${
+        dtsHasJSDoc ? '✅ Has JSDoc' : '❌ Missing JSDoc'
+      }`
     );
   } else {
     console.log(`   .d.ts file: ⚠️  Not found`);

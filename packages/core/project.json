@@ -15,39 +15,32 @@
   "implicitDependencies": ["utils"],
   "targets": {
     "build": {
-      "executor": "@nx/js:tsc",
+      "executor": "@nx/rollup:rollup",
       "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
+      "dependsOn": ["^build"],
       "options": {
         "main": "packages/core/src/index.ts",
-        "tsConfig": "packages/core/tsconfig.lib.json",
+        "tsConfig": "packages/core/tsconfig.lib.prod.json",
         "outputPath": "dist/packages/core",
+        "format": ["esm"],
         "assets": [
           {
             "input": "packages/core",
             "glob": "README.md",
             "output": "."
+          },
+          {
+            "input": "packages/core",
+            "glob": "package.json",
+            "output": "."
           }
-        ]
-      },
-      "postTargets": ["postbuild"],
-      "configurations": {
-        "production": {
-          "tsConfig": "packages/core/tsconfig.lib.prod.json"
-        },
-        "development": {
-          "tsConfig": "packages/core/tsconfig.lib.json"
-        }
-      },
-      "defaultConfiguration": "production"
-    },
-    "postbuild": {
-      "executor": "nx:run-commands",
-      "outputs": [],
-      "options": {
-        "command": "node packages/core/post-build.cjs",
-        "cwd": "{workspaceRoot}"
-      },
-      "dependsOn": ["build"]
+        ],
+        "rollupConfig": "packages/core/rollup.config.mjs",
+        "deleteOutputPath": true,
+        "buildLibsFromSource": true,
+        "useLegacyTypescriptPlugin": false,
+        "generatePackageJson": false
+      }
     },
     "nx-release-publish": {
       "options": {

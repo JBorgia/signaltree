@@ -12,28 +12,28 @@ NC='\033[0m'
 
 # Only verify packages that were actually built during validation
 # enterprise and ng-forms are skipped during validation
-NX_PACKAGES=("core" "callable-syntax" "shared" "types" "utils")
-TSUP_PACKAGES=("guardrails")
+NX_PACKAGES=("core" "callable-syntax" "shared" "types" "utils" "guardrails")
 ERRORS=0
 
 echo "Verifying distribution files for independent packages..."
 echo "(Note: enterprise and ng-forms are built during release, not validation)"
 echo ""
 
-# Check Nx-built packages (output to dist/packages/$package/src/)
+# Check Nx-built packages (output to dist/packages/$package)
 for package in "${NX_PACKAGES[@]}"; do
     DIST_DIR="./dist/packages/$package"
-    SRC_DIR="$DIST_DIR/src"
-    
+    JS_DIR="$DIST_DIR/dist"
+    DTS_DIR="$DIST_DIR/src"
+
     echo "Checking Nx package: $package..."
-    
+
     # Check dist directory exists
     if [ ! -d "$DIST_DIR" ]; then
         echo -e "${RED}❌ Missing dist directory: $DIST_DIR${NC}"
         ((ERRORS++))
         continue
     fi
-    
+
     # Check for package.json
     if [ ! -f "$DIST_DIR/package.json" ]; then
         echo -e "${RED}❌ Missing package.json in $DIST_DIR${NC}"
@@ -41,79 +41,66 @@ for package in "${NX_PACKAGES[@]}"; do
     else
         echo -e "${GREEN}✓ package.json found${NC}"
     fi
-    
-    # Check for main entry point in src/ subdirectory
-    if [ ! -f "$SRC_DIR/index.js" ]; then
-        echo -e "${RED}❌ Missing index.js in $SRC_DIR${NC}"
-        ((ERRORS++))
-    else
-        echo -e "${GREEN}✓ index.js found${NC}"
-    fi
-    
-    # Check for TypeScript declarations in src/ subdirectory
-    if [ ! -f "$SRC_DIR/index.d.ts" ]; then
-        echo -e "${RED}❌ Missing index.d.ts in $SRC_DIR${NC}"
-        ((ERRORS++))
-    else
-        echo -e "${GREEN}✓ index.d.ts found${NC}"
-    fi
-    
-    echo -e "${GREEN}✅ $package verified${NC}\n"
-done
 
-# Check tsup-built packages (output to packages/$package/dist/)
-for package in "${TSUP_PACKAGES[@]}"; do
-    DIST_DIR="./packages/$package/dist"
-    
-    echo "Checking tsup package: $package..."
-    
-    # Check dist directory exists
-    if [ ! -d "$DIST_DIR" ]; then
-        echo -e "${RED}❌ Missing dist directory: $DIST_DIR${NC}"
-        ((ERRORS++))
-        continue
-    fi
-    
-    # Check for main entry points (both CJS and ESM)
-    if [ ! -f "$DIST_DIR/index.js" ]; then
-        echo -e "${RED}❌ Missing index.js in $DIST_DIR${NC}"
+    # Check for compiled JS entry point
+    if [ ! -d "$JS_DIR" ]; then
+        echo -e "${RED}❌ Missing compiled output directory: $JS_DIR${NC}"
         ((ERRORS++))
     else
-        echo -e "${GREEN}✓ index.js found${NC}"
+        if [ "$package" = "guardrails" ]; then
+            GUARDRAILS_EXPECTED=(
+                "$JS_DIR/lib/guardrails.js"
+                "$JS_DIR/factories/index.js"
+                "$JS_DIR/noop.js"
+            )
+            for expected in "${GUARDRAILS_EXPECTED[@]}"; do
+                RELATIVE_PATH="${expected#$JS_DIR/}"
+                if [ ! -f "$expected" ]; then
+                    echo -e "${RED}❌ Missing guardrails artifact: $RELATIVE_PATH${NC}"
+                    ((ERRORS++))
+                else
+                    echo -e "${GREEN}✓ $RELATIVE_PATH found${NC}"
+                fi
+            done
+        else
+            if [ ! -f "$JS_DIR/index.js" ]; then
+                echo -e "${RED}❌ Missing index.js in $JS_DIR${NC}"
+                ((ERRORS++))
+            else
+                echo -e "${GREEN}✓ index.js found${NC}"
+            fi
+        fi
     fi
-    
-    if [ ! -f "$DIST_DIR/index.cjs" ]; then
-        echo -e "${RED}❌ Missing index.cjs in $DIST_DIR${NC}"
-        ((ERRORS++))
-    else
-        echo -e "${GREEN}✓ index.cjs found${NC}"
-    fi
-    
+
     # Check for TypeScript declarations
-    if [ ! -f "$DIST_DIR/index.d.ts" ]; then
-        echo -e "${RED}❌ Missing index.d.ts in $DIST_DIR${NC}"
+    if [ ! -d "$DTS_DIR" ]; then
+        echo -e "${RED}❌ Missing declaration directory: $DTS_DIR${NC}"
         ((ERRORS++))
     else
-        echo -e "${GREEN}✓ index.d.ts found${NC}"
-    fi
-    
-    # Special checks for guardrails (has noop and factories)
-    if [ "$package" = "guardrails" ]; then
-        if [ ! -f "$DIST_DIR/noop.js" ]; then
-            echo -e "${RED}❌ Missing noop.js${NC}"
+        if [ ! -f "$DTS_DIR/index.d.ts" ]; then
+            echo -e "${RED}❌ Missing index.d.ts in $DTS_DIR${NC}"
             ((ERRORS++))
         else
-            echo -e "${GREEN}✓ noop.js found${NC}"
+            echo -e "${GREEN}✓ index.d.ts found${NC}"
         fi
-        
-        if [ ! -d "$DIST_DIR/factories" ]; then
-            echo -e "${RED}❌ Missing factories/ directory${NC}"
-            ((ERRORS++))
-        else
-            echo -e "${GREEN}✓ factories/ directory found${NC}"
+
+        if [ "$package" = "guardrails" ]; then
+            EXTRA_DTS=(
+                "$DTS_DIR/noop.d.ts"
+                "$DTS_DIR/factories/index.d.ts"
+            )
+            for expected in "${EXTRA_DTS[@]}"; do
+                RELATIVE_PATH="${expected#$DTS_DIR/}"
+                if [ ! -f "$expected" ]; then
+                    echo -e "${RED}❌ Missing guardrails declaration: $RELATIVE_PATH${NC}"
+                    ((ERRORS++))
+                else
+                    echo -e "${GREEN}✓ $RELATIVE_PATH found${NC}"
+                fi
+            done
         fi
     fi
-    
+
     echo -e "${GREEN}✅ $package verified${NC}\n"
 done
 

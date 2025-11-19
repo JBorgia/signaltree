@@ -26,7 +26,7 @@ No tests found, exiting with code 1
 Run:
 
 ```bash
-pnpm --filter @signaltree/guardrails test --runInBand --passWithNoTests
+pnpm nx test guardrails --runInBand --passWithNoTests
 ```
 
 ## Runtime Diagnostics
@@ -50,7 +50,7 @@ withGuardrails({
   memoryLeaks: {
     enabled: true,
     retentionThreshold: 100, // default
-    growthRate: 0.3,         // default 0.2
+    growthRate: 0.3, // default 0.2
   },
 });
 ```
@@ -69,7 +69,7 @@ withGuardrails({
 
 ## Release & Publishing
 
-- Run `pnpm --filter @signaltree/guardrails build` before `./scripts/release.sh`.
+- Run `pnpm nx build guardrails` before `./scripts/release.sh`.
 - Guardrails publishing happens from `packages/guardrails` (the docs package is non-publishable).
 
 ## Bundle Analysis
@@ -77,7 +77,7 @@ withGuardrails({
 `node scripts/perf-suite.js` requires the Nx builds to exist. If you hit build failures, execute:
 
 ```bash
-NX_IGNORE_LOCKFILE_HASH=1 pnpm nx run-many --target=build --projects=core,enterprise,ng-forms,callable-syntax,shared,types,utils --configuration=production
+NX_IGNORE_LOCKFILE_HASH=1 pnpm nx run-many --target=build --projects=core,enterprise,ng-forms,callable-syntax,shared,types,utils,guardrails --configuration=production
 pnpm nx build demo --configuration=production
 ```
 
@@ -85,4 +85,3 @@ pnpm nx build demo --configuration=production
 
 - The `/guardrails` route uses `__guardrails` telemetry. Ensure dev mode is enabled (`ng serve --configuration development`).
 - If the telemetry panel is blank, check the browser console; guardrails warns when middleware hooks are missing.
-

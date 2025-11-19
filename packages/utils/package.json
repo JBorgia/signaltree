@@ -6,17 +6,19 @@
   "sideEffects": false,
   "main": "./dist/index.js",
   "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "types": "./src/index.d.ts",
   "exports": {
     ".": {
       "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "default": "./dist/index.js",
+      "types": "./src/index.d.ts"
     }
   },
   "publishConfig": {
     "access": "public"
   },
   "files": [
+    "dist",
     "src",
     "README.md",
     "package.json"
@@ -28,7 +30,8 @@
   ],
   "author": "SignalTree",
   "license": "MIT",
-  "devDependencies": {
-    "typescript": "^5.3.0"
+  "peerDependencies": {
+    "@angular/core": "^20.3.0",
+    "tslib": "^2.0.0"
   }
 }

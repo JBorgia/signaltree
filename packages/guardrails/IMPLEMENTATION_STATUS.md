@@ -6,7 +6,7 @@
 
 - [x] Package configuration (package.json with conditional exports)
 - [x] TypeScript configuration (tsconfig.json, tsconfig.spec.json)
-- [x] Build configuration (tsup.config.ts)
+- [x] Build configuration (Nx Rollup target + rollup.config.mjs)
 - [x] Jest test configuration (jest.config.ts)
 - [x] Dependencies installed via pnpm workspace
 
@@ -124,9 +124,9 @@
 
 3. **Verify outputs** (5 min)
 
-   - Check `dist/` folder for proper exports
-   - Verify `.d.ts` files generated correctly
-   - Test conditional exports in demo app
+- Check `dist/packages/guardrails` for proper exports
+- Verify `.d.ts` files generated correctly
+- Test conditional exports in demo app
 
 4. **Expand tests** (30-60 min)
 
@@ -170,6 +170,7 @@
 ## 🐛 Known Issues
 
 1. **Test coverage gaps**
+
    - Add hot path decay coverage and end-to-end integration tests with real SignalTree instances
    - Verify production no-op behaviour with bundle-level smoke test
 
@@ -183,7 +184,7 @@
 - All v1.1 features implemented: percentiles, recomputation, diff ratio, disposal, etc.
 - Framework-agnostic (works with any SignalTree setup)
 - Optional dev hooks integration for deeper instrumentation
-- Follows SignalTree monorepo conventions (workspace deps, tsup build)
+- Follows SignalTree monorepo conventions (workspace deps, Rollup build)
 - Added Jest coverage for hot path tracking, percentile stats, suppression metadata, and disposal cleanup
 - Added Jest coverage for diff ratio warnings, asynchronous custom rules, recomputation budgets, and memory leak detection
 
