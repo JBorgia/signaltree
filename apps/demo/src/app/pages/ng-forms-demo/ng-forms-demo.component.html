@@ -1,0 +1,86 @@
+<div class="ng-forms-demo" data-testid="ng-forms-demo">
+  <header>
+    <h1>SignalTree + Angular Forms</h1>
+    <p>
+      This demo shows how <code>@signaltree/ng-forms</code> keeps a reactive
+      profile form in sync with a SignalTree store, including validation,
+      persistence, and async submission hooks.
+    </p>
+  </header>
+
+  <section class="form-panel">
+    <h2>Profile Form</h2>
+    <form [formGroup]="profile.form" (ngSubmit)="save()" novalidate>
+      <div class="field">
+        <label for="name">Full name</label>
+        <input
+          id="name"
+          type="text"
+          formControlName="name"
+          placeholder="Ada Lovelace"
+        />
+        <p *ngIf="nameError" class="error">{{ nameError }}</p>
+      </div>
+
+      <div class="field">
+        <label for="email">Email</label>
+        <input
+          id="email"
+          type="email"
+          formControlName="email"
+          placeholder="ada@example.com"
+        />
+        <p *ngIf="emailError" class="error">{{ emailError }}</p>
+      </div>
+
+      <div class="field checkbox">
+        <label>
+          <input type="checkbox" formControlName="receiveUpdates" />
+          Keep me posted on product updates
+        </label>
+      </div>
+
+      <div class="actions">
+        <button type="submit" [disabled]="status() === 'saving'">
+          {{ submissionLabel }}
+        </button>
+        <button
+          type="button"
+          class="reset"
+          (click)="reset()"
+          [disabled]="status() === 'saving'"
+        >
+          Reset
+        </button>
+      </div>
+
+      <p class="status" [class.error]="status() === 'error'">
+        Status: {{ status() }}
+      </p>
+    </form>
+
+    <article class="callout">
+      <h3>Form Tree Setup</h3>
+      <pre><code>{{ calloutCode }}</code></pre>
+    </article>
+  </section>
+
+  <section class="inspector">
+    <h2>Live State Preview</h2>
+    <p>
+      SignalTree keeps the form state, validation errors, and async metadata in
+      a single tree. You can inspect the current snapshot below.
+    </p>
+    <pre><code>{{ preview }}</code></pre>
+
+    <div *ngIf="lastSaved()" class="saved-summary">
+      <h3>Last Saved Payload</h3>
+      <p><strong>Name:</strong> {{ lastSaved()?.name }}</p>
+      <p><strong>Email:</strong> {{ lastSaved()?.email }}</p>
+      <p>
+        <strong>Updates opt-in:</strong>
+        {{ lastSaved()?.receiveUpdates ? 'Enabled' : 'Disabled' }}
+      </p>
+    </div>
+  </section>
+</div>

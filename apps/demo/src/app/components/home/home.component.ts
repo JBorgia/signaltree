@@ -20,8 +20,7 @@ export class HomeComponent {
     },
     {
       title: '⚡ Performance',
-      description:
-        'Batched updates, memoization, and performance optimization',
+      description: 'Batched updates, memoization, and performance optimization',
       route: '/benchmarks',
       category: 'Performance',
       methods: ['batch', 'computed', 'optimize', 'clearCache', 'getMetrics'],
@@ -117,7 +116,7 @@ export class HomeComponent {
       title: '📝 Forms Integration',
       description:
         'Seamless Angular Forms integration with reactive validation',
-      route: '/examples/fundamentals',
+      route: '/ng-forms',
       category: 'Forms',
     },
     {

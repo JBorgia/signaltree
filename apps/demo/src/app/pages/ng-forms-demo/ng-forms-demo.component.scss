@@ -1,0 +1,147 @@
+.ng-forms-demo {
+  display: grid;
+  gap: 2rem;
+  padding: 2rem;
+  max-width: 1100px;
+}
+
+.ng-forms-demo header h1 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.ng-forms-demo header p {
+  color: #475569;
+  max-width: 640px;
+}
+
+.form-panel {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.form-panel form {
+  display: grid;
+  gap: 1rem;
+}
+
+.field label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.field input[type='text'],
+.field input[type='email'] {
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid #cbd5f5;
+  font-size: 0.95rem;
+}
+
+.field input[type='text']:focus,
+.field input[type='email']:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.field.checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 500;
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.actions button {
+  padding: 0.65rem 1.4rem;
+  border-radius: 999px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  background: #312e81;
+  color: #fff;
+  transition: background 0.2s ease;
+}
+
+.actions button:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
+.actions .reset {
+  background: transparent;
+  color: #312e81;
+  border: 1px solid #312e81;
+}
+
+.actions .reset:hover:not(:disabled) {
+  background: rgba(49, 46, 129, 0.08);
+}
+
+.error {
+  margin-top: 0.35rem;
+  color: #dc2626;
+  font-size: 0.85rem;
+}
+
+.status {
+  font-size: 0.9rem;
+  color: #334155;
+}
+
+.status.error {
+  color: #dc2626;
+}
+
+.callout {
+  background: #1e1b4b;
+  color: #e0e7ff;
+  padding: 1rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  overflow-x: auto;
+}
+
+.callout h3 {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  font-size: 1rem;
+}
+
+.callout pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.inspector {
+  display: grid;
+  gap: 1rem;
+}
+
+.inspector pre {
+  background: rgba(15, 23, 42, 0.9);
+  color: #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem;
+  overflow-x: auto;
+  font-size: 0.85rem;
+}
+
+.saved-summary {
+  background: #f1f5f9;
+  border-radius: 10px;
+  padding: 1rem;
+  border: 1px solid #cbd5f5;
+}

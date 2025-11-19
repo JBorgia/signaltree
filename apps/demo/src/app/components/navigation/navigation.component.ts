@@ -112,6 +112,13 @@ export class NavigationComponent {
       category: 'features',
     },
     {
+      id: 'ng-forms',
+      title: 'Forms Integration',
+      description: 'Angular forms bridge with persistence and validation',
+      route: '/ng-forms',
+      category: 'features',
+    },
+    {
       id: 'time-travel',
       title: 'Time Travel',
       description: 'Undo/redo and state history',

@@ -121,6 +121,13 @@ export const appRoutes: Route[] = [
         './pages/guardrails-monitoring/guardrails-monitoring.component'
       ).then((c) => c.GuardrailsMonitoringComponent),
   },
+  {
+    path: 'ng-forms',
+    loadComponent: () =>
+      import('./pages/ng-forms-demo/ng-forms-demo.component').then(
+        (c) => c.NgFormsDemoComponent
+      ),
+  },
 
   // Architecture and bundle analysis pages
   {
