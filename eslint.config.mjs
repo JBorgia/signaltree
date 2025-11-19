@@ -1,4 +1,5 @@
 import nx from '@nx/eslint-plugin';
+import jsoncParser from 'jsonc-eslint-parser';
 
 export default [
   ...nx.configs['flat/base'],
@@ -63,6 +64,34 @@ export default [
       //     ]
       //   }
       // ]
+    },
+  },
+  {
+    files: ['**/package.json'],
+    languageOptions: {
+      parser: jsoncParser,
+    },
+    rules: {
+      '@nx/dependency-checks': [
+        'error',
+        {
+          ignoredDependencies: ['tslib'],
+        },
+      ],
+    },
+  },
+  {
+    files: ['docs/guardrails/**/*.ts'],
+    rules: {
+      '@typescript-eslint/ban-ts-comment': 'off',
+      '@typescript-eslint/no-empty-object-type': 'off',
+      '@typescript-eslint/no-empty-interface': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      '@typescript-eslint/no-empty-function': 'off',
+      'no-empty': 'off',
+      'prefer-const': 'off',
     },
   },
 ];

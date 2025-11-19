@@ -5,6 +5,23 @@ All notable changes to SignalTree will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.1.0] - 2025-11-18
+
+### Changed
+
+- Migrated all publishable SignalTree packages (`core`, `enterprise`, `callable-syntax`, `guardrails`, `ng-forms`) to the Nx Rollup executor with `preserveModules` output for reliable ESM distribution and tree-shaking.
+- Updated guardrails distribution to ship pure ESM entry points with consistent conditional exports and a generated production `noop` module.
+- Regenerated package manifests and build graphs so published packages reference Rollup artifacts directly and pull types from source to match preserved module layout.
+
+### Added
+
+- Introduced `tools/build/create-rollup-config.mjs`, centralizing shared Rollup options across libraries.
+- Expanded bundle analysis tooling to validate the new dist layouts and enforce gzipped/ungzipped thresholds for every published facade.
+
+### Removed
+
+- Retired the legacy `tsup` build for guardrails and eliminated redundant docs package manifests that previously shadowed published packages.
+
 ## [4.0.14] - 2025-11-13
 
 ### Fixed

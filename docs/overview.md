@@ -36,7 +36,7 @@ SignalTree consists of one core package with all enhancers built-in, plus three 
 
 - Angular 20.3+, TypeScript 5.5+, Node 18.17+ (development)
 - Browser: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
-- Baseline core bundle ~7.25KB gzipped; total ecosystem ~27.56KB gzipped
+- Core entry-point barrel compresses to ~0.75KB gzipped, while the full publishable `@signaltree/core` package is 25.63KB gzipped; tree-shake entry-point totals across the ecosystem measure 30.99KB gzipped and the full publishable output sums to ~36.31KB. Consolidated architecture removes ~4.28KB (≈15.9%) versus the legacy separate-package layout when every enhancer is imported.
 - Performance targets: operations maintain sub‑millisecond times across common depths
 
 ### Performance targets (Sept 2025)
@@ -47,8 +47,10 @@ SignalTree consists of one core package with all enhancers built-in, plus three 
 | Operation latency (10 levels)  | <0.080ms | 0.061ms |
 | Operation latency (15 levels)  | <0.120ms | 0.092ms |
 | Operation latency (20+ levels) | <0.150ms | 0.104ms |
-| Core bundle size               | <8.00KB  | 7.25KB  |
-| Total ecosystem bundle size    | <30.00KB | 27.56KB |
+| Core bundle size (publishable) | <30.00KB | 25.64KB |
+| Total ecosystem bundle size    | <40.00KB | 36.32KB |
+
+<small>\* Entry-point barrels remain 0.75KB for `@signaltree/core`; the 30.99KB figure cited elsewhere reflects the sum of tree-shakeable facades prior to consumer bundling.</small>
 
 ### Frequency weighting system
 

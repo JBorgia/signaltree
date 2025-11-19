@@ -138,6 +138,12 @@ The release script **automatically runs** comprehensive validation:
 npm run validate
 ```
 
+### Documentation & Demo Currency (Hard Requirement)
+
+- Before signing off any release or size/performance change, refresh README files, docs, and published metrics to match the latest `artifacts/*.json` outputs.
+- Always rebuild the demo (`pnpm nx build demo --configuration=production`) against the current workspace to confirm it runs with the freshly built packages.
+- Treat doc updates and demo verification as blocking steps—AI assistants must surface mismatches or failures before declaring work complete.
+
 ### Automatic Rollback
 
 If validation fails, the release script **automatically**:

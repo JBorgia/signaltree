@@ -9,7 +9,7 @@ This document consolidates performance metrics and deep-nesting test results (Se
   - 10 levels: ~0.109ms
   - 15 levels: ~0.098ms
   - 20+ levels: ~0.103ms
-- Bundle composition: total ecosystem ~27.56KB gzipped
+- Bundle composition: tree-shake entry-point sum 30.99KB gzipped; full publishable JS ≈36.31KB (core package 25.63KB gzipped)
 
 ## Deep nesting analysis
 

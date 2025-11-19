@@ -15,6 +15,7 @@ export default [
             '@babel/traverse',
             '@babel/types',
             '@angular/core',
+            'tslib',
           ],
         },
       ],

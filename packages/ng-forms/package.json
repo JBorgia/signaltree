@@ -1,15 +1,15 @@
 {
   "name": "@signaltree/ng-forms",
-  "version": "4.0.16",
+  "version": "4.1.0",
   "description": "Complete Angular forms integration for SignalTree. FormTree creation, custom directives, validators, form state tracking, and RxJS bridge.",
   "peerDependencies": {
     "@angular/core": "^20.3.0",
     "@angular/forms": "^20.3.0",
-    "@signaltree/core": "^4.0.0",
+    "@signaltree/core": "^4.1.0",
     "rxjs": "^7.0.0"
   },
   "devDependencies": {
-    "@signaltree/core": "^4.0.14"
+    "@signaltree/core": "^4.1.0"
   },
   "sideEffects": false,
   "publishConfig": {

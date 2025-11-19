@@ -74,20 +74,7 @@ async function main() {
     try {
       const Analyzer = require('./consolidated-bundle-analysis.js');
       const analyzer = new Analyzer();
-      // Monkey-patch process.exit to capture exit without quitting
-      const realExit = process.exit;
-      let exitCode = 0;
-      process.exit = (code) => {
-        exitCode = code || 0;
-        throw new Error('__ANALYZER_EXIT__');
-      };
-      try {
-        analyzer.run();
-      } catch (e) {
-        if (String(e.message) !== '__ANALYZER_EXIT__') throw e;
-      } finally {
-        process.exit = realExit;
-      }
+      const { exitCode } = analyzer.execute();
       bundleResults = analyzer.results;
       bundleResults.exitCode = exitCode;
     } catch (err) {

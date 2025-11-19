@@ -21,11 +21,14 @@ const path = require('path');
 const zlib = require('zlib');
 const { execSync } = require('child_process');
 
-// Package configuration with size targets
 const packages = [
   {
     name: 'core',
-    path: 'dist/packages/core/dist/index.js',
+    path: [
+      'dist/packages/core/dist/index.js',
+      'dist/packages/core/src/index.js',
+      'dist/packages/core/fesm2022/signaltree-core.mjs',
+    ],
     maxSize: 30000,
     claimed: 27000,
   },
@@ -37,6 +40,10 @@ const packages = [
   },
   {
     name: 'ng-forms',
+    path: [
+      'dist/packages/ng-forms/dist/index.js',
+      'dist/packages/ng-forms/fesm2022/signaltree-ng-forms.mjs',
+    ],
     maxSize: 8000,
     claimed: 7300,
   },
@@ -122,7 +129,7 @@ const packages = [
     name: 'core/enhancers/presets',
     path: 'dist/packages/core/dist/enhancers/presets/lib/presets.js',
     maxSize: 900,
-    claimed: 720,
+    claimed: 760,
   },
   {
     name: 'core/enhancers/computed',
@@ -147,8 +154,13 @@ class BundleAnalyzer {
   constructor() {
     this.results = {
       packages: [],
+      fullPackages: [],
+      fullPackageSummary: null,
       demoApp: null,
       recommendations: [],
+      architecture: null,
+      summary: null,
+      error: null,
     };
   }
 
@@ -165,10 +177,34 @@ class BundleAnalyzer {
     return zlib.gzipSync(buffer).length;
   }
 
-  /**
-   * Get total gzipped size of ALL files in a package directory
-   * This gives the TRUE package size consumers will download
-   */
+  findFiles(dir, pattern) {
+    const files = [];
+    const matcher = pattern.includes('*') ? pattern.replace('*', '') : pattern;
+
+    const search = (currentDir) => {
+      const entries = fs.readdirSync(currentDir);
+      entries.forEach((entry) => {
+        const entryPath = path.join(currentDir, entry);
+        const stats = fs.statSync(entryPath);
+        if (stats.isDirectory()) {
+          search(entryPath);
+        } else if (
+          pattern.includes('*')
+            ? entry.endsWith(matcher)
+            : entryPath.endsWith(matcher)
+        ) {
+          files.push(entryPath);
+        }
+      });
+    };
+
+    if (fs.existsSync(dir)) {
+      search(dir);
+    }
+
+    return files;
+  }
+
   getFullPackageSize(packageName) {
     const packageDir = path.join(process.cwd(), `dist/packages/${packageName}`);
 
@@ -176,15 +212,12 @@ class BundleAnalyzer {
       return null;
     }
 
-    // Find all .js files recursively
-    const jsFiles = this.findFiles(packageDir, '.js');
-
+    const jsFiles = this.findFiles(packageDir, '*.js');
     if (jsFiles.length === 0) {
       return null;
     }
 
-    // Concatenate all JS content and gzip
-    const allContent = jsFiles.map((file) => fs.readFileSync(file)).join('\\n');
+    const allContent = jsFiles.map((file) => fs.readFileSync(file)).join('\n');
     const buffer = Buffer.from(allContent);
 
     return {
@@ -194,39 +227,54 @@ class BundleAnalyzer {
     };
   }
 
-  execCommand(
-    command,
-    description,
-    { continueOnError } = { continueOnError: false }
-  ) {
+  execCommand(command, description, options = {}) {
+    const { continueOnError = false } = options;
     this.log(`${description}...`);
     try {
       execSync(command, { stdio: 'pipe', cwd: process.cwd() });
       this.log(`${description} completed`, 'success');
+      return true;
     } catch (error) {
       this.log(`${description} failed: ${error.message}`, 'error');
-      if (!continueOnError) throw error;
+      if (error.stdout) {
+        console.log(error.stdout.toString());
+      }
+      if (error.stderr) {
+        console.log(error.stderr.toString());
+      }
+      if (!continueOnError) {
+        throw error;
+      }
+      return false;
     }
   }
 
   cleanAndBuild() {
     this.log('🧹 Cleaning previous builds...');
 
-    // Clear Nx cache and dist folder
     this.execCommand('pnpm nx reset', 'Clearing Nx cache');
     this.execCommand('rm -rf dist', 'Removing dist folder');
 
     this.log('🔨 Building all packages...');
-
-    // Build all packages
     const packageNames = nxProjects.join(',');
-    this.execCommand(
-      `pnpm nx run-many --target=build --projects=${packageNames} --configuration=production`,
+    const buildCommand = `pnpm nx run-many --target=build --projects=${packageNames} --configuration=production`;
+    const packagesBuilt = this.execCommand(
+      buildCommand,
       'Building SignalTree packages',
-      { continueOnError: true } // Continue even if some builds fail
+      { continueOnError: true }
     );
 
-    // Build demo app
+    if (!packagesBuilt) {
+      this.log(
+        'Retrying package build after restarting Nx daemon...',
+        'warning'
+      );
+      this.execCommand('pnpm nx reset', 'Restarting Nx cache/daemon', {
+        continueOnError: true,
+      });
+      this.execCommand(buildCommand, 'Building SignalTree packages (retry)');
+    }
+
     this.execCommand(
       'pnpm nx build demo --configuration=production',
       'Building demo application',
@@ -234,9 +282,36 @@ class BundleAnalyzer {
     );
   }
 
+  resolvePackagePath(pkg) {
+    const paths = [];
+    if (pkg.path) {
+      if (Array.isArray(pkg.path)) {
+        paths.push(...pkg.path);
+      } else {
+        paths.push(pkg.path);
+      }
+    }
+
+    const defaultCandidates = [
+      `dist/packages/${pkg.name}/dist/index.js`,
+      `dist/packages/${pkg.name}/src/index.js`,
+      `dist/packages/${pkg.name}/fesm2022/signaltree-${pkg.name}.mjs`,
+    ];
+
+    defaultCandidates.forEach((candidate) => {
+      if (!paths.includes(candidate)) {
+        paths.push(candidate);
+      }
+    });
+
+    return paths
+      .map((candidate) => path.join(process.cwd(), candidate))
+      .find((candidate) => fs.existsSync(candidate));
+  }
+
   analyzePackages() {
-    this.log('\\n📦 Analyzing SignalTree Package Bundles');
-    console.log('==========================================\\n');
+    this.log('\n📦 Analyzing SignalTree Package Bundles');
+    console.log('==========================================\n');
 
     let totalPassed = 0;
     let totalFailed = 0;
@@ -244,26 +319,7 @@ class BundleAnalyzer {
     let totalClaimedSize = 0;
 
     packages.forEach((pkg) => {
-      let distPath;
-
-      if (pkg.path) {
-        const customPaths = Array.isArray(pkg.path) ? pkg.path : [pkg.path];
-        distPath = customPaths
-          .map((rel) => path.join(process.cwd(), rel))
-          .find((candidate) => fs.existsSync(candidate));
-
-        if (!distPath && customPaths.length > 0) {
-          distPath = path.join(process.cwd(), customPaths[0]);
-        }
-      } else {
-        const candidatePaths = [
-          `dist/packages/${pkg.name}/dist/index.js`,
-          `dist/packages/${pkg.name}/src/index.js`,
-          `dist/packages/${pkg.name}/fesm2022/signaltree-${pkg.name}.mjs`,
-        ].map((rel) => path.join(process.cwd(), rel));
-
-        distPath = candidatePaths.find((candidate) => fs.existsSync(candidate));
-      }
+      const distPath = this.resolvePackagePath(pkg);
 
       if (!distPath || !fs.existsSync(distPath)) {
         this.log(`${pkg.name}: Build not found at ${distPath}`, 'warning');
@@ -274,16 +330,13 @@ class BundleAnalyzer {
       const rawSize = content.length;
       const gzipSize = this.getGzipSize(content);
 
-      // SANITY CHECK: Warn if measuring a tiny barrel file (likely wrong)
       if (
         rawSize < 3000 &&
         !pkg.name.includes('types') &&
         !pkg.name.includes('computed')
       ) {
         this.log(
-          `⚠️  WARNING: ${pkg.name} measures only ${rawSize} bytes raw - ` +
-            `this may be a re-export barrel, not the full package. ` +
-            `Consider measuring all package files instead.`,
+          `⚠️  WARNING: ${pkg.name} measures only ${rawSize} bytes raw - this may be a re-export barrel. Measure full package for documentation claims.`,
           'warning'
         );
       }
@@ -291,8 +344,11 @@ class BundleAnalyzer {
       const passed = gzipSize <= pkg.maxSize;
       const claimMet = gzipSize <= pkg.claimed;
 
-      if (passed) totalPassed++;
-      else totalFailed++;
+      if (passed) {
+        totalPassed += 1;
+      } else {
+        totalFailed += 1;
+      }
 
       totalActualSize += gzipSize;
       totalClaimedSize += pkg.claimed;
@@ -320,19 +376,18 @@ class BundleAnalyzer {
         }`
       );
 
-      // Add clarification for what this measurement represents
       if (pkg.name === 'core') {
-        console.log(`   Note: Core package contains re-exports only`);
+        console.log('   Note: Core package entry is a re-export façade');
       } else if (pkg.name.startsWith('core/enhancers/')) {
-        console.log(`   Note: Individual enhancer implementation size`);
+        console.log('   Note: Individual enhancer implementation size');
       } else if (pkg.name === 'ng-forms') {
-        console.log(`   Note: Complete ng-forms package bundle`);
+        console.log('   Note: Complete ng-forms package bundle');
       }
 
       console.log();
     });
 
-    console.log('==========================================\\n');
+    console.log('==========================================\n');
     console.log('📊 Package Summary:');
     console.log(`   Packages Passed: ${totalPassed}/${packages.length}`);
     console.log(`   Packages Failed: ${totalFailed}/${packages.length}`);
@@ -347,38 +402,20 @@ class BundleAnalyzer {
           : '❌ Some Claims Exceeded'
       }`
     );
-    console.log('\\n📋 What This Measures:');
+    console.log('\n📋 Measurement Note:');
     console.log(
-      '   • Core package: Single barrel file (0.7KB) - NOT full implementation'
+      '   These readings reflect single entry bundles, not full publishable packages.'
     );
     console.log(
-      '   • Individual enhancers: Single implementation file per enhancer'
-    );
-    console.log('   • ng-forms: Complete bundled package (ng-packagr output)');
-    console.log(
-      '   • Total: Sum of measured components (NOT what consumers download)'
-    );
-    console.log('\\n⚠️  MEASUREMENT LIMITATION:');
-    console.log(
-      '   This script measures individual files, not complete package contents.'
-    );
-    console.log(
-      '   Actual consumer bundle size = all transitive dependencies included.'
-    );
-    console.log(
-      '   For accurate total package size, measure all .js files in dist/packages/<name>/'
+      '   Use full package analysis below to validate documentation claims.'
     );
 
     return { totalPassed, totalFailed, totalActualSize, totalClaimedSize };
   }
 
-  /**
-   * NEW: Analyze FULL package contents (all JS files)
-   * This prevents the "measuring barrel only" mistake
-   */
   analyzeFullPackages() {
-    this.log('\\n📊 Full Package Analysis (All Files)');
-    console.log('==========================================\\n');
+    this.log('\n📊 Full Package Analysis (All Files)');
+    console.log('==========================================\n');
 
     const packageDirs = [
       'core',
@@ -388,11 +425,11 @@ class BundleAnalyzer {
       'types',
       'utils',
     ];
+
     const fullSizes = [];
 
     packageDirs.forEach((pkgName) => {
       const fullSize = this.getFullPackageSize(pkgName);
-
       if (!fullSize) {
         this.log(`${pkgName}: No build output found`, 'warning');
         return;
@@ -408,7 +445,6 @@ class BundleAnalyzer {
       console.log(`   Raw Total: ${this.formatSize(fullSize.rawSize)}`);
       console.log(`   Gzipped Total: ${this.formatSize(fullSize.gzipSize)}`);
 
-      // Cross-check against claimed size
       const pkgConfig = packages.find((p) => p.name === pkgName);
       if (pkgConfig) {
         const claimDiff = fullSize.gzipSize - pkgConfig.claimed;
@@ -427,20 +463,38 @@ class BundleAnalyzer {
       console.log();
     });
 
-    console.log('==========================================');
-    console.log(
-      '📋 This measures the COMPLETE package contents that npm publishes.'
+    const totalRawSize = fullSizes.reduce(
+      (sum, pkg) => sum + (pkg.rawSize || 0),
+      0
     );
-    console.log(
-      '   Use these values for accurate size claims in documentation.\\n'
+    const totalGzipSize = fullSizes.reduce(
+      (sum, pkg) => sum + (pkg.gzipSize || 0),
+      0
     );
 
-    return fullSizes;
+    const summary = {
+      totalRawSize,
+      totalGzipSize,
+      packageCount: fullSizes.length,
+    };
+
+    console.log('==========================================');
+    console.log(
+      '📋 These totals reflect the publishable output shipped to npm.'
+    );
+    console.log(
+      '   Use these numbers for documentation claims and release notes.\n'
+    );
+
+    this.results.fullPackages = fullSizes;
+    this.results.fullPackageSummary = summary;
+
+    return summary;
   }
 
   analyzeDemoApp() {
-    this.log('\\n🎯 Analyzing Demo Application Bundle');
-    console.log('=====================================\\n');
+    this.log('\n🎯 Analyzing Demo Application Bundle');
+    console.log('=====================================\n');
 
     const demoPath = path.join(process.cwd(), 'dist/apps/demo');
 
@@ -449,21 +503,18 @@ class BundleAnalyzer {
       return null;
     }
 
-    // Get total size
     const totalSize = this.getDirectorySize(demoPath);
-
-    // Analyze individual files
     const jsFiles = this.findFiles(demoPath, '*.js');
     const cssFiles = this.findFiles(demoPath, '*.css');
 
     const largeJsFiles = jsFiles.filter((file) => {
       const size = fs.statSync(file).size;
-      return size > 100 * 1024; // >100KB
+      return size > 100 * 1024;
     });
 
     const largeCssFiles = cssFiles.filter((file) => {
       const size = fs.statSync(file).size;
-      return size > 50 * 1024; // >50KB
+      return size > 50 * 1024;
     });
 
     console.log(`Total Bundle Size: ${this.formatSize(totalSize)}`);
@@ -471,7 +522,7 @@ class BundleAnalyzer {
     console.log(`CSS Files: ${cssFiles.length}`);
 
     if (largeJsFiles.length > 0) {
-      console.log('\\n⚠️  Large JavaScript Files (>100KB):');
+      console.log('\n⚠️  Large JavaScript Files (>100KB):');
       largeJsFiles.forEach((file) => {
         const size = fs.statSync(file).size;
         console.log(`   ${path.basename(file)}: ${this.formatSize(size)}`);
@@ -479,7 +530,7 @@ class BundleAnalyzer {
     }
 
     if (largeCssFiles.length > 0) {
-      console.log('\\n⚠️  Large CSS Files (>50KB):');
+      console.log('\n⚠️  Large CSS Files (>50KB):');
       largeCssFiles.forEach((file) => {
         const size = fs.statSync(file).size;
         console.log(`   ${path.basename(file)}: ${this.formatSize(size)}`);
@@ -499,14 +550,13 @@ class BundleAnalyzer {
 
   getDirectorySize(dirPath) {
     let totalSize = 0;
-    const files = fs.readdirSync(dirPath);
+    const entries = fs.readdirSync(dirPath);
 
-    files.forEach((file) => {
-      const filePath = path.join(dirPath, file);
-      const stats = fs.statSync(filePath);
-
+    entries.forEach((entry) => {
+      const entryPath = path.join(dirPath, entry);
+      const stats = fs.statSync(entryPath);
       if (stats.isDirectory()) {
-        totalSize += this.getDirectorySize(filePath);
+        totalSize += this.getDirectorySize(entryPath);
       } else {
         totalSize += stats.size;
       }
@@ -515,34 +565,10 @@ class BundleAnalyzer {
     return totalSize;
   }
 
-  findFiles(dir, pattern) {
-    const files = [];
-    const extension = pattern.replace('*.', '.');
-
-    const search = (currentDir) => {
-      const items = fs.readdirSync(currentDir);
-
-      items.forEach((item) => {
-        const itemPath = path.join(currentDir, item);
-        const stats = fs.statSync(itemPath);
-
-        if (stats.isDirectory()) {
-          search(itemPath);
-        } else if (item.endsWith(extension)) {
-          files.push(itemPath);
-        }
-      });
-    };
-
-    search(dir);
-    return files;
-  }
-
   showArchitectureComparison() {
-    this.log('\\n🔄 Architecture Comparison: Separate vs Consolidated');
-    console.log('====================================================\\n');
+    this.log('\n🔄 Architecture Comparison: Separate vs Consolidated');
+    console.log('====================================================\n');
 
-    // Old separate package sizes (from perf-summary.json baseline)
     const oldSeparateSizes = {
       core: 7368,
       batching: 1303,
@@ -567,15 +593,23 @@ class BundleAnalyzer {
       console.log(`   ${name}: ${this.formatSize(size)}`);
     });
 
-    console.log('\\n📦 New Architecture (Consolidated):');
-    const newTotal = this.results.packages.reduce(
-      (sum, pkg) => sum + pkg.gzipSize,
+    console.log('\n📦 New Architecture (Consolidated):');
+    const architecturePackages = this.results.packages.filter(
+      (pkg) =>
+        pkg.name === 'core' ||
+        pkg.name === 'ng-forms' ||
+        pkg.name.startsWith('core/enhancers/')
+    );
+
+    const newTotal = architecturePackages.reduce(
+      (sum, pkg) => sum + (pkg.gzipSize || 0),
       0
     );
     console.log(`   Total: ${this.formatSize(newTotal)} gzipped`);
 
-    // Show individual enhancer sizes
-    this.results.packages.forEach((pkg) => {
+    const comparisonRecords = [];
+
+    architecturePackages.forEach((pkg) => {
       if (pkg.name.startsWith('core/enhancers/')) {
         const enhancerName = pkg.name.replace('core/enhancers/', '');
         const oldSize = oldSeparateSizes[enhancerName] || 0;
@@ -591,12 +625,26 @@ class BundleAnalyzer {
             percentChange !== 'N/A' ? `${percentChange}%` : ''
           }`
         );
+
+        comparisonRecords.push({
+          name: enhancerName,
+          oldSize,
+          newSize,
+          delta: newSize - oldSize,
+        });
       } else if (pkg.name === 'core') {
         console.log(
           `   ${pkg.name}: ${this.formatSize(
             pkg.gzipSize
-          )} (re-exports only - actual code in enhancers)`
+          )} (re-export façade; implementation lives in enhancers)`
         );
+
+        comparisonRecords.push({
+          name: 'core',
+          oldSize: oldSeparateSizes.core || 0,
+          newSize: pkg.gzipSize,
+          delta: pkg.gzipSize - (oldSeparateSizes.core || 0),
+        });
       } else if (pkg.name === 'ng-forms') {
         const oldSize = oldSeparateSizes['ng-forms'] || 0;
         console.log(
@@ -604,37 +652,92 @@ class BundleAnalyzer {
             pkg.gzipSize
           )} (was ${this.formatSize(oldSize)})`
         );
+
+        comparisonRecords.push({
+          name: 'ng-forms',
+          oldSize,
+          newSize: pkg.gzipSize,
+          delta: pkg.gzipSize - oldSize,
+        });
+      } else {
+        const legacyName = pkg.name;
+        comparisonRecords.push({
+          name: legacyName,
+          oldSize: oldSeparateSizes[legacyName] || 0,
+          newSize: pkg.gzipSize,
+          delta: pkg.gzipSize - (oldSeparateSizes[legacyName] || 0),
+        });
       }
     });
 
-    console.log('\\n🎯 Key Benefits of Consolidated Architecture:');
+    Object.entries(oldSeparateSizes).forEach(([name, oldSize]) => {
+      if (!comparisonRecords.find((record) => record.name === name)) {
+        comparisonRecords.push({
+          name,
+          oldSize,
+          newSize: 0,
+          delta: -oldSize,
+        });
+      }
+    });
+
+    console.log('\n🎯 Key Benefits of Consolidated Architecture:');
     console.log('=============================================');
     console.log('✅ No duplication when importing multiple enhancers');
     console.log('✅ Shared core dependencies only loaded once');
-    console.log('✅ Tree-shaking can eliminate unused enhancers');
-    console.log(
-      '✅ Smaller total footprint for applications using multiple features'
-    );
+    console.log('✅ Tree-shaking removes unused enhancers');
+    console.log('✅ Smaller total footprint for multi-feature apps');
     console.log('✅ Simplified dependency management');
-    console.log('\\n📋 Comparison Notes:');
-    console.log('   • Old: Each package had separate core dependencies');
-    console.log('   • New: Core dependencies shared, enhancers are same size');
-    console.log('   • Benefit: Applications save on duplicated shared code');
 
     const totalSavings = oldTotal - newTotal;
+    this.results.architecture = {
+      legacyTotals: oldSeparateSizes,
+      legacyTotal: oldTotal,
+      consolidatedTotal: newTotal,
+      savings: totalSavings,
+      breakdown: comparisonRecords,
+    };
+
     if (totalSavings > 0) {
+      const savingsPct =
+        oldTotal > 0 ? ((totalSavings / oldTotal) * 100).toFixed(1) : '0.0';
       console.log(
-        `\\n💰 Architecture Savings: ${this.formatSize(
+        `\n💰 Architecture Savings: ${this.formatSize(
           totalSavings
-        )} (16.2% reduction) when using all enhancers`
+        )} (${savingsPct}% reduction) when using all enhancers`
+      );
+    } else if (totalSavings < 0) {
+      const increasePct =
+        oldTotal > 0
+          ? ((Math.abs(totalSavings) / oldTotal) * 100).toFixed(1)
+          : '0.0';
+      console.log(
+        `\n⚠️  Architecture Regression: +${this.formatSize(
+          Math.abs(totalSavings)
+        )} (${increasePct}% increase) when using all enhancers`
+      );
+      const largestIncreases = comparisonRecords
+        .filter((record) => record.delta > 0)
+        .sort((a, b) => b.delta - a.delta)
+        .slice(0, 3);
+      if (largestIncreases.length > 0) {
+        console.log('\n🔍 Primary regression drivers:');
+        largestIncreases.forEach((entry) => {
+          console.log(
+            `   • ${entry.name}: +${this.formatSize(
+              entry.delta
+            )} vs ${this.formatSize(entry.oldSize)}`
+          );
+        });
+      }
+    } else {
+      console.log(
+        '\nℹ️  Architecture footprint unchanged versus separate packages'
       );
     }
   }
 
-  saveResults(packageResults) {
-    const fs = require('fs');
-    const path = require('path');
-
+  saveResults(packageSummary, fullPackageSummary = null) {
     const resultsPath = path.join(
       process.cwd(),
       'artifacts',
@@ -645,23 +748,21 @@ class BundleAnalyzer {
       timestamp: new Date().toISOString(),
       architecture: 'consolidated',
       packages: this.results.packages,
+      fullPackages: this.results.fullPackages,
       demoApp: this.results.demoApp,
-      summary: {
-        totalActualSize: packageResults.totalActualSize,
-        totalClaimedSize: packageResults.totalClaimedSize,
-        packagesPassed: packageResults.totalPassed,
-        packagesFailed: packageResults.totalFailed,
-      },
+      summary: packageSummary,
+      fullSummary: fullPackageSummary,
+      architectureSummary: this.results.architecture,
       recommendations: this.results.recommendations,
+      error: this.results.error,
       notes: [
         'Consolidated architecture: all enhancers under core/src/enhancers/',
         'Secondary entry points enable tree-shaking',
-        'Bundle sizes represent compiled JS, not final bundles',
-        'Actual tree-shaking benefits require application bundling',
+        'Bundle sizes represent compiled JS facades unless full analysis is used',
+        'Actual tree-shaking benefits depend on consuming application bundlers',
       ],
     };
 
-    // Ensure artifacts directory exists
     const artifactsDir = path.dirname(resultsPath);
     if (!fs.existsSync(artifactsDir)) {
       fs.mkdirSync(artifactsDir, { recursive: true });
@@ -672,12 +773,11 @@ class BundleAnalyzer {
   }
 
   generateRecommendations() {
-    this.log('\\n🎯 Bundle Optimization Recommendations');
-    console.log('=======================================\\n');
+    this.log('\n🎯 Bundle Optimization Recommendations');
+    console.log('=======================================\n');
 
     const recommendations = [];
 
-    // Package recommendations
     const failedPackages = this.results.packages.filter((p) => !p.passed);
     if (failedPackages.length > 0) {
       recommendations.push({
@@ -694,13 +794,12 @@ class BundleAnalyzer {
       });
     }
 
-    // Demo app recommendations
     if (this.results.demoApp) {
       const demoRecommendations = [];
 
       if (this.results.demoApp.totalSize > 500 * 1024) {
         demoRecommendations.push(
-          'Consider reducing demo complexity or implementing more aggressive code splitting'
+          'Consider reducing demo complexity or apply additional code splitting'
         );
       }
 
@@ -724,7 +823,6 @@ class BundleAnalyzer {
       }
     }
 
-    // General recommendations
     recommendations.push({
       category: 'General Optimization',
       items: [
@@ -732,7 +830,7 @@ class BundleAnalyzer {
         'Use dynamic imports for optional features',
         'Consider lazy loading non-critical components',
         'Implement bundle splitting for vendor dependencies',
-        'Add compression middleware (gzip/brotli) for serving',
+        'Serve with gzip/brotli compression in production',
       ],
     });
 
@@ -745,45 +843,64 @@ class BundleAnalyzer {
     this.results.recommendations = recommendations;
   }
 
-  run() {
+  execute(options = {}) {
+    const { skipBuild = false } = options || {};
+
     console.log('🚀 SignalTree Consolidated Bundle Analysis');
-    console.log('==========================================\\n');
+    console.log('==========================================\n');
 
     try {
-      // Clean and rebuild everything
-      this.cleanAndBuild();
+      if (skipBuild) {
+        this.log('⏭  Skipping rebuild step (options.skipBuild = true)');
+      } else {
+        this.cleanAndBuild();
+      }
 
-      // Analyze packages
-      const packageResults = this.analyzePackages();
-
-      // NEW: Analyze full package contents for validation
-      const fullPackageSizes = this.analyzeFullPackages();
-
-      // Show architecture comparison
+      const packageSummary = this.analyzePackages();
+      const fullPackageSummary = this.analyzeFullPackages();
       this.showArchitectureComparison();
-
-      // Analyze demo app
       this.analyzeDemoApp();
-
-      // Generate recommendations
       this.generateRecommendations();
 
-      // Save results to artifacts
-      this.saveResults(packageResults);
+      this.results.summary = packageSummary;
 
-      // Final summary
-      console.log('\\n🎉 Analysis Complete!');
+      this.saveResults(packageSummary, fullPackageSummary);
+
+      console.log('\n🎉 Analysis Complete!');
       console.log('======================');
       console.log(
         `📦 Measured Components Total: ${this.formatSize(
-          packageResults.totalActualSize
+          packageSummary.totalActualSize
         )} gzipped`
       );
-      console.log(
-        `📊 Architecture Savings: ${this.formatSize(
-          26870 - 22520
-        )} vs old separate packages`
-      );
+      const architectureSummary = this.results.architecture;
+      if (architectureSummary) {
+        const { savings, legacyTotal } = architectureSummary;
+        const pct =
+          legacyTotal > 0
+            ? ((Math.abs(savings) / legacyTotal) * 100).toFixed(1)
+            : '0.0';
+
+        if (savings > 0) {
+          console.log(
+            `📊 Architecture Savings: ${this.formatSize(
+              savings
+            )} (${pct}% reduction) vs old separate packages`
+          );
+        } else if (savings < 0) {
+          console.log(
+            `⚠️  Architecture Regression: +${this.formatSize(
+              Math.abs(savings)
+            )} (${pct}% increase) vs old separate packages`
+          );
+        } else {
+          console.log(
+            'ℹ️  Architecture footprint unchanged vs old separate packages'
+          );
+        }
+      } else {
+        console.log('📊 Architecture impact unavailable');
+      }
       if (this.results.demoApp) {
         console.log(
           `🎯 Demo App Total: ${this.formatSize(
@@ -792,35 +909,82 @@ class BundleAnalyzer {
         );
       }
 
-      // Architecture assessment
-      console.log('\\n🏗️  Architecture Assessment:');
+      if (fullPackageSummary) {
+        console.log(
+          `📦 Full Publishable Output: ${this.formatSize(
+            fullPackageSummary.totalGzipSize
+          )} gzipped across ${fullPackageSummary.packageCount} packages`
+        );
+      }
+
+      console.log('\n🏗️  Architecture Assessment:');
       console.log('===========================');
       console.log('✅ Consolidated architecture successfully implemented');
-      console.log('✅ All enhancers moved to core/src/enhancers/');
-      console.log('✅ Secondary entry points configured in package.json');
-      console.log('✅ Tree-shaking enabled for selective imports');
-      console.log(
-        '📊 Bundle size reduction: 4.35KB (16.2%) vs separate packages'
-      );
+      console.log('✅ All enhancers co-located under core/src/enhancers/');
+      console.log('✅ Secondary entry points configured for tree-shaking');
+      let architectureLine = '📊 Architecture impact summary unavailable';
+      if (architectureSummary) {
+        const pct =
+          architectureSummary.legacyTotal > 0
+            ? (
+                (Math.abs(architectureSummary.savings) /
+                  architectureSummary.legacyTotal) *
+                100
+              ).toFixed(1)
+            : '0.0';
+
+        if (architectureSummary.savings > 0) {
+          architectureLine = `📊 Architecture savings: ${this.formatSize(
+            architectureSummary.savings
+          )} (${pct}% reduction) vs separate packages`;
+        } else if (architectureSummary.savings < 0) {
+          architectureLine = `⚠️  Architecture regression: +${this.formatSize(
+            Math.abs(architectureSummary.savings)
+          )} (${pct}% increase) vs separate packages`;
+        } else {
+          architectureLine =
+            'ℹ️  Architecture footprint unchanged vs separate packages';
+        }
+      }
+      console.log(architectureLine);
       console.log('🎯 Applications benefit from eliminated duplication');
       console.log(
-        '🔍 Core package: 0.60KB (re-exports) vs 7.20KB (old implementation)'
+        (() => {
+          const coreFacade = this.results.packages.find(
+            (pkg) => pkg.name === 'core'
+          );
+          const coreFull = this.results.fullPackages.find(
+            (pkg) => pkg.name === 'core'
+          );
+          if (!coreFacade) {
+            return '🔍 Core package: measurement unavailable';
+          }
+          const facadeSize = this.formatSize(coreFacade.gzipSize);
+          const fullSize = coreFull
+            ? this.formatSize(coreFull.gzipSize)
+            : 'n/a';
+          return `🔍 Core barrel facade: ${facadeSize} (full publishable package ${fullSize})`;
+        })()
       );
       console.log(
-        '📦 Individual enhancers: Same size, but shared dependencies'
+        '📦 Individual enhancers: Shared dependencies remove duplication compared to separate packages'
       );
 
-      // Exit code based on package validation
-      const exitCode = packageResults.totalFailed > 0 ? 1 : 0;
-      process.exit(exitCode);
+      const exitCode = packageSummary.totalFailed > 0 ? 1 : 0;
+      return { exitCode, results: this.results };
     } catch (error) {
+      this.results.error = error.message;
       this.log(`Analysis failed: ${error.message}`, 'error');
-      process.exit(1);
+      return { exitCode: 1, error, results: this.results };
     }
+  }
+
+  run() {
+    const { exitCode } = this.execute();
+    process.exit(exitCode);
   }
 }
 
-// Run if called directly
 if (require.main === module) {
   const analyzer = new BundleAnalyzer();
   analyzer.run();

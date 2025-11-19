@@ -1,4 +1,5 @@
 import nx from '@nx/eslint-plugin';
+
 import baseConfig from '../../eslint.config.mjs';
 
 export default [
@@ -13,6 +14,7 @@ export default [
           // @signaltree/shared is bundled at build time via Rollup, not a runtime dependency
           ignoredDependencies: [
             '@signaltree/shared',
+            'tslib',
             // Build-time dependencies (not runtime peer dependencies)
             '@rollup/plugin-commonjs',
             '@rollup/plugin-node-resolve',

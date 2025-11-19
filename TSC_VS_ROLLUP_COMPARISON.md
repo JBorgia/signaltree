@@ -2,9 +2,22 @@
 
 ## Executive Summary
 
-**Rollup was never used in production.** All published versions (4.0.6-4.0.16) were built with **TSC + Nx**. The Rollup configs existed but were not wired to any Nx executors and thus never executed.
+**Rollup is now the production build pipeline as of v4.1.0.** All packages ship via the Nx Rollup executor with `preserveModules` enabled so published artifacts mirror the source module graph. Prior releases (4.0.6–4.0.16) were still built with **TSC + Nx** and a suite of post-build copy scripts. Those legacy notes remain below for historical context.
 
-## Current State: TSC + Nx (Production)
+## Current State: Nx Rollup (v4.1.0+)
+
+```
+@nx/rollup:rollup → dist/packages/<name>/dist
+   ↓
+publish-ready layout → package.json exports reference Rollup output directly
+```
+
+- Pure ESM output with one file per source module (preserveModules)
+- `.d.ts` files emitted alongside source via TypeScript project references
+- No post-build copy scripts; manifest `files` entries now point at Rollup output
+- Bundle analysis validates gzipped and raw sizes for every façade before release
+
+## Legacy State: TSC + Nx (≤ v4.0.16)
 
 ### Build Pipeline
 
@@ -16,28 +29,31 @@ postbuild script → copies to dist/packages/*/dist
 API Extractor / copy-declarations → rolls type definitions
 ```
 
-### Bundle Size Analysis (v4.0.16)
+### Legacy Bundle Size Analysis (v4.0.16)
 
-| Package                         | Gzipped Size | Type                | Notes              |
-| ------------------------------- | ------------ | ------------------- | ------------------ |
-| **@signaltree/core**            | 0.72 KB      | Re-exports only     | Pure barrel file   |
-| **@signaltree/ng-forms**        | 7.09 KB      | Full implementation | Form integration   |
-| **@signaltree/enterprise**      | 2.40 KB      | Optimizations       | Diff-based updates |
-| **@signaltree/callable-syntax** | 0.80 KB      | Transforms          | AST utilities      |
-| **@signaltree/guardrails**      | 1.20 KB      | Validation          | Runtime checks     |
-| **@signaltree/shared**          | 0.50 KB      | Utilities           | Common helpers     |
-| **Batching enhancer**           | 0.26 KB      | Single enhancer     | Micro-package      |
-| **Computed enhancer**           | 1.20 KB      | Single enhancer     | Reactivity         |
-| **Middleware enhancer**         | 4.74 KB      | Single enhancer     | Largest enhancer   |
-| **Memoization enhancer**        | 0.80 KB      | Single enhancer     | Caching            |
-| **Time-travel enhancer**        | 2.10 KB      | Single enhancer     | History            |
-| **Devtools enhancer**           | 1.50 KB      | Single enhancer     | Debug utilities    |
-| **Presets enhancer**            | 0.90 KB      | Single enhancer     | Common configs     |
-| **Entities enhancer**           | 3.20 KB      | Single enhancer     | Normalization      |
-| **Serialization enhancer**      | 1.80 KB      | Single enhancer     | JSON handling      |
+| Package / Entry Point                | Gzipped Size | Type                | Notes                  |
+| ------------------------------------ | ------------ | ------------------- | ---------------------- |
+| **@signaltree/core**                 | 0.75 KB      | Re-exports only     | Pure barrel file       |
+| **@signaltree/ng-forms**             | 7.09 KB      | Full implementation | Form integration       |
+| **@signaltree/enterprise**           | 0.18 KB      | Optimizations       | Diff-based utilities   |
+| **@signaltree/callable-syntax**      | 0.15 KB      | Transforms          | AST utilities          |
+| **@signaltree/shared**               | 0.26 KB      | Utilities           | Common helpers         |
+| **@signaltree/types**                | 0.18 KB      | Typings             | Declaration helpers    |
+| **@signaltree/utils**                | 1.70 KB      | Utilities           | Runtime helpers        |
+| **@signaltree/guardrails**           | 5.08 KB      | Validation          | Runtime guard layer    |
+| **@signaltree/guardrails/factories** | 0.85 KB      | Validation          | Factory helpers        |
+| **core/enhancers/batching**          | 1.19 KB      | Single enhancer     | Scheduling / batching  |
+| **core/enhancers/memoization**       | 2.46 KB      | Single enhancer     | Cache management       |
+| **core/enhancers/time-travel**       | 1.29 KB      | Single enhancer     | History buffer         |
+| **core/enhancers/entities**          | 0.90 KB      | Single enhancer     | Normalization layer    |
+| **core/enhancers/middleware**        | 1.03 KB      | Single enhancer     | Action middleware      |
+| **core/enhancers/devtools**          | 2.38 KB      | Single enhancer     | Debug utilities        |
+| **core/enhancers/serialization**     | 4.53 KB      | Single enhancer     | Serialization pipeline |
+| **core/enhancers/presets**           | 0.72 KB      | Single enhancer     | Preset bundles         |
+| **core/enhancers/computed**          | 0.26 KB      | Single enhancer     | Derived signals        |
 
-**Total consolidated:** 40.16 KB gzipped (all packages)  
-**Core architecture:** 26.87 KB gzipped (separate enhancer packages, pre-consolidation)
+**Total facade sum:** 30.99 KB gzipped (all entry-point barrels)  
+**Core architecture:** 22.59 KB gzipped (core façade + enhancers + ng-forms) — legacy separate packages totaled 26.87 KB, so consolidation saves **4.28 KB** (~15.9%).
 
 ### Tree-Shaking Effectiveness
 
@@ -202,5 +218,5 @@ The configs existed but were never used in production. All 4.0.x releases shippe
 
 - Size check output: `pnpm run size:check` (Nov 15, 2025)
 - Git history: `git log --grep="rollup"` (confirms no Rollup builds)
-- Published versions: CHANGELOG.md (4.0.6-4.0.16 all TSC-based)
+- Published versions: CHANGELOG.md (≤4.0.16 TSC-based; 4.1.0+ Rollup-based)
 - Nx executor analysis: No `@nx/rollup` in any `project.json`
