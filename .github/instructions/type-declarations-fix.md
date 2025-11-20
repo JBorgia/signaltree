@@ -3,6 +3,7 @@
 ## Issue Summary
 
 **Problem**: Version 4.1.0 (and potentially earlier versions) published with broken type declarations that caused TypeScript import errors:
+
 ```
 Module '"@signaltree/core"' has no exported member 'signalTree'
 ```
@@ -13,10 +14,11 @@ The Nx Rollup build pipeline uses `@nx/js/src/plugins/rollup/type-definitions` p
 
 ```typescript
 // dist/index.d.ts
-export * from "./src/index";
+export * from './src/index';
 ```
 
 However, this path is **incorrect** because:
+
 1. The actual TypeScript declarations are at `src/index.d.ts` (package root)
 2. The re-export file is at `dist/index.d.ts` (subdirectory)
 3. From `dist/index.d.ts`, the correct relative path should be `"../src/index"`, not `"./src/index"`
@@ -32,19 +34,21 @@ When TypeScript tries to resolve these imports, it looks for `dist/src/index` wh
 ## The Fix
 
 ### Immediate Solution (Applied)
+
 Updated `package.json` `files` array in all affected packages to **explicitly exclude** the generated `dist/**/*.d.ts` files:
 
 ```json
 {
   "files": [
-    "dist/**/*.js",      // ✅ Include all JavaScript bundles
-    "src/**/*.d.ts",     // ✅ Include actual type declarations
-    "README.md"          // ✅ Include documentation
+    "dist/**/*.js", // ✅ Include all JavaScript bundles
+    "src/**/*.d.ts", // ✅ Include actual type declarations
+    "README.md" // ✅ Include documentation
   ]
 }
 ```
 
 **Packages Fixed**:
+
 - `@signaltree/core`
 - `@signaltree/enterprise`
 - `@signaltree/utils`
@@ -53,6 +57,7 @@ Updated `package.json` `files` array in all affected packages to **explicitly ex
 - `@signaltree/guardrails`
 
 **Not Affected**:
+
 - `@signaltree/ng-forms` - Uses `@nx/angular:package` (ng-packagr), not Rollup
 - `@signaltree/shared` - Private package, not published
 
@@ -66,22 +71,28 @@ Updated `package.json` `files` array in all affected packages to **explicitly ex
 ### Alternative Solutions Considered
 
 #### Option A: Fix Nx Plugin Path Calculation
+
 **Pros**: Would fix root cause
-**Cons**: 
-- Requires forking/patching `@nx/rollup` 
+**Cons**:
+
+- Requires forking/patching `@nx/rollup`
 - High maintenance burden across Nx upgrades
 - Complex to maintain
 
 #### Option B: Consolidate Declarations Into dist/
+
 **Pros**: Single output directory
 **Cons**:
+
 - Breaks build instructions directive (separate `src/` for declarations)
 - Would require restructuring all package.json exports
 - Doesn't align with `preserveModules` philosophy
 
 #### Option C: Disable typeDefinitions Plugin
+
 **Pros**: Prevents generation of broken files
 **Cons**:
+
 - Plugin is hardcoded in Nx's `withNx` wrapper
 - Would require completely custom Rollup configuration
 - Lose other Nx integration benefits
@@ -91,6 +102,7 @@ Updated `package.json` `files` array in all affected packages to **explicitly ex
 ## Validation
 
 ### Pre-Fix (Broken)
+
 ```bash
 $ npm pack @signaltree/core@4.1.0
 $ tar -tzf signaltree-core-4.1.0.tgz | grep "dist/index.d.ts"
@@ -101,6 +113,7 @@ export * from "./src/index";  # ❌ Wrong path
 ```
 
 ### Post-Fix (Working)
+
 ```bash
 $ npm pack dist/packages/core
 $ tar -tzf signaltree-core-4.1.1.tgz | grep "dist/index.d.ts"
@@ -113,7 +126,9 @@ function  # ✅ Import succeeds
 ## Future Prevention
 
 ### Build-Time Check
+
 Add to CI pipeline:
+
 ```bash
 # scripts/verify-no-broken-dts.sh
 for pkg in dist/packages/*; do
@@ -125,11 +140,13 @@ done
 ```
 
 ### Pre-Publish Validation
+
 Update `scripts/pre-publish-validation.sh` to check that no `dist/**/*.d.ts` files exist in packed tarballs.
 
 ## Monitoring
 
 Watch for similar issues if:
+
 - Upgrading `@nx/rollup` or `@nx/js` packages
 - Changing TypeScript `declarationDir` configuration
 - Modifying Rollup output structure
