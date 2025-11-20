@@ -2,13 +2,12 @@
   "extends": "./tsconfig.lib.json",
   "compilerOptions": {
     "removeComments": true,
-    "declaration": true,
+    "declaration": false,
     "declarationMap": false,
     "stripInternal": true,
     "sourceMap": false,
     "module": "preserve",
     "moduleResolution": "node",
-    "outDir": "../../dist/packages/callable-syntax/dist",
-    "declarationDir": "../../dist/packages/callable-syntax/dist"
+    "outDir": "../../dist/packages/callable-syntax/dist"
   }
 }

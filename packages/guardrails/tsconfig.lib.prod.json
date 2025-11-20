@@ -3,10 +3,9 @@
   "compilerOptions": {
     "removeComments": true,
     "declarationMap": false,
-    "declaration": true,
+    "declaration": false,
     "stripInternal": true,
     "sourceMap": false,
-    "outDir": "../../dist/packages/guardrails/dist",
-    "declarationDir": "../../dist/packages/guardrails/dist"
+    "outDir": "../../dist/packages/guardrails/dist"
   }
 }

@@ -2,13 +2,12 @@
   "extends": "./tsconfig.lib.json",
   "compilerOptions": {
     "removeComments": true,
-    "declaration": true,
+    "declaration": false,
     "declarationMap": false,
     "stripInternal": true,
     "sourceMap": false,
     "module": "preserve",
     "moduleResolution": "node",
-    "outDir": "../../dist/packages/shared/dist",
-    "declarationDir": "../../dist/packages/shared/dist"
+    "outDir": "../../dist/packages/shared/dist"
   }
 }
