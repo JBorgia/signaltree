@@ -23,6 +23,11 @@
             "input": "packages/types",
             "glob": "package.json",
             "output": "."
+          },
+          {
+            "input": "packages/types/src",
+            "glob": "**/*.d.ts",
+            "output": "./src"
           }
         ],
         "rollupConfig": "packages/types/rollup.config.mjs",

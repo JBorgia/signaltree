@@ -25,6 +25,11 @@
             "input": "packages/utils",
             "glob": "package.json",
             "output": "."
+          },
+          {
+            "input": "packages/utils/src",
+            "glob": "**/*.d.ts",
+            "output": "./src"
           }
         ],
         "rollupConfig": "packages/utils/rollup.config.mjs",

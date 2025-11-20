@@ -31,6 +31,11 @@
             "input": "packages/enterprise",
             "glob": "package.json",
             "output": "."
+          },
+          {
+            "input": "packages/enterprise/src",
+            "glob": "**/*.d.ts",
+            "output": "./src"
           }
         ],
         "rollupConfig": "packages/enterprise/rollup.config.mjs",

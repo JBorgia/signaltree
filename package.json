@@ -52,7 +52,7 @@
     "release:major": "./scripts/release.sh major",
     "release:patch": "./scripts/release.sh patch",
     "// Enhanced Build Scripts": "Scripts for efficient development and production builds",
-    "build:all": "nx run-many -t build --projects=core,enterprise,ng-forms,shared,types,utils,callable-syntax",
+    "build:all": "nx run-many -t build --projects=core,enterprise,ng-forms,shared,types,utils,callable-syntax && node tools/build/clean-dist-declarations.mjs",
     "build:core": "nx build core",
     "build:callable-syntax": "nx build callable-syntax",
     "build:packages": "nx run-many -t build --projects=enterprise,ng-forms,shared,types,utils,callable-syntax",

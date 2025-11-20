@@ -33,6 +33,11 @@
             "input": "packages/core",
             "glob": "package.json",
             "output": "."
+          },
+          {
+            "input": "packages/core/src",
+            "glob": "**/*.d.ts",
+            "output": "./src"
           }
         ],
         "rollupConfig": "packages/core/rollup.config.mjs",

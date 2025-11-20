@@ -41,6 +41,11 @@
             "input": "packages/guardrails",
             "glob": "package.json",
             "output": "."
+          },
+          {
+            "input": "packages/guardrails/src",
+            "glob": "**/*.d.ts",
+            "output": "./src"
           }
         ],
         "rollupConfig": "packages/guardrails/rollup.config.mjs",

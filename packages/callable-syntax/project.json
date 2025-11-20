@@ -42,6 +42,11 @@
             "input": "packages/callable-syntax",
             "glob": "augmentation.d.ts",
             "output": "."
+          },
+          {
+            "input": "packages/callable-syntax/src",
+            "glob": "**/*.d.ts",
+            "output": "./src"
           }
         ],
         "rollupConfig": "packages/callable-syntax/rollup.config.mjs",

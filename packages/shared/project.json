@@ -25,14 +25,9 @@
             "output": "."
           },
           {
-            "input": "packages/shared",
-            "glob": "index.d.ts",
-            "output": "."
-          },
-          {
-            "input": "packages/shared",
-            "glob": "index.js",
-            "output": "."
+            "input": "packages/shared/src",
+            "glob": "**/*.d.ts",
+            "output": "./src"
           }
         ],
         "rollupConfig": "packages/shared/rollup.config.mjs",
