@@ -1,4 +1,6 @@
 {
-  "installCommand": "echo 'Skipping install for API-only deployment'",
-  "buildCommand": "echo 'Skipping build for API-only deployment'"
+  "framework": "angular",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm nx build demo --configuration=production",
+  "outputDirectory": "dist/apps/demo/browser"
 }
