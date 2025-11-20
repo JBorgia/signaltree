@@ -2,85 +2,305 @@
   <header>
     <h1>SignalTree + Angular Forms</h1>
     <p>
-      This demo shows how <code>@signaltree/ng-forms</code> keeps a reactive
-      profile form in sync with a SignalTree store, including validation,
-      persistence, and async submission hooks.
+      Explore a production-style onboarding flow powered by
+      <code>@signaltree/ng-forms</code>. The form demonstrates nested groups,
+      form-array helpers, async validation, conditional sections, and automatic
+      persistence to <code>localStorage</code>.
     </p>
   </header>
 
-  <section class="form-panel">
-    <h2>Profile Form</h2>
-    <form [formGroup]="profile.form" (ngSubmit)="save()" novalidate>
-      <div class="field">
-        <label for="name">Full name</label>
-        <input
-          id="name"
-          type="text"
-          formControlName="name"
-          placeholder="Ada Lovelace"
-        />
-        <p *ngIf="nameError" class="error">{{ nameError }}</p>
+  <div class="content-grid">
+    <section class="form-panel">
+      <div class="status-row">
+        <div class="status-chips">
+          <span class="chip" [class.active]="profile.dirty()">Dirty</span>
+          <span class="chip" [class.active]="!profile.dirty()">Pristine</span>
+          <span class="chip" [class.success]="profile.valid()">Valid</span>
+          <span class="chip" [class.active]="hasPendingAsync()">
+            Async checks
+          </span>
+          <span class="chip" [class.active]="profile.submitting()">
+            Submitting
+          </span>
+        </div>
+        <div class="completion">
+          <label>Completion</label>
+          <div class="meter">
+            <div class="bar" [style.width.%]="completionPercent()"></div>
+          </div>
+          <span>{{ completionPercent() }}%</span>
+        </div>
       </div>
 
-      <div class="field">
-        <label for="email">Email</label>
-        <input
-          id="email"
-          type="email"
-          formControlName="email"
-          placeholder="ada@example.com"
-        />
-        <p *ngIf="emailError" class="error">{{ emailError }}</p>
-      </div>
+      <form [formGroup]="profile.form" (ngSubmit)="save()" novalidate>
+        <fieldset>
+          <legend>Identity</legend>
+          <div class="field-grid">
+            <div class="field">
+              <label for="name">Full name</label>
+              <input
+                id="name"
+                type="text"
+                formControlName="name"
+                placeholder="Ada Lovelace"
+                autocomplete="name"
+              />
+              <p *ngIf="nameError" class="error">{{ nameError }}</p>
+            </div>
 
-      <div class="field checkbox">
-        <label>
-          <input type="checkbox" formControlName="receiveUpdates" />
-          Keep me posted on product updates
-        </label>
-      </div>
+            <div class="field">
+              <label for="email">Email</label>
+              <div class="inline-field">
+                <input
+                  id="email"
+                  type="email"
+                  formControlName="email"
+                  placeholder="ada@signaltree.dev"
+                  autocomplete="email"
+                />
+                <span *ngIf="hasPendingAsync()" class="hint" aria-live="polite">
+                  Validating…
+                </span>
+              </div>
+              <p *ngIf="emailError" class="error">{{ emailError }}</p>
+              <p
+                *ngIf="profile.getFieldAsyncError('email')()"
+                class="error async"
+              >
+                {{ profile.getFieldAsyncError('email')() }}
+              </p>
+            </div>
 
-      <div class="actions">
-        <button type="submit" [disabled]="status() === 'saving'">
-          {{ submissionLabel }}
-        </button>
-        <button
-          type="button"
-          class="reset"
-          (click)="reset()"
-          [disabled]="status() === 'saving'"
-        >
-          Reset
-        </button>
-      </div>
+            <div class="field">
+              <label for="role">Collaboration mode</label>
+              <select id="role" formControlName="role">
+                <option value="individual">Individual contributor</option>
+                <option value="manager">Team manager</option>
+              </select>
+            </div>
 
-      <p class="status" [class.error]="status() === 'error'">
-        Status: {{ status() }}
-      </p>
-    </form>
+            <div class="field checkbox">
+              <label>
+                <input type="checkbox" formControlName="receiveUpdates" />
+                Keep me posted on product updates
+              </label>
+            </div>
+          </div>
+        </fieldset>
 
-    <article class="callout">
-      <h3>Form Tree Setup</h3>
-      <pre><code>{{ calloutCode }}</code></pre>
-    </article>
-  </section>
+        <fieldset formGroupName="company">
+          <legend>Company context</legend>
+          <p class="hint" *ngIf="!isManager()">
+            Switch to “Team manager” to activate company planning inputs.
+          </p>
+          <div class="field-grid">
+            <div class="field">
+              <label for="company-name">Company name</label>
+              <input
+                id="company-name"
+                type="text"
+                formControlName="name"
+                placeholder="SignalTree Labs"
+                autocomplete="organization"
+              />
+              <p *ngIf="profile.getFieldError('company.name')()" class="error">
+                {{ profile.getFieldError('company.name')() }}
+              </p>
+            </div>
 
-  <section class="inspector">
-    <h2>Live State Preview</h2>
-    <p>
-      SignalTree keeps the form state, validation errors, and async metadata in
-      a single tree. You can inspect the current snapshot below.
-    </p>
-    <pre><code>{{ preview() }}</code></pre>
+            <div class="field">
+              <label for="company-size">Team size</label>
+              <select id="company-size" formControlName="size">
+                <option *ngFor="let size of companySizeOptions" [value]="size">
+                  {{ size }} teammates
+                </option>
+              </select>
+              <p *ngIf="profile.getFieldError('company.size')()" class="error">
+                {{ profile.getFieldError('company.size')() }}
+              </p>
+            </div>
+          </div>
+        </fieldset>
 
-    <div *ngIf="lastSaved() as saved" class="saved-summary">
-      <h3>Last Saved Payload</h3>
-      <p><strong>Name:</strong> {{ saved.name }}</p>
-      <p><strong>Email:</strong> {{ saved.email }}</p>
-      <p>
-        <strong>Updates opt-in:</strong>
-        {{ saved.receiveUpdates ? 'Enabled' : 'Disabled' }}
-      </p>
-    </div>
-  </section>
+        <fieldset formGroupName="preferences">
+          <legend>Notification preferences</legend>
+          <div class="field-grid preferences">
+            <label class="checkbox">
+              <input type="checkbox" formControlName="newsletter" />
+              Weekly newsletter
+            </label>
+            <label class="checkbox">
+              <input type="checkbox" formControlName="productUpdates" />
+              Product releases
+            </label>
+            <label class="checkbox">
+              <input type="checkbox" formControlName="betaProgram" />
+              Experimental beta program
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset formArrayName="phoneNumbers">
+          <legend>Phone numbers</legend>
+          <div
+            class="phone-row"
+            *ngFor="
+              let phone of phoneControls.controls;
+              let i = index;
+              trackBy: trackByIndex
+            "
+            [formGroupName]="i"
+          >
+            <label class="sr-only" [for]="'phone-label-' + i">Label</label>
+            <select [id]="'phone-label-' + i" formControlName="label">
+              <option *ngFor="let label of phoneLabelOptions" [value]="label">
+                {{ label | titlecase }}
+              </option>
+            </select>
+
+            <label class="sr-only" [for]="'phone-value-' + i">Number</label>
+            <input
+              [id]="'phone-value-' + i"
+              type="tel"
+              formControlName="value"
+              placeholder="+1 415 555 0134"
+              autocomplete="tel"
+            />
+
+            <button
+              type="button"
+              class="remove"
+              (click)="removePhoneNumber(i)"
+              [disabled]="phoneControls.length === 1"
+              aria-label="Remove phone number"
+            >
+              Remove
+            </button>
+
+            <p *ngIf="phoneError(i)" class="error small">{{ phoneError(i) }}</p>
+            <p *ngIf="phoneAsyncError(i)" class="error small async">
+              {{ phoneAsyncError(i) }}
+            </p>
+          </div>
+
+          <button type="button" class="add" (click)="addPhoneNumber()">
+            + Add another number
+          </button>
+        </fieldset>
+
+        <fieldset>
+          <legend>Notes</legend>
+          <div class="field">
+            <label for="notes">Collaboration goals</label>
+            <textarea
+              id="notes"
+              rows="4"
+              formControlName="notes"
+              placeholder="Share how your team plans to use SignalTree."
+            ></textarea>
+            <p *ngIf="profile.getFieldError('notes')()" class="error">
+              {{ profile.getFieldError('notes')() }}
+            </p>
+          </div>
+        </fieldset>
+
+        <div class="actions">
+          <button type="submit" [disabled]="status() === 'saving'">
+            {{ submissionLabel }}
+          </button>
+          <button
+            type="button"
+            (click)="validateAll()"
+            [disabled]="status() === 'saving'"
+          >
+            Check validation
+          </button>
+          <button
+            type="button"
+            class="reset"
+            (click)="reset()"
+            [disabled]="status() === 'saving'"
+          >
+            Reset
+          </button>
+        </div>
+
+        <p class="status" [class.error]="status() === 'error'">
+          Status: {{ status() }}
+        </p>
+
+        <div class="validation-summary">
+          <div>
+            <h3>Sync validation</h3>
+            <ng-container *ngIf="errorEntries().length; else noSyncErrors">
+              <ul>
+                <li *ngFor="let error of errorEntries()">
+                  <code>{{ error[0] }}</code>
+                  <span>— {{ error[1] }}</span>
+                </li>
+              </ul>
+            </ng-container>
+          </div>
+          <div>
+            <h3>Async validation</h3>
+            <ng-container
+              *ngIf="asyncErrorEntries().length; else noAsyncErrors"
+            >
+              <ul>
+                <li *ngFor="let error of asyncErrorEntries()">
+                  <code>{{ error[0] }}</code>
+                  <span>— {{ error[1] }}</span>
+                </li>
+              </ul>
+            </ng-container>
+          </div>
+        </div>
+
+        <p class="hint small">
+          The form persists in the browser via <code>localStorage</code> using
+          <code>persistKey</code>. Clear storage or press reset to start fresh.
+        </p>
+      </form>
+    </section>
+
+    <aside class="inspector">
+      <article class="summary-card callout">
+        <h3>Form Tree Setup</h3>
+        <pre><code>{{ calloutCode }}</code></pre>
+      </article>
+
+      <article class="summary-card">
+        <h3>Live State Preview</h3>
+        <p>
+          Inspect the entire SignalTree snapshot, including aggregation signals
+          such as <code>valid</code>, <code>dirty</code>, async state, and the
+          current completion heuristic.
+        </p>
+        <pre><code>{{ preview() }}</code></pre>
+      </article>
+
+      <article class="summary-card" *ngIf="lastSaved() as saved">
+        <h3>Last Saved Payload</h3>
+        <p><strong>Name:</strong> {{ saved.name }}</p>
+        <p><strong>Email:</strong> {{ saved.email }}</p>
+        <p><strong>Role:</strong> {{ saved.role | titlecase }}</p>
+        <p>
+          <strong>Updates opt-in:</strong>
+          {{ saved.receiveUpdates ? 'Enabled' : 'Disabled' }}
+        </p>
+        <p>
+          <strong>Numbers:</strong>
+          {{ saved.phoneNumbers.length }} stored
+        </p>
+      </article>
+    </aside>
+  </div>
 </div>
+
+<ng-template #noSyncErrors>
+  <p class="hint">No sync validation issues detected.</p>
+</ng-template>
+
+<ng-template #noAsyncErrors>
+  <p class="hint">No async validation issues detected.</p>
+</ng-template>
