@@ -225,7 +225,7 @@ const profile = createFormTree({
           : null;
       },
     },
-    'phoneNumbers.*.value': [required(), pattern(/^[+\d ()-]{6,}$/)],
+    'phoneNumbers.*.value': [required(), pattern(/^[+0-9 ()-]{6,}$/u)],
   },
   conditionals: [
     {
