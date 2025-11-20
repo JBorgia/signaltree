@@ -8,6 +8,10 @@
 Module '"@signaltree/core"' has no exported member 'signalTree'
 ```
 
+**Status**: ✅ **FIXED in v4.1.1** with automated prevention
+
+**Prevention**: This issue cannot recur due to mandatory pre-release validation (see `.github/instructions/release-process.instructions.md`)
+
 ## Root Cause
 
 The Nx Rollup build pipeline uses `@nx/js/src/plugins/rollup/type-definitions` plugin which automatically generates **re-export declaration files** in the `dist/` directory. These files contain relative imports like:
@@ -125,23 +129,25 @@ function  # ✅ Import succeeds
 
 ## Future Prevention
 
-### Build-Time Check
+### Build-Time Check ✅ IMPLEMENTED
 
-Add to CI pipeline:
+Added to CI pipeline and npm scripts:
 
 ```bash
 # scripts/verify-no-broken-dts.sh
-for pkg in dist/packages/*; do
-  if [ -f "$pkg/dist/index.d.ts" ]; then
-    echo "❌ Found stray dist/index.d.ts in $pkg"
-    exit 1
-  fi
-done
+npm run validate:types
 ```
 
-### Pre-Publish Validation
+This script runs automatically as part of:
 
-Update `scripts/pre-publish-validation.sh` to check that no `dist/**/*.d.ts` files exist in packed tarballs.
+- `scripts/pre-publish-validation.sh` (step 9a)
+- `npm run validate:types` (standalone)
+
+It verifies that no `dist/**/*.d.ts` files exist in built packages before publishing.
+
+### Pre-Publish Validation ✅ INTEGRATED
+
+The verification is now part of the pre-publish workflow and will catch regressions before they reach npm.
 
 ## Monitoring
 
@@ -151,16 +157,31 @@ Watch for similar issues if:
 - Changing TypeScript `declarationDir` configuration
 - Modifying Rollup output structure
 
-## Release Plan
+**Automated Protection**: The `validate:types` script runs in pre-release validation (mandatory step in `.github/instructions/release-process.instructions.md`)
 
-1. ✅ Apply fix to all package.json files
-2. Bump patch version: `4.1.0` → `4.1.1`
-3. Build and test locally
-4. Publish with changelog entry explaining the fix
-5. Notify affected users (check GitHub issues for related reports)
+## Release History
+
+### v4.1.1 (2025-11-20) ✅ PUBLISHED
+
+1. ✅ Applied fix to all package.json files
+2. ✅ Bumped patch version: `4.1.0` → `4.1.1`
+3. ✅ Built and tested locally
+4. ✅ Published to npm with changelog entry
+5. ✅ Created verification script (`scripts/verify-no-broken-dts.sh`)
+6. ✅ Integrated verification into CI pipeline
+7. ✅ Documented release process (`.github/instructions/release-process.instructions.md`)
+
+**Lessons Learned**:
+
+- Never skip validation steps before releasing
+- Automated checks prevent human error
+- Package.json files array must explicitly exclude broken Nx-generated files
 
 ---
 
 **Last Updated**: 2025-11-20
+**Issue Reporter**: pascal-puetz (GitHub)
+**Fix Applied By**: Automated investigation + manual validation
+**Prevention**: Mandatory pre-release validation with `validate:types` check
 **Issue Reporter**: pascal-puetz (GitHub)
 **Fix Applied By**: Automated investigation + manual validation

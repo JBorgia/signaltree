@@ -91,6 +91,7 @@
     "validate:exports": "node scripts/verify-exports.js",
     "validate:docs": "bash scripts/validate-docs.sh",
     "validate:size-claims": "node scripts/verify-size-claims.js",
+    "validate:types": "bash scripts/verify-no-broken-dts.sh",
     "validate:all": "npm run validate",
     "// Performance & Analysis": "Performance testing and bundle analysis",
     "perf:test": "npm run test:performance",
