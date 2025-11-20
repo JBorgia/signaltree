@@ -14,9 +14,11 @@ All `.instructions.md` files in this directory define **required** processes and
 ## Active Instructions
 
 ### 1. [build-pipeline.instructions.md](./build-pipeline.instructions.md)
+
 **Purpose**: Defines the mandatory build architecture for all SignalTree libraries.
 
 **Key Requirements**:
+
 - Use bundler executors (Rollup/esbuild), not `@nx/js:tsc`
 - Emit pure ESM with `preserveModules: true`
 - Single bundler invocation per package (no post-build scripts)
@@ -29,9 +31,11 @@ All `.instructions.md` files in this directory define **required** processes and
 ---
 
 ### 2. [nx.instructions.md](./nx.instructions.md)
+
 **Purpose**: Defines how to work with the Nx workspace and use Nx MCP server tools.
 
 **Key Requirements**:
+
 - Use `nx_workspace` tool to understand architecture
 - Use `nx_docs` tool for up-to-date Nx configuration
 - Use `nx_generators` for code generation
@@ -45,12 +49,14 @@ All `.instructions.md` files in this directory define **required** processes and
 ---
 
 ### 3. [release-process.instructions.md](./release-process.instructions.md) 🆕
+
 **Purpose**: Defines the **mandatory** release process to prevent publishing broken packages.
 
 **Key Requirements**:
+
 - Run `npm run validate:all` before any release
 - Use `pnpm nx release [patch|minor|major] --yes` (never manual versioning)
-- Verify `validate:types` passes (no stray dist/**/*.d.ts files)
+- Verify `validate:types` passes (no stray dist/\*_/_.d.ts files)
 - Test installation in clean project after publishing
 - Push tags to GitHub after successful npm publish
 
@@ -61,9 +67,11 @@ All `.instructions.md` files in this directory define **required** processes and
 ---
 
 ### 4. [type-declarations-fix.md](./type-declarations-fix.md)
+
 **Purpose**: Documents the root cause and solution for the v4.1.0 type declaration bug.
 
 **Key Context**:
+
 - Nx's typeDefinitions plugin generates incorrect re-export files
 - package.json `files` array must exclude `dist/**/*.d.ts`
 - Verification script (`scripts/verify-no-broken-dts.sh`) prevents regression
@@ -91,15 +99,19 @@ All `.instructions.md` files in this directory define **required** processes and
 ### Critical Scenarios
 
 #### Releasing a New Version
+
 → **MUST** follow `release-process.instructions.md` step-by-step
 
 #### Modifying Build Configuration
+
 → **MUST** comply with `build-pipeline.instructions.md`
 
 #### Adding New Package
+
 → **MUST** follow both `build-pipeline.instructions.md` AND `nx.instructions.md`
 
 #### Troubleshooting Type Errors
+
 → **SHOULD** review `type-declarations-fix.md` for known issues
 
 ## Adding New Instructions
