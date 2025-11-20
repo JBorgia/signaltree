@@ -252,7 +252,8 @@ export function createFormTree<T extends Record<string, unknown>>(
     persistDebounceMs,
     cleanupCallbacks
   );
-  persistController.persistImmediately();
+  // Don't persist immediately - let the form stabilize first with conditionals applied
+  // persistController.persistImmediately();
 
   const fieldErrorKeys = new Set([
     ...Object.keys(syncValidators),
@@ -334,7 +335,12 @@ export function createFormTree<T extends Record<string, unknown>>(
               }
               conditionalState.set(fieldPath, visible);
               if (visible) {
-                control.enable({ emitEvent: false });
+                // Sync the control's current value to the SignalTree when enabling
+                const signalAtPath = getSignalAtPath(flattenedState, fieldPath);
+                if (signalAtPath && 'set' in signalAtPath) {
+                  (signalAtPath as WritableSignal<unknown>).set(control.value);
+                }
+                control.enable({ emitEvent: true });
               } else {
                 control.disable({ emitEvent: false });
               }
@@ -593,12 +599,22 @@ function getSignalAtPath<T>(
   const segments = parsePath(path);
   let current: unknown = node;
 
-  for (const segment of segments) {
-    if (!current || typeof current !== 'object') {
+  for (let i = 0; i < segments.length; i++) {
+    const segment = segments[i];
+    if (
+      !current ||
+      (typeof current !== 'object' && typeof current !== 'function')
+    ) {
       return null;
     }
 
     current = (current as Record<string, unknown>)[segment];
+
+    // If we found a signal but haven't reached the end of the path,
+    // call it to get the nested object and continue traversing
+    if (isSignal(current) && i < segments.length - 1) {
+      current = (current as Signal<unknown>)();
+    }
   }
 
   if (isSignal(current)) {

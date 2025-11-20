@@ -36,7 +36,7 @@ npm-debug.log
 yarn-error.log
 testem.log
 /typings
-./.npmrc
+.npmrc
 
 # System Files
 .DS_Store
