@@ -40,8 +40,8 @@
     "./package.json": "./package.json"
   },
   "files": [
-    "dist",
-    "src",
+    "dist/**/*.js",
+    "src/**/*.d.ts",
     "README.md",
     "CHANGELOG.md"
   ],

@@ -17,10 +17,9 @@
     "access": "public"
   },
   "files": [
-    "src",
-    "README.md",
-    "package.json",
-    "dist"
+    "dist/**/*.js",
+    "src/**/*.d.ts",
+    "README.md"
   ],
   "keywords": [
     "signaltree",
