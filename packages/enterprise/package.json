@@ -79,7 +79,7 @@
   },
   "files": [
     "dist/**/*.js",
-    "src/**/*.d.ts",
+    "dist/**/*.d.ts",
     "README.md"
   ]
 }

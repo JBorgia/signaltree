@@ -3,9 +3,10 @@
   "compilerOptions": {
     "removeComments": true,
     "declarationMap": false,
-    "declaration": false,
+    "declaration": true,
     "stripInternal": true,
     "sourceMap": false,
-    "outDir": "../../dist/packages/enterprise/dist"
+    "outDir": "../../dist/packages/enterprise/dist",
+    "declarationDir": "../../dist/packages/enterprise/dist"
   }
 }

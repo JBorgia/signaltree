@@ -3,11 +3,12 @@
   "compilerOptions": {
     "removeComments": true,
     "declarationMap": false,
-    "declaration": false,
+    "declaration": true,
     "stripInternal": true,
     "sourceMap": false,
     "module": "preserve",
     "moduleResolution": "node",
-    "outDir": "../../dist/packages/utils/dist"
+    "outDir": "../../dist/packages/utils/dist",
+    "declarationDir": "../../dist/packages/utils/dist"
   }
 }

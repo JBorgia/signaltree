@@ -3,10 +3,11 @@
   "compilerOptions": {
     "removeComments": true,
     "declarationMap": false,
-    "declaration": false,
+    "declaration": true,
     "stripInternal": true,
     "sourceMap": false,
-    "outDir": "../../dist/packages/core/dist"
+    "outDir": "../../dist/packages/core/dist",
+    "declarationDir": "../../dist/packages/core/dist"
   },
   "angularCompilerOptions": {
     "compilationMode": "partial"

@@ -168,14 +168,6 @@ print_info "Note: enterprise and ng-forms will be built during release after cor
 # Build core and other independent packages
 if NX_DAEMON=false npx nx run-many -t build --projects=core,callable-syntax,shared,types,utils,guardrails 2>&1 | tee /tmp/build.log; then
     print_success "Independent packages built successfully"
-
-    # Clean stray .d.ts files
-    print_step "Cleaning stray .d.ts files from dist/"
-    if node tools/build/clean-dist-declarations.mjs; then
-        print_success "Stray .d.ts files cleaned"
-    else
-        print_warning "Failed to clean .d.ts files (non-fatal)"
-    fi
 else
     print_error "Build failed"
     cat /tmp/build.log
