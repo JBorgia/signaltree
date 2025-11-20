@@ -1,3 +1,14 @@
+## 4.1.1 (2025-11-20)
+
+### 🩹 Fixes
+
+- apply type declaration fix to all Rollup-built packages + documentation ([d39f81b](https://github.com/JBorgia/signaltree/commit/d39f81b))
+- **core:** exclude stray dist/*.d.ts files that conflicted with type resolution ([9e1286e](https://github.com/JBorgia/signaltree/commit/9e1286e))
+
+### ❤️ Thank You
+
+- Borgia
+
 # Changelog
 
 All notable changes to SignalTree will be documented in this file.
