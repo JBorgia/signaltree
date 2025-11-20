@@ -44,11 +44,11 @@ npm install -D @signaltree/callable-syntax
 ```
 
 ```javascript
-// webpack.extra.js
-const { SignalTreeWebpackPlugin } = require('@signaltree/callable-syntax/webpack');
+// webpack.extra.mjs
+import { SignalTreeSyntaxWebpackPlugin } from '@signaltree/callable-syntax/webpack';
 
-module.exports = {
-  plugins: [new SignalTreeWebpackPlugin()],
+export default {
+  plugins: [new SignalTreeSyntaxWebpackPlugin()],
 };
 ```
 
@@ -62,44 +62,6 @@ import { signalTreeSyntaxTransform } from '@signaltree/callable-syntax/vite';
 export default defineConfig({
   plugins: [signalTreeSyntaxTransform()],
 });
-```
-
-### Webpack
-
-````ts
-#### Webpack (Manual Setup)
-
-```javascript
-// webpack.config.js
-const { SignalTreeTransform } = require('@signaltree/callable-syntax/transform');
-
-module.exports = {
-  module: {
-    rules: [
-      {
-        test: /\.tsx?$/,
-        use: [
-          'ts-loader',
-          {
-            loader: 'babel-loader',
-            options: {
-              plugins: [SignalTreeTransform]
-            }
-          }
-        ]
-      }
-    ]
-  }
-};
-````
-
-#### Babel Configuration
-
-```json
-// .babelrc or babel.config.json
-{
-  "plugins": ["@signaltree/callable-syntax/babel-plugin"]
-}
 ```
 
 ### Development Workflow
@@ -154,4 +116,8 @@ No per-file imports required in this repo. Types are loaded via root `tsconfig`:
 ### License
 
 Business Source License 1.1 (BSL-1.1) – converts to MIT on Change Date per root project license.
+```
+
+```
+
 ```
