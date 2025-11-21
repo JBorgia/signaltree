@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
-import { signalTree } from '@signaltree/core';
-import { UpdateResult, withEnterprise } from '@signaltree/enterprise';
+import { SignalTree, signalTree } from '@signaltree/core';
+import { EnterpriseEnhancedTree, UpdateResult, withEnterprise } from '@signaltree/enterprise';
 
 interface DashboardState extends Record<string, unknown> {
   metrics: Record<string, number>;
@@ -21,8 +21,9 @@ interface DashboardState extends Record<string, unknown> {
   styleUrls: ['./enterprise-enhancer.component.scss'],
 })
 export class EnterpriseEnhancerComponent {
-  // Demo state with large structure
-  private tree = signalTree<DashboardState>({
+  // Demo state with large structure - explicitly type the enhanced tree
+  private tree: SignalTree<DashboardState> &
+    EnterpriseEnhancedTree<DashboardState> = signalTree<DashboardState>({
     metrics: {
       cpu: 45,
       memory: 62,
@@ -128,7 +129,7 @@ export class EnterpriseEnhancerComponent {
   }
 
   reset() {
-    this.tree.setState({
+    this.tree({
       metrics: {
         cpu: 45,
         memory: 62,
