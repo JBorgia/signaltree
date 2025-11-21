@@ -1,32 +1,61 @@
 <div class="documentation-container">
   <div class="documentation-sidebar">
-    <h2>📚 Documentation</h2>
+    <div class="documentation-header">
+      <h2>📚 SignalTree Documentation</h2>
+      <div class="value-proposition">
+        <h3>🎓 Learn by Doing</h3>
+        <p>
+          <strong>Interactive examples, not just API reference.</strong>
+          Every SignalTree package includes runnable code samples, migration
+          guides, and real-world usage patterns. Compare to alternatives:
+        </p>
+        <ul class="doc-benefits">
+          <li>
+            <strong>vs NgRx:</strong> No 47-page PDF manual. Start with working
+            code in 5 minutes.
+          </li>
+          <li>
+            <strong>vs Akita:</strong> TypeScript-first examples (not
+            class-based patterns from 2018).
+          </li>
+          <li>
+            <strong>vs Redux Toolkit:</strong> Signal-native patterns (not
+            thunk/saga complexity).
+          </li>
+        </ul>
+        <p class="quick-start">
+          👉 Pick a package on the left to see live examples, migration paths,
+          and best practices.
+        </p>
+      </div>
+    </div>
+
     <div class="package-list">
       @for (pkg of packages; track pkg.id) {
-        <button
-          class="package-button"
-          [class.active]="selectedPackage().id === pkg.id"
-          (click)="selectPackage(pkg)"
-        >
-          <div class="package-name">{{ pkg.name }}</div>
-          <div class="package-description">{{ pkg.description }}</div>
-        </button>
+      <button
+        class="package-button"
+        [class.active]="selectedPackage().id === pkg.id"
+        (click)="selectPackage(pkg)"
+      >
+        <div class="package-name">{{ pkg.name }}</div>
+        <div class="package-description">{{ pkg.description }}</div>
+      </button>
       }
     </div>
   </div>
 
   <div class="documentation-content">
     @if (loading()) {
-      <div class="loading-spinner">
-        <div class="spinner"></div>
-        <p>Loading documentation...</p>
-      </div>
+    <div class="loading-spinner">
+      <div class="spinner"></div>
+      <p>Loading documentation...</p>
+    </div>
     } @else if (error()) {
-      <div class="error-message">
-        <p>{{ error() }}</p>
-      </div>
+    <div class="error-message">
+      <p>{{ error() }}</p>
+    </div>
     } @else {
-      <div class="markdown-content" [innerHTML]="markdownContent()"></div>
+    <div class="markdown-content" [innerHTML]="markdownContent()"></div>
     }
   </div>
 </div>

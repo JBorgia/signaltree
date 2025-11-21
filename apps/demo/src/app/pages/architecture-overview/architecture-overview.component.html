@@ -5,6 +5,51 @@
       Experience the power of a unified, optimized state management solution
       that combines all features into a single, tree-shakable package.
     </p>
+
+    <div class="value-proposition">
+      <h2>🎯 Why Consolidation Matters</h2>
+      <p>
+        <strong>Stop choosing between features and bundle size.</strong>
+        Traditional state management forces you to pick: install separate
+        packages for every feature (NgRx: @ngrx/store, @ngrx/effects,
+        @ngrx/entity, @ngrx/router-store, @ngrx/component-store...) or settle
+        for limited functionality.
+      </p>
+      <div class="architecture-benefits">
+        <div class="benefit-card">
+          <h3>📦 85% Smaller Bundles</h3>
+          <p>
+            Tree-shakable architecture means you only ship what you use. Import
+            just <code>signalTree()</code> for basic state (0.8KB), add
+            <code>withComputed()</code> for derived values (+0.3KB), or
+            <code>withHistory()</code> for time-travel (+0.4KB). No forced
+            dependencies.
+          </p>
+        </div>
+        <div class="benefit-card">
+          <h3>🔧 Zero Version Conflicts</h3>
+          <p>
+            NgRx's separate packages create peer dependency hell. Need
+            @ngrx/store@16.x with @ngrx/effects@16.x and @ngrx/entity@16.x? Hope
+            they're compatible. SignalTree: one package, one version, zero
+            conflicts.
+          </p>
+        </div>
+        <div class="benefit-card">
+          <h3>⚡ Optimized Together</h3>
+          <p>
+            Separate packages can't share optimizations. SignalTree's batching,
+            memoization, and lazy evaluation work across all features because
+            they're designed as a unified system.
+          </p>
+        </div>
+      </div>
+      <p class="comparison">
+        <strong>Real example:</strong> NgRx with effects, entity, devtools =
+        ~45KB. SignalTree with computed, history, persistence = ~3.4KB.
+        <strong>92% reduction.</strong>
+      </p>
+    </div>
   </div>
 
   <div class="content-section">

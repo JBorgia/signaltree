@@ -1,7 +1,14 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
 import { FormArray, ReactiveFormsModule } from '@angular/forms';
-import { createFormTree, email, FormValidationError, minLength, pattern, required } from '@signaltree/ng-forms';
+import {
+  createFormTree,
+  email,
+  FormValidationError,
+  minLength,
+  pattern,
+  required,
+} from '@signaltree/ng-forms';
 
 type PhoneLabel = 'work' | 'personal' | 'support';
 
@@ -322,6 +329,14 @@ const profile = createFormTree({
     this.profile.reset();
     this.status.set('idle');
     this.lastSaved.set(null);
+  }
+
+  clearStorage() {
+    if (this.storage) {
+      this.storage.removeItem('signaltree-ng-forms-demo');
+      this.reset();
+      this.status.set('idle');
+    }
   }
 
   trackByIndex(index: number) {

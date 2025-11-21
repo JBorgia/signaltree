@@ -2,11 +2,37 @@
   <header>
     <h1>SignalTree + Angular Forms</h1>
     <p>
-      Explore a production-style onboarding flow powered by
-      <code>@signaltree/ng-forms</code>. The form demonstrates nested groups,
-      form-array helpers, async validation, conditional sections, and automatic
-      persistence to <code>localStorage</code>.
+      <strong>Tree-structured signal forms for Angular 21+.</strong> This demo showcases why
+      <code>@signaltree/ng-forms</code> is essential for complex, production-ready forms—going
+      far beyond what Angular 21's native <code>FormField&lt;T&gt;</code> provides.
     </p>
+    <div class="value-callout">
+      <h2>🌲 Why use ng-forms over Angular 21 signal forms?</h2>
+      <ul>
+        <li>
+          <strong>Tree Structure:</strong> Nested objects (user.profile, user.address) with typed path access—Angular 21 only supports flat fields
+        </li>
+        <li>
+          <strong>Auto-Persistence:</strong> Built-in <code>localStorage</code>/<code>sessionStorage</code> with debouncing—no manual saving needed
+        </li>
+        <li>
+          <strong>Wizard Support:</strong> Multi-step forms with automatic field visibility—would require custom implementation in Angular 21
+        </li>
+        <li>
+          <strong>History Tracking:</strong> Undo/redo out of the box—not available in Angular 21
+        </li>
+        <li>
+          <strong>Reactive Bridge:</strong> Works with existing <code>FormGroup</code>/<code>FormControl</code>—Angular 21 is a new API requiring migration
+        </li>
+        <li>
+          <strong>Declarative Config:</strong> Centralized <code>fieldConfigs</code> with glob patterns (<code>payment.card.*</code>)—Angular 21 requires per-field setup
+        </li>
+      </ul>
+      <p class="hint">
+        <strong>Use both!</strong> Angular 21 <code>FormField</code> for simple login forms.
+        ng-forms for nested checkout flows, wizards, and forms with persistence.
+      </p>
+    </div>
   </header>
 
   <div class="content-grid">
@@ -30,6 +56,21 @@
           </div>
           <span>{{ completionPercent() }}%</span>
         </div>
+      </div>
+
+      <div class="demo-callout persistence">
+        <h3>💾 Auto-Persistence in Action</h3>
+        <p>
+          This form uses <code>persistKey: 'signaltree-ng-forms-demo'</code> with
+          <code>localStorage</code>. Every change you make auto-saves after 120ms of inactivity.
+          Refresh the page—your data persists! Angular 21's native signal forms don't include
+          persistence; you'd build this from scratch.
+        </p>
+        <p>
+          <button type="button" class="clear-storage" (click)="clearStorage()">
+            Clear saved demo data
+          </button>
+        </p>
       </div>
 
       <form [formGroup]="profile.form" (ngSubmit)="save()" novalidate>
@@ -69,6 +110,11 @@
               >
                 {{ profile.getFieldAsyncError('email')() }}
               </p>
+              <p class="hint small">
+                <strong>Async validation:</strong> Email uniqueness checked with 180ms debounce.
+                Angular 21 supports async validation but requires manual debouncing per field.
+                ng-forms centralizes it via <code>fieldConfigs</code>.
+              </p>
             </div>
 
             <div class="field">
@@ -90,8 +136,16 @@
 
         <fieldset formGroupName="company">
           <legend>Company context</legend>
+          <div class="demo-callout conditional">
+            <h3>🔀 Conditional Fields</h3>
+            <p>
+              <strong>Try it:</strong> Switch role to "Team manager" above. The company fields
+              below enable automatically via <code>conditionals</code> config. Angular 21 has no
+              built-in conditional logic—you'd implement this with reactive code.
+            </p>
+          </div>
           <p class="hint" *ngIf="!isManager()">
-            Switch to “Team manager” to activate company planning inputs.
+            Switch to "Team manager" to activate company planning inputs.
           </p>
           <div class="field-grid">
             <div class="field">
@@ -124,6 +178,14 @@
 
         <fieldset formGroupName="preferences">
           <legend>Notification preferences</legend>
+          <div class="demo-callout nested">
+            <h3>🌲 Nested Tree Structure</h3>
+            <p>
+              This fieldset is a nested group: <code>profile.$.preferences.newsletter()</code>.
+              Angular 21 signal forms are flat—no built-in nesting. ng-forms mirrors your data
+              model with typed paths like <code>'preferences.newsletter'</code>.
+            </p>
+          </div>
           <div class="field-grid preferences">
             <label class="checkbox">
               <input type="checkbox" formControlName="newsletter" />
@@ -142,6 +204,14 @@
 
         <fieldset formArrayName="phoneNumbers">
           <legend>Phone numbers</legend>
+          <div class="demo-callout array">
+            <h3>📋 Dynamic FormArray</h3>
+            <p>
+              Add/remove phone numbers dynamically. Validation applies via glob pattern
+              <code>'phoneNumbers.*.value'</code>. Angular 21 supports arrays but requires manual
+              per-index validation logic. ng-forms handles this declaratively.
+            </p>
+          </div>
           <div
             class="phone-row"
             *ngFor="
@@ -256,17 +326,80 @@
           </div>
         </div>
 
-        <p class="hint small">
-          The form persists in the browser via <code>localStorage</code> using
-          <code>persistKey</code>. Clear storage or press reset to start fresh.
-        </p>
+        <div class="demo-callout bridge">
+          <h3>🔗 Reactive Forms Bridge</h3>
+          <p>
+            This demo uses <code>[formGroup]="profile.form"</code> and
+            <code>formControlName</code> directives—the same reactive forms API you already know.
+            ng-forms provides <strong>both</strong> signals (<code>profile.$.name()</code>) and
+            reactive controls (<code>profile.form</code>), enabling incremental migration.
+          </p>
+          <p>
+            Angular 21's <code>FormField</code> is a new API requiring rewrite. ng-forms lets you
+            keep existing templates while adding signal capabilities.
+          </p>
+        </div>
       </form>
     </section>
 
     <aside class="inspector">
+      <article class="summary-card comparison">
+        <h3>Angular 21 vs ng-forms</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>Angular 21</th>
+              <th>ng-forms</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Nested objects</td>
+              <td>❌ Flat only</td>
+              <td>✅ Tree structure</td>
+            </tr>
+            <tr>
+              <td>Persistence</td>
+              <td>❌ Manual</td>
+              <td>✅ Built-in</td>
+            </tr>
+            <tr>
+              <td>Wizard flows</td>
+              <td>❌ Custom</td>
+              <td>✅ First-class API</td>
+            </tr>
+            <tr>
+              <td>History/undo</td>
+              <td>❌ Not available</td>
+              <td>✅ Built-in</td>
+            </tr>
+            <tr>
+              <td>Reactive bridge</td>
+              <td>⚠️ Separate API</td>
+              <td>✅ FormGroup compatible</td>
+            </tr>
+            <tr>
+              <td>Declarative config</td>
+              <td>⚠️ Per-field</td>
+              <td>✅ Centralized + globs</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="hint">
+          <strong>Both are valuable!</strong> Use Angular 21 for simple forms. Use ng-forms for
+          complex enterprise scenarios.
+        </p>
+      </article>
+
       <article class="summary-card callout">
         <h3>Form Tree Setup</h3>
         <pre><code>{{ calloutCode }}</code></pre>
+        <p class="hint">
+          This single <code>createFormTree()</code> call configures tree structure, persistence,
+          validation (sync + async), conditional fields, and debouncing. Angular 21 would require
+          separate setup for each concern.
+        </p>
       </article>
 
       <article class="summary-card">
@@ -291,6 +424,26 @@
         <p>
           <strong>Numbers:</strong>
           {{ saved.phoneNumbers.length }} stored
+        </p>
+      </article>
+
+      <article class="summary-card wizard-promo">
+        <h3>🧙 Need Multi-Step Forms?</h3>
+        <p>
+          This demo shows a single-page form. For wizard flows (onboarding, checkout),
+          use <code>createWizardForm()</code>:
+        </p>
+        <pre><code>const wizard = createWizardForm([
+  { fields: ['profile.name', 'profile.email'] },
+  { fields: ['company.name', 'company.size'] },
+  { fields: ['preferences.*'] }
+], initialValues);
+
+wizard.nextStep();  // Auto-shows next fields
+wizard.previousStep();
+wizard.currentStep(); // Signal</code></pre>
+        <p class="hint">
+          Angular 21 has no wizard support. You'd build step management manually.
         </p>
       </article>
     </aside>

@@ -7,6 +7,49 @@
       production builds. Use the controls below to generate activity and watch
       the live telemetry update.
     </p>
+
+    <div class="value-proposition">
+      <h2>🎯 Why Development Guardrails Matter</h2>
+      <p>
+        <strong
+          >Catch performance issues during development, not in
+          production.</strong
+        >
+        Most state management libraries provide zero visibility into hot paths,
+        budget violations, or architectural anti-patterns until users complain.
+        Guardrails gives you real-time feedback.
+      </p>
+      <div class="key-benefits">
+        <div class="benefit">
+          <h3>⚡ Performance Budgets</h3>
+          <p>
+            Set thresholds for update frequency, computation time, and state
+            size. Get warnings before issues reach production.
+          </p>
+        </div>
+        <div class="benefit">
+          <h3>🔥 Hot Path Detection</h3>
+          <p>
+            Automatically identify code paths that update too frequently.
+            NgRx/Redux require custom profiling; guardrails show it live.
+          </p>
+        </div>
+        <div class="benefit">
+          <h3>🛡️ Custom Rules</h3>
+          <p>
+            Enforce team conventions (no PII in state, max nesting depth, naming
+            patterns). Violations surface immediately in dev tools.
+          </p>
+        </div>
+      </div>
+      <p class="zero-cost">
+        <strong>Zero production overhead:</strong> Guardrails is automatically
+        excluded from production bundles. Akita/Elf DevTools stay in bundles;
+        NgRx requires manual plugin exclusion. Guardrails is 100% dev-only by
+        design.
+      </p>
+    </div>
+
     <p class="report-timestamp" *ngIf="reportTimestamp() as timestamp">
       Last report generated at <strong>{{ timestamp }}</strong>
     </p>

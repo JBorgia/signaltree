@@ -1,8 +1,81 @@
 # @signaltree/ng-forms
 
-Angular 20 signal forms meet SignalTree. `@signaltree/ng-forms` keeps your form state, validation, persistence, and wizard flows in sync with the rest of your application signals—no manual plumbing.
+**Tree-structured signal forms for Angular 21+**. When Angular's native signal forms aren't enough—add persistence, wizards, history tracking, and nested state management.
 
 **Bundle size: 3.38KB gzipped**
+
+## Why ng-forms?
+
+Angular 21 introduced native signal forms with `FormField<T>`, which work great for simple, flat forms. **ng-forms is for complex forms** that need:
+
+### **🌲 Tree-Structured State**
+```typescript
+// Angular 21: Flat fields, no relationships
+const name = formField('');
+const email = formField('');
+
+// ng-forms: Hierarchical structure that mirrors your data model
+const form = createFormTree({
+  user: { name: '', email: '' },
+  address: { street: '', city: '', zip: '' }
+});
+// Access nested: form.$.user.name()
+// Validate paths: 'address.zip'
+```
+
+### **💾 Auto-Persistence**
+```typescript
+// Angular 21: No persistence, build it yourself
+// ng-forms: Built-in with debouncing
+const form = createFormTree(initialState, {
+  persistKey: 'checkout-draft',
+  storage: localStorage,
+  persistDebounceMs: 500
+});
+// Auto-saves changes, restores on init
+```
+
+### **🧙 Wizard & Multi-Step Forms**
+```typescript
+// Angular 21: Build from scratch
+// ng-forms: First-class wizard support
+const wizard = createWizardForm([
+  { fields: ['profile.name', 'profile.email'] },
+  { fields: ['address.street', 'address.city'] }
+], initialValues);
+wizard.nextStep(); // Automatic field visibility management
+```
+
+### **↩️ History / Undo-Redo**
+```typescript
+// Angular 21: Not available
+// ng-forms: Built-in
+const form = withFormHistory(createFormTree(initialState));
+form.undo();
+form.redo();
+```
+
+### **🔗 Reactive Forms Bridge**
+```typescript
+// Angular 21: New API, migration required
+// ng-forms: Works with existing FormGroup/FormControl
+<form [formGroup]="profile.form" (ngSubmit)="save()">
+  <input formControlName="name" />
+</form>
+// Signals AND reactive forms, incremental migration
+```
+
+### **⚙️ Declarative Configuration**
+```typescript
+// Angular 21: Per-field imperative setup
+// ng-forms: Centralized, glob-pattern configs
+fieldConfigs: {
+  'email': { validators: [validators.email()], debounceMs: 300 },
+  'payment.card.*': { validators: validators.required() }
+}
+```
+
+**Use Angular 21 signal forms for simple forms. Use ng-forms for enterprise apps with complex state, persistence, and workflow requirements.**
 
 ## Installation
 
@@ -10,7 +83,7 @@ Angular 20 signal forms meet SignalTree. `@signaltree/ng-forms` keeps your form 
 pnpm add @signaltree/core @signaltree/ng-forms
 ```
 
-> This package supports Angular 17+ with TypeScript 5.5+. Angular 17-19 support uses a legacy bridge that will be deprecated when Angular 21 is released. For the best experience, upgrade to Angular 20.3+ to use native Signal Forms.
+> **Compatibility**: Angular 17+ with TypeScript 5.5+. Angular 21+ recommended for best experience. Works alongside Angular's native signal forms—use both where appropriate.
 
 ## Quick start
 
@@ -97,30 +170,58 @@ The returned `FormTree` exposes:
 - **Signal ↔ Observable bridge**: Convert signals to RxJS streams for interoperability
 - **Template-driven adapter**: `SignalValueDirective` bridges standalone signals with `ngModel`
 
-## Signal Forms (Angular 20+)
+## Angular 21 Interoperability
 
-`@signaltree/ng-forms` now prefers Angular's experimental Signal Forms `connect()` API when available.
+**ng-forms complements Angular 21's native signal forms**—use both in the same app:
 
-- Leaves in a SignalTree are native `WritableSignal<T>` and can be connected directly
-- For object slices, convert to a `WritableSignal<T>` via `toWritableSignal()` from `@signaltree/core`
+### Use Angular 21 `FormField<T>` for:
+- ✅ Simple, flat forms (login, search)
+- ✅ Single-field validation
+- ✅ Maximum type safety
 
+### Use ng-forms `createFormTree()` for:
+- ✅ Nested object structures (user + address + payment)
+- ✅ Forms with persistence/auto-save
+- ✅ Wizard/multi-step flows
+- ✅ History/undo requirements
+- ✅ Complex conditional logic
+- ✅ Migration from reactive forms
+
+### Hybrid Example: Simple Fields + Complex Tree
+```typescript
+import { formField } from '@angular/forms';
+import { createFormTree } from '@signaltree/ng-forms';
+
+@Component({...})
+class CheckoutComponent {
+  // Simple field: Use Angular 21 native
+  promoCode = formField('');
+
+  // Complex nested state: Use ng-forms
+  checkout = createFormTree({
+    shipping: { name: '', address: '', city: '', zip: '' },
+    payment: { card: '', cvv: '', expiry: '' },
+    items: [] as CartItem[]
+  }, {
+    persistKey: 'checkout-draft',
+    fieldConfigs: {
+      'shipping.zip': { validators: validators.zipCode() },
+      'payment.card': { validators: validators.creditCard(), debounceMs: 300 }
+    }
+  });
+
+  // Both work together seamlessly
+}
+```
+
+### Connecting to Reactive Forms
 ```ts
 import { toWritableSignal } from '@signaltree/core';
 
-const values = createFormTree({
-  user: { name: '', email: '' },
-});
-
-// Connect leaves directly
-nameControl.connect(values.$.user.name);
-emailControl.connect(values.$.user.email);
-
-// Or connect a whole slice
-const userSignal = toWritableSignal(values.values.$.user);
-userGroupControl.connect(userSignal);
+// Convert ng-forms signals to work with Angular's .connect()
+const nameSignal = toWritableSignal(formTree.$.user.name);
+reactiveControl.connect(nameSignal);
 ```
-
-Angular 20.3+ is preferred for native Signal Forms `connect()`. Angular 17-19 is supported via a legacy bridge that will be deprecated when Angular 21 is released.
 
 ## Form tree configuration
 
@@ -222,16 +323,27 @@ History tracking works at the FormGroup level so it plays nicely with external u
 
 Use `SignalValueDirective` to keep standalone signals and `ngModel` fields aligned in legacy sections while new pages migrate to forms-first APIs.
 
-## When to reach for ng-forms
+## When to use ng-forms vs Angular 21 signal forms
 
-- Complex Angular forms that need to remain in sync with SignalTree application state
-- Workflows that require persistence, auto-save, or offline drafts
-- Multi-step wizards or surveys with dynamic branching
-- Applications that benefit from first-class signal APIs around Angular forms
+| Scenario | Recommendation |
+|----------|---------------|
+| Login form (2-3 fields) | ✅ Angular 21 `FormField` |
+| Search bar with filters | ✅ Angular 21 `FormField` |
+| User profile with nested address | ✅ **ng-forms** (tree structure) |
+| Checkout flow (shipping + payment + items) | ✅ **ng-forms** (persistence + wizard) |
+| Multi-step onboarding (5+ steps) | ✅ **ng-forms** (wizard API) |
+| Form with auto-save drafts | ✅ **ng-forms** (built-in persistence) |
+| Complex editor with undo/redo | ✅ **ng-forms** (history tracking) |
+| Migrating from reactive forms | ✅ **ng-forms** (FormGroup bridge) |
+| Dynamic form with conditional fields | ✅ **ng-forms** (conditionals config) |
+| Form synced with global app state | ✅ **ng-forms** (SignalTree integration) |
+
+**Rule of thumb**: If your form data is a nested object or needs workflow features (persistence/wizards/history), use ng-forms. For simple flat forms, Angular 21's native signal forms are perfect.
 
 ## Links
 
 - [SignalTree Documentation](https://signaltree.io)
+- [Angular 21 Migration Guide](./ANGULAR21-MIGRATION.md)
 - [Core Package](https://www.npmjs.com/package/@signaltree/core)
 - [GitHub Repository](https://github.com/JBorgia/signaltree)
 - [Demo Application](https://signaltree.io/examples)
