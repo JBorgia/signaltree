@@ -1,3 +1,17 @@
+## 4.1.2 (2025-11-21)
+
+### 🩹 Fixes
+
+- **build:** disable declaration generation to prevent stray .d.ts files ([52d70b7](https://github.com/JBorgia/signaltree/commit/52d70b7))
+- **build:** add post-build cleanup for stray .d.ts files ([3ac04f2](https://github.com/JBorgia/signaltree/commit/3ac04f2))
+- **demo:** fix lint errors in ng-forms demo ([1d2a7ca](https://github.com/JBorgia/signaltree/commit/1d2a7ca))
+- **ng-forms:** fix conditional field synchronization with nested objects ([ce3ec52](https://github.com/JBorgia/signaltree/commit/ce3ec52))
+- **ng-forms): nested signal path traversal bug chore(build): align declaration layout with Nx preserveModules design chore(validation:** update scripts for src-based d.ts structure ([816f49c](https://github.com/JBorgia/signaltree/commit/816f49c))
+
+### ❤️ Thank You
+
+- Borgia
+
 ## 4.1.1 (2025-11-20)
 
 ### 🩹 Fixes
