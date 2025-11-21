@@ -29,11 +29,9 @@
         >
           @if (getLibraryRank(result, lib) === 1) {
           <span class="rank-badge">🥇</span>
-          }
-          @if (getLibraryRank(result, lib) === 2) {
+          } @if (getLibraryRank(result, lib) === 2) {
           <span class="rank-badge">🥈</span>
-          }
-          @if (getLibraryRank(result, lib) === 3) {
+          } @if (getLibraryRank(result, lib) === 3) {
           <span class="rank-badge">🥉</span>
           }
           <div class="cell-content">
@@ -44,8 +42,7 @@
             <span class="relative">
               {{ getRelativePerformance(result, lib) }}x vs SignalTree
             </span>
-            }
-            @if (result.winner === lib && lib !== 'signaltree') {
+            } @if (result.winner === lib && lib !== 'signaltree') {
             <span class="relative winner-margin">
               +{{ result.marginOfVictory?.toFixed(1) || '0' }}% faster
             </span>
@@ -64,4 +61,3 @@
   <p class="no-data">No test results available</p>
   }
 </div>
-

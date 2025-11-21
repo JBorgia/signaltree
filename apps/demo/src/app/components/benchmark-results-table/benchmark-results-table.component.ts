@@ -6,11 +6,14 @@ export interface BenchmarkResult {
   winner: string;
   marginOfVictory?: number;
   reliable: boolean;
-  libraryResults: Record<string, {
-    opsPerSec: number;
-    time: number;
-    version?: string;
-  }>;
+  libraryResults: Record<
+    string,
+    {
+      opsPerSec: number;
+      time: number;
+      version?: string;
+    }
+  >;
   libraryVersions?: Record<string, string>;
 }
 
@@ -30,18 +33,18 @@ export class BenchmarkResultsTableComponent {
     const libraries = new Set<string>();
     this.results.forEach((result) => {
       if (result.libraryResults) {
-        Object.keys(result.libraryResults).forEach(lib => libraries.add(lib));
+        Object.keys(result.libraryResults).forEach((lib) => libraries.add(lib));
       }
     });
     const libsArray = Array.from(libraries).sort();
-    
+
     // Always put signaltree first (it's the baseline)
     const signaltreeIndex = libsArray.indexOf('signaltree');
     if (signaltreeIndex > 0) {
       libsArray.splice(signaltreeIndex, 1);
       libsArray.unshift('signaltree');
     }
-    
+
     return libsArray;
   }
 
@@ -69,16 +72,20 @@ export class BenchmarkResultsTableComponent {
     const libs = Object.entries(result.libraryResults)
       .map(([name, data]) => ({
         name,
-        ops: data.opsPerSec || 0
+        ops: data.opsPerSec || 0,
       }))
       .sort((a, b) => b.ops - a.ops);
-    
-    const rank = libs.findIndex(l => l.name === library) + 1;
+
+    const rank = libs.findIndex((l) => l.name === library) + 1;
     return rank;
   }
 
   getRelativePerformance(result: BenchmarkResult, library: string): string {
-    if (!result.libraryResults || !result.libraryResults['signaltree'] || !result.libraryResults[library]) {
+    if (
+      !result.libraryResults ||
+      !result.libraryResults['signaltree'] ||
+      !result.libraryResults[library]
+    ) {
       return 'N/A';
     }
     const baselineOps = result.libraryResults['signaltree'].opsPerSec;
@@ -100,21 +107,20 @@ export class BenchmarkResultsTableComponent {
 
   getLibraryVersion(library: string): string | null {
     if (!this.results || this.results.length === 0) return null;
-    
+
     // Check if any result has library versions
     const firstResult = this.results[0];
     if (firstResult.libraryVersions?.[library]) {
       return firstResult.libraryVersions[library];
     }
-    
+
     // Fallback: check libraryResults for version
     for (const result of this.results) {
       if (result.libraryResults[library]?.version) {
         return result.libraryResults[library].version || null;
       }
     }
-    
+
     return null;
   }
 }
-

@@ -1,66 +1,276 @@
-<div class="enterprise-enhancer">
-  <header>
-    <h1>Enterprise Enhancer</h1>
-    <p>{{ description }}</p>
-  </header>
-
-  <div class="value-proposition">
-    <h2>🏢 Why Enterprise Features Matter</h2>
+<div class="enterprise-page">
+  <header class="page-header">
+    <h1>⚡ Enterprise Performance</h1>
     <p>
       <strong
-        >Enterprise applications require accountability, debugging, and
-        compliance.</strong
+        >Industrial-strength optimizations for large-scale applications.</strong
       >
-      While most state management libraries require custom solutions for audit
-      trails and time-travel debugging, SignalTree's enterprise enhancer
-      provides production-ready features out of the box.
+      The <code>@signaltree/enterprise</code> package provides diff-based
+      updates and bulk operation optimization for trees with 500+ signals and
+      high-frequency state changes.
     </p>
-    <div class="comparison-grid">
-      <div class="comparison-item">
-        <h3>vs NgRx/Redux</h3>
+
+    <div class="value-proposition">
+      <h2>🎯 When to Use Enterprise Optimizations</h2>
+      <p>
+        <strong>Designed for scale, not for every app.</strong> Most state
+        management libraries apply the same overhead to every update, regardless
+        of size. Enterprise enhancer uses diff-based updates to skip unchanged
+        signals, giving you 2-5x faster bulk operations.
+      </p>
+
+      <div class="key-benefits">
+        <div class="benefit">
+          <h3>⚡ Diff-Based Updates</h3>
+          <p>
+            Only update signals that actually changed. NgRx/Redux update entire
+            slices; enterprise tracks individual properties.
+          </p>
+        </div>
+        <div class="benefit">
+          <h3>📊 Bulk Operations</h3>
+          <p>
+            Optimized for high-frequency updates (60Hz+). Real-time dashboards,
+            data grids, and WebSocket streams benefit immediately.
+          </p>
+        </div>
+        <div class="benefit">
+          <h3>🔍 Change Tracking</h3>
+          <p>
+            Detailed statistics for every update: total changes, adds, updates,
+            deletes. Essential for monitoring and debugging.
+          </p>
+        </div>
+      </div>
+
+      <div class="use-cases">
+        <h3>✅ Use enterprise when:</h3>
         <ul>
-          <li>✅ Built-in time-travel (no custom middleware needed)</li>
-          <li>✅ Opt-in overhead (only pay for what you use)</li>
-          <li>✅ Tree-shakable (excluded from bundles when not imported)</li>
+          <li>You have <strong>500+ signals</strong> in your state tree</li>
+          <li>Bulk updates happen at <strong>60Hz+ frequency</strong></li>
+          <li>
+            You're building <strong>real-time dashboards</strong> or data feeds
+          </li>
+          <li>You need <strong>enterprise-scale</strong> applications</li>
         </ul>
       </div>
-      <div class="comparison-item">
-        <h3>vs Akita/Elf</h3>
+
+      <div class="skip-cases">
+        <h3>❌ Skip enterprise when:</h3>
         <ul>
-          <li>✅ Deterministic serialization for audit logs</li>
-          <li>✅ Telemetry hooks without custom stores</li>
-          <li>✅ Undo/redo with fine-grained state snapshots</li>
+          <li>Small to medium apps (<strong><100 signals</strong>)</li>
+          <li><strong>Infrequent</strong> state updates</li>
+          <li><strong>Startup/prototype</strong> projects</li>
+          <li>
+            <strong>Bundle size is critical</strong> (adds +2.4KB gzipped)
+          </li>
         </ul>
+      </div>
+
+      <p class="bundle-note">
+        <strong>Lazy initialization:</strong> Zero overhead until first
+        <code>updateOptimized()</code> call. Path indexing and diff engine only
+        activate when needed.
+      </p>
+    </div>
+  </header>
+
+  <section class="demo-section">
+    <h2>Interactive Demo</h2>
+    <p>
+      Use the controls below to see <code>updateOptimized()</code> in action.
+      Watch how it tracks changes and provides detailed statistics.
+    </p>
+
+    <div class="action-panel">
+      <button type="button" (click)="updateMetrics()">Update Metrics</button>
+      <button type="button" (click)="bulkUpdateUsers()">
+        Bulk Update Users
+      </button>
+      <button type="button" (click)="massUpdate()">Mass Update (All)</button>
+      <button type="button" class="secondary" (click)="reset()">
+        Reset Demo
+      </button>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <span class="metric-label">Total Updates</span>
+        <span class="metric-value">{{ updateCount() }}</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Changed Paths</span>
+        <span class="metric-value">{{ totalChanges() }}</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Path Index</span>
+        <span class="metric-value">{{
+          hasPathIndex() ? '✓ Active' : '✗ Inactive'
+        }}</span>
+      </div>
+      @if (lastUpdateResult()) {
+      <div class="metric-card">
+        <span class="metric-label">Duration</span>
+        <span class="metric-value"
+          >{{ lastDuration() | number : '1.2-2' }} ms</span
+        >
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Total Paths</span>
+        <span class="metric-value">{{ totalPaths() }}</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Optimized</span>
+        <span class="metric-value">{{ optimizedPaths() }}</span>
+      </div>
+      }
+    </div>
+
+    <div class="state-display">
+      <div class="state-section">
+        <h3>📊 Metrics</h3>
+        <div class="state-content">
+          @for (entry of metrics() | keyvalue; track entry.key) {
+          <div class="state-item">
+            <span class="key">{{ entry.key }}:</span>
+            <span class="value">{{ entry.value }}%</span>
+          </div>
+          }
+        </div>
+      </div>
+
+      <div class="state-section">
+        <h3>👥 Users ({{ users().length }})</h3>
+        <div class="state-content">
+          @for (user of users(); track user.id) {
+          <div class="state-item">
+            <span class="key">{{ user.name }}:</span>
+            <span class="value" [class.active]="user.active">
+              {{ user.active ? 'Active' : 'Inactive' }}
+            </span>
+          </div>
+          }
+        </div>
+      </div>
+
+      <div class="state-section">
+        <h3>⚙️ Config</h3>
+        <div class="state-content">
+          <div class="state-item">
+            <span class="key">theme:</span>
+            <span class="value">{{ config().theme }}</span>
+          </div>
+          <div class="state-item">
+            <span class="key">language:</span>
+            <span class="value">{{ config().language }}</span>
+          </div>
+          <div class="state-item">
+            <span class="key">notifications:</span>
+            <span class="value">{{ config().notifications ? '✓' : '✗' }}</span>
+          </div>
+        </div>
       </div>
     </div>
-    <p class="use-case">
-      <strong>Perfect for:</strong> Healthcare apps (audit requirements),
-      financial platforms (compliance), SaaS products (customer support
-      debugging), enterprise dashboards (session replay)
-    </p>
-  </div>
-
-  <section class="overview">
-    <h2>What it provides</h2>
-    <ul>
-      <li>Time-travel and history management</li>
-      <li>Deterministic serialization for audit/persistence</li>
-      <li>Audit hooks & telemetry middleware</li>
-      <li>Presets for enterprise-grade safety and observability</li>
-    </ul>
   </section>
 
-  <section class="example">
-    <h2>Usage Example</h2>
-    <pre><code>{{ example }}</code></pre>
+  <section class="code-examples">
+    <h2>Code Examples</h2>
+
+    <div class="example-card">
+      <h3>Basic Setup</h3>
+      <pre><code>import &#123; signalTree &#125; from '@signaltree/core';
+import &#123; withEnterprise &#125; from '@signaltree/enterprise';
+
+const tree = signalTree(largeState).with(withEnterprise());
+
+// Optimized bulk update
+const result = tree.updateOptimized(newData, &#123;
+  ignoreArrayOrder: true,
+  maxDepth: 10
+&#125;);
+
+console.log(result.stats);
+// &#123; totalPaths: 45, optimizedPaths: 30, batchedUpdates: 5 &#125;</code></pre>
+    </div>
+
+    <div class="example-card">
+      <h3>Real-Time Dashboard</h3>
+      <pre><code>const dashboard = signalTree(initialState).with(withEnterprise());
+
+// High-frequency WebSocket updates
+socket.on('metrics', (newMetrics) => &#123;
+  const result = dashboard.updateOptimized(
+    &#123; metrics: newMetrics &#125;,
+    &#123; ignoreArrayOrder: true &#125;
+  );
+
+  console.log(`Updated $&#123;result.changedPaths.length&#125; paths`);
+&#125;);</code></pre>
+    </div>
+
+    <div class="example-card">
+      <h3>Custom Equality</h3>
+      <pre><code>tree.updateOptimized(newState, &#123;
+  equalityFn: (a, b) => &#123;
+    // Custom deep equality for specific types
+    if (a instanceof Date && b instanceof Date) &#123;
+      return a.getTime() === b.getTime();
+    &#125;
+    return a === b;
+  &#125;
+&#125;);</code></pre>
+    </div>
   </section>
 
-  <section class="notes">
-    <h3>Notes</h3>
-    <p>
-      The enterprise enhancer is intentionally opt-in. It bundles features that
-      have measurable bundle cost but are essential in auditing and large team
-      workflows.
-    </p>
+  <section class="api-reference">
+    <h2>API Reference</h2>
+
+    <div class="api-method">
+      <h3><code>tree.updateOptimized(updates, options?)</code></h3>
+      <p>Performs optimized bulk updates using diff-based change detection.</p>
+
+      <h4>Options:</h4>
+      <ul>
+        <li>
+          <code>maxDepth?: number</code> - Maximum depth to traverse (default:
+          100)
+        </li>
+        <li>
+          <code>ignoreArrayOrder?: boolean</code> - Ignore array element order
+          (default: false)
+        </li>
+        <li>
+          <code>equalityFn?: (a, b) => boolean</code> - Custom equality function
+        </li>
+        <li>
+          <code>autoBatch?: boolean</code> - Automatically batch updates
+          (default: true)
+        </li>
+        <li>
+          <code>batchSize?: number</code> - Patches per batch (default: 10)
+        </li>
+      </ul>
+
+      <h4>Returns:</h4>
+      <pre><code>&#123;
+  changed: boolean,
+  duration: number,
+  changedPaths: string[],
+  stats: &#123;
+    totalPaths: number,
+    optimizedPaths: number,
+    batchedUpdates: number
+  &#125;
+&#125;</code></pre>
+    </div>
+
+    <div class="api-method">
+      <h3><code>tree.getPathIndex()</code></h3>
+      <p>
+        Get the PathIndex for debugging/monitoring. Returns <code>null</code> if
+        <code>updateOptimized</code> hasn't been called yet (lazy
+        initialization).
+      </p>
+    </div>
   </section>
 </div>

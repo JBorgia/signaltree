@@ -80,17 +80,17 @@
         </div>
         <div class="score-details">
           @for (factor of environmentFactors(); track factor.name) {
-            <div class="detail-item">
-              <span class="factor-name">{{ factor.name }}</span>
-              <span
-                class="factor-impact"
-                [class.positive]="factor.impact > 0"
-                [class.negative]="factor.impact < 0"
-              >
-                {{ factor.impact > 0 ? '+' : '' }}{{ factor.impact }}
-              </span>
-              <span class="factor-reason">{{ factor.reason }}</span>
-            </div>
+          <div class="detail-item">
+            <span class="factor-name">{{ factor.name }}</span>
+            <span
+              class="factor-impact"
+              [class.positive]="factor.impact > 0"
+              [class.negative]="factor.impact < 0"
+            >
+              {{ factor.impact > 0 ? '+' : '' }}{{ factor.impact }}
+            </span>
+            <span class="factor-reason">{{ factor.reason }}</span>
+          </div>
           }
         </div>
       </div>
@@ -103,80 +103,79 @@
         [disabled]="isCalibrating()"
       >
         @if (!isCalibrating()) {
-          <svg class="btn-icon" viewBox="0 0 24 24">
-            <path
-              d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41"
-            />
-          </svg>
-        }
-        @if (isCalibrating()) {
-          <div class="spinner"></div>
+        <svg class="btn-icon" viewBox="0 0 24 24">
+          <path
+            d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41"
+          />
+        </svg>
+        } @if (isCalibrating()) {
+        <div class="spinner"></div>
         }
         {{ isCalibrating() ? 'Calibrating...' : 'Calibrate Environment' }}
       </button>
 
       @if (calibrationData()) {
-        <div class="calibration-results">
-          <h3>Calibration Results</h3>
-          <div class="calibration-grid">
-            <div class="calibration-metric">
-              <span class="metric-label">CPU Performance</span>
-              <span class="metric-value"
-                >{{
-                  calibrationData()?.cpuOpsPerMs | number : '1.0-0'
-                }}
-                ops/ms</span
-              >
-              <div class="metric-bar">
-                <div
-                  class="metric-fill"
-                  [style.width.%]="calibrationData()?.cpuScore"
-                ></div>
-              </div>
-            </div>
-            <div class="calibration-metric">
-              <span class="metric-label">Memory Available</span>
-              <span class="metric-value"
-                >{{
-                  calibrationData()?.availableMemoryMB | number : '1.0-0'
-                }}
-                MB</span
-              >
-              <div class="metric-bar">
-                <div
-                  class="metric-fill"
-                  [style.width.%]="calibrationData()?.memoryScore"
-                ></div>
-              </div>
-            </div>
-            <div class="calibration-metric">
-              <span class="metric-label">Recommended Test Size</span>
-              <span class="metric-value"
-                >{{ calibrationData()?.recommendedSize | number }} items</span
-              >
-            </div>
-            <div class="calibration-metric">
-              <span class="metric-label">Recommended Iterations</span>
-              <span class="metric-value">{{
-                calibrationData()?.recommendedIterations
-              }}</span>
+      <div class="calibration-results">
+        <h3>Calibration Results</h3>
+        <div class="calibration-grid">
+          <div class="calibration-metric">
+            <span class="metric-label">CPU Performance</span>
+            <span class="metric-value"
+              >{{
+                calibrationData()?.cpuOpsPerMs | number : '1.0-0'
+              }}
+              ops/ms</span
+            >
+            <div class="metric-bar">
+              <div
+                class="metric-fill"
+                [style.width.%]="calibrationData()?.cpuScore"
+              ></div>
             </div>
           </div>
-          @if (calibrationWarnings().length > 0) {
-            <div class="calibration-warnings">
-              @for (warning of calibrationWarnings(); track $index) {
-                <div class="warning-item">
-                  <svg class="warning-icon" viewBox="0 0 24 24">
-                    <path
-                      d="M12 2L2 22h20L12 2zm0 6l1.5 7h-3L12 8zm0 9.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"
-                    />
-                  </svg>
-                  {{ warning }}
-                </div>
-              }
+          <div class="calibration-metric">
+            <span class="metric-label">Memory Available</span>
+            <span class="metric-value"
+              >{{
+                calibrationData()?.availableMemoryMB | number : '1.0-0'
+              }}
+              MB</span
+            >
+            <div class="metric-bar">
+              <div
+                class="metric-fill"
+                [style.width.%]="calibrationData()?.memoryScore"
+              ></div>
             </div>
+          </div>
+          <div class="calibration-metric">
+            <span class="metric-label">Recommended Test Size</span>
+            <span class="metric-value"
+              >{{ calibrationData()?.recommendedSize | number }} items</span
+            >
+          </div>
+          <div class="calibration-metric">
+            <span class="metric-label">Recommended Iterations</span>
+            <span class="metric-value">{{
+              calibrationData()?.recommendedIterations
+            }}</span>
+          </div>
+        </div>
+        @if (calibrationWarnings().length > 0) {
+        <div class="calibration-warnings">
+          @for (warning of calibrationWarnings(); track $index) {
+          <div class="warning-item">
+            <svg class="warning-icon" viewBox="0 0 24 24">
+              <path
+                d="M12 2L2 22h20L12 2zm0 6l1.5 7h-3L12 8zm0 9.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"
+              />
+            </svg>
+            {{ warning }}
+          </div>
           }
         </div>
+        }
+      </div>
       }
     </div>
   </section>
@@ -196,48 +195,46 @@
     </div>
     <div class="library-grid">
       @for (lib of availableLibraries; track lib.id) {
-        <div
-          class="library-card"
-          [attr.data-test-id]="'lib-' + lib.id + '-card'"
-          [class.selected]="lib.selected"
-          [class.disabled]="lib.id === 'signaltree'"
-          [style.--lib-color]="lib.color"
-          (click)="toggleLibrary(lib)"
-          (keydown)="onLibraryCardKeydown($event, lib)"
-          tabindex="0"
-          role="button"
-          [attr.aria-pressed]="lib.selected"
-        >
-          <div class="library-checkbox">
-            <input
-              type="checkbox"
-              [attr.data-test-id]="'lib-' + lib.id + '-checkbox'"
-              [ngModel]="lib.selected"
-              (ngModelChange)="onLibraryCheckboxChange(lib, $event)"
-              [disabled]="lib.id === 'signaltree'"
-              (click)="$event.stopPropagation()"
-              (change)="$event.stopPropagation()"
-              [attr.aria-label]="lib.name + ' selection'"
-            />
+      <div
+        class="library-card"
+        [attr.data-test-id]="'lib-' + lib.id + '-card'"
+        [class.selected]="lib.selected"
+        [class.disabled]="lib.id === 'signaltree'"
+        [style.--lib-color]="lib.color"
+        (click)="toggleLibrary(lib)"
+        (keydown)="onLibraryCardKeydown($event, lib)"
+        tabindex="0"
+        role="button"
+        [attr.aria-pressed]="lib.selected"
+      >
+        <div class="library-checkbox">
+          <input
+            type="checkbox"
+            [attr.data-test-id]="'lib-' + lib.id + '-checkbox'"
+            [ngModel]="lib.selected"
+            (ngModelChange)="onLibraryCheckboxChange(lib, $event)"
+            [disabled]="lib.id === 'signaltree'"
+            (click)="$event.stopPropagation()"
+            (change)="$event.stopPropagation()"
+            [attr.aria-label]="lib.name + ' selection'"
+          />
+        </div>
+        <div class="library-info">
+          <h3>{{ lib.name }}</h3>
+          <p>{{ lib.description }}</p>
+          @if (lib.stats) {
+          <div class="library-stats">
+            <span class="stat">Bundle: {{ lib.stats.bundleSize }}</span>
+            <span class="stat"
+              >Stars: {{ lib.stats.githubStars | number }}</span
+            >
           </div>
-          <div class="library-info">
-            <h3>{{ lib.name }}</h3>
-            <p>{{ lib.description }}</p>
-            @if (lib.stats) {
-              <div class="library-stats">
-                <span class="stat">Bundle: {{ lib.stats.bundleSize }}</span>
-                <span class="stat"
-                  >Stars: {{ lib.stats.githubStars | number }}</span
-                >
-              </div>
-            }
-          </div>
-          @if (lib.id === 'signaltree') {
-            <div class="library-badge">
-              Baseline
-            </div>
           }
         </div>
+        @if (lib.id === 'signaltree') {
+        <div class="library-badge">Baseline</div>
+        }
+      </div>
       }
     </div>
 
@@ -581,35 +578,35 @@ const tree = signalTree(state).with(withSelectorMemoization());</code></pre>
       <h3>Quick Select Presets</h3>
       <div class="presets-grid">
         @for (preset of scenarioPresets; track preset.id) {
-          <div
-            class="preset-card"
-            (click)="applyScenarioPreset(preset.id)"
-            tabindex="0"
-            role="button"
-          >
-            <h4>{{ preset.name }}</h4>
-            <p>{{ preset.description }}</p>
-            <div class="preset-count">{{ presetCount(preset) }} tests</div>
-          </div>
+        <div
+          class="preset-card"
+          (click)="applyScenarioPreset(preset.id)"
+          tabindex="0"
+          role="button"
+        >
+          <h4>{{ preset.name }}</h4>
+          <p>{{ preset.description }}</p>
+          <div class="preset-count">{{ presetCount(preset) }} tests</div>
+        </div>
         }
       </div>
     </div>
 
     <!-- Active Enhancers Display -->
     @if (selectedScenarios().length > 0) {
-      <div class="enhancers-display">
-        <h3>Active SignalTree Enhancers</h3>
-        <div class="enhancers-list">
-          @for (enhancer of activeEnhancers(); track enhancer.name) {
-            <span class="enhancer-tag">
-              {{ enhancer.name }}
-            </span>
-          }
-        </div>
-        <p class="enhancers-note">
-          {{ enhancerExplanation() }}
-        </p>
+    <div class="enhancers-display">
+      <h3>Active SignalTree Enhancers</h3>
+      <div class="enhancers-list">
+        @for (enhancer of activeEnhancers(); track enhancer.name) {
+        <span class="enhancer-tag">
+          {{ enhancer.name }}
+        </span>
+        }
       </div>
+      <p class="enhancers-note">
+        {{ enhancerExplanation() }}
+      </p>
+    </div>
     }
 
     <!-- Frequency Weighting Section -->
@@ -667,28 +664,28 @@ const tree = signalTree(state).with(withSelectorMemoization());</code></pre>
       <div class="weighting-presets">
         <!-- Smart Preset Suggestions -->
         @if (shouldShowSuggestions() && suggestedPresets().length > 0) {
-          <div class="smart-suggestions">
-            <h4>💡 Suggested Presets for Your Selection:</h4>
-            <div class="suggestion-cards">
-              @for (suggestion of suggestedPresets(); track suggestion.presetId) {
-                <div class="suggestion-card">
-                  <div class="suggestion-header">
-                    <strong>{{ suggestion.presetName }}</strong>
-                    <span class="confidence-badge"
-                      >{{ suggestion.confidence | number : '1.0-0' }}% match</span
-                    >
-                  </div>
-                  <p class="suggestion-reason">{{ suggestion.reason }}</p>
-                  <button
-                    class="btn btn-suggestion"
-                    (click)="applySuggestedPreset(suggestion.presetId)"
-                  >
-                    Apply {{ suggestion.presetName }} Weights
-                  </button>
-                </div>
-              }
+        <div class="smart-suggestions">
+          <h4>💡 Suggested Presets for Your Selection:</h4>
+          <div class="suggestion-cards">
+            @for (suggestion of suggestedPresets(); track suggestion.presetId) {
+            <div class="suggestion-card">
+              <div class="suggestion-header">
+                <strong>{{ suggestion.presetName }}</strong>
+                <span class="confidence-badge"
+                  >{{ suggestion.confidence | number : '1.0-0' }}% match</span
+                >
+              </div>
+              <p class="suggestion-reason">{{ suggestion.reason }}</p>
+              <button
+                class="btn btn-suggestion"
+                (click)="applySuggestedPreset(suggestion.presetId)"
+              >
+                Apply {{ suggestion.presetName }} Weights
+              </button>
             </div>
+            }
           </div>
+        </div>
         }
 
         <h4>Quick Presets:</h4>
@@ -809,74 +806,74 @@ const tree = signalTree(state).with(withSelectorMemoization());</code></pre>
       <h3>Benchmarks</h3>
       <div class="benchmarks-grid">
         @for (testCase of visibleScenarios(); track testCase.id) {
+        <div
+          class="benchmark-card"
+          [class.selected]="testCase.selected"
+          [class.disabled]="testCase.disabledReason"
+          (click)="toggleScenario(testCase)"
+          (keydown)="onScenarioCardKeydown($event, testCase)"
+          tabindex="0"
+          role="button"
+          [attr.aria-pressed]="testCase.selected"
+        >
+          <div class="benchmark-header">
+            <input
+              type="checkbox"
+              [checked]="testCase.selected"
+              (click)="$event.stopPropagation()"
+            />
+            <h3>{{ testCase.name }}</h3>
+            @if (testCase.disabledReason) {
+            <span class="unsupported-badge">
+              {{ testCase.disabledReason }}
+            </span>
+            }
+          </div>
           <div
-            class="benchmark-card"
-            [class.selected]="testCase.selected"
-            [class.disabled]="testCase.disabledReason"
-            (click)="toggleScenario(testCase)"
-            (keydown)="onScenarioCardKeydown($event, testCase)"
-            tabindex="0"
-            role="button"
-            [attr.aria-pressed]="testCase.selected"
+            class="frequency-indicator"
+            [attr.data-frequency]="testCase.frequencyWeight"
           >
-            <div class="benchmark-header">
+            <span class="frequency-label">Usage</span>
+            <div class="frequency-bar">
+              <div
+                class="frequency-fill"
+                [style.width.%]="
+                  getFrequencyBarWidth(testCase.frequencyWeight || 1.0)
+                "
+              ></div>
+            </div>
+            <span class="frequency-text">{{
+              getFrequencyLabel(testCase.frequencyWeight || 1.0)
+            }}</span>
+          </div>
+          <p>{{ testCase.description }}</p>
+
+          @if (testCase.architecturalTradeOffs) {
+          <div class="architectural-note">
+            <h5>🏗️ Architecture Impact:</h5>
+            <p class="tradeoff-text">{{ testCase.architecturalTradeOffs }}</p>
+          </div>
+          }
+
+          <div class="benchmark-details">
+            <span class="detail">Operations: {{ testCase.operations }}</span>
+            <span class="detail">Complexity: {{ testCase.complexity }}</span>
+            <div class="weight-control">
+              <label for="weight-{{ testCase.id }}">Impact Weight:</label>
               <input
-                type="checkbox"
-                [checked]="testCase.selected"
+                type="range"
+                id="weight-{{ testCase.id }}"
+                min="0"
+                max="3"
+                step="0.1"
+                [value]="testCase.frequencyWeight"
+                (input)="updateTestCaseWeight(testCase.id, $event)"
                 (click)="$event.stopPropagation()"
               />
-              <h3>{{ testCase.name }}</h3>
-              @if (testCase.disabledReason) {
-                <span class="unsupported-badge">
-                  {{ testCase.disabledReason }}
-                </span>
-              }
-            </div>
-            <div
-              class="frequency-indicator"
-              [attr.data-frequency]="testCase.frequencyWeight"
-            >
-              <span class="frequency-label">Usage</span>
-              <div class="frequency-bar">
-                <div
-                  class="frequency-fill"
-                  [style.width.%]="
-                    getFrequencyBarWidth(testCase.frequencyWeight || 1.0)
-                  "
-                ></div>
-              </div>
-              <span class="frequency-text">{{
-                getFrequencyLabel(testCase.frequencyWeight || 1.0)
-              }}</span>
-            </div>
-            <p>{{ testCase.description }}</p>
-
-            @if (testCase.architecturalTradeOffs) {
-              <div class="architectural-note">
-                <h5>🏗️ Architecture Impact:</h5>
-                <p class="tradeoff-text">{{ testCase.architecturalTradeOffs }}</p>
-              </div>
-            }
-
-            <div class="benchmark-details">
-              <span class="detail">Operations: {{ testCase.operations }}</span>
-              <span class="detail">Complexity: {{ testCase.complexity }}</span>
-              <div class="weight-control">
-                <label for="weight-{{ testCase.id }}">Impact Weight:</label>
-                <input
-                  type="range"
-                  id="weight-{{ testCase.id }}"
-                  min="0"
-                  max="3"
-                  step="0.1"
-                  [value]="testCase.frequencyWeight"
-                  (input)="updateTestCaseWeight(testCase.id, $event)"
-                  (click)="$event.stopPropagation()"
-                />
-                <span class="weight-value">{{ testCase.frequencyWeight }}x</span>
-              </div>
+              <span class="weight-value">{{ testCase.frequencyWeight }}x</span>
             </div>
           </div>
+        </div>
         }
       </div>
     </div>
@@ -897,564 +894,545 @@ const tree = signalTree(state).with(withSelectorMemoization());</code></pre>
     </button>
 
     @if (isRunning()) {
-      <div class="controls-running" aria-live="polite">
-        <span class="dot"></span>
-        <span
-          >Benchmarks running… {{ completedTests() }}/{{
-            totalTests()
-          }}
-          complete</span
-        >
-      </div>
-    }
-
-    @if (!canRunBenchmarks()) {
-      <div class="controls-info">
-        @if (!calibrationData()) {
-          <p>Please calibrate environment first</p>
-        }
-        @if (selectedLibraries().length < 2) {
-          <p>
-            Select at least one library to compare with {{ baselineName() }}
-          </p>
-        }
-        @if (selectedScenarios().length === 0) {
-          <p>Select at least one test scenario</p>
-        }
-      </div>
+    <div class="controls-running" aria-live="polite">
+      <span class="dot"></span>
+      <span
+        >Benchmarks running… {{ completedTests() }}/{{
+          totalTests()
+        }}
+        complete</span
+      >
+    </div>
+    } @if (!canRunBenchmarks()) {
+    <div class="controls-info">
+      @if (!calibrationData()) {
+      <p>Please calibrate environment first</p>
+      } @if (selectedLibraries().length < 2) {
+      <p>Select at least one library to compare with {{ baselineName() }}</p>
+      } @if (selectedScenarios().length === 0) {
+      <p>Select at least one test scenario</p>
+      }
+    </div>
     }
   </section>
 
   <!-- Progress Modal -->
   @if (isRunning()) {
-    <div class="progress-modal" data-test-id="progress-modal">
-      <div class="progress-content">
-        <h2>Running Benchmarks</h2>
+  <div class="progress-modal" data-test-id="progress-modal">
+    <div class="progress-content">
+      <h2>Running Benchmarks</h2>
 
-        <div class="progress-current">
-          <span class="current-library" data-test-id="progress-current-library">{{
-            currentLibrary()
-          }}</span>
-          <span
-            class="current-scenario"
-            data-test-id="progress-current-scenario"
-            >{{ currentScenario() }}</span
-          >
-          <span
-            class="current-iteration"
-            data-test-id="progress-current-iteration"
-            >Iteration {{ currentIteration() }} / {{ config().iterations }}</span
-          >
-        </div>
-
-        <div class="progress-bar-container">
-          <div class="progress-bar">
-            <div class="progress-fill" [style.width.%]="progressPercent()"></div>
-          </div>
-          <span class="progress-text"
-            >{{ progressPercent() | number : '1.0-0' }}%</span
-          >
-        </div>
-
-        <div class="progress-stats">
-          <div class="stat">
-            <span class="stat-label">Elapsed</span>
-            <span class="stat-value">{{ elapsedTime() }}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">Estimated</span>
-            <span class="stat-value">~{{ remainingTime() }}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">Tests Complete</span>
-            <span class="stat-value"
-              >{{ completedTests() }} / {{ totalTests() }}</span
-            >
-          </div>
-        </div>
-
-        <button
-          class="btn btn-cancel"
-          data-test-id="progress-cancel"
-          (click)="cancelBenchmarks()"
+      <div class="progress-current">
+        <span class="current-library" data-test-id="progress-current-library">{{
+          currentLibrary()
+        }}</span>
+        <span
+          class="current-scenario"
+          data-test-id="progress-current-scenario"
+          >{{ currentScenario() }}</span
         >
-          Cancel
-        </button>
+        <span
+          class="current-iteration"
+          data-test-id="progress-current-iteration"
+          >Iteration {{ currentIteration() }} / {{ config().iterations }}</span
+        >
       </div>
+
+      <div class="progress-bar-container">
+        <div class="progress-bar">
+          <div class="progress-fill" [style.width.%]="progressPercent()"></div>
+        </div>
+        <span class="progress-text"
+          >{{ progressPercent() | number : '1.0-0' }}%</span
+        >
+      </div>
+
+      <div class="progress-stats">
+        <div class="stat">
+          <span class="stat-label">Elapsed</span>
+          <span class="stat-value">{{ elapsedTime() }}</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Estimated</span>
+          <span class="stat-value">~{{ remainingTime() }}</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Tests Complete</span>
+          <span class="stat-value"
+            >{{ completedTests() }} / {{ totalTests() }}</span
+          >
+        </div>
+      </div>
+
+      <button
+        class="btn btn-cancel"
+        data-test-id="progress-cancel"
+        (click)="cancelBenchmarks()"
+      >
+        Cancel
+      </button>
     </div>
+  </div>
   }
 
   <!-- Results Section -->
   @if (hasResults()) {
-    <section class="results-section">
-      <h2>Benchmark Results</h2>
+  <section class="results-section">
+    <h2>Benchmark Results</h2>
 
-      <!-- Architectural Trade-off Explanation -->
-      <div
-        class="architectural-note"
-        style="
-          background: #e3f2fd;
-          border-left: 4px solid #2196f3;
-          padding: 1rem 1.5rem;
-          margin: 1rem 0;
-          border-radius: 4px;
-        "
-      >
-        <h4 style="margin: 0 0 0.5rem 0; color: #1976d2; font-size: 1rem">
-          💡 Understanding Selector/Memoization Performance
-        </h4>
-        <p style="margin: 0.5rem 0; color: #424242; font-size: 0.9rem">
-          <strong>Why SignalTree benchmarks use enhancers:</strong> SignalTree's
-          architecture showcases
-          <strong>developer-friendly enhancers</strong> (memoization, batching,
-          serialization, time-travel) that compose together. Benchmarks
-          intentionally use these enhancers to demonstrate real-world usage
-          patterns.
-        </p>
-        <p style="margin: 0.5rem 0; color: #424242; font-size: 0.9rem">
-          <strong>The trade-off:</strong> Angular's
-          <code style="background: #fff; padding: 2px 4px; border-radius: 3px"
-            >computed()</code
-          >
-          adds ~2μs per call vs NgRx's reference checks (~0.3μs). However,
-          memoization <strong>prevents expensive re-renders</strong>, saving
-          100-1000x more time in real applications. The benchmarks test
-          <em>cache efficiency</em>, not just speed.
-        </p>
-        <p style="margin: 0.5rem 0 0 0; color: #424242; font-size: 0.9rem">
-          <strong>Fair comparison:</strong> All libraries now update state during
-          tests (98% cache hits + 2% recomputation), testing real-world selector
-          behavior where data changes occasionally.
-        </p>
-      </div>
+    <!-- Architectural Trade-off Explanation -->
+    <div
+      class="architectural-note"
+      style="
+        background: #e3f2fd;
+        border-left: 4px solid #2196f3;
+        padding: 1rem 1.5rem;
+        margin: 1rem 0;
+        border-radius: 4px;
+      "
+    >
+      <h4 style="margin: 0 0 0.5rem 0; color: #1976d2; font-size: 1rem">
+        💡 Understanding Selector/Memoization Performance
+      </h4>
+      <p style="margin: 0.5rem 0; color: #424242; font-size: 0.9rem">
+        <strong>Why SignalTree benchmarks use enhancers:</strong> SignalTree's
+        architecture showcases
+        <strong>developer-friendly enhancers</strong> (memoization, batching,
+        serialization, time-travel) that compose together. Benchmarks
+        intentionally use these enhancers to demonstrate real-world usage
+        patterns.
+      </p>
+      <p style="margin: 0.5rem 0; color: #424242; font-size: 0.9rem">
+        <strong>The trade-off:</strong> Angular's
+        <code style="background: #fff; padding: 2px 4px; border-radius: 3px"
+          >computed()</code
+        >
+        adds ~2μs per call vs NgRx's reference checks (~0.3μs). However,
+        memoization <strong>prevents expensive re-renders</strong>, saving
+        100-1000x more time in real applications. The benchmarks test
+        <em>cache efficiency</em>, not just speed.
+      </p>
+      <p style="margin: 0.5rem 0 0 0; color: #424242; font-size: 0.9rem">
+        <strong>Fair comparison:</strong> All libraries now update state during
+        tests (98% cache hits + 2% recomputation), testing real-world selector
+        behavior where data changes occasionally.
+      </p>
+    </div>
 
-      <!-- Weighted Results Summary -->
-      <div class="weighted-results-section">
-        <h3>🎯 Real-World Weighted Performance</h3>
-        <p class="weighting-note">
-          Results below are weighted by real-world usage frequency.
-          <strong
-            >This reflects how different architectures perform in typical
-            applications.</strong
-          >
-        </p>
+    <!-- Weighted Results Summary -->
+    <div class="weighted-results-section">
+      <h3>🎯 Real-World Weighted Performance</h3>
+      <p class="weighting-note">
+        Results below are weighted by real-world usage frequency.
+        <strong
+          >This reflects how different architectures perform in typical
+          applications.</strong
+        >
+      </p>
 
-        <div class="weighted-summary-grid">
-          @for (summary of weightedLibrarySummaries(); track summary.name) {
-            <div
-              class="weighted-summary-card"
-              [style.--card-color]="summary.color"
-              [class.weighted-winner]="summary.rank === 1"
-            >
-              <div class="summary-header">
-                <h4>{{ summary.name }}</h4>
-                @if (summary.weightedScore !== -1) {
-                  <span class="weighted-rank">
-                    #{{ summary.rank }} ({{
-                      summary.weightedScore | number : '1.1-1'
-                    }} pts)
-                  </span>
-                }
-                @if (summary.weightedScore === -1) {
-                  <span class="weighted-rank unsupported">Incomplete</span>
-                }
-              </div>
-              <div class="weighted-breakdown">
-                @for (item of summary.breakdown; track item.scenarioName) {
-                  <div class="breakdown-item">
-                    <span class="scenario-name">{{ item.scenarioName }}</span>
-                    <span class="weight">{{ item.weight }}x</span>
-                    <span class="contribution"
-                      >{{ item.contribution | number : '1.1-1' }} pts</span
-                    >
-                  </div>
-                }
-              </div>
-            </div>
-          }
-        </div>
-
-        <div class="weighting-transparency">
-          <h4>📊 Current Weights Applied:</h4>
-          <div class="weight-display">
-            @for (scenario of visibleScenarios(); track scenario.id) {
-              <div
-                class="weight-item"
-                [class.disabled]="scenario.disabledReason"
-              >
-                <span class="scenario">{{ scenario.name }}</span>
-                <span class="weight-value"
-                  >{{ scenario.frequencyWeight || 1.0 }}x</span
-                >
-                @if (scenario.disabledReason) {
-                  <div class="scenario-disabled">
-                    <span class="unsupported-label">Unsupported</span>
-                    <small class="unsupported-reason">{{
-                      scenario.disabledReason
-                    }}</small>
-                  </div>
-                }
-                <div class="weight-bar">
-                  <div
-                    class="weight-fill"
-                    [style.width.%]="((scenario.frequencyWeight || 1.0) / 3) * 100"
-                  ></div>
-                </div>
-              </div>
+      <div class="weighted-summary-grid">
+        @for (summary of weightedLibrarySummaries(); track summary.name) {
+        <div
+          class="weighted-summary-card"
+          [style.--card-color]="summary.color"
+          [class.weighted-winner]="summary.rank === 1"
+        >
+          <div class="summary-header">
+            <h4>{{ summary.name }}</h4>
+            @if (summary.weightedScore !== -1) {
+            <span class="weighted-rank">
+              #{{ summary.rank }} ({{
+                summary.weightedScore | number : '1.1-1'
+              }}
+              pts)
+            </span>
+            } @if (summary.weightedScore === -1) {
+            <span class="weighted-rank unsupported">Incomplete</span>
             }
           </div>
-
-          <!-- Smart Weighting Tools -->
-          <div class="smart-weighting-tools">
-            <button
-              class="smart-adjust-btn"
-              (click)="applySmartWeightAdjustments()"
-              type="button"
-            >
-              🧠 Apply Research-Based Weights
-            </button>
-            <span class="smart-help">Based on real-world usage studies</span>
-          </div>
-        </div>
-
-        <!-- Detailed Weight Impact Analysis -->
-        @if (weightedResultsAnalysis(); as analysis) {
-          <div class="weight-impact-analysis">
-            <h4>🔬 Weight Impact Analysis</h4>
-            <div class="impact-summary">
-              <div
-                class="impact-level"
-                [class]="'impact-' + analysis.weightingSignificance"
+          <div class="weighted-breakdown">
+            @for (item of summary.breakdown; track item.scenarioName) {
+            <div class="breakdown-item">
+              <span class="scenario-name">{{ item.scenarioName }}</span>
+              <span class="weight">{{ item.weight }}x</span>
+              <span class="contribution"
+                >{{ item.contribution | number : '1.1-1' }} pts</span
               >
-                <strong>{{ analysis.weightingSignificance | uppercase }}</strong>
-                impact from frequency weighting
-              </div>
-              <div class="scenarios-count">
-                {{ analysis.totalScenariosAnalyzed }} scenarios analyzed
-              </div>
             </div>
-
-            @if (analysis.rankingChanges) {
-              <div class="ranking-changes">
-                <h5>📈 Ranking Changes Due to Weighting:</h5>
-                <div class="ranking-grid">
-                  @for (change of analysis.rankingChanges; track change.libraryName) {
-                    <div
-                      class="ranking-change-item"
-                      [class.ranking-improved]="change.rankChange > 0"
-                      [class.ranking-declined]="change.rankChange < 0"
-                    >
-                      <span class="library-name">{{ change.libraryName }}</span>
-                      <span class="rank-change">
-                        #{{ change.rawRank }} → #{{ change.weightedRank }}
-                        @if (change.rankChange !== 0) {
-                          <span class="change-indicator">
-                            {{ change.rankChange > 0 ? '↗️' : '↘️' }}
-                            {{
-                              change.rankChange > 0
-                                ? change.rankChange
-                                : -change.rankChange
-                            }}
-                          </span>
-                        }
-                      </span>
-                    </div>
-                  }
-                </div>
-              </div>
             }
           </div>
+        </div>
         }
       </div>
 
-      <!-- Detailed Library Analysis -->
+      <div class="weighting-transparency">
+        <h4>📊 Current Weights Applied:</h4>
+        <div class="weight-display">
+          @for (scenario of visibleScenarios(); track scenario.id) {
+          <div class="weight-item" [class.disabled]="scenario.disabledReason">
+            <span class="scenario">{{ scenario.name }}</span>
+            <span class="weight-value"
+              >{{ scenario.frequencyWeight || 1.0 }}x</span
+            >
+            @if (scenario.disabledReason) {
+            <div class="scenario-disabled">
+              <span class="unsupported-label">Unsupported</span>
+              <small class="unsupported-reason">{{
+                scenario.disabledReason
+              }}</small>
+            </div>
+            }
+            <div class="weight-bar">
+              <div
+                class="weight-fill"
+                [style.width.%]="((scenario.frequencyWeight || 1.0) / 3) * 100"
+              ></div>
+            </div>
+          </div>
+          }
+        </div>
+
+        <!-- Smart Weighting Tools -->
+        <div class="smart-weighting-tools">
+          <button
+            class="smart-adjust-btn"
+            (click)="applySmartWeightAdjustments()"
+            type="button"
+          >
+            🧠 Apply Research-Based Weights
+          </button>
+          <span class="smart-help">Based on real-world usage studies</span>
+        </div>
+      </div>
+
+      <!-- Detailed Weight Impact Analysis -->
       @if (weightedResultsAnalysis(); as analysis) {
-        <div class="detailed-analysis">
-          <h3>📋 Detailed Performance Breakdown</h3>
-          <div class="library-analysis-grid">
-            @for (lib of analysis.libraryAnalysis; track lib.libraryName) {
-              <div
-                class="library-analysis-card"
-                [style.--card-color]="lib.color"
-              >
-                <div class="analysis-header">
-                  <h4>{{ lib.libraryName }}</h4>
-                  <div class="score-comparison">
-                    <div class="raw-score">
-                      Raw: {{ lib.rawAverage | number : '1.0-0' }} ops/sec
-                    </div>
-                    <div class="weighted-score">
-                      Weighted: {{ lib.weightedAverage | number : '1.0-0' }} ops/sec
-                    </div>
-                    <div
-                      class="impact"
-                      [class.positive-impact]="lib.weightingImpact > 0"
-                      [class.negative-impact]="lib.weightingImpact < 0"
-                    >
-                      {{ lib.weightingImpact > 0 ? '+' : ''
-                      }}{{ lib.weightingImpact | number : '1.1-1' }}%
-                    </div>
-                  </div>
-                </div>
-                <div class="scenario-breakdown">
-                  @for (scenario of lib.scenarioBreakdown; track scenario.scenarioName) {
-                    <div class="scenario-item">
-                      <div class="scenario-info">
-                        <span class="scenario-name">{{ scenario.scenarioName }}</span>
-                        <span class="frequency-note">{{
-                          scenario.realWorldFrequency
-                        }}</span>
-                      </div>
-                      <div class="scenario-scores">
-                        <span class="weight">{{ scenario.weight }}x</span>
-                        <span class="raw">{{
-                          scenario.rawScore | number : '1.0-0'
-                        }}</span>
-                        <span class="weighted">{{
-                          scenario.weightedScore | number : '1.0-0'
-                        }}</span>
-                      </div>
-                    </div>
-                  }
-                </div>
-              </div>
+      <div class="weight-impact-analysis">
+        <h4>🔬 Weight Impact Analysis</h4>
+        <div class="impact-summary">
+          <div
+            class="impact-level"
+            [class]="'impact-' + analysis.weightingSignificance"
+          >
+            <strong>{{ analysis.weightingSignificance | uppercase }}</strong>
+            impact from frequency weighting
+          </div>
+          <div class="scenarios-count">
+            {{ analysis.totalScenariosAnalyzed }} scenarios analyzed
+          </div>
+        </div>
+
+        @if (analysis.rankingChanges) {
+        <div class="ranking-changes">
+          <h5>📈 Ranking Changes Due to Weighting:</h5>
+          <div class="ranking-grid">
+            @for (change of analysis.rankingChanges; track change.libraryName) {
+            <div
+              class="ranking-change-item"
+              [class.ranking-improved]="change.rankChange > 0"
+              [class.ranking-declined]="change.rankChange < 0"
+            >
+              <span class="library-name">{{ change.libraryName }}</span>
+              <span class="rank-change">
+                #{{ change.rawRank }} → #{{ change.weightedRank }}
+                @if (change.rankChange !== 0) {
+                <span class="change-indicator">
+                  {{ change.rankChange > 0 ? '↗️' : '↘️' }}
+                  {{
+                    change.rankChange > 0
+                      ? change.rankChange
+                      : -change.rankChange
+                  }}
+                </span>
+                }
+              </span>
+            </div>
             }
           </div>
         </div>
-      }
-
-      <!-- Summary Cards -->
-      <div class="summary-grid">
-        @for (summary of librarySummaries(); track summary.name) {
-          <div class="summary-card" [style.--card-color]="summary.color">
-            <div class="summary-header">
-              <h3>{{ summary.name }}</h3>
-              @if (summary.median !== -1) {
-                <span class="summary-rank">#{{ summary.rank }}</span>
-              }
-              @if (summary.median === -1) {
-                <span class="summary-rank unsupported">Not Implemented</span>
-              }
-            </div>
-            <div class="summary-metrics">
-              <div class="metric">
-                <span class="metric-label">Median</span>
-                @if (summary.median !== -1) {
-                  <span class="metric-value">{{ formatTime(summary.median) }}</span>
-                }
-                @if (summary.median === -1) {
-                  <span class="metric-value unsupported">N/A</span>
-                }
-              </div>
-              <div class="metric">
-                <span class="metric-label">P95</span>
-                @if (summary.p95 !== -1) {
-                  <span class="metric-value">{{ formatTime(summary.p95) }}</span>
-                }
-                @if (summary.p95 === -1) {
-                  <span class="metric-value unsupported">N/A</span>
-                }
-              </div>
-              <div class="metric">
-                <span class="metric-label">Ops/sec</span>
-                @if (
-                  summary.opsPerSecond !== -1 &&
-                  isFinite(summary.opsPerSecond)
-                ) {
-                  <span class="metric-value">
-                    {{ summary.opsPerSecond | number : '1.0-0' }}
-                  </span>
-                }
-                @if (
-                  summary.opsPerSecond === -1 ||
-                  !isFinite(summary.opsPerSecond)
-                ) {
-                  <span class="metric-value unsupported">N/A</span>
-                }
-              </div>
-              <div class="metric">
-                <span class="metric-label">vs {{ baselineName() }}</span>
-                @if (summary.relativeSpeed !== -1) {
-                  <span
-                    class="metric-value"
-                    [class.faster]="summary.relativeSpeed > 1"
-                    [class.slower]="summary.relativeSpeed < 1"
-                  >
-                    {{ summary.relativeSpeed | number : '1.1-1' }}x
-                  </span>
-                }
-                @if (summary.relativeSpeed === -1) {
-                  <span class="metric-value unsupported">N/A</span>
-                }
-              </div>
-            </div>
-          </div>
         }
       </div>
+      }
+    </div>
 
-      <!-- Charts Section (Single Combined) -->
-      <div class="charts-grid">
-        <div class="chart-container">
-          <div class="chart-toolbar">
-            <button
-              class="btn btn-export"
-              data-test-id="chart-scenarios"
-              [class.active]="chartMode() === 'scenarios'"
-              (click)="setChartMode('scenarios')"
-            >
-              Scenarios
-            </button>
-            <button
-              class="btn btn-export"
-              data-test-id="chart-distribution"
-              [class.active]="chartMode() === 'distribution'"
-              (click)="setChartMode('distribution')"
-            >
-              Distribution
-            </button>
-            <button
-              class="btn btn-export"
-              data-test-id="chart-percentiles"
-              [class.active]="chartMode() === 'percentiles'"
-              (click)="setChartMode('percentiles')"
-            >
-              Percentiles
-            </button>
-            <button
-              class="btn btn-export"
-              data-test-id="chart-timeseries"
-              [class.active]="chartMode() === 'timeseries'"
-              (click)="setChartMode('timeseries')"
-            >
-              Time Series
-            </button>
-          </div>
-          <canvas #combinedChart></canvas>
-        </div>
-      </div>
-
-      <!-- Detailed Results Table -->
-      <div class="results-table">
-        <h3>Detailed Results by Scenario</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Scenario</th>
-              @for (lib of librariesWithResults(); track lib.id) {
-                <th [style.color]="lib.color">
-                  {{ lib.name }}
-                </th>
-              }
-            </tr>
-          </thead>
-          <tbody>
-            @for (scenario of completedScenarios(); track scenario.id) {
-              <tr>
-                <td class="scenario-name">
-                  {{ scenario.name }}
-                  <small>{{ scenario.description }}</small>
-                </td>
-                @for (lib of librariesWithResults(); track lib.id) {
-                  <td
-                    [class.winner]="isScenarioWinner(scenario.id, lib.id)"
-                    [class]="getScenarioRankClass(scenario.id, lib.id)"
-                    [style.--cell-color]="lib.color"
-                  >
-                    @if (getScenarioRankEmoji(scenario.id, lib.id)) {
-                      <span class="rank-badge">
-                        {{ getScenarioRankEmoji(scenario.id, lib.id) }}
-                      </span>
-                    }
-                    <span class="time">{{ getScenarioTime(scenario.id, lib.id) }}</span>
-                    <span class="ops"
-                      >{{ getScenarioOps(scenario.id, lib.id) }} ops/s</span
-                    >
-                    @if (lib.id !== 'signaltree') {
-                      <span class="relative">
-                        {{ getRelativePerformance(scenario.id, lib.id) }}x vs
-                        {{ baselineName() }}
-                      </span>
-                    }
-                  </td>
-                }
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Statistical Analysis -->
-      <div class="statistics-section">
-        <h3>Statistical Analysis</h3>
-        <div class="statistics-grid">
-          @for (comparison of statisticalComparisons(); track comparison.name) {
-            <div class="stat-card">
-              <h4>{{ comparison.name }}</h4>
-              <div class="stat-row">
-                <span>Sample Size:</span>
-                <span>{{ comparison.sampleSize }}</span>
+    <!-- Detailed Library Analysis -->
+    @if (weightedResultsAnalysis(); as analysis) {
+    <div class="detailed-analysis">
+      <h3>📋 Detailed Performance Breakdown</h3>
+      <div class="library-analysis-grid">
+        @for (lib of analysis.libraryAnalysis; track lib.libraryName) {
+        <div class="library-analysis-card" [style.--card-color]="lib.color">
+          <div class="analysis-header">
+            <h4>{{ lib.libraryName }}</h4>
+            <div class="score-comparison">
+              <div class="raw-score">
+                Raw: {{ lib.rawAverage | number : '1.0-0' }} ops/sec
               </div>
-              <div class="stat-row">
-                <span>T-Statistic:</span>
-                <span>{{ comparison.tStatistic | number : '1.2-2' }}</span>
+              <div class="weighted-score">
+                Weighted: {{ lib.weightedAverage | number : '1.0-0' }} ops/sec
               </div>
-              <div class="stat-row">
-                <span>P-Value:</span>
-                <span [class.significant]="comparison.pValue < 0.05">
-                  {{ comparison.pValue | number : '1.4-4' }}
-                </span>
-              </div>
-              <div class="stat-row conclusion">
-                <span>Conclusion:</span>
-                <span>{{ comparison.conclusion }}</span>
+              <div
+                class="impact"
+                [class.positive-impact]="lib.weightingImpact > 0"
+                [class.negative-impact]="lib.weightingImpact < 0"
+              >
+                {{ lib.weightingImpact > 0 ? '+' : ''
+                }}{{ lib.weightingImpact | number : '1.1-1' }}%
               </div>
             </div>
+          </div>
+          <div class="scenario-breakdown">
+            @for (scenario of lib.scenarioBreakdown; track
+            scenario.scenarioName) {
+            <div class="scenario-item">
+              <div class="scenario-info">
+                <span class="scenario-name">{{ scenario.scenarioName }}</span>
+                <span class="frequency-note">{{
+                  scenario.realWorldFrequency
+                }}</span>
+              </div>
+              <div class="scenario-scores">
+                <span class="weight">{{ scenario.weight }}x</span>
+                <span class="raw">{{
+                  scenario.rawScore | number : '1.0-0'
+                }}</span>
+                <span class="weighted">{{
+                  scenario.weightedScore | number : '1.0-0'
+                }}</span>
+              </div>
+            </div>
+            }
+          </div>
+        </div>
+        }
+      </div>
+    </div>
+    }
+
+    <!-- Summary Cards -->
+    <div class="summary-grid">
+      @for (summary of librarySummaries(); track summary.name) {
+      <div class="summary-card" [style.--card-color]="summary.color">
+        <div class="summary-header">
+          <h3>{{ summary.name }}</h3>
+          @if (summary.median !== -1) {
+          <span class="summary-rank">#{{ summary.rank }}</span>
+          } @if (summary.median === -1) {
+          <span class="summary-rank unsupported">Not Implemented</span>
           }
         </div>
-      </div>
-
-      <!-- Export Section -->
-      <div class="export-section">
-        <h3>Export Results</h3>
-        <div class="export-buttons">
-          <button
-            class="btn btn-export"
-            data-test-id="export-csv"
-            (click)="exportCSV()"
-          >
-            <svg class="btn-icon" viewBox="0 0 24 24">
-              <path
-                d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20M12,19L8,15H10.5V12H13.5V15H16L12,19Z"
-              />
-            </svg>
-            Export CSV
-          </button>
-          <button
-            class="btn btn-export"
-            data-test-id="export-json"
-            (click)="exportJSON()"
-          >
-            <svg class="btn-icon" viewBox="0 0 24 24">
-              <path
-                d="M5,3H7V5H5V10A2,2 0 0,1 3,12A2,2 0 0,1 5,14V19H7V21H5C3.93,20.73 3,20.1 3,19V15A2,2 0 0,0 1,13H0V11H1A2,2 0 0,0 3,9V5A2,2 0 0,1 5,3M19,3A2,2 0 0,1 21,5V9A2,2 0 0,0 23,11H24V13H23A2,2 0 0,0 21,15V19A2,2 0 0,1 19,21H17V19H19V14A2,2 0 0,1 21,12A2,2 0 0,1 19,10V5H17V3H19M12,15A1,1 0 0,1 13,16A1,1 0 0,1 12,17A1,1 0 0,1 11,16A1,1 0 0,1 12,15M8,15A1,1 0 0,1 9,16A1,1 0 0,1 8,17A1,1 0 0,1 7,16A1,1 0 0,1 8,15M16,15A1,1 0 0,1 17,16A1,1 0 0,1 16,17A1,1 0 0,1 15,16A1,1 0 0,1 16,15Z"
-              />
-            </svg>
-            Export JSON
-          </button>
-          <button
-            class="btn btn-export"
-            data-test-id="share-results"
-            (click)="shareResults()"
-          >
-            <svg class="btn-icon" viewBox="0 0 24 24">
-              <path
-                d="M18,16.08C17.24,16.08 16.56,16.38 16.04,16.85L8.91,12.7C8.96,12.47 9,12.24 9,12C9,11.76 8.96,11.53 8.91,11.3L15.96,7.19C16.5,7.69 17.21,8 18,8A3,3 0 0,0 21,5A3,3 0 0,0 18,2A3,3 0 0,0 15,5C15,5.24 15.04,5.47 15.09,5.7L8.04,9.81C7.5,9.31 6.79,9 6,9A3,3 0 0,0 3,12A3,3 0 0,0 6,15C6.79,15 7.5,14.69 8.04,14.19L15.16,18.34C15.11,18.55 15.08,18.77 15.08,19C15.08,20.61 16.39,21.91 18,21.91C19.61,21.91 20.92,20.61 20.92,19A2.92,2.92 0 0,0 18,16.08Z"
-              />
-            </svg>
-            Share Results
-          </button>
+        <div class="summary-metrics">
+          <div class="metric">
+            <span class="metric-label">Median</span>
+            @if (summary.median !== -1) {
+            <span class="metric-value">{{ formatTime(summary.median) }}</span>
+            } @if (summary.median === -1) {
+            <span class="metric-value unsupported">N/A</span>
+            }
+          </div>
+          <div class="metric">
+            <span class="metric-label">P95</span>
+            @if (summary.p95 !== -1) {
+            <span class="metric-value">{{ formatTime(summary.p95) }}</span>
+            } @if (summary.p95 === -1) {
+            <span class="metric-value unsupported">N/A</span>
+            }
+          </div>
+          <div class="metric">
+            <span class="metric-label">Ops/sec</span>
+            @if ( summary.opsPerSecond !== -1 && isFinite(summary.opsPerSecond)
+            ) {
+            <span class="metric-value">
+              {{ summary.opsPerSecond | number : '1.0-0' }}
+            </span>
+            } @if ( summary.opsPerSecond === -1 ||
+            !isFinite(summary.opsPerSecond) ) {
+            <span class="metric-value unsupported">N/A</span>
+            }
+          </div>
+          <div class="metric">
+            <span class="metric-label">vs {{ baselineName() }}</span>
+            @if (summary.relativeSpeed !== -1) {
+            <span
+              class="metric-value"
+              [class.faster]="summary.relativeSpeed > 1"
+              [class.slower]="summary.relativeSpeed < 1"
+            >
+              {{ summary.relativeSpeed | number : '1.1-1' }}x
+            </span>
+            } @if (summary.relativeSpeed === -1) {
+            <span class="metric-value unsupported">N/A</span>
+            }
+          </div>
         </div>
       </div>
-    </section>
+      }
+    </div>
+
+    <!-- Charts Section (Single Combined) -->
+    <div class="charts-grid">
+      <div class="chart-container">
+        <div class="chart-toolbar">
+          <button
+            class="btn btn-export"
+            data-test-id="chart-scenarios"
+            [class.active]="chartMode() === 'scenarios'"
+            (click)="setChartMode('scenarios')"
+          >
+            Scenarios
+          </button>
+          <button
+            class="btn btn-export"
+            data-test-id="chart-distribution"
+            [class.active]="chartMode() === 'distribution'"
+            (click)="setChartMode('distribution')"
+          >
+            Distribution
+          </button>
+          <button
+            class="btn btn-export"
+            data-test-id="chart-percentiles"
+            [class.active]="chartMode() === 'percentiles'"
+            (click)="setChartMode('percentiles')"
+          >
+            Percentiles
+          </button>
+          <button
+            class="btn btn-export"
+            data-test-id="chart-timeseries"
+            [class.active]="chartMode() === 'timeseries'"
+            (click)="setChartMode('timeseries')"
+          >
+            Time Series
+          </button>
+        </div>
+        <canvas #combinedChart></canvas>
+      </div>
+    </div>
+
+    <!-- Detailed Results Table -->
+    <div class="results-table">
+      <h3>Detailed Results by Scenario</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Scenario</th>
+            @for (lib of librariesWithResults(); track lib.id) {
+            <th [style.color]="lib.color">
+              {{ lib.name }}
+            </th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (scenario of completedScenarios(); track scenario.id) {
+          <tr>
+            <td class="scenario-name">
+              {{ scenario.name }}
+              <small>{{ scenario.description }}</small>
+            </td>
+            @for (lib of librariesWithResults(); track lib.id) {
+            <td
+              [class.winner]="isScenarioWinner(scenario.id, lib.id)"
+              [class]="getScenarioRankClass(scenario.id, lib.id)"
+              [style.--cell-color]="lib.color"
+            >
+              @if (getScenarioRankEmoji(scenario.id, lib.id)) {
+              <span class="rank-badge">
+                {{ getScenarioRankEmoji(scenario.id, lib.id) }}
+              </span>
+              }
+              <span class="time">{{
+                getScenarioTime(scenario.id, lib.id)
+              }}</span>
+              <span class="ops"
+                >{{ getScenarioOps(scenario.id, lib.id) }} ops/s</span
+              >
+              @if (lib.id !== 'signaltree') {
+              <span class="relative">
+                {{ getRelativePerformance(scenario.id, lib.id) }}
+              </span>
+              }
+            </td>
+            }
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Statistical Analysis -->
+    <div class="statistics-section">
+      <h3>Statistical Analysis</h3>
+      <div class="statistics-grid">
+        @for (comparison of statisticalComparisons(); track comparison.name) {
+        <div class="stat-card">
+          <h4>{{ comparison.name }}</h4>
+          <div class="stat-row">
+            <span>Sample Size:</span>
+            <span>{{ comparison.sampleSize }}</span>
+          </div>
+          <div class="stat-row">
+            <span>T-Statistic:</span>
+            <span>{{ comparison.tStatistic | number : '1.2-2' }}</span>
+          </div>
+          <div class="stat-row">
+            <span>P-Value:</span>
+            <span [class.significant]="comparison.pValue < 0.05">
+              {{ comparison.pValue | number : '1.4-4' }}
+            </span>
+          </div>
+          <div class="stat-row conclusion">
+            <span>Conclusion:</span>
+            <span>{{ comparison.conclusion }}</span>
+          </div>
+        </div>
+        }
+      </div>
+    </div>
+
+    <!-- Export Section -->
+    <div class="export-section">
+      <h3>Export Results</h3>
+      <div class="export-buttons">
+        <button
+          class="btn btn-export"
+          data-test-id="export-csv"
+          (click)="exportCSV()"
+        >
+          <svg class="btn-icon" viewBox="0 0 24 24">
+            <path
+              d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20M12,19L8,15H10.5V12H13.5V15H16L12,19Z"
+            />
+          </svg>
+          Export CSV
+        </button>
+        <button
+          class="btn btn-export"
+          data-test-id="export-json"
+          (click)="exportJSON()"
+        >
+          <svg class="btn-icon" viewBox="0 0 24 24">
+            <path
+              d="M5,3H7V5H5V10A2,2 0 0,1 3,12A2,2 0 0,1 5,14V19H7V21H5C3.93,20.73 3,20.1 3,19V15A2,2 0 0,0 1,13H0V11H1A2,2 0 0,0 3,9V5A2,2 0 0,1 5,3M19,3A2,2 0 0,1 21,5V9A2,2 0 0,0 23,11H24V13H23A2,2 0 0,0 21,15V19A2,2 0 0,1 19,21H17V19H19V14A2,2 0 0,1 21,12A2,2 0 0,1 19,10V5H17V3H19M12,15A1,1 0 0,1 13,16A1,1 0 0,1 12,17A1,1 0 0,1 11,16A1,1 0 0,1 12,15M8,15A1,1 0 0,1 9,16A1,1 0 0,1 8,17A1,1 0 0,1 7,16A1,1 0 0,1 8,15M16,15A1,1 0 0,1 17,16A1,1 0 0,1 16,17A1,1 0 0,1 15,16A1,1 0 0,1 16,15Z"
+            />
+          </svg>
+          Export JSON
+        </button>
+        <button
+          class="btn btn-export"
+          data-test-id="share-results"
+          (click)="shareResults()"
+        >
+          <svg class="btn-icon" viewBox="0 0 24 24">
+            <path
+              d="M18,16.08C17.24,16.08 16.56,16.38 16.04,16.85L8.91,12.7C8.96,12.47 9,12.24 9,12C9,11.76 8.96,11.53 8.91,11.3L15.96,7.19C16.5,7.69 17.21,8 18,8A3,3 0 0,0 21,5A3,3 0 0,0 18,2A3,3 0 0,0 15,5C15,5.24 15.04,5.47 15.09,5.7L8.04,9.81C7.5,9.31 6.79,9 6,9A3,3 0 0,0 3,12A3,3 0 0,0 6,15C6.79,15 7.5,14.69 8.04,14.19L15.16,18.34C15.11,18.55 15.08,18.77 15.08,19C15.08,20.61 16.39,21.91 18,21.91C19.61,21.91 20.92,20.61 20.92,19A2.92,2.92 0 0,0 18,16.08Z"
+            />
+          </svg>
+          Share Results
+        </button>
+      </div>
+    </div>
+  </section>
   }
 </div>

@@ -1685,19 +1685,19 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         cpuResult > 500
           ? 50000
           : cpuResult > 200
-            ? 10000
-            : cpuResult > 100
-              ? 5000
-              : 1000;
+          ? 10000
+          : cpuResult > 100
+          ? 5000
+          : 1000;
 
       const recommendedIterations =
         cpuResult > 500
           ? 100
           : cpuResult > 200
-            ? 75
-            : cpuResult > 100
-              ? 50
-              : 25;
+          ? 75
+          : cpuResult > 100
+          ? 50
+          : 25;
 
       this.calibrationData.set({
         cpuOpsPerMs: cpuResult,
@@ -1823,7 +1823,8 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             __LIBRARY_VERSIONS__?: Record<string, string>;
           };
           if (windowWithVersions.__LIBRARY_VERSIONS__?.[lib.id]) {
-            libraryVersions[lib.id] = windowWithVersions.__LIBRARY_VERSIONS__[lib.id];
+            libraryVersions[lib.id] =
+              windowWithVersions.__LIBRARY_VERSIONS__[lib.id];
           }
         }
       });
@@ -2053,10 +2054,10 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
           const samplesArray: number[] = Array.isArray(res.samples)
             ? res.samples.slice()
             : Array.isArray(res.rawSamples)
-              ? res.rawSamples.slice()
-              : typeof res.durationMs === 'number'
-                ? [res.durationMs]
-                : [];
+            ? res.rawSamples.slice()
+            : typeof res.durationMs === 'number'
+            ? [res.durationMs]
+            : [];
 
           ext[libraryId][scenarioId] = {
             ...(typeof res === 'object' ? res : { durationMs: res }),
@@ -2744,10 +2745,19 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     )
       return 'N/A';
 
-    // Show how many times the given library compares to SignalTree by time.
-    // If the library is slower (higher median), this yields > 1 (e.g., 2.00x vs SignalTree).
-    const ratio = libResult.median / stResult.median;
-    return ratio.toFixed(2);
+    // Calculate performance difference as percentage
+    // Lower median time = better performance (faster)
+    if (libResult.median > stResult.median) {
+      // Library is slower than SignalTree
+      const percentSlower =
+        ((libResult.median - stResult.median) / stResult.median) * 100;
+      return `+${percentSlower.toFixed(1)}% slower`;
+    } else {
+      // Library is faster than SignalTree
+      const percentFaster =
+        ((stResult.median - libResult.median) / libResult.median) * 100;
+      return `+${percentFaster.toFixed(1)}% faster`;
+    }
   }
 
   // Chart updates
@@ -2956,22 +2966,28 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       const lib = libraries.find((l) => l.id === result.libraryId);
       const scenario = scenarios.find((s) => s.id === result.scenarioId);
 
-      csv += `${lib?.name},${scenario?.name},${result.median === -1 ? -1 : result.median.toFixed(3)
-        },`;
-      csv += `${result.mean === -1 ? -1 : result.mean.toFixed(3)},${result.p95 === -1 ? -1 : result.p95.toFixed(3)
-        },`;
-      csv += `${result.p99 === -1 ? -1 : result.p99.toFixed(3)},${result.min === -1 ? -1 : result.min.toFixed(3)
-        },`;
-      csv += `${result.max === -1 ? -1 : result.max.toFixed(3)},${result.stdDev === -1 ? -1 : result.stdDev.toFixed(3)
-        },`;
-      csv += `${result.opsPerSecond === -1 || !isFinite(result.opsPerSecond)
-        ? -1
-        : Math.round(result.opsPerSecond)
-        },`;
-      csv += `${typeof result.memoryDeltaMB === 'number'
-        ? result.memoryDeltaMB.toFixed(2)
-        : ''
-        }\n`;
+      csv += `${lib?.name},${scenario?.name},${
+        result.median === -1 ? -1 : result.median.toFixed(3)
+      },`;
+      csv += `${result.mean === -1 ? -1 : result.mean.toFixed(3)},${
+        result.p95 === -1 ? -1 : result.p95.toFixed(3)
+      },`;
+      csv += `${result.p99 === -1 ? -1 : result.p99.toFixed(3)},${
+        result.min === -1 ? -1 : result.min.toFixed(3)
+      },`;
+      csv += `${result.max === -1 ? -1 : result.max.toFixed(3)},${
+        result.stdDev === -1 ? -1 : result.stdDev.toFixed(3)
+      },`;
+      csv += `${
+        result.opsPerSecond === -1 || !isFinite(result.opsPerSecond)
+          ? -1
+          : Math.round(result.opsPerSecond)
+      },`;
+      csv += `${
+        typeof result.memoryDeltaMB === 'number'
+          ? result.memoryDeltaMB.toFixed(2)
+          : ''
+      }\n`;
     }
 
     this.downloadFile(csv, 'benchmark-results.csv', 'text/csv');
