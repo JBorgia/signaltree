@@ -434,9 +434,9 @@
           use <code>createWizardForm()</code>:
         </p>
         <pre><code>const wizard = createWizardForm([
-  { fields: ['profile.name', 'profile.email'] },
-  { fields: ['company.name', 'company.size'] },
-  { fields: ['preferences.*'] }
+  {{ '{' }} fields: ['profile.name', 'profile.email'] {{ '}' }},
+  {{ '{' }} fields: ['company.name', 'company.size'] {{ '}' }},
+  {{ '{' }} fields: ['preferences.*'] {{ '}' }}
 ], initialValues);
 
 wizard.nextStep();  // Auto-shows next fields
