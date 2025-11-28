@@ -174,7 +174,7 @@
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@rollup/plugin-typescript": "^12.3.0",
     "@schematics/angular": "~20.3.10",
-    "@signaltree/core": "file:dist/packages/core",
+    "@signaltree/core": "^4.1.4",
     "@signaltree/enterprise": "workspace:*",
     "@signaltree/ng-forms": "workspace:*",
     "@signaltree/shared": "workspace:*",
