@@ -43,7 +43,7 @@ jobs:
 
       - name: Add SPA Fallback (404.html)
         run: |
-          cp dist/apps/demo/index.html dist/apps/demo/404.html
+          cp dist/apps/demo/browser/index.html dist/apps/demo/browser/404.html
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
