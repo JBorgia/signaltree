@@ -2,6 +2,10 @@ import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
+import * as rootPkg from '../../../../../../package.json';
+
+// Import root package.json for version info (bundled at build time)
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 export interface DemoExample {
   id: string;
   title: string;
@@ -18,6 +22,33 @@ export interface DemoExample {
   styleUrls: ['./navigation.component.scss'],
 })
 export class NavigationComponent {
+  readonly coreVersion: string;
+  readonly enterpriseVersion: string;
+  readonly versionSummary: string;
+  readonly buildDate: string;
+
+  constructor() {
+    // Extract versions; workspace:* entries replaced with published core version where applicable
+    const devDeps: any = (rootPkg as any).devDependencies || {};
+    const deps: any = (rootPkg as any).dependencies || {};
+    const rawCore =
+      devDeps['@signaltree/core'] || deps['@signaltree/core'] || 'unknown';
+    // Normalize prefixes like ^ and file:
+    this.coreVersion = rawCore
+      .replace(/^\^/, '')
+      .replace(/^file:.*/, 'local-build');
+    // Enterprise is a workspace dependency; reuse core version if not explicitly versioned
+    const rawEnterprise =
+      devDeps['@signaltree/enterprise'] ||
+      deps['@signaltree/enterprise'] ||
+      this.coreVersion;
+    this.enterpriseVersion =
+      rawEnterprise === 'workspace:*'
+        ? this.coreVersion
+        : rawEnterprise.replace(/^\^/, '');
+    this.versionSummary = `@signaltree/core v${this.coreVersion} • enterprise v${this.enterpriseVersion}`;
+    this.buildDate = new Date().toISOString().slice(0, 10);
+  }
   examples: DemoExample[] = [
     // Getting Started
     {
