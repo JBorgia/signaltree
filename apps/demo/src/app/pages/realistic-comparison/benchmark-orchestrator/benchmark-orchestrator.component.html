@@ -233,6 +233,8 @@
         </div>
         @if (lib.id === 'signaltree') {
         <div class="library-badge">Baseline</div>
+        } @if (lib.id === 'signaltree-enterprise') {
+        <div class="library-badge enterprise">Enterprise</div>
         }
       </div>
       }
@@ -437,22 +439,6 @@
           param)</small
         >
       </div>
-
-      <div class="config-group">
-        <label for="include-enterprise">Include Enterprise Enhancer</label>
-        <input
-          type="checkbox"
-          id="include-enterprise"
-          [ngModel]="includeEnterpriseEnhancer()"
-          (ngModelChange)="setIncludeEnterpriseEnhancer($event)"
-          [disabled]="isRunning()"
-        />
-        <small>
-          When enabled, the 'enterprise' enhancer is added to SignalTree runs
-          (audit/time-travel features). For fair baseline comparisons, run
-          benchmarks with this disabled and then enabled to compare overhead.
-        </small>
-      </div>
     </div>
 
     <div class="test-estimates">
@@ -592,19 +578,43 @@ const tree = signalTree(state).with(withSelectorMemoization());</code></pre>
       </div>
     </div>
 
-    <!-- Active Enhancers Display -->
+    <!-- Per-Scenario Enhancers Display -->
     @if (selectedScenarios().length > 0) {
     <div class="enhancers-display">
-      <h3>Active SignalTree Enhancers</h3>
-      <div class="enhancers-list">
-        @for (enhancer of activeEnhancers(); track enhancer.name) {
-        <span class="enhancer-tag">
-          {{ enhancer.name }}
-        </span>
-        }
-      </div>
+      <h3>Per-Scenario Enhancers (SignalTree Baseline)</h3>
+      <table class="scenario-enhancers-table">
+        <thead>
+          <tr>
+            <th>Scenario</th>
+            <th>Enhancers Applied</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of scenarioEnhancersDetailed(); track s.id) {
+          <tr>
+            <td>{{ s.name }}</td>
+            <td>
+              @if (s.enhancers.length === 0) {
+              <span class="no-enhancers">(none)</span>
+              } @if (s.enhancers.length > 0) {
+              <div class="enhancer-badges">
+                @for (e of s.enhancers; track e) {
+                <span class="enhancer-tag">{{ e }}</span>
+                }
+              </div>
+              }
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
       <p class="enhancers-note">
         {{ enhancerExplanation() }}
+        <br />
+        <small>
+          Enterprise variant adds <code>enterprise</code> enhancer on top of the
+          above.
+        </small>
       </p>
     </div>
     }
@@ -979,6 +989,39 @@ const tree = signalTree(state).with(withSelectorMemoization());</code></pre>
   @if (hasResults()) {
   <section class="results-section">
     <h2>Benchmark Results</h2>
+    <div
+      class="results-legend"
+      style="
+        margin: 0 0 1rem 0;
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        font-size: 0.75rem;
+        align-items: center;
+      "
+    >
+      <div style="display: flex; align-items: center; gap: 0.4rem">
+        <span
+          class="library-badge"
+          style="background: #3b82f6; position: static"
+          >Baseline</span
+        >
+        <span>SignalTree core (no enterprise enhancer)</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 0.4rem">
+        <span class="library-badge enterprise" style="position: static"
+          >Enterprise</span
+        >
+        <span
+          >SignalTree Enterprise (adds diff engine + scheduler
+          optimizations)</span
+        >
+      </div>
+      <div style="display: flex; align-items: center; gap: 0.3rem">
+        <span class="enterprise-badge">Enterprise</span>
+        <span>Cell indicates enterprise variant for that library column.</span>
+      </div>
+    </div>
 
     <!-- Architectural Trade-off Explanation -->
     <div
@@ -1029,6 +1072,56 @@ const tree = signalTree(state).with(withSelectorMemoization());</code></pre>
           applications.</strong
         >
       </p>
+      <p class="effect-size-note">
+        Effect sizes (Δ%) now represent
+        <strong>throughput improvement</strong> (ops/sec) versus baseline
+        SignalTree with a 95% bootstrap confidence interval.
+      </p>
+      <div class="scoring-formula" role="note">
+        <div class="formula-header"><strong>Scoring Formula</strong></div>
+        <div class="formula-text" [attr.title]="scoringFormula">
+          <span class="line"
+            >Normalized scenario score = (ops/sec ÷ best ops/sec) × 100</span
+          >
+          <span class="line"
+            >Weighted points = normalized × frequency weight</span
+          >
+          <span class="line"
+            >Library weighted score = Σ(weighted points) ÷ Σ(weights)</span
+          >
+        </div>
+        <div class="formula-actions">
+          <button
+            type="button"
+            class="btn-inline-info"
+            (click)="showFormula = !showFormula"
+            [attr.aria-expanded]="showFormula"
+          >
+            {{ showFormula ? 'Hide Details' : 'Details' }}
+          </button>
+          <button
+            type="button"
+            class="btn-inline-info"
+            (click)="showEqualWeight.set(!showEqualWeight())"
+            [attr.aria-pressed]="showEqualWeight()"
+          >
+            {{ showEqualWeight() ? 'Hide Equal-Weight' : 'Show Equal-Weight' }}
+          </button>
+        </div>
+        @if (showFormula) {
+        <div class="formula-details">
+          <p>
+            Each scenario contributes a normalized score relative to the best
+            performer. Weighted ranking multiplies by real-world frequency
+            weights; Equal-Weight ranking treats each scenario equally.
+          </p>
+          <p>
+            Ops/sec derives from median ms/op: 1000 ÷ median(ms/op). Effect size
+            deltas show throughput (ops/sec) improvement percentages.
+          </p>
+        </div>
+        }
+      </div>
 
       <div class="weighted-summary-grid">
         @for (summary of weightedLibrarySummaries(); track summary.name) {
@@ -1206,6 +1299,51 @@ const tree = signalTree(state).with(withSelectorMemoization());</code></pre>
         </div>
         }
       </div>
+
+      <!-- Equal-Weight (Unweighted) Comparison -->
+      @if (showEqualWeight()) {
+      <div class="equal-weight-section">
+        <h4>⚖️ Equal-Weight (Unbiased) Ranking</h4>
+        <p class="equal-weight-note">
+          Uses the same normalized per-scenario scores but treats all selected
+          scenarios as weight = 1.0. This shows raw architectural efficiency
+          without real-world frequency emphasis.
+        </p>
+        <div class="equal-weight-grid">
+          @for (summary of equalWeightLibrarySummaries(); track summary.name) {
+          <div
+            class="equal-weight-card"
+            [class.equal-weight-winner]="summary.rank === 1"
+            [style.--card-color]="summary.color"
+          >
+            <div class="equal-header">
+              <h5>{{ summary.name }}</h5>
+              @if (summary.unweightedScore !== -1) {
+              <span class="equal-rank"
+                >#{{ summary.rank }} ({{
+                  summary.unweightedScore | number : '1.1-1'
+                }}
+                pts)</span
+              >
+              } @if (summary.unweightedScore === -1) {
+              <span class="equal-rank unsupported">Incomplete</span>
+              }
+            </div>
+            <div class="equal-breakdown">
+              @for (item of summary.breakdown; track item.scenarioName) {
+              <div class="equal-item">
+                <span class="scenario-name">{{ item.scenarioName }}</span>
+                <span class="score"
+                  >{{ item.normalizedScore | number : '1.0-0' }} pts</span
+                >
+              </div>
+              }
+            </div>
+          </div>
+          }
+        </div>
+      </div>
+      }
     </div>
     }
 
@@ -1337,7 +1475,11 @@ const tree = signalTree(state).with(withSelectorMemoization());</code></pre>
               [class]="getScenarioRankClass(scenario.id, lib.id)"
               [style.--cell-color]="lib.color"
             >
-              @if (getScenarioRankEmoji(scenario.id, lib.id)) {
+              @if (lib.id === 'signaltree-enterprise') {
+              <span class="enterprise-badge" title="Enterprise Enhancer Active"
+                >Enterprise</span
+              >
+              } @if (getScenarioRankEmoji(scenario.id, lib.id)) {
               <span class="rank-badge">
                 {{ getScenarioRankEmoji(scenario.id, lib.id) }}
               </span>
@@ -1352,7 +1494,20 @@ const tree = signalTree(state).with(withSelectorMemoization());</code></pre>
               <span class="relative">
                 {{ getRelativePerformance(scenario.id, lib.id) }}
               </span>
-              }
+              @if (getScenarioEffectSize(scenario.id, lib.id); as eff) {
+              <span
+                class="effect-size"
+                [attr.title]="
+                  'CI 95%: ' +
+                  (eff.ciLower | number : '1.1-1') +
+                  '% to ' +
+                  (eff.ciUpper | number : '1.1-1') +
+                  '%'
+                "
+              >
+                Δ {{ eff.deltaPct | number : '1.1-1' }}% ops/sec (CI)
+              </span>
+              } }
             </td>
             }
           </tr>

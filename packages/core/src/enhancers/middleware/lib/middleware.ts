@@ -63,6 +63,38 @@ export function withMiddleware<T>(
           }
         }
 
+        // Fast path: detect no-mutation scenarios and skip applying update entirely
+        // Shallow compare updated keys (primitive/reference equality). If all equal, treat as no-op.
+        let isNoMutation = true;
+        if (updateResult && typeof updateResult === 'object') {
+          for (const k in updateResult) {
+            if (!Object.prototype.hasOwnProperty.call(updateResult, k))
+              continue;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const nextVal = (updateResult as any)[k];
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const prevVal = (currentState as any)[k];
+            if (nextVal !== prevVal) {
+              isNoMutation = false;
+              break;
+            }
+          }
+        }
+        if (isNoMutation) {
+          // Call 'after' hooks with unchanged state (allows logging/instrumentation without diff cost)
+          for (const middleware of treeMiddlewares) {
+            if (middleware.after) {
+              middleware.after(
+                action,
+                updateResult,
+                currentState,
+                currentState
+              );
+            }
+          }
+          return; // Skip actual update
+        }
+
         // Capture state before update for 'after' hooks
         const previousState = currentState;
 

@@ -11,15 +11,15 @@ $dark: #1f2937;
 $light: #f9fafb;
 $border: #e5e7eb;
 
-// Mixins
-@mixin card {
+// Shared placeholders (use @extend to reduce emitted CSS duplication)
+%card {
   background: white;
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   padding: 1.5rem;
 }
 
-@mixin button {
+%button {
   padding: 0.75rem 1.5rem;
   border-radius: 8px;
   font-weight: 600;
@@ -39,6 +39,14 @@ $border: #e5e7eb;
     opacity: 0.5;
     cursor: not-allowed;
   }
+}
+
+// Legacy mixins kept for untouched areas; prefer @extend going forward
+@mixin card {
+  @extend %card;
+}
+@mixin button {
+  @extend %button;
 }
 
 // Main container
@@ -68,7 +76,7 @@ $border: #e5e7eb;
 
 // Calibration Section
 .calibration-section {
-  @include card;
+  @extend %card;
   background: linear-gradient(135deg, $primary 0%, $secondary 100%);
   color: white;
   margin-bottom: 2rem;
@@ -313,7 +321,7 @@ $border: #e5e7eb;
   }
 
   .library-card {
-    @include card;
+    @extend %card;
     cursor: pointer;
     border: 2px solid $border;
     transition: all 0.2s;
@@ -384,6 +392,17 @@ $border: #e5e7eb;
       border-radius: 4px;
       font-size: 0.75rem;
       font-weight: 600;
+    }
+    .library-badge.enterprise {
+      background: linear-gradient(
+        135deg,
+        #1e3a8a 0%,
+        #1e40af 60%,
+        #1d4ed8 100%
+      );
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15),
+        0 2px 4px rgba(30, 64, 175, 0.3);
+      letter-spacing: 0.5px;
     }
   }
 
@@ -504,7 +523,7 @@ $border: #e5e7eb;
 
 // Config Section
 .config-section {
-  @include card;
+  @extend %card;
   margin-bottom: 2rem;
 
   h2 {
@@ -613,7 +632,7 @@ $border: #e5e7eb;
     }
 
     .preset-card {
-      @include card;
+      @extend %card;
       cursor: pointer;
       border: 2px solid $border;
       transition: all 0.2s;
@@ -652,7 +671,7 @@ $border: #e5e7eb;
 
   // Active enhancers display
   .enhancers-display {
-    @include card;
+    @extend %card;
     margin-bottom: 2rem;
     border: 2px solid rgba($primary, 0.2);
     background: rgba($primary, 0.02);
@@ -685,6 +704,52 @@ $border: #e5e7eb;
       font-size: 0.875rem;
       color: #6b7280;
       font-style: italic;
+    }
+
+    // Scenario enhancer table spacing improvements
+    .scenario-enhancers-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 0.75rem;
+
+      th,
+      td {
+        padding: 0.5rem 0.75rem;
+        border-bottom: 1px solid rgba($primary, 0.15);
+        vertical-align: top;
+        font-size: 0.85rem;
+      }
+
+      th {
+        background: rgba($primary, 0.06);
+        font-weight: 600;
+        color: $dark;
+      }
+
+      .enhancer-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        align-items: center;
+      }
+
+      .enhancer-tag {
+        background: linear-gradient(135deg, $primary 0%, $secondary 100%);
+        color: #fff;
+        padding: 0.25rem 0.55rem;
+        border-radius: 4px;
+        font-size: 0.65rem;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+        line-height: 1;
+      }
+
+      .no-enhancers {
+        color: #9ca3af;
+        font-style: italic;
+        font-size: 0.7rem;
+      }
     }
   }
 
@@ -729,7 +794,7 @@ $border: #e5e7eb;
   }
 
   .benchmark-card {
-    @include card;
+    @extend %card;
     cursor: pointer;
     display: flex;
     flex-direction: column;
@@ -816,7 +881,7 @@ $border: #e5e7eb;
   margin-bottom: 2rem;
 
   .btn-run {
-    @include button;
+    @extend %button;
     background: linear-gradient(135deg, $primary, $secondary);
     color: white;
     font-size: 1.125rem;
@@ -866,7 +931,7 @@ $border: #e5e7eb;
   z-index: 1000;
 
   .progress-content {
-    @include card;
+    @extend %card;
     width: 90%;
     max-width: 500px;
 
@@ -993,7 +1058,7 @@ $border: #e5e7eb;
   }
 
   .summary-card {
-    @include card;
+    @extend %card;
     border-left: 4px solid var(--card-color);
 
     .summary-header {
@@ -1051,7 +1116,7 @@ $border: #e5e7eb;
   }
 
   .chart-container {
-    @include card;
+    @extend %card;
 
     h3 {
       margin-bottom: 1rem;
@@ -1080,7 +1145,7 @@ $border: #e5e7eb;
   }
 
   .results-table {
-    @include card;
+    @extend %card;
     margin-bottom: 2rem;
     overflow-x: auto;
 
@@ -1163,6 +1228,19 @@ $border: #e5e7eb;
           margin-right: 0.5rem;
           vertical-align: middle;
         }
+        .enterprise-badge {
+          display: inline-block;
+          background: linear-gradient(90deg, #1e40af, #1d4ed8);
+          color: #fff;
+          padding: 0.15rem 0.45rem;
+          border-radius: 4px;
+          font-size: 0.625rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          margin-right: 0.35rem;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+        }
 
         .time {
           display: block;
@@ -1186,7 +1264,7 @@ $border: #e5e7eb;
   }
 
   .statistics-section {
-    @include card;
+    @extend %card;
     margin-bottom: 2rem;
 
     h3 {
@@ -1232,7 +1310,7 @@ $border: #e5e7eb;
   }
 
   .export-section {
-    @include card;
+    @extend %card;
     text-align: center;
 
     h3 {
@@ -1437,7 +1515,7 @@ $border: #e5e7eb;
 
 // Frequency Weighting Styles
 .frequency-weighting-section {
-  @include card;
+  @extend %card;
   margin: 2rem 0;
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   border: 2px solid $primary;
@@ -1848,7 +1926,7 @@ $border: #e5e7eb;
 
 // Weighted results styling
 .weighted-results-section {
-  @include card;
+  @extend %card;
   margin: 2rem 0;
   background: linear-gradient(135deg, #fef7cd 0%, #fbbf24 20%, #f59e0b 100%);
   border: 2px solid $warning;
@@ -1866,6 +1944,74 @@ $border: #e5e7eb;
     border-left: 4px solid $warning;
   }
 
+  // Scoring formula layout improvements
+  .scoring-formula {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    background: rgba(white, 0.85);
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    border: 1px solid rgba($warning, 0.4);
+    font-size: 0.7rem;
+    line-height: 1.25;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    margin-bottom: 1.5rem;
+
+    .formula-header {
+      font-size: 0.75rem;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: color.adjust($warning, $lightness: -35%);
+      font-weight: 700;
+    }
+
+    .formula-text {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .line {
+      display: block;
+      word-break: break-word;
+    }
+
+    .formula-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .btn-inline-info {
+      @extend %button;
+      padding: 0.35rem 0.65rem;
+      font-size: 0.6rem;
+      background: white;
+      color: color.adjust($warning, $lightness: -30%);
+      border: 1px solid rgba($warning, 0.4);
+      box-shadow: none;
+      font-weight: 600;
+      line-height: 1;
+
+      &:hover:not(:disabled) {
+        background: color.adjust($warning, $lightness: -30%);
+        color: white;
+        transform: translateY(-2px);
+      }
+    }
+
+    .formula-details {
+      margin-top: 0.5rem;
+      font-size: 0.65rem;
+      line-height: 1.3;
+      background: rgba($warning, 0.08);
+      padding: 0.5rem 0.6rem;
+      border-radius: 6px;
+      border-left: 3px solid $warning;
+    }
+  }
+
   .weighted-summary-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -1873,7 +2019,7 @@ $border: #e5e7eb;
     margin-bottom: 1.5rem;
 
     .weighted-summary-card {
-      @include card;
+      @extend %card;
       border: 2px solid transparent;
 
       &.weighted-winner {
@@ -2165,7 +2311,7 @@ $border: #e5e7eb;
     gap: 1.5rem;
 
     .library-analysis-card {
-      @include card;
+      @extend %card;
       border-left: 4px solid var(--card-color);
 
       .analysis-header {
@@ -2277,7 +2423,7 @@ $border: #e5e7eb;
 
 // Memoization Info Section
 .memoization-info {
-  @include card;
+  @extend %card;
   margin-bottom: 2rem;
 
   .info-card {

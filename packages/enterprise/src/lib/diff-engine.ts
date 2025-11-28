@@ -41,6 +41,17 @@ export interface Diff {
 
   /** Whether any changes were detected */
   hasChanges: boolean;
+
+  /** Optional instrumentation metrics when enabled */
+  instrumentation?: {
+    elementComparisons: number;
+    prefixFastPathHits: number;
+    wholeArrayReplaceHits: number;
+    traversals: number;
+    suffixFastPathHits: number;
+    segmentSkips: number;
+    samplesTaken: number;
+  };
 }
 
 /**
@@ -61,6 +72,9 @@ export interface DiffOptions {
 
   /** Optional key validator for security (e.g., to prevent prototype pollution) */
   keyValidator?: (key: string) => boolean;
+
+  /** Enable instrumentation for diff performance analysis */
+  instrumentation?: boolean;
 }
 
 /**
@@ -102,6 +116,7 @@ export class DiffEngine {
     ignoreArrayOrder: false,
     equalityFn: (a, b) => a === b,
     keyValidator: undefined,
+    instrumentation: false,
   };
 
   /**
@@ -116,12 +131,21 @@ export class DiffEngine {
     const opts = { ...this.defaultOptions, ...options };
     const changes: Change[] = [];
     const visited = new WeakSet();
-
-    this.traverse(current, updates, [], changes, visited, opts, 0);
+    const metrics = {
+      elementComparisons: 0,
+      prefixFastPathHits: 0,
+      wholeArrayReplaceHits: 0,
+      traversals: 0,
+      suffixFastPathHits: 0,
+      segmentSkips: 0,
+      samplesTaken: 0,
+    };
+    this.traverse(current, updates, [], changes, visited, opts, 0, metrics);
 
     return {
       changes,
       hasChanges: changes.length > 0,
+      instrumentation: opts.instrumentation ? metrics : undefined,
     };
   }
 
@@ -135,11 +159,23 @@ export class DiffEngine {
     changes: Change[],
     visited: WeakSet<object>,
     opts: ResolvedDiffOptions,
-    depth: number
+    depth: number,
+    metrics: {
+      elementComparisons: number;
+      prefixFastPathHits: number;
+      wholeArrayReplaceHits: number;
+      traversals: number;
+    }
   ): void {
+    if (opts.instrumentation) metrics.traversals++;
     // Depth limit
     if (depth > opts.maxDepth) {
       return;
+    }
+
+    // Fast path: identical reference (common in unchanged subtrees after batching)
+    if (curr === upd) {
+      return; // No change anywhere below
     }
 
     // Handle primitives
@@ -163,7 +199,7 @@ export class DiffEngine {
 
     // Handle arrays
     if (Array.isArray(upd)) {
-      this.diffArrays(curr, upd, path, changes, visited, opts, depth);
+      this.diffArrays(curr, upd, path, changes, visited, opts, depth, metrics);
       return;
     }
 
@@ -198,7 +234,8 @@ export class DiffEngine {
           changes,
           visited,
           opts,
-          depth + 1
+          depth + 1,
+          metrics
         );
       }
     }
@@ -230,7 +267,13 @@ export class DiffEngine {
     changes: Change[],
     visited: WeakSet<object>,
     opts: ResolvedDiffOptions,
-    depth: number
+    depth: number,
+    metrics: {
+      elementComparisons: number;
+      prefixFastPathHits: number;
+      wholeArrayReplaceHits: number;
+      traversals: number;
+    }
   ): void {
     if (!Array.isArray(curr)) {
       // Not an array - replace
@@ -246,7 +289,16 @@ export class DiffEngine {
     if (opts.ignoreArrayOrder) {
       this.diffArraysUnordered(curr, upd, path, changes, opts);
     } else {
-      this.diffArraysOrdered(curr, upd, path, changes, visited, opts, depth);
+      this.diffArraysOrdered(
+        curr,
+        upd,
+        path,
+        changes,
+        visited,
+        opts,
+        depth,
+        metrics
+      );
     }
   }
 
@@ -260,11 +312,95 @@ export class DiffEngine {
     changes: Change[],
     visited: WeakSet<object>,
     opts: ResolvedDiffOptions,
-    depth: number
+    depth: number,
+    metrics: {
+      elementComparisons: number;
+      prefixFastPathHits: number;
+      wholeArrayReplaceHits: number;
+      traversals: number;
+    }
   ): void {
-    // Check each index
-    const maxLength = Math.max(curr.length, upd.length);
+    // Fast path: same reference or trivially identical contents
+    if (curr === upd) {
+      return;
+    }
+    if (curr.length === upd.length) {
+      let identical = true;
+      for (let i = 0; i < curr.length; i++) {
+        if (opts.instrumentation) metrics.elementComparisons++;
+        if (curr[i] !== upd[i]) {
+          identical = false;
+          break;
+        }
+      }
+      if (identical) return; // element-wise identical
+    }
+    const currLen = curr.length;
+    const updLen = upd.length;
+    const minLen = Math.min(currLen, updLen);
 
+    // Prefix fast path for push/pop style mutations
+    if (minLen > 0) {
+      let prefixIdentical = true;
+      for (let i = 0; i < minLen; i++) {
+        if (opts.instrumentation) metrics.elementComparisons++;
+        if (curr[i] !== upd[i]) {
+          prefixIdentical = false;
+          break;
+        }
+      }
+      if (prefixIdentical && currLen !== updLen) {
+        if (opts.instrumentation) metrics.prefixFastPathHits++;
+        if (updLen > currLen) {
+          for (let i = currLen; i < updLen; i++) {
+            changes.push({
+              type: ChangeType.ADD,
+              path: [...path, i],
+              value: upd[i],
+            });
+          }
+        } else if (currLen > updLen && opts.detectDeletions) {
+          for (let i = updLen; i < currLen; i++) {
+            changes.push({
+              type: ChangeType.DELETE,
+              path: [...path, i],
+              oldValue: curr[i],
+            });
+          }
+        }
+        return;
+      }
+    }
+
+    // Large array heuristic: whole-array replace if many mismatches
+    const LARGE_ARRAY_THRESHOLD = 1024;
+    const REPLACE_MISMATCH_RATIO = 0.4;
+    if (
+      currLen >= LARGE_ARRAY_THRESHOLD &&
+      updLen >= LARGE_ARRAY_THRESHOLD &&
+      currLen === updLen
+    ) {
+      let mismatches = 0;
+      for (let i = 0; i < currLen; i++) {
+        if (opts.instrumentation) metrics.elementComparisons++;
+        if (curr[i] !== upd[i]) {
+          mismatches++;
+          if (mismatches / currLen > REPLACE_MISMATCH_RATIO) {
+            changes.push({
+              type: ChangeType.REPLACE,
+              path: [...path],
+              value: upd,
+              oldValue: curr,
+            });
+            if (opts.instrumentation) metrics.wholeArrayReplaceHits++;
+            return;
+          }
+        }
+      }
+    }
+
+    // Check each index
+    const maxLength = Math.max(currLen, updLen);
     for (let i = 0; i < maxLength; i++) {
       if (i >= upd.length) {
         // Deletion (if enabled)
@@ -291,7 +427,8 @@ export class DiffEngine {
           changes,
           visited,
           opts,
-          depth + 1
+          depth + 1,
+          metrics
         );
       }
     }

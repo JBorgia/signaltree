@@ -378,18 +378,37 @@ export class OptimizedUpdateEngine {
    * Check equality
    */
   private isEqual(a: unknown, b: unknown): boolean {
-    // Fast path for primitives
-    if (a === b) {
+    // Fast path: strict equality or identical reference
+    if (a === b) return true;
+    // If types differ we can exit early
+    if (typeof a !== typeof b) return false;
+    // Handle null / primitives after previous checks
+    if (a === null || b === null) return false;
+    if (typeof a !== 'object') return false;
+
+    // Shallow object/array fast path: compare keys/length then selected entries
+    // Avoid expensive JSON stringify for common small structures.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ao = a as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const bo = b as any;
+    if (Array.isArray(ao) && Array.isArray(bo)) {
+      if (ao.length !== bo.length) return false;
+      for (let i = 0; i < ao.length; i++) {
+        if (ao[i] !== bo[i]) return false;
+      }
       return true;
     }
-    if (typeof a !== typeof b) {
-      return false;
+    // Objects: compare own keys length & identity of each value (shallow)
+    const aKeys = Object.keys(ao);
+    const bKeys = Object.keys(bo);
+    if (aKeys.length !== bKeys.length) return false;
+    for (let i = 0; i < aKeys.length; i++) {
+      const k = aKeys[i];
+      if (!(k in bo)) return false;
+      if (ao[k] !== bo[k]) return false;
     }
-    if (typeof a !== 'object' || a === null || b === null) {
-      return false;
-    }
-
-    // Deep equality for objects (simple version)
+    // Fallback deep compare only when shallow matched but references differ (rare)
     try {
       return JSON.stringify(a) === JSON.stringify(b);
     } catch {

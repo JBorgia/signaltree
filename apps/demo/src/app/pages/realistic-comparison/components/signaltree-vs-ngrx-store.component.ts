@@ -1,7 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { createSelector } from '@ngrx/store';
-import { signalTree, withBatching, withMemoization } from '@signaltree/core';
+import {
+  signalTree,
+  withBatching,
+  withHighPerformanceBatching,
+  withLightweightMemoization,
+  withShallowMemoization,
+} from '@signaltree/core';
 
 import { PerformanceGraphComponent } from '../../../shared/performance-graph/performance-graph.component';
 import { BenchmarkCalibrationService } from '../benchmark-calibration.service';
@@ -62,62 +68,61 @@ interface BenchmarkResult {
             {{ running() ? 'Running…' : 'Run Full Battery' }}
           </button>
           @if (!hasCalibration()) {
-            <p class="hint">
-              Calibrate environment above to enable runs.
-            </p>
+          <p class="hint">Calibrate environment above to enable runs.</p>
           }
         </div>
       </div>
 
       @if (results().length > 0) {
-        <div class="results">
-          <h3>Performance Results</h3>
-          <div class="charts">
-            <div class="chart-block">
-              <app-performance-graph
-                [title]="'All Scenarios: per-iteration (ms)'"
-                [series]="allSeries()"
-                [height]="360"
-              />
-            </div>
+      <div class="results">
+        <h3>Performance Results</h3>
+        <div class="charts">
+          <div class="chart-block">
+            <app-performance-graph
+              [title]="'All Scenarios: per-iteration (ms)'"
+              [series]="allSeries()"
+              [height]="360"
+            />
           </div>
-          <table class="results-table">
-            <thead>
-              <tr>
-                <th>Scenario</th>
-                <th>Library</th>
-                <th>P50 (ms)</th>
-                <th>P95 (ms)</th>
-                <th>Samples</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (result of results(); track result.scenario + '-' + result.library) {
-                <tr [class.faster]="isFaster(result)">
-                  <td>{{ result.scenario }}</td>
-                  <td>{{ result.library }}</td>
-                  <td>{{ result.p50.toFixed(3) }}</td>
-                  <td>{{ result.p95.toFixed(3) }}</td>
-                  <td>{{ result.samples.length }}</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-
-          @if (getInsights().length > 0) {
-            <div class="insights">
-              <h4>Key Insights</h4>
-              <div class="insight-list">
-                @for (insight of getInsights(); track insight.scenario) {
-                  <div class="insight">
-                    <strong>{{ insight.scenario }}:</strong>
-                    {{ insight.comparison }}
-                  </div>
-                }
-              </div>
-            </div>
-          }
         </div>
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>Scenario</th>
+              <th>Library</th>
+              <th>P50 (ms)</th>
+              <th>P95 (ms)</th>
+              <th>Samples</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (result of results(); track result.scenario + '-' +
+            result.library) {
+            <tr [class.faster]="isFaster(result)">
+              <td>{{ result.scenario }}</td>
+              <td>{{ result.library }}</td>
+              <td>{{ result.p50.toFixed(3) }}</td>
+              <td>{{ result.p95.toFixed(3) }}</td>
+              <td>{{ result.samples.length }}</td>
+            </tr>
+            }
+          </tbody>
+        </table>
+
+        @if (getInsights().length > 0) {
+        <div class="insights">
+          <h4>Key Insights</h4>
+          <div class="insight-list">
+            @for (insight of getInsights(); track insight.scenario) {
+            <div class="insight">
+              <strong>{{ insight.scenario }}:</strong>
+              {{ insight.comparison }}
+            </div>
+            }
+          </div>
+        </div>
+        }
+      </div>
       }
 
       <div class="architecture-explanation">
@@ -504,9 +509,10 @@ export class SignalTreeVsNgrxStoreComponent {
 
     for (let i = 0; i < iterations; i++) {
       const testData = this.createDeepNestedData();
+      // Deep Nested scenario mapping: batching + shallow memoization
       const store = signalTree(testData).with(
         withBatching(),
-        withMemoization()
+        withShallowMemoization()
       );
 
       // Create computed values with MODERATE intensive work (reduced from extreme)
@@ -752,7 +758,8 @@ export class SignalTreeVsNgrxStoreComponent {
             ? this.buildLargeArray(this.arraySize, (seedBase + i) | 0)
             : this.createLargeArray(this.arraySize),
       };
-      const store = signalTree(testData).with(withBatching());
+      // Array Updates scenario mapping: high-performance batching only
+      const store = signalTree(testData).with(withHighPerformanceBatching());
 
       // Create computeds with MODERATE work that depend on the array
       const totalComputed = computed(() => {
@@ -892,7 +899,8 @@ export class SignalTreeVsNgrxStoreComponent {
     // iterations param overrides default
     const seed = seedBase ?? 7777;
     const testData = { items: this.buildLargeArray(this.arraySize, seed) };
-    const store = signalTree(testData).with(withMemoization());
+    // Selector Performance scenario mapping: lightweight memoization
+    const store = signalTree(testData).with(withLightweightMemoization());
 
     // Create derived computation
     const expensiveComputation = computed(() => {

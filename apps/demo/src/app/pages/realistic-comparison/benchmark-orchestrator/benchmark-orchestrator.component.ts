@@ -1,10 +1,23 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, effect, ElementRef, inject, OnDestroy, signal, ViewChild } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  inject,
+  OnDestroy,
+  signal,
+  ViewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { Subject } from 'rxjs';
 
-import { RealisticBenchmarkService, RealisticBenchmarkSubmission } from '../../../services/realistic-benchmark.service';
+import {
+  RealisticBenchmarkService,
+  RealisticBenchmarkSubmission,
+} from '../../../services/realistic-benchmark.service';
 import { BenchmarkTestCase, ENHANCED_TEST_CASES } from './scenario-definitions';
 import { BenchmarkResult as ServiceBenchmarkResult } from './services/_types';
 import { AkitaBenchmarkService } from './services/akita-benchmark.service';
@@ -196,7 +209,9 @@ interface BenchmarkService {
   templateUrl: './benchmark-orchestrator.component.html',
   styleUrls: ['./benchmark-orchestrator.component.scss'],
 })
-export class BenchmarkOrchestratorComponent implements OnDestroy {
+export class BenchmarkOrchestratorComponent
+  implements OnDestroy, AfterViewInit
+{
   @ViewChild('combinedChart')
   combinedChartRef!: ElementRef<HTMLCanvasElement>;
 
@@ -222,28 +237,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     this._readMemoModeFromUrl()
   );
 
-  // Optional toggle to include the Enterprise enhancer during SignalTree
-  // benchmark runs. This is exposed in the UI and when enabled the
-  // orchestrator will add the 'enterprise' enhancer id to
-  // `window.__SIGNALTREE_ACTIVE_ENHANCERS` prior to invoking SignalTree
-  // benchmarks. Default is false.
-  includeEnterpriseEnhancer = signal(false);
-
-  setIncludeEnterpriseEnhancer(v: boolean | EventTarget | null) {
-    const val = typeof v === 'boolean' ? v : (v as any)?.value === 'true'; // eslint-disable-line @typescript-eslint/no-explicit-any
-    this.includeEnterpriseEnhancer.set(!!val);
-  }
-
-  // Optional automation mode: when enabled, SignalTree benchmarks will be
-  // executed twice per scenario: baseline (no enterprise enhancer) and
-  // enterprise (with the enterprise enhancer). This is useful for
-  // automated comparisons without toggling the UI manually.
-  includeEnterpriseAutoRun = signal(false);
-
-  setIncludeEnterpriseAutoRun(v: boolean | EventTarget | null) {
-    const val = typeof v === 'boolean' ? v : (v as any)?.value === 'true'; // eslint-disable-line @typescript-eslint/no-explicit-any
-    this.includeEnterpriseAutoRun.set(!!val);
-  }
+  // Enterprise enhancer is now a separate library option: signaltree-enterprise
 
   private _memoModeEffect = effect(() => {
     // Keep a global for other modules that may read it directly
@@ -384,6 +378,17 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       selected: true,
       stats: {
         bundleSize: '7.3KB', // Updated to match actual core bundle size
+        githubStars: 2800,
+      },
+    },
+    {
+      id: 'signaltree-enterprise',
+      name: 'SignalTree (Enterprise)',
+      description: 'SignalTree with enterprise enhancer for advanced features',
+      color: '#1e40af',
+      selected: false,
+      stats: {
+        bundleSize: '8.1KB', // Core + enterprise enhancer
         githubStars: 2800,
       },
     },
@@ -580,15 +585,19 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       }
 
       if (missingLibs.length > 0) {
-        const dr = `Unsupported by ${missingLibs.join(', ')}`;
-        const tc = testCase as MutableTestCase;
-        tc.disabledReason = dr;
-        // Auto-deselect if it was selected so users don't accidentally run unsupported tests
-        if (tc.selected) tc.selected = false;
+        // Partial support: keep scenario selectable; mark libraries lacking support.
+        const tc = testCase as MutableTestCase & {
+          partialUnsupportedBy?: string[];
+        };
+        tc.partialUnsupportedBy = missingLibs;
+        // Clear any previous disabledReason so scenario remains runnable for supported libs.
+        delete tc.disabledReason;
       } else {
         // Clear any previous annotation if now supported
         delete (testCase as unknown as { disabledReason?: string })
           .disabledReason;
+        delete (testCase as unknown as { partialUnsupportedBy?: string[] })
+          .partialUnsupportedBy;
       }
     });
 
@@ -771,9 +780,12 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   selectedScenarios = computed(() => {
     // Depend on scenarioSelectionVersion to trigger recompute when scenarios change
     this.scenarioSelectionVersion();
-    // Exclude any scenarios that were auto-marked as unsupported so they remain
-    // visible (via visibleScenarios) but are not included in runs.
-    return this.testCases.filter((s) => s.selected && !s.disabledReason);
+    // Include scenarios even if partially unsupported; exclude only fully disabled/hidden ones.
+    return this.testCases.filter(
+      (
+        s: any // eslint-disable-line @typescript-eslint/no-explicit-any
+      ) => s.selected && (!s.disabledReason || s.partialUnsupportedBy)
+    );
   });
 
   // Visible scenarios includes currently selected scenarios plus any
@@ -1454,18 +1466,19 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
             relativeSpeed: -1,
           };
         }
-
-        const medians = supportedResults.map((r) => r.median);
-        const p95s = supportedResults.map((r) => r.p95);
-        const ops = supportedResults.map((r) => r.opsPerSecond);
-
+        // Aggregate samples across all supported scenarios for a library-level distribution
+        const aggregatedSamples = supportedResults.flatMap((r) => r.samples);
+        aggregatedSamples.sort((a, b) => a - b);
+        const aggMedian = this.percentile(aggregatedSamples, 50);
+        const aggP95 = this.percentile(aggregatedSamples, 95);
+        const aggOps = aggMedian > 0 ? 1000 / aggMedian : 0;
         return {
           name: lib.name,
           color: lib.color,
           rank: 0,
-          median: this.average(medians),
-          p95: this.average(p95s),
-          opsPerSecond: this.average(ops),
+          median: aggMedian,
+          p95: aggP95,
+          opsPerSecond: aggOps,
           relativeSpeed: 1,
         };
       })
@@ -1475,9 +1488,26 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     const supportedSummaries = summaries.filter((s) => s.median !== -1);
     const unsupportedSummaries = summaries.filter((s) => s.median === -1);
 
-    // Sort supported libraries by median time and assign ranks
+    // Sort supported libraries by median time and assign tie-aware ranks
     supportedSummaries.sort((a, b) => a.median - b.median);
-    supportedSummaries.forEach((s, i) => (s.rank = i + 1));
+    const tolerance = 1e-9;
+    let currentRank = 1;
+    supportedSummaries.forEach((s, i) => {
+      if (i === 0) {
+        s.rank = 1;
+      } else {
+        const prev = supportedSummaries[i - 1];
+        if (Math.abs(s.median - prev.median) < tolerance) {
+          s.rank = prev.rank; // tie
+        } else {
+          // rank is number of distinct medians encountered so far + 1
+          const distinctBefore = new Set(
+            supportedSummaries.slice(0, i).map((x) => x.median)
+          ).size;
+          s.rank = distinctBefore + 1;
+        }
+      }
+    });
 
     // Calculate relative speed vs SignalTree for supported libraries
     const signalTree = supportedSummaries.find((s) => s.name === 'SignalTree');
@@ -1505,18 +1535,23 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
       let rawTotalScore = 0;
       let weightedTotalScore = 0;
       let totalWeight = 0;
+      let supportedCount = 0;
 
       const scenarioBreakdown = libResults.map((result) => {
         const testCase = this.testCases.find(
           (tc) => tc.id === result.scenarioId
         );
         const weight = testCase?.frequencyWeight || 1.0;
-        const rawScore = result.opsPerSecond > 0 ? result.opsPerSecond : 0;
-        const weightedScore = rawScore * weight;
+        const supported = result.median !== -1 && result.opsPerSecond > 0;
+        const rawScore = supported ? result.opsPerSecond : 0;
+        const weightedScore = supported ? rawScore * weight : 0;
 
-        rawTotalScore += rawScore;
-        weightedTotalScore += weightedScore;
-        totalWeight += weight;
+        if (supported) {
+          rawTotalScore += rawScore;
+          weightedTotalScore += weightedScore;
+          totalWeight += weight;
+          supportedCount++;
+        }
 
         return {
           scenarioId: result.scenarioId,
@@ -1524,14 +1559,17 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
           weight: weight,
           rawScore: rawScore,
           weightedScore: weightedScore,
+          supported,
           impactOnTotal:
-            totalWeight > 0 ? (weightedScore / totalWeight) * 100 : 0,
+            supported && totalWeight > 0
+              ? (weightedScore / totalWeight) * 100
+              : 0,
           realWorldFrequency: testCase?.realWorldFrequency || 'Unknown',
         };
       });
 
       const rawAverage =
-        libResults.length > 0 ? rawTotalScore / libResults.length : 0;
+        supportedCount > 0 ? rawTotalScore / supportedCount : 0;
       const weightedAverage =
         totalWeight > 0 ? weightedTotalScore / totalWeight : 0;
       const weightingImpact =
@@ -1545,9 +1583,9 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         color: lib.color,
         rawAverage,
         weightedAverage,
-        weightingImpact, // Percentage change due to weighting
+        weightingImpact,
         scenarioBreakdown,
-        rank: 0, // Will be set after sorting
+        rank: 0,
       };
     });
 
@@ -1647,13 +1685,21 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
     // Run chart updates inside an Angular injection context
     effect(() => {
+      // Depend on chartMode so chart updates when user switches modes
+      this.chartMode();
       if (this.hasResults()) {
-        // Multiple deferral layers to ensure ViewChild and DOM are ready
+        // Deferral layers ensure canvas exists before Chart instantiation
         queueMicrotask(() =>
           requestAnimationFrame(() => setTimeout(() => this.updateCharts(), 0))
         );
       }
     });
+  }
+  ngAfterViewInit() {
+    // If results already arrived before view init, ensure initial chart render
+    if (this.hasResults()) {
+      this.updateCharts();
+    }
   }
 
   // no ngOnInit needed; using constructor for effects
@@ -2087,13 +2133,14 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     // If we're about to run a SignalTree benchmark, expose the selected
     // enhancer set (or an override) on `window` so the SignalTree service can
     // apply the exact same enhancers.
-    if (libraryId === 'signaltree') {
+    if (libraryId === 'signaltree' || libraryId === 'signaltree-enterprise') {
       try {
         const enhancers = (this.activeEnhancers() || []).map(
           (e: { name: string }) => e.name
         );
+        // Add enterprise enhancer if the library ID is signaltree-enterprise
         const useEnterprise =
-          options?.overrideEnterprise ?? this.includeEnterpriseEnhancer?.();
+          options?.overrideEnterprise ?? libraryId === 'signaltree-enterprise';
         if (useEnterprise) enhancers.push('enterprise');
         // Maintain backwards-compatible global name and typed variant
         try {
@@ -2308,6 +2355,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   private getBenchmarkService(libraryId: string): BenchmarkService | null {
     switch (libraryId) {
       case 'signaltree':
+      case 'signaltree-enterprise':
         return this.stBench;
       case 'ngrx-store':
         return this.ngrxBench;
@@ -2353,22 +2401,52 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
   // Library management
   toggleLibrary(library: Library) {
-    if (library.id === 'signaltree') return; // SignalTree is always selected
+    // Allow toggling all libraries, but ensure at least one SignalTree variant is selected
+    const willBeSelected = !library.selected;
+    if (
+      !willBeSelected &&
+      (library.id === 'signaltree' || library.id === 'signaltree-enterprise')
+    ) {
+      // Check if the other SignalTree variant is selected
+      const otherSignalTreeId =
+        library.id === 'signaltree' ? 'signaltree-enterprise' : 'signaltree';
+      const otherSignalTree = this.availableLibraries.find(
+        (l) => l.id === otherSignalTreeId
+      );
+      if (!otherSignalTree?.selected) {
+        return; // Don't allow deselecting if no SignalTree variant would remain
+      }
+    }
     library.selected = !library.selected;
     this.selectionVersion.update((v) => v + 1);
   }
 
   onLibraryCheckboxChange(library: Library, selected: boolean) {
-    if (library.id === 'signaltree') return;
+    // Ensure at least one SignalTree variant remains selected
+    if (
+      !selected &&
+      (library.id === 'signaltree' || library.id === 'signaltree-enterprise')
+    ) {
+      const otherSignalTreeId =
+        library.id === 'signaltree' ? 'signaltree-enterprise' : 'signaltree';
+      const otherSignalTree = this.availableLibraries.find(
+        (l) => l.id === otherSignalTreeId
+      );
+      if (!otherSignalTree?.selected) {
+        return; // Don't allow deselecting if no SignalTree variant would remain
+      }
+    }
     library.selected = selected;
     this.selectionVersion.update((v) => v + 1);
   }
 
   toggleAllLibraries() {
     const allSelected = this.allLibrariesSelected();
-    // Toggle all libraries except SignalTree (which is always selected)
+    // Toggle all libraries; ensure at least baseline SignalTree remains selected
     this.availableLibraries.forEach((library) => {
-      if (library.id !== 'signaltree') {
+      if (library.id === 'signaltree') {
+        library.selected = true; // Baseline always selected when toggling all
+      } else {
         library.selected = !allSelected;
       }
     });
@@ -2376,7 +2454,7 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
   }
 
   allLibrariesSelected(): boolean {
-    // Check if all non-SignalTree libraries are selected
+    // Check if all non-baseline-SignalTree libraries are selected
     return this.availableLibraries
       .filter((lib) => lib.id !== 'signaltree')
       .every((lib) => lib.selected);
@@ -2415,7 +2493,30 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
 
     const libraries = this.selectedLibraries();
     const scenarios = this.selectedScenarios();
-    const config = this.config();
+    const originalConfig = this.config();
+    // Dynamic scaling: shorten tests when many libraries selected to keep total wall time reasonable
+    const libCount = Math.max(1, libraries.length);
+    const scaleFactor = 1 / (1 + (libCount - 1) * 0.5); // 1, 0.67, 0.5, 0.4, ...
+    const scaledDataSize = Math.max(
+      2000,
+      Math.round(originalConfig.dataSize * scaleFactor)
+    );
+    const scaledIterations = Math.max(
+      25,
+      Math.round(originalConfig.iterations * scaleFactor)
+    );
+    const config = {
+      ...originalConfig,
+      dataSize: scaledDataSize,
+      iterations: scaledIterations,
+    };
+    // Expose scaling for services that optionally inspect globals
+    try {
+      (window as any).__SIGNALTREE_LIB_COUNT__ = libCount; // eslint-disable-line @typescript-eslint/no-explicit-any
+      (window as any).__SIGNALTREE_ITERATION_SCALE__ = scaleFactor; // eslint-disable-line @typescript-eslint/no-explicit-any
+    } catch {
+      // ignore
+    }
 
     try {
       for (const scenario of scenarios) {
@@ -2425,41 +2526,14 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
           this.currentLibrary.set(library.name);
           this.currentScenario.set(scenario.name);
 
-          // If auto-run for enterprise compare is enabled for SignalTree,
-          // run baseline (no enterprise enhancer) then enterprise (with enhancer)
-          if (library.id === 'signaltree' && this.includeEnterpriseAutoRun()) {
-            const base = await this.runSingleBenchmark(
-              library,
-              scenario,
-              config,
-              {
-                overrideEnterprise: false,
-                variantLabel: 'baseline',
-              }
-            );
-            this.results.update((r) => [...r, base]);
-            this.completedTests.update((c) => c + 1);
-
-            const ent = await this.runSingleBenchmark(
-              library,
-              scenario,
-              config,
-              {
-                overrideEnterprise: true,
-                variantLabel: 'enterprise',
-              }
-            );
-            this.results.update((r) => [...r, ent]);
-            this.completedTests.update((c) => c + 1);
-          } else {
-            const result = await this.runSingleBenchmark(
-              library,
-              scenario,
-              config
-            );
-            this.results.update((r) => [...r, result]);
-            this.completedTests.update((c) => c + 1);
-          }
+          // Run single benchmark for each library-scenario pair
+          const result = await this.runSingleBenchmark(
+            library,
+            scenario,
+            config
+          );
+          this.results.update((r) => [...r, result]);
+          this.completedTests.update((c) => c + 1);
         }
       }
     } catch (error) {
@@ -2673,15 +2747,28 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     );
 
     if (results.length === 0) return 0;
-
-    // Sort by median time (lower is better)
-    const sortedResults = [...results].sort((a, b) => a.median - b.median);
-
-    // Find the position of this library
-    const position = sortedResults.findIndex((r) => r.libraryId === libraryId);
-
-    // Return rank (1-based) or 0 if not found
-    return position >= 0 ? position + 1 : 0;
+    // Tie-aware ranking by median time (lower is better). Equal medians share the same rank.
+    const sorted = [...results].sort((a, b) => a.median - b.median);
+    const tolerance = 1e-9;
+    const rankMap = new Map<string, number>();
+    let distinctCount = 0;
+    for (let i = 0; i < sorted.length; i++) {
+      const current = sorted[i];
+      if (i === 0) {
+        distinctCount = 1;
+        rankMap.set(current.libraryId, 1);
+      } else {
+        const prev = sorted[i - 1];
+        if (Math.abs(current.median - prev.median) < tolerance) {
+          // same rank as previous
+          rankMap.set(current.libraryId, rankMap.get(prev.libraryId)!);
+        } else {
+          distinctCount += 1;
+          rankMap.set(current.libraryId, distinctCount);
+        }
+      }
+    }
+    return rankMap.get(libraryId) || 0;
   }
 
   getScenarioRankClass(scenarioId: string, libraryId: string): string {
@@ -2701,13 +2788,91 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     return '';
   }
 
+  // Per-scenario enhancer listing (baseline mapping already declared above)
+  scenarioEnhancersDetailed = computed(() => {
+    const scenarios = this.selectedScenarios();
+    const map: Array<{ id: string; name: string; enhancers: string[] }> = [];
+    scenarios.forEach((s) => {
+      const enh = this.scenarioEnhancerMap[s.id] || [];
+      map.push({ id: s.id, name: s.name, enhancers: enh });
+    });
+    return map;
+  });
+
+  // Effect size (percent delta vs baseline SignalTree) + simple bootstrap CI
+  getScenarioEffectSize(
+    scenarioId: string,
+    libraryId: string
+  ): {
+    deltaPct: number;
+    ciLower: number;
+    ciUpper: number;
+  } | null {
+    if (libraryId === 'signaltree') return null; // baseline
+    const baseline = this.results().find(
+      (r) => r.scenarioId === scenarioId && r.libraryId === 'signaltree'
+    );
+    const target = this.results().find(
+      (r) => r.scenarioId === scenarioId && r.libraryId === libraryId
+    );
+    if (!baseline || !target || baseline.median <= 0 || target.median <= 0) {
+      return null;
+    }
+    // Ops/sec based effect size: percent improvement in throughput.
+    const baselineOps =
+      baseline.opsPerSecond > 0
+        ? baseline.opsPerSecond
+        : 1000 / baseline.median;
+    const targetOps =
+      target.opsPerSecond > 0 ? target.opsPerSecond : 1000 / target.median;
+    const deltaPct = ((targetOps - baselineOps) / baselineOps) * 100;
+
+    // Bootstrap CI on ops/sec improvement using resampled medians → derived ops/sec
+    const samplesA = baseline.samples.slice();
+    const samplesB = target.samples.slice();
+    if (samplesA.length < 5 || samplesB.length < 5) {
+      return { deltaPct, ciLower: deltaPct, ciUpper: deltaPct };
+    }
+    const iterations = Math.min(
+      200,
+      Math.max(50, Math.floor((samplesA.length + samplesB.length) / 10))
+    );
+    const diffs: number[] = [];
+    for (let i = 0; i < iterations; i++) {
+      const resampleA: number[] = [];
+      const resampleB: number[] = [];
+      for (let j = 0; j < samplesA.length; j++) {
+        resampleA.push(samplesA[Math.floor(Math.random() * samplesA.length)]);
+      }
+      for (let k = 0; k < samplesB.length; k++) {
+        resampleB.push(samplesB[Math.floor(Math.random() * samplesB.length)]);
+      }
+      resampleA.sort((a, b) => a - b);
+      resampleB.sort((a, b) => a - b);
+      const medA = resampleA[Math.floor(resampleA.length / 2)];
+      const medB = resampleB[Math.floor(resampleB.length / 2)];
+      if (medA <= 0 || medB <= 0) continue; // skip invalid resample
+      const opsA = 1000 / medA;
+      const opsB = 1000 / medB;
+      const pct = ((opsB - opsA) / opsA) * 100;
+      diffs.push(pct);
+    }
+    if (diffs.length === 0) {
+      return { deltaPct, ciLower: deltaPct, ciUpper: deltaPct };
+    }
+    diffs.sort((a, b) => a - b);
+    const ciLower = diffs[Math.floor(diffs.length * 0.025)];
+    const ciUpper = diffs[Math.floor(diffs.length * 0.975)];
+    return { deltaPct, ciLower, ciUpper };
+  }
+
   getScenarioTime(scenarioId: string, libraryId: string): string {
     const result = this.results().find(
       (r) => r.scenarioId === scenarioId && r.libraryId === libraryId
     );
 
     if (!result) return '-';
-    if (result.median === -1) return 'N/A';
+    if (result.median === -1) return 'Not supported';
     return this.formatTime(result.median);
   }
 
@@ -2717,7 +2882,8 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     );
 
     if (!result) return '-';
-    if (result.opsPerSecond === -1 || result.opsPerSecond === 0) return 'N/A';
+    if (result.opsPerSecond === -1 || result.opsPerSecond === 0)
+      return 'Not supported';
     if (!isFinite(result.opsPerSecond)) return 'N/A';
     return Math.round(result.opsPerSecond).toLocaleString();
   }
@@ -3069,14 +3235,10 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
     return widthThreshold || heightThreshold;
   }
 
+  // Normalized time formatting: always show milliseconds with three decimals.
+  // This provides consistent comparison across very fast and slower scenarios.
   formatTime(ms: number): string {
-    if (ms < 1) {
-      return `${(ms * 1000).toFixed(0)}μs`;
-    } else if (ms < 1000) {
-      return `${ms.toFixed(2)}ms`;
-    } else {
-      return `${(ms / 1000).toFixed(2)}s`;
-    }
+    return `${ms.toFixed(3)}ms`;
   }
 
   private formatDuration(ms: number): string {
@@ -3645,6 +3807,101 @@ export class BenchmarkOrchestratorComponent implements OnDestroy {
         summary.rank = index + 1;
       });
 
+    return summaries;
+  });
+
+  // Scoring formula description for tooltip display
+  scoringFormula = `Weighted Points Formula: For each scenario, normalizedScore = (libraryOpsPerSecond / bestOpsPerSecondInScenario) * 100. ScenarioContribution = normalizedScore * frequencyWeight. LibraryWeightedScore = (Σ ScenarioContribution) / (Σ frequencyWeight for scored scenarios). Raw ops/sec is the arithmetic mean of scenario ops/sec (excluding unsupported scenarios).`;
+  // UI toggle state for scoring formula details
+  showFormula = false;
+
+  // Equal-weight (unweighted) summaries for alternate ranking view
+  showEqualWeight = signal(false);
+  equalWeightLibrarySummaries = computed(() => {
+    const results = this.results();
+    this.scenarioSelectionVersion();
+    if (!results || results.length === 0) return [];
+
+    // Determine max ops/sec per scenario for normalization (same as weighted)
+    const scenarioMaxOps = new Map<string, number>();
+    results.forEach((result) => {
+      if (result.median !== -1 && result.opsPerSecond > 0) {
+        const currentMax = scenarioMaxOps.get(result.scenarioId) || 0;
+        scenarioMaxOps.set(
+          result.scenarioId,
+          Math.max(currentMax, result.opsPerSecond)
+        );
+      }
+    });
+
+    // Group by library
+    const libraryResults = new Map<string, BenchmarkResult[]>();
+    results.forEach((result) => {
+      if (!libraryResults.has(result.libraryId)) {
+        libraryResults.set(result.libraryId, []);
+      }
+      libraryResults.get(result.libraryId)!.push(result);
+    });
+
+    const summaries = Array.from(libraryResults.entries()).map(
+      ([libraryId, libResults]) => {
+        const library = this.selectedLibraries().find(
+          (lib) => lib.id === libraryId
+        );
+        let totalScore = 0;
+        let counted = 0;
+        const breakdown: Array<{
+          scenarioId: string;
+          scenarioName: string;
+          median: number;
+          normalizedScore: number;
+          opsPerSecond: number;
+        }> = [];
+        libResults.forEach((result) => {
+          const testCase = this.testCases.find(
+            (tc) => tc.id === result.scenarioId
+          );
+          if (!testCase) return;
+          if (
+            result.median === -1 ||
+            result.opsPerSecond === -1 ||
+            result.opsPerSecond === 0
+          ) {
+            breakdown.push({
+              scenarioId: result.scenarioId,
+              scenarioName: testCase.name,
+              median: -1,
+              normalizedScore: 0,
+              opsPerSecond: -1,
+            });
+            return;
+          }
+          const maxOps = scenarioMaxOps.get(result.scenarioId) || 1;
+          const normalizedScore = (result.opsPerSecond / maxOps) * 100;
+          totalScore += normalizedScore;
+          counted += 1;
+          breakdown.push({
+            scenarioId: result.scenarioId,
+            scenarioName: testCase.name,
+            median: result.median,
+            normalizedScore,
+            opsPerSecond: result.opsPerSecond,
+          });
+        });
+        return {
+          name: library?.name || libraryId,
+          color: library?.color || '#666',
+          unweightedScore: counted > 0 ? totalScore / counted : -1,
+          breakdown,
+          rank: 0,
+        };
+      }
+    );
+    // Rank
+    summaries
+      .filter((s) => s.unweightedScore !== -1)
+      .sort((a, b) => b.unweightedScore - a.unweightedScore)
+      .forEach((summary, index) => (summary.rank = index + 1));
     return summaries;
   });
 }

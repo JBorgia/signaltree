@@ -81,9 +81,15 @@ export function withEnterprise<T extends Record<string, unknown>>(): Enhancer<
       const result = updateEngine.update(signalTree.state, updates, options);
 
       // Rebuild index if changes were made
-      if (result.changed && result.stats && pathIndex) {
-        pathIndex.clear();
-        pathIndex.buildFromTree(signalTree.state);
+      if (result.changed && pathIndex) {
+        if (result.changedPaths.length) {
+          // Use incremental update logic instead of full rebuild
+          pathIndex.incrementalUpdate(signalTree.state, result.changedPaths);
+        } else {
+          // Fallback full rebuild
+          pathIndex.clear();
+          pathIndex.buildFromTree(signalTree.state);
+        }
       }
 
       return result;

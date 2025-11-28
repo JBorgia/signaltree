@@ -10,38 +10,31 @@
   "exports": {
     ".": {
       "import": "./dist/index.js",
-      "default": "./dist/index.js",
-      "types": "./src/index.d.ts"
+      "default": "./dist/index.js"
     },
     "./diff-engine": {
       "import": "./dist/lib/diff-engine.js",
-      "default": "./dist/lib/diff-engine.js",
-      "types": "./src/lib/diff-engine.d.ts"
+      "default": "./dist/lib/diff-engine.js"
     },
     "./path-index": {
       "import": "./dist/lib/path-index.js",
-      "default": "./dist/lib/path-index.js",
-      "types": "./src/lib/path-index.d.ts"
+      "default": "./dist/lib/path-index.js"
     },
     "./update-engine": {
       "import": "./dist/lib/update-engine.js",
-      "default": "./dist/lib/update-engine.js",
-      "types": "./src/lib/update-engine.d.ts"
+      "default": "./dist/lib/update-engine.js"
     },
     "./enterprise-enhancer": {
       "import": "./dist/lib/enterprise-enhancer.js",
-      "default": "./dist/lib/enterprise-enhancer.js",
-      "types": "./src/lib/enterprise-enhancer.d.ts"
+      "default": "./dist/lib/enterprise-enhancer.js"
     },
     "./scheduler": {
       "import": "./dist/lib/scheduler.js",
-      "default": "./dist/lib/scheduler.js",
-      "types": "./src/lib/scheduler.d.ts"
+      "default": "./dist/lib/scheduler.js"
     },
     "./thread-pools": {
       "import": "./dist/lib/thread-pools.js",
-      "default": "./dist/lib/thread-pools.js",
-      "types": "./src/lib/thread-pools.d.ts"
+      "default": "./dist/lib/thread-pools.js"
     }
   },
   "keywords": [

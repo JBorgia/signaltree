@@ -69,6 +69,14 @@ export class PathIndex<T extends object = WritableSignal<any>> {
     sets: 0,
     cleanups: 0,
   };
+  private enableInstrumentation = false;
+  private instrumentation = {
+    incrementalUpdates: 0,
+    fullRebuilds: 0,
+    nodesTouched: 0,
+    deletions: 0,
+    rebuildDurationNs: 0,
+  };
 
   /**
    * Set a value at the given path
@@ -236,6 +244,7 @@ export class PathIndex<T extends object = WritableSignal<any>> {
   clear(): void {
     this.root = new TrieNode<WeakRef<T>>();
     this.pathCache.clear();
+    if (this.enableInstrumentation) this.instrumentation.fullRebuilds++;
   }
 
   /**
@@ -316,5 +325,129 @@ export class PathIndex<T extends object = WritableSignal<any>> {
     for (const [key, child] of node.children) {
       this.collectDescendants(child, [...currentPath, key], results);
     }
+  }
+
+  /**
+   * Delete an entire subtree rooted at path (including descendants).
+   */
+  deleteSubtree(path: Path): void {
+    if (path.length === 0) {
+      // Clear everything
+      this.clear();
+      return;
+    }
+    let node: TrieNode<WeakRef<T>> | undefined = this.root;
+    const nodes: TrieNode<WeakRef<T>>[] = [node];
+    for (const segment of path) {
+      node = node.children.get(String(segment));
+      if (!node) {
+        return; // Nothing to delete
+      }
+      nodes.push(node);
+    }
+    // Collect all descendant path strings for cache cleanup
+    const toClean: string[] = [];
+    const collectPaths = (n: TrieNode<WeakRef<T>>, current: Path): void => {
+      if (n.value) {
+        toClean.push(this.pathToString(current));
+      }
+      for (const [key, child] of n.children) {
+        collectPaths(child, [...current, key]);
+      }
+    };
+    collectPaths(nodes[nodes.length - 1], path);
+    for (const p of toClean) {
+      this.pathCache.delete(p);
+    }
+    // Remove subtree from parent
+    const parent = nodes[nodes.length - 2];
+    parent.children.delete(String(path[path.length - 1]));
+    if (this.enableInstrumentation)
+      this.instrumentation.deletions += toClean.length || 1;
+  }
+
+  /**
+   * Incrementally update index given changed paths and the current tree root.
+   * Avoids full rebuild unless many paths changed.
+   */
+  incrementalUpdate(rootTree: unknown, changedPaths: string[]): void {
+    const start = this.enableInstrumentation ? performance.now() : 0;
+    if (!changedPaths.length) return;
+    // If too many changes, perform full rebuild.
+    const FULL_REBUILD_THRESHOLD = 2000; // heuristic
+    if (
+      changedPaths.length > FULL_REBUILD_THRESHOLD ||
+      changedPaths.includes('')
+    ) {
+      this.clear();
+      this.buildFromTree(rootTree);
+      if (this.enableInstrumentation) {
+        this.instrumentation.rebuildDurationNs +=
+          (performance.now() - start) * 1e6;
+      }
+      return;
+    }
+    // Deduplicate and remove child paths if parent present
+    const ordered = [...changedPaths].sort((a, b) => a.length - b.length);
+    const effective: string[] = [];
+    for (const p of ordered) {
+      if (!effective.some((ep) => p !== ep && p.startsWith(ep + '.'))) {
+        effective.push(p);
+      }
+    }
+    for (const pathStr of effective) {
+      const segments = pathStr === '' ? [] : pathStr.split('.');
+      let subtree: unknown = rootTree;
+      for (const seg of segments) {
+        if (!subtree || typeof subtree !== 'object') {
+          subtree = undefined;
+          break;
+        }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        subtree = (subtree as any)[seg];
+      }
+      if (subtree === undefined || subtree === null) {
+        this.deleteSubtree(segments);
+        continue;
+      }
+      if (isSignal(subtree)) {
+        this.set(segments, subtree as T);
+        if (this.enableInstrumentation) this.instrumentation.nodesTouched++;
+        continue;
+      }
+      if (typeof subtree === 'object') {
+        // Replace subtree: delete then rebuild
+        this.deleteSubtree(segments);
+        this.buildFromTree(subtree, segments);
+        if (this.enableInstrumentation) this.instrumentation.nodesTouched++;
+      } else {
+        // Primitive -> delete
+        this.deleteSubtree(segments);
+      }
+    }
+    if (this.enableInstrumentation) {
+      this.instrumentation.incrementalUpdates++;
+      this.instrumentation.rebuildDurationNs +=
+        (performance.now() - start) * 1e6;
+    }
+  }
+
+  /**
+   * Get instrumentation stats (reset=false leaves counters intact)
+   */
+  setInstrumentation(enabled: boolean): void {
+    this.enableInstrumentation = enabled;
+  }
+
+  getInstrumentation(reset = false): typeof this.instrumentation {
+    const snapshot = { ...this.instrumentation };
+    if (reset) {
+      this.instrumentation.incrementalUpdates = 0;
+      this.instrumentation.fullRebuilds = 0;
+      this.instrumentation.nodesTouched = 0;
+      this.instrumentation.deletions = 0;
+      this.instrumentation.rebuildDurationNs = 0;
+    }
+    return snapshot;
   }
 }

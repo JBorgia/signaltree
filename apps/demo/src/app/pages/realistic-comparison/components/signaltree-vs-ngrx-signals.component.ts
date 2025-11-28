@@ -1,7 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { patchState, signalState } from '@ngrx/signals';
-import { signalTree, withBatching, withMemoization } from '@signaltree/core';
+import {
+  signalTree,
+  withBatching,
+  withHighPerformanceBatching,
+  withShallowMemoization,
+} from '@signaltree/core';
 
 import { PerformanceGraphComponent } from '../../../shared/performance-graph/performance-graph.component';
 import { BenchmarkCalibrationService } from '../benchmark-calibration.service';
@@ -93,9 +98,7 @@ interface DeepNestedState {
             {{ isRunning() ? 'Running…' : 'Run Full Battery' }}
           </button>
           @if (!hasCalibration()) {
-            <p class="hint">
-              Calibrate environment above to enable runs.
-            </p>
+          <p class="hint">Calibrate environment above to enable runs.</p>
           }
           <app-performance-graph
             [title]="'All Scenarios: per-iteration (ms)'"
@@ -106,28 +109,29 @@ interface DeepNestedState {
       </div>
 
       @if (allResults().length > 0) {
-        <div class="all-results">
-          <h4>All Benchmark Results</h4>
-          <button (click)="exportResults()">Export Results (NDJSON)</button>
-          <div class="results-table">
-            <div class="table-header">
-              <span>Scenario</span>
-              <span>Library</span>
-              <span>p50 (ms)</span>
-              <span>p95 (ms)</span>
-              <span>Samples</span>
-            </div>
-            @for (result of allResults(); track result.scenario + '-' + result.library) {
-              <div class="table-row">
-                <span>{{ result.scenario }}</span>
-                <span>{{ result.library }}</span>
-                <span>{{ result.p50 }}</span>
-                <span>{{ result.p95 }}</span>
-                <span>{{ result.samples.length }}</span>
-              </div>
-            }
+      <div class="all-results">
+        <h4>All Benchmark Results</h4>
+        <button (click)="exportResults()">Export Results (NDJSON)</button>
+        <div class="results-table">
+          <div class="table-header">
+            <span>Scenario</span>
+            <span>Library</span>
+            <span>p50 (ms)</span>
+            <span>p95 (ms)</span>
+            <span>Samples</span>
           </div>
+          @for (result of allResults(); track result.scenario + '-' +
+          result.library) {
+          <div class="table-row">
+            <span>{{ result.scenario }}</span>
+            <span>{{ result.library }}</span>
+            <span>{{ result.p50 }}</span>
+            <span>{{ result.p95 }}</span>
+            <span>{{ result.samples.length }}</span>
+          </div>
+          }
         </div>
+      </div>
       }
     </div>
   `,
@@ -438,9 +442,10 @@ export class SignalTreeVsNgrxSignalsComponent {
     onSample?: (ms: number) => void
   ): Promise<BenchmarkResult> {
     const initialState = this.createInitialState();
+    // Deep Nested scenario mapping: batching + shallow memoization
     const tree = signalTree(initialState).with(
       withBatching(),
-      withMemoization()
+      withShallowMemoization()
     );
 
     const samples: number[] = [];
@@ -653,10 +658,8 @@ export class SignalTreeVsNgrxSignalsComponent {
     onSample?: (ms: number) => void
   ): Promise<BenchmarkResult> {
     const initialState = this.createInitialState();
-    const tree = signalTree(initialState).with(
-      withBatching(),
-      withMemoization()
-    );
+    // Array Updates scenario mapping: high-performance batching only
+    const tree = signalTree(initialState).with(withHighPerformanceBatching());
 
     const samples: number[] = [];
     let renderCount = 0;
@@ -884,9 +887,10 @@ export class SignalTreeVsNgrxSignalsComponent {
     onSample?: (ms: number) => void
   ): Promise<BenchmarkResult> {
     const initialState = this.createInitialState();
+    // Computed Performance scenario mapping: batching + shallow memoization
     const tree = signalTree(initialState).with(
       withBatching(),
-      withMemoization()
+      withShallowMemoization()
     );
 
     const samples: number[] = [];

@@ -10,58 +10,47 @@
   "exports": {
     ".": {
       "import": "./dist/index.js",
-      "default": "./dist/index.js",
-      "types": "./src/index.d.ts"
+      "default": "./dist/index.js"
     },
     "./enhancers": {
       "import": "./dist/enhancers/index.js",
-      "default": "./dist/enhancers/index.js",
-      "types": "./src/enhancers/index.d.ts"
+      "default": "./dist/enhancers/index.js"
     },
     "./enhancers/batching": {
       "import": "./dist/enhancers/batching/index.js",
-      "default": "./dist/enhancers/batching/index.js",
-      "types": "./src/enhancers/batching/index.d.ts"
+      "default": "./dist/enhancers/batching/index.js"
     },
     "./enhancers/computed": {
       "import": "./dist/enhancers/computed/index.js",
-      "default": "./dist/enhancers/computed/index.js",
-      "types": "./src/enhancers/computed/index.d.ts"
+      "default": "./dist/enhancers/computed/index.js"
     },
     "./enhancers/middleware": {
       "import": "./dist/enhancers/middleware/index.js",
-      "default": "./dist/enhancers/middleware/index.js",
-      "types": "./src/enhancers/middleware/index.d.ts"
+      "default": "./dist/enhancers/middleware/index.js"
     },
     "./enhancers/memoization": {
       "import": "./dist/enhancers/memoization/index.js",
-      "default": "./dist/enhancers/memoization/index.js",
-      "types": "./src/enhancers/memoization/index.d.ts"
+      "default": "./dist/enhancers/memoization/index.js"
     },
     "./enhancers/time-travel": {
       "import": "./dist/enhancers/time-travel/index.js",
-      "default": "./dist/enhancers/time-travel/index.js",
-      "types": "./src/enhancers/time-travel/index.d.ts"
+      "default": "./dist/enhancers/time-travel/index.js"
     },
     "./enhancers/devtools": {
       "import": "./dist/enhancers/devtools/index.js",
-      "default": "./dist/enhancers/devtools/index.js",
-      "types": "./src/enhancers/devtools/index.d.ts"
+      "default": "./dist/enhancers/devtools/index.js"
     },
     "./enhancers/presets": {
       "import": "./dist/enhancers/presets/index.js",
-      "default": "./dist/enhancers/presets/index.js",
-      "types": "./src/enhancers/presets/index.d.ts"
+      "default": "./dist/enhancers/presets/index.js"
     },
     "./enhancers/entities": {
       "import": "./dist/enhancers/entities/index.js",
-      "default": "./dist/enhancers/entities/index.js",
-      "types": "./src/enhancers/entities/index.d.ts"
+      "default": "./dist/enhancers/entities/index.js"
     },
     "./enhancers/serialization": {
       "import": "./dist/enhancers/serialization/index.js",
-      "default": "./dist/enhancers/serialization/index.js",
-      "types": "./src/enhancers/serialization/index.d.ts"
+      "default": "./dist/enhancers/serialization/index.js"
     }
   },
   "peerDependencies": {

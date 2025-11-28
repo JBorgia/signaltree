@@ -37,6 +37,15 @@ export interface BenchmarkTestCase {
 
 export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
   // Core Performance Tests
+  /**
+   * Rationale Alignment Note (2025-11):
+   * Deep Nested scenario now mapped in implementation to batching + shallow memoization.
+   * This file already lists withBatching as required and shallow as optional.
+   * We intentionally keep shallow memoization optional here so downstream consumers can
+   * evaluate raw batching only vs batching+shallow. The comparison components and
+   * `SignalTreeBenchmarkService` treat shallow memoization as part of the default set
+   * for Deep Nested fairness versus NgRx/SignalStore which rebuild nested objects.
+   */
   {
     id: 'deep-nested',
     name: 'Deep Nested Updates',
@@ -84,7 +93,7 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
       required: ['withHighPerformanceBatching'],
       optional: [],
       rationale:
-        'High-performance batching essential for rapid array updates; memoization counterproductive',
+        'High-performance batching essential for rapid array updates; memoization counterproductive (adds cache mgmt overhead without repeated reads). Lazy array coalescing may be conditionally injected for very large datasets (>5k) by the benchmark service but is benchmark-only and therefore not listed here.',
     },
     dataRequirements: {
       minSize: 1000,
@@ -112,7 +121,7 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
       required: ['withBatching', 'withShallowMemoization'],
       optional: [],
       rationale:
-        'Batching reduces cascading updates; memoization prevents redundant computations',
+        'Batching reduces cascading updates; shallow memoization chosen over full to minimize cache layers while still skipping unchanged branch recalculations. Full memoization removed to avoid overstating win vs selector-focused libraries.',
     },
     dataRequirements: {
       minSize: 100,
@@ -166,7 +175,7 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
       required: ['withLightweightMemoization'],
       optional: ['withBatching'],
       rationale:
-        'Testing memoization system - lightweight version for better performance',
+        'Testing memoization system using lightweight tier for realistic selector access cost (shallower caches, lower memory). Shallow/full tiers intentionally excluded to avoid unfair amplification versus NgRx Store selector memoization.',
     },
     dataRequirements: {
       minSize: 500,
@@ -197,7 +206,7 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
       ],
       optional: [],
       rationale:
-        'Testing serialization feature; memoization and batching for stable baseline',
+        "Testing serialization feature; memoization and batching stabilize signal read patterns before snapshot. Serialization enhancer performs unwrap + JSON conversion; memoization ensures dependent computed signals aren't re-evaluated spuriously.",
     },
     dataRequirements: {
       minSize: 100,
@@ -224,7 +233,7 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
       required: ['withBatching'],
       optional: [],
       rationale:
-        'Batching essential to prevent overwhelming the reactivity system',
+        'Batching essential to prevent overwhelming the reactivity system. Memoization intentionally excluded—hot update loop rarely benefits from cache hits and would inflate overhead.',
     },
     dataRequirements: {
       minSize: 50,
@@ -253,7 +262,7 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
       required: [],
       optional: ['withBatching'],
       rationale:
-        'Testing core reactivity scaling; batching may help with fanout',
+        'Testing core reactivity scaling without artificial batching assistance; batching optional for exploring mitigation of notification fanout cost.',
     },
     dataRequirements: {
       minSize: 10,
