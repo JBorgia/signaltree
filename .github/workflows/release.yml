@@ -31,7 +31,7 @@ jobs:
           version: latest
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-workspace
 
       - name: Reset Nx cache
         run: pnpm exec nx reset
@@ -47,6 +47,9 @@ jobs:
           pnpm nx run-many -t build -p callable-syntax,core,enterprise,ng-forms,types,utils,guardrails --configuration=production --parallel=3
         env:
           NX_DAEMON: 'false'
+          
+      - name: Install built workspace dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Publish packages with Nx
         run: pnpm nx release publish --verbose
