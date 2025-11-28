@@ -20,13 +20,13 @@ jobs:
           node-version: '18'
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install
 
       - name: Run CI checks (JSDoc + sizes)
         run: node scripts/ci-checks.js --jsdoc --sizes
 
       - name: Run metrics unit tests
-        run: npx jest scripts/__tests__/metrics.test.cjs --config '{"testEnvironment":"node"}' --runInBand
+        run: pnpm exec jest scripts/__tests__/metrics.test.cjs --config '{"testEnvironment":"node"}' --runInBand
 
       - name: Upload perf artifact (if present)
         uses: actions/upload-artifact@v4

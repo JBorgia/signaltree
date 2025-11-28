@@ -23,21 +23,21 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm ci
-          npm run build
+          pnpm install
+          pnpm run build
 
       - name: Run bundle size check
         id: bundle-check
         run: |
           echo "Running bundle size analysis..."
-          npm run size:check
+          pnpm run size:check
           echo "bundle-check-result=$?" >> $GITHUB_OUTPUT
 
       - name: Generate bundle report
         id: bundle-report
         run: |
           echo "Generating detailed bundle report..."
-          npm run size:report > bundle-report.txt
+          pnpm run size:report > bundle-report.txt
           echo "Generated bundle report"
 
           # Create a summary for PR comments
@@ -81,7 +81,7 @@ jobs:
             echo "Some packages exceed their size targets. Please review and optimize:" >> bundle-summary.md
             echo "1. Check the [Bundle Optimization Guide](docs/performance/bundle-optimization.md)" >> bundle-summary.md
             echo "2. Use the [Optimization Checklist](docs/OPTIMIZATION-CHECKLIST.md)" >> bundle-summary.md
-            echo "3. Run \`npm run size:report\` locally for detailed analysis" >> bundle-summary.md
+            echo "3. Run \`pnpm run size:report\` locally for detailed analysis" >> bundle-summary.md
           else
             echo "" >> bundle-summary.md
             echo "### ✅ All Good!" >> bundle-summary.md
