@@ -41,6 +41,9 @@ jobs:
       - name: Build demo
         run: pnpm run build:demo:prod
 
+      - name: Add SPA Fallback (404.html)
+        run: |
+          cp dist/apps/demo/index.html dist/apps/demo/404.html
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
