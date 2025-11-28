@@ -1,3 +1,23 @@
+## 4.1.4 (2025-11-28)
+
+### 🚀 Features
+
+- **demo:** add value propositions to all demo pages ([2024c32](https://github.com/JBorgia/signaltree/commit/2024c32))
+
+### 🩹 Fixes
+
+- **demo:** escape curly braces in ng-forms template code block ([98ab328](https://github.com/JBorgia/signaltree/commit/98ab328))
+- **demo:** improve benchmark comparison display and update enterprise enhancer page ([526a72e](https://github.com/JBorgia/signaltree/commit/526a72e))
+- **demo:** use correct SignalTree callable API instead of non-existent setState method ([15a5547](https://github.com/JBorgia/signaltree/commit/15a5547))
+
+### 🔥 Performance
+
+- **enterprise:** fix large array regression by simplifying diff; guard instrumentation in PathIndex/Scheduler; middleware no-mutation fast path; UI: add scoring formula spacing\n\n- Remove suffix/segmentation array heuristics; keep prefix + whole-array\n- Add PathIndex.enableInstrumentation + setInstrumentation(); guard metrics\n- Guard Scheduler metrics and performance.now() under instrumentation flag\n- Implement middleware no-mutation fast path in core\n- Update demo scoring formula spacing and benchmark text\n- Rebuild enterprise/core; validations pending ([aa75653](https://github.com/JBorgia/signaltree/commit/aa75653))
+
+### ❤️ Thank You
+
+- Borgia
+
 ## 4.1.3 (2025-11-21)
 
 ### 🚀 Features
