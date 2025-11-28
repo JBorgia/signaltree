@@ -1491,7 +1491,6 @@ export class BenchmarkOrchestratorComponent
     // Sort supported libraries by median time and assign tie-aware ranks
     supportedSummaries.sort((a, b) => a.median - b.median);
     const tolerance = 1e-9;
-    let currentRank = 1;
     supportedSummaries.forEach((s, i) => {
       if (i === 0) {
         s.rank = 1;
