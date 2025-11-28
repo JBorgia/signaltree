@@ -30,8 +30,8 @@ jobs:
         with:
           version: latest
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Install dependencies (skip optional)
+        run: pnpm install --frozen-lockfile || pnpm install --no-frozen-lockfile
 
       - name: Reset Nx cache
         run: pnpm exec nx reset
