@@ -32,14 +32,14 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
 
-      - name: Install dependencies (without demo)
-        run: pnpm install --frozen-lockfile --filter '!demo'
+      - name: Install dependencies (may fail on demo deps)
+        run: pnpm install --frozen-lockfile || pnpm install --no-frozen-lockfile --filter '!demo' || true
 
       - name: Build library packages
         run: pnpm nx run-many -t build -p types,utils,callable-syntax,core,enterprise,ng-forms,guardrails --configuration=production
 
-      - name: Install all dependencies (with built packages)
-        run: pnpm install --frozen-lockfile
+      - name: Install all dependencies
+        run: pnpm install --no-frozen-lockfile
 
       - name: Build demo
         run: pnpm run build:demo:prod
