@@ -1,19 +1,20 @@
-name: Create Release and Publish to NPM
+name: Nx Release Publish
 
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
-  release:
+  publish:
     runs-on: ubuntu-latest
     permissions:
       contents: write
       packages: write
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -24,111 +25,37 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Install pnpm
+      - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: latest
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
-      - name: Clear Nx cache
+      - name: Reset Nx cache
         run: pnpm exec nx reset
 
-      - name: Debug environment
+      - name: Debug versions
         run: |
           node --version
           pnpm --version
           pnpm exec nx --version
-          ls -la
 
-      - name: Build library
-        run: pnpm run build:lib --verbose
-        env:
-          NX_DAEMON: false
-
-      - name: Extract version from tag
-        id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-
-      - name: Create GitHub Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: 'Signal Tree v${{ steps.version.outputs.VERSION }}'
-          body: |
-            ## 🌳 Signal Tree v${{ steps.version.outputs.VERSION }}
-
-            A powerful, type-safe, hierarchical signal-based state management solution for Angular applications.
-
-            ### 📦 Installation
-            ```bash
-            npm install signaltree@${{ steps.version.outputs.VERSION }}
-            ```
-
-            ### 🔗 Links
-            - 📖 [Documentation](https://github.com/JBorgia/signaltree#readme)
-            - 📊 [npm Package](https://www.npmjs.com/package/signaltree)
-            - 🐛 [Report Issues](https://github.com/JBorgia/signaltree/issues)
-
-            ### ✨ Features
-            - **Progressive Enhancement**: Start with ~5KB basic mode, scale to 15KB with all features
-            - **55% less boilerplate** than NgRx
-            - **3x faster** nested updates compared to traditional stores
-            - **Smart bundle sizing**: Only pay for features you use
-            - **Type-safe by default** with automatic inference
-
-            ---
-            **Full Changelog**: https://github.com/JBorgia/signaltree/compare/v${{ steps.version.outputs.VERSION }}
-          draft: false
-          prerelease: false
-
-      - name: Publish to NPM
+      - name: Build packages
         run: |
-          cd dist/signaltree
-          npm publish
+          pnpm nx run-many -t build -p callable-syntax,core,enterprise,ng-forms,types,utils,guardrails --configuration=production --parallel=3
+        env:
+          NX_DAEMON: 'false'
+
+      - name: Publish packages with Nx
+        run: pnpm nx release publish --verbose
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Setup Node.js for GitHub Packages
-        uses: actions/setup-node@v4
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          node-version: '20'
-          registry-url: 'https://npm.pkg.github.com'
-
-      - name: Publish to GitHub Packages
-        run: |
-          cd dist/signaltree
-          # Create .npmrc for GitHub Packages
-          echo "@JBorgia:registry=https://npm.pkg.github.com" > .npmrc
-          echo "//npm.pkg.github.com/:_authToken=$NODE_AUTH_TOKEN" >> .npmrc
-
-          # Update package name for GitHub Packages (must be scoped)
-          node -p "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
-            pkg.name = '@JBorgia/signaltree';
-            pkg.publishConfig = {
-              registry: 'https://npm.pkg.github.com',
-              access: 'public'
-            };
-            fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2));
-            'Updated package.json for GitHub Packages'
-          "
-
-          # Publish to GitHub Packages
-          npm publish --registry=https://npm.pkg.github.com --access=public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Release Assets
-        uses: actions/upload-release-asset@v1
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/signaltree
-          asset_name: signaltree-v${{ steps.version.outputs.VERSION }}.tgz
-          asset_content_type: application/gzip
