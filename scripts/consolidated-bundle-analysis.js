@@ -142,7 +142,6 @@ const packages = [
 const nxProjects = [
   'core',
   'enterprise',
-  'ng-forms',
   'callable-syntax',
   'shared',
   'types',
