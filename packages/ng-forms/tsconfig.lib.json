@@ -6,13 +6,12 @@
     "declarationMap": true,
     "inlineSources": true,
     "types": [],
-    "typeRoots": [
-      "./src/types",
-      "../../node_modules/@types"
-    ],
+    "typeRoots": ["./src/types", "../../node_modules/@types"],
     "paths": {
       "@signaltree/core": ["../../packages/core/src/index.ts"],
-      "@signaltree/core/*": ["../../packages/core/src/*"]
+      "@signaltree/core/*": ["../../packages/core/src/*"],
+      "@signaltree/shared": ["../../packages/shared/src/index.ts"],
+      "@signaltree/shared/*": ["../../packages/shared/src/*"]
     }
   },
   "exclude": [
