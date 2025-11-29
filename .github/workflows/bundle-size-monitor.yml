@@ -40,9 +40,10 @@ jobs:
 
       - name: Generate bundle report
         id: bundle-report
+        continue-on-error: true
         run: |
           echo "Generating detailed bundle report..."
-          pnpm exec node scripts/consolidated-bundle-analysis.js --report > bundle-report.txt || true
+          pnpm exec node scripts/consolidated-bundle-analysis.js --report > bundle-report.txt
           echo "Generated bundle report"
 
           # Create a summary for PR comments
@@ -71,9 +72,9 @@ jobs:
           echo "" >> bundle-summary.md
 
           # Add summary statistics
-          total_packages=$(grep -c "✅\|❌" bundle-report.txt)
-          passing_packages=$(grep -c "✅" bundle-report.txt)
-          failing_packages=$(grep -c "❌" bundle-report.txt)
+          total_packages=$(grep -c "✅\|❌" bundle-report.txt || echo "0")
+          passing_packages=$(grep -c "✅" bundle-report.txt || echo "0")
+          failing_packages=$(grep -c "❌" bundle-report.txt || echo "0")
 
           echo "### Summary" >> bundle-summary.md
           echo "- **Total Packages**: $total_packages" >> bundle-summary.md
