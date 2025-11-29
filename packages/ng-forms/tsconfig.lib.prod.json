@@ -5,7 +5,8 @@
     "declarationMap": false,
     "declaration": true,
     "stripInternal": true,
-    "sourceMap": false
+    "sourceMap": true,
+    "inlineSources": true
   },
   "angularCompilerOptions": {
     "compilationMode": "partial"

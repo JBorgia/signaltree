@@ -147,6 +147,7 @@ const nxProjects = [
   'types',
   'utils',
   'guardrails',
+  'ng-forms',
 ];
 
 class BundleAnalyzer {

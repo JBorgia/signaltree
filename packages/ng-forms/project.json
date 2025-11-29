@@ -14,20 +14,32 @@
   "tags": [],
   "targets": {
     "build": {
-      "executor": "@nx/angular:package",
+      "executor": "@nx/rollup:rollup",
       "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
       "options": {
-        "project": "packages/ng-forms/ng-package.json"
-      },
-      "configurations": {
-        "production": {
-          "tsConfig": "packages/ng-forms/tsconfig.lib.prod.json"
-        },
-        "development": {
-          "tsConfig": "packages/ng-forms/tsconfig.lib.json"
-        }
-      },
-      "defaultConfiguration": "production"
+        "main": "packages/ng-forms/src/index.ts",
+        "tsConfig": "packages/ng-forms/tsconfig.lib.prod.json",
+        "outputPath": "dist/packages/ng-forms",
+        "format": ["esm"],
+        "assets": [
+          { "input": "packages/ng-forms", "glob": "README.md", "output": "." },
+          {
+            "input": "packages/ng-forms",
+            "glob": "package.json",
+            "output": "."
+          },
+          {
+            "input": "packages/ng-forms/src",
+            "glob": "**/*.d.ts",
+            "output": "./src"
+          }
+        ],
+        "rollupConfig": "packages/ng-forms/rollup.config.mjs",
+        "deleteOutputPath": true,
+        "buildLibsFromSource": true,
+        "useLegacyTypescriptPlugin": false,
+        "generatePackageJson": false
+      }
     },
     "nx-release-publish": {
       "options": {
