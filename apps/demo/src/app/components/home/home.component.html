@@ -45,168 +45,158 @@
     <h2 class="section-title">✨ Core Features</h2>
     <div class="features-grid">
       @for (feature of coreFeatures; track feature.name) {
-        <div class="feature-card">
-          <h3 class="feature-name">{{ feature.name }}</h3>
-          <p class="feature-description">{{ feature.description }}</p>
-        </div>
+      <div class="feature-card">
+        <h3 class="feature-name">{{ feature.name }}</h3>
+        <p class="feature-description">{{ feature.description }}</p>
+      </div>
       }
 
       <!-- Performance -->
-      @let performanceFeatures = getFeaturesByCategory('Performance');
-      @if (performanceFeatures.length > 0) {
-        <div class="category-section">
-          <h3 class="category-title">⚡ Performance</h3>
-          @if (performanceFeatures[0]?.methods?.length) {
-            <div class="method-list">
-              @for (method of performanceFeatures[0].methods; track method) {
-                <span class="method-tag">
-                  {{ method }}()
-                </span>
-              }
-            </div>
+      @let performanceFeatures = getFeaturesByCategory('Performance'); @if
+      (performanceFeatures.length > 0) {
+      <div class="category-section">
+        <h3 class="category-title">⚡ Performance</h3>
+        @if (performanceFeatures[0]?.methods?.length) {
+        <div class="method-list">
+          @for (method of performanceFeatures[0].methods; track method) {
+          <span class="method-tag"> {{ method }}() </span>
           }
-          <div class="category-grid">
-            @for (feature of performanceFeatures; track feature.title) {
-              <div class="category-card">
-                <h4 class="card-title">{{ feature.title }}</h4>
-                <p class="card-description">{{ feature.description }}</p>
-                <a [routerLink]="feature.route" class="card-link">
-                  View Performance Examples →
-                </a>
-              </div>
-            }
-          </div>
         </div>
+        }
+        <div class="category-grid">
+          @for (feature of performanceFeatures; track feature.title) {
+          <div class="category-card">
+            <h4 class="card-title">{{ feature.title }}</h4>
+            <p class="card-description">{{ feature.description }}</p>
+            <a [routerLink]="feature.route" class="card-link">
+              View Performance Examples →
+            </a>
+          </div>
+          }
+        </div>
+      </div>
       }
 
       <!-- Middleware -->
-      @let middlewareFeatures = getFeaturesByCategory('Middleware');
-      @if (middlewareFeatures.length > 0) {
-        <div class="category-section">
-          <h3 class="category-title">🔌 Middleware</h3>
-          @if (middlewareFeatures[0]?.methods?.length) {
-            <div class="method-list">
-              @for (method of middlewareFeatures[0].methods; track method) {
-                <span class="method-tag">
-                  {{ method }}()
-                </span>
-              }
-            </div>
+      @let middlewareFeatures = getFeaturesByCategory('Middleware'); @if
+      (middlewareFeatures.length > 0) {
+      <div class="category-section">
+        <h3 class="category-title">🔌 Middleware</h3>
+        @if (middlewareFeatures[0]?.methods?.length) {
+        <div class="method-list">
+          @for (method of middlewareFeatures[0].methods; track method) {
+          <span class="method-tag"> {{ method }}() </span>
           }
-          <div class="category-grid">
-            @for (feature of middlewareFeatures; track feature.title) {
-              <div class="category-card">
-                <h4 class="card-title">{{ feature.title }}</h4>
-                <p class="card-description">{{ feature.description }}</p>
-                <a [routerLink]="feature.route" class="card-link">
-                  Learn Middleware →
-                </a>
-              </div>
-            }
-          </div>
         </div>
+        }
+        <div class="category-grid">
+          @for (feature of middlewareFeatures; track feature.title) {
+          <div class="category-card">
+            <h4 class="card-title">{{ feature.title }}</h4>
+            <p class="card-description">{{ feature.description }}</p>
+            <a [routerLink]="feature.route" class="card-link">
+              Learn Middleware →
+            </a>
+          </div>
+          }
+        </div>
+      </div>
       }
 
       <!-- Entity Management -->
-      @let entityFeatures = getFeaturesByCategory('Entity');
-      @if (entityFeatures.length > 0) {
-        <div class="category-section">
-          <h3 class="category-title">📦 Entity Management</h3>
-          @if (entityFeatures[0]?.methods?.length) {
-            <div class="method-list">
-              @for (method of entityFeatures[0].methods; track method) {
-                <span class="method-tag">
-                  {{ method }}()
-                </span>
-              }
-            </div>
+      @let entityFeatures = getFeaturesByCategory('Entity'); @if
+      (entityFeatures.length > 0) {
+      <div class="category-section">
+        <h3 class="category-title">📦 Entity Management</h3>
+        @if (entityFeatures[0]?.methods?.length) {
+        <div class="method-list">
+          @for (method of entityFeatures[0].methods; track method) {
+          <span class="method-tag"> {{ method }}() </span>
           }
-          <div class="category-grid">
-            @for (feature of entityFeatures; track feature.title) {
-              <div class="category-card">
-                <h4 class="card-title">{{ feature.title }}</h4>
-                <p class="card-description">{{ feature.description }}</p>
-                <a [routerLink]="feature.route" class="card-link">
-                  Explore Entity CRUD →
-                </a>
-              </div>
-            }
-          </div>
         </div>
+        }
+        <div class="category-grid">
+          @for (feature of entityFeatures; track feature.title) {
+          <div class="category-card">
+            <h4 class="card-title">{{ feature.title }}</h4>
+            <p class="card-description">{{ feature.description }}</p>
+            <a [routerLink]="feature.route" class="card-link">
+              Explore Entity CRUD →
+            </a>
+          </div>
+          }
+        </div>
+      </div>
       }
 
       <!-- Async (via Middleware) -->
-      @let asyncFeatures = getFeaturesByCategory('Async');
-      @if (asyncFeatures.length > 0) {
-        <div class="category-section">
-          <h3 class="category-title">🌐 Async (via Middleware)</h3>
-          @if (asyncFeatures[0]?.methods?.length) {
-            <div class="method-list">
-              @for (method of asyncFeatures[0].methods; track method) {
-                <span class="method-tag">
-                  {{ method }}()
-                </span>
-              }
-            </div>
+      @let asyncFeatures = getFeaturesByCategory('Async'); @if
+      (asyncFeatures.length > 0) {
+      <div class="category-section">
+        <h3 class="category-title">🌐 Async (via Middleware)</h3>
+        @if (asyncFeatures[0]?.methods?.length) {
+        <div class="method-list">
+          @for (method of asyncFeatures[0].methods; track method) {
+          <span class="method-tag"> {{ method }}() </span>
           }
-          <div class="category-grid">
-            @for (feature of asyncFeatures; track feature.title) {
-              <div class="category-card">
-                <h4 class="card-title">{{ feature.title }}</h4>
-                <p class="card-description">{{ feature.description }}</p>
-                <a [routerLink]="feature.route" class="card-link">
-                  Learn Middleware →
-                </a>
-              </div>
-            }
-          </div>
         </div>
+        }
+        <div class="category-grid">
+          @for (feature of asyncFeatures; track feature.title) {
+          <div class="category-card">
+            <h4 class="card-title">{{ feature.title }}</h4>
+            <p class="card-description">{{ feature.description }}</p>
+            <a [routerLink]="feature.route" class="card-link">
+              Learn Middleware →
+            </a>
+          </div>
+          }
+        </div>
+      </div>
       }
 
       <!-- Time Travel -->
-      @let timeTravelFeatures = getFeaturesByCategory('Time Travel');
-      @if (timeTravelFeatures.length > 0) {
-        <div class="category-section">
-          <h3 class="category-title">⏰ Time Travel</h3>
-          @if (timeTravelFeatures[0]?.methods?.length) {
-            <div class="method-list">
-              @for (method of timeTravelFeatures[0].methods; track method) {
-                <span class="method-tag">
-                  {{ method }}()
-                </span>
-              }
-            </div>
+      @let timeTravelFeatures = getFeaturesByCategory('Time Travel'); @if
+      (timeTravelFeatures.length > 0) {
+      <div class="category-section">
+        <h3 class="category-title">⏰ Time Travel</h3>
+        @if (timeTravelFeatures[0]?.methods?.length) {
+        <div class="method-list">
+          @for (method of timeTravelFeatures[0].methods; track method) {
+          <span class="method-tag"> {{ method }}() </span>
           }
-          <div class="category-grid">
-            @for (feature of timeTravelFeatures; track feature.title) {
-              <div class="category-card">
-                <h4 class="card-title">{{ feature.title }}</h4>
-                <p class="card-description">{{ feature.description }}</p>
-                <a [routerLink]="feature.route" class="card-link">
-                  Time Travel Demo →
-                </a>
-              </div>
-            }
-          </div>
         </div>
+        }
+        <div class="category-grid">
+          @for (feature of timeTravelFeatures; track feature.title) {
+          <div class="category-card">
+            <h4 class="card-title">{{ feature.title }}</h4>
+            <p class="card-description">{{ feature.description }}</p>
+            <a [routerLink]="feature.route" class="card-link">
+              Time Travel Demo →
+            </a>
+          </div>
+          }
+        </div>
+      </div>
       }
 
       <!-- Additional Features -->
       @let formsTestingFeatures =
-        getFeaturesByCategory('Forms').concat(getFeaturesByCategory('Testing'));
+      getFeaturesByCategory('Forms').concat(getFeaturesByCategory('Testing'));
       @if (formsTestingFeatures.length > 0) {
-        <div class="category-section">
-          <h3 class="category-title">🛠️ Additional Features</h3>
-          <div class="category-grid">
-            @for (feature of formsTestingFeatures; track feature.title) {
-              <div class="category-card">
-                <h4 class="card-title">{{ feature.title }}</h4>
-                <p class="card-description">{{ feature.description }}</p>
-                <a [routerLink]="feature.route" class="card-link"> Explore → </a>
-              </div>
-            }
+      <div class="category-section">
+        <h3 class="category-title">🛠️ Additional Features</h3>
+        <div class="category-grid">
+          @for (feature of formsTestingFeatures; track feature.title) {
+          <div class="category-card">
+            <h4 class="card-title">{{ feature.title }}</h4>
+            <p class="card-description">{{ feature.description }}</p>
+            <a [routerLink]="feature.route" class="card-link"> Explore → </a>
           </div>
+          }
         </div>
+      </div>
       }
     </div>
   </section>
@@ -267,18 +257,18 @@
   <section class="additional-features-section">
     <h2 class="section-title">🔬 Advanced Features</h2>
     <div class="category-grid">
-      @let advancedFeatures = getFeaturesByCategory('Advanced');
-      @for (feature of advancedFeatures; track feature.title) {
-        <div
-          class="category-card extreme-depth-card"
-          [class.highlight]="feature.highlight"
-        >
-          <h4 class="card-title">{{ feature.title }}</h4>
-          <p class="card-description">{{ feature.description }}</p>
-          <a [routerLink]="feature.route" class="card-link">
-            {{ feature.cta || 'Explore Feature →' }}
-          </a>
-        </div>
+      @let advancedFeatures = getFeaturesByCategory('Advanced'); @for (feature
+      of advancedFeatures; track feature.title) {
+      <div
+        class="category-card extreme-depth-card"
+        [class.highlight]="feature.highlight"
+      >
+        <h4 class="card-title">{{ feature.title }}</h4>
+        <p class="card-description">{{ feature.description }}</p>
+        <a [routerLink]="feature.route" class="card-link">
+          {{ feature.cta || 'Explore Feature →' }}
+        </a>
+      </div>
       }
     </div>
   </section>
@@ -299,8 +289,8 @@
         <h3 class="step-title">Add Features</h3>
         <p class="step-description">Install optional packages as needed</p>
         <code class="step-code"
-          >npm install &#64;signaltree/ng-forms &#64;signaltree/enterprise
-npm install -D &#64;signaltree/callable-syntax</code
+          >npm install &#64;signaltree/ng-forms &#64;signaltree/enterprise npm
+          install -D &#64;signaltree/callable-syntax</code
         >
       </div>
 

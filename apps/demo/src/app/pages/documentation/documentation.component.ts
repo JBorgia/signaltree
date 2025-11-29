@@ -33,31 +33,31 @@ export class DocumentationComponent implements OnInit {
       id: 'core',
       name: '@signaltree/core',
       description: 'Foundation package for SignalTree',
-      readmePath: '/assets/docs/core/README.md',
+      readmePath: 'assets/docs/core/README.md',
     },
     {
       id: 'ng-forms',
       name: '@signaltree/ng-forms',
       description: 'Angular Forms integration',
-      readmePath: '/assets/docs/ng-forms/README.md',
+      readmePath: 'assets/docs/ng-forms/README.md',
     },
     {
       id: 'enterprise',
       name: '@signaltree/enterprise',
       description: 'Enterprise features and audit logging',
-      readmePath: '/assets/docs/enterprise/README.md',
+      readmePath: 'assets/docs/enterprise/README.md',
     },
     {
       id: 'guardrails',
       name: '@signaltree/guardrails',
       description: 'Development-only performance guardrails',
-      readmePath: '/assets/docs/guardrails/README.md',
+      readmePath: 'assets/docs/guardrails/README.md',
     },
     {
       id: 'callable-syntax',
       name: '@signaltree/callable-syntax',
       description: 'Build-time transform for callable syntax',
-      readmePath: '/assets/docs/callable-syntax/README.md',
+      readmePath: 'assets/docs/callable-syntax/README.md',
     },
   ];
 
