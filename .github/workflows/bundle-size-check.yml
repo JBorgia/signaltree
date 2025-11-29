@@ -22,7 +22,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pnpm install
+          pnpm install --no-frozen-lockfile
 
       - name: Check bundle sizes
         run: pnpm run size:check
