@@ -34,10 +34,10 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies
-        run: pnpm install
+      - name: Install dependencies (allow lockfile update)
+        run: pnpm install --no-frozen-lockfile
 
-      - name: Build demo
+      - name: Build demo (GitHub Pages base href)
         run: pnpm run build:demo:prod
 
       - name: Add SPA Fallback (404.html)
