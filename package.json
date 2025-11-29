@@ -25,7 +25,7 @@
     "build:lib": "nx build signaltree --configuration=production",
     "build:demo": "nx build demo",
     "deploy": "npm run build:demo:prod && npm run deploy:gh-pages",
-    "build:demo:prod": "nx build demo --configuration=production --base-href=/signaltree/",
+    "build:demo:prod": "nx build demo --configuration=production --base-href=/",
     "deploy:gh-pages": "gh-pages -d dist/apps/demo/browser",
     "test:lib": "nx test signaltree",
     "test:demo": "nx test demo",
