@@ -986,8 +986,18 @@ class BundleAnalyzer {
 }
 
 if (require.main === module) {
+  const args = process.argv.slice(2);
+  const allowFailures =
+    args.includes('--allow-failures') || args.includes('--no-exit');
+  const reportMode = args.includes('--report');
   const analyzer = new BundleAnalyzer();
-  analyzer.run();
+  const { exitCode } = analyzer.execute();
+  if (reportMode || allowFailures) {
+    // In report/non-blocking mode always exit 0 so CI summary can be published.
+    process.exit(0);
+  } else {
+    process.exit(exitCode);
+  }
 }
 
 module.exports = BundleAnalyzer;

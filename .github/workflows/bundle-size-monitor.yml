@@ -41,7 +41,7 @@ jobs:
         id: bundle-report
         run: |
           echo "Generating detailed bundle report..."
-          pnpm run size:report > bundle-report.txt
+          pnpm exec node scripts/consolidated-bundle-analysis.js --report > bundle-report.txt || true
           echo "Generated bundle report"
 
           # Create a summary for PR comments
@@ -85,7 +85,7 @@ jobs:
             echo "Some packages exceed their size targets. Please review and optimize:" >> bundle-summary.md
             echo "1. Check the [Bundle Optimization Guide](docs/performance/bundle-optimization.md)" >> bundle-summary.md
             echo "2. Use the [Optimization Checklist](docs/OPTIMIZATION-CHECKLIST.md)" >> bundle-summary.md
-            echo "3. Run \`pnpm run size:report\` locally for detailed analysis" >> bundle-summary.md
+            echo "3. Run \`pnpm exec node scripts/consolidated-bundle-analysis.js --report\` locally for detailed analysis" >> bundle-summary.md
           else
             echo "" >> bundle-summary.md
             echo "### ✅ All Good!" >> bundle-summary.md
