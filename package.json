@@ -218,5 +218,10 @@
   },
   "nx": {
     "includedScripts": []
+  },
+  "pnpm": {
+    "overrides": {
+      "find-cache-directory": "3.3.2"
+    }
   }
 }

@@ -29,7 +29,6 @@ jobs:
       - name: Install dependencies
         run: |
           pnpm install
-          pnpm run build
 
       - name: Run bundle size check
         id: bundle-check

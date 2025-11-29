@@ -20,10 +20,9 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install and build
+      - name: Install dependencies
         run: |
           pnpm install
-          pnpm run build
 
       - name: Check bundle sizes
         run: pnpm run size:check
