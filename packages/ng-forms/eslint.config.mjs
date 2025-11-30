@@ -12,7 +12,8 @@ export default [
         {
           ignoredFiles: ['{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}'],
           // @signaltree/shared is bundled at build time via Rollup, not a runtime dependency
-          ignoredDependencies: ['@signaltree/shared', '@angular/forms'],
+          // jest-preset-angular is a devDependency used only in test files (excluded from build)
+          ignoredDependencies: ['@signaltree/shared', '@angular/forms', 'jest-preset-angular'],
         },
       ],
     },
