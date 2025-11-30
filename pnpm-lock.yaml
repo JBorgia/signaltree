@@ -172,8 +172,8 @@ importers:
         specifier: ~20.3.10
         version: 20.3.10(chokidar@4.0.3)
       '@signaltree/core':
-        specifier: ^4.1.4
-        version: 4.1.4(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(tslib@2.8.1)
+        specifier: ^4.1.5
+        version: 4.1.5(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(tslib@2.8.1)
       '@signaltree/enterprise':
         specifier: workspace:*
         version: link:packages/enterprise
@@ -3548,8 +3548,8 @@ packages:
   '@shikijs/vscode-textmate@10.0.2':
     resolution: {integrity: sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==}
 
-  '@signaltree/core@4.1.4':
-    resolution: {integrity: sha512-zowBYB/RIO6BKRQZf/y0ilhKu/jnib9sVZrV859YrgSdR7LwmF6M8zXjHcnbJni8gt+uDYPEu4kGTlj31c/TLA==}
+  '@signaltree/core@4.1.5':
+    resolution: {integrity: sha512-exwKkJAsqMIU5Zd5u5TDHPqTN2mNha5GMeCQqYqLuIy9cKhYXE04E+SyH/acrNGaEkMgfoDr1Kbhx6DlAduxiQ==}
     peerDependencies:
       '@angular/core': ^20.3.0
       tslib: ^2.0.0
@@ -13783,7 +13783,7 @@ snapshots:
 
   '@shikijs/vscode-textmate@10.0.2': {}
 
-  '@signaltree/core@4.1.4(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(tslib@2.8.1)':
+  '@signaltree/core@4.1.5(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(tslib@2.8.1)':
     dependencies:
       '@angular/core': 20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1)
       tslib: 2.8.1
