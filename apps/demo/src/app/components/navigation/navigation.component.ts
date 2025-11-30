@@ -26,8 +26,8 @@ export class NavigationComponent {
   constructor() {
     // Hardcoded version to avoid module boundary violations
     // This should match the version in package.json
-    this.coreVersion = '4.1.0';
-    this.enterpriseVersion = '4.1.0';
+    this.coreVersion = '4.1.5';
+    this.enterpriseVersion = '4.1.5';
     this.versionSummary = `@signaltree/core v${this.coreVersion} • enterprise v${this.enterpriseVersion}`;
     this.buildDate = new Date().toISOString().slice(0, 10);
   }
