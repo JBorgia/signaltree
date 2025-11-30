@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/workspace",
-  "version": "4.1.0",
+  "version": "4.1.5",
   "license": "BSL-1.1",
   "funding": {
     "type": "github",
@@ -174,7 +174,7 @@
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@rollup/plugin-typescript": "^12.3.0",
     "@schematics/angular": "~20.3.10",
-    "@signaltree/core": "^4.1.4",
+    "@signaltree/core": "^4.1.5",
     "@signaltree/enterprise": "workspace:*",
     "@signaltree/ng-forms": "workspace:*",
     "@signaltree/shared": "workspace:*",

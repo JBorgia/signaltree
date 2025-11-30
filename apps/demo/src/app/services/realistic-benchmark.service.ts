@@ -180,7 +180,7 @@ export interface RealisticBenchmarkQueryParams {
 const SAMPLE_BENCHMARK_DETAILS: RealisticBenchmarkSubmission = {
   id: 'sample-benchmark-001',
   timestamp: new Date('2024-08-15T14:32:05.000Z').toISOString(),
-  version: '4.1.0',
+  version: '4.1.5',
   sessionId: 'sample-session',
   consentGiven: true,
   calibration: {

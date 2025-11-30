@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/guardrails",
-  "version": "4.1.2",
+  "version": "4.1.5",
   "description": "Development-only performance monitoring and anti-pattern detection for SignalTree",
   "type": "module",
   "sideEffects": false,
@@ -57,7 +57,7 @@
     "type-check": "tsc --project tsconfig.lib.json --noEmit"
   },
   "peerDependencies": {
-    "@signaltree/core": "4.1.0",
+    "@signaltree/core": "4.1.5",
     "tslib": "^2.0.0"
   },
   "devDependencies": {
