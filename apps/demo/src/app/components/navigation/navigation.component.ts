@@ -2,6 +2,8 @@ import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
+import { SIGNALTREE_CORE_VERSION, SIGNALTREE_ENTERPRISE_VERSION, SIGNALTREE_VERSION_SUMMARY } from '../../version';
+
 export interface DemoExample {
   id: string;
   title: string;
@@ -24,11 +26,10 @@ export class NavigationComponent {
   readonly buildDate: string;
 
   constructor() {
-    // Hardcoded version to avoid module boundary violations
-    // This should match the version in package.json
-    this.coreVersion = '4.1.5';
-    this.enterpriseVersion = '4.1.5';
-    this.versionSummary = `@signaltree/core v${this.coreVersion} • enterprise v${this.enterpriseVersion}`;
+    // Values injected via generated version.ts (tools/generate-version-env.mjs)
+    this.coreVersion = SIGNALTREE_CORE_VERSION;
+    this.enterpriseVersion = SIGNALTREE_ENTERPRISE_VERSION;
+    this.versionSummary = SIGNALTREE_VERSION_SUMMARY;
     this.buildDate = new Date().toISOString().slice(0, 10);
   }
   examples: DemoExample[] = [
