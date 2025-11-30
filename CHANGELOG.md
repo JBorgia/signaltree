@@ -1,3 +1,24 @@
+## 4.1.5 (2025-11-30)
+
+### 🚀 Features
+
+- **benchmarks:** add contextual explanations for enterprise, rapid updates, and subscriber scaling ([94ad851](https://github.com/JBorgia/signaltree/commit/94ad851))
+
+### 🩹 Fixes
+
+- move jest-preset-angular to devDependencies in ng-forms ([a4d7c8c](https://github.com/JBorgia/signaltree/commit/a4d7c8c))
+- ignore jest-preset-angular in ng-forms dependency checks ([cc837c8](https://github.com/JBorgia/signaltree/commit/cc837c8))
+- remove outdated ng-forms special case in declaration verification ([a08a941](https://github.com/JBorgia/signaltree/commit/a08a941))
+- use hardcoded version in navigation component ([d679a15](https://github.com/JBorgia/signaltree/commit/d679a15))
+- **benchmarks:** rename 'Large History Size' to 'History Buffer Scaling' for consistency ([a267852](https://github.com/JBorgia/signaltree/commit/a267852))
+- **benchmarks:** align rank badges and enterprise badges in results table ([2041375](https://github.com/JBorgia/signaltree/commit/2041375))
+- **demo:** use relative logo paths for GitHub Pages subfolder deployment ([318fb22](https://github.com/JBorgia/signaltree/commit/318fb22))
+- **demo:** use relative asset paths for documentation README files ([ad3f3eb](https://github.com/JBorgia/signaltree/commit/ad3f3eb))
+
+### ❤️ Thank You
+
+- Borgia
+
 ## 4.1.4 (2025-11-28)
 
 ### 🚀 Features
