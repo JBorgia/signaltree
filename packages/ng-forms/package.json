@@ -10,7 +10,8 @@
   },
   "devDependencies": {
     "@signaltree/core": "workspace:*",
-    "@signaltree/shared": "workspace:*"
+    "@signaltree/shared": "workspace:*",
+    "jest-preset-angular": "^14.0.0"
   },
   "sideEffects": false,
   "publishConfig": {

@@ -1,11 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
-
-import * as rootPkg from '../../../../../../package.json';
-
-// Import root package.json for version info (bundled at build time)
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 export interface DemoExample {
   id: string;
   title: string;
