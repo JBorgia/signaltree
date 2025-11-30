@@ -73,6 +73,7 @@
     "quality:simple": "npm run test:core && npm run build:core",
     "quality:fix": "npm run lint:fix:all && npm run test:all",
     "// Development Workflow": "Complete development workflows",
+    "prepare:versions": "node tools/generate-version-env.cjs",
     "dev": "nx serve demo",
     "dev:build": "npm run build:core && nx serve demo",
     "dev:check": "npm run test:core && npm run lint:core",

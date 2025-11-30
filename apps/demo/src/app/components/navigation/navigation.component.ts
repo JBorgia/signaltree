@@ -26,7 +26,7 @@ export class NavigationComponent {
   readonly buildDate: string;
 
   constructor() {
-    // Values injected via generated version.ts (tools/generate-version-env.mjs)
+    // Values injected via generated version.ts (tools/generate-version-env.cjs)
     this.coreVersion = SIGNALTREE_CORE_VERSION;
     this.enterpriseVersion = SIGNALTREE_ENTERPRISE_VERSION;
     this.versionSummary = SIGNALTREE_VERSION_SUMMARY;

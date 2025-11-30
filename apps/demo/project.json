@@ -9,6 +9,7 @@
     "build": {
       "executor": "@angular/build:application",
       "outputs": ["{options.outputPath}"],
+      "dependsOn": ["generate-versions"],
       "options": {
         "outputPath": "dist/apps/demo",
         "browser": "apps/demo/src/main.ts",
@@ -106,6 +107,12 @@
       "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
       "options": {
         "jestConfig": "apps/demo/jest.config.ts"
+      }
+    },
+    "generate-versions": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node tools/generate-version-env.cjs"
       }
     },
     "serve-static": {
