@@ -24,24 +24,10 @@ export class NavigationComponent {
   readonly buildDate: string;
 
   constructor() {
-    // Extract versions; workspace:* entries replaced with published core version where applicable
-    const devDeps: any = (rootPkg as any).devDependencies || {};
-    const deps: any = (rootPkg as any).dependencies || {};
-    const rawCore =
-      devDeps['@signaltree/core'] || deps['@signaltree/core'] || 'unknown';
-    // Normalize prefixes like ^ and file:
-    this.coreVersion = rawCore
-      .replace(/^\^/, '')
-      .replace(/^file:.*/, 'local-build');
-    // Enterprise is a workspace dependency; reuse core version if not explicitly versioned
-    const rawEnterprise =
-      devDeps['@signaltree/enterprise'] ||
-      deps['@signaltree/enterprise'] ||
-      this.coreVersion;
-    this.enterpriseVersion =
-      rawEnterprise === 'workspace:*'
-        ? this.coreVersion
-        : rawEnterprise.replace(/^\^/, '');
+    // Hardcoded version to avoid module boundary violations
+    // This should match the version in package.json
+    this.coreVersion = '4.1.0';
+    this.enterpriseVersion = '4.1.0';
     this.versionSummary = `@signaltree/core v${this.coreVersion} • enterprise v${this.enterpriseVersion}`;
     this.buildDate = new Date().toISOString().slice(0, 10);
   }
