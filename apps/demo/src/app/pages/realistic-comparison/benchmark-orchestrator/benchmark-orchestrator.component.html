@@ -1507,15 +1507,17 @@ const tree = signalTree(state).with(withSelectorMemoization());</code></pre>
               [class]="getScenarioRankClass(scenario.id, lib.id)"
               [style.--cell-color]="lib.color"
             >
-              @if (lib.id === 'signaltree-enterprise') {
-              <span class="enterprise-badge" title="Enterprise Enhancer Active"
-                >Enterprise</span
-              >
-              } @if (getScenarioRankEmoji(scenario.id, lib.id)) {
-              <span class="rank-badge">
-                {{ getScenarioRankEmoji(scenario.id, lib.id) }}
-              </span>
-              }
+              <div class="badges-row">
+                @if (lib.id === 'signaltree-enterprise') {
+                <span class="enterprise-badge" title="Enterprise Enhancer Active"
+                  >Enterprise</span
+                >
+                } @if (getScenarioRankEmoji(scenario.id, lib.id)) {
+                <span class="rank-badge">
+                  {{ getScenarioRankEmoji(scenario.id, lib.id) }}
+                </span>
+                }
+              </div>
               <span class="time">{{
                 getScenarioTime(scenario.id, lib.id)
               }}</span>
