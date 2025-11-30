@@ -16,17 +16,6 @@ for pkg in dist/packages/*; do
 
   PKG_NAME=$(basename "$pkg")
 
-  # ng-forms uses Angular's ng-packagr which puts declarations at root
-  if [ "$PKG_NAME" = "ng-forms" ]; then
-    if [ ! -f "$pkg/index.d.ts" ]; then
-      echo "❌ ERROR: Missing $PKG_NAME/index.d.ts"
-      EXIT_CODE=1
-    else
-      echo "✅ $PKG_NAME: declarations found at root (Angular package)"
-    fi
-    continue
-  fi
-
   # Check that src/ declarations exist
   if [ ! -d "$pkg/src" ]; then
     echo "⚠️  WARNING: $PKG_NAME has no src/ directory for declarations"
