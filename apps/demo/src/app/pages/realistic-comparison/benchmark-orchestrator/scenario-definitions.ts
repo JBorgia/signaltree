@@ -305,7 +305,7 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
   },
   {
     id: 'history-size',
-    name: 'Large History Size',
+    name: 'History Buffer Scaling',
     description: 'Performance with large history buffers',
     operations: '1000 history entries',
     complexity: 'High',
