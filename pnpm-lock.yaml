@@ -388,6 +388,9 @@ importers:
       '@signaltree/core':
         specifier: workspace:*
         version: link:../core
+      '@signaltree/shared':
+        specifier: workspace:*
+        version: link:../shared
 
   packages/shared:
     dependencies:
