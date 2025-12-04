@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
-import { signalTree } from '@signaltree/core';
-import { withBatching } from '@signaltree/core/enhancers/batching';
+import { signalTree, withBatching } from '@signaltree/core';
 import { withGuardrails } from '@signaltree/guardrails';
 
 /**
@@ -31,79 +30,75 @@ export interface DemoAppState {
 
 @Injectable({ providedIn: 'root' })
 export class DemoAppStore {
-  private tree = signalTree<DemoAppState>(
-    {
-      counter: {
-        count: 0,
-        incrementedCount: 0,
-      },
-      benchmark: {
-        isRunning: false,
-        progress: 0,
-        results: {},
-      },
-      ui: {
-        currentTab: 'getting-started',
-        sidebarOpen: false,
-      },
+  readonly tree = signalTree({
+    counter: {
+      count: 0,
+      incrementedCount: 0,
     },
-    // Use guardrails in development to catch performance issues and anti-patterns
+    benchmark: {
+      isRunning: false,
+      progress: 0,
+      results: {} as Record<string, number>,
+    },
+    ui: {
+      currentTab: 'getting-started' as string,
+      sidebarOpen: false as boolean,
+    },
+  }).with(
+    withBatching(),
     withGuardrails({
-      detectMemoryLeaks: true,
-      detectUnusedState: true,
-      maxUpdateFrequency: 100, // Warn if updating more than 100x per second
-      warnOnDeepNesting: 5,
-      enforceImmutability: true,
-    }),
-    // Use batching for multiple concurrent updates
-    withBatching()
+      mode: 'warn',
+      budgets: {
+        maxUpdateTime: 16,
+      },
+    })
   );
 
   // Expose state slices as public signals
-  readonly counter = this.tree.counter;
-  readonly benchmark = this.tree.benchmark;
-  readonly ui = this.tree.ui;
+  readonly counter = this.tree.$.counter;
+  readonly benchmark = this.tree.$.benchmark;
+  readonly ui = this.tree.$.ui;
 
   // Counter actions
   increment() {
-    this.tree.counter.count.update((c) => c + 1);
+    this.tree.$.counter.count.update((c: number) => c + 1);
   }
 
   decrement() {
-    this.tree.counter.count.update((c) => c - 1);
+    this.tree.$.counter.count.update((c: number) => c - 1);
   }
 
   reset() {
-    this.tree.counter.count.set(0);
+    this.tree.$.counter.count.set(0);
   }
 
   // Batch multiple counter updates to reduce change detection cycles
   addThenIncrement(amount: number) {
     this.tree.batch(() => {
-      this.tree.counter.count.update((c) => c + amount);
-      this.tree.counter.incrementedCount.update((c) => c + 1);
+      this.tree.$.counter.count.update((c: number) => c + amount);
+      this.tree.$.counter.incrementedCount.update((c: number) => c + 1);
     });
   }
 
   // Benchmark actions
   setBenchmarkRunning(isRunning: boolean) {
-    this.tree.benchmark.isRunning.set(isRunning);
+    this.tree.$.benchmark.isRunning.set(isRunning);
   }
 
   setBenchmarkProgress(progress: number) {
-    this.tree.benchmark.progress.set(progress);
+    this.tree.$.benchmark.progress.set(progress);
   }
 
   setBenchmarkResults(results: Record<string, number>) {
-    this.tree.benchmark.results.set(results);
+    (this.tree.$.benchmark['results'] as any).set(results);
   }
 
   // UI actions
   setCurrentTab(tab: string) {
-    this.tree.ui.currentTab.set(tab);
+    this.tree.$.ui.currentTab.set(tab);
   }
 
   toggleSidebar() {
-    this.tree.ui.sidebarOpen.update((open) => !open);
+    this.tree.$.ui.sidebarOpen.update((open: boolean) => !open);
   }
 }
