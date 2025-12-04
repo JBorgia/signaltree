@@ -442,6 +442,28 @@ users.add(user3);
 const activeUsers = users.selectBy((user) => user.active);
 const allUsers = users.selectAll();
 
+// Entities also support nested paths for organized state structures
+const appState = signalTree({
+  app: {
+    data: {
+      users: User[],
+      products: Product[]
+    },
+    admin: {
+      logs: AuditLog[]
+    }
+  }
+});
+
+// Access nested entities with dot notation
+const appUsers = appState.entities<User>('app.data.users');
+const appProducts = appState.entities<Product>('app.data.products');
+const adminLogs = appState.entities<AuditLog>('app.admin.logs');
+
+// All entity methods work with nested paths
+appUsers.selectBy(u => u.isActive).subscribe(filtered => console.log(filtered));
+appProducts.selectTotal().subscribe(count => console.log(`${count} products`));
+
 // Time Travel: Undo/redo functionality
 tree.undo(); // Undo last change
 tree.redo(); // Redo undone change

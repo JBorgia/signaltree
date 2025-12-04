@@ -866,6 +866,35 @@ users.add(newUser);
 users.selectBy((u) => u.active);
 users.updateMany([{ id: '1', changes: { status: 'active' } }]);
 
+// Entity helpers support nested paths for organized state structures
+// Example: deeply nested entities in a domain-driven design pattern
+const appTree = signalTree({
+  app: {
+    data: {
+      users: [] as User[],
+      products: [] as Product[],
+    }
+  },
+  admin: {
+    data: {
+      logs: [] as AuditLog[],
+      reports: [] as Report[],
+    }
+  }
+});
+
+// Access deeply nested entities using dot notation
+const appUsers = appTree.entities<User>('app.data.users');
+const appProducts = appTree.entities<Product>('app.data.products');
+const adminLogs = appTree.entities<AuditLog>('admin.data.logs');
+const adminReports = appTree.entities<Report>('admin.data.reports');
+
+// All entity methods work seamlessly with nested paths
+appUsers.selectBy((u) => u.isAdmin);     // Filtered signal
+appProducts.selectTotal();                // Count signal
+adminLogs.selectAll();                   // All items signal
+adminReports.selectIds();                // ID array signal
+
 // For async operations, use manual async or middleware helpers
 async function fetchUsers() {
   tree.$.ui.loading.set(true);

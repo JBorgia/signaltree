@@ -31,6 +31,10 @@ export type {
   BuiltInObject,
   NotFn,
 
+  // Deep path types - For nested entity access
+  DeepPath,
+  DeepAccess,
+
   // Configuration types
   TreeConfig,
   TreePreset,

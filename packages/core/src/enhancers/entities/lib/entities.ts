@@ -3,6 +3,7 @@ import { computed, Signal, WritableSignal } from '@angular/core';
 import { isAnySignal, isNodeAccessor } from '../../../lib/utils';
 
 import type { SignalTree, EntityHelpers } from '../../../lib/types';
+
 /**
  * Entity configuration options
  */
@@ -13,32 +14,89 @@ interface EntityConfig {
 }
 
 /**
+ * Resolve a dot-notation path to a nested signal
+ * Supports paths like 'app.data.users' by recursively navigating through the state tree
+ *
+ * @param tree - The SignalTree instance
+ * @param path - Either a top-level key or dot-notation path like 'app.data.users'
+ * @returns The signal at the specified path, or throws if path is invalid
+ */
+function resolveNestedSignal<T>(
+  tree: SignalTree<T>,
+  path: string | keyof T
+): WritableSignal<unknown> {
+  const pathStr = String(path);
+
+  // Fast path: direct property access (top-level key)
+  if (!pathStr.includes('.')) {
+    const signal = (tree.state as any)[pathStr];
+    if (!signal) {
+      throw new Error(
+        `Entity key '${pathStr}' does not exist in the state. Available top-level keys: ${Object.keys(
+          tree.state as any
+        ).join(', ')}`
+      );
+    }
+    return signal;
+  }
+
+  // Nested path: split and navigate
+  const segments = pathStr.split('.');
+  let current: any = tree.state;
+
+  for (let i = 0; i < segments.length; i++) {
+    const segment = segments[i];
+
+    // Dereference signal if needed
+    if (isAnySignal(current)) {
+      current = current();
+    }
+
+    // Navigate to next segment
+    current = current[segment];
+
+    if (current === undefined) {
+      const attemptedPath = segments.slice(0, i + 1).join('.');
+      throw new Error(
+        `Entity path '${pathStr}' is invalid: '${attemptedPath}' does not exist in the state`
+      );
+    }
+  }
+
+  // Dereference final signal if needed
+  if (isAnySignal(current)) {
+    // We have a signal - validate it later
+    return current as WritableSignal<unknown>;
+  }
+
+  throw new Error(
+    `Entity path '${pathStr}' does not resolve to a signal. Ensure all parent levels in the path are valid nested objects.`
+  );
+}
+
+/**
  * Creates entity helpers for a specific entity collection
  * This properly handles the SignalTree's TreeNode type structure
  *
  * CRITICAL: In SignalTree, arrays become WritableSignal<Array>
  * So `users: User[]` in the original state becomes `users: WritableSignal<User[]>` in tree.state
+ *
+ * Supports both top-level keys and nested paths:
+ * - tree.entities<User>('users') - top-level
+ * - tree.entities<User>('app.data.users') - nested
  */
 function createEntityHelpers<T, E extends { id: string | number }>(
   tree: SignalTree<T>,
-  entityKey: keyof T
+  entityKey: string | keyof T
 ): EntityHelpers<E> {
   // Get the signal from the deeply signalified state
   // The state property is of type TreeNode<T>
   const getEntitySignal = () => {
-    // Access the state property - it's already a signal due to TreeNode
-    // We need to use type assertion here because TypeScript can't track the deep signalification
-    const stateProperty = (tree.state as any)[entityKey];
+    // Use path resolution to handle both top-level and nested paths
+    const signal = resolveNestedSignal(tree, entityKey);
 
-    // Check if it exists
-    if (!stateProperty) {
-      throw new Error(
-        `Entity key '${String(entityKey)}' does not exist in the state`
-      );
-    }
-
-    // Due to TreeNode, if the original was an array, it's now WritableSignal<Array>
-    if (!isAnySignal(stateProperty)) {
+    // Validate it's actually a signal
+    if (!isAnySignal(signal)) {
       throw new Error(
         `Entity key '${String(
           entityKey
@@ -47,8 +105,8 @@ function createEntityHelpers<T, E extends { id: string | number }>(
     }
 
     // Cast to WritableSignal and verify it contains an array
-    const signal = stateProperty as WritableSignal<unknown>;
-    const value = signal();
+    const castSignal = signal as WritableSignal<unknown>;
+    const value = castSignal();
 
     if (!Array.isArray(value)) {
       throw new Error(
@@ -58,7 +116,7 @@ function createEntityHelpers<T, E extends { id: string | number }>(
       );
     }
 
-    return signal as WritableSignal<E[]>;
+    return castSignal as WritableSignal<E[]>;
   };
 
   // Helper function to set values on both WritableSignal and callable signals
@@ -163,13 +221,15 @@ function createEntityHelpers<T, E extends { id: string | number }>(
  *
  * The key insight: The state is already deeply signalified, so array properties
  * like `users: User[]` become `users: WritableSignal<User[]>` in tree.state
+ *
+ * Supports both top-level keys and nested paths for maximum flexibility
  */
 export function withEntities(config: EntityConfig = {}) {
   const { enabled = true } = config;
 
   return function enhanceWithEntities<T>(tree: SignalTree<T>): SignalTree<T> & {
     entities<E extends { id: string | number }>(
-      entityKey: keyof T
+      entityKey: string | keyof T
     ): EntityHelpers<E>;
   } {
     if (!enabled) {

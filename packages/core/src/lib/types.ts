@@ -1,4 +1,5 @@
 import { Signal, WritableSignal } from '@angular/core';
+import { SecurityPresets } from '@signaltree/core';
 
 import type { SecurityValidatorConfig } from './security/security-validator';
 
@@ -150,6 +151,50 @@ export type TreeNode<T> = {
  * Used by cleanUnwrap to return the original type shape
  */
 export type RemoveSignalMethods<T> = T extends infer U ? U : never;
+
+// ============================================
+// DEEP PATH TYPES FOR NESTED ENTITY ACCESS
+// ============================================
+
+/**
+ * Generate all possible dot-notation paths through a nested object type
+ * For example, given { a: { b: { c: number } } }, generates:
+ * "a" | "a.b" | "a.b.c"
+ *
+ * Used to support nested entity access like tree.entities<E>('app.data.users')
+ */
+export type DeepPath<T, Prefix extends string = ''> = {
+  [K in keyof T]: K extends string
+    ? T[K] extends readonly unknown[]
+      ? `${Prefix}${K}` // Array found - include this path
+      : T[K] extends object
+      ? T[K] extends Signal<unknown>
+        ? never // Skip Angular signals
+        : T[K] extends BuiltInObject
+        ? never // Skip built-in objects
+        : T[K] extends (...args: unknown[]) => unknown
+        ? never // Skip functions
+        : `${Prefix}${K}` | DeepPath<T[K], `${Prefix}${K}.`> // Nested object - recurse
+      : never // Skip primitives
+    : never;
+}[keyof T];
+
+/**
+ * Safely access a value at a deep path in a type
+ * For example: DeepAccess<{ a: { b: User[] } }, 'a.b'> => User[]
+ *
+ * Used to infer the entity type from a path string
+ */
+export type DeepAccess<
+  T,
+  Path extends string
+> = Path extends `${infer First}.${infer Rest}`
+  ? First extends keyof T
+    ? DeepAccess<T[First] & object, Rest>
+    : never
+  : Path extends keyof T
+  ? T[Path]
+  : never;
 
 // ============================================
 // ENHANCER SYSTEM TYPES
@@ -327,9 +372,9 @@ export type SignalTree<T> = NodeAccessor<T> & {
   addTap(middleware: Middleware<T>): void;
   removeTap(id: string): void;
 
-  /** Entity helpers */
+  /** Entity helpers - supports both top-level keys and nested dot-notation paths */
   entities<E extends { id: string | number }>(
-    entityKey?: keyof T
+    entityKey?: keyof T | DeepPath<T>
   ): EntityHelpers<E>;
 
   /** Time travel */
@@ -387,7 +432,6 @@ export interface TreeConfig {
    * });
    *
    * // Or use a preset
-   * import { SecurityPresets } from '@signaltree/core';
    * const tree = signalTree(state, {
    *   security: SecurityPresets.strict().getConfig()
    * });
