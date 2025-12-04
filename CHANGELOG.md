@@ -1,3 +1,20 @@
+## 4.2.0 (2025-12-04)
+
+### 🚀 Features
+
+- add support for nested entity paths with dot notation ([e0bef8d](https://github.com/JBorgia/signaltree/commit/e0bef8d))
+
+### 🩹 Fixes
+
+- remove circular import in types.ts ([5ed4601](https://github.com/JBorgia/signaltree/commit/5ed4601))
+- add depth limit to DeepPath type to prevent TypeScript infinite recursion ([90e0816](https://github.com/JBorgia/signaltree/commit/90e0816))
+- revert entities signature to keyof T for type safety while maintaining runtime nested path support ([28885d3](https://github.com/JBorgia/signaltree/commit/28885d3))
+- exclude demo from release pre-build command ([61c7ea8](https://github.com/JBorgia/signaltree/commit/61c7ea8))
+
+### ❤️ Thank You
+
+- Borgia
+
 # Changelog
 
 ## Unreleased
