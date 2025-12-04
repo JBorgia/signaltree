@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/guardrails",
-  "version": "4.1.6",
+  "version": "4.2.0",
   "description": "Development-only performance monitoring and anti-pattern detection for SignalTree",
   "type": "module",
   "sideEffects": false,
@@ -61,9 +61,9 @@
     "tslib": "^2.0.0"
   },
   "devDependencies": {
-    "@signaltree/core": "workspace:*",
-    "@signaltree/shared": "workspace:*",
-    "@signaltree/types": "workspace:*"
+    "@signaltree/core": "^4.2.0",
+    "@signaltree/shared": "^4.2.0",
+    "@signaltree/types": "^4.2.0"
   },
   "keywords": [
     "signaltree",
