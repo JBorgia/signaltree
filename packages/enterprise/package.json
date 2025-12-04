@@ -9,30 +9,37 @@
   "types": "./src/index.d.ts",
   "exports": {
     ".": {
+      "types": "./src/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./diff-engine": {
+      "types": "./src/lib/diff-engine.d.ts",
       "import": "./dist/lib/diff-engine.js",
       "default": "./dist/lib/diff-engine.js"
     },
     "./path-index": {
+      "types": "./src/lib/path-index.d.ts",
       "import": "./dist/lib/path-index.js",
       "default": "./dist/lib/path-index.js"
     },
     "./update-engine": {
+      "types": "./src/lib/update-engine.d.ts",
       "import": "./dist/lib/update-engine.js",
       "default": "./dist/lib/update-engine.js"
     },
     "./enterprise-enhancer": {
+      "types": "./src/lib/enterprise-enhancer.d.ts",
       "import": "./dist/lib/enterprise-enhancer.js",
       "default": "./dist/lib/enterprise-enhancer.js"
     },
     "./scheduler": {
+      "types": "./src/lib/scheduler.d.ts",
       "import": "./dist/lib/scheduler.js",
       "default": "./dist/lib/scheduler.js"
     },
     "./thread-pools": {
+      "types": "./src/lib/thread-pools.d.ts",
       "import": "./dist/lib/thread-pools.js",
       "default": "./dist/lib/thread-pools.js"
     }
