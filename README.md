@@ -413,16 +413,17 @@ tree.addTap({
   },
 });
 
-// Async: Advanced async operations with automatic loading states
-const loadUsersWithPosts = tree.asyncAction(
-  async () => {
+// Async: Advanced async operations with manual state management
+async function loadUsersWithPosts() {
+  tree.$.ui.loading.set(true);
+  try {
     const users = await api.getUsers();
     const posts = await api.getPosts();
-    return { users, posts };
-  },
-  {
-    onStart: (state) => ({ ui: { ...state.ui, loading: true } }),
-    onSuccess: (result, state) => ({
+    tree.$.users.set(users);
+    tree.$.posts.set(posts);
+  } catch (error) {
+    tree.$.ui.error.set(error instanceof Error ? error.message : 'Unknown error');
+  } finally {
       users: result.users,
       posts: result.posts,
       ui: { ...state.ui, loading: false },
@@ -662,7 +663,13 @@ entities.update(id, changes);
 entities.remove(id);
 
 // Basic async actions (lightweight)
-const action = tree.asyncAction(async () => api.call());
+async function action() {
+  try {
+    await api.call();
+  } catch (error) {
+    console.error(error);
+  }
+}
 ```
 
 ### Batching Enhancer (Included in @signaltree/core)
@@ -767,11 +774,18 @@ const tree = signalTree(data).with(enhancer);
 ### Async Operations
 
 ```typescript
-const loadData = tree.asyncAction(async (params) => await api.getData(params), {
-  loadingKey: 'loading',
-  errorKey: 'error',
-  onSuccess: (data) => ({ data }),
-});
+async function loadData(params) {
+  tree.$.loading.set(true);
+  tree.$.error.set(null);
+  try {
+    const data = await api.getData(params);
+    tree.$.data.set(data);
+  } catch (error) {
+    tree.$.error.set(error instanceof Error ? error.message : 'Unknown error');
+  } finally {
+    tree.$.loading.set(false);
+  }
+}
 ````
 
 ### Time Travel
@@ -820,16 +834,18 @@ const cartTotal = shopTree.memoize((state) => {
   }, 0);
 }, 'cart-total');
 
-// Async product loading with enhanced async features
-const loadProducts = shopTree.asyncAction(async (filters) => await api.getProducts(filters), {
-  onStart: () => ({ products: { loading: true } }),
-  onSuccess: (products) => ({
-    products: { items: products, loading: false },
-  }),
-  onError: (error) => ({
-    products: { loading: false, error: error.message },
-  }),
-});
+// Async product loading with manual state management
+async function loadProducts(filters) {
+  shopTree.$.products.loading.set(true);
+  try {
+    const products = await api.getProducts(filters);
+    shopTree.$.products.items.set(products);
+    shopTree.$.products.loading.set(false);
+  } catch (error) {
+    shopTree.$.products.loading.set(false);
+    shopTree.$.products.error.set(error instanceof Error ? error.message : 'Unknown error');
+  }
+}
 
 // Batch cart operations for performance
 const addToCart = (product: Product, quantity: number) => {
@@ -930,10 +946,18 @@ const appTree = signalTree({
 const todos = appTree.entities<Todo>('todos');
 todos.add({ id: '1', text: 'Learn SignalTree', done: false });
 
-// Async actions (via async enhancer)
-const loadUser = appTree.asyncAction(async (id: string) => {
-  return await api.getUser(id);
-});
+// Async actions (manual async pattern)
+async function loadUser(id: string) {
+  appTree.$.loading.set(true);
+  try {
+    const user = await api.getUser(id);
+    appTree.$.user.set(user);
+  } catch (error) {
+    appTree.$.error.set(error instanceof Error ? error.message : 'Unknown error');
+  } finally {
+    appTree.$.loading.set(false);
+  }
+}
 
 // Simple reactive effects (always included)
 appTree.effect((state) => {
@@ -1207,9 +1231,14 @@ describe('UserStore', () => {
     const tree = testTree(signalTree({ user: null, loading: false }));
 
     // Test async actions
-    const loginAction = tree.asyncAction(async (credentials) => {
-      return await api.login(credentials);
-    });
+    const loginAction = async (credentials) => {
+      tree.$.loading.set(true);
+      try {
+        return await api.login(credentials);
+      } finally {
+        tree.$.loading.set(false);
+      }
+    };
 
     await tree.testAsync(loginAction, { email: 'test@test.com', password: 'pass' });
 
@@ -1271,7 +1300,17 @@ loadUsers$ = createEffect(() =>
 );
 
 // After
-loadUsers = tree.asyncAction(() => api.getUsers(), { onSuccess: (users) => ({ users }) });
+loadUsers = async () => {
+  tree.$.loading.set(true);
+  try {
+    const users = await api.getUsers();
+    tree.$.users.set(users);
+  } catch (error) {
+    tree.$.error.set(error instanceof Error ? error.message : 'Unknown error');
+  } finally {
+    tree.$.loading.set(false);
+  }
+};
 ```
 
 ### From Native Signals

@@ -39,7 +39,6 @@ const DEV_MESSAGES = {
   MEMOIZE_NOT_ENABLED: 'memoize disabled',
   MIDDLEWARE_NOT_AVAILABLE: 'middleware missing',
   ENTITY_HELPERS_NOT_AVAILABLE: 'entity helpers missing',
-  ASYNC_ACTIONS_NOT_AVAILABLE: 'async actions missing',
   TIME_TRAVEL_NOT_AVAILABLE: 'time travel missing',
   OPTIMIZE_NOT_AVAILABLE: 'optimize missing',
   UPDATE_OPTIMIZED_NOT_AVAILABLE: 'update optimized missing',

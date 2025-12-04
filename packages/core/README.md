@@ -594,11 +594,18 @@ const tree = signalTree({
   withTimeTravel() // Undo/redo support
 );
 
-// Advanced async operations
-const fetchUser = tree.asyncAction(async (id: string) => api.getUser(id), {
-  loadingKey: 'loading',
-  onSuccess: (user) => ({ user }),
-});
+// For async operations, use manual async or middleware helpers
+async function fetchUser(id: string) {
+  tree.$.loading.set(true);
+  try {
+    const user = await api.getUser(id);
+    tree.$.user.set(user);
+  } catch (error) {
+    tree.$.loading.set(error.message);
+  } finally {
+    tree.$.loading.set(false);
+  }
+}
 
 // Automatic state persistence
 tree.$.preferences.theme('dark'); // Auto-saved
@@ -859,12 +866,18 @@ users.add(newUser);
 users.selectBy((u) => u.active);
 users.updateMany([{ id: '1', changes: { status: 'active' } }]);
 
-// Powerful async actions
-const fetchUsers = tree.asyncAction(async () => api.getUsers(), {
-  loadingKey: 'ui.loading',
-  errorKey: 'ui.error',
-  onSuccess: (users) => ({ users }),
-});
+// For async operations, use manual async or middleware helpers
+async function fetchUsers() {
+  tree.$.ui.loading.set(true);
+  try {
+    const users = await api.getUsers();
+    tree.$.users.set(users);
+  } catch (error) {
+    tree.$.ui.error.set(error.message);
+  } finally {
+    tree.$.ui.loading.set(false);
+  }
+}
 ```
 
 ### Full-Featured Development Composition
@@ -901,7 +914,9 @@ const tree = signalTree({
 
 // Rich feature set available
 const users = tree.entities<User>('app.data.users');
-const fetchUser = tree.asyncAction(api.getUser);
+async function fetchUser(id: string) {
+  return await api.getUser(id);
+}
 tree.undo(); // Time travel
 tree.save(); // Persistence
 ```
@@ -1272,7 +1287,7 @@ tree.destroy(); // Cleanup resources
 
 // Extended features (built into @signaltree/core)
 tree.entities<T>(key); // Entity helpers (use withEntities enhancer)
-tree.asyncAction(fn, config?); // Async operations (use createAsyncOperation helper)
+// For async operations, use manual async or middleware helpers like createAsyncOperation or trackAsync
 ```
 
 ## Extending with enhancers
@@ -1355,10 +1370,18 @@ async loadUsers() {
   }
 }
 
-// Or use middleware helpers for async actions (createAsyncOperation / trackAsync)
-loadUsers = tree.asyncAction(() => api.getUsers(), {
-  onSuccess: (users) => ({ users }),
-});
+// Or use manual async patterns
+loadUsers = async () => {
+  tree.$.loading.set(true);
+  try {
+    const users = await api.getUsers();
+    tree.$.users.set(users);
+  } catch (error) {
+    tree.$.error.set(error instanceof Error ? error.message : 'Unknown error');
+  } finally {
+    tree.$.loading.set(false);
+  }
+};
 ```
 
 ## Examples

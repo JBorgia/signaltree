@@ -379,12 +379,6 @@ export type SignalTree<T> = NodeAccessor<T> & {
     entityKey?: keyof T
   ): EntityHelpers<E>;
 
-  /** Async actions */
-  asyncAction<TInput, TResult>(
-    operation: (input: TInput) => Promise<TResult>,
-    config?: AsyncActionConfig<T, TResult>
-  ): AsyncAction<TInput, TResult>;
-
   /** Time travel */
   undo(): void;
   redo(): void;
@@ -478,20 +472,6 @@ export interface EntityHelpers<E extends { id: string | number }> {
   selectAll(): Signal<E[]>;
   selectTotal(): Signal<number>;
   clear(): void;
-}
-
-export interface AsyncActionConfig<T, TResult> {
-  onStart?: (state: T) => Partial<T>;
-  onSuccess?: (result: TResult, state: T) => Partial<T>;
-  onError?: (error: Error, state: T) => Partial<T>;
-  onComplete?: (state: T) => Partial<T>;
-}
-
-export interface AsyncAction<TInput, TResult> {
-  execute(input: TInput): Promise<TResult>;
-  pending: Signal<boolean>;
-  error: Signal<Error | null>;
-  result: Signal<TResult | null>;
 }
 
 export interface TimeTravelEntry<T> {

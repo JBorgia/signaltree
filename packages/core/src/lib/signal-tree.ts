@@ -1,4 +1,13 @@
-import { computed, DestroyRef, effect, inject, isSignal, Signal, signal, WritableSignal } from '@angular/core';
+import {
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  isSignal,
+  Signal,
+  signal,
+  WritableSignal,
+} from '@angular/core';
 
 import { resolveEnhancerOrder } from '../enhancers';
 import { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './constants';
@@ -18,8 +27,6 @@ import type {
   Middleware,
   PerformanceMetrics,
   EntityHelpers,
-  AsyncActionConfig,
-  AsyncAction,
   TimeTravelEntry,
   EnhancerWithMeta,
   ChainResult,
@@ -728,19 +735,6 @@ function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
       console.warn(SIGNAL_TREE_MESSAGES.ENTITY_HELPERS_NOT_AVAILABLE);
     }
     return {} as EntityHelpers<E>;
-  };
-
-  // Async action stub
-  tree.asyncAction = <TInput, TResult>(
-    operation: (input: TInput) => Promise<TResult>,
-    asyncConfig: AsyncActionConfig<T, TResult> = {}
-  ): AsyncAction<TInput, TResult> => {
-    if (config.debugMode) {
-      console.warn(SIGNAL_TREE_MESSAGES.ASYNC_ACTIONS_NOT_AVAILABLE);
-    }
-    void operation;
-    void asyncConfig;
-    return {} as AsyncAction<TInput, TResult>;
   };
 
   // Time travel stubs

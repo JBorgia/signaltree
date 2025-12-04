@@ -46,8 +46,6 @@ export type {
   Middleware,
   PerformanceMetrics,
   EntityHelpers,
-  AsyncActionConfig,
-  AsyncAction,
   TimeTravelEntry,
 } from './lib/types';
 
