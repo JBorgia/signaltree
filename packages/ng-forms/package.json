@@ -21,8 +21,8 @@
     "rxjs": "^7.0.0"
   },
   "devDependencies": {
-    "@signaltree/core": "^4.2.0",
-    "@signaltree/shared": "^4.2.0",
+    "@signaltree/core": "workspace:*",
+    "@signaltree/shared": "workspace:*",
     "jest-preset-angular": "^14.0.0"
   },
   "publishConfig": {

@@ -72,7 +72,7 @@
     "tslib": "^2.0.0"
   },
   "devDependencies": {
-    "@signaltree/core": "^4.2.0"
+    "@signaltree/core": "workspace:*"
   },
   "publishConfig": {
     "access": "public"
