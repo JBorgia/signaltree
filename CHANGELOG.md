@@ -1,3 +1,25 @@
+# Changelog
+
+## Unreleased
+
+### 🚀 Features
+
+- **core:** add support for nested entity paths with dot notation
+  - Entities can now be accessed using paths like `tree.entities<User>('app.data.users')`
+  - Added `DeepPath<T>` type to enumerate all valid nested array paths
+  - Added `DeepAccess<T, Path>` type for type-safe path resolution
+  - Backward compatible - top-level keys work exactly as before
+  - Performance: ~100-500ns overhead on initialization, memoized thereafter
+  - Enables better state organization for domain-driven architectures
+
+### 🔥 Refactoring
+
+- **core:** remove non-functional asyncAction stub and update documentation
+  - Removed `tree.asyncAction()` method (was returning empty object)
+  - Removed `AsyncActionConfig` and `AsyncAction` type interfaces
+  - Updated all documentation to use manual async patterns with `tree.$.loading.set()`
+  - Better alternatives: manual async, `createAsyncOperation()`, or `trackAsync()` helpers
+
 ## 4.1.7 (2025-12-04)
 
 ### 🩹 Fixes
@@ -152,7 +174,7 @@
 - apply type declaration fix to all Rollup-built packages + documentation ([d39f81b](https://github.com/JBorgia/signaltree/commit/d39f81b))
 - **build:** disable declaration generation to prevent stray .d.ts files ([2b469c6](https://github.com/JBorgia/signaltree/commit/2b469c6))
 - **build:** add post-build cleanup for stray .d.ts files ([5f0596b](https://github.com/JBorgia/signaltree/commit/5f0596b))
-- **core:** exclude stray dist/*.d.ts files that conflicted with type resolution ([9e1286e](https://github.com/JBorgia/signaltree/commit/9e1286e))
+- **core:** exclude stray dist/\*.d.ts files that conflicted with type resolution ([9e1286e](https://github.com/JBorgia/signaltree/commit/9e1286e))
 - **demo:** update home page with correct package installation instructions ([a36477c](https://github.com/JBorgia/signaltree/commit/a36477c))
 - **demo:** fix lint errors in ng-forms demo ([948ba76](https://github.com/JBorgia/signaltree/commit/948ba76))
 - **enterprise:** remove duplicate WeakRef declaration ([d162bdf](https://github.com/JBorgia/signaltree/commit/d162bdf))
@@ -189,7 +211,7 @@
 ### 🩹 Fixes
 
 - apply type declaration fix to all Rollup-built packages + documentation ([d39f81b](https://github.com/JBorgia/signaltree/commit/d39f81b))
-- **core:** exclude stray dist/*.d.ts files that conflicted with type resolution ([9e1286e](https://github.com/JBorgia/signaltree/commit/9e1286e))
+- **core:** exclude stray dist/\*.d.ts files that conflicted with type resolution ([9e1286e](https://github.com/JBorgia/signaltree/commit/9e1286e))
 
 ### ❤️ Thank You
 
