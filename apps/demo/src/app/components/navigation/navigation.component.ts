@@ -12,6 +12,13 @@ export interface DemoExample {
   category: 'getting-started' | 'benchmarks' | 'performance' | 'features';
 }
 
+export interface ExternalLink {
+  label: string;
+  url: string;
+  icon: string;
+  title: string;
+}
+
 @Component({
   selector: 'app-navigation',
   standalone: true,
@@ -160,6 +167,21 @@ export class NavigationComponent {
     'benchmarks',
     'performance',
     'features',
+  ];
+
+  externalLinks: ExternalLink[] = [
+    {
+      label: 'GitHub',
+      url: 'https://github.com/JBorgia/signaltree',
+      icon: '🔗',
+      title: 'View source code on GitHub',
+    },
+    {
+      label: 'npm',
+      url: 'https://www.npmjs.com/org/signaltree',
+      icon: '📦',
+      title: 'View packages on npm',
+    },
   ];
 
   getExamplesByCategory(category: DemoExample['category']): DemoExample[] {
