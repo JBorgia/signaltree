@@ -1,5 +1,4 @@
 import { Signal, WritableSignal } from '@angular/core';
-import { SecurityPresets } from '@signaltree/core';
 
 import type { SecurityValidatorConfig } from './security/security-validator';
 
