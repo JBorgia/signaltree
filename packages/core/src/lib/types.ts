@@ -378,9 +378,9 @@ export type SignalTree<T> = NodeAccessor<T> & {
   addTap(middleware: Middleware<T>): void;
   removeTap(id: string): void;
 
-  /** Entity helpers - supports both top-level keys and nested dot-notation paths */
+  /** Entity helpers - supports both top-level keys (type-checked) and nested dot-notation paths (runtime-validated) */
   entities<E extends { id: string | number }>(
-    entityKey?: keyof T | DeepPath<T>
+    entityKey?: keyof T
   ): EntityHelpers<E>;
 
   /** Time travel */

@@ -229,7 +229,7 @@ export function withEntities(config: EntityConfig = {}) {
 
   return function enhanceWithEntities<T>(tree: SignalTree<T>): SignalTree<T> & {
     entities<E extends { id: string | number }>(
-      entityKey: string | keyof T
+      entityKey: keyof T
     ): EntityHelpers<E>;
   } {
     if (!enabled) {
