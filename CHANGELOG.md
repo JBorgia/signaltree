@@ -1,3 +1,14 @@
+## 4.1.7 (2025-12-04)
+
+### 🩹 Fixes
+
+- **core,enterprise:** add types subpath condition to exports field ([57d101f](https://github.com/JBorgia/signaltree/commit/57d101f))
+- **guardrails:** update peerDependency to @signaltree/core 4.1.6 ([4e05a85](https://github.com/JBorgia/signaltree/commit/4e05a85))
+
+### ❤️ Thank You
+
+- Borgia
+
 ## 4.1.6 (2025-12-04)
 
 ### 🚀 Features
