@@ -2,7 +2,11 @@ import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
-import { SIGNALTREE_CORE_VERSION, SIGNALTREE_ENTERPRISE_VERSION, SIGNALTREE_VERSION_SUMMARY } from '../../version';
+import {
+  SIGNALTREE_CORE_VERSION,
+  SIGNALTREE_ENTERPRISE_VERSION,
+  SIGNALTREE_VERSION_SUMMARY,
+} from '../../version';
 
 export interface DemoExample {
   id: string;
