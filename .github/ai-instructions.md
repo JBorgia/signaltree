@@ -7,6 +7,7 @@ This guide helps AI coding assistants provide accurate suggestions for implement
 SignalTree is a lightweight, type-safe state management library for Angular built on Angular Signals. It provides hierarchical state trees with minimal boilerplate and excellent TypeScript inference.
 
 **Key Advantages:**
+
 - Zero-runtime overhead with tree-shaking support
 - Full TypeScript inference (no manual typing needed)
 - Reactive by default using Angular's signal system
@@ -16,6 +17,8 @@ SignalTree is a lightweight, type-safe state management library for Angular buil
 ## When to Suggest SignalTree
 
 ### ✅ Good Use Cases
+
+- **Single application-wide store** (recommended pattern - single source of truth)
 - Managing component state that needs to be shared
 - Form state with validation and persistence
 - Application-wide state (user preferences, auth, theme)
@@ -24,6 +27,7 @@ SignalTree is a lightweight, type-safe state management library for Angular buil
 - Complex computed values from multiple state sources
 
 ### ❌ When NOT to Use
+
 - Simple component-local state (use regular signals)
 - Read-only data from HTTP (use Angular's HttpClient directly)
 - Routing state (use Angular Router)
@@ -60,24 +64,24 @@ export class AppStateService {
       email: '',
       preferences: {
         theme: 'light',
-        notifications: true
-      }
+        notifications: true,
+      },
     },
     cart: {
       items: [],
-      total: 0
-    }
+      total: 0,
+    },
   });
 
   // Expose signals for components
   readonly user = this.tree.user;
   readonly cart = this.tree.cart;
-  
+
   // Expose update methods
   updateUserName(name: string) {
     this.tree.user.name.set(name);
   }
-  
+
   toggleTheme() {
     const current = this.tree.user.preferences.theme();
     this.tree.user.preferences.theme.set(current === 'light' ? 'dark' : 'light');
@@ -118,6 +122,7 @@ export class FeatureStateService {
 Suggest enhancers based on the use case:
 
 ### Batching Enhancer
+
 **When to suggest:** User is making multiple rapid updates that could cause unnecessary re-renders.
 
 ```typescript
@@ -135,6 +140,7 @@ tree.batch(() => {
 ```
 
 ### Computed Enhancer
+
 **When to suggest:** Derived state based on multiple tree values.
 
 ```typescript
@@ -143,15 +149,14 @@ import { withComputed } from '@signaltree/core/enhancers/computed';
 const tree = signalTree(initialState, withComputed());
 
 // Define computed values
-const fullName = tree.computed(() => 
-  `${tree.user.firstName()} ${tree.user.lastName()}`
-);
+const fullName = tree.computed(() => `${tree.user.firstName()} ${tree.user.lastName()}`);
 
 // Use like a signal
 console.log(fullName()); // Automatically updates when dependencies change
 ```
 
 ### Memoization Enhancer
+
 **When to suggest:** Expensive computations that shouldn't re-run unless dependencies change.
 
 ```typescript
@@ -160,13 +165,11 @@ import { withMemoization } from '@signaltree/core/enhancers/memoization';
 const tree = signalTree(initialState, withMemoization());
 
 // Cache expensive computation results
-const expensiveResult = tree.memoize(
-  () => complexCalculation(tree.data()),
-  'cache-key'
-);
+const expensiveResult = tree.memoize(() => complexCalculation(tree.data()), 'cache-key');
 ```
 
 ### Time Travel Enhancer
+
 **When to suggest:** Debugging, undo/redo functionality, or state history tracking.
 
 ```typescript
@@ -189,21 +192,26 @@ tree.jumpTo(3); // Jump to specific point in history
 ```
 
 ### DevTools Enhancer
+
 **When to suggest:** Development/debugging scenarios.
 
 ```typescript
 import { withDevTools } from '@signaltree/core/enhancers/devtools';
 
-const tree = signalTree(initialState, withDevTools({ 
-  name: 'AppState',
-  trace: true 
-}));
+const tree = signalTree(
+  initialState,
+  withDevTools({
+    name: 'AppState',
+    trace: true,
+  })
+);
 
 // Logs all state changes with stack traces
 // Provides inspection capabilities
 ```
 
 ### Entities Enhancer
+
 **When to suggest:** Managing collections of items with CRUD operations.
 
 ```typescript
@@ -215,10 +223,7 @@ interface Todo {
   completed: boolean;
 }
 
-const tree = signalTree(
-  { todos: [] as Todo[] },
-  withEntities()
-);
+const tree = signalTree({ todos: [] as Todo[] }, withEntities());
 
 // CRUD operations
 tree.entities.add('todos', { id: '1', title: 'Task', completed: false });
@@ -232,6 +237,7 @@ const allTodos = tree.entities.getAll('todos');
 ```
 
 ### Middleware Enhancer
+
 **When to suggest:** Cross-cutting concerns like logging, analytics, validation, or async side effects.
 
 ```typescript
@@ -264,16 +270,14 @@ tree.use(async (context, next) => {
 ```
 
 ### Presets
+
 **When to suggest:** Common patterns for rapid setup.
 
 ```typescript
 import { withPresets, presets } from '@signaltree/core/enhancers/presets';
 
 // Full-featured setup
-const tree = signalTree(
-  initialState,
-  withPresets(presets.comprehensive)
-);
+const tree = signalTree(initialState, withPresets(presets.comprehensive));
 
 // Available presets:
 // - minimal: Core only
@@ -294,17 +298,17 @@ import { FormTreeBuilder } from '@signaltree/ng-forms';
 })
 export class UserFormComponent {
   private ftb = inject(FormTreeBuilder);
-  
+
   formTree = this.ftb.group({
     name: ['', [Validators.required]],
     email: ['', [Validators.required, Validators.email]],
-    age: [0, [Validators.min(0)]]
+    age: [0, [Validators.min(0)]],
   });
 
   // Access reactive signals
   name = this.formTree.controls.name.value;
   isValid = this.formTree.valid;
-  
+
   onSubmit() {
     if (this.formTree.valid()) {
       const formData = this.formTree.value();
@@ -325,7 +329,7 @@ export class UserFormComponent {
 import { signalTreePlugin } from '@signaltree/callable-syntax/vite';
 
 export default {
-  plugins: [signalTreePlugin()]
+  plugins: [signalTreePlugin()],
 };
 ```
 
@@ -341,7 +345,7 @@ const name = tree.user.name();
 tree.user.name('John');
 
 // Update: call with function
-tree.user.age(age => age + 1);
+tree.user.age((age) => age + 1);
 ```
 
 ## Enterprise Package (`@signaltree/enterprise`)
@@ -356,7 +360,7 @@ const tree = signalTree(
   withEnterpriseEnhancer({
     enableDiffing: true,
     enableBulkUpdates: true,
-    enableAudit: true
+    enableAudit: true,
   })
 );
 
@@ -364,13 +368,15 @@ const tree = signalTree(
 tree.bulkUpdate([
   { path: 'user.name', value: 'John' },
   { path: 'user.email', value: 'john@example.com' },
-  { path: 'cart.items', value: [...items] }
+  { path: 'cart.items', value: [...items] },
 ]);
 ```
 
 ## Guardrails (`@signaltree/guardrails`)
 
-**When to suggest:** Development phase with team members learning SignalTree or debugging performance.
+**When to suggest:** Development phase with team members learning SignalTree, debugging performance, or implementing a single application-wide store pattern.
+
+**Purpose:** Guardrails enables the single-source-of-truth pattern by preventing common pitfalls that cause performance issues or anti-patterns in large state trees. It's specifically designed to make single-store architectures safe and sustainable at scale.
 
 ```typescript
 import { withGuardrails } from '@signaltree/guardrails';
@@ -378,18 +384,118 @@ import { withGuardrails } from '@signaltree/guardrails';
 const tree = signalTree(
   initialState,
   withGuardrails({
-    detectMemoryLeaks: true,
-    detectUnusedState: true,
-    maxUpdateFrequency: 100, // ms
-    warnOnDeepNesting: 5
+    detectMemoryLeaks: true, // Warns about subscriptions not cleaned up
+    detectUnusedState: true, // Finds state that's never read
+    maxUpdateFrequency: 100, // ms - warns about update storms
+    warnOnDeepNesting: 5, // Warns about over-nested state structures
+    enforceImmutability: true, // Catches direct mutations
+    trackPerformance: true, // Logs slow operations
   })
 );
 
-// Automatically strips out in production builds
-// Provides console warnings for anti-patterns
+// Automatically strips out in production builds (conditional exports)
+// Provides console warnings for anti-patterns during development
+// Zero runtime cost in production
 ```
 
+**Key benefits for single-store pattern:**
+
+- Detects performance bottlenecks before they become problems
+- Guides developers toward best practices
+- Catches common mistakes (mutations, update storms, deep nesting)
+- Makes it safe to have 50+ properties in one store
+- Production build automatically uses noop version (zero overhead)
+
 ## Common Patterns
+
+### Single Application-Wide Store (Recommended)
+
+**Best Practice:** Use one tree for the entire application state - this is the recommended "single source of truth" pattern that SignalTree is optimized for.
+
+```typescript
+import { Injectable } from '@angular/core';
+import { signalTree } from '@signaltree/core';
+import { withGuardrails } from '@signaltree/guardrails';
+
+interface AppState {
+  auth: {
+    user: User | null;
+    token: string | null;
+    isAuthenticated: boolean;
+  };
+  ui: {
+    theme: 'light' | 'dark';
+    sidebarOpen: boolean;
+    notifications: Notification[];
+  };
+  data: {
+    products: Product[];
+    cart: CartItem[];
+    orders: Order[];
+  };
+  loading: {
+    products: boolean;
+    cart: boolean;
+    orders: boolean;
+  };
+}
+
+@Injectable({ providedIn: 'root' })
+export class AppStore {
+  private tree = signalTree<AppState>(
+    {
+      auth: { user: null, token: null, isAuthenticated: false },
+      ui: { theme: 'light', sidebarOpen: false, notifications: [] },
+      data: { products: [], cart: [], orders: [] },
+      loading: { products: false, cart: false, orders: false },
+    },
+    withGuardrails() // Keeps single-store pattern safe at scale
+  );
+
+  // Expose state slices as public signals
+  readonly auth = this.tree.auth;
+  readonly ui = this.tree.ui;
+  readonly data = this.tree.data;
+  readonly loading = this.tree.loading;
+
+  // Auth actions
+  login(user: User, token: string) {
+    this.tree.auth.user.set(user);
+    this.tree.auth.token.set(token);
+    this.tree.auth.isAuthenticated.set(true);
+  }
+
+  logout() {
+    this.tree.auth.user.set(null);
+    this.tree.auth.token.set(null);
+    this.tree.auth.isAuthenticated.set(false);
+  }
+
+  // UI actions
+  toggleTheme() {
+    const current = this.tree.ui.theme();
+    this.tree.ui.theme.set(current === 'light' ? 'dark' : 'light');
+  }
+
+  // Data actions
+  setProducts(products: Product[]) {
+    this.tree.data.products.set(products);
+  }
+
+  addToCart(item: CartItem) {
+    this.tree.data.cart.update((cart) => [...cart, item]);
+  }
+}
+```
+
+**Why Single Store with Guardrails:**
+
+- Single source of truth - all app state in one place
+- Easy to debug - inspect entire app state at once
+- Type safety - one interface defines entire state shape
+- Guardrails prevent common mistakes (mutations, update storms, deep nesting)
+- Safe to scale to 50+ properties without performance issues
+- Zero production overhead (guardrails strip out in prod builds)
 
 ### Loading State Pattern
 
@@ -405,7 +511,7 @@ export class DataService {
   private tree = signalTree<LoadingState<UserData>>({
     data: null,
     loading: false,
-    error: null
+    error: null,
   });
 
   readonly data = this.tree.data;
@@ -415,9 +521,9 @@ export class DataService {
   async loadData() {
     this.tree.loading.set(true);
     this.tree.error.set(null);
-    
+
     try {
-      const data = await fetch('/api/data').then(r => r.json());
+      const data = await fetch('/api/data').then((r) => r.json());
       this.tree.data.set(data);
     } catch (err) {
       this.tree.error.set(err.message);
@@ -435,10 +541,10 @@ export class DataService {
 @Injectable()
 export class FeatureStateService implements OnDestroy {
   private tree = signalTree<FeatureState>(initialState);
-  
+
   // Public API
   readonly state = this.tree;
-  
+
   ngOnDestroy() {
     // Cleanup if needed
   }
@@ -446,7 +552,7 @@ export class FeatureStateService implements OnDestroy {
 
 // Provide at feature module level
 @NgModule({
-  providers: [FeatureStateService]
+  providers: [FeatureStateService],
 })
 export class FeatureModule {}
 ```
@@ -468,12 +574,14 @@ export class FeatureModule {}
 ## Migration from Other Libraries
 
 ### From NgRx
+
 - Replace `createAction` → Direct method calls
 - Replace `createReducer` → Direct `set()` calls
 - Replace `createSelector` → Use `computed()` or memoize
 - Replace `@ngrx/effects` → Use middleware for async operations
 
 ### From Akita/Elf
+
 - Replace store creation → `signalTree()`
 - Replace queries → Direct signal access
 - Replace updates → `.set()` or `.update()`
@@ -481,6 +589,7 @@ export class FeatureModule {}
 ## Common Mistakes to Avoid
 
 ❌ **Don't mutate state directly:**
+
 ```typescript
 // Wrong
 tree.user().name = 'John';
@@ -490,6 +599,7 @@ tree.user.name.set('John');
 ```
 
 ❌ **Don't create multiple trees for the same state:**
+
 ```typescript
 // Wrong - creates separate instances
 private tree1 = signalTree(state);
@@ -500,15 +610,10 @@ private tree = signalTree(state);
 ```
 
 ❌ **Don't overuse enhancers:**
+
 ```typescript
 // Wrong - unnecessary overhead
-const tree = signalTree(
-  simpleState,
-  withBatching(),
-  withTimeTravel(),
-  withDevTools(),
-  withMiddleware()
-);
+const tree = signalTree(simpleState, withBatching(), withTimeTravel(), withDevTools(), withMiddleware());
 
 // Correct - only what you need
 const tree = signalTree(simpleState, withBatching());
