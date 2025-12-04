@@ -161,22 +161,29 @@ export type RemoveSignalMethods<T> = T extends infer U ? U : never;
  * "a" | "a.b" | "a.b.c"
  *
  * Used to support nested entity access like tree.entities<E>('app.data.users')
+ * Depth is limited to 5 levels to prevent TypeScript "excessively deep" errors
  */
-export type DeepPath<T, Prefix extends string = ''> = {
-  [K in keyof T]: K extends string
-    ? T[K] extends readonly unknown[]
-      ? `${Prefix}${K}` // Array found - include this path
-      : T[K] extends object
-      ? T[K] extends Signal<unknown>
-        ? never // Skip Angular signals
-        : T[K] extends BuiltInObject
-        ? never // Skip built-in objects
-        : T[K] extends (...args: unknown[]) => unknown
-        ? never // Skip functions
-        : `${Prefix}${K}` | DeepPath<T[K], `${Prefix}${K}.`> // Nested object - recurse
-      : never // Skip primitives
-    : never;
-}[keyof T];
+export type DeepPath<
+  T,
+  Prefix extends string = '',
+  Depth extends readonly number[] = []
+> = Depth['length'] extends 5
+  ? never
+  : {
+      [K in keyof T]: K extends string
+        ? T[K] extends readonly unknown[]
+          ? `${Prefix}${K}` // Array found - include this path
+          : T[K] extends object
+          ? T[K] extends Signal<unknown>
+            ? never // Skip Angular signals
+            : T[K] extends BuiltInObject
+            ? never // Skip built-in objects
+            : T[K] extends (...args: unknown[]) => unknown
+            ? never // Skip functions
+            : `${Prefix}${K}` | DeepPath<T[K], `${Prefix}${K}.`, [...Depth, 1]> // Nested object - recurse
+          : never // Skip primitives
+        : never;
+    }[keyof T];
 
 /**
  * Safely access a value at a deep path in a type
