@@ -111,6 +111,46 @@ $stats-accent: #10b981; // Green for stats section
     }
   }
 
+  .new-feature-callout {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+
+    h3 {
+      margin: 0 0 0.75rem 0;
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    p {
+      margin: 0 0 1rem 0;
+      line-height: 1.6;
+      opacity: 0.95;
+    }
+
+    pre {
+      background: rgba(0, 0, 0, 0.2);
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 0.75rem 0;
+
+      code {
+        font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+        font-size: 0.875rem;
+        line-height: 1.6;
+        color: #e0e7ff;
+      }
+    }
+
+    strong {
+      font-weight: 700;
+    }
+  }
+
   .how-to-use {
     background: white;
     padding: 1.25rem;

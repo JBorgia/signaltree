@@ -303,6 +303,7 @@ Checks for stray `dist/**/*.d.ts` files that would break TypeScript resolution.
 **Why it exists**: Nx's typeDefinitions plugin generates incorrect re-export files. Our `package.json` files array excludes them, but this script ensures no regression occurs.
 
 **What it catches**:
+
 - Incorrect package.json files configuration
 - Nx plugin behavior changes after upgrades
 - Build pipeline modifications that break type exports

@@ -12,6 +12,27 @@
       and pagination.
     </p>
 
+    <!-- NEW in v4.2.0: Nested Entity Paths -->
+    <div class="new-feature-callout">
+      <h3>🎉 NEW in v4.2.0: Nested Entity Paths!</h3>
+      <p>
+        Access deeply nested entities with dot notation for better domain
+        organization:
+      </p>
+      <pre><code>// Old way - flat structure only
+const users = tree.entities&lt;User&gt;('users');
+
+// New way - nested paths! ✨
+const users = tree.entities&lt;User&gt;('app.data.users');
+const products = tree.entities&lt;Product&gt;('app.data.products');
+const logs = tree.entities&lt;AuditLog&gt;('admin.data.logs');</code></pre>
+      <p>
+        <strong>Benefits:</strong> Better code organization, domain-driven
+        design, type-safe paths (up to 5 levels deep), and zero runtime overhead
+        after initialization.
+      </p>
+    </div>
+
     <div class="how-to-use">
       <h3>🎯 How to Use This Demo:</h3>
       <ol class="instruction-list">
@@ -313,126 +334,119 @@
 
       <!-- Bulk Actions -->
       @if (selectedPostIds.size > 0) {
-        <div class="bulk-actions">
-          <span class="bulk-count"
-            >✓ {{ selectedPostIds.size }} post{{
-              selectedPostIds.size === 1 ? '' : 's'
-            }}
-            selected</span
+      <div class="bulk-actions">
+        <span class="bulk-count"
+          >✓ {{ selectedPostIds.size }} post{{
+            selectedPostIds.size === 1 ? '' : 's'
+          }}
+          selected</span
+        >
+        <div class="bulk-buttons">
+          <button
+            (click)="selectAllPosts()"
+            class="btn-primary btn-sm"
+            title="Select all visible posts"
           >
-          <div class="bulk-buttons">
-            <button
-              (click)="selectAllPosts()"
-              class="btn-primary btn-sm"
-              title="Select all visible posts"
-            >
-              ☑️ Select All
-            </button>
-            <button
-              (click)="exportSelectedPosts()"
-              class="btn-success btn-sm"
-              title="Export selected posts as JSON"
-            >
-              💾 Export JSON
-            </button>
-            <button
-              (click)="confirmDeleteSelected()"
-              class="btn-danger btn-sm"
-              title="Delete all selected posts"
-            >
-              🗑️ Delete Selected
-            </button>
-            <button
-              (click)="deselectAllPosts()"
-              class="btn-secondary btn-sm"
-              title="Clear selection"
-            >
-              ✕ Clear Selection
-            </button>
-          </div>
+            ☑️ Select All
+          </button>
+          <button
+            (click)="exportSelectedPosts()"
+            class="btn-success btn-sm"
+            title="Export selected posts as JSON"
+          >
+            💾 Export JSON
+          </button>
+          <button
+            (click)="confirmDeleteSelected()"
+            class="btn-danger btn-sm"
+            title="Delete all selected posts"
+          >
+            🗑️ Delete Selected
+          </button>
+          <button
+            (click)="deselectAllPosts()"
+            class="btn-secondary btn-sm"
+            title="Clear selection"
+          >
+            ✕ Clear Selection
+          </button>
         </div>
+      </div>
       }
 
       <div class="posts-list">
         @for (post of paginatedPosts(); track trackPost($index, post)) {
-          <div
-            class="post-card"
-            [class.selected]="selectedPostIds.has(post.id)"
-          >
-            <!-- Edit Mode -->
-            @if (editingPostId === post.id) {
-              <div class="edit-mode">
-                <input
-                  type="text"
-                  [(ngModel)]="editingPostTitle"
-                  class="input-field"
-                  placeholder="Title"
-                />
-                <textarea
-                  [(ngModel)]="editingPostContent"
-                  class="textarea-field"
-                  rows="3"
-                  placeholder="Body"
-                ></textarea>
-                <div class="button-group">
-                  <button (click)="savePost()" class="btn-success btn-sm">
-                    ✓ Save
-                  </button>
-                  <button (click)="cancelEditPost()" class="btn-secondary btn-sm">
-                    ✗ Cancel
-                  </button>
-                </div>
-              </div>
-            }
-
-            <!-- View Mode -->
-            @if (editingPostId !== post.id) {
-              <div class="view-mode">
-                <div class="post-header">
-                  <input
-                    type="checkbox"
-                    [checked]="selectedPostIds.has(post.id)"
-                    (change)="togglePostSelection(post.id)"
-                    class="checkbox"
-                  />
-                  <h3 class="post-title">
-                    {{ post.title }}
-                  </h3>
-                </div>
-                <p class="post-body">{{ post.content }}</p>
-                <div class="post-meta">
-                  <span>{{ getPostAuthor(post.authorId)?.name || 'Unknown' }}</span>
-                  <div class="post-actions">
-                    <button
-                      (click)="likePost(post.id)"
-                      class="btn-like"
-                      title="Like this post"
-                    >
-                      ❤️ {{ post.likes }}
-                    </button>
-                    <button
-                      (click)="startEditingPost(post)"
-                      class="btn-info btn-sm"
-                      title="Edit post"
-                    >
-                      ✏️ Edit
-                    </button>
-                  </div>
-                </div>
-                <div class="tag-list">
-                  @for (tag of post.tags; track tag) {
-                    <span class="tag">{{ tag }}</span>
-                  }
-                </div>
-              </div>
-            }
+        <div class="post-card" [class.selected]="selectedPostIds.has(post.id)">
+          <!-- Edit Mode -->
+          @if (editingPostId === post.id) {
+          <div class="edit-mode">
+            <input
+              type="text"
+              [(ngModel)]="editingPostTitle"
+              class="input-field"
+              placeholder="Title"
+            />
+            <textarea
+              [(ngModel)]="editingPostContent"
+              class="textarea-field"
+              rows="3"
+              placeholder="Body"
+            ></textarea>
+            <div class="button-group">
+              <button (click)="savePost()" class="btn-success btn-sm">
+                ✓ Save
+              </button>
+              <button (click)="cancelEditPost()" class="btn-secondary btn-sm">
+                ✗ Cancel
+              </button>
+            </div>
           </div>
-        }
+          }
 
-        @if (paginatedPosts().length === 0) {
-          <div class="empty-state">
-            No posts found
+          <!-- View Mode -->
+          @if (editingPostId !== post.id) {
+          <div class="view-mode">
+            <div class="post-header">
+              <input
+                type="checkbox"
+                [checked]="selectedPostIds.has(post.id)"
+                (change)="togglePostSelection(post.id)"
+                class="checkbox"
+              />
+              <h3 class="post-title">
+                {{ post.title }}
+              </h3>
+            </div>
+            <p class="post-body">{{ post.content }}</p>
+            <div class="post-meta">
+              <span>{{ getPostAuthor(post.authorId)?.name || 'Unknown' }}</span>
+              <div class="post-actions">
+                <button
+                  (click)="likePost(post.id)"
+                  class="btn-like"
+                  title="Like this post"
+                >
+                  ❤️ {{ post.likes }}
+                </button>
+                <button
+                  (click)="startEditingPost(post)"
+                  class="btn-info btn-sm"
+                  title="Edit post"
+                >
+                  ✏️ Edit
+                </button>
+              </div>
+            </div>
+            <div class="tag-list">
+              @for (tag of post.tags; track tag) {
+              <span class="tag">{{ tag }}</span>
+              }
+            </div>
           </div>
+          }
+        </div>
+        } @if (paginatedPosts().length === 0) {
+        <div class="empty-state">No posts found</div>
         }
       </div>
 
@@ -467,9 +481,7 @@
           ➕ Add Random Post
         </button>
         @if (!selectedUser()) {
-          <div class="help-text-small">
-            Select a user first to add posts
-          </div>
+        <div class="help-text-small">Select a user first to add posts</div>
         }
       </div>
     </div>
@@ -498,44 +510,44 @@
       <div class="stats-section">
         <h3>📈 Selected User Statistics</h3>
         @if (selectedUser()) {
-          <div class="stats-content">
-            <div class="stats-grid">
-              <div class="stat-card">
-                <div class="stat-value stat-blue">
-                  {{ getUserPostsCount() }}
-                </div>
-                <div class="stat-label">Posts</div>
+        <div class="stats-content">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-value stat-blue">
+                {{ getUserPostsCount() }}
               </div>
-              <div class="stat-card">
-                <div class="stat-value stat-pink">
-                  {{ userTotalLikes() }}
-                </div>
-                <div class="stat-label">Total Likes</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-value stat-purple">
-                  {{ getUserAvgPostLength() }}
-                </div>
-                <div class="stat-label">Avg Length</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-status" [class]="getUserActivityClass()">
-                  {{ getUserActivityStatus() }}
-                </div>
-                <div class="stat-label">Status</div>
-              </div>
+              <div class="stat-label">Posts</div>
             </div>
-
-            <!-- Export Button -->
-            <button
-              (click)="exportUserData()"
-              class="btn-primary btn-sm full-width export-btn"
-            >
-              💾 Export User Data (JSON)
-            </button>
+            <div class="stat-card">
+              <div class="stat-value stat-pink">
+                {{ userTotalLikes() }}
+              </div>
+              <div class="stat-label">Total Likes</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value stat-purple">
+                {{ getUserAvgPostLength() }}
+              </div>
+              <div class="stat-label">Avg Length</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-status" [class]="getUserActivityClass()">
+                {{ getUserActivityStatus() }}
+              </div>
+              <div class="stat-label">Status</div>
+            </div>
           </div>
+
+          <!-- Export Button -->
+          <button
+            (click)="exportUserData()"
+            class="btn-primary btn-sm full-width export-btn"
+          >
+            💾 Export User Data (JSON)
+          </button>
+        </div>
         } @else {
-          <div class="empty-state">No user selected</div>
+        <div class="empty-state">No user selected</div>
         }
       </div>
 
