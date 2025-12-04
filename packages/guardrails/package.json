@@ -57,7 +57,7 @@
     "type-check": "tsc --project tsconfig.lib.json --noEmit"
   },
   "peerDependencies": {
-    "@signaltree/core": "4.1.5",
+    "@signaltree/core": "4.1.6",
     "tslib": "^2.0.0"
   },
   "devDependencies": {
