@@ -73,6 +73,14 @@ export class HomeComponent {
       methods: ['memoize', 'clearCache', 'getCacheStats'],
     },
     {
+      title: '📝 Log Filtering',
+      description:
+        'Real-world example: Filter thousands of log entities with memoization',
+      route: '/log-filtering',
+      category: 'Performance',
+      methods: ['memoize', 'entities', 'filter'],
+    },
+    {
       title: '📊 Benchmark History',
       description:
         'View historical benchmark results comparing SignalTree and competitors',
