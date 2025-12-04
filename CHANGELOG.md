@@ -1,3 +1,20 @@
+## 4.1.6 (2025-12-04)
+
+### 🚀 Features
+
+- add automated version injection for demo app ([b209d34](https://github.com/JBorgia/signaltree/commit/b209d34))
+- add GitHub and npm links to navigation menu ([ec366c6](https://github.com/JBorgia/signaltree/commit/ec366c6))
+- **demo:** add automated version constant generator and integrate in navigation ([311d50b](https://github.com/JBorgia/signaltree/commit/311d50b))
+
+### 🩹 Fixes
+
+- **demo:** update displayed SignalTree versions to 4.1.5 ([22d28d6](https://github.com/JBorgia/signaltree/commit/22d28d6))
+- **ng-forms:** add proper type declarations and ESM configuration to package.json ([885769f](https://github.com/JBorgia/signaltree/commit/885769f))
+
+### ❤️ Thank You
+
+- Borgia
+
 ## 4.1.5 (2025-11-30)
 
 ### 🚀 Features
