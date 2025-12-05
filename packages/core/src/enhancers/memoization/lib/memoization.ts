@@ -1,3 +1,4 @@
+import { computed, Signal } from '@angular/core';
 import { deepEqual, LRUCache } from '@signaltree/shared';
 
 import { isNodeAccessor } from '../../../lib/utils';
@@ -570,6 +571,51 @@ export function withMemoization<T>(
 
       // Apply update using callable interface
       applyUpdateResult(result);
+    };
+
+    // Create a separate cache for tree.memoize() results
+    // This is different from the memoizedUpdate cache
+    const memoizeResultCache = createMemoCacheStore<CacheEntry<unknown>>(
+      MAX_CACHE_SIZE,
+      true
+    );
+
+    // Override tree.memoize() to provide actual memoization
+    // The stub implementation just wraps in computed() without caching
+    (tree as any).memoize = <R>(
+      fn: (state: T) => R,
+      cacheKey?: string
+    ): Signal<R> => {
+      return computed(() => {
+        const currentState = originalTreeCall();
+        const key =
+          cacheKey ||
+          generateCacheKey(fn as (...args: unknown[]) => unknown, [
+            currentState,
+          ]);
+
+        // Check cache
+        const cached = memoizeResultCache.get(key) as
+          | CacheEntry<unknown>
+          | undefined;
+        if (cached && equalityFn(cached.deps, [currentState])) {
+          // Cache hit - return cached result
+          return cached.value as R;
+        }
+
+        // Cache miss - compute new result
+        const result = fn(currentState);
+
+        // Cache the result
+        memoizeResultCache.set(key, {
+          value: result,
+          deps: [currentState],
+          timestamp: Date.now(),
+          hitCount: 1,
+        });
+
+        return result;
+      });
     };
 
     // Add cache management methods
