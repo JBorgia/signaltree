@@ -47,6 +47,12 @@
         "generatePackageJson": false
       }
     },
+    "postbuild": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "echo \"No-op postbuild: core bundler already produces publishable output\""
+      }
+    },
     "nx-release-publish": {
       "options": {
         "packageRoot": "dist/{projectRoot}"
