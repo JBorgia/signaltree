@@ -47,10 +47,10 @@ function resolveNestedSignal<T>(
   for (let i = 0; i < segments.length; i++) {
     const segment = segments[i];
 
-    // Dereference signal if needed
-    if (isAnySignal(current)) {
-      current = current();
-    }
+    // For nested objects in SignalTree:
+    // - Intermediate levels are NodeAccessors (callable with nested properties)
+    // - We need to access properties directly, not dereference
+    // - Only the final level should be a WritableSignal for the array
 
     // Navigate to next segment
     current = current[segment];
@@ -63,9 +63,8 @@ function resolveNestedSignal<T>(
     }
   }
 
-  // Dereference final signal if needed
+  // Final value should be a signal (array signal)
   if (isAnySignal(current)) {
-    // We have a signal - validate it later
     return current as WritableSignal<unknown>;
   }
 
@@ -229,7 +228,7 @@ export function withEntities(config: EntityConfig = {}) {
 
   return function enhanceWithEntities<T>(tree: SignalTree<T>): SignalTree<T> & {
     entities<E extends { id: string | number }>(
-      entityKey: keyof T
+      entityKey: keyof T | string
     ): EntityHelpers<E>;
   } {
     if (!enabled) {
@@ -237,7 +236,7 @@ export function withEntities(config: EntityConfig = {}) {
       // Cast is safe here because we're not actually adding the method
       return tree as SignalTree<T> & {
         entities<E extends { id: string | number }>(
-          entityKey: keyof T
+          entityKey: keyof T | string
         ): EntityHelpers<E>;
       };
     }
@@ -246,7 +245,7 @@ export function withEntities(config: EntityConfig = {}) {
     // This approach preserves the generic method signature better than direct property assignment
     const enhancedTree = Object.assign(tree, {
       entities<E extends { id: string | number }>(
-        entityKey: keyof T
+        entityKey: keyof T | string
       ): EntityHelpers<E> {
         return createEntityHelpers<T, E>(tree, entityKey);
       },
