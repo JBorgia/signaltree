@@ -256,6 +256,7 @@ function resolveNestedSignal(tree, path: keyof T) {
 ### Issue 2: Nested Paths - FIXED ✅
 
 **Changes Made**:
+
 1. Updated type signature: `entityKey: keyof T | string` (was `keyof T`)
 2. Fixed `resolveNestedSignal` navigation logic:
    - Removed incorrect signal dereferencing in loop
@@ -263,6 +264,7 @@ function resolveNestedSignal(tree, path: keyof T) {
    - Only validates final value is a signal
 
 **Tests Added**: 5 new tests in `entities-investigation.spec.ts`
+
 - ✅ Nested paths like `'data.forms'` now work
 - ✅ Deeply nested paths like `'app.data.forms'` work
 - ✅ All 273 core tests passing
@@ -272,6 +274,7 @@ function resolveNestedSignal(tree, path: keyof T) {
 ### Issue 1: Optional ID - DOCUMENTED (No Fix)
 
 **Decision**: Document as known limitation for 4.2.0
+
 - Workaround pattern documented (coalesce to 0, or use separate entity type)
 - Design decision deferred to 4.3.0 after user feedback
 - Not blocking release - workaround is acceptable
