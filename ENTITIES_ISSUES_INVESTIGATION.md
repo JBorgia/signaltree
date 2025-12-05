@@ -2,7 +2,7 @@
 
 ## Date: 2024-12-05
 
-## Status: BLOCKING v4.2.0 RELEASE
+## Status: PARTIAL FIX - Issue 2 RESOLVED ✅
 
 ---
 
@@ -10,8 +10,8 @@
 
 User reported two problems with `withEntities()` enhancer:
 
-1. **Optional ID constraint**: Entity type must have `{ id: string | number }`, but common DTO pattern uses optional `id?`
-2. **Nested path failure**: Runtime supports `'data.forms'` but TypeScript rejects it
+1. **Optional ID constraint**: Entity type must have `{ id: string | number }`, but common DTO pattern uses optional `id?` - **OPEN**
+2. **Nested path failure**: Runtime supports `'data.forms'` but TypeScript rejects it - **✅ FIXED**
 
 ---
 
@@ -247,7 +247,34 @@ function resolveNestedSignal(tree, path: keyof T) {
 1. ✅ Optional ID constraint test (currently fails, expected)
 2. ✅ Nested path test (currently fails TypeScript, works runtime)
 3. ⏳ Fix nested path types
-4. ⏳ Verify all entity tests pass with nested paths
+4. ✅ Verify all entity tests pass with nested paths - **DONE** (273 tests passing)
+
+---
+
+## ✅ RESOLUTION SUMMARY
+
+### Issue 2: Nested Paths - FIXED ✅
+
+**Changes Made**:
+1. Updated type signature: `entityKey: keyof T | string` (was `keyof T`)
+2. Fixed `resolveNestedSignal` navigation logic:
+   - Removed incorrect signal dereferencing in loop
+   - Now accesses NodeAccessor properties directly
+   - Only validates final value is a signal
+
+**Tests Added**: 5 new tests in `entities-investigation.spec.ts`
+- ✅ Nested paths like `'data.forms'` now work
+- ✅ Deeply nested paths like `'app.data.forms'` work
+- ✅ All 273 core tests passing
+
+**User Impact**: User's `'data.forms'` use case now works without workarounds
+
+### Issue 1: Optional ID - DOCUMENTED (No Fix)
+
+**Decision**: Document as known limitation for 4.2.0
+- Workaround pattern documented (coalesce to 0, or use separate entity type)
+- Design decision deferred to 4.3.0 after user feedback
+- Not blocking release - workaround is acceptable
 
 ---
 
@@ -255,7 +282,7 @@ function resolveNestedSignal(tree, path: keyof T) {
 
 **Question for maintainer**: How should we handle this for 4.2.0 release?
 
-- [ ] Fix nested paths, document optional ID limitation
+- [x] Fix nested paths, document optional ID limitation - **CHOSEN**
 - [ ] Fix both issues before release
 - [ ] Defer entities fixes to 4.3.0, ship memoization only
 
@@ -263,7 +290,8 @@ function resolveNestedSignal(tree, path: keyof T) {
 
 ## References
 
-- User report: "data.forms doesn't work"
-- User workaround: "coalesced id with 0"
+- User report: "data.forms doesn't work" - ✅ FIXED
+- User workaround: "coalesced id with 0" - Still valid pattern
 - Related: Entity helpers type constraint at `types.ts:467`
-- Runtime: `resolveNestedSignal` at `entities.ts:24-72`
+- Runtime: `resolveNestedSignal` at `entities.ts:24-72` - ✅ FIXED
+- Commit: "fix: support nested paths in entities enhancer"
