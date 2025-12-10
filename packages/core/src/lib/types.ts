@@ -378,7 +378,12 @@ export type SignalTree<T> = NodeAccessor<T> & {
   addTap(middleware: Middleware<T>): void;
   removeTap(id: string): void;
 
-  /** Entity helpers - supports both top-level keys (type-checked) and nested dot-notation paths (runtime-validated) */
+  /**
+   * @deprecated Use entityMap<E>() + withEntities() + tree.$.collectionName instead.
+   *
+   * Old entity helpers - supports both top-level keys (type-checked) and nested dot-notation paths (runtime-validated).
+   * This will be removed in v6.0. Migrate to the new Map-based entity API.
+   */
   entities<E extends { id: string | number }>(
     entityKey?: keyof T
   ): EntityHelpers<E>;
@@ -464,6 +469,170 @@ export interface PerformanceMetrics {
   averageUpdateTime: number;
 }
 
+// ============================================
+// ENTITY MAP & SIGNAL TYPES
+// ============================================
+
+/**
+ * Entity configuration options
+ */
+export interface EntityConfig<E, K extends string | number = string> {
+  /**
+   * Extract ID from entity. Default: (e) => e.id
+   * Required if entity doesn't have 'id' property.
+   */
+  selectId?: (entity: E) => K;
+
+  /**
+   * Entity-level hooks (run before collection hooks)
+   */
+  hooks?: {
+    /** Transform or block before add. Return false to block, entity to transform. */
+    beforeAdd?: (entity: E) => E | false;
+    /** Transform or block before update. Return false to block, changes to transform. */
+    beforeUpdate?: (id: K, changes: Partial<E>) => Partial<E> | false;
+    /** Block before remove. Return false to block. */
+    beforeRemove?: (id: K, entity: E) => boolean;
+  };
+}
+
+/**
+ * Runtime marker for entity collections.
+ * Used by TypeScript for inference; runtime value is just an empty object.
+ */
+export interface EntityMapMarker<E, K extends string | number> {
+  readonly __entityType?: E;
+  readonly __keyType?: K;
+}
+
+/**
+ * Create an entity map marker for use in signalTree state definition.
+ *
+ * @example
+ * ```typescript
+ * const tree = signalTree({
+ *   users: entityMap<User>(),
+ *   products: entityMap<Product, number>(),
+ * }).with(withEntities());
+ * ```
+ */
+export function entityMap<
+  E,
+  K extends string | number = E extends { id: infer I extends string | number }
+    ? I
+    : string
+>(config?: EntityConfig<E, K>): EntityMapMarker<E, K> {
+  return { ...config } as EntityMapMarker<E, K>;
+}
+
+/**
+ * Mutation options
+ */
+export interface MutationOptions {
+  onError?: (error: Error) => void;
+}
+
+export interface AddOptions<E, K> extends MutationOptions {
+  selectId?: (entity: E) => K;
+}
+
+export interface AddManyOptions<E, K> extends AddOptions<E, K> {
+  mode?: 'strict' | 'skip' | 'overwrite';
+}
+
+/**
+ * Tap handlers - observe entity lifecycle events
+ */
+export interface TapHandlers<E, K extends string | number> {
+  onAdd?: (entity: E, id: K) => void;
+  onUpdate?: (id: K, changes: Partial<E>, entity: E) => void;
+  onRemove?: (id: K, entity: E) => void;
+  onChange?: () => void;
+}
+
+/**
+ * Intercept context for blocking/transforming mutations
+ */
+export interface InterceptContext<T> {
+  block(reason?: string): void;
+  transform(value: T): void;
+  readonly blocked: boolean;
+  readonly blockReason: string | undefined;
+}
+
+/**
+ * Intercept handlers - block or transform mutations before they happen
+ */
+export interface InterceptHandlers<E, K extends string | number> {
+  onAdd?: (entity: E, ctx: InterceptContext<E>) => void | Promise<void>;
+  onUpdate?: (
+    id: K,
+    changes: Partial<E>,
+    ctx: InterceptContext<Partial<E>>
+  ) => void | Promise<void>;
+  onRemove?: (id: K, entity: E, ctx: InterceptContext<void>) => void | Promise<void>;
+}
+
+/**
+ * Entity node with deep signal access
+ */
+export type EntityNode<E> = {
+  (): E;
+  (value: E): void;
+  (updater: (current: E) => E): void;
+} & {
+  [P in keyof E]: E[P] extends object
+    ? E[P] extends readonly unknown[]
+      ? CallableWritableSignal<E[P]>
+      : EntityNode<E[P]>
+    : CallableWritableSignal<E[P]>;
+};
+
+/**
+ * EntitySignal provides reactive entity collection management.
+ */
+export interface EntitySignal<E, K extends string | number = string> {
+  // Bracket access
+  [id: string]: EntityNode<E> | undefined;
+  [id: number]: EntityNode<E> | undefined;
+
+  // Explicit access
+  byId(id: K): EntityNode<E> | undefined;
+  byIdOrFail(id: K): EntityNode<E>;
+
+  // Queries
+  all(): Signal<E[]>;
+  count(): Signal<number>;
+  ids(): Signal<K[]>;
+  has(id: K): Signal<boolean>;
+  isEmpty(): Signal<boolean>;
+  map(): Signal<ReadonlyMap<K, E>>;
+  where(predicate: (entity: E) => boolean): Signal<E[]>;
+  find(predicate: (entity: E) => boolean): Signal<E | undefined>;
+
+  // Mutations
+  addOne(entity: E, opts?: AddOptions<E, K>): K;
+  addMany(entities: E[], opts?: AddManyOptions<E, K>): K[];
+  updateOne(id: K, changes: Partial<E>, opts?: MutationOptions): void;
+  updateMany(ids: K[], changes: Partial<E>, opts?: MutationOptions): void;
+  updateWhere(predicate: (entity: E) => boolean, changes: Partial<E>): number;
+  upsertOne(entity: E, opts?: AddOptions<E, K>): K;
+  upsertMany(entities: E[], opts?: AddOptions<E, K>): K[];
+  removeOne(id: K, opts?: MutationOptions): void;
+  removeMany(ids: K[], opts?: MutationOptions): void;
+  removeWhere(predicate: (entity: E) => boolean): number;
+  clear(): void;
+  removeAll(): void;
+  setAll(entities: E[], opts?: AddOptions<E, K>): void;
+
+  // Hooks
+  tap(handlers: TapHandlers<E, K>): () => void;
+  intercept(handlers: InterceptHandlers<E, K>): () => void;
+}
+
+/**
+ * Deprecated old EntityHelpers interface - kept for backward compat during migration
+ */
 export interface EntityHelpers<E extends { id: string | number }> {
   add(entity: E): void;
   update(id: E['id'], updates: Partial<E>): void;
@@ -476,6 +645,95 @@ export interface EntityHelpers<E extends { id: string | number }> {
   selectTotal(): Signal<number>;
   clear(): void;
 }
+
+/**
+ * Global enhancer configurations
+ */
+export interface LoggingConfig {
+  name?: string;
+  filter?: (path: string) => boolean;
+  collapsed?: boolean;
+  onLog?: (entry: LogEntry) => void;
+}
+
+export interface LogEntry {
+  path: string;
+  prev: unknown;
+  value: unknown;
+  timestamp: number;
+}
+
+export interface ValidationConfig<T> {
+  validators: Array<{
+    match: (path: string) => boolean;
+    validate: (value: unknown, path: string) => void | never;
+  }>;
+  onError?: (error: Error, path: string) => void;
+}
+
+export interface PersistenceConfig {
+  key: string;
+  storage?: Storage;
+  debounceMs?: number;
+  filter?: (path: string) => boolean;
+  serialize?: (state: unknown) => string;
+  deserialize?: (json: string) => unknown;
+}
+
+export interface DevToolsConfig {
+  name?: string;
+  maxAge?: number;
+  features?: {
+    jump?: boolean;
+    skip?: boolean;
+    reorder?: boolean;
+  };
+}
+
+/**
+ * Type utilities for entities
+ */
+export type EntityType<T> = T extends EntitySignal<infer E, unknown> ? E : never;
+export type EntityKeyType<T> = T extends EntitySignal<unknown, infer K>
+  ? K
+  : never;
+export type IsEntityMap<T> = T extends EntityMapMarker<unknown, unknown>
+  ? true
+  : false;
+
+/**
+ * TreeNode augmented with entity signals
+ */
+export type EntityAwareTreeNode<T> = {
+  [K in keyof T]: T[K] extends EntityMapMarker<infer E, infer Key>
+    ? EntitySignal<E, Key>
+    : T[K] extends object
+      ? EntityAwareTreeNode<T[K]>
+      : CallableWritableSignal<T[K]>;
+};
+
+/**
+ * Internal path notifier interface
+ * @internal
+ */
+export interface PathNotifier {
+  subscribe(pattern: string, handler: PathHandler): () => void;
+  intercept(pattern: string, fn: PathInterceptor): () => void;
+  notify(path: string, value: unknown, prev: unknown): void;
+}
+
+export type PathHandler = (value: unknown, prev: unknown, path: string) => void;
+
+export type PathInterceptor = (
+  ctx: {
+    path: string;
+    value: unknown;
+    prev: unknown;
+    blocked: boolean;
+    blockReason?: string;
+  },
+  next: () => void
+) => void | Promise<void>;
 
 export interface TimeTravelEntry<T> {
   action: string;
