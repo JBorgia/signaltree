@@ -42,7 +42,12 @@ export class PathNotifier {
     if (!this.subscribers.has(pattern)) {
       this.subscribers.set(pattern, new Set());
     }
-    const handlers = this.subscribers.get(pattern)!;
+    const handlers = this.subscribers.get(pattern);
+    if (!handlers) {
+      return () => {
+        // No-op: pattern was not found
+      };
+    }
     handlers.add(handler);
 
     // Return unsubscribe function
@@ -62,7 +67,12 @@ export class PathNotifier {
     if (!this.interceptors.has(pattern)) {
       this.interceptors.set(pattern, new Set());
     }
-    const interceptors = this.interceptors.get(pattern)!;
+    const interceptors = this.interceptors.get(pattern);
+    if (!interceptors) {
+      return () => {
+        // No-op: pattern was not found
+      };
+    }
     interceptors.add(interceptor);
 
     return () => {

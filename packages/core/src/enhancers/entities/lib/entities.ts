@@ -1,110 +1,16 @@
-import { computed, Signal, WritableSignal } from '@angular/core';
+import { EntitySignalImpl } from '../../../lib/entity-signal';
+import { getPathNotifier } from '../../../lib/path-notifier';
+import { isNodeAccessor } from '../../../lib/utils';
 
-import { isAnySignal, isNodeAccessor } from '../../../lib/utils';
+import type {
+  EntityConfig,
+  EntityMapMarker,
+  EntitySignal,
+  SignalTree,
+} from '../../../lib/types';
 
-import type { SignalTree, EntityHelpers } from '../../../lib/types';
-
-/**
- * Entity configuration options
- */
-interface EntityConfig {
+interface EntitiesEnhancerConfig {
   enabled?: boolean;
-  trackChanges?: boolean;
-  validateIds?: boolean;
-}
-
-/**
- * Resolve a dot-notation path to a nested signal
- * Supports paths like 'app.data.users' by recursively navigating through the state tree
- *
- * @param tree - The SignalTree instance
- * @param path - Either a top-level key or dot-notation path like 'app.data.users'
- * @returns The signal at the specified path, or throws if path is invalid
- */
-function resolveNestedSignal<T>(
-  tree: SignalTree<T>,
-  path: string | keyof T
-): WritableSignal<unknown> {
-  const pathStr = String(path);
-
-  // Fast path: direct property access (top-level key)
-  if (!pathStr.includes('.')) {
-    const signal = (tree.state as any)[pathStr];
-    if (!signal) {
-      throw new Error(
-        `Entity key '${pathStr}' does not exist in the state. Available top-level keys: ${Object.keys(
-          tree.state as any
-        ).join(', ')}`
-      );
-    }
-    return signal;
-  }
-
-  // Nested path: split and navigate
-  const segments = pathStr.split('.');
-  let current: any = tree.state;
-
-  for (let i = 0; i < segments.length; i++) {
-    const segment = segments[i];
-
-    // For nested objects in SignalTree:
-    // - Intermediate levels are NodeAccessors (callable with nested properties)
-    // - We need to access properties directly, not dereference
-    // - Only the final level should be a WritableSignal for the array
-
-    // Navigate to next segment
-    current = current[segment];
-
-    if (current === undefined) {
-      const attemptedPath = segments.slice(0, i + 1).join('.');
-      throw new Error(
-        `Entity path '${pathStr}' is invalid: '${attemptedPath}' does not exist in the state`
-      );
-    }
-  }
-
-  // Final value should be a signal (array signal)
-  if (isAnySignal(current)) {
-    return current as WritableSignal<unknown>;
-  }
-
-  throw new Error(
-    `Entity path '${pathStr}' does not resolve to a signal. Ensure all parent levels in the path are valid nested objects.`
-  );
-}
-
-/**
- * Creates entity helpers for a specific entity collection
- * This properly handles the SignalTree's TreeNode type structure
- *
- * CRITICAL: In SignalTree, arrays become WritableSignal<Array>
- * So `users: User[]` in the original state becomes `users: WritableSignal<User[]>` in tree.state
- *
- * Supports both top-level keys and nested paths:
- * - tree.entities<User>('users') - top-level
- * - tree.entities<User>('app.data.users') - nested
- */
-function createEntityHelpers<T, E extends { id: string | number }>(
-  tree: SignalTree<T>,
-  entityKey: string | keyof T
-): EntityHelpers<E> {
-  // Get the signal from the deeply signalified state
-  // The state property is of type TreeNode<T>
-  const getEntitySignal = () => {
-    // Use path resolution to handle both top-level and nested paths
-    const signal = resolveNestedSignal(tree, entityKey);
-
-    // Validate it's actually a signal
-    if (!isAnySignal(signal)) {
-      throw new Error(
-        `Entity key '${String(
-          entityKey
-        )}' is not a signal. This should not happen with SignalTree.`
-      );
-    }
-
-    // Cast to WritableSignal and verify it contains an array
-    const castSignal = signal as WritableSignal<unknown>;
     const value = castSignal();
 
     if (!Array.isArray(value)) {

@@ -1,4 +1,4 @@
-import { computed, signal, Signal, WritableSignal } from '@angular/core';
+import { computed, Signal, signal, WritableSignal } from '@angular/core';
 
 import { PathNotifier } from '../lib/path-notifier';
 
@@ -73,7 +73,9 @@ export class EntitySignalImpl<
     private basePath: string
   ) {
     // Extract selectId or use default
-    this.selectId = config.selectId ?? ((entity: E) => (entity as unknown as Record<string, K>)['id']);
+    this.selectId =
+      config.selectId ??
+      ((entity: E) => (entity as unknown as Record<string, K>)['id']);
 
     // Initialize reactive signals
     this.allSignal = signal<E[]>([]);
@@ -180,7 +182,9 @@ export class EntitySignalImpl<
     for (const handler of this.interceptHandlers) {
       const ctx: InterceptContext<E> = {
         block: (reason?: string) => {
-          throw new Error(`Cannot add entity: ${reason || 'blocked by interceptor'}`);
+          throw new Error(
+            `Cannot add entity: ${reason || 'blocked by interceptor'}`
+          );
         },
         transform: (value: E) => {
           transformedEntity = value;
@@ -197,7 +201,11 @@ export class EntitySignalImpl<
     this.updateSignals();
 
     // Notify PathNotifier
-    this.pathNotifier.notify(`${this.basePath}.${String(id)}`, transformedEntity, undefined);
+    this.pathNotifier.notify(
+      `${this.basePath}.${String(id)}`,
+      transformedEntity,
+      undefined
+    );
 
     // Run tap handlers
     for (const handler of this.tapHandlers) {
@@ -232,7 +240,9 @@ export class EntitySignalImpl<
     for (const handler of this.interceptHandlers) {
       const ctx: InterceptContext<Partial<E>> = {
         block: (reason?: string) => {
-          throw new Error(`Cannot update entity: ${reason || 'blocked by interceptor'}`);
+          throw new Error(
+            `Cannot update entity: ${reason || 'blocked by interceptor'}`
+          );
         },
         transform: (value: Partial<E>) => {
           transformedChanges = value;
@@ -249,7 +259,11 @@ export class EntitySignalImpl<
     this.updateSignals();
 
     // Notify PathNotifier
-    this.pathNotifier.notify(`${this.basePath}.${String(id)}`, finalUpdated, prev);
+    this.pathNotifier.notify(
+      `${this.basePath}.${String(id)}`,
+      finalUpdated,
+      prev
+    );
 
     // Run tap handlers
     for (const handler of this.tapHandlers) {
@@ -288,7 +302,9 @@ export class EntitySignalImpl<
     for (const handler of this.interceptHandlers) {
       const ctx: InterceptContext<void> = {
         block: (reason?: string) => {
-          throw new Error(`Cannot remove entity: ${reason || 'blocked by interceptor'}`);
+          throw new Error(
+            `Cannot remove entity: ${reason || 'blocked by interceptor'}`
+          );
         },
         transform: () => {
           // void transform - no transformation possible
@@ -305,7 +321,11 @@ export class EntitySignalImpl<
     this.updateSignals();
 
     // Notify PathNotifier
-    this.pathNotifier.notify(`${this.basePath}.${String(id)}`, undefined, entity);
+    this.pathNotifier.notify(
+      `${this.basePath}.${String(id)}`,
+      undefined,
+      entity
+    );
 
     // Run tap handlers
     for (const handler of this.tapHandlers) {
@@ -450,9 +470,10 @@ export class EntitySignalImpl<
  * @param config Optional configuration (selectId, initial, selectKey)
  * @returns A type marker that withEntities() will recognize
  */
-export function entityMap<E extends Record<string, unknown>, K extends string | number = string>(
-  config?: Partial<EntityConfig<E, K>>
-): unknown {
+export function entityMap<
+  E extends Record<string, unknown>,
+  K extends string | number = string
+>(config?: Partial<EntityConfig<E, K>>): unknown {
   // Return a marker object that withEntities() recognizes
   return {
     __isEntityMap: true,

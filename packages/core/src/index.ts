@@ -46,12 +46,23 @@ export type {
   ChainResult,
   WithMethod,
 
+  // Entity types
+  EntitySignal,
+  EntityMapMarker,
+  EntityConfig,
+  MutationOptions,
+  AddOptions,
+  AddManyOptions,
+
   // Feature types - Advanced functionality
   Middleware,
   PerformanceMetrics,
   EntityHelpers,
   TimeTravelEntry,
 } from './lib/types';
+
+// Entity helpers (runtime)
+export { entityMap } from './lib/types';
 
 // ============================================
 // UTILITY EXPORTS

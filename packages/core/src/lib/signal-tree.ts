@@ -32,6 +32,7 @@ import type {
   ChainResult,
   WithMethod,
   NodeAccessor,
+  EntityMapMarker,
 } from './types';
 
 // Type alias for internal use
@@ -333,6 +334,15 @@ function createSignalStore<T>(
       try {
         if (typeof key === 'symbol') continue;
 
+        if (isEntityMapMarker(value)) {
+          // Preserve entity map markers so withEntities can materialize EntitySignals later
+          (store as Record<string, unknown>)[key] = value as EntityMapMarker<
+            unknown,
+            string | number
+          >;
+          continue;
+        }
+
         if (isSignal(value)) {
           // Preserve existing signals as-is
           (store as Record<string, unknown>)[key] = value;
@@ -390,6 +400,10 @@ function createSignalStore<T>(
     for (const sym of symbols) {
       const value = (obj as Record<symbol, unknown>)[sym];
       try {
+        if (isEntityMapMarker(value)) {
+          (store as Record<symbol, unknown>)[sym] = value;
+          continue;
+        }
         if (isSignal(value)) {
           (store as Record<symbol, unknown>)[sym] = value;
         } else {
@@ -410,6 +424,16 @@ function createSignalStore<T>(
   }
 
   return store as TreeNode<T>;
+}
+
+function isEntityMapMarker(
+  value: unknown
+): value is EntityMapMarker<unknown, string | number> {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      (value as Record<string, unknown>).__isEntityMap === true
+  );
 }
 
 // ============================================
