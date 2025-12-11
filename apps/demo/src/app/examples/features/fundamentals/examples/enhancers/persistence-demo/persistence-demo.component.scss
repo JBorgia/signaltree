@@ -75,7 +75,8 @@
 .form-group {
   margin-bottom: 1rem;
 
-  label {
+  label,
+  .form-label {
     display: block;
     margin-bottom: 0.25rem;
     font-weight: 500;

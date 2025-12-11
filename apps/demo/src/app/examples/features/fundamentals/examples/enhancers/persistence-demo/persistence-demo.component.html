@@ -52,8 +52,8 @@
       </div>
 
       <div class="form-group">
-        <label>Theme</label>
-        <div class="theme-buttons">
+        <span id="theme-label" class="form-label">Theme</span>
+        <div class="theme-buttons" role="group" aria-labelledby="theme-label">
           @for (theme of themes; track theme.value) {
           <button
             type="button"
