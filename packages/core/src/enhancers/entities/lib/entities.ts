@@ -11,149 +11,156 @@ import type {
 
 interface EntitiesEnhancerConfig {
   enabled?: boolean;
-    const value = castSignal();
+}
 
-    if (!Array.isArray(value)) {
-      throw new Error(
-        `Entity key '${String(
-          entityKey
-        )}' does not contain an array. Current type: ${typeof value}`
-      );
-    }
+type Marker = EntityMapMarker<unknown, string | number> & {
+  __entityMapConfig?: EntityConfig<unknown, string | number>;
+};
 
-    return castSignal as WritableSignal<E[]>;
-  };
+function isEntityMapMarker(value: unknown): value is Marker {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      (value as Record<string, unknown>).__isEntityMap === true
+  );
+}
 
-  // Helper function to set values on both WritableSignal and callable signals
-  const setSignalValue = (
-    signal: WritableSignal<E[]> | ((value: E[]) => void),
-    value: E[]
+function isEntitySignal(value: unknown): value is EntitySignal<unknown, string> {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    typeof (value as Record<string, unknown>).addOne === 'function' &&
+    typeof (value as Record<string, unknown>).all === 'function'
+  );
+}
+
+function materializeEntities<T>(
+  tree: SignalTree<T>,
+  notifier = getPathNotifier()
+): Map<string, EntitySignal<unknown, string | number>> {
+  const registry = new Map<string, EntitySignal<unknown, string | number>>();
+  const state = tree.state as Record<string, unknown>;
+
+  const visit = (
+    parent: Record<string, unknown> | undefined,
+    key: string,
+    value: unknown,
+    path: string[]
   ) => {
-    if (isNodeAccessor(signal)) {
-      // Callable signal - use function call
-      (signal as (value: E[]) => void)(value);
-    } else {
-      // WritableSignal - use .set() method
-      (signal as WritableSignal<E[]>).set(value);
+    const nextPath = [...path, key];
+
+    if (isEntityMapMarker(value)) {
+      const basePath = nextPath.join('.');
+      const config = (value.__entityMapConfig ?? {}) as EntityConfig<
+        unknown,
+        string | number
+      >;
+      const entitySignal = new EntitySignalImpl(config, notifier, basePath);
+
+      if (parent) {
+        try {
+          parent[key] = entitySignal;
+        } catch {
+          // Ignore assignment failures for non-configurable properties
+        }
+      }
+
+      try {
+        (tree as Record<string, unknown>)[key] = entitySignal;
+      } catch {
+        // If property cannot be defined on tree, skip
+      }
+
+      registry.set(basePath, entitySignal);
+      return;
+    }
+
+    if (isNodeAccessor(value)) {
+      for (const childKey of Object.keys(value as Record<string, unknown>)) {
+        visit(
+          value as Record<string, unknown>,
+          childKey,
+          (value as Record<string, unknown>)[childKey],
+          nextPath
+        );
+      }
+      return;
+    }
+
+    if (value && typeof value === 'object') {
+      for (const childKey of Object.keys(value as Record<string, unknown>)) {
+        visit(
+          value as Record<string, unknown>,
+          childKey,
+          (value as Record<string, unknown>)[childKey],
+          nextPath
+        );
+      }
     }
   };
 
-  return {
-    add: (entity: E) => {
-      const entitySignal = getEntitySignal();
-      const currentEntities = entitySignal();
+  for (const key of Object.keys(state)) {
+    visit(state, key, state[key], []);
+  }
 
-      // Check for duplicate
-      if (currentEntities.some((e) => e.id === entity.id)) {
-        throw new Error(`Entity with id '${entity.id}' already exists`);
-      }
+  return registry;
+}
 
-      setSignalValue(entitySignal, [...currentEntities, entity]);
-    },
+function resolveEntitySignal<T>(
+  tree: SignalTree<T>,
+  registry: Map<string, EntitySignal<unknown, string | number>>,
+  path: string | keyof T
+): EntitySignal<unknown, string | number> {
+  const pathStr = String(path);
+  const existing = registry.get(pathStr);
+  if (existing) return existing;
 
-    update: (id: string | number, updates: Partial<E>) => {
-      const entitySignal = getEntitySignal();
-      const currentEntities = entitySignal();
+  const segments = pathStr.split('.');
+  let current: unknown = tree.state as Record<string, unknown>;
 
-      const updatedEntities = currentEntities.map((entity) =>
-        entity.id === id ? { ...entity, ...updates } : entity
-      );
+  for (const segment of segments) {
+    if (!current) break;
+    current = (current as Record<string, unknown>)[segment];
+  }
 
-      setSignalValue(entitySignal, updatedEntities);
-    },
+  if (isEntitySignal(current)) {
+    registry.set(pathStr, current);
+    return current;
+  }
 
-    remove: (id: string | number) => {
-      const entitySignal = getEntitySignal();
-      const currentEntities = entitySignal();
-
-      const filteredEntities = currentEntities.filter(
-        (entity) => entity.id !== id
-      );
-      setSignalValue(entitySignal, filteredEntities);
-    },
-
-    upsert: (entity: E) => {
-      const entitySignal = getEntitySignal();
-      const currentEntities = entitySignal();
-
-      const index = currentEntities.findIndex((e) => e.id === entity.id);
-      if (index >= 0) {
-        // Update existing
-        const updatedEntities = [...currentEntities];
-        updatedEntities[index] = entity;
-        setSignalValue(entitySignal, updatedEntities);
-      } else {
-        // Add new
-        setSignalValue(entitySignal, [...currentEntities, entity]);
-      }
-    },
-
-    selectById: (id: string | number) => {
-      const entitySignal = getEntitySignal();
-      return computed(() => entitySignal().find((entity) => entity.id === id));
-    },
-
-    selectBy: (predicate: (entity: E) => boolean) => {
-      const entitySignal = getEntitySignal();
-      return computed(() => entitySignal().filter(predicate));
-    },
-
-    selectIds: () => {
-      const entitySignal = getEntitySignal();
-      return computed(() => entitySignal().map((entity) => entity.id));
-    },
-
-    selectAll: () => {
-      const entitySignal = getEntitySignal();
-      return entitySignal as Signal<E[]>;
-    },
-
-    selectTotal: () => {
-      const entitySignal = getEntitySignal();
-      return computed(() => entitySignal().length);
-    },
-
-    clear: () => {
-      const entitySignal = getEntitySignal();
-      setSignalValue(entitySignal, []);
-    },
-  };
+  throw new Error(
+    `Entity path '${pathStr}' is not configured. Define it with entityMap() in your initial state.`
+  );
 }
 
 /**
- * Enhances a SignalTree with entity management capabilities
- * Works with SignalTree's TreeNode type structure
- *
- * The key insight: The state is already deeply signalified, so array properties
- * like `users: User[]` become `users: WritableSignal<User[]>` in tree.state
- *
- * Supports both top-level keys and nested paths for maximum flexibility
+ * Entities enhancer that materializes EntitySignal collections from entityMap markers.
  */
-export function withEntities(config: EntityConfig = {}) {
+export function withEntities(config: EntitiesEnhancerConfig = {}) {
   const { enabled = true } = config;
 
-  return function enhanceWithEntities<T>(tree: SignalTree<T>): SignalTree<T> & {
-    entities<E extends { id: string | number }>(
-      entityKey: keyof T | string
-    ): EntityHelpers<E>;
+  return function enhanceWithEntities<T>(
+    tree: SignalTree<T>
+  ): SignalTree<T> & {
+    entities<E, K extends string | number>(
+      path: keyof T | string
+    ): EntitySignal<E, K>;
   } {
     if (!enabled) {
-      // When disabled, return the original tree object unchanged
-      // Cast is safe here because we're not actually adding the method
       return tree as SignalTree<T> & {
-        entities<E extends { id: string | number }>(
-          entityKey: keyof T | string
-        ): EntityHelpers<E>;
+        entities<E, K extends string | number>(
+          path: keyof T | string
+        ): EntitySignal<E, K>;
       };
     }
 
-    // Type-safe enhancement that adds entities method using Object.assign
-    // This approach preserves the generic method signature better than direct property assignment
+    const registry = materializeEntities(tree);
+
     const enhancedTree = Object.assign(tree, {
-      entities<E extends { id: string | number }>(
-        entityKey: keyof T | string
-      ): EntityHelpers<E> {
-        return createEntityHelpers<T, E>(tree, entityKey);
+      entities<E, K extends string | number>(
+        path: keyof T | string
+      ): EntitySignal<E, K> {
+        return resolveEntitySignal(tree, registry, path) as EntitySignal<E, K>;
       },
     });
 
@@ -161,20 +168,10 @@ export function withEntities(config: EntityConfig = {}) {
   };
 }
 
-/**
- * Convenience function to enable entities with default config
- */
 export function enableEntities() {
   return withEntities({ enabled: true });
 }
 
-/**
- * High-performance entity management configuration
- */
 export function withHighPerformanceEntities() {
-  return withEntities({
-    enabled: true,
-    trackChanges: true,
-    validateIds: true,
-  });
+  return withEntities({ enabled: true });
 }
