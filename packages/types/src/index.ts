@@ -568,10 +568,6 @@ export type EntityNode<E> = {
  * EntitySignal provides reactive entity collection management
  */
 export interface EntitySignal<E, K extends string | number = string> {
-  // Bracket access
-  [id: string]: EntityNode<E> | undefined;
-  [id: number]: EntityNode<E> | undefined;
-
   // Explicit access
   byId(id: K): EntityNode<E> | undefined;
   byIdOrFail(id: K): EntityNode<E>;
@@ -669,13 +665,11 @@ export interface DevToolsConfig {
 /**
  * Type utilities for entities
  */
-export type EntityType<T> = T extends EntitySignal<infer E, unknown>
+export type EntityType<T> = T extends EntitySignal<infer E, string | number>
   ? E
   : never;
-export type EntityKeyType<T> = T extends EntitySignal<unknown, infer K>
-  ? K
-  : never;
-export type IsEntityMap<T> = T extends EntityMapMarker<unknown, unknown>
+export type EntityKeyType<T> = T extends EntitySignal<any, infer K> ? K : never;
+export type IsEntityMap<T> = T extends EntityMapMarker<any, string | number>
   ? true
   : false;
 
