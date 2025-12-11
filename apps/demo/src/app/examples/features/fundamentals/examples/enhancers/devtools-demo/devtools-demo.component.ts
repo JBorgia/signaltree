@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { signalTree } from '@signaltree/core';
+import { signalTree, withDevTools } from '@signaltree/core';
 
 interface DevtoolsState {
   counter: number;
@@ -53,7 +53,13 @@ export class DevtoolsDemoComponent {
       },
     },
     todos: [],
-  });
+  }).with(
+    withDevTools({
+      treeName: 'DevTools Demo',
+      enableLogging: true,
+      enableBrowserDevTools: true,
+    })
+  );
 
   // Computed properties
   counter = this.store.$.counter;

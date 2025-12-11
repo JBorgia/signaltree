@@ -1,0 +1,310 @@
+.persistence-demo {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.demo-header {
+  margin-bottom: 2rem;
+
+  h2 {
+    margin: 0 0 0.5rem;
+    color: #1a1a2e;
+  }
+
+  .description {
+    color: #666;
+    margin-bottom: 1rem;
+  }
+}
+
+.status-bar {
+  display: flex;
+  gap: 2rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  flex-wrap: wrap;
+
+  .status-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    .label {
+      font-weight: 500;
+      color: #666;
+    }
+
+    .value {
+      font-family: monospace;
+
+      &.saving {
+        color: #f59e0b;
+      }
+
+      &.saved {
+        color: #10b981;
+      }
+
+      &.error {
+        color: #ef4444;
+      }
+    }
+  }
+}
+
+.demo-content {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.section {
+  padding: 1.5rem;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+
+  h3 {
+    margin: 0 0 1rem;
+    color: #1a1a2e;
+    font-size: 1.1rem;
+  }
+}
+
+.form-group {
+  margin-bottom: 1rem;
+
+  label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+    color: #374151;
+  }
+
+  input,
+  select {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 1rem;
+
+    &:focus {
+      outline: none;
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+  }
+}
+
+.theme-buttons {
+  display: flex;
+  gap: 0.5rem;
+
+  button {
+    flex: 1;
+    padding: 0.5rem 1rem;
+    border: 1px solid #d1d5db;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background: #f3f4f6;
+    }
+
+    &.active {
+      background: #6366f1;
+      color: white;
+      border-color: #6366f1;
+    }
+  }
+}
+
+.toggle-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+
+  input[type='checkbox'] {
+    width: 1.25rem;
+    height: 1.25rem;
+    cursor: pointer;
+  }
+
+  .toggle-label {
+    font-size: 0.95rem;
+  }
+}
+
+.add-note {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+
+  input,
+  textarea {
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-family: inherit;
+
+    &:focus {
+      outline: none;
+      border-color: #6366f1;
+    }
+  }
+
+  button {
+    align-self: flex-start;
+    padding: 0.5rem 1rem;
+    background: #6366f1;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: #4f46e5;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.empty-state {
+  color: #9ca3af;
+  text-align: center;
+  padding: 2rem;
+  font-style: italic;
+}
+
+.note-card {
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+
+  .note-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+
+    h4 {
+      margin: 0;
+      font-size: 1rem;
+      color: #1f2937;
+    }
+
+    .delete-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0.25rem;
+      font-size: 1rem;
+      opacity: 0.6;
+
+      &:hover {
+        opacity: 1;
+      }
+    }
+  }
+
+  .note-content {
+    margin: 0.5rem 0;
+    color: #4b5563;
+    font-size: 0.9rem;
+  }
+
+  .note-date {
+    display: block;
+    font-size: 0.75rem;
+    color: #9ca3af;
+  }
+}
+
+.demo-footer {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+
+  h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1rem;
+  }
+
+  .hint {
+    color: #666;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+  }
+}
+
+.control-buttons {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+
+  button {
+    padding: 0.5rem 1rem;
+    border: 1px solid #d1d5db;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background: #f3f4f6;
+    }
+
+    &.primary {
+      background: #6366f1;
+      color: white;
+      border-color: #6366f1;
+
+      &:hover {
+        background: #4f46e5;
+      }
+    }
+
+    &.danger {
+      color: #dc2626;
+      border-color: #dc2626;
+
+      &:hover {
+        background: #fef2f2;
+      }
+    }
+  }
+}
+
+.error-message {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: #fef2f2;
+  color: #dc2626;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}

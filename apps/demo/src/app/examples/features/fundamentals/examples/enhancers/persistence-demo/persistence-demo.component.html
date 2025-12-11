@@ -1,0 +1,183 @@
+<div class="persistence-demo">
+  <header class="demo-header">
+    <h2>💾 Persistence Demo</h2>
+    <p class="description">
+      State automatically saves to localStorage. Try making changes and
+      refreshing the page!
+    </p>
+
+    <div class="status-bar">
+      <div class="status-item">
+        <span class="label">Status:</span>
+        <span class="value" [class]="saveStatus()">
+          @switch (saveStatus()) { @case ('idle') { Ready } @case ('saving') {
+          Saving... } @case ('saved') { ✓ Saved } @case ('error') { ⚠️ Error } }
+        </span>
+      </div>
+      <div class="status-item">
+        <span class="label">Last Saved:</span>
+        <span class="value">{{ formatDate(lastSaved()) }}</span>
+      </div>
+      <div class="status-item">
+        <span class="label">Storage Size:</span>
+        <span class="value">{{ getStorageSize() }}</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="demo-content">
+    <!-- User Profile Section -->
+    <section class="section">
+      <h3>👤 User Profile</h3>
+      <div class="form-group">
+        <label for="name">Name</label>
+        <input
+          id="name"
+          type="text"
+          [value]="user().name"
+          (input)="updateName($event)"
+          placeholder="Enter your name"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input
+          id="email"
+          type="email"
+          [value]="user().email"
+          (input)="updateEmail($event)"
+          placeholder="Enter your email"
+        />
+      </div>
+
+      <div class="form-group">
+        <label>Theme</label>
+        <div class="theme-buttons">
+          @for (theme of themes; track theme.value) {
+          <button
+            type="button"
+            [class.active]="user().theme === theme.value"
+            (click)="updateTheme(theme.value)"
+          >
+            {{ theme.label }}
+          </button>
+          }
+        </div>
+      </div>
+    </section>
+
+    <!-- Preferences Section -->
+    <section class="section">
+      <h3>⚙️ Preferences</h3>
+
+      <div class="toggle-group">
+        <label class="toggle">
+          <input
+            type="checkbox"
+            [checked]="preferences().notifications"
+            (change)="toggleNotifications()"
+          />
+          <span class="toggle-label">🔔 Enable Notifications</span>
+        </label>
+
+        <label class="toggle">
+          <input
+            type="checkbox"
+            [checked]="preferences().autoSave"
+            (change)="toggleAutoSave()"
+          />
+          <span class="toggle-label">💾 Auto-Save Enabled</span>
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label for="language">Language</label>
+        <select
+          id="language"
+          [value]="preferences().language"
+          (change)="updateLanguage($event)"
+        >
+          @for (lang of languages; track lang.code) {
+          <option [value]="lang.code">{{ lang.name }}</option>
+          }
+        </select>
+      </div>
+    </section>
+
+    <!-- Notes Section -->
+    <section class="section">
+      <h3>📝 Notes ({{ notes().length }})</h3>
+
+      <div class="add-note">
+        <input
+          type="text"
+          [(ngModel)]="newNoteTitle"
+          placeholder="Note title..."
+          (keyup.enter)="addNote()"
+        />
+        <textarea
+          [(ngModel)]="newNoteContent"
+          placeholder="Note content (optional)..."
+          rows="2"
+        ></textarea>
+        <button
+          type="button"
+          (click)="addNote()"
+          [disabled]="!newNoteTitle.trim()"
+        >
+          Add Note
+        </button>
+      </div>
+
+      <div class="notes-list">
+        @if (notes().length === 0) {
+        <p class="empty-state">No notes yet. Add one above!</p>
+        } @else { @for (note of notes(); track note.id) {
+        <div class="note-card">
+          <div class="note-header">
+            <h4>{{ note.title }}</h4>
+            <button
+              type="button"
+              class="delete-btn"
+              (click)="deleteNote(note.id)"
+              title="Delete note"
+            >
+              🗑️
+            </button>
+          </div>
+          @if (note.content) {
+          <p class="note-content">{{ note.content }}</p>
+          }
+          <span class="note-date">{{ formatDate(note.createdAt) }}</span>
+        </div>
+        } }
+      </div>
+    </section>
+  </div>
+
+  <!-- Controls -->
+  <footer class="demo-footer">
+    <h3>🎮 Manual Controls</h3>
+    <p class="hint">
+      Auto-save handles most cases, but you can manually control persistence:
+    </p>
+
+    <div class="control-buttons">
+      <button type="button" class="primary" (click)="manualSave()">
+        💾 Save Now
+      </button>
+      <button type="button" (click)="manualLoad()">
+        📥 Reload from Storage
+      </button>
+      <button type="button" (click)="viewRawStorage()">👁️ View Raw Data</button>
+      <button type="button" class="danger" (click)="clearStorage()">
+        🗑️ Clear Storage
+      </button>
+    </div>
+
+    @if (lastError()) {
+    <div class="error-message">Error: {{ lastError() }}</div>
+    }
+  </footer>
+</div>

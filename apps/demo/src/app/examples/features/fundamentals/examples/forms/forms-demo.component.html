@@ -186,19 +186,32 @@
 
   <!-- Code Example -->
   <div class="code-section">
-    <h3>💻 Signal-Based Validation</h3>
-    <pre><code>{{`usernameValid = computed(() => {
-  const value = this.username();
-  return value.length >= 3 &&
-         /^[a-zA-Z0-9_]+$/.test(value);
-});
+    <h3>💻 SignalTree-Based Form State</h3>
+    <pre><code>// Unified form state with SignalTree
+formStore = signalTree&lt;FormState&gt;({{ '{' }}
+  fields: {{ '{' }}
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    agreeToTerms: false,
+  {{ '}' }},
+  touched: {{ '{' }} username: false, email: false {{ '}' }},
+  submitted: false,
+  submittedData: null,
+{{ '}' }});
 
-formValid = computed(() =>
-  this.usernameValid() &&
-  this.emailValid() &&
-  this.passwordValid() &&
-  this.passwordsMatch() &&
-  this.agreeToTerms()
-);`}}</code></pre>
+// Create aliases for cleaner binding
+username = this.formStore.$.fields.username;
+email = this.formStore.$.fields.email;
+
+// Computed validations work the same way
+usernameValid = computed(() =&gt; {{ '{' }}
+  const value = this.username();
+  return value.length &gt;= 3 &amp;&amp; /^[a-zA-Z0-9_]+$/.test(value);
+{{ '}' }});
+
+// Reset entire state in one call
+this.formStore.$.set({{ '{' }} fields: {{ '{' }} ... {{ '}' }}, touched: {{ '{' }} ... {{ '}' }} {{ '}' }});</code></pre>
   </div>
 </div>

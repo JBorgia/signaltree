@@ -1,7 +1,91 @@
 <div class="whats-new">
   <h2>🚀 What's New</h2>
 
-  <h3>v4.2.0 (December 2025)</h3>
+  <h3>🔥 v5.0.0 (December 2025) - Major Release</h3>
+  <div class="breaking-changes">
+    <h4>⚠️ Breaking Changes</h4>
+    <ul>
+      <li>
+        <strong>Middleware System Removed:</strong> The entire middleware system
+        has been deleted. Use <code>tap()</code> and <code>intercept()</code>
+        hooks on entity signals instead for lifecycle observation.
+      </li>
+      <li>
+        <strong
+          ><code>subscribe()</code> throws outside injection context:</strong
+        >
+        Calling <code>tree.subscribe()</code> outside Angular's injection
+        context now throws an <code>Error</code> instead of silently failing.
+        Enhancers use polling fallback when needed.
+      </li>
+    </ul>
+  </div>
+
+  <h4>✨ New Features</h4>
+  <ul>
+    <li>
+      <strong>PathNotifier System:</strong> Internal notification system for
+      path-based mutations. Enables entity hooks without global state.
+    </li>
+    <li>
+      <strong>Entity Hooks - <code>tap()</code>:</strong> Observe entity
+      mutations (add/update/remove) <em>after</em> they occur.
+      <pre><code>store.$.users.tap(&#123;
+  onAdd: (user, id) => console.log('Added:', user),
+  onUpdate: (id, changes) => console.log('Updated:', id),
+  onRemove: (id, user) => console.log('Removed:', user),
+&#125;);</code></pre>
+    </li>
+    <li>
+      <strong>Entity Hooks - <code>intercept()</code>:</strong> Block or
+      transform mutations <em>before</em> they happen. Perfect for validation!
+      <pre><code>store.$.users.intercept(&#123;
+  onAdd: (user, ctx) => &#123;
+    if (!user.email.includes('@')) &#123;
+      ctx.block('Invalid email');
+    &#125;
+  &#125;,
+  onUpdate: (id, changes, ctx) => &#123;
+    ctx.transform(&#123; ...changes, updatedAt: new Date() &#125;);
+  &#125;,
+&#125;);</code></pre>
+    </li>
+    <li>
+      <strong>Marker-Based Entity System:</strong> Type-safe
+      <code>EntityMapMarker&lt;T, ID&gt;</code> with reactive CRUD operations
+      via <code>store.$.field.method()</code>
+    </li>
+    <li>
+      <strong>Enhanced Types:</strong> Recursive inference up to 20+ nesting
+      levels with improved IntelliSense
+    </li>
+    <li>
+      <strong>Angular 20.3 Support:</strong> Full compatibility with signal
+      forms using <code>connect()</code> and <code>toWritableSignal()</code>
+    </li>
+    <li>
+      <strong>Tree-Shakeable Audit:</strong> Import audit tracking separately
+      via <code>&#64;signaltree/ng-forms/audit</code>
+    </li>
+  </ul>
+
+  <h4>🚀 Performance Improvements</h4>
+  <ul>
+    <li>
+      <strong>2-5x faster bulk operations</strong> with diff-based updates in
+      enterprise enhancer
+    </li>
+    <li>
+      <strong>40.5% bundle size reduction</strong> with consolidated
+      architecture and shared dependencies
+    </li>
+    <li>
+      <strong>Zero polling in Angular:</strong> <code>subscribe()</code> uses
+      Angular effects when available, falling back to polling only in tests
+    </li>
+  </ul>
+
+  <h3>v4.2.0 (November 2025)</h3>
   <ul>
     <li>
       <strong>🎯 Nested Entity Paths:</strong> Access deeply nested entities
@@ -24,37 +108,12 @@
     </li>
   </ul>
 
-  <h3>December 2025 - v5.0.0 Release</h3>
-  <ul>
-    <li>
-      <strong>Marker-Based Entity System</strong>: Type-safe
-      <code>EntityMapMarker&lt;T, ID&gt;</code> with reactive CRUD operations
-      via <code>store.$.field.method()</code>
-    </li>
-    <li>
-      <strong>Performance Boost</strong>: 2-5x faster bulk operations with
-      diff-based updates in enterprise enhancer
-    </li>
-    <li>
-      <strong>Enhanced Types</strong>: Recursive inference up to 20+ nesting
-      levels with improved IntelliSense
-    </li>
-    <li>
-      <strong>Angular 20.3 Support</strong>: Full compatibility with signal
-      forms using <code>connect()</code> and <code>toWritableSignal()</code>
-    </li>
-    <li>
-      <strong>Consolidated Architecture</strong>: 40.5% bundle size reduction
-      with shared dependencies
-    </li>
-    <li>
-      <strong>Development Guardrails</strong>: Zero-cost production builds with
-      dev-only monitoring and hot path detection
-    </li>
-  </ul>
   <p class="next-steps">
     Explore the details under
-    <strong>Features → Entities</strong> for nested paths examples, and
+    <strong>Features → Entities</strong> for entity hooks examples (<code
+      >tap</code
+    >
+    and <code>intercept</code>), and
     <strong>Angular → Signal Forms (Angular 20+)</strong> for forms integration.
   </p>
 </div>

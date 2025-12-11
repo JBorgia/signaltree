@@ -2,9 +2,17 @@ import { AsyncDemoComponent } from '../../features/fundamentals/examples/async/a
 import { ComputedExampleComponent } from '../../features/fundamentals/examples/computed/computed-example.component';
 import { EffectsDemoComponent } from '../../features/fundamentals/examples/effects/effects-demo.component';
 import { BatchingDemoComponent } from '../../features/fundamentals/examples/enhancers/batching-demo/batching-demo.component';
-import { CallableSyntaxDemoComponent } from '../../features/fundamentals/examples/enhancers/callable-syntax-demo/callable-syntax-demo.component';
+import {
+  CallableSyntaxDemoComponent,
+} from '../../features/fundamentals/examples/enhancers/callable-syntax-demo/callable-syntax-demo.component';
 import { DevtoolsDemoComponent } from '../../features/fundamentals/examples/enhancers/devtools-demo/devtools-demo.component';
+import {
+  PersistenceDemoComponent,
+} from '../../features/fundamentals/examples/enhancers/persistence-demo/persistence-demo.component';
 import { PresetsDemoComponent } from '../../features/fundamentals/examples/enhancers/presets-demo/presets-demo.component';
+import {
+  SerializationDemoComponent,
+} from '../../features/fundamentals/examples/enhancers/serialization-demo/serialization-demo.component';
 import { EntitiesDemoComponent } from '../../features/fundamentals/examples/entities/entities-demo.component';
 import { FormsDemoComponent } from '../../features/fundamentals/examples/forms/forms-demo.component';
 import { MemoizationDemoComponent } from '../../features/fundamentals/examples/memoization/memoization-demo.component';
@@ -145,6 +153,48 @@ export const presetsExampleMeta: ExampleMeta = {
     'production',
     'performance',
   ],
+};
+
+/**
+ * Persistence Examples
+ */
+export const persistenceExampleMeta: ExampleMeta = {
+  id: 'persistence',
+  title: 'Persistence & Auto-Save',
+  description:
+    'Automatically save and restore state from localStorage with debounced auto-save.',
+  category: 'Data Management',
+  focusAreas: ['persistence', 'localStorage', 'auto-save'],
+  functionalUse: ['state-persistence', 'data-storage', 'offline'],
+  enhancers: ['persistence', 'serialization'],
+  route: '/examples/fundamentals/enhancers/persistence',
+  component: PersistenceDemoComponent,
+  difficulty: 'intermediate',
+  tags: [
+    'persistence',
+    'localStorage',
+    'auto-save',
+    'serialization',
+    'offline',
+  ],
+};
+
+/**
+ * Serialization Examples
+ */
+export const serializationExampleMeta: ExampleMeta = {
+  id: 'serialization',
+  title: 'Serialization',
+  description:
+    'Export and import state as JSON with automatic type preservation for Date, Set, Map, and more.',
+  category: 'Data Management',
+  focusAreas: ['serialization', 'json', 'type-preservation'],
+  functionalUse: ['state-export', 'state-import', 'data-transfer'],
+  enhancers: ['serialization'],
+  route: '/examples/fundamentals/enhancers/serialization',
+  component: SerializationDemoComponent,
+  difficulty: 'intermediate',
+  tags: ['serialization', 'json', 'type-preservation', 'export', 'import'],
 };
 
 /**
@@ -292,6 +342,8 @@ export const EXAMPLES_REGISTRY: ExampleMeta[] = [
   callableSyntaxExampleMeta,
   devtoolsExampleMeta,
   presetsExampleMeta,
+  persistenceExampleMeta,
+  serializationExampleMeta,
   memoizationExampleMeta,
   timeTravelExampleMeta,
   effectsExampleMeta,

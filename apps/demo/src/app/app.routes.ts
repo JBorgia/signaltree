@@ -70,6 +70,20 @@ export const appRoutes: Route[] = [
       ).then((c) => c.PresetsDemoComponent),
   },
   {
+    path: 'persistence',
+    loadComponent: () =>
+      import(
+        './examples/features/fundamentals/examples/enhancers/persistence-demo/persistence-demo.component'
+      ).then((c) => c.PersistenceDemoComponent),
+  },
+  {
+    path: 'serialization',
+    loadComponent: () =>
+      import(
+        './examples/features/fundamentals/examples/enhancers/serialization-demo/serialization-demo.component'
+      ).then((c) => c.SerializationDemoComponent),
+  },
+  {
     path: 'time-travel',
     loadComponent: () =>
       import(

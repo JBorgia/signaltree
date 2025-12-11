@@ -1,23 +1,35 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { signalTree } from '@signaltree/core';
 
-interface FormData {
-  username: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-  agreeToTerms: boolean;
+interface FormState {
+  fields: {
+    username: string;
+    email: string;
+    password: string;
+    confirmPassword: string;
+    agreeToTerms: boolean;
+  };
+  touched: {
+    username: boolean;
+    email: boolean;
+    password: boolean;
+    confirmPassword: boolean;
+  };
+  submitted: boolean;
+  submittedData: FormState['fields'] | null;
 }
 
 /**
  * Forms Integration Demo
  *
- * Demonstrates signal-based forms with:
- * - Real-time validation
- * - Computed form validity
+ * Demonstrates SignalTree-based forms with:
+ * - Unified state tree for form fields, touch state, and submission
+ * - Real-time validation via computed signals
  * - Field-level error messages
  * - Password strength indicator
+ * - Demonstrates how SignalTree simplifies complex form state management
  */
 @Component({
   selector: 'app-forms-demo',
@@ -27,18 +39,39 @@ interface FormData {
   styleUrl: './forms-demo.component.scss',
 })
 export class FormsDemoComponent {
-  // Form fields
-  username = signal('');
-  email = signal('');
-  password = signal('');
-  confirmPassword = signal('');
-  agreeToTerms = signal(false);
+  // Unified form state using SignalTree
+  formStore = signalTree<FormState>({
+    fields: {
+      username: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      agreeToTerms: false,
+    },
+    touched: {
+      username: false,
+      email: false,
+      password: false,
+      confirmPassword: false,
+    },
+    submitted: false,
+    submittedData: null,
+  });
 
-  // Touch state (for showing errors)
-  usernameTouched = signal(false);
-  emailTouched = signal(false);
-  passwordTouched = signal(false);
-  confirmPasswordTouched = signal(false);
+  // Aliases for cleaner template binding
+  username = this.formStore.$.fields.username;
+  email = this.formStore.$.fields.email;
+  password = this.formStore.$.fields.password;
+  confirmPassword = this.formStore.$.fields.confirmPassword;
+  agreeToTerms = this.formStore.$.fields.agreeToTerms;
+
+  usernameTouched = this.formStore.$.touched.username;
+  emailTouched = this.formStore.$.touched.email;
+  passwordTouched = this.formStore.$.touched.password;
+  confirmPasswordTouched = this.formStore.$.touched.confirmPassword;
+
+  submitted = this.formStore.$.submitted;
+  submittedData = this.formStore.$.submittedData;
 
   // Computed validations
   usernameValid = computed(() => {
@@ -81,13 +114,9 @@ export class FormsDemoComponent {
     );
   });
 
-  // Submission
-  submitted = signal(false);
-  submittedData = signal<FormData | null>(null);
-
   submitForm() {
     if (!this.formValid()) {
-      // Mark all as touched to show errors
+      // Mark all fields as touched to show errors
       this.usernameTouched.set(true);
       this.emailTouched.set(true);
       this.passwordTouched.set(true);
@@ -95,28 +124,27 @@ export class FormsDemoComponent {
       return;
     }
 
-    const formData: FormData = {
-      username: this.username(),
-      email: this.email(),
-      password: this.password(),
-      confirmPassword: this.confirmPassword(),
-      agreeToTerms: this.agreeToTerms(),
-    };
-
-    this.submittedData.set(formData);
+    // Store submitted data and mark as submitted
+    const fields = this.formStore.$.fields();
+    this.submittedData.set({ ...fields });
     this.submitted.set(true);
   }
 
   resetForm() {
-    this.username.set('');
-    this.email.set('');
-    this.password.set('');
-    this.confirmPassword.set('');
-    this.agreeToTerms.set(false);
-    this.usernameTouched.set(false);
-    this.emailTouched.set(false);
-    this.passwordTouched.set(false);
-    this.confirmPasswordTouched.set(false);
+    // Reset each section of the form state using callable syntax
+    this.formStore.$.fields({
+      username: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      agreeToTerms: false,
+    });
+    this.formStore.$.touched({
+      username: false,
+      email: false,
+      password: false,
+      confirmPassword: false,
+    });
     this.submitted.set(false);
     this.submittedData.set(null);
   }

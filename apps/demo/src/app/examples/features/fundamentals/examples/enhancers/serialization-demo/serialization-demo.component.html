@@ -1,0 +1,251 @@
+<div class="demo-container">
+  <h2 class="demo-title">📦 Serialization Demo</h2>
+
+  <div class="intro">
+    <p>
+      <strong>withSerialization</strong> enables JSON import/export with
+      automatic handling of special JavaScript types like <code>Date</code>,
+      <code>Set</code>, <code>Map</code>, and more.
+    </p>
+  </div>
+
+  <div class="content-grid">
+    <!-- State Editor Section -->
+    <div class="panel state-panel">
+      <h3>📝 Current State</h3>
+
+      <!-- User Section -->
+      <div class="section">
+        <h4>User</h4>
+        <div class="form-group">
+          <label for="user-name-input">Name:</label>
+          <input
+            id="user-name-input"
+            type="text"
+            [value]="userName()"
+            (input)="updateUserName($event)"
+            class="input-field"
+          />
+        </div>
+        <div class="form-group">
+          <label for="user-email-input">Email:</label>
+          <input
+            id="user-email-input"
+            type="email"
+            [value]="userEmail()"
+            (input)="updateUserEmail($event)"
+            class="input-field"
+          />
+        </div>
+        <div class="info-row">
+          <span class="label">Created:</span>
+          <span class="value">{{ createdAt() }}</span>
+        </div>
+      </div>
+
+      <!-- Preferences Section -->
+      <div class="section">
+        <h4>Preferences</h4>
+        <div class="button-group theme-buttons">
+          <button
+            [class.active]="theme() === 'light'"
+            (click)="setTheme('light')"
+            class="btn btn-sm"
+          >
+            ☀️ Light
+          </button>
+          <button
+            [class.active]="theme() === 'dark'"
+            (click)="setTheme('dark')"
+            class="btn btn-sm"
+          >
+            🌙 Dark
+          </button>
+          <button
+            [class.active]="theme() === 'auto'"
+            (click)="setTheme('auto')"
+            class="btn btn-sm"
+          >
+            🔄 Auto
+          </button>
+        </div>
+        <div class="toggle-row">
+          <label for="notifications-toggle-btn">Notifications:</label>
+          <button
+            id="notifications-toggle-btn"
+            (click)="toggleNotifications()"
+            [class.on]="notifications()"
+            class="toggle-btn"
+          >
+            {{ notifications() ? '✓ On' : '✗ Off' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Items Section -->
+      <div class="section">
+        <h4>Items ({{ itemsCount() }})</h4>
+        <div class="items-list">
+          @for (item of items(); track item.id) {
+          <div class="item-card">
+            <div class="item-header">
+              <span class="item-name">{{ item.name }}</span>
+              <span class="item-value">{{ item.value }}</span>
+            </div>
+            <div class="item-tags">
+              @for (tag of item.tags; track tag) {
+              <span class="tag">{{ tag }}</span>
+              }
+            </div>
+            <div class="item-actions">
+              <button
+                (click)="addTagToItem(item.id, 'extra')"
+                class="btn btn-sm"
+              >
+                + Tag
+              </button>
+              <button
+                (click)="removeItem(item.id)"
+                class="btn btn-sm btn-danger"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+          }
+        </div>
+        <button
+          (click)="addItem()"
+          class="btn btn-sm btn-primary"
+          style="margin-top: 0.5rem"
+        >
+          + Add Item
+        </button>
+      </div>
+
+      <!-- Metadata Section -->
+      <div class="section">
+        <h4>Metadata</h4>
+        <div class="info-row">
+          <span class="label">Version:</span>
+          <span class="value">{{ metadataVersion() }}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Last Modified:</span>
+          <span class="value">{{ lastModified() }}</span>
+        </div>
+      </div>
+
+      <button (click)="resetToDefaults()" class="btn btn-sm">
+        🔄 Reset to Defaults
+      </button>
+    </div>
+
+    <!-- Serialization Section -->
+    <div class="panel serialization-panel">
+      <h3>💾 Serialization</h3>
+
+      <div class="action-buttons">
+        <button (click)="serializeToJSON()" class="btn btn-primary">
+          📤 Serialize (with types)
+        </button>
+        <button (click)="serializeSimple()" class="btn">📤 Simple JSON</button>
+      </div>
+
+      <div class="output-section">
+        <h4>
+          Output @if (serializedOutput()) {
+          <button (click)="copyToClipboard()" class="btn btn-sm">
+            📋 Copy
+          </button>
+          }
+        </h4>
+        <div class="json-output">
+          {{ serializedOutput() || 'Click serialize to see output...' }}
+        </div>
+        @if (serializedOutput()) {
+        <button
+          (click)="useOutputAsInput()"
+          class="btn btn-sm"
+          style="margin-top: 0.5rem"
+        >
+          ⬇️ Use as Import
+        </button>
+        }
+      </div>
+
+      <div class="import-section">
+        <h4>Import JSON</h4>
+        <textarea
+          class="json-input"
+          [value]="importInput()"
+          (input)="updateImportInput($event)"
+          placeholder="Paste JSON here to import..."
+        ></textarea>
+        <div class="import-actions">
+          <button (click)="deserializeFromJSON()" class="btn btn-success">
+            📥 Import
+          </button>
+          <button (click)="loadSampleJSON()" class="btn">📄 Load Sample</button>
+        </div>
+      </div>
+
+      @if (lastAction()) {
+      <div class="status-bar">
+        <span class="status-label">Last Action:</span>
+        <span class="status-value">{{ lastAction() }}</span>
+      </div>
+      }
+
+      <!-- Type Preservation Info -->
+      <div class="type-info">
+        <h4>
+          Type Preservation
+          <button (click)="toggleTypePreservation()" class="btn btn-sm">
+            {{ showTypePreservation() ? 'Hide' : 'Show' }}
+          </button>
+        </h4>
+        @if (showTypePreservation()) {
+        <div class="type-grid">
+          <div class="type-item">
+            <span class="type-label">createdAt:</span>
+            <span class="type-value">{{ typeInfo().createdAtType }}</span>
+          </div>
+          <div class="type-item">
+            <span class="type-label">lastModified:</span>
+            <span class="type-value">{{ typeInfo().lastModifiedType }}</span>
+          </div>
+          <div class="type-item">
+            <span class="type-label">tags:</span>
+            <span class="type-value">{{ typeInfo().tagsType }}</span>
+          </div>
+          <div class="type-item">
+            <span class="type-label">items:</span>
+            <span class="type-value">{{ typeInfo().itemsIsArray }}</span>
+          </div>
+        </div>
+        }
+      </div>
+    </div>
+
+    <!-- Code Example -->
+    <div class="code-section">
+      <h3>💻 Using withSerialization</h3>
+      <pre><code>// Create store with serialization enhancer
+store = signalTree&lt;AppState&gt;(initialState)
+  .with(withSerialization({{ '{' }}
+    preserveTypes: true,  // Preserve Date, Set, Map types
+    includeMetadata: true // Include timestamp in output
+  {{ '}' }}));
+
+// Export state to JSON
+const json = store.serialize();
+
+// Import state from JSON
+store.deserialize(json);
+
+// Get plain object (no type markers)
+const obj = store.toJSON();</code></pre>
+    </div>
+  </div>
+</div>

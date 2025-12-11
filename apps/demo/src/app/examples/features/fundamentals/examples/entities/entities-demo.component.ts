@@ -56,8 +56,78 @@ export class EntitiesDemoComponent {
   // ENTITY HOOKS - Lifecycle Observation
   // ==================
 
+  // Intercept state for validation demo
+  interceptEnabled = true;
+  blockedOperations: string[] = [];
+
   // Setup entity hooks to react to CRUD operations
   private setupEntityHooks() {
+    // ==================
+    // INTERCEPT HOOKS - Block/Transform mutations
+    // ==================
+
+    // User intercept: validate and transform mutations BEFORE they happen
+    this.store.$.users.intercept({
+      onAdd: (user, ctx) => {
+        // Block users with invalid email
+        if (this.interceptEnabled && !user.email.includes('@')) {
+          ctx.block('Invalid email format');
+          this.blockedOperations.push(
+            `Blocked: Add user "${user.name}" - invalid email`
+          );
+          return;
+        }
+        // Transform: ensure name is trimmed
+        ctx.transform({ ...user, name: user.name.trim() });
+      },
+      onUpdate: (id, changes, ctx) => {
+        // Block empty name updates
+        if (
+          this.interceptEnabled &&
+          changes.name !== undefined &&
+          changes.name.trim() === ''
+        ) {
+          ctx.block('Name cannot be empty');
+          this.blockedOperations.push(
+            `Blocked: Update user ${id} - empty name`
+          );
+          return;
+        }
+      },
+      onRemove: (id, _entity, ctx) => {
+        // Block removal of user with ID 1 (protected user)
+        if (this.interceptEnabled && id === 1) {
+          ctx.block('Cannot remove protected user');
+          this.blockedOperations.push(`Blocked: Remove user ${id} - protected`);
+        }
+      },
+    });
+
+    // Post intercept: enforce content policies
+    this.store.$.posts.intercept({
+      onAdd: (post, ctx) => {
+        // Transform: sanitize title
+        const sanitizedTitle = post.title.replace(/<[^>]*>/g, '');
+        if (sanitizedTitle !== post.title) {
+          ctx.transform({ ...post, title: sanitizedTitle });
+          console.log('🔒 Post title sanitized');
+        }
+      },
+      onUpdate: (id, changes, ctx) => {
+        // Block negative likes
+        if (changes.likes !== undefined && changes.likes < 0) {
+          ctx.block('Likes cannot be negative');
+          this.blockedOperations.push(
+            `Blocked: Update post ${id} - negative likes`
+          );
+        }
+      },
+    });
+
+    // ==================
+    // TAP HOOKS - Observe mutations AFTER they happen
+    // ==================
+
     // User hooks: track add/update/remove operations
     this.store.$.users.tap({
       onAdd: (user, id) => {
