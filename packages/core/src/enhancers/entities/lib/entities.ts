@@ -7,6 +7,8 @@ import type {
   EntityMapMarker,
   EntitySignal,
   SignalTree,
+  EntityAwareTreeNode,
+  TreeNode,
 } from '../../../lib/types';
 
 interface EntitiesEnhancerConfig {
@@ -21,16 +23,18 @@ function isEntityMapMarker(value: unknown): value is Marker {
   return Boolean(
     value &&
       typeof value === 'object' &&
-      (value as Record<string, unknown>).__isEntityMap === true
+      (value as Record<string, unknown>)['__isEntityMap'] === true
   );
 }
 
-function isEntitySignal(value: unknown): value is EntitySignal<unknown, string> {
+function isEntitySignal(
+  value: unknown
+): value is EntitySignal<unknown, string> {
   return (
     !!value &&
     typeof value === 'object' &&
-    typeof (value as Record<string, unknown>).addOne === 'function' &&
-    typeof (value as Record<string, unknown>).all === 'function'
+    typeof (value as Record<string, unknown>)['addOne'] === 'function' &&
+    typeof (value as Record<string, unknown>)['all'] === 'function'
   );
 }
 
@@ -52,7 +56,8 @@ function materializeEntities<T>(
     if (isEntityMapMarker(value)) {
       const basePath = nextPath.join('.');
       const config = (value.__entityMapConfig ?? {}) as EntityConfig<
-        unknown,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        any,
         string | number
       >;
       const entitySignal = new EntitySignalImpl(config, notifier, basePath);
@@ -76,13 +81,10 @@ function materializeEntities<T>(
     }
 
     if (isNodeAccessor(value)) {
-      for (const childKey of Object.keys(value as Record<string, unknown>)) {
-        visit(
-          value as Record<string, unknown>,
-          childKey,
-          (value as Record<string, unknown>)[childKey],
-          nextPath
-        );
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const nodeAsAny = value as any;
+      for (const childKey of Object.keys(nodeAsAny)) {
+        visit(nodeAsAny, childKey, nodeAsAny[childKey], nextPath);
       }
       return;
     }
@@ -139,19 +141,19 @@ function resolveEntitySignal<T>(
 export function withEntities(config: EntitiesEnhancerConfig = {}) {
   const { enabled = true } = config;
 
-  return function enhanceWithEntities<T>(
-    tree: SignalTree<T>
-  ): SignalTree<T> & {
+  return function enhanceWithEntities<T>(tree: SignalTree<T>): Omit<
+    SignalTree<T>,
+    'state' | '$'
+  > & {
+    state: EntityAwareTreeNode<T>;
+    $: EntityAwareTreeNode<T>;
     entities<E, K extends string | number>(
       path: keyof T | string
     ): EntitySignal<E, K>;
   } {
     if (!enabled) {
-      return tree as SignalTree<T> & {
-        entities<E, K extends string | number>(
-          path: keyof T | string
-        ): EntitySignal<E, K>;
-      };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return tree as any;
     }
 
     const registry = materializeEntities(tree);
@@ -164,7 +166,8 @@ export function withEntities(config: EntitiesEnhancerConfig = {}) {
       },
     });
 
-    return enhancedTree;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return enhancedTree as any;
   };
 }
 

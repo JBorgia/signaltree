@@ -366,7 +366,7 @@ describe('EntitySignal v5.0 Integration', () => {
   });
 
   describe('Entity access', () => {
-    it('should support bracket notation access', () => {
+    it('should support byId() method for entity access', () => {
       const tree = signalTree({
         users: entityMap<User>(),
       }).with(withEntities());
@@ -378,7 +378,7 @@ describe('EntitySignal v5.0 Integration', () => {
         active: true,
       });
 
-      const user = tree.$.users['u1'];
+      const user = tree.$.users.byId('u1');
       expect(user).toBeDefined();
       expect(user?.()).toBeDefined();
       expect(user?.().id).toBe('u1');

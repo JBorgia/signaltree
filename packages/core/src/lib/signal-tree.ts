@@ -432,7 +432,7 @@ function isEntityMapMarker(
   return Boolean(
     value &&
       typeof value === 'object' &&
-      (value as Record<string, unknown>).__isEntityMap === true
+      (value as Record<string, unknown>)['__isEntityMap'] === true
   );
 }
 
