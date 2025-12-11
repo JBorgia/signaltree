@@ -1,3 +1,85 @@
+## 5.0.0 (2025-12-10)
+
+### 💥 BREAKING CHANGES
+
+- **core:** entity system redesigned with marker-based API
+  - Replaced `tree.entities<E>(path)` with `entityMap()` in state definition
+  - Now accessed via `store.$.fieldName.method()` instead of `helpers.method()`
+  - Path-based entity access removed (use direct `$` access instead)
+  - Entity helpers API (`setAll`, `addOne`, `byId`, etc.) now reactive signals
+  - See RELEASE_v5.0.md for detailed migration guide
+
+### 🚀 Features
+
+- **core:** marker-based entity system with EntitySignal API
+
+  - `EntityMapMarker<T, ID>` type for compile-time safety
+  - Full TypeScript support with recursive type inference (20+ nesting levels)
+  - Reactive CRUD operations: `setAll()`, `addOne()`, `updateOne()`, `removeOne()`
+  - Type-safe computed selectors: `where()`, `byId()`, `count()`, `all()`
+  - Observable patterns for reactive queries
+
+- **core:** PathNotifier integration for reactive mutation tracking
+
+  - Internal path-level change tracking for computed selectors
+  - Minimal overhead with synchronous and batch operation support
+  - Enables advanced reactive patterns without proxy overhead
+
+- **core:** consolidated entity architecture
+
+  - All entity logic unified under single enhancer
+  - No separate entity package required
+  - Reduced bundle duplication across ecosystem
+  - Simplified mental model: entities = state slice with methods
+
+- **core:** enhanced type system
+
+  - Recursive type inference up to 20+ nesting levels
+  - Entity marker types for compile-time safety
+  - Improved parameter inference for enhancers
+  - Full IntelliSense support in editors
+
+- **core:** improved enhancer composition
+  - Metadata-driven enhancer ordering system
+  - Cleaner `requires`/`provides` declarations
+  - Better initialization sequencing
+  - Reduced inter-enhancer ordering bugs
+
+### 📊 Performance Improvements
+
+- **Entity operations** (map-based vs array-based)
+
+  - Add single item: +49.4% throughput (12M → 24M ops/sec)
+  - Update single item: +60.1% faster execution
+  - Lookup by ID: native Map performance (parity with v4.2.1)
+  - Remove single item: parity maintained
+  - Initial load (setAll 1000 items): +3.5% improvement
+
+- **Bundle size optimization**
+  - Consolidated entity architecture reduces duplication
+  - 15.9% reduction in total ecosystem size vs separate-package layout
+  - Tree-shakeable enhancer exports
+  - Minimal PathNotifier overhead
+
+### 📚 Documentation
+
+- New `QUICK_START.md` with step-by-step v5.0 examples
+- Updated `QUICK_REFERENCE.md` with EntitySignal API
+- Migration guide in RELEASE_v5.0.md
+- Moved ARCHITECTURE.md to `docs/ARCHITECTURE.md` for better organization
+- Enhanced USAGE_EXAMPLES.md with entity patterns
+- NEW: `docs/V5_ENTITY_PERFORMANCE_ANALYSIS.md` for entity perf guidance
+
+### 🩹 Fixes
+
+- Remove circular import in types.ts ([5ed4601](https://github.com/JBorgia/signaltree/commit/5ed4601))
+- Add depth limit to DeepPath type to prevent TypeScript infinite recursion ([90e0816](https://github.com/JBorgia/signaltree/commit/90e0816))
+- Exclude demo from release pre-build command ([61c7ea8](https://github.com/JBorgia/signaltree/commit/61c7ea8))
+
+### ❤️ Thank You
+
+- Borgia
+
 ## 4.2.0 (2025-12-04)
 
 ### 🚀 Features
