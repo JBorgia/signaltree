@@ -1,7 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { signalTree, withEntities, withMemoization } from '@signaltree/core';
+import {
+  entityMap,
+  signalTree,
+  withEntities,
+  withMemoization,
+} from '@signaltree/core';
 
 interface Log {
   id: string;
@@ -425,7 +430,7 @@ filteredLogs(); // Returns cached result`;
 
   // Create the tree with memoization and entities
   private tree = signalTree({
-    logs: [] as Log[],
+    logs: entityMap<Log, string>({ selectId: (log) => log.id }),
     filters: {
       level: 'all' as 'all' | 'info' | 'warn' | 'error',
       search: '',
@@ -433,37 +438,37 @@ filteredLogs(); // Returns cached result`;
     },
   }).with(withMemoization(), withEntities());
 
-  // Get entity manager
-  private logsEntity = this.tree.entities<Log>('logs');
-
-  // Memoized filtered logs - this is the key performance optimization
-  private filteredLogs = this.tree.memoize((state) => {
+  // Memoized filtered logs - using computed signal for caching
+  private filteredLogs = computed(() => {
     const startTime = performance.now();
-    let logs = state.logs;
+    let logs = this.tree.$.logs.all()();
+    const level = this.tree.$.filters.level();
+    const search = this.tree.$.filters.search();
+    const userId = this.tree.$.filters.userId();
 
-    if (state.filters.level !== 'all') {
-      logs = logs.filter((log) => log.level === state.filters.level);
+    if (level !== 'all') {
+      logs = logs.filter((log) => log.level === level);
     }
 
-    if (state.filters.search) {
-      const searchLower = state.filters.search.toLowerCase();
+    if (search) {
+      const searchLower = search.toLowerCase();
       logs = logs.filter((log) =>
         log.message.toLowerCase().includes(searchLower)
       );
     }
 
-    if (state.filters.userId) {
-      logs = logs.filter((log) => log.userId === state.filters.userId);
+    if (userId) {
+      logs = logs.filter((log) => log.userId === userId);
     }
 
     this.lastFilterTime = performance.now() - startTime;
     this.cacheHitCount++;
 
     return logs;
-  }, 'filtered-logs');
+  });
 
   // Computed signals for UI
-  totalLogs = computed(() => this.tree.$.logs().length);
+  totalLogs = computed(() => this.tree.$.logs.count()());
   filteredCount = computed(() => this.filteredLogs().length);
   displayedLogs = computed(() => this.filteredLogs().slice(0, 100)); // Limit display for performance
   cacheHits = computed(() => this.cacheHitCount);
@@ -520,7 +525,7 @@ filteredLogs(); // Returns cached result`;
       userId: userIds[Math.floor(Math.random() * userIds.length)] || undefined,
     };
 
-    this.logsEntity.add(log);
+    this.tree.$.logs.addOne(log);
   }
 
   addBulkLogs() {
@@ -551,14 +556,13 @@ filteredLogs(); // Returns cached result`;
       });
     }
 
-    // Add all logs at once
-    logs.forEach((log) => this.logsEntity.add(log));
+    // Add all logs at once using addMany for better performance
+    this.tree.$.logs.addMany(logs);
   }
 
   clearLogs() {
-    // Get all current logs and remove them via entity manager
-    const allLogs = this.tree.$.logs();
-    allLogs.forEach((log) => this.logsEntity.remove(log.id));
+    // Use EntitySignal clear() to remove all logs
+    this.tree.$.logs.clear();
     this.cacheHitCount = 0;
   }
 
@@ -598,6 +602,6 @@ filteredLogs(); // Returns cached result`;
       },
     ];
 
-    sampleLogs.forEach((log) => this.logsEntity.add(log));
+    this.tree.$.logs.addMany(sampleLogs);
   }
 }

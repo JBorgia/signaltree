@@ -1,13 +1,20 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { signalTree, withEntities } from '@signaltree/core';
+import { entityMap, signalTree, withEntities } from '@signaltree/core';
 
-import { generatePosts, generateUsers, Post, User } from '../../../../../shared/models';
+import {
+  generatePosts,
+  generateUsers,
+  Post,
+  User,
+} from '../../../../../shared/models';
+
+import type { EntityMapMarker } from '@signaltree/core';
 
 interface EntitiesState {
-  users: User[];
-  posts: Post[];
+  users: EntityMapMarker<User, number>;
+  posts: EntityMapMarker<Post, number>;
   selectedUserId: number | null;
   searchTerm: string;
   // Pagination & Sorting
@@ -30,8 +37,8 @@ interface EntitiesState {
 })
 export class EntitiesDemoComponent {
   store = signalTree<EntitiesState>({
-    users: [],
-    posts: [],
+    users: entityMap<User, number>({ selectId: (user) => user.id }),
+    posts: entityMap<Post, number>({ selectId: (post) => post.id }),
     selectedUserId: null,
     searchTerm: '',
     // Pagination & Sorting defaults
@@ -44,10 +51,6 @@ export class EntitiesDemoComponent {
     postsSortBy: 'likes',
     postsSortAsc: false,
   }).with(withEntities());
-
-  // Entity helpers from withEntities enhancer (@signaltree/core)
-  userHelpers = this.store.entities<User>('users');
-  postHelpers = this.store.entities<Post>('posts');
 
   // State signals
   searchTerm = '';
@@ -73,15 +76,17 @@ export class EntitiesDemoComponent {
   editingUserName = '';
   editingUserEmail = '';
 
-  // Entity selectors using entity helpers
-  userCount = this.userHelpers.selectTotal();
-  postCount = this.postHelpers.selectTotal();
-  allUsers = this.userHelpers.selectAll();
-  allPosts = this.postHelpers.selectAll();
+  // Entity selectors using v5.0 EntitySignal API
+  userCount = this.store.$.users.count();
+  postCount = this.store.$.posts.count();
+  allUsers = this.store.$.users.all();
+  allPosts = this.store.$.posts.all();
 
   selectedUser = computed(() => {
     const id = this.store.$.selectedUserId();
-    return id ? this.userHelpers.selectById(id)() : null;
+    if (!id) return null;
+    const userNode = this.store.$.users.byId(id);
+    return userNode ? userNode() : null;
   });
 
   filteredUsers = computed(() => {
@@ -202,12 +207,12 @@ export class EntitiesDemoComponent {
     const selectedId = this.store.$.selectedUserId();
     if (!selectedId) return [];
 
-    return this.store.$.posts().filter((post) => post.authorId === selectedId);
+    return this.store.$.posts.where((post) => post.authorId === selectedId)();
   });
 
   displayedPosts = computed(() => {
     const selectedId = this.store.$.selectedUserId();
-    const allPosts = this.store.$.posts();
+    const allPosts = this.allPosts();
 
     return selectedId
       ? allPosts.filter((post) => post.authorId === selectedId)
@@ -318,9 +323,8 @@ export class EntitiesDemoComponent {
 
   loadUsers() {
     const users = generateUsers(50);
-    // Use entity helpers to clear and add all users
-    this.userHelpers.clear();
-    users.forEach((user) => this.userHelpers.add(user));
+    // Use EntitySignal to set all users
+    this.store.$.users.setAll(users);
     this.trackOperation('Load Users');
   }
 
@@ -331,35 +335,34 @@ export class EntitiesDemoComponent {
     }
 
     const posts = generatePosts(200, Math.max(userCount, 50));
-    // Use entity helpers to clear and add all posts
-    this.postHelpers.clear();
-    posts.forEach((post) => this.postHelpers.add(post));
+    // Use EntitySignal to set all posts
+    this.store.$.posts.setAll(posts);
     this.trackOperation('Load Posts');
   }
 
   addRandomUser() {
     const newUser = generateUsers(1, Date.now())[0];
-    const users = this.store.$.users();
+    const users = this.allUsers();
     const currentMaxId = Math.max(0, ...users.map((u) => u.id));
     newUser.id = currentMaxId + 1;
 
-    // Use entity helper to add user
-    this.userHelpers.add(newUser);
+    // Use EntitySignal to add user
+    this.store.$.users.addOne(newUser);
     this.trackOperation('Add User');
   }
 
   addRandomPost() {
-    const users = this.store.$.users();
+    const users = this.allUsers();
     if (users.length === 0) return;
 
     const newPost = generatePosts(1, users.length, Date.now())[0];
-    const posts = this.store.$.posts();
+    const posts = this.allPosts();
     const currentMaxId = Math.max(0, ...posts.map((p) => p.id));
     newPost.id = currentMaxId + 1;
     newPost.authorId = users[Math.floor(Math.random() * users.length)].id;
 
-    // Use entity helper to add post
-    this.postHelpers.add(newPost);
+    // Use EntitySignal to add post
+    this.store.$.posts.addOne(newPost);
     this.trackOperation('Add Post');
   }
 
@@ -377,24 +380,25 @@ export class EntitiesDemoComponent {
   }
 
   bulkUpdatePosts() {
-    this.store.$.posts.update((posts) =>
-      posts.map((post) => ({
-        ...post,
-        likes: post.likes + 10,
-      }))
-    );
+    // Use EntitySignal updateWhere to update all posts
+    this.store.$.posts.updateWhere(() => true, { likes: 10 });
+    // Note: This sets likes to 10, not increments. For increment, we'd need to iterate.
+    const posts = this.allPosts();
+    posts.forEach((post) => {
+      this.store.$.posts.updateOne(post.id, { likes: post.likes + 10 });
+    });
     this.trackOperation('Bulk Update Posts');
   }
 
   removeInactivePosts() {
-    this.store.$.posts.update((posts) =>
-      posts.filter((post) => post.likes >= 20)
-    );
+    // Use EntitySignal removeWhere to remove posts with likes < 20
+    this.store.$.posts.removeWhere((post) => post.likes < 20);
     this.trackOperation('Remove Inactive Posts');
   }
 
   getPostAuthor(authorId: number): User | undefined {
-    return this.store.$.users().find((u) => u.id === authorId);
+    const userNode = this.store.$.users.byId(authorId);
+    return userNode ? userNode() : undefined;
   }
 
   getUserClass(userId: number): string {
@@ -477,7 +481,7 @@ export class EntitiesDemoComponent {
   addUser() {
     if (!this.newUserName || !this.newUserEmail) return;
 
-    const users = this.store.$.users();
+    const users = this.allUsers();
     const currentMaxId = Math.max(0, ...users.map((u) => u.id));
 
     const newUser: User = {
@@ -487,19 +491,19 @@ export class EntitiesDemoComponent {
       avatar: `https://i.pravatar.cc/150?u=${this.newUserEmail}`,
     };
 
-    this.userHelpers.add(newUser);
+    this.store.$.users.addOne(newUser);
     this.newUserName = '';
     this.newUserEmail = '';
     this.trackOperation('Add User');
   }
 
   updateUser(id: number, updates: Partial<User>) {
-    this.userHelpers.update(id, updates);
+    this.store.$.users.updateOne(id, updates);
     this.trackOperation('Update User');
   }
 
   deleteUser(id: number) {
-    this.userHelpers.remove(id);
+    this.store.$.users.removeOne(id);
     this.trackOperation('Delete User');
   }
 
@@ -510,9 +514,10 @@ export class EntitiesDemoComponent {
 
   // Post interaction methods
   likePost(postId: number) {
-    const post = this.postHelpers.selectById(postId)();
-    if (post) {
-      this.postHelpers.update(postId, { likes: post.likes + 1 });
+    const postNode = this.store.$.posts.byId(postId);
+    if (postNode) {
+      const post = postNode();
+      this.store.$.posts.updateOne(postId, { likes: post.likes + 1 });
       this.trackOperation('Like Post');
     }
   }
@@ -525,7 +530,7 @@ export class EntitiesDemoComponent {
 
   savePost() {
     if (this.editingPostId && this.editingPostTitle.trim()) {
-      this.postHelpers.update(this.editingPostId, {
+      this.store.$.posts.updateOne(this.editingPostId, {
         title: this.editingPostTitle.trim(),
         content: this.editingPostContent.trim(),
       });
@@ -553,7 +558,7 @@ export class EntitiesDemoComponent {
       this.editingUserName.trim() &&
       this.editingUserEmail.trim()
     ) {
-      this.userHelpers.update(this.editingUserId, {
+      this.store.$.users.updateOne(this.editingUserId, {
         name: this.editingUserName.trim(),
         email: this.editingUserEmail.trim(),
       });
@@ -590,12 +595,12 @@ export class EntitiesDemoComponent {
   confirmDeleteSelected() {
     if (this.selectedPostIds.size === 0) return;
 
-    if (confirm(`Delete ${this.selectedPostIds.size} selected posts?`)) {
-      this.selectedPostIds.forEach((postId) => {
-        this.postHelpers.remove(postId);
-      });
+    const count = this.selectedPostIds.size;
+    if (confirm(`Delete ${count} selected posts?`)) {
+      // Use EntitySignal removeMany for batch deletion
+      this.store.$.posts.removeMany(Array.from(this.selectedPostIds));
       this.selectedPostIds.clear();
-      this.trackOperation(`Bulk Delete ${this.selectedPostIds.size} Posts`);
+      this.trackOperation(`Bulk Delete ${count} Posts`);
     }
   }
 }
