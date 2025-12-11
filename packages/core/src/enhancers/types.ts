@@ -137,22 +137,6 @@ export interface EntityCollection<T = unknown> {
 }
 
 // ============================================
-// ASYNC TYPES
-// ============================================
-
-export interface AsyncConfig {
-  timeout?: number;
-  retryAttempts?: number;
-  retryDelay?: number;
-}
-
-export interface AsyncAction<T = unknown> {
-  execute(): Promise<T>;
-  cancel(): void;
-  status: 'pending' | 'fulfilled' | 'rejected' | 'cancelled';
-}
-
-// ============================================
 // SERIALIZATION TYPES
 // ============================================
 
