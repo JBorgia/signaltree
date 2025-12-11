@@ -4,7 +4,7 @@
  * @packageDocumentation
  */
 
-import type { Middleware, SignalTree } from '@signaltree/core';
+import type { SignalTree } from '@signaltree/core';
 
 import type {
   GuardrailsConfig,
@@ -30,12 +30,6 @@ declare const process:
   | undefined;
 
 type EnabledOption = boolean | (() => boolean);
-
-type MiddlewareCapableTree<T extends Record<string, unknown>> =
-  SignalTree<T> & {
-    addTap: (middleware: Middleware<T>) => void;
-    removeTap: (id: string) => void;
-  };
 
 function isFunction<T extends (...args: never[]) => unknown>(
   value: unknown
@@ -63,13 +57,6 @@ function resolveEnabledFlag(option?: EnabledOption): boolean {
     }
   }
   return option;
-}
-
-function supportsMiddleware<T extends Record<string, unknown>>(
-  tree: SignalTree<T>
-): tree is MiddlewareCapableTree<T> {
-  const candidate = tree as Partial<MiddlewareCapableTree<T>>;
-  return isFunction(candidate.addTap) && isFunction(candidate.removeTap);
 }
 
 function tryStructuredClone<T>(value: T): T {
@@ -130,15 +117,19 @@ interface GuardrailsContext<
   signalUsage: Map<string, { updates: number; lastSeen: number }>;
   memoryHistory: Array<{ timestamp: number; count: number }>;
   recomputationLog: number[];
-  middlewareId?: string;
+  pollingIntervalId?: ReturnType<typeof setInterval>;
+  previousState?: T;
   disposed: boolean;
 }
 
 const MAX_TIMING_SAMPLES = 1000;
 const RECOMPUTATION_WINDOW_MS = 1000;
+const POLLING_INTERVAL_MS = 50; // Fast polling for dev-time monitoring
 
 /**
  * Creates a guardrails enhancer for dev-only monitoring
+ * Uses reactive subscription when in Angular context (zero polling),
+ * falls back to polling-based detection in non-Angular environments (tests)
  */
 export function withGuardrails<T extends Record<string, unknown>>(
   config: GuardrailsConfig<T> = {}
@@ -147,13 +138,6 @@ export function withGuardrails<T extends Record<string, unknown>>(
     const enabled = resolveEnabledFlag(config.enabled);
 
     if (!isDevEnvironment() || !enabled) {
-      return tree;
-    }
-
-    if (!supportsMiddleware(tree)) {
-      console.warn(
-        '[Guardrails] Tree does not expose middleware hooks; guardrails disabled.'
-      );
       return tree;
     }
 
@@ -172,28 +156,21 @@ export function withGuardrails<T extends Record<string, unknown>>(
       signalUsage: new Map(),
       memoryHistory: [],
       recomputationLog: [],
+      previousState: tryStructuredClone(tree()),
       disposed: false,
     };
 
-    const middlewareId = `guardrails:${config.treeId ?? 'tree'}:${Math.random()
-      .toString(36)
-      .slice(2)}`;
-    context.middlewareId = middlewareId;
-
-    const middleware = createGuardrailsMiddleware(context);
-    tree.addTap(middleware);
+    // Try reactive subscription first (zero polling in Angular production)
+    // Fall back to polling for non-Angular environments (tests)
+    const stopChangeDetection = startChangeDetection(context);
 
     const stopMonitoring = startMonitoring(context);
 
     const teardown = () => {
       if (context.disposed) return;
       context.disposed = true;
+      stopChangeDetection();
       stopMonitoring();
-      try {
-        tree.removeTap(middlewareId);
-      } catch {
-        // ignore if removal fails
-      }
     };
 
     const originalDestroy = tree.destroy?.bind(tree);
@@ -213,6 +190,148 @@ export function withGuardrails<T extends Record<string, unknown>>(
   };
 }
 
+/**
+ * Start change detection - tries reactive subscription first, falls back to polling
+ */
+function startChangeDetection<T extends Record<string, unknown>>(
+  context: GuardrailsContext<T>
+): () => void {
+  // Try to use tree.subscribe() for reactive change detection (zero polling)
+  try {
+    const unsubscribe = context.tree.subscribe(() => {
+      handleStateChange(context);
+    });
+    // Success! Using reactive subscription - no polling needed
+    return unsubscribe;
+  } catch {
+    // subscribe() failed (no injection context) - fall back to polling
+    return startPollingChangeDetection(context);
+  }
+}
+
+/**
+ * Handle a state change (called by either subscription or polling)
+ */
+function handleStateChange<T extends Record<string, unknown>>(
+  context: GuardrailsContext<T>
+): void {
+  if (context.disposed || context.suppressed) return;
+
+  const currentState = context.tree();
+  const previousState = context.previousState;
+
+  if (!previousState) {
+    context.previousState = tryStructuredClone(currentState);
+    return;
+  }
+
+  // Compare states to detect changes
+  const currentJson = JSON.stringify(currentState);
+  const previousJson = JSON.stringify(previousState);
+
+  if (currentJson !== previousJson) {
+    const startTime = performance.now();
+    const timestamp = Date.now();
+
+    // Detect which paths changed
+    const changedPaths = detectChangedPaths(previousState, currentState);
+
+    for (const path of changedPaths) {
+      const detail: UpdateDetail = {
+        path,
+        segments: path.split('.'),
+        oldValue: getValueAtPath(previousState, path.split('.')),
+        newValue: getValueAtPath(currentState, path.split('.')),
+      };
+
+      // Analyze the change
+      analyzePreUpdate(context, detail, {});
+
+      const duration = performance.now() - startTime;
+      const diffRatio = calculateDiffRatio(detail.oldValue, detail.newValue);
+      analyzePostUpdate(context, detail, duration, diffRatio, true);
+      trackHotPath(context, path, duration);
+      trackSignalUsage(context, path, timestamp);
+    }
+
+    // Update timing stats
+    const totalDuration = performance.now() - startTime;
+    updateTimingStats(context, totalDuration);
+    updateSignalStats(context, timestamp);
+
+    // Store new state for next comparison
+    context.previousState = tryStructuredClone(currentState);
+  }
+}
+
+/**
+ * Start polling-based change detection for guardrails monitoring
+ * Used as fallback when reactive subscription is not available
+ */
+function startPollingChangeDetection<T extends Record<string, unknown>>(
+  context: GuardrailsContext<T>
+): () => void {
+  const pollForChanges = () => {
+    handleStateChange(context);
+  };
+
+  // Start polling
+  context.pollingIntervalId = setInterval(pollForChanges, POLLING_INTERVAL_MS);
+
+  // Return cleanup function
+  return () => {
+    if (context.pollingIntervalId) {
+      clearInterval(context.pollingIntervalId);
+      context.pollingIntervalId = undefined;
+    }
+  };
+}
+
+/**
+ * Detect paths that changed between two state objects
+ */
+function detectChangedPaths<T extends Record<string, unknown>>(
+  oldState: T,
+  newState: T,
+  prefix = ''
+): string[] {
+  const changes: string[] = [];
+
+  const allKeys = new Set([
+    ...Object.keys(oldState || {}),
+    ...Object.keys(newState || {}),
+  ]);
+
+  for (const key of allKeys) {
+    const path = prefix ? `${prefix}.${key}` : key;
+    const oldVal = (oldState as Record<string, unknown>)?.[key];
+    const newVal = (newState as Record<string, unknown>)?.[key];
+
+    if (oldVal === newVal) continue;
+
+    if (
+      isObjectLike(oldVal) &&
+      isObjectLike(newVal) &&
+      !Array.isArray(oldVal) &&
+      !Array.isArray(newVal)
+    ) {
+      // Recursively check nested objects
+      changes.push(
+        ...detectChangedPaths(
+          oldVal as Record<string, unknown>,
+          newVal as Record<string, unknown>,
+          path
+        )
+      );
+    } else {
+      // Primitive or array changed
+      changes.push(path);
+    }
+  }
+
+  return changes;
+}
+
 function createRuntimeStats(): RuntimeStats {
   return {
     updateCount: 0,
@@ -230,67 +349,6 @@ function createRuntimeStats(): RuntimeStats {
     memoryGrowthRate: 0,
     hotPathCount: 0,
     violationCount: 0,
-  };
-}
-
-function createGuardrailsMiddleware<T extends Record<string, unknown>>(
-  context: GuardrailsContext<T>
-): Middleware<T> {
-  return {
-    id: context.middlewareId ?? 'guardrails',
-    before: (action: string, payload: unknown, state: T): boolean => {
-      if (context.suppressed) {
-        context.currentUpdate = null;
-        return !context.disposed;
-      }
-
-      const metadata = extractMetadata(payload);
-      if (shouldSuppressUpdate(context, metadata)) {
-        context.currentUpdate = null;
-        return !context.disposed;
-      }
-
-      const details = collectUpdateDetails(payload, state);
-      context.currentUpdate = {
-        action,
-        startTime: performance.now(),
-        metadata,
-        details,
-      };
-
-      for (const detail of details) {
-        analyzePreUpdate(context, detail, metadata);
-      }
-
-      return !context.disposed;
-    },
-    after: (
-      _action: string,
-      _payload: unknown,
-      _previousState: T,
-      newState: T
-    ): void => {
-      const pending = context.currentUpdate;
-      if (!pending) return;
-
-      const duration = Math.max(0, performance.now() - pending.startTime);
-      const timestamp = Date.now();
-      const recomputations = Math.max(0, pending.details.length - 1);
-      updateTimingStats(context, duration);
-
-      for (const [index, detail] of pending.details.entries()) {
-        const latest = getValueAtPath(newState, detail.segments);
-        const diffRatio = calculateDiffRatio(detail.oldValue, latest);
-        analyzePostUpdate(context, detail, duration, diffRatio, index === 0);
-        trackHotPath(context, detail.path, duration);
-        trackSignalUsage(context, detail.path, timestamp);
-      }
-
-      updateSignalStats(context, timestamp);
-      recordRecomputations(context, recomputations, timestamp);
-
-      context.currentUpdate = null;
-    },
   };
 }
 

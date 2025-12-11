@@ -1,8 +1,13 @@
 import { composeEnhancers } from '../../../lib/utils';
-import { withBatching, withHighPerformanceBatching } from '../../batching/lib/batching';
+import {
+  withBatching,
+  withHighPerformanceBatching,
+} from '../../batching/lib/batching';
 import { withDevTools } from '../../devtools/lib/devtools';
-import { withHighPerformanceMemoization, withMemoization } from '../../memoization/lib/memoization';
-import { withMiddleware } from '../../middleware/lib/middleware';
+import {
+  withHighPerformanceMemoization,
+  withMemoization,
+} from '../../memoization/lib/memoization';
 import { withTimeTravel } from '../../time-travel/lib/time-travel';
 
 import type { TreeConfig } from '../../../lib/types';
@@ -153,7 +158,6 @@ export function createDevTree(overrides: Partial<TreeConfig> = {}) {
     withHighPerformanceBatching(),
     withMemoization(),
     withHighPerformanceMemoization(),
-    withMiddleware(),
     withTimeTravel(),
     withDevTools({ treeName: config.treeName ?? 'SignalTree Dev' })
   );

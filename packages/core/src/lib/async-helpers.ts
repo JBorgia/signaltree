@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 
-import type { SignalTree } from '../../../lib/types';
+import type { SignalTree } from './types';
 
 /**
  * Create an async operation that updates the tree via its batchUpdate method
@@ -11,7 +11,7 @@ export function createAsyncOperation<T, TResult>(
   operation: () => Promise<TResult>
 ) {
   return async (tree: SignalTree<T>) => {
-    // Trigger middleware-friendly batch update marking pending
+    // Trigger batch update marking pending
     if (typeof tree.batchUpdate === 'function') {
       // batchUpdate expects a Partial<T>. We don't know T here, so create
       // a minimal partial using unknown and cast to Partial<T> at the last step.

@@ -446,7 +446,7 @@ const activeUsers = computed(() => tree.$.users().filter((user) => user.active))
 
 ### 4) Manual async state management
 
-Core provides basic state updates. For advanced async helpers, use the built-in middleware functions (`createAsyncOperation`, `trackAsync`):
+Core provides basic state updates. For advanced async helpers, use the built-in async helpers (`createAsyncOperation`, `trackAsync`):
 
 ```typescript
 const tree = signalTree({
@@ -579,7 +579,7 @@ const tree = signalTree({
   user: null as User | null,
   preferences: { theme: 'light' },
 }).with(
-  // withAsync removed — API integration patterns are now covered by middleware helpers
+  // withAsync removed — API integration patterns are now covered by async helpers
   withSerialization({
     // Auto-save to localStorage
     autoSave: true,
@@ -588,7 +588,7 @@ const tree = signalTree({
   withTimeTravel() // Undo/redo support
 );
 
-// For async operations, use manual async or middleware helpers
+// For async operations, use manual async or async helpers
 async function fetchUser(id: string) {
   tree.$.loading.set(true);
   try {
@@ -889,7 +889,7 @@ appProducts.selectTotal(); // Count signal
 adminLogs.selectAll(); // All items signal
 adminReports.selectIds(); // ID array signal
 
-// For async operations, use manual async or middleware helpers
+// For async operations, use manual async or async helpers
 async function fetchUsers() {
   tree.$.ui.loading.set(true);
   try {
@@ -918,7 +918,7 @@ const tree = signalTree({
 }).with(
   withBatching(), // Performance
   withEntities(), // Data management
-  // withAsync removed — use middleware helpers for API integration
+  // withAsync removed — use async helpers for API integration
   withSerialization({
     // State persistence
     autoSave: true,
@@ -953,7 +953,7 @@ import { signalTree, withBatching, withEntities, withSerialization } from '@sign
 const tree = signalTree(initialState).with(
   withBatching(), // Performance optimization
   withEntities(), // Data management
-  // withAsync removed — use middleware helpers for API integration
+  // withAsync removed — use async helpers for API integration
   withSerialization({
     // User preferences
     autoSave: true,
@@ -1023,7 +1023,7 @@ const tree2 = tree.with(withBatching());
 const tree3 = tree2.with(withEntities());
 
 // Phase 4: Add async for API integration
-// withAsync removed — no explicit async enhancer; use middleware helpers instead
+// withAsync removed — no explicit async enhancer; use async helpers instead
 
 // Each phase is fully functional and production-ready
 ```
@@ -1310,7 +1310,7 @@ tree.destroy(); // Cleanup resources
 
 // Extended features (built into @signaltree/core)
 tree.entities<T>(key); // Entity helpers (use withEntities enhancer)
-// For async operations, use manual async or middleware helpers like createAsyncOperation or trackAsync
+// For async operations, use manual async or async helpers like createAsyncOperation or trackAsync
 ```
 
 ## Extending with enhancers
@@ -1330,7 +1330,6 @@ All enhancers are included in `@signaltree/core`:
 
 - **withBatching()** - Batch multiple updates for better performance
 - **withMemoization()** - Intelligent caching & performance optimization
-- **withMiddleware()** - Middleware system & state interceptors
 - **withEntities()** - Advanced entity management & CRUD operations
 - **withDevTools()** - Redux DevTools integration for debugging
 - **withTimeTravel()** - Undo/redo functionality & state history
@@ -1352,8 +1351,7 @@ Consider enhancers when you need:
 
 - ⚡ Performance optimization (withBatching, withMemoization)
 - 🐛 Advanced debugging (withDevTools, withTimeTravel)
-- � Entity management (withEntities)
-- 🔌 Middleware patterns (withMiddleware)
+- 📦 Entity management (withEntities)
 
 Consider separate packages when you need:
 
@@ -1488,7 +1486,6 @@ All enhancers are now consolidated in the core package. The following features a
 
 ### Advanced Features
 
-- **withMiddleware()** (+1.89KB gzipped) - Middleware system & state interceptors
 - **withEntities()** (+0.97KB gzipped) - Enhanced CRUD operations & entity management
 
 ### Development Tools

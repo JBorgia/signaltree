@@ -1,8 +1,16 @@
-import { AuditEntry, createAuditMiddleware } from '../audit/audit';
 import { toObservable } from '../rxjs/rxjs-bridge';
 import { unique } from './async-validators';
-import { createFormTree, SIGNAL_FORM_DIRECTIVES, SignalValueDirective } from './ng-forms';
-import { email as emailValidator, minLength, pattern, required } from './validators';
+import {
+  createFormTree,
+  SIGNAL_FORM_DIRECTIVES,
+  SignalValueDirective,
+} from './ng-forms';
+import {
+  email as emailValidator,
+  minLength,
+  pattern,
+  required,
+} from './validators';
 
 interface TestFormData extends Record<string, unknown> {
   username: string;
@@ -183,18 +191,6 @@ describe('NgForms', () => {
 
       expect(await uniqueValidator('available')).toBe(null);
       expect(await uniqueValidator('taken')).toBe('Already exists');
-    });
-  });
-
-  describe('createAuditMiddleware', () => {
-    it('should track changes in audit log', () => {
-      const auditLog: AuditEntry[] = [];
-      const middleware = createAuditMiddleware(auditLog, () => ({
-        userId: 'test-user',
-      }));
-
-      expect(middleware.id).toBe('audit');
-      expect(typeof middleware.after).toBe('function');
     });
   });
 

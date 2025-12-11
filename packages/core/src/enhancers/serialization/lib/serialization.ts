@@ -1105,6 +1105,8 @@ export function withPersistence<
     // Auto-save on updates if enabled
     if (autoSave) {
       let saveTimeout: ReturnType<typeof setTimeout> | undefined;
+      let previousState = JSON.stringify(tree());
+      let pollingActive = true;
 
       // Hook into state changes to trigger auto-save
       const triggerAutoSave = () => {
@@ -1120,42 +1122,37 @@ export function withPersistence<
         }, debounceMs);
       };
 
-      // Watch for any signal changes in the tree
-      const watchSignals = (obj: Record<string, unknown>, path = ''): void => {
-        if (!obj || typeof obj !== 'object') return;
-
-        for (const [key, value] of Object.entries(obj)) {
-          if (isSignal(value)) {
-            // Create an effect to watch this signal
-            const signal = value as Signal<unknown>;
-            let previousValue = signal();
-
-            // Periodically check for changes (this is a simplified approach)
-            // In a real implementation, you'd want to use Angular's effect() or similar
-            const checkForChanges = () => {
-              const currentValue = signal();
-              if (currentValue !== previousValue) {
-                previousValue = currentValue;
-                triggerAutoSave();
-              }
-              setTimeout(checkForChanges, 50); // Check every 50ms
-            };
-
-            setTimeout(checkForChanges, 0);
-          } else if (value && typeof value === 'object') {
-            watchSignals(
-              value as Record<string, unknown>,
-              path ? `${path}.${key}` : key
-            );
+      // Try to use tree.subscribe() for reactive state watching
+      // This leverages Angular's effect system - no polling needed in production
+      let usingReactiveSubscription = false;
+      try {
+        tree.subscribe(() => {
+          const currentState = JSON.stringify(tree());
+          if (currentState !== previousState) {
+            previousState = currentState;
+            triggerAutoSave();
           }
-        }
-      };
-
-      // Start watching signals
-      watchSignals(tree.state as Record<string, unknown>);
+        });
+        usingReactiveSubscription = true;
+      } catch {
+        // subscribe() threw - not in Angular injection context
+        // Fall back to setTimeout-based polling for non-Angular environments or tests
+        const checkForChanges = () => {
+          if (!pollingActive) return;
+          const currentState = JSON.stringify(tree());
+          if (currentState !== previousState) {
+            previousState = currentState;
+            triggerAutoSave();
+          }
+          // Use longer interval (100ms) to reduce CPU usage
+          setTimeout(checkForChanges, 100);
+        };
+        setTimeout(checkForChanges, 0); // Start immediately
+      }
 
       // Store cleanup function for testing
       (enhanced as EnhancedSignalTree).__flushAutoSave = () => {
+        pollingActive = false;
         if (saveTimeout) {
           clearTimeout(saveTimeout);
           saveTimeout = undefined;

@@ -55,7 +55,6 @@ export type {
   AddManyOptions,
 
   // Feature types - Advanced functionality
-  Middleware,
   PerformanceMetrics,
   EntityHelpers,
   TimeTravelEntry,
@@ -206,23 +205,10 @@ export {
 } from './enhancers/devtools/lib/devtools';
 
 /**
- * Middleware enhancer for state interceptors and async operations
- * @see {@link withMiddleware} for middleware system and state interceptors
- */
-export {
-  withMiddleware,
-  createLoggingMiddleware,
-  createValidationMiddleware,
-} from './enhancers/middleware/lib/middleware';
-
-/**
- * Async operation helpers for middleware
+ * Async operation helpers
  * @see {@link createAsyncOperation} for async operation management
  */
-export {
-  createAsyncOperation,
-  trackAsync,
-} from './enhancers/middleware/lib/async-helpers';
+export { createAsyncOperation, trackAsync } from './lib/async-helpers';
 
 /**
  * Preset configurations for common use cases

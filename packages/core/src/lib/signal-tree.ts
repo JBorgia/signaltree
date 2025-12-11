@@ -24,7 +24,6 @@ import type {
   TreeNode,
   TreeConfig,
   TreePreset,
-  Middleware,
   PerformanceMetrics,
   EntityHelpers,
   TimeTravelEntry,
@@ -675,10 +674,9 @@ function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
       if (config.debugMode) {
         console.warn(SIGNAL_TREE_MESSAGES.SUBSCRIBE_NO_CONTEXT, error);
       }
-      fn(tree());
-      return () => {
-        // No-op
-      };
+      // Re-throw to signal that reactive subscription is not available
+      // Callers should catch this and use alternative approaches (e.g., polling)
+      throw error;
     }
   };
 
@@ -736,21 +734,6 @@ function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
       cacheMisses: 0,
       averageUpdateTime: 0,
     };
-  };
-
-  // Middleware stubs
-  tree.addTap = (middleware: Middleware<T>) => {
-    if (config.debugMode) {
-      console.warn(SIGNAL_TREE_MESSAGES.MIDDLEWARE_NOT_AVAILABLE);
-    }
-    void middleware;
-  };
-
-  tree.removeTap = (id: string) => {
-    if (config.debugMode) {
-      console.warn(SIGNAL_TREE_MESSAGES.MIDDLEWARE_NOT_AVAILABLE);
-    }
-    void id;
   };
 
   // Entity helpers stub

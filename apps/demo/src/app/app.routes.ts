@@ -63,13 +63,6 @@ export const appRoutes: Route[] = [
       ).then((c) => c.LogFilteringDemoComponent),
   },
   {
-    path: 'middleware',
-    loadComponent: () =>
-      import(
-        './examples/features/fundamentals/examples/enhancers/middleware-demo/middleware-demo.component'
-      ).then((c) => c.MiddlewareDemoComponent),
-  },
-  {
     path: 'presets',
     loadComponent: () =>
       import(

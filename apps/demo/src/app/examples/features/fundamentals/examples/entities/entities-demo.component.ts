@@ -76,7 +76,7 @@ export class EntitiesDemoComponent {
         this.operationCount++;
         // Cascade delete: Remove all posts by this user
         const userPosts = this.store.$.posts.where(
-          (post) => post.userId === id
+          (post) => post.authorId === id
         )();
         userPosts.forEach((post) => {
           this.store.$.posts.removeOne(post.id);

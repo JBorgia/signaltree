@@ -36,28 +36,6 @@ export interface ComputedConfig {
 }
 
 // ============================================
-// MIDDLEWARE TYPES
-// ============================================
-
-export interface MiddlewareConfig {
-  beforeUpdate?: (path: string[], value: unknown) => void | boolean;
-  afterUpdate?: (
-    path: string[],
-    value: unknown,
-    previousValue: unknown
-  ) => void;
-  beforeRead?: (path: string[]) => void;
-  afterRead?: (path: string[], value: unknown) => void;
-}
-
-export interface MiddlewareContext {
-  path: string[];
-  value: unknown;
-  previousValue?: unknown;
-  operation: 'read' | 'write';
-}
-
-// ============================================
 // MEMOIZATION TYPES
 // ============================================
 

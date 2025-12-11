@@ -2,13 +2,8 @@ import { AsyncDemoComponent } from '../../features/fundamentals/examples/async/a
 import { ComputedExampleComponent } from '../../features/fundamentals/examples/computed/computed-example.component';
 import { EffectsDemoComponent } from '../../features/fundamentals/examples/effects/effects-demo.component';
 import { BatchingDemoComponent } from '../../features/fundamentals/examples/enhancers/batching-demo/batching-demo.component';
-import {
-  CallableSyntaxDemoComponent,
-} from '../../features/fundamentals/examples/enhancers/callable-syntax-demo/callable-syntax-demo.component';
+import { CallableSyntaxDemoComponent } from '../../features/fundamentals/examples/enhancers/callable-syntax-demo/callable-syntax-demo.component';
 import { DevtoolsDemoComponent } from '../../features/fundamentals/examples/enhancers/devtools-demo/devtools-demo.component';
-import {
-  MiddlewareDemoComponent,
-} from '../../features/fundamentals/examples/enhancers/middleware-demo/middleware-demo.component';
 import { PresetsDemoComponent } from '../../features/fundamentals/examples/enhancers/presets-demo/presets-demo.component';
 import { EntitiesDemoComponent } from '../../features/fundamentals/examples/entities/entities-demo.component';
 import { FormsDemoComponent } from '../../features/fundamentals/examples/forms/forms-demo.component';
@@ -126,24 +121,6 @@ export const devtoolsExampleMeta: ExampleMeta = {
   component: DevtoolsDemoComponent,
   difficulty: 'intermediate',
   tags: ['devtools', 'debugging', 'development', 'logging'],
-};
-
-/**
- * Middleware Examples
- */
-export const middlewareExampleMeta: ExampleMeta = {
-  id: 'middleware-hooks',
-  title: 'Middleware Hooks',
-  description:
-    'Extend SignalTree functionality with custom middleware for logging and validation.',
-  category: 'Extensibility',
-  focusAreas: ['middleware', 'extensibility', 'hooks'],
-  functionalUse: ['logging', 'validation', 'customization'],
-  enhancers: ['middleware'],
-  route: '/examples/fundamentals/enhancers/middleware',
-  component: MiddlewareDemoComponent,
-  difficulty: 'advanced',
-  tags: ['middleware', 'hooks', 'logging', 'validation', 'extensibility'],
 };
 
 /**
@@ -314,7 +291,6 @@ export const EXAMPLES_REGISTRY: ExampleMeta[] = [
   batchingExampleMeta,
   callableSyntaxExampleMeta,
   devtoolsExampleMeta,
-  middlewareExampleMeta,
   presetsExampleMeta,
   memoizationExampleMeta,
   timeTravelExampleMeta,

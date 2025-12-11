@@ -1,5 +1,4 @@
 import { signalTree } from '../../../lib/signal-tree';
-
 import {
   applySerialization,
   createIndexedDBAdapter,
@@ -10,7 +9,6 @@ import {
 } from './serialization';
 
 describe('Serialization', () => {
-
   describe('withSerialization', () => {
     it('should enhance tree with serialization capabilities', () => {
       const tree = applySerialization(signalTree({ count: 0 }));
@@ -355,35 +353,42 @@ describe('Serialization', () => {
     });
 
     it('should handle auto-save', async () => {
-      jest.useFakeTimers();
+      // Use real timers - fake timers conflict with Zone.js
+      // This test uses short debounce (50ms) to keep test fast
 
       const tree = signalTree({ count: 0 }).with(
         withPersistence({
           key: 'auto-save-test',
           autoSave: true,
-          debounceMs: 100,
+          debounceMs: 50,
         })
       );
+
+      // Small delay for polling to start
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Change state to trigger auto-save
       tree.$.count.set(42);
 
-      // Fast-forward time to trigger debounced save
-      jest.advanceTimersByTime(200);
-
-      // Allow promises to resolve
-      await Promise.resolve();
-      await Promise.resolve(); // Extra resolve for async chain
+      // Wait for: polling interval (100ms) + debounce (50ms) + buffer
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       expect(localStorage.setItem).toHaveBeenCalledWith(
         'auto-save-test',
         expect.stringContaining('42')
       );
 
-      jest.useRealTimers();
+      // Cleanup polling to prevent test hanging
+      if ((tree as { __flushAutoSave?: () => Promise<void> }).__flushAutoSave) {
+        await (
+          tree as { __flushAutoSave: () => Promise<void> }
+        ).__flushAutoSave();
+      }
     });
 
     it('should handle auto-load', async () => {
+      jest.useFakeTimers();
+
       // Pre-populate storage
       mockStorage['auto-load-test'] = JSON.stringify({
         data: { count: 99, name: 'loaded' },
@@ -397,11 +402,17 @@ describe('Serialization', () => {
         })
       );
 
-      // Wait for auto-load to complete
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      // Fast-forward for auto-load setTimeout(0) to fire
+      jest.advanceTimersByTime(10);
+
+      // Allow promises to resolve
+      await Promise.resolve();
+      await Promise.resolve();
 
       expect(tree.$.count()).toBe(99);
       expect(tree.$.name()).toBe('loaded');
+
+      jest.useRealTimers();
     });
 
     it('should clear storage', async () => {
