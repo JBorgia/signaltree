@@ -1,6 +1,7 @@
 # SignalTree v5.0 - Usage Examples
 
 ## Table of Contents
+
 1. [Basic Setup](#basic-setup)
 2. [Entity Collections](#entity-collections)
 3. [Entity Hooks](#entity-hooks)
@@ -17,43 +18,39 @@
 ```typescript
 import { signalTree } from '@signaltree/core';
 
-// Old way (still works)
 const tree = signalTree({
   user: { name: 'Alice', age: 30 },
   settings: { theme: 'dark' },
 });
 
-// Read and update
-console.log(tree.$.user.name());  // 'Alice'
+// Read and update via $
+console.log(tree.$.user.name()); // 'Alice'
 tree.$.user.name.set('Bob');
-tree.$.user.age.update(a => a + 1);
+tree.$.user.age.update((a) => a + 1);
 ```
 
 ### Create a Tree with Entities
 
 ```typescript
-import { signalTree, withEntities } from '@signaltree/core';
+import { signalTree, entityMap, withEntities } from '@signaltree/core';
 
-const tree = signalTree(
-  {
-    // Regular signal state
-    filters: {
-      searchTerm: '',
-      sortBy: 'name',
-    },
-    
-    // Entity collections (new!)
-    users: entity<User>('id'),      // Map<id, User>
-    posts: entity<Post>('postId'),  // Map<postId, Post>
-    comments: entity<Comment>('id'), // Map<id, Comment>
+const tree = signalTree({
+  // Regular signal state
+  filters: {
+    searchTerm: '',
+    sortBy: 'name',
   },
-  { enhancers: [withEntities()] }  // Enable entity system
-);
+
+  // Entity collections (new!)
+  users: entityMap<User>(), // EntitySignal<User, string>
+  posts: entityMap<Post>(), // EntitySignal<Post, string>
+  comments: entityMap<Comment>(), // EntitySignal<Comment, string>
+}).with(withEntities()); // Enable entity system
 
 // Now you have both:
-tree.$.filters.searchTerm();        // Regular signal access
-tree.$.users;                        // EntitySignal<User, string>
-tree.$.posts;                        // EntitySignal<Post, string>
+tree.$.filters.searchTerm(); // Regular signal access
+tree.$.users; // EntitySignal<User, string>
+tree.$.posts; // EntitySignal<Post, string>
 ```
 
 ---
@@ -76,35 +73,36 @@ const userId = tree.$.users.addOne({
 // Returns: 'u1' (the ID)
 
 // Can also auto-generate IDs
-const userId2 = tree.$.users.addOne(
-  { name: 'Bob', email: 'bob@example.com' },
-  { selectId: (user) => user.id || crypto.randomUUID() }
-);
+const userId2 = tree.$.users.addOne({ name: 'Bob', email: 'bob@example.com' }, { selectId: (user) => user.id || crypto.randomUUID() });
 
 // Add multiple
 const userIds = [
   { id: 'u2', name: 'Charlie', email: 'charlie@example.com' },
   { id: 'u3', name: 'Diana', email: 'diana@example.com' },
-].map(user => tree.$.users.addOne(user));
+].map((user) => tree.$.users.addOne(user));
 
 // ==================
-// READ (byId, all)
+// READ (byId, all, bracket notation)
 // ==================
 
-const user1 = tree.$.users.byId('u1');
-console.log(user1?.());  // { id: 'u1', name: 'Alice', ... }
+// Method 1: byId
+const user1 = tree.$.users.byId('u1')?.(); // User | undefined
+console.log(user1); // { id: 'u1', name: 'Alice', ... }
+
+// Method 2: Bracket notation (same result)
+const user2 = tree.$.users['u1']?.(); // User | undefined
 
 // Get all users as reactive array
-const allUsers = tree.$.users.all();
-console.log(allUsers());  // [User, User, User]
+const allUsers = tree.$.users.all(); // Signal<User[]>
+console.log(allUsers()); // [User, User, User]
 
 // Count (also reactive)
-const userCount = tree.$.users.count();
-console.log(userCount());  // 3
+const userCount = tree.$.users.count(); // Signal<number>
+console.log(userCount()); // 3
 
 // Get all IDs
-const userIds = tree.$.users.ids();
-console.log(userIds());  // ['u1', 'u2', 'u3']
+const userIds = tree.$.users.ids(); // Signal<string[]>
+console.log(userIds()); // ['u1', 'u2', 'u3']
 
 // ==================
 // UPDATE (updateOne)
@@ -117,7 +115,7 @@ tree.$.users.updateOne('u1', {
 // Only updates specified fields, rest unchanged
 
 // Update multiple
-['u1', 'u2', 'u3'].forEach(id => {
+['u1', 'u2', 'u3'].forEach((id) => {
   tree.$.users.updateOne(id, { updatedAt: new Date() });
 });
 
@@ -129,7 +127,7 @@ tree.$.users.removeOne('u1');
 // User 'u1' removed from collection
 
 // Delete multiple
-['u2', 'u3'].forEach(id => tree.$.users.removeOne(id));
+['u2', 'u3'].forEach((id) => tree.$.users.removeOne(id));
 
 // ==================
 // UPSERT (addOne or updateOne)
@@ -146,29 +144,31 @@ tree.$.users.upsertOne({
 // ERROR HANDLING
 // ==================
 
-// Throw on error
+// Option 1: Throw on error (halt execution)
 try {
   tree.$.users.updateOne('u999', { name: 'NoOne' });
 } catch (err) {
   console.error('User not found:', err.message);
+  // Stop here
 }
 
-// Or handle with callback
+// Option 2: Handle with callback (continue execution)
 tree.$.users.updateOne(
   'u999',
   { name: 'NoOne' },
   {
     onError: (err) => {
       console.warn('Update failed:', err.message);
-      // Don't throw, just log
+      // Execution continues
     },
   }
 );
 
-// Or both - onError runs first, prevents throw
+// Both onError runs first, prevents throw if provided
 tree.$.users.removeOne('u999', {
   onError: (err) => {
     showNotification('User not found');
+    // Execution continues, no throw
   },
 });
 ```
@@ -182,10 +182,13 @@ tree.$.users.removeOne('u999', {
 ```typescript
 import { signalTree, withEntities } from '@signaltree/core';
 
-const tree = signalTree({
-  users: entity<User>('id'),
-  posts: entity<Post>('postId'),
-}, { enhancers: [withEntities()] });
+const tree = signalTree(
+  {
+    users: entity<User>('id'),
+    posts: entity<Post>('postId'),
+  },
+  { enhancers: [withEntities()] }
+);
 
 // ==================
 // SIMPLE OBSERVATION
@@ -215,7 +218,7 @@ const unsub = tree.$.users.tap({
 
   // On any change (add, update, or remove)
   onChange: () => {
-    markDirty();  // Mark as unsaved
+    markDirty(); // Mark as unsaved
   },
 });
 
@@ -297,12 +300,12 @@ tree.$.users.intercept({
     if (!user.id || !user.name) {
       ctx.block('User must have id and name');
     }
-    
+
     // Validate email format
     if (!isValidEmail(user.email)) {
       ctx.block('Invalid email address');
     }
-    
+
     // All validations passed
   },
 
@@ -355,7 +358,7 @@ tree.$.users.intercept({
 // User is automatically enhanced
 const userId = tree.$.users.addOne({ id: 'u1', name: 'Alice', email: '' });
 const user = tree.$.users.byId(userId);
-console.log(user?.().createdAt);  // Date object (auto-added!)
+console.log(user?.().createdAt); // Date object (auto-added!)
 
 // ==================
 // AUTHORIZATION
@@ -373,7 +376,7 @@ tree.$.posts.intercept({
 
   onUpdate: (postId, changes, ctx) => {
     const post = tree.$.posts.byId(postId);
-    
+
     if (currentUser()?.id !== post?.().userId) {
       ctx.block('You can only edit your own posts');
     }
@@ -495,29 +498,24 @@ tree2.$.users.addOne({ id: 'u2', name: 'Tree2' });
 ```typescript
 import { signalTree, withPersistence } from '@signaltree/core';
 
-const tree = signalTree(
-  {
-    users: entity<User>('id'),
-    settings: { theme: 'dark' },
-  },
-  {
-    enhancers: [
-      withPersistence({
-        key: 'myapp-state',
-        storage: localStorage,
-        debounceMs: 1000,
-        
-        // Only persist certain paths
-        filter: (path) => {
-          // Persist only entity data, not temporary UI state
-          return path.startsWith('users') || path.startsWith('posts');
-        },
-      }),
-    ],
-  }
+const tree = signalTree({
+  users: entityMap<User>(),
+  settings: { theme: 'dark' },
+}).with(
+  withPersistence({
+    key: 'myapp-state',
+    storage: localStorage,
+    debounceMs: 1000,
+
+    // Only persist certain paths
+    filter: (path) => {
+      // Persist only entity data, not temporary UI state
+      return path.startsWith('users') || path.startsWith('posts');
+    },
+  })
 );
 
-// Before fix: 
+// Before fix:
 // - setInterval every 50ms checking for changes (wasted CPU)
 // - Never cleaned up (memory leak)
 // - Persisted everything
@@ -543,29 +541,24 @@ if (savedState) {
 }
 
 // Explicit save/load
-tree.save();                    // Save immediately (no debounce)
-tree.load();                    // Load from storage
-tree.clearPersisted();          // Clear localStorage
+tree.save(); // Save immediately (no debounce)
+tree.load(); // Load from storage
+tree.clearPersisted(); // Clear localStorage
 ```
 
 ### TimeTravel (Fixed: Now Catches All Mutations)
 
 ```typescript
-import { signalTree, withTimeTravel } from '@signaltree/core';
+import { signalTree, entityMap, withTimeTravel } from '@signaltree/core';
 
-const tree = signalTree(
-  {
-    users: entity<User>('id'),
-    selectedUserId: '',
-  },
-  {
-    enhancers: [
-      withTimeTravel({
-        maxHistorySize: 50,
-        useStructuralSharing: true,  // Efficient memory usage
-      }),
-    ],
-  }
+const tree = signalTree({
+  users: entityMap<User>(),
+  selectedUserId: '',
+}).with(
+  withTimeTravel({
+    maxHistorySize: 50,
+    useStructuralSharing: true, // Efficient memory usage
+  })
 );
 
 // Before fix:
@@ -578,16 +571,16 @@ const tree = signalTree(
 // - tree.$.users.updateOne() tracked ✓
 // - tree.$.selectedUserId.set() tracked ✓
 
-tree.$.users.addOne({ id: 'u1', name: 'Alice' });     // Snapshot 1
-tree.$.users.addOne({ id: 'u2', name: 'Bob' });       // Snapshot 2
-tree.$.users.updateOne('u1', { name: 'Alice v2' });   // Snapshot 3
-tree.$.selectedUserId.set('u1');                       // Snapshot 4
+tree.$.users.addOne({ id: 'u1', name: 'Alice' }); // Snapshot 1
+tree.$.users.addOne({ id: 'u2', name: 'Bob' }); // Snapshot 2
+tree.$.users.updateOne('u1', { name: 'Alice v2' }); // Snapshot 3
+tree.$.selectedUserId.set('u1'); // Snapshot 4
 
-console.log(tree.canUndo());  // true
+console.log(tree.canUndo()); // true
 tree.undo();
 // Back to Snapshot 3
 
-console.log(tree.canRedo());  // true
+console.log(tree.canRedo()); // true
 tree.redo();
 // Forward to Snapshot 4
 
@@ -614,21 +607,16 @@ tree.resetHistory();
 ### DevTools (Fixed: Now Complete)
 
 ```typescript
-import { signalTree, withDevTools } from '@signaltree/core';
+import { signalTree, entityMap, withDevTools } from '@signaltree/core';
 
-const tree = signalTree(
-  {
-    users: entity<User>('id'),
-    posts: entity<Post>('postId'),
-  },
-  {
-    enhancers: [
-      withDevTools({
-        name: 'My SignalTree App',
-        maxAge: 50,  // Keep last 50 mutations
-      }),
-    ],
-  }
+const tree = signalTree({
+  users: entityMap<User>(),
+  posts: entityMap<Post>(),
+}).with(
+  withDevTools({
+    name: 'My SignalTree App',
+    maxAge: 50, // Keep last 50 mutations
+  })
 );
 
 // Before fix:
@@ -671,10 +659,10 @@ const tree = signalTree(
     enhancers: [
       withLogging({
         name: 'MyApp',
-        
+
         // Filter which paths to log
-        filter: (path) => !path.startsWith('ui'),  // Skip UI updates
-        
+        filter: (path) => !path.startsWith('ui'), // Skip UI updates
+
         // Custom logger
         onLog: (log) => {
           console.log(`[${log.timestamp}] ${log.path}:`, {
@@ -682,9 +670,9 @@ const tree = signalTree(
             value: log.value,
           });
         },
-        
+
         // Or use default (console.group)
-        collapsed: true,  // Use console.groupCollapsed
+        collapsed: true, // Use console.groupCollapsed
       }),
     ],
   }
@@ -718,26 +706,22 @@ interface Todo {
   updatedAt: Date;
 }
 
-const todoTree = signalTree(
-  {
-    // Entities
-    todos: entity<Todo>('id'),
-    
-    // UI state
-    filter: 'all',  // 'all' | 'active' | 'completed'
-    editingId: null as string | null,
-  },
-  {
-    enhancers: [
-      withEntities(),
-      withPersistence({
-        key: 'todos-app',
-        filter: (path) => path.startsWith('todos'),  // Only persist todos, not UI
-      }),
-      withTimeTravel(),
-    ],
-  }
-);
+const todoTree = signalTree({
+  // Entities
+  todos: entityMap<Todo>(),
+
+  // UI state
+  filter: 'all', // 'all' | 'active' | 'completed'
+  editingId: null as string | null,
+})
+  .with(withEntities())
+  .with(
+    withPersistence({
+      key: 'todos-app',
+      filter: (path) => path.startsWith('todos'), // Only persist todos, not UI
+    })
+  )
+  .with(withTimeTravel());
 
 // Setup validation
 todoTree.$.todos.intercept({
@@ -745,7 +729,7 @@ todoTree.$.todos.intercept({
     if (!todo.text?.trim()) {
       ctx.block('Todo text cannot be empty');
     }
-    
+
     // Auto-timestamp
     ctx.transform({
       ...todo,
@@ -758,7 +742,7 @@ todoTree.$.todos.intercept({
     if (changes.text !== undefined && !changes.text.trim()) {
       ctx.block('Todo text cannot be empty');
     }
-    
+
     ctx.transform({
       ...changes,
       updatedAt: new Date(),
@@ -806,57 +790,75 @@ const deleteTodo = (id: string) => {
 
 // Reactive computed
 const activeTodos = computed(() => {
-  const all = todoTree.$.todos.all();
-  return all.filter(t => !t.completed);
+  const todos = todoTree.$.todos.all()(); // Call to unwrap Signal<Todo[]>
+  return todos.filter((t) => !t.completed);
 });
 
 // Component usage
-export function TodoApp() {
-  return (
+import { Component, inject } from '@angular/core';
+
+@Component({
+  selector: 'app-todo-list',
+  template: `
     <div>
-      <input
-        placeholder="Add a todo..."
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            addTodo(e.target.value);
-            e.target.value = '';
-          }
-        }}
-      />
+      <input placeholder="Add a todo..." (keydown.enter)="addTodo($event)" />
 
       <div>
-        {todoTree.$.todos.all().map((todo) => (
-          <div key={todo.id}>
-            <input
-              type="checkbox"
-              checked={todo.completed}
-              onChange={() => toggleTodo(todo.id)}
-            />
-            <span style={{ textDecoration: todo.completed ? 'line-through' : 'none' }}>
-              {todo.text}
-            </span>
-            <button onClick={() => deleteTodo(todo.id)}>Delete</button>
-          </div>
-        ))}
+        @for (todo of todos(); track todo.id) {
+        <div>
+          <input type="checkbox" [checked]="todo.completed" (change)="toggleTodo(todo.id)" />
+          <span [style.textDecoration]="todo.completed ? 'line-through' : 'none'">
+            {{ todo.text }}
+          </span>
+          <button (click)="deleteTodo(todo.id)">Delete</button>
+        </div>
+        }
       </div>
 
-      <div>Active: {activeTodos().length}</div>
+      <div>Active: {{ activeTodos().length }}</div>
 
-      <button onClick={() => todoTree.undo()} disabled={!todoTree.canUndo()}>
-        Undo
-      </button>
-      <button onClick={() => todoTree.redo()} disabled={!todoTree.canRedo()}>
-        Redo
-      </button>
+      <button (click)="todoTree.undo()" [disabled]="!todoTree.canUndo()">Undo</button>
+      <button (click)="todoTree.redo()" [disabled]="!todoTree.canRedo()">Redo</button>
     </div>
-  );
+  `,
+})
+export class TodoListComponent {
+  todoTree = inject(TodoTreeService).tree;
+  todos = this.todoTree.$.todos.all();
+  activeTodos = computed(() => this.todos().filter((t) => !t.completed));
+
+  addTodo(event: KeyboardEvent) {
+    const input = event.target as HTMLInputElement;
+    if (input.value.trim()) {
+      const id = crypto.randomUUID();
+      this.todoTree.$.todos.addOne({
+        id,
+        text: input.value,
+        completed: false,
+      });
+      input.value = '';
+    }
+  }
+
+  toggleTodo(id: string) {
+    const todo = this.todoTree.$.todos.byId(id)?.();
+    if (todo) {
+      this.todoTree.$.todos.updateOne(id, {
+        completed: !todo.completed,
+      });
+    }
+  }
+
+  deleteTodo(id: string) {
+    this.todoTree.$.todos.removeOne(id);
+  }
 }
 ```
 
 ### User Management with Access Control
 
 ```typescript
-import { signalTree, withEntities } from '@signaltree/core';
+import { signalTree, entityMap, withEntities } from '@signaltree/core';
 
 interface User {
   id: string;
@@ -866,16 +868,16 @@ interface User {
 }
 
 const userTree = signalTree({
-  users: entity<User>('id'),
+  users: entityMap<User>(),
   currentUserId: null as string | null,
-}, { enhancers: [withEntities()] });
+}).with(withEntities());
 
 // Authorization interceptor
 userTree.$.users.intercept({
   onAdd: (user, ctx) => {
-    const current = userTree.currentUserId();
+    const current = userTree.$.currentUserId();
     const currentUser = current ? userTree.$.users.byId(current)?.() : null;
-    
+
     // Only admins can add users
     if (currentUser?.role !== 'admin') {
       ctx.block('Only admins can add users');
@@ -883,14 +885,14 @@ userTree.$.users.intercept({
   },
 
   onUpdate: (id, changes, ctx) => {
-    const current = userTree.currentUserId();
+    const current = userTree.$.currentUserId();
     const currentUser = current ? userTree.$.users.byId(current)?.() : null;
-    
+
     // Users can only edit themselves
     if (id !== current && currentUser?.role !== 'admin') {
       ctx.block('You can only edit your own profile');
     }
-    
+
     // Only admins can change roles
     if (changes.role && currentUser?.role !== 'admin') {
       ctx.block('Only admins can change user roles');
@@ -898,14 +900,14 @@ userTree.$.users.intercept({
   },
 
   onRemove: (id, user, ctx) => {
-    const current = userTree.currentUserId();
+    const current = userTree.$.currentUserId();
     const currentUser = current ? userTree.$.users.byId(current)?.() : null;
-    
+
     // Can't delete yourself
     if (id === current) {
       ctx.block('You cannot delete your own account');
     }
-    
+
     // Only admins can delete
     if (currentUser?.role !== 'admin') {
       ctx.block('Only admins can delete users');
@@ -916,7 +918,7 @@ userTree.$.users.intercept({
 // Audit logging
 userTree.$.users.tap({
   onAdd: (user) => {
-    const current = userTree.$.users.byId(userTree.currentUserId());
+    const current = userTree.$.users.byId(userTree.$.currentUserId());
     auditLog.write({
       action: 'user_created',
       userId: user.id,
@@ -925,7 +927,7 @@ userTree.$.users.tap({
     });
   },
   onUpdate: (id, changes) => {
-    const current = userTree.$.users.byId(userTree.currentUserId());
+    const current = userTree.$.users.byId(userTree.$.currentUserId());
     auditLog.write({
       action: 'user_updated',
       userId: id,
@@ -935,7 +937,7 @@ userTree.$.users.tap({
     });
   },
   onRemove: (id, user) => {
-    const current = userTree.$.users.byId(userTree.currentUserId());
+    const current = userTree.$.users.byId(userTree.$.currentUserId());
     auditLog.write({
       action: 'user_deleted',
       userId: id,
@@ -948,8 +950,8 @@ userTree.$.users.tap({
 
 // Usage
 function addAdmin() {
-  userTree.currentUserId.set('admin-id');  // Login as admin
-  
+  userTree.$.currentUserId.set('admin-id'); // Login as admin
+
   const id = userTree.$.users.addOne({
     id: 'u1',
     name: 'Alice',
@@ -957,9 +959,9 @@ function addAdmin() {
     role: 'user',
   });
   // ✅ Works - admin can add users
-  
-  userTree.currentUserId.set('u1');  // Login as Alice
-  
+
+  userTree.$.currentUserId.set('u1'); // Login as Alice
+
   userTree.$.users.addOne({
     id: 'u2',
     name: 'Bob',
@@ -981,14 +983,14 @@ function addAdmin() {
 tree.addTap({
   id: 'logger',
   after: (action, payload, prevState, nextState) => {
-    console.log(action, payload);  // action: string?
+    console.log(action, payload); // action: string?
   },
 });
 
 tree.addTap({
   id: 'analytics',
   after: (action) => {
-    analytics.track(action);  // What action?
+    analytics.track(action); // What action?
   },
 });
 
@@ -1030,6 +1032,7 @@ tree.$.comments.tap({
 ---
 
 **Summary:**
+
 - ✅ Entity collections with type-safe CRUD
 - ✅ Hooks that are scoped and returnable
 - ✅ Fixed enhancers (batching, persistence, time-travel, devtools)
