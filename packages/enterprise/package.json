@@ -68,7 +68,7 @@
   },
   "peerDependencies": {
     "@angular/core": "^20.3.0",
-    "@signaltree/core": ">=5.0.0",
+    "@signaltree/core": "^4.1.0",
     "tslib": "^2.0.0"
   },
   "devDependencies": {
