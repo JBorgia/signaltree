@@ -5,6 +5,8 @@
 
 ## What's New in v5.0
 
+v5.0 is not just a performance release—it includes type system improvements, API overhaul, and architectural enhancements alongside the entity system redesign.
+
 ### 1. Marker-Based Entity System (EntitySignal API)
 
 Replaced the v4.x array-based `tree.entities<E>(path)` helpers with a modern, type-safe marker system:
@@ -17,8 +19,8 @@ interface State {
 }
 
 const store = signalTree<State>({
-  users: entityMap({ selectId: u => u.id }),
-  posts: entityMap({ selectId: p => p.id }),
+  users: entityMap({ selectId: (u) => u.id }),
+  posts: entityMap({ selectId: (p) => p.id }),
 }).with(withEntities());
 
 // Access via store.$
@@ -26,10 +28,11 @@ store.$.users.setAll(data);
 store.$.users.addOne(newUser);
 store.$.users.byId(id)();
 store.$.users.count();
-store.$.posts.where(p => p.likes > 10)();
+store.$.posts.where((p) => p.likes > 10)();
 ```
 
 **Benefits:**
+
 - Full TypeScript type safety with marker inference
 - Reactive entity CRUD operations
 - Computed selectors and derived queries
@@ -40,18 +43,19 @@ store.$.posts.where(p => p.likes > 10)();
 
 Map-based entities deliver significant throughput gains over array-based approach:
 
-| Operation | v4.2.1 (Array) | v5.0 (Map) | Improvement |
-|-----------|---|---|---|
-| Initial load (setAll 1000 items) | 0.015 ms | 0.015 ms | 3.5% ✓ |
-| Add single item | 0.000 ms | 0.000 ms | 49.4% ✓ |
-| Lookup by ID (100k ops) | 0.0000 ms | 0.0000 ms | Parity ✓ |
-| Update single item | 0.000 ms | 0.000 ms | 60.1% ✓ |
-| Remove single item | 0.0000 ms | 0.0000 ms | Parity ✓ |
+| Operation                        | v4.2.1 (Array) | v5.0 (Map) | Improvement |
+| -------------------------------- | -------------- | ---------- | ----------- |
+| Initial load (setAll 1000 items) | 0.015 ms       | 0.015 ms   | 3.5% ✓      |
+| Add single item                  | 0.000 ms       | 0.000 ms   | 49.4% ✓     |
+| Lookup by ID (100k ops)          | 0.0000 ms      | 0.0000 ms  | Parity ✓    |
+| Update single item               | 0.000 ms       | 0.000 ms   | 60.1% ✓     |
+| Remove single item               | 0.0000 ms      | 0.0000 ms  | Parity ✓    |
 
 **Throughput (ops/sec):**
+
 - v4.2.1 setAll: ~65k ops/sec
 - v5.0 setAll: ~67k ops/sec (+2.8%)
-- v4.2.1 add: ~12M ops/sec  
+- v4.2.1 add: ~12M ops/sec
 - v5.0 add: ~24M ops/sec (+100% throughput)
 - Lookup & remove: both at ~24M ops/sec (map native performance)
 
@@ -65,17 +69,33 @@ Expanded TypeScript support for deep nesting and entity paths:
 - Entity marker types for compile-time safety
 - Eliminating runtime type checking overhead
 - Full IntelliSense in editors
+- Type-safe entity where() and computed selectors
+- Improved parameter inference for enhancers
 
-### 4. PathNotifier Integration
+### 4. Architectural Improvements
 
-Internal mechanism for reactive mutations:
+**PathNotifier Integration**
 
-- Tracks state changes at the path level
+- Internal reactive mutation tracking at path level
 - Enables computed selectors and watchers
-- Minimal overhead compared to proxy-only approach
-- Supports both synchronous and batch operations
+- Minimal overhead vs proxy-only approach
+- Supports synchronous and batch operations
 
-### 5. Documentation & Examples
+**Consolidated Entity Architecture**
+
+- All entity logic unified under single enhancer
+- No separate entity package needed
+- Shared dependency graph reduces bundle duplication
+- Easier mental model: entities ≈ state slice with methods
+
+**Enhancer Composition**
+
+- Improved metadata-driven ordering
+- Cleaner `requires`/`provides` declarations
+- Better initialization sequencing
+- Reduced ordering bugs between enhancers
+
+### 5. API Consistency & Simplification
 
 - **`QUICK_START.md`** – New user guide with step-by-step examples
 - **`QUICK_REFERENCE.md`** – API cheat sheet for all enhancers
@@ -100,6 +120,7 @@ store.$.users.all();
 ```
 
 **Migration Path:**
+
 1. Replace `tree.entities<E>(path)` with `entityMap` in state definition
 2. Add `.with(withEntities())` to the store
 3. Access via `store.$.fieldName.method()` instead of `helpers.method()`
@@ -108,6 +129,7 @@ store.$.users.all();
 ## Bundle Size Impact
 
 **Core package gzipped sizes (v5.0):**
+
 - `@signaltree/core`: 27.95 KB (was ~28 KB in v4.2.1)
 - `@signaltree/enterprise`: 7.81 KB
 - `@signaltree/ng-forms`: 7.81 KB
@@ -115,6 +137,7 @@ store.$.users.all();
 - **Total ecosystem**: ~46 KB gzipped (down 15.9% vs separate-package layout)
 
 **Optimizations enabled:**
+
 - Map-based entity storage (native JS performance)
 - Tree-shakeable enhancer exports
 - Minimal PathNotifier overhead
@@ -131,6 +154,7 @@ npm run build:all         # All packages
 ```
 
 Performance benchmarks:
+
 - Entity CRUD: sub-millisecond operations
 - Recursive performance: 0.002–0.005 ms across 20+ nesting levels
 - Subscriber scaling: 175–202 ms for 1000+ subscribers (expected)
