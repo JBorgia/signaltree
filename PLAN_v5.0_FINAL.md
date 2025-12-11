@@ -1,8 +1,8 @@
 # SignalTree v5.0 - Final Implementation Plan
 
 **Status:** Reviewed, consolidated, and scope-corrected based on teammate feedback  
-**Timeline:** 7-11 days (corrected from 20-25)  
-**Complexity:** Low (focused implementation)
+**Timeline:** 14-17 days (includes critical enhancer migrations + fixes)  
+**Complexity:** Medium (core is simple, but 4 broken enhancers need migration)
 
 ---
 
@@ -26,6 +26,18 @@ Add **PathNotifier infrastructure** (simple notification system) and **entity co
 - Selective path enhancement APIs (cognitive overload)
 - Separate entry points (lazy init is enough)
 - Rebuilds of existing infrastructure (WeakRef, debug mode, structural sharing already exist)
+
+### What We ARE Fixing
+
+This isn't just "new features." We're fixing broken implementations in 4 enhancers and core:
+
+| Component | Current Issue | Fix |
+|-----------|--------------|-----|
+| **Batching** | Global mutable state (shared across trees) | Instance-scoped queue via PathNotifier |
+| **Persistence** | 50ms polling never cleaned up | PathNotifier subscription (event-driven) |
+| **TimeTravel** | Misses leaf mutations (tree.$.x.y changes) | PathNotifier subscription catches all |
+| **DevTools** | Misses leaf mutations | PathNotifier subscription catches all |
+| **Core Middleware** | tree.addTap/removeTap don't scale | Replace with scoped entity hooks |
 
 ---
 
@@ -211,45 +223,158 @@ tree.$.users.tap({
 
 ---
 
-### Phase 4: Global Enhancers Integration (2 days)
+### Phase 4: Enhancer Migration (3-4 days)
 
-**Deliverable:** Connect enhancers to PathNotifier
+**Deliverable:** Migrate 4 broken enhancers to use PathNotifier + remove broken core middleware
 
-**What to wire:**
+#### 4.1 Batching Enhancer (1 day)
 
-1. **withTimeTravel**
-   ```typescript
-   // Use existing useStructuralSharing config
-   const snapshot = config.useStructuralSharing
-     ? structuralClone(tree())
-     : deepClone(tree());
-   ```
+**Current Issue:** Global mutable state (broken—shared by ALL trees)
+```typescript
+// ❌ BROKEN: Global state
+let updateQueue = [];  // Shared across instances
+let isScheduled = false;
+```
 
-2. **withLogging**
-   ```typescript
-   pathNotifier.subscribe('**', (value, prev, path) => {
-     console.log(`[${path}]`, { prev, value });
-   });
-   ```
+**New Implementation:**
+```typescript
+// ✅ FIXED: Instance-scoped via PathNotifier
+export function withBatching<T>() {
+  return (tree: SignalTree<T>) => {
+    const queue = [];  // Per-tree instance
+    const pathNotifier = tree.pathNotifier;
+    
+    pathNotifier.subscribe('**', (value, prev, path) => {
+      queue.push({ path, value, prev });
+      if (!isScheduled) {
+        isScheduled = true;
+        queueMicrotask(() => {
+          queue.forEach(item => tree.notifyChange(item));
+          queue.length = 0;
+          isScheduled = false;
+        });
+      }
+    });
+    
+    return tree;
+  };
+}
+```
 
-3. **withBatching**
-   ```typescript
-   tree.suspend(() => {
-     // Batch mutations here
-     // PathNotifier calls fire after block completes
-   });
-   ```
+#### 4.2 Persistence Enhancer (1 day)
 
-4. **withPersistence**
-   ```typescript
-   pathNotifier.subscribe('**', (value, prev, path) => {
-     if (shouldPersist(path)) {
-       debouncedSave(tree());
-     }
-   });
-   ```
+**Current Issue:** 50ms polling (never cleaned up—always running)
+```typescript
+// ❌ BROKEN: Polls every 50ms even if idle
+const interval = setInterval(() => checkForChanges(tree), 50);
+// No cleanup on destroy()
+```
 
-**Key point:** Enhancers DON'T interact with PathNotifier directly. They use public APIs (tree.suspend, tree(), etc.) and PathNotifier is invisible.
+**New Implementation:**
+```typescript
+// ✅ FIXED: Only runs on actual mutations
+export function withPersistence<T>(config: PersistenceConfig) {
+  return (tree: SignalTree<T>) => {
+    const unsub = tree.pathNotifier.subscribe((value, prev, path) => {
+      if (config.shouldPersist(path)) {
+        debouncedSave(tree());
+      }
+    });
+    
+    tree.onDestroy(() => unsub());
+    return tree;
+  };
+}
+```
+
+**Impact:** 50 ms polling → 0 calls while idle
+
+#### 4.3 TimeTravel Enhancer (1 day)
+
+**Current Issue:** Only catches tree() calls, misses leaf updates via tree.$.x.y()
+```typescript
+// ❌ BROKEN: Can't track tree.$.users.name() changes
+const enhanced = function(...args) {
+  const result = original(...args);
+  recordHistory(result);  // Only sees full tree snapshots
+  return result;
+};
+```
+
+**New Implementation:**
+```typescript
+// ✅ FIXED: PathNotifier catches everything
+export function withTimeTravel<T>(config: TimeTravelConfig = {}) {
+  return (tree: SignalTree<T>) => {
+    const history = [tree()];
+    
+    tree.pathNotifier.subscribe('**', (value, prev, path) => {
+      const snapshot = config.useStructuralSharing
+        ? structuralClone(tree())
+        : deepClone(tree());
+      history.push(snapshot);
+    });
+    
+    tree.undo = () => {
+      if (history.length > 1) {
+        history.pop();
+        restoreState(tree, history[history.length - 1]);
+      }
+    };
+    
+    return tree;
+  };
+}
+```
+
+#### 4.4 DevTools Enhancer (0.5 days)
+
+**Current Issue:** Same as TimeTravel—only sees top-level mutations
+
+**New Implementation:**
+```typescript
+// ✅ FIXED: PathNotifier gives ALL mutations with full context
+export function withDevTools<T>() {
+  return (tree: SignalTree<T>) => {
+    tree.pathNotifier.subscribe('**', (value, prev, path) => {
+      window.__SIGNALTREE_DEVTOOLS__?.recordMutation({
+        path,
+        value,
+        prev,
+        timestamp: Date.now(),
+      });
+    });
+    return tree;
+  };
+}
+```
+
+#### 4.5 Remove Broken Core Middleware (0.5 days)
+
+**Current Issue:** tree.addTap() / removeTap() don't scale (global to tree, hard to remove)
+
+```typescript
+// ❌ REMOVE from SignalTree interface:
+addTap(middleware: Middleware<T>): void;    // Global to entire tree
+removeTap(id: string): void;                // Requires ID management
+
+// ✅ REPLACE with scoped entity hooks:
+tree.$.users.tap({
+  add: (user) => console.log('Added:', user),
+  update: (user) => console.log('Updated:', user),
+  remove: (user) => console.log('Removed:', user),
+});
+
+tree.$.posts.tap({
+  add: (post) => console.log('Post added:', post),
+});
+```
+
+**Why better:**
+- Per-entity scoping (users tap gets only user events, not all tree events)
+- Easy removal (just call returned unsubscribe function)
+- No ID management (no naming conflicts)
+- Matches Angular patterns (lifecycle hooks on components)
 
 ---
 
@@ -299,13 +424,17 @@ tree.$.users.tap({
 | 1 | Type definitions | - | ✅ DONE |
 | 2 | PathNotifier core | 2 | ⏳ Ready |
 | 3 | Entity system | 5-7 | ⏳ Ready |
-| 4 | Enhancer integration | 2 | ⏳ Ready |
+| 4 | Enhancer migration (batching, persistence, time-travel, devtools, remove middleware) | 3-4 | ⏳ Ready |
 | 5 | Testing | 1 | ⏳ Ready |
 | 6 | Documentation | 1 | ⏳ Ready |
 | 7 | Release | 1 | ⏳ Ready |
-| **TOTAL** | | **12-16 days** | |
+| **TOTAL** | | **14-17 days** | |
 
-**Corrected from:** 20-25 days (removed overengineering)
+**Timeline Reasoning:**
+- **Was:** 20-25 days (overengineered with unnecessary features)
+- **Now:** 14-17 days (focused: PathNotifier + entities + fix 4 broken enhancers)
+- **Removed:** ~800 lines of premature optimizations
+- **Added:** ~400 lines to fix existing broken code
 
 ---
 
@@ -360,17 +489,33 @@ tree.$.users.tap({
 
 ## How to Start
 
-1. **Day 1:** Implement PathNotifier core (~2 hours)
-   - File: `packages/core/src/lib/path-notifier.ts`
-   - Focus: Simple subscribe/notify, basic pattern matching
+**Week 1:**
+1. **Days 1-2:** PathNotifier core + Entity system (~2-3 days)
+   - Files: `path-notifier.ts` (~50 lines), `entity-signal.ts` (~500 lines)
+   - Quick: Just notify, CRUD, basic hooks
 
-2. **Days 2-7:** Implement EntitySignal (~40 hours)
-   - File: `packages/core/src/lib/entity-signal.ts`
-   - Focus: CRUD, hooks, integration
+2. **Days 3-7:** Enhancer migration (~3-4 days)
+   - Migrate: withBatching, withPersistence, withTimeTravel, withDevTools
+   - Remove: tree.addTap/removeTap
+   - Wire: structural sharing to time-travel
 
-3. **Days 8-10:** Wire enhancers and test (~16 hours)
+**Week 2:**
+3. **Days 8-9:** Testing + integration (~2 days)
+   - Verify all CRUD ops work
+   - Verify all 4 migrated enhancers work
+   - Verify hooks cleanup
+   - Verify no memory leaks
 
-4. **Days 11-12:** Documentation and release (~8 hours)
+4. **Days 10-11:** Documentation + migration guide (~2 days)
+   - Entity quick start
+   - Before/after for removed middleware
+   - Enhancer examples
+   - Migration guide for users
+
+5. **Days 12-13:** Release prep (~1-2 days)
+   - Build, bundle size check
+   - All tests green
+   - Tag and release
 
 ---
 
@@ -390,6 +535,12 @@ tree.$.users.tap({
 
 **Decision:** Reuse existing structural sharing config  
 **Rationale:** Already implemented. Just wire to time-travel. ~10 lines of code.
+
+**Decision:** Fix broken enhancers as part of this release, not v5.1  
+**Rationale:** PathNotifier exists now. Using it to fix batching/persistence/timetravel is faster than maintaining broken code. Removes technical debt.
+
+**Decision:** Remove tree.addTap() / removeTap() in favor of entity hooks  
+**Rationale:** Core middleware doesn't scale (global to tree, hard to remove). Entity hooks are scoped, returnable, match Angular patterns.
 
 ---
 
