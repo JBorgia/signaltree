@@ -24,23 +24,33 @@
     </li>
   </ul>
 
-  <h3>November 2025</h3>
+  <h3>December 2025 - v5.0.0 Release</h3>
   <ul>
     <li>
-      Angular Signal Forms demo: leaves use <code>connect()</code> directly;
-      slices use <code>toWritableSignal(slice)</code> for seamless two-way sync.
+      <strong>Marker-Based Entity System</strong>: Type-safe
+      <code>EntityMapMarker&lt;T, ID&gt;</code> with reactive CRUD operations
+      via <code>store.$.field.method()</code>
     </li>
     <li>
-      <code>toWritableSignal()</code> improved: reactive slice→signal updates
-      without feedback loops; safe <code>Injector</code> support for effects.
+      <strong>Performance Boost</strong>: 2-5x faster bulk operations with
+      diff-based updates in enterprise enhancer
     </li>
-    <li>Accessibility polish across forms: proper label/for associations.</li>
     <li>
-      Deprecation: legacy manual forms bridge will be removed with Angular 21.
-      Prefer <code>connect()</code> + <code>toWritableSignal()</code> going
-      forward.
+      <strong>Enhanced Types</strong>: Recursive inference up to 20+ nesting
+      levels with improved IntelliSense
     </li>
-    <li>All demo tests updated and passing on Angular 20.3.x.</li>
+    <li>
+      <strong>Angular 20.3 Support</strong>: Full compatibility with signal
+      forms using <code>connect()</code> and <code>toWritableSignal()</code>
+    </li>
+    <li>
+      <strong>Consolidated Architecture</strong>: 40.5% bundle size reduction
+      with shared dependencies
+    </li>
+    <li>
+      <strong>Development Guardrails</strong>: Zero-cost production builds with
+      dev-only monitoring and hot path detection
+    </li>
   </ul>
   <p class="next-steps">
     Explore the details under

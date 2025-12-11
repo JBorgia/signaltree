@@ -12,15 +12,18 @@
   </p>
 </div>
 
-## 🚀 What's New (November 2025)
+## 🚀 What's New (December 2025)
 
-- Angular Signal Forms demo added with clear patterns:
-  - Leaves: use `connect()` directly.
-  - Slices: use `toWritableSignal(slice)` to bridge to `WritableSignal<T>`.
-- `toWritableSignal()` improved: reactive slice→signal sync without feedback loops; supports `Injector` context when needed.
-- Demo accessibility polish: proper label associations and template fixes.
-- Deprecation note: legacy manual forms bridge is planned for removal when Angular 21 lands; prefer `connect()` + `toWritableSignal()`.
-- All demo tests updated and passing for Angular 20.3.x.
+**v5.0.0 Release** - Major entity system overhaul with marker-based API:
+
+- **Marker-Based Entity System**: Type-safe `EntityMapMarker<T, ID>` with reactive CRUD operations
+- **Performance Improvements**: 2-5x faster bulk operations with diff-based updates
+- **Enhanced Type System**: Recursive type inference up to 20+ nesting levels
+- **Angular 20.3 Support**: Full compatibility with Angular 20.3.x signal forms
+- **Consolidated Architecture**: 40.5% bundle size reduction with shared dependencies
+- **Development Guardrails**: Zero-cost production builds with dev-only monitoring
+
+See [CHANGELOG.md](./CHANGELOG.md) for full release notes.
 
 Explore it in the demo under “Signal Forms (Angular 20+)”.
 

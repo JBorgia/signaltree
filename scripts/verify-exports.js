@@ -15,14 +15,14 @@ let errors = 0;
 console.log('Verifying package exports...\n');
 
 for (const pkg of PACKAGES) {
-  const distDir = path.join(__dirname, '..', 'packages', pkg, 'dist');
+  const distDir = path.join(__dirname, '..', 'dist', 'packages', pkg);
   const packageJsonPath = path.join(distDir, 'package.json');
   
   console.log(`Checking ${pkg}...`);
   
   // Check if dist/package.json exists
   if (!fs.existsSync(packageJsonPath)) {
-    console.error(`❌ Missing package.json in ${pkg}/dist`);
+    console.error(`❌ Missing package.json in dist/packages/${pkg}`);
     errors++;
     continue;
   }
