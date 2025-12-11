@@ -36,6 +36,17 @@ async function main() {
   const summary = {};
   for (const k of Object.keys(buckets)) summary[k] = metrics.stats(buckets[k]);
 
+  // Run entity CRUD performance benchmarks
+  console.log('\n🧪 Running entity-crud-performance benchmarks');
+  const ecpRes = run('node', ['scripts/performance/entity-crud-performance.js']);
+  let entityResults = null;
+  if (ecpRes.code !== 0) {
+    console.warn('  ⚠ entity-crud-performance failed:', ecpRes.err || ecpRes.out);
+  } else {
+    console.log('  ✅ Entity CRUD benchmarks completed');
+    entityResults = metrics.parseEntityOutput(ecpRes.out);
+  }
+
   // Run proxy callable overhead microbench
   console.log('\n⏱ Running proxy-call-overhead microbench');
   // Ensure core ESM bundle exists for the microbench import
