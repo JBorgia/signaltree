@@ -126,16 +126,6 @@ export interface EntityConfig {
   relations?: Record<string, string>;
 }
 
-export interface EntityCollection<T = unknown> {
-  add(entity: T): void;
-  remove(id: string | number): boolean;
-  update(id: string | number, updates: Partial<T>): boolean;
-  get(id: string | number): T | undefined;
-  find(predicate: (entity: T) => boolean): T | undefined;
-  filter(predicate: (entity: T) => boolean): T[];
-  count(): number;
-}
-
 // ============================================
 // SERIALIZATION TYPES
 // ============================================
