@@ -11,36 +11,36 @@ The v5.0 entity system with marker-based API has been fully implemented, demo ap
 
 ### Single Operations (1000 iterations)
 
-| Operation | Mean | P95 | Notes |
-|-----------|------|-----|-------|
-| `addOne()` | 0.008ms | 0.013ms | Single entity insertion |
-| `updateOne()` | 0.031ms | 0.037ms | Direct ID-based update |
+| Operation     | Mean    | P95     | Notes                                 |
+| ------------- | ------- | ------- | ------------------------------------- |
+| `addOne()`    | 0.008ms | 0.013ms | Single entity insertion               |
+| `updateOne()` | 0.031ms | 0.037ms | Direct ID-based update                |
 | `removeOne()` | 0.231ms | 0.337ms | Includes Map deletion + signal update |
 
 ### Batch Operations
 
-| Operation | Mean | P95 | Dataset Size |
-|-----------|------|-----|--------------|
-| `addMany()` | 0.258ms | 0.459ms | 100 entities |
+| Operation       | Mean    | P95     | Dataset Size                     |
+| --------------- | ------- | ------- | -------------------------------- |
+| `addMany()`     | 0.258ms | 0.459ms | 100 entities                     |
 | `updateWhere()` | 6.313ms | 7.256ms | 1000 entities (predicate filter) |
 
 ### Query Operations (1000 entities in state)
 
-| Operation | Mean | P95 | Notes |
-|-----------|------|-----|-------|
-| `all()` | 0.0003ms | 0.0002ms | Return all entities as array |
-| `byId()` | 0.0014ms | 0.0023ms | Direct Map lookup |
+| Operation | Mean     | P95      | Notes                         |
+| --------- | -------- | -------- | ----------------------------- |
+| `all()`   | 0.0003ms | 0.0002ms | Return all entities as array  |
+| `byId()`  | 0.0014ms | 0.0023ms | Direct Map lookup             |
 | `where()` | 0.0068ms | 0.0151ms | Filtered query with predicate |
-| `find()` | 0.0032ms | 0.0045ms | First match lookup |
+| `find()`  | 0.0032ms | 0.0045ms | First match lookup            |
 
 ### Large Dataset Performance (10,000 entities)
 
-| Operation | Time | Notes |
-|-----------|------|-------|
-| Add all | ~2284ms | Initial bulk insertion |
-| Query all | 0.01ms | Cached signal read |
-| Batch update (1k) | ~516ms | updateWhere with predicate |
-| Batch remove (1k) | ~471ms | removeWhere with predicate |
+| Operation         | Time    | Notes                      |
+| ----------------- | ------- | -------------------------- |
+| Add all           | ~2284ms | Initial bulk insertion     |
+| Query all         | 0.01ms  | Cached signal read         |
+| Batch update (1k) | ~516ms  | updateWhere with predicate |
+| Batch remove (1k) | ~471ms  | removeWhere with predicate |
 
 ### Reactivity Overhead
 
@@ -66,6 +66,7 @@ The v5.0 entity system with marker-based API has been fully implemented, demo ap
 ### Architecture Savings
 
 Consolidated architecture vs old separate packages:
+
 - **10.88KB savings (40.5% reduction)** when using multiple enhancers
 - Shared dependencies loaded once
 - Tree-shaking removes unused enhancers
@@ -75,6 +76,7 @@ Consolidated architecture vs old separate packages:
 ### The Issue
 
 Performance suite reported constraint violations:
+
 - `perf.extreme` +116.7% > 25% threshold
 - `perf.unlimited` +88.9% > 25% threshold
 
@@ -83,12 +85,14 @@ Performance suite reported constraint violations:
 The recursive depth tests operate at **microsecond scales** where Node.js JIT, GC, and CPU scheduling dominate:
 
 **Multiple runs show high variance:**
+
 - Basic (5 levels): 0.004-0.008ms
-- Medium (10 levels): 0.002-0.005ms  
+- Medium (10 levels): 0.002-0.005ms
 - Extreme (15 levels): 0.002-0.006ms
 - Unlimited (20 levels): 0.003-0.008ms
 
 **Baseline (Nov 12, 2025):**
+
 - Basic: 0.0023ms
 - Medium: 0.0023ms
 - Extreme: 0.002ms
@@ -99,13 +103,14 @@ The recursive depth tests operate at **microsecond scales** where Node.js JIT, G
 Ran 500 iterations per depth with timing breakdown:
 
 | Depth | Creation (avg) | Access (avg) | Total (avg) | vs Baseline |
-|-------|----------------|--------------|-------------|-------------|
-| 5 | 0.0016ms | 0.0017ms | 0.0036ms | +55% |
-| 10 | 0.0008ms | 0.0006ms | 0.0015ms | -35% |
-| 15 | 0.0017ms | 0.0010ms | 0.0029ms | +45% |
-| 20 | 0.0014ms | 0.0010ms | 0.0027ms | -10% |
+| ----- | -------------- | ------------ | ----------- | ----------- |
+| 5     | 0.0016ms       | 0.0017ms     | 0.0036ms    | +55%        |
+| 10    | 0.0008ms       | 0.0006ms     | 0.0015ms    | -35%        |
+| 15    | 0.0017ms       | 0.0010ms     | 0.0029ms    | +45%        |
+| 20    | 0.0014ms       | 0.0010ms     | 0.0027ms    | -10%        |
 
 **Key Insights:**
+
 1. **No monotonic degradation** - depth 10 is faster than depth 5 in some runs
 2. **Creation scales worse than access** (1.9x vs 1.2x from depth 5→15)
 3. **Memory pressure minimal** - 1-2MB total for 1000 structures
@@ -114,6 +119,7 @@ Ran 500 iterations per depth with timing breakdown:
 ### Conclusion
 
 There is **no actual performance regression**. The "violations" are artifacts of:
+
 1. Measurements at noise floor (~2-8 microseconds)
 2. High variance from JIT compilation and GC
 3. Baseline captured during unusually fast run
@@ -126,6 +132,7 @@ There is **no actual performance regression**. The "violations" are artifacts of
 ### API Changes
 
 **v4.x (old)**:
+
 ```typescript
 users: User[]
 userHelpers = tree.entities<User>('users')
@@ -134,20 +141,21 @@ userHelpers.selectAll()()
 ```
 
 **v5.0 (new)**:
+
 ```typescript
-users: entityMap<User, number>({ selectId: (u) => u.id })
-tree.$.users.addOne(user)
-tree.$.users.all()()
+users: entityMap<User, number>({ selectId: (u) => u.id });
+tree.$.users.addOne(user);
+tree.$.users.all()();
 ```
 
 ### Performance Characteristics
 
-| Aspect | v4.x | v5.0 | Notes |
-|--------|------|------|-------|
-| Storage | Array + manual indexing | Native Map | O(1) lookups |
-| Type safety | Runtime generics | Compile-time markers | Better DX |
-| Tree-shaking | Limited | Full support | Smaller bundles |
-| API surface | Separate helper | Direct signal access | More intuitive |
+| Aspect       | v4.x                    | v5.0                 | Notes           |
+| ------------ | ----------------------- | -------------------- | --------------- |
+| Storage      | Array + manual indexing | Native Map           | O(1) lookups    |
+| Type safety  | Runtime generics        | Compile-time markers | Better DX       |
+| Tree-shaking | Limited                 | Full support         | Smaller bundles |
+| API surface  | Separate helper         | Direct signal access | More intuitive  |
 
 ### Migration Cost
 
@@ -161,6 +169,7 @@ tree.$.users.all()()
 ### 1. entity-crud-performance.js (370 lines)
 
 Comprehensive benchmark suite for v5.0 entity operations:
+
 - Single/batch CRUD operations
 - Query operation benchmarks
 - Large dataset tests (10k entities)
@@ -172,6 +181,7 @@ Comprehensive benchmark suite for v5.0 entity operations:
 ### 2. recursion-diagnostic.js (160 lines)
 
 Deep dive into recursive structure performance:
+
 - Timing breakdown (creation vs access)
 - Memory pressure analysis
 - Garbage collection impact
@@ -182,6 +192,7 @@ Deep dive into recursive structure performance:
 ### 3. Enhanced perf-suite.js
 
 Integrated entity benchmarks into main performance suite:
+
 - Runs entity CRUD benchmarks
 - Parses and reports results
 - Maintains baseline comparisons
@@ -192,11 +203,13 @@ Integrated entity benchmarks into main performance suite:
 ### For Production Use
 
 1. **Entity operations are production-ready**
+
    - Sub-millisecond for single operations
    - Reasonable batch performance (100-1000 entities)
    - Query performance excellent with Map-based storage
 
 2. **Monitor large datasets**
+
    - 10k+ entities: consider pagination/virtualization
    - Batch operations: ~500ms per 1000 entities
    - Use `addMany` instead of loop with `addOne`
@@ -209,10 +222,12 @@ Integrated entity benchmarks into main performance suite:
 ### For Performance Testing
 
 1. **Update baseline**
+
    - Run `PERF_UPDATE_BASELINE=1 npm run perf:run`
    - Current baseline from Nov 12 shows artificial regressions
 
 2. **Adjust thresholds**
+
    - Increase micro-benchmark threshold to 100% (from 25%)
    - Or switch to absolute time limits (e.g., >0.1ms)
 
@@ -225,6 +240,7 @@ Integrated entity benchmarks into main performance suite:
 ## Conclusion
 
 The v5.0 entity system delivers:
+
 - ✅ **Excellent performance** - sub-millisecond single ops, reasonable batch ops
 - ✅ **Improved DX** - marker-based API with full type safety
 - ✅ **Smaller bundles** - 0.91KB for entities enhancer
@@ -235,6 +251,7 @@ The apparent "performance regressions" in deep recursion tests are measurement a
 ---
 
 **Next Steps:**
+
 1. Update performance baseline to remove false regression warnings
 2. Consider adding entity-specific integration tests
 3. Document performance characteristics in main README

@@ -135,12 +135,15 @@ module.exports = {
       // Parse entity CRUD benchmark output for key metrics
       const lines = out.split(/\r?\n/);
       const results = {};
-      
+
       // Match patterns like "addOne:      0.1234ms / 0.5678ms"
-      const singleOpRe = /(addOne|updateOne|removeOne):\s*([0-9.]+)ms\s*\/\s*([0-9.]+)ms/i;
-      const batchOpRe = /(addMany|updateWhere):\s*([0-9.]+)ms\s*\/\s*([0-9.]+)ms/i;
-      const queryOpRe = /(all|byId|where|find)\(\):\s*([0-9.]+)ms\s*\/\s*([0-9.]+)ms/i;
-      
+      const singleOpRe =
+        /(addOne|updateOne|removeOne):\s*([0-9.]+)ms\s*\/\s*([0-9.]+)ms/i;
+      const batchOpRe =
+        /(addMany|updateWhere):\s*([0-9.]+)ms\s*\/\s*([0-9.]+)ms/i;
+      const queryOpRe =
+        /(all|byId|where|find)\(\):\s*([0-9.]+)ms\s*\/\s*([0-9.]+)ms/i;
+
       for (const line of lines) {
         let m = line.match(singleOpRe);
         if (m) {
@@ -154,13 +157,13 @@ module.exports = {
         }
         m = line.match(queryOpRe);
         if (m) {
-          results[`query${m[1].charAt(0).toUpperCase() + m[1].slice(1)}`] = { 
-            mean: Number(m[2]), 
-            p95: Number(m[3]) 
+          results[`query${m[1].charAt(0).toUpperCase() + m[1].slice(1)}`] = {
+            mean: Number(m[2]),
+            p95: Number(m[3]),
           };
         }
       }
-      
+
       return Object.keys(results).length > 0 ? results : null;
     } catch {
       return null;

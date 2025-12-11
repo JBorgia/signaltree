@@ -12,24 +12,22 @@
       and pagination.
     </p>
 
-    <!-- NEW in v4.2.0: Nested Entity Paths -->
+    <!-- v5.0: Marker-Based Entity API -->
     <div class="new-feature-callout">
-      <h3>🎉 NEW in v4.2.0: Nested Entity Paths!</h3>
+      <h3>🎉 v5.0: Marker-Based Entity API</h3>
       <p>
-        Access deeply nested entities with dot notation for better domain
-        organization:
+        SignalTree v5.0 introduces a modern entity system with marker types and
+        EntitySignal for cleaner, type-safe management.
       </p>
-      <pre><code>// Old way - flat structure only
-const users = tree.entities&lt;User&gt;('users');
-
-// New way - nested paths! ✨
-const users = tree.entities&lt;User&gt;('app.data.users');
-const products = tree.entities&lt;Product&gt;('app.data.products');
-const logs = tree.entities&lt;AuditLog&gt;('admin.data.logs');</code></pre>
       <p>
-        <strong>Benefits:</strong> Better code organization, domain-driven
-        design, type-safe paths (up to 5 levels deep), and zero runtime overhead
-        after initialization.
+        Define your state with <code>EntityMapMarker</code> types, create a
+        store with <code>withEntities()</code> enhancer, then use reactive
+        EntitySignal methods like <code>setAll()</code>, <code>addOne()</code>,
+        <code>byId()</code>, and <code>count()</code>.
+      </p>
+      <p>
+        <strong>Benefits:</strong> Full type safety, reactive entity CRUD,
+        computed selectors, and observable query patterns with minimal overhead.
       </p>
     </div>
 

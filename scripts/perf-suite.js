@@ -38,10 +38,15 @@ async function main() {
 
   // Run entity CRUD performance benchmarks
   console.log('\n🧪 Running entity-crud-performance benchmarks');
-  const ecpRes = run('node', ['scripts/performance/entity-crud-performance.js']);
+  const ecpRes = run('node', [
+    'scripts/performance/entity-crud-performance.js',
+  ]);
   let entityResults = null;
   if (ecpRes.code !== 0) {
-    console.warn('  ⚠ entity-crud-performance failed:', ecpRes.err || ecpRes.out);
+    console.warn(
+      '  ⚠ entity-crud-performance failed:',
+      ecpRes.err || ecpRes.out
+    );
   } else {
     console.log('  ✅ Entity CRUD benchmarks completed');
     entityResults = metrics.parseEntityOutput(ecpRes.out);
