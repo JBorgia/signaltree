@@ -519,12 +519,6 @@ All enhancers are exported directly from `@signaltree/core`:
 - `withDevTools()` - Redux DevTools integration
 - `withTimeTravel()` - Undo/redo functionality
 
-**Integration:**
-
-- `withMiddleware()` - State interceptors and logging
-- `createLoggingMiddleware()` - Built-in logging middleware
-- `createValidationMiddleware()` - Built-in validation middleware
-
 **Presets:**
 
 - `createDevTree()` - Pre-configured development setup

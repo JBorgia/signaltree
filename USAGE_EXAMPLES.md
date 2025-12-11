@@ -198,93 +198,278 @@ const tree = signalTree(
 const unsub = tree.$.users.tap({
   // When entity is added
   onAdd: (user, id) => {
-    console.log(`Added user: ${user.name} (${id})`);
-    updateUserCount();
+    console.log(`✅ Added user: ${user.name} (${id})`);
+    updateDashboard();
   },
 
-  // When entity is updated
+  // When entity is updated (receives partial changes + full updated entity)
   onUpdate: (id, changes, updatedEntity) => {
-    console.log(`Updated user ${id}:`, changes);
+    console.log(`🔄 Updated user ${id}:`, changes);
+
+    // React to specific field changes
     if (changes.name) {
       notifyNameChange(updatedEntity.name);
+    }
+    if (changes.role) {
+      handleRoleChange(id, changes.role);
     }
   },
 
   // When entity is removed
   onRemove: (id, removedEntity) => {
-    console.log(`Removed user ${id}: ${removedEntity.name}`);
-    updateUserCount();
+    console.log(`🗑️ Removed user ${id}: ${removedEntity.name}`);
+    cleanupUserData(id);
   },
 
   // On any change (add, update, or remove)
   onChange: () => {
-    markDirty(); // Mark as unsaved
+    markDirty();
+    triggerAutosave();
   },
 });
 
 // Add some users
-tree.$.users.addOne({ id: 'u1', name: 'Alice' });
-// Console: "Added user: Alice (u1)"
+tree.$.users.addOne({ id: 'u1', name: 'Alice', email: 'alice@ex.com', role: 'user' });
+// Console: "✅ Added user: Alice (u1)"
 // onChange fires
 
-tree.$.users.updateOne('u1', { name: 'Alice Updated' });
-// Console: "Updated user u1: { name: 'Alice Updated' }"
+tree.$.users.updateOne('u1', { name: 'Alice Smith', role: 'admin' });
+// Console: "🔄 Updated user u1: { name: 'Alice Smith', role: 'admin' }"
 // onChange fires
 
 tree.$.users.removeOne('u1');
-// Console: "Removed user u1: Alice Updated"
+// Console: "🗑️ Removed user u1: Alice Smith"
 // onChange fires
 
 // Stop listening
 unsub();
 
 // ==================
-// MULTIPLE HOOKS
+// MULTIPLE HOOKS (Separation of Concerns)
 // ==================
 
-// Different hooks for different concerns
+// Create separate hooks for different responsibilities
+
+// 1. Logging Hook
 const logUnsub = tree.$.users.tap({
-  onAdd: (user) => logger.info('User added', user),
-  onUpdate: (id, changes) => logger.info('User updated', { id, changes }),
-  onRemove: (id) => logger.info('User removed', { id }),
+  onAdd: (user) =>
+    logger.info('User added', {
+      userId: user.id,
+      name: user.name,
+    }),
+  onUpdate: (id, changes) =>
+    logger.info('User updated', {
+      id,
+      fields: Object.keys(changes),
+    }),
+  onRemove: (id, user) =>
+    logger.info('User removed', {
+      id,
+      email: user.email,
+    }),
 });
 
+// 2. Analytics Hook
 const analyticsUnsub = tree.$.users.tap({
-  onAdd: (user) => analytics.track('user_created', { userId: user.id }),
-  onRemove: (user) => analytics.track('user_deleted', { userId: user.id }),
-});
-
-const persistenceUnsub = tree.$.users.tap({
-  onChange: () => {
-    // Save to localStorage whenever users change
-    localStorage.setItem('users', JSON.stringify(tree.$.users.all()));
+  onAdd: (user) => {
+    analytics.track('user_created', {
+      userId: user.id,
+      role: user.role,
+      timestamp: Date.now(),
+    });
+  },
+  onUpdate: (id, changes) => {
+    if (changes.role) {
+      analytics.track('user_role_changed', {
+        userId: id,
+        newRole: changes.role,
+      });
+    }
+  },
+  onRemove: (id, user) => {
+    analytics.track('user_deleted', {
+      userId: id,
+      wasAdmin: user.role === 'admin',
+    });
   },
 });
 
-// Clean up all
-logUnsub();
-analyticsUnsub();
-persistenceUnsub();
+// 3. Auto-Persistence Hook (with try/catch)
+const persistenceUnsub = tree.$.users.tap({
+  onChange: () => {
+    const users = tree.$.users.all()();
+    try {
+      localStorage.setItem('users-backup', JSON.stringify(users));
+      console.log('💾 Auto-saved users to localStorage');
+    } catch (error) {
+      console.error('❌ Failed to save users:', error);
+    }
+  },
+});
+
+// 4. UI Notification Hook
+const notificationUnsub = tree.$.users.tap({
+  onAdd: (user) => toast.success(`Welcome ${user.name}!`),
+  onUpdate: (id, changes) => {
+    if (changes.role === 'admin') {
+      toast.info(`User promoted to admin`);
+    }
+  },
+  onRemove: (id, user) => toast.info(`${user.name} has been removed`),
+});
+
+// Clean up all hooks when component unmounts
+function cleanup() {
+  logUnsub();
+  analyticsUnsub();
+  persistenceUnsub();
+  notificationUnsub();
+}
 
 // ==================
-// CHAINED OBSERVERS
+// CROSS-ENTITY RELATIONSHIPS (Cascade Deletes)
 // ==================
 
-// Automatically track changes across multiple entities
-function setupUserTracking(tree) {
-  tree.$.users.tap({
-    onAdd: (user) => {
-      console.log('New user, initializing...');
-      tree.$.posts.tap({
-        onAdd: (post) => {
-          if (post.userId === user.id) {
-            console.log(`${user.name} posted: "${post.title}"`);
-          }
-        },
+interface Post {
+  id: string;
+  authorId: string;
+  title: string;
+  content: string;
+  createdAt: Date;
+}
+
+interface Comment {
+  id: string;
+  postId: string;
+  authorId: string;
+  content: string;
+}
+
+const tree = signalTree({
+  users: entityMap<User>(),
+  posts: entityMap<Post>(),
+  comments: entityMap<Comment>(),
+}).with(withEntities());
+
+// Cascade delete: Remove user's posts and comments when user is deleted
+tree.$.users.tap({
+  onRemove: (userId, user) => {
+    console.log(`🗑️ Cascading delete for user: ${user.name}`);
+
+    // Find and remove all posts by this user
+    const userPosts = tree.$.posts.where((post) => post.authorId === userId)();
+    userPosts.forEach((post) => {
+      tree.$.posts.removeOne(post.id);
+    });
+    console.log(`  Removed ${userPosts.length} posts`);
+
+    // Find and remove all comments by this user
+    const userComments = tree.$.comments.where((c) => c.authorId === userId)();
+    userComments.forEach((comment) => {
+      tree.$.comments.removeOne(comment.id);
+    });
+    console.log(`  Removed ${userComments.length} comments`);
+  },
+});
+
+// Track user activity: Update lastActive when user posts
+tree.$.posts.tap({
+  onAdd: (post) => {
+    const author = tree.$.users.byId(post.authorId)?.();
+    if (author) {
+      console.log(`📝 ${author.name} created post: "${post.title}"`);
+      tree.$.users.updateOne(post.authorId, {
+        lastActive: new Date(),
       });
+    }
+  },
+});
+
+// Cascade delete comments when post is deleted
+tree.$.posts.tap({
+  onRemove: (postId, post) => {
+    const postComments = tree.$.comments.where((c) => c.postId === postId)();
+    postComments.forEach((comment) => {
+      tree.$.comments.removeOne(comment.id);
+    });
+    console.log(`🗑️ Cascade deleted ${postComments.length} comments for "${post.title}"`);
+  },
+});
+
+// ==================
+// REAL-TIME BACKEND SYNC (with Debouncing)
+// ==================
+
+interface SyncConfig {
+  endpoint: string;
+  debounceMs: number;
+}
+
+function setupRealtimeSync<T>(entitySignal: any, entityName: string, config: SyncConfig) {
+  let syncTimer: ReturnType<typeof setTimeout> | null = null;
+  let pendingUpdates: Map<string, Partial<T>> = new Map();
+
+  return entitySignal.tap({
+    // Sync new entities immediately
+    onAdd: async (entity: T) => {
+      try {
+        const response = await fetch(`${config.endpoint}/${entityName}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(entity),
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        console.log('✅ Synced new entity to backend');
+      } catch (error) {
+        console.error('❌ Failed to sync entity:', error);
+      }
+    },
+
+    // Debounce updates to avoid hammering backend
+    onUpdate: (id: string, changes: Partial<T>) => {
+      const existing = pendingUpdates.get(id) || {};
+      pendingUpdates.set(id, { ...existing, ...changes });
+
+      if (syncTimer) clearTimeout(syncTimer);
+
+      syncTimer = setTimeout(async () => {
+        const updates = Array.from(pendingUpdates.entries());
+        pendingUpdates.clear();
+
+        try {
+          await Promise.all(
+            updates.map(([entityId, entityChanges]) =>
+              fetch(`${config.endpoint}/${entityName}/${entityId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(entityChanges),
+              })
+            )
+          );
+          console.log(`✅ Synced ${updates.length} updates to backend`);
+        } catch (error) {
+          console.error('❌ Failed to sync updates:', error);
+        }
+      }, config.debounceMs);
+    },
+
+    // Sync deletions immediately
+    onRemove: async (id: string) => {
+      try {
+        await fetch(`${config.endpoint}/${entityName}/${id}`, {
+          method: 'DELETE',
+        });
+        console.log('✅ Synced deletion to backend');
+      } catch (error) {
+        console.error('❌ Failed to sync deletion:', error);
+      }
     },
   });
 }
+
+// Usage
+const syncUnsub = setupRealtimeSync(tree.$.users, 'users', { endpoint: 'https://api.example.com', debounceMs: 500 });
 ```
 
 ### Intercept & Validate (intercept)

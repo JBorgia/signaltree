@@ -52,6 +52,62 @@ export class EntitiesDemoComponent {
     postsSortAsc: false,
   }).with(withEntities());
 
+  // ==================
+  // ENTITY HOOKS - Lifecycle Observation
+  // ==================
+
+  // Setup entity hooks to react to CRUD operations
+  private setupEntityHooks() {
+    // User hooks: track add/update/remove operations
+    this.store.$.users.tap({
+      onAdd: (user, id) => {
+        console.log(`✅ User added: ${user.name} (${id})`);
+        this.lastOperation = `Added user: ${user.name}`;
+        this.operationCount++;
+      },
+      onUpdate: (id, changes, updatedUser) => {
+        console.log(`🔄 User updated (${id}):`, changes);
+        this.lastOperation = `Updated user: ${updatedUser.name}`;
+        this.operationCount++;
+      },
+      onRemove: (id, removedUser) => {
+        console.log(`🗑️ User removed: ${removedUser.name}`);
+        this.lastOperation = `Removed user: ${removedUser.name}`;
+        this.operationCount++;
+        // Cascade delete: Remove all posts by this user
+        const userPosts = this.store.$.posts.where(
+          (post) => post.userId === id
+        )();
+        userPosts.forEach((post) => {
+          this.store.$.posts.removeOne(post.id);
+        });
+      },
+    });
+
+    // Post hooks: track add/update/remove operations
+    this.store.$.posts.tap({
+      onAdd: (post) => {
+        console.log(`📝 Post created: "${post.title}"`);
+        this.lastOperation = `Created post: ${post.title}`;
+        this.operationCount++;
+      },
+      onUpdate: (id, changes, updatedPost) => {
+        console.log(`🔄 Post updated (${id}):`, changes);
+        this.lastOperation = `Updated post: ${updatedPost.title}`;
+        this.operationCount++;
+      },
+      onRemove: (id, removedPost) => {
+        console.log(`🗑️ Post removed: "${removedPost.title}"`);
+        this.lastOperation = `Removed post: ${removedPost.title}`;
+        this.operationCount++;
+      },
+    });
+  }
+
+  constructor() {
+    this.setupEntityHooks();
+  }
+
   // State signals
   searchTerm = '';
   lastOperation = 'None';
