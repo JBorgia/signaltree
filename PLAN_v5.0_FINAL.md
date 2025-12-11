@@ -12,12 +12,12 @@ Add **PathNotifier infrastructure** (simple notification system) and **entity co
 
 ### What We're Building
 
-| Component | Purpose | Size |
-|-----------|---------|------|
-| **PathNotifier** | Simple change notification system | ~50 lines |
+| Component         | Purpose                                 | Size       |
+| ----------------- | --------------------------------------- | ---------- |
+| **PathNotifier**  | Simple change notification system       | ~50 lines  |
 | **Entity System** | Map-based collections with scoped hooks | ~500 lines |
-| **Integration** | Wire components together | ~100 lines |
-| **Tests & Docs** | Validation and examples | ~300 lines |
+| **Integration**   | Wire components together                | ~100 lines |
+| **Tests & Docs**  | Validation and examples                 | ~300 lines |
 
 ### What We're NOT Building
 
@@ -31,13 +31,13 @@ Add **PathNotifier infrastructure** (simple notification system) and **entity co
 
 This isn't just "new features." We're fixing broken implementations in 4 enhancers and core:
 
-| Component | Current Issue | Fix |
-|-----------|--------------|-----|
-| **Batching** | Global mutable state (shared across trees) | Instance-scoped queue via PathNotifier |
-| **Persistence** | 50ms polling never cleaned up | PathNotifier subscription (event-driven) |
-| **TimeTravel** | Misses leaf mutations (tree.$.x.y changes) | PathNotifier subscription catches all |
-| **DevTools** | Misses leaf mutations | PathNotifier subscription catches all |
-| **Core Middleware** | tree.addTap/removeTap don't scale | Replace with scoped entity hooks |
+| Component           | Current Issue                              | Fix                                      |
+| ------------------- | ------------------------------------------ | ---------------------------------------- |
+| **Batching**        | Global mutable state (shared across trees) | Instance-scoped queue via PathNotifier   |
+| **Persistence**     | 50ms polling never cleaned up              | PathNotifier subscription (event-driven) |
+| **TimeTravel**      | Misses leaf mutations (tree.$.x.y changes) | PathNotifier subscription catches all    |
+| **DevTools**        | Misses leaf mutations                      | PathNotifier subscription catches all    |
+| **Core Middleware** | tree.addTap/removeTap don't scale          | Replace with scoped entity hooks         |
 
 ---
 
@@ -101,7 +101,7 @@ class PathNotifier {
     }
     const handlers = this.subscribers.get(pattern)!;
     handlers.add(handler);
-    
+
     return () => handlers.delete(handler);
   }
 
@@ -109,7 +109,7 @@ class PathNotifier {
     // Simple pattern matching
     for (const [pattern, handlers] of this.subscribers) {
       if (this.matches(pattern, path)) {
-        handlers.forEach(h => h(value, prev, path));
+        handlers.forEach((h) => h(value, prev, path));
       }
     }
   }
@@ -123,6 +123,7 @@ class PathNotifier {
 ```
 
 **Integration points:**
+
 - Inject into SignalTree constructor
 - Call notify() when tree mutations occur
 - Lazy-create on first use (no overhead if unused)
@@ -143,10 +144,7 @@ class PathNotifier {
 export class EntitySignal<Entity, Key = string> {
   private storage = new Map<Key, Entity>();
 
-  constructor(
-    private config: EntityConfig<Entity, Key>,
-    private pathNotifier: PathNotifier
-  ) {}
+  constructor(private config: EntityConfig<Entity, Key>, private pathNotifier: PathNotifier) {}
 
   // CRUD operations
   addOne(entity: Entity): Key {
@@ -159,7 +157,7 @@ export class EntitySignal<Entity, Key = string> {
   updateOne(key: Key, updates: Partial<Entity>): void {
     const entity = this.storage.get(key);
     if (!entity) throw new Error(`Entity ${key} not found`);
-    
+
     const prev = entity;
     const next = { ...entity, ...updates };
     this.storage.set(key, next);
@@ -182,12 +180,14 @@ export class EntitySignal<Entity, Key = string> {
     // Listen to mutations, read-only
     const unsubs = [];
     if (handlers.add) {
-      unsubs.push(this.pathNotifier.subscribe('entities.*', (value, prev) => {
-        if (prev === undefined) handlers.add?.(value);
-      }));
+      unsubs.push(
+        this.pathNotifier.subscribe('entities.*', (value, prev) => {
+          if (prev === undefined) handlers.add?.(value);
+        })
+      );
     }
     // ... similar for update, remove
-    return () => unsubs.forEach(u => u());
+    return () => unsubs.forEach((u) => u());
   }
 
   intercept(handlers: EntityHooks<Entity>): () => void {
@@ -199,6 +199,7 @@ export class EntitySignal<Entity, Key = string> {
 ```
 
 **EntitySignal scoping rules:**
+
 - Hooks are scoped to the EntitySignal they're called on
 - No global pollution
 - Multiple EntitySignals can coexist without conflicts
@@ -230,32 +231,34 @@ tree.$.users.tap({
 #### 4.1 Batching Enhancer (1 day)
 
 **Current Issue:** Global mutable state (broken—shared by ALL trees)
+
 ```typescript
 // ❌ BROKEN: Global state
-let updateQueue = [];  // Shared across instances
+let updateQueue = []; // Shared across instances
 let isScheduled = false;
 ```
 
 **New Implementation:**
+
 ```typescript
 // ✅ FIXED: Instance-scoped via PathNotifier
 export function withBatching<T>() {
   return (tree: SignalTree<T>) => {
-    const queue = [];  // Per-tree instance
+    const queue = []; // Per-tree instance
     const pathNotifier = tree.pathNotifier;
-    
+
     pathNotifier.subscribe('**', (value, prev, path) => {
       queue.push({ path, value, prev });
       if (!isScheduled) {
         isScheduled = true;
         queueMicrotask(() => {
-          queue.forEach(item => tree.notifyChange(item));
+          queue.forEach((item) => tree.notifyChange(item));
           queue.length = 0;
           isScheduled = false;
         });
       }
     });
-    
+
     return tree;
   };
 }
@@ -264,6 +267,7 @@ export function withBatching<T>() {
 #### 4.2 Persistence Enhancer (1 day)
 
 **Current Issue:** 50ms polling (never cleaned up—always running)
+
 ```typescript
 // ❌ BROKEN: Polls every 50ms even if idle
 const interval = setInterval(() => checkForChanges(tree), 50);
@@ -271,6 +275,7 @@ const interval = setInterval(() => checkForChanges(tree), 50);
 ```
 
 **New Implementation:**
+
 ```typescript
 // ✅ FIXED: Only runs on actual mutations
 export function withPersistence<T>(config: PersistenceConfig) {
@@ -280,7 +285,7 @@ export function withPersistence<T>(config: PersistenceConfig) {
         debouncedSave(tree());
       }
     });
-    
+
     tree.onDestroy(() => unsub());
     return tree;
   };
@@ -292,36 +297,36 @@ export function withPersistence<T>(config: PersistenceConfig) {
 #### 4.3 TimeTravel Enhancer (1 day)
 
 **Current Issue:** Only catches tree() calls, misses leaf updates via tree.$.x.y()
+
 ```typescript
 // ❌ BROKEN: Can't track tree.$.users.name() changes
-const enhanced = function(...args) {
+const enhanced = function (...args) {
   const result = original(...args);
-  recordHistory(result);  // Only sees full tree snapshots
+  recordHistory(result); // Only sees full tree snapshots
   return result;
 };
 ```
 
 **New Implementation:**
+
 ```typescript
 // ✅ FIXED: PathNotifier catches everything
 export function withTimeTravel<T>(config: TimeTravelConfig = {}) {
   return (tree: SignalTree<T>) => {
     const history = [tree()];
-    
+
     tree.pathNotifier.subscribe('**', (value, prev, path) => {
-      const snapshot = config.useStructuralSharing
-        ? structuralClone(tree())
-        : deepClone(tree());
+      const snapshot = config.useStructuralSharing ? structuralClone(tree()) : deepClone(tree());
       history.push(snapshot);
     });
-    
+
     tree.undo = () => {
       if (history.length > 1) {
         history.pop();
         restoreState(tree, history[history.length - 1]);
       }
     };
-    
+
     return tree;
   };
 }
@@ -332,6 +337,7 @@ export function withTimeTravel<T>(config: TimeTravelConfig = {}) {
 **Current Issue:** Same as TimeTravel—only sees top-level mutations
 
 **New Implementation:**
+
 ```typescript
 // ✅ FIXED: PathNotifier gives ALL mutations with full context
 export function withDevTools<T>() {
@@ -371,6 +377,7 @@ tree.$.posts.tap({
 ```
 
 **Why better:**
+
 - Per-entity scoping (users tap gets only user events, not all tree events)
 - Easy removal (just call returned unsubscribe function)
 - No ID management (no naming conflicts)
@@ -419,18 +426,19 @@ tree.$.posts.tap({
 
 ## Timeline Summary
 
-| Phase | Task | Days | Status |
-|-------|------|------|--------|
-| 1 | Type definitions | - | ✅ DONE |
-| 2 | PathNotifier core | 2 | ⏳ Ready |
-| 3 | Entity system | 5-7 | ⏳ Ready |
-| 4 | Enhancer migration (batching, persistence, time-travel, devtools, remove middleware) | 3-4 | ⏳ Ready |
-| 5 | Testing | 1 | ⏳ Ready |
-| 6 | Documentation | 1 | ⏳ Ready |
-| 7 | Release | 1 | ⏳ Ready |
-| **TOTAL** | | **14-17 days** | |
+| Phase     | Task                                                                                 | Days           | Status   |
+| --------- | ------------------------------------------------------------------------------------ | -------------- | -------- |
+| 1         | Type definitions                                                                     | -              | ✅ DONE  |
+| 2         | PathNotifier core                                                                    | 2              | ⏳ Ready |
+| 3         | Entity system                                                                        | 5-7            | ⏳ Ready |
+| 4         | Enhancer migration (batching, persistence, time-travel, devtools, remove middleware) | 3-4            | ⏳ Ready |
+| 5         | Testing                                                                              | 1              | ⏳ Ready |
+| 6         | Documentation                                                                        | 1              | ⏳ Ready |
+| 7         | Release                                                                              | 1              | ⏳ Ready |
+| **TOTAL** |                                                                                      | **14-17 days** |          |
 
 **Timeline Reasoning:**
+
 - **Was:** 20-25 days (overengineered with unnecessary features)
 - **Now:** 14-17 days (focused: PathNotifier + entities + fix 4 broken enhancers)
 - **Removed:** ~800 lines of premature optimizations
@@ -448,7 +456,7 @@ tree.$.posts.tap({
 ❌ **Per-path subscriber maps** - Premature optimization before profiling  
 ❌ **Batch suspension API** - Breaks "invisible infrastructure" principle  
 ❌ **Separate entry points** - Unnecessary choice burden  
-❌ **Complex pattern matching** - Keep PathNotifier simple  
+❌ **Complex pattern matching** - Keep PathNotifier simple
 
 ### What We Did Right
 
@@ -456,31 +464,35 @@ tree.$.posts.tap({
 ✅ **Keep PathNotifier simple** - Just notify, no interceptors or complexity  
 ✅ **Map-based entities** - O(1) operations, clean semantics  
 ✅ **Scoped hooks** - No global state pollution  
-✅ **Entity-first DX** - Matches how developers think  
+✅ **Entity-first DX** - Matches how developers think
 
 ---
 
 ## Success Criteria
 
 ### Code Quality
+
 - [ ] TypeScript strict mode ✅
-- [ ] >85% test coverage
+- [ ] > 85% test coverage
 - [ ] Zero console warnings
 - [ ] Linting passes
 
 ### Performance
+
 - [ ] Entity CRUD <1ms average
 - [ ] Tree creation <5ms even with 1000 entities
 - [ ] No memory leaks in hook cleanup
 - [ ] Bundle size +5-10 KB gzipped
 
 ### Developer Experience
+
 - [ ] Entity API feels like Angular signals
 - [ ] Hooks work intuitively
 - [ ] Documentation clear and complete
 - [ ] Examples work copy-paste
 
 ### Compatibility
+
 - [ ] All existing SignalTree tests pass
 - [ ] No breaking changes
 - [ ] Backward compatible
@@ -490,7 +502,9 @@ tree.$.posts.tap({
 ## How to Start
 
 **Week 1:**
+
 1. **Days 1-2:** PathNotifier core + Entity system (~2-3 days)
+
    - Files: `path-notifier.ts` (~50 lines), `entity-signal.ts` (~500 lines)
    - Quick: Just notify, CRUD, basic hooks
 
@@ -499,14 +513,15 @@ tree.$.posts.tap({
    - Remove: tree.addTap/removeTap
    - Wire: structural sharing to time-travel
 
-**Week 2:**
-3. **Days 8-9:** Testing + integration (~2 days)
-   - Verify all CRUD ops work
-   - Verify all 4 migrated enhancers work
-   - Verify hooks cleanup
-   - Verify no memory leaks
+**Week 2:** 3. **Days 8-9:** Testing + integration (~2 days)
+
+- Verify all CRUD ops work
+- Verify all 4 migrated enhancers work
+- Verify hooks cleanup
+- Verify no memory leaks
 
 4. **Days 10-11:** Documentation + migration guide (~2 days)
+
    - Entity quick start
    - Before/after for removed middleware
    - Enhancer examples

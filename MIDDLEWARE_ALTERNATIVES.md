@@ -3,6 +3,7 @@
 ## Current Implementation (Baseline)
 
 **Type:**
+
 ```ts
 interface Middleware<T> {
   id: string;
@@ -10,11 +11,12 @@ interface Middleware<T> {
   after?: (action: string, payload: unknown, state: T, newState: T) => void;
 }
 
-tree.addTap(middleware)
-tree.removeTap(id)
+tree.addTap(middleware);
+tree.removeTap(id);
 ```
 
 **Issues:**
+
 - String-based action names (no type safety)
 - Weak hook semantics (before returns boolean, after is void)
 - `addTap`/`removeTap` feels foreign to Angular/RxJS conventions
@@ -30,21 +32,15 @@ tree.removeTap(id)
 **Philosophy:** Compose middleware as pure functions; no registry needed.
 
 ```ts
-type MiddlewareHandler<T> = (
-  next: (state: T) => void,
-  action: string,
-  payload: unknown,
-  state: T
-) => void;
+type MiddlewareHandler<T> = (next: (state: T) => void, action: string, payload: unknown, state: T) => void;
 
 export function withMiddlewareComposition<T>(...handlers: MiddlewareHandler<T>[]) {
   return (tree: SignalTree<T>) => {
     const chain = handlers.reverse().reduce(
-      (next, handler) => (action, payload, state) => 
-        handler(() => next(action, payload, state), action, payload, state),
+      (next, handler) => (action, payload, state) => handler(() => next(action, payload, state), action, payload, state),
       () => {} // final no-op
     );
-    
+
     // Intercept tree() calls
     // ...
     return tree;
@@ -68,6 +64,7 @@ const tree = signalTree(state).with(
 ```
 
 **Pros:**
+
 - ✅ Pure functional; no global state
 - ✅ Automatic ordering via composition
 - ✅ Easy to test (all functions)
@@ -75,6 +72,7 @@ const tree = signalTree(state).with(
 - ✅ Zero indirection (no WeakMap lookups)
 
 **Cons:**
+
 - ❌ Can't dynamically add/remove at runtime
 - ❌ Requires enhancer reapplication
 
@@ -97,25 +95,28 @@ type StateChange<T> = {
 
 export function withObservableMiddleware<T>(tree: SignalTree<T>) {
   const changes = signal<StateChange<T>[]>([]);
-  
+
   const originalFn = tree.bind(tree);
-  tree = function(...args) {
+  tree = function (...args) {
     const before = originalFn();
     const result = originalFn(...args);
     const after = originalFn();
-    
+
     if (before !== after) {
-      changes.update(arr => [...arr, {
-        action: args[0]?.type || 'UPDATE',
-        before,
-        after,
-        payload: args[0],
-        timestamp: Date.now(),
-      }]);
+      changes.update((arr) => [
+        ...arr,
+        {
+          action: args[0]?.type || 'UPDATE',
+          before,
+          after,
+          payload: args[0],
+          timestamp: Date.now(),
+        },
+      ]);
     }
     return result;
   };
-  
+
   // Return tree + observable api
   return tree as SignalTree<T> & {
     changes(): StateChange<T>[];
@@ -127,12 +128,13 @@ export function withObservableMiddleware<T>(tree: SignalTree<T>) {
 const tree = signalTree(state).with(withObservableMiddleware);
 
 const validationErrors = computed(() => {
-  const change = tree.onChange(c => c.action === 'UPDATE');
+  const change = tree.onChange((c) => c.action === 'UPDATE');
   return validate(change()?.after);
 });
 ```
 
 **Pros:**
+
 - ✅ Signal-native; fits SignalTree philosophy
 - ✅ Composable with computed() chains
 - ✅ Can replay history
@@ -140,6 +142,7 @@ const validationErrors = computed(() => {
 - ✅ Type-safe (StateChange is concrete)
 
 **Cons:**
+
 - ❌ Slight memory overhead (stores changes array)
 - ❌ Less suitable for side effects (logging)
 
@@ -155,7 +158,7 @@ const validationErrors = computed(() => {
 export function withLogging<T>(name: string) {
   return (tree: SignalTree<T>) => {
     const original = tree.bind(tree);
-    return function(...args) {
+    return function (...args) {
       if (args.length > 0) console.log(`${name}:`, args);
       return original(...args);
     } as SignalTree<T>;
@@ -165,7 +168,7 @@ export function withLogging<T>(name: string) {
 export function withValidation<T>(validator: (state: T) => boolean) {
   return (tree: SignalTree<T>) => {
     const original = tree.bind(tree);
-    return function(...args) {
+    return function (...args) {
       const result = original(...args);
       if (!validator(original())) throw new Error('Validation failed');
       return result;
@@ -174,14 +177,14 @@ export function withValidation<T>(validator: (state: T) => boolean) {
 }
 
 // Usage
-const tree = signalTree(state)
-  .with(
-    withLogging('MyTree'),
-    withValidation(s => s.age >= 0)
-  );
+const tree = signalTree(state).with(
+  withLogging('MyTree'),
+  withValidation((s) => s.age >= 0)
+);
 ```
 
 **Pros:**
+
 - ✅ Clean DX (reads as pipeline)
 - ✅ Each concern is isolated
 - ✅ Easy to reuse/test
@@ -189,6 +192,7 @@ const tree = signalTree(state)
 - ✅ Stackable errors (middleware can throw)
 
 **Cons:**
+
 - ❌ Multiple function wrappings add tiny overhead
 - ❌ Harder to remove dynamically
 
@@ -203,7 +207,7 @@ const tree = signalTree(state)
 ```ts
 export function withStateSubscriptions<T>(tree: SignalTree<T>) {
   const subscribers = new Map<string | symbol, ((value: unknown) => void)[]>();
-  
+
   return tree as SignalTree<T> & {
     onKeyChange<K extends keyof T>(
       key: K,
@@ -212,7 +216,7 @@ export function withStateSubscriptions<T>(tree: SignalTree<T>) {
       const handlers = subscribers.get(key) || [];
       handlers.push(handler as (value: unknown) => void);
       subscribers.set(key, handlers);
-      
+
       // Return unsubscribe function
       return () => {
         const idx = handlers.indexOf(handler as (value: unknown) => void);
@@ -229,12 +233,14 @@ const unsub = tree.onKeyChange('users', (newUsers, oldUsers) => {
 ```
 
 **Pros:**
+
 - ✅ Granular subscriptions (only what you care about)
 - ✅ Unsubscribe is explicit and easy
 - ✅ No overhead for unobserved changes
 - ✅ Fits reactive patterns (like .subscribe())
 
 **Cons:**
+
 - ❌ Can't intercept before updates
 - ❌ No global ordering
 
@@ -277,17 +283,19 @@ const tree = signalTree(state).with(
         return false; // block it
       }
       return true;
-    }
+    },
   })
 );
 ```
 
 **Pros:**
+
 - ✅ Can intercept any property access
 - ✅ Return false to block updates
 - ✅ Minimal code
 
 **Cons:**
+
 - ❌ Proxy overhead per property access
 - ❌ Doesn't intercept signal.set() calls directly (only state.key access)
 
@@ -307,37 +315,37 @@ type EventBus<T> = {
 
 export function withEventBus<T>(tree: SignalTree<T>): SignalTree<T> & EventBus<T> {
   const listeners = new Map<string, Set<Function>>();
-  
+
   const original = tree.bind(tree);
-  
-  const wrapper = function(...args) {
+
+  const wrapper = function (...args) {
     const before = original();
     const result = original(...args);
     const after = original();
-    
+
     // Emit change events for modified keys
     if (before !== after && typeof after === 'object') {
       for (const key of Object.keys(after)) {
         if ((before as any)[key] !== (after as any)[key]) {
           const handlers = listeners.get(key);
           if (handlers) {
-            handlers.forEach(h => h((after as any)[key]));
+            handlers.forEach((h) => h((after as any)[key]));
           }
         }
       }
     }
     return result;
   } as SignalTree<T>;
-  
+
   Object.assign(wrapper, tree);
-  
+
   wrapper.on = (event, handler) => {
     const handlers = listeners.get(String(event)) || new Set();
     handlers.add(handler);
     listeners.set(String(event), handlers);
     return () => handlers.delete(handler);
   };
-  
+
   return wrapper;
 }
 
@@ -348,11 +356,13 @@ tree.on('users', (newUsers) => {
 ```
 
 **Pros:**
+
 - ✅ Event-driven (familiar pattern)
 - ✅ Easy to unsubscribe
 - ✅ No global state
 
 **Cons:**
+
 - ❌ Pub-sub discovery is implicit (not visible at setup time)
 - ❌ Classic memory leak risk if subscriptions aren't cleaned up
 
@@ -373,17 +383,17 @@ type Diff<T> = {
 
 export function withDiffTracking<T>(tree: SignalTree<T>) {
   const diffs = signal<Diff<T>[]>([]);
-  
+
   const original = tree.bind(tree);
-  
-  const wrapper = function(...args) {
+
+  const wrapper = function (...args) {
     const before = structuredClone(original()); // deep clone for comparison
     const result = original(...args);
     const after = original();
-    
+
     const diff: Partial<T> = {};
     const changedPaths: string[] = [];
-    
+
     // Compute diff
     for (const key of Object.keys(after)) {
       if ((before as any)?.[key] !== (after as any)[key]) {
@@ -391,37 +401,39 @@ export function withDiffTracking<T>(tree: SignalTree<T>) {
         changedPaths.push(key);
       }
     }
-    
+
     if (changedPaths.length > 0) {
-      diffs.update(arr => [...arr, { timestamp: Date.now(), diff, changedPaths }]);
+      diffs.update((arr) => [...arr, { timestamp: Date.now(), diff, changedPaths }]);
     }
-    
+
     return result;
   } as SignalTree<T>;
-  
+
   Object.assign(wrapper, tree);
   wrapper.diffs = diffs;
-  
+
   return wrapper as SignalTree<T> & { diffs: Signal<Diff<T>[]> };
 }
 
 // Usage
 const changes = computed(() => {
   const allDiffs = tree.diffs();
-  return allDiffs.filter(d => d.changedPaths.includes('users'));
+  return allDiffs.filter((d) => d.changedPaths.includes('users'));
 });
 ```
 
 **Pros:**
+
 - ✅ Minimal data passed (only changes)
 - ✅ Signal-native querying
 - ✅ Can analyze change patterns
 
 **Cons:**
+
 - ❌ Deep clone on every update (expensive)
 - ❌ Memory overhead storing diffs
 
-**Performance:** O(n) per update (deep clone); memory: O(changes * size).
+**Performance:** O(n) per update (deep clone); memory: O(changes \* size).
 
 ---
 
@@ -439,19 +451,19 @@ type Aspect<T> = {
 
 export function withAspects<T>(tree: SignalTree<T>, aspects: Aspect<T>[]) {
   const original = tree.bind(tree);
-  
-  const wrapper = function(...args) {
+
+  const wrapper = function (...args) {
     const before = original();
-    
+
     // Find matching aspects
-    const matching = aspects.filter(a => {
+    const matching = aspects.filter((a) => {
       if (args.length === 0) return false;
       return a.pointcut(String(args[0]), args[1]);
     });
-    
+
     // Execute before hooks
-    matching.forEach(a => a.before?.({ key: String(args[0]), value: args[1], tree }));
-    
+    matching.forEach((a) => a.before?.({ key: String(args[0]), value: args[1], tree }));
+
     // Execute around hooks
     const proceed = () => original(...args);
     let executed = false;
@@ -462,14 +474,14 @@ export function withAspects<T>(tree: SignalTree<T>, aspects: Aspect<T>[]) {
       }
     }
     if (!executed) proceed();
-    
+
     // Execute after hooks
     const after = original();
-    matching.forEach(a => a.after?.({ key: String(args[0]), value: args[1], tree }));
-    
+    matching.forEach((a) => a.after?.({ key: String(args[0]), value: args[1], tree }));
+
     return after;
   } as SignalTree<T>;
-  
+
   Object.assign(wrapper, tree);
   return wrapper;
 }
@@ -488,19 +500,21 @@ const tree = signalTree(state).with(
         console.time('payment');
         proceed();
         console.timeEnd('payment');
-      }
-    }
+      },
+    },
   ])
 );
 ```
 
 **Pros:**
+
 - ✅ Separation of concerns (aspects are external)
 - ✅ Pointcuts allow selective interception
 - ✅ around/before/after hooks are clear
 - ✅ Easy to compose
 
 **Cons:**
+
 - ❌ Pointcut matching adds overhead
 - ❌ More verbose than alternatives
 
@@ -521,27 +535,29 @@ type StateStream<T> = {
 
 export function withReactiveStream<T>(tree: SignalTree<T>): SignalTree<T> & { changes: StateStream<T> } {
   const observers = new Set<Function>();
-  
+
   const original = tree.bind(tree);
-  
-  const wrapper = function(...args) {
+
+  const wrapper = function (...args) {
     const before = original();
     const result = original(...args);
     const after = original();
-    
+
     if (before !== after) {
-      observers.forEach(obs => obs({
-        before,
-        after,
-        action: args[0]?.type || 'UPDATE',
-        timestamp: Date.now(),
-      }));
+      observers.forEach((obs) =>
+        obs({
+          before,
+          after,
+          action: args[0]?.type || 'UPDATE',
+          timestamp: Date.now(),
+        })
+      );
     }
     return result;
   } as SignalTree<T>;
-  
+
   Object.assign(wrapper, tree);
-  
+
   wrapper.changes = {
     subscribe: (observer) => {
       observers.add(observer.next);
@@ -568,26 +584,28 @@ export function withReactiveStream<T>(tree: SignalTree<T>): SignalTree<T> & { ch
       map: (f) => wrapper.changes.map(fn).map(f),
     }),
   };
-  
+
   return wrapper;
 }
 
 // Usage
 tree.changes
-  .filter(c => c.action === 'UPDATE')
-  .map(c => c.after.users.length)
+  .filter((c) => c.action === 'UPDATE')
+  .map((c) => c.after.users.length)
   .subscribe({
-    next: (userCount) => console.log(`Users: ${userCount}`)
+    next: (userCount) => console.log(`Users: ${userCount}`),
   });
 ```
 
 **Pros:**
+
 - ✅ Familiar to RxJS developers
 - ✅ Lazy (only computes when subscribed)
 - ✅ Composable (filter, map, etc.)
 - ✅ Unsubscribe built-in
 
 **Cons:**
+
 - ❌ More overhead than simple callbacks
 - ❌ Chaining can be verbose
 
@@ -605,7 +623,7 @@ export function withChangeTracking<T>(tree: SignalTree<T>) {
   const changed = computed(() => {
     const current = tree();
     const last = lastValue();
-    
+
     // Auto-detect changes by comparing before/after
     // This works because computed() re-runs on tree() changes
     return {
@@ -614,14 +632,14 @@ export function withChangeTracking<T>(tree: SignalTree<T>) {
       paths: diffPaths(last, current),
     };
   });
-  
+
   // Update lastValue on every tree change
   effect(() => {
     const _ = tree(); // track changes
     const _ = changed(); // force compute
     lastValue.set(tree());
   });
-  
+
   return tree as SignalTree<T> & { changed: Signal<ChangeInfo<T>> };
 }
 
@@ -635,11 +653,13 @@ const logChanges = effect(() => {
 ```
 
 **Pros:**
+
 - ✅ No callbacks; uses Angular patterns (effect/computed)
 - ✅ Automatic cleanup (effects are tied to component lifecycle)
 - ✅ No memory leaks
 
 **Cons:**
+
 - ❌ Requires effect/computed understanding
 - ❌ Can't block updates (only observe)
 
@@ -662,32 +682,32 @@ type StateTransition<T> = {
 
 export function withStateMachine<T>(tree: SignalTree<T>, transitions: StateTransition<T>[]) {
   const lastState = signal<T>(tree());
-  
+
   const original = tree.bind(tree);
-  
-  const wrapper = function(...args) {
+
+  const wrapper = function (...args) {
     const before = original();
     const result = original(...args);
     const after = original();
-    
+
     if (before !== after) {
-      const matching = transitions.find(t => t.from(before) && t.to(after));
-      
+      const matching = transitions.find((t) => t.from(before) && t.to(after));
+
       if (!matching) {
         throw new Error(`Invalid state transition: ${before} -> ${after}`);
       }
-      
+
       if (matching.guard && !matching.guard(before, after)) {
         throw new Error(`Guard failed for transition ${matching.action}`);
       }
-      
+
       matching.onTransition?.(before, after);
       lastState.set(after);
     }
-    
+
     return result;
   } as SignalTree<T>;
-  
+
   Object.assign(wrapper, tree);
   return wrapper;
 }
@@ -704,18 +724,20 @@ const tree = signalTree(state).with(
       from: (s) => s.status === 'loading',
       to: (s) => s.status === 'ready',
       action: 'finish-load',
-    }
+    },
   ])
 );
 ```
 
 **Pros:**
+
 - ✅ Enforces valid state graph
 - ✅ Guards prevent invalid transitions
 - ✅ Great for complex workflows (auth, forms, etc.)
 - ✅ Self-documenting
 
 **Cons:**
+
 - ❌ Requires upfront state definition
 - ❌ Verbose for simple cases
 
@@ -735,19 +757,19 @@ type FieldResolver<T, K extends keyof T> = {
 
 export function withResolvers<T>(tree: SignalTree<T>, resolvers: Partial<Record<keyof T, FieldResolver<T, any>>>) {
   const original = tree.bind(tree);
-  
-  const wrapper = function(...args) {
+
+  const wrapper = function (...args) {
     if (args.length === 0) {
       // Get: apply selectors
       const state = original();
       const result = { ...state };
-      
+
       for (const [key, resolver] of Object.entries(resolvers)) {
         if (resolver.select && key in state) {
           (result as any)[key] = resolver.select((state as any)[key]);
         }
       }
-      
+
       return result;
     } else {
       // Set: apply interceptors
@@ -759,11 +781,11 @@ export function withResolvers<T>(tree: SignalTree<T>, resolvers: Partial<Record<
           return; // interceptor handles update
         }
       }
-      
+
       return original(...args);
     }
   } as SignalTree<T>;
-  
+
   Object.assign(wrapper, tree);
   return wrapper;
 }
@@ -772,23 +794,25 @@ export function withResolvers<T>(tree: SignalTree<T>, resolvers: Partial<Record<
 const tree = signalTree(state).with(
   withResolvers({
     users: {
-      select: (users) => users.filter(u => u.active), // only return active
+      select: (users) => users.filter((u) => u.active), // only return active
       intercept: (newUsers, next) => {
-        const validated = newUsers.filter(u => u.id); // require id
+        const validated = newUsers.filter((u) => u.id); // require id
         next(validated);
-      }
-    }
+      },
+    },
   })
 );
 ```
 
 **Pros:**
+
 - ✅ Per-field logic (like GraphQL resolvers)
 - ✅ Clean separation of read/write logic
 - ✅ Easy to reason about (each field is independent)
 - ✅ Can add computed fields
 
 **Cons:**
+
 - ❌ Only works at top level (not nested)
 - ❌ Less suitable for cross-field concerns
 
@@ -798,20 +822,20 @@ const tree = signalTree(state).with(
 
 ## Comparison Matrix
 
-| Alternative | DX Score | Perf | Testability | Learning Curve | Fits SignalTree |
-|-------------|----------|------|-------------|-----------------|-----------------|
-| 1. Composition | 9/10 | 10/10 | 10/10 | Low | 9/10 |
-| 2. Observable | 8/10 | 9/10 | 9/10 | Medium | 10/10 ✅ |
-| 3. Enhancer | 9/10 | 9/10 | 10/10 | Low | 10/10 ✅ |
-| 4. Subscriptions | 7/10 | 10/10 | 8/10 | Low | 8/10 |
-| 5. Proxy | 6/10 | 7/10 | 6/10 | Medium | 7/10 |
-| 6. Event Bus | 8/10 | 9/10 | 8/10 | Low | 8/10 |
-| 7. Diff Tracking | 7/10 | 6/10 | 8/10 | Low | 8/10 |
-| 8. AOP | 8/10 | 7/10 | 9/10 | High | 7/10 |
-| 9. Streams | 7/10 | 8/10 | 8/10 | High | 9/10 |
-| 10. Computed | 9/10 | 10/10 | 9/10 | Low | 10/10 ✅ |
-| 11. State Machine | 7/10 | 9/10 | 10/10 | High | 6/10 |
-| 12. Resolvers | 8/10 | 9/10 | 8/10 | Medium | 7/10 |
+| Alternative       | DX Score | Perf  | Testability | Learning Curve | Fits SignalTree |
+| ----------------- | -------- | ----- | ----------- | -------------- | --------------- |
+| 1. Composition    | 9/10     | 10/10 | 10/10       | Low            | 9/10            |
+| 2. Observable     | 8/10     | 9/10  | 9/10        | Medium         | 10/10 ✅        |
+| 3. Enhancer       | 9/10     | 9/10  | 10/10       | Low            | 10/10 ✅        |
+| 4. Subscriptions  | 7/10     | 10/10 | 8/10        | Low            | 8/10            |
+| 5. Proxy          | 6/10     | 7/10  | 6/10        | Medium         | 7/10            |
+| 6. Event Bus      | 8/10     | 9/10  | 8/10        | Low            | 8/10            |
+| 7. Diff Tracking  | 7/10     | 6/10  | 8/10        | Low            | 8/10            |
+| 8. AOP            | 8/10     | 7/10  | 9/10        | High           | 7/10            |
+| 9. Streams        | 7/10     | 8/10  | 8/10        | High           | 9/10            |
+| 10. Computed      | 9/10     | 10/10 | 9/10        | Low            | 10/10 ✅        |
+| 11. State Machine | 7/10     | 9/10  | 10/10       | High           | 6/10            |
+| 12. Resolvers     | 8/10     | 9/10  | 8/10        | Medium         | 7/10            |
 
 ---
 
@@ -820,6 +844,7 @@ const tree = signalTree(state).with(
 ### 🥇 Winner: Alternative 10 (Mutable Signal + Computed Tracking)
 
 **Why:**
+
 - Uses Angular's built-in effect/computed; zero new mental model
 - Automatic cleanup (no memory leaks)
 - Composes naturally with SignalTree's reactive design
@@ -838,34 +863,30 @@ effect(() => {
 ### 🥈 Alternative 3 (Enhancer-Based)
 
 **Why:**
+
 - Reads as a clean pipeline
 - Each concern isolated
 - Easy to understand and test
 - Scales to many enhancers without complexity
 
 ```ts
-const tree = signalTree(state)
-  .with(
-    withLogging('MyTree'),
-    withValidation(validate),
-    withPersistence({ key: 'state' })
-  );
+const tree = signalTree(state).with(withLogging('MyTree'), withValidation(validate), withPersistence({ key: 'state' }));
 ```
 
 ### 🥉 Alternative 2 (Observable/Signal-Based)
 
 **Why:**
+
 - Signal-native (fits SignalTree perfectly)
 - Can replay history
 - Composable with computed chains
 - Clean separation of concerns
 
 ```ts
-tree.onChange(c => c.action === 'UPDATE')
-  .pipe(
-    filter(c => c.after.users.length > 0)
-  )
-  .subscribe(change => {
+tree
+  .onChange((c) => c.action === 'UPDATE')
+  .pipe(filter((c) => c.after.users.length > 0))
+  .subscribe((change) => {
     console.log('Users updated:', change.after.users);
   });
 ```
@@ -877,21 +898,17 @@ tree.onChange(c => c.action === 'UPDATE')
 **Phase 1:** Drop `addTap`/`removeTap` API entirely.
 
 **Phase 2:** Introduce Alt #10 (Computed Tracking) as new standard:
+
 - Users subscribe to `tree.changed()` signal
 - Framework handles cleanup via effect lifecycle
 - No runtime registration needed
 
 **Phase 3:** Provide optional "classic" enhancers (logging, validation, etc.) as pre-built with Alternative 3 approach:
+
 ```ts
 import { withLogging, withValidation, withPersistence } from '@signaltree/enhancers';
 
-const tree = signalTree(state)
-  .with(
-    withLogging(),
-    withValidation(myValidator),
-    withPersistence({ key: 'my-state' })
-  );
+const tree = signalTree(state).with(withLogging(), withValidation(myValidator), withPersistence({ key: 'my-state' }));
 ```
 
 **Result:** Cleaner codebase, better DX, zero memory leak risk, full type safety.
-

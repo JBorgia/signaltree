@@ -570,7 +570,11 @@ export interface InterceptHandlers<E, K extends string | number> {
     changes: Partial<E>,
     ctx: InterceptContext<Partial<E>>
   ) => void | Promise<void>;
-  onRemove?: (id: K, entity: E, ctx: InterceptContext<void>) => void | Promise<void>;
+  onRemove?: (
+    id: K,
+    entity: E,
+    ctx: InterceptContext<void>
+  ) => void | Promise<void>;
 }
 
 /**
@@ -693,7 +697,9 @@ export interface DevToolsConfig {
 /**
  * Type utilities for entities
  */
-export type EntityType<T> = T extends EntitySignal<infer E, unknown> ? E : never;
+export type EntityType<T> = T extends EntitySignal<infer E, unknown>
+  ? E
+  : never;
 export type EntityKeyType<T> = T extends EntitySignal<unknown, infer K>
   ? K
   : never;
@@ -708,8 +714,8 @@ export type EntityAwareTreeNode<T> = {
   [K in keyof T]: T[K] extends EntityMapMarker<infer E, infer Key>
     ? EntitySignal<E, Key>
     : T[K] extends object
-      ? EntityAwareTreeNode<T[K]>
-      : CallableWritableSignal<T[K]>;
+    ? EntityAwareTreeNode<T[K]>
+    : CallableWritableSignal<T[K]>;
 };
 
 /**

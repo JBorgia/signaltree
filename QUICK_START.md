@@ -3,6 +3,7 @@
 ## Essential Documents (Start Here)
 
 1. **Architecture Overview**
+
    ```
    ARCHITECTURE.md — Visual diagrams and implementation map
    • Layer architecture (public API → impl → storage)
@@ -12,6 +13,7 @@
    ```
 
 2. **Design Decisions**
+
    ```
    DESIGN_DECISIONS.md — Locked architectural decisions
    • Storage: Map<K, WritableSignal<E>>
@@ -21,6 +23,7 @@
    ```
 
 3. **Complete Plan**
+
    ```
    ENTITY_REFACTOR_COMPLETE_PLAN.md — 8-phase breakdown
    • Phases 2-3: PathNotifier foundation (4-6 days)
@@ -41,9 +44,11 @@
 ## Phase 2: PathNotifier (Ready to Start)
 
 ### Goal
+
 Create internal backbone that catches ALL mutations and provides unified change detection for entities + enhancers.
 
 ### What to Create
+
 ```
 packages/core/src/lib/path-notifier.ts  (~400 lines)
 ├── PatternMatcher class
@@ -71,24 +76,30 @@ packages/core/src/lib/path-notifier.spec.ts  (~400 lines)
 ```
 
 ### Performance Targets
+
 - notify() < 1ms for 1000 handlers
 - Pattern matching cached
 - No memory leaks on destroy
 
 ### Key Insight
+
 This is the foundation that makes both entities AND enhancers work:
+
 - Entities: Will wire mutations through PathNotifier
 - Enhancers: Will subscribe to PathNotifier patterns
 
 ### Next Phase Dependency
+
 Phase 3 (Core Integration) requires Phase 2 complete to wire PathNotifier into signal setters.
 
 ## Phase 3: Core Integration (After Phase 2)
 
 ### Goal
+
 Integrate PathNotifier into all mutation points so every change triggers notifications.
 
 ### What to Modify
+
 ```
 packages/core/src/lib/signal-tree.ts
 ├── Add __pathNotifier: PathNotifier property
@@ -100,7 +111,9 @@ packages/core/src/lib/signal-tree.ts
 ```
 
 ### Critical Check
+
 All these mutations must trigger notify():
+
 - ✅ `tree.$.x.set(5)`
 - ✅ `tree.$.x.update(fn)`
 - ✅ `tree() { x: 5 }`
@@ -110,9 +123,11 @@ All these mutations must trigger notify():
 ## Phase 4: EntitySignal (After Phase 3)
 
 ### Goal
+
 Implement Map-based entity collection with scoped hooks.
 
 ### What to Create
+
 ```
 packages/core/src/enhancers/entities/lib/
 ├── entity-signal.ts
@@ -131,6 +146,7 @@ packages/core/src/enhancers/entities/lib/
 ```
 
 ### Key Features
+
 - O(1) lookups via Map.get(id)
 - Bracket access: `tree.$.users['u1']()`
 - Scoped hooks: `tree.$.users.tap({onAdd, onUpdate})`
@@ -141,6 +157,7 @@ packages/core/src/enhancers/entities/lib/
 ### What to Rewrite (4 enhancers)
 
 #### 5.1: Batching (Remove Global State)
+
 ```
 Before: Global updateQueue, flushTimeoutId
 After:  Instance-scoped queue via PathNotifier.intercept('**')
@@ -148,6 +165,7 @@ Impact: Multiple trees no longer interfere
 ```
 
 #### 5.2: Persistence (Remove Polling)
+
 ```
 Before: 50ms setTimeout loop = 20,000 calls/sec
 After:  PathNotifier.subscribe() = 0 calls when idle
@@ -155,6 +173,7 @@ Impact: Battery friendly, no memory leaks
 ```
 
 #### 5.3: TimeTravel (Improve Coverage)
+
 ```
 Before: ~20% of mutations tracked (only root tree() calls)
 After:  100% via PathNotifier.intercept('**')
@@ -162,6 +181,7 @@ Impact: Undo/redo works for all operations
 ```
 
 #### 5.4: DevTools (Complete Tracking)
+
 ```
 Before: Incomplete state in Redux DevTools
 After:  All mutations tracked, time-travel works
@@ -190,12 +210,12 @@ Will this break existing code?
 
 ## Performance Quick Reference
 
-| Operation | Before | After | Improvement |
-|-----------|--------|-------|-------------|
-| Entity updateOne | O(n) | O(1) | 40-100x |
-| Persistence calls/sec | 20,000 | 0 (idle) | ∞ |
-| TimeTravel coverage | 20% | 100% | 5x |
-| Bundle size | baseline | +2.1 KB | Justified |
+| Operation             | Before   | After    | Improvement |
+| --------------------- | -------- | -------- | ----------- |
+| Entity updateOne      | O(n)     | O(1)     | 40-100x     |
+| Persistence calls/sec | 20,000   | 0 (idle) | ∞           |
+| TimeTravel coverage   | 20%      | 100%     | 5x          |
+| Bundle size           | baseline | +2.1 KB  | Justified   |
 
 ## Testing Quick Reference
 
@@ -263,22 +283,22 @@ c61f424 docs: add complete 8-phase implementation plan for entities + PathNotifi
 ```
 Start of Week 1:
   Days 1-3:   Phase 2 (PathNotifier core)
-  
+
 Days 4-6:     Phase 3 (Core integration)
 
 Start of Week 2:
   Days 7-13:  Phase 4 (EntitySignal)
-  
+
 Days 7-10:    Phase 5.1-5.2 (Batching, Persistence) [parallel]
 
 Week 3:
   Days 14-15: Phase 5.3-5.4 (TimeTravel, DevTools)
   Days 16-17: Phase 6 (Integration testing)
-  
+
 Week 4:
   Days 18-19: Phase 7 (Documentation)
   Days 20-25: Phase 8 (Release prep & publish)
-  
+
 Total: 20-25 days realistic
 ```
 
@@ -289,6 +309,7 @@ Total: 20-25 days realistic
 **Next step:** Choose to start Phase 2 or take a break
 
 If starting Phase 2:
+
 1. Open `DESIGN_DECISIONS.md` for PathNotifier pattern details
 2. Create `packages/core/src/lib/path-notifier.ts`
 3. Start with PatternMatcher class

@@ -5,7 +5,9 @@
 SignalTree v5.0 needs to solve **two seemingly different problems** with one unified architecture:
 
 ### Problem 1: Entity Hooks (Scoped)
+
 Current approach pollutes root API:
+
 ```typescript
 // ❌ This pollutes tree root
 tree.addTap('users', (action) => {...});
@@ -17,7 +19,9 @@ tree.$.users.intercept({ onAdd: (user, ctx) => {...} });
 ```
 
 ### Problem 2: Enhancer Bugs (Global)
+
 Current enhancers have systemic issues:
+
 - **Batching**: Global mutable state → race conditions between trees
 - **Persistence**: 50ms polling → 20,000 calls/second per tree
 - **Time Travel**: Only catches ~20% of mutations
@@ -69,10 +73,11 @@ Instead of solving these as separate problems, PathNotifier acts as **internal i
 ### Entity Hooks (Scoped)
 
 **User code:**
+
 ```typescript
 const tree = signalTree({
-  users: entityMap<User, string>({ 
-    keyOf: u => u.id 
+  users: entityMap<User, string>({
+    keyOf: (u) => u.id,
   }),
 });
 
@@ -94,6 +99,7 @@ tree.$.users.intercept({
 ```
 
 **Implementation flow:**
+
 ```
 user.ts (EntitySignal)
   ├─ addOne(user)
@@ -145,7 +151,7 @@ export function withBatching<T>(config?: BatchingConfig) {
     // Subscribe to ALL mutations
     const unsub = tree.__pathNotifier.intercept('**', (ctx, next) => {
       queue.push(ctx);
-      
+
       if (queue.length >= config?.maxBatchSize) {
         flush();
       } else if (!flushScheduled) {
@@ -190,13 +196,10 @@ const checkForChanges = () => {
 export function withPersistence<T>(config: PersistenceConfig) {
   return (tree: SignalTree<T> & { __pathNotifier: PathNotifier }) => {
     // Subscribe only to changes we care about
-    const unsub = tree.__pathNotifier.subscribe(
-      config.filter ?? (() => true),
-      (value, prev, path) => {
-        // Only called when something ACTUALLY changes
-        saveToStorage(value);
-      }
-    );
+    const unsub = tree.__pathNotifier.subscribe(config.filter ?? (() => true), (value, prev, path) => {
+      // Only called when something ACTUALLY changes
+      saveToStorage(value);
+    });
 
     // Cleanup removes subscription
     tree.destroy = () => {
@@ -213,7 +216,7 @@ export function withPersistence<T>(config: PersistenceConfig) {
 
 ```typescript
 // ❌ Only catches root calls (BROKEN)
-const enhancedTree = function(...args) {
+const enhancedTree = function (...args) {
   const beforeState = tree();
   // Apply update via tree()
   const afterState = tree();
@@ -221,13 +224,13 @@ const enhancedTree = function(...args) {
 };
 
 // What's tracked:
-tree({ count: 1 });                    // ✅
-tree(s => ({ ...s, x: 1 }));           // ✅
+tree({ count: 1 }); // ✅
+tree((s) => ({ ...s, x: 1 })); // ✅
 
 // What's MISSED:
-tree.$.count.set(5);                   // ❌
-tree.$.users.addOne(user);             // ❌
-tree.batchUpdate(fn);                  // ❌
+tree.$.count.set(5); // ❌
+tree.$.users.addOne(user); // ❌
+tree.batchUpdate(fn); // ❌
 ```
 
 #### After: Time Travel Fixed
@@ -251,10 +254,10 @@ export function withTimeTravel<T>(config?: TimeTravelConfig) {
     });
 
     // What's tracked now:
-    tree({ count: 1 });                // ✅ Caught
-    tree.$.count.set(5);               // ✅ Caught
-    tree.$.users.addOne(user);         // ✅ Caught
-    tree.batchUpdate(fn);              // ✅ Caught
+    tree({ count: 1 }); // ✅ Caught
+    tree.$.count.set(5); // ✅ Caught
+    tree.$.users.addOne(user); // ✅ Caught
+    tree.batchUpdate(fn); // ✅ Caught
     // ALL mutations tracked!
   };
 }
@@ -267,6 +270,7 @@ export function withTimeTravel<T>(config?: TimeTravelConfig) {
 ### 1. **Single Point of Observation**
 
 PathNotifier is wired into all mutation points:
+
 ```
 tree()               → signal.set()      → notify
 tree.$.x.set(v)      → signal.set()      → notify
@@ -284,16 +288,10 @@ Enhancers subscribe to patterns, not hardcoded to specific properties:
 tree.__pathNotifier.intercept('**', batchingInterceptor);
 
 // Logging can filter
-tree.__pathNotifier.subscribe(
-  (path) => !path.startsWith('_'),
-  loggingHandler
-);
+tree.__pathNotifier.subscribe((path) => !path.startsWith('_'), loggingHandler);
 
 // Persistence can be selective
-tree.__pathNotifier.subscribe(
-  (path) => shouldPersist(path),
-  persistenceHandler
-);
+tree.__pathNotifier.subscribe((path) => shouldPersist(path), persistenceHandler);
 
 // Time travel can track everything
 tree.__pathNotifier.intercept('**', timeTravelInterceptor);
@@ -302,6 +300,7 @@ tree.__pathNotifier.intercept('**', timeTravelInterceptor);
 ### 3. **Instance Scoping**
 
 Each tree has its own PathNotifier:
+
 ```typescript
 const treeA = signalTree({...}).with(withBatching());
 const treeB = signalTree({...}).with(withBatching());
@@ -359,36 +358,41 @@ class EntitySignal<E, K> {
 
 ## Benefits of Unified Approach
 
-| Aspect | Before (Separate) | After (Unified) |
-|--------|-------------------|-----------------|
-| **Global state** | Batching: ❌ Yes | ✅ No (instance-scoped) |
-| **Change detection** | Ad-hoc per enhancer | ✅ Single backbone |
-| **Polling overhead** | Persistence: ❌ 20k calls/sec | ✅ 0 calls (event-driven) |
-| **Mutation coverage** | Time Travel: ❌ 20% | ✅ 100% |
-| **DevTools tracking** | ❌ Incomplete | ✅ Complete |
-| **Entity hooks scoping** | ❌ Pollutes root | ✅ Scoped to collection |
-| **Code duplication** | ❌ Each enhancer reinvents | ✅ Shared infrastructure |
-| **Memory leaks** | ❌ Common (no cleanup) | ✅ Guaranteed cleanup |
-| **Testing** | ❌ State bleeds | ✅ Isolated |
-| **Bundle size** | Duplicated logic | ✅ Shared, smaller |
+| Aspect                   | Before (Separate)             | After (Unified)           |
+| ------------------------ | ----------------------------- | ------------------------- |
+| **Global state**         | Batching: ❌ Yes              | ✅ No (instance-scoped)   |
+| **Change detection**     | Ad-hoc per enhancer           | ✅ Single backbone        |
+| **Polling overhead**     | Persistence: ❌ 20k calls/sec | ✅ 0 calls (event-driven) |
+| **Mutation coverage**    | Time Travel: ❌ 20%           | ✅ 100%                   |
+| **DevTools tracking**    | ❌ Incomplete                 | ✅ Complete               |
+| **Entity hooks scoping** | ❌ Pollutes root              | ✅ Scoped to collection   |
+| **Code duplication**     | ❌ Each enhancer reinvents    | ✅ Shared infrastructure  |
+| **Memory leaks**         | ❌ Common (no cleanup)        | ✅ Guaranteed cleanup     |
+| **Testing**              | ❌ State bleeds               | ✅ Isolated               |
+| **Bundle size**          | Duplicated logic              | ✅ Shared, smaller        |
 
 ---
 
 ## Implementation Sequence
 
 ### Foundation Layer (Phases 2-3)
+
 ```
 PathNotifier → Signal wrapping → Core integration
 ```
+
 This is the backbone everything else uses.
 
 ### Feature Layer (Phase 4)
+
 ```
 EntitySignal → Uses PathNotifier internally
 ```
+
 Scoped hooks (tap/intercept) attach to EntitySignal.
 
 ### Enhancement Layer (Phase 5)
+
 ```
 Migrate enhancers to use PathNotifier
 • withBatching()    → instance-scoped queue
@@ -398,6 +402,7 @@ Migrate enhancers to use PathNotifier
 ```
 
 ### Integration Layer (Phase 6)
+
 ```
 Verify entities work with global enhancers
 ```
@@ -409,11 +414,13 @@ Verify entities work with global enhancers
 ### 1. PathNotifier is Internal (Not Exposed)
 
 **Reasoning:**
+
 - Gives us flexibility to optimize without breaking API
 - Users interact with higher-level APIs (entity hooks, enhancers)
 - Prevents custom code from depending on implementation details
 
 **Exposure:**
+
 ```typescript
 // NOT exposed (internal only)
 tree.__pathNotifier; // double underscore = private
@@ -427,6 +434,7 @@ tree.with(withBatching());
 ### 2. Patterns Use Wildcards + Functions
 
 **Supports all subscription styles:**
+
 ```typescript
 'users'              // Exact path
 'users.*'            // Immediate children
@@ -435,6 +443,7 @@ tree.with(withBatching());
 ```
 
 This flexibility allows:
+
 - Persistence: Filter by path prefix
 - Logging: Exclude internal signals
 - Batching: Subscribe to everything
@@ -442,6 +451,7 @@ This flexibility allows:
 ### 3. Interceptors Run Before Tap
 
 **Order guarantees:**
+
 ```
 1. Run all interceptors (can block/transform)
 2. Apply mutation
@@ -449,6 +459,7 @@ This flexibility allows:
 ```
 
 This ensures:
+
 - Validation happens before state changes
 - Observers see final state
 - No race conditions
@@ -458,6 +469,7 @@ This ensures:
 ## Backward Compatibility
 
 ### Deprecated (Will Remove in v6.0)
+
 ```typescript
 // ❌ Don't use (global, pollutes root API)
 tree.addTap('users', handler);
@@ -466,11 +478,12 @@ tree.entities<User>('users');
 ```
 
 ### Use Instead (New API)
+
 ```typescript
 // ✅ Use this (scoped, clean API)
 tree.$.users.tap(handlers);
 tree.$.users.intercept(handlers);
-tree.$.users // EntitySignal with all methods
+tree.$.users; // EntitySignal with all methods
 ```
 
 **Migration path:** Keep old methods working (throw deprecation warning) until v6.0, then remove.
@@ -480,11 +493,13 @@ tree.$.users // EntitySignal with all methods
 ## Performance Impact
 
 ### Baseline (Current)
+
 - Persistence: 20,000 calls/sec (polling)
 - Batching: Queue shared across instances (race conditions)
 - Time Travel: ~20% coverage (incomplete)
 
 ### After PathNotifier
+
 - Persistence: 0 calls/sec (event-driven, only on change)
 - Batching: Instance-scoped (no interference)
 - Time Travel: 100% coverage (all mutations tracked)

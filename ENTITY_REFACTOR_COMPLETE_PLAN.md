@@ -53,6 +53,7 @@ The PathNotifier solves critical issues in current enhancers while providing the
 ## Why PathNotifier Solves Both Problems
 
 ### Entity Hooks (Scoped)
+
 ```typescript
 // Entity mutations trigger PathNotifier
 tree.$.users.addOne(user);
@@ -65,6 +66,7 @@ EntitySignal's internal tap/intercept handlers fire
 ```
 
 ### Global Enhancers (Unified)
+
 ```typescript
 // All mutations eventually trigger PathNotifier
 tree.$.count(5)              // Signal.set() → notify()
@@ -81,6 +83,7 @@ withBatching, withLogging, withPersistence subscribe to patterns
 ## Implementation Phases
 
 ### Phase 1: Types (COMPLETED ✅)
+
 - [x] EntitySignal interface
 - [x] EntityConfig, TapHandlers, InterceptHandlers
 - [x] Global enhancer configs
@@ -92,10 +95,13 @@ withBatching, withLogging, withPersistence subscribe to patterns
 ---
 
 ### Phase 2: PathNotifier Core (2-3 days)
+
 **Goal:** Implement internal PathNotifier infrastructure
 
 **Tasks:**
+
 - [ ] Create `packages/core/src/lib/path-notifier.ts`
+
   - [ ] Pattern matching (wildcard, function filter, glob patterns)
   - [ ] Subscriber management with cleanup
   - [ ] Interceptor chain with async support
@@ -110,6 +116,7 @@ withBatching, withLogging, withPersistence subscribe to patterns
   - [ ] Cleanup verification
 
 **Key Implementation Details:**
+
 ```typescript
 // Pattern matching examples
 'users'              → exact path
@@ -123,11 +130,14 @@ withBatching, withLogging, withPersistence subscribe to patterns
 ---
 
 ### Phase 3: SignalTree Core Integration (2-3 days)
+
 **Goal:** Wire PathNotifier into all mutation points
 
 **Tasks:**
+
 - [ ] Add internal `__pathNotifier: PathNotifier` to SignalTree (not exposed)
 - [ ] Wrap all signal setters to call PathNotifier
+
   - [ ] Root `tree()` callable
   - [ ] Direct signal `.set()` / `.update()` calls
   - [ ] `tree.batchUpdate()`
@@ -144,10 +154,13 @@ withBatching, withLogging, withPersistence subscribe to patterns
 ---
 
 ### Phase 4: EntitySignal Implementation (5-7 days)
+
 **Goal:** Implement full Map-based EntitySignal with hooks
 
 **Tasks:**
+
 - [ ] Create `packages/core/src/enhancers/entities/lib/entity-signal.ts`
+
   - [ ] Map storage with signal wrappers
   - [ ] Bracket access via Proxy: `['u1']()`
   - [ ] Explicit methods: `byId()`, `byIdOrFail()`
@@ -156,12 +169,14 @@ withBatching, withLogging, withPersistence subscribe to patterns
   - [ ] Computed signals (lazy initialization)
 
 - [ ] Add hook execution to each mutation
+
   - [ ] Run EntityConfig.hooks first (transform/block)
   - [ ] Run tap handlers (observation)
   - [ ] Run intercept handlers (blocking/transform)
   - [ ] Proper error handling with onError callback
 
 - [ ] Update `withEntities()` enhancer
+
   - [ ] Detect EntityMapMarker in state
   - [ ] Create EntitySignal instances for each collection
   - [ ] Inject PathNotifier into EntitySignal
@@ -179,9 +194,11 @@ withBatching, withLogging, withPersistence subscribe to patterns
 ---
 
 ### Phase 5: Fix Critical Enhancer Bugs (3-4 days)
+
 **Goal:** Fix batching, persistence, time-travel, devtools with PathNotifier
 
 **5.1 Migrate Batching** (1 day)
+
 - [ ] Rewrite `withBatching()` to use PathNotifier
 - [ ] Remove global `updateQueue` and `flushTimeoutId`
 - [ ] Make each tree instance have isolated queue
@@ -189,6 +206,7 @@ withBatching, withLogging, withPersistence subscribe to patterns
 - [ ] Benchmark: verify no performance regression
 
 **5.2 Migrate Persistence** (1 day)
+
 - [ ] Rewrite `withPersistence()` to use PathNotifier.subscribe
 - [ ] Remove 50ms polling loop
 - [ ] Add hash-based change detection to prevent redundant saves
@@ -196,6 +214,7 @@ withBatching, withLogging, withPersistence subscribe to patterns
 - [ ] Test with various storage backends (localStorage, sessionStorage, custom)
 
 **5.3 Migrate Time Travel** (1-2 days)
+
 - [ ] Rewrite `withTimeTravel()` to use PathNotifier.intercept
 - [ ] Ensure 100% mutation capture (currently only ~20%)
 - [ ] Test with:
@@ -207,12 +226,14 @@ withBatching, withLogging, withPersistence subscribe to patterns
 - [ ] Verify undo/redo works for all cases
 
 **5.4 Migrate DevTools** (1 day)
+
 - [ ] Rewrite `withDevTools()` to use PathNotifier.subscribe
 - [ ] Fix incomplete state tracking in Redux DevTools
 - [ ] Test time-travel from DevTools extension
 - [ ] Verify action names are descriptive (path in action)
 
 **Expected Improvements:**
+
 - ✅ Batching: Global state → Instance state (fixes race conditions)
 - ✅ Persistence: 20,000 calls/sec → 0 calls/sec (when idle)
 - ✅ Time Travel: 20% coverage → 100% coverage
@@ -221,9 +242,11 @@ withBatching, withLogging, withPersistence subscribe to patterns
 ---
 
 ### Phase 6: Entity Integration (1-2 days)
+
 **Goal:** Ensure entities work seamlessly with global enhancers
 
 **Tasks:**
+
 - [ ] Test entities + batching (entities batch updates)
 - [ ] Test entities + persistence (entity collections persist)
 - [ ] Test entities + time-travel (entity adds/updates/removes tracked)
@@ -237,26 +260,32 @@ withBatching, withLogging, withPersistence subscribe to patterns
 ---
 
 ### Phase 7: Cleanup & Documentation (1-2 days)
+
 **Goal:** Polish, deprecation warnings, migration guide
 
 **Tasks:**
+
 - [ ] Add deprecation warnings to old APIs
+
   - [ ] `tree.addTap()` → points to global enhancers
   - [ ] `tree.removeTap()` → points to global enhancers
   - [ ] `tree.entities<E>('path')` → points to entityMap + tree.$
 
 - [ ] Update all enhancer JSDoc comments
 - [ ] Create migration guide (`MIGRATION_v5.md`)
+
   - [ ] Before/after examples for each pattern
   - [ ] How to migrate from old entity API
   - [ ] How to create custom enhancers with PathNotifier
 
 - [ ] Update demo app
+
   - [ ] Replace old entity usage with new API
   - [ ] Add examples of tap/intercept hooks
   - [ ] Add examples of global enhancers working together
 
 - [ ] Performance benchmarks
+
   - [ ] Entity mutations (array vs Map)
   - [ ] Persistence writes (polling vs event-driven)
   - [ ] Batching efficiency (queue isolation)
@@ -271,9 +300,11 @@ withBatching, withLogging, withPersistence subscribe to patterns
 ---
 
 ### Phase 8: Release & Testing (1-2 days)
+
 **Goal:** Final validation, bump to v5.0, tag release
 
 **Tasks:**
+
 - [ ] Run full test suite
 - [ ] Bundle size check (expect ~2-3KB increase, justified by fixes)
 - [ ] Manual QA with real-world app
@@ -286,17 +317,17 @@ withBatching, withLogging, withPersistence subscribe to patterns
 
 ## Timeline Summary
 
-| Phase | Work | Days | Cumulative |
-|-------|------|------|-----------|
-| 1 | Types | 0 | 0 (done) |
-| 2 | PathNotifier | 2-3 | 2-3 |
-| 3 | Core Integration | 2-3 | 4-6 |
-| 4 | EntitySignal | 5-7 | 9-13 |
-| 5 | Fix Enhancers | 3-4 | 12-17 |
-| 6 | Entity Integration | 1-2 | 13-19 |
-| 7 | Polish & Docs | 1-2 | 14-21 |
-| 8 | Release | 1-2 | 15-23 |
-| **Total** | | **15-23 days** | |
+| Phase     | Work               | Days           | Cumulative |
+| --------- | ------------------ | -------------- | ---------- |
+| 1         | Types              | 0              | 0 (done)   |
+| 2         | PathNotifier       | 2-3            | 2-3        |
+| 3         | Core Integration   | 2-3            | 4-6        |
+| 4         | EntitySignal       | 5-7            | 9-13       |
+| 5         | Fix Enhancers      | 3-4            | 12-17      |
+| 6         | Entity Integration | 1-2            | 13-19      |
+| 7         | Polish & Docs      | 1-2            | 14-21      |
+| 8         | Release            | 1-2            | 15-23      |
+| **Total** |                    | **15-23 days** |            |
 
 **Realistic estimate: 20-25 days** (accounting for review, testing, iteration)
 
@@ -304,12 +335,12 @@ withBatching, withLogging, withPersistence subscribe to patterns
 
 ## Risk Mitigation
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|------------|--------|------------|
-| PathNotifier perf overhead | Low | Medium | Benchmark hot paths, lazy initialization |
-| Breaking existing enhancers | Medium | High | Maintain backward-compatible API, deprecation warnings |
-| Entity + enhancer interaction bugs | Medium | Medium | Comprehensive integration tests |
-| Bundle size bloat | Low | Low | Tree-shake old code, measure gzipped size |
+| Risk                               | Likelihood | Impact | Mitigation                                             |
+| ---------------------------------- | ---------- | ------ | ------------------------------------------------------ |
+| PathNotifier perf overhead         | Low        | Medium | Benchmark hot paths, lazy initialization               |
+| Breaking existing enhancers        | Medium     | High   | Maintain backward-compatible API, deprecation warnings |
+| Entity + enhancer interaction bugs | Medium     | Medium | Comprehensive integration tests                        |
+| Bundle size bloat                  | Low        | Low    | Tree-shake old code, measure gzipped size              |
 
 ---
 
@@ -329,15 +360,18 @@ withBatching, withLogging, withPersistence subscribe to patterns
 ## Development Strategy
 
 ### Start Immediately
+
 1. Phase 2: PathNotifier (foundation for everything else)
 2. Phase 3: Core integration (ensure notifications work)
 3. Phase 4: EntitySignal (main feature)
 
 ### Parallel Work (After Phase 3)
+
 - Phase 5.1-5.2: Batching & persistence (medium complexity, lower risk)
 - Phase 6: Entity integration (validates architecture)
 
 ### After EntitySignal Stabilizes
+
 - Phase 5.3-5.4: Time travel & devtools (higher complexity, needs careful testing)
 - Phase 7-8: Polish & release
 
@@ -368,12 +402,14 @@ Phase 8 (Release)
 ## Files to Create/Modify
 
 ### New Files
+
 - `packages/core/src/lib/path-notifier.ts` — PathNotifier implementation
 - `packages/core/src/lib/path-notifier.spec.ts` — Tests
 - `packages/core/src/enhancers/entities/lib/entity-signal.ts` — EntitySignal impl
 - `MIGRATION_v5.md` — Migration guide
 
 ### Modified Files
+
 - `packages/core/src/lib/types.ts` — (already updated ✅)
 - `packages/types/src/index.ts` — (already updated ✅)
 - `packages/core/src/lib/signal-tree.ts` — Add PathNotifier integration
@@ -385,6 +421,7 @@ Phase 8 (Release)
 - `apps/demo/` — Update examples
 
 ### Files to Deprecate (v6.0)
+
 - Old entities.ts (keep as shim)
 - Direct `addTap`/`removeTap` implementation
 
@@ -393,6 +430,7 @@ Phase 8 (Release)
 ## Code Review Checklist
 
 Before merging each phase:
+
 - [ ] All tests pass (unit + integration)
 - [ ] No TypeScript errors
 - [ ] Bundle size impact acceptable

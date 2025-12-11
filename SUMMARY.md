@@ -53,16 +53,16 @@ tree.$.users: EntitySignal<User, string>
 
 ## Timeline
 
-| Phase     | Task          | Days           |
-| --------- | ------------- | -------------- |
-| 1         | Types         | ✅ DONE        |
-| 2         | PathNotifier  | 2              |
-| 3         | Entity System | 5-7            |
-| 4         | **Enhancer Migration** | **3-4** |
-| 5         | Testing       | 1              |
-| 6         | Docs          | 1              |
-| 7         | Release       | 1              |
-| **TOTAL** | | **14-17 days** |
+| Phase     | Task                   | Days           |
+| --------- | ---------------------- | -------------- |
+| 1         | Types                  | ✅ DONE        |
+| 2         | PathNotifier           | 2              |
+| 3         | Entity System          | 5-7            |
+| 4         | **Enhancer Migration** | **3-4**        |
+| 5         | Testing                | 1              |
+| 6         | Docs                   | 1              |
+| 7         | Release                | 1              |
+| **TOTAL** |                        | **14-17 days** |
 
 ## What We're NOT Doing
 
@@ -78,13 +78,13 @@ tree.$.users: EntitySignal<User, string>
 
 ## What We ARE Fixing
 
-| Component | Current Issue | Fix |
-|-----------|--------------|-----|
-| **Batching** | Global state (shared across trees) | Instance-scoped queue via PathNotifier |
-| **Persistence** | 50ms polling never cleaned up | PathNotifier subscription (0 overhead idle) |
-| **TimeTravel** | Misses tree.$.x.y leaf mutations | PathNotifier subscription catches all |
-| **DevTools** | Misses leaf mutations | PathNotifier provides full context |
-| **Core Middleware** | tree.addTap/removeTap don't scale | Replace with scoped entity hooks |
+| Component           | Current Issue                      | Fix                                         |
+| ------------------- | ---------------------------------- | ------------------------------------------- |
+| **Batching**        | Global state (shared across trees) | Instance-scoped queue via PathNotifier      |
+| **Persistence**     | 50ms polling never cleaned up      | PathNotifier subscription (0 overhead idle) |
+| **TimeTravel**      | Misses tree.$.x.y leaf mutations   | PathNotifier subscription catches all       |
+| **DevTools**        | Misses leaf mutations              | PathNotifier provides full context          |
+| **Core Middleware** | tree.addTap/removeTap don't scale  | Replace with scoped entity hooks            |
 
 ## Key Principles
 

@@ -13,6 +13,7 @@ Your evaluation correctly identifies which options align with SignalTree's core 
 ### Tier 1: MUST DO ✅
 
 #### ✅ 1. Lazy PathNotifier Initialization
+
 - **Performance:** ⭐⭐⭐⭐⭐ Zero cost if unused
 - **DX:** ⭐⭐⭐⭐⭐ Completely invisible
 - **Simplicity:** ⭐⭐⭐⭐⭐ One `if (!this._notifier)` check
@@ -33,6 +34,7 @@ if (!this._pathNotifier) {
 ---
 
 #### ✅ 13. Effect-Based Persistence
+
 - **Performance:** ⭐⭐⭐⭐⭐ Angular's effect() is highly optimized
 - **DX:** ⭐⭐⭐⭐⭐ Peak signal-native
 - **Value:** ⭐⭐⭐⭐⭐ Eliminates 50ms polling hack entirely
@@ -48,14 +50,17 @@ export function withPersistence<T>(config: PersistenceConfig) {
       const state = tree(); // Reads tracked signal
       debouncedSave(state); // Implicit dependency tracking
     });
-    
-    tree.load = () => { /* ... */ };
+
+    tree.load = () => {
+      /* ... */
+    };
     return tree;
   };
 }
 ```
 
 **Why:** Angular's effect() handles:
+
 - Dependency tracking (reads whole tree automatically)
 - Cleanup on tree destroy (effect() is scoped to tree)
 - Change detection (Angular native, not custom)
@@ -64,6 +69,7 @@ export function withPersistence<T>(config: PersistenceConfig) {
 ---
 
 #### ✅ 14. Structural Sharing for Time Travel
+
 - **Performance:** ⭐⭐⭐⭐⭐ O(1) vs O(n) deepClone = game changer
 - **DX:** ⭐⭐⭐⭐⭐ Invisible, same API
 - **Value:** ⭐⭐⭐⭐⭐ Time travel becomes viable for large state
@@ -74,10 +80,10 @@ Deep cloning entire tree state for every mutation is wasteful. Structural sharin
 
 ```typescript
 interface HistoryEntry<T> {
-  path: string;           // 'users.u1.name'
-  prev: unknown;          // 'Alice'
-  next: unknown;          // 'Bob'
-  timestamp: number;      // When changed
+  path: string; // 'users.u1.name'
+  prev: unknown; // 'Alice'
+  next: unknown; // 'Bob'
+  timestamp: number; // When changed
 }
 
 // Memory: 1000 mutations = ~KB (diffs) not MB (full clones)
@@ -89,6 +95,7 @@ Use a library like `immer` for diff generation. Already battle-tested.
 ---
 
 #### ✅ 17. Selective Path Enhancement
+
 - **Performance:** ⭐⭐⭐⭐⭐ Only tracked paths pay cost
 - **DX:** ⭐⭐⭐⭐⭐ Peak SignalTree pattern: `tree.$.users.with(...)`
 - **Value:** ⭐⭐⭐⭐⭐ Solves hot path concern elegantly
@@ -103,8 +110,8 @@ const tree = signalTree(state).with(withTimeTravel());
 
 // Selective: only track specific paths
 const tree = signalTree(state);
-tree.$.users.with(withTimeTravel());        // Track entity adds/updates
-tree.$.settings.with(withPersistence());    // Persist settings only
+tree.$.users.with(withTimeTravel()); // Track entity adds/updates
+tree.$.settings.with(withPersistence()); // Persist settings only
 tree.$.ui.mouse; // ← zero overhead, no enhancer
 ```
 
@@ -113,6 +120,7 @@ This is so aligned with SignalTree's philosophy that it should be **standard pat
 ---
 
 #### ✅ 19. Proxy-Only Interception (Don't Wrap All Signals)
+
 - **Performance:** ⭐⭐⭐⭐⭐ O(1) tree creation vs O(n) wrapping
 - **DX:** ⭐⭐⭐⭐⭐ Invisible, consistent with lazy philosophy
 - **Value:** ⭐⭐⭐⭐⭐ Accessed paths pay cost, not created paths
@@ -131,18 +139,19 @@ function createSignalTree<T>(state: T) {
 // Better (Proxy-only):
 function createSignalTree<T>(state: T) {
   const signals = createSignalsRecursive(state); // Just create
-  
+
   return new Proxy(signals, {
     get(target, path) {
       const signal = target[path];
       // Wrap only when accessed
       return createTrackedSignal(signal, path);
-    }
+    },
   });
 }
 ```
 
 **Impact:** Tree with 1000 properties that user only accesses 10:
+
 - Before: Wrap 1000 signals
 - After: Wrap 10 signals (only accessed ones)
 
@@ -151,6 +160,7 @@ function createSignalTree<T>(state: T) {
 ### Tier 2: SHOULD DO ✅
 
 #### ✅ 15. Per-Path Subscriber Map
+
 - **Performance:** ⭐⭐⭐⭐⭐ O(1) exact match vs O(k) wildcard test
 - **DX:** ⭐⭐⭐⭐⭐ Internal, invisible optimization
 - **Complexity:** ⭐⭐ Low (hash map, no build magic)
@@ -160,21 +170,21 @@ This is obvious optimization once you have PathNotifier. Makes notification O(1)
 
 ```typescript
 class PathNotifier {
-  private exact = new Map<string, Set<Handler>>();      // 'users'
-  private prefixes = new Map<string, Set<Handler>>();   // 'users.*'
-  private wildcards = Set<Handler>;                      // '**'
-  
+  private exact = new Map<string, Set<Handler>>(); // 'users'
+  private prefixes = new Map<string, Set<Handler>>(); // 'users.*'
+  private wildcards = Set<Handler>; // '**'
+
   notify(path: string) {
     // Fast path: exact subscribers (most common)
-    this.exact.get(path)?.forEach(h => h());
-    
+    this.exact.get(path)?.forEach((h) => h());
+
     // Medium path: prefix match 'users.*'
     const prefix = path.split('.')[0];
-    this.prefixes.get(prefix)?.forEach(h => h());
-    
+    this.prefixes.get(prefix)?.forEach((h) => h());
+
     // Slow path: wildcard (only if subscribed)
     if (this.wildcards.size) {
-      this.wildcards.forEach(h => h());
+      this.wildcards.forEach((h) => h());
     }
   }
 }
@@ -183,6 +193,7 @@ class PathNotifier {
 ---
 
 #### ✅ 18. WeakRef Auto-Cleanup
+
 - **Performance:** ⭐⭐⭐⭐ Amortized cleanup during notify
 - **DX:** ⭐⭐⭐⭐⭐ No manual unsubscribe needed
 - **Value:** ⭐⭐⭐⭐ Eliminates memory leak class
@@ -207,6 +218,7 @@ This aligns with Angular's DestroyRef pattern and eliminates a class of memory l
 ---
 
 #### ✅ 10. Debug Trace Logging (Dev Only)
+
 - **Performance:** ⭐⭐⭐ Dev-only, tree-shaken in prod
 - **DX:** ⭐⭐⭐⭐⭐ Essential for debugging interceptor chains
 - **Value:** ⭐⭐⭐⭐ Directly addresses "harder to debug" concern
@@ -233,6 +245,7 @@ This is pure value for debugging complex setups.
 ---
 
 #### ⚠️ 2. Batch Suspension API (Maybe Wait)
+
 - **Performance:** ⭐⭐⭐⭐ Important escape hatch
 - **DX:** ⭐⭐⭐ Explicit API (slightly breaks "invisible")
 - **Value:** ⭐⭐⭐⭐ Users need for bulk operations
@@ -267,6 +280,7 @@ tree.suspend(() => {
 ---
 
 #### ⚠️ 8. Enhancer Validation Helper (Defer)
+
 - **Performance:** ⭐⭐⭐⭐⭐ Dev-only, tree-shaken
 - **DX:** ⭐⭐⭐⭐ Helps ecosystem authors
 - **Value:** ⭐⭐⭐ Low priority (no ecosystem yet)
@@ -277,11 +291,7 @@ Wait until you have third-party enhancers. Then add:
 ```typescript
 // In development
 if (__DEV__ && !usesPathNotifier(enhancer)) {
-  console.warn(
-    `[SignalTree] Enhancer "${enhancer.name}" doesn't use PathNotifier.\n` +
-    `This means mutations via tree.$... won't be tracked.\n` +
-    `Consider updating to latest enhancer API.`
-  );
+  console.warn(`[SignalTree] Enhancer "${enhancer.name}" doesn't use PathNotifier.\n` + `This means mutations via tree.$... won't be tracked.\n` + `Consider updating to latest enhancer API.`);
 }
 ```
 
@@ -290,12 +300,14 @@ Not needed now. Revisit when ecosystem exists.
 ---
 
 #### ⚠️ 12. Separate Entry Points (Probably Unnecessary)
+
 - **Performance:** ⭐⭐⭐⭐ Perfect tree-shaking without entry point
 - **DX:** ⭐⭐⭐⭐ Clear, standard pattern
 - **Value:** ⭐⭐⭐ Diminishing with #1 and #19
 - **Verdict:** **CONSIDER, BUT MAYBE SKIP**
 
 With lazy init (#1) and proxy-only interception (#19), PathNotifier only loads when:
+
 1. User imports an enhancer from `@signaltree/core/enhancers/*`
 2. Or calls `.with()` with an enhancer
 
@@ -317,6 +329,7 @@ import { withPersistence } from '@signaltree/core/enhancers';
 ### Tier 3: MAYBE ⚠️
 
 #### ⚠️ 16. Computed Change Stream (Interesting but Complex)
+
 - **DX:** ⭐⭐⭐⭐⭐ Very signal-native
 - **Complexity:** ⭐⭐ Can't support interception (blocking)
 - **Value:** ⭐⭐⭐ Might simplify internals
@@ -327,7 +340,7 @@ Idea: Make PathNotifier itself a computed signal.
 ```typescript
 class PathNotifier {
   private _changes = signal({ path: '', value: null });
-  
+
   changes() {
     return this._changes(); // Signal users can effect() on
   }
@@ -341,6 +354,7 @@ class PathNotifier {
 ---
 
 #### ⚠️ 20. Action-Only Tracking (Breaks Expectations)
+
 - **Performance:** ⭐⭐⭐⭐⭐ Best possible
 - **DX:** ⭐⭐⭐ Confusing boundary
 - **Value:** ⭐⭐⭐ Clear fast-path vs tracked-path
@@ -349,9 +363,9 @@ class PathNotifier {
 Idea: Only entity methods (addOne, etc.) and dispatch() are tracked. Leaf signal.set() is not.
 
 ```typescript
-tree.$.count.set(5);           // ← NOT tracked by time-travel
-tree.$.users.addOne(user);     // ← Tracked (entity method)
-tree.dispatch('increment');    // ← Tracked (action)
+tree.$.count.set(5); // ← NOT tracked by time-travel
+tree.$.users.addOne(user); // ← Tracked (entity method)
+tree.dispatch('increment'); // ← Tracked (action)
 ```
 
 **Problem:** Users expect `tree.$.count.set(5)` to be in time-travel history. Breaking this expectation is confusing.
@@ -363,6 +377,7 @@ tree.dispatch('increment');    // ← Tracked (action)
 ### Tier 4: DON'T DO ❌
 
 #### ❌ 3. Hot Path Opt-Out
+
 Users with `mouseX: 0` that needs 60fps tracking should use a **local signal outside tree**, not special opt-out config.
 
 ```typescript
@@ -378,6 +393,7 @@ const mouseX = signal(0); // Not in tree
 ---
 
 #### ❌ 4. Compiled Production Mode
+
 Build tool magic (tree-shake PathNotifier in prod, keep in dev) is fragile.
 
 - Requires plugin for every bundler (Vite, Webpack, esbuild, Rollup)
@@ -391,6 +407,7 @@ With #1 (lazy init) + #19 (proxy-only), PathNotifier is **already free if unused
 ---
 
 #### ❌ 6. Parallel v2 Implementation
+
 Maintaining two code paths is maintenance hell.
 
 **Verdict:** Don't do. Breaking changes are fine in v5.0 with clear changelog.
@@ -398,6 +415,7 @@ Maintaining two code paths is maintenance hell.
 ---
 
 #### ❌ 9. Legacy Adapter
+
 There are ~zero custom enhancers in the wild. No ecosystem to migrate.
 
 **Verdict:** Don't do. If someone wrote a custom enhancer, they can update it.
@@ -405,6 +423,7 @@ There are ~zero custom enhancers in the wild. No ecosystem to migrate.
 ---
 
 #### ❌ 11. DevTools Integration for PathNotifier
+
 Redux DevTools already shows state changes. Showing interceptor internals is noise.
 
 **Verdict:** Don't do. YAGNI. Revisit if users ask.
@@ -418,6 +437,7 @@ Redux DevTools already shows state changes. Showing interceptor internals is noi
 #### Phase 1: Type Definitions ✅ (Already Done)
 
 #### Phase 2: PathNotifier Core
+
 ```
 ✅ Lazy initialization (#1)
 ✅ Per-path subscriber map (#15)
@@ -426,12 +446,14 @@ Redux DevTools already shows state changes. Showing interceptor internals is noi
 ```
 
 #### Phase 3: SignalTree Core Integration
+
 ```
 ✅ Proxy-only interception (#19)
   → Wrap signals at access time, not creation
 ```
 
 #### Phase 4: EntitySignal + Selective Enhancement
+
 ```
 ✅ EntitySignal implementation
 ✅ Selective path enhancement (#17)
@@ -439,6 +461,7 @@ Redux DevTools already shows state changes. Showing interceptor internals is noi
 ```
 
 #### Phase 5: Fix Enhancers
+
 ```
 ✅ Batch Suspension API (#2)
 ✅ Persistence via effect() (#13)
@@ -449,6 +472,7 @@ Redux DevTools already shows state changes. Showing interceptor internals is noi
 #### Phase 6-8: Integration, Documentation, Release
 
 ### DON'T IMPLEMENT
+
 ```
 ❌ #3: Hot path opt-out
 ❌ #4: Compiled prod mode
@@ -460,6 +484,7 @@ Redux DevTools already shows state changes. Showing interceptor internals is noi
 ```
 
 ### DEFER DECISION
+
 ```
 ⚠️ #8: Enhancer validation helper (wait for ecosystem)
 ⚠️ #12: Separate entry points (measure bundle impact of #1+#19 first)
@@ -501,21 +526,25 @@ But: Smaller than current with benefits of:
 ## Confidence Checkpoints
 
 ### Before Phase 2
+
 - [ ] Measure current bundle size
 - [ ] Profile current PathNotifier design for hot paths
 - [ ] Verify lazy init solves "zero cost" concern
 
 ### Before Phase 4
+
 - [ ] Test selective enhancement pattern in demo app
 - [ ] Verify per-path subscriber map O(1) behavior
 - [ ] Benchmark WeakRef cleanup overhead
 
 ### Before Phase 5
+
 - [ ] Measure effect() overhead vs polling
 - [ ] Test structural sharing with large state
 - [ ] Profile batch suspension vs global enhancers
 
 ### Before Release
+
 - [ ] Full bundle size comparison
 - [ ] Performance benchmarks
 - [ ] Memory leak verification
@@ -525,28 +554,28 @@ But: Smaller than current with benefits of:
 
 ## Summary Table
 
-| # | Option | Verdict | Why |
-|---|--------|---------|-----|
-| 1 | Lazy PathNotifier | **DO** | Zero overhead, trivial |
-| 2 | Batch Suspension | **DO** | Necessary escape hatch |
-| 3 | Hot Path Opt-Out | **DON'T** | Wrong tool, educate |
-| 4 | Compiled Prod Mode | **DON'T** | #1 solves it, no build magic |
-| 5 | Phased Rollout | **DO** | (separate decision) |
-| 6 | Parallel v2 | **DON'T** | Maintenance nightmare |
-| 7 | Community Contrib | **MAYBE** | (separate decision) |
-| 8 | Validation Helper | **DEFER** | Wait for ecosystem |
-| 9 | Legacy Adapter | **DON'T** | No ecosystem yet |
-| 10 | Debug Trace | **DO** | Essential for debugging |
-| 11 | DevTools Internals | **DON'T** | YAGNI, noise |
-| 12 | Separate Entry Points | **DEFER** | Measure #1+#19 impact |
-| 13 | Effect-Based Persistence | **DO** | Signal-native, no polling |
-| 14 | Structural Sharing | **DO** | O(1) vs O(n) game changer |
-| 15 | Per-Path Subscriber Map | **DO** | O(1) notification |
-| 16 | Computed Change Stream | **SKIP** | Can't support blocking |
-| 17 | Selective Path Enhancement | **DO** | Peak DX, elegant solution |
-| 18 | WeakRef Cleanup | **DO** | Auto-cleanup, no leaks |
-| 19 | Proxy-Only Interception | **DO** | O(1) creation |
-| 20 | Action-Only Tracking | **SKIP** | Breaks expectations |
+| #   | Option                     | Verdict   | Why                          |
+| --- | -------------------------- | --------- | ---------------------------- |
+| 1   | Lazy PathNotifier          | **DO**    | Zero overhead, trivial       |
+| 2   | Batch Suspension           | **DO**    | Necessary escape hatch       |
+| 3   | Hot Path Opt-Out           | **DON'T** | Wrong tool, educate          |
+| 4   | Compiled Prod Mode         | **DON'T** | #1 solves it, no build magic |
+| 5   | Phased Rollout             | **DO**    | (separate decision)          |
+| 6   | Parallel v2                | **DON'T** | Maintenance nightmare        |
+| 7   | Community Contrib          | **MAYBE** | (separate decision)          |
+| 8   | Validation Helper          | **DEFER** | Wait for ecosystem           |
+| 9   | Legacy Adapter             | **DON'T** | No ecosystem yet             |
+| 10  | Debug Trace                | **DO**    | Essential for debugging      |
+| 11  | DevTools Internals         | **DON'T** | YAGNI, noise                 |
+| 12  | Separate Entry Points      | **DEFER** | Measure #1+#19 impact        |
+| 13  | Effect-Based Persistence   | **DO**    | Signal-native, no polling    |
+| 14  | Structural Sharing         | **DO**    | O(1) vs O(n) game changer    |
+| 15  | Per-Path Subscriber Map    | **DO**    | O(1) notification            |
+| 16  | Computed Change Stream     | **SKIP**  | Can't support blocking       |
+| 17  | Selective Path Enhancement | **DO**    | Peak DX, elegant solution    |
+| 18  | WeakRef Cleanup            | **DO**    | Auto-cleanup, no leaks       |
+| 19  | Proxy-Only Interception    | **DO**    | O(1) creation                |
+| 20  | Action-Only Tracking       | **SKIP**  | Breaks expectations          |
 
 ---
 
@@ -563,6 +592,7 @@ But: Smaller than current with benefits of:
 9. **Debug Trace** (#10) — Debuggability
 
 This combination gives you:
+
 - ✅ Zero overhead for unenhanced trees
 - ✅ O(1) creation and notification
 - ✅ Signal-native persistence (no polling!)

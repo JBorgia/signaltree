@@ -4,10 +4,10 @@
 
 SignalTree v5.0 is a major architectural redesign solving **three interconnected problems** with **one unified solution**:
 
-| Problem | Current | v5.0 Solution |
-|---------|---------|---------------|
-| Entity lookups | O(n) with `.find()` | O(1) with Map |
-| Entity hooks scope | Pollutes root API | Scoped to EntitySignal |
+| Problem              | Current                    | v5.0 Solution               |
+| -------------------- | -------------------------- | --------------------------- |
+| Entity lookups       | O(n) with `.find()`        | O(1) with Map               |
+| Entity hooks scope   | Pollutes root API          | Scoped to EntitySignal      |
 | Enhancer reliability | Global state, 20% coverage | PathNotifier backbone, 100% |
 
 The key insight: **PathNotifier is the missing piece** that makes both entities AND enhancers work correctly.
@@ -306,13 +306,14 @@ Documentation:
 ### Entity Operations
 
 **Before (v4.x):**
+
 ```typescript
 const tree = signalTree({
-  users: [] as User[]
+  users: [] as User[],
 });
 
 // ❌ O(n) lookup, not type-safe
-const user = tree().users.find(u => u.id === 'u1');
+const user = tree().users.find((u) => u.id === 'u1');
 user.name = 'Alice';
 
 // ❌ Pollutes root API, clunky
@@ -325,10 +326,11 @@ tree.removeTap('users');
 ```
 
 **After (v5.0):**
+
 ```typescript
 const tree = signalTree({
-  users: entityMap<User, string>({ 
-    keyOf: u => u.id 
+  users: entityMap<User, string>({
+    keyOf: u => u.id
   })
 });
 
@@ -359,35 +361,37 @@ unsub();
 ### Global Enhancers
 
 **Before (v4.x):**
+
 ```typescript
 // ❌ Global state → race conditions
-withBatching({ maxBatchSize: 100 })
+withBatching({ maxBatchSize: 100 });
 
 // ❌ 50ms polling loop, never cleaned up
-withPersistence({ key: 'state', autoSave: true })
+withPersistence({ key: 'state', autoSave: true });
 
 // ❌ Only catches 20% of mutations
-withTimeTravel()
+withTimeTravel();
 
 // ❌ Incomplete state in DevTools
-withDevTools()
+withDevTools();
 
 // ❌ Each enhancer reinvents change detection
 ```
 
 **After (v5.0):**
+
 ```typescript
 // ✅ Instance-scoped queue, no interference
-withBatching({ maxBatchSize: 100 })
+withBatching({ maxBatchSize: 100 });
 
 // ✅ Event-driven, 0 calls when idle, proper cleanup
-withPersistence({ key: 'state', autoSave: true })
+withPersistence({ key: 'state', autoSave: true });
 
 // ✅ Catches 100% of mutations (root, leaf, entity, batch)
-withTimeTravel()
+withTimeTravel();
 
 // ✅ Complete state tracking in DevTools
-withDevTools()
+withDevTools();
 
 // ✅ All use PathNotifier, unified infrastructure
 ```
@@ -398,32 +402,32 @@ withDevTools()
 
 ### Entity Operations
 
-| Operation | v4.x (Array) | v5.0 (Map) | Improvement |
-|-----------|-------------|-----------|-------------|
-| addOne | O(1) | O(1) | — |
-| updateOne | O(n) find + O(1) set | O(1) get + O(1) set | 40-100x |
-| removeOne | O(n) find + O(n) splice | O(1) delete | 40-100x |
-| byId | O(n) .find() | O(1) .get() | 40-100x |
-| all() | O(1) (ref) | O(n) computed | — |
+| Operation | v4.x (Array)            | v5.0 (Map)          | Improvement |
+| --------- | ----------------------- | ------------------- | ----------- |
+| addOne    | O(1)                    | O(1)                | —           |
+| updateOne | O(n) find + O(1) set    | O(1) get + O(1) set | 40-100x     |
+| removeOne | O(n) find + O(n) splice | O(1) delete         | 40-100x     |
+| byId      | O(n) .find()            | O(1) .get()         | 40-100x     |
+| all()     | O(1) (ref)              | O(n) computed       | —           |
 
 ### Persistence
 
-| Aspect | v4.x | v5.0 | Improvement |
-|--------|------|------|-------------|
-| Detection | 50ms polling | Event-driven | 0 idle calls |
-| Trees with 100 signals | 2,000 calls/sec | 0 calls (idle) | ∞ |
-| CPU usage (idle) | High | Minimal | 90%+ |
-| Memory cleanup | Leaks | Guaranteed | ✅ |
+| Aspect                 | v4.x            | v5.0           | Improvement  |
+| ---------------------- | --------------- | -------------- | ------------ |
+| Detection              | 50ms polling    | Event-driven   | 0 idle calls |
+| Trees with 100 signals | 2,000 calls/sec | 0 calls (idle) | ∞            |
+| CPU usage (idle)       | High            | Minimal        | 90%+         |
+| Memory cleanup         | Leaks           | Guaranteed     | ✅           |
 
 ### Time Travel
 
-| Aspect | v4.x | v5.0 | Improvement |
-|--------|------|------|-------------|
-| Coverage | ~20% of mutations | 100% | 5x |
-| Tracked: root `tree()` | ✅ | ✅ | — |
-| Tracked: leaf `tree.$.x.set()` | ❌ | ✅ | ✅ |
-| Tracked: entity `addOne()` | ❌ | ✅ | ✅ |
-| Tracked: batch updates | ❌ | ✅ | ✅ |
+| Aspect                         | v4.x              | v5.0 | Improvement |
+| ------------------------------ | ----------------- | ---- | ----------- |
+| Coverage                       | ~20% of mutations | 100% | 5x          |
+| Tracked: root `tree()`         | ✅                | ✅   | —           |
+| Tracked: leaf `tree.$.x.set()` | ❌                | ✅   | ✅          |
+| Tracked: entity `addOne()`     | ❌                | ✅   | ✅          |
+| Tracked: batch updates         | ❌                | ✅   | ✅          |
 
 ### Bundle Size Impact
 
@@ -519,12 +523,14 @@ Phase 6: Integration
 ## Success Metrics
 
 ### Code Quality
+
 - ✅ 0 global mutable state in enhancers
 - ✅ 100% type coverage
 - ✅ All tests pass
 - ✅ No TypeScript errors
 
 ### Performance
+
 - ✅ Entity lookups 40-100x faster
 - ✅ Persistence 0 calls/sec (idle)
 - ✅ Time travel 100% coverage
@@ -532,6 +538,7 @@ Phase 6: Integration
 - ✅ Bundle size < 2.5 KB gzipped
 
 ### DX
+
 - ✅ Scoped entity hooks (no root pollution)
 - ✅ Type-safe entity operations
 - ✅ Clear migration path
@@ -539,6 +546,7 @@ Phase 6: Integration
 - ✅ Example code in demo app
 
 ### Reliability
+
 - ✅ No memory leaks
 - ✅ Proper cleanup on destroy
 - ✅ No cross-tree contamination
@@ -552,21 +560,25 @@ Phase 6: Integration
 ### v5.0.0 Timeline
 
 **Week 1-2:** Phases 2-3 (PathNotifier + Core)
+
 - Code: ~1500 lines
 - Tests: ~1000 lines
 - Review: ~2 days
 
 **Week 3:** Phase 4 (EntitySignal)
+
 - Code: ~1200 lines
 - Tests: ~1500 lines
 - Review: ~2 days
 
 **Week 3-4:** Phases 5-6 (Enhancers + Integration)
+
 - Code: ~800 lines (enhancer rewrites)
 - Tests: ~1200 lines
 - Review: ~2 days
 
 **Week 5:** Phases 7-8 (Polish + Release)
+
 - Documentation: ~50 pages
 - Migration guide: ~20 pages
 - Testing: ~3 days
@@ -576,22 +588,25 @@ Phase 6: Integration
 
 ### Announcement
 
-```markdown
+````markdown
 # SignalTree v5.0: Map-Based Entities + PathNotifier Architecture
 
 ## Major Improvements
 
 ### Entity Collections: O(n) → O(1)
+
 - New entityMap<E, K>() API for Map-based storage
 - 40-100x faster lookups, updates, removals
 - Full TypeScript support with branded entity IDs
 
 ### Entity Hooks: Now Scoped!
+
 - tree.$.users.tap() and tree.$.users.intercept()
 - No more global middleware registry pollution
 - Async validation support with ctx.block()
 
 ### All Enhancers Fixed
+
 - Batching: No more global state (instance-scoped)
 - Persistence: No more polling (event-driven, 0 calls/sec idle)
 - TimeTravel: 100% mutation coverage (was 20%)
@@ -599,6 +614,7 @@ Phase 6: Integration
 - Logging: Flexible pattern filtering
 
 ### Architecture: PathNotifier Backbone
+
 - Internal coordination system for all mutations
 - Unified infrastructure shared by entities + enhancers
 - No duplicate change detection code
@@ -607,15 +623,18 @@ Phase 6: Integration
 ## Migration
 
 **Old API (deprecated, will remove in v6.0):**
+
 ```typescript
 tree.addTap('users', handler);
 tree.entities<User>('users');
 ```
+````
 
 **New API:**
+
 ```typescript
 tree.$.users.tap(handlers);
-tree.$.users // EntitySignal with full CRUD
+tree.$.users; // EntitySignal with full CRUD
 ```
 
 See MIGRATION_v5.md for complete guide.
@@ -626,6 +645,7 @@ See MIGRATION_v5.md for complete guide.
 - Persistence: 0 CPU usage when idle
 - TimeTravel: 5x more complete
 - Bundle: +2.1 KB (justified)
+
 ```
 
 ---
@@ -641,3 +661,4 @@ v5.0 is the culmination of the entity + enhancer analysis. PathNotifier is the *
 This is why the 8 phases work together—they're not separate features, they're **one coherent redesign**.
 
 **Total effort: 20-25 days of focused engineering.**
+```

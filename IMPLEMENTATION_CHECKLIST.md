@@ -1,6 +1,7 @@
 # v5.0 Implementation Checklist
 
 ## Status Summary
+
 ```
 Planning:   ✅ COMPLETE (5 commits, 4 docs)
 Phase 1:    ✅ COMPLETE (types defined)
@@ -525,21 +526,25 @@ Targets:
 ## Phase 6: Entity + Enhancer Integration ⏳
 
 - [ ] Test withBatching + entities
+
   - [ ] Entity mutations get batched
   - [ ] Queue isolation per tree
 
 - [ ] Test withPersistence + entities
+
   - [ ] Entity changes saved
   - [ ] No polling overhead
   - [ ] Entity serialization works
 
 - [ ] Test withTimeTravel + entities
+
   - [ ] Entity addOne tracked
   - [ ] Entity updateOne tracked
   - [ ] Entity removeOne tracked
   - [ ] Undo/redo with entities works
 
 - [ ] Test withDevTools + entities
+
   - [ ] Entity ops appear in DevTools
   - [ ] Time-travel from DevTools works
 
@@ -556,24 +561,28 @@ Targets:
 ## Phase 7: Polish & Documentation ⏳
 
 - [ ] Add deprecation warnings
+
   - [ ] tree.addTap() → show warning
   - [ ] tree.removeTap() → show warning
   - [ ] tree.entities() → show warning
   - [ ] Point to migration guide
 
 - [ ] Update JSDoc
+
   - [ ] All entity methods
   - [ ] All PathNotifier methods
   - [ ] All hook types
   - [ ] All enhancer configs
 
 - [ ] Create MIGRATION_v5.md
+
   - [ ] Before/after examples
   - [ ] Property naming changes
   - [ ] Hook location changes
   - [ ] Enhancer updates
 
 - [ ] Update demo app
+
   - [ ] Use new entityMap API
   - [ ] Show tap/intercept examples
   - [ ] Show enhancer combinations
@@ -592,21 +601,25 @@ Targets:
 ## Phase 8: Release v5.0 ⏳
 
 - [ ] Final testing
+
   - [ ] Full test suite passes
   - [ ] Integration tests pass
   - [ ] E2E tests pass
 
 - [ ] Performance verification
+
   - [ ] Bundle size acceptable
   - [ ] Runtime performance measured
   - [ ] Memory cleanup verified
 
 - [ ] Version bump
+
   - [ ] Update package.json files
   - [ ] Update CHANGELOG.md
   - [ ] Create git tag v5.0.0
 
 - [ ] Publish
+
   - [ ] Publish to npm
   - [ ] Verify on npm registry
   - [ ] Test installation

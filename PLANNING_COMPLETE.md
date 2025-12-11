@@ -11,11 +11,13 @@ The key insight: **PathNotifier solves both problems at once.**
 ## What We Now Have (Locked In)
 
 ### ✅ Phase 1: Type Definitions (COMPLETE)
+
 - Location: `packages/core/src/lib/types.ts` (500+ lines)
 - Commit: `8c4ef01`
 - Status: Tests compile, no errors, types are public
 
 **What's defined:**
+
 - `EntityMapMarker<E, K>` — runtime detection
 - `EntitySignal<E, K>` — full interface
 - `TapHandlers<E, K>` — observation hooks
@@ -26,12 +28,14 @@ The key insight: **PathNotifier solves both problems at once.**
 - Type utilities
 
 ### ✅ Complete Planning (This Session)
+
 - Document: `ENTITY_REFACTOR_COMPLETE_PLAN.md` (8 phases, 15-25 days)
 - Document: `PATHNOTIFIER_UNIFICATION.md` (how they work together)
 - Document: `DESIGN_DECISIONS.md` (locked decisions, testing strategy)
 - Document: `ARCHITECTURE.md` (complete implementation map)
 
 All documents committed to git:
+
 - `c61f424` — Complete plan
 - `67a723b` — Unification explanation
 - `ce78f29` — Design decisions
@@ -63,16 +67,19 @@ Total: 15-23 days (realistic: 20-25 with review)
 ## Why This Works (The Unified Insight)
 
 ### Problem 1: Entity Hooks (Scoped)
+
 **Before:** `tree.addTap('users')` pollutes root API ❌
 **After:** `tree.$.users.tap()` scoped to collection ✅
 
 **Solution:** Entity hooks are methods on EntitySignal instance, not global registry
 
 ### Problem 2: Enhancer Bugs (Global)
+
 **Before:** Each enhancer has ad-hoc change detection ❌
 **After:** All enhancers use PathNotifier backbone ✅
 
 **Solution:** PathNotifier provides unified mutation notification for:
+
 - Batching (no global state)
 - Persistence (no polling)
 - TimeTravel (100% coverage)
@@ -80,6 +87,7 @@ Total: 15-23 days (realistic: 20-25 with review)
 - Logging (flexible filtering)
 
 ### The PathNotifier: Internal Coordination
+
 ```
 User Code
     ↓
@@ -100,21 +108,25 @@ EntitySignal.addOne()  │  tree.$.count.set()  │  tree.batchUpdate()
 ## Critical Decisions (Locked)
 
 ### Entity Storage
+
 **Decision:** Map<K, WritableSignal<E>>
 **Why:** O(1) lookups, proper signal integration, type-safe
 **Trade-off:** Slightly more memory per entity (justified by speed)
 
 ### Hook Scope
+
 **Decision:** Scoped to EntitySignal, not global registry
 **Why:** Clean root API, scales better, no pollution
 **Trade-off:** None (pure improvement)
 
 ### PathNotifier Exposure
+
 **Decision:** Internal only (`__pathNotifier`), not public API
 **Why:** Flexibility, prevents API lock-in to implementation
 **Trade-off:** Users can't build custom mutation observers (acceptable—use enhancers)
 
 ### Enhancer Coordination
+
 **Decision:** Via PathNotifier subscriptions, not separate registry
 **Why:** Single backbone, no duplicate code
 **Trade-off:** None (only wins)
@@ -123,21 +135,23 @@ EntitySignal.addOne()  │  tree.$.count.set()  │  tree.batchUpdate()
 
 ## Documentation Created
 
-| Document | Purpose | Status |
-|----------|---------|--------|
-| `ENTITY_REFACTOR_COMPLETE_PLAN.md` | 8-phase breakdown with tasks | ✅ Committed |
-| `PATHNOTIFIER_UNIFICATION.md` | How PathNotifier solves both problems | ✅ Committed |
-| `DESIGN_DECISIONS.md` | Locked decisions + testing strategy | ✅ Committed |
-| `ARCHITECTURE.md` | Complete implementation map with diagrams | ✅ Committed |
-| `MIGRATION_v5.md` | User migration guide (Phase 7) | ⏳ To create |
-| `ENHANCER_IMPROVEMENTS.md` | Detailed analysis (from your input) | ✅ Already exists |
+| Document                           | Purpose                                   | Status            |
+| ---------------------------------- | ----------------------------------------- | ----------------- |
+| `ENTITY_REFACTOR_COMPLETE_PLAN.md` | 8-phase breakdown with tasks              | ✅ Committed      |
+| `PATHNOTIFIER_UNIFICATION.md`      | How PathNotifier solves both problems     | ✅ Committed      |
+| `DESIGN_DECISIONS.md`              | Locked decisions + testing strategy       | ✅ Committed      |
+| `ARCHITECTURE.md`                  | Complete implementation map with diagrams | ✅ Committed      |
+| `MIGRATION_v5.md`                  | User migration guide (Phase 7)            | ⏳ To create      |
+| `ENHANCER_IMPROVEMENTS.md`         | Detailed analysis (from your input)       | ✅ Already exists |
 
 ---
 
 ## Next Steps
 
 ### Immediate (Ready to Start)
+
 1. **Phase 2: PathNotifier Core** (2-3 days)
+
    - Create `packages/core/src/lib/path-notifier.ts`
    - Pattern matching (wildcard, function, exact)
    - Subscriber/interceptor registry
@@ -149,7 +163,9 @@ EntitySignal.addOne()  │  tree.$.count.set()  │  tree.batchUpdate()
    - Ensure all mutation points covered
 
 ### After Phase 3 (Foundation Ready)
+
 3. **Phase 4: EntitySignal** (5-7 days)
+
    - Implement EntitySignal class
    - Wire hooks (tap/intercept)
    - Implement all CRUD/query methods
@@ -159,6 +175,7 @@ EntitySignal.addOne()  │  tree.$.count.set()  │  tree.batchUpdate()
    - Remove polling, global state, limitations
 
 ### Final Phases (Polish & Release)
+
 5. **Phase 6-8:** Integration, documentation, release
 
 ---
@@ -166,6 +183,7 @@ EntitySignal.addOne()  │  tree.$.count.set()  │  tree.batchUpdate()
 ## Code Locations (Ready to Implement)
 
 ### To Create (Phase 2)
+
 ```typescript
 packages/core/src/lib/path-notifier.ts
 ├── class PatternMatcher
@@ -175,6 +193,7 @@ packages/core/src/lib/path-notifier.ts
 ```
 
 ### To Modify (Phase 3)
+
 ```typescript
 packages/core/src/lib/signal-tree.ts
 ├── Add __pathNotifier: PathNotifier
@@ -184,6 +203,7 @@ packages/core/src/lib/signal-tree.ts
 ```
 
 ### To Create (Phase 4)
+
 ```typescript
 packages/core/src/enhancers/entities/lib/
 ├── entity-signal.ts      (~400 lines)
@@ -193,6 +213,7 @@ packages/core/src/enhancers/entities/lib/
 ```
 
 ### To Modify (Phase 5)
+
 ```typescript
 packages/core/src/enhancers/
 ├── batching/lib/batching.ts
@@ -207,24 +228,28 @@ packages/core/src/enhancers/
 ## Success Criteria
 
 ### Code Quality
+
 - ✅ 0 global mutable state
 - ✅ 100% type coverage
 - ✅ All tests pass
 - ✅ No TypeScript errors
 
 ### Performance (Measured)
+
 - ✅ Entity ops: 40-100x faster
 - ✅ Persistence: 0 calls/sec (idle, was 20k)
 - ✅ TimeTravel: 100% coverage (was 20%)
 - ✅ Bundle: +2.1 KB gzipped
 
 ### DX (User Facing)
+
 - ✅ Scoped entity hooks (no root pollution)
 - ✅ Type-safe entity operations
 - ✅ Clear migration path
 - ✅ Comprehensive docs
 
 ### Reliability
+
 - ✅ No memory leaks
 - ✅ Proper cleanup on destroy
 - ✅ No cross-tree contamination
@@ -276,6 +301,7 @@ All that remains is implementation (phases 2-8).
 **Ready to begin PathNotifier core implementation?**
 
 If yes:
+
 1. Create `packages/core/src/lib/path-notifier.ts`
 2. Start with PatternMatcher (wildcard/function/exact)
 3. Then SubscriberRegistry (Map-based)
@@ -283,6 +309,7 @@ If yes:
 5. Write tests as you go
 
 If prefer break first:
+
 - Documents are locked and ready
 - Can start anytime without rework
 - Phase 2 estimated 2-3 days
@@ -305,6 +332,7 @@ git log --oneline | head -10
 ```
 
 Read any of these for reference during implementation:
+
 - `ARCHITECTURE.md` — Visual overview and diagrams
 - `DESIGN_DECISIONS.md` — Technical details and patterns
 - `PATHNOTIFIER_UNIFICATION.md` — Conceptual understanding

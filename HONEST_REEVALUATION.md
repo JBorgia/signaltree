@@ -4,14 +4,14 @@
 
 Your teammate is correct. SignalTree already has:
 
-| Feature | Already Exists | Location |
-|---------|---|----------|
-| Lazy signals | ✅ Yes | `useLazySignals`, `createLazySignalTree()` |
-| WeakRef cleanup | ✅ Yes | `SignalMemoryManager` with FinalizationRegistry |
-| Debug mode | ✅ Yes | `debugMode` config with console logging |
-| Structural sharing | ✅ Yes (config) | `useStructuralSharing` flag |
-| Proxy-based lazy access | ✅ Yes | Already in `createLazySignalTree()` |
-| Presets | ✅ Yes | `basic`, `performance`, `development`, `production` |
+| Feature                 | Already Exists  | Location                                            |
+| ----------------------- | --------------- | --------------------------------------------------- |
+| Lazy signals            | ✅ Yes          | `useLazySignals`, `createLazySignalTree()`          |
+| WeakRef cleanup         | ✅ Yes          | `SignalMemoryManager` with FinalizationRegistry     |
+| Debug mode              | ✅ Yes          | `debugMode` config with console logging             |
+| Structural sharing      | ✅ Yes (config) | `useStructuralSharing` flag                         |
+| Proxy-based lazy access | ✅ Yes          | Already in `createLazySignalTree()`                 |
+| Presets                 | ✅ Yes          | `basic`, `performance`, `development`, `production` |
 
 We proposed rebuilding/reimplementing things that **already exist**.
 
@@ -22,21 +22,25 @@ We proposed rebuilding/reimplementing things that **already exist**.
 ### ✅ Correct Assessment
 
 **#18 WeakRef Cleanup** → **DROP ❌**
+
 - Already implemented in `SignalMemoryManager`
 - Using FinalizationRegistry (perfect for this)
 - No need to rebuild
 
 **#19 Proxy-Only Interception** → **DROP ❌**
+
 - Already exists in lazy mode (`createLazySignalTree()`)
 - Wraps at access time
 - No need to implement again
 
 **#10 Debug Trace** → **EXTEND, NOT ADD**
+
 - Debug mode exists (`debugMode: true`)
 - Just extend existing logging, don't add new API
 - Keep it simple
 
 **#14 Structural Sharing** → **WIRE UP, NOT REBUILD**
+
 - Config exists (`useStructuralSharing`)
 - Just connect it to time-travel
 - ~10 lines of code
@@ -55,16 +59,18 @@ effect(() => {
 ```
 
 **The Issue:**
+
 - `tree()` calls unwrap() which traverses entire tree
 - For large state, this is **expensive**
 - Triggers save on ANY change, even unrelated paths
 - No filtering capability
 
 **Better approach:**
+
 ```typescript
 // PathNotifier with filter
 const unsub = pathNotifier.subscribe(
-  (path) => shouldPersist(path),  // Only notify for certain paths
+  (path) => shouldPersist(path), // Only notify for certain paths
   () => save()
 );
 ```
@@ -77,15 +83,16 @@ const unsub = pathNotifier.subscribe(
 
 ```typescript
 // Current (simple)
-subscribers.forEach(h => h(path, value));
+subscribers.forEach((h) => h(path, value));
 
 // Proposed (complex)
-exact.get(path)?.forEach(h => h());
-prefixes.get(prefix)?.forEach(h => h());
-wildcards.forEach(h => h());
+exact.get(path)?.forEach((h) => h());
+prefixes.get(prefix)?.forEach((h) => h());
+wildcards.forEach((h) => h());
 ```
 
 **The Issue:**
+
 - We don't have PathNotifier yet
 - We don't know subscriber counts
 - We don't know hot paths
@@ -105,6 +112,7 @@ const changes = computed(() => {
 ```
 
 **The Issue:**
+
 - Forces full tree unwrap on every read
 - O(n) operation on every access
 - This is backwards
@@ -117,8 +125,8 @@ const changes = computed(() => {
 
 ```typescript
 // Now users have two places to enhance:
-tree.with(withTimeTravel());                // Tree level
-tree.$.users.with(withTimeTravel());        // Path level
+tree.with(withTimeTravel()); // Tree level
+tree.$.users.with(withTimeTravel()); // Path level
 
 // Q: What if both are set? What happens?
 // Q: Which one takes precedence?
@@ -126,16 +134,20 @@ tree.$.users.with(withTimeTravel());        // Path level
 ```
 
 **The Issue:**
+
 - Doubles documentation surface area
 - Creates confusing edge cases
 - Users have to understand scoping rules
 
 **Better approach:**
+
 ```typescript
 // Keep it simple: one place to enhance
-tree.with(withTimeTravel({
-  filter: (path) => !path.startsWith('ui') // Exclude hot paths
-}));
+tree.with(
+  withTimeTravel({
+    filter: (path) => !path.startsWith('ui'), // Exclude hot paths
+  })
+);
 ```
 
 Filters are already standard pattern. No need to add scoped `.with()`.
@@ -155,17 +167,21 @@ tree.suspend(() => {
 ```
 
 **The Issue:**
+
 - Breaks "invisible infrastructure" principle
 - Creates pit of failure
 - Users must understand internals to use correctly
 
 **Better approach:**
+
 ```typescript
 // Automatic batching in same microtask
 // Or: Make it enhancer config instead
-tree.with(withBatching({ 
-  autoDetect: true,  // Batch if 100+ ops in same microtask
-}));
+tree.with(
+  withBatching({
+    autoDetect: true, // Batch if 100+ ops in same microtask
+  })
+);
 ```
 
 **Verdict:** Your teammate is right. **DON'T DO #2 as explicit API.**
@@ -175,11 +191,12 @@ tree.with(withBatching({
 ### ❌ #12 Separate Entry Points (UNNECESSARY BURDEN)
 
 ```typescript
-import { signalTree } from '@aspect/signaltree/core';    // Pick 1
-import { signalTree } from '@aspect/signaltree';        // Pick 2
+import { signalTree } from '@aspect/signaltree/core'; // Pick 1
+import { signalTree } from '@aspect/signaltree'; // Pick 2
 ```
 
 **The Issue:**
+
 - Users must choose before they understand tradeoffs
 - Changing later requires updating all imports
 - With lazy init (#1), "full" version has near-zero overhead
@@ -195,16 +212,16 @@ import { signalTree } from '@aspect/signaltree';        // Pick 2
 ```typescript
 class PathNotifier {
   private subscribers = new Set<Handler>();
-  
+
   subscribe(handler: Handler): () => void {
     this.subscribers.add(handler);
     return () => this.subscribers.delete(handler);
   }
-  
+
   notify(path: string, value: unknown, prev: unknown): void {
-    this.subscribers.forEach(h => h(path, value, prev));
+    this.subscribers.forEach((h) => h(path, value, prev));
   }
-  
+
   destroy(): void {
     this.subscribers.clear();
   }
@@ -222,14 +239,13 @@ Enhancers do their own filtering. Keep it simple. Add complexity IF performance 
 ```typescript
 export function withTimeTravel<T>(config: TimeTravelConfig) {
   return (tree: SignalTree<T>) => {
-    const shouldUseStructuralSharing = 
-      config.useStructuralSharing ?? true;  // Default ON
-    
+    const shouldUseStructuralSharing = config.useStructuralSharing ?? true; // Default ON
+
     // In history recording:
     const snapshot = shouldUseStructuralSharing
-      ? structuralClone(tree())   // Use existing utility
+      ? structuralClone(tree()) // Use existing utility
       : deepClone(tree());
-    
+
     history.push(snapshot);
   };
 }
@@ -242,6 +258,7 @@ Just **connect existing infrastructure**. Don't rebuild.
 ### 3. Entity System (Separate Large Feature)
 
 This is big enough to warrant its own effort:
+
 - Map-based storage
 - CRUD operations
 - Hooks (tap, intercept)
@@ -272,16 +289,19 @@ Don't create new API. Extend existing.
 ### DO (3 items, ~65 lines total)
 
 ✅ **#1 Lazy PathNotifier Init**
+
 - Created on first `.with()` call
 - No overhead for zero-enhancer usage
 - ~10 lines
 
 ✅ **PathNotifier Core (simple)**
+
 - Basic subscribe/notify
 - No complexity
 - ~50 lines + tests
 
 ✅ **Wire Structural Sharing to TimeTravel**
+
 - Use existing `useStructuralSharing` config
 - Connect to time-travel recording
 - ~10 lines
@@ -289,10 +309,12 @@ Don't create new API. Extend existing.
 ### EXTEND (2 items, ~15 lines total)
 
 🔧 **Extend #10 Debug Mode**
+
 - Add PathNotifier logging to existing debugMode
 - ~5 lines
 
 🔧 **Add Lazy Init Option**
+
 - `createLazySignalTree()` already exists
 - Just make PathNotifier use lazy too
 - ~10 lines
@@ -352,12 +374,14 @@ Your teammate is **absolutely correct**:
 5. ✅ We were suffering from "not invented here" syndrome
 
 **The path forward:**
+
 1. Implement simple PathNotifier (just notify, no complexity)
 2. Wire existing structural sharing to time-travel
 3. Implement entity system (separate feature)
 4. Leave everything else alone
 
 **Timeline:**
+
 - PathNotifier + wiring: 1-2 days
 - Entity system: 5-7 days (unchanged)
 - Integration: 1-2 days
