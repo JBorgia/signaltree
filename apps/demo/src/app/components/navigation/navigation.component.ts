@@ -2,11 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
-import {
-  SIGNALTREE_CORE_VERSION,
-  SIGNALTREE_ENTERPRISE_VERSION,
-  SIGNALTREE_VERSION_SUMMARY,
-} from '../../version';
+import { SIGNALTREE_CORE_VERSION, SIGNALTREE_ENTERPRISE_VERSION, SIGNALTREE_VERSION_SUMMARY } from '../../version';
 
 export interface DemoExample {
   id: string;
@@ -162,6 +158,20 @@ export class NavigationComponent {
       title: 'Enterprise Enhancer',
       description: 'Audit, time-travel and enterprise presets',
       route: '/enterprise-enhancer',
+      category: 'features',
+    },
+    {
+      id: 'persistence',
+      title: 'Persistence',
+      description: 'Auto-save state to localStorage',
+      route: '/persistence',
+      category: 'features',
+    },
+    {
+      id: 'serialization',
+      title: 'Serialization',
+      description: 'JSON export/import with type preservation',
+      route: '/serialization',
       category: 'features',
     },
   ];
