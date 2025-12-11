@@ -1,4 +1,4 @@
-import { computed, Signal, signal, WritableSignal } from '@angular/core';
+import { computed, signal, Signal, WritableSignal } from '@angular/core';
 
 import { PathNotifier } from '../lib/path-notifier';
 
@@ -16,7 +16,6 @@ import { PathNotifier } from '../lib/path-notifier';
  */
 
 import type {
-  EntitySignal,
   EntityConfig,
   TapHandlers,
   InterceptHandlers,
@@ -24,8 +23,8 @@ import type {
   EntityNode,
   AddOptions,
   AddManyOptions,
-  MutationOptions,
 } from '../lib/types';
+
 /**
  * Implementation of EntitySignal<E, K>
  * Stores entities in a Map with reactive queries and hooks
@@ -74,25 +73,25 @@ export class EntitySignalImpl<
     private basePath: string
   ) {
     // Extract selectId or use default
-    this.selectId =
-      config.selectId ??
-      ((entity: E) => (entity as unknown as Record<string, K>)['id']);
+    this.selectId = config.selectId ?? ((entity: E) => (entity as unknown as Record<string, K>)['id']);
 
     // Initialize reactive signals
     this.allSignal = signal<E[]>([]);
     this.countSignal = signal<number>(0);
     this.idsSignal = signal<K[]>([]);
+    this.mapSignal = signal<ReadonlyMap<K, E>>(new Map());
+
     // Return a Proxy to support bracket notation access
     return new Proxy(this, {
-      get: (target, prop: string | symbol) => {
+      get: (target: EntitySignalImpl<E, K>, prop: string | symbol) => {
         // Handle string/number bracket access
         if (typeof prop === 'string' && !isNaN(Number(prop))) {
           return target.byId(Number(prop) as K);
         }
         // Handle normal method/property access
-        return (target as Record<string | symbol, unknown>)[prop];
+        return (target as unknown as Record<string | symbol, unknown>)[prop];
       },
-    }) as any;
+    }) as never;
   }
 
   // ==================
@@ -171,35 +170,38 @@ export class EntitySignalImpl<
   addOne(entity: E, opts?: AddOptions<E, K>): K {
     const id = opts?.selectId?.(entity) ?? this.selectId(entity);
 
-    // Run interceptors
-    const ctx = this.createInterceptContext(entity);
-    for (const handler of this.interceptHandlers) {
-      handler.onAdd?.(entity, ctx);
-    }
-    if (ctx.blocked) {
-      throw new Error(`Cannot add entity: ${ctx.blockReason}`);
-    }
-
-    // Check for duplicates
+    // Check for duplicates first
     if (this.storage.has(id)) {
       throw new Error(`Entity with id ${String(id)} already exists`);
     }
 
+    // Run interceptors
+    let transformedEntity = entity;
+    for (const handler of this.interceptHandlers) {
+      const ctx: InterceptContext<E> = {
+        block: (reason?: string) => {
+          throw new Error(`Cannot add entity: ${reason || 'blocked by interceptor'}`);
+        },
+        transform: (value: E) => {
+          transformedEntity = value;
+        },
+        blocked: false,
+        blockReason: undefined,
+      };
+      handler.onAdd?.(entity, ctx);
+    }
+
     // Store and update signals
-    this.storage.set(id, ctx.value as E);
-    this.nodeCache.delete(id); // Invalidate cache
+    this.storage.set(id, transformedEntity);
+    this.nodeCache.delete(id);
     this.updateSignals();
 
     // Notify PathNotifier
-    this.pathNotifier.notify(
-      `${this.basePath}.${String(id)}`,
-      ctx.value,
-      undefined
-    );
+    this.pathNotifier.notify(`${this.basePath}.${String(id)}`, transformedEntity, undefined);
 
     // Run tap handlers
     for (const handler of this.tapHandlers) {
-      handler.onAdd?.(ctx.value as E, id);
+      handler.onAdd?.(transformedEntity, id);
     }
 
     return id;
@@ -217,41 +219,47 @@ export class EntitySignalImpl<
   // MUTATIONS: UPDATE
   // ==================
 
-  updateOne(id: K, changes: Partial<E>, opts?: MutationOptions): void {
+  updateOne(id: K, changes: Partial<E>): void {
     const entity = this.storage.get(id);
     if (!entity) {
       throw new Error(`Entity with id ${String(id)} not found`);
     }
 
     const prev = entity;
-    const updated = { ...entity, ...changes };
 
     // Run interceptors
-    const ctx = this.createInterceptContext(updated);
+    let transformedChanges = changes;
     for (const handler of this.interceptHandlers) {
+      const ctx: InterceptContext<Partial<E>> = {
+        block: (reason?: string) => {
+          throw new Error(`Cannot update entity: ${reason || 'blocked by interceptor'}`);
+        },
+        transform: (value: Partial<E>) => {
+          transformedChanges = value;
+        },
+        blocked: false,
+        blockReason: undefined,
+      };
       handler.onUpdate?.(id, changes, ctx);
     }
-    if (ctx.blocked) {
-      throw new Error(`Cannot update entity: ${ctx.blockReason}`);
-    }
 
-    // Store and update signals
-    this.storage.set(id, ctx.value as E);
-    this.nodeCache.delete(id); // Invalidate cache
+    const finalUpdated = { ...entity, ...transformedChanges };
+    this.storage.set(id, finalUpdated);
+    this.nodeCache.delete(id);
     this.updateSignals();
 
     // Notify PathNotifier
-    this.pathNotifier.notify(`${this.basePath}.${String(id)}`, ctx.value, prev);
+    this.pathNotifier.notify(`${this.basePath}.${String(id)}`, finalUpdated, prev);
 
     // Run tap handlers
     for (const handler of this.tapHandlers) {
-      handler.onUpdate?.(id, changes, ctx.value as E);
+      handler.onUpdate?.(id, transformedChanges, finalUpdated);
     }
   }
 
-  updateMany(ids: K[], changes: Partial<E>, opts?: MutationOptions): void {
+  updateMany(ids: K[], changes: Partial<E>): void {
     for (const id of ids) {
-      this.updateOne(id, changes, opts);
+      this.updateOne(id, changes);
     }
   }
 
@@ -270,19 +278,25 @@ export class EntitySignalImpl<
   // MUTATIONS: REMOVE
   // ==================
 
-  removeOne(id: K, opts?: MutationOptions): void {
+  removeOne(id: K): void {
     const entity = this.storage.get(id);
     if (!entity) {
       throw new Error(`Entity with id ${String(id)} not found`);
     }
 
     // Run interceptors
-    const ctx = this.createInterceptContext(entity);
     for (const handler of this.interceptHandlers) {
+      const ctx: InterceptContext<void> = {
+        block: (reason?: string) => {
+          throw new Error(`Cannot remove entity: ${reason || 'blocked by interceptor'}`);
+        },
+        transform: () => {
+          // void transform - no transformation possible
+        },
+        blocked: false,
+        blockReason: undefined,
+      };
       handler.onRemove?.(id, entity, ctx);
-    }
-    if (ctx.blocked) {
-      throw new Error(`Cannot remove entity: ${ctx.blockReason}`);
     }
 
     // Delete and update signals
@@ -291,11 +305,7 @@ export class EntitySignalImpl<
     this.updateSignals();
 
     // Notify PathNotifier
-    this.pathNotifier.notify(
-      `${this.basePath}.${String(id)}`,
-      undefined,
-      entity
-    );
+    this.pathNotifier.notify(`${this.basePath}.${String(id)}`, undefined, entity);
 
     // Run tap handlers
     for (const handler of this.tapHandlers) {
@@ -303,9 +313,9 @@ export class EntitySignalImpl<
     }
   }
 
-  removeMany(ids: K[], opts?: MutationOptions): void {
+  removeMany(ids: K[]): void {
     for (const id of ids) {
-      this.removeOne(id, opts);
+      this.removeOne(id);
     }
   }
 
@@ -396,27 +406,13 @@ export class EntitySignalImpl<
     this.mapSignal.set(map);
   }
 
-  private createInterceptContext(value: E): InterceptContext<E> {
-    const ctx: InterceptContext<E> = {
-      blocked: false,
-      blockReason: '',
-      value,
-      block: (reason: string) => {
-        ctx.blocked = true;
-        ctx.blockReason = reason;
-      },
-      transform: (transformed: E) => {
-        ctx.value = transformed;
-      },
-    };
-    return ctx;
-  }
-
   private getOrCreateNode(id: K, entity: E): EntityNode<E> {
-    if (!this.nodeCache.has(id)) {
-      this.nodeCache.set(id, this.createEntityNode(id, entity));
+    let node = this.nodeCache.get(id);
+    if (!node) {
+      node = this.createEntityNode(id, entity);
+      this.nodeCache.set(id, node);
     }
-    return this.nodeCache.get(id)!;
+    return node;
   }
 
   private createEntityNode(id: K, entity: E): EntityNode<E> {
@@ -424,7 +420,6 @@ export class EntitySignalImpl<
     const node = (() => this.storage.get(id)) as unknown as EntityNode<E>;
 
     // Add properties for deep access
-    const nodeObj = node as Record<string | symbol, unknown>;
     for (const key of Object.keys(entity)) {
       Object.defineProperty(node, key, {
         get: () => {
@@ -455,10 +450,9 @@ export class EntitySignalImpl<
  * @param config Optional configuration (selectId, initial, selectKey)
  * @returns A type marker that withEntities() will recognize
  */
-export function entityMap<
-  E extends Record<string, unknown>,
-  K extends string | number = string
->(config?: Partial<EntityConfig<E, K>>): unknown {
+export function entityMap<E extends Record<string, unknown>, K extends string | number = string>(
+  config?: Partial<EntityConfig<E, K>>
+): unknown {
   // Return a marker object that withEntities() recognizes
   return {
     __isEntityMap: true,
