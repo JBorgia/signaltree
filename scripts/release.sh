@@ -51,6 +51,8 @@ RELEASE_TYPE=${1:-patch}
 SKIP_TESTS=${2:-false}
 NON_INTERACTIVE=false
 KEEP_VERSION=false
+NPM_TOKEN=${NPM_TOKEN:-} # Automation token for 2FA bypass
+
 if [[ "$*" == *"--yes"* ]] || [[ "$*" == *"-y"* ]]; then
     NON_INTERACTIVE=true
 fi
@@ -376,6 +378,12 @@ print_step "Publishing all packages to npm..."
 PUBLISHED_PACKAGES=()
 FAILED_PACKAGES=()
 
+# Create temporary .npmrc with token if provided
+if [ -n "$NPM_TOKEN" ]; then
+    print_step "Setting up npm authentication with provided token"
+    echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/.npmrc.signaltree-temp
+fi
+
 for package in "${PACKAGES[@]}"; do
     DIST_PATH="./dist/packages/$package"
     if [ -d "$DIST_PATH" ]; then
@@ -390,7 +398,11 @@ for package in "${PACKAGES[@]}"; do
             continue
         fi
 
-        npm publish --access public 2>&1 | tee /tmp/npm_publish_$package.log
+        if [ -n "$NPM_TOKEN" ]; then
+            npm publish --access public --userconfig ~/.npmrc.signaltree-temp 2>&1 | tee /tmp/npm_publish_$package.log
+        else
+            npm publish --access public 2>&1 | tee /tmp/npm_publish_$package.log
+        fi
         if [ ${PIPESTATUS[0]} -eq 0 ]; then
             print_success "Published @signaltree/$package successfully"
             PUBLISHED_PACKAGES+=("$package")
@@ -422,8 +434,12 @@ if [ ${#FAILED_PACKAGES[@]} -gt 0 ]; then
     print_warning "You may need to fix build issues and publish these manually"
 fi
 
-# Step 7: Clean up backup file (release succeeded)
+# Step 7: Clean up backup file and temporary npm credentials (release succeeded)
 rm -f .version_backup
+if [ -n "$NPM_TOKEN" ]; then
+    rm -f ~/.npmrc.signaltree-temp
+    print_step "Cleaned up temporary npm credentials"
+fi
 # Disable trap now that we've succeeded
 trap - ERR
 
