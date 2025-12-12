@@ -50,8 +50,12 @@ PACKAGES=(
 RELEASE_TYPE=${1:-patch}
 SKIP_TESTS=${2:-false}
 NON_INTERACTIVE=false
+KEEP_VERSION=false
 if [[ "$*" == *"--yes"* ]] || [[ "$*" == *"-y"* ]]; then
     NON_INTERACTIVE=true
+fi
+if [[ "$*" == *"--keep-version"* ]]; then
+    KEEP_VERSION=true
 fi
 
 if [[ ! "$RELEASE_TYPE" =~ ^(major|minor|patch)$ ]]; then
@@ -102,11 +106,16 @@ case $RELEASE_TYPE in
         ;;
 esac
 
-print_step "New version will be: $NEW_VERSION"
+if [ "$KEEP_VERSION" = true ]; then
+    NEW_VERSION=$CURRENT_VERSION
+    print_step "Keep-version enabled: will publish current version $NEW_VERSION"
+else
+    print_step "New version will be: $NEW_VERSION"
+fi
 
 # Confirm with user (unless non-interactive)
 if [ "$NON_INTERACTIVE" = false ]; then
-    echo -e "${YELLOW}Continue with modular release $CURRENT_VERSION → $NEW_VERSION? (y/N)${NC}"
+    echo -e "${YELLOW}Continue with modular release $CURRENT_VERSION → $NEW_VERSION (keep-version=${KEEP_VERSION})? (y/N)${NC}"
     read -r CONFIRM
     if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
         print_warning "Release cancelled"
@@ -227,26 +236,34 @@ rollback_versions() {
 trap rollback_versions ERR
 
 # Step 2: Update versions in all package.json files
-print_step "Updating versions in all packages..."
+if [ "$KEEP_VERSION" = true ]; then
+    print_step "Skipping version bump (--keep-version)"
+else
+    print_step "Updating versions in all packages..."
+fi
 
 # Update workspace version
-node -p "
-    const fs = require('fs');
-    const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
-    pkg.version = '$NEW_VERSION';
-    fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n');
-    'Workspace version updated successfully'
-"
+if [ "$KEEP_VERSION" != true ]; then
+    node -p "
+        const fs = require('fs');
+        const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+        pkg.version = '$NEW_VERSION';
+        fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n');
+        'Workspace version updated successfully'
+    "
+fi
 
 # Update each package version and dependencies
 for package in "${PACKAGES[@]}"; do
     PACKAGE_JSON="./packages/$package/package.json"
     if [ -f "$PACKAGE_JSON" ]; then
         print_step "Updating version for @signaltree/$package..."
-        node -p "
+                node -p "
             const fs = require('fs');
             const pkg = JSON.parse(fs.readFileSync('$PACKAGE_JSON', 'utf8'));
-            pkg.version = '$NEW_VERSION';
+                        if ('$KEEP_VERSION' !== 'true') {
+                            pkg.version = '$NEW_VERSION';
+                        }
 
             // Update peer dependencies to use specific versions for other @signaltree packages
             if (pkg.peerDependencies) {
@@ -313,11 +330,17 @@ fi
 print_success "Package builds completed"
 
 # Step 4: Commit changes
-print_step "Committing version changes..."
+print_step "Committing version changes (if any)..."
 git add package.json packages/*/package.json
-git commit -m "chore: bump all packages to version $NEW_VERSION" || {
-    print_warning "Nothing to commit (versions might already be updated)"
-}
+if [ "$KEEP_VERSION" = true ]; then
+    git commit -m "chore(release): publish $NEW_VERSION (no version bump)" || {
+        print_warning "Nothing to commit (no changes for keep-version)"
+    }
+else
+    git commit -m "chore: bump all packages to version $NEW_VERSION" || {
+        print_warning "Nothing to commit (versions might already be updated)"
+    }
+fi
 
 # Step 5: Create and push tag
 print_step "Creating git tag v$NEW_VERSION..."
