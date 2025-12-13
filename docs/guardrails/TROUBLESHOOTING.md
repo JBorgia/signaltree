@@ -39,7 +39,7 @@ Checklist:
 
 - Ensure your build runs in dev mode (`process.env.NODE_ENV !== 'production'`).
 - Confirm `withGuardrails({ enabled: () => true })` returns truthy.
-- Verify the tree exposes `addTap` / `removeTap`.
+- Verify the tree exposes path notifications/hooks (PathNotifier or entity hooks).
 
 ### Memory Budget Warnings
 

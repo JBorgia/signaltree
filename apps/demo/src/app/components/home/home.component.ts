@@ -26,14 +26,6 @@ export class HomeComponent {
       methods: ['batch', 'computed', 'optimize', 'clearCache', 'getMetrics'],
     },
     {
-      title: '🔌 Middleware',
-      description:
-        'Intercept and extend tree operations with custom middleware',
-      route: '/middleware',
-      category: 'Middleware',
-      methods: ['use', 'removePlugin'],
-    },
-    {
       title: '📦 Entity Management',
       description:
         'CRUD operations and entity helpers for managing collections',
@@ -51,11 +43,10 @@ export class HomeComponent {
     },
     {
       title: '🌐 Async Pipelines',
-      description:
-        'Handle async operations using middleware helpers (createAsyncOperation / trackAsync)',
-      route: '/middleware',
+      description: 'Handle async operations using enhancers and entity hooks',
+      route: '/time-travel',
       category: 'Async',
-      methods: ['createAsyncOperation', 'trackAsync'],
+      methods: ['effect', 'intercept', 'tap'],
     },
     {
       title: '🔄 Batching Demo',
@@ -197,7 +188,7 @@ npm install @signaltree/ng-forms        # Angular forms integration
 npm install @signaltree/enterprise      # Enterprise-scale optimizations
 npm install @signaltree/callable-syntax # Optional DX enhancement
 
-# All enhancers (batching, memoization, middleware, entities, devtools,
+# All enhancers (batching, memoization, entities, devtools,
 # time-travel, serialization, presets) are built into @signaltree/core
 
 // Basic Usage
@@ -206,7 +197,6 @@ import {
   withBatching,
   withMemoization,
   withEntities,
-  withMiddleware,
   withDevTools,
   withTimeTravel
 } from '@signaltree/core';
@@ -226,7 +216,6 @@ const userTree = signalTree({
   withBatching(),
   withMemoization(),
   withEntities(),
-  withMiddleware(),
   withDevTools(),
   withTimeTravel(),
   withPresets()

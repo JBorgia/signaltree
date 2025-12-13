@@ -236,36 +236,30 @@ const todo = tree.entities.getById('todos', '1');
 const allTodos = tree.entities.getAll('todos');
 ```
 
-### Middleware Enhancer
+### Observation & Interception
 
-**When to suggest:** Cross-cutting concerns like logging, analytics, validation, or async side effects.
+Use entity hooks and Angular `effect()` instead of middleware.
 
 ```typescript
-import { withMiddleware } from '@signaltree/core/enhancers/middleware';
+const tree = signalTree({ users: entityMap<User>() }).with(withEntities());
 
-const tree = signalTree(initialState, withMiddleware());
-
-// Add logging middleware
-tree.use((context, next) => {
-  console.log('Before:', context.path, context.value);
-  next();
-  console.log('After:', context.path, context.newValue);
+// Logging via tap
+const unsub = tree.$.users.tap({
+  onAdd: (user, id) => console.log('Added user', id),
+  onUpdate: (id, changes) => console.log('Updated', id, changes),
 });
 
-// Add validation middleware
-tree.use((context, next) => {
-  if (context.path === 'user.age' && context.value < 0) {
-    throw new Error('Age cannot be negative');
-  }
-  next();
+// Validation via intercept
+tree.$.users.intercept({
+  onAdd: (user, ctx) => {
+    if (!user.email.includes('@')) ctx.block('Invalid email');
+  },
 });
 
-// Async middleware for side effects
-tree.use(async (context, next) => {
-  next();
-  if (context.path.startsWith('user.')) {
-    await syncToServer(context.value);
-  }
+// Async side effects on regular signals
+effect(() => {
+  const theme = tree.$.ui.theme();
+  syncThemeToServer(theme);
 });
 ```
 
@@ -613,7 +607,7 @@ private tree = signalTree(state);
 
 ```typescript
 // Wrong - unnecessary overhead
-const tree = signalTree(simpleState, withBatching(), withTimeTravel(), withDevTools(), withMiddleware());
+const tree = signalTree(simpleState, withBatching(), withTimeTravel(), withDevTools());
 
 // Correct - only what you need
 const tree = signalTree(simpleState, withBatching());
@@ -655,7 +649,7 @@ npm install -D @signaltree/guardrails
 4. **Working with forms?** → Add `@signaltree/ng-forms`
 5. **Need undo/redo?** → Add `withTimeTravel()`
 6. **Managing collections?** → Add `withEntities()`
-7. **Need async side effects?** → Add `withMiddleware()`
+7. **Need async side effects?** → Use `effect()` or entity `intercept()` hooks
 8. **Large app, performance critical?** → Add `@signaltree/enterprise`
 9. **In development?** → Add `@signaltree/guardrails`
 

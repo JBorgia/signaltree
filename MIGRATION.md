@@ -18,7 +18,7 @@ The following standalone packages are **no longer maintained** and have been con
 - ❌ `@signaltree/memoization` → Use `withMemoization` from `@signaltree/core` ✅ **Deprecated on npm**
 - ❌ `@signaltree/devtools` → Use `withDevtools` from `@signaltree/core` ✅ **Deprecated on npm**
 - ❌ `@signaltree/entities` → Use entity helpers from `@signaltree/core` ✅ **Deprecated on npm**
-- ❌ `@signaltree/middleware` → Use `withMiddleware` from `@signaltree/core` ✅ **Deprecated on npm**
+- ❌ `@signaltree/middleware` → Removed in v5.0; use entity hooks (`tap`/`intercept`) and enhancers
 - ❌ `@signaltree/presets` → Use preset functions from `@signaltree/core` ✅ **Deprecated on npm**
 - ❌ `@signaltree/time-travel` → Use `withTimeTravel` from `@signaltree/core` ✅ **Deprecated on npm**
 
@@ -67,7 +67,7 @@ import { withBatching } from '@signaltree/batching';
 import { withMemoization } from '@signaltree/memoization';
 import { withDevtools } from '@signaltree/devtools';
 import { withEntities } from '@signaltree/entities';
-import { withMiddleware } from '@signaltree/middleware';
+// Middleware removed; no direct replacement. Use hooks.
 import { withTimeTravel } from '@signaltree/time-travel';
 import { ecommercePreset, dashboardPreset } from '@signaltree/presets';
 import { withSerialization } from '@signaltree/serialization';
@@ -77,7 +77,7 @@ import { withSerialization } from '@signaltree/serialization';
 
 ```typescript
 // ✅ New way - single package import
-import { signalTree, withBatching, withMemoization, withDevtools, withEntities, withMiddleware, withTimeTravel, withSerialization, ecommercePreset, dashboardPreset } from '@signaltree/core';
+import { signalTree, withBatching, withMemoization, withDevtools, withEntities, withTimeTravel, withSerialization, ecommercePreset, dashboardPreset } from '@signaltree/core';
 ```
 
 ### Step 3: Verify Functionality

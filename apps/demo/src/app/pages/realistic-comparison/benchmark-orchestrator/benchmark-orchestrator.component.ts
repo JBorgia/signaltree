@@ -1,23 +1,10 @@
 import { CommonModule } from '@angular/common';
-import {
-  AfterViewInit,
-  Component,
-  computed,
-  effect,
-  ElementRef,
-  inject,
-  OnDestroy,
-  signal,
-  ViewChild,
-} from '@angular/core';
+import { AfterViewInit, Component, computed, effect, ElementRef, inject, OnDestroy, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { Subject } from 'rxjs';
 
-import {
-  RealisticBenchmarkService,
-  RealisticBenchmarkSubmission,
-} from '../../../services/realistic-benchmark.service';
+import { RealisticBenchmarkService, RealisticBenchmarkSubmission } from '../../../services/realistic-benchmark.service';
 import { BenchmarkTestCase, ENHANCED_TEST_CASES } from './scenario-definitions';
 import { BenchmarkResult as ServiceBenchmarkResult } from './services/_types';
 import { AkitaBenchmarkService } from './services/akita-benchmark.service';
@@ -311,30 +298,15 @@ export class BenchmarkOrchestratorComponent
     {
       id: 'advanced-features',
       name: 'Advanced Features',
-      description: 'Time travel, middleware, and complex workflows',
+      description: 'Time travel and complex workflows',
       // Note: undo/history/jump are SignalTree-only features (time-travel package).
-      // Middleware scenarios now properly implemented using actual library APIs:
-      // - SignalTree: withMiddleware() (native)
-      // - NgRx Store: Meta-reducers (ActionReducer wrapper)
-      // - NgXs: Plugins (NgxsPlugin interface)
-      // - Akita: Store hooks (akitaPreUpdate override)
-      // - Elf/NgRx SignalStore: Not implemented (no comparable architecture)
-      scenarios: [
-        'single-middleware',
-        'multiple-middleware',
-        'conditional-middleware',
-      ],
+      scenarios: [],
     },
     {
       id: 'performance-stress',
       name: 'Performance Stress',
       description: 'Heavy load and scaling tests',
-      scenarios: [
-        'concurrent-updates',
-        'memory-efficiency',
-        'history-size',
-        'conditional-middleware',
-      ],
+      scenarios: ['concurrent-updates', 'memory-efficiency', 'history-size'],
     },
     {
       id: 'all-tests',
@@ -507,11 +479,6 @@ export class BenchmarkOrchestratorComponent
       'history-size': 'runHistorySizeBenchmark',
       'jump-to-state': 'runJumpToStateBenchmark',
 
-      // Middleware
-      'single-middleware': 'runSingleMiddlewareBenchmark',
-      'multiple-middleware': 'runMultipleMiddlewareBenchmark',
-      'conditional-middleware': 'runConditionalMiddlewareBenchmark',
-
       // Async (behavior folded into middleware helpers)
       'async-workflow': 'runAsyncWorkflowBenchmark',
       'async-workflow-scheduling': 'runAsyncWorkflowBenchmark',
@@ -527,7 +494,6 @@ export class BenchmarkOrchestratorComponent
     // This prevents users from selecting scenarios that will immediately fail
     const staticUnsupportedScenarios: Record<string, string[]> = {
       akita: [
-        'multiple-middleware', // Single akitaPreUpdate hook only
         'data-fetching', // No built-in filtering capability
         'state-size-scaling', // No built-in indexing/caching
       ],
@@ -632,9 +598,6 @@ export class BenchmarkOrchestratorComponent
     'jump-to-state': ['withTimeTravel'],
 
     // Middleware - currently use no enhancers in implementation
-    'single-middleware': [],
-    'multiple-middleware': [],
-    'conditional-middleware': [],
 
     // Full stack benchmarks
   };
@@ -2332,32 +2295,6 @@ export class BenchmarkOrchestratorComponent
               BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR
             )
           );
-        case 'conditional-middleware':
-          if (!svc.runConditionalMiddlewareBenchmark) {
-            return -1;
-          }
-          return await maybeNormalize(
-            svc.runConditionalMiddlewareBenchmark(
-              BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR
-            )
-          );
-
-        // Full Stack
-        default:
-          return -1;
-      }
-    } catch {
-      return -1; // Indicates benchmark failed
-    }
-  }
-
-  private getBenchmarkService(libraryId: string): BenchmarkService | null {
-    switch (libraryId) {
-      case 'signaltree':
-      case 'signaltree-enterprise':
-        return this.stBench;
-      case 'ngrx-store':
-        return this.ngrxBench;
       case 'ngrx-signals':
         return this.ngrxSignalsBench;
       case 'akita':
@@ -3452,9 +3389,6 @@ export class BenchmarkOrchestratorComponent
       serialization: 0.9, // 28% of apps need state persistence/SSR
 
       // Advanced features - usage based on library adoption patterns
-      'single-middleware': 1.3, // 42% of apps use logging/analytics middleware
-      'multiple-middleware': 0.7, // 22% of apps have complex middleware stacks
-      'conditional-middleware': 0.4, // 12% of apps use advanced middleware patterns
 
       // Time-travel features - based on development tool usage
       'undo-redo': 0.8, // 25% of apps need undo/redo (editors, design tools)

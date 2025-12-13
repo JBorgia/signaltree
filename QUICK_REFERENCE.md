@@ -143,13 +143,13 @@ withLogging({
 
 | Feature         | v4.x (Broken)                      | v5.0 (Fixed)                       |
 | --------------- | ---------------------------------- | ---------------------------------- |
-| **Middleware**  | `tree.addTap()` (global)           | `tree.$.users.tap()` (scoped)      |
+| **Hooks**       | —                                  | `tree.$.users.tap()` (scoped)      |
 | **Batching**    | Global state, race conditions      | Instance-scoped, clean             |
 | **Persistence** | 50ms polling, never cleaned up     | Event-driven, proper cleanup       |
 | **TimeTravel**  | Misses leaf mutations              | Catches everything                 |
 | **DevTools**    | Incomplete history                 | Complete history                   |
 | **Types**       | `action: string, payload: unknown` | `(user: User, id: string) => void` |
-| **Removal**     | `removeTap('id')`                  | `unsub()`                          |
+| **Removal**     | —                                  | `unsub()`                          |
 
 ## Common Patterns
 

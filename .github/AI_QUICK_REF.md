@@ -60,8 +60,8 @@ tree.reset();
 ### Middleware - Side effects
 
 ```typescript
-import { withMiddleware } from '@signaltree/core/enhancers/middleware';
-const tree = signalTree(state, withMiddleware());
+// Middleware removed in v5. Use enhancers + entity hooks.
+// const tree = signalTree(state).with(withEntities());
 tree.use((context, next) => {
   /* logging/validation */ next();
 });

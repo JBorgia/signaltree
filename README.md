@@ -379,7 +379,7 @@ See [`@signaltree/callable-syntax`](./packages/callable-syntax/README.md) for se
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withBatching, withMemoization, withEntities, withMiddleware, withDevTools, withTimeTravel, withPresets } from '@signaltree/core';
+import { withBatching, withMemoization, withEntities, withDevTools, withTimeTravel, withPresets } from '@signaltree/core';
 
 // Compose multiple features using .with()
 const tree = signalTree({
@@ -390,7 +390,6 @@ const tree = signalTree({
 }).with(
   withBatching(), // Batch updates for performance
   withMemoization(), // Intelligent caching
-  withMiddleware(), // State interceptors
   withEntities(), // Enhanced CRUD operations
   withTimeTravel(), // Undo/redo functionality
   withDevTools(), // Development tools (auto-disabled in production)
@@ -407,14 +406,10 @@ tree.batchUpdate((state) => ({
 // Memoization: Cache expensive computations
 const filteredUsers = tree.memoize((state) => state.users.filter((u) => u.name.includes(state.filters.search) && (state.filters.category === 'all' || u.category === state.filters.category)), 'filtered-users');
 
-// Middleware: Intercept and log state changes
-tree.addTap({
-  id: 'logger',
-  after: (action, payload, state, newState) => {
-    console.log('Action:', action, payload);
-    console.log('New state:', newState);
-  },
-});
+// Observation & interception: Use entity hooks instead of middleware
+// Example: tap/intercept on entity collections
+// tree.$.users.tap({ onAdd: (user, id) => console.log('Added', user) });
+// tree.$.users.intercept({ onAdd: (user, ctx) => { if (!valid(user)) ctx.block('Invalid'); } });
 
 // Async: Advanced async operations with manual state management
 async function loadUsersWithPosts() {
@@ -1036,21 +1031,22 @@ optimizedTree.batchUpdate((state) => ({
 }));
 ```
 
-### Middleware Pipeline
+### Logging & Persistence (without middleware)
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withMiddleware, createLoggingMiddleware } from '@signaltree/core';
 import { withPersistence } from '@signaltree/core';
 
 const appTree = signalTree({ theme: 'dark', user: null }).with(
-  withMiddleware([createLoggingMiddleware('AppState')]),
   withPersistence({
     key: 'app-state',
     storage: localStorage,
     paths: ['theme'], // Only persist theme
   })
 );
+
+// Logging via entity hooks or effects
+// effect(() => console.log('Theme changed', appTree.$.theme()));
 ```
 
 ### ⚠️ Using Callable Syntax for Object Extraction Efficiently

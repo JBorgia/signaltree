@@ -316,12 +316,6 @@ const tree = signalTree({
 const user = tree().users.find((u) => u.id === 'u1');
 user.name = 'Alice';
 
-// ❌ Pollutes root API, clunky
-tree.addTap('users', (action) => {
-  console.log('Users changed:', action);
-});
-tree.removeTap('users');
-
 // ❌ No validation/control
 ```
 
@@ -512,10 +506,7 @@ Phase 6: Integration
 
 ```
 ✓ Old tree.entities<E>(path) still works (deprecated)
-✓ Old tree.addTap() still works (deprecated)
-✓ Old tree.removeTap() still works (deprecated)
-✓ Deprecation warnings appear
-✓ Migration path is clear
+✓ Migration path is clear (middleware removed)
 ```
 
 ---
@@ -622,14 +613,6 @@ Phase 6: Integration
 
 ## Migration
 
-**Old API (deprecated, will remove in v6.0):**
-
-```typescript
-tree.addTap('users', handler);
-tree.entities<User>('users');
-```
-````
-
 **New API:**
 
 ```typescript
@@ -662,3 +645,4 @@ This is why the 8 phases work together—they're not separate features, they're 
 
 **Total effort: 20-25 days of focused engineering.**
 ```
+````

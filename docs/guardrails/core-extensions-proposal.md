@@ -26,24 +26,25 @@ export interface DevHooks {
 // In tree implementation
 export function signalTree<T>(initial: T, config?: TreeConfig): SignalTree<T> {
   const tree = createTree(initial, config);
-  
+
   // Only in dev builds
   if (__DEV__) {
     tree.__devHooks = createDevHooks();
   }
-  
+
   return tree;
 }
 
 function createDevHooks(): DevHooks {
   const hooks: DevHooks = {};
-  
+
   // Enhancers can patch these hooks
   return hooks;
 }
 ```
 
 **Implementation Strategy:**
+
 - Wrap in `__DEV__` checks so they compile away in production
 - Use empty stubs that enhancers can override
 - Keep overhead minimal - just function calls, no complex logic
@@ -65,7 +66,7 @@ export interface UpdateMetadata {
   source?: 'serialization' | 'time-travel' | 'devtools' | 'user' | 'system';
   timestamp?: number;
   correlationId?: string;
-  
+
   // Enhancer-specific fields
   [key: string]: unknown;
 }
@@ -86,6 +87,7 @@ export interface UpdateContext {
 ```
 
 **Benefits:**
+
 - Enhancers can communicate intent
 - Enables "intent-aware" suppression of warnings
 - Supports correlation of related updates
@@ -100,9 +102,9 @@ Add path filtering to existing enhancers:
 export interface DevToolsOptions {
   name?: string;
   // NEW: Branch filtering
-  include?: string[];  // Only include these paths
-  exclude?: string[];  // Exclude these paths
-  maxDepth?: number;   // Limit depth
+  include?: string[]; // Only include these paths
+  exclude?: string[]; // Exclude these paths
+  maxDepth?: number; // Limit depth
   sampleRate?: number; // 0-1 for sampling large branches
 }
 
@@ -111,9 +113,9 @@ export interface SerializationOptions {
   key?: string;
   storage?: Storage;
   debounce?: number;
-  // NEW: Branch filtering  
-  include?: string[];  // Only persist these paths
-  exclude?: string[];  // Never persist these paths
+  // NEW: Branch filtering
+  include?: string[]; // Only persist these paths
+  exclude?: string[]; // Never persist these paths
   transform?: (value: unknown, path: string) => unknown;
 }
 
@@ -131,6 +133,7 @@ const tree = signalTree(initial).with(
 ```
 
 **Implementation:**
+
 - Use existing path matching utilities
 - Filter during snapshot/restore operations
 - Minimal overhead - just path checking
@@ -143,18 +146,14 @@ Enable proper cleanup and ownership tracking:
 // New scope API for subtrees
 export interface SignalTree<T> {
   // Create a scoped subtree with lifecycle
-  scope<K extends keyof T>(
-    path: K,
-    initializer?: () => T[K],
-    options?: ScopeOptions
-  ): ScopedTree<T[K]>;
+  scope<K extends keyof T>(path: K, initializer?: () => T[K], options?: ScopeOptions): ScopedTree<T[K]>;
 }
 
 export interface ScopeOptions {
-  disposable?: boolean;     // Auto-dispose when parent disposes
-  lazy?: boolean;           // Create on first access
-  isolated?: boolean;       // Don't inherit parent enhancers
-  onDispose?: () => void;   // Cleanup callback
+  disposable?: boolean; // Auto-dispose when parent disposes
+  lazy?: boolean; // Create on first access
+  isolated?: boolean; // Don't inherit parent enhancers
+  onDispose?: () => void; // Cleanup callback
 }
 
 export interface ScopedTree<T> extends SignalTree<T> {
@@ -167,19 +166,17 @@ export interface ScopedTree<T> extends SignalTree<T> {
 const tree = signalTree({ features: {} });
 
 // Create a scoped feature tree
-const featureTree = tree.scope('features.dashboard', 
-  () => ({ data: [], config: {} }),
-  { 
-    disposable: true,
-    onDispose: () => console.log('Dashboard cleanup')
-  }
-);
+const featureTree = tree.scope('features.dashboard', () => ({ data: [], config: {} }), {
+  disposable: true,
+  onDispose: () => console.log('Dashboard cleanup'),
+});
 
 // Later: dispose when feature unmounts
 featureTree.dispose();
 ```
 
 **Benefits:**
+
 - Proper cleanup of feature-specific state
 - Memory leak prevention
 - Clear ownership semantics
@@ -193,39 +190,31 @@ With these extensions, the guardrails enhancer becomes much cleaner:
 export function withGuardrails(config: GuardrailsConfig): Enhancer {
   return (tree) => {
     if (!__DEV__) return tree;
-    
+
     // Hook into dev tracing
     if (tree.__devHooks) {
       tree.__devHooks.onRead = (path, value) => {
         // Track read patterns for dependency analysis
         trackRead(path);
       };
-      
+
       tree.__devHooks.onRecomputation = (path, trigger) => {
         // Count recomputations for budget checking
         incrementRecomputations(path, trigger);
       };
-      
+
       tree.__devHooks.onSignalDispose = (path) => {
         // Track disposal for memory leak detection
         trackDisposal(path);
       };
     }
-    
-    // Use middleware for write interception
-    return tree.with(withMiddleware({
-      pre: (update) => {
-        // Check if suppressed by metadata
-        if (update.metadata?.suppressGuardrails) return;
-        
-        // Pre-update analysis
-        analyzeUpdate(update);
-      },
-      post: (update, result) => {
-        // Track hot paths and budgets
-        trackMetrics(update, result);
-      }
-    }));
+
+    // Intercept writes via path notifier/entity hooks (middleware removed)
+    tree.pathNotifier?.subscribe((value, prev, path) => {
+      analyzeUpdate({ path, value, prev });
+      trackMetrics({ path, value, prev }, {});
+    });
+    return tree;
   };
 }
 ```
@@ -233,21 +222,25 @@ export function withGuardrails(config: GuardrailsConfig): Enhancer {
 ## Implementation Timeline
 
 ### Phase 1: Core Hooks (Week 1)
+
 - Add DevHooks interface
 - Implement hook points in signal creation/disposal
-- Add __DEV__ gating
+- Add **DEV** gating
 
 ### Phase 2: Metadata Plumbing (Week 1)
+
 - Extend update methods with metadata parameter
 - Flow metadata through middleware
 - Update type definitions
 
 ### Phase 3: Branch Filtering (Week 2)
+
 - Add options to existing enhancers
 - Implement path filtering logic
 - Update documentation
 
 ### Phase 4: Scope API (Week 2-3)
+
 - Design scope lifecycle
 - Implement disposal tracking
 - Add tests for cleanup
@@ -255,6 +248,7 @@ export function withGuardrails(config: GuardrailsConfig): Enhancer {
 ## Bundle Size Impact
 
 All additions are dev-only or opt-in:
+
 - Dev hooks: 0 bytes in production (compiled away)
 - Metadata: ~200 bytes (only if used)
 - Branch filtering: ~500 bytes (only in enhancers that use it)
@@ -265,6 +259,7 @@ Total production impact for apps not using these features: **0 bytes**
 ## Breaking Changes
 
 None. All additions are:
+
 - Optional (existing code works unchanged)
 - Backward compatible (new parameters have defaults)
 - Tree-shakeable (unused features are removed)
@@ -276,38 +271,44 @@ No migration needed. Existing code continues to work. To adopt:
 1. **For metadata:** Add metadata parameter to updates where needed
 2. **For filtering:** Add include/exclude options to enhancer configs
 3. **For scopes:** Use tree.scope() for feature-specific state
-4. **For dev hooks:** Enhancers can check for and use tree.__devHooks
+4. **For dev hooks:** Enhancers can check for and use tree.\_\_devHooks
 
 ## Testing Plan
 
 ### Unit Tests
+
 - DevHooks called correctly in dev, absent in prod
 - Metadata flows through pipeline
 - Branch filtering works correctly
 - Scope lifecycle and disposal
 
 ### Integration Tests
+
 - Guardrails enhancer works with all hooks
 - No performance regression
 - Tree-shaking removes unused features
 
 ### Bundle Analysis
+
 - Verify zero production cost
 - Check dev build size increase (<5KB)
 
 ## Documentation Updates
 
 ### API Reference
+
 - Document all new interfaces
 - Add examples for each feature
 - Show integration patterns
 
 ### Migration Guide
+
 - "Adopting Dev Hooks" section
 - "Using Metadata" guide
 - "Branch Filtering" examples
 
 ### Best Practices
+
 - When to use scopes
 - Metadata conventions
 - Performance considerations
@@ -315,8 +316,9 @@ No migration needed. Existing code continues to work. To adopt:
 ## Conclusion
 
 These minimal, focused extensions enable powerful dev tooling while maintaining SignalTree's core philosophy:
+
 - Zero production cost
-- Progressive enhancement  
+- Progressive enhancement
 - Backward compatibility
 - Tree-shakeable features
 

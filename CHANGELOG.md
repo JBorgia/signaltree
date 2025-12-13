@@ -511,7 +511,7 @@ The following packages are now **deprecated** and will no longer receive updates
 - `@signaltree/memoization` → Use `withMemoization` from `@signaltree/core`
 - `@signaltree/devtools` → Use `withDevtools` from `@signaltree/core`
 - `@signaltree/entities` → Use entity helpers from `@signaltree/core`
-- `@signaltree/middleware` → Use `withMiddleware` from `@signaltree/core`
+- `@signaltree/middleware` → Removed in v5; use entity hooks/enhancers
 - `@signaltree/presets` → Use preset functions from `@signaltree/core`
 - `@signaltree/time-travel` → Use `withTimeTravel` from `@signaltree/core`
 
@@ -645,7 +645,7 @@ The following packages are now **deprecated** and will no longer receive updates
 - `@signaltree/memoization` → Use `withMemoization` from `@signaltree/core`
 - `@signaltree/devtools` → Use `withDevtools` from `@signaltree/core`
 - `@signaltree/entities` → Use entity helpers from `@signaltree/core`
-- `@signaltree/middleware` → Use `withMiddleware` from `@signaltree/core`
+- `@signaltree/middleware` → Removed in v5; use entity hooks/enhancers
 - `@signaltree/presets` → Use preset functions from `@signaltree/core`
 - `@signaltree/time-travel` → Use `withTimeTravel` from `@signaltree/core`
 
@@ -739,7 +739,7 @@ After initially removing synthetic implementations, benchmarks have been **prope
 
 **Middleware Systems**:
 
-- **SignalTree**: `withMiddleware()` - before/after state update interception
+- **SignalTree**: Middleware removed in v5; use entity tap/intercept hooks
 - **NgRx Store**: Meta-reducers - action interception wrapper pattern
 - **NgXs**: Plugin system - action lifecycle hooks
 - **Akita**: akitaPreUpdate - state transition hooks

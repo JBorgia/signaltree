@@ -1164,45 +1164,17 @@ function addAdmin() {
 ### Before (v4.x - Broken Middleware)
 
 ```typescript
-// Global middleware (broken)
-tree.addTap({
-  id: 'logger',
-  after: (action, payload, prevState, nextState) => {
-    console.log(action, payload); // action: string?
-  },
-});
-
-tree.addTap({
-  id: 'analytics',
-  after: (action) => {
-    analytics.track(action); // What action?
-  },
-});
-
-// Removing is hard
-tree.removeTap('logger');
-tree.removeTap('analytics');
+// Use entity hooks (tap/intercept) instead of global middleware
+// const loggerUnsub = tree.$.users.tap({ onAdd: (user) => console.log('User added:', user) });
+// const analyticsUnsub = tree.$.users.tap({ onAdd: (user) => analytics.track('user_created', { userId: user.id }) });
 ```
 
 ### After (v5.0 - Scoped Entity Hooks)
 
 ```typescript
-// Scoped entity hooks (fixed)
-const loggerUnsub = tree.$.users.tap({
-  onAdd: (user, id) => console.log('User added:', user),
-  onUpdate: (id, changes) => console.log('User updated:', id, changes),
-  onRemove: (id, user) => console.log('User removed:', id),
-});
-
-const analyticsUnsub = tree.$.users.tap({
-  onAdd: (user) => analytics.track('user_created', { userId: user.id }),
-  onUpdate: (id, changes) => analytics.track('user_updated', { userId: id }),
-  onRemove: (user) => analytics.track('user_deleted', { userId: user.id }),
-});
-
-// Easy unsubscribe
-loggerUnsub();
-analyticsUnsub();
+// Unsubscribe entity hooks
+// const unsub = tree.$.users.tap({...});
+// unsub();
 
 // Multiple entity types work independently
 tree.$.posts.tap({

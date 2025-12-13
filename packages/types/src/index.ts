@@ -370,10 +370,6 @@ export type SignalTree<T> = NodeAccessor<T> & {
   };
   getMetrics(): PerformanceMetrics;
 
-  /** Middleware */
-  addTap(middleware: Middleware<T>): void;
-  removeTap(id: string): void;
-
   /** Entity helpers */
   entities<E extends { id: string | number }>(
     entityKey?: keyof T
@@ -446,12 +442,6 @@ export interface TreeConfig {
 // ============================================
 // FEATURE TYPES
 // ============================================
-
-export interface Middleware<T> {
-  id: string;
-  before?: (action: string, payload: unknown, state: T) => boolean;
-  after?: (action: string, payload: unknown, state: T, newState: T) => void;
-}
 
 export interface PerformanceMetrics {
   updates: number;

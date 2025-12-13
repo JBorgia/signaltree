@@ -87,7 +87,6 @@ import {
   signalTree,
   withBatching,
   withEntities,
-  withMiddleware
 } from '@signaltree/core';`,
   };
 }

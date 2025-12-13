@@ -69,7 +69,7 @@ PACKAGES=(
     "memoization:This package has been consolidated into @signaltree/core. Please use: import { withMemoization } from '@signaltree/core'"
     "devtools:This package has been consolidated into @signaltree/core. Please use: import { withDevtools } from '@signaltree/core'"
     "entities:This package has been consolidated into @signaltree/core. Please use entity helpers from '@signaltree/core'"
-    "middleware:This package has been consolidated into @signaltree/core. Please use: import { withMiddleware } from '@signaltree/core'"
+    "middleware:Middleware was removed in v5. Use enhancers and entity hooks instead."
     "presets:This package has been consolidated into @signaltree/core. Please use preset functions from '@signaltree/core'"
     "time-travel:This package has been consolidated into @signaltree/core. Please use: import { withTimeTravel } from '@signaltree/core'"
 )

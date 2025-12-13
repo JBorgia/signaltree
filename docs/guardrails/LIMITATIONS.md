@@ -8,6 +8,6 @@
 | Recomputation stats | Metrics reset every 1s sliding window; very long-running tasks are clipped. | Persist `context.stats` snapshots externally if needed.             |
 | Nx integration      | Guardrails ships via the shared Nx Rollup target; no separate tsup build.   | Run `pnpm nx build guardrails` wherever you build/publish packages. |
 | Browser support     | Requires modern browsers with `structuredClone`; falls back to identity.    | Polyfill or disable deep diff analysis in legacy browsers.          |
-| Tree compatibility  | Trees must expose `addTap`/`removeTap`; otherwise guardrails auto-disables. | Wrap your tree or implement middleware hooks.                       |
+| Tree compatibility  | Requires path notifications/hooks; legacy middleware/tap APIs are removed.  | Ensure PathNotifier/entity hooks are enabled in the host tree.      |
 | Rule execution      | Async rules are best-effort; rejections are logged but do not fail updates. | Use idempotent rule logic and capture failures in custom reporter.  |
 | API stability       | `__guardrails` is dev-only and not part of public API guarantees.           | Access via the provided TypeScript augmentation interfaces.         |
