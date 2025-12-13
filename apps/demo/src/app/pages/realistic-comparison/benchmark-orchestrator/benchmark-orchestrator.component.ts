@@ -1,10 +1,23 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, computed, effect, ElementRef, inject, OnDestroy, signal, ViewChild } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  inject,
+  OnDestroy,
+  signal,
+  ViewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { Subject } from 'rxjs';
 
-import { RealisticBenchmarkService, RealisticBenchmarkSubmission } from '../../../services/realistic-benchmark.service';
+import {
+  RealisticBenchmarkService,
+  RealisticBenchmarkSubmission,
+} from '../../../services/realistic-benchmark.service';
 import { BenchmarkTestCase, ENHANCED_TEST_CASES } from './scenario-definitions';
 import { BenchmarkResult as ServiceBenchmarkResult } from './services/_types';
 import { AkitaBenchmarkService } from './services/akita-benchmark.service';
@@ -2275,36 +2288,16 @@ export class BenchmarkOrchestratorComponent
             )
           );
 
-        // Middleware
-        case 'single-middleware':
-          if (!svc.runSingleMiddlewareBenchmark) {
-            return -1;
-          }
-          return await maybeNormalize(
-            svc.runSingleMiddlewareBenchmark(
-              BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR
-            )
-          );
-        case 'multiple-middleware':
-          if (!svc.runMultipleMiddlewareBenchmark) {
-            return -1;
-          }
-          return await maybeNormalize(
-            svc.runMultipleMiddlewareBenchmark(
-              5,
-              BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR
-            )
-          );
-      case 'ngrx-signals':
-        return this.ngrxSignalsBench;
-      case 'akita':
-        return this.akitaBench;
-      case 'elf':
-        return this.elfBench;
-      case 'ngxs':
-        return this.ngxsBench;
-      default:
-        return null;
+        default:
+          return -1;
+      }
+    } catch (err) {
+      console.warn('Benchmark execution failed:', {
+        libraryId,
+        scenarioId,
+        error: err,
+      });
+      return -1;
     }
   }
 
@@ -3511,6 +3504,20 @@ export class BenchmarkOrchestratorComponent
       return avgDiff > 0.2; // Show suggestions if average difference > 0.2
     });
   });
+
+  private getBenchmarkService(libraryId: string): BenchmarkService | undefined {
+    const svcMap: Record<string, BenchmarkService | undefined> = {
+      signaltree: this.stBench,
+      'signaltree-enterprise': this.stBench,
+      'ngrx-store': this.ngrxBench,
+      'ngrx-signals': this.ngrxSignalsBench,
+      akita: this.akitaBench,
+      elf: this.elfBench,
+      ngxs: this.ngxsBench,
+    };
+
+    return svcMap[libraryId];
+  }
 
   private getPresetWeights(presetId: string): Record<string, number> | null {
     const presets: Record<string, Record<string, number>> = {
