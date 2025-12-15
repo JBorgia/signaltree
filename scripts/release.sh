@@ -454,32 +454,38 @@ if [ ${#FAILED_PACKAGES[@]} -gt 0 ]; then
 fi
 
 # Step 6: Create and push tag (AFTER successful publish)
-print_step "Creating git tag v$NEW_VERSION..."
-git tag "v$NEW_VERSION" || {
-    print_error "Tag v$NEW_VERSION already exists!"
-    rollback_versions
-    exit 1
-}
+# Tagging must be idempotent and must NEVER roll back versions after a successful publish
+TAG_CREATED=0
+print_step "Creating git tag v$NEW_VERSION (idempotent)..."
+if git rev-parse -q --verify "refs/tags/v$NEW_VERSION" >/dev/null; then
+    print_warning "Tag v$NEW_VERSION already exists locally; skipping tag creation"
+else
+    if git tag "v$NEW_VERSION"; then
+        TAG_CREATED=1
+        print_success "Created tag v$NEW_VERSION"
+    else
+        print_warning "Could not create tag v$NEW_VERSION (may already exist remotely). Skipping tag creation"
+    fi
+fi
 
 # Determine current branch and push to it (safer than hardcoding 'main')
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD || echo "main")
-print_step "Pushing changes and tag to GitHub (branch: $CURRENT_BRANCH)..."
-git push origin "$CURRENT_BRANCH" || {
-    print_error "Failed to push changes to GitHub!"
-    # Remove the tag we just created
-    git tag -d "v$NEW_VERSION" 2>/dev/null || true
-    rollback_versions
-    exit 1
-}
-git push origin "v$NEW_VERSION" || {
-    print_error "Failed to push tag to GitHub!"
-    # Try to delete the remote tag if it was created
-    git push origin --delete "v$NEW_VERSION" 2>/dev/null || true
-    git tag -d "v$NEW_VERSION" 2>/dev/null || true
-    rollback_versions
-    exit 1
-}
-print_success "Changes and tag pushed to GitHub"
+print_step "Pushing changes to GitHub (branch: $CURRENT_BRANCH)..."
+if ! git push origin "$CURRENT_BRANCH"; then
+    print_warning "Failed to push changes to GitHub. Please push manually: git push origin $CURRENT_BRANCH"
+fi
+
+if [ "$TAG_CREATED" -eq 1 ]; then
+    print_step "Pushing tag v$NEW_VERSION to GitHub..."
+    if git push origin "v$NEW_VERSION"; then
+        print_success "Tag v$NEW_VERSION pushed to GitHub"
+    else
+        print_warning "Failed to push tag v$NEW_VERSION. It may already exist remotely."
+        print_warning "If needed, recreate or move the tag manually: git tag -d v$NEW_VERSION && git tag v$NEW_VERSION && git push origin v$NEW_VERSION --force"
+    fi
+else
+    print_warning "Skipping tag push because tag was not created in this run."
+fi
 
 # Step 7: Clean up backup file and temporary npm credentials (release succeeded)
 rm -f .version_backup
