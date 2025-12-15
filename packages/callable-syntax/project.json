@@ -22,7 +22,6 @@
         "outputPath": "dist/packages/callable-syntax",
         "format": ["esm"],
         "additionalEntryPoints": [
-          "packages/callable-syntax/src/index.ts",
           "packages/callable-syntax/src/lib/vite-plugin.ts",
           "packages/callable-syntax/src/lib/webpack-plugin.ts",
           "packages/callable-syntax/src/augmentation.ts"

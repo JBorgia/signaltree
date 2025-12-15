@@ -22,7 +22,6 @@
         "outputPath": "dist/packages/ng-forms",
         "format": ["esm"],
         "additionalEntryPoints": [
-          "packages/ng-forms/src/index.ts",
           "packages/ng-forms/src/audit/index.ts"
         ],
         "assets": [
