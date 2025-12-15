@@ -372,14 +372,10 @@ for package in "${PACKAGES[@]}"; do
 
         # Attempt publish with retry on authentication failure
         PUBLISH_SUCCESS=false
-        OTP_CODE=""
         for attempt in 1 2; do
             PUBLISH_CMD="npm publish --access public"
             if [ -n "$NPM_TOKEN" ]; then
                 PUBLISH_CMD="$PUBLISH_CMD --userconfig ~/.npmrc.signaltree-temp"
-            fi
-            if [ -n "$OTP_CODE" ]; then
-                PUBLISH_CMD="$PUBLISH_CMD --otp=$OTP_CODE"
             fi
             
             $PUBLISH_CMD 2>&1 | tee /tmp/npm_publish_$package.log
@@ -405,36 +401,23 @@ for package in "${PACKAGES[@]}"; do
             # Check if it's an OTP error
             elif grep -qE "EOTP|one-time password" /tmp/npm_publish_$package.log 2>/dev/null; then
                 if [ $attempt -eq 1 ]; then
-                    print_warning "One-time password required for npm publish (2FA enabled)"
-                    read -p "Enter OTP code from your authenticator: " OTP_CODE
-                    if [ -z "$OTP_CODE" ]; then
-                        print_error "OTP code not provided"
-                        FAILED_PACKAGES+=("$package")
-                        break
-                    fi
-                    print_step "Retrying publish for @signaltree/$package with OTP..."
-                    continue  # Retry with OTP in next attempt
+                    print_warning "Browser-based 2FA validation required"
+                    print_step "Opening npm login in browser..."
+                    npm login --auth-type=web
+                    print_step "Retrying publish for @signaltree/$package..."
+                    continue  # Retry with browser auth
                 else
-                    # OTP provided but still failing - likely invalid/expired
-                    print_error "npm publish failed after OTP provided! (OTP may have expired)"
+                    print_error "npm publish failed after browser authentication!"
                     FAILED_PACKAGES+=("$package")
                     break
                 fi
             # Check for other authentication errors (E401, etc.)
             elif grep -qE "E401|authentication" /tmp/npm_publish_$package.log 2>/dev/null; then
                 if [ $attempt -eq 1 ]; then
-                    print_warning "Authentication required. Opening browser for npm login..."
-                    cd - > /dev/null
-                    if npm login --auth-type=web; then
-                        cd "$DIST_PATH"
-                        print_step "Login successful. Retrying publish for @signaltree/$package..."
-                        continue
-                    else
-                        print_error "npm login failed or was cancelled"
-                        cd "$DIST_PATH"
-                        FAILED_PACKAGES+=("$package")
-                        break
-                    fi
+                    print_warning "Authentication error detected. Opening npm login..."
+                    npm login --auth-type=web
+                    print_step "Retrying publish for @signaltree/$package..."
+                    continue
                 else
                     print_error "npm publish failed for @signaltree/$package after authentication retry!"
                     FAILED_PACKAGES+=("$package")
