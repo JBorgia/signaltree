@@ -392,13 +392,14 @@ for package in "${PACKAGES[@]}"; do
                     PUBLISH_SUCCESS=true
                     break
                 # Check if it's an authentication error (EOTP or auth failure)
-                elif grep -qE "EOTP|E401|authentication|login" /tmp/npm_publish_$package.log; then
+                elif grep -qE "EOTP|E401|authentication|one-time password" /tmp/npm_publish_$package.log; then
                     if [ $attempt -eq 1 ]; then
                         print_warning "Authentication required. Please log in to npm..."
                         cd - > /dev/null
                         npm login --auth-type=web || npm login
                         cd "$DIST_PATH"
                         print_step "Retrying publish for @signaltree/$package..."
+                        continue  # Retry the loop
                     else
                         print_error "npm publish failed for @signaltree/$package after authentication retry!"
                         FAILED_PACKAGES+=("$package")
