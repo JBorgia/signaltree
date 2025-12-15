@@ -344,7 +344,95 @@ else
     }
 fi
 
-# Step 5: Create and push tag
+# Step 5: Publish all packages to npm (BEFORE tagging/pushing)
+print_step "Publishing all packages to npm..."
+
+PUBLISHED_PACKAGES=()
+FAILED_PACKAGES=()
+
+# Create temporary .npmrc with token if provided
+if [ -n "$NPM_TOKEN" ]; then
+    print_step "Setting up npm authentication with provided token"
+    echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/.npmrc.signaltree-temp
+fi
+
+for package in "${PACKAGES[@]}"; do
+    DIST_PATH="./dist/packages/$package"
+    if [ -d "$DIST_PATH" ]; then
+        print_step "Publishing @signaltree/$package..."
+        cd "$DIST_PATH"
+
+        # Check if package.json exists in dist
+        if [ ! -f "package.json" ]; then
+            print_warning "package.json not found in $DIST_PATH, skipping..."
+            FAILED_PACKAGES+=("$package")
+            cd - > /dev/null
+            continue
+        fi
+
+        # Attempt publish with retry on authentication failure
+        PUBLISH_SUCCESS=false
+        for attempt in 1 2; do
+            if [ -n "$NPM_TOKEN" ]; then
+                npm publish --access public --userconfig ~/.npmrc.signaltree-temp 2>&1 | tee /tmp/npm_publish_$package.log
+            else
+                npm publish --access public 2>&1 | tee /tmp/npm_publish_$package.log
+            fi
+
+            if [ ${PIPESTATUS[0]} -eq 0 ]; then
+                print_success "Published @signaltree/$package successfully"
+                PUBLISHED_PACKAGES+=("$package")
+                PUBLISH_SUCCESS=true
+                break
+            else
+                # Check if it's a "cannot publish over existing version" error
+                if grep -q "cannot publish over the previously published versions" /tmp/npm_publish_$package.log; then
+                    print_warning "@signaltree/$package@$NEW_VERSION already published, skipping..."
+                    PUBLISHED_PACKAGES+=("$package")
+                    PUBLISH_SUCCESS=true
+                    break
+                # Check if it's an authentication error (EOTP or auth failure)
+                elif grep -qE "EOTP|E401|authentication|login" /tmp/npm_publish_$package.log; then
+                    if [ $attempt -eq 1 ]; then
+                        print_warning "Authentication required. Please log in to npm..."
+                        cd - > /dev/null
+                        npm login --auth-type=web || npm login
+                        cd "$DIST_PATH"
+                        print_step "Retrying publish for @signaltree/$package..."
+                    else
+                        print_error "npm publish failed for @signaltree/$package after authentication retry!"
+                        FAILED_PACKAGES+=("$package")
+                        break
+                    fi
+                else
+                    print_error "npm publish failed for @signaltree/$package!"
+                    FAILED_PACKAGES+=("$package")
+                    break
+                fi
+            fi
+        done
+
+        cd - > /dev/null
+        rm -f /tmp/npm_publish_$package.log
+    else
+        print_warning "Dist folder not found for $package at $DIST_PATH, skipping..."
+        FAILED_PACKAGES+=("$package")
+    fi
+done
+
+# Summary
+echo ""
+if [ ${#PUBLISHED_PACKAGES[@]} -gt 0 ]; then
+    print_success "Successfully published ${#PUBLISHED_PACKAGES[@]} package(s)"
+fi
+if [ ${#FAILED_PACKAGES[@]} -gt 0 ]; then
+    print_warning "Failed or skipped ${#FAILED_PACKAGES[@]} package(s): ${FAILED_PACKAGES[*]}"
+    print_warning "Publishing aborted; will not create or push git tags"
+    rollback_versions
+    exit 1
+fi
+
+# Step 6: Create and push tag (AFTER successful publish)
 print_step "Creating git tag v$NEW_VERSION..."
 git tag "v$NEW_VERSION" || {
     print_error "Tag v$NEW_VERSION already exists!"
@@ -371,68 +459,6 @@ git push origin "v$NEW_VERSION" || {
     exit 1
 }
 print_success "Changes and tag pushed to GitHub"
-
-# Step 6: Publish all packages to npm
-print_step "Publishing all packages to npm..."
-
-PUBLISHED_PACKAGES=()
-FAILED_PACKAGES=()
-
-# Create temporary .npmrc with token if provided
-if [ -n "$NPM_TOKEN" ]; then
-    print_step "Setting up npm authentication with provided token"
-    echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/.npmrc.signaltree-temp
-fi
-
-for package in "${PACKAGES[@]}"; do
-    DIST_PATH="./dist/packages/$package"
-    if [ -d "$DIST_PATH" ]; then
-        print_step "Publishing @signaltree/$package..."
-        cd "$DIST_PATH"
-
-        # Check if package.json exists in dist
-        if [ ! -f "package.json" ]; then
-            print_warning "package.json not found in $DIST_PATH, skipping..."
-            FAILED_PACKAGES+=("$package")
-            cd - > /dev/null
-            continue
-        fi
-
-        if [ -n "$NPM_TOKEN" ]; then
-            npm publish --access public --userconfig ~/.npmrc.signaltree-temp 2>&1 | tee /tmp/npm_publish_$package.log
-        else
-            npm publish --access public 2>&1 | tee /tmp/npm_publish_$package.log
-        fi
-        if [ ${PIPESTATUS[0]} -eq 0 ]; then
-            print_success "Published @signaltree/$package successfully"
-            PUBLISHED_PACKAGES+=("$package")
-        else
-            # Check if it's a "cannot publish over existing version" error
-            if grep -q "cannot publish over the previously published versions" /tmp/npm_publish_$package.log; then
-                print_warning "@signaltree/$package@$NEW_VERSION already published, skipping..."
-                PUBLISHED_PACKAGES+=("$package")
-            else
-                print_error "npm publish failed for @signaltree/$package!"
-                FAILED_PACKAGES+=("$package")
-            fi
-        fi
-        cd - > /dev/null
-        rm -f /tmp/npm_publish_$package.log
-    else
-        print_warning "Dist folder not found for $package at $DIST_PATH, skipping..."
-        FAILED_PACKAGES+=("$package")
-    fi
-done
-
-# Summary
-echo ""
-if [ ${#PUBLISHED_PACKAGES[@]} -gt 0 ]; then
-    print_success "Successfully published ${#PUBLISHED_PACKAGES[@]} package(s)"
-fi
-if [ ${#FAILED_PACKAGES[@]} -gt 0 ]; then
-    print_warning "Failed or skipped ${#FAILED_PACKAGES[@]} package(s): ${FAILED_PACKAGES[*]}"
-    print_warning "You may need to fix build issues and publish these manually"
-fi
 
 # Step 7: Clean up backup file and temporary npm credentials (release succeeded)
 rm -f .version_backup

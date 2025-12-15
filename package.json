@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/workspace",
-  "version": "5.0.2",
+  "version": "5.0.0",
   "license": "BSL-1.1",
   "funding": {
     "type": "github",
@@ -128,7 +128,7 @@
     "@angular/router": "~20.3.11",
     "@datorama/akita": "^8.0.1",
     "@ngneat/elf": "^2.5.1",
-    "@ngneat/elf-entities": "^5.0.2",
+    "@ngneat/elf-entities": "^5.0.0",
     "@ngrx/effects": "^20.1.0",
     "@ngrx/signals": "^20.1.0",
     "@ngrx/store": "^20.1.0",
