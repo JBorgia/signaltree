@@ -377,7 +377,7 @@ for package in "${PACKAGES[@]}"; do
             if [ -n "$NPM_TOKEN" ]; then
                 PUBLISH_CMD="$PUBLISH_CMD --userconfig ~/.npmrc.signaltree-temp"
             fi
-            
+
             $PUBLISH_CMD 2>&1 | tee /tmp/npm_publish_$package.log
 
             PUBLISH_EXIT_CODE=${PIPESTATUS[0]}
