@@ -350,15 +350,13 @@ print_step "Publishing all packages to npm..."
 PUBLISHED_PACKAGES=()
 FAILED_PACKAGES=()
 
-# Do browser-based login ONCE before all publishes to ensure fresh 2FA token
-# This handles accounts with 2FA enabled - the token expires in ~30 seconds
-print_step "Performing npm authentication (browser-based for 2FA)..."
-npm login --auth-type=web
-
-# Create temporary .npmrc with token if provided
+# Authentication: prefer NPM_TOKEN (automation token) to bypass OTP; otherwise use web login
 if [ -n "$NPM_TOKEN" ]; then
-    print_step "Setting up npm authentication with provided token"
+    print_step "Using NPM_TOKEN for npm authentication"
     echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/.npmrc.signaltree-temp
+else
+    print_step "Performing npm authentication (browser-based for 2FA)..."
+    npm login --auth-type=web
 fi
 
 for package in "${PACKAGES[@]}"; do
