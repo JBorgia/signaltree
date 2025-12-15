@@ -18,7 +18,7 @@ const barrelIndexPlugin = {
   generateBundle(options, bundle) {
     // If index.js doesn't exist (because Rollup optimized it away), create it
     // by re-exporting from the actual modules
-    if (!Object.keys(bundle).some(k => k.includes('dist/index'))) {
+    if (!Object.keys(bundle).some((k) => k.includes('dist/index'))) {
       const indexContent = `export * from './lib/callable-syntax.js';
 export * from './lib/vite-plugin.js';
 export * from './lib/webpack-plugin.js';
@@ -35,12 +35,12 @@ export * from './augmentation.js';
 
 export default (config, options = {}) => {
   const result = baseConfig(config, options);
-  
+
   // Add the barrel index plugin to ensure main entry point is generated
   if (!result.plugins) {
     result.plugins = [];
   }
   result.plugins.push(barrelIndexPlugin);
-  
+
   return result;
 };
