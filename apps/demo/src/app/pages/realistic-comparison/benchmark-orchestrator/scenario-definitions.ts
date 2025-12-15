@@ -17,6 +17,7 @@ export interface BenchmarkTestCase {
   selected: boolean;
   signalTreeOnly?: boolean; // True if this scenario is only supported by SignalTree
   disabledReason?: string; // Optional explanation why a scenario was auto-disabled
+  partialUnsupportedBy?: string[]; // Libraries that partially support the scenario
   category: 'core' | 'async' | 'time-travel' | 'middleware' | 'full-stack';
   purpose: string; // What this test specifically measures
   frequencyWeight?: number; // Multiplier for real-world frequency (0.1 = very rare, 3.0 = very common)

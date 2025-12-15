@@ -690,13 +690,22 @@ export interface DevToolsConfig {
 /**
  * Type utilities for entities
  */
-export type EntityType<T> = T extends EntitySignal<infer E, unknown>
+export type EntityType<T> = T extends EntitySignal<
+  infer E,
+  infer K extends string | number
+>
   ? E
   : never;
-export type EntityKeyType<T> = T extends EntitySignal<unknown, infer K>
+export type EntityKeyType<T> = T extends EntitySignal<
+  unknown,
+  infer K extends string | number
+>
   ? K
   : never;
-export type IsEntityMap<T> = T extends EntityMapMarker<unknown, unknown>
+export type IsEntityMap<T> = T extends EntityMapMarker<
+  unknown,
+  infer K extends string | number
+>
   ? true
   : false;
 

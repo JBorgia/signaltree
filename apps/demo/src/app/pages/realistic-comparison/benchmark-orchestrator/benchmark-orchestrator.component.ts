@@ -1,23 +1,10 @@
 import { CommonModule } from '@angular/common';
-import {
-  AfterViewInit,
-  Component,
-  computed,
-  effect,
-  ElementRef,
-  inject,
-  OnDestroy,
-  signal,
-  ViewChild,
-} from '@angular/core';
+import { AfterViewInit, Component, computed, effect, ElementRef, inject, OnDestroy, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { Subject } from 'rxjs';
 
-import {
-  RealisticBenchmarkService,
-  RealisticBenchmarkSubmission,
-} from '../../../services/realistic-benchmark.service';
+import { RealisticBenchmarkService, RealisticBenchmarkSubmission } from '../../../services/realistic-benchmark.service';
 import { BenchmarkTestCase, ENHANCED_TEST_CASES } from './scenario-definitions';
 import { BenchmarkResult as ServiceBenchmarkResult } from './services/_types';
 import { AkitaBenchmarkService } from './services/akita-benchmark.service';
@@ -93,6 +80,7 @@ interface ExtendedBenchmarkResult extends BenchmarkResult {
   appliedEnhancers: unknown[];
   rawSamples: number[];
   timestamp: string;
+  persistedAt?: string;
 }
 
 interface LibrarySummary {
@@ -2034,6 +2022,17 @@ export class BenchmarkOrchestratorComponent
     config: BenchmarkConfig,
     options?: { overrideEnterprise?: boolean }
   ): Promise<number> {
+    // Narrow potential service return shapes into a structured result we can inspect safely.
+    const isStructuredResult = (
+      res: unknown
+    ): res is Partial<
+      ServiceBenchmarkResult & {
+        samples?: number[];
+        rawSamples?: number[];
+        median?: number;
+      }
+    > => typeof res === 'object' && res !== null;
+
     // Use only real library benchmarks - check for capability support
     const svc = this.getBenchmarkService(libraryId);
     if (!svc) {
@@ -2075,7 +2074,7 @@ export class BenchmarkOrchestratorComponent
       // representation including which enhancers were active and raw samples
       // so automation can audit the run accurately.
       if (
-        res &&
+        isStructuredResult(res) &&
         (typeof res.durationMs === 'number' ||
           Array.isArray(res.samples) ||
           Array.isArray(res.rawSamples))
@@ -2100,7 +2099,7 @@ export class BenchmarkOrchestratorComponent
             appliedEnhancers: win.__SIGNALTREE_ACTIVE_ENHANCERS__ || [],
             rawSamples: samplesArray,
             persistedAt: new Date().toISOString(),
-          };
+          } as ExtendedBenchmarkResult;
         } catch (e) {
           // non-fatal
           void e;
