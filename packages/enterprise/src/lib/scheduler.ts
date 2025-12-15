@@ -70,7 +70,8 @@ async function drain() {
   if (config.instrumentation) metrics.drainCycles++;
   let tasksSinceYield = 0;
   while (q.length) {
-    const t = q.shift()!;
+    const t = q.shift();
+    if (!t) break;
     try {
       t();
     } catch (e) {

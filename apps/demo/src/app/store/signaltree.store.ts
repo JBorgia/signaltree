@@ -90,6 +90,7 @@ export class DemoAppStore {
   }
 
   setBenchmarkResults(results: Record<string, number>) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (this.tree.$.benchmark['results'] as any).set(results);
   }
 

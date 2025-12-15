@@ -1,4 +1,10 @@
-import { effect, isSignal, Signal, signal, WritableSignal } from '@angular/core';
+import {
+  effect,
+  isSignal,
+  Signal,
+  signal,
+  WritableSignal,
+} from '@angular/core';
 import { deepEqual, isBuiltInObject, parsePath } from '@signaltree/shared';
 
 /** Symbol to mark callable signals - using global symbol to match across files */
@@ -107,7 +113,6 @@ export function toWritableSignal<T>(node: NodeAccessor<T>): WritableSignal<T> {
   };
 
   // Override update to write back to the NodeAccessor
-  const originalUpdate = sig.update.bind(sig);
   sig.update = (updater: (current: T) => T) => {
     const newValue = updater(sig());
     sig.set(newValue);

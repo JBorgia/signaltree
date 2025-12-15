@@ -663,7 +663,7 @@ export interface LogEntry {
 export interface ValidationConfig<T> {
   validators: Array<{
     match: (path: string) => boolean;
-    validate: (value: unknown, path: string) => void | never;
+    validate: (value: T, path: string) => void | never;
   }>;
   onError?: (error: Error, path: string) => void;
 }
@@ -690,11 +690,13 @@ export interface DevToolsConfig {
 /**
  * Type utilities for entities
  */
-export type EntityType<T> = T extends EntitySignal<infer E, any> ? E : never;
+export type EntityType<T> = T extends EntitySignal<infer E, unknown>
+  ? E
+  : never;
 export type EntityKeyType<T> = T extends EntitySignal<unknown, infer K>
   ? K
   : never;
-export type IsEntityMap<T> = T extends EntityMapMarker<unknown, any>
+export type IsEntityMap<T> = T extends EntityMapMarker<unknown, unknown>
   ? true
   : false;
 

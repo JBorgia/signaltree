@@ -582,6 +582,7 @@ export function withMemoization<T>(
 
     // Override tree.memoize() to provide actual memoization
     // The stub implementation just wraps in computed() without caching
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (tree as any).memoize = <R>(
       fn: (state: T) => R,
       cacheKey?: string

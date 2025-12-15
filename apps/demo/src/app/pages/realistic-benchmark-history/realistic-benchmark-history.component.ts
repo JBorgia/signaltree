@@ -1,14 +1,21 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit, signal, ViewEncapsulation } from '@angular/core';
+import {
+  Component,
+  inject,
+  OnInit,
+  signal,
+  ViewEncapsulation,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
+import { BenchmarkResultsTableComponent } from '../../components/benchmark-results-table/benchmark-results-table.component';
 import {
   RealisticBenchmarkHistory,
   RealisticBenchmarkService,
   RealisticBenchmarkSubmission,
 } from '../../services/realistic-benchmark.service';
-import { BenchmarkResultsTableComponent } from '../../components/benchmark-results-table/benchmark-results-table.component';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 @Component({
   selector: 'app-realistic-benchmark-history',
   standalone: true,
@@ -29,7 +36,9 @@ export class RealisticBenchmarkHistoryComponent implements OnInit {
   detailsLoading = signal(false);
   detailsError = signal('');
   selectedBenchmark = signal<RealisticBenchmarkHistory | null>(null);
-  selectedBenchmarkFull = signal<(RealisticBenchmarkSubmission & { transformedResults?: any[] }) | null>(null);
+  selectedBenchmarkFull = signal<
+    (RealisticBenchmarkSubmission & { transformedResults?: any[] }) | null
+  >(null);
 
   // Filters
   selectedLibrary = signal('all');
@@ -224,34 +233,42 @@ export class RealisticBenchmarkHistoryComponent implements OnInit {
 
     // First pass: collect all scenarios and their library results
     Object.entries(data.results.libraries).forEach(([libName, libData]) => {
-      Object.entries(libData.scenarios).forEach(([scenarioId, scenarioData]) => {
-        if (!scenarioMap.has(scenarioId)) {
-          scenarioMap.set(scenarioId, {
-            name: scenarioData.scenarioName,
-            winner: '',
-            marginOfVictory: 0,
-            reliable: true,
-            libraryResults: {}
-          });
-        }
+      Object.entries(libData.scenarios).forEach(
+        ([scenarioId, scenarioData]) => {
+          if (!scenarioMap.has(scenarioId)) {
+            scenarioMap.set(scenarioId, {
+              name: scenarioData.scenarioName,
+              winner: '',
+              marginOfVictory: 0,
+              reliable: true,
+              libraryResults: {},
+            });
+          }
 
-        const scenario = scenarioMap.get(scenarioId);
-        scenario.libraryResults[libName] = {
-          opsPerSec: scenarioData.opsPerSec,
-          time: scenarioData.median,
-          version: libData.version || data.results.libraryVersions?.[libName] || undefined
-        };
-        
-        // Store library versions at the result level for easy access
-        if (!scenario.libraryVersions) {
-          scenario.libraryVersions = {};
+          const scenario = scenarioMap.get(scenarioId);
+          scenario.libraryResults[libName] = {
+            opsPerSec: scenarioData.opsPerSec,
+            time: scenarioData.median,
+            version:
+              libData.version ||
+              data.results.libraryVersions?.[libName] ||
+              undefined,
+          };
+
+          // Store library versions at the result level for easy access
+          if (!scenario.libraryVersions) {
+            scenario.libraryVersions = {};
+          }
+          scenario.libraryVersions[libName] =
+            libData.version ||
+            data.results.libraryVersions?.[libName] ||
+            'unknown';
         }
-        scenario.libraryVersions[libName] = libData.version || data.results.libraryVersions?.[libName] || 'unknown';
-      });
+      );
     });
 
     // Second pass: determine winners and margins
-    const results = Array.from(scenarioMap.values()).map(scenario => {
+    const results = Array.from(scenarioMap.values()).map((scenario) => {
       const libs = Object.entries(scenario.libraryResults) as [string, any][];
       libs.sort((a, b) => b[1].opsPerSec - a[1].opsPerSec);
 
@@ -260,7 +277,8 @@ export class RealisticBenchmarkHistoryComponent implements OnInit {
         if (libs.length > 1) {
           const winnerOps = libs[0][1].opsPerSec;
           const secondOps = libs[1][1].opsPerSec;
-          scenario.marginOfVictory = ((winnerOps - secondOps) / secondOps) * 100;
+          scenario.marginOfVictory =
+            ((winnerOps - secondOps) / secondOps) * 100;
         }
       }
 
@@ -297,31 +315,33 @@ export class RealisticBenchmarkHistoryComponent implements OnInit {
   }
 
   getWeightedResultsArray(libraries: Record<string, any>): Array<any> {
-    return Object.entries(libraries).map(([name, data]) => ({
-      name,
-      ...data
-    })).sort((a, b) => a.rank - b.rank);
+    return Object.entries(libraries)
+      .map(([name, data]) => ({
+        name,
+        ...data,
+      }))
+      .sort((a, b) => a.rank - b.rank);
   }
 
   getLibraryVersion(libraryName: string): string | null {
     const full = this.selectedBenchmarkFull();
     if (!full) return null;
-    
+
     // Try to get from libraryVersions
     if (full.results.libraryVersions) {
       // Map library name to ID
       const libraryIdMap: Record<string, string> = {
-        'SignalTree': 'signaltree',
+        SignalTree: 'signaltree',
         'NgRx Store': 'ngrx-store',
         'NgRx Signals': 'ngrx-signals',
-        'Akita': 'akita',
-        'Elf': 'elf',
-        'NGXS': 'ngxs',
+        Akita: 'akita',
+        Elf: 'elf',
+        NGXS: 'ngxs',
       };
       const libraryId = libraryIdMap[libraryName] || libraryName.toLowerCase();
       return full.results.libraryVersions[libraryId] || null;
     }
-    
+
     // Try to get from library data
     const libraryEntry = Object.entries(full.results.libraries).find(
       ([, lib]) => lib.name === libraryName
@@ -329,8 +349,7 @@ export class RealisticBenchmarkHistoryComponent implements OnInit {
     if (libraryEntry && libraryEntry[1].version) {
       return libraryEntry[1].version;
     }
-    
+
     return null;
   }
-
 }

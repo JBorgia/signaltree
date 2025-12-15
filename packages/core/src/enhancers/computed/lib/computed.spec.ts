@@ -1,8 +1,8 @@
 import { signalTree } from '../../../lib/signal-tree';
 import { computedEnhancer, createComputed } from './computed';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 describe('Computed Enhancer', () => {
-
   it('should enhance tree with computed capabilities', () => {
     const tree = signalTree({ count: 0 }).with(computedEnhancer());
 

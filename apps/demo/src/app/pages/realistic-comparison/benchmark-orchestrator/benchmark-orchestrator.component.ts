@@ -89,6 +89,12 @@ interface BenchmarkResult {
   memoryDeltaMB?: number;
 }
 
+interface ExtendedBenchmarkResult extends BenchmarkResult {
+  appliedEnhancers: unknown[];
+  rawSamples: number[];
+  timestamp: string;
+}
+
 interface LibrarySummary {
   name: string;
   color: string;
@@ -259,10 +265,13 @@ export class BenchmarkOrchestratorComponent
   // Allow changing the memo mode at runtime via the UI select. This updates
   // the URL so exporter automation can drive A/B using query params.
   setMemoMode(mode: string | EventTarget | null) {
-    const m = typeof mode === 'string' ? mode : (mode as any)?.value; // eslint-disable-line @typescript-eslint/no-explicit-any
+    const m =
+      typeof mode === 'string'
+        ? mode
+        : (mode as { value?: string } | null)?.value;
     if (!(m === 'off' || m === 'light' || m === 'shallow' || m === 'full'))
       return;
-    this.memoMode.set(m as any); // eslint-disable-line @typescript-eslint/no-explicit-any
+    this.memoMode.set(m);
     try {
       const url = new URL(window.location.href);
       url.searchParams.set('memo', m);
@@ -758,9 +767,7 @@ export class BenchmarkOrchestratorComponent
     this.scenarioSelectionVersion();
     // Include scenarios even if partially unsupported; exclude only fully disabled/hidden ones.
     return this.testCases.filter(
-      (
-        s: any // eslint-disable-line @typescript-eslint/no-explicit-any
-      ) => s.selected && (!s.disabledReason || s.partialUnsupportedBy)
+      (s) => s.selected && (!s.disabledReason || s.partialUnsupportedBy)
     );
   });
 
@@ -2049,10 +2056,17 @@ export class BenchmarkOrchestratorComponent
     // Helper: normalize service return into numeric duration and persist
     // structured result under window.__LAST_BENCHMARK_EXTENDED_RESULTS__.
     const maybeNormalize = async (
-      p: Promise<any> | undefined // eslint-disable-line @typescript-eslint/no-explicit-any
+      p: Promise<unknown> | undefined
     ): Promise<number> => {
       if (!p) return -1;
       const res = await p;
+      const win = window as unknown as {
+        __LAST_BENCHMARK_EXTENDED_RESULTS__?: Record<
+          string,
+          Record<string, ExtendedBenchmarkResult>
+        >;
+        __SIGNALTREE_ACTIVE_ENHANCERS__?: unknown[];
+      };
 
       // If the service returned a raw number, that's the duration
       if (typeof res === 'number') return res;
@@ -2067,8 +2081,8 @@ export class BenchmarkOrchestratorComponent
           Array.isArray(res.rawSamples))
       ) {
         try {
-          const ext = (window as any).__LAST_BENCHMARK_EXTENDED_RESULTS__ || {}; // eslint-disable-line @typescript-eslint/no-explicit-any
-          (window as any).__LAST_BENCHMARK_EXTENDED_RESULTS__ = ext; // eslint-disable-line @typescript-eslint/no-explicit-any
+          const ext = win.__LAST_BENCHMARK_EXTENDED_RESULTS__ || {};
+          win.__LAST_BENCHMARK_EXTENDED_RESULTS__ = ext;
           ext[libraryId] = ext[libraryId] || {};
 
           // Normalize a rawSamples array if present or derive from durationMs
@@ -2083,8 +2097,7 @@ export class BenchmarkOrchestratorComponent
           ext[libraryId][scenarioId] = {
             ...(typeof res === 'object' ? res : { durationMs: res }),
             // capture the orchestrator-requested enhancers (SignalTree only)
-            appliedEnhancers:
-              (window as any).__SIGNALTREE_ACTIVE_ENHANCERS__ || [], // eslint-disable-line @typescript-eslint/no-explicit-any
+            appliedEnhancers: win.__SIGNALTREE_ACTIVE_ENHANCERS__ || [],
             rawSamples: samplesArray,
             persistedAt: new Date().toISOString(),
           };
@@ -2441,8 +2454,12 @@ export class BenchmarkOrchestratorComponent
     };
     // Expose scaling for services that optionally inspect globals
     try {
-      (window as any).__SIGNALTREE_LIB_COUNT__ = libCount; // eslint-disable-line @typescript-eslint/no-explicit-any
-      (window as any).__SIGNALTREE_ITERATION_SCALE__ = scaleFactor; // eslint-disable-line @typescript-eslint/no-explicit-any
+      const win = window as unknown as {
+        __SIGNALTREE_LIB_COUNT__?: number;
+        __SIGNALTREE_ITERATION_SCALE__?: number;
+      };
+      win.__SIGNALTREE_LIB_COUNT__ = libCount;
+      win.__SIGNALTREE_ITERATION_SCALE__ = scaleFactor;
     } catch {
       // ignore
     }
@@ -2580,19 +2597,27 @@ export class BenchmarkOrchestratorComponent
     // and debug flows can inspect exactly which enhancers were active and
     // obtain raw, unrounded sample arrays for post-analysis.
     try {
-      const ext = window.__LAST_BENCHMARK_EXTENDED_RESULTS__ || {};
-      window.__LAST_BENCHMARK_EXTENDED_RESULTS__ = ext;
+      const win = window as unknown as {
+        __LAST_BENCHMARK_EXTENDED_RESULTS__?: Record<
+          string,
+          Record<string, ExtendedBenchmarkResult>
+        >;
+        __SIGNALTREE_ACTIVE_ENHANCERS__?: unknown[];
+      };
+      const ext = win.__LAST_BENCHMARK_EXTENDED_RESULTS__ || {};
+      win.__LAST_BENCHMARK_EXTENDED_RESULTS__ = ext;
       ext[library.id] = ext[library.id] || {};
       // Store a minimal extended payload beside the normal structured result.
-      ext[library.id][finalResult.scenarioId] = {
+      const extended: ExtendedBenchmarkResult = {
         // copy the formal result
         ...finalResult,
         // runtime metadata useful for auditing
-        appliedEnhancers: window.__SIGNALTREE_ACTIVE_ENHANCERS__ || [],
+        appliedEnhancers: win.__SIGNALTREE_ACTIVE_ENHANCERS__ || [],
         // unrounded raw samples for high-resolution analysis
         rawSamples: samples.slice(),
         timestamp: new Date().toISOString(),
-      } as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+      };
+      ext[library.id][finalResult.scenarioId] = extended;
     } catch (e) {
       // non-fatal — don't block benchmark return on persistence errors
       void e;
@@ -2690,7 +2715,8 @@ export class BenchmarkOrchestratorComponent
         const prev = sorted[i - 1];
         if (Math.abs(current.median - prev.median) < tolerance) {
           // same rank as previous
-          rankMap.set(current.libraryId, rankMap.get(prev.libraryId)!);
+          const prevRank = rankMap.get(prev.libraryId) ?? 1;
+          rankMap.set(current.libraryId, prevRank);
         } else {
           distinctCount += 1;
           rankMap.set(current.libraryId, distinctCount);
@@ -3780,7 +3806,10 @@ export class BenchmarkOrchestratorComponent
       if (!libraryResults.has(result.libraryId)) {
         libraryResults.set(result.libraryId, []);
       }
-      libraryResults.get(result.libraryId)!.push(result);
+      const list = libraryResults.get(result.libraryId);
+      if (list) {
+        list.push(result);
+      }
     });
 
     const summaries = Array.from(libraryResults.entries()).map(

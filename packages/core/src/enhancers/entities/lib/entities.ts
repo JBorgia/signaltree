@@ -8,7 +8,6 @@ import type {
   EntitySignal,
   SignalTree,
   EntityAwareTreeNode,
-  TreeNode,
 } from '../../../lib/types';
 
 interface EntitiesEnhancerConfig {

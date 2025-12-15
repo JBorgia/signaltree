@@ -88,7 +88,8 @@ export interface CompositionLogger {
 /**
  * DevTools interface specifically for modular SignalTree
  */
-export interface ModularDevToolsInterface<T = unknown> {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export interface ModularDevToolsInterface<_T = unknown> {
   /** Activity tracker for all modules */
   activityTracker: ModuleActivityTracker;
   /** Composition-aware logger */

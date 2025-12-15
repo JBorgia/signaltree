@@ -1124,7 +1124,6 @@ export function withPersistence<
 
       // Try to use tree.subscribe() for reactive state watching
       // This leverages Angular's effect system - no polling needed in production
-      let usingReactiveSubscription = false;
       try {
         tree.subscribe(() => {
           const currentState = JSON.stringify(tree());
@@ -1133,7 +1132,6 @@ export function withPersistence<
             triggerAutoSave();
           }
         });
-        usingReactiveSubscription = true;
       } catch {
         // subscribe() threw - not in Angular injection context
         // Fall back to setTimeout-based polling for non-Angular environments or tests

@@ -534,6 +534,7 @@ function updateSignalStats<T extends Record<string, unknown>>(
   context.stats.memoryGrowthRate = growth;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function recordRecomputations<T extends Record<string, unknown>>(
   context: GuardrailsContext<T>,
   count: number,
@@ -644,6 +645,7 @@ function addIssue<T extends Record<string, unknown>>(
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function shouldSuppressUpdate<T extends Record<string, unknown>>(
   context: GuardrailsContext<T>,
   metadata?: UpdateMetadata
@@ -884,12 +886,14 @@ function createAPI<T extends Record<string, unknown>>(
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function extractMetadata(payload: unknown): UpdateMetadata | undefined {
   if (!isObjectLike(payload)) return undefined;
   const candidate = (payload as Record<string, unknown>)['metadata'];
   return isObjectLike(candidate) ? (candidate as UpdateMetadata) : undefined;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function collectUpdateDetails(
   payload: unknown,
   stateSnapshot: unknown

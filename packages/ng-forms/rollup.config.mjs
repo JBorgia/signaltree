@@ -16,8 +16,6 @@ const baseConfig = createLibraryRollupConfig({
 const barrelIndexPlugin = {
   name: 'barrel-index-plugin',
   generateBundle(options, bundle) {
-    const distIndexPath = path.join(options.dir, 'dist', 'index.js');
-
     // If index.js doesn't exist (because Rollup optimized it away), create it
     // by re-exporting from the actual modules
     if (!Object.keys(bundle).some((k) => k.includes('dist/index'))) {
