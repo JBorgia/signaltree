@@ -350,6 +350,11 @@ print_step "Publishing all packages to npm..."
 PUBLISHED_PACKAGES=()
 FAILED_PACKAGES=()
 
+# Do browser-based login ONCE before all publishes to ensure fresh 2FA token
+# This handles accounts with 2FA enabled - the token expires in ~30 seconds
+print_step "Performing npm authentication (browser-based for 2FA)..."
+npm login --auth-type=web
+
 # Create temporary .npmrc with token if provided
 if [ -n "$NPM_TOKEN" ]; then
     print_step "Setting up npm authentication with provided token"
@@ -401,25 +406,24 @@ for package in "${PACKAGES[@]}"; do
             # Check if it's an OTP error
             elif grep -qE "EOTP|one-time password" /tmp/npm_publish_$package.log 2>/dev/null; then
                 if [ $attempt -eq 1 ]; then
-                    print_warning "Browser-based 2FA validation required"
-                    print_step "Opening npm login in browser..."
+                    print_error "2FA token expired. Re-logging in..."
                     npm login --auth-type=web
                     print_step "Retrying publish for @signaltree/$package..."
-                    continue  # Retry with browser auth
+                    continue  # Retry with fresh auth
                 else
-                    print_error "npm publish failed after browser authentication!"
+                    print_error "npm publish failed for @signaltree/$package after re-authentication!"
                     FAILED_PACKAGES+=("$package")
                     break
                 fi
             # Check for other authentication errors (E401, etc.)
             elif grep -qE "E401|authentication" /tmp/npm_publish_$package.log 2>/dev/null; then
                 if [ $attempt -eq 1 ]; then
-                    print_warning "Authentication error detected. Opening npm login..."
+                    print_warning "Authentication error. Re-logging in..."
                     npm login --auth-type=web
                     print_step "Retrying publish for @signaltree/$package..."
                     continue
                 else
-                    print_error "npm publish failed for @signaltree/$package after authentication retry!"
+                    print_error "npm publish failed for @signaltree/$package after re-authentication!"
                     FAILED_PACKAGES+=("$package")
                     break
                 fi
