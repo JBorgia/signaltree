@@ -1,3 +1,14 @@
+## 5.0.1 (2025-12-15)
+
+### 🩹 Fixes
+
+- Ensure main barrel entrypoints are emitted for packages using Rollup preserveModules (ng-forms, guardrails, callable-syntax) so `dist/index.js` is always present.
+- Broaden Angular peer dependency range to `^20.0.0` across all packages to avoid peer conflicts with Angular 21/22 while keeping Angular 20 compatibility.
+
+### 🧹 Chores
+
+- Format Rollup config files and project metadata for consistency.
+
 ## 5.0.0 (2025-12-10)
 
 ### 💥 BREAKING CHANGES
