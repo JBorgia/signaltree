@@ -1,3 +1,14 @@
+## 5.0.2 (2025-12-15)
+
+### 🧹 Chores
+
+- Align internal package versions (`shared`, `types`, `utils`) to 5.0.2 to match published artifacts.
+- Update release automation: make git tagging idempotent and avoid rollbacks after successful publish.
+
+### 🩹 Fixes
+
+- No user-facing code changes; release process hardening only.
+
 ## 5.0.1 (2025-12-15)
 
 ### 🩹 Fixes
