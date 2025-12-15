@@ -65,7 +65,7 @@
     }
   },
   "peerDependencies": {
-    "@angular/core": "^20.3.0",
+    "@angular/core": "^20.0.0",
     "tslib": "^2.0.0"
   },
   "publishConfig": {
