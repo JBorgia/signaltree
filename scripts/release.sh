@@ -379,37 +379,43 @@ for package in "${PACKAGES[@]}"; do
                 npm publish --access public 2>&1 | tee /tmp/npm_publish_$package.log
             fi
 
-            if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            PUBLISH_EXIT_CODE=${PIPESTATUS[0]}
+
+            if [ $PUBLISH_EXIT_CODE -eq 0 ]; then
                 print_success "Published @signaltree/$package successfully"
                 PUBLISHED_PACKAGES+=("$package")
                 PUBLISH_SUCCESS=true
                 break
-            else
-                # Check if it's a "cannot publish over existing version" error
-                if grep -q "cannot publish over the previously published versions" /tmp/npm_publish_$package.log; then
-                    print_warning "@signaltree/$package@$NEW_VERSION already published, skipping..."
-                    PUBLISHED_PACKAGES+=("$package")
-                    PUBLISH_SUCCESS=true
-                    break
-                # Check if it's an authentication error (EOTP or auth failure)
-                elif grep -qE "EOTP|E401|authentication|one-time password" /tmp/npm_publish_$package.log; then
-                    if [ $attempt -eq 1 ]; then
-                        print_warning "Authentication required. Please log in to npm..."
-                        cd - > /dev/null
-                        npm login --auth-type=web || npm login
-                        cd "$DIST_PATH"
-                        print_step "Retrying publish for @signaltree/$package..."
-                        continue  # Retry the loop
-                    else
-                        print_error "npm publish failed for @signaltree/$package after authentication retry!"
-                        FAILED_PACKAGES+=("$package")
-                        break
-                    fi
+            fi
+
+            # Publish failed - check the log file (give it a moment to flush)
+            sleep 0.1
+
+            # Check if it's a "cannot publish over existing version" error
+            if grep -q "cannot publish over the previously published versions" /tmp/npm_publish_$package.log 2>/dev/null; then
+                print_warning "@signaltree/$package@$NEW_VERSION already published, skipping..."
+                PUBLISHED_PACKAGES+=("$package")
+                PUBLISH_SUCCESS=true
+                break
+            # Check if it's an authentication error (EOTP or auth failure)
+            elif grep -qE "EOTP|E401|authentication|one-time password" /tmp/npm_publish_$package.log 2>/dev/null; then
+                if [ $attempt -eq 1 ]; then
+                    print_warning "Authentication required. Please log in to npm..."
+                    cd - > /dev/null
+                    npm login --auth-type=web
+                    cd "$DIST_PATH"
+                    print_step "Retrying publish for @signaltree/$package..."
+                    continue  # Retry the loop
                 else
-                    print_error "npm publish failed for @signaltree/$package!"
+                    print_error "npm publish failed for @signaltree/$package after authentication retry!"
                     FAILED_PACKAGES+=("$package")
                     break
                 fi
+            else
+                print_error "npm publish failed for @signaltree/$package! (Exit code: $PUBLISH_EXIT_CODE)"
+                cat /tmp/npm_publish_$package.log | tail -10
+                FAILED_PACKAGES+=("$package")
+                break
             fi
         done
 
