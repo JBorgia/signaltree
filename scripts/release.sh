@@ -402,10 +402,16 @@ for package in "${PACKAGES[@]}"; do
                 if [ $attempt -eq 1 ]; then
                     print_warning "Authentication required. Please log in to npm..."
                     cd - > /dev/null
-                    npm login --auth-type=web
-                    cd "$DIST_PATH"
-                    print_step "Retrying publish for @signaltree/$package..."
-                    continue  # Retry the loop
+                    if npm login --auth-type=web; then
+                        cd "$DIST_PATH"
+                        print_step "Login successful. Retrying publish for @signaltree/$package..."
+                        continue  # Retry the loop
+                    else
+                        print_error "npm login failed or was cancelled"
+                        cd "$DIST_PATH"
+                        FAILED_PACKAGES+=("$package")
+                        break
+                    fi
                 else
                     print_error "npm publish failed for @signaltree/$package after authentication retry!"
                     FAILED_PACKAGES+=("$package")
