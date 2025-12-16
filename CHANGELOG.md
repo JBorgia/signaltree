@@ -1,3 +1,12 @@
+## 5.0.6 (2025-12-16)
+
+### 🩹 Fixes
+
+- **core:** Fix broken type declarations referencing unpublished `@signaltree/shared`
+  - Type declarations now inline shared utility types instead of importing them
+  - Fixes TypeScript resolution errors when using `@signaltree/core` in consuming projects
+  - Added `fix:dts-imports` post-build step to automatically fix type declarations
+
 ## 5.0.5 (2025-12-16)
 
 ### 🩹 Fixes
