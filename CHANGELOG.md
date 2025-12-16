@@ -1,3 +1,13 @@
+## 5.0.9 (2025-12-16)
+
+### 🩹 Fixes
+
+- **core:** Make `TreeNode<T>` entity-aware by default
+  - Add `__isEntityMap` check to `TreeNode<T>` conditional type
+  - Entity markers (`entityMap<E>()`) are now treated as leaves, not recursively expanded
+  - Fixes type inference when using `signalTree()` with `entityMap()` in initial state
+  - No longer requires explicit generic parameter for correct type inference
+
 ## 5.0.8 (2025-12-16)
 
 ### 🩹 Fixes
