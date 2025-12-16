@@ -38,7 +38,11 @@ fi
 # List of packages to release
 # Note: batching, memoization, middleware, entities, devtools, time-travel, presets, serialization
 # were consolidated into @signaltree/core in v4.0.0 and are no longer separate packages
+# Order matters: shared/types/utils must be published before packages that depend on them
 PACKAGES=(
+    "types"           # Core TypeScript types (dependency of other packages)
+    "shared"          # Shared utilities (dependency of core)
+    "utils"           # Utility functions (dependency of core)
     "core"            # Main package with all enhancers (batching, memoization, etc.)
     "ng-forms"        # Angular forms integration
     "callable-syntax" # Build-time transform for callable DX syntax
