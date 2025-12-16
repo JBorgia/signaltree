@@ -329,7 +329,7 @@ export function withBatching<T>(
     // Ensure $ alias is preserved
     if ('$' in tree) {
       Object.defineProperty(enhancedTree, '$', {
-        value: (tree as Record<string, unknown>)['$'],
+        value: (tree as unknown as Record<string, unknown>)['$'],
         enumerable: false,
         configurable: true,
       });
@@ -343,7 +343,7 @@ export function withBatching<T>(
 
         // Apply updates to individual properties
         Object.entries(updates).forEach(([key, value]) => {
-          const property = (enhancedTree.state as Record<string, unknown>)[key];
+          const property = (enhancedTree.state as unknown as Record<string, unknown>)[key];
           if (property && 'set' in (property as object)) {
             // It's a WritableSignal - use .set()
             (property as { set: (value: unknown) => void }).set(value);

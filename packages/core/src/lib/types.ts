@@ -89,16 +89,19 @@ export type BuiltInObject =
 
 /**
  * Helper type to unwrap signals and remove any signal-specific properties
+ * Note: [T] extends [...] prevents distributive conditional types
  */
-export type Unwrap<T> = T extends WritableSignal<infer U>
+export type Unwrap<T> = [T] extends [WritableSignal<infer U>]
   ? U
-  : T extends Signal<infer U>
+  : [T] extends [Signal<infer U>]
   ? U
-  : T extends BuiltInObject
+  : [T] extends [BuiltInObject]
   ? T // Preserve built-in objects exactly as they are
-  : T extends readonly unknown[]
+  : [T] extends [readonly unknown[]]
   ? T // Preserve arrays exactly as they are
-  : T extends object
+  : [T] extends [EntityMapMarker<infer E, infer K>]
+  ? EntitySignal<E, K> // Entity markers unwrap to EntitySignal
+  : [T] extends [object]
   ? { [K in keyof T]: Unwrap<T[K]> }
   : T;
 
@@ -132,19 +135,21 @@ export type CallableWritableSignal<T> = WritableSignal<T> & {
 };
 
 export type TreeNode<T> = {
-  [K in keyof T]: T[K] extends readonly unknown[]
-    ? CallableWritableSignal<T[K]> // Arrays get callable overloads
-    : T[K] extends object
-    ? T[K] extends Signal<unknown>
-      ? T[K]
-      : T[K] extends BuiltInObject
-      ? CallableWritableSignal<T[K]> // Built-ins as callable writable signals
-      : T[K] extends (...args: unknown[]) => unknown
-      ? CallableWritableSignal<T[K]> // Function leaves as callable writable signals
-      : T[K] extends { __isEntityMap?: true } // Entity markers are leaves
-      ? CallableWritableSignal<T[K]>
-      : AccessibleNode<T[K]> // Nested objects
-    : CallableWritableSignal<T[K]>; // Primitives
+  // Note: [T[K]] extends [...] prevents distributive conditional types
+  // This ensures when T is generic, we don't get union of all possible branches
+  [K in keyof T]: [T[K]] extends [EntityMapMarker<infer E, infer Key>]
+  ? EntitySignal<E, Key> // Entity collections become EntitySignal
+  : [T[K]] extends [readonly unknown[]]
+  ? CallableWritableSignal<T[K]> // Arrays get callable overloads
+  : [T[K]] extends [object]
+  ? [T[K]] extends [Signal<unknown>]
+  ? T[K]
+  : [T[K]] extends [BuiltInObject]
+  ? CallableWritableSignal<T[K]> // Built-ins as callable writable signals
+  : [T[K]] extends [(...args: unknown[]) => unknown]
+  ? CallableWritableSignal<T[K]> // Function leaves as callable writable signals
+  : AccessibleNode<T[K]> // Nested objects
+  : CallableWritableSignal<T[K]>; // Primitives
 };
 
 /**
@@ -172,20 +177,20 @@ export type DeepPath<
 > = Depth['length'] extends 5
   ? never
   : {
-      [K in keyof T]: K extends string
-        ? T[K] extends readonly unknown[]
-          ? `${Prefix}${K}` // Array found - include this path
-          : T[K] extends object
-          ? T[K] extends Signal<unknown>
-            ? never // Skip Angular signals
-            : T[K] extends BuiltInObject
-            ? never // Skip built-in objects
-            : T[K] extends (...args: unknown[]) => unknown
-            ? never // Skip functions
-            : `${Prefix}${K}` | DeepPath<T[K], `${Prefix}${K}.`, [...Depth, 1]> // Nested object - recurse
-          : never // Skip primitives
-        : never;
-    }[keyof T];
+    [K in keyof T]: K extends string
+    ? T[K] extends readonly unknown[]
+    ? `${Prefix}${K}` // Array found - include this path
+    : T[K] extends object
+    ? T[K] extends Signal<unknown>
+    ? never // Skip Angular signals
+    : T[K] extends BuiltInObject
+    ? never // Skip built-in objects
+    : T[K] extends (...args: unknown[]) => unknown
+    ? never // Skip functions
+    : `${Prefix}${K}` | DeepPath<T[K], `${Prefix}${K}.`, [...Depth, 1]> // Nested object - recurse
+    : never // Skip primitives
+    : never;
+  }[keyof T];
 
 /**
  * Safely access a value at a deep path in a type
@@ -198,8 +203,8 @@ export type DeepAccess<
   Path extends string
 > = Path extends `${infer First}.${infer Rest}`
   ? First extends keyof T
-    ? DeepAccess<T[First] & object, Rest>
-    : never
+  ? DeepAccess<T[First] & object, Rest>
+  : never
   : Path extends keyof T
   ? T[Path]
   : never;
@@ -235,17 +240,17 @@ export type ChainResult<
   E extends Array<EnhancerWithMeta<unknown, unknown>>
 > = E extends [infer H, ...infer R]
   ? // If enhancer accepts SignalTree<any> (non-generic enhancer), treat it as compatible
-    H extends EnhancerWithMeta<SignalTree<unknown>, infer O>
-    ? R extends Array<EnhancerWithMeta<unknown, unknown>>
-      ? ChainResult<O, R>
-      : O
-    : H extends EnhancerWithMeta<infer I, infer O>
-    ? Start extends I
-      ? R extends Array<EnhancerWithMeta<unknown, unknown>>
-        ? ChainResult<O, R>
-        : O
-      : unknown
-    : unknown
+  H extends EnhancerWithMeta<SignalTree<unknown>, infer O>
+  ? R extends Array<EnhancerWithMeta<unknown, unknown>>
+  ? ChainResult<O, R>
+  : O
+  : H extends EnhancerWithMeta<infer I, infer O>
+  ? Start extends I
+  ? R extends Array<EnhancerWithMeta<unknown, unknown>>
+  ? ChainResult<O, R>
+  : O
+  : unknown
+  : unknown
   : Start;
 
 /**
@@ -396,7 +401,9 @@ export type SignalTree<T> = NodeAccessor<T> & {
   canUndo?: () => boolean;
   canRedo?: () => boolean;
   getCurrentIndex?: () => number;
-} & Record<string, unknown>;
+};
+// NOTE: Index signature removed in v5.1.0 to fix .with() bracket notation requirement
+// Enhancers must now explicitly type their return values
 
 // ============================================
 // CONFIGURATION TYPES
@@ -486,20 +493,30 @@ export interface EntityConfig<E, K extends string | number = string> {
 }
 
 /**
+ * Unique symbol for EntityMapMarker branding.
+ * NOT EXPORTED - this prevents external code from creating types that satisfy EntityMapMarker.
+ * This is critical for correct type inference in generic contexts.
+ */
+declare const ENTITY_MAP_BRAND: unique symbol;
+
+/**
  * Runtime marker for entity collections.
- * Used by TypeScript for inference; runtime value is just an empty object.
+ * Uses a unique symbol brand to ensure only types created via entityMap() can satisfy this interface.
+ * This prevents generic mapped type conditionals from producing unions.
  */
 export interface EntityMapMarker<E, K extends string | number> {
-  readonly __entityType?: E;
-  readonly __keyType?: K;
+  /** Unique brand - only satisfiable by entityMap() since symbol is not exported */
+  readonly [ENTITY_MAP_BRAND]: { __entity: E; __key: K };
   /** Runtime marker so enhancers can detect entity collections */
-  readonly __isEntityMap?: true;
+  readonly __isEntityMap: true;
   /** Persisted config used when materializing the EntitySignal */
   readonly __entityMapConfig?: EntityConfig<E, K>;
 }
 
 /**
  * Create an entity map marker for use in signalTree state definition.
+ * This is the ONLY way to create a type that satisfies EntityMapMarker,
+ * since the brand symbol is not exported.
  *
  * @example
  * ```typescript
@@ -512,9 +529,11 @@ export interface EntityMapMarker<E, K extends string | number> {
 export function entityMap<
   E,
   K extends string | number = E extends { id: infer I extends string | number }
-    ? I
-    : string
+  ? I
+  : string
 >(config?: EntityConfig<E, K>): EntityMapMarker<E, K> {
+  // Runtime: only needs __isEntityMap for detection
+  // Type-level: the brand symbol makes this nominally typed
   return {
     __isEntityMap: true,
     __entityMapConfig: config ?? {},
@@ -582,10 +601,10 @@ export type EntityNode<E> = {
   (updater: (current: E) => E): void;
 } & {
   [P in keyof E]: E[P] extends object
-    ? E[P] extends readonly unknown[]
-      ? CallableWritableSignal<E[P]>
-      : EntityNode<E[P]>
-    : CallableWritableSignal<E[P]>;
+  ? E[P] extends readonly unknown[]
+  ? CallableWritableSignal<E[P]>
+  : EntityNode<E[P]>
+  : CallableWritableSignal<E[P]>;
 };
 
 /**
@@ -713,10 +732,10 @@ export type IsEntityMap<T> = T extends EntityMapMarker<
  */
 export type EntityAwareTreeNode<T> = {
   [K in keyof T]: T[K] extends EntityMapMarker<infer E, infer Key>
-    ? EntitySignal<E, Key>
-    : T[K] extends object
-    ? EntityAwareTreeNode<T[K]>
-    : CallableWritableSignal<T[K]>;
+  ? EntitySignal<E, Key>
+  : T[K] extends object
+  ? EntityAwareTreeNode<T[K]>
+  : CallableWritableSignal<T[K]>;
 };
 
 /**

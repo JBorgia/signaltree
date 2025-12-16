@@ -851,13 +851,13 @@ function create<T>(obj: T, config: TreeConfig = {}): SignalTree<T> {
     }
     if (typeof arg === 'function') {
       const updater = arg as (current: T) => T;
-      const currentValue = unwrap(signalState);
+      const currentValue = unwrap(signalState) as T;
       const newValue = updater(currentValue);
       // Use recursive update to preserve signals
       recursiveUpdate(signalState, newValue);
     } else {
       // Direct set - use recursive update
-      recursiveUpdate(signalState, arg);
+      recursiveUpdate(signalState, arg as T);
     }
   } as SignalTree<T>;
 

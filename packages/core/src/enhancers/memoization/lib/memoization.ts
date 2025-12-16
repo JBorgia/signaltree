@@ -501,7 +501,7 @@ export function withMemoization<T>(
 
     const applyUpdateResult = (result: Partial<T>) => {
       Object.entries(result).forEach(([propKey, value]) => {
-        const property = (tree.state as Record<string, unknown>)[propKey];
+        const property = (tree.state as unknown as Record<string, unknown>)[propKey];
         if (property && 'set' in (property as object)) {
           (property as { set: (value: unknown) => void }).set(value);
         } else if (isNodeAccessor(property)) {

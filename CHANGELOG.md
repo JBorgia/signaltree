@@ -1,3 +1,56 @@
+## 5.2.0 (2025-12-16)
+
+### 🗑️ Removed
+
+- **core:** Remove `SignalTreeWithBase<T, Constraint>` and `ConstraintAwareTreeNode<T, Constraint>`
+  - These were workarounds for using SignalTree with NgRx-style generic enhancers
+  - SignalTree is designed for direct state management, not generic enhancer composition
+  - Use concrete types with SignalTree instead of generic enhancer patterns
+  - If you need reusable patterns, define methods alongside your tree, not as generic enhancers
+
+### 📖 Philosophy
+
+SignalTree is intentionally simple: create a tree, access nested signals directly. 
+The NgRx-style `withFeature()` enhancer pattern introduces unnecessary abstraction 
+and TypeScript complexity. Instead:
+
+```typescript
+// ✅ SignalTree way: direct and simple
+const tree = signalTree({ loading: { state: 'idle', error: null } });
+const loadAll$ = () => {
+  tree.$.loading.state.set('loading');
+  return service.load$().pipe(
+    tap(data => tree.$.loading.state.set('loaded')),
+    catchError(err => { tree.$.loading.error.set(err); return EMPTY; })
+  );
+};
+return { tree, loadAll$ };
+
+// ❌ Avoid: NgRx-style generic enhancers
+function withServiceRead<T extends BaseState>(tree: SignalTree<T>) { ... }
+```
+
+## 5.1.0 (2025-12-16)
+
+### 🚀 Features
+
+- **core:** Add `EntityMapMarker` unique symbol brand for nominal typing
+  - Prevents regular objects from structurally matching EntityMapMarker
+  - Improves type inference in generic contexts
+
+- **core:** Export additional utility types: `CallableWritableSignal`, `AccessibleNode`, `NodeAccessor`
+
+### 🩹 Fixes
+
+- **core:** Remove index signature from `SignalTree<T>` type
+  - Removed `& Record<string, unknown>` that caused `.with()` bracket notation requirement
+  - Enables clean dot notation: `tree.with(enhancer)` without bracket notation
+  - Enhancers must now explicitly type their return values (better practice anyway)
+  - Fixes TS4111 error with `noPropertyAccessFromIndexSignature: true`
+
+- **core:** Fix TreeNode conditional types to prevent distribution over generics
+  - Wrap conditional checks in `[T[K]] extends [...]` to prevent distributive behavior
+
 ## 5.0.9 (2025-12-16)
 
 ### 🩹 Fixes

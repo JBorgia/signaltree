@@ -26,6 +26,9 @@ export type {
   // Core types - Main SignalTree interfaces
   SignalTree,
   TreeNode,
+  CallableWritableSignal,
+  AccessibleNode,
+  NodeAccessor,
   RemoveSignalMethods,
   Primitive,
   BuiltInObject,

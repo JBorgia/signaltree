@@ -70,7 +70,7 @@ function materializeEntities<T>(
       }
 
       try {
-        (tree as Record<string, unknown>)[key] = entitySignal;
+        (tree as unknown as Record<string, unknown>)[key] = entitySignal;
       } catch {
         // If property cannot be defined on tree, skip
       }
