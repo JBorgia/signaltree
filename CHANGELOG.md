@@ -1,3 +1,12 @@
+## 5.0.8 (2025-12-16)
+
+### 🩹 Fixes
+
+- **core:** Ensure postbuild runs during release (skip Nx cache)
+  - Add `cache: false` to postbuild target
+  - Add `--skip-nx-cache` to release script postbuild step
+  - 5.0.7 was cached and skipped the fix
+
 ## 5.0.7 (2025-12-16)
 
 ### 🩹 Fixes

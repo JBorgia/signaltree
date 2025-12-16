@@ -309,7 +309,7 @@ npx nx build core --configuration=production || {
     exit 1
 }
 print_step "Running post-build step for @signaltree/core..."
-npx nx run core:postbuild || {
+npx nx run core:postbuild --skip-nx-cache || {
     print_error "Core package post-build failed! Rolling back version changes."
     rollback_versions
     exit 1
