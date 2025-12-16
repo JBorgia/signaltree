@@ -1,12 +1,7 @@
-import { signalTree } from '../../../lib/signal-tree';
+import { vi } from 'vitest';
 
-import {
-  enableDevTools,
-  ModuleMetadata,
-  withDevTools,
-  withFullDevTools,
-  withProductionDevTools,
-} from './devtools';
+import { signalTree } from '../../../lib/signal-tree';
+import { enableDevTools, ModuleMetadata, withDevTools, withFullDevTools, withProductionDevTools } from './devtools';
 
 describe('Modular DevTools', () => {
   interface TestState {
@@ -26,15 +21,15 @@ describe('Modular DevTools', () => {
 
   beforeEach(() => {
     // Reset any global state
-    jest.clearAllMocks();
-    jest.spyOn(console, 'log').mockImplementation();
-    jest.spyOn(console, 'warn').mockImplementation();
-    jest.spyOn(console, 'error').mockImplementation();
-    jest.spyOn(console, 'debug').mockImplementation();
+    vi.clearAllMocks();
+    vi.spyOn(console, 'log').mockImplementation();
+    vi.spyOn(console, 'warn').mockImplementation();
+    vi.spyOn(console, 'error').mockImplementation();
+    vi.spyOn(console, 'debug').mockImplementation();
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('withDevTools', () => {

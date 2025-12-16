@@ -1,3 +1,5 @@
+import { vi } from 'vitest';
+
 import { signalTree } from '../../../lib/signal-tree';
 import {
   applySerialization,
@@ -302,14 +304,14 @@ describe('Serialization', () => {
       // Mock localStorage
       Object.defineProperty(window, 'localStorage', {
         value: {
-          getItem: jest.fn((key: string) => mockStorage[key] || null),
-          setItem: jest.fn((key: string, value: string) => {
+          getItem: vi.fn((key: string) => mockStorage[key] || null),
+          setItem: vi.fn((key: string, value: string) => {
             mockStorage[key] = value;
           }),
-          removeItem: jest.fn((key: string) => {
+          removeItem: vi.fn((key: string) => {
             delete mockStorage[key];
           }),
-          clear: jest.fn(() => {
+          clear: vi.fn(() => {
             mockStorage = {};
           }),
         },
@@ -387,7 +389,7 @@ describe('Serialization', () => {
     });
 
     it('should handle auto-load', async () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
 
       // Pre-populate storage
       mockStorage['auto-load-test'] = JSON.stringify({
@@ -403,7 +405,7 @@ describe('Serialization', () => {
       );
 
       // Fast-forward for auto-load setTimeout(0) to fire
-      jest.advanceTimersByTime(10);
+      vi.advanceTimersByTime(10);
 
       // Allow promises to resolve
       await Promise.resolve();
@@ -412,7 +414,7 @@ describe('Serialization', () => {
       expect(tree.$.count()).toBe(99);
       expect(tree.$.name()).toBe('loaded');
 
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
 
     it('should clear storage', async () => {
@@ -430,9 +432,9 @@ describe('Serialization', () => {
 
   describe('Storage Adapters', () => {
     it('should create custom storage adapter', () => {
-      const mockRead = jest.fn().mockResolvedValue('{"test": true}');
-      const mockWrite = jest.fn().mockResolvedValue(undefined);
-      const mockDelete = jest.fn().mockResolvedValue(undefined);
+      const mockRead = vi.fn().mockResolvedValue('{"test": true}');
+      const mockWrite = vi.fn().mockResolvedValue(undefined);
+      const mockDelete = vi.fn().mockResolvedValue(undefined);
 
       const adapter = createStorageAdapter(mockRead, mockWrite, mockDelete);
 
@@ -484,9 +486,9 @@ describe('Serialization', () => {
 
     it('should handle storage errors gracefully', async () => {
       const failingAdapter: StorageAdapter = {
-        getItem: jest.fn().mockRejectedValue(new Error('Storage read failed')),
-        setItem: jest.fn().mockRejectedValue(new Error('Storage write failed')),
-        removeItem: jest
+        getItem: vi.fn().mockRejectedValue(new Error('Storage read failed')),
+        setItem: vi.fn().mockRejectedValue(new Error('Storage write failed')),
+        removeItem: vi
           .fn()
           .mockRejectedValue(new Error('Storage delete failed')),
       };
@@ -510,23 +512,23 @@ describe('Serialization', () => {
       const mockStorage: {
         data: Record<string, string>;
         writeCount: number;
-        setItem: jest.Mock<Promise<void>, [string, string]>;
-        getItem: jest.Mock<Promise<string | null>, [string]>;
-        removeItem: jest.Mock<Promise<void>, [string]>;
+        setItem: any;
+        getItem: any;
+        removeItem: any;
       } = {
         data: {} as Record<string, string>,
         writeCount: 0,
-        setItem: jest.fn<Promise<void>, [string, string]>(
+        setItem: vi.fn<Promise<void>, [string, string]>(
           (key: string, value: string) => {
             mockStorage.writeCount++;
             mockStorage.data[key] = value;
             return Promise.resolve();
           }
         ),
-        getItem: jest.fn<Promise<string | null>, [string]>((key: string) =>
+        getItem: vi.fn<Promise<string | null>, [string]>((key: string) =>
           Promise.resolve(mockStorage.data[key] ?? null)
         ),
-        removeItem: jest.fn<Promise<void>, [string]>((key: string) => {
+        removeItem: vi.fn<Promise<void>, [string]>((key: string) => {
           delete mockStorage.data[key];
           return Promise.resolve();
         }),
@@ -562,23 +564,23 @@ describe('Serialization', () => {
       const mockStorage: {
         data: Record<string, string>;
         writeCount: number;
-        setItem: jest.Mock<Promise<void>, [string, string]>;
-        getItem: jest.Mock<Promise<string | null>, [string]>;
-        removeItem: jest.Mock<Promise<void>, [string]>;
+        setItem: any;
+        getItem: any;
+        removeItem: any;
       } = {
         data: {} as Record<string, string>,
         writeCount: 0,
-        setItem: jest.fn<Promise<void>, [string, string]>(
+        setItem: vi.fn<Promise<void>, [string, string]>(
           (key: string, value: string) => {
             mockStorage.writeCount++;
             mockStorage.data[key] = value;
             return Promise.resolve();
           }
         ),
-        getItem: jest.fn<Promise<string | null>, [string]>((key: string) =>
+        getItem: vi.fn<Promise<string | null>, [string]>((key: string) =>
           Promise.resolve(mockStorage.data[key] ?? null)
         ),
-        removeItem: jest.fn<Promise<void>, [string]>((key: string) => {
+        removeItem: vi.fn<Promise<void>, [string]>((key: string) => {
           delete mockStorage.data[key];
           return Promise.resolve();
         }),

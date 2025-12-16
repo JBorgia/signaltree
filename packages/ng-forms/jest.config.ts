@@ -1,8 +1,15 @@
+/* eslint-disable */
 export default {
   displayName: 'ng-forms',
   preset: '../../jest.preset.js',
   setupFilesAfterEnv: ['<rootDir>/src/test-setup.ts'],
   coverageDirectory: '../../coverage/packages/ng-forms',
+  moduleNameMapper: {
+    '^@signaltree/core$': '<rootDir>/../../packages/core/src/index.ts',
+    '^@signaltree/shared$': '<rootDir>/../../packages/shared/src/index.ts',
+    '^@signaltree/types$': '<rootDir>/../../packages/types/src/index.ts',
+    '^@signaltree/utils$': '<rootDir>/../../packages/utils/src/index.ts',
+  },
   transform: {
     '^.+\\.(ts|mjs|js|html)$': [
       'jest-preset-angular',

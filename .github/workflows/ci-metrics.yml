@@ -31,7 +31,7 @@ jobs:
         run: node scripts/ci-checks.js --jsdoc --sizes
 
       - name: Run metrics unit tests
-        run: pnpm exec jest scripts/__tests__/metrics.test.cjs --config '{"testEnvironment":"node"}' --runInBand
+        run: pnpm exec vitest run scripts/__tests__/metrics.test.cjs --config vitest.config.ts
 
       - name: Upload perf artifact (if present)
         uses: actions/upload-artifact@v4

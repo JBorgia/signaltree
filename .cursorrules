@@ -11,7 +11,7 @@ This file provides comprehensive context for AI assistants working on the Signal
 - **Package Manager**: pnpm
 - **Monorepo Tool**: Nx
 - **Build Tools**: Rollup (packages & guardrails), Angular CLI (demo)
-- **Testing**: Jest
+- **Testing**: Vitest
 - **Linting**: ESLint
 - **License**: BSL-1.1 (Business Source License)
 
@@ -195,19 +195,19 @@ Check sizes: `npm run analyze:bundle`
 
 ### 2. Test Failures
 
-**Issue**: Jest `Cannot find module '@jest/test-sequencer'`
+**Issue**: Vitest `Cannot find module '@vitest/test-sequencer'`
 
 **Solution**:
 
-- Guardrails uses local stub: `packages/guardrails/tests/jest-test-sequencer.stub.ts`
+- Guardrails uses local stub: `packages/guardrails/tests/jest-test-sequencer.stub.ts` (name kept for compatibility)
 - Config: `testSequencer: '<rootDir>/tests/jest-test-sequencer.stub.ts'`
 
 **Issue**: Guardrails tests fail in parallel
 
 **Solution**:
 
-- Always run with `--runInBand` flag
-- Command: `pnpm nx test guardrails --runInBand`
+- Always run with `--pool=forks --poolOptions.forks.singleFork` flag
+- Command: `pnpm nx test guardrails --pool=forks --poolOptions.forks.singleFork`
 
 ### 3. Linting Issues
 
@@ -512,7 +512,7 @@ pnpm run quality:check
 - `package.json` - Workspace scripts and dependencies
 - `tsconfig.base.json` - Base TypeScript configuration
 - `.eslintrc.json` - ESLint configuration
-- `jest.config.ts` - Jest root configuration
+- `vitest.config.ts` - Vitest configuration files per package
 - `.release-rules.json` - Validation rules and thresholds
 
 ### Build

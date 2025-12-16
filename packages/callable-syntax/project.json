@@ -61,10 +61,11 @@
       }
     },
     "test": {
-      "executor": "@nx/jest:jest",
+      "executor": "@nx/vitest:test",
       "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
       "options": {
-        "jestConfig": "packages/callable-syntax/jest.config.ts"
+        "vitest Config": "packages/callable-syntax/vitest.config.ts",
+        "passWithNoTests": true
       }
     }
   }

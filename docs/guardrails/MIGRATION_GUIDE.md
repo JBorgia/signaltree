@@ -78,7 +78,7 @@ If you maintain forks or downstream pipelines, pull the updated scripts to make 
 ## 7. Breaking Changes
 
 - Node 18+ (or browsers with `performance.now`) is required for the new timing metrics.
-- Jest-based tests run in-band when collecting coverage to stabilize timing-sensitive specs.
+- Vitest-based tests run in-band when collecting coverage to stabilize timing-sensitive specs.
 
 ## 8. Checklist
 

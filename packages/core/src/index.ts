@@ -86,6 +86,9 @@ export {
   createLazySignalTree,
 } from './lib/utils';
 
+// PathNotifier exports - For internal use by enhancers (e.g., guardrails)
+export { getPathNotifier } from './lib/path-notifier';
+
 // ============================================
 // SECURITY EXPORTS
 // ============================================

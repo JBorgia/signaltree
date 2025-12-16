@@ -17,7 +17,7 @@
     "allowSyntheticDefaultImports": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
-    "types": ["@angular/core", "jest"],
+    "types": ["@angular/core", "vitest/globals"],
     "paths": {
       "@signaltree/callable-syntax": ["packages/callable-syntax/src/index.ts"],
       "@signaltree/callable-syntax/*": ["packages/callable-syntax/src/*"],

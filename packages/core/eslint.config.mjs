@@ -21,7 +21,6 @@ export default [
             '@rollup/plugin-typescript',
             'rollup',
             'rollup-plugin-dts',
-            'jest-preset-angular',
           ],
         },
       ],

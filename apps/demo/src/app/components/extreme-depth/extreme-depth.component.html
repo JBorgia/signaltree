@@ -117,12 +117,9 @@
         </button>
 
         @if (extensionPath.length > 0) {
-          <button
-            class="btn tertiary"
-            (click)="resetDepth()"
-          >
-            🔄 Reset to Base (15 levels)
-          </button>
+        <button class="btn tertiary" (click)="resetDepth()">
+          🔄 Reset to Base (15 levels)
+        </button>
         }
       </div>
 
@@ -270,31 +267,28 @@
 
       <div class="test-categories">
         @for (category of testCategories; track category.name) {
-          <div
-            class="test-category detailed"
-            [class.inactive]="!category.active"
-          >
-            <div class="category-header">
-              <span class="category-name">{{ category.name }}</span>
-              <span class="category-status">{{ category.status }}</span>
-            </div>
-            <div class="category-details">
-              <p><strong>What we test:</strong></p>
-              <ul>
-                @for (test of category.tests; track test) {
-                  <li>{{ test }}</li>
-                }
-              </ul>
-              <p><strong>Why it matters:</strong> {{ category.relevance }}</p>
-            </div>
+        <div class="test-category detailed" [class.inactive]="!category.active">
+          <div class="category-header">
+            <span class="category-name">{{ category.name }}</span>
+            <span class="category-status">{{ category.status }}</span>
           </div>
+          <div class="category-details">
+            <p><strong>What we test:</strong></p>
+            <ul>
+              @for (test of category.tests; track test) {
+              <li>{{ test }}</li>
+              }
+            </ul>
+            <p><strong>Why it matters:</strong> {{ category.relevance }}</p>
+          </div>
+        </div>
         }
       </div>
 
       <div class="technical-details">
         <h3>🔧 Technical Implementation</h3>
         <p>
-          These tests run in our CI/CD pipeline using Jest with TypeScript's
+          These tests run in our CI/CD pipeline using Vitest with TypeScript's
           <code>tsc</code> compiler. Key validation points:
         </p>
         <ul>
@@ -304,7 +298,7 @@
             no type degradation
           </li>
           <li>
-            <strong>Runtime:</strong> Standard Jest assertions validate
+            <strong>Runtime:</strong> Standard Vitest assertions validate
             functional correctness
           </li>
           <li>

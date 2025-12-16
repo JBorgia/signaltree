@@ -116,7 +116,7 @@ if [ ${#COVERAGE_REPORTS[@]} -gt 0 ]; then
     done
     echo ""
 else
-    print_warning "No coverage reports found. This might indicate Jest configuration issues."
+    print_warning "No coverage reports found. This might indicate Vitest configuration issues."
 fi
 
 # Final summary
