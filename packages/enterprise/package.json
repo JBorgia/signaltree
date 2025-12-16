@@ -71,7 +71,7 @@
     "@angular/compiler": "^20.0.0",
     "@angular/platform-browser-dynamic": "^20.0.0",
     "zone.js": "^0.15.0",
-    "@signaltree/core": "^4.1.0",
+    "@signaltree/core": "^5.0.0",
     "tslib": "^2.0.0",
     "vitest": "^2.0.0"
   },
