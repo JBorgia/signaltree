@@ -20,29 +20,12 @@
     }
   },
   "peerDependencies": {
-    "@angular/compiler": "^20.0.0",
     "@angular/core": "^20.0.0",
     "@angular/forms": "^20.0.0",
-    "@angular/platform-browser-dynamic": "^20.0.0",
     "@signaltree/core": "^5.0.0",
-    "jest-preset-angular": "^15.0.0",
-    "rxjs": "^7.0.0",
-    "zone.js": "^0.15.0"
+    "rxjs": "^7.0.0"
   },
-  "peerDependenciesMeta": {
-    "@angular/compiler": {
-      "optional": true
-    },
-    "@angular/platform-browser-dynamic": {
-      "optional": true
-    },
-    "jest-preset-angular": {
-      "optional": true
-    },
-    "zone.js": {
-      "optional": true
-    }
-  },
+  "peerDependenciesMeta": {},
   "devDependencies": {
     "@signaltree/core": "workspace:*",
     "@signaltree/shared": "workspace:*",
