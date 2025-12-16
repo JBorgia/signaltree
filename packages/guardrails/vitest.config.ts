@@ -11,6 +11,7 @@ export default defineConfig({
       reporter: ['text', 'json', 'html'],
       include: ['src/**/*.ts'],
       exclude: ['**/*.spec.ts', '**/__tests__/**', '**/index.ts', '**/noop.ts'],
+      reportsDirectory: '../../../coverage/packages/guardrails',
     },
   },
   resolve: {
