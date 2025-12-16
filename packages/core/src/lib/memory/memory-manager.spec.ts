@@ -1,4 +1,5 @@
 import { signal } from '@angular/core';
+import { vi } from 'vitest';
 
 import { SignalMemoryManager } from './memory-manager';
 
@@ -228,7 +229,7 @@ describe('SignalMemoryManager', () => {
 
   describe('Configuration', () => {
     it('should support debug mode', () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation();
 
       const manager = new SignalMemoryManager({ debugMode: true });
 
@@ -240,7 +241,7 @@ describe('SignalMemoryManager', () => {
     });
 
     it('should call cleanup callback', () => {
-      const cleanupSpy = jest.fn();
+      const cleanupSpy = vi.fn();
 
       const manager = new SignalMemoryManager({
         onCleanup: cleanupSpy,

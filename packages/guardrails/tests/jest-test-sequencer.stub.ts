@@ -24,7 +24,6 @@ export default class SimpleTestSequencer {
   }
 
   cacheResults(): void {
-    // Jest expects this method for caching test results between runs.
+    // Vitest expects this method for caching test results between runs.
   }
 }
-

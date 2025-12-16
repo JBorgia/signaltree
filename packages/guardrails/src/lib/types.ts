@@ -14,6 +14,12 @@ export interface GuardrailsConfig<
   /** Enable/disable guardrails */
   enabled?: boolean | (() => boolean);
 
+  /** Change detection strategy */
+  changeDetection?: {
+    /** Disable PathNotifier (force polling or subscription) */
+    disablePathNotifier?: boolean;
+  };
+
   /** Performance budget limits */
   budgets?: {
     /** Max milliseconds per update (default: 16) */

@@ -1,3 +1,4 @@
+/* eslint-disable */
 export default {
   displayName: 'demo',
   preset: '../../jest.preset.js',
@@ -6,8 +7,7 @@ export default {
   testPathIgnorePatterns: ['demo-e2e'],
   moduleNameMapper: {
     '^@signaltree/core$': '<rootDir>/../../packages/core/src/index.ts',
-    '^@signaltree/core/(.*)$':
-      '<rootDir>/../../packages/core/src/$1/index.ts',
+    '^@signaltree/core/(.*)$': '<rootDir>/../../packages/core/src/$1/index.ts',
     '^@signaltree/(.*)$': '<rootDir>/../../packages/$1/src/index.ts',
     '^@app/(.*)$': '<rootDir>/src/app/$1',
     '^@benchmark/(.*)$': '<rootDir>/src/app/services/benchmark/$1',

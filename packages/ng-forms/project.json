@@ -51,7 +51,15 @@
       "executor": "@nx/jest:jest",
       "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
       "options": {
-        "jestConfig": "packages/ng-forms/jest.config.ts"
+        "jestConfig": "packages/ng-forms/jest.config.ts",
+        "passWithNoTests": true
+      }
+    },
+    "test:watch": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest watch",
+        "cwd": "packages/ng-forms"
       }
     },
     "lint": {

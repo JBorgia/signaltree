@@ -450,8 +450,7 @@ describe('AsyncDemoComponent', () => {
 
     it('should handle error recovery workflow', fakeAsync(() => {
       // Force initial load error, then succeed on retry, then fail on add, then succeed on second add
-      jest
-        .spyOn(Math, 'random')
+      jest.spyOn(Math, 'random')
         .mockReturnValueOnce(0.1) // loadUsers fails
         .mockReturnValueOnce(0.5) // retry succeeds
         .mockReturnValueOnce(0.1) // addUser fails

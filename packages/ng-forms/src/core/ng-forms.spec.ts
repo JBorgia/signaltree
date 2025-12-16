@@ -1,16 +1,7 @@
 import { toObservable } from '../rxjs/rxjs-bridge';
 import { unique } from './async-validators';
-import {
-  createFormTree,
-  SIGNAL_FORM_DIRECTIVES,
-  SignalValueDirective,
-} from './ng-forms';
-import {
-  email as emailValidator,
-  minLength,
-  pattern,
-  required,
-} from './validators';
+import { createFormTree, SIGNAL_FORM_DIRECTIVES, SignalValueDirective } from './ng-forms';
+import { email as emailValidator, minLength, pattern, required } from './validators';
 
 interface TestFormData extends Record<string, unknown> {
   username: string;
@@ -195,10 +186,9 @@ describe('NgForms', () => {
   });
 
   describe('toObservable', () => {
-    it('should convert signal to observable', (done) => {
+    it('should convert signal to observable', () => {
       // This would need proper Angular testing setup for full test
       expect(typeof toObservable).toBe('function');
-      done();
     });
   });
 });

@@ -4,6 +4,17 @@ import { deepEqual, LRUCache } from '@signaltree/shared';
 import { isNodeAccessor } from '../../../lib/utils';
 
 import type { SignalTree } from '../../../lib/types';
+
+// Dev environment detection
+declare const __DEV__: boolean | undefined;
+
+function isDevMode(): boolean {
+  if (typeof __DEV__ !== 'undefined') {
+    return __DEV__;
+  }
+  return false;
+}
+
 /**
  * Extended SignalTree interface with memoization capabilities
  * Uses the same unconstrained recursive typing approach as core
@@ -605,6 +616,15 @@ export function withMemoization<T>(
         }
 
         // Cache miss - compute new result
+        // Notify dev hooks about recomputation (if enabled)
+        if (isDevMode() && (tree as any).__devHooks?.onRecompute) {
+          try {
+            (tree as any).__devHooks.onRecompute(key, 1);
+          } catch {
+            // Ignore dev hook errors
+          }
+        }
+
         const result = fn(currentState);
 
         // Cache the result

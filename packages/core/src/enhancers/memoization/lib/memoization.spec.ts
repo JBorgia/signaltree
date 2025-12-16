@@ -1,5 +1,6 @@
-import { signalTree } from '../../../lib/signal-tree';
+import { vi } from 'vitest';
 
+import { signalTree } from '../../../lib/signal-tree';
 import {
   clearAllCaches,
   enableMemoization,
@@ -237,11 +238,11 @@ describe('Memoization', () => {
 
     describe('TTL (Time To Live)', () => {
       beforeEach(() => {
-        jest.useFakeTimers();
+        vi.useFakeTimers();
       });
 
       afterEach(() => {
-        jest.useRealTimers();
+        vi.useRealTimers();
       });
 
       it('should expire cache entries after TTL', () => {
@@ -253,8 +254,8 @@ describe('Memoization', () => {
         expect(tree.getCacheStats?.()?.size).toBe(1);
 
         // Fast forward time to trigger cleanup interval (TTL + enough for cleanup to run)
-        jest.advanceTimersByTime(1000); // First interval at 1000ms
-        jest.runOnlyPendingTimers(); // Ensure any pending timers execute
+        vi.advanceTimersByTime(1000); // First interval at 1000ms
+        vi.runOnlyPendingTimers(); // Ensure any pending timers execute
 
         // Cache should be cleaned up after TTL expiration
         expect(tree.getCacheStats?.()?.size).toBe(0);

@@ -25,10 +25,11 @@
     "@signaltree/core": "^5.0.0",
     "rxjs": "^7.0.0"
   },
+  "peerDependenciesMeta": {},
   "devDependencies": {
     "@signaltree/core": "workspace:*",
     "@signaltree/shared": "workspace:*",
-    "jest-preset-angular": "^14.0.0"
+    "jest-preset-angular": "^15.0.3"
   },
   "publishConfig": {
     "access": "public"

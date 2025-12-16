@@ -1286,7 +1286,7 @@ describe('UserStore', () => {
   it('should batch multiple updates', () => {
     const tree = testTree(signalTree({ a: 1, b: 2 }));
 
-    const renderSpy = jest.fn();
+    const renderSpy = vi.fn();
     tree.effect(renderSpy);
 
     tree.batchUpdate((state) => ({ a: state.a + 1, b: state.b + 1 }));

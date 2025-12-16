@@ -15,7 +15,7 @@ Then run:
 pnpm nx reset
 ```
 
-### Jest Cannot Find Tests
+### Vitest Cannot Find Tests
 
 Guardrails coverage runs in-band to avoid glob parsing issues. If you see:
 

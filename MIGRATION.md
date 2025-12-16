@@ -340,4 +340,84 @@ If you encounter issues during migration:
 - **v4.0.0** (November 3, 2025): Breaking change, deprecated packages marked on npm
 - **v5.0.0** (Future): Deprecated packages may be unpublished
 
-**Recommendation**: Migrate to v4.0.0+ as soon as possible to benefit from improvements and ensure ongoing support.
+## **Recommendation**: Migrate to v4.0.0+ as soon as possible to benefit from improvements and ensure ongoing support.
+
+## ng-forms: Angular 17-19 Legacy Bridge Deprecation
+
+### Overview
+
+The `@signaltree/ng-forms` package includes a **manual bidirectional bridge** for Angular 17-19 compatibility. This bridge will be **removed in v6.0** when Angular 21 is released.
+
+**Timeline:**
+
+- **v5.x** (Current): Legacy bridge functional, deprecation warning in dev mode
+- **v6.0** (Planned): Legacy bridge removed, Angular 20.3+ required
+
+### Who is Affected?
+
+If you're using `@signaltree/ng-forms` with **Angular 17, 18, or 19**, you'll see this console warning in development:
+
+```
+[@signaltree/ng-forms] Legacy Angular 17-19 support is deprecated and will be removed in v6.0.
+Please upgrade to Angular 20.3+ to use native Signal Forms. See MIGRATION.md for the upgrade path.
+```
+
+### Migration Path
+
+**Option 1: Upgrade to Angular 20.3+ (Recommended)**
+
+Angular 20.3+ includes native Signal Forms with the `connect()` API. `@signaltree/ng-forms` will automatically use this API when available.
+
+```bash
+# Upgrade Angular
+ng update @angular/core @angular/cli --next
+
+# Verify version (should be 20.3+)
+ng version
+```
+
+No code changes required - `@signaltree/ng-forms` will detect and use the native API.
+
+**Option 2: Stay on Angular 17-19 (Temporary)**
+
+If you cannot upgrade immediately:
+
+1. The legacy bridge will continue working in v5.x
+2. You can suppress the warning by acknowledging the deprecation
+3. Plan to upgrade before v6.0 release
+
+**Suppressing the Warning** (not recommended):
+
+```typescript
+// Only if you understand the deprecation and have a migration plan
+if (globalThis && typeof globalThis === 'object') {
+  (globalThis as any).__signaltreeNgFormsLegacyAck = true;
+}
+```
+
+### What Changes in v6.0?
+
+- **Minimum Angular version**: 20.3+
+- **Removed**: Manual bidirectional bridge code
+- **Required**: Native Angular Signal Forms (`FormControl.connect()`)
+- **Benefit**: Smaller bundle size, better performance, native Angular integration
+
+### Testing the Upgrade
+
+After upgrading to Angular 20.3+:
+
+1. Verify no deprecation warnings in console
+2. Test form bindings work correctly
+3. Run your form validation tests
+4. Check async validators still function
+
+```typescript
+// Example test - should work unchanged
+const formTree = createFormTree({
+  name: '',
+  email: '',
+});
+
+formTree.$.name.set('Test'); // Should update form control
+formTree.form.get('email')?.setValue('test@example.com'); // Should update signal
+```

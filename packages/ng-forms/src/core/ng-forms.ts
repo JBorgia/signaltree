@@ -1,36 +1,49 @@
 import {
-    computed,
-    DestroyRef,
-    Directive,
-    effect,
-    ElementRef,
-    EventEmitter,
-    forwardRef,
-    HostListener,
-    inject,
-    Input,
-    isSignal,
-    OnInit,
-    Output,
-    Renderer2,
-    Signal,
-    signal,
-    WritableSignal,
+  computed,
+  DestroyRef,
+  Directive,
+  effect,
+  ElementRef,
+  EventEmitter,
+  forwardRef,
+  HostListener,
+  inject,
+  Input,
+  isSignal,
+  OnInit,
+  Output,
+  Renderer2,
+  Signal,
+  signal,
+  WritableSignal,
 } from '@angular/core';
 import {
-    AbstractControl,
-    AsyncValidatorFn as AngularAsyncValidatorFn,
-    ControlValueAccessor,
-    FormArray,
-    FormControl,
-    FormGroup,
-    NG_VALUE_ACCESSOR,
-    ValidationErrors,
-    ValidatorFn as AngularValidatorFn,
+  AbstractControl,
+  AsyncValidatorFn as AngularAsyncValidatorFn,
+  ControlValueAccessor,
+  FormArray,
+  FormControl,
+  FormGroup,
+  NG_VALUE_ACCESSOR,
+  ValidationErrors,
+  ValidatorFn as AngularValidatorFn,
 } from '@angular/forms';
 import { signalTree } from '@signaltree/core';
 import { deepClone, matchPath, mergeDeep, parsePath } from '@signaltree/shared';
 import { firstValueFrom, isObservable, Observable, Subscription } from 'rxjs';
+
+// Dev environment detection
+declare const __DEV__: boolean | undefined;
+declare const ngDevMode: boolean | undefined;
+
+function isDevEnvironment(): boolean {
+  if (typeof __DEV__ !== 'undefined') return __DEV__;
+  if (typeof ngDevMode !== 'undefined') return Boolean(ngDevMode);
+  return true; // Default to dev mode if uncertain
+}
+
+// Track if we've already shown the deprecation warning (show once per session)
+let hasShownLegacyWarning = false;
 
 /**
  * @fileoverview Angular Forms Integration for SignalTree
@@ -743,6 +756,17 @@ function connectControlAndSignal(
 
   // Fallback: Manual bidirectional bridge for Angular 17-19
   // @deprecated Will be removed when Angular 21 is released
+
+  // Emit deprecation warning in dev mode (once per session)
+  if (isDevEnvironment() && !hasShownLegacyWarning) {
+    hasShownLegacyWarning = true;
+    console.warn(
+      '[@signaltree/ng-forms] Legacy Angular 17-19 support is deprecated and will be removed in v6.0. ' +
+        'Please upgrade to Angular 20.3+ to use native Signal Forms. ' +
+        'See MIGRATION.md for the upgrade path.'
+    );
+  }
+
   let updatingFromControl = false;
   let updatingFromSignal = false;
   let versionCounter = 0;

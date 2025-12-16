@@ -66,7 +66,25 @@
   },
   "peerDependencies": {
     "@angular/core": "^20.0.0",
-    "tslib": "^2.0.0"
+    "@angular/compiler": "^20.0.0",
+    "@angular/platform-browser-dynamic": "^20.0.0",
+    "zone.js": "^0.15.0",
+    "tslib": "^2.0.0",
+    "vitest": "^2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@angular/compiler": {
+      "optional": true
+    },
+    "@angular/platform-browser-dynamic": {
+      "optional": true
+    },
+    "zone.js": {
+      "optional": true
+    },
+    "vitest": {
+      "optional": true
+    }
   },
   "publishConfig": {
     "access": "public"

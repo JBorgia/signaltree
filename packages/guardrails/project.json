@@ -60,10 +60,18 @@
       }
     },
     "test": {
-      "executor": "@nx/jest:jest",
+      "executor": "nx:run-commands",
       "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
       "options": {
-        "jestConfig": "packages/guardrails/jest.config.ts"
+        "command": "vitest run",
+        "cwd": "packages/guardrails"
+      }
+    },
+    "test:watch": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest watch",
+        "cwd": "packages/guardrails"
       }
     },
     "lint": {

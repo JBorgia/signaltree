@@ -38,6 +38,11 @@ function setDevFlag(value: boolean | undefined): void {
 // Polling interval used by guardrails (must match POLLING_INTERVAL_MS in guardrails.ts)
 const POLLING_INTERVAL_MS = 50;
 
+// Default config for tests with mock trees (disables PathNotifier since mocks don't emit events)
+const TEST_CONFIG_BASE = {
+  changeDetection: { disablePathNotifier: true },
+} as const;
+
 function createMockTree<T extends Record<string, unknown>>(
   initial: T
 ): MockTree<T> {
@@ -83,26 +88,26 @@ function createMockTree<T extends Record<string, unknown>>(
  */
 async function waitForPolling(times = 1): Promise<void> {
   for (let i = 0; i < times; i++) {
-    jest.advanceTimersByTime(POLLING_INTERVAL_MS);
+    vi.advanceTimersByTime(POLLING_INTERVAL_MS);
     await Promise.resolve(); // Allow async operations to complete
   }
 }
 
 describe('Guardrails Enhancer', () => {
   beforeEach(() => {
-    jest.useFakeTimers();
-    jest.spyOn(console, 'warn').mockImplementation(() => undefined);
-    jest.spyOn(console, 'error').mockImplementation(() => undefined);
-    jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    vi.useFakeTimers();
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
     setDevFlag(true);
     process.env['NODE_ENV'] = 'development';
   });
 
   afterEach(() => {
-    jest.runOnlyPendingTimers();
-    jest.clearAllTimers();
-    jest.useRealTimers();
-    jest.restoreAllMocks();
+    vi.runOnlyPendingTimers();
+    vi.clearAllTimers();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
     setDevFlag(undefined);
   });
 
@@ -121,7 +126,10 @@ describe('Guardrails Enhancer', () => {
 
   it('attaches guardrails API in development mode', () => {
     const tree = createMockTree({ count: 0 });
-    const enhancer = withGuardrails({ reporting: { console: false } });
+    const enhancer = withGuardrails({
+      ...TEST_CONFIG_BASE,
+      reporting: { console: false },
+    });
     const enhanced = enhancer(
       tree as unknown as SignalTree<{ count: number }>
     ) as unknown as GuardrailsTree<{ count: number }>;
@@ -134,6 +142,7 @@ describe('Guardrails Enhancer', () => {
   it('captures update time budget violations', async () => {
     const tree = createMockTree({ count: 0 });
     const enhancer = withGuardrails({
+      ...TEST_CONFIG_BASE,
       budgets: { maxUpdateTime: 5 },
       reporting: { console: false },
     });
@@ -142,7 +151,7 @@ describe('Guardrails Enhancer', () => {
     ) as unknown as GuardrailsTree<{ count: number }>;
 
     // Mock slow performance
-    const perfNowMock = jest.spyOn(performance, 'now');
+    const perfNowMock = vi.spyOn(performance, 'now');
     let callCount = 0;
     perfNowMock.mockImplementation(() => {
       callCount++;
@@ -152,6 +161,18 @@ describe('Guardrails Enhancer', () => {
 
     enhanced({ count: 1 });
 
+    // Debug: verify the tree state actually changed
+    const currentState = enhanced();
+    if (currentState.count !== 1) {
+      throw new Error(`Tree state didn't change! count=${currentState.count}`);
+    }
+
+    // Debug: check how many pending timers exist
+    const pendingTimers = vi.getTimerCount();
+    if (pendingTimers === 0) {
+      throw new Error('No pending timers! Polling interval was not set.');
+    }
+
     // Wait for polling to detect change
     await waitForPolling(2);
 
@@ -159,6 +180,14 @@ describe('Guardrails Enhancer', () => {
     if (!report) {
       throw new Error('Guardrails report unavailable');
     }
+
+    // Debug: check if any updates were detected
+    if (report.stats.updateCount === 0) {
+      throw new Error(
+        `No updates detected! Stats: ${JSON.stringify(report.stats)}`
+      );
+    }
+
     const hasBudgetIssue = report.issues.some(
       (issue: GuardrailIssue) => issue.type === 'budget'
     );
@@ -172,6 +201,7 @@ describe('Guardrails Enhancer', () => {
       nested: { level: {} as Record<string, unknown> },
     });
     const enhancer = withGuardrails({
+      ...TEST_CONFIG_BASE,
       customRules: [rules.noDeepNesting(2)],
       reporting: { console: false },
     });
@@ -232,6 +262,7 @@ describe('Guardrails Enhancer', () => {
   it('tracks hot paths when threshold is exceeded', async () => {
     const tree = createMockTree({ count: 0 });
     const enhancer = withGuardrails({
+      ...TEST_CONFIG_BASE,
       hotPaths: { enabled: true, threshold: 1, windowMs: 1000, topN: 5 },
       reporting: { console: false },
     });
@@ -262,6 +293,7 @@ describe('Guardrails Enhancer', () => {
   it('updates percentile stats across multiple samples', async () => {
     const tree = createMockTree({ count: 0 });
     const enhancer = withGuardrails({
+      ...TEST_CONFIG_BASE,
       reporting: { console: false },
     });
     const enhanced = enhancer(
@@ -320,7 +352,7 @@ describe('Guardrails Enhancer', () => {
 
   it('disposes polling and clears monitoring interval', () => {
     const tree = createMockTree({ count: 0 });
-    const clearSpy = jest.spyOn(globalThis, 'clearInterval');
+    const clearSpy = vi.spyOn(globalThis, 'clearInterval');
     const enhancer = withGuardrails({
       reporting: { console: false },
     });
@@ -348,6 +380,7 @@ describe('Guardrails Enhancer', () => {
     });
 
     const enhancer = withGuardrails({
+      ...TEST_CONFIG_BASE,
       analysis: { warnParentReplace: true, minDiffForParentReplace: 0.5 },
       reporting: { console: false },
     });
@@ -387,6 +420,7 @@ describe('Guardrails Enhancer', () => {
   it('handles asynchronous guardrail rules that resolve to false', async () => {
     const tree = createMockTree({ count: 0 });
     const enhancer = withGuardrails({
+      ...TEST_CONFIG_BASE,
       customRules: [
         {
           name: 'async-test',
@@ -429,6 +463,7 @@ describe('Guardrails Enhancer', () => {
     });
 
     const enhancer = withGuardrails({
+      ...TEST_CONFIG_BASE,
       budgets: { maxRecomputations: 1 },
       reporting: { console: false, interval: 50 },
     });
@@ -443,7 +478,7 @@ describe('Guardrails Enhancer', () => {
 
     // Wait for polling and monitoring
     await waitForPolling(3);
-    jest.advanceTimersByTime(60);
+    vi.advanceTimersByTime(60);
 
     const report = enhanced.__guardrails?.getReport();
     if (!report) {
@@ -460,6 +495,7 @@ describe('Guardrails Enhancer', () => {
     const tree = createMockTree({ metrics: {} as Record<string, number> });
 
     const enhancer = withGuardrails({
+      ...TEST_CONFIG_BASE,
       budgets: { maxMemory: 2 },
       memoryLeaks: {
         enabled: true,
@@ -485,7 +521,7 @@ describe('Guardrails Enhancer', () => {
     }
 
     // Wait for monitoring intervals
-    jest.advanceTimersByTime(200);
+    vi.advanceTimersByTime(200);
     await Promise.resolve();
 
     const report = enhanced.__guardrails?.getReport();

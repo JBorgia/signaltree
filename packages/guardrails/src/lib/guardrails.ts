@@ -3,9 +3,9 @@
  * Development-only performance monitoring and anti-pattern detection
  * @packageDocumentation
  */
+import { getPathNotifier } from '@signaltree/core';
 
 import type { SignalTree } from '@signaltree/core';
-
 import type {
   GuardrailsConfig,
   GuardrailsAPI,
@@ -115,6 +115,7 @@ interface GuardrailsContext<
   >;
   issueMap: Map<string, GuardrailIssue>;
   signalUsage: Map<string, { updates: number; lastSeen: number }>;
+  pathRecomputations: Map<string, number>;
   memoryHistory: Array<{ timestamp: number; count: number }>;
   recomputationLog: number[];
   pollingIntervalId?: ReturnType<typeof setInterval>;
@@ -154,10 +155,35 @@ export function withGuardrails<T extends Record<string, unknown>>(
       hotPathData: new Map(),
       issueMap: new Map(),
       signalUsage: new Map(),
+      pathRecomputations: new Map(),
       memoryHistory: [],
       recomputationLog: [],
       previousState: tryStructuredClone(tree()),
       disposed: false,
+    };
+    // Wire up dev hooks for memoization recomputation tracking
+    (tree as unknown as Record<string, unknown>)['__devHooks'] = {
+      onRecompute: (path: string, count: number) => {
+        if (!context.disposed && !context.suppressed) {
+          recordRecomputations(path, context, count, Date.now());
+
+          // Check budget violations
+          const maxRecomputations = config.budgets?.maxRecomputations;
+
+          if (
+            maxRecomputations &&
+            context.stats.recomputationCount > maxRecomputations
+          ) {
+            addIssue(context, {
+              type: 'budget',
+              severity: 'error',
+              message: `Recomputation budget exceeded: ${context.stats.recomputationCount} > ${maxRecomputations}`,
+              path,
+              count: 1,
+            });
+          }
+        }
+      },
     };
 
     // Try reactive subscription first (zero polling in Angular production)
@@ -191,12 +217,31 @@ export function withGuardrails<T extends Record<string, unknown>>(
 }
 
 /**
- * Start change detection - tries reactive subscription first, falls back to polling
+ * Start change detection - tries PathNotifier first, then reactive subscription, finally polling
  */
 function startChangeDetection<T extends Record<string, unknown>>(
   context: GuardrailsContext<T>
 ): () => void {
-  // Try to use tree.subscribe() for reactive change detection (zero polling)
+  // Strategy 1: Try PathNotifier for event-driven detection (zero polling, precise paths)
+  if (!context.config.changeDetection?.disablePathNotifier) {
+    try {
+      const pathNotifier = getPathNotifier();
+      if (pathNotifier) {
+        const unsubscribe = pathNotifier.subscribe(
+          '**',
+          (value: unknown, prev: unknown, path: string) => {
+            handlePathNotifierChange(context, path, value, prev);
+          }
+        );
+        // Success! Using PathNotifier - no polling, precise path tracking
+        return unsubscribe;
+      }
+    } catch {
+      // PathNotifier failed or not available, fall through to next strategy
+    }
+  }
+
+  // Strategy 2: Try reactive subscription (zero polling, but needs state diffing)
   try {
     const unsubscribe = context.tree.subscribe(() => {
       handleStateChange(context);
@@ -205,8 +250,50 @@ function startChangeDetection<T extends Record<string, unknown>>(
     return unsubscribe;
   } catch {
     // subscribe() failed (no injection context) - fall back to polling
-    return startPollingChangeDetection(context);
   }
+
+  // Strategy 3: Fall back to polling (last resort)
+  return startPollingChangeDetection(context);
+}
+
+/**
+ * Handle a path-specific change from PathNotifier (most efficient method)
+ * This is called directly by PathNotifier with precise path information,
+ * avoiding the need for JSON diffing.
+ */
+function handlePathNotifierChange<T extends Record<string, unknown>>(
+  context: GuardrailsContext<T>,
+  path: string,
+  newValue: unknown,
+  oldValue: unknown
+): void {
+  if (context.disposed || context.suppressed) return;
+
+  const startTime = performance.now();
+  const timestamp = Date.now();
+
+  const detail: UpdateDetail = {
+    path,
+    segments: path.split('.'),
+    oldValue,
+    newValue,
+  };
+
+  // Analyze the change
+  analyzePreUpdate(context, detail, {});
+
+  const duration = performance.now() - startTime;
+  const diffRatio = calculateDiffRatio(oldValue, newValue);
+  analyzePostUpdate(context, detail, duration, diffRatio, true);
+  trackHotPath(context, path, duration);
+  trackSignalUsage(context, path, timestamp);
+
+  // Update timing stats
+  updateTimingStats(context, duration);
+  updateSignalStats(context, timestamp);
+
+  // Update previous state snapshot for compatibility with other methods
+  context.previousState = tryStructuredClone(context.tree());
 }
 
 /**
@@ -534,12 +621,16 @@ function updateSignalStats<T extends Record<string, unknown>>(
   context.stats.memoryGrowthRate = growth;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function recordRecomputations<T extends Record<string, unknown>>(
+  path: string,
   context: GuardrailsContext<T>,
   count: number,
   timestamp: number
 ): void {
+  // Track per-path recomputations
+  const currentPathCount = context.pathRecomputations.get(path) ?? 0;
+  context.pathRecomputations.set(path, currentPathCount + count);
+
   if (count > 0) {
     context.stats.recomputationCount += count;
     for (let i = 0; i < count; i++) {
@@ -634,12 +725,14 @@ function addIssue<T extends Record<string, unknown>>(
       return;
     }
     context.issueMap.set(key, issue);
+  } else {
+    // When aggregation is disabled, add each issue with a unique key
+    const key = `${issue.type}:${issue.path}:${
+      issue.message
+    }:${Date.now()}:${Math.random()}`;
+    context.issueMap.set(key, issue);
   }
 
-  context.issues.push(issue);
-  context.stats.violationCount++;
-
-  // Throw mode
   if (context.config.mode === 'throw') {
     throw new Error(`[Guardrails] ${issue.message}`);
   }
