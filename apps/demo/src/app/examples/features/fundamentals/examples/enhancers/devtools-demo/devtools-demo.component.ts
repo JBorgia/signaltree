@@ -168,7 +168,7 @@ export class DevtoolsDemoComponent {
 
   triggerSnapshot() {
     // Export current debug session as a snapshot
-    const devTools = (this.store as Record<string, unknown>)['__devTools'];
+    const devTools = (this.store as unknown as Record<string, unknown>)['__devTools'];
     (
       devTools as { exportDebugSession?: () => unknown }
     )?.exportDebugSession?.();
@@ -177,7 +177,7 @@ export class DevtoolsDemoComponent {
 
   resetMetrics() {
     // Reset metrics by reconnecting devtools
-    const devTools = (this.store as Record<string, unknown>)['__devTools'];
+    const devTools = (this.store as unknown as Record<string, unknown>)['__devTools'];
     (
       devTools as { connectDevTools?: (name: string) => void }
     )?.connectDevTools?.('DevToolsDemo');

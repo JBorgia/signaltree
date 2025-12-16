@@ -22,8 +22,7 @@ interface DashboardState extends Record<string, unknown> {
 })
 export class EnterpriseEnhancerComponent {
   // Demo state with large structure - explicitly type the enhanced tree
-  private tree: SignalTree<DashboardState> &
-    EnterpriseEnhancedTree<DashboardState> = signalTree<DashboardState>({
+  private tree = signalTree<DashboardState>({
     metrics: {
       cpu: 45,
       memory: 62,
@@ -40,7 +39,7 @@ export class EnterpriseEnhancerComponent {
       language: 'en',
       notifications: true,
     },
-  }).with(withEnterprise());
+  }).with(withEnterprise() as unknown as (tree: SignalTree<DashboardState>) => SignalTree<DashboardState> & EnterpriseEnhancedTree<DashboardState>);
 
   // Expose signals for template
   metrics = this.tree.$.metrics;

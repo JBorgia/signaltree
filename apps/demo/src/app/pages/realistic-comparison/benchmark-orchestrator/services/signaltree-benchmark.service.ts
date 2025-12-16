@@ -963,7 +963,7 @@ export class SignalTreeBenchmarkService {
   ): Promise<number | BenchmarkResult> {
     const tree = signalTree({
       activeRequest: null as AbortController | null,
-      result: null as any,
+      result: null as { id: number; data: string } | null,
       cancelled: 0,
     });
 
