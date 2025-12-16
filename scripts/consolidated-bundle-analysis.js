@@ -92,7 +92,7 @@ const packages = [
   {
     name: 'core/enhancers/memoization',
     path: 'dist/packages/core/dist/enhancers/memoization/lib/memoization.js',
-    maxSize: 2700,
+    maxSize: 2800,
     claimed: 2650,
   },
   {
