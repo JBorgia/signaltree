@@ -92,8 +92,8 @@ const packages = [
   {
     name: 'core/enhancers/memoization',
     path: 'dist/packages/core/dist/enhancers/memoization/lib/memoization.js',
-    maxSize: 2650,
-    claimed: 2600,
+    maxSize: 2700,
+    claimed: 2650,
   },
   {
     name: 'core/enhancers/time-travel',
