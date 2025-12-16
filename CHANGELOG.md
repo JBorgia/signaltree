@@ -1,3 +1,17 @@
+## 5.0.5 (2025-12-16)
+
+### 🩹 Fixes
+
+- **core:** Fix type inference for `.with()` method chaining
+  - Moved index signature from inline `[key: string]: unknown` to intersection `& Record<string, unknown>`
+  - Explicit properties like `with`, `state`, `$` now take precedence over index signature
+  - Enables dot notation access: `tree.with(enhancer)` instead of `tree['with'](enhancer)`
+  - Resolves TS4111: "Property 'with' comes from an index signature"
+  
+- **core:** Remove duplicate `entityMap()` function from entity-signal.ts
+  - The correct implementation in types.ts returns `EntityMapMarker<E, K>` for proper type inference
+  - Removed redundant implementation that returned `unknown`
+
 ## 5.0.2 (2025-12-15)
 
 ### 🧹 Chores

@@ -456,27 +456,3 @@ export class EntitySignalImpl<
     return node;
   }
 }
-
-/**
- * Factory function to create an entity collection marker
- *
- * Usage:
- * ```typescript
- * const tree = signalTree({
- *   users: entityMap<User>(),
- * }).with(withEntities());
- * ```
- *
- * @param config Optional configuration (selectId, initial, selectKey)
- * @returns A type marker that withEntities() will recognize
- */
-export function entityMap<
-  E extends Record<string, unknown>,
-  K extends string | number = string
->(config?: Partial<EntityConfig<E, K>>): unknown {
-  // Return a marker object that withEntities() recognizes
-  return {
-    __isEntityMap: true,
-    __entityMapConfig: config || {},
-  };
-}

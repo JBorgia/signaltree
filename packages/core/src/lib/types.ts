@@ -394,10 +394,7 @@ export type SignalTree<T> = NodeAccessor<T> & {
   canUndo?: () => boolean;
   canRedo?: () => boolean;
   getCurrentIndex?: () => number;
-
-  /** Index signature for enhancer compatibility */
-  [key: string]: unknown;
-};
+} & Record<string, unknown>;
 
 // ============================================
 // CONFIGURATION TYPES
