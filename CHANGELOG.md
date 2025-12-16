@@ -1,3 +1,11 @@
+## 5.0.7 (2025-12-16)
+
+### 🩹 Fixes
+
+- **core:** Actually run fix-dts-imports in nx postbuild target
+  - Updated core project.json to run the fix script after build
+  - 5.0.6 had the script but didn't wire it to the build pipeline
+
 ## 5.0.6 (2025-12-16)
 
 ### 🩹 Fixes

@@ -50,7 +50,8 @@
     "postbuild": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "echo \"No-op postbuild: core bundler already produces publishable output\""
+        "command": "node tools/build/fix-dts-imports.mjs",
+        "cwd": "{workspaceRoot}"
       }
     },
     "nx-release-publish": {
