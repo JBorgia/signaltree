@@ -1,4 +1,3 @@
-/* eslint-disable */
 export default {
   displayName: 'ng-forms',
   preset: '../../jest.preset.js',
