@@ -141,6 +141,8 @@ export type TreeNode<T> = {
       ? CallableWritableSignal<T[K]> // Built-ins as callable writable signals
       : T[K] extends (...args: unknown[]) => unknown
       ? CallableWritableSignal<T[K]> // Function leaves as callable writable signals
+      : T[K] extends { __isEntityMap?: true } // Entity markers are leaves
+      ? CallableWritableSignal<T[K]>
       : AccessibleNode<T[K]> // Nested objects
     : CallableWritableSignal<T[K]>; // Primitives
 };
