@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/ng-forms",
-  "version": "5.0.8",
+  "version": "5.0.9",
   "description": "Complete Angular forms integration for SignalTree. FormTree creation, custom directives, validators, form state tracking, and RxJS bridge.",
   "type": "module",
   "sideEffects": false,
