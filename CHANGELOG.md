@@ -1,3 +1,12 @@
+## 5.1.1 (2025-12-17)
+
+### 🐛 Bug Fixes
+
+- **core:** Fix EntityMapMarker preservation in lazy signal trees
+  - `createLazySignalTree` now preserves `EntityMapMarker` objects instead of wrapping them in proxies
+  - This fixes runtime errors where `$.trucks.byId()` was undefined because entity maps weren't materialized
+  - Entity maps are now correctly converted to `EntitySignal` instances by `withEntities()`
+
 ## 5.2.0 (2025-12-16)
 
 ### 🗑️ Removed
