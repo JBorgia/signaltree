@@ -1,3 +1,11 @@
+## 5.1.2 (2025-12-17)
+
+### 🐛 Bug Fixes
+
+- **core:** Fix npm package publishing - include dist/ and src/ directories
+  - Previous publish was missing the actual JavaScript and TypeScript declaration files
+  - Package now correctly includes all required files for installation
+
 ## 5.1.1 (2025-12-17)
 
 ### 🐛 Bug Fixes
