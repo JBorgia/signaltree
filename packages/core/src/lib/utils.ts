@@ -15,6 +15,18 @@ export { isBuiltInObject };
 export { parsePath };
 
 /**
+ * Check if a value is an EntityMapMarker
+ * Used to preserve entity map markers during lazy signal tree creation
+ */
+function isEntityMapMarker(value: unknown): boolean {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      (value as { __isEntityMap?: unknown }).__isEntityMap === true
+  );
+}
+
+/**
  * Generic memory manager interface for lazy signal trees
  */
 export interface MemoryManager {
@@ -193,6 +205,9 @@ export function createLazySignalTree<T extends object>(
       const value = (target as Record<string, unknown>)[key];
 
       if (isSignal(value)) return value;
+
+      // Preserve EntityMapMarker so withEntities can materialize them later
+      if (isEntityMapMarker(value)) return value;
 
       // Check memory manager cache first
       if (memoryManager) {
