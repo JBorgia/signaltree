@@ -6,6 +6,12 @@
 
 Use this index to navigate the canonical documentation.
 
+## Getting Started
+
+- Implementation patterns guide: docs/IMPLEMENTATION_PATTERNS.md
+- Project overview and specifications: docs/overview.md
+- Root README: ../../README.md
+
 ## Overview
 
 - Project overview and specifications: docs/overview.md
