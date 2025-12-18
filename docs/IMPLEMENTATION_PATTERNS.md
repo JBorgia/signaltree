@@ -66,58 +66,73 @@ return {
 };
 ```
 
-## TypeScript Interface Pattern
+## TypeScript Type Pattern (SignalTree-First)
 
-The interface declares `Signal<T>` (read-only) while the implementation returns `WritableSignal<T>`:
+Use `ReturnType` inference instead of manual interface definitions:
 
 ```typescript
 // user-tree.types.ts
-import { Signal } from '@angular/core';
-import { EntitySignal } from '@signaltree/core';
+import type { createUserTree } from './user.tree';
 
-export interface UserTree {
-  // Entity collections
-  readonly users: EntitySignal<UserDto, number>;
+// Let SignalTree infer the type - no manual interface needed!
+export type UserTree = ReturnType<typeof createUserTree>;
 
-  // TypeScript enforces read-only contract at compile time
-  readonly selectedUserId: Signal<number | null>;
-  readonly loadingState: Signal<LoadingState>;
-  readonly error: Signal<Error | null>;
-
-  // Computed selectors
-  readonly selectedUser: Signal<UserDto | null>;
-  readonly isLoaded: Signal<boolean>;
-
-  // Mutation methods for state changes
-  setSelectedUser(id: number | null): void;
-  clearUsers(): void;
-  loadAll$(): Observable<void>;
+// Only define state shape types (needed for signalTree<T> generic)
+export interface UserTreeState {
+  users: EntityMapMarker<UserDto, number>;
+  selected: { userId: number | null };
+  loading: { state: LoadingState; error: string | null };
 }
 ```
 
 ```typescript
 // user.tree.ts
-export function createUserTree(): UserTree {
-  const tree = signalTree<UserTreeState>(initialState).with(withEntities()); // Auto-detects entityMap markers
+export function createUserTree() {
+  // No explicit return type needed!
+  const tree = signalTree<UserTreeState>(initialState)
+    .with(withEntities())
+    .with(withDevTools({ treeName: 'UserTree' }));
 
-  const $ = tree.$; // Shorthand for state access
+  const $ = tree.$;
+
+  // Derived state - actual computations
+  const selectedUser = computed(() => {
+    const id = $.selected.userId();
+    return id ? $.users.byId(id)() ?? null : null;
+  });
 
   return {
+    // SignalTree infers all types automatically
     users: $.users,
-    // WritableSignal is assignable to Signal - TypeScript enforces the contract
     selectedUserId: $.selected.userId,
     loadingState: $.loading.state,
-    error: $.loading.error,
+    selectedUser,
     // ...
   };
 }
 ```
 
-**Why this works:**
+**Why this is SignalTree-first:**
 
-- `WritableSignal<T>` extends `Signal<T>` in Angular's type system
-- Consumers see `Signal<T>` and cannot call `.set()` without casting
-- Implementation stays simple — no wrapper functions needed
+- Trust SignalTree's type inference instead of duplicating types
+- Less boilerplate, fewer places to update when API changes
+- Type always matches implementation (can't get out of sync)
+- Still get full IDE autocomplete and type checking
+
+### Alternative: Explicit Interface (When Needed)
+
+If you need to enforce a read-only contract or document the API explicitly:
+
+```typescript
+export interface UserTree {
+  readonly users: EntitySignal<UserDto, number>;
+  readonly selectedUserId: Signal<number | null>;
+  setSelectedUser(id: number | null): void;
+}
+```
+
+But prefer `ReturnType` inference for simplicity.
+
 - This is the same pattern Angular Material and other libraries use
 
 ## When to Use `computed()`

@@ -106,19 +106,21 @@ return {
 };
 ```
 
-### 2. Use TypeScript interfaces for read-only contracts
+### 2. Use `ReturnType` inference (SignalTree-first)
 
 ```typescript
-// Interface declares Signal<T> (read-only)
-export interface UserTree {
-  readonly selectedUserId: Signal<number | null>; // Consumer sees read-only
-  setSelectedUser(id: number): void; // Mutation via methods
-}
+// Let SignalTree infer the type - no manual interface needed!
+import type { createUserTree } from './user.tree';
+export type UserTree = ReturnType<typeof createUserTree>;
 
-// Implementation returns WritableSignal (assignable to Signal)
-return {
-  selectedUserId: $.selected.userId, // WritableSignal → Signal works!
-};
+// Factory function - no explicit return type needed
+export function createUserTree() {
+  const tree = signalTree(initialState).with(withEntities());
+  return {
+    selectedUserId: tree.$.selected.userId, // Type inferred automatically
+    // ...
+  };
+}
 ```
 
 ### 3. Use `computed()` only for derived state

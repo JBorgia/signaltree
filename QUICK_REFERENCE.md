@@ -23,11 +23,9 @@ return {
 const user = $.users.byId(123)(); // Returns signal, invoke to get value
 const all = $.users.all()(); // Returns signal, invoke to get array
 
-// ✅ DO: TypeScript interface for read-only contract
-interface MyTree {
-  readonly selectedId: Signal<number>; // Consumer sees read-only
-}
-// Implementation returns WritableSignal (assignable to Signal)
+// ✅ DO: Use ReturnType inference for types
+import type { createMyTree } from './my.tree';
+export type MyTree = ReturnType<typeof createMyTree>; // No manual interface!
 ```
 
 ## Setup
