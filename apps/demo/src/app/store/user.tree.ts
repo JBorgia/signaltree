@@ -147,14 +147,12 @@ export function createUserTree(): UserTree {
   // Create Signal Tree
   // ============================================================
 
-  const $ = signalTree(initialState)
-    .with(
-      withEntities({
-        collections: [{ collection: 'users', key: 'id' }],
-      })
-    )
-    .with(withDevTools({ treeName: STORE_NAME }))
-    .create();
+  const tree = signalTree(initialState)
+    .with(withEntities())
+    .with(withDevTools({ treeName: STORE_NAME }));
+
+  // Shorthand for tree access
+  const $ = tree.$;
 
   // ============================================================
   // Computed Selectors (Actual Derived State)
@@ -163,7 +161,9 @@ export function createUserTree(): UserTree {
   /** Selected user entity - derived from ID + entity collection */
   const selectedUser = computed(() => {
     const id = $.selected.userId();
-    return id !== null ? $.users.byId(id)() ?? null : null;
+    if (id === null) return null;
+    const userSignal = $.users.byId(id);
+    return userSignal ? userSignal() ?? null : null;
   });
 
   /** Users filtered by search term, role, and active status */
@@ -173,7 +173,7 @@ export function createUserTree(): UserTree {
     const role = $.filter.roleFilter();
     const showInactive = $.filter.showInactive();
 
-    return all.filter((user) => {
+    return all.filter((user: UserDto) => {
       // Filter by active status
       if (!showInactive && !user.isActive) return false;
 
@@ -195,7 +195,7 @@ export function createUserTree(): UserTree {
   const activeUserCount = computed(() => {
     return $.users
       .all()()
-      .filter((u) => u.isActive).length;
+      .filter((u: UserDto) => u.isActive).length;
   });
 
   /** Loading state checks */
@@ -219,7 +219,7 @@ export function createUserTree(): UserTree {
   }
 
   function toggleShowInactive(): void {
-    $.filter.showInactive.update((v) => !v);
+    $.filter.showInactive.update((v: boolean) => !v);
   }
 
   function clearUsers(): void {
