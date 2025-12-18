@@ -12,6 +12,7 @@ jobs:
     permissions:
       contents: write
       packages: write
+      id-token: write  # Required for npm provenance/trusted publishers
 
     steps:
       - name: Checkout
@@ -52,6 +53,7 @@ jobs:
         run: pnpm nx release publish --verbose
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true  # Enable provenance attestation
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
