@@ -5,6 +5,9 @@
 > 📖 Full guide: [docs/IMPLEMENTATION_PATTERNS.md](docs/IMPLEMENTATION_PATTERNS.md)
 
 ```typescript
+const tree = signalTree(initialState).with(withEntities());
+const $ = tree.$; // Shorthand for state access
+
 // ✅ DO: Expose signals directly from $ tree
 return {
   selectedUserId: $.selected.userId, // Direct signal
@@ -17,8 +20,8 @@ return {
 };
 
 // ✅ DO: Use EntitySignal API
-const user = $.users.byId(123)();
-const all = $.users.all()();
+const user = $.users.byId(123)(); // Returns signal, invoke to get value
+const all = $.users.all()(); // Returns signal, invoke to get array
 
 // ✅ DO: TypeScript interface for read-only contract
 interface MyTree {

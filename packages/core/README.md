@@ -90,6 +90,9 @@ Follow these principles for idiomatic SignalTree code:
 ### 1. Expose signals directly (no computed wrappers)
 
 ```typescript
+const tree = signalTree(initialState).with(withEntities());
+const $ = tree.$; // Shorthand for state access
+
 // ✅ SignalTree-first: Direct signal exposure
 return {
   selectedUserId: $.selected.userId, // Direct from $ tree

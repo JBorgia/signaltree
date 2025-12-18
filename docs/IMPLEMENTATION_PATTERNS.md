@@ -21,15 +21,16 @@ SignalTree-first means:
 
 ```typescript
 export function createUserTree(): UserTree {
-  const $ = signalTree<UserTreeState>(initialState)
-    .with(withEntities({ collection: 'users', key: 'id' }))
-    .with(withDevTools({ treeName: 'UserTree' }))
-    .create();
+  const tree = signalTree<UserTreeState>(initialState)
+    .with(withEntities()) // Auto-detects entityMap markers
+    .with(withDevTools({ treeName: 'UserTree' }));
+
+  const $ = tree.$; // Shorthand for state access
 
   // Derived state - actual computations
   const selectedUser = computed(() => {
     const id = $.selected.userId();
-    return id ? $.users.byId(id)() : null;
+    return id ? $.users.byId(id)() ?? null : null;
   });
 
   const isLoaded = computed(() => $.loading.state() === LoadingState.Loaded);
@@ -97,9 +98,9 @@ export interface UserTree {
 ```typescript
 // user.tree.ts
 export function createUserTree(): UserTree {
-  const $ = signalTree<UserTreeState>(initialState)
-    .with(withEntities({ collection: 'users', key: 'id' }))
-    .create();
+  const tree = signalTree<UserTreeState>(initialState).with(withEntities()); // Auto-detects entityMap markers
+
+  const $ = tree.$; // Shorthand for state access
 
   return {
     users: $.users,
@@ -190,7 +191,8 @@ Use Angular's `effect()` for side effects, keeping them explicit and visible:
 
 ```typescript
 export function createUserTree(): UserTree {
-  const $ = signalTree<UserTreeState>(initialState).create();
+  const tree = signalTree<UserTreeState>(initialState);
+  const $ = tree.$; // Shorthand for state access
 
   // Persist selection to localStorage
   effect(() => {
@@ -335,33 +337,29 @@ See the TruckTree implementation for a production example:
 ```typescript
 // truck.tree.ts - Full SignalTree-first implementation
 export function createTruckTree(): TruckTree {
-  const $ = signalTree<TruckTreeState>({
+  const tree = signalTree<TruckTreeState>({
     trucks: entityMap<TruckDto, number>(),
     haulers: entityMap<HaulerDto, number>(),
     selected: { haulerId: null, truckId: null },
     loading: { state: LoadingState.NotLoaded, error: null },
     filter: null,
   })
-    .with(
-      withEntities({
-        collections: [
-          { collection: 'trucks', key: 'id' },
-          { collection: 'haulers', key: 'id' },
-        ],
-      })
-    )
-    .with(withDevTools({ treeName: 'TruckTree' }))
-    .create();
+    .with(withEntities()) // Auto-detects entityMap markers
+    .with(withDevTools({ treeName: 'TruckTree' }));
+
+  const $ = tree.$; // Shorthand for state access
 
   // Computed selectors (actual derived state)
   const selectedTruck = computed(() => {
     const id = $.selected.truckId();
-    return id ? $.trucks.byId(id)() : null;
+    const signal = $.trucks.byId(id);
+    return signal ? signal() ?? null : null;
   });
 
   const selectedHauler = computed(() => {
     const id = $.selected.haulerId();
-    return id ? $.haulers.byId(id)() : null;
+    const signal = $.haulers.byId(id);
+    return signal ? signal() ?? null : null;
   });
 
   const isLoaded = computed(() => $.loading.state() === LoadingState.Loaded);
