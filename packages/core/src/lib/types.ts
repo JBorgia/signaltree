@@ -1,4 +1,5 @@
 import { Signal, WritableSignal } from '@angular/core';
+import { entityMap, signalTree, withEntities } from '@signaltree/core';
 
 import type { SecurityValidatorConfig } from './security/security-validator';
 
@@ -138,18 +139,18 @@ export type TreeNode<T> = {
   // Note: [T[K]] extends [...] prevents distributive conditional types
   // This ensures when T is generic, we don't get union of all possible branches
   [K in keyof T]: [T[K]] extends [EntityMapMarker<infer E, infer Key>]
-  ? EntitySignal<E, Key> // Entity collections become EntitySignal
-  : [T[K]] extends [readonly unknown[]]
-  ? CallableWritableSignal<T[K]> // Arrays get callable overloads
-  : [T[K]] extends [object]
-  ? [T[K]] extends [Signal<unknown>]
-  ? T[K]
-  : [T[K]] extends [BuiltInObject]
-  ? CallableWritableSignal<T[K]> // Built-ins as callable writable signals
-  : [T[K]] extends [(...args: unknown[]) => unknown]
-  ? CallableWritableSignal<T[K]> // Function leaves as callable writable signals
-  : AccessibleNode<T[K]> // Nested objects
-  : CallableWritableSignal<T[K]>; // Primitives
+    ? EntitySignal<E, Key> // Entity collections become EntitySignal
+    : [T[K]] extends [readonly unknown[]]
+    ? CallableWritableSignal<T[K]> // Arrays get callable overloads
+    : [T[K]] extends [object]
+    ? [T[K]] extends [Signal<unknown>]
+      ? T[K]
+      : [T[K]] extends [BuiltInObject]
+      ? CallableWritableSignal<T[K]> // Built-ins as callable writable signals
+      : [T[K]] extends [(...args: unknown[]) => unknown]
+      ? CallableWritableSignal<T[K]> // Function leaves as callable writable signals
+      : AccessibleNode<T[K]> // Nested objects
+    : CallableWritableSignal<T[K]>; // Primitives
 };
 
 /**
@@ -177,20 +178,20 @@ export type DeepPath<
 > = Depth['length'] extends 5
   ? never
   : {
-    [K in keyof T]: K extends string
-    ? T[K] extends readonly unknown[]
-    ? `${Prefix}${K}` // Array found - include this path
-    : T[K] extends object
-    ? T[K] extends Signal<unknown>
-    ? never // Skip Angular signals
-    : T[K] extends BuiltInObject
-    ? never // Skip built-in objects
-    : T[K] extends (...args: unknown[]) => unknown
-    ? never // Skip functions
-    : `${Prefix}${K}` | DeepPath<T[K], `${Prefix}${K}.`, [...Depth, 1]> // Nested object - recurse
-    : never // Skip primitives
-    : never;
-  }[keyof T];
+      [K in keyof T]: K extends string
+        ? T[K] extends readonly unknown[]
+          ? `${Prefix}${K}` // Array found - include this path
+          : T[K] extends object
+          ? T[K] extends Signal<unknown>
+            ? never // Skip Angular signals
+            : T[K] extends BuiltInObject
+            ? never // Skip built-in objects
+            : T[K] extends (...args: unknown[]) => unknown
+            ? never // Skip functions
+            : `${Prefix}${K}` | DeepPath<T[K], `${Prefix}${K}.`, [...Depth, 1]> // Nested object - recurse
+          : never // Skip primitives
+        : never;
+    }[keyof T];
 
 /**
  * Safely access a value at a deep path in a type
@@ -203,8 +204,8 @@ export type DeepAccess<
   Path extends string
 > = Path extends `${infer First}.${infer Rest}`
   ? First extends keyof T
-  ? DeepAccess<T[First] & object, Rest>
-  : never
+    ? DeepAccess<T[First] & object, Rest>
+    : never
   : Path extends keyof T
   ? T[Path]
   : never;
@@ -240,17 +241,17 @@ export type ChainResult<
   E extends Array<EnhancerWithMeta<unknown, unknown>>
 > = E extends [infer H, ...infer R]
   ? // If enhancer accepts SignalTree<any> (non-generic enhancer), treat it as compatible
-  H extends EnhancerWithMeta<SignalTree<unknown>, infer O>
-  ? R extends Array<EnhancerWithMeta<unknown, unknown>>
-  ? ChainResult<O, R>
-  : O
-  : H extends EnhancerWithMeta<infer I, infer O>
-  ? Start extends I
-  ? R extends Array<EnhancerWithMeta<unknown, unknown>>
-  ? ChainResult<O, R>
-  : O
-  : unknown
-  : unknown
+    H extends EnhancerWithMeta<SignalTree<unknown>, infer O>
+    ? R extends Array<EnhancerWithMeta<unknown, unknown>>
+      ? ChainResult<O, R>
+      : O
+    : H extends EnhancerWithMeta<infer I, infer O>
+    ? Start extends I
+      ? R extends Array<EnhancerWithMeta<unknown, unknown>>
+        ? ChainResult<O, R>
+        : O
+      : unknown
+    : unknown
   : Start;
 
 /**
@@ -529,8 +530,8 @@ export interface EntityMapMarker<E, K extends string | number> {
 export function entityMap<
   E,
   K extends string | number = E extends { id: infer I extends string | number }
-  ? I
-  : string
+    ? I
+    : string
 >(config?: EntityConfig<E, K>): EntityMapMarker<E, K> {
   // Runtime: only needs __isEntityMap for detection
   // Type-level: the brand symbol makes this nominally typed
@@ -601,10 +602,10 @@ export type EntityNode<E> = {
   (updater: (current: E) => E): void;
 } & {
   [P in keyof E]: E[P] extends object
-  ? E[P] extends readonly unknown[]
-  ? CallableWritableSignal<E[P]>
-  : EntityNode<E[P]>
-  : CallableWritableSignal<E[P]>;
+    ? E[P] extends readonly unknown[]
+      ? CallableWritableSignal<E[P]>
+      : EntityNode<E[P]>
+    : CallableWritableSignal<E[P]>;
 };
 
 /**
@@ -646,7 +647,29 @@ export interface EntitySignal<E, K extends string | number = string> {
 }
 
 /**
- * Deprecated old EntityHelpers interface - kept for backward compat during migration
+ * @deprecated The old EntityHelpers interface is deprecated and will be removed in v6.0.
+ * Use the new Map-based entity API instead:
+ *
+ * **Migration:**
+ * ```typescript
+ * // Old (deprecated):
+ * interface State { users: User[] }
+ * const tree = signalTree<State>({ users: [] });
+ * const helpers = tree.entities<User>('users');
+ * helpers.add(user);
+ * helpers.selectById(id)();
+ *
+ * // New (recommended):
+ *
+ * interface State { users: entityMap<User> }
+ * const tree = signalTree<State>({ users: entityMap<User>() })
+ *   .with(withEntities());
+ * tree.$.users.add(user);
+ * tree.$.users.byId(id)();
+ * ```
+ *
+ * @see entityMap for the new marker function
+ * @see withEntities for the new enhancer
  */
 export interface EntityHelpers<E extends { id: string | number }> {
   add(entity: E): void;
@@ -732,10 +755,10 @@ export type IsEntityMap<T> = T extends EntityMapMarker<
  */
 export type EntityAwareTreeNode<T> = {
   [K in keyof T]: T[K] extends EntityMapMarker<infer E, infer Key>
-  ? EntitySignal<E, Key>
-  : T[K] extends object
-  ? EntityAwareTreeNode<T[K]>
-  : CallableWritableSignal<T[K]>;
+    ? EntitySignal<E, Key>
+    : T[K] extends object
+    ? EntityAwareTreeNode<T[K]>
+    : CallableWritableSignal<T[K]>;
 };
 
 /**

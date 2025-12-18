@@ -293,15 +293,22 @@ export { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './lib/constants';
  * state.user.name.set('Jane');
  * ```
  *
- * @example With Enhancers
+ * @example With Enhancers (using .with() chain - recommended)
  * ```typescript
- * import { signalTree, createEnhancer } from '@signaltree/core';
+ * import { signalTree, withLogging, withEntities, entityMap } from '@signaltree/core';
  *
- * const logger = createEnhancer(
- *   { name: 'logger', provides: ['logging'] },
- *   (tree) => ({ ...tree, log: () => console.log(tree) })
- * );
+ * // Chain enhancers with .with() for type-safe composition
+ * const state = signalTree({ count: 0 })
+ *   .with(withLogging());
  *
- * const state = signalTree({ count: 0 }, { enhancers: [logger] });
+ * // Combine multiple enhancers
+ * interface AppState { users: entityMap<User> }
+ * const store = signalTree<AppState>({ users: entityMap<User>() })
+ *   .with(withEntities())
+ *   .with(withLogging());
+ *
+ * // Access entity methods via tree.$
+ * store.$.users.add({ id: 1, name: 'Alice' });
+ * const user = store.$.users.byId(1)();
  * ```
  */

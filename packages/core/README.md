@@ -619,22 +619,20 @@ const tree = signalTree({ count: 0 }).with(
 import { signalTree, withBatching, withMemoization, withEntities } from '@signaltree/core';
 
 const tree = signalTree({
-  products: [] as Product[],
+  products: entityMap<Product>(),
   ui: { loading: false },
-}).with(
-  withBatching(), // Batch updates for optimal rendering
-  withMemoization(), // Cache expensive computations
-  withEntities() // Efficient CRUD operations
-);
+})
+  .with(withEntities()) // Efficient CRUD operations (auto-detects entityMap)
+  .with(withBatching()); // Batch updates for optimal rendering
 
-// Now supports advanced operations
-tree.batchUpdate((state) => ({
-  products: [...state.products, newProduct],
-  ui: { loading: false },
-}));
+// Entity CRUD operations
+tree.$.products.addOne(newProduct);
+tree.$.products.setAll(productsFromApi);
 
-const products = tree.entities<Product>('products');
-products.selectBy((p) => p.category === 'electronics');
+// Entity queries
+const electronics = tree.$.products
+  .all()()
+  .filter((p) => p.category === 'electronics');
 ```
 
 **Full-Stack Application:**
@@ -711,17 +709,20 @@ const customTree = signalTree(state, TREE_PRESETS.DASHBOARD);
 SignalTree Core includes all enhancer functionality built-in. No separate packages needed:
 
 ```typescript
-import { signalTree, withEntities } from '@signaltree/core';
+import { signalTree, entityMap, withEntities } from '@signaltree/core';
 
-const tree = signalTree({ users: [] as User[] });
+// Without entityMap - use manual array updates
+const basic = signalTree({ users: [] as User[] });
+basic.$.users.update((users) => [...users, newUser]);
 
-// Without enhancer - use manual CRUD
-tree.$.users.update((users) => [...users, newUser]);
+// With entityMap + withEntities - use entity helpers
+const enhanced = signalTree({
+  users: entityMap<User>(),
+}).with(withEntities());
 
-// With enhancer - use entity helpers
-const enhanced = tree.with(withEntities());
-const users = enhanced.entities<User>('users');
-users.add(newUser); // ✅ Advanced CRUD operations
+enhanced.$.users.addOne(newUser); // ✅ Advanced CRUD operations
+enhanced.$.users.byId(123)(); // ✅ O(1) lookups
+enhanced.$.users.all()(); // ✅ Get all as array
 ```
 
 Core includes several performance optimizations:
@@ -910,58 +911,49 @@ const filteredProducts = computed(() => {
 ### Data Management Composition
 
 ```typescript
-import { signalTree, withEntities } from '@signaltree/core';
+import { signalTree, entityMap, withEntities } from '@signaltree/core';
 
 // Add data management capabilities (+2.77KB total)
 const tree = signalTree({
-  users: [] as User[],
-  posts: [] as Post[],
-  ui: { loading: false, error: null },
-}).with(
-  withEntities() // Advanced CRUD operations
-);
+  users: entityMap<User>(),
+  posts: entityMap<Post>(),
+  ui: { loading: false, error: null as string | null },
+}).with(withEntities());
 
-// Advanced entity operations
-const users = tree.entities<User>('users');
-users.add(newUser);
-users.selectBy((u) => u.active);
-users.updateMany([{ id: '1', changes: { status: 'active' } }]);
+// Advanced entity operations via tree.$ accessor
+tree.$.users.addOne(newUser);
+tree.$.users.selectBy((u) => u.active);
+tree.$.users.updateMany([{ id: '1', changes: { status: 'active' } }]);
 
-// Entity helpers support nested paths for organized state structures
+// Entity helpers work with nested structures
 // Example: deeply nested entities in a domain-driven design pattern
 const appTree = signalTree({
   app: {
     data: {
-      users: [] as User[],
-      products: [] as Product[],
+      users: entityMap<User>(),
+      products: entityMap<Product>(),
     },
   },
   admin: {
     data: {
-      logs: [] as AuditLog[],
-      reports: [] as Report[],
+      logs: entityMap<AuditLog>(),
+      reports: entityMap<Report>(),
     },
   },
-});
+}).with(withEntities());
 
-// Access deeply nested entities using dot notation
-const appUsers = appTree.entities<User>('app.data.users');
-const appProducts = appTree.entities<Product>('app.data.products');
-const adminLogs = appTree.entities<AuditLog>('admin.data.logs');
-const adminReports = appTree.entities<Report>('admin.data.reports');
-
-// All entity methods work seamlessly with nested paths
-appUsers.selectBy((u) => u.isAdmin); // Filtered signal
-appProducts.selectTotal(); // Count signal
-adminLogs.selectAll(); // All items signal
-adminReports.selectIds(); // ID array signal
+// Access nested entities using tree.$ accessor
+appTree.$.app.data.users.selectBy((u) => u.isAdmin); // Filtered signal
+appTree.$.app.data.products.selectTotal(); // Count signal
+appTree.$.admin.data.logs.all()(); // All items as array
+appTree.$.admin.data.reports.selectIds(); // ID array signal
 
 // For async operations, use manual async or async helpers
 async function fetchUsers() {
   tree.$.ui.loading.set(true);
   try {
     const users = await api.getUsers();
-    tree.$.users.set(users);
+    tree.$.users.setAll(users);
   } catch (error) {
     tree.$.ui.error.set(error.message);
   } finally {
@@ -1003,10 +995,10 @@ const tree = signalTree({
 );
 
 // Rich feature set available
-const users = tree.entities<User>('app.data.users');
 async function fetchUser(id: string) {
   return await api.getUser(id);
 }
+tree.$.app.data.users.byId(userId)(); // O(1) lookup
 tree.undo(); // Time travel
 tree.save(); // Persistence
 ```
@@ -1375,9 +1367,11 @@ tree.effect(fn); // Create reactive effects
 tree.subscribe(fn); // Manual subscriptions
 tree.destroy(); // Cleanup resources
 
-// Extended features (built into @signaltree/core)
-tree.entities<T>(key); // Entity helpers (use withEntities enhancer)
-// For async operations, use manual async or async helpers like createAsyncOperation or trackAsync
+// Entity helpers (when using entityMap + withEntities)
+// tree.$.users.addOne(user);    // Add single entity
+// tree.$.users.byId(id)();      // O(1) lookup by ID
+// tree.$.users.all()();         // Get all as array
+// tree.$.users.selectBy(pred);  // Filtered signal
 ```
 
 ## Extending with enhancers

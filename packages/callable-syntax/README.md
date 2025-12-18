@@ -69,9 +69,9 @@ export default defineConfig({
 The transform only affects build output - your TypeScript will still type-check correctly with callable syntax because SignalTree includes the necessary type augmentations.
 
 ```typescript
-import { createSignalStore } from '@signaltree/core';
+import { signalTree } from '@signaltree/core';
 
-const store = createSignalStore({
+const store = signalTree({
   todos: [] as Todo[],
   filter: 'all' as 'all' | 'active' | 'completed',
 });

@@ -41,10 +41,8 @@ export interface ComputedSignalTree<T extends Record<string, unknown>>
  * ```typescript
  * import { signalTree, computedEnhancer } from '@signaltree/core';
  *
- * const state = signalTree(
- *   { count: 0, multiplier: 2 },
- *   { enhancers: [computedEnhancer()] }
- * );
+ * const state = signalTree({ count: 0, multiplier: 2 })
+ *   .with(computedEnhancer());
  *
  * // Create a computed signal
  * const doubled = state.computed(tree => tree.count() * tree.multiplier());

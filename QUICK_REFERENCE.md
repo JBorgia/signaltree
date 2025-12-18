@@ -31,17 +31,16 @@ export type MyTree = ReturnType<typeof createMyTree>; // No manual interface!
 ## Setup
 
 ```typescript
-import { signalTree, withEntities, withPersistence, withTimeTravel, withDevTools } from '@signaltree/core';
+import { signalTree, entityMap, withEntities, withPersistence, withTimeTravel, withDevTools } from '@signaltree/core';
 
-const tree = signalTree(
-  {
-    users: entity<User>('id'),
-    settings: { theme: 'dark' },
-  },
-  {
-    enhancers: [withEntities(), withPersistence({ key: 'app-state' }), withTimeTravel(), withDevTools()],
-  }
-);
+const tree = signalTree({
+  users: entityMap<User>(), // EntitySignal - auto-detected by withEntities()
+  settings: { theme: 'dark' },
+})
+  .with(withEntities())
+  .with(withPersistence({ key: 'app-state' }))
+  .with(withTimeTravel())
+  .with(withDevTools());
 ```
 
 ## Entity CRUD

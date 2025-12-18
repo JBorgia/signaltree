@@ -1,13 +1,4 @@
-import {
-  computed,
-  DestroyRef,
-  effect,
-  inject,
-  isSignal,
-  Signal,
-  signal,
-  WritableSignal,
-} from '@angular/core';
+import { computed, DestroyRef, effect, inject, isSignal, Signal, signal, WritableSignal } from '@angular/core';
 
 import { resolveEnhancerOrder } from '../enhancers';
 import { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './constants';
@@ -736,8 +727,16 @@ function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
     };
   };
 
-  // Entity helpers stub
+  /**
+   * @deprecated Use entityMap<E>() + withEntities() + tree.$.collectionName instead.
+   * This stub method will be removed in v6.0. See EntityHelpers deprecation notice for migration guide.
+   */
   tree.entities = <E extends { id: string | number }>(): EntityHelpers<E> => {
+    console.warn(
+      '[@signaltree/core] tree.entities() is deprecated and will be removed in v6.0. ' +
+        'Use entityMap<E>() + withEntities() + tree.$.collectionName instead. ' +
+        'See https://signaltree.dev/docs/migration for migration guide.'
+    );
     if (config.debugMode) {
       console.warn(SIGNAL_TREE_MESSAGES.ENTITY_HELPERS_NOT_AVAILABLE);
     }

@@ -180,15 +180,12 @@ tree.$.users.removeOne('u999', {
 ### Observe Changes (tap)
 
 ```typescript
-import { signalTree, withEntities } from '@signaltree/core';
+import { signalTree, entityMap, withEntities } from '@signaltree/core';
 
-const tree = signalTree(
-  {
-    users: entity<User>('id'),
-    posts: entity<Post>('postId'),
-  },
-  { enhancers: [withEntities()] }
-);
+const tree = signalTree({
+  users: entityMap<User>(),
+  posts: entityMap<Post>(),
+}).with(withEntities());
 
 // ==================
 // SIMPLE OBSERVATION
@@ -641,17 +638,14 @@ tree.$.users.intercept({
 ### Batching (Fixed)
 
 ```typescript
-import { signalTree, withBatching } from '@signaltree/core';
+import { signalTree, entityMap, withEntities, withBatching } from '@signaltree/core';
 
-const tree = signalTree(
-  {
-    users: entity<User>('id'),
-    posts: entity<Post>('postId'),
-  },
-  {
-    enhancers: [withBatching()],
-  }
-);
+const tree = signalTree({
+  users: entityMap<User>(),
+  posts: entityMap<Post>(),
+})
+  .with(withEntities())
+  .with(withBatching());
 
 // Before: Global state bug - mutations from multiple trees interfered
 // After: Instance-scoped - each tree has isolated batching queue
@@ -670,8 +664,8 @@ tree.$.users.addOne({ id: 'u3', name: 'Charlie' });
 // After fix: onChange fires 1 time (batched!)
 
 // Multiple trees don't interfere
-const tree1 = signalTree({ users: entity<User>('id') }, { enhancers: [withBatching()] });
-const tree2 = signalTree({ users: entity<User>('id') }, { enhancers: [withBatching()] });
+const tree1 = signalTree({ users: entityMap<User>() }).with(withEntities()).with(withBatching());
+const tree2 = signalTree({ users: entityMap<User>() }).with(withEntities()).with(withBatching());
 
 tree1.$.users.addOne({ id: 'u1', name: 'Tree1' });
 tree2.$.users.addOne({ id: 'u2', name: 'Tree2' });
@@ -833,34 +827,32 @@ tree.$.posts.addOne({ postId: 'p1', userId: 'u1', title: 'Hello' });
 ### Logging (Uses PathNotifier)
 
 ```typescript
-import { signalTree, withLogging } from '@signaltree/core';
+import { signalTree, entityMap, withEntities, withLogging } from '@signaltree/core';
 
-const tree = signalTree(
-  {
-    users: entity<User>('id'),
-    settings: { theme: 'dark' },
-  },
-  {
-    enhancers: [
-      withLogging({
-        name: 'MyApp',
+const tree = signalTree({
+  users: entityMap<User>(),
+  settings: { theme: 'dark' },
+})
+  .with(withEntities())
+  .with(
+    withLogging({
+      name: 'MyApp',
 
-        // Filter which paths to log
-        filter: (path) => !path.startsWith('ui'), // Skip UI updates
+      // Filter which paths to log
+      filter: (path) => !path.startsWith('ui'), // Skip UI updates
 
-        // Custom logger
-        onLog: (log) => {
-          console.log(`[${log.timestamp}] ${log.path}:`, {
-            prev: log.prev,
-            value: log.value,
-          });
-        },
+      // Custom logger
+      onLog: (log) => {
+        console.log(`[${log.timestamp}] ${log.path}:`, {
+          prev: log.prev,
+          value: log.value,
+        });
+      },
 
-        // Or use default (console.group)
-        collapsed: true, // Use console.groupCollapsed
-      }),
-    ],
-  }
+      // Or use default (console.group)
+      collapsed: true, // Use console.groupCollapsed
+    })
+  )
 );
 
 // Every mutation is logged:

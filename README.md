@@ -378,95 +378,61 @@ See [`@signaltree/callable-syntax`](./packages/callable-syntax/README.md) for se
 ### Composed Usage (Modular Features)
 
 ```typescript
-import { signalTree } from '@signaltree/core';
-import { withBatching, withMemoization, withEntities, withDevTools, withTimeTravel, withPresets } from '@signaltree/core';
+import { signalTree, entityMap, withEntities, withBatching, withDevTools, withTimeTravel } from '@signaltree/core';
 
 // Compose multiple features using .with()
 const tree = signalTree({
-  users: [] as User[],
-  posts: [] as Post[],
+  users: entityMap<User>(),
+  posts: entityMap<Post>(),
   ui: { loading: false, theme: 'light' },
   filters: { search: '', category: 'all' },
-}).with(
-  withBatching(), // Batch updates for performance
-  withMemoization(), // Intelligent caching
-  withEntities(), // Enhanced CRUD operations
-  withTimeTravel(), // Undo/redo functionality
-  withDevTools(), // Development tools (auto-disabled in production)
-  withPresets() // Pre-configured setups
-);
+})
+  .with(withEntities()) // Enhanced CRUD operations (auto-detects entityMap markers)
+  .with(withBatching()) // Batch updates for performance
+  .with(withTimeTravel()) // Undo/redo functionality
+  .with(withDevTools()); // Development tools (auto-disabled in production)
 
-// Batching: Multiple updates in single render cycle
-tree.batchUpdate((state) => ({
-  users: [...state.users, newUser],
-  ui: { ...state.ui, loading: false },
-  filters: { ...state.filters, search: '' },
-}));
+// Entity CRUD operations
+tree.$.users.addOne({ id: 1, name: 'Alice', category: 'admin' });
+tree.$.users.addOne({ id: 2, name: 'Bob', category: 'user' });
+tree.$.posts.setAll(postsFromApi);
 
-// Memoization: Cache expensive computations
-const filteredUsers = tree.memoize((state) => state.users.filter((u) => u.name.includes(state.filters.search) && (state.filters.category === 'all' || u.category === state.filters.category)), 'filtered-users');
+// Entity queries
+const user = tree.$.users.byId(1)(); // Get by ID
+const allUsers = tree.$.users.all()(); // Get all as array
+const userCount = tree.$.users.count()(); // Get count
 
-// Observation & interception: Use entity hooks instead of middleware
-// Example: tap/intercept on entity collections
-// tree.$.users.tap({ onAdd: (user, id) => console.log('Added', user) });
-// tree.$.users.intercept({ onAdd: (user, ctx) => { if (!valid(user)) ctx.block('Invalid'); } });
+// Observation & interception: Use entity hooks
+tree.$.users.tap({
+  onAdd: (user, id) => console.log('Added', user),
+  onRemove: (id, user) => console.log('Removed', user),
+});
 
-// Async: Advanced async operations with manual state management
+tree.$.users.intercept({
+  onAdd: (user, ctx) => {
+    if (!user.name) ctx.block('Name required');
+  },
+});
+
+// Async: Manual async operations with state management
 async function loadUsersWithPosts() {
   tree.$.ui.loading.set(true);
   try {
     const users = await api.getUsers();
     const posts = await api.getPosts();
-    tree.$.users.set(users);
-    tree.$.posts.set(posts);
+    tree.$.users.setAll(users);
+    tree.$.posts.setAll(posts);
   } catch (error) {
     tree.$.ui.error.set(error instanceof Error ? error.message : 'Unknown error');
   } finally {
-      users: result.users,
-      posts: result.posts,
-      ui: { ...state.ui, loading: false },
-    }),
-    onError: (error, state) => ({
-      ui: { ...state.ui, loading: false, error: error.message },
-    }),
+    tree.$.ui.loading.set(false);
   }
-);
-
-// Entities: Enhanced CRUD with advanced querying
-const users = tree.entities<User>('users');
-users.add(user1);
-users.add(user2);
-users.add(user3);
-const activeUsers = users.selectBy((user) => user.active);
-const allUsers = users.selectAll();
-
-// Entities also support nested paths for organized state structures
-const appState = signalTree({
-  app: {
-    data: {
-      users: User[],
-      products: Product[]
-    },
-    admin: {
-      logs: AuditLog[]
-    }
-  }
-});
-
-// Access nested entities with dot notation
-const appUsers = appState.entities<User>('app.data.users');
-const appProducts = appState.entities<Product>('app.data.products');
-const adminLogs = appState.entities<AuditLog>('app.admin.logs');
-
-// All entity methods work with nested paths
-appUsers.selectBy(u => u.isActive).subscribe(filtered => console.log(filtered));
-appProducts.selectTotal().subscribe(count => console.log(`${count} products`));
+}
 
 // Time Travel: Undo/redo functionality
 tree.undo(); // Undo last change
 tree.redo(); // Redo undone change
 const history = tree.getHistory(); // Get state history
-users.add({ id: 1, name: 'Alice' });
 ```
 
 ### State Persistence & Serialization
@@ -666,30 +632,32 @@ import { signalTree } from '@signaltree/core';
 const tree = signalTree(initialState);
 
 // Core features always included:
-tree.state.property(); // Read signal value
-tree.$.property(); // Shorthand for state
-tree.state.property.set(value); // Update individual signal
-tree.state.property.update(fn); // Update individual signal with function
+tree.$.property(); // Read signal value ($ is shorthand)
+tree.$.property.set(value); // Update individual signal
+tree.$.property.update(fn); // Update individual signal with function
 tree(); // Get plain object (replaces tree.unwrap())
 tree(value); // Set entire tree
 tree((current) => updated); // Update entire tree with function
 tree.effect(fn); // Create reactive effects
 tree.subscribe(fn); // Manual subscriptions
 
-// Basic entity management (lightweight)
-const entities = tree.entities('entityKey');
-entities.add(item);
-entities.update(id, changes);
-entities.remove(id);
+// Entity management with entityMap + withEntities
+import { signalTree, entityMap, withEntities } from '@signaltree/core';
 
-// Basic async actions (lightweight)
-async function action() {
-  try {
-    await api.call();
-  } catch (error) {
-    console.error(error);
-  }
-}
+const tree = signalTree({
+  users: entityMap<User>(),
+}).with(withEntities());
+
+// Entity CRUD
+tree.$.users.addOne(user);
+tree.$.users.updateOne(id, changes);
+tree.$.users.removeOne(id);
+tree.$.users.setAll(users);
+
+// Entity queries
+tree.$.users.byId(id)(); // Get by ID
+tree.$.users.all()(); // Get all as array
+tree.$.users.count()(); // Get count
 ```
 
 ### Batching Enhancer (Included in @signaltree/core)
@@ -951,20 +919,17 @@ class RegistrationComponent {
 ### Minimal Setup (Core Only)
 
 ```typescript
-import { signalTree } from '@signaltree/core';
-import { withEntities } from '@signaltree/core';
-// withAsync removed — use middleware helpers for async operations
+import { signalTree, entityMap, withEntities } from '@signaltree/core';
 
-// Just 7.20KB core + entities + async - perfect for simple applications
+// Just 7.20KB core + entities - perfect for simple applications
 const appTree = signalTree({
   user: { name: '', email: '' },
-  todos: [] as Todo[],
+  todos: entityMap<Todo>(),
   loading: false,
-}).with(withEntities() /* withAsync removed; use middleware helpers */);
+}).with(withEntities());
 
-// Entity management (via entities enhancer)
-const todos = appTree.entities<Todo>('todos');
-todos.add({ id: '1', text: 'Learn SignalTree', done: false });
+// Entity management (via entityMap + withEntities enhancer)
+appTree.$.todos.addOne({ id: '1', text: 'Learn SignalTree', done: false });
 
 // Async actions (manual async pattern)
 async function loadUser(id: string) {
@@ -981,7 +946,7 @@ async function loadUser(id: string) {
 
 // Simple reactive effects (always included)
 appTree.effect((state) => {
-  console.log(`User: ${state.user.name}, Todos: ${state.todos.length}`);
+  console.log(`User: ${state.user.name}, Todos: ${appTree.$.todos.count()()}`);
 });
 ```
 
