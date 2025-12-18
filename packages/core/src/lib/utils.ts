@@ -1,10 +1,4 @@
-import {
-  effect,
-  isSignal,
-  Signal,
-  signal,
-  WritableSignal,
-} from '@angular/core';
+import { effect, Injector, isSignal, runInInjectionContext, Signal, signal, WritableSignal } from '@angular/core';
 import { deepEqual, isBuiltInObject, parsePath } from '@signaltree/shared';
 
 /** Symbol to mark callable signals - using global symbol to match across files */
@@ -19,6 +13,18 @@ export { deepEqual };
 export { deepEqual as equal };
 export { isBuiltInObject };
 export { parsePath };
+
+/**
+ * Check if a value is an EntityMapMarker
+ * Used to preserve entity map markers during lazy signal tree creation
+ */
+function isEntityMapMarker(value: unknown): boolean {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      (value as { __isEntityMap?: unknown }).__isEntityMap === true
+  );
+}
 
 /**
  * Generic memory manager interface for lazy signal trees
@@ -70,25 +76,18 @@ export function isAnySignal(value: unknown): boolean {
 }
 
 /**
- * Checks if a value is an EntityMapMarker
- * EntityMapMarker objects should be preserved (not proxied) so withEntities() can materialize them
- */
-function isEntityMapMarker(value: unknown): boolean {
-  return (
-    value !== null &&
-    typeof value === 'object' &&
-    '__isEntityMap' in value &&
-    (value as { __isEntityMap?: unknown }).__isEntityMap === true
-  );
-}
-
-/**
  * Converts a NodeAccessor (SignalTree slice or whole tree) into a WritableSignal
  * compatible with Angular's Signal Forms connect() API and other APIs that expect WritableSignal.
  *
  * Creates a two-way binding between the NodeAccessor and a WritableSignal:
  * - Reads all leaf values from the NodeAccessor and exposes them as a signal
  * - Writes to the WritableSignal update the underlying NodeAccessor
+ *
+ * **Important**: This function uses `effect()` internally for synchronization, which requires
+ * an injection context. It can be called in:
+ * - Component/directive/pipe class field initializers
+ * - Component/directive/pipe constructors
+ * - Functions called from within an injection context
  *
  * @template T - The type of the node value
  * @param node - The NodeAccessor to convert (can be a slice or whole tree)
@@ -108,27 +107,42 @@ function isEntityMapMarker(value: unknown): boolean {
  * nameControl.connect(tree.$.user.name); // ✅ Already a WritableSignal
  * ```
  */
-export function toWritableSignal<T>(node: NodeAccessor<T>): WritableSignal<T> {
+export function toWritableSignal<T>(
+  node: NodeAccessor<T>,
+  injector?: unknown
+): WritableSignal<T> {
   // Create a signal initialized with the current node value
   const sig = signal(node());
 
-  // Sync node changes to signal
-  // This ensures the signal reflects any updates made to the NodeAccessor
-  effect(() => {
-    sig.set(node());
-  });
-
-  // Override set to write back to the NodeAccessor
+  // Capture original setter before overriding so tree->signal sync doesn't write back and loop
   const originalSet = sig.set.bind(sig);
+
+  // Effect to sync tree (NodeAccessor) changes into the writable signal
+  // We intentionally track dependencies inside node() so updates to any leaf propagate.
+  const runner = () => {
+    originalSet(node() as T);
+  };
+  if (injector) {
+    runInInjectionContext(injector as Injector, () => effect(runner));
+  } else {
+    try {
+      effect(runner);
+    } catch {
+      console.warn(
+        '[SignalTree] toWritableSignal called without injection context; pass Injector for reactivity.'
+      );
+    }
+  }
+
+  // Override set to write back to the NodeAccessor, then update local signal
   sig.set = (value: T) => {
-    node(value); // Update the SignalTree node
-    originalSet(value); // Update the local signal
+    node(value);
+    originalSet(value);
   };
 
-  // Override update to write back to the NodeAccessor
+  // Override update to write back using set pathway
   sig.update = (updater: (current: T) => T) => {
-    const newValue = updater(sig());
-    sig.set(newValue);
+    sig.set(updater(sig()));
   };
 
   return sig;
@@ -203,7 +217,7 @@ export function createLazySignalTree<T extends object>(
         return value;
       }
 
-      // Preserve EntityMapMarker objects - they need to be materialized by withEntities()
+      // Preserve EntityMapMarker so withEntities can materialize them later
       if (isEntityMapMarker(value)) return value;
 
       // Check memory manager cache first
@@ -243,14 +257,14 @@ export function createLazySignalTree<T extends object>(
             error
           );
           const fallbackSignal = signal(value, { equal: equalityFn });
-          signalCache.set(
-            path,
-            fallbackSignal as unknown as WritableSignal<unknown>
-          );
+          signalCache.set(path, fallbackSignal as WritableSignal<unknown>);
 
           // Cache in memory manager
           if (memoryManager) {
-            memoryManager.cacheSignal(path, fallbackSignal);
+            memoryManager.cacheSignal(
+              path,
+              fallbackSignal as WritableSignal<unknown>
+            );
           }
 
           return fallbackSignal;
@@ -259,13 +273,12 @@ export function createLazySignalTree<T extends object>(
 
       try {
         const newSignal = signal(value, { equal: equalityFn });
-        signalCache.set(path, newSignal as unknown as WritableSignal<unknown>);
+        signalCache.set(path, newSignal as WritableSignal<unknown>);
 
         // Cache in memory manager
         if (memoryManager) {
-          memoryManager.cacheSignal(path, newSignal);
+          memoryManager.cacheSignal(path, newSignal as WritableSignal<unknown>);
         }
-
         return newSignal;
       } catch (error) {
         console.warn(`Failed to create signal for path "${path}":`, error);

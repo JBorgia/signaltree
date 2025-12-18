@@ -1,12 +1,14 @@
 import { Signal, WritableSignal } from '@angular/core';
 
+import type { SecurityValidatorConfig } from './security/security-validator';
+
 /**
- * SignalTree Shared Types
- * Common TypeScript type definitions used across SignalTree packages
+ * SignalTree Core Types v2.0.2
+ * MIT License - Copyright (c) 2025 Jonathan D Borgia
  */
 
 // ============================================
-// COMMON TYPES
+// CORE TYPE DEFINITIONS
 // ============================================
 
 /**
@@ -87,16 +89,19 @@ export type BuiltInObject =
 
 /**
  * Helper type to unwrap signals and remove any signal-specific properties
+ * Note: [T] extends [...] prevents distributive conditional types
  */
-export type Unwrap<T> = T extends WritableSignal<infer U>
+export type Unwrap<T> = [T] extends [WritableSignal<infer U>]
   ? U
-  : T extends Signal<infer U>
+  : [T] extends [Signal<infer U>]
   ? U
-  : T extends BuiltInObject
+  : [T] extends [BuiltInObject]
   ? T // Preserve built-in objects exactly as they are
-  : T extends readonly unknown[]
+  : [T] extends [readonly unknown[]]
   ? T // Preserve arrays exactly as they are
-  : T extends object
+  : [T] extends [EntityMapMarker<infer E, infer K>]
+  ? EntitySignal<E, K> // Entity markers unwrap to EntitySignal
+  : [T] extends [object]
   ? { [K in keyof T]: Unwrap<T[K]> }
   : T;
 
@@ -130,17 +135,21 @@ export type CallableWritableSignal<T> = WritableSignal<T> & {
 };
 
 export type TreeNode<T> = {
-  [K in keyof T]: T[K] extends readonly unknown[]
-    ? CallableWritableSignal<T[K]> // Arrays get callable overloads
-    : T[K] extends object
-    ? T[K] extends Signal<unknown>
-      ? T[K]
-      : T[K] extends BuiltInObject
-      ? CallableWritableSignal<T[K]> // Built-ins as callable overloads
-      : T[K] extends (...args: unknown[]) => unknown
-      ? CallableWritableSignal<T[K]> // Function leaves as callable overloads
-      : AccessibleNode<T[K]> // Nested objects
-    : CallableWritableSignal<T[K]>; // Primitives
+  // Note: [T[K]] extends [...] prevents distributive conditional types
+  // This ensures when T is generic, we don't get union of all possible branches
+  [K in keyof T]: [T[K]] extends [EntityMapMarker<infer E, infer Key>]
+  ? EntitySignal<E, Key> // Entity collections become EntitySignal
+  : [T[K]] extends [readonly unknown[]]
+  ? CallableWritableSignal<T[K]> // Arrays get callable overloads
+  : [T[K]] extends [object]
+  ? [T[K]] extends [Signal<unknown>]
+  ? T[K]
+  : [T[K]] extends [BuiltInObject]
+  ? CallableWritableSignal<T[K]> // Built-ins as callable writable signals
+  : [T[K]] extends [(...args: unknown[]) => unknown]
+  ? CallableWritableSignal<T[K]> // Function leaves as callable writable signals
+  : AccessibleNode<T[K]> // Nested objects
+  : CallableWritableSignal<T[K]>; // Primitives
 };
 
 /**
@@ -148,6 +157,57 @@ export type TreeNode<T> = {
  * Used by cleanUnwrap to return the original type shape
  */
 export type RemoveSignalMethods<T> = T extends infer U ? U : never;
+
+// ============================================
+// DEEP PATH TYPES FOR NESTED ENTITY ACCESS
+// ============================================
+
+/**
+ * Generate all possible dot-notation paths through a nested object type
+ * For example, given { a: { b: { c: number } } }, generates:
+ * "a" | "a.b" | "a.b.c"
+ *
+ * Used to support nested entity access like tree.entities<E>('app.data.users')
+ * Depth is limited to 5 levels to prevent TypeScript "excessively deep" errors
+ */
+export type DeepPath<
+  T,
+  Prefix extends string = '',
+  Depth extends readonly number[] = []
+> = Depth['length'] extends 5
+  ? never
+  : {
+    [K in keyof T]: K extends string
+    ? T[K] extends readonly unknown[]
+    ? `${Prefix}${K}` // Array found - include this path
+    : T[K] extends object
+    ? T[K] extends Signal<unknown>
+    ? never // Skip Angular signals
+    : T[K] extends BuiltInObject
+    ? never // Skip built-in objects
+    : T[K] extends (...args: unknown[]) => unknown
+    ? never // Skip functions
+    : `${Prefix}${K}` | DeepPath<T[K], `${Prefix}${K}.`, [...Depth, 1]> // Nested object - recurse
+    : never // Skip primitives
+    : never;
+  }[keyof T];
+
+/**
+ * Safely access a value at a deep path in a type
+ * For example: DeepAccess<{ a: { b: User[] } }, 'a.b'> => User[]
+ *
+ * Used to infer the entity type from a path string
+ */
+export type DeepAccess<
+  T,
+  Path extends string
+> = Path extends `${infer First}.${infer Rest}`
+  ? First extends keyof T
+  ? DeepAccess<T[First] & object, Rest>
+  : never
+  : Path extends keyof T
+  ? T[Path]
+  : never;
 
 // ============================================
 // ENHANCER SYSTEM TYPES
@@ -180,78 +240,35 @@ export type ChainResult<
   E extends Array<EnhancerWithMeta<unknown, unknown>>
 > = E extends [infer H, ...infer R]
   ? // If enhancer accepts SignalTree<any> (non-generic enhancer), treat it as compatible
-    H extends EnhancerWithMeta<SignalTree<unknown>, infer O>
-    ? R extends Array<EnhancerWithMeta<unknown, unknown>>
-      ? ChainResult<O, R>
-      : O
-    : H extends EnhancerWithMeta<infer I, infer O>
-    ? Start extends I
-      ? R extends Array<EnhancerWithMeta<unknown, unknown>>
-        ? ChainResult<O, R>
-        : O
-      : unknown
-    : unknown
+  H extends EnhancerWithMeta<SignalTree<unknown>, infer O>
+  ? R extends Array<EnhancerWithMeta<unknown, unknown>>
+  ? ChainResult<O, R>
+  : O
+  : H extends EnhancerWithMeta<infer I, infer O>
+  ? Start extends I
+  ? R extends Array<EnhancerWithMeta<unknown, unknown>>
+  ? ChainResult<O, R>
+  : O
+  : unknown
+  : unknown
   : Start;
 
 /**
- * Overload set for .with() method
+ * Simplified overload set for .with() method
+ * Reduced from 20+ complex overloads to basic patterns that TypeScript can infer.
+ * For complex enhancer chains, use applyEnhancer() helper or type assertions.
  */
 export interface WithMethod<T> {
   (): SignalTree<T>;
-  <O1>(e1: (input: SignalTree<T>) => O1): O1;
-  // Accept a generic enhancer function like `function <U>(tree: SignalTree<U>): R`
+  <O>(enhancer: (input: SignalTree<T>) => O): O;
   <O1, O2>(e1: (input: SignalTree<T>) => O1, e2: (input: O1) => O2): O2;
   <O1, O2, O3>(
     e1: (input: SignalTree<T>) => O1,
     e2: (input: O1) => O2,
     e3: (input: O2) => O3
   ): O3;
-  <O1, O2, O3, O4>(
-    e1: (input: SignalTree<T>) => O1,
-    e2: (input: O1) => O2,
-    e3: (input: O2) => O3,
-    e4: (input: O3) => O4
-  ): O4;
-  // Overloads for EnhancerWithMeta form so enhancers exported with metadata
-  <O1>(e1: EnhancerWithMeta<SignalTree<T>, O1>): O1;
-  // Accept enhancers that operate on SignalTree<any> (helps non-generic enhancers)
-  <O1>(e1: EnhancerWithMeta<SignalTree<unknown>, O1>): O1;
-  // Generic overload to accept EnhancerWithMeta starting from Start type
-  <O1>(e1: EnhancerWithMeta<SignalTree<T>, O1>): O1;
-  <O1>(
-    e1: EnhancerWithMeta<SignalTree<unknown>, O1>,
-    e2: EnhancerWithMeta<O1, unknown>
-  ): unknown;
-  <O1, O2>(
-    e1: EnhancerWithMeta<SignalTree<T>, O1>,
-    e2: EnhancerWithMeta<O1, O2>
-  ): O2;
-  <O1, O2>(
-    e1: EnhancerWithMeta<SignalTree<unknown>, O1>,
-    e2: EnhancerWithMeta<O1, O2>
-  ): O2;
-  <O1, O2, O3>(
-    e1: EnhancerWithMeta<SignalTree<T>, O1>,
-    e2: EnhancerWithMeta<O1, O2>,
-    e3: EnhancerWithMeta<O2, O3>
-  ): O3;
-  <O1, O2, O3>(
-    e1: EnhancerWithMeta<SignalTree<unknown>, O1>,
-    e2: EnhancerWithMeta<O1, O2>,
-    e3: EnhancerWithMeta<O2, O3>
-  ): O3;
-  <O1, O2, O3, O4>(
-    e1: EnhancerWithMeta<SignalTree<T>, O1>,
-    e2: EnhancerWithMeta<O1, O2>,
-    e3: EnhancerWithMeta<O2, O3>,
-    e4: EnhancerWithMeta<O3, O4>
-  ): O4;
-  <O1, O2, O3, O4>(
-    e1: EnhancerWithMeta<SignalTree<unknown>, O1>,
-    e2: EnhancerWithMeta<O1, O2>,
-    e3: EnhancerWithMeta<O2, O3>,
-    e4: EnhancerWithMeta<O3, O4>
-  ): O4;
+  // Basic EnhancerWithMeta overloads
+  <O>(enhancer: EnhancerWithMeta<SignalTree<T>, O>): O;
   <O1, O2>(
     e1: EnhancerWithMeta<SignalTree<T>, O1>,
     e2: EnhancerWithMeta<O1, O2>
@@ -261,12 +278,6 @@ export interface WithMethod<T> {
     e2: EnhancerWithMeta<O1, O2>,
     e3: EnhancerWithMeta<O2, O3>
   ): O3;
-  <O1, O2, O3, O4>(
-    e1: EnhancerWithMeta<SignalTree<T>, O1>,
-    e2: EnhancerWithMeta<O1, O2>,
-    e3: EnhancerWithMeta<O2, O3>,
-    e4: EnhancerWithMeta<O3, O4>
-  ): O4;
 }
 
 // ============================================
@@ -370,7 +381,12 @@ export type SignalTree<T> = NodeAccessor<T> & {
   };
   getMetrics(): PerformanceMetrics;
 
-  /** Entity helpers */
+  /**
+   * @deprecated Use entityMap<E>() + withEntities() + tree.$.collectionName instead.
+   *
+   * Old entity helpers - supports both top-level keys (type-checked) and nested dot-notation paths (runtime-validated).
+   * This will be removed in v6.0. Migrate to the new Map-based entity API.
+   */
   entities<E extends { id: string | number }>(
     entityKey?: keyof T
   ): EntityHelpers<E>;
@@ -385,10 +401,9 @@ export type SignalTree<T> = NodeAccessor<T> & {
   canUndo?: () => boolean;
   canRedo?: () => boolean;
   getCurrentIndex?: () => number;
-
-  /** Index signature for enhancer compatibility */
-  [key: string]: unknown;
 };
+// NOTE: Index signature removed in v5.1.0 to fix .with() bracket notation requirement
+// Enhancers must now explicitly type their return values
 
 // ============================================
 // CONFIGURATION TYPES
@@ -430,13 +445,12 @@ export interface TreeConfig {
    * });
    *
    * // Or use a preset
-   * import { SecurityPresets } from '@signaltree/core';
    * const tree = signalTree(state, {
    *   security: SecurityPresets.strict().getConfig()
    * });
    * ```
    */
-  security?: unknown; // SecurityValidatorConfig from core
+  security?: SecurityValidatorConfig;
 }
 
 // ============================================
@@ -459,33 +473,71 @@ export interface PerformanceMetrics {
  * Entity configuration options
  */
 export interface EntityConfig<E, K extends string | number = string> {
+  /**
+   * Extract ID from entity. Default: (e) => e.id
+   * Required if entity doesn't have 'id' property.
+   */
   selectId?: (entity: E) => K;
+
+  /**
+   * Entity-level hooks (run before collection hooks)
+   */
   hooks?: {
+    /** Transform or block before add. Return false to block, entity to transform. */
     beforeAdd?: (entity: E) => E | false;
+    /** Transform or block before update. Return false to block, changes to transform. */
     beforeUpdate?: (id: K, changes: Partial<E>) => Partial<E> | false;
+    /** Block before remove. Return false to block. */
     beforeRemove?: (id: K, entity: E) => boolean;
   };
 }
 
 /**
- * Runtime marker for entity collections
+ * Unique symbol for EntityMapMarker branding.
+ * NOT EXPORTED - this prevents external code from creating types that satisfy EntityMapMarker.
+ * This is critical for correct type inference in generic contexts.
+ */
+declare const ENTITY_MAP_BRAND: unique symbol;
+
+/**
+ * Runtime marker for entity collections.
+ * Uses a unique symbol brand to ensure only types created via entityMap() can satisfy this interface.
+ * This prevents generic mapped type conditionals from producing unions.
  */
 export interface EntityMapMarker<E, K extends string | number> {
+  /** Unique brand - only satisfiable by entityMap() since symbol is not exported */
+  readonly [ENTITY_MAP_BRAND]: { __entity: E; __key: K };
+  /** Runtime marker so enhancers can detect entity collections */
   readonly __isEntityMap: true;
-  readonly __entityType?: E;
-  readonly __keyType?: K;
+  /** Persisted config used when materializing the EntitySignal */
+  readonly __entityMapConfig?: EntityConfig<E, K>;
 }
 
 /**
- * Create an entity map marker
+ * Create an entity map marker for use in signalTree state definition.
+ * This is the ONLY way to create a type that satisfies EntityMapMarker,
+ * since the brand symbol is not exported.
+ *
+ * @example
+ * ```typescript
+ * const tree = signalTree({
+ *   users: entityMap<User>(),
+ *   products: entityMap<Product, number>(),
+ * }).with(withEntities());
+ * ```
  */
 export function entityMap<
   E,
   K extends string | number = E extends { id: infer I extends string | number }
-    ? I
-    : string
+  ? I
+  : string
 >(config?: EntityConfig<E, K>): EntityMapMarker<E, K> {
-  return { ...config, __isEntityMap: true as const } as EntityMapMarker<E, K>;
+  // Runtime: only needs __isEntityMap for detection
+  // Type-level: the brand symbol makes this nominally typed
+  return {
+    __isEntityMap: true,
+    __entityMapConfig: config ?? {},
+  } as EntityMapMarker<E, K>;
 }
 
 /**
@@ -549,14 +601,14 @@ export type EntityNode<E> = {
   (updater: (current: E) => E): void;
 } & {
   [P in keyof E]: E[P] extends object
-    ? E[P] extends readonly unknown[]
-      ? CallableWritableSignal<E[P]>
-      : EntityNode<E[P]>
-    : CallableWritableSignal<E[P]>;
+  ? E[P] extends readonly unknown[]
+  ? CallableWritableSignal<E[P]>
+  : EntityNode<E[P]>
+  : CallableWritableSignal<E[P]>;
 };
 
 /**
- * EntitySignal provides reactive entity collection management
+ * EntitySignal provides reactive entity collection management.
  */
 export interface EntitySignal<E, K extends string | number = string> {
   // Explicit access
@@ -629,7 +681,7 @@ export interface LogEntry {
 export interface ValidationConfig<T> {
   validators: Array<{
     match: (path: string) => boolean;
-    validate: (value: unknown, path: string) => void | never;
+    validate: (value: T, path: string) => void | never;
   }>;
   onError?: (error: Error, path: string) => void;
 }
@@ -656,11 +708,22 @@ export interface DevToolsConfig {
 /**
  * Type utilities for entities
  */
-export type EntityType<T> = T extends EntitySignal<infer E, string | number>
+export type EntityType<T> = T extends EntitySignal<
+  infer E,
+  infer K extends string | number
+>
   ? E
   : never;
-export type EntityKeyType<T> = T extends EntitySignal<any, infer K> ? K : never;
-export type IsEntityMap<T> = T extends EntityMapMarker<any, string | number>
+export type EntityKeyType<T> = T extends EntitySignal<
+  unknown,
+  infer K extends string | number
+>
+  ? K
+  : never;
+export type IsEntityMap<T> = T extends EntityMapMarker<
+  unknown,
+  infer K extends string | number
+>
   ? true
   : false;
 
@@ -669,10 +732,10 @@ export type IsEntityMap<T> = T extends EntityMapMarker<any, string | number>
  */
 export type EntityAwareTreeNode<T> = {
   [K in keyof T]: T[K] extends EntityMapMarker<infer E, infer Key>
-    ? EntitySignal<E, Key>
-    : T[K] extends object
-    ? EntityAwareTreeNode<T[K]>
-    : CallableWritableSignal<T[K]>;
+  ? EntitySignal<E, Key>
+  : T[K] extends object
+  ? EntityAwareTreeNode<T[K]>
+  : CallableWritableSignal<T[K]>;
 };
 
 /**
@@ -704,6 +767,10 @@ export interface TimeTravelEntry<T> {
   state: T;
   payload?: unknown;
 }
+
+// ============================================
+// TYPE GUARDS
+// ============================================
 
 /**
  * Type guard to check if a value is a SignalTree
