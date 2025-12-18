@@ -1,5 +1,32 @@
 # SignalTree v5.0 - Quick Reference
 
+## SignalTree-First Patterns
+
+> 📖 Full guide: [docs/IMPLEMENTATION_PATTERNS.md](docs/IMPLEMENTATION_PATTERNS.md)
+
+```typescript
+// ✅ DO: Expose signals directly from $ tree
+return {
+  selectedUserId: $.selected.userId, // Direct signal
+  selectedUser, // computed() for derived state only
+};
+
+// ❌ DON'T: Wrap signals in computed()
+return {
+  selectedUserId: computed(() => $.selected.userId()), // Unnecessary!
+};
+
+// ✅ DO: Use EntitySignal API
+const user = $.users.byId(123)();
+const all = $.users.all()();
+
+// ✅ DO: TypeScript interface for read-only contract
+interface MyTree {
+  readonly selectedId: Signal<number>; // Consumer sees read-only
+}
+// Implementation returns WritableSignal (assignable to Signal)
+```
+
 ## Setup
 
 ```typescript

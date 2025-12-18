@@ -81,6 +81,68 @@ Performance and bundle size vary by app shape, build tooling, device, and runtim
 - Use the **Benchmark Orchestrator** in the demo app to run calibrated, scenario-based benchmarks across supported libraries with **real-world frequency weighting**. It applies research-based multipliers derived from 40,000+ developer surveys and GitHub analysis, reports statistical summaries (median/p95/p99/stddev), alternates runs to reduce bias, and can export CSV/JSON. When available, memory usage is also reported.
 - Use the bundle analysis scripts in `scripts/` to measure your min+gz sizes. Sizes are approximate and depend on tree-shaking and configuration.
 
+## Best Practices (SignalTree-First)
+
+> 📖 **Full guide**: [Implementation Patterns](https://github.com/JBorgia/signaltree/blob/main/docs/IMPLEMENTATION_PATTERNS.md)
+
+Follow these principles for idiomatic SignalTree code:
+
+### 1. Expose signals directly (no computed wrappers)
+
+```typescript
+// ✅ SignalTree-first: Direct signal exposure
+return {
+  selectedUserId: $.selected.userId, // Direct from $ tree
+  loadingState: $.loading.state,
+  selectedUser, // Actual derived state (computed)
+};
+
+// ❌ Anti-pattern: Unnecessary computed wrappers
+return {
+  selectedUserId: computed(() => $.selected.userId()), // Adds indirection
+};
+```
+
+### 2. Use TypeScript interfaces for read-only contracts
+
+```typescript
+// Interface declares Signal<T> (read-only)
+export interface UserTree {
+  readonly selectedUserId: Signal<number | null>; // Consumer sees read-only
+  setSelectedUser(id: number): void; // Mutation via methods
+}
+
+// Implementation returns WritableSignal (assignable to Signal)
+return {
+  selectedUserId: $.selected.userId, // WritableSignal → Signal works!
+};
+```
+
+### 3. Use `computed()` only for derived state
+
+```typescript
+// ✅ Correct: Derived from multiple signals
+const selectedUser = computed(() => {
+  const id = $.selected.userId();
+  return id ? $.users.byId(id)() : null;
+});
+
+// ❌ Wrong: Wrapping an existing signal
+const selectedUserId = computed(() => $.selected.userId()); // Unnecessary!
+```
+
+### 4. Use EntitySignal API directly
+
+```typescript
+// ✅ SignalTree-native
+const user = $.users.byId(123)(); // O(1) lookup
+const allUsers = $.users.all()(); // Get all
+$.users.setAll(usersFromApi); // Replace all
+
+// ❌ NgRx-style (avoid)
+const user = entityMap()[123]; // Requires intermediate object
+```
+
 ## Quick start
 
 ### Installation
