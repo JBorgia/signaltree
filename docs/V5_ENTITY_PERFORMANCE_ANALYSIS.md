@@ -145,7 +145,7 @@ userHelpers.selectAll()()
 ```typescript
 users: entityMap<User, number>({ selectId: (u) => u.id });
 tree.$.users.addOne(user);
-tree.$.users.all()();
+tree.$.users.all();
 ```
 
 ### Performance Characteristics

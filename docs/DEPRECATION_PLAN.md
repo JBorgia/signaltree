@@ -33,7 +33,7 @@ const tree = signalTree<State>({ users: entityMap<User>() }).with(withEntities()
 
 tree.$.users.add(user);
 tree.$.users.byId(id)();
-tree.$.users.all()();
+tree.$.users.all();
 ```
 
 #### Key Differences

@@ -294,7 +294,7 @@ const analyticsUnsub = tree.$.users.tap({
 // 3. Auto-Persistence Hook (with try/catch)
 const persistenceUnsub = tree.$.users.tap({
   onChange: () => {
-    const users = tree.$.users.all()();
+    const users = tree.$.users.all();
     try {
       localStorage.setItem('users-backup', JSON.stringify(users));
       console.log('💾 Auto-saved users to localStorage');
@@ -967,7 +967,7 @@ const deleteTodo = (id: string) => {
 
 // Reactive computed
 const activeTodos = computed(() => {
-  const todos = todoTree.$.todos.all()(); // Call to unwrap Signal<Todo[]>
+  const todos = todoTree.$.todos.all(); // Returns Todo[] directly
   return todos.filter((t) => !t.completed);
 });
 

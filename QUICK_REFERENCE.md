@@ -21,7 +21,7 @@ return {
 
 // ✅ DO: Use EntitySignal API
 const user = $.users.byId(123)(); // Returns signal, invoke to get value
-const all = $.users.all()(); // Returns signal, invoke to get array
+const all = $.users.all(); // Returns array directly
 
 // ✅ DO: Use ReturnType inference for types
 import type { createMyTree } from './my.tree';

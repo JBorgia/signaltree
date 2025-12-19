@@ -399,8 +399,8 @@ tree.$.posts.setAll(postsFromApi);
 
 // Entity queries
 const user = tree.$.users.byId(1)(); // Get by ID
-const allUsers = tree.$.users.all()(); // Get all as array
-const userCount = tree.$.users.count()(); // Get count
+const allUsers = tree.$.users.all(); // Get all as array
+const userCount = tree.$.users.count(); // Get count
 
 // Observation & interception: Use entity hooks
 tree.$.users.tap({
@@ -656,8 +656,8 @@ tree.$.users.setAll(users);
 
 // Entity queries
 tree.$.users.byId(id)(); // Get by ID
-tree.$.users.all()(); // Get all as array
-tree.$.users.count()(); // Get count
+tree.$.users.all(); // Get all as array
+tree.$.users.count(); // Get count
 ```
 
 ### Batching Enhancer (Included in @signaltree/core)
@@ -946,7 +946,7 @@ async function loadUser(id: string) {
 
 // Simple reactive effects (always included)
 appTree.effect((state) => {
-  console.log(`User: ${state.user.name}, Todos: ${appTree.$.todos.count()()}`);
+  console.log(`User: ${state.user.name}, Todos: ${appTree.$.todos.count()}`);
 });
 ```
 

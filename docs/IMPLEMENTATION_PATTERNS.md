@@ -151,9 +151,7 @@ const isLoaded = computed(() => $.loading.state() === LoadingState.Loaded);
 
 // ✅ Correct: Filtering/mapping collections
 const activeUsers = computed(() => {
-  return $.users
-    .all()()
-    .filter((u) => u.isActive);
+  return $.users.all().filter((u) => u.isActive);
 });
 
 // ✅ Correct: Combining multiple pieces of state
@@ -171,7 +169,7 @@ Use SignalTree's `EntitySignal` API directly:
 
 ```typescript
 // Reading entities
-const allUsers = $.users.all()(); // Get all entities as array
+const allUsers = $.users.all(); // Get all entities as array
 const user = $.users.byId(123)(); // O(1) lookup by ID
 const userIds = $.users.ids()(); // Get all IDs
 
@@ -316,7 +314,7 @@ export const appConfig: ApplicationConfig = {
 export class UserListComponent {
   private readonly userTree = inject(USER_TREE);
 
-  readonly users = computed(() => this.userTree.users.all()());
+  readonly users = computed(() => this.userTree.users.all());
   readonly isLoaded = this.userTree.isLoaded;
 }
 ```
