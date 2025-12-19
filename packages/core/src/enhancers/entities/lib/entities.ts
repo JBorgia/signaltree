@@ -33,7 +33,7 @@ function isEntitySignal(
     !!value &&
     typeof value === 'object' &&
     typeof (value as Record<string, unknown>)['addOne'] === 'function' &&
-    typeof (value as Record<string, unknown>)['all'] === 'function'
+    'all' in value
   );
 }
 

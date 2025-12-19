@@ -118,19 +118,19 @@ export class EntitySignalImpl<
   // QUERIES (return Signals)
   // ==================
 
-  all(): Signal<E[]> {
+  get all(): Signal<E[]> {
     return this.allSignal;
   }
 
-  count(): Signal<number> {
+  get count(): Signal<number> {
     return this.countSignal;
   }
 
-  ids(): Signal<K[]> {
+  get ids(): Signal<K[]> {
     return this.idsSignal;
   }
 
-  map(): Signal<ReadonlyMap<K, E>> {
+  get map(): Signal<ReadonlyMap<K, E>> {
     return this.mapSignal;
   }
 
@@ -138,7 +138,7 @@ export class EntitySignalImpl<
     return computed(() => this.storage.has(id));
   }
 
-  isEmpty(): Signal<boolean> {
+  get isEmpty(): Signal<boolean> {
     return computed(() => this.storage.size === 0);
   }
 
