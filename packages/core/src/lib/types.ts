@@ -1,5 +1,4 @@
 import { Signal, WritableSignal } from '@angular/core';
-import { entityMap, signalTree, withEntities } from '@signaltree/core';
 
 import type { SecurityValidatorConfig } from './security/security-validator';
 
