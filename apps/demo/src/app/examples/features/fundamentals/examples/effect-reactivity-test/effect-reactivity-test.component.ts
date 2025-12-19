@@ -87,8 +87,8 @@ export class EffectReactivityTestComponent {
   // Expose signals for template
   loadingState = computed(() => this.store.$.loading.state());
   regularLoadingState = computed(() => this.regularSignal());
-  haulerCount = computed(() => this.store.$.haulers.count()());
-  haulers = computed(() => this.store.$.haulers.all()());
+  haulerCount = computed(() => this.store.$.haulers.count());
+  haulers = computed(() => this.store.$.haulers.all());
 
   constructor() {
     // ============================================================================
@@ -121,7 +121,7 @@ export class EffectReactivityTestComponent {
     // EFFECT 3: SignalTree entity count signal (should work with npm install)
     // ============================================================================
     effect(() => {
-      const count = this.store.$.haulers.count()();
+      const count = this.store.$.haulers.count();
       this.entityEffectCount++;
       const msg = `[${new Date().toISOString()}] SignalTree $.haulers.count() effect #${
         this.entityEffectCount
@@ -179,7 +179,7 @@ export class EffectReactivityTestComponent {
     console.log(`\n>>> ADDING hauler:`, hauler);
     this.store.$.haulers.addOne(hauler);
     console.log(
-      `>>> After add, $.haulers.count()() = ${this.store.$.haulers.count()()}`
+      `>>> After add, $.haulers.count() = ${this.store.$.haulers.count()}`
     );
   }
 
@@ -190,7 +190,7 @@ export class EffectReactivityTestComponent {
     console.log(`\n>>> CLEARING all haulers`);
     this.store.$.haulers.clear();
     console.log(
-      `>>> After clear, $.haulers.count()() = ${this.store.$.haulers.count()()}`
+      `>>> After clear, $.haulers.count() = ${this.store.$.haulers.count()}`
     );
   }
 
@@ -232,7 +232,7 @@ export class EffectReactivityTestComponent {
 
     console.log('>>> DATA LOAD COMPLETE');
     console.log(
-      `>>> Final state: loading=${this.store.$.loading.state()}, haulerCount=${this.store.$.haulers.count()()}`
+      `>>> Final state: loading=${this.store.$.loading.state()}, haulerCount=${this.store.$.haulers.count()}`
     );
   }
 }

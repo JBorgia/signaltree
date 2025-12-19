@@ -1,12 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import {
-  entityMap,
-  signalTree,
-  withEntities,
-  withMemoization,
-} from '@signaltree/core';
+import { entityMap, signalTree, withEntities, withMemoization } from '@signaltree/core';
 
 interface Log {
   id: string;
@@ -441,24 +436,24 @@ filteredLogs(); // Returns cached result`;
   // Memoized filtered logs - using computed signal for caching
   private filteredLogs = computed(() => {
     const startTime = performance.now();
-    let logs = this.tree.$.logs.all()();
+    let logs = this.tree.$.logs.all();
     const level = this.tree.$.filters.level();
     const search = this.tree.$.filters.search();
     const userId = this.tree.$.filters.userId();
 
     if (level !== 'all') {
-      logs = logs.filter((log) => log.level === level);
+      logs = logs.filter((log: Log) => log.level === level);
     }
 
     if (search) {
       const searchLower = search.toLowerCase();
-      logs = logs.filter((log) =>
+      logs = logs.filter((log: Log) =>
         log.message.toLowerCase().includes(searchLower)
       );
     }
 
     if (userId) {
-      logs = logs.filter((log) => log.userId === userId);
+      logs = logs.filter((log: Log) => log.userId === userId);
     }
 
     this.lastFilterTime = performance.now() - startTime;
@@ -468,7 +463,7 @@ filteredLogs(); // Returns cached result`;
   });
 
   // Computed signals for UI
-  totalLogs = computed(() => this.tree.$.logs.count()());
+  totalLogs = computed(() => this.tree.$.logs.count());
   filteredCount = computed(() => this.filteredLogs().length);
   displayedLogs = computed(() => this.filteredLogs().slice(0, 100)); // Limit display for performance
   cacheHits = computed(() => this.cacheHitCount);

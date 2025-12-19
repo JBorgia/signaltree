@@ -3,12 +3,7 @@ import { Component, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { entityMap, signalTree, withEntities } from '@signaltree/core';
 
-import {
-  generatePosts,
-  generateUsers,
-  Post,
-  User,
-} from '../../../../../shared/models';
+import { generatePosts, generateUsers, Post, User } from '../../../../../shared/models';
 
 import type { EntityMapMarker } from '@signaltree/core';
 
@@ -216,13 +211,13 @@ export class EntitiesDemoComponent {
   });
 
   filteredUsers = computed(() => {
-    const users = this.allUsers();
+    const users = this.allUsers;
     const term = this.searchTerm.toLowerCase();
 
     if (!term) return users;
 
     return users.filter(
-      (user) =>
+      (user: User) =>
         user.name.toLowerCase().includes(term) ||
         user.email.toLowerCase().includes(term)
     );
@@ -333,15 +328,17 @@ export class EntitiesDemoComponent {
     const selectedId = this.store.$.selectedUserId();
     if (!selectedId) return [];
 
-    return this.store.$.posts.where((post) => post.authorId === selectedId)();
+    return this.store.$.posts.where(
+      (post: Post) => post.authorId === selectedId
+    )();
   });
 
   displayedPosts = computed(() => {
     const selectedId = this.store.$.selectedUserId();
-    const allPosts = this.allPosts();
+    const allPosts = this.allPosts;
 
     return selectedId
-      ? allPosts.filter((post) => post.authorId === selectedId)
+      ? allPosts.filter((post: Post) => post.authorId === selectedId)
       : allPosts.slice(0, 20); // Show first 20 if no user selected
   });
 
@@ -411,7 +408,7 @@ export class EntitiesDemoComponent {
   }
 
   exportSelectedPosts() {
-    const selectedPosts = this.allPosts().filter((post) =>
+    const selectedPosts = this.allPosts.filter((post: Post) =>
       this.selectedPostIds.has(post.id)
     );
 
@@ -455,7 +452,7 @@ export class EntitiesDemoComponent {
   }
 
   loadPosts() {
-    const userCount = this.userCount();
+    const userCount = this.userCount;
     if (userCount === 0) {
       this.loadUsers();
     }
@@ -468,8 +465,8 @@ export class EntitiesDemoComponent {
 
   addRandomUser() {
     const newUser = generateUsers(1, Date.now())[0];
-    const users = this.allUsers();
-    const currentMaxId = Math.max(0, ...users.map((u) => u.id));
+    const users = this.allUsers;
+    const currentMaxId = Math.max(0, ...users.map((u: User) => u.id));
     newUser.id = currentMaxId + 1;
 
     // Use EntitySignal to add user
@@ -478,12 +475,12 @@ export class EntitiesDemoComponent {
   }
 
   addRandomPost() {
-    const users = this.allUsers();
+    const users = this.allUsers;
     if (users.length === 0) return;
 
     const newPost = generatePosts(1, users.length, Date.now())[0];
-    const posts = this.allPosts();
-    const currentMaxId = Math.max(0, ...posts.map((p) => p.id));
+    const posts = this.allPosts;
+    const currentMaxId = Math.max(0, ...posts.map((p: Post) => p.id));
     newPost.id = currentMaxId + 1;
     newPost.authorId = users[Math.floor(Math.random() * users.length)].id;
 
@@ -509,8 +506,8 @@ export class EntitiesDemoComponent {
     // Use EntitySignal updateWhere to update all posts
     this.store.$.posts.updateWhere(() => true, { likes: 10 });
     // Note: This sets likes to 10, not increments. For increment, we'd need to iterate.
-    const posts = this.allPosts();
-    posts.forEach((post) => {
+    const posts = this.allPosts;
+    posts.forEach((post: Post) => {
       this.store.$.posts.updateOne(post.id, { likes: post.likes + 10 });
     });
     this.trackOperation('Bulk Update Posts');
@@ -607,8 +604,8 @@ export class EntitiesDemoComponent {
   addUser() {
     if (!this.newUserName || !this.newUserEmail) return;
 
-    const users = this.allUsers();
-    const currentMaxId = Math.max(0, ...users.map((u) => u.id));
+    const users = this.allUsers;
+    const currentMaxId = Math.max(0, ...users.map((u: User) => u.id));
 
     const newUser: User = {
       id: currentMaxId + 1,
@@ -635,7 +632,7 @@ export class EntitiesDemoComponent {
 
   // Accessor methods for tests
   users() {
-    return this.allUsers();
+    return this.allUsers;
   }
 
   // Post interaction methods
@@ -709,7 +706,7 @@ export class EntitiesDemoComponent {
   }
 
   selectAllPosts() {
-    this.paginatedPosts().forEach((post) => {
+    this.paginatedPosts().forEach((post: Post) => {
       this.selectedPostIds.add(post.id);
     });
   }

@@ -168,7 +168,7 @@ export function createUserTree(): UserTree {
 
   /** Users filtered by search term, role, and active status */
   const filteredUsers = computed(() => {
-    const all = $.users.all()();
+    const all = $.users.all();
     const search = $.filter.searchTerm().toLowerCase();
     const role = $.filter.roleFilter();
     const showInactive = $.filter.showInactive();
@@ -193,9 +193,7 @@ export function createUserTree(): UserTree {
 
   /** Count of active users */
   const activeUserCount = computed(() => {
-    return $.users
-      .all()()
-      .filter((u: UserDto) => u.isActive).length;
+    return $.users.all().filter((u: UserDto) => u.isActive).length;
   });
 
   /** Loading state checks */

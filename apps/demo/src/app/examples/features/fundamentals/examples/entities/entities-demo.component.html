@@ -74,7 +74,7 @@
     <!-- Users Panel -->
     <div class="card users-panel">
       <div class="panel-header">
-        <h2>👥 Users ({{ userCount() }})</h2>
+        <h2>👥 Users ({{ userCount }})</h2>
         <button
           (click)="loadUsers()"
           class="btn-primary btn-sm"
@@ -84,7 +84,7 @@
         </button>
       </div>
 
-      @if (userCount() === 0) {
+      @if (userCount === 0) {
       <div class="help-text">👆 Click "Load Sample Users" to get started</div>
       }
 
