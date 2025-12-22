@@ -83,18 +83,6 @@ export class EntitySignalImpl<
     this.countSignal = signal<number>(0);
     this.idsSignal = signal<K[]>([]);
     this.mapSignal = signal<ReadonlyMap<K, E>>(new Map());
-
-    // Return a Proxy to support bracket notation access
-    return new Proxy(this, {
-      get: (target: EntitySignalImpl<E, K>, prop: string | symbol) => {
-        // Handle string/number bracket access
-        if (typeof prop === 'string' && !isNaN(Number(prop))) {
-          return target.byId(Number(prop) as K);
-        }
-        // Handle normal method/property access
-        return (target as unknown as Record<string | symbol, unknown>)[prop];
-      },
-    }) as EntitySignal<E, K>;
   }
 
   // ==================
@@ -119,19 +107,19 @@ export class EntitySignalImpl<
   // QUERIES (return Signals)
   // ==================
 
-  get all(): Signal<E[]> {
+  all(): Signal<E[]> {
     return this.allSignal;
   }
 
-  get count(): Signal<number> {
+  count(): Signal<number> {
     return this.countSignal;
   }
 
-  get ids(): Signal<K[]> {
+  ids(): Signal<K[]> {
     return this.idsSignal;
   }
 
-  get map(): Signal<ReadonlyMap<K, E>> {
+  map(): Signal<ReadonlyMap<K, E>> {
     return this.mapSignal;
   }
 
@@ -139,7 +127,7 @@ export class EntitySignalImpl<
     return computed(() => this.storage.has(id));
   }
 
-  get isEmpty(): Signal<boolean> {
+  isEmpty(): Signal<boolean> {
     return computed(() => this.storage.size === 0);
   }
 
