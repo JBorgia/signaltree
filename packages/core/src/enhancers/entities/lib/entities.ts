@@ -1,4 +1,4 @@
-import { EntitySignalImpl } from '../../../lib/entity-signal';
+import { createEntitySignal } from '../../../lib/entity-signal';
 import { getPathNotifier } from '../../../lib/path-notifier';
 import { isNodeAccessor } from '../../../lib/utils';
 
@@ -40,8 +40,8 @@ function isEntitySignal(
 function materializeEntities<T>(
   tree: SignalTree<T>,
   notifier = getPathNotifier()
-): Map<string, EntitySignal<unknown, string | number>> {
-  const registry = new Map<string, EntitySignal<unknown, string | number>>();
+): Map<string, EntitySignal<any, string | number>> {
+  const registry = new Map<string, EntitySignal<any, string | number>>();
   const state = tree.state as Record<string, unknown>;
 
   const visit = (
@@ -59,7 +59,7 @@ function materializeEntities<T>(
         any,
         string | number
       >;
-      const entitySignal = new EntitySignalImpl(config, notifier, basePath);
+      const entitySignal = createEntitySignal(config, notifier, basePath);
 
       if (parent) {
         try {

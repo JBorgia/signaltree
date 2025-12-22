@@ -17,6 +17,7 @@ import { PathNotifier } from '../lib/path-notifier';
 
 import type {
   EntityConfig,
+  EntitySignal,
   TapHandlers,
   InterceptHandlers,
   InterceptContext,
@@ -93,7 +94,7 @@ export class EntitySignalImpl<
         // Handle normal method/property access
         return (target as unknown as Record<string | symbol, unknown>)[prop];
       },
-    }) as never;
+    }) as EntitySignal<E, K>;
   }
 
   // ==================
@@ -455,4 +456,30 @@ export class EntitySignalImpl<
 
     return node;
   }
+}
+
+/**
+ * Creates an EntitySignal with Proxy wrapper for bracket notation access
+ * @internal
+ */
+export function createEntitySignal<
+  E extends Record<string, unknown>,
+  K extends string | number = string
+>(
+  config: EntityConfig<E, K>,
+  pathNotifier: PathNotifier,
+  basePath: string
+): EntitySignal<E, K> {
+  const impl = new EntitySignalImpl(config, pathNotifier, basePath);
+
+  return new Proxy(impl, {
+    get: (target: EntitySignalImpl<E, K>, prop: string | symbol) => {
+      // Handle string/number bracket access
+      if (typeof prop === 'string' && !isNaN(Number(prop))) {
+        return target.byId(Number(prop) as K);
+      }
+      // Handle normal method/property access
+      return (target as unknown as Record<string | symbol, unknown>)[prop];
+    },
+  }) as EntitySignal<E, K>;
 }
