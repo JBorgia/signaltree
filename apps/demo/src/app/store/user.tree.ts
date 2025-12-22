@@ -113,7 +113,7 @@ const STORE_NAME = 'UserTree';
  *
  * // Entity access (O(1) lookups)
  * const user = userTree.users.byId(123)();
- * const allUsers = userTree.users.all()();
+ * const allUsers = userTree.users.all();
  *
  * // Reactive selectors
  * effect(() => console.log('Selected:', userTree.selectedUser()));

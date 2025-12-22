@@ -616,12 +616,12 @@ export interface EntitySignal<E, K extends string | number = string> {
   byIdOrFail(id: K): EntityNode<E>;
 
   // Queries (readonly properties returning signals)
-  all(): Signal<E[]>;
-  count(): Signal<number>;
-  ids(): Signal<K[]>;
+  readonly all: Signal<E[]>;
+  readonly count: Signal<number>;
+  readonly ids: Signal<K[]>;
   has(id: K): Signal<boolean>;
-  isEmpty(): Signal<boolean>;
-  map(): Signal<ReadonlyMap<K, E>>;
+  readonly isEmpty: Signal<boolean>;
+  readonly map: Signal<ReadonlyMap<K, E>>;
   where(predicate: (entity: E) => boolean): Signal<E[]>;
   find(predicate: (entity: E) => boolean): Signal<E | undefined>;
 

@@ -54,18 +54,18 @@ describe('EntitySignal v5.0 Integration', () => {
       expect(userId).toBe('u1');
 
       // Query all
-      const allUsers = tree.$.users.all()();
+      const allUsers = tree.$.users.all();
       expect(allUsers).toHaveLength(1);
       expect(allUsers[0].name).toBe('Alice');
 
       // Update entity
       tree.$.users.updateOne('u1', { name: 'Alice Updated' });
-      const updated = tree.$.users.all()();
+      const updated = tree.$.users.all();
       expect(updated[0].name).toBe('Alice Updated');
 
       // Remove entity
       tree.$.users.removeOne('u1');
-      const afterRemove = tree.$.users.all()();
+      const afterRemove = tree.$.users.all();
       expect(afterRemove).toHaveLength(0);
     });
 
@@ -80,7 +80,7 @@ describe('EntitySignal v5.0 Integration', () => {
         price: 29.99,
       });
 
-      const products = tree.$.products.all()();
+      const products = tree.$.products.all();
       expect(products).toHaveLength(1);
       expect(products[0].id).toBe(100);
     });
@@ -128,21 +128,21 @@ describe('EntitySignal v5.0 Integration', () => {
       });
 
       // count()
-      expect(tree.$.users.count()()).toBe(2);
+      expect(tree.$.users.count()).toBe(2);
 
       // ids()
-      const ids = tree.$.users.ids()();
+      const ids = tree.$.users.ids();
       expect(ids).toEqual(['u1', 'u2']);
 
       // has()
-      expect(tree.$.users.has('u1')()).toBe(true);
-      expect(tree.$.users.has('u3')()).toBe(false);
+      expect(tree.$.users.has('u1')).toBe(true);
+      expect(tree.$.users.has('u3')).toBe(false);
 
       // isEmpty()
-      expect(tree.$.users.isEmpty()()).toBe(false);
+      expect(tree.$.users.isEmpty()).toBe(false);
 
       tree.$.users.clear();
-      expect(tree.$.users.isEmpty()()).toBe(true);
+      expect(tree.$.users.isEmpty()).toBe(true);
     });
 
     it('should support where() predicate queries', () => {
@@ -204,7 +204,7 @@ describe('EntitySignal v5.0 Integration', () => {
       ]);
 
       expect(ids).toEqual(['u1', 'u2', 'u3']);
-      expect(tree.$.users.count()()).toBe(3);
+      expect(tree.$.users.count()).toBe(3);
     });
 
     it('should support updateMany', () => {
@@ -219,7 +219,7 @@ describe('EntitySignal v5.0 Integration', () => {
 
       tree.$.users.updateMany(['u1', 'u2'], { active: false });
 
-      const users = tree.$.users.all()();
+      const users = tree.$.users.all();
       expect(users.every((u) => !u.active)).toBe(true);
     });
 
@@ -241,7 +241,7 @@ describe('EntitySignal v5.0 Integration', () => {
 
       tree.$.users.removeMany(['u1', 'u3']);
 
-      const remaining = tree.$.users.all()();
+      const remaining = tree.$.users.all();
       expect(remaining).toHaveLength(1);
       expect(remaining[0].id).toBe('u2');
     });
@@ -267,7 +267,7 @@ describe('EntitySignal v5.0 Integration', () => {
       });
 
       expect(updated).toBe(2);
-      const users = tree.$.users.all()();
+      const users = tree.$.users.all();
       expect(users.every((u) => !u.active)).toBe(true);
     });
 
@@ -290,7 +290,7 @@ describe('EntitySignal v5.0 Integration', () => {
       const removed = tree.$.users.removeWhere((u) => u.active);
 
       expect(removed).toBe(2);
-      const remaining = tree.$.users.all()();
+      const remaining = tree.$.users.all();
       expect(remaining).toHaveLength(1);
       expect(remaining[0].id).toBe('u2');
     });
@@ -309,7 +309,7 @@ describe('EntitySignal v5.0 Integration', () => {
         active: true,
       });
 
-      expect(tree.$.users.count()()).toBe(1);
+      expect(tree.$.users.count()).toBe(1);
     });
 
     it('should update existing entity', () => {
@@ -331,7 +331,7 @@ describe('EntitySignal v5.0 Integration', () => {
         active: false,
       });
 
-      const users = tree.$.users.all()();
+      const users = tree.$.users.all();
       expect(users).toHaveLength(1);
       expect(users[0].name).toBe('Alice Updated');
       expect(users[0].email).toBe('alice.new@example.com');
@@ -359,7 +359,7 @@ describe('EntitySignal v5.0 Integration', () => {
         { id: 'u2', name: 'Bob', email: 'bob@example.com', active: false },
       ]);
 
-      const users = tree.$.users.all()();
+      const users = tree.$.users.all();
       expect(users).toHaveLength(2);
       expect(users[0].name).toBe('Alice Updated');
     });
@@ -445,7 +445,7 @@ describe('EntitySignal v5.0 Integration', () => {
         },
       ]);
 
-      const users = tree.$.users.all()();
+      const users = tree.$.users.all();
       expect(users).toHaveLength(1);
       expect(users[0].id).toBe('u3');
     });
@@ -462,8 +462,8 @@ describe('EntitySignal v5.0 Integration', () => {
 
       tree.$.users.clear();
 
-      expect(tree.$.users.isEmpty()()).toBe(true);
-      expect(tree.$.users.count()()).toBe(0);
+      expect(tree.$.users.isEmpty()).toBe(true);
+      expect(tree.$.users.count()).toBe(0);
     });
 
     it('should support removeAll alias', () => {
@@ -480,7 +480,7 @@ describe('EntitySignal v5.0 Integration', () => {
 
       tree.$.users.removeAll();
 
-      expect(tree.$.users.count()()).toBe(0);
+      expect(tree.$.users.count()).toBe(0);
     });
   });
 
@@ -502,11 +502,11 @@ describe('EntitySignal v5.0 Integration', () => {
         value: 100,
       });
 
-      const items = tree.$.items.all()();
+      const items = tree.$.items.all();
       expect(items).toHaveLength(1);
       expect(items[0].customId).toBe('item-1');
 
-      const ids = tree.$.items.ids()();
+      const ids = tree.$.items.ids();
       expect(ids).toEqual(['item-1']);
     });
   });
@@ -531,11 +531,11 @@ describe('EntitySignal v5.0 Integration', () => {
         price: 29.99,
       });
 
-      expect(tree.$.users.count()()).toBe(1);
-      expect(tree.$.products.count()()).toBe(1);
+      expect(tree.$.users.count()).toBe(1);
+      expect(tree.$.products.count()).toBe(1);
 
-      const user = tree.$.users.all()()[0];
-      const product = tree.$.products.all()()[0];
+      const user = tree.$.users.all()[0];
+      const product = tree.$.products.all()[0];
 
       expect(user.name).toBe('Alice');
       expect(product.title).toBe('Widget');
