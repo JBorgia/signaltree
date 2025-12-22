@@ -216,7 +216,7 @@ export class EntitiesDemoComponent {
   });
 
   filteredUsers = computed(() => {
-    const users = this.allUsers;
+    const users = this.allUsers();
     const term = this.searchTerm.toLowerCase();
 
     if (!term) return users;
@@ -340,7 +340,7 @@ export class EntitiesDemoComponent {
 
   displayedPosts = computed(() => {
     const selectedId = this.store.$.selectedUserId();
-    const allPosts = this.allPosts;
+    const allPosts = this.allPosts();
 
     return selectedId
       ? allPosts.filter((post: Post) => post.authorId === selectedId)
@@ -413,7 +413,7 @@ export class EntitiesDemoComponent {
   }
 
   exportSelectedPosts() {
-    const selectedPosts = this.allPosts.filter((post: Post) =>
+    const selectedPosts = this.allPosts().filter((post: Post) =>
       this.selectedPostIds.has(post.id)
     );
 
@@ -457,7 +457,7 @@ export class EntitiesDemoComponent {
   }
 
   loadPosts() {
-    const userCount = this.userCount;
+    const userCount = this.userCount();
     if (userCount === 0) {
       this.loadUsers();
     }
@@ -470,7 +470,7 @@ export class EntitiesDemoComponent {
 
   addRandomUser() {
     const newUser = generateUsers(1, Date.now())[0];
-    const users = this.allUsers;
+    const users = this.allUsers();
     const currentMaxId = Math.max(0, ...users.map((u: User) => u.id));
     newUser.id = currentMaxId + 1;
 
@@ -484,7 +484,7 @@ export class EntitiesDemoComponent {
     if (users.length === 0) return;
 
     const newPost = generatePosts(1, users.length, Date.now())[0];
-    const posts = this.allPosts;
+    const posts = this.allPosts();
     const currentMaxId = Math.max(0, ...posts.map((p: Post) => p.id));
     newPost.id = currentMaxId + 1;
     newPost.authorId = users[Math.floor(Math.random() * users.length)].id;
@@ -511,7 +511,7 @@ export class EntitiesDemoComponent {
     // Use EntitySignal updateWhere to update all posts
     this.store.$.posts.updateWhere(() => true, { likes: 10 });
     // Note: This sets likes to 10, not increments. For increment, we'd need to iterate.
-    const posts = this.allPosts;
+    const posts = this.allPosts();
     posts.forEach((post: Post) => {
       this.store.$.posts.updateOne(post.id, { likes: post.likes + 10 });
     });
@@ -609,7 +609,7 @@ export class EntitiesDemoComponent {
   addUser() {
     if (!this.newUserName || !this.newUserEmail) return;
 
-    const users = this.allUsers;
+    const users = this.allUsers();
     const currentMaxId = Math.max(0, ...users.map((u: User) => u.id));
 
     const newUser: User = {

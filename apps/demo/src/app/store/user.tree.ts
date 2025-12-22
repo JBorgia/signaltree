@@ -179,7 +179,7 @@ export function createUserTree(): UserTree {
     const role = $.filter.roleFilter();
     const showInactive = $.filter.showInactive();
 
-    return all.filter((user: UserDto) => {
+    return all().filter((user: UserDto) => {
       // Filter by active status
       if (!showInactive && !user.isActive) return false;
 
@@ -199,7 +199,7 @@ export function createUserTree(): UserTree {
 
   /** Count of active users */
   const activeUserCount = computed(() => {
-    return $.users.all.filter((u: UserDto) => u.isActive).length;
+    return $.users.all().filter((u: UserDto) => u.isActive).length;
   });
 
   /** Loading state checks */
