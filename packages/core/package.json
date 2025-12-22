@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/core",
-  "version": "5.1.3",
+  "version": "5.1.2",
   "description": "Lightweight, type-safe signal-based state management for Angular. Core package providing hierarchical signal trees, basic entity management, and async actions.",
   "type": "module",
   "sideEffects": false,
