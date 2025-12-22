@@ -135,8 +135,8 @@ describe('EntitySignal v5.0 Integration', () => {
       expect(ids).toEqual(['u1', 'u2']);
 
       // has()
-      expect(tree.$.users.has('u1')).toBe(true);
-      expect(tree.$.users.has('u3')).toBe(false);
+      expect(tree.$.users.has('u1')()).toBe(true);
+      expect(tree.$.users.has('u3')()).toBe(false);
 
       // isEmpty()
       expect(tree.$.users.isEmpty()).toBe(false);
