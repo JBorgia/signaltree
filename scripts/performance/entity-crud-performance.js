@@ -222,7 +222,7 @@ class EntityPerformanceAnalyzer {
     const allResult = this.measureOperation(
       'all()',
       () => {
-        tree.$.entities.all()();
+        tree.$.entities.all();
       },
       1000
     );
@@ -297,7 +297,7 @@ class EntityPerformanceAnalyzer {
 
     // Query all
     const startQuery = performance.now();
-    tree.$.entities.all()();
+    tree.$.entities.all();
     const queryTime = performance.now() - startQuery;
 
     // Update batch

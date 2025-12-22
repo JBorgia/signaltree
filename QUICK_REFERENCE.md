@@ -51,9 +51,9 @@ const id = tree.$.users.addOne({ id: 'u1', name: 'Alice' });
 
 // Read
 const user = tree.$.users.byId('u1');
-const all = tree.$.users.all(); // Signal<User[]>
-const count = tree.$.users.count(); // Signal<number>
-const ids = tree.$.users.ids(); // Signal<string[]>
+const all = tree.$.users.all; // Signal<User[]>
+const count = tree.$.users.count; // Signal<number>
+const ids = tree.$.users.ids; // Signal<string[]>
 
 // Update
 tree.$.users.updateOne('u1', { name: 'Bob' });

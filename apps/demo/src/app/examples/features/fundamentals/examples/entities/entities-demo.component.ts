@@ -3,7 +3,12 @@ import { Component, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { entityMap, signalTree, withEntities } from '@signaltree/core';
 
-import { generatePosts, generateUsers, Post, User } from '../../../../../shared/models';
+import {
+  generatePosts,
+  generateUsers,
+  Post,
+  User,
+} from '../../../../../shared/models';
 
 import type { EntityMapMarker } from '@signaltree/core';
 
@@ -198,10 +203,10 @@ export class EntitiesDemoComponent {
   editingUserEmail = '';
 
   // Entity selectors using v5.0 EntitySignal API
-  userCount = this.store.$.users.count();
-  postCount = this.store.$.posts.count();
-  allUsers = this.store.$.users.all();
-  allPosts = this.store.$.posts.all();
+  userCount = this.store.$.users.count;
+  postCount = this.store.$.posts.count;
+  allUsers = this.store.$.users.all;
+  allPosts = this.store.$.posts.all;
 
   selectedUser = computed(() => {
     const id = this.store.$.selectedUserId();

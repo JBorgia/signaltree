@@ -141,7 +141,7 @@ const selectedUserId = computed(() => $.selected.userId()); // Unnecessary!
 ```typescript
 // ✅ SignalTree-native
 const user = $.users.byId(123)(); // O(1) lookup
-const allUsers = $.users.all(); // Get all
+const allUsers = $.users.all; // Get all
 $.users.setAll(usersFromApi); // Replace all
 
 // ❌ NgRx-style (avoid)
@@ -630,7 +630,7 @@ tree.$.products.addOne(newProduct);
 tree.$.products.setAll(productsFromApi);
 
 // Entity queries
-const electronics = tree.$.products.all().filter((p) => p.category === 'electronics');
+const electronics = tree.$.products.all.filter((p) => p.category === 'electronics');
 ```
 
 **Full-Stack Application:**
@@ -720,7 +720,7 @@ const enhanced = signalTree({
 
 enhanced.$.users.addOne(newUser); // ✅ Advanced CRUD operations
 enhanced.$.users.byId(123)(); // ✅ O(1) lookups
-enhanced.$.users.all(); // ✅ Get all as array
+enhanced.$.users.all; // ✅ Get all as array
 ```
 
 Core includes several performance optimizations:
@@ -943,7 +943,7 @@ const appTree = signalTree({
 // Access nested entities using tree.$ accessor
 appTree.$.app.data.users.selectBy((u) => u.isAdmin); // Filtered signal
 appTree.$.app.data.products.selectTotal(); // Count signal
-appTree.$.admin.data.logs.all(); // All items as array
+appTree.$.admin.data.logs.all; // All items as array
 appTree.$.admin.data.reports.selectIds(); // ID array signal
 
 // For async operations, use manual async or async helpers
@@ -1368,7 +1368,7 @@ tree.destroy(); // Cleanup resources
 // Entity helpers (when using entityMap + withEntities)
 // tree.$.users.addOne(user);    // Add single entity
 // tree.$.users.byId(id)();      // O(1) lookup by ID
-// tree.$.users.all();         // Get all as array
+// tree.$.users.all;         // Get all as array
 // tree.$.users.selectBy(pred);  // Filtered signal
 ```
 

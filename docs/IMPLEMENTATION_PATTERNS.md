@@ -151,7 +151,7 @@ const isLoaded = computed(() => $.loading.state() === LoadingState.Loaded);
 
 // ✅ Correct: Filtering/mapping collections
 const activeUsers = computed(() => {
-  return $.users.all().filter((u) => u.isActive);
+  return $.users.all.filter((u) => u.isActive);
 });
 
 // ✅ Correct: Combining multiple pieces of state
@@ -169,9 +169,9 @@ Use SignalTree's `EntitySignal` API directly:
 
 ```typescript
 // Reading entities
-const allUsers = $.users.all(); // Get all entities as array
+const allUsers = $.users.all; // Get all entities as array
 const user = $.users.byId(123)(); // O(1) lookup by ID
-const userIds = $.users.ids()(); // Get all IDs
+const userIds = $.users.ids(); // Get all IDs
 
 // Writing entities
 $.users.setAll(usersFromApi); // Replace all entities
@@ -314,7 +314,7 @@ export const appConfig: ApplicationConfig = {
 export class UserListComponent {
   private readonly userTree = inject(USER_TREE);
 
-  readonly users = computed(() => this.userTree.users.all());
+  readonly users = computed(() => this.userTree.users.all);
   readonly isLoaded = this.userTree.isLoaded;
 }
 ```
@@ -336,7 +336,7 @@ When creating a new store or migrating from NgRx:
 - [ ] State signals exposed directly from `$` tree (no `computed()` wrappers)
 - [ ] Interface declares `Signal<T>` for read-only contract
 - [ ] `computed()` used only for derived/transformed state
-- [ ] Entity access via `EntitySignal` API (`.all()`, `.byId()`, etc.)
+- [ ] Entity access via `EntitySignal` API (`.all`, `.byId()`, etc.)
 - [ ] Side effects in explicit `effect()` blocks
 - [ ] Mutation methods for complex multi-signal updates
 - [ ] Async methods return `Observable<void>`

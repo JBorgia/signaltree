@@ -93,15 +93,15 @@ console.log(user1); // { id: 'u1', name: 'Alice', ... }
 const user2 = tree.$.users['u1']?.(); // User | undefined
 
 // Get all users as reactive array
-const allUsers = tree.$.users.all(); // Signal<User[]>
+const allUsers = tree.$.users.all; // Signal<User[]>
 console.log(allUsers()); // [User, User, User]
 
 // Count (also reactive)
-const userCount = tree.$.users.count(); // Signal<number>
+const userCount = tree.$.users.count; // Signal<number>
 console.log(userCount()); // 3
 
 // Get all IDs
-const userIds = tree.$.users.ids(); // Signal<string[]>
+const userIds = tree.$.users.ids; // Signal<string[]>
 console.log(userIds()); // ['u1', 'u2', 'u3']
 
 // ==================
@@ -294,7 +294,7 @@ const analyticsUnsub = tree.$.users.tap({
 // 3. Auto-Persistence Hook (with try/catch)
 const persistenceUnsub = tree.$.users.tap({
   onChange: () => {
-    const users = tree.$.users.all();
+    const users = tree.$.users.all;
     try {
       localStorage.setItem('users-backup', JSON.stringify(users));
       console.log('💾 Auto-saved users to localStorage');
@@ -967,7 +967,7 @@ const deleteTodo = (id: string) => {
 
 // Reactive computed
 const activeTodos = computed(() => {
-  const todos = todoTree.$.todos.all(); // Returns Todo[] directly
+  const todos = todoTree.$.todos.all; // Signal<Todo[]>
   return todos.filter((t) => !t.completed);
 });
 
@@ -1001,7 +1001,7 @@ import { Component, inject } from '@angular/core';
 })
 export class TodoListComponent {
   todoTree = inject(TodoTreeService).tree;
-  todos = this.todoTree.$.todos.all();
+  todos = this.todoTree.$.todos.all;
   activeTodos = computed(() => this.todos().filter((t) => !t.completed));
 
   addTodo(event: KeyboardEvent) {

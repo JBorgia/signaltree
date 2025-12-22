@@ -1,5 +1,11 @@
 import { computed, effect, InjectionToken, Signal } from '@angular/core';
-import { entityMap, EntitySignal, signalTree, withDevTools, withEntities } from '@signaltree/core';
+import {
+  entityMap,
+  EntitySignal,
+  signalTree,
+  withDevTools,
+  withEntities,
+} from '@signaltree/core';
 import { catchError, delay, EMPTY, map, Observable, of, tap } from 'rxjs';
 
 // ============================================================================
@@ -113,7 +119,7 @@ const STORE_NAME = 'UserTree';
  *
  * // Entity access (O(1) lookups)
  * const user = userTree.users.byId(123)();
- * const allUsers = userTree.users.all();
+ * const allUsers = userTree.users.all;
  *
  * // Reactive selectors
  * effect(() => console.log('Selected:', userTree.selectedUser()));
@@ -168,7 +174,7 @@ export function createUserTree(): UserTree {
 
   /** Users filtered by search term, role, and active status */
   const filteredUsers = computed(() => {
-    const all = $.users.all();
+    const all = $.users.all;
     const search = $.filter.searchTerm().toLowerCase();
     const role = $.filter.roleFilter();
     const showInactive = $.filter.showInactive();
@@ -193,7 +199,7 @@ export function createUserTree(): UserTree {
 
   /** Count of active users */
   const activeUserCount = computed(() => {
-    return $.users.all().filter((u: UserDto) => u.isActive).length;
+    return $.users.all.filter((u: UserDto) => u.isActive).length;
   });
 
   /** Loading state checks */
