@@ -1,3 +1,13 @@
+## 5.1.3 (2025-12-17)
+
+### 🐛 Bug Fixes
+
+- **core:** Fix EntitySignal API consistency - properties return signals directly
+  - Changed `EntitySignal<E, K>` interface from method-based (`all(): Signal<E[]>`) to property-based (`all: Signal<E[]>`)
+  - Updated runtime type guards and all usage throughout codebase
+  - Fixed API inconsistency where interface declared methods but implementation used getters
+  - All entity query properties (`all`, `count`, `ids`, `isEmpty`, `map`) now consistently return signals directly
+
 ## 5.1.2 (2025-12-17)
 
 ### 🐛 Bug Fixes
@@ -27,8 +37,8 @@
 
 ### 📖 Philosophy
 
-SignalTree is intentionally simple: create a tree, access nested signals directly. 
-The NgRx-style `withFeature()` enhancer pattern introduces unnecessary abstraction 
+SignalTree is intentionally simple: create a tree, access nested signals directly.
+The NgRx-style `withFeature()` enhancer pattern introduces unnecessary abstraction
 and TypeScript complexity. Instead:
 
 ```typescript
@@ -52,6 +62,7 @@ function withServiceRead<T extends BaseState>(tree: SignalTree<T>) { ... }
 ### 🚀 Features
 
 - **core:** Add `EntityMapMarker` unique symbol brand for nominal typing
+
   - Prevents regular objects from structurally matching EntityMapMarker
   - Improves type inference in generic contexts
 
@@ -60,6 +71,7 @@ function withServiceRead<T extends BaseState>(tree: SignalTree<T>) { ... }
 ### 🩹 Fixes
 
 - **core:** Remove index signature from `SignalTree<T>` type
+
   - Removed `& Record<string, unknown>` that caused `.with()` bracket notation requirement
   - Enables clean dot notation: `tree.with(enhancer)` without bracket notation
   - Enhancers must now explicitly type their return values (better practice anyway)
@@ -113,7 +125,6 @@ function withServiceRead<T extends BaseState>(tree: SignalTree<T>) { ... }
   - Explicit properties like `with`, `state`, `$` now take precedence over index signature
   - Enables dot notation access: `tree.with(enhancer)` instead of `tree['with'](enhancer)`
   - Resolves TS4111: "Property 'with' comes from an index signature"
-  
 - **core:** Remove duplicate `entityMap()` function from entity-signal.ts
   - The correct implementation in types.ts returns `EntityMapMarker<E, K>` for proper type inference
   - Removed redundant implementation that returned `unknown`
