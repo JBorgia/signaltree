@@ -480,7 +480,7 @@ export class EntitiesDemoComponent {
   }
 
   addRandomPost() {
-    const users = this.allUsers;
+    const users = this.allUsers();
     if (users.length === 0) return;
 
     const newPost = generatePosts(1, users.length, Date.now())[0];
