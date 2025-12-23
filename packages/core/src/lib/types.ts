@@ -379,7 +379,6 @@ export type SignalTree<T> = NodeAccessor<T> & {
       batchedUpdates: number;
     };
   };
-  getMetrics(): PerformanceMetrics;
 
   /**
    * @deprecated Use entityMap<E>() + withEntities() + tree.$.collectionName instead.
@@ -456,14 +455,6 @@ export interface TreeConfig {
 // ============================================
 // FEATURE TYPES
 // ============================================
-
-export interface PerformanceMetrics {
-  updates: number;
-  computations: number;
-  cacheHits: number;
-  cacheMisses: number;
-  averageUpdateTime: number;
-}
 
 // ============================================
 // ENTITY MAP & SIGNAL TYPES

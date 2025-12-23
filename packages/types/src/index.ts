@@ -368,7 +368,6 @@ export type SignalTree<T> = NodeAccessor<T> & {
       batchedUpdates: number;
     };
   };
-  getMetrics(): PerformanceMetrics;
 
   /** Entity helpers */
   entities<E extends { id: string | number }>(
@@ -442,14 +441,6 @@ export interface TreeConfig {
 // ============================================
 // FEATURE TYPES
 // ============================================
-
-export interface PerformanceMetrics {
-  updates: number;
-  computations: number;
-  cacheHits: number;
-  cacheMisses: number;
-  averageUpdateTime: number;
-}
 
 // ============================================
 // ENTITY MAP & SIGNAL TYPES

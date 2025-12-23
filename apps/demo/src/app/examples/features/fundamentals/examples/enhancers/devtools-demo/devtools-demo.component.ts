@@ -151,15 +151,13 @@ export class DevtoolsDemoComponent {
 
   // DevTools methods
   getMetrics() {
-    return (
-      this.store.getMetrics?.() || {
-        updates: 0,
-        computations: 0,
-        cacheHits: 0,
-        cacheMisses: 0,
-        averageUpdateTime: 0,
-      }
-    );
+    return {
+      updates: 0,
+      computations: 0,
+      cacheHits: 0,
+      cacheMisses: 0,
+      averageUpdateTime: 0,
+    };
   }
 
   logState() {
@@ -168,7 +166,9 @@ export class DevtoolsDemoComponent {
 
   triggerSnapshot() {
     // Export current debug session as a snapshot
-    const devTools = (this.store as unknown as Record<string, unknown>)['__devTools'];
+    const devTools = (this.store as unknown as Record<string, unknown>)[
+      '__devTools'
+    ];
     (
       devTools as { exportDebugSession?: () => unknown }
     )?.exportDebugSession?.();
@@ -177,7 +177,9 @@ export class DevtoolsDemoComponent {
 
   resetMetrics() {
     // Reset metrics by reconnecting devtools
-    const devTools = (this.store as unknown as Record<string, unknown>)['__devTools'];
+    const devTools = (this.store as unknown as Record<string, unknown>)[
+      '__devTools'
+    ];
     (
       devTools as { connectDevTools?: (name: string) => void }
     )?.connectDevTools?.('DevToolsDemo');

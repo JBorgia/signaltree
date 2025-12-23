@@ -210,7 +210,6 @@ export type SignalTree<T> = NodeAccessor<T> & {
       batchedUpdates: number;
     };
   };
-  getMetrics(): PerformanceMetrics;
   entities<
     E extends {
       id: string | number;
@@ -241,13 +240,6 @@ export interface TreeConfig {
   debugMode?: boolean;
   useStructuralSharing?: boolean;
   security?: SecurityValidatorConfig;
-}
-export interface PerformanceMetrics {
-  updates: number;
-  computations: number;
-  cacheHits: number;
-  cacheMisses: number;
-  averageUpdateTime: number;
 }
 export interface EntityConfig<E, K extends string | number = string> {
   selectId?: (entity: E) => K;

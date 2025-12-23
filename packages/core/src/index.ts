@@ -58,7 +58,6 @@ export type {
   AddManyOptions,
 
   // Feature types - Advanced functionality
-  PerformanceMetrics,
   EntityHelpers,
   TimeTravelEntry,
 } from './lib/types';

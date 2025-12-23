@@ -15,7 +15,6 @@ import type {
   TreeNode,
   TreeConfig,
   TreePreset,
-  PerformanceMetrics,
   EntityHelpers,
   TimeTravelEntry,
   EnhancerWithMeta,
@@ -715,16 +714,6 @@ function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
     }
 
     return engine.update(tree(), updates, options);
-  };
-
-  tree.getMetrics = (): PerformanceMetrics => {
-    return {
-      updates: 0,
-      computations: 0,
-      cacheHits: 0,
-      cacheMisses: 0,
-      averageUpdateTime: 0,
-    };
   };
 
   /**
