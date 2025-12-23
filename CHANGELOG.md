@@ -1,3 +1,24 @@
+## 5.1.4 (2025-01-13)
+
+### 🗑️ Removed
+
+- **core:** Remove `tree.entities()` method from `withEntities` enhancer
+  - The `entities()` method was redundant and confusing - use direct property access instead
+  - `tree.entities()` → `tree` (direct access to entity signals)
+  - Updated all documentation and examples to reflect this change
+  - This simplifies the API and removes unnecessary abstraction
+
+### 📚 Documentation
+
+- **docs:** Add SignalTree architecture guide explaining recommended patterns
+- **docs:** Add recommended architecture demo showcasing best practices
+- **docs:** Update all documentation to reflect `tree.entities()` removal
+
+### 🛠️ Internal
+
+- **core:** Clean up unused entities method implementation
+- **perf:** Fix signal usage in performance scripts after API changes
+
 ## 5.1.3 (2025-12-17)
 
 ### 🐛 Bug Fixes
