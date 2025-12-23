@@ -347,7 +347,7 @@ class EntityPerformanceAnalyzer {
     for (let i = 0; i < 100; i++) {
       tree.$.entities.updateOne(i, { status: `iteration-${i}` });
       // Force signal computation to measure reactivity overhead
-      tree.$.entities.count()();
+      tree.$.entities.count();
     }
 
     const time = performance.now() - start;
