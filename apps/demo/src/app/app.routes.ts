@@ -97,6 +97,13 @@ export const appRoutes: Route[] = [
         './examples/features/fundamentals/examples/enhancers/devtools-demo/devtools-demo.component'
       ).then((c) => c.DevtoolsDemoComponent),
   },
+  {
+    path: 'examples/fundamentals/recommended-architecture',
+    loadComponent: () =>
+      import(
+        './examples/features/fundamentals/examples/recommended-architecture/recommended-architecture.component'
+      ).then((c) => c.RecommendedArchitectureComponent),
+  },
   // Performance comparisons
   {
     path: 'benchmarks',

@@ -16,6 +16,9 @@ import {
 import { EntitiesDemoComponent } from '../../features/fundamentals/examples/entities/entities-demo.component';
 import { FormsDemoComponent } from '../../features/fundamentals/examples/forms/forms-demo.component';
 import { MemoizationDemoComponent } from '../../features/fundamentals/examples/memoization/memoization-demo.component';
+import {
+  RecommendedArchitectureComponent,
+} from '../../features/fundamentals/examples/recommended-architecture/recommended-architecture.component';
 import { SignalFormsDemoComponent } from '../../features/fundamentals/examples/signal-forms/signal-forms-demo.component';
 import { SignalsExamplesComponent } from '../../features/fundamentals/examples/signals/signals-examples.component';
 import { TimeTravelDemoComponent } from '../../features/fundamentals/examples/time-travel/time-travel-demo.component';
@@ -318,6 +321,30 @@ export const asyncExampleMeta: ExampleMeta = {
 };
 
 /**
+ * Recommended Architecture Example
+ */
+export const recommendedArchitectureExampleMeta: ExampleMeta = {
+  id: 'recommended-architecture',
+  title: 'Recommended Architecture',
+  description:
+    'Global tree + selective facades pattern with clean API separation and direct component access.',
+  category: 'Architecture',
+  focusAreas: ['architecture', 'global-tree', 'facades', 'api-separation'],
+  functionalUse: ['state-management', 'orchestration', 'data-flow'],
+  enhancers: ['entities', 'batching'],
+  route: '/examples/fundamentals/recommended-architecture',
+  component: RecommendedArchitectureComponent,
+  difficulty: 'advanced',
+  tags: [
+    'architecture',
+    'global-tree',
+    'facades',
+    'best-practices',
+    'api-separation',
+  ],
+};
+
+/**
  * Central registry of all examples
  */
 export const EXAMPLES_REGISTRY: ExampleMeta[] = [
@@ -350,4 +377,5 @@ export const EXAMPLES_REGISTRY: ExampleMeta[] = [
   formsExampleMeta,
   signalFormsExampleMeta,
   asyncExampleMeta,
+  recommendedArchitectureExampleMeta,
 ];
