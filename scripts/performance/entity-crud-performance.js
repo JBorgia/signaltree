@@ -316,14 +316,14 @@ class EntityPerformanceAnalyzer {
       queryTime,
       updateTime,
       removeTime,
-      finalSize: tree.$.entities.count()(),
+      finalSize: tree.$.entities.count(),
     };
 
     console.log(`  Add 10k: ${addTime.toFixed(2)}ms`);
     console.log(`  Query all: ${queryTime.toFixed(2)}ms`);
     console.log(`  Update 1k: ${updateTime.toFixed(2)}ms`);
     console.log(`  Remove 1k: ${removeTime.toFixed(2)}ms`);
-    console.log(`  Final count: ${tree.$.entities.count()()}\n`);
+    console.log(`  Final count: ${tree.$.entities.count()}\n`);
   }
 
   // Test reactivity overhead
