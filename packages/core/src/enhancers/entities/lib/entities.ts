@@ -5,7 +5,6 @@ import { isNodeAccessor } from '../../../lib/utils';
 import type {
   EntityConfig,
   EntityMapMarker,
-  EntitySignal,
   SignalTree,
   EntityAwareTreeNode,
 } from '../../../lib/types';
@@ -26,22 +25,10 @@ function isEntityMapMarker(value: unknown): value is Marker {
   );
 }
 
-function isEntitySignal(
-  value: unknown
-): value is EntitySignal<unknown, string> {
-  return (
-    !!value &&
-    typeof value === 'object' &&
-    typeof (value as Record<string, unknown>)['addOne'] === 'function' &&
-    typeof (value as Record<string, unknown>)['all'] !== 'undefined'
-  );
-}
-
 function materializeEntities<T>(
   tree: SignalTree<T>,
   notifier = getPathNotifier()
-): Map<string, EntitySignal<any, string | number>> {
-  const registry = new Map<string, EntitySignal<any, string | number>>();
+): void {
   const state = tree.state as Record<string, unknown>;
 
   const visit = (
@@ -75,7 +62,6 @@ function materializeEntities<T>(
         // If property cannot be defined on tree, skip
       }
 
-      registry.set(basePath, entitySignal);
       return;
     }
 
@@ -103,35 +89,6 @@ function materializeEntities<T>(
   for (const key of Object.keys(state)) {
     visit(state, key, state[key], []);
   }
-
-  return registry;
-}
-
-function resolveEntitySignal<T>(
-  tree: SignalTree<T>,
-  registry: Map<string, EntitySignal<unknown, string | number>>,
-  path: string | keyof T
-): EntitySignal<unknown, string | number> {
-  const pathStr = String(path);
-  const existing = registry.get(pathStr);
-  if (existing) return existing;
-
-  const segments = pathStr.split('.');
-  let current: unknown = tree.state as Record<string, unknown>;
-
-  for (const segment of segments) {
-    if (!current) break;
-    current = (current as Record<string, unknown>)[segment];
-  }
-
-  if (isEntitySignal(current)) {
-    registry.set(pathStr, current);
-    return current;
-  }
-
-  throw new Error(
-    `Entity path '${pathStr}' is not configured. Define it with entityMap() in your initial state.`
-  );
 }
 
 /**
@@ -146,27 +103,16 @@ export function withEntities(config: EntitiesEnhancerConfig = {}) {
   > & {
     state: EntityAwareTreeNode<T>;
     $: EntityAwareTreeNode<T>;
-    entities<E, K extends string | number>(
-      path: keyof T | string
-    ): EntitySignal<E, K>;
   } {
     if (!enabled) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return tree as any;
     }
 
-    const registry = materializeEntities(tree);
-
-    const enhancedTree = Object.assign(tree, {
-      entities<E, K extends string | number>(
-        path: keyof T | string
-      ): EntitySignal<E, K> {
-        return resolveEntitySignal(tree, registry, path) as EntitySignal<E, K>;
-      },
-    });
+    materializeEntities(tree);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return enhancedTree as any;
+    return tree as any;
   };
 }
 
