@@ -505,7 +505,7 @@ Phase 6: Integration
 ### Backward Compatibility Tests
 
 ```
-✓ Old tree.entities<E>(path) still works (deprecated)
+✓ Old tree.entities<E>(path) removed in v5.1.4 (was deprecated)
 ✓ Migration path is clear (middleware removed)
 ```
 

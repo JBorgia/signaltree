@@ -56,7 +56,7 @@ tree.$.users.all();
 **Removal:** v6.0  
 **Alternative:** `EntitySignal<E, K>` interface from `withEntities()`
 
-The old `EntityHelpers` interface is kept for backward compatibility during migration but will be removed alongside `tree.entities()`.
+The old `EntityHelpers` interface is kept for backward compatibility during migration but will be removed alongside the deprecated `tree.entities()` method.
 
 ---
 
@@ -82,8 +82,9 @@ const tree = signalTree(state).with(withBatching()).with(withLogging());
 
 | Version | Changes                                                 |
 | ------- | ------------------------------------------------------- |
+| v5.1.4  | Removed `tree.entities()` method from `withEntities()`  |
 | v5.x    | Deprecation warnings added, migration docs published    |
-| v6.0    | Remove `tree.entities()`, `EntityHelpers` interface     |
+| v6.0    | Remove `EntityHelpers` interface                        |
 | v7.0    | Consider removing `{ enhancers: [...] }` config pattern |
 
 ---
@@ -96,8 +97,8 @@ Run this command to find deprecated patterns in your codebase:
 # Find old entity<T>('id') markers (if any exist)
 grep -rn "entity<.*>(" src/ --include="*.ts" | grep -v "entityMap"
 
-# Find old tree.entities() usage
-grep -rn "\.entities<" src/ --include="*.ts"
+# Note: tree.entities() method was removed in v5.1.4
+# The deprecated tree.entities() method no longer exists
 
 # Find old config object pattern
 grep -rn "{ enhancers:" src/ --include="*.ts"

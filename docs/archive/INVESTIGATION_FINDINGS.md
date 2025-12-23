@@ -116,7 +116,7 @@ filteredLogs()
 The log-filtering-demo uses `withEntities()` which might have separate issues:
 
 ```typescript
-private logsEntity = this.tree.entities<Log>('logs');
+private logsEntity = this.tree.entities<Log>('logs'); // Old API - removed in v5.1.4
 
 // Updates via entity manager
 this.logsEntity.add(log);

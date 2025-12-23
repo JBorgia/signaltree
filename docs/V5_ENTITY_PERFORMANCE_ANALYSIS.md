@@ -135,7 +135,7 @@ There is **no actual performance regression**. The "violations" are artifacts of
 
 ```typescript
 users: User[]
-userHelpers = tree.entities<User>('users')
+userHelpers = tree.entities<User>('users') // Removed in v5.1.4
 userHelpers.add(user)
 userHelpers.selectAll()()
 ```
