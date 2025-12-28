@@ -661,6 +661,104 @@ export interface TimeTravelEntry<T> {
 }
 
 // ============================================
+// BACKWARDS-COMPAT & CONVENIENCE TYPES (stable exports expected by consumers)
+// These are intentionally simple aliases or fallbacks to keep the public API stable
+// while allowing internal refactors of the type system.
+
+export type CallableWritableSignal<T> = WritableSignal<T> & {
+  (value: NotFn<T>): void;
+  (updater: (current: T) => T): void;
+};
+
+export type AccessibleNode<T> = NodeAccessor<T> & TreeNode<T>;
+
+export type RemoveSignalMethods<T> = T extends infer U ? U : never;
+
+export type BuiltInObject = unknown;
+
+export type DeepPath<T> = string;
+
+export type DeepAccess<T, Path extends string> = unknown;
+
+export type ChainResult<Start, E extends Array<unknown>> = Start;
+
+/** Symbol key for enhancer metadata (stable public export) */
+export const ENHANCER_META = Symbol('signaltree:enhancer:meta');
+
+/** Basic Enhancer shape (stable export) */
+export type Enhancer<Input = unknown, Output = unknown> = (
+  input: Input
+) => Output;
+
+export type EnhancerWithMeta<Input = unknown, Output = unknown> = Enhancer<
+  Input,
+  Output
+> & { metadata?: EnhancerMeta };
+
+// Main public SignalTree interface expected by downstream packages
+export type SignalTree<T> = NodeAccessor<T> & {
+  state: TreeNode<T>;
+  $: TreeNode<T>;
+  with: WithMethod<T>;
+  bind(thisArg?: unknown): NodeAccessor<T>;
+  destroy(): void;
+  dispose?(): void;
+
+  // core enhanced methods (most are optional and provided by enhancers)
+  effect(fn: (tree: T) => void): () => void;
+  subscribe(fn: (tree: T) => void): () => void;
+  batch(updater: (tree: T) => void): void;
+  batchUpdate(updater: (current: T) => Partial<T>): void;
+  memoize<R>(fn: (tree: T) => R, cacheKey?: string): Signal<R>;
+  memoizedUpdate?(updater: (current: T) => Partial<T>, cacheKey?: string): void;
+  clearMemoCache?(key?: string): void;
+  getCacheStats?(): {
+    size: number;
+    hitRate: number;
+    totalHits: number;
+    totalMisses: number;
+    keys: string[];
+  };
+
+  optimize?(): void;
+  clearCache?(): void;
+  invalidatePattern?(pattern: string): number;
+
+  entities?<E extends { id: string | number }>(
+    entityKey?: keyof T
+  ): EntityHelpers<E>;
+
+  updateOptimized?: (
+    updates: Partial<T>,
+    options?: {
+      batch?: boolean;
+      batchSize?: number;
+      maxDepth?: number;
+      ignoreArrayOrder?: boolean;
+      equalityFn?: (a: unknown, b: unknown) => boolean;
+    }
+  ) => {
+    changed: boolean;
+    duration: number;
+    changedPaths: string[];
+    stats?: {
+      totalPaths: number;
+      optimizedPaths: number;
+      batchedUpdates: number;
+    };
+  };
+
+  undo?(): void;
+  redo?(): void;
+  getHistory?(): TimeTravelEntry<T>[];
+  resetHistory?(): void;
+  jumpTo?: (index: number) => void;
+  canUndo?: () => boolean;
+  canRedo?: () => boolean;
+  getCurrentIndex?: () => number;
+};
+
+// ============================================
 // TYPE GUARDS
 // ============================================
 
