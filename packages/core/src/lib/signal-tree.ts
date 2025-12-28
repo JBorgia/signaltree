@@ -949,34 +949,23 @@ const presetConfigs: Record<TreePreset, Partial<TreeConfig>> = {
 // PUBLIC API
 // ============================================
 
-export function signalTree<T>(obj: T): SignalTree<T>;
-export function signalTree<T>(obj: T, preset: TreePreset): SignalTree<T>;
-export function signalTree<T>(obj: T, config: TreeConfig): SignalTree<T>;
-export function signalTree<T extends Record<string, unknown>>(
-  obj: Required<T>,
+export function signalTree(
+  obj: unknown,
   configOrPreset?: TreeConfig | TreePreset
-): SignalTree<Required<T>>;
-export function signalTree<T>(
-  obj: T,
-  configOrPreset?: TreeConfig | TreePreset
-): SignalTree<T>;
-export function signalTree<T>(
-  obj: T,
-  configOrPreset?: TreeConfig | TreePreset
-): SignalTree<T> {
+): SignalTree<any> {
   if (typeof configOrPreset === 'string') {
     const config = presetConfigs[configOrPreset];
     if (!config) {
       console.warn(
-        SIGNAL_TREE_MESSAGES.PRESET_UNKNOWN.replace('%s', configOrPreset)
+        SIGNAL_TREE_MESSAGES.PRESET_UNKNOWN.replace('%s', String(configOrPreset))
       );
-      return create(obj, {});
+      return create(obj as any, {} as any) as SignalTree<any>;
     }
-    return create(obj, config);
+    return create(obj as any, config as any) as SignalTree<any>;
   }
 
-  const config = configOrPreset || {};
-  return create(obj, config);
+  const config = (configOrPreset || {}) as TreeConfig;
+  return create(obj as any, config) as SignalTree<any>;
 }
 
 /**
