@@ -43,29 +43,6 @@ export interface SignalTreeBase<T> extends NodeAccessor<T> {
 
 export interface WithMethod<T> {
   (): SignalTreeBase<T>;
-  <A>(e1: Enhancer<SignalTreeBase<T>, A>): SignalTreeBase<T> & A;
-  <A, B>(
-    e1: Enhancer<SignalTreeBase<T>, A>,
-    e2: Enhancer<SignalTreeBase<T>, B>
-  ): SignalTreeBase<T> & A & B;
-  <A, B, C>(
-    e1: Enhancer<SignalTreeBase<T>, A>,
-    e2: Enhancer<SignalTreeBase<T>, B>,
-    e3: Enhancer<SignalTreeBase<T>, C>
-  ): SignalTreeBase<T> & A & B & C;
-  <A, B, C, D>(
-    e1: Enhancer<SignalTreeBase<T>, A>,
-    e2: Enhancer<SignalTreeBase<T>, B>,
-    e3: Enhancer<SignalTreeBase<T>, C>,
-    e4: Enhancer<SignalTreeBase<T>, D>
-  ): SignalTreeBase<T> & A & B & C & D;
-  <A, B, C, D, E>(
-    e1: Enhancer<SignalTreeBase<T>, A>,
-    e2: Enhancer<SignalTreeBase<T>, B>,
-    e3: Enhancer<SignalTreeBase<T>, C>,
-    e4: Enhancer<SignalTreeBase<T>, D>,
-    e5: Enhancer<SignalTreeBase<T>, E>
-  ): SignalTreeBase<T> & A & B & C & D & E;
   (...enhancers: Enhancer<SignalTreeBase<T>, unknown>[]): SignalTreeBase<T> &
     Record<string, unknown>;
 }
