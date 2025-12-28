@@ -569,7 +569,9 @@ export const ENHANCER_META = Symbol('signaltree:enhancer:meta');
  * Historically many callsites use `Enhancer<Input, Output>` where
  * `Input` is often the tree shape and `Output` is the augmented tree.
  */
-export type Enhancer<Input = unknown, Output = unknown> = (input: Input) => Output;
+export type Enhancer<Input = unknown, Output = unknown> = (
+  input: Input
+) => Output;
 
 /** Metadata attached to enhancers to help ordering and diagnostics */
 export interface EnhancerMeta {
@@ -619,48 +621,10 @@ export type ProdSignalTree<T> = SignalTreeBase<T> &
   EntitiesMethods<T>;
 
 // Backwards-compatible aliases expected by older consumers
-/** Legacy alias: `SignalTree<T>` maps to the full preset combination */
-export type SignalTree<T> = FullSignalTree<T>;
-
-/**
- * Backwards-compatible `.with()` method overloads maintained for consumer
- * compatibility. v6's runtime accepts single enhancers, but the type-level
- * convenience preserved here lets callers chain multiple enhancers with
- * improved inference (up to 6 explicit overloads, then a spread fallback).
- */
-export interface WithMethod<T> {
-  (): SignalTreeBase<T>;
-  <A>(e1: Enhancer<A>): SignalTreeBase<T> & A;
-  <A, B>(e1: Enhancer<A>, e2: Enhancer<B>): SignalTreeBase<T> & A & B;
-  <A, B, C>(
-    e1: Enhancer<A>,
-    e2: Enhancer<B>,
-    e3: Enhancer<C>
-  ): SignalTreeBase<T> & A & B & C;
-  <A, B, C, D>(
-    e1: Enhancer<A>,
-    e2: Enhancer<B>,
-    e3: Enhancer<C>,
-    e4: Enhancer<D>
-  ): SignalTreeBase<T> & A & B & C & D;
-  <A, B, C, D, E>(
-    e1: Enhancer<A>,
-    e2: Enhancer<B>,
-    e3: Enhancer<C>,
-    e4: Enhancer<D>,
-    e5: Enhancer<E>
-  ): SignalTreeBase<T> & A & B & C & D & E;
-  <A, B, C, D, E, F>(
-    e1: Enhancer<A>,
-    e2: Enhancer<B>,
-    e3: Enhancer<C>,
-    e4: Enhancer<D>,
-    e5: Enhancer<E>,
-    e6: Enhancer<F>
-  ): SignalTreeBase<T> & A & B & C & D & E & F;
-  (...enhancers: Enhancer<unknown>[]): SignalTreeBase<T> &
-    Record<string, unknown>;
-}
+// v6: remove legacy `SignalTree` alias and multi-overload `WithMethod`.
+// Consumers should use `SignalTreeBase<T>` for the minimal runtime shape
+// and opt into `FullSignalTree<T>` / `ProdSignalTree<T>` when they need
+// the enhanced feature set. Helper presets produce those enhanced shapes.
 
 // ============================================
 // TYPE GUARDS

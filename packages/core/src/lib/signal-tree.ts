@@ -1,4 +1,4 @@
-import { computed, DestroyRef, effect, inject, isSignal, Signal, signal, WritableSignal } from '@angular/core';
+import { isSignal, Signal, signal, WritableSignal } from '@angular/core';
 
 import { resolveEnhancerOrder } from '../enhancers';
 import { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './constants';
@@ -11,7 +11,6 @@ import { createLazySignalTree, equal, isBuiltInObject, unwrap } from './utils';
 const NODE_ACCESSOR_SYMBOL = Symbol.for('NodeAccessor');
 
 import type {
-  SignalTree,
   TreeNode,
   TreeConfig,
   TreePreset,
@@ -19,7 +18,6 @@ import type {
   TimeTravelEntry,
   EnhancerWithMeta,
   ChainResult,
-  WithMethod,
   NodeAccessor,
   EntityMapMarker,
   SignalTreeBase,
@@ -29,7 +27,7 @@ import type {
 type LocalUnknownEnhancer = EnhancerWithMeta<unknown, unknown>;
 
 // Extended tree type with optional updateEngine
-interface SignalTreeWithEngine<T> extends SignalTree<T> {
+interface SignalTreeWithEngine<T> extends SignalTreeBase<T> {
   updateEngine?: OptimizedUpdateEngine;
 }
 
@@ -431,7 +429,7 @@ function isEntityMapMarker(
 // ============================================
 
 function enhanceTree<T>(
-  tree: SignalTree<T>,
+  tree: SignalTreeBase<T>,
   config: TreeConfig = {}
 ): SignalTreeWithEngine<T> {
   const isLazy = config.useLazySignals ?? shouldUseLazy(tree.state, config);
@@ -439,7 +437,7 @@ function enhanceTree<T>(
   // with() enhancer composition
   tree.with = (<E extends Array<EnhancerWithMeta<unknown, unknown>>>(
     ...enhancers: E
-  ): ChainResult<SignalTree<T>, E> => {
+  ): ChainResult<SignalTreeBase<T>, E> => {
     if (enhancers.length === 0) {
       return tree as unknown as ChainResult<SignalTree<T>, E>;
     }
@@ -503,8 +501,8 @@ function enhanceTree<T>(
       }
 
       try {
-        const result = (enhancer as EnhancerWithMeta<SignalTree<any>, unknown>)(
-          currentTree as SignalTree<any>
+        const result = (enhancer as EnhancerWithMeta<SignalTreeBase<any>, unknown>)(
+          currentTree as SignalTreeBase<any>
         );
         if (result !== currentTree) currentTree = result as unknown;
 
@@ -537,8 +535,8 @@ function enhanceTree<T>(
       }
     }
 
-    return currentTree as ChainResult<SignalTree<T>, E>;
-  }) as unknown as WithMethod<T>;
+    return currentTree as ChainResult<SignalTreeBase<T>, E>;
+  }) as unknown as SignalTreeBase<T>['with'];
 
   // destroy unchanged
   tree.destroy = () => {
@@ -561,203 +559,10 @@ function enhanceTree<T>(
     }
   };
 
-  // Add stub implementations for advanced features
-  addStubMethods(tree, config);
+  // v6: do not attach stub methods — keep base tree minimal.
 
   return tree;
 }
-
-function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
-  tree.batchUpdate = (updater: (current: T) => Partial<T>) => {
-    console.warn(SIGNAL_TREE_MESSAGES.BATCH_NOT_ENABLED);
-    tree((current: T) => {
-      const partial = updater(current);
-      return { ...current, ...partial } as T;
-    });
-  };
-
-  tree.memoize = <R>(fn: (tree: T) => R, cacheKey?: string): Signal<R> => {
-    console.warn(SIGNAL_TREE_MESSAGES.MEMOIZE_NOT_ENABLED);
-    void cacheKey;
-    return computed(() => fn(tree()));
-  };
-
-  // Memoization helper stubs (overridden by withMemoization)
-  (
-    tree as unknown as {
-      memoizedUpdate: (
-        updater: (current: T) => Partial<T>,
-        cacheKey?: string
-      ) => void;
-      clearMemoCache: (key?: string) => void;
-      getCacheStats: () => {
-        size: number;
-        hitRate: number;
-        totalHits: number;
-        totalMisses: number;
-        keys: string[];
-      };
-    }
-  ).memoizedUpdate = (updater: (current: T) => Partial<T>): void => {
-    if (config.debugMode) {
-      console.warn(SIGNAL_TREE_MESSAGES.MEMOIZE_NOT_ENABLED);
-    }
-    // Fallback: apply the update without caching
-    tree((current: T) => ({ ...current, ...updater(current) }));
-  };
-
-  (
-    tree as unknown as { clearMemoCache: (key?: string) => void }
-  ).clearMemoCache = () => {
-    if (config.debugMode) {
-      console.warn(SIGNAL_TREE_MESSAGES.MEMOIZE_NOT_ENABLED);
-    }
-    // no-op
-  };
-
-  (
-    tree as unknown as {
-      getCacheStats: () => {
-        size: number;
-        hitRate: number;
-        totalHits: number;
-        totalMisses: number;
-        keys: string[];
-      };
-    }
-  ).getCacheStats = () => ({
-    size: 0,
-    hitRate: 0,
-    totalHits: 0,
-    totalMisses: 0,
-    keys: [],
-  });
-
-  // Memoization helper methods are only present when withMemoization is applied
-
-  tree.effect = (fn: (tree: T) => void): (() => void) => {
-    try {
-      const effectRef = effect(() => fn(tree()));
-      return () => {
-        try {
-          effectRef.destroy();
-        } catch {
-          // swallow
-        }
-      };
-    } catch (error) {
-      if (config.debugMode) {
-        console.warn(SIGNAL_TREE_MESSAGES.EFFECT_NO_CONTEXT, error);
-      }
-      // If we can't create a reactive effect (no Angular context), return a noop cleanup
-      return () => {
-        /* noop */
-      };
-    }
-  };
-
-  tree.subscribe = (fn: (tree: T) => void): (() => void) => {
-    try {
-      const destroyRef = inject(DestroyRef);
-      let isDestroyed = false;
-
-      const effectRef = effect(() => {
-        if (!isDestroyed) {
-          fn(tree());
-        }
-      });
-
-      const unsubscribe = () => {
-        isDestroyed = true;
-        effectRef.destroy();
-      };
-
-      destroyRef.onDestroy(unsubscribe);
-      return unsubscribe;
-    } catch (error) {
-      if (config.debugMode) {
-        console.warn(SIGNAL_TREE_MESSAGES.SUBSCRIBE_NO_CONTEXT, error);
-      }
-      // Re-throw to signal that reactive subscription is not available
-      // Callers should catch this and use alternative approaches (e.g., polling)
-      throw error;
-    }
-  };
-
-  // Performance stubs
-  (tree as any).optimize = () => {
-    if (config.debugMode) {
-      console.warn(SIGNAL_TREE_MESSAGES.OPTIMIZE_NOT_AVAILABLE);
-    }
-  };
-
-  (tree as any).clearCache = () => {
-    if (config.debugMode) {
-      console.warn(SIGNAL_TREE_MESSAGES.CACHE_NOT_AVAILABLE);
-    }
-  };
-
-  (tree as any).invalidatePattern = (): number => {
-    if (config.debugMode) {
-      console.warn(SIGNAL_TREE_MESSAGES.PERFORMANCE_NOT_ENABLED);
-    }
-    return 0;
-  };
-
-  // Initialize optimized update engine
-  const treeWithEngine = tree as SignalTreeWithEngine<T>;
-  if (!treeWithEngine.updateEngine) {
-    treeWithEngine.updateEngine = new OptimizedUpdateEngine(tree);
-  }
-
-  tree.updateOptimized = (updates: Partial<T>, options = {}) => {
-    const treeWithEngine = tree as SignalTreeWithEngine<T>;
-    const engine = treeWithEngine.updateEngine;
-    if (!engine) {
-      // Fallback to basic update
-      if (config.debugMode) {
-        console.warn(SIGNAL_TREE_MESSAGES.UPDATE_OPTIMIZED_NOT_AVAILABLE);
-      }
-      tree((current: T) => ({ ...current, ...updates }));
-      return {
-        changed: true,
-        duration: 0,
-        changedPaths: Object.keys(updates),
-        stats: undefined,
-      };
-    }
-
-    return engine.update(tree(), updates, options);
-  };
-
-  /**
-   * @deprecated Use entityMap<E>() + withEntities() + tree.$.collectionName instead.
-   * This stub method will be removed in v6.0. See EntityHelpers deprecation notice for migration guide.
-   */
-  tree.entities = <E extends { id: string | number }>(): EntityHelpers<E> => {
-    console.warn(
-      '[@signaltree/core] tree.entities() is deprecated and will be removed in v6.0. ' +
-        'Use entityMap<E>() + withEntities() + tree.$.collectionName instead. ' +
-        'See https://signaltree.dev/docs/migration for migration guide.'
-    );
-    if (config.debugMode) {
-      console.warn(SIGNAL_TREE_MESSAGES.ENTITY_HELPERS_NOT_AVAILABLE);
-    }
-    return {} as EntityHelpers<E>;
-  };
-
-  // Time travel stubs
-  tree.undo = () => {
-    if (config.debugMode) {
-      console.warn(SIGNAL_TREE_MESSAGES.TIME_TRAVEL_NOT_AVAILABLE);
-    }
-  };
-
-  tree.redo = () => {
-    if (config.debugMode) {
-      console.warn(SIGNAL_TREE_MESSAGES.TIME_TRAVEL_NOT_AVAILABLE);
-    }
-  };
 
   tree.getHistory = (): TimeTravelEntry<T>[] => {
     if (config.debugMode) {
@@ -777,7 +582,7 @@ function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
 // CORE CREATION FUNCTION
 // ============================================
 
-function create<T>(obj: T, config: TreeConfig = {}): SignalTree<T> {
+function create<T>(obj: T, config: TreeConfig = {}): SignalTreeBase<T> {
   if (obj === null || obj === undefined) {
     throw new Error(SIGNAL_TREE_MESSAGES.NULL_OR_UNDEFINED);
   }
@@ -797,7 +602,7 @@ function create<T>(obj: T, config: TreeConfig = {}): SignalTree<T> {
     const tree = makeRootNodeAccessor(
       signalState,
       signalState
-    ) as SignalTree<T>;
+    ) as SignalTreeBase<T>;
 
     // Add state and $ properties that reference the signal itself
     Object.defineProperty(tree, 'state', {
@@ -861,7 +666,7 @@ function create<T>(obj: T, config: TreeConfig = {}): SignalTree<T> {
       // Direct set - use recursive update
       recursiveUpdate(signalState, arg as T);
     }
-  } as SignalTree<T>;
+  } as SignalTreeBase<T>;
 
   // Mark as NodeAccessor
   Object.defineProperty(tree, NODE_ACCESSOR_SYMBOL, {
@@ -979,12 +784,12 @@ export function signalTree(
  * migration until `.with` overloads are simplified.
  */
 export function applyEnhancer<T, O>(
-  tree: SignalTree<T>,
-  enhancer: EnhancerWithMeta<SignalTree<T>, O>
-): SignalTree<T> & O {
+  tree: SignalTreeBase<T>,
+  enhancer: EnhancerWithMeta<SignalTreeBase<T>, O>
+): SignalTreeBase<T> & O {
   // Call site still needs a runtime cast since enhancers may be legacy-typed;
   // we keep the external signature strict while using a local cast.
-  return (enhancer as unknown as (t: SignalTree<T>) => SignalTree<T> & O)(
+  return (enhancer as unknown as (t: SignalTreeBase<T>) => SignalTreeBase<T> & O)(
     tree
-  ) as SignalTree<T> & O;
+  ) as SignalTreeBase<T> & O;
 }
