@@ -50,6 +50,11 @@
       - [Quick Migration (5 minutes)](#quick-migration-5-minutes)
       - [Proper Migration (30 minutes)](#proper-migration-30-minutes)
     - [Upgrade Checklist (step-by-step)](#upgrade-checklist-step-by-step)
+    - [Chained `.with()` (new recommended pattern)](#chained-with-new-recommended-pattern)
+    - [Minimal base interface](#minimal-base-interface)
+    - [Intersection types for methods](#intersection-types-for-methods)
+    - [Preset factories](#preset-factories)
+    - [Dev proxy — better DX in development](#dev-proxy--better-dx-in-development)
     - [Optional: Automated Codemod (recommended for large codebases)](#optional-automated-codemod-recommended-for-large-codebases)
     - [Verify \& Rollout](#verify--rollout)
     - [Troubleshooting \& Notes](#troubleshooting--notes)
@@ -3798,7 +3803,7 @@ pnpm -w tsc -p tsconfig.base.json --noEmit
 # Serve demo (if applicable)
 nx serve demo --port 4200
 ```
- 
+
 ### Chained `.with()` (new recommended pattern)
 
 v6 introduces a single-enhancer-per-call chaining pattern that preserves IDE UX and gives perfect type inference.
@@ -3810,13 +3815,12 @@ Example:
 
 ```typescript
 // v6 — recommended
-const tree = signalTree({ count: 0 })
-  .with(withEffects())
-  .with(withTimeTravel())
-  .with(withBatching());
+const tree = signalTree({ count: 0 }).with(withEffects()).with(withTimeTravel()).with(withBatching());
 
 tree.undo(); // ✅ available after withTimeTravel
-tree.batch(() => { /*...*/ }); // ✅ available after withBatching
+tree.batch(() => {
+  /*...*/
+}); // ✅ available after withBatching
 
 // Do NOT rely on a multi-arg .with(...) overload that mixes enhancers in one call;
 // prefer chaining for clearer inference and DX.
@@ -3865,7 +3869,9 @@ const dev = createDevTree({ users: [] });
 dev.undo(); // available
 
 const prod = createProdTree({ users: [] });
-prod.batch(() => { /* fast updates */ });
+prod.batch(() => {
+  /* fast updates */
+});
 ```
 
 When migrating, choose the preset that best matches the runtime features your code needs. Prefer `createProdTree` for apps near production and `createDevTree` for local/dev tooling.
@@ -3890,7 +3896,6 @@ Migration checklist (quick):
 - Replace multi-enhancer `.with(a,b,c)` calls with chained `.with(a).with(b).with(c)` to improve type inference.
 - Prefer `createDevTree` / `createProdTree` where appropriate.
 - Run the typechecker and fix places where methods are now missing (the compiler points to the exact call site).
-
 
 ### Optional: Automated Codemod (recommended for large codebases)
 
