@@ -482,12 +482,47 @@ export type IsEntityMap<T> = T extends EntityMapMarker<
 /**
  * TreeNode augmented with entity signals
  */
-export type EntityAwareTreeNode<T> = {
+/**
+ * Deep recursive tree node shape used for advanced, opt-in typing.
+ * This expands nested objects into `EntitySignal` / `EntityNode` shapes
+ * and is intentionally expensive for TypeScript to compute. Exported
+ * as `DeepEntityAwareTreeNode` so callers can opt-in when they need
+ * the full deep inference.
+ */
+export type DeepEntityAwareTreeNode<T> = {
   [K in keyof T]: T[K] extends EntityMapMarker<infer E, infer Key>
     ? EntitySignal<E, Key>
     : T[K] extends object
-    ? EntityAwareTreeNode<T[K]>
+    ? DeepEntityAwareTreeNode<T[K]>
     : CallableWritableSignal<T[K]>;
+};
+
+/**
+ * Shallow public tree node used by default in most public APIs.
+ * This avoids eagerly expanding deeply nested types and keeps
+ * editor/CI responsiveness high while preserving common DX.
+ * Consumers who want the fully expanded shape can opt-in via
+ * `TypedSignalTree<T>` (see below) or use `DeepEntityAwareTreeNode`.
+ */
+export type EntityAwareTreeNode<T> = {
+  [K in keyof T]: T[K] extends EntityMapMarker<infer E, infer Key>
+    ? EntitySignal<E, Key>
+    : CallableWritableSignal<T[K]>;
+};
+
+/**
+ * Opt-in alias providing the full depth-expanded SignalTree typing.
+ * Use when you explicitly want deep compile-time inference for nested
+ * structures. Example:
+ *
+ *   type MyTyped = TypedSignalTree<MyState>;
+ *   const typed = tree as MyTyped;
+ *
+ * This keeps the default common path fast while preserving power for
+ * advanced users.
+ */
+export type TypedSignalTree<T> = SignalTree<T> & {
+  $: DeepEntityAwareTreeNode<T>;
 };
 
 /**
