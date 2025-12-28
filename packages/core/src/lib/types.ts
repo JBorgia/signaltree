@@ -541,9 +541,16 @@ export type ChainResult<Start, E extends Array<unknown>> = Start;
 export const ENHANCER_META = Symbol('signaltree:enhancer:meta');
 
 /** Basic Enhancer shape (stable export) */
-export type Enhancer<Input = unknown, Output = unknown> = (
-  input: Input
-) => Output;
+/**
+ * Enhancer type that supports two forms for compatibility:
+ * - Modern: `Enhancer<In, Out>` => (input: In) => Out
+ * - Legacy: `Enhancer<Out>` => (input: SignalTreeBase<any>) => Out
+ */
+export type Enhancer<InOrOut = unknown, Out = unknown> = InOrOut extends
+  | SignalTreeBase<any>
+  | (SignalTreeBase<any> & {})
+  ? (input: InOrOut) => Out
+  : (input: SignalTreeBase<any>) => InOrOut;
 
 /** Metadata attached to enhancers to help ordering and diagnostics */
 export interface EnhancerMeta {
