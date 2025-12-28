@@ -29,7 +29,7 @@ export function withTimeTravel<T>(
     const applySnapshot = (snap: S) => {
       isTraveling = true;
       try {
-        (tree as any).$;
+        // Apply snapshot by invoking the tree as a setter
         (tree as any)(() => snap as any);
       } finally {
         setTimeout(() => (isTraveling = false), 0);

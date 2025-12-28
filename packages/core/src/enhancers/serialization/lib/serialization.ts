@@ -801,8 +801,9 @@ export function withSerialization<
         };
 
         if (rootAlias) walkAlias(rootAlias);
-      } catch {
+      } catch (_err) {
         // Do not block serialization on nodeMap errors
+        void 0;
       }
 
       // Add metadata if requested
@@ -1110,11 +1111,7 @@ export function withPersistence<
 
       // Hook into state changes to trigger auto-save
       const triggerAutoSave = () => {
-        // Debounce saves
-        if (saveTimeout) {
-          clearTimeout(saveTimeout);
-        }
-
+        if (saveTimeout) clearTimeout(saveTimeout);
         saveTimeout = setTimeout(() => {
           enhanced.save().catch((error) => {
             console.error('[SignalTree] Auto-save failed:', error);
@@ -1123,7 +1120,6 @@ export function withPersistence<
       };
 
       // Try to use tree.subscribe() for reactive state watching if available
-      // This leverages Angular's effect system - no polling needed in production
       if (typeof (tree as any).subscribe === 'function') {
         try {
           (tree as any).subscribe(() => {
@@ -1133,8 +1129,8 @@ export function withPersistence<
               triggerAutoSave();
             }
           });
-        } catch {
-          // subscribe() threw - fall back to polling below
+        } catch (_e) {
+          void 0;
         }
       }
 
@@ -1142,18 +1138,18 @@ export function withPersistence<
       const checkForChanges = () => {
         if (!pollingActive) return;
         const currentState = JSON.stringify((tree as any)());
-          if (currentState !== previousState) {
-            previousState = currentState;
-            triggerAutoSave();
-          }
-          // Use longer interval (100ms) to reduce CPU usage
-          setTimeout(checkForChanges, 100);
-        };
-        setTimeout(checkForChanges, 0); // Start immediately
-      }
+        if (currentState !== previousState) {
+          previousState = currentState;
+          triggerAutoSave();
+        }
+        // Use longer interval (100ms) to reduce CPU usage
+        setTimeout(checkForChanges, 100);
+      };
+
+      setTimeout(checkForChanges, 0); // Start immediately
 
       // Store cleanup function for testing
-      (enhanced as EnhancedSignalTree).__flushAutoSave = () => {
+      (enhanced as EnhancedSignalTree).__flushAutoSave = async () => {
         pollingActive = false;
         if (saveTimeout) {
           clearTimeout(saveTimeout);
@@ -1167,12 +1163,8 @@ export function withPersistence<
     return enhanced;
   }
 
-  (
-    enhancer as EnhancerWithMeta<
-      SignalTree<T>,
-      SerializableSignalTree<T> & PersistenceMethods
-    >
-  ).metadata = { name: 'persistence' };
+  (enhancer as any).metadata = { name: 'persistence' };
+
   return enhancer as EnhancerWithMeta<
     SignalTree<T>,
     SerializableSignalTree<T> & PersistenceMethods

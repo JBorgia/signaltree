@@ -28,13 +28,16 @@ export function withEffects<T>(
           cleanupFns.forEach((fn) => {
             try {
               fn();
-            } catch {}
+            } catch (_e) {
+              void 0;
+            }
           });
           cleanupFns.clear();
         });
       }
-    } catch {
+    } catch (_err) {
       // Not in injection context; manual cleanup required
+      void 0;
     }
 
     const methods: EffectsMethods<S> = {
@@ -48,7 +51,9 @@ export function withEffects<T>(
         const cleanup = () => {
           try {
             ref.destroy();
-          } catch {}
+          } catch (_e) {
+            void 0;
+          }
           cleanupFns.delete(cleanup);
         };
 
@@ -66,7 +71,9 @@ export function withEffects<T>(
       cleanupFns.forEach((fn) => {
         try {
           fn();
-        } catch {}
+        } catch (_err) {
+          void 0;
+        }
       });
       cleanupFns.clear();
       originalDestroy();

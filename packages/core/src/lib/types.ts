@@ -3,7 +3,14 @@ import { Signal, WritableSignal } from '@angular/core';
 // Core v6 types — type-safe enhancer architecture
 
 // Primitives
-export type Primitive = string | number | boolean | null | undefined | bigint | symbol;
+export type Primitive =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | bigint
+  | symbol;
 
 export type NotFn<T> = T extends (...args: unknown[]) => unknown ? never : T;
 
@@ -59,10 +66,26 @@ export interface WithMethod<T> {
   (): SignalTreeBase<T>;
   <A>(e1: Enhancer<A>): SignalTreeBase<T> & A;
   <A, B>(e1: Enhancer<A>, e2: Enhancer<B>): SignalTreeBase<T> & A & B;
-  <A, B, C>(e1: Enhancer<A>, e2: Enhancer<B>, e3: Enhancer<C>): SignalTreeBase<T> & A & B & C;
-  <A, B, C, D>(e1: Enhancer<A>, e2: Enhancer<B>, e3: Enhancer<C>, e4: Enhancer<D>): SignalTreeBase<T> & A & B & C & D;
-  <A, B, C, D, E>(e1: Enhancer<A>, e2: Enhancer<B>, e3: Enhancer<C>, e4: Enhancer<D>, e5: Enhancer<E>): SignalTreeBase<T> & A & B & C & D & E;
-  (...enhancers: Enhancer<unknown>[]): SignalTreeBase<T> & Record<string, unknown>;
+  <A, B, C>(
+    e1: Enhancer<A>,
+    e2: Enhancer<B>,
+    e3: Enhancer<C>
+  ): SignalTreeBase<T> & A & B & C;
+  <A, B, C, D>(
+    e1: Enhancer<A>,
+    e2: Enhancer<B>,
+    e3: Enhancer<C>,
+    e4: Enhancer<D>
+  ): SignalTreeBase<T> & A & B & C & D;
+  <A, B, C, D, E>(
+    e1: Enhancer<A>,
+    e2: Enhancer<B>,
+    e3: Enhancer<C>,
+    e4: Enhancer<D>,
+    e5: Enhancer<E>
+  ): SignalTreeBase<T> & A & B & C & D & E;
+  (...enhancers: Enhancer<unknown>[]): SignalTreeBase<T> &
+    Record<string, unknown>;
 }
 
 // Method interfaces
@@ -80,7 +103,13 @@ export interface MemoizationMethods<T> {
   memoize<R>(fn: (state: T) => R, cacheKey?: string): Signal<R>;
   memoizedUpdate(updater: (current: T) => Partial<T>, cacheKey?: string): void;
   clearMemoCache(key?: string): void;
-  getCacheStats(): { size: number; hitRate: number; totalHits: number; totalMisses: number; keys: string[] };
+  getCacheStats(): {
+    size: number;
+    hitRate: number;
+    totalHits: number;
+    totalMisses: number;
+    keys: string[];
+  };
 }
 
 export interface TimeTravelMethods<T> {
@@ -100,34 +129,108 @@ export interface DevToolsMethods {
 }
 
 export interface EntitiesMethods<T> {
-  entities<E extends { id: string | number }>(path: keyof T | string): EntityHelpers<E>;
+  entities<E extends { id: string | number }>(
+    path: keyof T | string
+  ): EntityHelpers<E>;
 }
 
 export interface OptimizedUpdateMethods<T> {
-  updateOptimized(updates: Partial<T>, options?: { batch?: boolean; batchSize?: number; maxDepth?: number; ignoreArrayOrder?: boolean; equalityFn?: (a: unknown, b: unknown) => boolean }): { changed: boolean; duration: number; changedPaths: string[]; stats?: { totalPaths: number; optimizedPaths: number; batchedUpdates: number } };
+  updateOptimized(
+    updates: Partial<T>,
+    options?: {
+      batch?: boolean;
+      batchSize?: number;
+      maxDepth?: number;
+      ignoreArrayOrder?: boolean;
+      equalityFn?: (a: unknown, b: unknown) => boolean;
+    }
+  ): {
+    changed: boolean;
+    duration: number;
+    changedPaths: string[];
+    stats?: {
+      totalPaths: number;
+      optimizedPaths: number;
+      batchedUpdates: number;
+    };
+  };
 }
 
-export interface TimeTravelEntry<T> { action: string; timestamp: number; state: T; payload?: unknown }
+export interface TimeTravelEntry<T> {
+  action: string;
+  timestamp: number;
+  state: T;
+  payload?: unknown;
+}
 
 // Entity types
-export interface EntityConfig<E, K extends string | number = string> { selectId?: (entity: E) => K; hooks?: { beforeAdd?: (entity: E) => E | false; beforeUpdate?: (id: K, changes: Partial<E>) => Partial<E> | false; beforeRemove?: (id: K, entity: E) => boolean } }
+export interface EntityConfig<E, K extends string | number = string> {
+  selectId?: (entity: E) => K;
+  hooks?: {
+    beforeAdd?: (entity: E) => E | false;
+    beforeUpdate?: (id: K, changes: Partial<E>) => Partial<E> | false;
+    beforeRemove?: (id: K, entity: E) => boolean;
+  };
+}
 
 declare const ENTITY_MAP_BRAND: unique symbol;
-export interface EntityMapMarker<E, K extends string | number> { readonly [ENTITY_MAP_BRAND]: { __entity: E; __key: K }; readonly __isEntityMap: true; readonly __entityMapConfig?: EntityConfig<E, K> }
+export interface EntityMapMarker<E, K extends string | number> {
+  readonly [ENTITY_MAP_BRAND]: { __entity: E; __key: K };
+  readonly __isEntityMap: true;
+  readonly __entityMapConfig?: EntityConfig<E, K>;
+}
 
-export function entityMap<E, K extends string | number = E extends { id: infer I extends string | number } ? I : string>(config?: EntityConfig<E, K>): EntityMapMarker<E, K>;
+// `entityMap` implementation is declared later; remove forward-declaration
 
-export interface MutationOptions { onError?: (error: Error) => void }
-export interface AddOptions<E, K> extends MutationOptions { selectId?: (entity: E) => K }
-export interface AddManyOptions<E, K> extends AddOptions<E, K> { mode?: 'strict' | 'skip' | 'overwrite' }
+export interface MutationOptions {
+  onError?: (error: Error) => void;
+}
+export interface AddOptions<E, K> extends MutationOptions {
+  selectId?: (entity: E) => K;
+}
+export interface AddManyOptions<E, K> extends AddOptions<E, K> {
+  mode?: 'strict' | 'skip' | 'overwrite';
+}
 
-export interface TapHandlers<E, K extends string | number> { onAdd?: (entity: E, id: K) => void; onUpdate?: (id: K, changes: Partial<E>, entity: E) => void; onRemove?: (id: K, entity: E) => void; onChange?: () => void }
+export interface TapHandlers<E, K extends string | number> {
+  onAdd?: (entity: E, id: K) => void;
+  onUpdate?: (id: K, changes: Partial<E>, entity: E) => void;
+  onRemove?: (id: K, entity: E) => void;
+  onChange?: () => void;
+}
 
-export interface InterceptContext<T> { block(reason?: string): void; transform(value: T): void; readonly blocked: boolean; readonly blockReason: string | undefined }
+export interface InterceptContext<T> {
+  block(reason?: string): void;
+  transform(value: T): void;
+  readonly blocked: boolean;
+  readonly blockReason: string | undefined;
+}
 
-export interface InterceptHandlers<E, K extends string | number> { onAdd?: (entity: E, ctx: InterceptContext<E>) => void | Promise<void>; onUpdate?: (id: K, changes: Partial<E>, ctx: InterceptContext<Partial<E>>) => void | Promise<void>; onRemove?: (id: K, entity: E, ctx: InterceptContext<void>) => void | Promise<void> }
+export interface InterceptHandlers<E, K extends string | number> {
+  onAdd?: (entity: E, ctx: InterceptContext<E>) => void | Promise<void>;
+  onUpdate?: (
+    id: K,
+    changes: Partial<E>,
+    ctx: InterceptContext<Partial<E>>
+  ) => void | Promise<void>;
+  onRemove?: (
+    id: K,
+    entity: E,
+    ctx: InterceptContext<void>
+  ) => void | Promise<void>;
+}
 
-export type EntityNode<E> = { (): E; (value: E): void; (updater: (current: E) => E): void } & { [P in keyof E]: E[P] extends object ? (E[P] extends readonly unknown[] ? CallableWritableSignal<E[P]> : EntityNode<E[P]>) : CallableWritableSignal<E[P]> }
+export type EntityNode<E> = {
+  (): E;
+  (value: E): void;
+  (updater: (current: E) => E): void;
+} & {
+  [P in keyof E]: E[P] extends object
+    ? E[P] extends readonly unknown[]
+      ? CallableWritableSignal<E[P]>
+      : EntityNode<E[P]>
+    : CallableWritableSignal<E[P]>;
+};
 
 export interface EntitySignal<E, K extends string | number = string> {
   byId(id: K): EntityNode<E> | undefined;
@@ -170,20 +273,27 @@ export interface EntityHelpers<E extends { id: string | number }> {
   clear(): void;
 }
 
-export interface CacheStats { size: number; hitRate: number; totalHits: number; totalMisses: number; keys: string[] }
+export interface CacheStats {
+  size: number;
+  hitRate: number;
+  totalHits: number;
+  totalMisses: number;
+  keys: string[];
+}
 
-export function isSignalTree<T>(value: unknown): value is SignalTreeBase<T>;
+// `isSignalTree` implementation is declared later; remove forward-declaration
 
 // Back-compat and convenience aliases for v5 consumers
-export type SignalTree<T> = SignalTreeBase<T> & Partial<
-  EffectsMethods<T> &
-    BatchingMethods<T> &
-    MemoizationMethods<T> &
-    TimeTravelMethods<T> &
-    DevToolsMethods &
-    EntitiesMethods<T> &
-    OptimizedUpdateMethods<T>
->;
+export type SignalTree<T> = SignalTreeBase<T> &
+  Partial<
+    EffectsMethods<T> &
+      BatchingMethods<T> &
+      MemoizationMethods<T> &
+      TimeTravelMethods<T> &
+      DevToolsMethods &
+      EntitiesMethods<T> &
+      OptimizedUpdateMethods<T>
+  >;
 
 export type CallableWritableSignal<T> = CallableWritableSignal<T>;
 
@@ -219,7 +329,6 @@ export type TreePreset = 'basic' | 'performance' | 'development' | 'production';
 export type ChainResult<Start, E extends Array<unknown>> = Start;
 
 export { EnhancerMeta };
-
 
 /** Enhancer function that may carry metadata */
 export type Enhancer<Input = unknown, Output = unknown> = (

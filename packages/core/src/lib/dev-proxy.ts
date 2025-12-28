@@ -44,6 +44,9 @@ export function shouldUseDevProxy(): boolean {
       return Boolean((globalThis as any).ngDevMode);
     if (typeof process !== 'undefined' && process?.env?.NODE_ENV)
       return process.env.NODE_ENV !== 'production';
-  } catch {}
+  } catch (_err) {
+    // ignore errors while probing environment
+    void 0;
+  }
   return false;
 }
