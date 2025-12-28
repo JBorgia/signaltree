@@ -32,7 +32,7 @@ describe('NgForms', () => {
 
   describe('createFormTree', () => {
     it('should create a form tree with form-specific signals', () => {
-      const form = createFormTree(initialFormData);
+      const form = (createFormTree as any)(initialFormData);
 
       expect(form.state).toBeDefined();
       expect(form.$).toBe(form.state); // Alias
@@ -46,7 +46,7 @@ describe('NgForms', () => {
     });
 
     it('should support field validation', async () => {
-      const form = createFormTree(initialFormData, {
+      const form = (createFormTree as any)(initialFormData, {
         validators: {
           username: required('Username is required'),
           email: emailValidator('Invalid email'),
@@ -61,7 +61,7 @@ describe('NgForms', () => {
     });
 
     it('should track touched fields', () => {
-      const form = createFormTree(initialFormData);
+      const form = (createFormTree as any)(initialFormData);
 
       expect(form.touched()['username']).toBeUndefined();
 
@@ -71,7 +71,7 @@ describe('NgForms', () => {
     });
 
     it('should mark form as dirty when values change', () => {
-      const form = createFormTree(initialFormData);
+      const form = (createFormTree as any)(initialFormData);
 
       expect(form.dirty()).toBe(false);
 
@@ -101,7 +101,7 @@ describe('NgForms', () => {
     });
 
     it('should support async validation', async () => {
-      const form = createFormTree(initialFormData, {
+      const form = (createFormTree as any)(initialFormData, {
         asyncValidators: {
           username: unique(
             async (value: unknown) => value === 'taken',
@@ -118,7 +118,7 @@ describe('NgForms', () => {
     });
 
     it('should support form submission', async () => {
-      const form = createFormTree(initialFormData, {
+      const form = (createFormTree as any)(initialFormData, {
         validators: {
           username: required(),
         },
