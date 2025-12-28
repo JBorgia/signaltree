@@ -952,12 +952,15 @@ const presetConfigs: Record<TreePreset, Partial<TreeConfig>> = {
 export function signalTree(
   obj: unknown,
   configOrPreset?: TreeConfig | TreePreset
-): SignalTree<any> {
+): any {
   if (typeof configOrPreset === 'string') {
     const config = presetConfigs[configOrPreset];
     if (!config) {
       console.warn(
-        SIGNAL_TREE_MESSAGES.PRESET_UNKNOWN.replace('%s', String(configOrPreset))
+        SIGNAL_TREE_MESSAGES.PRESET_UNKNOWN.replace(
+          '%s',
+          String(configOrPreset)
+        )
       );
       return create(obj as any, {} as any) as SignalTree<any>;
     }
