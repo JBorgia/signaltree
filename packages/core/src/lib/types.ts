@@ -564,11 +564,12 @@ export const ENHANCER_META = Symbol('signaltree:enhancer:meta');
  * - Modern: `Enhancer<In, Out>` => (input: In) => Out
  * - Legacy: `Enhancer<Out>` => (input: SignalTreeBase<any>) => Out
  */
-export type Enhancer<InOrOut = unknown, Out = unknown> = InOrOut extends
-  | SignalTreeBase<any>
-  | (SignalTreeBase<any> & {})
-  ? (input: InOrOut) => Out
-  : (input: SignalTreeBase<any>) => InOrOut;
+/**
+ * Enhancer function shape: transforms an input type to an output type.
+ * Historically many callsites use `Enhancer<Input, Output>` where
+ * `Input` is often the tree shape and `Output` is the augmented tree.
+ */
+export type Enhancer<Input = unknown, Output = unknown> = (input: Input) => Output;
 
 /** Metadata attached to enhancers to help ordering and diagnostics */
 export interface EnhancerMeta {
