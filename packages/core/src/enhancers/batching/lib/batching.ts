@@ -311,7 +311,7 @@ export function withBatching<T>(
           }
         });
       }
-    } as SignalTree<T>;
+    } as unknown as SignalTree<T>;
 
     // Copy all properties and methods from original tree
     Object.setPrototypeOf(enhancedTree, Object.getPrototypeOf(tree));
@@ -354,7 +354,7 @@ export function withBatching<T>(
         });
       });
     };
-    return enhancedTree;
+    return enhancedTree as unknown as BatchingSignalTree<T>;
   };
 }
 

@@ -429,7 +429,7 @@ export function withDevTools<T>(
 
         return result;
       }
-    } as SignalTree<T>;
+    } as unknown as SignalTree<T>;
 
     // Copy all properties and methods from original tree
     Object.setPrototypeOf(enhancedTree, Object.getPrototypeOf(tree));

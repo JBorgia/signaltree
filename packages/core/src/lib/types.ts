@@ -1,32 +1,12 @@
 import { Signal, WritableSignal } from '@angular/core';
 
-import type { SecurityValidatorConfig } from './security/security-validator';
+// Core v6 types — type-safe enhancer architecture
 
-/**
- * SignalTree Core Types v2.0.2
- * MIT License - Copyright (c) 2025 Jonathan D Borgia
- */
+// Primitives
+export type Primitive = string | number | boolean | null | undefined | bigint | symbol;
 
-// ============================================
-// CORE TYPE DEFINITIONS
-// ============================================
-
-/**
- * Helper type preventing ambiguity when a node itself stores a function value.
- * In that case direct callable set(fn) would clash with the update(fn) signature.
- * We exclude raw function values from the direct-set overload so users must use .set(fn)
- * (after transform) instead of callable form, while updater form still works.
- */
 export type NotFn<T> = T extends (...args: unknown[]) => unknown ? never : T;
 
-// ============================================
-// TYPESCRIPT AUGMENTATIONS FOR DX SUGAR
-// ============================================
-
-/**
- * Augment Angular's WritableSignal to support callable syntax for DX.
- * This is purely TypeScript-level - the transform converts these calls to .set/.update
- */
 declare module '@angular/core' {
   interface WritableSignal<T> {
     (value: NotFn<T>): void;
@@ -34,191 +14,212 @@ declare module '@angular/core' {
   }
 }
 
-// ============================================
-// CORE TYPE DEFINITIONS
-// ============================================
+export type CallableWritableSignal<T> = WritableSignal<T> & {
+  (value: NotFn<T>): void;
+  (updater: (current: T) => T): void;
+};
 
-/**
- * Primitive types for type checking
- */
-export type Primitive =
-  | string
-  | number
-  | boolean
-  | null
-  | undefined
-  | bigint
-  | symbol;
-
-/**
- * Built-in object types that should be treated as primitive values
- * (Keep this list in sync with runtime isBuiltInObject)
- */
-export type BuiltInObject =
-  // Core JS
-  | Date
-  | RegExp
-  | ((...args: unknown[]) => unknown)
-  | Map<unknown, unknown>
-  | Set<unknown>
-  | WeakMap<object, unknown>
-  | WeakSet<object>
-  | ArrayBuffer
-  | DataView
-  | Error
-  | Promise<unknown>
-  // Typed Arrays
-  | Uint16Array
-  | Int32Array
-  | Uint32Array
-  | Float32Array
-  | Float64Array
-  | BigInt64Array
-  | BigUint64Array
-  // Web APIs
-  | URL
-  | URLSearchParams
-  | FormData
-  | Blob
-  | File
-  | Headers
-  | Request
-  | Response
-  | AbortController
-  | AbortSignal;
-
-/**
- * Helper type to unwrap signals and remove any signal-specific properties
- * Note: [T] extends [...] prevents distributive conditional types
- */
-export type Unwrap<T> = [T] extends [WritableSignal<infer U>]
-  ? U
-  : [T] extends [Signal<infer U>]
-  ? U
-  : [T] extends [BuiltInObject]
-  ? T // Preserve built-in objects exactly as they are
-  : [T] extends [readonly unknown[]]
-  ? T // Preserve arrays exactly as they are
-  : [T] extends [EntityMapMarker<infer E, infer K>]
-  ? EntitySignal<E, K> // Entity markers unwrap to EntitySignal
-  : [T] extends [object]
-  ? { [K in keyof T]: Unwrap<T[K]> }
-  : T;
-
-/**
- * Node accessor interface - unified API for get/set/update via function calls.
- * Overloads:
- *  (): T                     - getter
- *  (value: NotFn<T>): void   - direct set (blocked when T is itself a function)
- *  (updater: (T)=>T): void   - functional update
- */
 export interface NodeAccessor<T> {
   (): T;
   (value: T): void;
   (updater: (current: T) => T): void;
 }
 
-/**
- * Signalified node with callable interface
- */
-export type AccessibleNode<T> = NodeAccessor<T> & TreeNode<T>;
+export type TreeNode<T> = { [K in keyof T]: any };
 
-/**
- * Deep signalification type - converts object properties to signals recursively
- * - Leaves (primitives, arrays, functions, built-ins): Raw Angular WritableSignal<T>
- * - Nested objects: NodeAccessor<T> (callable) + recursive TreeNode<T> properties
- */
-// WritableSignal with callable set/update overloads (purely type-level augmentation)
-export type CallableWritableSignal<T> = WritableSignal<T> & {
-  (value: NotFn<T>): void;
-  (updater: (current: T) => T): void;
+// Base SignalTree minimal interface
+export interface SignalTreeBase<T> extends NodeAccessor<T> {
+  readonly state: TreeNode<T>;
+  readonly $: TreeNode<T>;
+  with: WithMethod<T>;
+  bind(thisArg?: unknown): NodeAccessor<T>;
+  destroy(): void;
+  dispose?(): void;
+}
+
+// Enhancer type that adds methods/properties described by TAdded
+export type Enhancer<TAdded> = {
+  <S>(tree: SignalTreeBase<S>): SignalTreeBase<S> & TAdded;
+  metadata?: { name?: string; requires?: string[]; provides?: string[] };
 };
 
-export type TreeNode<T> = {
-  // Note: [T[K]] extends [...] prevents distributive conditional types
-  // This ensures when T is generic, we don't get union of all possible branches
-  [K in keyof T]: [T[K]] extends [EntityMapMarker<infer E, infer Key>]
-    ? EntitySignal<E, Key> // Entity collections become EntitySignal
-    : [T[K]] extends [readonly unknown[]]
-    ? CallableWritableSignal<T[K]> // Arrays get callable overloads
-    : [T[K]] extends [object]
-    ? [T[K]] extends [Signal<unknown>]
-      ? T[K]
-      : [T[K]] extends [BuiltInObject]
-      ? CallableWritableSignal<T[K]> // Built-ins as callable writable signals
-      : [T[K]] extends [(...args: unknown[]) => unknown]
-      ? CallableWritableSignal<T[K]> // Function leaves as callable writable signals
-      : AccessibleNode<T[K]> // Nested objects
-    : CallableWritableSignal<T[K]>; // Primitives
-};
-
-/**
- * Utility type to remove signal-specific methods from a type
- * Used by cleanUnwrap to return the original type shape
- */
-export type RemoveSignalMethods<T> = T extends infer U ? U : never;
-
-// ============================================
-// DEEP PATH TYPES FOR NESTED ENTITY ACCESS
-// ============================================
-
-/**
- * Generate all possible dot-notation paths through a nested object type
- * For example, given { a: { b: { c: number } } }, generates:
- * "a" | "a.b" | "a.b.c"
- *
- * Used to support nested entity access like tree.entities<E>('app.data.users')
- * Depth is limited to 5 levels to prevent TypeScript "excessively deep" errors
- */
-export type DeepPath<
-  T,
-  Prefix extends string = '',
-  Depth extends readonly number[] = []
-> = Depth['length'] extends 5
-  ? never
-  : {
-      [K in keyof T]: K extends string
-        ? T[K] extends readonly unknown[]
-          ? `${Prefix}${K}` // Array found - include this path
-          : T[K] extends object
-          ? T[K] extends Signal<unknown>
-            ? never // Skip Angular signals
-            : T[K] extends BuiltInObject
-            ? never // Skip built-in objects
-            : T[K] extends (...args: unknown[]) => unknown
-            ? never // Skip functions
-            : `${Prefix}${K}` | DeepPath<T[K], `${Prefix}${K}.`, [...Depth, 1]> // Nested object - recurse
-          : never // Skip primitives
-        : never;
-    }[keyof T];
-
-/**
- * Safely access a value at a deep path in a type
- * For example: DeepAccess<{ a: { b: User[] } }, 'a.b'> => User[]
- *
- * Used to infer the entity type from a path string
- */
-export type DeepAccess<
-  T,
-  Path extends string
-> = Path extends `${infer First}.${infer Rest}`
-  ? First extends keyof T
-    ? DeepAccess<T[First] & object, Rest>
-    : never
-  : Path extends keyof T
-  ? T[Path]
-  : never;
-
-// ============================================
-// ENHANCER SYSTEM TYPES
-// ============================================
-
-/** Enhancer metadata for optional auto-ordering */
 export interface EnhancerMeta {
   name?: string;
   requires?: string[];
   provides?: string[];
 }
+
+export const ENHANCER_META: unique symbol;
+
+export type EnhancerWithMeta<I = unknown, O = unknown> = ((input: I) => O) & {
+  metadata?: EnhancerMeta;
+};
+
+export interface WithMethod<T> {
+  (): SignalTreeBase<T>;
+  <A>(e1: Enhancer<A>): SignalTreeBase<T> & A;
+  <A, B>(e1: Enhancer<A>, e2: Enhancer<B>): SignalTreeBase<T> & A & B;
+  <A, B, C>(e1: Enhancer<A>, e2: Enhancer<B>, e3: Enhancer<C>): SignalTreeBase<T> & A & B & C;
+  <A, B, C, D>(e1: Enhancer<A>, e2: Enhancer<B>, e3: Enhancer<C>, e4: Enhancer<D>): SignalTreeBase<T> & A & B & C & D;
+  <A, B, C, D, E>(e1: Enhancer<A>, e2: Enhancer<B>, e3: Enhancer<C>, e4: Enhancer<D>, e5: Enhancer<E>): SignalTreeBase<T> & A & B & C & D & E;
+  (...enhancers: Enhancer<unknown>[]): SignalTreeBase<T> & Record<string, unknown>;
+}
+
+// Method interfaces
+export interface EffectsMethods<T> {
+  effect(fn: (state: T) => void): () => void;
+  subscribe(fn: (state: T) => void): () => void;
+}
+
+export interface BatchingMethods<T> {
+  batch(updater: (state: TreeNode<T>) => void): void;
+  batchUpdate(updater: (current: T) => Partial<T>): void;
+}
+
+export interface MemoizationMethods<T> {
+  memoize<R>(fn: (state: T) => R, cacheKey?: string): Signal<R>;
+  memoizedUpdate(updater: (current: T) => Partial<T>, cacheKey?: string): void;
+  clearMemoCache(key?: string): void;
+  getCacheStats(): { size: number; hitRate: number; totalHits: number; totalMisses: number; keys: string[] };
+}
+
+export interface TimeTravelMethods<T> {
+  undo(): void;
+  redo(): void;
+  canUndo(): boolean;
+  canRedo(): boolean;
+  getHistory(): TimeTravelEntry<T>[];
+  resetHistory(): void;
+  jumpTo(index: number): void;
+  getCurrentIndex(): number;
+}
+
+export interface DevToolsMethods {
+  connectDevTools(): void;
+  disconnectDevTools(): void;
+}
+
+export interface EntitiesMethods<T> {
+  entities<E extends { id: string | number }>(path: keyof T | string): EntityHelpers<E>;
+}
+
+export interface OptimizedUpdateMethods<T> {
+  updateOptimized(updates: Partial<T>, options?: { batch?: boolean; batchSize?: number; maxDepth?: number; ignoreArrayOrder?: boolean; equalityFn?: (a: unknown, b: unknown) => boolean }): { changed: boolean; duration: number; changedPaths: string[]; stats?: { totalPaths: number; optimizedPaths: number; batchedUpdates: number } };
+}
+
+export interface TimeTravelEntry<T> { action: string; timestamp: number; state: T; payload?: unknown }
+
+// Entity types
+export interface EntityConfig<E, K extends string | number = string> { selectId?: (entity: E) => K; hooks?: { beforeAdd?: (entity: E) => E | false; beforeUpdate?: (id: K, changes: Partial<E>) => Partial<E> | false; beforeRemove?: (id: K, entity: E) => boolean } }
+
+declare const ENTITY_MAP_BRAND: unique symbol;
+export interface EntityMapMarker<E, K extends string | number> { readonly [ENTITY_MAP_BRAND]: { __entity: E; __key: K }; readonly __isEntityMap: true; readonly __entityMapConfig?: EntityConfig<E, K> }
+
+export function entityMap<E, K extends string | number = E extends { id: infer I extends string | number } ? I : string>(config?: EntityConfig<E, K>): EntityMapMarker<E, K>;
+
+export interface MutationOptions { onError?: (error: Error) => void }
+export interface AddOptions<E, K> extends MutationOptions { selectId?: (entity: E) => K }
+export interface AddManyOptions<E, K> extends AddOptions<E, K> { mode?: 'strict' | 'skip' | 'overwrite' }
+
+export interface TapHandlers<E, K extends string | number> { onAdd?: (entity: E, id: K) => void; onUpdate?: (id: K, changes: Partial<E>, entity: E) => void; onRemove?: (id: K, entity: E) => void; onChange?: () => void }
+
+export interface InterceptContext<T> { block(reason?: string): void; transform(value: T): void; readonly blocked: boolean; readonly blockReason: string | undefined }
+
+export interface InterceptHandlers<E, K extends string | number> { onAdd?: (entity: E, ctx: InterceptContext<E>) => void | Promise<void>; onUpdate?: (id: K, changes: Partial<E>, ctx: InterceptContext<Partial<E>>) => void | Promise<void>; onRemove?: (id: K, entity: E, ctx: InterceptContext<void>) => void | Promise<void> }
+
+export type EntityNode<E> = { (): E; (value: E): void; (updater: (current: E) => E): void } & { [P in keyof E]: E[P] extends object ? (E[P] extends readonly unknown[] ? CallableWritableSignal<E[P]> : EntityNode<E[P]>) : CallableWritableSignal<E[P]> }
+
+export interface EntitySignal<E, K extends string | number = string> {
+  byId(id: K): EntityNode<E> | undefined;
+  byIdOrFail(id: K): EntityNode<E>;
+  readonly all: Signal<E[]>;
+  readonly count: Signal<number>;
+  readonly ids: Signal<K[]>;
+  has(id: K): Signal<boolean>;
+  readonly isEmpty: Signal<boolean>;
+  readonly map: Signal<ReadonlyMap<K, E>>;
+  where(predicate: (entity: E) => boolean): Signal<E[]>;
+  find(predicate: (entity: E) => boolean): Signal<E | undefined>;
+  addOne(entity: E, opts?: AddOptions<E, K>): K;
+  addMany(entities: E[], opts?: AddManyOptions<E, K>): K[];
+  updateOne(id: K, changes: Partial<E>, opts?: MutationOptions): void;
+  updateMany(ids: K[], changes: Partial<E>, opts?: MutationOptions): void;
+  updateWhere(predicate: (entity: E) => boolean, changes: Partial<E>): number;
+  upsertOne(entity: E, opts?: AddOptions<E, K>): K;
+  upsertMany(entities: E[], opts?: AddOptions<E, K>): K[];
+  removeOne(id: K, opts?: MutationOptions): void;
+  removeMany(ids: K[], opts?: MutationOptions): void;
+  removeWhere(predicate: (entity: E) => boolean): number;
+  clear(): void;
+  removeAll(): void;
+  setAll(entities: E[], opts?: AddOptions<E, K>): void;
+  tap(handlers: TapHandlers<E, K>): () => void;
+  intercept(handlers: InterceptHandlers<E, K>): () => void;
+}
+
+export interface EntityHelpers<E extends { id: string | number }> {
+  add(entity: E): void;
+  update(id: E['id'], updates: Partial<E>): void;
+  remove(id: E['id']): void;
+  upsert(entity: E): void;
+  selectById(id: E['id']): Signal<E | undefined>;
+  selectBy(predicate: (entity: E) => boolean): Signal<E[]>;
+  selectIds(): Signal<Array<string | number>>;
+  selectAll(): Signal<E[]>;
+  selectTotal(): Signal<number>;
+  clear(): void;
+}
+
+export interface CacheStats { size: number; hitRate: number; totalHits: number; totalMisses: number; keys: string[] }
+
+export function isSignalTree<T>(value: unknown): value is SignalTreeBase<T>;
+
+// Back-compat and convenience aliases for v5 consumers
+export type SignalTree<T> = SignalTreeBase<T> & Partial<
+  EffectsMethods<T> &
+    BatchingMethods<T> &
+    MemoizationMethods<T> &
+    TimeTravelMethods<T> &
+    DevToolsMethods &
+    EntitiesMethods<T> &
+    OptimizedUpdateMethods<T>
+>;
+
+export type CallableWritableSignal<T> = CallableWritableSignal<T>;
+
+export type AccessibleNode<T> = NodeAccessor<T> & TreeNode<T>;
+
+export type RemoveSignalMethods<T> = T extends infer U ? U : never;
+
+export type NotFn<T> = NotFn<T>;
+
+export type BuiltInObject = unknown;
+
+export type DeepPath<T> = string;
+
+export type DeepAccess<T, Path extends string> = unknown;
+
+export interface TreeConfig {
+  batchUpdates?: boolean;
+  useMemoization?: boolean;
+  enableTimeTravel?: boolean;
+  useLazySignals?: boolean;
+  useShallowComparison?: boolean;
+  maxCacheSize?: number;
+  trackPerformance?: boolean;
+  treeName?: string;
+  enableDevTools?: boolean;
+  debugMode?: boolean;
+  useStructuralSharing?: boolean;
+  security?: unknown;
+}
+
+export type TreePreset = 'basic' | 'performance' | 'development' | 'production';
+
+export type ChainResult<Start, E extends Array<unknown>> = Start;
+
+export { EnhancerMeta };
+
 
 /** Enhancer function that may carry metadata */
 export type Enhancer<Input = unknown, Output = unknown> = (
@@ -296,6 +297,7 @@ export type SignalTree<T> = NodeAccessor<T> & {
 
   /** Core methods */
   with: WithMethod<T>;
+  bind(thisArg?: unknown): NodeAccessor<T>;
   destroy(): void;
 
   /**
@@ -314,7 +316,7 @@ export type SignalTree<T> = NodeAccessor<T> & {
    * tree.dispose(); // Clean up when done
    * ```
    */
-  dispose?(): void;
+  dispose(): void;
 
   /** Enhanced functionality */
   effect(fn: (tree: T) => void): void;
@@ -337,6 +339,18 @@ export type SignalTree<T> = NodeAccessor<T> & {
   optimize(): void;
   clearCache(): void;
   invalidatePattern(pattern: string): number;
+
+  /**
+   * Deprecated entity helpers shim. Will be removed in v6.0.
+   * Use `entityMap()` + `withEntities()` and `tree.$.collection` instead.
+   */
+  entities<
+    E extends {
+      id: string | number;
+    }
+  >(
+    entityKey?: keyof T
+  ): EntityHelpers<E>;
 
   /**
    * Optimized update using diff-based patching and batching.
@@ -379,28 +393,19 @@ export type SignalTree<T> = NodeAccessor<T> & {
       batchedUpdates: number;
     };
   };
-
-  /**
-   * @deprecated Use entityMap<E>() + withEntities() + tree.$.collectionName instead.
-   *
-   * Old entity helpers - supports both top-level keys (type-checked) and nested dot-notation paths (runtime-validated).
-   * This will be removed in v6.0. Migrate to the new Map-based entity API.
-   */
-  entities<E extends { id: string | number }>(
-    entityKey?: keyof T
-  ): EntityHelpers<E>;
-
   /** Time travel */
   undo(): void;
   redo(): void;
   getHistory(): TimeTravelEntry<T>[];
   resetHistory(): void;
   // Optional convenience helpers provided by time-travel enhancer
-  jumpTo?: (index: number) => void;
-  canUndo?: () => boolean;
-  canRedo?: () => boolean;
-  getCurrentIndex?: () => number;
+  jumpTo: (index: number) => void;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
+  getCurrentIndex: () => number;
 };
+// Back-compat alias for v6 transition helpers
+export type SignalTreeBase<T> = SignalTree<T>;
 // NOTE: Index signature removed in v5.1.0 to fix .with() bracket notation requirement
 // Enhancers must now explicitly type their return values
 

@@ -1122,22 +1122,26 @@ export function withPersistence<
         }, debounceMs);
       };
 
-      // Try to use tree.subscribe() for reactive state watching
+      // Try to use tree.subscribe() for reactive state watching if available
       // This leverages Angular's effect system - no polling needed in production
-      try {
-        tree.subscribe(() => {
-          const currentState = JSON.stringify(tree());
-          if (currentState !== previousState) {
-            previousState = currentState;
-            triggerAutoSave();
-          }
-        });
-      } catch {
-        // subscribe() threw - not in Angular injection context
-        // Fall back to setTimeout-based polling for non-Angular environments or tests
-        const checkForChanges = () => {
-          if (!pollingActive) return;
-          const currentState = JSON.stringify(tree());
+      if (typeof (tree as any).subscribe === 'function') {
+        try {
+          (tree as any).subscribe(() => {
+            const currentState = JSON.stringify((tree as any)());
+            if (currentState !== previousState) {
+              previousState = currentState;
+              triggerAutoSave();
+            }
+          });
+        } catch {
+          // subscribe() threw - fall back to polling below
+        }
+      }
+
+      // Fall back to setTimeout-based polling for non-Angular environments or tests
+      const checkForChanges = () => {
+        if (!pollingActive) return;
+        const currentState = JSON.stringify((tree as any)());
           if (currentState !== previousState) {
             previousState = currentState;
             triggerAutoSave();
