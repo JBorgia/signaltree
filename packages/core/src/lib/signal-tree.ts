@@ -22,10 +22,11 @@ import type {
   WithMethod,
   NodeAccessor,
   EntityMapMarker,
+  SignalTreeBase,
 } from './types';
 
-// Type alias for internal use
-type LocalUnknownEnhancer = EnhancerWithMeta<unknown, unknown>;
+// Type alias for internal use - enhancers that accept a generic SignalTreeBase shape
+type LocalUnknownEnhancer = EnhancerWithMeta<SignalTreeBase<any>, unknown>;
 
 // Extended tree type with optional updateEngine
 interface SignalTreeWithEngine<T> extends SignalTree<T> {
@@ -502,8 +503,10 @@ function enhanceTree<T>(
       }
 
       try {
-        const result = enhancer(currentTree as any);
-        if (result !== currentTree) currentTree = result;
+        const result = (enhancer as EnhancerWithMeta<SignalTree<any>, unknown>)(
+          currentTree as SignalTree<any>
+        );
+        if (result !== currentTree) currentTree = result as unknown;
 
         const provs = enhancer.metadata?.provides ?? [];
         for (const p of provs) provided.add(p);
@@ -559,8 +562,7 @@ function enhanceTree<T>(
   };
 
   // Add stub implementations for advanced features
-  // Cast to any to avoid deeply recursive type instantiation during compilation
-  addStubMethods(tree as any, config);
+  addStubMethods(tree, config);
 
   return tree;
 }
@@ -804,7 +806,7 @@ function create<T>(obj: T, config: TreeConfig = {}): SignalTree<T> {
     });
     Object.defineProperty(tree, '$', { value: signalState, enumerable: false });
 
-    enhanceTree(tree as any, config);
+    enhanceTree(tree, config);
     return tree;
   }
 
@@ -892,7 +894,7 @@ function create<T>(obj: T, config: TreeConfig = {}): SignalTree<T> {
   }
 
   // Enhance tree with methods
-  enhanceTree(tree as any, config);
+  enhanceTree(tree, config);
 
   // Attach signal state properties to the tree AFTER enhancement
   // This prevents conflicts with built-in methods
@@ -977,8 +979,12 @@ export function signalTree(
  * migration until `.with` overloads are simplified.
  */
 export function applyEnhancer<T, O>(
-  tree: any,
-  enhancer: EnhancerWithMeta<any, O>
-): O {
-  return enhancer(tree) as O;
+  tree: SignalTree<T>,
+  enhancer: EnhancerWithMeta<SignalTree<T>, O>
+): SignalTree<T> & O {
+  // Call site still needs a runtime cast since enhancers may be legacy-typed;
+  // we keep the external signature strict while using a local cast.
+  return (enhancer as unknown as (t: SignalTree<T>) => SignalTree<T> & O)(
+    tree
+  ) as SignalTree<T> & O;
 }

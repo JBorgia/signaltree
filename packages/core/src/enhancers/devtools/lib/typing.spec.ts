@@ -1,0 +1,17 @@
+// Type-level tests for devtools enhancer
+import type { withDevTools } from './devtools';
+import type { DevToolsConfig } from '../../devtools/lib/devtools';
+import type { Enhancer } from '../../../lib/types';
+
+type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
+  ? 1
+  : 2
+  ? true
+  : false;
+type Assert<T extends true> = T;
+
+type WDT = typeof withDevTools;
+type Expected = (cfg?: DevToolsConfig) => Enhancer;
+type _devtools_signature = Assert<Equals<WDT, Expected>>;
+
+export {};

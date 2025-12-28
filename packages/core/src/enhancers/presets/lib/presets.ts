@@ -1,16 +1,10 @@
 import { composeEnhancers } from '../../../lib/utils';
-import {
-  withBatching,
-  withHighPerformanceBatching,
-} from '../../batching/lib/batching';
+import { withBatching, withHighPerformanceBatching } from '../../batching/lib/batching';
 import { withDevTools } from '../../devtools/lib/devtools';
-import {
-  withHighPerformanceMemoization,
-  withMemoization,
-} from '../../memoization/lib/memoization';
+import { withHighPerformanceMemoization, withMemoization } from '../../memoization/lib/memoization';
 import { withTimeTravel } from '../../time-travel/lib/time-travel';
 
-import type { TreeConfig } from '../../../lib/types';
+import type { TreeConfig, Enhancer } from '../../../lib/types';
 export type TreePreset = 'basic' | 'performance' | 'development' | 'production';
 
 /**
@@ -150,7 +144,10 @@ export function combinePresets(
  * enhancer function that can be applied to a tree. This keeps packages
  * independent while offering a one-line dev onboarding.
  */
-export function createDevTree(overrides: Partial<TreeConfig> = {}) {
+export function createDevTree(overrides: Partial<TreeConfig> = {}): {
+  config: TreeConfig;
+  enhancer: Enhancer;
+} {
   const config = createPresetConfig('development', overrides);
 
   const composed = composeEnhancers(
@@ -164,6 +161,6 @@ export function createDevTree(overrides: Partial<TreeConfig> = {}) {
 
   return {
     config,
-    enhancer: composed,
+    enhancer: composed as unknown as Enhancer,
   } as const;
 }

@@ -18,7 +18,7 @@ export { parsePath };
  * Check if a value is an EntityMapMarker
  * Used to preserve entity map markers during lazy signal tree creation
  */
-function isEntityMapMarker(value: unknown): boolean {
+export function isEntityMapMarker(value: unknown): boolean {
   return Boolean(
     value &&
       typeof value === 'object' &&
@@ -536,7 +536,10 @@ export function applyState<T>(stateNode: TreeNode<T>, snapshot: T): void {
     if (isNodeAccessor(target)) {
       if (val && typeof val === 'object') {
         try {
-          applyState(target as unknown as TreeNode<unknown>, val as unknown as any);
+          applyState(
+            target as unknown as TreeNode<unknown>,
+            val as unknown as any
+          );
         } catch {
           try {
             (target as any)(val);

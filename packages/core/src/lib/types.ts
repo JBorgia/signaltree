@@ -43,7 +43,17 @@ export interface SignalTreeBase<T> extends NodeAccessor<T> {
 
 export interface WithMethod<T> {
   (): SignalTreeBase<T>;
-  (...enhancers: Enhancer<SignalTreeBase<T>, unknown>[]): SignalTreeBase<T> &
+  <A>(e1: EnhancerWithMeta<SignalTreeBase<T>, A>): SignalTreeBase<T> & A;
+  <A, B>(
+    e1: EnhancerWithMeta<SignalTreeBase<T>, A>,
+    e2: EnhancerWithMeta<SignalTreeBase<T>, B>
+  ): SignalTreeBase<T> & A & B;
+  <A, B, C>(
+    e1: EnhancerWithMeta<SignalTreeBase<T>, A>,
+    e2: EnhancerWithMeta<SignalTreeBase<T>, B>,
+    e3: EnhancerWithMeta<SignalTreeBase<T>, C>
+  ): SignalTreeBase<T> & A & B & C;
+  (...enhancers: Array<EnhancerWithMeta<any, any>>): SignalTreeBase<T> &
     Record<string, unknown>;
 }
 
@@ -70,6 +80,17 @@ export interface MemoizationMethods<T> {
     keys: string[];
   };
 }
+
+/**
+ * Statistics returned by memoization caches
+ */
+export type CacheStats = {
+  size: number;
+  hitRate: number;
+  totalHits: number;
+  totalMisses: number;
+  keys: string[];
+};
 
 export interface TimeTravelMethods<T> {
   undo(): void;
