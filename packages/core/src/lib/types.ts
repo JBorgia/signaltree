@@ -591,7 +591,14 @@ export type Enhancer<TAdded = unknown> = <S>(
   tree: SignalTreeBase<S>
 ) => SignalTreeBase<S> & TAdded;
 
-export type EnhancerWithMeta<TAdded = unknown> = Enhancer<TAdded> & {
+/**
+ * Compatibility: allow two generic parameters historically used across the codebase.
+ * The first generic (Input) is ignored for v6's shape but accepted for compatibility.
+ */
+export type EnhancerWithMeta<
+  _In = unknown,
+  TAdded = unknown
+> = Enhancer<TAdded> & {
   metadata?: EnhancerMeta;
 };
 
