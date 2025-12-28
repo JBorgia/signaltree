@@ -632,13 +632,24 @@ function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
 
   // Memoization helper methods are only present when withMemoization is applied
 
-  tree.effect = (fn: (tree: T) => void) => {
+  tree.effect = (fn: (tree: T) => void): (() => void) => {
     try {
-      effect(() => fn(tree()));
+      const effectRef = effect(() => fn(tree()));
+      return () => {
+        try {
+          effectRef.destroy();
+        } catch {
+          // swallow
+        }
+      };
     } catch (error) {
       if (config.debugMode) {
         console.warn(SIGNAL_TREE_MESSAGES.EFFECT_NO_CONTEXT, error);
       }
+      // If we can't create a reactive effect (no Angular context), return a noop cleanup
+      return () => {
+        /* noop */
+      };
     }
   };
 
@@ -671,19 +682,19 @@ function addStubMethods<T>(tree: SignalTree<T>, config: TreeConfig): void {
   };
 
   // Performance stubs
-  tree.optimize = () => {
+  (tree as any).optimize = () => {
     if (config.debugMode) {
       console.warn(SIGNAL_TREE_MESSAGES.OPTIMIZE_NOT_AVAILABLE);
     }
   };
 
-  tree.clearCache = () => {
+  (tree as any).clearCache = () => {
     if (config.debugMode) {
       console.warn(SIGNAL_TREE_MESSAGES.CACHE_NOT_AVAILABLE);
     }
   };
 
-  tree.invalidatePattern = (): number => {
+  (tree as any).invalidatePattern = (): number => {
     if (config.debugMode) {
       console.warn(SIGNAL_TREE_MESSAGES.PERFORMANCE_NOT_ENABLED);
     }
