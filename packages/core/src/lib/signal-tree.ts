@@ -501,9 +501,9 @@ function enhanceTree<T>(
       }
 
       try {
-        const result = (enhancer as EnhancerWithMeta<SignalTreeBase<any>, unknown>)(
-          currentTree as SignalTreeBase<any>
-        );
+        const result = (
+          enhancer as EnhancerWithMeta<SignalTreeBase<any>, unknown>
+        )(currentTree as SignalTreeBase<any>);
         if (result !== currentTree) currentTree = result as unknown;
 
         const provs = enhancer.metadata?.provides ?? [];
@@ -774,7 +774,7 @@ export function applyEnhancer<T, O>(
 ): SignalTreeBase<T> & O {
   // Call site still needs a runtime cast since enhancers may be legacy-typed;
   // we keep the external signature strict while using a local cast.
-  return (enhancer as unknown as (t: SignalTreeBase<T>) => SignalTreeBase<T> & O)(
-    tree
-  ) as SignalTreeBase<T> & O;
+  return (
+    enhancer as unknown as (t: SignalTreeBase<T>) => SignalTreeBase<T> & O
+  )(tree) as SignalTreeBase<T> & O;
 }
