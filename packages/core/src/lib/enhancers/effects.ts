@@ -23,8 +23,8 @@ export function withEffects<T>(
     try {
       if (!effectInjector && autoCleanup) {
         effectInjector = inject(Injector);
-        const destroyRef = inject((globalThis as any).DestroyRef as any);
-        destroyRef?.onDestroy(() => {
+        const destroyRef = inject((globalThis as any).DestroyRef as any) as any;
+        destroyRef?.onDestroy?.(() => {
           cleanupFns.forEach((fn) => {
             try {
               fn();
