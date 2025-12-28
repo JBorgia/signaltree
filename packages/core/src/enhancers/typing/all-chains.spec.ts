@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 // Exhaustive compile-time typing assertions for enhancer chaining
 // This file uses type-level assertions only. It must compile without errors.
 
@@ -22,7 +23,7 @@ type Base = {}; // placeholder for SignalTreeBase<T> fields we don't model here
 type _batch_single = Assert<Equals<BatchingMethods<Tree> & Base, Base & BatchingMethods<Tree>>>;
 type _memo_single = Assert<Equals<MemoizationMethods<Tree> & Base, Base & MemoizationMethods<Tree>>>;
 type _tt_single = Assert<Equals<TimeTravelMethods<Tree> & Base, Base & TimeTravelMethods<Tree>>>;
-type _dev_single = Assert<Equals<DevToolsMethods & Base, Base & DevToolsMethods>>>;
+type _dev_single = Assert<Equals<DevToolsMethods & Base, Base & DevToolsMethods>>;
 type _entities_single = Assert<Equals<EntitiesMethods<Tree> & Base, Base & EntitiesMethods<Tree>>>;
 
 // Pair combinations — expected intersection of methods

@@ -1,4 +1,5 @@
 // Type-level tests for batching enhancer
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 import type { withBatching, withHighPerformanceBatching } from './batching';
 import type { BatchingMethods } from './batching';
 import type { Enhancer } from '../../../lib/types';
