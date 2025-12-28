@@ -127,7 +127,7 @@ describe('NgForms', () => {
       form.setValue('username', 'testuser');
       form.setValue('email', 'test@example.com');
 
-      const submitData = await form.submit(async (values) => {
+      const submitData = await form.submit(async (values: any) => {
         return { success: true, data: values };
       });
 
