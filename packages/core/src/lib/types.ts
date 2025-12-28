@@ -1,5 +1,7 @@
 import { Signal, WritableSignal } from '@angular/core';
 
+import { SecurityValidatorConfig } from './security/security-validator';
+
 // Core v6 types — type-safe enhancer architecture
 
 // Primitives
@@ -21,11 +23,6 @@ declare module '@angular/core' {
   }
 }
 
-export type CallableWritableSignal<T> = WritableSignal<T> & {
-  (value: NotFn<T>): void;
-  (updater: (current: T) => T): void;
-};
-
 export interface NodeAccessor<T> {
   (): T;
   (value: T): void;
@@ -43,24 +40,6 @@ export interface SignalTreeBase<T> extends NodeAccessor<T> {
   destroy(): void;
   dispose?(): void;
 }
-
-// Enhancer type that adds methods/properties described by TAdded
-export type Enhancer<TAdded> = {
-  <S>(tree: SignalTreeBase<S>): SignalTreeBase<S> & TAdded;
-  metadata?: { name?: string; requires?: string[]; provides?: string[] };
-};
-
-export interface EnhancerMeta {
-  name?: string;
-  requires?: string[];
-  provides?: string[];
-}
-
-// Symbol key for enhancer metadata (declared later)
-
-export type EnhancerWithMeta<I = unknown, O = unknown> = ((input: I) => O) & {
-  metadata?: EnhancerMeta;
-};
 
 export interface WithMethod<T> {
   (): SignalTreeBase<T>;
@@ -162,126 +141,6 @@ export interface TimeTravelEntry<T> {
   state: T;
   payload?: unknown;
 }
-
-// Entity types
-export interface EntityConfig<E, K extends string | number = string> {
-  selectId?: (entity: E) => K;
-  hooks?: {
-    beforeAdd?: (entity: E) => E | false;
-    beforeUpdate?: (id: K, changes: Partial<E>) => Partial<E> | false;
-    beforeRemove?: (id: K, entity: E) => boolean;
-  };
-}
-
-declare const ENTITY_MAP_BRAND: unique symbol;
-export interface EntityMapMarker<E, K extends string | number> {
-  readonly [ENTITY_MAP_BRAND]: { __entity: E; __key: K };
-  readonly __isEntityMap: true;
-  readonly __entityMapConfig?: EntityConfig<E, K>;
-}
-
-// `entityMap` implementation is declared later; remove forward-declaration
-
-export interface MutationOptions {
-  onError?: (error: Error) => void;
-}
-export interface AddOptions<E, K> extends MutationOptions {
-  selectId?: (entity: E) => K;
-}
-export interface AddManyOptions<E, K> extends AddOptions<E, K> {
-  mode?: 'strict' | 'skip' | 'overwrite';
-}
-
-export interface TapHandlers<E, K extends string | number> {
-  onAdd?: (entity: E, id: K) => void;
-  onUpdate?: (id: K, changes: Partial<E>, entity: E) => void;
-  onRemove?: (id: K, entity: E) => void;
-  onChange?: () => void;
-}
-
-export interface InterceptContext<T> {
-  block(reason?: string): void;
-  transform(value: T): void;
-  readonly blocked: boolean;
-  readonly blockReason: string | undefined;
-}
-
-export interface InterceptHandlers<E, K extends string | number> {
-  onAdd?: (entity: E, ctx: InterceptContext<E>) => void | Promise<void>;
-  onUpdate?: (
-    id: K,
-    changes: Partial<E>,
-    ctx: InterceptContext<Partial<E>>
-  ) => void | Promise<void>;
-  onRemove?: (
-    id: K,
-    entity: E,
-    ctx: InterceptContext<void>
-  ) => void | Promise<void>;
-}
-
-export type EntityNode<E> = {
-  (): E;
-  (value: E): void;
-  (updater: (current: E) => E): void;
-} & {
-  [P in keyof E]: E[P] extends object
-    ? E[P] extends readonly unknown[]
-      ? CallableWritableSignal<E[P]>
-      : EntityNode<E[P]>
-    : CallableWritableSignal<E[P]>;
-};
-
-export interface EntitySignal<E, K extends string | number = string> {
-  byId(id: K): EntityNode<E> | undefined;
-  byIdOrFail(id: K): EntityNode<E>;
-  readonly all: Signal<E[]>;
-  readonly count: Signal<number>;
-  readonly ids: Signal<K[]>;
-  has(id: K): Signal<boolean>;
-  readonly isEmpty: Signal<boolean>;
-  readonly map: Signal<ReadonlyMap<K, E>>;
-  where(predicate: (entity: E) => boolean): Signal<E[]>;
-  find(predicate: (entity: E) => boolean): Signal<E | undefined>;
-  addOne(entity: E, opts?: AddOptions<E, K>): K;
-  addMany(entities: E[], opts?: AddManyOptions<E, K>): K[];
-  updateOne(id: K, changes: Partial<E>, opts?: MutationOptions): void;
-  updateMany(ids: K[], changes: Partial<E>, opts?: MutationOptions): void;
-  updateWhere(predicate: (entity: E) => boolean, changes: Partial<E>): number;
-  upsertOne(entity: E, opts?: AddOptions<E, K>): K;
-  upsertMany(entities: E[], opts?: AddOptions<E, K>): K[];
-  removeOne(id: K, opts?: MutationOptions): void;
-  removeMany(ids: K[], opts?: MutationOptions): void;
-  removeWhere(predicate: (entity: E) => boolean): number;
-  clear(): void;
-  removeAll(): void;
-  setAll(entities: E[], opts?: AddOptions<E, K>): void;
-  tap(handlers: TapHandlers<E, K>): () => void;
-  intercept(handlers: InterceptHandlers<E, K>): () => void;
-}
-
-export interface EntityHelpers<E extends { id: string | number }> {
-  add(entity: E): void;
-  update(id: E['id'], updates: Partial<E>): void;
-  remove(id: E['id']): void;
-  upsert(entity: E): void;
-  selectById(id: E['id']): Signal<E | undefined>;
-  selectBy(predicate: (entity: E) => boolean): Signal<E[]>;
-  selectIds(): Signal<Array<string | number>>;
-  selectAll(): Signal<E[]>;
-  selectTotal(): Signal<number>;
-  clear(): void;
-}
-
-export interface CacheStats {
-  size: number;
-  hitRate: number;
-  totalHits: number;
-  totalMisses: number;
-  keys: string[];
-}
-
-// `isSignalTree` implementation is declared later; remove forward-declaration
 
 // ============================================
 // CONFIGURATION TYPES
@@ -652,13 +511,6 @@ export type PathInterceptor = (
   },
   next: () => void
 ) => void | Promise<void>;
-
-export interface TimeTravelEntry<T> {
-  action: string;
-  timestamp: number;
-  state: T;
-  payload?: unknown;
-}
 
 // ============================================
 // BACKWARDS-COMPAT & CONVENIENCE TYPES (stable exports expected by consumers)
