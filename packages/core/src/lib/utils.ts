@@ -513,3 +513,64 @@ export function unwrap<T>(node: unknown): T {
 
   return result as unknown as T;
 }
+
+/**
+ * Snapshot the current tree state into a plain JS object by unwrapping signals.
+ */
+export function snapshotState<T>(state: TreeNode<T>): T {
+  return unwrap(state as unknown) as T;
+}
+
+/**
+ * Apply a plain JS snapshot onto a TreeNode (state.$) by writing into signals or node accessors.
+ * This is a shallow/apply operation suitable for devtools/time-travel use-cases.
+ */
+export function applyState<T>(stateNode: TreeNode<T>, snapshot: T): void {
+  if (snapshot === null || snapshot === undefined) return;
+  if (typeof snapshot !== 'object') return;
+
+  for (const key of Object.keys(snapshot as Record<string, unknown>)) {
+    const val = (snapshot as Record<string, unknown>)[key];
+    const target = (stateNode as Record<string, unknown>)[key];
+
+    if (isNodeAccessor(target)) {
+      if (val && typeof val === 'object') {
+        try {
+          applyState(target as unknown as TreeNode<unknown>, val as unknown as any);
+        } catch {
+          try {
+            (target as any)(val);
+          } catch {
+            // swallow
+          }
+        }
+      } else {
+        try {
+          (target as any)(val);
+        } catch {
+          // ignore
+        }
+      }
+    } else if (isSignal(target)) {
+      try {
+        (target as any).set?.(val);
+      } catch {
+        try {
+          (target as any)(val);
+        } catch {
+          // ignore
+        }
+      }
+    } else {
+      try {
+        (stateNode as Record<string, unknown>)[key] = val as unknown;
+      } catch {
+        // ignore
+      }
+    }
+  }
+}
+
+export function deepCloneJSON<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value));
+}
