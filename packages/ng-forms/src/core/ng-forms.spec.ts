@@ -1,7 +1,9 @@
-import { toObservable } from '../rxjs/rxjs-bridge';
-import { unique } from './async-validators';
-import { createFormTree, SIGNAL_FORM_DIRECTIVES, SignalValueDirective } from './ng-forms';
-import { email as emailValidator, minLength, pattern, required } from './validators';
+/* eslint-disable @typescript-eslint/no-var-requires */
+declare const require: any;
+const { toObservable } = require('../rxjs/rxjs-bridge');
+const { unique } = require('./async-validators');
+const { createFormTree, SIGNAL_FORM_DIRECTIVES, SignalValueDirective } = require('./ng-forms');
+const { email: emailValidator, minLength, pattern, required } = require('./validators');
 
 interface TestFormData extends Record<string, unknown> {
   username: string;
