@@ -502,7 +502,7 @@ function enhanceTree<T>(
       }
 
       try {
-        const result = enhancer(currentTree as unknown);
+        const result = enhancer(currentTree as any);
         if (result !== currentTree) currentTree = result;
 
         const provs = enhancer.metadata?.provides ?? [];

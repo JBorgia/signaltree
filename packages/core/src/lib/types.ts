@@ -557,6 +557,10 @@ export interface EnhancerMeta {
   name?: string;
   /** Optional array of symbols this enhancer depends on (for ordering) */
   dependsOn?: symbol[];
+  /** Required runtime capabilities (strings) */
+  requires?: string[];
+  /** Provided runtime capabilities (strings) */
+  provides?: string[];
   /** Human-friendly description */
   description?: string;
 }
