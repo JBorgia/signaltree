@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 // Type-level tests for presets/composition and chaining inference
 import type { composeEnhancers } from '../../../lib/utils';
 import type { withBatching } from '../../batching/lib/batching';

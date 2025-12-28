@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 // GENERATED FILE - do not edit by hand
 // Comprehensive type-level checks for enhancer subsets
 import type { Equals, Assert } from './helpers-types';

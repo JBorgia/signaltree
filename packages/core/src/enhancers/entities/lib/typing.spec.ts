@@ -1,4 +1,5 @@
 // Type-level tests for entities enhancer
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 import type { withEntities } from './entities';
 import type { Enhancer } from '../../../lib/types';
 

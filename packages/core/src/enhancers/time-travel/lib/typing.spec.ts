@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 // Type-level tests for time-travel enhancer
 import type { withTimeTravel } from './time-travel';
 import type { TimeTravelMethods } from './time-travel';

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 // Type-level tests for devtools enhancer
 import type { withDevTools } from './devtools';
 import type { DevToolsConfig } from '../../devtools/lib/devtools';
