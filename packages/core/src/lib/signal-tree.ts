@@ -560,22 +560,7 @@ function enhanceTree<T>(
   };
 
   // v6: do not attach stub methods — keep base tree minimal.
-
   return tree;
-}
-
-  tree.getHistory = (): TimeTravelEntry<T>[] => {
-    if (config.debugMode) {
-      console.warn(SIGNAL_TREE_MESSAGES.TIME_TRAVEL_NOT_AVAILABLE);
-    }
-    return [];
-  };
-
-  tree.resetHistory = () => {
-    if (config.debugMode) {
-      console.warn(SIGNAL_TREE_MESSAGES.TIME_TRAVEL_NOT_AVAILABLE);
-    }
-  };
 }
 
 // ============================================

@@ -32,35 +32,31 @@ export function createDevTree<T extends object>(
   initialState: T,
   config: DevTreeConfig = {}
 ): FullSignalTree<T> {
-  return (
-    signalTree(initialState, config)
-      .with(withEffects(config.effects))
-      .with(withBatching(config.batching))
-      .with(withMemoization(config.memoization))
-      .with(withEntities(config.entities))
-      .with(withTimeTravel(config.timeTravel))
-      .with(withDevTools(config.devTools)) as unknown as FullSignalTree<T>
-  );
+  return signalTree(initialState, config)
+    .with(withEffects(config.effects))
+    .with(withBatching(config.batching))
+    .with(withMemoization(config.memoization))
+    .with(withEntities(config.entities))
+    .with(withTimeTravel(config.timeTravel))
+    .with(withDevTools(config.devTools)) as unknown as FullSignalTree<T>;
 }
 
 export function createProdTree<T extends object>(
   initialState: T,
   config: ProdTreeConfig = {}
 ): ProdSignalTree<T> {
-  return (
-    signalTree(initialState, config)
-      .with(withEffects(config.effects))
-      .with(withBatching(config.batching))
-      .with(withMemoization(config.memoization))
-      .with(withEntities(config.entities)) as unknown as ProdSignalTree<T>
-  );
+  return signalTree(initialState, config)
+    .with(withEffects(config.effects))
+    .with(withBatching(config.batching))
+    .with(withMemoization(config.memoization))
+    .with(withEntities(config.entities)) as unknown as ProdSignalTree<T>;
 }
 
 export function createMinimalTree<T extends object>(
   initialState: T,
   config: MinimalTreeConfig = {}
 ): MinimalSignalTree<T> {
-  return (
-    signalTree(initialState, config).with(withEffects(config.effects)) as unknown as MinimalSignalTree<T>
-  );
+  return signalTree(initialState, config).with(
+    withEffects(config.effects)
+  ) as unknown as MinimalSignalTree<T>;
 }
