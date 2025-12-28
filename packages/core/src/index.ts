@@ -24,7 +24,9 @@ export { signalTree } from './lib/signal-tree';
 
 export type {
   // Core types - Main SignalTree interfaces
-  SignalTree,
+  SignalTreeBase,
+  FullSignalTree,
+  ProdSignalTree,
   TreeNode,
   CallableWritableSignal,
   AccessibleNode,
@@ -47,7 +49,7 @@ export type {
   EnhancerMeta,
   EnhancerWithMeta,
   ChainResult,
-  WithMethod,
+  // WithMethod removed in v6 (single-enhancer runtime)
 
   // Entity types
   EntitySignal,
