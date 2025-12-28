@@ -35,26 +35,11 @@ export type TreeNode<T> = { [K in keyof T]: any };
 export interface SignalTreeBase<T> extends NodeAccessor<T> {
   readonly state: TreeNode<T>;
   readonly $: TreeNode<T>;
-  with: WithMethod<T>;
+  // Single-enhancer chain: apply one enhancer at a time.
+  with<A>(enhancer: EnhancerWithMeta<A>): SignalTreeBase<T> & A;
   bind(thisArg?: unknown): NodeAccessor<T>;
   destroy(): void;
   dispose?(): void;
-}
-
-export interface WithMethod<T> {
-  (): SignalTreeBase<T>;
-  <A>(e1: EnhancerWithMeta<SignalTreeBase<T>, A>): SignalTreeBase<T> & A;
-  <A, B>(
-    e1: EnhancerWithMeta<SignalTreeBase<T>, A>,
-    e2: EnhancerWithMeta<SignalTreeBase<T>, B>
-  ): SignalTreeBase<T> & A & B;
-  <A, B, C>(
-    e1: EnhancerWithMeta<SignalTreeBase<T>, A>,
-    e2: EnhancerWithMeta<SignalTreeBase<T>, B>,
-    e3: EnhancerWithMeta<SignalTreeBase<T>, C>
-  ): SignalTreeBase<T> & A & B & C;
-  (...enhancers: Array<EnhancerWithMeta<any, any>>): SignalTreeBase<T> &
-    Record<string, unknown>;
 }
 
 // Method interfaces
@@ -521,7 +506,7 @@ export type EntityAwareTreeNode<T> = {
  * This keeps the default common path fast while preserving power for
  * advanced users.
  */
-export type TypedSignalTree<T> = SignalTree<T> & {
+export type TypedSignalTree<T> = SignalTreeBase<T> & {
   $: DeepEntityAwareTreeNode<T>;
 };
 
@@ -598,73 +583,38 @@ export interface EnhancerMeta {
   description?: string;
 }
 
-export type EnhancerWithMeta<Input = unknown, Output = unknown> = Enhancer<
-  Input,
-  Output
-> & { metadata?: EnhancerMeta };
+/**
+ * Simplified enhancer type for v6: an enhancer takes a base tree and
+ * returns the same base tree augmented with the added methods/properties.
+ */
+export type Enhancer<TAdded = unknown> = <S>(
+  tree: SignalTreeBase<S>
+) => SignalTreeBase<S> & TAdded;
+
+export type EnhancerWithMeta<TAdded = unknown> = Enhancer<TAdded> & {
+  metadata?: EnhancerMeta;
+};
 
 // Main public SignalTree interface expected by downstream packages
-export type SignalTree<T> = NodeAccessor<T> & {
-  state: TreeNode<T>;
-  $: TreeNode<T>;
-  with: WithMethod<T>;
-  bind(thisArg?: unknown): NodeAccessor<T>;
-  destroy(): void;
-  dispose?(): void;
+/**
+ * Convenience signal tree aliases representing common preset combinations.
+ * V6 removes the old monolithic `SignalTree<T>` in favor of a minimal
+ * `SignalTreeBase<T>` and opt-in intersections with method interfaces.
+ */
+export type FullSignalTree<T> = SignalTreeBase<T> &
+  EffectsMethods<T> &
+  BatchingMethods<T> &
+  MemoizationMethods<T> &
+  TimeTravelMethods<T> &
+  DevToolsMethods &
+  EntitiesMethods<T> &
+  OptimizedUpdateMethods<T>;
 
-  // core enhanced methods (most are optional and provided by enhancers)
-  effect(fn: (tree: T) => void): () => void;
-  subscribe(fn: (tree: T) => void): () => void;
-  batch(updater: (tree: T) => void): void;
-  batchUpdate(updater: (current: T) => Partial<T>): void;
-  memoize<R>(fn: (tree: T) => R, cacheKey?: string): Signal<R>;
-  memoizedUpdate?(updater: (current: T) => Partial<T>, cacheKey?: string): void;
-  clearMemoCache?(key?: string): void;
-  getCacheStats?(): {
-    size: number;
-    hitRate: number;
-    totalHits: number;
-    totalMisses: number;
-    keys: string[];
-  };
-
-  optimize?(): void;
-  clearCache?(): void;
-  invalidatePattern?(pattern: string): number;
-
-  entities?<E extends { id: string | number }>(
-    entityKey?: keyof T
-  ): EntityHelpers<E>;
-
-  updateOptimized?: (
-    updates: Partial<T>,
-    options?: {
-      batch?: boolean;
-      batchSize?: number;
-      maxDepth?: number;
-      ignoreArrayOrder?: boolean;
-      equalityFn?: (a: unknown, b: unknown) => boolean;
-    }
-  ) => {
-    changed: boolean;
-    duration: number;
-    changedPaths: string[];
-    stats?: {
-      totalPaths: number;
-      optimizedPaths: number;
-      batchedUpdates: number;
-    };
-  };
-
-  undo?(): void;
-  redo?(): void;
-  getHistory?(): TimeTravelEntry<T>[];
-  resetHistory?(): void;
-  jumpTo?: (index: number) => void;
-  canUndo?: () => boolean;
-  canRedo?: () => boolean;
-  getCurrentIndex?: () => number;
-};
+export type ProdSignalTree<T> = SignalTreeBase<T> &
+  EffectsMethods<T> &
+  BatchingMethods<T> &
+  MemoizationMethods<T> &
+  EntitiesMethods<T>;
 
 // ============================================
 // TYPE GUARDS
@@ -673,7 +623,7 @@ export type SignalTree<T> = NodeAccessor<T> & {
 /**
  * Type guard to check if a value is a SignalTree
  */
-export function isSignalTree<T>(value: unknown): value is SignalTree<T> {
+export function isSignalTree<T>(value: unknown): value is SignalTreeBase<T> {
   return (
     value !== null &&
     typeof value === 'function' && // It's a callable function
