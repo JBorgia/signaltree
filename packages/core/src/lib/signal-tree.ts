@@ -962,13 +962,13 @@ export function signalTree(
           String(configOrPreset)
         )
       );
-      return create(obj as any, {} as any) as SignalTree<any>;
+      return create(obj as any, {} as any) as any;
     }
-    return create(obj as any, config as any) as SignalTree<any>;
+    return create(obj as any, config as any) as any;
   }
 
   const config = (configOrPreset || {}) as TreeConfig;
-  return create(obj as any, config) as SignalTree<any>;
+  return create(obj as any, config) as any;
 }
 
 /**
