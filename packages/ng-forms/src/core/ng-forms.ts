@@ -475,7 +475,7 @@ export function createFormTree<T extends Record<string, unknown>>(
     cleanupCallbacks.splice(0).forEach((fn) => fn());
   };
 
-  const formTree: FormTree<T> = {
+  const formTree = {
     state: flattenedState,
     $: flattenedState,
     form: formGroup,
@@ -509,9 +509,9 @@ export function createFormTree<T extends Record<string, unknown>>(
     fieldAsyncErrors,
     values: valuesTree,
     destroy,
-  };
+  } as any;
 
-  return formTree;
+  return formTree as FormTree<T>;
 }
 
 export function createVirtualFormArray<T>(
