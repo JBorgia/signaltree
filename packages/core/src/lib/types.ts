@@ -630,7 +630,11 @@ export interface WithMethod<T> {
   (): SignalTreeBase<T>;
   <A>(e1: Enhancer<A>): SignalTreeBase<T> & A;
   <A, B>(e1: Enhancer<A>, e2: Enhancer<B>): SignalTreeBase<T> & A & B;
-  <A, B, C>(e1: Enhancer<A>, e2: Enhancer<B>, e3: Enhancer<C>): SignalTreeBase<T> & A & B & C;
+  <A, B, C>(
+    e1: Enhancer<A>,
+    e2: Enhancer<B>,
+    e3: Enhancer<C>
+  ): SignalTreeBase<T> & A & B & C;
   <A, B, C, D>(
     e1: Enhancer<A>,
     e2: Enhancer<B>,
@@ -652,7 +656,8 @@ export interface WithMethod<T> {
     e5: Enhancer<E>,
     e6: Enhancer<F>
   ): SignalTreeBase<T> & A & B & C & D & E & F;
-  (...enhancers: Enhancer<unknown>[]): SignalTreeBase<T> & Record<string, unknown>;
+  (...enhancers: Enhancer<unknown>[]): SignalTreeBase<T> &
+    Record<string, unknown>;
 }
 
 // ============================================
