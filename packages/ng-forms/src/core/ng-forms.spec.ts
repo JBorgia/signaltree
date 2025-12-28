@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
-declare const require: any;
 const { toObservable } = require('../rxjs/rxjs-bridge');
 const { unique } = require('./async-validators');
 const { createFormTree, SIGNAL_FORM_DIRECTIVES, SignalValueDirective } = require('./ng-forms');
