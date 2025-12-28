@@ -559,7 +559,8 @@ function enhanceTree<T>(
   };
 
   // Add stub implementations for advanced features
-  addStubMethods(tree, config);
+  // Cast to any to avoid deeply recursive type instantiation during compilation
+  addStubMethods(tree as any, config);
 
   return tree;
 }
