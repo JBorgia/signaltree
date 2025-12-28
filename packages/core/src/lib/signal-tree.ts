@@ -804,7 +804,7 @@ function create<T>(obj: T, config: TreeConfig = {}): SignalTree<T> {
     });
     Object.defineProperty(tree, '$', { value: signalState, enumerable: false });
 
-    enhanceTree(tree, config);
+    enhanceTree(tree as any, config);
     return tree;
   }
 
@@ -892,7 +892,7 @@ function create<T>(obj: T, config: TreeConfig = {}): SignalTree<T> {
   }
 
   // Enhance tree with methods
-  enhanceTree(tree, config);
+  enhanceTree(tree as any, config);
 
   // Attach signal state properties to the tree AFTER enhancement
   // This prevents conflicts with built-in methods
