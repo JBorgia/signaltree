@@ -977,8 +977,8 @@ export function signalTree(
  * migration until `.with` overloads are simplified.
  */
 export function applyEnhancer<T, O>(
-  tree: SignalTree<T>,
-  enhancer: EnhancerWithMeta<SignalTree<T>, O>
+  tree: any,
+  enhancer: EnhancerWithMeta<any, O>
 ): O {
   return enhancer(tree) as O;
 }
