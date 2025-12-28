@@ -112,17 +112,17 @@ export interface OptimizedUpdateMethods<T> {
   ): {
     changed: boolean;
     duration: number;
+    changedPaths: string[];
+    stats?: {
+      totalPaths: number;
+      optimizedPaths: number;
       batchedUpdates: number;
     };
   };
 }
-  /**
-   * Compatibility: allow two generic parameters historically used across the codebase.
-   * The first generic (Input) is ignored for v6's shape but accepted for compatibility.
-   */
-  export type EnhancerWithMeta<_In = unknown, TAdded = unknown> = Enhancer<TAdded> & {
-    metadata?: EnhancerMeta;
-  };
+
+export interface TimeTravelEntry<T> {
+  action: string;
   timestamp: number;
   state: T;
   payload?: unknown;
@@ -584,21 +584,12 @@ export interface EnhancerMeta {
 }
 
 /**
- * Simplified enhancer type for v6: an enhancer takes a base tree and
- * returns the same base tree augmented with the added methods/properties.
- */
-export type Enhancer<TAdded = unknown> = <S>(
-  tree: SignalTreeBase<S>
-) => SignalTreeBase<S> & TAdded;
-
-/**
  * Compatibility: allow two generic parameters historically used across the codebase.
- * The first generic (Input) is ignored for v6's shape but accepted for compatibility.
+ * The primary `Enhancer<Input, Output>` form is preserved above; here we
+ * expose `EnhancerWithMeta<Input, Output>` accepting two generics for
+ * existing call sites while mapping to the flexible `Enhancer` shape.
  */
-export type EnhancerWithMeta<
-  _In = unknown,
-  TAdded = unknown
-> = Enhancer<TAdded> & {
+export type EnhancerWithMeta<In = unknown, Out = unknown> = Enhancer<In, Out> & {
   metadata?: EnhancerMeta;
 };
 
@@ -637,17 +628,8 @@ export interface WithMethod<T> {
   (): SignalTreeBase<T>;
   <A>(e1: Enhancer<A>): SignalTreeBase<T> & A;
   <A, B>(e1: Enhancer<A>, e2: Enhancer<B>): SignalTreeBase<T> & A & B;
-  <A, B, C>(
-    e1: Enhancer<A>,
-    e2: Enhancer<B>,
-    e3: Enhancer<C>
-  ): SignalTreeBase<T> & A & B & C;
-  <A, B, C, D>(
-    e1: Enhancer<A>,
-    e2: Enhancer<B>,
-    e3: Enhancer<C>,
-    e4: Enhancer<D>
-  ): SignalTreeBase<T> & A & B & C & D;
+  <A, B, C>(e1: Enhancer<A>, e2: Enhancer<B>, e3: Enhancer<C>): SignalTreeBase<T> & A & B & C;
+  <A, B, C, D>(e1: Enhancer<A>, e2: Enhancer<B>, e3: Enhancer<C>, e4: Enhancer<D>): SignalTreeBase<T> & A & B & C & D;
   <A, B, C, D, E>(
     e1: Enhancer<A>,
     e2: Enhancer<B>,
@@ -663,8 +645,7 @@ export interface WithMethod<T> {
     e5: Enhancer<E>,
     e6: Enhancer<F>
   ): SignalTreeBase<T> & A & B & C & D & E & F;
-  (...enhancers: Enhancer<unknown>[]): SignalTreeBase<T> &
-    Record<string, unknown>;
+  (...enhancers: Enhancer<unknown>[]): SignalTreeBase<T> & Record<string, unknown>;
 }
 
 // ============================================
