@@ -112,17 +112,17 @@ export interface OptimizedUpdateMethods<T> {
   ): {
     changed: boolean;
     duration: number;
-    changedPaths: string[];
-    stats?: {
-      totalPaths: number;
-      optimizedPaths: number;
       batchedUpdates: number;
     };
   };
 }
-
-export interface TimeTravelEntry<T> {
-  action: string;
+  /**
+   * Compatibility: allow two generic parameters historically used across the codebase.
+   * The first generic (Input) is ignored for v6's shape but accepted for compatibility.
+   */
+  export type EnhancerWithMeta<_In = unknown, TAdded = unknown> = Enhancer<TAdded> & {
+    metadata?: EnhancerMeta;
+  };
   timestamp: number;
   state: T;
   payload?: unknown;
