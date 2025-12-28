@@ -56,7 +56,7 @@ export interface EnhancerMeta {
   provides?: string[];
 }
 
-export const ENHANCER_META: unique symbol;
+// Symbol key for enhancer metadata (declared later)
 
 export type EnhancerWithMeta<I = unknown, O = unknown> = ((input: I) => O) & {
   metadata?: EnhancerMeta;
