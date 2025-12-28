@@ -3798,6 +3798,99 @@ pnpm -w tsc -p tsconfig.base.json --noEmit
 # Serve demo (if applicable)
 nx serve demo --port 4200
 ```
+ 
+### Chained `.with()` (new recommended pattern)
+
+v6 introduces a single-enhancer-per-call chaining pattern that preserves IDE UX and gives perfect type inference.
+
+- Pattern: call `.with()` once per enhancer (unlimited chaining)
+- Rationale: each `.with()` returns the tree type extended via an intersection with the enhancer's methods, so the compiler accurately reflects available methods at each step.
+
+Example:
+
+```typescript
+// v6 — recommended
+const tree = signalTree({ count: 0 })
+  .with(withEffects())
+  .with(withTimeTravel())
+  .with(withBatching());
+
+tree.undo(); // ✅ available after withTimeTravel
+tree.batch(() => { /*...*/ }); // ✅ available after withBatching
+
+// Do NOT rely on a multi-arg .with(...) overload that mixes enhancers in one call;
+// prefer chaining for clearer inference and DX.
+```
+
+Migration tip:
+
+- If you previously used a single `.with(a, b, c)` call, simply split it into chained calls. The runtime behavior remains the same; types become accurate.
+
+### Minimal base interface
+
+The core runtime now exposes a compact base shape: `SignalTreeBase<T>` with only the essentials:
+
+- `state` — the reactive state tree
+- `$` — shorthand alias for `state`
+- `with()` — enhancer application method
+- `destroy()` — cleanup
+
+All other methods (undo, batch, memoize, entities, devtools, etc.) are added by enhancers via intersection types. This keeps the base type tiny and guarantees that autocomplete only surfaces methods actually present on the instance.
+
+### Intersection types for methods
+
+Each enhancer is typed to add its methods via an intersection. For example:
+
+```ts
+type WithTimeTravel = Enhancer<TimeTravelMethods<T>>;
+// Applying it transforms the runtime type to: SignalTreeBase<T> & TimeTravelMethods<T>
+```
+
+This approach preserves IDE IntelliSense — when you apply `withTimeTravel()` the editor will immediately show `undo()`, `redo()`, and related helpers.
+
+### Preset factories
+
+To reduce friction, use the provided preset factories instead of calling `signalTree()` directly when appropriate:
+
+- `createDevTree(state)` — includes dev-facing enhancers: time-travel, devtools, entities, memoization, effects
+- `createProdTree(state)` — production-focused enhancers: batching, memoization
+- `createMinimalTree(state)` — minimal runtime (only essentials)
+
+Examples:
+
+```ts
+import { createDevTree, createProdTree } from '@signaltree/core';
+
+const dev = createDevTree({ users: [] });
+dev.undo(); // available
+
+const prod = createProdTree({ users: [] });
+prod.batch(() => { /* fast updates */ });
+```
+
+When migrating, choose the preset that best matches the runtime features your code needs. Prefer `createProdTree` for apps near production and `createDevTree` for local/dev tooling.
+
+### Dev proxy — better DX in development
+
+In dev mode the library wraps trees with a small proxy that throws instructive errors when you call a method provided by an enhancer that wasn't applied. This aids quick discovery during migration.
+
+Behavior:
+
+- In dev builds (ngDevMode or NODE_ENV !== 'production') calling `tree.undo()` without `withTimeTravel()` will throw: "undo() requires withTimeTravel() — try applying that enhancer or use createDevTree()."
+- In production builds the proxy is disabled for performance; calling a missing method will remain a runtime error.
+
+Example runtime message:
+
+```
+Error: undo() requires withTimeTravel() — apply .with(withTimeTravel()) or use createDevTree()
+```
+
+Migration checklist (quick):
+
+- Replace multi-enhancer `.with(a,b,c)` calls with chained `.with(a).with(b).with(c)` to improve type inference.
+- Prefer `createDevTree` / `createProdTree` where appropriate.
+- Run the typechecker and fix places where methods are now missing (the compiler points to the exact call site).
+
 
 ### Optional: Automated Codemod (recommended for large codebases)
 
