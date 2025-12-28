@@ -25,8 +25,8 @@ import type {
   SignalTreeBase,
 } from './types';
 
-// Type alias for internal use - enhancers that accept a generic SignalTreeBase shape
-type LocalUnknownEnhancer = EnhancerWithMeta<SignalTreeBase<any>, unknown>;
+// Type alias for internal use - general enhancer shape used locally
+type LocalUnknownEnhancer = EnhancerWithMeta<unknown, unknown>;
 
 // Extended tree type with optional updateEngine
 interface SignalTreeWithEngine<T> extends SignalTree<T> {
