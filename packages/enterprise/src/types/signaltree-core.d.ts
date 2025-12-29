@@ -1,5 +1,5 @@
-// Local type shim to make TS happy when importing '@signaltree/core'
-// during workspace builds. Maps to core source types via path mapping.
-declare module '@signaltree/core' {
-  export type { Enhancer } from '@signaltree/core/src/lib/types';
-}
+// Removed shim: previous local module augmentation caused stray declaration
+// files that break TypeScript resolution during packaging. If a module
+// augmentation is required again, prefer adding path mapping or proper
+// project references instead of committing a local `.d.ts` into `src/`.
+
