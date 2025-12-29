@@ -35,7 +35,7 @@ export interface NodeAccessor<T> {
 // enhancer or helper used a different generic parameter name. Relax the
 // index signature to permit dynamic string indexing while still preserving
 // the mapped keys for better editor DX.
-export type TreeNode<T> = Record<PropertyKey, any> & { [K in keyof T]: any };
+export type TreeNode<T> = { [K in keyof T]: unknown } & Record<string, unknown>;
 
 // Base SignalTree minimal interface
 export interface SignalTreeBase<T> extends NodeAccessor<T> {
