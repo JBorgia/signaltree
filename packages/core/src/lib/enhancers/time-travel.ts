@@ -13,12 +13,12 @@ export interface TimeTravelConfig {
 
 export function withTimeTravel(
   config: TimeTravelConfig = {}
-): <S>(tree: SignalTree<S>) => SignalTree<S> & TimeTravelMethods<S> {
+): <S>(tree: SignalTree<S>) => SignalTree<S> & TimeTravelMethods {
   const { maxHistory = 50, debounceMs = 0 } = config;
 
   const enhancer = <S>(
     tree: SignalTree<S>
-  ): SignalTree<S> & TimeTravelMethods<S> => {
+  ): SignalTree<S> & TimeTravelMethods => {
     const history: TimeTravelEntry<S>[] = [];
     let currentIndex = -1;
     let isTraveling = false;
@@ -73,7 +73,10 @@ export function withTimeTravel(
         return currentIndex < history.length - 1;
       },
       getHistory() {
-        return history.map((h) => ({ ...h, state: deepCloneJSON(h.state) }));
+        return history.map((h) => ({
+          ...h,
+          state: deepCloneJSON(h.state),
+        })) as unknown[];
       },
       resetHistory() {
         history.length = 0;

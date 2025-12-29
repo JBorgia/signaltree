@@ -77,24 +77,16 @@ export interface EffectsMethods<T> {
   subscribe(fn: (state: T) => void): () => void;
 }
 
-export interface BatchingMethods<T> {
+export interface BatchingMethods {
   // Runtime `batch` calls don't receive the state argument; they run
   // a zero-arg callback that performs updates via `tree.$` or `tree()`.
-  batch(updater: () => void): void;
-  batchUpdate(updater: (current: T) => Partial<T>): void;
+  batch(fn: () => void): void;
 }
 
 export interface MemoizationMethods<T> {
   memoize<R>(fn: (state: T) => R, cacheKey?: string): Signal<R>;
-  memoizedUpdate(updater: (current: T) => Partial<T>, cacheKey?: string): void;
   clearMemoCache(key?: string): void;
-  getCacheStats(): {
-    size: number;
-    hitRate: number;
-    totalHits: number;
-    totalMisses: number;
-    keys: string[];
-  };
+  getCacheStats(): CacheStats;
 }
 
 /**
@@ -108,12 +100,12 @@ export type CacheStats = {
   keys: string[];
 };
 
-export interface TimeTravelMethods<T> {
+export interface TimeTravelMethods {
   undo(): void;
   redo(): void;
   canUndo(): boolean;
   canRedo(): boolean;
-  getHistory(): TimeTravelEntry<T>[];
+  getHistory(): unknown[];
   resetHistory(): void;
   jumpTo(index: number): void;
   getCurrentIndex(): number;
@@ -612,16 +604,16 @@ export interface EnhancerMeta {
  */
 export type FullSignalTree<T> = SignalTreeBase<T> &
   EffectsMethods<T> &
-  BatchingMethods<T> &
+  BatchingMethods &
   MemoizationMethods<T> &
-  TimeTravelMethods<T> &
+  TimeTravelMethods &
   DevToolsMethods &
   EntitiesEnabled &
   OptimizedUpdateMethods<T>;
 
 export type ProdSignalTree<T> = SignalTreeBase<T> &
   EffectsMethods<T> &
-  BatchingMethods<T> &
+  BatchingMethods &
   MemoizationMethods<T> &
   EntitiesEnabled &
   OptimizedUpdateMethods<T>;

@@ -342,12 +342,12 @@ function create<T extends object>(
   // v6 single-enhancer chaining: accept exactly one enhancer and return
   // the enhanced tree. Chaining should be done by calling `.with()` again.
   Object.defineProperty(tree, 'with', {
-    value: function <A>(enhancer: Enhancer<A>): SignalTreeBase<T> & A {
+    value: function <R>(enhancer: (tree: SignalTreeBase<T>) => R): R {
       if (typeof enhancer !== 'function') {
         throw new Error('Enhancer must be a function');
       }
 
-      return enhancer(tree) as SignalTreeBase<T> & A;
+      return enhancer(tree) as R;
     },
     enumerable: false,
     writable: false,

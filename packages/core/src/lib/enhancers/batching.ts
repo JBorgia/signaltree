@@ -1,5 +1,3 @@
-import { snapshotState } from '../utils';
-
 import type {
   SignalTreeBase as SignalTree,
   BatchingMethods,
@@ -10,12 +8,10 @@ import type {
 
 export function withBatching(
   config: BatchingConfig = {}
-): <S>(tree: SignalTree<S>) => SignalTree<S> & BatchingMethods<S> {
+): <S>(tree: SignalTree<S>) => SignalTree<S> & BatchingMethods {
   const { debounceMs = 0, maxBatchSize = 1000 } = config;
 
-  const inner = <S>(
-    tree: SignalTree<S>
-  ): SignalTree<S> & BatchingMethods<S> => {
+  const inner = <S>(tree: SignalTree<S>): SignalTree<S> & BatchingMethods => {
     let queue: Array<() => void> = [];
     let scheduled = false;
 
@@ -39,20 +35,11 @@ export function withBatching(
       else queueMicrotask(flush);
     };
 
-    const methods: BatchingMethods<S> = {
-      batch(updater) {
-        queue.push(() => updater());
+    const methods: BatchingMethods = {
+      batch(fn) {
+        queue.push(() => fn());
         if (queue.length >= maxBatchSize) flush();
         else schedule();
-      },
-
-      batchUpdate(updater) {
-        methods.batch(() => {
-          const current = snapshotState((tree as any).state) as S;
-          const updates = updater(current);
-          // naive apply: use tree() updater
-          (tree as any)((cur: S) => ({ ...cur, ...updates }));
-        });
       },
     };
 

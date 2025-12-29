@@ -75,12 +75,8 @@ export function withMemoization(
         return sig as Signal<R>;
       },
 
-      memoizedUpdate(updater, cacheKey) {
-        const current = snapshotState((tree as any).state) as S;
-        const updates = updater(current);
-        (tree as any)((cur: S) => ({ ...cur, ...updates }));
-        if (cacheKey) cache.delete(cacheKey);
-      },
+      // NOTE: legacy `memoizedUpdate` removed from public types; use
+      // `tree()` or `tree.batchUpdate()` as appropriate.
 
       clearMemoCache(key?: string) {
         if (key) cache.delete(key);
