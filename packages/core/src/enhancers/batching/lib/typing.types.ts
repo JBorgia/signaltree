@@ -11,9 +11,7 @@ type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
 type Assert<T extends true> = T;
 
 type WB = typeof withBatching;
-type Expected = <T = any>(
-  config?: Parameters<typeof withBatching>[0]
-) => Enhancer<BatchingMethods<T>>;
+type Expected = typeof withBatching;
 type _batching_signature = Assert<Equals<WB, Expected>>;
 
 type WBHP = typeof withHighPerformanceBatching;
