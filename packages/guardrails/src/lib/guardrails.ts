@@ -141,8 +141,12 @@ const POLLING_INTERVAL_MS = 50; // Fast polling for dev-time monitoring
  */
 export function withGuardrails(
   config: GuardrailsConfig<any> = {}
-): <S>(tree: SignalTree<S>) => SignalTree<S> & { __guardrails?: GuardrailsAPI } {
-  return function <S>(tree: SignalTree<S>): SignalTree<S> & { __guardrails?: GuardrailsAPI } {
+): <S>(
+  tree: SignalTree<S>
+) => SignalTree<S> & { __guardrails?: GuardrailsAPI } {
+  return function <S>(
+    tree: SignalTree<S>
+  ): SignalTree<S> & { __guardrails?: GuardrailsAPI } {
     const enabled = resolveEnabledFlag(config.enabled);
     if (!isDevEnvironment() || !enabled) {
       return tree as SignalTree<S> & { __guardrails?: GuardrailsAPI };

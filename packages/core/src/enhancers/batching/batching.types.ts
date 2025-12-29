@@ -1,11 +1,11 @@
+import { withBatching } from './batching';
+
 /**
  * Type-level tests for batching enhancer.
  *
  * This file ensures the enhancer follows the v6 contract.
  * If this file compiles, the types are correct.
  */
-import { withBatching } from './batching';
-
 import type {
   SignalTreeBase,
   BatchingMethods,
