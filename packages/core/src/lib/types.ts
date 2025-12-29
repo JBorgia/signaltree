@@ -56,7 +56,9 @@ export interface SignalTreeBase<T> extends NodeAccessor<T> {
   readonly state: TreeNode<T>;
   readonly $: TreeNode<T>;
   // Single-enhancer chain: apply one enhancer at a time.
-  with<A>(enhancer: Enhancer<A>): SignalTreeBase<T> & A;
+  // Accept an enhancer that is applied to this specific tree and infer
+  // the resulting return type `R` so added methods can depend on `T`.
+  with<R>(enhancer: (tree: SignalTreeBase<T>) => R): R;
   bind(thisArg?: unknown): NodeAccessor<T>;
   destroy(): void;
   // Allow enhancers to attach runtime methods — consumers should cast to the

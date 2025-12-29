@@ -8,14 +8,12 @@ import type {
   BatchingConfig,
 } from '../types';
 
-export function withBatching<T>(
+export function withBatching(
   config: BatchingConfig = {}
-): Enhancer<BatchingMethods<T>> {
+): <S>(tree: SignalTree<S>) => SignalTree<S> & BatchingMethods<S> {
   const { debounceMs = 0, maxBatchSize = 1000 } = config;
 
-  const enhancer = <S>(
-    tree: SignalTree<S>
-  ): SignalTree<S> & BatchingMethods<S> => {
+  const inner = <S>(tree: SignalTree<S>): SignalTree<S> & BatchingMethods<S> => {
     let queue: Array<() => void> = [];
     let scheduled = false;
 
@@ -59,9 +57,10 @@ export function withBatching<T>(
     return Object.assign(tree, methods);
   };
 
-  (enhancer as any).metadata = {
+  (inner as any).metadata = {
     name: 'withBatching',
     provides: ['batch', 'batchUpdate'],
   };
-  return enhancer as unknown as Enhancer<BatchingMethods<T>>;
+
+  return inner;
 }
