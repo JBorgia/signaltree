@@ -14,14 +14,12 @@ export interface MemoizationConfig {
   useLRU?: boolean;
 }
 
-export function withMemoization<T>(
+export function withMemoization(
   config: MemoizationConfig = {}
-): Enhancer<MemoizationMethods<T>> {
+): <S>(tree: SignalTree<S>) => SignalTree<S> & MemoizationMethods<S> {
   const { maxCacheSize = 100, ttlMs = 0, useLRU = true } = config;
 
-  const enhancer = <S>(
-    tree: SignalTree<S>
-  ): SignalTree<S> & MemoizationMethods<S> => {
+  const enhancer = <S>(tree: SignalTree<S>): SignalTree<S> & MemoizationMethods<S> => {
     const cache = new Map<
       string,
       {
@@ -112,5 +110,5 @@ export function withMemoization<T>(
     name: 'withMemoization',
     provides: ['memoize', 'clearMemoCache', 'memoizedUpdate', 'getCacheStats'],
   };
-  return enhancer as unknown as Enhancer<MemoizationMethods<T>>;
+  return enhancer;
 }

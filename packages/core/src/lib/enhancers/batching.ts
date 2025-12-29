@@ -8,12 +8,12 @@ import type {
   BatchingConfig,
 } from '../types';
 
-export function withBatching<T = unknown>(
+export function withBatching(
   config: BatchingConfig = {}
-): (tree: SignalTree<T>) => SignalTree<T> & BatchingMethods<T> {
+): <S>(tree: SignalTree<S>) => SignalTree<S> & BatchingMethods<S> {
   const { debounceMs = 0, maxBatchSize = 1000 } = config;
 
-  const inner = (tree: SignalTree<T>): SignalTree<T> & BatchingMethods<T> => {
+  const inner = <S>(tree: SignalTree<S>): SignalTree<S> & BatchingMethods<S> => {
     let queue: Array<() => void> = [];
     let scheduled = false;
 
@@ -37,7 +37,7 @@ export function withBatching<T = unknown>(
       else queueMicrotask(flush);
     };
 
-    const methods: BatchingMethods<T> = {
+    const methods: BatchingMethods<S> = {
       batch(updater) {
         queue.push(() => updater());
         if (queue.length >= maxBatchSize) flush();
@@ -46,10 +46,10 @@ export function withBatching<T = unknown>(
 
       batchUpdate(updater) {
         methods.batch(() => {
-          const current = snapshotState((tree as any).state) as T;
+          const current = snapshotState((tree as any).state) as S;
           const updates = updater(current);
           // naive apply: use tree() updater
-          (tree as any)((cur: T) => ({ ...cur, ...updates }));
+          (tree as any)((cur: S) => ({ ...cur, ...updates }));
         });
       },
     };

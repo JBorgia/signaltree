@@ -11,14 +11,12 @@ export interface TimeTravelConfig {
   debounceMs?: number;
 }
 
-export function withTimeTravel<T>(
+export function withTimeTravel(
   config: TimeTravelConfig = {}
-): Enhancer<TimeTravelMethods<T>> {
+): <S>(tree: SignalTree<S>) => SignalTree<S> & TimeTravelMethods<S> {
   const { maxHistory = 50, debounceMs = 0 } = config;
 
-  const enhancer = <S>(
-    tree: SignalTree<S>
-  ): SignalTree<S> & TimeTravelMethods<S> => {
+  const enhancer = <S>(tree: SignalTree<S>): SignalTree<S> & TimeTravelMethods<S> => {
     const history: TimeTravelEntry<S>[] = [];
     let currentIndex = -1;
     let isTraveling = false;
@@ -115,5 +113,5 @@ export function withTimeTravel<T>(
       'getCurrentIndex',
     ],
   };
-  return enhancer as unknown as Enhancer<TimeTravelMethods<T>>;
+  return enhancer;
 }
