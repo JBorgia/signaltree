@@ -383,6 +383,39 @@ function create<T extends object>(
     configurable: true,
   });
 
+  // clearCache(): compatibility stub for older DX and enhancers that expect
+  // a global clearCache helper on the tree. Enhancers may replace this with
+  // a real implementation (e.g. memoization). Default is a no-op.
+  Object.defineProperty(tree, 'clearCache', {
+    value: () => {
+      /* no-op default */
+    },
+    enumerable: false,
+    writable: true,
+    configurable: true,
+  });
+
+  // batchUpdate(): default pass-through for when batching is not enabled.
+  // Applies the update immediately using the same internal recursiveUpdate
+  // logic so consumers can call `tree.batchUpdate(...)` regardless of
+  // whether the batching enhancer is active.
+  Object.defineProperty(tree, 'batchUpdate', {
+    value: function (arg?: unknown): void {
+      if (arguments.length === 0) return;
+
+      if (typeof arg === 'function') {
+        const updater = arg as (current: T) => T;
+        const current = unwrap(signalState) as T;
+        recursiveUpdate(signalState, updater(current));
+      } else {
+        recursiveUpdate(signalState, arg);
+      }
+    },
+    enumerable: false,
+    writable: true,
+    configurable: true,
+  });
+
   // Copy state properties to root for direct access
   for (const key of Object.keys(signalState as object)) {
     if (!(key in tree)) {

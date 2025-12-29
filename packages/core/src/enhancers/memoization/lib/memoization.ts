@@ -3,6 +3,8 @@ import { deepEqual, LRUCache } from '@signaltree/shared';
 
 import { isNodeAccessor } from '../../../lib/utils';
 
+import type { TreeNode } from '../../../lib/utils';
+
 import type { SignalTreeBase as SignalTree } from '../../../lib/types';
 
 // Dev environment detection
@@ -501,8 +503,8 @@ export function withMemoization<T>(
 
     const applyUpdateResult = (result: Partial<T>) => {
       Object.entries(result).forEach(([propKey, value]) => {
-        const property = (tree.state as unknown as Record<string, unknown>)[
-          propKey
+        const property = (tree.state as unknown as TreeNode<T>)[
+          propKey as keyof T
         ];
         if (property && 'set' in (property as object)) {
           (property as { set: (value: unknown) => void }).set(value);
@@ -524,6 +526,9 @@ export function withMemoization<T>(
       memoTree.clearMemoCache = () => {
         /* no-op when memoization disabled */
       };
+
+      // Compatibility alias used by some convenience helpers/tests
+      (memoTree as any).clearCache = (memoTree as any).clearMemoCache;
 
       memoTree.getCacheStats = () => ({
         size: 0,
@@ -650,6 +655,9 @@ export function withMemoization<T>(
       }
     };
 
+    // Provide compatibility alias
+    (tree as any).clearCache = (tree as any).clearMemoCache;
+
     (tree as MemoizedSignalTree<T>).getCacheStats = () => {
       let totalHits = 0;
       let totalMisses = 0;
@@ -684,6 +692,9 @@ export function withMemoization<T>(
         clearCleanupInterval(tree as object);
       };
     }
+
+    // Ensure alias reflects any wrapped/overridden clear implementation
+    (tree as any).clearCache = (tree as any).clearMemoCache;
 
     // Intentionally do NOT attach memoization helpers to `tree.$` to preserve
     // the "callable-only nodes" invariant for serialization safety.

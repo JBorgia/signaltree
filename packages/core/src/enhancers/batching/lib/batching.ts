@@ -1,6 +1,8 @@
 import { parsePath } from '@signaltree/shared';
 
-import { isNodeAccessor } from '../../../lib/utils';
+import { applyState, isNodeAccessor } from '../../../lib/utils';
+
+import type { TreeNode } from '../../../lib/utils';
 
 import type { SignalTreeBase as SignalTree } from '../../../lib/types';
 
@@ -140,7 +142,48 @@ export function withBatchingWithConfig<T>(
 
   return (tree: SignalTree<T>): BatchingSignalTree<T> => {
     if (!enabled) {
-      return tree as BatchingSignalTree<T>;
+      // Provide explicit pass-through methods so consumers can always call
+      // `tree.batchUpdate(...)` even when batching is disabled. This avoids
+      // relying on the base `signalTree` implementation shape and keeps
+      // behavior stable across versions.
+      const enhanced = tree as SignalTree<T> &
+        BatchingMethods<T> & {
+          batch?: (updater: (state: TreeNode<T>) => void) => void;
+        };
+
+      enhanced.batch = (updater: (state: TreeNode<T>) => void) => {
+        try {
+          // Delegate to the tree's built-in batchUpdate which applies updates
+          // immediately in the default (non-batching) case.
+          (tree as any).batchUpdate(updater as any);
+        } catch {
+          try {
+            updater(enhanced.state as unknown as TreeNode<T>);
+          } catch {
+            // ignore
+          }
+        }
+      };
+      // No-op: keep default immediate behavior but expose `batch`/`batchUpdate`.
+      // Ensure `batchUpdate` exists and delegates to the tree's default
+      // immediate-update implementation so callers can always call
+      // `tree.batchUpdate(...)` and get the non-batching behavior.
+      (enhanced as any).batchUpdate = (updater: (current: T) => Partial<T>) => {
+        try {
+          const current = tree() as T;
+          const updates = updater(current as T);
+
+          applyState(enhanced.state as unknown as TreeNode<T>, updates as T);
+        } catch (err) {
+          try {
+            (tree as any).batchUpdate(updater as any);
+          } catch {
+            // ignore
+          }
+        }
+      };
+
+      return enhanced as BatchingSignalTree<T>;
     }
 
     const originalTreeCall = tree.bind(tree);
@@ -178,7 +221,7 @@ export function withBatchingWithConfig<T>(
 
     if ('$' in tree) {
       Object.defineProperty(enhancedTree, '$', {
-        value: (tree as unknown as Record<string, unknown>)['$'],
+        value: (tree as SignalTree<T>).$,
         enumerable: false,
         configurable: true,
       });
@@ -192,9 +235,9 @@ export function withBatchingWithConfig<T>(
         const updates = updater(current);
 
         Object.entries(updates).forEach(([key, value]) => {
-          const property = (
-            enhancedTree.state as unknown as Record<string, unknown>
-          )[key];
+          const property = (enhancedTree.state as unknown as TreeNode<T>)[
+            key as keyof T
+          ];
           if (property && 'set' in (property as object)) {
             (property as { set: (value: unknown) => void }).set(value);
           } else if (isNodeAccessor(property)) {
@@ -209,10 +252,10 @@ export function withBatchingWithConfig<T>(
 }
 
 /** User-friendly no-arg signature expected by type-level tests */
-export function withBatching<T = any>(): <S>(
-  tree: SignalTree<S>
-) => SignalTree<S> & BatchingMethods<T> {
-  const enhancer = withBatchingWithConfig<T>({});
+export function withBatching<T = any>(
+  config: BatchingConfig = {}
+): <S>(tree: SignalTree<S>) => SignalTree<S> & BatchingMethods<T> {
+  const enhancer = withBatchingWithConfig<T>(config);
   return <S>(tree: SignalTree<S>) =>
     enhancer(tree as unknown as SignalTree<T>) as unknown as SignalTree<S> &
       BatchingMethods<T>;

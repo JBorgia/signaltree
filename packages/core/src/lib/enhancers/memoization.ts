@@ -3,7 +3,7 @@ import { computed, Signal } from '@angular/core';
 import { snapshotState } from '../utils';
 
 import type {
-  SignalTree,
+  SignalTreeBase as SignalTree,
   MemoizationMethods,
   Enhancer,
   CacheStats,

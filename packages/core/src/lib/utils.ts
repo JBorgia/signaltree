@@ -1,8 +1,8 @@
 import { effect, Injector, isSignal, runInInjectionContext, Signal, signal, WritableSignal } from '@angular/core';
 import { deepEqual, isBuiltInObject, parsePath } from '@signaltree/shared';
 
-/** Symbol to mark callable signals - using global symbol to match across files */
-const CALLABLE_SIGNAL_SYMBOL = Symbol.for('NodeAccessor');
+/** Symbol to mark callable signals - must match symbol used by signal-tree */
+const CALLABLE_SIGNAL_SYMBOL = Symbol.for('SignalTree:NodeAccessor');
 
 /**
  * SignalTree Utility Functions v1.1.6

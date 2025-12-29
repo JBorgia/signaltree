@@ -5,7 +5,7 @@ import type { EnhancerWithMeta } from '../types';
  * For now this is a simple pass-through that preserves order.
  * Future improvement: topological sort using metadata.requires/provides.
  */
-export function resolveEnhancerOrder<T extends EnhancerWithMeta<any, any>>(
+export function resolveEnhancerOrder<T extends EnhancerWithMeta<any>>(
   enhancers: T[],
   _coreCapabilities = new Set<string>(),
   _debug = false

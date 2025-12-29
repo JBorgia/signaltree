@@ -1,7 +1,7 @@
 import { deepCloneJSON, snapshotState } from '../utils';
 
 import type {
-  SignalTree,
+  SignalTreeBase as SignalTree,
   TimeTravelMethods,
   Enhancer,
   TimeTravelEntry,

@@ -1,5 +1,7 @@
+import { snapshotState } from '../../../lib/utils';
 import { deepClone, deepEqual } from './utils';
 
+import type { TreeNode } from '../../../lib/utils';
 import type { SignalTreeBase as SignalTree } from '../../../lib/types';
 
 /**
@@ -122,8 +124,17 @@ class TimeTravelManager<T> implements TimeTravelInterface<T> {
     }
 
     // Create new entry
+    // Ensure we store a plain, fully-unwrapped snapshot (no signal references)
+    // by unwrapping the internal state node and then making a structured
+    // clone to remove any residual accessors/functions.
+    const plain = snapshotState(this.tree.state as unknown as TreeNode<T>);
+    const cloned =
+      typeof structuredClone !== 'undefined'
+        ? structuredClone(plain)
+        : JSON.parse(JSON.stringify(plain));
     const entry: TimeTravelEntry<T> = {
-      state: deepClone(state),
+      // Store cloned plain snapshot
+      state: cloned as T,
       timestamp: Date.now(),
       action: this.actionNames[action] || action,
       ...(this.includePayload && payload !== undefined && { payload }),
@@ -360,7 +371,7 @@ export function withTimeTravel<T>(
     // Ensure $ alias is preserved
     if ('$' in tree) {
       Object.defineProperty(enhancedTree, '$', {
-        value: (tree as unknown as Record<string, unknown>)['$'],
+        value: (tree as SignalTree<T>).$,
         enumerable: false,
         configurable: true,
       });

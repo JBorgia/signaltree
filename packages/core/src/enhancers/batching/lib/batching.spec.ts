@@ -1,5 +1,4 @@
 import { signalTree } from '../../../lib/signal-tree';
-
 import {
   flushBatchedUpdates,
   getBatchQueueSize,
@@ -9,7 +8,6 @@ import {
 } from './batching';
 
 describe('Batching', () => {
-
   it('should enhance tree with batching capabilities', () => {
     const tree = signalTree({ count: 0 }).with(withBatching());
 

@@ -447,7 +447,7 @@ export function withDevTools<T>(
     // Ensure $ alias is preserved
     if ('$' in tree) {
       Object.defineProperty(enhancedTree, '$', {
-        value: (tree as unknown as Record<string, unknown>)['$'],
+        value: (tree as SignalTree<T>).$,
         enumerable: false,
         configurable: true,
       });

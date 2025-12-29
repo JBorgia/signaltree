@@ -1,11 +1,12 @@
 import { isSignal, Signal, WritableSignal } from '@angular/core';
 
+import { snapshotState } from '../../../lib/utils';
 import { TYPE_MARKERS } from '../constants';
 
+import type { TreeNode } from '../../../lib/utils';
 import type { SignalTreeBase as SignalTree } from '../../../lib/types';
 
 import type { EnhancerWithMeta } from '../../../lib/types';
-
 /**
  * SignalTree Serialization Module
  *
@@ -472,10 +473,17 @@ export function withSerialization<
      * Get plain object representation
      */
     enhanced.toJSON = (): T => {
-      // Delegate to the tree's public unwrap() which already strips helper
-      // methods like `set`/`update`. Keep unwrapObjectSafely for
-      // serialize() where we need type-preserving markers.
-      return tree();
+      // Use serialize() which already unwraps and encodes special types,
+      // then parse and return the plain `data` object. This avoids leaking
+      // live signal accessors into plain outputs.
+      try {
+        const payload = enhanced.serialize();
+        const parsed = JSON.parse(payload) as SerializedState<T>;
+        return parsed.data as T;
+      } catch {
+        // Fallback to snapshotState if serialize/parse fails
+        return snapshotState(tree.state as unknown as TreeNode<T>);
+      }
     };
 
     /**

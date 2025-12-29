@@ -2,6 +2,8 @@ import { createEntitySignal } from '../../../lib/entity-signal';
 import { getPathNotifier } from '../../../lib/path-notifier';
 import { isNodeAccessor } from '../../../lib/utils';
 
+import type { TreeNode } from '../../../lib/utils';
+
 import type {
   EntityConfig,
   EntityMapMarker,
@@ -29,7 +31,7 @@ function materializeEntities<T>(
   tree: SignalTreeBase<T>,
   notifier = getPathNotifier()
 ): void {
-  const state = tree.state as Record<string, unknown>;
+  const state = tree.state as unknown as TreeNode<T>;
 
   const visit = (
     parent: Record<string, unknown> | undefined,
@@ -57,7 +59,7 @@ function materializeEntities<T>(
       }
 
       try {
-        (tree as unknown as Record<string, unknown>)[key] = entitySignal;
+        (tree as any)[key] = entitySignal;
       } catch {
         // If property cannot be defined on tree, skip
       }
@@ -87,7 +89,7 @@ function materializeEntities<T>(
   };
 
   for (const key of Object.keys(state)) {
-    visit(state, key, state[key], []);
+    visit(state, key, (state as Record<string, unknown>)[key], []);
   }
 }
 

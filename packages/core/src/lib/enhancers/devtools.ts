@@ -1,6 +1,10 @@
 import { applyState, snapshotState } from '../utils';
 
-import type { SignalTree, DevToolsMethods, Enhancer } from '../types';
+import type {
+  SignalTreeBase as SignalTree,
+  DevToolsMethods,
+  Enhancer,
+} from '../types';
 export interface DevToolsConfig {
   name?: string;
   maxAge?: number;
