@@ -250,13 +250,17 @@ function startChangeDetection<T extends Record<string, unknown>>(
 
   // Strategy 2: Try reactive subscription (zero polling, but needs state diffing)
   try {
-    const unsubscribe = context.tree.subscribe(() => {
-      handleStateChange(context);
-    });
-    // Success! Using reactive subscription - no polling needed
-    return unsubscribe;
+    // `subscribe` may be provided by an enhancer (effects) or be absent.
+    // Treat it as optional and call if present to avoid TS errors during build.
+    const maybeSubscribe = (context.tree as unknown as { subscribe?: (fn: () => void) => () => void }).subscribe;
+    if (typeof maybeSubscribe === 'function') {
+      const unsubscribe = maybeSubscribe.call(context.tree, () => {
+        handleStateChange(context);
+      });
+      return unsubscribe;
+    }
   } catch {
-    // subscribe() failed (no injection context) - fall back to polling
+    // subscribe() failed or is not available - fall back to polling
   }
 
   // Strategy 3: Fall back to polling (last resort)
