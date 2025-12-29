@@ -6,7 +6,7 @@ import { withMemoization } from './enhancers/memoization';
 import { withTimeTravel } from './enhancers/time-travel';
 import { signalTree } from './signal-tree';
 
-import type { TreeConfig, FullSignalTree, ProdSignalTree } from './types';
+import type { TreeConfig, FullSignalTree, ProdSignalTree, MinimalSignalTree } from './types';
 
 export interface DevTreeConfig extends TreeConfig {
   effects?: Parameters<typeof withEffects>[0];
