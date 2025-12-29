@@ -51,8 +51,8 @@ const enhanced1 = withBatching()(tree1);
 const enhanced2 = withBatching({ debounceMs: 16 })(tree2);
 
 // Verify methods are available
-enhanced1.batch(() => {});
-enhanced2.batch(() => {});
+enhanced1.batch(() => void 0);
+enhanced2.batch(() => void 0);
 
 // Verify state type is preserved
 const _count: number = enhanced1().count;

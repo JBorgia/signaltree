@@ -218,12 +218,8 @@ export function withGuardrails(
       teardown
     );
 
-    return tree;
-  };
-
     return tree as SignalTree<S> & { __guardrails?: GuardrailsAPI };
   };
-}
 }
 
 /**

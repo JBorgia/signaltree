@@ -314,8 +314,8 @@ export function withMemoization(
           const updates = updater(current);
           applyPartialUpdate(tree, updates);
         },
-        clearMemoCache(): void {},
-        clearCache(): void {},
+        clearMemoCache(): void { return; },
+        clearCache(): void { return; },
         getCacheStats() {
           return {
             size: 0,

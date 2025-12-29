@@ -244,8 +244,8 @@ export function withTimeTravel(
     // Disabled path
     if (!enabled) {
       const noopMethods: TimeTravelMethods = {
-        undo(): void {},
-        redo(): void {},
+        undo(): void { return; },
+        redo(): void { return; },
         canUndo(): boolean {
           return false;
         },
@@ -255,8 +255,8 @@ export function withTimeTravel(
         getHistory(): unknown[] {
           return [];
         },
-        resetHistory(): void {},
-        jumpTo(): void {},
+        resetHistory(): void { return; },
+        jumpTo(): void { return; },
         getCurrentIndex(): number {
           return -1;
         },
