@@ -43,7 +43,7 @@ export function withEntities<T = unknown>(
     // Mark that entities have been materialized at runtime. Consumers should
     // use `tree.$.prop` which is typed as `EntitySignal` by `TreeNode<T>`.
     (tree as any).__entitiesEnabled = true;
-    return tree as SignalTree<S> & EntitiesEnabled;
+    return tree as SignalTree<T> & EntitiesEnabled;
   };
 
   (inner as any).metadata = {
