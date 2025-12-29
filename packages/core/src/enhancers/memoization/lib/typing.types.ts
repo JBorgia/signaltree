@@ -4,8 +4,8 @@ import type {
   withMemoization,
   withHighPerformanceMemoization,
 } from './memoization';
-import type { MemoizationConfig, MemoizationMethods } from './memoization';
-import type { Enhancer } from '../../../lib/types';
+import type { MemoizationConfig } from '../../../lib/enhancers/memoization';
+import type { Enhancer, MemoizationMethods } from '../../../lib/types';
 
 type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
   ? 1

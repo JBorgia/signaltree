@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 // Type-level tests for devtools enhancer
-import type { withDevTools } from './devtools';
-import type { DevToolsConfig } from '../../devtools/lib/devtools';
-import type { Enhancer } from '../../../lib/types';
+import { DevToolsConfig } from '../../../lib/types';
 
+import type { withDevTools } from './devtools';
+import type { Enhancer } from '../../../lib/types';
 type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
   ? 1
   : 2

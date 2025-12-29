@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 // Type-level tests for time-travel enhancer
 import type { withTimeTravel } from './time-travel';
-import type { TimeTravelMethods } from './time-travel';
-import type { Enhancer } from '../../../lib/types';
+import type { Enhancer, TimeTravelMethods } from '../../../lib/types';
 
 type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
   ? 1
