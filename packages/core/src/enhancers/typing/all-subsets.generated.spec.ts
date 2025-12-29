@@ -8,11 +8,19 @@ import type { BatchingMethods } from '../batching/lib/batching';
 import type { MemoizationMethods } from '../memoization/lib/memoization';
 import type { TimeTravelMethods } from '../time-travel/lib/time-travel';
 import type { DevToolsMethods } from '../devtools/lib/devtools';
-import type { EntitiesMethods } from '../entities/lib/entities';
+import type { EntitiesEnabled } from '../../lib/types';
+type EntitiesMethods = EntitiesEnabled;
 import type { OptimizedUpdateMethods } from '../../lib/types';
 
 // Helper to detect method presence
-type HasMethod<T, K extends string> = K extends keyof T ? true : false;
+// Special-case legacy 'entities' check to map to the new marker `__entitiesEnabled`.
+type HasMethod<T, K extends string> = K extends 'entities'
+  ? '__entitiesEnabled' extends keyof T
+    ? true
+    : false
+  : K extends keyof T
+  ? true
+  : false;
 
 type Subset_A = BatchingMethods<Tree>;
 type Subset_A_has_batch = Assert<Equals<HasMethod<Subset_A, 'batch'>, true>>;
@@ -56,7 +64,7 @@ type Subset_A_has_disconnectDevTools = Assert<
   Equals<HasMethod<Subset_A, 'disconnectDevTools'>, false>
 >;
 type Subset_A_has_entities = Assert<
-  Equals<HasMethod<Subset_A, 'entities'>, false>
+  Equals<HasMethod<Subset_A, '__entitiesEnabled'>, false>
 >;
 type Subset_A_has_updateOptimized = Assert<
   Equals<HasMethod<Subset_A, 'updateOptimized'>, false>
@@ -104,7 +112,7 @@ type Subset_B_has_disconnectDevTools = Assert<
   Equals<HasMethod<Subset_B, 'disconnectDevTools'>, false>
 >;
 type Subset_B_has_entities = Assert<
-  Equals<HasMethod<Subset_B, 'entities'>, false>
+  Equals<HasMethod<Subset_B, '__entitiesEnabled'>, false>
 >;
 type Subset_B_has_updateOptimized = Assert<
   Equals<HasMethod<Subset_B, 'updateOptimized'>, false>

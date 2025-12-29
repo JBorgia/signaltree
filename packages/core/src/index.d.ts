@@ -24,7 +24,6 @@ export type {
   MutationOptions,
   AddOptions,
   AddManyOptions,
-  EntityHelpers,
   TimeTravelEntry,
 } from './lib/types';
 export { entityMap } from './lib/types';

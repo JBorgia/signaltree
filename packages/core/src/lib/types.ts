@@ -113,10 +113,13 @@ export interface DevToolsMethods {
   disconnectDevTools(): void;
 }
 
-export interface EntitiesMethods<T> {
-  entities<E extends { id: string | number }>(
-    path: keyof T | string
-  ): EntityHelpers<E>;
+/**
+ * Marker interface indicating entities have been materialized at runtime.
+ * Prefer accessing entity collections via `tree.$.prop` (typed as `EntitySignal`).
+ */
+export interface EntitiesEnabled {
+  /** @internal */
+  readonly __entitiesEnabled?: true;
 }
 
 export interface OptimizedUpdateMethods<T> {
@@ -405,18 +408,7 @@ export interface EntitySignal<E, K extends string | number = string> {
  * @see entityMap for the new marker function
  * @see withEntities for the new enhancer
  */
-export interface EntityHelpers<E extends { id: string | number }> {
-  add(entity: E): void;
-  update(id: E['id'], updates: Partial<E>): void;
-  remove(id: E['id']): void;
-  upsert(entity: E): void;
-  selectById(id: E['id']): Signal<E | undefined>;
-  selectBy(predicate: (entity: E) => boolean): Signal<E[]>;
-  selectIds(): Signal<Array<string | number>>;
-  selectAll(): Signal<E[]>;
-  selectTotal(): Signal<number>;
-  clear(): void;
-}
+// Legacy `EntityHelpers` removed — v6 uses `EntitySignal` via `tree.$.prop`.
 
 /**
  * Global enhancer configurations
@@ -460,6 +452,12 @@ export interface DevToolsConfig {
     skip?: boolean;
     reorder?: boolean;
   };
+}
+
+/** Batching enhancer configuration (canonical) */
+export interface BatchingConfig {
+  debounceMs?: number;
+  maxBatchSize?: number;
 }
 
 /**
@@ -607,14 +605,15 @@ export type FullSignalTree<T> = SignalTreeBase<T> &
   MemoizationMethods<T> &
   TimeTravelMethods<T> &
   DevToolsMethods &
-  EntitiesMethods<T> &
+  EntitiesEnabled &
   OptimizedUpdateMethods<T>;
 
 export type ProdSignalTree<T> = SignalTreeBase<T> &
   EffectsMethods<T> &
   BatchingMethods<T> &
   MemoizationMethods<T> &
-  EntitiesMethods<T>;
+  EntitiesEnabled &
+  OptimizedUpdateMethods<T>;
 
 /** Minimal tree (just effects) */
 export type MinimalSignalTree<T> = SignalTreeBase<T> & EffectsMethods<T>;

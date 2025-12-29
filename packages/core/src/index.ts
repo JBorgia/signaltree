@@ -54,9 +54,6 @@ export type {
   MutationOptions,
   AddOptions,
   AddManyOptions,
-
-  // Feature types - Advanced functionality
-  EntityHelpers,
   TimeTravelEntry,
 } from './lib/types';
 

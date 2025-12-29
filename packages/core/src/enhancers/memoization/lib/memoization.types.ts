@@ -5,22 +5,22 @@ import type {
   withHighPerformanceMemoization,
 } from './memoization';
 import type { MemoizationConfig } from '../../../lib/enhancers/memoization';
-import type { Enhancer, MemoizationMethods } from '../../../lib/types';
+import type { SignalTreeBase } from '../../../lib/types';
+import type { MemoizedSignalTree } from './memoization';
 
-type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
-  ? 1
-  : 2
-  ? true
-  : false;
+type Equals<A, B> = A extends B ? (B extends A ? true : false) : false;
 type Assert<T extends true> = T;
 
 type WMType = typeof withMemoization;
-type ExpectedWM = <T = any>(
+type ExpectedWM = <T>(
   config?: MemoizationConfig
-) => Enhancer<MemoizationMethods<T>>;
+) => (tree: SignalTreeBase<T>) => MemoizedSignalTree<T>;
 
 // Ensure exported enhancer factory has expected shape
-type _memoization_signature = Assert<Equals<WMType, ExpectedWM>>;
+type _debug_actual = WMType;
+type _debug_expected = ExpectedWM;
+type _debug_match = Equals<WMType, ExpectedWM>;
+type _memoization_signature = Assert<_debug_match>;
 
 type WMPH = typeof withHighPerformanceMemoization;
 // High-performance variant should also be an enhancer factory

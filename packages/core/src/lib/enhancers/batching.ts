@@ -5,11 +5,8 @@ import type {
   BatchingMethods,
   Enhancer,
   TreeNode,
+  BatchingConfig,
 } from '../types';
-export interface BatchingConfig {
-  debounceMs?: number;
-  maxBatchSize?: number;
-}
 
 export function withBatching<T>(
   config: BatchingConfig = {}

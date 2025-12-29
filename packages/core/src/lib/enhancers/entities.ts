@@ -3,8 +3,9 @@ import { isEntityMapMarker } from '../utils';
 
 import type {
   SignalTreeBase as SignalTree,
-  EntitiesMethods,
+  EntitiesEnabled,
   Enhancer,
+  EntitySignal,
 } from '../types';
 
 export interface EntitiesConfig {
@@ -13,14 +14,12 @@ export interface EntitiesConfig {
 
 export function withEntities<T>(
   config: EntitiesConfig = {}
-): Enhancer<EntitiesMethods<T>> {
+): Enhancer<EntitiesEnabled> {
   const { defaultSelectId } = config;
 
   const enhancer = <S>(
     tree: SignalTree<S>
-  ): SignalTree<S> & EntitiesMethods<S> => {
-    const registry = new Map<string, unknown>();
-
+  ): SignalTree<S> & EntitiesEnabled => {
     function materialize(node: any, path: string[] = []) {
       if (!node || typeof node !== 'object') return;
       for (const [k, v] of Object.entries(node)) {
@@ -34,8 +33,6 @@ export function withEntities<T>(
             pathStr
           );
           node[k] = sig;
-          registry.set(pathStr, sig);
-          registry.set(k, sig);
         } else if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
           materialize(v, currentPath);
         }
@@ -45,18 +42,15 @@ export function withEntities<T>(
     materialize((tree as any).state, []);
     materialize((tree as any).$, []);
 
-    const methods: EntitiesMethods<S> = {
-      entities(path) {
-        const p = String(path);
-        const found = registry.get(p) as any;
-        if (!found) throw new Error(`Entity path '${p}' not found`);
-        return found as unknown as any;
-      },
-    };
-
-    return Object.assign(tree, methods);
+    // Mark that entities have been materialized at runtime. Consumers should
+    // use `tree.$.prop` which is typed as `EntitySignal` by `TreeNode<T>`.
+    (tree as any).__entitiesEnabled = true;
+    return tree as SignalTree<S> & EntitiesEnabled;
   };
 
-  (enhancer as any).metadata = { name: 'withEntities', provides: ['entities'] };
-  return enhancer as unknown as Enhancer<EntitiesMethods<T>>;
+  (enhancer as any).metadata = {
+    name: 'withEntities',
+    provides: ['entitiesEnabled'],
+  };
+  return enhancer as unknown as Enhancer<EntitiesEnabled>;
 }
