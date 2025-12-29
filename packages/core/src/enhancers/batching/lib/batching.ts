@@ -19,9 +19,12 @@ interface BatchingConfig {
   batchTimeoutMs?: number;
 }
 
-/** Enhanced SignalTree interface with batching method */
+/** Enhanced SignalTree interface with batching methods */
 interface BatchingSignalTree<T> extends SignalTree<T> {
-  batchUpdate(updater: (current: T) => Partial<T>): void;
+  // Public, user-facing batching API (new v6 shape)
+  batch(fn: () => void): void;
+  // Legacy/internal batchUpdate preserved for compatibility
+  batchUpdate?(updater: (current: T) => Partial<T>): void;
 }
 
 /** Public methods surface added by the batching enhancer */
