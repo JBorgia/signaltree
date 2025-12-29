@@ -131,7 +131,12 @@ export function withBatchingWithConfig<T>(
 ): (tree: SignalTree<T>) => BatchingSignalTree<T> {
   const { enabled = true } = config;
 
-  currentBatchingConfig = { ...currentBatchingConfig, ...config };
+  // Only update the global batching configuration when batching is enabled
+  // for this enhancer instance. Leaving global config untouched when disabled
+  // prevents accidental cross-test interference.
+  if (enabled) {
+    currentBatchingConfig = { ...currentBatchingConfig, ...config };
+  }
 
   return (tree: SignalTree<T>): BatchingSignalTree<T> => {
     if (!enabled) {
