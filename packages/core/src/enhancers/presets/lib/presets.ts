@@ -1,6 +1,6 @@
-import { createDevTree, createMinimalTree, createProdTree } from '../../lib/presets';
+import { createDevTree, createMinimalTree, createProdTree } from '../../../lib/presets';
 
-import type { TreeConfig, TreePreset } from '../../lib/types';
+import type { TreeConfig, TreePreset } from '../../../lib/types';
 // Minimal compatibility shim exposing the legacy preset API expected by consumers/tests.
 export const TREE_PRESETS: Record<TreePreset, Partial<TreeConfig>> = {} as any;
 
