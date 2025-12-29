@@ -85,7 +85,9 @@ export function createFeatureTree<T extends Record<string, unknown>>(
       // so factories can accept it uniformly. This is safe because the factory
       // doesn't depend on the added methods and `.with()` will correctly type
       // the resulting tree for callers.
-      enhancers.push(withGuardrails(guardrailsConfig) as unknown as Enhancer<unknown>);
+      enhancers.push(
+        withGuardrails(guardrailsConfig) as unknown as Enhancer<unknown>
+      );
     }
   }
 
