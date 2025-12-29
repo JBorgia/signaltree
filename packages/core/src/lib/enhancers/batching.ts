@@ -37,19 +37,19 @@ export function withBatching<T = unknown>(
       else queueMicrotask(flush);
     };
 
-    const methods: BatchingMethods<S> = {
+    const methods: BatchingMethods<T> = {
       batch(updater) {
-        queue.push(() => updater((tree as any).$ as TreeNode<S>));
+        queue.push(() => updater((tree as any).$ as TreeNode<T>));
         if (queue.length >= maxBatchSize) flush();
         else schedule();
       },
 
       batchUpdate(updater) {
         methods.batch(() => {
-          const current = snapshotState((tree as any).state) as S;
+          const current = snapshotState((tree as any).state) as T;
           const updates = updater(current);
           // naive apply: use tree() updater
-          (tree as any)((cur: S) => ({ ...cur, ...updates }));
+          (tree as any)((cur: T) => ({ ...cur, ...updates }));
         });
       },
     };
