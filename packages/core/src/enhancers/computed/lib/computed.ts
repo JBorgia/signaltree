@@ -54,23 +54,24 @@ export interface ComputedSignalTree<T extends Record<string, unknown>>
  */
 export function computedEnhancer(_config: ComputedConfig = {}) {
   void _config;
-  return createEnhancer<ComputedSignalTree<Record<string, unknown>>>(
+  return createEnhancer<unknown>(
     {
       name: 'computed',
       provides: ['computed'],
       requires: [],
     },
     (tree) => {
-      const computedTree = tree as ComputedSignalTree<Record<string, unknown>>;
+      const computedTree = tree as unknown as ComputedSignalTree<Record<string, unknown>> &
+        Record<string, unknown>;
 
       // Add computed method to the tree
-      computedTree.computed = function <U>(
+      (computedTree as any).computed = function <U>(
         computeFn: (tree: TreeNode<Record<string, unknown>>) => U
       ): ComputedSignal<U> {
-        return computed(() => computeFn(tree.state));
+        return computed(() => computeFn((tree as any).state));
       };
 
-      return computedTree;
+      return computedTree as any;
     }
   );
 }
