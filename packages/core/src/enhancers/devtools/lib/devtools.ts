@@ -280,9 +280,7 @@ export function withDevTools<T>(
     enableLogging?: boolean;
     performanceThreshold?: number;
   } = {}
-): (
-  tree: SignalTree<T>
-) => SignalTree<T> & { __devTools: ModularDevToolsInterface<T> } {
+): Enhancer<{ __devTools: ModularDevToolsInterface<T> }> {
   const {
     enabled = true,
     treeName = 'ModularSignalTree',
@@ -291,9 +289,7 @@ export function withDevTools<T>(
     performanceThreshold = 16,
   } = config;
 
-  return (
-    tree: SignalTree<T>
-  ): SignalTree<T> & { __devTools: ModularDevToolsInterface<T> } => {
+  const enhancer = (tree: SignalTree<any>) => {
     if (!enabled) {
       // Return minimal devtools interface when disabled
       const createNoopInterface = () => ({
@@ -507,8 +503,14 @@ export function withDevTools<T>(
       }),
     };
 
-    return Object.assign(enhancedTree, { __devTools: devToolsInterface });
+    return Object.assign(enhancedTree, {
+      __devTools: devToolsInterface,
+    }) as any;
   };
+
+  return enhancer as unknown as Enhancer<{
+    __devTools: ModularDevToolsInterface<T>;
+  }>;
 }
 
 /**
