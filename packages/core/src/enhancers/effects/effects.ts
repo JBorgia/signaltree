@@ -1,14 +1,8 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 // ============================================================================
 // FILE: src/enhancers/effects/effects.ts
 // ============================================================================
-
-/**
- * v6 Effects Enhancer
 import { effect as angularEffect, untracked } from '@angular/core';
-
- *
- * Contract: (config?) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & EffectsMethods<S>
- */
 
 import type { SignalTreeBase, EffectsMethods } from '../../lib/types';
 
