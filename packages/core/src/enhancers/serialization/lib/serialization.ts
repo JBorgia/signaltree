@@ -910,9 +910,7 @@ export function withSerialization<
     return enhanced;
   };
 
-  (
-    enhancer as EnhancerWithMeta<SerializableSignalTree<T>>
-  ).metadata = {
+  (enhancer as EnhancerWithMeta<SerializableSignalTree<T>>).metadata = {
     name: 'serialization',
   };
   return enhancer as EnhancerWithMeta<SerializableSignalTree<T>>;
@@ -1162,7 +1160,9 @@ export function withPersistence<
 
   (enhancer as any).metadata = { name: 'persistence' };
 
-  return enhancer as EnhancerWithMeta<SerializableSignalTree<T> & PersistenceMethods>;
+  return enhancer as EnhancerWithMeta<
+    SerializableSignalTree<T> & PersistenceMethods
+  >;
 }
 
 /**
