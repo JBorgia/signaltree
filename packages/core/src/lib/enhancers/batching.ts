@@ -1,8 +1,6 @@
 import type {
   SignalTreeBase as SignalTree,
   BatchingMethods,
-  Enhancer,
-  TreeNode,
   BatchingConfig,
 } from '../types';
 
@@ -48,7 +46,7 @@ export function withBatching(
 
   (inner as any).metadata = {
     name: 'withBatching',
-    provides: ['batch', 'batchUpdate'],
+    provides: ['batch'],
   };
 
   return inner;
