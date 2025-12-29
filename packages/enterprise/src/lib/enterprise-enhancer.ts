@@ -45,7 +45,9 @@ import type { Enhancer } from '@signaltree/core';
  *
  * @public
  */
-export function withEnterprise<T extends Record<string, unknown>>(): Enhancer<unknown> {
+export function withEnterprise<
+  T extends Record<string, unknown>
+>(): Enhancer<unknown> {
   return (tree: any): any => {
     // Lazy initialization - only create when first needed
     let pathIndex: PathIndex<Signal<unknown>> | null = null;
