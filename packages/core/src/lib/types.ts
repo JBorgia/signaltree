@@ -29,7 +29,13 @@ export interface NodeAccessor<T> {
   (updater: (current: T) => T): void;
 }
 
-export type TreeNode<T> = { [K in keyof T]: any };
+// TreeNode represents the runtime shape of the tree where properties are
+// accessed by string keys at runtime. Previously this was strictly mapped
+// to `keyof T` which caused incompatibilities across packages when an
+// enhancer or helper used a different generic parameter name. Relax the
+// index signature to permit dynamic string indexing while still preserving
+// the mapped keys for better editor DX.
+export type TreeNode<T> = Record<PropertyKey, any> & { [K in keyof T]: any };
 
 // Base SignalTree minimal interface
 export interface SignalTreeBase<T> extends NodeAccessor<T> {
