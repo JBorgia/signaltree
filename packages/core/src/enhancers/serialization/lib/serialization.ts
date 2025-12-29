@@ -465,7 +465,7 @@ export function withSerialization<
   T extends Record<string, unknown> = Record<string, unknown>
 >(
   defaultConfig: SerializationConfig = {}
-): EnhancerWithMeta<SignalTree<T>, SerializableSignalTree<T>> {
+): EnhancerWithMeta<SerializableSignalTree<T>> {
   const enhancer = (tree: SignalTree<T>): SerializableSignalTree<T> => {
     const enhanced = tree as SerializableSignalTree<T>;
     /**
@@ -911,11 +911,11 @@ export function withSerialization<
   };
 
   (
-    enhancer as EnhancerWithMeta<SignalTree<T>, SerializableSignalTree<T>>
+    enhancer as EnhancerWithMeta<SerializableSignalTree<T>>
   ).metadata = {
     name: 'serialization',
   };
-  return enhancer as EnhancerWithMeta<SignalTree<T>, SerializableSignalTree<T>>;
+  return enhancer as EnhancerWithMeta<SerializableSignalTree<T>>;
 }
 
 /**
@@ -986,10 +986,7 @@ export function withPersistence<
   T extends Record<string, unknown> = Record<string, unknown>
 >(
   config: PersistenceConfig
-): EnhancerWithMeta<
-  SignalTree<T>,
-  SerializableSignalTree<T> & PersistenceMethods
-> {
+): EnhancerWithMeta<SerializableSignalTree<T> & PersistenceMethods> {
   const {
     key,
     storage = typeof window !== 'undefined' ? window.localStorage : undefined,
@@ -1165,10 +1162,7 @@ export function withPersistence<
 
   (enhancer as any).metadata = { name: 'persistence' };
 
-  return enhancer as EnhancerWithMeta<
-    SignalTree<T>,
-    SerializableSignalTree<T> & PersistenceMethods
-  >;
+  return enhancer as EnhancerWithMeta<SerializableSignalTree<T> & PersistenceMethods>;
 }
 
 /**
