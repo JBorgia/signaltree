@@ -77,7 +77,7 @@ export interface EffectsMethods<T> {
   subscribe(fn: (state: T) => void): () => void;
 }
 
-export interface BatchingMethods {
+export interface BatchingMethods<T = unknown> {
   // Runtime `batch` calls don't receive the state argument; they run
   // a zero-arg callback that performs updates via `tree.$` or `tree()`.
   batch(fn: () => void): void;
@@ -100,7 +100,7 @@ export type CacheStats = {
   keys: string[];
 };
 
-export interface TimeTravelMethods {
+export interface TimeTravelMethods<T = unknown> {
   undo(): void;
   redo(): void;
   canUndo(): boolean;
@@ -602,18 +602,19 @@ export interface EnhancerMeta {
  * V6 removes the old monolithic `SignalTree<T>` in favor of a minimal
  * `SignalTreeBase<T>` and opt-in intersections with method interfaces.
  */
+
 export type FullSignalTree<T> = SignalTreeBase<T> &
   EffectsMethods<T> &
-  BatchingMethods &
+  BatchingMethods<T> &
   MemoizationMethods<T> &
-  TimeTravelMethods &
+  TimeTravelMethods<T> &
   DevToolsMethods &
   EntitiesEnabled &
   OptimizedUpdateMethods<T>;
 
 export type ProdSignalTree<T> = SignalTreeBase<T> &
   EffectsMethods<T> &
-  BatchingMethods &
+  BatchingMethods<T> &
   MemoizationMethods<T> &
   EntitiesEnabled &
   OptimizedUpdateMethods<T>;
