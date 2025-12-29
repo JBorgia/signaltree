@@ -2,7 +2,7 @@ import { computed, Signal } from '@angular/core';
 
 import { createEnhancer } from '../..';
 
-import type { TreeNode, SignalTree } from '../../../lib/types';
+import type { TreeNode, SignalTreeBase } from '../../../lib/types';
 
 /**
  * Configuration for the computed enhancer
@@ -23,7 +23,7 @@ export type ComputedSignal<T> = Signal<T>;
  * Extended SignalTree with computed signal capabilities
  */
 export interface ComputedSignalTree<T extends Record<string, unknown>>
-  extends SignalTree<T> {
+  extends SignalTreeBase<T> {
   /**
    * Create a computed signal from the current tree state
    * @param computeFn Function that computes the derived value
@@ -54,10 +54,7 @@ export interface ComputedSignalTree<T extends Record<string, unknown>>
  */
 export function computedEnhancer(_config: ComputedConfig = {}) {
   void _config;
-  return createEnhancer<
-    SignalTree<Record<string, unknown>>,
-    ComputedSignalTree<Record<string, unknown>>
-  >(
+  return createEnhancer<ComputedSignalTree<Record<string, unknown>>>(
     {
       name: 'computed',
       provides: ['computed'],
