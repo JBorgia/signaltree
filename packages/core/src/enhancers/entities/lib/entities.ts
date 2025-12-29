@@ -5,7 +5,7 @@ import { isNodeAccessor } from '../../../lib/utils';
 import type {
   EntityConfig,
   EntityMapMarker,
-  SignalTree,
+  SignalTreeBase,
   EntityAwareTreeNode,
 } from '../../../lib/types';
 
@@ -26,7 +26,7 @@ function isEntityMapMarker(value: unknown): value is Marker {
 }
 
 function materializeEntities<T>(
-  tree: SignalTree<T>,
+  tree: SignalTreeBase<T>,
   notifier = getPathNotifier()
 ): void {
   const state = tree.state as Record<string, unknown>;
@@ -97,8 +97,8 @@ function materializeEntities<T>(
 export function withEntities(config: EntitiesEnhancerConfig = {}) {
   const { enabled = true } = config;
 
-  return function enhanceWithEntities<T>(tree: SignalTree<T>): Omit<
-    SignalTree<T>,
+  return function enhanceWithEntities<T>(tree: SignalTreeBase<T>): Omit<
+    SignalTreeBase<T>,
     'state' | '$'
   > & {
     state: EntityAwareTreeNode<T>;
