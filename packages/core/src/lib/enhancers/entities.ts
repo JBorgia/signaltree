@@ -14,12 +14,10 @@ export interface EntitiesConfig {
 
 export function withEntities<T>(
   config: EntitiesConfig = {}
-): Enhancer<EntitiesEnabled> {
+): <S>(tree: SignalTree<S>) => SignalTree<S> & EntitiesEnabled {
   const { defaultSelectId } = config;
 
-  const enhancer = <S>(
-    tree: SignalTree<S>
-  ): SignalTree<S> & EntitiesEnabled => {
+  const inner = <S>(tree: SignalTree<S>): SignalTree<S> & EntitiesEnabled => {
     function materialize(node: any, path: string[] = []) {
       if (!node || typeof node !== 'object') return;
       for (const [k, v] of Object.entries(node)) {
@@ -48,9 +46,10 @@ export function withEntities<T>(
     return tree as SignalTree<S> & EntitiesEnabled;
   };
 
-  (enhancer as any).metadata = {
+  (inner as any).metadata = {
     name: 'withEntities',
     provides: ['entitiesEnabled'],
   };
-  return enhancer as unknown as Enhancer<EntitiesEnabled>;
+
+  return inner;
 }
