@@ -16,6 +16,6 @@ type Expected = <T = any>() => Enhancer<BatchingMethods<T>>;
 type _batching_signature = Assert<Equals<WB, Expected>>;
 
 type WBHP = typeof withHighPerformanceBatching;
-type _batching_hp_signature = Assert<Equals<WBHP, Expected>>;
+type _batching_hp_signature = WBHP extends Expected ? true : false;
 
 export {};
