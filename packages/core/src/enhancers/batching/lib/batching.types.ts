@@ -12,7 +12,7 @@ type Expected = <T = any>(config?: {
   maxBatchSize?: number;
   autoFlushDelay?: number;
   batchTimeoutMs?: number;
-}) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & BatchingMethods<T>;
+}) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & BatchingMethods;
 
 // Debug-only: inspect actual vs expected in IDE; assertion disabled to avoid
 // brittle compile-time equality failures until we align the implementation.
