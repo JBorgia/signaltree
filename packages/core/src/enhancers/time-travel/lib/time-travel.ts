@@ -368,31 +368,25 @@ export function withTimeTravel<T>(
 
     // Override DX-friendly methods to forward to the time travel manager
     // These shadow the core stubs when the enhancer is applied
-    (enhancedTree as SignalTree<T> & Record<string, unknown>).undo = () => {
+    (enhancedTree as any)['undo'] = () => {
       timeTravelManager.undo();
     };
-    (enhancedTree as SignalTree<T> & Record<string, unknown>).redo = () => {
+    (enhancedTree as any)['redo'] = () => {
       timeTravelManager.redo();
     };
-    (enhancedTree as SignalTree<T> & Record<string, unknown>).getHistory = () =>
-      timeTravelManager.getHistory();
-    (enhancedTree as SignalTree<T> & Record<string, unknown>).resetHistory =
-      () => {
-        timeTravelManager.resetHistory();
-      };
+    (enhancedTree as any)['getHistory'] = () => timeTravelManager.getHistory();
+    (enhancedTree as any)['resetHistory'] = () => {
+      timeTravelManager.resetHistory();
+    };
 
     // Additional helpers exposed directly on the tree for better DX
-    (enhancedTree as SignalTree<T> & Record<string, unknown>).jumpTo = (
-      index: number
-    ) => {
+    (enhancedTree as any)['jumpTo'] = (index: number) => {
       timeTravelManager.jumpTo(index);
     };
-    (enhancedTree as SignalTree<T> & Record<string, unknown>).canUndo = () =>
-      timeTravelManager.canUndo();
-    (enhancedTree as SignalTree<T> & Record<string, unknown>).canRedo = () =>
-      timeTravelManager.canRedo();
-    (enhancedTree as SignalTree<T> & Record<string, unknown>).getCurrentIndex =
-      () => timeTravelManager.getCurrentIndex();
+    (enhancedTree as any)['canUndo'] = () => timeTravelManager.canUndo();
+    (enhancedTree as any)['canRedo'] = () => timeTravelManager.canRedo();
+    (enhancedTree as any)['getCurrentIndex'] = () =>
+      timeTravelManager.getCurrentIndex();
 
     return Object.assign(enhancedTree, {
       __timeTravel: timeTravelManager,

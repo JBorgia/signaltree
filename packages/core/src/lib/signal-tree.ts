@@ -1,11 +1,11 @@
 import { isSignal, Signal, signal, WritableSignal } from '@angular/core';
+import { create } from 'domain';
+import { config } from 'process';
 
-import { resolveEnhancerOrder } from '../enhancers';
 import { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './constants';
-import { SignalMemoryManager } from './memory/memory-manager';
 import { OptimizedUpdateEngine } from './performance/update-engine';
 import { SecurityValidator } from './security/security-validator';
-import { createLazySignalTree, equal, isBuiltInObject, unwrap } from './utils';
+import { equal, isBuiltInObject, unwrap } from './utils';
 
 // Global symbol for NodeAccessor identification
 const NODE_ACCESSOR_SYMBOL = Symbol.for('NodeAccessor');
@@ -21,8 +21,8 @@ import type {
   NodeAccessor,
   EntityMapMarker,
   SignalTreeBase,
+  Enhancer,
 } from './types';
-
 // Type alias for internal use - general enhancer shape used locally
 type LocalUnknownEnhancer = EnhancerWithMeta<unknown, unknown>;
 
@@ -428,230 +428,22 @@ function isEntityMapMarker(
 // TREE ENHANCEMENT
 // ============================================
 
-function enhanceTree<T>(
-  tree: SignalTreeBase<T>,
-  config: TreeConfig = {}
-): SignalTreeWithEngine<T> {
-  const isLazy = config.useLazySignals ?? shouldUseLazy(tree.state, config);
-
-  // with() enhancer composition
-  tree.with = (<E extends Array<EnhancerWithMeta<unknown, unknown>>>(
-    ...enhancers: E
-  ): ChainResult<SignalTreeBase<T>, E> => {
-    if (enhancers.length === 0) {
-      return tree as unknown as ChainResult<SignalTree<T>, E>;
-    }
-
-    const coreCapabilities = new Set<string>();
-    if (config.batchUpdates) coreCapabilities.add('batchUpdate');
-    if (config.useMemoization) coreCapabilities.add('memoize');
-    if (config.enableTimeTravel) coreCapabilities.add('undo');
-    if (config.enableDevTools) coreCapabilities.add('connectDevTools');
-
-    try {
-      for (const key of Object.keys(tree)) coreCapabilities.add(String(key));
-    } catch {
-      // Ignore reflection issues
-    }
-
-    const hasMetadata = enhancers.some((e) =>
-      Boolean(e.metadata && (e.metadata.requires || e.metadata.provides))
-    );
-
-    let orderedEnhancers = enhancers as LocalUnknownEnhancer[];
-
-    if (hasMetadata) {
-      try {
-        orderedEnhancers = resolveEnhancerOrder(
-          enhancers as LocalUnknownEnhancer[],
-          coreCapabilities,
-          config.debugMode
-        );
-      } catch (err) {
-        console.warn(SIGNAL_TREE_MESSAGES.ENHANCER_ORDER_FAILED, err);
-      }
-    }
-
-    const provided = new Set<string>(coreCapabilities);
-    let currentTree: unknown = tree;
-
-    for (let i = 0; i < orderedEnhancers.length; i++) {
-      const enhancer = orderedEnhancers[i];
-
+function enhanceTree<T>(tree: SignalTreeBase<T>, config: TreeConfig = {}): SignalTreeWithEngine<T> {
+  // v6 semantics: single-enhancer runtime `.with(enhancer)`
+  Object.defineProperty(tree, 'with', {
+    value: function <A>(enhancer: EnhancerWithMeta<unknown, A> | Enhancer<unknown, A>) {
       if (typeof enhancer !== 'function') {
-        throw new Error(
-          SIGNAL_TREE_MESSAGES.ENHANCER_NOT_FUNCTION.replace('%d', String(i))
-        );
+        throw new Error('Enhancer must be a function');
       }
+      return (enhancer as unknown as Enhancer)(tree as SignalTreeBase<T>) as SignalTreeBase<T> & A;
+    },
+    enumerable: false,
+    configurable: true,
+    writable: false,
+  });
 
-      const reqs = enhancer.metadata?.requires ?? [];
-      for (const r of reqs) {
-        if (!(r in (currentTree as object)) && !provided.has(r)) {
-          const name = enhancer.metadata?.name ?? `enhancer#${i}`;
-          const msg = SIGNAL_TREE_MESSAGES.ENHANCER_REQUIREMENT_MISSING.replace(
-            '%s',
-            name
-          ).replace('%s', r);
-          if (config.debugMode) {
-            throw new Error(msg);
-          } else {
-            console.warn(msg);
-          }
-        }
-      }
-
-      try {
-        const result = (
-          enhancer as EnhancerWithMeta<SignalTreeBase<any>, unknown>
-        )(currentTree as SignalTreeBase<any>);
-        if (result !== currentTree) currentTree = result as unknown;
-
-        const provs = enhancer.metadata?.provides ?? [];
-        for (const p of provs) provided.add(p);
-
-        if (config.debugMode && provs.length > 0) {
-          for (const p of provs) {
-            if (!(p in (currentTree as object))) {
-              console.warn(
-                SIGNAL_TREE_MESSAGES.ENHANCER_PROVIDES_MISSING.replace(
-                  '%s',
-                  enhancer.metadata?.name ?? String(i)
-                ).replace('%s', p)
-              );
-            }
-          }
-        }
-      } catch (error) {
-        const name = enhancer.metadata?.name || `enhancer at index ${i}`;
-        console.error(
-          SIGNAL_TREE_MESSAGES.ENHANCER_FAILED.replace('%s', name),
-          error
-        );
-        if (config.debugMode) {
-          console.error('[SignalTree] Enhancer stack trace:', enhancer);
-          console.error('[SignalTree] Tree state at failure:', currentTree);
-        }
-        throw error;
-      }
-    }
-
-    return currentTree as ChainResult<SignalTreeBase<T>, E>;
-  }) as unknown as SignalTreeBase<T>['with'];
-
-  // destroy unchanged
-  tree.destroy = () => {
-    try {
-      if (isLazy) {
-        const state = tree.state as unknown;
-        if (state && typeof state === 'object' && '__cleanup__' in state) {
-          const cleanup = (state as { __cleanup__: unknown }).__cleanup__;
-          if (typeof cleanup === 'function') {
-            cleanup();
-          }
-        }
-      }
-
-      if (config.debugMode) {
-        console.log(SIGNAL_TREE_MESSAGES.TREE_DESTROYED);
-      }
-    } catch (error) {
-      console.error(SIGNAL_TREE_MESSAGES.CLEANUP_ERROR, error);
-    }
-  };
-
-  // v6: do not attach stub methods — keep base tree minimal.
-  return tree;
+  return tree as unknown as SignalTreeWithEngine<T>;
 }
-
-// ============================================
-// CORE CREATION FUNCTION
-// ============================================
-
-function create<T>(obj: T, config: TreeConfig = {}): SignalTreeBase<T> {
-  if (obj === null || obj === undefined) {
-    throw new Error(SIGNAL_TREE_MESSAGES.NULL_OR_UNDEFINED);
-  }
-
-  // Validate the tree if security is configured
-  validateTree(obj, config);
-
-  const estimatedSize = estimateObjectSize(obj);
-  const equalityFn = createEqualityFn(config.useShallowComparison ?? false);
-
-  // ARRAY ROOT MODE: arrays are treated as single signals
-  if (Array.isArray(obj)) {
-    const signalState = signal(obj as unknown as T, {
-      equal: equalityFn,
-    }) as WritableSignal<T>;
-
-    const tree = makeRootNodeAccessor(
-      signalState,
-      signalState
-    ) as SignalTreeBase<T>;
-
-    // Add state and $ properties that reference the signal itself
-    Object.defineProperty(tree, 'state', {
-      value: signalState,
-      enumerable: false,
-    });
-    Object.defineProperty(tree, '$', { value: signalState, enumerable: false });
-
-    enhanceTree(tree, config);
-    return tree;
-  }
-
-  const useLazy = shouldUseLazy(obj, config, estimatedSize);
-
-  if (config.debugMode) {
-    console.log(
-      SIGNAL_TREE_MESSAGES.STRATEGY_SELECTION.replace(
-        '%s',
-        useLazy ? 'lazy' : 'eager'
-      ).replace('%d', String(estimatedSize))
-    );
-  }
-
-  let signalState: TreeNode<T>;
-  let memoryManager: SignalMemoryManager | undefined;
-
-  try {
-    if (useLazy && typeof obj === 'object') {
-      memoryManager = new SignalMemoryManager();
-      signalState = createLazySignalTree(
-        obj as object,
-        equalityFn,
-        '', // basePath
-        memoryManager
-      ) as TreeNode<T>;
-    } else {
-      signalState = createSignalStore(obj, equalityFn) as TreeNode<T>;
-    }
-  } catch (error) {
-    if (useLazy) {
-      console.warn(SIGNAL_TREE_MESSAGES.LAZY_FALLBACK, error);
-      signalState = createSignalStore(obj, equalityFn) as TreeNode<T>;
-      memoryManager = undefined; // Reset memory manager on fallback
-    } else {
-      throw error;
-    }
-  }
-
-  // Create callable tree function for the root
-  const tree = function (arg?: unknown): T | void {
-    if (arguments.length === 0) {
-      return unwrap(signalState);
-    }
-    if (typeof arg === 'function') {
-      const updater = arg as (current: T) => T;
-      const currentValue = unwrap(signalState) as T;
-      const newValue = updater(currentValue);
-      // Use recursive update to preserve signals
-      recursiveUpdate(signalState, newValue);
-    } else {
-      // Direct set - use recursive update
-      recursiveUpdate(signalState, arg as T);
-    }
-  } as SignalTreeBase<T>;
 
   // Mark as NodeAccessor
   Object.defineProperty(tree, NODE_ACCESSOR_SYMBOL, {

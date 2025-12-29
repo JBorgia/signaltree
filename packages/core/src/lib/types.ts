@@ -620,6 +620,9 @@ export type ProdSignalTree<T> = SignalTreeBase<T> &
   MemoizationMethods<T> &
   EntitiesMethods<T>;
 
+/** Minimal tree (just effects) */
+export type MinimalSignalTree<T> = SignalTreeBase<T> & EffectsMethods<T>;
+
 // Backwards-compatible aliases expected by older consumers
 // v6: remove legacy `SignalTree` alias and multi-overload `WithMethod`.
 // Consumers should use `SignalTreeBase<T>` for the minimal runtime shape
