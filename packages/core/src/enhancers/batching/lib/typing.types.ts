@@ -1,8 +1,7 @@
 // Type-level tests for batching enhancer
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 import type { withBatching, withHighPerformanceBatching } from './batching';
-import type { BatchingMethods } from './batching';
-import type { Enhancer } from '../../../lib/types';
+import type { BatchingMethods, Enhancer } from '../../../lib/types';
 
 type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
   ? 1
@@ -12,7 +11,7 @@ type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
 type Assert<T extends true> = T;
 
 type WB = typeof withBatching;
-type Expected = <T = any>() => Enhancer<BatchingMethods<T>>;
+type Expected = <T = any>(config?: unknown) => Enhancer<BatchingMethods<T>>;
 type _batching_signature = Assert<Equals<WB, Expected>>;
 
 type WBHP = typeof withHighPerformanceBatching;
