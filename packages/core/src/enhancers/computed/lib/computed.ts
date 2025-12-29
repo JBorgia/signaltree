@@ -61,7 +61,9 @@ export function computedEnhancer(_config: ComputedConfig = {}) {
       requires: [],
     },
     (tree) => {
-      const computedTree = tree as unknown as ComputedSignalTree<Record<string, unknown>> &
+      const computedTree = tree as unknown as ComputedSignalTree<
+        Record<string, unknown>
+      > &
         Record<string, unknown>;
 
       // Add computed method to the tree
