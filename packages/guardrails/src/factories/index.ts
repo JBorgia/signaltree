@@ -26,9 +26,10 @@ type SignalTreeFactory<T extends Record<string, unknown>> = (
   config?: TreeConfig
 ) => SignalTree<T>;
 
-type EnhancerFn<T extends Record<string, unknown>> = (
-  tree: SignalTree<T>
-) => SignalTree<T>;
+// Polymorphic enhancer signature compatible with v6 `Enhancer<TAdded>`
+type EnhancerFn<TAdded = unknown> = <S>(
+  tree: SignalTree<S>
+) => SignalTree<S> & TAdded;
 
 interface FeatureTreeOptions<T extends Record<string, unknown>> {
   name: string;
