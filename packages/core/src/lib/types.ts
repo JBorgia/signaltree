@@ -42,6 +42,8 @@ export type TreeNode<T> = {
     ? EntitySignal<E, Key>
     : T[K] extends Primitive
     ? CallableWritableSignal<T[K]>
+    : T[K] extends readonly unknown[]
+    ? CallableWritableSignal<T[K]>
     : T[K] extends object
     ? NodeAccessor<T[K]> & TreeNode<T[K]>
     : CallableWritableSignal<T[K]>;
