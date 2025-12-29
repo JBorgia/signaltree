@@ -3,7 +3,7 @@
  * This module exports empty implementations to ensure zero production cost
  */
 
-import type { SignalTree } from '@signaltree/core';
+import type { SignalTreeBase as SignalTree } from '@signaltree/core';
 
 import type { GuardrailsConfig, GuardrailRule } from './lib/types';
 

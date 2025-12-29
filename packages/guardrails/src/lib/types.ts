@@ -3,7 +3,7 @@
  * @packageDocumentation
  */
 
-import type { SignalTree } from '@signaltree/core';
+import type { SignalTreeBase as SignalTree } from '@signaltree/core';
 
 export interface GuardrailsConfig<
   T extends Record<string, unknown> = Record<string, unknown>

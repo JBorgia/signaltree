@@ -1,8 +1,11 @@
-import type { SignalTree } from './types';
-export declare function createAsyncOperation<T, TResult>(name: string, operation: () => Promise<TResult>): (tree: SignalTree<T>) => Promise<TResult>;
+import type { SignalTreeBase as SignalTree } from './types';
+export declare function createAsyncOperation<T, TResult>(
+  name: string,
+  operation: () => Promise<TResult>
+): (tree: SignalTree<T>) => Promise<TResult>;
 export declare function trackAsync<T>(operation: () => Promise<T>): {
-    pending: import("@angular/core").Signal<boolean>;
-    error: import("@angular/core").Signal<Error | null>;
-    result: import("@angular/core").Signal<T | null>;
-    execute: () => Promise<T>;
+  pending: import('@angular/core').Signal<boolean>;
+  error: import('@angular/core').Signal<Error | null>;
+  result: import('@angular/core').Signal<T | null>;
+  execute: () => Promise<T>;
 };

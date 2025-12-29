@@ -1,7 +1,7 @@
 import { withGuardrails } from '../src/lib/guardrails';
 import { rules } from '../src/lib/rules';
 
-import type { SignalTree } from '@signaltree/core';
+import type { SignalTreeBase as SignalTree } from '@signaltree/core';
 import type { GuardrailIssue, GuardrailsAPI } from '../src/lib/types';
 
 type UpdatePayload<T extends Record<string, unknown>> = Partial<T> &

@@ -2,7 +2,7 @@ import { isSignal, Signal, WritableSignal } from '@angular/core';
 
 import { TYPE_MARKERS } from '../constants';
 
-import type { SignalTree } from '../../../lib/types';
+import type { SignalTreeBase as SignalTree } from '../../../lib/types';
 
 import type { EnhancerWithMeta } from '../../../lib/types';
 

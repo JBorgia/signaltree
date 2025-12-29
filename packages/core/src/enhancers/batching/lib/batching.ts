@@ -2,7 +2,7 @@ import { parsePath } from '@signaltree/shared';
 
 import { isNodeAccessor } from '../../../lib/utils';
 
-import type { SignalTree } from '../../../lib/types';
+import type { SignalTreeBase as SignalTree } from '../../../lib/types';
 
 /**
  * Configuration options for intelligent batching behavior.
@@ -343,7 +343,9 @@ export function withBatching<T>(
 
         // Apply updates to individual properties
         Object.entries(updates).forEach(([key, value]) => {
-          const property = (enhancedTree.state as unknown as Record<string, unknown>)[key];
+          const property = (
+            enhancedTree.state as unknown as Record<string, unknown>
+          )[key];
           if (property && 'set' in (property as object)) {
             // It's a WritableSignal - use .set()
             (property as { set: (value: unknown) => void }).set(value);

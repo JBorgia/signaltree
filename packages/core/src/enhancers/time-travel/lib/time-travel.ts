@@ -1,6 +1,6 @@
 import { deepClone, deepEqual } from './utils';
 
-import type { SignalTree } from '../../../lib/types';
+import type { SignalTreeBase as SignalTree } from '../../../lib/types';
 
 /**
  * Entry in the time travel history

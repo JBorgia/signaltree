@@ -3,7 +3,7 @@ import { deepEqual, LRUCache } from '@signaltree/shared';
 
 import { isNodeAccessor } from '../../../lib/utils';
 
-import type { SignalTree } from '../../../lib/types';
+import type { SignalTreeBase as SignalTree } from '../../../lib/types';
 
 // Dev environment detection
 declare const __DEV__: boolean | undefined;
@@ -501,7 +501,9 @@ export function withMemoization<T>(
 
     const applyUpdateResult = (result: Partial<T>) => {
       Object.entries(result).forEach(([propKey, value]) => {
-        const property = (tree.state as unknown as Record<string, unknown>)[propKey];
+        const property = (tree.state as unknown as Record<string, unknown>)[
+          propKey
+        ];
         if (property && 'set' in (property as object)) {
           (property as { set: (value: unknown) => void }).set(value);
         } else if (isNodeAccessor(property)) {

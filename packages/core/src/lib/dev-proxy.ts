@@ -1,4 +1,4 @@
-import type { SignalTree } from './types';
+import type { SignalTreeBase as SignalTree } from './types';
 
 const ENHANCER_METHOD_MAP: Record<
   string,

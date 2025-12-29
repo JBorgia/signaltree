@@ -1,11 +1,11 @@
+import { getPathNotifier } from '@signaltree/core';
+
 /**
  * SignalTree Guardrails Enhancer v1.1
  * Development-only performance monitoring and anti-pattern detection
  * @packageDocumentation
  */
-import { getPathNotifier } from '@signaltree/core';
-
-import type { SignalTree } from '@signaltree/core';
+import type { SignalTreeBase as SignalTree } from '@signaltree/core';
 import type {
   GuardrailsConfig,
   GuardrailsAPI,

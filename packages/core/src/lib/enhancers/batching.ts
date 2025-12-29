@@ -1,6 +1,11 @@
 import { snapshotState } from '../utils';
 
-import type { SignalTree, BatchingMethods, Enhancer, TreeNode } from '../types';
+import type {
+  SignalTreeBase as SignalTree,
+  BatchingMethods,
+  Enhancer,
+  TreeNode,
+} from '../types';
 export interface BatchingConfig {
   debounceMs?: number;
   maxBatchSize?: number;

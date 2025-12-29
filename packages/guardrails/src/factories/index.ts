@@ -1,12 +1,16 @@
+import { withGuardrails } from '../lib/guardrails';
+import { rules } from '../lib/rules';
+
 /**
  * Factory Patterns for SignalTree with Guardrails
  * @packageDocumentation
  */
 
-import type { SignalTree, TreeConfig } from '@signaltree/core';
+import type {
+  SignalTreeBase as SignalTree,
+  TreeConfig,
+} from '@signaltree/core';
 
-import { withGuardrails } from '../lib/guardrails';
-import { rules } from '../lib/rules';
 import type { GuardrailsConfig } from '../lib/types';
 
 declare const ngDevMode: boolean | undefined;

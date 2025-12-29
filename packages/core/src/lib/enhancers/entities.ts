@@ -1,7 +1,11 @@
 import { createEntitySignal } from '../entity-signal';
 import { isEntityMapMarker } from '../utils';
 
-import type { SignalTree, EntitiesMethods, Enhancer } from '../types';
+import type {
+  SignalTreeBase as SignalTree,
+  EntitiesMethods,
+  Enhancer,
+} from '../types';
 
 export interface EntitiesConfig {
   defaultSelectId?: <E>(entity: E) => string | number;

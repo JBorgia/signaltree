@@ -9,7 +9,7 @@ import { getChanges } from '@signaltree/shared';
  * @packageDocumentation
  */
 
-import type { SignalTree } from '@signaltree/core';
+import type { SignalTreeBase as SignalTree } from '@signaltree/core';
 /**
  * Audit log entry recording form changes
  */

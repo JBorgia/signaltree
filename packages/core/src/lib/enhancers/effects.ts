@@ -3,7 +3,11 @@ import { effect as ngEffect, inject, Injector, runInInjectionContext } from '@an
 import { snapshotState } from '../utils';
 
 import type { Signal } from '@angular/core';
-import type { SignalTree, EffectsMethods, Enhancer } from '../types';
+import type {
+  SignalTreeBase as SignalTree,
+  EffectsMethods,
+  Enhancer,
+} from '../types';
 export interface EffectsConfig {
   autoCleanup?: boolean;
   injector?: Injector | null;

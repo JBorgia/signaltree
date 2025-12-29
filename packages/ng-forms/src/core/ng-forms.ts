@@ -53,7 +53,11 @@ let hasShownLegacyWarning = false;
  */
 
 // Re-export core types needed for forms
-import type { SignalTree, TreeConfig, TreeNode } from '@signaltree/core';
+import type {
+  SignalTreeBase as SignalTree,
+  TreeConfig,
+  TreeNode,
+} from '@signaltree/core';
 // ============================================
 // FORM TREE TYPES
 // ============================================

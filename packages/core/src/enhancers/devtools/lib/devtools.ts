@@ -1,6 +1,6 @@
 import { Signal, signal } from '@angular/core';
 
-import type { SignalTree } from '../../../lib/types';
+import type { SignalTreeBase as SignalTree } from '../../../lib/types';
 
 /**
  * Module metadata for tracking in the composition chain
