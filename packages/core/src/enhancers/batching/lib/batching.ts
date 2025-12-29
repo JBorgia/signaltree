@@ -25,9 +25,7 @@ interface BatchingSignalTree<T> extends SignalTree<T> {
 }
 
 /** Public methods surface added by the batching enhancer */
-export type BatchingMethods<T> = {
-  batchUpdate(updater: (current: T) => Partial<T>): void;
-};
+export type BatchingMethods<T> = import('../../../lib/types').BatchingMethods<T>;
 
 /** Represents a queued update in the batching system */
 interface BatchedUpdate {

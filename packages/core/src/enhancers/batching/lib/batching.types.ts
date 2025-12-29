@@ -2,21 +2,31 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import type { withBatching, withHighPerformanceBatching } from './batching';
-import type { SignalTreeBase, BatchingMethods, BatchingConfig } from '../../../lib/types';
+import type {
+  SignalTreeBase,
+  BatchingMethods,
+  BatchingConfig,
+} from '../../../lib/types';
 
-type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2)
+type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
+  ? 1
+  : 2
   ? true
   : false;
 type Assert<T extends true> = T;
 
 // withBatching signature
 type WB = typeof withBatching;
-type ExpectedWB = (config?: BatchingConfig) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & BatchingMethods;
+type ExpectedWB = (
+  config?: BatchingConfig
+) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & BatchingMethods;
 type _batching_signature = Assert<Equals<WB, ExpectedWB>>;
 
 // withHighPerformanceBatching signature
 type WHPB = typeof withHighPerformanceBatching;
-type ExpectedWHPB = () => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & BatchingMethods;
+type ExpectedWHPB = () => <S>(
+  tree: SignalTreeBase<S>
+) => SignalTreeBase<S> & BatchingMethods;
 type _hp_batching_signature = Assert<Equals<WHPB, ExpectedWHPB>>;
 
 export {};
