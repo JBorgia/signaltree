@@ -40,6 +40,10 @@ export interface NodeAccessor<T> {
 export type TreeNode<T> = {
   [K in keyof T]: T[K] extends EntityMapMarker<infer E, infer Key>
     ? EntitySignal<E, Key>
+    : T[K] extends Primitive
+    ? CallableWritableSignal<T[K]>
+    : T[K] extends object
+    ? NodeAccessor<T[K]> & TreeNode<T[K]>
     : CallableWritableSignal<T[K]>;
 } & Record<string, unknown>;
 
