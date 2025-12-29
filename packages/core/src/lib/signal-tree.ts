@@ -356,7 +356,10 @@ function create<T extends object>(
     value: function (thisArg?: unknown): NodeAccessor<T> {
       // Use native Function.prototype.bind to avoid calling this custom
       // `bind` property (which would cause infinite recursion).
-      return Function.prototype.bind.call(tree, thisArg) as unknown as NodeAccessor<T>;
+      return Function.prototype.bind.call(
+        tree,
+        thisArg
+      ) as unknown as NodeAccessor<T>;
     },
     enumerable: false,
     // Allow enhancers or consumers to bind/override if necessary
