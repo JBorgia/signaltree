@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, Injectable, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { entityMap, signalTree, withEntities } from '@signaltree/core';
+import { entityMap, signalTree, withEntities, withBatching } from '@signaltree/core';
 
 import type { EntityMapMarker } from '@signaltree/core';
 
@@ -71,7 +71,7 @@ export class AppTreeService {
       theme: 'light',
       sidebarOpen: false,
     },
-  }).with(withEntities());
+  }).with(withEntities()).with(withBatching());
 
   // Expose state slices as public signals
   readonly users = this.tree.$.users;
