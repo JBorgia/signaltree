@@ -31,13 +31,16 @@ type EnhancerFn<TAdded = unknown> = <S>(
   tree: SignalTree<S>
 ) => SignalTree<S> & TAdded;
 
+// Allow legacy/machine-generated enhancers that are monomorphic.
+type AnyEnhancer = (tree: SignalTree<any>) => SignalTree<any>;
+
 interface FeatureTreeOptions<T extends Record<string, unknown>> {
   name: string;
   env?: 'development' | 'test' | 'staging' | 'production';
   persistence?: boolean | Record<string, unknown>;
   guardrails?: boolean | GuardrailsConfig;
   devtools?: boolean;
-  enhancers?: EnhancerFn<T>[];
+  enhancers?: AnyEnhancer[];
 }
 
 function isGuardrailsConfig<T extends Record<string, unknown>>(
@@ -77,7 +80,7 @@ export function createFeatureTree<T extends Record<string, unknown>>(
   const isDev = env === 'development';
   const isTest = env === 'test';
 
-  const enhancers: EnhancerFn<T>[] = [];
+  const enhancers: AnyEnhancer[] = [];
 
   if (isDev || isTest) {
     const guardrailsConfig = resolveGuardrailsConfig<T>(options.guardrails);
