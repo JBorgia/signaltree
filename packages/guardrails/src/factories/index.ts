@@ -28,9 +28,7 @@ type SignalTreeFactory<T extends Record<string, unknown>> = (
 ) => SignalTree<T>;
 
 // Polymorphic enhancer signature compatible with v6 `Enhancer<TAdded>`
-type EnhancerFn<TAdded = unknown> = <S>(
-  tree: SignalTree<S>
-) => SignalTree<S> & TAdded;
+// (kept here for reference if needed by future local typings)
 
 interface FeatureTreeOptions<T extends Record<string, unknown>> {
   name: string;
@@ -83,7 +81,11 @@ export function createFeatureTree<T extends Record<string, unknown>>(
   if (isDev || isTest) {
     const guardrailsConfig = resolveGuardrailsConfig<T>(options.guardrails);
     if (guardrailsConfig) {
-      enhancers.push(withGuardrails(guardrailsConfig));
+      // `withGuardrails` returns a monomorphic enhancer; cast to `Enhancer<unknown>`
+      // so factories can accept it uniformly. This is safe because the factory
+      // doesn't depend on the added methods and `.with()` will correctly type
+      // the resulting tree for callers.
+      enhancers.push(withGuardrails(guardrailsConfig) as unknown as Enhancer<unknown>);
     }
   }
 
