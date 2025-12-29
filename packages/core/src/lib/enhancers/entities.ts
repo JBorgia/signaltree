@@ -12,12 +12,12 @@ export interface EntitiesConfig {
   defaultSelectId?: <E>(entity: E) => string | number;
 }
 
-export function withEntities<T>(
+export function withEntities<T = unknown>(
   config: EntitiesConfig = {}
-): <S>(tree: SignalTree<S>) => SignalTree<S> & EntitiesEnabled {
+): (tree: SignalTree<T>) => SignalTree<T> & EntitiesEnabled {
   const { defaultSelectId } = config;
 
-  const inner = <S>(tree: SignalTree<S>): SignalTree<S> & EntitiesEnabled => {
+  const inner = (tree: SignalTree<T>): SignalTree<T> & EntitiesEnabled => {
     function materialize(node: any, path: string[] = []) {
       if (!node || typeof node !== 'object') return;
       for (const [k, v] of Object.entries(node)) {

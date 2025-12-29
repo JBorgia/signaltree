@@ -8,12 +8,12 @@ import type {
   BatchingConfig,
 } from '../types';
 
-export function withBatching(
+export function withBatching<T = unknown>(
   config: BatchingConfig = {}
-): <S>(tree: SignalTree<S>) => SignalTree<S> & BatchingMethods<S> {
+): (tree: SignalTree<T>) => SignalTree<T> & BatchingMethods<T> {
   const { debounceMs = 0, maxBatchSize = 1000 } = config;
 
-  const inner = <S>(tree: SignalTree<S>): SignalTree<S> & BatchingMethods<S> => {
+  const inner = (tree: SignalTree<T>): SignalTree<T> & BatchingMethods<T> => {
     let queue: Array<() => void> = [];
     let scheduled = false;
 
@@ -64,3 +64,4 @@ export function withBatching(
 
   return inner;
 }
+
