@@ -18,14 +18,14 @@ type Assert<T extends true> = T;
 // withBatching signature
 type WB = typeof withBatching;
 type ExpectedWB = (
-  config?: BatchingConfig
+  <T = any>(config?: BatchingConfig
 ) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & BatchingMethods;
 type _batching_signature = Assert<Equals<WB, ExpectedWB>>;
 
 // withHighPerformanceBatching signature
 type WHPB = typeof withHighPerformanceBatching;
 type ExpectedWHPB = () => <S>(
-  tree: SignalTreeBase<S>
+  <T = any>() => <S>(tree: SignalTreeBase<S>
 ) => SignalTreeBase<S> & BatchingMethods;
 type _hp_batching_signature = Assert<Equals<WHPB, ExpectedWHPB>>;
 
