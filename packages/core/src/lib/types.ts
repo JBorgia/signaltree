@@ -44,7 +44,13 @@ export type TreeNode<T> = {
     ? CallableWritableSignal<T[K]>
     : T[K] extends readonly unknown[]
     ? CallableWritableSignal<T[K]>
-    : T[K] extends Date | RegExp | Map<any, any> | Set<any> | Error | ((...args: unknown[]) => unknown)
+    : T[K] extends
+        | Date
+        | RegExp
+        | Map<any, any>
+        | Set<any>
+        | Error
+        | ((...args: unknown[]) => unknown)
     ? CallableWritableSignal<T[K]> // Built-in objects → treat as atomic values
     : T[K] extends object
     ? NodeAccessor<T[K]> & TreeNode<T[K]>
@@ -72,7 +78,9 @@ export interface EffectsMethods<T> {
 }
 
 export interface BatchingMethods<T> {
-  batch(updater: (state: TreeNode<T>) => void): void;
+  // Runtime `batch` calls don't receive the state argument; they run
+  // a zero-arg callback that performs updates via `tree.$` or `tree()`.
+  batch(updater: () => void): void;
   batchUpdate(updater: (current: T) => Partial<T>): void;
 }
 
