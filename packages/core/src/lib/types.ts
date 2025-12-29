@@ -64,6 +64,7 @@ export interface SignalTreeBase<T> extends NodeAccessor<T> {
   // Single-enhancer chain: apply one enhancer at a time.
   // Accept an enhancer that is applied to this specific tree and infer
   // the resulting return type `R` so added methods can depend on `T`.
+  with<A>(enhancer: Enhancer<A>): SignalTreeBase<T> & A;
   with<R>(enhancer: (tree: SignalTreeBase<T>) => R): R;
   bind(thisArg?: unknown): NodeAccessor<T>;
   destroy(): void;
