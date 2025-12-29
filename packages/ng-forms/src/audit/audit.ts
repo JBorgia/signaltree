@@ -158,9 +158,14 @@ export function createAuditTracker<T extends Record<string, unknown>>(
   let unsubscribe: (() => void) | undefined;
   let pollingId: ReturnType<typeof setInterval> | undefined;
 
-  try {
-    unsubscribe = tree.subscribe(handleChange);
-  } catch {
+  if ('subscribe' in (tree as any) && typeof (tree as any).subscribe === 'function') {
+    try {
+      unsubscribe = (tree as any).subscribe(handleChange);
+    } catch {
+      // Fall back to polling for non-Angular environments
+      pollingId = setInterval(handleChange, 100);
+    }
+  } else {
     // Fall back to polling for non-Angular environments
     pollingId = setInterval(handleChange, 100);
   }
