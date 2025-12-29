@@ -12,11 +12,9 @@ type Expected = <T>(config?: {
   enableBrowserDevTools?: boolean;
   enableLogging?: boolean;
   performanceThreshold?: number;
-}) => (
-  tree: import('../../../lib/types').SignalTreeBase<T>
-) => import('../../../lib/types').SignalTreeBase<T> & {
+}) => import('../../../lib/types').Enhancer<{
   __devTools: ModularDevToolsInterface<T>;
-};
+}>;
 
 type _debug_actual = WDT;
 type _debug_expected = Expected;
