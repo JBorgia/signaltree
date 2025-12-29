@@ -39,7 +39,7 @@ export function withBatching<T = unknown>(
 
     const methods: BatchingMethods<T> = {
       batch(updater) {
-        queue.push(() => updater((tree as any).$ as TreeNode<T>));
+        queue.push(() => updater());
         if (queue.length >= maxBatchSize) flush();
         else schedule();
       },
@@ -64,4 +64,3 @@ export function withBatching<T = unknown>(
 
   return inner;
 }
-
