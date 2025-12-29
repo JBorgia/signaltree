@@ -4,8 +4,10 @@ import { snapshotState } from '../../../lib/utils';
 import { TYPE_MARKERS } from '../constants';
 
 import type { TreeNode } from '../../../lib/utils';
-import type { SignalTreeBase as SignalTree } from '../../../lib/types';
-
+import type {
+  SignalTreeBase as SignalTree,
+  Enhancer,
+} from '../../../lib/types';
 import type { EnhancerWithMeta } from '../../../lib/types';
 /**
  * SignalTree Serialization Module
@@ -992,7 +994,7 @@ export function withPersistence<
   T extends Record<string, unknown> = Record<string, unknown>
 >(
   config: PersistenceConfig
-): EnhancerWithMeta<SerializableSignalTree<T> & PersistenceMethods> {
+): Enhancer<SerializableSignalTree<T> & PersistenceMethods> {
   const {
     key,
     storage = typeof window !== 'undefined' ? window.localStorage : undefined,

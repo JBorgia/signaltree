@@ -5,17 +5,15 @@ import type {
   TimeTravelInterface,
   TimeTravelConfig,
 } from './time-travel';
-import type { SignalTreeBase } from '../../../lib/types';
+import type { SignalTreeBase, Enhancer } from '../../../lib/types';
 
 type Equals<A, B> = A extends B ? (B extends A ? true : false) : false;
 type Assert<T extends true> = T;
 
 type WTT = typeof withTimeTravel;
-type Expected = <T>(config?: TimeTravelConfig) => (
-  tree: SignalTreeBase<T>
-) => SignalTreeBase<T> & {
+type Expected = <T>(config?: TimeTravelConfig) => Enhancer<{
   __timeTravel: TimeTravelInterface<T>;
-};
+}>;
 
 type _debug_actual = WTT;
 type _debug_expected = Expected;

@@ -1,14 +1,12 @@
 import { createEntitySignal } from '../../../lib/entity-signal';
 import { getPathNotifier } from '../../../lib/path-notifier';
-import { isNodeAccessor } from '../../../lib/utils';
-
-import type { TreeNode } from '../../../lib/utils';
 
 import type {
   EntityConfig,
   EntityMapMarker,
   SignalTreeBase,
-  EntityAwareTreeNode,
+  Enhancer,
+  EntitiesEnabled,
 } from '../../../lib/types';
 
 interface EntitiesEnhancerConfig {
@@ -27,101 +25,64 @@ function isEntityMapMarker(value: unknown): value is Marker {
   );
 }
 
-function materializeEntities<T>(
-  tree: SignalTreeBase<T>,
-  notifier = getPathNotifier()
-): void {
-  const state = tree.state as unknown as TreeNode<T>;
-
-  const visit = (
-    parent: Record<string, unknown> | undefined,
-    key: string,
-    value: unknown,
-    path: string[]
-  ) => {
-    const nextPath = [...path, key];
-
-    if (isEntityMapMarker(value)) {
-      const basePath = nextPath.join('.');
-      const config = (value.__entityMapConfig ?? {}) as EntityConfig<
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        any,
-        string | number
-      >;
-      const entitySignal = createEntitySignal(config, notifier, basePath);
-
-      if (parent) {
-        try {
-          parent[key] = entitySignal;
-        } catch {
-          // Ignore assignment failures for non-configurable properties
-        }
-      }
-
-      try {
-        (tree as any)[key] = entitySignal;
-      } catch {
-        // If property cannot be defined on tree, skip
-      }
-
-      return;
-    }
-
-    if (isNodeAccessor(value)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const nodeAsAny = value as any;
-      for (const childKey of Object.keys(nodeAsAny)) {
-        visit(nodeAsAny, childKey, nodeAsAny[childKey], nextPath);
-      }
-      return;
-    }
-
-    if (value && typeof value === 'object') {
-      for (const childKey of Object.keys(value as Record<string, unknown>)) {
-        visit(
-          value as Record<string, unknown>,
-          childKey,
-          (value as Record<string, unknown>)[childKey],
-          nextPath
-        );
-      }
-    }
-  };
-
-  for (const key of Object.keys(state)) {
-    visit(state, key, (state as Record<string, unknown>)[key], []);
-  }
-}
-
 /**
- * Entities enhancer that materializes EntitySignal collections from entityMap markers.
+ * Runtime-only entities enhancer. Type transformations are handled by
+ * `TreeNode<T>` at compile time; this enhancer only materializes the
+ * runtime EntitySignal instances and attaches a marker.
  */
-export function withEntities(config: EntitiesEnhancerConfig = {}) {
+export function withEntities(
+  config: EntitiesEnhancerConfig = {}
+): Enhancer<EntitiesEnabled> {
   const { enabled = true } = config;
 
-  return function enhanceWithEntities<T>(tree: SignalTreeBase<T>): Omit<
-    SignalTreeBase<T>,
-    'state' | '$'
-  > & {
-    state: EntityAwareTreeNode<T>;
-    $: EntityAwareTreeNode<T>;
-  } {
+  return <S>(tree: SignalTreeBase<S>): SignalTreeBase<S> & EntitiesEnabled => {
     if (!enabled) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return tree as any;
+      (tree as any).__entitiesEnabled = true;
+      return tree as SignalTreeBase<S> & EntitiesEnabled;
     }
 
-    materializeEntities(tree);
+    const notifier = getPathNotifier();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return tree as any;
+    function materialize(node: unknown, path: string[] = []) {
+      if (!node || typeof node !== 'object') return;
+      for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+        if (isEntityMapMarker(v)) {
+          const cfg = (v as any).__entityMapConfig ?? {};
+          const sig = createEntitySignal(
+            cfg as EntityConfig<any, any>,
+            notifier,
+            path.concat(k).join('.')
+          );
+          try {
+            (node as any)[k] = sig;
+          } catch {
+            // ignore non-writable properties
+          }
+          try {
+            (tree as any)[k] = sig;
+          } catch {
+            // ignore if can't define on tree
+          }
+        } else if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
+          materialize(v, path.concat(k));
+        }
+      }
+    }
+
+    materialize(tree.state);
+    materialize((tree as any).$);
+
+    // Attach runtime marker
+    (tree as any).__entitiesEnabled = true;
+
+    return tree as SignalTreeBase<S> & EntitiesEnabled;
   };
 }
 
-export function enableEntities() {
-  return withEntities({ enabled: true });
+export function enableEntities(): ReturnType<typeof withEntities> {
+  return withEntities();
 }
 
-export function withHighPerformanceEntities() {
-  return withEntities({ enabled: true });
+export function withHighPerformanceEntities(): ReturnType<typeof withEntities> {
+  return withEntities();
 }

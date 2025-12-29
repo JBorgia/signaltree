@@ -3,10 +3,10 @@
 import type {
   withMemoization,
   withHighPerformanceMemoization,
+  MemoizationMethods,
 } from './memoization';
 import type { MemoizationConfig } from '../../../lib/enhancers/memoization';
-import type { SignalTreeBase } from '../../../lib/types';
-import type { MemoizedSignalTree } from './memoization';
+import type { SignalTreeBase, Enhancer } from '../../../lib/types';
 
 type Equals<A, B> = A extends B ? (B extends A ? true : false) : false;
 type Assert<T extends true> = T;
@@ -14,7 +14,7 @@ type Assert<T extends true> = T;
 type WMType = typeof withMemoization;
 type ExpectedWM = <T>(
   config?: MemoizationConfig
-) => (tree: SignalTreeBase<T>) => MemoizedSignalTree<T>;
+) => Enhancer<MemoizationMethods<T>>;
 
 // Ensure exported enhancer factory has expected shape
 type _debug_actual = WMType;

@@ -1,6 +1,9 @@
 import { Signal, signal } from '@angular/core';
 
-import type { SignalTreeBase as SignalTree } from '../../../lib/types';
+import type {
+  SignalTreeBase as SignalTree,
+  Enhancer,
+} from '../../../lib/types';
 
 /**
  * Module metadata for tracking in the composition chain
@@ -277,7 +280,9 @@ export function withDevTools<T>(
     enableLogging?: boolean;
     performanceThreshold?: number;
   } = {}
-) {
+): (
+  tree: SignalTree<T>
+) => SignalTree<T> & { __devTools: ModularDevToolsInterface<T> } {
   const {
     enabled = true,
     treeName = 'ModularSignalTree',
@@ -509,22 +514,14 @@ export function withDevTools<T>(
 /**
  * Simple devtools for development
  */
-export function enableDevTools<T>(
-  treeName = 'SignalTree'
-): (
-  tree: SignalTree<T>
-) => SignalTree<T> & { __devTools: ModularDevToolsInterface<T> } {
+export function enableDevTools<T>(treeName = 'SignalTree') {
   return withDevTools<T>({ treeName, enabled: true });
 }
 
 /**
  * Full-featured devtools for intensive debugging
  */
-export function withFullDevTools<T>(
-  treeName = 'SignalTree'
-): (
-  tree: SignalTree<T>
-) => SignalTree<T> & { __devTools: ModularDevToolsInterface<T> } {
+export function withFullDevTools<T>(treeName = 'SignalTree') {
   return withDevTools<T>({
     treeName,
     enabled: true,
@@ -537,9 +534,7 @@ export function withFullDevTools<T>(
 /**
  * Lightweight devtools for production
  */
-export function withProductionDevTools<T>(): (
-  tree: SignalTree<T>
-) => SignalTree<T> & { __devTools: ModularDevToolsInterface<T> } {
+export function withProductionDevTools<T>() {
   return withDevTools<T>({
     enabled: true,
     enableBrowserDevTools: false,

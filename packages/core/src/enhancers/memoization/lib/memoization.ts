@@ -5,7 +5,10 @@ import { isNodeAccessor } from '../../../lib/utils';
 
 import type { TreeNode } from '../../../lib/utils';
 
-import type { SignalTreeBase as SignalTree } from '../../../lib/types';
+import type {
+  SignalTreeBase as SignalTree,
+  Enhancer,
+} from '../../../lib/types';
 
 // Dev environment detection
 declare const __DEV__: boolean | undefined;
@@ -35,6 +38,23 @@ export interface MemoizedSignalTree<T> extends SignalTree<T> {
     keys: string[];
   };
 }
+
+// Methods added by the enhancer — used for the Enhancer generic parameter
+export type MemoizationMethods<T> = {
+  memoizedUpdate: (
+    updater: (current: T) => Partial<T>,
+    cacheKey?: string
+  ) => void;
+  clearMemoCache: (key?: string) => void;
+  getCacheStats: () => {
+    size: number;
+    hitRate: number;
+    totalHits: number;
+    totalMisses: number;
+    keys: string[];
+  };
+  memoize?: <R>(fn: (state: T) => R, cacheKey?: string) => Signal<R>;
+};
 
 // Cache entry interface with proper timestamp tracking
 interface CacheEntry<T> {
@@ -487,7 +507,7 @@ export function withHighFrequencyMemoization<T>() {
  */
 export function withMemoization<T>(
   config: MemoizationConfig = {}
-): (tree: SignalTree<T>) => MemoizedSignalTree<T> {
+): Enhancer<MemoizationMethods<T>> {
   const {
     enabled = true,
     maxCacheSize = 1000,
@@ -498,7 +518,7 @@ export function withMemoization<T>(
     enableLRU = true,
   } = config;
 
-  return (tree: SignalTree<T>): MemoizedSignalTree<T> => {
+  const enhancer = (tree: SignalTree<any>): any => {
     const originalTreeCall = tree.bind(tree);
 
     const applyUpdateResult = (result: Partial<T>) => {
@@ -717,8 +737,10 @@ export function withMemoization<T>(
       setCleanupInterval(tree as object, intervalId);
     }
 
-    return tree as MemoizedSignalTree<T>;
+    return tree as MemoizedSignalTree<any>;
   };
+
+  return enhancer as unknown as Enhancer<MemoizationMethods<T>>;
 }
 
 /**

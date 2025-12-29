@@ -44,6 +44,8 @@ export type TreeNode<T> = {
     ? CallableWritableSignal<T[K]>
     : T[K] extends readonly unknown[]
     ? CallableWritableSignal<T[K]>
+    : T[K] extends Date | RegExp | Map<any, any> | Set<any> | Error | ((...args: unknown[]) => unknown)
+    ? CallableWritableSignal<T[K]> // Built-in objects → treat as atomic values
     : T[K] extends object
     ? NodeAccessor<T[K]> & TreeNode<T[K]>
     : CallableWritableSignal<T[K]>;

@@ -2,7 +2,10 @@ import { snapshotState } from '../../../lib/utils';
 import { deepClone, deepEqual } from './utils';
 
 import type { TreeNode } from '../../../lib/utils';
-import type { SignalTreeBase as SignalTree } from '../../../lib/types';
+import type {
+  SignalTreeBase as SignalTree,
+  Enhancer,
+} from '../../../lib/types';
 
 /**
  * Entry in the time travel history
@@ -282,10 +285,8 @@ class TimeTravelManager<T> implements TimeTravelInterface<T> {
  */
 export function withTimeTravel<T>(
   config: TimeTravelConfig = {}
-): (
-  tree: SignalTree<T>
-) => SignalTree<T> & { __timeTravel: TimeTravelInterface<T> } {
-  return (tree: SignalTree<T>) => {
+): Enhancer<{ __timeTravel: TimeTravelInterface<T> }> {
+  const enhancer = (tree: SignalTree<any>) => {
     // Store the original callable tree function
     const originalTreeCall = tree.bind(tree);
 
@@ -401,18 +402,20 @@ export function withTimeTravel<T>(
 
     return Object.assign(enhancedTree, {
       __timeTravel: timeTravelManager,
-    }) as SignalTree<T> & { __timeTravel: TimeTravelInterface<T> };
+    }) as SignalTree<any> & { __timeTravel: TimeTravelInterface<any> };
   };
+
+  return enhancer as unknown as Enhancer<{
+    __timeTravel: TimeTravelInterface<T>;
+  }>;
 }
 
 /**
  * Convenience function to enable basic time travel
  */
-export function enableTimeTravel<T>(
-  maxHistorySize?: number
-): (
-  tree: SignalTree<T>
-) => SignalTree<T> & { __timeTravel: TimeTravelInterface<T> } {
+export function enableTimeTravel<T>(maxHistorySize?: number): Enhancer<{
+  __timeTravel: TimeTravelInterface<T>;
+}> {
   return withTimeTravel({ maxHistorySize });
 }
 

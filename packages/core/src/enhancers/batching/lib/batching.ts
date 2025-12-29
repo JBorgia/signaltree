@@ -4,7 +4,10 @@ import { applyState, isNodeAccessor } from '../../../lib/utils';
 
 import type { TreeNode } from '../../../lib/utils';
 
-import type { SignalTreeBase as SignalTree } from '../../../lib/types';
+import type {
+  SignalTreeBase as SignalTree,
+  Enhancer,
+} from '../../../lib/types';
 
 /**
  * Configuration options for intelligent batching behavior.
