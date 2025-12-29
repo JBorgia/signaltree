@@ -1,26 +1,22 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // Type-level tests for memoization enhancer
 import type {
   withMemoization,
   withHighPerformanceMemoization,
-  MemoizationMethods,
 } from './memoization';
+import type { SignalTreeBase, MemoizationMethods } from '../../../lib/types';
 import type { MemoizationConfig } from '../../../lib/enhancers/memoization';
-import type { SignalTreeBase, Enhancer } from '../../../lib/types';
 
-type Equals<A, B> = A extends B ? (B extends A ? true : false) : false;
+type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2)
+  ? true
+  : false;
 type Assert<T extends true> = T;
 
 type WMType = typeof withMemoization;
-type ExpectedWM = <T>(
-  config?: MemoizationConfig
-) => Enhancer<MemoizationMethods<T>>;
+type ExpectedWM = (config?: MemoizationConfig) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & MemoizationMethods<S>;
 
 // Ensure exported enhancer factory has expected shape
-type _debug_actual = WMType;
-type _debug_expected = ExpectedWM;
-type _debug_match = Equals<WMType, ExpectedWM>;
-type _memoization_signature = Assert<_debug_match>;
+type _memoization_signature = Assert<Equals<WMType, ExpectedWM>>;
 
 type WMPH = typeof withHighPerformanceMemoization;
 // High-performance variant should also be an enhancer factory

@@ -1,22 +1,15 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // Type-level tests for entities enhancer (assert intended public contract)
 import type { withEntities } from './entities';
-import type {
-  SignalTreeBase,
-  Enhancer,
-  EntitiesEnabled,
-} from '../../../lib/types';
+import type { SignalTreeBase, EntitiesEnabled } from '../../../lib/types';
 
-type Equals<A, B> = A extends B ? (B extends A ? true : false) : false;
+type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2)
+  ? true
+  : false;
 type Assert<T extends true> = T;
 
 type WEN = typeof withEntities;
-type Expected = () => Enhancer<EntitiesEnabled>;
-
-type _debug_actual = WEN;
-type _debug_expected = Expected;
-type _debug_match = Equals<WEN, Expected>;
-
-type _entities_signature = Assert<_debug_match>;
+type Expected = (config?: unknown) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & EntitiesEnabled;
+type _entities_signature = Assert<Equals<WEN, Expected>>;
 
 export {};
