@@ -140,7 +140,7 @@ class TimeTravelManager<S> {
     }
   }
 
-  recordCurrentState(action: string = 'update', payload?: unknown): void {
+  recordCurrentState(action = 'update', payload?: unknown): void {
     const currentState = this.snapshot();
     const lastEntry = this.history[this.currentIndex];
 
