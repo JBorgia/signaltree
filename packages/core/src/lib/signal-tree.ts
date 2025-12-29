@@ -354,11 +354,14 @@ function create<T extends object>(
   // bind()
   Object.defineProperty(tree, 'bind', {
     value: function (thisArg?: unknown): NodeAccessor<T> {
-      const fn = tree as unknown as (arg?: unknown) => T | void;
-      return fn.bind(thisArg) as unknown as NodeAccessor<T>;
+      // Use native Function.prototype.bind to avoid calling this custom
+      // `bind` property (which would cause infinite recursion).
+      return Function.prototype.bind.call(tree, thisArg) as unknown as NodeAccessor<T>;
     },
     enumerable: false,
-    writable: false,
+    // Allow enhancers or consumers to bind/override if necessary
+    writable: true,
+    configurable: true,
   });
 
   // destroy()
@@ -372,7 +375,9 @@ function create<T extends object>(
       }
     },
     enumerable: false,
-    writable: false,
+    // Allow enhancers (like guardrails) to override/replace `destroy` at runtime.
+    writable: true,
+    configurable: true,
   });
 
   // Copy state properties to root for direct access
