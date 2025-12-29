@@ -609,17 +609,10 @@ export type MinimalSignalTree<T> = SignalTreeBase<T> & EffectsMethods<T>;
 // and opt into `FullSignalTree<T>` / `ProdSignalTree<T>` when they need
 // the enhanced feature set. Helper presets produce those enhanced shapes.
 
-// Backwards-compatible alias: some packages still import `SignalTree<T>`.
-// Provide a lightweight alias to ease migration to v6 types.
-export type SignalTree<T> = SignalTreeBase<T>;
-
-/**
- * Backwards-compatible alias.
- * Some packages still import `SignalTree<T>` from v5-era typings —
- * re-export a thin alias to avoid refactoring all callsites during
- * the v6 migration.
- */
-export type SignalTree<T> = SignalTreeBase<T>;
+// Note: `SignalTree` alias is provided by the separate `types` package.
+// Core now uses `SignalTreeBase<T>` and the dedicated `types` package
+// supplies the legacy `SignalTree<T>` declaration to avoid duplicate
+// identifier collisions during monorepo type-checking.
 
 // ============================================
 // TYPE GUARDS

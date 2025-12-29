@@ -1,4 +1,5 @@
 import { getPathNotifier } from '@signaltree/core';
+import { deepEqual } from '@signaltree/shared';
 
 /**
  * SignalTree Guardrails Enhancer v1.1
@@ -74,7 +75,13 @@ function tryStructuredClone<T>(value: T): T {
     }
   }
 
-  return value;
+  try {
+    // Fallback to JSON-based deep clone for plain objects.
+    return JSON.parse(JSON.stringify(value)) as T;
+  } catch {
+    // As a last resort, return the original reference.
+    return value;
+  }
 }
 
 function isDevEnvironment(): boolean {
@@ -312,11 +319,10 @@ function handleStateChange<T extends Record<string, unknown>>(
     return;
   }
 
-  // Compare states to detect changes
-  const currentJson = JSON.stringify(currentState);
-  const previousJson = JSON.stringify(previousState);
+  // Compare states to detect changes using deep equality
+  const equal = deepEqual(currentState, previousState);
 
-  if (currentJson !== previousJson) {
+  if (!equal) {
     const startTime = performance.now();
     const timestamp = Date.now();
 
