@@ -133,7 +133,7 @@ function batchUpdates(fn: () => void, path?: string): void {
 
 export function withBatchingWithConfig<T>(
   config: BatchingConfig = {}
-): (tree: SignalTree<T>) => BatchingSignalTree<T> {
+): Enhancer<BatchingMethods<T>> {
   const { enabled = true } = config;
 
   // Only update the global batching configuration when batching is enabled
@@ -143,7 +143,7 @@ export function withBatchingWithConfig<T>(
     currentBatchingConfig = { ...currentBatchingConfig, ...config };
   }
 
-  return (tree: SignalTree<T>): BatchingSignalTree<T> => {
+  const enhancer = (tree: SignalTree<any>): any => {
     if (!enabled) {
       // Provide explicit pass-through methods so consumers can always call
       // `tree.batchUpdate(...)` even when batching is disabled. This avoids
@@ -250,18 +250,17 @@ export function withBatchingWithConfig<T>(
       });
     };
 
-    return enhancedTree as unknown as BatchingSignalTree<T>;
+    return enhancedTree as unknown as BatchingSignalTree<any>;
   };
+
+  return enhancer as unknown as Enhancer<BatchingMethods<T>>;
 }
 
 /** User-friendly no-arg signature expected by type-level tests */
 export function withBatching<T = any>(
   config: BatchingConfig = {}
-): <S>(tree: SignalTree<S>) => SignalTree<S> & BatchingMethods<T> {
-  const enhancer = withBatchingWithConfig<T>(config);
-  return <S>(tree: SignalTree<S>) =>
-    enhancer(tree as unknown as SignalTree<T>) as unknown as SignalTree<S> &
-      BatchingMethods<T>;
+): Enhancer<BatchingMethods<T>> {
+  return withBatchingWithConfig<T>(config);
 }
 
 export function withHighPerformanceBatching<T>() {
