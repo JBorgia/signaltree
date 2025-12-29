@@ -40,6 +40,10 @@ export interface SignalTreeBase<T> extends NodeAccessor<T> {
   bind(thisArg?: unknown): NodeAccessor<T>;
   destroy(): void;
   dispose?(): void;
+  // Allow enhancers to attach runtime methods without causing TS property errors.
+  // These are intentionally untyped — consumers should cast to the specific
+  // enhanced shape they expect (e.g. `SignalTreeBase<T> & BatchingMethods<T>`).
+  [key: string]: unknown;
 }
 
 // Method interfaces
@@ -604,6 +608,10 @@ export type MinimalSignalTree<T> = SignalTreeBase<T> & EffectsMethods<T>;
 // Consumers should use `SignalTreeBase<T>` for the minimal runtime shape
 // and opt into `FullSignalTree<T>` / `ProdSignalTree<T>` when they need
 // the enhanced feature set. Helper presets produce those enhanced shapes.
+
+// Backwards-compatible alias: some packages still import `SignalTree<T>`.
+// Provide a lightweight alias to ease migration to v6 types.
+export type SignalTree<T> = SignalTreeBase<T>;
 
 /**
  * Backwards-compatible alias.
