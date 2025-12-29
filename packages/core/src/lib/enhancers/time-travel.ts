@@ -52,7 +52,7 @@ export function withTimeTravel(
 
     record();
 
-    const methods: TimeTravelMethods<S> = {
+    const methods: TimeTravelMethods = {
       undo() {
         if (currentIndex <= 0) return;
         if (currentIndex === history.length - 1) {
