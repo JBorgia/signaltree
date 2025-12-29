@@ -155,9 +155,9 @@ function validateTree<T>(obj: T, config: TreeConfig): void {
 // =============================================================================
 
 function makeNodeAccessor<T>(store: TreeNode<T>): NodeAccessor<T> {
-  const accessor = function (arg?: unknown): T | void {
+    const accessor = function (arg?: unknown): T | void {
     if (arguments.length === 0) {
-      return unwrap(store);
+      return unwrap(store) as unknown as T;
     }
 
     if (typeof arg === 'function') {
@@ -311,7 +311,7 @@ function create<T extends object>(
   // Create root callable function
   const tree = function (arg?: unknown): T | void {
     if (arguments.length === 0) {
-      return unwrap(signalState);
+      return unwrap(signalState) as unknown as T;
     }
 
     if (typeof arg === 'function') {
