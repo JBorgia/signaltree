@@ -146,7 +146,7 @@ export function combinePresets(
  */
 export function createDevTree(overrides: Partial<TreeConfig> = {}): {
   config: TreeConfig;
-  enhancer: Enhancer;
+  enhancer: Enhancer<unknown>;
 } {
   const config = createPresetConfig('development', overrides);
 
@@ -161,6 +161,6 @@ export function createDevTree(overrides: Partial<TreeConfig> = {}): {
 
   return {
     config,
-    enhancer: composed as unknown as Enhancer,
+    enhancer: composed as unknown as Enhancer<unknown>,
   } as const;
 }
