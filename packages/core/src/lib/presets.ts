@@ -126,7 +126,7 @@ export function createDevTree<T extends object>(
     .with(withTimeTravel(config.timeTravel))
     .with(withDevTools(config.devTools));
 
-  return enhanced as FullSignalTree<T>;
+  return enhanced as unknown as FullSignalTree<T>;
 }
 
 /**
@@ -162,7 +162,7 @@ export function createProdTree<T extends object>(
     .with(withMemoization(config.memoization))
     .with(withEntities());
 
-  return enhanced as ProdSignalTree<T>;
+  return enhanced as unknown as ProdSignalTree<T>;
 }
 
 /**
@@ -192,7 +192,7 @@ export function createMinimalTree<T extends object>(
 
   const enhanced = base.with(withEffects());
 
-  return enhanced as MinimalSignalTree<T>;
+  return enhanced as unknown as MinimalSignalTree<T>;
 }
 
 // ============================================================================
