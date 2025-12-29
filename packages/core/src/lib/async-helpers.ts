@@ -12,13 +12,13 @@ export function createAsyncOperation<T, TResult>(
 ) {
   return async (tree: SignalTree<T>) => {
     // Trigger batch update marking pending
-    if (typeof tree.batchUpdate === 'function') {
+    if (typeof (tree as any)['batchUpdate'] === 'function') {
       // batchUpdate expects a Partial<T>. We don't know T here, so create
       // a minimal partial using unknown and cast to Partial<T> at the last step.
       const pendingPatch = {
         [`${name}_PENDING`]: true,
       } as unknown as Partial<T>;
-      tree.batchUpdate(() => pendingPatch);
+      (tree as any)['batchUpdate'](() => pendingPatch);
     } else if ('$' in tree) {
       // Best-effort fallback: set via $ alias if available
       try {
@@ -37,12 +37,12 @@ export function createAsyncOperation<T, TResult>(
     try {
       const result = await operation();
 
-      if (typeof tree.batchUpdate === 'function') {
+      if (typeof (tree as any)['batchUpdate'] === 'function') {
         const resultPatch = {
           [`${name}_RESULT`]: result,
           [`${name}_PENDING`]: false,
         } as unknown as Partial<T>;
-        tree.batchUpdate(() => resultPatch);
+        (tree as any)['batchUpdate'](() => resultPatch);
       } else if ('$' in tree) {
         try {
           (
@@ -66,12 +66,12 @@ export function createAsyncOperation<T, TResult>(
 
       return result;
     } catch (error) {
-      if (typeof tree.batchUpdate === 'function') {
+      if (typeof (tree as any)['batchUpdate'] === 'function') {
         const errorPatch = {
           [`${name}_ERROR`]: error,
           [`${name}_PENDING`]: false,
         } as unknown as Partial<T>;
-        tree.batchUpdate(() => errorPatch);
+        (tree as any)['batchUpdate'](() => errorPatch);
       } else if ('$' in tree) {
         try {
           (
