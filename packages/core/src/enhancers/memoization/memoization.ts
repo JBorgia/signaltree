@@ -5,10 +5,7 @@ import { isNodeAccessor } from '../../lib/utils';
 
 import type { TreeNode } from '../../lib/utils';
 
-import type {
-  SignalTreeBase as SignalTree,
-  Enhancer,
-} from '../../lib/types';
+import type { SignalTreeBase as SignalTree, Enhancer } from '../../lib/types';
 
 // Dev environment detection
 declare const __DEV__: boolean | undefined;

@@ -43,13 +43,17 @@ export interface PersistenceMethods {
 }
 
 // Minimal runtime stubs so module resolution works during tests.
-export function withSerialization<T extends Record<string, unknown> = Record<string, unknown>>(
+export function withSerialization<
+  T extends Record<string, unknown> = Record<string, unknown>
+>(
   defaultConfig?: SerializationConfig
 ): EnhancerWithMeta<SignalTree<T>, SerializableSignalTree<T>> {
   return (tree: any) => tree as any;
 }
 
-export function enableSerialization<T extends Record<string, unknown> = Record<string, unknown>>() {
+export function enableSerialization<
+  T extends Record<string, unknown> = Record<string, unknown>
+>() {
   return (tree: any) => tree as any;
 }
 
@@ -68,9 +72,9 @@ export interface PersistenceConfig extends SerializationConfig {
   skipCache?: boolean;
 }
 
-export function withPersistence<T extends Record<string, unknown> = Record<string, unknown>>(
-  config: PersistenceConfig
-) {
+export function withPersistence<
+  T extends Record<string, unknown> = Record<string, unknown>
+>(config: PersistenceConfig) {
   return (tree: any) => tree as any;
 }
 
@@ -83,10 +87,16 @@ export function createStorageAdapter(
 }
 
 export function createIndexedDBAdapter(dbName?: string, storeName?: string) {
-  return createStorageAdapter(() => null, () => {}, () => {});
+  return createStorageAdapter(
+    () => null,
+    () => undefined,
+    () => undefined
+  );
 }
 
-export function applySerialization<T extends Record<string, unknown>>(tree: SignalTree<T>) {
+export function applySerialization<T extends Record<string, unknown>>(
+  tree: SignalTree<T>
+) {
   return tree as unknown as SerializableSignalTree<T>;
 }
 
