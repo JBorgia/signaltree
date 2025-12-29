@@ -19,7 +19,9 @@ export function withMemoization(
 ): <S>(tree: SignalTree<S>) => SignalTree<S> & MemoizationMethods<S> {
   const { maxCacheSize = 100, ttlMs = 0, useLRU = true } = config;
 
-  const enhancer = <S>(tree: SignalTree<S>): SignalTree<S> & MemoizationMethods<S> => {
+  const enhancer = <S>(
+    tree: SignalTree<S>
+  ): SignalTree<S> & MemoizationMethods<S> => {
     const cache = new Map<
       string,
       {

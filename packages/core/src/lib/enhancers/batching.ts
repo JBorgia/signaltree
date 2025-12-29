@@ -13,7 +13,9 @@ export function withBatching(
 ): <S>(tree: SignalTree<S>) => SignalTree<S> & BatchingMethods<S> {
   const { debounceMs = 0, maxBatchSize = 1000 } = config;
 
-  const inner = <S>(tree: SignalTree<S>): SignalTree<S> & BatchingMethods<S> => {
+  const inner = <S>(
+    tree: SignalTree<S>
+  ): SignalTree<S> & BatchingMethods<S> => {
     let queue: Array<() => void> = [];
     let scheduled = false;
 

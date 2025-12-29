@@ -16,7 +16,9 @@ export function withTimeTravel(
 ): <S>(tree: SignalTree<S>) => SignalTree<S> & TimeTravelMethods<S> {
   const { maxHistory = 50, debounceMs = 0 } = config;
 
-  const enhancer = <S>(tree: SignalTree<S>): SignalTree<S> & TimeTravelMethods<S> => {
+  const enhancer = <S>(
+    tree: SignalTree<S>
+  ): SignalTree<S> & TimeTravelMethods<S> => {
     const history: TimeTravelEntry<S>[] = [];
     let currentIndex = -1;
     let isTraveling = false;
