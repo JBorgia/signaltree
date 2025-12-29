@@ -1,18 +1,17 @@
+import { withBatching } from '../enhancers/batching';
+import { withDevTools } from '../enhancers/devtools';
+import { withEffects } from '../enhancers/effects';
+import { withEntities } from '../enhancers/entities';
+import { withMemoization } from '../enhancers/memoization';
+import { withTimeTravel } from '../enhancers/time-travel';
+import { signalTree } from './signal-tree';
+
 /**
  * v6 Preset Factories
  *
  * Pre-configured tree factories that chain multiple enhancers.
  * Types flow naturally through the chain - no casts needed.
  */
-import { withBatching } from './enhancers/batching';
-import { withDevTools } from './enhancers/devtools';
-import { withEffects } from './enhancers/effects';
-import { withEntities } from './enhancers/entities';
-import { withMemoization } from './enhancers/memoization';
-import { withTimeTravel } from './enhancers/time-travel';
-import { signalTree } from './signal-tree';
-
-
 import type {
   SignalTreeBase,
   TreeConfig,

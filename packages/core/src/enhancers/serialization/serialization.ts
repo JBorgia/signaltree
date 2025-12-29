@@ -47,7 +47,7 @@ export function withSerialization<
   T extends Record<string, unknown> = Record<string, unknown>
 >(
   defaultConfig?: SerializationConfig
-): EnhancerWithMeta<SignalTree<T>, SerializableSignalTree<T>> {
+): EnhancerWithMeta<SerializableSignalTree<T>> {
   return (tree: any) => tree as any;
 }
 
