@@ -3,7 +3,7 @@ import { isSignal, signal, WritableSignal } from '@angular/core';
 import { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './constants';
 import { SignalMemoryManager } from './memory/memory-manager';
 import { SecurityValidator } from './security/security-validator';
-import { createLazySignalTree, equal, isBuiltInObject, unwrap } from './utils';
+import { createLazySignalTree, equal, isBuiltInObject, unwrap, composeEnhancers } from './utils';
 
 import type {
   TreeNode,
@@ -341,10 +341,16 @@ function create<T extends object>(
 
   // v6 single-enhancer chaining
   Object.defineProperty(tree, 'with', {
-    value: function <A>(enhancer: Enhancer<A>): SignalTreeBase<T> & A {
+    value: function <A>(enhancer: Enhancer<A>, ...more: Enhancer<any>[]): SignalTreeBase<T> & A {
       if (typeof enhancer !== 'function') {
         throw new Error('Enhancer must be a function');
       }
+
+      if (more && more.length > 0) {
+        const composed = composeEnhancers(enhancer, ...more);
+        return composed(tree) as SignalTreeBase<T> & A;
+      }
+
       return enhancer(tree) as SignalTreeBase<T> & A;
     },
     enumerable: false,
