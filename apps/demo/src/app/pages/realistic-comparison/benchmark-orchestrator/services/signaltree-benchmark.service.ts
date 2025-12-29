@@ -191,11 +191,21 @@ export class SignalTreeBenchmarkService {
         }
       }
 
-      if (enhancers.length > 0) return tree.with(...enhancers);
+      if (enhancers.length > 0) {
+        let t = tree;
+        for (const e of enhancers) {
+          t = t.with(e);
+        }
+        return t;
+      }
 
       // No requested enhancers — apply scenario defaults if provided
       if (defaults && Array.isArray(defaults) && defaults.length > 0) {
-        return tree.with(...defaults);
+        let t = tree;
+        for (const e of defaults) {
+          t = t.with(e);
+        }
+        return t;
       }
     } catch {
       // ignore errors and return tree unchanged

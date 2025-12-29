@@ -212,14 +212,13 @@ const userTree = signalTree({
     theme: 'dark',
     notifications: true
   }
-}).with(
-  withBatching(),
-  withMemoization(),
-  withEntities(),
-  withDevTools(),
-  withTimeTravel(),
-  withPresets()
-);
+})
+  .with(withBatching())
+  .with(withMemoization())
+  .with(withEntities())
+  .with(withDevTools())
+  .with(withTimeTravel())
+  .with(withPresets());
 
 // Access signals directly through state or $ (shorthand)
 console.log(userTree.state.user.name()); // 'John Doe'

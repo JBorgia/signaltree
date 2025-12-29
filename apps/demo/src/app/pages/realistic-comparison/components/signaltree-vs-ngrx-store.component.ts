@@ -510,10 +510,9 @@ export class SignalTreeVsNgrxStoreComponent {
     for (let i = 0; i < iterations; i++) {
       const testData = this.createDeepNestedData();
       // Deep Nested scenario mapping: batching + shallow memoization
-      const store = signalTree(testData).with(
-        withBatching(),
-        withShallowMemoization()
-      );
+      const store = signalTree(testData)
+        .with(withBatching())
+        .with(withShallowMemoization());
 
       // Create computed values with MODERATE intensive work (reduced from extreme)
       const computed1 = computed(() => {

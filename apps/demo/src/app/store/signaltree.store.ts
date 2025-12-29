@@ -44,15 +44,16 @@ export class DemoAppStore {
       currentTab: 'getting-started' as string,
       sidebarOpen: false as boolean,
     },
-  }).with(
-    withBatching(),
-    withGuardrails({
-      mode: 'warn',
-      budgets: {
-        maxUpdateTime: 16,
-      },
-    })
-  );
+  })
+    .with(withBatching())
+    .with(
+      withGuardrails({
+        mode: 'warn',
+        budgets: {
+          maxUpdateTime: 16,
+        },
+      })
+    );
 
   // Expose state slices as public signals
   readonly counter = this.tree.$.counter;
