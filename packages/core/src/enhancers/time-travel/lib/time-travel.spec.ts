@@ -1,13 +1,7 @@
 import { signalTree } from '../../../lib/signal-tree';
-import { SignalTree } from '../../../lib/types';
-import {
-  withTimeTravel,
-  enableTimeTravel,
-  getTimeTravel,
-  type TimeTravelEntry,
-  type TimeTravelInterface,
-} from './time-travel';
+import { enableTimeTravel, getTimeTravel, TimeTravelEntry, TimeTravelInterface, withTimeTravel } from './time-travel';
 
+import type { SignalTreeBase as SignalTree } from '../../../lib/types';
 interface TestState {
   count: number;
   user: {

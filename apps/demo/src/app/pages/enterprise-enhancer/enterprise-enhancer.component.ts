@@ -1,8 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
-import { SignalTree, signalTree } from '@signaltree/core';
+import { signalTree } from '@signaltree/core';
 import { EnterpriseEnhancedTree, UpdateResult, withEnterprise } from '@signaltree/enterprise';
 
+import type { SignalTreeBase as SignalTree } from '@signaltree/core';
 interface DashboardState extends Record<string, unknown> {
   metrics: Record<string, number>;
   users: Array<{ id: number; name: string; active: boolean }>;
@@ -39,7 +40,11 @@ export class EnterpriseEnhancerComponent {
       language: 'en',
       notifications: true,
     },
-  }).with(withEnterprise() as unknown as (tree: SignalTree<DashboardState>) => SignalTree<DashboardState> & EnterpriseEnhancedTree<DashboardState>);
+  }).with(
+    withEnterprise() as unknown as (
+      tree: SignalTree<DashboardState>
+    ) => SignalTree<DashboardState> & EnterpriseEnhancedTree<DashboardState>
+  );
 
   // Expose signals for template
   metrics = this.tree.$.metrics;

@@ -45,7 +45,7 @@ export type TreeNode<T> = {
     : T[K] extends object
     ? NodeAccessor<T[K]> & TreeNode<T[K]>
     : CallableWritableSignal<T[K]>;
-} & Record<string, unknown>;
+};
 
 // Base SignalTree minimal interface
 export interface SignalTreeBase<T> extends NodeAccessor<T> {
@@ -55,7 +55,6 @@ export interface SignalTreeBase<T> extends NodeAccessor<T> {
   with<A>(enhancer: Enhancer<A>): SignalTreeBase<T> & A;
   bind(thisArg?: unknown): NodeAccessor<T>;
   destroy(): void;
-  dispose?(): void;
   // Allow enhancers to attach runtime methods — consumers should cast to the
   // specific enhanced shape they expect (e.g. `SignalTreeBase<T> & BatchingMethods<T>`).
 }
