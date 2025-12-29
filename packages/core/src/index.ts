@@ -31,14 +31,10 @@ export type {
   CallableWritableSignal,
   AccessibleNode,
   NodeAccessor,
-  RemoveSignalMethods,
   Primitive,
-  BuiltInObject,
   NotFn,
 
-  // Deep path types - For nested entity access
-  DeepPath,
-  DeepAccess,
+  // Deep path types - For nested entity access (removed in v6)
 
   // Configuration types
   TreeConfig,
@@ -48,7 +44,7 @@ export type {
   Enhancer,
   EnhancerMeta,
   EnhancerWithMeta,
-  ChainResult,
+  // ChainResult removed in v6
   // WithMethod removed in v6 (single-enhancer runtime)
 
   // Entity types

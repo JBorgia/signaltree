@@ -36,7 +36,7 @@ export interface SignalTreeBase<T> extends NodeAccessor<T> {
   readonly state: TreeNode<T>;
   readonly $: TreeNode<T>;
   // Single-enhancer chain: apply one enhancer at a time.
-  with<A>(enhancer: EnhancerWithMeta<A>): SignalTreeBase<T> & A;
+  with<A>(enhancer: Enhancer<A>): SignalTreeBase<T> & A;
   bind(thisArg?: unknown): NodeAccessor<T>;
   destroy(): void;
   dispose?(): void;
@@ -545,59 +545,35 @@ export type CallableWritableSignal<T> = WritableSignal<T> & {
 
 export type AccessibleNode<T> = NodeAccessor<T> & TreeNode<T>;
 
-export type RemoveSignalMethods<T> = T extends infer U ? U : never;
-
-export type BuiltInObject = unknown;
-
-export type DeepPath<T> = string;
-
-export type DeepAccess<T, Path extends string> = unknown;
-
-export type ChainResult<Start, E extends Array<unknown>> = Start;
+// Removed v5 legacy helper types to reduce public surface area in v6
 
 /** Symbol key for enhancer metadata (stable public export) */
 export const ENHANCER_META = Symbol('signaltree:enhancer:meta');
 
-/** Basic Enhancer shape (stable export) */
-/**
- * Enhancer type that supports two forms for compatibility:
- * - Modern: `Enhancer<In, Out>` => (input: In) => Out
- * - Legacy: `Enhancer<Out>` => (input: SignalTreeBase<any>) => Out
- */
-/**
- * Enhancer function shape: transforms an input type to an output type.
- * Historically many callsites use `Enhancer<Input, Output>` where
- * `Input` is often the tree shape and `Output` is the augmented tree.
- */
-export type Enhancer<Input = unknown, Output = unknown> = (
-  input: Input
-) => Output;
-
-/** Metadata attached to enhancers to help ordering and diagnostics */
-export interface EnhancerMeta {
-  name?: string;
-  /** Optional array of symbols this enhancer depends on (for ordering) */
-  dependsOn?: symbol[];
-  /** Required runtime capabilities (strings) */
-  requires?: string[];
-  /** Provided runtime capabilities (strings) */
-  provides?: string[];
-  /** Human-friendly description */
-  description?: string;
-}
+// =============================================================================
+// ENHANCER SYSTEM (v6)
+// =============================================================================
 
 /**
- * Compatibility: allow two generic parameters historically used across the codebase.
- * The primary `Enhancer<Input, Output>` form is preserved above; here we
- * expose `EnhancerWithMeta<Input, Output>` accepting two generics for
- * existing call sites while mapping to the flexible `Enhancer` shape.
+ * Enhancer function that adds methods to a tree.
+ * Generic parameter `TAdded` represents the methods being added.
  */
-export type EnhancerWithMeta<In = unknown, Out = unknown> = Enhancer<
-  In,
-  Out
-> & {
+export type Enhancer<TAdded> = <S>(
+  tree: SignalTreeBase<S>
+) => SignalTreeBase<S> & TAdded;
+
+/** Enhancer with optional metadata for ordering/debugging */
+export type EnhancerWithMeta<TAdded> = Enhancer<TAdded> & {
   metadata?: EnhancerMeta;
 };
+
+/** Metadata for enhancer ordering and debugging */
+export interface EnhancerMeta {
+  name?: string;
+  requires?: string[];
+  provides?: string[];
+  description?: string;
+}
 
 // Main public SignalTree interface expected by downstream packages
 /**

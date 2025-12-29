@@ -204,10 +204,13 @@ export function withBatchingWithConfig<T>(
 }
 
 /** User-friendly no-arg signature expected by type-level tests */
-export function withBatching<T = any>(): (
-  tree: SignalTree<T>
-) => BatchingSignalTree<T> {
-  return withBatchingWithConfig<T>({});
+export function withBatching<T = any>(): <S>(
+  tree: SignalTree<S>
+) => SignalTree<S> & BatchingMethods<T> {
+  const enhancer = withBatchingWithConfig<T>({});
+  return <S>(tree: SignalTree<S>) =>
+    enhancer(tree as unknown as SignalTree<T>) as unknown as SignalTree<S> &
+      BatchingMethods<T>;
 }
 
 export function withHighPerformanceBatching<T>() {
