@@ -6,7 +6,7 @@ import { deepEqual } from '@signaltree/shared';
  * Development-only performance monitoring and anti-pattern detection
  * @packageDocumentation
  */
-import type { SignalTreeBase as SignalTree } from '@signaltree/core';
+import type { SignalTreeBase as SignalTree, Enhancer } from '@signaltree/core';
 import type {
   GuardrailsConfig,
   GuardrailsAPI,
@@ -141,8 +141,8 @@ const POLLING_INTERVAL_MS = 50; // Fast polling for dev-time monitoring
  */
 export function withGuardrails<T extends Record<string, unknown>>(
   config: GuardrailsConfig<T> = {}
-): (tree: SignalTree<T>) => SignalTree<T> {
-  return (tree: SignalTree<T>) => {
+): Enhancer<{ __guardrails?: GuardrailsAPI }> {
+  const inner: any = (tree: SignalTree<T>) => {
     const enabled = resolveEnabledFlag(config.enabled);
 
     if (!isDevEnvironment() || !enabled) {
@@ -221,6 +221,8 @@ export function withGuardrails<T extends Record<string, unknown>>(
 
     return tree;
   };
+
+  return inner as Enhancer<{ __guardrails?: GuardrailsAPI }>;
 }
 
 /**
