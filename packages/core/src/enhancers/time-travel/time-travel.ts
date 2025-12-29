@@ -1,20 +1,11 @@
-/**
- * v6 Time Travel Enhancer
- *
- * Contract: (config?) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & TimeTravelMethods
- *
- * Provides undo/redo functionality with state history management.
- */
+import { snapshotState } from '../../../lib/utils';
+import { deepClone, deepEqual } from './utils';
 
+import type { TreeNode } from '../../../lib/utils';
 import type {
-  SignalTreeBase,
-  TimeTravelMethods,
-  TimeTravelConfig,
-} from '../../lib/types';
-
-// ============================================================================
-// Types
-// ============================================================================
+  SignalTreeBase as SignalTree,
+  Enhancer,
+} from '../../../lib/types';
 
 /**
  * Entry in the time travel history
@@ -26,145 +17,191 @@ export interface TimeTravelEntry<T> {
   payload?: unknown;
 }
 
-// ============================================================================
-// Utility Functions
-// ============================================================================
+/**
+ * Time travel interface for state history management
+ */
+export interface TimeTravelInterface<T> {
+  /**
+   * Navigate backward in history by one step
+   */
+  undo(): boolean;
 
-function deepClone<T>(value: T): T {
-  if (value === null || value === undefined) return value;
+  /**
+   * Navigate forward in history by one step
+   */
+  redo(): boolean;
 
-  try {
-    if (typeof structuredClone !== 'undefined') {
-      return structuredClone(value);
-    }
-  } catch {
-    // Fall through
-  }
+  /**
+   * Get the complete history of state changes
+   */
+  getHistory(): TimeTravelEntry<T>[];
 
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch {
-    return value;
-  }
+  /**
+   * Reset the history, keeping only the current state
+   */
+  resetHistory(): void;
+
+  /**
+   * Jump to a specific point in history by index
+   */
+  jumpTo(index: number): boolean;
+
+  /**
+   * Get current position in history
+   */
+  getCurrentIndex(): number;
+
+  /**
+   * Check if undo is possible
+   */
+  canUndo(): boolean;
+
+  /**
+   * Check if redo is possible
+   */
+  canRedo(): boolean;
 }
 
-function deepEqual(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-  if (a == null || b == null) return false;
-  if (typeof a !== typeof b) return false;
+/**
+ * Configuration options for time travel
+ */
+export interface TimeTravelConfig {
+  /**
+   * Maximum number of history entries to keep
+   * @default 50
+   */
+  maxHistorySize?: number;
 
-  if (Array.isArray(a) && Array.isArray(b)) {
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) {
-      if (!deepEqual(a[i], b[i])) return false;
-    }
-    return true;
-  }
+  /**
+   * Whether to include payload information in history entries
+   * @default true
+   */
+  includePayload?: boolean;
 
-  if (typeof a === 'object' && typeof b === 'object') {
-    const aObj = a as Record<string, unknown>;
-    const bObj = b as Record<string, unknown>;
-
-    const aKeys = Object.keys(aObj);
-    const bKeys = Object.keys(bObj);
-
-    if (aKeys.length !== bKeys.length) return false;
-
-    for (const key of aKeys) {
-      if (!deepEqual(aObj[key], bObj[key])) return false;
-    }
-
-    return true;
-  }
-
-  return false;
+  /**
+   * Custom action names for different operations
+   */
+  actionNames?: {
+    update?: string;
+    set?: string;
+    batch?: string;
+    [key: string]: string | undefined;
+  };
 }
 
-// ============================================================================
-// Time Travel Manager
-// ============================================================================
-
-class TimeTravelManager<S> {
-  private history: TimeTravelEntry<S>[] = [];
+/**
+ * Internal time travel state management
+ */
+class TimeTravelManager<T> implements TimeTravelInterface<T> {
+  private history: TimeTravelEntry<T>[] = [];
   private currentIndex = -1;
-  private readonly maxHistorySize: number;
-  private readonly includePayload: boolean;
-  private readonly actionNames: Record<string, string>;
+  private maxHistorySize: number;
+  private includePayload: boolean;
+  private actionNames: Record<string, string>;
 
   constructor(
-    private readonly tree: SignalTreeBase<S>,
-    config: TimeTravelConfig,
-    private readonly restoreState: (state: S) => void
+    private tree: SignalTree<T>,
+    private config: TimeTravelConfig = {},
+    private restoreStateFn?: (state: T) => void
   ) {
     this.maxHistorySize = config.maxHistorySize ?? 50;
     this.includePayload = config.includePayload ?? true;
     this.actionNames = {
       update: 'UPDATE',
       set: 'SET',
-      init: 'INIT',
-      reset: 'RESET',
+      batch: 'BATCH',
       ...config.actionNames,
     };
 
-    // Add initial state
-    this.addEntry('init', this.snapshot());
+    // Add initial state to history
+    this.addEntry('INIT', this.tree());
   }
 
-  private snapshot(): S {
-    return deepClone(this.tree() as S);
-  }
-
-  addEntry(action: string, state: S, payload?: unknown): void {
-    // Truncate forward history
+  /**
+   * Add a new entry to the history
+   */
+  addEntry(action: string, state: T, payload?: unknown): void {
+    // If we're not at the end of history, remove everything after current position
     if (this.currentIndex < this.history.length - 1) {
       this.history = this.history.slice(0, this.currentIndex + 1);
     }
 
-    const entry: TimeTravelEntry<S> = {
-      state: deepClone(state),
+    // Create new entry
+    // Ensure we store a plain, fully-unwrapped snapshot (no signal references)
+    // by unwrapping the internal state node and then making a structured
+    // clone to remove any residual accessors/functions.
+    const plain = snapshotState(this.tree.state as unknown as TreeNode<T>);
+    const cloned =
+      typeof structuredClone !== 'undefined'
+        ? structuredClone(plain)
+        : JSON.parse(JSON.stringify(plain));
+    const entry: TimeTravelEntry<T> = {
+      // Store cloned plain snapshot
+      state: cloned as T,
       timestamp: Date.now(),
-      action: this.actionNames[action] ?? action,
+      action: this.actionNames[action] || action,
+      ...(this.includePayload && payload !== undefined && { payload }),
     };
-
-    if (this.includePayload && payload !== undefined) {
-      entry.payload = payload;
-    }
 
     this.history.push(entry);
     this.currentIndex = this.history.length - 1;
 
-    // Enforce max size
-    while (this.history.length > this.maxHistorySize) {
+    // Enforce max history size
+    if (this.history.length > this.maxHistorySize) {
       this.history.shift();
       this.currentIndex--;
     }
   }
 
-  recordCurrentState(action = 'update', payload?: unknown): void {
-    const currentState = this.snapshot();
-    const lastEntry = this.history[this.currentIndex];
-
-    if (!lastEntry || !deepEqual(lastEntry.state, currentState)) {
-      this.addEntry(action, currentState, payload);
-    }
-  }
-
   undo(): boolean {
-    if (!this.canUndo()) return false;
+    if (!this.canUndo()) {
+      return false;
+    }
 
     this.currentIndex--;
     const entry = this.history[this.currentIndex];
-    this.restoreState(deepClone(entry.state));
+    this.restoreState(entry.state);
     return true;
   }
 
   redo(): boolean {
-    if (!this.canRedo()) return false;
+    if (!this.canRedo()) {
+      return false;
+    }
 
     this.currentIndex++;
     const entry = this.history[this.currentIndex];
-    this.restoreState(deepClone(entry.state));
+    this.restoreState(entry.state);
     return true;
+  }
+
+  getHistory(): TimeTravelEntry<T>[] {
+    return this.history.map((entry) => ({
+      ...entry,
+      state: deepClone(entry.state),
+    }));
+  }
+
+  resetHistory(): void {
+    const currentState = this.tree();
+    this.history = [];
+    this.currentIndex = -1;
+    this.addEntry('RESET', currentState);
+  }
+
+  jumpTo(index: number): boolean {
+    if (index < 0 || index >= this.history.length) {
+      return false;
+    }
+
+    this.currentIndex = index;
+    const entry = this.history[index];
+    this.restoreState(entry.state);
+    return true;
+  }
+
+  getCurrentIndex(): number {
+    return this.currentIndex;
   }
 
   canUndo(): boolean {
@@ -175,222 +212,218 @@ class TimeTravelManager<S> {
     return this.currentIndex < this.history.length - 1;
   }
 
-  getHistory(): TimeTravelEntry<S>[] {
-    return this.history.map((entry) => ({
-      ...entry,
-      state: deepClone(entry.state),
-    }));
-  }
-
-  resetHistory(): void {
-    const currentState = this.snapshot();
-    this.history = [];
-    this.currentIndex = -1;
-    this.addEntry('reset', currentState);
-  }
-
-  jumpTo(index: number): boolean {
-    if (index < 0 || index >= this.history.length) return false;
-
-    this.currentIndex = index;
-    const entry = this.history[index];
-    this.restoreState(deepClone(entry.state));
-    return true;
-  }
-
-  getCurrentIndex(): number {
-    return this.currentIndex;
+  /**
+   * Restore state without triggering time travel middleware
+   */
+  private restoreState(state: T): void {
+    if (this.restoreStateFn) {
+      this.restoreStateFn(state);
+    } else {
+      // Fallback if no restoration function provided
+      this.tree(state);
+    }
   }
 }
 
-// ============================================================================
-// Main Enhancer Implementation
-// ============================================================================
-
 /**
- * Enhances a SignalTree with time travel capabilities.
+ * Enhances a SignalTree with comprehensive time travel capabilities.
  *
- * @param config - Time travel configuration
- * @returns Polymorphic enhancer function
+ * Adds undo/redo functionality, state history management, and snapshot features.
+ * Automatically tracks state changes and provides methods to navigate through
+ * the application's state history with configurable limits and optimizations.
+ *
+ * @template T - The state object type
+ * @param config - Configuration options for time travel behavior
+ * @returns Function that enhances a SignalTree with time travel capabilities
  *
  * @example
  * ```typescript
- * const tree = signalTree({ count: 0, name: '' })
- *   .with(withTimeTravel({ maxHistorySize: 100 }));
+ * // Basic time travel enhancement
+ * const store = signalTree({ count: 0, text: '' }).with(withTimeTravel());
  *
- * // Make changes
- * tree.$.count.set(1);
- * tree.$.name.set('test');
+ * // Make some changes
+ * store.count.set(1);
+ * store.text.set('hello');
+ * store.count.set(2);
  *
- * // Undo/redo
- * tree.undo();
- * tree.redo();
+ * // Access time travel interface
+ * const timeTravel = store.__timeTravel;
  *
- * // Jump to specific point
- * tree.jumpTo(0);
+ * // Navigate history
+ * console.log(timeTravel.canUndo()); // true
+ * timeTravel.undo(); // count: 1, text: 'hello'
+ * timeTravel.undo(); // count: 1, text: ''
+ * timeTravel.undo(); // count: 0, text: ''
  *
- * // View history
- * const history = tree.getHistory();
+ * timeTravel.redo(); // count: 1, text: ''
+ * console.log(timeTravel.canRedo()); // true
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // Advanced configuration
+ * const store = signalTree({
+ *   document: { title: '', content: '' },
+ *   settings: { theme: 'light' }
+ * }).with(withTimeTravel({
+ *   maxHistorySize: 50,        // Limit memory usage
+ *   includePayload: true,      // Store action metadata
+ *   actionNames: {             // Custom action names
+ *     'update_title': 'Update Document Title',
+ *     'change_theme': 'Change Theme'
+ *   }
+ * }));
+ *
+ * // Named actions with metadata
+ * store.update(() => ({ document: { title: 'New Title' } }), 'update_title');
+ *
+ * // View detailed history
+ * const history = store.__timeTravel.getHistory();
+ * console.log(history[0].action); // 'Update Document Title'
+ * console.log(history[0].timestamp); // Date when change occurred
  * ```
  */
-export function withTimeTravel(
+export function withTimeTravel<T>(
   config: TimeTravelConfig = {}
-): <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & TimeTravelMethods {
-  const { enabled = true } = config;
+): Enhancer<{ __timeTravel: TimeTravelInterface<T> }> {
+  const enhancer = (tree: SignalTree<any>) => {
+    // Store the original callable tree function
+    const originalTreeCall = tree.bind(tree);
 
-  return <S>(
-    tree: SignalTreeBase<S>
-  ): SignalTreeBase<S> & TimeTravelMethods => {
-    // Disabled path
-    if (!enabled) {
-      const noopMethods: TimeTravelMethods = {
-        undo(): void { return; },
-        redo(): void { return; },
-        canUndo(): boolean {
-          return false;
-        },
-        canRedo(): boolean {
-          return false;
-        },
-        getHistory(): unknown[] {
-          return [];
-        },
-        resetHistory(): void { return; },
-        jumpTo(): void { return; },
-        getCurrentIndex(): number {
-          return -1;
-        },
-      };
-      return Object.assign(tree, noopMethods);
-    }
-
-    // Flag to prevent recording during restoration
+    // Flag to prevent time travel during restoration
     let isRestoring = false;
 
-    // Restore function
-    const restoreState = (state: S): void => {
-      isRestoring = true;
-      try {
-        const treeState = tree.state as Record<string, unknown>;
-        const newState = state as Record<string, unknown>;
+    // Create time travel manager with restoration function
+    const timeTravelManager = new TimeTravelManager(
+      tree,
+      config,
+      (state: T) => {
+        isRestoring = true;
+        try {
+          originalTreeCall(state);
+        } finally {
+          isRestoring = false;
+        }
+      }
+    );
 
-        for (const key of Object.keys(newState)) {
-          const node = treeState[key];
-          if (node && typeof node === 'function') {
-            (node as (v: unknown) => void)(newState[key]);
-          } else if (node && typeof node === 'object' && 'set' in node) {
-            (node as { set: (v: unknown) => void }).set(newState[key]);
+    // Create enhanced tree function that includes time travel tracking
+    const enhancedTree = function (
+      this: SignalTree<T>,
+      ...args: unknown[]
+    ): T | void {
+      if (args.length === 0) {
+        // Get operation - call original directly
+        return originalTreeCall();
+      } else {
+        // Set or update operation - track for time travel
+        if (isRestoring) {
+          // During restoration, just call original update
+          if (args.length === 1) {
+            const arg = args[0];
+            if (typeof arg === 'function') {
+              return originalTreeCall(arg as (current: T) => T);
+            } else {
+              return originalTreeCall(arg as T);
+            }
+          }
+          return;
+        }
+
+        const beforeState = originalTreeCall();
+
+        // Execute the actual update using the original callable interface
+        let result: void;
+        if (args.length === 1) {
+          const arg = args[0];
+          if (typeof arg === 'function') {
+            result = originalTreeCall(arg as (current: T) => T);
+          } else {
+            result = originalTreeCall(arg as T);
           }
         }
-      } finally {
-        isRestoring = false;
+
+        const afterState = originalTreeCall();
+
+        // Only add to history if state actually changed
+        const statesEqual = deepEqual(beforeState, afterState);
+
+        if (!statesEqual) {
+          timeTravelManager.addEntry('update', afterState);
+        }
+
+        return result;
       }
+    } as unknown as SignalTree<T>;
+
+    // Copy all properties and methods from original tree
+    Object.setPrototypeOf(enhancedTree, Object.getPrototypeOf(tree));
+    Object.assign(enhancedTree, tree);
+
+    // Ensure state and $ properties are preserved
+    if ('state' in tree) {
+      Object.defineProperty(enhancedTree, 'state', {
+        value: tree.state,
+        enumerable: false,
+        configurable: true,
+      });
+    }
+
+    // Ensure $ alias is preserved
+    if ('$' in tree) {
+      Object.defineProperty(enhancedTree, '$', {
+        value: (tree as SignalTree<T>).$,
+        enumerable: false,
+        configurable: true,
+      });
+    }
+
+    // Override DX-friendly methods to forward to the time travel manager
+    // These shadow the core stubs when the enhancer is applied
+    (enhancedTree as any)['undo'] = () => {
+      timeTravelManager.undo();
+    };
+    (enhancedTree as any)['redo'] = () => {
+      timeTravelManager.redo();
+    };
+    (enhancedTree as any)['getHistory'] = () => timeTravelManager.getHistory();
+    (enhancedTree as any)['resetHistory'] = () => {
+      timeTravelManager.resetHistory();
     };
 
-    // Create manager
-    const manager = new TimeTravelManager(tree, config, restoreState);
-
-    // Track last known state for change detection
-    let lastKnownState = deepClone(tree() as S);
-
-    const checkAndRecordChanges = (): void => {
-      if (isRestoring) return;
-
-      const currentState = tree() as S;
-      if (!deepEqual(lastKnownState, currentState)) {
-        manager.recordCurrentState('update');
-        lastKnownState = deepClone(currentState);
-      }
+    // Additional helpers exposed directly on the tree for better DX
+    (enhancedTree as any)['jumpTo'] = (index: number) => {
+      timeTravelManager.jumpTo(index);
     };
+    (enhancedTree as any)['canUndo'] = () => timeTravelManager.canUndo();
+    (enhancedTree as any)['canRedo'] = () => timeTravelManager.canRedo();
+    (enhancedTree as any)['getCurrentIndex'] = () =>
+      timeTravelManager.getCurrentIndex();
 
-    const methods: TimeTravelMethods = {
-      undo(): void {
-        checkAndRecordChanges();
-        manager.undo();
-        lastKnownState = deepClone(tree() as S);
-      },
-
-      redo(): void {
-        manager.redo();
-        lastKnownState = deepClone(tree() as S);
-      },
-
-      canUndo(): boolean {
-        checkAndRecordChanges();
-        return manager.canUndo();
-      },
-
-      canRedo(): boolean {
-        return manager.canRedo();
-      },
-
-      getHistory(): unknown[] {
-        checkAndRecordChanges();
-        return manager.getHistory();
-      },
-
-      resetHistory(): void {
-        manager.resetHistory();
-        lastKnownState = deepClone(tree() as S);
-      },
-
-      jumpTo(index: number): void {
-        checkAndRecordChanges();
-        manager.jumpTo(index);
-        lastKnownState = deepClone(tree() as S);
-      },
-
-      getCurrentIndex(): number {
-        return manager.getCurrentIndex();
-      },
-    };
-
-    return Object.assign(tree, methods);
+    return Object.assign(enhancedTree, {
+      __timeTravel: timeTravelManager,
+    }) as SignalTree<any> & { __timeTravel: TimeTravelInterface<any> };
   };
-}
 
-// ============================================================================
-// Convenience Helpers
-// ============================================================================
-
-/**
- * Enable time travel with default settings
- */
-export function enableTimeTravel(): <S>(
-  tree: SignalTreeBase<S>
-) => SignalTreeBase<S> & TimeTravelMethods {
-  return withTimeTravel({ enabled: true });
+  return enhancer as unknown as Enhancer<{
+    __timeTravel: TimeTravelInterface<T>;
+  }>;
 }
 
 /**
- * Time travel with custom history size
+ * Convenience function to enable basic time travel
  */
-export function withTimeTravelHistory(
-  maxHistorySize: number
-): <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & TimeTravelMethods {
+export function enableTimeTravel<T>(maxHistorySize?: number): Enhancer<{
+  __timeTravel: TimeTravelInterface<T>;
+}> {
   return withTimeTravel({ maxHistorySize });
 }
 
 /**
- * Lightweight time travel with smaller history
+ * Get time travel interface from an enhanced tree
  */
-export function withLightweightTimeTravel(): <S>(
-  tree: SignalTreeBase<S>
-) => SignalTreeBase<S> & TimeTravelMethods {
-  return withTimeTravel({
-    maxHistorySize: 20,
-    includePayload: false,
-  });
-}
-
-/**
- * Full-featured time travel for debugging
- */
-export function withDebugTimeTravel(): <S>(
-  tree: SignalTreeBase<S>
-) => SignalTreeBase<S> & TimeTravelMethods {
-  return withTimeTravel({
-    maxHistorySize: 200,
-    includePayload: true,
-  });
+export function getTimeTravel<T>(
+  tree: SignalTree<T> & { __timeTravel?: TimeTravelInterface<T> }
+): TimeTravelInterface<T> | undefined {
+  return tree.__timeTravel;
 }
