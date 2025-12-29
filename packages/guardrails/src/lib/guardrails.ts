@@ -139,18 +139,17 @@ const POLLING_INTERVAL_MS = 50; // Fast polling for dev-time monitoring
  * Uses reactive subscription when in Angular context (zero polling),
  * falls back to polling-based detection in non-Angular environments (tests)
  */
-export function withGuardrails<T extends Record<string, unknown>>(
-  config: GuardrailsConfig<T> = {}
-): Enhancer<{ __guardrails?: GuardrailsAPI }> {
-  const inner: any = (tree: SignalTree<T>) => {
+export function withGuardrails(
+  config: GuardrailsConfig<any> = {}
+): <S>(tree: SignalTree<S>) => SignalTree<S> & { __guardrails?: GuardrailsAPI } {
+  return function <S>(tree: SignalTree<S>): SignalTree<S> & { __guardrails?: GuardrailsAPI } {
     const enabled = resolveEnabledFlag(config.enabled);
-
     if (!isDevEnvironment() || !enabled) {
-      return tree;
+      return tree as SignalTree<S> & { __guardrails?: GuardrailsAPI };
     }
 
     const stats = createRuntimeStats();
-    const context: GuardrailsContext<T> = {
+    const context: GuardrailsContext<S> = {
       tree,
       config,
       stats,
@@ -222,7 +221,9 @@ export function withGuardrails<T extends Record<string, unknown>>(
     return tree;
   };
 
-  return inner as Enhancer<{ __guardrails?: GuardrailsAPI }>;
+    return tree as SignalTree<S> & { __guardrails?: GuardrailsAPI };
+  };
+}
 }
 
 /**

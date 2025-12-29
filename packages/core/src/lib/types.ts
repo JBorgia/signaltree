@@ -2,6 +2,43 @@ import { Signal, WritableSignal } from '@angular/core';
 
 import { SecurityValidatorConfig } from './security/security-validator';
 
+// Time travel enhancer configuration (canonical)
+export interface TimeTravelConfig {
+  /**
+   * Maximum number of history entries to keep
+   * @default 50
+   */
+  maxHistorySize?: number;
+
+  /**
+   * Whether to include payload information in history entries
+   * @default true
+   */
+  includePayload?: boolean;
+
+  /**
+   * Custom action names for different operations
+   */
+  actionNames?: {
+    update?: string;
+    set?: string;
+    batch?: string;
+    [key: string]: string | undefined;
+  };
+}
+// Memoization enhancer configuration (canonical)
+export interface MemoizationConfig {
+  /** Enable/disable memoization (default: true) */
+  enabled?: boolean;
+  /** Maximum number of cached computations (default: 100) */
+  maxCacheSize?: number;
+  /** Time-to-live for cache entries in milliseconds */
+  ttl?: number;
+  /** Enable LRU eviction (default: true) */
+  enableLRU?: boolean;
+  /** Equality strategy for cache comparison (default: 'deep') */
+  equality?: 'deep' | 'shallow' | 'reference';
+}
 // Core v6 types — type-safe enhancer architecture
 
 // Primitives
@@ -79,9 +116,13 @@ export interface EffectsMethods<T> {
   subscribe(fn: (state: T) => void): () => void;
 }
 
+/** Batching enhancer configuration (canonical) */
+export interface BatchingConfig {
+  debounceMs?: number;
+  maxBatchSize?: number;
+}
+
 export interface BatchingMethods<T = unknown> {
-  // Runtime `batch` calls don't receive the state argument; they run
-  // a zero-arg callback that performs updates via `tree.$` or `tree()`.
   batch(fn: () => void): void;
 }
 
@@ -450,7 +491,21 @@ export interface PersistenceConfig {
 }
 
 export interface DevToolsConfig {
+  /** Enable Redux DevTools browser extension */
+  enableBrowserDevTools?: boolean;
+  /** Enable internal logging */
+  enableLogging?: boolean;
+  /** Performance warning threshold (ms) */
+  performanceThreshold?: number;
+  /** Name shown in Redux DevTools */
   name?: string;
+  /** Alias for name (legacy support) */
+  treeName?: string;
+  /** Enable/disable devtools connection */
+  enabled?: boolean;
+  /** Log actions to console */
+  logActions?: boolean;
+  /** Max history entries to keep */
   maxAge?: number;
   features?: {
     jump?: boolean;

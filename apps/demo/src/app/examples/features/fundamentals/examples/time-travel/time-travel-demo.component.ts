@@ -63,12 +63,12 @@ export class TimeTravelDemoComponent {
       { id: 2, title: 'Try Time Travel', completed: false },
       { id: 3, title: 'Build Something Amazing', completed: false },
     ],
-  }).with(withTimeTravel({ maxHistorySize: 50 })) as TimeTravelTree;
+  }).with(withTimeTravel({ maxHistorySize: 50 }));
 
   // Type-safe tree updater
-  private updateTree = this.tree as unknown as (
-    updater: (state: AppState) => AppState
-  ) => void;
+  private updateTree = (updater: (state: AppState) => AppState) => {
+    this.tree(updater);
+  };
 
   // State signals
   counter = this.tree.state.counter;

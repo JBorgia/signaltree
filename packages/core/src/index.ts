@@ -153,7 +153,6 @@ export {
   memoize,
   memoizeShallow,
   memoizeReference,
-  cleanupMemoizationCache,
   clearAllCaches,
   getGlobalCacheStats,
 } from './enhancers/memoization/lib/memoization';
@@ -166,7 +165,6 @@ export {
   withTimeTravel,
   enableTimeTravel,
   getTimeTravel,
-  type TimeTravelInterface,
 } from './enhancers/time-travel/lib/time-travel';
 
 /**

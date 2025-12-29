@@ -18,7 +18,8 @@
     "src/**/*.spec.ts",
     "src/test-setup.ts",
     "vitest.config.ts",
-    "src/**/*.test.ts"
+    "src/**/*.test.ts",
+    "src/**/*.d.ts"
   ],
   "include": ["src/**/*.ts"],
   "references": [
