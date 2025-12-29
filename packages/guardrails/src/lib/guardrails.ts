@@ -252,7 +252,9 @@ function startChangeDetection<T extends Record<string, unknown>>(
   try {
     // `subscribe` may be provided by an enhancer (effects) or be absent.
     // Treat it as optional and call if present to avoid TS errors during build.
-    const maybeSubscribe = (context.tree as unknown as { subscribe?: (fn: () => void) => () => void }).subscribe;
+    const maybeSubscribe = (
+      context.tree as unknown as { subscribe?: (fn: () => void) => () => void }
+    ).subscribe;
     if (typeof maybeSubscribe === 'function') {
       const unsubscribe = maybeSubscribe.call(context.tree, () => {
         handleStateChange(context);
