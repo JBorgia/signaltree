@@ -1,14 +1,14 @@
 import { computed, Signal } from '@angular/core';
 import { deepEqual, LRUCache } from '@signaltree/shared';
 
-import { isNodeAccessor } from '../../../lib/utils';
+import { isNodeAccessor } from '../../lib/utils';
 
-import type { TreeNode } from '../../../lib/utils';
+import type { TreeNode } from '../../lib/utils';
 
 import type {
   SignalTreeBase as SignalTree,
   Enhancer,
-} from '../../../lib/types';
+} from '../../lib/types';
 
 // Dev environment detection
 declare const __DEV__: boolean | undefined;

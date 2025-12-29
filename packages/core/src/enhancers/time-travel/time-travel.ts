@@ -1,11 +1,8 @@
-import { snapshotState } from '../../../lib/utils';
+import { snapshotState } from '../../lib/utils';
 import { deepClone, deepEqual } from './utils';
 
-import type { TreeNode } from '../../../lib/utils';
-import type {
-  SignalTreeBase as SignalTree,
-  Enhancer,
-} from '../../../lib/types';
+import type { TreeNode } from '../../lib/utils';
+import type { SignalTreeBase as SignalTree, Enhancer } from '../../lib/types';
 
 /**
  * Entry in the time travel history

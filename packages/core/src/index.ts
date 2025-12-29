@@ -219,7 +219,7 @@ export {
   getAvailablePresets,
   combinePresets,
   createDevTree,
-} from './lib/presets';
+} from './enhancers/presets/lib/presets';
 
 /**
  * Computed enhancer for derived signal creation

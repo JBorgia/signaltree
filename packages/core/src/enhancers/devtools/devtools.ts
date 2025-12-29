@@ -3,7 +3,7 @@ import { Signal, signal } from '@angular/core';
 import type {
   SignalTreeBase as SignalTree,
   Enhancer,
-} from '../../../lib/types';
+} from '../../lib/types';
 
 /**
  * Module metadata for tracking in the composition chain

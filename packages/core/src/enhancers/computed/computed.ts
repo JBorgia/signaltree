@@ -2,7 +2,7 @@ import { computed, Signal } from '@angular/core';
 
 import { createEnhancer } from '../..';
 
-import type { TreeNode, SignalTreeBase } from '../../../lib/types';
+import type { TreeNode, SignalTreeBase } from '../../lib/types';
 
 /**
  * Configuration for the computed enhancer

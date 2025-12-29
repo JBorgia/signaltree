@@ -1,5 +1,5 @@
-import { createEntitySignal } from '../../../lib/entity-signal';
-import { getPathNotifier } from '../../../lib/path-notifier';
+import { createEntitySignal } from '../../lib/entity-signal';
+import { getPathNotifier } from '../../lib/path-notifier';
 
 import type {
   EntityConfig,
@@ -7,7 +7,7 @@ import type {
   SignalTreeBase,
   Enhancer,
   EntitiesEnabled,
-} from '../../../lib/types';
+} from '../../lib/types';
 
 interface EntitiesEnhancerConfig {
   enabled?: boolean;
