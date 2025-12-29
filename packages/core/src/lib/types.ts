@@ -56,10 +56,8 @@ export interface SignalTreeBase<T> extends NodeAccessor<T> {
   bind(thisArg?: unknown): NodeAccessor<T>;
   destroy(): void;
   dispose?(): void;
-  // Allow enhancers to attach runtime methods without causing TS property errors.
-  // These are intentionally untyped — consumers should cast to the specific
-  // enhanced shape they expect (e.g. `SignalTreeBase<T> & BatchingMethods<T>`).
-  [key: string]: unknown;
+  // Allow enhancers to attach runtime methods — consumers should cast to the
+  // specific enhanced shape they expect (e.g. `SignalTreeBase<T> & BatchingMethods<T>`).
 }
 
 // Method interfaces

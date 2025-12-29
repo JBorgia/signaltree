@@ -1,5 +1,9 @@
 export { signalTree } from './lib/signal-tree';
 export type {
+  SignalTreeBase,
+  FullSignalTree,
+  ProdSignalTree,
+  MinimalSignalTree,
   SignalTree,
   TreeNode,
   CallableWritableSignal,
