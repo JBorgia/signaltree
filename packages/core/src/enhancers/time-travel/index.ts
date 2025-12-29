@@ -1,1 +1,1 @@
-export * from './lib/time-travel';
+export * from './time-travel';

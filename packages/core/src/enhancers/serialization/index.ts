@@ -1,2 +1,2 @@
-export * from './lib/serialization';
+export * from './serialization';
 export * from './constants';
