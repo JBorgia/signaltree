@@ -274,7 +274,8 @@ export function withDevTools(
 
   const displayName = name ?? treeName;
 
-  return <S>(tree: SignalTreeBase<S>): SignalTreeBase<S> & DevToolsMethods => {
+  return <Tree extends SignalTreeBase<any>>(tree: Tree): Tree & DevToolsMethods => {
+    type S = Tree extends SignalTreeBase<infer U> ? U : unknown;
     // ========================================================================
     // Disabled path
     // ========================================================================
@@ -287,8 +288,7 @@ export function withDevTools(
           /* disabled */
         },
       };
-      return Object.assign(tree, noopMethods) as unknown as Tree &
-        DevToolsMethods;
+      return Object.assign(tree, noopMethods) as Tree & DevToolsMethods;
     }
 
     // ========================================================================
@@ -474,11 +474,7 @@ export function withDevTools(
     (enhancedTree as unknown as Record<string, unknown>)['__devTools'] =
       devToolsInterface;
 
-    return Object.assign(enhancedTree, methods) as unknown as <
-      Tree extends SignalTreeBase<any>
-    >(
-      tree: Tree
-    ) => Tree & DevToolsMethods;
+    return Object.assign(enhancedTree, methods) as unknown as Tree & DevToolsMethods;
   };
 }
 
