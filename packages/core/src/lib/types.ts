@@ -125,7 +125,10 @@ export interface EffectsMethods<T> {
 export interface BatchingConfig {
   /** Enable/disable batching (default: true) */
   enabled?: boolean;
+  /** Milliseconds to debounce flushes when batching is enabled */
   debounceMs?: number;
+  /** Milliseconds to auto-flush pending batches (compatibility name) */
+  autoFlushDelay?: number;
   maxBatchSize?: number;
 }
 
