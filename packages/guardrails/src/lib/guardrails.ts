@@ -139,10 +139,12 @@ const POLLING_INTERVAL_MS = 50; // Fast polling for dev-time monitoring
  */
 export function withGuardrails(
   config: GuardrailsConfig<any> = {}
-): <S>(
-  tree: SignalTree<S>
-) => SignalTree<S> & { __guardrails?: GuardrailsAPI } {
-  return function <S>(tree: SignalTree<S>): SignalTree<S> & {
+): <Tree extends SignalTree<any>>(
+  tree: Tree
+) => Tree & { __guardrails?: GuardrailsAPI } {
+  return function <Tree extends SignalTree<any>>(
+    tree: Tree
+  ): Tree & {
     __guardrails?: GuardrailsAPI;
   } {
     const enabled = resolveEnabledFlag(config.enabled);
@@ -152,8 +154,8 @@ export function withGuardrails(
 
     const stats = createRuntimeStats();
     const context = {
-      tree,
-      config: config as GuardrailsConfig<S>,
+      tree: tree as unknown as SignalTree<any>,
+      config: config as GuardrailsConfig<any>,
       stats,
       issues: [],
       hotPaths: [],
@@ -166,9 +168,9 @@ export function withGuardrails(
       pathRecomputations: new Map(),
       memoryHistory: [],
       recomputationLog: [],
-      previousState: tryStructuredClone(tree()),
+      previousState: tryStructuredClone((tree as unknown as any)()),
       disposed: false,
-    } as GuardrailsContext<S>;
+    } as GuardrailsContext<any>;
     // Wire up dev hooks for memoization recomputation tracking
     (tree as unknown as Record<string, unknown>)['__devHooks'] = {
       onRecompute: (path: string, count: number) => {
