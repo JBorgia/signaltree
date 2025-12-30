@@ -3,7 +3,7 @@
  * @packageDocumentation
  */
 
-import type { SignalTreeBase as SignalTree } from '@signaltree/core';
+import type { SignalTree as SignalTree } from '@signaltree/core';
 
 export interface GuardrailsConfig<T = Record<string, unknown>> {
   /** Behavior mode: warn (console), throw (errors), or silent (collect only) */

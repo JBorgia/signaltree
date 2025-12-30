@@ -2,7 +2,7 @@ import { Assert, Equals } from '../test-helpers/types-equals';
 import { withBatching } from './batching';
 
 import type {
-  SignalTreeBase,
+  ISignalTree,
   BatchingMethods,
   BatchingConfig,
 } from '../../lib/types';
@@ -10,9 +10,7 @@ import type {
 // The expected signature
 type ExpectedSignature = (
   config?: BatchingConfig
-) => <Tree extends SignalTreeBase<any>>(
-  tree: Tree
-) => Tree & BatchingMethods<any>;
+) => <Tree extends ISignalTree<any>>(tree: Tree) => Tree & BatchingMethods<any>;
 
 // The actual signature
 type ActualSignature = typeof withBatching;
@@ -25,8 +23,8 @@ type _ContractCheck = Assert<Equals<ActualSignature, ExpectedSignature>>;
 // ============================================================================
 
 // Verify the enhancer works with different state types
-declare const tree1: SignalTreeBase<{ count: number }>;
-declare const tree2: SignalTreeBase<{ users: string[]; active: boolean }>;
+declare const tree1: ISignalTree<{ count: number }>;
+declare const tree2: ISignalTree<{ users: string[]; active: boolean }>;
 
 // These should all compile
 const enhanced1 = withBatching()(tree1);

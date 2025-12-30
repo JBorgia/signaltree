@@ -3,7 +3,7 @@
  * This module exports empty implementations to ensure zero production cost
  */
 
-import type { SignalTreeBase as SignalTree } from '@signaltree/core';
+import type { SignalTree as SignalTree } from '@signaltree/core';
 
 import type { GuardrailsConfig, GuardrailRule } from './lib/types';
 
@@ -16,11 +16,11 @@ const noopRule = (name: string): GuardrailRule => ({
 });
 
 export function withGuardrails(config: GuardrailsConfig<any> = {}) {
-  return <S>(tree: import('@signaltree/core').SignalTreeBase<S>) => {
+  return <S>(tree: import('@signaltree/core').SignalTree<S>) => {
     if (config) {
       // Production build ignores guardrail configuration
     }
-    return tree as import('@signaltree/core').SignalTreeBase<S>;
+    return tree as import('@signaltree/core').SignalTree<S>;
   };
 }
 

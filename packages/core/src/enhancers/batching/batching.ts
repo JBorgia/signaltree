@@ -5,7 +5,7 @@ import { applyState, isNodeAccessor } from '../../lib/utils';
 import type { TreeNode } from '../../lib/utils';
 
 import type {
-  SignalTreeBase as SignalTree,
+  ISignalTree as ISignalTree,
   Enhancer,
   BatchingConfig,
 } from '../../lib/types';
@@ -15,7 +15,7 @@ import type {
  */
 
 /** Enhanced SignalTree interface with batching methods */
-interface BatchingSignalTree<T> extends SignalTree<T> {
+interface BatchingSignalTree<T> extends ISignalTree<T> {
   // Public, user-facing batching API (new v6 shape)
   batch(fn: () => void): void;
   // Legacy/internal batchUpdate preserved for compatibility
@@ -139,7 +139,7 @@ export function withBatchingWithConfig<T>(
     currentBatchingConfig = { ...currentBatchingConfig, ...config };
   }
 
-  const enhancer = <Tree extends SignalTree<T>>(
+  const enhancer = <Tree extends ISignalTree<T>>(
     tree: Tree
   ): Tree & BatchingMethods<T> => {
     if (!enabled) {
@@ -147,7 +147,7 @@ export function withBatchingWithConfig<T>(
       // `tree.batchUpdate(...)` even when batching is disabled. This avoids
       // relying on the base `signalTree` implementation shape and keeps
       // behavior stable across versions.
-      const enhanced = tree as unknown as SignalTree<T> &
+      const enhanced = tree as unknown as ISignalTree<T> &
         BatchingMethods<T> & {
           batch?: (updater: (state: TreeNode<T>) => void) => void;
         };
@@ -190,7 +190,7 @@ export function withBatchingWithConfig<T>(
     const originalTreeCall = tree.bind(tree);
 
     const enhancedTree = function (
-      this: SignalTree<T>,
+      this: ISignalTree<T>,
       ...args: unknown[]
     ): T | void {
       if (args.length === 0) {
@@ -207,7 +207,7 @@ export function withBatchingWithConfig<T>(
           }
         });
       }
-    } as unknown as SignalTree<T>;
+    } as unknown as ISignalTree<T>;
 
     Object.setPrototypeOf(enhancedTree, Object.getPrototypeOf(tree));
     Object.assign(enhancedTree, tree);
@@ -222,7 +222,7 @@ export function withBatchingWithConfig<T>(
 
     if ('$' in tree) {
       Object.defineProperty(enhancedTree, '$', {
-        value: (tree as SignalTree<T>).$,
+        value: (tree as ISignalTree<T>).$,
         enumerable: false,
         configurable: true,
       });
@@ -257,9 +257,9 @@ export function withBatchingWithConfig<T>(
 /** User-friendly no-arg signature expected by type-level tests */
 export function withBatching(
   config: BatchingConfig = {}
-): <Tree extends SignalTree<any>>(tree: Tree) => Tree & BatchingMethods<any> {
+): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & BatchingMethods<any> {
   return withBatchingWithConfig(config) as unknown as <
-    Tree extends SignalTree<any>
+    Tree extends ISignalTree<any>
   >(
     tree: Tree
   ) => Tree & BatchingMethods<any>;

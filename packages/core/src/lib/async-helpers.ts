@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 
-import type { SignalTreeBase as SignalTree } from './types';
+import type { ISignalTree as ISignalTree } from './types';
 
 /**
  * Create an async operation that updates the tree via its batchUpdate method
@@ -10,7 +10,7 @@ export function createAsyncOperation<T, TResult>(
   name: string,
   operation: () => Promise<TResult>
 ) {
-  return async (tree: SignalTree<T>) => {
+  return async (tree: ISignalTree<T>) => {
     // Trigger batch update marking pending
     if (typeof (tree as any)['batchUpdate'] === 'function') {
       // batchUpdate expects a Partial<T>. We don't know T here, so create

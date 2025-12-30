@@ -76,7 +76,7 @@ const subsets = powerset(enhancers);
 let content = `// GENERATED FILE - do not edit by hand
 // Comprehensive type-level checks for enhancer subsets
 import type { Equals, Assert } from './helpers-types';
-import type { SignalTreeBase } from '../../lib/types';
+import type { SignalTree } from '../../lib/types';
 type Tree = { count: number };
 `;
 

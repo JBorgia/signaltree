@@ -1,4 +1,4 @@
-import type { SignalTreeBase as SignalTree } from './types';
+import type { ISignalTree as ISignalTree } from './types';
 
 const ENHANCER_METHOD_MAP: Record<
   string,
@@ -20,7 +20,7 @@ const ENHANCER_METHOD_MAP: Record<
   entities: { enhancer: 'withEntities()', preset: 'createDevTree' },
 };
 
-export function wrapWithDevProxy<T>(tree: SignalTree<T>): SignalTree<T> {
+export function wrapWithDevProxy<T>(tree: ISignalTree<T>): ISignalTree<T> {
   return new Proxy(tree, {
     get(target, prop, receiver) {
       const value = Reflect.get(target, prop, receiver);
@@ -35,7 +35,7 @@ export function wrapWithDevProxy<T>(tree: SignalTree<T>): SignalTree<T> {
     has(target, prop) {
       return Reflect.has(target, prop);
     },
-  }) as SignalTree<T>;
+  }) as ISignalTree<T>;
 }
 
 export function shouldUseDevProxy(): boolean {

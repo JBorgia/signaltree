@@ -1,7 +1,7 @@
 import { rules, withGuardrails } from '../noop';
 
 import type {
-  SignalTreeBase as SignalTree,
+  SignalTree as SignalTree,
   TreeConfig,
   Enhancer,
 } from '@signaltree/core';
@@ -90,7 +90,7 @@ export function createFeatureTree<T extends Record<string, unknown>>(
 
   const tree = signalTree(initial);
   // Apply enhancers in an `unknown` local to avoid leaking temporary
-  // `SignalTreeBase<unknown>` inference into the typed `SignalTree<T>`.
+  // `SignalTree<unknown>` inference into the typed `SignalTree<T>`.
   // The factory API remains strongly typed for callers; this cast only
   // affects internal sequencing of enhancers.
   let enhanced: unknown = tree;

@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
 import { signalTree, withSerialization } from '@signaltree/core';
 
-import type { SignalTreeBase as SignalTree } from '@signaltree/core';
+import type { SignalTree as SignalTree } from '@signaltree/core';
 
 interface ItemType {
   id: number;

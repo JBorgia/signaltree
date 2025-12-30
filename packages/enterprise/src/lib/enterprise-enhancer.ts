@@ -46,14 +46,14 @@ import type { Enhancer } from '@signaltree/core';
  * @public
  */
 export function withEnterprise(): <
-  Tree extends import('@signaltree/core').SignalTreeBase<any>
+  Tree extends import('@signaltree/core').SignalTree<any>
 >(
   tree: Tree
 ) => Tree & import('@signaltree/enterprise').EnterpriseEnhancedTree<any> {
-  return <Tree extends import('@signaltree/core').SignalTreeBase<any>>(
+  return <Tree extends import('@signaltree/core').SignalTree<any>>(
     tree: Tree
   ): Tree & import('@signaltree/enterprise').EnterpriseEnhancedTree<any> => {
-    type S = Tree extends import('@signaltree/core').SignalTreeBase<infer U>
+    type S = Tree extends import('@signaltree/core').SignalTree<infer U>
       ? U
       : unknown;
     // Lazy initialization - only create when first needed

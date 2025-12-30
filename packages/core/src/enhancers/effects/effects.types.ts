@@ -4,13 +4,11 @@ import { withEffects } from './effects';
 /**
  * Type-level tests for effects enhancer.
  */
-import type { SignalTreeBase, EffectsMethods } from '../../lib/types';
+import type { ISignalTree, EffectsMethods } from '../../lib/types';
 // Expected signature (config is optional and has no required fields)
 type ExpectedSignature = (config?: {
   enabled?: boolean;
-}) => <Tree extends SignalTreeBase<any>>(
-  tree: Tree
-) => Tree & EffectsMethods<any>;
+}) => <Tree extends ISignalTree<any>>(tree: Tree) => Tree & EffectsMethods<any>;
 
 type ActualSignature = typeof withEffects;
 
@@ -18,7 +16,7 @@ type ActualSignature = typeof withEffects;
 type _ContractCheck = Assert<Equals<ActualSignature, ExpectedSignature>>;
 
 // Usage verification
-declare const tree: SignalTreeBase<{ count: number }>;
+declare const tree: ISignalTree<{ count: number }>;
 const enhanced = withEffects()(tree);
 
 // Effect method should be available

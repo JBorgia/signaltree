@@ -19,7 +19,7 @@ type Assert<T extends true> = T;
 
 type Tree = { count: number };
 
-type Base = object; // placeholder for SignalTreeBase<T> fields we don't model here
+type Base = object; // placeholder for SignalTree<T> fields we don't model here
 
 // Single enhancer expectations
 type _batch_single = Assert<

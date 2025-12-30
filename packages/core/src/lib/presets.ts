@@ -13,7 +13,7 @@ import { signalTree } from './signal-tree';
  * Types flow naturally through the chain - no casts needed.
  */
 import type {
-  SignalTreeBase,
+  ISignalTree,
   TreeConfig,
   BatchingConfig,
   MemoizationConfig,
@@ -58,7 +58,7 @@ export interface MinimalTreeConfig extends TreeConfig {
 /**
  * Full development tree with all enhancers
  */
-export type FullSignalTree<T> = SignalTreeBase<T> &
+export type FullSignalTree<T> = ISignalTree<T> &
   EffectsMethods<T> &
   BatchingMethods &
   MemoizationMethods<T> &
@@ -69,7 +69,7 @@ export type FullSignalTree<T> = SignalTreeBase<T> &
 /**
  * Production tree without dev tools and time travel
  */
-export type ProdSignalTree<T> = SignalTreeBase<T> &
+export type ProdSignalTree<T> = ISignalTree<T> &
   EffectsMethods<T> &
   BatchingMethods &
   MemoizationMethods<T> &
@@ -78,7 +78,7 @@ export type ProdSignalTree<T> = SignalTreeBase<T> &
 /**
  * Minimal tree with just effects
  */
-export type MinimalSignalTree<T> = SignalTreeBase<T> & EffectsMethods<T>;
+export type MinimalSignalTree<T> = ISignalTree<T> & EffectsMethods<T>;
 
 // ============================================================================
 // Factory Functions
@@ -116,7 +116,7 @@ export function createDevTree<T extends object>(
   config?: DevTreeConfig
 ): FullSignalTree<T>;
 export function createDevTree(): {
-  enhancer: <Tree extends SignalTreeBase<any>>(
+  enhancer: <Tree extends ISignalTree<any>>(
     tree: Tree
   ) => Tree &
     EffectsMethods<any> &
@@ -133,7 +133,7 @@ export function createDevTree<T extends object>(
   // If no initial state provided, return the enhancer chain so callers
   // can apply it to an existing tree (demo usage pattern).
   if (arguments.length === 0) {
-    const enhancer = <Tree extends SignalTreeBase<any>>(tree: Tree) =>
+    const enhancer = <Tree extends ISignalTree<any>>(tree: Tree) =>
       tree
         .with(withEffects())
         .with(withBatching())
@@ -264,14 +264,14 @@ export function buildTree<T extends object>(
   initialState: T,
   config: TreeConfig = {}
 ) {
-  let tree: SignalTreeBase<T> = signalTree(initialState, config);
+  let tree: ISignalTree<T> = signalTree(initialState, config);
 
   return {
     /**
      * Add an enhancer to the tree
      */
     add<R>(enhancer: (t: typeof tree) => R) {
-      tree = enhancer(tree) as unknown as SignalTreeBase<T>;
+      tree = enhancer(tree) as unknown as ISignalTree<T>;
       return this;
     },
 

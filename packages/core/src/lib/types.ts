@@ -7,6 +7,10 @@ export interface TimeTravelConfig {
   /** Enable/disable time travel (default: true) */
   enabled?: boolean;
   /**
+import { Signal, WritableSignal } from '@angular/core';
+
+import { SecurityValidatorConfig } from './security/security-validator';
+
    * Maximum number of history entries to keep
    * @default 50
    */
@@ -97,7 +101,9 @@ export type TreeNode<T> = {
 };
 
 // Base SignalTree minimal interface
-export interface SignalTreeBase<T> extends NodeAccessor<T> {
+// v6: primary runtime tree type is `SignalTree<T>`; a deprecated alias
+// `SignalTree<T>` is provided at the end of this file for compatibility.
+export interface ISignalTree<T> extends NodeAccessor<T> {
   readonly state: TreeNode<T>;
   readonly $: TreeNode<T>;
   // Single-enhancer chain: apply one enhancer at a time.
@@ -109,7 +115,7 @@ export interface SignalTreeBase<T> extends NodeAccessor<T> {
   bind(thisArg?: unknown): NodeAccessor<T>;
   destroy(): void;
   // Allow enhancers to attach runtime methods — consumers should cast to the
-  // specific enhanced shape they expect (e.g. `SignalTreeBase<T> & BatchingMethods<T>`).
+  // specific enhanced shape they expect (e.g. `SignalTree<T> & BatchingMethods<T>`).
 }
 
 // Method interfaces
@@ -611,7 +617,7 @@ export type EntityAwareTreeNode<T> = {
  * This keeps the default common path fast while preserving power for
  * advanced users.
  */
-export type TypedSignalTree<T> = SignalTreeBase<T> & {
+export type TypedSignalTree<T> = ISignalTree<T> & {
   $: DeepEntityAwareTreeNode<T>;
 };
 
@@ -663,7 +669,7 @@ export const ENHANCER_META = Symbol('signaltree:enhancer:meta');
  * Enhancer function that adds methods to a tree.
  * Generic parameter `TAdded` represents the methods being added.
  */
-export type Enhancer<TAdded> = <Tree extends SignalTreeBase<any>>(
+export type Enhancer<TAdded> = <Tree extends ISignalTree<any>>(
   tree: Tree
 ) => Tree & TAdded;
 
@@ -683,11 +689,9 @@ export interface EnhancerMeta {
 // Main public SignalTree interface expected by downstream packages
 /**
  * Convenience signal tree aliases representing common preset combinations.
- * V6 removes the old monolithic `SignalTree<T>` in favor of a minimal
- * `SignalTreeBase<T>` and opt-in intersections with method interfaces.
  */
 
-export type FullSignalTree<T> = SignalTreeBase<T> &
+export type FullSignalTree<T> = ISignalTree<T> &
   EffectsMethods<T> &
   BatchingMethods<T> &
   MemoizationMethods<T> &
@@ -696,7 +700,7 @@ export type FullSignalTree<T> = SignalTreeBase<T> &
   EntitiesEnabled &
   OptimizedUpdateMethods<T>;
 
-export type ProdSignalTree<T> = SignalTreeBase<T> &
+export type ProdSignalTree<T> = ISignalTree<T> &
   EffectsMethods<T> &
   BatchingMethods<T> &
   MemoizationMethods<T> &
@@ -704,16 +708,16 @@ export type ProdSignalTree<T> = SignalTreeBase<T> &
   OptimizedUpdateMethods<T>;
 
 /** Minimal tree (just effects) */
-export type MinimalSignalTree<T> = SignalTreeBase<T> & EffectsMethods<T>;
+export type MinimalSignalTree<T> = ISignalTree<T> & EffectsMethods<T>;
 
 // Backwards-compatible aliases expected by older consumers
 // v6: remove legacy `SignalTree` alias and multi-overload `WithMethod`.
-// Consumers should use `SignalTreeBase<T>` for the minimal runtime shape
+// Consumers should use `SignalTree<T>` for the minimal runtime shape
 // and opt into `FullSignalTree<T>` / `ProdSignalTree<T>` when they need
 // the enhanced feature set. Helper presets produce those enhanced shapes.
 
 // Note: `SignalTree` alias is provided by the separate `types` package.
-// Core now uses `SignalTreeBase<T>` and the dedicated `types` package
+// Core now uses `SignalTree<T>` and the dedicated `types` package
 // supplies the legacy `SignalTree<T>` declaration to avoid duplicate
 // identifier collisions during monorepo type-checking.
 
@@ -724,7 +728,7 @@ export type MinimalSignalTree<T> = SignalTreeBase<T> & EffectsMethods<T>;
 /**
  * Type guard to check if a value is a SignalTree
  */
-export function isSignalTree<T>(value: unknown): value is SignalTreeBase<T> {
+export function isSignalTree<T>(value: unknown): value is ISignalTree<T> {
   return (
     value !== null &&
     typeof value === 'function' && // It's a callable function

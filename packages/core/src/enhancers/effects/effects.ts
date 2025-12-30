@@ -3,10 +3,10 @@ import { effect as angularEffect, untracked } from '@angular/core';
 /**
  * v6 Effects Enhancer
  *
- * Contract: (config?) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & EffectsMethods<S>
+ * Contract: (config?) => <S>(tree: SignalTree<S>) => SignalTree<S> & EffectsMethods<S>
  */
 /* eslint-disable @typescript-eslint/no-empty-function */
-import type { SignalTreeBase, EffectsMethods } from '../../lib/types';
+import type { ISignalTree, EffectsMethods } from '../../lib/types';
 
 export interface EffectsConfig {
   /** Enable/disable effects (default: true) */
@@ -42,14 +42,12 @@ export interface EffectsConfig {
  */
 export function withEffects(
   config: EffectsConfig = {}
-): <Tree extends SignalTreeBase<any>>(
-  tree: Tree
-) => Tree & EffectsMethods<any> {
+): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & EffectsMethods<any> {
   const { enabled = true } = config;
-  return <Tree extends SignalTreeBase<any>>(
+  return <Tree extends ISignalTree<any>>(
     tree: Tree
   ): Tree & EffectsMethods<any> => {
-    type S = Tree extends SignalTreeBase<infer U> ? U : unknown;
+    type S = Tree extends ISignalTree<infer U> ? U : unknown;
     const cleanupFns: Array<() => void> = [];
 
     const methods: EffectsMethods<S> = {
@@ -124,7 +122,7 @@ export function withEffects(
 /**
  * Enable effects with default settings
  */
-export function enableEffects(): <Tree extends SignalTreeBase<any>>(
+export function enableEffects(): <Tree extends ISignalTree<any>>(
   tree: Tree
 ) => Tree & EffectsMethods<any> {
   return withEffects({ enabled: true });

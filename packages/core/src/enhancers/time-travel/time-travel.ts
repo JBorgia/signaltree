@@ -3,7 +3,7 @@ import { deepClone, deepEqual } from './utils';
 
 import type { TreeNode } from '../../lib/utils';
 import type {
-  SignalTreeBase,
+  ISignalTree,
   TimeTravelMethods,
   TimeTravelConfig,
   TimeTravelEntry,
@@ -25,7 +25,7 @@ class TimeTravelManager<T> {
   private actionNames: Record<string, string>;
 
   constructor(
-    private tree: SignalTreeBase<T>,
+    private tree: ISignalTree<T>,
     private config: TimeTravelConfig = {},
     private restoreStateFn?: (state: T) => void
   ) {
@@ -210,12 +210,12 @@ class TimeTravelManager<T> {
  */
 export function withTimeTravel(
   config: TimeTravelConfig = {}
-): <Tree extends SignalTreeBase<any>>(tree: Tree) => Tree & TimeTravelMethods {
+): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & TimeTravelMethods {
   const { enabled = true } = config;
-  return <Tree extends SignalTreeBase<any>>(
+  return <Tree extends ISignalTree<any>>(
     tree: Tree
   ): Tree & TimeTravelMethods => {
-    type S = Tree extends SignalTreeBase<infer U> ? U : unknown;
+    type S = Tree extends ISignalTree<infer U> ? U : unknown;
     // Disabled (noop) path
     if (!enabled) {
       const noopMethods: TimeTravelMethods = {
@@ -268,10 +268,7 @@ export function withTimeTravel(
     );
 
     // Create enhanced tree function that includes time travel tracking
-    const enhancedTree = function (
-      this: SignalTreeBase<S>,
-      ...args: unknown[]
-    ) {
+    const enhancedTree = function (this: ISignalTree<S>, ...args: unknown[]) {
       if (args.length === 0) {
         return originalTreeCall();
       } else {
@@ -307,7 +304,7 @@ export function withTimeTravel(
 
         return result;
       }
-    } as unknown as SignalTreeBase<S>;
+    } as unknown as ISignalTree<S>;
 
     Object.setPrototypeOf(enhancedTree, Object.getPrototypeOf(tree));
     Object.assign(enhancedTree, tree);
@@ -357,7 +354,7 @@ export function withTimeTravel(
 /**
  * Convenience function to enable basic time travel
  */
-export function enableTimeTravel(): <Tree extends SignalTreeBase<any>>(
+export function enableTimeTravel(): <Tree extends ISignalTree<any>>(
   tree: Tree
 ) => Tree & TimeTravelMethods {
   return withTimeTravel({ enabled: true });
@@ -368,6 +365,6 @@ export function enableTimeTravel(): <Tree extends SignalTreeBase<any>>(
  */
 export function withTimeTravelHistory(
   maxHistorySize: number
-): <Tree extends SignalTreeBase<any>>(tree: Tree) => Tree & TimeTravelMethods {
+): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & TimeTravelMethods {
   return withTimeTravel({ maxHistorySize });
 }

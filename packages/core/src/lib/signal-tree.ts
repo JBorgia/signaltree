@@ -10,7 +10,7 @@ import type {
   TreeConfig,
   NodeAccessor,
   EntityMapMarker,
-  SignalTreeBase,
+  ISignalTree,
 } from './types';
 
 // =============================================================================
@@ -273,7 +273,7 @@ function createSignalStore<T>(
 function create<T extends object>(
   initialState: T,
   config: TreeConfig
-): SignalTreeBase<T> {
+): ISignalTree<T> {
   if (initialState === null || initialState === undefined) {
     throw new Error(SIGNAL_TREE_MESSAGES.NULL_OR_UNDEFINED);
   }
@@ -320,7 +320,7 @@ function create<T extends object>(
     } else {
       recursiveUpdate(signalState, arg);
     }
-  } as SignalTreeBase<T>;
+  } as ISignalTree<T>;
 
   // Mark as NodeAccessor
   (tree as unknown as Record<symbol, boolean>)[NODE_ACCESSOR_SYMBOL] = true;
@@ -341,7 +341,7 @@ function create<T extends object>(
   // v6 single-enhancer chaining: accept exactly one enhancer and return
   // the enhanced tree. Chaining should be done by calling `.with()` again.
   Object.defineProperty(tree, 'with', {
-    value: function <R>(enhancer: (tree: SignalTreeBase<T>) => R): R {
+    value: function <R>(enhancer: (tree: ISignalTree<T>) => R): R {
       if (typeof enhancer !== 'function') {
         throw new Error('Enhancer must be a function');
       }
@@ -438,7 +438,7 @@ function create<T extends object>(
 /**
  * Create a minimal SignalTree.
  *
- * Returns SignalTreeBase<T> with only core functionality.
+ * Returns SignalTree<T> with only core functionality.
  * Use .with() to add enhancers for additional features.
  *
  * @example
@@ -459,6 +459,6 @@ function create<T extends object>(
 export function signalTree<T extends object>(
   initialState: T,
   config: TreeConfig = {}
-): SignalTreeBase<T> {
+): ISignalTree<T> {
   return create(initialState, config);
 }

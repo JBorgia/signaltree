@@ -1,4 +1,4 @@
-import type { SignalTreeBase as SignalTree } from '../../lib/types';
+import type { ISignalTree as ISignalTree } from '../../lib/types';
 import type { EnhancerWithMeta } from '../../lib/types';
 
 export interface SerializationConfig {
@@ -25,7 +25,7 @@ export interface SerializedState<T = unknown> {
   };
 }
 
-export interface SerializableSignalTree<T> extends SignalTree<T> {
+export interface SerializableSignalTree<T> extends ISignalTree<T> {
   $: any;
   serialize(config?: SerializationConfig): string;
   deserialize(json: string, config?: SerializationConfig): void;
@@ -45,14 +45,14 @@ export interface PersistenceMethods {
 // Minimal runtime stubs so module resolution works during tests.
 export function withSerialization(
   defaultConfig?: SerializationConfig
-): <Tree extends SignalTree<any>>(
+): <Tree extends ISignalTree<any>>(
   tree: Tree
 ) => Tree & SerializableSignalTree<any> {
   return (tree: any) => tree as any;
 }
 
 export function enableSerialization() {
-  return <Tree extends SignalTree<any>>(tree: Tree) => tree as any;
+  return <Tree extends ISignalTree<any>>(tree: Tree) => tree as any;
 }
 
 export interface StorageAdapter {
@@ -71,7 +71,7 @@ export interface PersistenceConfig extends SerializationConfig {
 }
 
 export function withPersistence(config: PersistenceConfig) {
-  return <Tree extends SignalTree<any>>(tree: Tree) => tree as any;
+  return <Tree extends ISignalTree<any>>(tree: Tree) => tree as any;
 }
 
 export function createStorageAdapter(
@@ -90,12 +90,12 @@ export function createIndexedDBAdapter(dbName?: string, storeName?: string) {
   );
 }
 
-export function applySerialization<T>(tree: SignalTree<T>) {
+export function applySerialization<T>(tree: ISignalTree<T>) {
   return tree as unknown as SerializableSignalTree<T>;
 }
 
 export function applyPersistence<T>(
-  tree: SignalTree<T>,
+  tree: ISignalTree<T>,
   cfg: PersistenceConfig
 ) {
   return tree as unknown as SerializableSignalTree<T> & PersistenceMethods;

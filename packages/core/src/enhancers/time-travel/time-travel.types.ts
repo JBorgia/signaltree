@@ -1,18 +1,18 @@
-import { SignalTreeBase } from '../../lib/types';
+import { ISignalTree } from '../../lib/types';
 import { Assert, Equals } from '../test-helpers/types-equals';
 import { TimeTravelMethods } from '../types';
 import { TimeTravelConfig, withTimeTravel } from './time-travel';
 
 type ExpectedSignature = (
   config?: TimeTravelConfig
-) => <Tree extends SignalTreeBase<any>>(tree: Tree) => Tree & TimeTravelMethods;
+) => <Tree extends ISignalTree<any>>(tree: Tree) => Tree & TimeTravelMethods;
 
 type ActualSignature = typeof withTimeTravel;
 
 type _ContractCheck = Assert<Equals<ActualSignature, ExpectedSignature>>;
 
 // Usage verification
-declare const tree: SignalTreeBase<{ count: number }>;
+declare const tree: ISignalTree<{ count: number }>;
 const enhanced = withTimeTravel({ maxHistorySize: 50 })(tree);
 
 // All time travel methods should be available

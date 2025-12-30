@@ -1,4 +1,4 @@
-import { signalTree, SignalTreeBase } from '@signaltree/core';
+import { ISignalTree, signalTree } from '@signaltree/core';
 
 /**
  * Recursive Performance Metrics System
@@ -533,7 +533,7 @@ eliminating traditional constraints through revolutionary recursive typing.
 
   private accessDeepestValue(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    tree: SignalTreeBase<any>
+    tree: ISignalTree<any>
   ): string | undefined {
     // Access deeply nested value for performance testing
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

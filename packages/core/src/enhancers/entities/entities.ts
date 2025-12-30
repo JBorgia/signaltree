@@ -4,7 +4,7 @@ import { getPathNotifier } from '../../lib/path-notifier';
 import type {
   EntityConfig,
   EntityMapMarker,
-  SignalTreeBase,
+  ISignalTree,
   EntitiesEnabled,
 } from '../../lib/types';
 
@@ -28,17 +28,17 @@ function isEntityMapMarker(value: unknown): value is Marker {
 /**
  * v6 Entities Enhancer
  *
- * Contract: (config?) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & EntitiesEnabled
+ * Contract: (config?) => <S>(tree: SignalTree<S>) => SignalTree<S> & EntitiesEnabled
  */
 export function withEntities(
   config: EntitiesEnhancerConfig = {}
-): <Tree extends SignalTreeBase<any>>(tree: Tree) => Tree & EntitiesEnabled {
+): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & EntitiesEnabled {
   // ← Explicit signature
   const { enabled = true } = config;
-  return <Tree extends SignalTreeBase<any>>(
+  return <Tree extends ISignalTree<any>>(
     tree: Tree
   ): Tree & EntitiesEnabled => {
-    type S = Tree extends SignalTreeBase<infer U> ? U : unknown;
+    type S = Tree extends ISignalTree<infer U> ? U : unknown;
     if (!enabled) {
       (tree as { __entitiesEnabled?: true }).__entitiesEnabled = true;
       return tree as Tree & EntitiesEnabled;
@@ -81,15 +81,13 @@ export function withEntities(
   };
 }
 
-export function enableEntities(): <Tree extends SignalTreeBase<any>>(
+export function enableEntities(): <Tree extends ISignalTree<any>>(
   tree: Tree
 ) => Tree & EntitiesEnabled {
   return withEntities();
 }
 
-export function withHighPerformanceEntities(): <
-  Tree extends SignalTreeBase<any>
->(
+export function withHighPerformanceEntities(): <Tree extends ISignalTree<any>>(
   tree: Tree
 ) => Tree & EntitiesEnabled {
   return withEntities();

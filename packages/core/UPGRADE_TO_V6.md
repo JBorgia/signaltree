@@ -115,14 +115,14 @@ enhanced.undo(); // TypeScript: ✅ | Runtime: ✅
 
 ### 1.3 Key Components
 
-| Component           | Purpose                                            |
-| ------------------- | -------------------------------------------------- |
-| `SignalTreeBase<T>` | Minimal core interface (state, $, with, destroy)   |
-| Method Interfaces   | `TimeTravelMethods<T>`, `BatchingMethods<T>`, etc. |
-| `Enhancer<TAdded>`  | Type that transforms tree and adds methods         |
-| `WithMethod<T>`     | Properly typed `.with()` overloads                 |
-| Preset Factories    | `createDevTree()`, `createProdTree()`, etc.        |
-| Dev Proxy           | Runtime errors with guidance (dev mode only)       |
+| Component          | Purpose                                            |
+| ------------------ | -------------------------------------------------- |
+| `SignalTree<T>`    | Minimal core interface (state, $, with, destroy)   |
+| Method Interfaces  | `TimeTravelMethods<T>`, `BatchingMethods<T>`, etc. |
+| `Enhancer<TAdded>` | Type that transforms tree and adds methods         |
+| `WithMethod<T>`    | Properly typed `.with()` overloads                 |
+| Preset Factories   | `createDevTree()`, `createProdTree()`, etc.        |
+| Dev Proxy          | Runtime errors with guidance (dev mode only)       |
 
 ### 1.4 Benefits Matrix
 
@@ -142,7 +142,7 @@ enhanced.undo(); // TypeScript: ✅ | Runtime: ✅
 ### 2.1 Type Hierarchy
 
 ```
-SignalTreeBase<T>                    # Core: state, $, with(), destroy()
+SignalTree<T>                    # Core: state, $, with(), destroy()
     │
     ├── & EffectsMethods<T>          # effect(), subscribe()
     │
@@ -163,19 +163,19 @@ SignalTreeBase<T>                    # Core: state, $, with(), destroy()
 signalTree(state)
     │
     ▼
-SignalTreeBase<T>  ──► .with(withEffects())
+SignalTree<T>  ──► .with(withEffects())
     │                        │
     │                        ▼
-    │               SignalTreeBase<T> & EffectsMethods<T>
+    │               SignalTree<T> & EffectsMethods<T>
     │                        │
     │                        ▼
     │               .with(withTimeTravel())
     │                        │
     │                        ▼
-    │               SignalTreeBase<T> & EffectsMethods<T> & TimeTravelMethods<T>
+    │               SignalTree<T> & EffectsMethods<T> & TimeTravelMethods<T>
     │
     ▼
-createDevTree(state)  ──► SignalTreeBase<T> & ALL_METHODS
+createDevTree(state)  ──► SignalTree<T> & ALL_METHODS
 ```
 
 ### 2.3 File Structure
@@ -384,7 +384,7 @@ export type TreeNode<T> = {
  *
  * @template T - The state shape type
  */
-export interface SignalTreeBase<T> {
+export interface SignalTree<T> {
   /**
    * The reactive state tree.
    * Access nested state via dot notation: tree.state.users.list
@@ -458,7 +458,7 @@ export const ENHANCER_META = Symbol('signaltree:enhancer:meta');
  * ```
  */
 export type Enhancer<TAdded> = {
-  <S>(tree: SignalTreeBase<S>): SignalTreeBase<S> & TAdded;
+  <S>(tree: SignalTree<S>): SignalTree<S> & TAdded;
   metadata?: EnhancerMeta;
 };
 
@@ -475,28 +475,28 @@ export type EnhancerAdds<E> = E extends Enhancer<infer Added> ? Added : never;
  */
 export interface WithMethod<T> {
   /** Zero enhancers - return base tree */
-  (): SignalTreeBase<T>;
+  (): SignalTree<T>;
 
   /** One enhancer */
-  <A>(e1: Enhancer<A>): SignalTreeBase<T> & A;
+  <A>(e1: Enhancer<A>): SignalTree<T> & A;
 
   /** Two enhancers */
-  <A, B>(e1: Enhancer<A>, e2: Enhancer<B>): SignalTreeBase<T> & A & B;
+  <A, B>(e1: Enhancer<A>, e2: Enhancer<B>): SignalTree<T> & A & B;
 
   /** Three enhancers */
-  <A, B, C>(e1: Enhancer<A>, e2: Enhancer<B>, e3: Enhancer<C>): SignalTreeBase<T> & A & B & C;
+  <A, B, C>(e1: Enhancer<A>, e2: Enhancer<B>, e3: Enhancer<C>): SignalTree<T> & A & B & C;
 
   /** Four enhancers */
-  <A, B, C, D>(e1: Enhancer<A>, e2: Enhancer<B>, e3: Enhancer<C>, e4: Enhancer<D>): SignalTreeBase<T> & A & B & C & D;
+  <A, B, C, D>(e1: Enhancer<A>, e2: Enhancer<B>, e3: Enhancer<C>, e4: Enhancer<D>): SignalTree<T> & A & B & C & D;
 
   /** Five enhancers */
-  <A, B, C, D, E>(e1: Enhancer<A>, e2: Enhancer<B>, e3: Enhancer<C>, e4: Enhancer<D>, e5: Enhancer<E>): SignalTreeBase<T> & A & B & C & D & E;
+  <A, B, C, D, E>(e1: Enhancer<A>, e2: Enhancer<B>, e3: Enhancer<C>, e4: Enhancer<D>, e5: Enhancer<E>): SignalTree<T> & A & B & C & D & E;
 
   /** Six enhancers */
-  <A, B, C, D, E, F>(e1: Enhancer<A>, e2: Enhancer<B>, e3: Enhancer<C>, e4: Enhancer<D>, e5: Enhancer<E>, e6: Enhancer<F>): SignalTreeBase<T> & A & B & C & D & E & F;
+  <A, B, C, D, E, F>(e1: Enhancer<A>, e2: Enhancer<B>, e3: Enhancer<C>, e4: Enhancer<D>, e5: Enhancer<E>, e6: Enhancer<F>): SignalTree<T> & A & B & C & D & E & F;
 
   /** Spread fallback for 7+ enhancers (less type precision) */
-  (...enhancers: Enhancer<unknown>[]): SignalTreeBase<T> & Record<string, unknown>;
+  (...enhancers: Enhancer<unknown>[]): SignalTree<T> & Record<string, unknown>;
 }
 
 // ============================================================================
@@ -946,19 +946,19 @@ export interface TreeConfig {
  * Full-featured SignalTree with all standard enhancers.
  * Equivalent to createDevTree() return type.
  */
-export type FullSignalTree<T> = SignalTreeBase<T> & EffectsMethods<T> & BatchingMethods<T> & MemoizationMethods<T> & TimeTravelMethods<T> & DevToolsMethods & EntitiesMethods<T>;
+export type FullSignalTree<T> = SignalTree<T> & EffectsMethods<T> & BatchingMethods<T> & MemoizationMethods<T> & TimeTravelMethods<T> & DevToolsMethods & EntitiesMethods<T>;
 
 /**
  * Production SignalTree without debug features.
  * Equivalent to createProdTree() return type.
  */
-export type ProdSignalTree<T> = SignalTreeBase<T> & EffectsMethods<T> & BatchingMethods<T> & MemoizationMethods<T> & EntitiesMethods<T>;
+export type ProdSignalTree<T> = SignalTree<T> & EffectsMethods<T> & BatchingMethods<T> & MemoizationMethods<T> & EntitiesMethods<T>;
 
 /**
  * Minimal SignalTree with just effects.
  * Equivalent to createMinimalTree() return type.
  */
-export type MinimalSignalTree<T> = SignalTreeBase<T> & EffectsMethods<T>;
+export type MinimalSignalTree<T> = SignalTree<T> & EffectsMethods<T>;
 
 // ============================================================================
 // SECTION 9: TYPE GUARDS
@@ -967,49 +967,49 @@ export type MinimalSignalTree<T> = SignalTreeBase<T> & EffectsMethods<T>;
 /**
  * Check if a value is a SignalTree.
  */
-export function isSignalTree<T>(value: unknown): value is SignalTreeBase<T> {
+export function isSignalTree<T>(value: unknown): value is SignalTree<T> {
   return value !== null && typeof value === 'object' && 'state' in value && '$' in value && 'with' in value && 'destroy' in value;
 }
 
 /**
  * Check if a tree has time travel methods.
  */
-export function hasTimeTravel<T>(tree: SignalTreeBase<T>): tree is SignalTreeBase<T> & TimeTravelMethods<T> {
+export function hasTimeTravel<T>(tree: SignalTree<T>): tree is SignalTree<T> & TimeTravelMethods<T> {
   return typeof (tree as any).undo === 'function' && typeof (tree as any).canUndo === 'function';
 }
 
 /**
  * Check if a tree has batching methods.
  */
-export function hasBatching<T>(tree: SignalTreeBase<T>): tree is SignalTreeBase<T> & BatchingMethods<T> {
+export function hasBatching<T>(tree: SignalTree<T>): tree is SignalTree<T> & BatchingMethods<T> {
   return typeof (tree as any).batch === 'function';
 }
 
 /**
  * Check if a tree has memoization methods.
  */
-export function hasMemoization<T>(tree: SignalTreeBase<T>): tree is SignalTreeBase<T> & MemoizationMethods<T> {
+export function hasMemoization<T>(tree: SignalTree<T>): tree is SignalTree<T> & MemoizationMethods<T> {
   return typeof (tree as any).memoize === 'function';
 }
 
 /**
  * Check if a tree has effects methods.
  */
-export function hasEffects<T>(tree: SignalTreeBase<T>): tree is SignalTreeBase<T> & EffectsMethods<T> {
+export function hasEffects<T>(tree: SignalTree<T>): tree is SignalTree<T> & EffectsMethods<T> {
   return typeof (tree as any).effect === 'function';
 }
 
 /**
  * Check if a tree has devtools methods.
  */
-export function hasDevTools<T>(tree: SignalTreeBase<T>): tree is SignalTreeBase<T> & DevToolsMethods {
+export function hasDevTools<T>(tree: SignalTree<T>): tree is SignalTree<T> & DevToolsMethods {
   return typeof (tree as any).connectDevTools === 'function';
 }
 
 /**
  * Check if a tree has entity methods.
  */
-export function hasEntities<T>(tree: SignalTreeBase<T>): tree is SignalTreeBase<T> & EntitiesMethods<T> {
+export function hasEntities<T>(tree: SignalTree<T>): tree is SignalTree<T> & EntitiesMethods<T> {
   return typeof (tree as any).entities === 'function';
 }
 ````
@@ -1504,7 +1504,7 @@ function createAccessibleNode(store: Record<string, unknown>, config: TreeConfig
 **File: `packages/core/src/lib/dev-proxy.ts`**
 
 ```typescript
-import { SignalTreeBase } from './types';
+import { SignalTree } from './types';
 
 /**
  * Map of enhancer method names to their required enhancers.
@@ -1558,7 +1558,7 @@ const ENHANCER_METHOD_MAP: Record<string, { enhancer: string; preset: string }> 
  * Only used in development mode to help developers understand
  * what enhancers they need to add.
  */
-export function wrapWithDevProxy<T>(tree: SignalTreeBase<T>): SignalTreeBase<T> {
+export function wrapWithDevProxy<T>(tree: SignalTree<T>): SignalTree<T> {
   return new Proxy(tree, {
     get(target, prop, receiver) {
       // First check if property exists on target
@@ -1658,7 +1658,7 @@ declare const ngDevMode: boolean | undefined;
 **File: `packages/core/src/lib/signal-tree.ts`**
 
 ````typescript
-import { SignalTreeBase, TreeNode, TreeConfig, Enhancer } from './types';
+import { SignalTree, TreeNode, TreeConfig, Enhancer } from './types';
 import { createSignalStore } from './create-signal-store';
 import { wrapWithDevProxy, shouldUseDevProxy } from './dev-proxy';
 
@@ -1675,7 +1675,7 @@ import { wrapWithDevProxy, shouldUseDevProxy } from './dev-proxy';
  *
  * @param initialState - The initial state object
  * @param config - Optional configuration options
- * @returns A SignalTreeBase that can be enhanced
+ * @returns A SignalTree that can be enhanced
  *
  * @example
  * ```typescript
@@ -1695,7 +1695,7 @@ import { wrapWithDevProxy, shouldUseDevProxy } from './dev-proxy';
  * full.undo();         // ✅ Works
  * ```
  */
-export function signalTree<T extends object>(initialState: T, config: TreeConfig = {}): SignalTreeBase<T> {
+export function signalTree<T extends object>(initialState: T, config: TreeConfig = {}): SignalTree<T> {
   // Validate input
   if (initialState === null || initialState === undefined) {
     throw new Error('signalTree() requires a non-null initial state object');
@@ -1712,7 +1712,7 @@ export function signalTree<T extends object>(initialState: T, config: TreeConfig
   const cleanupFns: Array<() => void> = [];
 
   // Build the base tree object
-  const tree: SignalTreeBase<T> = {
+  const tree: SignalTree<T> = {
     state,
     $: state,
 
@@ -1776,7 +1776,7 @@ export { createSignalStore } from './create-signal-store';
 
 ````typescript
 import { effect as ngEffect, DestroyRef, inject, Injector, runInInjectionContext } from '@angular/core';
-import { SignalTreeBase, EffectsMethods, Enhancer, ENHANCER_META } from '../types';
+import { SignalTree, EffectsMethods, Enhancer, ENHANCER_META } from '../types';
 import { snapshotState } from '../utils';
 
 /**
@@ -1823,7 +1823,7 @@ export interface EffectsConfig {
 export function withEffects<T>(config: EffectsConfig = {}): Enhancer<EffectsMethods<T>> {
   const { autoCleanup = true, injector: configInjector } = config;
 
-  const enhancerFn = <S>(tree: SignalTreeBase<S>): SignalTreeBase<S> & EffectsMethods<S> => {
+  const enhancerFn = <S>(tree: SignalTree<S>): SignalTree<S> & EffectsMethods<S> => {
     // Track all cleanup functions
     const cleanupFns = new Set<() => void>();
 
@@ -1923,7 +1923,7 @@ export function withEffects<T>(config: EffectsConfig = {}): Enhancer<EffectsMeth
 **File: `packages/core/src/lib/enhancers/batching.ts`**
 
 ````typescript
-import { SignalTreeBase, BatchingMethods, Enhancer, TreeNode } from '../types';
+import { SignalTree, BatchingMethods, Enhancer, TreeNode } from '../types';
 import { snapshotState, applyState } from '../utils';
 
 /**
@@ -1973,7 +1973,7 @@ export interface BatchingConfig {
 export function withBatching<T>(config: BatchingConfig = {}): Enhancer<BatchingMethods<T>> {
   const { debounceMs = 0, maxBatchSize = 1000 } = config;
 
-  const enhancerFn = <S>(tree: SignalTreeBase<S>): SignalTreeBase<S> & BatchingMethods<S> => {
+  const enhancerFn = <S>(tree: SignalTree<S>): SignalTree<S> & BatchingMethods<S> => {
     // Batch queue and state
     let batchQueue: Array<() => void> = [];
     let batchScheduled = false;
@@ -2094,7 +2094,7 @@ function applyPartialState<T>(treeNode: TreeNode<T>, updates: Partial<T>): void 
 
 ````typescript
 import { computed, Signal } from '@angular/core';
-import { SignalTreeBase, MemoizationMethods, CacheStats, Enhancer } from '../types';
+import { SignalTree, MemoizationMethods, CacheStats, Enhancer } from '../types';
 import { snapshotState } from '../utils';
 
 /**
@@ -2158,7 +2158,7 @@ interface CacheEntry {
 export function withMemoization<T>(config: MemoizationConfig = {}): Enhancer<MemoizationMethods<T>> {
   const { maxCacheSize = 100, ttlMs = 0, useLRU = true } = config;
 
-  const enhancerFn = <S>(tree: SignalTreeBase<S>): SignalTreeBase<S> & MemoizationMethods<S> => {
+  const enhancerFn = <S>(tree: SignalTree<S>): SignalTree<S> & MemoizationMethods<S> => {
     const cache = new Map<string, CacheEntry>();
     let totalHits = 0;
     let totalMisses = 0;
@@ -2331,7 +2331,7 @@ function applyPartialState<T>(treeNode: any, updates: Partial<T>): void {
 **File: `packages/core/src/lib/enhancers/time-travel.ts`**
 
 ````typescript
-import { SignalTreeBase, TimeTravelMethods, TimeTravelEntry, Enhancer } from '../types';
+import { SignalTree, TimeTravelMethods, TimeTravelEntry, Enhancer } from '../types';
 import { snapshotState, applyState, deepCloneJSON } from '../utils';
 
 /**
@@ -2395,7 +2395,7 @@ export interface TimeTravelConfig {
 export function withTimeTravel<T>(config: TimeTravelConfig = {}): Enhancer<TimeTravelMethods<T>> {
   const { maxHistory = 50, debounceMs = 0 } = config;
 
-  const enhancerFn = <S>(tree: SignalTreeBase<S>): SignalTreeBase<S> & TimeTravelMethods<S> => {
+  const enhancerFn = <S>(tree: SignalTree<S>): SignalTree<S> & TimeTravelMethods<S> => {
     // History storage
     const history: TimeTravelEntry<S>[] = [];
     let currentIndex = -1;
@@ -2568,7 +2568,7 @@ export function withTimeTravel<T>(config: TimeTravelConfig = {}): Enhancer<TimeT
 **File: `packages/core/src/lib/enhancers/devtools.ts`**
 
 ````typescript
-import { SignalTreeBase, DevToolsMethods, Enhancer } from '../types';
+import { SignalTree, DevToolsMethods, Enhancer } from '../types';
 import { snapshotState, applyState, deepCloneJSON } from '../utils';
 
 /**
@@ -2666,7 +2666,7 @@ declare global {
 export function withDevTools<T>(config: DevToolsConfig = {}): Enhancer<DevToolsMethods> {
   const { name = 'SignalTree', maxAge = 50, trace = false, traceLimit = 10 } = config;
 
-  const enhancerFn = <S>(tree: SignalTreeBase<S>): SignalTreeBase<S> & DevToolsMethods => {
+  const enhancerFn = <S>(tree: SignalTree<S>): SignalTree<S> & DevToolsMethods => {
     let devTools: ReduxDevToolsConnection | null = null;
     let unsubscribe: (() => void) | null = null;
     let isFromDevTools = false;
@@ -2806,7 +2806,7 @@ export function withDevTools<T>(config: DevToolsConfig = {}): Enhancer<DevToolsM
 **File: `packages/core/src/lib/enhancers/entities.ts`**
 
 ````typescript
-import { SignalTreeBase, EntitiesMethods, Enhancer, EntitySignal, EntityHelpers, EntityConfig } from '../types';
+import { SignalTree, EntitiesMethods, Enhancer, EntitySignal, EntityHelpers, EntityConfig } from '../types';
 import { EntitySignalImpl } from './entity-signal';
 import { isEntityMapMarker } from '../utils';
 
@@ -2850,7 +2850,7 @@ export interface EntitiesConfig {
 export function withEntities<T>(config: EntitiesConfig = {}): Enhancer<EntitiesMethods<T>> {
   const { defaultSelectId = (e: any) => e.id } = config;
 
-  const enhancerFn = <S>(tree: SignalTreeBase<S>): SignalTreeBase<S> & EntitiesMethods<S> => {
+  const enhancerFn = <S>(tree: SignalTree<S>): SignalTree<S> & EntitiesMethods<S> => {
     // Registry of materialized entity signals
     const registry = new Map<string, EntitySignal<unknown, string | number>>();
 
@@ -3403,7 +3403,7 @@ export class EntitySignalImpl<E, K extends string | number = string> implements 
 
 ````typescript
 import { signalTree } from './signal-tree';
-import { SignalTreeBase, TreeConfig, EffectsMethods, BatchingMethods, MemoizationMethods, TimeTravelMethods, DevToolsMethods, EntitiesMethods, FullSignalTree, ProdSignalTree, MinimalSignalTree } from './types';
+import { SignalTree, TreeConfig, EffectsMethods, BatchingMethods, MemoizationMethods, TimeTravelMethods, DevToolsMethods, EntitiesMethods, FullSignalTree, ProdSignalTree, MinimalSignalTree } from './types';
 import { withEffects, EffectsConfig } from './enhancers/effects';
 import { withBatching, BatchingConfig } from './enhancers/batching';
 import { withMemoization, MemoizationConfig } from './enhancers/memoization';
@@ -3575,7 +3575,7 @@ export function createTree<T extends object>(initialState: T, config: DevTreeCon
  * tree.memoize();            // ❌ Not included
  * ```
  */
-export function createCustomTree<T extends object>(initialState: T, features: Array<'effects' | 'batching' | 'memoization' | 'timeTravel' | 'devTools' | 'entities'>, config: DevTreeConfig = {}): SignalTreeBase<T> & Partial<EffectsMethods<T> & BatchingMethods<T> & MemoizationMethods<T> & TimeTravelMethods<T> & DevToolsMethods & EntitiesMethods<T>> {
+export function createCustomTree<T extends object>(initialState: T, features: Array<'effects' | 'batching' | 'memoization' | 'timeTravel' | 'devTools' | 'entities'>, config: DevTreeConfig = {}): SignalTree<T> & Partial<EffectsMethods<T> & BatchingMethods<T> & MemoizationMethods<T> & TimeTravelMethods<T> & DevToolsMethods & EntitiesMethods<T>> {
   let tree: any = signalTree(initialState, config);
 
   if (features.includes('effects')) {
@@ -3643,7 +3643,7 @@ export { signalTree } from './lib/signal-tree';
 // ============================================================================
 
 // Base types
-export type { SignalTreeBase, TreeNode, TreeConfig, NodeAccessor, AccessibleNode, CallableWritableSignal, Primitive, BuiltInObject, Unwrap } from './lib/types';
+export type { SignalTree, TreeNode, TreeConfig, NodeAccessor, AccessibleNode, CallableWritableSignal, Primitive, BuiltInObject, Unwrap } from './lib/types';
 
 // Enhancer system types
 export type { Enhancer, EnhancerMeta, EnhancerAdds, WithMethod } from './lib/types';
@@ -3832,7 +3832,7 @@ Migration tip:
 
 ### Minimal base interface
 
-The core runtime now exposes a compact base shape: `SignalTreeBase<T>` with only the essentials:
+The core runtime now exposes a compact base shape: `SignalTree<T>` with only the essentials:
 
 - `state` — the reactive state tree
 - `$` — shorthand alias for `state`
@@ -3847,7 +3847,7 @@ Each enhancer is typed to add its methods via an intersection. For example:
 
 ```ts
 type WithTimeTravel = Enhancer<TimeTravelMethods<T>>;
-// Applying it transforms the runtime type to: SignalTreeBase<T> & TimeTravelMethods<T>
+// Applying it transforms the runtime type to: SignalTree<T> & TimeTravelMethods<T>
 ```
 
 This approach preserves IDE IntelliSense — when you apply `withTimeTravel()` the editor will immediately show `undo()`, `redo()`, and related helpers.

@@ -24,7 +24,7 @@ export { signalTree } from './lib/signal-tree';
 
 export type {
   // Core types - Main SignalTree interfaces
-  SignalTreeBase,
+  ISignalTree,
   FullSignalTree,
   ProdSignalTree,
   TreeNode,

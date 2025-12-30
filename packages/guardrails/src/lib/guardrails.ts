@@ -6,7 +6,7 @@ import { deepEqual } from '@signaltree/shared';
  * Development-only performance monitoring and anti-pattern detection
  * @packageDocumentation
  */
-import type { SignalTreeBase as SignalTree } from '@signaltree/core';
+import type { SignalTree as SignalTree } from '@signaltree/core';
 import type {
   GuardrailsConfig,
   GuardrailsAPI,

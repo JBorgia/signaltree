@@ -59,7 +59,7 @@ export type TreeNode<T> = {
  * Base SignalTree with ONLY core functionality.
  * Enhancers add methods via intersection types.
  */
-export interface SignalTreeBase<T> {
+export interface SignalTree<T> {
   /** The reactive state tree */
   readonly state: TreeNode<T>;
 
@@ -80,7 +80,7 @@ export interface SignalTreeBase<T> {
  * SignalTree is the base plus any enhancer additions.
  * Start with just the base - enhancers extend it.
  */
-export type SignalTree<T> = SignalTreeBase<T>;
+export type SignalTree<T> = SignalTree<T>;
 
 // ============================================
 // ENHANCER SYSTEM
@@ -446,9 +446,7 @@ export interface BatchingConfig {
   debounceMs?: number;
 }
 
-export function withBatching<T>(
-  config: BatchingConfig = {}
-): Enhancer<SignalTree<T>, BatchingMethods<T>> {
+export function withBatching<T>(config: BatchingConfig = {}): Enhancer<SignalTree<T>, BatchingMethods<T>> {
   const enhancer = (tree: SignalTree<T>): SignalTree<T> & BatchingMethods<T> => {
     let batchQueue: Array<() => void> = [];
     let batchScheduled = false;
@@ -457,7 +455,7 @@ export function withBatching<T>(
       const queue = batchQueue;
       batchQueue = [];
       batchScheduled = false;
-      queue.forEach(fn => fn());
+      queue.forEach((fn) => fn());
     };
 
     const scheduleBatch = () => {
@@ -516,9 +514,7 @@ export interface MemoizationConfig {
   ttlMs?: number;
 }
 
-export function withMemoization<T>(
-  config: MemoizationConfig = {}
-): Enhancer<SignalTree<T>, MemoizationMethods<T>> {
+export function withMemoization<T>(config: MemoizationConfig = {}): Enhancer<SignalTree<T>, MemoizationMethods<T>> {
   const { maxCacheSize = 100 } = config;
 
   const enhancer = (tree: SignalTree<T>): SignalTree<T> & MemoizationMethods<T> => {
@@ -602,9 +598,7 @@ export interface TimeTravelConfig {
   excludePaths?: string[];
 }
 
-export function withTimeTravel<T>(
-  config: TimeTravelConfig = {}
-): Enhancer<SignalTree<T>, TimeTravelMethods<T>> {
+export function withTimeTravel<T>(config: TimeTravelConfig = {}): Enhancer<SignalTree<T>, TimeTravelMethods<T>> {
   const { maxHistory = 50 } = config;
 
   const enhancer = (tree: SignalTree<T>): SignalTree<T> & TimeTravelMethods<T> => {
@@ -730,7 +724,7 @@ export function withEffects<T>(): Enhancer<SignalTree<T>, EffectsMethods<T>> {
     // Extend destroy to clean up effects
     const originalDestroy = tree.destroy.bind(tree);
     tree.destroy = () => {
-      subscriptions.forEach(cleanup => cleanup());
+      subscriptions.forEach((cleanup) => cleanup());
       subscriptions.clear();
       originalDestroy();
     };
@@ -757,9 +751,7 @@ export interface DevToolsConfig {
   maxAge?: number;
 }
 
-export function withDevTools<T>(
-  config: DevToolsConfig = {}
-): Enhancer<SignalTree<T>, DevToolsMethods> {
+export function withDevTools<T>(config: DevToolsConfig = {}): Enhancer<SignalTree<T>, DevToolsMethods> {
   const enhancer = (tree: SignalTree<T>): SignalTree<T> & DevToolsMethods => {
     let devTools: any = null;
     const { name = 'SignalTree', maxAge = 50 } = config;
@@ -804,17 +796,14 @@ export function withDevTools<T>(
 
 ```typescript
 import { signal, WritableSignal } from '@angular/core';
-import { SignalTree, SignalTreeBase, TreeNode, TreeConfig, Enhancer } from './types';
+import { SignalTree, SignalTree, TreeNode, TreeConfig, Enhancer } from './types';
 
-export function signalTree<T extends object>(
-  initialState: T,
-  config: TreeConfig = {}
-): SignalTree<T> {
+export function signalTree<T extends object>(initialState: T, config: TreeConfig = {}): SignalTree<T> {
   // Create the signal store recursively
   const state = createSignalStore(initialState, config) as TreeNode<T>;
 
   // Base tree with only core functionality
-  const tree: SignalTreeBase<T> = {
+  const tree: SignalTree<T> = {
     state,
     $: state,
 
@@ -871,26 +860,11 @@ function createSignalStore<T>(obj: T, config: TreeConfig): TreeNode<T> {
 }
 
 function isBuiltInObject(obj: unknown): boolean {
-  return (
-    obj instanceof Date ||
-    obj instanceof RegExp ||
-    obj instanceof Map ||
-    obj instanceof Set ||
-    obj instanceof WeakMap ||
-    obj instanceof WeakSet ||
-    obj instanceof Error ||
-    obj instanceof URL ||
-    obj instanceof Promise ||
-    ArrayBuffer.isView(obj)
-  );
+  return obj instanceof Date || obj instanceof RegExp || obj instanceof Map || obj instanceof Set || obj instanceof WeakMap || obj instanceof WeakSet || obj instanceof Error || obj instanceof URL || obj instanceof Promise || ArrayBuffer.isView(obj);
 }
 
 function isEntityMapMarker(value: unknown): boolean {
-  return Boolean(
-    value &&
-    typeof value === 'object' &&
-    (value as any).__isEntityMap === true
-  );
+  return Boolean(value && typeof value === 'object' && (value as any).__isEntityMap === true);
 }
 ```
 
@@ -899,43 +873,13 @@ function isEntityMapMarker(value: unknown): boolean {
 ```typescript
 // Core
 export { signalTree } from './signal-tree';
-export type {
-  SignalTree,
-  SignalTreeBase,
-  TreeNode,
-  TreeConfig,
-  NodeAccessor,
-  AccessibleNode,
-  CallableWritableSignal,
-} from './types';
+export type { SignalTree, SignalTree, TreeNode, TreeConfig, NodeAccessor, AccessibleNode, CallableWritableSignal } from './types';
 
 // Enhancer types
-export type {
-  Enhancer,
-  EnhancerMeta,
-  WithMethod,
-  BatchingMethods,
-  MemoizationMethods,
-  TimeTravelMethods,
-  DevToolsMethods,
-  EffectsMethods,
-  EntitiesMethods,
-  OptimizedUpdateMethods,
-  CacheStats,
-  TimeTravelEntry,
-} from './types';
+export type { Enhancer, EnhancerMeta, WithMethod, BatchingMethods, MemoizationMethods, TimeTravelMethods, DevToolsMethods, EffectsMethods, EntitiesMethods, OptimizedUpdateMethods, CacheStats, TimeTravelEntry } from './types';
 
 // Entity types
-export type {
-  EntitySignal,
-  EntityMapMarker,
-  EntityConfig,
-  EntityNode,
-  EntityHelpers,
-  TapHandlers,
-  InterceptHandlers,
-  InterceptContext,
-} from './types';
+export type { EntitySignal, EntityMapMarker, EntityConfig, EntityNode, EntityHelpers, TapHandlers, InterceptHandlers, InterceptContext } from './types';
 export { entityMap } from './types';
 
 // Enhancers
@@ -953,16 +897,7 @@ export { isSignalTree } from './types';
 ## 5. Usage Examples
 
 ```typescript
-import {
-  signalTree,
-  entityMap,
-  withBatching,
-  withMemoization,
-  withTimeTravel,
-  withDevTools,
-  withEffects,
-  withEntities,
-} from '@signaltree/core';
+import { signalTree, entityMap, withBatching, withMemoization, withTimeTravel, withDevTools, withEffects, withEntities } from '@signaltree/core';
 
 interface User {
   id: string;
@@ -986,18 +921,19 @@ const base = signalTree<AppState>({
   count: 0,
 });
 
-base.$.count.set(1);        // ✅ Works
-base.undo();                // ❌ Error: Property 'undo' does not exist
-base.batch(() => {});       // ❌ Error: Property 'batch' does not exist
+base.$.count.set(1); // ✅ Works
+base.undo(); // ❌ Error: Property 'undo' does not exist
+base.batch(() => {}); // ❌ Error: Property 'batch' does not exist
 
 // With batching - adds batch(), batchUpdate()
 const withBatch = base.with(withBatching());
 
-withBatch.batch(($) => {    // ✅ Works
+withBatch.batch(($) => {
+  // ✅ Works
   $.count.set(1);
   $.settings.theme.set('dark');
 });
-withBatch.undo();           // ❌ Error: Property 'undo' does not exist
+withBatch.undo(); // ❌ Error: Property 'undo' does not exist
 
 // Full featured tree
 const tree = signalTree<AppState>({
@@ -1013,13 +949,13 @@ const tree = signalTree<AppState>({
   .with(withDevTools({ name: 'MyApp' }));
 
 // All methods available with proper types
-tree.$.count.set(1);                          // ✅ Base
-tree.batch(($) => $.count.set(2));            // ✅ From withBatching
-tree.memoize((s) => s.count * 2);             // ✅ From withMemoization
-tree.undo();                                  // ✅ From withTimeTravel
-tree.canUndo();                               // ✅ From withTimeTravel - returns boolean
-tree.effect((s) => console.log(s.count));     // ✅ From withEffects
-tree.connectDevTools();                       // ✅ From withDevTools
+tree.$.count.set(1); // ✅ Base
+tree.batch(($) => $.count.set(2)); // ✅ From withBatching
+tree.memoize((s) => s.count * 2); // ✅ From withMemoization
+tree.undo(); // ✅ From withTimeTravel
+tree.canUndo(); // ✅ From withTimeTravel - returns boolean
+tree.effect((s) => console.log(s.count)); // ✅ From withEffects
+tree.connectDevTools(); // ✅ From withDevTools
 
 // Entity access
 tree.$.users.addOne({ id: '1', name: 'Alice', email: 'alice@example.com' });
@@ -1028,12 +964,12 @@ const user = tree.$.users.byId('1')?.();
 
 ## Key Benefits
 
-| Aspect | Before | After |
-|--------|--------|-------|
-| Type safety | All methods on interface (lying) | Only available methods typed |
-| Optional chaining | Sometimes needed, inconsistent | Never needed for available methods |
-| IDE autocomplete | Shows unavailable methods | Only shows what's actually available |
-| Runtime errors | Silent no-ops | Would get compile error instead |
-| Documentation | Misleading | Accurate |
+| Aspect            | Before                           | After                                |
+| ----------------- | -------------------------------- | ------------------------------------ |
+| Type safety       | All methods on interface (lying) | Only available methods typed         |
+| Optional chaining | Sometimes needed, inconsistent   | Never needed for available methods   |
+| IDE autocomplete  | Shows unavailable methods        | Only shows what's actually available |
+| Runtime errors    | Silent no-ops                    | Would get compile error instead      |
+| Documentation     | Misleading                       | Accurate                             |
 
 This is a breaking change but makes the type system honest about what's actually available.

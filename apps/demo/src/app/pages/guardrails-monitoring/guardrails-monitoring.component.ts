@@ -12,7 +12,7 @@ import {
   withGuardrails,
 } from '@signaltree/guardrails';
 
-import type { SignalTreeBase as SignalTree } from '@signaltree/core';
+import type { SignalTree as SignalTree } from '@signaltree/core';
 interface GuardrailsDemoState extends Record<string, unknown> {
   performance: {
     totalUpdates: number;

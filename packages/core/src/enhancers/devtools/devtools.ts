@@ -3,10 +3,10 @@ import { Signal, signal } from '@angular/core';
 /**
  * v6 DevTools Enhancer
  *
- * Contract: (config?) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & DevToolsMethods
+ * Contract: (config?) => <S>(tree: SignalTree<S>) => SignalTree<S> & DevToolsMethods
  */
 import type {
-  SignalTreeBase,
+  ISignalTree,
   DevToolsConfig,
   DevToolsMethods,
 } from '../../lib/types';
@@ -262,7 +262,7 @@ function createModularMetrics() {
  */
 export function withDevTools(
   config: DevToolsConfig = {}
-): <Tree extends SignalTreeBase<any>>(tree: Tree) => Tree & DevToolsMethods {
+): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & DevToolsMethods {
   const {
     enabled = true,
     treeName = 'SignalTree',
@@ -274,10 +274,10 @@ export function withDevTools(
 
   const displayName = name ?? treeName;
 
-  return <Tree extends SignalTreeBase<any>>(
+  return <Tree extends ISignalTree<any>>(
     tree: Tree
   ): Tree & DevToolsMethods => {
-    type S = Tree extends SignalTreeBase<infer U> ? U : unknown;
+    type S = Tree extends ISignalTree<infer U> ? U : unknown;
     // ========================================================================
     // Disabled path
     // ========================================================================
@@ -351,7 +351,7 @@ export function withDevTools(
 
     // Create enhanced tree function with tracking
     const enhancedTree = function (
-      this: SignalTreeBase<S>,
+      this: ISignalTree<S>,
       ...args: unknown[]
     ): S | void {
       if (args.length === 0) {
@@ -390,7 +390,7 @@ export function withDevTools(
       }
 
       return result;
-    } as unknown as SignalTreeBase<S>;
+    } as unknown as ISignalTree<S>;
 
     // Copy properties from original tree
     Object.setPrototypeOf(enhancedTree, Object.getPrototypeOf(tree));
@@ -490,7 +490,7 @@ export function withDevTools(
  */
 export function enableDevTools(
   treeName = 'SignalTree'
-): <Tree extends SignalTreeBase<any>>(tree: Tree) => Tree & DevToolsMethods {
+): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & DevToolsMethods {
   return withDevTools({ treeName, enabled: true });
 }
 
@@ -499,7 +499,7 @@ export function enableDevTools(
  */
 export function withFullDevTools(
   treeName = 'SignalTree'
-): <Tree extends SignalTreeBase<any>>(tree: Tree) => Tree & DevToolsMethods {
+): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & DevToolsMethods {
   return withDevTools({
     treeName,
     enabled: true,
@@ -512,7 +512,7 @@ export function withFullDevTools(
 /**
  * Lightweight devtools for production
  */
-export function withProductionDevTools(): <Tree extends SignalTreeBase<any>>(
+export function withProductionDevTools(): <Tree extends ISignalTree<any>>(
   tree: Tree
 ) => Tree & DevToolsMethods {
   return withDevTools({

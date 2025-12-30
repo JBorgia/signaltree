@@ -2,7 +2,7 @@
 // GENERATED FILE - do not edit by hand
 // Comprehensive type-level checks for enhancer subsets
 import type { Equals, Assert } from './helpers-types';
-import type { SignalTreeBase } from '../../lib/types';
+import type { ISignalTree } from '../../lib/types';
 type Tree = { count: number };
 import type { BatchingMethods } from '../batching/lib/batching';
 import type { MemoizationMethods } from '../memoization/lib/memoization';
