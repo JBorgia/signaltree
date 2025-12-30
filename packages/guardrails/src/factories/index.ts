@@ -6,7 +6,7 @@ import type {
   Enhancer,
 } from '@signaltree/core';
 
-import type { GuardrailsConfig } from '../lib/types';
+import type { GuardrailsConfig, GuardrailRule } from '../lib/types';
 declare const ngDevMode: boolean | undefined;
 
 interface GlobalProcess {
@@ -132,7 +132,7 @@ export function createAppShellTree<T extends Record<string, unknown>>(
         maxMemory: 20,
       },
       hotPaths: { threshold: 5 },
-      customRules: [rules.noDeepNesting(3)],
+      customRules: [rules.noDeepNesting(3) as unknown as GuardrailRule<T>],
     } as GuardrailsConfig<T>,
   });
 }
@@ -172,9 +172,9 @@ export function createFormTree<T extends Record<string, unknown>>(
     name: `form-${formName}`,
     guardrails: {
       customRules: [
-        rules.noDeepNesting(4),
-        rules.maxPayloadSize(50),
-        rules.noSensitiveData(),
+        rules.noDeepNesting(4) as unknown as GuardrailRule<T>,
+        rules.maxPayloadSize(50) as unknown as GuardrailRule<T>,
+        rules.noSensitiveData() as unknown as GuardrailRule<T>,
       ],
     } as GuardrailsConfig<T>,
   });
@@ -215,7 +215,10 @@ export function createTestTree<T extends Record<string, unknown>>(
         maxUpdateTime: 5,
         maxRecomputations: 50,
       },
-      customRules: [rules.noFunctionsInState(), rules.noDeepNesting(4)],
+      customRules: [
+        rules.noFunctionsInState() as unknown as GuardrailRule<T>,
+        rules.noDeepNesting(4) as unknown as GuardrailRule<T>,
+      ],
       ...(overrides as unknown as Partial<GuardrailsConfig<T>>),
     } as GuardrailsConfig<T>,
   });
