@@ -113,7 +113,7 @@ export type MinimalSignalTree<T> = SignalTreeBase<T> & EffectsMethods<T>;
  */
 export function createDevTree<T extends object>(
   initialState: T,
-  config: DevTreeConfig = {}
+  config?: DevTreeConfig
 ): FullSignalTree<T>;
 export function createDevTree(): {
   enhancer: <Tree extends SignalTreeBase<any>>(
