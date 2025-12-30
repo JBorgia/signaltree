@@ -55,6 +55,7 @@ export type {
   AddOptions,
   AddManyOptions,
   TimeTravelEntry,
+  TimeTravelMethods,
 } from './lib/types';
 
 // Entity helpers (runtime)
