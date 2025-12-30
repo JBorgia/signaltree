@@ -31,7 +31,7 @@ function createMockTree() {
     (_: unknown) =>
     (...a: unknown[]) =>
       tree(...(a as any));
-  tree.destroy = () => {};
+  tree.destroy = () => void 0;
 
   return tree as any;
 }
