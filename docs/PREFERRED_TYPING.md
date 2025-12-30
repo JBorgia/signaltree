@@ -4,7 +4,7 @@ This page documents the preferred pattern for typing initialized SignalTree stat
 
 ### ✅ PREFERRED: Type the initialized object, let inference handle the rest
 
-```typescript
+````typescript
 type Themes = 'light' | 'dark' | 'system';
 
 // Type assertions on specific values in the initial state
@@ -15,39 +15,46 @@ const store = signalTree({
     theme: 'system' as Themes, // Assert literal type here
   },
   preferences: {
-    notifications: true,
-    autoSave: true,
-  },
-  items: [] as Item[], // Assert array element type here
-});
+    ## Single Source of Truth for Initial Value AND Type
 
-// TypeScript infers the full tree type correctly
-// All subsequent operations preserve literal types
-```
+    **Define what a field starts as AND what it can become in one place.**
 
-### ❌ AVOID: Passing a generic type parameter to `signalTree`
+    ```typescript
+    // ✅ PREFERRED: Initial value + type in one place
+    const tree = signalTree({
+      name: 'John' as string,           // Starts as 'John', can be any string
+      theme: 'dark' as Theme,           // Starts as 'dark', can be any Theme
+      count: 0 as number,               // Starts as 0, can be any number
+      items: [] as Item[],              // Starts empty, can hold Items
+    });
+    ```
 
-```typescript
-// Don't do this - fighting against inference
-interface State {
-  user: { name: string; email: string; theme: Themes };
-  preferences: { notifications: boolean; autoSave: boolean };
-  items: Item[];
-}
+    ```typescript
+    // ❌ AVOID: Type in one place, value in another
+    interface State {
+      name: string;      // Type here...
+      theme: Theme;
+      count: number;
+      items: Item[];
+    }
 
-const store = signalTree<State>({
-  user: { name: '', email: '', theme: 'system' },
-  // ...
-});
-```
+    const tree = signalTree<State>({
+      name: 'John',      // ...value here (now you have two places to maintain)
+      theme: 'dark',
+      count: 0,
+      items: [],
+    });
+    ```
 
-### Why this matters
+    ### Why?
 
-1. **DRY** - Define types once at the source, not in two places
-2. **Inference works better** - TypeScript propagates literal types correctly
-3. **Enhancer compatibility** - Tree-polymorphic enhancers infer from concrete types
-4. **Less maintenance** - Changes to initial state automatically update inferred types
+    1. **Single source of debugging** - When a type error occurs, look at the field definition. The fix is right there.
 
----
+    2. **Co-located intent** - You immediately see "this starts as X and can become Y" without jumping between files/locations.
 
-Place examples from this page in your code examples and docs to help contributors and consumers follow the pattern consistently.
+    3. **Let inference work for you** - TypeScript propagates the type through the entire tree automatically. You only annotate at the leaves.
+
+    4. **Reduced maintenance** - Change the type in one place, not two. No interface to keep in sync.
+
+    (Place these examples in code samples and `QUICK_REFERENCE.md` to teach contributors the pattern.)
+````
