@@ -924,10 +924,6 @@ export function serialization(
 }
 
 /**
- * @deprecated Use `serialization()` instead. This legacy `withSerialization`
- * alias will be removed in a future major release.
- */
-/**
  * @deprecated Use `serialization()` as the primary enhancer. This alias
  * remains for backwards compatibility and will be removed in a future major
  * release.
