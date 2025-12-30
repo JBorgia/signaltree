@@ -1,4 +1,5 @@
-import { isSignal, Signal } from '@angular/core';
+import { isSignal, Signal, WritableSignal } from '@angular/core';
+import { deepEqual } from '../../lib/utils';
 
 import { TYPE_MARKERS } from '../../lib/constants';
 
@@ -453,7 +454,9 @@ export function withPersistence(config: PersistenceConfig) {
       if (autoSaveInterval !== undefined) {
         try {
           clearInterval(autoSaveInterval as any);
-        } catch {}
+        } catch {
+          /* ignore */
+        }
         autoSaveInterval = undefined;
       }
       if (originalDestroy) return originalDestroy.apply(this, args);
