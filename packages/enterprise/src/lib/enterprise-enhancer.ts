@@ -62,12 +62,12 @@ export function withEnterprise(): <S extends Record<string, unknown>>(
 
     // Add updateOptimized method to tree
     enhancedTree.updateOptimized = (
-      updates: Partial<T>,
+      updates: Partial<S>,
       options?: {
         maxDepth?: number;
         ignoreArrayOrder?: boolean;
         equalityFn?: (a: unknown, b: unknown) => boolean;
-        batch?: boolean;
+        autoBatch?: boolean;
         batchSize?: number;
       }
     ): UpdateResult => {
