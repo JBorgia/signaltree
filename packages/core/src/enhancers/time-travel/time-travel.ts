@@ -231,7 +231,7 @@ export function withTimeTravel(
         canRedo(): boolean {
           return false;
         },
-        getHistory(): unknown[] {
+        getHistory(): TimeTravelEntry<S>[] {
           return [];
         },
         resetHistory(): void {
@@ -346,6 +346,9 @@ export function withTimeTravel(
     (enhancedTree as any)['canRedo'] = () => timeTravelManager.canRedo();
     (enhancedTree as any)['getCurrentIndex'] = () =>
       timeTravelManager.getCurrentIndex();
+
+    // Expose internal manager for advanced tooling / demo usage
+    (enhancedTree as any)['__timeTravel'] = timeTravelManager;
 
     return enhancedTree as unknown as Tree & TimeTravelMethods;
   };
