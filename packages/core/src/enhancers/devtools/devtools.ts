@@ -260,6 +260,10 @@ function createModularMetrics() {
  * @param config - DevTools configuration
  * @returns Polymorphic enhancer function
  */
+/**
+ * @deprecated Use `devTools()` as the primary enhancer. This legacy
+ * `withDevTools` factory will be removed in a future major release.
+ */
 export function withDevTools(
   config: DevToolsConfig = {}
 ): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & DevToolsMethods {
@@ -537,4 +541,4 @@ export const devTools = Object.assign(
  * @deprecated Use `devTools()` as the primary enhancer. This legacy
  * `withDevTools` factory will be removed in a future major release.
  */
-export const withDevTools = withDevTools as unknown as typeof withDevTools;
+// Legacy `withDevTools` factory is defined above and marked deprecated.
