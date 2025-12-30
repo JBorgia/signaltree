@@ -523,17 +523,18 @@ export function withProductionDevTools(): <Tree extends ISignalTree<any>>(
   });
 }
 
-// v6-friendly alias with presets
+// New v6-friendly export: `devTools` with named presets.
+export const devTools = Object.assign(
+  (config?: DevToolsConfig) => withDevTools(config ?? {}),
+  {
+    production: withProductionDevTools,
+    full: withFullDevTools,
+    enable: enableDevTools,
+  }
+);
+
 /**
  * @deprecated Use `devTools()` as the primary enhancer. This legacy
- * `withDevTools` alias will be removed in a future major release.
+ * `withDevTools` factory will be removed in a future major release.
  */
-export function devTools(config?: any) {
-  return withDevTools(config as any);
-}
-
-export const withDevTools = Object.assign(devTools, {
-  production: withProductionDevTools,
-  full: withFullDevTools,
-  enable: enableDevTools,
-});
+export const withDevTools = withDevTools as unknown as typeof withDevTools;
