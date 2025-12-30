@@ -75,8 +75,8 @@ export class TimeTravelDemoComponent {
   message = this.tree.state.message;
   todos = this.tree.state.todos;
 
-  // Time travel interface
-  private timeTravel = this.tree.__timeTravel;
+  // Time travel interface (non-null asserted because we applied withTimeTravel)
+  private timeTravel = this.tree.__timeTravel!;
 
   // Time travel signals - need to be writable to trigger updates
   history = signal(this.timeTravel.getHistory());
@@ -87,7 +87,6 @@ export class TimeTravelDemoComponent {
   // Helper to refresh time travel state
   private refreshTimeTravelState() {
     this.history.set(this.timeTravel.getHistory());
-    this.refreshTimeTravelState();
     this.canUndo.set(this.timeTravel.canUndo());
     this.canRedo.set(this.timeTravel.canRedo());
   }
