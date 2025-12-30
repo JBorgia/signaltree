@@ -2,7 +2,7 @@ import { DatePipe } from '@angular/common';
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
-import { signalTree, withMemoization } from '@signaltree/core';
+import { memoization, signalTree } from '@signaltree/core';
 
 /**
  * Test suite for [(model)] two-way binding with signals and SignalTree memoization
@@ -50,7 +50,7 @@ class ModelBindingTestComponent {
       },
     ] as LogEntry[],
     selectedDate: new Date('2025-12-01'),
-  }).with(withMemoization());
+  }).with(memoization());
 
   private memoFilterCalls = 0;
 
@@ -132,7 +132,7 @@ describe('[(model)] Binding with SignalTree Memoization', () => {
       const callsAfterChange = component.getMemoCallCount();
 
       // Memoization should have been called at least once more
-      // (actual behavior depends on whether withMemoization is enabled)
+      // (actual behavior depends on whether memoization is enabled)
       expect(callsAfterChange).toBeGreaterThanOrEqual(initialCalls);
 
       // Most importantly: the filtered results should be correct
@@ -227,7 +227,7 @@ describe('SignalTree Memoization with Model Binding - Integration', () => {
         { id: 2, name: 'Item 2', date: new Date('2025-12-02') },
         { id: 3, name: 'Item 3', date: new Date('2025-12-01') },
       ],
-    }).with(withMemoization());
+    }).with(memoization());
 
     let filterCalls = 0;
 
@@ -264,7 +264,7 @@ describe('SignalTree Memoization with Model Binding - Integration', () => {
         { id: 1, date: new Date('2025-12-01'), message: 'A' },
         { id: 2, date: new Date('2025-12-02'), message: 'B' },
       ],
-    }).with(withMemoization());
+    }).with(memoization());
 
     let filterCalls = 0;
 

@@ -5,7 +5,7 @@ import { isNodeAccessor } from '../../lib/utils';
 
 import type { TreeNode } from '../../lib/utils';
 
-import type { ISignalTree, ISignalTree as ISignalTree } from '../../lib/types';
+import type { ISignalTree } from '../../lib/types';
 
 // Dev environment detection
 declare const __DEV__: boolean | undefined;
@@ -463,6 +463,14 @@ export function withHighFrequencyMemoization(): <S>(
 ) => ISignalTree<S> & MemoizationMethods<S> {
   return withMemoization(MEMOIZATION_PRESETS.highFrequency);
 }
+
+// New v6-friendly export: `memoization` with named presets.
+export const memoization = Object.assign(withMemoization, {
+  selector: withSelectorMemoization,
+  computed: withComputedMemoization,
+  deep: withDeepStateMemoization,
+  fast: withHighFrequencyMemoization,
+});
 
 /**
  * Enhances a SignalTree with memoization capabilities

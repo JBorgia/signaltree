@@ -6,7 +6,7 @@ import { deepEqual } from '@signaltree/shared';
  * Development-only performance monitoring and anti-pattern detection
  * @packageDocumentation
  */
-import type { SignalTree as SignalTree } from '@signaltree/core';
+import type { ISignalTree } from '@signaltree/core';
 import type {
   GuardrailsConfig,
   GuardrailsAPI,
@@ -106,7 +106,7 @@ interface PendingUpdate {
 }
 
 interface GuardrailsContext<T = Record<string, unknown>> {
-  tree: SignalTree<T>;
+  tree: ISignalTree<T>;
   config: GuardrailsConfig<T>;
   stats: RuntimeStats;
   issues: GuardrailIssue[];
@@ -139,10 +139,10 @@ const POLLING_INTERVAL_MS = 50; // Fast polling for dev-time monitoring
  */
 export function withGuardrails(
   config: GuardrailsConfig<any> = {}
-): <Tree extends SignalTree<any>>(
+): <Tree extends ISignalTree<any>>(
   tree: Tree
 ) => Tree & { __guardrails?: GuardrailsAPI } {
-  return function <Tree extends SignalTree<any>>(
+  return function <Tree extends ISignalTree<any>>(
     tree: Tree
   ): Tree & {
     __guardrails?: GuardrailsAPI;
@@ -154,7 +154,7 @@ export function withGuardrails(
 
     const stats = createRuntimeStats();
     const context = {
-      tree: tree as unknown as SignalTree<any>,
+      tree: tree as unknown as ISignalTree<any>,
       config: config as GuardrailsConfig<any>,
       stats,
       issues: [],

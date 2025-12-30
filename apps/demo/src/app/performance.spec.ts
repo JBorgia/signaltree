@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { signalTree, withBatching, withMemoization } from '@signaltree/core';
+import { batching, memoization, signalTree } from '@signaltree/core';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
@@ -143,7 +143,7 @@ describe('SignalTree Performance Benchmarks', () => {
   it('should benchmark batching performance', () => {
     const state = generateNestedState(3, 4);
     const regularTree = signalTree(state);
-    const batchTree = signalTree(state).with(withBatching());
+    const batchTree = signalTree(state).with(batching());
 
     const singleUpdateTime = measureTime(() => {
       regularTree((state: any) => ({ ...state, value: Math.random() }));
@@ -173,7 +173,7 @@ describe('SignalTree Performance Benchmarks', () => {
   it('should benchmark memoization performance', () => {
     const entities = generateEntities(1000);
     const state = { entities, filter: { category: 'A', active: true } };
-    const tree = signalTree(state).with(withMemoization());
+    const tree = signalTree(state).with(memoization());
 
     const heavyComputation = (state: any) => {
       return state.entities

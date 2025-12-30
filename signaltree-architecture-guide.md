@@ -37,7 +37,7 @@ Components inject and access the tree directly. No intermediary layers.
 
 ```typescript
 // app-tree.ts
-export const appTree = signalTree<AppState>({...}).with(withEntities<Plant>('plants'));
+export const appTree = signalTree<AppState>({...}).with(entities<Plant>('plants'));
 
 // component.ts
 export class PlantsComponent {
@@ -106,7 +106,7 @@ Extend the tree object itself with domain methods. No separate facade classes.
 
 ```typescript
 // app-tree.ts
-const baseTree = signalTree<AppState>({...}).with(withEntities<Plant>('plants.entities'));
+const baseTree = signalTree<AppState>({...}).with(entities<Plant>('plants.entities'));
 
 export const appTree = Object.assign(baseTree, {
   plants: {
@@ -175,10 +175,10 @@ Separate tree instance per domain.
 
 ```typescript
 // plants-tree.ts
-export const plantsTree = signalTree<PlantsState>({...}).with(withEntities<Plant>('entities'));
+export const plantsTree = signalTree<PlantsState>({...}).with(entities<Plant>('entities'));
 
 // gardens-tree.ts
-export const gardensTree = signalTree<GardensState>({...}).with(withEntities<Garden>('entities'));
+export const gardensTree = signalTree<GardensState>({...}).with(entities<Garden>('entities'));
 
 // component.ts
 export class DashboardComponent {
@@ -292,7 +292,7 @@ export const appTree = signalTree({
   gardens: gardensSlice,
   auth: { userId: null as string | null },
   ui: { theme: 'light' as Theme },
-}).with(withEntities<Plant>('plants.entities'), withEntities<Garden>('gardens.entities'));
+}).with(entities<Plant>('plants.entities'), entities<Garden>('gardens.entities'));
 ```
 
 | Pros                                   | Cons                      |
@@ -553,7 +553,7 @@ Use SignalTree only where its features are needed. Vanilla signals elsewhere.
 export const entitiesTree = signalTree({
   plants: { entities: [] as Plant[] },
   gardens: { entities: [] as Garden[] },
-}).with(withEntities<Plant>('plants.entities'), withEntities<Garden>('gardens.entities'));
+}).with(entities<Plant>('plants.entities'), entities<Garden>('gardens.entities'));
 
 // Everything else is vanilla signals
 export const authState = {
@@ -595,7 +595,7 @@ export function createFeatureStore<TEntity extends { id: string }>(
         save: { status: 'idle' as OperationStatus, error: null as string | null }
       }
     }
-  }).with(withEntities<TEntity>('entities'));
+  }).with(entities<TEntity>('entities'));
 
   return {
     // State
@@ -676,15 +676,15 @@ Domain key contains only the entity array. No metadata in tree—handle loading/
 ```typescript
 tree.$.plants.selectAll();
 tree.$.plants.add(plant);
-withEntities<Plant>('plants');
+entities<Plant>('plants');
 ```
 
-| Pros                           | Cons                                              |
-| ------------------------------ | ------------------------------------------------- |
-| Simplest structure             | No place for operation/filter state               |
-| Cleanest entity access         | Loading states live elsewhere (component signals) |
-| `withEntities` path is minimal | Less cohesive domain representation               |
-| Easy to understand             |                                                   |
+| Pros                       | Cons                                              |
+| -------------------------- | ------------------------------------------------- |
+| Simplest structure         | No place for operation/filter state               |
+| Cleanest entity access     | Loading states live elsewhere (component signals) |
+| `entities` path is minimal | Less cohesive domain representation               |
+| Easy to understand         |                                                   |
 
 **Best for:** Simple apps, prototypes, apps where loading/filter state lives in components
 
@@ -726,7 +726,7 @@ Entities and metadata grouped under domain, with metadata nested in a `meta` obj
 tree.$.plants.entities.selectAll();
 tree.$.plants.meta.operations.load.status();
 tree.$.plants.meta.filters.search.set('fern');
-withEntities<Plant>('plants.entities');
+entities<Plant>('plants.entities');
 ```
 
 | Pros                                            | Cons                |
@@ -772,7 +772,7 @@ Entities and metadata as siblings under domain key—no `meta` wrapper.
 tree.$.plants.entities.selectAll();
 tree.$.plants.operations.load.status();
 tree.$.plants.filters.search.set('fern');
-withEntities<Plant>('plants.entities');
+entities<Plant>('plants.entities');
 ```
 
 | Pros                                   | Cons                                       |
@@ -1214,7 +1214,7 @@ export class AppComponent {
 
 ### Pattern 3: Optimistic Updates with Rollback
 
-> **⚠️ Important:** Optimistic rollback and user undo (Ctrl+Z) are different concerns. See [Common Misconceptions](#common-misconceptions) for details on why `withTimeTravel` should generally NOT be used for API failure rollback.
+> **⚠️ Important:** Optimistic rollback and user undo (Ctrl+Z) are different concerns. See [Common Misconceptions](#common-misconceptions) for details on why `timeTravel` should generally NOT be used for API failure rollback.
 
 **Recommended: Snapshot-Based Rollback**
 
@@ -2448,7 +2448,7 @@ export class PlantSelectionService {
 
 ```typescript
 const tree = signalTree<AppState>({...})
-  .with(withTimeTravel({ maxHistory: 50 }));
+  .with(timeTravel({ maxHistory: 50 }));
 
 // In component or service
 @Injectable({ providedIn: 'root' })
@@ -2569,20 +2569,20 @@ async updatePlant(id: string, changes: Partial<Plant>) {
 
 ```typescript
 // "Using multiple enhancers is over-engineering"
-const tree = signalTree(state).with(withEntities()).with(withBatching()).with(withTimeTravel()).with(withDevTools()).with(withMemoization()); // ❌ "Too many enhancers!"
+const tree = signalTree(state).with(entities()).with(batching()).with(timeTravel()).with(devTools()).with(memoization()); // ❌ "Too many enhancers!"
 ```
 
 **Why This Is Wrong:**
 
 Enhancers are designed to compose. Using multiple enhancers that each serve a purpose is not over-engineering—it's using the library correctly.
 
-| Enhancer            | Purpose                | Over-engineering?                     |
-| ------------------- | ---------------------- | ------------------------------------- |
-| `withEntities()`    | Entity CRUD operations | No—if you have entities               |
-| `withBatching()`    | Batch multiple updates | No—reduces re-renders                 |
-| `withTimeTravel()`  | User undo/redo         | No—if you need undo                   |
-| `withDevTools()`    | Debugging in dev mode  | No—tree-shakes in prod                |
-| `withMemoization()` | Cache computed values  | No—if you have expensive computations |
+| Enhancer        | Purpose                | Over-engineering?                     |
+| --------------- | ---------------------- | ------------------------------------- |
+| `entities()`    | Entity CRUD operations | No—if you have entities               |
+| `batching()`    | Batch multiple updates | No—reduces re-renders                 |
+| `timeTravel()`  | User undo/redo         | No—if you need undo                   |
+| `devTools()`    | Debugging in dev mode  | No—tree-shakes in prod                |
+| `memoization()` | Cache computed values  | No—if you have expensive computations |
 
 **What IS Over-Engineering:**
 
@@ -2592,7 +2592,7 @@ The problem is abstraction layers, not enhancers:
 // ❌ OVER-ENGINEERING: Unnecessary layers between component and tree
 Component
   → TrackedChangesManager (wraps time travel)
-    → CustomEntityStore (wraps withEntities)
+    → CustomEntityStore (wraps entities)
       → BaseFacade (wraps tree access)
         → Tree with enhancers
 
@@ -2755,12 +2755,12 @@ Before removing anything, document what each abstraction layer actually does:
 - **Exposes**: undo(), redo(), canUndo$, canRedo$, trackChanges()
 - **Consumers**: PlantEditorComponent, BulkEditModal
 - **If removed**: Undo/redo keyboard shortcuts stop working
-- **Duplicates**: Partially duplicates withTimeTravel
+  -- **Duplicates**: Partially duplicates timeTravel
 - **Adds value**: Integrates with form dirty state
 
 ## Verdict: PARTIAL KEEP
 
-- Remove undo/redo (use withTimeTravel directly)
+- Remove undo/redo (use timeTravel directly)
 - Keep form dirty state integration (move to facade)
 ```
 
@@ -2773,7 +2773,7 @@ For each piece of code, categorize it:
 | Category                               | Action                        | Example                                      |
 | -------------------------------------- | ----------------------------- | -------------------------------------------- |
 | **Dead code**                          | Remove                        | Unused methods, unreachable branches         |
-| **Duplicate functionality**            | Remove the duplicate          | Custom undo that wraps `withTimeTravel`      |
+| **Duplicate functionality**            | Remove the duplicate          | Custom undo that wraps `timeTravel`          |
 | **Misplaced logic**                    | Move to correct layer         | Business rules in tree file → move to facade |
 | **Wrong abstraction**                  | Replace with simpler approach | Inheritance hierarchy → composition          |
 | **Legitimate feature, wrong location** | Extract to appropriate module | Monitoring code in tree → extract to service |
@@ -2932,8 +2932,10 @@ Plan:
 Plan:
 
 1. Audit TrackedChangesManager
-   - Finding: Wraps withTimeTravel + adds form integration
-   - Action: Remove wrapper, keep form integration in facade
+
+- Finding: Wraps timeTravel + adds form integration
+- Action: Remove wrapper, keep form integration in facade
+
 2. Audit TrackedEntityStoreBase
    - Finding: Adds validation + relationship handling
    - Action: Move validation to facades, evaluate relationship handling

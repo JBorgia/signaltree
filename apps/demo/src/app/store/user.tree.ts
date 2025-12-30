@@ -1,10 +1,10 @@
 import { computed, effect, InjectionToken, Signal } from '@angular/core';
 import {
+  devTools,
+  entities,
   entityMap,
   EntitySignal,
   signalTree,
-  withDevTools,
-  withEntities,
 } from '@signaltree/core';
 import { catchError, delay, EMPTY, map, Observable, of, tap } from 'rxjs';
 
@@ -154,8 +154,8 @@ export function createUserTree(): UserTree {
   // ============================================================
 
   const tree = signalTree(initialState)
-    .with(withEntities())
-    .with(withDevTools({ treeName: STORE_NAME }));
+    .with(entities())
+    .with(devTools({ treeName: STORE_NAME }));
 
   // Shorthand for tree access
   const $ = tree.$;

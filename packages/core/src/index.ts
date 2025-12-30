@@ -25,6 +25,8 @@ export { signalTree } from './lib/signal-tree';
 export type {
   // Core types - Main SignalTree interfaces
   ISignalTree,
+  SignalTree,
+  SignalTreeBase,
   FullSignalTree,
   ProdSignalTree,
   TreeNode,
@@ -132,6 +134,7 @@ export { ENHANCER_META } from './lib/types';
  */
 export {
   withBatching,
+  batching,
   withHighPerformanceBatching,
   flushBatchedUpdates,
   hasPendingUpdates,
@@ -144,6 +147,7 @@ export {
  */
 export {
   withMemoization,
+  memoization,
   withSelectorMemoization,
   withComputedMemoization,
   withDeepStateMemoization,
@@ -164,6 +168,7 @@ export {
  */
 export {
   withTimeTravel,
+  timeTravel,
   enableTimeTravel,
 } from './enhancers/time-travel/time-travel';
 
@@ -173,6 +178,7 @@ export {
  */
 export {
   withEntities,
+  entities,
   enableEntities,
   withHighPerformanceEntities,
 } from './enhancers/entities/entities';
@@ -197,6 +203,7 @@ export {
  */
 export {
   withDevTools,
+  devTools,
   enableDevTools,
   withFullDevTools,
   withProductionDevTools,
@@ -236,6 +243,19 @@ export { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './lib/constants';
 // ============================================
 // PUBLIC API SUMMARY
 // ============================================
+
+// Backwards-compatible alias exports: expose new short names that map
+// to existing `with*` factories so demos and examples can adopt the
+// new naming while the core implementation still provides the original
+// factories.
+export { withHighPerformanceBatching as highPerformanceBatching } from './enhancers/batching/batching';
+export {
+  withLightweightMemoization as lightweightMemoization,
+  withShallowMemoization as shallowMemoization,
+  withComputedMemoization as computedMemoization,
+  withSelectorMemoization as selectorMemoization,
+} from './enhancers/memoization/memoization';
+export { withSerialization as serialization } from './enhancers/serialization/serialization';
 
 /**
  * SignalTree Core API Summary:

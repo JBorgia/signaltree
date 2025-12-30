@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { signalTree, withTimeTravel } from '@signaltree/core';
+import { signalTree, timeTravel } from '@signaltree/core';
 
 import type { SignalTree, TimeTravelMethods } from '@signaltree/core';
 
@@ -66,7 +66,7 @@ export class TimeTravelDemoComponent {
       { id: 3, title: 'Build Something Amazing', completed: false },
     ],
   }).with(
-    withTimeTravel({ maxHistorySize: 50 })
+    timeTravel({ maxHistorySize: 50 })
   ) as unknown as SignalTree<AppState> & TimeTravelMethods<AppState>;
 
   // Type-safe tree updater

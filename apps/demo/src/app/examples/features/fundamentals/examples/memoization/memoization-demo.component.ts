@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, effect } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { signalTree, withMemoization } from '@signaltree/core';
+import { memoization, signalTree } from '@signaltree/core';
 
 interface ComputationLog {
   id: number;
@@ -36,7 +36,7 @@ export class MemoizationDemoComponent {
     computationCount: 0,
     cacheHitCount: 0,
   }).with(
-    withMemoization({
+    memoization({
       enabled: true,
       maxCacheSize: 100,
       equality: 'shallow',

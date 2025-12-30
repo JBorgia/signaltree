@@ -53,11 +53,7 @@ let hasShownLegacyWarning = false;
  */
 
 // Re-export core types needed for forms
-import type {
-  SignalTree as SignalTree,
-  TreeConfig,
-  TreeNode,
-} from '@signaltree/core';
+import type { ISignalTree, TreeConfig, TreeNode } from '@signaltree/core';
 // ============================================
 // FORM TREE TYPES
 // ============================================
@@ -143,7 +139,7 @@ export type FormTree<T extends Record<string, unknown>> = {
   fieldAsyncErrors: Record<string, Signal<string | undefined>>;
 
   // Keep values tree for backward compatibility
-  values: SignalTree<T>;
+  values: ISignalTree<T>;
 
   // Cleanup helpers to tear down subscriptions created for bridge layer
   destroy(): void;

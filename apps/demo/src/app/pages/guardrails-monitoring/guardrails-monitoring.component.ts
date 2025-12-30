@@ -1,5 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, OnDestroy, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  OnDestroy,
+  signal,
+} from '@angular/core';
 import { signalTree } from '@signaltree/core';
 import {
   GuardrailIssue,
@@ -12,7 +18,7 @@ import {
   withGuardrails,
 } from '@signaltree/guardrails';
 
-import type { SignalTree as SignalTree } from '@signaltree/core';
+import type { ISignalTree, SignalTree } from '@signaltree/core';
 interface GuardrailsDemoState extends Record<string, unknown> {
   performance: {
     totalUpdates: number;

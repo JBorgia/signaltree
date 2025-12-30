@@ -481,7 +481,7 @@
         <div class="presets-info-grid">
           <div class="preset-info-card">
             <h4>🎯 Selector Memoization</h4>
-            <code class="preset-code">withSelectorMemoization()</code>
+            <code class="preset-code">selectorMemoization()</code>
             <ul class="preset-details">
               <li><strong>Equality:</strong> Reference (~0.3μs)</li>
               <li><strong>Cache Size:</strong> 10 entries</li>
@@ -495,7 +495,7 @@
 
           <div class="preset-info-card">
             <h4>⚡ Computed Memoization</h4>
-            <code class="preset-code">withComputedMemoization()</code>
+            <code class="preset-code">computedMemoization()</code>
             <ul class="preset-details">
               <li><strong>Equality:</strong> Shallow (~5-15μs)</li>
               <li><strong>Cache Size:</strong> 100 entries</li>
@@ -509,7 +509,7 @@
 
           <div class="preset-info-card">
             <h4>🔍 Deep State Memoization</h4>
-            <code class="preset-code">withDeepStateMemoization()</code>
+            <code class="preset-code">deepStateMemoization()</code>
             <ul class="preset-details">
               <li><strong>Equality:</strong> Deep (~50-200μs)</li>
               <li><strong>Cache Size:</strong> 50 entries</li>
@@ -523,7 +523,7 @@
 
           <div class="preset-info-card">
             <h4>🚀 High Frequency Memoization</h4>
-            <code class="preset-code">withHighFrequencyMemoization()</code>
+            <code class="preset-code">highFrequencyMemoization()</code>
             <ul class="preset-details">
               <li><strong>Equality:</strong> Shallow (~5-15μs)</li>
               <li><strong>Cache Size:</strong> 500 entries</li>
@@ -539,9 +539,9 @@
         <div class="usage-example">
           <h4>💻 How to Use</h4>
           <pre><code>import &#123; signalTree &#125; from '&#64;signaltree/core';
-import &#123; withSelectorMemoization &#125; from '&#64;signaltree/memoization';
+import &#123; selectorMemoization &#125; from '&#64;signaltree/memoization';
 
-const tree = signalTree(state).with(withSelectorMemoization());</code></pre>
+const tree = signalTree(state).with(selectorMemoization());</code></pre>
         </div>
 
         <div class="info-footer">

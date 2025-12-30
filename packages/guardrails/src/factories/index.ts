@@ -1,10 +1,6 @@
 import { rules, withGuardrails } from '../noop';
 
-import type {
-  SignalTree as SignalTree,
-  TreeConfig,
-  Enhancer,
-} from '@signaltree/core';
+import type { ISignalTree, TreeConfig, Enhancer } from '@signaltree/core';
 
 import type { GuardrailsConfig, GuardrailRule } from '../lib/types';
 declare const ngDevMode: boolean | undefined;
@@ -18,7 +14,7 @@ declare const process: GlobalProcess | undefined;
 type SignalTreeFactory<T extends Record<string, unknown>> = (
   initial: T,
   config?: TreeConfig
-) => SignalTree<T>;
+) => ISignalTree<T>;
 
 // Polymorphic enhancer signature compatible with v6 `Enhancer<TAdded>`
 // (kept here for reference if needed by future local typings)
@@ -63,7 +59,7 @@ export function createFeatureTree<T extends Record<string, unknown>>(
   signalTree: SignalTreeFactory<T>,
   initial: T,
   options: FeatureTreeOptions<T>
-): SignalTree<T> {
+): ISignalTree<T> {
   const env = options.env ?? process?.env?.['NODE_ENV'] ?? 'production';
 
   const isDev = env === 'development';
@@ -98,7 +94,7 @@ export function createFeatureTree<T extends Record<string, unknown>>(
     enhanced = (enhanced as any).with(enhancer);
   }
 
-  return enhanced as SignalTree<T>;
+  return enhanced as ISignalTree<T>;
 }
 
 /**
@@ -108,7 +104,7 @@ export function createAngularFeatureTree<T extends Record<string, unknown>>(
   signalTree: SignalTreeFactory<T>,
   initial: T,
   options: Omit<FeatureTreeOptions<T>, 'env'>
-): SignalTree<T> {
+): ISignalTree<T> {
   const isDev = Boolean(ngDevMode);
 
   return createFeatureTree(signalTree, initial, {
@@ -123,7 +119,7 @@ export function createAngularFeatureTree<T extends Record<string, unknown>>(
 export function createAppShellTree<T extends Record<string, unknown>>(
   signalTree: SignalTreeFactory<T>,
   initial: T
-): SignalTree<T> {
+): ISignalTree<T> {
   return createFeatureTree(signalTree, initial, {
     name: 'app-shell',
     guardrails: {
@@ -144,7 +140,7 @@ export function createPerformanceTree<T extends Record<string, unknown>>(
   signalTree: SignalTreeFactory<T>,
   initial: T,
   name: string
-): SignalTree<T> {
+): ISignalTree<T> {
   return createFeatureTree(signalTree, initial, {
     name,
     persistence: false,
@@ -167,7 +163,7 @@ export function createFormTree<T extends Record<string, unknown>>(
   signalTree: SignalTreeFactory<T>,
   initial: T,
   formName: string
-): SignalTree<T> {
+): ISignalTree<T> {
   return createFeatureTree(signalTree, initial, {
     name: `form-${formName}`,
     guardrails: {
@@ -186,7 +182,7 @@ export function createFormTree<T extends Record<string, unknown>>(
 export function createCacheTree<T extends Record<string, unknown>>(
   signalTree: SignalTreeFactory<T>,
   initial: T
-): SignalTree<T> {
+): ISignalTree<T> {
   return createFeatureTree(signalTree, initial, {
     name: 'cache',
     persistence: false,
@@ -205,7 +201,7 @@ export function createTestTree<T extends Record<string, unknown>>(
   signalTree: SignalTreeFactory<T>,
   initial: T,
   overrides?: Partial<GuardrailsConfig<T>>
-): SignalTree<T> {
+): ISignalTree<T> {
   return createFeatureTree(signalTree, initial, {
     name: 'test',
     env: 'test',

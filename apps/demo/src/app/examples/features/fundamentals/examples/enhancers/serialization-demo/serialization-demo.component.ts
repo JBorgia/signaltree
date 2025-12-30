@@ -1,8 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
-import { signalTree, withSerialization } from '@signaltree/core';
+import { serialization, signalTree } from '@signaltree/core';
 
-import type { SignalTree as SignalTree } from '@signaltree/core';
+import type { ISignalTree } from '@signaltree/core';
 
 interface ItemType {
   id: number;
@@ -40,7 +40,7 @@ interface SerializableMethods {
 /**
  * Serialization Demo
  *
- * Demonstrates the withSerialization enhancer for:
+ * Demonstrates the serialization enhancer for:
  * - Converting SignalTree state to JSON
  * - Restoring state from JSON
  * - Handling special types (Date, Set, Map, etc.)
@@ -55,8 +55,8 @@ interface SerializableMethods {
 })
 export class SerializationDemoComponent {
   // Create store with serialization enhancer
-  // Note: Using type assertion due to complex generic constraints in withSerialization
-  store: SignalTree<AppState> & SerializableMethods;
+  // Note: Using type assertion due to complex generic constraints in serialization
+  store: ISignalTree<AppState> & SerializableMethods;
 
   constructor() {
     const baseStore = signalTree<AppState>({
@@ -83,7 +83,7 @@ export class SerializationDemoComponent {
     // Apply enhancer with type assertion
     /* eslint-disable @typescript-eslint/no-explicit-any */
     this.store = baseStore.with(
-      withSerialization({ preserveTypes: true, includeMetadata: true }) as any
+      serialization({ preserveTypes: true, includeMetadata: true }) as any
     ) as any;
     /* eslint-enable @typescript-eslint/no-explicit-any */
   }

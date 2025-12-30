@@ -127,3 +127,8 @@ export function enableEffects(): <Tree extends ISignalTree<any>>(
 ) => Tree & EffectsMethods<any> {
   return withEffects({ enabled: true });
 }
+
+// v6 alias
+export const effects = Object.assign(withEffects, {
+  enable: enableEffects,
+});

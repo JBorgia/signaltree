@@ -1,11 +1,11 @@
-# SignalTree v5.0 - Quick Reference
+# SignalTree v6 - Quick Reference
 
 ## SignalTree-First Patterns
 
 > 📖 Full guide: [docs/IMPLEMENTATION_PATTERNS.md](docs/IMPLEMENTATION_PATTERNS.md)
 
 ```typescript
-const tree = signalTree(initialState).with(withEntities());
+const tree = signalTree(initialState).with(entities());
 const $ = tree.$; // Shorthand for state access
 
 // ✅ DO: Expose signals directly from $ tree
@@ -31,16 +31,16 @@ export type MyTree = ReturnType<typeof createMyTree>; // No manual interface!
 ## Setup
 
 ```typescript
-import { signalTree, entityMap, withEntities, withPersistence, withTimeTravel, withDevTools } from '@signaltree/core';
+import { signalTree, entityMap, entities, withPersistence, timeTravel, devTools } from '@signaltree/core';
 
 const tree = signalTree({
   users: entityMap<User>(), // EntitySignal - auto-detected by withEntities()
   settings: { theme: 'dark' },
 })
-  .with(withEntities())
+  .with(entities())
   .with(withPersistence({ key: 'app-state' }))
-  .with(withTimeTravel())
-  .with(withDevTools());
+  .with(timeTravel())
+  .with(devTools());
 ```
 
 ## Entity CRUD

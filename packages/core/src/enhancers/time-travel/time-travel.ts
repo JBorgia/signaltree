@@ -368,3 +368,10 @@ export function withTimeTravelHistory(
 ): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & TimeTravelMethods {
   return withTimeTravel({ maxHistorySize });
 }
+
+// v6-friendly alias with presets
+export const timeTravel = Object.assign(withTimeTravel, {
+  minimal: () => withTimeTravel({ maxHistorySize: 20, includePayload: false }),
+  debug: () => withTimeTravel({ maxHistorySize: 200, includePayload: true }),
+  history: withTimeTravelHistory,
+});

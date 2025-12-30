@@ -92,3 +92,9 @@ export function withHighPerformanceEntities(): <Tree extends ISignalTree<any>>(
 ) => Tree & EntitiesEnabled {
   return withEntities();
 }
+
+// v6 alias with presets
+export const entities = Object.assign(withEntities, {
+  highPerformance: withHighPerformanceEntities,
+  enable: enableEntities,
+});

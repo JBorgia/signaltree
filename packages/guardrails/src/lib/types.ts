@@ -3,7 +3,7 @@
  * @packageDocumentation
  */
 
-import type { SignalTree as SignalTree } from '@signaltree/core';
+import type { ISignalTree } from '@signaltree/core';
 
 export interface GuardrailsConfig<T = Record<string, unknown>> {
   /** Behavior mode: warn (console), throw (errors), or silent (collect only) */
@@ -156,7 +156,7 @@ export interface RuleContext<T = Record<string, unknown>> {
   /** Update metadata */
   metadata?: UpdateMetadata;
   /** The tree instance */
-  tree: SignalTree<T>;
+  tree: ISignalTree<T>;
   /** Update duration in ms */
   duration?: number;
   /** Diff ratio (0-1) */

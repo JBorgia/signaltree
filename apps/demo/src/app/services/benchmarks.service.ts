@@ -1,5 +1,5 @@
 import { computed, Injectable, signal } from '@angular/core';
-import { signalTree, withBatching, withMemoization } from '@signaltree/core';
+import { batching, memoization, signalTree } from '@signaltree/core';
 
 /**
  * @fileoverview Comprehensive benchmarking suite for SignalTree Demo
@@ -364,7 +364,7 @@ export class BenchmarkService {
 
     // Batch updates
     try {
-      const batchTree = signalTree(state).with(withBatching());
+      const batchTree = signalTree(state).with(batching());
 
       results.batch10 = BenchmarkService.measureTime(() => {
         try {
@@ -519,7 +519,7 @@ export class BenchmarkService {
     const memoTree = signalTree({
       entities,
       filter: { category: 'A', active: true },
-    }).with(withMemoization());
+    }).with(memoization());
 
     const memoizedCompute = memoTree.memoize(
       (state: {

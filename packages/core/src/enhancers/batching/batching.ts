@@ -4,11 +4,7 @@ import { applyState, isNodeAccessor } from '../../lib/utils';
 
 import type { TreeNode } from '../../lib/utils';
 
-import type {
-  ISignalTree as ISignalTree,
-  Enhancer,
-  BatchingConfig,
-} from '../../lib/types';
+import type { ISignalTree, Enhancer, BatchingConfig } from '../../lib/types';
 
 /**
  * Configuration options for intelligent batching behavior.
@@ -294,3 +290,8 @@ export function hasPendingUpdates(): boolean {
 export function getBatchQueueSize(): number {
   return updateQueue.length;
 }
+
+// v6 alias with preset attachment
+export const batching = Object.assign(withBatching, {
+  highPerformance: withHighPerformanceBatching,
+});

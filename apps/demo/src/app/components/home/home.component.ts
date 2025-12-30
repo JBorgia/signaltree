@@ -139,7 +139,7 @@ export class HomeComponent {
         'Navigate state history with undo/redo controls and timeline insights',
       route: '/time-travel',
       category: 'Time Travel',
-      methods: ['withTimeTravel', 'undo', 'redo', 'jumpTo'],
+      methods: ['timeTravel', 'undo', 'redo', 'jumpTo'],
     },
   ];
 
@@ -194,11 +194,11 @@ npm install @signaltree/callable-syntax # Optional DX enhancement
 // Basic Usage
 import {
   signalTree,
-  withBatching,
-  withMemoization,
-  withEntities,
-  withDevTools,
-  withTimeTravel
+  batching,
+  memoization,
+  entities,
+  devTools,
+  timeTravel
 } from '@signaltree/core';
 
 // Create a signal tree with enhancers
@@ -213,11 +213,11 @@ const userTree = signalTree({
     notifications: true
   }
 })
-  .with(withBatching())
-  .with(withMemoization())
-  .with(withEntities())
-  .with(withDevTools())
-  .with(withTimeTravel())
+  .with(batching())
+  .with(memoization())
+  .with(entities())
+  .with(devTools())
+  .with(timeTravel())
   .with(withPresets());
 
 // Access signals directly through state or $ (shorthand)

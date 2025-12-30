@@ -346,7 +346,7 @@ export interface EntityMapMarker<E, K extends string | number> {
  * const tree = signalTree({
  *   users: entityMap<User>(),
  *   products: entityMap<Product, number>(),
- * }).with(withEntities());
+ * }).with(entities());
  * ```
  */
 export function entityMap<
@@ -485,13 +485,13 @@ export interface EntitySignal<E, K extends string | number = string> {
  *
  * interface State { users: entityMap<User> }
  * const tree = signalTree<State>({ users: entityMap<User>() })
- *   .with(withEntities());
+ *   .with(entities());
  * tree.$.users.add(user);
  * tree.$.users.byId(id)();
  * ```
  *
  * @see entityMap for the new marker function
- * @see withEntities for the new enhancer
+ * @see entities for the new enhancer
  */
 // Legacy `EntityHelpers` removed — v6 uses `EntitySignal` via `tree.$.prop`.
 
@@ -720,6 +720,11 @@ export type MinimalSignalTree<T> = ISignalTree<T> & EffectsMethods<T>;
 // Core now uses `SignalTree<T>` and the dedicated `types` package
 // supplies the legacy `SignalTree<T>` declaration to avoid duplicate
 // identifier collisions during monorepo type-checking.
+
+// Provide lightweight aliases for legacy consumers importing from core.
+// These are simple re-exports of the internal `ISignalTree` shape.
+export type SignalTree<T> = ISignalTree<T>;
+export type SignalTreeBase<T> = ISignalTree<T>;
 
 // ============================================
 // TYPE GUARDS

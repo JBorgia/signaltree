@@ -41,7 +41,7 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
   /**
    * Rationale Alignment Note (2025-11):
    * Deep Nested scenario now mapped in implementation to batching + shallow memoization.
-   * This file already lists withBatching as required and shallow as optional.
+   * This file already lists batching as required and shallow as optional.
    * We intentionally keep shallow memoization optional here so downstream consumers can
    * evaluate raw batching only vs batching+shallow. The comparison components and
    * `SignalTreeBenchmarkService` treat shallow memoization as part of the default set
@@ -62,8 +62,8 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     architecturalTradeOffs:
       'Direct mutation excels with deep updates vs immutable rebuilding',
     enhancers: {
-      required: ['withBatching'],
-      optional: ['withShallowMemoization'],
+      required: ['batching'],
+      optional: ['shallowMemoization'],
       rationale:
         'Batching prevents excessive notifications; shallow memoization helps with object updates',
     },
@@ -92,7 +92,7 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     architecturalTradeOffs:
       'Direct mutation provides massive advantages for large arrays vs immutable rebuilding. Enterprise enhancer adds diff engine for targeted updates (skip unchanged elements).',
     enhancers: {
-      required: ['withHighPerformanceBatching'],
+      required: ['highPerformanceBatching'],
       optional: [],
       rationale:
         'High-performance batching essential for rapid array updates; memoization counterproductive (adds cache mgmt overhead without repeated reads). Enterprise variant uses OptimizedUpdateEngine for +16.7% gain. Lazy array coalescing may be conditionally injected for very large datasets (>5k) by the benchmark service but is benchmark-only and therefore not listed here.',
@@ -120,7 +120,7 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     architecturalTradeOffs:
       'Granular reactivity prevents unnecessary recalculations vs coarse invalidation',
     enhancers: {
-      required: ['withBatching', 'withShallowMemoization'],
+      required: ['batching', 'shallowMemoization'],
       optional: [],
       rationale:
         'Batching reduces cascading updates; shallow memoization chosen over full to minimize cache layers while still skipping unchanged branch recalculations. Full memoization removed to avoid overstating win vs selector-focused libraries.',
@@ -147,7 +147,7 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     architecturalTradeOffs:
       'Batching reduces render thrashing vs individual update overhead',
     enhancers: {
-      required: ['withHighPerformanceBatching'],
+      required: ['highPerformanceBatching'],
       optional: [],
       rationale:
         'Core batching functionality being tested - no other enhancers needed',
@@ -174,8 +174,8 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     architecturalTradeOffs:
       'Memoization prevents expensive recalculations vs memory overhead',
     enhancers: {
-      required: ['withLightweightMemoization'],
-      optional: ['withBatching'],
+      required: ['lightweightMemoization'],
+      optional: ['batching'],
       rationale:
         'Testing memoization system using lightweight tier for realistic selector access cost (shallower caches, lower memory). Shallow/full tiers intentionally excluded to avoid unfair amplification versus NgRx Store selector memoization.',
     },
@@ -201,11 +201,7 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     architecturalTradeOffs:
       'Direct JSON serialization vs complex immutable structure traversal',
     enhancers: {
-      required: [
-        'withSerialization',
-        'withMemoization',
-        'withHighPerformanceBatching',
-      ],
+      required: ['serialization', 'memoization', 'highPerformanceBatching'],
       optional: [],
       rationale:
         "Testing serialization feature; memoization and batching stabilize signal read patterns before snapshot. Serialization enhancer performs unwrap + JSON conversion; memoization ensures dependent computed signals aren't re-evaluated spuriously.",
@@ -230,9 +226,9 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     realWorldFrequency:
       'Rare - Gaming, real-time data streams, intensive animations',
     architecturalTradeOffs:
-      'SignalTree integrates with Angular\'s change detection (automatic microtask batching). This scenario tests "unmanaged" rapid updates that bypass framework batching, which doesn\'t reflect real Angular usage. Use withHighPerformanceBatching() for 60Hz+ updates in production.',
+      'SignalTree integrates with Angular\'s change detection (automatic microtask batching). This scenario tests "unmanaged" rapid updates that bypass framework batching, which doesn\'t reflect real Angular usage. Use highPerformanceBatching() for 60Hz+ updates in production.',
     enhancers: {
-      required: ['withBatching'],
+      required: ['batching'],
       optional: [],
       rationale:
         "Batching essential to prevent overwhelming the reactivity system. Memoization intentionally excluded—hot update loop rarely benefits from cache hits and would inflate overhead. Note: This scenario is architecturally incompatible with Angular's reactive system, not a performance limitation.",
@@ -262,7 +258,7 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
       'Micro-overhead (~2μs per computed) enables macro-optimization (prevents unnecessary component renders). Trade-off: small reactivity cost for massive rendering savings.',
     enhancers: {
       required: [],
-      optional: ['withBatching'],
+      optional: ['batching'],
       rationale:
         'Testing core reactivity scaling without artificial batching assistance; batching optional for exploring mitigation of notification fanout cost. Real apps use OnPush to limit subscriber evaluations.',
     },
@@ -283,7 +279,7 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     complexity: 'Medium',
     selected: false,
     category: 'time-travel',
-    // This scenario relies on the withTimeTravel enhancer from @signaltree/core
+    // This scenario relies on the timeTravel enhancer from @signaltree/core
     signalTreeOnly: true,
     purpose:
       'Tests time-travel functionality and history navigation performance',
@@ -292,8 +288,8 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     architecturalTradeOffs:
       'Time-travel requires immutable snapshots vs direct mutation benefits',
     enhancers: {
-      required: ['withTimeTravel'],
-      optional: ['withBatching'],
+      required: ['timeTravel'],
+      optional: ['batching'],
       rationale:
         'Time-travel enhancer required; batching may improve performance',
     },
@@ -312,7 +308,7 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     complexity: 'High',
     selected: false,
     category: 'time-travel',
-    // This scenario uses withTimeTravel enhancer from @signaltree/core
+    // This scenario uses timeTravel enhancer from @signaltree/core
     signalTreeOnly: true,
     purpose: 'Tests time-travel performance with large history buffers',
     frequencyWeight: 0.3, // Rare - Only specific debugging/development scenarios
@@ -320,7 +316,7 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     architecturalTradeOffs:
       'Large history requires significant memory vs lightweight state tracking',
     enhancers: {
-      required: ['withTimeTravel'],
+      required: ['timeTravel'],
       optional: [],
       rationale: 'Time-travel enhancer with large history size configuration',
     },
@@ -339,7 +335,7 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     complexity: 'Medium',
     selected: false,
     category: 'time-travel',
-    // This scenario uses withTimeTravel enhancer from @signaltree/core
+    // This scenario uses timeTravel enhancer from @signaltree/core
     signalTreeOnly: true,
     purpose: 'Tests random access performance in time-travel history',
     frequencyWeight: 0.2, // Very rare - Only advanced debugging/development tools
@@ -347,7 +343,7 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     architecturalTradeOffs:
       'Random state access requires indexed history vs linear traversal',
     enhancers: {
-      required: ['withTimeTravel'],
+      required: ['timeTravel'],
       optional: [],
       rationale: 'Time-travel enhancer for state jumping functionality',
     },

@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 
-import type { ISignalTree as ISignalTree } from './types';
+import type { ISignalTree } from './types';
 
 /**
  * Create an async operation that updates the tree via its batchUpdate method

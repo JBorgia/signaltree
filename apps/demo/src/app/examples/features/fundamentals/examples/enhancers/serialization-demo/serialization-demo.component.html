@@ -3,8 +3,8 @@
 
   <div class="intro">
     <p>
-      <strong>withSerialization</strong> enables JSON import/export with
-      automatic handling of special JavaScript types like <code>Date</code>,
+      <strong>serialization</strong> enables JSON import/export with automatic
+      handling of special JavaScript types like <code>Date</code>,
       <code>Set</code>, <code>Map</code>, and more.
     </p>
   </div>
@@ -230,10 +230,10 @@
 
     <!-- Code Example -->
     <div class="code-section">
-      <h3>💻 Using withSerialization</h3>
+      <h3>💻 Using serialization</h3>
       <pre><code>// Create store with serialization enhancer
 store = signalTree&lt;AppState&gt;(initialState)
-  .with(withSerialization({{ '{' }}
+  .with(serialization({{ '{' }}
     preserveTypes: true,  // Preserve Date, Set, Map types
     includeMetadata: true // Include timestamp in output
   {{ '}' }}));

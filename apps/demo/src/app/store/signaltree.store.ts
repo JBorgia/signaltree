@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { signalTree, withBatching } from '@signaltree/core';
+import { batching, signalTree } from '@signaltree/core';
 import { withGuardrails } from '@signaltree/guardrails';
 
 /**
@@ -45,7 +45,7 @@ export class DemoAppStore {
       sidebarOpen: false as boolean,
     },
   })
-    .with(withBatching())
+    .with(batching())
     .with(
       withGuardrails({
         mode: 'warn',

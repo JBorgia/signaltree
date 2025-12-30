@@ -26,11 +26,11 @@ describe('SignalTree Boilerplate & Code Metrics', () => {
         setupComplexity: 1,
         maintainabilityScore: 10,
         example: `
-import { signalTree } from '@signaltree/core';
+      import { signalTree } from '@signaltree/core';
 
-const tree = signalTree({ count: 0 });
-// Access: tree.$.count()
-// Update: tree.$.count.set(5)`,
+      const tree = signalTree({ count: 0 });
+      // Access: tree.$.count()
+      // Update: tree.$.count.set(5)`,
       },
       {
         framework: 'NgRx',
@@ -122,15 +122,15 @@ const count = signal(0);
         maintainabilityScore: 9,
         example: `
 import { signalTree } from '@signaltree/core';
-import { withBatching } from '@signaltree/core';
+import { batching } from '@signaltree/core';
 // async removed: recommend middleware/manual helpers for loading/error states
-import { withEntities } from '@signaltree/core';
+import { entities } from '@signaltree/core';
 
 const userTree = signalTree({
   users: [] as User[],
   loading: false,
   error: null
-  }).with(withBatching() /*, withEntities() */);
+  }).with(batching() /*, entities() */);
 
 // Usage: userTree.async.loadUsers(() => api.getUsers())`,
       },

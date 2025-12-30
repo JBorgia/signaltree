@@ -1,4 +1,4 @@
-import type { ISignalTree as ISignalTree } from '../../lib/types';
+import type { ISignalTree } from '../../lib/types';
 import type { EnhancerWithMeta } from '../../lib/types';
 
 export interface SerializationConfig {

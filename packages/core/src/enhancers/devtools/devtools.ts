@@ -522,3 +522,10 @@ export function withProductionDevTools(): <Tree extends ISignalTree<any>>(
     performanceThreshold: 50,
   });
 }
+
+// v6-friendly alias with presets
+export const devTools = Object.assign(withDevTools, {
+  production: withProductionDevTools,
+  full: withFullDevTools,
+  enable: enableDevTools,
+});
