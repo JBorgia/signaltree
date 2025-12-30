@@ -96,11 +96,16 @@ export function createFeatureTree<T extends Record<string, unknown>>(
   }
 
   let tree = signalTree(initial);
+  // Apply enhancers in an `unknown` local to avoid leaking temporary
+  // `SignalTreeBase<unknown>` inference into the typed `SignalTree<T>`.
+  // The factory API remains strongly typed for callers; this cast only
+  // affects internal sequencing of enhancers.
+  let enhanced: unknown = tree;
   for (const enhancer of enhancers) {
-    tree = tree.with(enhancer);
+    enhanced = (enhanced as any).with(enhancer);
   }
 
-  return tree;
+  return enhanced as SignalTree<T>;
 }
 
 /**
