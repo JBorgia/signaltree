@@ -12,13 +12,13 @@ const store = signalTree({
   user: {
     name: '',
     email: '',
-    theme: 'system' as Themes,  // Assert literal type here
+    theme: 'system' as Themes, // Assert literal type here
   },
   preferences: {
     notifications: true,
     autoSave: true,
   },
-  items: [] as Item[],  // Assert array element type here
+  items: [] as Item[], // Assert array element type here
 });
 
 // TypeScript infers the full tree type correctly

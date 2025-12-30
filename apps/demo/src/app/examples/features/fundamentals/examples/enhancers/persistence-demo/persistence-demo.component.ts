@@ -1,27 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { persistence, signalTree } from '@signaltree/core';
+import { signalTree, withPersistence } from '@signaltree/core';
 
-interface PersistenceState extends Record<string, unknown> {
-  user: {
-    name: string;
-    email: string;
-    theme: 'light' | 'dark' | 'system';
-  };
-  preferences: {
-    notifications: boolean;
-    autoSave: boolean;
-    language: string;
-  };
-  notes: Array<{
-    id: number;
-    title: string;
-    content: string;
-    createdAt: string;
-  }>;
-  lastSaved: string | null;
-}
+type Themes = 'light' | 'dark' | 'system';
 
 /**
  * Persistence Demo
@@ -57,21 +39,26 @@ export class PersistenceDemoComponent implements OnDestroy {
   newNoteContent = '';
 
   // Create store with persistence enhancer
-  store = signalTree<PersistenceState>({
+  store = signalTree({
     user: {
       name: '',
       email: '',
-      theme: 'system',
+      theme: 'system' as Themes,
     },
     preferences: {
       notifications: true,
       autoSave: true,
       language: 'en',
     },
-    notes: [],
-    lastSaved: null,
+    notes: [] as Array<{
+      id: number;
+      title: string;
+      content: string;
+      createdAt: string;
+    }>,
+    lastSaved: null as string | null,
   }).with(
-    persistence({
+    withPersistence({
       key: this.STORAGE_KEY,
       autoSave: true, // Auto-save on every state change
       autoLoad: true, // Auto-load on creation
@@ -119,18 +106,18 @@ export class PersistenceDemoComponent implements OnDestroy {
 
   updateName(event: Event) {
     const target = event.target as HTMLInputElement;
-    this.store.$.user.name(target.value);
+    this.store.$.user.name.set(target.value);
     this.updateLastSaved();
   }
 
   updateEmail(event: Event) {
     const target = event.target as HTMLInputElement;
-    this.store.$.user.email(target.value);
+    this.store.$.user.email.set(target.value);
     this.updateLastSaved();
   }
 
   updateTheme(theme: 'light' | 'dark' | 'system') {
-    this.store.$.user.theme(theme);
+    this.store.$.user.theme.set(theme);
     this.updateLastSaved();
   }
 
@@ -139,18 +126,18 @@ export class PersistenceDemoComponent implements OnDestroy {
   // ==================
 
   toggleNotifications() {
-    this.store.$.preferences.notifications((n: boolean) => !n);
+    this.store.$.preferences.notifications.update((n: boolean) => !n);
     this.updateLastSaved();
   }
 
   toggleAutoSave() {
-    this.store.$.preferences.autoSave((a: boolean) => !a);
+    this.store.$.preferences.autoSave.update((a: boolean) => !a);
     this.updateLastSaved();
   }
 
   updateLanguage(event: Event) {
     const target = event.target as HTMLSelectElement;
-    this.store.$.preferences.language(target.value);
+    this.store.$.preferences.language.set(target.value);
     this.updateLastSaved();
   }
 
@@ -168,19 +155,14 @@ export class PersistenceDemoComponent implements OnDestroy {
       createdAt: new Date().toISOString(),
     };
 
-    this.store.$.notes((notes: PersistenceState['notes']) => [
-      ...notes,
-      newNote,
-    ]);
+    this.store.$.notes.update((notes) => [...notes, newNote]);
     this.newNoteTitle = '';
     this.newNoteContent = '';
     this.updateLastSaved();
   }
 
   deleteNote(id: number) {
-    this.store.$.notes((notes: PersistenceState['notes']) =>
-      notes.filter((n) => n.id !== id)
-    );
+    this.store.$.notes.update((notes) => notes.filter((n) => n.id !== id));
     this.updateLastSaved();
   }
 
@@ -234,19 +216,19 @@ export class PersistenceDemoComponent implements OnDestroy {
     try {
       await (this.store as unknown as { clear: () => Promise<void> }).clear();
 
-      // Reset to defaults (use update to match accessor API)
-      this.store.$.user(() => ({
+      // Reset to defaults
+      this.store.$.user({
         name: '',
         email: '',
         theme: 'system',
-      }));
-      this.store.$.preferences(() => ({
+      });
+      this.store.$.preferences({
         notifications: true,
         autoSave: true,
         language: 'en',
-      }));
-      this.store.$.notes(() => []);
-      this.store.$.lastSaved(() => null);
+      });
+      this.store.$.notes.set([]);
+      this.store.$.lastSaved.set(null);
 
       this.saveStatus.set('idle');
     } catch (error) {
@@ -258,7 +240,7 @@ export class PersistenceDemoComponent implements OnDestroy {
   }
 
   private updateLastSaved() {
-    this.store.$.lastSaved(new Date().toISOString());
+    this.store.$.lastSaved.set(new Date().toISOString());
   }
 
   // ==================
