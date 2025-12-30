@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree, withTimeTravel } from '@signaltree/core';
+import type { SignalTreeBase, TimeTravelMethods } from '@signaltree/core';
 
 interface Todo {
   id: number;
@@ -63,7 +64,8 @@ export class TimeTravelDemoComponent {
       { id: 2, title: 'Try Time Travel', completed: false },
       { id: 3, title: 'Build Something Amazing', completed: false },
     ],
-  }).with(withTimeTravel({ maxHistorySize: 50 }));
+  }).with(withTimeTravel({ maxHistorySize: 50 })) as unknown as
+    SignalTreeBase<AppState> & TimeTravelMethods<AppState>;
 
   // Type-safe tree updater
   private updateTree = (updater: (state: AppState) => AppState) => {
