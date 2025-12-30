@@ -1,6 +1,6 @@
 import { ISignalTree, MemoizationConfig, MemoizationMethods } from '../../lib/types';
 import { Assert, Equals } from '../test-helpers/types-equals';
-import { withMemoization } from './memoization';
+import { memoization } from './memoization';
 
 type ExpectedSignature = (
   config?: MemoizationConfig
@@ -8,7 +8,7 @@ type ExpectedSignature = (
   tree: Tree
 ) => Tree & MemoizationMethods<any>;
 
-type ActualSignature = typeof withMemoization;
+type ActualSignature = typeof memoization;
 
 type _ContractCheck = Assert<Equals<ActualSignature, ExpectedSignature>>;
 
@@ -19,7 +19,7 @@ interface TestState {
 }
 
 declare const tree: ISignalTree<TestState>;
-const enhanced = withMemoization({ maxCacheSize: 100 })(tree);
+const enhanced = memoization({ maxCacheSize: 100 })(tree);
 
 // Memoize should work with selectors
 const filtered = enhanced.memoize((state: TestState) =>
