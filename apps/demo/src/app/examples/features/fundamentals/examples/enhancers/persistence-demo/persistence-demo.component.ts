@@ -234,19 +234,19 @@ export class PersistenceDemoComponent implements OnDestroy {
     try {
       await (this.store as unknown as { clear: () => Promise<void> }).clear();
 
-      // Reset to defaults
-      this.store.$.user.set({
+      // Reset to defaults (use update to match accessor API)
+      this.store.$.user.update(() => ({
         name: '',
         email: '',
         theme: 'system',
-      });
-      this.store.$.preferences.set({
+      }));
+      this.store.$.preferences.update(() => ({
         notifications: true,
         autoSave: true,
         language: 'en',
-      });
-      this.store.$.notes.set([]);
-      this.store.$.lastSaved.set(null);
+      }));
+      this.store.$.notes.update(() => []);
+      this.store.$.lastSaved.update(() => null);
 
       this.saveStatus.set('idle');
     } catch (error) {
