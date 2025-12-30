@@ -2499,7 +2499,7 @@ export class UndoService {
 **The Wrong Assumption:**
 
 ```typescript
-// "I can use withTimeTravel for API failure rollback"
+// "I can use timeTravel for API failure rollback"
 async updatePlant(id: string, changes: Partial<Plant>) {
   this.tree.$.plants.entities.update(id, changes);
   try {
@@ -2975,7 +2975,7 @@ For most Angular applications using SignalTree:
 ┌─────────────────────────────────▼───────────────────────────┐
 │                   Single Global Tree                        │
 │  • All shared state                                         │
-│  • Entities with withEntities()                             │
+│  • Entities with entities()                             │
 │  • Enhancers as needed                                      │
 │  • Organized by domain (tree.$.plants, tree.$.gardens)      │
 └─────────────────────────────────┬───────────────────────────┘

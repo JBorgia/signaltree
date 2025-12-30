@@ -37,7 +37,7 @@ import { signalTree, entityMap, entities, persistence, timeTravel, devTools } fr
 // Legacy `with*` factories are deprecated aliases and will be removed in a future major release.
 
 const tree = signalTree({
-  users: entityMap<User>(), // EntitySignal - auto-detected by withEntities()
+  users: entityMap<User>(), // EntitySignal - auto-detected by entities()
   settings: { theme: 'dark' },
 })
   .with(entities())
@@ -133,7 +133,7 @@ tree.$.users.addOne(u3); // Log fires once (batched!)
 ### Persistence (Event-driven, not polling)
 
 ```typescript
-withPersistence({
+persistence({
   key: 'my-app',
   storage: localStorage,
   debounceMs: 1000,
@@ -163,7 +163,7 @@ tree.getHistory(); // Array of all snapshots
 ### Logging (Automatic)
 
 ```typescript
-withLogging({
+logging({
   filter: (path) => !path.startsWith('ui'),
   onLog: (log) => console.log(log.path, log.value),
 });
