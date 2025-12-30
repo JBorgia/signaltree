@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, OnDestroy, signal } from 
 import { signalTree } from '@signaltree/core';
 import {
   GuardrailIssue,
+  GuardrailRule,
   GuardrailsAPI,
   GuardrailsConfig,
   GuardrailsReport,
@@ -74,7 +75,10 @@ export class GuardrailsMonitoringComponent implements OnDestroy {
     memoryLeaks: {
       enabled: false,
     },
-    customRules: [rules.noDeepNesting(5), rules.noSensitiveData()],
+    customRules: [
+      rules.noDeepNesting(5) as GuardrailRule<GuardrailsDemoState>,
+      rules.noSensitiveData() as GuardrailRule<GuardrailsDemoState>,
+    ],
     reporting: {
       console: false,
       interval: 3000,
