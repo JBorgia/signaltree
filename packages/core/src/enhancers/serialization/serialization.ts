@@ -1,7 +1,7 @@
-import { isSignal, Signal, WritableSignal } from '@angular/core';
-import { deepEqual } from '../../lib/utils';
+import { isSignal, Signal } from '@angular/core';
 
-import { TYPE_MARKERS } from '../../lib/constants';
+import { deepEqual } from '../../lib/utils';
+import { TYPE_MARKERS } from './constants';
 
 import type { SignalTree } from '../../lib/types';
 
@@ -273,10 +273,10 @@ type InternalSerializationConfig = Required<
 // Minimal runtime stubs so module resolution works during tests.
 export function withSerialization(
   defaultConfig?: SerializationConfig
-): <Tree extends ISignalTree<any>>(
+): <Tree extends SignalTree<any>>(
   tree: Tree
 ) => Tree & SerializableSignalTree<any> {
-  return <Tree extends ISignalTree<any>>(tree: Tree) => {
+  return <Tree extends SignalTree<any>>(tree: Tree) => {
     const cfg = Object.assign({} as SerializationConfig, defaultConfig || {});
 
     function toJSON(): any {
@@ -352,7 +352,7 @@ export function withSerialization(
 }
 
 export function enableSerialization() {
-  return <Tree extends ISignalTree<any>>(tree: Tree) =>
+  return <Tree extends SignalTree<any>>(tree: Tree) =>
     withSerialization()(tree as any) as any;
 }
 
@@ -372,7 +372,7 @@ export interface PersistenceConfig extends SerializationConfig {
 }
 
 export function withPersistence(config: PersistenceConfig) {
-  return <Tree extends ISignalTree<any>>(tree: Tree) => {
+  return <Tree extends SignalTree<any>>(tree: Tree) => {
     const cfg: PersistenceConfig = Object.assign(
       {} as PersistenceConfig,
       config || ({} as any)
@@ -517,12 +517,12 @@ export function createIndexedDBAdapter(dbName?: string, storeName?: string) {
   );
 }
 
-export function applySerialization<T>(tree: ISignalTree<T>) {
+export function applySerialization<T>(tree: SignalTree<T>) {
   return tree as unknown as SerializableSignalTree<T>;
 }
 
 export function applyPersistence<T>(
-  tree: ISignalTree<T>,
+  tree: SignalTree<T>,
   cfg: PersistenceConfig
 ) {
   return tree as unknown as SerializableSignalTree<T> & PersistenceMethods;
