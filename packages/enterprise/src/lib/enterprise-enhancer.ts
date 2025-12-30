@@ -50,19 +50,22 @@ export function withEnterprise(): <
 >(
   tree: Tree
 ) => Tree & import('@signaltree/enterprise').EnterpriseEnhancedTree<any> {
-  return <S>(
-    tree: import('@signaltree/core').SignalTreeBase<S>
-  ): import('@signaltree/core').SignalTreeBase<S> &
-    EnterpriseEnhancedTree<S> => {
+  return <Tree extends import('@signaltree/core').SignalTreeBase<any>>(
+    tree: Tree
+  ): Tree & import('@signaltree/enterprise').EnterpriseEnhancedTree<any> => {
+    type S = Tree extends import('@signaltree/core').SignalTreeBase<infer U>
+      ? U
+      : unknown;
     // Lazy initialization - only create when first needed
     let pathIndex: PathIndex<Signal<unknown>> | null = null;
     let updateEngine: OptimizedUpdateEngine | null = null;
 
-    // Type assertion to access SignalTree properties
-    const signalTree = tree as unknown as { state: unknown };
+    // Type assertion to access SignalTree properties (preserve S)
+    const signalTree = tree as unknown as { state: S };
     // Cast tree to enhanced type for safe property assignment
-    const enhancedTree = tree as import('@signaltree/core').SignalTreeBase<S> &
-      EnterpriseEnhancedTree<S>;
+    const enhancedTree = tree as unknown as
+      | (Tree & import('@signaltree/enterprise').EnterpriseEnhancedTree<S>)
+      | (Tree & import('@signaltree/enterprise').EnterpriseEnhancedTree<any>);
 
     // Add updateOptimized method to tree
     enhancedTree.updateOptimized = (
