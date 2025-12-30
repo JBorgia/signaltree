@@ -205,8 +205,8 @@ export {
   withDevTools,
   devTools,
   enableDevTools,
-  withFullDevTools,
-  withProductionDevTools,
+  fullDevTools,
+  productionDevTools,
 } from './enhancers/devtools/devtools';
 
 /**
