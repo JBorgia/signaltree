@@ -1,7 +1,6 @@
 import { isSignal, Signal, WritableSignal } from '@angular/core';
 
 import { ISignalTree, SignalTree } from '../../lib/types';
-import { EnhancerWithMeta } from '../types';
 import { TYPE_MARKERS } from './constants';
 
 /**
@@ -990,7 +989,9 @@ export interface PersistenceConfig extends SerializationConfig {
  */
 export function withPersistence(
   config: PersistenceConfig
-): <Tree extends SignalTree<any>>(tree: Tree) => Tree & SerializationMethods & PersistenceMethods {
+): <Tree extends SignalTree<any>>(
+  tree: Tree
+) => Tree & SerializationMethods & PersistenceMethods {
   const {
     key,
     storage = typeof window !== 'undefined' ? window.localStorage : undefined,
@@ -1009,12 +1010,17 @@ export function withPersistence(
   // Narrow storage for TypeScript and linter: from here on it's defined.
   const storageAdapter: StorageAdapter = storage;
 
-  return <Tree extends SignalTree<any>>(tree: Tree): Tree & SerializationMethods & PersistenceMethods => {
+  return <Tree extends SignalTree<any>>(
+    tree: Tree
+  ): Tree & SerializationMethods & PersistenceMethods => {
     // First enhance with serialization
-    const serializable = withSerialization(serializationConfig)(tree) as Tree & SerializationMethods;
+    const serializable = withSerialization(serializationConfig)(tree) as Tree &
+      SerializationMethods;
 
     // Add persistence methods
-    const enhanced = serializable as Tree & SerializationMethods & PersistenceMethods;
+    const enhanced = serializable as Tree &
+      SerializationMethods &
+      PersistenceMethods;
 
     // Cache to avoid redundant storage writes. Use a metadata-free cache key
     // so timestamps in metadata don't cause false positives for changes.
