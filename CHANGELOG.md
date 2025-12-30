@@ -77,6 +77,7 @@ return { tree, loadAll$ };
 // ❌ Avoid: NgRx-style generic enhancers
 function withServiceRead<T extends BaseState>(tree: SignalTree<T>) { ... }
 ```
+
 ## 5.1.6 (2025-12-29)
 
 ### 🚀 Changes
@@ -90,7 +91,6 @@ function withServiceRead<T extends BaseState>(tree: SignalTree<T>) { ... }
 - **ci:** Fixes and updates to demo build and validation scripts
   - Rebuilt demo assets and updated example imports
   - Updated test fixtures and committed validation fixes
-
 
 ## 5.1.0 (2025-12-16)
 
