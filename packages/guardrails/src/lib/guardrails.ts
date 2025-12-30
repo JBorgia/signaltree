@@ -149,7 +149,7 @@ export function withGuardrails(
   } {
     const enabled = resolveEnabledFlag(config.enabled);
     if (!isDevEnvironment() || !enabled) {
-      return tree as SignalTree<S> & { __guardrails?: GuardrailsAPI };
+      return tree as unknown as Tree & { __guardrails?: GuardrailsAPI };
     }
 
     const stats = createRuntimeStats();
@@ -222,7 +222,7 @@ export function withGuardrails(
       teardown
     );
 
-    return tree as SignalTree<S> & { __guardrails?: GuardrailsAPI };
+    return tree as unknown as Tree & { __guardrails?: GuardrailsAPI };
   };
 }
 
