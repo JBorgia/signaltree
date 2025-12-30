@@ -40,6 +40,10 @@ export interface EffectsConfig {
  * unsub();
  * ```
  */
+/**
+ * @deprecated Use `effects()` as the primary enhancer. This legacy
+ * `withEffects` factory will be removed in a future major release.
+ */
 export function withEffects(
   config: EffectsConfig = {}
 ): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & EffectsMethods<any> {
@@ -128,15 +132,10 @@ export function enableEffects(): <Tree extends ISignalTree<any>>(
   return withEffects({ enabled: true });
 }
 
-// v6 alias
-/**
- * @deprecated Use `effects()` as the primary enhancer. This legacy
- * `withEffects` alias will be removed in a future major release.
- */
-export function effects(config: EffectsConfig = {}) {
-  return withEffects(config);
-}
-
-export const withEffects = Object.assign(effects, {
-  enable: enableEffects,
-});
+// New v6-friendly export: `effects` with helper presets
+export const effects = Object.assign(
+  (config: EffectsConfig = {}) => withEffects(config),
+  {
+    enable: enableEffects,
+  }
+);
