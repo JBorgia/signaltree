@@ -1,13 +1,13 @@
 import { ISignalTree } from '../../lib/types';
 import { Assert, Equals } from '../test-helpers/types-equals';
 import { DevToolsConfig, DevToolsMethods } from '../types';
-import { withDevTools } from './devtools';
+import { devTools } from './devtools';
 
 type ExpectedSignature = (
   config?: DevToolsConfig
 ) => <Tree extends ISignalTree<any>>(tree: Tree) => Tree & DevToolsMethods;
 
-type ActualSignature = typeof withDevTools;
+type ActualSignature = typeof devTools;
 
 type _ContractCheck = Assert<Equals<ActualSignature, ExpectedSignature>>;
 
