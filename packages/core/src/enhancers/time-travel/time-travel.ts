@@ -208,6 +208,10 @@ class TimeTravelManager<T> {
  * console.log(history[0].timestamp); // Date when change occurred
  * ```
  */
+/**
+ * @deprecated Use `timeTravel()` as the primary enhancer. This legacy
+ * `withTimeTravel` factory will be removed in a future major release.
+ */
 export function withTimeTravel(
   config: TimeTravelConfig = {}
 ): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & TimeTravelMethods {
@@ -384,4 +388,5 @@ export const timeTravel = Object.assign(
  * @deprecated Use `timeTravel()` as the primary enhancer. This legacy
  * `withTimeTravel` alias will be removed in a future major release.
  */
-export const withTimeTravel = Object.assign(timeTravel, {});
+// Note: `withTimeTravel` is kept as the legacy implementation above; do not
+// re-export it as a const alias to avoid duplicate identifier errors.
