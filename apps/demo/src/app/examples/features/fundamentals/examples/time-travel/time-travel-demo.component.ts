@@ -75,20 +75,17 @@ export class TimeTravelDemoComponent {
   message = this.tree.state.message;
   todos = this.tree.state.todos;
 
-  // Time travel interface (non-null asserted because we applied withTimeTravel)
-  private timeTravel = this.tree.__timeTravel!;
-
-  // Time travel signals - need to be writable to trigger updates
-  history = signal(this.timeTravel.getHistory());
-  currentIndex = signal(this.timeTravel.getCurrentIndex());
-  canUndo = signal(this.timeTravel.canUndo());
-  canRedo = signal(this.timeTravel.canRedo());
+  // Time travel signals - derive from the tree (preserves generics)
+  history = signal(this.tree.getHistory());
+  currentIndex = signal(this.tree.getCurrentIndex());
+  canUndo = signal(this.tree.canUndo());
+  canRedo = signal(this.tree.canRedo());
 
   // Helper to refresh time travel state
   private refreshTimeTravelState() {
-    this.history.set(this.timeTravel.getHistory());
-    this.canUndo.set(this.timeTravel.canUndo());
-    this.canRedo.set(this.timeTravel.canRedo());
+    this.history.set(this.tree.getHistory());
+    this.canUndo.set(this.tree.canUndo());
+    this.canRedo.set(this.tree.canRedo());
   }
 
   // Computed signals
@@ -173,17 +170,17 @@ export class TimeTravelDemoComponent {
 
   // Time travel actions
   undo() {
-    this.timeTravel.undo();
+    this.tree.undo();
     this.refreshTimeTravelState();
   }
 
   redo() {
-    this.timeTravel.redo();
+    this.tree.redo();
     this.refreshTimeTravelState();
   }
 
   goToState(index: number) {
-    this.timeTravel.jumpTo(index);
+    this.tree.jumpTo(index);
     this.refreshTimeTravelState();
   }
 
@@ -195,14 +192,14 @@ export class TimeTravelDemoComponent {
   }
 
   clearHistory() {
-    this.timeTravel.resetHistory();
+    this.tree.resetHistory();
     this.refreshTimeTravelState();
   }
 
   // Generate sample actions for easy testing
   generateSampleActions() {
     // Reset history first
-    this.timeTravel.resetHistory();
+    this.tree.resetHistory();
 
     // Create a sequence of actions with delays for better history visualization
     setTimeout(() => {
