@@ -1132,7 +1132,7 @@ export function withPersistence(
       // Try to use tree.subscribe() for reactive state watching
       // This leverages Angular's effect system - no polling needed in production
       try {
-        (tree as unknown as ISignalTree<any>).subscribe(() => {
+        (tree as ISignalTree<any>).subscribe(() => {
           const currentState = JSON.stringify(tree());
           if (currentState !== previousState) {
             previousState = currentState;
@@ -1258,15 +1258,15 @@ export function createIndexedDBAdapter(
  * complex `.with()` overload inference in tests and tooling.
  */
 export function applySerialization<T extends Record<string, unknown>>(
-  tree: SignalTree<T>
-): SerializableSignalTree<T> {
-  return withSerialization()(tree) as SerializableSignalTree<T>;
+  tree: ISignalTree<T>
+): ISignalTree<T> & SerializationMethods {
+  return withSerialization()(tree as any) as ISignalTree<T> & SerializationMethods;
 }
 
 export function applyPersistence<T extends Record<string, unknown>>(
-  tree: SignalTree<T>,
+  tree: ISignalTree<T>,
   cfg: PersistenceConfig
-): SerializableSignalTree<T> & PersistenceMethods {
-  return withPersistence(cfg)(tree) as SerializableSignalTree<T> &
-    PersistenceMethods;
+): ISignalTree<T> & SerializationMethods & PersistenceMethods {
+  return withPersistence(cfg)(tree as any) as ISignalTree<T> &
+    SerializationMethods & PersistenceMethods;
 }
