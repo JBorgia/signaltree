@@ -1,6 +1,48 @@
 <div class="whats-new">
   <h2>🚀 What's New</h2>
 
+  <h3>⚠️ v6.0.0 — Breaking Changes (summary)</h3>
+  <div class="breaking-changes v6-summary">
+    <p>
+      SignalTree v6 tightens types and makes enhancers opt-in. Important
+      user-facing changes (short summary):
+    </p>
+    <ul>
+      <li>
+        <strong>Enhancer factories renamed:</strong> Short factories are now
+        primary (e.g. <code>persistence()</code>); legacy <code>withX()</code>
+        names remain as deprecated aliases.
+      </li>
+      <li>
+        <strong>Methods are added by enhancers:</strong> The base tree no longer
+        declares all methods — apply an enhancer to gain its methods (e.g.
+        time-travel, batching). This makes the type system reflect runtime
+        behavior.
+      </li>
+      <li>
+        <strong>Polymorphic enhancer pattern:</strong> Enhancers are now
+        polymorphic in the tree state type so TypeScript correctly infers
+        updated APIs when you call <code>.with()</code>.
+      </li>
+      <li>
+        <strong>Marker-based entity API:</strong> Use <code>entityMap()</code>
+        in your initial state (marker) and access reactive CRUD via
+        <code>store.$.myEntities.*</code>.
+      </li>
+      <li>
+        <strong>Typing & API cleanup:</strong> Removed index-signature
+        workarounds and improved inference—prefer annotating initial values with
+        per-field assertions (see Preferred Typing docs).
+      </li>
+    </ul>
+    <p>
+      See
+      <a href="/docs/UPGRADE_TO_V6.md">packages/core/UPGRADE_TO_V6.md</a> and
+      <a href="/docs/ENHANCER_TYPE_SYSTEM_V6.md">ENHANCER_TYPE_SYSTEM_V6.md</a>
+      for the full migration guide and examples.
+    </p>
+  </div>
+
   <h3>🔥 v5.0.0 (December 2025) - Major Release</h3>
   <div class="breaking-changes">
     <h4>⚠️ Breaking Changes</h4>
