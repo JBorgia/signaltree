@@ -44,6 +44,21 @@ const tree = signalTree({
   .with(persistence({ key: 'app-state' }))
   .with(timeTravel())
   .with(devTools());
+
+## Preferred SignalTree Typing Pattern
+
+We recommend a consistent typing pattern to preserve literal types and keep enhancer inference happy. See the full guidance: [docs/PREFERRED_TYPING.md](docs/PREFERRED_TYPING.md)
+
+Short example:
+
+```typescript
+type Themes = 'light' | 'dark' | 'system';
+
+const store = signalTree({
+  user: { name: '', email: '', theme: 'system' as Themes },
+  items: [] as Item[],
+});
+```
 ```
 
 ## Entity CRUD
