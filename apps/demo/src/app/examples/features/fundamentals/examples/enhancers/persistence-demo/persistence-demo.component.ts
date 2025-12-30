@@ -119,18 +119,18 @@ export class PersistenceDemoComponent implements OnDestroy {
 
   updateName(event: Event) {
     const target = event.target as HTMLInputElement;
-    this.store.$.user.name.set(target.value);
+    this.store.$.user.name(target.value);
     this.updateLastSaved();
   }
 
   updateEmail(event: Event) {
     const target = event.target as HTMLInputElement;
-    this.store.$.user.email.set(target.value);
+    this.store.$.user.email(target.value);
     this.updateLastSaved();
   }
 
   updateTheme(theme: 'light' | 'dark' | 'system') {
-    this.store.$.user.theme.set(theme);
+    this.store.$.user.theme(theme);
     this.updateLastSaved();
   }
 
@@ -139,18 +139,18 @@ export class PersistenceDemoComponent implements OnDestroy {
   // ==================
 
   toggleNotifications() {
-    this.store.$.preferences.notifications.update((n: boolean) => !n);
+    this.store.$.preferences.notifications((n: boolean) => !n);
     this.updateLastSaved();
   }
 
   toggleAutoSave() {
-    this.store.$.preferences.autoSave.update((a: boolean) => !a);
+    this.store.$.preferences.autoSave((a: boolean) => !a);
     this.updateLastSaved();
   }
 
   updateLanguage(event: Event) {
     const target = event.target as HTMLSelectElement;
-    this.store.$.preferences.language.set(target.value);
+    this.store.$.preferences.language(target.value);
     this.updateLastSaved();
   }
 
@@ -168,7 +168,7 @@ export class PersistenceDemoComponent implements OnDestroy {
       createdAt: new Date().toISOString(),
     };
 
-    this.store.$.notes.update((notes: PersistenceState['notes']) => [
+    this.store.$.notes((notes: PersistenceState['notes']) => [
       ...notes,
       newNote,
     ]);
@@ -178,7 +178,7 @@ export class PersistenceDemoComponent implements OnDestroy {
   }
 
   deleteNote(id: number) {
-    this.store.$.notes.update((notes: PersistenceState['notes']) =>
+    this.store.$.notes((notes: PersistenceState['notes']) =>
       notes.filter((n) => n.id !== id)
     );
     this.updateLastSaved();
@@ -235,18 +235,18 @@ export class PersistenceDemoComponent implements OnDestroy {
       await (this.store as unknown as { clear: () => Promise<void> }).clear();
 
       // Reset to defaults (use update to match accessor API)
-      this.store.$.user.update(() => ({
+      this.store.$.user(() => ({
         name: '',
         email: '',
         theme: 'system',
       }));
-      this.store.$.preferences.update(() => ({
+      this.store.$.preferences(() => ({
         notifications: true,
         autoSave: true,
         language: 'en',
       }));
-      this.store.$.notes.update(() => []);
-      this.store.$.lastSaved.update(() => null);
+      this.store.$.notes(() => []);
+      this.store.$.lastSaved(() => null);
 
       this.saveStatus.set('idle');
     } catch (error) {
@@ -258,7 +258,7 @@ export class PersistenceDemoComponent implements OnDestroy {
   }
 
   private updateLastSaved() {
-    this.store.$.lastSaved.set(new Date().toISOString());
+    this.store.$.lastSaved(new Date().toISOString());
   }
 
   // ==================
