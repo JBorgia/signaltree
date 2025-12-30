@@ -76,8 +76,8 @@ export class GuardrailsMonitoringComponent implements OnDestroy {
       enabled: false,
     },
     customRules: [
-      rules.noDeepNesting(5) as GuardrailRule<GuardrailsDemoState>,
-      rules.noSensitiveData() as GuardrailRule<GuardrailsDemoState>,
+      rules.noDeepNesting(5) as unknown as GuardrailRule<any>,
+      rules.noSensitiveData() as unknown as GuardrailRule<any>,
     ],
     reporting: {
       console: false,
