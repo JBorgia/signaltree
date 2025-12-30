@@ -31,14 +31,17 @@ export type MyTree = ReturnType<typeof createMyTree>; // No manual interface!
 ## Setup
 
 ```typescript
-import { signalTree, entityMap, entities, withPersistence, timeTravel, devTools } from '@signaltree/core';
+import { signalTree, entityMap, entities, persistence, timeTravel, devTools } from '@signaltree/core';
+
+// Note: v6 primary API uses short-named enhancers (e.g. `persistence()`).
+// Legacy `with*` factories are deprecated aliases and will be removed in a future major release.
 
 const tree = signalTree({
   users: entityMap<User>(), // EntitySignal - auto-detected by withEntities()
   settings: { theme: 'dark' },
 })
   .with(entities())
-  .with(withPersistence({ key: 'app-state' }))
+  .with(persistence({ key: 'app-state' }))
   .with(timeTravel())
   .with(devTools());
 ```
