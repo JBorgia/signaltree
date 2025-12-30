@@ -1,21 +1,7 @@
-/**
- * Type-level tests for time-travel enhancer.
- */
-
-import type { withTimeTravel } from './time-travel';
-import type {
-  SignalTreeBase,
-  TimeTravelMethods,
-  TimeTravelConfig,
-} from '../../lib/types';
-
-type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
-  ? 1
-  : 2
-  ? true
-  : false;
-
-type Assert<T extends true> = T;
+import { SignalTreeBase } from '../../lib/types';
+import { Assert, Equals } from '../test-helpers/types-equals';
+import { TimeTravelMethods } from '../types';
+import { TimeTravelConfig, withTimeTravel } from './time-travel';
 
 type ExpectedSignature = (
   config?: TimeTravelConfig

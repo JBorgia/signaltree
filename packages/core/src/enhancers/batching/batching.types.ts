@@ -1,36 +1,16 @@
+import { Assert, Equals } from '../test-helpers/types-equals';
 import { withBatching } from './batching';
 
-/**
- * Type-level tests for batching enhancer.
- *
- * This file ensures the enhancer follows the v6 contract.
- * If this file compiles, the types are correct.
- */
 import type {
   SignalTreeBase,
   BatchingMethods,
   BatchingConfig,
 } from '../../lib/types';
-// ============================================================================
-// Type Equality Helpers
-// ============================================================================
-
-type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
-  ? 1
-  : 2
-  ? true
-  : false;
-
-type Assert<T extends true> = T;
-
-// ============================================================================
-// Contract Verification
-// ============================================================================
 
 // The expected signature
 type ExpectedSignature = (
   config?: BatchingConfig
-) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & BatchingMethods;
+) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & BatchingMethods<S>;
 
 // The actual signature
 type ActualSignature = typeof withBatching;

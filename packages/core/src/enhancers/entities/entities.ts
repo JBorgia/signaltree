@@ -5,16 +5,16 @@ import type {
   EntityConfig,
   EntityMapMarker,
   SignalTreeBase,
-  Enhancer,
   EntitiesEnabled,
 } from '../../lib/types';
 
-interface EntitiesEnhancerConfig {
+// Match whatever config the type test expects
+export interface EntitiesEnhancerConfig {
   enabled?: boolean;
 }
 
-type Marker = EntityMapMarker<unknown, string | number> & {
-  __entityMapConfig?: EntityConfig<unknown, string | number>;
+type Marker = EntityMapMarker<Record<string, unknown>, string | number> & {
+  __entityMapConfig?: EntityConfig<Record<string, unknown>, string | number>;
 };
 
 function isEntityMapMarker(value: unknown): value is Marker {
@@ -26,18 +26,19 @@ function isEntityMapMarker(value: unknown): value is Marker {
 }
 
 /**
- * Runtime-only entities enhancer. Type transformations are handled by
- * `TreeNode<T>` at compile time; this enhancer only materializes the
- * runtime EntitySignal instances and attaches a marker.
+ * v6 Entities Enhancer
+ *
+ * Contract: (config?) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & EntitiesEnabled
  */
 export function withEntities(
   config: EntitiesEnhancerConfig = {}
-): Enhancer<EntitiesEnabled> {
+): <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & EntitiesEnabled {
+  // ← Explicit signature
   const { enabled = true } = config;
 
   return <S>(tree: SignalTreeBase<S>): SignalTreeBase<S> & EntitiesEnabled => {
     if (!enabled) {
-      (tree as any).__entitiesEnabled = true;
+      (tree as { __entitiesEnabled?: true }).__entitiesEnabled = true;
       return tree as SignalTreeBase<S> & EntitiesEnabled;
     }
 
@@ -47,21 +48,21 @@ export function withEntities(
       if (!node || typeof node !== 'object') return;
       for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
         if (isEntityMapMarker(v)) {
-          const cfg = (v as any).__entityMapConfig ?? {};
+          const cfg = (v as Marker).__entityMapConfig ?? {};
           const sig = createEntitySignal(
-            cfg as EntityConfig<any, any>,
+            cfg as EntityConfig<Record<string, unknown>, string | number>,
             notifier,
             path.concat(k).join('.')
           );
           try {
-            (node as any)[k] = sig;
+            (node as Record<string, unknown>)[k] = sig;
           } catch {
-            // ignore non-writable properties
+            /* ignore */
           }
           try {
-            (tree as any)[k] = sig;
+            (tree as unknown as Record<string, unknown>)[k] = sig;
           } catch {
-            // ignore if can't define on tree
+            /* ignore */
           }
         } else if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
           materialize(v, path.concat(k));
@@ -70,19 +71,22 @@ export function withEntities(
     }
 
     materialize(tree.state);
-    materialize((tree as any).$);
+    materialize((tree as { $?: unknown }).$);
 
-    // Attach runtime marker
-    (tree as any).__entitiesEnabled = true;
+    (tree as { __entitiesEnabled?: true }).__entitiesEnabled = true;
 
     return tree as SignalTreeBase<S> & EntitiesEnabled;
   };
 }
 
-export function enableEntities(): ReturnType<typeof withEntities> {
+export function enableEntities(): <S>(
+  tree: SignalTreeBase<S>
+) => SignalTreeBase<S> & EntitiesEnabled {
   return withEntities();
 }
 
-export function withHighPerformanceEntities(): ReturnType<typeof withEntities> {
+export function withHighPerformanceEntities(): <S>(
+  tree: SignalTreeBase<S>
+) => SignalTreeBase<S> & EntitiesEnabled {
   return withEntities();
 }

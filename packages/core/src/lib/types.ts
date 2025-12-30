@@ -4,6 +4,8 @@ import { SecurityValidatorConfig } from './security/security-validator';
 
 // Time travel enhancer configuration (canonical)
 export interface TimeTravelConfig {
+  /** Enable/disable time travel (default: true) */
+  enabled?: boolean;
   /**
    * Maximum number of history entries to keep
    * @default 50
@@ -112,7 +114,10 @@ export interface SignalTreeBase<T> extends NodeAccessor<T> {
 
 // Method interfaces
 export interface EffectsMethods<T> {
-  effect(fn: (state: T) => void): () => void;
+  /** Register an effect that can optionally return a cleanup function */
+  effect(fn: (state: T) => void | (() => void)): () => void;
+
+  /** Subscribe to state changes (simpler alternative to effect) */
   subscribe(fn: (state: T) => void): () => void;
 }
 
@@ -127,8 +132,18 @@ export interface BatchingMethods<T = unknown> {
 }
 
 export interface MemoizationMethods<T> {
+  /** Memoize a computation based on state and optional cache key */
   memoize<R>(fn: (state: T) => R, cacheKey?: string): Signal<R>;
+  /** Memoized update for partial state, with optional cache key */
+  memoizedUpdate?: (
+    updater: (current: T) => Partial<T>,
+    cacheKey?: string
+  ) => void;
+  /** Clear the memoization cache (optionally by key) */
   clearMemoCache(key?: string): void;
+  /** Alias for clearMemoCache for compatibility */
+  clearCache?: (key?: string) => void;
+  /** Get cache statistics */
   getCacheStats(): CacheStats;
 }
 
@@ -512,12 +527,6 @@ export interface DevToolsConfig {
     skip?: boolean;
     reorder?: boolean;
   };
-}
-
-/** Batching enhancer configuration (canonical) */
-export interface BatchingConfig {
-  debounceMs?: number;
-  maxBatchSize?: number;
 }
 
 /**

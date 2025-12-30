@@ -1,21 +1,7 @@
-/**
- * Type-level tests for devtools enhancer.
- */
-
-import type { withDevTools } from './devtools';
-import type {
-  SignalTreeBase,
-  DevToolsMethods,
-  DevToolsConfig,
-} from '../../lib/types';
-
-type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
-  ? 1
-  : 2
-  ? true
-  : false;
-
-type Assert<T extends true> = T;
+import { SignalTreeBase } from '../../lib/types';
+import { Assert, Equals } from '../test-helpers/types-equals';
+import { DevToolsConfig, DevToolsMethods } from '../types';
+import { withDevTools } from './devtools';
 
 type ExpectedSignature = (
   config?: DevToolsConfig

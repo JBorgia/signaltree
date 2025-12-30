@@ -2,94 +2,22 @@ import { snapshotState } from '../../lib/utils';
 import { deepClone, deepEqual } from './utils';
 
 import type { TreeNode } from '../../lib/utils';
-import type { SignalTreeBase as SignalTree, Enhancer } from '../../lib/types';
+import type {
+  SignalTreeBase,
+  TimeTravelMethods,
+  TimeTravelConfig,
+  TimeTravelEntry,
+} from '../../lib/types';
 
-/**
- * Entry in the time travel history
- */
-export interface TimeTravelEntry<T> {
-  state: T;
-  timestamp: number;
-  action: string;
-  payload?: unknown;
-}
+// Re-export for convenience (do not redefine locally)
+export type { TimeTravelConfig, TimeTravelEntry };
 
-/**
- * Time travel interface for state history management
- */
-export interface TimeTravelInterface<T> {
-  /**
-   * Navigate backward in history by one step
-   */
-  undo(): boolean;
-
-  /**
-   * Navigate forward in history by one step
-   */
-  redo(): boolean;
-
-  /**
-   * Get the complete history of state changes
-   */
-  getHistory(): TimeTravelEntry<T>[];
-
-  /**
-   * Reset the history, keeping only the current state
-   */
-  resetHistory(): void;
-
-  /**
-   * Jump to a specific point in history by index
-   */
-  jumpTo(index: number): boolean;
-
-  /**
-   * Get current position in history
-   */
-  getCurrentIndex(): number;
-
-  /**
-   * Check if undo is possible
-   */
-  canUndo(): boolean;
-
-  /**
-   * Check if redo is possible
-   */
-  canRedo(): boolean;
-}
-
-/**
- * Configuration options for time travel
- */
-export interface TimeTravelConfig {
-  /**
-   * Maximum number of history entries to keep
-   * @default 50
-   */
-  maxHistorySize?: number;
-
-  /**
-   * Whether to include payload information in history entries
-   * @default true
-   */
-  includePayload?: boolean;
-
-  /**
-   * Custom action names for different operations
-   */
-  actionNames?: {
-    update?: string;
-    set?: string;
-    batch?: string;
-    [key: string]: string | undefined;
-  };
-}
+// (TimeTravelConfig is imported from canonical types)
 
 /**
  * Internal time travel state management
  */
-class TimeTravelManager<T> implements TimeTravelInterface<T> {
+class TimeTravelManager<T> {
   private history: TimeTravelEntry<T>[] = [];
   private currentIndex = -1;
   private maxHistorySize: number;
@@ -97,7 +25,7 @@ class TimeTravelManager<T> implements TimeTravelInterface<T> {
   private actionNames: Record<string, string>;
 
   constructor(
-    private tree: SignalTree<T>,
+    private tree: SignalTreeBase<T>,
     private config: TimeTravelConfig = {},
     private restoreStateFn?: (state: T) => void
   ) {
@@ -280,12 +208,48 @@ class TimeTravelManager<T> implements TimeTravelInterface<T> {
  * console.log(history[0].timestamp); // Date when change occurred
  * ```
  */
-export function withTimeTravel<T>(
+export function withTimeTravel(
   config: TimeTravelConfig = {}
-): Enhancer<{ __timeTravel: TimeTravelInterface<T> }> {
-  const enhancer = (tree: SignalTree<any>) => {
+): <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & TimeTravelMethods {
+  const { enabled = true } = config;
+
+  return <S>(
+    tree: SignalTreeBase<S>
+  ): SignalTreeBase<S> & TimeTravelMethods => {
+    // Disabled (noop) path
+    if (!enabled) {
+      const noopMethods: TimeTravelMethods = {
+        undo(): void {
+          /* disabled */
+        },
+        redo(): void {
+          /* disabled */
+        },
+        canUndo(): boolean {
+          return false;
+        },
+        canRedo(): boolean {
+          return false;
+        },
+        getHistory(): unknown[] {
+          return [];
+        },
+        resetHistory(): void {
+          /* disabled */
+        },
+        jumpTo(_index: number): void {
+          void _index; /* disabled */
+        },
+        getCurrentIndex(): number {
+          return -1;
+        },
+      };
+
+      return Object.assign(tree, noopMethods) as SignalTreeBase<S> &
+        TimeTravelMethods;
+    }
     // Store the original callable tree function
-    const originalTreeCall = tree.bind(tree);
+    const originalTreeCall = (tree as any).bind(tree);
 
     // Flag to prevent time travel during restoration
     let isRestoring = false;
@@ -294,7 +258,7 @@ export function withTimeTravel<T>(
     const timeTravelManager = new TimeTravelManager(
       tree,
       config,
-      (state: T) => {
+      (state: S) => {
         isRestoring = true;
         try {
           originalTreeCall(state);
@@ -306,22 +270,19 @@ export function withTimeTravel<T>(
 
     // Create enhanced tree function that includes time travel tracking
     const enhancedTree = function (
-      this: SignalTree<T>,
+      this: SignalTreeBase<S>,
       ...args: unknown[]
-    ): T | void {
+    ) {
       if (args.length === 0) {
-        // Get operation - call original directly
         return originalTreeCall();
       } else {
-        // Set or update operation - track for time travel
         if (isRestoring) {
-          // During restoration, just call original update
           if (args.length === 1) {
             const arg = args[0];
             if (typeof arg === 'function') {
-              return originalTreeCall(arg as (current: T) => T);
+              return originalTreeCall(arg as (current: S) => S);
             } else {
-              return originalTreeCall(arg as T);
+              return originalTreeCall(arg as S);
             }
           }
           return;
@@ -329,35 +290,29 @@ export function withTimeTravel<T>(
 
         const beforeState = originalTreeCall();
 
-        // Execute the actual update using the original callable interface
         let result: void;
         if (args.length === 1) {
           const arg = args[0];
           if (typeof arg === 'function') {
-            result = originalTreeCall(arg as (current: T) => T);
+            result = originalTreeCall(arg as (current: S) => S);
           } else {
-            result = originalTreeCall(arg as T);
+            result = originalTreeCall(arg as S);
           }
         }
 
         const afterState = originalTreeCall();
 
-        // Only add to history if state actually changed
-        const statesEqual = deepEqual(beforeState, afterState);
-
-        if (!statesEqual) {
+        if (!deepEqual(beforeState, afterState)) {
           timeTravelManager.addEntry('update', afterState);
         }
 
         return result;
       }
-    } as unknown as SignalTree<T>;
+    } as unknown as SignalTreeBase<S>;
 
-    // Copy all properties and methods from original tree
     Object.setPrototypeOf(enhancedTree, Object.getPrototypeOf(tree));
     Object.assign(enhancedTree, tree);
 
-    // Ensure state and $ properties are preserved
     if ('state' in tree) {
       Object.defineProperty(enhancedTree, 'state', {
         value: tree.state,
@@ -366,17 +321,14 @@ export function withTimeTravel<T>(
       });
     }
 
-    // Ensure $ alias is preserved
     if ('$' in tree) {
       Object.defineProperty(enhancedTree, '$', {
-        value: (tree as SignalTree<T>).$,
+        value: (tree as any).$,
         enumerable: false,
         configurable: true,
       });
     }
 
-    // Override DX-friendly methods to forward to the time travel manager
-    // These shadow the core stubs when the enhancer is applied
     (enhancedTree as any)['undo'] = () => {
       timeTravelManager.undo();
     };
@@ -388,7 +340,6 @@ export function withTimeTravel<T>(
       timeTravelManager.resetHistory();
     };
 
-    // Additional helpers exposed directly on the tree for better DX
     (enhancedTree as any)['jumpTo'] = (index: number) => {
       timeTravelManager.jumpTo(index);
     };
@@ -397,30 +348,24 @@ export function withTimeTravel<T>(
     (enhancedTree as any)['getCurrentIndex'] = () =>
       timeTravelManager.getCurrentIndex();
 
-    return Object.assign(enhancedTree, {
-      __timeTravel: timeTravelManager,
-    }) as SignalTree<any> & { __timeTravel: TimeTravelInterface<any> };
+    return enhancedTree as unknown as SignalTreeBase<S> & TimeTravelMethods;
   };
-
-  return enhancer as unknown as Enhancer<{
-    __timeTravel: TimeTravelInterface<T>;
-  }>;
 }
 
 /**
  * Convenience function to enable basic time travel
  */
-export function enableTimeTravel<T>(maxHistorySize?: number): Enhancer<{
-  __timeTravel: TimeTravelInterface<T>;
-}> {
-  return withTimeTravel({ maxHistorySize });
+export function enableTimeTravel(): <S>(
+  tree: SignalTreeBase<S>
+) => SignalTreeBase<S> & TimeTravelMethods {
+  return withTimeTravel({ enabled: true });
 }
 
 /**
- * Get time travel interface from an enhanced tree
+ * Time travel with custom history size (v6 pattern)
  */
-export function getTimeTravel<T>(
-  tree: SignalTree<T> & { __timeTravel?: TimeTravelInterface<T> }
-): TimeTravelInterface<T> | undefined {
-  return tree.__timeTravel;
+export function withTimeTravelHistory(
+  maxHistorySize: number
+): <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & TimeTravelMethods {
+  return withTimeTravel({ maxHistorySize });
 }

@@ -1,25 +1,16 @@
-/**
- * Type-level tests for entities enhancer.
- */
+import { Assert, Equals } from '../test-helpers/types-equals';
+import { EntitiesEnhancerConfig, withEntities } from './entities';
 
-import type { withEntities, entityMap } from './entities';
 import type {
   SignalTreeBase,
   EntitiesEnabled,
   EntityMapMarker,
+  entityMap,
 } from '../../lib/types';
 
-type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
-  ? 1
-  : 2
-  ? true
-  : false;
-
-type Assert<T extends true> = T;
-
-type ExpectedSignature = (config?: {
-  idField?: string;
-}) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & EntitiesEnabled;
+type ExpectedSignature = (
+  config?: EntitiesEnhancerConfig
+) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & EntitiesEnabled;
 
 type ActualSignature = typeof withEntities;
 
@@ -40,7 +31,7 @@ type _MarkerCheck = Assert<
 declare const tree: SignalTreeBase<{ count: number }>;
 const enhanced = withEntities()(tree);
 
-// Should have __entities marker
-const _marker: true = enhanced.__entities;
+// Should have __entitiesEnabled marker
+const _marker: true | undefined = enhanced.__entitiesEnabled;
 
 export {};

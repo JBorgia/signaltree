@@ -4,17 +4,15 @@ import { applyState, isNodeAccessor } from '../../lib/utils';
 
 import type { TreeNode } from '../../lib/utils';
 
-import type { SignalTreeBase as SignalTree, Enhancer } from '../../lib/types';
+import type {
+  SignalTreeBase as SignalTree,
+  Enhancer,
+  BatchingConfig,
+} from '../../lib/types';
 
 /**
  * Configuration options for intelligent batching behavior.
  */
-interface BatchingConfig {
-  enabled?: boolean;
-  maxBatchSize?: number;
-  autoFlushDelay?: number;
-  batchTimeoutMs?: number;
-}
 
 /** Enhanced SignalTree interface with batching methods */
 interface BatchingSignalTree<T> extends SignalTree<T> {
@@ -72,7 +70,7 @@ function scheduleFlush(config: BatchingConfig) {
     clearTimeout(flushTimeoutId);
   }
 
-  const delay = config.autoFlushDelay ?? 16;
+  const delay = (config as any).autoFlushDelay ?? config.debounceMs ?? 16;
   flushTimeoutId = setTimeout(() => {
     flushUpdates();
   }, delay) as unknown as number;
@@ -114,10 +112,10 @@ function batchUpdates(fn: () => void, path?: string): void {
 
   if (!wasFlushed) {
     const isTimedOut =
-      currentBatchingConfig.batchTimeoutMs &&
+      (currentBatchingConfig as any).batchTimeoutMs &&
       updateQueue.length > 0 &&
       startTime - updateQueue[0].startTime >=
-        currentBatchingConfig.batchTimeoutMs;
+        (currentBatchingConfig as any).batchTimeoutMs;
 
     if (isTimedOut) {
       flushUpdates();
@@ -132,7 +130,7 @@ function batchUpdates(fn: () => void, path?: string): void {
 export function withBatchingWithConfig<T>(
   config: BatchingConfig = {}
 ): Enhancer<BatchingMethods<T>> {
-  const { enabled = true } = config;
+  const enabled = (config as any).enabled ?? true;
 
   // Only update the global batching configuration when batching is enabled
   // for this enhancer instance. Leaving global config untouched when disabled
@@ -255,18 +253,18 @@ export function withBatchingWithConfig<T>(
 }
 
 /** User-friendly no-arg signature expected by type-level tests */
-export function withBatching<T = any>(
+export function withBatching(
   config: BatchingConfig = {}
-): Enhancer<BatchingMethods<T>> {
-  return withBatchingWithConfig<T>(config);
+): <S>(tree: SignalTree<S>) => SignalTree<S> & BatchingMethods<S> {
+  return withBatchingWithConfig(config) as unknown as <S>(
+    tree: SignalTree<S>
+  ) => SignalTree<S> & BatchingMethods<S>;
 }
 
 export function withHighPerformanceBatching<T>() {
-  return withBatchingWithConfig<T>({
-    enabled: true,
-    maxBatchSize: 200,
-    batchTimeoutMs: 0,
-  });
+  return withBatchingWithConfig<T>(
+    ({ enabled: true, maxBatchSize: 200, debounceMs: 0 } as unknown) as BatchingConfig
+  );
 }
 
 export function flushBatchedUpdates(): void {
