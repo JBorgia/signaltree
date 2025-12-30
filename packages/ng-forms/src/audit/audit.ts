@@ -9,7 +9,7 @@ import { getChanges } from '@signaltree/shared';
  * @packageDocumentation
  */
 
-import type { SignalTree } from '@signaltree/core';
+import type { ISignalTree } from '@signaltree/core';
 /**
  * Audit log entry recording form changes
  */
@@ -59,7 +59,7 @@ export interface AuditTrackerConfig<T> {
  *
  * This function is tree-shakeable - if not imported, it won't be included in your bundle.
  *
- * @param tree - The SignalTree to track
+ * @param tree - The ISignalTree to track
  * @param auditLog - Array to collect audit entries
  * @param config - Optional configuration
  * @returns Unsubscribe function to stop tracking
@@ -102,7 +102,7 @@ export interface AuditTrackerConfig<T> {
  * ```
  */
 export function createAuditTracker<T extends Record<string, unknown>>(
-  tree: SignalTree<T>,
+  tree: ISignalTree<T>,
   auditLog: AuditEntry<T>[],
   config: AuditTrackerConfig<T> = {}
 ): () => void {
@@ -158,9 +158,17 @@ export function createAuditTracker<T extends Record<string, unknown>>(
   let unsubscribe: (() => void) | undefined;
   let pollingId: ReturnType<typeof setInterval> | undefined;
 
-  try {
-    unsubscribe = tree.subscribe(handleChange);
-  } catch {
+  if (
+    'subscribe' in (tree as any) &&
+    typeof (tree as any).subscribe === 'function'
+  ) {
+    try {
+      unsubscribe = (tree as any).subscribe(handleChange);
+    } catch {
+      // Fall back to polling for non-Angular environments
+      pollingId = setInterval(handleChange, 100);
+    }
+  } else {
     // Fall back to polling for non-Angular environments
     pollingId = setInterval(handleChange, 100);
   }

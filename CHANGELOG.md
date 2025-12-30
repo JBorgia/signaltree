@@ -78,6 +78,20 @@ return { tree, loadAll$ };
 function withServiceRead<T extends BaseState>(tree: SignalTree<T>) { ... }
 ```
 
+## 5.1.6 (2025-12-29)
+
+### 🚀 Changes
+
+- **core:** Rename enhancer factory helpers from `withX()` to short factories (e.g. `withBatching()` → `batching()`)
+  - Updated demo, examples and tests to use the new factory names
+  - Added compatibility alias exports to preserve `with*` names for consumers
+
+### 🛠️ Validation
+
+- **ci:** Fixes and updates to demo build and validation scripts
+  - Rebuilt demo assets and updated example imports
+  - Updated test fixtures and committed validation fixes
+
 ## 5.1.0 (2025-12-16)
 
 ### 🚀 Features

@@ -139,22 +139,6 @@ tree.batch(() => {
 });
 ```
 
-### Computed Enhancer
-
-**When to suggest:** Derived state based on multiple tree values.
-
-```typescript
-import { withComputed } from '@signaltree/core/enhancers/computed';
-
-const tree = signalTree(initialState, withComputed());
-
-// Define computed values
-const fullName = tree.computed(() => `${tree.user.firstName()} ${tree.user.lastName()}`);
-
-// Use like a signal
-console.log(fullName()); // Automatically updates when dependencies change
-```
-
 ### Memoization Enhancer
 
 **When to suggest:** Expensive computations that shouldn't re-run unless dependencies change.

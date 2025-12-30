@@ -3,11 +3,9 @@
  * @packageDocumentation
  */
 
-import type { SignalTree } from '@signaltree/core';
+import type { ISignalTree } from '@signaltree/core';
 
-export interface GuardrailsConfig<
-  T extends Record<string, unknown> = Record<string, unknown>
-> {
+export interface GuardrailsConfig<T = Record<string, unknown>> {
   /** Behavior mode: warn (console), throw (errors), or silent (collect only) */
   mode?: 'warn' | 'throw' | 'silent';
 
@@ -131,9 +129,7 @@ export interface UpdateMetadata {
   [key: string]: unknown;
 }
 
-export interface GuardrailRule<
-  T extends Record<string, unknown> = Record<string, unknown>
-> {
+export interface GuardrailRule<T = Record<string, unknown>> {
   /** Rule name */
   name: string;
   /** Description */
@@ -150,9 +146,7 @@ export interface GuardrailRule<
   tags?: string[];
 }
 
-export interface RuleContext<
-  T extends Record<string, unknown> = Record<string, unknown>
-> {
+export interface RuleContext<T = Record<string, unknown>> {
   /** Path to the value */
   path: string[];
   /** New value */
@@ -162,7 +156,7 @@ export interface RuleContext<
   /** Update metadata */
   metadata?: UpdateMetadata;
   /** The tree instance */
-  tree: SignalTree<T>;
+  tree: ISignalTree<T>;
   /** Update duration in ms */
   duration?: number;
   /** Diff ratio (0-1) */

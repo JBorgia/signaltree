@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, Injectable, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { entityMap, signalTree, withEntities } from '@signaltree/core';
+import { batching, entities, entityMap, signalTree } from '@signaltree/core';
 
 import type { EntityMapMarker } from '@signaltree/core';
 
@@ -71,7 +71,9 @@ export class AppTreeService {
       theme: 'light',
       sidebarOpen: false,
     },
-  }).with(withEntities());
+  })
+    .with(entities())
+    .with(batching());
 
   // Expose state slices as public signals
   readonly users = this.tree.$.users;
@@ -369,7 +371,7 @@ export class ApiService {
               <h4>Global Tree</h4>
               <ul>
                 <li>All shared state</li>
-                <li>Entities with withEntities()</li>
+                <li>Entities with entities()</li>
                 <li>Unified dot notation access</li>
               </ul>
             </div>

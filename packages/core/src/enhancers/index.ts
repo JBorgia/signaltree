@@ -5,7 +5,7 @@ import { ENHANCER_META } from '../lib/types';
  * SignalTree Enhancer System
  * Handles enhancer composition and dependency resolution
  */
-import type { EnhancerMeta, EnhancerWithMeta } from '../lib/types';
+import type { EnhancerMeta, EnhancerWithMeta, Enhancer } from '../lib/types';
 /**
  * Helper to create an enhancer with metadata attached
  *
@@ -28,11 +28,11 @@ import type { EnhancerMeta, EnhancerWithMeta } from '../lib/types';
  * );
  * ```
  */
-export function createEnhancer<I = unknown, O = unknown>(
+export function createEnhancer<TAdded = unknown>(
   meta: EnhancerMeta,
-  enhancerFn: (input: I) => O
-): EnhancerWithMeta<I, O> {
-  const fn = enhancerFn as EnhancerWithMeta<I, O>;
+  enhancerFn: Enhancer<TAdded>
+): EnhancerWithMeta<TAdded> {
+  const fn = enhancerFn as EnhancerWithMeta<TAdded>;
   try {
     fn.metadata = meta;
     // Also attach under symbol for third-party compatibility
@@ -56,10 +56,10 @@ export function createEnhancer<I = unknown, O = unknown>(
  * @returns Ordered array of enhancers
  */
 export function resolveEnhancerOrder(
-  enhancers: EnhancerWithMeta<unknown, unknown>[],
+  enhancers: EnhancerWithMeta<unknown>[],
   availableCapabilities: Set<string> = new Set<string>(),
   debugMode = false
-): EnhancerWithMeta<unknown, unknown>[] {
+): EnhancerWithMeta<unknown>[] {
   // Build nodes with metadata
   const nodes = enhancers.map((e, idx) => ({
     fn: e,
@@ -133,6 +133,6 @@ export function resolveEnhancerOrder(
   // Map ordered names back to enhancer functions
   return ordered.map((name) => {
     const n = nameToNode.get(name);
-    return (n ? n.fn : enhancers[0]) as EnhancerWithMeta<unknown, unknown>;
+    return (n ? n.fn : enhancers[0]) as EnhancerWithMeta<unknown>;
   });
 }

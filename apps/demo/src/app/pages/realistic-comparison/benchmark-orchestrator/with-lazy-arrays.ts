@@ -3,7 +3,7 @@
  * - Coalesces many small updates into a single microtask-flush
  * - Flush performs a single batched set using tree.batch() when available
  */
-import type { SignalTree } from '@signaltree/core';
+import type { ISignalTree, SignalTree } from '@signaltree/core';
 
 type Config = {
   enabled?: boolean;

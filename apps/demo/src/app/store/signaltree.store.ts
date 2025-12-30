@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { signalTree, withBatching } from '@signaltree/core';
+import { batching, signalTree } from '@signaltree/core';
 import { withGuardrails } from '@signaltree/guardrails';
 
 /**
@@ -44,15 +44,16 @@ export class DemoAppStore {
       currentTab: 'getting-started' as string,
       sidebarOpen: false as boolean,
     },
-  }).with(
-    withBatching(),
-    withGuardrails({
-      mode: 'warn',
-      budgets: {
-        maxUpdateTime: 16,
-      },
-    })
-  );
+  })
+    .with(batching())
+    .with(
+      withGuardrails({
+        mode: 'warn',
+        budgets: {
+          maxUpdateTime: 16,
+        },
+      })
+    );
 
   // Expose state slices as public signals
   readonly counter = this.tree.$.counter;

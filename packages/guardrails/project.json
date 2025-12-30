@@ -23,7 +23,8 @@
         "format": ["esm"],
         "additionalEntryPoints": [
           "packages/guardrails/src/factories/index.ts",
-          "packages/guardrails/src/noop.ts"
+          "packages/guardrails/src/noop.ts",
+          "packages/guardrails/src/lib/guardrails.ts"
         ],
         "assets": [
           {

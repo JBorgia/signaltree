@@ -24,19 +24,19 @@ export { signalTree } from './lib/signal-tree';
 
 export type {
   // Core types - Main SignalTree interfaces
+  ISignalTree,
   SignalTree,
+  SignalTreeBase,
+  FullSignalTree,
+  ProdSignalTree,
   TreeNode,
   CallableWritableSignal,
   AccessibleNode,
   NodeAccessor,
-  RemoveSignalMethods,
   Primitive,
-  BuiltInObject,
   NotFn,
 
-  // Deep path types - For nested entity access
-  DeepPath,
-  DeepAccess,
+  // Deep path types - For nested entity access (removed in v6)
 
   // Configuration types
   TreeConfig,
@@ -46,8 +46,8 @@ export type {
   Enhancer,
   EnhancerMeta,
   EnhancerWithMeta,
-  ChainResult,
-  WithMethod,
+  // ChainResult removed in v6
+  // WithMethod removed in v6 (single-enhancer runtime)
 
   // Entity types
   EntitySignal,
@@ -56,10 +56,8 @@ export type {
   MutationOptions,
   AddOptions,
   AddManyOptions,
-
-  // Feature types - Advanced functionality
-  EntityHelpers,
   TimeTravelEntry,
+  TimeTravelMethods,
 } from './lib/types';
 
 // Entity helpers (runtime)
@@ -136,11 +134,12 @@ export { ENHANCER_META } from './lib/types';
  */
 export {
   withBatching,
+  batching,
   withHighPerformanceBatching,
   flushBatchedUpdates,
   hasPendingUpdates,
   getBatchQueueSize,
-} from './enhancers/batching/lib/batching';
+} from './enhancers/batching/batching';
 
 /**
  * Memoization enhancer for performance optimization
@@ -148,6 +147,7 @@ export {
  */
 export {
   withMemoization,
+  memoization,
   withSelectorMemoization,
   withComputedMemoization,
   withDeepStateMemoization,
@@ -158,10 +158,9 @@ export {
   memoize,
   memoizeShallow,
   memoizeReference,
-  cleanupMemoizationCache,
   clearAllCaches,
   getGlobalCacheStats,
-} from './enhancers/memoization/lib/memoization';
+} from './enhancers/memoization/memoization';
 
 /**
  * Time travel enhancer for debugging and undo/redo functionality
@@ -169,10 +168,9 @@ export {
  */
 export {
   withTimeTravel,
+  timeTravel,
   enableTimeTravel,
-  getTimeTravel,
-  type TimeTravelInterface,
-} from './enhancers/time-travel/lib/time-travel';
+} from './enhancers/time-travel/time-travel';
 
 /**
  * Entities enhancer for normalized collection helpers
@@ -180,23 +178,24 @@ export {
  */
 export {
   withEntities,
+  entities,
   enableEntities,
   withHighPerformanceEntities,
-} from './enhancers/entities/lib/entities';
+} from './enhancers/entities/entities';
 
 /**
  * Serialization enhancer for state persistence and restoration
- * @see {@link withSerialization} for serialization capabilities
+ * Primary v6 exports: `serialization()` and `persistence()`.
  */
 export {
-  withSerialization,
+  serialization,
   enableSerialization,
-  withPersistence,
+  persistence,
   createStorageAdapter,
   createIndexedDBAdapter,
   applySerialization,
   applyPersistence,
-} from './enhancers/serialization/lib/serialization';
+} from './enhancers/serialization/serialization';
 
 /**
  * DevTools enhancer for development and debugging
@@ -204,10 +203,11 @@ export {
  */
 export {
   withDevTools,
+  devTools,
   enableDevTools,
-  withFullDevTools,
-  withProductionDevTools,
-} from './enhancers/devtools/lib/devtools';
+  fullDevTools,
+  productionDevTools,
+} from './enhancers/devtools/devtools';
 
 /**
  * Async operation helpers
@@ -228,17 +228,6 @@ export {
   createDevTree,
 } from './enhancers/presets/lib/presets';
 
-/**
- * Computed enhancer for derived signal creation
- */
-export {
-  computedEnhancer,
-  createComputed,
-  type ComputedConfig,
-  type ComputedSignal,
-  type ComputedSignalTree,
-} from './enhancers/computed/lib/computed';
-
 // ============================================
 // CONSTANTS EXPORTS
 // ============================================
@@ -254,6 +243,36 @@ export { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './lib/constants';
 // ============================================
 // PUBLIC API SUMMARY
 // ============================================
+
+// Backwards-compatible alias exports: expose new short names that map
+// to existing `with*` factories so demos and examples can adopt the
+// new naming while the core implementation still provides the original
+// factories.
+/**
+ * @deprecated Legacy alias export. Prefer the short factory name (e.g. `highPerformanceBatching()`)
+ * and import that directly from the short-named module. This alias will be removed in a future major release.
+ */
+export { withHighPerformanceBatching as highPerformanceBatching } from './enhancers/batching/batching';
+
+/**
+ * @deprecated Legacy alias exports. Prefer the short factory names (e.g. `lightweightMemoization()`, `shallowMemoization()`, `computedMemoization()`, `selectorMemoization()`)
+ * and import them directly from the memoization enhancer. These aliases will be removed in a future major release.
+ */
+export {
+  withLightweightMemoization as lightweightMemoization,
+  withShallowMemoization as shallowMemoization,
+  withComputedMemoization as computedMemoization,
+  withSelectorMemoization as selectorMemoization,
+} from './enhancers/memoization/memoization';
+
+/**
+ * @deprecated Legacy alias export. Prefer `serialization()` imported from the serialization enhancer.
+ * This alias will be removed in a future major release.
+ */
+export {
+  serialization as withSerialization,
+  persistence as withPersistence,
+} from './enhancers/serialization/serialization';
 
 /**
  * SignalTree Core API Summary:

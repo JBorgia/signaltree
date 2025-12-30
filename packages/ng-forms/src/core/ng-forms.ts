@@ -53,7 +53,7 @@ let hasShownLegacyWarning = false;
  */
 
 // Re-export core types needed for forms
-import type { SignalTree, TreeConfig, TreeNode } from '@signaltree/core';
+import type { ISignalTree, TreeConfig, TreeNode } from '@signaltree/core';
 // ============================================
 // FORM TREE TYPES
 // ============================================
@@ -139,7 +139,7 @@ export type FormTree<T extends Record<string, unknown>> = {
   fieldAsyncErrors: Record<string, Signal<string | undefined>>;
 
   // Keep values tree for backward compatibility
-  values: SignalTree<T>;
+  values: ISignalTree<T>;
 
   // Cleanup helpers to tear down subscriptions created for bridge layer
   destroy(): void;
@@ -475,7 +475,7 @@ export function createFormTree<T extends Record<string, unknown>>(
     cleanupCallbacks.splice(0).forEach((fn) => fn());
   };
 
-  const formTree: FormTree<T> = {
+  const formTree = {
     state: flattenedState,
     $: flattenedState,
     form: formGroup,
@@ -509,9 +509,9 @@ export function createFormTree<T extends Record<string, unknown>>(
     fieldAsyncErrors,
     values: valuesTree,
     destroy,
-  };
+  } as any;
 
-  return formTree;
+  return formTree as FormTree<T>;
 }
 
 export function createVirtualFormArray<T>(

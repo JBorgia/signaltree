@@ -1,0 +1,103 @@
+import { createEntitySignal } from '../../lib/entity-signal';
+import { getPathNotifier } from '../../lib/path-notifier';
+
+import type {
+  EntityConfig,
+  EntityMapMarker,
+  ISignalTree,
+  EntitiesEnabled,
+} from '../../lib/types';
+
+// Match whatever config the type test expects
+export interface EntitiesEnhancerConfig {
+  enabled?: boolean;
+}
+
+type Marker = EntityMapMarker<Record<string, unknown>, string | number> & {
+  __entityMapConfig?: EntityConfig<Record<string, unknown>, string | number>;
+};
+
+function isEntityMapMarker(value: unknown): value is Marker {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      (value as Record<string, unknown>)['__isEntityMap'] === true
+  );
+}
+
+/**
+ * v6 Entities Enhancer
+ *
+ * Contract: (config?) => <S>(tree: SignalTree<S>) => SignalTree<S> & EntitiesEnabled
+ */
+export function entities(
+  config: EntitiesEnhancerConfig = {}
+): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & EntitiesEnabled {
+  // ← Explicit signature
+  const { enabled = true } = config;
+  return <Tree extends ISignalTree<any>>(
+    tree: Tree
+  ): Tree & EntitiesEnabled => {
+    type S = Tree extends ISignalTree<infer U> ? U : unknown;
+    if (!enabled) {
+      (tree as { __entitiesEnabled?: true }).__entitiesEnabled = true;
+      return tree as Tree & EntitiesEnabled;
+    }
+
+    const notifier = getPathNotifier();
+
+    function materialize(node: unknown, path: string[] = []) {
+      if (!node || typeof node !== 'object') return;
+      for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+        if (isEntityMapMarker(v)) {
+          const cfg = (v as Marker).__entityMapConfig ?? {};
+          const sig = createEntitySignal(
+            cfg as EntityConfig<Record<string, unknown>, string | number>,
+            notifier,
+            path.concat(k).join('.')
+          );
+          try {
+            (node as Record<string, unknown>)[k] = sig;
+          } catch {
+            /* ignore */
+          }
+          try {
+            (tree as unknown as Record<string, unknown>)[k] = sig;
+          } catch {
+            /* ignore */
+          }
+        } else if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
+          materialize(v, path.concat(k));
+        }
+      }
+    }
+
+    materialize(tree.state);
+    materialize((tree as { $?: unknown }).$);
+
+    (tree as { __entitiesEnabled?: true }).__entitiesEnabled = true;
+
+    return tree as Tree & EntitiesEnabled;
+  };
+}
+
+export function enableEntities(): <Tree extends ISignalTree<any>>(
+  tree: Tree
+) => Tree & EntitiesEnabled {
+  return entities();
+}
+
+export function withHighPerformanceEntities(): <Tree extends ISignalTree<any>>(
+  tree: Tree
+) => Tree & EntitiesEnabled {
+  return entities();
+}
+
+/**
+ * @deprecated Use `entities()` instead. This legacy `withEntities`
+ * alias will be removed in a future major release.
+ */
+export const withEntities = Object.assign(entities, {
+  highPerformance: withHighPerformanceEntities,
+  enable: enableEntities,
+});

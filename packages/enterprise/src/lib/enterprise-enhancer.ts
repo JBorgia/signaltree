@@ -45,29 +45,36 @@ import type { Enhancer } from '@signaltree/core';
  *
  * @public
  */
-export function withEnterprise<T extends Record<string, unknown>>(): Enhancer<
-  T,
-  T & EnterpriseEnhancedTree<T>
-> {
-  return (tree: T): T & EnterpriseEnhancedTree<T> => {
+export function enterprise(): <
+  Tree extends import('@signaltree/core').SignalTree<any>
+>(
+  tree: Tree
+) => Tree & import('@signaltree/enterprise').EnterpriseEnhancedTree<any> {
+  return <Tree extends import('@signaltree/core').SignalTree<any>>(
+    tree: Tree
+  ): Tree & import('@signaltree/enterprise').EnterpriseEnhancedTree<any> => {
+    type S = Tree extends import('@signaltree/core').SignalTree<infer U>
+      ? U
+      : unknown;
     // Lazy initialization - only create when first needed
     let pathIndex: PathIndex<Signal<unknown>> | null = null;
     let updateEngine: OptimizedUpdateEngine | null = null;
 
-    // Type assertion to access SignalTree properties
-    const signalTree = tree as unknown as { state: unknown };
-
+    // Type assertion to access SignalTree properties (preserve S)
+    const signalTree = tree as unknown as { state: S };
     // Cast tree to enhanced type for safe property assignment
-    const enhancedTree = tree as T & EnterpriseEnhancedTree<T>;
+    const enhancedTree = tree as unknown as
+      | (Tree & import('@signaltree/enterprise').EnterpriseEnhancedTree<S>)
+      | (Tree & import('@signaltree/enterprise').EnterpriseEnhancedTree<any>);
 
     // Add updateOptimized method to tree
     enhancedTree.updateOptimized = (
-      updates: Partial<T>,
+      updates: Partial<S>,
       options?: {
         maxDepth?: number;
         ignoreArrayOrder?: boolean;
         equalityFn?: (a: unknown, b: unknown) => boolean;
-        batch?: boolean;
+        autoBatch?: boolean;
         batchSize?: number;
       }
     ): UpdateResult => {
@@ -98,7 +105,8 @@ export function withEnterprise<T extends Record<string, unknown>>(): Enhancer<
     // Add PathIndex access for debugging/monitoring
     enhancedTree.getPathIndex = () => pathIndex;
 
-    return enhancedTree;
+    return enhancedTree as unknown as Tree &
+      import('@signaltree/enterprise').EnterpriseEnhancedTree<any>;
   };
 }
 
@@ -140,3 +148,9 @@ export interface EnterpriseEnhancedTree<T> {
    */
   getPathIndex(): PathIndex<Signal<unknown>> | null;
 }
+
+/**
+ * @deprecated Use `enterprise()` instead. This legacy `withEnterprise`
+ * alias will be removed in a future major release.
+ */
+export const withEnterprise = Object.assign(enterprise, {});

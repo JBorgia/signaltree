@@ -1,4 +1,4 @@
-import { signalTree, withMemoization } from '@signaltree/core';
+import { memoization, signalTree } from '@signaltree/core';
 
 describe('tree.memoize() - Fixed and Working Properly', () => {
   it('demonstrates that tree.memoize now properly caches when state changes', () => {
@@ -8,7 +8,7 @@ describe('tree.memoize() - Fixed and Working Properly', () => {
         { id: 1, date: new Date('2025-12-01'), message: 'Log 1' },
         { id: 2, date: new Date('2025-12-02'), message: 'Log 2' },
       ],
-    }).with(withMemoization());
+    }).with(memoization());
 
     let callCount = 0;
 
@@ -42,7 +42,7 @@ describe('tree.memoize() - Fixed and Working Properly', () => {
     const tree = signalTree({
       count: 0,
       computed: 0,
-    }).with(withMemoization());
+    }).with(memoization());
 
     // Test memoizedUpdate
     let updateComputeCount = 0;
@@ -76,7 +76,7 @@ describe('tree.memoize() - Fixed and Working Properly', () => {
   });
 
   it('proves tree.memoize now uses proper caching logic', () => {
-    const tree = signalTree({ value: 0 }).with(withMemoization());
+    const tree = signalTree({ value: 0 }).with(memoization());
 
     const output: string[] = [];
 
@@ -106,7 +106,7 @@ describe('tree.memoize() - Fixed and Working Properly', () => {
         level: 'all',
         search: '',
       },
-    }).with(withMemoization());
+    }).with(memoization());
 
     let calls = 0;
     const memoized = tree.memoize((state) => {

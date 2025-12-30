@@ -1,14 +1,8 @@
-/**
- * Factory Patterns for SignalTree with Guardrails
- * @packageDocumentation
- */
+import { rules, withGuardrails } from '../noop';
 
-import type { SignalTree, TreeConfig } from '@signaltree/core';
+import type { ISignalTree, TreeConfig, Enhancer } from '@signaltree/core';
 
-import { withGuardrails } from '../lib/guardrails';
-import { rules } from '../lib/rules';
-import type { GuardrailsConfig } from '../lib/types';
-
+import type { GuardrailsConfig, GuardrailRule } from '../lib/types';
 declare const ngDevMode: boolean | undefined;
 
 interface GlobalProcess {
@@ -20,19 +14,18 @@ declare const process: GlobalProcess | undefined;
 type SignalTreeFactory<T extends Record<string, unknown>> = (
   initial: T,
   config?: TreeConfig
-) => SignalTree<T>;
+) => ISignalTree<T>;
 
-type EnhancerFn<T extends Record<string, unknown>> = (
-  tree: SignalTree<T>
-) => SignalTree<T>;
+// Polymorphic enhancer signature compatible with v6 `Enhancer<TAdded>`
+// (kept here for reference if needed by future local typings)
 
 interface FeatureTreeOptions<T extends Record<string, unknown>> {
   name: string;
   env?: 'development' | 'test' | 'staging' | 'production';
   persistence?: boolean | Record<string, unknown>;
-  guardrails?: boolean | GuardrailsConfig;
+  guardrails?: boolean | GuardrailsConfig<T>;
   devtools?: boolean;
-  enhancers?: EnhancerFn<T>[];
+  enhancers?: Enhancer<unknown>[];
 }
 
 function isGuardrailsConfig<T extends Record<string, unknown>>(
@@ -66,18 +59,24 @@ export function createFeatureTree<T extends Record<string, unknown>>(
   signalTree: SignalTreeFactory<T>,
   initial: T,
   options: FeatureTreeOptions<T>
-): SignalTree<T> {
+): ISignalTree<T> {
   const env = options.env ?? process?.env?.['NODE_ENV'] ?? 'production';
 
   const isDev = env === 'development';
   const isTest = env === 'test';
 
-  const enhancers: EnhancerFn<T>[] = [];
+  const enhancers: Enhancer<unknown>[] = [];
 
   if (isDev || isTest) {
     const guardrailsConfig = resolveGuardrailsConfig<T>(options.guardrails);
     if (guardrailsConfig) {
-      enhancers.push(withGuardrails(guardrailsConfig));
+      // `withGuardrails` returns a monomorphic enhancer; cast to `Enhancer<unknown>`
+      // so factories can accept it uniformly. This is safe because the factory
+      // doesn't depend on the added methods and `.with()` will correctly type
+      // the resulting tree for callers.
+      enhancers.push(
+        withGuardrails(guardrailsConfig) as unknown as Enhancer<unknown>
+      );
     }
   }
 
@@ -85,12 +84,17 @@ export function createFeatureTree<T extends Record<string, unknown>>(
     enhancers.push(...options.enhancers);
   }
 
-  let tree = signalTree(initial);
+  const tree = signalTree(initial);
+  // Apply enhancers in an `unknown` local to avoid leaking temporary
+  // `SignalTree<unknown>` inference into the typed `SignalTree<T>`.
+  // The factory API remains strongly typed for callers; this cast only
+  // affects internal sequencing of enhancers.
+  let enhanced: unknown = tree;
   for (const enhancer of enhancers) {
-    tree = tree.with(enhancer);
+    enhanced = (enhanced as any).with(enhancer);
   }
 
-  return tree;
+  return enhanced as ISignalTree<T>;
 }
 
 /**
@@ -100,7 +104,7 @@ export function createAngularFeatureTree<T extends Record<string, unknown>>(
   signalTree: SignalTreeFactory<T>,
   initial: T,
   options: Omit<FeatureTreeOptions<T>, 'env'>
-): SignalTree<T> {
+): ISignalTree<T> {
   const isDev = Boolean(ngDevMode);
 
   return createFeatureTree(signalTree, initial, {
@@ -115,7 +119,7 @@ export function createAngularFeatureTree<T extends Record<string, unknown>>(
 export function createAppShellTree<T extends Record<string, unknown>>(
   signalTree: SignalTreeFactory<T>,
   initial: T
-): SignalTree<T> {
+): ISignalTree<T> {
   return createFeatureTree(signalTree, initial, {
     name: 'app-shell',
     guardrails: {
@@ -124,8 +128,8 @@ export function createAppShellTree<T extends Record<string, unknown>>(
         maxMemory: 20,
       },
       hotPaths: { threshold: 5 },
-      customRules: [rules.noDeepNesting(3)],
-    },
+      customRules: [rules.noDeepNesting(3) as unknown as GuardrailRule<T>],
+    } as GuardrailsConfig<T>,
   });
 }
 
@@ -136,7 +140,7 @@ export function createPerformanceTree<T extends Record<string, unknown>>(
   signalTree: SignalTreeFactory<T>,
   initial: T,
   name: string
-): SignalTree<T> {
+): ISignalTree<T> {
   return createFeatureTree(signalTree, initial, {
     name,
     persistence: false,
@@ -159,16 +163,16 @@ export function createFormTree<T extends Record<string, unknown>>(
   signalTree: SignalTreeFactory<T>,
   initial: T,
   formName: string
-): SignalTree<T> {
+): ISignalTree<T> {
   return createFeatureTree(signalTree, initial, {
     name: `form-${formName}`,
     guardrails: {
       customRules: [
-        rules.noDeepNesting(4),
-        rules.maxPayloadSize(50),
-        rules.noSensitiveData(),
+        rules.noDeepNesting(4) as unknown as GuardrailRule<T>,
+        rules.maxPayloadSize(50) as unknown as GuardrailRule<T>,
+        rules.noSensitiveData() as unknown as GuardrailRule<T>,
       ],
-    },
+    } as GuardrailsConfig<T>,
   });
 }
 
@@ -178,7 +182,7 @@ export function createFormTree<T extends Record<string, unknown>>(
 export function createCacheTree<T extends Record<string, unknown>>(
   signalTree: SignalTreeFactory<T>,
   initial: T
-): SignalTree<T> {
+): ISignalTree<T> {
   return createFeatureTree(signalTree, initial, {
     name: 'cache',
     persistence: false,
@@ -196,8 +200,8 @@ export function createCacheTree<T extends Record<string, unknown>>(
 export function createTestTree<T extends Record<string, unknown>>(
   signalTree: SignalTreeFactory<T>,
   initial: T,
-  overrides?: Partial<GuardrailsConfig>
-): SignalTree<T> {
+  overrides?: Partial<GuardrailsConfig<T>>
+): ISignalTree<T> {
   return createFeatureTree(signalTree, initial, {
     name: 'test',
     env: 'test',
@@ -207,8 +211,11 @@ export function createTestTree<T extends Record<string, unknown>>(
         maxUpdateTime: 5,
         maxRecomputations: 50,
       },
-      customRules: [rules.noFunctionsInState(), rules.noDeepNesting(4)],
-      ...overrides,
-    },
+      customRules: [
+        rules.noFunctionsInState() as unknown as GuardrailRule<T>,
+        rules.noDeepNesting(4) as unknown as GuardrailRule<T>,
+      ],
+      ...(overrides as unknown as Partial<GuardrailsConfig<T>>),
+    } as GuardrailsConfig<T>,
   });
 }

@@ -1,10 +1,10 @@
-import { signalTree, withMemoization } from '@signaltree/core';
+import { memoization, signalTree } from '@signaltree/core';
 
 describe('Investigation: Understanding tree.memoize() behavior', () => {
   it('detailed trace of what happens when state changes', () => {
     const tree = signalTree({
       selectedDate: new Date('2025-12-01'),
-    }).with(withMemoization());
+    }).with(memoization());
 
     let callCount = 0;
 
@@ -62,7 +62,7 @@ describe('Investigation: Understanding tree.memoize() behavior', () => {
   it('tests with multiple computed accesses', () => {
     const tree = signalTree({
       count: 0,
-    }).with(withMemoization());
+    }).with(memoization());
 
     let memoCallCount = 0;
 
@@ -109,7 +109,7 @@ describe('Investigation: Understanding tree.memoize() behavior', () => {
         level: 'all' as 'all' | 'info' | 'warn',
         search: '',
       },
-    }).with(withMemoization());
+    }).with(memoization());
 
     let filterCalls = 0;
 
@@ -148,7 +148,7 @@ describe('Investigation: Understanding tree.memoize() behavior', () => {
         { id: 1, date: new Date('2025-12-01') },
         { id: 2, date: new Date('2025-12-02') },
       ],
-    }).with(withMemoization());
+    }).with(memoization());
 
     let calls = 0;
 

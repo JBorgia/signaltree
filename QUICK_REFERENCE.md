@@ -1,11 +1,11 @@
-# SignalTree v5.0 - Quick Reference
+# SignalTree v6 - Quick Reference
 
 ## SignalTree-First Patterns
 
 > 📖 Full guide: [docs/IMPLEMENTATION_PATTERNS.md](docs/IMPLEMENTATION_PATTERNS.md)
 
 ```typescript
-const tree = signalTree(initialState).with(withEntities());
+const tree = signalTree(initialState).with(entities());
 const $ = tree.$; // Shorthand for state access
 
 // ✅ DO: Expose signals directly from $ tree
@@ -31,16 +31,19 @@ export type MyTree = ReturnType<typeof createMyTree>; // No manual interface!
 ## Setup
 
 ```typescript
-import { signalTree, entityMap, withEntities, withPersistence, withTimeTravel, withDevTools } from '@signaltree/core';
+import { signalTree, entityMap, entities, persistence, timeTravel, devTools } from '@signaltree/core';
+
+// Note: v6 primary API uses short-named enhancers (e.g. `persistence()`).
+// Legacy `with*` factories are deprecated aliases and will be removed in a future major release.
 
 const tree = signalTree({
-  users: entityMap<User>(), // EntitySignal - auto-detected by withEntities()
+  users: entityMap<User>(), // EntitySignal - auto-detected by entities()
   settings: { theme: 'dark' },
 })
-  .with(withEntities())
-  .with(withPersistence({ key: 'app-state' }))
-  .with(withTimeTravel())
-  .with(withDevTools());
+  .with(entities())
+  .with(persistence({ key: 'app-state' }))
+  .with(timeTravel())
+  .with(devTools());
 ```
 
 ## Entity CRUD
@@ -130,7 +133,7 @@ tree.$.users.addOne(u3); // Log fires once (batched!)
 ### Persistence (Event-driven, not polling)
 
 ```typescript
-withPersistence({
+persistence({
   key: 'my-app',
   storage: localStorage,
   debounceMs: 1000,
@@ -160,7 +163,7 @@ tree.getHistory(); // Array of all snapshots
 ### Logging (Automatic)
 
 ```typescript
-withLogging({
+logging({
   filter: (path) => !path.startsWith('ui'),
   onLog: (log) => console.log(log.path, log.value),
 });

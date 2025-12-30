@@ -41,8 +41,8 @@ export default [
     rules: {
       // NOTE: Tree-shaking test shows barrel imports work fine with modern bundlers.
       // Both patterns produce identical bundles (~9.3KB for core+batching):
-      //   import { signalTree, withBatching } from '@signaltree/core';
-      //   import { withBatching } from '@signaltree/core/enhancers/batching';
+      //   import { signalTree, batching } from '@signaltree/core';
+      //   import { batching } from '@signaltree/core/enhancers/batching';
       //
       // Subpath imports are supported for developer preference, but not required.
       // The ESLint rule below is DISABLED by default - enable only if your
@@ -55,9 +55,9 @@ export default [
       //       {
       //         name: '@signaltree/core',
       //         importNames: [
-      //           'withBatching', 'withMemoization', 'withDevTools',
-      //           'withEntities', 'withSerialization', 'withTimeTravel',
-      //           'withMiddleware', 'createAsyncOperation', 'TREE_PRESETS'
+      //           'batching', 'memoization', 'devTools',
+      //           'entities', 'serialization', 'timeTravel',
+      //           'middleware', 'createAsyncOperation', 'TREE_PRESETS'
       //         ],
       //         message: 'Consider subpath imports like @signaltree/core/enhancers/<name> for explicit control'
       //       }

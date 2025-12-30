@@ -1,7 +1,17 @@
-import { toObservable } from '../rxjs/rxjs-bridge';
-import { unique } from './async-validators';
-import { createFormTree, SIGNAL_FORM_DIRECTIVES, SignalValueDirective } from './ng-forms';
-import { email as emailValidator, minLength, pattern, required } from './validators';
+/* eslint-disable @typescript-eslint/no-var-requires */
+const { toObservable } = require('../rxjs/rxjs-bridge');
+const { unique } = require('./async-validators');
+const {
+  createFormTree,
+  SIGNAL_FORM_DIRECTIVES,
+  SignalValueDirective,
+} = require('./ng-forms');
+const {
+  email: emailValidator,
+  minLength,
+  pattern,
+  required,
+} = require('./validators');
 
 interface TestFormData extends Record<string, unknown> {
   username: string;
@@ -32,7 +42,7 @@ describe('NgForms', () => {
 
   describe('createFormTree', () => {
     it('should create a form tree with form-specific signals', () => {
-      const form = createFormTree(initialFormData);
+      const form = (createFormTree as any)(initialFormData);
 
       expect(form.state).toBeDefined();
       expect(form.$).toBe(form.state); // Alias
@@ -46,7 +56,7 @@ describe('NgForms', () => {
     });
 
     it('should support field validation', async () => {
-      const form = createFormTree(initialFormData, {
+      const form = (createFormTree as any)(initialFormData, {
         validators: {
           username: required('Username is required'),
           email: emailValidator('Invalid email'),
@@ -61,7 +71,7 @@ describe('NgForms', () => {
     });
 
     it('should track touched fields', () => {
-      const form = createFormTree(initialFormData);
+      const form = (createFormTree as any)(initialFormData);
 
       expect(form.touched()['username']).toBeUndefined();
 
@@ -71,7 +81,7 @@ describe('NgForms', () => {
     });
 
     it('should mark form as dirty when values change', () => {
-      const form = createFormTree(initialFormData);
+      const form = (createFormTree as any)(initialFormData);
 
       expect(form.dirty()).toBe(false);
 
@@ -101,7 +111,7 @@ describe('NgForms', () => {
     });
 
     it('should support async validation', async () => {
-      const form = createFormTree(initialFormData, {
+      const form = (createFormTree as any)(initialFormData, {
         asyncValidators: {
           username: unique(
             async (value: unknown) => value === 'taken',
@@ -118,7 +128,7 @@ describe('NgForms', () => {
     });
 
     it('should support form submission', async () => {
-      const form = createFormTree(initialFormData, {
+      const form = (createFormTree as any)(initialFormData, {
         validators: {
           username: required(),
         },
@@ -127,7 +137,7 @@ describe('NgForms', () => {
       form.setValue('username', 'testuser');
       form.setValue('email', 'test@example.com');
 
-      const submitData = await form.submit(async (values) => {
+      const submitData = await form.submit(async (values: any) => {
         return { success: true, data: values };
       });
 

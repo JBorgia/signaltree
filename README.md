@@ -163,11 +163,11 @@ See [Frequency Weighting System Documentation](docs/performance/frequency-weight
 
 ```typescript
 // Leverage built-in caching optimization (automatic)
-import { withSerialization, withPersistence } from '@signaltree/core';
+import { serialization, persistence } from '@signaltree/core';
 
 const tree = signalTree(state).with(
-  withSerialization(),
-  withPersistence({
+  serialization(),
+  persistence({
     key: 'app-state',
     autoSave: true,
     // Caching automatically prevents redundant storage I/O
@@ -175,7 +175,7 @@ const tree = signalTree(state).with(
 );
 
 // Optimize serialization frequency
-withPersistence({
+persistence({
   debounceMs: 2000, // Reduce serialization frequency
   autoSave: true,
 });
@@ -378,7 +378,7 @@ See [`@signaltree/callable-syntax`](./packages/callable-syntax/README.md) for se
 ### Composed Usage (Modular Features)
 
 ```typescript
-import { signalTree, entityMap, withEntities, withBatching, withDevTools, withTimeTravel } from '@signaltree/core';
+import { signalTree, entityMap, entities, batching, devTools, timeTravel } from '@signaltree/core';
 
 // Compose multiple features using .with()
 const tree = signalTree({
@@ -387,10 +387,10 @@ const tree = signalTree({
   ui: { loading: false, theme: 'light' },
   filters: { search: '', category: 'all' },
 })
-  .with(withEntities()) // Enhanced CRUD operations (auto-detects entityMap markers)
-  .with(withBatching()) // Batch updates for performance
-  .with(withTimeTravel()) // Undo/redo functionality
-  .with(withDevTools()); // Development tools (auto-disabled in production)
+  .with(entities()) // Enhanced CRUD operations (auto-detects entityMap markers)
+  .with(batching()) // Batch updates for performance
+  .with(timeTravel()) // Undo/redo functionality
+  .with(devTools()); // Development tools (auto-disabled in production)
 
 // Entity CRUD operations
 tree.$.users.addOne({ id: 1, name: 'Alice', category: 'admin' });

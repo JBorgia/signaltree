@@ -85,8 +85,8 @@ export class ArchitectureOverviewComponent {
     consolidated: `// Current approach - all enhancers in core
 import {
   signalTree,
-  withBatching,
-  withEntities,
+  batching,
+  entities,
 } from '@signaltree/core';`,
   };
 }

@@ -2,21 +2,23 @@ import { CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
-  OnDestroy,
   computed,
+  OnDestroy,
   signal,
 } from '@angular/core';
-import { signalTree, type SignalTree } from '@signaltree/core';
+import { signalTree } from '@signaltree/core';
 import {
+  GuardrailIssue,
+  GuardrailRule,
+  GuardrailsAPI,
+  GuardrailsConfig,
+  GuardrailsReport,
+  HotPath,
   rules,
   withGuardrails,
-  type GuardrailsAPI,
-  type GuardrailsConfig,
-  type GuardrailsReport,
-  type GuardrailIssue,
-  type HotPath,
 } from '@signaltree/guardrails';
 
+import type { ISignalTree, SignalTree } from '@signaltree/core';
 interface GuardrailsDemoState extends Record<string, unknown> {
   performance: {
     totalUpdates: number;
@@ -79,7 +81,10 @@ export class GuardrailsMonitoringComponent implements OnDestroy {
     memoryLeaks: {
       enabled: false,
     },
-    customRules: [rules.noDeepNesting(5), rules.noSensitiveData()],
+    customRules: [
+      rules.noDeepNesting(5) as unknown as GuardrailRule<any>,
+      rules.noSensitiveData() as unknown as GuardrailRule<any>,
+    ],
     reporting: {
       console: false,
       interval: 3000,

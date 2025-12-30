@@ -4,15 +4,15 @@
   "description": "Development-only performance monitoring and anti-pattern detection for SignalTree",
   "type": "module",
   "sideEffects": false,
-  "main": "./dist/lib/guardrails.js",
-  "module": "./dist/lib/guardrails.js",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "types": "./src/index.d.ts",
   "exports": {
     ".": {
       "types": "./src/index.d.ts",
       "development": {
-        "import": "./dist/lib/guardrails.js",
-        "default": "./dist/lib/guardrails.js"
+        "import": "./dist/index.js",
+        "default": "./dist/index.js"
       },
       "production": {
         "import": "./dist/noop.js",
@@ -58,6 +58,7 @@
   },
   "peerDependencies": {
     "@signaltree/core": "^5.0.0",
+    "@signaltree/shared": "^5.0.0",
     "tslib": "^2.0.0",
     "vitest": "^2.0.0"
   },

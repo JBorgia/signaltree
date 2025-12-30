@@ -1,10 +1,23 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, computed, effect, ElementRef, inject, OnDestroy, signal, ViewChild } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  inject,
+  OnDestroy,
+  signal,
+  ViewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { Subject } from 'rxjs';
 
-import { RealisticBenchmarkService, RealisticBenchmarkSubmission } from '../../../services/realistic-benchmark.service';
+import {
+  RealisticBenchmarkService,
+  RealisticBenchmarkSubmission,
+} from '../../../services/realistic-benchmark.service';
 import { BenchmarkTestCase, ENHANCED_TEST_CASES } from './scenario-definitions';
 import { BenchmarkResult as ServiceBenchmarkResult } from './services/_types';
 import { AkitaBenchmarkService } from './services/akita-benchmark.service';
@@ -585,27 +598,24 @@ export class BenchmarkOrchestratorComponent
   // Mapping of test scenarios to the exact enhancers used in SignalTree benchmark service
   private scenarioEnhancerMap: Record<string, string[]> = {
     // Core performance benchmarks
-    'deep-nested': ['withBatching', 'withShallowMemoization'],
-    'large-array': ['withHighPerformanceBatching'],
-    'computed-chains': ['withBatching', 'withShallowMemoization'],
-    'batch-updates': ['withHighPerformanceBatching'],
-    'selector-memoization': ['withLightweightMemoization'],
-    serialization: ['withMemoization', 'withHighPerformanceBatching'],
-    'concurrent-updates': ['withBatching'],
-    'memory-efficiency': ['withLightweightMemoization', 'withBatching'],
-    'data-fetching': ['withBatching', 'withShallowMemoization'],
-    'real-time-updates': [
-      'withHighPerformanceBatching',
-      'withLightweightMemoization',
-    ],
-    'state-size-scaling': ['withLightweightMemoization', 'withBatching'],
+    'deep-nested': ['batching', 'shallowMemoization'],
+    'large-array': ['highPerformanceBatching'],
+    'computed-chains': ['batching', 'shallowMemoization'],
+    'batch-updates': ['highPerformanceBatching'],
+    'selector-memoization': ['lightweightMemoization'],
+    serialization: ['memoization', 'highPerformanceBatching'],
+    'concurrent-updates': ['batching'],
+    'memory-efficiency': ['lightweightMemoization', 'batching'],
+    'data-fetching': ['batching', 'shallowMemoization'],
+    'real-time-updates': ['highPerformanceBatching', 'lightweightMemoization'],
+    'state-size-scaling': ['lightweightMemoization', 'batching'],
 
     // Async operations: runtime implementations still exist but the demo page was removed; async behavior is tested via middleware helpers
 
-    // Time travel - now use withTimeTravel enhancer
-    'undo-redo': ['withTimeTravel'],
-    'history-size': ['withTimeTravel'],
-    'jump-to-state': ['withTimeTravel'],
+    // Time travel - now use timeTravel enhancer
+    'undo-redo': ['timeTravel'],
+    'history-size': ['timeTravel'],
+    'jump-to-state': ['timeTravel'],
 
     // Middleware - currently use no enhancers in implementation
 
@@ -681,16 +691,16 @@ export class BenchmarkOrchestratorComponent
     }
 
     const enhancerDescriptions: Record<string, string> = {
-      withBatching: 'groups multiple state updates for better performance',
-      withHighPerformanceBatching:
+      batching: 'groups multiple state updates for better performance',
+      highPerformanceBatching:
         'optimized batching for high-frequency operations',
-      withMemoization: 'full memoization with deep equality checks',
-      withShallowMemoization: 'lightweight memoization for object structures',
-      withLightweightMemoization:
+      memoization: 'full memoization with deep equality checks',
+      shallowMemoization: 'lightweight memoization for object structures',
+      lightweightMemoization:
         'minimal caching overhead for intensive workloads',
-      withSerialization: 'state persistence and snapshot capabilities',
-      withTimeTravel: 'undo/redo functionality with history management',
-      // withAsync removed — async behavior handled by middleware helpers
+      serialization: 'state persistence and snapshot capabilities',
+      timeTravel: 'undo/redo functionality with history management',
+      // async removed — async behavior handled by middleware helpers
     };
 
     const enhancerSummary = enhancers

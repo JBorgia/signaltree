@@ -1,1 +1,1 @@
-export * from './lib/memoization';
+export * from './memoization';
