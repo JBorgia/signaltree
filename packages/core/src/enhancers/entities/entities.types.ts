@@ -1,5 +1,5 @@
 import { Assert, Equals } from '../test-helpers/types-equals';
-import { EntitiesEnhancerConfig, withEntities } from './entities';
+import { EntitiesEnhancerConfig, entities } from './entities';
 
 import type {
   ISignalTree,
@@ -12,7 +12,7 @@ type ExpectedSignature = (
   config?: EntitiesEnhancerConfig
 ) => <Tree extends ISignalTree<any>>(tree: Tree) => Tree & EntitiesEnabled;
 
-type ActualSignature = typeof withEntities;
+type ActualSignature = typeof entities;
 
 type _ContractCheck = Assert<Equals<ActualSignature, ExpectedSignature>>;
 
@@ -29,7 +29,7 @@ type _MarkerCheck = Assert<
 
 // Usage verification
 declare const tree: ISignalTree<{ count: number }>;
-const enhanced = withEntities()(tree);
+const enhanced = entities()(tree);
 
 // Should have __entitiesEnabled marker
 const _marker: true | undefined = enhanced.__entitiesEnabled;
