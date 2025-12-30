@@ -290,7 +290,7 @@ export function flushBatchedUpdates(): void {
 export function hasPendingUpdates(): boolean {
   return updateQueue.length > 0;
 }
- 
+
 export function getBatchQueueSize(): number {
   return updateQueue.length;
 }
@@ -307,6 +307,17 @@ export function getBatchQueueSize(): number {
  * @deprecated Use `batching()` as the primary enhancer. This legacy
  * `withBatching` alias will be removed in a future major release.
  */
-export const withBatching = Object.assign(batching, {
-  highPerformance: withHighPerformanceBatching,
-});
+export type WithBatchingSignature = (
+  config?: BatchingConfig
+) => <Tree extends ISignalTree<any>>(tree: Tree) => Tree & BatchingMethods<any>;
+
+/**
+ * @deprecated Use `batching()` as the primary enhancer. This legacy
+ * `withBatching` alias will be removed in a future major release.
+ */
+export const withBatching: WithBatchingSignature = Object.assign(
+  (config: BatchingConfig = {}) => withBatchingWithConfig(config),
+  {
+    highPerformance: withHighPerformanceBatching,
+  }
+) as unknown as WithBatchingSignature;
