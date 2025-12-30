@@ -46,9 +46,10 @@ export function withEffects(
   tree: Tree
 ) => Tree & EffectsMethods<any> {
   const { enabled = true } = config;
-  return <S>(
-    tree: SignalTreeBase<S>
-  ): SignalTreeBase<S> & EffectsMethods<S> => {
+  return <Tree extends SignalTreeBase<any>>(
+    tree: Tree
+  ): Tree & EffectsMethods<any> => {
+    type S = Tree extends SignalTreeBase<infer U> ? U : unknown;
     const cleanupFns: Array<() => void> = [];
 
     const methods: EffectsMethods<S> = {
