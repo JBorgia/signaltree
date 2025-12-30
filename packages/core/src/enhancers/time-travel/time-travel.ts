@@ -244,8 +244,8 @@ export function withTimeTravel(
         },
       };
 
-      return Object.assign(tree, noopMethods) as SignalTreeBase<S> &
-        TimeTravelMethods;
+      return Object.assign(tree, noopMethods) as unknown as Tree &
+        TimeTravelMethods<unknown>;
     }
     // Store the original callable tree function
     const originalTreeCall = (tree as any).bind(tree);
@@ -347,7 +347,8 @@ export function withTimeTravel(
     (enhancedTree as any)['getCurrentIndex'] = () =>
       timeTravelManager.getCurrentIndex();
 
-    return enhancedTree as unknown as SignalTreeBase<S> & TimeTravelMethods;
+    return enhancedTree as unknown as <Tree extends SignalTreeBase<any>>(tree: Tree) =>
+      Tree & TimeTravelMethods<unknown>;
   };
 }
 
