@@ -212,7 +212,10 @@ export function withTimeTravel(
   config: TimeTravelConfig = {}
 ): <Tree extends SignalTreeBase<any>>(tree: Tree) => Tree & TimeTravelMethods {
   const { enabled = true } = config;
-    const enhancerFn = (tree: any) => {
+  return <Tree extends SignalTreeBase<any>>(
+    tree: Tree
+  ): Tree & TimeTravelMethods => {
+    type S = Tree extends SignalTreeBase<infer U> ? U : unknown;
     // Disabled (noop) path
     if (!enabled) {
       const noopMethods: TimeTravelMethods = {
@@ -242,7 +245,7 @@ export function withTimeTravel(
         },
       };
 
-          return Object.assign(tree, noopMethods) as any;
+      return Object.assign(tree, noopMethods) as Tree & TimeTravelMethods;
     }
     // Store the original callable tree function
     const originalTreeCall = (tree as any).bind(tree);
@@ -344,8 +347,7 @@ export function withTimeTravel(
     (enhancedTree as any)['getCurrentIndex'] = () =>
       timeTravelManager.getCurrentIndex();
 
-        return enhancerFn as unknown as <Tree extends SignalTreeBase<any>>(tree: Tree) =>
-          Tree & TimeTravelMethods;
+    return enhancedTree as unknown as Tree & TimeTravelMethods;
   };
 }
 
