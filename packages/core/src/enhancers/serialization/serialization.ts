@@ -1132,10 +1132,7 @@ export function withPersistence(
       // Try to use tree.subscribe() for reactive state watching
       // This leverages Angular's effect system - no polling needed in production
       try {
-        (
-          tree as ISignalTree<any> &
-            import('../../lib/types').EffectsMethods<any>
-        ).subscribe(() => {
+        (tree as unknown as { subscribe: (fn: () => void) => () => void }).subscribe(() => {
           const currentState = JSON.stringify(tree());
           if (currentState !== previousState) {
             previousState = currentState;
