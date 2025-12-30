@@ -175,7 +175,7 @@ export interface TimeTravelMethods<T = unknown> {
   jumpTo(index: number): void;
   getCurrentIndex(): number;
   /** Internal time-travel manager exposed for advanced tooling/debugging */
-  readonly __timeTravel: {
+  readonly __timeTravel?: {
     undo(): void;
     redo(): void;
     canUndo(): boolean;
