@@ -1,7 +1,7 @@
+/**
 import { withGuardrails } from '../lib/guardrails';
 import { rules } from '../lib/rules';
 
-/**
  * Factory Patterns for SignalTree with Guardrails
  * @packageDocumentation
  */
@@ -34,7 +34,7 @@ interface FeatureTreeOptions<T extends Record<string, unknown>> {
   name: string;
   env?: 'development' | 'test' | 'staging' | 'production';
   persistence?: boolean | Record<string, unknown>;
-  guardrails?: boolean | GuardrailsConfig;
+  guardrails?: boolean | GuardrailsConfig<T>;
   devtools?: boolean;
   enhancers?: Enhancer<unknown>[];
 }
@@ -190,11 +190,11 @@ export function createFormTree<T extends Record<string, unknown>>(
 /**
  * Cache tree with relaxed rules
  */
-export function createCacheTree<T extends Record<string, unknown>>(
+export function createTestTree<T extends Record<string, unknown>>(
   signalTree: SignalTreeFactory<T>,
-  initial: T
-): SignalTree<T> {
-  return createFeatureTree(signalTree, initial, {
+  initial: T,
+  overrides?: Partial<GuardrailsConfig<T>>
+) {
     name: 'cache',
     persistence: false,
     guardrails: {
@@ -205,7 +205,7 @@ export function createCacheTree<T extends Record<string, unknown>>(
   });
 }
 
-/**
+      ...((overrides as unknown) as Partial<GuardrailsConfig<T>>),
  * Test tree with strict enforcement
  */
 export function createTestTree<T extends Record<string, unknown>>(
