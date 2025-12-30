@@ -153,9 +153,9 @@ export function withGuardrails(
     }
 
     const stats = createRuntimeStats();
-    const context: GuardrailsContext<S> = {
+    const context = {
       tree,
-      config,
+      config: config as GuardrailsConfig<S>,
       stats,
       issues: [],
       hotPaths: [],
@@ -170,7 +170,7 @@ export function withGuardrails(
       recomputationLog: [],
       previousState: tryStructuredClone(tree()),
       disposed: false,
-    };
+    } as GuardrailsContext<S>;
     // Wire up dev hooks for memoization recomputation tracking
     (tree as unknown as Record<string, unknown>)['__devHooks'] = {
       onRecompute: (path: string, count: number) => {
