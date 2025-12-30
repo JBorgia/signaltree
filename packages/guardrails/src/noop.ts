@@ -29,7 +29,9 @@ export const rules = {
   noFunctionsInState: () => noopRule('noop'),
   noCacheInPersistence: () => noopRule('noop'),
   maxPayloadSize: (_maxKB: number = 100) => noopRule('noop'),
-  noSensitiveData: (_sensitiveKeys: string[] = ['password', 'token', 'secret', 'apiKey']) => noopRule('noop'),
+  noSensitiveData: (
+    _sensitiveKeys: string[] = ['password', 'token', 'secret', 'apiKey']
+  ) => noopRule('noop'),
 };
 
 export * from './lib/types';
