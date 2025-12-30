@@ -129,6 +129,14 @@ export function enableEffects(): <Tree extends ISignalTree<any>>(
 }
 
 // v6 alias
-export const effects = Object.assign(withEffects, {
+/**
+ * @deprecated Use `effects()` as the primary enhancer. This legacy
+ * `withEffects` alias will be removed in a future major release.
+ */
+export function effects(config: EffectsConfig = {}) {
+  return withEffects(config);
+}
+
+export const withEffects = Object.assign(effects, {
   enable: enableEffects,
 });

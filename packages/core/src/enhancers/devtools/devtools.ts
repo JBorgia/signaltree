@@ -524,7 +524,15 @@ export function withProductionDevTools(): <Tree extends ISignalTree<any>>(
 }
 
 // v6-friendly alias with presets
-export const devTools = Object.assign(withDevTools, {
+/**
+ * @deprecated Use `devTools()` as the primary enhancer. This legacy
+ * `withDevTools` alias will be removed in a future major release.
+ */
+export function devTools(config?: any) {
+  return withDevTools(config as any);
+}
+
+export const withDevTools = Object.assign(devTools, {
   production: withProductionDevTools,
   full: withFullDevTools,
   enable: enableDevTools,
