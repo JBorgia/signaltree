@@ -164,7 +164,6 @@ export {
 export {
   withTimeTravel,
   enableTimeTravel,
-  getTimeTravel,
 } from './enhancers/time-travel/time-travel';
 
 /**
