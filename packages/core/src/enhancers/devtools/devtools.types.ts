@@ -13,7 +13,7 @@ type _ContractCheck = Assert<Equals<ActualSignature, ExpectedSignature>>;
 
 // Usage verification
 declare const tree: ISignalTree<{ count: number }>;
-const enhanced = withDevTools({ name: 'Test' })(tree);
+const enhanced = devTools({ name: 'Test' })(tree);
 
 enhanced.connectDevTools();
 enhanced.disconnectDevTools();
