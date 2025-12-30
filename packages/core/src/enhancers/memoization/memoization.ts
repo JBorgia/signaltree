@@ -411,7 +411,7 @@ export const MEMOIZATION_PRESETS = {
 export function withSelectorMemoization(): <S>(
   tree: ISignalTree<S>
 ) => ISignalTree<S> & MemoizationMethods<S> {
-  return withMemoization(MEMOIZATION_PRESETS.selector);
+  return memoization(MEMOIZATION_PRESETS.selector);
 }
 
 /**
@@ -429,7 +429,7 @@ export function withSelectorMemoization(): <S>(
 export function withComputedMemoization(): <S>(
   tree: ISignalTree<S>
 ) => ISignalTree<S> & MemoizationMethods<S> {
-  return withMemoization(MEMOIZATION_PRESETS.computed);
+  return memoization(MEMOIZATION_PRESETS.computed);
 }
 
 /**
@@ -445,7 +445,7 @@ export function withComputedMemoization(): <S>(
 export function withDeepStateMemoization(): <S>(
   tree: ISignalTree<S>
 ) => ISignalTree<S> & MemoizationMethods<S> {
-  return withMemoization(MEMOIZATION_PRESETS.deepState);
+  return memoization(MEMOIZATION_PRESETS.deepState);
 }
 
 /**
@@ -461,7 +461,7 @@ export function withDeepStateMemoization(): <S>(
 export function withHighFrequencyMemoization(): <S>(
   tree: ISignalTree<S>
 ) => ISignalTree<S> & MemoizationMethods<S> {
-  return withMemoization(MEMOIZATION_PRESETS.highFrequency);
+  return memoization(MEMOIZATION_PRESETS.highFrequency);
 }
 
 // New v6-friendly export: `memoization` with named presets.
@@ -471,8 +471,8 @@ export function withHighFrequencyMemoization(): <S>(
  * major release.
  */
 // Primary v6-friendly `memoization` export: wraps the legacy implementation
-export const memoization = Object.assign(
-  (config: MemoizationConfig = {}) => withMemoization(config),
+export const withMemoization = Object.assign(
+  (config: MemoizationConfig = {}) => memoization(config),
   {
     selector: withSelectorMemoization,
     computed: withComputedMemoization,
@@ -489,7 +489,7 @@ export const memoization = Object.assign(
  * @deprecated Use `memoization()` instead. This legacy factory will be
  * removed in a future major release.
  */
-export function withMemoization(
+export function memoization(
   config: MemoizationConfig = {}
 ): <Tree extends ISignalTree<any>>(
   tree: Tree
@@ -755,7 +755,7 @@ export function withMemoization(
 export function enableMemoization(): <Tree extends ISignalTree<any>>(
   tree: Tree
 ) => Tree & MemoizationMethods<any> {
-  return withMemoization({ enabled: true });
+  return memoization({ enabled: true });
 }
 
 /**
@@ -767,7 +767,7 @@ export function withHighPerformanceMemoization(): <
 >(
   tree: Tree
 ) => Tree & MemoizationMethods<any> {
-  return withMemoization({
+  return memoization({
     enabled: true,
     maxCacheSize: 10000,
     ttl: 300000, // 5 minutes
@@ -783,7 +783,7 @@ export function withHighPerformanceMemoization(): <
 export function withLightweightMemoization(): <Tree extends ISignalTree<any>>(
   tree: Tree
 ) => Tree & MemoizationMethods<any> {
-  return withMemoization({
+  return memoization({
     enabled: true,
     maxCacheSize: 100, // Smaller cache to reduce management overhead
     ttl: undefined, // No TTL to avoid timestamp checks
@@ -799,7 +799,7 @@ export function withLightweightMemoization(): <Tree extends ISignalTree<any>>(
 export function withShallowMemoization(): <Tree extends ISignalTree<any>>(
   tree: Tree
 ) => Tree & MemoizationMethods<any> {
-  return withMemoization({
+  return memoization({
     enabled: true,
     maxCacheSize: 1000,
     ttl: 60000, // 1 minute

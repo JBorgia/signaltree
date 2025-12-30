@@ -260,11 +260,8 @@ function createModularMetrics() {
  * @param config - DevTools configuration
  * @returns Polymorphic enhancer function
  */
-/**
- * @deprecated Use `devTools()` as the primary enhancer. This legacy
- * `withDevTools` factory will be removed in a future major release.
- */
-export function withDevTools(
+
+export function devTools(
   config: DevToolsConfig = {}
 ): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & DevToolsMethods {
   const {
@@ -495,16 +492,16 @@ export function withDevTools(
 export function enableDevTools(
   treeName = 'SignalTree'
 ): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & DevToolsMethods {
-  return withDevTools({ treeName, enabled: true });
+  return devTools({ treeName, enabled: true });
 }
 
 /**
  * Full-featured devtools for intensive debugging
  */
-export function withFullDevTools(
+export function fullDevTools(
   treeName = 'SignalTree'
 ): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & DevToolsMethods {
-  return withDevTools({
+  return devTools({
     treeName,
     enabled: true,
     enableBrowserDevTools: true,
@@ -516,10 +513,10 @@ export function withFullDevTools(
 /**
  * Lightweight devtools for production
  */
-export function withProductionDevTools(): <Tree extends ISignalTree<any>>(
+export function productionDevTools(): <Tree extends ISignalTree<any>>(
   tree: Tree
 ) => Tree & DevToolsMethods {
-  return withDevTools({
+  return devTools({
     enabled: true,
     enableBrowserDevTools: false,
     enableLogging: false,
@@ -527,18 +524,12 @@ export function withProductionDevTools(): <Tree extends ISignalTree<any>>(
   });
 }
 
-// New v6-friendly export: `devTools` with named presets.
-export const devTools = Object.assign(
-  (config?: DevToolsConfig) => withDevTools(config ?? {}),
-  {
-    production: withProductionDevTools,
-    full: withFullDevTools,
-    enable: enableDevTools,
-  }
-);
-
 /**
  * @deprecated Use `devTools()` as the primary enhancer. This legacy
  * `withDevTools` factory will be removed in a future major release.
  */
-// Legacy `withDevTools` factory is defined above and marked deprecated.
+export const withDevTools = Object.assign(devTools, {
+  production: productionDevTools,
+  full: fullDevTools,
+  enable: enableDevTools,
+});

@@ -22,7 +22,7 @@ export interface EffectsConfig {
  * @example
  * ```typescript
  * const tree = signalTree({ count: 0 })
- *   .with(withEffects());
+ *   .with(effects());
  *
  * // Register an effect with cleanup
  * const cleanup = tree.effect(state => {
@@ -40,11 +40,8 @@ export interface EffectsConfig {
  * unsub();
  * ```
  */
-/**
- * @deprecated Use `effects()` as the primary enhancer. This legacy
- * `withEffects` factory will be removed in a future major release.
- */
-export function withEffects(
+
+export function effects(
   config: EffectsConfig = {}
 ): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & EffectsMethods<any> {
   const { enabled = true } = config;
@@ -129,12 +126,14 @@ export function withEffects(
 export function enableEffects(): <Tree extends ISignalTree<any>>(
   tree: Tree
 ) => Tree & EffectsMethods<any> {
-  return withEffects({ enabled: true });
+  return effects({ enabled: true });
 }
-
-// New v6-friendly export: `effects` with helper presets
-export const effects = Object.assign(
-  (config: EffectsConfig = {}) => withEffects(config),
+/**
+ * @deprecated Use `effects()` as the primary enhancer. This legacy
+ * `withEffects` factory will be removed in a future major release.
+ */
+export const withEffects = Object.assign(
+  (config: EffectsConfig = {}) => effects(config),
   {
     enable: enableEffects,
   }

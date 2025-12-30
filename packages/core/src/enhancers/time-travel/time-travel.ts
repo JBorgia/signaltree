@@ -164,7 +164,7 @@ class TimeTravelManager<T> {
  * @example
  * ```typescript
  * // Basic time travel enhancement
- * const store = signalTree({ count: 0, text: '' }).with(withTimeTravel());
+ * const store = signalTree({ count: 0, text: '' }).with(timeTravel());
  *
  * // Make some changes
  * store.count.set(1);
@@ -190,7 +190,7 @@ class TimeTravelManager<T> {
  * const store = signalTree({
  *   document: { title: '', content: '' },
  *   settings: { theme: 'light' }
- * }).with(withTimeTravel({
+ * }).with(timeTravel({
  *   maxHistorySize: 50,        // Limit memory usage
  *   includePayload: true,      // Store action metadata
  *   actionNames: {             // Custom action names
@@ -208,11 +208,8 @@ class TimeTravelManager<T> {
  * console.log(history[0].timestamp); // Date when change occurred
  * ```
  */
-/**
- * @deprecated Use `timeTravel()` as the primary enhancer. This legacy
- * `withTimeTravel` factory will be removed in a future major release.
- */
-export function withTimeTravel(
+
+export function timeTravel(
   config: TimeTravelConfig = {}
 ): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & TimeTravelMethods {
   const { enabled = true } = config;
@@ -361,32 +358,24 @@ export function withTimeTravel(
 export function enableTimeTravel(): <Tree extends ISignalTree<any>>(
   tree: Tree
 ) => Tree & TimeTravelMethods {
-  return withTimeTravel({ enabled: true });
+  return timeTravel({ enabled: true });
 }
 
 /**
  * Time travel with custom history size (v6 pattern)
  */
-export function withTimeTravelHistory(
+export function timeTravelHistory(
   maxHistorySize: number
 ): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & TimeTravelMethods {
-  return withTimeTravel({ maxHistorySize });
+  return timeTravel({ maxHistorySize });
 }
 
 // New v6-friendly export: `timeTravel` with named presets.
-export const timeTravel = Object.assign(
-  (config: TimeTravelConfig = {}) => withTimeTravel(config),
+export const withTimeTravel = Object.assign(
+  (config: TimeTravelConfig = {}) => timeTravel(config),
   {
-    minimal: () =>
-      withTimeTravel({ maxHistorySize: 20, includePayload: false }),
-    debug: () => withTimeTravel({ maxHistorySize: 200, includePayload: true }),
-    history: withTimeTravelHistory,
+    minimal: () => timeTravel({ maxHistorySize: 20, includePayload: false }),
+    debug: () => timeTravel({ maxHistorySize: 200, includePayload: true }),
+    history: timeTravelHistory,
   }
 );
-
-/**
- * @deprecated Use `timeTravel()` as the primary enhancer. This legacy
- * `withTimeTravel` alias will be removed in a future major release.
- */
-// Note: `withTimeTravel` is kept as the legacy implementation above; do not
-// re-export it as a const alias to avoid duplicate identifier errors.
