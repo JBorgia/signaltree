@@ -11,7 +11,6 @@ import type {
   NodeAccessor,
   EntityMapMarker,
   SignalTreeBase,
-  Enhancer,
 } from './types';
 
 // =============================================================================

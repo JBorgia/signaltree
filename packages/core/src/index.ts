@@ -55,6 +55,7 @@ export type {
   AddOptions,
   AddManyOptions,
   TimeTravelEntry,
+  TimeTravelMethods,
 } from './lib/types';
 
 // Entity helpers (runtime)
@@ -135,7 +136,7 @@ export {
   flushBatchedUpdates,
   hasPendingUpdates,
   getBatchQueueSize,
-} from './enhancers/batching/lib/batching';
+} from './enhancers/batching/batching';
 
 /**
  * Memoization enhancer for performance optimization
@@ -155,7 +156,7 @@ export {
   memoizeReference,
   clearAllCaches,
   getGlobalCacheStats,
-} from './enhancers/memoization/lib/memoization';
+} from './enhancers/memoization/memoization';
 
 /**
  * Time travel enhancer for debugging and undo/redo functionality
@@ -164,8 +165,7 @@ export {
 export {
   withTimeTravel,
   enableTimeTravel,
-  getTimeTravel,
-} from './enhancers/time-travel/lib/time-travel';
+} from './enhancers/time-travel/time-travel';
 
 /**
  * Entities enhancer for normalized collection helpers
@@ -175,7 +175,7 @@ export {
   withEntities,
   enableEntities,
   withHighPerformanceEntities,
-} from './enhancers/entities/lib/entities';
+} from './enhancers/entities/entities';
 
 /**
  * Serialization enhancer for state persistence and restoration
@@ -189,7 +189,7 @@ export {
   createIndexedDBAdapter,
   applySerialization,
   applyPersistence,
-} from './enhancers/serialization/lib/serialization';
+} from './enhancers/serialization/serialization';
 
 /**
  * DevTools enhancer for development and debugging
@@ -200,7 +200,7 @@ export {
   enableDevTools,
   withFullDevTools,
   withProductionDevTools,
-} from './enhancers/devtools/lib/devtools';
+} from './enhancers/devtools/devtools';
 
 /**
  * Async operation helpers
@@ -220,17 +220,6 @@ export {
   combinePresets,
   createDevTree,
 } from './enhancers/presets/lib/presets';
-
-/**
- * Computed enhancer for derived signal creation
- */
-export {
-  computedEnhancer,
-  createComputed,
-  type ComputedConfig,
-  type ComputedSignal,
-  type ComputedSignalTree,
-} from './enhancers/computed/lib/computed';
 
 // ============================================
 // CONSTANTS EXPORTS

@@ -1,22 +1,16 @@
+import { Assert, Equals } from '../test-helpers/types-equals';
+import { withEffects } from './effects';
+
 /**
  * Type-level tests for effects enhancer.
  */
-
-import type { withEffects } from './effects';
 import type { SignalTreeBase, EffectsMethods } from '../../lib/types';
-
-type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
-  ? 1
-  : 2
-  ? true
-  : false;
-
-type Assert<T extends true> = T;
-
 // Expected signature (config is optional and has no required fields)
 type ExpectedSignature = (config?: {
   enabled?: boolean;
-}) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & EffectsMethods<S>;
+}) => <Tree extends SignalTreeBase<any>>(
+  tree: Tree
+) => Tree & EffectsMethods<any>;
 
 type ActualSignature = typeof withEffects;
 

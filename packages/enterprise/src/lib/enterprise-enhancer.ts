@@ -45,29 +45,36 @@ import type { Enhancer } from '@signaltree/core';
  *
  * @public
  */
-export function withEnterprise(): <S extends Record<string, unknown>>(
-  tree: S
-) => S & EnterpriseEnhancedTree<S> {
-  return <S extends Record<string, unknown>>(
-    tree: S
-  ): S & EnterpriseEnhancedTree<S> => {
+export function withEnterprise(): <
+  Tree extends import('@signaltree/core').SignalTreeBase<any>
+>(
+  tree: Tree
+) => Tree & import('@signaltree/enterprise').EnterpriseEnhancedTree<any> {
+  return <Tree extends import('@signaltree/core').SignalTreeBase<any>>(
+    tree: Tree
+  ): Tree & import('@signaltree/enterprise').EnterpriseEnhancedTree<any> => {
+    type S = Tree extends import('@signaltree/core').SignalTreeBase<infer U>
+      ? U
+      : unknown;
     // Lazy initialization - only create when first needed
     let pathIndex: PathIndex<Signal<unknown>> | null = null;
     let updateEngine: OptimizedUpdateEngine | null = null;
 
-    // Type assertion to access SignalTree properties
-    const signalTree = tree as unknown as { state: unknown };
+    // Type assertion to access SignalTree properties (preserve S)
+    const signalTree = tree as unknown as { state: S };
     // Cast tree to enhanced type for safe property assignment
-    const enhancedTree = tree as S & EnterpriseEnhancedTree<S>;
+    const enhancedTree = tree as unknown as
+      | (Tree & import('@signaltree/enterprise').EnterpriseEnhancedTree<S>)
+      | (Tree & import('@signaltree/enterprise').EnterpriseEnhancedTree<any>);
 
     // Add updateOptimized method to tree
     enhancedTree.updateOptimized = (
-      updates: Partial<T>,
+      updates: Partial<S>,
       options?: {
         maxDepth?: number;
         ignoreArrayOrder?: boolean;
         equalityFn?: (a: unknown, b: unknown) => boolean;
-        batch?: boolean;
+        autoBatch?: boolean;
         batchSize?: number;
       }
     ): UpdateResult => {
@@ -98,7 +105,8 @@ export function withEnterprise(): <S extends Record<string, unknown>>(
     // Add PathIndex access for debugging/monitoring
     enhancedTree.getPathIndex = () => pathIndex;
 
-    return enhancedTree;
+    return enhancedTree as unknown as Tree &
+      import('@signaltree/enterprise').EnterpriseEnhancedTree<any>;
   };
 }
 

@@ -4,6 +4,8 @@ import { SecurityValidatorConfig } from './security/security-validator';
 
 // Time travel enhancer configuration (canonical)
 export interface TimeTravelConfig {
+  /** Enable/disable time travel (default: true) */
+  enabled?: boolean;
   /**
    * Maximum number of history entries to keep
    * @default 50
@@ -100,10 +102,10 @@ export interface SignalTreeBase<T> extends NodeAccessor<T> {
   readonly $: TreeNode<T>;
   // Single-enhancer chain: apply one enhancer at a time.
   // Accept an enhancer that is applied to this specific tree and infer
-  // the resulting return type `R` so added methods can depend on `T`.
-  with<Enh extends <S>(tree: SignalTreeBase<S>) => unknown>(
-    enhancer: Enh
-  ): ReturnType<Enh>;
+  // the resulting return type `R` so added methods can depend on the
+  // concrete tree type (`this`). This preserves strong type inference
+  // for enhancer methods that depend on the tree's state shape.
+  with<R>(enhancer: (tree: this) => R): R;
   bind(thisArg?: unknown): NodeAccessor<T>;
   destroy(): void;
   // Allow enhancers to attach runtime methods — consumers should cast to the
@@ -112,13 +114,23 @@ export interface SignalTreeBase<T> extends NodeAccessor<T> {
 
 // Method interfaces
 export interface EffectsMethods<T> {
-  effect(fn: (state: T) => void): () => void;
+  /** Register an effect that can optionally return a cleanup function */
+  effect(fn: (state: T) => void | (() => void)): () => void;
+
+  /** Subscribe to state changes (simpler alternative to effect) */
   subscribe(fn: (state: T) => void): () => void;
 }
 
 /** Batching enhancer configuration (canonical) */
 export interface BatchingConfig {
+  /** Enable/disable batching (default: true) */
+  enabled?: boolean;
+  /** Milliseconds to debounce flushes when batching is enabled */
   debounceMs?: number;
+  /** Legacy alias for debounceMs used in some demo code */
+  batchTimeoutMs?: number;
+  /** Milliseconds to auto-flush pending batches (compatibility name) */
+  autoFlushDelay?: number;
   maxBatchSize?: number;
 }
 
@@ -127,8 +139,18 @@ export interface BatchingMethods<T = unknown> {
 }
 
 export interface MemoizationMethods<T> {
+  /** Memoize a computation based on state and optional cache key */
   memoize<R>(fn: (state: T) => R, cacheKey?: string): Signal<R>;
+  /** Memoized update for partial state, with optional cache key */
+  memoizedUpdate?: (
+    updater: (current: T) => Partial<T>,
+    cacheKey?: string
+  ) => void;
+  /** Clear the memoization cache (optionally by key) */
   clearMemoCache(key?: string): void;
+  /** Alias for clearMemoCache for compatibility */
+  clearCache?: (key?: string) => void;
+  /** Get cache statistics */
   getCacheStats(): CacheStats;
 }
 
@@ -148,10 +170,21 @@ export interface TimeTravelMethods<T = unknown> {
   redo(): void;
   canUndo(): boolean;
   canRedo(): boolean;
-  getHistory(): unknown[];
+  getHistory(): TimeTravelEntry<T>[];
   resetHistory(): void;
   jumpTo(index: number): void;
   getCurrentIndex(): number;
+  /** Internal time-travel manager exposed for advanced tooling/debugging */
+  readonly __timeTravel?: {
+    undo(): void;
+    redo(): void;
+    canUndo(): boolean;
+    canRedo(): boolean;
+    getHistory(): TimeTravelEntry<T>[];
+    resetHistory(): void;
+    jumpTo(index: number): void;
+    getCurrentIndex(): number;
+  };
 }
 
 export interface DevToolsMethods {
@@ -514,12 +547,6 @@ export interface DevToolsConfig {
   };
 }
 
-/** Batching enhancer configuration (canonical) */
-export interface BatchingConfig {
-  debounceMs?: number;
-  maxBatchSize?: number;
-}
-
 /**
  * Type utilities for entities
  */
@@ -636,9 +663,9 @@ export const ENHANCER_META = Symbol('signaltree:enhancer:meta');
  * Enhancer function that adds methods to a tree.
  * Generic parameter `TAdded` represents the methods being added.
  */
-export type Enhancer<TAdded> = <S>(
-  tree: SignalTreeBase<S>
-) => SignalTreeBase<S> & TAdded;
+export type Enhancer<TAdded> = <Tree extends SignalTreeBase<any>>(
+  tree: Tree
+) => Tree & TAdded;
 
 /** Enhancer with optional metadata for ordering/debugging */
 export type EnhancerWithMeta<TAdded> = Enhancer<TAdded> & {

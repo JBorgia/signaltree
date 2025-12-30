@@ -1,1 +1,1 @@
-export * from './lib/batching';
+export * from './batching';

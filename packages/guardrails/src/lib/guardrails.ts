@@ -6,7 +6,7 @@ import { deepEqual } from '@signaltree/shared';
  * Development-only performance monitoring and anti-pattern detection
  * @packageDocumentation
  */
-import type { SignalTreeBase as SignalTree, Enhancer } from '@signaltree/core';
+import type { SignalTreeBase as SignalTree } from '@signaltree/core';
 import type {
   GuardrailsConfig,
   GuardrailsAPI,
@@ -105,9 +105,7 @@ interface PendingUpdate {
   details: UpdateDetail[];
 }
 
-interface GuardrailsContext<
-  T extends Record<string, unknown> = Record<string, unknown>
-> {
+interface GuardrailsContext<T = Record<string, unknown>> {
   tree: SignalTree<T>;
   config: GuardrailsConfig<T>;
   stats: RuntimeStats;
@@ -141,17 +139,23 @@ const POLLING_INTERVAL_MS = 50; // Fast polling for dev-time monitoring
  */
 export function withGuardrails(
   config: GuardrailsConfig<any> = {}
-): <S>(tree: SignalTree<S>) => SignalTree<S> & { __guardrails?: GuardrailsAPI } {
-  return function <S>(tree: SignalTree<S>): SignalTree<S> & { __guardrails?: GuardrailsAPI } {
+): <Tree extends SignalTree<any>>(
+  tree: Tree
+) => Tree & { __guardrails?: GuardrailsAPI } {
+  return function <Tree extends SignalTree<any>>(
+    tree: Tree
+  ): Tree & {
+    __guardrails?: GuardrailsAPI;
+  } {
     const enabled = resolveEnabledFlag(config.enabled);
     if (!isDevEnvironment() || !enabled) {
-      return tree as SignalTree<S> & { __guardrails?: GuardrailsAPI };
+      return tree as unknown as Tree & { __guardrails?: GuardrailsAPI };
     }
 
     const stats = createRuntimeStats();
-    const context: GuardrailsContext<S> = {
-      tree,
-      config,
+    const context = {
+      tree: tree as unknown as SignalTree<any>,
+      config: config as GuardrailsConfig<any>,
       stats,
       issues: [],
       hotPaths: [],
@@ -164,9 +168,9 @@ export function withGuardrails(
       pathRecomputations: new Map(),
       memoryHistory: [],
       recomputationLog: [],
-      previousState: tryStructuredClone(tree()),
+      previousState: tryStructuredClone((tree as unknown as any)()),
       disposed: false,
-    };
+    } as GuardrailsContext<any>;
     // Wire up dev hooks for memoization recomputation tracking
     (tree as unknown as Record<string, unknown>)['__devHooks'] = {
       onRecompute: (path: string, count: number) => {
@@ -218,20 +222,14 @@ export function withGuardrails(
       teardown
     );
 
-    return tree;
+    return tree as unknown as Tree & { __guardrails?: GuardrailsAPI };
   };
-
-    return tree as SignalTree<S> & { __guardrails?: GuardrailsAPI };
-  };
-}
 }
 
 /**
  * Start change detection - tries PathNotifier first, then reactive subscription, finally polling
  */
-function startChangeDetection<T extends Record<string, unknown>>(
-  context: GuardrailsContext<T>
-): () => void {
+function startChangeDetection<T>(context: GuardrailsContext<T>): () => void {
   // Strategy 1: Try PathNotifier for event-driven detection (zero polling, precise paths)
   if (!context.config.changeDetection?.disablePathNotifier) {
     try {
@@ -277,7 +275,7 @@ function startChangeDetection<T extends Record<string, unknown>>(
  * This is called directly by PathNotifier with precise path information,
  * avoiding the need for JSON diffing.
  */
-function handlePathNotifierChange<T extends Record<string, unknown>>(
+function handlePathNotifierChange<T>(
   context: GuardrailsContext<T>,
   path: string,
   newValue: unknown,
@@ -315,9 +313,7 @@ function handlePathNotifierChange<T extends Record<string, unknown>>(
 /**
  * Handle a state change (called by either subscription or polling)
  */
-function handleStateChange<T extends Record<string, unknown>>(
-  context: GuardrailsContext<T>
-): void {
+function handleStateChange<T>(context: GuardrailsContext<T>): void {
   if (context.disposed || context.suppressed) return;
 
   const currentState = context.tree();
@@ -370,7 +366,7 @@ function handleStateChange<T extends Record<string, unknown>>(
  * Start polling-based change detection for guardrails monitoring
  * Used as fallback when reactive subscription is not available
  */
-function startPollingChangeDetection<T extends Record<string, unknown>>(
+function startPollingChangeDetection<T>(
   context: GuardrailsContext<T>
 ): () => void {
   const pollForChanges = () => {
@@ -392,7 +388,7 @@ function startPollingChangeDetection<T extends Record<string, unknown>>(
 /**
  * Detect paths that changed between two state objects
  */
-function detectChangedPaths<T extends Record<string, unknown>>(
+function detectChangedPaths<T>(
   oldState: T,
   newState: T,
   prefix = ''
@@ -454,9 +450,7 @@ function createRuntimeStats(): RuntimeStats {
   };
 }
 
-function updatePercentiles<T extends Record<string, unknown>>(
-  context: GuardrailsContext<T>
-): void {
+function updatePercentiles<T>(context: GuardrailsContext<T>): void {
   if (context.timings.length === 0) return;
 
   const sorted = [...context.timings].sort((a, b) => a - b);
@@ -489,7 +483,7 @@ function calculateDiffRatio(oldValue: unknown, newValue: unknown): number {
   return allKeys.size === 0 ? 0 : changed / allKeys.size;
 }
 
-function analyzePreUpdate<T extends Record<string, unknown>>(
+function analyzePreUpdate<T>(
   context: GuardrailsContext<T>,
   detail: UpdateDetail,
   metadata?: UpdateMetadata
@@ -508,7 +502,7 @@ function analyzePreUpdate<T extends Record<string, unknown>>(
   }
 }
 
-function analyzePostUpdate<T extends Record<string, unknown>>(
+function analyzePostUpdate<T>(
   context: GuardrailsContext<T>,
   detail: UpdateDetail,
   duration: number,
@@ -546,7 +540,7 @@ function analyzePostUpdate<T extends Record<string, unknown>>(
   }
 }
 
-function trackHotPath<T extends Record<string, unknown>>(
+function trackHotPath<T>(
   context: GuardrailsContext<T>,
   path: string,
   duration: number
@@ -594,7 +588,7 @@ function trackHotPath<T extends Record<string, unknown>>(
   }
 }
 
-function trackSignalUsage<T extends Record<string, unknown>>(
+function trackSignalUsage<T>(
   context: GuardrailsContext<T>,
   path: string,
   timestamp: number
@@ -609,7 +603,7 @@ function trackSignalUsage<T extends Record<string, unknown>>(
   context.signalUsage.set(key, entry);
 }
 
-function updateSignalStats<T extends Record<string, unknown>>(
+function updateSignalStats<T>(
   context: GuardrailsContext<T>,
   timestamp: number
 ): void {
@@ -636,7 +630,7 @@ function updateSignalStats<T extends Record<string, unknown>>(
   context.stats.memoryGrowthRate = growth;
 }
 
-function recordRecomputations<T extends Record<string, unknown>>(
+function recordRecomputations<T>(
   path: string,
   context: GuardrailsContext<T>,
   count: number,
@@ -662,7 +656,7 @@ function recordRecomputations<T extends Record<string, unknown>>(
   context.stats.recomputationsPerSecond = context.recomputationLog.length;
 }
 
-function updateHotPath<T extends Record<string, unknown>>(
+function updateHotPath<T>(
   context: GuardrailsContext<T>,
   hotPath: HotPath
 ): void {
@@ -680,7 +674,7 @@ function updateHotPath<T extends Record<string, unknown>>(
   context.stats.hotPathCount = context.hotPaths.length;
 }
 
-function evaluateRule<T extends Record<string, unknown>>(
+function evaluateRule<T>(
   context: GuardrailsContext<T>,
   rule: GuardrailRule<T>,
   ruleContext: RuleContext<T>
@@ -725,7 +719,7 @@ function evaluateRule<T extends Record<string, unknown>>(
   }
 }
 
-function addIssue<T extends Record<string, unknown>>(
+function addIssue<T>(
   context: GuardrailsContext<T>,
   issue: GuardrailIssue
 ): void {
@@ -754,7 +748,7 @@ function addIssue<T extends Record<string, unknown>>(
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function shouldSuppressUpdate<T extends Record<string, unknown>>(
+function shouldSuppressUpdate<T>(
   context: GuardrailsContext<T>,
   metadata?: UpdateMetadata
 ): boolean {
@@ -777,9 +771,7 @@ function shouldSuppressUpdate<T extends Record<string, unknown>>(
   );
 }
 
-function startMonitoring<T extends Record<string, unknown>>(
-  context: GuardrailsContext<T>
-): () => void {
+function startMonitoring<T>(context: GuardrailsContext<T>): () => void {
   const interval = setInterval(() => {
     if (context.disposed) {
       clearInterval(interval);
@@ -792,9 +784,7 @@ function startMonitoring<T extends Record<string, unknown>>(
   return () => clearInterval(interval);
 }
 
-function checkMemory<T extends Record<string, unknown>>(
-  context: GuardrailsContext<T>
-): void {
+function checkMemory<T>(context: GuardrailsContext<T>): void {
   if (!context.config.memoryLeaks?.enabled) return;
 
   const now = Date.now();
@@ -828,9 +818,7 @@ function checkMemory<T extends Record<string, unknown>>(
   }
 }
 
-function maybeReport<T extends Record<string, unknown>>(
-  context: GuardrailsContext<T>
-): void {
+function maybeReport<T>(context: GuardrailsContext<T>): void {
   if (context.config.reporting?.console === false) return;
 
   const report = generateReport(context);
@@ -891,9 +879,7 @@ function getSeverityPrefix(severity: GuardrailIssue['severity']): string {
   return 'ℹ️';
 }
 
-function generateReport<T extends Record<string, unknown>>(
-  context: GuardrailsContext<T>
-): GuardrailsReport {
+function generateReport<T>(context: GuardrailsContext<T>): GuardrailsReport {
   const memoryCurrent = context.stats.signalCount;
   const memoryLimit = context.config.budgets?.maxMemory ?? 50;
   const recomputationCurrent = context.stats.recomputationsPerSecond;
@@ -947,9 +933,7 @@ function createBudgetItem(current: number, limit: number): BudgetItem {
   };
 }
 
-function generateRecommendations<T extends Record<string, unknown>>(
-  context: GuardrailsContext<T>
-): string[] {
+function generateRecommendations<T>(context: GuardrailsContext<T>): string[] {
   const recommendations: string[] = [];
 
   if (context.hotPaths.length > 0) {
@@ -965,7 +949,7 @@ function generateRecommendations<T extends Record<string, unknown>>(
   return recommendations;
 }
 
-function createAPI<T extends Record<string, unknown>>(
+function createAPI<T>(
   context: GuardrailsContext<T>,
   teardown: () => void
 ): GuardrailsAPI {
@@ -1078,7 +1062,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return proto === Object.prototype || proto === null;
 }
 
-function updateTimingStats<T extends Record<string, unknown>>(
+function updateTimingStats<T>(
   context: GuardrailsContext<T>,
   duration: number
 ): void {

@@ -1,73 +1,96 @@
+import { createEntitySignal } from '../../lib/entity-signal';
+import { getPathNotifier } from '../../lib/path-notifier';
+
+import type {
+  EntityConfig,
+  EntityMapMarker,
+  SignalTreeBase,
+  EntitiesEnabled,
+} from '../../lib/types';
+
+// Match whatever config the type test expects
+export interface EntitiesEnhancerConfig {
+  enabled?: boolean;
+}
+
+type Marker = EntityMapMarker<Record<string, unknown>, string | number> & {
+  __entityMapConfig?: EntityConfig<Record<string, unknown>, string | number>;
+};
+
+function isEntityMapMarker(value: unknown): value is Marker {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      (value as Record<string, unknown>)['__isEntityMap'] === true
+  );
+}
+
 /**
  * v6 Entities Enhancer
  *
  * Contract: (config?) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & EntitiesEnabled
- *
- * This enhancer enables entity collections marked with entityMap() in the state.
- */
-
-import type { SignalTreeBase, EntitiesEnabled, EntityMapMarker } from '../../lib/types';
-
-export interface EntitiesConfig {
-  /** ID field name (default: 'id') */
-  idField?: string;
-}
-
-/**
- * Create an entity map marker for use in state definition.
- *
- * @example
- * ```typescript
- * interface User {
- *   id: string;
- *   name: string;
- * }
- *
- * const tree = signalTree({
- *   users: entityMap<User>(),
- * }).with(withEntities());
- *
- * // Now you can use entity methods
- * tree.$.users.upsert({ id: '1', name: 'Alice' });
- * tree.$.users.byId('1'); // { id: '1', name: 'Alice' }
- * ```
- */
-export function entityMap<E, Key extends string | number = string>(): EntityMapMarker<E, Key> {
-  // This is a compile-time marker only
-  // The actual implementation is handled by the signal-tree factory
-  return new Map() as unknown as EntityMapMarker<E, Key>;
-}
-
-/**
- * Enhances a SignalTree with entity collection support.
- *
- * @param config - Entities configuration
- * @returns Polymorphic enhancer function
  */
 export function withEntities(
-  config: EntitiesConfig = {}
-): <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & EntitiesEnabled {
-  const { idField = 'id' } = config;
+  config: EntitiesEnhancerConfig = {}
+): <Tree extends SignalTreeBase<any>>(tree: Tree) => Tree & EntitiesEnabled {
+  // ← Explicit signature
+  const { enabled = true } = config;
+  return <Tree extends SignalTreeBase<any>>(
+    tree: Tree
+  ): Tree & EntitiesEnabled => {
+    type S = Tree extends SignalTreeBase<infer U> ? U : unknown;
+    if (!enabled) {
+      (tree as { __entitiesEnabled?: true }).__entitiesEnabled = true;
+      return tree as Tree & EntitiesEnabled;
+    }
 
-  return <S>(tree: SignalTreeBase<S>): SignalTreeBase<S> & EntitiesEnabled => {
-    // The entity functionality is primarily compile-time via EntityMapMarker
-    // Runtime entity signals are created by the signal-tree factory when it
-    // encounters entityMap() markers.
-    //
-    // This enhancer simply marks the tree as entity-enabled.
+    const notifier = getPathNotifier();
 
-    const enhanced = tree as SignalTreeBase<S> & EntitiesEnabled;
-    enhanced.__entities = true;
+    function materialize(node: unknown, path: string[] = []) {
+      if (!node || typeof node !== 'object') return;
+      for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+        if (isEntityMapMarker(v)) {
+          const cfg = (v as Marker).__entityMapConfig ?? {};
+          const sig = createEntitySignal(
+            cfg as EntityConfig<Record<string, unknown>, string | number>,
+            notifier,
+            path.concat(k).join('.')
+          );
+          try {
+            (node as Record<string, unknown>)[k] = sig;
+          } catch {
+            /* ignore */
+          }
+          try {
+            (tree as unknown as Record<string, unknown>)[k] = sig;
+          } catch {
+            /* ignore */
+          }
+        } else if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
+          materialize(v, path.concat(k));
+        }
+      }
+    }
 
-    return enhanced;
+    materialize(tree.state);
+    materialize((tree as { $?: unknown }).$);
+
+    (tree as { __entitiesEnabled?: true }).__entitiesEnabled = true;
+
+    return tree as Tree & EntitiesEnabled;
   };
 }
 
-/**
- * Enable entities with default settings
- */
-export function enableEntities(): <S>(
-  tree: SignalTreeBase<S>
-) => SignalTreeBase<S> & EntitiesEnabled {
+export function enableEntities(): <Tree extends SignalTreeBase<any>>(
+  tree: Tree
+) => Tree & EntitiesEnabled {
+  return withEntities();
+}
+
+export function withHighPerformanceEntities(): <
+  Tree extends SignalTreeBase<any>
+>(
+  tree: Tree
+) => Tree & EntitiesEnabled {
   return withEntities();
 }

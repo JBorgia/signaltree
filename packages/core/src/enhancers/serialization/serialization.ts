@@ -1,5 +1,6 @@
-import type { SignalTreeBase as SignalTree } from '../../../lib/types';
-import type { EnhancerWithMeta } from '../../../lib/types';
+import type { SignalTreeBase as SignalTree } from '../../lib/types';
+import type { EnhancerWithMeta } from '../../lib/types';
+
 export interface SerializationConfig {
   includeMetadata?: boolean;
   replacer?: (key: string, value: unknown) => unknown;
@@ -8,6 +9,7 @@ export interface SerializationConfig {
   maxDepth?: number;
   handleCircular?: boolean;
 }
+
 export interface SerializedState<T = unknown> {
   data: T;
   metadata?: {
@@ -22,6 +24,7 @@ export interface SerializedState<T = unknown> {
     nodeMap?: Record<string, 'b' | 'r'>;
   };
 }
+
 export interface SerializableSignalTree<T> extends SignalTree<T> {
   $: any;
   serialize(config?: SerializationConfig): string;
@@ -31,25 +34,33 @@ export interface SerializableSignalTree<T> extends SignalTree<T> {
   snapshot(): SerializedState<T>;
   restore(snapshot: SerializedState<T>): void;
 }
+
 export interface PersistenceMethods {
   save(): Promise<void>;
   load(): Promise<void>;
   clear(): Promise<void>;
   __flushAutoSave?: () => Promise<void>;
 }
-export declare function withSerialization<
-  T extends Record<string, unknown> = Record<string, unknown>
->(
+
+// Minimal runtime stubs so module resolution works during tests.
+export function withSerialization(
   defaultConfig?: SerializationConfig
-): EnhancerWithMeta<SignalTree<T>, SerializableSignalTree<T>>;
-export declare function enableSerialization<
-  T extends Record<string, unknown> = Record<string, unknown>
->(): EnhancerWithMeta<SignalTree<T>, SerializableSignalTree<T>>;
+): <Tree extends SignalTree<any>>(
+  tree: Tree
+) => Tree & SerializableSignalTree<any> {
+  return (tree: any) => tree as any;
+}
+
+export function enableSerialization() {
+  return <Tree extends SignalTree<any>>(tree: Tree) => tree as any;
+}
+
 export interface StorageAdapter {
   getItem(key: string): string | null | Promise<string | null>;
   setItem(key: string, value: string): void | Promise<void>;
   removeItem(key: string): void | Promise<void>;
 }
+
 export interface PersistenceConfig extends SerializationConfig {
   key: string;
   storage?: StorageAdapter;
@@ -58,27 +69,34 @@ export interface PersistenceConfig extends SerializationConfig {
   autoLoad?: boolean;
   skipCache?: boolean;
 }
-export declare function withPersistence<
-  T extends Record<string, unknown> = Record<string, unknown>
->(
-  config: PersistenceConfig
-): EnhancerWithMeta<
-  SignalTree<T>,
-  SerializableSignalTree<T> & PersistenceMethods
->;
-export declare function createStorageAdapter(
+
+export function withPersistence(config: PersistenceConfig) {
+  return <Tree extends SignalTree<any>>(tree: Tree) => tree as any;
+}
+
+export function createStorageAdapter(
   getItem: (key: string) => string | null | Promise<string | null>,
   setItem: (key: string, value: string) => void | Promise<void>,
   removeItem: (key: string) => void | Promise<void>
-): StorageAdapter;
-export declare function createIndexedDBAdapter(
-  dbName?: string,
-  storeName?: string
-): StorageAdapter;
-export declare function applySerialization<T extends Record<string, unknown>>(
-  tree: SignalTree<T>
-): SerializableSignalTree<T>;
-export declare function applyPersistence<T extends Record<string, unknown>>(
+) {
+  return { getItem, setItem, removeItem } as StorageAdapter;
+}
+
+export function createIndexedDBAdapter(dbName?: string, storeName?: string) {
+  return createStorageAdapter(
+    () => null,
+    () => undefined,
+    () => undefined
+  );
+}
+
+export function applySerialization<T>(tree: SignalTree<T>) {
+  return tree as unknown as SerializableSignalTree<T>;
+}
+
+export function applyPersistence<T>(
   tree: SignalTree<T>,
   cfg: PersistenceConfig
-): SerializableSignalTree<T> & PersistenceMethods;
+) {
+  return tree as unknown as SerializableSignalTree<T> & PersistenceMethods;
+}

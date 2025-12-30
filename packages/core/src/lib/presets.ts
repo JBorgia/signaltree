@@ -1,18 +1,17 @@
+import { withBatching } from '../enhancers/batching';
+import { withDevTools } from '../enhancers/devtools';
+import { withEffects } from '../enhancers/effects';
+import { withEntities } from '../enhancers/entities';
+import { withMemoization } from '../enhancers/memoization';
+import { withTimeTravel } from '../enhancers/time-travel';
+import { signalTree } from './signal-tree';
+
 /**
  * v6 Preset Factories
  *
  * Pre-configured tree factories that chain multiple enhancers.
  * Types flow naturally through the chain - no casts needed.
  */
-import { withBatching } from './enhancers/batching';
-import { withDevTools } from './enhancers/devtools';
-import { withEffects } from './enhancers/effects';
-import { withEntities } from './enhancers/entities';
-import { withMemoization } from './enhancers/memoization';
-import { withTimeTravel } from './enhancers/time-travel';
-import { signalTree } from './signal-tree';
-
-
 import type {
   SignalTreeBase,
   TreeConfig,
@@ -114,9 +113,39 @@ export type MinimalSignalTree<T> = SignalTreeBase<T> & EffectsMethods<T>;
  */
 export function createDevTree<T extends object>(
   initialState: T,
+  config?: DevTreeConfig
+): FullSignalTree<T>;
+export function createDevTree(): {
+  enhancer: <Tree extends SignalTreeBase<any>>(
+    tree: Tree
+  ) => Tree &
+    EffectsMethods<any> &
+    BatchingMethods &
+    MemoizationMethods<any> &
+    EntitiesEnabled &
+    TimeTravelMethods &
+    DevToolsMethods;
+};
+export function createDevTree<T extends object>(
+  initialState?: T,
   config: DevTreeConfig = {}
-): FullSignalTree<T> {
-  const base = signalTree(initialState, config);
+): any {
+  // If no initial state provided, return the enhancer chain so callers
+  // can apply it to an existing tree (demo usage pattern).
+  if (arguments.length === 0) {
+    const enhancer = <Tree extends SignalTreeBase<any>>(tree: Tree) =>
+      tree
+        .with(withEffects())
+        .with(withBatching())
+        .with(withMemoization())
+        .with(withEntities())
+        .with(withTimeTravel())
+        .with(withDevTools());
+
+    return { enhancer };
+  }
+
+  const base = signalTree(initialState as T, config);
 
   // Chain enhancers - types accumulate automatically with v6 pattern
   const enhanced = base
@@ -127,7 +156,7 @@ export function createDevTree<T extends object>(
     .with(withTimeTravel(config.timeTravel))
     .with(withDevTools(config.devTools));
 
-  return enhanced as FullSignalTree<T>;
+  return enhanced as unknown as FullSignalTree<T>;
 }
 
 /**
@@ -163,7 +192,7 @@ export function createProdTree<T extends object>(
     .with(withMemoization(config.memoization))
     .with(withEntities());
 
-  return enhanced as ProdSignalTree<T>;
+  return enhanced as unknown as ProdSignalTree<T>;
 }
 
 /**
@@ -193,7 +222,7 @@ export function createMinimalTree<T extends object>(
 
   const enhanced = base.with(withEffects());
 
-  return enhanced as MinimalSignalTree<T>;
+  return enhanced as unknown as MinimalSignalTree<T>;
 }
 
 // ============================================================================

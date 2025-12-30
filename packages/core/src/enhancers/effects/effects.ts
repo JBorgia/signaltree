@@ -1,9 +1,11 @@
-/* eslint-disable @typescript-eslint/no-empty-function */
-// ============================================================================
-// FILE: src/enhancers/effects/effects.ts
-// ============================================================================
 import { effect as angularEffect, untracked } from '@angular/core';
 
+/**
+ * v6 Effects Enhancer
+ *
+ * Contract: (config?) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & EffectsMethods<S>
+ */
+/* eslint-disable @typescript-eslint/no-empty-function */
 import type { SignalTreeBase, EffectsMethods } from '../../lib/types';
 
 export interface EffectsConfig {
@@ -22,35 +24,44 @@ export interface EffectsConfig {
  * const tree = signalTree({ count: 0 })
  *   .with(withEffects());
  *
- * // Register an effect
+ * // Register an effect with cleanup
  * const cleanup = tree.effect(state => {
  *   console.log('Count changed:', state.count);
+ *   return () => console.log('Cleanup');
  * });
  *
- * // Later: cleanup the effect
+ * // Or use subscribe for simpler cases
+ * const unsub = tree.subscribe(state => {
+ *   console.log('State:', state);
+ * });
+ *
+ * // Later: cleanup
  * cleanup();
+ * unsub();
  * ```
  */
 export function withEffects(
   config: EffectsConfig = {}
-): <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & EffectsMethods<S> {
+): <Tree extends SignalTreeBase<any>>(
+  tree: Tree
+) => Tree & EffectsMethods<any> {
   const { enabled = true } = config;
-
-  return <S>(
-    tree: SignalTreeBase<S>
-  ): SignalTreeBase<S> & EffectsMethods<S> => {
+  return <Tree extends SignalTreeBase<any>>(
+    tree: Tree
+  ): Tree & EffectsMethods<any> => {
+    type S = Tree extends SignalTreeBase<infer U> ? U : unknown;
     const cleanupFns: Array<() => void> = [];
 
     const methods: EffectsMethods<S> = {
       effect(effectFn: (state: S) => void | (() => void)): () => void {
         if (!enabled) {
-          return () => {}; // no-op
+          return () => {};
         }
 
         let innerCleanup: (() => void) | void;
 
         const effectRef = angularEffect(() => {
-          // Get current state (this creates the signal dependency)
+          // Get current state (creates signal dependency)
           const state = tree() as S;
 
           // Clean up previous effect run
@@ -73,15 +84,31 @@ export function withEffects(
 
         return cleanup;
       },
+
       subscribe(fn: (state: S) => void): () => void {
-        // No-op implementation to satisfy EffectsMethods interface
-        return () => {};
+        if (!enabled) {
+          return () => {};
+        }
+
+        // Subscribe is a simpler version of effect without cleanup return
+        const effectRef = angularEffect(() => {
+          const state = tree() as S;
+          untracked(() => fn(state));
+        });
+
+        const cleanup = () => {
+          effectRef.destroy();
+        };
+
+        cleanupFns.push(cleanup);
+
+        return cleanup;
       },
     };
 
     // Override destroy to cleanup all effects
     const originalDestroy = tree.destroy?.bind(tree);
-    (tree as any).destroy = () => {
+    (tree as unknown as { destroy: () => void }).destroy = () => {
       cleanupFns.forEach((fn) => fn());
       cleanupFns.length = 0;
       if (originalDestroy) {
@@ -89,15 +116,16 @@ export function withEffects(
       }
     };
 
-    return Object.assign(tree, methods);
+    return Object.assign(tree, methods) as unknown as Tree &
+      EffectsMethods<any>;
   };
 }
 
 /**
  * Enable effects with default settings
  */
-export function enableEffects(): <S>(
-  tree: SignalTreeBase<S>
-) => SignalTreeBase<S> & EffectsMethods<S> {
+export function enableEffects(): <Tree extends SignalTreeBase<any>>(
+  tree: Tree
+) => Tree & EffectsMethods<any> {
   return withEffects({ enabled: true });
 }

@@ -1,26 +1,12 @@
-/**
- * Type-level tests for memoization enhancer.
- */
-
-import type { withMemoization } from './memoization';
-import type { withMemoization } from './memoization';
-import type {
-  SignalTreeBase,
-  MemoizationMethods,
-  MemoizationConfig,
-} from '../../lib/types';
-
-type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
-  ? 1
-  : 2
-  ? true
-  : false;
-
-type Assert<T extends true> = T;
+import { MemoizationConfig, MemoizationMethods, SignalTreeBase } from '../../lib/types';
+import { Assert, Equals } from '../test-helpers/types-equals';
+import { withMemoization } from './memoization';
 
 type ExpectedSignature = (
   config?: MemoizationConfig
-) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & MemoizationMethods<S>;
+) => <Tree extends SignalTreeBase<any>>(
+  tree: Tree
+) => Tree & MemoizationMethods<any>;
 
 type ActualSignature = typeof withMemoization;
 
@@ -36,13 +22,13 @@ declare const tree: SignalTreeBase<TestState>;
 const enhanced = withMemoization({ maxCacheSize: 100 })(tree);
 
 // Memoize should work with selectors
-const filtered = enhanced.memoize((state) =>
+const filtered = enhanced.memoize((state: TestState) =>
   state.users.filter((u) => u.name.includes(state.filter))
 );
 
 // Other methods
 enhanced.clearMemoCache();
-enhanced.clearCache('key');
+enhanced.clearMemoCache('key');
 const stats = enhanced.getCacheStats();
 const _size: number = stats.size;
 

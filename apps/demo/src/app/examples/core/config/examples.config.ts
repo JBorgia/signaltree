@@ -1,5 +1,4 @@
 import { AsyncDemoComponent } from '../../features/fundamentals/examples/async/async-demo.component';
-import { ComputedExampleComponent } from '../../features/fundamentals/examples/computed/computed-example.component';
 import { EffectsDemoComponent } from '../../features/fundamentals/examples/effects/effects-demo.component';
 import { BatchingDemoComponent } from '../../features/fundamentals/examples/enhancers/batching-demo/batching-demo.component';
 import {
@@ -42,24 +41,6 @@ export const signalsExampleMeta: ExampleMeta = {
   component: SignalsExamplesComponent,
   difficulty: 'beginner',
   tags: ['signals', 'counter', 'reactive-input', 'computed'],
-};
-
-/**
- * Computed Examples
- */
-export const computedExampleMeta: ExampleMeta = {
-  id: 'computed-properties',
-  title: 'Computed Properties',
-  description:
-    'Explore computed values with shopping cart calculations and reactive transformations.',
-  category: 'Signals',
-  focusAreas: ['computed', 'reactivity', 'transformations'],
-  functionalUse: ['calculations', 'derived-state'],
-  enhancers: [],
-  route: '/examples/fundamentals/computed',
-  component: ComputedExampleComponent,
-  difficulty: 'beginner',
-  tags: ['computed', 'shopping-cart', 'calculations', 'transformations'],
 };
 
 /**
@@ -363,7 +344,6 @@ export const EXAMPLES_REGISTRY: ExampleMeta[] = [
     tags: ['news', 'readme', 'updates'],
   },
   signalsExampleMeta,
-  computedExampleMeta,
   entitiesExampleMeta,
   batchingExampleMeta,
   callableSyntaxExampleMeta,

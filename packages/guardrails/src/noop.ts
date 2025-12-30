@@ -15,23 +15,23 @@ const noopRule = (name: string): GuardrailRule => ({
   severity: 'info',
 });
 
-export function withGuardrails<T extends Record<string, unknown>>(
-  config?: GuardrailsConfig
-): (tree: SignalTree<T>) => SignalTree<T> {
-  return (tree) => {
+export function withGuardrails(config: GuardrailsConfig<any> = {}) {
+  return <S>(tree: import('@signaltree/core').SignalTreeBase<S>) => {
     if (config) {
       // Production build ignores guardrail configuration
     }
-    return tree;
+    return tree as import('@signaltree/core').SignalTreeBase<S>;
   };
 }
 
 export const rules = {
-  noDeepNesting: () => noopRule('noop'),
+  noDeepNesting: (_maxDepth = 5) => noopRule('noop'),
   noFunctionsInState: () => noopRule('noop'),
   noCacheInPersistence: () => noopRule('noop'),
-  maxPayloadSize: () => noopRule('noop'),
-  noSensitiveData: () => noopRule('noop'),
+  maxPayloadSize: (_maxKB = 100) => noopRule('noop'),
+  noSensitiveData: (
+    _sensitiveKeys = ['password', 'token', 'secret', 'apiKey']
+  ) => noopRule('noop'),
 };
 
-export type * from './lib/types';
+export * from './lib/types';

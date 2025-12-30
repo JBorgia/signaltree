@@ -1,9 +1,4 @@
-/**
- * Type-level tests for batching enhancer.
- *
- * This file ensures the enhancer follows the v6 contract.
- * If this file compiles, the types are correct.
- */
+import { Assert, Equals } from '../test-helpers/types-equals';
 import { withBatching } from './batching';
 
 import type {
@@ -11,26 +6,13 @@ import type {
   BatchingMethods,
   BatchingConfig,
 } from '../../lib/types';
-// ============================================================================
-// Type Equality Helpers
-// ============================================================================
-
-type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
-  ? 1
-  : 2
-  ? true
-  : false;
-
-type Assert<T extends true> = T;
-
-// ============================================================================
-// Contract Verification
-// ============================================================================
 
 // The expected signature
 type ExpectedSignature = (
   config?: BatchingConfig
-) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & BatchingMethods;
+) => <Tree extends SignalTreeBase<any>>(
+  tree: Tree
+) => Tree & BatchingMethods<any>;
 
 // The actual signature
 type ActualSignature = typeof withBatching;
@@ -51,8 +33,8 @@ const enhanced1 = withBatching()(tree1);
 const enhanced2 = withBatching({ debounceMs: 16 })(tree2);
 
 // Verify methods are available
-enhanced1.batch(() => {});
-enhanced2.batch(() => {});
+enhanced1.batch(() => void 0);
+enhanced2.batch(() => void 0);
 
 // Verify state type is preserved
 const _count: number = enhanced1().count;

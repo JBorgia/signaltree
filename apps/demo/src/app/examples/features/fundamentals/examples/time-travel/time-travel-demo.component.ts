@@ -3,6 +3,8 @@ import { Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree, withTimeTravel } from '@signaltree/core';
 
+import type { SignalTreeBase, TimeTravelMethods } from '@signaltree/core';
+
 interface Todo {
   id: number;
   title: string;
@@ -63,7 +65,9 @@ export class TimeTravelDemoComponent {
       { id: 2, title: 'Try Time Travel', completed: false },
       { id: 3, title: 'Build Something Amazing', completed: false },
     ],
-  }).with(withTimeTravel({ maxHistorySize: 50 }));
+  }).with(
+    withTimeTravel({ maxHistorySize: 50 })
+  ) as unknown as SignalTreeBase<AppState> & TimeTravelMethods<AppState>;
 
   // Type-safe tree updater
   private updateTree = (updater: (state: AppState) => AppState) => {
@@ -75,21 +79,17 @@ export class TimeTravelDemoComponent {
   message = this.tree.state.message;
   todos = this.tree.state.todos;
 
-  // Time travel interface
-  private timeTravel = this.tree.__timeTravel;
-
-  // Time travel signals - need to be writable to trigger updates
-  history = signal(this.timeTravel.getHistory());
-  currentIndex = signal(this.timeTravel.getCurrentIndex());
-  canUndo = signal(this.timeTravel.canUndo());
-  canRedo = signal(this.timeTravel.canRedo());
+  // Time travel signals - derive from the tree (preserves generics)
+  history = signal(this.tree.getHistory());
+  currentIndex = signal(this.tree.getCurrentIndex());
+  canUndo = signal(this.tree.canUndo());
+  canRedo = signal(this.tree.canRedo());
 
   // Helper to refresh time travel state
   private refreshTimeTravelState() {
-    this.history.set(this.timeTravel.getHistory());
-    this.refreshTimeTravelState();
-    this.canUndo.set(this.timeTravel.canUndo());
-    this.canRedo.set(this.timeTravel.canRedo());
+    this.history.set(this.tree.getHistory());
+    this.canUndo.set(this.tree.canUndo());
+    this.canRedo.set(this.tree.canRedo());
   }
 
   // Computed signals
@@ -174,17 +174,17 @@ export class TimeTravelDemoComponent {
 
   // Time travel actions
   undo() {
-    this.timeTravel.undo();
+    this.tree.undo();
     this.refreshTimeTravelState();
   }
 
   redo() {
-    this.timeTravel.redo();
+    this.tree.redo();
     this.refreshTimeTravelState();
   }
 
   goToState(index: number) {
-    this.timeTravel.jumpTo(index);
+    this.tree.jumpTo(index);
     this.refreshTimeTravelState();
   }
 
@@ -196,14 +196,14 @@ export class TimeTravelDemoComponent {
   }
 
   clearHistory() {
-    this.timeTravel.resetHistory();
+    this.tree.resetHistory();
     this.refreshTimeTravelState();
   }
 
   // Generate sample actions for easy testing
   generateSampleActions() {
     // Reset history first
-    this.timeTravel.resetHistory();
+    this.tree.resetHistory();
 
     // Create a sequence of actions with delays for better history visualization
     setTimeout(() => {

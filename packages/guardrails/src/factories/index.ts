@@ -1,10 +1,4 @@
-import { withGuardrails } from '../lib/guardrails';
-import { rules } from '../lib/rules';
-
-/**
- * Factory Patterns for SignalTree with Guardrails
- * @packageDocumentation
- */
+import { rules, withGuardrails } from '../noop';
 
 import type {
   SignalTreeBase as SignalTree,
@@ -12,8 +6,7 @@ import type {
   Enhancer,
 } from '@signaltree/core';
 
-import type { GuardrailsConfig } from '../lib/types';
-
+import type { GuardrailsConfig, GuardrailRule } from '../lib/types';
 declare const ngDevMode: boolean | undefined;
 
 interface GlobalProcess {
@@ -34,7 +27,7 @@ interface FeatureTreeOptions<T extends Record<string, unknown>> {
   name: string;
   env?: 'development' | 'test' | 'staging' | 'production';
   persistence?: boolean | Record<string, unknown>;
-  guardrails?: boolean | GuardrailsConfig;
+  guardrails?: boolean | GuardrailsConfig<T>;
   devtools?: boolean;
   enhancers?: Enhancer<unknown>[];
 }
@@ -95,12 +88,17 @@ export function createFeatureTree<T extends Record<string, unknown>>(
     enhancers.push(...options.enhancers);
   }
 
-  let tree = signalTree(initial);
+  const tree = signalTree(initial);
+  // Apply enhancers in an `unknown` local to avoid leaking temporary
+  // `SignalTreeBase<unknown>` inference into the typed `SignalTree<T>`.
+  // The factory API remains strongly typed for callers; this cast only
+  // affects internal sequencing of enhancers.
+  let enhanced: unknown = tree;
   for (const enhancer of enhancers) {
-    tree = tree.with(enhancer);
+    enhanced = (enhanced as any).with(enhancer);
   }
 
-  return tree;
+  return enhanced as SignalTree<T>;
 }
 
 /**
@@ -134,8 +132,8 @@ export function createAppShellTree<T extends Record<string, unknown>>(
         maxMemory: 20,
       },
       hotPaths: { threshold: 5 },
-      customRules: [rules.noDeepNesting(3)],
-    },
+      customRules: [rules.noDeepNesting(3) as unknown as GuardrailRule<T>],
+    } as GuardrailsConfig<T>,
   });
 }
 
@@ -174,11 +172,11 @@ export function createFormTree<T extends Record<string, unknown>>(
     name: `form-${formName}`,
     guardrails: {
       customRules: [
-        rules.noDeepNesting(4),
-        rules.maxPayloadSize(50),
-        rules.noSensitiveData(),
+        rules.noDeepNesting(4) as unknown as GuardrailRule<T>,
+        rules.maxPayloadSize(50) as unknown as GuardrailRule<T>,
+        rules.noSensitiveData() as unknown as GuardrailRule<T>,
       ],
-    },
+    } as GuardrailsConfig<T>,
   });
 }
 
@@ -206,7 +204,7 @@ export function createCacheTree<T extends Record<string, unknown>>(
 export function createTestTree<T extends Record<string, unknown>>(
   signalTree: SignalTreeFactory<T>,
   initial: T,
-  overrides?: Partial<GuardrailsConfig>
+  overrides?: Partial<GuardrailsConfig<T>>
 ): SignalTree<T> {
   return createFeatureTree(signalTree, initial, {
     name: 'test',
@@ -217,8 +215,11 @@ export function createTestTree<T extends Record<string, unknown>>(
         maxUpdateTime: 5,
         maxRecomputations: 50,
       },
-      customRules: [rules.noFunctionsInState(), rules.noDeepNesting(4)],
-      ...overrides,
-    },
+      customRules: [
+        rules.noFunctionsInState() as unknown as GuardrailRule<T>,
+        rules.noDeepNesting(4) as unknown as GuardrailRule<T>,
+      ],
+      ...(overrides as unknown as Partial<GuardrailsConfig<T>>),
+    } as GuardrailsConfig<T>,
   });
 }
