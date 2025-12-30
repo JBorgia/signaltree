@@ -248,13 +248,27 @@ export { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './lib/constants';
 // to existing `with*` factories so demos and examples can adopt the
 // new naming while the core implementation still provides the original
 // factories.
+/**
+ * @deprecated Legacy alias export. Prefer the short factory name (e.g. `highPerformanceBatching()`)
+ * and import that directly from the short-named module. This alias will be removed in a future major release.
+ */
 export { withHighPerformanceBatching as highPerformanceBatching } from './enhancers/batching/batching';
+
+/**
+ * @deprecated Legacy alias exports. Prefer the short factory names (e.g. `lightweightMemoization()`, `shallowMemoization()`, `computedMemoization()`, `selectorMemoization()`)
+ * and import them directly from the memoization enhancer. These aliases will be removed in a future major release.
+ */
 export {
   withLightweightMemoization as lightweightMemoization,
   withShallowMemoization as shallowMemoization,
   withComputedMemoization as computedMemoization,
   withSelectorMemoization as selectorMemoization,
 } from './enhancers/memoization/memoization';
+
+/**
+ * @deprecated Legacy alias export. Prefer `serialization()` imported from the serialization enhancer.
+ * This alias will be removed in a future major release.
+ */
 export { withSerialization as serialization } from './enhancers/serialization/serialization';
 
 /**
