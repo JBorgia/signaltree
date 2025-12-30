@@ -1,7 +1,7 @@
 import { ISignalTree } from '../../lib/types';
 import { Assert, Equals } from '../test-helpers/types-equals';
 import { TimeTravelMethods } from '../types';
-import { TimeTravelConfig, timeTravel } from './time-travel';
+import { timeTravel, TimeTravelConfig } from './time-travel';
 
 type ExpectedSignature = (
   config?: TimeTravelConfig

@@ -1,4 +1,8 @@
-import { ISignalTree, MemoizationConfig, MemoizationMethods } from '../../lib/types';
+import {
+  ISignalTree,
+  MemoizationConfig,
+  MemoizationMethods,
+} from '../../lib/types';
 import { Assert, Equals } from '../test-helpers/types-equals';
 import { memoization } from './memoization';
 
