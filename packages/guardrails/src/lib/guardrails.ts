@@ -138,7 +138,7 @@ const POLLING_INTERVAL_MS = 50; // Fast polling for dev-time monitoring
  * falls back to polling-based detection in non-Angular environments (tests)
  */
 export function withGuardrails(
-  config: GuardrailsConfig = {}
+  config: GuardrailsConfig<any> = {}
 ): <S>(
   tree: SignalTree<S>
 ) => SignalTree<S> & { __guardrails?: GuardrailsAPI } {
