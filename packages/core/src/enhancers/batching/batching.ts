@@ -250,8 +250,12 @@ export function withBatchingWithConfig<T>(
   return enhancer as unknown as Enhancer<BatchingMethods<T>>;
 }
 
+/**
+ * @deprecated Use `batching()` instead. This legacy factory will be
+ * removed in a future major release.
+ */
 /** User-friendly no-arg signature expected by type-level tests */
-export function withBatching(
+export function batching(
   config: BatchingConfig = {}
 ): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & BatchingMethods<any> {
   return withBatchingWithConfig(config) as unknown as <
@@ -286,12 +290,23 @@ export function flushBatchedUpdates(): void {
 export function hasPendingUpdates(): boolean {
   return updateQueue.length > 0;
 }
-
+ 
 export function getBatchQueueSize(): number {
   return updateQueue.length;
 }
 
-// v6 alias with preset attachment
-export const batching = Object.assign(withBatching, {
+/**
+ * @deprecated Use `batching()` as the primary enhancer. `withBatching` is
+ * retained for backwards compatibility and will be removed in a future major
+ * release.
+ */
+// (see exported `batching` below)
+
+// Primary v6-friendly `batching` export: wraps the legacy implementation
+/**
+ * @deprecated Use `batching()` as the primary enhancer. This legacy
+ * `withBatching` alias will be removed in a future major release.
+ */
+export const withBatching = Object.assign(batching, {
   highPerformance: withHighPerformanceBatching,
 });

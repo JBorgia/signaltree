@@ -30,7 +30,7 @@ function isEntityMapMarker(value: unknown): value is Marker {
  *
  * Contract: (config?) => <S>(tree: SignalTree<S>) => SignalTree<S> & EntitiesEnabled
  */
-export function withEntities(
+export function entities(
   config: EntitiesEnhancerConfig = {}
 ): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & EntitiesEnabled {
   // ← Explicit signature
@@ -84,17 +84,20 @@ export function withEntities(
 export function enableEntities(): <Tree extends ISignalTree<any>>(
   tree: Tree
 ) => Tree & EntitiesEnabled {
-  return withEntities();
+  return entities();
 }
 
 export function withHighPerformanceEntities(): <Tree extends ISignalTree<any>>(
   tree: Tree
 ) => Tree & EntitiesEnabled {
-  return withEntities();
+  return entities();
 }
 
-// v6 alias with presets
-export const entities = Object.assign(withEntities, {
+/**
+ * @deprecated Use `entities()` instead. This legacy `withEntities`
+ * alias will be removed in a future major release.
+ */
+export const withEntities = Object.assign(entities, {
   highPerformance: withHighPerformanceEntities,
   enable: enableEntities,
 });

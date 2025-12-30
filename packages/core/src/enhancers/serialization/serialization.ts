@@ -1001,10 +1001,6 @@ export interface PersistenceConfig extends SerializationConfig {
 /**
  * Adds persistence capabilities to a SerializableSignalTree
  */
-/**
- * @deprecated Use `persistence()` instead. This legacy `withPersistence`
- * alias will be removed in a future major release.
- */
 export function persistence(
   config: PersistenceConfig
 ): <Tree extends SignalTree<any>>(

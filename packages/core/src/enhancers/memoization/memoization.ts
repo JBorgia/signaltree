@@ -465,16 +465,29 @@ export function withHighFrequencyMemoization(): <S>(
 }
 
 // New v6-friendly export: `memoization` with named presets.
-export const memoization = Object.assign(withMemoization, {
-  selector: withSelectorMemoization,
-  computed: withComputedMemoization,
-  deep: withDeepStateMemoization,
-  fast: withHighFrequencyMemoization,
-});
+/**
+ * @deprecated Use `memoization()` as the primary enhancer. `withMemoization`
+ * is retained for backwards compatibility and will be removed in a future
+ * major release.
+ */
+// Primary v6-friendly `memoization` export: wraps the legacy implementation
+export const memoization = Object.assign(
+  (config: MemoizationConfig = {}) => withMemoization(config),
+  {
+    selector: withSelectorMemoization,
+    computed: withComputedMemoization,
+    deep: withDeepStateMemoization,
+    fast: withHighFrequencyMemoization,
+  }
+);
 
 /**
  * Enhances a SignalTree with memoization capabilities
  * Uses unconstrained recursive typing - no limitations on T
+ */
+/**
+ * @deprecated Use `memoization()` instead. This legacy factory will be
+ * removed in a future major release.
  */
 export function withMemoization(
   config: MemoizationConfig = {}
