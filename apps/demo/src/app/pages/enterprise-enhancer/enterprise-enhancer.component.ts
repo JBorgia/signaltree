@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
 import { signalTree } from '@signaltree/core';
-import { UpdateResult, withEnterprise } from '@signaltree/enterprise';
+import { enterprise, UpdateResult } from '@signaltree/enterprise';
 
 import type { ISignalTree } from '@signaltree/core';
 interface DashboardState extends Record<string, unknown> {
@@ -40,7 +40,7 @@ export class EnterpriseEnhancerComponent {
       language: 'en',
       notifications: true,
     },
-  }).with(withEnterprise());
+  }).with(enterprise());
 
   // Expose signals for template
   metrics = this.tree.$.metrics;

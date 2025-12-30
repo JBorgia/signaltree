@@ -45,6 +45,10 @@ import type { Enhancer } from '@signaltree/core';
  *
  * @public
  */
+/**
+ * @deprecated Use `enterprise()` instead. This legacy `withEnterprise`
+ * alias will be removed in a future major release.
+ */
 export function withEnterprise(): <
   Tree extends import('@signaltree/core').SignalTree<any>
 >(
@@ -148,3 +152,6 @@ export interface EnterpriseEnhancedTree<T> {
    */
   getPathIndex(): PathIndex<Signal<unknown>> | null;
 }
+
+// v6 alias
+export const enterprise = Object.assign(withEnterprise, {});

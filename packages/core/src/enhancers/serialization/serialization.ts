@@ -473,6 +473,10 @@ function resolveCircularReferences(
 /**
  * Enhances a SignalTree with serialization capabilities
  */
+/**
+ * @deprecated Use `serialization()` instead. This legacy `withSerialization`
+ * alias will be removed in a future major release.
+ */
 export function withSerialization(
   defaultConfig: SerializationConfig = {}
 ): <Tree extends SignalTree<any>>(tree: Tree) => Tree & SerializationMethods {
@@ -987,6 +991,10 @@ export interface PersistenceConfig extends SerializationConfig {
 /**
  * Adds persistence capabilities to a SerializableSignalTree
  */
+/**
+ * @deprecated Use `persistence()` instead. This legacy `withPersistence`
+ * alias will be removed in a future major release.
+ */
 export function withPersistence(
   config: PersistenceConfig
 ): <Tree extends SignalTree<any>>(
@@ -1254,6 +1262,10 @@ export function createIndexedDBAdapter(
 }
 
 // Type-only exports (none)
+
+// v6-friendly aliases
+export const serialization = Object.assign(withSerialization, {});
+export const persistence = Object.assign(withPersistence, {});
 
 /**
  * Helpers to apply enhancers with explicit typing to avoid depending on

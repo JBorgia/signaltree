@@ -226,6 +226,9 @@ export function withGuardrails(
   };
 }
 
+// v6 alias
+export const guardrails = Object.assign(withGuardrails, {});
+
 /**
  * Start change detection - tries PathNotifier first, then reactive subscription, finally polling
  */

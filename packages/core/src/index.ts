@@ -185,12 +185,12 @@ export {
 
 /**
  * Serialization enhancer for state persistence and restoration
- * @see {@link withSerialization} for serialization capabilities
+ * Primary v6 exports: `serialization()` and `persistence()`.
  */
 export {
-  withSerialization,
+  serialization,
   enableSerialization,
-  withPersistence,
+  persistence,
   createStorageAdapter,
   createIndexedDBAdapter,
   applySerialization,
@@ -269,7 +269,7 @@ export {
  * @deprecated Legacy alias export. Prefer `serialization()` imported from the serialization enhancer.
  * This alias will be removed in a future major release.
  */
-export { withSerialization as serialization } from './enhancers/serialization/serialization';
+export { serialization as withSerialization, persistence as withPersistence } from './enhancers/serialization/serialization';
 
 /**
  * SignalTree Core API Summary:

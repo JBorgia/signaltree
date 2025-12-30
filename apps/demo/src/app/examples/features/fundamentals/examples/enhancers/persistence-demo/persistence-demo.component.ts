@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { signalTree, withPersistence } from '@signaltree/core';
+import { persistence, signalTree } from '@signaltree/core';
 
 interface PersistenceState extends Record<string, unknown> {
   user: {
@@ -71,7 +71,7 @@ export class PersistenceDemoComponent implements OnDestroy {
     notes: [],
     lastSaved: null,
   }).with(
-    withPersistence({
+    persistence({
       key: this.STORAGE_KEY,
       autoSave: true, // Auto-save on every state change
       autoLoad: true, // Auto-load on creation
