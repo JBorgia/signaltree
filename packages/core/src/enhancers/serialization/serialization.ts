@@ -1132,7 +1132,7 @@ export function withPersistence(
       // Try to use tree.subscribe() for reactive state watching
       // This leverages Angular's effect system - no polling needed in production
       try {
-        tree.subscribe(() => {
+        (tree as unknown as ISignalTree<any>).subscribe(() => {
           const currentState = JSON.stringify(tree());
           if (currentState !== previousState) {
             previousState = currentState;
@@ -1156,7 +1156,7 @@ export function withPersistence(
       }
 
       // Store cleanup function for testing
-      (enhanced as EnhancedSignalTree).__flushAutoSave = () => {
+      (enhanced as unknown as EnhancedSignalTree).__flushAutoSave = () => {
         pollingActive = false;
         if (saveTimeout) {
           clearTimeout(saveTimeout);
@@ -1260,13 +1260,13 @@ export function createIndexedDBAdapter(
 export function applySerialization<T extends Record<string, unknown>>(
   tree: SignalTree<T>
 ): SerializableSignalTree<T> {
-  return withSerialization<T>()(tree) as SerializableSignalTree<T>;
+  return withSerialization()(tree) as SerializableSignalTree<T>;
 }
 
 export function applyPersistence<T extends Record<string, unknown>>(
   tree: SignalTree<T>,
   cfg: PersistenceConfig
 ): SerializableSignalTree<T> & PersistenceMethods {
-  return withPersistence<T>(cfg)(tree) as SerializableSignalTree<T> &
+  return withPersistence(cfg)(tree) as SerializableSignalTree<T> &
     PersistenceMethods;
 }
