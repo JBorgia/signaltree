@@ -170,17 +170,17 @@ export interface TimeTravelMethods<T = unknown> {
   redo(): void;
   canUndo(): boolean;
   canRedo(): boolean;
-  getHistory(): unknown[];
+  getHistory(): TimeTravelEntry<T>[];
   resetHistory(): void;
   jumpTo(index: number): void;
   getCurrentIndex(): number;
   /** Internal time-travel manager exposed for advanced tooling/debugging */
-  readonly __timeTravel?: {
+  readonly __timeTravel: {
     undo(): void;
     redo(): void;
     canUndo(): boolean;
     canRedo(): boolean;
-    getHistory(): unknown[];
+    getHistory(): TimeTravelEntry<T>[];
     resetHistory(): void;
     jumpTo(index: number): void;
     getCurrentIndex(): number;
