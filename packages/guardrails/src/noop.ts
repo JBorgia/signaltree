@@ -25,11 +25,11 @@ export function withGuardrails(config: GuardrailsConfig<any> = {}) {
 }
 
 export const rules = {
-  noDeepNesting: () => noopRule('noop'),
+  noDeepNesting: (_maxDepth: number = 5) => noopRule('noop'),
   noFunctionsInState: () => noopRule('noop'),
   noCacheInPersistence: () => noopRule('noop'),
-  maxPayloadSize: () => noopRule('noop'),
-  noSensitiveData: () => noopRule('noop'),
+  maxPayloadSize: (_maxKB: number = 100) => noopRule('noop'),
+  noSensitiveData: (_sensitiveKeys: string[] = ['password', 'token', 'secret', 'apiKey']) => noopRule('noop'),
 };
 
 export * from './lib/types';
