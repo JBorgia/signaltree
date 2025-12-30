@@ -116,14 +116,16 @@ export function createDevTree<T extends object>(
   config: DevTreeConfig = {}
 ): FullSignalTree<T>;
 export function createDevTree(): {
-  enhancer: <Tree extends SignalTreeBase<any>>(tree: Tree) =>
-    Tree &
+  enhancer: <Tree extends SignalTreeBase<any>>(
+    tree: Tree
+  ) => Tree &
     EffectsMethods<any> &
     BatchingMethods &
     MemoizationMethods<any> &
     EntitiesEnabled &
     TimeTravelMethods &
     DevToolsMethods;
+};
 export function createDevTree<T extends object>(
   initialState?: T,
   config: DevTreeConfig = {}
