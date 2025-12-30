@@ -473,11 +473,7 @@ function resolveCircularReferences(
 /**
  * Enhances a SignalTree with serialization capabilities
  */
-/**
- * @deprecated Use `serialization()` instead. This legacy `withSerialization`
- * alias will be removed in a future major release.
- */
-export function withSerialization(
+export function serialization(
   defaultConfig: SerializationConfig = {}
 ): <Tree extends SignalTree<any>>(tree: Tree) => Tree & SerializationMethods {
   return <Tree extends SignalTree<any>>(
@@ -928,12 +924,26 @@ export function withSerialization(
 }
 
 /**
+ * @deprecated Use `serialization()` instead. This legacy `withSerialization`
+ * alias will be removed in a future major release.
+ */
+/**
+ * @deprecated Use `serialization()` as the primary enhancer. This alias
+ * remains for backwards compatibility and will be removed in a future major
+ * release.
+ */
+export const withSerialization = Object.assign(
+  (defaultConfig: SerializationConfig = {}) => serialization(defaultConfig),
+  {}
+);
+
+/**
  * Convenience function to enable serialization with defaults
  */
 export function enableSerialization(): <Tree extends SignalTree<any>>(
   tree: Tree
 ) => Tree & SerializationMethods {
-  return withSerialization({
+  return serialization({
     includeMetadata: true,
     preserveTypes: true,
     handleCircular: true,
@@ -995,7 +1005,7 @@ export interface PersistenceConfig extends SerializationConfig {
  * @deprecated Use `persistence()` instead. This legacy `withPersistence`
  * alias will be removed in a future major release.
  */
-export function withPersistence(
+export function persistence(
   config: PersistenceConfig
 ): <Tree extends SignalTree<any>>(
   tree: Tree
@@ -1182,6 +1192,16 @@ export function withPersistence(
 }
 
 /**
+ * @deprecated Use `persistence()` as the primary enhancer. This alias
+ * remains for backwards compatibility and will be removed in a future major
+ * release.
+ */
+export const withPersistence = Object.assign(
+  (cfg: PersistenceConfig) => persistence(cfg),
+  {}
+);
+
+/**
  * Create a custom storage adapter
  */
 export function createStorageAdapter(
@@ -1263,9 +1283,9 @@ export function createIndexedDBAdapter(
 
 // Type-only exports (none)
 
-// v6-friendly aliases
-export const serialization = Object.assign(withSerialization, {});
-export const persistence = Object.assign(withPersistence, {});
+// The primary `serialization()` and `persistence()` implementations are
+// declared above. Legacy `withSerialization` / `withPersistence` aliases
+// are exported (and annotated `@deprecated`) for backwards compatibility.
 
 /**
  * Helpers to apply enhancers with explicit typing to avoid depending on
@@ -1274,15 +1294,14 @@ export const persistence = Object.assign(withPersistence, {});
 export function applySerialization<T extends Record<string, unknown>>(
   tree: ISignalTree<T>
 ): ISignalTree<T> & SerializationMethods {
-  return withSerialization()(tree as any) as ISignalTree<T> &
-    SerializationMethods;
+  return serialization()(tree as any) as ISignalTree<T> & SerializationMethods;
 }
 
 export function applyPersistence<T extends Record<string, unknown>>(
   tree: ISignalTree<T>,
   cfg: PersistenceConfig
 ): ISignalTree<T> & SerializationMethods & PersistenceMethods {
-  return withPersistence(cfg)(tree as any) as ISignalTree<T> &
+  return persistence(cfg)(tree as any) as ISignalTree<T> &
     SerializationMethods &
     PersistenceMethods;
 }

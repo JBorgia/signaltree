@@ -269,7 +269,10 @@ export {
  * @deprecated Legacy alias export. Prefer `serialization()` imported from the serialization enhancer.
  * This alias will be removed in a future major release.
  */
-export { serialization as withSerialization, persistence as withPersistence } from './enhancers/serialization/serialization';
+export {
+  serialization as withSerialization,
+  persistence as withPersistence,
+} from './enhancers/serialization/serialization';
 
 /**
  * SignalTree Core API Summary:

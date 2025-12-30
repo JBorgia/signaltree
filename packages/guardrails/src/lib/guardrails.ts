@@ -137,7 +137,7 @@ const POLLING_INTERVAL_MS = 50; // Fast polling for dev-time monitoring
  * Uses reactive subscription when in Angular context (zero polling),
  * falls back to polling-based detection in non-Angular environments (tests)
  */
-export function withGuardrails(
+export function guardrails(
   config: GuardrailsConfig<any> = {}
 ): <Tree extends ISignalTree<any>>(
   tree: Tree
@@ -226,8 +226,11 @@ export function withGuardrails(
   };
 }
 
-// v6 alias
-export const guardrails = Object.assign(withGuardrails, {});
+/**
+ * @deprecated Use `guardrails()` instead. This legacy `withGuardrails`
+ * alias will be removed in a future major release.
+ */
+export const withGuardrails = Object.assign(guardrails, {});
 
 /**
  * Start change detection - tries PathNotifier first, then reactive subscription, finally polling
