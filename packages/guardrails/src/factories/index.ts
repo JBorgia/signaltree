@@ -1,10 +1,4 @@
-/**
-import { withGuardrails } from '../lib/guardrails';
-import { rules } from '../lib/rules';
-
- * Factory Patterns for SignalTree with Guardrails
- * @packageDocumentation
- */
+import { rules, withGuardrails } from '../noop';
 
 import type {
   SignalTreeBase as SignalTree,
@@ -13,7 +7,6 @@ import type {
 } from '@signaltree/core';
 
 import type { GuardrailsConfig } from '../lib/types';
-
 declare const ngDevMode: boolean | undefined;
 
 interface GlobalProcess {
@@ -140,7 +133,7 @@ export function createAppShellTree<T extends Record<string, unknown>>(
       },
       hotPaths: { threshold: 5 },
       customRules: [rules.noDeepNesting(3)],
-    },
+    } as GuardrailsConfig<T>,
   });
 }
 
@@ -183,7 +176,7 @@ export function createFormTree<T extends Record<string, unknown>>(
         rules.maxPayloadSize(50),
         rules.noSensitiveData(),
       ],
-    },
+    } as GuardrailsConfig<T>,
   });
 }
 
@@ -224,6 +217,6 @@ export function createTestTree<T extends Record<string, unknown>>(
       },
       customRules: [rules.noFunctionsInState(), rules.noDeepNesting(4)],
       ...(overrides as unknown as Partial<GuardrailsConfig<T>>),
-    },
+    } as GuardrailsConfig<T>,
   });
 }
