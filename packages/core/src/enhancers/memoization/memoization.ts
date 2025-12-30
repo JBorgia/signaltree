@@ -91,22 +91,282 @@ function createMemoCacheStore<V>(
         shadow.forEach((value, key) => callback(value, key));
       },
       keys: () => shadow.keys(),
-    // Primary `memoization` export: wrapper around internal implementation
-    export const memoization = Object.assign(
-      (config: MemoizationConfig = {}) => _memoizationImpl(config),
-      {
-        selector: withSelectorMemoization,
-        computed: withComputedMemoization,
-        deep: withDeepStateMemoization,
-        fast: withHighFrequencyMemoization,
-      }
-    );
+    };
+  }
 
-    /**
-     * @deprecated Use `memoization()` as the primary enhancer. This legacy
-     * `withMemoization` alias will be removed in a future major release.
-     */
-    export const withMemoization = Object.assign(memoization, {});
+  const store = new Map<string, V>();
+  return {
+    get: (key) => store.get(key),
+    set: (key, value) => {
+      store.set(key, value);
+    },
+    delete: (key) => store.delete(key),
+    clear: () => store.clear(),
+    size: () => store.size,
+    forEach: (callback) => {
+      store.forEach((value, key) => callback(value, key));
+    },
+    keys: () => store.keys(),
+  };
+}
+
+function getCleanupInterval(
+  tree: object
+): ReturnType<typeof setInterval> | undefined {
+  return (
+    tree as {
+      _memoCleanupInterval?: ReturnType<typeof setInterval>;
+    }
+  )._memoCleanupInterval;
+}
+
+function setCleanupInterval(
+  tree: object,
+  interval?: ReturnType<typeof setInterval>
+): void {
+  if (interval === undefined) {
+    delete (
+      tree as {
+        _memoCleanupInterval?: ReturnType<typeof setInterval>;
+      }
+    )._memoCleanupInterval;
+    return;
+  }
+
+  (
+    tree as {
+      _memoCleanupInterval?: ReturnType<typeof setInterval>;
+    }
+  )._memoCleanupInterval = interval;
+}
+
+function clearCleanupInterval(tree: object): void {
+  const interval = getCleanupInterval(tree);
+  if (!interval) {
+    return;
+  }
+
+  try {
+    clearInterval(interval as unknown as number);
+  } catch {
+    /* best-effort cleanup */
+  }
+
+  setCleanupInterval(tree);
+}
+
+function resetMemoizationCaches(): void {
+  memoizationCache.forEach((cache, tree) => {
+    cache.clear();
+    clearCleanupInterval(tree);
+  });
+  memoizationCache.clear();
+}
+
+/**
+ * Cleanup the cache interval on app shutdown
+ */
+export function cleanupMemoizationCache(): void {
+  resetMemoizationCaches();
+}
+
+/**
+ * Shallow equality check for dependency comparison
+ * Much faster than deep equality for objects with primitive values
+ * Optimized: Uses for...in instead of Object.keys() to avoid array allocations
+ */
+function shallowEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (a == null || b == null) return false;
+  if (typeof a !== typeof b) return false;
+
+  if (typeof a === 'object' && typeof b === 'object') {
+    const objA = a as Record<string, unknown>;
+    const objB = b as Record<string, unknown>;
+
+    // Count properties in objA and check equality
+    let countA = 0;
+    for (const key in objA) {
+      if (!Object.prototype.hasOwnProperty.call(objA, key)) continue;
+      countA++;
+      // Early exit if key missing or value different
+      if (!(key in objB) || objA[key] !== objB[key]) return false;
+    }
+
+    // Count properties in objB to ensure same number
+    let countB = 0;
+    for (const key in objB) {
+      if (Object.prototype.hasOwnProperty.call(objB, key)) countB++;
+    }
+
+    return countA === countB;
+  }
+
+  return false;
+}
+/**
+ * Generate cache key for memoization
+ */
+function generateCacheKey(
+  fn: (...args: unknown[]) => unknown,
+  args: unknown[]
+): string {
+  try {
+    return `${fn.name || 'anonymous'}_${JSON.stringify(args)}`;
+  } catch {
+    // Fallback for cyclic or non-serializable args
+    return `${fn.name || 'anonymous'}_${args.length}`;
+  }
+}
+
+/**
+ * Get equality function based on strategy
+ */
+function getEqualityFn(
+  strategy: 'deep' | 'shallow' | 'reference'
+): (a: unknown, b: unknown) => boolean {
+  switch (strategy) {
+    case 'shallow':
+      return shallowEqual;
+    case 'reference':
+      return (a, b) => a === b;
+    case 'deep':
+    default:
+      return deepEqual;
+  }
+}
+
+/**
+ * Memoization function that caches expensive computations with enhanced cache management
+ */
+import type {
+  MemoizationConfig,
+  MemoizationMethods,
+  CacheStats,
+} from '../../lib/types';
+export function memoize<TArgs extends unknown[], TReturn>(
+  fn: (...args: TArgs) => TReturn,
+  keyFn?: (...args: TArgs) => string,
+  config: MemoizationConfig = {}
+): (...args: TArgs) => TReturn {
+  const maxSize = config.maxCacheSize ?? MAX_CACHE_SIZE;
+  const ttl = config.ttl ?? DEFAULT_TTL;
+  // Use shallow equality by default to avoid expensive deep comparisons
+  const equality = getEqualityFn(config.equality ?? 'shallow');
+  // Disable LRU by default to avoid hidden CPU overhead
+  const enableLRU = config.enableLRU ?? false;
+  const cache = createMemoCacheStore<CacheEntry<TReturn>>(maxSize, enableLRU);
+
+  const cleanExpiredEntries = () => {
+    if (!ttl) return; // Skip if TTL is disabled
+    const now = Date.now();
+    cache.forEach((entry, key) => {
+      if (entry.timestamp && now - entry.timestamp > ttl) {
+        cache.delete(key);
+      }
+    });
+  };
+
+  return (...args: TArgs): TReturn => {
+    // Probabilistic cleanup to avoid paying cleanup cost on every hot call.
+    // Runs ~1% of the time when TTL is enabled.
+    if (ttl && Math.random() < 0.01) {
+      cleanExpiredEntries();
+    }
+
+    const key = keyFn
+      ? keyFn(...args)
+      : generateCacheKey(
+          fn as (...args: unknown[]) => unknown,
+          args as unknown[]
+        );
+    const cached = cache.get(key);
+
+    // If using custom key function, trust the key; otherwise check equality
+    if (cached && (keyFn || equality(cached.deps, args))) {
+      if (enableLRU) {
+        cached.hitCount += 1;
+      }
+      return cached.value;
+    }
+
+    const result = fn(...args);
+    cache.set(key, {
+      value: result,
+      deps: args as readonly unknown[],
+      timestamp: Date.now(),
+      hitCount: 1,
+    });
+
+    return result;
+  };
+}
+/**
+ * High-performance memoization function optimized for speed
+ * Uses shallow equality and minimal cache management overhead
+ */
+export function memoizeShallow<TArgs extends unknown[], TReturn>(
+  fn: (...args: TArgs) => TReturn,
+  keyFn?: (...args: TArgs) => string
+): (...args: TArgs) => TReturn {
+  return memoize(fn, keyFn, {
+    equality: 'shallow',
+    enableLRU: false,
+    ttl: undefined,
+    maxCacheSize: 100,
+  });
+}
+
+/**
+ * Lightweight memoization function with reference equality only
+ * Maximum performance for scenarios where exact reference matches are sufficient
+ */
+export function memoizeReference<TArgs extends unknown[], TReturn>(
+  fn: (...args: TArgs) => TReturn,
+  keyFn?: (...args: TArgs) => string
+): (...args: TArgs) => TReturn {
+  return memoize(fn, keyFn, {
+    equality: 'reference',
+    enableLRU: false,
+    ttl: undefined,
+    maxCacheSize: 50,
+  });
+}
+
+/**
+ * Preset memoization configurations optimized for common use cases
+ * These presets are the same ones used in SignalTree's benchmarks
+ */
+export const MEMOIZATION_PRESETS = {
+  /**
+   * Optimized for selectors and frequently-accessed computed values
+   * - Fast reference-only equality checks (~0.3μs)
+   * - Small cache (10 entries) for minimal overhead
+   * - No LRU management (eliminates bookkeeping cost)
+   * - Best for: Selectors, derived values, stable references
+   */
+  selector: {
+    equality: 'reference' as const,
+    maxCacheSize: 10,
+    enableLRU: false,
+    ttl: undefined,
+  },
+
+  /**
+   * Balanced configuration for general computed values
+   * - Shallow equality checks (~5-15μs) for object comparisons
+   * - Medium cache (100 entries) for reasonable coverage
+   * - No LRU (good performance/memory balance)
+   * - Best for: General computations, objects with primitives
+   */
+  computed: {
+    equality: 'shallow' as const,
+    maxCacheSize: 100,
+    enableLRU: false,
+    ttl: undefined,
+  },
+
+  /**
    * Thorough configuration for complex nested state
    * - Deep equality checks (~50-200μs) for nested objects
    * - Large cache (1000 entries) for complex scenarios
@@ -169,9 +429,7 @@ export function withSelectorMemoization(): <S>(
 export function withComputedMemoization(): <S>(
   tree: ISignalTree<S>
 ) => ISignalTree<S> & MemoizationMethods<S> {
-  return memoization(MEMOIZATION_PRESETS.computed) as unknown as <S>(
-    tree: ISignalTree<S>
-  ) => ISignalTree<S> & MemoizationMethods<S>;
+  return withMemoization(MEMOIZATION_PRESETS.computed);
 }
 
 /**
@@ -187,9 +445,7 @@ export function withComputedMemoization(): <S>(
 export function withDeepStateMemoization(): <S>(
   tree: ISignalTree<S>
 ) => ISignalTree<S> & MemoizationMethods<S> {
-  return memoization(MEMOIZATION_PRESETS.deepState) as unknown as <S>(
-    tree: ISignalTree<S>
-  ) => ISignalTree<S> & MemoizationMethods<S>;
+  return withMemoization(MEMOIZATION_PRESETS.deepState);
 }
 
 /**
@@ -205,248 +461,25 @@ export function withDeepStateMemoization(): <S>(
 export function withHighFrequencyMemoization(): <S>(
   tree: ISignalTree<S>
 ) => ISignalTree<S> & MemoizationMethods<S> {
-  return memoization(MEMOIZATION_PRESETS.highFrequency) as unknown as <S>(
-    tree: ISignalTree<S>
-  ) => ISignalTree<S> & MemoizationMethods<S>;
+  return withMemoization(MEMOIZATION_PRESETS.highFrequency);
 }
 
 // New v6-friendly export: `memoization` with named presets.
 /**
- * Core implementation moved to an internal helper so `memoization` can be
- * the primary export while `withMemoization` remains a deprecated alias.
+ * @deprecated Use `memoization()` as the primary enhancer. `withMemoization`
+ * is retained for backwards compatibility and will be removed in a future
+ * major release.
  */
-function _memoizationImpl(
-  config: MemoizationConfig = {}
-): <Tree extends ISignalTree<any>>(
-  tree: Tree
-) => Tree & MemoizationMethods<any> {
-  // Reuse the implementation that used to live on `withMemoization`
-  const {
-    enabled = true,
-    maxCacheSize = 1000,
-    ttl,
-    equality = 'deep',
-    enableLRU = true,
-  } = config;
-
-  const enhancer = <S>(
-    tree: ISignalTree<S>
-  ): ISignalTree<S> & MemoizationMethods<S> => {
-    const originalTreeCall = tree.bind(tree);
-
-    const applyUpdateResult = (result: Partial<S>) => {
-      Object.entries(result).forEach(([propKey, value]) => {
-        const property = (tree.state as unknown as TreeNode<S>)[
-          propKey as keyof S
-        ];
-        if (property && 'set' in (property as object)) {
-          (property as { set: (value: unknown) => void }).set(value);
-        } else if (isNodeAccessor(property)) {
-          (property as (value: unknown) => void)(value);
-        }
-      });
-    };
-
-    if (!enabled) {
-      const memoTree = tree as ISignalTree<S> & MemoizationMethods<S>;
-
-      memoTree.memoize = <R>(
-        fn: (state: S) => R,
-        _cacheKey?: string
-      ): Signal<R> => {
-        return computed(() => fn(originalTreeCall()));
-      };
-
-      memoTree.memoizedUpdate = (updater) => {
-        const currentState = originalTreeCall();
-        const result = updater(currentState);
-        applyUpdateResult(result);
-      };
-
-      memoTree.clearMemoCache = () => {
-        /* no-op when memoization disabled */
-      };
-
-      (
-        memoTree as unknown as { clearCache: typeof memoTree.clearMemoCache }
-      ).clearCache = memoTree.clearMemoCache;
-
-      memoTree.getCacheStats = () => ({
-        size: 0,
-        hitRate: 0,
-        totalHits: 0,
-        totalMisses: 0,
-        keys: [],
-      });
-
-      return memoTree;
-    }
-
-    // The rest of the implementation is unchanged and reuses existing helpers
-    const cache = createMemoCacheStore<CacheEntry<Partial<S>>>(
-      maxCacheSize,
-      enableLRU
-    );
-    memoizationCache.set(
-      tree as object,
-      cache as unknown as MemoCacheStore<CacheEntry<unknown>>
-    );
-
-    const equalityFn = getEqualityFn(equality);
-
-    (tree as ISignalTree<S> & MemoizationMethods<S>).memoizedUpdate = (
-      updater: (current: S) => Partial<S>,
-      cacheKey?: string
-    ) => {
-      const currentState = originalTreeCall();
-      const key =
-        cacheKey ||
-        generateCacheKey(updater as (...args: unknown[]) => unknown, [
-          currentState,
-        ]);
-
-      const cached = cache.get(key);
-      if (cached && equalityFn(cached.deps, [currentState])) {
-        const cachedUpdate = cached.value as Partial<S>;
-        applyUpdateResult(cachedUpdate);
-        return;
-      }
-
-      const result = updater(currentState);
-
-      cache.set(key, {
-        value: result,
-        deps: [currentState],
-        timestamp: Date.now(),
-        hitCount: 1,
-      });
-
-      applyUpdateResult(result);
-    };
-
-    const memoizeResultCache = createMemoCacheStore<CacheEntry<unknown>>(
-      MAX_CACHE_SIZE,
-      true
-    );
-
-    (tree as ISignalTree<S> & MemoizationMethods<S>).memoize = <R>(
-      fn: (state: S) => R,
-      cacheKey?: string
-    ): Signal<R> => {
-      return computed(() => {
-        const currentState = originalTreeCall();
-        const key =
-          cacheKey ||
-          generateCacheKey(fn as (...args: unknown[]) => unknown, [
-            currentState,
-          ]);
-
-        const cached = memoizeResultCache.get(key) as
-          | CacheEntry<unknown>
-          | undefined;
-        if (cached && equalityFn(cached.deps, [currentState])) {
-          if (isDevMode() && (tree as any).__devHooks?.onRecompute) {
-            try {
-              (tree as any).__devHooks.onRecompute(key, 1);
-            } catch {}
-          }
-          return cached.value as R;
-        }
-
-        const result = fn(currentState);
-
-        memoizeResultCache.set(key, {
-          value: result,
-          deps: [currentState],
-          timestamp: Date.now(),
-          hitCount: 1,
-        });
-
-        return result;
-      });
-    };
-
-    (tree as ISignalTree<S> & MemoizationMethods<S>).clearMemoCache = (
-      key?: string
-    ) => {
-      if (key) {
-        cache.delete(key);
-      } else {
-        cache.clear();
-      }
-    };
-
-    (tree as any).clearCache = (tree as any).clearMemoCache;
-
-    (tree as ISignalTree<S> & MemoizationMethods<S>).getCacheStats = () => {
-      let totalHits = 0;
-      let totalMisses = 0;
-
-      cache.forEach((entry) => {
-        totalHits += entry.hitCount || 0;
-        totalMisses += Math.floor((entry.hitCount || 0) / 2);
-      });
-
-      const hitRate =
-        totalHits + totalMisses > 0 ? totalHits / (totalHits + totalMisses) : 0;
-
-      return {
-        size: cache.size(),
-        hitRate,
-        totalHits,
-        totalMisses,
-        keys: Array.from(cache.keys()),
-      };
-    };
-
-    const maybeInterval = getCleanupInterval(tree as object);
-    if (maybeInterval) {
-      const origClear = (
-        tree as ISignalTree<S> & MemoizationMethods<S>
-      ).clearMemoCache.bind(tree as ISignalTree<S> & MemoizationMethods<S>);
-      (tree as ISignalTree<S> & MemoizationMethods<S>).clearMemoCache = (
-        key?: string
-      ) => {
-        origClear(key);
-        clearCleanupInterval(tree as object);
-      };
-    }
-
-    (tree as any).clearCache = (tree as any).clearMemoCache;
-
-    if (ttl) {
-      const cleanup = () => {
-        const now = Date.now();
-        cache.forEach((entry, key) => {
-          if (entry.timestamp && now - entry.timestamp > ttl) {
-            cache.delete(key);
-          }
-        });
-      };
-
-      const intervalId = setInterval(cleanup, ttl);
-      setCleanupInterval(tree as object, intervalId);
-    }
-
-    return tree as ISignalTree<S> & MemoizationMethods<S>;
-  };
-
-  return enhancer as unknown as <Tree extends ISignalTree<any>>(
-    tree: Tree
-  ) => Tree & MemoizationMethods<any>;
-}
-
-export function memoization(config: MemoizationConfig = {}) {
-  return _memoizationImpl(config);
-}
-
-// Attach presets on the primary `memoization` export
-export const memoization = Object.assign(memoization, {
-  selector: withSelectorMemoization,
-  computed: withComputedMemoization,
-  deep: withDeepStateMemoization,
-  fast: withHighFrequencyMemoization,
-});
+// Primary v6-friendly `memoization` export: wraps the legacy implementation
+export const memoization = Object.assign(
+  (config: MemoizationConfig = {}) => withMemoization(config),
+  {
+    selector: withSelectorMemoization,
+    computed: withComputedMemoization,
+    deep: withDeepStateMemoization,
+    fast: withHighFrequencyMemoization,
+  }
+);
 
 /**
  * Enhances a SignalTree with memoization capabilities
