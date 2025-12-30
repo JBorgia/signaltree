@@ -30,7 +30,7 @@ export type MyTree = ReturnType<typeof createMyTree>; // No manual interface!
 
 ## Setup
 
-```typescript
+````typescript
 import { signalTree, entityMap, entities, persistence, timeTravel, devTools } from '@signaltree/core';
 
 // Note: v6 primary API uses short-named enhancers (e.g. `persistence()`).
@@ -39,7 +39,7 @@ import { signalTree, entityMap, entities, persistence, timeTravel, devTools } fr
 const tree = signalTree({
   users: entityMap<User>(), // EntitySignal - auto-detected by entities()
   settings: { theme: 'dark' },
-})
+} as const)
   .with(entities())
   .with(persistence({ key: 'app-state' }))
   .with(timeTravel())
@@ -58,8 +58,9 @@ const store = signalTree({
   user: { name: '', email: '', theme: 'system' as Themes },
   items: [] as Item[],
 });
-```
-```
+````
+
+````
 
 ## Entity CRUD
 
@@ -90,7 +91,7 @@ tree.$.users.updateOne(
     onError: (err) => console.warn(err.message),
   }
 );
-```
+````
 
 ## Hooks (Observe)
 

@@ -5,10 +5,10 @@ import { signalTree } from '@signaltree/core';
 // ==============================================
 
 const basicTree = signalTree({
-  name: 'John',
-  age: 30,
-  email: 'john@example.com',
-  active: true,
+  name: 'John' as string,
+  age: 30 as number,
+  email: 'john@example.com' as string,
+  active: true as boolean,
 });
 
 // Direct value updates (standard syntax)
@@ -28,16 +28,16 @@ basicTree.$.age.update((current) => current + 5);
 const nestedTree = signalTree({
   user: {
     profile: {
-      firstName: 'John',
-      lastName: 'Doe',
+      firstName: 'John' as string,
+      lastName: 'Doe' as string,
       settings: {
-        theme: 'dark',
-        notifications: true,
+        theme: 'dark' as string,
+        notifications: true as boolean,
       },
     },
     preferences: {
-      language: 'en',
-      timezone: 'UTC',
+      language: 'en' as string,
+      timezone: 'UTC' as string,
     },
   },
 });
@@ -60,9 +60,9 @@ const arrayTree = signalTree({
   todos: [
     { id: 1, text: 'Learn SignalTree', done: false },
     { id: 2, text: 'Build awesome app', done: false },
-  ],
-  tags: ['typescript', 'angular'],
-  scores: [95, 87, 92],
+  ] as Array<{ id: number; text: string; done: boolean }>,
+  tags: ['typescript', 'angular'] as string[],
+  scores: [95, 87, 92] as number[],
 });
 
 // Add new todo
@@ -88,14 +88,14 @@ arrayTree.$.scores.update((current) => current.map((score) => score + 3));
 
 const stateTree = signalTree({
   ui: {
-    loading: false,
+    loading: false as boolean,
     error: null as string | null,
     data: null as { results: string[] } | null,
   },
   filters: {
-    search: '',
-    category: 'all',
-    sortBy: 'name',
+    search: '' as string,
+    category: 'all' as string,
+    sortBy: 'name' as string,
   },
 });
 
@@ -126,13 +126,13 @@ stateTree.$.filters.category.update((current) =>
 
 const optionalTree = signalTree({
   user: {
-    name: 'John',
-    email: 'john@example.com',
+    name: 'John' as string,
+    email: 'john@example.com' as string,
     avatar: null as string | null,
     lastLogin: null as Date | null,
   },
   settings: {
-    notifications: true,
+    notifications: true as boolean,
     theme: 'auto' as 'light' | 'dark' | 'auto',
   },
 });
@@ -151,13 +151,13 @@ optionalTree.$.user.lastLogin.update((current) => current || new Date());
 
 const performanceTree = signalTree({
   metrics: {
-    pageViews: 0,
-    uniqueVisitors: 0,
-    bounceRate: 0.0,
+    pageViews: 0 as number,
+    uniqueVisitors: 0 as number,
+    bounceRate: 0.0 as number,
   },
   analytics: {
     events: [] as Array<{ type: string; timestamp: Date }>,
-    sessions: 0,
+    sessions: 0 as number,
   },
 });
 
