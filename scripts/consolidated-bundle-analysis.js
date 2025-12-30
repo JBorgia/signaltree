@@ -131,12 +131,6 @@ const packages = [
     maxSize: 900,
     claimed: 760,
   },
-  {
-    name: 'core/enhancers/computed',
-    path: 'dist/packages/core/dist/enhancers/computed/lib/computed.js',
-    maxSize: 800,
-    claimed: 270,
-  },
 ];
 
 const nxProjects = [

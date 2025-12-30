@@ -30,14 +30,6 @@ tree.batch(() => {
 });
 ```
 
-### Computed - Derived values
-
-```typescript
-import { withComputed } from '@signaltree/core/enhancers/computed';
-const tree = signalTree(state, withComputed());
-const fullName = tree.computed(() => `${tree.first()} ${tree.last()}`);
-```
-
 ### Entities - Collection CRUD
 
 ```typescript

@@ -50,7 +50,6 @@ API Extractor / copy-declarations → rolls type definitions
 | **core/enhancers/devtools**          | 2.38 KB      | Single enhancer     | Debug utilities        |
 | **core/enhancers/serialization**     | 4.53 KB      | Single enhancer     | Serialization pipeline |
 | **core/enhancers/presets**           | 0.72 KB      | Single enhancer     | Preset bundles         |
-| **core/enhancers/computed**          | 0.26 KB      | Single enhancer     | Derived signals        |
 
 **Total facade sum:** 30.99 KB gzipped (all entry-point barrels)  
 **Core architecture:** 22.59 KB gzipped (core façade + enhancers + ng-forms) — legacy separate packages totaled 26.87 KB, so consolidation saves **4.28 KB** (~15.9%).
@@ -75,7 +74,6 @@ import { signalTree } from '@signaltree/core';
 
 // ✅ Add only what you need
 import { batching } from '@signaltree/core/enhancers/batching'; // +1.3 KB
-import { computed } from '@signaltree/core/enhancers/computed'; // +1.2 KB
 ```
 
 → **Actual minimal bundle:** **6.7 KB gzipped** (core only, zero enhancers)  

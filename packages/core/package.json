@@ -23,11 +23,6 @@
       "import": "./dist/enhancers/batching/index.js",
       "default": "./dist/enhancers/batching/index.js"
     },
-    "./enhancers/computed": {
-      "types": "./src/enhancers/computed/index.d.ts",
-      "import": "./dist/enhancers/computed/index.js",
-      "default": "./dist/enhancers/computed/index.js"
-    },
     "./enhancers/middleware": {
       "types": "./src/enhancers/middleware/index.d.ts",
       "import": "./dist/enhancers/middleware/index.js",
