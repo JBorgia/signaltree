@@ -1,11 +1,10 @@
+import { Signal, signal } from '@angular/core';
+
 /**
  * v6 DevTools Enhancer
  *
  * Contract: (config?) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & DevToolsMethods
  */
-import { Signal, signal } from '@angular/core';
-
-
 import type {
   SignalTreeBase,
   DevToolsConfig,
@@ -263,7 +262,7 @@ function createModularMetrics() {
  */
 export function withDevTools(
   config: DevToolsConfig = {}
-): <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & DevToolsMethods {
+): <Tree extends SignalTreeBase<any>>(tree: Tree) => Tree & DevToolsMethods {
   const {
     enabled = true,
     treeName = 'SignalTree',
@@ -288,7 +287,8 @@ export function withDevTools(
           /* disabled */
         },
       };
-      return Object.assign(tree, noopMethods);
+      return Object.assign(tree, noopMethods) as unknown as Tree &
+        DevToolsMethods;
     }
 
     // ========================================================================
@@ -474,7 +474,11 @@ export function withDevTools(
     (enhancedTree as unknown as Record<string, unknown>)['__devTools'] =
       devToolsInterface;
 
-    return Object.assign(enhancedTree, methods);
+    return Object.assign(enhancedTree, methods) as unknown as <
+      Tree extends SignalTreeBase<any>
+    >(
+      tree: Tree
+    ) => Tree & DevToolsMethods;
   };
 }
 
@@ -487,7 +491,7 @@ export function withDevTools(
  */
 export function enableDevTools(
   treeName = 'SignalTree'
-): <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & DevToolsMethods {
+): <Tree extends SignalTreeBase<any>>(tree: Tree) => Tree & DevToolsMethods {
   return withDevTools({ treeName, enabled: true });
 }
 
@@ -496,7 +500,7 @@ export function enableDevTools(
  */
 export function withFullDevTools(
   treeName = 'SignalTree'
-): <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & DevToolsMethods {
+): <Tree extends SignalTreeBase<any>>(tree: Tree) => Tree & DevToolsMethods {
   return withDevTools({
     treeName,
     enabled: true,
@@ -509,9 +513,9 @@ export function withFullDevTools(
 /**
  * Lightweight devtools for production
  */
-export function withProductionDevTools(): <S>(
-  tree: SignalTreeBase<S>
-) => SignalTreeBase<S> & DevToolsMethods {
+export function withProductionDevTools(): <Tree extends SignalTreeBase<any>>(
+  tree: Tree
+) => Tree & DevToolsMethods {
   return withDevTools({
     enabled: true,
     enableBrowserDevTools: false,

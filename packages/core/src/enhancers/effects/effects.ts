@@ -1,11 +1,10 @@
+import { effect as angularEffect, untracked } from '@angular/core';
+
 /**
  * v6 Effects Enhancer
  *
  * Contract: (config?) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & EffectsMethods<S>
  */
-import { effect as angularEffect, untracked } from '@angular/core';
-
-
 /* eslint-disable @typescript-eslint/no-empty-function */
 import type { SignalTreeBase, EffectsMethods } from '../../lib/types';
 
@@ -43,9 +42,10 @@ export interface EffectsConfig {
  */
 export function withEffects(
   config: EffectsConfig = {}
-): <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & EffectsMethods<S> {
+): <Tree extends SignalTreeBase<any>>(
+  tree: Tree
+) => Tree & EffectsMethods<any> {
   const { enabled = true } = config;
-
   return <S>(
     tree: SignalTreeBase<S>
   ): SignalTreeBase<S> & EffectsMethods<S> => {
@@ -115,15 +115,16 @@ export function withEffects(
       }
     };
 
-    return Object.assign(tree, methods);
+    return Object.assign(tree, methods) as unknown as Tree &
+      EffectsMethods<any>;
   };
 }
 
 /**
  * Enable effects with default settings
  */
-export function enableEffects(): <S>(
-  tree: SignalTreeBase<S>
-) => SignalTreeBase<S> & EffectsMethods<S> {
+export function enableEffects(): <Tree extends SignalTreeBase<any>>(
+  tree: Tree
+) => Tree & EffectsMethods<any> {
   return withEffects({ enabled: true });
 }

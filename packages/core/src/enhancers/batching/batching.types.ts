@@ -10,7 +10,9 @@ import type {
 // The expected signature
 type ExpectedSignature = (
   config?: BatchingConfig
-) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & BatchingMethods<S>;
+) => <Tree extends SignalTreeBase<any>>(
+  tree: Tree
+) => Tree & BatchingMethods<any>;
 
 // The actual signature
 type ActualSignature = typeof withBatching;

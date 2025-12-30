@@ -45,12 +45,14 @@ export interface PersistenceMethods {
 // Minimal runtime stubs so module resolution works during tests.
 export function withSerialization(
   defaultConfig?: SerializationConfig
-): <T>(tree: SignalTree<T>) => SerializableSignalTree<T> {
+): <Tree extends SignalTree<any>>(
+  tree: Tree
+) => Tree & SerializableSignalTree<any> {
   return (tree: any) => tree as any;
 }
 
 export function enableSerialization() {
-  return <T>(tree: SignalTree<T>) => tree as any;
+  return <Tree extends SignalTree<any>>(tree: Tree) => tree as any;
 }
 
 export interface StorageAdapter {
@@ -69,7 +71,7 @@ export interface PersistenceConfig extends SerializationConfig {
 }
 
 export function withPersistence(config: PersistenceConfig) {
-  return <T>(tree: SignalTree<T>) => tree as any;
+  return <Tree extends SignalTree<any>>(tree: Tree) => tree as any;
 }
 
 export function createStorageAdapter(

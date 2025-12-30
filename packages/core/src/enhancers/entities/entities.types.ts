@@ -10,7 +10,7 @@ import type {
 
 type ExpectedSignature = (
   config?: EntitiesEnhancerConfig
-) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & EntitiesEnabled;
+) => <Tree extends SignalTreeBase<any>>(tree: Tree) => Tree & EntitiesEnabled;
 
 type ActualSignature = typeof withEntities;
 

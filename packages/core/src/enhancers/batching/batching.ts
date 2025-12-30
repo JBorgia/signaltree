@@ -139,13 +139,15 @@ export function withBatchingWithConfig<T>(
     currentBatchingConfig = { ...currentBatchingConfig, ...config };
   }
 
-  const enhancer = (tree: SignalTree<any>): any => {
+  const enhancer = <Tree extends SignalTree<T>>(
+    tree: Tree
+  ): Tree & BatchingMethods<T> => {
     if (!enabled) {
       // Provide explicit pass-through methods so consumers can always call
       // `tree.batchUpdate(...)` even when batching is disabled. This avoids
       // relying on the base `signalTree` implementation shape and keeps
       // behavior stable across versions.
-      const enhanced = tree as SignalTree<T> &
+      const enhanced = tree as unknown as SignalTree<T> &
         BatchingMethods<T> & {
           batch?: (updater: (state: TreeNode<T>) => void) => void;
         };
@@ -182,7 +184,7 @@ export function withBatchingWithConfig<T>(
         }
       };
 
-      return enhanced as BatchingSignalTree<T>;
+      return enhanced as unknown as Tree & BatchingMethods<T>;
     }
 
     const originalTreeCall = tree.bind(tree);
@@ -246,7 +248,7 @@ export function withBatchingWithConfig<T>(
       });
     };
 
-    return enhancedTree as unknown as BatchingSignalTree<any>;
+    return enhancedTree as unknown as Tree & BatchingMethods<T>;
   };
 
   return enhancer as unknown as Enhancer<BatchingMethods<T>>;
@@ -255,16 +257,20 @@ export function withBatchingWithConfig<T>(
 /** User-friendly no-arg signature expected by type-level tests */
 export function withBatching(
   config: BatchingConfig = {}
-): <S>(tree: SignalTree<S>) => SignalTree<S> & BatchingMethods<S> {
-  return withBatchingWithConfig(config) as unknown as <S>(
-    tree: SignalTree<S>
-  ) => SignalTree<S> & BatchingMethods<S>;
+): <Tree extends SignalTree<any>>(tree: Tree) => Tree & BatchingMethods<any> {
+  return withBatchingWithConfig(config) as unknown as <
+    Tree extends SignalTree<any>
+  >(
+    tree: Tree
+  ) => Tree & BatchingMethods<any>;
 }
 
 export function withHighPerformanceBatching<T>() {
-  return withBatchingWithConfig<T>(
-    ({ enabled: true, maxBatchSize: 200, debounceMs: 0 } as unknown) as BatchingConfig
-  );
+  return withBatchingWithConfig<T>({
+    enabled: true,
+    maxBatchSize: 200,
+    debounceMs: 0,
+  } as unknown as BatchingConfig);
 }
 
 export function flushBatchedUpdates(): void {

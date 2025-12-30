@@ -8,7 +8,9 @@ import type { SignalTreeBase, EffectsMethods } from '../../lib/types';
 // Expected signature (config is optional and has no required fields)
 type ExpectedSignature = (config?: {
   enabled?: boolean;
-}) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & EffectsMethods<S>;
+}) => <Tree extends SignalTreeBase<any>>(
+  tree: Tree
+) => Tree & EffectsMethods<any>;
 
 type ActualSignature = typeof withEffects;
 

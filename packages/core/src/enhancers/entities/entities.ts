@@ -32,10 +32,9 @@ function isEntityMapMarker(value: unknown): value is Marker {
  */
 export function withEntities(
   config: EntitiesEnhancerConfig = {}
-): <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & EntitiesEnabled {
+): <Tree extends SignalTreeBase<any>>(tree: Tree) => Tree & EntitiesEnabled {
   // ← Explicit signature
   const { enabled = true } = config;
-
   return <S>(tree: SignalTreeBase<S>): SignalTreeBase<S> & EntitiesEnabled => {
     if (!enabled) {
       (tree as { __entitiesEnabled?: true }).__entitiesEnabled = true;
@@ -79,14 +78,16 @@ export function withEntities(
   };
 }
 
-export function enableEntities(): <S>(
-  tree: SignalTreeBase<S>
-) => SignalTreeBase<S> & EntitiesEnabled {
+export function enableEntities(): <Tree extends SignalTreeBase<any>>(
+  tree: Tree
+) => Tree & EntitiesEnabled {
   return withEntities();
 }
 
-export function withHighPerformanceEntities(): <S>(
-  tree: SignalTreeBase<S>
-) => SignalTreeBase<S> & EntitiesEnabled {
+export function withHighPerformanceEntities(): <
+  Tree extends SignalTreeBase<any>
+>(
+  tree: Tree
+) => Tree & EntitiesEnabled {
   return withEntities();
 }

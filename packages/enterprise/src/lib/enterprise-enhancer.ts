@@ -45,10 +45,11 @@ import type { Enhancer } from '@signaltree/core';
  *
  * @public
  */
-export function withEnterprise(): <S>(
-  tree: import('@signaltree/core').SignalTreeBase<S>
-) => import('@signaltree/enterprise').EnterpriseEnhancedTree<S> &
-  import('@signaltree/core').SignalTreeBase<S> {
+export function withEnterprise(): <
+  Tree extends import('@signaltree/core').SignalTreeBase<any>
+>(
+  tree: Tree
+) => Tree & import('@signaltree/enterprise').EnterpriseEnhancedTree<any> {
   return <S>(
     tree: import('@signaltree/core').SignalTreeBase<S>
   ): import('@signaltree/core').SignalTreeBase<S> &
@@ -101,7 +102,8 @@ export function withEnterprise(): <S>(
     // Add PathIndex access for debugging/monitoring
     enhancedTree.getPathIndex = () => pathIndex;
 
-    return enhancedTree;
+    return enhancedTree as unknown as Tree &
+      import('@signaltree/enterprise').EnterpriseEnhancedTree<any>;
   };
 }
 

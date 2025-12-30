@@ -4,7 +4,9 @@ import { withMemoization } from './memoization';
 
 type ExpectedSignature = (
   config?: MemoizationConfig
-) => <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & MemoizationMethods<S>;
+) => <Tree extends SignalTreeBase<any>>(
+  tree: Tree
+) => Tree & MemoizationMethods<any>;
 
 type ActualSignature = typeof withMemoization;
 

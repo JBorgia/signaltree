@@ -473,7 +473,9 @@ export function withHighFrequencyMemoization(): <S>(
  */
 export function withMemoization(
   config: MemoizationConfig = {}
-): <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & MemoizationMethods<S> {
+): <Tree extends SignalTree<any>>(
+  tree: Tree
+) => Tree & MemoizationMethods<any> {
   const {
     enabled = true,
     maxCacheSize = 1000,
@@ -723,16 +725,18 @@ export function withMemoization(
     return tree as SignalTree<S> & MemoizationMethods<S>;
   };
 
-  return enhancer;
+  return enhancer as unknown as <Tree extends SignalTree<any>>(
+    tree: Tree
+  ) => Tree & MemoizationMethods<any>;
 }
 
 /**
  * Convenience function to enable memoization with default settings
  * Uses unconstrained recursive typing - no limitations on T
  */
-export function enableMemoization(): <S>(
-  tree: SignalTreeBase<S>
-) => SignalTreeBase<S> & MemoizationMethods<S> {
+export function enableMemoization(): <Tree extends SignalTree<any>>(
+  tree: Tree
+) => Tree & MemoizationMethods<any> {
   return withMemoization({ enabled: true });
 }
 
@@ -740,9 +744,11 @@ export function enableMemoization(): <S>(
  * High-performance memoization with aggressive caching
  * Uses unconstrained recursive typing - no limitations on T
  */
-export function withHighPerformanceMemoization(): <S>(
-  tree: SignalTreeBase<S>
-) => SignalTreeBase<S> & MemoizationMethods<S> {
+export function withHighPerformanceMemoization(): <
+  Tree extends SignalTree<any>
+>(
+  tree: Tree
+) => Tree & MemoizationMethods<any> {
   return withMemoization({
     enabled: true,
     maxCacheSize: 10000,
@@ -756,9 +762,9 @@ export function withHighPerformanceMemoization(): <S>(
  * Lightweight memoization optimized for performance-critical scenarios
  * Disables expensive cache management features for maximum speed
  */
-export function withLightweightMemoization(): <S>(
-  tree: SignalTreeBase<S>
-) => SignalTreeBase<S> & MemoizationMethods<S> {
+export function withLightweightMemoization(): <Tree extends SignalTree<any>>(
+  tree: Tree
+) => Tree & MemoizationMethods<any> {
   return withMemoization({
     enabled: true,
     maxCacheSize: 100, // Smaller cache to reduce management overhead
@@ -772,9 +778,9 @@ export function withLightweightMemoization(): <S>(
  * Shallow equality memoization for objects with primitive values
  * Good balance between performance and correctness
  */
-export function withShallowMemoization(): <S>(
-  tree: SignalTreeBase<S>
-) => SignalTreeBase<S> & MemoizationMethods<S> {
+export function withShallowMemoization(): <Tree extends SignalTree<any>>(
+  tree: Tree
+) => Tree & MemoizationMethods<any> {
   return withMemoization({
     enabled: true,
     maxCacheSize: 1000,

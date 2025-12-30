@@ -210,9 +210,8 @@ class TimeTravelManager<T> {
  */
 export function withTimeTravel(
   config: TimeTravelConfig = {}
-): <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & TimeTravelMethods {
+): <Tree extends SignalTreeBase<any>>(tree: Tree) => Tree & TimeTravelMethods {
   const { enabled = true } = config;
-
   return <S>(
     tree: SignalTreeBase<S>
   ): SignalTreeBase<S> & TimeTravelMethods => {
@@ -355,9 +354,9 @@ export function withTimeTravel(
 /**
  * Convenience function to enable basic time travel
  */
-export function enableTimeTravel(): <S>(
-  tree: SignalTreeBase<S>
-) => SignalTreeBase<S> & TimeTravelMethods {
+export function enableTimeTravel(): <Tree extends SignalTreeBase<any>>(
+  tree: Tree
+) => Tree & TimeTravelMethods {
   return withTimeTravel({ enabled: true });
 }
 
@@ -366,6 +365,6 @@ export function enableTimeTravel(): <S>(
  */
 export function withTimeTravelHistory(
   maxHistorySize: number
-): <S>(tree: SignalTreeBase<S>) => SignalTreeBase<S> & TimeTravelMethods {
+): <Tree extends SignalTreeBase<any>>(tree: Tree) => Tree & TimeTravelMethods {
   return withTimeTravel({ maxHistorySize });
 }
