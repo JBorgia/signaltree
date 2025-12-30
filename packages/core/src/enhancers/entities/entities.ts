@@ -35,7 +35,9 @@ export function withEntities(
 ): <Tree extends SignalTreeBase<any>>(tree: Tree) => Tree & EntitiesEnabled {
   // ← Explicit signature
   const { enabled = true } = config;
-  return <Tree extends SignalTreeBase<any>>(tree: Tree): Tree & EntitiesEnabled => {
+  return <Tree extends SignalTreeBase<any>>(
+    tree: Tree
+  ): Tree & EntitiesEnabled => {
     type S = Tree extends SignalTreeBase<infer U> ? U : unknown;
     if (!enabled) {
       (tree as { __entitiesEnabled?: true }).__entitiesEnabled = true;

@@ -274,7 +274,9 @@ export function withDevTools(
 
   const displayName = name ?? treeName;
 
-  return <Tree extends SignalTreeBase<any>>(tree: Tree): Tree & DevToolsMethods => {
+  return <Tree extends SignalTreeBase<any>>(
+    tree: Tree
+  ): Tree & DevToolsMethods => {
     type S = Tree extends SignalTreeBase<infer U> ? U : unknown;
     // ========================================================================
     // Disabled path
@@ -474,7 +476,8 @@ export function withDevTools(
     (enhancedTree as unknown as Record<string, unknown>)['__devTools'] =
       devToolsInterface;
 
-    return Object.assign(enhancedTree, methods) as unknown as Tree & DevToolsMethods;
+    return Object.assign(enhancedTree, methods) as unknown as Tree &
+      DevToolsMethods;
   };
 }
 
