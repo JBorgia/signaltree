@@ -102,8 +102,10 @@ export interface SignalTreeBase<T> extends NodeAccessor<T> {
   readonly $: TreeNode<T>;
   // Single-enhancer chain: apply one enhancer at a time.
   // Accept an enhancer that is applied to this specific tree and infer
-  // the resulting return type `R` so added methods can depend on `T`.
-  with<R>(enhancer: (tree: SignalTreeBase<T>) => R): R;
+  // the resulting return type `R` so added methods can depend on the
+  // concrete tree type (`this`). This preserves strong type inference
+  // for enhancer methods that depend on the tree's state shape.
+  with<R>(enhancer: (tree: this) => R): R;
   bind(thisArg?: unknown): NodeAccessor<T>;
   destroy(): void;
   // Allow enhancers to attach runtime methods — consumers should cast to the
@@ -121,6 +123,8 @@ export interface EffectsMethods<T> {
 
 /** Batching enhancer configuration (canonical) */
 export interface BatchingConfig {
+  /** Enable/disable batching (default: true) */
+  enabled?: boolean;
   debounceMs?: number;
   maxBatchSize?: number;
 }

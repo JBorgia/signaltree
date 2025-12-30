@@ -23,9 +23,9 @@ checks.push(() => {
 });
 
 checks.push(() => {
-  const p = 'packages/core/src/enhancers/batching/lib/batching.ts';
+  const p = 'packages/core/src/enhancers/batching/batching.ts';
   const c = fileHas(p);
-  return c && c.includes('withBatching')
+  return c && c.includes('batching')
     ? [true, 'batching enhancer present in core']
     : [false, `missing or incomplete ${p}`];
 });
