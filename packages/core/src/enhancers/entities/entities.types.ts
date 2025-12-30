@@ -1,5 +1,5 @@
 import { Assert, Equals } from '../test-helpers/types-equals';
-import { EntitiesEnhancerConfig, entities } from './entities';
+import { entities, EntitiesEnhancerConfig } from './entities';
 
 import type {
   ISignalTree,
