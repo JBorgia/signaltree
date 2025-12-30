@@ -369,19 +369,19 @@ export function withTimeTravelHistory(
   return withTimeTravel({ maxHistorySize });
 }
 
-// v6-friendly alias with presets
+// New v6-friendly export: `timeTravel` with named presets.
+export const timeTravel = Object.assign(
+  (config: TimeTravelConfig = {}) => withTimeTravel(config),
+  {
+    minimal: () =>
+      withTimeTravel({ maxHistorySize: 20, includePayload: false }),
+    debug: () => withTimeTravel({ maxHistorySize: 200, includePayload: true }),
+    history: withTimeTravelHistory,
+  }
+);
+
 /**
  * @deprecated Use `timeTravel()` as the primary enhancer. This legacy
  * `withTimeTravel` alias will be removed in a future major release.
  */
-export function timeTravel(
-  config: { maxHistorySize?: number; includePayload?: boolean } = {}
-) {
-  return withTimeTravel(config as any);
-}
-
-export const withTimeTravel = Object.assign(timeTravel, {
-  minimal: () => withTimeTravel({ maxHistorySize: 20, includePayload: false }),
-  debug: () => withTimeTravel({ maxHistorySize: 200, includePayload: true }),
-  history: withTimeTravelHistory,
-});
+export const withTimeTravel = Object.assign(timeTravel, {});
