@@ -114,8 +114,36 @@ export type MinimalSignalTree<T> = SignalTreeBase<T> & EffectsMethods<T>;
 export function createDevTree<T extends object>(
   initialState: T,
   config: DevTreeConfig = {}
-): FullSignalTree<T> {
-  const base = signalTree(initialState, config);
+): FullSignalTree<T>;
+export function createDevTree(): {
+  enhancer: <Tree extends SignalTreeBase<any>>(tree: Tree) =>
+    Tree &
+    EffectsMethods<any> &
+    BatchingMethods &
+    MemoizationMethods<any> &
+    EntitiesEnabled &
+    TimeTravelMethods &
+    DevToolsMethods;
+export function createDevTree<T extends object>(
+  initialState?: T,
+  config: DevTreeConfig = {}
+): any {
+  // If no initial state provided, return the enhancer chain so callers
+  // can apply it to an existing tree (demo usage pattern).
+  if (arguments.length === 0) {
+    const enhancer = <Tree extends SignalTreeBase<any>>(tree: Tree) =>
+      tree
+        .with(withEffects())
+        .with(withBatching())
+        .with(withMemoization())
+        .with(withEntities())
+        .with(withTimeTravel())
+        .with(withDevTools());
+
+    return { enhancer };
+  }
+
+  const base = signalTree(initialState as T, config);
 
   // Chain enhancers - types accumulate automatically with v6 pattern
   const enhanced = base

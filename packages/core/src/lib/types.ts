@@ -127,6 +127,8 @@ export interface BatchingConfig {
   enabled?: boolean;
   /** Milliseconds to debounce flushes when batching is enabled */
   debounceMs?: number;
+  /** Legacy alias for debounceMs used in some demo code */
+  batchTimeoutMs?: number;
   /** Milliseconds to auto-flush pending batches (compatibility name) */
   autoFlushDelay?: number;
   maxBatchSize?: number;
@@ -172,6 +174,17 @@ export interface TimeTravelMethods<T = unknown> {
   resetHistory(): void;
   jumpTo(index: number): void;
   getCurrentIndex(): number;
+  /** Internal time-travel manager exposed for advanced tooling/debugging */
+  readonly __timeTravel?: {
+    undo(): void;
+    redo(): void;
+    canUndo(): boolean;
+    canRedo(): boolean;
+    getHistory(): unknown[];
+    resetHistory(): void;
+    jumpTo(index: number): void;
+    getCurrentIndex(): number;
+  };
 }
 
 export interface DevToolsMethods {
