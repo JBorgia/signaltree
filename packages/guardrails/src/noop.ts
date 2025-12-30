@@ -15,14 +15,12 @@ const noopRule = (name: string): GuardrailRule => ({
   severity: 'info',
 });
 
-export function withGuardrails<T extends Record<string, unknown>>(
-  config?: GuardrailsConfig
-): (tree: SignalTree<T>) => SignalTree<T> {
-  return (tree) => {
+export function withGuardrails<T = unknown>(config?: GuardrailsConfig) {
+  return <S>(tree: import('@signaltree/core').SignalTreeBase<S>) => {
     if (config) {
       // Production build ignores guardrail configuration
     }
-    return tree;
+    return tree as import('@signaltree/core').SignalTreeBase<S>;
   };
 }
 
