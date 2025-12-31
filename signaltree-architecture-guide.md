@@ -6,14 +6,137 @@ A comprehensive guide to architecting applications with SignalTree, covering arc
 
 ## Table of Contents
 
-1. [Core Principles](#core-principles)
-2. [Architecture Options](#architecture-options)
-3. [Decision Matrix](#decision-matrix)
-4. [Domain State Structure Options](#domain-state-structure-options)
-5. [Common Patterns](#common-patterns)
-6. [Common Misconceptions](#common-misconceptions)
-7. [Evaluating Existing Implementations](#evaluating-existing-implementations)
-8. [Summary: Recommended Default Architecture](#summary-recommended-default-architecture)
+1. [Getting Started](#getting-started)
+2. [Core Principles](#core-principles)
+3. [Architecture Options](#architecture-options)
+4. [Decision Matrix](#decision-matrix)
+5. [Domain State Structure Options](#domain-state-structure-options)
+6. [Common Patterns](#common-patterns)
+7. [Where Do Selectors Live?](#where-do-selectors-live)
+8. [Common Misconceptions](#common-misconceptions)
+9. [Evaluating Existing Implementations](#evaluating-existing-implementations)
+10. [Summary: Recommended Default Architecture](#summary-recommended-default-architecture)
+
+---
+
+## Getting Started
+
+### Basic Setup (Angular)
+
+#### 1. Define Your Tree
+
+```typescript
+// app-tree.ts
+import { signalTree, withEntities, entityMap } from '@signaltree/core';
+
+export function createAppTree() {
+  return signalTree({
+    users: entityMap<User, string>(),
+    posts: entityMap<Post, string>(),
+    ui: {
+      theme: 'light' as 'light' | 'dark',
+      sidebarOpen: true as boolean,
+    },
+  }).with(withEntities());
+}
+
+// Type inference - single source of truth
+export type AppTree = ReturnType<typeof createAppTree>;
+```
+
+#### 2. Create Typed Token
+
+```typescript
+// app-tree.ts (continued)
+import { InjectionToken } from '@angular/core';
+
+export const APP_TREE = new InjectionToken<AppTree>('APP_TREE');
+```
+
+#### 3. Provide at App Bootstrap
+
+```typescript
+// app.config.ts
+import { ApplicationConfig } from '@angular/core';
+import { APP_TREE, createAppTree } from './store/app-tree';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    {
+      provide: APP_TREE,
+      useFactory: () => createAppTree(),
+    },
+  ],
+};
+```
+
+#### 4. Use in Components
+
+```typescript
+// users.component.ts
+@Component({...})
+export class UsersComponent {
+  private readonly tree = inject(APP_TREE);
+
+  readonly users = this.tree.$.users.all;
+  readonly theme = this.tree.$.ui.theme;
+
+  addUser(user: User) {
+    this.tree.$.users.add(user);
+  }
+
+  toggleTheme() {
+    this.tree.$.ui.theme.update(t => t === 'light' ? 'dark' : 'light');
+  }
+}
+```
+
+#### 5. Testing
+
+```typescript
+// users.component.spec.ts
+describe('UsersComponent', () => {
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: APP_TREE,
+          useFactory: () => {
+            const tree = createAppTree();
+            tree.$.users.setAll([mockUser]);
+            return tree;
+          },
+        },
+      ],
+    });
+  });
+});
+```
+
+#### 6. Reusable Test Helper (Optional)
+
+```typescript
+// testing/provide-mock-app-tree.ts
+export function provideMockAppTree(setup?: (tree: AppTree) => void): Provider[] {
+  return [
+    {
+      provide: APP_TREE,
+      useFactory: () => {
+        const tree = createAppTree();
+        setup?.(tree);
+        return tree;
+      },
+    },
+  ];
+}
+
+// Usage in tests
+providers: [
+  provideMockAppTree((tree) => {
+    tree.$.users.setAll([mockUser]);
+  }),
+];
+```
 
 ---
 
@@ -31,7 +154,11 @@ Any architectural decision should preserve these principles.
 
 ## Architecture Options
 
-### Option 1: Single Tree, Direct Access
+### Category A: Direct Access (Recommended Default)
+
+Components inject the tree directly. Optional facades for orchestration.
+
+#### A1: Pure Direct Access
 
 Components inject and access the tree directly. No intermediary layers.
 
@@ -58,7 +185,7 @@ export class PlantsComponent {
 
 ---
 
-### Option 2: Single Tree + Orchestration Facades
+#### A2: With Orchestration Facades
 
 Facades exist only to coordinate multi-step or cross-domain operations.
 
@@ -100,7 +227,85 @@ export class PlantsComponent {
 
 ---
 
-### Option 3: Single Tree + Attached Methods
+#### A3: With Shared Selectors
+
+Selector service for cross-domain computed values used app-wide.
+
+```typescript
+// app-selectors.service.ts
+@Injectable({ providedIn: 'root' })
+export class AppSelectors {
+  private readonly tree = inject(APP_TREE);
+
+  readonly selectedTruck = computed(() => {
+    const id = this.tree.$.selected.truckId();
+    return id ? this.tree.$.trucks.byId(id)?.() ?? null : null;
+  });
+
+  readonly selectableTrucks = computed(() => {
+    const haulerId = this.tree.$.selected.haulerId();
+    return haulerId ? this.tree.$.haulers.byId(haulerId)?.()?.trucks ?? [] : [];
+  });
+}
+
+// component.ts
+export class TruckListComponent {
+  private selectors = inject(AppSelectors);
+  readonly trucks = this.selectors.selectableTrucks;
+}
+```
+
+| Pros                            | Cons                              |
+| ------------------------------- | --------------------------------- |
+| Reusable cross-domain computed  | Another service to inject         |
+| Single source for complex logic | Can grow unbounded if not careful |
+
+**Best for:** Apps with complex derived state used in 4+ places
+
+---
+
+### Category B: Service-Wrapped
+
+Each domain has a service wrapping tree access.
+
+#### B1: Service-Per-Entity
+
+Each entity type gets a dedicated service wrapping tree access.
+
+```typescript
+@Injectable({ providedIn: 'root' })
+export class PlantService {
+  private tree = inject(APP_TREE);
+  private api = inject(PlantsApi);
+
+  readonly entities = this.tree.$.plants.entities;
+  readonly all = this.entities.selectAll;
+  readonly byId = (id: string) => this.entities.selectById(id);
+
+  async load() {
+    const plants = await this.api.getAll();
+    this.entities.set(plants);
+  }
+
+  async create(plant: Omit<Plant, 'id'>) {
+    const created = await this.api.create(plant);
+    this.entities.add(created);
+    return created;
+  }
+}
+```
+
+| Pros                   | Cons                               |
+| ---------------------- | ---------------------------------- |
+| Familiar pattern       | One more layer                     |
+| Testable services      | Potential for pass-through methods |
+| Encapsulated API logic |                                    |
+
+**Best for:** Teams coming from NgRx/Akita wanting similar structure
+
+---
+
+#### B2: Attached Methods
 
 Extend the tree object itself with domain methods. No separate facade classes.
 
@@ -138,7 +343,11 @@ export class PlantsComponent {
 
 ---
 
-### Option 4: Single Tree + Feature Tokens
+### Category C: Feature-Scoped
+
+Boundaries between features with typed slice access.
+
+#### C1: Feature Tokens
 
 Each feature module gets a typed slice token, but all point to same tree.
 
@@ -169,104 +378,7 @@ export class PlantsComponent {
 
 ---
 
-### Option 5: Domain-Scoped Trees (Multiple Trees)
-
-Separate tree instance per domain.
-
-```typescript
-// plants-tree.ts
-export const plantsTree = signalTree<PlantsState>({...}).with(entities<Plant>('entities'));
-
-// gardens-tree.ts
-export const gardensTree = signalTree<GardensState>({...}).with(entities<Garden>('entities'));
-
-// component.ts
-export class DashboardComponent {
-  private plants = inject(PLANTS_TREE);
-  private gardens = inject(GARDENS_TREE);
-
-  // Cross-domain? Manual coordination
-  async transferPlant(plantId: string, gardenId: string) {
-    await this.api.transfer(plantId, gardenId);
-    this.plants.$.entities.update(plantId, { gardenId });
-    this.gardens.$.entities.update(gardenId, { plantCount: count + 1 });
-  }
-}
-```
-
-| Pros                   | Cons                                |
-| ---------------------- | ----------------------------------- |
-| Domain isolation       | Cross-domain coordination is manual |
-| Smaller tree instances | Loses unified dot notation          |
-|                        | Must know which tree to inject      |
-
-**Best for:** Truly independent domains with minimal cross-talk (rare)
-
----
-
-### Option 6: Component-Scoped Trees
-
-Each component creates its own tree instance for local state.
-
-```typescript
-@Component({...})
-export class PlantEditorComponent {
-  private localTree = signalTree({
-    draft: null as Plant | null,
-    validation: { errors: [] as string[], touched: false },
-    saving: false
-  });
-
-  readonly draft = this.localTree.$.draft;
-  readonly errors = this.localTree.$.validation.errors;
-
-  save() {
-    this.localTree.$.saving.set(true);
-    // ...
-  }
-}
-```
-
-| Pros                         | Cons                                |
-| ---------------------------- | ----------------------------------- |
-| Fully isolated               | Can't share state                   |
-| Automatic cleanup on destroy | Repeated patterns across components |
-| No global state pollution    |                                     |
-
-**Best for:** Complex forms, wizards, isolated interactive widgets
-
----
-
-### Option 7: Hybrid Global + Local
-
-Global tree for shared state, component signals or mini-trees for UI-only state.
-
-```typescript
-@Component({...})
-export class PlantsListComponent {
-  // Global shared state
-  private tree = inject(APP_TREE);
-  readonly plants = this.tree.$.plants.entities.selectAll;
-
-  // Local UI state - never needs to be shared
-  readonly showFilters = signal(false);
-  readonly selectedIds = signal<Set<string>>(new Set());
-  readonly sortColumn = signal<'name' | 'date'>('name');
-
-  toggleFilters() { this.showFilters.update(v => !v); }
-}
-```
-
-| Pros                    | Cons                                |
-| ----------------------- | ----------------------------------- |
-| Right tool for each job | Two mental models (tree vs signals) |
-| Global state stays lean |                                     |
-
-**Best for:** Most apps—this is the recommended default
-
----
-
-### Option 8: Composed Sub-Trees
+#### C2: Composed Sub-Trees
 
 Global tree composed from domain sub-trees. Single access point, modular definition.
 
@@ -305,44 +417,116 @@ export const appTree = signalTree({
 
 ---
 
-### Option 9: Service-Per-Entity
+### Category D: Multiple Trees
 
-Each entity type gets a dedicated service wrapping tree access.
+Separate tree instances for isolation.
+
+#### D1: Domain-Scoped Trees
+
+Separate tree instance per domain.
 
 ```typescript
-@Injectable({ providedIn: 'root' })
-export class PlantService {
-  private tree = inject(APP_TREE);
-  private api = inject(PlantsApi);
+// plants-tree.ts
+export const plantsTree = signalTree<PlantsState>({...}).with(entities<Plant>('entities'));
 
-  readonly entities = this.tree.$.plants.entities;
-  readonly all = this.entities.selectAll;
-  readonly byId = (id: string) => this.entities.selectById(id);
+// gardens-tree.ts
+export const gardensTree = signalTree<GardensState>({...}).with(entities<Garden>('entities'));
 
-  async load() {
-    const plants = await this.api.getAll();
-    this.entities.set(plants);
-  }
+// component.ts
+export class DashboardComponent {
+  private plants = inject(PLANTS_TREE);
+  private gardens = inject(GARDENS_TREE);
 
-  async create(plant: Omit<Plant, 'id'>) {
-    const created = await this.api.create(plant);
-    this.entities.add(created);
-    return created;
+  // Cross-domain? Manual coordination
+  async transferPlant(plantId: string, gardenId: string) {
+    await this.api.transfer(plantId, gardenId);
+    this.plants.$.entities.update(plantId, { gardenId });
+    this.gardens.$.entities.update(gardenId, { plantCount: count + 1 });
   }
 }
 ```
 
-| Pros                   | Cons                               |
-| ---------------------- | ---------------------------------- |
-| Familiar pattern       | One more layer                     |
-| Testable services      | Potential for pass-through methods |
-| Encapsulated API logic |                                    |
+| Pros                   | Cons                                |
+| ---------------------- | ----------------------------------- |
+| Domain isolation       | Cross-domain coordination is manual |
+| Smaller tree instances | Loses unified dot notation          |
+|                        | Must know which tree to inject      |
 
-**Best for:** Teams coming from NgRx/Akita wanting similar structure
+**Best for:** Truly independent domains with minimal cross-talk (rare)
 
 ---
 
-### Option 10: CQRS-Style Separation
+#### D2: Component-Scoped Trees
+
+Each component creates its own tree instance for local state.
+
+```typescript
+@Component({...})
+export class PlantEditorComponent {
+  private localTree = signalTree({
+    draft: null as Plant | null,
+    validation: { errors: [] as string[], touched: false },
+    saving: false
+  });
+
+  readonly draft = this.localTree.$.draft;
+  readonly errors = this.localTree.$.validation.errors;
+
+  save() {
+    this.localTree.$.saving.set(true);
+    // ...
+  }
+}
+```
+
+| Pros                         | Cons                                |
+| ---------------------------- | ----------------------------------- |
+| Fully isolated               | Can't share state                   |
+| Automatic cleanup on destroy | Repeated patterns across components |
+| No global state pollution    |                                     |
+
+**Best for:** Complex forms, wizards, isolated interactive widgets
+
+---
+
+#### D3: Minimal SignalTree
+
+Use SignalTree only where its features are needed. Vanilla signals elsewhere.
+
+```typescript
+// Only entities need SignalTree
+export const entitiesTree = signalTree({
+  plants: { entities: [] as Plant[] },
+  gardens: { entities: [] as Garden[] },
+}).with(entities<Plant>('plants.entities'), entities<Garden>('gardens.entities'));
+
+// Everything else is vanilla signals
+export const authState = {
+  userId: signal<string | null>(null),
+  token: signal<string | null>(null),
+  isAuthenticated: computed(() => authState.token() !== null),
+};
+
+export const uiState = {
+  theme: signal<'light' | 'dark'>('light'),
+  sidebarOpen: signal(true),
+};
+```
+
+| Pros                          | Cons                         |
+| ----------------------------- | ---------------------------- |
+| Use each tool where it shines | Multiple state containers    |
+| Minimal overhead              | Inconsistent access patterns |
+
+**Best for:** Gradual adoption, performance-critical apps wanting minimal abstraction
+
+---
+
+### Category E: Advanced Patterns
+
+For specific requirements.
+
+#### E1: CQRS-Style Separation
 
 Explicit separation between read projections and write commands.
 
@@ -355,10 +539,6 @@ export function plantQueries(tree: AppTree) {
     byGarden: (id: string) => computed(() =>
       tree.$.plants.entities.selectAll()().filter(p => p.gardenId === id)
     ),
-    stats: computed(() => ({
-      total: tree.$.plants.entities.selectAll()().length,
-      needsWater: tree.$.plants.entities.selectAll()().filter(p => p.needsWater).length
-    }))
   };
 }
 
@@ -368,7 +548,6 @@ export function plantCommands(tree: AppTree, api: PlantsApi) {
     async load() { ... },
     async create(plant: NewPlant) { ... },
     async water(id: string) { ... },
-    async transfer(id: string, gardenId: string) { ... }
   };
 }
 ```
@@ -383,40 +562,7 @@ export function plantCommands(tree: AppTree, api: PlantsApi) {
 
 ---
 
-### Option 11: Micro-Frontend Style
-
-Independent feature trees communicating via events or shared minimal contract.
-
-```typescript
-// Feature A
-export const plantsMicrofrontend = {
-  tree: signalTree<PlantsState>({...}),
-  events: new Subject<PlantEvent>(),
-
-  init() {
-    globalEventBus.on('garden:deleted', (gardenId) => {
-      this.tree.$.entities.removeBy(p => p.gardenId === gardenId);
-    });
-  }
-};
-
-// Feature B publishes
-gardensTree.events.pipe(
-  filter(e => e.type === 'deleted')
-).subscribe(e => globalEventBus.emit('garden:deleted', e.gardenId));
-```
-
-| Pros                            | Cons                        |
-| ------------------------------- | --------------------------- |
-| True isolation                  | Complex coordination        |
-| Independent deployment possible | Eventual consistency issues |
-|                                 | Debugging harder            |
-
-**Best for:** Actual micro-frontends with separate deployments
-
----
-
-### Option 12: Redux-Like Actions
+#### E2: Redux-Like Actions
 
 Explicit action objects with reducer-style handlers.
 
@@ -456,7 +602,7 @@ export function dispatch(action: PlantAction) {
 
 ---
 
-### Option 13: Repository + Unit of Work
+#### E3: Repository + Unit of Work
 
 Database-inspired pattern with explicit save/commit.
 
@@ -486,7 +632,6 @@ export class PlantRepository {
         this.tree.$.plants.entities.update(id, changes);
       }
     });
-
     this.pending.clear();
   }
 
@@ -506,7 +651,7 @@ export class PlantRepository {
 
 ---
 
-### Option 14: RxJS Interop Layer
+#### E4: RxJS Interop Layer
 
 Bridge SignalTree with RxJS for complex async flows.
 
@@ -544,45 +689,64 @@ export class PlantEffects {
 
 ---
 
-### Option 15: Minimal SignalTree
+### Additional Patterns
 
-Use SignalTree only where its features are needed. Vanilla signals elsewhere.
+#### Hybrid Global + Local
+
+Global tree for shared state, component signals or mini-trees for UI-only state.
 
 ```typescript
-// Only entities need SignalTree
-export const entitiesTree = signalTree({
-  plants: { entities: [] as Plant[] },
-  gardens: { entities: [] as Garden[] },
-}).with(entities<Plant>('plants.entities'), entities<Garden>('gardens.entities'));
+@Component({...})
+export class PlantsListComponent {
+  // Global shared state
+  private tree = inject(APP_TREE);
+  readonly plants = this.tree.$.plants.entities.selectAll;
 
-// Everything else is vanilla signals
-export const authState = {
-  userId: signal<string | null>(null),
-  token: signal<string | null>(null),
-  isAuthenticated: computed(() => authState.token() !== null),
-};
+  // Local UI state - never needs to be shared
+  readonly showFilters = signal(false);
+  readonly selectedIds = signal<Set<string>>(new Set());
+  readonly sortColumn = signal<'name' | 'date'>('name');
 
-export const uiState = {
-  theme: signal<'light' | 'dark'>('light'),
-  sidebarOpen: signal(true),
-};
+  toggleFilters() { this.showFilters.update(v => !v); }
+}
 ```
 
-| Pros                          | Cons                         |
-| ----------------------------- | ---------------------------- |
-| Use each tool where it shines | Multiple state containers    |
-| Minimal overhead              | Inconsistent access patterns |
+| Pros                    | Cons                                |
+| ----------------------- | ----------------------------------- |
+| Right tool for each job | Two mental models (tree vs signals) |
+| Global state stays lean |                                     |
 
-**Best for:** Gradual adoption, performance-critical apps wanting minimal abstraction
+**Best for:** Most apps—this is the recommended default
 
 ---
 
-### Option 16: Feature Store Factory
+#### Micro-Frontend Style
+
+Independent feature trees communicating via events or shared minimal contract.
+
+```typescript
+// Feature A
+export const plantsMicrofrontend = {
+  tree: signalTree<PlantsState>({...}),
+  events: new Subject<PlantEvent>(),
+
+  init() {
+    globalEventBus.on('garden:deleted', (gardenId) => {
+      this.tree.$.entities.removeBy(p => p.gardenId === gardenId);
+    });
+  }
+};
+```
+
+**Best for:** Actual micro-frontends with separate deployments
+
+---
+
+#### Feature Store Factory
 
 Factory function producing configured stores per feature.
 
 ```typescript
-// store.factory.ts
 export function createFeatureStore<TEntity extends { id: string }>(
   name: string,
   api: CrudApi<TEntity>
@@ -598,25 +762,10 @@ export function createFeatureStore<TEntity extends { id: string }>(
   }).with(entities<TEntity>('entities'));
 
   return {
-    // State
     entities: tree.$.entities,
     operations: tree.$.meta.operations,
-
-    // Operations
-    async load() {
-      tree.$.meta.operations.load.status.set('pending');
-      try {
-        const data = await api.getAll();
-        tree.$.entities.set(data);
-        tree.$.meta.operations.load.status.set('success');
-      } catch (e) {
-        tree.$.meta.operations.load.set({ status: 'error', error: e.message });
-      }
-    },
-
+    async load() { ... },
     async create(entity: Omit<TEntity, 'id'>) { ... },
-    async update(id: string, changes: Partial<TEntity>) { ... },
-    async remove(id: string) { ... }
   };
 }
 
@@ -625,30 +774,24 @@ export const plantStore = createFeatureStore('plants', plantsApi);
 export const gardenStore = createFeatureStore('gardens', gardensApi);
 ```
 
-| Pros                 | Cons                            |
-| -------------------- | ------------------------------- |
-| Consistent patterns  | Multiple tree instances         |
-| Reduced boilerplate  | Cross-store coordination manual |
-| Easy to add features |                                 |
-
 **Best for:** Apps with many similar CRUD domains
 
 ---
 
 ## Decision Matrix
 
-| Scenario                      | Recommended Option                              |
-| ----------------------------- | ----------------------------------------------- |
-| Small app, single dev         | Option 1 (Direct Access) or Option 15 (Minimal) |
-| Medium app, simple domains    | Option 7 (Hybrid Global + Local)                |
-| Medium app, complex workflows | Option 2 (Orchestration Facades)                |
-| Large app, multiple teams     | Option 4 (Feature Tokens) + Option 2            |
-| Complex async, real-time      | Option 14 (RxJS Interop)                        |
-| Offline-first, draft/commit   | Option 13 (Repository)                          |
-| Many similar CRUD domains     | Option 16 (Feature Store Factory)               |
-| Heavy debugging needs         | Option 12 (Redux-Like)                          |
-| Micro-frontends               | Option 11                                       |
-| Strict read/write separation  | Option 10 (CQRS)                                |
+| Scenario                      | Recommended Option               |
+| ----------------------------- | -------------------------------- |
+| Small app, single dev         | A1 (Pure Direct) or D3 (Minimal) |
+| Medium app, simple domains    | A1 + Hybrid Global/Local         |
+| Medium app, complex workflows | A2 (With Orchestration Facades)  |
+| Large app, multiple teams     | C1 (Feature Tokens) + A2         |
+| Complex async, real-time      | E4 (RxJS Interop)                |
+| Offline-first, draft/commit   | E3 (Repository)                  |
+| Many similar CRUD domains     | Feature Store Factory            |
+| Heavy debugging needs         | E2 (Redux-Like)                  |
+| Micro-frontends               | Micro-Frontend Style             |
+| Strict read/write separation  | E1 (CQRS)                        |
 
 ---
 
@@ -783,6 +926,65 @@ entities<Plant>('plants.entities');
 | Feature slices are portable            |                                            |
 
 **Best for:** Large apps, teams comfortable with entities alongside metadata, modular codebases
+
+---
+
+### Loading State: Two Valid Approaches
+
+When using `entityMap` directly at the domain level, you have two options for loading state:
+
+#### Approach A: Inside Domain (Recommended for grouped structures)
+
+Loading state nested within the domain it affects.
+
+```typescript
+{
+  plants: {
+    entities: Plant[],
+    loading: {
+      state: 'idle' as LoadingState,
+      error: null as string | null,
+    },
+  },
+}
+
+// Access
+tree.$.plants.loading.state()
+tree.$.plants.loading.error()
+```
+
+**Pros:** Co-located with data it describes, natural grouping.
+
+#### Approach B: Domain-Level Sibling (Recommended for flat structures)
+
+Loading state as sibling to entity collection.
+
+```typescript
+{
+  plants: entityMap<Plant, number>(),
+  plantsLoading: {
+    state: 'idle' as LoadingState,
+    error: null as string | null,
+  },
+}
+
+// Access
+tree.$.plantsLoading.state()
+tree.$.plantsLoading.error()
+```
+
+**Pros:** Flatter structure, simpler when using `entityMap` directly.
+
+#### Which to Choose?
+
+| Scenario                                                  | Recommendation |
+| --------------------------------------------------------- | -------------- |
+| Domain has multiple pieces (entities, filters, selection) | Approach A     |
+| Domain is just an entity collection                       | Approach B     |
+| Team prefers flat structures                              | Approach B     |
+| Team prefers grouped structures                           | Approach A     |
+
+Both are valid. Pick one and be consistent.
 
 ---
 
@@ -1191,25 +1393,6 @@ export class ErrorService {
 }
 ```
 
-**Component Usage:**
-
-```typescript
-@Component({
-  template: `
-    @if (globalError()) {
-    <app-global-error-banner [error]="globalError()" (dismiss)="errorService.clearGlobalError()" />
-    } @if (plantSaveError()) {
-    <app-inline-error [message]="plantSaveError()!.message" />
-    }
-  `,
-})
-export class AppComponent {
-  protected errorService = inject(ErrorService);
-  readonly globalError = this.errorService.globalError;
-  readonly plantSaveError = this.errorService.getError('plants.save');
-}
-```
-
 ---
 
 ### Pattern 3: Optimistic Updates with Rollback
@@ -1279,38 +1462,6 @@ async bulkUpdate(updates: Array<{ id: string; changes: Partial<Plant> }>) {
   }
 }
 ```
-
-**When Time Travel CAN Work for Rollback (Limited Cases):**
-
-Time travel (`tree.undo()`) can work for rollback ONLY when:
-
-1. The operation is the only thing happening (no concurrent requests)
-2. No user actions occur between request start and failure
-3. You don't mind polluting the undo history
-
-```typescript
-// ⚠️ Use with caution - only for simple, non-concurrent cases
-async updatePlantSimple(id: string, changes: Partial<Plant>) {
-  this.tree.$.plants.entities.update(id, changes);
-
-  try {
-    await this.api.updatePlant(id, changes);
-  } catch (e) {
-    this.tree.undo(); // Works IF nothing else changed in between
-    throw e;
-  }
-}
-```
-
-**Why time travel usually fails for optimistic updates:**
-
-| Scenario                                         | What Happens                          |
-| ------------------------------------------------ | ------------------------------------- |
-| User updates name, then species. Name API fails. | `undo()` reverts species, not name ❌ |
-| Two concurrent requests, first fails.            | `undo()` reverts the wrong one ❌     |
-| User makes unrelated change during request.      | `undo()` reverts user's change ❌     |
-
-**Recommendation:** Default to snapshot-based rollback. Only use time travel for rollback in trivial cases where concurrency is impossible.
 
 ---
 
@@ -1436,20 +1587,6 @@ export class PlantEditorComponent {
     this.formTree.$.touched.set({});
     this.formTree.$.errors.set({});
   }
-
-  private validateField(field: keyof Plant) {
-    const value = this.formTree.$.draft[field]();
-    const errors: string[] = [];
-
-    if (field === 'name' && (!value || String(value).trim() === '')) {
-      errors.push('Name is required');
-    }
-
-    this.formTree.$.errors.set({
-      ...this.formTree.$.errors(),
-      [field]: errors
-    });
-  }
 }
 ```
 
@@ -1542,14 +1679,6 @@ export function createPlantSelectors(tree: AppTree) {
         result = result.filter(p =>
           filters.status === 'active' ? p.active : !p.active
         );
-      }
-
-      if (filters.gardenId) {
-        result = result.filter(p => p.gardenId === filters.gardenId);
-      }
-
-      if (filters.species.length > 0) {
-        result = result.filter(p => filters.species.includes(p.species));
       }
 
       // Apply sort
@@ -1660,19 +1789,6 @@ export class PlantsFilterService {
     this.tree.$.plants.meta.filters.status.set(status);
   }
 
-  setGardenFilter(gardenId: string | null) {
-    this.tree.$.plants.meta.filters.gardenId.set(gardenId);
-  }
-
-  toggleSpeciesFilter(species: string) {
-    const current = this.tree.$.plants.meta.filters.species();
-    if (current.includes(species)) {
-      this.tree.$.plants.meta.filters.species.set(current.filter((s) => s !== species));
-    } else {
-      this.tree.$.plants.meta.filters.species.set([...current, species]);
-    }
-  }
-
   toggleSort(field: keyof Plant) {
     const current = this.sort();
     if (current.field === field) {
@@ -1689,37 +1805,6 @@ export class PlantsFilterService {
       gardenId: null,
       species: [],
     });
-  }
-}
-```
-
-**Component Usage:**
-
-```typescript
-@Component({
-  template: `
-    <input [value]="filterService.filters().search" (input)="filterService.setSearch($event.target.value)" placeholder="Search plants..." />
-
-    <select (change)="filterService.setStatusFilter($event.target.value)">
-      <option value="all">All</option>
-      <option value="active">Active</option>
-      <option value="inactive">Inactive</option>
-    </select>
-
-    <button (click)="filterService.toggleSort('name')">Name {{ sortIndicator('name') }}</button>
-
-    @for (plant of filterService.filteredAndSorted(); track plant.id) {
-    <app-plant-card [plant]="plant" />
-    }
-  `,
-})
-export class PlantsListComponent {
-  filterService = inject(PlantsFilterService);
-
-  sortIndicator(field: keyof Plant): string {
-    const sort = this.filterService.sort();
-    if (sort.field !== field) return '';
-    return sort.direction === 'asc' ? '↑' : '↓';
   }
 }
 ```
@@ -1762,21 +1847,6 @@ export class PlantsPaginationService {
   readonly hasMore = this.pagination.hasMore;
   readonly isLoadingPage = computed(() => this.tree.$.plants.meta.operations.loadPage.status() === 'pending');
 
-  // For traditional pagination (replace)
-  readonly currentPagePlants = computed(() => {
-    const { page, pageSize } = this.pagination();
-    const all = this.tree.$.plants.entities.selectAll()();
-    const start = (page - 1) * pageSize;
-    return all.slice(start, start + pageSize);
-  });
-
-  // For infinite scroll (accumulate)
-  readonly accumulatedPlants = computed(() => {
-    const { page, pageSize } = this.pagination();
-    const all = this.tree.$.plants.entities.selectAll()();
-    return all.slice(0, page * pageSize);
-  });
-
   async loadPage(page: number, mode: 'replace' | 'append' = 'replace') {
     const { pageSize } = this.pagination();
 
@@ -1789,7 +1859,6 @@ export class PlantsPaginationService {
         if (mode === 'replace' || page === 1) {
           this.tree.$.plants.entities.set(result.items);
         } else {
-          // Append for infinite scroll
           for (const plant of result.items) {
             this.tree.$.plants.entities.add(plant);
           }
@@ -1813,35 +1882,7 @@ export class PlantsPaginationService {
   }
 
   async loadNextPage() {
-    const current = this.currentPage();
-    await this.loadPage(current + 1, 'append');
-  }
-
-  async goToPage(page: number) {
-    await this.loadPage(page, 'replace');
-  }
-}
-```
-
-**Infinite Scroll Component:**
-
-```typescript
-@Component({
-  template: `
-    @for (plant of paginationService.accumulatedPlants(); track plant.id) {
-    <app-plant-card [plant]="plant" />
-    } @if (paginationService.hasMore()) {
-    <button (click)="paginationService.loadNextPage()" [disabled]="paginationService.isLoadingPage()">
-      {{ paginationService.isLoadingPage() ? 'Loading...' : 'Load More' }}
-    </button>
-    }
-  `,
-})
-export class PlantsInfiniteListComponent {
-  paginationService = inject(PlantsPaginationService);
-
-  ngOnInit() {
-    this.paginationService.loadPage(1);
+    await this.loadPage(this.currentPage() + 1, 'append');
   }
 }
 ```
@@ -1883,12 +1924,6 @@ export class AuthService {
   readonly isAuthenticated = computed(() => this.status() === 'authenticated');
   readonly isLoggingIn = computed(() => this.tree.$.auth.meta.operations.login.status() === 'pending');
   readonly loginError = this.tree.$.auth.meta.operations.login.error;
-
-  readonly isTokenExpiringSoon = computed(() => {
-    const expiresAt = this.tree.$.auth.expiresAt();
-    if (!expiresAt) return false;
-    return expiresAt - Date.now() < 5 * 60 * 1000; // 5 minutes
-  });
 
   async login(credentials: Credentials) {
     this.tree.$.auth.meta.operations.login.set({ status: 'pending', error: null });
@@ -1932,35 +1967,6 @@ export class AuthService {
       },
     });
   }
-
-  async refreshIfNeeded() {
-    if (!this.isTokenExpiringSoon()) return;
-
-    const refreshToken = this.tree.$.auth.refreshToken();
-    if (!refreshToken) {
-      this.logout();
-      return;
-    }
-
-    this.tree.$.auth.meta.operations.refresh.set({ status: 'pending', error: null });
-
-    try {
-      const result = await this.api.refresh(refreshToken);
-
-      this.tree.batchUpdate(() => {
-        this.tree.$.auth.token.set(result.token);
-        this.tree.$.auth.expiresAt.set(Date.now() + result.expiresIn * 1000);
-        this.tree.$.auth.meta.operations.refresh.set({ status: 'success', error: null });
-      });
-    } catch {
-      this.logout();
-    }
-  }
-
-  getAuthHeader(): string | null {
-    const token = this.tree.$.auth.token();
-    return token ? `Bearer ${token}` : null;
-  }
 }
 ```
 
@@ -1987,12 +1993,6 @@ export const authGuard: CanActivateFn = () => {
 
 ```typescript
 {
-  plants: {
-    entities: [] as Plant[],
-    meta: {
-      // ... other plant meta
-    }
-  },
   realtime: {
     status: 'disconnected' as 'connecting' | 'connected' | 'disconnected' | 'error',
     lastEvent: null as RealtimeEvent | null,
@@ -2018,29 +2018,16 @@ export class RealtimeService {
 
     this.socket$ = webSocket<RealtimeEvent>({
       url: 'wss://api.example.com/ws',
-      openObserver: {
-        next: () => this.tree.$.realtime.status.set('connected'),
-      },
-      closeObserver: {
-        next: () => this.tree.$.realtime.status.set('disconnected'),
-      },
+      openObserver: { next: () => this.tree.$.realtime.status.set('connected') },
+      closeObserver: { next: () => this.tree.$.realtime.status.set('disconnected') },
     });
 
     this.socket$.pipe(retry({ delay: 5000 }), takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (event) => this.handleEvent(event),
       error: (err) => {
-        this.tree.$.realtime.set({
-          status: 'error',
-          lastEvent: null,
-          error: err.message,
-        });
+        this.tree.$.realtime.set({ status: 'error', lastEvent: null, error: err.message });
       },
     });
-  }
-
-  disconnect() {
-    this.socket$?.complete();
-    this.tree.$.realtime.status.set('disconnected');
   }
 
   private handleEvent(event: RealtimeEvent) {
@@ -2050,20 +2037,11 @@ export class RealtimeService {
       case 'plant:created':
         this.tree.$.plants.entities.add(event.payload);
         break;
-
       case 'plant:updated':
         this.tree.$.plants.entities.update(event.payload.id, event.payload.changes);
         break;
-
       case 'plant:deleted':
         this.tree.$.plants.entities.remove(event.payload.id);
-        break;
-
-      case 'bulk:sync':
-        this.tree.batchUpdate(() => {
-          this.tree.$.plants.entities.set(event.payload.plants);
-          this.tree.$.gardens.entities.set(event.payload.gardens);
-        });
         break;
     }
   }
@@ -2094,19 +2072,6 @@ export class RealtimeService {
 }
 ```
 
-**Type Definitions:**
-
-```typescript
-interface ConfirmationConfig {
-  title: string;
-  message: string;
-  confirmText?: string;
-  cancelText?: string;
-  onConfirm: () => void | Promise<void>;
-  onCancel?: () => void;
-}
-```
-
 **Modal Service:**
 
 ```typescript
@@ -2114,7 +2079,6 @@ interface ConfirmationConfig {
 export class ModalService {
   private tree = inject(APP_TREE);
 
-  // Plant Editor Modal
   readonly plantEditorModal = this.tree.$.ui.modals.plantEditor;
 
   openPlantEditor(plantId: string | null = null) {
@@ -2133,13 +2097,8 @@ export class ModalService {
     });
   }
 
-  // Confirmation Modal
-  readonly confirmationModal = this.tree.$.ui.modals.confirmation;
-  private confirmationResolve?: (result: boolean) => void;
-
   async confirm(config: Omit<ConfirmationConfig, 'onConfirm' | 'onCancel'>): Promise<boolean> {
     return new Promise((resolve) => {
-      this.confirmationResolve = resolve;
       this.tree.$.ui.modals.confirmation.set({
         open: true,
         config: {
@@ -2159,82 +2118,6 @@ export class ModalService {
 
   private closeConfirmation() {
     this.tree.$.ui.modals.confirmation.set({ open: false, config: null });
-    this.confirmationResolve = undefined;
-  }
-}
-```
-
-**Component Usage:**
-
-```typescript
-@Component({
-  template: `
-    <button (click)="openEditor()">Add Plant</button>
-    <button (click)="editPlant(selectedPlantId)">Edit</button>
-    <button (click)="deletePlant(selectedPlantId)">Delete</button>
-
-    @if (modalService.plantEditorModal().open) {
-    <app-plant-editor-modal [plantId]="modalService.plantEditorModal().plantId" [mode]="modalService.plantEditorModal().mode" (close)="modalService.closePlantEditor()" />
-    } @if (modalService.confirmationModal().open) {
-    <app-confirmation-modal [config]="modalService.confirmationModal().config!" />
-    }
-  `,
-})
-export class PlantsComponent {
-  modalService = inject(ModalService);
-  private tree = inject(APP_TREE);
-
-  selectedPlantId = 'plant-1';
-
-  openEditor() {
-    this.modalService.openPlantEditor();
-  }
-
-  editPlant(id: string) {
-    this.modalService.openPlantEditor(id);
-  }
-
-  async deletePlant(id: string) {
-    const confirmed = await this.modalService.confirm({
-      title: 'Delete Plant',
-      message: 'Are you sure you want to delete this plant? This action cannot be undone.',
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
-    });
-
-    if (confirmed) {
-      this.tree.$.plants.entities.remove(id);
-    }
-  }
-}
-```
-
-**Alternative: Component-Local Modal State**
-
-For modals that don't need to be controlled globally:
-
-```typescript
-@Component({...})
-export class PlantsListComponent {
-  readonly showDeleteConfirm = signal(false);
-  readonly plantToDelete = signal<string | null>(null);
-
-  confirmDelete(plantId: string) {
-    this.plantToDelete.set(plantId);
-    this.showDeleteConfirm.set(true);
-  }
-
-  cancelDelete() {
-    this.showDeleteConfirm.set(false);
-    this.plantToDelete.set(null);
-  }
-
-  executeDelete() {
-    const id = this.plantToDelete();
-    if (id) {
-      this.tree.$.plants.entities.remove(id);
-    }
-    this.cancelDelete();
   }
 }
 ```
@@ -2268,7 +2151,6 @@ export class FeatureFlagService {
   private api = inject(FeatureFlagApi);
 
   readonly loaded = this.tree.$.featureFlags.loaded;
-  readonly isLoading = computed(() => this.tree.$.featureFlags.meta.operations.load.status() === 'pending');
 
   async load() {
     this.tree.$.featureFlags.meta.operations.load.set({ status: 'pending', error: null });
@@ -2278,11 +2160,7 @@ export class FeatureFlagService {
       this.tree.$.featureFlags.set({
         loaded: true,
         flags,
-        meta: {
-          operations: {
-            load: { status: 'success', error: null },
-          },
-        },
+        meta: { operations: { load: { status: 'success', error: null } } },
       });
     } catch (e) {
       this.tree.$.featureFlags.meta.operations.load.set({
@@ -2296,46 +2174,9 @@ export class FeatureFlagService {
     return computed(() => this.tree.$.featureFlags.flags()[flag] ?? false);
   }
 
-  // Commonly used flags as named signals
   readonly newPlantEditor = this.isEnabled('new-plant-editor');
   readonly darkMode = this.isEnabled('dark-mode');
-  readonly betaFeatures = this.isEnabled('beta-features');
 }
-```
-
-**Component Usage:**
-
-```typescript
-@Component({
-  template: `
-    @if (featureFlags.newPlantEditor()) {
-    <app-new-plant-editor />
-    } @else {
-    <app-legacy-plant-editor />
-    } @if (featureFlags.betaFeatures()) {
-    <app-beta-banner />
-    }
-  `,
-})
-export class PlantEditorWrapperComponent {
-  featureFlags = inject(FeatureFlagService);
-}
-```
-
-**App Initializer:**
-
-```typescript
-// app.config.ts
-export const appConfig: ApplicationConfig = {
-  providers: [
-    {
-      provide: APP_INITIALIZER,
-      useFactory: (featureFlags: FeatureFlagService) => () => featureFlags.load(),
-      deps: [FeatureFlagService],
-      multi: true,
-    },
-  ],
-};
 ```
 
 ---
@@ -2388,8 +2229,7 @@ export class PlantSelectionService {
         lastSelectedId: id,
       });
     } else {
-      const current = this.selectedIds();
-      const updated = new Set(current);
+      const updated = new Set(this.selectedIds());
       updated.add(id);
       this.tree.$.plants.meta.selection.set({
         ...this.selection(),
@@ -2399,43 +2239,18 @@ export class PlantSelectionService {
     }
   }
 
-  deselect(id: string) {
-    const current = this.selectedIds();
-    const updated = new Set(current);
-    updated.delete(id);
-    this.tree.$.plants.meta.selection.selectedIds.set(updated);
-  }
-
   toggle(id: string) {
     if (this.selectedIds().has(id)) {
-      this.deselect(id);
+      const updated = new Set(this.selectedIds());
+      updated.delete(id);
+      this.tree.$.plants.meta.selection.selectedIds.set(updated);
     } else {
       this.select(id);
     }
   }
 
-  selectAll() {
-    const allIds = this.tree.$.plants.entities
-      .selectAll()()
-      .map((p) => p.id);
-    this.tree.$.plants.meta.selection.selectedIds.set(new Set(allIds));
-  }
-
   clearSelection() {
     this.tree.$.plants.meta.selection.selectedIds.set(new Set());
-  }
-
-  setMode(mode: 'single' | 'multiple') {
-    this.tree.$.plants.meta.selection.mode.set(mode);
-    if (mode === 'single' && this.selectedCount() > 1) {
-      // Keep only the last selected
-      const lastId = this.selection().lastSelectedId;
-      this.tree.$.plants.meta.selection.selectedIds.set(lastId ? new Set([lastId]) : new Set());
-    }
-  }
-
-  isSelected(id: string): Signal<boolean> {
-    return computed(() => this.selectedIds().has(id));
   }
 }
 ```
@@ -2450,14 +2265,12 @@ export class PlantSelectionService {
 const tree = signalTree<AppState>({...})
   .with(timeTravel({ maxHistory: 50 }));
 
-// In component or service
 @Injectable({ providedIn: 'root' })
 export class UndoService {
   private tree = inject(APP_TREE);
 
   readonly canUndo = this.tree.canUndo;
   readonly canRedo = this.tree.canRedo;
-  readonly historyLength = computed(() => this.tree.getHistory().length);
 
   undo() {
     if (this.canUndo()) {
@@ -2471,7 +2284,6 @@ export class UndoService {
     }
   }
 
-  // Keyboard shortcuts
   setupKeyboardShortcuts() {
     fromEvent<KeyboardEvent>(document, 'keydown')
       .pipe(
@@ -2489,6 +2301,112 @@ export class UndoService {
   }
 }
 ```
+
+---
+
+## Where Do Selectors Live?
+
+Selectors (computed values derived from state) can live in three places. Choose based on reuse.
+
+### Option 1: Component-Local (Default)
+
+For selectors used in one component only.
+
+```typescript
+@Component({...})
+export class PlantListComponent {
+  private readonly tree = inject(APP_TREE);
+
+  // Local selector - only used here
+  readonly activePlants = computed(() =>
+    this.tree.$.plants.all().filter(p => p.active)
+  );
+
+  readonly plantsByGarden = computed(() => {
+    const gardenId = this.selectedGardenId();
+    return this.tree.$.plants.all().filter(p => p.gardenId === gardenId);
+  });
+}
+```
+
+**Use when:** Selector is specific to one component's needs.
+
+---
+
+### Option 2: Selector Factory (Recommended for Reuse)
+
+For selectors used in 2-3 places. Tree-shakeable.
+
+```typescript
+// plant.selectors.ts
+export function createPlantSelectors(tree: AppTree) {
+  return {
+    active: computed(() => tree.$.plants.all().filter(p => p.active)),
+
+    byGarden: (gardenId: string) => computed(() =>
+      tree.$.plants.all().filter(p => p.gardenId === gardenId)
+    ),
+
+    stats: computed(() => ({
+      total: tree.$.plants.all().length,
+      active: tree.$.plants.all().filter(p => p.active).length,
+    })),
+  };
+}
+
+// Usage in component
+@Component({...})
+export class PlantDashboard {
+  private readonly tree = inject(APP_TREE);
+  private readonly selectors = createPlantSelectors(this.tree);
+
+  readonly stats = this.selectors.stats;
+  readonly activePlants = this.selectors.active;
+}
+```
+
+**Use when:** Same selector logic needed in multiple components.
+
+---
+
+### Option 3: Injectable Service (For DI Needs)
+
+For selectors that need dependency injection or are used app-wide.
+
+```typescript
+// app-selectors.service.ts
+@Injectable({ providedIn: 'root' })
+export class AppSelectors {
+  private readonly tree = inject(APP_TREE);
+
+  // Cross-domain selectors used everywhere
+  readonly selectedTruck = computed(() => {
+    const id = this.tree.$.selected.truckId();
+    return id ? this.tree.$.trucks.byId(id)?.() ?? null : null;
+  });
+
+  readonly isExternal = computed(() => this.tree.$.driver.current()?.isExternal ?? true);
+
+  readonly selectableTrucks = computed(() => {
+    if (!this.isExternal()) return this.tree.$.trucks.all();
+    const haulerId = this.tree.$.selected.haulerId();
+    return haulerId ? this.tree.$.haulers.byId(haulerId)?.()?.trucks ?? [] : [];
+  });
+}
+```
+
+**Use when:** Selectors are used in 4+ places OR need DI.
+
+---
+
+### Decision Guide
+
+| Selector Usage | Location           | Example                             |
+| -------------- | ------------------ | ----------------------------------- |
+| 1 component    | Component-local    | `readonly filtered = computed(...)` |
+| 2-3 components | Factory function   | `createPlantSelectors(tree)`        |
+| 4+ components  | Injectable service | `AppSelectors`                      |
+| Needs DI       | Injectable service | Selectors using other services      |
 
 ---
 
@@ -2670,26 +2588,8 @@ This conflates architectural complexity (bad) with feature complexity (sometimes
 **Before Labeling Something "Over-Engineering," Ask:**
 
 1. **Is it a product requirement?**
-
-   - Real-time sync → Does the product need live updates?
-   - Performance monitoring → Is this used in production dashboards?
-
 2. **Is it actually used?**
-
-   - If used → Keep (maybe relocate)
-   - If unused → Remove (it's dead code, not over-engineering)
-
 3. **Is it in the right place?**
-   - Business logic in tree file → Move to facades
-   - Infrastructure in tree file → Extract to separate module
-
-**The Correct Framing:**
-
-| Instead of...             | Ask...                                                   |
-| ------------------------- | -------------------------------------------------------- |
-| "Remove this feature"     | "Is this feature required? If so, where should it live?" |
-| "This is over-engineered" | "What specifically is adding unnecessary complexity?"    |
-| "Simplify by removing"    | "Simplify by relocating to the right layer"              |
 
 ---
 
@@ -2725,8 +2625,6 @@ Moving code to different files doesn't reduce complexity—it just spreads it ar
 2. **Then**: Remove or relocate with clear reasoning
 3. **Finally**: Reorganize what remains (if it helps clarity)
 
-Don't reorganize first—you'll just spread complexity across more files and make it harder to identify what to remove.
-
 ---
 
 ## Evaluating Existing Implementations
@@ -2745,23 +2643,6 @@ Before removing anything, document what each abstraction layer actually does:
 - **What would break if removed?**
 - **Does it duplicate built-in SignalTree functionality?**
 - **Does it add legitimate value beyond SignalTree?**
-```
-
-**Example Audit:**
-
-```markdown
-## Layer: TrackedChangesManager
-
-- **Exposes**: undo(), redo(), canUndo$, canRedo$, trackChanges()
-- **Consumers**: PlantEditorComponent, BulkEditModal
-- **If removed**: Undo/redo keyboard shortcuts stop working
-  -- **Duplicates**: Partially duplicates timeTravel
-- **Adds value**: Integrates with form dirty state
-
-## Verdict: PARTIAL KEEP
-
-- Remove undo/redo (use timeTravel directly)
-- Keep form dirty state integration (move to facade)
 ```
 
 ---
@@ -2789,9 +2670,8 @@ For each major operation, trace the full path:
 User clicks "Save Plant"
   → Component.onSave()
     → [What gets called?]
-      → [What gets called?]
-        → [Where does tree mutation happen?]
-          → [Where does API call happen?]
+      → [Where does tree mutation happen?]
+        → [Where does API call happen?]
 ```
 
 **Red Flags:**
@@ -2800,23 +2680,6 @@ User clicks "Save Plant"
 - Same data transformed multiple times
 - Multiple places that could trigger the same mutation
 - Unclear ownership of side effects
-
-**Example Trace:**
-
-```
-❌ PROBLEMATIC:
-SaveButton.onClick()
-  → PlantsFacade.save()
-    → TrackedChangesManager.trackChange()
-      → PlantStore.update()
-        → BaseEntityStore.update()
-          → Tree.$.plants.entities.update()
-
-✅ SIMPLIFIED:
-SaveButton.onClick()
-  → PlantsFacade.save()  // Orchestration + API call
-    → Tree.$.plants.entities.update()  // Direct tree access
-```
 
 ---
 
@@ -2831,12 +2694,6 @@ For each layer that remains, it should have exactly one responsibility:
 | **Tree**        | State storage, enhancer composition      | Business logic, API calls                     |
 | **API Service** | HTTP calls, response mapping             | State management, caching                     |
 
-**Questions to Ask:**
-
-- Does this layer have more than one responsibility?
-- Could this responsibility live in an existing layer?
-- Is this layer just passing through to another layer?
-
 ---
 
 ### Step 5: Measure Before and After
@@ -2850,24 +2707,6 @@ Don't use made-up metrics like "60-70% simpler." Measure real things:
 | **Files touched per feature** | How many files to add a new entity? | Fewer = easier maintenance    |
 | **Cyclomatic complexity**     | Static analysis tools               | Lower = easier to test        |
 | **Time to trace a bug**       | Stopwatch a debugging session       | Shorter = better DX           |
-
-**Example Measurement:**
-
-```markdown
-## Before Refactor
-
-- Total LOC: 4,200
-- Layers (component → tree): 6
-- Files to add new entity type: 8
-- Time to trace "save" flow: 15 minutes
-
-## After Refactor
-
-- Total LOC: 2,100 (-50%)
-- Layers (component → tree): 3 (-50%)
-- Files to add new entity type: 3 (-62%)
-- Time to trace "save" flow: 3 minutes (-80%)
-```
 
 ---
 
@@ -2905,53 +2744,6 @@ Use this checklist when simplifying an implementation:
 
 ---
 
-### Anti-Pattern: The Blanket Removal
-
-**Don't do this:**
-
-```markdown
-Plan:
-
-1. Remove TrackedChangesManager ❌
-2. Remove TrackedEntityStoreBase ❌
-3. Remove all facades ❌
-4. Remove performance monitoring ❌
-5. Remove real-time sync ❌
-```
-
-**Why it fails:**
-
-- No analysis of what these provide
-- No consideration of what breaks
-- No migration path for consumers
-- Assumes all abstraction is bad
-
-**Do this instead:**
-
-```markdown
-Plan:
-
-1. Audit TrackedChangesManager
-
-- Finding: Wraps timeTravel + adds form integration
-- Action: Remove wrapper, keep form integration in facade
-
-2. Audit TrackedEntityStoreBase
-   - Finding: Adds validation + relationship handling
-   - Action: Move validation to facades, evaluate relationship handling
-3. Audit facades
-   - Finding: PlantsFacade has orchestration, GardensFacade is pass-through
-   - Action: Keep PlantsFacade, remove GardensFacade
-4. Audit performance monitoring
-   - Finding: Used in production dashboards
-   - Action: Keep, extract to separate module
-5. Audit real-time sync
-   - Finding: Product requirement for collaborative editing
-   - Action: Keep, extract to separate module
-```
-
----
-
 ## Summary: Recommended Default Architecture
 
 For most Angular applications using SignalTree:
@@ -2975,7 +2767,7 @@ For most Angular applications using SignalTree:
 ┌─────────────────────────────────▼───────────────────────────┐
 │                   Single Global Tree                        │
 │  • All shared state                                         │
-│  • Entities with entities()                             │
+│  • Entities with entities()                                 │
 │  • Enhancers as needed                                      │
 │  • Organized by domain (tree.$.plants, tree.$.gardens)      │
 └─────────────────────────────────┬───────────────────────────┘
