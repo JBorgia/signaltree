@@ -390,8 +390,8 @@ importers:
         version: 0.15.1
     devDependencies:
       '@signaltree/core':
-        specifier: workspace:*
-        version: link:../core
+        specifier: ^6.0.0
+        version: 6.0.0(@angular/compiler@20.3.11)(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(@angular/platform-browser-dynamic@20.3.11(@angular/common@20.3.11(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/compiler@20.3.11)(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(@angular/platform-browser@20.3.11(@angular/common@20.3.11(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))))(tslib@2.8.1)(vitest@2.1.9)(zone.js@0.15.1)
 
   packages/guardrails:
     dependencies:
@@ -403,8 +403,8 @@ importers:
         version: 2.1.9(@edge-runtime/vm@3.2.0)(@types/node@22.18.1)(@vitest/ui@2.1.9)(happy-dom@20.0.11)(jsdom@26.1.0)(less@4.4.2)(lightningcss@1.30.1)(sass-embedded@1.93.3)(sass@1.94.0)(terser@5.43.1)
     devDependencies:
       '@signaltree/core':
-        specifier: workspace:*
-        version: link:../core
+        specifier: ^6.0.0
+        version: 6.0.0(@angular/compiler@20.3.11)(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(@angular/platform-browser-dynamic@20.3.11(@angular/common@20.3.11(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/compiler@20.3.11)(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(@angular/platform-browser@20.3.11(@angular/common@20.3.11(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))))(tslib@2.8.1)(vitest@2.1.9)(zone.js@0.15.1)
       '@signaltree/shared':
         specifier: workspace:*
         version: link:../shared
@@ -425,8 +425,8 @@ importers:
         version: 7.8.2
     devDependencies:
       '@signaltree/core':
-        specifier: workspace:*
-        version: link:../core
+        specifier: ^6.0.0
+        version: 6.0.0(@angular/compiler@20.3.11)(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(@angular/platform-browser-dynamic@20.3.11(@angular/common@20.3.11(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/compiler@20.3.11)(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(@angular/platform-browser@20.3.11(@angular/common@20.3.11(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))))(tslib@2.8.1)(vitest@2.1.9)(zone.js@0.15.1)
       '@signaltree/shared':
         specifier: workspace:*
         version: link:../shared
@@ -3656,6 +3656,25 @@ packages:
 
   '@shikijs/vscode-textmate@10.0.2':
     resolution: {integrity: sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==}
+
+  '@signaltree/core@6.0.0':
+    resolution: {integrity: sha512-zb+Lpnijy4S3ATcIJPRBSsNA6MyYfXYnXMvZwmmH5ovfVSIt/+8IYESok7OKLRobuWM3pSUQk2VmUWWX+tvbDw==}
+    peerDependencies:
+      '@angular/compiler': ^20.0.0
+      '@angular/core': ^20.0.0
+      '@angular/platform-browser-dynamic': ^20.0.0
+      tslib: ^2.0.0
+      vitest: ^2.0.0
+      zone.js: ^0.15.0
+    peerDependenciesMeta:
+      '@angular/compiler':
+        optional: true
+      '@angular/platform-browser-dynamic':
+        optional: true
+      vitest:
+        optional: true
+      zone.js:
+        optional: true
 
   '@sigstore/bundle@3.1.0':
     resolution: {integrity: sha512-Mm1E3/CmDDCz3nDhFKTuYdB47EdRFRQMOE/EAbiG1MJW77/w1b3P7Qx7JSrVJs8PfwOLOVcKQCHErIwCTyPbag==}
@@ -13973,6 +13992,16 @@ snapshots:
       '@types/hast': 3.0.4
 
   '@shikijs/vscode-textmate@10.0.2': {}
+
+  '@signaltree/core@6.0.0(@angular/compiler@20.3.11)(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(@angular/platform-browser-dynamic@20.3.11(@angular/common@20.3.11(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/compiler@20.3.11)(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(@angular/platform-browser@20.3.11(@angular/common@20.3.11(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))))(tslib@2.8.1)(vitest@2.1.9)(zone.js@0.15.1)':
+    dependencies:
+      '@angular/core': 20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1)
+      tslib: 2.8.1
+    optionalDependencies:
+      '@angular/compiler': 20.3.11
+      '@angular/platform-browser-dynamic': 20.3.11(@angular/common@20.3.11(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/compiler@20.3.11)(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(@angular/platform-browser@20.3.11(@angular/common@20.3.11(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1)))
+      vitest: 2.1.9(@edge-runtime/vm@3.2.0)(@types/node@22.18.1)(@vitest/ui@2.1.9)(happy-dom@20.0.11)(jsdom@26.1.0)(less@4.4.2)(lightningcss@1.30.1)(sass-embedded@1.93.3)(sass@1.94.0)(terser@5.43.1)
+      zone.js: 0.15.1
 
   '@sigstore/bundle@3.1.0':
     dependencies:
