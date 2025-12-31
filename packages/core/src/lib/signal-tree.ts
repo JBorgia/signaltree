@@ -234,7 +234,7 @@ function createSignalStore<T>(
   const store: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-    // Entity map markers - preserve for withEntities()
+    // Entity map markers - preserve for entities()
     if (isEntityMapMarker(value)) {
       store[key] = value;
       continue;
@@ -338,8 +338,53 @@ function create<T extends object>(
     writable: false,
   });
 
-  // v6 single-enhancer chaining: accept exactly one enhancer and return
-  // the enhanced tree. Chaining should be done by calling `.with()` again.
+  /**
+   * Apply a single enhancer to this SignalTree instance and return the enhanced tree.
+   *
+   * Enhancers extend the tree with additional capabilities (batching, memoization, time travel, dev tools, entities, serialization, etc).
+   *
+   * Usage:
+   * ```ts
+   * const enhanced = tree.with(batching({ debounceMs: 10 }));
+   * // Chain multiple enhancers:
+   * const fullyEnhanced = tree
+   *   .with(batching())
+   *   .with(memoization({ maxCacheSize: 500 }))
+   *   .with(timeTravel({ maxHistorySize: 100 }))
+   *   .with(devTools({ treeName: 'MyTree' }));
+   * ```
+   *
+   * Supported enhancers and their options:
+   *
+   * - `batching(config?: BatchingConfig)`
+   *   - Enables batched state updates for performance.
+   *   - Options: `debounceMs`, `maxBatchSize`, `enabled`.
+   *
+   * - `memoization(config?: MemoizationConfig)`
+   *   - Adds memoized selectors and cache management.
+   *   - Options: `maxCacheSize`, `ttl`, `enableLRU`, `equality`, `enabled`.
+   *
+   * - `timeTravel(config?: TimeTravelConfig)`
+   *   - Enables undo/redo and state history.
+   *   - Options: `maxHistorySize`, `includePayload`, `actionNames`, `enabled`.
+   *
+   * - `devTools(config?: DevToolsConfig)`
+   *   - Integrates with browser devtools and logs state changes.
+   *   - Options: `treeName`, `enableBrowserDevTools`, `enableLogging`, `performanceThreshold`, `enabled`.
+   *
+   * - `entities(config?: EntitiesEnhancerConfig)`
+   *   - Enables entity map support for normalized collections.
+   *   - Options: `enabled`.
+   *
+   * - `serialization(config?: SerializationConfig)`
+   *   - Adds state serialization and persistence helpers.
+   *   - Options: `includeMetadata`, `replacer`, `reviver`, `preserveTypes`, `maxDepth`.
+   *
+   * @template R The return type of the enhancer (usually the enhanced tree).
+   * @param enhancer A function that takes the current tree and returns an enhanced tree.
+   * @returns The enhanced tree with additional methods or capabilities.
+   * @see BatchingConfig, MemoizationConfig, TimeTravelConfig, DevToolsConfig, EntitiesEnhancerConfig, SerializationConfig
+   */
   Object.defineProperty(tree, 'with', {
     value: function <R>(enhancer: (tree: ISignalTree<T>) => R): R {
       if (typeof enhancer !== 'function') {
@@ -438,7 +483,7 @@ function create<T extends object>(
 /**
  * Create a minimal SignalTree.
  *
- * Returns SignalTree<T> with only core functionality.
+ * Returns ISignalTree<T> with only core functionality.
  * Use .with() to add enhancers for additional features.
  *
  * @example
@@ -447,13 +492,13 @@ function create<T extends object>(
  * const tree = signalTree({ count: 0 });
  *
  * // With effects
- * const tree = signalTree({ count: 0 }).with(withEffects());
+ * const tree = signalTree({ count: 0 }).with(effects());
  *
  * // With multiple enhancers
  * const tree = signalTree({ count: 0 })
- *   .with(withEffects())
- *   .with(withTimeTravel())
- *   .with(withBatching());
+ *   .with(effects())
+ *   .with(timeTravel())
+ *   .with(batching());
  * ```
  */
 export function signalTree<T extends object>(

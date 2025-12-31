@@ -1,14 +1,14 @@
-import { signalTree, withMemoization } from '@signaltree/core';
+import { memoization, signalTree } from '@signaltree/core';
 import { describe, expect, it } from 'vitest';
 
-import { withGuardrails } from '../guardrails';
+import { guardrails } from '../guardrails';
 
 // Import enhancer from source to avoid Vitest package ESM resolution issues
 describe('recomputation tracking', () => {
   it('counts recomputations from memoization and triggers budget warning', async () => {
     const tree = signalTree({ a: 1, b: 2 });
-    const memo = withMemoization<{ a: number; b: number }>({ enabled: true });
-    const guard = withGuardrails<{ a: number; b: number }>({
+    const memo = memoization({ enabled: true });
+    const guard = guardrails({
       budgets: { maxRecomputations: 1 },
       reporting: { aggregateWarnings: false },
       changeDetection: { disablePathNotifier: true }, // signalTree doesn't emit PathNotifier events
@@ -37,8 +37,8 @@ describe('recomputation tracking', () => {
   describe('recomputation budget edge cases', () => {
     it('warns when budget is exceeded by single recomputation', async () => {
       const tree = signalTree({ value: 1 });
-      const memo = withMemoization<{ value: number }>({ enabled: true });
-      const guard = withGuardrails<{ value: number }>({
+      const memo = memoization({ enabled: true });
+      const guard = guardrails({
         budgets: { maxRecomputations: 1 }, // Allow only 1 recomputation
         reporting: { aggregateWarnings: false },
         changeDetection: { disablePathNotifier: true },
@@ -69,10 +69,10 @@ describe('recomputation tracking', () => {
         y: 2,
         z: 3,
       });
-      const memo = withMemoization<{ x: number; y: number; z: number }>({
+      const memo = memoization({
         enabled: true,
       });
-      const guard = withGuardrails<{ x: number; y: number; z: number }>({
+      const guard = guardrails({
         budgets: { maxRecomputations: 100 },
         reporting: { aggregateWarnings: false },
         changeDetection: { disablePathNotifier: true },
@@ -126,8 +126,8 @@ describe('recomputation tracking', () => {
 
     it('resets recomputation count after disposal', async () => {
       const tree = signalTree({ count: 0 });
-      const memo = withMemoization<{ count: number }>({ enabled: true });
-      const guard = withGuardrails<{ count: number }>({
+      const memo = memoization({ enabled: true });
+      const guard = guardrails({
         budgets: { maxRecomputations: 10 },
         reporting: { aggregateWarnings: false },
         changeDetection: { disablePathNotifier: true },
@@ -165,8 +165,8 @@ describe('recomputation tracking', () => {
 
     it('handles rapid successive recomputations', async () => {
       const tree = signalTree({ value: 0 });
-      const memo = withMemoization<{ value: number }>({ enabled: true });
-      const guard = withGuardrails<{ value: number }>({
+      const memo = memoization({ enabled: true });
+      const guard = guardrails({
         budgets: { maxRecomputations: 50 },
         reporting: { aggregateWarnings: false },
         changeDetection: { disablePathNotifier: true },

@@ -36,9 +36,9 @@ All enhancers are imported from `@signaltree/core`:
 ### Simple composition using `composeEnhancers`:
 
 ```typescript
-import { signalTree, composeEnhancers, withBatching, withDevTools } from '@signaltree/core';
+import { signalTree, composeEnhancers, batching, devTools } from '@signaltree/core';
 
-const composed = composeEnhancers(withBatching, withDevTools);
+const composed = composeEnhancers(batching, devTools);
 
 const tree = signalTree({ count: 0 }).with(composed);
 ```
@@ -46,9 +46,9 @@ const tree = signalTree({ count: 0 }).with(composed);
 ### Or apply enhancers directly in explicit order (recommended for predictability):
 
 ```typescript
-import { signalTree, withBatching, withDevTools } from '@signaltree/core';
+import { signalTree, batching, devTools } from '@signaltree/core';
 
-const enhanced = signalTree({ count: 0 }).with(withBatching, withDevTools);
+const enhanced = signalTree({ count: 0 }).with(batching, devTools);
 ```
 
 ### Use presets for convenient developer setup:

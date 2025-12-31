@@ -1,4 +1,4 @@
-import { rules, withGuardrails } from '../noop';
+import { guardrails, rules } from '../noop';
 
 import type { ISignalTree, TreeConfig, Enhancer } from '@signaltree/core';
 
@@ -70,12 +70,12 @@ export function createFeatureTree<T extends Record<string, unknown>>(
   if (isDev || isTest) {
     const guardrailsConfig = resolveGuardrailsConfig<T>(options.guardrails);
     if (guardrailsConfig) {
-      // `withGuardrails` returns a monomorphic enhancer; cast to `Enhancer<unknown>`
+      // `guardrails` returns a monomorphic enhancer; cast to `Enhancer<unknown>`
       // so factories can accept it uniformly. This is safe because the factory
       // doesn't depend on the added methods and `.with()` will correctly type
       // the resulting tree for callers.
       enhancers.push(
-        withGuardrails(guardrailsConfig) as unknown as Enhancer<unknown>
+        guardrails(guardrailsConfig) as unknown as Enhancer<unknown>
       );
     }
   }

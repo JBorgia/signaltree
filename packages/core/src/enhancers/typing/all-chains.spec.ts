@@ -2,12 +2,14 @@
 // Exhaustive compile-time typing assertions for enhancer chaining
 // This file uses type-level assertions only. It must compile without errors.
 
-import type { BatchingMethods } from '../batching/lib/batching';
-import type { MemoizationMethods } from '../memoization/lib/memoization';
-import type { TimeTravelMethods } from '../time-travel/lib/time-travel';
-import type { DevToolsMethods } from '../devtools/lib/devtools';
-import type { EntitiesMethods } from '../entities/lib/entities';
-import type { OptimizedUpdateMethods } from '../../lib/types';
+import type {
+  BatchingMethods,
+  DevToolsMethods,
+  MemoizationMethods,
+  OptimizedUpdateMethods,
+  TimeTravelMethods,
+  EntitiesEnabled,
+} from '../../lib/types';
 
 // Helper equality/assert types
 type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
@@ -19,7 +21,7 @@ type Assert<T extends true> = T;
 
 type Tree = { count: number };
 
-type Base = object; // placeholder for SignalTree<T> fields we don't model here
+type Base = object; // placeholder for ISignalTree<T> fields we don't model here
 
 // Single enhancer expectations
 type _batch_single = Assert<
@@ -35,7 +37,7 @@ type _dev_single = Assert<
   Equals<DevToolsMethods & Base, Base & DevToolsMethods>
 >;
 type _entities_single = Assert<
-  Equals<EntitiesMethods<Tree> & Base, Base & EntitiesMethods<Tree>>
+  Equals<EntitiesEnabled & Base, Base & EntitiesEnabled>
 >;
 
 // Pair combinations — expected intersection of methods
@@ -64,9 +66,9 @@ type _triple_bmt = Assert<
 >;
 
 // Include optimized update methods and entities
-type EO = EntitiesMethods<Tree> & OptimizedUpdateMethods<Tree> & Base;
+type EO = EntitiesEnabled & OptimizedUpdateMethods<Tree> & Base;
 type _pair_entities_opt = Assert<
-  Equals<EO, Base & EntitiesMethods<Tree> & OptimizedUpdateMethods<Tree>>
+  Equals<EO, Base & EntitiesEnabled & OptimizedUpdateMethods<Tree>>
 >;
 
 // Affirm composition assignability (structural)
@@ -75,14 +77,20 @@ type Composite = Base &
   MemoizationMethods<Tree> &
   DevToolsMethods &
   TimeTravelMethods<Tree> &
-  EntitiesMethods<Tree> &
+  EntitiesEnabled &
   OptimizedUpdateMethods<Tree>;
 type _composite_ok = Assert<Equals<Composite, Composite>>;
 
 export {};
 
-import { describe, it, expect } from 'vitest';
-describe('typing compile-time checks (runtime shim)', () => { it('compiles type-level assertions', () => { expect(true).toBe(true); }); });
+describe('typing compile-time checks (runtime shim)', () => {
+  it('compiles type-level assertions', () => {
+    expect(true).toBe(true);
+  });
+});
 
-import { describe, it, expect } from 'vitest';
-describe('typing compile-time checks (runtime shim)', () => { it('compiles type-level assertions', () => { expect(true).toBe(true); }); });
+describe('typing compile-time checks (runtime shim)', () => {
+  it('compiles type-level assertions', () => {
+    expect(true).toBe(true);
+  });
+});

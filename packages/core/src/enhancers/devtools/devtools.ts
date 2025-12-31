@@ -3,7 +3,7 @@ import { Signal, signal } from '@angular/core';
 /**
  * v6 DevTools Enhancer
  *
- * Contract: (config?) => <S>(tree: SignalTree<S>) => SignalTree<S> & DevToolsMethods
+ * Contract: (config?) => <S>(tree: ISignalTree<S>) => ISignalTree<S> & DevToolsMethods
  */
 import type {
   ISignalTree,

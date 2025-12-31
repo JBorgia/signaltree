@@ -206,7 +206,7 @@ export function createLazySignalTree<T extends object>(
 
       if (isSignal(value)) return value;
 
-      // Check if value is already an EntitySignal (materialized by withEntities())
+      // Check if value is already an EntitySignal (materialized by entities())
       // EntitySignal has addOne and all methods
       if (
         value &&
@@ -217,7 +217,7 @@ export function createLazySignalTree<T extends object>(
         return value;
       }
 
-      // Preserve EntityMapMarker so withEntities can materialize them later
+      // Preserve EntityMapMarker so entities can materialize them later
       if (isEntityMapMarker(value)) return value;
 
       // Check memory manager cache first

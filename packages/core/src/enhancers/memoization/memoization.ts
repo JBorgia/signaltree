@@ -402,13 +402,13 @@ export const MEMOIZATION_PRESETS = {
  *
  * @example
  * ```typescript
- * const tree = signalTree(state).with(withSelectorMemoization());
+ * const tree = signalTree(state).with(selectorMemoization());
  * const activeUsers = computed(() =>
  *   tree.state.users().filter(u => u.active)
  * );
  * ```
  */
-export function withSelectorMemoization(): <S>(
+export function selectorMemoization(): <S>(
   tree: ISignalTree<S>
 ) => ISignalTree<S> & MemoizationMethods<S> {
   return memoization(MEMOIZATION_PRESETS.selector);
@@ -420,13 +420,13 @@ export function withSelectorMemoization(): <S>(
  *
  * @example
  * ```typescript
- * const tree = signalTree(state).with(withComputedMemoization());
+ * const tree = signalTree(state).with(computedMemoization());
  * const metrics = computed(() =>
  *   calculateExpensiveMetrics(tree.state.data())
  * );
  * ```
  */
-export function withComputedMemoization(): <S>(
+export function computedMemoization(): <S>(
   tree: ISignalTree<S>
 ) => ISignalTree<S> & MemoizationMethods<S> {
   return memoization(MEMOIZATION_PRESETS.computed);
@@ -438,11 +438,11 @@ export function withComputedMemoization(): <S>(
  *
  * @example
  * ```typescript
- * const tree = signalTree(state).with(withDeepStateMemoization());
+ * const tree = signalTree(state).with(deepStateMemoization());
  * // Handles complex nested object comparisons
  * ```
  */
-export function withDeepStateMemoization(): <S>(
+export function deepStateMemoization(): <S>(
   tree: ISignalTree<S>
 ) => ISignalTree<S> & MemoizationMethods<S> {
   return memoization(MEMOIZATION_PRESETS.deepState);
@@ -454,11 +454,11 @@ export function withDeepStateMemoization(): <S>(
  *
  * @example
  * ```typescript
- * const tree = signalTree(state).with(withHighFrequencyMemoization());
+ * const tree = signalTree(state).with(highFrequencyMemoization());
  * // For operations called thousands of times per second
  * ```
  */
-export function withHighFrequencyMemoization(): <S>(
+export function highFrequencyMemoization(): <S>(
   tree: ISignalTree<S>
 ) => ISignalTree<S> & MemoizationMethods<S> {
   return memoization(MEMOIZATION_PRESETS.highFrequency);
@@ -474,20 +474,16 @@ export function withHighFrequencyMemoization(): <S>(
 export const withMemoization = Object.assign(
   (config: MemoizationConfig = {}) => memoization(config),
   {
-    selector: withSelectorMemoization,
-    computed: withComputedMemoization,
-    deep: withDeepStateMemoization,
-    fast: withHighFrequencyMemoization,
+    selector: selectorMemoization,
+    computed: computedMemoization,
+    deep: deepStateMemoization,
+    fast: highFrequencyMemoization,
   }
 );
 
 /**
  * Enhances a SignalTree with memoization capabilities
  * Uses unconstrained recursive typing - no limitations on T
- */
-/**
- * @deprecated Use `memoization()` instead. This legacy factory will be
- * removed in a future major release.
  */
 export function memoization(
   config: MemoizationConfig = {}
@@ -762,9 +758,7 @@ export function enableMemoization(): <Tree extends ISignalTree<any>>(
  * High-performance memoization with aggressive caching
  * Uses unconstrained recursive typing - no limitations on T
  */
-export function withHighPerformanceMemoization(): <
-  Tree extends ISignalTree<any>
->(
+export function highPerformanceMemoization(): <Tree extends ISignalTree<any>>(
   tree: Tree
 ) => Tree & MemoizationMethods<any> {
   return memoization({
@@ -780,7 +774,7 @@ export function withHighPerformanceMemoization(): <
  * Lightweight memoization optimized for performance-critical scenarios
  * Disables expensive cache management features for maximum speed
  */
-export function withLightweightMemoization(): <Tree extends ISignalTree<any>>(
+export function lightweightMemoization(): <Tree extends ISignalTree<any>>(
   tree: Tree
 ) => Tree & MemoizationMethods<any> {
   return memoization({
@@ -796,7 +790,7 @@ export function withLightweightMemoization(): <Tree extends ISignalTree<any>>(
  * Shallow equality memoization for objects with primitive values
  * Good balance between performance and correctness
  */
-export function withShallowMemoization(): <Tree extends ISignalTree<any>>(
+export function shallowMemoization(): <Tree extends ISignalTree<any>>(
   tree: Tree
 ) => Tree & MemoizationMethods<any> {
   return memoization({

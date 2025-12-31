@@ -1,4 +1,4 @@
-import { withGuardrails } from './lib/guardrails';
+import { guardrails } from './lib/guardrails';
 import { rules } from './lib/rules';
 
 /**
@@ -7,5 +7,5 @@ import { rules } from './lib/rules';
  * @packageDocumentation
  */
 
-export { withGuardrails, rules };
+export { guardrails, rules };
 export type * from './lib/types';

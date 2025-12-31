@@ -33,8 +33,8 @@ const testCases = [
   {
     name: 'Core + one enhancer (batching)',
     code: `
-      import { signalTree, withBatching } from '@signaltree/core';
-      const tree = signalTree({ count: 0 }).with(withBatching());
+      import { signalTree, batching } from '@signaltree/core';
+      const tree = signalTree({ count: 0 }).with(batching());
     `,
     expectedFiles: ['signal-tree.js', 'batching.js'],
     shouldNotInclude: ['memoization', 'devtools', 'serialization'],
@@ -43,8 +43,8 @@ const testCases = [
     name: 'Subpath import (avoids barrel)',
     code: `
       import { signalTree } from '@signaltree/core';
-      import { withBatching } from '@signaltree/core/enhancers/batching';
-      const tree = signalTree({ count: 0 }).with(withBatching());
+      import { batching } from '@signaltree/core/enhancers/batching';
+      const tree = signalTree({ count: 0 }).with(batching());
     `,
     expectedFiles: ['signal-tree.js', 'batching.js'],
     shouldNotInclude: ['memoization', 'devtools', 'serialization'],

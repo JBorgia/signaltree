@@ -20,9 +20,9 @@ npm install @signaltree/core @signaltree/enterprise
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withEnterprise } from '@signaltree/enterprise';
+import { enterprise } from '@signaltree/enterprise';
 
-const tree = signalTree(largeState).with(withEnterprise());
+const tree = signalTree(largeState).with(enterprise());
 
 // Use optimized bulk updates
 const result = tree.updateOptimized(newData, {
@@ -53,15 +53,15 @@ console.log(result.stats);
 
 ## API
 
-### `withEnterprise()`
+### `enterprise()`
 
 Enhancer that adds enterprise optimizations to a SignalTree.
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withEnterprise } from '@signaltree/enterprise';
+import { enterprise } from '@signaltree/enterprise';
 
-const tree = signalTree(initialState).with(withEnterprise());
+const tree = signalTree(initialState).with(enterprise());
 ```
 
 ### `tree.updateOptimized(updates, options?)`
@@ -116,7 +116,7 @@ if (index) {
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withEnterprise } from '@signaltree/enterprise';
+import { enterprise } from '@signaltree/enterprise';
 
 interface DashboardState {
   metrics: Record<string, number>;
@@ -125,7 +125,7 @@ interface DashboardState {
   // ... hundreds more properties
 }
 
-const dashboard = signalTree<DashboardState>(initialState).with(withEnterprise());
+const dashboard = signalTree<DashboardState>(initialState).with(enterprise());
 
 // High-frequency updates from WebSocket
 socket.on('metrics', (newMetrics) => {
@@ -139,14 +139,14 @@ socket.on('metrics', (newMetrics) => {
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withEnterprise } from '@signaltree/enterprise';
+import { enterprise } from '@signaltree/enterprise';
 
 const grid = signalTree({
   rows: [] as GridRow[],
   columns: [] as GridColumn[],
   filters: {} as FilterState,
   selection: new Set<string>(),
-}).with(withEnterprise());
+}).with(enterprise());
 
 // Bulk update from API
 async function loadData() {
@@ -164,7 +164,7 @@ async function loadData() {
 ### Custom Equality for Complex Objects
 
 ```typescript
-const tree = signalTree(complexState).with(withEnterprise());
+const tree = signalTree(complexState).with(enterprise());
 
 tree.updateOptimized(newState, {
   equalityFn: (a, b) => {

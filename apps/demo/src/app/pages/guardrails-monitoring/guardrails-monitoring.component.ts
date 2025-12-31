@@ -1,21 +1,15 @@
 import { CommonModule } from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  OnDestroy,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, OnDestroy, signal } from '@angular/core';
 import { signalTree } from '@signaltree/core';
 import {
   GuardrailIssue,
   GuardrailRule,
+  guardrails,
   GuardrailsAPI,
   GuardrailsConfig,
   GuardrailsReport,
   HotPath,
   rules,
-  withGuardrails,
 } from '@signaltree/guardrails';
 
 import type { ISignalTree, SignalTree } from '@signaltree/core';
@@ -43,7 +37,7 @@ interface DemoEvent {
 }
 
 type GuardrailsEnabledTree<T extends Record<string, unknown>> =
-  SignalTree<T> & {
+  ISignalTree<T> & {
     __guardrails?: GuardrailsAPI;
   };
 
@@ -111,9 +105,7 @@ export class GuardrailsMonitoringComponent implements OnDestroy {
 
   private readonly tree = signalTree<GuardrailsDemoState>(
     this.initialState
-  ).with(
-    withGuardrails(this.config)
-  ) as GuardrailsEnabledTree<GuardrailsDemoState>;
+  ).with(guardrails(this.config)) as GuardrailsEnabledTree<GuardrailsDemoState>;
 
   private readonly guardrails = this.tree.__guardrails;
 

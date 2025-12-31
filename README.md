@@ -4,7 +4,7 @@
   <p>Type-safe, modular, signal-based state management for Angular. SignalTree offers a lightweight alternative to traditional solutions with a composable API and solid performance.</p>
   
   <p>
-    <a href="https://jborgia.github.io/signaltree/" target="_blank"><strong>🎮 Live Demo & Benchmarks</strong></a>
+    <a href="https://jborgia.github.io/signaltree/" target="_blank"><strong>🎮 Live Demo & Benchmarks</strong></a> 
     &nbsp;|&nbsp;
     <a href="https://www.npmjs.com/package/@signaltree/core" target="_blank">📦 npm</a>
     &nbsp;|&nbsp;
@@ -266,8 +266,8 @@ The following standalone packages are **deprecated on npm** and will no longer r
 ```typescript
 // ❌ Old way - multiple package installations
 import { signalTree } from '@signaltree/core';
-import { withBatching } from '@signaltree/batching';
-import { withMemoization } from '@signaltree/memoization';
+import { batching } from '@signaltree/batching';
+import { memoization } from '@signaltree/memoization';
 import { withDevtools } from '@signaltree/devtools';
 ```
 
@@ -275,7 +275,7 @@ import { withDevtools } from '@signaltree/devtools';
 
 ```typescript
 // ✅ New way - single package import
-import { signalTree, withBatching, withMemoization, withDevtools } from '@signaltree/core';
+import { signalTree, batching, memoization, withDevtools } from '@signaltree/core';
 
 // All enhancers available from @signaltree/core
 ```
@@ -439,7 +439,7 @@ const history = tree.getHistory(); // Get state history
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withSerialization, withPersistence } from '@signaltree/core';
+import { serialization, persistence } from '@signaltree/core';
 
 // Create a tree with serialization capabilities
 const tree = signalTree({
@@ -447,7 +447,7 @@ const tree = signalTree({
   settings: { language: 'en', notifications: true },
   cart: { items: [], total: 0 },
 }).with(
-  withSerialization({
+  serialization({
     preserveTypes: true, // Handle Date, Map, Set, etc.
     handleCircular: true, // Detect and resolve circular references
     includeMetadata: true, // Add timestamps and version info
@@ -459,7 +459,7 @@ const serialized = tree.serialize();
 console.log(serialized); // JSON string with metadata
 
 // Deserialize and restore state
-const newTree = signalTree({}).with(withSerialization());
+const newTree = signalTree({}).with(serialization());
 newTree.deserialize(serialized);
 
 // Snapshots for debugging and state management
@@ -475,7 +475,7 @@ const persistentTree = signalTree({
   user: { name: 'John' },
   settings: { theme: 'dark' },
 }).with(
-  withPersistence({
+  persistence({
     key: 'app-state',
     autoSave: true, // Automatically save on updates
     autoLoad: true, // Load state on initialization
@@ -641,12 +641,12 @@ tree((current) => updated); // Update entire tree with function
 tree.effect(fn); // Create reactive effects
 tree.subscribe(fn); // Manual subscriptions
 
-// Entity management with entityMap + withEntities
-import { signalTree, entityMap, withEntities } from '@signaltree/core';
+// Entity management with entityMap + entities
+import { signalTree, entityMap, entities } from '@signaltree/core';
 
 const tree = signalTree({
   users: entityMap<User>(),
-}).with(withEntities());
+}).with(entities());
 
 // Entity CRUD
 tree.$.users.addOne(user);
@@ -664,9 +664,9 @@ tree.$.users.count; // Get count
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withBatching } from '@signaltree/core';
+import { batching } from '@signaltree/core';
 
-const tree = signalTree(data).with(withBatching());
+const tree = signalTree(data).with(batching());
 
 // Batch multiple updates for optimal performance
 tree.batchUpdate((state) => ({
@@ -679,9 +679,9 @@ tree.batchUpdate((state) => ({
 ### Memoization Enhancer (Included in @signaltree/core)
 
 ```typescript
-import { withMemoization } from '@signaltree/core';
+import { memoization } from '@signaltree/core';
 
-const tree = signalTree(data).with(withMemoization());
+const tree = signalTree(data).with(memoization());
 
 // Intelligent caching with automatic invalidation
 const expensiveComputation = tree.memoize((state) => heavyCalculation(state.data), 'cache-key');
@@ -736,10 +736,10 @@ form.submit(async (values) => api.submit(values));
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withBatching, withMemoization, withTimeTravel, withDevTools } from '@signaltree/core';
+import { batching, memoization, withTimeTravel, devTools } from '@signaltree/core';
 
 // Compose multiple features
-const tree = signalTree(initialState).with(withBatching(), withMemoization({ maxCacheSize: 200 }), withTimeTravel({ maxHistorySize: 50 }), withDevTools({ name: 'MyApp' }));
+const tree = signalTree(initialState).with(batching(), memoization({ maxCacheSize: 200 }), withTimeTravel({ maxHistorySize: 50 }), devTools({ name: 'MyApp' }));
 ```
 
 ### Preset Configurations
@@ -793,7 +793,7 @@ tree.resetHistory();
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withBatching, withMemoization, withDevTools } from '@signaltree/core';
+import { batching, memoization, devTools } from '@signaltree/core';
 
 const shopTree = signalTree({
   products: {
@@ -812,7 +812,7 @@ const shopTree = signalTree({
     profile: null as User | null,
     isAuthenticated: false,
   },
-}).with(withBatching(), withMemoization({ maxCacheSize: 100 }), withDevTools({ name: 'ShopApp' }));
+}).with(batching(), memoization({ maxCacheSize: 100 }), devTools({ name: 'ShopApp' }));
 
 // Computed values with intelligent caching
 const cartTotal = shopTree.memoize((state) => {
@@ -919,16 +919,16 @@ class RegistrationComponent {
 ### Minimal Setup (Core Only)
 
 ```typescript
-import { signalTree, entityMap, withEntities } from '@signaltree/core';
+import { signalTree, entityMap, entities } from '@signaltree/core';
 
 // Just 7.20KB core + entities - perfect for simple applications
 const appTree = signalTree({
   user: { name: '', email: '' },
   todos: entityMap<Todo>(),
   loading: false,
-}).with(withEntities());
+}).with(entities());
 
-// Entity management (via entityMap + withEntities enhancer)
+// Entity management (via entityMap + entities enhancer)
 appTree.$.todos.addOne({ id: '1', text: 'Learn SignalTree', done: false });
 
 // Async actions (manual async pattern)
@@ -979,14 +979,14 @@ appTree.jumpTo(0); // count: 0
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withBatching, withMemoization } from '@signaltree/core';
+import { batching, memoization } from '@signaltree/core';
 
 const optimizedTree = signalTree({
   users: [] as User[],
   filters: { name: '', role: '' },
 }).with(
-  withBatching({ debounceMs: 16 }), // Batch rapid updates
-  withMemoization({ maxCacheSize: 100 }) // Cache expensive computations
+  batching({ debounceMs: 16 }), // Batch rapid updates
+  memoization({ maxCacheSize: 100 }) // Cache expensive computations
 );
 
 // Multiple updates batched automatically
@@ -1000,10 +1000,10 @@ optimizedTree.batchUpdate((state) => ({
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withPersistence } from '@signaltree/core';
+import { persistence } from '@signaltree/core';
 
 const appTree = signalTree({ theme: 'dark', user: null }).with(
-  withPersistence({
+  persistence({
     key: 'app-state',
     storage: localStorage,
     paths: ['theme'], // Only persist theme
@@ -1339,7 +1339,7 @@ const tree = signalTree({
 
 // Elf Comparable (6-7KB) requires:
 import { createStore, withProps } from '@ngneat/elf';        // 3KB
-import { withEntities } from '@ngneat/elf-entities';          // +2KB
+import { entities } from '@ngneat/elf-entities';          // +2KB
 import { withRequestsStatus } from '@ngneat/elf-requests';   // +1.5KB
 // Total: ~6.5KB for similar features
 
@@ -1394,7 +1394,7 @@ const tree = signalTree(state);
 // Includes: signals, hierarchical state, full TypeScript inference
 
 // SignalTree with Persistence (11.87KB) - Add state serialization
-const tree = signalTree(state).with(withSerialization());
+const tree = signalTree(state).with(serialization());
 // Adds: SSR support, state debugging, persistence, time-travel ready
 
 // SignalTree Smart Auto-Enable (7.20-27.50KB) - Features enable as needed
@@ -1403,7 +1403,7 @@ const tree = signalTree(state); // Starts at 7.20KB, grows to 27.50KB as you use
 
 // Elf "Equivalent" (10KB) - To match SignalTree features
 import { createStore, withProps } from '@ngneat/elf'; // 3KB
-import { withEntities, selectAll } from '@ngneat/elf-entities'; // 2KB
+import { entities, selectAll } from '@ngneat/elf-entities'; // 2KB
 import { withRequestsStatus } from '@ngneat/elf-requests'; // 1.5KB
 import { devtools } from '@ngneat/elf-devtools'; // 3KB
 // Still missing: forms, time-travel, auto-enabling patterns

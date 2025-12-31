@@ -11,7 +11,7 @@ import {
   signalTree,
   timeTravel,
 } from '@signaltree/core';
-import { withEnterprise } from '@signaltree/enterprise';
+import { enterprise } from '@signaltree/enterprise';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
 import { createYieldToUI } from '../shared/benchmark-utils';
@@ -159,7 +159,7 @@ export class SignalTreeBenchmarkService {
               break;
             case 'enterprise':
               // Apply the enterprise enhancer for second-pass enterprise runs
-              enhancers.push(withEnterprise());
+              enhancers.push(enterprise());
               break;
             default:
               // Unknown enhancer name — ignore to maintain robustness

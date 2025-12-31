@@ -10,11 +10,7 @@
  * - Map transformations
  */
 
-const {
-  signalTree,
-  entityMap,
-  withEntities,
-} = require('../../dist/packages/core');
+const { signalTree, entityMap, entities } = require('../../dist/packages/core');
 
 console.log('🧪 SignalTree Entity CRUD Performance Benchmarks\n');
 
@@ -70,7 +66,7 @@ class EntityPerformanceAnalyzer {
       (i) => {
         const tree = signalTree({
           entities: entityMap({ selectId: (e) => e.id }),
-        }).with(withEntities());
+        }).with(entities());
 
         tree.$.entities.addOne(this.createTestEntity(i));
       },
@@ -93,7 +89,7 @@ class EntityPerformanceAnalyzer {
       (i) => {
         const tree = signalTree({
           entities: entityMap({ selectId: (e) => e.id }),
-        }).with(withEntities());
+        }).with(entities());
 
         const entities = Array.from({ length: 100 }, (_, idx) =>
           this.createTestEntity(i * 100 + idx)
@@ -116,7 +112,7 @@ class EntityPerformanceAnalyzer {
 
     const tree = signalTree({
       entities: entityMap({ selectId: (e) => e.id }),
-    }).with(withEntities());
+    }).with(entities());
 
     // Pre-populate with entities
     const entities = Array.from({ length: 1000 }, (_, i) =>
@@ -149,7 +145,7 @@ class EntityPerformanceAnalyzer {
 
     const tree = signalTree({
       entities: entityMap({ selectId: (e) => e.id }),
-    }).with(withEntities());
+    }).with(entities());
 
     // Pre-populate with entities
     const entities = Array.from({ length: 1000 }, (_, i) =>
@@ -183,7 +179,7 @@ class EntityPerformanceAnalyzer {
       (i) => {
         const tree = signalTree({
           entities: entityMap({ selectId: (e) => e.id }),
-        }).with(withEntities());
+        }).with(entities());
 
         // Add entities
         const entities = Array.from({ length: 100 }, (_, idx) =>
@@ -210,7 +206,7 @@ class EntityPerformanceAnalyzer {
 
     const tree = signalTree({
       entities: entityMap({ selectId: (e) => e.id }),
-    }).with(withEntities());
+    }).with(entities());
 
     // Pre-populate with entities
     const entities = Array.from({ length: 1000 }, (_, i) =>
@@ -285,7 +281,7 @@ class EntityPerformanceAnalyzer {
 
     const tree = signalTree({
       entities: entityMap({ selectId: (e) => e.id }),
-    }).with(withEntities());
+    }).with(entities());
 
     // Add 10k entities
     const startAdd = performance.now();
@@ -332,7 +328,7 @@ class EntityPerformanceAnalyzer {
 
     const tree = signalTree({
       entities: entityMap({ selectId: (e) => e.id }),
-    }).with(withEntities());
+    }).with(entities());
 
     // Add some entities
     const entities = Array.from({ length: 100 }, (_, i) =>

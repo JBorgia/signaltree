@@ -16,7 +16,7 @@ The user reported:
 
 ### Issue Found: `tree.memoize()` uses stub implementation
 
-The `withMemoization()` enhancer creates a cache store but **does NOT override** the `tree.memoize()` method.
+The `memoization()` enhancer creates a cache store but **does NOT override** the `tree.memoize()` method.
 
 **Current behavior:**
 
@@ -111,9 +111,9 @@ filteredLogs()
 - Or the filter function might not be seeing the updated date value
 - Or there could be a timing issue with Angular change detection
 
-### Side Note: withEntities() and logs
+### Side Note: entities() and logs
 
-The log-filtering-demo uses `withEntities()` which might have separate issues:
+The log-filtering-demo uses `entities()` which might have separate issues:
 
 ```typescript
 private logsEntity = this.tree.entities<Log>('logs'); // Old API - removed in v5.1.4
@@ -160,7 +160,7 @@ private performFilter = memoize((state) => {
 
 ### Long Term (What needs fixing in SignalTree):
 
-The `withMemoization()` enhancer needs to override `tree.memoize()`:
+The `memoization()` enhancer needs to override `tree.memoize()`:
 
 ```typescript
 if (enabled) {
@@ -198,7 +198,7 @@ if (enabled) {
 
 ## Next Steps
 
-1. **Verify the fix** - Apply the solution to withMemoization()
+1. **Verify the fix** - Apply the solution to memoization()
 2. **Update tests** - Make memoization-bug.spec.ts pass
 3. **Update user component** - Test that log-filtering-demo works correctly
 4. **Document** - Add clear examples to memoization documentation showing the difference between:

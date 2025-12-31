@@ -1,14 +1,14 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { signalTree, withPersistence } from '@signaltree/core';
+import { persistence, signalTree } from '@signaltree/core';
 
 type Themes = 'light' | 'dark' | 'system';
 
 /**
  * Persistence Demo
  *
- * Demonstrates withPersistence enhancer for automatic state persistence:
+ * Demonstrates persistence enhancer for automatic state persistence:
  * - Auto-save to localStorage on every change
  * - Auto-load on app start
  * - Manual save/load/clear controls
@@ -58,7 +58,7 @@ export class PersistenceDemoComponent implements OnDestroy {
     }>,
     lastSaved: null as string | null,
   }).with(
-    withPersistence({
+    persistence({
       key: this.STORAGE_KEY,
       autoSave: true, // Auto-save on every state change
       autoLoad: true, // Auto-load on creation

@@ -59,7 +59,7 @@ export type TreeNode<T> = {
  * Base SignalTree with ONLY core functionality.
  * Enhancers add methods via intersection types.
  */
-export interface SignalTree<T> {
+export interface ISignalTree<T> {
   /** The reactive state tree */
   readonly state: TreeNode<T>;
 
@@ -80,7 +80,7 @@ export interface SignalTree<T> {
  * SignalTree is the base plus any enhancer additions.
  * Start with just the base - enhancers extend it.
  */
-export type SignalTree<T> = SignalTree<T>;
+export type ISignalTree<T> = ISignalTree<T>;
 
 // ============================================
 // ENHANCER SYSTEM
@@ -158,7 +158,7 @@ export interface WithMethod<T, TSelf> {
 // ============================================
 
 /**
- * Methods added by withBatching()
+ * Methods added by batching()
  */
 export interface BatchingMethods<T> {
   /** Batch multiple updates into a single change detection cycle */
@@ -169,7 +169,7 @@ export interface BatchingMethods<T> {
 }
 
 /**
- * Methods added by withMemoization()
+ * Methods added by memoization()
  */
 export interface MemoizationMethods<T> {
   /** Create a memoized computed signal */
@@ -194,7 +194,7 @@ export interface CacheStats {
 }
 
 /**
- * Methods added by withTimeTravel()
+ * Methods added by timeTravel()
  */
 export interface TimeTravelMethods<T> {
   /** Undo last change */
@@ -230,7 +230,7 @@ export interface TimeTravelEntry<T> {
 }
 
 /**
- * Methods added by withDevTools()
+ * Methods added by devTools()
  */
 export interface DevToolsMethods {
   /** Connect to Redux DevTools */
@@ -241,7 +241,7 @@ export interface DevToolsMethods {
 }
 
 /**
- * Methods added by withEntities()
+ * Methods added by entities()
  */
 export interface EntitiesMethods<T> {
   /**
@@ -252,7 +252,7 @@ export interface EntitiesMethods<T> {
 }
 
 /**
- * Methods added by withEffects()
+ * Methods added by effects()
  */
 export interface EffectsMethods<T> {
   /** Register a reactive effect */
@@ -263,7 +263,7 @@ export interface EffectsMethods<T> {
 }
 
 /**
- * Methods added by withOptimizedUpdates() / withEnterprise()
+ * Methods added by withOptimizedUpdates() / enterprise()
  */
 export interface OptimizedUpdateMethods<T> {
   /** Diff-based optimized update */
@@ -395,7 +395,7 @@ export interface EntitySignal<E, K extends string | number = string> {
   intercept(handlers: InterceptHandlers<E, K>): () => void;
 }
 
-/** @deprecated Use entityMap<E>() + withEntities() instead */
+/** @deprecated Use entityMap<E>() + entities() instead */
 export interface EntityHelpers<E extends { id: string | number }> {
   add(entity: E): void;
   update(id: E['id'], updates: Partial<E>): void;
@@ -423,7 +423,7 @@ export interface TreeConfig {
 // TYPE GUARDS
 // ============================================
 
-export function isSignalTree<T>(value: unknown): value is SignalTree<T> {
+export function isSignalTree<T>(value: unknown): value is ISignalTree<T> {
   return (
     value !== null &&
     typeof value === 'object' &&
@@ -437,7 +437,7 @@ export function isSignalTree<T>(value: unknown): value is SignalTree<T> {
 
 ## 2. Enhancer Implementations
 
-### `withBatching.ts`
+### `batching.ts`
 
 ```typescript
 import { SignalTree, BatchingMethods, Enhancer, ENHANCER_META } from './types';
@@ -446,8 +446,8 @@ export interface BatchingConfig {
   debounceMs?: number;
 }
 
-export function withBatching<T>(config: BatchingConfig = {}): Enhancer<SignalTree<T>, BatchingMethods<T>> {
-  const enhancer = (tree: SignalTree<T>): SignalTree<T> & BatchingMethods<T> => {
+export function batching<T>(config: BatchingConfig = {}): Enhancer<SignalTree<T>, BatchingMethods<T>> {
+  const enhancer = (tree: ISignalTree<T>): ISignalTree<T> & BatchingMethods<T> => {
     let batchQueue: Array<() => void> = [];
     let batchScheduled = false;
 
@@ -503,7 +503,7 @@ export function withBatching<T>(config: BatchingConfig = {}): Enhancer<SignalTre
 }
 ```
 
-### `withMemoization.ts`
+### `memoization.ts`
 
 ```typescript
 import { computed, Signal } from '@angular/core';
@@ -514,10 +514,10 @@ export interface MemoizationConfig {
   ttlMs?: number;
 }
 
-export function withMemoization<T>(config: MemoizationConfig = {}): Enhancer<SignalTree<T>, MemoizationMethods<T>> {
+export function memoization<T>(config: MemoizationConfig = {}): Enhancer<SignalTree<T>, MemoizationMethods<T>> {
   const { maxCacheSize = 100 } = config;
 
-  const enhancer = (tree: SignalTree<T>): SignalTree<T> & MemoizationMethods<T> => {
+  const enhancer = (tree: ISignalTree<T>): ISignalTree<T> & MemoizationMethods<T> => {
     const cache = new Map<string, { signal: Signal<unknown>; hits: number }>();
     let totalHits = 0;
     let totalMisses = 0;
@@ -601,7 +601,7 @@ export interface TimeTravelConfig {
 export function withTimeTravel<T>(config: TimeTravelConfig = {}): Enhancer<SignalTree<T>, TimeTravelMethods<T>> {
   const { maxHistory = 50 } = config;
 
-  const enhancer = (tree: SignalTree<T>): SignalTree<T> & TimeTravelMethods<T> => {
+  const enhancer = (tree: ISignalTree<T>): ISignalTree<T> & TimeTravelMethods<T> => {
     const history: TimeTravelEntry<T>[] = [];
     let currentIndex = -1;
     let isTimeTraveling = false;
@@ -695,14 +695,14 @@ export function withTimeTravel<T>(config: TimeTravelConfig = {}): Enhancer<Signa
 }
 ```
 
-### `withEffects.ts`
+### `effects.ts`
 
 ```typescript
 import { effect as ngEffect } from '@angular/core';
 import { SignalTree, EffectsMethods, Enhancer } from './types';
 
-export function withEffects<T>(): Enhancer<SignalTree<T>, EffectsMethods<T>> {
-  const enhancer = (tree: SignalTree<T>): SignalTree<T> & EffectsMethods<T> => {
+export function effects<T>(): Enhancer<SignalTree<T>, EffectsMethods<T>> {
+  const enhancer = (tree: ISignalTree<T>): ISignalTree<T> & EffectsMethods<T> => {
     const subscriptions = new Set<() => void>();
 
     const methods: EffectsMethods<T> = {
@@ -741,7 +741,7 @@ export function withEffects<T>(): Enhancer<SignalTree<T>, EffectsMethods<T>> {
 }
 ```
 
-### `withDevTools.ts`
+### `devTools.ts`
 
 ```typescript
 import { SignalTree, DevToolsMethods, Enhancer } from './types';
@@ -751,8 +751,8 @@ export interface DevToolsConfig {
   maxAge?: number;
 }
 
-export function withDevTools<T>(config: DevToolsConfig = {}): Enhancer<SignalTree<T>, DevToolsMethods> {
-  const enhancer = (tree: SignalTree<T>): SignalTree<T> & DevToolsMethods => {
+export function devTools<T>(config: DevToolsConfig = {}): Enhancer<SignalTree<T>, DevToolsMethods> {
+  const enhancer = (tree: ISignalTree<T>): ISignalTree<T> & DevToolsMethods => {
     let devTools: any = null;
     const { name = 'SignalTree', maxAge = 50 } = config;
 
@@ -798,12 +798,12 @@ export function withDevTools<T>(config: DevToolsConfig = {}): Enhancer<SignalTre
 import { signal, WritableSignal } from '@angular/core';
 import { SignalTree, SignalTree, TreeNode, TreeConfig, Enhancer } from './types';
 
-export function signalTree<T extends object>(initialState: T, config: TreeConfig = {}): SignalTree<T> {
+export function signalTree<T extends object>(initialState: T, config: TreeConfig = {}): ISignalTree<T> {
   // Create the signal store recursively
   const state = createSignalStore(initialState, config) as TreeNode<T>;
 
   // Base tree with only core functionality
-  const tree: SignalTree<T> = {
+  const tree: ISignalTree<T> = {
     state,
     $: state,
 
@@ -825,7 +825,7 @@ export function signalTree<T extends object>(initialState: T, config: TreeConfig
     },
   };
 
-  return tree as SignalTree<T>;
+  return tree as ISignalTree<T>;
 }
 
 function createSignalStore<T>(obj: T, config: TreeConfig): TreeNode<T> {
@@ -845,7 +845,7 @@ function createSignalStore<T>(obj: T, config: TreeConfig): TreeNode<T> {
 
   for (const [key, value] of Object.entries(obj)) {
     if (isEntityMapMarker(value)) {
-      // Preserve marker for withEntities to process
+      // Preserve marker for entities to process
       store[key] = value;
     } else if (value !== null && typeof value === 'object' && !isBuiltInObject(value) && !Array.isArray(value)) {
       // Nested object - recurse
@@ -883,12 +883,12 @@ export type { EntitySignal, EntityMapMarker, EntityConfig, EntityNode, EntityHel
 export { entityMap } from './types';
 
 // Enhancers
-export { withBatching, type BatchingConfig } from './enhancers/batching';
-export { withMemoization, type MemoizationConfig } from './enhancers/memoization';
+export { batching, type BatchingConfig } from './enhancers/batching';
+export { memoization, type MemoizationConfig } from './enhancers/memoization';
 export { withTimeTravel, type TimeTravelConfig } from './enhancers/time-travel';
-export { withDevTools, type DevToolsConfig } from './enhancers/devtools';
-export { withEffects } from './enhancers/effects';
-export { withEntities, type EntitiesConfig } from './enhancers/entities';
+export { devTools, type DevToolsConfig } from './enhancers/devtools';
+export { effects } from './enhancers/effects';
+export { entities, type EntitiesConfig } from './enhancers/entities';
 
 // Type guards
 export { isSignalTree } from './types';
@@ -897,7 +897,7 @@ export { isSignalTree } from './types';
 ## 5. Usage Examples
 
 ```typescript
-import { signalTree, entityMap, withBatching, withMemoization, withTimeTravel, withDevTools, withEffects, withEntities } from '@signaltree/core';
+import { signalTree, entityMap, batching, memoization, withTimeTravel, devTools, effects, entities } from '@signaltree/core';
 
 interface User {
   id: string;
@@ -926,7 +926,7 @@ base.undo(); // ❌ Error: Property 'undo' does not exist
 base.batch(() => {}); // ❌ Error: Property 'batch' does not exist
 
 // With batching - adds batch(), batchUpdate()
-const withBatch = base.with(withBatching());
+const withBatch = base.with(batching());
 
 withBatch.batch(($) => {
   // ✅ Works
@@ -941,21 +941,21 @@ const tree = signalTree<AppState>({
   settings: { theme: 'light', language: 'en' },
   count: 0,
 })
-  .with(withEntities())
-  .with(withBatching())
-  .with(withMemoization())
-  .with(withTimeTravel())
-  .with(withEffects())
-  .with(withDevTools({ name: 'MyApp' }));
+  .with(entities())
+  .with(batching())
+  .with(memoization())
+  .with(timeTravel())
+  .with(effects())
+  .with(devTools({ name: 'MyApp' }));
 
 // All methods available with proper types
 tree.$.count.set(1); // ✅ Base
-tree.batch(($) => $.count.set(2)); // ✅ From withBatching
-tree.memoize((s) => s.count * 2); // ✅ From withMemoization
+tree.batch(($) => $.count.set(2)); // ✅ From batching
+tree.memoize((s) => s.count * 2); // ✅ From memoization
 tree.undo(); // ✅ From withTimeTravel
 tree.canUndo(); // ✅ From withTimeTravel - returns boolean
-tree.effect((s) => console.log(s.count)); // ✅ From withEffects
-tree.connectDevTools(); // ✅ From withDevTools
+tree.effect((s) => console.log(s.count)); // ✅ From effects
+tree.connectDevTools(); // ✅ From devTools
 
 // Entity access
 tree.$.users.addOne({ id: '1', name: 'Alice', email: 'alice@example.com' });

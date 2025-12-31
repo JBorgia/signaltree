@@ -1,6 +1,6 @@
 import { isSignal, Signal, WritableSignal } from '@angular/core';
 
-import { ISignalTree, SignalTree } from '../../lib/types';
+import { ISignalTree } from '../../lib/types';
 import { TYPE_MARKERS } from './constants';
 
 /**
@@ -116,7 +116,7 @@ export interface SerializedState<T = unknown> {
 /**
  * Enhanced SignalTree interface with serialization capabilities
  */
-export interface SerializableSignalTree<T> extends SignalTree<T> {
+export interface SerializableSignalTree<T> extends ISignalTree<T> {
   /** Explicit reactive alias for state (helps TS resolution in tests) */
   // Use `any` here as a pragmatic escape hatch to avoid TS index-signature
   // access errors in tests (dot-access on dynamic keys). This will be
@@ -475,11 +475,11 @@ function resolveCircularReferences(
  */
 export function serialization(
   defaultConfig: SerializationConfig = {}
-): <Tree extends SignalTree<any>>(tree: Tree) => Tree & SerializationMethods {
-  return <Tree extends SignalTree<any>>(
+): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & SerializationMethods {
+  return <Tree extends ISignalTree<any>>(
     tree: Tree
   ): Tree & SerializationMethods => {
-    type T = Tree extends SignalTree<infer U> ? U : unknown;
+    type T = Tree extends ISignalTree<infer U> ? U : unknown;
     const enhanced = tree as Tree & SerializationMethods;
     /**
      * Get plain object representation
@@ -936,7 +936,7 @@ export const withSerialization = Object.assign(
 /**
  * Convenience function to enable serialization with defaults
  */
-export function enableSerialization(): <Tree extends SignalTree<any>>(
+export function enableSerialization(): <Tree extends ISignalTree<any>>(
   tree: Tree
 ) => Tree & SerializationMethods {
   return serialization({
@@ -999,7 +999,7 @@ export interface PersistenceConfig extends SerializationConfig {
  */
 export function persistence(
   config: PersistenceConfig
-): <Tree extends SignalTree<any>>(
+): <Tree extends ISignalTree<any>>(
   tree: Tree
 ) => Tree & SerializationMethods & PersistenceMethods {
   const {
@@ -1020,11 +1020,11 @@ export function persistence(
   // Narrow storage for TypeScript and linter: from here on it's defined.
   const storageAdapter: StorageAdapter = storage;
 
-  return <Tree extends SignalTree<any>>(
+  return <Tree extends ISignalTree<any>>(
     tree: Tree
   ): Tree & SerializationMethods & PersistenceMethods => {
     // First enhance with serialization
-    const serializable = withSerialization(serializationConfig)(tree) as Tree &
+    const serializable = serialization(serializationConfig)(tree) as Tree &
       SerializationMethods;
 
     // Add persistence methods
@@ -1276,7 +1276,7 @@ export function createIndexedDBAdapter(
 // Type-only exports (none)
 
 // The primary `serialization()` and `persistence()` implementations are
-// declared above. Legacy `withSerialization` / `withPersistence` aliases
+// declared above. Legacy `serialization` / `persistence` aliases
 // are exported (and annotated `@deprecated`) for backwards compatibility.
 
 /**

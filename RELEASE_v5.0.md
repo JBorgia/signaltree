@@ -21,7 +21,7 @@ interface State {
 const store = signalTree<State>({
   users: entityMap({ selectId: (u) => u.id }),
   posts: entityMap({ selectId: (p) => p.id }),
-}).with(withEntities());
+}).with(entities());
 
 // Access via store.$
 store.$.users.setAll(data);
@@ -115,14 +115,14 @@ const userHelpers = tree.entities<User>('users');
 userHelpers.all(); // deprecated
 
 // New (v5.0) - Use this instead
-const store = signalTree({ users: entityMap(...) }).with(withEntities());
+const store = signalTree({ users: entityMap(...) }).with(entities());
 store.$.users.all();
 ```
 
 **Migration Path:**
 
 1. Replace `tree.entities<E>(path)` with `entityMap` in state definition
-2. Add `.with(withEntities())` to the store
+2. Add `.with(entities())` to the store
 3. Access via `store.$.fieldName.method()` instead of `helpers.method()`
 4. Run `npm run validate:all` to catch any type errors
 

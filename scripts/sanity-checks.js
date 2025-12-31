@@ -33,7 +33,7 @@ checks.push(() => {
 checks.push(() => {
   const p = 'packages/enterprise/src/lib/enterprise-enhancer.ts';
   const c = fileHas(p);
-  return c && c.includes('withEnterprise')
+  return c && c.includes('enterprise')
     ? [true, 'enterprise package present']
     : [false, `missing or incomplete ${p}`];
 });

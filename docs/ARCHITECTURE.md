@@ -19,7 +19,7 @@ The key insight: **PathNotifier is the missing piece** that makes both entities 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                   Application Code (User)                          │
-│  tree.$.users.tap({...})  tree.$.count.set(5)  withBatching(...)   │
+│  tree.$.users.tap({...})  tree.$.count.set(5)  batching(...)   │
 └────────────────────────────────────────────────────────────────────┬┘
                              │
 ┌────────────────────────────▼────────────────────────────────────────┐
@@ -27,7 +27,7 @@ The key insight: **PathNotifier is the missing piece** that makes both entities 
 │  • tree.$: EntityAwareTreeNode                                      │
 │  • tree.$.collection: EntitySignal                                  │
 │  • tree.with(enhancer): WithMethods                                 │
-│  • withLogging, withBatching, withPersistence, withDevTools, etc.   │
+│  • batching, persistence, devTools, etc.   │
 └────────────────────────────────────────────────────────────────────┬┘
                              │
 ┌────────────────────────────▼────────────────────────────────────────┐
@@ -271,7 +271,7 @@ packages/core/src/
 │   │   └── lib/
 │   │       ├── entity-signal.ts    (EntitySignal class)
 │   │       ├── entity-node.ts      (Bracket access via Proxy)
-│   │       ├── entities.ts         (withEntities() enhancer)
+│   │       ├── entities.ts         (entities() enhancer)
 │   │       └── entities.spec.ts
 │   │
 │   ├── batching/lib/               (Phase 5.1)
@@ -358,16 +358,16 @@ unsub();
 
 ```typescript
 // ❌ Global state → race conditions
-withBatching({ maxBatchSize: 100 });
+batching({ maxBatchSize: 100 });
 
 // ❌ 50ms polling loop, never cleaned up
-withPersistence({ key: 'state', autoSave: true });
+persistence({ key: 'state', autoSave: true });
 
 // ❌ Only catches 20% of mutations
 withTimeTravel();
 
 // ❌ Incomplete state in DevTools
-withDevTools();
+devTools();
 
 // ❌ Each enhancer reinvents change detection
 ```
@@ -376,16 +376,16 @@ withDevTools();
 
 ```typescript
 // ✅ Instance-scoped queue, no interference
-withBatching({ maxBatchSize: 100 });
+batching({ maxBatchSize: 100 });
 
 // ✅ Event-driven, 0 calls when idle, proper cleanup
-withPersistence({ key: 'state', autoSave: true });
+persistence({ key: 'state', autoSave: true });
 
 // ✅ Catches 100% of mutations (root, leaf, entity, batch)
 withTimeTravel();
 
 // ✅ Complete state tracking in DevTools
-withDevTools();
+devTools();
 
 // ✅ All use PathNotifier, unified infrastructure
 ```

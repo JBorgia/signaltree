@@ -1,4 +1,4 @@
-import { withGuardrails } from '../src/lib/guardrails';
+import { guardrails } from '../src/lib/guardrails';
 import { rules } from '../src/lib/rules';
 
 import type { ISignalTree } from '@signaltree/core';
@@ -116,9 +116,9 @@ describe('Guardrails Enhancer', () => {
     process.env['NODE_ENV'] = 'production';
 
     const tree = createMockTree({ count: 0 });
-    const enhancer = withGuardrails();
+    const enhancer = guardrails();
     const enhanced = enhancer(
-      tree as unknown as SignalTree<{ count: number }>
+      tree as unknown as ISignalTree<{ count: number }>
     ) as unknown as GuardrailsTree<{ count: number }>;
 
     expect(enhanced.__guardrails).toBeUndefined();
@@ -126,12 +126,12 @@ describe('Guardrails Enhancer', () => {
 
   it('attaches guardrails API in development mode', () => {
     const tree = createMockTree({ count: 0 });
-    const enhancer = withGuardrails({
+    const enhancer = guardrails({
       ...TEST_CONFIG_BASE,
       reporting: { console: false },
     });
     const enhanced = enhancer(
-      tree as unknown as SignalTree<{ count: number }>
+      tree as unknown as ISignalTree<{ count: number }>
     ) as unknown as GuardrailsTree<{ count: number }>;
 
     expect(enhanced.__guardrails).toBeDefined();
@@ -141,13 +141,13 @@ describe('Guardrails Enhancer', () => {
 
   it('captures update time budget violations', async () => {
     const tree = createMockTree({ count: 0 });
-    const enhancer = withGuardrails({
+    const enhancer = guardrails({
       ...TEST_CONFIG_BASE,
       budgets: { maxUpdateTime: 5 },
       reporting: { console: false },
     });
     const enhanced = enhancer(
-      tree as unknown as SignalTree<{ count: number }>
+      tree as unknown as ISignalTree<{ count: number }>
     ) as unknown as GuardrailsTree<{ count: number }>;
 
     // Mock slow performance
@@ -200,13 +200,13 @@ describe('Guardrails Enhancer', () => {
     const tree = createMockTree({
       nested: { level: {} as Record<string, unknown> },
     });
-    const enhancer = withGuardrails({
+    const enhancer = guardrails({
       ...TEST_CONFIG_BASE,
       customRules: [rules.noDeepNesting(2)],
       reporting: { console: false },
     });
     const enhanced = enhancer(
-      tree as unknown as SignalTree<{
+      tree as unknown as ISignalTree<{
         nested: { level: Record<string, unknown> };
       }>
     ) as unknown as GuardrailsTree<{
@@ -233,12 +233,12 @@ describe('Guardrails Enhancer', () => {
 
   it('allows suppression of guardrails instrumentation', async () => {
     const tree = createMockTree({ count: 0 });
-    const enhancer = withGuardrails({
+    const enhancer = guardrails({
       budgets: { maxUpdateTime: 5 },
       reporting: { console: false },
     });
     const enhanced = enhancer(
-      tree as unknown as SignalTree<{ count: number }>
+      tree as unknown as ISignalTree<{ count: number }>
     ) as unknown as GuardrailsTree<{ count: number }>;
 
     const api = enhanced.__guardrails;
@@ -261,13 +261,13 @@ describe('Guardrails Enhancer', () => {
 
   it('tracks hot paths when threshold is exceeded', async () => {
     const tree = createMockTree({ count: 0 });
-    const enhancer = withGuardrails({
+    const enhancer = guardrails({
       ...TEST_CONFIG_BASE,
       hotPaths: { enabled: true, threshold: 1, windowMs: 1000, topN: 5 },
       reporting: { console: false },
     });
     const enhanced = enhancer(
-      tree as unknown as SignalTree<{ count: number }>
+      tree as unknown as ISignalTree<{ count: number }>
     ) as unknown as GuardrailsTree<{ count: number }>;
 
     // Multiple rapid updates to trigger hot path detection
@@ -292,12 +292,12 @@ describe('Guardrails Enhancer', () => {
 
   it('updates percentile stats across multiple samples', async () => {
     const tree = createMockTree({ count: 0 });
-    const enhancer = withGuardrails({
+    const enhancer = guardrails({
       ...TEST_CONFIG_BASE,
       reporting: { console: false },
     });
     const enhanced = enhancer(
-      tree as unknown as SignalTree<{ count: number }>
+      tree as unknown as ISignalTree<{ count: number }>
     ) as unknown as GuardrailsTree<{ count: number }>;
 
     enhanced({ count: 1 });
@@ -321,12 +321,12 @@ describe('Guardrails Enhancer', () => {
     // Note: With polling-based detection, metadata suppression works differently
     // The polling approach detects state changes, not individual updates
     const tree = createMockTree({ count: 0 });
-    const enhancer = withGuardrails({
+    const enhancer = guardrails({
       budgets: { maxUpdateTime: 5 },
       reporting: { console: false },
     });
     const enhanced = enhancer(
-      tree as unknown as SignalTree<{ count: number }>
+      tree as unknown as ISignalTree<{ count: number }>
     ) as unknown as GuardrailsTree<{ count: number }>;
 
     // Suppress detection via API
@@ -353,11 +353,11 @@ describe('Guardrails Enhancer', () => {
   it('disposes polling and clears monitoring interval', () => {
     const tree = createMockTree({ count: 0 });
     const clearSpy = vi.spyOn(globalThis, 'clearInterval');
-    const enhancer = withGuardrails({
+    const enhancer = guardrails({
       reporting: { console: false },
     });
     const enhanced = enhancer(
-      tree as unknown as SignalTree<{ count: number }>
+      tree as unknown as ISignalTree<{ count: number }>
     ) as unknown as GuardrailsTree<{ count: number }>;
 
     const api = enhanced.__guardrails;
@@ -379,14 +379,14 @@ describe('Guardrails Enhancer', () => {
       },
     });
 
-    const enhancer = withGuardrails({
+    const enhancer = guardrails({
       ...TEST_CONFIG_BASE,
       analysis: { warnParentReplace: true, minDiffForParentReplace: 0.5 },
       reporting: { console: false },
     });
 
     const enhanced = enhancer(
-      tree as unknown as SignalTree<{
+      tree as unknown as ISignalTree<{
         profile: { name: string; location: Record<string, string> };
       }>
     ) as unknown as GuardrailsTree<{
@@ -419,7 +419,7 @@ describe('Guardrails Enhancer', () => {
 
   it('handles asynchronous guardrail rules that resolve to false', async () => {
     const tree = createMockTree({ count: 0 });
-    const enhancer = withGuardrails({
+    const enhancer = guardrails({
       ...TEST_CONFIG_BASE,
       customRules: [
         {
@@ -436,7 +436,7 @@ describe('Guardrails Enhancer', () => {
     });
 
     const enhanced = enhancer(
-      tree as unknown as SignalTree<{ count: number }>
+      tree as unknown as ISignalTree<{ count: number }>
     ) as unknown as GuardrailsTree<{ count: number }>;
 
     enhanced({ count: 1 });
@@ -462,14 +462,14 @@ describe('Guardrails Enhancer', () => {
       nested: { a: 1, b: 1, c: 1 },
     });
 
-    const enhancer = withGuardrails({
+    const enhancer = guardrails({
       ...TEST_CONFIG_BASE,
       budgets: { maxRecomputations: 1 },
       reporting: { console: false, interval: 50 },
     });
 
     const enhanced = enhancer(
-      tree as unknown as SignalTree<{ nested: Record<string, number> }>
+      tree as unknown as ISignalTree<{ nested: Record<string, number> }>
     ) as unknown as GuardrailsTree<{ nested: Record<string, number> }>;
 
     enhanced({
@@ -494,7 +494,7 @@ describe('Guardrails Enhancer', () => {
   it('flags memory leak conditions and exceeds memory budget', async () => {
     const tree = createMockTree({ metrics: {} as Record<string, number> });
 
-    const enhancer = withGuardrails({
+    const enhancer = guardrails({
       ...TEST_CONFIG_BASE,
       budgets: { maxMemory: 2 },
       memoryLeaks: {
@@ -507,7 +507,7 @@ describe('Guardrails Enhancer', () => {
     });
 
     const enhanced = enhancer(
-      tree as unknown as SignalTree<{ metrics: Record<string, number> }>
+      tree as unknown as ISignalTree<{ metrics: Record<string, number> }>
     ) as unknown as GuardrailsTree<{ metrics: Record<string, number> }>;
 
     for (let i = 0; i < 3; i++) {

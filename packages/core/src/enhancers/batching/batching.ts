@@ -1,22 +1,17 @@
-import { parsePath } from '@signaltree/shared';
-
-import { applyState, isNodeAccessor } from '../../lib/utils';
+import { applyState, isNodeAccessor, parsePath } from '../../lib/utils';
 
 import type { TreeNode } from '../../lib/utils';
 
 import type { ISignalTree, Enhancer, BatchingConfig } from '../../lib/types';
-
 /**
+import { parsePath } from '@signaltree/shared';
+
+import { applyState, isNodeAccessor } from '../../lib/utils';
+import { parsePath } from '@signaltree/shared';
+
+
  * Configuration options for intelligent batching behavior.
  */
-
-/** Enhanced SignalTree interface with batching methods */
-interface BatchingSignalTree<T> extends ISignalTree<T> {
-  // Public, user-facing batching API (new v6 shape)
-  batch(fn: () => void): void;
-  // Legacy/internal batchUpdate preserved for compatibility
-  batchUpdate?(updater: (current: T) => Partial<T>): void;
-}
 
 /** Public methods surface added by the batching enhancer */
 export type BatchingMethods<T> = import('../../lib/types').BatchingMethods<T>;
@@ -123,7 +118,7 @@ function batchUpdates(fn: () => void, path?: string): void {
   }
 }
 
-export function withBatchingWithConfig<T>(
+export function batchingWithConfig<T>(
   config: BatchingConfig = {}
 ): Enhancer<BatchingMethods<T>> {
   const enabled = (config as any).enabled ?? true;
@@ -250,23 +245,19 @@ export function withBatchingWithConfig<T>(
   return enhancer as unknown as Enhancer<BatchingMethods<T>>;
 }
 
-/**
- * @deprecated Use `batching()` instead. This legacy factory will be
- * removed in a future major release.
- */
 /** User-friendly no-arg signature expected by type-level tests */
 export function batching(
   config: BatchingConfig = {}
 ): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & BatchingMethods<any> {
-  return withBatchingWithConfig(config) as unknown as <
+  return batchingWithConfig(config) as unknown as <
     Tree extends ISignalTree<any>
   >(
     tree: Tree
   ) => Tree & BatchingMethods<any>;
 }
 
-export function withHighPerformanceBatching<T>() {
-  return withBatchingWithConfig<T>({
+export function highPerformanceBatching<T>() {
+  return batchingWithConfig<T>({
     enabled: true,
     maxBatchSize: 200,
     debounceMs: 0,
@@ -296,28 +287,12 @@ export function getBatchQueueSize(): number {
 }
 
 /**
- * @deprecated Use `batching()` as the primary enhancer. `withBatching` is
- * retained for backwards compatibility and will be removed in a future major
- * release.
- */
-// (see exported `batching` below)
-
-// Primary v6-friendly `batching` export: wraps the legacy implementation
-/**
  * @deprecated Use `batching()` as the primary enhancer. This legacy
  * `withBatching` alias will be removed in a future major release.
  */
-export type WithBatchingSignature = (
-  config?: BatchingConfig
-) => <Tree extends ISignalTree<any>>(tree: Tree) => Tree & BatchingMethods<any>;
-
-/**
- * @deprecated Use `batching()` as the primary enhancer. This legacy
- * `withBatching` alias will be removed in a future major release.
- */
-export const withBatching: WithBatchingSignature = Object.assign(
-  (config: BatchingConfig = {}) => withBatchingWithConfig(config),
+export const withBatching = Object.assign(
+  (config: BatchingConfig = {}) => batchingWithConfig(config),
   {
-    highPerformance: withHighPerformanceBatching,
+    highPerformance: highPerformanceBatching,
   }
-) as unknown as WithBatchingSignature;
+);

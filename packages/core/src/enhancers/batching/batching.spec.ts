@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import {
   batching,
+  batching,
   flushBatchedUpdates,
   getBatchQueueSize,
   hasPendingUpdates,
-  withBatching,
-  withHighPerformanceBatching,
+  highPerformanceBatching,
 } from './batching';
 
 function createMockTree() {
@@ -40,8 +40,8 @@ function createMockTree() {
 describe('batching enhancer', () => {
   it('exports factory functions and helpers', () => {
     expect(typeof batching).toBe('function');
-    expect(typeof withBatching).toBe('function');
-    expect(typeof withHighPerformanceBatching).toBe('function');
+    expect(typeof batching).toBe('function');
+    expect(typeof highPerformanceBatching).toBe('function');
     expect(typeof batching()).toBe('function');
 
     // helpers callable

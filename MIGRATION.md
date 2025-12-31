@@ -14,8 +14,8 @@ This guide will help you migrate from the old separate package structure to the 
 
 The following standalone packages are **no longer maintained** and have been consolidated into `@signaltree/core`:
 
-- ❌ `@signaltree/batching` → Use `withBatching` from `@signaltree/core` ✅ **Deprecated on npm**
-- ❌ `@signaltree/memoization` → Use `withMemoization` from `@signaltree/core` ✅ **Deprecated on npm**
+- ❌ `@signaltree/batching` → Use `batching` from `@signaltree/core` ✅ **Deprecated on npm**
+- ❌ `@signaltree/memoization` → Use `memoization` from `@signaltree/core` ✅ **Deprecated on npm**
 - ❌ `@signaltree/devtools` → Use `withDevtools` from `@signaltree/core` ✅ **Deprecated on npm**
 - ❌ `@signaltree/entities` → Use entity helpers from `@signaltree/core` ✅ **Deprecated on npm**
 - ❌ `@signaltree/middleware` → Removed in v5.0; use entity hooks (`tap`/`intercept`) and enhancers
@@ -63,21 +63,21 @@ npm install @signaltree/core@latest
 ```typescript
 // ❌ Old way - multiple package installations
 import { signalTree } from '@signaltree/core';
-import { withBatching } from '@signaltree/batching';
-import { withMemoization } from '@signaltree/memoization';
+import { batching } from '@signaltree/batching';
+import { memoization } from '@signaltree/memoization';
 import { withDevtools } from '@signaltree/devtools';
-import { withEntities } from '@signaltree/entities';
+import { entities } from '@signaltree/entities';
 // Middleware removed; no direct replacement. Use hooks.
 import { withTimeTravel } from '@signaltree/time-travel';
 import { ecommercePreset, dashboardPreset } from '@signaltree/presets';
-import { withSerialization } from '@signaltree/serialization';
+import { serialization } from '@signaltree/serialization';
 ```
 
 #### After (v4.0.0+ - Consolidated)
 
 ```typescript
 // ✅ New way - single package import
-import { signalTree, withBatching, withMemoization, withDevtools, withEntities, withTimeTravel, withSerialization, ecommercePreset, dashboardPreset } from '@signaltree/core';
+import { signalTree, batching, memoization, withDevtools, entities, withTimeTravel, serialization, ecommercePreset, dashboardPreset } from '@signaltree/core';
 ```
 
 ### Step 3: Verify Functionality
@@ -86,7 +86,7 @@ The **API remains 100% compatible** - only import statements change. Your existi
 
 ```typescript
 // Your existing code works exactly the same
-const tree = signalTree(state).with(withBatching(), withMemoization(), withDevtools());
+const tree = signalTree(state).with(batching(), memoization(), withDevtools());
 ```
 
 ---
@@ -100,19 +100,19 @@ const tree = signalTree(state).with(withBatching(), withMemoization(), withDevto
 ```typescript
 // ❌ v3.x
 import { signalTree } from '@signaltree/core';
-import { withBatching } from '@signaltree/batching';
-import { withMemoization } from '@signaltree/memoization';
+import { batching } from '@signaltree/batching';
+import { memoization } from '@signaltree/memoization';
 
-const tree = signalTree(state).with(withBatching(), withMemoization());
+const tree = signalTree(state).with(batching(), memoization());
 ```
 
 **After:**
 
 ```typescript
 // ✅ v4.0.0+
-import { signalTree, withBatching, withMemoization } from '@signaltree/core';
+import { signalTree, batching, memoization } from '@signaltree/core';
 
-const tree = signalTree(state).with(withBatching(), withMemoization());
+const tree = signalTree(state).with(batching(), memoization());
 ```
 
 ### Example 2: Full Stack with DevTools
@@ -122,22 +122,22 @@ const tree = signalTree(state).with(withBatching(), withMemoization());
 ```typescript
 // ❌ v3.x
 import { signalTree } from '@signaltree/core';
-import { withBatching } from '@signaltree/batching';
-import { withMemoization } from '@signaltree/memoization';
+import { batching } from '@signaltree/batching';
+import { memoization } from '@signaltree/memoization';
 import { withDevtools } from '@signaltree/devtools';
 import { withTimeTravel } from '@signaltree/time-travel';
-import { withEntities } from '@signaltree/entities';
+import { entities } from '@signaltree/entities';
 
-const tree = signalTree(state).with(withBatching(), withMemoization(), withEntities(), withTimeTravel(), withDevtools());
+const tree = signalTree(state).with(batching(), memoization(), entities(), withTimeTravel(), withDevtools());
 ```
 
 **After:**
 
 ```typescript
 // ✅ v4.0.0+
-import { signalTree, withBatching, withMemoization, withDevtools, withTimeTravel, withEntities } from '@signaltree/core';
+import { signalTree, batching, memoization, withDevtools, withTimeTravel, entities } from '@signaltree/core';
 
-const tree = signalTree(state).with(withBatching(), withMemoization(), withEntities(), withTimeTravel(), withDevtools());
+const tree = signalTree(state).with(batching(), memoization(), entities(), withTimeTravel(), withDevtools());
 ```
 
 ### Example 3: E-commerce Preset
@@ -168,10 +168,10 @@ const tree = signalTree(state).with(ecommercePreset());
 ```typescript
 // ❌ v3.x
 import { signalTree } from '@signaltree/core';
-import { withSerialization } from '@signaltree/serialization';
+import { serialization } from '@signaltree/serialization';
 
 const tree = signalTree(state).with(
-  withSerialization({
+  serialization({
     autoSave: true,
     key: 'app-state',
   })
@@ -182,10 +182,10 @@ const tree = signalTree(state).with(
 
 ```typescript
 // ✅ v4.0.0+
-import { signalTree, withSerialization } from '@signaltree/core';
+import { signalTree, serialization } from '@signaltree/core';
 
 const tree = signalTree(state).with(
-  withSerialization({
+  serialization({
     autoSave: true,
     key: 'app-state',
   })
@@ -246,8 +246,8 @@ Consolidated exports enable more efficient bundling:
 
 ```typescript
 // Only the features you use are included in the bundle
-import { signalTree, withBatching } from '@signaltree/core';
-// withMemoization, withDevtools, etc. are tree-shaken out
+import { signalTree, batching } from '@signaltree/core';
+// memoization, withDevtools, etc. are tree-shaken out
 ```
 
 ### 3. Simplified Dependencies
@@ -295,7 +295,7 @@ Cannot find module '@signaltree/batching' or its corresponding type declarations
 **Solution:**
 
 1. Verify you uninstalled the deprecated package: `npm uninstall @signaltree/batching`
-2. Update import to use `@signaltree/core`: `import { withBatching } from '@signaltree/core'`
+2. Update import to use `@signaltree/core`: `import { batching } from '@signaltree/core'`
 3. Clear your `node_modules` and reinstall: `rm -rf node_modules && npm install`
 
 ### Issue: TypeScript errors after migration
@@ -303,7 +303,7 @@ Cannot find module '@signaltree/batching' or its corresponding type declarations
 **Problem:**
 
 ```
-Module '"@signaltree/core"' has no exported member 'withBatching'.
+Module '"@signaltree/core"' has no exported member 'batching'.
 ```
 
 **Solution:**

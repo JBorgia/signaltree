@@ -68,9 +68,8 @@
     }
   },
   "devDependencies": {
-    "@signaltree/core": "^6.0.0",
-    "@signaltree/shared": "workspace:*",
-    "@signaltree/types": "workspace:*"
+    "@signaltree/core": "workspace:*",
+    "@signaltree/shared": "workspace:*"
   },
   "keywords": [
     "signaltree",

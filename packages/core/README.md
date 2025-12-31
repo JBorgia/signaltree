@@ -23,11 +23,11 @@ Modern bundlers (webpack 5+, esbuild, Rollup, Vite) **automatically tree-shake b
 
 ```ts
 // ✅ Recommended: Simple and clean
-import { signalTree, withBatching } from '@signaltree/core';
+import { signalTree, batching } from '@signaltree/core';
 
 // ✅ Also fine: Explicit subpath (same bundle size)
 import { signalTree } from '@signaltree/core';
-import { withBatching } from '@signaltree/core/enhancers/batching';
+import { batching } from '@signaltree/core/enhancers/batching';
 ```
 
 **Measured impact** (with modern bundlers):
@@ -90,7 +90,7 @@ Follow these principles for idiomatic SignalTree code:
 ### 1. Expose signals directly (no computed wrappers)
 
 ```typescript
-const tree = signalTree(initialState).with(withEntities());
+const tree = signalTree(initialState).with(entities());
 const $ = tree.$; // Shorthand for state access
 
 // ✅ SignalTree-first: Direct signal exposure
@@ -115,7 +115,7 @@ export type UserTree = ReturnType<typeof createUserTree>;
 
 // Factory function - no explicit return type needed
 export function createUserTree() {
-  const tree = signalTree(initialState).with(withEntities());
+  const tree = signalTree(initialState).with(entities());
   return {
     selectedUserId: tree.$.selected.userId, // Type inferred automatically
     // ...
@@ -351,7 +351,7 @@ effect(() => {
 Computed values become even more powerful with the built-in memoization enhancer:
 
 ```typescript
-import { signalTree, withMemoization } from '@signaltree/core';
+import { signalTree, memoization } from '@signaltree/core';
 
 const tree = signalTree({
   items: Array.from({ length: 10000 }, (_, i) => ({
@@ -359,7 +359,7 @@ const tree = signalTree({
     value: Math.random(),
     category: `cat-${i % 10}`,
   })),
-}).with(withMemoization());
+}).with(memoization());
 
 // Expensive computation - automatically cached by memoization enhancer
 const expensiveComputation = computed(() => {
@@ -479,7 +479,7 @@ tree.$.config.settings.nested.set(false); // ✅ boolean
 
 ### 3) Manual state management
 
-Core provides basic state updates. For advanced entity management, use the built-in `withEntities` enhancer:
+Core provides basic state updates. For advanced entity management, use the built-in `entities` enhancer:
 
 ```typescript
 interface User {
@@ -568,22 +568,22 @@ All enhancers are exported directly from `@signaltree/core`:
 
 **Performance Enhancers:**
 
-- `withBatching()` - Batch updates to reduce recomputation and rendering
-- `withMemoization()` - Intelligent caching for expensive computations
-- `withHighPerformanceBatching()` - Advanced batching for high-frequency updates
+- `batching()` - Batch updates to reduce recomputation and rendering
+- `memoization()` - Intelligent caching for expensive computations
+- `highPerformanceBatching()` - Advanced batching for high-frequency updates
 - `withHighPerformanceMemoization()` - Optimized memoization for large state trees
 
 **Data Management:**
 
-- `withEntities()` - Advanced CRUD operations for collections
+- `entities()` - Advanced CRUD operations for collections
 - `createAsyncOperation()` - Async operation management with loading/error states
 - `trackAsync()` - Track async operations in your state
-- `withSerialization()` - State persistence and SSR support
-- `withPersistence()` - Auto-save to localStorage/IndexedDB
+- `serialization()` - State persistence and SSR support
+- `persistence()` - Auto-save to localStorage/IndexedDB
 
 **Development Tools:**
 
-- `withDevTools()` - Redux DevTools integration
+- `devTools()` - Redux DevTools integration
 - `withTimeTravel()` - Undo/redo functionality
 
 **Presets:**
@@ -604,26 +604,26 @@ These are the **only** separate packages in the SignalTree ecosystem:
 **Basic Enhancement:**
 
 ```typescript
-import { signalTree, withBatching, withDevTools } from '@signaltree/core';
+import { signalTree, batching, devTools } from '@signaltree/core';
 
 // Apply enhancers in order
 const tree = signalTree({ count: 0 }).with(
-  withBatching(), // Performance optimization
-  withDevTools() // Development tools
+  batching(), // Performance optimization
+  devTools() // Development tools
 );
 ```
 
 **Performance-Focused Stack:**
 
 ```typescript
-import { signalTree, withBatching, withMemoization, withEntities } from '@signaltree/core';
+import { signalTree, batching, memoization, entities } from '@signaltree/core';
 
 const tree = signalTree({
   products: entityMap<Product>(),
   ui: { loading: false },
 })
-  .with(withEntities()) // Efficient CRUD operations (auto-detects entityMap)
-  .with(withBatching()); // Batch updates for optimal rendering
+  .with(entities()) // Efficient CRUD operations (auto-detects entityMap)
+  .with(batching()); // Batch updates for optimal rendering
 
 // Entity CRUD operations
 tree.$.products.addOne(newProduct);
@@ -636,14 +636,14 @@ const electronics = tree.$.products.all.filter((p) => p.category === 'electronic
 **Full-Stack Application:**
 
 ```typescript
-import { signalTree, withSerialization, withTimeTravel } from '@signaltree/core';
+import { signalTree, serialization, withTimeTravel } from '@signaltree/core';
 
 const tree = signalTree({
   user: null as User | null,
   preferences: { theme: 'light' },
 }).with(
   // withAsync removed — API integration patterns are now covered by async helpers
-  withSerialization({
+  serialization({
     // Auto-save to localStorage
     autoSave: true,
     storage: 'localStorage',
@@ -678,9 +678,9 @@ Enhancers can declare metadata for automatic dependency resolution:
 ```typescript
 // Enhancers are automatically ordered based on requirements
 const tree = signalTree(state).with(
-  withDevTools(), // Requires: core, provides: debugging
-  withBatching(), // Requires: core, provides: batching
-  withMemoization() // Requires: batching, provides: caching
+  devTools(), // Requires: core, provides: debugging
+  batching(), // Requires: core, provides: batching
+  memoization() // Requires: batching, provides: caching
 );
 // Automatically ordered: batching -> memoization -> devtools
 ```
@@ -707,16 +707,16 @@ const customTree = signalTree(state, TREE_PRESETS.DASHBOARD);
 SignalTree Core includes all enhancer functionality built-in. No separate packages needed:
 
 ```typescript
-import { signalTree, entityMap, withEntities } from '@signaltree/core';
+import { signalTree, entityMap, entities } from '@signaltree/core';
 
 // Without entityMap - use manual array updates
 const basic = signalTree({ users: [] as User[] });
 basic.$.users.update((users) => [...users, newUser]);
 
-// With entityMap + withEntities - use entity helpers
+// With entityMap + entities - use entity helpers
 const enhanced = signalTree({
   users: entityMap<User>(),
-}).with(withEntities());
+}).with(entities());
 
 enhanced.$.users.addOne(newUser); // ✅ Advanced CRUD operations
 enhanced.$.users.byId(123)(); // ✅ O(1) lookups
@@ -881,15 +881,15 @@ tree.effect(() => console.log('State changed'));
 ### Performance-Enhanced Composition
 
 ```typescript
-import { signalTree, withBatching, withMemoization } from '@signaltree/core';
+import { signalTree, batching, memoization } from '@signaltree/core';
 
 // Add performance optimizations
 const tree = signalTree({
   products: [] as Product[],
   filters: { category: '', search: '' },
 }).with(
-  withBatching(), // Batch updates for optimal rendering
-  withMemoization() // Cache expensive computations
+  batching(), // Batch updates for optimal rendering
+  memoization() // Cache expensive computations
 );
 
 // Now supports batched updates
@@ -909,14 +909,14 @@ const filteredProducts = computed(() => {
 ### Data Management Composition
 
 ```typescript
-import { signalTree, entityMap, withEntities } from '@signaltree/core';
+import { signalTree, entityMap, entities } from '@signaltree/core';
 
 // Add data management capabilities (+2.77KB total)
 const tree = signalTree({
   users: entityMap<User>(),
   posts: entityMap<Post>(),
   ui: { loading: false, error: null as string | null },
-}).with(withEntities());
+}).with(entities());
 
 // Advanced entity operations via tree.$ accessor
 tree.$.users.addOne(newUser);
@@ -938,7 +938,7 @@ const appTree = signalTree({
       reports: entityMap<Report>(),
     },
   },
-}).with(withEntities());
+}).with(entities());
 
 // Access nested entities using tree.$ accessor
 appTree.$.app.data.users.selectBy((u) => u.isAdmin); // Filtered signal
@@ -963,7 +963,7 @@ async function fetchUsers() {
 ### Full-Featured Development Composition
 
 ```typescript
-import { signalTree, withBatching, withEntities, withSerialization, withTimeTravel, withDevTools } from '@signaltree/core';
+import { signalTree, batching, entities, serialization, withTimeTravel, devTools } from '@signaltree/core';
 
 // Full development stack (example)
 const tree = signalTree({
@@ -973,10 +973,10 @@ const tree = signalTree({
     data: { users: [], posts: [] },
   },
 }).with(
-  withBatching(), // Performance
-  withEntities(), // Data management
+  batching(), // Performance
+  entities(), // Data management
   // withAsync removed — use async helpers for API integration
-  withSerialization({
+  serialization({
     // State persistence
     autoSave: true,
     storage: 'localStorage',
@@ -985,7 +985,7 @@ const tree = signalTree({
     // Undo/redo
     maxHistory: 50,
   }),
-  withDevTools({
+  devTools({
     // Debug tools (dev only)
     name: 'MyApp',
     trace: true,
@@ -1004,14 +1004,14 @@ tree.save(); // Persistence
 ### Production-Ready Composition
 
 ```typescript
-import { signalTree, withBatching, withEntities, withSerialization } from '@signaltree/core';
+import { signalTree, batching, entities, serialization } from '@signaltree/core';
 
 // Production build (no dev tools)
 const tree = signalTree(initialState).with(
-  withBatching(), // Performance optimization
-  withEntities(), // Data management
+  batching(), // Performance optimization
+  entities(), // Data management
   // withAsync removed — use async helpers for API integration
-  withSerialization({
+  serialization({
     // User preferences
     autoSave: true,
     storage: 'localStorage',
@@ -1025,18 +1025,18 @@ const tree = signalTree(initialState).with(
 ### Conditional Enhancement
 
 ```typescript
-import { signalTree, withBatching, withEntities, withDevTools, withTimeTravel } from '@signaltree/core';
+import { signalTree, batching, entities, devTools, withTimeTravel } from '@signaltree/core';
 
 const isDevelopment = process.env['NODE_ENV'] === 'development';
 
 // Conditional enhancement based on environment
 const tree = signalTree(state).with(
-  withBatching(), // Always include performance
-  withEntities(), // Always include data management
+  batching(), // Always include performance
+  entities(), // Always include data management
   ...(isDevelopment
     ? [
         // Development-only features
-        withDevTools(),
+        devTools(),
         withTimeTravel(),
       ]
     : [])
@@ -1074,10 +1074,10 @@ Start with core and grow incrementally:
 const tree = signalTree(state);
 
 // Phase 2: Add performance when needed
-const tree2 = tree.with(withBatching());
+const tree2 = tree.with(batching());
 
 // Phase 3: Add data management for collections
-const tree3 = tree2.with(withEntities());
+const tree3 = tree2.with(entities());
 
 // Phase 4: Add async for API integration
 // withAsync removed — no explicit async enhancer; use async helpers instead
@@ -1090,11 +1090,11 @@ const tree3 = tree2.with(withEntities());
 let tree = signalTree(initialState);
 
 if (isDevelopment) {
-  tree = tree.with(withDevTools());
+  tree = tree.with(devTools());
 }
 
 if (needsPerformance) {
-  tree = tree.with(withBatching(), withMemoization());
+  tree = tree.with(batching(), memoization());
 }
 
 if (needsTimeTravel) {
@@ -1365,7 +1365,7 @@ tree.effect(fn); // Create reactive effects
 tree.subscribe(fn); // Manual subscriptions
 tree.destroy(); // Cleanup resources
 
-// Entity helpers (when using entityMap + withEntities)
+// Entity helpers (when using entityMap + entities)
 // tree.$.users.addOne(user);    // Add single entity
 // tree.$.users.byId(id)();      // O(1) lookup by ID
 // tree.$.users.all;         // Get all as array
@@ -1377,22 +1377,22 @@ tree.destroy(); // Cleanup resources
 SignalTree Core includes all enhancers built-in:
 
 ```typescript
-import { signalTree, withBatching, withMemoization, withTimeTravel } from '@signaltree/core';
+import { signalTree, batching, memoization, withTimeTravel } from '@signaltree/core';
 
 // All enhancers available from @signaltree/core
-const tree = signalTree(initialState).with(withBatching(), withMemoization(), withTimeTravel());
+const tree = signalTree(initialState).with(batching(), memoization(), withTimeTravel());
 ```
 
 ### Available enhancers
 
 All enhancers are included in `@signaltree/core`:
 
-- **withBatching()** - Batch multiple updates for better performance
-- **withMemoization()** - Intelligent caching & performance optimization
-- **withEntities()** - Advanced entity management & CRUD operations
-- **withDevTools()** - Redux DevTools integration for debugging
+- **batching()** - Batch multiple updates for better performance
+- **memoization()** - Intelligent caching & performance optimization
+- **entities()** - Advanced entity management & CRUD operations
+- **devTools()** - Redux DevTools integration for debugging
 - **withTimeTravel()** - Undo/redo functionality & state history
-- **withSerialization()** - State persistence & SSR support
+- **serialization()** - State persistence & SSR support
 - **createDevTree()** - Pre-configured development setup
 - **TREE_PRESETS** - Common configuration patterns (PERFORMANCE, DASHBOARD, etc.)
 
@@ -1408,9 +1408,9 @@ Perfect for:
 
 Consider enhancers when you need:
 
-- ⚡ Performance optimization (withBatching, withMemoization)
-- 🐛 Advanced debugging (withDevTools, withTimeTravel)
-- 📦 Entity management (withEntities)
+- ⚡ Performance optimization (batching, memoization)
+- 🐛 Advanced debugging (devTools, withTimeTravel)
+- 📦 Entity management (entities)
 
 Consider separate packages when you need:
 
@@ -1540,21 +1540,21 @@ All enhancers are now consolidated in the core package. The following features a
 
 ### Performance & Optimization
 
-- **withBatching()** (+1.27KB gzipped) - Batch multiple updates for better performance
-- **withMemoization()** (+2.33KB gzipped) - Intelligent caching & performance optimization
+- **batching()** (+1.27KB gzipped) - Batch multiple updates for better performance
+- **memoization()** (+2.33KB gzipped) - Intelligent caching & performance optimization
 
 ### Advanced Features
 
-- **withEntities()** (+0.97KB gzipped) - Enhanced CRUD operations & entity management
+- **entities()** (+0.97KB gzipped) - Enhanced CRUD operations & entity management
 
 ### Development Tools
 
-- **withDevTools()** (+2.49KB gzipped) - Development tools & Redux DevTools integration
+- **devTools()** (+2.49KB gzipped) - Development tools & Redux DevTools integration
 - **withTimeTravel()** (+1.75KB gzipped) - Undo/redo functionality & state history
 
 ### Integration & Convenience
 
-- **withSerialization()** (+0.84KB gzipped) - State persistence & SSR support
+- **serialization()** (+0.84KB gzipped) - State persistence & SSR support
 - **ecommercePreset()** - Pre-configured setups for e-commerce applications
 - **dashboardPreset()** - Pre-configured setups for dashboard applications
 
@@ -1569,12 +1569,12 @@ npm install @signaltree/core
 # Everything is available from @signaltree/core:
 import {
   signalTree,
-  withBatching,
-  withMemoization,
-  withEntities,
-  withDevTools,
+  batching,
+  memoization,
+  entities,
+  devTools,
   withTimeTravel,
-  withSerialization,
+  serialization,
   ecommercePreset,
   dashboardPreset
 } from '@signaltree/core';
@@ -1691,7 +1691,7 @@ npm install @signaltree/enterprise
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withEnterpriseOptimizations } from '@signaltree/enterprise';
+import { enterpriseOptimizations } from '@signaltree/enterprise';
 
 const tree = signalTree({
   // Large application state with hundreds of signals
@@ -1708,7 +1708,7 @@ const tree = signalTree({
     // ... many more modules
   },
 }).with(
-  withEnterpriseOptimizations({
+  enterpriseOptimizations({
     enablePathIndex: true,
     enableMemoryOptimizations: true,
     enablePerformanceMonitoring: true,
@@ -1757,13 +1757,13 @@ npm install --save-dev @signaltree/guardrails
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withGuardrails } from '@signaltree/guardrails';
+import { guardrails } from '@signaltree/guardrails';
 
 const tree = signalTree({
   users: [] as User[],
   posts: [] as Post[],
 }).with(
-  withGuardrails({
+  guardrails({
     hotPathThreshold: 100, // Warn if signal accessed >100 times/sec
     memoryLeakThreshold: 50, // Warn if >50 uncleaned signals
     budgets: {

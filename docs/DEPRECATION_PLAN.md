@@ -8,7 +8,7 @@ This document tracks deprecated APIs scheduled for removal in future major versi
 
 **Status:** Deprecated in v5.x  
 **Removal:** v6.0  
-**Alternative:** `entityMap<E>()` + `withEntities()` + `tree.$.collectionName`
+**Alternative:** `entityMap<E>()` + `entities()` + `tree.$.collectionName`
 
 #### Migration Example
 
@@ -24,12 +24,12 @@ helpers.selectById(id)();
 helpers.selectAll()();
 
 // ✅ New (recommended):
-import { entityMap, signalTree, withEntities } from '@signaltree/core';
+import { entityMap, signalTree, entities } from '@signaltree/core';
 
 interface State {
   users: entityMap<User>;
 }
-const tree = signalTree<State>({ users: entityMap<User>() }).with(withEntities());
+const tree = signalTree<State>({ users: entityMap<User>() }).with(entities());
 
 tree.$.users.add(user);
 tree.$.users.byId(id)();
@@ -54,7 +54,7 @@ tree.$.users.all();
 
 **Status:** Deprecated in v5.x  
 **Removal:** v6.0  
-**Alternative:** `EntitySignal<E, K>` interface from `withEntities()`
+**Alternative:** `EntitySignal<E, K>` interface from `entities()`
 
 The old `EntityHelpers` interface is kept for backward compatibility during migration but will be removed alongside the deprecated `tree.entities()` method.
 
@@ -68,10 +68,10 @@ The old `EntityHelpers` interface is kept for backward compatibility during migr
 
 ```typescript
 // ❌ Not recommended:
-const tree = signalTree(state, { enhancers: [withBatching(), withLogging()] });
+const tree = signalTree(state, { enhancers: [batching(), withLogging()] });
 
 // ✅ Recommended:
-const tree = signalTree(state).with(withBatching()).with(withLogging());
+const tree = signalTree(state).with(batching()).with(withLogging());
 ```
 
 **Rationale:** The `.with()` chain provides better TypeScript inference and cleaner composition.
@@ -82,7 +82,7 @@ const tree = signalTree(state).with(withBatching()).with(withLogging());
 
 | Version | Changes                                                 |
 | ------- | ------------------------------------------------------- |
-| v5.1.4  | Removed `tree.entities()` method from `withEntities()`  |
+| v5.1.4  | Removed `tree.entities()` method from `entities()`      |
 | v5.x    | Deprecation warnings added, migration docs published    |
 | v6.0    | Remove `EntityHelpers` interface                        |
 | v7.0    | Consider removing `{ enhancers: [...] }` config pattern |

@@ -1,5 +1,5 @@
 import { Assert, Equals } from '../test-helpers/types-equals';
-import { withBatching } from './batching';
+import { batching } from './batching';
 
 import type {
   ISignalTree,
@@ -13,7 +13,7 @@ type ExpectedSignature = (
 ) => <Tree extends ISignalTree<any>>(tree: Tree) => Tree & BatchingMethods<any>;
 
 // The actual signature
-type ActualSignature = typeof withBatching;
+type ActualSignature = typeof batching;
 
 // This line will fail to compile if signatures don't match
 type _ContractCheck = Assert<Equals<ActualSignature, ExpectedSignature>>;
@@ -27,8 +27,8 @@ declare const tree1: ISignalTree<{ count: number }>;
 declare const tree2: ISignalTree<{ users: string[]; active: boolean }>;
 
 // These should all compile
-const enhanced1 = withBatching()(tree1);
-const enhanced2 = withBatching({ debounceMs: 16 })(tree2);
+const enhanced1 = batching()(tree1);
+const enhanced2 = batching({ debounceMs: 16 })(tree2);
 
 // Verify methods are available
 enhanced1.batch(() => void 0);

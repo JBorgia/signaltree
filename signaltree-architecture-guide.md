@@ -27,7 +27,7 @@ A comprehensive guide to architecting applications with SignalTree, covering arc
 
 ```typescript
 // app-tree.ts
-import { signalTree, withEntities, entityMap } from '@signaltree/core';
+import { signalTree, entities, entityMap } from '@signaltree/core';
 
 export function createAppTree() {
   return signalTree({
@@ -37,7 +37,7 @@ export function createAppTree() {
       theme: 'light' as 'light' | 'dark',
       sidebarOpen: true as boolean,
     },
-  }).with(withEntities());
+  }).with(entities());
 }
 
 // Type inference - single source of truth

@@ -65,8 +65,8 @@ fi
 # Define deprecated packages (package_name:message format)
 # Note: serialization was never published to npm, so it's excluded
 PACKAGES=(
-    "batching:This package has been consolidated into @signaltree/core. Please use: import { withBatching } from '@signaltree/core'"
-    "memoization:This package has been consolidated into @signaltree/core. Please use: import { withMemoization } from '@signaltree/core'"
+    "batching:This package has been consolidated into @signaltree/core. Please use: import { batching } from '@signaltree/core'"
+    "memoization:This package has been consolidated into @signaltree/core. Please use: import { memoization } from '@signaltree/core'"
     "devtools:This package has been consolidated into @signaltree/core. Please use: import { withDevtools } from '@signaltree/core'"
     "entities:This package has been consolidated into @signaltree/core. Please use entity helpers from '@signaltree/core'"
     "middleware:Middleware was removed in v5. Use enhancers and entity hooks instead."

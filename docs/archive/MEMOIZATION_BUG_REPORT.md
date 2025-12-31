@@ -2,7 +2,7 @@
 
 ## Problem
 
-When using `withMemoization()` enhancer, the `tree.memoize()` method **does NOT actually memoize**. It continues to use the stub implementation that just wraps the function in `computed()` without any caching logic.
+When using `memoization()` enhancer, the `tree.memoize()` method **does NOT actually memoize**. It continues to use the stub implementation that just wraps the function in `computed()` without any caching logic.
 
 **User Report:**
 
@@ -12,7 +12,7 @@ When using `withMemoization()` enhancer, the `tree.memoize()` method **does NOT 
 
 ## Root Cause
 
-In `packages/core/src/enhancers/memoization/lib/memoization.ts`, the `withMemoization()` function only implements:
+In `packages/core/src/enhancers/memoization/lib/memoization.ts`, the `memoization()` function only implements:
 
 - `tree.memoizedUpdate()`
 - `tree.clearMemoCache()`
@@ -34,7 +34,7 @@ This console.warn IS visible in tests, confirming memoization is disabled for `t
 
 ## Expected Behavior
 
-When `withMemoization()` is applied, `tree.memoize()` should:
+When `memoization()` is applied, `tree.memoize()` should:
 
 1. Cache the result based on the state values read inside the memoized function
 2. Only recalculate when those state values change
@@ -55,7 +55,7 @@ Currently `tree.memoize()` just calls the function wrapped in `computed()`, whic
 const tree = signalTree({
   selectedDate: new Date('2025-12-01'),
   logs: [...]
-}).with(withMemoization());  // ← Memoization enabled
+}).with(memoization());  // ← Memoization enabled
 
 let filterCalls = 0;
 
@@ -76,7 +76,7 @@ tree.$.selectedDate.set(new Date('2025-12-02'));
 
 ## Solution Required
 
-The `withMemoization()` function needs to override `tree.memoize()` with a proper implementation that:
+The `memoization()` function needs to override `tree.memoize()` with a proper implementation that:
 
 1. Tracks which state properties are accessed inside the memoized function
 2. Caches the result with a dependency set
@@ -86,8 +86,8 @@ The `withMemoization()` function needs to override `tree.memoize()` with a prope
 ### Implementation Approach
 
 ```typescript
-export function withMemoization<T>(config: MemoizationConfig = {}) {
-  return (tree: SignalTree<T>): MemoizedSignalTree<T> => {
+export function memoization<T>(config: MemoizationConfig = {}) {
+  return (tree: ISignalTree<T>): MemoizedSignalTree<T> => {
     // ... existing setup code ...
 
     if (enabled) {

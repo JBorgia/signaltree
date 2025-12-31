@@ -15,7 +15,7 @@ const noopRule = (name: string): GuardrailRule => ({
   severity: 'info',
 });
 
-export function withGuardrails(config: GuardrailsConfig<any> = {}) {
+export function guardrails(config: GuardrailsConfig<any> = {}) {
   return <S>(tree: import('@signaltree/core').SignalTree<S>) => {
     if (config) {
       // Production build ignores guardrail configuration

@@ -179,9 +179,9 @@
     <div class="example-card">
       <h3>Basic Setup</h3>
       <pre><code>import &#123; signalTree &#125; from '@signaltree/core';
-import &#123; withEnterprise &#125; from '@signaltree/enterprise';
+import &#123; enterprise &#125; from '@signaltree/enterprise';
 
-const tree = signalTree(largeState).with(withEnterprise());
+const tree = signalTree(largeState).with(enterprise());
 
 // Optimized bulk update
 const result = tree.updateOptimized(newData, &#123;
@@ -195,7 +195,7 @@ console.log(result.stats);
 
     <div class="example-card">
       <h3>Real-Time Dashboard</h3>
-      <pre><code>const dashboard = signalTree(initialState).with(withEnterprise());
+      <pre><code>const dashboard = signalTree(initialState).with(enterprise());
 
 // High-frequency WebSocket updates
 socket.on('metrics', (newMetrics) => &#123;

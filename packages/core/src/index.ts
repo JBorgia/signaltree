@@ -130,12 +130,11 @@ export { ENHANCER_META } from './lib/types';
 
 /**
  * Batching enhancer for high-performance state updates
- * @see {@link withBatching} for intelligent batching capabilities
+ * @see {@link batching} for intelligent batching capabilities
  */
 export {
-  withBatching,
   batching,
-  withHighPerformanceBatching,
+  highPerformanceBatching,
   flushBatchedUpdates,
   hasPendingUpdates,
   getBatchQueueSize,
@@ -143,18 +142,17 @@ export {
 
 /**
  * Memoization enhancer for performance optimization
- * @see {@link withMemoization} for intelligent memoization capabilities
+ * @see {@link memoization} for intelligent memoization capabilities
  */
 export {
-  withMemoization,
   memoization,
-  withSelectorMemoization,
-  withComputedMemoization,
-  withDeepStateMemoization,
-  withHighFrequencyMemoization,
-  withHighPerformanceMemoization,
-  withLightweightMemoization,
-  withShallowMemoization,
+  selectorMemoization,
+  computedMemoization,
+  deepStateMemoization,
+  highFrequencyMemoization,
+  highPerformanceMemoization,
+  lightweightMemoization,
+  shallowMemoization,
   memoize,
   memoizeShallow,
   memoizeReference,
@@ -164,23 +162,21 @@ export {
 
 /**
  * Time travel enhancer for debugging and undo/redo functionality
- * @see {@link withTimeTravel} for time travel capabilities
+ * @see {@link timeTravel} for time travel capabilities
  */
 export {
-  withTimeTravel,
   timeTravel,
   enableTimeTravel,
 } from './enhancers/time-travel/time-travel';
 
 /**
  * Entities enhancer for normalized collection helpers
- * @see {@link withEntities}
+ * @see {@link entities}
  */
 export {
-  withEntities,
   entities,
   enableEntities,
-  withHighPerformanceEntities,
+  highPerformanceEntities,
 } from './enhancers/entities/entities';
 
 /**
@@ -199,10 +195,9 @@ export {
 
 /**
  * DevTools enhancer for development and debugging
- * @see {@link withDevTools} for development tools and Redux DevTools integration
+ * @see {@link devTools} for development tools and Redux DevTools integration
  */
 export {
-  withDevTools,
   devTools,
   enableDevTools,
   fullDevTools,
@@ -244,36 +239,6 @@ export { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './lib/constants';
 // PUBLIC API SUMMARY
 // ============================================
 
-// Backwards-compatible alias exports: expose new short names that map
-// to existing `with*` factories so demos and examples can adopt the
-// new naming while the core implementation still provides the original
-// factories.
-/**
- * @deprecated Legacy alias export. Prefer the short factory name (e.g. `highPerformanceBatching()`)
- * and import that directly from the short-named module. This alias will be removed in a future major release.
- */
-export { withHighPerformanceBatching as highPerformanceBatching } from './enhancers/batching/batching';
-
-/**
- * @deprecated Legacy alias exports. Prefer the short factory names (e.g. `lightweightMemoization()`, `shallowMemoization()`, `computedMemoization()`, `selectorMemoization()`)
- * and import them directly from the memoization enhancer. These aliases will be removed in a future major release.
- */
-export {
-  withLightweightMemoization as lightweightMemoization,
-  withShallowMemoization as shallowMemoization,
-  withComputedMemoization as computedMemoization,
-  withSelectorMemoization as selectorMemoization,
-} from './enhancers/memoization/memoization';
-
-/**
- * @deprecated Legacy alias export. Prefer `serialization()` imported from the serialization enhancer.
- * This alias will be removed in a future major release.
- */
-export {
-  serialization as withSerialization,
-  persistence as withPersistence,
-} from './enhancers/serialization/serialization';
-
 /**
  * SignalTree Core API Summary:
  *
@@ -313,17 +278,17 @@ export {
  *
  * @example With Enhancers (using .with() chain - recommended)
  * ```typescript
- * import { signalTree, withLogging, withEntities, entityMap } from '@signaltree/core';
+ * import { signalTree, entities, entityMap } from '@signaltree/core';
  *
  * // Chain enhancers with .with() for type-safe composition
  * const state = signalTree({ count: 0 })
- *   .with(withLogging());
+ *   // .with(logging());
  *
  * // Combine multiple enhancers
  * interface AppState { users: entityMap<User> }
  * const store = signalTree<AppState>({ users: entityMap<User>() })
- *   .with(withEntities())
- *   .with(withLogging());
+ *   .with(entities())
+ *   // .with(logging());
  *
  * // Access entity methods via tree.$
  * store.$.users.add({ id: 1, name: 'Alice' });

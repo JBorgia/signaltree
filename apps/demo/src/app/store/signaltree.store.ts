@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { batching, signalTree } from '@signaltree/core';
-import { withGuardrails } from '@signaltree/guardrails';
+import { guardrails } from '@signaltree/guardrails';
 
 /**
  * Demo Application Store - Single source of truth for app-wide state
@@ -47,7 +47,7 @@ export class DemoAppStore {
   })
     .with(batching())
     .with(
-      withGuardrails({
+      guardrails({
         mode: 'warn',
         budgets: {
           maxUpdateTime: 16,

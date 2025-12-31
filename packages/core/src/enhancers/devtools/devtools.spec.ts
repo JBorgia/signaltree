@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  devTools,
-  enableDevTools,
-  fullDevTools,
-  productionDevTools,
-  withDevTools,
-} from './devtools';
+import { devTools, enableDevTools, fullDevTools, productionDevTools } from './devtools';
 
 function createMockTree() {
   const state = { count: 0 } as Record<string, any>;
@@ -69,9 +63,9 @@ describe('devTools enhancer (v6 API)', () => {
     expect(typeof snapshot.metrics.totalUpdates).toBe('number');
   });
 
-  it('alias `withDevTools` behaves like `devTools` and presets are available', () => {
+  it('alias `devTools` behaves like `devTools` and presets are available', () => {
     const treeA = createMockTree();
-    const a = withDevTools({})(treeA);
+    const a = devTools({})(treeA);
     expect((a as any).__devTools).toBeDefined();
 
     const treeB = createMockTree();

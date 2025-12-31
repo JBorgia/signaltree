@@ -1,9 +1,9 @@
-import { withBatching } from '../enhancers/batching';
-import { withDevTools } from '../enhancers/devtools';
-import { withEffects } from '../enhancers/effects';
-import { withEntities } from '../enhancers/entities';
-import { withMemoization } from '../enhancers/memoization';
-import { withTimeTravel } from '../enhancers/time-travel';
+import { batching } from '../enhancers/batching';
+import { devTools } from '../enhancers/devtools';
+import { effects } from '../enhancers/effects';
+import { entities } from '../enhancers/entities';
+import { memoization } from '../enhancers/memoization';
+import { timeTravel } from '../enhancers/time-travel';
 import { signalTree } from './signal-tree';
 
 /**
@@ -135,12 +135,12 @@ export function createDevTree<T extends object>(
   if (arguments.length === 0) {
     const enhancer = <Tree extends ISignalTree<any>>(tree: Tree) =>
       tree
-        .with(withEffects())
-        .with(withBatching())
-        .with(withMemoization())
-        .with(withEntities())
-        .with(withTimeTravel())
-        .with(withDevTools());
+        .with(effects())
+        .with(batching())
+        .with(memoization())
+        .with(entities())
+        .with(timeTravel())
+        .with(devTools());
 
     return { enhancer };
   }
@@ -149,12 +149,12 @@ export function createDevTree<T extends object>(
 
   // Chain enhancers - types accumulate automatically with v6 pattern
   const enhanced = base
-    .with(withEffects())
-    .with(withBatching(config.batching))
-    .with(withMemoization(config.memoization))
-    .with(withEntities())
-    .with(withTimeTravel(config.timeTravel))
-    .with(withDevTools(config.devTools));
+    .with(effects())
+    .with(batching(config.batching))
+    .with(memoization(config.memoization))
+    .with(entities())
+    .with(timeTravel(config.timeTravel))
+    .with(devTools(config.devTools));
 
   return enhanced as unknown as FullSignalTree<T>;
 }
@@ -187,10 +187,10 @@ export function createProdTree<T extends object>(
   const base = signalTree(initialState, config);
 
   const enhanced = base
-    .with(withEffects())
-    .with(withBatching(config.batching))
-    .with(withMemoization(config.memoization))
-    .with(withEntities());
+    .with(effects())
+    .with(batching(config.batching))
+    .with(memoization(config.memoization))
+    .with(entities());
 
   return enhanced as unknown as ProdSignalTree<T>;
 }
@@ -220,7 +220,7 @@ export function createMinimalTree<T extends object>(
 ): MinimalSignalTree<T> {
   const base = signalTree(initialState, config);
 
-  const enhanced = base.with(withEffects());
+  const enhanced = base.with(effects());
 
   return enhanced as unknown as MinimalSignalTree<T>;
 }
@@ -255,8 +255,8 @@ export const minimalTree = createMinimalTree;
  * ```typescript
  * // Create a tree with just batching and memoization
  * const tree = buildTree({ items: [] })
- *   .add(withBatching())
- *   .add(withMemoization())
+ *   .add(batching())
+ *   .add(memoization())
  *   .done();
  * ```
  */

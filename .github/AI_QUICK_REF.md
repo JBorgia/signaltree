@@ -23,8 +23,8 @@ tree.count.update((n) => n + 1);
 ### Batching - Multiple updates at once
 
 ```typescript
-import { withBatching } from '@signaltree/core/enhancers/batching';
-const tree = signalTree(state, withBatching());
+import { batching } from '@signaltree/core/enhancers/batching';
+const tree = signalTree(state, batching());
 tree.batch(() => {
   /* multiple updates */
 });
@@ -33,8 +33,8 @@ tree.batch(() => {
 ### Entities - Collection CRUD
 
 ```typescript
-import { withEntities } from '@signaltree/core/enhancers/entities';
-const tree = signalTree({ todos: [] }, withEntities());
+import { entities } from '@signaltree/core/enhancers/entities';
+const tree = signalTree({ todos: [] }, entities());
 tree.entities.add('todos', item);
 tree.entities.update('todos', id, changes);
 ```
@@ -42,8 +42,8 @@ tree.entities.update('todos', id, changes);
 ### TimeTravel - Undo/Redo
 
 ```typescript
-import { withTimeTravel } from '@signaltree/core/enhancers/time-travel';
-const tree = signalTree(state, withTimeTravel());
+import { timeTravel } from '@signaltree/core';
+const tree = signalTree(state, timeTravel());
 tree.undo();
 tree.redo();
 tree.reset();
@@ -53,7 +53,7 @@ tree.reset();
 
 ```typescript
 // Middleware removed in v5. Use enhancers + entity hooks.
-// const tree = signalTree(state).with(withEntities());
+// const tree = signalTree(state).with(entities());
 tree.use((context, next) => {
   /* logging/validation */ next();
 });

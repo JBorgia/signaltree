@@ -157,7 +157,7 @@ rapid updates that bypass framework batching.
 **Why this doesn't matter**:
 
 - Real Angular apps use zone.js batching
-- Use `withHighPerformanceBatching()` for high-frequency updates
+- Use `highPerformanceBatching()` for high-frequency updates
 - 60Hz+ updates are handled by batching enhancer
 
 **Result**: This scenario is architecturally incompatible, not a limitation.
@@ -169,7 +169,7 @@ Rename to "Batched High-Frequency Updates" and test:
 
 ```typescript
 // Test batching effectiveness at 60Hz
-withHighPerformanceBatching({ flushInterval: 16 }); // 60fps
+highPerformanceBatching({ flushInterval: 16 }); // 60fps
 ```
 
 ---

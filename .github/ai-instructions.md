@@ -127,9 +127,9 @@ Suggest enhancers based on the use case:
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withBatching } from '@signaltree/core/enhancers/batching';
+import { batching } from '@signaltree/core/enhancers/batching';
 
-const tree = signalTree(initialState, withBatching());
+const tree = signalTree(initialState, batching());
 
 // All updates inside batch() trigger ONE change detection
 tree.batch(() => {
@@ -144,9 +144,9 @@ tree.batch(() => {
 **When to suggest:** Expensive computations that shouldn't re-run unless dependencies change.
 
 ```typescript
-import { withMemoization } from '@signaltree/core/enhancers/memoization';
+import { memoization } from '@signaltree/core/enhancers/memoization';
 
-const tree = signalTree(initialState, withMemoization());
+const tree = signalTree(initialState, memoization());
 
 // Cache expensive computation results
 const expensiveResult = tree.memoize(() => complexCalculation(tree.data()), 'cache-key');
@@ -157,9 +157,9 @@ const expensiveResult = tree.memoize(() => complexCalculation(tree.data()), 'cac
 **When to suggest:** Debugging, undo/redo functionality, or state history tracking.
 
 ```typescript
-import { withTimeTravel } from '@signaltree/core/enhancers/time-travel';
+import { timeTravel } from '@signaltree/core';
 
-const tree = signalTree(initialState, withTimeTravel({ maxHistory: 50 }));
+const tree = signalTree(initialState, timeTravel({ maxHistory: 50 }));
 
 // Record state changes
 tree.user.name.set('John');
@@ -180,11 +180,11 @@ tree.jumpTo(3); // Jump to specific point in history
 **When to suggest:** Development/debugging scenarios.
 
 ```typescript
-import { withDevTools } from '@signaltree/core/enhancers/devtools';
+import { devTools } from '@signaltree/core/enhancers/devtools';
 
 const tree = signalTree(
   initialState,
-  withDevTools({
+  devTools({
     name: 'AppState',
     trace: true,
   })
@@ -199,7 +199,7 @@ const tree = signalTree(
 **When to suggest:** Managing collections of items with CRUD operations.
 
 ```typescript
-import { withEntities } from '@signaltree/core/enhancers/entities';
+import { entities } from '@signaltree/core/enhancers/entities';
 
 interface Todo {
   id: string;
@@ -207,7 +207,7 @@ interface Todo {
   completed: boolean;
 }
 
-const tree = signalTree({ todos: [] as Todo[] }, withEntities());
+const tree = signalTree({ todos: [] as Todo[] }, entities());
 
 // CRUD operations
 tree.entities.add('todos', { id: '1', title: 'Task', completed: false });
@@ -225,7 +225,7 @@ const allTodos = tree.entities.getAll('todos');
 Use entity hooks and Angular `effect()` instead of middleware.
 
 ```typescript
-const tree = signalTree({ users: entityMap<User>() }).with(withEntities());
+const tree = signalTree({ users: entityMap<User>() }).with(entities());
 
 // Logging via tap
 const unsub = tree.$.users.tap({
@@ -252,10 +252,10 @@ effect(() => {
 **When to suggest:** Common patterns for rapid setup.
 
 ```typescript
-import { withPresets, presets } from '@signaltree/core/enhancers/presets';
+import { presets, presets } from '@signaltree/core/enhancers/presets';
 
 // Full-featured setup
-const tree = signalTree(initialState, withPresets(presets.comprehensive));
+const tree = signalTree(initialState, presets(presets.comprehensive));
 
 // Available presets:
 // - minimal: Core only
@@ -331,11 +331,11 @@ tree.user.age((age) => age + 1);
 **When to suggest:** Large applications with performance requirements or bulk update operations.
 
 ```typescript
-import { withEnterpriseEnhancer } from '@signaltree/enterprise';
+import { enterpriseEnhancer } from '@signaltree/enterprise';
 
 const tree = signalTree(
   initialState,
-  withEnterpriseEnhancer({
+  enterpriseEnhancer({
     enableDiffing: true,
     enableBulkUpdates: true,
     enableAudit: true,
@@ -357,11 +357,11 @@ tree.bulkUpdate([
 **Purpose:** Guardrails enables the single-source-of-truth pattern by preventing common pitfalls that cause performance issues or anti-patterns in large state trees. It's specifically designed to make single-store architectures safe and sustainable at scale.
 
 ```typescript
-import { withGuardrails } from '@signaltree/guardrails';
+import { guardrails } from '@signaltree/guardrails';
 
 const tree = signalTree(
   initialState,
-  withGuardrails({
+  guardrails({
     detectMemoryLeaks: true, // Warns about subscriptions not cleaned up
     detectUnusedState: true, // Finds state that's never read
     maxUpdateFrequency: 100, // ms - warns about update storms
@@ -393,7 +393,7 @@ const tree = signalTree(
 ```typescript
 import { Injectable } from '@angular/core';
 import { signalTree } from '@signaltree/core';
-import { withGuardrails } from '@signaltree/guardrails';
+import { guardrails } from '@signaltree/guardrails';
 
 interface AppState {
   auth: {
@@ -427,7 +427,7 @@ export class AppStore {
       data: { products: [], cart: [], orders: [] },
       loading: { products: false, cart: false, orders: false },
     },
-    withGuardrails() // Keeps single-store pattern safe at scale
+    guardrails() // Keeps single-store pattern safe at scale
   );
 
   // Expose state slices as public signals
@@ -591,10 +591,10 @@ private tree = signalTree(state);
 
 ```typescript
 // Wrong - unnecessary overhead
-const tree = signalTree(simpleState, withBatching(), withTimeTravel(), withDevTools());
+const tree = signalTree(simpleState, batching(), timeTravel(), devTools());
 
 // Correct - only what you need
-const tree = signalTree(simpleState, withBatching());
+const tree = signalTree(simpleState, batching());
 ```
 
 ## Package Installation Commands
@@ -628,11 +628,11 @@ npm install -D @signaltree/guardrails
 ## Quick Decision Tree
 
 1. **Need state management?** → Start with `@signaltree/core`
-2. **Making multiple rapid updates?** → Add `withBatching()`
+2. **Making multiple rapid updates?** → Add `batching()`
 3. **Need derived state?** → Add `withComputed()`
 4. **Working with forms?** → Add `@signaltree/ng-forms`
 5. **Need undo/redo?** → Add `withTimeTravel()`
-6. **Managing collections?** → Add `withEntities()`
+6. **Managing collections?** → Add `entities()`
 7. **Need async side effects?** → Use `effect()` or entity `intercept()` hooks
 8. **Large app, performance critical?** → Add `@signaltree/enterprise`
 9. **In development?** → Add `@signaltree/guardrails`

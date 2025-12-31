@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 // GENERATED FILE - do not edit by hand
 // Comprehensive type-level checks for enhancer subsets
+import { describe, expect, it } from 'vitest';
+
 import type { Equals, Assert } from './helpers-types';
 import type { ISignalTree } from '../../lib/types';
 type Tree = { count: number };
@@ -3448,5 +3450,8 @@ type Subset_ABCDEF_has_updateOptimized = Assert<
 
 export {};
 
-import { describe, it, expect } from 'vitest';
-describe('typing generated subsets (runtime shim)', () => { it('compiles type-level assertions', () => { expect(true).toBe(true); }); });
+describe('typing generated subsets (runtime shim)', () => {
+  it('compiles type-level assertions', () => {
+    expect(true).toBe(true);
+  });
+});

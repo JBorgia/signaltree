@@ -3,7 +3,7 @@ import { effect as angularEffect, untracked } from '@angular/core';
 /**
  * v6 Effects Enhancer
  *
- * Contract: (config?) => <S>(tree: SignalTree<S>) => SignalTree<S> & EffectsMethods<S>
+ * Contract: (config?) => <S>(tree: ISignalTree<S>) => ISignalTree<S> & EffectsMethods<S>
  */
 /* eslint-disable @typescript-eslint/no-empty-function */
 import type { ISignalTree, EffectsMethods } from '../../lib/types';

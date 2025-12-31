@@ -9,7 +9,7 @@ describe('serialization enhancer exports', () => {
     const factory =
       (serialization as any).serialization ||
       (serialization as any).default ||
-      (serialization as any).withSerialization;
+      (serialization as any).serialization;
     expect(
       typeof factory === 'function' || typeof factory === 'object'
     ).toBeTruthy();

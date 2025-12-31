@@ -14,13 +14,13 @@ This guide covers how to choose the right memoization strategy for optimal Signa
 
 ### 1. Hot Path Optimization (>100 calls/second)
 
-**Use: `withLightweightMemoization()` or no memoization**
+**Use: `lightweightMemoization()` or no memoization**
 
 ```typescript
 // For rapid sequential updates
 const realtimeTree = signalTree({
   metrics: { cpu: 0, memory: 0, requests: 0 },
-}).with(withLightweightMemoization());
+}).with(lightweightMemoization());
 
 // Configuration: reference equality, no LRU, no TTL, small cache
 ```
@@ -29,14 +29,14 @@ const realtimeTree = signalTree({
 
 ### 2. Stable Object Updates
 
-**Use: `withShallowMemoization()`**
+**Use: `shallowMemoization()`**
 
 ```typescript
 // For user preferences, settings, form data
 const settingsTree = signalTree({
   user: { id: 1, name: 'John', theme: 'dark' },
   preferences: { autoSave: true, notifications: false },
-}).with(withShallowMemoization());
+}).with(shallowMemoization());
 ```
 
 **Why**: Objects change infrequently, shallow equality is sufficient and fast.
@@ -63,15 +63,15 @@ Based on SignalTree benchmark analysis:
 
 ```typescript
 // DON'T: Memoization adds overhead when values always change
-import { withMemoization } from '@signaltree/core';
+import { memoization } from '@signaltree/core';
 const rapidTree = signalTree({
   counters: Array.from({ length: 50 }, () => ({ value: 0 })),
-}).with(withMemoization()); // ❌ Cache never hits
+}).with(memoization()); // ❌ Cache never hits
 
 // DO: Use lightweight or no memoization
 const optimizedTree = signalTree({
   counters: Array.from({ length: 50 }, () => ({ value: 0 })),
-}).with(withLightweightMemoization()); // ✅ Minimal overhead
+}).with(lightweightMemoization()); // ✅ Minimal overhead
 ```
 
 ### Array Mutations
@@ -80,7 +80,7 @@ const optimizedTree = signalTree({
 // DON'T: Memoize when arrays are constantly mutated
 const arrayTree = signalTree({
   items: [] as Item[],
-}).with(withMemoization()); // ❌ Every mutation invalidates cache
+}).with(memoization()); // ❌ Every mutation invalidates cache
 
 // DO: Let signals handle direct updates
 const directTree = signalTree({
@@ -92,12 +92,12 @@ const directTree = signalTree({
 
 ```typescript
 // DO: Use shallow equality for object properties
-import { withShallowMemoization } from '@signaltree/core';
+import { shallowMemoization } from '@signaltree/core';
 const nestedTree = signalTree({
   user: {
     profile: { settings: { theme: 'dark', lang: 'en' } },
   },
-}).with(withShallowMemoization()); // ✅ Balances speed and correctness
+}).with(shallowMemoization()); // ✅ Balances speed and correctness
 ```
 
 ### Computed Selectors
@@ -138,8 +138,8 @@ if (stats.hitRate < 0.3) {
 // Test your specific workload
 const strategies = [
   { name: 'None', create: () => signalTree(state) },
-  { name: 'Lightweight', create: () => signalTree(state).with(withLightweightMemoization()) },
-  { name: 'Shallow', create: () => signalTree(state).with(withShallowMemoization()) },
+  { name: 'Lightweight', create: () => signalTree(state).with(lightweightMemoization()) },
+  { name: 'Shallow', create: () => signalTree(state).with(shallowMemoization()) },
 ];
 
 strategies.forEach(({ name, create }) => {
@@ -162,7 +162,7 @@ strategies.forEach(({ name, create }) => {
 // Bad: Complex memoization for simple, frequent operations
 const badTree = signalTree({
   timestamp: Date.now(),
-}).with(withMemoization({ equality: 'deep' })); // Overhead > benefit
+}).with(memoization({ equality: 'deep' })); // Overhead > benefit
 ```
 
 ### ❌ Under-Memoizing Expensive Operations
@@ -181,7 +181,7 @@ const expensiveTree = signalTree({
 const settingsTree = signalTree({
   theme: 'dark',
   language: 'en',
-}).with(withMemoization({ equality: 'deep' })); // Unnecessary complexity
+}).with(memoization({ equality: 'deep' })); // Unnecessary complexity
 ```
 
 ## Memory Management
@@ -191,7 +191,7 @@ const settingsTree = signalTree({
 ```typescript
 // Limit cache sizes in memory-constrained environments
 const mobileTree = signalTree(state).with(
-  withMemoization({
+  memoization({
     maxCacheSize: 50,
     ttl: 30000,
     enableLRU: true,
@@ -203,8 +203,8 @@ const mobileTree = signalTree(state).with(
 
 ```typescript
 // More aggressive caching in production
-import { withHighPerformanceMemoization, withLightweightMemoization } from '@signaltree/core';
-const productionTree = signalTree(state).with(isProduction ? withHighPerformanceMemoization() : withLightweightMemoization());
+import { withHighPerformanceMemoization, lightweightMemoization } from '@signaltree/core';
+const productionTree = signalTree(state).with(isProduction ? withHighPerformanceMemoization() : lightweightMemoization());
 ```
 
 ## Related Documentation
@@ -215,8 +215,8 @@ const productionTree = signalTree(state).with(isProduction ? withHighPerformance
 
 ## TL;DR Quick Decisions
 
-1. **Hot paths (>100 ops/sec)**: `withLightweightMemoization()` or none
-2. **Settings/preferences**: `withShallowMemoization()`
+1. **Hot paths (>100 ops/sec)**: `lightweightMemoization()` or none
+2. **Settings/preferences**: `shallowMemoization()`
 3. **Expensive computations**: `withHighPerformanceMemoization()`
 4. **Constantly changing data**: No memoization
 5. **Angular computed()**: Let Angular handle it

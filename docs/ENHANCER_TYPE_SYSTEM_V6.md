@@ -6,8 +6,8 @@ In v5, enhancers used a monomorphic pattern where the state type `T` was fixed a
 
 ```typescript
 // v5 Pattern (BROKEN)
-export function withBatching<T>(config?: BatchingConfig): Enhancer<BatchingMethods<T>> {
-  return (tree: SignalTree<T>): SignalTree<T> & BatchingMethods<T> => {
+export function batching<T>(config?: BatchingConfig): Enhancer<BatchingMethods<T>> {
+  return (tree: ISignalTree<T>): ISignalTree<T> & BatchingMethods<T> => {
     // ...
   };
 }
@@ -21,8 +21,8 @@ Enhancer factories must return a function that is generic in the tree state type
 
 ```typescript
 // v6 Pattern (CORRECT)
-export function withBatching(config?: BatchingConfig): <S>(tree: SignalTree<S>) => SignalTree<S> & BatchingMethods {
-  return <S>(tree: SignalTree<S>): SignalTree<S> & BatchingMethods => {
+export function batching(config?: BatchingConfig): <S>(tree: ISignalTree<S>) => ISignalTree<S> & BatchingMethods {
+  return <S>(tree: ISignalTree<S>): ISignalTree<S> & BatchingMethods => {
     // ...
     return Object.assign(tree, methods);
   };
@@ -40,7 +40,7 @@ export function withBatching(config?: BatchingConfig): <S>(tree: SignalTree<S>) 
 ## `.with()` Signature
 
 ```typescript
-with<R>(enhancer: (tree: SignalTree<T>) => R): R;
+with<R>(enhancer: (tree: ISignalTree<T>) => R): R;
 ```
 
 This allows TypeScript to infer the correct return type and preserve all generic relationships.
@@ -58,21 +58,21 @@ This allows TypeScript to infer the correct return type and preserve all generic
 Type-tests must verify the exact signature:
 
 ```typescript
-type Actual = typeof withBatching;
-type Expected = (config?: BatchingConfig) => <S>(tree: SignalTree<S>) => SignalTree<S> & BatchingMethods;
+type Actual = typeof batching;
+type Expected = (config?: BatchingConfig) => <S>(tree: ISignalTree<S>) => ISignalTree<S> & BatchingMethods;
 type _check = Assert<Equals<Actual, Expected>>;
 ```
 
 ## Summary Table
 
-| Enhancer        | Return Type                                          |
-| --------------- | ---------------------------------------------------- |
-| withBatching    | `<S>(tree) => SignalTree<S> & BatchingMethods`       |
-| withEffects     | `<S>(tree) => SignalTree<S> & EffectsMethods<S>`     |
-| withMemoization | `<S>(tree) => SignalTree<S> & MemoizationMethods<S>` |
-| withTimeTravel  | `<S>(tree) => SignalTree<S> & TimeTravelMethods`     |
-| withDevTools    | `<S>(tree) => SignalTree<S> & DevToolsMethods`       |
-| withEntities    | `<S>(tree) => SignalTree<S> & EntitiesEnabled`       |
+| Enhancer       | Return Type                                           |
+| -------------- | ----------------------------------------------------- |
+| batching       | `<S>(tree) => ISignalTree<S> & BatchingMethods`       |
+| effects        | `<S>(tree) => ISignalTree<S> & EffectsMethods<S>`     |
+| memoization    | `<S>(tree) => ISignalTree<S> & MemoizationMethods<S>` |
+| withTimeTravel | `<S>(tree) => ISignalTree<S> & TimeTravelMethods`     |
+| devTools       | `<S>(tree) => ISignalTree<S> & DevToolsMethods`       |
+| entities       | `<S>(tree) => ISignalTree<S> & EntitiesEnabled`       |
 
 ## Type-Test Pattern
 
@@ -86,7 +86,7 @@ type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B 
 type Assert<T extends true> = T;
 
 type Actual = typeof withX;
-type Expected = (config?: XConfig) => <S>(tree: SignalTree<S>) => SignalTree<S> & XMethods;
+type Expected = (config?: XConfig) => <S>(tree: ISignalTree<S>) => ISignalTree<S> & XMethods;
 type _check = Assert<Equals<Actual, Expected>>;
 ```
 

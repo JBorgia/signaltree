@@ -2,7 +2,6 @@ import { PathIndex } from './path-index';
 import { OptimizedUpdateEngine, UpdateResult } from './update-engine';
 
 import type { Signal } from '@angular/core';
-import type { Enhancer } from '@signaltree/core';
 /**
  * Enterprise-grade optimizations for large-scale applications.
  *
@@ -29,9 +28,9 @@ import type { Enhancer } from '@signaltree/core';
  * @example
  * ```typescript
  * import { signalTree } from '@signaltree/core';
- * import { withEnterprise } from '@signaltree/enterprise';
+ * import { enterprise } from '@signaltree/enterprise';
  *
- * const tree = signalTree(largeState).with(withEnterprise());
+ * const tree = signalTree(largeState).with(enterprise());
  *
  * // Now available: optimized bulk updates
  * const result = tree.updateOptimized(newData, {
@@ -112,14 +111,14 @@ export function enterprise(): <
 
 /**
  * Type augmentation for trees enhanced with enterprise features.
- * This is applied when using withEnterprise().
+ * This is applied when using enterprise().
  *
  * @public
  */
 export interface EnterpriseEnhancedTree<T> {
   /**
    * Optimized bulk update method using diff-based change detection.
-   * Only available when using withEnterprise().
+   * Only available when using enterprise().
    *
    * @param newValue - The new state value
    * @param options - Update options
@@ -143,7 +142,7 @@ export interface EnterpriseEnhancedTree<T> {
 
   /**
    * Get the PathIndex for debugging/monitoring.
-   * Only available when using withEnterprise().
+   * Only available when using enterprise().
    * Returns null if updateOptimized hasn't been called yet (lazy initialization).
    */
   getPathIndex(): PathIndex<Signal<unknown>> | null;

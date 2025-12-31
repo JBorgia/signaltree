@@ -22,12 +22,14 @@ npm install --save-dev @signaltree/guardrails
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withGuardrails } from '@signaltree/guardrails';
+import { guardrails } from '@signaltree/guardrails';
 
-const tree = signalTree({ count: 0 }).with(withGuardrails({
-  budgets: { maxUpdateTime: 16 },
-  hotPaths: { threshold: 10 },
-}));
+const tree = signalTree({ count: 0 }).with(
+  guardrails({
+    budgets: { maxUpdateTime: 16 },
+    hotPaths: { threshold: 10 },
+  })
+);
 ```
 
 ## Using Factories
@@ -36,10 +38,14 @@ const tree = signalTree({ count: 0 }).with(withGuardrails({
 import { signalTree } from '@signaltree/core';
 import { createFeatureTree } from '@signaltree/guardrails/factories';
 
-const tree = createFeatureTree(signalTree, { data: [] }, {
-  name: 'dashboard',
-  guardrails: true,
-});
+const tree = createFeatureTree(
+  signalTree,
+  { data: [] },
+  {
+    name: 'dashboard',
+    guardrails: true,
+  }
+);
 ```
 
 ## Configuration

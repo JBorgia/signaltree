@@ -32,7 +32,7 @@ tree.$.user.age.update((a) => a + 1);
 ### Create a Tree with Entities
 
 ```typescript
-import { signalTree, entityMap, withEntities } from '@signaltree/core';
+import { signalTree, entityMap, entities } from '@signaltree/core';
 
 const tree = signalTree({
   // Regular signal state
@@ -45,7 +45,7 @@ const tree = signalTree({
   users: entityMap<User>(), // EntitySignal<User, string>
   posts: entityMap<Post>(), // EntitySignal<Post, string>
   comments: entityMap<Comment>(), // EntitySignal<Comment, string>
-}).with(withEntities()); // Enable entity system
+}).with(entities()); // Enable entity system
 
 // Now you have both:
 tree.$.filters.searchTerm(); // Regular signal access
@@ -180,12 +180,12 @@ tree.$.users.removeOne('u999', {
 ### Observe Changes (tap)
 
 ```typescript
-import { signalTree, entityMap, withEntities } from '@signaltree/core';
+import { signalTree, entityMap, entities } from '@signaltree/core';
 
 const tree = signalTree({
   users: entityMap<User>(),
   posts: entityMap<Post>(),
-}).with(withEntities());
+}).with(entities());
 
 // ==================
 // SIMPLE OBSERVATION
@@ -346,7 +346,7 @@ const tree = signalTree({
   users: entityMap<User>(),
   posts: entityMap<Post>(),
   comments: entityMap<Comment>(),
-}).with(withEntities());
+}).with(entities());
 
 // Cascade delete: Remove user's posts and comments when user is deleted
 tree.$.users.tap({
@@ -638,14 +638,14 @@ tree.$.users.intercept({
 ### Batching (Fixed)
 
 ```typescript
-import { signalTree, entityMap, withEntities, withBatching } from '@signaltree/core';
+import { signalTree, entityMap, entities, batching } from '@signaltree/core';
 
 const tree = signalTree({
   users: entityMap<User>(),
   posts: entityMap<Post>(),
 })
-  .with(withEntities())
-  .with(withBatching());
+  .with(entities())
+  .with(batching());
 
 // Before: Global state bug - mutations from multiple trees interfered
 // After: Instance-scoped - each tree has isolated batching queue
@@ -664,8 +664,8 @@ tree.$.users.addOne({ id: 'u3', name: 'Charlie' });
 // After fix: onChange fires 1 time (batched!)
 
 // Multiple trees don't interfere
-const tree1 = signalTree({ users: entityMap<User>() }).with(withEntities()).with(withBatching());
-const tree2 = signalTree({ users: entityMap<User>() }).with(withEntities()).with(withBatching());
+const tree1 = signalTree({ users: entityMap<User>() }).with(entities()).with(batching());
+const tree2 = signalTree({ users: entityMap<User>() }).with(entities()).with(batching());
 
 tree1.$.users.addOne({ id: 'u1', name: 'Tree1' });
 tree2.$.users.addOne({ id: 'u2', name: 'Tree2' });
@@ -675,13 +675,13 @@ tree2.$.users.addOne({ id: 'u2', name: 'Tree2' });
 ### Persistence (Fixed: 50ms Polling → Event-Driven)
 
 ```typescript
-import { signalTree, withPersistence } from '@signaltree/core';
+import { signalTree, persistence } from '@signaltree/core';
 
 const tree = signalTree({
   users: entityMap<User>(),
   settings: { theme: 'dark' },
 }).with(
-  withPersistence({
+  persistence({
     key: 'myapp-state',
     storage: localStorage,
     debounceMs: 1000,
@@ -728,13 +728,13 @@ tree.clearPersisted(); // Clear localStorage
 ### TimeTravel (Fixed: Now Catches All Mutations)
 
 ```typescript
-import { signalTree, entityMap, withTimeTravel } from '@signaltree/core';
+import { signalTree, entityMap, timeTravel } from '@signaltree/core';
 
 const tree = signalTree({
   users: entityMap<User>(),
   selectedUserId: '',
 }).with(
-  withTimeTravel({
+  timeTravel({
     maxHistorySize: 50,
     useStructuralSharing: true, // Efficient memory usage
   })
@@ -786,13 +786,13 @@ tree.resetHistory();
 ### DevTools (Fixed: Now Complete)
 
 ```typescript
-import { signalTree, entityMap, withDevTools } from '@signaltree/core';
+import { signalTree, entityMap, devTools } from '@signaltree/core';
 
 const tree = signalTree({
   users: entityMap<User>(),
   posts: entityMap<Post>(),
 }).with(
-  withDevTools({
+  devTools({
     name: 'My SignalTree App',
     maxAge: 50, // Keep last 50 mutations
   })
@@ -827,15 +827,15 @@ tree.$.posts.addOne({ postId: 'p1', userId: 'u1', title: 'Hello' });
 ### Logging (Uses PathNotifier)
 
 ```typescript
-import { signalTree, entityMap, withEntities, withLogging } from '@signaltree/core';
+import { signalTree, entityMap, entities } from '@signaltree/core';
 
 const tree = signalTree({
   users: entityMap<User>(),
   settings: { theme: 'dark' },
 })
-  .with(withEntities())
+  .with(entities())
   .with(
-    withLogging({
+    // withLogging({
       name: 'MyApp',
 
       // Filter which paths to log
@@ -873,7 +873,7 @@ tree.$.settings.theme.set('light');
 ### Todo App with Entities
 
 ```typescript
-import { signalTree, withEntities, withPersistence, withTimeTravel } from '@signaltree/core';
+import { signalTree, entities, persistence, timeTravel } from '@signaltree/core';
 
 interface Todo {
   id: string;
@@ -891,14 +891,15 @@ const todoTree = signalTree({
   filter: 'all', // 'all' | 'active' | 'completed'
   editingId: null as string | null,
 })
-  .with(withEntities())
+  .with(entities())
   .with(
-    withPersistence({
+    persistence({
       key: 'todos-app',
       filter: (path) => path.startsWith('todos'), // Only persist todos, not UI
     })
   )
-  .with(withTimeTravel());
+  .with(timeTravel());
+// ⚠️ Deprecated: All withX() enhancer aliases (e.g., withTimeTravel(), persistence()) are available for legacy support but will be removed in a future major release. Prefer the new v6 syntax: timeTravel(), persistence(), etc.
 
 // Setup validation
 todoTree.$.todos.intercept({
@@ -1035,7 +1036,7 @@ export class TodoListComponent {
 ### User Management with Access Control
 
 ```typescript
-import { signalTree, entityMap, withEntities } from '@signaltree/core';
+import { signalTree, entityMap, entities } from '@signaltree/core';
 
 interface User {
   id: string;
@@ -1047,7 +1048,7 @@ interface User {
 const userTree = signalTree({
   users: entityMap<User>(),
   currentUserId: null as string | null,
-}).with(withEntities());
+}).with(entities());
 
 // Authorization interceptor
 userTree.$.users.intercept({

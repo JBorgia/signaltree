@@ -47,8 +47,8 @@ export async function runElfInitialization(): Promise<{
     async () => {
       // Simulate Elf store initialization
       const { createStore } = await import('@ngneat/elf');
-      const { withEntities } = await import('@ngneat/elf-entities');
-      createStore({ name: 'elf-init' }, withEntities<any>());
+      const { entities } = await import('@ngneat/elf-entities');
+      createStore({ name: 'elf-init' }, entities<any>());
     },
     { operations: 1, trackMemory: true, label: 'elf-init' }
   );

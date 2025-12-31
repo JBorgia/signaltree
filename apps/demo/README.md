@@ -168,7 +168,7 @@ const persistentDemo = signalTree({
   userPreferences: { theme: 'light' },
   appData: { lastSaved: new Date() },
 }).with(
-  withPersistence({
+  persistence({
     key: 'demo-state',
     autoSave: true,
     debounceMs: 500,

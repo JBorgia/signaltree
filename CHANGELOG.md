@@ -2,7 +2,7 @@
 
 ### 🗑️ Removed
 
-- **core:** Remove `tree.entities()` method from `withEntities` enhancer
+- **core:** Remove `tree.entities()` method from `entities` enhancer
   - The `entities()` method was redundant and confusing - use direct property access instead
   - `tree.entities()` → `tree` (direct access to entity signals)
   - Updated all documentation and examples to reflect this change
@@ -44,7 +44,7 @@
 - **core:** Fix EntityMapMarker preservation in lazy signal trees
   - `createLazySignalTree` now preserves `EntityMapMarker` objects instead of wrapping them in proxies
   - This fixes runtime errors where `$.trucks.byId()` was undefined because entity maps weren't materialized
-  - Entity maps are now correctly converted to `EntitySignal` instances by `withEntities()`
+  - Entity maps are now correctly converted to `EntitySignal` instances by `entities()`
 
 ## 5.2.0 (2025-12-16)
 
@@ -75,14 +75,14 @@ const loadAll$ = () => {
 return { tree, loadAll$ };
 
 // ❌ Avoid: NgRx-style generic enhancers
-function withServiceRead<T extends BaseState>(tree: SignalTree<T>) { ... }
+function withServiceRead<T extends BaseState>(tree: ISignalTree<T>) { ... }
 ```
 
 ## 5.1.6 (2025-12-29)
 
 ### 🚀 Changes
 
-- **core:** Rename enhancer factory helpers from `withX()` to short factories (e.g. `withBatching()` → `batching()`)
+- **core:** Rename enhancer factory helpers from `withX()` to short factories (e.g. `batching()` → `batching()`)
   - Updated demo, examples and tests to use the new factory names
   - Added compatibility alias exports to preserve `with*` names for consumers
 
@@ -622,9 +622,9 @@ npm install @signaltree/enterprise
 
 ```typescript
 import { signalTree } from '@signaltree/core';
-import { withEnterprise } from '@signaltree/enterprise';
+import { enterprise } from '@signaltree/enterprise';
 
-const tree = signalTree(largeState).with(withEnterprise());
+const tree = signalTree(largeState).with(enterprise());
 const result = tree.updateOptimized(newData, { ignoreArrayOrder: true });
 console.log(result.stats); // { totalChanges: 15, adds: 3, updates: 10, deletes: 2 }
 ```
@@ -676,8 +676,8 @@ console.log(result.stats); // { totalChanges: 15, adds: 3, updates: 10, deletes:
 
 ```typescript
 import { createSignalTree } from '@signaltree/core';
-import { withBatching } from '@signaltree/batching';
-import { withMemoization } from '@signaltree/memoization';
+import { batching } from '@signaltree/batching';
+import { memoization } from '@signaltree/memoization';
 import { withDevtools } from '@signaltree/devtools';
 
 // Multiple package installations required
@@ -686,7 +686,7 @@ import { withDevtools } from '@signaltree/devtools';
 **After (consolidated in core):**
 
 ```typescript
-import { createSignalTree, withBatching, withMemoization, withDevtools } from '@signaltree/core';
+import { createSignalTree, batching, memoization, withDevtools } from '@signaltree/core';
 
 // Single package provides everything
 ```
@@ -695,8 +695,8 @@ import { createSignalTree, withBatching, withMemoization, withDevtools } from '@
 
 The following packages are now **deprecated** and will no longer receive updates:
 
-- `@signaltree/batching` → Use `withBatching` from `@signaltree/core`
-- `@signaltree/memoization` → Use `withMemoization` from `@signaltree/core`
+- `@signaltree/batching` → Use `batching` from `@signaltree/core`
+- `@signaltree/memoization` → Use `memoization` from `@signaltree/core`
 - `@signaltree/devtools` → Use `withDevtools` from `@signaltree/core`
 - `@signaltree/entities` → Use entity helpers from `@signaltree/core`
 - `@signaltree/middleware` → Removed in v5; use entity hooks/enhancers
@@ -736,8 +736,8 @@ Consolidated packages published to v4.0.0:
 
 Added optimized preset configurations for common use cases, ensuring benchmark fairness and transparency:
 
-- `withSelectorMemoization()` - Fast selector caching (reference equality, 10 entries)
-- `withComputedMemoization()` - Balanced computed properties (shallow equality, 100 entries)
+- `selectorMemoization()` - Fast selector caching (reference equality, 10 entries)
+- `computedMemoization()` - Balanced computed properties (shallow equality, 100 entries)
 - `withDeepStateMemoization()` - Complex nested state (deep equality, 50 entries, LRU)
 - `withHighFrequencyMemoization()` - High-frequency operations (shallow equality, 500 entries, LRU)
 
@@ -764,8 +764,8 @@ Added comprehensive memoization presets documentation to benchmark interface:
 #### Benchmark Updates
 
 - Updated SignalTree benchmarks to use public preset functions
-- `runSelectorBenchmark()` now uses `withSelectorMemoization()`
-- `runComputedBenchmark()` now uses `withComputedMemoization()`
+- `runSelectorBenchmark()` now uses `selectorMemoization()`
+- `runComputedBenchmark()` now uses `computedMemoization()`
 - Ensures complete transparency and fairness in performance comparisons
 
 ### Published Packages
@@ -810,8 +810,8 @@ All packages synchronized to v3.0.2:
 
 ```typescript
 import { createSignalTree } from '@signaltree/core';
-import { withBatching } from '@signaltree/batching';
-import { withMemoization } from '@signaltree/memoization';
+import { batching } from '@signaltree/batching';
+import { memoization } from '@signaltree/memoization';
 import { withDevtools } from '@signaltree/devtools';
 
 // Multiple package installations required
@@ -820,7 +820,7 @@ import { withDevtools } from '@signaltree/devtools';
 **After (consolidated in core):**
 
 ```typescript
-import { createSignalTree, withBatching, withMemoization, withDevtools } from '@signaltree/core';
+import { createSignalTree, batching, memoization, withDevtools } from '@signaltree/core';
 
 // Single package provides everything
 ```
@@ -829,8 +829,8 @@ import { createSignalTree, withBatching, withMemoization, withDevtools } from '@
 
 The following packages are now **deprecated** and will no longer receive updates:
 
-- `@signaltree/batching` → Use `withBatching` from `@signaltree/core`
-- `@signaltree/memoization` → Use `withMemoization` from `@signaltree/core`
+- `@signaltree/batching` → Use `batching` from `@signaltree/core`
+- `@signaltree/memoization` → Use `memoization` from `@signaltree/core`
 - `@signaltree/devtools` → Use `withDevtools` from `@signaltree/core`
 - `@signaltree/entities` → Use entity helpers from `@signaltree/core`
 - `@signaltree/middleware` → Removed in v5; use entity hooks/enhancers

@@ -218,7 +218,7 @@ const userTree = signalTree({
   .with(entities())
   .with(devTools())
   .with(timeTravel())
-  .with(withPresets());
+  .with(presets());
 
 // Access signals directly through state or $ (shorthand)
 console.log(userTree.state.user.name()); // 'John Doe'

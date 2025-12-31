@@ -1,7 +1,7 @@
 import { getPathNotifier, signalTree } from '@signaltree/core';
 import { describe, expect, it, vi } from 'vitest';
 
-import { withGuardrails } from '../guardrails';
+import { guardrails } from '../guardrails';
 
 describe('PathNotifier integration', () => {
   // TODO: PathNotifier doesn't emit events for regular signalTree mutations
@@ -11,7 +11,7 @@ describe('PathNotifier integration', () => {
   // 2. Accept that PathNotifier integration only works with entity-based trees
   it.skip('uses PathNotifier when available', async () => {
     const tree = signalTree({ users: { u1: { name: 'Alice' } } });
-    const enhanced = withGuardrails()(tree);
+    const enhanced = guardrails()(tree);
 
     const notifier = getPathNotifier();
     let notified = false;
@@ -38,7 +38,7 @@ describe('PathNotifier integration', () => {
     vi.useFakeTimers();
     const tree = signalTree({ settings: { theme: 'dark' } });
     // Explicitly disable PathNotifier to test polling fallback
-    const enhanced = withGuardrails({
+    const enhanced = guardrails({
       changeDetection: { disablePathNotifier: true },
     })(tree);
 
@@ -54,7 +54,7 @@ describe('PathNotifier integration', () => {
     it('handles multiple rapid mutations within polling interval', () => {
       vi.useFakeTimers();
       const tree = signalTree({ a: 1, b: 2, c: 3 });
-      const enhanced = withGuardrails({
+      const enhanced = guardrails({
         changeDetection: { disablePathNotifier: true },
       })(tree);
 
@@ -77,7 +77,7 @@ describe('PathNotifier integration', () => {
     it('handles subscription without prior mutations', () => {
       vi.useFakeTimers();
       const tree = signalTree({ count: 0 });
-      const enhanced = withGuardrails({
+      const enhanced = guardrails({
         changeDetection: { disablePathNotifier: true },
       })(tree);
 
@@ -101,7 +101,7 @@ describe('PathNotifier integration', () => {
       const tree = signalTree({ value: 0 });
 
       // First initialization
-      const enhanced1 = withGuardrails({
+      const enhanced1 = guardrails({
         changeDetection: { disablePathNotifier: true },
       })(tree);
 
@@ -115,7 +115,7 @@ describe('PathNotifier integration', () => {
       api1.dispose();
 
       // Re-initialize on same tree
-      const enhanced2 = withGuardrails({
+      const enhanced2 = guardrails({
         changeDetection: { disablePathNotifier: true },
       })(tree);
 
@@ -136,7 +136,7 @@ describe('PathNotifier integration', () => {
         },
       });
 
-      const enhanced = withGuardrails({
+      const enhanced = guardrails({
         changeDetection: { disablePathNotifier: true },
       })(tree);
 
@@ -154,7 +154,7 @@ describe('PathNotifier integration', () => {
     it('handles polling with stress test', () => {
       vi.useFakeTimers();
       const tree = signalTree({ count: 0 });
-      const enhanced = withGuardrails({
+      const enhanced = guardrails({
         changeDetection: { disablePathNotifier: true },
       })(tree);
 

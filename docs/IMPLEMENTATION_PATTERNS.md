@@ -22,8 +22,8 @@ SignalTree-first means:
 ```typescript
 export function createUserTree(): UserTree {
   const tree = signalTree<UserTreeState>(initialState)
-    .with(withEntities()) // Auto-detects entityMap markers
-    .with(withDevTools({ treeName: 'UserTree' }));
+    .with(entities()) // Auto-detects entityMap markers
+    .with(devTools({ treeName: 'UserTree' }));
 
   const $ = tree.$; // Shorthand for state access
 
@@ -90,8 +90,8 @@ export interface UserTreeState {
 export function createUserTree() {
   // No explicit return type needed!
   const tree = signalTree<UserTreeState>(initialState)
-    .with(withEntities())
-    .with(withDevTools({ treeName: 'UserTree' }));
+    .with(entities())
+    .with(devTools({ treeName: 'UserTree' }));
 
   const $ = tree.$;
 
@@ -357,8 +357,8 @@ export function createTruckTree(): TruckTree {
     loading: { state: LoadingState.NotLoaded, error: null },
     filter: null,
   })
-    .with(withEntities()) // Auto-detects entityMap markers
-    .with(withDevTools({ treeName: 'TruckTree' }));
+    .with(entities()) // Auto-detects entityMap markers
+    .with(devTools({ treeName: 'TruckTree' }));
 
   const $ = tree.$; // Shorthand for state access
 

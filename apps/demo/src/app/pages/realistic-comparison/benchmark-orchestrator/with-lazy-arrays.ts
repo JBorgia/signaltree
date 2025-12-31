@@ -25,7 +25,7 @@ class LazyArrayUpdater<T = unknown> {
   private timerId: ReturnType<typeof setTimeout> | undefined;
 
   constructor(
-    private tree: SignalTree<unknown>,
+    private tree: ISignalTree<unknown>,
     private key = 'items',
     private cfg: { maxOps: number; fallbackMs: number } = {
       maxOps: 1024,
@@ -72,7 +72,7 @@ class LazyArrayUpdater<T = unknown> {
     // Perform a single batched mutation and single set of the backing array
     try {
       // Check if tree has a batch method
-      const treeWithBatch = this.tree as SignalTree<unknown> & {
+      const treeWithBatch = this.tree as ISignalTree<unknown> & {
         batch?: (fn: () => void) => void;
       };
       treeWithBatch.batch?.(() => {
@@ -159,7 +159,7 @@ export function withLazyArrays(config: Config = {}) {
   const maxOps = config.maxOps ?? 1024;
   const fallbackMs = config.fallbackMs ?? 8;
 
-  return (tree: SignalTree<unknown>) => {
+  return (tree: ISignalTree<unknown>) => {
     if (!enabled) return tree;
 
     const updater = new LazyArrayUpdater(tree, key, { maxOps, fallbackMs });

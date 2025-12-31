@@ -28,7 +28,7 @@ function isEntityMapMarker(value: unknown): value is Marker {
 /**
  * v6 Entities Enhancer
  *
- * Contract: (config?) => <S>(tree: SignalTree<S>) => SignalTree<S> & EntitiesEnabled
+ * Contract: (config?) => <S>(tree: ISignalTree<S>) => ISignalTree<S> & EntitiesEnabled
  */
 export function entities(
   config: EntitiesEnhancerConfig = {}
@@ -87,7 +87,7 @@ export function enableEntities(): <Tree extends ISignalTree<any>>(
   return entities();
 }
 
-export function withHighPerformanceEntities(): <Tree extends ISignalTree<any>>(
+export function highPerformanceEntities(): <Tree extends ISignalTree<any>>(
   tree: Tree
 ) => Tree & EntitiesEnabled {
   return entities();
@@ -98,6 +98,6 @@ export function withHighPerformanceEntities(): <Tree extends ISignalTree<any>>(
  * alias will be removed in a future major release.
  */
 export const withEntities = Object.assign(entities, {
-  highPerformance: withHighPerformanceEntities,
+  highPerformance: highPerformanceEntities,
   enable: enableEntities,
 });

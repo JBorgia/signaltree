@@ -24,7 +24,7 @@ export interface DevHooks {
 }
 
 // In tree implementation
-export function signalTree<T>(initial: T, config?: TreeConfig): SignalTree<T> {
+export function signalTree<T>(initial: T, config?: TreeConfig): ISignalTree<T> {
   const tree = createTree(initial, config);
 
   // Only in dev builds
@@ -55,7 +55,7 @@ Allow metadata to flow through the update pipeline:
 
 ```typescript
 // Extend update methods to accept metadata
-export interface SignalTree<T> {
+export interface ISignalTree<T> {
   update(value: Partial<T>, metadata?: UpdateMetadata): void;
   $.set(path: Path, value: unknown, metadata?: UpdateMetadata): void;
 }
@@ -82,7 +82,7 @@ export interface UpdateContext {
   value: unknown;
   oldValue?: unknown;
   metadata?: UpdateMetadata;
-  tree: SignalTree<unknown>;
+  tree: ISignalTree<unknown>;
 }
 ```
 
@@ -121,11 +121,11 @@ export interface SerializationOptions {
 
 // Usage
 const tree = signalTree(initial).with(
-  withDevTools({
+  devTools({
     include: ['ui', 'user'],
     exclude: ['cache', 'temp'],
   }),
-  withSerialization({
+  serialization({
     include: ['user', 'settings'],
     exclude: ['cache', 'internal'],
   })
@@ -144,7 +144,7 @@ Enable proper cleanup and ownership tracking:
 
 ```typescript
 // New scope API for subtrees
-export interface SignalTree<T> {
+export interface ISignalTree<T> {
   // Create a scoped subtree with lifecycle
   scope<K extends keyof T>(path: K, initializer?: () => T[K], options?: ScopeOptions): ScopedTree<T[K]>;
 }
@@ -156,10 +156,10 @@ export interface ScopeOptions {
   onDispose?: () => void; // Cleanup callback
 }
 
-export interface ScopedTree<T> extends SignalTree<T> {
+export interface ScopedTree<T> extends ISignalTree<T> {
   dispose(): void;
   isDisposed(): boolean;
-  parent: SignalTree<unknown>;
+  parent: ISignalTree<unknown>;
 }
 
 // Usage
@@ -187,7 +187,7 @@ featureTree.dispose();
 With these extensions, the guardrails enhancer becomes much cleaner:
 
 ```typescript
-export function withGuardrails(config: GuardrailsConfig): Enhancer {
+export function guardrails(config: GuardrailsConfig): Enhancer {
   return (tree) => {
     if (!__DEV__) return tree;
 
