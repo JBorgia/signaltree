@@ -6,8 +6,6 @@ export default {
   moduleNameMapper: {
     '^@signaltree/core$': '<rootDir>/../../packages/core/src/index.ts',
     '^@signaltree/shared$': '<rootDir>/../../packages/shared/src/index.ts',
-    '^@signaltree/types$': '<rootDir>/../../packages/types/src/index.ts',
-    '^@signaltree/utils$': '<rootDir>/../../packages/utils/src/index.ts',
   },
   transform: {
     '^.+\\.(ts|mjs|js|html)$': [
