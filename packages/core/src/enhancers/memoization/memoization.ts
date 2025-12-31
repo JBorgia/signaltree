@@ -619,7 +619,7 @@ export function memoization(
 
     // Override tree.memoize() to provide actual memoization
     // The stub implementation just wraps in computed() without caching
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     (tree as ISignalTree<S> & MemoizationMethods<S>).memoize = <R>(
       fn: (state: S) => R,
       cacheKey?: string

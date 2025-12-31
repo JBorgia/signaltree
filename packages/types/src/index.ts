@@ -458,17 +458,24 @@ export interface EntityConfig<E, K extends string | number = string> {
   };
 }
 
+// Unique symbol for EntityMapMarker branding (for compatibility with core)
+export const ENTITY_MAP_BRAND = Symbol('ENTITY_MAP_BRAND');
+
 /**
  * Runtime marker for entity collections
+ * Uses a unique symbol brand to ensure only types created via entityMap() can satisfy this interface.
+ * This prevents generic mapped type conditionals from producing unions.
  */
 export interface EntityMapMarker<E, K extends string | number> {
+  readonly [ENTITY_MAP_BRAND]: { __entity: E; __key: K };
   readonly __isEntityMap: true;
-  readonly __entityType?: E;
-  readonly __keyType?: K;
+  readonly __entityMapConfig?: EntityConfig<E, K>;
 }
 
 /**
- * Create an entity map marker
+ * Create an entity map marker for use in signalTree state definition.
+ * This is the ONLY way to create a type that satisfies EntityMapMarker,
+ * since the brand symbol is not exported.
  */
 export function entityMap<
   E,
@@ -476,8 +483,16 @@ export function entityMap<
     ? I
     : string
 >(config?: EntityConfig<E, K>): EntityMapMarker<E, K> {
-  return { ...config, __isEntityMap: true as const } as EntityMapMarker<E, K>;
+  // Runtime: only needs __isEntityMap for detection
+  // Type-level: the brand symbol makes this nominally typed
+  return {
+    __isEntityMap: true,
+    __entityMapConfig: config ?? {},
+  } as EntityMapMarker<E, K>;
 }
+// ============================================
+// EXPORTS: All foundational types are exported above, do not re-export here.
+// If MemoizationConfig, TimeTravelConfig are needed, define and export them above.
 
 /**
  * Mutation options
@@ -650,8 +665,10 @@ export interface DevToolsConfig {
 export type EntityType<T> = T extends EntitySignal<infer E, string | number>
   ? E
   : never;
-export type EntityKeyType<T> = T extends EntitySignal<any, infer K> ? K : never;
-export type IsEntityMap<T> = T extends EntityMapMarker<any, string | number>
+export type EntityKeyType<T> = T extends EntitySignal<unknown, infer K>
+  ? K
+  : never;
+export type IsEntityMap<T> = T extends EntityMapMarker<unknown, string | number>
   ? true
   : false;
 

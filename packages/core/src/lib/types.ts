@@ -1,122 +1,32 @@
-import { Signal, WritableSignal } from '@angular/core';
-
 import { SecurityValidatorConfig } from './security/security-validator';
 
-// Time travel enhancer configuration (canonical)
-export interface TimeTravelConfig {
-  /** Enable/disable time travel (default: true) */
-  enabled?: boolean;
-  /**
-import { Signal, WritableSignal } from '@angular/core';
+import type {
+  NotFn,
+  NodeAccessor,
+  TreeNode,
+  EntitySignal,
+  EntityMapMarker,
+  CallableWritableSignal,
+  Signal,
+  WritableSignal,
+  ISignalTree,
+  EffectsMethods,
+  BatchingConfig,
+  BatchingMethods,
+  MemoizationMethods,
+  CacheStats,
+  TimeTravelMethods,
+  DevToolsMethods,
+  EntitiesEnabled,
+  OptimizedUpdateMethods,
+  TimeTravelEntry,
+  TreePreset,
+  TreeConfig,
+} from '@signaltree/types';
 
-import { SecurityValidatorConfig } from './security/security-validator';
+// All foundational and shared types are imported from @signaltree/types. Do not redeclare them here.
 
-   * Maximum number of history entries to keep
-   * @default 50
-   */
-  maxHistorySize?: number;
-
-  /**
-   * Whether to include payload information in history entries
-   * @default true
-   */
-  includePayload?: boolean;
-
-  /**
-   * Custom action names for different operations
-   */
-  actionNames?: {
-    update?: string;
-    set?: string;
-    batch?: string;
-    [key: string]: string | undefined;
-  };
-}
-// Memoization enhancer configuration (canonical)
-export interface MemoizationConfig {
-  /** Enable/disable memoization (default: true) */
-  enabled?: boolean;
-  /** Maximum number of cached computations (default: 100) */
-  maxCacheSize?: number;
-  /** Time-to-live for cache entries in milliseconds */
-  ttl?: number;
-  /** Enable LRU eviction (default: true) */
-  enableLRU?: boolean;
-  /** Equality strategy for cache comparison (default: 'deep') */
-  equality?: 'deep' | 'shallow' | 'reference';
-}
-// Core v6 types — type-safe enhancer architecture
-
-// Primitives
-export type Primitive =
-  | string
-  | number
-  | boolean
-  | null
-  | undefined
-  | bigint
-  | symbol;
-
-export type NotFn<T> = T extends (...args: unknown[]) => unknown ? never : T;
-
-declare module '@angular/core' {
-  interface WritableSignal<T> {
-    (value: NotFn<T>): void;
-    (updater: (current: T) => T): void;
-  }
-}
-
-export interface NodeAccessor<T> {
-  (): T;
-  (value: T): void;
-  (updater: (current: T) => T): void;
-}
-
-// TreeNode represents the runtime shape of the tree where properties are
-// accessed by string keys at runtime. Previously this was strictly mapped
-// to `keyof T` which caused incompatibilities across packages when an
-// enhancer or helper used a different generic parameter name. Relax the
-// index signature to permit dynamic string indexing while still preserving
-// the mapped keys for better editor DX.
-// Default TreeNode maps known keys to either EntitySignal or CallableWritableSignal
-// and still allows dynamic string indexing at runtime.
-export type TreeNode<T> = {
-  [K in keyof T]: T[K] extends EntityMapMarker<infer E, infer Key>
-    ? EntitySignal<E, Key>
-    : T[K] extends Primitive
-    ? CallableWritableSignal<T[K]>
-    : T[K] extends readonly unknown[]
-    ? CallableWritableSignal<T[K]>
-    : T[K] extends
-        | Date
-        | RegExp
-        | Map<any, any>
-        | Set<any>
-        | Error
-        | ((...args: unknown[]) => unknown)
-    ? CallableWritableSignal<T[K]> // Built-in objects → treat as atomic values
-    : T[K] extends object
-    ? NodeAccessor<T[K]> & TreeNode<T[K]>
-    : CallableWritableSignal<T[K]>;
-};
-
-// Base SignalTree minimal interface
-// v6: primary runtime tree type is `SignalTree<T>`; a deprecated alias
-// `SignalTree<T>` is provided at the end of this file for compatibility.
-export interface ISignalTree<T> extends NodeAccessor<T> {
-  readonly state: TreeNode<T>;
-  readonly $: TreeNode<T>;
-  // Single-enhancer chain: apply one enhancer at a time.
-  // Accept an enhancer that is applied to this specific tree and infer
-  // the resulting return type `R` so added methods can depend on the
-  // concrete tree type (`this`). This preserves strong type inference
-  // for enhancer methods that depend on the tree's state shape.
-  with<R>(enhancer: (tree: this) => R): R;
-  bind(thisArg?: unknown): NodeAccessor<T>;
-  destroy(): void;
-  // Allow enhancers to attach runtime methods — consumers should cast to the
-  // specific enhanced shape they expect (e.g. `SignalTree<T> & BatchingMethods<T>`).
-}
+// ...existing code...
 
 // Method interfaces
 export interface EffectsMethods<T> {
@@ -315,53 +225,7 @@ export interface EntityConfig<E, K extends string | number = string> {
   };
 }
 
-/**
- * Unique symbol for EntityMapMarker branding.
- * NOT EXPORTED - this prevents external code from creating types that satisfy EntityMapMarker.
- * This is critical for correct type inference in generic contexts.
- */
-declare const ENTITY_MAP_BRAND: unique symbol;
-
-/**
- * Runtime marker for entity collections.
- * Uses a unique symbol brand to ensure only types created via entityMap() can satisfy this interface.
- * This prevents generic mapped type conditionals from producing unions.
- */
-export interface EntityMapMarker<E, K extends string | number> {
-  /** Unique brand - only satisfiable by entityMap() since symbol is not exported */
-  readonly [ENTITY_MAP_BRAND]: { __entity: E; __key: K };
-  /** Runtime marker so enhancers can detect entity collections */
-  readonly __isEntityMap: true;
-  /** Persisted config used when materializing the EntitySignal */
-  readonly __entityMapConfig?: EntityConfig<E, K>;
-}
-
-/**
- * Create an entity map marker for use in signalTree state definition.
- * This is the ONLY way to create a type that satisfies EntityMapMarker,
- * since the brand symbol is not exported.
- *
- * @example
- * ```typescript
- * const tree = signalTree({
- *   users: entityMap<User>(),
- *   products: entityMap<Product, number>(),
- * }).with(entities());
- * ```
- */
-export function entityMap<
-  E,
-  K extends string | number = E extends { id: infer I extends string | number }
-    ? I
-    : string
->(config?: EntityConfig<E, K>): EntityMapMarker<E, K> {
-  // Runtime: only needs __isEntityMap for detection
-  // Type-level: the brand symbol makes this nominally typed
-  return {
-    __isEntityMap: true,
-    __entityMapConfig: config ?? {},
-  } as EntityMapMarker<E, K>;
-}
+// ...existing code...
 
 /**
  * Mutation options
@@ -669,7 +533,7 @@ export const ENHANCER_META = Symbol('signaltree:enhancer:meta');
  * Enhancer function that adds methods to a tree.
  * Generic parameter `TAdded` represents the methods being added.
  */
-export type Enhancer<TAdded> = <Tree extends ISignalTree<any>>(
+export type Enhancer<TAdded> = <Tree extends ISignalTree<unknown>>(
   tree: Tree
 ) => Tree & TAdded;
 

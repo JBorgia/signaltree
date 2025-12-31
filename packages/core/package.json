@@ -60,6 +60,7 @@
     }
   },
   "peerDependencies": {
+    "@signaltree/types": "*",
     "@angular/core": "^20.0.0",
     "@angular/compiler": "^20.0.0",
     "@angular/platform-browser-dynamic": "^20.0.0",

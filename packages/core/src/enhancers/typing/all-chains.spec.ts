@@ -1,4 +1,5 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
+import { describe, describe, expect, expect, it, it } from 'vitest';
+
 // Exhaustive compile-time typing assertions for enhancer chaining
 // This file uses type-level assertions only. It must compile without errors.
 
@@ -81,8 +82,14 @@ type _composite_ok = Assert<Equals<Composite, Composite>>;
 
 export {};
 
-import { describe, it, expect } from 'vitest';
-describe('typing compile-time checks (runtime shim)', () => { it('compiles type-level assertions', () => { expect(true).toBe(true); }); });
+describe('typing compile-time checks (runtime shim)', () => {
+  it('compiles type-level assertions', () => {
+    expect(true).toBe(true);
+  });
+});
 
-import { describe, it, expect } from 'vitest';
-describe('typing compile-time checks (runtime shim)', () => { it('compiles type-level assertions', () => { expect(true).toBe(true); }); });
+describe('typing compile-time checks (runtime shim)', () => {
+  it('compiles type-level assertions', () => {
+    expect(true).toBe(true);
+  });
+});
