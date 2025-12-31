@@ -1,4 +1,4 @@
-## 6.0.1 (2025-12-31)
+## 6.0.0 (2025-12-31)
 
 ### 🩹 Fixes
 
@@ -8,7 +8,7 @@
 
 ### 🧹 Chores
 
-- Bump all package versions to 6.0.1 after benchmark script fix
+- Bump all package versions to 6.0.0 after benchmark script fix
 
 ## 5.1.5 (2025-01-13)
 
