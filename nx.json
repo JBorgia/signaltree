@@ -85,7 +85,7 @@
   },
   "release": {
     "version": {
-      "preVersionCommand": "npx nx run-many -t build --projects=core,enterprise,ng-forms,guardrails,types,utils,callable-syntax,shared"
+      "preVersionCommand": "npx nx run-many -t build --projects=core,enterprise,ng-forms,guardrails,callable-syntax,shared"
     }
   }
 }

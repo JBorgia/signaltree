@@ -91,14 +91,7 @@ function measurePackage(packageName) {
   };
 }
 
-const packages = [
-  'core',
-  'enterprise',
-  'callable-syntax',
-  'shared',
-  'types',
-  'utils',
-];
+const packages = ['core', 'enterprise', 'callable-syntax', 'shared'];
 let hasErrors = false;
 const results = [];
 

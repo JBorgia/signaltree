@@ -44,16 +44,6 @@ const packages = [
     path: 'packages/shared',
     features: ['Deep Utilities', 'LRU Cache', 'Path Parsing'],
   },
-  {
-    name: 'types',
-    path: 'packages/types',
-    features: ['Shared Types', 'Public Interfaces'],
-  },
-  {
-    name: 'utils',
-    path: 'packages/utils',
-    features: ['Build Helpers', 'Internal Tooling'],
-  },
 ];
 
 // Build all packages first
@@ -185,8 +175,6 @@ class RecursiveBundleAnalyzer {
       'ng-forms': 4198, // 4.1KB - Deep form validation
       'callable-syntax': 1024, // 1KB - DX transform
       shared: 1536, // 1.5KB - Shared utilities
-      types: 256, // 0.25KB - Type exports
-      utils: 384, // 0.37KB - Internal tooling helpers
     };
 
     return baseSizes[pkg.name] || 2048;

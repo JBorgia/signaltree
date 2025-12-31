@@ -77,7 +77,7 @@ withGuardrails({
 `node scripts/perf-suite.js` requires the Nx builds to exist. If you hit build failures, execute:
 
 ```bash
-NX_IGNORE_LOCKFILE_HASH=1 pnpm nx run-many --target=build --projects=core,enterprise,ng-forms,callable-syntax,shared,types,utils,guardrails --configuration=production
+NX_IGNORE_LOCKFILE_HASH=1 pnpm nx run-many --target=build --projects=core,enterprise,ng-forms,callable-syntax,shared,guardrails --configuration=production
 pnpm nx build demo --configuration=production
 ```
 

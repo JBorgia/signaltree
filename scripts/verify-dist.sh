@@ -12,7 +12,7 @@ NC='\033[0m'
 
 # Only verify packages that were actually built during validation
 # enterprise and ng-forms are skipped during validation
-NX_PACKAGES=("core" "callable-syntax" "shared" "types" "utils" "guardrails")
+NX_PACKAGES=("core" "callable-syntax" "shared" "guardrails")
 ERRORS=0
 
 echo "Verifying distribution files for independent packages..."

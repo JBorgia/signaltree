@@ -60,18 +60,6 @@ const packages = [
     claimed: 3800,
   },
   {
-    name: 'types',
-    path: 'dist/packages/types/dist/index.js',
-    maxSize: 500,
-    claimed: 350,
-  },
-  {
-    name: 'utils',
-    path: 'dist/packages/utils/dist/index.js',
-    maxSize: 3200,
-    claimed: 3400,
-  },
-  {
     name: 'guardrails',
     path: 'dist/packages/guardrails/dist/lib/guardrails.js',
     maxSize: 9000,
@@ -138,8 +126,6 @@ const nxProjects = [
   'enterprise',
   'callable-syntax',
   'shared',
-  'types',
-  'utils',
   'guardrails',
   'ng-forms',
 ];
@@ -411,14 +397,7 @@ class BundleAnalyzer {
     this.log('\n📊 Full Package Analysis (All Files)');
     console.log('==========================================\n');
 
-    const packageDirs = [
-      'core',
-      'enterprise',
-      'callable-syntax',
-      'shared',
-      'types',
-      'utils',
-    ];
+    const packageDirs = ['core', 'enterprise', 'callable-syntax', 'shared'];
 
     const fullSizes = [];
 
