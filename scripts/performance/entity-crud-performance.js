@@ -10,6 +10,7 @@
  * - Map transformations
  */
 
+// Import entities at the top to avoid TDZ issues
 const { signalTree, entityMap, entities } = require('../../dist/packages/core');
 
 console.log('🧪 SignalTree Entity CRUD Performance Benchmarks\n');
