@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { createStore } from '@ngneat/elf';
-import { entities, getAllEntities, setEntities, updateAllEntities, updateEntities } from '@ngneat/elf-entities';
+import { getAllEntities, setEntities, updateAllEntities, updateEntities, withEntities } from '@ngneat/elf-entities';
 import { map } from 'rxjs';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
@@ -117,7 +117,10 @@ export class ElfBenchmarkService {
 
   async runArrayBenchmark(dataSize: number): Promise<number | BenchmarkResult> {
     type Item = { id: number; value: number };
-    const store = createStore({ name: 'elf-bench-items' }, entities<Item>());
+    const store = createStore(
+      { name: 'elf-bench-items' },
+      withEntities<Item>()
+    );
     store.update(
       setEntities(
         Array.from({ length: dataSize }, (_, i) => ({
@@ -181,7 +184,10 @@ export class ElfBenchmarkService {
     batchSize = BENCHMARK_CONSTANTS.ITERATIONS.BATCH_SIZE
   ): Promise<number | BenchmarkResult> {
     type Item = { id: number; value: number };
-    const store = createStore({ name: 'elf-bench-batch' }, entities<Item>());
+    const store = createStore(
+      { name: 'elf-bench-batch' },
+      withEntities<Item>()
+    );
     store.update(
       setEntities(
         Array.from({ length: batchSize }, (_, i) => ({ id: i, value: i }))
@@ -208,7 +214,10 @@ export class ElfBenchmarkService {
       value: number;
       metadata: { category: number; priority: number };
     };
-    const store = createStore({ name: 'elf-bench-select' }, entities<Item>());
+    const store = createStore(
+      { name: 'elf-bench-select' },
+      withEntities<Item>()
+    );
     store.update(
       setEntities(
         Array.from({ length: dataSize }, (_, i) => ({
@@ -294,7 +303,7 @@ export class ElfBenchmarkService {
       active: boolean;
       meta: { createdAt: Date };
     };
-    const store = createStore({ name: 'elf-serialize' }, entities<User>());
+    const store = createStore({ name: 'elf-serialize' }, withEntities<User>());
     const users: User[] = Array.from(
       {
         length: Math.max(
@@ -331,7 +340,7 @@ export class ElfBenchmarkService {
     updatesPerWorker = 200
   ): Promise<number | BenchmarkResult> {
     type Item = { id: number; value: number };
-    const store = createStore({ name: 'elf-bench-conc' }, entities<Item>());
+    const store = createStore({ name: 'elf-bench-conc' }, withEntities<Item>());
     store.update(
       setEntities(
         Array.from({ length: concurrency }, (_, i) => ({ id: i, value: 0 }))
@@ -355,7 +364,7 @@ export class ElfBenchmarkService {
     dataSize: number
   ): Promise<number | BenchmarkResult> {
     type Item = { id: number; score: number; tags: string[]; group: number };
-    const store = createStore({ name: 'elf-bench-mem' }, entities<Item>());
+    const store = createStore({ name: 'elf-bench-mem' }, withEntities<Item>());
     const itemsCount = Math.max(
       BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.ENTITY_COUNT.MIN,
       Math.min(BENCHMARK_CONSTANTS.DATA_SIZE_LIMITS.ENTITY_COUNT.MAX, dataSize)
@@ -407,7 +416,7 @@ export class ElfBenchmarkService {
       lastLogin: string;
     };
 
-    const userStore = createStore({ name: 'elf-users' }, entities<User>());
+    const userStore = createStore({ name: 'elf-users' }, withEntities<User>());
 
     const start = performance.now();
 
@@ -434,7 +443,7 @@ export class ElfBenchmarkService {
     // Create filtered store for active users
     const activeUserStore = createStore(
       { name: 'elf-active-users' },
-      entities<User>()
+      withEntities<User>()
     );
     activeUserStore.update(setEntities(activeUsers));
 
@@ -452,7 +461,7 @@ export class ElfBenchmarkService {
     Object.entries(departmentGroups).forEach(([dept, deptUsers]) => {
       departmentStores[dept] = createStore(
         { name: `elf-dept-${dept}` },
-        entities<User>()
+        withEntities<User>()
       );
       departmentStores[dept].update(setEntities(deptUsers));
     });
@@ -485,12 +494,12 @@ export class ElfBenchmarkService {
 
     const metricStore = createStore(
       { name: 'elf-metrics' },
-      entities<Metric>()
+      withEntities<Metric>()
     );
 
     const messageStore = createStore(
       { name: 'elf-messages' },
-      entities<Message>()
+      withEntities<Message>()
     );
 
     const start = performance.now();
@@ -556,7 +565,7 @@ export class ElfBenchmarkService {
 
     const largeDataStore = createStore(
       { name: 'elf-large-data' },
-      entities<LargeDataItem>()
+      withEntities<LargeDataItem>()
     );
 
     const start = performance.now();
@@ -587,7 +596,7 @@ export class ElfBenchmarkService {
 
     const activeItemStore = createStore(
       { name: 'elf-active-items' },
-      entities<LargeDataItem>()
+      withEntities<LargeDataItem>()
     );
     activeItemStore.update(setEntities(activeItems));
 
@@ -598,7 +607,7 @@ export class ElfBenchmarkService {
 
     const sortedItemStore = createStore(
       { name: 'elf-sorted-items' },
-      entities<LargeDataItem>()
+      withEntities<LargeDataItem>()
     );
     sortedItemStore.update(setEntities(sortedItems));
 
@@ -639,7 +648,7 @@ export class ElfBenchmarkService {
 
     const store = createStore(
       { name: 'elf-subscriber-scaling' },
-      entities<SubscriberState>()
+      withEntities<SubscriberState>()
     );
 
     // Initialize with one entity
