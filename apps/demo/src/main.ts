@@ -9,7 +9,7 @@ if (typeof window !== 'undefined') {
   (
     window as unknown as { __LIBRARY_VERSIONS__?: Record<string, string> }
   ).__LIBRARY_VERSIONS__ = {
-    signaltree: '4.1.5', // @signaltree/core
+    signaltree: '6.0.0', // @signaltree/core
     'ngrx-store': '20.1.0', // @ngrx/store
     'ngrx-signals': '20.1.0', // @ngrx/signals
     akita: '8.0.1', // @datorama/akita
