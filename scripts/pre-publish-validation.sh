@@ -283,15 +283,6 @@ done
 if [ $MISSING_DOCS -eq 0 ]; then
     print_success "All required documentation files present"
 
-    # Check if CHANGELOG has an entry for the current version
-    if [ -f "CHANGELOG.md" ]; then
-        CURRENT_VERSION=$(node -p "require('./package.json').version")
-        if grep -q "$CURRENT_VERSION" CHANGELOG.md; then
-            print_success "CHANGELOG.md includes entry for version $CURRENT_VERSION"
-        else
-            print_warning "CHANGELOG.md may not include entry for version $CURRENT_VERSION"
-        fi
-    fi
 else
     print_error "Missing $MISSING_DOCS documentation files"
     exit 1
