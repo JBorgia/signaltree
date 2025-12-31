@@ -1,3 +1,15 @@
+## 6.0.1 (2025-12-31)
+
+### 🩹 Fixes
+
+- **perf:** Fix TDZ bug in `entity-crud-performance.js` benchmark script
+  - Resolved a temporal dead zone (TDZ) ReferenceError that prevented performance benchmarks from running during release validation
+  - Ensures all performance and release scripts execute successfully
+
+### 🧹 Chores
+
+- Bump all package versions to 6.0.1 after benchmark script fix
+
 ## 5.1.5 (2025-01-13)
 
 ### 🗑️ Removed
