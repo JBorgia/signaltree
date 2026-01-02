@@ -462,7 +462,8 @@ function create<T extends object>(
     configurable: true,
   });
 
-  // Copy state properties to root for direct access
+  // Copy state properties to root for direct access (DEPRECATED - will be removed in v7)
+  // Consumers should use tree.$ for state access
   for (const key of Object.keys(signalState as object)) {
     if (!(key in tree)) {
       Object.defineProperty(tree, key, {
