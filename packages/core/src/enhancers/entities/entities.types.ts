@@ -10,7 +10,7 @@ import type {
 
 type ExpectedSignature = (
   config?: EntitiesEnhancerConfig
-) => <Tree extends ISignalTree<any>>(tree: Tree) => Tree & EntitiesEnabled;
+) => <T>(tree: ISignalTree<T>) => ISignalTree<T> & EntitiesEnabled;
 
 type ActualSignature = typeof entities;
 

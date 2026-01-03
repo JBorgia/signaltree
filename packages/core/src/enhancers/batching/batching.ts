@@ -118,10 +118,10 @@ function batchUpdates(fn: () => void, path?: string): void {
   }
 }
 
-export function batchingWithConfig<T>(
+export function batchingWithConfig(
   config: BatchingConfig = {}
-): Enhancer<BatchingMethods<T>> {
-  const enabled = (config as any).enabled ?? true;
+): <T>(tree: ISignalTree<T>) => ISignalTree<T> & BatchingMethods<T> {
+  const enabled = (config as { enabled?: boolean }).enabled ?? true;
 
   // Only update the global batching configuration when batching is enabled
   // for this enhancer instance. Leaving global config untouched when disabled
@@ -130,9 +130,9 @@ export function batchingWithConfig<T>(
     currentBatchingConfig = { ...currentBatchingConfig, ...config };
   }
 
-  const enhancer = <Tree extends ISignalTree<T>>(
-    tree: Tree
-  ): Tree & BatchingMethods<T> => {
+  const enhancer = <T>(
+    tree: ISignalTree<T>
+  ): ISignalTree<T> & BatchingMethods<T> => {
     if (!enabled) {
       // Provide explicit pass-through methods so consumers can always call
       // `tree.batchUpdate(...)` even when batching is disabled. This avoids
@@ -175,7 +175,7 @@ export function batchingWithConfig<T>(
         }
       };
 
-      return enhanced as unknown as Tree & BatchingMethods<T>;
+      return enhanced as ISignalTree<T> & BatchingMethods<T>;
     }
 
     const originalTreeCall = tree.bind(tree);
@@ -239,29 +239,27 @@ export function batchingWithConfig<T>(
       });
     };
 
-    return enhancedTree as unknown as Tree & BatchingMethods<T>;
+    return enhancedTree as unknown as ISignalTree<T> & BatchingMethods<T>;
   };
 
-  return enhancer as unknown as Enhancer<BatchingMethods<T>>;
+  return enhancer;
 }
 
 /** User-friendly no-arg signature expected by type-level tests */
 export function batching(
   config: BatchingConfig = {}
-): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & BatchingMethods<any> {
-  return batchingWithConfig(config) as unknown as <
-    Tree extends ISignalTree<any>
-  >(
-    tree: Tree
-  ) => Tree & BatchingMethods<any>;
+): <T>(tree: ISignalTree<T>) => ISignalTree<T> & BatchingMethods<T> {
+  return batchingWithConfig(config);
 }
 
-export function highPerformanceBatching<T>() {
-  return batchingWithConfig<T>({
+export function highPerformanceBatching(): <T>(
+  tree: ISignalTree<T>
+) => ISignalTree<T> & BatchingMethods<T> {
+  return batchingWithConfig({
     enabled: true,
     maxBatchSize: 200,
     debounceMs: 0,
-  } as unknown as BatchingConfig);
+  });
 }
 
 export function flushBatchedUpdates(): void {

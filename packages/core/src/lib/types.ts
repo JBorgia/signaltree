@@ -668,10 +668,11 @@ export const ENHANCER_META = Symbol('signaltree:enhancer:meta');
 /**
  * Enhancer function that adds methods to a tree.
  * Generic parameter `TAdded` represents the methods being added.
+ * Uses explicit <T> to preserve type inference through the chain.
  */
-export type Enhancer<TAdded> = <Tree extends ISignalTree<any>>(
-  tree: Tree
-) => Tree & TAdded;
+export type Enhancer<TAdded> = <T>(
+  tree: ISignalTree<T>
+) => ISignalTree<T> & TAdded;
 
 /** Enhancer with optional metadata for ordering/debugging */
 export type EnhancerWithMeta<TAdded> = Enhancer<TAdded> & {

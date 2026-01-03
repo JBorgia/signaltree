@@ -5,7 +5,7 @@ import { devTools } from './devtools';
 
 type ExpectedSignature = (
   config?: DevToolsConfig
-) => <Tree extends ISignalTree<any>>(tree: Tree) => Tree & DevToolsMethods;
+) => <T>(tree: ISignalTree<T>) => ISignalTree<T> & DevToolsMethods;
 
 type ActualSignature = typeof devTools;
 

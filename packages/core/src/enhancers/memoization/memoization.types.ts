@@ -1,16 +1,10 @@
-import {
-  ISignalTree,
-  MemoizationConfig,
-  MemoizationMethods,
-} from '../../lib/types';
+import { ISignalTree, MemoizationConfig, MemoizationMethods } from '../../lib/types';
 import { Assert, Equals } from '../test-helpers/types-equals';
 import { memoization } from './memoization';
 
 type ExpectedSignature = (
   config?: MemoizationConfig
-) => <Tree extends ISignalTree<any>>(
-  tree: Tree
-) => Tree & MemoizationMethods<any>;
+) => <T>(tree: ISignalTree<T>) => ISignalTree<T> & MemoizationMethods<T>;
 
 type ActualSignature = typeof memoization;
 

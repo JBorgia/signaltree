@@ -28,20 +28,16 @@ function isEntityMapMarker(value: unknown): value is Marker {
 /**
  * v6 Entities Enhancer
  *
- * Contract: (config?) => <S>(tree: ISignalTree<S>) => ISignalTree<S> & EntitiesEnabled
+ * Contract: (config?) => <T>(tree: ISignalTree<T>) => ISignalTree<T> & EntitiesEnabled
  */
 export function entities(
   config: EntitiesEnhancerConfig = {}
-): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & EntitiesEnabled {
-  // ← Explicit signature
+): <T>(tree: ISignalTree<T>) => ISignalTree<T> & EntitiesEnabled {
   const { enabled = true } = config;
-  return <Tree extends ISignalTree<any>>(
-    tree: Tree
-  ): Tree & EntitiesEnabled => {
-    type S = Tree extends ISignalTree<infer U> ? U : unknown;
+  return <T>(tree: ISignalTree<T>): ISignalTree<T> & EntitiesEnabled => {
     if (!enabled) {
       (tree as { __entitiesEnabled?: true }).__entitiesEnabled = true;
-      return tree as Tree & EntitiesEnabled;
+      return tree as ISignalTree<T> & EntitiesEnabled;
     }
 
     const notifier = getPathNotifier();
@@ -77,19 +73,19 @@ export function entities(
 
     (tree as { __entitiesEnabled?: true }).__entitiesEnabled = true;
 
-    return tree as Tree & EntitiesEnabled;
+    return tree as ISignalTree<T> & EntitiesEnabled;
   };
 }
 
-export function enableEntities(): <Tree extends ISignalTree<any>>(
-  tree: Tree
-) => Tree & EntitiesEnabled {
+export function enableEntities(): <T>(
+  tree: ISignalTree<T>
+) => ISignalTree<T> & EntitiesEnabled {
   return entities();
 }
 
-export function highPerformanceEntities(): <Tree extends ISignalTree<any>>(
-  tree: Tree
-) => Tree & EntitiesEnabled {
+export function highPerformanceEntities(): <T>(
+  tree: ISignalTree<T>
+) => ISignalTree<T> & EntitiesEnabled {
   return entities();
 }
 

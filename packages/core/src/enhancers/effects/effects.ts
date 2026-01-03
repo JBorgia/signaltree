@@ -3,7 +3,7 @@ import { effect as angularEffect, untracked } from '@angular/core';
 /**
  * v6 Effects Enhancer
  *
- * Contract: (config?) => <S>(tree: ISignalTree<S>) => ISignalTree<S> & EffectsMethods<S>
+ * Contract: (config?) => <T>(tree: ISignalTree<T>) => ISignalTree<T> & EffectsMethods<T>
  */
 /* eslint-disable @typescript-eslint/no-empty-function */
 import type { ISignalTree, EffectsMethods } from '../../lib/types';
@@ -43,12 +43,10 @@ export interface EffectsConfig {
 
 export function effects(
   config: EffectsConfig = {}
-): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & EffectsMethods<any> {
+): <T>(tree: ISignalTree<T>) => ISignalTree<T> & EffectsMethods<T> {
   const { enabled = true } = config;
-  return <Tree extends ISignalTree<any>>(
-    tree: Tree
-  ): Tree & EffectsMethods<any> => {
-    type S = Tree extends ISignalTree<infer U> ? U : unknown;
+  return <T>(tree: ISignalTree<T>): ISignalTree<T> & EffectsMethods<T> => {
+    type S = T;
     const cleanupFns: Array<() => void> = [];
 
     const methods: EffectsMethods<S> = {
@@ -115,17 +113,17 @@ export function effects(
       }
     };
 
-    return Object.assign(tree, methods) as unknown as Tree &
-      EffectsMethods<any>;
+    return Object.assign(tree, methods) as unknown as ISignalTree<T> &
+      EffectsMethods<T>;
   };
 }
 
 /**
  * Enable effects with default settings
  */
-export function enableEffects(): <Tree extends ISignalTree<any>>(
-  tree: Tree
-) => Tree & EffectsMethods<any> {
+export function enableEffects(): <T>(
+  tree: ISignalTree<T>
+) => ISignalTree<T> & EffectsMethods<T> {
   return effects({ enabled: true });
 }
 /**

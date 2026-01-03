@@ -3,7 +3,7 @@ import { Signal, signal } from '@angular/core';
 /**
  * v6 DevTools Enhancer
  *
- * Contract: (config?) => <S>(tree: ISignalTree<S>) => ISignalTree<S> & DevToolsMethods
+ * Contract: (config?) => <T>(tree: ISignalTree<T>) => ISignalTree<T> & DevToolsMethods
  */
 import type {
   ISignalTree,
@@ -263,7 +263,7 @@ function createModularMetrics() {
 
 export function devTools(
   config: DevToolsConfig = {}
-): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & DevToolsMethods {
+): <T>(tree: ISignalTree<T>) => ISignalTree<T> & DevToolsMethods {
   const {
     enabled = true,
     treeName = 'SignalTree',
@@ -275,10 +275,7 @@ export function devTools(
 
   const displayName = name ?? treeName;
 
-  return <Tree extends ISignalTree<any>>(
-    tree: Tree
-  ): Tree & DevToolsMethods => {
-    type S = Tree extends ISignalTree<infer U> ? U : unknown;
+  return <T>(tree: ISignalTree<T>): ISignalTree<T> & DevToolsMethods => {
     // ========================================================================
     // Disabled path
     // ========================================================================
@@ -291,7 +288,8 @@ export function devTools(
           /* disabled */
         },
       };
-      return Object.assign(tree, noopMethods) as Tree & DevToolsMethods;
+      return Object.assign(tree, noopMethods) as ISignalTree<T> &
+        DevToolsMethods;
     }
 
     // ========================================================================
@@ -352,11 +350,11 @@ export function devTools(
 
     // Create enhanced tree function with tracking
     const enhancedTree = function (
-      this: ISignalTree<S>,
+      this: ISignalTree<T>,
       ...args: unknown[]
-    ): S | void {
+    ): T | void {
       if (args.length === 0) {
-        return originalTreeCall() as S;
+        return originalTreeCall() as T;
       }
 
       const startTime = performance.now();
@@ -366,9 +364,9 @@ export function devTools(
       if (args.length === 1) {
         const arg = args[0];
         if (typeof arg === 'function') {
-          result = originalTreeCall(arg as (current: S) => S) as void;
+          result = originalTreeCall(arg as (current: T) => T) as void;
         } else {
-          result = originalTreeCall(arg as S) as void;
+          result = originalTreeCall(arg as T) as void;
         }
       }
 
@@ -391,7 +389,7 @@ export function devTools(
       }
 
       return result;
-    } as unknown as ISignalTree<S>;
+    } as unknown as ISignalTree<T>;
 
     // Copy properties from original tree
     Object.setPrototypeOf(enhancedTree, Object.getPrototypeOf(tree));
@@ -477,7 +475,7 @@ export function devTools(
     (enhancedTree as unknown as Record<string, unknown>)['__devTools'] =
       devToolsInterface;
 
-    return Object.assign(enhancedTree, methods) as unknown as Tree &
+    return Object.assign(enhancedTree, methods) as unknown as ISignalTree<T> &
       DevToolsMethods;
   };
 }
@@ -491,7 +489,7 @@ export function devTools(
  */
 export function enableDevTools(
   treeName = 'SignalTree'
-): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & DevToolsMethods {
+): <T>(tree: ISignalTree<T>) => ISignalTree<T> & DevToolsMethods {
   return devTools({ treeName, enabled: true });
 }
 
@@ -500,7 +498,7 @@ export function enableDevTools(
  */
 export function fullDevTools(
   treeName = 'SignalTree'
-): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & DevToolsMethods {
+): <T>(tree: ISignalTree<T>) => ISignalTree<T> & DevToolsMethods {
   return devTools({
     treeName,
     enabled: true,
@@ -513,9 +511,9 @@ export function fullDevTools(
 /**
  * Lightweight devtools for production
  */
-export function productionDevTools(): <Tree extends ISignalTree<any>>(
-  tree: Tree
-) => Tree & DevToolsMethods {
+export function productionDevTools(): <T>(
+  tree: ISignalTree<T>
+) => ISignalTree<T> & DevToolsMethods {
   return devTools({
     enabled: true,
     enableBrowserDevTools: false,

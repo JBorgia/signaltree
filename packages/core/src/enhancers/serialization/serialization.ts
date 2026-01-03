@@ -475,12 +475,9 @@ function resolveCircularReferences(
  */
 export function serialization(
   defaultConfig: SerializationConfig = {}
-): <Tree extends ISignalTree<any>>(tree: Tree) => Tree & SerializationMethods {
-  return <Tree extends ISignalTree<any>>(
-    tree: Tree
-  ): Tree & SerializationMethods => {
-    type T = Tree extends ISignalTree<infer U> ? U : unknown;
-    const enhanced = tree as Tree & SerializationMethods;
+): <T>(tree: ISignalTree<T>) => ISignalTree<T> & SerializationMethods {
+  return <T>(tree: ISignalTree<T>): ISignalTree<T> & SerializationMethods => {
+    const enhanced = tree as ISignalTree<T> & SerializationMethods;
     /**
      * Get plain object representation
      */
@@ -913,13 +910,16 @@ export function serialization(
 
       // Resolve circular references if present
       if (metadata?.circularRefs) {
-        resolveCircularReferences(data, metadata.circularRefs);
+        resolveCircularReferences(
+          data as Record<string, unknown>,
+          metadata.circularRefs
+        );
       }
 
       enhanced.fromJSON(data as T, metadata as SerializedState<T>['metadata']);
     };
 
-    return enhanced as Tree & SerializationMethods;
+    return enhanced as ISignalTree<T> & SerializationMethods;
   };
 }
 
@@ -936,9 +936,9 @@ export const withSerialization = Object.assign(
 /**
  * Convenience function to enable serialization with defaults
  */
-export function enableSerialization(): <Tree extends ISignalTree<any>>(
-  tree: Tree
-) => Tree & SerializationMethods {
+export function enableSerialization(): <T>(
+  tree: ISignalTree<T>
+) => ISignalTree<T> & SerializationMethods {
   return serialization({
     includeMetadata: true,
     preserveTypes: true,
@@ -999,9 +999,9 @@ export interface PersistenceConfig extends SerializationConfig {
  */
 export function persistence(
   config: PersistenceConfig
-): <Tree extends ISignalTree<any>>(
-  tree: Tree
-) => Tree & SerializationMethods & PersistenceMethods {
+): <T>(
+  tree: ISignalTree<T>
+) => ISignalTree<T> & SerializationMethods & PersistenceMethods {
   const {
     key,
     storage = typeof window !== 'undefined' ? window.localStorage : undefined,
@@ -1020,15 +1020,16 @@ export function persistence(
   // Narrow storage for TypeScript and linter: from here on it's defined.
   const storageAdapter: StorageAdapter = storage;
 
-  return <Tree extends ISignalTree<any>>(
-    tree: Tree
-  ): Tree & SerializationMethods & PersistenceMethods => {
+  return <T>(
+    tree: ISignalTree<T>
+  ): ISignalTree<T> & SerializationMethods & PersistenceMethods => {
     // First enhance with serialization
-    const serializable = serialization(serializationConfig)(tree) as Tree &
-      SerializationMethods;
+    const serializable = serialization(serializationConfig)(
+      tree
+    ) as ISignalTree<T> & SerializationMethods;
 
     // Add persistence methods
-    const enhanced = serializable as Tree &
+    const enhanced = serializable as ISignalTree<T> &
       SerializationMethods &
       PersistenceMethods;
 
@@ -1179,7 +1180,9 @@ export function persistence(
       };
     }
 
-    return enhanced as Tree & SerializationMethods & PersistenceMethods;
+    return enhanced as ISignalTree<T> &
+      SerializationMethods &
+      PersistenceMethods;
   };
 }
 

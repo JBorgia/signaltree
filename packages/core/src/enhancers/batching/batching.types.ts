@@ -7,10 +7,10 @@ import type {
   BatchingConfig,
 } from '../../lib/types';
 
-// The expected signature
+// The expected signature (v6 pattern: <T> preserves type inference)
 type ExpectedSignature = (
   config?: BatchingConfig
-) => <Tree extends ISignalTree<any>>(tree: Tree) => Tree & BatchingMethods<any>;
+) => <T>(tree: ISignalTree<T>) => ISignalTree<T> & BatchingMethods<T>;
 
 // The actual signature
 type ActualSignature = typeof batching;

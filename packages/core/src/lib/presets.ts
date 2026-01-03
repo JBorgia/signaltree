@@ -116,14 +116,14 @@ export function createDevTree<T extends object>(
   config?: DevTreeConfig
 ): FullSignalTree<T>;
 export function createDevTree(): {
-  enhancer: <Tree extends ISignalTree<any>>(
-    tree: Tree
-  ) => Tree &
-    EffectsMethods<any> &
-    BatchingMethods &
-    MemoizationMethods<any> &
+  enhancer: <T>(
+    tree: ISignalTree<T>
+  ) => ISignalTree<T> &
+    EffectsMethods<T> &
+    BatchingMethods<T> &
+    MemoizationMethods<T> &
     EntitiesEnabled &
-    TimeTravelMethods &
+    TimeTravelMethods<T> &
     DevToolsMethods;
 };
 export function createDevTree<T extends object>(
@@ -133,7 +133,7 @@ export function createDevTree<T extends object>(
   // If no initial state provided, return the enhancer chain so callers
   // can apply it to an existing tree (demo usage pattern).
   if (arguments.length === 0) {
-    const enhancer = <Tree extends ISignalTree<any>>(tree: Tree) =>
+    const enhancer = <U>(tree: ISignalTree<U>) =>
       tree
         .with(effects())
         .with(batching())
