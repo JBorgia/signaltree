@@ -105,12 +105,9 @@ export interface ISignalTree<T> extends NodeAccessor<T> {
   /**
    * Apply an enhancer to the tree.
    * Preserves all previous enhancer methods via `this`.
-   * Extracts the added methods from the enhancer's return type.
+   * Returns the enhancer's return type directly for maximum flexibility.
    */
-  // Use the workspace `Enhancer<TAdded>` alias so enhancer implementations
-  // that are generic over `T` remain assignable while avoiding the
-  // brittle ReturnType extraction that produced `unknown` substitutions.
-  with<TAdded>(enhancer: Enhancer<TAdded>): this & TAdded;
+  with<R>(enhancer: (tree: this) => R): R;
   bind(thisArg?: unknown): NodeAccessor<T>;
   destroy(): void;
   // Allow enhancers to attach runtime methods — consumers should cast to the
@@ -668,12 +665,12 @@ export const ENHANCER_META = Symbol('signaltree:enhancer:meta');
  * Enhancer function that adds methods to a tree.
  * Generic parameter `TAdded` represents the methods being added.
  *
- * Use a permissive parameter type so existing enhancer implementations
- * remain assignable and can be applied to trees that have already
- * accumulated methods from previous enhancers.
+ * Uses ISignalTree<any> to allow enhancers to be applied to trees
+ * that have already accumulated methods from previous enhancers.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type Enhancer<TAdded> = (tree: any) => any;
+export type Enhancer<TAdded> = (
+  tree: ISignalTree<any>
+) => ISignalTree<any> & TAdded;
 
 /** Enhancer with optional metadata for ordering/debugging */
 export type EnhancerWithMeta<TAdded> = Enhancer<TAdded> & {
