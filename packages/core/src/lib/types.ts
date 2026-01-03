@@ -104,10 +104,26 @@ export interface ISignalTree<T> extends NodeAccessor<T> {
   readonly $: TreeNode<T>;
   /**
    * Apply an enhancer to the tree.
-   * Preserves all previous enhancer methods via `this`.
-   * Returns the enhancer's return type directly for maximum flexibility.
+   * Preserves the caller's tree type (`this`) and intersects with added features.
+   *
+   * @typeParam TAdded - The additional methods/properties added by the enhancer
+   * @param enhancer - Function that receives the tree and returns it with additions
+   * @returns The tree with both its original type and the added features
+   *
+   * @example
+   * ```typescript
+   * const tree = signalTree<DashboardState>({...})
+   *   .with(enterprise())  // Returns tree with DashboardState + enterprise methods
+   *   .with(batching());   // Returns tree with DashboardState + enterprise + batching
+   *
+   * tree.$.metrics  // ✅ DashboardState preserved
+   * tree.updateOptimized({...})  // ✅ Enterprise method available
+   * tree.batch(() => {...})  // ✅ Batching method available
+   * ```
    */
-  with<R>(enhancer: (tree: this) => R): R;
+  with<TAdded>(
+    enhancer: (tree: ISignalTree<T>) => ISignalTree<T> & TAdded
+  ): this & TAdded;
   bind(thisArg?: unknown): NodeAccessor<T>;
   destroy(): void;
   // Allow enhancers to attach runtime methods — consumers should cast to the
