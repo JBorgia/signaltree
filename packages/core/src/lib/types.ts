@@ -731,8 +731,10 @@ export type MinimalSignalTree<T> = ISignalTree<T> & EffectsMethods<T>;
 
 // Provide lightweight aliases for legacy consumers importing from core.
 // These are simple re-exports of the internal `ISignalTree` shape.
-export type SignalTree<T> = ISignalTree<T>;
-export type SignalTreeBase<T> = ISignalTree<T>;
+// Backwards-compatible alias: include TreeNode<T> so properties copied to
+// the root callable are visible in TypeScript (legacy consumers rely on this)
+export type SignalTree<T> = ISignalTree<T> & TreeNode<T>;
+export type SignalTreeBase<T> = ISignalTree<T> & TreeNode<T>;
 
 // ============================================
 // TYPE GUARDS
