@@ -3,7 +3,6 @@ import { Component, computed, signal } from '@angular/core';
 import { signalTree } from '@signaltree/core';
 import { enterprise, UpdateResult } from '@signaltree/enterprise';
 
-import type { ISignalTree } from '@signaltree/core';
 interface DashboardState extends Record<string, unknown> {
   metrics: Record<string, number>;
   users: Array<{ id: number; name: string; active: boolean }>;

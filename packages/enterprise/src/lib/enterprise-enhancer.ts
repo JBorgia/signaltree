@@ -2,6 +2,8 @@ import { PathIndex } from './path-index';
 import { OptimizedUpdateEngine, UpdateResult } from './update-engine';
 
 import type { Signal } from '@angular/core';
+import type { ISignalTree } from '@signaltree/core';
+
 /**
  * Enterprise-grade optimizations for large-scale applications.
  *
@@ -44,31 +46,22 @@ import type { Signal } from '@angular/core';
  *
  * @public
  */
-export function enterprise(): <
-  Tree extends import('@signaltree/core').SignalTree<any>
->(
-  tree: Tree
-) => Tree & import('@signaltree/enterprise').EnterpriseEnhancedTree<any> {
-  return <Tree extends import('@signaltree/core').SignalTree<any>>(
-    tree: Tree
-  ): Tree & import('@signaltree/enterprise').EnterpriseEnhancedTree<any> => {
-    type S = Tree extends import('@signaltree/core').SignalTree<infer U>
-      ? U
-      : unknown;
+export function enterprise<T = unknown>(): (
+  tree: ISignalTree<T>
+) => ISignalTree<T> & EnterpriseEnhancedTree<T> {
+  return (tree: ISignalTree<T>): ISignalTree<T> & EnterpriseEnhancedTree<T> => {
     // Lazy initialization - only create when first needed
     let pathIndex: PathIndex<Signal<unknown>> | null = null;
     let updateEngine: OptimizedUpdateEngine | null = null;
 
-    // Type assertion to access SignalTree properties (preserve S)
-    const signalTree = tree as unknown as { state: S };
+    // Type assertion to access SignalTree properties
+    const signalTree = tree as unknown as { state: T };
     // Cast tree to enhanced type for safe property assignment
-    const enhancedTree = tree as unknown as
-      | (Tree & import('@signaltree/enterprise').EnterpriseEnhancedTree<S>)
-      | (Tree & import('@signaltree/enterprise').EnterpriseEnhancedTree<any>);
+    const enhancedTree = tree as ISignalTree<T> & EnterpriseEnhancedTree<T>;
 
     // Add updateOptimized method to tree
     enhancedTree.updateOptimized = (
-      updates: Partial<S>,
+      updates: Partial<T>,
       options?: {
         maxDepth?: number;
         ignoreArrayOrder?: boolean;
@@ -104,8 +97,7 @@ export function enterprise(): <
     // Add PathIndex access for debugging/monitoring
     enhancedTree.getPathIndex = () => pathIndex;
 
-    return enhancedTree as unknown as Tree &
-      import('@signaltree/enterprise').EnterpriseEnhancedTree<any>;
+    return enhancedTree;
   };
 }
 
@@ -120,12 +112,12 @@ export interface EnterpriseEnhancedTree<T> {
    * Optimized bulk update method using diff-based change detection.
    * Only available when using enterprise().
    *
-   * @param newValue - The new state value
+   * @param updates - Partial state updates to apply
    * @param options - Update options
    * @returns Update result with statistics
    */
   updateOptimized(
-    newValue: T,
+    updates: Partial<T>,
     options?: {
       /** Maximum depth to traverse (default: 100) */
       maxDepth?: number;
