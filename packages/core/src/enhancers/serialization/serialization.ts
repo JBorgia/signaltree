@@ -919,7 +919,7 @@ export function serialization(
       enhanced.fromJSON(data as T, metadata as SerializedState<T>['metadata']);
     };
 
-    return enhanced as ISignalTree<T> & SerializationMethods;
+    return enhanced as unknown as ISignalTree<T> & SerializationMethods;
   };
 }
 
@@ -1180,7 +1180,7 @@ export function persistence(
       };
     }
 
-    return enhanced as ISignalTree<T> &
+    return enhanced as unknown as ISignalTree<T> &
       SerializationMethods &
       PersistenceMethods;
   };

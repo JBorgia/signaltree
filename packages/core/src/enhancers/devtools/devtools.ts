@@ -288,7 +288,7 @@ export function devTools(
           /* disabled */
         },
       };
-      return Object.assign(tree, noopMethods) as ISignalTree<T> &
+      return Object.assign(tree, noopMethods) as unknown as ISignalTree<T> &
         DevToolsMethods;
     }
 

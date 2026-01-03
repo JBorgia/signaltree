@@ -37,7 +37,7 @@ export function entities(
   return <T>(tree: ISignalTree<T>): ISignalTree<T> & EntitiesEnabled => {
     if (!enabled) {
       (tree as { __entitiesEnabled?: true }).__entitiesEnabled = true;
-      return tree as ISignalTree<T> & EntitiesEnabled;
+      return tree as unknown as ISignalTree<T> & EntitiesEnabled;
     }
 
     const notifier = getPathNotifier();

@@ -106,12 +106,15 @@ export type TreeNode<T> = {
 export interface ISignalTree<T> extends NodeAccessor<T> {
   readonly state: TreeNode<T>;
   readonly $: TreeNode<T>;
-  // Single-enhancer chain: apply one enhancer at a time.
-  // Accept an enhancer that is applied to this specific tree and infer
-  // the resulting return type `R` so added methods can depend on the
-  // concrete tree type (`this`). This preserves strong type inference
-  // for enhancer methods that depend on the tree's state shape.
-  with<R>(enhancer: (tree: this) => R): R;
+  /**
+   * Apply an enhancer to the tree.
+   * Preserves all previous enhancer methods via `this`.
+   * Extracts the added methods from the enhancer's return type.
+   */
+  // Use the workspace `Enhancer<TAdded>` alias so enhancer implementations
+  // that are generic over `T` remain assignable while avoiding the
+  // brittle ReturnType extraction that produced `unknown` substitutions.
+  with<TAdded>(enhancer: Enhancer<TAdded>): this & TAdded;
   bind(thisArg?: unknown): NodeAccessor<T>;
   destroy(): void;
   // Allow enhancers to attach runtime methods — consumers should cast to the
@@ -666,13 +669,17 @@ export const ENHANCER_META = Symbol('signaltree:enhancer:meta');
 // =============================================================================
 
 /**
- * Enhancer function that adds methods to a tree.
+/** Enhancer function that adds methods to a tree.
  * Generic parameter `TAdded` represents the methods being added.
- * Uses explicit <T> to preserve type inference through the chain.
+ *
+ * Use a permissive, non-generic parameter so existing enhancer
+ * implementations (which are often generic over `T`) remain assignable
+ * and so enhancers can be applied to trees that have already accumulated
+ * methods from previous enhancers.
  */
-export type Enhancer<TAdded> = <T>(
-  tree: ISignalTree<T>
-) => ISignalTree<T> & TAdded;
+export type Enhancer<TAdded> = (
+  tree: ISignalTree<any>
+) => ISignalTree<any> & TAdded;
 
 /** Enhancer with optional metadata for ordering/debugging */
 export type EnhancerWithMeta<TAdded> = Enhancer<TAdded> & {

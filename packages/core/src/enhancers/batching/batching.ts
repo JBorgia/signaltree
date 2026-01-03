@@ -175,7 +175,7 @@ export function batchingWithConfig(
         }
       };
 
-      return enhanced as ISignalTree<T> & BatchingMethods<T>;
+      return enhanced as unknown as ISignalTree<T> & BatchingMethods<T>;
     }
 
     const originalTreeCall = tree.bind(tree);

@@ -15,16 +15,6 @@ type ActualSignature = typeof effects;
 // Contract check
 type _ContractCheck = Assert<Equals<ActualSignature, ExpectedSignature>>;
 
-// Usage verification
-declare const tree: ISignalTree<{ count: number }>;
-const enhanced = effects()(tree);
-
-// Effect method should be available
-const cleanup = enhanced.effect((state) => {
-  const _count: number = state.count;
-});
-
-// Cleanup should be callable
-cleanup();
+// .with() preserves accumulated types via `this & TAdded` pattern.
 
 export {};

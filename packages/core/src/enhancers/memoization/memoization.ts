@@ -551,7 +551,7 @@ export function memoization(
         keys: [],
       });
 
-      return memoTree;
+      return memoTree as unknown as ISignalTree<S> & MemoizationMethods<S>;
     }
 
     // Initialize cache for this tree
@@ -734,7 +734,7 @@ export function memoization(
       setCleanupInterval(tree as object, intervalId);
     }
 
-    return tree as ISignalTree<S> & MemoizationMethods<S>;
+    return tree as unknown as ISignalTree<S> & MemoizationMethods<S>;
   };
 
   return enhancer as unknown as <T>(

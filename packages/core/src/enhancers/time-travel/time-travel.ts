@@ -243,7 +243,7 @@ export function timeTravel(
         },
       };
 
-      return Object.assign(tree, noopMethods) as ISignalTree<T> &
+      return Object.assign(tree, noopMethods) as unknown as ISignalTree<T> &
         TimeTravelMethods<T>;
     }
     // Store the original callable tree function
