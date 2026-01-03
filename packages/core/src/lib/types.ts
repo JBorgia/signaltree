@@ -7,10 +7,6 @@ export interface TimeTravelConfig {
   /** Enable/disable time travel (default: true) */
   enabled?: boolean;
   /**
-import { Signal, WritableSignal } from '@angular/core';
-
-import { SecurityValidatorConfig } from './security/security-validator';
-
    * Maximum number of history entries to keep
    * @default 50
    */
@@ -669,17 +665,15 @@ export const ENHANCER_META = Symbol('signaltree:enhancer:meta');
 // =============================================================================
 
 /**
-/** Enhancer function that adds methods to a tree.
+ * Enhancer function that adds methods to a tree.
  * Generic parameter `TAdded` represents the methods being added.
  *
- * Use a permissive, non-generic parameter so existing enhancer
- * implementations (which are often generic over `T`) remain assignable
- * and so enhancers can be applied to trees that have already accumulated
- * methods from previous enhancers.
+ * Use a permissive parameter type so existing enhancer implementations
+ * remain assignable and can be applied to trees that have already
+ * accumulated methods from previous enhancers.
  */
-export type Enhancer<TAdded> = (
-  tree: ISignalTree<any>
-) => ISignalTree<any> & TAdded;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type Enhancer<TAdded> = (tree: any) => any;
 
 /** Enhancer with optional metadata for ordering/debugging */
 export type EnhancerWithMeta<TAdded> = Enhancer<TAdded> & {
