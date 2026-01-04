@@ -105,9 +105,8 @@ export class BatchingDemoComponent {
   }).with(
     batching({
       enabled: true,
-      maxBatchSize: 50,
-      autoFlushDelay: 16,
-      batchTimeoutMs: 100,
+      // v6.1.0: Signal writes are synchronous, only CD notifications are batched
+      notificationDelayMs: 0, // 0 = microtask (default)
     })
   );
 

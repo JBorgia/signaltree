@@ -171,7 +171,7 @@ const persistentDemo = signalTree({
   persistence({
     key: 'demo-state',
     autoSave: true,
-    debounceMs: 500,
+    notificationDelayMs: 500, // v6.1.0: debounce CD notifications
   })
 );
 

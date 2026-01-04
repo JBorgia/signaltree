@@ -180,7 +180,7 @@ tree.$.users.addOne(u3); // Log fires once (batched!)
 persistence({
   key: 'my-app',
   storage: localStorage,
-  debounceMs: 1000,
+  notificationDelayMs: 1000, // v6.1.0: only affects CD notification timing
   filter: (path) => !path.startsWith('ui'), // Only persist data
 });
 ```
