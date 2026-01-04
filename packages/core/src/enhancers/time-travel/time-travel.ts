@@ -56,10 +56,21 @@ class TimeTravelManager<T> {
     // by unwrapping the internal state node and then making a structured
     // clone to remove any residual accessors/functions.
     const plain = snapshotState(this.tree.state as unknown as TreeNode<T>);
-    const cloned =
-      typeof structuredClone !== 'undefined'
+    
+    // Use structuredClone if available, but fall back to JSON serialization
+    // if structuredClone fails (e.g., when state contains functions like
+    // entityMap's idKey config). JSON serialization naturally strips functions.
+    let cloned: T;
+    try {
+      cloned = typeof structuredClone !== 'undefined'
         ? structuredClone(plain)
         : JSON.parse(JSON.stringify(plain));
+    } catch {
+      // structuredClone failed (likely due to functions in state)
+      // Fall back to JSON serialization which strips non-serializable values
+      cloned = JSON.parse(JSON.stringify(plain));
+    }
+    
     const entry: TimeTravelEntry<T> = {
       // Store cloned plain snapshot
       state: cloned as T,
