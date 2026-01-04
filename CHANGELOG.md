@@ -1,3 +1,26 @@
+## 6.2.1 (2026-01-04)
+
+### 🐛 Bug Fixes
+
+- **core:** Preserve `.with()` method through enhancer chains - wrapper-creating enhancers (batching, devTools, timeTravel) now correctly pass the enhanced tree to subsequent enhancers
+- **time-travel:** Handle `structuredClone` failure for states containing functions (e.g., entityMap's `idKey`) - falls back to JSON serialization
+
+### 📖 Details
+
+The `.with()` chaining bug occurred because enhancers that create wrapper functions (like batching) were copying the `.with()` method from the original tree. The closure inside `.with()` still referenced the original tree, so subsequent enhancers received an un-enhanced tree and lost methods from previous enhancers.
+
+**Before (broken):**
+```typescript
+tree.with(batching()).with(devTools()) // devTools receives un-batched tree!
+```
+
+**After (fixed):**
+```typescript
+tree.with(batching()).with(devTools()) // devTools receives batched tree ✅
+```
+
+---
+
 ## 6.2.0 (2026-01-03)
 
 ### ⚠️ BREAKING CHANGES
