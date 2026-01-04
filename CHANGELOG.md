@@ -1,3 +1,31 @@
+## 6.2.0 (2026-01-03)
+
+### ⚠️ BREAKING CHANGES
+
+- **batching:** Removed deprecated BatchingConfig options:
+  - `debounceMs` - use `notificationDelayMs` instead
+  - `maxBatchSize` - no longer used (signal writes are synchronous)
+  - `autoFlushDelay` - was alias for `debounceMs`
+  - `batchTimeoutMs` - was alias for `debounceMs`
+- **batching:** Backwards compatibility fallbacks removed - users **must** update to use `notificationDelayMs`
+
+### 📖 Migration
+
+```typescript
+// Before (deprecated)
+tree.with(batching({ debounceMs: 16 }));
+tree.with(batching({ maxBatchSize: 100 })); // maxBatchSize is ignored
+tree.with(batching({ autoFlushDelay: 50 }));
+
+// After
+tree.with(batching({ notificationDelayMs: 16 }));
+tree.with(batching()); // No config needed for default behavior
+```
+
+**Note:** `debounceMs` in other configs (`PersistenceConfig`, `FieldConfig`) remains valid - only `BatchingConfig` options were removed.
+
+---
+
 ## 6.1.0 (2026-01-03)
 
 ### ⚠️ BREAKING CHANGES (Behavior)
