@@ -139,21 +139,93 @@ export interface EffectsMethods<T> {
   subscribe(fn: (state: T) => void): () => void;
 }
 
-/** Batching enhancer configuration (canonical) */
+/**
+ * Configuration for the batching enhancer.
+ *
+ * IMPORTANT: Signal writes are ALWAYS synchronous.
+ * Batching only affects change detection notification timing.
+ */
 export interface BatchingConfig {
-  /** Enable/disable batching (default: true) */
+  /**
+   * Whether batching is enabled.
+   * @default true
+   */
   enabled?: boolean;
-  /** Milliseconds to debounce flushes when batching is enabled */
+
+  /**
+   * Delay before flushing CD notifications (ms).
+   * 0 = microtask (default), >0 = setTimeout with delay.
+   * @default 0
+   */
+  notificationDelayMs?: number;
+
+  /**
+   * @deprecated Use notificationDelayMs instead. Kept for backwards compatibility.
+   */
   debounceMs?: number;
-  /** Legacy alias for debounceMs used in some demo code */
+
+  /**
+   * @deprecated Legacy alias for debounceMs.
+   */
   batchTimeoutMs?: number;
-  /** Milliseconds to auto-flush pending batches (compatibility name) */
+
+  /**
+   * @deprecated Legacy alias for debounceMs.
+   */
   autoFlushDelay?: number;
+
+  /**
+   * @deprecated No longer used - signal writes are now synchronous.
+   */
   maxBatchSize?: number;
 }
 
+/**
+ * Methods added by the batching() enhancer.
+ *
+ * IMPORTANT: Signal writes are ALWAYS synchronous.
+ * Batching only affects change detection notification timing.
+ */
 export interface BatchingMethods<T = unknown> {
+  /**
+   * Group multiple updates into a single change detection cycle.
+   * Signal values update immediately; CD notification is batched.
+   *
+   * @example
+   * tree.batch(() => {
+   *   tree.$.a.set(1);  // Value updates immediately
+   *   tree.$.b.set(2);  // Value updates immediately
+   *   console.log(tree.$.a()); // Returns 1 ✅
+   * });
+   * // Single CD notification after batch completes
+   */
   batch(fn: () => void): void;
+
+  /**
+   * Coalesce rapid updates to the same path.
+   * Only the final value for each path is written.
+   * Use for high-frequency updates (typing, dragging, etc.)
+   *
+   * @example
+   * tree.coalesce(() => {
+   *   tree.$.query.set('h');
+   *   tree.$.query.set('he');
+   *   tree.$.query.set('hel');
+   * });
+   * // Only 'hel' is written to the signal
+   */
+  coalesce(fn: () => void): void;
+
+  /**
+   * Check if there are pending CD notifications.
+   */
+  hasPendingNotifications(): boolean;
+
+  /**
+   * Manually flush pending CD notifications.
+   * Rarely needed - notifications flush automatically on microtask.
+   */
+  flushNotifications(): void;
 }
 
 export interface MemoizationMethods<T> {

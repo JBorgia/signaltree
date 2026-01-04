@@ -1,185 +1,284 @@
-import { applyState, isNodeAccessor, parsePath } from '../../lib/utils';
+import { copyTreeProperties } from '../utils/copy-tree-properties';
 
-import type { TreeNode } from '../../lib/utils';
+import type {
+  ISignalTree,
+  BatchingConfig,
+  BatchingMethods,
+} from '../../lib/types';
 
-import type { ISignalTree, Enhancer, BatchingConfig } from '../../lib/types';
 /**
-import { parsePath } from '@signaltree/shared';
-
-import { applyState, isNodeAccessor } from '../../lib/utils';
-import { parsePath } from '@signaltree/shared';
-
-
- * Configuration options for intelligent batching behavior.
+ * Batching enhancer for SignalTree.
+ *
+ * KEY PRINCIPLE: Signal writes are ALWAYS synchronous.
+ * Batching only affects change detection notification timing.
+ *
+ * This aligns with Angular's signal contract:
+ * - signal.set(x) updates the value immediately
+ * - signal() always returns the current value
+ * - Effects/CD run on microtask
+ *
+ * @example
+ * ```typescript
+ * const tree = signalTree({ count: 0 }).with(batching());
+ *
+ * tree.$.count.set(5);
+ * console.log(tree.$.count()); // 5 - immediate!
+ *
+ * tree.batch(() => {
+ *   tree.$.a.set(1);
+ *   tree.$.b.set(2);
+ *   // Values update immediately, CD notification batched
+ * });
+ * ```
  */
-
-/** Public methods surface added by the batching enhancer */
-export type BatchingMethods<T> = import('../../lib/types').BatchingMethods<T>;
-
-/** Represents a queued update in the batching system */
-interface BatchedUpdate {
-  fn: () => void;
-  startTime: number;
-  depth?: number;
-  path?: string;
-}
-
-/** Global queue for batched updates awaiting processing */
-let updateQueue: Array<BatchedUpdate> = [];
-/** Flag to prevent recursive batch processing */
-let isUpdating = false;
-/** Timeout ID for scheduled flush operations */
-let flushTimeoutId: number | undefined;
-/** Current batching configuration */
-let currentBatchingConfig: BatchingConfig = {};
-
-function addToQueue(
-  update: BatchedUpdate,
-  config: BatchingConfig = currentBatchingConfig
-): boolean {
-  const maxSize = config.maxBatchSize ?? 100;
-
-  if (update.path) {
-    updateQueue = updateQueue.filter(
-      (existing) => existing.path !== update.path
-    );
-  }
-
-  updateQueue.push(update);
-
-  if (updateQueue.length > maxSize) {
-    flushUpdates();
-    return true;
-  }
-
-  scheduleFlush(config);
-  return false;
-}
-
-function scheduleFlush(config: BatchingConfig) {
-  if (flushTimeoutId !== undefined) {
-    clearTimeout(flushTimeoutId);
-  }
-
-  const delay = (config as any).autoFlushDelay ?? config.debounceMs ?? 16;
-  flushTimeoutId = setTimeout(() => {
-    flushUpdates();
-  }, delay) as unknown as number;
-}
-
-function flushUpdates(): void {
-  if (isUpdating) return;
-
-  let queue: Array<BatchedUpdate>;
-  do {
-    if (updateQueue.length === 0) return;
-
-    isUpdating = true;
-    queue = updateQueue;
-    updateQueue = [];
-
-    if (flushTimeoutId !== undefined) {
-      clearTimeout(flushTimeoutId);
-      flushTimeoutId = undefined;
-    }
-
-    queue.sort((a, b) => (b.depth ?? 0) - (a.depth ?? 0));
-
-    try {
-      queue.forEach(({ fn }) => fn());
-    } finally {
-      isUpdating = false;
-    }
-  } while (updateQueue.length > 0);
-}
-
-function batchUpdates(fn: () => void, path?: string): void {
-  const startTime = performance.now();
-  const depth = path ? parsePath(path).length : 0;
-
-  const update: BatchedUpdate = { fn, startTime, depth, path };
-
-  const wasFlushed = addToQueue(update, currentBatchingConfig);
-
-  if (!wasFlushed) {
-    const isTimedOut =
-      (currentBatchingConfig as any).batchTimeoutMs &&
-      updateQueue.length > 0 &&
-      startTime - updateQueue[0].startTime >=
-        (currentBatchingConfig as any).batchTimeoutMs;
-
-    if (isTimedOut) {
-      flushUpdates();
-    } else if (!isUpdating && updateQueue.length > 0) {
-      queueMicrotask(() => {
-        flushUpdates();
-      });
-    }
-  }
-}
-
-export function batchingWithConfig(
+export function batching(
   config: BatchingConfig = {}
 ): <T>(tree: ISignalTree<T>) => ISignalTree<T> & BatchingMethods<T> {
-  const enabled = (config as { enabled?: boolean }).enabled ?? true;
+  // Handle legacy config options for backwards compatibility
+  const enabled = config.enabled ?? true;
+  const notificationDelayMs =
+    config.notificationDelayMs ??
+    config.debounceMs ??
+    config.autoFlushDelay ??
+    config.batchTimeoutMs ??
+    0;
 
-  // Only update the global batching configuration when batching is enabled
-  // for this enhancer instance. Leaving global config untouched when disabled
-  // prevents accidental cross-test interference.
-  if (enabled) {
-    currentBatchingConfig = { ...currentBatchingConfig, ...config };
-  }
-
-  const enhancer = <T>(
-    tree: ISignalTree<T>
-  ): ISignalTree<T> & BatchingMethods<T> => {
+  return <T>(tree: ISignalTree<T>): ISignalTree<T> & BatchingMethods<T> => {
+    // ========================================
+    // DISABLED PATH - passthrough
+    // ========================================
     if (!enabled) {
-      // Provide explicit pass-through methods so consumers can always call
-      // `tree.batchUpdate(...)` even when batching is disabled. This avoids
-      // relying on the base `signalTree` implementation shape and keeps
-      // behavior stable across versions.
-      const enhanced = tree as unknown as ISignalTree<T> &
-        BatchingMethods<T> & {
-          batch?: (updater: (state: TreeNode<T>) => void) => void;
+      const passthrough: BatchingMethods<T> = {
+        batch: (fn) => fn(),
+        coalesce: (fn) => fn(),
+        hasPendingNotifications: () => false,
+        flushNotifications: () => {
+          /* empty */
+        },
+      };
+
+      const enhanced = tree as ISignalTree<T> & BatchingMethods<T>;
+      Object.assign(enhanced, passthrough);
+
+      // Backwards compat: batchUpdate delegates to immediate execution
+      (enhanced as any).batchUpdate = (updater: (current: T) => Partial<T>) => {
+        if (typeof (tree as any).batchUpdate === 'function') {
+          (tree as any).batchUpdate(updater);
+        } else {
+          updater(tree());
+        }
+      };
+
+      return enhanced;
+    }
+
+    // ========================================
+    // NOTIFICATION BATCHING STATE
+    // ========================================
+    let notificationPending = false;
+    let notificationTimeoutId: ReturnType<typeof setTimeout> | undefined;
+    let inBatch = false;
+    let inCoalesce = false;
+
+    // For coalesce: track pending writes by path
+    const coalescedUpdates = new Map<string, () => void>();
+
+    /**
+     * Schedule CD notification on microtask or after delay.
+     */
+    const scheduleNotification = (): void => {
+      if (notificationPending) return;
+      notificationPending = true;
+
+      if (notificationDelayMs > 0) {
+        notificationTimeoutId = setTimeout(
+          flushNotificationsInternal,
+          notificationDelayMs
+        );
+      } else {
+        queueMicrotask(flushNotificationsInternal);
+      }
+    };
+
+    /**
+     * Internal flush implementation
+     */
+    const flushNotificationsInternal = (): void => {
+      if (!notificationPending) return;
+
+      notificationPending = false;
+      if (notificationTimeoutId !== undefined) {
+        clearTimeout(notificationTimeoutId);
+        notificationTimeoutId = undefined;
+      }
+
+      // Trigger Angular change detection if available
+      // In Angular 17+, signals automatically notify
+      // This is a hook for custom CD strategies
+      if ((tree as any).__notifyChangeDetection) {
+        (tree as any).__notifyChangeDetection();
+      }
+    };
+
+    /**
+     * Execute coalesced updates.
+     */
+    const flushCoalescedUpdates = (): void => {
+      const updates = Array.from(coalescedUpdates.values());
+      coalescedUpdates.clear();
+
+      // Execute all coalesced updates
+      updates.forEach((fn) => {
+        try {
+          fn();
+        } catch (e) {
+          console.error('[SignalTree] Error in coalesced update:', e);
+        }
+      });
+    };
+
+    // ========================================
+    // WRAP SIGNAL SETTERS TO TRACK NOTIFICATIONS
+    // ========================================
+
+    /**
+     * Recursively wrap signal setters to schedule notifications.
+     * Signal values still update immediately (synchronous).
+     */
+    const wrapSignalSetters = (node: any, path = ''): void => {
+      if (!node || typeof node !== 'object') return;
+
+      // If this node has a set method, wrap it
+      if (typeof node.set === 'function' && !node.__batchingWrapped) {
+        const originalSet = node.set.bind(node);
+
+        node.set = (value: any) => {
+          if (inCoalesce) {
+            // Coalesce mode: store update, execute later
+            coalescedUpdates.set(path, () => originalSet(value));
+          } else {
+            // Normal mode: execute immediately (synchronous!)
+            originalSet(value);
+          }
+
+          // Schedule CD notification (doesn't affect value timing)
+          if (!inBatch) {
+            scheduleNotification();
+          }
         };
 
-      enhanced.batch = (updater: (state: TreeNode<T>) => void) => {
-        try {
-          // Delegate to the tree's built-in batchUpdate which applies updates
-          // immediately in the default (non-batching) case.
-          (tree as any).batchUpdate(updater as any);
-        } catch {
-          try {
-            updater(enhanced.state as unknown as TreeNode<T>);
-          } catch {
-            // ignore
-          }
-        }
-      };
-      // No-op: keep default immediate behavior but expose `batch`/`batchUpdate`.
-      // Ensure `batchUpdate` exists and delegates to the tree's default
-      // immediate-update implementation so callers can always call
-      // `tree.batchUpdate(...)` and get the non-batching behavior.
-      (enhanced as any).batchUpdate = (updater: (current: T) => Partial<T>) => {
-        try {
-          const current = tree() as T;
-          const updates = updater(current as T);
+        // Mark as wrapped to prevent double-wrapping
+        node.__batchingWrapped = true;
+      }
 
-          applyState(enhanced.state as unknown as TreeNode<T>, updates as T);
-        } catch (err) {
-          try {
-            (tree as any).batchUpdate(updater as any);
-          } catch {
-            // ignore
-          }
-        }
-      };
+      // If this node has an update method, wrap it
+      if (typeof node.update === 'function' && !node.__batchingUpdateWrapped) {
+        const originalUpdate = node.update.bind(node);
 
-      return enhanced as unknown as ISignalTree<T> & BatchingMethods<T>;
+        node.update = (updater: any) => {
+          if (inCoalesce) {
+            // Coalesce mode: store update, execute later
+            // Note: for update(), we can't easily dedupe, so we just queue
+            coalescedUpdates.set(`${path}:update:${Date.now()}`, () =>
+              originalUpdate(updater)
+            );
+          } else {
+            // Normal mode: execute immediately (synchronous!)
+            originalUpdate(updater);
+          }
+
+          if (!inBatch) {
+            scheduleNotification();
+          }
+        };
+
+        node.__batchingUpdateWrapped = true;
+      }
+
+      // Recurse into child nodes
+      for (const key of Object.keys(node)) {
+        if (key.startsWith('_') || key === 'set' || key === 'update') continue;
+        const child = node[key];
+        if (child && typeof child === 'object') {
+          wrapSignalSetters(child, path ? `${path}.${key}` : key);
+        }
+      }
+    };
+
+    // Wrap the tree's $ proxy
+    if (tree.$) {
+      wrapSignalSetters(tree.$);
     }
+
+    // ========================================
+    // BATCHING METHODS
+    // ========================================
+
+    const batchingMethods: BatchingMethods<T> = {
+      /**
+       * batch() - Group CD notifications
+       * Signal values update immediately inside the callback.
+       */
+      batch(fn: () => void): void {
+        const wasBatching = inBatch;
+        inBatch = true;
+
+        try {
+          fn();
+        } finally {
+          inBatch = wasBatching;
+
+          // Schedule notification after outermost batch completes
+          if (!inBatch) {
+            scheduleNotification();
+          }
+        }
+      },
+
+      /**
+       * coalesce() - Deduplicate same-path updates
+       * Only the final value for each path is written.
+       */
+      coalesce(fn: () => void): void {
+        const wasCoalescing = inCoalesce;
+        const wasBatching = inBatch;
+        inCoalesce = true;
+        inBatch = true; // Also batch during coalesce
+
+        try {
+          fn();
+        } finally {
+          inCoalesce = wasCoalescing;
+          inBatch = wasBatching;
+
+          // Execute coalesced updates
+          if (!wasCoalescing) {
+            flushCoalescedUpdates();
+          }
+
+          // Schedule notification
+          if (!inBatch) {
+            scheduleNotification();
+          }
+        }
+      },
+
+      hasPendingNotifications(): boolean {
+        return notificationPending;
+      },
+
+      flushNotifications(): void {
+        flushNotificationsInternal();
+      },
+    };
+
+    // ========================================
+    // CREATE ENHANCED TREE
+    // ========================================
 
     const originalTreeCall = tree.bind(tree);
 
+    // Create enhanced tree function that handles direct calls
     const enhancedTree = function (
       this: ISignalTree<T>,
       ...args: unknown[]
@@ -187,22 +286,36 @@ export function batchingWithConfig(
       if (args.length === 0) {
         return originalTreeCall();
       } else {
-        batchUpdates(() => {
-          if (args.length === 1) {
-            const arg = args[0];
-            if (typeof arg === 'function') {
-              originalTreeCall(arg as (current: T) => T);
-            } else {
-              originalTreeCall(arg as T);
-            }
+        // Direct tree updates - execute immediately
+        if (args.length === 1) {
+          const arg = args[0];
+          if (typeof arg === 'function') {
+            originalTreeCall(arg as (current: T) => T);
+          } else {
+            originalTreeCall(arg as T);
           }
-        });
+        }
+        // Schedule notification after update
+        if (!inBatch) {
+          scheduleNotification();
+        }
       }
     } as unknown as ISignalTree<T>;
 
+    // Copy prototype chain
     Object.setPrototypeOf(enhancedTree, Object.getPrototypeOf(tree));
+
+    // Copy enumerable properties
     Object.assign(enhancedTree, tree);
 
+    // Copy non-enumerable properties
+    try {
+      copyTreeProperties(tree as object, enhancedTree as object);
+    } catch {
+      /* best-effort */
+    }
+
+    // Define state property
     if ('state' in tree) {
       Object.defineProperty(enhancedTree, 'state', {
         value: tree.state,
@@ -211,29 +324,32 @@ export function batchingWithConfig(
       });
     }
 
+    // Define $ property
     if ('$' in tree) {
       Object.defineProperty(enhancedTree, '$', {
-        value: (tree as ISignalTree<T>).$,
+        value: tree.$,
         enumerable: false,
         configurable: true,
       });
     }
 
+    // Add batching methods
+    Object.assign(enhancedTree, batchingMethods);
+
+    // Backwards compat: batchUpdate method
     (enhancedTree as any).batchUpdate = (
       updater: (current: T) => Partial<T>
     ) => {
-      batchUpdates(() => {
+      (enhancedTree as any).batch(() => {
         const current = originalTreeCall();
         const updates = updater(current);
 
         Object.entries(updates).forEach(([key, value]) => {
-          const property = (enhancedTree.state as unknown as TreeNode<T>)[
-            key as keyof T
-          ];
-          if (property && 'set' in (property as object)) {
-            (property as { set: (value: unknown) => void }).set(value);
-          } else if (isNodeAccessor(property)) {
-            (property as (value: unknown) => void)(value);
+          const property = ((enhancedTree as ISignalTree<T>).state as any)[key];
+          if (property && typeof property.set === 'function') {
+            property.set(value);
+          } else if (typeof property === 'function') {
+            property(value);
           }
         });
       });
@@ -241,47 +357,53 @@ export function batchingWithConfig(
 
     return enhancedTree as unknown as ISignalTree<T> & BatchingMethods<T>;
   };
-
-  return enhancer;
 }
 
-/** User-friendly no-arg signature expected by type-level tests */
-export function batching(
-  config: BatchingConfig = {}
-): <T>(tree: ISignalTree<T>) => ISignalTree<T> & BatchingMethods<T> {
-  return batchingWithConfig(config);
-}
-
+/**
+ * High performance batching preset.
+ * Uses microtask-based notifications for minimal latency.
+ */
 export function highPerformanceBatching(): <T>(
   tree: ISignalTree<T>
 ) => ISignalTree<T> & BatchingMethods<T> {
-  return batchingWithConfig({
+  return batching({
     enabled: true,
-    maxBatchSize: 200,
-    debounceMs: 0,
+    notificationDelayMs: 0,
   });
 }
 
+// ========================================
+// DEPRECATED EXPORTS (for backwards compat)
+// ========================================
+
+/** @deprecated Use batching() instead */
+export function batchingWithConfig(
+  config: BatchingConfig = {}
+): <T>(tree: ISignalTree<T>) => ISignalTree<T> & BatchingMethods<T> {
+  return batching(config);
+}
+
+/** @deprecated Use tree.flushNotifications() instead */
 export function flushBatchedUpdates(): void {
-  if (updateQueue.length > 0) {
-    const queue = updateQueue.slice();
-    updateQueue = [];
-    isUpdating = false;
-
-    queue.sort((a, b) => (b.depth ?? 0) - (a.depth ?? 0));
-
-    queue.forEach(({ fn }) => {
-      fn();
-    });
-  }
+  console.warn(
+    '[SignalTree] flushBatchedUpdates() is deprecated. Use tree.flushNotifications() instead.'
+  );
 }
 
+/** @deprecated Use tree.hasPendingNotifications() instead */
 export function hasPendingUpdates(): boolean {
-  return updateQueue.length > 0;
+  console.warn(
+    '[SignalTree] hasPendingUpdates() is deprecated. Use tree.hasPendingNotifications() instead.'
+  );
+  return false;
 }
 
+/** @deprecated No longer needed - signal reads are always synchronous */
 export function getBatchQueueSize(): number {
-  return updateQueue.length;
+  console.warn(
+    '[SignalTree] getBatchQueueSize() is deprecated. Signal writes are now synchronous.'
+  );
+  return 0;
 }
 
 /**
@@ -289,7 +411,7 @@ export function getBatchQueueSize(): number {
  * `withBatching` alias will be removed in a future major release.
  */
 export const withBatching = Object.assign(
-  (config: BatchingConfig = {}) => batchingWithConfig(config),
+  (config: BatchingConfig = {}) => batching(config),
   {
     highPerformance: highPerformanceBatching,
   }

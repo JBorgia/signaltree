@@ -148,15 +148,22 @@ export { ENHANCER_META } from './lib/types';
 
 /**
  * Batching enhancer for high-performance state updates
+ *
+ * IMPORTANT: Signal writes are ALWAYS synchronous.
+ * Batching only affects change detection notification timing.
+ *
  * @see {@link batching} for intelligent batching capabilities
  */
 export {
   batching,
+  batchingWithConfig,
   highPerformanceBatching,
   flushBatchedUpdates,
   hasPendingUpdates,
   getBatchQueueSize,
 } from './enhancers/batching/batching';
+
+export type { BatchingConfig, BatchingMethods } from './lib/types';
 
 /**
  * Memoization enhancer for performance optimization

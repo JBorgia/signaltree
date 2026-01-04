@@ -1,3 +1,53 @@
+## 6.1.0 (2026-01-03)
+
+### ⚠️ BREAKING CHANGES (Behavior)
+
+- **batching:** Signal writes are now **synchronous** - values update immediately when `.set()` is called
+  - This is a **breaking behavioral change** but aligns with Angular's signal contract
+  - Only change detection notifications are batched to microtask
+  - Read-after-write patterns now work correctly without workarounds
+
+### ✨ Features
+
+- **batching:** Add `coalesce()` method for deduplicating rapid same-path updates
+  - Use for high-frequency updates (typing, dragging, etc.)
+  - Only the final value for each path is written
+- **batching:** Add `hasPendingNotifications()` method to check CD notification queue
+- **batching:** Add `flushNotifications()` method for manual CD notification flush
+- **batching:** Add `notificationDelayMs` config option (replaces `debounceMs`)
+
+### 🗑️ Deprecated
+
+- `flushBatchedUpdates()` - use `tree.flushNotifications()` instead
+- `hasPendingUpdates()` - use `tree.hasPendingNotifications()` instead
+- `getBatchQueueSize()` - no longer relevant (writes are synchronous)
+- `debounceMs` config - use `notificationDelayMs` instead
+- `transaction()` - removed (no longer needed since writes are synchronous)
+
+### 📖 Migration
+
+```typescript
+// Before: required setTimeout or transaction() for read-after-write
+tree.$.selected.haulerId.set(5);
+setTimeout(() => {
+  const trucks = tree.$.selectableTrucks();
+}, 0);
+
+// After: just works™
+tree.$.selected.haulerId.set(5);
+const trucks = tree.$.selectableTrucks(); // Immediate ✅
+```
+
+### 🎯 Design Philosophy
+
+The batching enhancer now aligns with Angular's signal contract:
+
+- `signal.set(x)` updates the value **immediately**
+- `signal()` **always** returns the current value
+- Effects and change detection run on microtask
+
+This means `batch()` only affects **when** change detection is notified, not **when** values update.
+
 ## 6.0.0 (2025-12-31)
 
 ### 🩹 Fixes
