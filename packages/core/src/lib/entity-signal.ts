@@ -205,11 +205,65 @@ export class EntitySignalImpl<
   }
 
   addMany(entities: E[], opts?: AddManyOptions<E, K>): K[] {
-    const ids: K[] = [];
+    // Check for duplicates first
+    const idsToAdd: K[] = [];
     for (const entity of entities) {
-      ids.push(this.addOne(entity, opts));
+      const id = opts?.selectId?.(entity) ?? this.selectId(entity);
+      if (this.storage.has(id)) {
+        throw new Error(`Entity with id ${String(id)} already exists`);
+      }
+      idsToAdd.push(id);
     }
-    return ids;
+
+    // Add all entities without triggering per-entity signal updates
+    const addedEntities: Array<{ id: K; entity: E }> = [];
+    for (let i = 0; i < entities.length; i++) {
+      const entity = entities[i];
+      const id = idsToAdd[i];
+
+      // Run interceptors
+      let transformedEntity = entity;
+      for (const handler of this.interceptHandlers) {
+        const ctx: InterceptContext<E> = {
+          block: (reason?: string) => {
+            throw new Error(
+              `Cannot add entity: ${reason || 'blocked by interceptor'}`
+            );
+          },
+          transform: (value: E) => {
+            transformedEntity = value;
+          },
+          blocked: false,
+          blockReason: undefined,
+        };
+        handler.onAdd?.(entity, ctx);
+      }
+
+      this.storage.set(id, transformedEntity);
+      this.nodeCache.delete(id);
+      addedEntities.push({ id, entity: transformedEntity });
+    }
+
+    // Single signal update after all entities are added
+    this.updateSignals();
+
+    // Notify PathNotifier for each added entity
+    for (const { id, entity } of addedEntities) {
+      this.pathNotifier.notify(
+        `${this.basePath}.${String(id)}`,
+        entity,
+        undefined
+      );
+    }
+
+    // Run tap handlers for each added entity
+    for (const { id, entity } of addedEntities) {
+      for (const handler of this.tapHandlers) {
+        handler.onAdd?.(entity, id);
+      }
+    }
+
+    return idsToAdd;
   }
 
   // ==================
@@ -261,20 +315,78 @@ export class EntitySignalImpl<
   }
 
   updateMany(ids: K[], changes: Partial<E>): void {
+    if (ids.length === 0) return;
+
+    // Collect entities and run interceptors first
+    const updatedEntities: Array<{
+      id: K;
+      prev: E;
+      finalUpdated: E;
+      transformedChanges: Partial<E>;
+    }> = [];
+
     for (const id of ids) {
-      this.updateOne(id, changes);
+      const entity = this.storage.get(id);
+      if (!entity) {
+        throw new Error(`Entity with id ${String(id)} not found`);
+      }
+      const prev = entity;
+
+      // Run interceptors
+      let transformedChanges = changes;
+      for (const handler of this.interceptHandlers) {
+        const ctx: InterceptContext<Partial<E>> = {
+          block: (reason?: string) => {
+            throw new Error(
+              `Cannot update entity: ${reason || 'blocked by interceptor'}`
+            );
+          },
+          transform: (value: Partial<E>) => {
+            transformedChanges = value;
+          },
+          blocked: false,
+          blockReason: undefined,
+        };
+        handler.onUpdate?.(id, changes, ctx);
+      }
+
+      const finalUpdated = { ...entity, ...transformedChanges };
+      this.storage.set(id, finalUpdated);
+      this.nodeCache.delete(id);
+      updatedEntities.push({ id, prev, finalUpdated, transformedChanges });
+    }
+
+    // Single signal update after all entities are updated
+    this.updateSignals();
+
+    // Notify PathNotifier for each updated entity
+    for (const { id, prev, finalUpdated } of updatedEntities) {
+      this.pathNotifier.notify(
+        `${this.basePath}.${String(id)}`,
+        finalUpdated,
+        prev
+      );
+    }
+
+    // Run tap handlers for each updated entity
+    for (const { id, transformedChanges, finalUpdated } of updatedEntities) {
+      for (const handler of this.tapHandlers) {
+        handler.onUpdate?.(id, transformedChanges, finalUpdated);
+      }
     }
   }
 
   updateWhere(predicate: (entity: E) => boolean, changes: Partial<E>): number {
-    let count = 0;
+    const idsToUpdate: K[] = [];
     for (const [id, entity] of this.storage) {
       if (predicate(entity)) {
-        this.updateOne(id, changes);
-        count++;
+        idsToUpdate.push(id);
       }
     }
-    return count;
+    if (idsToUpdate.length > 0) {
+      this.updateMany(idsToUpdate, changes);
+    }
+    return idsToUpdate.length;
   }
 
   // ==================
@@ -323,8 +435,59 @@ export class EntitySignalImpl<
   }
 
   removeMany(ids: K[]): void {
+    if (ids.length === 0) return;
+
+    // Collect entities and run interceptors first
+    const entitiesToRemove: Array<{ id: K; entity: E }> = [];
     for (const id of ids) {
-      this.removeOne(id);
+      const entity = this.storage.get(id);
+      if (!entity) {
+        throw new Error(`Entity with id ${String(id)} not found`);
+      }
+
+      // Run interceptors
+      for (const handler of this.interceptHandlers) {
+        const ctx: InterceptContext<void> = {
+          block: (reason?: string) => {
+            throw new Error(
+              `Cannot remove entity: ${reason || 'blocked by interceptor'}`
+            );
+          },
+          transform: () => {
+            // void transform - no transformation possible
+          },
+          blocked: false,
+          blockReason: undefined,
+        };
+        handler.onRemove?.(id, entity, ctx);
+      }
+
+      entitiesToRemove.push({ id, entity });
+    }
+
+    // Delete all entities without triggering per-entity signal updates
+    for (const { id } of entitiesToRemove) {
+      this.storage.delete(id);
+      this.nodeCache.delete(id);
+    }
+
+    // Single signal update after all entities are removed
+    this.updateSignals();
+
+    // Notify PathNotifier for each removed entity
+    for (const { id, entity } of entitiesToRemove) {
+      this.pathNotifier.notify(
+        `${this.basePath}.${String(id)}`,
+        undefined,
+        entity
+      );
+    }
+
+    // Run tap handlers for each removed entity
+    for (const { id, entity } of entitiesToRemove) {
+      for (const handler of this.tapHandlers) {
+        handler.onRemove?.(id, entity);
+      }
     }
   }
 
@@ -335,12 +498,10 @@ export class EntitySignalImpl<
         idsToRemove.push(id);
       }
     }
-    let count = 0;
-    for (const id of idsToRemove) {
-      this.removeOne(id);
-      count++;
+    if (idsToRemove.length > 0) {
+      this.removeMany(idsToRemove);
     }
-    return count;
+    return idsToRemove.length;
   }
 
   // ==================
@@ -358,7 +519,113 @@ export class EntitySignalImpl<
   }
 
   upsertMany(entities: E[], opts?: AddOptions<E, K>): K[] {
-    return entities.map((e) => this.upsertOne(e, opts));
+    if (entities.length === 0) return [];
+
+    // Separate adds from updates
+    const toAdd: Array<{ entity: E; id: K }> = [];
+    const toUpdate: Array<{ entity: E; id: K; prev: E }> = [];
+
+    for (const entity of entities) {
+      const id = opts?.selectId?.(entity) ?? this.selectId(entity);
+      if (this.storage.has(id)) {
+        toUpdate.push({ entity, id, prev: this.storage.get(id)! });
+      } else {
+        toAdd.push({ entity, id });
+      }
+    }
+
+    // Process adds
+    const addedEntities: Array<{ id: K; entity: E }> = [];
+    for (const { entity, id } of toAdd) {
+      // Run interceptors
+      let transformedEntity = entity;
+      for (const handler of this.interceptHandlers) {
+        const ctx: InterceptContext<E> = {
+          block: (reason?: string) => {
+            throw new Error(
+              `Cannot add entity: ${reason || 'blocked by interceptor'}`
+            );
+          },
+          transform: (value: E) => {
+            transformedEntity = value;
+          },
+          blocked: false,
+          blockReason: undefined,
+        };
+        handler.onAdd?.(entity, ctx);
+      }
+      this.storage.set(id, transformedEntity);
+      this.nodeCache.delete(id);
+      addedEntities.push({ id, entity: transformedEntity });
+    }
+
+    // Process updates
+    const updatedEntities: Array<{
+      id: K;
+      prev: E;
+      finalUpdated: E;
+      transformedChanges: Partial<E>;
+    }> = [];
+    for (const { entity, id, prev } of toUpdate) {
+      // Run interceptors
+      let transformedChanges: Partial<E> = entity;
+      for (const handler of this.interceptHandlers) {
+        const ctx: InterceptContext<Partial<E>> = {
+          block: (reason?: string) => {
+            throw new Error(
+              `Cannot update entity: ${reason || 'blocked by interceptor'}`
+            );
+          },
+          transform: (value: Partial<E>) => {
+            transformedChanges = value;
+          },
+          blocked: false,
+          blockReason: undefined,
+        };
+        handler.onUpdate?.(id, entity, ctx);
+      }
+      const finalUpdated = { ...prev, ...transformedChanges };
+      this.storage.set(id, finalUpdated);
+      this.nodeCache.delete(id);
+      updatedEntities.push({ id, prev, finalUpdated, transformedChanges });
+    }
+
+    // Single signal update after all entities are processed
+    this.updateSignals();
+
+    // Notify PathNotifier for added entities
+    for (const { id, entity } of addedEntities) {
+      this.pathNotifier.notify(
+        `${this.basePath}.${String(id)}`,
+        entity,
+        undefined
+      );
+    }
+
+    // Notify PathNotifier for updated entities
+    for (const { id, prev, finalUpdated } of updatedEntities) {
+      this.pathNotifier.notify(
+        `${this.basePath}.${String(id)}`,
+        finalUpdated,
+        prev
+      );
+    }
+
+    // Run tap handlers for added entities
+    for (const { id, entity } of addedEntities) {
+      for (const handler of this.tapHandlers) {
+        handler.onAdd?.(entity, id);
+      }
+    }
+
+    // Run tap handlers for updated entities
+    for (const { id, transformedChanges, finalUpdated } of updatedEntities) {
+      for (const handler of this.tapHandlers) {
+        handler.onUpdate?.(id, transformedChanges, finalUpdated);
+      }
+    }
+
+    return [...toAdd.map((a) => a.id), ...toUpdate.map((u) => u.id)];
   }
 
   // ==================
@@ -376,8 +643,59 @@ export class EntitySignalImpl<
   }
 
   setAll(entities: E[], opts?: AddOptions<E, K>): void {
-    this.clear();
-    this.addMany(entities, opts);
+    // Clear storage without triggering intermediate signal updates
+    this.storage.clear();
+    this.nodeCache.clear();
+
+    // Add all entities without triggering per-entity signal updates
+    const addedIds: K[] = [];
+    for (const entity of entities) {
+      const id = opts?.selectId?.(entity) ?? this.selectId(entity);
+
+      // Run interceptors
+      let transformedEntity = entity;
+      for (const handler of this.interceptHandlers) {
+        const ctx: InterceptContext<E> = {
+          block: (reason?: string) => {
+            throw new Error(
+              `Cannot add entity: ${reason || 'blocked by interceptor'}`
+            );
+          },
+          transform: (value: E) => {
+            transformedEntity = value;
+          },
+          blocked: false,
+          blockReason: undefined,
+        };
+        handler.onAdd?.(entity, ctx);
+      }
+
+      this.storage.set(id, transformedEntity);
+      addedIds.push(id);
+    }
+
+    // Single signal update after all entities are added
+    this.updateSignals();
+
+    // Notify PathNotifier for each added entity
+    for (let i = 0; i < addedIds.length; i++) {
+      const id = addedIds[i];
+      const entity = this.storage.get(id);
+      this.pathNotifier.notify(
+        `${this.basePath}.${String(id)}`,
+        entity,
+        undefined
+      );
+    }
+
+    // Run tap handlers for each added entity
+    for (let i = 0; i < addedIds.length; i++) {
+      const id = addedIds[i];
+      const entity = this.storage.get(id)!;
+      for (const handler of this.tapHandlers) {
+        handler.onAdd?.(entity, id);
+      }
+    }
   }
 
   // ==================
