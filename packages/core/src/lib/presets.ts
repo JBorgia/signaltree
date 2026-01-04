@@ -176,7 +176,7 @@ export function createDevTree<T extends object>(
  *   cache: {}
  * }, {
  *   memoization: { maxCacheSize: 500 },
- *   batching: { debounceMs: 16 }
+ *   batching: { notificationDelayMs: 16 }
  * });
  * ```
  */

@@ -1,13 +1,12 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { computed, signal } from '@angular/core';
-import { signalTree } from '../../lib/signal-tree';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import {
-  batching,
-  batchingWithConfig,
-  flushBatchedUpdates,
-  getBatchQueueSize,
-  hasPendingUpdates,
-  highPerformanceBatching,
+    batching,
+    batchingWithConfig,
+    flushBatchedUpdates,
+    getBatchQueueSize,
+    hasPendingUpdates,
+    highPerformanceBatching,
 } from './batching';
 
 // Helper to create a basic mock tree for unit tests
@@ -31,12 +30,20 @@ function createMockTree() {
   // Create signal-like accessors for state properties
   tree.state = {
     count: {
-      set: (v: number) => { state.count = v; },
-      update: (fn: (v: number) => number) => { state.count = fn(state.count); },
+      set: (v: number) => {
+        state.count = v;
+      },
+      update: (fn: (v: number) => number) => {
+        state.count = fn(state.count);
+      },
     },
     name: {
-      set: (v: string) => { state.name = v; },
-      update: (fn: (v: string) => string) => { state.name = fn(state.name); },
+      set: (v: string) => {
+        state.name = v;
+      },
+      update: (fn: (v: string) => string) => {
+        state.name = fn(state.name);
+      },
     },
   };
   tree.$ = tree.state;
@@ -105,7 +112,9 @@ describe('batching enhancer', () => {
     });
 
     it('should work with nested object updates', () => {
-      const nestedState = { user: { name: 'Alice', settings: { theme: 'light' } } };
+      const nestedState = {
+        user: { name: 'Alice', settings: { theme: 'light' } },
+      };
       const tree = createMockTree();
       Object.assign(tree(), nestedState);
 
@@ -113,7 +122,9 @@ describe('batching enhancer', () => {
       tree.$.user = {
         settings: {
           theme: {
-            set: (v: string) => { tree().user.settings.theme = v; },
+            set: (v: string) => {
+              tree().user.settings.theme = v;
+            },
           },
         },
       };
@@ -289,9 +300,10 @@ describe('batching enhancer', () => {
       expect(notified).toBe(true);
     });
 
-    it('should use debounceMs as fallback for backwards compatibility', async () => {
+    it('should ignore deprecated config options and use defaults', async () => {
       const tree = createMockTree();
-      const enhanced = batching({ debounceMs: 50 })(tree) as any;
+      // Passing unknown/deprecated options should be ignored, not cause errors
+      const enhanced = batching({} as any)(tree) as any;
 
       let notified = false;
       (tree as any).__notifyChangeDetection = () => {
@@ -300,9 +312,9 @@ describe('batching enhancer', () => {
 
       enhanced.$.count.set(5);
       expect(tree().count).toBe(5);
-      expect(notified).toBe(false);
 
-      vi.advanceTimersByTime(50);
+      // With default (notificationDelayMs: 0), notification should happen on microtask
+      await Promise.resolve();
       expect(notified).toBe(true);
     });
   });

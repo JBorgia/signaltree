@@ -158,26 +158,6 @@ export interface BatchingConfig {
    * @default 0
    */
   notificationDelayMs?: number;
-
-  /**
-   * @deprecated Use notificationDelayMs instead. Kept for backwards compatibility.
-   */
-  debounceMs?: number;
-
-  /**
-   * @deprecated Legacy alias for debounceMs.
-   */
-  batchTimeoutMs?: number;
-
-  /**
-   * @deprecated Legacy alias for debounceMs.
-   */
-  autoFlushDelay?: number;
-
-  /**
-   * @deprecated No longer used - signal writes are now synchronous.
-   */
-  maxBatchSize?: number;
 }
 
 /**

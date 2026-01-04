@@ -345,7 +345,7 @@ function create<T extends object>(
    *
    * Usage:
    * ```ts
-   * const enhanced = tree.with(batching({ debounceMs: 10 }));
+   * const enhanced = tree.with(batching());
    * // Chain multiple enhancers:
    * const fullyEnhanced = tree
    *   .with(batching())
@@ -357,8 +357,9 @@ function create<T extends object>(
    * Supported enhancers and their options:
    *
    * - `batching(config?: BatchingConfig)`
-   *   - Enables batched state updates for performance.
-   *   - Options: `debounceMs`, `maxBatchSize`, `enabled`.
+   *   - Batches change detection notifications for performance.
+   *   - Signal writes are always synchronous.
+   *   - Options: `enabled`, `notificationDelayMs`.
    *
    * - `memoization(config?: MemoizationConfig)`
    *   - Adds memoized selectors and cache management.

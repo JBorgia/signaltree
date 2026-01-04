@@ -34,14 +34,8 @@ import type {
 export function batching(
   config: BatchingConfig = {}
 ): <T>(tree: ISignalTree<T>) => ISignalTree<T> & BatchingMethods<T> {
-  // Handle legacy config options for backwards compatibility
   const enabled = config.enabled ?? true;
-  const notificationDelayMs =
-    config.notificationDelayMs ??
-    config.debounceMs ??
-    config.autoFlushDelay ??
-    config.batchTimeoutMs ??
-    0;
+  const notificationDelayMs = config.notificationDelayMs ?? 0;
 
   return <T>(tree: ISignalTree<T>): ISignalTree<T> & BatchingMethods<T> => {
     // ========================================
