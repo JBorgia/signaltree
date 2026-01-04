@@ -1,5 +1,7 @@
 import { Signal, signal } from '@angular/core';
 
+import { copyTreeProperties } from '../utils/copy-tree-properties';
+
 /**
  * v6 DevTools Enhancer
  *
@@ -391,9 +393,23 @@ export function devTools(
       return result;
     } as unknown as ISignalTree<T>;
 
-    // Copy properties from original tree
+    // Copy properties from original tree using utility that handles non-enumerable properties
     Object.setPrototypeOf(enhancedTree, Object.getPrototypeOf(tree));
-    Object.assign(enhancedTree, tree);
+    copyTreeProperties(tree as object, enhancedTree as object);
+
+    // Define new .with() method that passes enhancedTree (not the original tree)
+    // to subsequent enhancers. This is critical for preserving the enhancer chain.
+    Object.defineProperty(enhancedTree, 'with', {
+      value: function <R>(enhancer: (tree: ISignalTree<T>) => R): R {
+        if (typeof enhancer !== 'function') {
+          throw new Error('Enhancer must be a function');
+        }
+        return enhancer(enhancedTree as ISignalTree<T>) as R;
+      },
+      writable: false,
+      enumerable: false,
+      configurable: true,
+    });
 
     if ('state' in tree) {
       Object.defineProperty(enhancedTree, 'state', {

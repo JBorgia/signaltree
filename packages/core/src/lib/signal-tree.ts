@@ -396,6 +396,7 @@ function create<T extends object>(
     },
     enumerable: false,
     writable: false,
+    configurable: true,
   });
 
   // bind()
