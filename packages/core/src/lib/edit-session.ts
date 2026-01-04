@@ -1,12 +1,12 @@
+import { signal, WritableSignal } from '@angular/core';
+
+import { deepEqual } from './utils';
+
 export type UndoRedoHistory<T> = {
   past: T[];
   present: T;
   future: T[];
 };
-
-import { signal, WritableSignal } from '@angular/core';
-
-import { deepEqual } from './utils';
 
 export interface EditSession<T> {
   readonly original: WritableSignal<T>;
@@ -26,7 +26,6 @@ export interface EditSession<T> {
 function clone<T>(value: T): T {
   try {
     // Use structuredClone when available for deep copy
-    // @ts-ignore - global may provide structuredClone
     return (globalThis as any).structuredClone
       ? (globalThis as any).structuredClone(value)
       : JSON.parse(JSON.stringify(value));
