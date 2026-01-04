@@ -86,6 +86,24 @@ export {
   createLazySignalTree,
 } from './lib/utils';
 
+// ============================================
+// EDIT SESSION EXPORTS
+// ============================================
+
+/**
+ * EditSession for tracking changes to a single value with undo/redo.
+ * Unlike `timeTravel()` which tracks the entire tree, EditSession is for
+ * isolated value editing (forms, entities, component-level state).
+ *
+ * @see {@link createEditSession} for creating an edit session
+ * @see {@link EditSession} for the interface definition
+ */
+export {
+  createEditSession,
+  type EditSession,
+  type UndoRedoHistory,
+} from './lib/edit-session';
+
 // PathNotifier exports - For internal use by enhancers (e.g., guardrails)
 export { getPathNotifier } from './lib/path-notifier';
 
