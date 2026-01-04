@@ -12,20 +12,29 @@
   </p>
 </div>
 
-## 🚀 What's New (December 2025)
+## 🚀 What's New (January 2026)
 
-**v5.0.0 Release** - Major entity system overhaul with marker-based API:
+**v6.1.0 Release** - Synchronous Signal Writes:
 
-- **Marker-Based Entity System**: Type-safe `EntityMapMarker<T, ID>` with reactive CRUD operations
-- **Performance Improvements**: 2-5x faster bulk operations with diff-based updates
-- **Enhanced Type System**: Recursive type inference up to 20+ nesting levels
-- **Angular 20.3 Support**: Full compatibility with Angular 20.3.x signal forms
-- **Consolidated Architecture**: 40.5% bundle size reduction with shared dependencies
-- **Development Guardrails**: Zero-cost production builds with dev-only monitoring
+- **Synchronous Signal Writes**: Signal values now update **immediately** when `.set()` is called
+- **Angular Signal Contract**: Aligns with Angular's signal semantics - read-after-write works correctly
+- **Batched CD Notifications**: Only change detection notifications are batched to microtask
+- **New `coalesce()` Method**: Deduplicate rapid same-path updates (typing, dragging, etc.)
+- **New Notification Helpers**: `hasPendingNotifications()` and `flushNotifications()` methods
+
+```typescript
+// Before v6.1.0: Required setTimeout workaround
+tree.$.haulerId.set(5);
+setTimeout(() => {
+  const trucks = tree.$.selectableTrucks(); // Had to wait
+}, 0);
+
+// v6.1.0+: Just works™
+tree.$.haulerId.set(5);
+const trucks = tree.$.selectableTrucks(); // Immediate ✅
+```
 
 See [CHANGELOG.md](./CHANGELOG.md) for full release notes.
-
-Explore it in the demo under “Signal Forms (Angular 20+)”.
 
 ## Why SignalTree?
 
