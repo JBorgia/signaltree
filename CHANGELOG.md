@@ -10,13 +10,15 @@
 The `.with()` chaining bug occurred because enhancers that create wrapper functions (like batching) were copying the `.with()` method from the original tree. The closure inside `.with()` still referenced the original tree, so subsequent enhancers received an un-enhanced tree and lost methods from previous enhancers.
 
 **Before (broken):**
+
 ```typescript
-tree.with(batching()).with(devTools()) // devTools receives un-batched tree!
+tree.with(batching()).with(devTools()); // devTools receives un-batched tree!
 ```
 
 **After (fixed):**
+
 ```typescript
-tree.with(batching()).with(devTools()) // devTools receives batched tree ✅
+tree.with(batching()).with(devTools()); // devTools receives batched tree ✅
 ```
 
 ---
