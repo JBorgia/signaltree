@@ -1,16 +1,16 @@
 import { computed, Injectable } from '@angular/core';
 import {
-  batching,
-  computedMemoization,
-  ENHANCER_META,
-  highPerformanceBatching,
-  lightweightMemoization,
-  memoization,
-  selectorMemoization,
-  serialization,
-  shallowMemoization,
-  signalTree,
-  timeTravel,
+    batching,
+    computedMemoization,
+    ENHANCER_META,
+    highPerformanceBatching,
+    lightweightMemoization,
+    memoization,
+    selectorMemoization,
+    serialization,
+    shallowMemoization,
+    signalTree,
+    timeTravel,
 } from '@signaltree/core';
 import { resolveEnhancerOrder } from '@signaltree/core/enhancers';
 import { enterprise } from '@signaltree/enterprise';
@@ -20,11 +20,11 @@ import { createYieldToUI } from '../shared/benchmark-utils';
 import { withLazyArrays } from '../with-lazy-arrays';
 import { BenchmarkResult } from './_types';
 import {
-  BenchmarkComparison,
-  EnhancedBenchmarkOptions,
-  EnhancedBenchmarkResult,
-  PerformanceEnvironment,
-  runEnhancedBenchmark,
+    BenchmarkComparison,
+    EnhancedBenchmarkOptions,
+    EnhancedBenchmarkResult,
+    PerformanceEnvironment,
+    runEnhancedBenchmark,
 } from './benchmark-runner';
 
 // Enterprise enhancer (premium optimization bundle)
@@ -1318,9 +1318,21 @@ export class SignalTreeBenchmarkService {
   /**
    * Enhanced array benchmark with statistical analysis
    */
+  private _isQuickRun(): boolean {
+    try {
+      if ((window as any).__SIGNALTREE_QUICK_RUN__) return true;
+      const p = new URLSearchParams(window.location.search);
+      return p.has('quickRun') || p.has('quickrun') || p.has('quick-run');
+    } catch {
+      return false;
+    }
+  }
+
   async runEnhancedArrayBenchmark(
     dataSize: number
   ): Promise<EnhancedBenchmarkResult> {
+    const isQuick = this._isQuickRun();
+
     const options: EnhancedBenchmarkOptions = {
       operations: Math.min(
         BENCHMARK_CONSTANTS.ITERATIONS.ARRAY_UPDATES,
@@ -1336,11 +1348,24 @@ export class SignalTreeBenchmarkService {
       minDurationMs: 100,
     };
 
+    if (isQuick) {
+      options.warmup = 0;
+      options.measurementSamples = 2;
+      options.operations = Math.min(options.operations, 2);
+      options.trackMemory = false;
+      options.forceGC = false;
+      options.removeOutliers = false;
+      options.minDurationMs = 10;
+    }
+
     const base = signalTree({
-      items: Array.from({ length: dataSize }, (_, i) => ({
-        id: i,
-        value: Math.random() * 1000,
-      })),
+      items: Array.from(
+        { length: isQuick ? Math.min(dataSize, 100) : dataSize },
+        (_, i) => ({
+          id: i,
+          value: Math.random() * 1000,
+        })
+      ),
     });
     const tree = this.applyConfiguredEnhancers(base, [
       highPerformanceBatching(),
@@ -1352,6 +1377,105 @@ export class SignalTreeBenchmarkService {
         const newItems = [...items];
         newItems[idx] = { ...newItems[idx], value: Math.random() * 1000 };
         return newItems;
+      });
+    }, options);
+  }
+
+  async runEnhancedSelectorBenchmark(
+    dataSize: number
+  ): Promise<EnhancedBenchmarkResult> {
+    const isQuick = this._isQuickRun();
+
+    const base = signalTree({
+      items: Array.from(
+        { length: isQuick ? Math.min(dataSize, 100) : dataSize },
+        (_, i) => ({
+          id: i,
+          flag: i % 2 === 0,
+        })
+      ),
+    });
+    const tree = this.applyConfiguredEnhancers(base, [
+      lightweightMemoization(),
+    ]);
+
+    // Create computed selector matching NgRx pattern
+    const selectEven = computed(
+      () => tree.state.items().filter((x: any) => x.flag).length
+    );
+
+    const options: EnhancedBenchmarkOptions = {
+      operations: 1000,
+      warmup: 5,
+      measurementSamples: 50,
+      yieldEvery: 64,
+      trackMemory: false,
+      removeOutliers: true,
+      label: 'SignalTree Selector (Memoized)',
+      minDurationMs: 50,
+    };
+
+    if (isQuick) {
+      options.operations = Math.min(options.operations, 2);
+      options.warmup = 0;
+      options.measurementSamples = 2;
+      options.minDurationMs = 10;
+      options.removeOutliers = false;
+    }
+
+    return runEnhancedBenchmark(async () => {
+      // This should hit memoization cache most of the time
+      selectEven();
+    }, options);
+  }
+
+  async runEnhancedDeepNestedBenchmark(
+    dataSize: number,
+    depth = 15
+  ): Promise<EnhancedBenchmarkResult> {
+    const isQuick = this._isQuickRun();
+
+    const createNested = (level: number): any =>
+      level === 0
+        ? { value: 0, data: 'test' }
+        : { level: createNested(level - 1) };
+
+    const base = signalTree(createNested(depth));
+    const tree = this.applyConfiguredEnhancers(base, [
+      batching(),
+      shallowMemoization(),
+    ]);
+
+    const options: EnhancedBenchmarkOptions = {
+      operations: Math.min(dataSize, 1000),
+      warmup: 5,
+      measurementSamples: 20,
+      yieldEvery: 1024,
+      trackMemory: true,
+      removeOutliers: true,
+      forceGC: true,
+      label: 'SignalTree Deep Nested Updates',
+      minDurationMs: 100,
+    };
+
+    if (isQuick) {
+      options.operations = Math.min(options.operations, 2);
+      options.warmup = 0;
+      options.measurementSamples = 2;
+      options.trackMemory = false;
+      options.removeOutliers = false;
+      options.forceGC = false;
+      options.minDurationMs = 10;
+    }
+
+    return runEnhancedBenchmark(async (iteration) => {
+      // Use proper deep update method - access via bracket notation for signal tree
+      (tree as any)['update']((state: any) => {
+        const updateDeep = (obj: any, lvl: number): any =>
+          lvl === 0
+            ? { ...obj, value: iteration }
+            : { ...obj, level: updateDeep(obj.level ?? {}, lvl - 1) };
+        return updateDeep(state, depth - 1);
       });
     }, options);
   }
@@ -1556,6 +1680,9 @@ export class SignalTreeBenchmarkService {
     deepNestedBenchmark: number;
     totalTime: number;
   }> {
+    const isQuick = this._isQuickRun();
+    if (isQuick) dataSize = Math.min(dataSize, 100);
+
     const suiteStart = performance.now();
 
     // Update UI before each benchmark
@@ -1644,6 +1771,12 @@ export class SignalTreeBenchmarkService {
     };
   }> {
     const start = performance.now();
+
+    // Respect quick-run mode (reduce sizes if active)
+    const isQuickRun = this._isQuickRun();
+    if (isQuickRun) {
+      dataSize = Math.min(dataSize, 200);
+    }
 
     // 1) Environment
     const environment = await this.validateBenchmarkEnvironment();

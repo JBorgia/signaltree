@@ -31,6 +31,7 @@ const s2 = tree.$.users.where(isActive); // same Signal instance
 **Caveat:** Function identity matters. Inline anonymous predicates (e.g. `where(u => u.active)`) will not be cached. Prefer named predicate functions.
 
 ## Enhancer ordering & telemetry
+
 Enhancers can depend on each-other (e.g., memoization assumes stable signals, batching controls notification timing). The demo harness now:
 
 - Uses the library's `resolveEnhancerOrder()` helper to establish a safe apply order for enhancers selected in the UI or defaults.
@@ -72,5 +73,7 @@ SignalTree will remain framework-friendly and avoid adding default behavior that
 - Measure both _notification_ overhead and _actual UI render_ cost; a tiny notification win may be negated by more renders in the UI
 
 ---
+
+💡 **Quick-run mode**: The demo supports an opt-in quick-run mode (URL param `?quickRun` or `window.__SIGNALTREE_QUICK_RUN__`) that reduces data sizes, iterations, and warmups so CI smoke tests complete quickly and deterministically. Use it for CI smoke runs; do not use it when collecting production-quality performance metrics.
 
 If you'd like, I can add a demo page showing the `selectActiveUsers` pattern and a micro-benchmark that demonstrates caching wins.

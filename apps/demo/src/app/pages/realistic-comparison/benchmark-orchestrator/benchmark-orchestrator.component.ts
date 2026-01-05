@@ -1,23 +1,10 @@
 import { CommonModule } from '@angular/common';
-import {
-  AfterViewInit,
-  Component,
-  computed,
-  effect,
-  ElementRef,
-  inject,
-  OnDestroy,
-  signal,
-  ViewChild,
-} from '@angular/core';
+import { AfterViewInit, Component, computed, effect, ElementRef, inject, OnDestroy, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { Subject } from 'rxjs';
 
-import {
-  RealisticBenchmarkService,
-  RealisticBenchmarkSubmission,
-} from '../../../services/realistic-benchmark.service';
+import { RealisticBenchmarkService, RealisticBenchmarkSubmission } from '../../../services/realistic-benchmark.service';
 import { BenchmarkTestCase, ENHANCED_TEST_CASES } from './scenario-definitions';
 import { BenchmarkResult as ServiceBenchmarkResult } from './services/_types';
 import { AkitaBenchmarkService } from './services/akita-benchmark.service';
@@ -244,12 +231,54 @@ export class BenchmarkOrchestratorComponent
     this._readMemoModeFromUrl()
   );
 
+  // Quick-run mode: opt-in via URL param `?quickRun` or window.__SIGNALTREE_QUICK_RUN__
+  // When enabled, the orchestrator reduces data size, iterations, and warmup
+  // so smoke tests and CI runs complete in seconds.
+  quickRun = signal<boolean>(this._readQuickRunFromUrl());
+
   // Enterprise enhancer is now a separate library option: signaltree-enterprise
 
   private _memoModeEffect = effect(() => {
     // Keep a global for other modules that may read it directly
     window.__SIGNALTREE_MEMO_MODE = this.memoMode();
   });
+
+  // Keep a global flag for quick-run detection; adjusts config on load
+  private _quickRunEffect = effect(() => {
+    const qr = this.quickRun();
+    try {
+      (window as any).__SIGNALTREE_QUICK_RUN__ = qr ? true : false;
+    } catch {}
+
+    // If quick-run is enabled, apply a compact default config so tests run fast
+    if (qr) {
+      this.config.set({
+        dataSize: 100,
+        complexity: 'basic',
+        iterations: 2,
+        warmupRuns: 0,
+      });
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('quickRun', '1');
+        history.replaceState(null, '', url.toString());
+      } catch {
+        // ignore URL update failures
+      }
+    }
+  });
+
+  // Helper: read quickRun from URL or global
+  private _readQuickRunFromUrl(): boolean {
+    try {
+      const p = new URLSearchParams(window.location.search);
+      if (p.has('quickRun') || p.has('quickrun') || p.has('quick-run'))
+        return true;
+    } catch {
+      // ignore
+    }
+    return Boolean((window as any).__SIGNALTREE_QUICK_RUN__);
+  }
 
   private _readMemoModeFromUrl(): 'off' | 'light' | 'shallow' | 'full' {
     try {

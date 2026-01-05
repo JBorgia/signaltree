@@ -11,8 +11,8 @@ const OUT_PATH = path.resolve(
 test('smoke: run realistic comparison and capture extended results', async ({
   page,
 }) => {
-  // Navigate directly to the realistic comparison page
-  await page.goto('http://localhost:4200/realistic-comparison', {
+  // Navigate directly to the realistic comparison page in quick-run mode so CI runs are fast
+  await page.goto('http://localhost:4200/realistic-comparison?quickRun', {
     waitUntil: 'domcontentloaded',
   });
 
@@ -79,11 +79,16 @@ test('smoke: run realistic comparison and capture extended results', async ({
   await runBtn.click();
 
   // Wait for the run to start (progress modal), then cancel to avoid long-running work in CI
-  await page.waitForSelector('[data-test-id="progress-modal"]', { timeout: 30000 });
+  await page.waitForSelector('[data-test-id="progress-modal"]', {
+    timeout: 30000,
+  });
   // Click cancel to stop the benchmark safely
   if ((await page.locator('[data-test-id="progress-cancel"]').count()) > 0) {
     await page.click('[data-test-id="progress-cancel"]');
-    await page.waitForSelector('[data-test-id="progress-modal"]', { state: 'detached', timeout: 10000 });
+    await page.waitForSelector('[data-test-id="progress-modal"]', {
+      state: 'detached',
+      timeout: 10000,
+    });
   }
 
   // Read persisted globals (may be set even if we canceled)

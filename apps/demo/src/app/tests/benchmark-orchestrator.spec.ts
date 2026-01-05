@@ -1,19 +1,19 @@
 import { TestBed } from '@angular/core/testing';
 
 import {
-  BenchmarkOrchestratorComponent,
+    BenchmarkOrchestratorComponent,
 } from '../pages/realistic-comparison/benchmark-orchestrator/benchmark-orchestrator.component';
 import {
-  AkitaBenchmarkService,
+    AkitaBenchmarkService,
 } from '../pages/realistic-comparison/benchmark-orchestrator/services/akita-benchmark.service';
 import { ElfBenchmarkService } from '../pages/realistic-comparison/benchmark-orchestrator/services/elf-benchmark.service';
 import { NgRxBenchmarkService } from '../pages/realistic-comparison/benchmark-orchestrator/services/ngrx-benchmark.service';
 import {
-  NgRxSignalsBenchmarkService,
+    NgRxSignalsBenchmarkService,
 } from '../pages/realistic-comparison/benchmark-orchestrator/services/ngrx-signals-benchmark.service';
 import { NgxsBenchmarkService } from '../pages/realistic-comparison/benchmark-orchestrator/services/ngxs-benchmark.service';
 import {
-  SignalTreeBenchmarkService,
+    SignalTreeBenchmarkService,
 } from '../pages/realistic-comparison/benchmark-orchestrator/services/signaltree-benchmark.service';
 import { RealisticBenchmarkService } from '../services/realistic-benchmark.service';
 
@@ -141,5 +141,23 @@ describe('BenchmarkOrchestratorComponent', () => {
     expect(testCases[0].selected).toBe(true); // scenario1 should be selected
     expect(testCases[1].selected).toBe(false); // scenario2 should not be selected (disabled)
     expect(testCases[2].selected).toBe(true); // scenario3 should be selected
+  });
+
+  it('should honour quick-run flag and set compact defaults', async () => {
+    (global as any).window = (global as any).window || {};
+    (global as any).window.__SIGNALTREE_QUICK_RUN__ = true;
+
+    // Re-inject component and trigger the quickRun signal effect
+    const newComp = TestBed.inject(BenchmarkOrchestratorComponent);
+    // Simulate the effect that would normally read the URL/global at startup
+    newComp.quickRun.set(true);
+
+    // allow microtask queue to flush effects
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(newComp.quickRun()).toBe(true);
+    expect(newComp.config().dataSize).toBe(100);
+    expect(newComp.config().iterations).toBe(2);
+    expect(newComp.config().warmupRuns).toBe(0);
   });
 });
