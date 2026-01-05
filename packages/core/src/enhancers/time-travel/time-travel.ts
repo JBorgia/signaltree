@@ -318,20 +318,22 @@ export function timeTravel(
     // a single snapshot per flush; otherwise, keep the existing immediate
     // update-based history entry.
     try {
-      // Lazy require to avoid circular import issues
-      const { getPathNotifier } =
-        require('../../lib/path-notifier') as typeof import('../../lib/path-notifier');
-      const notifier = getPathNotifier();
-      if (notifier && typeof notifier.onFlush === 'function') {
-        // Always subscribe to flush events. Tests may reset the notifier or
-        // enable batching after enhancers are applied; listening to flush
-        // events ensures we capture batch snapshots whenever a flush occurs.
-        notifier.onFlush(() => {
-          // Avoid recording history while restoring
-          if (isRestoring) return;
-          const afterState = originalTreeCall();
-          timeTravelManager.addEntry('batch', afterState);
-        });
+      // Use a runtime require lookup to avoid TypeScript errors in build
+      // environments that don't expose `require` as a global symbol.
+      const req = (globalThis as any)['require'];
+      if (typeof req === 'function') {
+        const { getPathNotifier } = req(
+          '../../lib/path-notifier'
+        ) as typeof import('../../lib/path-notifier');
+        const notifier = getPathNotifier();
+        if (notifier && typeof notifier.onFlush === 'function') {
+          notifier.onFlush(() => {
+            // Avoid recording history while restoring
+            if (isRestoring) return;
+            const afterState = originalTreeCall();
+            timeTravelManager.addEntry('batch', afterState);
+          });
+        }
       }
     } catch {
       // Ignore - fall back to default behavior
