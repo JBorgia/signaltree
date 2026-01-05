@@ -1,0 +1,7 @@
+{
+  "inputs": {
+    "libs/store/src/index.ts": { "bytes": 40000 },
+    "node_modules/.pnpm/@signaltree+core@6.2.4/node_modules/@signaltree/core/dist/index.js": { "bytes": 29000 },
+    "node_modules/.pnpm/rxjs@7.8.2/node_modules/rxjs/dist/esm/internal/Observable.js": { "bytes": 2856 }
+  }
+}

@@ -42,6 +42,13 @@ export const appRoutes: Route[] = [
       ).then((c) => c.BatchingDemoComponent),
   },
   {
+    path: 'batching/compare',
+    loadComponent: () =>
+      import(
+        './examples/features/fundamentals/examples/enhancers/batching-comparison/batching-comparison.component'
+      ).then((c) => c.BatchingComparisonComponent),
+  },
+  {
     path: 'entities',
     loadComponent: () =>
       import(
@@ -104,6 +111,13 @@ export const appRoutes: Route[] = [
         './examples/features/fundamentals/examples/recommended-architecture/recommended-architecture.component'
       ).then((c) => c.RecommendedArchitectureComponent),
   },
+  {
+    path: 'examples/fundamentals/migration-recipe',
+    loadComponent: () =>
+      import('./pages/migration-recipe/migration-recipe.component').then(
+        (c) => c.MigrationRecipeComponent
+      ),
+  },
   // Performance comparisons
   {
     path: 'benchmarks',
@@ -157,6 +171,20 @@ export const appRoutes: Route[] = [
       import(
         './pages/architecture-overview/architecture-overview.component'
       ).then((c) => c.ArchitectureOverviewComponent),
+  },
+  {
+    path: 'bundle-visualizer',
+    loadComponent: () =>
+      import('./pages/bundle-visualizer/bundle-visualizer.component').then(
+        (c) => c.BundleVisualizerComponent
+      ),
+  },
+  {
+    path: 'undo-redo',
+    loadComponent: () =>
+      import('./pages/undo-redo-demo/undo-redo-demo.component').then(
+        (c) => c.UndoRedoDemoComponent
+      ),
   },
   {
     path: 'enterprise-enhancer',

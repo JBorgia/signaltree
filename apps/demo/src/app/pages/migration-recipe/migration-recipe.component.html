@@ -1,0 +1,52 @@
+<div class="article">
+  <h1>Migration Recipe: NgRx to SignalTree</h1>
+
+  <p>
+    This page walks through a small, practical migration from NgRx Signals to
+    SignalTree for a single domain.
+  </p>
+
+  <h2>Step 1: Identify the store</h2>
+  <pre><code>// Example NgRx signals store (simplified)
+export const TicketStore = signalStore(
+  &#123; providedIn: 'root' &#125;,
+  withState&lt;TicketState&gt;(&#123; /* ... */ &#125;),
+  withComputed(...),
+  withMethods(...),
+  withEntities(),
+  withReduxDevtools()
+);
+</code></pre>
+
+  <h2>Step 2: Map concepts</h2>
+  <ul>
+    <li><strong>State</strong> → add to `app-tree`</li>
+    <li><strong>Computed</strong> → `AppComputed` service</li>
+    <li><strong>Methods</strong> → `ops` service</li>
+    <li><strong>Entities</strong> → `entityMap()`</li>
+    <li><strong>Devtools</strong> → `devTools()` enhancer</li>
+  </ul>
+
+  <h2>Step 3: Replace in small PRs</h2>
+  <ol>
+    <li>Extract computed values to `AppComputed` and add tests.</li>
+    <li>Move methods to an Ops service and update callers.</li>
+    <li>Replace entity adapter with `entityMap()`.</li>
+    <li>
+      Remove old store files and run `pnpm test` and `pnpm nx build --statsJson`
+      to compare bundle.
+    </li>
+  </ol>
+
+  <h2>Resources</h2>
+  <ul>
+    <li>
+      <a href="/architecture">Architecture guide (migration checklist)</a>
+    </li>
+    <li>
+      <a href="/examples/fundamentals/recommended-architecture"
+        >Recommended architecture</a
+      >
+    </li>
+  </ul>
+</div>

@@ -1,0 +1,25 @@
+name: 'Check bundle size'
+
+on:
+  pull_request:
+    paths:
+      - 'apps/demo/**'
+      - 'libs/**'
+      - 'packages/**'
+      - 'scripts/check-bundle-size.js'
+
+jobs:
+  bundle-size:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: pnpm/action-setup@v2
+        with:
+          version: '20'
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Build demo with stats
+        run: pnpm nx build demo --configuration=production --statsJson
+      - name: Run bundle size check
+        run: node scripts/check-bundle-size.js dist/apps/demo/stats.json

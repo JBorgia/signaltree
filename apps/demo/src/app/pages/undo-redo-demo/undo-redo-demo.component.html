@@ -1,0 +1,10 @@
+<div class="article">
+  <h1>Undo / Redo Demo (Time Travel)</h1>
+  <button (click)="add()">Add Item</button>
+  <button (click)="undo()" [disabled]="!canUndo()">Undo</button>
+  <button (click)="redo()" [disabled]="!canRedo()">Redo</button>
+
+  <ul>
+    <li *ngFor="let i of items()">{{i}}</li>
+  </ul>
+</div>

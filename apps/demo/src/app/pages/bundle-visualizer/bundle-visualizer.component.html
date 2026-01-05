@@ -1,0 +1,23 @@
+<div class="article">
+  <h1>Bundle Visualizer</h1>
+  <p>Load a sample stats.json and inspect package bytes.</p>
+  <button (click)="loadSample()">Load sample stats</button>
+
+  <div *ngIf="stats()">
+    <h3>Total bytes: {{ totalBytes() }}</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Key</th>
+          <th>Bytes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let kv of stats() | keyvalue">
+          <td>{{ kv.key }}</td>
+          <td>{{ kv.value.bytes }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

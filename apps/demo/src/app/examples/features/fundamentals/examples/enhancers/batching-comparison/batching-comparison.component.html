@@ -1,0 +1,57 @@
+<div class="example-card">
+  <h2>Batching Comparison</h2>
+
+  <div class="controls">
+    <label>
+      Operations:
+      <input
+        type="number"
+        [value]="ops()"
+        (input)="ops.set($any($event.target).valueAsNumber || 0)"
+      />
+    </label>
+    <label>
+      Batch notification delay (ms):
+      <input
+        type="number"
+        [value]="batchNotificationDelayMs()"
+        (input)="
+          batchNotificationDelayMs.set($any($event.target).valueAsNumber || 0)
+        "
+      />
+    </label>
+
+    <button (click)="runComparison()">Run Comparison</button>
+  </div>
+
+  <div class="results">
+    <h3>Results</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Mode</th>
+          <th>Time (ms)</th>
+          <th>Render Count</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Unbatched</td>
+          <td>{{ unbatchedTime() ?? '—' }}</td>
+          <td>{{ unbatchedRenders() }}</td>
+        </tr>
+        <tr>
+          <td>Batched</td>
+          <td>{{ batchedTime() ?? '—' }}</td>
+          <td>{{ batchedRenders() }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="note">
+      Note: Batched timings are measured from call start to the end of
+      synchronous loop; batch notifications may be delivered asynchronously
+      depending on delay.
+    </p>
+  </div>
+</div>
