@@ -20,10 +20,10 @@ test('smoke: run realistic comparison and capture extended results', async ({
   const artifactsDir = path.dirname(OUT_PATH);
   fs.mkdirSync(artifactsDir, { recursive: true });
 
-  // Make sure the enterprise enhancer checkbox is unchecked for a fair baseline run
-  const enterprise = page.locator('#include-enterprise');
+  // Make sure the enterprise enhancer is unchecked for a fair baseline run
+  const enterprise = page.getByTestId('lib-signaltree-enterprise-checkbox');
   await expect(enterprise).toHaveCount(1);
-  await enterprise.setChecked(false);
+  await enterprise.uncheck();
 
   // Clear any previous globals
   await page.evaluate(() => {
