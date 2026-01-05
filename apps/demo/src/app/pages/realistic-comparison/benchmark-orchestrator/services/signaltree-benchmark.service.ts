@@ -213,7 +213,9 @@ export class SignalTreeBenchmarkService {
                   (en.metadata?.name || (en as any)[ENHANCER_META]?.name)) ||
                 'unknown'
             );
-          } catch {}
+          } catch {
+            // ignore - diagnostic best-effort
+          }
 
           let t = tree;
           for (const e of ordered) {
