@@ -2,6 +2,7 @@ import { computed, Injectable } from '@angular/core';
 import {
   batching,
   computedMemoization,
+  ENHANCER_META,
   highPerformanceBatching,
   lightweightMemoization,
   memoization,
@@ -11,6 +12,7 @@ import {
   signalTree,
   timeTravel,
 } from '@signaltree/core';
+import { resolveEnhancerOrder } from '@signaltree/core/enhancers';
 import { enterprise } from '@signaltree/enterprise';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
@@ -169,13 +171,21 @@ export class SignalTreeBenchmarkService {
       }
 
       // Auto-add memoization based on runtime memo mode if none explicitly requested
+      // Prefer using enhancer metadata (ENHANCER_META) when available rather than
+      // relying on function name heuristics. This is more robust across builds.
       const hasMemo = enhancers.some((e: any) => {
-        const id = (e && e.name) || '';
-        return (
-          id.includes('Memoization') ||
-          id.includes('memo') ||
-          id.includes('Memo')
-        );
+        try {
+          const meta = (e as any)[ENHANCER_META] || (e as any).metadata;
+          if (meta && Array.isArray(meta.provides)) {
+            return meta.provides.some((p: string) =>
+              String(p).toLowerCase().includes('memo')
+            );
+          }
+          const name = meta?.name || (e && e.name) || '';
+          return String(name).toLowerCase().includes('memo');
+        } catch {
+          return false;
+        }
       });
       if (!hasMemo && memoMode !== 'off') {
         switch (memoMode) {
@@ -192,11 +202,40 @@ export class SignalTreeBenchmarkService {
       }
 
       if (enhancers.length > 0) {
-        let t = tree;
-        for (const e of enhancers) {
-          t = t.with(e);
+        // Use the resolver to ensure enhancers are applied in dependency order
+        try {
+          const ordered = resolveEnhancerOrder(enhancers as any);
+          // record applied enhancer names for diagnostics and export
+          try {
+            (window as any).__SIGNALTREE_ACTIVE_ENHANCERS__ = ordered.map(
+              (en: any) =>
+                (en &&
+                  (en.metadata?.name || (en as any)[ENHANCER_META]?.name)) ||
+                'unknown'
+            );
+          } catch {}
+
+          let t = tree;
+          for (const e of ordered) {
+            t = t.with(e);
+          }
+          return t;
+        } catch {
+          // Fallback to original order on error
+          let t = tree;
+          for (const e of enhancers) {
+            t = t.with(e);
+          }
+          try {
+            (window as any).__SIGNALTREE_ACTIVE_ENHANCERS__ = enhancers.map(
+              (en: any) =>
+                (en &&
+                  (en.metadata?.name || (en as any)[ENHANCER_META]?.name)) ||
+                'unknown'
+            );
+          } catch {}
+          return t;
         }
-        return t;
       }
 
       // No requested enhancers — apply scenario defaults if provided
