@@ -359,3 +359,19 @@ pnpm nx test demo
 - SignalTree equivalent store
 - Side-by-side spec with identical scenarios (updates, selectors, effects-free)
 - Extensible scaffolding for more feature comparisons
+
+---
+
+## Improvements & TODO (suggested)
+
+This demo is already a strong reference — here are concrete enhancements that would make it more valuable for users and reviewers:
+
+- **Interactive DevTools & Time-travel demo**: Add a page that toggles `devTools()` for the tree and demonstrates recording, stepping, and time-traveling state. (Good for teaching and QA.)
+- **Batch vs No-batch interactive comparison**: Add a small page with controls to run identical updates in batched vs unbatched modes and display operations/sec and render counts.
+- **Migration recipe page (NgRx → SignalTree)**: Add a guided walkthrough (code snippets + links to the architecture guide) showing a small store migrated from NgRx to SignalTree with tests and measurement commands.
+- **Bundle composition viewer**: Add a small utility that reads `stats.json` outputs and visualizes the bytes per package (helpful when testing CI changes).
+- **Undo/Redo demo**: Add an interactive undo/redo UI that uses tracked-changes manager so users can exercise and understand the PR flow.
+- **Quick links to common examples**: Make the `architecture-overview` page link prominently to `AppComputed`, `Ops`, and `provideMockAppTree` examples.
+- **Add migration and architecture notes to the demo site**: Surface short migration tips on the `architecture-overview` page for quick reference.
+
+If you'd like, I can implement one or two of the smaller items (Batch vs No-batch page and Migration recipe page) and open a PR for review.

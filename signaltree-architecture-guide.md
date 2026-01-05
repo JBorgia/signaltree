@@ -2712,35 +2712,121 @@ Don't use made-up metrics like "60-70% simpler." Measure real things:
 
 ### Step 6: Migration Checklist
 
-Use this checklist when simplifying an implementation:
+Use this checklist when simplifying an implementation. The goal is repeatable, measurable, and low-risk migration.
 
-```markdown
-## Pre-Migration
+#### Pre-migration
 
-- [ ] Audited all abstraction layers
-- [ ] Categorized each piece (remove/move/keep)
-- [ ] Documented what each layer actually does
-- [ ] Measured baseline metrics
-- [ ] Identified all consumers of each layer
+- [ ] Audit each abstraction layer: who consumes it, what it exposes, and whether it duplicates built-in SignalTree features.
+- [ ] Measure baseline metrics:
+  - Lines of code: `git ls-files | xargs wc -l`
+  - Delta on removal: `git diff --numstat origin/main...HEAD -- frontend`
+  - Baseline bundle composition: `pnpm nx build <app> --statsJson` (save `dist/.../stats.json`)
+  - Test coverage and runtime smoke tests
+- [ ] Create a small, reversible plan (small commits, feature-flag if needed)
 
-## Migration
+#### Migration steps (order of safety)
 
-- [ ] Removed dead code first (safest)
-- [ ] Removed duplicate functionality
-- [ ] Moved misplaced logic to correct layers
-- [ ] Replaced wrong abstractions with simpler approaches
-- [ ] Updated all consumers
+1. Remove dead code and unused helpers.
+2. Replace duplicate functionality with built-in primitives (`entityMap`, `devTools`, `batching`, `persistence`, etc.).
+3. Move misplaced logic to facades/ops (keep tree purely for state + enhancers).
+4. Replace `withX` patterns with `ops` services, `AppComputed` services, or direct tree usage as appropriate.
+5. Add tests (unit + integration) for each change before removing the old code.
+6. Keep each change small and measured (one feature at a time).
 
-## Post-Migration
+#### Mapping (NgRx → SignalTree) quick reference
 
-- [ ] All tests pass
-- [ ] No runtime errors
-- [ ] Features still work (especially: undo/redo, optimistic updates, real-time)
-- [ ] Build succeeds
-- [ ] Type-check passes
-- [ ] Measured post-migration metrics
-- [ ] Documented architectural decisions
+| NgRx construct                   | SignalTree equivalent               | Notes/examples                                                                                |
+| -------------------------------- | ----------------------------------- | --------------------------------------------------------------------------------------------- |
+| `withEntityCrud`, `withEntities` | `entityMap()`                       | Use `.set`, `.delete`, `.byId()` and `.all()` (see `libs/store`)                              |
+| `withComputed`                   | centralized `AppComputed`           | Put cross-domain derived signals in one place (`libs/store/src/lib/computed/app-computed.ts`) |
+| `withMethods` / store methods    | `ops` services (return observables) | e.g. `ticket-ops.ts` — keep side-effects injectable and testable                              |
+| `withTrackedChanges`             | `tracked-changes-manager` service   | Centralize undo/redo handling rather than per-store plumbing                                  |
+| `withReduxDevtools`              | `devTools()` enhancer               | Built-in to SignalTree, enable in dev only                                                    |
+
+#### Testing recipes (practical examples)
+
+- Reusable mock tree:
+
+```ts
+// libs/store/src/lib/testing/provide-mock-app-tree.ts
+export function provideMockAppTree(setup?: (tree: AppTree) => void) {
+  return [
+    {
+      provide: APP_TREE,
+      useFactory: () => {
+        const t = createAppTree();
+        setup?.(t);
+        return t;
+      },
+    },
+  ];
+}
 ```
+
+- Stubbing external connectors (DatabusHub stub used in `apps/demo` tests):
+
+```ts
+// In failing test suites, add a lightweight stub
+const provideMockDatabusHub = () => ({ provide: 'DATABUS_HUB_TEST', useValue: {} });
+
+TestBed.configureTestingModule({ providers: [provideMockAppTree(), provideMockDatabusHub()] });
+```
+
+- Testing an `ops` service:
+
+```ts
+it('loadActiveTicket sets tree state', async () => {
+  TestBed.configureTestingModule({
+    providers: [
+      provideMockAppTree((tree) => {
+        tree.$.tickets.isLoading.set(false);
+      }),
+      TicketOps,
+      { provide: TicketApi, useValue: mockApi },
+    ],
+  });
+  const ops = TestBed.inject(TicketOps);
+  await ops.loadActiveTicket$(123).toPromise();
+  expect(TestBed.inject(APP_TREE).$.tickets.active()).toBeTruthy();
+});
+```
+
+#### Bundle-size CI gating (example)
+
+- Create `scripts/check-bundle-size.js` that reads `dist/*/stats.json` and verifies the gzipped size for targeted inputs (e.g., `libs/store` + `@signaltree/core`) does not exceed agreed thresholds.
+
+- Example snippet (pseudo):
+
+```js
+const stats = require('./dist/apps/demo/stats.json');
+const sumBytes = Object.entries(stats.inputs)
+  .filter(([k]) => k.startsWith('libs/store') || k.includes('@signaltree/core'))
+  .reduce((s, [, v]) => s + (v.bytes || 0), 0);
+if (sumBytes > THRESHOLD) process.exit(2);
+```
+
+- Add CI job to run `pnpm nx build demo --statsJson` and then `node scripts/check-bundle-size.js` and fail PRs that increase the state-management footprint beyond the approved budget.
+
+#### Batching & performance (guidance)
+
+- Use `batch()`/`batching()` to coalesce many synchronous updates into one render pass. Prefer it for multi-entity updates (e.g., initial sync, large imports).
+- Avoid over-batching in user-facing interactions where visible intermediate states are helpful. If combining async operations, use short, explicit batches to keep UI responsive.
+- Use the synchronous batching plan for worst-case debugging and when you need deterministic profiling: see `SIGNALTREE_SYNCHRONOUS_BATCHING_PLAN.md` in the repo.
+
+#### Ops & tracked-changes patterns
+
+- Prefer small, single-responsibility `ops` services that accept IDs/params and return Observables for side-effects and API interactions.
+- Keep undo/redo and tracked-changes centralized in the tracked-changes manager; tests should verify undo/redo round-trips.
+
+#### Post-migration checklist
+
+- [ ] All tests pass (unit & integration)
+- [ ] Build and production smoke tests pass
+- [ ] Measured post-migration metrics (lines, bundle, runtime perf) and documented
+- [ ] Update architecture docs with the migration notes and link to demo recipes
+- [ ] Draft release notes highlighting the migration, regressions tested, and rollback steps
+
+---
 
 ---
 
