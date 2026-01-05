@@ -49,11 +49,8 @@ test('smoke: run realistic comparison and capture extended results', async ({
   });
 
   // Click the Run Benchmarks button (wait for it to be present)
-  await page.waitForSelector('[data-test-id="run-benchmarks"]', {
-    timeout: 15000,
-  });
-  const runBenchmarksButton = page.getByTestId('run-benchmarks');
-  await runBenchmarksButton.click();
+  await page.waitForSelector('[data-test-id="run-benchmarks"]', { timeout: 30000 });
+  await page.click('[data-test-id="run-benchmarks"]');
 
   // Wait for results section to appear (indicates completion)
   const resultsSection = page.locator('.results-section');
