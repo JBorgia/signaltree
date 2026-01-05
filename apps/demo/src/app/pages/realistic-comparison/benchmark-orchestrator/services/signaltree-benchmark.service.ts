@@ -1484,48 +1484,6 @@ export class SignalTreeBenchmarkService {
     }, options);
   }
 
-  /**
-   * Enhanced deep nested benchmark with proper signal traversal
-   */
-  async runEnhancedDeepNestedBenchmark(
-    dataSize: number,
-    depth = 15
-  ): Promise<EnhancedBenchmarkResult> {
-    const createNested = (level: number): any =>
-      level === 0
-        ? { value: 0, data: 'test' }
-        : { level: createNested(level - 1) };
-
-    const base = signalTree(createNested(depth));
-    const tree = this.applyConfiguredEnhancers(base, [
-      batching(),
-      shallowMemoization(),
-    ]);
-
-    const options: EnhancedBenchmarkOptions = {
-      operations: Math.min(dataSize, 1000),
-      warmup: 5,
-      measurementSamples: 20,
-      yieldEvery: 1024,
-      trackMemory: true,
-      removeOutliers: true,
-      forceGC: true,
-      label: 'SignalTree Deep Nested Updates',
-      minDurationMs: 100,
-    };
-
-    return runEnhancedBenchmark(async (iteration) => {
-      // Use proper deep update method - access via bracket notation for signal tree
-      (tree as any)['update']((state: any) => {
-        const updateDeep = (obj: any, lvl: number): any =>
-          lvl === 0
-            ? { ...obj, value: iteration }
-            : { ...obj, level: updateDeep(obj.level ?? {}, lvl - 1) };
-        return updateDeep(state, depth - 1);
-      });
-    }, options);
-  }
-
   // ==========================================
   // PURE BENCHMARK METHODS (NO YIELDING)
   // ==========================================
