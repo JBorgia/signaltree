@@ -148,6 +148,46 @@ $.users.setAll(usersFromApi); // Replace all
 const user = entityMap()[123]; // Requires intermediate object
 ```
 
+### Notification Batching
+
+SignalTree automatically batches _notification delivery_ to subscribers and change detection to the end of the current microtask. This prevents render thrashing when multiple values are updated together and preserves immediate read-after-write semantics (values update synchronously, notifications are deferred).
+
+**Example**
+
+```typescript
+// Multiple updates in the same microtask are coalesced into a single notification
+tree.$.form.name.set('Alice');
+tree.$.form.email.set('alice@example.com');
+tree.$.form.submitted.set(true);
+// → Subscribers are notified once at the end of the microtask with final values
+```
+
+**Testing**
+
+When tests need synchronous notification delivery, use `flushSync()`:
+
+```typescript
+import { getPathNotifier } from '@signaltree/core';
+
+it('updates state', () => {
+  tree.$.count.set(5);
+  getPathNotifier().flushSync();
+  expect(subscriber).toHaveBeenCalledWith(5, 0);
+});
+```
+
+Alternatively, await a microtask (`await Promise.resolve()`) to allow the automatic flush to occur.
+
+**Opting out**
+
+To disable automatic microtask batching for a specific tree instance:
+
+```typescript
+const tree = signalTree(initialState, { batching: false });
+```
+
+Use this only for rare cases that truly require synchronous notifications (most apps should keep batching enabled).
+
 ## Quick start
 
 ### Installation
