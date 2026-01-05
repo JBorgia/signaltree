@@ -24,7 +24,10 @@ test('smoke: run realistic comparison and capture extended results', async ({
   await expect(
     page.getByRole('heading', { name: 'Select Libraries to Compare' })
   ).toBeVisible({ timeout: 15000 });
-  const enterprise = page.getByTestId('lib-signaltree-enterprise-checkbox');
+  // Locate the enterprise library card, then find the checkbox inside it
+  const enterpriseCard = page.getByTestId('lib-signaltree-enterprise-card');
+  await expect(enterpriseCard).toHaveCount(1, { timeout: 15000 });
+  const enterprise = enterpriseCard.locator('input[data-test-id="lib-signaltree-enterprise-checkbox"]');
   await expect(enterprise).toHaveCount(1, { timeout: 10000 });
   await enterprise.uncheck();
 
