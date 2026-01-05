@@ -34,6 +34,28 @@ export class PathNotifier {
   // Map of pattern -> Set of interceptors
   private interceptors = new Map<string, Set<PathNotifierInterceptor>>();
 
+  // Batching state
+  private batchingEnabled = true;
+  private pendingFlush = false;
+  private pending = new Map<string, { newValue: unknown; oldValue: unknown }>();
+  private firstValues = new Map<string, unknown>();
+  private flushCallbacks = new Set<() => void>();
+
+  constructor(options?: { batching?: boolean }) {
+    if (options && options.batching === false) this.batchingEnabled = false;
+  }
+
+  /**
+   * Enable or disable batching at runtime (global opt-out)
+   */
+  setBatchingEnabled(enabled: boolean): void {
+    this.batchingEnabled = enabled;
+  }
+
+  isBatchingEnabled(): boolean {
+    return this.batchingEnabled;
+  }
+
   /**
    * Subscribe to mutations matching a path pattern
    * Returns unsubscribe function
@@ -86,8 +108,41 @@ export class PathNotifier {
   /**
    * Notify all subscribers matching the path
    * Also runs interceptors and allows blocking/transforming
+   * When batching is enabled, notifications are queued and flushed at
+   * the end of the current microtask (via queueMicrotask).
    */
   notify(
+    path: string,
+    value: unknown,
+    prev: unknown
+  ): { blocked: boolean; value: unknown } {
+    if (!this.batchingEnabled) {
+      // Synchronous path: run interceptors and subscribers immediately
+      return this._runNotify(path, value, prev);
+    }
+
+    // Batched path: record first oldValue for the path and latest newValue
+    if (!this.pending.has(path)) {
+      this.firstValues.set(path, prev);
+    }
+    this.pending.set(path, {
+      newValue: value,
+      oldValue: this.firstValues.get(path),
+    });
+
+    if (!this.pendingFlush) {
+      this.pendingFlush = true;
+      queueMicrotask(() => this.flush());
+    }
+
+    // Synchronous notify still returns not-blocked info (can't block during batching)
+    return { blocked: false, value };
+  }
+
+  /**
+   * Internal synchronous notification runner (interceptors + subscribers)
+   */
+  private _runNotify(
     path: string,
     value: unknown,
     prev: unknown
@@ -128,6 +183,70 @@ export class PathNotifier {
   }
 
   /**
+   * Flush pending batched notifications immediately.
+   * This is re-entrant safe and will process notifications queued during
+   * subscriber callbacks in subsequent rounds.
+   */
+  private flush(): void {
+    // Snapshot and clear before notifying to allow re-entrant behavior
+    const toNotify = new Map(this.pending);
+    this.pending.clear();
+    this.firstValues.clear();
+    this.pendingFlush = false;
+
+    for (const [path, { newValue, oldValue }] of toNotify) {
+      // If value didn't change compared to original oldValue, skip
+      if (newValue === oldValue) continue;
+
+      // Run interceptors + subscribers synchronously for each path
+      const res = this._runNotify(path, newValue, oldValue);
+      if (res.blocked) {
+        // blocked by interceptor - nothing to do
+      }
+    }
+
+    // Call flush listeners (e.g., timeTravel) once per flush
+    for (const cb of Array.from(this.flushCallbacks)) {
+      try {
+        cb();
+      } catch {
+        // swallow callback errors to avoid breaking flush loop
+      }
+    }
+  }
+
+  /**
+   * Force synchronous flush of pending notifications
+   */
+  flushSync(): void {
+    // Process until no pending notifications exist
+    while (this.pending.size > 0 || this.pendingFlush) {
+      // If a pendingFlush was scheduled but not yet processed, clear flag and process
+      if (this.pendingFlush && this.pending.size === 0) {
+        // nothing queued - clear and continue
+        this.pendingFlush = false;
+        break;
+      }
+      this.flush();
+    }
+  }
+
+  /**
+   * Subscribe to flush events (called after a flush completes)
+   */
+  onFlush(callback: () => void): () => void {
+    this.flushCallbacks.add(callback);
+    return () => this.flushCallbacks.delete(callback);
+  }
+
+  /**
+   * Check if there are pending notifications
+   */
+  hasPending(): boolean {
+    return this.pending.size > 0;
+  }
+
+  /**
    * Simple pattern matching
    * - 'users' matches exactly 'users'
    * - 'users.*' matches 'users.u1', 'users.u2', etc.
@@ -152,6 +271,12 @@ export class PathNotifier {
   clear(): void {
     this.subscribers.clear();
     this.interceptors.clear();
+    this.pending.clear();
+    this.firstValues.clear();
+    // Note: do NOT clear flush callbacks here. Enhancers may have
+    // registered onFlush listeners that should survive a runtime reset
+    // (e.g., resetPathNotifier) to avoid losing subscriptions silently.
+    this.pendingFlush = false;
   }
 
   /**
@@ -202,5 +327,15 @@ export function getPathNotifier(): PathNotifier {
  * @internal
  */
 export function resetPathNotifier(): void {
-  globalPathNotifier = null;
+  // Preserve existing instance to keep subscribers registered (tests may call
+  // reset after enhancers have subscribed). Instead of replacing the instance
+  // we clear its internal state so listeners remain intact and later calls to
+  // `getPathNotifier()` continue to return the same object.
+  if (!globalPathNotifier) {
+    globalPathNotifier = new PathNotifier();
+    return;
+  }
+
+  globalPathNotifier.clear();
+  globalPathNotifier.setBatchingEnabled(true);
 }

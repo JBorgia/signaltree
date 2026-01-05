@@ -13,10 +13,12 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let kv of stats() | keyvalue">
+        @for (kv of stats() | keyvalue; track kv.key) {
+        <tr>
           <td>{{ kv.key }}</td>
           <td>{{ $any(kv.value).bytes }}</td>
         </tr>
+        }
       </tbody>
     </table>
   </div>

@@ -1,8 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import { createEntitySignal } from './entity-signal';
 
 // Minimal PathNotifier stub
-const pathNotifier = { notify: () => {} } as any;
+const pathNotifier = {
+  notify: () => {
+    /* empty */
+  },
+} as any;
 
 describe('EntitySignal predicate caching', () => {
   it('returns the same signal for identical predicate references', () => {

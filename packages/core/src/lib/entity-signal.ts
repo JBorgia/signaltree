@@ -126,8 +126,14 @@ export function createEntitySignal<
   // same computed Signal instance (reduces redundant computed creation).
   // NOTE: This only works reliably when callers pass stable, named
   // predicate references. Inline anonymous predicates will not be cached.
-  const whereCache: WeakMap<(entity: E) => boolean, Signal<E[]>> = new WeakMap();
-  const findCache: WeakMap<(entity: E) => boolean, Signal<E | undefined>> = new WeakMap();
+  const whereCache: WeakMap<
+    (entity: E) => boolean,
+    Signal<E[]>
+  > = new WeakMap();
+  const findCache: WeakMap<
+    (entity: E) => boolean,
+    Signal<E | undefined>
+  > = new WeakMap();
 
   const api = {
     // ==================
@@ -139,7 +145,6 @@ export function createEntitySignal<
       if (!entity) return undefined;
       return getOrCreateNode(id, entity);
     },
-
 
     byIdOrFail(id: K): EntityNode<E> {
       const node = api.byId(id);
