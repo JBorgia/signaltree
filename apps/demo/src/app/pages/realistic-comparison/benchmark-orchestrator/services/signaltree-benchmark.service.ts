@@ -1,18 +1,18 @@
 import { computed, Injectable } from '@angular/core';
 import {
-    batching,
-    computedMemoization,
-    ENHANCER_META,
-    highPerformanceBatching,
-    lightweightMemoization,
-    memoization,
-    selectorMemoization,
-    serialization,
-    shallowMemoization,
-    signalTree,
-    timeTravel,
+  batching,
+  computedMemoization,
+  ENHANCER_META,
+  highPerformanceBatching,
+  lightweightMemoization,
+  memoization,
+  resolveEnhancerOrder,
+  selectorMemoization,
+  serialization,
+  shallowMemoization,
+  signalTree,
+  timeTravel,
 } from '@signaltree/core';
-import { resolveEnhancerOrder } from '@signaltree/core/enhancers';
 import { enterprise } from '@signaltree/enterprise';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
@@ -20,11 +20,11 @@ import { createYieldToUI } from '../shared/benchmark-utils';
 import { withLazyArrays } from '../with-lazy-arrays';
 import { BenchmarkResult } from './_types';
 import {
-    BenchmarkComparison,
-    EnhancedBenchmarkOptions,
-    EnhancedBenchmarkResult,
-    PerformanceEnvironment,
-    runEnhancedBenchmark,
+  BenchmarkComparison,
+  EnhancedBenchmarkOptions,
+  EnhancedBenchmarkResult,
+  PerformanceEnvironment,
+  runEnhancedBenchmark,
 } from './benchmark-runner';
 
 // Enterprise enhancer (premium optimization bundle)
