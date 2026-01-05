@@ -21,9 +21,9 @@ test('smoke: run realistic comparison and capture extended results', async ({
   fs.mkdirSync(artifactsDir, { recursive: true });
 
   // Wait for the library selection section to be visible, then ensure enterprise is unchecked
-  await page
-    .getByRole('heading', { name: 'Select Libraries to Compare' })
-    .toBeVisible({ timeout: 15000 });
+  await expect(
+    page.getByRole('heading', { name: 'Select Libraries to Compare' })
+  ).toBeVisible({ timeout: 15000 });
   const enterprise = page.getByTestId('lib-signaltree-enterprise-checkbox');
   await expect(enterprise).toHaveCount(1, { timeout: 10000 });
   await enterprise.uncheck();
