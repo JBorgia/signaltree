@@ -48,8 +48,18 @@ test('smoke: run realistic comparison and capture extended results', async ({
     delete win['__SIGNALTREE_ACTIVE_ENHANCERS__'];
   });
 
+  // Calibrate environment if needed, then click Run Benchmarks
+  const calibrateBtn = page.locator('.btn-calibrate');
+  const calibrateCount = await calibrateBtn.count();
+  if (calibrateCount > 0) {
+    await calibrateBtn.first().click();
+    await page.waitForSelector('.calibration-results', { timeout: 30000 });
+  }
+
   // Click the Run Benchmarks button (wait for it to be present)
-  await page.waitForSelector('[data-test-id="run-benchmarks"]', { timeout: 30000 });
+  await page.waitForSelector('[data-test-id="run-benchmarks"]', {
+    timeout: 30000,
+  });
   await page.click('[data-test-id="run-benchmarks"]');
 
   // Wait for results section to appear (indicates completion)
