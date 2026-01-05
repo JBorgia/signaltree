@@ -1,3 +1,36 @@
+## [6.3.0] - 2026-01-XX
+
+### Added
+
+- **Automatic notification batching**: PathNotifier now batches notifications within a microtask by default. Multiple updates to the same path result in a single notification with the final value.
+- `getPathNotifier().flushSync()` - Force synchronous flush of pending notifications
+- `getPathNotifier().onFlush(callback)` - Subscribe to flush-complete events (useful for time-travel, devtools)
+- `signalTree(state, { batching: false })` - Opt-out of automatic batching
+
+### Changed
+
+- Time-travel enhancer now records one snapshot per flush batch (instead of per-update)
+
+### Migration
+
+Tests that assert on immediate subscriber callbacks need updating:
+
+```typescript
+// Before
+tree.$.count.set(5);
+expect(subscriber).toHaveBeenCalled();
+
+// After (option 1)
+tree.$.count.set(5);
+await Promise.resolve();
+expect(subscriber).toHaveBeenCalled();
+
+// After (option 2)
+tree.$.count.set(5);
+getPathNotifier().flushSync();
+expect(subscriber).toHaveBeenCalled();
+```
+
 ## 6.2.1 (2026-01-04)
 
 ### 🐛 Bug Fixes

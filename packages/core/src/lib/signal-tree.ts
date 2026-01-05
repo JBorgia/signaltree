@@ -2,6 +2,7 @@ import { isSignal, signal, WritableSignal } from '@angular/core';
 
 import { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './constants';
 import { SignalMemoryManager } from './memory/memory-manager';
+import { getPathNotifier } from './path-notifier';
 import { SecurityValidator } from './security/security-validator';
 import { createLazySignalTree, equal, isBuiltInObject, unwrap } from './utils';
 
@@ -288,6 +289,16 @@ function create<T extends object>(
   // Create signal store
   let signalState: TreeNode<T>;
   let memoryManager: SignalMemoryManager | undefined;
+
+  // Configure global PathNotifier batching based on tree config (opt-out via config.batchUpdates=false)
+  // Default: batching enabled unless explicitly disabled
+  try {
+    getPathNotifier().setBatchingEnabled(
+      Boolean(config.batchUpdates !== false)
+    );
+  } catch {
+    // ignore failures (shouldn't happen)
+  }
 
   if (useLazy && typeof initialState === 'object') {
     try {

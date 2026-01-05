@@ -248,7 +248,9 @@ export class BenchmarkOrchestratorComponent
     const qr = this.quickRun();
     try {
       (window as any).__SIGNALTREE_QUICK_RUN__ = qr ? true : false;
-    } catch {}
+    } catch {
+      // ignore - best-effort global flag
+    }
 
     // If quick-run is enabled, apply a compact default config so tests run fast
     if (qr) {

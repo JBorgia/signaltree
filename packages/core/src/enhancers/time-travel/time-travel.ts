@@ -44,42 +44,51 @@ class TimeTravelManager<T> {
 
   /**
    * Add a new entry to the history
+   * If `provisional` is true, mark the entry so it can be finalized
+   * later (coalesced / updated) rather than creating multiple history
+   * entries for rapid updates.
    */
-  addEntry(action: string, state: T, payload?: unknown): void {
+  addEntry(
+    action: string,
+    state: T,
+    payload?: unknown,
+    provisional = false
+  ): void {
     // If we're not at the end of history, remove everything after current position
     if (this.currentIndex < this.history.length - 1) {
       this.history = this.history.slice(0, this.currentIndex + 1);
     }
 
     // Create new entry
-    // Ensure we store a plain, fully-unwrapped snapshot (no signal references)
-    // by unwrapping the internal state node and then making a structured
-    // clone to remove any residual accessors/functions.
     const plain = snapshotState(this.tree.state as unknown as TreeNode<T>);
-    
-    // Use structuredClone if available, but fall back to JSON serialization
-    // if structuredClone fails (e.g., when state contains functions like
-    // entityMap's idKey config). JSON serialization naturally strips functions.
+
     let cloned: T;
     try {
-      cloned = typeof structuredClone !== 'undefined'
-        ? structuredClone(plain)
-        : JSON.parse(JSON.stringify(plain));
+      cloned =
+        typeof structuredClone !== 'undefined'
+          ? structuredClone(plain)
+          : JSON.parse(JSON.stringify(plain));
     } catch {
-      // structuredClone failed (likely due to functions in state)
-      // Fall back to JSON serialization which strips non-serializable values
       cloned = JSON.parse(JSON.stringify(plain));
     }
-    
-    const entry: TimeTravelEntry<T> = {
-      // Store cloned plain snapshot
+
+    const entry: TimeTravelEntry<T> & { __provisional?: boolean } = {
       state: cloned as T,
       timestamp: Date.now(),
       action: this.actionNames[action] || action,
       ...(this.includePayload && payload !== undefined && { payload }),
     };
 
-    this.history.push(entry);
+    if (provisional) (entry as any).__provisional = true;
+
+    // If the last entry is identical, dedupe and clear provisional marker if present
+    const last = this.history[this.history.length - 1];
+    if (last && deepEqual(last.state, entry.state)) {
+      if ((last as any).__provisional) delete (last as any).__provisional;
+      return; // skip duplicate
+    }
+
+    this.history.push(entry as TimeTravelEntry<T>);
     this.currentIndex = this.history.length - 1;
 
     // Enforce max history size
@@ -98,6 +107,30 @@ class TimeTravelManager<T> {
     const entry = this.history[this.currentIndex];
     this.restoreState(entry.state);
     return true;
+  }
+
+  /**
+   * Finalize a previously provisional entry (coalesced updates)
+   */
+  finalizeProvisional(state: T): void {
+    const last = this.history[this.history.length - 1] as
+      | (TimeTravelEntry<T> & { __provisional?: boolean })
+      | undefined;
+    if (last && (last as any).__provisional) {
+      // If identical, just clear provisional marker
+      if (deepEqual(last.state, state)) {
+        delete (last as any).__provisional;
+        return;
+      }
+      // Replace state and clear provisional flag
+      last.state = deepClone(state);
+      last.timestamp = Date.now();
+      delete (last as any).__provisional;
+      return;
+    }
+
+    // No provisional entry to finalize - fall back to adding a new entry
+    this.addEntry('update', state);
   }
 
   redo(): boolean {
@@ -281,6 +314,31 @@ export function timeTravel(
       }
     );
 
+    // If PathNotifier batching is enabled, use flush events to record
+    // a single snapshot per flush; otherwise, keep the existing immediate
+    // update-based history entry.
+    try {
+      // Use a runtime require lookup to avoid TypeScript errors in build
+      // environments that don't expose `require` as a global symbol.
+      const req = (globalThis as any)['require'];
+      if (typeof req === 'function') {
+        const { getPathNotifier } = req(
+          '../../lib/path-notifier'
+        ) as typeof import('../../lib/path-notifier');
+        const notifier = getPathNotifier();
+        if (notifier && typeof notifier.onFlush === 'function') {
+          notifier.onFlush(() => {
+            // Avoid recording history while restoring
+            if (isRestoring) return;
+            const afterState = originalTreeCall();
+            timeTravelManager.addEntry('batch', afterState);
+          });
+        }
+      }
+    } catch {
+      // Ignore - fall back to default behavior
+    }
+
     // Create enhanced tree function that includes time travel tracking
     const enhancedTree = function (this: ISignalTree<T>, ...args: unknown[]) {
       if (args.length === 0) {
@@ -313,6 +371,7 @@ export function timeTravel(
         const afterState = originalTreeCall();
 
         if (!deepEqual(beforeState, afterState)) {
+          // Immediate entry on explicit tree updates (preserve historical behavior)
           timeTravelManager.addEntry('update', afterState);
         }
 

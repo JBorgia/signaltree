@@ -213,7 +213,9 @@ export class SignalTreeBenchmarkService {
                   (en.metadata?.name || (en as any)[ENHANCER_META]?.name)) ||
                 'unknown'
             );
-          } catch {}
+          } catch {
+            // ignore - diagnostic best-effort
+          }
 
           let t = tree;
           for (const e of ordered) {
@@ -233,7 +235,9 @@ export class SignalTreeBenchmarkService {
                   (en.metadata?.name || (en as any)[ENHANCER_META]?.name)) ||
                 'unknown'
             );
-          } catch {}
+          } catch {
+            // ignore - diagnostic best-effort
+          }
           return t;
         }
       }
@@ -1477,44 +1481,6 @@ export class SignalTreeBenchmarkService {
             : { ...obj, level: updateDeep(obj.level ?? {}, lvl - 1) };
         return updateDeep(state, depth - 1);
       });
-    }, options);
-  }
-
-  /**
-   * Enhanced selector benchmark with memoization analysis
-   */
-  async runEnhancedSelectorBenchmark(
-    dataSize: number
-  ): Promise<EnhancedBenchmarkResult> {
-    const base = signalTree({
-      items: Array.from({ length: dataSize }, (_, i) => ({
-        id: i,
-        flag: i % 2 === 0,
-      })),
-    });
-    const tree = this.applyConfiguredEnhancers(base, [
-      lightweightMemoization(),
-    ]);
-
-    // Create computed selector matching NgRx pattern
-    const selectEven = computed(
-      () => tree.state.items().filter((x: any) => x.flag).length
-    );
-
-    const options: EnhancedBenchmarkOptions = {
-      operations: 1000,
-      warmup: 5,
-      measurementSamples: 50,
-      yieldEvery: 64,
-      trackMemory: false,
-      removeOutliers: true,
-      label: 'SignalTree Selector (Memoized)',
-      minDurationMs: 50,
-    };
-
-    return runEnhancedBenchmark(async () => {
-      // This should hit memoization cache most of the time
-      selectEven();
     }, options);
   }
 
