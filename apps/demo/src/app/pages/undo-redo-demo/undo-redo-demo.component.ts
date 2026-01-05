@@ -9,11 +9,11 @@ import { signalTree, timeTravel } from '@signaltree/core';
   templateUrl: './undo-redo-demo.component.html',
 })
 export class UndoRedoDemoComponent {
-  private tree = signalTree({ items: [] }).with(timeTravel());
+  private tree = signalTree<{ items: string[] }>({ items: [] }).with(timeTravel());
   items = this.tree.$.items;
 
   add() {
-    this.tree.$.items.update((items: any[]) => [
+    this.tree.$.items.update((items: string[]) => [
       ...items,
       `item_${Date.now()}`,
     ]);
