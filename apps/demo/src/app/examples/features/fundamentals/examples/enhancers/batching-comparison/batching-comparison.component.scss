@@ -1,0 +1,17 @@
+.example-card {
+  padding: 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+}
+.controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+.results {
+  margin-top: 1rem;
+}
+.note {
+  color: #666;
+  font-size: 12px;
+}

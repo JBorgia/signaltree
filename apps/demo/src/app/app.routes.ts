@@ -42,6 +42,13 @@ export const appRoutes: Route[] = [
       ).then((c) => c.BatchingDemoComponent),
   },
   {
+    path: 'batching/compare',
+    loadComponent: () =>
+      import(
+        './examples/features/fundamentals/examples/enhancers/batching-comparison/batching-comparison.component'
+      ).then((c) => c.BatchingComparisonComponent),
+  },
+  {
     path: 'entities',
     loadComponent: () =>
       import(
@@ -103,6 +110,13 @@ export const appRoutes: Route[] = [
       import(
         './examples/features/fundamentals/examples/recommended-architecture/recommended-architecture.component'
       ).then((c) => c.RecommendedArchitectureComponent),
+  },
+  {
+    path: 'examples/fundamentals/migration-recipe',
+    loadComponent: () =>
+      import('./pages/migration-recipe/migration-recipe.component').then(
+        (c) => c.MigrationRecipeComponent
+      ),
   },
   // Performance comparisons
   {
