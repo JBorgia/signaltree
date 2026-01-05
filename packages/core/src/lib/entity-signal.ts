@@ -121,6 +121,14 @@ export function createEntitySignal<
   // API OBJECT
   // ==================
 
+  // Caches for predicate-based queries. Uses WeakMap keyed by function
+  // reference so callers that pass the same function object will receive the
+  // same computed Signal instance (reduces redundant computed creation).
+  // NOTE: This only works reliably when callers pass stable, named
+  // predicate references. Inline anonymous predicates will not be cached.
+  const whereCache: WeakMap<(entity: E) => boolean, Signal<E[]>> = new WeakMap();
+  const findCache: WeakMap<(entity: E) => boolean, Signal<E | undefined>> = new WeakMap();
+
   const api = {
     // ==================
     // EXPLICIT ACCESS
@@ -131,6 +139,7 @@ export function createEntitySignal<
       if (!entity) return undefined;
       return getOrCreateNode(id, entity);
     },
+
 
     byIdOrFail(id: K): EntityNode<E> {
       const node = api.byId(id);
@@ -169,11 +178,21 @@ export function createEntitySignal<
     },
 
     where(predicate: (entity: E) => boolean): Signal<E[]> {
-      return computed(() => allSignal().filter(predicate));
+      const cached = whereCache.get(predicate);
+      if (cached) return cached;
+
+      const s = computed(() => allSignal().filter(predicate));
+      whereCache.set(predicate, s);
+      return s;
     },
 
     find(predicate: (entity: E) => boolean): Signal<E | undefined> {
-      return computed(() => allSignal().find(predicate));
+      const cached = findCache.get(predicate);
+      if (cached) return cached;
+
+      const s = computed(() => allSignal().find(predicate));
+      findCache.set(predicate, s);
+      return s;
     },
 
     // ==================
