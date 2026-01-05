@@ -56,11 +56,22 @@ test('smoke: run realistic comparison and capture extended results', async ({
     await page.waitForSelector('.calibration-results', { timeout: 30000 });
   }
 
-  // Click the Run Benchmarks button (wait for it to be present)
-  await page.waitForSelector('[data-test-id="run-benchmarks"]', {
-    timeout: 30000,
-  });
-  await page.click('[data-test-id="run-benchmarks"]');
+  // Select an additional library and a scenario so benchmarks can run
+  const ngrxCheckbox = page.getByTestId('lib-ngrx-store-checkbox');
+  if ((await ngrxCheckbox.count()) > 0) {
+    await ngrxCheckbox.first().check();
+  }
+
+  // Select the first benchmark scenario
+  const firstScenario = page
+    .locator('.benchmarks-grid .benchmark-card')
+    .first();
+  await firstScenario.click();
+
+  // Wait for Run Benchmarks to become enabled and click it
+  const runBtn = page.getByTestId('run-benchmarks');
+  await expect(runBtn).toBeEnabled({ timeout: 30000 });
+  await runBtn.click();
 
   // Wait for results section to appear (indicates completion)
   const resultsSection = page.locator('.results-section');
