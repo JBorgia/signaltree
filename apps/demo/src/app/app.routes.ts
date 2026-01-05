@@ -173,6 +173,20 @@ export const appRoutes: Route[] = [
       ).then((c) => c.ArchitectureOverviewComponent),
   },
   {
+    path: 'bundle-visualizer',
+    loadComponent: () =>
+      import('./pages/bundle-visualizer/bundle-visualizer.component').then(
+        (c) => c.BundleVisualizerComponent
+      ),
+  },
+  {
+    path: 'undo-redo',
+    loadComponent: () =>
+      import('./pages/undo-redo-demo/undo-redo-demo.component').then(
+        (c) => c.UndoRedoDemoComponent
+      ),
+  },
+  {
     path: 'enterprise-enhancer',
     loadComponent: () =>
       import('./pages/enterprise-enhancer/enterprise-enhancer.component').then(
