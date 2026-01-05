@@ -20,9 +20,12 @@ test('smoke: run realistic comparison and capture extended results', async ({
   const artifactsDir = path.dirname(OUT_PATH);
   fs.mkdirSync(artifactsDir, { recursive: true });
 
-  // Make sure the enterprise enhancer is unchecked for a fair baseline run
+  // Wait for the library selection section to be visible, then ensure enterprise is unchecked
+  await page
+    .getByRole('heading', { name: 'Select Libraries to Compare' })
+    .toBeVisible({ timeout: 15000 });
   const enterprise = page.getByTestId('lib-signaltree-enterprise-checkbox');
-  await expect(enterprise).toHaveCount(1);
+  await expect(enterprise).toHaveCount(1, { timeout: 10000 });
   await enterprise.uncheck();
 
   // Clear any previous globals
