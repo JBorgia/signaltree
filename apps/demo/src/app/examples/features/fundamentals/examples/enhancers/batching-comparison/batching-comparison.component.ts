@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, effect, signal } from '@angular/core';
+import { batching, signalTree } from '@signaltree/core';
 
 @Component({
   selector: 'app-batching-comparison',
@@ -27,14 +28,13 @@ export class BatchingComparisonComponent {
 
   private runUnbatched() {
     // Create a tree without batching (or with batching disabled)
-    const { signalTree } = require('@signaltree/core');
     const tree = signalTree({ counter: 0 });
 
     // Count renders using effect
     let renders = 0;
     effect(() => {
       // read counter to trigger
-      const _ = tree.$.counter();
+      void tree.$.counter();
       renders++;
     });
 
@@ -49,7 +49,6 @@ export class BatchingComparisonComponent {
   }
 
   private runBatched() {
-    const { signalTree, batching } = require('@signaltree/core');
     const tree = signalTree({ counter: 0 }).with(
       batching({
         enabled: true,
@@ -59,7 +58,7 @@ export class BatchingComparisonComponent {
 
     let renders = 0;
     effect(() => {
-      const _ = tree.$.counter();
+      void tree.$.counter();
       renders++;
     });
 

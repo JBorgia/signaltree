@@ -13,9 +13,9 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let k of Object.keys(stats().inputs)">
-          <td>{{ k }}</td>
-          <td>{{ stats().inputs[k].bytes }}</td>
+        <tr *ngFor="let kv of stats() | keyvalue">
+          <td>{{ kv.key }}</td>
+          <td>{{ kv.value.bytes }}</td>
         </tr>
       </tbody>
     </table>
