@@ -28,7 +28,9 @@ test('smoke: run realistic comparison and capture extended results', async ({
   const enterpriseCard = page.getByTestId('lib-signaltree-enterprise-card');
   const enterpriseCardCount = await enterpriseCard.count();
   if (enterpriseCardCount > 0) {
-    const enterprise = enterpriseCard.locator('input[data-test-id="lib-signaltree-enterprise-checkbox"]');
+    const enterprise = enterpriseCard.locator(
+      'input[data-test-id="lib-signaltree-enterprise-checkbox"]'
+    );
     const enterpriseCount = await enterprise.count();
     if (enterpriseCount > 0) {
       await enterprise.uncheck();
@@ -46,9 +48,11 @@ test('smoke: run realistic comparison and capture extended results', async ({
     delete win['__SIGNALTREE_ACTIVE_ENHANCERS__'];
   });
 
-  // Click the Run Benchmarks button
+  // Click the Run Benchmarks button (wait for it to be present)
+  await page.waitForSelector('[data-test-id="run-benchmarks"]', {
+    timeout: 15000,
+  });
   const runBenchmarksButton = page.getByTestId('run-benchmarks');
-  await expect(runBenchmarksButton).toBeVisible();
   await runBenchmarksButton.click();
 
   // Wait for results section to appear (indicates completion)
