@@ -22,12 +22,12 @@
   "peerDependencies": {
     "@angular/core": "^20.0.0",
     "@angular/forms": "^20.0.0",
-    "@signaltree/core": "^7.0.0",
+    "@signaltree/core": "workspace:*",
     "rxjs": "^7.0.0"
   },
   "peerDependenciesMeta": {},
   "devDependencies": {
-    "@signaltree/core": "^7.0.0",
+    "@signaltree/core": "workspace:*",
     "@signaltree/shared": "workspace:*",
     "jest-preset-angular": "^15.0.3"
   },
