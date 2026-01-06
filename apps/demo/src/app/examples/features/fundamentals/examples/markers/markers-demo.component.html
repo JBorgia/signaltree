@@ -68,7 +68,7 @@
         @if (store.$.users.status.isError()) {
         <div class="error-message">
           <strong>Error:</strong>
-          {{ store.$.users.status.error()?.message }}
+          {{ $any(store.$.users.status.error())?.message }}
           <button class="btn small" (click)="loadUsers()">Retry</button>
         </div>
         } @if (store.$.users.status.isLoaded()) {

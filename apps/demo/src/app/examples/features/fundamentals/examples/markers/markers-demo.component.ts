@@ -13,7 +13,7 @@ interface MarkersState {
   // Status marker for async operations
   users: {
     entities: ReturnType<typeof entityMap<User, number>>;
-    status: ReturnType<typeof status>;
+    status: ReturnType<typeof status<Error>>;
   };
 
   // Stored markers for persistence
@@ -36,7 +36,7 @@ export class MarkersDemoComponent {
   store = signalTree<MarkersState>({
     users: {
       entities: entityMap<User, number>({ selectId: (u) => u.id }),
-      status: status(),
+      status: status<Error>(),
     },
     theme: stored<'light' | 'dark'>('demo-theme', 'light'),
     fontSize: stored('demo-fontSize', 14),
