@@ -326,4 +326,67 @@ describe('status() marker', () => {
       expect(elapsed).toBeLessThan(100);
     });
   });
+
+  describe('generic error type', () => {
+    interface CustomError {
+      code: string;
+      message: string;
+      details?: Record<string, unknown>;
+    }
+
+    it('should support custom error type via generic', () => {
+      const marker = status<CustomError>();
+      const sig = createStatusSignal(marker);
+
+      const customError: CustomError = {
+        code: 'ERR_001',
+        message: 'Something went wrong',
+        details: { field: 'name' },
+      };
+
+      sig.setError(customError);
+      expect(sig.error()).toEqual(customError);
+      expect(sig.error()?.code).toBe('ERR_001');
+      expect(sig.isError()).toBe(true);
+    });
+
+    it('should integrate with signalTree using custom error type', () => {
+      interface Ticket {
+        id: number;
+        title: string;
+      }
+
+      const tree = signalTree({
+        tickets: {
+          entities: entityMap<Ticket, number>(),
+          status: status<CustomError>(),
+        },
+      }).with(entities());
+
+      // Verify error signal accepts custom type
+      const customError: CustomError = {
+        code: 'LOAD_FAILED',
+        message: 'Failed to load tickets',
+      };
+
+      tree.$.tickets.status.setError(customError);
+      expect(tree.$.tickets.status.error()).toEqual(customError);
+      expect(tree.$.tickets.status.isError()).toBe(true);
+
+      // Reset clears error
+      tree.$.tickets.status.reset();
+      expect(tree.$.tickets.status.error()).toBe(null);
+      expect(tree.$.tickets.status.isNotLoaded()).toBe(true);
+    });
+
+    it('should default to Error type when no generic provided', () => {
+      const marker = status();
+      const sig = createStatusSignal(marker);
+
+      const jsError = new Error('Standard JS error');
+      sig.setError(jsError);
+      expect(sig.error()).toBe(jsError);
+      expect(sig.error()?.message).toBe('Standard JS error');
+    });
+  });
 });

@@ -30,21 +30,25 @@ export interface StatusConfig {
 
 /**
  * Status marker - placeholder in source state.
+ * @typeParam E - Error type (default: Error)
  */
-export interface StatusMarker {
+export interface StatusMarker<E = Error> {
   [STATUS_MARKER]: true;
   initialState: LoadingState;
+  /** Phantom type for error - not used at runtime */
+  readonly __errorType?: E;
 }
 
 /**
  * Materialized status signal with state, error, derived signals, and helpers.
+ * @typeParam E - Error type (default: Error)
  */
-export interface StatusSignal {
+export interface StatusSignal<E = Error> {
   // Source signals (writable)
   /** Current loading state */
   state: WritableSignal<LoadingState>;
   /** Current error (null if no error) */
-  error: WritableSignal<Error | null>;
+  error: WritableSignal<E | null>;
 
   // Derived signals (read-only)
   /** True when state is NotLoaded */
@@ -64,7 +68,7 @@ export interface StatusSignal {
   /** Set state to Loaded and clear error */
   setLoaded(): void;
   /** Set state to Error and store the error */
-  setError(error: Error): void;
+  setError(error: E): void;
   /** Reset to NotLoaded (alias for setNotLoaded) */
   reset(): void;
 }
@@ -76,11 +80,13 @@ export interface StatusSignal {
 /**
  * Creates a status marker for async operation state tracking.
  *
+ * @typeParam E - Error type (default: Error). Use custom error types like NotifyErrorModel.
  * @param initialState - Initial loading state (default: NotLoaded)
  * @returns StatusMarker to be processed during tree finalization
  *
  * @example
  * ```typescript
+ * // Default error type (Error)
  * signalTree({
  *   tickets: {
  *     entities: entityMap<Ticket>(),
@@ -88,17 +94,25 @@ export interface StatusSignal {
  *   }
  * })
  *
- * // With initial state:
+ * // Custom error type
+ * signalTree({
+ *   tickets: {
+ *     entities: entityMap<Ticket>(),
+ *     status: status<NotifyErrorModel>()
+ *   }
+ * })
+ *
+ * // With initial state
  * signalTree({
  *   data: {
- *     status: status(LoadingState.Loading)
+ *     status: status<MyError>(LoadingState.Loading)
  *   }
  * })
  * ```
  */
-export function status(
+export function status<E = Error>(
   initialState: LoadingState = LoadingState.NotLoaded
-): StatusMarker {
+): StatusMarker<E> {
   return {
     [STATUS_MARKER]: true,
     initialState,
@@ -128,12 +142,15 @@ export function isStatusMarker(value: unknown): value is StatusMarker {
 /**
  * Creates a materialized StatusSignal from a StatusMarker.
  *
+ * @typeParam E - Error type (default: Error)
  * @param marker - The status marker with configuration
  * @returns Fully functional StatusSignal
  */
-export function createStatusSignal(marker: StatusMarker): StatusSignal {
+export function createStatusSignal<E = Error>(
+  marker: StatusMarker<E>
+): StatusSignal<E> {
   const stateSignal = signal<LoadingState>(marker.initialState);
-  const errorSignal = signal<Error | null>(null);
+  const errorSignal = signal<E | null>(null);
 
   // Lazy computed signals - only created on first access
   // This avoids creating 4 computed signals per status marker upfront
@@ -182,7 +199,7 @@ export function createStatusSignal(marker: StatusMarker): StatusSignal {
       stateSignal.set(LoadingState.Loaded);
       errorSignal.set(null);
     },
-    setError(err: Error) {
+    setError(err: E) {
       stateSignal.set(LoadingState.Error);
       errorSignal.set(err);
     },

@@ -81,8 +81,8 @@ export interface NodeAccessor<T> {
 export type TreeNode<T> = {
   [K in keyof T]: T[K] extends EntityMapMarker<infer E, infer Key>
     ? EntitySignal<E, Key>
-    : T[K] extends StatusMarker
-    ? StatusSignal
+    : T[K] extends StatusMarker<infer Err>
+    ? StatusSignal<Err>
     : T[K] extends StoredMarker<infer V>
     ? StoredSignal<V>
     : T[K] extends Primitive
