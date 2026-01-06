@@ -78,7 +78,7 @@ export type { SignalTreeBuilder } from './lib/internals/builder-types';
 // ============================================
 
 export {
-  derived,
+  // derived() function removed in v6.3.1 - use computed() directly
   isDerivedMarker,
   type DerivedMarker,
   type DerivedType,

@@ -1,11 +1,3 @@
-import { computed } from '@angular/core';
-import { describe, expect, it } from 'vitest';
-
-import { entities } from '../../enhancers/entities/entities';
-import { derived } from '../markers/derived';
-import { signalTree } from '../signal-tree';
-import { entityMap } from '../types';
-
 describe('derived() marker pattern', () => {
   describe('basic derived state', () => {
     it('should create derived computed signals from source state', () => {
@@ -14,12 +6,19 @@ describe('derived() marker pattern', () => {
       }
 
       const tree = signalTree<CounterState>({ count: 5 }).derived(($) => ({
-        doubled: derived(() => $.count() * 2),
-        tripled: derived(() => $.count() * 3),
+        doubled: computed(() => $.count() * 2),
+        tripled: computed(() => $.count() * 3),
       }));
 
       // Access $ to finalize
       expect(tree.$.doubled()).toBe(10);
+import { computed } from '@angular/core';
+import { describe, expect, it } from 'vitest';
+
+import { entities } from '../../enhancers/entities/entities';
+import { signalTree } from '../signal-tree';
+import { entityMap } from '../types';
+
       expect(tree.$.tripled()).toBe(15);
 
       // Update source state
@@ -44,7 +43,7 @@ describe('derived() marker pattern', () => {
           lastName: 'Doe',
         },
       }).derived(($) => ({
-        fullName: derived(() => `${$.user.firstName()} ${$.user.lastName()}`),
+        fullName: computed(() => `${$.user.firstName()} ${$.user.lastName()}`),
       }));
 
       expect(tree.$.fullName()).toBe('John Doe');
@@ -59,10 +58,10 @@ describe('derived() marker pattern', () => {
     it('should support derived-of-derived', () => {
       const tree = signalTree({ value: 2 })
         .derived(($) => ({
-          doubled: derived(() => $.value() * 2),
+          doubled: computed(() => $.value() * 2),
         }))
         .derived(($) => ({
-          quadrupled: derived(() => $.doubled() * 2),
+          quadrupled: computed(() => $.doubled() * 2),
         }));
 
       expect(tree.$.doubled()).toBe(4);
@@ -79,13 +78,13 @@ describe('derived() marker pattern', () => {
 
       const tree = signalTree({ a: 1, b: 2 })
         .derived(($) => ({
-          sum: derived(() => {
+          sum: computed(() => {
             computeCount++;
             return $.a() + $.b();
           }),
         }))
         .derived(($) => ({
-          doubleSum: derived(() => $.sum() * 2),
+          doubleSum: computed(() => $.sum() * 2),
         }));
 
       // Initial access
@@ -107,8 +106,8 @@ describe('derived() marker pattern', () => {
         items: [1, 2, 3],
       }).derived(($) => ({
         stats: {
-          count: derived(() => $.items().length),
-          sum: derived(() =>
+          count: computed(() => $.items().length),
+          sum: computed(() =>
             $.items().reduce((a: number, b: number) => a + b, 0)
           ),
         },
@@ -120,6 +119,112 @@ describe('derived() marker pattern', () => {
       tree.$.items.set([1, 2, 3, 4, 5]);
       expect(tree.$.stats.count()).toBe(5);
       expect(tree.$.stats.sum()).toBe(15);
+    });
+
+    it('should deep-merge derived namespace into source namespace preserving all properties', () => {
+      // This test verifies the deep merge behavior:
+      // When a derived layer defines a nested object at the same path as a source object,
+      // the source properties should be preserved and the derived properties added.
+      interface TicketEntity {
+        id: number;
+        status: string;
+      }
+
+      const tree = signalTree({
+        tickets: {
+          entities: entityMap<TicketEntity, number>(),
+          activeId: null as number | null,
+          startDate: new Date('2024-01-01'),
+          endDate: new Date('2024-12-31'),
+        },
+      })
+        .with(entities())
+        .derived(($) => ({
+          // Derived namespace with same path as source
+          tickets: {
+            // Add derived signals
+            active: computed(() => {
+              const id = $.tickets.activeId();
+              return id != null
+                ? $.tickets.entities.byId(id)?.() ?? null
+                : null;
+            }),
+            all: computed(() => $.tickets.entities.all()),
+          },
+        }));
+
+      // Verify derived signals work
+      expect(tree.$.tickets.active()).toBe(null);
+      expect(tree.$.tickets.all()).toEqual([]);
+
+      // CRITICAL: Verify source properties are preserved (deep merge)
+      // These should NOT be undefined after the derived merge
+      expect(tree.$.tickets.entities).toBeDefined();
+      expect(typeof tree.$.tickets.entities.addOne).toBe('function');
+      expect(typeof tree.$.tickets.entities.byId).toBe('function');
+      expect(tree.$.tickets.activeId).toBeDefined();
+      expect(tree.$.tickets.startDate).toBeDefined();
+      expect(tree.$.tickets.endDate).toBeDefined();
+
+      // Verify mutations still work through source properties
+      tree.$.tickets.entities.addOne({ id: 1, status: 'pending' });
+      tree.$.tickets.activeId.set(1);
+
+      // Verify derived signals reflect the mutations
+      expect(tree.$.tickets.all().length).toBe(1);
+      expect(tree.$.tickets.active()?.id).toBe(1);
+      expect(tree.$.tickets.active()?.status).toBe('pending');
+
+      // Verify source signal mutations work
+      tree.$.tickets.startDate.set(new Date('2024-06-01'));
+      expect(tree.$.tickets.startDate()).toEqual(new Date('2024-06-01'));
+    });
+
+    it('should preserve entityMap methods when adding derived signals to same namespace', () => {
+      // Specifically tests that entityMap API is preserved
+      interface Item {
+        id: number;
+        name: string;
+      }
+
+      const tree = signalTree({
+        items: {
+          entities: entityMap<Item, number>(),
+          selectedId: null as number | null,
+        },
+      })
+        .with(entities())
+        .derived(($) => ({
+          items: {
+            selected: computed(() => {
+              const id = $.items.selectedId();
+              return id != null ? $.items.entities.byId(id)?.() ?? null : null;
+            }),
+            count: computed(() => $.items.entities.count()),
+          },
+        }));
+
+      // EntityMap methods should be preserved
+      expect(tree.$.items.entities.addOne).toBeDefined();
+      expect(tree.$.items.entities.addMany).toBeDefined();
+      expect(tree.$.items.entities.updateOne).toBeDefined();
+      expect(tree.$.items.entities.removeOne).toBeDefined();
+      expect(tree.$.items.entities.setAll).toBeDefined();
+      expect(tree.$.items.entities.upsertOne).toBeDefined();
+      expect(tree.$.items.entities.byId).toBeDefined();
+      expect(tree.$.items.entities.all).toBeDefined();
+
+      // Use the preserved methods
+      tree.$.items.entities.upsertOne({ id: 1, name: 'First' });
+      tree.$.items.entities.upsertOne({ id: 2, name: 'Second' });
+
+      // Derived signals should work
+      expect(tree.$.items.count()).toBe(2);
+      expect(tree.$.items.selected()).toBe(null);
+
+      // Select and verify
+      tree.$.items.selectedId.set(1);
+      expect(tree.$.items.selected()?.name).toBe('First');
     });
   });
 
@@ -137,7 +242,7 @@ describe('derived() marker pattern', () => {
 
     it('should preserve state and $ accessors', () => {
       const tree = signalTree({ name: 'test' }).derived(($) => ({
-        upper: derived(() => $.name().toUpperCase()),
+        upper: computed(() => $.name().toUpperCase()),
       }));
 
       // Both accessors should work
@@ -147,7 +252,7 @@ describe('derived() marker pattern', () => {
 
     it('should preserve with() enhancer chaining', () => {
       const tree = signalTree({ count: 0 }).derived(($) => ({
-        doubled: derived(() => $.count() * 2),
+        doubled: computed(() => $.count() * 2),
       }));
 
       // with() should still be available
@@ -165,7 +270,7 @@ describe('derived() marker pattern', () => {
       // Now derived() should throw
       expect(() => {
         tree.derived(($) => ({
-          doubled: derived(() => $.count() * 2),
+          doubled: computed(() => $.count() * 2),
         }));
       }).toThrow(/Cannot add derived\(\) after tree\.\$ has been accessed/);
     });
@@ -175,7 +280,7 @@ describe('derived() marker pattern', () => {
     it('should work alongside regular computed signals', () => {
       const tree = signalTree({ value: 10 }).derived(($) => ({
         // derived() marker
-        markerDerived: derived(() => $.value() + 1),
+        markerDerived: computed(() => $.value() + 1),
         // Regular computed (should also work)
         regularComputed: computed(() => $.value() + 2),
       }));
@@ -188,8 +293,8 @@ describe('derived() marker pattern', () => {
   describe('second-argument syntax', () => {
     it('should accept derived factory as second argument', () => {
       const tree = signalTree({ count: 5 }, ($) => ({
-        doubled: derived(() => $.count() * 2),
-        tripled: derived(() => $.count() * 3),
+        doubled: computed(() => $.count() * 2),
+        tripled: computed(() => $.count() * 3),
       }));
 
       expect(tree.$.doubled()).toBe(10);
@@ -201,11 +306,11 @@ describe('derived() marker pattern', () => {
 
     it('should be equivalent to .derived() chaining', () => {
       const tree1 = signalTree({ value: 2 }).derived(($) => ({
-        squared: derived(() => $.value() ** 2),
+        squared: computed(() => $.value() ** 2),
       }));
 
       const tree2 = signalTree({ value: 2 }, ($) => ({
-        squared: derived(() => $.value() ** 2),
+        squared: computed(() => $.value() ** 2),
       }));
 
       expect(tree1.$.squared()).toBe(tree2.$.squared());
@@ -214,9 +319,9 @@ describe('derived() marker pattern', () => {
 
     it('should allow further .derived() chaining after second-argument', () => {
       const tree = signalTree({ base: 2 }, ($) => ({
-        doubled: derived(() => $.base() * 2),
+        doubled: computed(() => $.base() * 2),
       })).derived(($) => ({
-        quadrupled: derived(() => $.doubled() * 2),
+        quadrupled: computed(() => $.doubled() * 2),
       }));
 
       expect(tree.$.doubled()).toBe(4);
@@ -226,8 +331,8 @@ describe('derived() marker pattern', () => {
     it('should work with nested derived definitions', () => {
       const tree = signalTree({ items: [1, 2, 3, 4, 5] }, ($) => ({
         stats: {
-          count: derived(() => $.items().length),
-          sum: derived(() =>
+          count: computed(() => $.items().length),
+          sum: computed(() =>
             $.items().reduce((a: number, b: number) => a + b, 0)
           ),
         },
@@ -291,16 +396,18 @@ describe('derived() marker pattern', () => {
         ] as HaulerDto[],
       }).derived(($) => ({
         // Migrated from AppStore.isExternalDriver
-        isExternalDriver: derived(() => $.driver.current()?.isExternal ?? true),
+        isExternalDriver: computed(
+          () => $.driver.current()?.isExternal ?? true
+        ),
 
         // Migrated from AppStore.isDriverLoaded
-        isDriverLoaded: derived(() => $.driver.current() != null),
+        isDriverLoaded: computed(() => $.driver.current() != null),
 
         // Migrated from AppStore.driverUrl
-        driverUrl: derived(() => $.driver.current()?.url ?? ''),
+        driverUrl: computed(() => $.driver.current()?.url ?? ''),
 
         // Migrated from AppStore.selectedTruck
-        selectedTruck: derived(() => {
+        selectedTruck: computed(() => {
           const id = $.selected.truckId();
           return id != null
             ? $.trucks().find((t) => t.id === id) ?? null
@@ -308,14 +415,14 @@ describe('derived() marker pattern', () => {
         }),
 
         // Migrated from AppStore.selectedProductLine
-        selectedProductLine: derived(() => {
+        selectedProductLine: computed(() => {
           const id = $.selected.truckId();
           const truck = id != null ? $.trucks().find((t) => t.id === id) : null;
           return truck?.primaryProductLine ?? null;
         }),
 
         // Migrated from AppStore.selectableTrucks
-        selectableTrucks: derived(() => {
+        selectableTrucks: computed(() => {
           const driver = $.driver.current();
           if (!driver) return [];
           if (!driver.isExternal) return $.trucks();
@@ -329,7 +436,7 @@ describe('derived() marker pattern', () => {
         }),
 
         // Migrated from AppStore.areHaulerAndTruckSelected
-        areHaulerAndTruckSelected: derived(() => {
+        areHaulerAndTruckSelected: computed(() => {
           const driver = $.driver.current();
           if (!driver) return false;
           if (!driver.isExternal) return $.selected.truckId() != null;
@@ -398,20 +505,20 @@ describe('derived() marker pattern', () => {
       })
         .derived(($) => ({
           // First layer: selectedTruck
-          selectedTruck: derived(() => {
+          selectedTruck: computed(() => {
             const id = $.selected.truckId();
             return $.trucks().find((t) => t.id === id) ?? null;
           }),
         }))
         .derived(($) => ({
           // Second layer: depends on selectedTruck
-          activeProductLine: derived(
+          activeProductLine: computed(
             () => $.selectedTruck()?.productLine ?? null
           ),
         }))
         .derived(($) => ({
           // Third layer: depends on activeProductLine
-          ticketWorkflow: derived(() => {
+          ticketWorkflow: computed(() => {
             const productLine = $.activeProductLine();
             if (productLine === 'Concrete') {
               return [
@@ -473,21 +580,21 @@ describe('derived() marker pattern', () => {
         .with(entities())
         .derived(($) => ({
           // Derived from entityMap.byId()
-          selectedUser: derived(() => {
+          selectedUser: computed(() => {
             const id = $.selectedUserId();
             return id != null ? $.users.byId(id)?.() ?? null : null;
           }),
 
           // Derived from entityMap.all()
-          activeUsers: derived(() =>
+          activeUsers: computed(() =>
             $.users.all().filter((u: UserEntity) => u.active)
           ),
 
           // Derived from entityMap.count
-          userCount: derived(() => $.users.count()),
+          userCount: computed(() => $.users.count()),
 
           // Derived from entityMap.where()
-          adminUsers: derived(() =>
+          adminUsers: computed(() =>
             $.users.all().filter((u: UserEntity) => u.role === 'admin')
           ),
         }));
@@ -556,13 +663,13 @@ describe('derived() marker pattern', () => {
       })
         .with(entities())
         .derived(($) => ({
-          selectedUser: derived(() => {
+          selectedUser: computed(() => {
             const id = $.selectedUserId();
             return id != null ? $.users.byId(id)?.() ?? null : null;
           }),
 
           // Cross-entity derived: orders for selected user
-          selectedUserOrders: derived(() => {
+          selectedUserOrders: computed(() => {
             const userId = $.selectedUserId();
             if (userId == null) return [];
             return $.orders
@@ -571,7 +678,7 @@ describe('derived() marker pattern', () => {
           }),
 
           // Aggregation: total revenue per user status
-          totalPendingRevenue: derived(() =>
+          totalPendingRevenue: computed(() =>
             $.orders
               .all()
               .filter((o: OrderEntity) => o.status === 'pending')
@@ -580,9 +687,9 @@ describe('derived() marker pattern', () => {
         }))
         .derived(($) => ({
           // Second layer: depends on selectedUserOrders
-          selectedUserOrderCount: derived(() => $.selectedUserOrders().length),
+          selectedUserOrderCount: computed(() => $.selectedUserOrders().length),
 
-          selectedUserTotalSpent: derived(() =>
+          selectedUserTotalSpent: computed(() =>
             $.selectedUserOrders().reduce(
               (sum: number, o: OrderEntity) => sum + o.total,
               0
@@ -629,7 +736,7 @@ describe('derived() marker pattern', () => {
       })
         .with(entities())
         .derived(($) => ({
-          sum: derived(() =>
+          sum: computed(() =>
             $.items
               .all()
               .reduce(
@@ -637,7 +744,7 @@ describe('derived() marker pattern', () => {
                 0
               )
           ),
-          average: derived(() => {
+          average: computed(() => {
             const all = $.items.all();
             if (all.length === 0) return 0;
             const sum = all.reduce(
@@ -677,7 +784,7 @@ describe('derived() marker pattern', () => {
       const startWithDerived = performance.now();
       for (let i = 0; i < iterations; i++) {
         const tree = signalTree({ count: i }).derived(($) => ({
-          doubled: derived(() => $.count() * 2),
+          doubled: computed(() => $.count() * 2),
         }));
         // Access $ to finalize (this is the typical usage pattern)
         void tree.$.doubled();
@@ -713,7 +820,7 @@ describe('derived() marker pattern', () => {
         relatedValue: 1,
         unrelatedValue: 'hello',
       }).derived(($) => ({
-        doubledRelated: derived(() => {
+        doubledRelated: computed(() => {
           derivedCallCount++;
           return $.relatedValue() * 2;
         }),
@@ -747,7 +854,7 @@ describe('derived() marker pattern', () => {
             // Cast needed because computed property keys create index signature
             const accessor = $ as Record<string, () => number>;
             return {
-              [`level${d}`]: derived(() => accessor['base']() + d),
+              [`level${d}`]: computed(() => accessor['base']() + d),
             };
           }) as typeof builder;
         }

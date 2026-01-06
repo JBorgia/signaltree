@@ -156,6 +156,30 @@ function validateTree<T>(obj: T, config: TreeConfig): void {
 // NODE ACCESSOR CREATION
 // =============================================================================
 
+/**
+ * Creates a NodeAccessor function that wraps a TreeNode.
+ *
+ * NodeAccessors are functions that:
+ * - Can be called with no args to get the unwrapped state
+ * - Can be called with a value to set state
+ * - Can be called with an updater function to transform state
+ * - Have enumerable properties for child nodes (signals or nested accessors)
+ *
+ * ## Writable Properties for Deep Merge
+ *
+ * Properties are defined with `writable: true` to support the deep merge pattern.
+ * When derived state is merged into a namespace and then processed by enhancers
+ * like `entities()`, the enhancer needs to replace entityMap markers with
+ * EntitySignal instances. Without writable properties, this assignment would
+ * silently fail.
+ *
+ * Example flow:
+ * 1. Source defines: `tickets: { entities: entityMap<Ticket>() }`
+ * 2. Derived adds: `tickets: { active: derived(...) }`
+ * 3. Deep merge creates $.tickets as NodeAccessor with both properties
+ * 4. entities() tries to replace $.tickets.entities marker with EntitySignal
+ * 5. If not writable, step 4 silently fails → runtime error when calling methods
+ */
 function makeNodeAccessor<T>(store: TreeNode<T>): NodeAccessor<T> {
   const accessor = function (arg?: unknown): T | void {
     if (arguments.length === 0) {
@@ -174,10 +198,16 @@ function makeNodeAccessor<T>(store: TreeNode<T>): NodeAccessor<T> {
   (accessor as unknown as Record<symbol, boolean>)[NODE_ACCESSOR_SYMBOL] = true;
 
   // Copy store properties onto accessor
+  // CRITICAL: Properties must be writable to allow enhancers (like entities())
+  // to replace them. When entities() processes an entityMap marker, it needs to
+  // assign an EntitySignal in place of the marker. Without writable: true,
+  // this assignment silently fails in non-strict mode, causing runtime errors
+  // like "$.tickets.entities.upsertOne is not a function".
   for (const key of Object.keys(store as object)) {
     Object.defineProperty(accessor, key, {
       value: (store as Record<string, unknown>)[key],
       enumerable: true,
+      writable: true,
       configurable: true,
     });
   }

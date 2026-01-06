@@ -2,7 +2,9 @@
 
 ## Overview
 
-SignalTree v7 introduces the `derived()` marker pattern for declaring computed signals alongside source state. This enables type-safe, reactive derived state that automatically updates when dependencies change.
+SignalTree v7 introduces the `.derived()` method for declaring computed signals alongside source state. This enables type-safe, reactive derived state that automatically updates when dependencies change.
+
+> **Note:** The `derived()` marker function is deprecated as of v6.3.1. Use Angular's `computed()` directly instead - it works identically and is the preferred approach.
 
 ## Core Concepts
 
@@ -18,12 +20,14 @@ const doubled = computed(() => tree.$.count() * 2); // Separate, disconnected
 
 ### The Solution
 
-The `derived()` marker pattern allows computed signals to be declared inline:
+The `.derived()` method allows computed signals to be declared inline using Angular's `computed()`:
 
 ```typescript
+import { computed } from '@angular/core';
+
 // New approach - integrated derived state
 const tree = signalTree({ count: 0 }).derived(($) => ({
-  doubled: derived(() => $.count() * 2),
+  doubled: computed(() => $.count() * 2),
 }));
 
 tree.$.doubled(); // 0 - type-safe access
@@ -33,14 +37,30 @@ tree.$.doubled(); // 10 - automatically updates
 
 ## API Reference
 
-### `derived<T>(factory: () => T): DerivedMarker<T>`
+### `computed<T>(factory: () => T): Signal<T>` (Recommended)
 
-Creates a marker that will be converted to a computed signal at runtime.
+Use Angular's native `computed()` function directly. SignalTree automatically detects and integrates computed signals.
 
 ```typescript
-import { derived } from '@signaltree/core';
+import { computed } from '@angular/core';
 
-derived(() => someSignal() * 2); // Returns DerivedMarker<number>
+.derived($ => ({
+  doubled: computed(() => $.count() * 2)  // Recommended approach
+}))
+```
+
+### ~~`derived<T>(factory: () => T): DerivedMarker<T>`~~ (Deprecated)
+
+> **Deprecated in v6.3.1.** Use `computed()` directly instead.
+
+The `derived()` marker was a wrapper that created a marker object later converted to `computed()`. Since `computed()` works directly, the marker is redundant.
+
+```typescript
+// Deprecated - will show warning in dev mode
+derived(() => someSignal() * 2);
+
+// Preferred - use computed() directly
+computed(() => someSignal() * 2);
 ```
 
 ### `signalTree().derived(factory)`
@@ -48,12 +68,14 @@ derived(() => someSignal() * 2); // Returns DerivedMarker<number>
 Adds a layer of derived state to the tree. Can be chained multiple times.
 
 ```typescript
+import { computed } from '@angular/core';
+
 const tree = signalTree({ value: 1 })
   .derived(($) => ({
-    doubled: derived(() => $.value() * 2),
+    doubled: computed(() => $.value() * 2),
   }))
   .derived(($) => ({
-    quadrupled: derived(() => $.doubled() * 2), // Can reference previous derived
+    quadrupled: computed(() => $.doubled() * 2), // Can reference previous derived
   }));
 ```
 
@@ -62,6 +84,8 @@ const tree = signalTree({ value: 1 })
 ### Basic Derived State
 
 ```typescript
+import { computed } from '@angular/core';
+
 interface AppState {
   items: string[];
   filter: string;
@@ -71,19 +95,21 @@ const tree = signalTree<AppState>({
   items: ['apple', 'banana', 'cherry'],
   filter: '',
 }).derived(($) => ({
-  filteredItems: derived(() => $.items().filter((item) => item.includes($.filter()))),
-  itemCount: derived(() => $.items().length),
+  filteredItems: computed(() => $.items().filter((item) => item.includes($.filter()))),
+  itemCount: computed(() => $.items().length),
 }));
 ```
 
 ### Nested Derived Definitions
 
 ```typescript
+import { computed } from '@angular/core';
+
 const tree = signalTree({ items: [1, 2, 3] }).derived(($) => ({
   stats: {
-    count: derived(() => $.items().length),
-    sum: derived(() => $.items().reduce((a, b) => a + b, 0)),
-    average: derived(() => {
+    count: computed(() => $.items().length),
+    sum: computed(() => $.items().reduce((a, b) => a + b, 0)),
+    average: computed(() => {
       const items = $.items();
       return items.length ? items.reduce((a, b) => a + b, 0) / items.length : 0;
     }),
@@ -98,13 +124,15 @@ tree.$.stats.average(); // 2
 ### Chained Derived Layers (Derived-of-Derived)
 
 ```typescript
+import { computed } from '@angular/core';
+
 const tree = signalTree({ base: 10 })
   .derived(($) => ({
-    doubled: derived(() => $.base() * 2),
+    doubled: computed(() => $.base() * 2),
   }))
   .derived(($) => ({
-    quadrupled: derived(() => $.doubled() * 2),
-    octupled: derived(() => $.quadrupled() * 2),
+    quadrupled: computed(() => $.doubled() * 2),
+    octupled: computed(() => $.quadrupled() * 2),
   }));
 
 tree.$.base.set(5);
@@ -116,15 +144,17 @@ tree.$.octupled(); // 40
 The `.derived()` method works seamlessly with enhancer chaining. You can add derived state before or after enhancers:
 
 ```typescript
+import { computed } from '@angular/core';
+
 const tree = signalTree({ count: 0 })
   .derived(($) => ({
-    doubled: derived(() => $.count() * 2),
+    doubled: computed(() => $.count() * 2),
   }))
   .with(batching())
   .with(timeTravel())
   .derived(($) => ({
     // Can add more derived after enhancers too
-    quadrupled: derived(() => $.doubled() * 2),
+    quadrupled: computed(() => $.doubled() * 2),
   }));
 
 // Enhancer methods are available
@@ -139,10 +169,12 @@ tree.undo();
 For simpler cases, you can pass the derived factory as the second argument:
 
 ```typescript
+import { computed } from '@angular/core';
+
 // Instead of chaining .derived()
 const tree = signalTree({ count: 0 }, ($) => ({
-  doubled: derived(() => $.count() * 2),
-  tripled: derived(() => $.count() * 3),
+  doubled: computed(() => $.count() * 2),
+  tripled: computed(() => $.count() * 3),
 }));
 
 tree.$.doubled(); // 0
@@ -154,20 +186,23 @@ tree.$.tripled(); // 15
 You can still chain additional `.derived()` calls after:
 
 ```typescript
+import { computed } from '@angular/core';
+
 const tree = signalTree({ base: 2 }, ($) => ({
-  doubled: derived(() => $.base() * 2),
+  doubled: computed(() => $.base() * 2),
 })).derived(($) => ({
   // $.doubled is available from second argument
-  quadrupled: derived(() => $.doubled() * 2),
+  quadrupled: computed(() => $.doubled() * 2),
 }));
 ```
 
 ### With EntityMap Integration
 
-The `derived()` pattern works perfectly with `entityMap()` for reactive entity queries:
+The `.derived()` method works perfectly with `entityMap()` for reactive entity queries:
 
 ```typescript
-import { signalTree, entityMap, entities, derived } from '@signaltree/core';
+import { computed } from '@angular/core';
+import { signalTree, entityMap, entities } from '@signaltree/core';
 
 interface User {
   id: number;
@@ -183,14 +218,14 @@ const tree = signalTree({
   .with(entities())
   .derived(($) => ({
     // Derived from entityMap.byId()
-    selectedUser: derived(() => {
+    selectedUser: computed(() => {
       const id = $.selectedUserId();
       return id != null ? $.users.byId(id)?.() ?? null : null;
     }),
 
     // Derived from entityMap queries
-    activeUsers: derived(() => $.users.all().filter((u) => u.active)),
-    adminCount: derived(() => $.users.all().filter((u) => u.role === 'admin').length),
+    activeUsers: computed(() => $.users.all().filter((u) => u.active)),
+    adminCount: computed(() => $.users.all().filter((u) => u.role === 'admin').length),
   }));
 
 // Add users
@@ -217,6 +252,8 @@ tree.$.activeUsers().length; // 3
 You can create derived state that spans multiple entity collections:
 
 ```typescript
+import { computed } from '@angular/core';
+
 interface Order {
   id: number;
   userId: number;
@@ -231,11 +268,11 @@ const tree = signalTree({
 })
   .with(entities())
   .derived(($) => ({
-    selectedUser: derived(() => {
+    selectedUser: computed(() => {
       const id = $.selectedUserId();
       return id != null ? $.users.byId(id)?.() ?? null : null;
     }),
-    selectedUserOrders: derived(() => {
+    selectedUserOrders: computed(() => {
       const userId = $.selectedUserId();
       if (userId == null) return [];
       return $.orders.all().filter((o) => o.userId === userId);
@@ -243,22 +280,266 @@ const tree = signalTree({
   }))
   .derived(($) => ({
     // Second layer depends on first
-    selectedUserTotalSpent: derived(() => $.selectedUserOrders().reduce((sum, o) => sum + o.total, 0)),
+    selectedUserTotalSpent: computed(() => $.selectedUserOrders().reduce((sum, o) => sum + o.total, 0)),
   }));
 ```
 
 ### Mixed Derived and Regular Computed
 
-You can mix `derived()` markers with regular `computed()` signals:
+> **Note:** The `derived()` marker is deprecated. Just use `computed()` directly everywhere.
+
+Both work, but `computed()` is preferred:
 
 ```typescript
 import { computed } from '@angular/core';
-import { derived, signalTree } from '@signaltree/core';
+import { signalTree } from '@signaltree/core';
 
 const tree = signalTree({ value: 10 }).derived(($) => ({
-  markerDerived: derived(() => $.value() + 1),
-  regularComputed: computed(() => $.value() + 2), // Also works
+  // Both work, but computed() is preferred
+  usingComputed: computed(() => $.value() + 1), // ✓ Recommended
+  usingDerived: derived(() => $.value() + 2), // Works but deprecated
 }));
+```
+
+## Deep Merge Behavior
+
+**Available since v6.x**
+
+One of the most powerful features of `.derived()` is its deep merge semantics. When you define a derived namespace at the same path as an existing source namespace, **all source properties are preserved** while your derived properties are added. This enables you to extend existing namespaces without losing access to entity methods, signals, or other properties.
+
+### How Deep Merge Works
+
+When merging derived state into the source tree:
+
+1. **Computed signals** are placed at their target path
+2. **Nested objects** in derived are recursively merged into existing namespaces
+3. **Source properties** at the same path are **preserved**, not overwritten
+4. **Only conflicting keys** trigger overwrites (with a warning in dev mode)
+
+```typescript
+import { computed } from '@angular/core';
+
+// Source state with tickets namespace containing entityMap
+const tree = signalTree({
+  tickets: {
+    entities: entityMap<Ticket, number>(),
+    activeId: null as number | null,
+  },
+})
+  .derived(($) => ({
+    // Adding derived to tickets namespace - source properties are preserved
+    tickets: {
+      activeTicket: computed(() => {
+        const id = $.tickets.activeId();
+        return id != null ? $.tickets.entities.byId(id)?.() : null;
+      }),
+      count: computed(() => $.tickets.entities.all().length),
+    },
+  }))
+  .with(entities());
+
+// After merge, $.tickets contains:
+// - entities (from source - preserved with all EntitySignal methods)
+// - activeId (from source - preserved)
+// - activeTicket (from derived - computed signal)
+// - count (from derived - computed signal)
+
+tree.$.tickets.entities.upsertOne({ id: 1, name: 'Test' }); // ✓ Works!
+tree.$.tickets.activeTicket(); // ✓ Works!
+```
+
+### Why Deep Merge Matters
+
+Without deep merge, defining a `tickets` object in derived would **replace** the source `tickets` namespace entirely, losing access to methods like `entities.upsertOne()`, `entities.all()`, etc.
+
+**❌ Without deep merge (hypothetical):**
+
+```typescript
+// If derived replaced instead of merged:
+const tree = signalTree({
+  tickets: {
+    entities: entityMap<Ticket, number>(),
+  },
+}).derived(($) => ({
+  tickets: {
+    // This would REPLACE tickets, losing entities!
+    isActive: computed(() => true),
+  },
+}));
+
+tree.$.tickets.entities; // undefined - LOST!
+```
+
+**✅ With deep merge (actual behavior):**
+
+```typescript
+import { computed } from '@angular/core';
+
+// Deep merge preserves all source properties
+const tree = signalTree({
+  tickets: {
+    entities: entityMap<Ticket, number>(),
+  },
+}).derived(($) => ({
+  tickets: {
+    // This EXTENDS tickets, preserving entities
+    isActive: computed(() => true),
+  },
+}));
+
+tree.$.tickets.entities.all(); // ✓ Still works!
+tree.$.tickets.isActive(); // ✓ Also works!
+```
+
+### EntityMap Integration with Deep Merge
+
+This feature is especially important when working with `entityMap()` markers. EntityMaps provide methods like `all()`, `byId()`, `upsertOne()`, `removeById()`, etc. Deep merge ensures these are never lost:
+
+```typescript
+import { computed } from '@angular/core';
+
+interface Ticket {
+  id: number;
+  title: string;
+  status: 'open' | 'closed';
+}
+
+const tree = signalTree({
+  tickets: {
+    entities: entityMap<Ticket, number>(),
+    activeId: null as number | null,
+    filter: {
+      startDate: null as Date | null,
+      endDate: null as Date | null,
+      status: 'all' as 'all' | 'open' | 'closed',
+    },
+  },
+})
+  .derived(($) => ({
+    tickets: {
+      // All of these extend the tickets namespace
+      active: computed(() => {
+        const id = $.tickets.activeId();
+        return id != null ? $.tickets.entities.byId(id)?.() : null;
+      }),
+      filtered: computed(() => {
+        const status = $.tickets.filter.status();
+        const all = $.tickets.entities.all();
+        if (status === 'all') return all;
+        return all.filter((t) => t.status === status);
+      }),
+      hasActive: computed(() => $.tickets.activeId() != null),
+    },
+    // Can also add derived state at other paths
+    ui: {
+      ticketCount: computed(() => $.tickets.entities.all().length),
+    },
+  }))
+  .with(entities());
+
+// Full API available:
+tree.$.tickets.entities.upsertOne({ id: 1, title: 'Bug', status: 'open' });
+tree.$.tickets.entities.upsertMany([{ id: 2, title: 'Feature', status: 'closed' }]);
+tree.$.tickets.activeId.set(1);
+tree.$.tickets.active(); // { id: 1, title: 'Bug', status: 'open' }
+tree.$.tickets.filtered(); // Filtered list based on status
+tree.$.tickets.filter.status.set('open');
+tree.$.ui.ticketCount(); // 2
+```
+
+### Multi-Level Deep Merge
+
+Deep merge works at any depth in your tree:
+
+```typescript
+import { computed } from '@angular/core';
+
+const tree = signalTree({
+  app: {
+    data: {
+      users: entityMap<User, number>(),
+      settings: {
+        theme: 'light',
+        locale: 'en',
+      },
+    },
+  },
+})
+  .derived(($) => ({
+    app: {
+      data: {
+        // Deep merge at 3 levels deep
+        userCount: computed(() => $.app.data.users.all().length),
+        settings: {
+          // Deep merge at 4 levels deep - preserves theme and locale
+          isDark: computed(() => $.app.data.settings.theme() === 'dark'),
+        },
+      },
+    },
+  }))
+  .with(entities());
+
+// All paths accessible:
+$.app.data.users.all(); // EntitySignal method - preserved
+$.app.data.settings.theme(); // Source signal - preserved
+$.app.data.settings.locale(); // Source signal - preserved
+$.app.data.userCount(); // Derived computed - added
+$.app.data.settings.isDark(); // Derived computed - added
+```
+
+### Collision Warnings
+
+When a derived key collides with an existing source key that contains a signal, SignalTree issues a development warning:
+
+```typescript
+import { computed } from '@angular/core';
+
+const tree = signalTree({
+  count: 0, // This is a signal
+}).derived(($) => ({
+  count: computed(() => $.count() * 2), // Overwrites source signal!
+}));
+
+// Console warning in dev mode:
+// SignalTree: Derived "count" overwrites source signal.
+// Consider using a different key to avoid confusion.
+```
+
+**Best practice:** Use distinct names for derived state to avoid confusion:
+
+```typescript
+import { computed } from '@angular/core';
+
+const tree = signalTree({
+  count: 0,
+}).derived(($) => ({
+  doubledCount: computed(() => $.count() * 2), // Clear, no collision
+}));
+```
+
+### Technical Implementation
+
+Deep merge is implemented through recursive traversal in `mergeDerivedState()`:
+
+1. **For computed signals**: Assigns directly to target path
+2. **For nested objects**: Ensures the path exists, then recursively merges
+3. **For collisions**: Shows warning in dev mode
+
+The key insight is that `ensurePathAndGetTarget()` navigates to existing objects rather than replacing them, and the recursive call to `mergeDerivedState()` adds properties to existing namespaces.
+
+Additionally, the `entities()` enhancer properly recurses into **NodeAccessors** (the function-based wrappers around nested state). This ensures that entityMaps nested within NodeAccessors are properly materialized, not skipped.
+
+```typescript
+// In entities.ts - materialize() function
+function materialize(node, ...args) {
+  // ... processing logic ...
+  for (const k of Object.keys(v)) {
+    if (typeof v[k] === 'object' || isNodeAccessor(v[k])) {
+      // ↑ isNodeAccessor check ensures we recurse into function-based nodes
+      materialize(v[k], k, path);
+    }
+  }
+}
 ```
 
 ## Implementation Details
@@ -479,6 +760,101 @@ export function createAppTree(initial) {
 }))
 
 // Phase 4: Remove from AppStore class
+```
+
+### Removing Passthrough Workarounds
+
+**Before v6.x**, if you needed to add derived state to a namespace that contained an entityMap, you may have added "passthrough" properties to re-expose the source signals:
+
+**❌ Old workaround (no longer needed):**
+
+```typescript
+// BEFORE: Manual passthrough to preserve source properties
+const tree = signalTree({
+  tickets: {
+    entities: entityMap<Ticket, number>(),
+    activeId: null as number | null,
+    startDate: null as Date | null,
+    endDate: null as Date | null,
+  },
+})
+  .derived(($) => ({
+    tickets: {
+      // Had to manually pass through every source property!
+      entities: $.tickets.entities, // Passthrough
+      activeId: $.tickets.activeId, // Passthrough
+      startDate: $.tickets.startDate, // Passthrough
+      endDate: $.tickets.endDate, // Passthrough
+
+      // Actual derived state
+      active: derived(() => {
+        const id = $.tickets.activeId();
+        return id != null ? $.tickets.entities.byId(id)?.() : null;
+      }),
+    },
+  }))
+  .with(entities());
+```
+
+**✅ After v6.x (deep merge preserves automatically):**
+
+```typescript
+// AFTER: Just add your derived state - source is preserved
+const tree = signalTree({
+  tickets: {
+    entities: entityMap<Ticket, number>(),
+    activeId: null as number | null,
+    startDate: null as Date | null,
+    endDate: null as Date | null,
+  },
+})
+  .derived(($) => ({
+    tickets: {
+      // Only derived state - source properties are preserved automatically!
+      active: derived(() => {
+        const id = $.tickets.activeId();
+        return id != null ? $.tickets.entities.byId(id)?.() : null;
+      }),
+    },
+  }))
+  .with(entities());
+
+// All of these work without passthrough:
+tree.$.tickets.entities.upsertOne({ id: 1 }); // ✓ Preserved
+tree.$.tickets.activeId(); // ✓ Preserved
+tree.$.tickets.startDate(); // ✓ Preserved
+tree.$.tickets.endDate(); // ✓ Preserved
+tree.$.tickets.active(); // ✓ Your derived signal
+```
+
+**Migration steps:**
+
+1. **Identify passthrough properties** - Look for patterns like `propertyName: $.namespace.propertyName` in your derived definitions
+2. **Remove the passthroughs** - Delete these lines; deep merge handles preservation automatically
+3. **Test entity operations** - Verify `entities.upsertOne()`, `entities.all()`, etc. still work
+4. **Verify signal access** - Ensure source signals like `activeId()` are still accessible
+
+**Example diff:**
+
+```diff
+ .derived(($) => ({
+   tickets: {
+-    // Remove all passthrough properties
+-    entities: $.tickets.entities,
+-    activeId: $.tickets.activeId,
+-    startDate: $.tickets.startDate,
+-    endDate: $.tickets.endDate,
+-
+     // Keep only actual derived state
+     active: derived(() => {
+       const id = $.tickets.activeId();
+       return id != null ? $.tickets.entities.byId(id)?.() : null;
+     }),
++    hasDateRange: derived(() =>
++      $.tickets.startDate() != null && $.tickets.endDate() != null
++    ),
+   },
+ }))
 ```
 
 ### From Manual Computed

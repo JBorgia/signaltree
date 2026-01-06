@@ -14,6 +14,31 @@
 
 ## 🚀 What's New (January 2026)
 
+**v6.3.1 Release** - Deep Merge Fix + `derived()` Deprecation:
+
+- **Deep Merge Fixed**: Derived namespaces now correctly preserve source properties including `entityMap()` methods
+- **`derived()` Deprecated**: Use `computed()` directly - the marker was redundant
+- **No More Passthrough Workarounds**: Remove manual re-exports from your derived definitions
+
+```typescript
+// Before v6.3.1: Had to manually pass through source properties
+.derived(($) => ({
+  tickets: {
+    entities: $.tickets.entities, // ❌ Passthrough needed
+    activeId: $.tickets.activeId, // ❌ Passthrough needed
+    active: derived(() => ...),   // ❌ derived() marker deprecated
+  },
+}))
+
+// v6.3.1+: Deep merge + use computed() directly
+.derived(($) => ({
+  tickets: {
+    // ✅ Only add computed state - source is preserved!
+    active: computed(() => $.tickets.entities.byId($.tickets.activeId())?.()),
+  },
+}))
+```
+
 **v6.1.0 Release** - Synchronous Signal Writes:
 
 - **Synchronous Signal Writes**: Signal values now update **immediately** when `.set()` is called
@@ -668,6 +693,59 @@ tree.$.users.byId(id)(); // Get by ID
 tree.$.users.all; // Get all as array
 tree.$.users.count; // Get count
 ```
+
+### Derived State (.derived())
+
+Use `.derived()` to add computed signals that react to your source state:
+
+```typescript
+import { computed } from '@angular/core';
+import { signalTree, entityMap, entities } from '@signaltree/core';
+
+const tree = signalTree({
+  tickets: {
+    entities: entityMap<Ticket, number>(),
+    activeId: null as number | null,
+    filter: { status: 'all' as 'all' | 'open' | 'closed' },
+  },
+})
+  .derived(($) => ({
+    // Add computed state at any path
+    activeTicket: computed(() => {
+      const id = $.tickets.activeId();
+      return id != null ? $.tickets.entities.byId(id)?.() : null;
+    }),
+    // Deep merge: add derived to existing namespace
+    tickets: {
+      filtered: computed(() => {
+        const status = $.tickets.filter.status();
+        const all = $.tickets.entities.all();
+        if (status === 'all') return all;
+        return all.filter((t) => t.status === status);
+      }),
+      count: computed(() => $.tickets.entities.all().length),
+    },
+  }))
+  .with(entities());
+
+// Source properties preserved via deep merge:
+tree.$.tickets.entities.upsertOne({ id: 1, status: 'open' }); // ✅ Works
+tree.$.tickets.activeId.set(1); // ✅ Works
+
+// Derived computed signals:
+tree.$.activeTicket(); // Ticket | null
+tree.$.tickets.filtered(); // Filtered array
+tree.$.tickets.count(); // Number
+```
+
+**Key Benefits:**
+
+- **Co-located State**: Computed signals live with your state definition
+- **Deep Merge**: Add derived to namespaces without losing source properties
+- **Type Safety**: Full inference from source state to derived
+- **Tree-Shakeable**: Unused derived state is eliminated from bundles
+
+See [docs/DERIVED_STATE_V7.md](./docs/DERIVED_STATE_V7.md) for complete documentation.
 
 ### Batching Enhancer (Included in @signaltree/core)
 

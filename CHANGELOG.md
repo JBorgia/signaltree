@@ -1,3 +1,81 @@
+## [6.3.1] - 2026-01-XX
+
+### ⚠️ Breaking Changes
+
+- **core:** `derived()` marker function removed - use `computed()` directly in `.derived()` layers
+  - The marker was redundant since `computed()` signals are automatically detected
+  - Types (`DerivedMarker`, `isDerivedMarker`) kept for backwards compatibility
+
+```typescript
+// Before (removed)
+import { derived } from '@signaltree/core';
+.derived($ => ({ doubled: derived(() => $.count() * 2) }))
+
+// After (use Angular's computed directly)
+import { computed } from '@angular/core';
+.derived($ => ({ doubled: computed(() => $.count() * 2) }))
+```
+
+### 🐛 Bug Fixes
+
+- **core:** Fixed deep merge of derived state into namespaces containing entityMaps
+  - NodeAccessor properties are now `writable: true`, allowing enhancers to replace entityMap markers
+  - `entities()` enhancer now properly recurses into NodeAccessors (function-based nodes)
+  - Fixes runtime error: `$.namespace.entities.upsertOne is not a function`
+
+### 📖 Details
+
+When using `.derived()` to add computed signals to a namespace that also contains an `entityMap()`, the deep merge was not working correctly. The derived properties were added, but the entityMap methods (like `upsertOne`, `all`, `byId`) were inaccessible.
+
+**Root Cause:** Two related issues:
+
+1. `entities()` enhancer only recursed into plain objects (`typeof === 'object'`), but after derived merge, namespaces become NodeAccessors which are functions
+2. NodeAccessor properties were defined with `writable: false`, so when `entities()` tried to replace the entityMap marker with an EntitySignal, the assignment silently failed
+
+**Example that now works:**
+
+```typescript
+const tree = signalTree({
+  tickets: {
+    entities: entityMap<Ticket, number>(),
+    activeId: null,
+  },
+})
+  .derived(($) => ({
+    tickets: {
+      // Deep merge preserves entities while adding active
+      active: derived(() => {
+        const id = $.tickets.activeId();
+        return id != null ? $.tickets.entities.byId(id)?.() : null;
+      }),
+    },
+  }))
+  .with(entities());
+
+// All methods now work correctly:
+tree.$.tickets.entities.upsertOne({ id: 1, name: 'Test' }); // ✅
+tree.$.tickets.entities.all(); // ✅
+tree.$.tickets.activeId(); // ✅
+tree.$.tickets.active(); // ✅
+```
+
+**Migration:** If you previously used passthrough workarounds to preserve source properties, you can now remove them:
+
+```diff
+ .derived(($) => ({
+   tickets: {
+-    // Remove passthrough workarounds
+-    entities: $.tickets.entities,
+-    activeId: $.tickets.activeId,
+-
+     // Only derived state needed
+     active: derived(() => /* ... */),
+   },
+ }))
+```
+
+---
+
 ## [6.3.0] - 2026-01-XX
 
 ### Added

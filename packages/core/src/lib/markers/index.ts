@@ -5,9 +5,8 @@
  * during tree creation or by enhancers.
  */
 
-// Derived state marker
+// Derived state types (derived() function removed - use computed() directly)
 export {
-  derived,
   isDerivedMarker,
   getDerivedMarkerSymbol,
   type DerivedMarker,

@@ -1,18 +1,21 @@
 /**
- * Derived State Marker for SignalTree
+ * Derived State Types for SignalTree
  *
- * Enables type-safe computed signals that can be nested alongside source state.
+ * Type definitions for the derived state system. The `.derived()` method
+ * accepts computed() signals directly from @angular/core.
  *
  * @example
  * ```typescript
+ * import { computed } from '@angular/core';
+ *
  * const tree = signalTree({
  *   trucks: entityMap<TruckDto, number>(),
  *   selected: { truckId: null as number | null }
  * }, ($) => ({
  *   selected: {
- *     truck: derived(() => $.trucks.byId($.selected.truckId())?.())
+ *     truck: computed(() => $.trucks.byId($.selected.truckId())?.())
  *   },
- *   canSubmit: derived(() => $.selected.truckId() !== null)
+ *   canSubmit: computed(() => $.selected.truckId() !== null)
  * })).with(entities());
  * ```
  */
@@ -30,6 +33,9 @@ const DERIVED_MARKER = Symbol.for('signaltree:derived');
 /**
  * Marker interface for derived state definitions.
  * Carries the factory function and return type.
+ *
+ * @deprecated This type is kept for backwards compatibility only.
+ * Use `computed()` from @angular/core directly instead.
  */
 export interface DerivedMarker<T> {
   readonly [DERIVED_MARKER]: true;
@@ -40,68 +46,9 @@ export interface DerivedMarker<T> {
 
 /**
  * Extracts the return type from a derived marker.
+ * @deprecated Use Signal<T> types directly instead.
  */
 export type DerivedType<T> = T extends DerivedMarker<infer R> ? R : never;
-
-// =============================================================================
-// FACTORY FUNCTION
-// =============================================================================
-
-/**
- * Creates a derived state marker.
- *
- * Use this to define computed values that depend on source state.
- * The factory function is called within a `computed()` context,
- * so signal reads are automatically tracked.
- *
- * @param factory - Function that computes the derived value.
- *                  Called within a computed() context, so signal
- *                  reads are automatically tracked.
- * @returns A marker that will be processed into a computed signal.
- *
- * @example Basic usage
- * ```typescript
- * signalTree({
- *   count: 0
- * }, ($) => ({
- *   doubled: derived(() => $.count() * 2)
- * }))
- * ```
- *
- * @example Nested derived state
- * ```typescript
- * signalTree({
- *   selected: { truckId: null as number | null },
- *   trucks: entityMap<TruckDto, number>()
- * }, ($) => ({
- *   selected: {
- *     // Merges with source's selected object
- *     truck: derived(() => {
- *       const id = $.selected.truckId();
- *       return id != null ? $.trucks.byId(id)?.() ?? null : null;
- *     })
- *   }
- * })).with(entities());
- * ```
- *
- * @example Cross-domain derived
- * ```typescript
- * signalTree({
- *   tickets: { active: null as TicketDto | null },
- *   selected: { truckId: null as number | null }
- * }, ($) => ({
- *   canSubmit: derived(() =>
- *     $.tickets.active() !== null && $.selected.truckId() !== null
- *   )
- * }))
- * ```
- */
-export function derived<T>(factory: () => T): DerivedMarker<T> {
-  return {
-    [DERIVED_MARKER]: true,
-    factory,
-  };
-}
 
 // =============================================================================
 // TYPE GUARDS
@@ -109,6 +56,7 @@ export function derived<T>(factory: () => T): DerivedMarker<T> {
 
 /**
  * Type guard to check if a value is a derived marker.
+ * @internal Used by mergeDerivedState for backwards compatibility.
  */
 export function isDerivedMarker(
   value: unknown
