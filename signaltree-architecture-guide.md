@@ -27,17 +27,24 @@ A comprehensive guide to architecting applications with SignalTree, covering arc
 
 ```typescript
 // app-tree.ts
-import { signalTree, entities, entityMap } from '@signaltree/core';
+import { signalTree, entityMap, status, stored } from '@signaltree/core';
 
 export function createAppTree() {
   return signalTree({
+    // entityMap - auto-processed marker for entity collections
     users: entityMap<User, string>(),
     posts: entityMap<Post, string>(),
+
+    // status() - auto loading state tracking
+    usersStatus: status(),
+
+    // stored() - auto localStorage persistence
     ui: {
-      theme: 'light' as 'light' | 'dark',
+      theme: stored('app-theme', 'light' as 'light' | 'dark'),
       sidebarOpen: true as boolean,
     },
-  }).with(entities());
+  });
+  // Note: v7+ auto-processes markers, no .with(entities()) needed
 }
 
 // Type inference - single source of truth
@@ -933,14 +940,47 @@ entities<Plant>('plants.entities');
 
 When using `entityMap` directly at the domain level, you have two options for loading state:
 
-#### Approach A: Inside Domain (Recommended for grouped structures)
+#### Approach A: Using `status()` Marker (Recommended for v7+)
 
-Loading state nested within the domain it affects.
+The `status()` marker provides automatic loading state with derived convenience signals.
+
+```typescript
+import { status } from '@signaltree/core';
+
+{
+  plants: {
+    entities: entityMap<Plant, number>(),
+    status: status()  // Auto-creates state, error, isLoading, etc.
+  },
+}
+
+// Access
+tree.$.plants.status.state()       // LoadingState enum
+tree.$.plants.status.error()       // Error | null
+tree.$.plants.status.isLoading()   // boolean
+tree.$.plants.status.isLoaded()    // boolean
+tree.$.plants.status.isError()     // boolean
+
+// Mutations
+tree.$.plants.status.setLoading()
+tree.$.plants.status.setLoaded()
+tree.$.plants.status.setError(error)
+tree.$.plants.status.reset()
+
+// With custom error type:
+status: status<NotifyErrorModel>()  // error() returns NotifyErrorModel | null
+```
+
+**Pros:** Less boilerplate, auto-derived signals, type-safe error handling.
+
+#### Approach B: Manual Loading State (Legacy)
+
+For backwards compatibility or custom loading state shapes.
 
 ```typescript
 {
   plants: {
-    entities: Plant[],
+    entities: entityMap<Plant, number>(),
     loading: {
       state: 'idle' as LoadingState,
       error: null as string | null,
@@ -953,38 +993,35 @@ tree.$.plants.loading.state()
 tree.$.plants.loading.error()
 ```
 
-**Pros:** Co-located with data it describes, natural grouping.
+**Pros:** Full control over state shape, backwards compatible.
 
-#### Approach B: Domain-Level Sibling (Recommended for flat structures)
+#### Approach C: Domain-Level Sibling (Flat structures)
 
 Loading state as sibling to entity collection.
 
 ```typescript
 {
   plants: entityMap<Plant, number>(),
-  plantsLoading: {
-    state: 'idle' as LoadingState,
-    error: null as string | null,
-  },
+  plantsStatus: status(),  // or manual loading state
 }
 
 // Access
-tree.$.plantsLoading.state()
-tree.$.plantsLoading.error()
+tree.$.plantsStatus.isLoading()
 ```
 
 **Pros:** Flatter structure, simpler when using `entityMap` directly.
 
 #### Which to Choose?
 
-| Scenario                                                  | Recommendation |
-| --------------------------------------------------------- | -------------- |
-| Domain has multiple pieces (entities, filters, selection) | Approach A     |
-| Domain is just an entity collection                       | Approach B     |
-| Team prefers flat structures                              | Approach B     |
-| Team prefers grouped structures                           | Approach A     |
+| Scenario                                                  | Recommendation                |
+| --------------------------------------------------------- | ----------------------------- |
+| New v7+ projects                                          | Approach A (`status()`)       |
+| Domain has multiple pieces (entities, filters, selection) | Approach A                    |
+| Custom error types needed                                 | Approach A with `status<E>()` |
+| Domain is just an entity collection                       | Approach C                    |
+| Legacy code migration                                     | Approach B                    |
 
-Both are valid. Pick one and be consistent.
+**v7 Recommendation:** Use `status()` marker for new code. It reduces boilerplate and provides type-safe derived signals.
 
 ---
 
@@ -2487,7 +2524,8 @@ async updatePlant(id: string, changes: Partial<Plant>) {
 
 ```typescript
 // "Using multiple enhancers is over-engineering"
-const tree = signalTree(state).with(entities()).with(batching()).with(timeTravel()).with(devTools()).with(memoization()); // ❌ "Too many enhancers!"
+const tree = signalTree(state).with(batching()).with(timeTravel()).with(devTools()).with(memoization()); // ❌ "Too many enhancers!"
+// Note: v7+ auto-processes markers (entityMap, status, stored), no explicit enhancer needed
 ```
 
 **Why This Is Wrong:**
@@ -2496,7 +2534,9 @@ Enhancers are designed to compose. Using multiple enhancers that each serve a pu
 
 | Enhancer        | Purpose                | Over-engineering?                     |
 | --------------- | ---------------------- | ------------------------------------- |
-| `entities()`    | Entity CRUD operations | No—if you have entities               |
+| `entityMap()`   | Entity collections     | No—auto-processed marker in v7+       |
+| `status()`      | Loading/error state    | No—auto-processed marker in v7+       |
+| `stored()`      | Persist to storage     | No—auto-processed marker in v7+       |
 | `batching()`    | Batch multiple updates | No—reduces re-renders                 |
 | `timeTravel()`  | User undo/redo         | No—if you need undo                   |
 | `devTools()`    | Debugging in dev mode  | No—tree-shakes in prod                |
@@ -2853,8 +2893,8 @@ For most Angular applications using SignalTree:
 ┌─────────────────────────────────▼───────────────────────────┐
 │                   Single Global Tree                        │
 │  • All shared state                                         │
-│  • Entities with entities()                                 │
-│  • Enhancers as needed                                      │
+│  • Markers: entityMap(), status(), stored()                 │
+│  • Enhancers as needed (batching, timeTravel, devTools)     │
 │  • Organized by domain (tree.$.plants, tree.$.gardens)      │
 └─────────────────────────────────┬───────────────────────────┘
                                   │
