@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/guardrails",
-  "version": "6.4.0",
+  "version": "7.0.0",
   "description": "Development-only performance monitoring and anti-pattern detection for SignalTree",
   "type": "module",
   "sideEffects": false,
