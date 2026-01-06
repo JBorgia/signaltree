@@ -264,7 +264,10 @@ export function buildTree<T extends object>(
   initialState: T,
   config: TreeConfig = {}
 ) {
-  let tree: ISignalTree<T> = signalTree(initialState, config);
+  let tree: ISignalTree<T> = signalTree(
+    initialState,
+    config
+  ) as unknown as ISignalTree<T>;
 
   return {
     /**

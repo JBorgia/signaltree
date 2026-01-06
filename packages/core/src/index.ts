@@ -63,6 +63,27 @@ export type {
 // Entity helpers (runtime)
 export { entityMap } from './lib/types';
 
+// Derived state types (v7)
+export type {
+  ProcessDerived,
+  DeepMergeTree,
+  DerivedFactory,
+} from './lib/internals/derived-types';
+
+// Builder types (v7)
+export type { SignalTreeBuilder } from './lib/internals/builder-types';
+
+// ============================================
+// MARKER EXPORTS
+// ============================================
+
+export {
+  derived,
+  isDerivedMarker,
+  type DerivedMarker,
+  type DerivedType,
+} from './lib/markers/derived';
+
 // ============================================
 // UTILITY EXPORTS
 // ============================================

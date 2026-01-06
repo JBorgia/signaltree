@@ -1,6 +1,9 @@
 import { isSignal, signal, WritableSignal } from '@angular/core';
 
 import { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './constants';
+import { SignalTreeBuilder } from './internals/builder-types';
+import { ProcessDerived } from './internals/derived-types';
+import { applyDerivedFactories } from './internals/merge-derived';
 import { SignalMemoryManager } from './memory/memory-manager';
 import { getPathNotifier } from './path-notifier';
 import { SecurityValidator } from './security/security-validator';
@@ -13,7 +16,6 @@ import type {
   EntityMapMarker,
   ISignalTree,
 } from './types';
-
 // =============================================================================
 // INTERNAL SYMBOLS
 // =============================================================================
@@ -513,11 +515,216 @@ function create<T extends object>(
  *   .with(effects())
  *   .with(timeTravel())
  *   .with(batching());
+ *
+ * // With derived state (v7) - chained syntax
+ * const tree = signalTree({ count: 0 })
+ *   .derived(($) => ({
+ *     doubled: derived(() => $.count() * 2)
+ *   }))
+ *   .with(entities());
+ *
+ * // With derived state (v7) - second argument syntax
+ * const tree = signalTree(
+ *   { count: 0 },
+ *   ($) => ({
+ *     doubled: derived(() => $.count() * 2)
+ *   })
+ * );
  * ```
  */
+// Overload: with derived factory as second argument
+export function signalTree<T extends object, TDerived extends object>(
+  initialState: T,
+  derivedFactory: ($: TreeNode<T>) => TDerived
+): SignalTreeBuilder<T, TreeNode<T> & ProcessDerived<TDerived>>;
+
+// Overload: with config object
 export function signalTree<T extends object>(
   initialState: T,
-  config: TreeConfig = {}
-): ISignalTree<T> {
-  return create(initialState, config);
+  config?: TreeConfig
+): SignalTreeBuilder<T, TreeNode<T>>;
+
+// Implementation
+export function signalTree<T extends object, TDerived extends object>(
+  initialState: T,
+  configOrDerived?: TreeConfig | (($: TreeNode<T>) => TDerived)
+): SignalTreeBuilder<T, TreeNode<T>> {
+  // Determine if second arg is a derived factory or config
+  const isFactory = typeof configOrDerived === 'function';
+  const config: TreeConfig = isFactory ? {} : configOrDerived ?? {};
+
+  const baseTree = create(initialState, config);
+  const builder = createBuilder<T, TreeNode<T>>(baseTree);
+
+  // If derived factory provided, apply it immediately
+  if (isFactory) {
+    return builder.derived(
+      configOrDerived as ($: TreeNode<T>) => TDerived
+    ) as unknown as SignalTreeBuilder<T, TreeNode<T>>;
+  }
+
+  return builder;
+}
+
+// =============================================================================
+// BUILDER FACTORY
+// =============================================================================
+
+/**
+ * Creates a SignalTreeBuilder that wraps an ISignalTree and adds:
+ * - .derived() method for adding derived state layers
+ * - Lazy finalization (derived factories run on first $ access)
+ */
+function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
+  baseTree: ISignalTree<TSource>
+): SignalTreeBuilder<TSource, TAccum> {
+  const derivedQueue: Array<($: unknown) => object> = [];
+  let isFinalized = false;
+
+  const finalize = () => {
+    if (isFinalized) return;
+    isFinalized = true;
+
+    // Apply all queued derived factories
+    if (derivedQueue.length > 0) {
+      applyDerivedFactories(baseTree.$, derivedQueue);
+    }
+  };
+
+  // Create callable builder function that delegates to baseTree
+  const builder = function (arg?: unknown): TSource | void {
+    // Delegate to baseTree's call signature
+    if (arguments.length === 0) {
+      return (baseTree as unknown as () => TSource)();
+    }
+    return (baseTree as unknown as (arg: unknown) => void)(arg);
+  } as SignalTreeBuilder<TSource, TAccum>;
+
+  // Mark as NodeAccessor
+  (builder as unknown as Record<symbol, boolean>)[NODE_ACCESSOR_SYMBOL] = true;
+
+  // Copy all properties from baseTree to builder
+  Object.defineProperty(builder, 'state', {
+    get() {
+      finalize();
+      return baseTree.state;
+    },
+    enumerable: false,
+    configurable: true,
+  });
+
+  Object.defineProperty(builder, '$', {
+    get() {
+      finalize();
+      return baseTree.$;
+    },
+    enumerable: false,
+    configurable: true,
+  });
+
+  // Override 'with' method to maintain builder chain
+  Object.defineProperty(builder, 'with', {
+    value: function <TAdded>(
+      enhancer: (tree: ISignalTree<TSource>) => ISignalTree<TSource> & TAdded
+    ): SignalTreeBuilder<TSource, TAccum> & TAdded {
+      // Apply enhancer to base tree
+      const enhanced = baseTree.with(enhancer);
+      // Create a new builder wrapping the enhanced tree
+      const newBuilder = createBuilder<TSource, TAccum>(
+        enhanced as unknown as ISignalTree<TSource>
+      );
+      // Copy any additional properties from the enhancer result
+      for (const key of Object.keys(enhanced)) {
+        if (
+          key !== '$' &&
+          key !== 'state' &&
+          key !== 'with' &&
+          key !== 'bind' &&
+          key !== 'destroy' &&
+          key !== 'derived'
+        ) {
+          try {
+            (newBuilder as unknown as Record<string, unknown>)[key] = (
+              enhanced as unknown as Record<string, unknown>
+            )[key];
+          } catch {
+            /* ignore read-only */
+          }
+        }
+      }
+      // Transfer pending derived queue to the new builder
+      for (const factory of derivedQueue) {
+        (
+          newBuilder as unknown as {
+            derived: (f: ($: unknown) => object) => unknown;
+          }
+        ).derived(factory as ($: unknown) => object);
+      }
+      return newBuilder as SignalTreeBuilder<TSource, TAccum> & TAdded;
+    },
+    enumerable: false,
+    writable: false,
+    configurable: true,
+  });
+
+  // Copy 'bind' method from baseTree (if it exists)
+  if (typeof baseTree.bind === 'function') {
+    Object.defineProperty(builder, 'bind', {
+      value: baseTree.bind.bind(baseTree),
+      enumerable: false,
+      writable: false,
+      configurable: true,
+    });
+  } else {
+    Object.defineProperty(builder, 'bind', {
+      value: () => builder,
+      enumerable: false,
+      writable: false,
+      configurable: true,
+    });
+  }
+
+  // Copy 'destroy' method from baseTree (if it exists)
+  if (typeof baseTree.destroy === 'function') {
+    Object.defineProperty(builder, 'destroy', {
+      value: baseTree.destroy.bind(baseTree),
+      enumerable: false,
+      writable: false,
+      configurable: true,
+    });
+  } else {
+    Object.defineProperty(builder, 'destroy', {
+      value: () => {
+        /* noop */
+      },
+      enumerable: false,
+      writable: false,
+      configurable: true,
+    });
+  }
+
+  // Add derived() method
+  Object.defineProperty(builder, 'derived', {
+    value: function <TDerived extends object>(
+      factory: ($: TAccum) => TDerived
+    ): SignalTreeBuilder<TSource, TAccum & ProcessDerived<TDerived>> {
+      if (isFinalized) {
+        throw new Error(
+          'SignalTree: Cannot add derived() after tree.$ has been accessed. ' +
+            'Chain all .derived() calls before accessing $.'
+        );
+      }
+      derivedQueue.push(factory as ($: unknown) => object);
+      // Return same builder - types are updated at compile time
+      return builder as unknown as SignalTreeBuilder<
+        TSource,
+        TAccum & ProcessDerived<TDerived>
+      >;
+    },
+    enumerable: false,
+    writable: false,
+    configurable: true,
+  });
+
+  return builder;
 }
