@@ -685,11 +685,12 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
   }
 
   // Copy 'destroy' method from baseTree (if it exists)
+  // Note: writable: true allows enhancers like guardrails() to override destroy
   if (typeof baseTree.destroy === 'function') {
     Object.defineProperty(builder, 'destroy', {
       value: baseTree.destroy.bind(baseTree),
       enumerable: false,
-      writable: false,
+      writable: true,
       configurable: true,
     });
   } else {
@@ -698,7 +699,7 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
         /* noop */
       },
       enumerable: false,
-      writable: false,
+      writable: true,
       configurable: true,
     });
   }
