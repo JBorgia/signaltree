@@ -23,9 +23,8 @@ export type PathNotifierInterceptor = (
 
 /**
  * Simple path-based notification system
- * Used internally by SignalTree for entity hooks and enhancers
- *
- * @internal
+ * Used internally by SignalTree for entity hooks and enhancers.
+ * Access via getPathNotifier().
  */
 export class PathNotifier {
   // Map of pattern -> Set of handlers
@@ -310,9 +309,8 @@ let globalPathNotifier: PathNotifier | null = null;
 
 /**
  * Get or create the global PathNotifier
- * Lazy initialization ensures zero overhead if entities/enhancers aren't used
- *
- * @internal
+ * Lazy initialization ensures zero overhead if entities/enhancers aren't used.
+ * Used by enhancers like guardrails for monitoring.
  */
 export function getPathNotifier(): PathNotifier {
   if (!globalPathNotifier) {

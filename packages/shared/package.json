@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/shared",
-  "version": "7.0.0",
+  "version": "7.0.1",
   "description": "Internal shared utilities for SignalTree packages.",
   "private": true,
   "type": "module",

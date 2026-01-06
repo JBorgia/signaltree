@@ -56,7 +56,7 @@ export type DerivedType<T> = T extends DerivedMarker<infer R> ? R : never;
 
 /**
  * Type guard to check if a value is a derived marker.
- * @internal Used by mergeDerivedState for backwards compatibility.
+ * Used by mergeDerivedState for backwards compatibility.
  */
 export function isDerivedMarker(
   value: unknown
