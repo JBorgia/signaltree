@@ -1,29 +1,47 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
+import { entityMap, signalTree } from '../..';
 import { entities } from './entities';
 
-function createFakeTree(initial: any) {
-  let state = initial;
-  const tree: any = function (arg?: any) {
-    if (arguments.length === 0) return state;
-    if (typeof arg === 'function') state = arg(state);
-    else state = arg;
-  };
-
-  tree.state = state;
-  return tree as unknown as any;
-}
-
 describe('entities enhancer', () => {
-  it('materializes entity map markers and enables entities', () => {
-    const marker = { __isEntityMap: true, __entityMapConfig: {} };
-    const tree = createFakeTree({ users: marker });
+  it('should show deprecation warning', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
-    const enhanced = entities()(tree as any) as any;
+    signalTree({
+      users: entityMap<{ id: number }, number>(),
+    }).with(entities());
 
-    expect((enhanced as any).__entitiesEnabled).toBe(true);
-    // materialize either replaces the marker with a signal-like object
-    const users = enhanced().users;
-    expect(users).not.toEqual(marker);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('entities() enhancer is deprecated')
+    );
+
+    warnSpy.mockRestore();
+  });
+
+  it('should still work (backward compatible)', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    const tree = signalTree({
+      users: entityMap<{ id: number; name: string }, number>(),
+    }).with(entities());
+
+    tree.$.users.upsertOne({ id: 1, name: 'Alice' });
+
+    expect(tree.$.users.all()).toEqual([{ id: 1, name: 'Alice' }]);
+    expect(
+      (tree as unknown as { __entitiesEnabled: boolean }).__entitiesEnabled
+    ).toBe(true);
+  });
+
+  it('should mark tree as entities enabled', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    const tree = signalTree({
+      users: entityMap<{ id: number }, number>(),
+    }).with(entities());
+
+    expect(
+      (tree as unknown as { __entitiesEnabled: boolean }).__entitiesEnabled
+    ).toBe(true);
   });
 });

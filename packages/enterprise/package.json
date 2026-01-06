@@ -71,7 +71,7 @@
     "@angular/compiler": "^20.0.0",
     "@angular/platform-browser-dynamic": "^20.0.0",
     "zone.js": "^0.15.0",
-    "@signaltree/core": "^6.0.0",
+    "@signaltree/core": "^7.0.0",
     "tslib": "^2.0.0",
     "vitest": "^2.0.0"
   },
@@ -90,7 +90,7 @@
     }
   },
   "devDependencies": {
-    "@signaltree/core": "^6.0.0"
+    "@signaltree/core": "^7.0.0"
   },
   "publishConfig": {
     "access": "public"

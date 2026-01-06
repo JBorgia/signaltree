@@ -1,0 +1,242 @@
+<div class="markers-demo">
+  <div class="demo-header">
+    <h1>Markers Demo</h1>
+    <p class="subtitle">
+      v7.0 introduces <code>status()</code> and <code>stored()</code> markers
+      for async state tracking and localStorage persistence.
+    </p>
+  </div>
+
+  <!-- Status Marker Section -->
+  <section class="demo-section">
+    <h2>status() Marker - Async Operation State</h2>
+    <p class="section-desc">
+      Track loading states for async operations with automatic derived signals
+      and helper methods.
+    </p>
+
+    <div class="demo-card">
+      <div class="card-header">
+        <h3>User Loading Demo</h3>
+        <div class="status-indicators">
+          <span
+            class="status-badge"
+            [class.active]="store.$.users.status.isNotLoaded()"
+          >
+            NotLoaded
+          </span>
+          <span
+            class="status-badge"
+            [class.active]="store.$.users.status.isLoading()"
+          >
+            Loading
+          </span>
+          <span
+            class="status-badge"
+            [class.active]="store.$.users.status.isLoaded()"
+          >
+            Loaded
+          </span>
+          <span
+            class="status-badge error"
+            [class.active]="store.$.users.status.isError()"
+          >
+            Error
+          </span>
+        </div>
+      </div>
+
+      <div class="card-content">
+        <div class="button-group">
+          <button
+            class="btn primary"
+            (click)="loadUsers()"
+            [disabled]="store.$.users.status.isLoading()"
+          >
+            @if (store.$.users.status.isLoading()) {
+            <span class="spinner"></span> Loading... } @else { Load Users }
+          </button>
+          <button
+            class="btn secondary"
+            (click)="resetUsers()"
+            [disabled]="store.$.users.status.isNotLoaded()"
+          >
+            Reset
+          </button>
+        </div>
+
+        @if (store.$.users.status.isError()) {
+        <div class="error-message">
+          <strong>Error:</strong>
+          {{ store.$.users.status.error()?.message }}
+          <button class="btn small" (click)="loadUsers()">Retry</button>
+        </div>
+        } @if (store.$.users.status.isLoaded()) {
+        <div class="users-list">
+          <h4>Users ({{ store.$.users.entities.all().length }})</h4>
+          <ul>
+            @for (user of store.$.users.entities.all(); track user.id) {
+            <li
+              tabindex="0"
+              [class.selected]="store.$.lastViewedUserId() === user.id"
+              (click)="selectUser(user.id)"
+              (keydown.enter)="selectUser(user.id)"
+            >
+              <span class="user-name">{{ user.name }}</span>
+              <span class="user-email">{{ user.email }}</span>
+            </li>
+            }
+          </ul>
+        </div>
+        }
+
+        <div class="state-display">
+          <h4>Current State</h4>
+          <pre>{{
+            {
+              state: store.$.users.status.state(),
+              isReady: store.$.isReady(),
+              userCount: store.$.users.entities.all().length
+            } | json
+          }}</pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-example">
+      <h4>Code Example</h4>
+      <pre><code>{{ statusExample }}</code></pre>
+    </div>
+  </section>
+
+  <!-- Stored Marker Section -->
+  <section class="demo-section">
+    <h2>stored() Marker - localStorage Persistence</h2>
+    <p class="section-desc">
+      Auto-sync signals to localStorage with debounced writes. Changes persist
+      across page reloads.
+    </p>
+
+    <div class="demo-card" [ngStyle]="store.$.themeStyles()">
+      <div class="card-header">
+        <h3>Preferences Demo</h3>
+        <span class="persistence-badge"> 📦 Persisted to localStorage </span>
+      </div>
+
+      <div class="card-content">
+        <div class="preference-controls">
+          <div class="control-group">
+            <span class="control-label">Theme</span>
+            <div class="button-group">
+              <button
+                class="btn"
+                [class.active]="store.$.theme() === 'light'"
+                (click)="store.$.theme.set('light')"
+              >
+                ☀️ Light
+              </button>
+              <button
+                class="btn"
+                [class.active]="store.$.theme() === 'dark'"
+                (click)="store.$.theme.set('dark')"
+              >
+                🌙 Dark
+              </button>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <span class="control-label"
+              >Font Size: {{ store.$.fontSize() }}px</span
+            >
+            <div class="button-group">
+              <button class="btn" (click)="decreaseFontSize()">A-</button>
+              <button class="btn" (click)="increaseFontSize()">A+</button>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <span class="control-label">Last Viewed User</span>
+            <span class="value">
+              @if (store.$.selectedUser(); as user) {
+              {{ user.name }}
+              } @else { None selected }
+            </span>
+          </div>
+        </div>
+
+        <div class="button-group">
+          <button class="btn danger" (click)="clearPreferences()">
+            Clear All Preferences
+          </button>
+        </div>
+
+        <div class="storage-display">
+          <h4>localStorage Values</h4>
+          <pre>{{
+            {
+              'demo-theme': store.$.theme(),
+              'demo-fontSize': store.$.fontSize(),
+              'demo-lastViewedUserId': store.$.lastViewedUserId()
+            } | json
+          }}</pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-example">
+      <h4>Code Example</h4>
+      <pre><code>{{ storedExample }}</code></pre>
+    </div>
+  </section>
+
+  <!-- Combined Usage Section -->
+  <section class="demo-section">
+    <h2>Combining Markers with Derived State</h2>
+    <p class="section-desc">
+      Use markers together with <code>.derived()</code> for powerful patterns.
+    </p>
+
+    <div class="code-example">
+      <h4>Code Example</h4>
+      <pre><code>{{ combinedExample }}</code></pre>
+    </div>
+  </section>
+
+  <!-- Performance Notes -->
+  <section class="demo-section">
+    <h2>Performance Optimizations</h2>
+    <div class="performance-grid">
+      <div class="perf-card">
+        <h3>status()</h3>
+        <ul>
+          <li>
+            <strong>Lazy Computed:</strong> Derived signals (isLoading, etc.)
+            only created on first access
+          </li>
+          <li>
+            <strong>Performance Budget:</strong> 100 markers initialize in
+            &lt;50ms
+          </li>
+        </ul>
+      </div>
+      <div class="perf-card">
+        <h3>stored()</h3>
+        <ul>
+          <li>
+            <strong>Debounced Writes:</strong> Default 100ms debounce prevents
+            localStorage hammering
+          </li>
+          <li>
+            <strong>Non-blocking:</strong> Writes use queueMicrotask() for
+            responsive UI
+          </li>
+          <li>
+            <strong>Coalesced Updates:</strong> Rapid updates result in single
+            storage write
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</div>

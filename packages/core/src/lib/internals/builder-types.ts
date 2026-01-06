@@ -34,7 +34,7 @@ import type { ISignalTree, TreeNode } from '../types';
 export interface SignalTreeBuilder<TSource, TAccum = TreeNode<TSource>> {
   // Callable (backward compatible with NodeAccessor)
   (): TSource;
-  (value: TSource): void;
+  (value: Partial<TSource>): void;
   (updater: (current: TSource) => TSource): void;
 
   // State accessors with accumulated type

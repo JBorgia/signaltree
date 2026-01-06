@@ -3,9 +3,7 @@ import { deepEqual, LRUCache } from '@signaltree/shared';
 
 import { isNodeAccessor } from '../../lib/utils';
 
-import type { TreeNode } from '../../lib/utils';
-
-import type { ISignalTree } from '../../lib/types';
+import type { ISignalTree, TreeNode } from '../../lib/types';
 
 // Dev environment detection
 declare const __DEV__: boolean | undefined;

@@ -84,6 +84,28 @@ export {
   type DerivedType,
 } from './lib/markers/derived';
 
+// Status marker (v7) - async operation state
+export {
+  status,
+  isStatusMarker,
+  LoadingState,
+  type StatusMarker,
+  type StatusSignal,
+  type StatusConfig,
+} from './lib/markers/status';
+
+// Stored marker (v7) - localStorage persistence
+export {
+  stored,
+  isStoredMarker,
+  type StoredMarker,
+  type StoredSignal,
+  type StoredOptions,
+} from './lib/markers/stored';
+
+// Marker processing (v7) - extensibility
+export { registerMarkerProcessor } from './lib/internals/materialize-markers';
+
 // ============================================
 // UTILITY EXPORTS
 // ============================================

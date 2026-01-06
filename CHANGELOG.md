@@ -1,3 +1,197 @@
+## [7.0.0] - 2026-01-06
+
+### 🎯 Philosophy: Use Angular Directly
+
+v7 embraces a **minimal marker** philosophy. SignalTree provides markers only for things Angular doesn't have built-in:
+
+| SignalTree Marker      | Purpose                  | Angular Equivalent |
+| ---------------------- | ------------------------ | ------------------ |
+| `entityMap<T, K>()`    | Normalized collections   | None               |
+| `status()`             | Manual async state       | None               |
+| `stored(key, default)` | localStorage persistence | None               |
+
+**Everything else → use Angular directly:**
+
+- `computed()` - Derived read-only state
+- `linkedSignal()` - Writable derived state
+- `resource()` - Async data fetching with auto loading/error
+
+### 📐 The `.derived()` Rule
+
+> **Only use `.derived()` when you need access to `$` (tree state)**
+
+```typescript
+signalTree({
+  // ✅ Plain values → become signals
+  count: 0,
+  name: '',
+
+  // ✅ SignalTree markers (Angular doesn't have these)
+  users: entityMap<User, number>(),
+  usersStatus: status(),
+  theme: stored('theme', 'light'),
+
+  // ✅ Angular primitives that DON'T need tree state
+  windowWidth: linkedSignal(() => window.innerWidth),
+  serverConfig: resource({ loader: () => fetch('/api/config') }),
+}).derived(($) => ({
+  // ✅ Only things that NEED $ go here
+  doubled: computed(() => $.count() * 2),
+  selectedUser: computed(() => $.users.byId($.selectedId())?.()),
+  userDetails: resource({
+    request: () => $.selectedId(),
+    loader: ({ request }) => fetch(`/api/users/${request}`),
+  }),
+}));
+```
+
+### 🚀 New Features
+
+#### `status()` Marker - Async Operation State Tracking
+
+Track loading states for async operations with automatic derived signals and helper methods:
+
+```typescript
+import { signalTree, status, LoadingState } from '@signaltree/core';
+
+const tree = signalTree({
+  users: {
+    entities: entityMap<User>(),
+    status: status(), // Async state tracking
+  },
+});
+
+// Derived boolean signals (lazy-created for performance)
+tree.$.users.status.isNotLoaded(); // true initially
+tree.$.users.status.isLoading(); // false
+tree.$.users.status.isLoaded(); // false
+tree.$.users.status.isError(); // false
+
+// Helper methods
+tree.$.users.status.setLoading(); // Start loading
+tree.$.users.status.setLoaded(); // Mark complete
+tree.$.users.status.setError(new Error('Failed')); // Set error state
+tree.$.users.status.reset(); // Back to NotLoaded
+```
+
+**Performance optimizations:**
+
+- Lazy computed signals - `isLoading`, `isLoaded`, etc. only created on first access
+- 100 status markers initialize in < 50ms
+
+#### `stored()` Marker - localStorage Persistence
+
+Auto-sync signals to localStorage with debounced writes:
+
+```typescript
+import { signalTree, stored } from '@signaltree/core';
+
+const tree = signalTree({
+  theme: stored('app-theme', 'light'),
+  preferences: stored('user-prefs', { notifications: true }),
+});
+
+// Value loads from localStorage on init
+tree.$.theme(); // 'light' or restored value
+
+// Auto-saves on change (debounced by default)
+tree.$.theme.set('dark'); // Signal updates immediately, storage writes debounced
+
+// Methods
+tree.$.theme.clear(); // Reset to default, remove from storage
+tree.$.theme.reload(); // Force reload from storage
+```
+
+**Performance optimizations:**
+
+- Default 100ms debounce prevents localStorage hammering
+- Non-blocking writes via `queueMicrotask()`
+- Rapid updates coalesced into single storage write
+- Set `debounceMs: 0` for immediate writes when needed
+
+#### Marker Extensibility
+
+Register custom marker processors for advanced use cases:
+
+```typescript
+import { registerMarkerProcessor } from '@signaltree/core';
+
+// Register a custom marker type
+registerMarkerProcessor(
+  isMyMarker, // Type guard
+  (marker, notifier, path) => createMySignal(marker) // Factory
+);
+```
+
+### ⚡ Performance
+
+- **status()**: Lazy computed creation - derived signals only created on access
+- **stored()**: Debounced writes (default 100ms) with queueMicrotask for non-blocking I/O
+- **Performance budgets**: 100 markers initialize in < 50ms (tested)
+- **Auto-batching**: Partial updates via callable are automatically batched
+
+### ⚠️ Deprecations
+
+#### `entities()` Enhancer Deprecated
+
+The `entities()` enhancer is **no longer needed**. EntityMap markers are now automatically processed during tree finalization.
+
+```typescript
+// Before (v6)
+const tree = signalTree({
+  users: entityMap<User, number>(),
+}).with(entities()); // Required
+
+// After (v7)
+const tree = signalTree({
+  users: entityMap<User, number>(),
+}); // Just works - no .with(entities()) needed!
+```
+
+If you have existing code with `.with(entities())`, it will continue to work (backward compatible) but will show a deprecation warning:
+
+```
+SignalTree: entities() enhancer is deprecated in v7. EntityMap markers are now automatically
+processed. Remove .with(entities()) from your code. This enhancer will be removed in v8.
+```
+
+### 🔄 Auto-Batching
+
+Partial updates via the callable syntax are now automatically batched:
+
+```typescript
+const tree = signalTree({
+  user: { name: 'Alice', age: 30 },
+});
+
+// Partial update - auto-batched (single change detection cycle)
+tree.$.user({ name: 'Bob' }); // Only updates name, keeps age: 30
+
+// Function update - also auto-batched
+tree.$.user((prev) => ({ ...prev, score: prev.score + 10 }));
+```
+
+The `NodeAccessor` type now accepts `Partial<T>` for partial updates.
+
+### 📦 Exports
+
+New exports from `@signaltree/core`:
+
+```typescript
+// Status marker
+export { status, isStatusMarker, LoadingState } from '@signaltree/core';
+export type { StatusMarker, StatusSignal, StatusConfig } from '@signaltree/core';
+
+// Stored marker
+export { stored, isStoredMarker } from '@signaltree/core';
+export type { StoredMarker, StoredSignal, StoredOptions } from '@signaltree/core';
+
+// Extensibility
+export { registerMarkerProcessor } from '@signaltree/core';
+```
+
+---
+
 ## [6.3.1] - 2026-01-XX
 
 ### ⚠️ Breaking Changes

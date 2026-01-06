@@ -75,7 +75,8 @@ export class DemoAppStore {
 
   // Batch multiple counter updates to reduce change detection cycles
   addThenIncrement(amount: number) {
-    this.tree.batch(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (this.tree as any).batch(() => {
       this.tree.$.counter.count.update((c: number) => c + amount);
       this.tree.$.counter.incrementedCount.update((c: number) => c + 1);
     });

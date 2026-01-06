@@ -1,12 +1,12 @@
 import { snapshotState } from '../../lib/utils';
 import { deepClone, deepEqual } from './utils';
 
-import type { TreeNode } from '../../lib/utils';
 import type {
   ISignalTree,
   TimeTravelMethods,
   TimeTravelConfig,
   TimeTravelEntry,
+  TreeNode,
 } from '../../lib/types';
 
 // Re-export for convenience (do not redefine locally)

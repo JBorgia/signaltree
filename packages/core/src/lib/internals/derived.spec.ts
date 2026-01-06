@@ -1,3 +1,10 @@
+import { computed } from '@angular/core';
+import { describe, expect, it } from 'vitest';
+
+import { entities } from '../../enhancers/entities/entities';
+import { signalTree } from '../signal-tree';
+import { entityMap } from '../types';
+
 describe('derived() marker pattern', () => {
   describe('basic derived state', () => {
     it('should create derived computed signals from source state', () => {
@@ -12,13 +19,6 @@ describe('derived() marker pattern', () => {
 
       // Access $ to finalize
       expect(tree.$.doubled()).toBe(10);
-import { computed } from '@angular/core';
-import { describe, expect, it } from 'vitest';
-
-import { entities } from '../../enhancers/entities/entities';
-import { signalTree } from '../signal-tree';
-import { entityMap } from '../types';
-
       expect(tree.$.tripled()).toBe(15);
 
       // Update source state

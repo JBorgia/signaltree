@@ -14,6 +14,52 @@
 
 ## 🚀 What's New (January 2026)
 
+**v7.0.0 Release** - Simplified Marker Philosophy:
+
+> **Use Angular directly.** SignalTree only provides markers for what Angular doesn't have.
+
+| SignalTree Marker      | Purpose                  | Angular Has? |
+| ---------------------- | ------------------------ | ------------ |
+| `entityMap<T, K>()`    | Normalized collections   | ❌           |
+| `status()`             | Manual async state       | ❌           |
+| `stored(key, default)` | localStorage persistence | ❌           |
+
+For derived state, async fetching, and writable derivations - **use Angular's primitives directly**:
+
+```typescript
+import { signalTree, entityMap, status, stored } from '@signaltree/core';
+import { computed, linkedSignal, resource } from '@angular/core';
+
+const store = signalTree({
+  // ✅ SignalTree markers (Angular doesn't have these)
+  users: entityMap<User, number>(),
+  submitStatus: status(),
+  theme: stored('app-theme', 'light'),
+
+  // ✅ Plain values → become signals
+  selectedId: null as number | null,
+
+  // ✅ Angular primitives that DON'T need tree state
+  serverConfig: resource({ loader: () => fetch('/api/config') }),
+}).derived(($) => ({
+  // ✅ Only things that NEED $ go in .derived()
+  selectedUser: computed(() => $.users.byId($.selectedId())?.()),
+  userDetails: resource({
+    request: () => $.selectedId(),
+    loader: ({ request }) => fetch(`/api/users/${request}`),
+  }),
+}));
+// Note: .with(entities()) no longer needed in v7 - entityMap auto-processes!
+```
+
+**New Marker Features:**
+
+- **`status()` Marker**: Track async states (NotLoaded, Loading, Loaded, Error) with lazy computed signals
+- **`stored()` Marker**: Auto-sync to localStorage with 100ms debounced writes
+- **Performance Budgets**: 100 markers initialize in < 50ms
+
+📚 See [v7 Patterns Guide](./docs/v7-patterns.md) for detailed examples.
+
 **v6.3.1 Release** - Deep Merge Fix + `derived()` Deprecation:
 
 - **Deep Merge Fixed**: Derived namespaces now correctly preserve source properties including `entityMap()` methods
@@ -412,7 +458,7 @@ See [`@signaltree/callable-syntax`](./packages/callable-syntax/README.md) for se
 ### Composed Usage (Modular Features)
 
 ```typescript
-import { signalTree, entityMap, entities, batching, devTools, timeTravel } from '@signaltree/core';
+import { signalTree, entityMap, batching, devTools, timeTravel } from '@signaltree/core';
 
 // Compose multiple features using .with()
 const tree = signalTree({
@@ -421,7 +467,7 @@ const tree = signalTree({
   ui: { loading: false, theme: 'light' },
   filters: { search: '', category: 'all' },
 })
-  .with(entities()) // Enhanced CRUD operations (auto-detects entityMap markers)
+  // Note: entities() no longer needed - entityMap auto-processes in v7!
   .with(batching()) // Batch updates for performance
   .with(timeTravel()) // Undo/redo functionality
   .with(devTools()); // Development tools (auto-disabled in production)

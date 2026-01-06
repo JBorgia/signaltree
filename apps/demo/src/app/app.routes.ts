@@ -98,6 +98,13 @@ export const appRoutes: Route[] = [
       ).then((c) => c.TimeTravelDemoComponent),
   },
   {
+    path: 'markers',
+    loadComponent: () =>
+      import(
+        './examples/features/fundamentals/examples/markers/markers-demo.component'
+      ).then((c) => c.MarkersDemoComponent),
+  },
+  {
     path: 'devtools',
     loadComponent: () =>
       import(

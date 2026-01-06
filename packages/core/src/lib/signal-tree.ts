@@ -1,9 +1,13 @@
 import { isSignal, signal, WritableSignal } from '@angular/core';
 
 import { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './constants';
+import { batchScope } from './internals/batch-scope';
 import { SignalTreeBuilder } from './internals/builder-types';
 import { ProcessDerived } from './internals/derived-types';
+import { materializeMarkers } from './internals/materialize-markers';
 import { applyDerivedFactories } from './internals/merge-derived';
+import { isStatusMarker } from './markers/status';
+import { isStoredMarker } from './markers/stored';
 import { SignalMemoryManager } from './memory/memory-manager';
 import { getPathNotifier } from './path-notifier';
 import { SecurityValidator } from './security/security-validator';
@@ -19,7 +23,6 @@ import type {
 // =============================================================================
 // INTERNAL SYMBOLS
 // =============================================================================
-
 const NODE_ACCESSOR_SYMBOL = Symbol.for('SignalTree:NodeAccessor');
 
 // =============================================================================
@@ -165,44 +168,60 @@ function validateTree<T>(obj: T, config: TreeConfig): void {
  * - Can be called with an updater function to transform state
  * - Have enumerable properties for child nodes (signals or nested accessors)
  *
+ * ## Auto-Batching for Partial Updates
+ *
+ * When called with an object argument (partial update), all child signal
+ * writes are wrapped in a batchScope, resulting in a single change detection
+ * cycle instead of multiple cycles.
+ *
+ * ```typescript
+ * // Single CD cycle (auto-batched)
+ * $.tickets({ startDate, endDate, count });
+ *
+ * // Individual CD cycles (not batched)
+ * $.tickets.startDate.set(startDate);
+ * $.tickets.endDate.set(endDate);
+ * $.tickets.count.set(count);
+ * ```
+ *
  * ## Writable Properties for Deep Merge
  *
  * Properties are defined with `writable: true` to support the deep merge pattern.
- * When derived state is merged into a namespace and then processed by enhancers
- * like `entities()`, the enhancer needs to replace entityMap markers with
- * EntitySignal instances. Without writable properties, this assignment would
- * silently fail.
- *
- * Example flow:
- * 1. Source defines: `tickets: { entities: entityMap<Ticket>() }`
- * 2. Derived adds: `tickets: { active: derived(...) }`
- * 3. Deep merge creates $.tickets as NodeAccessor with both properties
- * 4. entities() tries to replace $.tickets.entities marker with EntitySignal
- * 5. If not writable, step 4 silently fails → runtime error when calling methods
+ * When derived state is merged into a namespace and then processed by
+ * materializeMarkers(), it needs to replace markers with their signal forms.
  */
 function makeNodeAccessor<T>(store: TreeNode<T>): NodeAccessor<T> {
   const accessor = function (arg?: unknown): T | void {
+    // GET - no argument
     if (arguments.length === 0) {
       return unwrap(store) as unknown as T;
     }
 
+    // UPDATE with function - auto-batch
     if (typeof arg === 'function') {
       const updater = arg as (current: T) => T;
       const current = unwrap(store) as T;
-      recursiveUpdate(store, updater(current));
-    } else {
-      recursiveUpdate(store, arg);
+      batchScope(() => recursiveUpdate(store, updater(current)));
+      return;
     }
+
+    // PARTIAL UPDATE with object - auto-batch
+    if (typeof arg === 'object' && arg !== null && !Array.isArray(arg)) {
+      batchScope(() => recursiveUpdate(store, arg as Partial<T>));
+      return;
+    }
+
+    // FULL SET with primitive/array - single value, no batch needed
+    recursiveUpdate(store, arg);
   } as NodeAccessor<T>;
 
   (accessor as unknown as Record<symbol, boolean>)[NODE_ACCESSOR_SYMBOL] = true;
 
   // Copy store properties onto accessor
-  // CRITICAL: Properties must be writable to allow enhancers (like entities())
-  // to replace them. When entities() processes an entityMap marker, it needs to
-  // assign an EntitySignal in place of the marker. Without writable: true,
+  // CRITICAL: Properties must be writable to allow materializeMarkers()
+  // to replace markers with their signal forms. Without writable: true,
   // this assignment silently fails in non-strict mode, causing runtime errors
-  // like "$.tickets.entities.upsertOne is not a function".
+  // like "$.users.upsertOne is not a function".
   for (const key of Object.keys(store as object)) {
     Object.defineProperty(accessor, key, {
       value: (store as Record<string, unknown>)[key],
@@ -234,7 +253,7 @@ function recursiveUpdate(target: unknown, updates: unknown): void {
       if (value && typeof value === 'object') {
         recursiveUpdate(prop, value);
       } else {
-        prop(value);
+        (prop as (v: unknown) => void)(value);
       }
     }
   }
@@ -267,8 +286,20 @@ function createSignalStore<T>(
   const store: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-    // Entity map markers - preserve for entities()
+    // Entity map markers - preserve for entities() enhancer
     if (isEntityMapMarker(value)) {
+      store[key] = value;
+      continue;
+    }
+
+    // Status markers - preserve for materializeMarkers()
+    if (isStatusMarker(value)) {
+      store[key] = value;
+      continue;
+    }
+
+    // Stored markers - preserve for materializeMarkers()
+    if (isStoredMarker(value)) {
       store[key] = value;
       continue;
     }
@@ -615,7 +646,13 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
     if (isFinalized) return;
     isFinalized = true;
 
-    // Apply all queued derived factories
+    // Step 1: Materialize ALL markers (entityMap, status, stored, etc.)
+    // This must happen BEFORE derived processing so that derived factories
+    // can reference entity methods, status signals, and stored signals.
+    materializeMarkers(baseTree.$);
+    materializeMarkers(baseTree.state);
+
+    // Step 2: Apply all queued derived factories
     if (derivedQueue.length > 0) {
       applyDerivedFactories(baseTree.$, derivedQueue);
     }

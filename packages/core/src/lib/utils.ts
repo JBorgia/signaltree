@@ -35,28 +35,8 @@ export interface MemoryManager {
   dispose(): void;
 }
 
-/**
- * Minimal type definitions for utils package
- * (Full definitions are in @signaltree/types)
- */
-
-export interface NodeAccessor<T> {
-  (): T;
-  (value: T): void;
-  (updater: (current: T) => T): void;
-}
-
-export type TreeNode<T> = {
-  [K in keyof T]: T[K] extends readonly unknown[]
-    ? WritableSignal<T[K]>
-    : T[K] extends object
-    ? T[K] extends Signal<unknown>
-      ? T[K]
-      : T[K] extends (...args: unknown[]) => unknown
-      ? WritableSignal<T[K]>
-      : NodeAccessor<T[K]>
-    : WritableSignal<T[K]>;
-};
+// NodeAccessor and TreeNode are defined in ./types.ts (canonical location)
+import type { NodeAccessor, TreeNode } from './types';
 
 /**
  * Checks if a value is a node accessor created by makeNodeAccessor
