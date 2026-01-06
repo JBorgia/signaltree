@@ -1,3 +1,21 @@
+## 7.1.0 (2026-01-06)
+
+### 🚀 Features
+
+- ⚠️  **core:** add generic error type to status() marker ([13a6ef2](https://github.com/JBorgia/signaltree/commit/13a6ef2))
+
+### 🩹 Fixes
+
+- **guardrails:** update @signaltree/shared peer dependency to ^7.0.0 ([50a21d9](https://github.com/JBorgia/signaltree/commit/50a21d9))
+
+### ⚠️  Breaking Changes
+
+- **core:** None - fully backward compatible
+
+### ❤️ Thank You
+
+- Borgia
+
 ## [7.0.0] - 2026-01-06
 
 ### 🎯 Philosophy: Use Angular Directly
