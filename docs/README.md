@@ -8,44 +8,37 @@ Use this index to navigate the canonical documentation.
 
 ## Getting Started
 
-- Implementation patterns guide: docs/IMPLEMENTATION_PATTERNS.md
-- Project overview and specifications: docs/overview.md
-- Root README: ../../README.md
-
-## Overview
-
-- Project overview and specifications: docs/overview.md
-- Root README: ../../README.md
+- **Architecture Guide**: [signaltree-architecture-guide.md](../signaltree-architecture-guide.md) - Comprehensive patterns and guidance
+- **AI/Developer Guide**: [LLM.md](../LLM.md) - Quick reference for v7 markers and patterns
+- Project overview: [overview.md](overview.md)
+- Root README: [README.md](../README.md)
 
 ## Performance
 
-- Metrics and methodology: docs/performance/metrics.md
-- Bundle optimization guide: docs/performance/bundle-optimization.md
-- Memoization optimization: docs/performance/memoization-optimization.md
-- Frequency weighting system: docs/performance/frequency-weighting-system.md
+- Metrics and methodology: [performance/metrics.md](performance/metrics.md)
+- Bundle optimization: [performance/bundle-optimization.md](performance/bundle-optimization.md)
+- Memoization optimization: [performance/memoization-optimization.md](performance/memoization-optimization.md)
+- Performance patterns: [performance/performance-patterns.md](performance/performance-patterns.md)
+- Hosting guide: [performance/performance-hosting-guide.md](performance/performance-hosting-guide.md)
 
 ## Deployment
 
-- Production deployment: docs/deployment/production.md
+- Production deployment: [deployment/production.md](deployment/production.md)
 
 ## Packages
 
-- Core (all enhancers included): ../../packages/core/README.md
-- Enterprise add-ons: ../../packages/enterprise/README.md
-- Angular forms integration: ../../packages/ng-forms/README.md
-- Callable syntax transform: ../../packages/callable-syntax/README.md
-- Shared utilities: ../../packages/shared/README.md
+- Core: [packages/core/README.md](../packages/core/README.md)
+- Enterprise: [packages/enterprise/README.md](../packages/enterprise/README.md)
+- Angular forms: [packages/ng-forms/README.md](../packages/ng-forms/README.md)
+- Callable syntax: [packages/callable-syntax/README.md](../packages/callable-syntax/README.md)
 
-## Scripts
+## Development
 
-- Scripts overview: ../../scripts/README.md
+- Release process: [.github/instructions/release-process.instructions.md](../.github/instructions/release-process.instructions.md)
+- Validation guide: [.github/VALIDATION_GUIDE.md](../.github/VALIDATION_GUIDE.md)
+- Local symlink issues: [LOCAL_DEVELOPMENT_SYMLINK_ISSUE.md](LOCAL_DEVELOPMENT_SYMLINK_ISSUE.md)
+- Scripts: [scripts/README.md](../scripts/README.md)
 
-## Legal
+## Archive
 
-- License: ../../LICENSE
-- Intellectual property: ../../INTELLECTUAL_PROPERTY.md
-
-## Other
-
-- Demo app: ../../apps/demo/README.md
-- Git hooks: ../../.githooks/README.md
+Historical documents moved to [archive/](archive/) for reference.
