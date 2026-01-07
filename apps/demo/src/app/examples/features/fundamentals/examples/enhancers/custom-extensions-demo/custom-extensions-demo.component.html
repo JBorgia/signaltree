@@ -199,7 +199,7 @@
             During tree finalization, registered processors transform markers
             into their materialized form.
           </p>
-          <pre><code>{{ markerCode }}</code></pre>
+          <pre><code [innerText]="markerCode"></code></pre>
         </div>
       </details>
 
@@ -213,7 +213,7 @@
             An enhancer is a function that takes a tree and returns an augmented
             tree with additional methods or behavior.
           </p>
-          <pre><code>{{ enhancerCode }}</code></pre>
+          <pre><code [innerText]="enhancerCode"></code></pre>
         </div>
       </details>
 
@@ -227,7 +227,7 @@
             Combine markers and enhancers for powerful, type-safe state
             management:
           </p>
-          <pre><code>{{ usageCode }}</code></pre>
+          <pre><code [innerText]="usageCode"></code></pre>
         </div>
       </details>
     </div>
