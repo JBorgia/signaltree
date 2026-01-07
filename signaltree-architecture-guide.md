@@ -2872,61 +2872,344 @@ if (sumBytes > THRESHOLD) process.exit(2);
 
 ## Summary: Recommended Default Architecture
 
-For most Angular applications using SignalTree:
+For most Angular applications using SignalTree, we recommend a **modular architecture** with derived tiers and domain operations:
+
+### Folder Structure
+
+```
+store/
+├── app-store.ts                    # Thin facade - composes ops namespace
+├── tree/
+│   ├── index.ts                    # Re-exports
+│   ├── app-tree.ts                 # Tree assembly (imports domains)
+│   ├── app-tree.provider.ts        # DI setup
+│   │
+│   ├── state/                      # Initial state definitions
+│   │   ├── index.ts
+│   │   ├── tickets.state.ts
+│   │   ├── users.state.ts
+│   │   └── shared.state.ts         # loadingSlice(), etc.
+│   │
+│   └── derived/                    # Derived tier definitions
+│       ├── index.ts
+│       ├── tier-1.derived.ts       # Entity resolution
+│       ├── tier-2.derived.ts       # Complex logic
+│       ├── tier-3.derived.ts       # Workflow
+│       ├── tier-4.derived.ts       # Workflow navigation
+│       └── tier-5.derived.ts       # UI aggregates
+│
+└── ops/                            # Async operations by domain
+    ├── index.ts
+    ├── ticket.ops.ts
+    ├── user.ops.ts
+    └── auth.ops.ts
+```
+
+### The One Paradigm Rule
+
+**All state access uses `store.$.path.to.thing()`** - no aliases, no duplicate accessors.
+**All operations use `store.ops.domain.method()`** - domain ops handle mutations and async.
+
+```typescript
+// ✅ Correct - single access patterns
+const user = this._store.$.users.current();
+const isLoading = this._store.$.users.loading.state();
+this._store.ops.users.loadUsers$().subscribe();
+this._store.ops.users.setCurrentUser(user);
+
+// ❌ Wrong - aliases that duplicate tree paths
+readonly currentUser = this.$.users.current;  // Don't create aliases in AppStore
+
+// ❌ Wrong - old pattern without ops namespace
+this._store.users.loadUsers$().subscribe();  // Use store.ops.users instead
+```
+
+### Layer Diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                        Components                           │
-│  • Inject APP_TREE directly for reads                       │
-│  • Inject facades for orchestrated operations               │
+│  • Access state via store.$.domain.property()               │
+│  • Call operations via store.ops.domain.method()            │
 │  • Use local signals for UI-only state                      │
 └─────────────────────────────────┬───────────────────────────┘
                                   │
 ┌─────────────────────────────────▼───────────────────────────┐
-│                    Facades (selective)                      │
-│  • Multi-step workflows                                     │
-│  • Cross-domain coordination                                │
-│  • Business rule validation                                 │
-│  • Complex API orchestration                                │
+│                    AppStore (Thin Facade)                   │
+│  • Exposes tree.$ for state access                          │
+│  • Composes domain ops via ops namespace                    │
+│  • Cross-domain orchestration methods only (rare)           │
 └─────────────────────────────────┬───────────────────────────┘
                                   │
-┌─────────────────────────────────▼───────────────────────────┐
-│                   Single Global Tree                        │
-│  • All shared state                                         │
-│  • Markers: entityMap(), status(), stored()                 │
-│  • Enhancers as needed (batching, timeTravel, devTools)     │
-│  • Organized by domain (tree.$.plants, tree.$.gardens)      │
-└─────────────────────────────────┬───────────────────────────┘
-                                  │
-┌─────────────────────────────────▼───────────────────────────┐
-│                      API Services                           │
-│  • HTTP calls only                                          │
-│  • No state management                                      │
-│  • Return typed data                                        │
+          ┌───────────────────────┼───────────────────────┐
+          │                       │                       │
+          ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Domain Ops    │    │   Domain Ops    │    │   Domain Ops    │
+│  (ticket.ops)   │    │   (user.ops)    │    │   (auth.ops)    │
+│  • Mutations    │    │  • Mutations    │    │  • Mutations    │
+│  • Async ops    │    │  • Async ops    │    │  • Async ops    │
+│  • Loading mgmt │    │  • Loading mgmt │    │  • Loading mgmt │
+└────────┬────────┘    └────────┬────────┘    └────────┬────────┘
+         │                      │                      │
+         └──────────────────────┼──────────────────────┘
+                                │
+┌───────────────────────────────▼─────────────────────────────┐
+│                   Signal Tree (app-tree.ts)                 │
+│  • Base state from state/*.state.ts                         │
+│  • Enhancers: devTools, batching, memoization, timeTravel   │
+│  • Derived tiers: tier-1 → tier-2 → tier-3 → tier-4 → tier-5│
 └─────────────────────────────────────────────────────────────┘
 ```
 
+### Derived Tier Rules
+
+**Critical Rule**: Computed signals in a tier can only reference:
+
+- Base state signals
+- Computed signals from **previous** tiers
+
+```typescript
+// ✅ Tier 4 can use Tier 3's $.workflow.statusDisplayMap()
+.derived($ => ({
+  workflow: {
+    currentForDisplay: computed(() => {
+      const displayMap = $.workflow.statusDisplayMap(); // From Tier 3
+      return { ...status, label: displayMap[status.status]?.label };
+    })
+  }
+}))
+
+// ❌ WRONG - Cannot reference same-tier computed
+.derived($ => ({
+  workflow: {
+    statusDisplayMap: computed(() => { /* ... */ }),
+    currentForDisplay: computed(() => {
+      // ERROR: statusDisplayMap doesn't exist yet in this tier!
+      const displayMap = $.workflow.statusDisplayMap();
+    })
+  }
+}))
+```
+
+**Solution**: If computed B depends on computed A, move A to an earlier tier.
+
+### Tier Organization Pattern
+
+| Tier | Purpose           | Example Computeds                                               |
+| ---- | ----------------- | --------------------------------------------------------------- |
+| 1    | Entity Resolution | `users.current`, `selection.item`, `tickets.active`             |
+| 2    | Complex Logic     | `users.isAdmin`, `selection.isComplete`, `tickets.statusMap`    |
+| 3    | Workflow          | `workflow.steps`, `workflow.currentIndex`, `workflow.statusMap` |
+| 4    | Navigation        | `workflow.nextStatus`, `workflow.canAdvance`                    |
+| 5    | UI Aggregates     | `ui.isLoading`, `ui.hasError`, `ui.globalStatus`                |
+
+### Deep Merge Behavior
+
+Derived tiers use deep merge - you can extend domains across tiers:
+
+```typescript
+// Tier 1
+.derived($ => ({ tickets: { active: computed(() => /* ... */) } }))
+// Tier 2 - extends tickets domain, doesn't replace it
+.derived($ => ({ tickets: { statusMap: computed(() => /* ... */) } }))  // tickets.active still exists!
+```
+
+### Implementation Examples
+
+#### State File (`tree/state/tickets.state.ts`)
+
+```typescript
+import { entityMap } from '@signaltree/core';
+import { LoadingState, Nullable, NotifyErrorModel, TicketDto } from '@models';
+
+export function loadingSlice() {
+  return {
+    state: LoadingState.NotLoaded as LoadingState,
+    error: null as Nullable<NotifyErrorModel>,
+  };
+}
+
+export function ticketsState() {
+  return {
+    entities: entityMap<TicketDto, number>(),
+    activeId: null as Nullable<number>,
+    startDate: new Date(),
+    endDate: new Date(),
+    loading: loadingSlice(),
+  };
+}
+```
+
+#### Derived Tier (`tree/derived/tier-1.derived.ts`)
+
+```typescript
+import { computed } from '@angular/core';
+import type { AppTreeBase } from '../app-tree';
+
+/**
+ * Derived Tier 1: Entity Resolution
+ *
+ * Resolves IDs to actual entities. Transforms raw ID references
+ * into computed signals that return full entity objects.
+ */
+export function tier1Derived($: AppTreeBase['$']) {
+  return {
+    users: {
+      current: computed(() => {
+        const userId = $.selected.userId();
+        return userId != null ? $.users.byId(userId)?.() ?? null : null;
+      }),
+    },
+    tickets: {
+      active: computed(() => {
+        const activeId = $.tickets.activeId();
+        return activeId != null ? $.tickets.entities.byId(activeId)?.() ?? null : null;
+      }),
+    },
+  };
+}
+```
+
+#### Domain Ops (`ops/ticket.ops.ts`)
+
+```typescript
+import { inject, Injectable } from '@angular/core';
+import { catchError, map, Observable, of, tap } from 'rxjs';
+import { LoadingState, Nullable, TicketDto } from '@models';
+import { TicketService } from '@services';
+import { APP_TREE } from '../tree/app-tree';
+
+@Injectable({ providedIn: 'root' })
+export class TicketOps {
+  private readonly _ticketApi = inject(TicketService);
+  private readonly _$ = inject(APP_TREE).$;
+
+  // Mutations
+  setActiveTicket(ticket: Nullable<TicketDto>): void {
+    if (ticket) {
+      this._$.tickets.entities.upsertOne(ticket, { selectId: (t: TicketDto) => t.id });
+      this._$.tickets.activeId.set(ticket.id);
+    } else {
+      this._$.tickets.activeId.set(null);
+    }
+  }
+
+  // Async Operations
+  loadActiveTicket$(): Observable<void> {
+    this._setLoading();
+    return this._ticketApi.getActiveTicket$().pipe(
+      tap((ticket) => this.setActiveTicket(ticket ?? null)),
+      tap(() => this._setLoaded()),
+      map(() => void 0),
+      catchError((err) => {
+        this._setError(err, 'loadActiveTicket$');
+        return of(void 0);
+      })
+    );
+  }
+
+  // Private Helpers
+  private _setLoading(): void {
+    this._$.tickets.loading.state.set(LoadingState.Loading);
+    this._$.tickets.loading.error.set(null);
+  }
+
+  private _setLoaded(): void {
+    this._$.tickets.loading.state.set(LoadingState.Loaded);
+  }
+
+  private _setError(err: unknown, context: string): void {
+    this._$.tickets.loading.state.set(LoadingState.Error);
+    this._$.tickets.loading.error.set({ message: String(err), context });
+  }
+}
+```
+
+#### AppStore (`app-store.ts`)
+
+```typescript
+import { inject, Injectable } from '@angular/core';
+import { APP_TREE, AppTree } from './tree/app-tree';
+import { TicketOps } from './ops/ticket.ops';
+import { UserOps } from './ops/user.ops';
+import { AuthOps } from './ops/auth.ops';
+
+@Injectable({ providedIn: 'root' })
+export class AppStore {
+  readonly tree: AppTree = inject(APP_TREE);
+  readonly $ = this.tree.$;
+
+  // Domain operations via ops namespace
+  readonly ops = {
+    tickets: inject(TicketOps),
+    users: inject(UserOps),
+    auth: inject(AuthOps),
+  };
+
+  // Cross-domain orchestration only (rare)
+  clearSelections(): void {
+    this.$.selected.userId.set(null);
+    this.$.selected.ticketId.set(null);
+  }
+}
+```
+
+#### Component Usage
+
+```typescript
+@Component({ ... })
+export class TicketListComponent {
+  private store = inject(AppStore);
+
+  // State access - always via $
+  readonly tickets = this.store.$.tickets.all;
+  readonly isLoading = this.store.$.tickets.loading.state;
+  readonly activeTicket = this.store.$.tickets.active;
+
+  // Operations - via ops.domain
+  loadTickets() {
+    this.store.ops.tickets.loadTickets$().subscribe();
+  }
+
+  selectTicket(ticket: TicketDto) {
+    this.store.ops.tickets.setActiveTicket(ticket);
+  }
+}
+```
+
+### Summary Table
+
+| Layer       | Responsibility       | Location                         |
+| ----------- | -------------------- | -------------------------------- |
+| **State**   | Initial state shape  | `tree/state/*.state.ts`          |
+| **Derived** | Computed signals     | `tree/derived/tier-*.derived.ts` |
+| **Tree**    | Assembly + enhancers | `tree/app-tree.ts`               |
+| **Ops**     | Mutations + async    | `ops/*.ops.ts`                   |
+| **Store**   | Thin facade          | `app-store.ts`                   |
+
 ### What to Keep vs. Remove
 
-| Layer                 | Verdict              | Reasoning                                          |
-| --------------------- | -------------------- | -------------------------------------------------- |
-| Global App Tree       | **Keep**             | Core value prop—unified state, dot notation access |
-| Domain Facades        | **Keep selectively** | Only if they contain orchestration/business logic  |
-| Domain Services (API) | **Keep**             | Clean separation of HTTP concerns                  |
-| Loading Helpers       | **Remove**           | Use domain-scoped operations state                 |
-| Service Managers      | **Remove**           | Fold into facades or tree methods                  |
-| Type Definitions      | **Simplify**         | Reduce aliases, let inference work                 |
+| Layer                 | Verdict         | Reasoning                                          |
+| --------------------- | --------------- | -------------------------------------------------- |
+| Global App Tree       | **Keep**        | Core value prop—unified state, dot notation access |
+| Domain Ops            | **Keep**        | Encapsulate mutations and async operations         |
+| Domain Services (API) | **Keep**        | Clean separation of HTTP concerns                  |
+| AppStore Facade       | **Keep (thin)** | Composes ops, minimal orchestration only           |
+| Loading Helpers       | **Remove**      | Use domain-scoped operations state in ops          |
+| Service Managers      | **Remove**      | Fold into ops files                                |
+| Type Definitions      | **Simplify**    | Reduce aliases, let inference work                 |
 
 ### Decision Guide: Where Does Logic Live?
 
-| Operation Type           | Location               | Example                                          |
-| ------------------------ | ---------------------- | ------------------------------------------------ |
-| Read state               | Component via `tree.$` | `tree.$.plants.entities.selectAll()`             |
-| Simple mutation          | Component via `tree.$` | `tree.$.plants.entities.add(plant)`              |
-| API call (single domain) | Facade or component    | `await api.save(); tree.$.plants.entities.add()` |
-| API call (multi-domain)  | **Facade**             | Load plants + schedules together                 |
-| Business rule validation | **Facade**             | Ownership checks before transfer                 |
-| Cross-domain mutation    | **Facade**             | Update plants AND gardens AND schedules          |
-| UI-only state            | Component signal       | `showModal = signal(false)`                      |
+| Operation Type           | Location                | Example                                     |
+| ------------------------ | ----------------------- | ------------------------------------------- |
+| Read state               | Component via `store.$` | `store.$.tickets.active()`                  |
+| Simple mutation          | Domain ops              | `store.ops.tickets.setActiveTicket(ticket)` |
+| API call (single domain) | Domain ops              | `store.ops.tickets.loadActiveTicket$()`     |
+| API call (multi-domain)  | Cross-domain in store   | `store.loadDashboard$()` (rare)             |
+| Business rule validation | Domain ops              | Ownership checks in ops method              |
+| Cross-domain mutation    | Store method            | `store.clearSelections()`                   |
+| UI-only state            | Component signal        | `showModal = signal(false)`                 |
 
-This gives you unified dot notation access, minimal abstraction layers, and facades only where they provide real value.
+This gives you unified dot notation access, minimal abstraction layers, and clear separation between state access (`store.$`) and operations (`store.ops`).

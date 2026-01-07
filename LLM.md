@@ -203,12 +203,56 @@ store.$.users.activeCount(); // number
 store.$.hasSelection(); // boolean
 ```
 
-### Derived Layer Best Practices
+### Derived Tier Best Practices
 
 1. **Use `computed()` from Angular** - It's the standard reactive primitive
 2. **Nest under domains** - Keep derived state co-located with source
-3. **Multiple layers allowed** - Chain `.derived()` for complex dependencies
+3. **Multiple tiers allowed** - Chain `.derived()` for complex dependencies
 4. **Avoid side effects** - Derived state should be pure computations
+
+### Derived Tier Rules
+
+**Critical Rule**: Computed signals in a tier can only reference:
+
+- Base state signals
+- Computed signals from **previous** tiers
+
+```typescript
+// ✅ Tier 2 can use Tier 1's $.users.current()
+.derived($ => ({
+  users: {
+    current: computed(() => $.users.byId($.selected.userId())?.())  // Tier 1
+  }
+}))
+.derived($ => ({
+  users: {
+    isAdmin: computed(() => $.users.current()?.role === 'admin')  // Tier 2 uses Tier 1
+  }
+}))
+
+// ❌ WRONG - Cannot reference same-tier computed
+.derived($ => ({
+  users: {
+    current: computed(() => /* ... */),
+    isAdmin: computed(() => {
+      // ERROR: current doesn't exist yet in this tier!
+      return $.users.current()?.role === 'admin';
+    })
+  }
+}))
+```
+
+**Solution**: If computed B depends on computed A, move A to an earlier tier.
+
+### Tier Organization Pattern
+
+| Tier | Purpose           | Example Computeds                                               |
+| ---- | ----------------- | --------------------------------------------------------------- |
+| 1    | Entity Resolution | `users.current`, `selection.item`, `tickets.active`             |
+| 2    | Complex Logic     | `users.isAdmin`, `selection.isComplete`, `tickets.statusMap`    |
+| 3    | Workflow          | `workflow.steps`, `workflow.currentIndex`, `workflow.statusMap` |
+| 4    | Navigation        | `workflow.nextStatus`, `workflow.canAdvance`                    |
+| 5    | UI Aggregates     | `ui.isLoading`, `ui.hasError`, `ui.globalStatus`                |
 
 ---
 
@@ -241,6 +285,234 @@ const store = signalTree({ ... })
 | `memoization()`   | Cache expensive computations  | Large derived state       |
 | `timeTravel()`    | Undo/redo functionality       | Form editing, canvas apps |
 | `serialization()` | State persistence             | App reload persistence    |
+
+---
+
+## Modular Architecture (Recommended)
+
+For production Angular applications, we recommend a **modular architecture** with derived tiers and domain operations:
+
+### Folder Structure
+
+```
+store/
+├── app-store.ts                    # Thin facade - composes ops namespace
+├── tree/
+│   ├── index.ts                    # Re-exports
+│   ├── app-tree.ts                 # Tree assembly (imports domains)
+│   ├── app-tree.provider.ts        # DI setup
+│   │
+│   ├── state/                      # Initial state definitions
+│   │   ├── index.ts
+│   │   ├── tickets.state.ts
+│   │   ├── users.state.ts
+│   │   └── shared.state.ts         # loadingSlice(), etc.
+│   │
+│   └── derived/                    # Derived tier definitions
+│       ├── index.ts
+│       ├── tier-1.derived.ts       # Entity resolution
+│       ├── tier-2.derived.ts       # Complex logic
+│       ├── tier-3.derived.ts       # Workflow
+│       └── tier-4.derived.ts       # UI aggregates
+│
+└── ops/                            # Async operations by domain
+    ├── index.ts
+    ├── ticket.ops.ts
+    ├── user.ops.ts
+    └── auth.ops.ts
+```
+
+### The One Paradigm Rule
+
+**All state access uses `store.$.path.to.thing()`** - no aliases, no duplicate accessors.
+**All operations use `store.ops.domain.method()`** - domain ops handle mutations and async.
+
+```typescript
+// ✅ Correct - single access patterns
+const user = this._store.$.users.current();
+const isLoading = this._store.$.users.loading.state();
+this._store.ops.users.loadUsers$().subscribe();
+this._store.ops.users.setCurrentUser(user);
+
+// ❌ Wrong - aliases that duplicate tree paths
+readonly currentUser = this.$.users.current;  // Don't create aliases in AppStore
+
+// ❌ Wrong - old pattern without ops namespace
+this._store.users.loadUsers$().subscribe();  // Use store.ops.users instead
+```
+
+### State File Example
+
+```typescript
+// tree/state/tickets.state.ts
+import { entityMap } from '@signaltree/core';
+import { LoadingState, Nullable, NotifyErrorModel, TicketDto } from '@models';
+
+export function loadingSlice() {
+  return {
+    state: LoadingState.NotLoaded as LoadingState,
+    error: null as Nullable<NotifyErrorModel>,
+  };
+}
+
+export function ticketsState() {
+  return {
+    entities: entityMap<TicketDto, number>(),
+    activeId: null as Nullable<number>,
+    startDate: new Date(),
+    endDate: new Date(),
+    loading: loadingSlice(),
+  };
+}
+```
+
+### Derived Tier Example
+
+```typescript
+// tree/derived/tier-1.derived.ts
+import { computed } from '@angular/core';
+import type { AppTreeBase } from '../app-tree';
+
+/**
+ * Derived Tier 1: Entity Resolution
+ *
+ * Resolves IDs to actual entities.
+ */
+export function tier1Derived($: AppTreeBase['$']) {
+  return {
+    users: {
+      current: computed(() => {
+        const userId = $.selected.userId();
+        return userId != null ? $.users.byId(userId)?.() ?? null : null;
+      }),
+    },
+    tickets: {
+      active: computed(() => {
+        const activeId = $.tickets.activeId();
+        return activeId != null ? $.tickets.entities.byId(activeId)?.() ?? null : null;
+      }),
+    },
+  };
+}
+```
+
+### Domain Ops Example
+
+```typescript
+// ops/ticket.ops.ts
+import { inject, Injectable } from '@angular/core';
+import { catchError, map, Observable, of, tap } from 'rxjs';
+import { LoadingState, Nullable, TicketDto } from '@models';
+import { TicketService } from '@services';
+import { APP_TREE } from '../tree/app-tree';
+
+@Injectable({ providedIn: 'root' })
+export class TicketOps {
+  private readonly _ticketApi = inject(TicketService);
+  private readonly _$ = inject(APP_TREE).$;
+
+  // Mutations
+  setActiveTicket(ticket: Nullable<TicketDto>): void {
+    if (ticket) {
+      this._$.tickets.entities.upsertOne(ticket, { selectId: (t: TicketDto) => t.id });
+      this._$.tickets.activeId.set(ticket.id);
+    } else {
+      this._$.tickets.activeId.set(null);
+    }
+  }
+
+  // Async Operations
+  loadActiveTicket$(): Observable<void> {
+    this._setLoading();
+    return this._ticketApi.getActiveTicket$().pipe(
+      tap((ticket) => this.setActiveTicket(ticket ?? null)),
+      tap(() => this._setLoaded()),
+      map(() => void 0),
+      catchError((err) => {
+        this._setError(err, 'loadActiveTicket$');
+        return of(void 0);
+      })
+    );
+  }
+
+  private _setLoading(): void {
+    this._$.tickets.loading.state.set(LoadingState.Loading);
+    this._$.tickets.loading.error.set(null);
+  }
+
+  private _setLoaded(): void {
+    this._$.tickets.loading.state.set(LoadingState.Loaded);
+  }
+
+  private _setError(err: unknown, context: string): void {
+    this._$.tickets.loading.state.set(LoadingState.Error);
+    this._$.tickets.loading.error.set({ message: String(err), context });
+  }
+}
+```
+
+### AppStore Example
+
+```typescript
+// app-store.ts
+import { inject, Injectable } from '@angular/core';
+import { APP_TREE, AppTree } from './tree/app-tree';
+import { TicketOps } from './ops/ticket.ops';
+import { UserOps } from './ops/user.ops';
+import { AuthOps } from './ops/auth.ops';
+
+@Injectable({ providedIn: 'root' })
+export class AppStore {
+  readonly tree: AppTree = inject(APP_TREE);
+  readonly $ = this.tree.$;
+
+  // Domain operations via ops namespace
+  readonly ops = {
+    tickets: inject(TicketOps),
+    users: inject(UserOps),
+    auth: inject(AuthOps),
+  };
+
+  // Cross-domain orchestration only (rare)
+  clearSelections(): void {
+    this.$.selected.userId.set(null);
+    this.$.selected.ticketId.set(null);
+  }
+}
+```
+
+### Component Usage
+
+```typescript
+@Component({ ... })
+export class TicketListComponent {
+  private store = inject(AppStore);
+
+  // State access - always via $
+  readonly tickets = this.store.$.tickets.all;
+  readonly isLoading = this.store.$.tickets.loading.state;
+  readonly activeTicket = this.store.$.tickets.active;
+
+  // Operations - via ops.domain
+  loadTickets() {
+    this.store.ops.tickets.loadTickets$().subscribe();
+  }
+
+  selectTicket(ticket: TicketDto) {
+    this.store.ops.tickets.setActiveTicket(ticket);
+  }
+}
+```
+
+### Summary Table
+
+| Layer       | Responsibility       | Location                         |
+| ----------- | -------------------- | -------------------------------- |
+| **State**   | Initial state shape  | `tree/state/*.state.ts`          |
+| **Derived** | Computed signals     | `tree/derived/tier-*.derived.ts` |
+| **Tree**    | Assembly + enhancers | `tree/app-tree.ts`               |
+| **Ops**     | Mutations + async    | `ops/*.ops.ts`                   |
+| **Store**   | Thin facade          | `app-store.ts`                   |
 
 ---
 
