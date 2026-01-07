@@ -17,13 +17,12 @@
       </p>
       <div class="architecture-benefits">
         <div class="benefit-card">
-          <h3>📦 85% Smaller Bundles</h3>
+          <h3>📦 46% Smaller Dependencies</h3>
           <p>
-            Tree-shakable architecture means you only ship what you use. Import
-            just <code>signalTree()</code> for basic state (0.8KB), add
-            <code>withComputed()</code> for derived values (+0.3KB), or
-            <code>withHistory()</code> for time-travel (+0.4KB). No forced
-            dependencies.
+            Real-world v3 migration: NgRx (4 packages) ~45-50KB gzipped →
+            SignalTree (1 package) ~27KB gzipped. Tree-shakable architecture
+            means you only ship what you use. Full core with all enhancers
+            included.
           </p>
         </div>
         <div class="benefit-card">
@@ -45,9 +44,11 @@
         </div>
       </div>
       <p class="comparison">
-        <strong>Real example:</strong> NgRx with effects, entity, devtools =
-        ~45KB. SignalTree with computed, history, persistence = ~3.4KB.
-        <strong>92% reduction.</strong>
+        <strong>Real v3 migration:</strong> NgRx (4 packages) = ~45-50KB
+        gzipped. SignalTree core (includes all enhancers) = ~27KB gzipped.
+        <strong
+          >46% bundle reduction, 76% less app code, 75% fewer packages.</strong
+        >
       </p>
     </div>
   </div>

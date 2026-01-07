@@ -1,6 +1,48 @@
 <div class="whats-new">
   <h2>🚀 What's New</h2>
 
+  <h3>🎉 v7.0.0 — Production-Validated Release (January 2026)</h3>
+  <div class="release-highlights">
+    <p>
+      SignalTree v7 has been <strong>validated in production</strong> with the
+      TruckTrax v3 mobile app migration. Real-world results from a complex
+      Angular enterprise app:
+    </p>
+    <div class="metrics-grid">
+      <div class="metric">
+        <span class="value">76%</span>
+        <span class="label">Less App Code</span>
+        <span class="detail">11,735 → 2,825 lines</span>
+      </div>
+      <div class="metric">
+        <span class="value">46%</span>
+        <span class="label">Smaller Bundle</span>
+        <span class="detail">NgRx ~50KB → SignalTree ~27KB</span>
+      </div>
+      <div class="metric">
+        <span class="value">75%</span>
+        <span class="label">Fewer Packages</span>
+        <span class="detail">4 @ngrx/* → 1 @signaltree/core</span>
+      </div>
+    </div>
+    <h4>✨ New in v7</h4>
+    <ul>
+      <li>
+        <strong>Custom Markers & Enhancers:</strong> Create your own state
+        primitives with <code>registerMarkerProcessor()</code>. See the
+        <a routerLink="/custom-extensions">Custom Extensions demo</a>.
+      </li>
+      <li>
+        <strong>Improved TypeScript Inference:</strong> Better generic handling
+        for nested derived tiers.
+      </li>
+      <li>
+        <strong>Production-Ready Architecture:</strong> Validated ops pattern
+        with domain-organized state.
+      </li>
+    </ul>
+  </div>
+
   <h3>⚠️ v6.0.0 — Breaking Changes (summary)</h3>
   <div class="breaking-changes v6-summary">
     <p>

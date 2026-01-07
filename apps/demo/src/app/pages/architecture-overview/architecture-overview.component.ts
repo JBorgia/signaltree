@@ -58,13 +58,19 @@ export class ArchitectureOverviewComponent {
   savingsMetrics: SavingsMetric[] = [
     {
       label: 'Bundle Size Reduction',
-      value: '~15-25%',
-      description: 'Average bundle size savings compared to separate packages',
+      value: '~46%',
+      description:
+        'NgRx ~45-50KB → SignalTree ~27KB (measured in v3 migration)',
+    },
+    {
+      label: 'App Code Reduction',
+      value: '76%',
+      description: '11,735 → 2,825 lines (v3 migration)',
     },
     {
       label: 'Dependency Count',
       value: '1 package',
-      description: 'Instead of 4-6 separate packages',
+      description: 'Instead of 4 NgRx packages',
     },
     {
       label: 'Type Conflicts',

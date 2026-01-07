@@ -9,4 +9,53 @@
   .next-steps {
     color: #555;
   }
+
+  .release-highlights {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 1px solid #0ea5e9;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin: 16px 0;
+
+    .metric {
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+      .value {
+        display: block;
+        font-size: 2rem;
+        font-weight: 700;
+        color: #0ea5e9;
+      }
+
+      .label {
+        display: block;
+        font-weight: 600;
+        color: #334155;
+        margin: 4px 0;
+      }
+
+      .detail {
+        display: block;
+        font-size: 0.85rem;
+        color: #64748b;
+      }
+    }
+  }
+
+  @media (max-width: 600px) {
+    .metrics-grid {
+      grid-template-columns: 1fr;
+    }
+  }
 }

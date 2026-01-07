@@ -174,6 +174,13 @@ export class NavigationComponent {
       route: '/serialization',
       category: 'features',
     },
+    {
+      id: 'custom-extensions',
+      title: 'Custom Markers & Enhancers',
+      description: 'Create your own markers and enhancers',
+      route: '/custom-extensions',
+      category: 'features',
+    },
   ];
 
   categories: DemoExample['category'][] = [
