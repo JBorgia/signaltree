@@ -200,6 +200,9 @@
             into their materialized form.
           </p>
           <pre><code [innerText]="markerCode || '[code not available]'"></code></pre>
+          <div class="code-debug">
+            Length: <code>{{ markerCode?.length ?? 0 }}</code>
+          </div>
         </div>
       </details>
 
@@ -214,6 +217,9 @@
             tree with additional methods or behavior.
           </p>
           <pre><code [innerText]="enhancerCode || '[code not available]'"></code></pre>
+          <div class="code-debug">
+            Length: <code>{{ enhancerCode?.length ?? 0 }}</code>
+          </div>
         </div>
       </details>
 
@@ -228,6 +234,9 @@
             management:
           </p>
           <pre><code [innerText]="usageCode || '[code not available]'"></code></pre>
+          <div class="code-debug">
+            Length: <code>{{ usageCode?.length ?? 0 }}</code>
+          </div>
         </div>
       </details>
     </div>
