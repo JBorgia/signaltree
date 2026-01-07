@@ -275,6 +275,12 @@ export class CustomExtensionsDemoComponent {
 
     // Log initial state
     this.store.log('Demo component initialized');
+
+    // Debug logs to help diagnose why code panels may be empty in some browsers
+    // (show lengths so users can report if values are missing)
+    console.debug('[debug] markerCode length:', this.markerCode?.length ?? 0);
+    console.debug('[debug] enhancerCode length:', this.enhancerCode?.length ?? 0);
+    console.debug('[debug] usageCode length:', this.usageCode?.length ?? 0);
   }
 
   // Actions
