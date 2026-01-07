@@ -796,6 +796,87 @@ tree.update((state) => ({
 }));
 ```
 
+### 7) Extensibility: Custom Markers & Enhancers
+
+SignalTree is designed for extensibility. Create your own **markers** (state placeholders that materialize into specialized signals) and **enhancers** (functions that augment trees with additional capabilities).
+
+#### Custom Marker Example
+
+```typescript
+import { signal, Signal } from '@angular/core';
+import { registerMarkerProcessor, signalTree } from '@signaltree/core';
+
+// 1. Define marker symbol and interface
+const VALIDATED_MARKER = Symbol('VALIDATED_MARKER');
+
+interface ValidatedMarker<T> {
+  [VALIDATED_MARKER]: true;
+  defaultValue: T;
+  validator: (value: T) => string | null;
+}
+
+// 2. Create marker factory
+function validated<T>(defaultValue: T, validator: (value: T) => string | null): ValidatedMarker<T> {
+  return { [VALIDATED_MARKER]: true, defaultValue, validator };
+}
+
+// 3. Type guard
+function isValidatedMarker(value: unknown): value is ValidatedMarker<unknown> {
+  return Boolean(value && typeof value === 'object' && (value as any)[VALIDATED_MARKER] === true);
+}
+
+// 4. Register materializer (call once at app startup)
+registerMarkerProcessor(isValidatedMarker, (marker) => {
+  const valueSignal = signal(marker.defaultValue);
+  const errorSignal = signal<string | null>(marker.validator(marker.defaultValue));
+  return {
+    get: () => valueSignal(),
+    set: (v: any) => {
+      valueSignal.set(v);
+      errorSignal.set(marker.validator(v));
+    },
+    error: errorSignal.asReadonly(),
+    isValid: () => errorSignal() === null,
+  };
+});
+
+// 5. Usage
+const tree = signalTree({
+  email: validated('', (v) => (v.includes('@') ? null : 'Invalid email')),
+});
+```
+
+#### Custom Enhancer Example
+
+```typescript
+import { signal, Signal } from '@angular/core';
+import type { ISignalTree } from '@signaltree/core';
+
+interface WithLogger {
+  log(message: string): void;
+  history: Signal<string[]>;
+}
+
+function withLogger(config?: { maxHistory?: number }) {
+  const maxHistory = config?.maxHistory ?? 100;
+  return <T>(tree: ISignalTree<T>): ISignalTree<T> & WithLogger => {
+    const historySignal = signal<string[]>([]);
+    return Object.assign(tree, {
+      log: (msg: string) => historySignal.update((h) => [...h, `[${new Date().toLocaleTimeString()}] ${msg}`].slice(-maxHistory)),
+      history: historySignal.asReadonly(),
+    });
+  };
+}
+
+// Usage
+const tree = signalTree({ count: 0 }).with(withLogger());
+tree.log('Tree created');
+```
+
+> 📖 **Full guide**: [Custom Markers & Enhancers](https://github.com/JBorgia/signaltree/blob/main/docs/custom-markers-enhancers.md)
+>
+> 📱 **Interactive demo**: [Demo App](/custom-extensions)
+
 ## Error handling examples
 
 ### Manual async error handling

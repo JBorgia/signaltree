@@ -112,6 +112,13 @@ export const appRoutes: Route[] = [
       ).then((c) => c.DevtoolsDemoComponent),
   },
   {
+    path: 'custom-extensions',
+    loadComponent: () =>
+      import(
+        './examples/features/fundamentals/examples/enhancers/custom-extensions-demo/custom-extensions-demo.component'
+      ).then((c) => c.CustomExtensionsDemoComponent),
+  },
+  {
     path: 'examples/fundamentals/recommended-architecture',
     loadComponent: () =>
       import(

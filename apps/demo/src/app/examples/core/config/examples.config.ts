@@ -2,21 +2,24 @@ import { AsyncDemoComponent } from '../../features/fundamentals/examples/async/a
 import { EffectsDemoComponent } from '../../features/fundamentals/examples/effects/effects-demo.component';
 import { BatchingDemoComponent } from '../../features/fundamentals/examples/enhancers/batching-demo/batching-demo.component';
 import {
-  CallableSyntaxDemoComponent,
+    CallableSyntaxDemoComponent,
 } from '../../features/fundamentals/examples/enhancers/callable-syntax-demo/callable-syntax-demo.component';
+import {
+    CustomExtensionsDemoComponent,
+} from '../../features/fundamentals/examples/enhancers/custom-extensions-demo/custom-extensions-demo.component';
 import { DevtoolsDemoComponent } from '../../features/fundamentals/examples/enhancers/devtools-demo/devtools-demo.component';
 import {
-  PersistenceDemoComponent,
+    PersistenceDemoComponent,
 } from '../../features/fundamentals/examples/enhancers/persistence-demo/persistence-demo.component';
 import { PresetsDemoComponent } from '../../features/fundamentals/examples/enhancers/presets-demo/presets-demo.component';
 import {
-  SerializationDemoComponent,
+    SerializationDemoComponent,
 } from '../../features/fundamentals/examples/enhancers/serialization-demo/serialization-demo.component';
 import { EntitiesDemoComponent } from '../../features/fundamentals/examples/entities/entities-demo.component';
 import { FormsDemoComponent } from '../../features/fundamentals/examples/forms/forms-demo.component';
 import { MemoizationDemoComponent } from '../../features/fundamentals/examples/memoization/memoization-demo.component';
 import {
-  RecommendedArchitectureComponent,
+    RecommendedArchitectureComponent,
 } from '../../features/fundamentals/examples/recommended-architecture/recommended-architecture.component';
 import { SignalFormsDemoComponent } from '../../features/fundamentals/examples/signal-forms/signal-forms-demo.component';
 import { SignalsExamplesComponent } from '../../features/fundamentals/examples/signals/signals-examples.component';
@@ -326,6 +329,30 @@ export const recommendedArchitectureExampleMeta: ExampleMeta = {
 };
 
 /**
+ * Custom Extensions Example
+ */
+export const customExtensionsExampleMeta: ExampleMeta = {
+  id: 'custom-extensions',
+  title: 'Custom Markers & Enhancers',
+  description:
+    'Learn how to create your own markers and enhancers to extend SignalTree functionality.',
+  category: 'Advanced',
+  focusAreas: ['extensibility', 'markers', 'enhancers', 'custom'],
+  functionalUse: ['extension', 'customization', 'plugin-development'],
+  enhancers: [],
+  route: '/custom-extensions',
+  component: CustomExtensionsDemoComponent,
+  difficulty: 'advanced',
+  tags: [
+    'custom-markers',
+    'custom-enhancers',
+    'extensibility',
+    'advanced',
+    'plugin',
+  ],
+};
+
+/**
  * Central registry of all examples
  */
 export const EXAMPLES_REGISTRY: ExampleMeta[] = [
@@ -358,4 +385,5 @@ export const EXAMPLES_REGISTRY: ExampleMeta[] = [
   signalFormsExampleMeta,
   asyncExampleMeta,
   recommendedArchitectureExampleMeta,
+  customExtensionsExampleMeta,
 ];
