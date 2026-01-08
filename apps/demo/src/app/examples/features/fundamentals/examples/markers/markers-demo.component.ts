@@ -169,7 +169,7 @@ const tree = signalTree({
   },
   lastViewedUserId: stored('lastViewed', null),
 })
-.with(entities())
+// No .with(entities()) needed in v7+ (removed in v8)
 .derived(($) => ({
   isReady: computed(() => 
     $.users.status.isLoaded() && 

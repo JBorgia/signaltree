@@ -432,8 +432,7 @@ filteredLogs(); // Returns cached result`;
       userId: null as string | null,
     },
   })
-    .with(memoization())
-    .with(entities());
+    .with(memoization());
 
   // Memoized filtered logs - using computed signal for caching
   private filteredLogs = computed(() => {
