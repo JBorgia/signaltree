@@ -14,6 +14,20 @@
 
 ## 🚀 What's New (January 2026)
 
+**v7.1.1 Release** - Tree-Shakeable Markers:
+
+> **Zero-cost abstraction:** Built-in markers now self-register on first use. If you don't use a marker, its code is completely eliminated from your bundle.
+
+```typescript
+// ✅ Only status() processor bundled - entityMap/stored tree-shaken out
+import { signalTree, status } from '@signaltree/core';
+const tree = signalTree({ loadState: status() });
+
+// ✅ Minimal bundle - no marker processors included at all
+import { signalTree } from '@signaltree/core';
+const tree = signalTree({ count: 0 });
+```
+
 **v7.0.0 Release** - Simplified Marker Philosophy:
 
 > **Use Angular directly.** SignalTree only provides markers for what Angular doesn't have.

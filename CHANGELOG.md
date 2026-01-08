@@ -1,14 +1,39 @@
+## 7.1.1 (2026-01-07)
+
+### 🚀 Features
+
+- **core:** Self-registering markers for 100% tree-shakeability
+
+### 🩹 Fixes
+
+- **core:** Prevent duplicate marker processor registrations
+- **core:** Fix circular dependency between types.ts and entity-signal.ts
+
+### ⚡ Performance
+
+- **core:** Zero import-time side effects - unused markers completely eliminated from bundle
+- **core:** Built-in markers (`entityMap`, `status`, `stored`) now self-register on first use
+
+### 📖 Documentation
+
+- Updated custom-markers-enhancers.md with self-registering pattern
+- Added tree-shaking section to core README
+
+### ❤️ Thank You
+
+- Borgia
+
 ## 7.1.0 (2026-01-06)
 
 ### 🚀 Features
 
-- ⚠️  **core:** add generic error type to status() marker ([13a6ef2](https://github.com/JBorgia/signaltree/commit/13a6ef2))
+- ⚠️ **core:** add generic error type to status() marker ([13a6ef2](https://github.com/JBorgia/signaltree/commit/13a6ef2))
 
 ### 🩹 Fixes
 
 - **guardrails:** update @signaltree/shared peer dependency to ^7.0.0 ([50a21d9](https://github.com/JBorgia/signaltree/commit/50a21d9))
 
-### ⚠️  Breaking Changes
+### ⚠️ Breaking Changes
 
 - **core:** None - fully backward compatible
 

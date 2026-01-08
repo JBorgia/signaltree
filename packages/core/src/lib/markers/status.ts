@@ -1,5 +1,7 @@
 import { computed, Signal, signal, WritableSignal } from '@angular/core';
 
+import { registerMarkerProcessor } from '../internals/materialize-markers';
+
 // =============================================================================
 // SYMBOL & ENUM
 // =============================================================================
@@ -74,11 +76,18 @@ export interface StatusSignal<E = Error> {
 }
 
 // =============================================================================
-// MARKER FACTORY
+// MARKER FACTORY (Self-registering for tree-shaking)
 // =============================================================================
+
+/** @internal - Tracks if processor is registered */
+let statusRegistered = false;
 
 /**
  * Creates a status marker for async operation state tracking.
+ *
+ * Automatically registers its processor on first use - no manual
+ * registration required. If you never use `status()`, the processor
+ * is tree-shaken out of your bundle.
  *
  * @typeParam E - Error type (default: Error). Use custom error types like NotifyErrorModel.
  * @param initialState - Initial loading state (default: NotLoaded)
@@ -113,6 +122,12 @@ export interface StatusSignal<E = Error> {
 export function status<E = Error>(
   initialState: LoadingState = LoadingState.NotLoaded
 ): StatusMarker<E> {
+  // Self-register on first use (tree-shakeable)
+  if (!statusRegistered) {
+    statusRegistered = true;
+    registerMarkerProcessor(isStatusMarker, createStatusSignal);
+  }
+
   return {
     [STATUS_MARKER]: true,
     initialState,

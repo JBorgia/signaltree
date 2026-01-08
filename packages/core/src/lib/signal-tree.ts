@@ -4,7 +4,7 @@ import { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './constants';
 import { batchScope } from './internals/batch-scope';
 import { SignalTreeBuilder } from './internals/builder-types';
 import { ProcessDerived } from './internals/derived-types';
-import { materializeMarkers } from './internals/materialize-markers';
+import { isRegisteredMarker, materializeMarkers } from './internals/materialize-markers';
 import { applyDerivedFactories } from './internals/merge-derived';
 import { isStatusMarker } from './markers/status';
 import { isStoredMarker } from './markers/stored';
@@ -302,6 +302,29 @@ function createSignalStore<T>(
     if (isStoredMarker(value)) {
       store[key] = value;
       continue;
+    }
+
+    // User-registered markers - preserve for materializeMarkers()
+    if (isRegisteredMarker(value)) {
+      store[key] = value;
+      continue;
+    }
+
+    // Dev-mode warning: object has Symbol keys but no registered processor
+    // This catches the common mistake of forgetting to register before tree creation
+    if (typeof ngDevMode === 'undefined' || ngDevMode) {
+      if (
+        value !== null &&
+        typeof value === 'object' &&
+        !Array.isArray(value) &&
+        Object.getOwnPropertySymbols(value).length > 0
+      ) {
+        console.warn(
+          `SignalTree: Object at "${key}" has Symbol keys but doesn't match any ` +
+            `registered marker processor. If this is a custom marker, ensure ` +
+            `registerMarkerProcessor() is called BEFORE creating the tree.`
+        );
+      }
     }
 
     // Existing signals - preserve

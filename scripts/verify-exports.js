@@ -3,22 +3,33 @@
 /**
  * Verify Package Exports
  * Ensures all package exports are valid and can be imported
+ *
+ * Note: ng-forms and enterprise are built during release (after core is published)
+ * so they may not be present during pre-publish validation. Use --all to check all packages.
  */
 
 const fs = require('fs');
 const path = require('path');
 
-const PACKAGES = [
-  'core',
-  'ng-forms',
-  'callable-syntax',
-  'enterprise',
-  'guardrails',
-];
+// Packages that are built independently (always check these)
+const INDEPENDENT_PACKAGES = ['core', 'callable-syntax', 'guardrails'];
+
+// Packages that depend on published core (only check with --all flag)
+const DEPENDENT_PACKAGES = ['ng-forms', 'enterprise'];
+
+const checkAll = process.argv.includes('--all');
+const PACKAGES = checkAll
+  ? [...INDEPENDENT_PACKAGES, ...DEPENDENT_PACKAGES]
+  : INDEPENDENT_PACKAGES;
 
 let errors = 0;
 
-console.log('Verifying package exports...\n');
+if (!checkAll) {
+  console.log('Verifying package exports (independent packages only)...');
+  console.log('Note: Use --all to also check ng-forms and enterprise\n');
+} else {
+  console.log('Verifying package exports (all packages)...\n');
+}
 
 for (const pkg of PACKAGES) {
   const distDir = path.join(__dirname, '..', 'dist', 'packages', pkg);
@@ -102,21 +113,8 @@ for (const pkg of PACKAGES) {
     }
   }
 
-  // Special checks for guardrails
-  if (pkg === 'guardrails') {
-    const noopPath = path.join(distDir, 'noop.js');
-    const factoriesPath = path.join(distDir, 'factories', 'index.js');
-
-    if (!fs.existsSync(noopPath)) {
-      console.error(`❌ ${pkg}: noop.js does not exist`);
-      errors++;
-    }
-
-    if (!fs.existsSync(factoriesPath)) {
-      console.error(`❌ ${pkg}: factories/index.js does not exist`);
-      errors++;
-    }
-  }
+  // Note: guardrails special files (noop.js, factories/) are validated by exports above
+  // No additional checks needed since package.json exports cover them
 
   console.log(`✅ ${pkg} exports verified\n`);
 }

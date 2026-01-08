@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/core",
-  "version": "7.0.1",
+  "version": "7.1.0",
   "description": "Lightweight, type-safe signal-based state management for Angular. Core package providing hierarchical signal trees, basic entity management, and async actions.",
   "type": "module",
   "sideEffects": false,
@@ -13,51 +13,7 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
-    "./enhancers": {
-      "types": "./src/enhancers/index.d.ts",
-      "import": "./dist/enhancers/index.js",
-      "default": "./dist/enhancers/index.js"
-    },
-    "./enhancers/batching": {
-      "types": "./src/enhancers/batching/index.d.ts",
-      "import": "./dist/enhancers/batching/index.js",
-      "default": "./dist/enhancers/batching/index.js"
-    },
-    "./enhancers/middleware": {
-      "types": "./src/enhancers/middleware/index.d.ts",
-      "import": "./dist/enhancers/middleware/index.js",
-      "default": "./dist/enhancers/middleware/index.js"
-    },
-    "./enhancers/memoization": {
-      "types": "./src/enhancers/memoization/index.d.ts",
-      "import": "./dist/enhancers/memoization/index.js",
-      "default": "./dist/enhancers/memoization/index.js"
-    },
-    "./enhancers/time-travel": {
-      "types": "./src/enhancers/time-travel/index.d.ts",
-      "import": "./dist/enhancers/time-travel/index.js",
-      "default": "./dist/enhancers/time-travel/index.js"
-    },
-    "./enhancers/devtools": {
-      "types": "./src/enhancers/devtools/index.d.ts",
-      "import": "./dist/enhancers/devtools/index.js",
-      "default": "./dist/enhancers/devtools/index.js"
-    },
-    "./enhancers/presets": {
-      "types": "./src/enhancers/presets/index.d.ts",
-      "import": "./dist/enhancers/presets/index.js",
-      "default": "./dist/enhancers/presets/index.js"
-    },
-    "./enhancers/entities": {
-      "types": "./src/enhancers/entities/index.d.ts",
-      "import": "./dist/enhancers/entities/index.js",
-      "default": "./dist/enhancers/entities/index.js"
-    },
-    "./enhancers/serialization": {
-      "types": "./src/enhancers/serialization/index.d.ts",
-      "import": "./dist/enhancers/serialization/index.js",
-      "default": "./dist/enhancers/serialization/index.js"
-    }
+    "./package.json": "./package.json"
   },
   "peerDependencies": {
     "@angular/core": "^20.0.0",

@@ -5,6 +5,7 @@ SignalTree is designed for extensibility. You can create your own **markers** (s
 ## Table of Contents
 
 - [Overview](#overview)
+- [Two Patterns for Custom Signals](#two-patterns-for-custom-signals)
 - [Built-in Markers](#built-in-markers)
 - [Built-in Enhancers](#built-in-enhancers)
 - [Creating Custom Markers](#creating-custom-markers)
@@ -50,6 +51,162 @@ tree.batch(() => {
 });
 tree.effect((state) => console.log(state));
 ```
+
+---
+
+## Two Patterns for Custom Signals
+
+SignalTree supports two patterns for creating custom signal types. Choose based on your needs:
+
+### Pattern 1: Standalone Signal Factories (Recommended for Most Cases)
+
+Create factory functions that return rich signal objects. Use these alongside your SignalTree.
+
+```typescript
+// counter.ts
+import { signal } from '@angular/core';
+
+export interface CounterSignal {
+  (): number;
+  increment(): void;
+  decrement(): void;
+  reset(): void;
+}
+
+export function createCounter(initial = 0, step = 1): CounterSignal {
+  const value = signal(initial);
+
+  const counter = (() => value()) as CounterSignal;
+  counter.increment = () => value.update((v) => v + step);
+  counter.decrement = () => value.update((v) => v - step);
+  counter.reset = () => value.set(initial);
+
+  return counter;
+}
+
+// Usage
+const likes = createCounter(0);
+likes.increment();
+console.log(likes()); // 1
+```
+
+**Advantages:**
+
+- Simple and self-contained
+- No registration required
+- Works immediately
+- Easy to test
+
+**Best for:** UI-specific state, component-local counters, selections, toggles
+
+### Pattern 2: Markers in Tree State (For Shared/Persistent State)
+
+Register marker processors to embed custom signals directly in SignalTree state.
+
+```typescript
+// selection-marker.ts
+import { signal, computed } from '@angular/core';
+import { registerMarkerProcessor } from '@signaltree/core';
+
+const SELECTION_MARKER = Symbol('SELECTION_MARKER');
+let selectionRegistered = false;  // ← Track registration
+
+export interface SelectionMarker<T> { [SELECTION_MARKER]: true; }
+
+export function selection<T>(): SelectionMarker<T> {
+  // Self-register on first use (tree-shakeable!)
+  if (!selectionRegistered) {
+    selectionRegistered = true;
+    registerMarkerProcessor(isSelectionMarker, () => createSelectionSignal());
+  }
+  return { [SELECTION_MARKER]: true };
+}
+
+export function isSelectionMarker(v: unknown): v is SelectionMarker<unknown> {
+  return Boolean(v && typeof v === 'object' && SELECTION_MARKER in v);
+}
+
+// Usage - no manual registration needed!
+const tree = signalTree({
+  tasks: [...],
+  selectedIds: selection<number>(),  // ← Self-registers & materializes
+});
+
+tree.$.selectedIds.toggle(1);
+tree.$.selectedIds.count(); // Reactive!
+```
+
+**Advantages:**
+
+- State lives in SignalTree (persists with tree)
+- DevTools integration
+- Undo/redo via enhancers
+- Tree serialization includes markers
+- **100% tree-shakeable** (unused markers are eliminated from bundle)
+
+**Best for:** Domain entities, shared selections, validated fields
+
+### Registration Timing & Self-Registration (v7.0.1+)
+
+**Built-in markers (`entityMap`, `status`, `stored`) are self-registering as of v7.0.1:**
+
+```typescript
+// ✅ Built-in markers now "just work" - no manual registration needed
+import { signalTree, entityMap, status, stored } from '@signaltree/core';
+
+const tree = signalTree({
+  users: entityMap<User>(), // Auto-registers on first use
+  loading: status(), // Auto-registers on first use
+  theme: stored('theme', 'dark'), // Auto-registers on first use
+});
+```
+
+**For custom markers, `registerMarkerProcessor()` MUST be called BEFORE `signalTree()`:**
+
+```typescript
+// ✅ CORRECT - Register custom marker first
+registerMarkerProcessor(isMyMarker, createMySignal);
+const tree = signalTree({ field: myMarker() }); // Works!
+
+// ❌ WRONG - Register after tree creation
+const tree = signalTree({ field: myMarker() }); // Too late!
+registerMarkerProcessor(isMyMarker, createMySignal); // Never processes
+```
+
+**Self-Registering Pattern for Custom Markers (Recommended):**
+
+For optimal tree-shaking, implement self-registration in your marker factory:
+
+```typescript
+// my-marker.ts
+import { registerMarkerProcessor } from '@signaltree/core';
+
+const MY_MARKER = Symbol('MY_MARKER');
+let registered = false;
+
+export function myMarker<T>(): MyMarker<T> {
+  // Self-register on first use
+  if (!registered) {
+    registered = true;
+    registerMarkerProcessor(isMyMarker, createMySignal);
+  }
+  return { [MY_MARKER]: true };
+}
+```
+
+This pattern ensures:
+
+- Zero import-time side effects (100% tree-shakeable)
+- No manual registration required by consumers
+- Duplicate registrations are prevented automatically
+
+**Where to register custom markers (if not self-registering):**
+
+- `main.ts` (before `bootstrapApplication`)
+- App initializer (Angular `APP_INITIALIZER`)
+- Top of a barrel file that's imported early
+
+**Dev-mode warning:** SignalTree emits a console warning if it detects objects with Symbol keys that don't match any registered processor. This helps catch registration timing mistakes.
 
 ---
 
@@ -133,6 +290,8 @@ tree.$.theme.reload(); // Re-reads from localStorage
 
 ## Creating Custom Markers
 
+> **Important:** If you just need a rich signal for component-local state, consider the simpler [Standalone Signal Factories](#pattern-1-standalone-signal-factories-recommended-for-most-cases) pattern. Use markers when you need the signal to live inside SignalTree state.
+
 ### Step-by-Step Guide
 
 #### 1. Define a unique symbol and marker interface
@@ -203,11 +362,28 @@ export function createMySignal<T>(marker: MyMarker<T>): MySignal<T> {
 
 #### 6. Register the processor
 
+> ⚠️ **Registration must happen BEFORE any `signalTree()` call that uses this marker!**
+
 ```typescript
 import { registerMarkerProcessor } from '@signaltree/core';
 
-// Call once at app startup (e.g., in main.ts or app.config.ts)
+// Call once at app startup (e.g., in main.ts BEFORE bootstrapApplication)
 registerMarkerProcessor(isMyMarker, (marker) => createMySignal(marker));
+```
+
+**Best registration locations:**
+
+- `main.ts` before `bootstrapApplication()`
+- An `APP_INITIALIZER` provider
+- Top of a barrel file that's imported at app startup
+
+```typescript
+// main.ts example
+import './markers/register-all-markers'; // ← Registers all custom markers
+import { bootstrapApplication } from '@angular/platform-browser';
+import { AppComponent } from './app/app.component';
+
+bootstrapApplication(AppComponent, appConfig);
 ```
 
 #### 7. Use it!

@@ -2,9 +2,9 @@
   <header class="demo-header">
     <h1>🔧 Custom Markers & Enhancers</h1>
     <p class="subtitle">
-      Learn how to extend SignalTree with your own markers and enhancers. This
-      demo shows a complete <code>validated()</code> marker and
-      <code>withAnalytics()</code> / <code>withLogger()</code> enhancers.
+      Learn how to extend SignalTree with your own markers and enhancers. These
+      examples show <strong>why</strong> markers and enhancers are powerful -
+      not just how to make them.
     </p>
   </header>
 
@@ -15,16 +15,14 @@
         <div class="card-icon">🏷️</div>
         <h3>Markers</h3>
         <p>
-          Placeholders in your state that get <strong>materialized</strong> into
-          specialized signal types during tree initialization.
+          Rich APIs from simple declarations. Define <code>counter(0)</code> and
+          get <code>increment()</code>, <code>decrement()</code>,
+          <code>reset()</code> for free.
         </p>
         <ul>
-          <li>Define state shape declaratively</li>
-          <li>Auto-transform to rich APIs</li>
-          <li>
-            Examples: <code>entityMap()</code>, <code>status()</code>,
-            <code>validated()</code>
-          </li>
+          <li>State + behavior bundled together</li>
+          <li>Type-safe, auto-materialized</li>
+          <li>Two patterns: standalone or in-tree</li>
         </ul>
       </div>
 
@@ -32,165 +30,249 @@
         <div class="card-icon">⚡</div>
         <h3>Enhancers</h3>
         <p>
-          Functions that augment your tree with additional methods, signals, or
-          behaviors via <code>.with()</code>.
+          Cross-cutting concerns that <strong>interact with tree state</strong>.
+          Add undo/redo, freeze mutations, auto-save - capabilities that span
+          your entire tree.
         </p>
         <ul>
-          <li>Add methods to tree instances</li>
-          <li>Can have dependencies on other enhancers</li>
-          <li>
-            Examples: <code>batching()</code>, <code>devTools()</code>,
-            <code>withAnalytics()</code>
-          </li>
+          <li>Actually work with tree state</li>
+          <li>Composable via <code>.with()</code></li>
+          <li>More than just wrapped services</li>
         </ul>
+      </div>
+    </div>
+
+    <!-- Two Patterns Callout -->
+    <div class="patterns-callout">
+      <h4>📌 Two Patterns for Custom Signals</h4>
+      <div class="patterns-grid">
+        <div class="pattern-box">
+          <strong>Pattern 1: Standalone Factories</strong>
+          <p>Create and use immediately. No registration needed.</p>
+          <code>const likes = createCounter(0);</code>
+        </div>
+        <div class="pattern-box">
+          <strong>Pattern 2: Markers in Tree State</strong>
+          <p>Embed in SignalTree. Register processor first!</p>
+          <code>signalTree(&#123; views: counter(0) &#125;)</code>
+        </div>
       </div>
     </div>
   </section>
 
   <!-- Live Demo Section -->
   <section class="demo-section">
-    <h2>📝 Live Demo: Validated Form with Analytics</h2>
-    <p class="section-desc">
-      This form uses a custom <code>validated()</code> marker for real-time
-      validation and custom enhancers for analytics and logging.
-    </p>
+    <h2>📝 Live Demo</h2>
 
     <div class="demo-grid">
-      <!-- Form Panel -->
-      <div class="demo-panel form-panel">
-        <h3>Form with Validation</h3>
+      <!-- Counter Marker Demo -->
+      <div class="demo-panel counter-panel">
+        <h3>🎯 Pattern 1: Standalone Factories</h3>
+        <p class="panel-desc">
+          <code>createCounter(initial, step)</code> - No registration needed
+        </p>
 
-        <div
-          class="form-group"
-          [class.has-error]="emailError()"
-          [class.is-valid]="!emailError() && store.$.email()"
-        >
-          <label for="email">Email</label>
-          <input
-            id="email"
-            type="email"
-            [value]="store.$.email()"
-            (input)="onEmailChange($event)"
-            placeholder="Enter email address"
-          />
-          @if (emailError()) {
-          <span class="error-message">{{ emailError() }}</span>
-          } @if (!emailError() && store.$.email()) {
-          <span class="valid-indicator">✓ Valid</span>
-          }
-        </div>
+        <div class="counter-demo">
+          <div class="counter-item">
+            <span class="counter-label">Likes (step: 1)</span>
+            <div class="counter-controls">
+              <button class="btn small" (click)="likes.decrement()">−</button>
+              <span class="counter-value">{{ likes() }}</span>
+              <button class="btn small" (click)="likes.increment()">+</button>
+              <button class="btn tiny" (click)="likes.reset()">Reset</button>
+            </div>
+          </div>
 
-        <div
-          class="form-group"
-          [class.has-error]="usernameError()"
-          [class.is-valid]="!usernameError() && store.$.username()"
-        >
-          <label for="username">Username</label>
-          <input
-            id="username"
-            type="text"
-            [value]="store.$.username()"
-            (input)="onUsernameChange($event)"
-            placeholder="Choose a username"
-          />
-          @if (usernameError()) {
-          <span class="error-message">{{ usernameError() }}</span>
-          } @if (!usernameError() && store.$.username()) {
-          <span class="valid-indicator">✓ Valid</span>
-          }
+          <div class="counter-item">
+            <span class="counter-label">Quantity (step: 5)</span>
+            <div class="counter-controls">
+              <button class="btn small" (click)="quantity.decrement()">
+                −5
+              </button>
+              <span class="counter-value">{{ quantity() }}</span>
+              <button class="btn small" (click)="quantity.increment()">
+                +5
+              </button>
+              <button class="btn tiny" (click)="quantity.reset()">Reset</button>
+            </div>
+          </div>
         </div>
-
-        <div
-          class="form-group"
-          [class.has-error]="ageError()"
-          [class.is-valid]="!ageError() && store.$.age() > 0"
-        >
-          <label for="age">Age</label>
-          <input
-            id="age"
-            type="number"
-            [value]="store.$.age()"
-            (input)="onAgeChange($event)"
-            placeholder="Enter your age"
-            min="0"
-            max="150"
-          />
-          @if (ageError()) {
-          <span class="error-message">{{ ageError() }}</span>
-          } @if (!ageError() && store.$.age() > 0) {
-          <span class="valid-indicator">✓ Valid</span>
-          }
-        </div>
-
-        <div class="form-actions">
-          <button
-            class="btn primary"
-            [disabled]="!allFieldsValid()"
-            (click)="submitForm()"
-          >
-            Submit Form
-          </button>
-          <button class="btn secondary" (click)="resetForm()">Reset</button>
-        </div>
-
-        @if (store.$.lastSubmitted()) {
-        <div class="submit-info">
-          <strong>Last submitted:</strong> {{ store.$.lastSubmitted() }}
-          <br />
-          <strong>Total submissions:</strong> {{ store.$.submitCount() }}
-        </div>
-        }
       </div>
 
-      <!-- Analytics Panel -->
-      <div class="demo-panel analytics-panel">
-        <h3>Custom withAnalytics() Enhancer</h3>
-        <div class="panel-header">
-          <span class="event-count">{{ store.eventCount() }} events</span>
-          <button class="btn small" (click)="store.clearEvents()">Clear</button>
+      <!-- Marker in Tree Demo -->
+      <div class="demo-panel marker-tree-panel">
+        <h3>🌳 Pattern 2: Markers in Tree</h3>
+        <p class="panel-desc">
+          <code>signalTree(&#123; views: counter(0) &#125;)</code> - State lives
+          in tree
+        </p>
+
+        <div class="counter-demo">
+          <div class="counter-item">
+            <span class="counter-label">Page Views (in tree)</span>
+            <div class="counter-controls">
+              <button class="btn small" (click)="pageViews.decrement()">
+                −
+              </button>
+              <span class="counter-value">{{ pageViews() }}</span>
+              <button class="btn small" (click)="pageViews.increment()">
+                +
+              </button>
+              <button class="btn tiny" (click)="pageViews.reset()">
+                Reset
+              </button>
+            </div>
+          </div>
+
+          <div class="counter-item">
+            <span class="counter-label"
+              >Favorites: {{ favoriteIds.count() }}</span
+            >
+            <div class="counter-controls">
+              @for (product of treeWithMarkers.$.products(); track product.id) {
+              <button
+                class="btn tiny"
+                [class.active]="favoriteIds.isSelected(product.id)"
+                (click)="favoriteIds.toggle(product.id)"
+              >
+                {{ favoriteIds.isSelected(product.id) ? '★' : '☆' }}
+                {{ product.name }}
+              </button>
+              }
+            </div>
+          </div>
         </div>
 
-        <div class="events-list">
-          @for (event of store.events().slice().reverse().slice(0, 10); track
-          event.timestamp) {
-          <div class="event-item" [class]="event.type">
-            <span class="event-type">{{ event.type }}</span>
-            <span class="event-time">{{
-              event.timestamp | date : 'HH:mm:ss.SSS'
-            }}</span>
-            @if (event.data) {
-            <pre class="event-data">{{ event.data | json }}</pre>
+        <p class="hint">
+          ⚠️ <code>registerMarkerProcessor()</code> was called before
+          <code>signalTree()</code>
+        </p>
+      </div>
+
+      <!-- Selection Marker Demo -->
+      <div class="demo-panel selection-panel">
+        <h3>✅ selection() Marker</h3>
+        <p class="panel-desc">
+          Multi-select state from <code>selection&lt;number&gt;()</code>
+        </p>
+
+        <div class="task-list">
+          @for (task of store.$.tasks(); track task.id) {
+          <div
+            class="task-item"
+            [class.selected]="selectedTaskIds.isSelected(task.id)"
+            [class.completed]="task.completed"
+            (click)="toggleTask(task.id)"
+            (keydown.enter)="toggleTask(task.id)"
+            tabindex="0"
+          >
+            <span class="task-checkbox">
+              {{ selectedTaskIds.isSelected(task.id) ? '☑' : '☐' }}
+            </span>
+            <span class="task-title">{{ task.title }}</span>
+            @if (task.completed) {
+            <span class="completed-badge">✓ Done</span>
             }
           </div>
-          } @if (store.events().length === 0) {
-          <div class="empty-state">
-            No events tracked yet. Interact with the form!
-          </div>
           }
+        </div>
+
+        <div class="selection-info">
+          <span>{{ selectedTaskIds.count() }} selected</span>
+          <div class="selection-actions">
+            <button class="btn tiny" (click)="selectAllTasks()">
+              Select All
+            </button>
+            <button
+              class="btn tiny"
+              (click)="clearSelection()"
+              [disabled]="!selectedTaskIds.hasSelection()"
+            >
+              Clear
+            </button>
+            <button
+              class="btn tiny primary"
+              (click)="completeSelected()"
+              [disabled]="!selectedTaskIds.hasSelection()"
+            >
+              Complete Selected
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- Logger Panel -->
-      <div class="demo-panel logger-panel">
-        <h3>Custom withLogger() Enhancer</h3>
-        <div class="panel-header">
-          <span class="log-count">{{ logs().length }} logs</span>
-          <button class="btn small" (click)="clearLogs()">Clear</button>
+      <!-- Undo/Redo Enhancer Demo -->
+      <div class="demo-panel undo-panel">
+        <h3>↩️ withUndo() Enhancer</h3>
+        <p class="panel-desc">
+          Snapshots and restores <strong>actual tree state</strong>
+        </p>
+
+        <div class="form-group">
+          <label for="userName">User Name</label>
+          <input
+            id="userName"
+            type="text"
+            [value]="store.$.userName()"
+            (input)="updateUserName($event)"
+            placeholder="Type to change..."
+          />
         </div>
 
-        <div class="logs-list">
-          @for (entry of logs().slice().reverse(); track entry.timestamp) {
-          <div class="log-item" [class]="entry.level">
-            <span class="log-level">{{ entry.level | uppercase }}</span>
-            <span class="log-message">{{ entry.message }}</span>
-            <span class="log-time">{{
-              entry.timestamp | date : 'HH:mm:ss'
-            }}</span>
-          </div>
-          } @if (logs().length === 0) {
-          <div class="empty-state">No logs yet. Submit or reset the form!</div>
-          }
+        <div class="undo-controls">
+          <button
+            class="btn"
+            (click)="undo()"
+            [disabled]="!canUndo()"
+            title="Undo last change"
+          >
+            ↩️ Undo
+          </button>
+          <button
+            class="btn"
+            (click)="redo()"
+            [disabled]="!canRedo()"
+            title="Redo"
+          >
+            ↪️ Redo
+          </button>
+          <span class="history-info">{{ historyLength() }} checkpoints</span>
         </div>
+
+        <p class="hint">
+          Try changing the name, selecting tasks, or clicking counters - then
+          undo!
+        </p>
+      </div>
+
+      <!-- Freeze Enhancer Demo -->
+      <div class="demo-panel freeze-panel" [class.frozen]="isFrozen()">
+        <h3>🔒 withFreeze() Enhancer</h3>
+        <p class="panel-desc">Prevents all mutations while frozen</p>
+
+        <div class="freeze-controls">
+          <button
+            class="btn"
+            [class.active]="isFrozen()"
+            (click)="isFrozen() ? unfreeze() : freeze()"
+          >
+            {{ isFrozen() ? '🔓 Unfreeze' : '🔒 Freeze' }}
+          </button>
+          <span class="freeze-status" [class.frozen]="isFrozen()">
+            {{
+              isFrozen()
+                ? 'State is FROZEN - mutations blocked!'
+                : 'State is mutable'
+            }}
+          </span>
+        </div>
+
+        @if (isFrozen()) {
+        <p class="freeze-warning">
+          ⚠️ Try clicking counters or changing text - nothing will happen! Check
+          the console for warnings.
+        </p>
+        }
       </div>
     </div>
   </section>
@@ -201,45 +283,123 @@
 
     <div class="code-examples-container">
       <div class="code-example">
-        <h4>🏷️ Creating a Custom Marker</h4>
+        <h4>🎯 counter() Marker - Hello World</h4>
         <p class="code-desc">
-          A marker is a placeholder that gets transformed into a specialized
-          signal. Here's how to create the <code>validated()</code> marker:
+          The simplest marker - state + methods from a single declaration:
         </p>
-        <pre><code>{{ markerCode }}</code></pre>
+        <pre class="code-block" #counterCode></pre>
       </div>
 
       <div class="code-example">
-        <h4>⚡ Creating Custom Enhancers</h4>
+        <h4>✅ selection() Marker - Practical Value</h4>
         <p class="code-desc">
-          Enhancers add methods and behavior to your tree:
+          A marker that manages multi-select state - immediately useful:
         </p>
-        <pre><code>{{ enhancerCode }}</code></pre>
+        <pre class="code-block" #selectionCode></pre>
       </div>
 
       <div class="code-example">
-        <h4>🚀 Usage Example</h4>
+        <h4>↩️ withUndo() Enhancer - Tree Interaction</h4>
+        <p class="code-desc">
+          An enhancer that <strong>actually works with tree state</strong>:
+        </p>
+        <pre class="code-block" #undoCode></pre>
+      </div>
+
+      <div class="code-example">
+        <h4>🔒 withFreeze() Enhancer - Simple Power</h4>
+        <p class="code-desc">
+          Prevent mutations during async operations or submissions:
+        </p>
+        <pre class="code-block" #freezeCode></pre>
+      </div>
+
+      <div class="code-example">
+        <h4>🚀 Complete Usage</h4>
         <p class="code-desc">
           Combining custom markers and enhancers in a real application:
         </p>
-        <pre><code>{{ usageCode }}</code></pre>
+        <pre class="code-block" #usageCode></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Why Better Section -->
+  <section class="why-section">
+    <h2>💡 Why These Are Better</h2>
+
+    <div class="comparison-grid">
+      <div class="comparison-card">
+        <h4>Markers vs Services</h4>
+        <table class="comparison-table">
+          <tr>
+            <th>Plain Service</th>
+            <th>Custom Marker</th>
+          </tr>
+          <tr>
+            <td>Separate from state</td>
+            <td>Part of state definition</td>
+          </tr>
+          <tr>
+            <td>Manual wiring</td>
+            <td>Auto-materialized</td>
+          </tr>
+          <tr>
+            <td>No type inference</td>
+            <td>Full TypeScript support</td>
+          </tr>
+          <tr>
+            <td>
+              <code>counterService.increment()</code>
+            </td>
+            <td>
+              <code>store.$.likes.increment()</code>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="comparison-card">
+        <h4>Enhancers vs Wrapper Services</h4>
+        <table class="comparison-table">
+          <tr>
+            <th>Wrapper Service</th>
+            <th>Custom Enhancer</th>
+          </tr>
+          <tr>
+            <td>Doesn't see tree state</td>
+            <td>Snapshots/restores state</td>
+          </tr>
+          <tr>
+            <td>Manual integration</td>
+            <td><code>.with()</code> composition</td>
+          </tr>
+          <tr>
+            <td>Can't intercept mutations</td>
+            <td>Can freeze, validate, log</td>
+          </tr>
+          <tr>
+            <td>Separate API</td>
+            <td>Unified tree API</td>
+          </tr>
+        </table>
       </div>
     </div>
   </section>
 
   <!-- Best Practices Section -->
   <section class="best-practices-section">
-    <h2>✅ Best Practices Checklist</h2>
+    <h2>✅ Best Practices</h2>
 
     <div class="practices-grid">
       <div class="practice-card">
         <h4>Markers</h4>
         <ul>
           <li>Use <code>Symbol()</code> for unique identification</li>
-          <li>Keep type guards simple and fast</li>
+          <li>Keep materializers pure - no side effects</li>
           <li>Register processors once at app startup</li>
-          <li>Provide <code>reset()</code> methods</li>
-          <li>Handle SSR (no browser APIs at import time)</li>
+          <li>Provide <code>reset()</code> for easy state clearing</li>
+          <li>Use computed signals for derived state</li>
         </ul>
       </div>
 
@@ -248,9 +408,9 @@
         <ul>
           <li>Return <code>tree & YourMethods</code> for TypeScript</li>
           <li>Use <code>Object.assign()</code> to preserve tree identity</li>
+          <li>Actually interact with tree state when possible</li>
+          <li>Consider cleanup in <code>destroy()</code> if needed</li>
           <li>Add <code>/*&#64;__PURE__*/</code> for tree-shaking</li>
-          <li>Use <code>createEnhancer()</code> for dependencies</li>
-          <li>Implement <code>destroy()</code> for cleanup</li>
         </ul>
       </div>
     </div>

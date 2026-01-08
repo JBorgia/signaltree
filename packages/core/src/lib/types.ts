@@ -418,20 +418,11 @@ export interface EntityMapMarker<E, K extends string | number> {
  *   products: entityMap<Product, number>(),
  * }).with(entities());
  * ```
+ *
+ * @see {@link ./markers/entity-map.ts} for the self-registering implementation
  */
-export function entityMap<
-  E,
-  K extends string | number = E extends { id: infer I extends string | number }
-    ? I
-    : string
->(config?: EntityConfig<E, K>): EntityMapMarker<E, K> {
-  // Runtime: only needs __isEntityMap for detection
-  // Type-level: the brand symbol makes this nominally typed
-  return {
-    __isEntityMap: true,
-    __entityMapConfig: config ?? {},
-  } as EntityMapMarker<E, K>;
-}
+// Re-export from self-registering marker module
+export { entityMap } from './markers/entity-map';
 
 /**
  * Mutation options

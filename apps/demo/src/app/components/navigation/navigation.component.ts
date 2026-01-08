@@ -9,7 +9,12 @@ export interface DemoExample {
   title: string;
   description: string;
   route: string;
-  category: 'getting-started' | 'benchmarks' | 'performance' | 'features';
+  category:
+    | 'getting-started'
+    | 'core-features'
+    | 'enhancers'
+    | 'advanced'
+    | 'benchmarks';
 }
 
 export interface ExternalLink {
@@ -40,7 +45,7 @@ export class NavigationComponent {
     this.buildDate = new Date().toISOString().slice(0, 10);
   }
   examples: DemoExample[] = [
-    // Getting Started
+    // Getting Started - Learn the basics
     {
       id: 'docs',
       title: '📚 Documentation',
@@ -52,7 +57,7 @@ export class NavigationComponent {
       id: 'fundamentals',
       title: 'Fundamentals',
       description:
-        'Interactive examples demonstrating core SignalTree concepts with filtering',
+        'Interactive examples demonstrating core SignalTree concepts',
       route: '/examples/fundamentals',
       category: 'getting-started',
     },
@@ -62,6 +67,103 @@ export class NavigationComponent {
       description: 'Unified callable API: tree.$.user.name("value")',
       route: '/callable-syntax',
       category: 'getting-started',
+    },
+    {
+      id: 'architecture',
+      title: 'Architecture Overview',
+      description: 'Consolidated architecture and tree-shaking benefits',
+      route: '/architecture',
+      category: 'getting-started',
+    },
+
+    // Core Features - Built-in capabilities
+    {
+      id: 'entities',
+      title: 'Entity Management',
+      description: 'CRUD operations for entity collections',
+      route: '/entities',
+      category: 'core-features',
+    },
+    {
+      id: 'ng-forms',
+      title: 'Forms Integration',
+      description: 'Angular forms bridge with persistence and validation',
+      route: '/ng-forms',
+      category: 'core-features',
+    },
+    {
+      id: 'persistence',
+      title: 'Persistence',
+      description: 'Auto-save state to localStorage',
+      route: '/persistence',
+      category: 'core-features',
+    },
+    {
+      id: 'serialization',
+      title: 'Serialization',
+      description: 'JSON export/import with type preservation',
+      route: '/serialization',
+      category: 'core-features',
+    },
+
+    // Enhancers - Extend your tree
+    {
+      id: 'batching',
+      title: 'Batching',
+      description: 'Batch multiple updates for optimal performance',
+      route: '/batching',
+      category: 'enhancers',
+    },
+    {
+      id: 'memoization',
+      title: 'Memoization',
+      description: 'Cache expensive computations',
+      route: '/memoization',
+      category: 'enhancers',
+    },
+    {
+      id: 'time-travel',
+      title: 'Time Travel',
+      description: 'Undo/redo and state history',
+      route: '/time-travel',
+      category: 'enhancers',
+    },
+    {
+      id: 'devtools',
+      title: 'DevTools',
+      description: 'Redux DevTools integration',
+      route: '/devtools',
+      category: 'enhancers',
+    },
+
+    // Advanced - Enterprise & Configuration
+    {
+      id: 'custom-extensions',
+      title: 'Custom Markers & Enhancers',
+      description: 'Create your own markers and enhancers',
+      route: '/custom-extensions',
+      category: 'advanced',
+    },
+    {
+      id: 'presets',
+      title: 'Presets',
+      description: 'Pre-configured patterns for common use cases',
+      route: '/presets',
+      category: 'advanced',
+    },
+    {
+      id: 'enterprise-enhancer',
+      title: 'Enterprise Enhancer',
+      description: 'Audit, time-travel and enterprise presets',
+      route: '/enterprise-enhancer',
+      category: 'advanced',
+    },
+    {
+      id: 'extreme-depth',
+      title: 'Extreme Depth',
+      description: 'Test recursive typing at 15+ levels',
+      route: '/extreme-depth',
+      category: 'advanced',
     },
 
     // Benchmarks
@@ -79,115 +181,14 @@ export class NavigationComponent {
       route: '/realistic-benchmark-history',
       category: 'benchmarks',
     },
-    {
-      id: 'architecture',
-      title: 'Architecture Overview',
-      description: 'Consolidated architecture and tree-shaking benefits',
-      route: '/architecture',
-      category: 'features',
-    },
-
-    // Performance
-    {
-      id: 'batching',
-      title: 'Batching',
-      description: 'Batch multiple updates for optimal performance',
-      route: '/batching',
-      category: 'performance',
-    },
-    {
-      id: 'memoization',
-      title: 'Memoization',
-      description: 'Cache expensive computations',
-      route: '/memoization',
-      category: 'performance',
-    },
-    {
-      id: 'extreme-depth',
-      title: 'Extreme Depth',
-      description: 'Test recursive typing at 15+ levels',
-      route: '/extreme-depth',
-      category: 'performance',
-    },
-
-    // Features
-    {
-      id: 'entities',
-      title: 'Entity Management',
-      description: 'CRUD operations for entity collections',
-      route: '/entities',
-      category: 'features',
-    },
-    {
-      id: 'presets',
-      title: 'Presets',
-      description: 'Pre-configured patterns for common use cases',
-      route: '/presets',
-      category: 'features',
-    },
-    {
-      id: 'middleware',
-      title: 'Middleware',
-      description: 'Extend functionality with middleware hooks',
-      route: '/middleware',
-      category: 'features',
-    },
-    {
-      id: 'ng-forms',
-      title: 'Forms Integration',
-      description: 'Angular forms bridge with persistence and validation',
-      route: '/ng-forms',
-      category: 'features',
-    },
-    {
-      id: 'time-travel',
-      title: 'Time Travel',
-      description: 'Undo/redo and state history',
-      route: '/time-travel',
-      category: 'features',
-    },
-    {
-      id: 'devtools',
-      title: 'DevTools',
-      description: 'Developer tools and debugging utilities',
-      route: '/devtools',
-      category: 'features',
-    },
-    {
-      id: 'enterprise-enhancer',
-      title: 'Enterprise Enhancer',
-      description: 'Audit, time-travel and enterprise presets',
-      route: '/enterprise-enhancer',
-      category: 'features',
-    },
-    {
-      id: 'persistence',
-      title: 'Persistence',
-      description: 'Auto-save state to localStorage',
-      route: '/persistence',
-      category: 'features',
-    },
-    {
-      id: 'serialization',
-      title: 'Serialization',
-      description: 'JSON export/import with type preservation',
-      route: '/serialization',
-      category: 'features',
-    },
-    {
-      id: 'custom-extensions',
-      title: 'Custom Markers & Enhancers',
-      description: 'Create your own markers and enhancers',
-      route: '/custom-extensions',
-      category: 'features',
-    },
   ];
 
   categories: DemoExample['category'][] = [
     'getting-started',
+    'core-features',
+    'enhancers',
+    'advanced',
     'benchmarks',
-    'performance',
-    'features',
   ];
 
   externalLinks: ExternalLink[] = [
@@ -212,9 +213,10 @@ export class NavigationComponent {
   getCategoryLabel(category: DemoExample['category']): string {
     const labels: Record<DemoExample['category'], string> = {
       'getting-started': '🚀 Getting Started',
+      'core-features': '📦 Core Features',
+      enhancers: '⚡ Enhancers',
+      advanced: '🔧 Advanced',
       benchmarks: '📊 Benchmarks',
-      performance: '⚡ Performance',
-      features: '✨ Features',
     };
     return labels[category];
   }

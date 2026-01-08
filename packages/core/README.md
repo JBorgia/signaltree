@@ -36,6 +36,26 @@ import { batching } from '@signaltree/core/enhancers/batching';
 - Core + batching: ~9.3 KB gzipped (barrel vs subpath: identical)
 - Unused enhancers: **automatically excluded** by tree-shaking
 
+### Marker Tree-Shaking (Self-Registering)
+
+Built-in markers (`entityMap()`, `status()`, `stored()`) are **self-registering** - they only add their processor code when you actually use them:
+
+```ts
+// ✅ Only status() code is bundled (entityMap and stored tree-shaken out)
+import { signalTree, status } from '@signaltree/core';
+const tree = signalTree({ loadState: status() });
+
+// ✅ Minimal bundle - no marker code included
+import { signalTree } from '@signaltree/core';
+const tree = signalTree({ count: 0 });
+```
+
+**How it works:**
+
+- Each marker factory (`status()`, `stored()`, `entityMap()`) registers its processor on first call
+- If you never call a marker factory, its code is completely eliminated
+- Zero import-time side effects - registration is lazy and automatic
+
 **When to use subpath imports:**
 
 - Older bundlers (webpack <5) with poor tree-shaking

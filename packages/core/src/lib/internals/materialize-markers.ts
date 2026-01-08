@@ -1,8 +1,5 @@
 import { isSignal } from '@angular/core';
 
-import { createEntitySignal } from '../entity-signal';
-import { createStatusSignal, isStatusMarker, StatusMarker } from '../markers/status';
-import { createStoredSignal, isStoredMarker, StoredMarker } from '../markers/stored';
 import { getPathNotifier, PathNotifier } from '../path-notifier';
 import { isNodeAccessor } from '../utils';
 
@@ -17,29 +14,13 @@ import { isNodeAccessor } from '../utils';
  * 1. materializeMarkers() - entityMap, status, stored markers → signals
  * 2. applyDerivedFactories() - derived factories → computed signals
  *
- * This ensures entity methods, status signals, and stored signals are
- * available when derived factories execute.
+ * TREE-SHAKING: This module has NO side effects at import time.
+ * Built-in markers (entityMap, status, stored) self-register when
+ * their factory functions are first called. If you never use a marker,
+ * its code is completely tree-shaken from your bundle.
  *
  * @internal
  */
-
-import type { EntityConfig, EntityMapMarker } from '../types';
-
-// =============================================================================
-// ENTITY MAP MARKER (inline - matches existing implementation)
-// =============================================================================
-
-type Marker = EntityMapMarker<Record<string, unknown>, string | number> & {
-  __entityMapConfig?: EntityConfig<Record<string, unknown>, string | number>;
-};
-
-function isEntityMapMarker(value: unknown): value is Marker {
-  return Boolean(
-    value &&
-      typeof value === 'object' &&
-      (value as Record<string, unknown>)['__isEntityMap'] === true
-  );
-}
 
 // =============================================================================
 // MARKER PROCESSOR REGISTRY
@@ -57,16 +38,80 @@ interface MarkerProcessor {
 const MARKER_PROCESSORS: MarkerProcessor[] = [];
 
 /**
- * Register a custom marker processor.
- * For advanced use cases and extensions.
+ * Check if a value matches any registered marker processor.
+ * Used by createSignalStore to preserve markers for later materialization.
+ *
+ * This enables user-defined markers registered via registerMarkerProcessor()
+ * to be preserved during tree creation and materialized later.
+ *
+ * @param value - The value to check
+ * @returns true if the value is a registered marker
+ */
+export function isRegisteredMarker(value: unknown): boolean {
+  // Early exit for non-objects
+  if (value === null || typeof value !== 'object') {
+    return false;
+  }
+
+  // Fast path: most objects don't have Symbol keys
+  // Custom markers typically use Symbols for identification
+  if (Object.getOwnPropertySymbols(value).length === 0) {
+    return false;
+  }
+
+  for (const processor of MARKER_PROCESSORS) {
+    if (processor.check(value)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Check if a value has Symbol keys but isn't a registered marker.
+ * Used for dev-mode warnings about potential registration timing issues.
+ *
+ * @param value - The value to check
+ * @returns true if value has Symbols but no matching processor
+ * @internal
+ */
+export function hasUnregisteredSymbolKeys(value: unknown): boolean {
+  if (value === null || typeof value !== 'object') {
+    return false;
+  }
+  const symbolKeys = Object.getOwnPropertySymbols(value);
+  if (symbolKeys.length === 0) {
+    return false;
+  }
+  // Has Symbols but no registered processor matched
+  return !isRegisteredMarker(value);
+}
+
+/**
+ * Register a marker processor.
+ *
+ * Built-in markers call this automatically when their factory is first used.
+ * Custom markers should call this at app startup, BEFORE creating trees.
  *
  * @param check - Type guard function to identify the marker
  * @param create - Factory function to create the materialized signal
+ *
+ * @example
+ * ```typescript
+ * // Custom marker registration (call before creating trees)
+ * registerMarkerProcessor(isCounterMarker, createCounterSignal);
+ * ```
  */
 export function registerMarkerProcessor<T, R>(
   check: (value: unknown) => value is T,
   create: (marker: T, notifier: PathNotifier, path: string) => R
 ): void {
+  // Prevent duplicate registration (same check function)
+  const alreadyRegistered = MARKER_PROCESSORS.some((p) => p.check === check);
+  if (alreadyRegistered) {
+    return;
+  }
+
   MARKER_PROCESSORS.push({
     check,
     create: create as (
@@ -76,34 +121,6 @@ export function registerMarkerProcessor<T, R>(
     ) => unknown,
   });
 }
-
-// =============================================================================
-// CORE MARKER PROCESSORS (built-in)
-// =============================================================================
-
-// EntityMap processor
-registerMarkerProcessor<Marker, unknown>(
-  isEntityMapMarker,
-  (marker, notifier, path) => {
-    const cfg = marker.__entityMapConfig ?? {};
-    return createEntitySignal(
-      cfg as EntityConfig<Record<string, unknown>, string | number>,
-      notifier,
-      path
-    );
-  }
-);
-
-// Status processor
-registerMarkerProcessor<StatusMarker, unknown>(isStatusMarker, (marker) =>
-  createStatusSignal(marker)
-);
-
-// Stored processor
-registerMarkerProcessor<StoredMarker<unknown>, unknown>(
-  isStoredMarker,
-  (marker) => createStoredSignal(marker)
-);
 
 // =============================================================================
 // MATERIALIZATION
@@ -227,3 +244,15 @@ export function hasMarkers(
 
   return false;
 }
+
+// =============================================================================
+// TESTING UTILITIES
+// =============================================================================
+
+/**
+ * Exposed for testing tree-shaking behavior.
+ * DO NOT USE IN PRODUCTION CODE.
+ *
+ * @internal
+ */
+export const MARKER_PROCESSORS_FOR_TESTING = MARKER_PROCESSORS;

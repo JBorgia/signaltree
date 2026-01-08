@@ -196,7 +196,18 @@ else
     exit 1
 fi
 
-# 9a. Verify No Broken Type Declarations
+# 9a. Verify Package Exports
+print_step "Verifying package exports match build output"
+if node scripts/verify-exports.js 2>&1 | tee /tmp/verify-exports.log; then
+    print_success "All package exports verified"
+else
+    print_error "Package exports verification failed - exports don't match build output"
+    cat /tmp/verify-exports.log
+    print_info "This prevents publishing packages with broken imports"
+    exit 1
+fi
+
+# 9b. Verify No Broken Type Declarations
 print_step "Checking for stray dist/**/*.d.ts files"
 if bash scripts/verify-no-broken-dts.sh 2>&1 | tee /tmp/verify-dts.log; then
     print_success "No broken type declaration files found"

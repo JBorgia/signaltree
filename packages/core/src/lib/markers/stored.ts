@@ -1,5 +1,7 @@
 import { signal } from '@angular/core';
 
+import { registerMarkerProcessor } from '../internals/materialize-markers';
+
 /**
  * Stored Marker - Auto-sync to localStorage
  *
@@ -76,11 +78,18 @@ export interface StoredSignal<T> {
 }
 
 // =============================================================================
-// MARKER FACTORY
+// MARKER FACTORY (Self-registering for tree-shaking)
 // =============================================================================
+
+/** @internal - Tracks if processor is registered */
+let storedRegistered = false;
 
 /**
  * Creates a stored marker for localStorage persistence.
+ *
+ * Automatically registers its processor on first use - no manual
+ * registration required. If you never use `stored()`, the processor
+ * is tree-shaken out of your bundle.
  *
  * @param key - localStorage key
  * @param defaultValue - Default value if nothing stored
@@ -103,6 +112,12 @@ export function stored<T>(
   defaultValue: T,
   options: StoredOptions<T> = {}
 ): StoredMarker<T> {
+  // Self-register on first use (tree-shakeable)
+  if (!storedRegistered) {
+    storedRegistered = true;
+    registerMarkerProcessor(isStoredMarker, createStoredSignal);
+  }
+
   return {
     [STORED_MARKER]: true,
     key,

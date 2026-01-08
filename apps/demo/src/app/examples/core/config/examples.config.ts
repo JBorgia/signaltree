@@ -4,9 +4,6 @@ import { BatchingDemoComponent } from '../../features/fundamentals/examples/enha
 import {
     CallableSyntaxDemoComponent,
 } from '../../features/fundamentals/examples/enhancers/callable-syntax-demo/callable-syntax-demo.component';
-import {
-    CustomExtensionsDemoComponent,
-} from '../../features/fundamentals/examples/enhancers/custom-extensions-demo/custom-extensions-demo.component';
 import { DevtoolsDemoComponent } from '../../features/fundamentals/examples/enhancers/devtools-demo/devtools-demo.component';
 import {
     PersistenceDemoComponent,
@@ -328,29 +325,8 @@ export const recommendedArchitectureExampleMeta: ExampleMeta = {
   ],
 };
 
-/**
- * Custom Extensions Example
- */
-export const customExtensionsExampleMeta: ExampleMeta = {
-  id: 'custom-extensions',
-  title: 'Custom Markers & Enhancers',
-  description:
-    'Learn how to create your own markers and enhancers to extend SignalTree functionality.',
-  category: 'Advanced',
-  focusAreas: ['extensibility', 'markers', 'enhancers', 'custom'],
-  functionalUse: ['extension', 'customization', 'plugin-development'],
-  enhancers: [],
-  route: '/custom-extensions',
-  component: CustomExtensionsDemoComponent,
-  difficulty: 'advanced',
-  tags: [
-    'custom-markers',
-    'custom-enhancers',
-    'extensibility',
-    'advanced',
-    'plugin',
-  ],
-};
+// Note: CustomExtensionsDemoComponent is NOT included in the registry
+// to allow it to be lazy-loaded separately via its own route
 
 /**
  * Central registry of all examples
@@ -385,5 +361,5 @@ export const EXAMPLES_REGISTRY: ExampleMeta[] = [
   signalFormsExampleMeta,
   asyncExampleMeta,
   recommendedArchitectureExampleMeta,
-  customExtensionsExampleMeta,
+  // Note: customExtensionsExampleMeta removed - loaded separately via route
 ];
