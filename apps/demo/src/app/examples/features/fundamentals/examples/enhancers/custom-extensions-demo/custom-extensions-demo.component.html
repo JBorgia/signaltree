@@ -2,7 +2,9 @@
   <header class="demo-header">
     <h1>🔧 Custom Markers & Enhancers</h1>
     <p class="subtitle">
-      Learn how to extend SignalTree with your own markers and enhancers
+      Learn how to extend SignalTree with your own markers and enhancers. This
+      demo shows a complete <code>validated()</code> marker and
+      <code>withAnalytics()</code> / <code>withLogger()</code> enhancers.
     </p>
   </header>
 
@@ -21,7 +23,7 @@
           <li>Auto-transform to rich APIs</li>
           <li>
             Examples: <code>entityMap()</code>, <code>status()</code>,
-            <code>stored()</code>
+            <code>validated()</code>
           </li>
         </ul>
       </div>
@@ -30,15 +32,15 @@
         <div class="card-icon">⚡</div>
         <h3>Enhancers</h3>
         <p>
-          Functions that <strong>augment</strong> your tree with additional
-          methods, signals, or behavior via <code>.with()</code>.
+          Functions that augment your tree with additional methods, signals, or
+          behaviors via <code>.with()</code>.
         </p>
         <ul>
-          <li>Add cross-cutting features</li>
-          <li>Compose via chaining</li>
+          <li>Add methods to tree instances</li>
+          <li>Can have dependencies on other enhancers</li>
           <li>
-            Examples: <code>devTools()</code>, <code>batching()</code>,
-            <code>effects()</code>
+            Examples: <code>batching()</code>, <code>devTools()</code>,
+            <code>withAnalytics()</code>
           </li>
         </ul>
       </div>
@@ -47,137 +49,147 @@
 
   <!-- Live Demo Section -->
   <section class="demo-section">
-    <h2>📱 Live Demo</h2>
-    <p class="section-intro">
-      This demo uses a custom <code>validated()</code> marker and a custom
-      <code>withLogger()</code> enhancer:
+    <h2>📝 Live Demo: Validated Form with Analytics</h2>
+    <p class="section-desc">
+      This form uses a custom <code>validated()</code> marker for real-time
+      validation and custom enhancers for analytics and logging.
     </p>
 
     <div class="demo-grid">
-      <!-- Validated Fields Panel -->
-      <div class="panel validated-panel">
-        <h3>🏷️ Custom <code>validated()</code> Marker</h3>
-        <p class="panel-description">
-          Each field below uses the custom marker to provide built-in
-          validation:
-        </p>
+      <!-- Form Panel -->
+      <div class="demo-panel form-panel">
+        <h3>Form with Validation</h3>
 
-        <div class="form-group">
-          <label for="username">Username</label>
-          <div class="input-row">
-            <input
-              id="username"
-              type="text"
-              [(ngModel)]="usernameInput"
-              [class.invalid]="!username.isValid()"
-              [class.valid]="username.isValid() && usernameInput"
-              placeholder="Enter username"
-            />
-            <button class="btn-small" (click)="updateUsername()">Set</button>
-          </div>
-          <div class="validation-status">
-            @if (username.error(); as error) {
-            <span class="error">❌ {{ error }}</span>
-            } @else if (username()) {
-            <span class="valid">✅ Valid</span>
-            }
-          </div>
-          <div class="current-value">
-            Current: <code>{{ username() || '(empty)' }}</code>
-          </div>
-        </div>
-
-        <div class="form-group">
+        <div
+          class="form-group"
+          [class.has-error]="emailError()"
+          [class.is-valid]="!emailError() && store.$.email()"
+        >
           <label for="email">Email</label>
-          <div class="input-row">
-            <input
-              id="email"
-              type="email"
-              [(ngModel)]="emailInput"
-              [class.invalid]="!email.isValid()"
-              [class.valid]="email.isValid() && emailInput"
-              placeholder="Enter email"
-            />
-            <button class="btn-small" (click)="updateEmail()">Set</button>
-          </div>
-          <div class="validation-status">
-            @if (email.error(); as error) {
-            <span class="error">❌ {{ error }}</span>
-            } @else if (email()) {
-            <span class="valid">✅ Valid</span>
-            }
-          </div>
-          <div class="current-value">
-            Current: <code>{{ email() || '(empty)' }}</code>
-          </div>
+          <input
+            id="email"
+            type="email"
+            [value]="store.$.email()"
+            (input)="onEmailChange($event)"
+            placeholder="Enter email address"
+          />
+          @if (emailError()) {
+          <span class="error-message">{{ emailError() }}</span>
+          } @if (!emailError() && store.$.email()) {
+          <span class="valid-indicator">✓ Valid</span>
+          }
         </div>
 
-        <div class="form-group">
+        <div
+          class="form-group"
+          [class.has-error]="usernameError()"
+          [class.is-valid]="!usernameError() && store.$.username()"
+        >
+          <label for="username">Username</label>
+          <input
+            id="username"
+            type="text"
+            [value]="store.$.username()"
+            (input)="onUsernameChange($event)"
+            placeholder="Choose a username"
+          />
+          @if (usernameError()) {
+          <span class="error-message">{{ usernameError() }}</span>
+          } @if (!usernameError() && store.$.username()) {
+          <span class="valid-indicator">✓ Valid</span>
+          }
+        </div>
+
+        <div
+          class="form-group"
+          [class.has-error]="ageError()"
+          [class.is-valid]="!ageError() && store.$.age() > 0"
+        >
           <label for="age">Age</label>
-          <div class="input-row">
-            <input
-              id="age"
-              type="number"
-              [(ngModel)]="ageInput"
-              [class.invalid]="!age.isValid()"
-              [class.valid]="age.isValid()"
-              placeholder="Enter age"
-            />
-            <button class="btn-small" (click)="updateAge()">Set</button>
-          </div>
-          <div class="validation-status">
-            @if (age.error(); as error) {
-            <span class="error">❌ {{ error }}</span>
-            } @else {
-            <span class="valid">✅ Valid</span>
-            }
-          </div>
-          <div class="current-value">
-            Current: <code>{{ age() }}</code>
-          </div>
+          <input
+            id="age"
+            type="number"
+            [value]="store.$.age()"
+            (input)="onAgeChange($event)"
+            placeholder="Enter your age"
+            min="0"
+            max="150"
+          />
+          @if (ageError()) {
+          <span class="error-message">{{ ageError() }}</span>
+          } @if (!ageError() && store.$.age() > 0) {
+          <span class="valid-indicator">✓ Valid</span>
+          }
         </div>
 
-        <div class="actions">
-          <button class="btn-secondary" (click)="resetAll()">Reset All</button>
+        <div class="form-actions">
+          <button
+            class="btn primary"
+            [disabled]="!allFieldsValid()"
+            (click)="submitForm()"
+          >
+            Submit Form
+          </button>
+          <button class="btn secondary" (click)="resetForm()">Reset</button>
+        </div>
+
+        @if (store.$.lastSubmitted()) {
+        <div class="submit-info">
+          <strong>Last submitted:</strong> {{ store.$.lastSubmitted() }}
+          <br />
+          <strong>Total submissions:</strong> {{ store.$.submitCount() }}
+        </div>
+        }
+      </div>
+
+      <!-- Analytics Panel -->
+      <div class="demo-panel analytics-panel">
+        <h3>Custom withAnalytics() Enhancer</h3>
+        <div class="panel-header">
+          <span class="event-count">{{ store.eventCount() }} events</span>
+          <button class="btn small" (click)="store.clearEvents()">Clear</button>
+        </div>
+
+        <div class="events-list">
+          @for (event of store.events().slice().reverse().slice(0, 10); track
+          event.timestamp) {
+          <div class="event-item" [class]="event.type">
+            <span class="event-type">{{ event.type }}</span>
+            <span class="event-time">{{
+              event.timestamp | date : 'HH:mm:ss.SSS'
+            }}</span>
+            @if (event.data) {
+            <pre class="event-data">{{ event.data | json }}</pre>
+            }
+          </div>
+          } @if (store.events().length === 0) {
+          <div class="empty-state">
+            No events tracked yet. Interact with the form!
+          </div>
+          }
         </div>
       </div>
 
       <!-- Logger Panel -->
-      <div class="panel logger-panel">
-        <h3>⚡ Custom <code>withLogger()</code> Enhancer</h3>
-        <p class="panel-description">
-          The enhancer adds <code>log()</code>, <code>history</code>, and
-          <code>clearLogs()</code>:
-        </p>
-
-        <div class="counter-section">
-          <span class="section-label">Counter (regular signal)</span>
-          <div class="counter-row">
-            <span class="counter-value">{{ store.$.counter() }}</span>
-            <button class="btn-primary" (click)="incrementCounter()">+1</button>
-          </div>
+      <div class="demo-panel logger-panel">
+        <h3>Custom withLogger() Enhancer</h3>
+        <div class="panel-header">
+          <span class="log-count">{{ logs().length }} logs</span>
+          <button class="btn small" (click)="clearLogs()">Clear</button>
         </div>
 
-        <div class="log-section">
-          <div class="log-header">
-            <span class="section-label"
-              >Log History ({{ history().length }} entries)</span
-            >
-            <button class="btn-small btn-secondary" (click)="clearLogs()">
-              Clear
-            </button>
+        <div class="logs-list">
+          @for (entry of logs().slice().reverse(); track entry.timestamp) {
+          <div class="log-item" [class]="entry.level">
+            <span class="log-level">{{ entry.level | uppercase }}</span>
+            <span class="log-message">{{ entry.message }}</span>
+            <span class="log-time">{{
+              entry.timestamp | date : 'HH:mm:ss'
+            }}</span>
           </div>
-          <div class="log-container">
-            @if (history().length === 0) {
-            <div class="log-empty">No logs yet</div>
-            } @else { @for (entry of history(); track entry) {
-            <div class="log-entry">{{ entry }}</div>
-            } }
-          </div>
-        </div>
-
-        <div class="last-action">
-          <strong>Last action:</strong> {{ lastAction() }}
+          } @if (logs().length === 0) {
+          <div class="empty-state">No logs yet. Submit or reset the form!</div>
+          }
         </div>
       </div>
     </div>
@@ -185,130 +197,62 @@
 
   <!-- Code Examples Section -->
   <section class="code-section">
-    <h2>📝 Implementation Guide</h2>
+    <h2>📚 Implementation Guide</h2>
 
-    <div class="code-tabs">
-      <details open>
-        <summary>
-          <span class="tab-icon">🏷️</span>
-          Custom Marker Implementation
-        </summary>
-        <div class="code-content">
-          <p>
-            A marker is a placeholder object identified by a unique Symbol.
-            During tree finalization, registered processors transform markers
-            into their materialized form.
-          </p>
-          <pre><code [innerText]="markerCode || '[code not available]'"></code></pre>
-          <div class="code-debug">
-            Length: <code>{{ markerCode?.length ?? 0 }}</code>
-          </div>
-        </div>
-      </details>
+    <div class="code-examples-container">
+      <div class="code-example">
+        <h4>🏷️ Creating a Custom Marker</h4>
+        <p class="code-desc">
+          A marker is a placeholder that gets transformed into a specialized
+          signal. Here's how to create the <code>validated()</code> marker:
+        </p>
+        <pre><code>{{ markerCode }}</code></pre>
+      </div>
 
-      <details>
-        <summary>
-          <span class="tab-icon">⚡</span>
-          Custom Enhancer Implementation
-        </summary>
-        <div class="code-content">
-          <p>
-            An enhancer is a function that takes a tree and returns an augmented
-            tree with additional methods or behavior.
-          </p>
-          <pre><code [innerText]="enhancerCode || '[code not available]'"></code></pre>
-          <div class="code-debug">
-            Length: <code>{{ enhancerCode?.length ?? 0 }}</code>
-          </div>
-        </div>
-      </details>
+      <div class="code-example">
+        <h4>⚡ Creating Custom Enhancers</h4>
+        <p class="code-desc">
+          Enhancers add methods and behavior to your tree:
+        </p>
+        <pre><code>{{ enhancerCode }}</code></pre>
+      </div>
 
-      <details>
-        <summary>
-          <span class="tab-icon">🚀</span>
-          Usage Example
-        </summary>
-        <div class="code-content">
-          <p>
-            Combine markers and enhancers for powerful, type-safe state
-            management:
-          </p>
-          <pre><code [innerText]="usageCode || '[code not available]'"></code></pre>
-          <div class="code-debug">
-            Length: <code>{{ usageCode?.length ?? 0 }}</code>
-          </div>
-        </div>
-      </details>
+      <div class="code-example">
+        <h4>🚀 Usage Example</h4>
+        <p class="code-desc">
+          Combining custom markers and enhancers in a real application:
+        </p>
+        <pre><code>{{ usageCode }}</code></pre>
+      </div>
     </div>
   </section>
 
   <!-- Best Practices Section -->
   <section class="best-practices-section">
-    <h2>✅ Best Practices</h2>
+    <h2>✅ Best Practices Checklist</h2>
 
     <div class="practices-grid">
-      <div class="practice">
-        <h4>🏷️ Markers</h4>
+      <div class="practice-card">
+        <h4>Markers</h4>
         <ul>
           <li>Use <code>Symbol()</code> for unique identification</li>
           <li>Keep type guards simple and fast</li>
           <li>Register processors once at app startup</li>
-          <li>Handle errors gracefully in materializers</li>
-          <li>Provide <code>reset()</code> methods for default restoration</li>
+          <li>Provide <code>reset()</code> methods</li>
+          <li>Handle SSR (no browser APIs at import time)</li>
         </ul>
       </div>
 
-      <div class="practice">
-        <h4>⚡ Enhancers</h4>
+      <div class="practice-card">
+        <h4>Enhancers</h4>
         <ul>
-          <li>Return <code>tree & YourMethods</code> for type inference</li>
+          <li>Return <code>tree & YourMethods</code> for TypeScript</li>
           <li>Use <code>Object.assign()</code> to preserve tree identity</li>
-          <li>Provide cleanup in <code>destroy()</code> if needed</li>
-          <li>Add <code>/*@__PURE__*/</code> for tree-shaking</li>
-          <li>Use <code>createEnhancer()</code> for metadata</li>
+          <li>Add <code>/*&#64;__PURE__*/</code> for tree-shaking</li>
+          <li>Use <code>createEnhancer()</code> for dependencies</li>
+          <li>Implement <code>destroy()</code> for cleanup</li>
         </ul>
       </div>
-
-      <div class="practice">
-        <h4>🔗 Composition</h4>
-        <ul>
-          <li>Chain enhancers with <code>.with().with()</code></li>
-          <li>Markers work independently of enhancers</li>
-          <li>Order matters for enhancer dependencies</li>
-          <li>Use <code>provides</code>/<code>requires</code> metadata</li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <!-- Links Section -->
-  <section class="links-section">
-    <h2>📚 Learn More</h2>
-    <div class="links-grid">
-      <a
-        href="/docs/custom-markers-enhancers.md"
-        class="link-card"
-        target="_blank"
-      >
-        <span class="link-icon">📖</span>
-        <span>Full Documentation</span>
-      </a>
-      <a
-        href="https://github.com/JBorgia/signaltree"
-        class="link-card"
-        target="_blank"
-      >
-        <span class="link-icon">🐙</span>
-        <span>Source Code</span>
-      </a>
-      <a routerLink="/devtools" class="link-card">
-        <span class="link-icon">🔧</span>
-        <span>DevTools Demo</span>
-      </a>
-      <a routerLink="/batching" class="link-card">
-        <span class="link-icon">📦</span>
-        <span>Batching Demo</span>
-      </a>
     </div>
   </section>
 </div>
