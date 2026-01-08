@@ -389,7 +389,7 @@ const tree = signalTree({
     search: '',
     userId: null
   }
-}).with(memoization()).with(entities());
+}).with(memoization());
 
 // Memoized filtered logs - cached automatically!
 const filteredLogs = tree.memoize(state => {

@@ -137,21 +137,17 @@ describe('derived() marker pattern', () => {
           startDate: new Date('2024-01-01'),
           endDate: new Date('2024-12-31'),
         },
-      })
-        .with(entities())
-        .derived(($) => ({
-          // Derived namespace with same path as source
-          tickets: {
-            // Add derived signals
-            active: computed(() => {
-              const id = $.tickets.activeId();
-              return id != null
-                ? $.tickets.entities.byId(id)?.() ?? null
-                : null;
-            }),
-            all: computed(() => $.tickets.entities.all()),
-          },
-        }));
+      }).derived(($) => ({
+        // Derived namespace with same path as source
+        tickets: {
+          // Add derived signals
+          active: computed(() => {
+            const id = $.tickets.activeId();
+            return id != null ? $.tickets.entities.byId(id)?.() ?? null : null;
+          }),
+          all: computed(() => $.tickets.entities.all()),
+        },
+      }));
 
       // Verify derived signals work
       expect(tree.$.tickets.active()).toBe(null);
@@ -192,17 +188,15 @@ describe('derived() marker pattern', () => {
           entities: entityMap<Item, number>(),
           selectedId: null as number | null,
         },
-      })
-        .with(entities())
-        .derived(($) => ({
-          items: {
-            selected: computed(() => {
-              const id = $.items.selectedId();
-              return id != null ? $.items.entities.byId(id)?.() ?? null : null;
-            }),
-            count: computed(() => $.items.entities.count()),
-          },
-        }));
+      }).derived(($) => ({
+        items: {
+          selected: computed(() => {
+            const id = $.items.selectedId();
+            return id != null ? $.items.entities.byId(id)?.() ?? null : null;
+          }),
+          count: computed(() => $.items.entities.count()),
+        },
+      }));
 
       // EntityMap methods should be preserved
       expect(tree.$.items.entities.addOne).toBeDefined();
@@ -576,28 +570,26 @@ describe('derived() marker pattern', () => {
       const tree = signalTree({
         users: entityMap<UserEntity, number>(),
         selectedUserId: null as number | null,
-      })
-        .with(entities())
-        .derived(($) => ({
-          // Derived from entityMap.byId()
-          selectedUser: computed(() => {
-            const id = $.selectedUserId();
-            return id != null ? $.users.byId(id)?.() ?? null : null;
-          }),
+      }).derived(($) => ({
+        // Derived from entityMap.byId()
+        selectedUser: computed(() => {
+          const id = $.selectedUserId();
+          return id != null ? $.users.byId(id)?.() ?? null : null;
+        }),
 
-          // Derived from entityMap.all()
-          activeUsers: computed(() =>
-            $.users.all().filter((u: UserEntity) => u.active)
-          ),
+        // Derived from entityMap.all()
+        activeUsers: computed(() =>
+          $.users.all().filter((u: UserEntity) => u.active)
+        ),
 
-          // Derived from entityMap.count
-          userCount: computed(() => $.users.count()),
+        // Derived from entityMap.count
+        userCount: computed(() => $.users.count()),
 
-          // Derived from entityMap.where()
-          adminUsers: computed(() =>
-            $.users.all().filter((u: UserEntity) => u.role === 'admin')
-          ),
-        }));
+        // Derived from entityMap.where()
+        adminUsers: computed(() =>
+          $.users.all().filter((u: UserEntity) => u.role === 'admin')
+        ),
+      }));
 
       // Initial state - no users
       expect(tree.$.selectedUser()).toBe(null);
@@ -661,7 +653,6 @@ describe('derived() marker pattern', () => {
         orders: entityMap<OrderEntity, number>(),
         selectedUserId: null as number | null,
       })
-        .with(entities())
         .derived(($) => ({
           selectedUser: computed(() => {
             const id = $.selectedUserId();
@@ -733,27 +724,25 @@ describe('derived() marker pattern', () => {
     it('should handle entity mutations reactively', () => {
       const tree = signalTree({
         items: entityMap<{ id: number; value: number }, number>(),
-      })
-        .with(entities())
-        .derived(($) => ({
-          sum: computed(() =>
-            $.items
-              .all()
-              .reduce(
-                (acc: number, item: { value: number }) => acc + item.value,
-                0
-              )
-          ),
-          average: computed(() => {
-            const all = $.items.all();
-            if (all.length === 0) return 0;
-            const sum = all.reduce(
+      }).derived(($) => ({
+        sum: computed(() =>
+          $.items
+            .all()
+            .reduce(
               (acc: number, item: { value: number }) => acc + item.value,
               0
-            );
-            return sum / all.length;
-          }),
-        }));
+            )
+        ),
+        average: computed(() => {
+          const all = $.items.all();
+          if (all.length === 0) return 0;
+          const sum = all.reduce(
+            (acc: number, item: { value: number }) => acc + item.value,
+            0
+          );
+          return sum / all.length;
+        }),
+      }));
 
       expect(tree.$.sum()).toBe(0);
       expect(tree.$.average()).toBe(0);

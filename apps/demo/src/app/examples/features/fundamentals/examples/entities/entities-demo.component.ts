@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { entities, entityMap, signalTree } from '@signaltree/core';
+import { entityMap, signalTree } from '@signaltree/core';
 
 import {
   generatePosts,
@@ -50,7 +50,7 @@ export class EntitiesDemoComponent {
     postsPerPage: 10,
     postsSortBy: 'likes',
     postsSortAsc: false,
-  }).with(entities());
+  });
 
   // ==================
   // ENTITY HOOKS - Lifecycle Observation

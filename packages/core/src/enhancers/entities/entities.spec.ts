@@ -1,14 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { enableEntities, entities } from './entities';
+import { enableEntities, entities, highPerformanceEntities } from './entities';
 
 describe('entities enhancer', () => {
-  it('exports factory and aliases', () => {
+  it('exports symbol and aliases but calling it throws', () => {
     expect(typeof entities).toBe('function');
     expect(typeof enableEntities).toBe('function');
-    expect(typeof entities).toBe('function');
+    expect(typeof highPerformanceEntities).toBe('function');
 
-    const f = entities();
-    expect(typeof f).toBe('function');
+    expect(() => entities()).toThrow(/entities\(\) has been removed/i);
   });
 });

@@ -1,0 +1,42 @@
+name: 'Perf Suite Check'
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  perf:
+    name: Run perf-suite (quiet)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install pnpm
+        run: npm i -g pnpm@9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages (production)
+        run: pnpm nx run-many --target=build --all --configuration=production
+
+      - name: Run perf-suite (quiet, multi-run, trim outliers)
+        env:
+          PERF_QUIET: '1'
+          RUNS: '5'
+          PERF_TRIM_OUTLIERS: '1'
+          PERF_FAIL_ON_VIOLATION: '1'
+        run: pnpm run perf:run
+
+      - name: Upload perf summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-summary
+          path: artifacts/perf-summary.json

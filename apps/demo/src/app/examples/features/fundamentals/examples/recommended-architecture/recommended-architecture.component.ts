@@ -71,9 +71,7 @@ export class AppTreeService {
       theme: 'light',
       sidebarOpen: false,
     },
-  })
-    .with(entities())
-    .with(batching());
+  }).with(batching());
 
   // Expose state slices as public signals
   readonly users = this.tree.$.users;

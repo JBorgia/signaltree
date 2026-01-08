@@ -10,8 +10,9 @@
  * - Map transformations
  */
 
-// Import entities at the top to avoid TDZ issues
-const { signalTree, entityMap, entities } = require('../../dist/packages/core');
+// Import only the items we need; avoid destructuring `entities` to prevent TDZ and deprecation spam
+const core = require('../../dist/packages/core');
+const { signalTree, entityMap } = core;
 
 console.log('🧪 SignalTree Entity CRUD Performance Benchmarks\n');
 
@@ -67,7 +68,7 @@ class EntityPerformanceAnalyzer {
       (i) => {
         const tree = signalTree({
           entities: entityMap({ selectId: (e) => e.id }),
-        }).with(entities());
+        });
 
         tree.$.entities.addOne(this.createTestEntity(i));
       },
@@ -90,7 +91,7 @@ class EntityPerformanceAnalyzer {
       (i) => {
         const tree = signalTree({
           entities: entityMap({ selectId: (e) => e.id }),
-        }).with(entities());
+        });
 
         const entities = Array.from({ length: 100 }, (_, idx) =>
           this.createTestEntity(i * 100 + idx)
@@ -113,7 +114,7 @@ class EntityPerformanceAnalyzer {
 
     const tree = signalTree({
       entities: entityMap({ selectId: (e) => e.id }),
-    }).with(entities());
+    });
 
     // Pre-populate with entities
     const entities = Array.from({ length: 1000 }, (_, i) =>
@@ -123,6 +124,7 @@ class EntityPerformanceAnalyzer {
 
     const result = this.measureOperation(
       'updateOne',
+
       (i) => {
         const id = i % 1000;
         tree.$.entities.updateOne(id, {
@@ -146,13 +148,13 @@ class EntityPerformanceAnalyzer {
 
     const tree = signalTree({
       entities: entityMap({ selectId: (e) => e.id }),
-    }).with(entities());
+    });
 
-    // Pre-populate with entities
-    const entities = Array.from({ length: 1000 }, (_, i) =>
+    // Pre-populate with items
+    const items = Array.from({ length: 1000 }, (_, i) =>
       this.createTestEntity(i)
     );
-    tree.$.entities.addMany(entities);
+    tree.$.entities.addMany(items);
 
     const result = this.measureOperation(
       'updateWhere',
@@ -180,13 +182,13 @@ class EntityPerformanceAnalyzer {
       (i) => {
         const tree = signalTree({
           entities: entityMap({ selectId: (e) => e.id }),
-        }).with(entities());
+        });
 
-        // Add entities
-        const entities = Array.from({ length: 100 }, (_, idx) =>
+        // Add items
+        const items = Array.from({ length: 100 }, (_, idx) =>
           this.createTestEntity(idx)
         );
-        tree.$.entities.addMany(entities);
+        tree.$.entities.addMany(items);
 
         // Remove one
         tree.$.entities.removeOne(i % 100);
@@ -207,13 +209,13 @@ class EntityPerformanceAnalyzer {
 
     const tree = signalTree({
       entities: entityMap({ selectId: (e) => e.id }),
-    }).with(entities());
+    });
 
-    // Pre-populate with entities
-    const entities = Array.from({ length: 1000 }, (_, i) =>
+    // Pre-populate with items
+    const items = Array.from({ length: 1000 }, (_, i) =>
       this.createTestEntity(i)
     );
-    tree.$.entities.addMany(entities);
+    tree.$.entities.addMany(items);
 
     // Test all()
     const allResult = this.measureOperation(
@@ -282,14 +284,14 @@ class EntityPerformanceAnalyzer {
 
     const tree = signalTree({
       entities: entityMap({ selectId: (e) => e.id }),
-    }).with(entities());
+    });
 
-    // Add 10k entities
+    // Add 10k items
     const startAdd = performance.now();
-    const entities = Array.from({ length: 10000 }, (_, i) =>
+    const items = Array.from({ length: 10000 }, (_, i) =>
       this.createTestEntity(i)
     );
-    tree.$.entities.addMany(entities);
+    tree.$.entities.addMany(items);
     const addTime = performance.now() - startAdd;
 
     // Query all
@@ -329,13 +331,13 @@ class EntityPerformanceAnalyzer {
 
     const tree = signalTree({
       entities: entityMap({ selectId: (e) => e.id }),
-    }).with(entities());
+    });
 
-    // Add some entities
-    const entities = Array.from({ length: 100 }, (_, i) =>
+    // Add some items
+    const items = Array.from({ length: 100 }, (_, i) =>
       this.createTestEntity(i)
     );
-    tree.$.entities.addMany(entities);
+    tree.$.entities.addMany(items);
 
     const start = performance.now();
 

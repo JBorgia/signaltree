@@ -138,7 +138,6 @@ export function createDevTree<T extends object>(
         .with(effects())
         .with(batching())
         .with(memoization())
-        .with(entities())
         .with(timeTravel())
         .with(devTools());
 
@@ -152,7 +151,6 @@ export function createDevTree<T extends object>(
     .with(effects())
     .with(batching(config.batching))
     .with(memoization(config.memoization))
-    .with(entities())
     .with(timeTravel(config.timeTravel))
     .with(devTools(config.devTools));
 
@@ -189,8 +187,7 @@ export function createProdTree<T extends object>(
   const enhanced = base
     .with(effects())
     .with(batching(config.batching))
-    .with(memoization(config.memoization))
-    .with(entities());
+    .with(memoization(config.memoization));
 
   return enhanced as unknown as ProdSignalTree<T>;
 }

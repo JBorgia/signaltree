@@ -1,7 +1,14 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { entities, entityMap, LoadingState, signalTree, status, stored } from '@signaltree/core';
+import {
+  entities,
+  entityMap,
+  LoadingState,
+  signalTree,
+  status,
+  stored,
+} from '@signaltree/core';
 
 interface User {
   id: number;
@@ -41,24 +48,22 @@ export class MarkersDemoComponent {
     theme: stored<'light' | 'dark'>('demo-theme', 'light'),
     fontSize: stored('demo-fontSize', 14),
     lastViewedUserId: stored<number | null>('demo-lastViewedUserId', null),
-  })
-    .with(entities())
-    .derived(($) => ({
-      // Derived state combining status and entities
-      isReady: computed(
-        () => $.users.status.isLoaded() && $.users.entities.all().length > 0
-      ),
-      selectedUser: computed(() => {
-        const id = $.lastViewedUserId();
-        return id != null ? $.users.entities.byId(id)?.() ?? null : null;
-      }),
-      // Theme-based styles
-      themeStyles: computed(() => ({
-        background: $.theme() === 'dark' ? '#1e1e1e' : '#ffffff',
-        color: $.theme() === 'dark' ? '#ffffff' : '#1e1e1e',
-        fontSize: `${$.fontSize()}px`,
-      })),
-    }));
+  }).derived(($) => ({
+    // Derived state combining status and entities
+    isReady: computed(
+      () => $.users.status.isLoaded() && $.users.entities.all().length > 0
+    ),
+    selectedUser: computed(() => {
+      const id = $.lastViewedUserId();
+      return id != null ? $.users.entities.byId(id)?.() ?? null : null;
+    }),
+    // Theme-based styles
+    themeStyles: computed(() => ({
+      background: $.theme() === 'dark' ? '#1e1e1e' : '#ffffff',
+      color: $.theme() === 'dark' ? '#ffffff' : '#1e1e1e',
+      fontSize: `${$.fontSize()}px`,
+    })),
+  }));
 
   // Simulate async loading
   async loadUsers() {

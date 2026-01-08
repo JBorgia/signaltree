@@ -1,7 +1,6 @@
 import { computed, effect, InjectionToken, Signal } from '@angular/core';
 import {
   devTools,
-  entities,
   entityMap,
   EntitySignal,
   signalTree,
@@ -153,9 +152,9 @@ export function createUserTree(): UserTree {
   // Create Signal Tree
   // ============================================================
 
-  const tree = signalTree(initialState)
-    .with(entities())
-    .with(devTools({ treeName: STORE_NAME }));
+  const tree = signalTree(initialState).with(
+    devTools({ treeName: STORE_NAME })
+  );
 
   // Shorthand for tree access
   const $ = tree.$;

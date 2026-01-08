@@ -195,7 +195,7 @@ If you have existing code with `.with(entities())`, it will continue to work (ba
 
 ```
 SignalTree: entities() enhancer is deprecated in v7. EntityMap markers are now automatically
-processed. Remove .with(entities()) from your code. This enhancer will be removed in v8.
+processed. Remove .with(entities()) from your code. This enhancer has been removed in v8.
 ```
 
 ### 🔄 Auto-Batching

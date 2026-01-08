@@ -44,7 +44,7 @@ export function createAppTree() {
       sidebarOpen: true as boolean,
     },
   });
-  // Note: v7+ auto-processes markers, no .with(entities()) needed
+  // Note: v7+ auto-processes markers; `.with(entities())` was removed in v8 (do not call it)
 }
 
 // Type inference - single source of truth

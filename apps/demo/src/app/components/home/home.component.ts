@@ -215,7 +215,7 @@ const userTree = signalTree({
 })
   .with(batching())
   .with(memoization())
-  .with(entities())
+  
   .with(devTools())
   .with(timeTravel())
   .with(presets());

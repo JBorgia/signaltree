@@ -346,7 +346,8 @@ export { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './lib/constants';
  *
  * @example With Enhancers (using .with() chain - recommended)
  * ```typescript
- * import { signalTree, entities, entityMap } from '@signaltree/core';
+ * import { signalTree, entityMap } from '@signaltree/core';
+ * // Note: `.with(entities())` has been removed in v8; entityMap is auto-processed.
  *
  * // Chain enhancers with .with() for type-safe composition
  * const state = signalTree({ count: 0 })

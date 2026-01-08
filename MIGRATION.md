@@ -77,7 +77,9 @@ import { serialization } from '@signaltree/serialization';
 
 ```typescript
 // ✅ New way - single package import
-import { signalTree, batching, memoization, withDevtools, entities, withTimeTravel, serialization, ecommercePreset, dashboardPreset } from '@signaltree/core';
+import { signalTree, batching, memoization, withDevtools, withTimeTravel, serialization, ecommercePreset, dashboardPreset } from '@signaltree/core';
+
+// Note: `.with(entities())` was deprecated in v7 and removed in v8 — remove any calls in your code.
 ```
 
 ### Step 3: Verify Functionality

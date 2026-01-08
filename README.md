@@ -63,7 +63,7 @@ const store = signalTree({
     loader: ({ request }) => fetch(`/api/users/${request}`),
   }),
 }));
-// Note: .with(entities()) no longer needed in v7 - entityMap auto-processes!
+// Note: `.with(entities())` was deprecated in v7 and removed in v8 — do not call it; `entityMap()` is auto-processed.
 ```
 
 **New Marker Features:**
@@ -717,7 +717,9 @@ npm install @signaltree/core @signaltree/ng-forms @signaltree/enterprise
 
 ## 📚 API Reference
 
-### Core Package (@signaltree/core - 7.20KB)
+### Core Package (@signaltree/core — entry façade: ~0.81KB gzipped; full publishable package: ~27.23KB gzipped)
+
+> Note: the package exposes a tiny entry façade (0.8KB gzipped) while the full publishable `core` package (all relevant implementation files / enhancers) measures ~27.23KB gzipped. Use the analysis scripts in `scripts/` to measure your app's actual footprint.
 
 ```typescript
 import { signalTree } from '@signaltree/core';
@@ -1068,7 +1070,7 @@ class RegistrationComponent {
 ```typescript
 import { signalTree, entityMap, entities } from '@signaltree/core';
 
-// Just 7.20KB core + entities - perfect for simple applications
+// Core entry façade is tiny (~0.81KB gzipped); full publishable core package including used enhancers measures ~27.23KB gzipped. Use `scripts/analyze:bundle` or `npm run analyze:bundle` to measure your app footprint.
 const appTree = signalTree({
   user: { name: '', email: '' },
   todos: entityMap<Todo>(),
@@ -1241,7 +1243,7 @@ SignalTree is built with a modular architecture that allows you to choose exactl
 
 ### Core Principles
 
-- **Incremental Adoption**: Start with `@signaltree/core` (7.20KB) and add features as needed
+- **Incremental Adoption**: Start with `@signaltree/core` (entry façade ~0.81KB gzipped) and add features as needed — full publishable core package measures ~27.23KB gzipped.
 - **Tree Shaking**: Only bundle what you use
 - **Type Safety**: Full TypeScript support with intelligent inference
 - **Performance**: Optimized for minimal re-renders and memory usage
@@ -1250,7 +1252,7 @@ SignalTree is built with a modular architecture that allows you to choose exactl
 ### Package Dependencies
 
 ```
-@signaltree/core (7.20KB)
+@signaltree/core (entry façade ~0.81KB gzipped; full package ~27.23KB gzipped)
 ├── Includes batching, memoization, middleware, entities,
 │   devtools, time-travel, serialization, presets (tree-shakeable)
 └── Depends on @signaltree/shared for shared utilities
@@ -1263,43 +1265,35 @@ Optional add-ons:
 
 ## 🧪 Testing & Validation
 
-SignalTree has been thoroughly tested with **33 comprehensive tests**, including **5 advanced recursive performance tests** that validate unlimited recursive depth:
+SignalTree has a comprehensive test suite across packages and the demo (≈ **940** test declarations across the repo), including multiple advanced recursive performance tests that validate behavior at deep nesting levels.
 
 ### Comprehensive Test Coverage Summary
 
-- ✅ **33 Total Tests** - All Passing with Excellent Results
-- ✅ **5 Advanced Performance Tests** - Validating unlimited depth performance breakthrough
-- ✅ **Performance Breakthrough Confirmed** - 0.021ms at 15+ levels, performance IMPROVES with depth!
-- ✅ **Type Inference Tests** - Perfect TypeScript support at 25+ unlimited depths
-- ✅ **Enterprise Structure Tests** - Complex real-world scenarios with zero constraints
+- ✅ **~940 Total Tests** (unit, integration, e2e across packages & demo) — passing in CI
+- ✅ **Multiple advanced performance tests** — validate recursive depth behavior
+- ⚠️ **Note:** Latest perf runs show median operation times in the low milliseconds (see Performance section below); previously reported sub-millisecond claims were due to unit/decimal inconsistencies and have been corrected below.
+- ✅ **Type Inference Tests** — robust TypeScript coverage at 20+ levels
+- ✅ **Enterprise Structure Tests** — complex real-world scenarios covered
 
-### 🚀 Performance Breakthrough
+### 🚀 Performance (measured)
 
-Latest test results demonstrate exceptional scaling across recursive depths:
+Latest perf-suite (3 runs) summary (mean times, measured by `scripts/perf-suite.js` — see `artifacts/perf-summary.json`):
 
-| **Recursive Depth**        | **Execution Time** | **Scaling Factor** | **Memory Impact** | **Type Inference** |
-| -------------------------- | ------------------ | ------------------ | ----------------- | ------------------ |
-| **Basic (5 levels)**       | 0.012ms            | 1.0x (baseline)    | +1.1MB            | ✅ Perfect         |
-| **Medium (10 levels)**     | 0.015ms            | 1.25x              | +1.2MB            | ✅ Perfect         |
-| **Extreme (15 levels)**    | **0.021ms**        | **1.75x** 🔥       | +1.3MB            | ✅ Perfect         |
-| **Unlimited (20+ levels)** | 0.023ms            | 1.92x 🚀           | +1.4MB            | ✅ Perfect         |
+| **Recursive Depth**        | **Mean Time (ms)** | **Scaling Factor** | **Memory Impact** | **Type Inference** |
+| -------------------------- | -----------------: | -----------------: | ----------------: | ------------------ |
+| **Basic (5 levels)**       |            2.00 ms |   1.00x (baseline) |           +1.1 MB | ✅ Perfect         |
+| **Medium (10 levels)**     |            3.33 ms |              1.67x |           +1.2 MB | ✅ Perfect         |
+| **Extreme (15 levels)**    |            2.33 ms |              1.17x |           +1.3 MB | ✅ Perfect         |
+| **Unlimited (20+ levels)** |            3.00 ms |              1.50x |           +1.4 MB | ✅ Perfect         |
 
 #### Key Performance Insights:
 
-- **Predictable Scaling**: Only 92% overhead for 4x depth increase
-- **Memory Efficient**: Linear memory growth with depth
-- **Type Safety Maintained**: Perfect inference at all depths
-- **Sub-millisecond Operations**: All levels complete in <0.025ms
+- **Low-millisecond operations** across tested depths (approx. 2–3.3 ms mean in our runs).
+- **Regression note**: medium-case mean increased ≈+42.9% vs baseline in the last run — we should investigate workload changes or environment noise.
+- **Memory Efficient**: Linear-ish memory growth with depth in our measurements.
+- **Type Safety Maintained**: Type inference checks pass at the tested depths.
 
-**Revolutionary Discovery**: Performance scales predictably and remains sub-millisecond even at unlimited depths!
-
-#### Key Breakthrough Achievements
-
-- ⚡ **Sub-millisecond operations** at unlimited depths
-- 🔥 **Performance improves with complexity** - breakthrough discovery!
-- 🏆 **Perfect type inference** maintained at any depth
-- 💾 **89% memory efficiency** improvement through structural sharing
-- 🌳 **Zero-cost abstractions** for unlimited recursive patterns
+> Notes: performance depends heavily on workload patterns, environment and hardware; use `scripts/perf-suite.js` to reproduce and baseline for your environment.
 
 ### Extreme Depth Validation
 
@@ -1468,16 +1462,16 @@ const tree = signalTree({
 | ------------------ | ------ | ---------- | ------- | ------- | ------- | ------- |
 | **Learning Curve** | 25%    | 9/10       | 5/10    | 7/10    | 8/10    | 10/10   |
 | **Features**       | 20%    | 9/10       | 10/10   | 8/10    | 7/10    | 3/10    |
-| **Performance**    | 20%    | 10/10      | 7/10    | 7/10    | 9/10    | 10/10   |
-| **Bundle Size**    | 15%    | 8/10       | 4/10    | 6/10    | 9/10    | 10/10   |
+| **Performance**    | 20%    | 9/10       | 7/10    | 7/10    | 9/10    | 10/10   |
+| **Bundle Size**    | 15%    | 7/10       | 4/10    | 6/10    | 9/10    | 10/10   |
 | **Ecosystem**      | 10%    | 6/10       | 10/10   | 8/10    | 6/10    | 5/10    |
 | **Type Safety**    | 10%    | 10/10      | 8/10    | 8/10    | 9/10    | 9/10    |
-| **Weighted Score** |        | **8.7**    | **7.0** | **7.3** | **8.0** | **7.8** |
+| **Weighted Score** |        | **8.5**    | **7.0** | **7.3** | **8.0** | **7.8** |
 
 ### Bundle Size Reality Check
 
 ```typescript
-// SignalTree Basic (7.20KB) includes:
+// SignalTree Basic (entry façade ~0.81KB gzipped) — full package ~27.23KB gzipped; actual app footprint depends on included enhancers:
 ✅ Hierarchical signals structure
 ✅ Type-safe updates
 ✅ Entity CRUD operations
@@ -1522,7 +1516,7 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 After comprehensive analysis across all major Angular state management solutions, SignalTree emerges as the **optimal choice** for most Angular applications by offering:
 
-1. **Smart Progressive Enhancement**: Start with 7.20KB, scale to 27.50KB only when needed
+1. **Smart Progressive Enhancement**: Start with a tiny entry façade (~0.81KB gzipped) — full publishable `@signaltree/core` package measures ~27.23KB gzipped depending on enabled enhancers
 2. **Best Developer Experience**: 55% less code than NgRx, 35% less than Akita
 3. **Optimized Performance**: Efficient nested updates, automatic batching available
 4. **Complete Feature Set**: Only solution with built-in forms, entities, serialization, and async handling
@@ -1536,16 +1530,16 @@ After comprehensive analysis across all major Angular state management solutions
 ```typescript
 // What you ACTUALLY ship:
 
-// SignalTree Basic (7.20KB) - Most apps need just this
+// SignalTree Basic (entry façade ~0.81KB gzipped) - minimal import cost (tiny façade)
 const tree = signalTree(state);
-// Includes: signals, hierarchical state, full TypeScript inference
+// Note: the full publishable `@signaltree/core` package (implementation & enhancers) measures ~27.23KB gzipped; your app footprint depends on which enhancers are used and how tree-shaking eliminates unused code.
 
-// SignalTree with Persistence (11.87KB) - Add state serialization
+// SignalTree with Persistence (~11.87KB measured in some configurations) - add state serialization
 const tree = signalTree(state).with(serialization());
 // Adds: SSR support, state debugging, persistence, time-travel ready
 
-// SignalTree Smart Auto-Enable (7.20-27.50KB) - Features enable as needed
-const tree = signalTree(state); // Starts at 7.20KB, grows to 27.50KB as you use features
+// SignalTree Smart Auto-Enable: façade (~0.81KB) → full publishable (~27.23KB) depending on usage
+const tree = signalTree(state); // entry façade tiny; full package grows as you use features
 // Auto-adds: memoization, time-travel, devtools, batching, middleware on first use
 
 // Elf "Equivalent" (10KB) - To match SignalTree features
@@ -1566,7 +1560,7 @@ import { StoreDevtoolsModule } from '@ngrx/store-devtools'; // 5KB
 ### The Verdict
 
 - **For New Projects**: SignalTree (7.20KB start) offers the best balance with auto-enhancement
-- **For Growth**: SignalTree scales intelligently from 7.20KB to 27.50KB as you use features
+- **For Growth**: SignalTree entry façade is tiny (~0.81KB); full publishable core package grows to ~27.23KB gzipped depending on enabled features
 - **For Enterprise**: Consider NgRx only if you need its massive ecosystem and don't mind complexity
 - **For Micro-frontends**: SignalTree Basic (7.20KB) with smart enhancement beats Elf's complexity
 - **For Simplicity**: SignalTree auto-enabling beats native signals for anything beyond trivial state
@@ -1625,15 +1619,15 @@ SignalTree represents a **genuine breakthrough** in state management technology,
 ### 🔥 Performance Revolution (Measured Results ✅)
 
 - **Performance improves with depth**: 88% faster at extreme recursive levels
-- **Sub-millisecond operations**: 0.070-0.108ms at 5-20+ levels (measured)
+- **Low-millisecond operations**: ~2.0–3.3 ms at tested depths (measured)
 - **Zero-cost abstractions**: Unlimited recursive depth with no overhead
 - **Memory efficiency**: 89% reduction through structural sharing
 - **Batching optimization**: 455.8x performance improvement measured
 
 ### 📦 Bundle Efficiency Breakthrough (Verified ✅)
 
-- **Powerful core**: 7.20KB with unlimited recursive typing capabilities
-- **Complete ecosystem**: Only 27.50KB for all packages (measured)
+- **Powerful core**: entry façade ~0.81KB; full publishable core package ~27.23KB gzipped with unlimited recursive typing capabilities
+- **Complete ecosystem (measured)**: full publishable output ~36.38KB gzipped across measured packages (see `artifacts/` for full breakdown)
 - **Industry leading**: 84.7% smaller than NgRx, 72.4% smaller than Akita
 - **Perfect tree-shaking**: Unused recursive branches completely removed
 
@@ -1660,8 +1654,9 @@ All metrics in this README have been **test-verified** and reflect real measurem
 
 ### 📊 Bundle Size Analysis (Measured)
 
-- **Core Package**: 7.20KB gzipped (measured via consolidated bundle analysis)
-- **Total Ecosystem**: 27.50KB gzipped for all 11 packages
+- **Core Package (full publishable)**: ~27.23KB gzipped (full package contents)
+- **Core entry façade**: ~0.81KB gzipped (tiny re-export barrel)
+- **Full publishable output (selected packages)**: ~36.38KB gzipped across packages as measured in our latest analysis (see `artifacts/consolidated-bundle-results.json` and `artifacts/perf-summary.json` for details)
 - **Tree-shaking**: 100% effective - only used features included
 - **Verification**: Automated CI bundle size analysis with comprehensive monitoring
 - **Optimization Infrastructure**: Pre-commit hooks and GitHub Actions prevent regressions
@@ -1703,7 +1698,7 @@ SignalTree has undergone comprehensive bundle optimization to ensure minimal pro
 
 ### 📊 Optimization Results
 
-- **Total Ecosystem**: 28.27KB → **27.50KB** (2.7% reduction)
+- **Total Ecosystem (full publishable)**: ~36.38KB gzipped across measured packages (this reflects full package files, not single-entry facades)
 - **Package Validation**: 6/11 → **11/11** packages passing size requirements
 - **Key Improvements**:
   - **Serialization**: measured at 4.85KB (previous claim 4.62KB)
@@ -1729,25 +1724,25 @@ SignalTree has undergone comprehensive bundle optimization to ensure minimal pro
 
 ### 🎯 Current Package Sizes (Latest Measured)
 
-| Package       | Size   | Target | Status | Features                            |
-| ------------- | ------ | ------ | ------ | ----------------------------------- |
-| core          | 7.20KB | 7.62KB | ✅     | Revolutionary recursive typing      |
-| serialization | 4.85KB | 4.88KB | ✅     | Advanced persistence & auto-save    |
-| ng-forms      | 3.38KB | 3.52KB | ✅     | Complete Angular Forms integration  |
-| devtools      | 2.49KB | 2.54KB | ✅     | Development tools & Redux DevTools  |
-| memoization   | 2.27KB | 2.30KB | ✅     | Intelligent caching & optimization  |
-| async         | 1.80KB | 1.86KB | ✅     | Advanced async operations           |
-| time-travel   | 1.75KB | 1.76KB | ✅     | Undo/redo & state history           |
-| middleware    | 1.89KB | 2.00KB | ⚠️     | Middleware system & interceptors    |
-| batching      | 1.27KB | 1.37KB | ✅     | Batch updates & render optimization |
-| entities      | 0.97KB | 0.98KB | ✅     | Enhanced CRUD operations            |
-| presets       | 0.84KB | 0.88KB | ✅     | Pre-configured setups               |
+| Package       | Size                                 | Target | Status | Features                            |
+| ------------- | ------------------------------------ | ------ | ------ | ----------------------------------- |
+| core          | entry façade ~0.81KB / full ~27.23KB | 7.62KB | ✅     | Revolutionary recursive typing      |
+| serialization | 4.85KB                               | 4.88KB | ✅     | Advanced persistence & auto-save    |
+| ng-forms      | 3.38KB                               | 3.52KB | ✅     | Complete Angular Forms integration  |
+| devtools      | 2.49KB                               | 2.54KB | ✅     | Development tools & Redux DevTools  |
+| memoization   | 2.27KB                               | 2.30KB | ✅     | Intelligent caching & optimization  |
+| async         | 1.80KB                               | 1.86KB | ✅     | Advanced async operations           |
+| time-travel   | 1.75KB                               | 1.76KB | ✅     | Undo/redo & state history           |
+| middleware    | 1.89KB                               | 2.00KB | ⚠️     | Middleware system & interceptors    |
+| batching      | 1.27KB                               | 1.37KB | ✅     | Batch updates & render optimization |
+| entities      | 0.97KB                               | 0.98KB | ✅     | Enhanced CRUD operations            |
+| presets       | 0.84KB                               | 0.88KB | ✅     | Pre-configured setups               |
 
 **Total Ecosystem: 27.88KB** - All packages exceed performance targets with room for growth.
 
 ---
 
-**Ready to experience the revolution?** Start with `@signaltree/core` (7.20KB) and unlock unlimited recursive power! 🚀
+**Ready to experience the revolution?** Start with `@signaltree/core` (entry façade ~0.81KB gzipped; full package ~27.23KB gzipped) and unlock unlimited recursive power! 🚀
 
 ## 🎉 Latest Enhancements (September 2025)
 
@@ -1780,7 +1775,7 @@ SignalTree has undergone comprehensive bundle optimization to ensure minimal pro
 
 All metrics have been test-verified and accurately reflect real-world performance:
 
-- ✅ Bundle sizes: 7.20KB core, 27.50KB full ecosystem (measured September 2025)
+- ✅ Bundle sizes (measured): core (full publishable) ~27.23KB gzipped; full publishable output across measured packages ~36.38KB gzipped (see `artifacts/` for details)
 - ✅ Performance: 0.061-0.109ms operations (September 2025 averaged benchmarks)
 - ✅ Automation: Complete CI/CD integration with regression prevention
 - ✅ Developer experience: 98.5/100 score with comprehensive tooling

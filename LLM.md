@@ -38,7 +38,7 @@ store.$.settings.theme.set('dark');
 
 ## v7 Breaking Changes
 
-### ❌ DEPRECATED: `.with(entities())`
+### ❌ REMOVED: `.with(entities())` (v8 - remove calls)
 
 **v6 (old):**
 

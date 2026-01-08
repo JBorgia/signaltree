@@ -25,45 +25,15 @@ export interface EntitiesEnhancerConfig {
  *
  * Contract: (config?) => <T>(tree: ISignalTree<T>) => ISignalTree<T> & EntitiesEnabled
  */
-export function entities(
-  config: EntitiesEnhancerConfig = {}
-): <T>(tree: ISignalTree<T>) => ISignalTree<T> & EntitiesEnabled {
-  // Show deprecation warning in development
-  if (typeof ngDevMode === 'undefined' || ngDevMode) {
-    console.warn(
-      'SignalTree: entities() enhancer is deprecated in v7. ' +
-        'EntityMap markers are now automatically processed. ' +
-        'Remove .with(entities()) from your code. ' +
-        'This enhancer will be removed in v8.'
-    );
-  }
-
-  const { enabled = true } = config;
-  return <T>(tree: ISignalTree<T>): ISignalTree<T> & EntitiesEnabled => {
-    // No-op - markers are already processed by materializeMarkers() in finalize()
-    // Just mark as enabled for backward compatibility checks
-    (tree as { __entitiesEnabled?: true }).__entitiesEnabled = true;
-    return tree as ISignalTree<T> & EntitiesEnabled;
-  };
+export function entities(config: EntitiesEnhancerConfig = {}) {
+  // Removed in v8: throw a helpful error at runtime to force callers to remove
+  // `.with(entities())` calls. v7+ automatically processes EntityMap markers.
+  throw new Error(
+    'entities() has been removed. Remove `.with(entities())` from your code; v7+ auto-processes EntityMap markers.'
+  );
 }
 
-export function enableEntities(): <T>(
-  tree: ISignalTree<T>
-) => ISignalTree<T> & EntitiesEnabled {
-  return entities();
-}
-
-export function highPerformanceEntities(): <T>(
-  tree: ISignalTree<T>
-) => ISignalTree<T> & EntitiesEnabled {
-  return entities();
-}
-
-/**
- * @deprecated Use `entities()` instead. This legacy `withEntities`
- * alias will be removed in a future major release.
- */
-export const withEntities = Object.assign(entities, {
-  highPerformance: highPerformanceEntities,
-  enable: enableEntities,
-});
+// Keep aliases for backward-compat import names, but they will throw when used.
+export const enableEntities = entities;
+export const highPerformanceEntities = entities;
+export const withEntities = entities;

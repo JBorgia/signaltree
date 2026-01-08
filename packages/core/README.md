@@ -110,7 +110,7 @@ Follow these principles for idiomatic SignalTree code:
 ### 1. Expose signals directly (no computed wrappers)
 
 ```typescript
-const tree = signalTree(initialState).with(entities());
+const tree = signalTree(initialState); // No .with(entities()) needed in v7+ (removed in v8)
 const $ = tree.$; // Shorthand for state access
 
 // ✅ SignalTree-first: Direct signal exposure
@@ -135,7 +135,7 @@ export type UserTree = ReturnType<typeof createUserTree>;
 
 // Factory function - no explicit return type needed
 export function createUserTree() {
-  const tree = signalTree(initialState).with(entities());
+  const tree = signalTree(initialState); // entities() not needed in v7+
   return {
     selectedUserId: tree.$.selected.userId, // Type inferred automatically
     // ...

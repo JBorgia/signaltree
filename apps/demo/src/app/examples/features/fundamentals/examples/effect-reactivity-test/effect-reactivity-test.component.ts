@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, effect, signal } from '@angular/core';
-import { entities, entityMap, signalTree } from '@signaltree/core';
+import { entityMap, signalTree } from '@signaltree/core';
 
 import type { EntityMapMarker } from '@signaltree/core';
 
@@ -69,7 +69,7 @@ export class EffectReactivityTestComponent {
     haulers: entityMap<Hauler, number>({ selectId: (h) => h.id }),
     trucks: entityMap<Truck, number>({ selectId: (t) => t.id }),
     selectedHaulerId: null,
-  }).with(entities());
+  });
 
   // Regular Angular signal for comparison
   private regularSignal = signal<LoadingState>('idle');

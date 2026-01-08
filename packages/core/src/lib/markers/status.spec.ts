@@ -2,7 +2,13 @@ import { computed } from '@angular/core';
 import { describe, expect, it } from 'vitest';
 
 import { entities } from '../../enhancers/entities/entities';
-import { createStatusSignal, isStatusMarker, LoadingState, status, STATUS_MARKER } from '../markers/status';
+import {
+  createStatusSignal,
+  isStatusMarker,
+  LoadingState,
+  status,
+  STATUS_MARKER,
+} from '../markers/status';
 import { signalTree } from '../signal-tree';
 import { entityMap } from '../types';
 
@@ -169,7 +175,7 @@ describe('status() marker', () => {
           entities: entityMap<User, number>(),
           status: status(),
         },
-      }).with(entities());
+      });
 
       // Both markers should be materialized
       expect(tree.$.users.status.isNotLoaded()).toBe(true);
@@ -220,17 +226,15 @@ describe('status() marker', () => {
           status: status(),
           activeId: null as number | null,
         },
-      })
-        .with(entities())
-        .derived(($) => ({
-          tickets: {
-            active: computed(() => {
-              const id = $.tickets.activeId();
-              return id != null ? $.tickets.entities.byId(id)?.() : null;
-            }),
-            isReady: computed(() => $.tickets.status.isLoaded()),
-          },
-        }));
+      }).derived(($) => ({
+        tickets: {
+          active: computed(() => {
+            const id = $.tickets.activeId();
+            return id != null ? $.tickets.entities.byId(id)?.() : null;
+          }),
+          isReady: computed(() => $.tickets.status.isLoaded()),
+        },
+      }));
 
       // Source state preserved
       expect(tree.$.tickets.status.isNotLoaded()).toBe(true);
@@ -361,7 +365,7 @@ describe('status() marker', () => {
           entities: entityMap<Ticket, number>(),
           status: status<CustomError>(),
         },
-      }).with(entities());
+      });
 
       // Verify error signal accepts custom type
       const customError: CustomError = {

@@ -1,5 +1,5 @@
 import { Assert, Equals } from '../test-helpers/types-equals';
-import { entities, EntitiesEnhancerConfig } from './entities';
+import { entities } from './entities';
 
 import type {
   ISignalTree,
@@ -8,13 +8,14 @@ import type {
   entityMap,
 } from '../../lib/types';
 
-type ExpectedSignature = (
-  config?: EntitiesEnhancerConfig
-) => <T>(tree: ISignalTree<T>) => ISignalTree<T> & EntitiesEnabled;
+// The `entities` enhancer factory was removed in v8. Keep a minimal
+// compile-time check that `entities` exists but do not assert the old
+// enhancer type signature (it intentionally throws at runtime).
+// This keeps tests that import the symbol type-checking without enforcing
+// the previous callable enhancer contract.
 
 type ActualSignature = typeof entities;
-
-type _ContractCheck = Assert<Equals<ActualSignature, ExpectedSignature>>;
+type _ContractCheck = Assert<Equals<ActualSignature, typeof entities>>;
 
 // entityMap should produce correct marker type
 interface User {
