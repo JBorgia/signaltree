@@ -110,7 +110,7 @@ Follow these principles for idiomatic SignalTree code:
 ### 1. Expose signals directly (no computed wrappers)
 
 ```typescript
-const tree = signalTree(initialState); // No .with(entities()) needed in v7+ (removed in v8)
+const tree = signalTree(initialState); // No .with(entities()) needed in v7+ (deprecated in v6, removed in v7)
 const $ = tree.$; // Shorthand for state access
 
 // ✅ SignalTree-first: Direct signal exposure

@@ -63,7 +63,7 @@ const store = signalTree({
     loader: ({ request }) => fetch(`/api/users/${request}`),
   }),
 }));
-// Note: `.with(entities())` was deprecated in v7 and removed in v8 — do not call it; `entityMap()` is auto-processed.
+// Note: `.with(entities())` was deprecated in v6 and removed in v7 — do not call it; `entityMap()` is auto-processed.
 ```
 
 **New Marker Features:**

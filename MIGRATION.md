@@ -79,7 +79,7 @@ import { serialization } from '@signaltree/serialization';
 // ✅ New way - single package import
 import { signalTree, batching, memoization, withDevtools, withTimeTravel, serialization, ecommercePreset, dashboardPreset } from '@signaltree/core';
 
-// Note: `.with(entities())` was deprecated in v7 and removed in v8 — remove any calls in your code.
+// Note: `.with(entities())` was deprecated in v6 and removed in v7 — remove any calls in your code.
 ```
 
 ### Step 3: Verify Functionality

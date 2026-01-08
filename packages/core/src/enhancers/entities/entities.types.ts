@@ -8,7 +8,7 @@ import type {
   entityMap,
 } from '../../lib/types';
 
-// The `entities` enhancer factory was removed in v8. Keep a minimal
+// The `entities` enhancer factory was removed in v7. Keep a minimal
 // compile-time check that `entities` exists but do not assert the old
 // enhancer type signature (it intentionally throws at runtime).
 // This keeps tests that import the symbol type-checking without enforcing

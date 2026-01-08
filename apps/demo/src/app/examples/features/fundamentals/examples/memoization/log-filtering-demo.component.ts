@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { entities, entityMap, memoization, signalTree } from '@signaltree/core';
+import { entityMap, memoization, signalTree } from '@signaltree/core';
 
 interface Log {
   id: string;
@@ -431,8 +431,7 @@ filteredLogs(); // Returns cached result`;
       search: '',
       userId: null as string | null,
     },
-  })
-    .with(memoization());
+  }).with(memoization());
 
   // Memoized filtered logs - using computed signal for caching
   private filteredLogs = computed(() => {

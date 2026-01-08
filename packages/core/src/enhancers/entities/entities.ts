@@ -21,12 +21,12 @@ export interface EntitiesEnhancerConfig {
  * signalTree({ users: entityMap<User>() })  // Just works!
  * ```
  *
- * This enhancer will be removed in v8.
+ * This enhancer was deprecated in v6 and removed in v7.
  *
  * Contract: (config?) => <T>(tree: ISignalTree<T>) => ISignalTree<T> & EntitiesEnabled
  */
 export function entities(config: EntitiesEnhancerConfig = {}) {
-  // Removed in v8: throw a helpful error at runtime to force callers to remove
+  // Removed in v7: throw a helpful error at runtime to force callers to remove
   // `.with(entities())` calls. v7+ automatically processes EntityMap markers.
   throw new Error(
     'entities() has been removed. Remove `.with(entities())` from your code; v7+ auto-processes EntityMap markers.'
