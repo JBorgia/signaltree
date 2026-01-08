@@ -1,0 +1,10 @@
+import{Hc as d,Lb as t,Ya as m,sb as i,tb as e}from"./chunk-YYEXL5C7.js";import"./chunk-A3ECCK3J.js";var a=class o{static \u0275fac=function(n){return new(n||o)};static \u0275cmp=m({type:o,selectors:[["app-migration-recipe"]],decls:53,vars:0,consts:[[1,"article"],["href","/architecture"],["href","/examples/fundamentals/recommended-architecture"]],template:function(n,r){n&1&&(i(0,"div",0)(1,"h1"),t(2,"Migration Recipe: NgRx to SignalTree"),e(),i(3,"p"),t(4," This page walks through a small, practical migration from NgRx Signals to SignalTree for a single domain. "),e(),i(5,"h2"),t(6,"Step 1: Identify the store"),e(),i(7,"pre")(8,"code"),t(9,`// Example NgRx signals store (simplified)
+export const TicketStore = signalStore(
+  { providedIn: 'root' },
+  withState<TicketState>({ /* ... */ }),
+  withComputed(...),
+  withMethods(...),
+  withEntities(),
+  withReduxDevtools()
+);
+`),e()(),i(10,"h2"),t(11,"Step 2: Map concepts"),e(),i(12,"ul")(13,"li")(14,"strong"),t(15,"State"),e(),t(16," \u2192 add to `app-tree`"),e(),i(17,"li")(18,"strong"),t(19,"Computed"),e(),t(20," \u2192 `AppComputed` service"),e(),i(21,"li")(22,"strong"),t(23,"Methods"),e(),t(24," \u2192 `ops` service"),e(),i(25,"li")(26,"strong"),t(27,"Entities"),e(),t(28," \u2192 `entityMap()`"),e(),i(29,"li")(30,"strong"),t(31,"Devtools"),e(),t(32," \u2192 `devTools()` enhancer"),e()(),i(33,"h2"),t(34,"Step 3: Replace in small PRs"),e(),i(35,"ol")(36,"li"),t(37,"Extract computed values to `AppComputed` and add tests."),e(),i(38,"li"),t(39,"Move methods to an Ops service and update callers."),e(),i(40,"li"),t(41,"Replace entity adapter with `entityMap()`."),e(),i(42,"li"),t(43," Remove old store files and run `pnpm test` and `pnpm nx build --statsJson` to compare bundle. "),e()(),i(44,"h2"),t(45,"Resources"),e(),i(46,"ul")(47,"li")(48,"a",1),t(49,"Architecture guide (migration checklist)"),e()(),i(50,"li")(51,"a",2),t(52,"Recommended architecture"),e()()()())},dependencies:[d],styles:[".article[_ngcontent-%COMP%]{padding:1rem}.article[_ngcontent-%COMP%]   pre[_ngcontent-%COMP%]{background:#f6f8fa;padding:1rem;border-radius:6px;overflow:auto}"]})};export{a as MigrationRecipeComponent};
