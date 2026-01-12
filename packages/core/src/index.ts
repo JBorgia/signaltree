@@ -1,9 +1,10 @@
 /**
- * SignalTree v1.1.6
- * A reactive state management library for Angular
+ * SignalTree: Reactive JSON for Angular
  *
- * Provides reactive state management with deep signal trees, enhancer system,
- * and performance optimizations including lazy loading and batch updates.
+ * JSON branches, reactive leaves.
+ * No actions. No reducers. No selectors.
+ * Type-safe, dot-addressable state where data stays plain
+ * and reactivity stays invisible.
  *
  * @packageDocumentation
  */

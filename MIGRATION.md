@@ -1,6 +1,6 @@
 # Migration Guide: v4.0.0 Package Consolidation
 
-> **SignalTree** — Reactive JSON for Angular. Type-safe, dot-addressable state where data stays plain and reactivity stays invisible.
+> **SignalTree** — Reactive JSON for Angular. JSON branches, reactive leaves.
 
 ## Overview
 

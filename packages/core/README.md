@@ -2,11 +2,11 @@
   <img src="https://raw.githubusercontent.com/JBorgia/signaltree/main/apps/demo/public/signaltree.svg" alt="SignalTree Logo" width="60" height="60" />
 </div>
 
-# SignalTree Core
+# SignalTree: Reactive JSON
 
-**Reactive JSON.** Type-safe, dot-addressable state where data stays plain and reactivity stays invisible.
+**JSON branches, reactive leaves.**
 
-> _If you can describe it as JSON, you can make it reactive._
+> No actions. No reducers. No selectors.
 
 ## What is @signaltree/core?
 

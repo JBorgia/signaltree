@@ -1,8 +1,8 @@
 # SignalTree Architecture Guide
 
-**Reactive JSON.** Type-safe, dot-addressable state where data stays plain and reactivity stays invisible.
+**Reactive JSON.** JSON branches, reactive leaves.
 
-> _If you can describe it as JSON, you can make it reactive._
+> No actions. No reducers. No selectors.
 
 A comprehensive guide to architecting applications with SignalTree, covering architectural options, decision frameworks, and implementation patterns.
 
@@ -10,7 +10,7 @@ A comprehensive guide to architecting applications with SignalTree, covering arc
 
 ## Core Ethos
 
-SignalTree treats application state as **reactive JSON**. At its heart, it prioritizes typed, dot-notation access to values in a plain, JSON-like state object, while transparently layering fine-grained reactivity on top.
+SignalTree treats application state as **reactive JSON**. The branches are your JSON paths (`$.user.profile`), and the leaves are reactive signals you read and write.
 
 You don't model state as actions, reducers, selectors, or classes — you model it as **data**.
 

@@ -13,8 +13,7 @@ export class HomeComponent {
   features = [
     {
       title: '🏪 Core Features',
-      description:
-        'Simple hierarchical signal tree with reactive state management',
+      description: 'JSON branches, reactive leaves — explore the fundamentals',
       route: '/examples/fundamentals',
       category: 'Core',
     },
@@ -145,34 +144,35 @@ export class HomeComponent {
 
   coreFeatures = [
     {
-      name: 'Hierarchical State',
+      name: 'Reactive JSON',
       description:
-        'Organize state in nested structures with automatic signal creation',
+        'State looks like JSON. Access feels obvious. Reactivity stays invisible.',
+      highlight: true,
     },
     {
-      name: 'Type Safety',
+      name: 'Dot-Notation Access',
       description:
-        'Full TypeScript support with inferred types and autocomplete',
+        'tree.$.user.profile.name() — fully type-safe, IDE-discoverable',
     },
     {
-      name: 'Reactive Updates',
-      description: 'Built on Angular signals for automatic change detection',
+      name: 'Deep Type Inference',
+      description:
+        'Perfect TypeScript types at 15+ nesting levels, no degradation to any',
+    },
+    {
+      name: 'Invisible Reactivity',
+      description:
+        'Think in data paths, not subscriptions. Built on Angular signals.',
+    },
+    {
+      name: 'Lazy by Design',
+      description:
+        'Signals created only where accessed. 0.036ms at 15+ levels.',
+      highlight: true,
     },
     {
       name: 'Developer Tools',
       description: 'Redux DevTools integration for debugging and inspection',
-    },
-    {
-      name: 'Revolutionary Performance',
-      description:
-        'Breakthrough 0.036ms performance at 15+ levels - gets faster with complexity',
-      highlight: true,
-    },
-    {
-      name: 'Extreme Depth',
-      description:
-        'Unlimited nesting depth with perfect type inference at 15+ levels',
-      highlight: true,
     },
   ];
 

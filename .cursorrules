@@ -4,15 +4,15 @@ This file provides comprehensive context for AI assistants working on the Signal
 
 ## Repository Overview
 
-**SignalTree** is reactive JSON for Angular — type-safe, dot-addressable state trees where data stays plain and reactivity stays invisible.
+**SignalTree: Reactive JSON for Angular.** JSON branches, reactive leaves.
 
-> _If you can describe it as JSON, you can make it reactive._
+> No actions. No reducers. No selectors. Type-safe, dot-addressable state where data stays plain and reactivity stays invisible.
 
 **Core Philosophy:**
 
-- **State is Data First** — Your state looks like JSON. No ceremony, no abstractions.
-- **Dot-Notation Interface** — `tree.$.user.profile.name()` — fully type-safe, IDE-discoverable
-- **Invisible Reactivity** — Think in data paths, not subscriptions
+- **JSON Branches** — Your state paths look like JSON. `$.user.profile.settings`
+- **Reactive Leaves** — Leaf nodes are signals you read and write. `tree.$.name()`
+- **No Mechanics** — No actions, reducers, or selectors. Just data that reacts.
 - **Lazy by Design** — Signals created only where accessed. Minimal runtime footprint.
 
 - **Language**: TypeScript

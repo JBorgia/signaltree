@@ -7,10 +7,10 @@
       </div>
       <h1 class="hero-title">SignalTree</h1>
       <p class="hero-subtitle">
-        <strong>Reactive JSON.</strong> Type-safe, dot-addressable state where data stays plain and reactivity stays invisible.
+        <strong>Reactive JSON.</strong> JSON branches, reactive leaves.
       </p>
       <p class="hero-tagline">
-        <em>If you can describe it as JSON, you can make it reactive.</em>
+        No actions. No reducers. No selectors. Just data that reacts.
       </p>
       <div class="hero-badges">
         <span class="badge revolutionary">0.036ms at 15+ levels</span>
@@ -27,18 +27,22 @@
     <h2 class="section-title">❓ What is SignalTree?</h2>
     <div class="description-content">
       <p>
-        <strong>SignalTree is reactive JSON</strong> — type-safe, dot-addressable state 
-        where data stays plain and reactivity stays invisible. If you can describe it 
-        as JSON, you can make it reactive.
+        <strong>JSON branches, reactive leaves.</strong> SignalTree treats your
+        state like a tree — the branches are your JSON paths
+        (<code>$.user.profile</code>), and the leaves are reactive signals you
+        read and write.
       </p>
       <p>
-        You don't model state as actions, reducers, selectors, or classes — you model 
-        it as <strong>data</strong>. Access feels obvious: <code>tree.$.user.profile.name()</code> — 
-        fully type-safe, IDE-discoverable, with fine-grained reactivity layered transparently on top.
+        No actions. No reducers. No selectors. You model state as
+        <strong>data</strong>, not mechanics. Access feels obvious:
+        <code>tree.$.user.profile.name()</code> — fully type-safe,
+        IDE-discoverable, with fine-grained reactivity layered transparently on
+        top.
       </p>
       <p>
-        With perfect type inference at 15+ nesting levels and industry-leading 0.036ms 
-        performance, SignalTree makes complex state management simple, fast, and intuitive.
+        With perfect type inference at 15+ nesting levels and industry-leading
+        0.036ms performance, SignalTree makes complex state management simple,
+        fast, and intuitive.
       </p>
     </div>
   </section>
@@ -217,15 +221,13 @@
     <h2 class="section-title">🔥 Extreme Depth Testing</h2>
     <div class="extreme-depth-content">
       <div class="extreme-depth-highlight">
-        <h3>🚀 Revolutionary Recursive Typing Breakthrough</h3>
+        <h3>🚀 Deep JSON, Perfect Types</h3>
         <p>
-          SignalTree achieves perfect type inference at unprecedented nesting
-          depths with
-          <strong>revolutionary 0.036ms performance at 15+ levels</strong> - an
-          88% improvement that actually gets faster with complexity. The
-          recursive typing system maintains full TypeScript support without
-          degrading to 'any' types, delivering a 96.0/100 developer experience
-          score in just 7.3KB total bundle size.
+          SignalTree treats nested state as <strong>reactive JSON</strong> with
+          perfect type inference at unprecedented nesting depths. Access any
+          level with <strong>dot-notation</strong> —
+          <code>tree.$.deep.nested.path()</code> — fully type-safe,
+          IDE-discoverable, with 0.036ms performance at 15+ levels.
         </p>
         <div class="depth-stats">
           <div class="stat">
@@ -234,7 +236,7 @@
           </div>
           <div class="stat">
             <span class="stat-value">0.036ms</span>
-            <span class="stat-label">Revolutionary Performance</span>
+            <span class="stat-label">Deep Access Performance</span>
           </div>
           <div class="stat">
             <span class="stat-value">33</span>

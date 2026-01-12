@@ -1,8 +1,8 @@
 <div align="center">
   <img src="apps/demo/public/signaltree.svg" alt="SignalTree Logo" width="120" height="120" style="background: transparent;" />
-  <h1>SignalTree</h1>
-  <p><strong>Reactive JSON.</strong> Type-safe, dot-addressable state where data stays plain and reactivity stays invisible.</p>
-  <p><em>If you can describe it as JSON, you can make it reactive.</em></p>
+  <h1>SignalTree: Reactive JSON</h1>
+  <p><strong>JSON branches, reactive leaves.</strong></p>
+  <p>No actions. No reducers. No selectors.</p>
   
   <p>
     <a href="https://jborgia.github.io/signaltree/" target="_blank"><strong>🎮 Live Demo & Benchmarks</strong></a> 

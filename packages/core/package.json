@@ -1,7 +1,7 @@
 {
   "name": "@signaltree/core",
   "version": "7.1.3",
-  "description": "Reactive JSON for Angular. Type-safe, dot-addressable state trees where data stays plain and reactivity stays invisible.",
+  "description": "Reactive JSON for Angular. JSON branches, reactive leaves. No actions. No reducers. No selectors.",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
