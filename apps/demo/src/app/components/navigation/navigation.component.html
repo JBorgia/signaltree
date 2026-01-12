@@ -1,42 +1,32 @@
-<nav class="bg-blue-900 text-white p-4">
-  <div class="container mx-auto">
+<nav class="nav-container">
+  <div class="nav-content">
     <!-- Header with Logo and Home Button -->
-    <div class="flex items-center justify-between mb-4">
-      <div class="flex items-center gap-3">
-        <img
-          src="/signaltree.svg"
-          alt="SignalTree Logo"
-          class="w-6 h-6 sm:w-8 sm:h-8"
-        />
-        <h1 class="font-bold whitespace-nowrap">
-          <span class="text-xl sm:text-2xl">SignalTree:</span>
-          <span class="text-lg sm:text-xl">Reactive JSON</span>
+    <div class="nav-header">
+      <div class="brand">
+        <img src="/signaltree.svg" alt="SignalTree Logo" class="brand-logo" />
+        <h1 class="brand-title">
+          <span class="brand-name">SignalTree</span>
+          <span class="brand-tagline">Reactive JSON</span>
         </h1>
       </div>
-      <a
-        routerLink="/"
-        class="home-button bg-blue-800 hover:bg-blue-700 px-6 py-3 rounded transition-colors font-semibold text-sm"
-        title="Return to home page"
-      >
+      <a routerLink="/" class="home-button" title="Return to home page">
         🏠 Home
       </a>
     </div>
 
     <!-- Navigation Categories -->
-    <div class="flex flex-wrap gap-6 nav-blocks">
+    <div class="nav-categories">
       @for (category of categories; track category) {
-      <div class="space-y-2">
-        <h3
-          class="font-semibold text-blue-200 text-sm tracking-wide px-3 pb-1 border-b border-blue-700"
-        >
+      <div class="category-block">
+        <h3 class="category-title">
           {{ getCategoryLabel(category) }}
         </h3>
-        <div class="space-y-1">
+        <div class="category-links">
           @for (example of getExamplesByCategory(category); track example.id) {
           <a
             [routerLink]="example.route"
-            routerLinkActive="bg-blue-700"
-            class="block px-3 py-2 rounded text-sm hover:bg-blue-800 transition-colors min-h-touch"
+            routerLinkActive="active"
+            class="nav-link"
             [attr.title]="example.description"
           >
             {{ example.title }}
@@ -46,25 +36,25 @@
       </div>
       }
     </div>
+
     <!-- Version Info and External Links -->
-    <div
-      class="mt-6 pt-3 border-t border-blue-700 text-xs text-blue-200 flex items-center justify-between flex-wrap gap-4"
-    >
-      <div class="flex gap-4">
+    <div class="nav-footer">
+      <div class="version-info">
         <span>{{ versionSummary }}</span>
+        <span class="separator">•</span>
         <span>Built: {{ buildDate }}</span>
       </div>
-      <div class="flex gap-6">
+      <div class="external-links">
         @for (link of externalLinks; track link.url) {
         <a
           [href]="link.url"
           target="_blank"
           rel="noopener noreferrer"
-          class="inline-flex items-center gap-1 hover:text-white transition-colors"
+          class="external-link"
           [title]="link.title"
         >
-          <span>{{ link.icon }}</span>
-          <span>{{ link.label }}</span>
+          <span class="link-icon">{{ link.icon }}</span>
+          <span class="link-label">{{ link.label }}</span>
         </a>
         }
       </div>
