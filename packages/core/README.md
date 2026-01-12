@@ -897,6 +897,123 @@ tree.log('Tree created');
 >
 > 📱 **Interactive demo**: [Demo App](/custom-extensions)
 
+### 8) Derived State Tiers
+
+SignalTree supports **derived state** via the `.derived()` method, which allows you to add computed signals that build on base state or previous derived tiers.
+
+#### Basic Usage (Inline Derived)
+
+When derived functions are defined inline, TypeScript automatically infers all types:
+
+```typescript
+import { signalTree, entityMap } from '@signaltree/core';
+import { computed } from '@angular/core';
+
+const tree = signalTree({
+  users: entityMap<User, number>(),
+  selectedUserId: null as number | null,
+})
+  .derived(($) => ({
+    // Tier 1: Entity resolution
+    selectedUser: computed(() => {
+      const id = $.selectedUserId();
+      return id != null ? $.users.byId(id)?.() ?? null : null;
+    }),
+  }))
+  .derived(($) => ({
+    // Tier 2: Complex logic (can access $.selectedUser from Tier 1)
+    isAdmin: computed(() => $.selectedUser()?.role === 'admin'),
+  }));
+
+// Usage
+tree.$.selectedUser(); // User | null (computed signal)
+tree.$.isAdmin(); // boolean (computed signal)
+```
+
+#### External Derived Functions (Modular Architecture)
+
+For larger applications, you may want to organize derived tiers into separate files. **This requires explicit typing** because TypeScript cannot infer types across file boundaries.
+
+SignalTree provides two utilities for external derived functions:
+
+- **`externalDerived<TTree>()`** - Curried helper function that provides type context for your derived function
+- **`WithDerived<TTree, TDerivedFn>`** - Type utility to build intermediate tree types
+
+```typescript
+// app-tree.ts
+import { signalTree, entityMap, WithDerived } from '@signaltree/core';
+import { entityResolutionDerived } from './derived/tier-entity-resolution';
+import { complexLogicDerived } from './derived/tier-complex-logic';
+
+// Define base tree type
+export type AppTreeBase = ReturnType<typeof signalTree<ReturnType<typeof createBaseState>>>;
+
+// Build intermediate types using WithDerived
+export type AppTreeWithTier1 = WithDerived<AppTreeBase, typeof entityResolutionDerived>;
+export type AppTreeWithTier2 = WithDerived<AppTreeWithTier1, typeof complexLogicDerived>;
+
+function createBaseState() {
+  return {
+    users: entityMap<User, number>(),
+    selectedUserId: null as number | null,
+  };
+}
+
+export function createAppTree() {
+  return signalTree(createBaseState()).derived(entityResolutionDerived).derived(complexLogicDerived);
+}
+```
+
+```typescript
+// derived/tier-entity-resolution.ts
+import { computed } from '@angular/core';
+import { externalDerived } from '@signaltree/core';
+import type { AppTreeBase } from '../app-tree';
+
+// externalDerived provides the type context for $ via curried syntax
+export const entityResolutionDerived = externalDerived<AppTreeBase>()(($) => ({
+  selectedUser: computed(() => {
+    const id = $.selectedUserId();
+    return id != null ? $.users.byId(id)?.() ?? null : null;
+  }),
+}));
+```
+
+```typescript
+// derived/tier-complex-logic.ts
+import { computed } from '@angular/core';
+import { externalDerived } from '@signaltree/core';
+import type { AppTreeWithTier1 } from '../app-tree';
+
+// This tier has access to $.selectedUser from Tier 1
+export const complexLogicDerived = externalDerived<AppTreeWithTier1>()(($) => ({
+  isAdmin: computed(() => $.selectedUser()?.role === 'admin'),
+  displayName: computed(() => {
+    const user = $.selectedUser();
+    return user ? `${user.firstName} ${user.lastName}` : 'No user selected';
+  }),
+}));
+```
+
+#### Why External Functions Need Typing
+
+When a function is defined in a separate file, TypeScript analyzes it **in isolation** before knowing how it will be used. The type inference happens at the **definition site**, not the **call site**:
+
+```typescript
+// ❌ TypeScript can't infer $ - this file is compiled before app-tree.ts uses it
+export function myDerived($) {
+  // $ is 'any'
+  return { foo: computed(() => $.bar()) }; // Error: $ has no properties
+}
+
+// ✅ externalDerived provides the type context (curried syntax)
+export const myDerived = externalDerived<AppTreeBase>()(($) => ({
+  foo: computed(() => $.bar()), // $ is properly typed
+}));
+```
+
+**Key point**: `externalDerived` is **only needed for functions defined in separate files**. Inline functions automatically inherit types from the chain. Note the curried syntax: `externalDerived<TreeType>()(fn)` - this allows TypeScript to infer the return type while you specify the tree type.
+
 ## Error handling examples
 
 ### Manual async error handling

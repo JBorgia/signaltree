@@ -68,7 +68,11 @@ export type {
   ProcessDerived,
   DeepMergeTree,
   DerivedFactory,
+  WithDerived,
 } from './lib/internals/derived-types';
+
+// External derived helper (v7.2) - for defining derived functions in separate files
+export { externalDerived } from './lib/internals/derived-types';
 
 // Builder types (v7)
 export type { SignalTreeBuilder } from './lib/internals/builder-types';

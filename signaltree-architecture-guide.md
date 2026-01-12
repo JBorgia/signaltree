@@ -2994,6 +2994,60 @@ this._store.users.loadUsers$().subscribe();  // Use store.ops.users instead
 
 **Solution**: If computed B depends on computed A, move A to an earlier tier.
 
+### External Derived Utilities
+
+When derived functions are defined in **separate files** (recommended for modular architecture), TypeScript cannot infer parameter types from the call site. SignalTree provides utilities to handle this:
+
+#### `externalDerived<TTree>()`
+
+A curried helper function that provides type context for derived functions in external files:
+
+```typescript
+// derived/tier-1.derived.ts
+import { externalDerived } from '@signaltree/core';
+import type { AppTreeBase } from '../app-tree';
+
+// externalDerived provides the type for $ via curried syntax
+export const tier1Derived = externalDerived<AppTreeBase>()(($) => ({
+  users: {
+    current: computed(() => $.users.byId($.selected.userId())?.() ?? null),
+  },
+}));
+```
+
+Note the curried syntax: `externalDerived<TreeType>()(fn)`. The first call specifies the tree type, the second takes your derived function. This allows TypeScript to infer the return type while you explicitly specify the input tree type.
+
+#### `WithDerived<TTree, TDerivedFn>`
+
+A type utility to build intermediate tree types:
+
+```typescript
+// app-tree.ts
+import { WithDerived } from '@signaltree/core';
+import { tier1Derived } from './derived/tier-1.derived';
+import { tier2Derived } from './derived/tier-2.derived';
+
+export type AppTreeBase = ReturnType<typeof signalTree<ReturnType<typeof createBaseState>>>;
+export type AppTreeWithTier1 = WithDerived<AppTreeBase, typeof tier1Derived>;
+export type AppTreeWithTier2 = WithDerived<AppTreeWithTier1, typeof tier2Derived>;
+```
+
+#### Why External Functions Need Typing
+
+TypeScript analyzes each file **in isolation** before seeing how it's used. When you define:
+
+```typescript
+// ❌ TypeScript can't infer $ - analyzed before app-tree.ts uses it
+export function tier1Derived($) {
+  // $ is 'any'
+  return { foo: computed(() => $.bar()) }; // Error: $ has no properties
+}
+```
+
+TypeScript resolves parameter types at the **definition site**, not where the function is called. `externalDerived` provides the type context upfront.
+
+**Key Point**: `externalDerived` is **only needed for external files**. Inline functions within `.derived()` calls automatically inherit types from the chain.
+
 ### Tier Organization Pattern
 
 | Tier | Purpose           | Example Computeds                                               |
@@ -3045,6 +3099,7 @@ export function ticketsState() {
 
 ```typescript
 import { computed } from '@angular/core';
+import { externalDerived } from '@signaltree/core';
 import type { AppTreeBase } from '../app-tree';
 
 /**
@@ -3052,23 +3107,25 @@ import type { AppTreeBase } from '../app-tree';
  *
  * Resolves IDs to actual entities. Transforms raw ID references
  * into computed signals that return full entity objects.
+ *
+ * NOTE: Use externalDerived<TTree>() when defining derived functions in
+ * external files. This provides type context for the $ parameter.
+ * Inline functions (within .derived() call) don't need this helper.
  */
-export function tier1Derived($: AppTreeBase['$']) {
-  return {
-    users: {
-      current: computed(() => {
-        const userId = $.selected.userId();
-        return userId != null ? $.users.byId(userId)?.() ?? null : null;
-      }),
-    },
-    tickets: {
-      active: computed(() => {
-        const activeId = $.tickets.activeId();
-        return activeId != null ? $.tickets.entities.byId(activeId)?.() ?? null : null;
-      }),
-    },
-  };
-}
+export const tier1Derived = externalDerived<AppTreeBase>()(($) => ({
+  users: {
+    current: computed(() => {
+      const userId = $.selected.userId();
+      return userId != null ? $.users.byId(userId)?.() ?? null : null;
+    }),
+  },
+  tickets: {
+    active: computed(() => {
+      const activeId = $.tickets.activeId();
+      return activeId != null ? $.tickets.entities.byId(activeId)?.() ?? null : null;
+    }),
+  },
+}));
 ```
 
 #### Domain Ops (`ops/ticket.ops.ts`)
