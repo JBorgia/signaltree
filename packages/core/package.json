@@ -1,7 +1,7 @@
 {
   "name": "@signaltree/core",
   "version": "7.1.3",
-  "description": "Lightweight, type-safe signal-based state management for Angular. Core package providing hierarchical signal trees, basic entity management, and async actions.",
+  "description": "Reactive JSON for Angular. Type-safe, dot-addressable state trees where data stays plain and reactivity stays invisible.",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,

@@ -1,6 +1,28 @@
 # SignalTree Architecture Guide
 
+**Reactive JSON.** Type-safe, dot-addressable state where data stays plain and reactivity stays invisible.
+
+> _If you can describe it as JSON, you can make it reactive._
+
 A comprehensive guide to architecting applications with SignalTree, covering architectural options, decision frameworks, and implementation patterns.
+
+---
+
+## Core Ethos
+
+SignalTree treats application state as **reactive JSON**. At its heart, it prioritizes typed, dot-notation access to values in a plain, JSON-like state object, while transparently layering fine-grained reactivity on top.
+
+You don't model state as actions, reducers, selectors, or classes — you model it as **data**.
+
+### Ethos Pillars
+
+| Principle                        | What It Means                                                                                                  |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **State is Data First**          | The state shape looks like JSON — nested objects and primitives. What you see is what the state _is_.          |
+| **Dot-Notation Interface**       | `state.user.profile.name()` — fully type-safe, deeply inferred, IDE-discoverable. No string keys or selectors. |
+| **Invisible Reactivity**         | Signals exist, but don't dominate the mental model. You think in data paths, not subscriptions.                |
+| **Lazy by Design**               | Signals created only where accessed. Types do heavy lifting at compile time. Minimal runtime footprint.        |
+| **Composable, Not Prescriptive** | No enforced patterns. Compose trees like JSON documents. Scales from small features to large domains.          |
 
 ---
 

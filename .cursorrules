@@ -4,7 +4,16 @@ This file provides comprehensive context for AI assistants working on the Signal
 
 ## Repository Overview
 
-**SignalTree** is a type-safe, modular, signal-based state management library for Angular with revolutionary recursive typing that enables unlimited nesting depth with perfect type inference.
+**SignalTree** is reactive JSON for Angular — type-safe, dot-addressable state trees where data stays plain and reactivity stays invisible.
+
+> _If you can describe it as JSON, you can make it reactive._
+
+**Core Philosophy:**
+
+- **State is Data First** — Your state looks like JSON. No ceremony, no abstractions.
+- **Dot-Notation Interface** — `tree.$.user.profile.name()` — fully type-safe, IDE-discoverable
+- **Invisible Reactivity** — Think in data paths, not subscriptions
+- **Lazy by Design** — Signals created only where accessed. Minimal runtime footprint.
 
 - **Language**: TypeScript
 - **Framework**: Angular (for ng-forms, demo)

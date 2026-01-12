@@ -1,7 +1,8 @@
 <div align="center">
   <img src="apps/demo/public/signaltree.svg" alt="SignalTree Logo" width="120" height="120" style="background: transparent;" />
   <h1>SignalTree</h1>
-  <p>Type-safe, modular, signal-based state management for Angular. SignalTree offers a lightweight alternative to traditional solutions with a composable API and solid performance.</p>
+  <p><strong>Reactive JSON.</strong> Type-safe, dot-addressable state where data stays plain and reactivity stays invisible.</p>
+  <p><em>If you can describe it as JSON, you can make it reactive.</em></p>
   
   <p>
     <a href="https://jborgia.github.io/signaltree/" target="_blank"><strong>🎮 Live Demo & Benchmarks</strong></a> 

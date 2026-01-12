@@ -4,17 +4,32 @@
 
 # SignalTree Core
 
-Foundation package for SignalTree. Provides recursive typing, deep nesting support, and strong performance.
+**Reactive JSON.** Type-safe, dot-addressable state where data stays plain and reactivity stays invisible.
+
+> _If you can describe it as JSON, you can make it reactive._
 
 ## What is @signaltree/core?
 
-SignalTree Core is a lightweight package that provides:
+SignalTree treats application state as **reactive JSON** — a typed, dot-notation interface to plain JSON-like objects with fine-grained reactivity layered transparently on top.
+
+You don't model state as actions, reducers, selectors, or classes — you model it as **data**.
+
+### Core Philosophy
+
+| Principle                | What It Means                                                                |
+| ------------------------ | ---------------------------------------------------------------------------- |
+| **State is Data**        | Your state shape looks like JSON. No ceremony, no abstractions.              |
+| **Dot-Notation Access**  | `tree.$.user.profile.name()` — fully type-safe, IDE-discoverable             |
+| **Invisible Reactivity** | You think in data paths, not subscriptions. Reactivity emerges naturally.    |
+| **Lazy by Design**       | Signals created only where accessed. Types do heavy lifting at compile time. |
+
+### Technical Features
 
 - Recursive typing with deep nesting and accurate type inference
 - Fast operations with sub‑millisecond measurements at 5–20+ levels
 - Strong TypeScript safety across nested structures
 - Memory efficiency via structural sharing and lazy signals
-- Small API surface with zero-cost abstractions
+- Small API surface with minimal runtime overhead
 - Compact bundle size suited for production
 
 ## Import guidance (tree-shaking)

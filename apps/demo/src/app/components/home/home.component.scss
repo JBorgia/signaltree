@@ -63,6 +63,13 @@
 .hero-subtitle {
   font-size: 1.25rem;
   opacity: 0.9;
+  margin-bottom: var(--space-4);
+  line-height: 1.6;
+}
+
+.hero-tagline {
+  font-size: 1.1rem;
+  opacity: 0.85;
   margin-bottom: var(--space-8);
   line-height: 1.6;
 }

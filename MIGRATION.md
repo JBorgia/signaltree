@@ -1,5 +1,7 @@
 # Migration Guide: v4.0.0 Package Consolidation
 
+> **SignalTree** — Reactive JSON for Angular. Type-safe, dot-addressable state where data stays plain and reactivity stays invisible.
+
 ## Overview
 
 As of v4.0.0, all SignalTree enhancers have been **consolidated into `@signaltree/core`** for better tree-shaking, smaller bundles, and simplified maintenance.
