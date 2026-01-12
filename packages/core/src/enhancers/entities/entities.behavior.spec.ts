@@ -6,7 +6,7 @@ import { entities } from './entities';
 describe('entities enhancer (removed)', () => {
   it('should throw a helpful error explaining removal', () => {
     expect(() => {
-      // @ts-ignore - assert runtime behavior
+      // @ts-expect-error - assert runtime behavior with type error
       signalTree({ users: entityMap<{ id: number }, number>() }).with(
         entities()
       );
