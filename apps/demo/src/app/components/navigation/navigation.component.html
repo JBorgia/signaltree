@@ -8,11 +8,14 @@
           alt="SignalTree Logo"
           class="w-8 h-8 sm:w-10 sm:h-10"
         />
-        <h1 class="text-xl sm:text-2xl font-bold whitespace-nowrap">SignalTree: Reactive JSON</h1>
+        <h1 class="font-bold whitespace-nowrap">
+          <span class="text-xl sm:text-2xl">SignalTree:</span>
+          <span class="text-lg sm:text-xl">Reactive JSON</span>
+        </h1>
       </div>
       <a
         routerLink="/"
-        class="home-button bg-blue-800 hover:bg-blue-700 px-4 py-2 rounded transition-colors font-semibold text-sm"
+        class="home-button bg-blue-800 hover:bg-blue-700 px-6 py-3 rounded transition-colors font-semibold text-sm"
         title="Return to home page"
       >
         🏠 Home
@@ -51,7 +54,7 @@
         <span>{{ versionSummary }}</span>
         <span>Built: {{ buildDate }}</span>
       </div>
-      <div class="flex gap-3">
+      <div class="flex gap-6">
         @for (link of externalLinks; track link.url) {
         <a
           [href]="link.url"
