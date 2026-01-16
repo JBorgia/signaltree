@@ -114,10 +114,12 @@ export type WithDerived<
  * @example
  * ```typescript
  * // In tier-entity-resolution.derived.ts
- * import { externalDerived } from '@signaltree/core';
+ * import { derivedFrom } from '@signaltree/core';
  * import type { AppTreeBase } from '../app-tree';
  *
- * export const entityResolutionDerived = externalDerived<AppTreeBase>()($ => ({
+ * const derived = derivedFrom<AppTreeBase>();
+ *
+ * export const entityResolutionDerived = derived($ => ({
  *   driver: {
  *     current: computed(() => {
  *       const id = $.selected.driverId();
@@ -131,7 +133,7 @@ export type WithDerived<
  *   .derived(entityResolutionDerived)  // Works exactly as before
  * ```
  */
-export function externalDerived<TTree extends { $: object }>(): <
+export function derivedFrom<TTree extends { $: object }>(): <
   TReturn extends object
 >(
   fn: ($: TTree['$']) => TReturn
@@ -141,3 +143,8 @@ export function externalDerived<TTree extends { $: object }>(): <
   return <TReturn extends object>(fn: ($: TTree['$']) => TReturn) =>
     fn as ($: any) => TReturn;
 }
+
+/**
+ * @deprecated Use `derivedFrom` instead. Will be removed in v8.
+ */
+export const externalDerived = derivedFrom;

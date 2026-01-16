@@ -3020,24 +3020,24 @@ this._store.users.loadUsers$().subscribe();  // Use store.ops.users instead
 
 When derived functions are defined in **separate files** (recommended for modular architecture), TypeScript cannot infer parameter types from the call site. SignalTree provides utilities to handle this:
 
-#### `externalDerived<TTree>()`
+#### `derivedFrom<TTree>()`
 
 A curried helper function that provides type context for derived functions in external files:
 
 ```typescript
 // derived/tier-1.derived.ts
-import { externalDerived } from '@signaltree/core';
+import { derivedFrom } from '@signaltree/core';
 import type { AppTreeBase } from '../app-tree';
 
-// externalDerived provides the type for $ via curried syntax
-export const tier1Derived = externalDerived<AppTreeBase>()(($) => ({
+// derivedFrom provides the type for $ via curried syntax
+export const tier1Derived = derivedFrom<AppTreeBase>()(($) => ({
   users: {
     current: computed(() => $.users.byId($.selected.userId())?.() ?? null),
   },
 }));
 ```
 
-Note the curried syntax: `externalDerived<TreeType>()(fn)`. The first call specifies the tree type, the second takes your derived function. This allows TypeScript to infer the return type while you explicitly specify the input tree type.
+Note the curried syntax: `derivedFrom<TreeType>()(fn)`. The first call specifies the tree type, the second takes your derived function. This allows TypeScript to infer the return type while you explicitly specify the input tree type.
 
 #### `WithDerived<TTree, TDerivedFn>`
 
@@ -3066,9 +3066,9 @@ export function tier1Derived($) {
 }
 ```
 
-TypeScript resolves parameter types at the **definition site**, not where the function is called. `externalDerived` provides the type context upfront.
+TypeScript resolves parameter types at the **definition site**, not where the function is called. `derivedFrom` provides the type context upfront.
 
-**Key Point**: `externalDerived` is **only needed for external files**. Inline functions within `.derived()` calls automatically inherit types from the chain.
+**Key Point**: `derivedFrom` is **only needed for external files**. Inline functions within `.derived()` calls automatically inherit types from the chain.
 
 ### Tier Organization Pattern
 
@@ -3121,7 +3121,7 @@ export function ticketsState() {
 
 ```typescript
 import { computed } from '@angular/core';
-import { externalDerived } from '@signaltree/core';
+import { derivedFrom } from '@signaltree/core';
 import type { AppTreeBase } from '../app-tree';
 
 /**
@@ -3130,11 +3130,11 @@ import type { AppTreeBase } from '../app-tree';
  * Resolves IDs to actual entities. Transforms raw ID references
  * into computed signals that return full entity objects.
  *
- * NOTE: Use externalDerived<TTree>() when defining derived functions in
+ * NOTE: Use derivedFrom<TTree>() when defining derived functions in
  * external files. This provides type context for the $ parameter.
  * Inline functions (within .derived() call) don't need this helper.
  */
-export const tier1Derived = externalDerived<AppTreeBase>()(($) => ({
+export const tier1Derived = derivedFrom<AppTreeBase>()(($) => ({
   users: {
     current: computed(() => {
       const userId = $.selected.userId();

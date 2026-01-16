@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed } from '@angular/core';
-import { entityMap, externalDerived, signalTree, WithDerived } from '@signaltree/core';
+import { derivedFrom, entityMap, signalTree, WithDerived } from '@signaltree/core';
 
 // =============================================================================
 // EXAMPLE 1: INLINE DERIVED (Simple - Types inferred automatically)
@@ -50,7 +50,7 @@ function createInlineTree() {
  * across file boundaries.
  *
  * Use these utilities:
- * - externalDerived<TTree>() - Provides type context for the $ parameter
+ * - derivedFrom<TTree>() - Provides type context for the $ parameter
  * - WithDerived<TTree, TDerivedFn> - Builds intermediate tree types
  */
 
@@ -70,11 +70,11 @@ type ExternalTreeBase = ReturnType<
   typeof signalTree<ReturnType<typeof createExternalBaseState>>
 >;
 
-// Step 3: Define derived tier functions using externalDerived
+// Step 3: Define derived tier functions using derivedFrom
 // NOTE: These would normally be in separate files!
-// externalDerived uses curried syntax: externalDerived<TreeType>()(fn)
+// derivedFrom uses curried syntax: derivedFrom<TreeType>()(fn)
 
-const entityResolutionDerived = externalDerived<ExternalTreeBase>()(($) => ({
+const entityResolutionDerived = derivedFrom<ExternalTreeBase>()(($) => ({
   selectedProduct: computed(() => {
     const id = $.selectedProductId();
     return id != null ? $.products.byId(id)?.() ?? null : null;
@@ -95,7 +95,7 @@ type TreeWithTier1 = WithDerived<
   typeof entityResolutionDerived
 >;
 
-const complexLogicDerived = externalDerived<TreeWithTier1>()(($) => ({
+const complexLogicDerived = derivedFrom<TreeWithTier1>()(($) => ({
   // Can access $.selectedProduct from Tier 1!
   isSelectedInCart: computed(() => {
     const product = $.selectedProduct();
@@ -177,7 +177,7 @@ interface CartItem {
         <h3>Example 2: External Derived (Modular)</h3>
         <p class="description">
           For larger apps, organize derived tiers into separate files. Use
-          <code>externalDerived&lt;TTree&gt;</code> for type safety.
+          <code>derivedFrom&lt;TTree&gt;</code> for type safety.
         </p>
 
         <div class="demo-area">
@@ -207,7 +207,7 @@ interface CartItem {
       <section class="code-note">
         <h4>💡 Key Point</h4>
         <p>
-          <code>externalDerived</code> is
+          <code>derivedFrom</code> is
           <strong>only needed for functions defined in separate files</strong>.
           Inline functions automatically inherit types from the chain.
         </p>
