@@ -13,7 +13,7 @@ import type {
   RealtimeChannel,
   RealtimePostgresChangesPayload,
 } from '@supabase/supabase-js';
-import type { Enhancer } from '@signaltree/core';
+import type { ISignalTree } from '@signaltree/core';
 
 /**
  * Supabase-specific subscription configuration.
@@ -277,11 +277,13 @@ export function createSupabaseAdapter(client: SupabaseClient): RealtimeAdapter {
  * }));
  * ```
  */
-export function supabaseRealtime<TState extends object>(
+export function supabaseRealtime<TConfig extends object>(
   client: SupabaseClient,
-  config: SupabaseRealtimeConfig<TState>,
+  config: SupabaseRealtimeConfig<TConfig>,
   options: RealtimeEnhancerOptions = {}
-): Enhancer<{ realtime: RealtimeEnhancerResult }> {
+): <T>(
+  tree: ISignalTree<T>
+) => ISignalTree<T> & { realtime: RealtimeEnhancerResult } {
   const adapter = createSupabaseAdapter(client);
   return createRealtimeEnhancer(adapter, config, options);
 }

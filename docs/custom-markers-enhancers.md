@@ -483,6 +483,93 @@ tree.$.email.isValid(); // true
 
 ## Creating Custom Enhancers
 
+### ⚠️ CRITICAL: Proper Type Signature for Enhancers
+
+When creating custom enhancers, **always use a generic function signature** to preserve the tree's state type. This is the most common mistake when building enhancers.
+
+#### ❌ WRONG - Using the `Enhancer<TAdded>` type alias directly
+
+```typescript
+import type { Enhancer } from '@signaltree/core';
+
+// DON'T DO THIS - loses tree state type information!
+export function myEnhancer(): Enhancer<{ myMethod: () => void }> {
+  return (tree) => {
+    // tree is ISignalTree<any> - state type is LOST!
+    return Object.assign(tree, { myMethod: () => {} });
+  };
+}
+```
+
+The `Enhancer<TAdded>` type is defined as `(tree: ISignalTree<any>) => ISignalTree<any> & TAdded`. This uses `any` to allow enhancers to work on trees with accumulated methods from previous enhancers, but it loses the state type `T`.
+
+#### ✅ CORRECT - Generic function that preserves type T
+
+```typescript
+import type { ISignalTree } from '@signaltree/core';
+
+// DO THIS - preserves tree state type!
+export function myEnhancer(): <T>(
+  tree: ISignalTree<T>
+) => ISignalTree<T> & { myMethod: () => void } {
+  return <T>(tree: ISignalTree<T>): ISignalTree<T> & { myMethod: () => void } => {
+    // tree is ISignalTree<T> - state type is preserved!
+    return Object.assign(tree, { myMethod: () => {} });
+  };
+}
+```
+
+#### Reference: How Core Enhancers Do It
+
+All built-in enhancers follow this pattern:
+
+```typescript
+// batching.ts
+export function batching(
+  config: BatchingConfig = {}
+): <T>(tree: ISignalTree<T>) => ISignalTree<T> & BatchingMethods<T> {
+  return <T>(tree: ISignalTree<T>): ISignalTree<T> & BatchingMethods<T> => {
+    // Implementation...
+  };
+}
+
+// devTools.ts
+export function devTools(
+  config: DevToolsConfig = {}
+): <T>(tree: ISignalTree<T>) => ISignalTree<T> & DevToolsMethods {
+  return <T>(tree: ISignalTree<T>): ISignalTree<T> & DevToolsMethods => {
+    // Implementation...
+  };
+}
+
+// memoization.ts
+export function memoization(
+  config: MemoizationConfig = {}
+): <T>(tree: ISignalTree<T>) => ISignalTree<T> & MemoizationMethods<T> {
+  return <T>(tree: ISignalTree<T>): ISignalTree<T> & MemoizationMethods<T> => {
+    // Implementation...
+  };
+}
+```
+
+#### Why This Matters
+
+When you use the wrong pattern, TypeScript will complain when chaining `.with()`:
+
+```typescript
+// With WRONG pattern - TypeScript error!
+const tree = signalTree({ count: 0 })
+  .with(batching())
+  .with(myBrokenEnhancer()); // ❌ Error: types are incompatible
+
+// With CORRECT pattern - works perfectly!
+const tree = signalTree({ count: 0 })
+  .with(batching())
+  .with(myCorrectEnhancer()); // ✅ No errors, full type safety
+```
+
+---
+
 ### Step-by-Step Guide
 
 #### 1. Define the interface for added methods
@@ -686,7 +773,8 @@ export function createStoredSignal<T>(marker: StoredMarker<T>): StoredSignal<T> 
 
 ### Enhancers
 
-- [ ] Return `tree & YourMethods` for TypeScript inference
+- [ ] **Use generic `<T>` function signature** - NEVER use `Enhancer<TAdded>` type directly (see "CRITICAL" section above)
+- [ ] Return `ISignalTree<T> & YourMethods` for TypeScript inference
 - [ ] Use `Object.assign()` to preserve tree identity
 - [ ] Implement cleanup in `destroy()` if using subscriptions/timers
 - [ ] Add `/*@__PURE__*/` annotation for tree-shaking

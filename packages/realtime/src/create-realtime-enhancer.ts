@@ -9,7 +9,7 @@ import {
     RealtimeSubscription,
 } from './types';
 
-import type { Enhancer, ISignalTree } from '@signaltree/core';
+import type { ISignalTree } from '@signaltree/core';
 
 /**
  * Adapter interface for different real-time backends.
@@ -61,11 +61,13 @@ export interface RealtimeAdapter {
  *   .with(createRealtimeEnhancer(myAdapter, config));
  * ```
  */
-export function createRealtimeEnhancer<TState extends object>(
+export function createRealtimeEnhancer<TConfig extends object>(
   adapter: RealtimeAdapter,
-  config: RealtimeConfig<TState>,
+  config: RealtimeConfig<TConfig>,
   options: RealtimeEnhancerOptions = {}
-): Enhancer<{ realtime: RealtimeEnhancerResult }> {
+): <T>(
+  tree: ISignalTree<T>
+) => ISignalTree<T> & { realtime: RealtimeEnhancerResult } {
   const {
     autoReconnect = true,
     reconnectDelay = 1000,
@@ -73,7 +75,9 @@ export function createRealtimeEnhancer<TState extends object>(
     debug = typeof ngDevMode === 'undefined' || ngDevMode,
   } = options;
 
-  return (tree: ISignalTree<TState>) => {
+  return <T>(
+    tree: ISignalTree<T>
+  ): ISignalTree<T> & { realtime: RealtimeEnhancerResult } => {
     const connection = createConnectionState() as WritableConnectionState;
     const subscriptions = new Map<string, CleanupFn>();
     let connectionCleanup: CleanupFn | null = null;
@@ -316,6 +320,6 @@ export function createRealtimeEnhancer<TState extends object>(
         subscribe,
         unsubscribe,
       },
-    }) as ISignalTree<TState> & { realtime: RealtimeEnhancerResult };
+    }) as ISignalTree<T> & { realtime: RealtimeEnhancerResult };
   };
 }
