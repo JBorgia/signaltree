@@ -23,6 +23,7 @@
         "tsConfig": "packages/realtime/tsconfig.lib.prod.json",
         "outputPath": "dist/packages/realtime",
         "format": ["esm"],
+        "additionalEntryPoints": ["packages/realtime/src/supabase/index.ts"],
         "assets": [
           {
             "input": "packages/realtime",

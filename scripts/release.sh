@@ -42,6 +42,7 @@ fi
 PACKAGES=(
     "core"            # Main package with all enhancers (batching, memoization, etc.)
     "ng-forms"        # Angular forms integration
+    "realtime"        # Real-time sync with Supabase/WebSocket
     "callable-syntax" # Build-time transform for callable DX syntax
     "enterprise"      # Enterprise-grade optimizations for large-scale apps
     "guardrails"      # Dev-only performance guardrails (Rollup build)
