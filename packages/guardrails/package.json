@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/guardrails",
-  "version": "7.2.0",
+  "version": "7.3.0",
   "description": "Development guardrails for SignalTree reactive JSON. Performance monitoring and anti-pattern detection.",
   "type": "module",
   "sideEffects": false,
