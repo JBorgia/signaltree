@@ -1,0 +1,68 @@
+{
+  "name": "realtime",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/realtime/src",
+  "prefix": "lib",
+  "projectType": "library",
+  "release": {
+    "version": {
+      "manifestRootsToUpdate": ["dist/{projectRoot}"],
+      "currentVersionResolver": "git-tag",
+      "fallbackCurrentVersionResolver": "disk"
+    }
+  },
+  "tags": [],
+  "implicitDependencies": ["core"],
+  "targets": {
+    "build": {
+      "executor": "@nx/rollup:rollup",
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
+      "dependsOn": ["^build"],
+      "options": {
+        "main": "packages/realtime/src/index.ts",
+        "tsConfig": "packages/realtime/tsconfig.lib.prod.json",
+        "outputPath": "dist/packages/realtime",
+        "format": ["esm"],
+        "assets": [
+          {
+            "input": "packages/realtime",
+            "glob": "README.md",
+            "output": "."
+          },
+          {
+            "input": "packages/realtime",
+            "glob": "package.json",
+            "output": "."
+          },
+          {
+            "input": "packages/realtime/src",
+            "glob": "**/*.d.ts",
+            "output": "./src"
+          }
+        ],
+        "external": [
+          "@angular/core",
+          "@signaltree/core",
+          "@supabase/supabase-js",
+          "firebase",
+          "tslib",
+          "rxjs"
+        ],
+        "rollupConfig": "packages/realtime/rollup.config.mjs"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"]
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "vitestConfig": "packages/realtime/vitest.config.ts",
+        "passWithNoTests": true,
+        "reportsDirectory": "../../coverage/packages/realtime"
+      }
+    }
+  }
+}

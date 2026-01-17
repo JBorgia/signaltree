@@ -2,12 +2,12 @@ import { computed } from '@angular/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-    clearStoragePrefix,
-    createStorageKeys,
-    createStoredSignal,
-    isStoredMarker,
-    stored,
-    STORED_MARKER,
+  clearStoragePrefix,
+  createStorageKeys,
+  createStoredSignal,
+  isStoredMarker,
+  stored,
+  STORED_MARKER,
 } from '../markers/stored';
 import { signalTree } from '../signal-tree';
 
@@ -882,7 +882,9 @@ describe('stored() versioning and migrations', () => {
     });
 
     it('should handle migration errors gracefully', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => { /* noop */ });
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
+        /* noop */
+      });
 
       mockStorage.setItem(
         'bad-migrate',
@@ -911,7 +913,9 @@ describe('stored() versioning and migrations', () => {
     });
 
     it('should clear storage on migration failure when configured', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => { /* noop */ });
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
+        /* noop */
+      });
 
       mockStorage.setItem(
         'clear-on-fail',

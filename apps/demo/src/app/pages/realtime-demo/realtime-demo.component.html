@@ -1,0 +1,239 @@
+<div class="demo-container">
+  <header class="demo-header">
+    <h1>🔴 Realtime Demo</h1>
+    <p>
+      Live data synchronization with entityMaps. This demo simulates realtime
+      events to demonstrate how &#64;signaltree/realtime syncs entities
+      automatically.
+    </p>
+  </header>
+
+  <div class="demo-layout">
+    <!-- Left Panel: Chat Interface -->
+    <div class="chat-panel">
+      <div
+        class="connection-bar"
+        [class.connected]="connectionStatus() === 'connected'"
+      >
+        <span class="status-indicator"></span>
+        <span class="status-text">
+          @switch (connectionStatus()) { @case ('disconnected') { Disconnected }
+          @case ('connecting') { Connecting... } @case ('connected') { Connected
+          } }
+        </span>
+        <div class="connection-actions">
+          @if (connectionStatus() === 'disconnected') {
+          <button class="btn-primary btn-sm" (click)="connect()">
+            Connect
+          </button>
+          } @else {
+          <button class="btn-secondary btn-sm" (click)="disconnect()">
+            Disconnect
+          </button>
+          }
+        </div>
+      </div>
+
+      <div class="chat-main">
+        <!-- Users Sidebar -->
+        <div class="users-sidebar">
+          <h3>
+            Users
+            <span class="badge">{{ store.$.users.all().length }}</span>
+          </h3>
+
+          <div class="user-stats">
+            <span class="stat online"
+              >{{ store.$.userCountByStatus().online }} online</span
+            >
+            <span class="stat away"
+              >{{ store.$.userCountByStatus().away }} away</span
+            >
+            <span class="stat offline"
+              >{{ store.$.userCountByStatus().offline }} offline</span
+            >
+          </div>
+
+          <div class="user-list">
+            @for (user of store.$.users.all(); track user.id) {
+            <div class="user-item" [class]="user.status">
+              <img [src]="user.avatar" [alt]="user.username" class="avatar" />
+              <span class="username">{{ user.username }}</span>
+              <span class="status-dot"></span>
+            </div>
+            } @empty {
+            <div class="empty-state">No users connected</div>
+            }
+          </div>
+
+          <div class="add-user">
+            <input
+              type="text"
+              [ngModel]="newUsername()"
+              (ngModelChange)="newUsername.set($event)"
+              (keyup.enter)="addUser()"
+              placeholder="Add user..."
+              [disabled]="connectionStatus() !== 'connected'"
+            />
+            <button
+              class="btn-sm btn-secondary"
+              (click)="addUser()"
+              [disabled]="connectionStatus() !== 'connected'"
+            >
+              +
+            </button>
+          </div>
+        </div>
+
+        <!-- Messages Area -->
+        <div class="messages-area">
+          <div class="messages-list">
+            @for (msg of store.$.recentMessages(); track msg.id) {
+            <div
+              class="message"
+              [class.system]="msg.type === 'system'"
+              [class.own]="msg.userId === 'current-user'"
+            >
+              @if (msg.type !== 'system') {
+              <div class="message-header">
+                <span class="author">{{ msg.username }}</span>
+                <span class="time">{{
+                  msg.timestamp | date : 'shortTime'
+                }}</span>
+              </div>
+              }
+              <div class="message-content">{{ msg.content }}</div>
+            </div>
+            } @empty {
+            <div class="empty-state">
+              @if (connectionStatus() === 'connected') { No messages yet. Send
+              one! } @else { Connect to start chatting }
+            </div>
+            }
+          </div>
+
+          <div class="message-input">
+            <input
+              type="text"
+              [ngModel]="newMessage()"
+              (ngModelChange)="newMessage.set($event)"
+              (keyup.enter)="sendMessage()"
+              placeholder="Type a message..."
+              [disabled]="connectionStatus() !== 'connected'"
+            />
+            <button
+              class="btn-primary"
+              (click)="sendMessage()"
+              [disabled]="connectionStatus() !== 'connected' || !newMessage()"
+            >
+              Send
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Panel: Controls & Code -->
+    <div class="controls-panel">
+      <!-- Simulation Controls -->
+      <div class="control-card">
+        <h3>🎮 Simulation Controls</h3>
+        <p class="help-text">Simulate realtime events from other users</p>
+
+        <div class="control-buttons">
+          <button
+            class="btn-secondary"
+            (click)="simulateIncomingMessage()"
+            [disabled]="
+              connectionStatus() !== 'connected' ||
+              store.$.users.all().length === 0
+            "
+          >
+            📨 Incoming Message
+          </button>
+          <button
+            class="btn-secondary"
+            (click)="simulateUserStatusChange()"
+            [disabled]="
+              connectionStatus() !== 'connected' ||
+              store.$.users.all().length === 0
+            "
+          >
+            🔄 Status Change
+          </button>
+          <button
+            class="btn-secondary"
+            (click)="simulateUserLeave()"
+            [disabled]="
+              connectionStatus() !== 'connected' ||
+              store.$.users.all().length === 0
+            "
+          >
+            👋 User Leave
+          </button>
+        </div>
+
+        <div class="auto-simulate">
+          <label>
+            <input
+              type="checkbox"
+              [ngModel]="autoSimulate()"
+              (ngModelChange)="toggleAutoSimulation()"
+              [disabled]="connectionStatus() !== 'connected'"
+            />
+            Auto-simulate (every 2s)
+          </label>
+        </div>
+
+        <button
+          class="btn-danger btn-full"
+          (click)="clearMessages()"
+          [disabled]="store.$.messages.all().length === 0"
+        >
+          🗑️ Clear Messages
+        </button>
+      </div>
+
+      <!-- State Overview -->
+      <div class="control-card">
+        <h3>📊 State Overview</h3>
+        <dl class="state-list">
+          <dt>Messages:</dt>
+          <dd>{{ store.$.messageCount() }}</dd>
+          <dt>Users:</dt>
+          <dd>{{ store.$.users.all().length }}</dd>
+          <dt>Online:</dt>
+          <dd class="online">{{ store.$.onlineUsers().length }}</dd>
+          <dt>Last Event:</dt>
+          <dd class="event">{{ lastEvent() || 'None' }}</dd>
+        </dl>
+      </div>
+
+      <!-- Event Log -->
+      <div class="control-card event-log-card">
+        <div class="card-header">
+          <h3>📜 Event Log</h3>
+          <button class="btn-sm" (click)="clearEventLog()">Clear</button>
+        </div>
+        <div class="event-log">
+          @for (event of eventLog(); track event) {
+          <div class="log-entry">{{ event }}</div>
+          } @empty {
+          <div class="empty-state">No events yet</div>
+          }
+        </div>
+      </div>
+
+      <!-- Code Examples -->
+      <div class="control-card code-card">
+        <h3>💻 Code: Realtime Enhancer</h3>
+        <pre><code>{{ realtimeCode }}</code></pre>
+      </div>
+
+      <div class="control-card code-card">
+        <h3>🔌 Code: Custom Adapter</h3>
+        <pre><code>{{ adapterCode }}</code></pre>
+      </div>
+    </div>
+  </div>
+</div>

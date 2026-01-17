@@ -1,10 +1,14 @@
-// @ts-nocheck - Type compatibility between EnhancerWithMeta and .with() signature
-// Tests focus on runtime behavior; types are tested via compilation of usage examples
 import { TestBed } from '@angular/core/testing';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { form, signalTree } from '@signaltree/core';
 
 import { formBridge } from './form-bridge';
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Tests focus on runtime behavior; complex EnhancerWithMeta types are handled via casting
+// Helper to work around EnhancerWithMeta type complexity in tests
+const withFormBridge = (config?: Parameters<typeof formBridge>[0]) =>
+  formBridge(config) as any;
 
 describe('formBridge enhancer', () => {
   beforeEach(() => {
@@ -19,7 +23,7 @@ describe('formBridge enhancer', () => {
         profile: form({
           initial: { name: '', email: '' },
         }),
-      }).with(formBridge()) as any;
+      }).with(withFormBridge()) as any;
 
       expect(tree.formBridge.size).toBe(1);
       expect(tree.formBridge.has('profile')).toBe(true);
@@ -30,7 +34,7 @@ describe('formBridge enhancer', () => {
         profile: form({
           initial: { name: '', email: '' },
         }),
-      }).with(formBridge()) as any;
+      }).with(withFormBridge()) as any;
 
       const bridge = tree.getAngularForm('profile');
       expect(bridge).toBeTruthy();
@@ -42,7 +46,7 @@ describe('formBridge enhancer', () => {
         profile: form({
           initial: { name: 'John', email: 'john@test.com' },
         }),
-      }).with(formBridge()) as any;
+      }).with(withFormBridge()) as any;
 
       const bridge = tree.getAngularForm('profile');
       expect(bridge?.formGroup.value).toEqual({
@@ -56,7 +60,7 @@ describe('formBridge enhancer', () => {
         profile: form({
           initial: { name: '' },
         }),
-      }).with(formBridge()) as any;
+      }).with(withFormBridge()) as any;
 
       expect(tree.getAngularForm('nonexistent')).toBeNull();
     });
@@ -68,7 +72,7 @@ describe('formBridge enhancer', () => {
         profile: form({
           initial: { name: '', email: '' },
         }),
-      }).with(formBridge()) as any;
+      }).with(withFormBridge()) as any;
 
       const bridge = tree.getAngularForm('profile');
       bridge?.formGroup.patchValue({ name: 'Jane' });
@@ -82,7 +86,7 @@ describe('formBridge enhancer', () => {
         profile: form({
           initial: { name: '', email: '' },
         }),
-      }).with(formBridge()) as any;
+      }).with(withFormBridge()) as any;
 
       const bridge = tree.getAngularForm('profile');
       const nameControl = bridge?.formControl('name');
@@ -104,7 +108,7 @@ describe('formBridge enhancer', () => {
             initial: { card: '', cvv: '' },
           }),
         },
-      }).with(formBridge()) as any;
+      }).with(withFormBridge()) as any;
 
       expect(tree.formBridge.size).toBe(2);
       expect(tree.formBridge.has('checkout.shipping')).toBe(true);
@@ -121,7 +125,7 @@ describe('formBridge enhancer', () => {
             initial: { card: '4111' },
           }),
         },
-      }).with(formBridge()) as any;
+      }).with(withFormBridge()) as any;
 
       const shippingBridge = tree.getAngularForm('checkout.shipping');
       const paymentBridge = tree.getAngularForm('checkout.payment');
@@ -140,7 +144,7 @@ describe('formBridge enhancer', () => {
           initial: { name: '', bio: '', showBio: false },
         }),
       }).with(
-        formBridge({
+        withFormBridge({
           conditionals: [
             {
               when: (values: any) => values.showBio,
@@ -164,7 +168,7 @@ describe('formBridge enhancer', () => {
           initial: { name: '', showBio: false },
         }),
       }).with(
-        formBridge({
+        withFormBridge({
           conditionals: [
             {
               when: (values: any) => values.showBio,
@@ -190,7 +194,7 @@ describe('formBridge enhancer', () => {
         profile: form({
           initial: { name: '' },
         }),
-      }).with(formBridge()) as any;
+      }).with(withFormBridge()) as any;
 
       const bridge = tree.getAngularForm('profile');
       expect(bridge?.angularErrors).toBeTruthy();
@@ -202,7 +206,7 @@ describe('formBridge enhancer', () => {
         profile: form({
           initial: { name: '' },
         }),
-      }).with(formBridge()) as any;
+      }).with(withFormBridge()) as any;
 
       const bridge = tree.getAngularForm('profile');
       expect(bridge?.asyncPending).toBeTruthy();
@@ -221,7 +225,7 @@ describe('formBridge enhancer', () => {
           },
         }),
       }) as any;
-      // Note: NOT calling .with(formBridge())
+      // Note: NOT calling .with(withFormBridge())
 
       // form() features should work
       tree.$.profile.$.name.set('John');
@@ -243,7 +247,7 @@ describe('formBridge enhancer', () => {
         profile: form({
           initial: { name: '' },
         }),
-      }).with(formBridge()) as any;
+      }).with(withFormBridge()) as any;
 
       // The enhancer attaches formGroup directly to the form signal
       const profileForm = tree.$.profile;

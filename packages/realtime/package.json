@@ -1,0 +1,68 @@
+{
+  "name": "@signaltree/realtime",
+  "version": "7.1.5",
+  "description": "Real-time data synchronization enhancers for SignalTree - Supabase, Firebase, and WebSocket support",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./supabase": {
+      "types": "./src/supabase/index.d.ts",
+      "import": "./dist/supabase/index.js",
+      "default": "./dist/supabase/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "peerDependencies": {
+    "@angular/core": "^20.0.0",
+    "@signaltree/core": "^7.0.0",
+    "@supabase/supabase-js": "^2.0.0",
+    "tslib": "^2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@supabase/supabase-js": {
+      "optional": true
+    },
+    "firebase": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "^2.49.0",
+    "vitest": "^3.0.5"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist/**/*.js",
+    "src/**/*.d.ts",
+    "README.md"
+  ],
+  "keywords": [
+    "angular",
+    "signals",
+    "state-management",
+    "realtime",
+    "supabase",
+    "firebase",
+    "websocket"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JBorgia/signaltree.git",
+    "directory": "packages/realtime"
+  },
+  "bugs": {
+    "url": "https://github.com/JBorgia/signaltree/issues"
+  },
+  "homepage": "https://signaltree.dev"
+}
