@@ -1,32 +1,32 @@
 import {
-  computed,
-  DestroyRef,
-  Directive,
-  effect,
-  ElementRef,
-  EventEmitter,
-  forwardRef,
-  HostListener,
-  inject,
-  Input,
-  isSignal,
-  OnInit,
-  Output,
-  Renderer2,
-  Signal,
-  signal,
-  WritableSignal,
+    computed,
+    DestroyRef,
+    Directive,
+    effect,
+    ElementRef,
+    EventEmitter,
+    forwardRef,
+    HostListener,
+    inject,
+    Input,
+    isSignal,
+    OnInit,
+    Output,
+    Renderer2,
+    Signal,
+    signal,
+    WritableSignal,
 } from '@angular/core';
 import {
-  AbstractControl,
-  AsyncValidatorFn as AngularAsyncValidatorFn,
-  ControlValueAccessor,
-  FormArray,
-  FormControl,
-  FormGroup,
-  NG_VALUE_ACCESSOR,
-  ValidationErrors,
-  ValidatorFn as AngularValidatorFn,
+    AbstractControl,
+    AsyncValidatorFn as AngularAsyncValidatorFn,
+    ControlValueAccessor,
+    FormArray,
+    FormControl,
+    FormGroup,
+    NG_VALUE_ACCESSOR,
+    ValidationErrors,
+    ValidatorFn as AngularValidatorFn,
 } from '@angular/forms';
 import { signalTree } from '@signaltree/core';
 import { deepClone, matchPath, mergeDeep, parsePath } from '@signaltree/shared';
@@ -161,6 +161,9 @@ type AsyncValidatorMap = Record<string, FormTreeAsyncValidatorFn<unknown>>;
 const SYNC_ERROR_KEY = 'signaltree';
 const ASYNC_ERROR_KEY = 'signaltreeAsync';
 
+// Track if we've shown the createFormTree deprecation warning
+let hasShownCreateFormTreeDeprecation = false;
+
 // ============================================
 // UTILITY FUNCTIONS
 // ============================================
@@ -169,10 +172,46 @@ const ASYNC_ERROR_KEY = 'signaltreeAsync';
 // FORM TREE IMPLEMENTATION
 // ============================================
 
+/**
+ * Creates a form tree with Angular FormGroup integration.
+ *
+ * @deprecated Use `signalTree({ myForm: form({...}) }).with(formBridge())` instead.
+ * The new pattern provides better tree-shaking, composability, and separation of concerns.
+ *
+ * Migration example:
+ * ```typescript
+ * // OLD (deprecated)
+ * const form = createFormTree({ name: '', email: '' }, { validators: {...} });
+ *
+ * // NEW (recommended)
+ * import { signalTree, form } from '@signaltree/core';
+ * import { formBridge } from '@signaltree/ng-forms';
+ *
+ * const tree = signalTree({
+ *   profile: form({
+ *     initial: { name: '', email: '' },
+ *     validators: {...}
+ *   })
+ * }).with(formBridge());
+ *
+ * // Access form: tree.$.profile
+ * // Access FormGroup: tree.getAngularForm('profile')?.formGroup
+ * ```
+ */
 export function createFormTree<T extends Record<string, unknown>>(
   initialValues: T,
   config: FormTreeOptions<T> = {}
 ): FormTree<T> {
+  // Show deprecation warning in dev mode (once per session)
+  if (isDevEnvironment() && !hasShownCreateFormTreeDeprecation) {
+    hasShownCreateFormTreeDeprecation = true;
+    console.warn(
+      `[@signaltree/ng-forms] createFormTree() is deprecated. ` +
+        `Use signalTree({ myForm: form({...}) }).with(formBridge()) instead. ` +
+        `See https://signaltree.dev/migration/ng-forms for migration guide.`
+    );
+  }
+
   const {
     validators: baseValidators = {},
     asyncValidators: baseAsyncValidators = {},

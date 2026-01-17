@@ -25,6 +25,8 @@
       "@signaltree/enterprise": ["packages/enterprise/src/index.ts"],
       "@signaltree/guardrails": ["packages/guardrails/src/index.ts"],
       "@signaltree/ng-forms": ["packages/ng-forms/src/index.ts"],
+      "@signaltree/realtime": ["packages/realtime/src/index.ts"],
+      "@signaltree/realtime/*": ["packages/realtime/src/*"],
       "@signaltree/shared": ["packages/shared/src/index.ts"],
       "@signaltree/shared/*": ["packages/shared/src/*"],
       "@signaltree/types": ["packages/types/src/index.ts"],

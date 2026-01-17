@@ -1,3 +1,48 @@
+## 7.2.0 (2026-01-17)
+
+### 🚀 Features
+
+- **core:** `form()` marker for tree-integrated forms with validation, wizard navigation, and persistence
+- **core:** `entityMap().computed()` - chainable computed slices for derived entity collections
+- **core:** `stored()` versioning and migrations with `migrate` function
+- **realtime:** `@signaltree/realtime` package for Supabase/Firebase/WebSocket synchronization
+- **ng-forms:** `formBridge()` enhancer for bridging `form()` markers to Angular FormGroup
+
+### 🏗️ Architecture
+
+- **ng-forms:** New layered architecture: `form()` (core) + `formBridge()` (ng-forms)
+  - `form()` is self-sufficient: works standalone without Angular forms
+  - `formBridge()` adds FormGroup bridge, conditional fields, Angular validators
+  - Better composability and tree-shaking
+- **ng-forms:** Deprecate `createFormTree()` in favor of `signalTree({ myForm: form({...}) }).with(formBridge())`
+
+### 🩹 Fixes
+
+- **core:** Fix `EntityMapBuilder` type to properly extend `EntityMapMarker`
+- **realtime:** Fix Supabase adapter type constraints for `channel.on()` generic parameters
+- **realtime:** Add `@supabase/supabase-js` as dev dependency for TypeScript resolution
+
+### 📖 Documentation
+
+- **core:** Comprehensive documentation for all built-in markers in README:
+  - `entityMap()` with computed slices and custom ID selection
+  - `status()` with generic error types
+  - `stored()` with versioning, migrations, and `createStorageKeys()`
+  - `form()` with validation, wizard, persistence, and async validators
+- **ng-forms:** Updated README with new architecture diagram and migration guide
+- **realtime:** Package README with Supabase integration guide
+
+### Demo App
+
+- Added interactive demos for all v7 features:
+  - Form marker demo with wizard and persistence
+  - Stored versioning demo with migration testing
+  - Realtime demo with simulated sync
+
+### ❤️ Thank You
+
+- Borgia
+
 ## 7.1.1 (2026-01-07)
 
 ### 🚀 Features

@@ -1029,6 +1029,398 @@ export const myDerived = derivedFrom<AppTreeBase>()(($) => ({
 
 **Key point**: `derivedFrom` is **only needed for functions defined in separate files**. Inline functions automatically inherit types from the chain. Note the curried syntax: `derivedFrom<TreeType>()(fn)` - this allows TypeScript to infer the return type while you specify the tree type.
 
+## Built-in Markers
+
+SignalTree provides four built-in markers that handle common state patterns Angular doesn't provide out of the box. All markers are **self-registering** and **tree-shakeable** - only the markers you use are included in your bundle.
+
+### 9) `entityMap<E, K>()` - Normalized Collections
+
+Creates a normalized entity collection with O(1) lookups by ID. Includes chainable `.computed()` for derived slices.
+
+```typescript
+import { signalTree, entityMap } from '@signaltree/core';
+
+interface Product {
+  id: number;
+  name: string;
+  category: string;
+  price: number;
+  inStock: boolean;
+}
+
+const tree = signalTree({
+  products: entityMap<Product, number>()
+    .computed('electronics', (all) => all.filter((p) => p.category === 'electronics'))
+    .computed('inStock', (all) => all.filter((p) => p.inStock))
+    .computed('totalValue', (all) => all.reduce((sum, p) => sum + p.price, 0)),
+});
+
+// EntitySignal API
+tree.$.products.setMany([
+  { id: 1, name: 'Laptop', category: 'electronics', price: 999, inStock: true },
+  { id: 2, name: 'Chair', category: 'furniture', price: 199, inStock: false },
+]);
+
+tree.$.products.all();              // Signal<Product[]> - all entities
+tree.$.products.byId(1);            // Signal<Product> | undefined
+tree.$.products.ids();              // Signal<number[]>
+tree.$.products.count();            // Signal<number>
+
+// Computed slices (reactive, type-safe)
+tree.$.products.electronics();      // Signal<Product[]> - auto-updates
+tree.$.products.inStock();          // Signal<Product[]>
+tree.$.products.totalValue();       // Signal<number>
+
+// CRUD operations
+tree.$.products.upsertOne({ id: 1, name: 'Updated', category: 'electronics', price: 899, inStock: true });
+tree.$.products.upsertMany([...]);
+tree.$.products.removeOne(1);
+tree.$.products.removeMany([1, 2]);
+tree.$.products.clear();
+```
+
+#### Custom ID Selection
+
+```typescript
+interface User {
+  odataId: string; // Not named 'id'
+  email: string;
+}
+
+const tree = signalTree({
+  users: entityMap<User, string>(),
+});
+
+// Specify selectId when upserting
+tree.$.users.upsertOne(user, { selectId: (u) => u.odataId });
+```
+
+### 10) `status()` - Manual Async State
+
+Creates a status signal for manual async state management with type-safe error handling.
+
+```typescript
+import { signalTree, status, LoadingState } from '@signaltree/core';
+
+interface ApiError {
+  code: number;
+  message: string;
+}
+
+const tree = signalTree({
+  users: {
+    data: [] as User[],
+    loadStatus: status<ApiError>(), // Generic error type
+  },
+});
+
+// Status API
+tree.$.users.loadStatus.state(); // Signal<LoadingState>
+tree.$.users.loadStatus.error(); // Signal<ApiError | null>
+
+// Convenience signals
+tree.$.users.loadStatus.isNotLoaded(); // Signal<boolean>
+tree.$.users.loadStatus.isLoading(); // Signal<boolean>
+tree.$.users.loadStatus.isLoaded(); // Signal<boolean>
+tree.$.users.loadStatus.isError(); // Signal<boolean>
+
+// Update methods
+tree.$.users.loadStatus.setLoading();
+tree.$.users.loadStatus.setLoaded();
+tree.$.users.loadStatus.setError({ code: 404, message: 'Not found' });
+tree.$.users.loadStatus.reset();
+
+// LoadingState enum
+LoadingState.NotLoaded; // 'not-loaded'
+LoadingState.Loading; // 'loading'
+LoadingState.Loaded; // 'loaded'
+LoadingState.Error; // 'error'
+```
+
+### 11) `stored(key, default, options?)` - localStorage Persistence
+
+Auto-syncs state to localStorage with versioning and migration support.
+
+```typescript
+import { signalTree, stored, createStorageKeys, clearStoragePrefix } from '@signaltree/core';
+
+// Basic usage
+const tree = signalTree({
+  theme: stored('app-theme', 'light' as 'light' | 'dark'),
+  lastViewedId: stored('last-viewed', null as number | null),
+});
+
+// Auto-loads from localStorage on init
+// Auto-saves on every .set() or .update()
+tree.$.theme.set('dark'); // Saved to localStorage immediately
+
+// StoredSignal API
+tree.$.theme(); // Get current value
+tree.$.theme.set('light'); // Set and persist
+tree.$.theme.clear(); // Remove from storage, reset to default
+tree.$.theme.reload(); // Force reload from storage
+```
+
+#### Versioning and Migrations
+
+```typescript
+interface SettingsV1 {
+  darkMode: boolean;
+}
+
+interface SettingsV2 {
+  theme: 'light' | 'dark' | 'system';
+  fontSize: number;
+}
+
+const tree = signalTree({
+  settings: stored<SettingsV2>(
+    'user-settings',
+    { theme: 'light', fontSize: 14 },
+    {
+      version: 2,
+      migrate: (oldData, oldVersion) => {
+        if (oldVersion === 1) {
+          // Migrate from V1 to V2
+          const v1 = oldData as SettingsV1;
+          return {
+            theme: v1.darkMode ? 'dark' : 'light',
+            fontSize: 14, // New field with default
+          };
+        }
+        return oldData as SettingsV2;
+      },
+      clearOnMigrationFailure: true, // Clear storage if migration fails
+    }
+  ),
+});
+```
+
+#### Type-Safe Storage Keys
+
+```typescript
+// Create namespaced storage keys
+const STORAGE = createStorageKeys('myApp', {
+  theme: 'theme',
+  user: {
+    settings: 'settings',
+    preferences: 'prefs',
+  },
+} as const);
+
+// STORAGE.theme = "myApp:theme"
+// STORAGE.user.settings = "myApp:user:settings"
+
+const tree = signalTree({
+  theme: stored(STORAGE.theme, 'light'),
+  settings: stored(STORAGE.user.settings, {}),
+});
+
+// Clear all app storage (e.g., on logout)
+clearStoragePrefix('myApp');
+```
+
+#### Advanced Options
+
+```typescript
+stored('key', defaultValue, {
+  version: 1, // Schema version
+  migrate: (old, ver) => migrated, // Migration function
+  debounceMs: 100, // Write debounce (default: 100)
+  storage: sessionStorage, // Custom storage backend
+  serialize: (v) => JSON.stringify(v), // Custom serializer
+  deserialize: (s) => JSON.parse(s), // Custom deserializer
+  clearOnMigrationFailure: false, // Clear on failed migration
+});
+```
+
+### 12) `form(config)` - Tree-Integrated Forms
+
+Creates forms with validation, wizard navigation, and persistence that live inside SignalTree.
+
+```typescript
+import { signalTree, form, validators } from '@signaltree/core';
+
+interface ContactForm {
+  name: string;
+  email: string;
+  phone: string;
+  message: string;
+}
+
+const tree = signalTree({
+  contact: form<ContactForm>({
+    initial: { name: '', email: '', phone: '', message: '' },
+    validators: {
+      name: validators.required('Name is required'),
+      email: [validators.required('Email is required'), validators.email('Invalid email format')],
+      phone: validators.pattern(/^\+?[\d\s-]+$/, 'Invalid phone number'),
+      message: validators.minLength(10, 'Message must be at least 10 characters'),
+    },
+  }),
+});
+
+// FormSignal API - Field access via $
+tree.$.contact.$.name(); // Get field value
+tree.$.contact.$.name.set('Jane'); // Set field value
+tree.$.contact.$.email();
+
+// Form-level operations
+tree.$.contact(); // Get all values: ContactForm
+tree.$.contact.set({ name: 'Jane', email: 'jane@example.com', phone: '', message: '' });
+tree.$.contact.patch({ name: 'Updated' }); // Partial update
+tree.$.contact.reset(); // Reset to initial values
+tree.$.contact.clear(); // Clear all values
+
+// Validation signals
+tree.$.contact.valid(); // Signal<boolean>
+tree.$.contact.dirty(); // Signal<boolean>
+tree.$.contact.submitting(); // Signal<boolean>
+tree.$.contact.touched(); // Signal<Record<keyof T, boolean>>
+tree.$.contact.errors(); // Signal<Partial<Record<keyof T, string>>>
+tree.$.contact.errorList(); // Signal<string[]>
+
+// Validation methods
+await tree.$.contact.validate(); // Validate all fields
+await tree.$.contact.validateField('email');
+tree.$.contact.touch('name'); // Mark field as touched
+tree.$.contact.touchAll(); // Mark all fields as touched
+```
+
+#### Built-in Validators
+
+```typescript
+import { validators } from '@signaltree/core';
+
+validators.required('Field is required')
+validators.minLength(5, 'Min 5 characters')
+validators.maxLength(100, 'Max 100 characters')
+validators.min(0, 'Must be positive')
+validators.max(100, 'Max 100')
+validators.email('Invalid email')
+validators.pattern(/regex/, 'Invalid format')
+
+// Compose multiple validators
+validators: {
+  password: [
+    validators.required('Password is required'),
+    validators.minLength(8, 'Min 8 characters'),
+    validators.pattern(/[A-Z]/, 'Must contain uppercase'),
+    validators.pattern(/[0-9]/, 'Must contain number'),
+  ],
+}
+```
+
+#### Wizard Navigation
+
+```typescript
+const tree = signalTree({
+  listing: form<ListingDraft>({
+    initial: { title: '', description: '', photos: [], price: null, location: '' },
+    validators: {
+      title: validators.required('Title is required'),
+      price: [validators.required('Price required'), validators.min(0, 'Must be positive')],
+      location: validators.required('Location required'),
+    },
+    wizard: {
+      steps: ['details', 'media', 'pricing', 'review'],
+      stepFields: {
+        details: ['title', 'description'],
+        media: ['photos'],
+        pricing: ['price'],
+        review: ['location'],
+      },
+    },
+  }),
+});
+
+// Wizard API
+const wizard = tree.$.listing.wizard!;
+
+wizard.currentStep(); // Signal<number> - 0-based index
+wizard.stepName(); // Signal<string> - current step name
+wizard.steps(); // Signal<string[]> - all step names
+wizard.canNext(); // Signal<boolean>
+wizard.canPrev(); // Signal<boolean>
+wizard.isFirstStep(); // Signal<boolean>
+wizard.isLastStep(); // Signal<boolean>
+
+// Navigation (validates current step before proceeding)
+await wizard.next(); // Returns false if validation fails
+wizard.prev();
+await wizard.goTo(2); // Jump to step by index
+await wizard.goTo('pricing'); // Jump to step by name
+wizard.reset(); // Go back to first step
+```
+
+#### Form Persistence
+
+```typescript
+const tree = signalTree({
+  draft: form<EmailDraft>({
+    initial: { subject: '', body: '', to: '' },
+    persist: 'email-draft', // localStorage key
+    persistDebounceMs: 500, // Debounce writes (default: 500ms)
+    validators: {
+      subject: validators.required('Subject required'),
+      to: validators.email('Invalid email'),
+    },
+  }),
+});
+
+// Form auto-saves to localStorage
+// On page reload, draft is restored automatically
+```
+
+#### Async Validators
+
+```typescript
+const tree = signalTree({
+  registration: form<RegistrationForm>({
+    initial: { username: '', email: '' },
+    validators: {
+      username: validators.minLength(3, 'Min 3 characters'),
+    },
+    asyncValidators: {
+      username: async (value) => {
+        const taken = await api.checkUsername(value);
+        return taken ? 'Username already taken' : null;
+      },
+      email: async (value) => {
+        const exists = await api.checkEmail(value);
+        return exists ? 'Email already registered' : null;
+      },
+    },
+  }),
+});
+```
+
+#### Form Submission
+
+```typescript
+async function handleSubmit() {
+  const contactForm = tree.$.contact;
+
+  // Validate all fields first
+  contactForm.touchAll();
+  const isValid = await contactForm.validate();
+
+  if (!isValid) return;
+
+  // Set submitting state
+  contactForm.setSubmitting(true);
+
+  try {
+    await api.submit(contactForm());
+    contactForm.reset();
+  } catch (error) {
+    // Handle error
+  } finally {
+    contactForm.setSubmitting(false);
+  }
+}
+```
+
 ## Error handling examples
 
 ### Manual async error handling

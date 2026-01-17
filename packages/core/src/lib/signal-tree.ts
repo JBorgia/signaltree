@@ -717,6 +717,8 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
     value: function <TAdded>(
       enhancer: (tree: ISignalTree<TSource>) => ISignalTree<TSource> & TAdded
     ): SignalTreeBuilder<TSource, TAccum> & TAdded {
+      // Finalize markers BEFORE passing to enhancer so form(), entityMap(), etc. are materialized
+      finalize();
       // Apply enhancer to base tree
       const enhanced = baseTree.with(enhancer);
       // Create a new builder wrapping the enhanced tree

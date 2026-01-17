@@ -1,81 +1,129 @@
 # @signaltree/ng-forms
 
-**Tree-structured signal forms for Angular 21+**. When Angular's native signal forms aren't enough—add persistence, wizards, history tracking, and nested state management.
+**Angular FormGroup bridge for SignalTree's `form()` marker**. Adds reactive forms integration, conditional fields, and undo/redo to tree-integrated forms.
 
 **Bundle size: 3.38KB gzipped**
 
-## Why ng-forms?
+## Architecture: form() + formBridge()
 
-Angular 21 introduced native signal forms with `FormField<T>`, which work great for simple, flat forms. **ng-forms is for complex forms** that need:
+SignalTree v7 introduces a layered forms architecture:
 
-### **🌲 Tree-Structured State**
-```typescript
-// Angular 21: Flat fields, no relationships
-const name = formField('');
-const email = formField('');
-
-// ng-forms: Hierarchical structure that mirrors your data model
-const form = createFormTree({
-  user: { name: '', email: '' },
-  address: { street: '', city: '', zip: '' }
-});
-// Access nested: form.$.user.name()
-// Validate paths: 'address.zip'
+```
+@signaltree/core                    @signaltree/ng-forms
+┌─────────────────────────┐         ┌─────────────────────────┐
+│ form() marker           │         │ formBridge()      │
+│ ─────────────────────── │   ───►  │ enhancer that:          │
+│ • Signal-based fields   │         │ • Creates FormGroup     │
+│ • Sync/async validators │         │ • Bidirectional sync    │
+│ • Persistence           │         │ • Conditional fields    │
+│ • Wizard navigation     │         │ • Angular validators    │
+│ • dirty/valid/submitting│         │                         │
+└─────────────────────────┘         │ withFormHistory()       │
+     Works standalone!              │ • Undo/redo             │
+                                    └─────────────────────────┘
 ```
 
-### **💾 Auto-Persistence**
-```typescript
-// Angular 21: No persistence, build it yourself
-// ng-forms: Built-in with debouncing
-const form = createFormTree(initialState, {
-  persistKey: 'checkout-draft',
-  storage: localStorage,
-  persistDebounceMs: 500
-});
-// Auto-saves changes, restores on init
-```
+**Key insight**: `form()` is self-sufficient. `formBridge()` adds Angular-specific capabilities.
 
-### **🧙 Wizard & Multi-Step Forms**
-```typescript
-// Angular 21: Build from scratch
-// ng-forms: First-class wizard support
-const wizard = createWizardForm([
-  { fields: ['profile.name', 'profile.email'] },
-  { fields: ['address.street', 'address.city'] }
-], initialValues);
-wizard.nextStep(); // Automatic field visibility management
-```
+## Quick Start (Recommended Pattern)
 
-### **↩️ History / Undo-Redo**
 ```typescript
-// Angular 21: Not available
-// ng-forms: Built-in
-const form = withFormHistory(createFormTree(initialState));
-form.undo();
-form.redo();
-```
+import { signalTree, form } from '@signaltree/core';
+import { formBridge } from '@signaltree/ng-forms';
 
-### **🔗 Reactive Forms Bridge**
-```typescript
-// Angular 21: New API, migration required
-// ng-forms: Works with existing FormGroup/FormControl
-<form [formGroup]="profile.form" (ngSubmit)="save()">
-  <input formControlName="name" />
-</form>
-// Signals AND reactive forms, incremental migration
-```
+// Define forms in your tree
+const tree = signalTree({
+  checkout: {
+    shipping: form({
+      initial: { name: '', address: '', zip: '' },
+      validators: {
+        zip: (v) => (/^\d{5}$/.test(String(v)) ? null : 'Invalid ZIP'),
+      },
+      persist: 'checkout-shipping',
+    }),
+    payment: form({
+      initial: { card: '', cvv: '' },
+      wizard: { steps: ['card', 'review'] },
+    }),
+  },
+}).with(
+  formBridge({
+    conditionals: [{ when: (v) => v.checkout.sameAsBilling, fields: ['checkout.shipping.*'] }],
+  })
+);
 
-### **⚙️ Declarative Configuration**
-```typescript
-// Angular 21: Per-field imperative setup
-// ng-forms: Centralized, glob-pattern configs
-fieldConfigs: {
-  'email': { validators: [validators.email()], debounceMs: 300 },
-  'payment.card.*': { validators: validators.required() }
+// Use in components
+@Component({
+  template: `
+    <!-- Option 1: Use form() signals directly -->
+    <input [value]="tree.$.checkout.shipping.$.name()" (input)="tree.$.checkout.shipping.$.name.set($event.target.value)" />
+
+    <!-- Option 2: Use Angular FormGroup -->
+    <form [formGroup]="shippingForm">
+      <input formControlName="name" />
+    </form>
+  `,
+})
+class CheckoutComponent {
+  tree = inject(CHECKOUT_TREE);
+
+  // Get the FormGroup bridge
+  shippingForm = this.tree.getAngularForm('checkout.shipping')?.formGroup;
 }
 ```
 
-**Use Angular 21 signal forms for simple forms. Use ng-forms for enterprise apps with complex state, persistence, and workflow requirements.**
+## When to Use Each Layer
+
+### form() alone (no ng-forms needed)
+
+```typescript
+// Pure signal forms - works without Angular forms module
+const tree = signalTree({
+  login: form({
+    initial: { email: '', password: '' },
+    validators: { email: validators.email() },
+  }),
+});
+
+// Full functionality without Angular FormGroup
+tree.$.login.$.email.set('user@test.com');
+tree.$.login.valid(); // Reactive validation
+tree.$.login.validate(); // Trigger validation
+tree.$.login.submit(fn); // Submit handling
+tree.$.login.wizard?.next(); // Wizard navigation (if configured)
+```
+
+**Use when**: SSR, unit tests, simple forms, non-Angular environments
+
+### form() + formBridge()
+
+```typescript
+// Add Angular FormGroup bridge
+const tree = signalTree({
+  profile: form({ initial: { name: '' } }),
+}).with(formBridge());
+
+// Now you get FormGroup access
+const formGroup = tree.getAngularForm('profile')?.formGroup;
+// Or attached directly: (tree.$.profile as any).formGroup
+```
+
+**Use when**: Need `[formGroup]` directives, Angular validators, conditional field disabling
+
+### form() + formBridge() + withFormHistory()
+
+```typescript
+const tree = signalTree({
+  editor: form({ initial: { content: '' } }),
+})
+  .with(formBridge())
+  .with(withFormHistory({ capacity: 50 }));
+
+tree.undo();
+tree.redo();
+```
+
+**Use when**: Complex editors, need undo/redo
 
 ## Installation
 
@@ -175,11 +223,13 @@ The returned `FormTree` exposes:
 **ng-forms complements Angular 21's native signal forms**—use both in the same app:
 
 ### Use Angular 21 `FormField<T>` for:
+
 - ✅ Simple, flat forms (login, search)
 - ✅ Single-field validation
 - ✅ Maximum type safety
 
 ### Use ng-forms `createFormTree()` for:
+
 - ✅ Nested object structures (user + address + payment)
 - ✅ Forms with persistence/auto-save
 - ✅ Wizard/multi-step flows
@@ -188,6 +238,7 @@ The returned `FormTree` exposes:
 - ✅ Migration from reactive forms
 
 ### Hybrid Example: Simple Fields + Complex Tree
+
 ```typescript
 import { formField } from '@angular/forms';
 import { createFormTree } from '@signaltree/ng-forms';
@@ -215,6 +266,7 @@ class CheckoutComponent {
 ```
 
 ### Connecting to Reactive Forms
+
 ```ts
 import { toWritableSignal } from '@signaltree/core';
 
@@ -325,20 +377,82 @@ Use `SignalValueDirective` to keep standalone signals and `ngModel` fields align
 
 ## When to use ng-forms vs Angular 21 signal forms
 
-| Scenario | Recommendation |
-|----------|---------------|
-| Login form (2-3 fields) | ✅ Angular 21 `FormField` |
-| Search bar with filters | ✅ Angular 21 `FormField` |
-| User profile with nested address | ✅ **ng-forms** (tree structure) |
-| Checkout flow (shipping + payment + items) | ✅ **ng-forms** (persistence + wizard) |
-| Multi-step onboarding (5+ steps) | ✅ **ng-forms** (wizard API) |
-| Form with auto-save drafts | ✅ **ng-forms** (built-in persistence) |
-| Complex editor with undo/redo | ✅ **ng-forms** (history tracking) |
-| Migrating from reactive forms | ✅ **ng-forms** (FormGroup bridge) |
-| Dynamic form with conditional fields | ✅ **ng-forms** (conditionals config) |
-| Form synced with global app state | ✅ **ng-forms** (SignalTree integration) |
+| Scenario                                   | Recommendation                           |
+| ------------------------------------------ | ---------------------------------------- |
+| Login form (2-3 fields)                    | ✅ Angular 21 `FormField`                |
+| Search bar with filters                    | ✅ Angular 21 `FormField`                |
+| User profile with nested address           | ✅ **ng-forms** (tree structure)         |
+| Checkout flow (shipping + payment + items) | ✅ **ng-forms** (persistence + wizard)   |
+| Multi-step onboarding (5+ steps)           | ✅ **ng-forms** (wizard API)             |
+| Form with auto-save drafts                 | ✅ **ng-forms** (built-in persistence)   |
+| Complex editor with undo/redo              | ✅ **ng-forms** (history tracking)       |
+| Migrating from reactive forms              | ✅ **ng-forms** (FormGroup bridge)       |
+| Dynamic form with conditional fields       | ✅ **ng-forms** (conditionals config)    |
+| Form synced with global app state          | ✅ **ng-forms** (SignalTree integration) |
 
 **Rule of thumb**: If your form data is a nested object or needs workflow features (persistence/wizards/history), use ng-forms. For simple flat forms, Angular 21's native signal forms are perfect.
+
+## Migration from createFormTree()
+
+`createFormTree()` is deprecated in favor of the composable `form()` + `formBridge()` pattern.
+
+### Before (deprecated)
+
+```typescript
+import { createFormTree } from '@signaltree/ng-forms';
+
+const form = createFormTree(
+  {
+    name: '',
+    email: '',
+  },
+  {
+    validators: { email: validators.email() },
+    persistKey: 'profile-form',
+  }
+);
+
+// Access
+form.$.name.set('John');
+form.form; // FormGroup
+```
+
+### After (recommended)
+
+```typescript
+import { signalTree, form } from '@signaltree/core';
+import { formBridge } from '@signaltree/ng-forms';
+
+const tree = signalTree({
+  profile: form({
+    initial: { name: '', email: '' },
+    validators: { email: validators.email() },
+    persist: 'profile-form',
+  }),
+}).with(formBridge());
+
+// Access
+tree.$.profile.$.name.set('John');
+tree.getAngularForm('profile')?.formGroup; // FormGroup
+// Or: (tree.$.profile as any).formGroup
+```
+
+### Key differences
+
+| Aspect               | createFormTree()        | form() + formBridge()  |
+| -------------------- | ----------------------- | ---------------------------- |
+| **Standalone**       | Always needs Angular    | form() works without Angular |
+| **Tree integration** | Separate from app state | Lives in your main tree      |
+| **DevTools**         | Separate                | Inherits tree DevTools       |
+| **Composability**    | Limited                 | Add enhancers freely         |
+| **Tree-shaking**     | All-or-nothing          | Only what you use            |
+
+### Migration steps
+
+1. Move form state into your SignalTree using `form()` marker
+2. Add `.with(formBridge())` to your tree
+3. Update access patterns: `form.$.field` → `tree.$.formName.$.field`
+4. Update FormGroup access: `form.form` → `tree.getAngularForm('path')?.formGroup`
 
 ## Links
 

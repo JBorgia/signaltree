@@ -1,0 +1,403 @@
+<div class="demo-container">
+  <header class="demo-header">
+    <h1>💾 Stored Versioning Demo</h1>
+    <p>
+      Version your localStorage data with automatic migrations. Never lose user
+      preferences when your data schema changes.
+    </p>
+  </header>
+
+  <!-- Tab Navigation -->
+  <nav class="demo-tabs">
+    <button
+      [class.active]="activeDemo() === 'basic'"
+      (click)="activeDemo.set('basic')"
+    >
+      📦 Basic Versioning
+    </button>
+    <button
+      [class.active]="activeDemo() === 'migration'"
+      (click)="activeDemo.set('migration')"
+    >
+      🔄 Migration Chain
+    </button>
+    <button
+      [class.active]="activeDemo() === 'utilities'"
+      (click)="activeDemo.set('utilities')"
+    >
+      🛠️ Storage Utilities
+    </button>
+  </nav>
+
+  <!-- DEMO 1: Basic Versioning -->
+  @if (activeDemo() === 'basic') {
+  <section class="demo-section">
+    <h2>Basic Versioned Storage</h2>
+    <p class="info-text">
+      ℹ️ Versioned storage wraps data in
+      <code>{{ '{ __v: N, data: T }' }}</code> format. This enables future
+      migrations while maintaining backward compatibility.
+    </p>
+
+    <div class="demo-grid">
+      <div class="form-panel">
+        <div class="demo-card">
+          <h3>Versioned Preferences (v1)</h3>
+
+          <div class="form-field">
+            <label>
+              <input
+                type="checkbox"
+                [ngModel]="basicStore.$.preferences().notifications"
+                (ngModelChange)="updateNotifications($event)"
+              />
+              Enable Notifications
+            </label>
+          </div>
+
+          <div class="form-field">
+            <label for="basic-language">Language</label>
+            <select
+              id="basic-language"
+              [ngModel]="basicStore.$.preferences().language"
+              (ngModelChange)="updateLanguage($event)"
+            >
+              @for (lang of languages; track lang) {
+              <option [value]="lang">{{ lang | uppercase }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="current-value">
+            <strong>In-memory:</strong>
+            <code>{{ basicStore.$.preferences() | json }}</code>
+          </div>
+
+          <div class="storage-value">
+            <strong>In localStorage:</strong>
+            <code>{{
+              '{ __v: 1, data: ' + (basicStore.$.preferences() | json) + ' }'
+            }}</code>
+          </div>
+
+          <div class="form-actions">
+            <button
+              class="btn-secondary"
+              (click)="basicStore.$.preferences.reload()"
+            >
+              🔄 Reload
+            </button>
+            <button
+              class="btn-danger"
+              (click)="basicStore.$.preferences.clear()"
+            >
+              🗑️ Clear
+            </button>
+          </div>
+        </div>
+
+        <div class="demo-card">
+          <h3>Simple Counter (No Version)</h3>
+
+          <div class="counter-display">
+            <button class="btn-icon" (click)="decrementCounter()">−</button>
+            <span class="counter-value">{{
+              basicStore.$.simpleCounter()
+            }}</span>
+            <button class="btn-icon" (click)="incrementCounter()">+</button>
+          </div>
+
+          <div class="storage-value">
+            <strong>In localStorage:</strong>
+            <code>{{ basicStore.$.simpleCounter() }}</code>
+            <span class="note">(raw value, no wrapper)</span>
+          </div>
+
+          <div class="form-actions">
+            <button
+              class="btn-secondary"
+              (click)="basicStore.$.simpleCounter.reload()"
+            >
+              🔄 Reload
+            </button>
+            <button
+              class="btn-danger"
+              (click)="basicStore.$.simpleCounter.clear()"
+            >
+              🗑️ Reset to 0
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-panel">
+        <h3>Code</h3>
+        <pre><code>{{ basicVersioningCode }}</code></pre>
+      </div>
+    </div>
+  </section>
+  }
+
+  <!-- DEMO 2: Migration Chain -->
+  @if (activeDemo() === 'migration') {
+  <section class="demo-section">
+    <h2>Migration Chain Demo</h2>
+    <p class="info-text">
+      ℹ️ Test migrations by simulating old data formats. Click "Simulate V1/V2
+      Data" then "Reload" to see automatic migration to V3.
+    </p>
+
+    <div class="demo-grid">
+      <div class="form-panel">
+        <div class="demo-card">
+          <h3>Current Settings (V3)</h3>
+
+          <div class="settings-group">
+            <h4>🎨 Appearance</h4>
+
+            <fieldset class="form-field">
+              <legend>Theme</legend>
+              <div class="theme-options">
+                @for (theme of themeOptions; track theme) {
+                <button
+                  type="button"
+                  [attr.aria-pressed]="
+                    migrationStore.$.settings().appearance.theme === theme
+                  "
+                  [class.active]="
+                    migrationStore.$.settings().appearance.theme === theme
+                  "
+                  (click)="updateTheme(theme)"
+                >
+                  {{ theme | titlecase }}
+                </button>
+                }
+              </div>
+            </fieldset>
+
+            <div class="form-field">
+              <label for="font-size-range"
+                >Font Size:
+                {{ migrationStore.$.settings().appearance.fontSize }}px</label
+              >
+              <input
+                id="font-size-range"
+                type="range"
+                min="12"
+                max="24"
+                [ngModel]="migrationStore.$.settings().appearance.fontSize"
+                (ngModelChange)="updateFontSize($event)"
+              />
+            </div>
+
+            <div class="form-field">
+              <label for="font-family-select">Font Family</label>
+              <select
+                id="font-family-select"
+                [ngModel]="migrationStore.$.settings().appearance.fontFamily"
+                (ngModelChange)="updateFontFamily($event)"
+              >
+                @for (font of fontFamilies; track font) {
+                <option [value]="font">{{ font }}</option>
+                }
+              </select>
+            </div>
+
+            <fieldset class="form-field">
+              <legend>Accent Color</legend>
+              <div class="color-options">
+                @for (color of accentColors; track color) {
+                <button
+                  type="button"
+                  class="color-swatch"
+                  [style.background-color]="color"
+                  [attr.aria-label]="'Select accent color ' + color"
+                  [attr.aria-pressed]="
+                    migrationStore.$.settings().appearance.accentColor === color
+                  "
+                  [class.active]="
+                    migrationStore.$.settings().appearance.accentColor === color
+                  "
+                  (click)="updateAccentColor(color)"
+                ></button>
+                }
+              </div>
+            </fieldset>
+          </div>
+
+          <div class="settings-group">
+            <h4>♿ Accessibility</h4>
+
+            <div class="form-field">
+              <label>
+                <input
+                  type="checkbox"
+                  [ngModel]="
+                    migrationStore.$.settings().accessibility.reduceMotion
+                  "
+                  (ngModelChange)="updateReduceMotion($event)"
+                />
+                Reduce Motion
+              </label>
+            </div>
+
+            <div class="form-field">
+              <label>
+                <input
+                  type="checkbox"
+                  [ngModel]="
+                    migrationStore.$.settings().accessibility.highContrast
+                  "
+                  (ngModelChange)="updateHighContrast($event)"
+                />
+                High Contrast
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="demo-card migration-controls">
+          <h3>🧪 Migration Testing</h3>
+
+          <div class="button-group">
+            <button class="btn-warning" (click)="simulateV1Data()">
+              Simulate V1 Data
+            </button>
+            <button class="btn-warning" (click)="simulateV2Data()">
+              Simulate V2 Data
+            </button>
+            <button class="btn-primary" (click)="reloadSettings()">
+              🔄 Reload (Run Migration)
+            </button>
+          </div>
+
+          <div class="migration-log">
+            <div class="log-header">
+              <strong>Migration Log</strong>
+              <button class="btn-small" (click)="clearMigrationLog()">
+                Clear
+              </button>
+            </div>
+            <div class="log-entries">
+              @for (entry of migrationLog(); track entry) {
+              <div class="log-entry">{{ entry }}</div>
+              } @empty {
+              <div class="log-empty">
+                No migrations yet. Try simulating old data.
+              </div>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-panel">
+        <h3>Code</h3>
+        <pre><code>{{ migrationCode }}</code></pre>
+      </div>
+    </div>
+  </section>
+  }
+
+  <!-- DEMO 3: Storage Utilities -->
+  @if (activeDemo() === 'utilities') {
+  <section class="demo-section">
+    <h2>Storage Key Utilities</h2>
+    <p class="info-text">
+      ℹ️ Use <code>createStorageKeys()</code> to namespace keys and
+      <code>clearStoragePrefix()</code> to bulk-clear.
+    </p>
+
+    <div class="demo-grid">
+      <div class="form-panel">
+        <div class="demo-card">
+          <h3>User Settings</h3>
+
+          <div class="form-field">
+            <label for="util-name">Name</label>
+            <input
+              id="util-name"
+              type="text"
+              [ngModel]="utilitiesStore.$.user.profile().name"
+              (ngModelChange)="updateProfileName($event)"
+              placeholder="Your name"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="util-avatar">Avatar URL</label>
+            <input
+              id="util-avatar"
+              type="text"
+              [ngModel]="utilitiesStore.$.user.profile().avatar"
+              (ngModelChange)="updateProfileAvatar($event)"
+              placeholder="https://..."
+            />
+          </div>
+
+          <div class="form-field">
+            <label>
+              <input
+                type="checkbox"
+                [ngModel]="utilitiesStore.$.user.settings().darkMode"
+                (ngModelChange)="updateDarkMode($event)"
+              />
+              Dark Mode
+            </label>
+          </div>
+        </div>
+
+        <div class="demo-card">
+          <h3>Cache Data</h3>
+
+          <div class="cache-info">
+            <strong>Last Fetch:</strong>
+            {{ utilitiesStore.$.cache.lastFetch() || 'Never' }}
+          </div>
+
+          <div class="cache-items">
+            @for (item of utilitiesStore.$.cache.data(); track item) {
+            <div class="cache-item">{{ item }}</div>
+            } @empty {
+            <div class="cache-empty">No cached items</div>
+            }
+          </div>
+
+          <button class="btn-primary" (click)="addCacheItem()">
+            ➕ Add Cache Item
+          </button>
+        </div>
+
+        <div class="demo-card">
+          <h3>Storage Keys</h3>
+
+          <div class="key-section">
+            <h4>Keys with "myapp-" prefix:</h4>
+            <div class="key-list">
+              @for (key of prefixedKeys(); track key) {
+              <code class="storage-key">{{ key }}</code>
+              } @empty {
+              <span class="no-keys">No keys found</span>
+              }
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn-secondary" (click)="refreshStorageKeys()">
+              🔄 Refresh Keys
+            </button>
+            <button class="btn-danger" (click)="clearAllMyAppStorage()">
+              🗑️ Clear All "myapp-" Keys
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-panel">
+        <h3>Code</h3>
+        <pre><code>{{ utilitiesCode }}</code></pre>
+      </div>
+    </div>
+  </section>
+  }
+</div>

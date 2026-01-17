@@ -1,12 +1,7 @@
 import { Assert, Equals } from '../test-helpers/types-equals';
 import { entities } from './entities';
 
-import type {
-  ISignalTree,
-  EntitiesEnabled,
-  EntityMapMarker,
-  entityMap,
-} from '../../lib/types';
+import type { EntityMapMarker, entityMap } from '../../lib/types';
 
 // The `entities` enhancer factory was removed in v7. Keep a minimal
 // compile-time check that `entities` exists but do not assert the old
@@ -23,10 +18,12 @@ interface User {
   name: string;
 }
 
-type UserMapMarker = ReturnType<typeof entityMap<User, string>>;
-type _MarkerCheck = Assert<
-  Equals<UserMapMarker, EntityMapMarker<User, string>>
->;
+type UserMapBuilder = ReturnType<typeof entityMap<User, string>>;
+// Builder extends EntityMapMarker, so this should be assignable
+type _MarkerCheck = UserMapBuilder extends EntityMapMarker<User, string>
+  ? true
+  : false;
+type _MarkerAssert = Assert<_MarkerCheck>;
 
 // Note: Direct calls like `entities()(tree)` don't infer types correctly
 // with the two-type-parameter pattern. In practice, enhancers are always

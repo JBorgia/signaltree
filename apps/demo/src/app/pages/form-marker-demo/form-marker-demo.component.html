@@ -1,0 +1,517 @@
+<div class="demo-container">
+  <header class="demo-header">
+    <h1>🏗️ Form Marker Demo</h1>
+    <p>
+      Tree-integrated forms with validation, wizard navigation, and persistence.
+      Forms live inside SignalTree, inheriting batching, DevTools visibility,
+      and more.
+    </p>
+  </header>
+
+  <!-- Tab Navigation -->
+  <nav class="demo-tabs">
+    <button
+      [class.active]="activeDemo() === 'basic'"
+      (click)="activeDemo.set('basic')"
+    >
+      📝 Basic Validation
+    </button>
+    <button
+      [class.active]="activeDemo() === 'wizard'"
+      (click)="activeDemo.set('wizard')"
+    >
+      🧙 Wizard Form
+    </button>
+    <button
+      [class.active]="activeDemo() === 'persistence'"
+      (click)="activeDemo.set('persistence')"
+    >
+      💾 Persistence
+    </button>
+  </nav>
+
+  <!-- DEMO 1: Basic Validation -->
+  @if (activeDemo() === 'basic') {
+  <section class="demo-section">
+    <h2>Contact Form with Validation</h2>
+
+    <div class="demo-grid">
+      <div class="form-panel">
+        <form (ngSubmit)="submitContact()" class="demo-form">
+          <!-- Name Field -->
+          <div
+            class="form-field"
+            [class.has-error]="contactForm.errors()['name']"
+          >
+            <label for="name">Name *</label>
+            <input
+              id="name"
+              type="text"
+              [ngModel]="contactForm.$.name()"
+              (ngModelChange)="contactForm.$.name.set($event)"
+              (blur)="contactForm.touch('name')"
+              name="name"
+              placeholder="Your name"
+            />
+            @if (contactForm.touched()['name'] && contactForm.errors()['name'])
+            {
+            <span class="error">{{ contactForm.errors()['name'] }}</span>
+            }
+          </div>
+
+          <!-- Email Field -->
+          <div
+            class="form-field"
+            [class.has-error]="contactForm.errors()['email']"
+          >
+            <label for="email">Email *</label>
+            <input
+              id="email"
+              type="email"
+              [ngModel]="contactForm.$.email()"
+              (ngModelChange)="contactForm.$.email.set($event)"
+              (blur)="contactForm.touch('email')"
+              name="email"
+              placeholder="you@example.com"
+            />
+            @if (contactForm.touched()['email'] &&
+            contactForm.errors()['email']) {
+            <span class="error">{{ contactForm.errors()['email'] }}</span>
+            }
+          </div>
+
+          <!-- Phone Field -->
+          <div
+            class="form-field"
+            [class.has-error]="contactForm.errors()['phone']"
+          >
+            <label for="phone">Phone</label>
+            <input
+              id="phone"
+              type="tel"
+              [ngModel]="contactForm.$.phone()"
+              (ngModelChange)="contactForm.$.phone.set($event)"
+              (blur)="contactForm.touch('phone')"
+              name="phone"
+              placeholder="+1 (555) 123-4567"
+            />
+            @if (contactForm.touched()['phone'] &&
+            contactForm.errors()['phone']) {
+            <span class="error">{{ contactForm.errors()['phone'] }}</span>
+            }
+          </div>
+
+          <!-- Message Field -->
+          <div
+            class="form-field"
+            [class.has-error]="contactForm.errors()['message']"
+          >
+            <label for="message">Message *</label>
+            <textarea
+              id="message"
+              [ngModel]="contactForm.$.message()"
+              (ngModelChange)="contactForm.$.message.set($event)"
+              (blur)="contactForm.touch('message')"
+              name="message"
+              rows="4"
+              placeholder="Your message..."
+            ></textarea>
+            @if (contactForm.touched()['message'] &&
+            contactForm.errors()['message']) {
+            <span class="error">{{ contactForm.errors()['message'] }}</span>
+            }
+          </div>
+
+          <div class="form-actions">
+            <button
+              type="submit"
+              class="btn-primary"
+              [disabled]="!contactForm.valid() || contactForm.submitting()"
+            >
+              @if (contactForm.submitting()) { ⏳ Sending... } @else { 📤 Send
+              Message }
+            </button>
+            <button
+              type="button"
+              class="btn-secondary"
+              (click)="contactForm.reset()"
+            >
+              Reset
+            </button>
+          </div>
+        </form>
+
+        <!-- Form State Panel -->
+        <div class="state-panel">
+          <h3>Form State</h3>
+          <dl>
+            <dt>Valid:</dt>
+            <dd
+              [class.success]="contactForm.valid()"
+              [class.error]="!contactForm.valid()"
+            >
+              {{ contactForm.valid() }}
+            </dd>
+            <dt>Dirty:</dt>
+            <dd>{{ contactForm.dirty() }}</dd>
+            <dt>Submitting:</dt>
+            <dd>{{ contactForm.submitting() }}</dd>
+            <dt>Errors:</dt>
+            <dd>{{ contactForm.errorList().length }} field(s)</dd>
+          </dl>
+          @if (contactForm.errorList().length) {
+          <ul class="error-list">
+            @for (error of contactForm.errorList(); track error) {
+            <li>{{ error }}</li>
+            }
+          </ul>
+          }
+        </div>
+      </div>
+
+      <div class="code-panel">
+        <h3>Code</h3>
+        <pre><code>{{ basicFormCode }}</code></pre>
+      </div>
+    </div>
+  </section>
+  }
+
+  <!-- DEMO 2: Wizard Form -->
+  @if (activeDemo() === 'wizard') {
+  <section class="demo-section">
+    <h2>Multi-Step Listing Wizard</h2>
+
+    <div class="wizard-container">
+      <!-- Step Progress -->
+      <div class="wizard-progress">
+        @for (step of listingForm.wizard!.steps(); track step; let i = $index) {
+        <div
+          class="step-indicator"
+          [class.active]="i === listingForm.wizard!.currentStep()"
+          [class.completed]="i < listingForm.wizard!.currentStep()"
+        >
+          <span class="step-number">{{ i + 1 }}</span>
+          <span class="step-name">{{ step | titlecase }}</span>
+        </div>
+        }
+      </div>
+
+      <!-- Step Content -->
+      <div class="wizard-content">
+        @switch (listingForm.wizard!.stepName()) { @case ('details') {
+        <div class="step-panel">
+          <h3>📝 Listing Details</h3>
+
+          <div class="form-field">
+            <label for="listing-title">Title *</label>
+            <input
+              id="listing-title"
+              type="text"
+              [ngModel]="listingForm.$.title()"
+              (ngModelChange)="listingForm.$.title.set($event)"
+              (blur)="listingForm.touch('title')"
+              placeholder="What are you selling?"
+            />
+            @if (listingForm.errors()['title']) {
+            <span class="error">{{ listingForm.errors()['title'] }}</span>
+            }
+          </div>
+
+          <div class="form-field">
+            <label for="listing-description">Description</label>
+            <textarea
+              id="listing-description"
+              [ngModel]="listingForm.$.description()"
+              (ngModelChange)="listingForm.$.description.set($event)"
+              (blur)="listingForm.touch('description')"
+              rows="4"
+              placeholder="Describe your item in detail..."
+            ></textarea>
+            @if (listingForm.errors()['description']) {
+            <span class="error">{{ listingForm.errors()['description'] }}</span>
+            }
+          </div>
+
+          <div class="form-field">
+            <label for="listing-category">Category *</label>
+            <select
+              id="listing-category"
+              [ngModel]="listingForm.$.category()"
+              (ngModelChange)="listingForm.$.category.set($event)"
+            >
+              <option value="">Select a category</option>
+              @for (cat of categoryOptions; track cat) {
+              <option [value]="cat">{{ cat }}</option>
+              }
+            </select>
+            @if (listingForm.errors()['category']) {
+            <span class="error">{{ listingForm.errors()['category'] }}</span>
+            }
+          </div>
+        </div>
+        } @case ('media') {
+        <div class="step-panel">
+          <h3>📸 Photos</h3>
+
+          <div class="photo-grid">
+            @for (photo of listingForm.$.photos(); track photo; let i = $index)
+            {
+            <div class="photo-item">
+              <img [src]="photo" alt="Photo {{ i + 1 }}" />
+              <button class="remove-btn" (click)="removePhoto(i)">×</button>
+            </div>
+            }
+            <button class="add-photo-btn" (click)="addMockPhoto()">
+              <span>+</span>
+              <span>Add Photo</span>
+            </button>
+          </div>
+          <p class="help-text">
+            Add up to 10 photos. Click "Add Photo" to add mock images.
+          </p>
+        </div>
+        } @case ('pricing') {
+        <div class="step-panel">
+          <h3>💰 Pricing & Condition</h3>
+
+          <div class="form-field">
+            <label for="listing-price">Price *</label>
+            <div class="price-input">
+              <span class="currency">$</span>
+              <input
+                id="listing-price"
+                type="number"
+                [ngModel]="listingForm.$.price()"
+                (ngModelChange)="listingForm.$.price.set($event)"
+                (blur)="listingForm.touch('price')"
+                min="0"
+                step="0.01"
+              />
+            </div>
+            @if (listingForm.errors()['price']) {
+            <span class="error">{{ listingForm.errors()['price'] }}</span>
+            }
+          </div>
+
+          <fieldset class="form-field">
+            <legend>Condition</legend>
+            <div class="condition-options">
+              @for (cond of conditionOptions; track cond) {
+              <label class="radio-option">
+                <input
+                  type="radio"
+                  [value]="cond"
+                  [checked]="listingForm.$.condition() === cond"
+                  (change)="listingForm.$.condition.set(cond)"
+                />
+                <span>{{ cond | titlecase }}</span>
+              </label>
+              }
+            </div>
+          </fieldset>
+
+          <fieldset class="form-field">
+            <legend>Shipping Options</legend>
+            <div class="checkbox-group">
+              @for (opt of shippingOptions; track opt) {
+              <label class="checkbox-option">
+                <input
+                  type="checkbox"
+                  [checked]="listingForm.$.shippingOptions().includes(opt)"
+                  (change)="toggleShipping(opt)"
+                />
+                <span>{{ opt }}</span>
+              </label>
+              }
+            </div>
+          </fieldset>
+        </div>
+        } @case ('review') {
+        <div class="step-panel">
+          <h3>✅ Review & Publish</h3>
+
+          <div class="form-field">
+            <label for="listing-location">Location *</label>
+            <input
+              id="listing-location"
+              type="text"
+              [ngModel]="listingForm.$.location()"
+              (ngModelChange)="listingForm.$.location.set($event)"
+              (blur)="listingForm.touch('location')"
+              placeholder="City, State"
+            />
+            @if (listingForm.errors()['location']) {
+            <span class="error">{{ listingForm.errors()['location'] }}</span>
+            }
+          </div>
+
+          <div class="review-summary">
+            <h4>Listing Summary</h4>
+            <dl>
+              <dt>Title:</dt>
+              <dd>{{ listingForm.$.title() || '(not set)' }}</dd>
+              <dt>Category:</dt>
+              <dd>{{ listingForm.$.category() || '(not set)' }}</dd>
+              <dt>Price:</dt>
+              <dd>${{ listingForm.$.price() | number : '1.2-2' }}</dd>
+              <dt>Condition:</dt>
+              <dd>{{ listingForm.$.condition() | titlecase }}</dd>
+              <dt>Photos:</dt>
+              <dd>{{ listingForm.$.photos().length }} photo(s)</dd>
+              <dt>Shipping:</dt>
+              <dd>
+                {{
+                  listingForm.$.shippingOptions().join(', ') || 'None selected'
+                }}
+              </dd>
+            </dl>
+          </div>
+        </div>
+        } }
+      </div>
+
+      <!-- Wizard Navigation -->
+      <div class="wizard-nav">
+        <button
+          class="btn-secondary"
+          [disabled]="!listingForm.wizard!.canPrev()"
+          (click)="listingForm.wizard!.prev()"
+        >
+          ← Previous
+        </button>
+
+        <span class="step-counter">
+          Step {{ listingForm.wizard!.currentStep() + 1 }} of
+          {{ listingForm.wizard!.steps().length }}
+        </span>
+
+        @if (listingForm.wizard!.isLastStep()) {
+        <button
+          class="btn-primary"
+          [disabled]="!listingForm.valid() || listingForm.submitting()"
+          (click)="publishListing()"
+        >
+          @if (listingForm.submitting()) { ⏳ Publishing... } @else { 🚀 Publish
+          Listing }
+        </button>
+        } @else {
+        <button
+          class="btn-primary"
+          [disabled]="!listingForm.wizard!.canNext()"
+          (click)="listingForm.wizard!.next()"
+        >
+          Next →
+        </button>
+        }
+      </div>
+    </div>
+
+    <div class="code-panel">
+      <h3>Code</h3>
+      <pre><code>{{ wizardCode }}</code></pre>
+    </div>
+  </section>
+  }
+
+  <!-- DEMO 3: Persistence -->
+  @if (activeDemo() === 'persistence') {
+  <section class="demo-section">
+    <h2>Persistent Email Draft</h2>
+    <p class="info-text">
+      ℹ️ This form auto-saves to localStorage. Close the tab and come back -
+      your draft will be restored!
+    </p>
+
+    <div class="demo-grid">
+      <div class="form-panel">
+        <div class="demo-form">
+          <div class="form-field">
+            <label for="draft-subject">Subject *</label>
+            <input
+              id="draft-subject"
+              type="text"
+              [ngModel]="draftForm.$.subject()"
+              (ngModelChange)="draftForm.$.subject.set($event)"
+              (blur)="draftForm.touch('subject')"
+              placeholder="Email subject..."
+            />
+            @if (draftForm.errors()['subject']) {
+            <span class="error">{{ draftForm.errors()['subject'] }}</span>
+            }
+          </div>
+
+          <div class="form-field">
+            <label for="draft-body">Body</label>
+            <textarea
+              id="draft-body"
+              [ngModel]="draftForm.$.body()"
+              (ngModelChange)="draftForm.$.body.set($event)"
+              (blur)="draftForm.touch('body')"
+              rows="6"
+              placeholder="Write your email..."
+            ></textarea>
+            @if (draftForm.errors()['body']) {
+            <span class="error">{{ draftForm.errors()['body'] }}</span>
+            }
+          </div>
+
+          <div class="form-field">
+            <label for="draft-tags">Tags</label>
+            <div class="tag-input">
+              <input
+                id="draft-tags"
+                type="text"
+                [ngModel]="tagInput()"
+                (ngModelChange)="tagInput.set($event)"
+                (keyup.enter)="addTag()"
+                placeholder="Add tag..."
+              />
+              <button type="button" (click)="addTag()">Add</button>
+            </div>
+            <div class="tags">
+              @for (tag of draftForm.$.tags(); track tag) {
+              <span class="tag">
+                {{ tag }}
+                <button (click)="removeTag(tag)">×</button>
+              </span>
+              }
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn-primary" (click)="draftForm.persistNow()">
+              💾 Save Now
+            </button>
+            <button class="btn-secondary" (click)="draftForm.reload()">
+              🔄 Reload from Storage
+            </button>
+            <button class="btn-danger" (click)="clearDraft()">
+              🗑️ Clear Draft
+            </button>
+          </div>
+        </div>
+
+        <div class="state-panel">
+          <h3>Persistence State</h3>
+          <dl>
+            <dt>Storage Key:</dt>
+            <dd><code>signaltree-demo-email-draft</code></dd>
+            <dt>Dirty:</dt>
+            <dd>{{ draftForm.dirty() }}</dd>
+            <dt>Current Values:</dt>
+            <dd>
+              <pre>{{ draftForm() | json }}</pre>
+            </dd>
+          </dl>
+        </div>
+      </div>
+
+      <div class="code-panel">
+        <h3>Code</h3>
+        <pre><code>{{ persistenceCode }}</code></pre>
+      </div>
+    </div>
+  </section>
+  }
+</div>

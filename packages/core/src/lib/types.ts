@@ -1,5 +1,6 @@
 import { Signal, WritableSignal } from '@angular/core';
 
+import { FormMarker, FormSignal } from './markers/form';
 import { StatusMarker, StatusSignal } from './markers/status';
 import { StoredMarker, StoredSignal } from './markers/stored';
 import { SecurityValidatorConfig } from './security/security-validator';
@@ -76,7 +77,7 @@ export interface NodeAccessor<T> {
 // enhancer or helper used a different generic parameter name. Relax the
 // index signature to permit dynamic string indexing while still preserving
 // the mapped keys for better editor DX.
-// Default TreeNode maps known keys to either EntitySignal, StatusSignal, StoredSignal,
+// Default TreeNode maps known keys to either EntitySignal, StatusSignal, StoredSignal, FormSignal,
 // or CallableWritableSignal and still allows dynamic string indexing at runtime.
 export type TreeNode<T> = {
   [K in keyof T]: T[K] extends EntityMapMarker<infer E, infer Key>
@@ -85,6 +86,8 @@ export type TreeNode<T> = {
     ? StatusSignal<Err>
     : T[K] extends StoredMarker<infer V>
     ? StoredSignal<V>
+    : T[K] extends FormMarker<infer F>
+    ? FormSignal<F>
     : T[K] extends Primitive
     ? CallableWritableSignal<T[K]>
     : T[K] extends readonly unknown[]

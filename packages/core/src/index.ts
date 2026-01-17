@@ -103,10 +103,30 @@ export {
 export {
   stored,
   isStoredMarker,
+  createStorageKeys,
+  clearStoragePrefix,
   type StoredMarker,
   type StoredSignal,
   type StoredOptions,
 } from './lib/markers/stored';
+
+// Form marker (v7.2) - tree-integrated forms with validation
+export {
+  form,
+  isFormMarker,
+  createFormSignal,
+  validators,
+  FORM_MARKER,
+  type FormMarker,
+  type FormSignal,
+  type FormConfig,
+  type FormFields,
+  type FormWizard,
+  type WizardConfig,
+  type WizardStepConfig,
+  type Validator,
+  type AsyncValidator,
+} from './lib/markers/form';
 
 // Marker processing (v7) - extensibility
 export { registerMarkerProcessor } from './lib/internals/materialize-markers';

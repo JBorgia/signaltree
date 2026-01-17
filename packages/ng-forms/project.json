@@ -21,7 +21,10 @@
         "tsConfig": "packages/ng-forms/tsconfig.lib.prod.json",
         "outputPath": "dist/packages/ng-forms",
         "format": ["esm"],
-        "additionalEntryPoints": ["packages/ng-forms/src/audit/index.ts"],
+        "additionalEntryPoints": [
+          "packages/ng-forms/src/audit/index.ts",
+          "packages/ng-forms/src/enhancer/index.ts"
+        ],
         "assets": [
           { "input": "packages/ng-forms", "glob": "README.md", "output": "." },
           {

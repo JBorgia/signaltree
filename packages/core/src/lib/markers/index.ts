@@ -9,6 +9,7 @@
  * - entityMap<T, K>() - Normalized entity collections with CRUD
  * - status() - Async operation state (loading, error, helpers)
  * - stored(key, default) - Auto-sync to localStorage
+ * - form<T>(config) - Tree-integrated forms with validation, wizard, persistence
  *
  * Note: derived() function was removed in v6.3.1 - use computed() directly
  */
@@ -38,8 +39,29 @@ export {
   stored,
   isStoredMarker,
   createStoredSignal,
+  createStorageKeys,
+  clearStoragePrefix,
   STORED_MARKER,
   type StoredMarker,
   type StoredSignal,
   type StoredOptions,
+  type MigrationFn,
 } from './stored';
+
+// Form marker - tree-integrated forms (v7.2)
+export {
+  form,
+  isFormMarker,
+  createFormSignal,
+  validators,
+  FORM_MARKER,
+  type FormMarker,
+  type FormSignal,
+  type FormConfig,
+  type FormFields,
+  type FormWizard,
+  type WizardConfig,
+  type WizardStepConfig,
+  type Validator,
+  type AsyncValidator,
+} from './form';

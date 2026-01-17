@@ -110,6 +110,33 @@ export class HomeComponent {
       category: 'Advanced',
       cta: 'Read Documentation →',
     },
+    // V7 Feature Demos
+    {
+      title: '🏗️ Form Marker',
+      description:
+        'Tree-integrated forms with validation, wizard navigation, and persistence',
+      route: '/form-marker',
+      category: 'V7 Features',
+      highlight: true,
+      cta: 'Try Form Marker →',
+    },
+    {
+      title: '💾 Stored Versioning',
+      description:
+        'Version your localStorage data with automatic schema migrations',
+      route: '/stored-versioning',
+      category: 'V7 Features',
+      cta: 'Try Versioning →',
+    },
+    {
+      title: '🔴 Realtime Sync',
+      description:
+        'Live data synchronization with entityMaps via adapters (Supabase, etc.)',
+      route: '/realtime',
+      category: 'V7 Features',
+      highlight: true,
+      cta: 'Try Realtime →',
+    },
     {
       title: '📝 Forms Integration',
       description:

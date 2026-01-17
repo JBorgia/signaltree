@@ -431,6 +431,22 @@ importers:
         specifier: ^15.0.3
         version: 15.0.3(45edbe73b3cd3ab52d34bff115328169)
 
+  packages/realtime:
+    dependencies:
+      '@angular/core':
+        specifier: ^20.0.0
+        version: 20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1)
+      '@signaltree/core':
+        specifier: ^7.0.0
+        version: 7.1.6(@angular/compiler@20.3.11)(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(@angular/platform-browser-dynamic@20.3.11(@angular/common@20.3.11(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/compiler@20.3.11)(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(@angular/platform-browser@20.3.11(@angular/common@20.3.11(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))))(tslib@2.8.1)(vitest@2.1.9)(zone.js@0.15.1)
+      tslib:
+        specifier: ^2.0.0
+        version: 2.8.1
+    devDependencies:
+      '@supabase/supabase-js':
+        specifier: ^2.49.0
+        version: 2.90.1
+
   packages/shared:
     dependencies:
       tslib:
@@ -3635,6 +3651,25 @@ packages:
   '@shikijs/vscode-textmate@10.0.2':
     resolution: {integrity: sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==}
 
+  '@signaltree/core@7.1.6':
+    resolution: {integrity: sha512-roE11ZGPbNjMsOkOfSKS1/YAD7ce3mfQ1QCnHiX4NaA8FoyEwHPWanbUGWiFiDSQXOh+YZfhB0WdPUkO1+i/5g==}
+    peerDependencies:
+      '@angular/compiler': ^20.0.0
+      '@angular/core': ^20.0.0
+      '@angular/platform-browser-dynamic': ^20.0.0
+      tslib: ^2.0.0
+      vitest: ^2.0.0
+      zone.js: ^0.15.0
+    peerDependenciesMeta:
+      '@angular/compiler':
+        optional: true
+      '@angular/platform-browser-dynamic':
+        optional: true
+      vitest:
+        optional: true
+      zone.js:
+        optional: true
+
   '@sigstore/bundle@3.1.0':
     resolution: {integrity: sha512-Mm1E3/CmDDCz3nDhFKTuYdB47EdRFRQMOE/EAbiG1MJW77/w1b3P7Qx7JSrVJs8PfwOLOVcKQCHErIwCTyPbag==}
     engines: {node: ^18.17.0 || >=20.5.0}
@@ -3674,6 +3709,30 @@ packages:
 
   '@sinonjs/fake-timers@13.0.5':
     resolution: {integrity: sha512-36/hTbH2uaWuGVERyC6da9YwGWnzUZXuPro/F2LfsdOsLnCojz/iSH8MxUt/FD2S5XBSVPhmArFUXcpCQ2Hkiw==}
+
+  '@supabase/auth-js@2.90.1':
+    resolution: {integrity: sha512-vxb66dgo6h3yyPbR06735Ps+dK3hj0JwS8w9fdQPVZQmocSTlKUW5MfxSy99mN0XqCCuLMQ3jCEiIIUU23e9ng==}
+    engines: {node: '>=20.0.0'}
+
+  '@supabase/functions-js@2.90.1':
+    resolution: {integrity: sha512-x9mV9dF1Lam9qL3zlpP6mSM5C9iqMPtF5B/tU1Jj/F0ufX5mjDf9ghVBaErVxmrQJRL4+iMKWKY2GnODkpS8tw==}
+    engines: {node: '>=20.0.0'}
+
+  '@supabase/postgrest-js@2.90.1':
+    resolution: {integrity: sha512-jh6vqzaYzoFn3raaC0hcFt9h+Bt+uxNRBSdc7PfToQeRGk7PDPoweHsbdiPWREtDVTGKfu+PyPW9e2jbK+BCgQ==}
+    engines: {node: '>=20.0.0'}
+
+  '@supabase/realtime-js@2.90.1':
+    resolution: {integrity: sha512-PWbnEMkcQRuor8jhObp4+Snufkq8C6fBp+MchVp2qBPY1NXk/c3Iv3YyiFYVzo0Dzuw4nAlT4+ahuPggy4r32w==}
+    engines: {node: '>=20.0.0'}
+
+  '@supabase/storage-js@2.90.1':
+    resolution: {integrity: sha512-GHY+Ps/K/RBfRj7kwx+iVf2HIdqOS43rM2iDOIDpapyUnGA9CCBFzFV/XvfzznGykd//z2dkGZhlZZprsVFqGg==}
+    engines: {node: '>=20.0.0'}
+
+  '@supabase/supabase-js@2.90.1':
+    resolution: {integrity: sha512-U8KaKGLUgTIFHtwEW1dgw1gK7XrdpvvYo7nzzqPx721GqPe8WZbAiLh/hmyKLGBYQ/mmQNr20vU9tWSDZpii3w==}
+    engines: {node: '>=20.0.0'}
 
   '@swc-node/core@1.14.1':
     resolution: {integrity: sha512-jrt5GUaZUU6cmMS+WTJEvGvaB6j1YNKPHPzC2PUi2BjaFbtxURHj6641Az6xN7b665hNniAIdvjxWcRml5yCnw==}
@@ -3915,6 +3974,9 @@ packages:
 
   '@types/parse-json@4.0.2':
     resolution: {integrity: sha512-dISoDXWWQwUquiKsyZ4Ng+HX2KsPL7LyHKHQwgGFEA3IaKac4Obd+h2a/a6waisAoepJlBcx9paWqjA8/HVjCw==}
+
+  '@types/phoenix@1.6.7':
+    resolution: {integrity: sha512-oN9ive//QSBkf19rfDv45M7eZPi0eEXylht2OLEXicu5b4KoQ1OzXIw+xDSGWxSxe1JmepRR/ZH283vsu518/Q==}
 
   '@types/qs@6.14.0':
     resolution: {integrity: sha512-eOunJqu0K1923aExK6y8p6fsihYEn/BYuQ4g0CxAAgFc4b/ZLN4CrsRZ55srTdqoiLzU2B2evC+apEIxprEzkQ==}
@@ -6406,6 +6468,10 @@ packages:
   hyperdyperid@1.2.0:
     resolution: {integrity: sha512-Y93lCzHYgGWdrJ66yIktxiaGULYc6oGiABxhcO5AufBeOyoIdZF7bIfLaOrbM0iGIOXQQgxxRrFEnb+Y6w1n4A==}
     engines: {node: '>=10.18'}
+
+  iceberg-js@0.8.1:
+    resolution: {integrity: sha512-1dhVQZXhcHje7798IVM+xoo/1ZdVfzOMIc8/rgVSijRK38EDqOJoGula9N/8ZI5RD8QTxNQtK/Gozpr+qUqRRA==}
+    engines: {node: '>=20.0.0'}
 
   iconv-lite@0.4.24:
     resolution: {integrity: sha512-v3MXnZAcvnywkTUEZomIActle7RXXeedOR31wwl7VlyoXO4Qi9arvSenNQWne1TcRwhCL1HwLI21bEqdpj8/rA==}
@@ -14001,6 +14067,16 @@ snapshots:
 
   '@shikijs/vscode-textmate@10.0.2': {}
 
+  '@signaltree/core@7.1.6(@angular/compiler@20.3.11)(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(@angular/platform-browser-dynamic@20.3.11(@angular/common@20.3.11(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/compiler@20.3.11)(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(@angular/platform-browser@20.3.11(@angular/common@20.3.11(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))))(tslib@2.8.1)(vitest@2.1.9)(zone.js@0.15.1)':
+    dependencies:
+      '@angular/core': 20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1)
+      tslib: 2.8.1
+    optionalDependencies:
+      '@angular/compiler': 20.3.11
+      '@angular/platform-browser-dynamic': 20.3.11(@angular/common@20.3.11(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/compiler@20.3.11)(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(@angular/platform-browser@20.3.11(@angular/common@20.3.11(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1)))
+      vitest: 2.1.9(@edge-runtime/vm@3.2.0)(@types/node@22.18.1)(@vitest/ui@2.1.9)(happy-dom@20.0.11)(jsdom@26.1.0)(less@4.4.2)(lightningcss@1.30.1)(sass-embedded@1.93.3)(sass@1.94.0)(terser@5.43.1)
+      zone.js: 0.15.1
+
   '@sigstore/bundle@3.1.0':
     dependencies:
       '@sigstore/protobuf-specs': 0.4.3
@@ -14046,6 +14122,44 @@ snapshots:
   '@sinonjs/fake-timers@13.0.5':
     dependencies:
       '@sinonjs/commons': 3.0.1
+
+  '@supabase/auth-js@2.90.1':
+    dependencies:
+      tslib: 2.8.1
+
+  '@supabase/functions-js@2.90.1':
+    dependencies:
+      tslib: 2.8.1
+
+  '@supabase/postgrest-js@2.90.1':
+    dependencies:
+      tslib: 2.8.1
+
+  '@supabase/realtime-js@2.90.1':
+    dependencies:
+      '@types/phoenix': 1.6.7
+      '@types/ws': 8.18.1
+      tslib: 2.8.1
+      ws: 8.18.3
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
+  '@supabase/storage-js@2.90.1':
+    dependencies:
+      iceberg-js: 0.8.1
+      tslib: 2.8.1
+
+  '@supabase/supabase-js@2.90.1':
+    dependencies:
+      '@supabase/auth-js': 2.90.1
+      '@supabase/functions-js': 2.90.1
+      '@supabase/postgrest-js': 2.90.1
+      '@supabase/realtime-js': 2.90.1
+      '@supabase/storage-js': 2.90.1
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
 
   '@swc-node/core@1.14.1(@swc/core@1.5.29(@swc/helpers@0.5.17))(@swc/types@0.1.25)':
     dependencies:
@@ -14312,6 +14426,8 @@ snapshots:
       undici-types: 6.21.0
 
   '@types/parse-json@4.0.2': {}
+
+  '@types/phoenix@1.6.7': {}
 
   '@types/qs@6.14.0': {}
 
@@ -14827,7 +14943,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 1.2.0
-      vitest: 2.1.9(@edge-runtime/vm@3.2.0)(@types/node@22.18.1)(@vitest/ui@2.1.9)(happy-dom@20.0.11)(jsdom@26.1.0)(less@4.4.2)(lightningcss@1.30.1)(sass-embedded@1.93.3)(sass@1.94.0)(terser@5.43.1)
+      vitest: 2.1.9(@edge-runtime/vm@3.2.0)(@types/node@20.19.24)(@vitest/ui@2.1.9)(happy-dom@20.0.11)(jsdom@26.1.0)(less@4.4.2)(lightningcss@1.30.1)(sass-embedded@1.93.3)(sass@1.94.0)(terser@5.43.1)
 
   '@vitest/utils@2.1.9':
     dependencies:
@@ -17258,6 +17374,8 @@ snapshots:
   human-signals@2.1.0: {}
 
   hyperdyperid@1.2.0: {}
+
+  iceberg-js@0.8.1: {}
 
   iconv-lite@0.4.24:
     dependencies:

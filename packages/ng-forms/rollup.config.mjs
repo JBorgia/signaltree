@@ -23,6 +23,7 @@ const barrelIndexPlugin = {
 export * from './core/validators.js';
 export * from './core/async-validators.js';
 export * from './history/index.js';
+export * from './enhancer/index.js';
 `;
       bundle['dist/index.js'] = {
         type: 'asset',

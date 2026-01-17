@@ -7,6 +7,31 @@ export const appRoutes: Route[] = [
       import('./components/home/home.component').then((c) => c.HomeComponent),
   },
 
+  // =========================================================================
+  // V7 Feature Demos
+  // =========================================================================
+  {
+    path: 'form-marker',
+    loadComponent: () =>
+      import('./pages/form-marker-demo/form-marker-demo.component').then(
+        (c) => c.FormMarkerDemoComponent
+      ),
+  },
+  {
+    path: 'stored-versioning',
+    loadComponent: () =>
+      import(
+        './pages/stored-versioning-demo/stored-versioning-demo.component'
+      ).then((c) => c.StoredVersioningDemoComponent),
+  },
+  {
+    path: 'realtime',
+    loadComponent: () =>
+      import('./pages/realtime-demo/realtime-demo.component').then(
+        (c) => c.RealtimeDemoComponent
+      ),
+  },
+
   // Fundamentals examples page (embedded demos on one page)
   {
     path: 'examples/fundamentals',
