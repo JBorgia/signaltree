@@ -1,14 +1,14 @@
 import { computed, DestroyRef, inject, Signal } from '@angular/core';
 import {
-  AbstractControl,
-  AsyncValidatorFn,
-  FormArray,
-  FormControl,
-  FormGroup,
-  ValidationErrors,
-  ValidatorFn,
+    AbstractControl,
+    AsyncValidatorFn,
+    FormArray,
+    FormControl,
+    FormGroup,
+    ValidationErrors,
+    ValidatorFn,
 } from '@angular/forms';
-import { createEnhancer, FORM_MARKER, FormSignal, isFormMarker, ISignalTree } from '@signaltree/core';
+import { FORM_MARKER, FormSignal, isFormMarker, ISignalTree } from '@signaltree/core';
 
 // =============================================================================
 // TYPES
@@ -381,64 +381,60 @@ function collectControlErrors(
  * // Use in template: [formGroup]="formGroup"
  * ```
  */
-export function formBridge<T = unknown>(config: AngularFormsConfig<T> = {}) {
-  return createEnhancer<AngularFormsMethods>(
-    {
-      name: 'formBridge',
-      provides: ['angular-forms', 'form-group-bridge'],
-      requires: [], // No hard requirements - form() markers are optional
-      description: 'Bridges form() markers to Angular Reactive Forms',
-    },
-    (tree: ISignalTree<unknown>) => {
-      const cleanupCallbacks: Array<() => void> = [];
-      const formBridgeMap = new Map<
-        string,
-        AngularFormBridge<Record<string, unknown>>
-      >();
+export function formBridge<TConfig = unknown>(
+  config: AngularFormsConfig<TConfig> = {}
+): <T>(tree: ISignalTree<T>) => ISignalTree<T> & AngularFormsMethods {
+  // Return a properly generic enhancer function
+  return <T>(tree: ISignalTree<T>): ISignalTree<T> & AngularFormsMethods => {
+    const cleanupCallbacks: Array<() => void> = [];
+    const formBridgeMap = new Map<
+      string,
+      AngularFormBridge<Record<string, unknown>>
+    >();
 
-      // Find all form() markers in the tree
-      const formLocations: FormLocation[] = [];
-      findFormSignals(tree.$, '', formLocations);
+    // Find all form() markers in the tree
+    const formLocations: FormLocation[] = [];
+    findFormSignals(tree.$, '', formLocations);
 
-      // Create FormGroup bridges for each form
-      for (const { path, formSignal } of formLocations) {
-        const bridge = createFormGroupBridge(
-          formSignal,
-          config as AngularFormsConfig<Record<string, unknown>>,
-          cleanupCallbacks
-        );
-        formBridgeMap.set(path, bridge);
+    // Create FormGroup bridges for each form
+    for (const { path, formSignal } of formLocations) {
+      const bridge = createFormGroupBridge(
+        formSignal,
+        config as AngularFormsConfig<Record<string, unknown>>,
+        cleanupCallbacks
+      );
+      formBridgeMap.set(path, bridge);
 
-        // Attach bridge directly to the form signal for convenience
-        (formSignal as unknown as Record<string, unknown>)['formGroup'] =
-          bridge.formGroup;
-        (formSignal as unknown as Record<string, unknown>)['formControl'] =
-          bridge.formControl;
-        (formSignal as unknown as Record<string, unknown>)['angularErrors'] =
-          bridge.angularErrors;
-        (formSignal as unknown as Record<string, unknown>)['asyncPending'] =
-          bridge.asyncPending;
-      }
+      // Attach bridge directly to the form signal for convenience
+      (formSignal as unknown as Record<string, unknown>)['formGroup'] =
+        bridge.formGroup;
+      (formSignal as unknown as Record<string, unknown>)['formControl'] =
+        bridge.formControl;
+      (formSignal as unknown as Record<string, unknown>)['angularErrors'] =
+        bridge.angularErrors;
+      (formSignal as unknown as Record<string, unknown>)['asyncPending'] =
+        bridge.asyncPending;
+    }
 
-      // Set up cleanup
-      const destroyRef = config.destroyRef ?? tryInjectDestroyRef();
-      if (destroyRef) {
-        destroyRef.onDestroy(() => {
-          cleanupCallbacks.forEach((fn) => fn());
-        });
-      }
-
-      // Return enhanced tree
-      return Object.assign(tree, {
-        formBridge: formBridgeMap,
-        getAngularForm<TForm extends Record<string, unknown>>(
-          path: string
-        ): AngularFormBridge<TForm> | null {
-          return (formBridgeMap.get(path) as AngularFormBridge<TForm>) ?? null;
-        },
+    // Set up cleanup
+    const destroyRef = config.destroyRef ?? tryInjectDestroyRef();
+    if (destroyRef) {
+      destroyRef.onDestroy(() => {
+        cleanupCallbacks.forEach((fn) => fn());
       });
     }
-  );
+
+    // Return enhanced tree with proper typing
+    const enhanced = tree as ISignalTree<T> & AngularFormsMethods;
+    enhanced.formBridge = formBridgeMap;
+    enhanced.getAngularForm = function <TForm extends Record<string, unknown>>(
+      path: string
+    ): AngularFormBridge<TForm> | null {
+      return (formBridgeMap.get(path) as AngularFormBridge<TForm>) ?? null;
+    };
+
+    return enhanced;
+  };
 }
 
 /**
