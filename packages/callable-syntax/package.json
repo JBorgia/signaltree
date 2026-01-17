@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/callable-syntax",
-  "version": "7.1.4",
+  "version": "7.2.0",
   "description": "Optional callable syntax transform for SignalTree reactive JSON. Zero-runtime DX sugar for leaf signals.",
   "license": "MIT",
   "type": "module",
