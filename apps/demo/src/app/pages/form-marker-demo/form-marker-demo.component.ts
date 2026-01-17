@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, computed, signal } from '@angular/core';
+import { FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { form, FormSignal, signalTree, validators } from '@signaltree/core';
+import { formBridge } from '@signaltree/ng-forms';
 
 // =============================================================================
 // TYPES
@@ -34,13 +35,15 @@ interface ListingWizard {
 @Component({
   selector: 'app-form-marker-demo',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './form-marker-demo.component.html',
   styleUrls: ['./form-marker-demo.component.scss'],
 })
 export class FormMarkerDemoComponent {
   // Demo selection
-  activeDemo = signal<'basic' | 'wizard' | 'persistence'>('basic');
+  activeDemo = signal<'basic' | 'wizard' | 'persistence' | 'angular-bridge'>(
+    'basic'
+  );
 
   // =============================================================================
   // DEMO 1: Basic Form with Validation
@@ -248,6 +251,84 @@ export class FormMarkerDemoComponent {
   }
 
   // =============================================================================
+  // DEMO 4: Angular FormGroup Bridge
+  // =============================================================================
+
+  bridgeStore = signalTree({
+    feedback: form<{
+      rating: number;
+      title: string;
+      comment: string;
+      recommend: boolean;
+    }>({
+      initial: {
+        rating: 0,
+        title: '',
+        comment: '',
+        recommend: false,
+      },
+      validators: {
+        rating: validators.min(1, 'Please select a rating'),
+        title: [
+          validators.required('Title is required'),
+          validators.minLength(5, 'Title must be at least 5 characters'),
+        ],
+        comment: validators.minLength(
+          10,
+          'Please provide at least 10 characters'
+        ),
+      },
+    }),
+  }).with(formBridge());
+
+  // Get the Angular FormGroup bridge
+  get feedbackFormGroup(): FormGroup | null {
+    return (
+      this.bridgeStore.getAngularForm<{
+        rating: number;
+        title: string;
+        comment: string;
+        recommend: boolean;
+      }>('feedback')?.formGroup ?? null
+    );
+  }
+
+  get feedbackForm() {
+    return this.bridgeStore.$.feedback as unknown as FormSignal<{
+      rating: number;
+      title: string;
+      comment: string;
+      recommend: boolean;
+    }>;
+  }
+
+  // Rating stars helper
+  ratingStars = computed(() => {
+    const rating = this.feedbackForm.$.rating();
+    return [1, 2, 3, 4, 5].map((star) => ({
+      star,
+      filled: star <= rating,
+    }));
+  });
+
+  setRating(star: number) {
+    this.feedbackForm.$.rating.set(star);
+  }
+
+  async submitFeedback() {
+    const result = await this.feedbackForm.submit(async (values) => {
+      await new Promise((r) => setTimeout(r, 1000));
+      console.log('Feedback submitted:', values);
+      return { success: true };
+    });
+
+    if (result?.success) {
+      alert('Thank you for your feedback!');
+      this.feedbackForm.reset();
+    }
+  }
+
+  // =============================================================================
   // CODE EXAMPLES
   // =============================================================================
 
@@ -336,4 +417,43 @@ tree.$.draft.$.subject.set('Hello');  // Debounced save
 tree.$.draft.persistNow();    // Force immediate save
 tree.$.draft.reload();        // Reload from storage
 tree.$.draft.clearStorage();  // Remove from storage`;
+
+  formBridgeCode = `// Angular FormGroup Bridge
+// Use form() marker with formBridge() enhancer to get
+// Angular-compatible FormGroup instances
+
+import { form, signalTree } from '@signaltree/core';
+import { formBridge } from '@signaltree/ng-forms';
+
+const tree = signalTree({
+  feedback: form<FeedbackForm>({
+    initial: {
+      rating: 0,
+      title: '',
+      comment: '',
+      recommend: false,
+    },
+    validators: {
+      rating: validators.min(1, 'Please select a rating'),
+      title: validators.required('Title is required'),
+    },
+  }),
+}).with(formBridge());
+
+// Get the Angular FormGroup
+const feedbackFormGroup = tree.getAngularForm('feedback')?.formGroup;
+
+// Use in template with [formGroup]
+<form [formGroup]="feedbackFormGroup">
+  <input formControlName="title">
+  <textarea formControlName="comment"></textarea>
+</form>
+
+// Both APIs stay in sync:
+tree.$.feedback.$.title.set('New title');  // Updates FormGroup
+feedbackFormGroup.patchValue({ title: 'Another' }); // Updates signals
+
+// Access Angular-specific features
+const titleControl = tree.getAngularForm('feedback')?.formControl('title');
+titleControl?.markAsTouched();`;
 }

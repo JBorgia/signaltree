@@ -578,3 +578,88 @@
   margin-bottom: 1.5rem;
   color: var(--info-text, #1e40af);
 }
+
+// Star Rating
+.star-rating {
+  display: flex;
+  gap: 0.25rem;
+
+  .star {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    cursor: pointer;
+    color: var(--text-secondary, #999);
+    transition: color 0.2s, transform 0.1s;
+    padding: 0;
+
+    &.filled {
+      color: #f59e0b;
+    }
+
+    &:hover {
+      transform: scale(1.1);
+    }
+  }
+}
+
+// Sync Demo Panel
+.sync-demo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+
+  .sync-item {
+    h4 {
+      margin: 0 0 0.5rem;
+      font-size: 0.875rem;
+      color: var(--text-secondary, #666);
+    }
+
+    pre {
+      background: var(--bg-code, #f3f4f6);
+      padding: 0.75rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      overflow-x: auto;
+      margin: 0;
+    }
+  }
+}
+
+.sync-note {
+  font-size: 0.875rem;
+  color: var(--text-secondary, #666);
+  background: var(--bg-hover, #f9fafb);
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin: 0;
+}
+
+// Section description
+.section-description {
+  color: var(--text-secondary, #666);
+  margin-bottom: 1.5rem;
+
+  code {
+    background: var(--bg-code, #f3f4f6);
+    padding: 0.125rem 0.375rem;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+}
+
+// Checkbox field
+.checkbox-field {
+  label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+
+    input[type='checkbox'] {
+      width: auto;
+    }
+  }
+}

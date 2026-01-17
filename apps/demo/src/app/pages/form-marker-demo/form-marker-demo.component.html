@@ -28,6 +28,12 @@
     >
       💾 Persistence
     </button>
+    <button
+      [class.active]="activeDemo() === 'angular-bridge'"
+      (click)="activeDemo.set('angular-bridge')"
+    >
+      🔗 Angular Bridge
+    </button>
   </nav>
 
   <!-- DEMO 1: Basic Validation -->
@@ -510,6 +516,150 @@
       <div class="code-panel">
         <h3>Code</h3>
         <pre><code>{{ persistenceCode }}</code></pre>
+      </div>
+    </div>
+  </section>
+  }
+
+  <!-- DEMO 4: Angular FormGroup Bridge -->
+  @if (activeDemo() === 'angular-bridge') {
+  <section class="demo-section">
+    <h2>Angular FormGroup Bridge</h2>
+    <p class="section-description">
+      Bridge <code>form()</code> markers to Angular's <code>FormGroup</code> for
+      seamless integration with Angular's reactive forms. Both APIs stay in sync
+      automatically.
+    </p>
+
+    <div class="demo-content">
+      <div class="demo-grid">
+        <div class="form-panel">
+          @if (feedbackFormGroup) {
+          <form
+            [formGroup]="feedbackFormGroup"
+            (ngSubmit)="submitFeedback()"
+            class="demo-form"
+          >
+            <!-- Rating Field -->
+            <div
+              class="form-field"
+              [class.has-error]="feedbackForm.errors()['rating']"
+            >
+              <label>Rating *</label>
+              <div class="star-rating">
+                @for (star of ratingStars(); track star.star) {
+                <button
+                  type="button"
+                  class="star"
+                  [class.filled]="star.filled"
+                  (click)="setRating(star.star)"
+                >
+                  {{ star.filled ? '★' : '☆' }}
+                </button>
+                }
+              </div>
+              @if (feedbackForm.touched()['rating'] &&
+              feedbackForm.errors()['rating']) {
+              <span class="error">{{ feedbackForm.errors()['rating'] }}</span>
+              }
+            </div>
+
+            <!-- Title Field (using Angular formControlName) -->
+            <div
+              class="form-field"
+              [class.has-error]="
+                feedbackFormGroup.get('title')?.invalid &&
+                feedbackFormGroup.get('title')?.touched
+              "
+            >
+              <label for="bridge-title">Title * (FormControl)</label>
+              <input
+                id="bridge-title"
+                type="text"
+                formControlName="title"
+                placeholder="Summary of your feedback"
+              />
+              @if (feedbackFormGroup.get('title')?.touched &&
+              feedbackFormGroup.get('title')?.errors) {
+              <span class="error">{{ feedbackForm.errors()['title'] }}</span>
+              }
+            </div>
+
+            <!-- Comment Field (using SignalTree signals) -->
+            <div
+              class="form-field"
+              [class.has-error]="feedbackForm.errors()['comment']"
+            >
+              <label for="bridge-comment">Comment (Signal API)</label>
+              <textarea
+                id="bridge-comment"
+                [ngModel]="feedbackForm.$.comment()"
+                (ngModelChange)="feedbackForm.$.comment.set($event)"
+                [ngModelOptions]="{ standalone: true }"
+                (blur)="feedbackForm.touch('comment')"
+                placeholder="Tell us more about your experience..."
+                rows="4"
+              ></textarea>
+              @if (feedbackForm.touched()['comment'] &&
+              feedbackForm.errors()['comment']) {
+              <span class="error">{{ feedbackForm.errors()['comment'] }}</span>
+              }
+            </div>
+
+            <!-- Recommend Checkbox -->
+            <div class="form-field checkbox-field">
+              <label>
+                <input type="checkbox" formControlName="recommend" />
+                Would you recommend us?
+              </label>
+            </div>
+
+            <div class="form-actions">
+              <button
+                type="submit"
+                class="btn-primary"
+                [disabled]="!feedbackForm.valid() || feedbackForm.submitting()"
+              >
+                {{
+                  feedbackForm.submitting()
+                    ? '⏳ Submitting...'
+                    : '✅ Submit Feedback'
+                }}
+              </button>
+              <button
+                type="button"
+                class="btn-secondary"
+                (click)="feedbackForm.reset()"
+              >
+                🔄 Reset
+              </button>
+            </div>
+          </form>
+          }
+        </div>
+
+        <div class="state-panel">
+          <h3>Sync Demonstration</h3>
+          <div class="sync-demo">
+            <div class="sync-item">
+              <h4>SignalTree Signals</h4>
+              <pre>{{ feedbackForm() | json }}</pre>
+            </div>
+            <div class="sync-item">
+              <h4>Angular FormGroup</h4>
+              <pre>{{ feedbackFormGroup?.value | json }}</pre>
+            </div>
+          </div>
+          <p class="sync-note">
+            ℹ️ Both views update automatically when either API is used. Try
+            typing in the Title field (FormControl) vs Comment field (Signal).
+          </p>
+        </div>
+      </div>
+
+      <div class="code-panel">
+        <h3>Code</h3>
+        <pre><code>{{ formBridgeCode }}</code></pre>
       </div>
     </div>
   </section>
