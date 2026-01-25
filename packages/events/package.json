@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/events",
-  "version": "7.3.1",
+  "version": "7.3.2",
   "description": "Event-driven architecture infrastructure for SignalTree - event bus, subscribers, validation, and real-time sync",
   "license": "MIT",
   "type": "module",
