@@ -23,6 +23,8 @@
       "@signaltree/callable-syntax/*": ["packages/callable-syntax/src/*"],
       "@signaltree/core": ["packages/core/src/index.ts"],
       "@signaltree/enterprise": ["packages/enterprise/src/index.ts"],
+      "@signaltree/events": ["packages/events/src/index.ts"],
+      "@signaltree/events/*": ["packages/events/src/*"],
       "@signaltree/guardrails": ["packages/guardrails/src/index.ts"],
       "@signaltree/ng-forms": ["packages/ng-forms/src/index.ts"],
       "@signaltree/realtime": ["packages/realtime/src/index.ts"],

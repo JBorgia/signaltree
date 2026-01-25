@@ -31,6 +31,13 @@ export const appRoutes: Route[] = [
         (c) => c.RealtimeDemoComponent
       ),
   },
+  {
+    path: 'events',
+    loadComponent: () =>
+      import('./pages/events-demo/events-demo.component').then(
+        (c) => c.EventsDemoComponent
+      ),
+  },
 
   // Fundamentals examples page (embedded demos on one page)
   {

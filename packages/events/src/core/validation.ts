@@ -243,12 +243,12 @@ export function isBaseEventLike(value: unknown): value is BaseEvent {
 
   const obj = value as Record<string, unknown>;
   return (
-    typeof obj.id === 'string' &&
-    typeof obj.type === 'string' &&
-    typeof obj.timestamp === 'string' &&
-    typeof obj.correlationId === 'string' &&
-    typeof obj.actor === 'object' &&
-    typeof obj.metadata === 'object' &&
+    typeof obj['id'] === 'string' &&
+    typeof obj['type'] === 'string' &&
+    typeof obj['timestamp'] === 'string' &&
+    typeof obj['correlationId'] === 'string' &&
+    typeof obj['actor'] === 'object' &&
+    typeof obj['metadata'] === 'object' &&
     'data' in obj
   );
 }

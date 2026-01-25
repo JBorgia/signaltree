@@ -288,9 +288,9 @@ export function createErrorClassifier(config: ErrorClassifierConfig = {}): {
     if (typeof error === 'object' && error !== null) {
       const obj = error as Record<string, unknown>;
       return {
-        message: String(obj.message ?? obj.error ?? ''),
-        code: obj.code as string | undefined,
-        status: (obj.status ?? obj.statusCode) as number | undefined,
+        message: String(obj['message'] ?? obj['error'] ?? ''),
+        code: obj['code'] as string | undefined,
+        status: (obj['status'] ?? obj['statusCode']) as number | undefined,
       };
     }
 

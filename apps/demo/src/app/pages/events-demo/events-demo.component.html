@@ -1,0 +1,463 @@
+<section class="events-demo">
+  <header class="demo-header">
+    <h1>@signaltree/events</h1>
+    <p class="subtitle">
+      Event-driven architecture infrastructure for SignalTree applications
+    </p>
+  </header>
+
+  <!-- Tab Navigation -->
+  <nav class="demo-tabs">
+    <button
+      [class.active]="activeTab() === 'factory'"
+      (click)="setActiveTab('factory')"
+    >
+      Event Factory
+    </button>
+    <button
+      [class.active]="activeTab() === 'validation'"
+      (click)="setActiveTab('validation')"
+    >
+      Validation
+    </button>
+    <button
+      [class.active]="activeTab() === 'eventbus'"
+      (click)="setActiveTab('eventbus')"
+    >
+      MockEventBus
+    </button>
+    <button
+      [class.active]="activeTab() === 'errors'"
+      (click)="setActiveTab('errors')"
+    >
+      Error Classification
+    </button>
+    <button
+      [class.active]="activeTab() === 'idempotency'"
+      (click)="setActiveTab('idempotency')"
+    >
+      Idempotency
+    </button>
+  </nav>
+
+  <!-- Event Factory Tab -->
+  @if (activeTab() === 'factory') {
+  <div class="demo-section">
+    <h2>Event Factory</h2>
+    <p class="section-description">
+      Create events with proper structure, UUID v7 generation, and correlation
+      ID management.
+    </p>
+
+    <div class="demo-controls">
+      <button class="btn primary" (click)="createTradeProposalEvent()">
+        Create Trade Proposal
+      </button>
+      <button class="btn secondary" (click)="createChainedEvents()">
+        Create Chained Events
+      </button>
+      <button class="btn secondary" (click)="generateId()">
+        Generate UUID v7
+      </button>
+      <button class="btn ghost" (click)="clearFactoryLog()">Clear Log</button>
+    </div>
+
+    <div class="demo-output">
+      <h3>Factory Log</h3>
+      <div class="log-container">
+        @for (entry of factoryLog(); track $index) {
+        <div class="log-entry">{{ entry }}</div>
+        } @empty {
+        <div class="log-entry muted">No events created yet</div>
+        }
+      </div>
+
+      @if (generatedEvent()) {
+      <h3>Last Generated Event</h3>
+      <pre class="code-block">{{ generatedEvent() | json }}</pre>
+      }
+    </div>
+
+    <div class="priority-table">
+      <h3>Event Priority SLAs</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Priority</th>
+            <th>SLA (ms)</th>
+            <th>Weight</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of priorityInfo(); track p.priority) {
+          <tr>
+            <td>
+              <span class="priority-badge" [class]="p.priority">{{
+                p.priority
+              }}</span>
+            </td>
+            <td>{{ p.slaMs }}ms</td>
+            <td>{{ p.weight }}</td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+  }
+
+  <!-- Validation Tab -->
+  @if (activeTab() === 'validation') {
+  <div class="demo-section">
+    <h2>Event Validation with Zod</h2>
+    <p class="section-description">
+      Define event schemas with Zod for runtime validation. Invalid events are
+      caught before they propagate.
+    </p>
+
+    <div class="demo-controls">
+      <button class="btn primary" (click)="validateCurrentInput()">
+        Validate Event
+      </button>
+      <button class="btn secondary" (click)="validateWithIsValid()">
+        Check isValidEvent()
+      </button>
+      <button class="btn ghost" (click)="setValidInput()">Set Valid</button>
+      <button class="btn ghost" (click)="setInvalidInput()">Set Invalid</button>
+      <button class="btn ghost" (click)="clearValidationLog()">
+        Clear Log
+      </button>
+    </div>
+
+    <div class="demo-input">
+      <h3>Event JSON</h3>
+      <textarea
+        class="code-input"
+        [ngModel]="validationInput()"
+        (ngModelChange)="validationInput.set($event)"
+        rows="12"
+      ></textarea>
+    </div>
+
+    @if (validationResult()) {
+    <div
+      class="validation-result"
+      [class.valid]="validationResult()?.isValid"
+      [class.invalid]="!validationResult()?.isValid"
+    >
+      @if (validationResult()?.isValid) {
+      <span class="result-icon">✓</span>
+      <span>Event is valid</span>
+      } @else {
+      <span class="result-icon">✗</span>
+      <div class="error-list">
+        <strong>Validation Errors:</strong>
+        @for (error of validationResult()?.errors ?? []; track $index) {
+        <div class="error-item">{{ error }}</div>
+        }
+      </div>
+      }
+    </div>
+    }
+
+    <div class="demo-output">
+      <h3>Validation Log</h3>
+      <div class="log-container">
+        @for (entry of validationLog(); track $index) {
+        <div class="log-entry">{{ entry }}</div>
+        } @empty {
+        <div class="log-entry muted">No validation attempts yet</div>
+        }
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- MockEventBus Tab -->
+  @if (activeTab() === 'eventbus') {
+  <div class="demo-section">
+    <h2>MockEventBus for Testing</h2>
+    <p class="section-description">
+      In-memory event bus for unit tests. Publish events, subscribe to event
+      types, and assert behavior.
+    </p>
+
+    <div class="demo-controls">
+      <button class="btn primary" (click)="publishTradeProposal()">
+        Publish Trade Proposal
+      </button>
+      <button class="btn secondary" (click)="publishTradeAccepted()">
+        Publish Trade Accepted
+      </button>
+      <button class="btn secondary" (click)="checkEventWasPublished()">
+        Check wasPublished()
+      </button>
+      <button class="btn ghost" (click)="clearEventBus()">Clear Bus</button>
+      <button class="btn ghost" (click)="clearSubscriberLogs()">
+        Clear Log
+      </button>
+    </div>
+
+    <div class="two-column">
+      <div class="demo-output">
+        <h3>Subscriber Logs</h3>
+        <div class="log-container">
+          @for (entry of subscriberLogs(); track $index) {
+          <div class="log-entry">{{ entry }}</div>
+          } @empty {
+          <div class="log-entry muted">No events published yet</div>
+          }
+        </div>
+      </div>
+
+      <div class="demo-output">
+        <h3>Published Events ({{ publishedEvents().length }})</h3>
+        <div class="event-list">
+          @for (event of publishedEvents(); track event.id) {
+          <div class="event-card">
+            <div class="event-type">{{ event.type }}</div>
+            <div class="event-id">{{ event.id.slice(0, 8) }}...</div>
+          </div>
+          } @empty {
+          <div class="log-entry muted">No events in bus</div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- Error Classification Tab -->
+  @if (activeTab() === 'errors') {
+  <div class="demo-section">
+    <h2>Error Classification</h2>
+    <p class="section-description">
+      Classify errors to determine if they're retryable and configure
+      appropriate retry behavior.
+    </p>
+
+    <div class="demo-controls">
+      <div class="radio-group">
+        <label [class.selected]="errorType() === 'network'">
+          <input
+            type="radio"
+            name="errorType"
+            value="network"
+            [checked]="errorType() === 'network'"
+            (change)="setErrorType('network')"
+          />
+          Network Error
+        </label>
+        <label [class.selected]="errorType() === 'validation'">
+          <input
+            type="radio"
+            name="errorType"
+            value="validation"
+            [checked]="errorType() === 'validation'"
+            (change)="setErrorType('validation')"
+          />
+          Validation Error
+        </label>
+        <label [class.selected]="errorType() === 'constraint'">
+          <input
+            type="radio"
+            name="errorType"
+            value="constraint"
+            [checked]="errorType() === 'constraint'"
+            (change)="setErrorType('constraint')"
+          />
+          Constraint Violation
+        </label>
+        <label [class.selected]="errorType() === 'timeout'">
+          <input
+            type="radio"
+            name="errorType"
+            value="timeout"
+            [checked]="errorType() === 'timeout'"
+            (change)="setErrorType('timeout')"
+          />
+          Timeout Error
+        </label>
+        <label [class.selected]="errorType() === 'unknown'">
+          <input
+            type="radio"
+            name="errorType"
+            value="unknown"
+            [checked]="errorType() === 'unknown'"
+            (change)="setErrorType('unknown')"
+          />
+          Unknown Error
+        </label>
+      </div>
+
+      <button class="btn primary" (click)="classifySelectedError()">
+        Classify Error
+      </button>
+    </div>
+
+    @if (errorClassificationResult()) {
+    <div class="classification-result">
+      <div class="result-row">
+        <span class="label">Classification:</span>
+        <span class="value code">{{ errorClassificationResult()?.classification }}</span>
+      </div>
+      <div class="result-row">
+        <span class="label">Reason:</span>
+        <span class="value">{{ errorClassificationResult()?.reason }}</span>
+      </div>
+      <div class="result-row">
+        <span class="label">Is Retryable:</span>
+        <span
+          class="value"
+          [class.yes]="errorClassificationResult()?.isRetryable"
+          [class.no]="!errorClassificationResult()?.isRetryable"
+        >
+          {{ errorClassificationResult()?.isRetryable ? 'Yes' : 'No' }}
+        </span>
+      </div>
+      @if (errorClassificationResult()?.isRetryable) {
+      <div class="result-row">
+        <span class="label">Max Attempts:</span>
+        <span class="value">{{
+          errorClassificationResult()?.retryConfig?.maxAttempts
+        }}</span>
+      </div>
+      <div class="result-row">
+        <span class="label">Initial Delay:</span>
+        <span class="value"
+          >{{ errorClassificationResult()?.retryConfig?.initialDelayMs }}ms</span
+        >
+      </div>
+      }
+    </div>
+    }
+  </div>
+  }
+
+  <!-- Idempotency Tab -->
+  @if (activeTab() === 'idempotency') {
+  <div class="demo-section">
+    <h2>Idempotency Store</h2>
+    <p class="section-description">
+      Prevent duplicate event processing with an in-memory idempotency store.
+      Events are tracked and duplicates are detected.
+    </p>
+
+    <div class="demo-controls">
+      <button class="btn primary" (click)="processEventWithIdempotency()">
+        Process New Event
+      </button>
+      <button class="btn secondary" (click)="reprocessLastEvent()">
+        Re-process Last Event
+      </button>
+      <button class="btn ghost" (click)="clearIdempotencyStore()">
+        Clear Store
+      </button>
+      <button class="btn ghost" (click)="clearIdempotencyLog()">
+        Clear Log
+      </button>
+    </div>
+
+    <div class="two-column">
+      <div class="demo-output">
+        <h3>Processing Log</h3>
+        <div class="log-container">
+          @for (entry of idempotencyLog(); track $index) {
+          <div class="log-entry">{{ entry }}</div>
+          } @empty {
+          <div class="log-entry muted">No events processed yet</div>
+          }
+        </div>
+      </div>
+
+      <div class="demo-output">
+        <h3>Processed Events ({{ processedEventIds().length }})</h3>
+        <div class="event-list">
+          @for (id of processedEventIds(); track id) {
+          <div class="event-card small">
+            <div class="event-id">{{ id.slice(0, 16) }}...</div>
+          </div>
+          } @empty {
+          <div class="log-entry muted">No events processed</div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- Code Examples -->
+  <div class="code-examples">
+    <h2>Quick Start</h2>
+
+    <div class="example">
+      <h3>1. Define Event Schemas</h3>
+      <pre class="code-block">
+import {{ '{' }} createEventSchema, z {{ '}' }} from '&#64;signaltree/events';
+
+export const TradeProposalCreatedSchema = createEventSchema('TradeProposalCreated', {{
+          '{'
+        }}
+  tradeId: z.string().uuid(),
+  initiatorId: z.string().uuid(),
+  recipientId: z.string().uuid(),
+  vehicleOfferedId: z.string().uuid(),
+{{ '}' }});
+
+export type TradeProposalCreated = z.infer&lt;typeof TradeProposalCreatedSchema&gt;;</pre
+      >
+    </div>
+
+    <div class="example">
+      <h3>2. Create Events with Factory</h3>
+      <pre class="code-block">
+import {{ '{' }} createEventFactory {{ '}' }} from '&#64;signaltree/events';
+
+const factory = createEventFactory({{ '{' }}
+  source: 'trade-service',
+  environment: 'production',
+{{ '}' }});
+
+const event = factory.create&lt;TradeProposalCreated&gt;('TradeProposalCreated', {{
+          '{'
+        }}
+  tradeId: '550e8400-e29b-41d4-a716-446655440000',
+  initiatorId: 'user-1',
+  recipientId: 'user-2',
+  vehicleOfferedId: 'vehicle-1',
+{{ '}' }}, {{ '{' }}
+  priority: 'high',
+  actor: {{ '{' }} id: 'user-1', type: 'user' {{ '}' }},
+{{ '}' }});</pre
+      >
+    </div>
+
+    <div class="example">
+      <h3>3. Test with MockEventBus</h3>
+      <pre class="code-block">
+import {{ '{' }} createMockEventBus, createTestEvent {{
+          '}'
+        }} from '&#64;signaltree/events/testing';
+
+const eventBus = createMockEventBus();
+
+// Subscribe to events
+eventBus.subscribe('TradeProposalCreated', (event) => {{ '{' }}
+  console.log('Trade proposed:', event.data.tradeId);
+{{ '}' }});
+
+// Publish test event
+await eventBus.publish(createTestEvent('TradeProposalCreated', {{ '{' }}
+  tradeId: '123',
+  initiatorId: 'user-1',
+  recipientId: 'user-2',
+  vehicleOfferedId: 'vehicle-1',
+{{ '}' }}));
+
+// Assert behavior
+expect(eventBus.wasPublished('TradeProposalCreated')).toBe(true);
+expect(eventBus.getPublishedEvents()).toHaveLength(1);</pre
+      >
+    </div>
+  </div>
+</section>

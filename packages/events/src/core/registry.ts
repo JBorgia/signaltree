@@ -152,7 +152,7 @@ export class EventRegistry {
     }
 
     const eventObj = event as Record<string, unknown>;
-    const type = eventObj.type as string;
+    const type = eventObj['type'] as string;
 
     if (!type) {
       throw new Error('Event must have a type field');
