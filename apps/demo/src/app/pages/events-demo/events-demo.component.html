@@ -299,7 +299,9 @@
     <div class="classification-result">
       <div class="result-row">
         <span class="label">Classification:</span>
-        <span class="value code">{{ errorClassificationResult()?.classification }}</span>
+        <span class="value code">{{
+          errorClassificationResult()?.classification
+        }}</span>
       </div>
       <div class="result-row">
         <span class="label">Reason:</span>
@@ -325,7 +327,9 @@
       <div class="result-row">
         <span class="label">Initial Delay:</span>
         <span class="value"
-          >{{ errorClassificationResult()?.retryConfig?.initialDelayMs }}ms</span
+          >{{
+            errorClassificationResult()?.retryConfig?.initialDelayMs
+          }}ms</span
         >
       </div>
       }

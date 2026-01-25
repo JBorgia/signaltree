@@ -24,10 +24,11 @@
         "outputPath": "dist/packages/events",
         "format": ["esm"],
         "additionalEntryPoints": [
-          "packages/events/src/nestjs/index.ts",
-          "packages/events/src/angular/index.ts",
-          "packages/events/src/testing/index.ts"
+          "packages/events/src/nestjs.ts",
+          "packages/events/src/angular.ts",
+          "packages/events/src/testing.ts"
         ],
+        "generateExportsField": true,
         "assets": [
           {
             "input": "packages/events",
@@ -56,12 +57,18 @@
           "zod",
           "tslib",
           "rxjs"
-        ]
+        ],
+        "useLegacyTypescriptPlugin": false
       },
       "configurations": {
         "production": {
           "tsConfig": "packages/events/tsconfig.lib.prod.json"
         }
+      }
+    },
+    "nx-release-publish": {
+      "options": {
+        "packageRoot": "dist/{projectRoot}"
       }
     },
     "test": {

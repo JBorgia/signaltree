@@ -243,7 +243,7 @@ export class EventRegistry {
   toJSONSchema(): Record<string, unknown> {
     const schemas: Record<string, unknown> = {};
 
-    for (const [type, event] of this.events) {
+    for (const [type, event] of Array.from(this.events.entries())) {
       // Note: This is a simplified JSON schema export
       // For full compatibility, use zod-to-json-schema package
       schemas[type] = {

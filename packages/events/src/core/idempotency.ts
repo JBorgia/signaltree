@@ -342,7 +342,7 @@ export class InMemoryIdempotencyStore implements IdempotencyStore {
     const now = Date.now();
     let cleaned = 0;
 
-    for (const [key, record] of this.records) {
+    for (const [key, record] of Array.from(this.records.entries())) {
       if (record.expiresAt < now) {
         this.records.delete(key);
         cleaned++;

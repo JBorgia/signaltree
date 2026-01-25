@@ -2,26 +2,23 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
-  z,
-  type BaseEvent,
-  type EventPriority,
-  EVENT_PRIORITIES,
-  createEventSchema,
-  validateEvent,
-  isValidEvent,
-  EventValidationError,
-  createEventFactory,
-  generateEventId,
-  classifyError,
-  isRetryableError,
-  generateIdempotencyKey,
+    BaseEvent,
+    classifyError,
+    createEventFactory,
+    createEventSchema,
+    EVENT_PRIORITIES,
+    EventPriority,
+    EventValidationError,
+    generateEventId,
+    generateIdempotencyKey,
+    isRetryableError,
+    isValidEvent,
+    type,
+    type,
+    validateEvent,
+    z,
 } from '@signaltree/events';
-import {
-  createMockEventBus,
-  createTestEvent,
-  type MockEventBus,
-  type PublishedEvent,
-} from '@signaltree/events/testing';
+import { createMockEventBus, createTestEvent, MockEventBus, PublishedEvent, type, type } from '@signaltree/events/testing';
 
 // =============================================================================
 // DEMO EVENT TYPES
@@ -120,7 +117,10 @@ export class EventsDemoComponent {
 
   // Idempotency Demo - simplified for demo purposes
   // (Real implementation uses InMemoryIdempotencyStore with BaseEvent objects)
-  private readonly processedEventsMap = new Map<string, { processedAt: Date; result: unknown }>();
+  private readonly processedEventsMap = new Map<
+    string,
+    { processedAt: Date; result: unknown }
+  >();
   readonly idempotencyLog = signal<string[]>([]);
   readonly processedEventIds = signal<string[]>([]);
 
@@ -412,7 +412,9 @@ export class EventsDemoComponent {
       `wasPublished('TradeProposalCreated') → ${wasPublished}`
     );
 
-    const events = this.mockEventBus.getPublishedEventsByType('TradeProposalCreated');
+    const events = this.mockEventBus.getPublishedEventsByType(
+      'TradeProposalCreated'
+    );
     this.logSubscriber(
       `  Found ${events.length} TradeProposalCreated event(s)`
     );

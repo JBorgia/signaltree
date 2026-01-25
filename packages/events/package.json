@@ -5,29 +5,29 @@
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./src/index.d.ts",
+  "main": "./index.esm.js",
+  "module": "./index.esm.js",
+  "types": "./index.d.ts",
   "exports": {
     ".": {
-      "types": "./src/index.d.ts",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
+      "types": "./index.d.ts",
+      "import": "./index.esm.js",
+      "default": "./index.esm.js"
     },
     "./nestjs": {
-      "types": "./src/nestjs/index.d.ts",
-      "import": "./dist/nestjs/index.js",
-      "default": "./dist/nestjs/index.js"
+      "types": "./nestjs.d.ts",
+      "import": "./nestjs.esm.js",
+      "default": "./nestjs.esm.js"
     },
     "./angular": {
-      "types": "./src/angular/index.d.ts",
-      "import": "./dist/angular/index.js",
-      "default": "./dist/angular/index.js"
+      "types": "./angular.d.ts",
+      "import": "./angular.esm.js",
+      "default": "./angular.esm.js"
     },
     "./testing": {
-      "types": "./src/testing/index.d.ts",
-      "import": "./dist/testing/index.js",
-      "default": "./dist/testing/index.js"
+      "types": "./testing.d.ts",
+      "import": "./testing.esm.js",
+      "default": "./testing.esm.js"
     },
     "./package.json": "./package.json"
   },
@@ -85,7 +85,8 @@
     "access": "public"
   },
   "files": [
-    "dist/**/*.js",
+    "*.esm.js",
+    "*.d.ts",
     "src/**/*.d.ts",
     "README.md"
   ],
