@@ -1,0 +1,81 @@
+{
+  "name": "events",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/events/src",
+  "prefix": "lib",
+  "projectType": "library",
+  "release": {
+    "version": {
+      "manifestRootsToUpdate": ["dist/{projectRoot}"],
+      "currentVersionResolver": "git-tag",
+      "fallbackCurrentVersionResolver": "disk"
+    }
+  },
+  "tags": [],
+  "implicitDependencies": ["core"],
+  "targets": {
+    "build": {
+      "executor": "@nx/rollup:rollup",
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
+      "dependsOn": ["^build"],
+      "options": {
+        "main": "packages/events/src/index.ts",
+        "tsConfig": "packages/events/tsconfig.lib.prod.json",
+        "outputPath": "dist/packages/events",
+        "format": ["esm"],
+        "additionalEntryPoints": [
+          "packages/events/src/nestjs/index.ts",
+          "packages/events/src/angular/index.ts",
+          "packages/events/src/testing/index.ts"
+        ],
+        "assets": [
+          {
+            "input": "packages/events",
+            "glob": "README.md",
+            "output": "."
+          },
+          {
+            "input": "packages/events",
+            "glob": "package.json",
+            "output": "."
+          },
+          {
+            "input": "packages/events/src",
+            "glob": "**/*.d.ts",
+            "output": "./src"
+          }
+        ],
+        "external": [
+          "@angular/core",
+          "@signaltree/core",
+          "@nestjs/common",
+          "@nestjs/core",
+          "bullmq",
+          "ioredis",
+          "socket.io-client",
+          "zod",
+          "tslib",
+          "rxjs"
+        ]
+      },
+      "configurations": {
+        "production": {
+          "tsConfig": "packages/events/tsconfig.lib.prod.json"
+        }
+      }
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "config": "packages/events/vitest.config.ts"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": ["packages/events/**/*.ts"]
+      }
+    }
+  }
+}

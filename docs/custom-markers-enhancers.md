@@ -509,9 +509,7 @@ The `Enhancer<TAdded>` type is defined as `(tree: ISignalTree<any>) => ISignalTr
 import type { ISignalTree } from '@signaltree/core';
 
 // DO THIS - preserves tree state type!
-export function myEnhancer(): <T>(
-  tree: ISignalTree<T>
-) => ISignalTree<T> & { myMethod: () => void } {
+export function myEnhancer(): <T>(tree: ISignalTree<T>) => ISignalTree<T> & { myMethod: () => void } {
   return <T>(tree: ISignalTree<T>): ISignalTree<T> & { myMethod: () => void } => {
     // tree is ISignalTree<T> - state type is preserved!
     return Object.assign(tree, { myMethod: () => {} });
@@ -525,27 +523,21 @@ All built-in enhancers follow this pattern:
 
 ```typescript
 // batching.ts
-export function batching(
-  config: BatchingConfig = {}
-): <T>(tree: ISignalTree<T>) => ISignalTree<T> & BatchingMethods<T> {
+export function batching(config: BatchingConfig = {}): <T>(tree: ISignalTree<T>) => ISignalTree<T> & BatchingMethods<T> {
   return <T>(tree: ISignalTree<T>): ISignalTree<T> & BatchingMethods<T> => {
     // Implementation...
   };
 }
 
 // devTools.ts
-export function devTools(
-  config: DevToolsConfig = {}
-): <T>(tree: ISignalTree<T>) => ISignalTree<T> & DevToolsMethods {
+export function devTools(config: DevToolsConfig = {}): <T>(tree: ISignalTree<T>) => ISignalTree<T> & DevToolsMethods {
   return <T>(tree: ISignalTree<T>): ISignalTree<T> & DevToolsMethods => {
     // Implementation...
   };
 }
 
 // memoization.ts
-export function memoization(
-  config: MemoizationConfig = {}
-): <T>(tree: ISignalTree<T>) => ISignalTree<T> & MemoizationMethods<T> {
+export function memoization(config: MemoizationConfig = {}): <T>(tree: ISignalTree<T>) => ISignalTree<T> & MemoizationMethods<T> {
   return <T>(tree: ISignalTree<T>): ISignalTree<T> & MemoizationMethods<T> => {
     // Implementation...
   };
@@ -558,14 +550,10 @@ When you use the wrong pattern, TypeScript will complain when chaining `.with()`
 
 ```typescript
 // With WRONG pattern - TypeScript error!
-const tree = signalTree({ count: 0 })
-  .with(batching())
-  .with(myBrokenEnhancer()); // ❌ Error: types are incompatible
+const tree = signalTree({ count: 0 }).with(batching()).with(myBrokenEnhancer()); // ❌ Error: types are incompatible
 
 // With CORRECT pattern - works perfectly!
-const tree = signalTree({ count: 0 })
-  .with(batching())
-  .with(myCorrectEnhancer()); // ✅ No errors, full type safety
+const tree = signalTree({ count: 0 }).with(batching()).with(myCorrectEnhancer()); // ✅ No errors, full type safety
 ```
 
 ---

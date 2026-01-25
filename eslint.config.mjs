@@ -75,7 +75,11 @@ export default [
       '@nx/dependency-checks': [
         'error',
         {
-          ignoredDependencies: ['tslib'],
+          ignoredDependencies: [
+            'tslib',
+            // vitest is a test framework - should stay in devDependencies
+            'vitest',
+          ],
         },
       ],
     },

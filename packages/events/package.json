@@ -1,0 +1,113 @@
+{
+  "name": "@signaltree/events",
+  "version": "7.3.1",
+  "description": "Event-driven architecture infrastructure for SignalTree - event bus, subscribers, validation, and real-time sync",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./nestjs": {
+      "types": "./src/nestjs/index.d.ts",
+      "import": "./dist/nestjs/index.js",
+      "default": "./dist/nestjs/index.js"
+    },
+    "./angular": {
+      "types": "./src/angular/index.d.ts",
+      "import": "./dist/angular/index.js",
+      "default": "./dist/angular/index.js"
+    },
+    "./testing": {
+      "types": "./src/testing/index.d.ts",
+      "import": "./dist/testing/index.js",
+      "default": "./dist/testing/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "peerDependencies": {
+    "zod": "^3.0.0",
+    "@angular/core": "^18.0.0 || ^19.0.0 || ^20.0.0",
+    "rxjs": "^7.0.0",
+    "@nestjs/common": "^10.0.0 || ^11.0.0",
+    "bullmq": "^5.0.0",
+    "reflect-metadata": "^0.1.13 || ^0.2.0"
+  },
+  "peerDependenciesMeta": {
+    "@nestjs/common": {
+      "optional": true
+    },
+    "@nestjs/core": {
+      "optional": true
+    },
+    "bullmq": {
+      "optional": true
+    },
+    "ioredis": {
+      "optional": true
+    },
+    "@angular/core": {
+      "optional": true
+    },
+    "rxjs": {
+      "optional": true
+    },
+    "reflect-metadata": {
+      "optional": true
+    },
+    "@signaltree/core": {
+      "optional": true
+    },
+    "socket.io-client": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@angular/core": "^20.0.0",
+    "@signaltree/core": "workspace:*",
+    "bullmq": "^5.0.0",
+    "ioredis": "^5.0.0",
+    "socket.io-client": "^4.0.0",
+    "rxjs": "^7.8.0",
+    "reflect-metadata": "^0.2.0",
+    "zod": "^3.24.0",
+    "vitest": "^3.0.5"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist/**/*.js",
+    "src/**/*.d.ts",
+    "README.md"
+  ],
+  "keywords": [
+    "signaltree",
+    "events",
+    "event-driven",
+    "event-bus",
+    "cqrs",
+    "bullmq",
+    "nestjs",
+    "angular",
+    "websocket",
+    "real-time"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JBorgia/signaltree.git",
+    "directory": "packages/events"
+  },
+  "bugs": {
+    "url": "https://github.com/JBorgia/signaltree/issues"
+  },
+  "homepage": "https://github.com/JBorgia/signaltree/tree/main/packages/events#readme"
+}
