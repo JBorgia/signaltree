@@ -68,6 +68,7 @@ export { EVENT_PRIORITIES, DEFAULT_EVENT_VERSION } from './core/types';
 export {
   // Schema creation
   createEventSchema,
+  createEventSchemaFromZod,
   BaseEventSchema,
   EventMetadataSchema,
   EventActorSchema,

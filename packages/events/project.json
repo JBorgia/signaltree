@@ -22,13 +22,14 @@
         "main": "packages/events/src/index.ts",
         "tsConfig": "packages/events/tsconfig.lib.prod.json",
         "outputPath": "dist/packages/events",
-        "format": ["esm"],
+        "format": ["esm", "cjs"],
         "additionalEntryPoints": [
-          "packages/events/src/nestjs.ts",
-          "packages/events/src/angular.ts",
-          "packages/events/src/testing.ts"
+          "packages/events/src/nestjs/index.ts",
+          "packages/events/src/angular/index.ts",
+          "packages/events/src/testing/index.ts"
         ],
-        "generateExportsField": true,
+        "rollupConfig": "packages/events/rollup.config.mjs",
+        "generateExportsField": false,
         "assets": [
           {
             "input": "packages/events",

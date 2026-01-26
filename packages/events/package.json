@@ -1,38 +1,49 @@
 {
   "name": "@signaltree/events",
-  "version": "7.3.2",
+  "version": "7.4.1",
   "description": "Event-driven architecture infrastructure for SignalTree - event bus, subscribers, validation, and real-time sync",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
-  "main": "./index.esm.js",
-  "module": "./index.esm.js",
-  "types": "./index.d.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./src/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "nestjs": ["./src/nestjs/index.d.ts"],
+      "angular": ["./src/angular/index.d.ts"],
+      "testing": ["./src/testing/index.d.ts"]
+    }
+  },
   "exports": {
     ".": {
-      "types": "./index.d.ts",
-      "import": "./index.esm.js",
-      "default": "./index.esm.js"
+      "types": "./src/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.js"
     },
     "./nestjs": {
-      "types": "./nestjs.d.ts",
-      "import": "./nestjs.esm.js",
-      "default": "./nestjs.esm.js"
+      "types": "./src/nestjs/index.d.ts",
+      "import": "./dist/nestjs/index.js",
+      "require": "./dist/nestjs/index.cjs",
+      "default": "./dist/nestjs/index.js"
     },
     "./angular": {
-      "types": "./angular.d.ts",
-      "import": "./angular.esm.js",
-      "default": "./angular.esm.js"
+      "types": "./src/angular/index.d.ts",
+      "import": "./dist/angular/index.js",
+      "require": "./dist/angular/index.cjs",
+      "default": "./dist/angular/index.js"
     },
     "./testing": {
-      "types": "./testing.d.ts",
-      "import": "./testing.esm.js",
-      "default": "./testing.esm.js"
+      "types": "./src/testing/index.d.ts",
+      "import": "./dist/testing/index.js",
+      "require": "./dist/testing/index.cjs",
+      "default": "./dist/testing/index.js"
     },
     "./package.json": "./package.json"
   },
   "peerDependencies": {
-    "zod": "^3.0.0",
+    "zod": "^3.0.0 || ^4.0.0",
     "@angular/core": "^18.0.0 || ^19.0.0 || ^20.0.0",
     "rxjs": "^7.0.0",
     "@nestjs/common": "^10.0.0 || ^11.0.0",
@@ -85,8 +96,8 @@
     "access": "public"
   },
   "files": [
-    "*.esm.js",
-    "*.d.ts",
+    "dist/**/*.js",
+    "dist/**/*.cjs",
     "src/**/*.d.ts",
     "README.md"
   ],
