@@ -41,6 +41,7 @@ fi
 # Note: "shared" is private (bundled into core) and should NOT be in this list
 PACKAGES=(
     "core"            # Main package with all enhancers (batching, memoization, etc.)
+    "events"          # Event-driven architecture (BullMQ, NestJS, testing)
     "ng-forms"        # Angular forms integration
     "realtime"        # Real-time sync with Supabase/WebSocket
     "callable-syntax" # Build-time transform for callable DX syntax
