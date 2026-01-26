@@ -1,5 +1,5 @@
 import { generateCorrelationId, generateEventId } from '../core/factory';
-import { BaseEvent, EventPriority } from '../core/types';
+import { BaseEvent, DEFAULT_EVENT_VERSION, EventActor, EventMetadata, EventPriority, EventVersion } from '../core/types';
 
 /**
  * Mock Event Bus - In-memory event bus for testing
@@ -38,6 +38,34 @@ export interface MockEventBusOptions {
   autoGenerateIds?: boolean;
   /** Throw on publish errors */
   throwOnError?: boolean;
+  /** Source for event metadata (used by createEvent) */
+  source?: string;
+  /** Environment for event metadata (used by createEvent) */
+  environment?: string;
+}
+
+/**
+ * Options for creating an event via MockEventBus.createEvent()
+ */
+export interface MockCreateEventOptions {
+  /** Override event ID */
+  id?: string;
+  /** Correlation ID for request tracing */
+  correlationId?: string;
+  /** Causation ID (parent event) */
+  causationId?: string;
+  /** Actor who triggered the event */
+  actor?: EventActor;
+  /** Additional metadata */
+  metadata?: Partial<EventMetadata>;
+  /** Event priority */
+  priority?: EventPriority;
+  /** Schema version override */
+  version?: EventVersion;
+  /** Aggregate info */
+  aggregate?: { type: string; id: string };
+  /** Timestamp override (for testing/replay) */
+  timestamp?: string;
 }
 
 /**
@@ -74,8 +102,81 @@ export class MockEventBus {
       asyncDelayMs: 10,
       autoGenerateIds: true,
       throwOnError: false,
+      source: 'mock-event-bus',
+      environment: 'test',
       ...options,
     };
+  }
+
+  /**
+   * Create an event with defaults (matches EventBusService.createEvent API)
+   *
+   * @example
+   * ```typescript
+   * const event = mockBus.createEvent('TradeAccepted', {
+   *   tradeId: '123',
+   *   acceptedById: 'user-1',
+   * }, {
+   *   actor: { id: 'user-1', type: 'user' },
+   * });
+   * ```
+   */
+  createEvent<TType extends string, TData>(
+    type: TType,
+    data: TData,
+    options: MockCreateEventOptions = {}
+  ): BaseEvent<TType, TData> {
+    const id = options.id ?? (this.options.autoGenerateIds ? generateEventId() : 'test-event-id');
+    const correlationId = options.correlationId ?? generateCorrelationId();
+    const timestamp = options.timestamp ?? new Date().toISOString();
+
+    const actor: EventActor = options.actor ?? {
+      id: 'test-user',
+      type: 'user',
+    };
+
+    const metadata: EventMetadata = {
+      source: this.options.source ?? 'mock-event-bus',
+      environment: this.options.environment ?? 'test',
+      ...options.metadata,
+    };
+
+    return {
+      id,
+      type,
+      version: options.version ?? DEFAULT_EVENT_VERSION,
+      timestamp,
+      correlationId,
+      causationId: options.causationId,
+      actor,
+      metadata,
+      data,
+      priority: options.priority,
+      aggregate: options.aggregate,
+    };
+  }
+
+  /**
+   * Convenience method to create and publish an event in one call
+   * (matches EventBusService.publishEvent API)
+   *
+   * @example
+   * ```typescript
+   * await mockBus.publishEvent('TradeAccepted', {
+   *   tradeId: '123',
+   *   acceptedById: 'user-1',
+   * }, {
+   *   actor: { id: 'user-1', type: 'user' },
+   * });
+   * ```
+   */
+  async publishEvent<TType extends string, TData>(
+    type: TType,
+    data: TData,
+    options: MockCreateEventOptions & { queue?: string; delay?: number } = {}
+  ): Promise<{ eventId: string; queue: string }> {
+    const event = this.createEvent(type, data, options);
+    return this.publish(event as BaseEvent, { queue: options.queue, delay: options.delay });
   }
 
   /**

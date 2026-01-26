@@ -7,7 +7,7 @@
 
 // Mock Event Bus
 export { MockEventBus, createMockEventBus } from './mock-event-bus';
-export type { MockEventBusOptions, PublishedEvent } from './mock-event-bus';
+export type { MockEventBusOptions, PublishedEvent, MockCreateEventOptions } from './mock-event-bus';
 
 // Event Factories
 export { createTestEvent, createTestEventFactory } from './factories';

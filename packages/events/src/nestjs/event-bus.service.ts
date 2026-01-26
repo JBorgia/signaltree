@@ -3,7 +3,7 @@ import { ConnectionOptions, Queue, QueueEvents } from 'bullmq';
 
 import { generateCorrelationId, generateEventId } from '../core/factory';
 import { EventRegistry } from '../core/registry';
-import { BaseEvent, EventPriority } from '../core/types';
+import { BaseEvent, DEFAULT_EVENT_VERSION, EventActor, EventMetadata, EventPriority, EventVersion } from '../core/types';
 import { EventBusModuleConfig, QueueConfig } from './event-bus.module';
 import { EVENT_BUS_CONFIG, EVENT_REGISTRY } from './tokens';
 
@@ -50,6 +50,30 @@ export interface PublishResult {
   queue: string;
   /** Correlation ID */
   correlationId: string;
+}
+
+/**
+ * Options for creating an event via EventBusService.createEvent()
+ */
+export interface CreateEventServiceOptions {
+  /** Override event ID */
+  id?: string;
+  /** Correlation ID for request tracing */
+  correlationId?: string;
+  /** Causation ID (parent event) */
+  causationId?: string;
+  /** Actor who triggered the event */
+  actor?: EventActor;
+  /** Additional metadata */
+  metadata?: Partial<EventMetadata>;
+  /** Event priority */
+  priority?: EventPriority;
+  /** Schema version override */
+  version?: EventVersion;
+  /** Aggregate info */
+  aggregate?: { type: string; id: string };
+  /** Timestamp override (for testing/replay) */
+  timestamp?: string;
 }
 
 /**
@@ -227,6 +251,93 @@ export class EventBusService implements OnModuleInit, OnModuleDestroy {
       queue: queueName,
       correlationId,
     };
+  }
+
+  /**
+   * Create an event with defaults from module configuration
+   *
+   * This is a convenience method that auto-fills id, timestamp, version,
+   * correlationId, and metadata.source from the module config.
+   *
+   * @example
+   * ```typescript
+   * // Instead of constructing the full event manually:
+   * const event = this.eventBus.createEvent('TradeProposalCreated', {
+   *   tradeId: '123',
+   *   initiatorId: 'user-1',
+   *   recipientId: 'user-2',
+   * }, {
+   *   actor: { id: userId, type: 'user' },
+   *   priority: 'high',
+   * });
+   *
+   * await this.eventBus.publish(event);
+   * ```
+   */
+  createEvent<TType extends string, TData>(
+    type: TType,
+    data: TData,
+    options: CreateEventServiceOptions = {}
+  ): BaseEvent<TType, TData> {
+    const id = options.id ?? generateEventId();
+    const correlationId = options.correlationId ?? generateCorrelationId();
+    const timestamp = options.timestamp ?? new Date().toISOString();
+
+    const actor: EventActor = options.actor ?? {
+      id: 'system',
+      type: 'system',
+    };
+
+    const metadata: EventMetadata = {
+      source: this.config.source ?? 'signaltree',
+      environment: this.config.environment ?? process.env['NODE_ENV'] ?? 'development',
+      ...options.metadata,
+    };
+
+    return {
+      id,
+      type,
+      version: options.version ?? DEFAULT_EVENT_VERSION,
+      timestamp,
+      correlationId,
+      causationId: options.causationId,
+      actor,
+      metadata,
+      data,
+      priority: options.priority,
+      aggregate: options.aggregate,
+    };
+  }
+
+  /**
+   * Convenience method to create and publish an event in one call
+   *
+   * Combines createEvent() and publish() for the common case.
+   *
+   * @example
+   * ```typescript
+   * await this.eventBus.publishEvent('TradeProposalCreated', {
+   *   tradeId: '123',
+   *   initiatorId: 'user-1',
+   * }, {
+   *   actor: { id: userId, type: 'user' },
+   *   priority: 'high',
+   * });
+   * ```
+   */
+  async publishEvent<TType extends string, TData>(
+    type: TType,
+    data: TData,
+    options: CreateEventServiceOptions & Pick<PublishOptions, 'delay' | 'queue' | 'jobId' | 'jobOptions'> = {}
+  ): Promise<PublishResult> {
+    const event = this.createEvent(type, data, options);
+    return this.publish(event, {
+      delay: options.delay,
+      queue: options.queue,
+      jobId: options.jobId,
+      jobOptions: options.jobOptions,
+      priority: options.priority,
+    });
   }
 
   /**

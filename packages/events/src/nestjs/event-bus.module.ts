@@ -51,14 +51,73 @@ export interface QueueConfig {
 }
 
 /**
+ * Preset queue configurations for common use cases
+ */
+export type QueuePreset = 'priority-based' | 'single-queue' | 'minimal';
+
+/**
+ * Preset definitions
+ */
+export const QUEUE_PRESETS: Record<QueuePreset, QueueConfig[]> = {
+  /**
+   * Full priority-based queues (default) - separate queues per priority
+   */
+  'priority-based': [
+    { name: 'events-critical', priorities: ['critical'], concurrency: 10 },
+    { name: 'events-high', priorities: ['high'], concurrency: 8 },
+    { name: 'events-normal', priorities: ['normal'], concurrency: 5 },
+    { name: 'events-low', priorities: ['low'], concurrency: 3 },
+    { name: 'events-bulk', priorities: ['bulk'], concurrency: 2, rateLimit: { max: 100, duration: 1000 } },
+  ],
+  /**
+   * Single queue for all priorities - simpler setup, uses BullMQ priority numbers
+   */
+  'single-queue': [
+    { name: 'events', priorities: ['critical', 'high', 'normal', 'low', 'bulk'], concurrency: 10 },
+  ],
+  /**
+   * Minimal setup - one queue, low concurrency, good for development
+   */
+  'minimal': [
+    { name: 'events', priorities: ['critical', 'high', 'normal', 'low', 'bulk'], concurrency: 3 },
+  ],
+};
+
+/**
  * EventBus module configuration
  */
 export interface EventBusModuleConfig {
   /** Redis connection config */
   redis: RedisConfig;
 
-  /** Queue configuration (defaults to priority-based queues) */
+  /**
+   * Queue preset for quick configuration.
+   * Use this OR `queues`, not both.
+   *
+   * - 'priority-based': Separate queues per priority (recommended for production)
+   * - 'single-queue': One queue with priority numbers (simpler setup)
+   * - 'minimal': Development-friendly, low concurrency
+   *
+   * @default 'priority-based'
+   */
+  preset?: QueuePreset;
+
+  /** Queue configuration (defaults to priority-based queues if no preset specified) */
   queues?: QueueConfig[];
+
+  /**
+   * Service/module name for event metadata.source
+   * Used by createEvent() and publishEvent() convenience methods.
+   * @default 'signaltree'
+   */
+  source?: string;
+
+  /**
+   * Environment name for event metadata.environment
+   * Used by createEvent() and publishEvent() convenience methods.
+   * @default process.env.NODE_ENV || 'development'
+   */
+  environment?: string;
 
   /** Event registry configuration */
   registry?: EventRegistryConfig;
@@ -230,8 +289,24 @@ export class EventBusModule {
     };
   }
 
+  /**
+   * Resolve queue configuration from preset or explicit config
+   */
+  private static resolveQueues(config: EventBusModuleConfig): QueueConfig[] {
+    // Explicit queues take precedence
+    if (config.queues && config.queues.length > 0) {
+      return config.queues;
+    }
+    // Use preset if specified
+    if (config.preset) {
+      return QUEUE_PRESETS[config.preset];
+    }
+    // Default to priority-based
+    return DEFAULT_QUEUES;
+  }
+
   private static createProviders(config: EventBusModuleConfig): Provider[] {
-    const queues = config.queues ?? DEFAULT_QUEUES;
+    const queues = EventBusModule.resolveQueues(config);
     const fullConfig: EventBusModuleConfig = {
       ...config,
       queues,

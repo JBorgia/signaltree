@@ -397,4 +397,157 @@ describe('MockEventBus', () => {
       expect(bus).toBeInstanceOf(MockEventBus);
     });
   });
+
+  describe('createEvent', () => {
+    it('should create an event with auto-generated id and timestamp', () => {
+      const event = eventBus.createEvent('TestEvent', { value: 42 });
+
+      expect(event.type).toBe('TestEvent');
+      expect(event.data).toEqual({ value: 42 });
+      expect(event.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+      expect(event.timestamp).toBeDefined();
+      expect(event.correlationId).toBeDefined();
+      expect(event.version).toEqual({ major: 1, minor: 0 });
+    });
+
+    it('should use source and environment from options', () => {
+      const customBus = createMockEventBus({
+        source: 'my-service',
+        environment: 'staging',
+      });
+
+      const event = customBus.createEvent('TestEvent', {});
+
+      expect(event.metadata.source).toBe('my-service');
+      expect(event.metadata.environment).toBe('staging');
+    });
+
+    it('should allow custom actor', () => {
+      const event = eventBus.createEvent('TestEvent', {}, {
+        actor: { id: 'user-123', type: 'user', name: 'Test User' },
+      });
+
+      expect(event.actor.id).toBe('user-123');
+      expect(event.actor.type).toBe('user');
+      expect(event.actor.name).toBe('Test User');
+    });
+
+    it('should use default test actor if not provided', () => {
+      const event = eventBus.createEvent('TestEvent', {});
+
+      expect(event.actor.id).toBe('test-user');
+      expect(event.actor.type).toBe('user');
+    });
+
+    it('should allow custom id override', () => {
+      const event = eventBus.createEvent('TestEvent', {}, {
+        id: 'custom-id-123',
+      });
+
+      expect(event.id).toBe('custom-id-123');
+    });
+
+    it('should allow correlationId override', () => {
+      const event = eventBus.createEvent('TestEvent', {}, {
+        correlationId: 'corr-123',
+      });
+
+      expect(event.correlationId).toBe('corr-123');
+    });
+
+    it('should allow causationId', () => {
+      const event = eventBus.createEvent('TestEvent', {}, {
+        causationId: 'cause-123',
+      });
+
+      expect(event.causationId).toBe('cause-123');
+    });
+
+    it('should allow priority', () => {
+      const event = eventBus.createEvent('TestEvent', {}, {
+        priority: 'high',
+      });
+
+      expect(event.priority).toBe('high');
+    });
+
+    it('should allow custom metadata', () => {
+      const event = eventBus.createEvent('TestEvent', {}, {
+        metadata: { traceId: 'trace-123', customField: 'value' },
+      });
+
+      expect(event.metadata.traceId).toBe('trace-123');
+      expect(event.metadata.customField).toBe('value');
+      expect(event.metadata.source).toBe('mock-event-bus'); // Still has defaults
+    });
+
+    it('should allow version override', () => {
+      const event = eventBus.createEvent('TestEvent', {}, {
+        version: { major: 2, minor: 1 },
+      });
+
+      expect(event.version).toEqual({ major: 2, minor: 1 });
+    });
+
+    it('should allow aggregate info', () => {
+      const event = eventBus.createEvent('TestEvent', {}, {
+        aggregate: { type: 'Trade', id: 'trade-123' },
+      });
+
+      expect(event.aggregate).toEqual({ type: 'Trade', id: 'trade-123' });
+    });
+  });
+
+  describe('publishEvent', () => {
+    it('should create and publish an event in one call', async () => {
+      const result = await eventBus.publishEvent('TestEvent', { value: 42 });
+
+      expect(result.eventId).toBeDefined();
+      expect(result.queue).toBeDefined();
+      
+      const events = eventBus.getPublishedEvents();
+      expect(events).toHaveLength(1);
+      expect(events[0].event.type).toBe('TestEvent');
+      expect(events[0].event.data).toEqual({ value: 42 });
+    });
+
+    it('should accept actor and other options', async () => {
+      await eventBus.publishEvent('TestEvent', { value: 42 }, {
+        actor: { id: 'user-1', type: 'user' },
+        priority: 'critical',
+      });
+
+      const events = eventBus.getPublishedEvents();
+      expect(events[0].event.actor.id).toBe('user-1');
+      expect(events[0].event.priority).toBe('critical');
+      expect(events[0].queue).toBe('events-critical');
+    });
+
+    it('should accept queue override', async () => {
+      const result = await eventBus.publishEvent('TestEvent', {}, {
+        queue: 'custom-queue',
+      });
+
+      expect(result.queue).toBe('custom-queue');
+    });
+
+    it('should accept delay', async () => {
+      await eventBus.publishEvent('TestEvent', {}, {
+        delay: 5000,
+      });
+
+      const events = eventBus.getPublishedEvents();
+      expect(events[0].delay).toBe(5000);
+    });
+
+    it('should notify subscribers', async () => {
+      const handler = vi.fn();
+      eventBus.subscribe('TestEvent', handler);
+
+      await eventBus.publishEvent('TestEvent', { value: 'hello' });
+
+      expect(handler).toHaveBeenCalledOnce();
+      expect(handler.mock.calls[0][0].data.value).toBe('hello');
+    });
+  });
 });

@@ -6,15 +6,18 @@
  */
 
 // Module
-export { EventBusModule } from './event-bus.module';
+export { EventBusModule, QUEUE_PRESETS } from './event-bus.module';
 export type {
   EventBusModuleConfig,
   EventBusModuleAsyncConfig,
+  QueueConfig,
+  QueuePreset,
+  RedisConfig,
 } from './event-bus.module';
 
 // Services
 export { EventBusService } from './event-bus.service';
-export type { PublishOptions, PublishResult } from './event-bus.service';
+export type { PublishOptions, PublishResult, CreateEventServiceOptions } from './event-bus.service';
 
 // Subscribers
 export { BaseSubscriber } from './base.subscriber';
