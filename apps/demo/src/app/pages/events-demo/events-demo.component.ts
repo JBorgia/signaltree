@@ -13,12 +13,10 @@ import {
     generateIdempotencyKey,
     isRetryableError,
     isValidEvent,
-    type,
-    type,
     validateEvent,
     z,
 } from '@signaltree/events';
-import { createMockEventBus, createTestEvent, MockEventBus, PublishedEvent, type, type } from '@signaltree/events/testing';
+import { createMockEventBus, createTestEvent, MockEventBus, PublishedEvent } from '@signaltree/events/testing';
 
 // =============================================================================
 // DEMO EVENT TYPES
