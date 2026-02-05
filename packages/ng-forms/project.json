@@ -22,8 +22,13 @@
         "outputPath": "dist/packages/ng-forms",
         "format": ["esm"],
         "additionalEntryPoints": [
+          "packages/ng-forms/src/core/ng-forms.ts",
+          "packages/ng-forms/src/core/validators.ts",
+          "packages/ng-forms/src/core/async-validators.ts",
+          "packages/ng-forms/src/history/history.ts",
+          "packages/ng-forms/src/enhancer/form-bridge.ts",
           "packages/ng-forms/src/audit/index.ts",
-          "packages/ng-forms/src/enhancer/index.ts"
+          "packages/ng-forms/src/wizard/wizard.ts"
         ],
         "assets": [
           { "input": "packages/ng-forms", "glob": "README.md", "output": "." },

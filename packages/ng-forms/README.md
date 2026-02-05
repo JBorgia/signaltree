@@ -77,11 +77,14 @@ class CheckoutComponent {
 ### form() alone (no ng-forms needed)
 
 ```typescript
+import { signalTree, form } from '@signaltree/core';
+import { email } from '@signaltree/ng-forms';
+
 // Pure signal forms - works without Angular forms module
 const tree = signalTree({
   login: form({
     initial: { email: '', password: '' },
-    validators: { email: validators.email() },
+    validators: { email: email() },
   }),
 });
 
@@ -137,9 +140,9 @@ pnpm add @signaltree/core @signaltree/ng-forms
 
 ```typescript
 import { Component } from '@angular/core';
-import { createFormTree, validators } from '@signaltree/ng-forms';
+import { createFormTree, required, email } from '@signaltree/ng-forms';
 
-interface ProfileForm {
+interface ProfileForm extends Record<string, unknown> {
   name: string;
   email: string;
   marketing: boolean;
@@ -182,9 +185,9 @@ export class ProfileFormComponent {
       persistKey: 'profile-form',
       storage: this.storage,
       fieldConfigs: {
-        name: { validators: validators.required('Name is required') },
+        name: { validators: [required('Name is required')] },
         email: {
-          validators: [validators.required(), validators.email()],
+          validators: [required(), email()],
           debounceMs: 150,
         },
       },
@@ -256,8 +259,8 @@ class CheckoutComponent {
   }, {
     persistKey: 'checkout-draft',
     fieldConfigs: {
-      'shipping.zip': { validators: validators.zipCode() },
-      'payment.card': { validators: validators.creditCard(), debounceMs: 300 }
+      'shipping.zip': { validators: [(v) => /^\d{5}$/.test(String(v)) ? null : 'Invalid ZIP'] },
+      'payment.card': { validators: [(v) => /^\d{13,19}$/.test(String(v)) ? null : 'Invalid card'], debounceMs: 300 }
     }
   });
 
@@ -287,7 +290,7 @@ const checkout = createFormTree(initialState, {
   },
   fieldConfigs: {
     'payment.card.number': { debounceMs: 200 },
-    'preferences.*': { validators: validators.required() },
+    'preferences.*': { validators: [required()] },
   },
   conditionals: [
     {
@@ -399,7 +402,7 @@ Use `SignalValueDirective` to keep standalone signals and `ngModel` fields align
 ### Before (deprecated)
 
 ```typescript
-import { createFormTree } from '@signaltree/ng-forms';
+import { createFormTree, email } from '@signaltree/ng-forms';
 
 const form = createFormTree(
   {
@@ -407,7 +410,7 @@ const form = createFormTree(
     email: '',
   },
   {
-    validators: { email: validators.email() },
+    validators: { email: email() },
     persistKey: 'profile-form',
   }
 );
@@ -421,12 +424,12 @@ form.form; // FormGroup
 
 ```typescript
 import { signalTree, form } from '@signaltree/core';
-import { formBridge } from '@signaltree/ng-forms';
+import { formBridge, email } from '@signaltree/ng-forms';
 
 const tree = signalTree({
   profile: form({
     initial: { name: '', email: '' },
-    validators: { email: validators.email() },
+    validators: { email: email() },
     persist: 'profile-form',
   }),
 }).with(formBridge());

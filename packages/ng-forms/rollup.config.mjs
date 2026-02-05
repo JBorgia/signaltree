@@ -12,18 +12,20 @@ const baseConfig = createLibraryRollupConfig({
 /**
  * Plugin to ensure the main index.ts barrel file is always generated,
  * even when it contains only re-exports that Rollup would normally tree-shake.
+ * Updated to use the actual output file structure.
  */
 const barrelIndexPlugin = {
   name: 'barrel-index-plugin',
   generateBundle(options, bundle) {
     // If index.js doesn't exist (because Rollup optimized it away), create it
-    // by re-exporting from the actual modules
+    // by re-exporting from the actual modules that were built
     if (!Object.keys(bundle).some((k) => k.includes('dist/index'))) {
+      // Use the actual output structure - files are built directly (not in subdirectory barrels)
       const indexContent = `export * from './core/ng-forms.js';
 export * from './core/validators.js';
 export * from './core/async-validators.js';
-export * from './history/index.js';
-export * from './enhancer/index.js';
+export * from './history/history.js';
+export * from './enhancer/form-bridge.js';
 `;
       bundle['dist/index.js'] = {
         type: 'asset',
