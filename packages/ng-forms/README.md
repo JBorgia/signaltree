@@ -142,12 +142,6 @@ pnpm add @signaltree/core @signaltree/ng-forms
 import { Component } from '@angular/core';
 import { createFormTree, required, email } from '@signaltree/ng-forms';
 
-interface ProfileForm extends Record<string, unknown> {
-  name: string;
-  email: string;
-  marketing: boolean;
-}
-
 @Component({
   selector: 'app-profile-form',
   template: `
@@ -175,7 +169,8 @@ interface ProfileForm extends Record<string, unknown> {
 export class ProfileFormComponent {
   private storage = typeof window !== 'undefined' ? window.localStorage : undefined;
 
-  profile = createFormTree<ProfileForm>(
+  // Type is inferred from initial values - no interface needed!
+  profile = createFormTree(
     {
       name: '',
       email: '',
@@ -196,7 +191,7 @@ export class ProfileFormComponent {
 
   async save() {
     await this.profile.submit(async (values) => {
-      // Persist values to your API or service layer here
+      // values is typed as { name: string; email: string; marketing: boolean }
       console.log('Saving profile', values);
     });
   }
@@ -205,10 +200,63 @@ export class ProfileFormComponent {
 
 The returned `FormTree` exposes:
 
-- `form`: Angular `FormGroup` for templates and directives
+- `form`: Angular `TypedFormGroup<T>` for templates and directives (fully typed!)
 - `$` / `state`: signal-backed access to individual fields
 - `errors`, `asyncErrors`, `valid`, `dirty`, `submitting`: writable signals for UI state
 - Helpers such as `setValue`, `setValues`, `reset`, `validate`, and `submit`
+
+## Type Inference
+
+`createFormTree()` leverages recursive type inference—types flow from initial values:
+
+```typescript
+// ✅ Simple case: types inferred automatically
+const form = createFormTree({
+  name: '',           // string
+  age: 0,             // number
+  active: false,      // boolean
+});
+
+form.$.name();        // string
+form.$.age();         // number
+form.form.controls.name;  // FormControl<string>
+```
+
+### Union Types Need Assertions
+
+When a field can be one of several specific values, TypeScript widens the inferred type to `string`. Use inline type assertions to preserve narrowness:
+
+```typescript
+// ❌ Without assertion: resolution is inferred as string
+const form = createFormTree({
+  resolution: 'PENDING',  // Inferred as string, not the union
+});
+
+// ✅ With assertion: resolution is the exact union type
+const form = createFormTree({
+  resolution: 'PENDING' as 'PENDING' | 'APPROVED' | 'REJECTED',
+  category: null as CategoryType | null,
+  items: [] as string[],
+});
+```
+
+### TypedFormGroup
+
+The `form` property returns `TypedFormGroup<T>`, which recursively maps your form shape to Angular controls:
+
+```typescript
+type TypedFormGroup<T> = FormGroup<{
+  [K in keyof T]: T[K] extends unknown[]
+    ? FormArray<FormControl<T[K][number]>>
+    : T[K] extends object
+      ? FormGroup<...>  // Nested objects become nested FormGroups
+      : FormControl<T[K]>
+}>;
+
+// Result: full autocomplete and type checking
+const form = createFormTree({ user: { name: '', email: '' } });
+form.form.controls.user.controls.name.value;  // string
+```
 
 ## Core capabilities
 
