@@ -32,6 +32,30 @@ import { signalTree } from '@signaltree/core';
 import { deepClone, matchPath, mergeDeep, parsePath } from '@signaltree/shared';
 import { firstValueFrom, isObservable, Observable, Subscription } from 'rxjs';
 
+// ============================================
+// TYPED FORM GROUP HELPERS
+// ============================================
+
+/**
+ * Maps a value type T to the appropriate Angular form control type.
+ * - Arrays become FormArray
+ * - Objects become nested FormGroup
+ * - Primitives become FormControl
+ */
+type ToFormControl<T> = T extends (infer U)[]
+  ? FormArray<ToFormControl<U>>
+  : T extends Record<string, unknown>
+    ? FormGroup<{ [K in keyof T]: ToFormControl<T[K]> }>
+    : FormControl<T>;
+
+/**
+ * Creates a typed FormGroup structure from a form value type.
+ * This enables proper type inference for form.controls.fieldName
+ */
+export type TypedFormGroup<T extends Record<string, unknown>> = FormGroup<{
+  [K in keyof T]: ToFormControl<T[K]>;
+}>;
+
 // Dev environment detection
 declare const __DEV__: boolean | undefined;
 declare const ngDevMode: boolean | undefined;
@@ -107,8 +131,8 @@ export type FormTree<T extends Record<string, unknown>> = {
   state: TreeNode<T>;
   $: TreeNode<T>; // Alias for state
 
-  // Underlying Angular form structure
-  form: FormGroup;
+  // Underlying Angular form structure - fully typed!
+  form: TypedFormGroup<T>;
 
   // Form-specific signals
   errors: WritableSignal<Record<string, string>>;
