@@ -1,5 +1,5 @@
 import { computed } from '@angular/core';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { devTools } from '../../enhancers/devtools/devtools';
 import { entities } from '../../enhancers/entities/entities';
@@ -797,6 +797,10 @@ describe('derived() marker pattern', () => {
   });
 
   it('should preserve derived signal identity across .with() chaining', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
+      // silence warnings; we assert below that overwrite warnings do not happen
+    });
+
     const base = signalTree({ count: 1 }).derived(($) => ({
       doubled: computed(() => $.count() * 2),
     }));
@@ -806,6 +810,13 @@ describe('derived() marker pattern', () => {
 
     expect(base.$.doubled).toBe(w1.$.doubled);
     expect(w1.$.doubled).toBe(w2.$.doubled);
+
+    const warnedAboutOverwrite = warnSpy.mock.calls.some((call) =>
+      String(call[0] ?? '').includes('overwrites source signal')
+    );
+    expect(warnedAboutOverwrite).toBe(false);
+
+    warnSpy.mockRestore();
   });
 
   describe('performance characteristics', () => {
