@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/core",
-  "version": "7.3.1",
+  "version": "7.4.0",
   "description": "Reactive JSON for Angular. JSON branches, reactive leaves. No actions. No reducers. No selectors.",
   "license": "MIT",
   "type": "module",
