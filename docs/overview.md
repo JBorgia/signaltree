@@ -6,6 +6,13 @@
 
 This document consolidates the feature overview and technical specifications for the SignalTree ecosystem (September 2025).
 
+## Latest release (7.6.0)
+
+- DevTools auto-connect, path-based actions, and time-travel dispatch support
+- `entityMap().byId()` reactivity fix when IDs are set before collections
+- Derived `.with()` chaining preserves computed identity
+- Safer DevTools serialization and filtering options
+
 ## Overview
 
 - Recursive typing with deep nesting and accurate type inference

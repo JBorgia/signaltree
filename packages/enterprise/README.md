@@ -16,6 +16,11 @@ Enterprise-grade optimizations for SignalTree. Designed for large-scale applicat
 npm install @signaltree/core @signaltree/enterprise
 ```
 
+## Type Definitions
+
+Type declarations are shipped as `src/**/*.d.ts` and referenced by the package exports.
+No extra build step is needed to consume types.
+
 ## Quick Start
 
 ```typescript

@@ -13,7 +13,28 @@
   </p>
 </div>
 
-## 🚀 What's New (January 2026)
+## 🚀 What's New (February 2026)
+
+**v7.6.0 Release** - DevTools Upgrades + Reactivity Fixes:
+
+> **DevTools that behave like you expect.** Auto-connect, path-based actions, time-travel dispatch, and safer serialization.
+
+- **DevTools auto-connect** to Redux DevTools extension
+- **Path-based actions** with metadata and filtering
+- **Time-travel dispatch** support from Redux DevTools
+- **`entityMap().byId()` reactivity** fixed for pre-set IDs
+- **Derived `.with()` identity** preserved across enhancer chains
+
+```typescript
+import { devTools, signalTree } from '@signaltree/core';
+
+const tree = signalTree({
+  activeId: null as number | null,
+  users: entityMap<User, number>(),
+}).derived(($) => ({
+  activeUser: computed(() => $.users.byId($.activeId())?.()),
+})).with(devTools({ treeName: 'Users' }));
+```
 
 **v7.1.1 Release** - Tree-Shakeable Markers:
 

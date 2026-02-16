@@ -1,3 +1,22 @@
+## 7.6.0 (2026-02-16)
+
+### 🚀 Features
+
+- **core:** DevTools auto-connect, path-based actions, time-travel dispatch, and action metadata
+- **core:** DevTools filtering, safe serialization, pretty path formatting, and rate limiting
+- **core:** `devTools()` composition tracing via `.with()` chain actions
+
+### 🩹 Fixes
+
+- **core:** `entityMap().byId()` reactivity when IDs are set before collections
+- **core:** Preserve derived signal identity across `.with()` chaining
+
+### 📖 Documentation
+
+- Demo and docs updated to reflect DevTools auto-connect, path actions, and time-travel support
+
+---
+
 ## 7.2.0 (2026-01-17)
 
 ### 🚀 Features

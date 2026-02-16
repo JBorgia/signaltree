@@ -82,6 +82,7 @@ import { serialization } from '@signaltree/serialization';
 import { signalTree, batching, memoization, withDevtools, withTimeTravel, serialization, ecommercePreset, dashboardPreset } from '@signaltree/core';
 
 // Note: `.with(entities())` was deprecated in v6 and removed in v7 — remove any calls in your code.
+// Note: devTools auto-connects to Redux DevTools and supports time-travel dispatch.
 ```
 
 ### Step 3: Verify Functionality

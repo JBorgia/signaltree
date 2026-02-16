@@ -650,7 +650,7 @@ All enhancers are exported directly from `@signaltree/core`:
 
 **Data Management:**
 
-- `entities()` - Advanced CRUD operations for collections
+- `entities()` - Legacy helper (not required when using `entityMap()` in v7)
 - `createAsyncOperation()` - Async operation management with loading/error states
 - `trackAsync()` - Track async operations in your state
 - `serialization()` - State persistence and SSR support
@@ -658,7 +658,7 @@ All enhancers are exported directly from `@signaltree/core`:
 
 **Development Tools:**
 
-- `devTools()` - Redux DevTools integration
+- `devTools()` - Redux DevTools auto-connect, path actions, and time-travel dispatch
 - `withTimeTravel()` - Undo/redo functionality
 
 **Presets:**
@@ -691,14 +691,12 @@ const tree = signalTree({ count: 0 }).with(
 **Performance-Focused Stack:**
 
 ```typescript
-import { signalTree, batching, memoization, entities } from '@signaltree/core';
+import { signalTree, batching, memoization, entityMap } from '@signaltree/core';
 
 const tree = signalTree({
   products: entityMap<Product>(),
   ui: { loading: false },
-})
-  .with(entities()) // Efficient CRUD operations (auto-detects entityMap)
-  .with(batching()); // Batch updates for optimal rendering
+}).with(batching()); // Batch updates for optimal rendering
 
 // Entity CRUD operations
 tree.$.products.addOne(newProduct);
@@ -747,6 +745,8 @@ tree.undo(); // Revert changes
 ```
 
 #### Enhancer Metadata & Ordering
+
+Derived computed signals are preserved across `.with()` chaining, so enhancer composition does not recreate signal identities.
 
 Enhancers can declare metadata for automatic dependency resolution:
 
@@ -1574,14 +1574,14 @@ const filteredProducts = computed(() => {
 ### Data Management Composition
 
 ```typescript
-import { signalTree, entityMap, entities } from '@signaltree/core';
+import { signalTree, entityMap } from '@signaltree/core';
 
-// Add data management capabilities (+2.77KB total)
+// Add data management capabilities (entityMap is auto-processed)
 const tree = signalTree({
   users: entityMap<User>(),
   posts: entityMap<Post>(),
   ui: { loading: false, error: null as string | null },
-}).with(entities());
+});
 
 // Advanced entity operations via tree.$ accessor
 tree.$.users.addOne(newUser);
@@ -1603,7 +1603,7 @@ const appTree = signalTree({
       reports: entityMap<Report>(),
     },
   },
-}).with(entities());
+});
 
 // Access nested entities using tree.$ accessor
 appTree.$.app.data.users.selectBy((u) => u.isAdmin); // Filtered signal
@@ -1628,7 +1628,7 @@ async function fetchUsers() {
 ### Full-Featured Development Composition
 
 ```typescript
-import { signalTree, batching, entities, serialization, withTimeTravel, devTools } from '@signaltree/core';
+import { signalTree, batching, serialization, withTimeTravel, devTools } from '@signaltree/core';
 
 // Full development stack (example)
 const tree = signalTree({
@@ -1639,7 +1639,6 @@ const tree = signalTree({
   },
 }).with(
   batching(), // Performance
-  entities(), // Data management
   // withAsync removed — use async helpers for API integration
   serialization({
     // State persistence
@@ -1653,7 +1652,9 @@ const tree = signalTree({
   devTools({
     // Debug tools (dev only)
     name: 'MyApp',
-    trace: true,
+    enableTimeTravel: true,
+    includePaths: ['app.*', 'ui.*'],
+    formatPath: (path) => path.replace(/\.(\d+)/g, '[$1]'),
   })
 );
 
@@ -1669,12 +1670,11 @@ tree.save(); // Persistence
 ### Production-Ready Composition
 
 ```typescript
-import { signalTree, batching, entities, serialization } from '@signaltree/core';
+import { signalTree, batching, serialization } from '@signaltree/core';
 
 // Production build (no dev tools)
 const tree = signalTree(initialState).with(
   batching(), // Performance optimization
-  entities(), // Data management
   // withAsync removed — use async helpers for API integration
   serialization({
     // User preferences
@@ -1690,14 +1690,13 @@ const tree = signalTree(initialState).with(
 ### Conditional Enhancement
 
 ```typescript
-import { signalTree, batching, entities, devTools, withTimeTravel } from '@signaltree/core';
+import { signalTree, batching, devTools, withTimeTravel } from '@signaltree/core';
 
 const isDevelopment = process.env['NODE_ENV'] === 'development';
 
 // Conditional enhancement based on environment
 const tree = signalTree(state).with(
   batching(), // Always include performance
-  entities(), // Always include data management
   ...(isDevelopment
     ? [
         // Development-only features
@@ -1742,7 +1741,7 @@ const tree = signalTree(state);
 const tree2 = tree.with(batching());
 
 // Phase 3: Add data management for collections
-const tree3 = tree2.with(entities());
+const tree3 = tree2; // entityMap is auto-processed in v7
 
 // Phase 4: Add async for API integration
 // withAsync removed — no explicit async enhancer; use async helpers instead
@@ -2054,8 +2053,8 @@ All enhancers are included in `@signaltree/core`:
 
 - **batching()** - Batch multiple updates for better performance
 - **memoization()** - Intelligent caching & performance optimization
-- **entities()** - Advanced entity management & CRUD operations
-- **devTools()** - Redux DevTools integration for debugging
+- **entities()** - Legacy helper (not required when using `entityMap()` in v7)
+- **devTools()** - Auto-connect, path actions, and time-travel dispatch
 - **withTimeTravel()** - Undo/redo functionality & state history
 - **serialization()** - State persistence & SSR support
 - **createDevTree()** - Pre-configured development setup
@@ -2210,11 +2209,11 @@ All enhancers are now consolidated in the core package. The following features a
 
 ### Advanced Features
 
-- **entities()** (+0.97KB gzipped) - Enhanced CRUD operations & entity management
+- **entities()** (+0.97KB gzipped) - Legacy helper (not required when using `entityMap()` in v7)
 
 ### Development Tools
 
-- **devTools()** (+2.49KB gzipped) - Development tools & Redux DevTools integration
+- **devTools()** (+2.49KB gzipped) - Auto-connect, path actions, and time-travel dispatch
 - **withTimeTravel()** (+1.75KB gzipped) - Undo/redo functionality & state history
 
 ### Integration & Convenience

@@ -6,6 +6,8 @@
 
 Use this index to navigate the documentation.
 
+**Latest release:** 7.6.0 (DevTools upgrades + reactivity fixes). See [CHANGELOG](../CHANGELOG.md).
+
 ---
 
 ## 📚 Getting Started
