@@ -224,9 +224,6 @@ rollback_versions() {
             git push origin --delete "v$NEW_VERSION" 2>/dev/null || true
         fi
 
-        # Clean up git changes
-        git reset --hard HEAD 2>/dev/null || true
-
         # Remove backup file
         rm -f .version_backup
 
@@ -304,12 +301,6 @@ print_step "Building all packages..."
 print_step "Building @signaltree/core first..."
 npx nx build core --configuration=production || {
     print_error "Core package build failed! Rolling back version changes."
-    rollback_versions
-    exit 1
-}
-print_step "Running post-build step for @signaltree/core..."
-npx nx run core:postbuild --skip-nx-cache || {
-    print_error "Core package post-build failed! Rolling back version changes."
     rollback_versions
     exit 1
 }

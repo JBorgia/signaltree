@@ -89,16 +89,16 @@ export function createEntitySignal<
 
   function createEntityNode(id: K, entity: E): EntityNode<E> {
     // Node is callable: node() returns current entity
-    const node = (() => storage.get(id)) as unknown as EntityNode<E>;
+    // IMPORTANT: Read from mapSignal() so consumers who call node() inside
+    // computed/effect properly register a dependency on entity map updates.
+    const node = (() => mapSignal().get(id)) as unknown as EntityNode<E>;
 
     // Add properties for deep access
     for (const key of Object.keys(entity)) {
       Object.defineProperty(node, key, {
         get: () => {
-          const current = storage.get(id);
-          const value = current?.[key as keyof E];
           // Return a signal-like callable
-          return () => value;
+          return () => mapSignal().get(id)?.[key as keyof E];
         },
         enumerable: true,
         configurable: true,
@@ -141,7 +141,10 @@ export function createEntitySignal<
     // ==================
 
     byId(id: K): EntityNode<E> | undefined {
-      const entity = storage.get(id);
+      // Read mapSignal() so callers register a reactive dependency even when
+      // the entity does not exist yet.
+      const map = mapSignal();
+      const entity = map.get(id);
       if (!entity) return undefined;
       return getOrCreateNode(id, entity);
     },

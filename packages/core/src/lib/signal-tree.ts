@@ -744,14 +744,6 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
           }
         }
       }
-      // Transfer pending derived queue to the new builder
-      for (const factory of derivedQueue) {
-        (
-          newBuilder as unknown as {
-            derived: (f: ($: unknown) => object) => unknown;
-          }
-        ).derived(factory as ($: unknown) => object);
-      }
       return newBuilder as SignalTreeBuilder<TSource, TAccum> & TAdded;
     },
     enumerable: false,

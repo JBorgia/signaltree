@@ -24,7 +24,10 @@ export const TicketStore = signalStore(
     <li><strong>Computed</strong> → `AppComputed` service</li>
     <li><strong>Methods</strong> → `ops` service</li>
     <li><strong>Entities</strong> → `entityMap()`</li>
-    <li><strong>Devtools</strong> → `devTools()` enhancer</li>
+    <li>
+      <strong>Devtools</strong> → `devTools()` enhancer (auto-connects to Redux
+      DevTools when the browser extension is installed)
+    </li>
   </ul>
 
   <h2>Step 3: Replace in small PRs</h2>

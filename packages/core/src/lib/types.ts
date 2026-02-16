@@ -600,6 +600,8 @@ export interface DevToolsConfig {
   enableLogging?: boolean;
   /** Performance warning threshold (ms) */
   performanceThreshold?: number;
+  /** Enable Redux DevTools time-travel integration */
+  enableTimeTravel?: boolean;
   /** Name shown in Redux DevTools */
   name?: string;
   /** Alias for name (legacy support) */
@@ -610,6 +612,24 @@ export interface DevToolsConfig {
   logActions?: boolean;
   /** Max history entries to keep */
   maxAge?: number;
+  /** Limit sends to at most once every N milliseconds (0 = no limit) */
+  rateLimitMs?: number;
+  /** Limit sends by rate (overrides rateLimitMs if provided) */
+  maxSendsPerSecond?: number;
+  /** Only include actions matching these path patterns */
+  includePaths?: string[];
+  /** Exclude actions matching these path patterns */
+  excludePaths?: string[];
+  /** Customize how paths are formatted for display */
+  formatPath?: (path: string) => string;
+  /** Maximum serialization depth for devtools state snapshots */
+  maxDepth?: number;
+  /** Maximum array length to serialize per path */
+  maxArrayLength?: number;
+  /** Maximum string length to serialize per field */
+  maxStringLength?: number;
+  /** Optional custom serializer for devtools state snapshots */
+  serialize?: (state: unknown) => unknown;
   features?: {
     jump?: boolean;
     skip?: boolean;

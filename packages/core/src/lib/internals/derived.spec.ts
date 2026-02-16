@@ -1,7 +1,9 @@
 import { computed } from '@angular/core';
 import { describe, expect, it } from 'vitest';
 
+import { devTools } from '../../enhancers/devtools/devtools';
 import { entities } from '../../enhancers/entities/entities';
+import { memoization } from '../../enhancers/memoization/memoization';
 import { signalTree } from '../signal-tree';
 import { entityMap } from '../types';
 
@@ -763,6 +765,47 @@ describe('derived() marker pattern', () => {
       expect(tree.$.sum()).toBe(30);
       expect(tree.$.average()).toBe(30);
     });
+
+    it('should update byId-derived when id is set before setAll()', () => {
+      interface ProductEntity {
+        id: string;
+        name: string;
+      }
+
+      const tree = signalTree({
+        products: entityMap<ProductEntity>(),
+        activeProductId: undefined as string | undefined,
+      }).derived(($) => ({
+        activeProduct: computed(() => {
+          const id = $.activeProductId();
+          return id != null ? $.products.byId(id)?.() : undefined;
+        }),
+      }));
+
+      // Set id first (entity not present yet)
+      tree.$.activeProductId.set('1');
+      expect(tree.$.activeProduct()).toBeUndefined();
+
+      // Now load entities - derived should update without extra deps
+      tree.$.products.setAll([
+        { id: '1', name: 'Apple' },
+        { id: '2', name: 'Banana' },
+      ]);
+
+      expect(tree.$.activeProduct()?.name).toBe('Apple');
+    });
+  });
+
+  it('should preserve derived signal identity across .with() chaining', () => {
+    const base = signalTree({ count: 1 }).derived(($) => ({
+      doubled: computed(() => $.count() * 2),
+    }));
+
+    const w1 = base.with(memoization());
+    const w2 = w1.with(devTools({ enabled: false }));
+
+    expect(base.$.doubled).toBe(w1.$.doubled);
+    expect(w1.$.doubled).toBe(w2.$.doubled);
   });
 
   describe('performance characteristics', () => {
