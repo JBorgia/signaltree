@@ -111,7 +111,7 @@ export class UsersComponent {
   readonly theme = this.tree.$.ui.theme;
 
   addUser(user: User) {
-    this.tree.$.users.add(user);
+    this.tree.$.users.addOne(user);
   }
 
   toggleTheme() {
@@ -193,14 +193,17 @@ Components inject and access the tree directly. No intermediary layers.
 
 ```typescript
 // app-tree.ts
-export const appTree = signalTree<AppState>({...}).with(entities<Plant>('plants'));
+export const appTree = signalTree<AppState>({
+  ...,
+  plants: entityMap<Plant>(),
+});
 
 // component.ts
 export class PlantsComponent {
   private tree = inject(APP_TREE);
-  readonly plants = this.tree.$.plants.selectAll;
+  readonly plants = this.tree.$.plants.all;
 
-  add(plant: Plant) { this.tree.$.plants.add(plant); }
+  add(plant: Plant) { this.tree.$.plants.addOne(plant); }
 }
 ```
 
@@ -228,8 +231,8 @@ export class PlantsFacade {
   async loadWithSchedules(gardenId: string) {
     const [plants, schedules] = await Promise.all([...]);
     this.tree.batchUpdate(() => {
-      this.tree.$.plants.entities.set(plants);
-      this.tree.$.schedules.entities.set(schedules);
+      this.tree.$.plants.entities.setAll(plants);
+      this.tree.$.schedules.entities.setAll(schedules);
     });
   }
 }
@@ -239,10 +242,10 @@ export class PlantsComponent {
   private tree = inject(APP_TREE);
   private facade = inject(PlantsFacade);
 
-  readonly plants = this.tree.$.plants.entities.selectAll;
+  readonly plants = this.tree.$.plants.entities.all;
 
   ngOnInit() { this.facade.loadWithSchedules(this.gardenId); }
-  delete(id: string) { this.tree.$.plants.entities.remove(id); } // Direct for simple ops
+  delete(id: string) { this.tree.$.plants.entities.removeOne(id); } // Direct for simple ops
 }
 ```
 
@@ -308,17 +311,17 @@ export class PlantService {
   private api = inject(PlantsApi);
 
   readonly entities = this.tree.$.plants.entities;
-  readonly all = this.entities.selectAll;
-  readonly byId = (id: string) => this.entities.selectById(id);
+  readonly all = this.entities.all;
+  readonly byId = (id: string) => this.entities.byId(id);
 
   async load() {
     const plants = await this.api.getAll();
-    this.entities.set(plants);
+    this.entities.setAll(plants);
   }
 
   async create(plant: Omit<Plant, 'id'>) {
     const created = await this.api.create(plant);
-    this.entities.add(created);
+    this.entities.addOne(created);
     return created;
   }
 }
@@ -340,7 +343,10 @@ Extend the tree object itself with domain methods. No separate facade classes.
 
 ```typescript
 // app-tree.ts
-const baseTree = signalTree<AppState>({...}).with(entities<Plant>('plants.entities'));
+const baseTree = signalTree<AppState>({
+  ...,
+  // where plants.entities is entityMap<Plant>()
+});
 
 export const appTree = Object.assign(baseTree, {
   plants: {
@@ -348,8 +354,8 @@ export const appTree = Object.assign(baseTree, {
     async loadWithSchedules(api: PlantsApi, gardenId: string) {
       const [plants, schedules] = await Promise.all([...]);
       baseTree.batchUpdate(() => {
-        baseTree.$.plants.entities.set(plants);
-        baseTree.$.schedules.entities.set(schedules);
+        baseTree.$.plants.entities.setAll(plants);
+        baseTree.$.schedules.entities.setAll(schedules);
       });
     }
   }
@@ -394,7 +400,7 @@ export const GARDENS_STATE = new InjectionToken<typeof appTree.$.gardens>('Garde
 // component.ts
 export class PlantsComponent {
   private plants = inject(PLANTS_STATE);
-  readonly all = this.plants.entities.selectAll;
+  readonly all = this.plants.entities.all;
 }
 ```
 
@@ -414,7 +420,7 @@ Global tree composed from domain sub-trees. Single access point, modular definit
 ```typescript
 // domains/plants.tree.ts
 export const plantsSlice = {
-  entities: [] as Plant[],
+  entities: entityMap<Plant>(),
   filters: { search: '', status: 'all' as PlantStatus },
   operations: {
     load: { status: 'idle' as OperationStatus, error: null as string | null },
@@ -423,7 +429,7 @@ export const plantsSlice = {
 
 // domains/gardens.tree.ts
 export const gardensSlice = {
-  entities: [] as Garden[],
+  entities: entityMap<Garden>(),
   selected: null as string | null,
 };
 
@@ -433,7 +439,7 @@ export const appTree = signalTree({
   gardens: gardensSlice,
   auth: { userId: null as string | null },
   ui: { theme: 'light' as Theme },
-}).with(entities<Plant>('plants.entities'), entities<Garden>('gardens.entities'));
+});
 ```
 
 | Pros                                   | Cons                      |
@@ -456,10 +462,14 @@ Separate tree instance per domain.
 
 ```typescript
 // plants-tree.ts
-export const plantsTree = signalTree<PlantsState>({...}).with(entities<Plant>('entities'));
+export const plantsTree = signalTree({
+  entities: entityMap<Plant>(),
+});
 
 // gardens-tree.ts
-export const gardensTree = signalTree<GardensState>({...}).with(entities<Garden>('entities'));
+export const gardensTree = signalTree({
+  entities: entityMap<Garden>(),
+});
 
 // component.ts
 export class DashboardComponent {
@@ -469,8 +479,8 @@ export class DashboardComponent {
   // Cross-domain? Manual coordination
   async transferPlant(plantId: string, gardenId: string) {
     await this.api.transfer(plantId, gardenId);
-    this.plants.$.entities.update(plantId, { gardenId });
-    this.gardens.$.entities.update(gardenId, { plantCount: count + 1 });
+    this.plants.$.entities.updateOne(plantId, { gardenId });
+    this.gardens.$.entities.updateOne(gardenId, { plantCount: count + 1 });
   }
 }
 ```
@@ -525,9 +535,9 @@ Use SignalTree only where its features are needed. Vanilla signals elsewhere.
 ```typescript
 // Only entities need SignalTree
 export const entitiesTree = signalTree({
-  plants: { entities: [] as Plant[] },
-  gardens: { entities: [] as Garden[] },
-}).with(entities<Plant>('plants.entities'), entities<Garden>('gardens.entities'));
+  plants: { entities: entityMap<Plant>() },
+  gardens: { entities: entityMap<Garden>() },
+});
 
 // Everything else is vanilla signals
 export const authState = {
@@ -563,10 +573,10 @@ Explicit separation between read projections and write commands.
 // queries.ts - Read-only projections
 export function plantQueries(tree: AppTree) {
   return {
-    all: tree.$.plants.entities.selectAll,
-    active: computed(() => tree.$.plants.entities.selectAll()().filter(p => p.active)),
+    all: tree.$.plants.entities.all,
+    active: computed(() => tree.$.plants.entities.all().filter(p => p.active)),
     byGarden: (id: string) => computed(() =>
-      tree.$.plants.entities.selectAll()().filter(p => p.gardenId === id)
+      tree.$.plants.entities.all().filter(p => p.gardenId === id)
     ),
   };
 }
@@ -603,13 +613,13 @@ export type PlantAction = { type: 'plants/load'; payload: Plant[] } | { type: 'p
 export function handlePlantAction(tree: AppTree, action: PlantAction) {
   switch (action.type) {
     case 'plants/load':
-      tree.$.plants.entities.set(action.payload);
+      tree.$.plants.entities.setAll(action.payload);
       break;
     case 'plants/add':
-      tree.$.plants.entities.add(action.payload);
+      tree.$.plants.entities.addOne(action.payload);
       break;
     case 'plants/remove':
-      tree.$.plants.entities.remove(action.payload);
+      tree.$.plants.entities.removeOne(action.payload);
       break;
   }
 }
@@ -642,10 +652,10 @@ export class PlantRepository {
   private pending = new Map<string, Partial<Plant>>();
 
   get(id: string) {
-    return this.tree.$.plants.entities.selectById(id);
+    return computed(() => this.tree.$.plants.entities.byId(id)?.());
   }
   getAll() {
-    return this.tree.$.plants.entities.selectAll;
+    return this.tree.$.plants.entities.all;
   }
 
   stage(id: string, changes: Partial<Plant>) {
@@ -658,7 +668,7 @@ export class PlantRepository {
 
     this.tree.batchUpdate(() => {
       for (const [id, changes] of updates) {
-        this.tree.$.plants.entities.update(id, changes);
+        this.tree.$.plants.entities.updateOne(id, changes);
       }
     });
     this.pending.clear();
@@ -695,7 +705,7 @@ export function treeSlice$<T>(selector: () => T): Observable<T> {
 export class PlantEffects {
   private tree = inject(APP_TREE);
 
-  readonly autoSave$ = treeSlice$(() => this.tree.$.plants.entities.selectAll()()).pipe(
+  readonly autoSave$ = treeSlice$(() => this.tree.$.plants.entities.all()).pipe(
     debounceTime(5000),
     switchMap((plants) => this.api.bulkSave(plants))
   );
@@ -704,7 +714,7 @@ export class PlantEffects {
     filter(Boolean),
     distinctUntilChanged(),
     switchMap((gardenId) => this.api.getPlantsByGarden(gardenId)),
-    tap((plants) => this.tree.$.plants.entities.set(plants))
+    tap((plants) => this.tree.$.plants.entities.setAll(plants))
   );
 }
 ```
@@ -729,7 +739,7 @@ Global tree for shared state, component signals or mini-trees for UI-only state.
 export class PlantsListComponent {
   // Global shared state
   private tree = inject(APP_TREE);
-  readonly plants = this.tree.$.plants.entities.selectAll;
+  readonly plants = this.tree.$.plants.entities.all;
 
   // Local UI state - never needs to be shared
   readonly showFilters = signal(false);
@@ -781,14 +791,14 @@ export function createFeatureStore<TEntity extends { id: string }>(
   api: CrudApi<TEntity>
 ) {
   const tree = signalTree({
-    entities: [] as TEntity[],
+    entities: entityMap<TEntity>(),
     meta: {
       operations: {
         load: { status: 'idle' as OperationStatus, error: null as string | null },
         save: { status: 'idle' as OperationStatus, error: null as string | null }
       }
     }
-  }).with(entities<TEntity>('entities'));
+  });
 
   return {
     entities: tree.$.entities,
@@ -836,8 +846,8 @@ Domain key contains only the entity array. No metadata in tree—handle loading/
 
 ```typescript
 {
-  plants: Plant[],
-  gardens: Garden[],
+  plants: entityMap<Plant>(),
+  gardens: entityMap<Garden>(),
   auth: { user: User | null, token: string | null },
   ui: { theme: 'light' | 'dark' }
 }
@@ -846,9 +856,9 @@ Domain key contains only the entity array. No metadata in tree—handle loading/
 **Access Patterns:**
 
 ```typescript
-tree.$.plants.selectAll();
-tree.$.plants.add(plant);
-entities<Plant>('plants');
+tree.$.plants.all();
+tree.$.plants.addOne(plant);
+entityMap<Plant>();
 ```
 
 | Pros                       | Cons                                              |
@@ -881,7 +891,7 @@ Entities and metadata grouped under domain, with metadata nested in a `meta` obj
     }
   },
   gardens: {
-    entities: Garden[],
+    entities: entityMap<Garden>(),
     meta: {
       operations: {
         load: { status: 'idle', error: null }
@@ -895,10 +905,10 @@ Entities and metadata grouped under domain, with metadata nested in a `meta` obj
 **Access Patterns:**
 
 ```typescript
-tree.$.plants.entities.selectAll();
+tree.$.plants.entities.all();
 tree.$.plants.meta.operations.load.status();
 tree.$.plants.meta.filters.search.set('fern');
-entities<Plant>('plants.entities');
+entityMap<Plant>();
 ```
 
 | Pros                                            | Cons                |
@@ -919,7 +929,7 @@ Entities and metadata as siblings under domain key—no `meta` wrapper.
 ```typescript
 {
   plants: {
-    entities: Plant[],
+    entities: entityMap<Plant>(),
     operations: {
       load: { status: 'idle', error: null },
       save: { status: 'idle', error: null }
@@ -929,7 +939,7 @@ Entities and metadata as siblings under domain key—no `meta` wrapper.
     pagination: { page: 1, pageSize: 20, total: 0, hasMore: true }
   },
   gardens: {
-    entities: Garden[],
+    entities: entityMap<Garden>(),
     operations: {
       load: { status: 'idle', error: null }
     },
@@ -941,10 +951,10 @@ Entities and metadata as siblings under domain key—no `meta` wrapper.
 **Access Patterns:**
 
 ```typescript
-tree.$.plants.entities.selectAll();
+tree.$.plants.entities.all();
 tree.$.plants.operations.load.status();
 tree.$.plants.filters.search.set('fern');
-entities<Plant>('plants.entities');
+entityMap<Plant>();
 ```
 
 | Pros                                   | Cons                                       |
@@ -1222,11 +1232,11 @@ interface AppState {
 
 > **Note on Examples:** The patterns below use the **Domain-Grouped with Meta** structure (Option B) for consistency. Adapt access patterns to your chosen structure:
 >
-> | Structure         | Entity Access                        | Metadata Access                      |
-> | ----------------- | ------------------------------------ | ------------------------------------ |
-> | Flat (A)          | `tree.$.plants.selectAll()`          | N/A (use component signals)          |
-> | With Meta (B)     | `tree.$.plants.entities.selectAll()` | `tree.$.plants.meta.operations.load` |
-> | Flat Siblings (C) | `tree.$.plants.entities.selectAll()` | `tree.$.plants.operations.load`      |
+> | Structure         | Entity Access                  | Metadata Access                      |
+> | ----------------- | ------------------------------ | ------------------------------------ |
+> | Flat (A)          | `tree.$.plants.all()`          | N/A (use component signals)          |
+> | With Meta (B)     | `tree.$.plants.entities.all()` | `tree.$.plants.meta.operations.load` |
+> | Flat Siblings (C) | `tree.$.plants.entities.all()` | `tree.$.plants.operations.load`      |
 
 ### Pattern 1: Loading & Operation States
 
@@ -1278,7 +1288,7 @@ export class PlantsFacade {
 
     try {
       const plants = await this.api.getAll();
-      this.tree.$.plants.entities.set(plants);
+      this.tree.$.plants.entities.setAll(plants);
       this.tree.$.plants.meta.operations.load.set({ status: 'success', error: null });
     } catch (e) {
       this.tree.$.plants.meta.operations.load.set({
@@ -1293,7 +1303,7 @@ export class PlantsFacade {
 
     try {
       const saved = await this.api.save(plant);
-      this.tree.$.plants.entities.update(saved.id, saved);
+      this.tree.$.plants.entities.updateOne(saved.id, saved);
       this.tree.$.plants.meta.operations.save.set({ status: 'success', error: null });
       return saved;
     } catch (e) {
@@ -1325,7 +1335,7 @@ export class PlantsListComponent {
   private tree = inject(APP_TREE);
   private facade = inject(PlantsFacade);
 
-  readonly plants = this.tree.$.plants.entities.selectAll;
+  readonly plants = this.tree.$.plants.entities.all;
   readonly isLoading = computed(() => this.tree.$.plants.meta.operations.load.status() === 'pending');
   readonly loadError = this.tree.$.plants.meta.operations.load.error;
 
@@ -1365,7 +1375,7 @@ async loadPlants() {
   await withOperation(
     this.tree.$.plants.meta.operations.load,
     () => this.api.getAll().then(plants => {
-      this.tree.$.plants.entities.set(plants);
+      this.tree.$.plants.entities.setAll(plants);
       return plants;
     })
   );
@@ -1465,10 +1475,10 @@ This is the correct pattern for optimistic updates. It captures state before mut
 ```typescript
 async updatePlant(id: string, changes: Partial<Plant>) {
   // 1. Capture previous state BEFORE mutation
-  const previous = this.tree.$.plants.entities.selectById(id)();
+  const previous = this.tree.$.plants.entities.byId(id)?.();
 
   // 2. Optimistic update (UI reflects change immediately)
-  this.tree.$.plants.entities.update(id, changes);
+  this.tree.$.plants.entities.updateOne(id, changes);
 
   try {
     // 3. API call
@@ -1476,7 +1486,7 @@ async updatePlant(id: string, changes: Partial<Plant>) {
   } catch (e) {
     // 4. Targeted rollback - ONLY this entity, doesn't affect undo history
     if (previous) {
-      this.tree.$.plants.entities.update(id, previous);
+      this.tree.$.plants.entities.updateOne(id, previous);
     }
     throw e;
   }
@@ -1496,13 +1506,13 @@ async updatePlant(id: string, changes: Partial<Plant>) {
 async bulkUpdate(updates: Array<{ id: string; changes: Partial<Plant> }>) {
   // Capture all previous states
   const previousStates = new Map(
-    updates.map(({ id }) => [id, this.tree.$.plants.entities.selectById(id)()])
+    updates.map(({ id }) => [id, this.tree.$.plants.entities.byId(id)?.()])
   );
 
   // Optimistic batch update
   this.tree.batchUpdate(() => {
     for (const { id, changes } of updates) {
-      this.tree.$.plants.entities.update(id, changes);
+      this.tree.$.plants.entities.updateOne(id, changes);
     }
   });
 
@@ -1513,7 +1523,7 @@ async bulkUpdate(updates: Array<{ id: string; changes: Partial<Plant> }>) {
     this.tree.batchUpdate(() => {
       for (const [id, previous] of previousStates) {
         if (previous) {
-          this.tree.$.plants.entities.update(id, previous);
+          this.tree.$.plants.entities.updateOne(id, previous);
         }
       }
     });
@@ -1541,16 +1551,16 @@ export class GardensFacade {
       // Batch for atomic update
       this.tree.batchUpdate(() => {
         // Remove garden
-        this.tree.$.gardens.entities.remove(gardenId);
+        this.tree.$.gardens.entities.removeOne(gardenId);
 
         // Remove associated plants
         const plantsToRemove = this.tree.$.plants.entities
-          .selectAll()()
+          .all()
           .filter((p) => p.gardenId === gardenId)
           .map((p) => p.id);
 
         for (const plantId of plantsToRemove) {
-          this.tree.$.plants.entities.remove(plantId);
+          this.tree.$.plants.entities.removeOne(plantId);
         }
 
         // Clear selection if deleted garden was selected
@@ -1577,8 +1587,8 @@ export class GardensFacade {
 
 ```typescript
 readonly plantsWithGardenNames = computed(() => {
-  const allPlants = this.tree.$.plants.entities.selectAll()();
-  const gardens = this.tree.$.gardens.entities.selectAll()();
+  const allPlants = this.tree.$.plants.entities.all();
+  const gardens = this.tree.$.gardens.entities.all();
   const gardenMap = new Map(gardens.map(g => [g.id, g]));
 
   return allPlants.map(p => ({
@@ -1694,21 +1704,21 @@ export function createPlantSelectors(tree: AppTree) {
 
   return {
     // Simple selections
-    all: plants.entities.selectAll,
-    byId: (id: string) => plants.entities.selectById(id),
+    all: plants.entities.all,
+    byId: (id: string) => plants.entities.byId(id),
 
     // Filtered selections
     active: computed(() =>
-      plants.entities.selectAll()().filter(p => p.active)
+      plants.entities.all().filter(p => p.active)
     ),
 
     byGarden: (gardenId: string) => computed(() =>
-      plants.entities.selectAll()().filter(p => p.gardenId === gardenId)
+      plants.entities.all().filter(p => p.gardenId === gardenId)
     ),
 
     // Aggregations
     stats: computed(() => {
-      const all = plants.entities.selectAll()();
+      const all = plants.entities.all();
       return {
         total: all.length,
         active: all.filter(p => p.active).length,
@@ -1719,7 +1729,7 @@ export function createPlantSelectors(tree: AppTree) {
 
     // Filtered + sorted (combines filters and sort state)
     filteredAndSorted: computed(() => {
-      const entities = plants.entities.selectAll()();
+      const entities = plants.entities.all();
       const filters = plants.meta.filters();
       const sort = plants.meta.sort();
 
@@ -1805,7 +1815,7 @@ export class PlantsFilterService {
   readonly sort = this.tree.$.plants.meta.sort;
 
   readonly filteredAndSorted = computed(() => {
-    const entities = this.tree.$.plants.entities.selectAll()();
+    const entities = this.tree.$.plants.entities.all();
     const filters = this.filters();
     const sort = this.sort();
 
@@ -1916,10 +1926,10 @@ export class PlantsPaginationService {
 
       this.tree.batchUpdate(() => {
         if (mode === 'replace' || page === 1) {
-          this.tree.$.plants.entities.set(result.items);
+          this.tree.$.plants.entities.setAll(result.items);
         } else {
           for (const plant of result.items) {
-            this.tree.$.plants.entities.add(plant);
+            this.tree.$.plants.entities.addOne(plant);
           }
         }
 
@@ -2094,13 +2104,13 @@ export class RealtimeService {
 
     switch (event.type) {
       case 'plant:created':
-        this.tree.$.plants.entities.add(event.payload);
+        this.tree.$.plants.entities.addOne(event.payload);
         break;
       case 'plant:updated':
-        this.tree.$.plants.entities.update(event.payload.id, event.payload.changes);
+        this.tree.$.plants.entities.updateOne(event.payload.id, event.payload.changes);
         break;
       case 'plant:deleted':
-        this.tree.$.plants.entities.remove(event.payload.id);
+        this.tree.$.plants.entities.removeOne(event.payload.id);
         break;
     }
   }
@@ -2273,9 +2283,7 @@ export class PlantSelectionService {
 
   readonly selectedPlants = computed(() => {
     const ids = this.selectedIds();
-    return this.tree.$.plants.entities
-      .selectAll()()
-      .filter((p) => ids.has(p.id));
+    return this.tree.$.plants.entities.all().filter((p) => ids.has(p.id));
   });
 
   select(id: string) {
@@ -2478,7 +2486,7 @@ export class AppSelectors {
 ```typescript
 // "I can use timeTravel for API failure rollback"
 async updatePlant(id: string, changes: Partial<Plant>) {
-  this.tree.$.plants.entities.update(id, changes);
+  this.tree.$.plants.entities.updateOne(id, changes);
   try {
     await this.api.updatePlant(id, changes);
   } catch (e) {
@@ -2527,12 +2535,12 @@ setupKeyboardShortcuts() {
 
 // API rollback - USE snapshot pattern
 async updatePlant(id: string, changes: Partial<Plant>) {
-  const previous = this.tree.$.plants.entities.selectById(id)();
-  this.tree.$.plants.entities.update(id, changes);
+  const previous = this.tree.$.plants.entities.byId(id)?.();
+  this.tree.$.plants.entities.updateOne(id, changes);
   try {
     await this.api.updatePlant(id, changes);
   } catch (e) {
-    if (previous) this.tree.$.plants.entities.update(id, previous);
+    if (previous) this.tree.$.plants.entities.updateOne(id, previous);
     throw e;
   }
 }

@@ -32,7 +32,7 @@ This document consolidates the feature overview and technical specifications for
 
 SignalTree consists of one core package with all enhancers built-in, plus three optional add-on packages:
 
-- **@signaltree/core**: Complete state management solution including all enhancers (batching, memoization, middleware, entities, devtools, time-travel, serialization, presets)
+- **@signaltree/core**: Complete state management solution including all enhancers (batching, memoization, middleware, devtools, time-travel, serialization, presets) plus built-in markers like `entityMap`, `status`, and `stored`
 - **@signaltree/ng-forms**: Angular Forms integration (separate package)
 - **@signaltree/enterprise**: Enterprise-scale optimizations for 500+ signals (separate package)
 - **@signaltree/callable-syntax**: Build-time transform for callable signal syntax (dev dependency, separate package)

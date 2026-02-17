@@ -117,7 +117,7 @@ const STORE_NAME = 'UserTree';
  * const userTree = inject(USER_TREE);
  *
  * // Entity access (O(1) lookups)
- * const user = userTree.users.byId(123)();
+ * const user = userTree.users.byId(123)?.();
  * const allUsers = userTree.users.all;
  *
  * // Reactive selectors

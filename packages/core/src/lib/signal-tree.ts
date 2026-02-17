@@ -4,7 +4,10 @@ import { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './constants';
 import { batchScope } from './internals/batch-scope';
 import { SignalTreeBuilder } from './internals/builder-types';
 import { ProcessDerived } from './internals/derived-types';
-import { isRegisteredMarker, materializeMarkers } from './internals/materialize-markers';
+import {
+  isRegisteredMarker,
+  materializeMarkers,
+} from './internals/materialize-markers';
 import { applyDerivedFactories } from './internals/merge-derived';
 import { isStatusMarker } from './markers/status';
 import { isStoredMarker } from './markers/stored';
@@ -588,6 +591,9 @@ function create<T extends object>(
  *
  * @example
  * ```typescript
+ * import { computed } from '@angular/core';
+ * import { signalTree } from '@signaltree/core';
+ *
  * // Minimal tree
  * const tree = signalTree({ count: 0 });
  *
@@ -603,15 +609,14 @@ function create<T extends object>(
  * // With derived state (v7) - chained syntax
  * const tree = signalTree({ count: 0 })
  *   .derived(($) => ({
- *     doubled: derived(() => $.count() * 2)
- *   }))
- *   .with(entities());
+ *     doubled: computed(() => $.count() * 2)
+ *   }));
  *
  * // With derived state (v7) - second argument syntax
  * const tree = signalTree(
  *   { count: 0 },
  *   ($) => ({
- *     doubled: derived(() => $.count() * 2)
+ *     doubled: computed(() => $.count() * 2)
  *   })
  * );
  * ```

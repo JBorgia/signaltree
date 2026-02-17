@@ -419,7 +419,7 @@ export interface EntityMapMarker<E, K extends string | number> {
  * const tree = signalTree({
  *   users: entityMap<User>(),
  *   products: entityMap<Product, number>(),
- * }).with(entities());
+ * });
  * ```
  *
  * @see {@link ./markers/entity-map.ts} for the self-registering implementation
@@ -548,14 +548,12 @@ export interface EntitySignal<E, K extends string | number = string> {
  * // New (recommended):
  *
  * interface State { users: entityMap<User> }
- * const tree = signalTree<State>({ users: entityMap<User>() })
- *   .with(entities());
- * tree.$.users.add(user);
- * tree.$.users.byId(id)();
+ * const tree = signalTree<State>({ users: entityMap<User>() });
+ * tree.$.users.addOne(user);
+ * tree.$.users.byId(id)?.();
  * ```
  *
  * @see entityMap for the new marker function
- * @see entities for the new enhancer
  */
 // Legacy `EntityHelpers` removed — v6 uses `EntitySignal` via `tree.$.prop`.
 

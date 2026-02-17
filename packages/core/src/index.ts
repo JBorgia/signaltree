@@ -371,21 +371,19 @@ export { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './lib/constants';
  *
  * @example With Enhancers (using .with() chain - recommended)
  * ```typescript
- * import { signalTree, entityMap } from '@signaltree/core';
- * // Note: `.with(entities())` was deprecated in v6 and removed in v7; entityMap is auto-processed.
+ * import { signalTree, entityMap, devTools } from '@signaltree/core';
+ * // Note: `.with(entities())` was deprecated in v6 and removed in v7; `entityMap()` is auto-processed.
  *
  * // Chain enhancers with .with() for type-safe composition
  * const state = signalTree({ count: 0 })
  *   // .with(logging());
  *
  * // Combine multiple enhancers
- * interface AppState { users: entityMap<User> }
- * const store = signalTree<AppState>({ users: entityMap<User>() })
- *   .with(entities())
- *   // .with(logging());
+ * const store = signalTree({ users: entityMap<User, number>() })
+ *   .with(devTools({ treeName: 'MyStore', enabled: false }));
  *
  * // Access entity methods via tree.$
- * store.$.users.add({ id: 1, name: 'Alice' });
- * const user = store.$.users.byId(1)();
+ * store.$.users.addOne({ id: 1, name: 'Alice' });
+ * const user = store.$.users.byId(1)?.();
  * ```
  */

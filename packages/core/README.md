@@ -118,7 +118,7 @@ Performance and bundle size vary by app shape, build tooling, device, and runtim
 
 ## Best Practices (SignalTree-First)
 
-> 📖 **Full guide**: [Implementation Patterns](https://github.com/JBorgia/signaltree/blob/main/docs/IMPLEMENTATION_PATTERNS.md)
+> 📖 **Full guide**: [Architecture Guide](https://github.com/JBorgia/signaltree/blob/main/docs/architecture/signaltree-architecture-guide.md)
 
 Follow these principles for idiomatic SignalTree code:
 
@@ -164,7 +164,7 @@ export function createUserTree() {
 // ✅ Correct: Derived from multiple signals
 const selectedUser = computed(() => {
   const id = $.selected.userId();
-  return id ? $.users.byId(id)() : null;
+  return id ? $.users.byId(id)?.() ?? null : null;
 });
 
 // ❌ Wrong: Wrapping an existing signal
@@ -175,8 +175,8 @@ const selectedUserId = computed(() => $.selected.userId()); // Unnecessary!
 
 ```typescript
 // ✅ SignalTree-native
-const user = $.users.byId(123)(); // O(1) lookup
-const allUsers = $.users.all; // Get all
+const user = $.users.byId(123)?.(); // O(1) lookup
+const allUsers = $.users.all(); // Get all
 $.users.setAll(usersFromApi); // Replace all
 
 // ❌ NgRx-style (avoid)
@@ -782,20 +782,20 @@ const customTree = signalTree(state, TREE_PRESETS.DASHBOARD);
 SignalTree Core includes all enhancer functionality built-in. No separate packages needed:
 
 ```typescript
-import { signalTree, entityMap, entities } from '@signaltree/core';
+import { signalTree, entityMap } from '@signaltree/core';
 
 // Without entityMap - use manual array updates
 const basic = signalTree({ users: [] as User[] });
 basic.$.users.update((users) => [...users, newUser]);
 
-// With entityMap + entities - use entity helpers
+// With entityMap (v7+ auto-processed) - use entity helpers
 const enhanced = signalTree({
   users: entityMap<User>(),
-}).with(entities());
+});
 
 enhanced.$.users.addOne(newUser); // ✅ Advanced CRUD operations
-enhanced.$.users.byId(123)(); // ✅ O(1) lookups
-enhanced.$.users.all; // ✅ Get all as array
+enhanced.$.users.byId(123)?.(); // ✅ O(1) lookups
+enhanced.$.users.all(); // ✅ Get all as array
 ```
 
 Core includes several performance optimizations:
@@ -908,7 +908,7 @@ const tree = signalTree({ count: 0 }).with(withLogger());
 tree.log('Tree created');
 ```
 
-> 📖 **Full guide**: [Custom Markers & Enhancers](https://github.com/JBorgia/signaltree/blob/main/docs/custom-markers-enhancers.md)
+> 📖 **Full guide**: [Custom Markers & Enhancers](https://github.com/JBorgia/signaltree/blob/main/docs/guides/custom-markers-enhancers.md)
 >
 > 📱 **Interactive demo**: [Demo App](/custom-extensions)
 
@@ -1585,8 +1585,8 @@ const tree = signalTree({
 
 // Advanced entity operations via tree.$ accessor
 tree.$.users.addOne(newUser);
-tree.$.users.selectBy((u) => u.active);
-tree.$.users.updateMany([{ id: '1', changes: { status: 'active' } }]);
+tree.$.users.where((u) => u.active); // Filtered signal
+tree.$.users.updateMany(['1'], { status: 'active' });
 
 // Entity helpers work with nested structures
 // Example: deeply nested entities in a domain-driven design pattern
@@ -1606,10 +1606,10 @@ const appTree = signalTree({
 });
 
 // Access nested entities using tree.$ accessor
-appTree.$.app.data.users.selectBy((u) => u.isAdmin); // Filtered signal
-appTree.$.app.data.products.selectTotal(); // Count signal
-appTree.$.admin.data.logs.all; // All items as array
-appTree.$.admin.data.reports.selectIds(); // ID array signal
+appTree.$.app.data.users.where((u) => u.isAdmin); // Filtered signal
+appTree.$.app.data.products.count(); // Count
+appTree.$.admin.data.logs.all(); // All items as array
+appTree.$.admin.data.reports.ids(); // ID array
 
 // For async operations, use manual async or async helpers
 async function fetchUsers() {
@@ -1662,7 +1662,7 @@ const tree = signalTree({
 async function fetchUser(id: string) {
   return await api.getUser(id);
 }
-tree.$.app.data.users.byId(userId)(); // O(1) lookup
+tree.$.app.data.users.byId(userId)?.(); // O(1) lookup
 tree.undo(); // Time travel
 tree.save(); // Persistence
 ```
@@ -1819,7 +1819,7 @@ For fair, reproducible measurements that reflect your app and hardware, use the 
           {{ userTree.$.error() }}
           <button (click)="loadUsers()">Retry</button>
         </div>
-        } @else { @for (user of users.selectAll()(); track user.id) {
+        } @else { @for (user of users(); track user.id) {
         <div class="user-card">
           <h3>{{ user.name }}</h3>
           <p>{{ user.email }}</p>
@@ -1846,6 +1846,8 @@ class UserManagerComponent implements OnInit {
     error: null as string | null,
     form: { id: '', name: '', email: '' },
   });
+
+  readonly users = this.userTree.$.users;
 
   constructor(private userService: UserService) {}
 
@@ -2031,9 +2033,9 @@ tree.destroy(); // Cleanup resources
 
 // Entity helpers (when using entityMap + entities)
 // tree.$.users.addOne(user);    // Add single entity
-// tree.$.users.byId(id)();      // O(1) lookup by ID
-// tree.$.users.all;         // Get all as array
-// tree.$.users.selectBy(pred);  // Filtered signal
+// tree.$.users.byId(id)?.();      // O(1) lookup by ID
+// tree.$.users.all();             // Get all as array
+// tree.$.users.where(pred)();     // Filtered array
 ```
 
 ## Extending with enhancers

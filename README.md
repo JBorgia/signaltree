@@ -26,14 +26,17 @@
 - **Derived `.with()` identity** preserved across enhancer chains
 
 ```typescript
-import { devTools, signalTree } from '@signaltree/core';
+import { computed } from '@angular/core';
+import { devTools, entityMap, signalTree } from '@signaltree/core';
 
 const tree = signalTree({
   activeId: null as number | null,
   users: entityMap<User, number>(),
-}).derived(($) => ({
-  activeUser: computed(() => $.users.byId($.activeId())?.()),
-})).with(devTools({ treeName: 'Users' }));
+})
+  .derived(($) => ({
+    activeUser: computed(() => $.users.byId($.activeId())?.()),
+  }))
+  .with(devTools({ treeName: 'Users' }));
 ```
 
 **v7.1.1 Release** - Tree-Shakeable Markers:
@@ -94,7 +97,7 @@ const store = signalTree({
 - **`stored()` Marker**: Auto-sync to localStorage with 100ms debounced writes
 - **Performance Budgets**: 100 markers initialize in < 50ms
 
-📚 See [v7 Patterns Guide](./docs/v7-patterns.md) for detailed examples.
+📚 See [docs/overview.md](./docs/overview.md) and the [Architecture Guide](./docs/architecture/signaltree-architecture-guide.md) for detailed examples.
 
 **v6.3.1 Release** - Deep Merge Fix + `derived()` Deprecation:
 
@@ -514,9 +517,9 @@ tree.$.users.addOne({ id: 2, name: 'Bob', category: 'user' });
 tree.$.posts.setAll(postsFromApi);
 
 // Entity queries
-const user = tree.$.users.byId(1)(); // Get by ID
-const allUsers = tree.$.users.all; // Get all as array
-const userCount = tree.$.users.count; // Get count
+const user = tree.$.users.byId(1)?.(); // Get by ID
+const allUsers = tree.$.users.all(); // Get all as array
+const userCount = tree.$.users.count(); // Get count
 
 // Observation & interception: Use entity hooks
 tree.$.users.tap({
@@ -744,38 +747,39 @@ npm install @signaltree/core @signaltree/ng-forms @signaltree/enterprise
 > Note: the package exposes a tiny entry façade (0.8KB gzipped) while the full publishable `core` package (all relevant implementation files / enhancers) measures ~27.23KB gzipped. Use the analysis scripts in `scripts/` to measure your app's actual footprint.
 
 ```typescript
-import { signalTree } from '@signaltree/core';
+import { signalTree, entityMap, effects } from '@signaltree/core';
 
 // Create a basic tree (minimal bundle)
-const tree = signalTree(initialState);
+const coreTree = signalTree(initialState);
 
 // Core features always included:
-tree.$.property(); // Read signal value ($ is shorthand)
-tree.$.property.set(value); // Update individual signal
-tree.$.property.update(fn); // Update individual signal with function
-tree(); // Get plain object (replaces tree.unwrap())
-tree(value); // Set entire tree
-tree((current) => updated); // Update entire tree with function
-tree.effect(fn); // Create reactive effects
-tree.subscribe(fn); // Manual subscriptions
+coreTree.$.property(); // Read signal value ($ is shorthand)
+coreTree.$.property.set(value); // Update individual signal
+coreTree.$.property.update(fn); // Update individual signal with function
+coreTree(); // Get plain object (replaces tree.unwrap())
+coreTree(value); // Set entire tree
+coreTree((current) => updated); // Update entire tree with function
 
-// Entity management with entityMap + entities
-import { signalTree, entityMap, entities } from '@signaltree/core';
+// Effects & subscriptions (via .with(effects()))
+// const enhanced = coreTree.with(effects());
+// enhanced.effect(fn);
+// enhanced.subscribe(fn);
 
-const tree = signalTree({
+// Entity management with entityMap (v7+ auto-processed; no enhancer needed)
+const entityTree = signalTree({
   users: entityMap<User>(),
-}).with(entities());
+});
 
 // Entity CRUD
-tree.$.users.addOne(user);
-tree.$.users.updateOne(id, changes);
-tree.$.users.removeOne(id);
-tree.$.users.setAll(users);
+entityTree.$.users.addOne(user);
+entityTree.$.users.updateOne(id, changes);
+entityTree.$.users.removeOne(id);
+entityTree.$.users.setAll(users);
 
 // Entity queries
-tree.$.users.byId(id)(); // Get by ID
-tree.$.users.all; // Get all as array
-tree.$.users.count; // Get count
+entityTree.$.users.byId(id)?.(); // Get by ID
+entityTree.$.users.all(); // Get all as array
+entityTree.$.users.count(); // Get count
 ```
 
 ### Derived State (.derived())
@@ -784,7 +788,7 @@ Use `.derived()` to add computed signals that react to your source state:
 
 ```typescript
 import { computed } from '@angular/core';
-import { signalTree, entityMap, entities } from '@signaltree/core';
+import { signalTree, entityMap } from '@signaltree/core';
 
 const tree = signalTree({
   tickets: {
@@ -792,26 +796,23 @@ const tree = signalTree({
     activeId: null as number | null,
     filter: { status: 'all' as 'all' | 'open' | 'closed' },
   },
-})
-  .derived(($) => ({
-    // Add computed state at any path
-    activeTicket: computed(() => {
-      const id = $.tickets.activeId();
-      return id != null ? $.tickets.entities.byId(id)?.() : null;
+}).derived(($) => ({
+  // Add computed state at any path
+  activeTicket: computed(() => {
+    const id = $.tickets.activeId();
+    return id != null ? $.tickets.entities.byId(id)?.() : null;
+  }),
+  // Deep merge: add derived to existing namespace
+  tickets: {
+    filtered: computed(() => {
+      const status = $.tickets.filter.status();
+      const all = $.tickets.entities.all();
+      if (status === 'all') return all;
+      return all.filter((t) => t.status === status);
     }),
-    // Deep merge: add derived to existing namespace
-    tickets: {
-      filtered: computed(() => {
-        const status = $.tickets.filter.status();
-        const all = $.tickets.entities.all();
-        if (status === 'all') return all;
-        return all.filter((t) => t.status === status);
-      }),
-      count: computed(() => $.tickets.entities.all().length),
-    },
-  }))
-  .with(entities());
-
+    count: computed(() => $.tickets.entities.all().length),
+  },
+}));
 // Source properties preserved via deep merge:
 tree.$.tickets.entities.upsertOne({ id: 1, status: 'open' }); // ✅ Works
 tree.$.tickets.activeId.set(1); // ✅ Works
@@ -829,7 +830,7 @@ tree.$.tickets.count(); // Number
 - **Type Safety**: Full inference from source state to derived
 - **Tree-Shakeable**: Unused derived state is eliminated from bundles
 
-See [docs/DERIVED_STATE_V7.md](./docs/DERIVED_STATE_V7.md) for complete documentation.
+See [docs/overview.md](./docs/overview.md) and [packages/core/README.md](./packages/core/README.md) for complete documentation.
 
 ### Batching Enhancer (Included in @signaltree/core)
 
@@ -1090,14 +1091,15 @@ class RegistrationComponent {
 ### Minimal Setup (Core Only)
 
 ```typescript
-import { signalTree, entityMap, entities } from '@signaltree/core';
+import { signalTree, entityMap, effects } from '@signaltree/core';
 
 // Core entry façade is tiny (~0.81KB gzipped); full publishable core package including used enhancers measures ~27.23KB gzipped. Use `scripts/analyze:bundle` or `npm run analyze:bundle` to measure your app footprint.
 const appTree = signalTree({
   user: { name: '', email: '' },
   todos: entityMap<Todo>(),
   loading: false,
-}).with(entities());
+  error: null as string | null,
+}).with(effects());
 
 // Entity management (via entityMap + entities enhancer)
 appTree.$.todos.addOne({ id: '1', text: 'Learn SignalTree', done: false });
@@ -1115,9 +1117,9 @@ async function loadUser(id: string) {
   }
 }
 
-// Simple reactive effects (always included)
+// Simple reactive effects (via .with(effects()))
 appTree.effect((state) => {
-  console.log(`User: ${state.user.name}, Todos: ${appTree.$.todos.count}`);
+  console.log(`User: ${state.user.name}, Todos: ${appTree.$.todos.count()}`);
 });
 ```
 

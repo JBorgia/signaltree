@@ -21,14 +21,16 @@ import type { ISignalTree, TreeNode } from '../types';
  *
  * @example
  * ```typescript
+ * import { computed } from '@angular/core';
+ * import { signalTree } from '@signaltree/core';
+ *
  * const tree = signalTree({ count: 0 })
  *   .derived(($) => ({
- *     doubled: derived(() => $.count() * 2)
+ *     doubled: computed(() => $.count() * 2)
  *   }))
  *   .derived(($) => ({
- *     quadrupled: derived(() => $.doubled() * 2)  // ✓ $.doubled is typed
- *   }))
- *   .with(entities());
+ *     quadrupled: computed(() => $.doubled() * 2)  // ✓ $.doubled is typed
+ *   }));
  * ```
  */
 export interface SignalTreeBuilder<TSource, TAccum = TreeNode<TSource>> {

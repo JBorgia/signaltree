@@ -16,7 +16,7 @@
  *     truck: computed(() => $.trucks.byId($.selected.truckId())?.())
  *   },
  *   canSubmit: computed(() => $.selected.truckId() !== null)
- * })).with(entities());
+ * }));
  * ```
  */
 

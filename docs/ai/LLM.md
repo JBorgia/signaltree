@@ -1,7 +1,7 @@
 # SignalTree v7 - AI/Developer Guidance
 
 > **Purpose:** Comprehensive guidance for AI assistants and developers implementing SignalTree v7+.
-> **Last Updated:** January 2026 (v7.1.0)
+> **Last Updated:** February 2026 (v7.6.0)
 
 ---
 
@@ -38,7 +38,7 @@ store.$.settings.theme.set('dark');
 
 ## v7 Breaking Changes
 
-### ❌ REMOVED: `.with(entities())` (v8 - remove calls)
+### ❌ REMOVED: `.with(entities())` (v7 - remove calls)
 
 **v6 (old):**
 
@@ -91,9 +91,9 @@ const store = signalTree({
 });
 
 // Available operations:
-store.$.users.all(); // Signal<User[]>
+store.$.users.all(); // User[]
 store.$.users.byId(1); // () => Signal<User | undefined>
-store.$.users.count(); // Signal<number>
+store.$.users.count(); // number
 store.$.users.addOne(user); // Add single entity
 store.$.users.addMany(users); // Add multiple entities
 store.$.users.setAll(users); // Replace all entities
@@ -178,7 +178,7 @@ store.$.settings.theme.reload(); // Re-read from localStorage
 Use `.derived()` to add computed state based on source state.
 
 ```typescript
-import { signalTree, entityMap, derived } from '@signaltree/core';
+import { signalTree, entityMap } from '@signaltree/core';
 import { computed } from '@angular/core';
 
 const store = signalTree({
@@ -209,6 +209,8 @@ store.$.hasSelection(); // boolean
 2. **Nest under domains** - Keep derived state co-located with source
 3. **Multiple tiers allowed** - Chain `.derived()` for complex dependencies
 4. **Avoid side effects** - Derived state should be pure computations
+
+**Composition note:** You can interleave `.derived(...)` and `.with(...)` in a chain. Enhancer chaining preserves derived computed identity; derived factories should run once and remain stable across `.with()` calls.
 
 ### Derived Tier Rules
 
