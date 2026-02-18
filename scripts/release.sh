@@ -293,6 +293,13 @@ for package in "${PACKAGES[@]}"; do
     fi
 done
 
+# Keep the demo app version banner in sync with the package versions.
+# This file is tracked in git and must be included in the release commit.
+if [ -f "tools/generate-version-env.cjs" ]; then
+    print_step "Updating demo version constants..."
+    node tools/generate-version-env.cjs
+fi
+
 # Step 3: Build all packages
 print_step "Building all packages..."
 
@@ -328,6 +335,9 @@ print_success "Package builds completed"
 # Step 4: Commit changes
 print_step "Committing version changes (if any)..."
 git add package.json packages/*/package.json
+if [ -f "apps/demo/src/app/version.ts" ]; then
+    git add apps/demo/src/app/version.ts
+fi
 if [ "$KEEP_VERSION" = true ]; then
     git commit -m "chore(release): publish $NEW_VERSION (no version bump)" || {
         print_warning "Nothing to commit (no changes for keep-version)"
