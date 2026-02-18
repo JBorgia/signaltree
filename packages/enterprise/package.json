@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/enterprise",
-  "version": "7.6.0",
+  "version": "7.6.1",
   "description": "Enterprise optimizations for SignalTree reactive JSON. Diff-based updates, bulk operations, and advanced change tracking for large-scale applications.",
   "license": "BSL-1.1",
   "type": "module",
