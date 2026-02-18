@@ -349,8 +349,12 @@ if [ -n "$NPM_TOKEN" ]; then
     print_step "Using NPM_TOKEN for npm authentication"
     echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/.npmrc.signaltree-temp
 else
-    print_step "Performing npm authentication (browser-based for 2FA)..."
-    npm login --auth-type=web
+    if npm whoami >/dev/null 2>&1; then
+        print_step "Using existing npm authentication"
+    else
+        print_step "Performing npm authentication (browser-based for 2FA)..."
+        npm login --auth-type=web
+    fi
 fi
 
 for package in "${PACKAGES[@]}"; do
