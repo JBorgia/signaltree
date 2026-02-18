@@ -1,5 +1,9 @@
 {
   "nxConsole.generateAiAgentRules": true,
   "angular.enable-strict-mode-prompt": false,
-  "vitest.disableWorkspaceWarning": true
+  "vitest.disableWorkspaceWarning": true,
+  "editor.fontFamily": "Hack Nerd Font Mono, HackNerdFontMono, Hack Nerd Font, HackNerdFont, JetBrainsMono Nerd Font Mono, JetBrainsMono NFM, JetBrainsMono Nerd Font, JetBrainsMono NF, MesloLGL Nerd Font Mono, MesloLGL NFM, MesloLGL Nerd Font, MesloLGL NF, SF Mono, Menlo, Monaco, 'Courier New', monospace",
+  "editor.fontLigatures": true,
+  "terminal.integrated.fontFamily": "Hack Nerd Font Mono, HackNerdFontMono, Hack Nerd Font, HackNerdFont, JetBrainsMono Nerd Font Mono, JetBrainsMono NFM, JetBrainsMono Nerd Font, JetBrainsMono NF, MesloLGL Nerd Font Mono, MesloLGL NFM, MesloLGL Nerd Font, MesloLGL NF, SF Mono, Menlo, Monaco, 'Courier New', monospace",
+  "debug.console.fontFamily": "Hack Nerd Font Mono, HackNerdFontMono, Hack Nerd Font, HackNerdFont, JetBrainsMono Nerd Font Mono, JetBrainsMono NFM, JetBrainsMono Nerd Font, JetBrainsMono NF, MesloLGL Nerd Font Mono, MesloLGL NFM, MesloLGL Nerd Font, MesloLGL NF, SF Mono, Menlo, Monaco, 'Courier New', monospace"
 }
