@@ -110,6 +110,37 @@ describe('devTools enhancer (v6 API)', () => {
     }
   });
 
+  it('omits function-valued properties from DevTools state', async () => {
+    resetPathNotifier();
+
+    const originalWindow = (globalThis as any).window;
+    const send = vi.fn();
+    const connect = vi.fn(() => ({ send }));
+
+    (globalThis as any).window = {
+      __REDUX_DEVTOOLS_EXTENSION__: {
+        connect,
+      },
+    };
+
+    try {
+      const tree = createMockTree();
+      (tree.state as any).fn = () => 123;
+      (tree.$ as any).fn = (tree.state as any).fn;
+
+      devTools({ enabled: true, enableBrowserDevTools: true })(tree);
+
+      expect(send).toHaveBeenCalledTimes(1);
+      const initState = send.mock.calls[0][1];
+      expect(initState).toMatchObject({ count: 0 });
+      expect((initState as any).fn).toBeUndefined();
+
+      await Promise.resolve();
+    } finally {
+      (globalThis as any).window = originalWindow;
+    }
+  });
+
   it('sends updates to Redux DevTools on PathNotifier flushes (beyond @@INIT)', async () => {
     resetPathNotifier();
 
@@ -223,6 +254,90 @@ describe('devTools enhancer (v6 API)', () => {
 
       // Allow any scheduled sends to complete
       await Promise.resolve();
+    } finally {
+      (globalThis as any).window = originalWindow;
+    }
+  });
+
+  it('disconnectDevTools calls unsubscribe when DevTools subscribe returns it', () => {
+    resetPathNotifier();
+
+    const originalWindow = (globalThis as any).window;
+    const send = vi.fn();
+    const unsubscribe = vi.fn();
+    const connect = vi.fn(() => ({
+      send,
+      subscribe: (_listener: (message: unknown) => void) => unsubscribe,
+    }));
+
+    (globalThis as any).window = {
+      __REDUX_DEVTOOLS_EXTENSION__: {
+        connect,
+      },
+    };
+
+    try {
+      const tree = createMockTree();
+      const enhanced = devTools({ enabled: true, enableBrowserDevTools: true })(
+        tree
+      );
+
+      enhanced.disconnectDevTools();
+      expect(unsubscribe).toHaveBeenCalledTimes(1);
+    } finally {
+      (globalThis as any).window = originalWindow;
+    }
+  });
+
+  it('time-travel restores EntitySignal-like nodes via setAll(all)', () => {
+    resetPathNotifier();
+
+    const originalWindow = (globalThis as any).window;
+    const send = vi.fn();
+    let subscriber: ((message: unknown) => void) | null = null;
+
+    const setAll = vi.fn();
+    const users = {
+      setAll,
+      // method placeholders that must NOT be overwritten by time travel
+      addOne: vi.fn(),
+      byId: vi.fn(),
+    };
+
+    const connect = vi.fn(() => ({
+      send,
+      subscribe: (listener: (message: unknown) => void) => {
+        subscriber = listener;
+      },
+    }));
+
+    (globalThis as any).window = {
+      __REDUX_DEVTOOLS_EXTENSION__: {
+        connect,
+      },
+    };
+
+    try {
+      const tree = createMockTree();
+      (tree.state as any).users = users;
+      (tree.$ as any).users = users;
+
+      devTools({ enabled: true, enableBrowserDevTools: true })(tree);
+
+      const nextUsers = [{ id: 1, name: 'Alice' }];
+      const nextState = { count: 0, users: { all: nextUsers } };
+      subscriber?.({
+        type: 'DISPATCH',
+        payload: { type: 'JUMP_TO_STATE' },
+        state: JSON.stringify(nextState),
+      });
+
+      expect(setAll).toHaveBeenCalledTimes(1);
+      expect(setAll).toHaveBeenCalledWith(nextUsers);
+
+      // ensure we didn't overwrite methods
+      expect((tree.$ as any).users.addOne).toBe(users.addOne);
+      expect((tree.$ as any).users.byId).toBe(users.byId);
     } finally {
       (globalThis as any).window = originalWindow;
     }

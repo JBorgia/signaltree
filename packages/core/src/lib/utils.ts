@@ -365,6 +365,9 @@ export function unwrap<T>(node: unknown): T {
         } else {
           result[key] = unwrappedValue;
         }
+      } else if (typeof value === 'function') {
+        // Skip functions so snapshots stay plain-data.
+        continue;
       } else if (
         typeof value === 'object' &&
         value !== null &&
@@ -416,6 +419,11 @@ export function unwrap<T>(node: unknown): T {
 
     const value = (node as Record<string, unknown>)[key];
 
+    if (typeof value === 'function' && !isNodeAccessor(value) && !isSignal(value)) {
+      // Skip plain functions so snapshots stay plain-data.
+      continue;
+    }
+
     if (isNodeAccessor(value)) {
       const unwrappedValue = value();
       if (
@@ -455,6 +463,12 @@ export function unwrap<T>(node: unknown): T {
   const symbols = Object.getOwnPropertySymbols(node as object);
   for (const sym of symbols) {
     const value = (node as Record<symbol, unknown>)[sym];
+
+    if (typeof value === 'function' && !isNodeAccessor(value) && !isSignal(value)) {
+      // Skip plain functions so snapshots stay plain-data.
+      continue;
+    }
+
     if (isNodeAccessor(value)) {
       const unwrappedValue = value();
       if (
@@ -509,6 +523,24 @@ export function applyState<T>(stateNode: TreeNode<T>, snapshot: T): void {
   if (snapshot === null || snapshot === undefined) return;
   if (typeof snapshot !== 'object') return;
 
+  // Special-case EntitySignal-like nodes: restore via setAll() when possible
+  // so internal storage stays consistent.
+  if (
+    stateNode &&
+    typeof stateNode === 'object' &&
+    typeof (stateNode as any).setAll === 'function' &&
+    snapshot &&
+    typeof snapshot === 'object' &&
+    Array.isArray((snapshot as any).all)
+  ) {
+    try {
+      (stateNode as any).setAll((snapshot as any).all);
+      return;
+    } catch {
+      // fall back to generic application
+    }
+  }
+
   for (const key of Object.keys(snapshot as Record<string, unknown>)) {
     const val = (snapshot as Record<string, unknown>)[key];
     const target = (stateNode as Record<string, unknown>)[key];
@@ -540,6 +572,23 @@ export function applyState<T>(stateNode: TreeNode<T>, snapshot: T): void {
       } catch {
         try {
           (target as any)(val);
+        } catch {
+          // ignore
+        }
+      }
+    } else if (
+      target &&
+      typeof target === 'object' &&
+      val &&
+      typeof val === 'object' &&
+      !Array.isArray(target) &&
+      !Array.isArray(val)
+    ) {
+      try {
+        applyState(target as unknown as TreeNode<unknown>, val as unknown as any);
+      } catch {
+        try {
+          (stateNode as Record<string, unknown>)[key] = val as unknown;
         } catch {
           // ignore
         }

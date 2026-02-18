@@ -397,7 +397,7 @@ function sanitizeState(
   if (typeof value === 'number' || typeof value === 'boolean') return value;
   if (typeof value === 'bigint') return `${value.toString()}n`;
   if (typeof value === 'symbol') return String(value);
-  if (typeof value === 'function') return '[Function]';
+  if (typeof value === 'function') return undefined;
 
   if (depth >= maxDepth) return '[MaxDepth]';
 
@@ -432,6 +432,7 @@ function sanitizeState(
 
     const result: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(obj)) {
+      if (typeof val === 'function') continue;
       result[key] = sanitizeState(val, options, depth + 1, seen);
     }
     return result;
@@ -521,9 +522,19 @@ export function devTools(
     >();
 
     // Browser DevTools integration
+    let browserDevToolsConnection: {
+      send: (action: unknown, state: unknown) => void;
+      subscribe?: (
+        listener: (message: unknown) => void
+      ) => void | (() => void);
+      disconnect?: () => void;
+      unsubscribe?: () => void;
+    } | null = null;
     let browserDevTools: {
       send: (action: unknown, state: unknown) => void;
-      subscribe?: (listener: (message: unknown) => void) => void;
+      subscribe?: (
+        listener: (message: unknown) => void
+      ) => void | (() => void);
     } | null = null;
     let isConnected = false;
     let isApplyingExternalState = false;
@@ -643,7 +654,7 @@ export function devTools(
         : formattedPaths.length === 1
         ? buildAction(`SignalTree/${formattedPaths[0]}`, formattedPaths[0])
         : formattedPaths.length > 1
-        ? buildAction('SignalTree/batch', formattedPaths)
+        ? buildAction('SignalTree/update', formattedPaths)
         : buildAction('SignalTree/update');
 
       const actionMeta: DevToolsActionMeta = {
@@ -822,23 +833,33 @@ export function devTools(
         ] as {
           connect: (config: Record<string, unknown>) => {
             send: (action: unknown, state: unknown) => void;
-            subscribe?: (listener: (message: unknown) => void) => void;
+            subscribe?: (
+              listener: (message: unknown) => void
+            ) => void | (() => void);
+            disconnect?: () => void;
+            unsubscribe?: () => void;
           };
         };
         const connection = devToolsExt.connect({
           name: displayName,
           features: { dispatch: true, jump: true, skip: true },
         });
+        browserDevToolsConnection = connection;
         browserDevTools = {
           send: connection.send,
           subscribe: connection.subscribe,
         };
         if (browserDevTools.subscribe && !unsubscribeDevTools) {
-          browserDevTools.subscribe(handleDevToolsMessage);
-          unsubscribeDevTools = () => {
-            // Redux DevTools doesn't expose an unsubscribe; overwrite handler by no-op
-            browserDevTools?.subscribe?.(() => void 0);
-          };
+          const maybeUnsubscribe = browserDevTools.subscribe(handleDevToolsMessage);
+          if (typeof maybeUnsubscribe === 'function') {
+            unsubscribeDevTools = maybeUnsubscribe;
+          } else {
+            unsubscribeDevTools = () => {
+              // Some Redux DevTools implementations don't expose an unsubscribe;
+              // overwrite handler by no-op as a best-effort fallback.
+              browserDevTools?.subscribe?.(() => void 0);
+            };
+          }
         }
 
         const rawSnapshot = readSnapshot();
@@ -1009,7 +1030,25 @@ export function devTools(
         initBrowserDevTools();
       },
       disconnectDevTools(): void {
+        // Best-effort cleanup to avoid duplicate updates across recreated stores.
+        try {
+          unsubscribeDevTools?.();
+        } catch {
+          // ignore
+        }
+        try {
+          browserDevToolsConnection?.unsubscribe?.();
+        } catch {
+          // ignore
+        }
+        try {
+          browserDevToolsConnection?.disconnect?.();
+        } catch {
+          // ignore
+        }
+
         browserDevTools = null;
+        browserDevToolsConnection = null;
         isConnected = false;
 
         if (unsubscribeNotifier) {
@@ -1020,10 +1059,7 @@ export function devTools(
           unsubscribeFlush();
           unsubscribeFlush = null;
         }
-        if (unsubscribeDevTools) {
-          unsubscribeDevTools();
-          unsubscribeDevTools = null;
-        }
+        unsubscribeDevTools = null;
         if (effectRef) {
           effectRef.destroy();
           effectRef = null;
