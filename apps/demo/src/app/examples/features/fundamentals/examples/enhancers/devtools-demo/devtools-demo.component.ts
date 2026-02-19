@@ -182,7 +182,7 @@ export class DevtoolsDemoComponent {
     ];
     (
       devTools as { connectDevTools?: (name: string) => void }
-    )?.connectDevTools?.('DevToolsDemo');
+    )?.connectDevTools?.('DevTools Demo');
     this.lastAction = 'Reset performance metrics';
   }
 

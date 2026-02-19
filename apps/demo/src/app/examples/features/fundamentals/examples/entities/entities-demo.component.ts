@@ -179,7 +179,13 @@ export class EntitiesDemoComponent {
   }
 
   // State signals
-  searchTerm = '';
+  get searchTerm(): string {
+    return this.store.$.searchTerm();
+  }
+
+  set searchTerm(value: string) {
+    this.store.$.searchTerm.set(value);
+  }
   lastOperation = 'None';
   operationCount = 0;
 
@@ -217,7 +223,7 @@ export class EntitiesDemoComponent {
 
   filteredUsers = computed(() => {
     const users = this.allUsers();
-    const term = this.searchTerm.toLowerCase();
+    const term = this.store.$.searchTerm().toLowerCase();
 
     if (!term) return users;
 
@@ -502,8 +508,7 @@ export class EntitiesDemoComponent {
   }
 
   updateSearchTerm(event: Event) {
-    const target = event.target as HTMLInputElement;
-    this.searchTerm = target.value;
+    void event;
     this.trackOperation('Search');
   }
 

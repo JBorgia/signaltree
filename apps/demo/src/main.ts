@@ -2,6 +2,7 @@ import { bootstrapApplication } from '@angular/platform-browser';
 
 import { AppComponent } from './app/app';
 import { appConfig } from './app/app.config';
+import { SIGNALTREE_CORE_VERSION } from './app/version';
 
 // Inject library versions into window for benchmark tracking
 // These versions are read from package.json files at build time
@@ -9,7 +10,7 @@ if (typeof window !== 'undefined') {
   (
     window as unknown as { __LIBRARY_VERSIONS__?: Record<string, string> }
   ).__LIBRARY_VERSIONS__ = {
-    signaltree: '6.0.0', // @signaltree/core
+    signaltree: SIGNALTREE_CORE_VERSION, // @signaltree/core
     'ngrx-store': '20.1.0', // @ngrx/store
     'ngrx-signals': '20.1.0', // @ngrx/signals
     akita: '8.0.1', // @datorama/akita
