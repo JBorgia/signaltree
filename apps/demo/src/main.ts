@@ -1,26 +1,20 @@
+import { isDevMode } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 
 import { AppComponent } from './app/app';
 import { appConfig } from './app/app.config';
-import { SIGNALTREE_CORE_VERSION } from './app/version';
+import { DEMO_LIBRARY_VERSIONS } from './app/library-versions';
 
 // Inject library versions into window for benchmark tracking
 // These versions are read from package.json files at build time
 if (typeof window !== 'undefined') {
   (
     window as unknown as { __LIBRARY_VERSIONS__?: Record<string, string> }
-  ).__LIBRARY_VERSIONS__ = {
-    signaltree: SIGNALTREE_CORE_VERSION, // @signaltree/core
-    'ngrx-store': '20.1.0', // @ngrx/store
-    'ngrx-signals': '20.1.0', // @ngrx/signals
-    akita: '8.0.1', // @datorama/akita
-    elf: '2.5.1', // @ngneat/elf
-    ngxs: '20.1.0', // @ngxs/store
-  };
+  ).__LIBRARY_VERSIONS__ = DEMO_LIBRARY_VERSIONS;
 }
 
 // Suppress noisy extension-origin errors in development (chrome-extension://)
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && isDevMode()) {
   const isExtensionUrl = (url: unknown) =>
     typeof url === 'string' && url.startsWith('chrome-extension://');
 
