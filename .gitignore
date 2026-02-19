@@ -76,6 +76,9 @@ error.log
 tmp/
 .vercel
 
+# Local tooling
+.ralphy/
+
 # Build artifacts that should not be committed
 *.tgz
 .version_backup
