@@ -26,6 +26,21 @@ You don't model state as actions, reducers, selectors, or classes — you model 
 
 ---
 
+## Recommended Architecture (TL;DR)
+
+If you only read one section, read this.
+
+**Default recommendation (matches SignalTree’s ethos and implementation):**
+
+- **One global runtime tree** for application/shared state.
+- **Compose domain slices as plain objects** under that root (Category C2).
+- **Expose typed feature slices** (`tree.$.feature`) via InjectionTokens/services (Category C1) to enforce boundaries.
+- Keep **UI-only state local** with Angular `signal()` / `computed()` (hybrid pattern).
+- For “lazy” features, keep the **slice object present** and initialize **leaf values** to `undefined` until you hydrate them (avoid `slice: undefined as Slice | undefined` if you need nested access).
+- Apply cross-cutting enhancers **once at the root** (especially `devTools()`, time travel, persistence/serialization).
+
+This yields the best DX: a single dot-notation state universe, one DevTools instance, and predictable path-based tooling.
+
 ## Table of Contents
 
 1. [Getting Started](#getting-started)
@@ -440,6 +455,37 @@ export const appTree = signalTree({
   auth: { userId: null as string | null },
   ui: { theme: 'light' as Theme },
 });
+
+**Lazy feature hydration (recommended pattern)**
+
+When you want a feature to be “present in types” but hydrated later (e.g. on navigation), model the feature as an **object slice** and put `undefined` only at the *leaves*.
+
+- ✅ Keeps dot-notation typing (`tree.$.reports.filters.query` exists)
+- ✅ Allows lazy runtime cost (signals are still created on access)
+- ❌ Avoid `feature: undefined as FeatureState | undefined` if you need nested access — that makes `feature` a leaf signal, not a branch.
+
+```typescript
+type ReportsState = {
+  data: Report[] | undefined;
+  filters: { query: string; status: 'all' | 'open' | 'closed' };
+};
+
+export const reportsSlice = {
+  data: undefined as Report[] | undefined,
+  filters: {
+    query: '',
+    status: 'all' as const,
+  },
+} satisfies ReportsState;
+
+export const appTree = signalTree({
+  reports: reportsSlice,
+  // ...other slices
+});
+
+// Later (e.g. on route enter)
+appTree.$.reports.data.set(await api.loadReports());
+```
 ```
 
 | Pros                                   | Cons                      |
@@ -455,6 +501,15 @@ export const appTree = signalTree({
 ### Category D: Multiple Trees
 
 Separate tree instances for isolation.
+
+**Important note about DevTools and path-based enhancers**
+
+SignalTree’s DevTools / time-travel / persistence ecosystem is built around a **global PathNotifier** (see `getPathNotifier()` in core). If you create multiple independent trees and enable `devTools()` on more than one of them:
+
+- You will get **multiple Redux DevTools connections** (one per tree).
+- You may see **noisy / confusing DevTools actions** across trees because each `devTools()` enhancer listens to the same global notifier.
+
+If you want a single unified DevTools view, prefer **one global runtime tree** (Category C) and inject typed slices (`tree.$.feature`) into feature code.
 
 #### D1: Domain-Scoped Trees
 
@@ -489,6 +544,7 @@ export class DashboardComponent {
 | ---------------------- | ----------------------------------- |
 | Domain isolation       | Cross-domain coordination is manual |
 | Smaller tree instances | Loses unified dot notation          |
+|                        | Separate Redux DevTools connections |
 |                        | Must know which tree to inject      |
 
 **Best for:** Truly independent domains with minimal cross-talk (rare)

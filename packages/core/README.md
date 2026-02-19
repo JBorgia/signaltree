@@ -661,6 +661,12 @@ All enhancers are exported directly from `@signaltree/core`:
 - `devTools()` - Redux DevTools auto-connect, path actions, and time-travel dispatch
 - `withTimeTravel()` - Undo/redo functionality
 
+**DevTools connection model**
+
+`devTools()` connects to the Redux DevTools browser extension via `window.__REDUX_DEVTOOLS_EXTENSION__.connect(...)`. That means **each SignalTree instance you enhance with `devTools()` will show up as its own DevTools “instance”.**
+
+If you want a single unified DevTools view, prefer a **single global tree** composed from domain slices, and apply `devTools()` once at the root. See the Architecture Guide (Category C: Feature-scoped / composed sub-trees) for patterns that keep code modular without fragmenting runtime state.
+
 **Presets:**
 
 - `createDevTree()` - Pre-configured development setup

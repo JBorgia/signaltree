@@ -99,6 +99,8 @@ const store = signalTree({
 
 📚 See [docs/overview.md](./docs/overview.md) and the [Architecture Guide](./docs/architecture/signaltree-architecture-guide.md) for detailed examples.
 
+**Not sure how to structure your app?** Start with the Architecture Guide’s **“Recommended Architecture (TL;DR)”** section.
+
 **v6.3.1 Release** - Deep Merge Fix + `derived()` Deprecation:
 
 - **Deep Merge Fixed**: Derived namespaces now correctly preserve source properties including `entityMap()` methods

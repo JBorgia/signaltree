@@ -23,7 +23,7 @@ Use this index to navigate the documentation.
 
 | Document | Description |
 |----------|-------------|
-| [Architecture Guide](architecture/signaltree-architecture-guide.md) | Comprehensive patterns and decision frameworks |
+| [Architecture Guide](architecture/signaltree-architecture-guide.md) | Comprehensive patterns and decision frameworks (start with “Recommended Architecture (TL;DR)”) |
 
 ---
 
