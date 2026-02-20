@@ -252,8 +252,17 @@ rollback_versions() {
     fi
 }
 
-# Set up trap to rollback on failure
-trap rollback_versions ERR
+# Set up trap to rollback on failure (only before publishing starts)
+on_error() {
+    if [ "$PUBLISH_STARTED" = false ]; then
+        rollback_versions
+    else
+        print_error "Release failed during npm publish; not rolling back versions automatically"
+        print_error "Some packages may already be published. Resolve manually and re-run with --keep-version."
+    fi
+}
+
+trap on_error ERR
 
 # Step 2: Update versions in all package.json files
 if [ "$KEEP_VERSION" = true ]; then
@@ -426,9 +435,13 @@ for package in "${PACKAGES[@]}"; do
                 PUBLISH_CMD="$PUBLISH_CMD --userconfig ~/.npmrc.signaltree-temp"
             fi
 
+            # With `set -e` + `pipefail`, a failing publish would abort the script
+            # before we can inspect the output. Temporarily disable `-e` to handle
+            # expected failures (already published, OTP expiration, etc.) explicitly.
+            set +e
             $PUBLISH_CMD 2>&1 | tee /tmp/npm_publish_$package.log
-
             PUBLISH_EXIT_CODE=${PIPESTATUS[0]}
+            set -e
 
             if [ $PUBLISH_EXIT_CODE -eq 0 ]; then
                 print_success "Published @signaltree/$package successfully"
