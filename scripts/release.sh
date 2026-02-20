@@ -56,6 +56,11 @@ NON_INTERACTIVE=false
 KEEP_VERSION=false
 NPM_TOKEN=${NPM_TOKEN:-} # Automation token for 2FA bypass
 
+# Track whether we have entered the publishing phase.
+# If the user interrupts (Ctrl+C) during publish, we should NOT auto-rollback
+# versions/commits because we may have already published some packages.
+PUBLISH_STARTED=false
+
 if [[ "$*" == *"--yes"* ]] || [[ "$*" == *"-y"* ]]; then
     NON_INTERACTIVE=true
 fi
@@ -70,6 +75,19 @@ if [[ ! "$RELEASE_TYPE" =~ ^(major|minor|patch)$ ]]; then
 fi
 
 print_step "Starting modular release process with type: $RELEASE_TYPE"
+
+on_interrupt() {
+    print_error "Release interrupted"
+    if [ "$PUBLISH_STARTED" = false ]; then
+        rollback_versions
+    else
+        print_error "Interrupted during npm publish; not rolling back versions automatically"
+        print_error "Some packages may already be published. Re-run publish or reconcile manually."
+    fi
+    exit 130
+}
+
+trap on_interrupt INT TERM
 
 # Step 0: Run comprehensive pre-publish validation
 print_step "Running comprehensive pre-publish validation..."
@@ -324,19 +342,36 @@ done
 if [ ${#REMAINING_PACKAGES[@]} -gt 0 ]; then
     print_step "Building remaining Nx packages..."
     REMAINING_LIST=$(IFS=,; echo "${REMAINING_PACKAGES[*]}")
-    npx nx run-many -t build --projects=$REMAINING_LIST --configuration=production || {
-        print_warning "Some dependent packages failed to build, but continuing with core..."
-        print_warning "Failed packages will be skipped during publish"
-    }
+    npx nx run-many -t build --projects=$REMAINING_LIST --configuration=production
 fi
 
 print_success "Package builds completed"
+
+# Preflight: ensure all publishable dist folders exist BEFORE publishing anything.
+print_step "Verifying dist outputs exist for all packages (fail-fast)..."
+for package in "${PACKAGES[@]}"; do
+    DIST_PATH="./dist/packages/$package"
+    if [ ! -d "$DIST_PATH" ]; then
+        print_error "Dist folder not found for $package at $DIST_PATH"
+        print_error "Aborting before publish to avoid partial releases"
+        exit 1
+    fi
+    if [ ! -f "$DIST_PATH/package.json" ]; then
+        print_error "package.json not found in $DIST_PATH"
+        print_error "Aborting before publish to avoid partial releases"
+        exit 1
+    fi
+done
+print_success "All dist outputs present"
 
 # Step 4: Commit changes
 print_step "Committing version changes (if any)..."
 git add package.json packages/*/package.json
 if [ -f "apps/demo/src/app/version.ts" ]; then
     git add apps/demo/src/app/version.ts
+fi
+if [ -f "apps/demo/src/app/library-versions.ts" ]; then
+    git add apps/demo/src/app/library-versions.ts
 fi
 if [ "$KEEP_VERSION" = true ]; then
     git commit -m "chore(release): publish $NEW_VERSION (no version bump)" || {
@@ -350,6 +385,8 @@ fi
 
 # Step 5: Publish all packages to npm (BEFORE tagging/pushing)
 print_step "Publishing all packages to npm..."
+
+PUBLISH_STARTED=true
 
 PUBLISHED_PACKAGES=()
 FAILED_PACKAGES=()
@@ -444,7 +481,7 @@ for package in "${PACKAGES[@]}"; do
         cd - > /dev/null
         rm -f /tmp/npm_publish_$package.log
     else
-        print_warning "Dist folder not found for $package at $DIST_PATH, skipping..."
+        print_error "Dist folder not found for $package at $DIST_PATH"
         FAILED_PACKAGES+=("$package")
     fi
 done
@@ -502,7 +539,7 @@ if [ -n "$NPM_TOKEN" ]; then
     print_step "Cleaned up temporary npm credentials"
 fi
 # Disable trap now that we've succeeded
-trap - ERR
+trap - ERR INT TERM
 
 # Step 8: Check GitHub Actions
 print_step "GitHub Actions should now create a release automatically"
