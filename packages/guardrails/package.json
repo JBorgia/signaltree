@@ -57,8 +57,8 @@
     "type-check": "tsc --project tsconfig.lib.json --noEmit"
   },
   "peerDependencies": {
-    "@signaltree/core": "^7.0.0",
-    "@signaltree/shared": "^7.0.0",
+    "@signaltree/core": "^8.0.0",
+    "@signaltree/shared": "^7.1.0",
     "tslib": "^2.0.0",
     "vitest": "^2.0.0"
   },
