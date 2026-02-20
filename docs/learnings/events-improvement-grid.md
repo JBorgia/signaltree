@@ -3,6 +3,8 @@
 **Generated**: January 26, 2025  
 **Source**: Real-world integration learnings from Swapacado migration
 
+> **Note (Feb 2026):** `@signaltree/events` is now **ESM-only**. If you're consuming `@signaltree/events/nestjs` from Node/NestJS, your backend must run in ESM mode (e.g. `package.json` has `"type": "module"`, and TypeScript uses `"module": "NodeNext"` + `"moduleResolution": "NodeNext"`).
+
 ---
 
 ## Improvement Summary Grid

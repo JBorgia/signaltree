@@ -39,6 +39,8 @@ PACKAGES=(
     "callable-syntax"
     "enterprise"
     "guardrails"
+    "events"
+    "realtime"
 )
 
 ISSUES_FOUND=0

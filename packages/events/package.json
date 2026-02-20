@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
-  "main": "./dist/index.cjs",
+  "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./src/index.d.ts",
   "typesVersions": {
@@ -25,25 +25,21 @@
     ".": {
       "types": "./src/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs",
       "default": "./dist/index.js"
     },
     "./nestjs": {
       "types": "./src/nestjs/index.d.ts",
       "import": "./dist/nestjs/index.js",
-      "require": "./dist/nestjs/index.cjs",
       "default": "./dist/nestjs/index.js"
     },
     "./angular": {
       "types": "./src/angular/index.d.ts",
       "import": "./dist/angular/index.js",
-      "require": "./dist/angular/index.cjs",
       "default": "./dist/angular/index.js"
     },
     "./testing": {
       "types": "./src/testing/index.d.ts",
       "import": "./dist/testing/index.js",
-      "require": "./dist/testing/index.cjs",
       "default": "./dist/testing/index.js"
     },
     "./package.json": "./package.json"
@@ -103,7 +99,6 @@
   },
   "files": [
     "dist/**/*.js",
-    "dist/**/*.cjs",
     "src/**/*.d.ts",
     "README.md"
   ],

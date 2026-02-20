@@ -47,14 +47,6 @@
         "generatePackageJson": false
       }
     },
-    "postbuild": {
-      "executor": "nx:run-commands",
-      "cache": false,
-      "options": {
-        "command": "node tools/build/fix-dts-imports.mjs",
-        "cwd": "{workspaceRoot}"
-      }
-    },
     "nx-release-publish": {
       "options": {
         "packageRoot": "dist/{projectRoot}"

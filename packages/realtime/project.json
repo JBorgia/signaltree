@@ -49,7 +49,10 @@
           "tslib",
           "rxjs"
         ],
-        "rollupConfig": "packages/realtime/rollup.config.mjs"
+        "rollupConfig": "packages/realtime/rollup.config.mjs",
+        "deleteOutputPath": true,
+        "generatePackageJson": false,
+        "useLegacyTypescriptPlugin": false
       }
     },
     "lint": {

@@ -162,12 +162,20 @@ fi
 # 7. Build All Packages
 print_header "7. Building All Packages"
 print_step "Running production builds"
-print_info "Building independent packages (core, callable-syntax, guardrails, shared)"
-print_info "Note: enterprise and ng-forms will be built during release after core is published"
+print_info "Building all packages that are published by scripts/release.sh"
 
-# Build core and other independent packages
-if NX_DAEMON=false npx nx run-many -t build --projects=core,callable-syntax,shared,guardrails 2>&1 | tee /tmp/build.log; then
-    print_success "Independent packages built successfully"
+# Build packages in dependency order (core first, then the rest)
+if NX_DAEMON=false npx nx build core --configuration=production 2>&1 | tee /tmp/build-core.log; then
+    print_success "Core built successfully"
+else
+    print_error "Core build failed"
+    cat /tmp/build-core.log
+    exit 1
+fi
+
+PUBLISHED_PACKAGES="callable-syntax,shared,guardrails,events,realtime,enterprise,ng-forms"
+if NX_DAEMON=false npx nx run-many -t build --projects=$PUBLISHED_PACKAGES --configuration=production 2>&1 | tee /tmp/build.log; then
+    print_success "All published packages built successfully"
 else
     print_error "Build failed"
     cat /tmp/build.log

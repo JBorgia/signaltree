@@ -7,13 +7,9 @@ const srcRoot = path.join(packageRoot, 'src');
 
 /**
  * Custom rollup config for @signaltree/events.
- * 
- * Unlike other packages (core, guardrails) which are ESM-only,
- * events needs both ESM and CJS because:
- * - Angular apps use ESM (./angular entry)
- * - NestJS backends use CJS by default (./nestjs entry)
- * 
- * We use preserveModules to maintain tree-shaking compatibility.
+ *
+ * SignalTree packages ship pure ESM output with preserveModules enabled.
+ * This maintains tree-shaking compatibility while keeping publishing reliable.
  */
 export default (config, options = {}) => {
   // Merge additionalEntryPoints into config.input
@@ -49,7 +45,7 @@ export default (config, options = {}) => {
     return basePath ? `dist/${basePath}.${ext}` : `dist/[name].${ext}`;
   };
 
-  // Create both ESM and CJS outputs
+  // Create ESM output
   const esmOutput = {
     dir: targetRoot,
     format: 'esm',
@@ -61,21 +57,10 @@ export default (config, options = {}) => {
     sourcemap: false,
   };
 
-  const cjsOutput = {
-    dir: targetRoot,
-    format: 'cjs',
-    entryFileNames: (chunkInfo) => toOutputPath(chunkInfo.facadeModuleId, chunkInfo.name, 'cjs'),
-    chunkFileNames: (chunkInfo) => toOutputPath(chunkInfo.facadeModuleId ?? chunkInfo.moduleIds?.[0], chunkInfo.name, 'cjs'),
-    exports: 'named',
-    preserveModules: true,
-    preserveModulesRoot: srcRoot,
-    sourcemap: false,
-  };
-
   return {
     ...config,
     input: mergedInput,
-    output: [esmOutput, cjsOutput],
+    output: esmOutput,
     treeshake: {
       moduleSideEffects: true,
     },

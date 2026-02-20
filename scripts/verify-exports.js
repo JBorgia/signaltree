@@ -11,25 +11,23 @@
 const fs = require('fs');
 const path = require('path');
 
-// Packages that are built independently (always check these)
-const INDEPENDENT_PACKAGES = ['core', 'callable-syntax', 'guardrails'];
+// Default: verify every package that scripts/release.sh publishes.
+// (Pre-publish validation now builds all of these.)
+const PUBLISHED_PACKAGES = [
+  'core',
+  'events',
+  'ng-forms',
+  'realtime',
+  'callable-syntax',
+  'enterprise',
+  'guardrails',
+];
 
-// Packages that depend on published core (only check with --all flag)
-const DEPENDENT_PACKAGES = ['ng-forms', 'enterprise'];
-
-const checkAll = process.argv.includes('--all');
-const PACKAGES = checkAll
-  ? [...INDEPENDENT_PACKAGES, ...DEPENDENT_PACKAGES]
-  : INDEPENDENT_PACKAGES;
+const PACKAGES = PUBLISHED_PACKAGES;
 
 let errors = 0;
 
-if (!checkAll) {
-  console.log('Verifying package exports (independent packages only)...');
-  console.log('Note: Use --all to also check ng-forms and enterprise\n');
-} else {
-  console.log('Verifying package exports (all packages)...\n');
-}
+console.log('Verifying package exports (published packages)...\n');
 
 for (const pkg of PACKAGES) {
   const distDir = path.join(__dirname, '..', 'dist', 'packages', pkg);

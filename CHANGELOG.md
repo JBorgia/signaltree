@@ -1,3 +1,13 @@
+## Unreleased
+
+### ⚠️ Breaking Changes
+
+- **events:** `@signaltree/events` is now **ESM-only** (CJS build + `exports["require"]` removed). Node/NestJS consumers must run in ESM mode.
+
+### 🏗️ Build & Packaging
+
+- Packaging reliability improvements: publishable `dist/` layouts are produced directly by the bundler targets (no ad-hoc post-build copy steps).
+
 ## 7.6.0 (2026-02-16)
 
 ### 🚀 Features

@@ -71,7 +71,7 @@ signaltree/
 1. **Core, ng-forms, callable-syntax, enterprise**: Nx + Rollup
 
    - Entry: `src/index.ts`
-   - Output: `dist/` with CJS, ESM, and type definitions
+  - Output: `dist/` with preserved-module ESM and type definitions
    - Build: `nx build <package>`
 
 2. **Guardrails**: Nx + Rollup (shared preserveModules configuration)

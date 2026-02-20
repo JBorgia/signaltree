@@ -4,6 +4,8 @@
 **Context**: Migrating Swapacado backend from a local event bus implementation to `@signaltree/events/nestjs`
 **Status**: P1 and P2 improvements implemented ✅
 
+> **Note (Feb 2026):** `@signaltree/events` is now **ESM-only**. If you're consuming `@signaltree/events/nestjs` from Node/NestJS, your backend must run in ESM mode (e.g. `package.json` has `"type": "module"`, and TypeScript uses `"module": "NodeNext"` + `"moduleResolution": "NodeNext"`).
+
 ---
 
 ## Summary

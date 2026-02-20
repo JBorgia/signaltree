@@ -5,10 +5,22 @@ Event-driven architecture infrastructure for SignalTree applications. Provides a
 ## Installation
 
 ```bash
-npm install @signaltree/events
+npm install @signaltree/events zod
 # or
-pnpm add @signaltree/events
+pnpm add @signaltree/events zod
 ```
+
+## Module Format (ESM-only)
+
+`@signaltree/events` ships as **pure ESM**.
+
+- ✅ Works in ESM environments (modern bundlers, Vite, Angular, Node ESM)
+- ❌ **Does not support** CommonJS `require()` (you'll get `ERR_REQUIRE_ESM`)
+
+If you're using the NestJS entry (`@signaltree/events/nestjs`) from Node, make sure your backend runs in ESM mode, for example:
+
+- `package.json`: set `"type": "module"`
+- `tsconfig.json`: set `"module": "NodeNext"` and `"moduleResolution": "NodeNext"`
 
 ## Subpaths
 

@@ -10,13 +10,21 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-# Only verify packages that were actually built during validation
-# enterprise and ng-forms are skipped during validation
-NX_PACKAGES=("core" "callable-syntax" "shared" "guardrails")
+# Verify the packages that scripts/release.sh publishes.
+NX_PACKAGES=(
+    "core"
+    "callable-syntax"
+    "shared"
+    "guardrails"
+    "events"
+    "realtime"
+    "enterprise"
+    "ng-forms"
+)
 ERRORS=0
 
 echo "Verifying distribution files for independent packages..."
-echo "(Note: enterprise and ng-forms are built during release, not validation)"
+echo "(Matches the packages published by scripts/release.sh)"
 echo ""
 
 # Check Nx-built packages (output to dist/packages/$package)
@@ -46,7 +54,37 @@ for package in "${NX_PACKAGES[@]}"; do
         echo -e "${RED}❌ Missing compiled output directory: $JS_DIR${NC}"
         ((ERRORS++))
     else
-        if [ "$package" = "guardrails" ]; then
+        if [ "$package" = "events" ]; then
+            EVENTS_EXPECTED=(
+                "$JS_DIR/index.js"
+                "$JS_DIR/nestjs/index.js"
+                "$JS_DIR/angular/index.js"
+                "$JS_DIR/testing/index.js"
+            )
+            for expected in "${EVENTS_EXPECTED[@]}"; do
+                RELATIVE_PATH="${expected#$JS_DIR/}"
+                if [ ! -f "$expected" ]; then
+                    echo -e "${RED}❌ Missing events artifact: $RELATIVE_PATH${NC}"
+                    ((ERRORS++))
+                else
+                    echo -e "${GREEN}✓ $RELATIVE_PATH found${NC}"
+                fi
+            done
+        elif [ "$package" = "realtime" ]; then
+            REALTIME_EXPECTED=(
+                "$JS_DIR/index.js"
+                "$JS_DIR/supabase/index.js"
+            )
+            for expected in "${REALTIME_EXPECTED[@]}"; do
+                RELATIVE_PATH="${expected#$JS_DIR/}"
+                if [ ! -f "$expected" ]; then
+                    echo -e "${RED}❌ Missing realtime artifact: $RELATIVE_PATH${NC}"
+                    ((ERRORS++))
+                else
+                    echo -e "${GREEN}✓ $RELATIVE_PATH found${NC}"
+                fi
+            done
+        elif [ "$package" = "guardrails" ]; then
             GUARDRAILS_EXPECTED=(
                 "$JS_DIR/lib/guardrails.js"
                 "$JS_DIR/factories/index.js"
@@ -71,8 +109,52 @@ for package in "${NX_PACKAGES[@]}"; do
         fi
     fi
 
-    # Check for TypeScript declarations in dist/
-    if [ "$package" = "guardrails" ]; then
+    # Check for TypeScript declarations
+    if [ "$package" = "events" ]; then
+        EVENTS_DTS=(
+            "$DIST_DIR/src/index.d.ts"
+            "$DIST_DIR/src/nestjs/index.d.ts"
+            "$DIST_DIR/src/angular/index.d.ts"
+            "$DIST_DIR/src/testing/index.d.ts"
+        )
+        for expected in "${EVENTS_DTS[@]}"; do
+            RELATIVE_PATH="${expected#$DIST_DIR/}"
+            if [ ! -f "$expected" ]; then
+                echo -e "${RED}❌ Missing events declaration: $RELATIVE_PATH${NC}"
+                ((ERRORS++))
+            else
+                echo -e "${GREEN}✓ $RELATIVE_PATH found${NC}"
+            fi
+        done
+    elif [ "$package" = "realtime" ]; then
+        REALTIME_DTS=(
+            "$DIST_DIR/src/index.d.ts"
+            "$DIST_DIR/src/supabase/index.d.ts"
+        )
+        for expected in "${REALTIME_DTS[@]}"; do
+            RELATIVE_PATH="${expected#$DIST_DIR/}"
+            if [ ! -f "$expected" ]; then
+                echo -e "${RED}❌ Missing realtime declaration: $RELATIVE_PATH${NC}"
+                ((ERRORS++))
+            else
+                echo -e "${GREEN}✓ $RELATIVE_PATH found${NC}"
+            fi
+        done
+    elif [ "$package" = "ng-forms" ]; then
+        NG_FORMS_DTS=(
+            "$DIST_DIR/src/index.d.ts"
+            "$DIST_DIR/src/audit/index.d.ts"
+        )
+        for expected in "${NG_FORMS_DTS[@]}"; do
+            RELATIVE_PATH="${expected#$DIST_DIR/}"
+            if [ ! -f "$expected" ]; then
+                echo -e "${RED}❌ Missing ng-forms declaration: $RELATIVE_PATH${NC}"
+                ((ERRORS++))
+            else
+                echo -e "${GREEN}✓ $RELATIVE_PATH found${NC}"
+            fi
+        done
+    elif [ "$package" = "guardrails" ]; then
         # Guardrails has special entry points, skip generic index.d.ts check
         :
     elif [ ! -f "$JS_DIR/index.d.ts" ]; then
