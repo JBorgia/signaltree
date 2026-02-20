@@ -436,12 +436,15 @@ for package in "${PACKAGES[@]}"; do
             fi
 
             # With `set -e` + `pipefail`, a failing publish would abort the script
-            # before we can inspect the output. Temporarily disable `-e` to handle
-            # expected failures (already published, OTP expiration, etc.) explicitly.
+            # before we can inspect the output. Also, `trap ERR` would fire even for
+            # expected publish failures (already published, OTP expiration, etc.).
+            # Temporarily disable both while we capture output and handle failures explicitly.
+            trap - ERR
             set +e
             $PUBLISH_CMD 2>&1 | tee /tmp/npm_publish_$package.log
             PUBLISH_EXIT_CODE=${PIPESTATUS[0]}
             set -e
+            trap on_error ERR
 
             if [ $PUBLISH_EXIT_CODE -eq 0 ]; then
                 print_success "Published @signaltree/$package successfully"
