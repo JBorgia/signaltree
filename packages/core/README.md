@@ -118,7 +118,7 @@ Performance and bundle size vary by app shape, build tooling, device, and runtim
 
 ## Best Practices (SignalTree-First)
 
-> 📖 **Full guide**: [Architecture Guide](https://github.com/JBorgia/signaltree/blob/main/docs/architecture/signaltree-architecture-guide.md)
+> 📖 **Full guide**: [Implementation Patterns](https://github.com/JBorgia/signaltree/blob/main/docs/IMPLEMENTATION_PATTERNS.md)
 
 Follow these principles for idiomatic SignalTree code:
 
@@ -164,7 +164,7 @@ export function createUserTree() {
 // ✅ Correct: Derived from multiple signals
 const selectedUser = computed(() => {
   const id = $.selected.userId();
-  return id ? $.users.byId(id)?.() ?? null : null;
+  return id ? $.users.byId(id)() : null;
 });
 
 // ❌ Wrong: Wrapping an existing signal
@@ -175,8 +175,8 @@ const selectedUserId = computed(() => $.selected.userId()); // Unnecessary!
 
 ```typescript
 // ✅ SignalTree-native
-const user = $.users.byId(123)?.(); // O(1) lookup
-const allUsers = $.users.all(); // Get all
+const user = $.users.byId(123)(); // O(1) lookup
+const allUsers = $.users.all; // Get all
 $.users.setAll(usersFromApi); // Replace all
 
 // ❌ NgRx-style (avoid)
@@ -650,7 +650,7 @@ All enhancers are exported directly from `@signaltree/core`:
 
 **Data Management:**
 
-- `entities()` - Legacy helper (not required when using `entityMap()` in v7)
+- `entities()` - Advanced CRUD operations for collections
 - `createAsyncOperation()` - Async operation management with loading/error states
 - `trackAsync()` - Track async operations in your state
 - `serialization()` - State persistence and SSR support
@@ -660,12 +660,6 @@ All enhancers are exported directly from `@signaltree/core`:
 
 - `devTools()` - Redux DevTools auto-connect, path actions, and time-travel dispatch
 - `withTimeTravel()` - Undo/redo functionality
-
-**DevTools connection model**
-
-`devTools()` connects to the Redux DevTools browser extension via `window.__REDUX_DEVTOOLS_EXTENSION__.connect(...)`. That means **each SignalTree instance you enhance with `devTools()` will show up as its own DevTools “instance”.**
-
-If you want a single unified DevTools view, prefer a **single global tree** composed from domain slices, and apply `devTools()` once at the root. See the Architecture Guide (Category C: Feature-scoped / composed sub-trees) for patterns that keep code modular without fragmenting runtime state.
 
 **Presets:**
 
@@ -697,12 +691,14 @@ const tree = signalTree({ count: 0 }).with(
 **Performance-Focused Stack:**
 
 ```typescript
-import { signalTree, batching, memoization, entityMap } from '@signaltree/core';
+import { signalTree, batching, memoization, entities } from '@signaltree/core';
 
 const tree = signalTree({
   products: entityMap<Product>(),
   ui: { loading: false },
-}).with(batching()); // Batch updates for optimal rendering
+})
+  .with(entities()) // Efficient CRUD operations (auto-detects entityMap)
+  .with(batching()); // Batch updates for optimal rendering
 
 // Entity CRUD operations
 tree.$.products.addOne(newProduct);
@@ -788,20 +784,20 @@ const customTree = signalTree(state, TREE_PRESETS.DASHBOARD);
 SignalTree Core includes all enhancer functionality built-in. No separate packages needed:
 
 ```typescript
-import { signalTree, entityMap } from '@signaltree/core';
+import { signalTree, entityMap, entities } from '@signaltree/core';
 
 // Without entityMap - use manual array updates
 const basic = signalTree({ users: [] as User[] });
 basic.$.users.update((users) => [...users, newUser]);
 
-// With entityMap (v7+ auto-processed) - use entity helpers
+// With entityMap + entities - use entity helpers
 const enhanced = signalTree({
   users: entityMap<User>(),
-});
+}).with(entities());
 
 enhanced.$.users.addOne(newUser); // ✅ Advanced CRUD operations
-enhanced.$.users.byId(123)?.(); // ✅ O(1) lookups
-enhanced.$.users.all(); // ✅ Get all as array
+enhanced.$.users.byId(123)(); // ✅ O(1) lookups
+enhanced.$.users.all; // ✅ Get all as array
 ```
 
 Core includes several performance optimizations:
@@ -914,7 +910,7 @@ const tree = signalTree({ count: 0 }).with(withLogger());
 tree.log('Tree created');
 ```
 
-> 📖 **Full guide**: [Custom Markers & Enhancers](https://github.com/JBorgia/signaltree/blob/main/docs/guides/custom-markers-enhancers.md)
+> 📖 **Full guide**: [Custom Markers & Enhancers](https://github.com/JBorgia/signaltree/blob/main/docs/custom-markers-enhancers.md)
 >
 > 📱 **Interactive demo**: [Demo App](/custom-extensions)
 
@@ -1580,19 +1576,19 @@ const filteredProducts = computed(() => {
 ### Data Management Composition
 
 ```typescript
-import { signalTree, entityMap } from '@signaltree/core';
+import { signalTree, entityMap, entities } from '@signaltree/core';
 
-// Add data management capabilities (entityMap is auto-processed)
+// Add data management capabilities (+2.77KB total)
 const tree = signalTree({
   users: entityMap<User>(),
   posts: entityMap<Post>(),
   ui: { loading: false, error: null as string | null },
-});
+}).with(entities());
 
 // Advanced entity operations via tree.$ accessor
 tree.$.users.addOne(newUser);
-tree.$.users.where((u) => u.active); // Filtered signal
-tree.$.users.updateMany(['1'], { status: 'active' });
+tree.$.users.selectBy((u) => u.active);
+tree.$.users.updateMany([{ id: '1', changes: { status: 'active' } }]);
 
 // Entity helpers work with nested structures
 // Example: deeply nested entities in a domain-driven design pattern
@@ -1609,13 +1605,13 @@ const appTree = signalTree({
       reports: entityMap<Report>(),
     },
   },
-});
+}).with(entities());
 
 // Access nested entities using tree.$ accessor
-appTree.$.app.data.users.where((u) => u.isAdmin); // Filtered signal
-appTree.$.app.data.products.count(); // Count
-appTree.$.admin.data.logs.all(); // All items as array
-appTree.$.admin.data.reports.ids(); // ID array
+appTree.$.app.data.users.selectBy((u) => u.isAdmin); // Filtered signal
+appTree.$.app.data.products.selectTotal(); // Count signal
+appTree.$.admin.data.logs.all; // All items as array
+appTree.$.admin.data.reports.selectIds(); // ID array signal
 
 // For async operations, use manual async or async helpers
 async function fetchUsers() {
@@ -1634,7 +1630,7 @@ async function fetchUsers() {
 ### Full-Featured Development Composition
 
 ```typescript
-import { signalTree, batching, serialization, withTimeTravel, devTools } from '@signaltree/core';
+import { signalTree, batching, entities, serialization, withTimeTravel, devTools } from '@signaltree/core';
 
 // Full development stack (example)
 const tree = signalTree({
@@ -1645,6 +1641,7 @@ const tree = signalTree({
   },
 }).with(
   batching(), // Performance
+  entities(), // Data management
   // withAsync removed — use async helpers for API integration
   serialization({
     // State persistence
@@ -1668,7 +1665,7 @@ const tree = signalTree({
 async function fetchUser(id: string) {
   return await api.getUser(id);
 }
-tree.$.app.data.users.byId(userId)?.(); // O(1) lookup
+tree.$.app.data.users.byId(userId)(); // O(1) lookup
 tree.undo(); // Time travel
 tree.save(); // Persistence
 ```
@@ -1676,11 +1673,12 @@ tree.save(); // Persistence
 ### Production-Ready Composition
 
 ```typescript
-import { signalTree, batching, serialization } from '@signaltree/core';
+import { signalTree, batching, entities, serialization } from '@signaltree/core';
 
 // Production build (no dev tools)
 const tree = signalTree(initialState).with(
   batching(), // Performance optimization
+  entities(), // Data management
   // withAsync removed — use async helpers for API integration
   serialization({
     // User preferences
@@ -1696,13 +1694,14 @@ const tree = signalTree(initialState).with(
 ### Conditional Enhancement
 
 ```typescript
-import { signalTree, batching, devTools, withTimeTravel } from '@signaltree/core';
+import { signalTree, batching, entities, devTools, withTimeTravel } from '@signaltree/core';
 
 const isDevelopment = process.env['NODE_ENV'] === 'development';
 
 // Conditional enhancement based on environment
 const tree = signalTree(state).with(
   batching(), // Always include performance
+  entities(), // Always include data management
   ...(isDevelopment
     ? [
         // Development-only features
@@ -1747,7 +1746,7 @@ const tree = signalTree(state);
 const tree2 = tree.with(batching());
 
 // Phase 3: Add data management for collections
-const tree3 = tree2; // entityMap is auto-processed in v7
+const tree3 = tree2.with(entities());
 
 // Phase 4: Add async for API integration
 // withAsync removed — no explicit async enhancer; use async helpers instead
@@ -1825,7 +1824,7 @@ For fair, reproducible measurements that reflect your app and hardware, use the 
           {{ userTree.$.error() }}
           <button (click)="loadUsers()">Retry</button>
         </div>
-        } @else { @for (user of users(); track user.id) {
+        } @else { @for (user of users.selectAll()(); track user.id) {
         <div class="user-card">
           <h3>{{ user.name }}</h3>
           <p>{{ user.email }}</p>
@@ -1852,8 +1851,6 @@ class UserManagerComponent implements OnInit {
     error: null as string | null,
     form: { id: '', name: '', email: '' },
   });
-
-  readonly users = this.userTree.$.users;
 
   constructor(private userService: UserService) {}
 
@@ -2039,9 +2036,9 @@ tree.destroy(); // Cleanup resources
 
 // Entity helpers (when using entityMap + entities)
 // tree.$.users.addOne(user);    // Add single entity
-// tree.$.users.byId(id)?.();      // O(1) lookup by ID
-// tree.$.users.all();             // Get all as array
-// tree.$.users.where(pred)();     // Filtered array
+// tree.$.users.byId(id)();      // O(1) lookup by ID
+// tree.$.users.all;         // Get all as array
+// tree.$.users.selectBy(pred);  // Filtered signal
 ```
 
 ## Extending with enhancers
@@ -2061,8 +2058,8 @@ All enhancers are included in `@signaltree/core`:
 
 - **batching()** - Batch multiple updates for better performance
 - **memoization()** - Intelligent caching & performance optimization
-- **entities()** - Legacy helper (not required when using `entityMap()` in v7)
-- **devTools()** - Auto-connect, path actions, and time-travel dispatch
+- **entities()** - Advanced entity management & CRUD operations
+- **devTools()** - Redux DevTools integration for debugging
 - **withTimeTravel()** - Undo/redo functionality & state history
 - **serialization()** - State persistence & SSR support
 - **createDevTree()** - Pre-configured development setup
@@ -2217,11 +2214,11 @@ All enhancers are now consolidated in the core package. The following features a
 
 ### Advanced Features
 
-- **entities()** (+0.97KB gzipped) - Legacy helper (not required when using `entityMap()` in v7)
+- **entities()** (+0.97KB gzipped) - Enhanced CRUD operations & entity management
 
 ### Development Tools
 
-- **devTools()** (+2.49KB gzipped) - Auto-connect, path actions, and time-travel dispatch
+- **devTools()** (+2.49KB gzipped) - Development tools & Redux DevTools integration
 - **withTimeTravel()** (+1.75KB gzipped) - Undo/redo functionality & state history
 
 ### Integration & Convenience
