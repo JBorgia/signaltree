@@ -12,4 +12,4 @@ export {
   type AuditEntry,
   type AuditMetadata,
   type AuditTrackerConfig,
-} from './audit.js';
+} from './audit';

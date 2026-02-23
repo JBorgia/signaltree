@@ -211,7 +211,8 @@ class BundleAnalyzer {
     const { continueOnError = false } = options;
     this.log(`${description}...`);
     try {
-      execSync(command, { stdio: 'pipe', cwd: process.cwd() });
+      const stdio = options.stdio || 'pipe';
+      execSync(command, { stdio, cwd: process.cwd() });
       this.log(`${description} completed`, 'success');
       return true;
     } catch (error) {
@@ -237,11 +238,11 @@ class BundleAnalyzer {
 
     this.log('🔨 Building all packages...');
     const packageNames = nxProjects.join(',');
-    const buildCommand = `pnpm nx run-many --target=build --projects=${packageNames} --configuration=production`;
+    const buildCommand = `pnpm nx run-many --target=build --projects=${packageNames} --configuration=production --verbose --output-style=static --no-daemon`;
     const packagesBuilt = this.execCommand(
       buildCommand,
       'Building SignalTree packages',
-      { continueOnError: true }
+      { continueOnError: true, stdio: 'inherit' }
     );
 
     if (!packagesBuilt) {
@@ -251,8 +252,11 @@ class BundleAnalyzer {
       );
       this.execCommand('pnpm nx reset', 'Restarting Nx cache/daemon', {
         continueOnError: true,
+        stdio: 'inherit',
       });
-      this.execCommand(buildCommand, 'Building SignalTree packages (retry)');
+      this.execCommand(buildCommand, 'Building SignalTree packages (retry)', {
+        stdio: 'inherit',
+      });
     }
 
     this.execCommand(
