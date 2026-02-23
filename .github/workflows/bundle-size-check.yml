@@ -14,15 +14,17 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: latest
+          version: '10.17.0'
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
       - name: Install dependencies
         run: |
-          pnpm install --no-frozen-lockfile
+          pnpm install --frozen-lockfile
 
       - name: Check bundle sizes
         run: pnpm run size:check
+        env:
+          NX_DAEMON: 'false'
