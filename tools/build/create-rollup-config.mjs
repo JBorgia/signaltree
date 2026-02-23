@@ -33,6 +33,21 @@ export function createLibraryRollupConfig({
       return path.join('shared', fromShared);
     }
 
+    // Also handle modules resolved from the shared build output
+    // (dist/packages/shared/dist/) so they land under shared/ in the
+    // consuming package's output.
+    const sharedBuildDir = path.join(
+      workspaceRoot,
+      'dist',
+      'packages',
+      'shared',
+      'dist'
+    );
+    const fromSharedBuild = path.relative(sharedBuildDir, moduleId);
+    if (!fromSharedBuild.startsWith('..')) {
+      return path.join('shared', fromSharedBuild);
+    }
+
     // Fall back to module path relative to the package root to keep the layout stable.
     const fromPackage = path.relative(resolvedPackageRoot, moduleId);
     if (!fromPackage.startsWith('..')) {
@@ -195,6 +210,38 @@ declare const DEFAULT_PATH_CACHE_SIZE: number;
       },
     };
 
+    // Resolve @signaltree/shared imports to the compiled build output.
+    // shared:build outputs to dist/packages/shared/dist/ which contains
+    // plain JS that any Rollup plugin can process. Resolving to source .ts
+    // files fails because @rollup/plugin-typescript only processes files
+    // within the current package's include pattern.
+    const sharedBuildDist = path.join(
+      workspaceRoot,
+      'dist',
+      'packages',
+      'shared',
+      'dist'
+    );
+    const resolveSharedPlugin = {
+      name: 'signaltree-resolve-shared',
+      resolveId(source) {
+        if (source === '@signaltree/shared') {
+          return { id: path.join(sharedBuildDist, 'index.js'), external: false };
+        }
+        if (source.startsWith('@signaltree/shared/')) {
+          const rest = source.slice('@signaltree/shared/'.length);
+          return {
+            id: path.join(
+              sharedBuildDist,
+              rest.endsWith('.js') ? rest : `${rest}.js`
+            ),
+            external: false,
+          };
+        }
+        return null;
+      },
+    };
+
     const plugins = Array.isArray(config.plugins)
       ? config.plugins
       : config.plugins
@@ -203,7 +250,7 @@ declare const DEFAULT_PATH_CACHE_SIZE: number;
 
     return {
       ...config,
-      plugins: [...plugins, inlineSharedTypesPlugin],
+      plugins: [resolveSharedPlugin, ...plugins, inlineSharedTypesPlugin],
       output: Array.isArray(config.output) ? updatedOutputs : updatedOutputs[0],
       treeshake: {
         ...(config.treeshake || {}),
