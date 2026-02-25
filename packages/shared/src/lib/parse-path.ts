@@ -1,5 +1,5 @@
-import { DEFAULT_PATH_CACHE_SIZE } from './constants.js';
-import { LRUCache } from './lru-cache.js';
+import { DEFAULT_PATH_CACHE_SIZE } from './constants';
+import { LRUCache } from './lru-cache';
 
 const pathCache = new LRUCache<string, string[]>(DEFAULT_PATH_CACHE_SIZE);
 
