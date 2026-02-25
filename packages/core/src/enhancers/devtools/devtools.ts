@@ -1,7 +1,6 @@
-import { effect as angularEffect, Signal, signal } from '@angular/core';
+import { Signal, signal } from '@angular/core';
 
 import { copyTreeProperties } from '../utils/copy-tree-properties';
-import { getPathNotifier } from '../../lib/path-notifier';
 import { applyState, snapshotState } from '../../lib/utils';
 
 /**
@@ -81,7 +80,7 @@ export interface ModularDevToolsInterface {
   trackComposition: (modules: string[]) => void;
   startModuleProfiling: (module: string) => string;
   endModuleProfiling: (profileId: string) => void;
-  connectDevTools: (treeName: string) => void;
+  connectDevTools: () => void;
   exportDebugSession: () => {
     metrics: ModularPerformanceMetrics;
     modules: ModuleMetadata[];
@@ -441,6 +440,553 @@ function sanitizeState(
   return value;
 }
 
+function parseDevToolsState(state: unknown): unknown {
+  if (typeof state === 'string') {
+    try {
+      return JSON.parse(state);
+    } catch {
+      return undefined;
+    }
+  }
+  return state;
+}
+
+function buildDevToolsAction(
+  type: string,
+  payload?: unknown,
+  meta?: DevToolsActionMeta
+): DevToolsAction {
+  return {
+    type,
+    ...(payload !== undefined && { payload }),
+    ...(meta && { meta: meta }),
+  };
+}
+
+const GLOBAL_GROUPS_KEY = '__SIGNALTREE_DEVTOOLS_GROUPS__';
+const GLOBAL_MARKER_KEY = '__SIGNALTREE_DEVTOOLS_GLOBAL_MARKER__';
+
+function getRegistryHost(): any {
+  return typeof window !== 'undefined' ? window : globalThis;
+}
+
+function ensureGlobalMarker(): string {
+  const host = getRegistryHost();
+  if (!host[GLOBAL_MARKER_KEY]) {
+    host[GLOBAL_MARKER_KEY] = `marker_${Math.random().toString(36).slice(2)}`;
+  }
+  return host[GLOBAL_MARKER_KEY];
+}
+
+interface DevToolsGroup {
+  registerTree: (
+    treeKey: string,
+    tree: {
+      readSnapshot: () => unknown;
+      buildSerializedState: (state: unknown) => unknown;
+      applyExternalState: (state: unknown) => void;
+      formatPathFn: (path: string) => string;
+      isPathAllowed: (path: string) => boolean;
+      maxDepth: number;
+      maxArrayLength: number;
+      maxStringLength: number;
+      sendRateLimitMs: number;
+    }
+  ) => () => void;
+  enqueue: (
+    treeKey: string,
+    pendingPaths: string[],
+    action?: DevToolsAction,
+    meta?: DevToolsActionMeta
+  ) => void;
+  connect: () => void;
+}
+
+function getGlobalDevToolsGroups(): Map<string, DevToolsGroup> {
+  const host = getRegistryHost();
+  if (!host[GLOBAL_GROUPS_KEY]) {
+    host[GLOBAL_GROUPS_KEY] = new Map();
+  }
+  return host[GLOBAL_GROUPS_KEY];
+}
+
+const devToolsGroups = getGlobalDevToolsGroups();
+
+const GLOBAL_CONNECTIONS_KEY = '__SIGNALTREE_DEVTOOLS_CONNECTIONS__';
+
+interface DevToolsConnectionEntry {
+  status: 'connecting' | 'connected';
+  connection: any;
+  tools: any;
+  subscribed: boolean;
+  unsubscribe: (() => void) | null;
+  waiters: Set<(entry: DevToolsConnectionEntry) => void>;
+}
+
+function getGlobalDevToolsConnections(): Map<string, DevToolsConnectionEntry> {
+  const host = getRegistryHost();
+  ensureGlobalMarker();
+  if (!host[GLOBAL_CONNECTIONS_KEY]) {
+    host[GLOBAL_CONNECTIONS_KEY] = new Map();
+  }
+  return host[GLOBAL_CONNECTIONS_KEY];
+}
+
+const devToolsConnections = getGlobalDevToolsConnections();
+
+function getOrCreateDevToolsGroup(
+  groupId: string,
+  displayName: string
+): DevToolsGroup {
+  if (devToolsGroups.has(groupId)) {
+    return devToolsGroups.get(groupId)!;
+  }
+
+  const trees = new Map<
+    string,
+    {
+      readSnapshot: () => unknown;
+      buildSerializedState: (state: unknown) => unknown;
+      applyExternalState: (state: unknown) => void;
+      formatPathFn: (path: string) => string;
+      isPathAllowed: (path: string) => boolean;
+      maxDepth: number;
+      maxArrayLength: number;
+      maxStringLength: number;
+      sendRateLimitMs: number;
+    }
+  >();
+  const lastSnapshots = new Map<string, unknown>();
+  const lastSerialized = new Map<string, unknown>();
+  const pendingPathsByTree = new Map<string, string[]>();
+
+  let browserDevToolsConnection: any = null;
+  let browserDevTools: any = null;
+  let devToolsExtension: any = null;
+  let unsubscribeDevTools: (() => void) | null = null;
+  let isConnected = false;
+  let isApplyingExternalState = false;
+
+  let sendScheduled = false;
+  let sendTimer: any = null;
+  let lastSendAt = 0;
+  let sendRateLimitMs = 0;
+
+  let pendingAction: DevToolsAction | null = null;
+  let pendingExplicitAction = false;
+  let pendingSource: string | undefined;
+  let pendingDuration: number | undefined;
+  const instanceId = `signaltree:${groupId}`;
+
+  const sendAggregated = (actionType: string, payload: unknown) => {
+    if (!browserDevTools) return;
+    const aggregated = buildAggregatedState();
+    browserDevTools.send(buildDevToolsAction(actionType, payload), aggregated);
+  };
+
+  const sendEmptyState = () => {
+    try {
+      sendAggregated('SignalTree/empty', {
+        groupId,
+      });
+    } catch {
+      // ignore
+    }
+    pendingPathsByTree.clear();
+    lastSnapshots.clear();
+    lastSerialized.clear();
+  };
+
+
+  const updateRateLimit = () => {
+    sendRateLimitMs = 0;
+    for (const tree of trees.values()) {
+      if (typeof tree.sendRateLimitMs === 'number') {
+        sendRateLimitMs = Math.max(sendRateLimitMs, tree.sendRateLimitMs);
+      }
+    }
+  };
+
+  const buildAggregatedState = () => {
+    const aggregated: Record<string, unknown> = {};
+    for (const [treeKey, tree] of trees) {
+      const snapshot = tree.readSnapshot();
+      const lastSnapshot = lastSnapshots.get(treeKey);
+      
+      let serialized: unknown;
+      if (lastSnapshot === snapshot && lastSerialized.has(treeKey)) {
+        serialized = lastSerialized.get(treeKey);
+      } else {
+        lastSnapshots.set(treeKey, snapshot);
+        serialized = tree.buildSerializedState(snapshot);
+        lastSerialized.set(treeKey, serialized);
+      }
+      
+      aggregated[treeKey] = serialized;
+    }
+    return aggregated;
+  };
+
+  const sendInit = () => {
+    if (!browserDevTools) return;
+    const aggregated = buildAggregatedState();
+    browserDevTools.send('@@INIT', aggregated);
+  };
+
+  const applyExternalState = (state: any) => {
+    if (state === undefined || state === null) return;
+    isApplyingExternalState = true;
+    try {
+      for (const [treeKey, tree] of trees) {
+        const treeState = state?.[treeKey];
+        if (treeState !== undefined) {
+          tree.applyExternalState(treeState);
+        }
+      }
+    } finally {
+      isApplyingExternalState = false;
+      for (const treeKey of trees.keys()) {
+        lastSnapshots.delete(treeKey);
+        pendingPathsByTree.delete(treeKey);
+      }
+    }
+  };
+
+  const handleDevToolsMessage = (message: any) => {
+    if (!message || typeof message !== 'object') return;
+    const msg = message;
+    if (msg.type !== 'DISPATCH' || !msg.payload?.type) return;
+
+    const actionType = msg.payload.type;
+
+    if (actionType === 'JUMP_TO_STATE' || actionType === 'JUMP_TO_ACTION') {
+      const nextState = parseDevToolsState(msg.state);
+      applyExternalState(nextState);
+      return;
+    }
+
+    if (actionType === 'ROLLBACK') {
+      const nextState = parseDevToolsState(msg.state);
+      applyExternalState(nextState);
+      sendInit();
+      return;
+    }
+
+    if (actionType === 'COMMIT') {
+      sendInit();
+      return;
+    }
+
+    if (actionType === 'IMPORT_STATE') {
+      const lifted = msg.payload.nextLiftedState;
+      const computedStates = lifted?.computedStates ?? [];
+      const index = lifted?.currentStateIndex ?? computedStates.length - 1;
+      const entry = computedStates[index];
+      const nextState = parseDevToolsState(entry?.state);
+      applyExternalState(nextState);
+      sendInit();
+    }
+  };
+
+  const initBrowserDevTools = () => {
+
+    if (isConnected) return;
+
+    if (
+      typeof window === 'undefined' ||
+      !('__REDUX_DEVTOOLS_EXTENSION__' in window)
+    ) {
+      return;
+    }
+
+    const waiters = new Set<(entry: DevToolsConnectionEntry) => void>();
+    devToolsConnections.set(groupId, {
+      status: 'connecting',
+      connection: null,
+      tools: null,
+      subscribed: false,
+      unsubscribe: null,
+      waiters,
+    });
+
+    try {
+      const devToolsExt = (window as any)['__REDUX_DEVTOOLS_EXTENSION__'];
+      devToolsExtension = devToolsExt;
+      const connection = devToolsExt.connect({
+        name: displayName,
+        instanceId,
+        features: {
+          dispatch: true,
+          jump: true,
+          skip: true,
+        },
+      });
+
+      browserDevToolsConnection = connection;
+      browserDevTools = {
+        send: connection.send,
+        subscribe: connection.subscribe,
+      };
+
+      if (browserDevTools.subscribe && !unsubscribeDevTools) {
+        const maybeUnsubscribe = browserDevTools.subscribe(
+          handleDevToolsMessage
+        );
+        if (typeof maybeUnsubscribe === 'function') {
+          unsubscribeDevTools = maybeUnsubscribe;
+        } else {
+          unsubscribeDevTools = () => {
+            browserDevTools?.subscribe?.(() => void 0);
+          };
+        }
+      }
+
+      const connEntry = devToolsConnections.get(groupId);
+      if (connEntry) {
+        connEntry.status = 'connected';
+        connEntry.connection = browserDevToolsConnection;
+        connEntry.tools = browserDevTools;
+        connEntry.subscribed = !!browserDevTools?.subscribe;
+        connEntry.unsubscribe = unsubscribeDevTools;
+        for (const waiter of connEntry.waiters) {
+          try {
+            waiter(connEntry);
+          } catch {
+            // ignore
+          }
+        }
+        connEntry.waiters.clear();
+      }
+
+      sendInit();
+      isConnected = true;
+    } catch (e: any) {
+      devToolsConnections.delete(groupId);
+      console.warn('[SignalTree] Failed to connect to Redux DevTools:', e);
+    }
+  };
+
+  const flushSend = () => {
+    sendScheduled = false;
+    if (!browserDevTools || isApplyingExternalState) return;
+
+    const aggregatedState: Record<string, unknown> = {};
+    const allFormattedPaths: string[] = [];
+
+    for (const [treeKey, tree] of trees) {
+      const previous = lastSnapshots.get(treeKey);
+      const currentSnapshot = tree.readSnapshot();
+      lastSnapshots.set(treeKey, currentSnapshot);
+      const serialized = tree.buildSerializedState(currentSnapshot);
+      lastSerialized.set(treeKey, serialized);
+      aggregatedState[treeKey] = serialized;
+
+      const defaultPaths =
+        previous === undefined
+          ? []
+          : computeChangedPaths(
+            previous,
+            currentSnapshot,
+            tree.maxDepth,
+            tree.maxArrayLength
+          );
+      const pendingRaw = pendingPathsByTree.get(treeKey) ?? [];
+      const mergedRawPaths = Array.from(
+        new Set([
+          ...pendingRaw,
+          ...defaultPaths.filter((path) => path && tree.isPathAllowed(path)),
+        ])
+      );
+
+      if (mergedRawPaths.length > 0) {
+        const formatted = mergedRawPaths.map((path) =>
+          tree.formatPathFn(`${treeKey}.${path}`)
+        );
+        allFormattedPaths.push(...formatted);
+      }
+    }
+
+    if (allFormattedPaths.length === 0 && !pendingExplicitAction) {
+      pendingAction = null;
+      pendingExplicitAction = false;
+      pendingSource = undefined;
+      pendingDuration = undefined;
+      pendingPathsByTree.clear();
+      lastSendAt = Date.now();
+      return;
+    }
+
+    const effectiveAction =
+      pendingExplicitAction && pendingAction
+        ? pendingAction
+        : allFormattedPaths.length === 1
+          ? buildDevToolsAction(
+            `SignalTree/${allFormattedPaths[0]}`,
+            allFormattedPaths[0]
+          )
+          : allFormattedPaths.length > 1
+            ? buildDevToolsAction('SignalTree/update', allFormattedPaths)
+            : buildDevToolsAction('SignalTree/update');
+
+    const actionMeta: DevToolsActionMeta = {
+      timestamp: Date.now(),
+      ...(pendingSource && { source: pendingSource }),
+      ...(pendingDuration !== undefined && {
+        duration: pendingDuration,
+        slow: pendingDuration > 16,
+      }),
+      ...(allFormattedPaths.length > 0 && { paths: allFormattedPaths }),
+    };
+
+    const actionToSend = buildDevToolsAction(
+      effectiveAction?.type ?? 'SignalTree/update',
+      effectiveAction?.payload,
+      actionMeta
+    );
+
+    try {
+      browserDevTools.send(actionToSend, aggregatedState);
+    } catch {
+      // ignore
+    } finally {
+      pendingAction = null;
+      pendingExplicitAction = false;
+      pendingSource = undefined;
+      pendingDuration = undefined;
+      pendingPathsByTree.clear();
+      lastSendAt = Date.now();
+    }
+  };
+
+  const scheduleSend = (action?: DevToolsAction, meta?: DevToolsActionMeta) => {
+    if (isApplyingExternalState) return;
+
+    if (action !== undefined) {
+      if (!pendingExplicitAction && pendingAction == null) {
+        pendingAction = action;
+        pendingExplicitAction = true;
+      } else {
+        // If an explicit action was already pending, we might have merged/clobbered.
+        // For simplicity, we reset to avoid confusing action chains.
+        pendingAction = null;
+        pendingExplicitAction = false;
+      }
+    }
+
+    if (meta?.source) {
+      if (!pendingSource) {
+        pendingSource = meta.source;
+      } else if (pendingSource !== meta.source) {
+        pendingSource = 'mixed';
+      }
+    }
+
+    if (meta?.duration !== undefined) {
+      pendingDuration =
+        pendingDuration === undefined
+          ? meta.duration
+          : Math.max(pendingDuration, meta.duration);
+    }
+
+    if (!browserDevTools) return;
+    if (sendScheduled) return;
+
+    sendScheduled = true;
+    queueMicrotask(() => {
+      if (!browserDevTools) {
+        sendScheduled = false;
+        return;
+      }
+
+      const now = Date.now();
+      const waitMs = Math.max(0, sendRateLimitMs - (now - lastSendAt));
+
+      if (waitMs > 0) {
+        if (sendTimer) return;
+        sendTimer = setTimeout(() => {
+          sendTimer = null;
+          flushSend();
+        }, waitMs);
+        return;
+      }
+
+      flushSend();
+    });
+  };
+
+  const registerTree = (
+    treeKey: string,
+    tree: {
+      readSnapshot: () => unknown;
+      buildSerializedState: (state: unknown) => unknown;
+      applyExternalState: (state: unknown) => void;
+      formatPathFn: (path: string) => string;
+      isPathAllowed: (path: string) => boolean;
+      maxDepth: number;
+      maxArrayLength: number;
+      maxStringLength: number;
+      sendRateLimitMs: number;
+    }
+  ) => {
+    const wasConnected = isConnected;
+    trees.set(treeKey, tree);
+    updateRateLimit();
+    initBrowserDevTools();
+
+    if (browserDevTools) {
+      const snapshot = tree.readSnapshot();
+      lastSnapshots.set(treeKey, snapshot);
+      lastSerialized.set(treeKey, tree.buildSerializedState(snapshot));
+      if (trees.size === 1 && !wasConnected) {
+        sendInit();
+      } else {
+        sendAggregated('SignalTree/register', { treeKey });
+      }
+    }
+
+    return () => {
+      trees.delete(treeKey);
+      pendingPathsByTree.delete(treeKey);
+      lastSnapshots.delete(treeKey);
+      lastSerialized.delete(treeKey);
+      updateRateLimit();
+
+      if (trees.size === 0) {
+        sendEmptyState();
+        return;
+      }
+
+      if (browserDevTools) {
+        sendAggregated('SignalTree/unregister', { treeKey });
+      }
+    };
+  };
+
+  const enqueue = (
+    treeKey: string,
+    pendingPaths: string[],
+    action?: DevToolsAction,
+    meta?: DevToolsActionMeta
+  ) => {
+    if (pendingPaths && pendingPaths.length > 0) {
+      const existing = pendingPathsByTree.get(treeKey) ?? [];
+      pendingPathsByTree.set(treeKey, [...existing, ...pendingPaths]);
+    }
+    scheduleSend(action, meta);
+  };
+
+  const group: DevToolsGroup = {
+    registerTree,
+    enqueue,
+    connect() {
+      initBrowserDevTools();
+    },
+  };
+
+  devToolsGroups.set(groupId, group);
+  return group;
+}
+
 // ============================================================================
 // Main Enhancer (v6 Pattern)
 // ============================================================================
@@ -472,9 +1018,12 @@ export function devTools(
     maxArrayLength = 50,
     maxStringLength = 2000,
     serialize,
+    aggregatedReduxInstance,
   } = config;
 
   const displayName = name ?? treeName;
+  const groupId = aggregatedReduxInstance?.id ?? displayName;
+  const instanceId = `signaltree:${groupId}`;
   const pathInclude = toArray(includePaths);
   const pathExclude = toArray(excludePaths);
   const sendRateLimitMs =
@@ -536,18 +1085,15 @@ export function devTools(
         listener: (message: unknown) => void
       ) => void | (() => void);
     } | null = null;
+    let devToolsExtension: any = null;
     let isConnected = false;
     let isApplyingExternalState = false;
     let unsubscribeDevTools: (() => void) | null = null;
 
     // PathNotifier subscriptions (batched mutation streaming)
-    let unsubscribeNotifier: (() => void) | null = null;
-    let unsubscribeFlush: (() => void) | null = null;
     let pendingPaths: string[] = [];
 
     // Effect + send scheduling for leaf-signal updates
-    let effectRef: { destroy: () => void } | null = null;
-    let effectPrimed = false;
     let sendScheduled = false;
     let pendingAction: DevToolsAction | null = null;
     let pendingExplicitAction = false;
@@ -736,15 +1282,19 @@ export function devTools(
       });
     };
 
-    const parseDevToolsState = (state: unknown): unknown => {
-      if (typeof state === 'string') {
-        try {
-          return JSON.parse(state);
-        } catch {
-          return undefined;
-        }
-      }
-      return state;
+    const sendInit = (): void => {
+      if (!browserDevTools) return;
+      const rawSnapshot = readSnapshot() ?? {};
+      const serialized = buildSerializedState(rawSnapshot);
+      browserDevTools.send('@@INIT', serialized);
+      lastSnapshot = rawSnapshot;
+
+      // Clear pending state as it's now part of the init snapshot
+      pendingPaths = [];
+      pendingAction = null;
+      pendingExplicitAction = false;
+      pendingSource = undefined;
+      pendingDuration = undefined;
     };
 
     const applyExternalState = (state: unknown): void => {
@@ -785,20 +1335,12 @@ export function devTools(
       if (actionType === 'ROLLBACK') {
         const nextState = parseDevToolsState(msg.state);
         applyExternalState(nextState);
-        if (browserDevTools) {
-          const rawSnapshot = readSnapshot();
-          const sanitized = buildSerializedState(rawSnapshot);
-          browserDevTools.send('@@INIT', sanitized);
-        }
+        sendInit();
         return;
       }
 
       if (actionType === 'COMMIT') {
-        if (browserDevTools) {
-          const rawSnapshot = readSnapshot();
-          const sanitized = buildSerializedState(rawSnapshot);
-          browserDevTools.send('@@INIT', sanitized);
-        }
+        sendInit();
         return;
       }
 
@@ -809,15 +1351,19 @@ export function devTools(
         const entry = computedStates[index];
         const nextState = parseDevToolsState(entry?.state);
         applyExternalState(nextState);
-        if (browserDevTools) {
-          const rawSnapshot = readSnapshot();
-          const sanitized = buildSerializedState(rawSnapshot);
-          browserDevTools.send('@@INIT', sanitized);
-        }
+        sendInit();
       }
     };
 
     const initBrowserDevTools = (): void => {
+      if (aggregatedReduxInstance) {
+        getOrCreateDevToolsGroup(
+          aggregatedReduxInstance.id,
+          aggregatedReduxInstance.name ?? displayName
+        ).connect();
+        return;
+      }
+
       if (isConnected) return;
       if (
         !enableBrowserDevTools ||
@@ -826,6 +1372,16 @@ export function devTools(
       ) {
         return;
       }
+
+      const waiters = new Set<(entry: DevToolsConnectionEntry) => void>();
+      devToolsConnections.set(groupId, {
+        status: 'connecting',
+        connection: null,
+        tools: null,
+        subscribed: false,
+        unsubscribe: null,
+        waiters,
+      });
 
       try {
         const devToolsExt = (window as Record<string, unknown>)[
@@ -840,9 +1396,11 @@ export function devTools(
             unsubscribe?: () => void;
           };
         };
+        devToolsExtension = devToolsExt;
         const connection = devToolsExt.connect({
           name: displayName,
           features: { dispatch: true, jump: true, skip: true },
+          instanceId,
         });
         browserDevToolsConnection = connection;
         browserDevTools = {
@@ -862,13 +1420,28 @@ export function devTools(
           }
         }
 
-        const rawSnapshot = readSnapshot();
-        const sanitized = buildSerializedState(rawSnapshot);
-        browserDevTools.send('@@INIT', sanitized);
-        lastSnapshot = rawSnapshot;
+        const connEntry = devToolsConnections.get(groupId);
+        if (connEntry) {
+          connEntry.status = 'connected';
+          connEntry.connection = browserDevToolsConnection;
+          connEntry.tools = browserDevTools;
+          connEntry.subscribed = !!browserDevTools?.subscribe;
+          connEntry.unsubscribe = unsubscribeDevTools;
+          for (const waiter of connEntry.waiters) {
+            try {
+              waiter(connEntry);
+            } catch {
+              // ignore
+            }
+          }
+          connEntry.waiters.clear();
+        }
+
+        sendInit();
         isConnected = true;
         console.log(`🔗 Connected to Redux DevTools as "${displayName}"`);
       } catch (e) {
+        devToolsConnections.delete(groupId);
         console.warn('[SignalTree] Failed to connect to Redux DevTools:', e);
       }
     };
@@ -903,7 +1476,7 @@ export function devTools(
       }
 
       const duration = performance.now() - startTime;
-      const newState = originalTreeCall();
+      originalTreeCall();
 
       metrics.trackModuleUpdate('core', duration);
 
@@ -994,136 +1567,36 @@ export function devTools(
         const profile = activeProfiles.get(profileId);
         if (profile) {
           const duration = performance.now() - profile.startTime;
-          activityTracker.trackMethodCall(
-            profile.module,
-            profile.operation,
-            duration
-          );
+          metrics.trackModuleUpdate(profile.module, duration);
           activeProfiles.delete(profileId);
         }
       },
-
-      connectDevTools: (name: string) => {
-        if (!browserDevTools || !isConnected) {
+      connectDevTools: () => {
+        if (aggregatedReduxInstance) {
+          getOrCreateDevToolsGroup(
+            aggregatedReduxInstance.id,
+            aggregatedReduxInstance.name ?? displayName
+          ).connect();
+        } else {
           initBrowserDevTools();
         }
-        if (browserDevTools) {
-          const rawSnapshot = readSnapshot();
-          const sanitized = buildSerializedState(rawSnapshot);
-          browserDevTools.send('@@INIT', sanitized);
-          lastSnapshot = rawSnapshot;
-          console.log(`🔗 Connected to Redux DevTools as "${name}"`);
-        }
       },
-
-      exportDebugSession: () => ({
-        metrics: metrics.signal(),
-        modules: activityTracker.getAllModules(),
-        logs: logger.exportLogs(),
-        compositionHistory: [...compositionHistory],
-      }),
-    };
-
-    // Methods that match DevToolsMethods interface
-    const methods: DevToolsMethods = {
-      connectDevTools(): void {
-        initBrowserDevTools();
-      },
-      disconnectDevTools(): void {
-        // Best-effort cleanup to avoid duplicate updates across recreated stores.
-        try {
-          unsubscribeDevTools?.();
-        } catch {
-          // ignore
-        }
-        try {
-          browserDevToolsConnection?.unsubscribe?.();
-        } catch {
-          // ignore
-        }
-        try {
-          browserDevToolsConnection?.disconnect?.();
-        } catch {
-          // ignore
-        }
-
-        browserDevTools = null;
-        browserDevToolsConnection = null;
-        isConnected = false;
-
-        if (unsubscribeNotifier) {
-          unsubscribeNotifier();
-          unsubscribeNotifier = null;
-        }
-        if (unsubscribeFlush) {
-          unsubscribeFlush();
-          unsubscribeFlush = null;
-        }
-        unsubscribeDevTools = null;
-        if (effectRef) {
-          effectRef.destroy();
-          effectRef = null;
-        }
-        if (sendTimer) {
-          clearTimeout(sendTimer);
-          sendTimer = null;
-        }
-        pendingPaths = [];
-        sendScheduled = false;
-        pendingAction = null;
-        pendingExplicitAction = false;
-        pendingSource = undefined;
-        pendingDuration = undefined;
-        lastSnapshot = undefined;
+      exportDebugSession: () => {
+        return {
+          metrics: metrics.signal(),
+          modules: activityTracker.getAllModules(),
+          logs: logger.exportLogs(),
+          compositionHistory,
+        };
       },
     };
 
-    // Attach __devTools for advanced usage
-    (enhancedTree as unknown as Record<string, unknown>)['__devTools'] =
-      devToolsInterface;
-
-    // Auto-connect on enhancer application (docs expectation), and stream
-    // notifications from PathNotifier flushes as DevTools actions.
-    try {
-      initBrowserDevTools();
-
-      const notifier = getPathNotifier();
-      unsubscribeNotifier = notifier.subscribe('**', (_value, _prev, path) => {
-        if (!isPathAllowed(path)) return;
-        pendingPaths.push(path);
-      });
-
-      unsubscribeFlush = notifier.onFlush(() => {
-        if (!browserDevTools) {
-          pendingPaths = [];
-          return;
-        }
-
-        if (pendingPaths.length === 0) return;
-        scheduleSend(undefined, { source: 'path-notifier' });
-      });
-
-      // Capture leaf signal updates (e.g. $.count.set()) by tracking the full
-      // unwrapped state. This effect is the only way to observe direct signal
-      // writes that bypass the callable tree wrapper.
-      effectRef = angularEffect(() => {
-        // Establish dependencies on all signals in the tree
-        void originalTreeCall();
-
-        // Skip the first run (INIT already sent)
-        if (!effectPrimed) {
-          effectPrimed = true;
-          return;
-        }
-
-        scheduleSend(undefined, { source: 'signal' });
-      });
-    } catch {
-      // Ignore devtools integration errors
-    }
-
-    return Object.assign(enhancedTree, methods) as unknown as ISignalTree<T> &
-      DevToolsMethods;
+    // Always return the enhanced tree with DevTools methods (only those required by DevToolsMethods)
+    return Object.assign(enhancedTree, {
+      connectDevTools: devToolsInterface.connectDevTools,
+      exportDebugSession: devToolsInterface.exportDebugSession,
+      disconnectDevTools: () => { /* no-op or implement if needed */ }
+    }) as ISignalTree<T> & DevToolsMethods;
   };
 }
 

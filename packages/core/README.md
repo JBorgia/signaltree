@@ -447,6 +447,51 @@ const expensiveComputation = computed(() => {
 // Subsequent calls return cached result
 ```
 
+### Debugging with Redux DevTools
+
+SignalTree integrates seamlessly with Redux DevTools for time-travel debugging and state inspection.
+
+**Basic Usage:**
+
+```typescript
+import { signalTree, devTools } from '@signaltree/core';
+
+const tree = signalTree({ count: 0 }).with(devTools({ name: 'Counter' }));
+```
+
+**Single Instance Mode:**
+
+When using multiple independent stores (e.g., feature modules), you can group them under a single Redux DevTools instance to avoid cluttering the connection list. This is particularly useful for large applications with many lazy-loaded stores.
+
+```typescript
+const DEVTOOLS_GROUP_ID = 'my-app-production';
+const DEVTOOLS_GROUP_NAME = 'My App SignalTree';
+
+// Store 1
+const materialsTree = signalTree(materialsState).with(
+  devTools({
+    treeName: 'Materials',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
+    },
+  })
+);
+
+// Store 2
+const ordersTree = signalTree(ordersState).with(
+  devTools({
+    treeName: 'Orders',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
+    },
+  })
+);
+```
+
+Both stores will appear as branches under the same "My App SignalTree" instance in Redux DevTools.
+
 ### Advanced usage (full state tree)
 
 ```typescript
@@ -631,1311 +676,142 @@ class UsersComponent {
 }
 ```
 
-### 5) Performance considerations
+### Performance optimization with memoization
 
-### 6) Enhancers and composition
-
-SignalTree Core provides a complete set of built-in enhancers. Each enhancer is a focused, tree-shakeable extension that adds specific functionality.
-
-#### Available Enhancers (All in @signaltree/core)
-
-All enhancers are exported directly from `@signaltree/core`:
-
-**Performance Enhancers:**
-
-- `batching()` - Batch updates to reduce recomputation and rendering
-- `memoization()` - Intelligent caching for expensive computations
-- `highPerformanceBatching()` - Advanced batching for high-frequency updates
-- `withHighPerformanceMemoization()` - Optimized memoization for large state trees
-
-**Data Management:**
-
-- `entities()` - Advanced CRUD operations for collections
-- `createAsyncOperation()` - Async operation management with loading/error states
-- `trackAsync()` - Track async operations in your state
-- `serialization()` - State persistence and SSR support
-- `persistence()` - Auto-save to localStorage/IndexedDB
-
-**Development Tools:**
-
-- `devTools()` - Redux DevTools auto-connect, path actions, and time-travel dispatch
-- `withTimeTravel()` - Undo/redo functionality
-
-**Presets:**
-
-- `createDevTree()` - Pre-configured development setup
-- `TREE_PRESETS` - Common configuration patterns
-
-#### Additional Packages
-
-These are the **only** separate packages in the SignalTree ecosystem:
-
-- **`@signaltree/ng-forms`** - Angular Forms integration (separate package)
-- **`@signaltree/enterprise`** - Enterprise-scale optimizations for 500+ signals (separate package)
-- **`@signaltree/callable-syntax`** - Build-time transform for callable syntax (dev dependency, separate package)
-
-#### Composition Patterns
-
-**Basic Enhancement:**
+Computed values become even more powerful with the built-in memoization enhancer:
 
 ```typescript
-import { signalTree, batching, devTools } from '@signaltree/core';
-
-// Apply enhancers in order
-const tree = signalTree({ count: 0 }).with(
-  batching(), // Performance optimization
-  devTools() // Development tools
-);
-```
-
-**Performance-Focused Stack:**
-
-```typescript
-import { signalTree, batching, memoization, entities } from '@signaltree/core';
+import { signalTree, memoization } from '@signaltree/core';
 
 const tree = signalTree({
-  products: entityMap<Product>(),
-  ui: { loading: false },
-})
-  .with(entities()) // Efficient CRUD operations (auto-detects entityMap)
-  .with(batching()); // Batch updates for optimal rendering
+  items: Array.from({ length: 10000 }, (_, i) => ({
+    id: i,
+    value: Math.random(),
+    category: `cat-${i % 10}`,
+  })),
+}).with(memoization());
 
-// Entity CRUD operations
-tree.$.products.addOne(newProduct);
-tree.$.products.setAll(productsFromApi);
-
-// Entity queries
-const electronics = tree.$.products.all.filter((p) => p.category === 'electronics');
-```
-
-**Full-Stack Application:**
-
-```typescript
-import { signalTree, serialization, withTimeTravel } from '@signaltree/core';
-
-const tree = signalTree({
-  user: null as User | null,
-  preferences: { theme: 'light' },
-}).with(
-  // withAsync removed — API integration patterns are now covered by async helpers
-  serialization({
-    // Auto-save to localStorage
-    autoSave: true,
-    storage: 'localStorage',
-  }),
-  withTimeTravel() // Undo/redo support
-);
-
-// For async operations, use manual async or async helpers
-async function fetchUser(id: string) {
-  tree.$.loading.set(true);
-  try {
-    const user = await api.getUser(id);
-    tree.$.user.set(user);
-  } catch (error) {
-    tree.$.loading.set(error.message);
-  } finally {
-    tree.$.loading.set(false);
-  }
-}
-
-// Automatic state persistence
-tree.$.preferences.theme('dark'); // Auto-saved
-
-// Time travel
-tree.undo(); // Revert changes
-```
-
-#### Enhancer Metadata & Ordering
-
-Derived computed signals are preserved across `.with()` chaining, so enhancer composition does not recreate signal identities.
-
-Enhancers can declare metadata for automatic dependency resolution:
-
-```typescript
-// Enhancers are automatically ordered based on requirements
-const tree = signalTree(state).with(
-  devTools(), // Requires: core, provides: debugging
-  batching(), // Requires: core, provides: batching
-  memoization() // Requires: batching, provides: caching
-);
-// Automatically ordered: batching -> memoization -> devtools
-```
-
-#### Quick Start with Presets
-
-For common patterns, use presets that combine multiple enhancers:
-
-```typescript
-import { createDevTree, TREE_PRESETS } from '@signaltree/core';
-
-// Development preset includes: batching, memoization, devtools, time-travel
-const devTree = createDevTree({
-  products: [] as Product[],
-  cart: { items: [], total: 0 },
+// Expensive computation - automatically cached by memoization enhancer
+const expensiveComputation = computed(() => {
+  return tree.$.items()
+    .filter((item) => item.value > 0.5)
+    .reduce((acc, item) => acc + Math.sin(item.value * Math.PI), 0);
 });
 
-// Or use preset configurations
-const customTree = signalTree(state, TREE_PRESETS.DASHBOARD);
+// The computation only runs when tree.$.items() actually changes
+// Subsequent calls return cached result
 ```
 
-#### Core Stubs
+### Debugging with Redux DevTools
 
-SignalTree Core includes all enhancer functionality built-in. No separate packages needed:
+SignalTree integrates seamlessly with Redux DevTools for time-travel debugging and state inspection.
+
+**Basic Usage:**
 
 ```typescript
-import { signalTree, entityMap, entities } from '@signaltree/core';
+import { signalTree, devTools } from '@signaltree/core';
 
-// Without entityMap - use manual array updates
-const basic = signalTree({ users: [] as User[] });
-basic.$.users.update((users) => [...users, newUser]);
-
-// With entityMap + entities - use entity helpers
-const enhanced = signalTree({
-  users: entityMap<User>(),
-}).with(entities());
-
-enhanced.$.users.addOne(newUser); // ✅ Advanced CRUD operations
-enhanced.$.users.byId(123)(); // ✅ O(1) lookups
-enhanced.$.users.all; // ✅ Get all as array
+const tree = signalTree({ count: 0 }).with(devTools({ name: 'Counter' }));
 ```
 
-Core includes several performance optimizations:
+**Single Instance Mode:**
+
+When using multiple independent stores (e.g., feature modules), you can group them under a single Redux DevTools instance to avoid cluttering the connection list. This is particularly useful for large applications with many lazy-loaded stores.
 
 ```typescript
-// Lazy signal creation (default)
-const tree = signalTree(
-  {
-    largeObject: {
-      // Signals only created when accessed
-      level1: { level2: { level3: { data: 'value' } } },
-    },
-  },
-  {
-    useLazySignals: true, // Default: true
-  }
-);
-
-// Custom equality function
-const tree2 = signalTree(
-  {
-    items: [] as Item[],
-  },
-  {
-    useShallowComparison: false, // Deep equality (default)
-  }
-);
-
-// Structural sharing for memory efficiency
-tree.update((state) => ({
-  ...state, // Reuses unchanged parts
-  newField: 'value',
-}));
-```
-
-### 7) Extensibility: Custom Markers & Enhancers
-
-SignalTree is designed for extensibility. Create your own **markers** (state placeholders that materialize into specialized signals) and **enhancers** (functions that augment trees with additional capabilities).
-
-#### Custom Marker Example
-
-```typescript
-import { signal, Signal } from '@angular/core';
-import { registerMarkerProcessor, signalTree } from '@signaltree/core';
-
-// 1. Define marker symbol and interface
-const VALIDATED_MARKER = Symbol('VALIDATED_MARKER');
-
-interface ValidatedMarker<T> {
-  [VALIDATED_MARKER]: true;
-  defaultValue: T;
-  validator: (value: T) => string | null;
-}
-
-// 2. Create marker factory
-function validated<T>(defaultValue: T, validator: (value: T) => string | null): ValidatedMarker<T> {
-  return { [VALIDATED_MARKER]: true, defaultValue, validator };
-}
-
-// 3. Type guard
-function isValidatedMarker(value: unknown): value is ValidatedMarker<unknown> {
-  return Boolean(value && typeof value === 'object' && (value as any)[VALIDATED_MARKER] === true);
-}
-
-// 4. Register materializer (call once at app startup)
-registerMarkerProcessor(isValidatedMarker, (marker) => {
-  const valueSignal = signal(marker.defaultValue);
-  const errorSignal = signal<string | null>(marker.validator(marker.defaultValue));
-  return {
-    get: () => valueSignal(),
-    set: (v: any) => {
-      valueSignal.set(v);
-      errorSignal.set(marker.validator(v));
-    },
-    error: errorSignal.asReadonly(),
-    isValid: () => errorSignal() === null,
-  };
-});
-
-// 5. Usage
-const tree = signalTree({
-  email: validated('', (v) => (v.includes('@') ? null : 'Invalid email')),
-});
-```
-
-#### Custom Enhancer Example
-
-```typescript
-import { signal, Signal } from '@angular/core';
-import type { ISignalTree } from '@signaltree/core';
-
-interface WithLogger {
-  log(message: string): void;
-  history: Signal<string[]>;
-}
-
-function withLogger(config?: { maxHistory?: number }) {
-  const maxHistory = config?.maxHistory ?? 100;
-  return <T>(tree: ISignalTree<T>): ISignalTree<T> & WithLogger => {
-    const historySignal = signal<string[]>([]);
-    return Object.assign(tree, {
-      log: (msg: string) => historySignal.update((h) => [...h, `[${new Date().toLocaleTimeString()}] ${msg}`].slice(-maxHistory)),
-      history: historySignal.asReadonly(),
-    });
-  };
-}
-
-// Usage
-const tree = signalTree({ count: 0 }).with(withLogger());
-tree.log('Tree created');
-```
-
-> 📖 **Full guide**: [Custom Markers & Enhancers](https://github.com/JBorgia/signaltree/blob/main/docs/custom-markers-enhancers.md)
->
-> 📱 **Interactive demo**: [Demo App](/custom-extensions)
-
-### 8) Derived State Tiers
-
-SignalTree supports **derived state** via the `.derived()` method, which allows you to add computed signals that build on base state or previous derived tiers.
-
-#### Basic Usage (Inline Derived)
-
-When derived functions are defined inline, TypeScript automatically infers all types:
-
-```typescript
-import { signalTree, entityMap } from '@signaltree/core';
-import { computed } from '@angular/core';
-
-const tree = signalTree({
-  users: entityMap<User, number>(),
-  selectedUserId: null as number | null,
-})
-  .derived(($) => ({
-    // Tier 1: Entity resolution
-    selectedUser: computed(() => {
-      const id = $.selectedUserId();
-      return id != null ? $.users.byId(id)?.() ?? null : null;
-    }),
-  }))
-  .derived(($) => ({
-    // Tier 2: Complex logic (can access $.selectedUser from Tier 1)
-    isAdmin: computed(() => $.selectedUser()?.role === 'admin'),
-  }));
-
-// Usage
-tree.$.selectedUser(); // User | null (computed signal)
-tree.$.isAdmin(); // boolean (computed signal)
-```
-
-#### External Derived Functions (Modular Architecture)
-
-For larger applications, you may want to organize derived tiers into separate files. **This requires explicit typing** because TypeScript cannot infer types across file boundaries.
-
-SignalTree provides two utilities for external derived functions:
-
-- **`derivedFrom<TTree>()`** - Curried helper function that provides type context for your derived function
-- **`WithDerived<TTree, TDerivedFn>`** - Type utility to build intermediate tree types
-
-```typescript
-// app-tree.ts
-import { signalTree, entityMap, WithDerived } from '@signaltree/core';
-import { entityResolutionDerived } from './derived/tier-entity-resolution';
-import { complexLogicDerived } from './derived/tier-complex-logic';
-
-// Define base tree type
-export type AppTreeBase = ReturnType<typeof signalTree<ReturnType<typeof createBaseState>>>;
-
-// Build intermediate types using WithDerived
-export type AppTreeWithTier1 = WithDerived<AppTreeBase, typeof entityResolutionDerived>;
-export type AppTreeWithTier2 = WithDerived<AppTreeWithTier1, typeof complexLogicDerived>;
-
-function createBaseState() {
-  return {
-    users: entityMap<User, number>(),
-    selectedUserId: null as number | null,
-  };
-}
-
-export function createAppTree() {
-  return signalTree(createBaseState()).derived(entityResolutionDerived).derived(complexLogicDerived);
-}
-```
-
-```typescript
-// derived/tier-entity-resolution.ts
-import { computed } from '@angular/core';
-import { derivedFrom } from '@signaltree/core';
-import type { AppTreeBase } from '../app-tree';
-
-// derivedFrom provides the type context for $ via curried syntax
-export const entityResolutionDerived = derivedFrom<AppTreeBase>()(($) => ({
-  selectedUser: computed(() => {
-    const id = $.selectedUserId();
-    return id != null ? $.users.byId(id)?.() ?? null : null;
-  }),
-}));
-```
-
-```typescript
-// derived/tier-complex-logic.ts
-import { computed } from '@angular/core';
-import { derivedFrom } from '@signaltree/core';
-import type { AppTreeWithTier1 } from '../app-tree';
-
-// This tier has access to $.selectedUser from Tier 1
-export const complexLogicDerived = derivedFrom<AppTreeWithTier1>()(($) => ({
-  isAdmin: computed(() => $.selectedUser()?.role === 'admin'),
-  displayName: computed(() => {
-    const user = $.selectedUser();
-    return user ? `${user.firstName} ${user.lastName}` : 'No user selected';
-  }),
-}));
-```
-
-#### Why External Functions Need Typing
-
-When a function is defined in a separate file, TypeScript analyzes it **in isolation** before knowing how it will be used. The type inference happens at the **definition site**, not the **call site**:
-
-```typescript
-// ❌ TypeScript can't infer $ - this file is compiled before app-tree.ts uses it
-export function myDerived($) {
-  // $ is 'any'
-  return { foo: computed(() => $.bar()) }; // Error: $ has no properties
-}
-
-// ✅ derivedFrom provides the type context (curried syntax)
-export const myDerived = derivedFrom<AppTreeBase>()(($) => ({
-  foo: computed(() => $.bar()), // $ is properly typed
-}));
-```
-
-**Key point**: `derivedFrom` is **only needed for functions defined in separate files**. Inline functions automatically inherit types from the chain. Note the curried syntax: `derivedFrom<TreeType>()(fn)` - this allows TypeScript to infer the return type while you specify the tree type.
-
-## Built-in Markers
-
-SignalTree provides four built-in markers that handle common state patterns Angular doesn't provide out of the box. All markers are **self-registering** and **tree-shakeable** - only the markers you use are included in your bundle.
-
-### 9) `entityMap<E, K>()` - Normalized Collections
-
-Creates a normalized entity collection with O(1) lookups by ID. Includes chainable `.computed()` for derived slices.
-
-```typescript
-import { signalTree, entityMap } from '@signaltree/core';
-
-interface Product {
-  id: number;
-  name: string;
-  category: string;
-  price: number;
-  inStock: boolean;
-}
-
-const tree = signalTree({
-  products: entityMap<Product, number>()
-    .computed('electronics', (all) => all.filter((p) => p.category === 'electronics'))
-    .computed('inStock', (all) => all.filter((p) => p.inStock))
-    .computed('totalValue', (all) => all.reduce((sum, p) => sum + p.price, 0)),
-});
-
-// EntitySignal API
-tree.$.products.setMany([
-  { id: 1, name: 'Laptop', category: 'electronics', price: 999, inStock: true },
-  { id: 2, name: 'Chair', category: 'furniture', price: 199, inStock: false },
-]);
-
-tree.$.products.all();              // Signal<Product[]> - all entities
-tree.$.products.byId(1);            // Signal<Product> | undefined
-tree.$.products.ids();              // Signal<number[]>
-tree.$.products.count();            // Signal<number>
-
-// Computed slices (reactive, type-safe)
-tree.$.products.electronics();      // Signal<Product[]> - auto-updates
-tree.$.products.inStock();          // Signal<Product[]>
-tree.$.products.totalValue();       // Signal<number>
-
-// CRUD operations
-tree.$.products.upsertOne({ id: 1, name: 'Updated', category: 'electronics', price: 899, inStock: true });
-tree.$.products.upsertMany([...]);
-tree.$.products.removeOne(1);
-tree.$.products.removeMany([1, 2]);
-tree.$.products.clear();
-```
-
-#### Custom ID Selection
-
-```typescript
-interface User {
-  odataId: string; // Not named 'id'
-  email: string;
-}
-
-const tree = signalTree({
-  users: entityMap<User, string>(),
-});
-
-// Specify selectId when upserting
-tree.$.users.upsertOne(user, { selectId: (u) => u.odataId });
-```
-
-### 10) `status()` - Manual Async State
-
-Creates a status signal for manual async state management with type-safe error handling.
-
-```typescript
-import { signalTree, status, LoadingState } from '@signaltree/core';
-
-interface ApiError {
-  code: number;
-  message: string;
-}
-
-const tree = signalTree({
-  users: {
-    data: [] as User[],
-    loadStatus: status<ApiError>(), // Generic error type
-  },
-});
-
-// Status API
-tree.$.users.loadStatus.state(); // Signal<LoadingState>
-tree.$.users.loadStatus.error(); // Signal<ApiError | null>
-
-// Convenience signals
-tree.$.users.loadStatus.isNotLoaded(); // Signal<boolean>
-tree.$.users.loadStatus.isLoading(); // Signal<boolean>
-tree.$.users.loadStatus.isLoaded(); // Signal<boolean>
-tree.$.users.loadStatus.isError(); // Signal<boolean>
-
-// Update methods
-tree.$.users.loadStatus.setLoading();
-tree.$.users.loadStatus.setLoaded();
-tree.$.users.loadStatus.setError({ code: 404, message: 'Not found' });
-tree.$.users.loadStatus.reset();
-
-// LoadingState enum
-LoadingState.NotLoaded; // 'not-loaded'
-LoadingState.Loading; // 'loading'
-LoadingState.Loaded; // 'loaded'
-LoadingState.Error; // 'error'
-```
-
-### 11) `stored(key, default, options?)` - localStorage Persistence
-
-Auto-syncs state to localStorage with versioning and migration support.
-
-```typescript
-import { signalTree, stored, createStorageKeys, clearStoragePrefix } from '@signaltree/core';
-
-// Basic usage
-const tree = signalTree({
-  theme: stored('app-theme', 'light' as 'light' | 'dark'),
-  lastViewedId: stored('last-viewed', null as number | null),
-});
-
-// Auto-loads from localStorage on init
-// Auto-saves on every .set() or .update()
-tree.$.theme.set('dark'); // Saved to localStorage immediately
-
-// StoredSignal API
-tree.$.theme(); // Get current value
-tree.$.theme.set('light'); // Set and persist
-tree.$.theme.clear(); // Remove from storage, reset to default
-tree.$.theme.reload(); // Force reload from storage
-```
-
-#### Versioning and Migrations
-
-```typescript
-interface SettingsV1 {
-  darkMode: boolean;
-}
-
-interface SettingsV2 {
-  theme: 'light' | 'dark' | 'system';
-  fontSize: number;
-}
-
-const tree = signalTree({
-  settings: stored<SettingsV2>(
-    'user-settings',
-    { theme: 'light', fontSize: 14 },
-    {
-      version: 2,
-      migrate: (oldData, oldVersion) => {
-        if (oldVersion === 1) {
-          // Migrate from V1 to V2
-          const v1 = oldData as SettingsV1;
-          return {
-            theme: v1.darkMode ? 'dark' : 'light',
-            fontSize: 14, // New field with default
-          };
-        }
-        return oldData as SettingsV2;
-      },
-      clearOnMigrationFailure: true, // Clear storage if migration fails
-    }
-  ),
-});
-```
-
-#### Type-Safe Storage Keys
-
-```typescript
-// Create namespaced storage keys
-const STORAGE = createStorageKeys('myApp', {
-  theme: 'theme',
-  user: {
-    settings: 'settings',
-    preferences: 'prefs',
-  },
-} as const);
-
-// STORAGE.theme = "myApp:theme"
-// STORAGE.user.settings = "myApp:user:settings"
-
-const tree = signalTree({
-  theme: stored(STORAGE.theme, 'light'),
-  settings: stored(STORAGE.user.settings, {}),
-});
-
-// Clear all app storage (e.g., on logout)
-clearStoragePrefix('myApp');
-```
-
-#### Advanced Options
-
-```typescript
-stored('key', defaultValue, {
-  version: 1, // Schema version
-  migrate: (old, ver) => migrated, // Migration function
-  debounceMs: 100, // Write debounce (default: 100)
-  storage: sessionStorage, // Custom storage backend
-  serialize: (v) => JSON.stringify(v), // Custom serializer
-  deserialize: (s) => JSON.parse(s), // Custom deserializer
-  clearOnMigrationFailure: false, // Clear on failed migration
-});
-```
-
-### 12) `form(config)` - Tree-Integrated Forms
-
-Creates forms with validation, wizard navigation, and persistence that live inside SignalTree.
-
-```typescript
-import { signalTree, form, validators } from '@signaltree/core';
-
-interface ContactForm {
-  name: string;
-  email: string;
-  phone: string;
-  message: string;
-}
-
-const tree = signalTree({
-  contact: form<ContactForm>({
-    initial: { name: '', email: '', phone: '', message: '' },
-    validators: {
-      name: validators.required('Name is required'),
-      email: [validators.required('Email is required'), validators.email('Invalid email format')],
-      phone: validators.pattern(/^\+?[\d\s-]+$/, 'Invalid phone number'),
-      message: validators.minLength(10, 'Message must be at least 10 characters'),
-    },
-  }),
-});
-
-// FormSignal API - Field access via $
-tree.$.contact.$.name(); // Get field value
-tree.$.contact.$.name.set('Jane'); // Set field value
-tree.$.contact.$.email();
-
-// Form-level operations
-tree.$.contact(); // Get all values: ContactForm
-tree.$.contact.set({ name: 'Jane', email: 'jane@example.com', phone: '', message: '' });
-tree.$.contact.patch({ name: 'Updated' }); // Partial update
-tree.$.contact.reset(); // Reset to initial values
-tree.$.contact.clear(); // Clear all values
-
-// Validation signals
-tree.$.contact.valid(); // Signal<boolean>
-tree.$.contact.dirty(); // Signal<boolean>
-tree.$.contact.submitting(); // Signal<boolean>
-tree.$.contact.touched(); // Signal<Record<keyof T, boolean>>
-tree.$.contact.errors(); // Signal<Partial<Record<keyof T, string>>>
-tree.$.contact.errorList(); // Signal<string[]>
-
-// Validation methods
-await tree.$.contact.validate(); // Validate all fields
-await tree.$.contact.validateField('email');
-tree.$.contact.touch('name'); // Mark field as touched
-tree.$.contact.touchAll(); // Mark all fields as touched
-```
-
-#### Built-in Validators
-
-```typescript
-import { validators } from '@signaltree/core';
-
-validators.required('Field is required')
-validators.minLength(5, 'Min 5 characters')
-validators.maxLength(100, 'Max 100 characters')
-validators.min(0, 'Must be positive')
-validators.max(100, 'Max 100')
-validators.email('Invalid email')
-validators.pattern(/regex/, 'Invalid format')
-
-// Compose multiple validators
-validators: {
-  password: [
-    validators.required('Password is required'),
-    validators.minLength(8, 'Min 8 characters'),
-    validators.pattern(/[A-Z]/, 'Must contain uppercase'),
-    validators.pattern(/[0-9]/, 'Must contain number'),
-  ],
-}
-```
-
-#### Wizard Navigation
-
-```typescript
-const tree = signalTree({
-  listing: form<ListingDraft>({
-    initial: { title: '', description: '', photos: [], price: null, location: '' },
-    validators: {
-      title: validators.required('Title is required'),
-      price: [validators.required('Price required'), validators.min(0, 'Must be positive')],
-      location: validators.required('Location required'),
-    },
-    wizard: {
-      steps: ['details', 'media', 'pricing', 'review'],
-      stepFields: {
-        details: ['title', 'description'],
-        media: ['photos'],
-        pricing: ['price'],
-        review: ['location'],
-      },
-    },
-  }),
-});
-
-// Wizard API
-const wizard = tree.$.listing.wizard!;
-
-wizard.currentStep(); // Signal<number> - 0-based index
-wizard.stepName(); // Signal<string> - current step name
-wizard.steps(); // Signal<string[]> - all step names
-wizard.canNext(); // Signal<boolean>
-wizard.canPrev(); // Signal<boolean>
-wizard.isFirstStep(); // Signal<boolean>
-wizard.isLastStep(); // Signal<boolean>
-
-// Navigation (validates current step before proceeding)
-await wizard.next(); // Returns false if validation fails
-wizard.prev();
-await wizard.goTo(2); // Jump to step by index
-await wizard.goTo('pricing'); // Jump to step by name
-wizard.reset(); // Go back to first step
-```
-
-#### Form Persistence
-
-```typescript
-const tree = signalTree({
-  draft: form<EmailDraft>({
-    initial: { subject: '', body: '', to: '' },
-    persist: 'email-draft', // localStorage key
-    persistDebounceMs: 500, // Debounce writes (default: 500ms)
-    validators: {
-      subject: validators.required('Subject required'),
-      to: validators.email('Invalid email'),
-    },
-  }),
-});
-
-// Form auto-saves to localStorage
-// On page reload, draft is restored automatically
-```
-
-#### Async Validators
-
-```typescript
-const tree = signalTree({
-  registration: form<RegistrationForm>({
-    initial: { username: '', email: '' },
-    validators: {
-      username: validators.minLength(3, 'Min 3 characters'),
-    },
-    asyncValidators: {
-      username: async (value) => {
-        const taken = await api.checkUsername(value);
-        return taken ? 'Username already taken' : null;
-      },
-      email: async (value) => {
-        const exists = await api.checkEmail(value);
-        return exists ? 'Email already registered' : null;
-      },
-    },
-  }),
-});
-```
-
-#### Form Submission
-
-```typescript
-async function handleSubmit() {
-  const contactForm = tree.$.contact;
-
-  // Validate all fields first
-  contactForm.touchAll();
-  const isValid = await contactForm.validate();
-
-  if (!isValid) return;
-
-  // Set submitting state
-  contactForm.setSubmitting(true);
-
-  try {
-    await api.submit(contactForm());
-    contactForm.reset();
-  } catch (error) {
-    // Handle error
-  } finally {
-    contactForm.setSubmitting(false);
-  }
-}
-```
-
-## Error handling examples
-
-### Manual async error handling
-
-```typescript
-const tree = signalTree({
-  data: null as ApiData | null,
-  loading: false,
-  error: null as Error | null,
-  retryCount: 0,
-});
-
-async function loadDataWithRetry(attempt = 0) {
-  tree.$.loading.set(true);
-  tree.$.error.set(null);
-
-  try {
-    const data = await api.getData();
-    tree.$.data.set(data);
-    tree.$.loading.set(false);
-    tree.$.retryCount.set(0);
-  } catch (error) {
-    if (attempt < 3) {
-      // Retry logic
-      await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
-      return loadDataWithRetry(attempt + 1);
-    }
-
-    tree.$.loading.set(false);
-    tree.$.error.set(error instanceof Error ? error : new Error('Unknown error'));
-    tree.$.retryCount.update((count) => count + 1);
-  }
-}
-
-// Error boundary component
-@Component({
-  template: `
-    @if (tree.$.error()) {
-    <div class="error-boundary">
-      <h3>Something went wrong</h3>
-      <p>{{ tree.$.error()?.message }}</p>
-      <p>Attempts: {{ tree.$.retryCount() }}</p>
-      <button (click)="retry()">Retry</button>
-      <button (click)="clear()">Clear Error</button>
-    </div>
-    } @else {
-    <!-- Normal content -->
-    }
-  `,
-})
-class ErrorHandlingComponent {
-  tree = tree;
-
-  retry() {
-    loadDataWithRetry();
-  }
-
-  clear() {
-    this.tree.$.error.set(null);
-  }
-}
-```
-
-### State update error handling
-
-```typescript
-const tree = signalTree({
-  items: [] as Item[],
-  validationErrors: [] as string[],
-});
-
-// Safe update with validation
-function safeUpdateItem(id: string, updates: Partial<Item>) {
-  try {
-    tree.update((state) => {
-      const itemIndex = state.items.findIndex((item) => item.id === id);
-      if (itemIndex === -1) {
-        throw new Error(`Item with id ${id} not found`);
-      }
-
-      const updatedItem = { ...state.items[itemIndex], ...updates };
-
-      // Validation
-      if (!updatedItem.name?.trim()) {
-        throw new Error('Item name is required');
-      }
-
-      const newItems = [...state.items];
-      newItems[itemIndex] = updatedItem;
-
-      return {
-        items: newItems,
-        validationErrors: [], // Clear errors on success
-      };
-    });
-  } catch (error) {
-    tree.$.validationErrors.update((errors) => [...errors, error instanceof Error ? error.message : 'Unknown error']);
-  }
-}
-```
-
-## Package composition patterns
-
-SignalTree Core is designed for modular composition. Start minimal and add features as needed.
-
-### Basic Composition
-
-```typescript
-import { signalTree } from '@signaltree/core';
-
-// Core provides the foundation
-const tree = signalTree({
-  users: [] as User[],
-  ui: { loading: false },
-});
-
-// Basic operations included in core
-tree.$.users.set([...users, newUser]);
-tree.$.ui.loading.set(true);
-tree.effect(() => console.log('State changed'));
-```
-
-### Performance-Enhanced Composition
-
-```typescript
-import { signalTree, batching, memoization } from '@signaltree/core';
-
-// Add performance optimizations
-const tree = signalTree({
-  products: [] as Product[],
-  filters: { category: '', search: '' },
-}).with(
-  batching(), // Batch updates for optimal rendering
-  memoization() // Cache expensive computations
-);
-
-// Now supports batched updates
-tree.batchUpdate((state) => ({
-  products: [...state.products, ...newProducts],
-  filters: { category: 'electronics', search: '' },
-}));
-
-// Expensive computations are automatically cached
-const filteredProducts = computed(() => {
-  return tree.$.products()
-    .filter((p) => p.category.includes(tree.$.filters.category()))
-    .filter((p) => p.name.includes(tree.$.filters.search()));
-});
-```
-
-### Data Management Composition
-
-```typescript
-import { signalTree, entityMap, entities } from '@signaltree/core';
-
-// Add data management capabilities (+2.77KB total)
-const tree = signalTree({
-  users: entityMap<User>(),
-  posts: entityMap<Post>(),
-  ui: { loading: false, error: null as string | null },
-}).with(entities());
-
-// Advanced entity operations via tree.$ accessor
-tree.$.users.addOne(newUser);
-tree.$.users.selectBy((u) => u.active);
-tree.$.users.updateMany([{ id: '1', changes: { status: 'active' } }]);
-
-// Entity helpers work with nested structures
-// Example: deeply nested entities in a domain-driven design pattern
-const appTree = signalTree({
-  app: {
-    data: {
-      users: entityMap<User>(),
-      products: entityMap<Product>(),
-    },
-  },
-  admin: {
-    data: {
-      logs: entityMap<AuditLog>(),
-      reports: entityMap<Report>(),
-    },
-  },
-}).with(entities());
-
-// Access nested entities using tree.$ accessor
-appTree.$.app.data.users.selectBy((u) => u.isAdmin); // Filtered signal
-appTree.$.app.data.products.selectTotal(); // Count signal
-appTree.$.admin.data.logs.all; // All items as array
-appTree.$.admin.data.reports.selectIds(); // ID array signal
-
-// For async operations, use manual async or async helpers
-async function fetchUsers() {
-  tree.$.ui.loading.set(true);
-  try {
-    const users = await api.getUsers();
-    tree.$.users.setAll(users);
-  } catch (error) {
-    tree.$.ui.error.set(error.message);
-  } finally {
-    tree.$.ui.loading.set(false);
-  }
-}
-```
-
-### Full-Featured Development Composition
-
-```typescript
-import { signalTree, batching, entities, serialization, withTimeTravel, devTools } from '@signaltree/core';
-
-// Full development stack (example)
-const tree = signalTree({
-  app: {
-    user: null as User | null,
-    preferences: { theme: 'light' },
-    data: { users: [], posts: [] },
-  },
-}).with(
-  batching(), // Performance
-  entities(), // Data management
-  // withAsync removed — use async helpers for API integration
-  serialization({
-    // State persistence
-    autoSave: true,
-    storage: 'localStorage',
-  }),
-  withTimeTravel({
-    // Undo/redo
-    maxHistory: 50,
-  }),
+const DEVTOOLS_GROUP_ID = 'my-app-production';
+const DEVTOOLS_GROUP_NAME = 'My App SignalTree';
+
+// Store 1
+const materialsTree = signalTree(materialsState).with(
   devTools({
-    // Debug tools (dev only)
-    name: 'MyApp',
-    enableTimeTravel: true,
-    includePaths: ['app.*', 'ui.*'],
-    formatPath: (path) => path.replace(/\.(\d+)/g, '[$1]'),
+    treeName: 'Materials',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
+    },
   })
 );
 
-// Rich feature set available
-async function fetchUser(id: string) {
-  return await api.getUser(id);
+// Store 2
+const ordersTree = signalTree(ordersState).with(
+  devTools({
+    treeName: 'Orders',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
+    },
+  })
+);
+```
+
+Both stores will appear as branches under the same "My App SignalTree" instance in Redux DevTools.
+
+### Advanced usage (full state tree)
+
+```typescript
+interface AppState {
+  auth: {
+    user: User | null;
+    token: string | null;
+    isAuthenticated: boolean;
+  };
+  data: {
+    users: User[];
+    posts: Post[];
+    cache: Record<string, unknown>;
+  };
+  ui: {
+    theme: 'light' | 'dark';
+    sidebar: {
+      open: boolean;
+      width: number;
+    };
+    notifications: Notification[];
+  };
 }
-tree.$.app.data.users.byId(userId)(); // O(1) lookup
-tree.undo(); // Time travel
-tree.save(); // Persistence
-```
 
-### Production-Ready Composition
-
-```typescript
-import { signalTree, batching, entities, serialization } from '@signaltree/core';
-
-// Production build (no dev tools)
-const tree = signalTree(initialState).with(
-  batching(), // Performance optimization
-  entities(), // Data management
-  // withAsync removed — use async helpers for API integration
-  serialization({
-    // User preferences
-    autoSave: true,
-    storage: 'localStorage',
-    key: 'app-v1.2.3',
-  })
-);
-
-// Clean, efficient, production-ready
-```
-
-### Conditional Enhancement
-
-```typescript
-import { signalTree, batching, entities, devTools, withTimeTravel } from '@signaltree/core';
-
-const isDevelopment = process.env['NODE_ENV'] === 'development';
-
-// Conditional enhancement based on environment
-const tree = signalTree(state).with(
-  batching(), // Always include performance
-  entities(), // Always include data management
-  ...(isDevelopment
-    ? [
-        // Development-only features
-        devTools(),
-        withTimeTravel(),
-      ]
-    : [])
-);
-```
-
-### Preset-Based Composition
-
-```typescript
-import { createDevTree, TREE_PRESETS } from '@signaltree/core';
-
-// Use presets for common patterns
-const devTree = createDevTree({
-  products: [],
-  cart: { items: [], total: 0 },
-  user: null,
+const tree = signalTree<AppState>({
+  auth: {
+    user: null,
+    token: null,
+    isAuthenticated: false,
+  },
+  data: {
+    users: [],
+    posts: [],
+    cache: {},
+  },
+  ui: {
+    theme: 'light',
+    sidebar: { open: true, width: 250 },
+    notifications: [],
+  },
 });
-// Includes: batching, memoization, devtools, time-travel
 
-// Or use preset configurations directly
-const customTree = signalTree(state, TREE_PRESETS.PERFORMANCE);
-// Includes: batching, memoization optimizations
-```
-
-### Measuring bundle size
-
-Bundle sizes depend on your build, tree-shaking, and which enhancers you include. Use the scripts in `scripts/` to analyze min+gz for your configuration.
-
-### Migration Strategy
-
-Start with core and grow incrementally:
-
-```typescript
-// Phase 1: Start with core
-const tree = signalTree(state);
-
-// Phase 2: Add performance when needed
-const tree2 = tree.with(batching());
-
-// Phase 3: Add data management for collections
-const tree3 = tree2.with(entities());
-
-// Phase 4: Add async for API integration
-// withAsync removed — no explicit async enhancer; use async helpers instead
-
-// Each phase is fully functional and production-ready
-```
-
-```typescript
-// Start minimal, add features as needed
-let tree = signalTree(initialState);
-
-if (isDevelopment) {
-  tree = tree.with(devTools());
-}
-
-if (needsPerformance) {
-  tree = tree.with(batching(), memoization());
-}
-
-if (needsTimeTravel) {
-  tree = tree.with(withTimeTravel());
-}
-```
-
-### Service-based pattern
-
-```typescript
-@Injectable()
-class AppStateService {
-  private tree = signalTree({
-    user: null as User | null,
-    settings: { theme: 'light' as const },
-  });
-
-  // Expose specific parts
-  readonly user$ = this.tree.$.user;
-  readonly settings$ = this.tree.$.settings;
-
-  // Expose specific actions
-  setUser(user: User) {
-    this.tree.$.user.set(user);
-  }
-
-  updateSettings(settings: Partial<Settings>) {
-    this.tree.$.settings.update((current) => ({
-      ...current,
-      ...settings,
-    }));
-  }
-
-  // For advanced features, return the tree
-  getTree() {
-    return this.tree;
-  }
-}
-```
-
-## Measuring performance
-
-For fair, reproducible measurements that reflect your app and hardware, use the **Benchmark Orchestrator** in the demo. It calibrates runs per scenario and library, applies **real-world frequency weighting** based on research analysis, reports robust statistics, and supports CSV/JSON export. Avoid copying fixed numbers from docs; results vary.
-
-## Example
-
-```typescript
-// Complete user management component
-@Component({
-  template: `
-    <div class="user-manager">
-      <!-- User List -->
-      <div class="user-list">
-        @if (userTree.$.loading()) {
-        <div class="loading">Loading users...</div>
-        } @else if (userTree.$.error()) {
-        <div class="error">
-          {{ userTree.$.error() }}
-          <button (click)="loadUsers()">Retry</button>
-        </div>
-        } @else { @for (user of users.selectAll()(); track user.id) {
-        <div class="user-card">
-          <h3>{{ user.name }}</h3>
-          <p>{{ user.email }}</p>
-          <button (click)="editUser(user)">Edit</button>
-          <button (click)="deleteUser(user.id)">Delete</button>
-        </div>
-        } }
-      </div>
-
-      <!-- User Form -->
-      <form (ngSubmit)="saveUser()" #form="ngForm">
-        <input [(ngModel)]="userTree.$.form.name()" name="name" placeholder="Name" required />
-        <input [(ngModel)]="userTree.$.form.email()" name="email" type="email" placeholder="Email" required />
-        <button type="submit" [disabled]="form.invalid">{{ userTree.$.form.id() ? 'Update' : 'Create' }} User</button>
-        <button type="button" (click)="clearForm()">Clear</button>
-      </form>
-    </div>
-  `,
-})
-class UserManagerComponent implements OnInit {
-  userTree = signalTree({
-    users: [] as User[],
-    loading: false,
-    error: null as string | null,
-    form: { id: '', name: '', email: '' },
-  });
-
-  constructor(private userService: UserService) {}
-
-  ngOnInit() {
-    this.loadUsers();
-  }
-
-  async loadUsers() {
-    this.userTree.$.loading.set(true);
-    this.userTree.$.error.set(null);
-
-    try {
-      const users = await this.userService.getUsers();
-      this.userTree.$.users.set(users);
-    } catch (error) {
-      this.userTree.$.error.set(error instanceof Error ? error.message : 'Load failed');
-    } finally {
-      this.userTree.$.loading.set(false);
-    }
-  }
-
-  editUser(user: User) {
-    this.userTree.$.form.set(user);
-  }
-
-  async saveUser() {
-    try {
-      const form = this.userTree.$.form();
-      if (form.id) {
-        await this.userService.updateUser(form.id, form);
-        this.updateUser(form.id, form);
-      } else {
-        const newUser = await this.userService.createUser(form);
-        this.addUser(newUser);
-      }
-      this.clearForm();
-    } catch (error) {
-      this.userTree.$.error.set(error instanceof Error ? error.message : 'Save failed');
-    }
-  }
-
-  private addUser(user: User) {
-    this.userTree.$.users.update((users) => [...users, user]);
-  }
-
-  private updateUser(id: string, updates: Partial<User>) {
-    this.userTree.$.users.update((users) => users.map((user) => (user.id === id ? { ...user, ...updates } : user)));
-  }
-
-  deleteUser(id: string) {
-    if (confirm('Delete user?')) {
-      this.removeUser(id);
-      this.userService.deleteUser(id).catch((error) => {
-        this.userTree.$.error.set(error.message);
-        this.loadUsers(); // Reload on error
-      });
-    }
-  }
-
-  private removeUser(id: string) {
-    this.userTree.$.users.update((users) => users.filter((user) => user.id !== id));
-  }
-
-  clearForm() {
-    this.userTree.$.form.set({ id: '', name: '', email: '' });
-  }
-}
-```
-
-    ]
-
-}
+// Complex updates with type safety
+tree((state) => ({
+  auth: {
+    ...state.auth,
+    user: { id: '1', name: 'John' },
+    isAuthenticated: true,
+  },
+  ui: {
+    ...state.ui,
+    notifications: [...state.ui.notifications, { id: '1', message: 'Welcome!', type: 'success' }],
+  },
 }));
 
 // Get entire state as plain object
-const currentState = tree.unwrap();
+const currentState = tree();
 console.log('Current app state:', currentState);
-
-```
-});
 ```
 
 ## Core features
 
-### Hierarchical signal trees
+### 1) Hierarchical signal trees
+
+Create deeply nested reactive state with automatic type inference:
 
 ```typescript
 const tree = signalTree({
@@ -1945,627 +821,3211 @@ const tree = signalTree({
 });
 
 // Access nested signals with full type safety
-tree.$.user.name(); // string
-tree.$.settings.theme.set('light');
-tree.$.todos.update((todos) => [...todos, newTodo]);
+tree.$.user.name(); // string signal
+tree.$.settings.theme.set('light'); // type-checked value
+tree.$.todos.update((todos) => [...todos, newTodo]); // array operations
 ```
 
-### Manual entity management
+### 2) TypeScript inference
+
+SignalTree provides complete type inference without manual typing:
 
 ```typescript
-// Manual CRUD operations
+// Automatic inference from initial state
 const tree = signalTree({
-  todos: [] as Todo[],
+  count: 0, // Inferred as WritableSignal<number>
+  name: 'John', // Inferred as WritableSignal<string>
+  active: true, // Inferred as WritableSignal<boolean>
+  items: [] as Item[], // Inferred as WritableSignal<Item[]>
+  config: {
+    theme: 'dark' as const, // Inferred as WritableSignal<'dark'>
+    settings: {
+      nested: true, // Deep nesting maintained
+    },
+  },
 });
 
-function addTodo(todo: Todo) {
-  tree.$.todos.update((todos) => [...todos, todo]);
-}
-
-function updateTodo(id: string, updates: Partial<Todo>) {
-  tree.$.todos.update((todos) => todos.map((todo) => (todo.id === id ? { ...todo, ...updates } : todo)));
-}
-
-function removeTodo(id: string) {
-  tree.$.todos.update((todos) => todos.filter((todo) => todo.id !== id));
-}
-
-// Manual queries with computed signals
-const todoById = (id: string) => computed(() => tree.$.todos().find((todo) => todo.id === id));
-const allTodos = computed(() => tree.$.todos());
-const todoCount = computed(() => tree.$.todos().length);
+// Type-safe access and updates
+tree.$.count.set(5); // ✅ number
+tree.$.count.set('invalid'); // ❌ Type error
+tree.$.config.theme.set('light'); // ❌ Type error ('dark' const)
+tree.$.config.settings.nested.set(false); // ✅ boolean
 ```
 
-### Manual async state management
+### 3) Manual state management
+
+Core provides basic state updates. For advanced entity management, use the built-in `entities` enhancer:
 
 ```typescript
-async function loadUsers() {
-  tree.$.loading.set(true);
-
-  try {
-    const users = await api.getUsers();
-    tree.$.users.set(users);
-  } catch (error) {
-    tree.$.error.set(error instanceof Error ? error.message : 'Unknown error');
-  } finally {
-    tree.$.loading.set(false);
-  }
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  active: boolean;
 }
 
-// Use in components
-async function handleLoadUsers() {
-  await loadUsers();
-}
-```
-
-### Reactive effects
-
-```typescript
-// Create reactive effects
-tree.effect((state) => {
-  console.log(`User: ${state.user.name}, Theme: ${state.settings.theme}`);
+const tree = signalTree({
+  users: [] as User[],
 });
 
-// Manual subscriptions
-const unsubscribe = tree.subscribe((state) => {
-  // Handle state changes
-});
-```
-
-## Core API reference
-
-### signalTree()
-
-```typescript
-const tree = signalTree(initialState, config?);
-```
-
-### Tree Methods
-
-```typescript
-// State access
-tree.$.property(); // Read signal value
-tree.$.property.set(value); // Update signal
-tree.unwrap(); // Get plain object
-
-// Tree operations
-tree.update(updater); // Update entire tree
-tree.effect(fn); // Create reactive effects
-tree.subscribe(fn); // Manual subscriptions
-tree.destroy(); // Cleanup resources
-
-// Entity helpers (when using entityMap + entities)
-// tree.$.users.addOne(user);    // Add single entity
-// tree.$.users.byId(id)();      // O(1) lookup by ID
-// tree.$.users.all;         // Get all as array
-// tree.$.users.selectBy(pred);  // Filtered signal
-```
-
-## Extending with enhancers
-
-SignalTree Core includes all enhancers built-in:
-
-```typescript
-import { signalTree, batching, memoization, withTimeTravel } from '@signaltree/core';
-
-// All enhancers available from @signaltree/core
-const tree = signalTree(initialState).with(batching(), memoization(), withTimeTravel());
-```
-
-### Available enhancers
-
-All enhancers are included in `@signaltree/core`:
-
-- **batching()** - Batch multiple updates for better performance
-- **memoization()** - Intelligent caching & performance optimization
-- **entities()** - Advanced entity management & CRUD operations
-- **devTools()** - Redux DevTools integration for debugging
-- **withTimeTravel()** - Undo/redo functionality & state history
-- **serialization()** - State persistence & SSR support
-- **createDevTree()** - Pre-configured development setup
-- **TREE_PRESETS** - Common configuration patterns (PERFORMANCE, DASHBOARD, etc.)
-
-## When to use core only
-
-Perfect for:
-
-- ✅ Simple to medium applications
-- ✅ Prototype and MVP development
-- ✅ When bundle size is critical
-- ✅ Learning signal-based state management
-- ✅ Applications with basic state needs
-
-Consider enhancers when you need:
-
-- ⚡ Performance optimization (batching, memoization)
-- 🐛 Advanced debugging (devTools, withTimeTravel)
-- 📦 Entity management (entities)
-
-Consider separate packages when you need:
-
-- 📝 Angular forms integration (@signaltree/ng-forms)
-- 🏢 Enterprise-scale optimizations (@signaltree/enterprise)
-- 🎯 Callable syntax transform (@signaltree/callable-syntax)
-
-## Migration from NgRx
-
-```typescript
-// Step 1: Create parallel tree
-const tree = signalTree(initialState);
-
-// Step 2: Gradually migrate components
-// Before (NgRx)
-users$ = this.store.select(selectUsers);
-
-// After (SignalTree)
-users = this.tree.$.users;
-
-// Step 3: Replace effects with manual async operations
-// Before (NgRx)
-loadUsers$ = createEffect(() =>
-  this.actions$.with(
-    ofType(loadUsers),
-    switchMap(() => this.api.getUsers())
-  )
-);
-
-// After (SignalTree Core)
-async loadUsers() {
-  try {
-    const users = await api.getUsers();
-    tree.$.users.set(users);
-  } catch (error) {
-    tree.$.error.set(error.message);
-  }
+// Entity CRUD operations using core methods
+function addUser(user: User) {
+  tree.$.users.update((users) => [...users, user]);
 }
 
-// Or use manual async patterns
-loadUsers = async () => {
-  tree.$.loading.set(true);
-  try {
-    const users = await api.getUsers();
-    tree.$.users.set(users);
-  } catch (error) {
-    tree.$.error.set(error instanceof Error ? error.message : 'Unknown error');
-  } finally {
-    tree.$.loading.set(false);
-  }
-};
-```
-
-## Examples
-
-### Simple Counter
-
-```typescript
-const counter = signalTree({ count: 0 });
-
-// In component
-@Component({
-  template: ` <button (click)="increment()">{{ counter.$.count() }}</button> `,
-})
-class CounterComponent {
-  counter = counter;
-
-  increment() {
-    this.counter.$.count.update((n) => n + 1);
-  }
+function updateUser(id: string, updates: Partial<User>) {
+  tree.$.users.update((users) => users.map((user) => (user.id === id ? { ...user, ...updates } : user)));
 }
+
+function removeUser(id: string) {
+  tree.$.users.update((users) => users.filter((user) => user.id !== id));
+}
+
+// Manual queries using computed signals
+const userById = (id: string) => computed(() => tree.$.users().find((user) => user.id === id));
+const activeUsers = computed(() => tree.$.users().filter((user) => user.active));
 ```
 
-### User Management
+### 4) Manual async state management
+
+Core provides basic state updates. For advanced async helpers, use the built-in async helpers (`createAsyncOperation`, `trackAsync`):
 
 ```typescript
-const userTree = signalTree({
+const tree = signalTree({
   users: [] as User[],
   loading: false,
   error: null as string | null,
 });
 
+// Manual async operation management
 async function loadUsers() {
-  userTree.$.loading.set(true);
+  tree.$.loading.set(true);
+  tree.$.error.set(null);
+
   try {
     const users = await api.getUsers();
-    userTree.$.users.set(users);
-    userTree.$.error.set(null);
+    tree.$.users.set(users);
   } catch (error) {
-    userTree.$.error.set(error instanceof Error ? error.message : 'Load failed');
+    tree.$.error.set(error instanceof Error ? error.message : 'Unknown error');
   } finally {
-    userTree.$.loading.set(false);
+    tree.$.loading.set(false);
   }
 }
 
-function addUser(user: User) {
-  userTree.$.users.update((users) => [...users, user]);
-}
-
-// In component
+// Usage in component
 @Component({
   template: `
-    @if (userTree.$.loading()) {
-    <spinner />
-    } @else { @for (user of userTree.$.users(); track user.id) {
+    @if (tree.$.loading()) {
+    <div>Loading...</div>
+    } @else if (tree.$.error()) {
+    <div class="error">{{ tree.$.error() }}</div>
+    } @else { @for (user of tree.$.users(); track user.id) {
     <user-card [user]="user" />
     } }
+    <button (click)="loadUsers()">Refresh</button>
   `,
 })
 class UsersComponent {
-  userTree = userTree;
-
-  ngOnInit() {
-    loadUsers();
-  }
-
-  addUser(userData: Partial<User>) {
-    const newUser = { id: crypto.randomUUID(), ...userData } as User;
-    addUser(newUser);
-  }
+  tree = tree;
+  loadUsers = loadUsers;
 }
 ```
 
-## Available extension packages
+### Reactive computations with computed()
 
-All enhancers are now consolidated in the core package. The following features are available directly from `@signaltree/core`:
-
-### Performance & Optimization
-
-- **batching()** (+1.27KB gzipped) - Batch multiple updates for better performance
-- **memoization()** (+2.33KB gzipped) - Intelligent caching & performance optimization
-
-### Advanced Features
-
-- **entities()** (+0.97KB gzipped) - Enhanced CRUD operations & entity management
-
-### Development Tools
-
-- **devTools()** (+2.49KB gzipped) - Development tools & Redux DevTools integration
-- **withTimeTravel()** (+1.75KB gzipped) - Undo/redo functionality & state history
-
-### Integration & Convenience
-
-- **serialization()** (+0.84KB gzipped) - State persistence & SSR support
-- **ecommercePreset()** - Pre-configured setups for e-commerce applications
-- **dashboardPreset()** - Pre-configured setups for dashboard applications
-
-### Quick Start with Extensions
-
-All enhancers are now available from the core package:
-
-```bash
-# Install only the core package - all features included
-npm install @signaltree/core
-
-# Everything is available from @signaltree/core:
-import {
-  signalTree,
-  batching,
-  memoization,
-  entities,
-  devTools,
-  withTimeTravel,
-  serialization,
-  ecommercePreset,
-  dashboardPreset
-} from '@signaltree/core';
-```
-
-## Companion Packages
-
-While `@signaltree/core` includes comprehensive built-in enhancers for most use cases, the SignalTree ecosystem also provides specialized companion packages for specific needs:
-
-### 📝 @signaltree/ng-forms
-
-**Angular Forms integration for SignalTree (Angular 17+)**
-
-Seamlessly connect Angular Forms with your SignalTree state for two-way data binding, validation, and form control.
-
-```bash
-npm install @signaltree/ng-forms
-```
-
-**Features:**
-
-- 🔗 Two-way binding between forms and SignalTree state
-- ✅ Built-in validation integration
-- 🎯 Type-safe form controls
-- 🔄 Automatic sync between form state and tree state
-- 📊 Form status tracking (valid, pristine, touched, etc.)
-- ⚡ Native Signal Forms support (Angular 20.3+)
-- 🔧 Legacy bridge for Angular 17-19 (deprecated, will be removed with Angular 21)
-
-**Signal Forms (Angular 20.3+ recommended)**
-
-Use Angular's Signal Forms `connect()` API directly with SignalTree:
-
-```ts
-import { toWritableSignal } from '@signaltree/core';
-
-const tree = signalTree({
-  user: { name: '', email: '' },
-});
-
-// Leaves are WritableSignal<T>
-nameControl.connect(tree.$.user.name);
-
-// Convert a slice to a WritableSignal<T>
-const userSignal = toWritableSignal(tree.$.user);
-userGroupControl.connect(userSignal);
-```
-
-The `@signaltree/ng-forms` package supports Angular 17+ and will prefer `connect()` when available (Angular 20.3+). Angular 17-19 uses a legacy bridge that will be deprecated when Angular 21 is released.
-
-**Quick Example:**
+SignalTree works seamlessly with Angular's `computed()` for creating efficient reactive computations. These computations automatically update when their dependencies change and are memoized for optimal performance.
 
 ```typescript
+import { computed, effect } from '@angular/core';
 import { signalTree } from '@signaltree/core';
-import { bindFormToTree } from '@signaltree/ng-forms';
 
 const tree = signalTree({
-  user: { name: '', email: '', age: 0 },
-});
-
-@Component({
-  template: `
-    <form [formGroup]="form">
-      <input formControlName="name" />
-      <input formControlName="email" type="email" />
-      <input formControlName="age" type="number" />
-    </form>
-  `,
-})
-class UserFormComponent {
-  form = new FormGroup({
-    name: new FormControl(''),
-    email: new FormControl(''),
-    age: new FormControl(0),
-  });
-
-  constructor() {
-    // Automatically sync form with tree state
-    bindFormToTree(this.form, tree.$.user);
-  }
-}
-```
-
-**When to use:**
-
-- Building forms with Angular Reactive Forms
-- Need validation integration
-- Two-way data binding between forms and state
-- Complex form scenarios with nested form groups
-
-**Learn more:** [npm package](https://www.npmjs.com/package/@signaltree/ng-forms)
-
----
-
-### 🏢 @signaltree/enterprise
-
-**Enterprise-scale optimizations for large applications**
-
-Advanced performance optimizations designed for applications with 500+ signals and complex state trees.
-
-```bash
-npm install @signaltree/enterprise
-```
-
-**Features:**
-
-- ⚡ PathIndex for O(k) lookup time regardless of tree size
-- 🗜️ Advanced memory optimization algorithms
-- 📊 Performance profiling and monitoring
-- 🔍 Efficient path-based signal resolution
-- 🎯 Optimized for large-scale applications
-
-**Quick Example:**
-
-```typescript
-import { signalTree } from '@signaltree/core';
-import { enterpriseOptimizations } from '@signaltree/enterprise';
-
-const tree = signalTree({
-  // Large application state with hundreds of signals
-  modules: {
-    auth: {
-      /* ... */
-    },
-    data: {
-      /* ... */
-    },
-    ui: {
-      /* ... */
-    },
-    // ... many more modules
+  users: [
+    { id: '1', name: 'Alice', active: true, role: 'admin' },
+    { id: '2', name: 'Bob', active: false, role: 'user' },
+    { id: '3', name: 'Charlie', active: true, role: 'user' },
+  ],
+  filters: {
+    showActive: true,
+    role: 'all' as 'all' | 'admin' | 'user',
   },
-}).with(
-  enterpriseOptimizations({
-    enablePathIndex: true,
-    enableMemoryOptimizations: true,
-    enablePerformanceMonitoring: true,
+});
+
+// Basic computed - automatically memoized
+const userCount = computed(() => tree.$.users().length);
+
+// Complex filtering computation
+const filteredUsers = computed(() => {
+  const users = tree.$.users();
+  const filters = tree.$.filters();
+
+  return users.filter((user) => {
+    if (filters.showActive && !user.active) return false;
+    if (filters.role !== 'all' && user.role !== filters.role) return false;
+    return true;
+  });
+});
+
+// Derived computation from other computed values
+const activeAdminCount = computed(() => filteredUsers().filter((user) => user.role === 'admin' && user.active).length);
+
+// Performance-critical computation with complex logic
+const userStatistics = computed(() => {
+  const users = tree.$.users();
+
+  return {
+    total: users.length,
+    active: users.filter((u) => u.active).length,
+    admins: users.filter((u) => u.role === 'admin').length,
+    averageNameLength: users.reduce((acc, u) => acc + u.name.length, 0) / users.length,
+  };
+});
+
+// Dynamic computed functions (factory pattern)
+const userById = (id: string) => computed(() => tree.$.users().find((user) => user.id === id));
+
+// Usage in effects
+effect(() => {
+  console.log(`Filtered users: ${filteredUsers().length}`);
+  console.log(`Statistics:`, userStatistics());
+});
+
+// Best Practices:
+// 1. Use computed() for derived state that depends on signals
+// 2. Keep computations pure - no side effects
+// 3. Leverage automatic memoization for expensive operations
+// 4. Chain computed values for complex transformations
+// 5. Use factory functions for parameterized computations
+```
+
+### Performance optimization with memoization
+
+Computed values become even more powerful with the built-in memoization enhancer:
+
+```typescript
+import { signalTree, memoization } from '@signaltree/core';
+
+const tree = signalTree({
+  items: Array.from({ length: 10000 }, (_, i) => ({
+    id: i,
+    value: Math.random(),
+    category: `cat-${i % 10}`,
+  })),
+}).with(memoization());
+
+// Expensive computation - automatically cached by memoization enhancer
+const expensiveComputation = computed(() => {
+  return tree.$.items()
+    .filter((item) => item.value > 0.5)
+    .reduce((acc, item) => acc + Math.sin(item.value * Math.PI), 0);
+});
+
+// The computation only runs when tree.$.items() actually changes
+// Subsequent calls return cached result
+```
+
+### Debugging with Redux DevTools
+
+SignalTree integrates seamlessly with Redux DevTools for time-travel debugging and state inspection.
+
+**Basic Usage:**
+
+```typescript
+import { signalTree, devTools } from '@signaltree/core';
+
+const tree = signalTree({ count: 0 }).with(devTools({ name: 'Counter' }));
+```
+
+**Single Instance Mode:**
+
+When using multiple independent stores (e.g., feature modules), you can group them under a single Redux DevTools instance to avoid cluttering the connection list. This is particularly useful for large applications with many lazy-loaded stores.
+
+```typescript
+const DEVTOOLS_GROUP_ID = 'my-app-production';
+const DEVTOOLS_GROUP_NAME = 'My App SignalTree';
+
+// Store 1
+const materialsTree = signalTree(materialsState).with(
+  devTools({
+    treeName: 'Materials',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
+    },
+  })
+);
+
+// Store 2
+const ordersTree = signalTree(ordersState).with(
+  devTools({
+    treeName: 'Orders',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
+    },
   })
 );
 ```
 
-**Performance Benefits:**
+Both stores will appear as branches under the same "My App SignalTree" instance in Redux DevTools.
 
-- **Constant-time lookups:** O(k) lookup where k is path depth, not total signal count
-- **Memory efficiency:** Up to 40% reduction in memory usage for large trees
-- **Faster updates:** Optimized update batching for high-frequency scenarios
-
-**When to use:**
-
-- Applications with 500+ signals
-- Complex nested state structures (10+ levels deep)
-- High-frequency state updates
-- Enterprise-scale applications with performance requirements
-- Need detailed performance profiling
-
-**Learn more:** [npm package](https://www.npmjs.com/package/@signaltree/enterprise)
-
----
-
-### 🛡️ @signaltree/guardrails
-
-**Development-only performance monitoring and debugging**
-
-Comprehensive development tools for detecting performance issues, memory leaks, and anti-patterns during development. **Zero production overhead** via conditional exports.
-
-```bash
-npm install --save-dev @signaltree/guardrails
-```
-
-**Features:**
-
-- 🔥 Hot-path detection - identifies frequently accessed signals
-- 💾 Memory leak detection - tracks signal cleanup issues
-- 📊 Performance budgets - enforces performance thresholds
-- ⚠️ Anti-pattern warnings - detects common mistakes
-- 📈 Real-time performance metrics
-- 🎯 Zero production overhead (no-op in production builds)
-
-**Quick Example:**
+### Advanced usage (full state tree)
 
 ```typescript
-import { signalTree } from '@signaltree/core';
-import { guardrails } from '@signaltree/guardrails';
+interface AppState {
+  auth: {
+    user: User | null;
+    token: string | null;
+    isAuthenticated: boolean;
+  };
+  data: {
+    users: User[];
+    posts: Post[];
+    cache: Record<string, unknown>;
+  };
+  ui: {
+    theme: 'light' | 'dark';
+    sidebar: {
+      open: boolean;
+      width: number;
+    };
+    notifications: Notification[];
+  };
+}
+
+const tree = signalTree<AppState>({
+  auth: {
+    user: null,
+    token: null,
+    isAuthenticated: false,
+  },
+  data: {
+    users: [],
+    posts: [],
+    cache: {},
+  },
+  ui: {
+    theme: 'light',
+    sidebar: { open: true, width: 250 },
+    notifications: [],
+  },
+});
+
+// Complex updates with type safety
+tree((state) => ({
+  auth: {
+    ...state.auth,
+    user: { id: '1', name: 'John' },
+    isAuthenticated: true,
+  },
+  ui: {
+    ...state.ui,
+    notifications: [...state.ui.notifications, { id: '1', message: 'Welcome!', type: 'success' }],
+  },
+}));
+
+// Get entire state as plain object
+const currentState = tree();
+console.log('Current app state:', currentState);
+```
+
+## Core features
+
+### 1) Hierarchical signal trees
+
+Create deeply nested reactive state with automatic type inference:
+
+```typescript
+const tree = signalTree({
+  user: { name: '', email: '' },
+  settings: { theme: 'dark', notifications: true },
+  todos: [] as Todo[],
+});
+
+// Access nested signals with full type safety
+tree.$.user.name(); // string signal
+tree.$.settings.theme.set('light'); // type-checked value
+tree.$.todos.update((todos) => [...todos, newTodo]); // array operations
+```
+
+### 2) TypeScript inference
+
+SignalTree provides complete type inference without manual typing:
+
+```typescript
+// Automatic inference from initial state
+const tree = signalTree({
+  count: 0, // Inferred as WritableSignal<number>
+  name: 'John', // Inferred as WritableSignal<string>
+  active: true, // Inferred as WritableSignal<boolean>
+  items: [] as Item[], // Inferred as WritableSignal<Item[]>
+  config: {
+    theme: 'dark' as const, // Inferred as WritableSignal<'dark'>
+    settings: {
+      nested: true, // Deep nesting maintained
+    },
+  },
+});
+
+// Type-safe access and updates
+tree.$.count.set(5); // ✅ number
+tree.$.count.set('invalid'); // ❌ Type error
+tree.$.config.theme.set('light'); // ❌ Type error ('dark' const)
+tree.$.config.settings.nested.set(false); // ✅ boolean
+```
+
+### 3) Manual state management
+
+Core provides basic state updates. For advanced entity management, use the built-in `entities` enhancer:
+
+```typescript
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  active: boolean;
+}
 
 const tree = signalTree({
   users: [] as User[],
-  posts: [] as Post[],
-}).with(
-  guardrails({
-    hotPathThreshold: 100, // Warn if signal accessed >100 times/sec
-    memoryLeakThreshold: 50, // Warn if >50 uncleaned signals
-    budgets: {
-      updateTime: 16, // Warn if updates take >16ms
-      signalCount: 1000, // Warn if >1000 signals created
+});
+
+// Entity CRUD operations using core methods
+function addUser(user: User) {
+  tree.$.users.update((users) => [...users, user]);
+}
+
+function updateUser(id: string, updates: Partial<User>) {
+  tree.$.users.update((users) => users.map((user) => (user.id === id ? { ...user, ...updates } : user)));
+}
+
+function removeUser(id: string) {
+  tree.$.users.update((users) => users.filter((user) => user.id !== id));
+}
+
+// Manual queries using computed signals
+const userById = (id: string) => computed(() => tree.$.users().find((user) => user.id === id));
+const activeUsers = computed(() => tree.$.users().filter((user) => user.active));
+```
+
+### 4) Manual async state management
+
+Core provides basic state updates. For advanced async helpers, use the built-in async helpers (`createAsyncOperation`, `trackAsync`):
+
+```typescript
+const tree = signalTree({
+  users: [] as User[],
+  loading: false,
+  error: null as string | null,
+});
+
+// Manual async operation management
+async function loadUsers() {
+  tree.$.loading.set(true);
+  tree.$.error.set(null);
+
+  try {
+    const users = await api.getUsers();
+    tree.$.users.set(users);
+  } catch (error) {
+    tree.$.error.set(error instanceof Error ? error.message : 'Unknown error');
+  } finally {
+    tree.$.loading.set(false);
+  }
+}
+
+// Usage in component
+@Component({
+  template: `
+    @if (tree.$.loading()) {
+    <div>Loading...</div>
+    } @else if (tree.$.error()) {
+    <div class="error">{{ tree.$.error() }}</div>
+    } @else { @for (user of tree.$.users(); track user.id) {
+    <user-card [user]="user" />
+    } }
+    <button (click)="loadUsers()">Refresh</button>
+  `,
+})
+class UsersComponent {
+  tree = tree;
+  loadUsers = loadUsers;
+}
+```
+
+### Reactive computations with computed()
+
+SignalTree works seamlessly with Angular's `computed()` for creating efficient reactive computations. These computations automatically update when their dependencies change and are memoized for optimal performance.
+
+```typescript
+import { computed, effect } from '@angular/core';
+import { signalTree } from '@signaltree/core';
+
+const tree = signalTree({
+  users: [
+    { id: '1', name: 'Alice', active: true, role: 'admin' },
+    { id: '2', name: 'Bob', active: false, role: 'user' },
+    { id: '3', name: 'Charlie', active: true, role: 'user' },
+  ],
+  filters: {
+    showActive: true,
+    role: 'all' as 'all' | 'admin' | 'user',
+  },
+});
+
+// Basic computed - automatically memoized
+const userCount = computed(() => tree.$.users().length);
+
+// Complex filtering computation
+const filteredUsers = computed(() => {
+  const users = tree.$.users();
+  const filters = tree.$.filters();
+
+  return users.filter((user) => {
+    if (filters.showActive && !user.active) return false;
+    if (filters.role !== 'all' && user.role !== filters.role) return false;
+    return true;
+  });
+});
+
+// Derived computation from other computed values
+const activeAdminCount = computed(() => filteredUsers().filter((user) => user.role === 'admin' && user.active).length);
+
+// Performance-critical computation with complex logic
+const userStatistics = computed(() => {
+  const users = tree.$.users();
+
+  return {
+    total: users.length,
+    active: users.filter((u) => u.active).length,
+    admins: users.filter((u) => u.role === 'admin').length,
+    averageNameLength: users.reduce((acc, u) => acc + u.name.length, 0) / users.length,
+  };
+});
+
+// Dynamic computed functions (factory pattern)
+const userById = (id: string) => computed(() => tree.$.users().find((user) => user.id === id));
+
+// Usage in effects
+effect(() => {
+  console.log(`Filtered users: ${filteredUsers().length}`);
+  console.log(`Statistics:`, userStatistics());
+});
+
+// Best Practices:
+// 1. Use computed() for derived state that depends on signals
+// 2. Keep computations pure - no side effects
+// 3. Leverage automatic memoization for expensive operations
+// 4. Chain computed values for complex transformations
+// 5. Use factory functions for parameterized computations
+```
+
+### Performance optimization with memoization
+
+Computed values become even more powerful with the built-in memoization enhancer:
+
+```typescript
+import { signalTree, memoization } from '@signaltree/core';
+
+const tree = signalTree({
+  items: Array.from({ length: 10000 }, (_, i) => ({
+    id: i,
+    value: Math.random(),
+    category: `cat-${i % 10}`,
+  })),
+}).with(memoization());
+
+// Expensive computation - automatically cached by memoization enhancer
+const expensiveComputation = computed(() => {
+  return tree.$.items()
+    .filter((item) => item.value > 0.5)
+    .reduce((acc, item) => acc + Math.sin(item.value * Math.PI), 0);
+});
+
+// The computation only runs when tree.$.items() actually changes
+// Subsequent calls return cached result
+```
+
+### Debugging with Redux DevTools
+
+SignalTree integrates seamlessly with Redux DevTools for time-travel debugging and state inspection.
+
+**Basic Usage:**
+
+```typescript
+import { signalTree, devTools } from '@signaltree/core';
+
+const tree = signalTree({ count: 0 }).with(devTools({ name: 'Counter' }));
+```
+
+**Single Instance Mode:**
+
+When using multiple independent stores (e.g., feature modules), you can group them under a single Redux DevTools instance to avoid cluttering the connection list. This is particularly useful for large applications with many lazy-loaded stores.
+
+```typescript
+const DEVTOOLS_GROUP_ID = 'my-app-production';
+const DEVTOOLS_GROUP_NAME = 'My App SignalTree';
+
+// Store 1
+const materialsTree = signalTree(materialsState).with(
+  devTools({
+    treeName: 'Materials',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
     },
   })
 );
 
-// Development warnings will appear in console
-// Production builds get no-op functions (0 overhead)
+// Store 2
+const ordersTree = signalTree(ordersState).with(
+  devTools({
+    treeName: 'Orders',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
+    },
+  })
+);
 ```
 
-**Development Features:**
+Both stores will appear as branches under the same "My App SignalTree" instance in Redux DevTools.
+
+### Advanced usage (full state tree)
 
 ```typescript
-import { getPerformanceMetrics, getHotPaths, checkMemoryLeaks } from '@signaltree/guardrails';
-
-// Get detailed performance metrics
-const metrics = getPerformanceMetrics();
-console.log('Update time:', metrics.avgUpdateTime);
-console.log('Signal count:', metrics.totalSignals);
-
-// Identify hot paths
-const hotPaths = getHotPaths();
-console.log('Most accessed signals:', hotPaths);
-
-// Check for memory leaks
-const leaks = checkMemoryLeaks();
-if (leaks.length > 0) {
-  console.warn('Potential memory leaks:', leaks);
+interface AppState {
+  auth: {
+    user: User | null;
+    token: string | null;
+    isAuthenticated: boolean;
+  };
+  data: {
+    users: User[];
+    posts: Post[];
+    cache: Record<string, unknown>;
+  };
+  ui: {
+    theme: 'light' | 'dark';
+    sidebar: {
+      open: boolean;
+      width: number;
+    };
+    notifications: Notification[];
+  };
 }
+
+const tree = signalTree<AppState>({
+  auth: {
+    user: null,
+    token: null,
+    isAuthenticated: false,
+  },
+  data: {
+    users: [],
+    posts: [],
+    cache: {},
+  },
+  ui: {
+    theme: 'light',
+    sidebar: { open: true, width: 250 },
+    notifications: [],
+  },
+});
+
+// Complex updates with type safety
+tree((state) => ({
+  auth: {
+    ...state.auth,
+    user: { id: '1', name: 'John' },
+    isAuthenticated: true,
+  },
+  ui: {
+    ...state.ui,
+    notifications: [...state.ui.notifications, { id: '1', message: 'Welcome!', type: 'success' }],
+  },
+}));
+
+// Get entire state as plain object
+const currentState = tree();
+console.log('Current app state:', currentState);
 ```
 
-**Conditional Exports (Zero Production Overhead):**
+## Core features
 
-```json
-{
-  "exports": {
-    ".": {
-      "development": "./dist/index.js",
-      "production": "./dist/noop.js"
-    }
-  }
-}
-```
+### 1) Hierarchical signal trees
 
-In production builds, all guardrails functions become no-ops with zero runtime cost.
-
-**When to use:**
-
-- During active development
-- Performance optimization phase
-- Debugging state management issues
-- Team onboarding and code reviews
-- CI/CD performance regression detection
-
-**Learn more:** [npm package](https://www.npmjs.com/package/@signaltree/guardrails)
-
----
-
-### 🎯 @signaltree/callable-syntax
-
-**Build-time transform for callable signal syntax**
-
-A TypeScript transformer that enables callable syntax sugar for setting signal values. This is **purely a developer experience enhancement** with zero runtime overhead.
-
-```bash
-npm install --save-dev @signaltree/callable-syntax
-```
-
-**Features:**
-
-- 🍬 Syntactic sugar for signal updates
-- ⚡ Zero runtime overhead (build-time transform)
-- ✅ Full TypeScript type safety
-- 🔧 Works with any build tool (Rollup, Webpack, esbuild, etc.)
-- 📝 Optional - use direct `.set/.update` if preferred
-
-**Syntax Transformation:**
+Create deeply nested reactive state with automatic type inference:
 
 ```typescript
-// With callable-syntax transform
-tree.$.name('Jane'); // Transformed to: tree.$.name.set('Jane')
-tree.$.count((n) => n + 1); // Transformed to: tree.$.count.update((n) => n + 1)
+const tree = signalTree({
+  user: { name: '', email: '' },
+  settings: { theme: 'dark', notifications: true },
+  todos: [] as Todo[],
+});
 
-// Reading always works directly (no transform needed)
-const name = tree.$.name(); // Direct Angular signal API
+// Access nested signals with full type safety
+tree.$.user.name(); // string signal
+tree.$.settings.theme.set('light'); // type-checked value
+tree.$.todos.update((todos) => [...todos, newTodo]); // array operations
 ```
 
-**Setup (tsconfig.json):**
+### 2) TypeScript inference
 
-```json
-{
-  "compilerOptions": {
-    "plugins": [{ "transform": "@signaltree/callable-syntax" }]
+SignalTree provides complete type inference without manual typing:
+
+```typescript
+// Automatic inference from initial state
+const tree = signalTree({
+  count: 0, // Inferred as WritableSignal<number>
+  name: 'John', // Inferred as WritableSignal<string>
+  active: true, // Inferred as WritableSignal<boolean>
+  items: [] as Item[], // Inferred as WritableSignal<Item[]>
+  config: {
+    theme: 'dark' as const, // Inferred as WritableSignal<'dark'>
+    settings: {
+      nested: true, // Deep nesting maintained
+    },
+  },
+});
+
+// Type-safe access and updates
+tree.$.count.set(5); // ✅ number
+tree.$.count.set('invalid'); // ❌ Type error
+tree.$.config.theme.set('light'); // ❌ Type error ('dark' const)
+tree.$.config.settings.nested.set(false); // ✅ boolean
+```
+
+### 3) Manual state management
+
+Core provides basic state updates. For advanced entity management, use the built-in `entities` enhancer:
+
+```typescript
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  active: boolean;
+}
+
+const tree = signalTree({
+  users: [] as User[],
+});
+
+// Entity CRUD operations using core methods
+function addUser(user: User) {
+  tree.$.users.update((users) => [...users, user]);
+}
+
+function updateUser(id: string, updates: Partial<User>) {
+  tree.$.users.update((users) => users.map((user) => (user.id === id ? { ...user, ...updates } : user)));
+}
+
+function removeUser(id: string) {
+  tree.$.users.update((users) => users.filter((user) => user.id !== id));
+}
+
+// Manual queries using computed signals
+const userById = (id: string) => computed(() => tree.$.users().find((user) => user.id === id));
+const activeUsers = computed(() => tree.$.users().filter((user) => user.active));
+```
+
+### 4) Manual async state management
+
+Core provides basic state updates. For advanced async helpers, use the built-in async helpers (`createAsyncOperation`, `trackAsync`):
+
+```typescript
+const tree = signalTree({
+  users: [] as User[],
+  loading: false,
+  error: null as string | null,
+});
+
+// Manual async operation management
+async function loadUsers() {
+  tree.$.loading.set(true);
+  tree.$.error.set(null);
+
+  try {
+    const users = await api.getUsers();
+    tree.$.users.set(users);
+  } catch (error) {
+    tree.$.error.set(error instanceof Error ? error.message : 'Unknown error');
+  } finally {
+    tree.$.loading.set(false);
   }
+}
+
+// Usage in component
+@Component({
+  template: `
+    @if (tree.$.loading()) {
+    <div>Loading...</div>
+    } @else if (tree.$.error()) {
+    <div class="error">{{ tree.$.error() }}</div>
+    } @else { @for (user of tree.$.users(); track user.id) {
+    <user-card [user]="user" />
+    } }
+    <button (click)="loadUsers()">Refresh</button>
+  `,
+})
+class UsersComponent {
+  tree = tree;
+  loadUsers = loadUsers;
 }
 ```
 
-**Setup (Rollup):**
+### Reactive computations with computed()
 
-```javascript
-import { callableSyntaxTransform } from '@signaltree/callable-syntax/rollup';
+SignalTree works seamlessly with Angular's `computed()` for creating efficient reactive computations. These computations automatically update when their dependencies change and are memoized for optimal performance.
 
-export default {
-  plugins: [callableSyntaxTransform()],
-};
+```typescript
+import { computed, effect } from '@angular/core';
+import { signalTree } from '@signaltree/core';
+
+const tree = signalTree({
+  users: [
+    { id: '1', name: 'Alice', active: true, role: 'admin' },
+    { id: '2', name: 'Bob', active: false, role: 'user' },
+    { id: '3', name: 'Charlie', active: true, role: 'user' },
+  ],
+  filters: {
+    showActive: true,
+    role: 'all' as 'all' | 'admin' | 'user',
+  },
+});
+
+// Basic computed - automatically memoized
+const userCount = computed(() => tree.$.users().length);
+
+// Complex filtering computation
+const filteredUsers = computed(() => {
+  const users = tree.$.users();
+  const filters = tree.$.filters();
+
+  return users.filter((user) => {
+    if (filters.showActive && !user.active) return false;
+    if (filters.role !== 'all' && user.role !== filters.role) return false;
+    return true;
+  });
+});
+
+// Derived computation from other computed values
+const activeAdminCount = computed(() => filteredUsers().filter((user) => user.role === 'admin' && user.active).length);
+
+// Performance-critical computation with complex logic
+const userStatistics = computed(() => {
+  const users = tree.$.users();
+
+  return {
+    total: users.length,
+    active: users.filter((u) => u.active).length,
+    admins: users.filter((u) => u.role === 'admin').length,
+    averageNameLength: users.reduce((acc, u) => acc + u.name.length, 0) / users.length,
+  };
+});
+
+// Dynamic computed functions (factory pattern)
+const userById = (id: string) => computed(() => tree.$.users().find((user) => user.id === id));
+
+// Usage in effects
+effect(() => {
+  console.log(`Filtered users: ${filteredUsers().length}`);
+  console.log(`Statistics:`, userStatistics());
+});
+
+// Best Practices:
+// 1. Use computed() for derived state that depends on signals
+// 2. Keep computations pure - no side effects
+// 3. Leverage automatic memoization for expensive operations
+// 4. Chain computed values for complex transformations
+// 5. Use factory functions for parameterized computations
 ```
 
-**Important Notes:**
+### Performance optimization with memoization
 
-- **Optional:** You can always use direct `.set(value)` or `.update(fn)` syntax
-- **Build-time only:** No runtime code is added to your bundle
-- **Function-valued leaves:** When storing functions, use `.set(fn)` directly
-- **Type-safe:** Full TypeScript support via module augmentation
+Computed values become even more powerful with the built-in memoization enhancer:
 
-**When to use:**
+```typescript
+import { signalTree, memoization } from '@signaltree/core';
 
-- Prefer shorter, more concise syntax
-- Team convention favors callable style
-- Migrating from other signal libraries with similar syntax
-- Want familiar DX without runtime overhead
+const tree = signalTree({
+  items: Array.from({ length: 10000 }, (_, i) => ({
+    id: i,
+    value: Math.random(),
+    category: `cat-${i % 10}`,
+  })),
+}).with(memoization());
 
-**When to skip:**
+// Expensive computation - automatically cached by memoization enhancer
+const expensiveComputation = computed(() => {
+  return tree.$.items()
+    .filter((item) => item.value > 0.5)
+    .reduce((acc, item) => acc + Math.sin(item.value * Math.PI), 0);
+});
 
-- Team prefers explicit `.set/.update` syntax
-- Build pipeline doesn't support transformers
-- Storing functions as signal values (use direct `.set`)
+// The computation only runs when tree.$.items() actually changes
+// Subsequent calls return cached result
+```
 
-**Learn more:** [npm package](https://www.npmjs.com/package/@signaltree/callable-syntax)
+### Debugging with Redux DevTools
 
----
+SignalTree integrates seamlessly with Redux DevTools for time-travel debugging and state inspection.
+
+**Basic Usage:**
+
+```typescript
+import { signalTree, devTools } from '@signaltree/core';
+
+const tree = signalTree({ count: 0 }).with(devTools({ name: 'Counter' }));
+```
+
+**Single Instance Mode:**
+
+When using multiple independent stores (e.g., feature modules), you can group them under a single Redux DevTools instance to avoid cluttering the connection list. This is particularly useful for large applications with many lazy-loaded stores.
+
+```typescript
+const DEVTOOLS_GROUP_ID = 'my-app-production';
+const DEVTOOLS_GROUP_NAME = 'My App SignalTree';
+
+// Store 1
+const materialsTree = signalTree(materialsState).with(
+  devTools({
+    treeName: 'Materials',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
+    },
+  })
+);
+
+// Store 2
+const ordersTree = signalTree(ordersState).with(
+  devTools({
+    treeName: 'Orders',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
+    },
+  })
+);
+```
+
+Both stores will appear as branches under the same "My App SignalTree" instance in Redux DevTools.
+
+### Advanced usage (full state tree)
+
+```typescript
+interface AppState {
+  auth: {
+    user: User | null;
+    token: string | null;
+    isAuthenticated: boolean;
+  };
+  data: {
+    users: User[];
+    posts: Post[];
+    cache: Record<string, unknown>;
+  };
+  ui: {
+    theme: 'light' | 'dark';
+    sidebar: {
+      open: boolean;
+      width: number;
+    };
+    notifications: Notification[];
+  };
+}
+
+const tree = signalTree<AppState>({
+  auth: {
+    user: null,
+    token: null,
+    isAuthenticated: false,
+  },
+  data: {
+    users: [],
+    posts: [],
+    cache: {},
+  },
+  ui: {
+    theme: 'light',
+    sidebar: { open: true, width: 250 },
+    notifications: [],
+  },
+});
+
+// Complex updates with type safety
+tree((state) => ({
+  auth: {
+    ...state.auth,
+    user: { id: '1', name: 'John' },
+    isAuthenticated: true,
+  },
+  ui: {
+    ...state.ui,
+    notifications: [...state.ui.notifications, { id: '1', message: 'Welcome!', type: 'success' }],
+  },
+}));
+
+// Get entire state as plain object
+const currentState = tree();
+console.log('Current app state:', currentState);
+```
+
+## Core features
+
+### 1) Hierarchical signal trees
+
+Create deeply nested reactive state with automatic type inference:
+
+```typescript
+const tree = signalTree({
+  user: { name: '', email: '' },
+  settings: { theme: 'dark', notifications: true },
+  todos: [] as Todo[],
+});
+
+// Access nested signals with full type safety
+tree.$.user.name(); // string signal
+tree.$.settings.theme.set('light'); // type-checked value
+tree.$.todos.update((todos) => [...todos, newTodo]); // array operations
+```
+
+### 2) TypeScript inference
+
+SignalTree provides complete type inference without manual typing:
+
+```typescript
+// Automatic inference from initial state
+const tree = signalTree({
+  count: 0, // Inferred as WritableSignal<number>
+  name: 'John', // Inferred as WritableSignal<string>
+  active: true, // Inferred as WritableSignal<boolean>
+  items: [] as Item[], // Inferred as WritableSignal<Item[]>
+  config: {
+    theme: 'dark' as const, // Inferred as WritableSignal<'dark'>
+    settings: {
+      nested: true, // Deep nesting maintained
+    },
+  },
+});
+
+// Type-safe access and updates
+tree.$.count.set(5); // ✅ number
+tree.$.count.set('invalid'); // ❌ Type error
+tree.$.config.theme.set('light'); // ❌ Type error ('dark' const)
+tree.$.config.settings.nested.set(false); // ✅ boolean
+```
+
+### 3) Manual state management
+
+Core provides basic state updates. For advanced entity management, use the built-in `entities` enhancer:
+
+```typescript
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  active: boolean;
+}
+
+const tree = signalTree({
+  users: [] as User[],
+});
+
+// Entity CRUD operations using core methods
+function addUser(user: User) {
+  tree.$.users.update((users) => [...users, user]);
+}
+
+function updateUser(id: string, updates: Partial<User>) {
+  tree.$.users.update((users) => users.map((user) => (user.id === id ? { ...user, ...updates } : user)));
+}
+
+function removeUser(id: string) {
+  tree.$.users.update((users) => users.filter((user) => user.id !== id));
+}
+
+// Manual queries using computed signals
+const userById = (id: string) => computed(() => tree.$.users().find((user) => user.id === id));
+const activeUsers = computed(() => tree.$.users().filter((user) => user.active));
+```
+
+### 4) Manual async state management
+
+Core provides basic state updates. For advanced async helpers, use the built-in async helpers (`createAsyncOperation`, `trackAsync`):
+
+```typescript
+const tree = signalTree({
+  users: [] as User[],
+  loading: false,
+  error: null as string | null,
+});
+
+// Manual async operation management
+async function loadUsers() {
+  tree.$.loading.set(true);
+  tree.$.error.set(null);
+
+  try {
+    const users = await api.getUsers();
+    tree.$.users.set(users);
+  } catch (error) {
+    tree.$.error.set(error instanceof Error ? error.message : 'Unknown error');
+  } finally {
+    tree.$.loading.set(false);
+  }
+}
+
+// Usage in component
+@Component({
+  template: `
+    @if (tree.$.loading()) {
+    <div>Loading...</div>
+    } @else if (tree.$.error()) {
+    <div class="error">{{ tree.$.error() }}</div>
+    } @else { @for (user of tree.$.users(); track user.id) {
+    <user-card [user]="user" />
+    } }
+    <button (click)="loadUsers()">Refresh</button>
+  `,
+})
+class UsersComponent {
+  tree = tree;
+  loadUsers = loadUsers;
+}
+```
+
+### Reactive computations with computed()
+
+SignalTree works seamlessly with Angular's `computed()` for creating efficient reactive computations. These computations automatically update when their dependencies change and are memoized for optimal performance.
+
+```typescript
+import { computed, effect } from '@angular/core';
+import { signalTree } from '@signaltree/core';
+
+const tree = signalTree({
+  users: [
+    { id: '1', name: 'Alice', active: true, role: 'admin' },
+    { id: '2', name: 'Bob', active: false, role: 'user' },
+    { id: '3', name: 'Charlie', active: true, role: 'user' },
+  ],
+  filters: {
+    showActive: true,
+    role: 'all' as 'all' | 'admin' | 'user',
+  },
+});
+
+// Basic computed - automatically memoized
+const userCount = computed(() => tree.$.users().length);
+
+// Complex filtering computation
+const filteredUsers = computed(() => {
+  const users = tree.$.users();
+  const filters = tree.$.filters();
+
+  return users.filter((user) => {
+    if (filters.showActive && !user.active) return false;
+    if (filters.role !== 'all' && user.role !== filters.role) return false;
+    return true;
+  });
+});
+
+// Derived computation from other computed values
+const activeAdminCount = computed(() => filteredUsers().filter((user) => user.role === 'admin' && user.active).length);
+
+// Performance-critical computation with complex logic
+const userStatistics = computed(() => {
+  const users = tree.$.users();
+
+  return {
+    total: users.length,
+    active: users.filter((u) => u.active).length,
+    admins: users.filter((u) => u.role === 'admin').length,
+    averageNameLength: users.reduce((acc, u) => acc + u.name.length, 0) / users.length,
+  };
+});
+
+// Dynamic computed functions (factory pattern)
+const userById = (id: string) => computed(() => tree.$.users().find((user) => user.id === id));
+
+// Usage in effects
+effect(() => {
+  console.log(`Filtered users: ${filteredUsers().length}`);
+  console.log(`Statistics:`, userStatistics());
+});
+
+// Best Practices:
+// 1. Use computed() for derived state that depends on signals
+// 2. Keep computations pure - no side effects
+// 3. Leverage automatic memoization for expensive operations
+// 4. Chain computed values for complex transformations
+// 5. Use factory functions for parameterized computations
+```
+
+### Performance optimization with memoization
+
+Computed values become even more powerful with the built-in memoization enhancer:
+
+```typescript
+import { signalTree, memoization } from '@signaltree/core';
+
+const tree = signalTree({
+  items: Array.from({ length: 10000 }, (_, i) => ({
+    id: i,
+    value: Math.random(),
+    category: `cat-${i % 10}`,
+  })),
+}).with(memoization());
+
+// Expensive computation - automatically cached by memoization enhancer
+const expensiveComputation = computed(() => {
+  return tree.$.items()
+    .filter((item) => item.value > 0.5)
+    .reduce((acc, item) => acc + Math.sin(item.value * Math.PI), 0);
+});
+
+// The computation only runs when tree.$.items() actually changes
+// Subsequent calls return cached result
+```
+
+### Debugging with Redux DevTools
+
+SignalTree integrates seamlessly with Redux DevTools for time-travel debugging and state inspection.
+
+**Basic Usage:**
+
+```typescript
+import { signalTree, devTools } from '@signaltree/core';
+
+const tree = signalTree({ count: 0 }).with(devTools({ name: 'Counter' }));
+```
+
+**Single Instance Mode:**
+
+When using multiple independent stores (e.g., feature modules), you can group them under a single Redux DevTools instance to avoid cluttering the connection list. This is particularly useful for large applications with many lazy-loaded stores.
+
+```typescript
+const DEVTOOLS_GROUP_ID = 'my-app-production';
+const DEVTOOLS_GROUP_NAME = 'My App SignalTree';
+
+// Store 1
+const materialsTree = signalTree(materialsState).with(
+  devTools({
+    treeName: 'Materials',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
+    },
+  })
+);
+
+// Store 2
+const ordersTree = signalTree(ordersState).with(
+  devTools({
+    treeName: 'Orders',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
+    },
+  })
+);
+```
+
+Both stores will appear as branches under the same "My App SignalTree" instance in Redux DevTools.
+
+### Advanced usage (full state tree)
+
+```typescript
+interface AppState {
+  auth: {
+    user: User | null;
+    token: string | null;
+    isAuthenticated: boolean;
+  };
+  data: {
+    users: User[];
+    posts: Post[];
+    cache: Record<string, unknown>;
+  };
+  ui: {
+    theme: 'light' | 'dark';
+    sidebar: {
+      open: boolean;
+      width: number;
+    };
+    notifications: Notification[];
+  };
+}
+
+const tree = signalTree<AppState>({
+  auth: {
+    user: null,
+    token: null,
+    isAuthenticated: false,
+  },
+  data: {
+    users: [],
+    posts: [],
+    cache: {},
+  },
+  ui: {
+    theme: 'light',
+    sidebar: { open: true, width: 250 },
+    notifications: [],
+  },
+});
+
+// Complex updates with type safety
+tree((state) => ({
+  auth: {
+    ...state.auth,
+    user: { id: '1', name: 'John' },
+    isAuthenticated: true,
+  },
+  ui: {
+    ...state.ui,
+    notifications: [...state.ui.notifications, { id: '1', message: 'Welcome!', type: 'success' }],
+  },
+}));
+
+// Get entire state as plain object
+const currentState = tree();
+console.log('Current app state:', currentState);
+```
+
+## Core features
+
+### 1) Hierarchical signal trees
+
+Create deeply nested reactive state with automatic type inference:
+
+```typescript
+const tree = signalTree({
+  user: { name: '', email: '' },
+  settings: { theme: 'dark', notifications: true },
+  todos: [] as Todo[],
+});
+
+// Access nested signals with full type safety
+tree.$.user.name(); // string signal
+tree.$.settings.theme.set('light'); // type-checked value
+tree.$.todos.update((todos) => [...todos, newTodo]); // array operations
+```
+
+### 2) TypeScript inference
+
+SignalTree provides complete type inference without manual typing:
+
+```typescript
+// Automatic inference from initial state
+const tree = signalTree({
+  count: 0, // Inferred as WritableSignal<number>
+  name: 'John', // Inferred as WritableSignal<string>
+  active: true, // Inferred as WritableSignal<boolean>
+  items: [] as Item[], // Inferred as WritableSignal<Item[]>
+  config: {
+    theme: 'dark' as const, // Inferred as WritableSignal<'dark'>
+    settings: {
+      nested: true, // Deep nesting maintained
+    },
+  },
+});
+
+// Type-safe access and updates
+tree.$.count.set(5); // ✅ number
+tree.$.count.set('invalid'); // ❌ Type error
+tree.$.config.theme.set('light'); // ❌ Type error ('dark' const)
+tree.$.config.settings.nested.set(false); // ✅ boolean
+```
+
+### 3) Manual state management
+
+Core provides basic state updates. For advanced entity management, use the built-in `entities` enhancer:
+
+```typescript
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  active: boolean;
+}
+
+const tree = signalTree({
+  users: [] as User[],
+});
+
+// Entity CRUD operations using core methods
+function addUser(user: User) {
+  tree.$.users.update((users) => [...users, user]);
+}
+
+function updateUser(id: string, updates: Partial<User>) {
+  tree.$.users.update((users) => users.map((user) => (user.id === id ? { ...user, ...updates } : user)));
+}
+
+function removeUser(id: string) {
+  tree.$.users.update((users) => users.filter((user) => user.id !== id));
+}
+
+// Manual queries using computed signals
+const userById = (id: string) => computed(() => tree.$.users().find((user) => user.id === id));
+const activeUsers = computed(() => tree.$.users().filter((user) => user.active));
+```
+
+### 4) Manual async state management
+
+Core provides basic state updates. For advanced async helpers, use the built-in async helpers (`createAsyncOperation`, `trackAsync`):
+
+```typescript
+const tree = signalTree({
+  users: [] as User[],
+  loading: false,
+  error: null as string | null,
+});
+
+// Manual async operation management
+async function loadUsers() {
+  tree.$.loading.set(true);
+  tree.$.error.set(null);
+
+  try {
+    const users = await api.getUsers();
+    tree.$.users.set(users);
+  } catch (error) {
+    tree.$.error.set(error instanceof Error ? error.message : 'Unknown error');
+  } finally {
+    tree.$.loading.set(false);
+  }
+}
+
+// Usage in component
+@Component({
+  template: `
+    @if (tree.$.loading()) {
+    <div>Loading...</div>
+    } @else if (tree.$.error()) {
+    <div class="error">{{ tree.$.error() }}</div>
+    } @else { @for (user of tree.$.users(); track user.id) {
+    <user-card [user]="user" />
+    } }
+    <button (click)="loadUsers()">Refresh</button>
+  `,
+})
+class UsersComponent {
+  tree = tree;
+  loadUsers = loadUsers;
+}
+```
+
+### Reactive computations with computed()
+
+SignalTree works seamlessly with Angular's `computed()` for creating efficient reactive computations. These computations automatically update when their dependencies change and are memoized for optimal performance.
+
+```typescript
+import { computed, effect } from '@angular/core';
+import { signalTree } from '@signaltree/core';
+
+const tree = signalTree({
+  users: [
+    { id: '1', name: 'Alice', active: true, role: 'admin' },
+    { id: '2', name: 'Bob', active: false, role: 'user' },
+    { id: '3', name: 'Charlie', active: true, role: 'user' },
+  ],
+  filters: {
+    showActive: true,
+    role: 'all' as 'all' | 'admin' | 'user',
+  },
+});
+
+// Basic computed - automatically memoized
+const userCount = computed(() => tree.$.users().length);
+
+// Complex filtering computation
+const filteredUsers = computed(() => {
+  const users = tree.$.users();
+  const filters = tree.$.filters();
+
+  return users.filter((user) => {
+    if (filters.showActive && !user.active) return false;
+    if (filters.role !== 'all' && user.role !== filters.role) return false;
+    return true;
+  });
+});
+
+// Derived computation from other computed values
+const activeAdminCount = computed(() => filteredUsers().filter((user) => user.role === 'admin' && user.active).length);
+
+// Performance-critical computation with complex logic
+const userStatistics = computed(() => {
+  const users = tree.$.users();
+
+  return {
+    total: users.length,
+    active: users.filter((u) => u.active).length,
+    admins: users.filter((u) => u.role === 'admin').length,
+    averageNameLength: users.reduce((acc, u) => acc + u.name.length, 0) / users.length,
+  };
+});
+
+// Dynamic computed functions (factory pattern)
+const userById = (id: string) => computed(() => tree.$.users().find((user) => user.id === id));
+
+// Usage in effects
+effect(() => {
+  console.log(`Filtered users: ${filteredUsers().length}`);
+  console.log(`Statistics:`, userStatistics());
+});
+
+// Best Practices:
+// 1. Use computed() for derived state that depends on signals
+// 2. Keep computations pure - no side effects
+// 3. Leverage automatic memoization for expensive operations
+// 4. Chain computed values for complex transformations
+// 5. Use factory functions for parameterized computations
+```
+
+### Performance optimization with memoization
+
+Computed values become even more powerful with the built-in memoization enhancer:
+
+```typescript
+import { signalTree, memoization } from '@signaltree/core';
+
+const tree = signalTree({
+  items: Array.from({ length: 10000 }, (_, i) => ({
+    id: i,
+    value: Math.random(),
+    category: `cat-${i % 10}`,
+  })),
+}).with(memoization());
+
+// Expensive computation - automatically cached by memoization enhancer
+const expensiveComputation = computed(() => {
+  return tree.$.items()
+    .filter((item) => item.value > 0.5)
+    .reduce((acc, item) => acc + Math.sin(item.value * Math.PI), 0);
+});
+
+// The computation only runs when tree.$.items() actually changes
+// Subsequent calls return cached result
+```
+
+### Debugging with Redux DevTools
+
+SignalTree integrates seamlessly with Redux DevTools for time-travel debugging and state inspection.
+
+**Basic Usage:**
+
+```typescript
+import { signalTree, devTools } from '@signaltree/core';
+
+const tree = signalTree({ count: 0 }).with(devTools({ name: 'Counter' }));
+```
+
+**Single Instance Mode:**
+
+When using multiple independent stores (e.g., feature modules), you can group them under a single Redux DevTools instance to avoid cluttering the connection list. This is particularly useful for large applications with many lazy-loaded stores.
+
+```typescript
+const DEVTOOLS_GROUP_ID = 'my-app-production';
+const DEVTOOLS_GROUP_NAME = 'My App SignalTree';
+
+// Store 1
+const materialsTree = signalTree(materialsState).with(
+  devTools({
+    treeName: 'Materials',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
+    },
+  })
+);
+
+// Store 2
+const ordersTree = signalTree(ordersState).with(
+  devTools({
+    treeName: 'Orders',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
+    },
+  })
+);
+```
+
+Both stores will appear as branches under the same "My App SignalTree" instance in Redux DevTools.
+
+### Advanced usage (full state tree)
+
+```typescript
+interface AppState {
+  auth: {
+    user: User | null;
+    token: string | null;
+    isAuthenticated: boolean;
+  };
+  data: {
+    users: User[];
+    posts: Post[];
+    cache: Record<string, unknown>;
+  };
+  ui: {
+    theme: 'light' | 'dark';
+    sidebar: {
+      open: boolean;
+      width: number;
+    };
+    notifications: Notification[];
+  };
+}
+
+const tree = signalTree<AppState>({
+  auth: {
+    user: null,
+    token: null,
+    isAuthenticated: false,
+  },
+  data: {
+    users: [],
+    posts: [],
+    cache: {},
+  },
+  ui: {
+    theme: 'light',
+    sidebar: { open: true, width: 250 },
+    notifications: [],
+  },
+});
+
+// Complex updates with type safety
+tree((state) => ({
+  auth: {
+    ...state.auth,
+    user: { id: '1', name: 'John' },
+    isAuthenticated: true,
+  },
+  ui: {
+    ...state.ui,
+    notifications: [...state.ui.notifications, { id: '1', message: 'Welcome!', type: 'success' }],
+  },
+}));
+
+// Get entire state as plain object
+const currentState = tree();
+console.log('Current app state:', currentState);
+```
+
+## Core features
+
+### 1) Hierarchical signal trees
+
+Create deeply nested reactive state with automatic type inference:
+
+```typescript
+const tree = signalTree({
+  user: { name: '', email: '' },
+  settings: { theme: 'dark', notifications: true },
+  todos: [] as Todo[],
+});
+
+// Access nested signals with full type safety
+tree.$.user.name(); // string signal
+tree.$.settings.theme.set('light'); // type-checked value
+tree.$.todos.update((todos) => [...todos, newTodo]); // array operations
+```
+
+### 2) TypeScript inference
+
+SignalTree provides complete type inference without manual typing:
+
+```typescript
+// Automatic inference from initial state
+const tree = signalTree({
+  count: 0, // Inferred as WritableSignal<number>
+  name: 'John', // Inferred as WritableSignal<string>
+  active: true, // Inferred as WritableSignal<boolean>
+  items: [] as Item[], // Inferred as WritableSignal<Item[]>
+  config: {
+    theme: 'dark' as const, // Inferred as WritableSignal<'dark'>
+    settings: {
+      nested: true, // Deep nesting maintained
+    },
+  },
+});
+
+// Type-safe access and updates
+tree.$.count.set(5); // ✅ number
+tree.$.count.set('invalid'); // ❌ Type error
+tree.$.config.theme.set('light'); // ❌ Type error ('dark' const)
+tree.$.config.settings.nested.set(false); // ✅ boolean
+```
+
+### 3) Manual state management
+
+Core provides basic state updates. For advanced entity management, use the built-in `entities` enhancer:
+
+```typescript
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  active: boolean;
+}
+
+const tree = signalTree({
+  users: [] as User[],
+});
+
+// Entity CRUD operations using core methods
+function addUser(user: User) {
+  tree.$.users.update((users) => [...users, user]);
+}
+
+function updateUser(id: string, updates: Partial<User>) {
+  tree.$.users.update((users) => users.map((user) => (user.id === id ? { ...user, ...updates } : user)));
+}
+
+function removeUser(id: string) {
+  tree.$.users.update((users) => users.filter((user) => user.id !== id));
+}
+
+// Manual queries using computed signals
+const userById = (id: string) => computed(() => tree.$.users().find((user) => user.id === id));
+const activeUsers = computed(() => tree.$.users().filter((user) => user.active));
+```
+
+### 4) Manual async state management
+
+Core provides basic state updates. For advanced async helpers, use the built-in async helpers (`createAsyncOperation`, `trackAsync`):
+
+```typescript
+const tree = signalTree({
+  users: [] as User[],
+  loading: false,
+  error: null as string | null,
+});
+
+// Manual async operation management
+async function loadUsers() {
+  tree.$.loading.set(true);
+  tree.$.error.set(null);
+
+  try {
+    const users = await api.getUsers();
+    tree.$.users.set(users);
+  } catch (error) {
+    tree.$.error.set(error instanceof Error ? error.message : 'Unknown error');
+  } finally {
+    tree.$.loading.set(false);
+  }
+}
+
+// Usage in component
+@Component({
+  template: `
+    @if (tree.$.loading()) {
+    <div>Loading...</div>
+    } @else if (tree.$.error()) {
+    <div class="error">{{ tree.$.error() }}</div>
+    } @else { @for (user of tree.$.users(); track user.id) {
+    <user-card [user]="user" />
+    } }
+    <button (click)="loadUsers()">Refresh</button>
+  `,
+})
+class UsersComponent {
+  tree = tree;
+  loadUsers = loadUsers;
+}
+```
+
+### Reactive computations with computed()
+
+SignalTree works seamlessly with Angular's `computed()` for creating efficient reactive computations. These computations automatically update when their dependencies change and are memoized for optimal performance.
+
+```typescript
+import { computed, effect } from '@angular/core';
+import { signalTree } from '@signaltree/core';
+
+const tree = signalTree({
+  users: [
+    { id: '1', name: 'Alice', active: true, role: 'admin' },
+    { id: '2', name: 'Bob', active: false, role: 'user' },
+    { id: '3', name: 'Charlie', active: true, role: 'user' },
+  ],
+  filters: {
+    showActive: true,
+    role: 'all' as 'all' | 'admin' | 'user',
+  },
+});
+
+// Basic computed - automatically memoized
+const userCount = computed(() => tree.$.users().length);
+
+// Complex filtering computation
+const filteredUsers = computed(() => {
+  const users = tree.$.users();
+  const filters = tree.$.filters();
+
+  return users.filter((user) => {
+    if (filters.showActive && !user.active) return false;
+    if (filters.role !== 'all' && user.role !== filters.role) return false;
+    return true;
+  });
+});
+
+// Derived computation from other computed values
+const activeAdminCount = computed(() => filteredUsers().filter((user) => user.role === 'admin' && user.active).length);
+
+// Performance-critical computation with complex logic
+const userStatistics = computed(() => {
+  const users = tree.$.users();
+
+  return {
+    total: users.length,
+    active: users.filter((u) => u.active).length,
+    admins: users.filter((u) => u.role === 'admin').length,
+    averageNameLength: users.reduce((acc, u) => acc + u.name.length, 0) / users.length,
+  };
+});
+
+// Dynamic computed functions (factory pattern)
+const userById = (id: string) => computed(() => tree.$.users().find((user) => user.id === id));
+
+// Usage in effects
+effect(() => {
+  console.log(`Filtered users: ${filteredUsers().length}`);
+  console.log(`Statistics:`, userStatistics());
+});
+
+// Best Practices:
+// 1. Use computed() for derived state that depends on signals
+// 2. Keep computations pure - no side effects
+// 3. Leverage automatic memoization for expensive operations
+// 4. Chain computed values for complex transformations
+// 5. Use factory functions for parameterized computations
+```
+
+### Performance optimization with memoization
+
+Computed values become even more powerful with the built-in memoization enhancer:
+
+```typescript
+import { signalTree, memoization } from '@signaltree/core';
+
+const tree = signalTree({
+  items: Array.from({ length: 10000 }, (_, i) => ({
+    id: i,
+    value: Math.random(),
+    category: `cat-${i % 10}`,
+  })),
+}).with(memoization());
+
+// Expensive computation - automatically cached by memoization enhancer
+const expensiveComputation = computed(() => {
+  return tree.$.items()
+    .filter((item) => item.value > 0.5)
+    .reduce((acc, item) => acc + Math.sin(item.value * Math.PI), 0);
+});
+
+// The computation only runs when tree.$.items() actually changes
+// Subsequent calls return cached result
+```
+
+### Debugging with Redux DevTools
+
+SignalTree integrates seamlessly with Redux DevTools for time-travel debugging and state inspection.
+
+**Basic Usage:**
+
+```typescript
+import { signalTree, devTools } from '@signaltree/core';
+
+const tree = signalTree({ count: 0 }).with(devTools({ name: 'Counter' }));
+```
+
+**Single Instance Mode:**
+
+When using multiple independent stores (e.g., feature modules), you can group them under a single Redux DevTools instance to avoid cluttering the connection list. This is particularly useful for large applications with many lazy-loaded stores.
+
+```typescript
+const DEVTOOLS_GROUP_ID = 'my-app-production';
+const DEVTOOLS_GROUP_NAME = 'My App SignalTree';
+
+// Store 1
+const materialsTree = signalTree(materialsState).with(
+  devTools({
+    treeName: 'Materials',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
+    },
+  })
+);
+
+// Store 2
+const ordersTree = signalTree(ordersState).with(
+  devTools({
+    treeName: 'Orders',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
+    },
+  })
+);
+```
+
+Both stores will appear as branches under the same "My App SignalTree" instance in Redux DevTools.
+
+### Advanced usage (full state tree)
+
+```typescript
+interface AppState {
+  auth: {
+    user: User | null;
+    token: string | null;
+    isAuthenticated: boolean;
+  };
+  data: {
+    users: User[];
+    posts: Post[];
+    cache: Record<string, unknown>;
+  };
+  ui: {
+    theme: 'light' | 'dark';
+    sidebar: {
+      open: boolean;
+      width: number;
+    };
+    notifications: Notification[];
+  };
+}
+
+const tree = signalTree<AppState>({
+  auth: {
+    user: null,
+    token: null,
+    isAuthenticated: false,
+  },
+  data: {
+    users: [],
+    posts: [],
+    cache: {},
+  },
+  ui: {
+    theme: 'light',
+    sidebar: { open: true, width: 250 },
+    notifications: [],
+  },
+});
+
+// Complex updates with type safety
+tree((state) => ({
+  auth: {
+    ...state.auth,
+    user: { id: '1', name: 'John' },
+    isAuthenticated: true,
+  },
+  ui: {
+    ...state.ui,
+    notifications: [...state.ui.notifications, { id: '1', message: 'Welcome!', type: 'success' }],
+  },
+}));
+
+// Get entire state as plain object
+const currentState = tree();
+console.log('Current app state:', currentState);
+```
+
+## Core features
+
+### 1) Hierarchical signal trees
+
+Create deeply nested reactive state with automatic type inference:
+
+```typescript
+const tree = signalTree({
+  user: { name: '', email: '' },
+  settings: { theme: 'dark', notifications: true },
+  todos: [] as Todo[],
+});
+
+// Access nested signals with full type safety
+tree.$.user.name(); // string signal
+tree.$.settings.theme.set('light'); // type-checked value
+tree.$.todos.update((todos) => [...todos, newTodo]); // array operations
+```
+
+### 2) TypeScript inference
+
+SignalTree provides complete type inference without manual typing:
+
+```typescript
+// Automatic inference from initial state
+const tree = signalTree({
+  count: 0, // Inferred as WritableSignal<number>
+  name: 'John', // Inferred as WritableSignal<string>
+  active: true, // Inferred as WritableSignal<boolean>
+  items: [] as Item[], // Inferred as WritableSignal<Item[]>
+  config: {
+    theme: 'dark' as const, // Inferred as WritableSignal<'dark'>
+    settings: {
+      nested: true, // Deep nesting maintained
+    },
+  },
+});
+
+// Type-safe access and updates
+tree.$.count.set(5); // ✅ number
+tree.$.count.set('invalid'); // ❌ Type error
+tree.$.config.theme.set('light'); // ❌ Type error ('dark' const)
+tree.$.config.settings.nested.set(false); // ✅ boolean
+```
+
+### 3) Manual state management
+
+Core provides basic state updates. For advanced entity management, use the built-in `entities` enhancer:
+
+```typescript
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  active: boolean;
+}
+
+const tree = signalTree({
+  users: [] as User[],
+});
+
+// Entity CRUD operations using core methods
+function addUser(user: User) {
+  tree.$.users.update((users) => [...users, user]);
+}
+
+function updateUser(id: string, updates: Partial<User>) {
+  tree.$.users.update((users) => users.map((user) => (user.id === id ? { ...user, ...updates } : user)));
+}
+
+function removeUser(id: string) {
+  tree.$.users.update((users) => users.filter((user) => user.id !== id));
+}
+
+// Manual queries using computed signals
+const userById = (id: string) => computed(() => tree.$.users().find((user) => user.id === id));
+const activeUsers = computed(() => tree.$.users().filter((user) => user.active));
+```
+
+### 4) Manual async state management
+
+Core provides basic state updates. For advanced async helpers, use the built-in async helpers (`createAsyncOperation`, `trackAsync`):
+
+```typescript
+const tree = signalTree({
+  users: [] as User[],
+  loading: false,
+  error: null as string | null,
+});
+
+// Manual async operation management
+async function loadUsers() {
+  tree.$.loading.set(true);
+  tree.$.error.set(null);
+
+  try {
+    const users = await api.getUsers();
+    tree.$.users.set(users);
+  } catch (error) {
+    tree.$.error.set(error instanceof Error ? error.message : 'Unknown error');
+  } finally {
+    tree.$.loading.set(false);
+  }
+}
+
+// Usage in component
+@Component({
+  template: `
+    @if (tree.$.loading()) {
+    <div>Loading...</div>
+    } @else if (tree.$.error()) {
+    <div class="error">{{ tree.$.error() }}</div>
+    } @else { @for (user of tree.$.users(); track user.id) {
+    <user-card [user]="user" />
+    } }
+    <button (click)="loadUsers()">Refresh</button>
+  `,
+})
+class UsersComponent {
+  tree = tree;
+  loadUsers = loadUsers;
+}
+```
+
+### Reactive computations with computed()
+
+SignalTree works seamlessly with Angular's `computed()` for creating efficient reactive computations. These computations automatically update when their dependencies change and are memoized for optimal performance.
+
+```typescript
+import { computed, effect } from '@angular/core';
+import { signalTree } from '@signaltree/core';
+
+const tree = signalTree({
+  users: [
+    { id: '1', name: 'Alice', active: true, role: 'admin' },
+    { id: '2', name: 'Bob', active: false, role: 'user' },
+    { id: '3', name: 'Charlie', active: true, role: 'user' },
+  ],
+  filters: {
+    showActive: true,
+    role: 'all' as 'all' | 'admin' | 'user',
+  },
+});
+
+// Basic computed - automatically memoized
+const userCount = computed(() => tree.$.users().length);
+
+// Complex filtering computation
+const filteredUsers = computed(() => {
+  const users = tree.$.users();
+  const filters = tree.$.filters();
+
+  return users.filter((user) => {
+    if (filters.showActive && !user.active) return false;
+    if (filters.role !== 'all' && user.role !== filters.role) return false;
+    return true;
+  });
+});
+
+// Derived computation from other computed values
+const activeAdminCount = computed(() => filteredUsers().filter((user) => user.role === 'admin' && user.active).length);
+
+// Performance-critical computation with complex logic
+const userStatistics = computed(() => {
+  const users = tree.$.users();
+
+  return {
+    total: users.length,
+    active: users.filter((u) => u.active).length,
+    admins: users.filter((u) => u.role === 'admin').length,
+    averageNameLength: users.reduce((acc, u) => acc + u.name.length, 0) / users.length,
+  };
+});
+
+// Dynamic computed functions (factory pattern)
+const userById = (id: string) => computed(() => tree.$.users().find((user) => user.id === id));
+
+// Usage in effects
+effect(() => {
+  console.log(`Filtered users: ${filteredUsers().length}`);
+  console.log(`Statistics:`, userStatistics());
+});
+
+// Best Practices:
+// 1. Use computed() for derived state that depends on signals
+// 2. Keep computations pure - no side effects
+// 3. Leverage automatic memoization for expensive operations
+// 4. Chain computed values for complex transformations
+// 5. Use factory functions for parameterized computations
+```
+
+### Performance optimization with memoization
+
+Computed values become even more powerful with the built-in memoization enhancer:
+
+```typescript
+import { signalTree, memoization } from '@signaltree/core';
+
+const tree = signalTree({
+  items: Array.from({ length: 10000 }, (_, i) => ({
+    id: i,
+    value: Math.random(),
+    category: `cat-${i % 10}`,
+  })),
+}).with(memoization());
+
+// Expensive computation - automatically cached by memoization enhancer
+const expensiveComputation = computed(() => {
+  return tree.$.items()
+    .filter((item) => item.value > 0.5)
+    .reduce((acc, item) => acc + Math.sin(item.value * Math.PI), 0);
+});
+
+// The computation only runs when tree.$.items() actually changes
+// Subsequent calls return cached result
+```
+
+### Debugging with Redux DevTools
+
+SignalTree integrates seamlessly with Redux DevTools for time-travel debugging and state inspection.
+
+**Basic Usage:**
+
+```typescript
+import { signalTree, devTools } from '@signaltree/core';
+
+const tree = signalTree({ count: 0 }).with(devTools({ name: 'Counter' }));
+```
+
+**Single Instance Mode:**
+
+When using multiple independent stores (e.g., feature modules), you can group them under a single Redux DevTools instance to avoid cluttering the connection list. This is particularly useful for large applications with many lazy-loaded stores.
+
+```typescript
+const DEVTOOLS_GROUP_ID = 'my-app-production';
+const DEVTOOLS_GROUP_NAME = 'My App SignalTree';
+
+// Store 1
+const materialsTree = signalTree(materialsState).with(
+  devTools({
+    treeName: 'Materials',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
+    },
+  })
+);
+
+// Store 2
+const ordersTree = signalTree(ordersState).with(
+  devTools({
+    treeName: 'Orders',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
+    },
+  })
+);
+```
+
+Both stores will appear as branches under the same "My App SignalTree" instance in Redux DevTools.
+
+### Advanced usage (full state tree)
+
+```typescript
+interface AppState {
+  auth: {
+    user: User | null;
+    token: string | null;
+    isAuthenticated: boolean;
+  };
+  data: {
+    users: User[];
+    posts: Post[];
+    cache: Record<string, unknown>;
+  };
+  ui: {
+    theme: 'light' | 'dark';
+    sidebar: {
+      open: boolean;
+      width: number;
+    };
+    notifications: Notification[];
+  };
+}
+
+const tree = signalTree<AppState>({
+  auth: {
+    user: null,
+    token: null,
+    isAuthenticated: false,
+  },
+  data: {
+    users: [],
+    posts: [],
+    cache: {},
+  },
+  ui: {
+    theme: 'light',
+    sidebar: { open: true, width: 250 },
+    notifications: [],
+  },
+});
+
+// Complex updates with type safety
+tree((state) => ({
+  auth: {
+    ...state.auth,
+    user: { id: '1', name: 'John' },
+    isAuthenticated: true,
+  },
+  ui: {
+    ...state.ui,
+    notifications: [...state.ui.notifications, { id: '1', message: 'Welcome!', type: 'success' }],
+  },
+}));
+
+// Get entire state as plain object
+const currentState = tree();
+console.log('Current app state:', currentState);
+```
+
+## Core features
+
+### 1) Hierarchical signal trees
+
+Create deeply nested reactive state with automatic type inference:
+
+```typescript
+const tree = signalTree({
+  user: { name: '', email: '' },
+  settings: { theme: 'dark', notifications: true },
+  todos: [] as Todo[],
+});
+
+// Access nested signals with full type safety
+tree.$.user.name(); // string signal
+tree.$.settings.theme.set('light'); // type-checked value
+tree.$.todos.update((todos) => [...todos, newTodo]); // array operations
+```
+
+### 2) TypeScript inference
+
+SignalTree provides complete type inference without manual typing:
+
+```typescript
+// Automatic inference from initial state
+const tree = signalTree({
+  count: 0, // Inferred as WritableSignal<number>
+  name: 'John', // Inferred as WritableSignal<string>
+  active: true, // Inferred as WritableSignal<boolean>
+  items: [] as Item[], // Inferred as WritableSignal<Item[]>
+  config: {
+    theme: 'dark' as const, // Inferred as WritableSignal<'dark'>
+    settings: {
+      nested: true, // Deep nesting maintained
+    },
+  },
+});
+
+// Type-safe access and updates
+tree.$.count.set(5); // ✅ number
+tree.$.count.set('invalid'); // ❌ Type error
+tree.$.config.theme.set('light'); // ❌ Type error ('dark' const)
+tree.$.config.settings.nested.set(false); // ✅ boolean
+```
+
+### 3) Manual state management
+
+Core provides basic state updates. For advanced entity management, use the built-in `entities` enhancer:
+
+```typescript
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  active: boolean;
+}
+
+const tree = signalTree({
+  users: [] as User[],
+});
+
+// Entity CRUD operations using core methods
+function addUser(user: User) {
+  tree.$.users.update((users) => [...users, user]);
+}
+
+function updateUser(id: string, updates: Partial<User>) {
+  tree.$.users.update((users) => users.map((user) => (user.id === id ? { ...user, ...updates } : user)));
+}
+
+function removeUser(id: string) {
+  tree.$.users.update((users) => users.filter((user) => user.id !== id));
+}
+
+// Manual queries using computed signals
+const userById = (id: string) => computed(() => tree.$.users().find((user) => user.id === id));
+const activeUsers = computed(() => tree.$.users().filter((user) => user.active));
+```
+
+### 4) Manual async state management
+
+Core provides basic state updates. For advanced async helpers, use the built-in async helpers (`createAsyncOperation`, `trackAsync`):
+
+```typescript
+const tree = signalTree({
+  users: [] as User[],
+  loading: false,
+  error: null as string | null,
+});
+
+// Manual async operation management
+async function loadUsers() {
+  tree.$.loading.set(true);
+  tree.$.error.set(null);
+
+  try {
+    const users = await api.getUsers();
+    tree.$.users.set(users);
+  } catch (error) {
+    tree.$.error.set(error instanceof Error ? error.message : 'Unknown error');
+  } finally {
+    tree.$.loading.set(false);
+  }
+}
+
+// Usage in component
+@Component({
+  template: `
+    @if (tree.$.loading()) {
+    <div>Loading...</div>
+    } @else if (tree.$.error()) {
+    <div class="error">{{ tree.$.error() }}</div>
+    } @else { @for (user of tree.$.users(); track user.id) {
+    <user-card [user]="user" />
+    } }
+    <button (click)="loadUsers()">Refresh</button>
+  `,
+})
+class UsersComponent {
+  tree = tree;
+  loadUsers = loadUsers;
+}
+```
+
+### Reactive computations with computed()
+
+SignalTree works seamlessly with Angular's `computed()` for creating efficient reactive computations. These computations automatically update when their dependencies change and are memoized for optimal performance.
+
+```typescript
+import { computed, effect } from '@angular/core';
+import { signalTree } from '@signaltree/core';
+
+const tree = signalTree({
+  users: [
+    { id: '1', name: 'Alice', active: true, role: 'admin' },
+    { id: '2', name: 'Bob', active: false, role: 'user' },
+    { id: '3', name: 'Charlie', active: true, role: 'user' },
+  ],
+  filters: {
+    showActive: true,
+    role: 'all' as 'all' | 'admin' | 'user',
+  },
+});
+
+// Basic computed - automatically memoized
+const userCount = computed(() => tree.$.users().length);
+
+// Complex filtering computation
+const filteredUsers = computed(() => {
+  const users = tree.$.users();
+  const filters = tree.$.filters();
+
+  return users.filter((user) => {
+    if (filters.showActive && !user.active) return false;
+    if (filters.role !== 'all' && user.role !== filters.role) return false;
+    return true;
+  });
+});
+
+// Derived computation from other computed values
+const activeAdminCount = computed(() => filteredUsers().filter((user) => user.role === 'admin' && user.active).length);
+
+// Performance-critical computation with complex logic
+const userStatistics = computed(() => {
+  const users = tree.$.users();
+
+  return {
+    total: users.length,
+    active: users.filter((u) => u.active).length,
+    admins: users.filter((u) => u.role === 'admin').length,
+    averageNameLength: users.reduce((acc, u) => acc + u.name.length, 0) / users.length,
+  };
+});
+
+// Dynamic computed functions (factory pattern)
+const userById = (id: string) => computed(() => tree.$.users().find((user) => user.id === id));
+
+// Usage in effects
+effect(() => {
+  console.log(`Filtered users: ${filteredUsers().length}`);
+  console.log(`Statistics:`, userStatistics());
+});
+
+// Best Practices:
+// 1. Use computed() for derived state that depends on signals
+// 2. Keep computations pure - no side effects
+// 3. Leverage automatic memoization for expensive operations
+// 4. Chain computed values for complex transformations
+// 5. Use factory functions for parameterized computations
+```
+
+### Performance optimization with memoization
+
+Computed values become even more powerful with the built-in memoization enhancer:
+
+```typescript
+import { signalTree, memoization } from '@signaltree/core';
+
+const tree = signalTree({
+  items: Array.from({ length: 10000 }, (_, i) => ({
+    id: i,
+    value: Math.random(),
+    category: `cat-${i % 10}`,
+  })),
+}).with(memoization());
+
+// Expensive computation - automatically cached by memoization enhancer
+const expensiveComputation = computed(() => {
+  return tree.$.items()
+    .filter((item) => item.value > 0.5)
+    .reduce((acc, item) => acc + Math.sin(item.value * Math.PI), 0);
+});
+
+// The computation only runs when tree.$.items() actually changes
+// Subsequent calls return cached result
+```
+
+### Debugging with Redux DevTools
+
+SignalTree integrates seamlessly with Redux DevTools for time-travel debugging and state inspection.
+
+**Basic Usage:**
+
+```typescript
+import { signalTree, devTools } from '@signaltree/core';
+
+const tree = signalTree({ count: 0 }).with(devTools({ name: 'Counter' }));
+```
+
+**Single Instance Mode:**
+
+When using multiple independent stores (e.g., feature modules), you can group them under a single Redux DevTools instance to avoid cluttering the connection list. This is particularly useful for large applications with many lazy-loaded stores.
+
+```typescript
+const DEVTOOLS_GROUP_ID = 'my-app-production';
+const DEVTOOLS_GROUP_NAME = 'My App SignalTree';
+
+// Store 1
+const materialsTree = signalTree(materialsState).with(
+  devTools({
+    treeName: 'Materials',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
+    },
+  })
+);
+
+// Store 2
+const ordersTree = signalTree(ordersState).with(
+  devTools({
+    treeName: 'Orders',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
+    },
+  })
+);
+```
+
+Both stores will appear as branches under the same "My App SignalTree" instance in Redux DevTools.
+
+### Advanced usage (full state tree)
+
+```typescript
+interface AppState {
+  auth: {
+    user: User | null;
+    token: string | null;
+    isAuthenticated: boolean;
+  };
+  data: {
+    users: User[];
+    posts: Post[];
+    cache: Record<string, unknown>;
+  };
+  ui: {
+    theme: 'light' | 'dark';
+    sidebar: {
+      open: boolean;
+      width: number;
+    };
+    notifications: Notification[];
+  };
+}
+
+const tree = signalTree<AppState>({
+  auth: {
+    user: null,
+    token: null,
+    isAuthenticated: false,
+  },
+  data: {
+    users: [],
+    posts: [],
+    cache: {},
+  },
+  ui: {
+    theme: 'light',
+    sidebar: { open: true, width: 250 },
+    notifications: [],
+  },
+});
+
+// Complex updates with type safety
+tree((state) => ({
+  auth: {
+    ...state.auth,
+    user: { id: '1', name: 'John' },
+    isAuthenticated: true,
+  },
+  ui: {
+    ...state.ui,
+    notifications: [...state.ui.notifications, { id: '1', message: 'Welcome!', type: 'success' }],
+  },
+}));
+
+// Get entire state as plain object
+const currentState = tree();
+console.log('Current app state:', currentState);
+```
+
+## Core features
+
+### 1) Hierarchical signal trees
+
+Create deeply nested reactive state with automatic type inference:
+
+```typescript
+const tree = signalTree({
+  user: { name: '', email: '' },
+  settings: { theme: 'dark', notifications: true },
+  todos: [] as Todo[],
+});
+
+// Access nested signals with full type safety
+tree.$.user.name(); // string signal
+tree.$.settings.theme.set('light'); // type-checked value
+tree.$.todos.update((todos) => [...todos, newTodo]); // array operations
+```
+
+### 2) TypeScript inference
+
+SignalTree provides complete type inference without manual typing:
+
+```typescript
+// Automatic inference from initial state
+const tree = signalTree({
+  count: 0, // Inferred as WritableSignal<number>
+  name: 'John', // Inferred as WritableSignal<string>
+  active: true, // Inferred as WritableSignal<boolean>
+  items: [] as Item[], // Inferred as WritableSignal<Item[]>
+  config: {
+    theme: 'dark' as const, // Inferred as WritableSignal<'dark'>
+    settings: {
+      nested: true, // Deep nesting maintained
+    },
+  },
+});
+
+// Type-safe access and updates
+tree.$.count.set(5); // ✅ number
+tree.$.count.set('invalid'); // ❌ Type error
+tree.$.config.theme.set('light'); // ❌ Type error ('dark' const)
+tree.$.config.settings.nested.set(false); // ✅ boolean
+```
+
+### 3) Manual state management
+
+Core provides basic state updates. For advanced entity management, use the built-in `entities` enhancer:
+
+```typescript
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  active: boolean;
+}
+
+const tree = signalTree({
+  users: [] as User[],
+});
+
+// Entity CRUD operations using core methods
+function addUser(user: User) {
+  tree.$.users.update((users) => [...users, user]);
+}
+
+function updateUser(id: string, updates: Partial<User>) {
+  tree.$.users.update((users) => users.map((user) => (user.id === id ? { ...user, ...updates } : user)));
+}
+
+function removeUser(id: string) {
+  tree.$.users.update((users) => users.filter((user) => user.id !== id));
+}
+
+// Manual queries using computed signals
+const userById = (id: string) => computed(() => tree.$.users().find((user) => user.id === id));
+const activeUsers = computed(() => tree.$.users().filter((user) => user.active));
+```
+
+### 4) Manual async state management
+
+Core provides basic state updates. For advanced async helpers, use the built-in async helpers (`createAsyncOperation`, `trackAsync`):
+
+```typescript
+const tree = signalTree({
+  users: [] as User[],
+  loading: false,
+  error: null as string | null,
+});
+
+// Manual async operation management
+async function loadUsers() {
+  tree.$.loading.set(true);
+  tree.$.error.set(null);
+
+  try {
+    const users = await api.getUsers();
+    tree.$.users.set(users);
+  } catch (error) {
+    tree.$.error.set(error instanceof Error ? error.message : 'Unknown error');
+  } finally {
+    tree.$.loading.set(false);
+  }
+}
+
+// Usage in component
+@Component({
+  template: `
+    @if (tree.$.loading()) {
+    <div>Loading...</div>
+    } @else if (tree.$.error()) {
+    <div class="error">{{ tree.$.error() }}</div>
+    } @else { @for (user of tree.$.users(); track user.id) {
+    <user-card [user]="user" />
+    } }
+    <button (click)="loadUsers()">Refresh</button>
+  `,
+})
+class UsersComponent {
+  tree = tree;
+  loadUsers = loadUsers;
+}
+```
+
+### Reactive computations with computed()
+
+SignalTree works seamlessly with Angular's `computed()` for creating efficient reactive computations. These computations automatically update when their dependencies change and are memoized for optimal performance.
+
+```typescript
+import { computed, effect } from '@angular/core';
+import { signalTree } from '@signaltree/core';
+
+const tree = signalTree({
+  users: [
+    { id: '1', name: 'Alice', active: true, role: 'admin' },
+    { id: '2', name: 'Bob', active: false, role: 'user' },
+    { id: '3', name: 'Charlie', active: true, role: 'user' },
+  ],
+  filters: {
+    showActive: true,
+    role: 'all' as 'all' | 'admin' | 'user',
+  },
+});
+
+// Basic computed - automatically memoized
+const userCount = computed(() => tree.$.users().length);
+
+// Complex filtering computation
+const filteredUsers = computed(() => {
+  const users = tree.$.users();
+  const filters = tree.$.filters();
+
+  return users.filter((user) => {
+    if (filters.showActive && !user.active) return false;
+    if (filters.role !== 'all' && user.role !== filters.role) return false;
+    return true;
+  });
+});
+
+// Derived computation from other computed values
+const activeAdminCount = computed(() => filteredUsers().filter((user) => user.role === 'admin' && user.active).length);
+
+// Performance-critical computation with complex logic
+const userStatistics = computed(() => {
+  const users = tree.$.users();
+
+  return {
+    total: users.length,
+    active: users.filter((u) => u.active).length,
+    admins: users.filter((u) => u.role === 'admin').length,
+    averageNameLength: users.reduce((acc, u) => acc + u.name.length, 0) / users.length,
+  };
+});
+
+// Dynamic computed functions (factory pattern)
+const userById = (id: string) => computed(() => tree.$.users().find((user) => user.id === id));
+
+// Usage in effects
+effect(() => {
+  console.log(`Filtered users: ${filteredUsers().length}`);
+  console.log(`Statistics:`, userStatistics());
+});
+
+// Best Practices:
+// 1. Use computed() for derived state that depends on signals
+// 2. Keep computations pure - no side effects
+// 3. Leverage automatic memoization for expensive operations
+// 4. Chain computed values for complex transformations
+// 5. Use factory functions for parameterized computations
+```
+
+### Performance optimization with memoization
+
+Computed values become even more powerful with the built-in memoization enhancer:
+
+```typescript
+import { signalTree, memoization } from '@signaltree/core';
+
+const tree = signalTree({
+  items: Array.from({ length: 10000 }, (_, i) => ({
+    id: i,
+    value: Math.random(),
+    category: `cat-${i % 10}`,
+  })),
+}).with(memoization());
+
+// Expensive computation - automatically cached by memoization enhancer
+const expensiveComputation = computed(() => {
+  return tree.$.items()
+    .filter((item) => item.value > 0.5)
+    .reduce((acc, item) => acc + Math.sin(item.value * Math.PI), 0);
+});
+
+// The computation only runs when tree.$.items() actually changes
+// Subsequent calls return cached result
+```
+
+### Debugging with Redux DevTools
+
+SignalTree integrates seamlessly with Redux DevTools for time-travel debugging and state inspection.
+
+**Basic Usage:**
+
+```typescript
+import { signalTree, devTools } from '@signaltree/core';
+
+const tree = signalTree({ count: 0 }).with(devTools({ name: 'Counter' }));
+```
+
+**Single Instance Mode:**
+
+When using multiple independent stores (e.g., feature modules), you can group them under a single Redux DevTools instance to avoid cluttering the connection list. This is particularly useful for large applications with many lazy-loaded stores.
+
+```typescript
+const DEVTOOLS_GROUP_ID = 'my-app-production';
+const DEVTOOLS_GROUP_NAME = 'My App SignalTree';
+
+// Store 1
+const materialsTree = signalTree(materialsState).with(
+  devTools({
+    treeName: 'Materials',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
+    },
+  })
+);
+
+// Store 2
+const ordersTree = signalTree(ordersState).with(
+  devTools({
+    treeName: 'Orders',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
+    },
+  })
+);
+```
+
+Both stores will appear as branches under the same "My App SignalTree" instance in Redux DevTools.
+
+### Advanced usage (full state tree)
+
+```typescript
+interface AppState {
+  auth: {
+    user: User | null;
+    token: string | null;
+    isAuthenticated: boolean;
+  };
+  data: {
+    users: User[];
+    posts: Post[];
+    cache: Record<string, unknown>;
+  };
+  ui: {
+    theme: 'light' | 'dark';
+    sidebar: {
+      open: boolean;
+      width: number;
+    };
+    notifications: Notification[];
+  };
+}
+
+const tree = signalTree<AppState>({
+  auth: {
+    user: null,
+    token: null,
+    isAuthenticated: false,
+  },
+  data: {
+    users: [],
+    posts: [],
+    cache: {},
+  },
+  ui: {
+    theme: 'light',
+    sidebar: { open: true, width: 250 },
+    notifications: [],
+  },
+});
+
+// Complex updates with type safety
+tree((state) => ({
+  auth: {
+    ...state.auth,
+    user: { id: '1', name: 'John' },
+    isAuthenticated: true,
+  },
+  ui: {
+    ...state.ui,
+    notifications: [...state.ui.notifications, { id: '1', message: 'Welcome!', type: 'success' }],
+  },
+}));
+
+// Get entire state as plain object
+const currentState = tree();
+console.log('Current app state:', currentState);
+```
+
+## Core features
+
+### 1) Hierarchical signal trees
+
+Create deeply nested reactive state with automatic type inference:
+
+```typescript
+const tree = signalTree({
+  user: { name: '', email: '' },
+  settings: { theme: 'dark', notifications: true },
+  todos: [] as Todo[],
+});
+
+// Access nested signals with full type safety
+tree.$.user.name(); // string signal
+tree.$.settings.theme.set('light'); // type-checked value
+tree.$.todos.update((todos) => [...todos, newTodo]); // array operations
+```
+
+### 2) TypeScript inference
+
+SignalTree provides complete type inference without manual typing:
+
+```typescript
+// Automatic inference from initial state
+const tree = signalTree({
+  count: 0, // Inferred as WritableSignal<number>
+  name: 'John', // Inferred as WritableSignal<string>
+  active: true, // Inferred as WritableSignal<boolean>
+  items: [] as Item[], // Inferred as WritableSignal<Item[]>
+  config: {
+    theme: 'dark' as const, // Inferred as WritableSignal<'dark'>
+    settings: {
+      nested: true, // Deep nesting maintained
+    },
+  },
+});
+
+// Type-safe access and updates
+tree.$.count.set(5); // ✅ number
+tree.$.count.set('invalid'); // ❌ Type error
+tree.$.config.theme.set('light'); // ❌ Type error ('dark' const)
+tree.$.config.settings.nested.set(false); // ✅ boolean
+```
+
+### 3) Manual state management
+
+Core provides basic state updates. For advanced entity management, use the built-in `entities` enhancer:
+
+```typescript
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  active: boolean;
+}
+
+const tree = signalTree({
+  users: [] as User[],
+});
+
+// Entity CRUD operations using core methods
+function addUser(user: User) {
+  tree.$.users.update((users) => [...users, user]);
+}
+
+function updateUser(id: string, updates: Partial<User>) {
+  tree.$.users.update((users) => users.map((user) => (user.id === id ? { ...user, ...updates } : user)));
+}
+
+function removeUser(id: string) {
+  tree.$.users.update((users) => users.filter((user) => user.id !== id));
+}
+
+// Manual queries using computed signals
+const userById = (id: string) => computed(() => tree.$.users().find((user) => user.id === id));
+const activeUsers = computed(() => tree.$.users().filter((user) => user.active));
+```
+
+### 4) Manual async state management
+
+Core provides basic state updates. For advanced async helpers, use the built-in async helpers (`createAsyncOperation`, `trackAsync`):
+
+```typescript
+const tree = signalTree({
+  users: [] as User[],
+  loading: false,
+  error: null as string | null,
+});
+
+// Manual async operation management
+async function loadUsers() {
+  tree.$.loading.set(true);
+  tree.$.error.set(null);
+
+  try {
+    const users = await api.getUsers();
+    tree.$.users.set(users);
+  } catch (error) {
+    tree.$.error.set(error instanceof Error ? error.message : 'Unknown error');
+  } finally {
+    tree.$.loading.set(false);
+  }
+}
+
+// Usage in component
+@Component({
+  template: `
+    @if (tree.$.loading()) {
+    <div>Loading...</div>
+    } @else if (tree.$.error()) {
+    <div class="error">{{ tree.$.error() }}</div>
+    } @else { @for (user of tree.$.users(); track user.id) {
+    <user-card [user]="user" />
+    } }
+    <button (click)="loadUsers()">Refresh</button>
+  `,
+})
+class UsersComponent {
+  tree = tree;
+  loadUsers = loadUsers;
+}
+```
+
+### Reactive computations with computed()
+
+SignalTree works seamlessly with Angular's `computed()` for creating efficient reactive computations. These computations automatically update when their dependencies change and are memoized for optimal performance.
+
+```typescript
+import { computed, effect } from '@angular/core';
+import { signalTree } from '@signaltree/core';
+
+const tree = signalTree({
+  users: [
+    { id: '1', name: 'Alice', active: true, role: 'admin' },
+    { id: '2', name: 'Bob', active: false, role: 'user' },
+    { id: '3', name: 'Charlie', active: true, role: 'user' },
+  ],
+  filters: {
+    showActive: true,
+    role: 'all' as 'all' | 'admin' | 'user',
+  },
+});
+
+// Basic computed - automatically memoized
+const userCount = computed(() => tree.$.users().length);
+
+// Complex filtering computation
+const filteredUsers = computed(() => {
+  const users = tree.$.users();
+  const filters = tree.$.filters();
+
+  return users.filter((user) => {
+    if (filters.showActive && !user.active) return false;
+    if (filters.role !== 'all' && user.role !== filters.role) return false;
+    return true;
+  });
+});
+
+// Derived computation from other computed values
+const activeAdminCount = computed(() => filteredUsers().filter((user) => user.role === 'admin' && user.active).length);
+
+// Performance-critical computation with complex logic
+const userStatistics = computed(() => {
+  const users = tree.$.users();
+
+  return {
+    total: users.length,
+    active: users.filter((u) => u.active).length,
+    admins: users.filter((u) => u.role === 'admin').length,
+    averageNameLength: users.reduce((acc, u) => acc + u.name.length, 0) / users.length,
+  };
+});
+
+// Dynamic computed functions (factory pattern)
+const userById = (id: string) => computed(() => tree.$.users().find((user) => user.id === id));
+
+// Usage in effects
+effect(() => {
+  console.log(`Filtered users: ${filteredUsers().length}`);
+  console.log(`Statistics:`, userStatistics());
+});
+
+// Best Practices:
+// 1. Use computed() for derived state that depends on signals
+// 2. Keep computations pure - no side effects
+// 3. Leverage automatic memoization for expensive operations
+// 4. Chain computed values for complex transformations
+// 5. Use factory functions for parameterized computations
+```
+
+### Performance optimization with memoization
+
+Computed values become even more powerful with the built-in memoization enhancer:
+
+```typescript
+import { signalTree, memoization } from '@signaltree/core';
+
+const tree = signalTree({
+  items: Array.from({ length: 10000 }, (_, i) => ({
+    id: i,
+    value: Math.random(),
+    category: `cat-${i % 10}`,
+  })),
+}).with(memoization());
+
+// Expensive computation - automatically cached by memoization enhancer
+const expensiveComputation = computed(() => {
+  return tree.$.items()
+    .filter((item) => item.value > 0.5)
+    .reduce((acc, item) => acc + Math.sin(item.value * Math.PI), 0);
+});
+
+// The computation only runs when tree.$.items() actually changes
+// Subsequent calls return cached result
+```
+
+### Debugging with Redux DevTools
+
+SignalTree integrates seamlessly with Redux DevTools for time-travel debugging and state inspection.
+
+**Basic Usage:**
+
+```typescript
+import { signalTree, devTools } from '@signaltree/core';
+
+const tree = signalTree({ count: 0 }).with(devTools({ name: 'Counter' }));
+```
+
+**Single Instance Mode:**
+
+When using multiple independent stores (e.g., feature modules), you can group them under a single Redux DevTools instance to avoid cluttering the connection list. This is particularly useful for large applications with many lazy-loaded stores.
+
+```typescript
+const DEVTOOLS_GROUP_ID = 'my-app-production';
+const DEVTOOLS_GROUP_NAME = 'My App SignalTree';
+
+// Store 1
+const materialsTree = signalTree(materialsState).with(
+  devTools({
+    treeName: 'Materials',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
+    },
+  })
+);
+
+// Store 2
+const ordersTree = signalTree(ordersState).with(
+  devTools({
+    treeName: 'Orders',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
+    },
+  })
+);
+```
+
+Both stores will appear as branches under the same "My App SignalTree" instance in Redux DevTools.
+
+### Advanced usage (full state tree)
+
+```typescript
+interface AppState {
+  auth: {
+    user: User | null;
+    token: string | null;
+    isAuthenticated: boolean;
+  };
+  data: {
+    users: User[];
+    posts: Post[];
+    cache: Record<string, unknown>;
+  };
+  ui: {
+    theme: 'light' | 'dark';
+    sidebar: {
+      open: boolean;
+      width: number;
+    };
+    notifications: Notification[];
+  };
+}
+
+const tree = signalTree<AppState>({
+  auth: {
+    user: null,
+    token: null,
+    isAuthenticated: false,
+  },
+  data: {
+    users: [],
+    posts: [],
+    cache: {},
+  },
+  ui: {
+    theme: 'light',
+    sidebar: { open: true, width: 250 },
+    notifications: [],
+  },
+});
+
+// Complex updates with type safety
+tree((state) => ({
+  auth: {
+    ...state.auth,
+    user: { id: '1', name: 'John' },
+    isAuthenticated: true,
+  },
+  ui: {
+    ...state.ui,
+    notifications: [...state.ui.notifications, { id: '1', message: 'Welcome!', type: 'success' }],
+  },
+}));
+
+// Get entire state as plain object
+const currentState = tree();
+console.log('Current app state:', currentState);
+```
 
 ## Package Selection Guide
 

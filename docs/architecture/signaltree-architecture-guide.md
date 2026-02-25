@@ -464,7 +464,7 @@ When you want a feature to be “present in types” but hydrated later (e.g. on
 - ✅ Allows lazy runtime cost (signals are still created on access)
 - ❌ Avoid `feature: undefined as FeatureState | undefined` if you need nested access — that makes `feature` a leaf signal, not a branch.
 
-```typescript
+  ```typescript
 type ReportsState = {
   data: Report[] | undefined;
   filters: { query: string; status: 'all' | 'open' | 'closed' };
@@ -510,6 +510,31 @@ SignalTree’s DevTools / time-travel / persistence ecosystem is built around a 
 - You may see **noisy / confusing DevTools actions** across trees because each `devTools()` enhancer listens to the same global notifier.
 
 If you want a single unified DevTools view, prefer **one global runtime tree** (Category C) and inject typed slices (`tree.$.feature`) into feature code.
+
+**Alternative: Aggregated DevTools Instance**
+
+If you require multiple trees but want a unified usage in Redux DevTools, you can use the `aggregatedReduxInstance` option. This groups multiple independent SignalTree instances under a single DevTools connection, displaying them as separate branches.
+
+```typescript
+const sharedDevToolsConfig = {
+  id: 'app-instance-id',     // Unique ID for the connection
+  name: 'My App'             // Title in the extension dropdown
+};
+
+const authTree = signalTree({ user: null }).with(
+  devTools({
+    treeName: 'Auth',       // Will appear as state.Auth
+    aggregatedReduxInstance: sharedDevToolsConfig
+  })
+);
+
+const productsTree = signalTree({ list: [] }).with(
+  devTools({
+    treeName: 'Products',   // Will appear as state.Products
+    aggregatedReduxInstance: sharedDevToolsConfig
+  })
+);
+```
 
 #### D1: Domain-Scoped Trees
 
@@ -987,8 +1012,8 @@ Entities and metadata as siblings under domain key—no `meta` wrapper.
   plants: {
     entities: entityMap<Plant>(),
     operations: {
-      load: { status: 'idle', error: null },
-      save: { status: 'idle', error: null }
+      load: { status: 'idle' as OperationStatus, error: null as string | null },
+      save: { status: 'idle' as OperationStatus, error: null as string | null }
     },
     filters: { search: '', status: 'all' },
     sort: { field: 'name', direction: 'asc' },
@@ -997,7 +1022,7 @@ Entities and metadata as siblings under domain key—no `meta` wrapper.
   gardens: {
     entities: entityMap<Garden>(),
     operations: {
-      load: { status: 'idle', error: null }
+      load: { status: 'idle' as OperationStatus, error: null as string | null }
     },
     selected: null
   }
@@ -1204,11 +1229,9 @@ interface AppState {
     user: User | null;
     token: string | null;
     status: 'unknown' | 'authenticated' | 'unauthenticated';
-    meta: {
-      operations: {
-        login: OperationState;
-        refresh: OperationState;
-      };
+    operations: {
+      login: OperationState;
+      refresh: OperationState;
     };
   };
   ui: {
@@ -2470,21 +2493,64 @@ export function createPlantSelectors(tree: AppTree) {
       tree.$.plants.all().filter(p => p.gardenId === gardenId)
     ),
 
-    stats: computed(() => ({
-      total: tree.$.plants.all().length,
-      active: tree.$.plants.all().filter(p => p.active).length,
-    })),
+    stats: computed(() => {
+      const all = tree.$.plants.all();
+      return {
+        total: all.length,
+        active: all.filter(p => p.active).length,
+        needsWater: all.filter(p => p.needsWater).length,
+        bySpecies: groupBy(all, 'species')
+      };
+    }),
+
+    // Filtered + sorted (combines filters and sort state)
+    filteredAndSorted: computed(() => {
+      const entities = tree.$.plants.all();
+      const filters = tree.$.plants.meta.filters();
+      const sort = tree.$.plants.meta.sort();
+
+      let result = entities;
+
+      // Apply filters
+      if (filters.search) {
+        const term = filters.search.toLowerCase();
+        result = result.filter(p =>
+          p.name.toLowerCase().includes(term) ||
+          p.species.toLowerCase().includes(term)
+        );
+      }
+
+      if (filters.status !== 'all') {
+        result = result.filter(p =>
+          filters.status === 'active' ? p.active : !p.active
+        );
+      }
+
+      // Apply sort
+      result = [...result].sort((a, b) => {
+        const aVal = a[sort.field];
+        const bVal = b[sort.field];
+        const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+        return sort.direction === 'asc' ? cmp : -cmp;
+      });
+
+      return result;
+    })
   };
 }
 
-// Usage in component
+// Usage
 @Component({...})
-export class PlantDashboard {
-  private readonly tree = inject(APP_TREE);
-  private readonly selectors = createPlantSelectors(this.tree);
+export class PlantsDashboardComponent {
+  private tree = inject(APP_TREE);
+  private selectors = createPlantSelectors(this.tree);
 
   readonly stats = this.selectors.stats;
-  readonly activePlants = this.selectors.active;
+  readonly filteredPlants = this.selectors.filteredAndSorted;
+
+  readonly needsAttention = computed(() =>
+    this.selectors.stats().needsWater > 0
+  );
 }
 ```
 
@@ -2585,7 +2651,12 @@ setupKeyboardShortcuts() {
   fromEvent<KeyboardEvent>(document, 'keydown')
     .pipe(filter(e => (e.ctrlKey || e.metaKey) && e.key === 'z'))
     .subscribe(e => {
-      e.shiftKey ? this.tree.redo() : this.tree.undo();
+      e.preventDefault();
+      if (e.shiftKey) {
+        this.redo();
+      } else {
+        this.undo();
+      }
     });
 }
 
@@ -2813,11 +2884,11 @@ User clicks "Save Plant"
 
 For each layer that remains, it should have exactly one responsibility:
 
-| Layer           | Responsibility                           | Should NOT Do                                 |
-| --------------- | ---------------------------------------- | --------------------------------------------- |
+| Layer       | Responsibility                           | Should NOT Do                                 |
+| ----------- | ---------------------------------------- | --------------------------------------------- |
 | **Component**   | UI rendering, user event handling        | Business logic, API calls                     |
 | **Facade**      | Orchestration, cross-domain coordination | Direct DOM manipulation, store implementation |
-| **Tree**        | State storage, enhancer composition      | Business logic, API calls                     |
+| **Tree**    | State storage, enhancer composition      | Business logic, API calls                     |
 | **API Service** | HTTP calls, response mapping             | State management, caching                     |
 
 ---
@@ -2844,10 +2915,10 @@ Use this checklist when simplifying an implementation. The goal is repeatable, m
 
 - [ ] Audit each abstraction layer: who consumes it, what it exposes, and whether it duplicates built-in SignalTree features.
 - [ ] Measure baseline metrics:
-  - Lines of code: `git ls-files | xargs wc -l`
-  - Delta on removal: `git diff --numstat origin/main...HEAD -- frontend`
-  - Baseline bundle composition: `pnpm nx build <app> --statsJson` (save `dist/.../stats.json`)
-  - Test coverage and runtime smoke tests
+    - Lines of code: `git ls-files | xargs wc -l`
+    - Delta on removal: `git diff --numstat origin/main...HEAD -- frontend`
+    - Baseline bundle composition: `pnpm nx build <app> --statsJson` (save `dist/.../stats.json`)
+    - Test coverage and runtime smoke tests
 - [ ] Create a small, reversible plan (small commits, feature-flag if needed)
 
 #### Migration steps (order of safety)
@@ -2868,6 +2939,7 @@ Use this checklist when simplifying an implementation. The goal is repeatable, m
 | `withMethods` / store methods    | `ops` services (return observables) | e.g. `ticket-ops.ts` — keep side-effects injectable and testable                              |
 | `withTrackedChanges`             | `tracked-changes-manager` service   | Centralize undo/redo handling rather than per-store plumbing                                  |
 | `withReduxDevtools`              | `devTools()` enhancer               | Built-in to SignalTree, enable in dev only                                                    |
+| `memoization()`                  | Cache computed values              | No—if you have expensive computations                                                          |
 
 #### Testing recipes (practical examples)
 
@@ -3090,101 +3162,6 @@ A curried helper function that provides type context for derived functions in ex
 
 ```typescript
 // derived/tier-1.derived.ts
-import { derivedFrom } from '@signaltree/core';
-import type { AppTreeBase } from '../app-tree';
-
-// derivedFrom provides the type for $ via curried syntax
-export const tier1Derived = derivedFrom<AppTreeBase>()(($) => ({
-  users: {
-    current: computed(() => $.users.byId($.selected.userId())?.() ?? null),
-  },
-}));
-```
-
-Note the curried syntax: `derivedFrom<TreeType>()(fn)`. The first call specifies the tree type, the second takes your derived function. This allows TypeScript to infer the return type while you explicitly specify the input tree type.
-
-#### `WithDerived<TTree, TDerivedFn>`
-
-A type utility to build intermediate tree types:
-
-```typescript
-// app-tree.ts
-import { WithDerived } from '@signaltree/core';
-import { tier1Derived } from './derived/tier-1.derived';
-import { tier2Derived } from './derived/tier-2.derived';
-
-export type AppTreeBase = ReturnType<typeof signalTree<ReturnType<typeof createBaseState>>>;
-export type AppTreeWithTier1 = WithDerived<AppTreeBase, typeof tier1Derived>;
-export type AppTreeWithTier2 = WithDerived<AppTreeWithTier1, typeof tier2Derived>;
-```
-
-#### Why External Functions Need Typing
-
-TypeScript analyzes each file **in isolation** before seeing how it's used. When you define:
-
-```typescript
-// ❌ TypeScript can't infer $ - analyzed before app-tree.ts uses it
-export function tier1Derived($) {
-  // $ is 'any'
-  return { foo: computed(() => $.bar()) }; // Error: $ has no properties
-}
-```
-
-TypeScript resolves parameter types at the **definition site**, not where the function is called. `derivedFrom` provides the type context upfront.
-
-**Key Point**: `derivedFrom` is **only needed for external files**. Inline functions within `.derived()` calls automatically inherit types from the chain.
-
-### Tier Organization Pattern
-
-| Tier | Purpose           | Example Computeds                                               |
-| ---- | ----------------- | --------------------------------------------------------------- |
-| 1    | Entity Resolution | `users.current`, `selection.item`, `tickets.active`             |
-| 2    | Complex Logic     | `users.isAdmin`, `selection.isComplete`, `tickets.statusMap`    |
-| 3    | Workflow          | `workflow.steps`, `workflow.currentIndex`, `workflow.statusMap` |
-| 4    | Navigation        | `workflow.nextStatus`, `workflow.canAdvance`                    |
-| 5    | UI Aggregates     | `ui.isLoading`, `ui.hasError`, `ui.globalStatus`                |
-
-### Deep Merge Behavior
-
-Derived tiers use deep merge - you can extend domains across tiers:
-
-```typescript
-// Tier 1
-.derived($ => ({ tickets: { active: computed(() => /* ... */) } }))
-// Tier 2 - extends tickets domain, doesn't replace it
-.derived($ => ({ tickets: { statusMap: computed(() => /* ... */) } }))  // tickets.active still exists!
-```
-
-### Implementation Examples
-
-#### State File (`tree/state/tickets.state.ts`)
-
-```typescript
-import { entityMap } from '@signaltree/core';
-import { LoadingState, Nullable, NotifyErrorModel, TicketDto } from '@models';
-
-export function loadingSlice() {
-  return {
-    state: LoadingState.NotLoaded as LoadingState,
-    error: null as Nullable<NotifyErrorModel>,
-  };
-}
-
-export function ticketsState() {
-  return {
-    entities: entityMap<TicketDto, number>(),
-    activeId: null as Nullable<number>,
-    startDate: new Date(),
-    endDate: new Date(),
-    loading: loadingSlice(),
-  };
-}
-```
-
-#### Derived Tier (`tree/derived/tier-1.derived.ts`)
-
-```typescript
-import { computed } from '@angular/core';
 import { derivedFrom } from '@signaltree/core';
 import type { AppTreeBase } from '../app-tree';
 
