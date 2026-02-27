@@ -46,14 +46,9 @@
     "@babel/types": "^7.28.4"
   },
   "peerDependencies": {
-    "@angular/core": "^20.0.0",
-    "vitest": "^2.0.0"
+    "@angular/core": "^20.0.0"
   },
-  "peerDependenciesMeta": {
-    "vitest": {
-      "optional": true
-    }
-  },
+  "peerDependenciesMeta": {},
   "devDependencies": {
     "@angular/core": "^20.0.0",
     "@types/babel__traverse": "^7.20.0",

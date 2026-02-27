@@ -1,4 +1,4 @@
-import { deepClone } from './deep-clone.js';
+import { deepClone } from './deep-clone';
 
 /**
  * Deep merges a partial source object into a target object.

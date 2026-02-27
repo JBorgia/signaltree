@@ -267,7 +267,7 @@ export interface TimeTravelMethods<T = unknown> {
 }
 
 export interface DevToolsMethods {
-  connectDevTools(): void;
+  connectDevTools(treeName?: string): void;
   disconnectDevTools(): void;
 }
 
@@ -628,6 +628,14 @@ export interface DevToolsConfig {
   maxStringLength?: number;
   /** Optional custom serializer for devtools state snapshots */
   serialize?: (state: unknown) => unknown;
+  /**
+   * Configuration for sharing a single Redux DevTools instance across multiple stores.
+   * When provided, stores with the same id will share a single DevTools connection.
+   */
+  aggregatedReduxInstance?: {
+    id: string;
+    name?: string;
+  };
   features?: {
     jump?: boolean;
     skip?: boolean;

@@ -77,7 +77,7 @@ for pkg in "${PACKAGES[@]}"; do
     fi
 
     # Check sideEffects is false (for tree-shaking)
-    sideEffects=$(cat "$pkg_json" | grep '"sideEffects"' | sed 's/.*"sideEffects": \(.*\),*/\1/')
+    sideEffects=$(node -p "try { const p = require('./$pkg_json'); String(p.sideEffects) } catch { '' }")
     if [ "$sideEffects" = "false" ]; then
         print_success "✓ sideEffects: false (tree-shaking enabled)"
     else

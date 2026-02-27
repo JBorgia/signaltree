@@ -59,14 +59,9 @@
   "peerDependencies": {
     "@signaltree/core": "^8.0.0",
     "@signaltree/shared": "^7.1.0",
-    "tslib": "^2.0.0",
-    "vitest": "^2.0.0"
+    "tslib": "^2.0.0"
   },
-  "peerDependenciesMeta": {
-    "vitest": {
-      "optional": true
-    }
-  },
+  "peerDependenciesMeta": {},
   "devDependencies": {
     "@signaltree/core": "workspace:*",
     "@signaltree/shared": "workspace:*"

@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { devTools, enableDevTools, fullDevTools, productionDevTools } from './devtools';
 import { getPathNotifier, resetPathNotifier } from '../../lib/path-notifier';
 
-function createMockTree() {
-  const state = { count: 0 } as Record<string, any>;
+function createMockTree(initialState: Record<string, any> = { count: 0 }) {
+  const state = { ...initialState } as Record<string, any>;
 
   const tree = function (...args: any[]) {
     if (args.length === 0) return state;
@@ -338,6 +338,224 @@ describe('devTools enhancer (v6 API)', () => {
       // ensure we didn't overwrite methods
       expect((tree.$ as any).users.addOne).toBe(users.addOne);
       expect((tree.$ as any).users.byId).toBe(users.byId);
+    } finally {
+      (globalThis as any).window = originalWindow;
+    }
+  });
+
+  it('aggregatedReduxInstance groups multiple trees under one DevTools instance', async () => {
+    resetPathNotifier();
+
+    const originalWindow = (globalThis as any).window;
+    const send = vi.fn();
+    const connect = vi.fn(() => ({
+      send,
+      subscribe: (_listener: (message: unknown) => void) => void 0,
+    }));
+
+    (globalThis as any).window = {
+      __REDUX_DEVTOOLS_EXTENSION__: {
+        connect,
+      },
+    };
+
+    try {
+      const treeA = createMockTree();
+      const treeB = createMockTree();
+
+      devTools({
+        enabled: true,
+        enableBrowserDevTools: true,
+        treeName: 'A',
+        aggregatedReduxInstance: { id: 'group-1', name: 'Group 1' },
+      })(treeA);
+
+      devTools({
+        enabled: true,
+        enableBrowserDevTools: true,
+        treeName: 'B',
+        aggregatedReduxInstance: { id: 'group-1', name: 'Group 1' },
+      })(treeB);
+
+      expect(connect).toHaveBeenCalledTimes(1);
+
+      // There should be at least one send containing both A and B.
+      const sentStates = send.mock.calls.map((c) => c[1]);
+      expect(
+        sentStates.some((s) => s && typeof s === 'object' && 'A' in s && 'B' in s)
+      ).toBe(true);
+
+      await Promise.resolve();
+    } finally {
+      (globalThis as any).window = originalWindow;
+    }
+  });
+
+  it('aggregatedReduxInstance applies time-travel dispatches to all trees', async () => {
+    resetPathNotifier();
+
+    const originalWindow = (globalThis as any).window;
+    const send = vi.fn();
+    let subscriber: ((message: unknown) => void) | null = null;
+    const connect = vi.fn(() => ({
+      send,
+      subscribe: (listener: (message: unknown) => void) => {
+        subscriber = listener;
+      },
+    }));
+
+    (globalThis as any).window = {
+      __REDUX_DEVTOOLS_EXTENSION__: {
+        connect,
+      },
+    };
+
+    try {
+      const treeA = createMockTree();
+      const treeB = createMockTree();
+
+      devTools({
+        enabled: true,
+        enableBrowserDevTools: true,
+        treeName: 'A',
+        aggregatedReduxInstance: { id: 'group-2', name: 'Group 2' },
+      })(treeA);
+
+      devTools({
+        enabled: true,
+        enableBrowserDevTools: true,
+        treeName: 'B',
+        aggregatedReduxInstance: { id: 'group-2', name: 'Group 2' },
+      })(treeB);
+
+      subscriber?.({
+        type: 'DISPATCH',
+        payload: { type: 'JUMP_TO_STATE' },
+        state: JSON.stringify({ A: { count: 10 }, B: { count: 20 } }),
+      });
+
+      expect((treeA() as any).count).toBe(10);
+      expect((treeB() as any).count).toBe(20);
+
+      await Promise.resolve();
+    } finally {
+      (globalThis as any).window = originalWindow;
+    }
+  });
+
+  it('aggregatedReduxInstance does not bleed PathNotifier paths across trees', async () => {
+    resetPathNotifier();
+
+    const originalWindow = (globalThis as any).window;
+    const send = vi.fn();
+    const connect = vi.fn(() => ({
+      send,
+      subscribe: (_listener: (message: unknown) => void) => void 0,
+    }));
+
+    (globalThis as any).window = {
+      __REDUX_DEVTOOLS_EXTENSION__: {
+        connect,
+      },
+    };
+
+    try {
+      const treeA = createMockTree({ a: 0 });
+      const treeB = createMockTree({ b: 0 });
+
+      devTools({
+        enabled: true,
+        enableBrowserDevTools: true,
+        treeName: 'A',
+        aggregatedReduxInstance: { id: 'group-bleed', name: 'Group Bleed' },
+      })(treeA);
+
+      devTools({
+        enabled: true,
+        enableBrowserDevTools: true,
+        treeName: 'B',
+        aggregatedReduxInstance: { id: 'group-bleed', name: 'Group Bleed' },
+      })(treeB);
+
+      // Ignore any init/register events
+      send.mockClear();
+
+      const notifier = getPathNotifier();
+      notifier.notify('a', 1, 0);
+      notifier.flushSync();
+      await Promise.resolve();
+
+      expect(send).toHaveBeenCalledTimes(1);
+      const [action] = send.mock.calls[0];
+
+      expect(action).toMatchObject({
+        type: 'SignalTree/A.a',
+        payload: 'A.a',
+        meta: {
+          source: 'path-notifier',
+          paths: ['A.a'],
+          timestamp: expect.any(Number),
+        },
+      });
+      expect((action as any).meta.paths.some((p: string) => p.startsWith('B.'))).toBe(
+        false
+      );
+    } finally {
+      (globalThis as any).window = originalWindow;
+    }
+  });
+
+  it('aggregatedReduxInstance tears down when last tree disconnects (allows reconnect)', () => {
+    resetPathNotifier();
+
+    const originalWindow = (globalThis as any).window;
+    const send = vi.fn();
+    const connect = vi.fn(() => ({
+      send,
+      subscribe: (_listener: (message: unknown) => void) => void 0,
+      disconnect: vi.fn(),
+      unsubscribe: vi.fn(),
+    }));
+
+    (globalThis as any).window = {
+      __REDUX_DEVTOOLS_EXTENSION__: {
+        connect,
+      },
+    };
+
+    try {
+      const treeA = createMockTree();
+      const treeB = createMockTree();
+
+      const enhancedA = devTools({
+        enabled: true,
+        enableBrowserDevTools: true,
+        treeName: 'A',
+        aggregatedReduxInstance: { id: 'group-3', name: 'Group 3' },
+      })(treeA);
+
+      const enhancedB = devTools({
+        enabled: true,
+        enableBrowserDevTools: true,
+        treeName: 'B',
+        aggregatedReduxInstance: { id: 'group-3', name: 'Group 3' },
+      })(treeB);
+
+      expect(connect).toHaveBeenCalledTimes(1);
+
+      enhancedA.disconnectDevTools();
+      enhancedB.disconnectDevTools();
+
+      // New tree with same group id should reconnect (group was cleaned up)
+      const treeC = createMockTree();
+      devTools({
+        enabled: true,
+        enableBrowserDevTools: true,
+        treeName: 'C',
+        aggregatedReduxInstance: { id: 'group-3', name: 'Group 3' },
+      })(treeC);
+
+      expect(connect).toHaveBeenCalledTimes(2);
     } finally {
       (globalThis as any).window = originalWindow;
     }

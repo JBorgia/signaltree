@@ -1670,6 +1670,61 @@ tree.undo(); // Time travel
 tree.save(); // Persistence
 ```
 
+### Aggregated Redux DevTools Instance
+~~~~
+When using multiple independent trees (e.g. per lazy-loaded feature module), each `devTools()` call creates a separate Redux DevTools instance by default. Use `aggregatedReduxInstance` to group multiple trees under a **single Redux DevTools instance**:
+
+```typescript
+import { signalTree, batching, entityMap, devTools } from '@signaltree/core';
+
+const DEVTOOLS_GROUP_ID = 'my-app';
+const DEVTOOLS_GROUP_NAME = 'MyApp SignalTree';
+
+// Feature A tree
+const ordersTree = signalTree({ orders: entityMap<Order>() })
+  .with(batching())
+  .with(devTools({
+    treeName: 'orders-store',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
+    },
+  }));
+
+// Feature B tree (same group)
+const productsTree = signalTree({ products: entityMap<Product>() })
+  .with(batching())
+  .with(devTools({
+    treeName: 'products-store',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
+    },
+  }));
+```
+
+In Redux DevTools you will see a single instance named `"MyApp SignalTree"` with state:
+
+```json
+{
+  "orders-store": { "orders": { ... } },
+  "products-store": { "products": { ... } }
+}
+```
+
+**Key behaviors:**
+
+- Trees sharing the same `aggregatedReduxInstance.id` are grouped together.
+- The Redux DevTools `instanceId` is based on `aggregatedReduxInstance.id` to avoid collisions.
+- Trees can be dynamically registered/unregistered as lazy-loaded modules come and go.
+- The shared connection is created on first registration and cleaned up when the last tree disconnects.
+- Trees that omit `aggregatedReduxInstance` work as standalone DevTools instances as before.
+- You can mix aggregated and standalone trees in the same application.
+
+**Logging:** DevTools internal logging is quiet by default. Set `enableLogging: true` on `devTools({ ... })` if you need console diagnostics.
+
+**Cleanup:** Call `tree.disconnectDevTools()` when destroying a tree (e.g. in `DestroyRef.onDestroy`) to unregister it from the group and clean up its state in DevTools.
+
 ### Production-Ready Composition
 
 ```typescript
