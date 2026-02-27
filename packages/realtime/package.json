@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/realtime",
-  "version": "8.0.0",
+  "version": "8.0.1",
   "description": "Real-time data synchronization enhancers for SignalTree - Supabase, Firebase, and WebSocket support",
   "license": "MIT",
   "type": "module",
