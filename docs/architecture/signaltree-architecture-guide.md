@@ -511,6 +511,39 @@ SignalTree’s DevTools / time-travel / persistence ecosystem is built around a 
 
 If you want a single unified DevTools view, prefer **one global runtime tree** (Category C) and inject typed slices (`tree.$.feature`) into feature code.
 
+**Alternatively**, if you need multiple independent trees but want a single Redux DevTools instance, you can use the `aggregatedReduxInstance` option to group them:
+
+```typescript
+const DEVTOOLS_GROUP_ID = 'my-app';
+const DEVTOOLS_GROUP_NAME = 'MyApp SignalTree';
+
+// orders-tree.ts
+const ordersTree = signalTree({ orders: entityMap<Order>() })
+  .with(batching())
+  .with(devTools({
+    treeName: 'orders-store',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
+    },
+  }));
+
+// products-tree.ts
+const productsTree = signalTree({ products: entityMap<Product>() })
+  .with(batching())
+  .with(devTools({
+    treeName: 'products-store',
+    aggregatedReduxInstance: {
+      id: DEVTOOLS_GROUP_ID,
+      name: DEVTOOLS_GROUP_NAME,
+    },
+  }));
+```
+
+All trees sharing the same `aggregatedReduxInstance.id` will appear under a **single Redux DevTools instance** (named by `aggregatedReduxInstance.name`), with each tree's state nested under its `treeName` key. Trees can be dynamically registered/unregistered as lazy-loaded modules come and go — the shared DevTools instance is created on first registration and cleaned up when the last tree disconnects.
+
+Trees that omit `aggregatedReduxInstance` continue to work as standalone DevTools instances.
+
 #### D1: Domain-Scoped Trees
 
 Separate tree instance per domain.
@@ -2585,7 +2618,7 @@ setupKeyboardShortcuts() {
   fromEvent<KeyboardEvent>(document, 'keydown')
     .pipe(filter(e => (e.ctrlKey || e.metaKey) && e.key === 'z'))
     .subscribe(e => {
-      e.shiftKey ? this.tree.redo() : this.tree.undo();
+      e.shiftKey ? this.redo() : this.undo();
     });
 }
 
@@ -2610,7 +2643,13 @@ async updatePlant(id: string, changes: Partial<Plant>) {
 
 ```typescript
 // "Using multiple enhancers is over-engineering"
-const tree = signalTree(state).with(batching()).with(timeTravel()).with(devTools()).with(memoization()); // ❌ "Too many enhancers!"
+const tree = signalTree<AppState>({
+  ...,
+  plants: entityMap<Plant>(),
+})
+  .with(batching())
+  .with(devTools())
+  .with(memoization()); // ❌ "Too many enhancers!"
 // Note: v7+ auto-processes markers (entityMap, status, stored), no explicit enhancer needed
 ```
 
@@ -3096,7 +3135,16 @@ import type { AppTreeBase } from '../app-tree';
 // derivedFrom provides the type for $ via curried syntax
 export const tier1Derived = derivedFrom<AppTreeBase>()(($) => ({
   users: {
-    current: computed(() => $.users.byId($.selected.userId())?.() ?? null),
+    current: computed(() => {
+      const userId = $.selected.userId();
+      return userId != null ? $.users.byId(userId)?.() ?? null : null;
+    }),
+  },
+  tickets: {
+    active: computed(() => {
+      const activeId = $.tickets.activeId();
+      return activeId != null ? $.tickets.entities.byId(activeId)?.() ?? null : null;
+    }),
   },
 }));
 ```
@@ -3310,7 +3358,7 @@ export class TicketListComponent {
   readonly isLoading = this.store.$.tickets.loading.state;
   readonly activeTicket = this.store.$.tickets.active;
 
-  // Operations - via ops.domain
+  // Operations - via ops.namespace
   loadTickets() {
     this.store.ops.tickets.loadTickets$().subscribe();
   }

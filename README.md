@@ -19,6 +19,7 @@
 
 > **DevTools that behave like you expect.** Auto-connect, path-based actions, time-travel dispatch, and safer serialization.
 
+- **Aggregated instances Support** for multiple stores in Redux DevTools
 - **DevTools auto-connect** to Redux DevTools extension
 - **Path-based actions** with metadata and filtering
 - **Time-travel dispatch** support from Redux DevTools
