@@ -155,11 +155,15 @@ describe('devTools enhancer (v6 API)', () => {
     };
 
     try {
-      const tree = createMockTree();
+      // Tree must have a 'products' key for the path to be owned
+      const tree = createMockTree({ products: {} });
       devTools({ enabled: true, enableBrowserDevTools: true })(tree);
 
       // Ignore init call
       send.mockClear();
+
+      // Mutate state so stateActuallyChanged is true
+      (tree.state as any).products = { 1: { id: 1 } };
 
       const notifier = getPathNotifier();
       notifier.notify('products.1', { id: 1 }, undefined);
@@ -556,6 +560,112 @@ describe('devTools enhancer (v6 API)', () => {
       })(treeC);
 
       expect(connect).toHaveBeenCalledTimes(2);
+    } finally {
+      (globalThis as any).window = originalWindow;
+    }
+  });
+
+  it('standalone trees with overlapping keys do NOT send phantom actions from cross-tree notifications', async () => {
+    resetPathNotifier();
+
+    const originalWindow = (globalThis as any).window;
+    const sendTreeA = vi.fn();
+    const sendTreeB = vi.fn();
+    let connectCallCount = 0;
+    const connect = vi.fn(() => {
+      connectCallCount++;
+      return {
+        send: connectCallCount === 1 ? sendTreeA : sendTreeB,
+        subscribe: () => void 0,
+      };
+    });
+
+    (globalThis as any).window = {
+      __REDUX_DEVTOOLS_EXTENSION__: {
+        connect,
+      },
+    };
+
+    try {
+      // Two standalone trees with the SAME top-level key ("counter")
+      const treeA = createMockTree({ counter: 0 });
+      const treeB = createMockTree({ counter: 0 });
+
+      // Both trees have DevTools enabled in standalone mode (no aggregatedReduxInstance)
+      devTools({ enabled: true, enableBrowserDevTools: true })(treeA);
+      devTools({ enabled: true, enableBrowserDevTools: true })(treeB);
+
+      // Clear init calls
+      sendTreeA.mockClear();
+      sendTreeB.mockClear();
+
+      // Mutate tree A's state
+      treeA.state.counter = 10;
+
+      // PathNotifier emits for "counter" path (which both trees have)
+      const notifier = getPathNotifier();
+      notifier.notify('counter', 10, 0);
+      notifier.flushSync();
+
+      await Promise.resolve();
+
+      // Tree A should send (its state changed)
+      expect(sendTreeA).toHaveBeenCalledTimes(1);
+
+      // Tree B should NOT send - its state did NOT change, even though
+      // PathNotifier reported the "counter" path. This was the phantom action bug.
+      expect(sendTreeB).not.toHaveBeenCalled();
+    } finally {
+      (globalThis as any).window = originalWindow;
+    }
+  });
+
+  it('standalone trees with different keys filter PathNotifier events by ownership', async () => {
+    resetPathNotifier();
+
+    const originalWindow = (globalThis as any).window;
+    const sendTreeA = vi.fn();
+    const sendTreeB = vi.fn();
+    let connectCallCount = 0;
+    const connect = vi.fn(() => {
+      connectCallCount++;
+      return {
+        send: connectCallCount === 1 ? sendTreeA : sendTreeB,
+        subscribe: () => void 0,
+      };
+    });
+
+    (globalThis as any).window = {
+      __REDUX_DEVTOOLS_EXTENSION__: {
+        connect,
+      },
+    };
+
+    try {
+      // Two standalone trees with DIFFERENT top-level keys
+      const treeA = createMockTree({ users: [] });
+      const treeB = createMockTree({ products: [] });
+
+      devTools({ enabled: true, enableBrowserDevTools: true })(treeA);
+      devTools({ enabled: true, enableBrowserDevTools: true })(treeB);
+
+      sendTreeA.mockClear();
+      sendTreeB.mockClear();
+
+      // Mutate tree A
+      treeA.state.users = [{ id: 1 }];
+
+      const notifier = getPathNotifier();
+      notifier.notify('users.1', { id: 1 }, undefined);
+      notifier.flushSync();
+
+      await Promise.resolve();
+
+      // Tree A should send (owns "users")
+      expect(sendTreeA).toHaveBeenCalledTimes(1);
+
+      // Tree B should NOT send (does not own "users", filters it out)
+      expect(sendTreeB).not.toHaveBeenCalled();
     } finally {
       (globalThis as any).window = originalWindow;
     }

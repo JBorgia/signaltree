@@ -542,9 +542,9 @@ const productsTree = signalTree({ products: entityMap<Product>() })
 
 All trees sharing the same `aggregatedReduxInstance.id` will appear under a **single Redux DevTools instance** (named by `aggregatedReduxInstance.name`), with each tree's state nested under its `treeName` key. Trees can be dynamically registered/unregistered as lazy-loaded modules come and go — the shared DevTools instance is created on first registration and cleaned up when the last tree disconnects.
 
-In aggregated mode, SignalTree attempts to **filter PathNotifier events by tree ownership** (based on each tree’s top-level keys) to reduce cross-tree noise. If multiple trees share the same top-level keys, ownership becomes ambiguous and you may still see some overlapping action naming.
+PathNotifier events are **filtered by tree ownership** in both standalone and aggregated modes. Each tree only processes paths that start with its top-level keys, and DevTools only sends an action when the tree's state actually changed. This prevents phantom actions even when multiple trees share the same property names.
 
-Trees that omit `aggregatedReduxInstance` continue to work as standalone DevTools instances.
+Trees that omit `aggregatedReduxInstance` work as standalone DevTools instances with one connection per tree.
 
 #### D1: Domain-Scoped Trees
 

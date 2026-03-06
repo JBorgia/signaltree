@@ -1247,11 +1247,11 @@ export function devTools(
         (path) => path && isPathAllowed(path)
       );
 
-      if (
-        !stateActuallyChanged &&
-        !pendingExplicitAction &&
-        pendingAllowedPaths.length === 0
-      ) {
+      // Paths are hints for action naming, not triggers for sending.
+      // If state didn't actually change, don't send an action—even if
+      // PathNotifier reported paths (which can happen with cross-tree
+      // notifications when multiple standalone trees share property names).
+      if (!stateActuallyChanged && !pendingExplicitAction) {
         pendingAction = null;
         pendingExplicitAction = false;
         pendingSource = undefined;
@@ -1754,10 +1754,9 @@ export function devTools(
       },
     };
 
-    // PathNotifier is a global singleton, so in aggregated mode we try to
-    // filter out events from other trees. In standalone mode we preserve the
-    // historical behavior: accept all paths (ownership is ambiguous).
-    const shouldFilterByOwnership = Boolean(aggregatedReduxInstance);
+    // PathNotifier is a global singleton, so we filter out events from other
+    // trees based on top-level keys. This prevents cross-tree path leakage
+    // when multiple standalone trees exist with overlapping property names.
     const treeTopKeys = new Set<string>();
     const refreshTreeTopKeys = (): void => {
       treeTopKeys.clear();
@@ -1772,12 +1771,11 @@ export function devTools(
       }
     };
 
-    // Always populate keys so we can intercept leaf signals. Ownership
-    // filtering is only applied in aggregated mode.
+    // Always populate keys so we can intercept leaf signals and filter
+    // PathNotifier events by tree ownership.
     refreshTreeTopKeys();
 
     const isPathOwnedByTree = (path: string): boolean => {
-      if (!shouldFilterByOwnership) return true;
       if (treeTopKeys.size === 0) return true;
       const root = path.split('.')[0];
       if (treeTopKeys.has(root)) return true;
