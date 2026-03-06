@@ -60,6 +60,25 @@ NPM_TOKEN=${NPM_TOKEN:-} # Automation token for 2FA bypass
 # If the user interrupts (Ctrl+C) during publish, we should NOT auto-rollback
 # versions/commits because we may have already published some packages.
 PUBLISH_STARTED=false
+BACKUP_DIR=".release_backup"
+
+backup_file() {
+    local file_path="$1"
+    if [ -f "$file_path" ]; then
+        mkdir -p "$BACKUP_DIR/$(dirname "$file_path")"
+        cp "$file_path" "$BACKUP_DIR/$file_path"
+    fi
+}
+
+restore_file() {
+    local file_path="$1"
+    local backup_path="$BACKUP_DIR/$file_path"
+    if [ -f "$backup_path" ]; then
+        mkdir -p "$(dirname "$file_path")"
+        cp "$backup_path" "$file_path"
+        print_step "Restored $file_path"
+    fi
+}
 
 if [[ "$*" == *"--yes"* ]] || [[ "$*" == *"-y"* ]]; then
     NON_INTERACTIVE=true
@@ -151,22 +170,19 @@ fi
 # Step 1: Backup original versions (for rollback if needed)
 print_step "Creating version backup for rollback capability..."
 
-# Backup workspace version
-ORIGINAL_WORKSPACE_VERSION=$(node -p "JSON.parse(require('fs').readFileSync('./package.json', 'utf8')).version")
+rm -rf "$BACKUP_DIR"
+mkdir -p "$BACKUP_DIR"
 
-# Create backup file for rollback
-echo "ORIGINAL_WORKSPACE_VERSION=$ORIGINAL_WORKSPACE_VERSION" > .version_backup
-echo "NEW_VERSION=$NEW_VERSION" >> .version_backup
-echo "PACKAGES=(${PACKAGES[*]})" >> .version_backup
+# Backup workspace manifest and generated demo version files exactly as-is
+backup_file "package.json"
+backup_file "apps/demo/src/app/version.ts"
+backup_file "apps/demo/src/app/library-versions.ts"
 
-# Backup each package version
+# Backup each publishable package manifest exactly as-is
 for package in "${PACKAGES[@]}"; do
     PACKAGE_JSON="./packages/$package/package.json"
     if [ -f "$PACKAGE_JSON" ]; then
-        ORIGINAL_VERSION=$(node -p "JSON.parse(require('fs').readFileSync('$PACKAGE_JSON', 'utf8')).version")
-        # Convert package name to uppercase using tr for compatibility
-        PACKAGE_UPPER=$(echo "$package" | tr '[:lower:]' '[:upper:]' | tr '-' '_')
-        echo "ORIGINAL_${PACKAGE_UPPER}_VERSION=$ORIGINAL_VERSION" >> .version_backup
+        backup_file "$PACKAGE_JSON"
     fi
 done
 
@@ -176,56 +192,18 @@ print_success "Version backup created"
 rollback_versions() {
     print_error "Rolling back version changes..."
 
-    if [ -f ".version_backup" ]; then
-        source .version_backup
+    if [ -d "$BACKUP_DIR" ]; then
+        restore_file "package.json"
 
-        # Restore workspace version
-        node -p "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
-            pkg.version = '$ORIGINAL_WORKSPACE_VERSION';
-            fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n');
-            'Workspace version restored to $ORIGINAL_WORKSPACE_VERSION'
-        "
-
-        # Restore each package version
+        # Restore each package manifest exactly, including original dependency ranges
         for package in "${PACKAGES[@]}"; do
             PACKAGE_JSON="./packages/$package/package.json"
-            if [ -f "$PACKAGE_JSON" ]; then
-                # Convert package name to uppercase using tr for compatibility
-                PACKAGE_UPPER=$(echo "$package" | tr '[:lower:]' '[:upper:]' | tr '-' '_')
-                VAR_NAME="ORIGINAL_${PACKAGE_UPPER}_VERSION"
-                ORIGINAL_VERSION=${!VAR_NAME}
-                if [ -n "$ORIGINAL_VERSION" ]; then
-                    node -p "
-                        const fs = require('fs');
-                        const pkg = JSON.parse(fs.readFileSync('$PACKAGE_JSON', 'utf8'));
-                        pkg.version = '$ORIGINAL_VERSION';
-
-                        // Restore peer dependencies
-                        if (pkg.peerDependencies) {
-                            Object.keys(pkg.peerDependencies).forEach(dep => {
-                                if (dep.startsWith('@signaltree/')) {
-                                    pkg.peerDependencies[dep] = '*';
-                                }
-                            });
-                        }
-
-                        // Restore dependencies
-                        if (pkg.dependencies) {
-                            Object.keys(pkg.dependencies).forEach(dep => {
-                                if (dep.startsWith('@signaltree/')) {
-                                    pkg.dependencies[dep] = '*';
-                                }
-                            });
-                        }
-
-                        fs.writeFileSync('$PACKAGE_JSON', JSON.stringify(pkg, null, 2) + '\n');
-                        'Package $package version restored to $ORIGINAL_VERSION'
-                    "
-                fi
-            fi
+            restore_file "$PACKAGE_JSON"
         done
+
+        # Restore generated demo version files exactly
+        restore_file "apps/demo/src/app/version.ts"
+        restore_file "apps/demo/src/app/library-versions.ts"
 
         # Clean up build artifacts
         print_step "Cleaning up build artifacts..."
@@ -242,8 +220,8 @@ rollback_versions() {
             git push origin --delete "v$NEW_VERSION" 2>/dev/null || true
         fi
 
-        # Remove backup file
-        rm -f .version_backup
+        # Remove backup directory
+        rm -rf "$BACKUP_DIR"
 
         print_success "Version rollback completed"
         print_error "Release failed - all changes have been reverted"
@@ -548,8 +526,8 @@ else
     print_warning "Skipping tag push because tag was not created in this run."
 fi
 
-# Step 7: Clean up backup file and temporary npm credentials (release succeeded)
-rm -f .version_backup
+# Step 7: Clean up backup files and temporary npm credentials (release succeeded)
+rm -rf "$BACKUP_DIR"
 if [ -n "$NPM_TOKEN" ]; then
     rm -f ~/.npmrc.signaltree-temp
     print_step "Cleaned up temporary npm credentials"

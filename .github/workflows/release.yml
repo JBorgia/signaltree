@@ -1,4 +1,4 @@
-name: Nx Release Publish
+name: GitHub Release
 
 on:
   push:
@@ -7,12 +7,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  publish:
+  release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      packages: write
-      id-token: write  # Required for npm provenance/trusted publishers
 
     steps:
       - name: Checkout
@@ -20,40 +18,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: latest
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: Install dependencies (skip optional)
-        run: pnpm install --frozen-lockfile || pnpm install --no-frozen-lockfile
-
-      - name: Reset Nx cache
-        run: pnpm exec nx reset
-
-      - name: Debug versions
+      - name: Validate release tag format
         run: |
-          node --version
-          pnpm --version
-          pnpm exec nx --version
-
-      - name: Build packages
-        run: |
-          pnpm nx run-many -t build -p types,utils,callable-syntax,core,enterprise,ng-forms,guardrails --configuration=production
-        env:
-          NX_DAEMON: 'false'
-
-      - name: Publish packages with Nx
-        run: pnpm nx release publish --verbose
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_CONFIG_PROVENANCE: true  # Enable provenance attestation
+          if [[ "${GITHUB_REF_NAME}" != v* ]]; then
+            echo "Expected a version tag like v8.0.2, got: ${GITHUB_REF_NAME}"
+            exit 1
+          fi
+          echo "Creating GitHub release for ${GITHUB_REF_NAME}"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
