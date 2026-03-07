@@ -12,6 +12,11 @@
 }
 
 .nav-drawer {
+  display: none;
+  padding-top: 0.25rem;
+}
+
+.nav-drawer.nav-drawer-open {
   display: block;
 }
 
@@ -61,6 +66,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  margin-left: auto;
 }
 
 .home-button {
@@ -92,7 +98,7 @@
 }
 
 .menu-toggle {
-  display: none;
+  display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   min-height: 42px;
@@ -246,10 +252,6 @@
     padding-bottom: 0.75rem;
   }
 
-  .nav-header-actions {
-    margin-left: auto;
-  }
-
   .brand-logo {
     width: 2rem;
     height: 2rem;
@@ -266,19 +268,6 @@
   .home-button {
     padding: 0.5rem 1rem;
     font-size: 0.8rem;
-  }
-
-  .menu-toggle {
-    display: inline-flex;
-  }
-
-  .nav-drawer {
-    display: none;
-    padding-top: 0.25rem;
-  }
-
-  .nav-drawer.nav-drawer-open {
-    display: block;
   }
 
   .nav-categories {
