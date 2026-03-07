@@ -1,18 +1,23 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
-import { SIGNALTREE_CORE_VERSION, SIGNALTREE_ENTERPRISE_VERSION, SIGNALTREE_VERSION_SUMMARY } from '../../version';
+import {
+  SIGNALTREE_CORE_VERSION,
+  SIGNALTREE_ENTERPRISE_VERSION,
+  SIGNALTREE_VERSION_SUMMARY,
+} from '../../version';
 
 export interface DemoExample {
   id: string;
   title: string;
   description: string;
   route: string;
+  queryParams?: Record<string, string>;
   category:
-    | 'getting-started'
-    | 'core-features'
-    | 'enhancers'
+    | 'learn'
+    | 'packages'
+    | 'examples'
     | 'advanced'
     | 'benchmarks';
 }
@@ -35,111 +40,142 @@ export class NavigationComponent {
   readonly coreVersion: string;
   readonly enterpriseVersion: string;
   readonly versionSummary: string;
-  readonly buildDate: string;
+  readonly mobileMenuOpen = signal(false);
 
   constructor() {
-    // Values injected via generated version.ts (tools/generate-version-env.cjs)
     this.coreVersion = SIGNALTREE_CORE_VERSION;
     this.enterpriseVersion = SIGNALTREE_ENTERPRISE_VERSION;
     this.versionSummary = SIGNALTREE_VERSION_SUMMARY;
-    this.buildDate = new Date().toISOString().slice(0, 10);
   }
+
   examples: DemoExample[] = [
-    // Getting Started - Learn the basics
     {
       id: 'docs',
-      title: '📚 Documentation',
-      description: 'Package documentation and READMEs',
+      title: 'Documentation',
+      description: 'Browse package docs and READMEs',
       route: '/docs',
-      category: 'getting-started',
+      category: 'learn',
     },
     {
       id: 'fundamentals',
       title: 'Fundamentals',
-      description:
-        'Interactive examples demonstrating core SignalTree concepts',
+      description: 'Interactive core examples and mental model',
       route: '/examples/fundamentals',
-      category: 'getting-started',
+      category: 'learn',
+    },
+    {
+      id: 'recommended-architecture',
+      title: 'Recommended Architecture',
+      description: 'One runtime tree, typed slices, root-level enhancers',
+      route: '/examples/fundamentals/recommended-architecture',
+      category: 'learn',
+    },
+    {
+      id: 'migration-recipe',
+      title: 'Migration Recipe',
+      description: 'Practical path from more ceremonial state patterns',
+      route: '/examples/fundamentals/migration-recipe',
+      category: 'learn',
+    },
+    {
+      id: 'core-package',
+      title: 'Core Package',
+      description: 'Start with the main SignalTree package',
+      route: '/docs',
+      queryParams: { package: 'core' },
+      category: 'packages',
+    },
+    {
+      id: 'events',
+      title: 'Events',
+      description: 'Event helpers and related docs/demo entry points',
+      route: '/docs',
+      queryParams: { package: 'events' },
+      category: 'packages',
+    },
+    {
+      id: 'realtime',
+      title: 'Realtime',
+      description: 'Live synchronization patterns for entity maps',
+      route: '/docs',
+      queryParams: { package: 'realtime' },
+      category: 'packages',
+    },
+    {
+      id: 'ng-forms',
+      title: 'Angular Forms',
+      description: 'Forms integration with validation and persistence',
+      route: '/docs',
+      queryParams: { package: 'ng-forms' },
+      category: 'packages',
     },
     {
       id: 'callable-syntax',
       title: 'Callable Syntax',
-      description: 'Unified callable API: tree.$.user.name("value")',
-      route: '/callable-syntax',
-      category: 'getting-started',
+      description: 'Optional DX layer for callable node syntax',
+      route: '/docs',
+      queryParams: { package: 'callable-syntax' },
+      category: 'packages',
     },
     {
-      id: 'architecture',
-      title: 'Architecture Overview',
-      description: 'Consolidated architecture and tree-shaking benefits',
-      route: '/architecture',
-      category: 'getting-started',
+      id: 'form-marker',
+      title: 'Form Marker',
+      description: 'Tree-integrated form state modeling',
+      route: '/form-marker',
+      category: 'examples',
     },
-
-    // Core Features - Built-in capabilities
-    {
-      id: 'entities',
-      title: 'Entity Management',
-      description: 'CRUD operations for entity collections',
-      route: '/entities',
-      category: 'core-features',
-    },
-    {
-      id: 'ng-forms',
-      title: 'Forms Integration',
-      description: 'Angular forms bridge with persistence and validation',
-      route: '/ng-forms',
-      category: 'core-features',
-    },
-    {
-      id: 'persistence',
-      title: 'Persistence',
-      description: 'Auto-save state to localStorage',
-      route: '/persistence',
-      category: 'core-features',
-    },
-    {
-      id: 'serialization',
-      title: 'Serialization',
-      description: 'JSON export/import with type preservation',
-      route: '/serialization',
-      category: 'core-features',
-    },
-
-    // Enhancers - Extend your tree
     {
       id: 'batching',
       title: 'Batching',
-      description: 'Batch multiple updates for optimal performance',
+      description: 'Batch multiple updates without losing clarity',
       route: '/batching',
-      category: 'enhancers',
+      category: 'examples',
+    },
+    {
+      id: 'entities',
+      title: 'Entities',
+      description: 'CRUD ergonomics for collection-heavy state',
+      route: '/entities',
+      category: 'examples',
     },
     {
       id: 'memoization',
       title: 'Memoization',
       description: 'Cache expensive computations',
       route: '/memoization',
-      category: 'enhancers',
+      category: 'examples',
+    },
+    {
+      id: 'persistence',
+      title: 'Persistence',
+      description: 'Persist state deliberately to local storage',
+      route: '/persistence',
+      category: 'examples',
+    },
+    {
+      id: 'serialization',
+      title: 'Serialization',
+      description: 'Export/import state with explicit serialization',
+      route: '/serialization',
+      category: 'examples',
     },
     {
       id: 'time-travel',
       title: 'Time Travel',
       description: 'Undo/redo and state history',
       route: '/time-travel',
-      category: 'enhancers',
+      category: 'examples',
     },
     {
       id: 'devtools',
       title: 'DevTools',
       description: 'Redux DevTools integration',
       route: '/devtools',
-      category: 'enhancers',
+      category: 'examples',
     },
-
-    // Advanced - Enterprise & Configuration
     {
       id: 'custom-extensions',
-      title: 'Custom Markers & Enhancers',
+      title: 'Custom Extensions',
       description: 'Create your own markers and enhancers',
       route: '/custom-extensions',
       category: 'advanced',
@@ -152,9 +188,37 @@ export class NavigationComponent {
       category: 'advanced',
     },
     {
+      id: 'markers',
+      title: 'Markers',
+      description: 'Understand the marker model and built-in primitives',
+      route: '/markers',
+      category: 'advanced',
+    },
+    {
+      id: 'guardrails',
+      title: 'Guardrails',
+      description: 'Development guardrails and monitoring surface',
+      route: '/guardrails',
+      category: 'advanced',
+    },
+    {
+      id: 'undo-redo',
+      title: 'Undo / Redo',
+      description: 'Focused history workflow demo',
+      route: '/undo-redo',
+      category: 'advanced',
+    },
+    {
+      id: 'bundle-visualizer',
+      title: 'Bundle Visualizer',
+      description: 'Inspect output shape and tree-shaking-oriented packaging',
+      route: '/bundle-visualizer',
+      category: 'advanced',
+    },
+    {
       id: 'enterprise-enhancer',
       title: 'Enterprise Enhancer',
-      description: 'Audit, time-travel and enterprise presets',
+      description: 'Audit, diagnostics, and enterprise-oriented capabilities',
       route: '/enterprise-enhancer',
       category: 'advanced',
     },
@@ -165,12 +229,10 @@ export class NavigationComponent {
       route: '/extreme-depth',
       category: 'advanced',
     },
-
-    // Benchmarks
     {
       id: 'benchmarks',
       title: 'Library Comparison',
-      description: 'Compare SignalTree vs NgRx, Akita, Elf, NgXs',
+      description: 'Compare SignalTree with other Angular state approaches',
       route: '/benchmarks',
       category: 'benchmarks',
     },
@@ -184,9 +246,9 @@ export class NavigationComponent {
   ];
 
   categories: DemoExample['category'][] = [
-    'getting-started',
-    'core-features',
-    'enhancers',
+    'learn',
+    'packages',
+    'examples',
     'advanced',
     'benchmarks',
   ];
@@ -210,11 +272,19 @@ export class NavigationComponent {
     return this.examples.filter((example) => example.category === category);
   }
 
+  toggleMobileMenu(): void {
+    this.mobileMenuOpen.update((isOpen) => !isOpen);
+  }
+
+  closeMobileMenu(): void {
+    this.mobileMenuOpen.set(false);
+  }
+
   getCategoryLabel(category: DemoExample['category']): string {
     const labels: Record<DemoExample['category'], string> = {
-      'getting-started': '🚀 Getting Started',
-      'core-features': '📦 Core Features',
-      enhancers: '⚡ Enhancers',
+      learn: '🚀 Learn',
+      packages: '📦 Reference',
+      examples: '🧪 Examples',
       advanced: '🔧 Advanced',
       benchmarks: '📊 Benchmarks',
     };

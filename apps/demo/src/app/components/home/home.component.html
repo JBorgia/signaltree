@@ -1,312 +1,192 @@
 <div class="home-container">
-  <!-- Hero Section -->
   <section class="hero-section">
-    <div class="hero-content">
+    <div class="hero-copy">
+      <div class="hero-eyebrow">Deep reactive state for Angular</div>
       <div class="hero-logo-container">
         <img src="/signaltree.svg" alt="SignalTree Logo" class="hero-logo" />
       </div>
-      <h1 class="hero-title">SignalTree</h1>
+      <h1 class="hero-title">
+        Model nested state as data — not reducers, selectors, and ceremony.
+      </h1>
       <p class="hero-subtitle">
-        <strong>Reactive JSON.</strong> JSON branches, reactive leaves.
+        SignalTree gives Angular apps a path-based, type-safe state model that
+        stays readable as your data gets deeper and your app gets bigger.
       </p>
-      <p class="hero-tagline">
-        No actions. No reducers. No selectors. Just data that reacts.
+      <p class="hero-supporting-copy">
+        Keep one runtime tree, compose typed slices, and add DevTools, time
+        travel, persistence, entities, forms, realtime, and events when you
+        need them.
       </p>
+
+      <div class="hero-actions">
+        @for (cta of primaryCtas; track cta.label) {
+        <a
+          [routerLink]="cta.route"
+          class="hero-action"
+          [class.hero-action-primary]="cta.variant === 'primary'"
+          [class.hero-action-secondary]="cta.variant === 'secondary'"
+          [class.hero-action-ghost]="cta.variant === 'ghost'"
+        >
+          {{ cta.label }}
+        </a>
+        }
+      </div>
+
       <div class="hero-badges">
-        <span class="badge revolutionary">0.036ms at 15+ levels</span>
-        <span class="badge">Angular 17+</span>
-        <span class="badge">TypeScript</span>
-        <span class="badge">Signals</span>
-        <span class="badge">Reactive JSON</span>
+        <span class="badge">Angular signals</span>
+        <span class="badge">Type-safe paths</span>
+        <span class="badge">One runtime tree</span>
+        <span class="badge">DevTools + time travel</span>
       </div>
     </div>
   </section>
 
-  <!-- What is SignalTree? -->
-  <section class="description-section">
-    <h2 class="section-title">❓ What is SignalTree?</h2>
-    <div class="description-content">
-      <p>
-        <strong>JSON branches, reactive leaves.</strong> SignalTree treats your
-        state like a tree — the branches are your JSON paths
-        (<code>$.user.profile</code>), and the leaves are reactive signals you
-        read and write.
-      </p>
-      <p>
-        No actions. No reducers. No selectors. You model state as
-        <strong>data</strong>, not mechanics. Access feels obvious:
-        <code>tree.$.user.profile.name()</code> — fully type-safe,
-        IDE-discoverable, with fine-grained reactivity layered transparently on
-        top.
-      </p>
-      <p>
-        With perfect type inference at 15+ nesting levels and industry-leading
-        0.036ms performance, SignalTree makes complex state management simple,
-        fast, and intuitive.
-      </p>
+  <section class="section">
+    <h2 class="section-title">Start here</h2>
+    <p class="section-intro">
+      The fastest way to evaluate SignalTree is to learn the model, inspect the
+      architecture, read the package docs, and then use benchmarks as proof.
+    </p>
+
+    <div class="card-grid card-grid-2">
+      @for (card of evaluationCards; track card.title) {
+      <article class="link-card">
+        <h3 class="link-card-title">{{ card.title }}</h3>
+        <p class="link-card-description">{{ card.description }}</p>
+        <a [routerLink]="card.route" class="link-card-cta">{{ card.cta }}</a>
+      </article>
+      }
     </div>
   </section>
 
-  <!-- Core Features -->
-  <section class="core-features-section">
-    <h2 class="section-title">✨ Core Features</h2>
-    <div class="features-grid">
+  <section class="section compare-section">
+    <div class="compare-header">
+      <h2 class="section-title">Why this feels simpler</h2>
+      <p class="section-intro">
+        The point is not that SignalTree introduces a new abstraction to learn.
+        The point is that your state continues to look like your data.
+      </p>
+    </div>
+
+    <div class="compare-grid">
+      <article class="compare-card">
+        <h3 class="compare-title">Typical ceremony</h3>
+        <pre class="code-example"><code>{{ beforeCode }}</code></pre>
+      </article>
+
+      <article class="compare-card compare-card-highlight">
+        <h3 class="compare-title">SignalTree</h3>
+        <pre class="code-example"><code>{{ afterCode }}</code></pre>
+      </article>
+    </div>
+  </section>
+
+  <section class="section quick-start-section">
+    <h2 class="section-title">Quick start</h2>
+    <p class="section-intro">
+      Start with the core package. In production, the recommended shape is one
+      root tree with typed branches for domain slices.
+    </p>
+    <pre class="code-example code-example-large"><code>{{ quickStartCode }}</code></pre>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">What you get</h2>
+    <div class="feature-grid">
       @for (feature of coreFeatures; track feature.name) {
-      <div class="feature-card">
+      <article
+        class="feature-card"
+        [class.feature-card-highlight]="feature.highlight"
+      >
         <h3 class="feature-name">{{ feature.name }}</h3>
         <p class="feature-description">{{ feature.description }}</p>
-      </div>
-      }
-
-      <!-- Performance -->
-      @let performanceFeatures = getFeaturesByCategory('Performance'); @if
-      (performanceFeatures.length > 0) {
-      <div class="category-section">
-        <h3 class="category-title">⚡ Performance</h3>
-        @if (performanceFeatures[0]?.methods?.length) {
-        <div class="method-list">
-          @for (method of performanceFeatures[0].methods; track method) {
-          <span class="method-tag"> {{ method }}() </span>
-          }
-        </div>
-        }
-        <div class="category-grid">
-          @for (feature of performanceFeatures; track feature.title) {
-          <div class="category-card">
-            <h4 class="card-title">{{ feature.title }}</h4>
-            <p class="card-description">{{ feature.description }}</p>
-            <a [routerLink]="feature.route" class="card-link">
-              View Performance Examples →
-            </a>
-          </div>
-          }
-        </div>
-      </div>
-      }
-
-      <!-- Middleware -->
-      @let middlewareFeatures = getFeaturesByCategory('Middleware'); @if
-      (middlewareFeatures.length > 0) {
-      <div class="category-section">
-        <h3 class="category-title">🔌 Middleware</h3>
-        @if (middlewareFeatures[0]?.methods?.length) {
-        <div class="method-list">
-          @for (method of middlewareFeatures[0].methods; track method) {
-          <span class="method-tag"> {{ method }}() </span>
-          }
-        </div>
-        }
-        <div class="category-grid">
-          @for (feature of middlewareFeatures; track feature.title) {
-          <div class="category-card">
-            <h4 class="card-title">{{ feature.title }}</h4>
-            <p class="card-description">{{ feature.description }}</p>
-            <a [routerLink]="feature.route" class="card-link">
-              Learn Middleware →
-            </a>
-          </div>
-          }
-        </div>
-      </div>
-      }
-
-      <!-- Entity Management -->
-      @let entityFeatures = getFeaturesByCategory('Entity'); @if
-      (entityFeatures.length > 0) {
-      <div class="category-section">
-        <h3 class="category-title">📦 Entity Management</h3>
-        @if (entityFeatures[0]?.methods?.length) {
-        <div class="method-list">
-          @for (method of entityFeatures[0].methods; track method) {
-          <span class="method-tag"> {{ method }}() </span>
-          }
-        </div>
-        }
-        <div class="category-grid">
-          @for (feature of entityFeatures; track feature.title) {
-          <div class="category-card">
-            <h4 class="card-title">{{ feature.title }}</h4>
-            <p class="card-description">{{ feature.description }}</p>
-            <a [routerLink]="feature.route" class="card-link">
-              Explore Entity CRUD →
-            </a>
-          </div>
-          }
-        </div>
-      </div>
-      }
-
-      <!-- Async (via Middleware) -->
-      @let asyncFeatures = getFeaturesByCategory('Async'); @if
-      (asyncFeatures.length > 0) {
-      <div class="category-section">
-        <h3 class="category-title">🌐 Async (via Middleware)</h3>
-        @if (asyncFeatures[0]?.methods?.length) {
-        <div class="method-list">
-          @for (method of asyncFeatures[0].methods; track method) {
-          <span class="method-tag"> {{ method }}() </span>
-          }
-        </div>
-        }
-        <div class="category-grid">
-          @for (feature of asyncFeatures; track feature.title) {
-          <div class="category-card">
-            <h4 class="card-title">{{ feature.title }}</h4>
-            <p class="card-description">{{ feature.description }}</p>
-            <a [routerLink]="feature.route" class="card-link">
-              Learn Middleware →
-            </a>
-          </div>
-          }
-        </div>
-      </div>
-      }
-
-      <!-- Time Travel -->
-      @let timeTravelFeatures = getFeaturesByCategory('Time Travel'); @if
-      (timeTravelFeatures.length > 0) {
-      <div class="category-section">
-        <h3 class="category-title">⏰ Time Travel</h3>
-        @if (timeTravelFeatures[0]?.methods?.length) {
-        <div class="method-list">
-          @for (method of timeTravelFeatures[0].methods; track method) {
-          <span class="method-tag"> {{ method }}() </span>
-          }
-        </div>
-        }
-        <div class="category-grid">
-          @for (feature of timeTravelFeatures; track feature.title) {
-          <div class="category-card">
-            <h4 class="card-title">{{ feature.title }}</h4>
-            <p class="card-description">{{ feature.description }}</p>
-            <a [routerLink]="feature.route" class="card-link">
-              Time Travel Demo →
-            </a>
-          </div>
-          }
-        </div>
-      </div>
-      }
-
-      <!-- Additional Features -->
-      @let formsTestingFeatures =
-      getFeaturesByCategory('Forms').concat(getFeaturesByCategory('Testing'));
-      @if (formsTestingFeatures.length > 0) {
-      <div class="category-section">
-        <h3 class="category-title">🛠️ Additional Features</h3>
-        <div class="category-grid">
-          @for (feature of formsTestingFeatures; track feature.title) {
-          <div class="category-card">
-            <h4 class="card-title">{{ feature.title }}</h4>
-            <p class="card-description">{{ feature.description }}</p>
-            <a [routerLink]="feature.route" class="card-link"> Explore → </a>
-          </div>
-          }
-        </div>
-      </div>
+      </article>
       }
     </div>
   </section>
 
-  <!-- Quick Start -->
-  <section class="quick-start-section">
-    <h2 class="section-title">🚀 Quick Start</h2>
-    <div class="code-example">
-      <pre><code>{{ quickStartCode }}</code></pre>
-    </div>
-  </section>
-
-  <!-- Extreme Depth Showcase -->
-  <section class="extreme-depth-section">
-    <h2 class="section-title">🔥 Extreme Depth Testing</h2>
-    <div class="extreme-depth-content">
-      <div class="extreme-depth-highlight">
-        <h3>🚀 Deep JSON, Perfect Types</h3>
-        <p>
-          SignalTree treats nested state as <strong>reactive JSON</strong> with
-          perfect type inference at unprecedented nesting depths. Access any
-          level with <strong>dot-notation</strong> —
-          <code>tree.$.deep.nested.path()</code> — fully type-safe,
-          IDE-discoverable, with 0.036ms performance at 15+ levels.
-        </p>
-        <div class="depth-stats">
-          <div class="stat">
-            <span class="stat-value">15+</span>
-            <span class="stat-label">Nesting Levels</span>
-          </div>
-          <div class="stat">
-            <span class="stat-value">0.036ms</span>
-            <span class="stat-label">Deep Access Performance</span>
-          </div>
-          <div class="stat">
-            <span class="stat-value">33</span>
-            <span class="stat-label">Tests Passing</span>
-          </div>
-          <div class="stat">
-            <span class="stat-value">96.0/100</span>
-            <span class="stat-label">Developer Experience</span>
-          </div>
-          <div class="stat">
-            <span class="stat-value">7.3KB</span>
-            <span class="stat-label">Total Bundle Size</span>
-          </div>
-        </div>
-      </div>
-      <div class="code-example extreme-depth-code">
-        <pre><code>{{ extremeDepthCode }}</code></pre>
-      </div>
-    </div>
-  </section>
-
-  <!-- Additional Features -->
-  <section class="additional-features-section">
-    <h2 class="section-title">🔬 Advanced Features</h2>
-    <div class="category-grid">
-      @let advancedFeatures = getFeaturesByCategory('Advanced'); @for (feature
-      of advancedFeatures; track feature.title) {
-      <div
-        class="category-card extreme-depth-card"
-        [class.highlight]="feature.highlight"
-      >
-        <h4 class="card-title">{{ feature.title }}</h4>
-        <p class="card-description">{{ feature.description }}</p>
-        <a [routerLink]="feature.route" class="card-link">
-          {{ feature.cta || 'Explore Feature →' }}
-        </a>
-      </div>
+  <section class="section fit-section">
+    <h2 class="section-title">Who it’s for</h2>
+    <div class="card-grid card-grid-2">
+      @for (group of fitGuidance; track group.title) {
+      <article class="fit-card">
+        <h3 class="fit-title">{{ group.title }}</h3>
+        <ul class="fit-list">
+          @for (item of group.items; track item) {
+          <li>{{ item }}</li>
+          }
+        </ul>
+      </article>
       }
     </div>
   </section>
 
-  <!-- Getting Started -->
-  <section class="getting-started-section">
-    <h2 class="section-title">🏁 Getting Started</h2>
-    <div class="steps-grid">
-      <div class="step-card">
-        <div class="step-number">1</div>
-        <h3 class="step-title">Install Core</h3>
-        <p class="step-description">Install the core package (required)</p>
-        <code class="step-code">npm install &#64;signaltree/core</code>
-      </div>
-
-      <div class="step-card">
-        <div class="step-number">2</div>
-        <h3 class="step-title">Add Features</h3>
-        <p class="step-description">Install optional packages as needed</p>
-        <code class="step-code"
-          >npm install &#64;signaltree/ng-forms &#64;signaltree/enterprise npm
-          install -D &#64;signaltree/callable-syntax</code
+  <section class="section">
+    <h2 class="section-title">Package entry points</h2>
+    <div class="card-grid card-grid-2">
+      @for (card of packageCards; track card.title) {
+      <article class="link-card">
+        <h3 class="link-card-title">{{ card.title }}</h3>
+        <p class="link-card-description">{{ card.description }}</p>
+        <a
+          [routerLink]="card.route"
+          [queryParams]="card.queryParams || null"
+          class="link-card-cta"
+          >{{ card.cta }}</a
         >
-      </div>
+      </article>
+      }
+    </div>
+  </section>
 
-      <div class="step-card">
-        <div class="step-number">3</div>
-        <h3 class="step-title">Import & Use</h3>
-        <p class="step-description">Start managing reactive state</p>
-        <code class="step-code"
-          >import &#123; signalTree &#125; from '&#64;signaltree/core'</code
-        >
+  <section class="section extreme-depth-section">
+    <div class="extreme-depth-copy">
+      <h2 class="section-title section-title-light">Deep typing still matters</h2>
+      <p class="section-intro section-intro-light">
+        SignalTree’s model stays readable even when the object graph gets deep.
+        The extreme-depth demo is a proof point, not the primary pitch.
+      </p>
+      <div class="extreme-depth-stats">
+        <div class="stat-card">
+          <span class="stat-value">15+</span>
+          <span class="stat-label">Nested levels</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">0.036ms</span>
+          <span class="stat-label">Example deep-access result</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">7.3KB</span>
+          <span class="stat-label">Current core bundle</span>
+        </div>
       </div>
+    </div>
+    <pre class="code-example extreme-depth-code"><code>{{ extremeDepthCode }}</code></pre>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">More to explore</h2>
+    <div class="card-grid card-grid-2">
+      @for (card of advancedRoutes; track card.title) {
+      <article class="link-card">
+        <h3 class="link-card-title">{{ card.title }}</h3>
+        <p class="link-card-description">{{ card.description }}</p>
+        <a [routerLink]="card.route" class="link-card-cta">{{ card.cta }}</a>
+      </article>
+      }
+    </div>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">Proof and inspection</h2>
+    <div class="card-grid card-grid-2">
+      @for (card of proofCards; track card.title) {
+      <article class="link-card">
+        <h3 class="link-card-title">{{ card.title }}</h3>
+        <p class="link-card-description">{{ card.description }}</p>
+        <a [routerLink]="card.route" class="link-card-cta">{{ card.cta }}</a>
+      </article>
+      }
     </div>
   </section>
 </div>

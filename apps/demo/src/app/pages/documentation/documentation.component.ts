@@ -17,6 +17,11 @@ interface DocPackage {
   readmePath: string;
 }
 
+interface DocQuickLink {
+  label: string;
+  route: string;
+}
+
 @Component({
   selector: 'app-documentation',
   standalone: true,
@@ -32,32 +37,63 @@ export class DocumentationComponent implements OnInit {
     {
       id: 'core',
       name: '@signaltree/core',
-      description: 'Foundation package for SignalTree',
+      description: 'Core tree, entities, enhancers, DevTools, and persistence primitives',
       readmePath: 'assets/docs/core/README.md',
+    },
+    {
+      id: 'events',
+      name: '@signaltree/events',
+      description: 'Event helpers for reacting to state changes in a data-first way',
+      readmePath: 'assets/docs/events/README.md',
+    },
+    {
+      id: 'realtime',
+      name: '@signaltree/realtime',
+      description: 'Realtime synchronization patterns for SignalTree entity maps',
+      readmePath: 'assets/docs/realtime/README.md',
     },
     {
       id: 'ng-forms',
       name: '@signaltree/ng-forms',
-      description: 'Angular Forms integration',
+      description: 'Angular forms integration, validation, and persistence workflows',
       readmePath: 'assets/docs/ng-forms/README.md',
     },
     {
       id: 'enterprise',
       name: '@signaltree/enterprise',
-      description: 'Enterprise features and audit logging',
+      description: 'Enterprise-oriented diagnostics, scaling, and audit-related capabilities',
       readmePath: 'assets/docs/enterprise/README.md',
     },
     {
       id: 'guardrails',
       name: '@signaltree/guardrails',
-      description: 'Development-only performance guardrails',
+      description: 'Development-time guardrails for safer state usage patterns',
       readmePath: 'assets/docs/guardrails/README.md',
     },
     {
       id: 'callable-syntax',
       name: '@signaltree/callable-syntax',
-      description: 'Build-time transform for callable syntax',
+      description: 'Build-time transform for optional callable node syntax',
       readmePath: 'assets/docs/callable-syntax/README.md',
+    },
+  ];
+
+  readonly quickLinks: DocQuickLink[] = [
+    {
+      label: 'Fundamentals',
+      route: '/examples/fundamentals',
+    },
+    {
+      label: 'Recommended Architecture',
+      route: '/examples/fundamentals/recommended-architecture',
+    },
+    {
+      label: 'Migration Recipe',
+      route: '/examples/fundamentals/migration-recipe',
+    },
+    {
+      label: 'Benchmarks',
+      route: '/benchmarks',
     },
   ];
 
@@ -118,7 +154,6 @@ export class DocumentationComponent implements OnInit {
       const html = await marked.parse(markdown);
       this.markdownContent.set(this.highlightCodeBlocks(html));
     } catch (err) {
-      console.error('Error loading README:', err);
       this.error.set(`Failed to load documentation for ${pkg.name}`);
       this.markdownContent.set('');
     } finally {
@@ -150,7 +185,7 @@ export class DocumentationComponent implements OnInit {
         }
         codeElement.classList.add('hljs');
       } catch (error) {
-        console.warn('Could not highlight code block:', error);
+        // Leave unhighlighted on failure.
       }
     }
 

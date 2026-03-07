@@ -2,6 +2,25 @@ import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
+interface HomeLinkCard {
+  title: string;
+  description: string;
+  route: string;
+  cta: string;
+  queryParams?: Record<string, string>;
+}
+
+interface HomeCta {
+  label: string;
+  route: string;
+  variant: 'primary' | 'secondary' | 'ghost';
+}
+
+interface FitItem {
+  title: string;
+  items: string[];
+}
+
 @Component({
   selector: 'app-home',
   standalone: true,
@@ -10,263 +29,277 @@ import { RouterModule } from '@angular/router';
   styleUrls: ['./home.component.scss'],
 })
 export class HomeComponent {
-  features = [
+  readonly primaryCtas: HomeCta[] = [
     {
-      title: '🏪 Core Features',
-      description: 'JSON branches, reactive leaves — explore the fundamentals',
+      label: 'Start with fundamentals',
       route: '/examples/fundamentals',
-      category: 'Core',
+      variant: 'primary',
     },
     {
-      title: '⚡ Performance',
-      description: 'Batched updates, memoization, and performance optimization',
+      label: 'Read the docs',
+      route: '/docs',
+      variant: 'secondary',
+    },
+    {
+      label: 'See benchmarks',
       route: '/benchmarks',
-      category: 'Performance',
-      methods: ['batch', 'computed', 'optimize', 'clearCache', 'getMetrics'],
+      variant: 'ghost',
+    },
+  ];
+
+  readonly evaluationCards: HomeLinkCard[] = [
+    {
+      title: 'Learn the model',
+      description:
+        'Start with the fundamentals page to see how SignalTree models nested state as data, not reducers and selectors.',
+      route: '/examples/fundamentals',
+      cta: 'Open fundamentals →',
     },
     {
-      title: '📦 Entity Management',
+      title: 'Check the architecture',
       description:
-        'CRUD operations and entity helpers for managing collections',
-      route: '/entities',
-      category: 'Entity',
-      methods: [
-        'entityMap',
-        'addOne',
-        'updateOne',
-        'removeOne',
-        'upsertOne',
-        'byId',
-        'where',
+        'See the recommended “one runtime tree, typed slices, root-level enhancers” architecture in context.',
+      route: '/examples/fundamentals/recommended-architecture',
+      cta: 'View recommended architecture →',
+    },
+    {
+      title: 'Read package docs',
+      description:
+        'Browse the core package first, then optional packages like realtime, events, forms, and enterprise features.',
+      route: '/docs',
+      cta: 'Browse documentation →',
+    },
+    {
+      title: 'Inspect proof points',
+      description:
+        'Use benchmarks, DevTools, and bundle visualisation as proof—not as the first thing you have to believe.',
+      route: '/benchmarks',
+      cta: 'Review benchmarks →',
+    },
+  ];
+
+  readonly packageCards: HomeLinkCard[] = [
+    {
+      title: '@signaltree/core',
+      description:
+        'The main package: state tree, entities, batching, memoization, DevTools, time travel, persistence, and serialization.',
+      route: '/docs',
+      cta: 'Read core docs →',
+      queryParams: { package: 'core' },
+    },
+    {
+      title: '@signaltree/events',
+      description:
+        'Event-oriented helpers for reacting to state changes without abandoning the data-first tree model.',
+      route: '/docs',
+      queryParams: { package: 'events' },
+      cta: 'Read events docs →',
+    },
+    {
+      title: '@signaltree/realtime',
+      description:
+        'Keep entity maps in sync with live data sources while preserving SignalTree’s path-based ergonomics.',
+      route: '/docs',
+      queryParams: { package: 'realtime' },
+      cta: 'Read realtime docs →',
+    },
+    {
+      title: '@signaltree/ng-forms',
+      description:
+        'Angular forms integration for reactive form state, validation, and persistence patterns.',
+      route: '/docs',
+      queryParams: { package: 'ng-forms' },
+      cta: 'Read forms docs →',
+    },
+    {
+      title: '@signaltree/enterprise',
+      description:
+        'Advanced diagnostics and scaling-oriented tooling for larger teams and heavier state graphs.',
+      route: '/docs',
+      queryParams: { package: 'enterprise' },
+      cta: 'Read enterprise docs →',
+    },
+  ];
+
+  readonly proofCards: HomeLinkCard[] = [
+    {
+      title: 'DevTools',
+      description:
+        'Inspect state changes, path-based actions, and time-travel support through the Redux DevTools integration.',
+      route: '/devtools',
+      cta: 'Open DevTools demo →',
+    },
+    {
+      title: 'Benchmarks',
+      description:
+        'Compare SignalTree against other Angular state approaches, with current version metadata shown in the UI and methodology visible in the app.',
+      route: '/benchmarks',
+      cta: 'Review benchmarks →',
+    },
+    {
+      title: 'Bundle Visualizer',
+      description:
+        'Inspect package shape and learn how the build pipeline preserves module structure for tree shaking.',
+      route: '/bundle-visualizer',
+      cta: 'View bundle visualizer →',
+    },
+    {
+      title: 'Extreme Depth',
+      description:
+        'Stress-test deep typing and path access to see where SignalTree’s model remains readable and precise.',
+      route: '/extreme-depth',
+      cta: 'See deep typing demo →',
+    },
+  ];
+
+  readonly advancedRoutes: HomeLinkCard[] = [
+    {
+      title: 'Persistence & Serialization',
+      description:
+        'Store and restore state deliberately with local persistence and import/export support.',
+      route: '/persistence',
+      cta: 'Explore persistence →',
+    },
+    {
+      title: 'Presets & Custom Extensions',
+      description:
+        'Learn the extension story without leaving the path-first, data-first model.',
+      route: '/presets',
+      cta: 'Explore presets →',
+    },
+    {
+      title: 'Guardrails & Undo/Redo',
+      description:
+        'Explore development guardrails, history workflows, and related advanced examples.',
+      route: '/guardrails',
+      cta: 'Explore guardrails →',
+    },
+  ];
+
+  readonly coreFeatures = [
+    {
+      name: 'State stays data-shaped',
+      description:
+        'Model nested state as plain data, then let SignalTree layer reactivity on top.',
+      highlight: true,
+    },
+    {
+      name: 'Dot-notation access',
+      description:
+        '`tree.$.user.profile.name()` stays direct, type-safe, and IDE-discoverable.',
+    },
+    {
+      name: 'One runtime tree',
+      description:
+        'The recommended architecture is one runtime tree with typed slices and root-level enhancers.',
+    },
+    {
+      name: 'Invisible reactivity',
+      description:
+        'Think in data paths instead of subscriptions and state-management ceremony.',
+    },
+    {
+      name: 'Optional power, not required ceremony',
+      description:
+        'Add entities, DevTools, time travel, persistence, forms, or realtime only when you need them.',
+      highlight: true,
+    },
+    {
+      name: 'Proof you can inspect',
+      description: 'Benchmarks, DevTools, and bundle tooling support evaluation instead of replacing it.',
+    },
+  ];
+
+  readonly fitGuidance: FitItem[] = [
+    {
+      title: 'Great fit for',
+      items: [
+        'Angular apps with deep or evolving nested state',
+        'Teams that want state to look like data, not framework ceremony',
+        'Apps that benefit from root-level DevTools, time travel, persistence, and entities',
       ],
     },
     {
-      title: '🌐 Async Pipelines',
-      description: 'Handle async operations using enhancers and entity hooks',
-      route: '/time-travel',
-      category: 'Async',
-      methods: ['effect', 'intercept', 'tap'],
-    },
-    {
-      title: '🔄 Batching Demo',
-      description: 'Batched updates and operation processing',
-      route: '/batching',
-      category: 'Performance',
-      methods: ['batch', 'process'],
-    },
-    {
-      title: '🧪 Memoization',
-      description:
-        'Intelligent caching and performance optimization for expensive computations',
-      route: '/memoization',
-      category: 'Performance',
-      methods: ['memoize', 'clearCache', 'getCacheStats'],
-    },
-    {
-      title: '📝 Log Filtering',
-      description:
-        'Real-world example: Filter thousands of log entities with memoization',
-      route: '/log-filtering',
-      category: 'Performance',
-      methods: ['memoize', 'entityMap', 'filter'],
-    },
-    {
-      title: '📊 Benchmark History',
-      description:
-        'View historical benchmark results comparing SignalTree and competitors',
-      route: '/realistic-benchmark-history',
-      category: 'Performance',
-    },
-    {
-      title: '🔥 Extreme Depth Testing',
-      description:
-        'Push recursive typing to 15+ levels with perfect type inference',
-      route: '/extreme-depth',
-      category: 'Advanced',
-      highlight: true,
-      cta: 'Experience Extreme Depth →',
-    },
-    {
-      title: '🚀 Enterprise Optimizer',
-      description:
-        'Enable diff-based updates, path indexes, and live update metrics',
-      route: '/enterprise-enhancer',
-      category: 'Advanced',
-      cta: 'Explore Enterprise Enhancer →',
-    },
-    {
-      title: '🏛 Architecture Overview',
-      description:
-        'Explore memory management, security guardrails, and shared utilities',
-      route: '/architecture',
-      category: 'Advanced',
-      cta: 'View Architecture Overview →',
-    },
-    {
-      title: '📚 Docs & Guides',
-      description:
-        'Read package guides, migration notes, and API documentation in-app',
-      route: '/docs',
-      category: 'Advanced',
-      cta: 'Read Documentation →',
-    },
-    // V7 Feature Demos
-    {
-      title: '🏗️ Form Marker',
-      description:
-        'Tree-integrated forms with validation, wizard navigation, and persistence',
-      route: '/form-marker',
-      category: 'V7 Features',
-      highlight: true,
-      cta: 'Try Form Marker →',
-    },
-    {
-      title: '💾 Stored Versioning',
-      description:
-        'Version your localStorage data with automatic schema migrations',
-      route: '/stored-versioning',
-      category: 'V7 Features',
-      cta: 'Try Versioning →',
-    },
-    {
-      title: '🔴 Realtime Sync',
-      description:
-        'Live data synchronization with entityMaps via adapters (Supabase, etc.)',
-      route: '/realtime',
-      category: 'V7 Features',
-      highlight: true,
-      cta: 'Try Realtime →',
-    },
-    {
-      title: '📝 Forms Integration',
-      description:
-        'Seamless Angular Forms integration with reactive validation',
-      route: '/ng-forms',
-      category: 'Forms',
-    },
-    {
-      title: '🛠️ DevTools',
-      description:
-        'Redux DevTools integration for powerful debugging and state inspection',
-      route: '/devtools',
-      category: 'Testing',
-    },
-    {
-      title: '📞 Callable Syntax',
-      description:
-        'Optional enhanced developer experience with callable node syntax',
-      route: '/callable-syntax',
-      category: 'Advanced',
-      cta: 'Try Callable Syntax →',
-    },
-    {
-      title: '⏰ Time Travel Debugging',
-      description:
-        'Navigate state history with undo/redo controls and timeline insights',
-      route: '/time-travel',
-      category: 'Time Travel',
-      methods: ['timeTravel', 'undo', 'redo', 'jumpTo'],
+      title: 'Probably not the point',
+      items: [
+        'Very small apps with shallow local state only',
+        'Teams that explicitly want action/reducer workflows as the primary abstraction',
+        'Use cases where the benchmark story matters more than the day-to-day modeling ergonomics',
+      ],
     },
   ];
 
-  coreFeatures = [
-    {
-      name: 'Reactive JSON',
-      description:
-        'State looks like JSON. Access feels obvious. Reactivity stays invisible.',
-      highlight: true,
-    },
-    {
-      name: 'Dot-Notation Access',
-      description:
-        'tree.$.user.profile.name() — fully type-safe, IDE-discoverable',
-    },
-    {
-      name: 'Deep Type Inference',
-      description:
-        'Perfect TypeScript types at 15+ nesting levels, no degradation to any',
-    },
-    {
-      name: 'Invisible Reactivity',
-      description:
-        'Think in data paths, not subscriptions. Built on Angular signals.',
-    },
-    {
-      name: 'Lazy by Design',
-      description:
-        'Signals created only where accessed. 0.036ms at 15+ levels.',
-      highlight: true,
-    },
-    {
-      name: 'Developer Tools',
-      description: 'Redux DevTools integration for debugging and inspection',
-    },
-  ];
-
-  getFeaturesByCategory(category: string) {
-    return this.features.filter((f) => f.category === category);
-  }
-
-  quickStartCode = `# Install the core package (all enhancers included)
+  readonly quickStartCode = `# Install the core package
 npm install @signaltree/core
 
-# Optional add-on packages
-npm install @signaltree/ng-forms        # Angular forms integration
-npm install @signaltree/enterprise      # Enterprise-scale optimizations
-npm install @signaltree/callable-syntax # Optional DX enhancement
+# Optional packages
+npm install @signaltree/ng-forms
+npm install @signaltree/realtime
+npm install @signaltree/events
 
-# All enhancers (batching, memoization, entities, devtools,
-# time-travel, serialization, presets) are built into @signaltree/core
-
-// Basic Usage
+// Create one root tree for app state
 import {
   signalTree,
   batching,
-  memoization,
-  entities,
   devTools,
   timeTravel
 } from '@signaltree/core';
 
-// Create a signal tree with enhancers
-const userTree = signalTree({
+const appTree = signalTree({
   user: {
-    name: 'John Doe',
-    age: 30,
-    email: 'john@example.com'
+    profile: {
+      name: 'Ada Lovelace',
+      email: 'ada@example.com'
+    }
   },
   settings: {
-    theme: 'dark',
+    theme: 'dark' as 'dark' | 'light',
     notifications: true
+  },
+  cart: {
+    items: [] as Array<{ id: string; quantity: number }>
   }
 })
   .with(batching())
-  .with(memoization())
-  
-  .with(devTools())
-  .with(timeTravel())
-  .with(presets());
+  .with(devTools({ treeName: 'App State' }))
+  .with(timeTravel());
 
-// Access signals directly through state or $ (shorthand)
-console.log(userTree.state.user.name()); // 'John Doe'
-console.log(userTree.$.settings.theme()); // 'dark'
+// Read nested values directly
+console.log(appTree.$.user.profile.name());
+console.log(appTree.$.settings.theme());
 
-// Update individual values
-userTree.state.user.name.set('Jane Doe');
-userTree.$.settings.theme.set('light');
+// Write individual leaves
+appTree.$.user.profile.name.set('Grace Hopper');
+appTree.$.settings.theme.set('light');
 
-// Update entire tree
-userTree((current) => ({
+// Update with one root-level operation when needed
+appTree((current) => ({
   ...current,
-  user: { ...current.user, age: 31 }
+  cart: {
+    ...current.cart,
+    items: [...current.cart.items, { id: 'book-1', quantity: 1 }]
+  }
 }));
 
-// Get unwrapped values
-const userData = userTree();`;
+// Read the full unwrapped snapshot
+const snapshot = appTree();`;
 
-  extremeDepthCode = `import { signalTree } from '@signaltree/core';
+  readonly beforeCode = `// Typical nested-state ceremony
+const displayName = selectUserDisplayName(state);
 
-// 15+ Level Deep Enterprise Structure with Perfect Type Inference
+dispatch(updateUserProfile({
+  id: userId,
+  changes: { name: 'Grace Hopper' }
+}));`;
+
+  readonly afterCode = `// SignalTree
+const displayName = appTree.$.user.profile.name();
+
+appTree.$.user.profile.name.set('Grace Hopper');`;
+
+  readonly extremeDepthCode = `import { signalTree } from '@signaltree/core';
+
+// Deep nested state with strong type inference
 const extremeDepth = signalTree({
   enterprise: {
     divisions: {
@@ -305,7 +338,7 @@ const extremeDepth = signalTree({
   }
 });
 
-// Perfect type inference at 15+ levels - no 'any' types!
+// Type inference still holds at this depth
 const status = extremeDepth.$.enterprise.divisions.technology
   .departments.engineering.teams.frontend.projects.signaltree
   .releases.v1.features.recursiveTyping.validation.tests

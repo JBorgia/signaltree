@@ -1,4 +1,4 @@
-<nav class="nav-container">
+<nav class="nav-container" [class.nav-container-mobile-open]="mobileMenuOpen()">
   <div class="nav-content">
     <!-- Header with Logo and Home Button -->
     <div class="nav-header">
@@ -6,57 +6,83 @@
         <img src="/signaltree.svg" alt="SignalTree Logo" class="brand-logo" />
         <h1 class="brand-title">
           <span class="brand-name">SignalTree</span>
-          <span class="brand-tagline">Reactive JSON</span>
+          <span class="brand-tagline">Deep reactive state</span>
         </h1>
       </div>
-      <a routerLink="/" class="home-button" title="Return to home page">
-        🏠 Home
-      </a>
+      <div class="nav-header-actions">
+        <a
+          routerLink="/"
+          class="home-button"
+          title="Return to home page"
+          (click)="closeMobileMenu()"
+        >
+          🏠 Home
+        </a>
+        <button
+          type="button"
+          class="menu-toggle"
+          [attr.aria-expanded]="mobileMenuOpen()"
+          aria-controls="primary-navigation-drawer"
+          [attr.aria-label]="mobileMenuOpen() ? 'Close navigation menu' : 'Open navigation menu'"
+          (click)="toggleMobileMenu()"
+        >
+          <span class="menu-toggle-label">{{ mobileMenuOpen() ? 'Close' : 'Menu' }}</span>
+          <span class="menu-toggle-icon" aria-hidden="true">{{ mobileMenuOpen() ? '✕' : '☰' }}</span>
+        </button>
+      </div>
     </div>
 
-    <!-- Navigation Categories -->
-    <div class="nav-categories">
-      @for (category of categories; track category) {
-      <div class="category-block">
-        <h3 class="category-title">
-          {{ getCategoryLabel(category) }}
-        </h3>
-        <div class="category-links">
-          @for (example of getExamplesByCategory(category); track example.id) {
+    <div
+      id="primary-navigation-drawer"
+      class="nav-drawer"
+      [class.nav-drawer-open]="mobileMenuOpen()"
+    >
+      <!-- Navigation Categories -->
+      <div class="nav-categories">
+        @for (category of categories; track category) {
+        <div class="category-block">
+          <h3 class="category-title">
+            {{ getCategoryLabel(category) }}
+          </h3>
+          <div class="category-links">
+            @for (example of getExamplesByCategory(category); track example.id) {
+            <a
+              [routerLink]="example.route"
+              [queryParams]="example.queryParams || null"
+              routerLinkActive="active"
+              class="nav-link"
+              [attr.title]="example.description"
+              (click)="closeMobileMenu()"
+            >
+              {{ example.title }}
+            </a>
+            }
+          </div>
+        </div>
+        }
+      </div>
+
+      <!-- Version Info and External Links -->
+      <div class="nav-footer">
+        <div class="version-info">
+          <span>{{ versionSummary }}</span>
+          <span class="separator">•</span>
+          <span>Docs, demos, and benchmarks</span>
+        </div>
+        <div class="external-links">
+          @for (link of externalLinks; track link.url) {
           <a
-            [routerLink]="example.route"
-            routerLinkActive="active"
-            class="nav-link"
-            [attr.title]="example.description"
+            [href]="link.url"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="external-link"
+            [title]="link.title"
           >
-            {{ example.title }}
+            <span class="link-icon">{{ link.icon }}</span>
+            <span class="link-label">{{ link.label }}</span>
           </a>
           }
         </div>
-      </div>
-      }
-    </div>
-
-    <!-- Version Info and External Links -->
-    <div class="nav-footer">
-      <div class="version-info">
-        <span>{{ versionSummary }}</span>
-        <span class="separator">•</span>
-        <span>Built: {{ buildDate }}</span>
-      </div>
-      <div class="external-links">
-        @for (link of externalLinks; track link.url) {
-        <a
-          [href]="link.url"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="external-link"
-          [title]="link.title"
-        >
-          <span class="link-icon">{{ link.icon }}</span>
-          <span class="link-label">{{ link.label }}</span>
-        </a>
-        }
       </div>
     </div>
   </div>

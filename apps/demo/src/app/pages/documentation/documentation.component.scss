@@ -27,6 +27,34 @@
   gap: 1rem;
 }
 
+.doc-quick-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.doc-quick-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid #cbd5e0;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #2d3748;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: #4299e1;
+    color: #2b6cb0;
+    transform: translateY(-1px);
+  }
+}
+
 .package-button {
   display: block;
   width: 100%;

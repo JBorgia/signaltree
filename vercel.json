@@ -2,5 +2,14 @@
   "framework": "angular",
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm nx build demo --configuration=production",
-  "outputDirectory": "dist/apps/demo/browser"
+  "outputDirectory": "dist/apps/demo/browser",
+  "routes": [
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/.*",
+      "dest": "/index.html"
+    }
+  ]
 }

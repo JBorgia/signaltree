@@ -3,30 +3,34 @@
     <div class="documentation-header">
       <h2>📚 SignalTree Documentation</h2>
       <div class="value-proposition">
-        <h3>🎓 Learn by Doing</h3>
+        <h3>Start with core. Add packages as needed.</h3>
         <p>
-          <strong>Interactive examples, not just API reference.</strong>
-          Every SignalTree package includes runnable code samples, migration
-          guides, and real-world usage patterns. Compare to alternatives:
+          The docs page is intended to help you evaluate SignalTree in the same
+          order the product is designed: core first, then optional packages for
+          forms, realtime, events, enterprise capabilities, and DX enhancements.
         </p>
         <ul class="doc-benefits">
           <li>
-            <strong>vs NgRx:</strong> No 47-page PDF manual. Start with working
-            code in 5 minutes.
+            <strong>Learn:</strong> fundamentals, architecture, and package
+            docs should all agree on the same one-tree mental model.
           </li>
           <li>
-            <strong>vs Akita:</strong> TypeScript-first examples (not
-            class-based patterns from 2018).
+            <strong>Reference:</strong> each package entry explains what it is
+            for and where to go next.
           </li>
           <li>
-            <strong>vs Redux Toolkit:</strong> Signal-native patterns (not
-            thunk/saga complexity).
+            <strong>Examples:</strong> use the demo routes to inspect runtime
+            behavior after reading the docs.
           </li>
         </ul>
         <p class="quick-start">
-          👉 Pick a package on the left to see live examples, migration paths,
-          and best practices.
+          👉 Pick a package on the left to open its README in-app.
         </p>
+        <div class="doc-quick-links">
+          @for (link of quickLinks; track link.label) {
+          <a [routerLink]="link.route" class="doc-quick-link">{{ link.label }}</a>
+          }
+        </div>
       </div>
     </div>
 

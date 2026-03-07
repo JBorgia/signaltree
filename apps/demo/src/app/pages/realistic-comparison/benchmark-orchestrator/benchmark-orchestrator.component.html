@@ -1,10 +1,11 @@
 <div class="benchmark-container" [attr.aria-busy]="isRunning()">
   <!-- Header Section -->
   <header class="benchmark-header">
-    <h1>Benchmarks vs Alternatives</h1>
+    <h1>Benchmark Comparison</h1>
     <p class="subtitle">
-      SignalTree compared to NgRx Store and NgRx SignalStore - Understanding
-      trade-offs with real-world usage weighting
+      SignalTree compared to NgRx Store, NgRx SignalStore, and related
+      alternatives — focused on trade-offs, methodology, and real-world usage
+      weighting.
     </p>
 
     <!-- Performance Warning -->
@@ -19,32 +20,28 @@
       "
     >
       <h3 style="margin: 0 0 0.5rem 0; color: #856404; font-size: 1.1rem">
-        ⚠️ Performance Notice
+        ⚠️ Runtime Notice
       </h3>
       <p style="margin: 0; color: #856404; font-size: 0.9rem">
         <strong>Benchmarks are computationally intensive.</strong> You may see a
         "Page Unresponsive" warning during test execution. This is expected
         behavior. Please click <strong>"Wait"</strong> and allow the benchmarks
-        to complete. The tests are designed to stress-test performance under
-        heavy load.
+        to complete. These scenarios intentionally apply heavy load so you can
+        inspect comparative behavior under pressure.
       </p>
     </div>
 
     <div class="performance-disclaimer">
       <p>
-        While raw speed is important, the true purpose of these benchmarks is to
-        show that
+        These benchmarks are here to support evaluation, not replace it.
         <strong
-          >SignalTree is architected with developer experience at its core,
-          strategically rebalancing performance toward the most commonly used
-          actions without compromise.</strong
+          >Use them to inspect trade-offs between update cost, read patterns,
+          memory behavior, bundle impact, and ergonomics.</strong
         >
         <br /><br />
-        <strong>The goals:</strong> <br />
-        Create a state management system that embraces dot notation, type
-        inference, and JSON’s natural key-value structure. The outcome is a
-        framework that feels both intuitive and efficient — delivering a
-        streamlined DX while optimizing performance where it matters most.
+        <strong>How to read them:</strong> <br />
+        Treat the numbers as one input alongside architecture, debugging,
+        maintainability, and the shape of your real application workloads.
       </p>
     </div>
   </header>
@@ -252,61 +249,54 @@
 
     <!-- Performance Trade-offs Section -->
     <div class="performance-tradeoffs">
-      <h3>📊 Performance Trade-offs</h3>
+      <h3>📊 Performance Notes</h3>
       <div class="tradeoff-grid">
         <div class="tradeoff-item advantage">
-          <h4>✅ SignalTree Advantages</h4>
+          <h4>✅ Areas SignalTree tends to do well</h4>
           <ul>
             <li>
-              <strong>25-65% faster</strong> state updates and reads in most
-              scenarios
+              Targeted updates and reads perform well in many scenarios
             </li>
             <li>
-              <strong>85% memory reduction</strong> through lazy signal creation
+              Lazy signal creation can reduce memory overhead in large trees
             </li>
             <li>
-              <strong>Automatic optimization</strong> of reactive computations
-              with intelligent caching
+              Composable enhancers help tune reactive computation behavior
             </li>
             <li>
-              <strong>Fine-grained reactivity</strong> for minimal re-renders
-              and targeted updates
+              Fine-grained reactivity helps avoid broad invalidation
             </li>
             <li>
-              <strong>Zero-cost abstractions</strong> with compile-time callable
-              syntax transforms
+              Optional DX layers can be added without changing the core model
             </li>
             <li>
-              <strong>Surgical updates</strong> without parent object rebuilding
-              for deep nested changes
+              Deep nested updates stay path-oriented instead of requiring parent
+              object rebuilding
             </li>
             <li>
-              <strong>Direct access patterns</strong> eliminate complex
-              selectors and reducers
+              Direct access patterns reduce selector/reducer ceremony
             </li>
             <li>
-              <strong>Batching optimizations</strong> prevent render thrashing
-              in high-frequency scenarios
+              Batching can reduce thrash in high-frequency update scenarios
             </li>
           </ul>
         </div>
         <div class="tradeoff-item known-limitation">
-          <h4>⚠️ Known Performance Trade-off</h4>
+          <h4>⚠️ Known Trade-off</h4>
           <p>
-            <strong>Serialization is ~2-3x slower</strong> than libraries
-            storing plain objects.
+            <strong>Serialization can be slower</strong> than libraries storing
+            plain objects directly.
           </p>
           <p class="explanation">
             SignalTree stores reactive signals that must be "unwrapped" during
             serialization, while other libraries can serialize plain objects
-            directly. This is by choice. Serialization takes very little time
-            and by the sacrifice here enables the significant performance gains
-            in all other operations.
+            directly. This is part of the model trade-off rather than an
+            accident. In many applications serialization happens relatively
+            infrequently compared with reads and updates.
           </p>
           <div class="mitigation">
-            <strong>Mitigation:</strong> Built-in caching automatically
-            optimizes storage I/O, and debounced auto-save reduces serialization
-            frequency.
+            <strong>Mitigation:</strong> Caching and debounced persistence can
+            reduce how often serialization is paid in practice.
           </div>
         </div>
       </div>
@@ -1038,10 +1028,9 @@ const tree = signalTree(state).with(selectorMemoization());</code></pre>
         🏢 Enterprise Enhancer: Targeted Optimization
       </h4>
       <p style="margin: 0.5rem 0; color: #424242; font-size: 0.9rem">
-        The enterprise enhancer provides
-        <strong>+16.7% faster large array operations</strong> through diff-based
-        change detection, path indexing for O(k) lookups, and batched patch
-        application.
+        In this benchmark set, the enterprise enhancer improves selected large
+        array scenarios through diff-based change detection, path indexing, and
+        batched patch application.
       </p>
       <p style="margin: 0.5rem 0; color: #424242; font-size: 0.9rem">
         <strong>When to use:</strong> Apps with frequent bulk updates
@@ -1050,8 +1039,8 @@ const tree = signalTree(state).with(selectorMemoization());</code></pre>
       </p>
       <p style="margin: 0.5rem 0 0 0; color: #424242; font-size: 0.9rem">
         <strong>Bundle cost:</strong> +2.4KB gzipped |
-        <strong>Overall impact:</strong> +1.7% weighted score (targeted gains in
-        specific scenarios)
+        <strong>Overall impact in this run:</strong> +1.7% weighted score
+        (targeted gains in specific scenarios)
       </p>
     </div>
 
@@ -1070,22 +1059,20 @@ const tree = signalTree(state).with(selectorMemoization());</code></pre>
         💡 Understanding Selector/Memoization Performance
       </h4>
       <p style="margin: 0.5rem 0; color: #424242; font-size: 0.9rem">
-        <strong>Why SignalTree benchmarks use enhancers:</strong> SignalTree's
-        architecture showcases
-        <strong>developer-friendly enhancers</strong> (memoization, batching,
-        serialization, time-travel) that compose together. Benchmarks
-        intentionally use these enhancers to demonstrate real-world usage
-        patterns.
+        <strong>Why SignalTree benchmarks use enhancers:</strong> SignalTree’s
+        performance story is tied to composable enhancers like memoization,
+        batching, serialization, and time travel. The benchmark configuration
+        keeps those capabilities visible because they are part of real usage,
+        not an afterthought.
       </p>
       <p style="margin: 0.5rem 0; color: #424242; font-size: 0.9rem">
         <strong>The trade-off:</strong> Angular's
         <code style="background: #fff; padding: 2px 4px; border-radius: 3px"
           >computed()</code
         >
-        adds ~2μs per call vs NgRx's reference checks (~0.3μs). However,
-        memoization <strong>prevents expensive re-renders</strong>, saving
-        100-1000x more time in real applications. The benchmarks test
-        <em>cache efficiency</em>, not just speed.
+        adds ~2μs per call vs NgRx's reference checks (~0.3μs). The point of
+        this comparison is not only raw selector speed; it is to show the trade
+        between dependency tracking cost and reduced downstream recalculation.
       </p>
       <p style="margin: 0.5rem 0 0 0; color: #424242; font-size: 0.9rem">
         <strong>Fair comparison:</strong> All libraries now update state during
@@ -1096,11 +1083,11 @@ const tree = signalTree(state).with(selectorMemoization());</code></pre>
 
     <!-- Weighted Results Summary -->
     <div class="weighted-results-section">
-      <h3>🎯 Real-World Weighted Performance</h3>
+      <h3>🎯 Real-World Weighted View</h3>
       <p class="weighting-note">
         Results below are weighted by real-world usage frequency.
         <strong
-          >This reflects how different architectures perform in typical
+          >This is intended to approximate how different architectures perform in typical
           applications.</strong
         >
       </p>
@@ -1137,14 +1124,14 @@ const tree = signalTree(state).with(selectorMemoization());</code></pre>
             (click)="showEqualWeight.set(!showEqualWeight())"
             [attr.aria-pressed]="showEqualWeight()"
           >
-            {{ showEqualWeight() ? 'Hide Equal-Weight' : 'Show Equal-Weight' }}
+            {{ showEqualWeight() ? 'Hide Equal-Weight View' : 'Show Equal-Weight View' }}
           </button>
         </div>
         @if (showFormula) {
         <div class="formula-details">
           <p>
-            Each scenario contributes a normalized score relative to the best
-            performer. Weighted ranking multiplies by real-world frequency
+            Each scenario contributes a normalized score relative to the fastest
+            performer in that scenario. Weighted ranking multiplies by real-world frequency
             weights; Equal-Weight ranking treats each scenario equally.
           </p>
           <p>
@@ -1224,9 +1211,9 @@ const tree = signalTree(state).with(selectorMemoization());</code></pre>
             (click)="applySmartWeightAdjustments()"
             type="button"
           >
-            🧠 Apply Research-Based Weights
+            🧠 Apply Suggested Weights
           </button>
-          <span class="smart-help">Based on real-world usage studies</span>
+          <span class="smart-help">Based on the weighting assumptions used by this page</span>
         </div>
       </div>
 
@@ -1335,11 +1322,11 @@ const tree = signalTree(state).with(selectorMemoization());</code></pre>
       <!-- Equal-Weight (Unweighted) Comparison -->
       @if (showEqualWeight()) {
       <div class="equal-weight-section">
-        <h4>⚖️ Equal-Weight (Unbiased) Ranking</h4>
+        <h4>⚖️ Equal-Weight Ranking</h4>
         <p class="equal-weight-note">
           Uses the same normalized per-scenario scores but treats all selected
-          scenarios as weight = 1.0. This shows raw architectural efficiency
-          without real-world frequency emphasis.
+          scenarios as weight = 1.0. This shows the same benchmark set without
+          real-world frequency emphasis.
         </p>
         <div class="equal-weight-grid">
           @for (summary of equalWeightLibrarySummaries(); track summary.name) {
