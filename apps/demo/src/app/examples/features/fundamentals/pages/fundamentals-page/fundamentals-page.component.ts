@@ -21,6 +21,7 @@ import type { FilterState } from '../../../../core/models';
 })
 export class FundamentalsPageComponent {
   private readonly examplesRegistry = new ExamplesRegistryService();
+  readonly totalExampleCount = this.examplesRegistry.getAllExamples().length;
 
   // Filter state
   private _filters = signal<FilterState>({
@@ -183,7 +184,10 @@ export class FundamentalsPageComponent {
 
   // Quick action methods
   filterByDifficulty(difficulty: string) {
-    this._filters.update((f) => ({ ...f, difficulty }));
+    this._filters.update((f) => ({
+      ...f,
+      difficulty: difficulty.toLowerCase(),
+    }));
     // Smooth scroll to filters
     document.querySelector('#filters')?.scrollIntoView({ behavior: 'smooth' });
   }

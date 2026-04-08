@@ -26,7 +26,7 @@
       <div class="hero__quick-actions">
         <button
           class="hero__quick-btn hero__quick-btn--beginner"
-          (click)="filterByDifficulty('Beginner')"
+          (click)="filterByDifficulty('beginner')"
           type="button"
           aria-label="Show beginner examples"
         >
@@ -41,7 +41,7 @@
         </button>
         <button
           class="hero__quick-btn hero__quick-btn--advanced"
-          (click)="filterByDifficulty('Advanced')"
+          (click)="filterByDifficulty('advanced')"
           type="button"
           aria-label="Show advanced examples"
         >
@@ -115,7 +115,7 @@
         <div class="filters__status">
           <span class="filters__count"
             >{{ filteredExamples().length }} of
-            {{ availableCategories.length * 3 }} shown</span
+            {{ totalExampleCount }} shown</span
           >
           <button
             (click)="clearFilters()"

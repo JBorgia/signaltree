@@ -29,6 +29,8 @@ interface MemoState {
   styleUrls: ['./memoization-demo.component.scss'],
 })
 export class MemoizationDemoComponent {
+  private nextLogId = 0;
+
   private tree = signalTree<MemoState>({
     inputValue: 5,
     multiplier: 2,
@@ -180,7 +182,7 @@ export class MemoizationDemoComponent {
   private addLog(log: Omit<ComputationLog, 'id' | 'timestamp'>) {
     const newLog: ComputationLog = {
       ...log,
-      id: Date.now(),
+      id: ++this.nextLogId,
       timestamp: Date.now(),
     };
     this.tree.$.logs.set([newLog, ...this.logs()].slice(0, 50));

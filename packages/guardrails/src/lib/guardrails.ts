@@ -85,7 +85,7 @@ function tryStructuredClone<T>(value: T): T {
 }
 
 function isDevEnvironment(): boolean {
-  if (__DEV__ !== undefined) return __DEV__;
+  if (typeof __DEV__ !== 'undefined') return __DEV__;
   if (process?.env?.['NODE_ENV'] === 'production') return false;
   if (ngDevMode != null) return Boolean(ngDevMode);
   return true;
