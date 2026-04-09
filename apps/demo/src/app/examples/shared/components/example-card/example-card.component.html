@@ -67,6 +67,11 @@
       </svg>
       Live Demo
     </div>
+    @if (!demoReady) {
+    <button class="card__load-demo" type="button" (click)="loadDemoNow()">
+      Load demo
+    </button>
+    }
     <ng-container #componentContainer></ng-container>
   </div>
 

@@ -260,6 +260,39 @@
       animation: shimmer 2s infinite;
     }
 
+
+  &__load-demo {
+    align-self: flex-start;
+    appearance: none;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    border: 0;
+    border-radius: 999px;
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    margin-bottom: 16px;
+    padding: 10px 16px;
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
+
+    &:hover {
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+      transform: translateY(-1px);
+    }
+  }
+
+  &__error {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 12px;
+    color: #b91c1c;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 12px 14px;
+  }
     svg {
       width: 14px;
       height: 14px;

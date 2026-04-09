@@ -30,6 +30,7 @@ interface MemoState {
 })
 export class MemoizationDemoComponent {
   private nextLogId = 0;
+  private lastComputationDuration = 0;
 
   private tree = signalTree<MemoState>({
     inputValue: 5,
@@ -54,7 +55,10 @@ export class MemoizationDemoComponent {
   cacheHitCount = this.tree.$.cacheHitCount;
 
   // Track previous values using a memoization cache
-  private cache = new Map<string, { result: number; timestamp: number }>();
+  private cache = new Map<
+    string,
+    { result: number; timestamp: number; duration: number }
+  >();
 
   // Expensive computation (simulated) - READ ONLY, no signal writes
   expensiveResult = computed(() => {
@@ -68,18 +72,24 @@ export class MemoizationDemoComponent {
 
     // Return cached value if it exists and is fresh (within 5 seconds)
     if (cached && now - cached.timestamp < 5000) {
+      this.lastComputationDuration = 0.02;
       return cached.result;
     }
 
-    // Perform expensive computation
-    let sum = 0;
-    for (let i = 0; i < 10000000; i++) {
-      sum += Math.sqrt(i);
+    const start = performance.now();
+
+    // Simulate meaningful work without freezing the entire fundamentals page.
+    let accumulator = 0;
+    for (let i = 0; i < 200000; i++) {
+      accumulator += ((i % 17) + input) * mult;
     }
-    const result = input * mult + sum * 0;
+
+    const result = input * mult + (accumulator % 997);
+    const duration = performance.now() - start;
+    this.lastComputationDuration = duration;
 
     // Store in cache
-    this.cache.set(cacheKey, { result, timestamp: now });
+    this.cache.set(cacheKey, { result, timestamp: now, duration });
 
     // Return the result (logging will be handled by effect)
     return result;
@@ -112,7 +122,7 @@ export class MemoizationDemoComponent {
         input: `input=${input}, multiplier=${mult}`,
         output: result.toString(),
         cached: isCached,
-        duration: 0.1, // Approximate since we can't track in effect
+        duration: this.lastComputationDuration,
       });
 
       // Update last values

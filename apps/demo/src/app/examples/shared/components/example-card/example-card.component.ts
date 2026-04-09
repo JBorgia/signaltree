@@ -1,13 +1,16 @@
 import { CommonModule } from '@angular/common';
 import {
+  AfterViewInit,
   Component,
   ComponentRef,
+  ElementRef,
   Input,
   OnDestroy,
   OnInit,
   Type,
   ViewChild,
   ViewContainerRef,
+  inject,
 } from '@angular/core';
 
 import type { ExampleMeta } from '../../../core/models';
@@ -23,36 +26,88 @@ import type { ExampleMeta } from '../../../core/models';
   templateUrl: './example-card.component.html',
   styleUrl: './example-card.component.scss',
 })
-export class ExampleCardComponent implements OnInit, OnDestroy {
+export class ExampleCardComponent implements AfterViewInit, OnInit, OnDestroy {
   @Input({ required: true }) example!: ExampleMeta;
 
   @ViewChild('componentContainer', { read: ViewContainerRef, static: true })
   container!: ViewContainerRef;
 
-  private componentRef?: ComponentRef<unknown>;
+  protected demoReady = false;
 
-  async ngOnInit() {
-    if (this.example?.component) {
+  private readonly elementRef = inject(ElementRef<HTMLElement>);
+  private componentRef?: ComponentRef<unknown>;
+  private observer?: IntersectionObserver;
+
+  ngOnInit() {}
+
+  ngAfterViewInit() {
+    if (!this.example?.component) {
+      return;
+    }
+
+    if (typeof IntersectionObserver === 'undefined') {
+      this.loadDemoComponent();
+      return;
+    }
+
+    this.observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          this.loadDemoComponent();
+          this.observer?.disconnect();
+          this.observer = undefined;
+        }
+      },
+      {
+        rootMargin: '300px 0px',
+        threshold: 0.1,
+      }
+    );
+
+    this.observer.observe(this.elementRef.nativeElement);
+  }
+
+  ngOnDestroy() {
+    this.observer?.disconnect();
+
+    if (this.componentRef) {
+      this.componentRef.destroy();
+    }
+  }
+
+  loadDemoNow() {
+    this.loadDemoComponent();
+  }
+
+  private loadDemoComponent() {
+    if (this.demoReady || !this.example?.component) {
+      return;
+    }
+
+    this.demoReady = true;
+
+    const scheduleLoad =
+      typeof requestIdleCallback === 'function'
+        ? (callback: () => void) => requestIdleCallback(() => callback())
+        : (callback: () => void) => setTimeout(callback, 0);
+
+    scheduleLoad(() => {
+      if (this.componentRef) {
+        return;
+      }
+
       try {
-        // Dynamically create the component
         this.componentRef = this.container.createComponent(
           this.example.component as Type<unknown>
         );
       } catch (error) {
         console.error('Failed to load example component:', error);
-        // Fallback: show an error message
         this.container.element.nativeElement.innerHTML = `
-          <div class="p-4 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+          <div class="card__error">
             Failed to load example component. Please check the console for details.
           </div>
         `;
       }
-    }
-  }
-
-  ngOnDestroy() {
-    if (this.componentRef) {
-      this.componentRef.destroy();
-    }
+    });
   }
 }
