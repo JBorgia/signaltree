@@ -24,6 +24,11 @@ import { TimeTravelDemoComponent } from '../../features/fundamentals/examples/ti
 import { WhatsNewComponent } from '../../features/fundamentals/examples/whats-new/whats-new.component';
 
 import type { ExampleMeta } from '../models';
+
+const FUNDAMENTALS_ROUTE = '/examples/fundamentals';
+const RECOMMENDED_ARCHITECTURE_ROUTE =
+  '/examples/fundamentals/recommended-architecture';
+
 // Import example components from the new features structure
 /**
  * Signals Examples
@@ -37,7 +42,7 @@ export const signalsExampleMeta: ExampleMeta = {
   focusAreas: ['signals', 'reactivity'],
   functionalUse: ['state-management', 'ui-updates'],
   enhancers: [],
-  route: '/examples/fundamentals/signals',
+  route: FUNDAMENTALS_ROUTE,
   component: SignalsExamplesComponent,
   difficulty: 'beginner',
   tags: ['signals', 'counter', 'reactive-input', 'computed'],
@@ -55,7 +60,7 @@ export const entitiesExampleMeta: ExampleMeta = {
   focusAreas: ['entities', 'crud', 'collections'],
   functionalUse: ['data-management', 'pagination', 'sorting'],
   enhancers: ['entities'],
-  route: '/examples/fundamentals/entities',
+  route: '/entities',
   component: EntitiesDemoComponent,
   difficulty: 'intermediate',
   tags: ['entities', 'crud', 'pagination', 'sorting', 'collections'],
@@ -73,7 +78,7 @@ export const batchingExampleMeta: ExampleMeta = {
   focusAreas: ['batching', 'performance', 'optimization'],
   functionalUse: ['bulk-updates', 'performance'],
   enhancers: ['batching'],
-  route: '/examples/fundamentals/enhancers/batching',
+  route: '/batching',
   component: BatchingDemoComponent,
   difficulty: 'intermediate',
   tags: ['batching', 'performance', 'optimization', 'bulk-updates'],
@@ -91,7 +96,7 @@ export const callableSyntaxExampleMeta: ExampleMeta = {
   focusAreas: ['api', 'syntax', 'usability'],
   functionalUse: ['state-updates', 'api-usage'],
   enhancers: ['callable-syntax'],
-  route: '/examples/fundamentals/enhancers/callable-syntax',
+  route: '/callable-syntax',
   component: CallableSyntaxDemoComponent,
   difficulty: 'beginner',
   tags: ['callable-syntax', 'api', 'fluent-api', 'usability'],
@@ -109,7 +114,7 @@ export const devtoolsExampleMeta: ExampleMeta = {
   focusAreas: ['debugging', 'development', 'tools'],
   functionalUse: ['debugging', 'development'],
   enhancers: ['devtools'],
-  route: '/examples/fundamentals/enhancers/devtools',
+  route: '/devtools',
   component: DevtoolsDemoComponent,
   difficulty: 'intermediate',
   tags: ['devtools', 'debugging', 'development', 'logging'],
@@ -127,7 +132,7 @@ export const presetsExampleMeta: ExampleMeta = {
   focusAreas: ['presets', 'configuration', 'setup'],
   functionalUse: ['quick-start', 'best-practices'],
   enhancers: ['presets'],
-  route: '/examples/fundamentals/enhancers/presets',
+  route: '/presets',
   component: PresetsDemoComponent,
   difficulty: 'intermediate',
   tags: [
@@ -151,7 +156,7 @@ export const persistenceExampleMeta: ExampleMeta = {
   focusAreas: ['persistence', 'localStorage', 'auto-save'],
   functionalUse: ['state-persistence', 'data-storage', 'offline'],
   enhancers: ['persistence', 'serialization'],
-  route: '/examples/fundamentals/enhancers/persistence',
+  route: '/persistence',
   component: PersistenceDemoComponent,
   difficulty: 'intermediate',
   tags: [
@@ -175,7 +180,7 @@ export const serializationExampleMeta: ExampleMeta = {
   focusAreas: ['serialization', 'json', 'type-preservation'],
   functionalUse: ['state-export', 'state-import', 'data-transfer'],
   enhancers: ['serialization'],
-  route: '/examples/fundamentals/enhancers/serialization',
+  route: '/serialization',
   component: SerializationDemoComponent,
   difficulty: 'intermediate',
   tags: ['serialization', 'json', 'type-preservation', 'export', 'import'],
@@ -193,7 +198,7 @@ export const memoizationExampleMeta: ExampleMeta = {
   focusAreas: ['memoization', 'caching', 'performance'],
   functionalUse: ['optimization', 'expensive-computations'],
   enhancers: ['memoization'],
-  route: '/examples/fundamentals/memoization',
+  route: '/memoization',
   component: MemoizationDemoComponent,
   difficulty: 'intermediate',
   tags: ['memoization', 'caching', 'performance', 'optimization'],
@@ -211,7 +216,7 @@ export const timeTravelExampleMeta: ExampleMeta = {
   focusAreas: ['time-travel', 'debugging', 'history'],
   functionalUse: ['undo-redo', 'debugging', 'state-history'],
   enhancers: ['time-travel'],
-  route: '/examples/fundamentals/time-travel',
+  route: '/time-travel',
   component: TimeTravelDemoComponent,
   difficulty: 'advanced',
   tags: [
@@ -235,7 +240,7 @@ export const effectsExampleMeta: ExampleMeta = {
   focusAreas: ['effects', 'side-effects', 'reactivity'],
   functionalUse: ['auto-save', 'notifications', 'sync'],
   enhancers: [],
-  route: '/examples/fundamentals/effects',
+  route: FUNDAMENTALS_ROUTE,
   component: EffectsDemoComponent,
   difficulty: 'intermediate',
   tags: ['effects', 'auto-save', 'localStorage', 'notifications'],
@@ -253,7 +258,7 @@ export const formsExampleMeta: ExampleMeta = {
   focusAreas: ['forms', 'validation', 'computed'],
   functionalUse: ['form-handling', 'validation', 'user-input'],
   enhancers: [],
-  route: '/examples/fundamentals/forms',
+  route: FUNDAMENTALS_ROUTE,
   component: FormsDemoComponent,
   difficulty: 'intermediate',
   tags: ['forms', 'validation', 'computed', 'reactive'],
@@ -271,7 +276,7 @@ export const signalFormsExampleMeta: ExampleMeta = {
   focusAreas: ['signal-forms', 'forms', 'angular-20'],
   functionalUse: ['form-binding', 'two-way-sync', 'toWritableSignal'],
   enhancers: [],
-  route: '/examples/fundamentals/signal-forms',
+  route: FUNDAMENTALS_ROUTE,
   component: SignalFormsDemoComponent,
   difficulty: 'intermediate',
   tags: [
@@ -295,7 +300,7 @@ export const asyncExampleMeta: ExampleMeta = {
   focusAreas: ['async', 'loading-states', 'error-handling'],
   functionalUse: ['data-fetching', 'search', 'optimistic-updates'],
   enhancers: [],
-  route: '/examples/fundamentals/async',
+  route: FUNDAMENTALS_ROUTE,
   component: AsyncDemoComponent,
   difficulty: 'intermediate',
   tags: ['async', 'loading', 'debounce', 'search', 'errors'],
@@ -313,7 +318,7 @@ export const recommendedArchitectureExampleMeta: ExampleMeta = {
   focusAreas: ['architecture', 'global-tree', 'facades', 'api-separation'],
   functionalUse: ['state-management', 'orchestration', 'data-flow'],
   enhancers: ['entities', 'batching'],
-  route: '/examples/fundamentals/recommended-architecture',
+  route: RECOMMENDED_ARCHITECTURE_ROUTE,
   component: RecommendedArchitectureComponent,
   difficulty: 'advanced',
   tags: [
@@ -341,7 +346,7 @@ export const EXAMPLES_REGISTRY: ExampleMeta[] = [
     focusAreas: ['news', 'changelog'],
     functionalUse: ['release-notes'],
     enhancers: [],
-    route: '/examples/fundamentals/whats-new',
+    route: FUNDAMENTALS_ROUTE,
     component: WhatsNewComponent,
     difficulty: 'beginner',
     tags: ['news', 'readme', 'updates'],
