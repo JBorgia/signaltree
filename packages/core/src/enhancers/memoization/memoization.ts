@@ -3,7 +3,8 @@ import { deepEqual, LRUCache } from '@signaltree/shared';
 
 import { isNodeAccessor } from '../../lib/utils';
 
-import type { ISignalTree, TreeNode } from '../../lib/types';
+import type { ISignalTree, TreeNode, EnhancerMeta } from '../../lib/types';
+import { ENHANCER_META } from '../../lib/types';
 
 // Dev environment detection
 declare const __DEV__: boolean | undefined;
@@ -732,9 +733,21 @@ export function memoization(
       setCleanupInterval(tree as object, intervalId);
     }
 
+    // Register cleanup for tree destruction
+    if (typeof tree.registerCleanup === 'function') {
+      tree.registerCleanup(() => {
+        clearCleanupInterval(tree as object);
+        cache.clear();
+        memoizationCache.delete(tree as object);
+      });
+    }
+
     return tree as unknown as ISignalTree<S> & MemoizationMethods<S>;
   };
 
+  const meta: EnhancerMeta = { name: 'memoization', provides: ['memoization'] };
+  (enhancer as unknown as { metadata: EnhancerMeta }).metadata = meta;
+  (enhancer as unknown as Record<symbol, EnhancerMeta>)[ENHANCER_META] = meta;
   return enhancer as unknown as <T>(
     tree: ISignalTree<T>
   ) => ISignalTree<T> & MemoizationMethods<T>;

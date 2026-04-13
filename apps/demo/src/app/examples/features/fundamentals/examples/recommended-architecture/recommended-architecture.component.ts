@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, Injectable, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { batching, entities, entityMap, signalTree } from '@signaltree/core';
+import { batching, entityMap, signalTree } from '@signaltree/core';
 
 import type { EntityMapMarker } from '@signaltree/core';
 

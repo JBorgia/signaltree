@@ -432,7 +432,7 @@ export class PlantsComponent {
 
 Global tree composed from domain sub-trees. Single access point, modular definition.
 
-```typescript
+````typescript
 // domains/plants.tree.ts
 export const plantsSlice = {
   entities: entityMap<Plant>(),
@@ -485,8 +485,9 @@ export const appTree = signalTree({
 
 // Later (e.g. on route enter)
 appTree.$.reports.data.set(await api.loadReports());
-```
-```
+````
+
+````
 
 | Pros                                   | Cons                      |
 | -------------------------------------- | ------------------------- |
@@ -538,7 +539,7 @@ const productsTree = signalTree({ products: entityMap<Product>() })
       name: DEVTOOLS_GROUP_NAME,
     },
   }));
-```
+````
 
 All trees sharing the same `aggregatedReduxInstance.id` will appear under a **single Redux DevTools instance** (named by `aggregatedReduxInstance.name`), with each tree's state nested under its `treeName` key. Trees can be dynamically registered/unregistered as lazy-loaded modules come and go — the shared DevTools instance is created on first registration and cleaned up when the last tree disconnects.
 
@@ -3406,3 +3407,112 @@ export class TicketListComponent {
 | UI-only state            | Component signal        | `showModal = signal(false)`                 |
 
 This gives you unified dot notation access, minimal abstraction layers, and clear separation between state access (`store.$`) and operations (`store.ops`).
+
+---
+
+## When to Use Which Enhancer
+
+Use this decision flowchart to pick enhancers:
+
+```
+Start
+  │
+  ├── Do you have many rapid writes in a single turn?
+  │     └── YES → batching()
+  │
+  ├── Do you need deep/shallow equality instead of reference equality?
+  │     └── YES → memoization({ equality: 'shallow' | 'deep' })
+  │
+  ├── Do you need undo/redo?
+  │     └── YES → timeTravel()
+  │
+  ├── Do you need to persist state across page reloads?
+  │     └── YES → persistence({ key: '...' })
+  │
+  ├── Do you want Redux DevTools integration?
+  │     └── YES → devTools()
+  │
+  └── None of the above?
+        └── Use signalTree() with no enhancers. Add them later if needed.
+```
+
+**Common combinations:**
+
+| Use Case                      | Enhancers                                             |
+| ----------------------------- | ----------------------------------------------------- |
+| Feature store (simple)        | None                                                  |
+| Feature store (with batching) | `batching()`                                          |
+| Form with undo                | `timeTravel()`                                        |
+| Persisted user preferences    | `persistence({ key: 'prefs' })`                       |
+| Development debugging         | `devTools()`                                          |
+| High-frequency dashboard      | `batching()` + `memoization({ equality: 'shallow' })` |
+
+---
+
+## Common Anti-Patterns
+
+### 1. Over-enhancing
+
+```typescript
+// ❌ Don't add every enhancer "just in case"
+const tree = signalTree(state)
+  .with(batching())
+  .with(memoization())
+  .with(timeTravel())
+  .with(devTools())
+  .with(persistence({ key: 'all' }));
+
+// ✅ Start with none, add what you actually need
+const tree = signalTree(state);
+```
+
+### 2. Duplicating Angular's work
+
+```typescript
+// ❌ Using memoization for something computed() already handles
+const tree = signalTree({ items: [1, 2, 3] }).with(memoization()); // Angular's computed() already memoizes by reference
+
+// ✅ Only use memoization when you need deep/shallow equality
+const tree = signalTree({ items: [1, 2, 3] }).with(memoization({ equality: 'deep' })); // Useful when objects are recreated
+```
+
+### 3. Giant monolithic trees
+
+```typescript
+// ❌ One tree for the entire app
+const appTree = signalTree({
+  auth: { ... },
+  products: { ... },
+  cart: { ... },
+  admin: { ... },
+  analytics: { ... },
+});
+
+// ✅ Domain-scoped trees
+const authTree = signalTree({ user: null, token: null });
+const productTree = signalTree({ items: [], filters: {} });
+const cartTree = signalTree({ items: [], total: 0 });
+```
+
+### 4. Treating signalTree as a form library
+
+```typescript
+// ❌ Using signalTree for form validation logic
+// Use Angular Reactive Forms or the form() marker instead.
+
+// ✅ Use the form() marker if you need tree-integrated forms
+const tree = signalTree({ myForm: form({ name: '', email: '' }) });
+```
+
+---
+
+## Scaling from Feature to Enterprise
+
+| Stage          | Team Size | Recommended Pattern                                    | Enhancers                  |
+| -------------- | --------- | ------------------------------------------------------ | -------------------------- |
+| **Prototype**  | 1-2       | Single tree, direct access (A1)                        | None                       |
+| **Feature**    | 2-5       | Service-wrapped (B1) or Feature-scoped (C1)            | `batching()` if needed     |
+| **Product**    | 5-15      | Domain-scoped trees (D1) with shared selectors         | `batching()`, `devTools()` |
+| **Enterprise** | 15+       | Domain-scoped + `@signaltree/enterprise` for hot paths | Full stack as needed       |
+
+The key insight: **start simple and add complexity only when you feel pain.** SignalTree's enhancer model means you can add capabilities without restructuring your state.

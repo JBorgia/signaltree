@@ -3,8 +3,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { patchState, signalState } from '@ngrx/signals';
 import {
   batching,
-  highPerformanceBatching,
-  shallowMemoization,
+  memoization,
   signalTree,
 } from '@signaltree/core';
 
@@ -445,7 +444,7 @@ export class SignalTreeVsNgrxSignalsComponent {
     // Deep Nested scenario mapping: batching + shallow memoization
     const tree = signalTree(initialState)
       .with(batching())
-      .with(shallowMemoization());
+      .with(memoization({ equality: 'shallow' }));
 
     const samples: number[] = [];
     let renderCount = 0;
@@ -658,7 +657,7 @@ export class SignalTreeVsNgrxSignalsComponent {
   ): Promise<BenchmarkResult> {
     const initialState = this.createInitialState();
     // Array Updates scenario mapping: high-performance batching only
-    const tree = signalTree(initialState).with(highPerformanceBatching());
+    const tree = signalTree(initialState).with(batching({ enabled: true, notificationDelayMs: 0 }));
 
     const samples: number[] = [];
     let renderCount = 0;
@@ -889,7 +888,7 @@ export class SignalTreeVsNgrxSignalsComponent {
     // Computed Performance scenario mapping: batching + shallow memoization
     const tree = signalTree(initialState)
       .with(batching())
-      .with(shallowMemoization());
+      .with(memoization({ equality: 'shallow' }));
 
     const samples: number[] = [];
     let renderCount = 0;

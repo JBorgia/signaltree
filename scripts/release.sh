@@ -408,7 +408,7 @@ for package in "${PACKAGES[@]}"; do
         # Attempt publish with retry on authentication failure
         PUBLISH_SUCCESS=false
         for attempt in 1 2; do
-            PUBLISH_CMD="npm publish --access public"
+            PUBLISH_CMD="npm publish --access public --provenance"
             if [ -n "$NPM_TOKEN" ]; then
                 PUBLISH_CMD="$PUBLISH_CMD --userconfig ~/.npmrc.signaltree-temp"
             fi

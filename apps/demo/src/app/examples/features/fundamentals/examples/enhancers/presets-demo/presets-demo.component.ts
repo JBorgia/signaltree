@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { createDevTree, createPresetConfig, getAvailablePresets, signalTree, TreePreset } from '@signaltree/core';
+import { signalTree } from '@signaltree/core';
+import { createDevTree, createPresetConfig, getAvailablePresets, type TreePreset } from '@signaltree/core/presets';
 
 interface AppState extends Record<string, unknown> {
   user: {

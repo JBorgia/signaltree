@@ -88,6 +88,13 @@ const _isProdByEnv = Boolean(
 const _isDev =
   typeof ngDevMode !== 'undefined' ? Boolean(ngDevMode) : !_isProdByEnv;
 
+/**
+ * Whether the current environment is development mode.
+ * Uses Angular's `ngDevMode` when available, otherwise falls back to NODE_ENV.
+ * @internal Exported for use by enhancers and internal modules.
+ */
+export const isDev = _isDev;
+
 export const SIGNAL_TREE_MESSAGES = Object.freeze(
   _isDev
     ? (DEV_MESSAGES as typeof DEV_MESSAGES)

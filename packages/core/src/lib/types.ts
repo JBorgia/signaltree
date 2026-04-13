@@ -135,9 +135,19 @@ export interface ISignalTree<T> extends NodeAccessor<T> {
   ): this & TAdded;
   bind(thisArg?: unknown): NodeAccessor<T>;
   destroy(): void;
+  /** Whether this tree has been destroyed. */
+  readonly destroyed: Signal<boolean>;
+  /**
+   * Register a cleanup function to be called when the tree is destroyed.
+   * Enhancers should use this to release resources (intervals, subscriptions, etc.).
+   */
+  registerCleanup(fn: EnhancerCleanup): void;
   // Allow enhancers to attach runtime methods — consumers should cast to the
   // specific enhanced shape they expect (e.g. `SignalTree<T> & BatchingMethods<T>`).
 }
+
+/** Cleanup function returned or registered by enhancers. */
+export type EnhancerCleanup = () => void;
 
 // Method interfaces
 export interface EffectsMethods<T> {

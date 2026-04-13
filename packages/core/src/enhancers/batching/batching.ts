@@ -4,7 +4,9 @@ import type {
   ISignalTree,
   BatchingConfig,
   BatchingMethods,
+  EnhancerMeta,
 } from '../../lib/types';
+import { ENHANCER_META } from '../../lib/types';
 
 /**
  * Batching enhancer for SignalTree.
@@ -37,7 +39,7 @@ export function batching(
   const enabled = config.enabled ?? true;
   const notificationDelayMs = config.notificationDelayMs ?? 0;
 
-  return <T>(tree: ISignalTree<T>): ISignalTree<T> & BatchingMethods<T> => {
+  const enhancerFn = <T>(tree: ISignalTree<T>): ISignalTree<T> & BatchingMethods<T> => {
     // ========================================
     // DISABLED PATH - passthrough
     // ========================================
@@ -363,8 +365,24 @@ export function batching(
       });
     };
 
+    // Register cleanup for tree destruction
+    if (typeof tree.registerCleanup === 'function') {
+      tree.registerCleanup(() => {
+        if (notificationTimeoutId !== undefined) {
+          clearTimeout(notificationTimeoutId);
+          notificationTimeoutId = undefined;
+        }
+        coalescedUpdates.clear();
+      });
+    }
+
     return enhancedTree as unknown as ISignalTree<T> & BatchingMethods<T>;
   };
+
+  const meta: EnhancerMeta = { name: 'batching', provides: ['batching'] };
+  (enhancerFn as unknown as { metadata: EnhancerMeta }).metadata = meta;
+  (enhancerFn as unknown as Record<symbol, EnhancerMeta>)[ENHANCER_META] = meta;
+  return enhancerFn;
 }
 
 /**

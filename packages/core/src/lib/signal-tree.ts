@@ -22,7 +22,10 @@ import type {
   NodeAccessor,
   EntityMapMarker,
   ISignalTree,
+  EnhancerMeta,
 } from './types';
+
+import { ENHANCER_META } from './types';
 // =============================================================================
 // INTERNAL SYMBOLS
 // =============================================================================
@@ -425,6 +428,11 @@ function create<T extends object>(
   // Mark as NodeAccessor
   (tree as unknown as Record<symbol, boolean>)[NODE_ACCESSOR_SYMBOL] = true;
 
+  // Lifecycle: cleanup registry and destroyed flag
+  const cleanupFns: Array<() => void> = [];
+  const destroyedSig = signal(false);
+  const appliedEnhancers = new Set<string>();
+
   // Add core properties
   Object.defineProperty(tree, 'state', {
     value: signalState,
@@ -492,6 +500,32 @@ function create<T extends object>(
         throw new Error('Enhancer must be a function');
       }
 
+      // Duplicate detection via enhancer metadata
+      const meta = (enhancer as unknown as Record<symbol, EnhancerMeta>)[
+        ENHANCER_META
+      ] ??
+        (enhancer as unknown as { metadata?: EnhancerMeta }).metadata;
+
+      if (meta?.name) {
+        if (appliedEnhancers.has(meta.name)) {
+          throw new Error(
+            `Enhancer "${meta.name}" has already been applied to this tree. ` +
+            `Each enhancer can only be applied once.`
+          );
+        }
+        // Dependency validation
+        if (meta.requires) {
+          for (const dep of meta.requires) {
+            if (!appliedEnhancers.has(dep)) {
+              throw new Error(
+                `Enhancer "${meta.name}" requires "${dep}" to be applied first.`
+              );
+            }
+          }
+        }
+        appliedEnhancers.add(meta.name);
+      }
+
       return enhancer(tree) as R;
     },
     enumerable: false,
@@ -518,6 +552,17 @@ function create<T extends object>(
   // destroy()
   Object.defineProperty(tree, 'destroy', {
     value: function (): void {
+      if (destroyedSig()) return; // Already destroyed
+      destroyedSig.set(true);
+      // Run registered cleanup functions (enhancers, subscriptions, etc.)
+      for (const fn of cleanupFns) {
+        try {
+          fn();
+        } catch {
+          // Swallow errors during cleanup to ensure all cleanups run
+        }
+      }
+      cleanupFns.length = 0;
       if (memoryManager) {
         memoryManager.dispose();
       }
@@ -528,6 +573,26 @@ function create<T extends object>(
     enumerable: false,
     // Allow enhancers (like guardrails) to override/replace `destroy` at runtime.
     writable: true,
+    configurable: true,
+  });
+
+  // destroyed (readonly signal)
+  Object.defineProperty(tree, 'destroyed', {
+    value: destroyedSig.asReadonly(),
+    enumerable: false,
+    writable: false,
+    configurable: true,
+  });
+
+  // registerCleanup()
+  Object.defineProperty(tree, 'registerCleanup', {
+    value: function (fn: () => void): void {
+      if (typeof fn === 'function') {
+        cleanupFns.push(fn);
+      }
+    },
+    enumerable: false,
+    writable: false,
     configurable: true,
   });
 
@@ -738,6 +803,8 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
           key !== 'with' &&
           key !== 'bind' &&
           key !== 'destroy' &&
+          key !== 'destroyed' &&
+          key !== 'registerCleanup' &&
           key !== 'derived'
         ) {
           try {
@@ -789,6 +856,26 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
       },
       enumerable: false,
       writable: true,
+      configurable: true,
+    });
+  }
+
+  // Copy 'destroyed' signal from baseTree
+  if (baseTree.destroyed) {
+    Object.defineProperty(builder, 'destroyed', {
+      value: baseTree.destroyed,
+      enumerable: false,
+      writable: false,
+      configurable: true,
+    });
+  }
+
+  // Copy 'registerCleanup' from baseTree
+  if (typeof baseTree.registerCleanup === 'function') {
+    Object.defineProperty(builder, 'registerCleanup', {
+      value: baseTree.registerCleanup.bind(baseTree),
+      enumerable: false,
+      writable: false,
       configurable: true,
     });
   }

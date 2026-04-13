@@ -3,9 +3,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { createSelector } from '@ngrx/store';
 import {
   batching,
-  highPerformanceBatching,
-  lightweightMemoization,
-  shallowMemoization,
+  memoization,
   signalTree,
 } from '@signaltree/core';
 
@@ -512,7 +510,7 @@ export class SignalTreeVsNgrxStoreComponent {
       // Deep Nested scenario mapping: batching + shallow memoization
       const store = signalTree(testData)
         .with(batching())
-        .with(shallowMemoization());
+        .with(memoization({ equality: 'shallow' }));
 
       // Create computed values with MODERATE intensive work (reduced from extreme)
       const computed1 = computed(() => {
@@ -758,7 +756,7 @@ export class SignalTreeVsNgrxStoreComponent {
             : this.createLargeArray(this.arraySize),
       };
       // Array Updates scenario mapping: high-performance batching only
-      const store = signalTree(testData).with(highPerformanceBatching());
+      const store = signalTree(testData).with(batching({ enabled: true, notificationDelayMs: 0 }));
 
       // Create computeds with MODERATE work that depend on the array
       const totalComputed = computed(() => {
@@ -899,7 +897,7 @@ export class SignalTreeVsNgrxStoreComponent {
     const seed = seedBase ?? 7777;
     const testData = { items: this.buildLargeArray(this.arraySize, seed) };
     // Selector Performance scenario mapping: lightweight memoization
-    const store = signalTree(testData).with(lightweightMemoization());
+    const store = signalTree(testData).with(memoization({ maxCacheSize: 50, enableLRU: false }));
 
     // Create derived computation
     const expensiveComputation = computed(() => {

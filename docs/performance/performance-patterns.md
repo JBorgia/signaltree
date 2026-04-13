@@ -1,79 +1,105 @@
 # Performance Patterns & Guidance
 
-This document summarizes practical patterns to avoid common performance pitfalls when using SignalTree in Angular applications. Focused on real-world, production-relevant scenarios.
+Practical patterns for avoiding common performance pitfalls in SignalTree + Angular apps.
 
-## Selector Sharing (Recommended)
+## Batching: When and Why
 
-Avoid creating identical computed/selectors repeatedly across components. Prefer single shared selectors exported from a module.
+Use `batching()` when you make **multiple writes in one synchronous turn** and want to consolidate change notifications.
 
-```ts
-// selectors/user.selectors.ts
-export const selectActiveUsers = (tree: AppTree) => tree.$.users.where(isActive);
+```typescript
+// Without batching: each set() triggers a notification
+tree.$.firstName.set('Alice');
+tree.$.lastName.set('Smith');
+tree.$.age.set(30);
+// → 3 notifications
 
-// Component
-class UserListComponent {
-  activeUsers = selectActiveUsers(this.tree);
-}
+// With batching: notifications are coalesced
+const tree = signalTree(state).with(batching());
+tree.$.firstName.set('Alice');
+tree.$.lastName.set('Smith');
+tree.$.age.set(30);
+// → 1 notification (coalesced)
 ```
 
-Why: Reuse avoids creating many `computed()` instances for the same derived query.
+**Don't use batching** if you only write one field at a time. The enhancer adds overhead per write.
 
-## Cached predicate queries in EntitySignal
+## Memoization: When It Helps vs. When It's Overhead
 
-`EntitySignal.where(predicate)` and `find(predicate)` now cache computed signals when callers pass the same function reference. This yields a large win when components reuse the same named predicate:
+Angular's `computed()` already memoizes by **reference equality**. The memoization enhancer adds a second layer using **deep or shallow equality**.
 
-```ts
+**Use memoization when:**
+
+- Objects are recreated with the same values (API responses, serialized data)
+- You need `equality: 'shallow'` or `equality: 'deep'` comparison
+
+**Don't use memoization when:**
+
+- You're working with primitives (numbers, strings, booleans)
+- Angular's reference equality is sufficient
+- You're not sure if you need it — you probably don't
+
+```typescript
+// ✅ Useful: API returns new object references with same data
+const tree = signalTree(state).with(memoization({ equality: 'shallow' }));
+
+// ❌ Unnecessary: primitives already compare by value in Angular
+const tree = signalTree({ count: 0 }).with(memoization()); // Overhead, no benefit
+```
+
+## Selector Sharing
+
+Avoid creating identical `computed()` expressions across multiple components. Share selectors:
+
+```typescript
+// selectors/user.selectors.ts
+export const selectActiveUsers = (tree: AppTree) => tree.$.users.where(isActive);
+```
+
+Why: Reuse avoids creating many `computed()` instances for the same derived query. `EntitySignal.where(predicate)` caches by function reference — named predicates benefit from this caching; inline arrow functions do not.
+
+## EntitySignal Predicate Caching
+
+```typescript
 const isActive = (u: User) => u.active;
 const s1 = tree.$.users.where(isActive); // cached
 const s2 = tree.$.users.where(isActive); // same Signal instance
+
+// ❌ Not cached — new function reference each time
+const s3 = tree.$.users.where((u) => u.active);
 ```
 
-**Caveat:** Function identity matters. Inline anonymous predicates (e.g. `where(u => u.active)`) will not be cached. Prefer named predicate functions.
+## Anti-Patterns to Avoid
 
-## Enhancer ordering & telemetry
+### Synchronous tight loops
 
-Enhancers can depend on each-other (e.g., memoization assumes stable signals, batching controls notification timing). The demo harness now:
+```typescript
+// ❌ Don't benchmark like this — it's not how Angular apps behave
+for (let i = 0; i < 100000; i++) {
+  tree.$.counter.set(i);
+}
+```
 
-- Uses the library's `resolveEnhancerOrder()` helper to establish a safe apply order for enhancers selected in the UI or defaults.
-- Detects whether a memoization enhancer was already requested using attached enhancer metadata (safer than string-matching function names).
-- Exposes the final list of applied enhancers on `window.__SIGNALTREE_ACTIVE_ENHANCERS__` so CI and Playwright exporters can audit the exact runtime enhancer set.
+Angular's microtask-based change detection already batches many updates in real apps.
 
-Recommended per-scenario enhancer sets (demo defaults):
+### Thousands of subscribers to one node
 
-- Deep Nested Updates: `batching(), shallowMemoization()`
-- Array updates: `highPerformanceBatching(), withLazyArrays()` (when large)
-- Computed chains: `batching(), shallowMemoization()` (or `computedMemoization()` if heavy computed graphs)
-- Selector workloads: `lightweightMemoization()` or `selectorMemoization()`
-- Serialization: `memoization(), highPerformanceBatching(), serialization()`
+Split hot state into separate nodes. Use shared selectors instead of per-component inline computed expressions. Virtualize large lists.
 
-These show the typical trade-offs — choose the smallest set that addresses your bottleneck to keep semantics predictable.
+### Heavy computation in memoization
 
-## When NOT to worry: Rapid Sequential Updates
+Memoization caches results but still pays the equality check cost on every read. If the equality check itself is expensive (large objects with `equality: 'deep'`), the overhead may exceed the savings.
 
-Angular's microtask-based change detection already batches many record updates. Benchmarks that artificially call `tree.$.counter.set(i)` in a tight loop outside Angular's zone are not reflective of typical Angular apps.
+## Lazy Trees
 
-If you truly need sustained 60Hz updates (games, real-time viz), consider:
+SignalTree automatically uses lazy proxy-based signal creation for state shapes with more than 50 estimated nodes. This means signals are created on-demand when accessed, not upfront.
 
-- Handling rendering on a dedicated rAF loop
-- Minimising Angular CD calls (OnPush, manual markForCheck)
-- Using a specialized dataflow outside Angular
+You can override this:
 
-SignalTree will remain framework-friendly and avoid adding default behavior that changes notification timing.
+```typescript
+signalTree(largeState, { useLazySignals: true }); // Force lazy
+signalTree(smallState, { useLazySignals: false }); // Force eager
+```
 
-## Architecture Patterns to Avoid Subscriber Scaling
+## Diagnostics
 
-- Split hot state nodes (avoid one giant list with thousands of subscribers)
-- Use shared selectors instead of per-component inline selectors
-- Move heavy derived work to a service/shared computed instead of duplicating across components
-- Virtualize large lists
-
-## Diagnostics & Benchmarks
-
-- Add subscriber-scaling scenarios to your CI benchmarks if your app deals with large subscriber counts
-- Measure both _notification_ overhead and _actual UI render_ cost; a tiny notification win may be negated by more renders in the UI
-
----
-
-💡 **Quick-run mode**: The demo supports an opt-in quick-run mode (URL param `?quickRun` or `window.__SIGNALTREE_QUICK_RUN__`) that reduces data sizes, iterations, and warmups so CI smoke tests complete quickly and deterministically. Use it for CI smoke runs; do not use it when collecting production-quality performance metrics.
-
-If you'd like, I can add a demo page showing the `selectActiveUsers` pattern and a micro-benchmark that demonstrates caching wins.
+The demo app supports `?quickRun` URL parameter to reduce iterations for CI smoke tests. Do not use for production-quality measurements.

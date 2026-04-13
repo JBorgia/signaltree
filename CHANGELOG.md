@@ -1,8 +1,66 @@
-## Unreleased
+## 9.0.0
 
 ### ⚠️ Breaking Changes
 
-- **events:** `@signaltree/events` is now **ESM-only** (CJS build + `exports["require"]` removed). Node/NestJS consumers must run in ESM mode.
+- **core:** Removed 37 deprecated/alias exports from main barrel. See [migration guide](docs/guides/migration-v8-v9.md) for full list and replacements.
+  - Removed: `entities()`, `enableEntities()`, `highPerformanceEntities()` (deprecated since v7)
+  - Removed: `enableDevTools()`, `fullDevTools()`, `productionDevTools()` → use `devTools(config)`
+  - Removed: `enableSerialization()`, `applySerialization()`, `applyPersistence()` → use `.with(serialization())` / `.with(persistence())`
+  - Removed: `enableTimeTravel()` → use `timeTravel()`
+  - Removed: `batchingWithConfig`, `highPerformanceBatching()` → use `batching(config)`
+  - Removed: `createAsyncOperation()`, `trackAsync()` → use Angular `resource()`
+  - Removed: 7 memoization variant functions → use `memoization({ preset: '...' })`
+  - Removed: `memoize()`, `memoizeShallow()`, `memoizeReference()` standalone functions
+  - Removed: `clearAllCaches()`, `getGlobalCacheStats()` global functions
+- **core:** `SecurityValidator`, `SecurityPresets`, and security types moved to `@signaltree/core/security`
+- **core:** `TREE_PRESETS`, `createDevTree()`, `createProdTree()`, `createMinimalTree()`, and preset utilities moved to `@signaltree/core/presets`
+- **core:** `createEditSession()`, `EditSession`, `UndoRedoHistory` moved to `@signaltree/core/edit-session`
+- **core:** `createStorageAdapter()`, `createIndexedDBAdapter()` moved to `@signaltree/core/storage`
+- **core:** Applying the same enhancer twice now throws (duplicate detection via `ENHANCER_META` symbol)
+- **core:** `destroy()` now automatically calls all enhancer cleanup functions
+
+### 🚀 Features
+
+- **core:** Enhancer lifecycle cleanup — enhancers register teardown functions via `registerCleanup()`. All 5 enhancers (batching, memoization, devtools, time-travel, persistence) now clean up properly on `destroy()`.
+- **core:** `tree.destroyed` readonly signal — components can react to tree disposal
+- **core:** `tree.registerCleanup(fn)` — register custom cleanup functions
+- **core:** Enhancer dependency validation — `.with()` validates that required enhancers are present
+- **core:** `ENHANCER_META` symbol for enhancer metadata (name, provides, requires)
+- **core:** `isDev` utility exported for dev-mode detection
+- **core:** 4 subpath exports: `@signaltree/core/presets`, `/security`, `/edit-session`, `/storage`
+
+### 🧪 Testing
+
+- Added 44 new tests:
+  - 13 enhancer safety tests (metadata, duplicates, dependencies)
+  - 8 enhancer cleanup tests (per-enhancer cleanup, stress test)
+  - 5 memory stress tests (10K nodes, rapid updates, 100 create/destroy cycles)
+  - 6 lazy tree threshold tests
+  - 6 schema-level type tests
+  - 6 benchmark tests (creation/read/write overhead, enhancer overhead)
+
+### 📖 Documentation
+
+- README rewritten from 1,812 → 169 lines. Leads with mental model, no marketing hyperbole.
+- v8 → v9 migration guide with before/after code
+- Custom enhancers guide documenting the enhancer contract
+- Performance methodology doc with honest measurement rules
+- Architecture guide expanded with enhancer decision flowchart, anti-patterns, scaling guide
+- Performance patterns guide rewritten with actionable guidance
+
+### 🏗️ Build & CI
+
+- `validate:budget` script — export count, bundle size, and dev-code leak CI checks
+- `validate:tree-shaking` script — verifies minimal import doesn't pull enhancer code
+- Tree-shaking verified: `signalTree`-only import bundles to 44.5 KB vs 183 KB total
+- Publish provenance (`--provenance`) added to release script
+- API surface reduced from 76 → 39 runtime exports (49% reduction)
+- Bundle size: 74.7 KB gzipped, 315 KB unpacked (slightly smaller than v8)
+
+### 🩹 Fixes
+
+- Fixed persistence subscription leak — `tree.subscribe()` return value was being discarded
+- **events:** `@signaltree/events` is now **ESM-only** (CJS build + `exports["require"]` removed)
 
 ### 🏗️ Build & Packaging
 

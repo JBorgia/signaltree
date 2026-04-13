@@ -7,7 +7,10 @@ import type {
   TimeTravelConfig,
   TimeTravelEntry,
   TreeNode,
+  EnhancerMeta,
 } from '../../lib/types';
+
+import { ENHANCER_META } from '../../lib/types';
 
 // Re-export for convenience (do not redefine locally)
 export type { TimeTravelConfig, TimeTravelEntry };
@@ -257,7 +260,7 @@ export function timeTravel(
   config: TimeTravelConfig = {}
 ): <T>(tree: ISignalTree<T>) => ISignalTree<T> & TimeTravelMethods<T> {
   const { enabled = true } = config;
-  return <T>(tree: ISignalTree<T>): ISignalTree<T> & TimeTravelMethods<T> => {
+  const enhancerFn = <T>(tree: ISignalTree<T>): ISignalTree<T> & TimeTravelMethods<T> => {
     // Disabled (noop) path
     if (!enabled) {
       const noopMethods: TimeTravelMethods<T> = {
@@ -441,8 +444,20 @@ export function timeTravel(
     (enhancedTree as unknown as Record<string, unknown>)['__timeTravel'] =
       timeTravelManager;
 
+    // Register cleanup to free history snapshots on destroy
+    if (typeof tree.registerCleanup === 'function') {
+      tree.registerCleanup(() => {
+        timeTravelManager.resetHistory();
+      });
+    }
+
     return enhancedTree as unknown as ISignalTree<T> & TimeTravelMethods<T>;
   };
+
+  const meta: EnhancerMeta = { name: 'timeTravel', provides: ['timeTravel'] };
+  (enhancerFn as unknown as { metadata: EnhancerMeta }).metadata = meta;
+  (enhancerFn as unknown as Record<symbol, EnhancerMeta>)[ENHANCER_META] = meta;
+  return enhancerFn;
 }
 
 /**

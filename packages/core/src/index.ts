@@ -59,6 +59,9 @@ export type {
   AddManyOptions,
   TimeTravelEntry,
   TimeTravelMethods,
+
+  // Lifecycle
+  EnhancerCleanup,
 } from './lib/types';
 
 // Entity helpers (runtime)
@@ -149,48 +152,24 @@ export {
   parsePath,
   composeEnhancers,
   isBuiltInObject,
-
-  // Advanced utilities - For library extensions and plugins
-  createLazySignalTree,
 } from './lib/utils';
 
 // ============================================
-// EDIT SESSION EXPORTS
+// EDIT SESSION (subpath: @signaltree/core/edit-session)
 // ============================================
 
-/**
- * EditSession for tracking changes to a single value with undo/redo.
- * Unlike `timeTravel()` which tracks the entire tree, EditSession is for
- * isolated value editing (forms, entities, component-level state).
- *
- * @see {@link createEditSession} for creating an edit session
- * @see {@link EditSession} for the interface definition
- */
-export {
-  createEditSession,
-  type EditSession,
-  type UndoRedoHistory,
-} from './lib/edit-session';
+// Moved to '@signaltree/core/edit-session' in v9.
+// Import from there to reduce main bundle size.
 
 // PathNotifier exports - For internal use by enhancers (e.g., guardrails)
 export { getPathNotifier } from './lib/path-notifier';
 
 // ============================================
-// SECURITY EXPORTS
+// SECURITY (subpath: @signaltree/core/security)
 // ============================================
 
-/**
- * Security utilities for preventing common vulnerabilities
- * @see {@link SecurityValidator} for validation and sanitization
- * @see {@link SecurityPresets} for common security configurations
- */
-export {
-  SecurityValidator,
-  SecurityPresets,
-  type SecurityEvent,
-  type SecurityEventType,
-  type SecurityValidatorConfig,
-} from './lib/security/security-validator';
+// Moved to '@signaltree/core/security' in v9.
+// Import from there to reduce main bundle size.
 
 // ============================================
 // MEMORY MANAGEMENT EXPORTS
@@ -222,99 +201,40 @@ export { ENHANCER_META } from './lib/types';
  *
  * @see {@link batching} for intelligent batching capabilities
  */
-export {
-  batching,
-  batchingWithConfig,
-  highPerformanceBatching,
-  flushBatchedUpdates,
-  hasPendingUpdates,
-  getBatchQueueSize,
-} from './enhancers/batching/batching';
+export { batching } from './enhancers/batching/batching';
 
 export type { BatchingConfig, BatchingMethods } from './lib/types';
 
 /**
- * Memoization enhancer for performance optimization
- * @see {@link memoization} for intelligent memoization capabilities
+ * Memoization enhancer for caching derived computations.
+ *
+ * NOTE: Angular's computed() already memoizes by reference equality.
+ * Use this enhancer when you need deep/shallow equality checks or
+ * explicit cache key management beyond what computed() provides.
+ *
+ * @see {@link memoization} for memoization capabilities
  */
-export {
-  memoization,
-  selectorMemoization,
-  computedMemoization,
-  deepStateMemoization,
-  highFrequencyMemoization,
-  highPerformanceMemoization,
-  lightweightMemoization,
-  shallowMemoization,
-  memoize,
-  memoizeShallow,
-  memoizeReference,
-  clearAllCaches,
-  getGlobalCacheStats,
-} from './enhancers/memoization/memoization';
+export { memoization } from './enhancers/memoization/memoization';
 
 /**
  * Time travel enhancer for debugging and undo/redo functionality
  * @see {@link timeTravel} for time travel capabilities
  */
-export {
-  timeTravel,
-  enableTimeTravel,
-} from './enhancers/time-travel/time-travel';
-
-/**
- * Entities enhancer for normalized collection helpers
- * @see {@link entities}
- */
-export {
-  entities,
-  enableEntities,
-  highPerformanceEntities,
-} from './enhancers/entities/entities';
+export { timeTravel } from './enhancers/time-travel/time-travel';
 
 /**
  * Serialization enhancer for state persistence and restoration
- * Primary v6 exports: `serialization()` and `persistence()`.
  */
 export {
   serialization,
-  enableSerialization,
   persistence,
-  createStorageAdapter,
-  createIndexedDBAdapter,
-  applySerialization,
-  applyPersistence,
 } from './enhancers/serialization/serialization';
 
 /**
  * DevTools enhancer for development and debugging
  * @see {@link devTools} for development tools and Redux DevTools integration
  */
-export {
-  devTools,
-  enableDevTools,
-  fullDevTools,
-  productionDevTools,
-} from './enhancers/devtools/devtools';
-
-/**
- * Async operation helpers
- * @see {@link createAsyncOperation} for async operation management
- */
-export { createAsyncOperation, trackAsync } from './lib/async-helpers';
-
-/**
- * Preset configurations for common use cases
- * @see {@link createPresetConfig} for preset configuration
- */
-export {
-  TREE_PRESETS,
-  createPresetConfig,
-  validatePreset,
-  getAvailablePresets,
-  combinePresets,
-  createDevTree,
-} from './enhancers/presets/lib/presets';
+export { devTools } from './enhancers/devtools/devtools';
 
 // ============================================
 // CONSTANTS EXPORTS
@@ -326,64 +246,54 @@ export {
  * @see {@link SIGNAL_TREE_CONSTANTS} for configuration values
  * @see {@link SIGNAL_TREE_MESSAGES} for error/warning messages
  */
-export { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './lib/constants';
+export { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES, isDev } from './lib/constants';
 
 // ============================================
 // PUBLIC API SUMMARY
 // ============================================
 
 /**
- * SignalTree Core API Summary:
+ * SignalTree Core API Summary (v9):
  *
  * **Main Factory:**
  * - `signalTree(state, config?)` - Create a reactive signal tree
  *
- * **Core Types:**
- * - `SignalTree<T>` - Main interface for signal trees
- * - `TreeNode<T>` - Type transformation for nested signals
- * - `TreeConfig` - Configuration options
+ * **Markers (things Angular doesn't have):**
+ * - `entityMap<T, K>()` - Normalized collections
+ * - `status()` - Async operation state
+ * - `stored(key, default)` - localStorage persistence
+ * - `form(fields)` - Tree-integrated forms
  *
- * **Utilities:**
- * - `equal()` / `deepEqual()` - Comparison functions
+ * **Enhancers (one function each):**
+ * - `batching(config?)` - Batch CD notifications
+ * - `memoization(config?)` - Cache with deep/shallow equality
+ * - `timeTravel(config?)` - Undo/redo
+ * - `devTools(config?)` - Redux DevTools integration
+ * - `serialization(config?)` - State serialization
+ * - `persistence(config?)` - State persistence
  *
- * **Enhancer System:**
- * - `createEnhancer()` - Create enhancers with metadata
- * - `composeEnhancers()` - Combine multiple enhancers
- *
- * **Advanced:**
- * - `createLazySignalTree()` - For performance optimizations
- * - Constants and messages for extensions
+ * **Derived State:**
+ * - `.derived($)` - Add computed state to tree
+ * - `derivedFrom()` / `externalDerived()` - Helpers for separate files
  *
  * @example Basic Usage
  * ```typescript
  * import { signalTree } from '@signaltree/core';
  *
- * const state = signalTree({ count: 0, user: { name: 'John' } });
- *
- * // Access signals
- * console.log(state.count()); // 0
- * console.log(state.user.name()); // 'John'
- *
- * // Update values
- * state.count.set(5);
- * state.user.name.set('Jane');
+ * const tree = signalTree({ count: 0, user: { name: 'John' } });
+ * tree.$.count();          // 0
+ * tree.$.user.name();      // 'John'
+ * tree.$.count.set(5);     // Update
  * ```
  *
- * @example With Enhancers (using .with() chain - recommended)
+ * @example With Enhancers
  * ```typescript
- * import { signalTree, entityMap, devTools } from '@signaltree/core';
- * // Note: `.with(entities())` was deprecated in v6 and removed in v7; `entityMap()` is auto-processed.
+ * import { signalTree, entityMap, devTools, batching } from '@signaltree/core';
  *
- * // Chain enhancers with .with() for type-safe composition
- * const state = signalTree({ count: 0 })
- *   // .with(logging());
- *
- * // Combine multiple enhancers
  * const store = signalTree({ users: entityMap<User, number>() })
- *   .with(devTools({ treeName: 'MyStore', enabled: false }));
+ *   .with(batching())
+ *   .with(devTools({ treeName: 'MyStore' }));
  *
- * // Access entity methods via tree.$
  * store.$.users.addOne({ id: 1, name: 'Alice' });
- * const user = store.$.users.byId(1)?.();
  * ```
  */

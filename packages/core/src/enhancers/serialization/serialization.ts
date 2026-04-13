@@ -1,6 +1,8 @@
 import { isSignal, Signal, WritableSignal } from '@angular/core';
 
 import { ISignalTree } from '../../lib/types';
+import type { EnhancerMeta } from '../../lib/types';
+import { ENHANCER_META } from '../../lib/types';
 import { TYPE_MARKERS } from './constants';
 
 /**
@@ -476,7 +478,7 @@ function resolveCircularReferences(
 export function serialization(
   defaultConfig: SerializationConfig = {}
 ): <T>(tree: ISignalTree<T>) => ISignalTree<T> & SerializationMethods {
-  return <T>(tree: ISignalTree<T>): ISignalTree<T> & SerializationMethods => {
+  const enhancerFn = <T>(tree: ISignalTree<T>): ISignalTree<T> & SerializationMethods => {
     const enhanced = tree as ISignalTree<T> & SerializationMethods;
     /**
      * Get plain object representation
@@ -921,6 +923,11 @@ export function serialization(
 
     return enhanced as unknown as ISignalTree<T> & SerializationMethods;
   };
+
+  const meta: EnhancerMeta = { name: 'serialization', provides: ['serialization'] };
+  (enhancerFn as unknown as { metadata: EnhancerMeta }).metadata = meta;
+  (enhancerFn as unknown as Record<symbol, EnhancerMeta>)[ENHANCER_META] = meta;
+  return enhancerFn;
 }
 
 /**
@@ -1020,7 +1027,7 @@ export function persistence(
   // Narrow storage for TypeScript and linter: from here on it's defined.
   const storageAdapter: StorageAdapter = storage;
 
-  return <T>(
+  const persistenceFn = <T>(
     tree: ISignalTree<T>
   ): ISignalTree<T> & SerializationMethods & PersistenceMethods => {
     // First enhance with serialization
@@ -1142,8 +1149,9 @@ export function persistence(
 
       // Try to use tree.subscribe() for reactive state watching
       // This leverages Angular's effect system - no polling needed in production
+      let unsubscribeAutoSave: (() => void) | null = null;
       try {
-        (
+        unsubscribeAutoSave = (
           tree as unknown as { subscribe: (fn: () => void) => () => void }
         ).subscribe(() => {
           const currentState = JSON.stringify(tree());
@@ -1171,6 +1179,10 @@ export function persistence(
       // Store cleanup function for testing
       (enhanced as unknown as EnhancedSignalTree).__flushAutoSave = () => {
         pollingActive = false;
+        if (unsubscribeAutoSave) {
+          unsubscribeAutoSave();
+          unsubscribeAutoSave = null;
+        }
         if (saveTimeout) {
           clearTimeout(saveTimeout);
           saveTimeout = undefined;
@@ -1178,12 +1190,32 @@ export function persistence(
         }
         return Promise.resolve();
       };
+
+      // Register cleanup so destroy() stops auto-save automatically
+      if (typeof tree.registerCleanup === 'function') {
+        tree.registerCleanup(() => {
+          pollingActive = false;
+          if (unsubscribeAutoSave) {
+            unsubscribeAutoSave();
+            unsubscribeAutoSave = null;
+          }
+          if (saveTimeout) {
+            clearTimeout(saveTimeout);
+            saveTimeout = undefined;
+          }
+        });
+      }
     }
 
     return enhanced as unknown as ISignalTree<T> &
       SerializationMethods &
       PersistenceMethods;
   };
+
+  const meta: EnhancerMeta = { name: 'persistence', provides: ['persistence', 'serialization'], requires: [] };
+  (persistenceFn as unknown as { metadata: EnhancerMeta }).metadata = meta;
+  (persistenceFn as unknown as Record<symbol, EnhancerMeta>)[ENHANCER_META] = meta;
+  return persistenceFn;
 }
 
 /**

@@ -124,7 +124,7 @@ const count = signal(0);
 import { signalTree } from '@signaltree/core';
 import { batching } from '@signaltree/core';
 // async removed: recommend middleware/manual helpers for loading/error states
-import { entities } from '@signaltree/core';
+// entities() enhancer removed in v9 — entityMap marker is used directly
 
 const userTree = signalTree({
   users: [] as User[],

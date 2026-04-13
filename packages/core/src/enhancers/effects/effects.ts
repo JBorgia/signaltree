@@ -6,7 +6,8 @@ import { effect as angularEffect, untracked } from '@angular/core';
  * Contract: (config?) => <T>(tree: ISignalTree<T>) => ISignalTree<T> & EffectsMethods<T>
  */
 /* eslint-disable @typescript-eslint/no-empty-function */
-import type { ISignalTree, EffectsMethods } from '../../lib/types';
+import type { ISignalTree, EffectsMethods, EnhancerMeta } from '../../lib/types';
+import { ENHANCER_META } from '../../lib/types';
 
 export interface EffectsConfig {
   /** Enable/disable effects (default: true) */
@@ -45,7 +46,7 @@ export function effects(
   config: EffectsConfig = {}
 ): <T>(tree: ISignalTree<T>) => ISignalTree<T> & EffectsMethods<T> {
   const { enabled = true } = config;
-  return <T>(tree: ISignalTree<T>): ISignalTree<T> & EffectsMethods<T> => {
+  const enhancerFn = <T>(tree: ISignalTree<T>): ISignalTree<T> & EffectsMethods<T> => {
     type S = T;
     const cleanupFns: Array<() => void> = [];
 
@@ -116,6 +117,11 @@ export function effects(
     return Object.assign(tree, methods) as unknown as ISignalTree<T> &
       EffectsMethods<T>;
   };
+
+  const meta: EnhancerMeta = { name: 'effects', provides: ['effects'] };
+  (enhancerFn as unknown as { metadata: EnhancerMeta }).metadata = meta;
+  (enhancerFn as unknown as Record<symbol, EnhancerMeta>)[ENHANCER_META] = meta;
+  return enhancerFn;
 }
 
 /**

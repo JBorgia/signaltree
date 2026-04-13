@@ -13,7 +13,9 @@ import type {
   ISignalTree,
   DevToolsConfig,
   DevToolsMethods,
+  EnhancerMeta,
 } from '../../lib/types';
+import { ENHANCER_META } from '../../lib/types';
 
 // ============================================================================
 // Types
@@ -1095,7 +1097,7 @@ export function devTools(
       : rateLimitMs ?? 0;
   const formatPathFn = formatPath ?? defaultFormatPath;
 
-  return <T>(tree: ISignalTree<T>): ISignalTree<T> & DevToolsMethods => {
+  const enhancerFn = <T>(tree: ISignalTree<T>): ISignalTree<T> & DevToolsMethods => {
     // ========================================================================
     // Disabled path
     // ========================================================================
@@ -1964,8 +1966,20 @@ export function devTools(
       initBrowserDevTools();
     }
 
+    // Register cleanup so destroy() disconnects DevTools automatically
+    if (typeof tree.registerCleanup === 'function') {
+      tree.registerCleanup(() => {
+        result.disconnectDevTools();
+      });
+    }
+
     return result;
   };
+
+  const meta: EnhancerMeta = { name: 'devTools', provides: ['devTools'] };
+  (enhancerFn as unknown as { metadata: EnhancerMeta }).metadata = meta;
+  (enhancerFn as unknown as Record<symbol, EnhancerMeta>)[ENHANCER_META] = meta;
+  return enhancerFn;
 }
 
 // ============================================================================
