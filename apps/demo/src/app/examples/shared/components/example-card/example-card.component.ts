@@ -6,7 +6,6 @@ import {
   ElementRef,
   Input,
   OnDestroy,
-  OnInit,
   Type,
   ViewChild,
   ViewContainerRef,
@@ -26,7 +25,7 @@ import type { ExampleMeta } from '../../../core/models';
   templateUrl: './example-card.component.html',
   styleUrl: './example-card.component.scss',
 })
-export class ExampleCardComponent implements AfterViewInit, OnInit, OnDestroy {
+export class ExampleCardComponent implements AfterViewInit, OnDestroy {
   @Input({ required: true }) example!: ExampleMeta;
 
   @ViewChild('componentContainer', { read: ViewContainerRef, static: true })
@@ -37,8 +36,6 @@ export class ExampleCardComponent implements AfterViewInit, OnInit, OnDestroy {
   private readonly elementRef = inject(ElementRef<HTMLElement>);
   private componentRef?: ComponentRef<unknown>;
   private observer?: IntersectionObserver;
-
-  ngOnInit() {}
 
   ngAfterViewInit() {
     if (!this.example?.component) {

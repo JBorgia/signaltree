@@ -37,7 +37,7 @@ interface ListingWizard {
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './form-marker-demo.component.html',
-  styleUrls: ['./form-marker-demo.component.scss'],
+  styleUrl: './form-marker-demo.component.scss',
 })
 export class FormMarkerDemoComponent {
   // Demo selection

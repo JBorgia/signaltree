@@ -40,7 +40,7 @@ interface AppState extends Record<string, unknown> {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './presets-demo.component.html',
-  styleUrls: ['./presets-demo.component.scss'],
+  styleUrl: './presets-demo.component.scss',
 })
 export class PresetsDemoComponent {
   // Available presets from the presets package

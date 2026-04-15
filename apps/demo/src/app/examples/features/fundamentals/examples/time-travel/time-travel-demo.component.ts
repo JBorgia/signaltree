@@ -52,7 +52,7 @@ interface TimeTravelTree {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './time-travel-demo.component.html',
-  styleUrls: ['./time-travel-demo.component.scss'],
+  styleUrl: './time-travel-demo.component.scss',
 })
 export class TimeTravelDemoComponent {
   newTodoText = '';

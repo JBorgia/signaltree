@@ -22,7 +22,7 @@ export interface BenchmarkResult {
   standalone: true,
   imports: [CommonModule],
   templateUrl: './benchmark-results-table.component.html',
-  styleUrls: ['./benchmark-results-table.component.scss'],
+  styleUrl: './benchmark-results-table.component.scss',
 })
 export class BenchmarkResultsTableComponent {
   @Input() results: BenchmarkResult[] = [];

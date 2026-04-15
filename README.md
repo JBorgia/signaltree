@@ -20,19 +20,17 @@ A SignalTree turns a plain JSON object into a tree of Angular signals. Each leaf
 ```typescript
 import { signalTree } from '@signaltree/core';
 
-// Create a tree from plain JSON
 const store = signalTree({
   user: { name: 'Alice', age: 30 },
   settings: { theme: 'dark' },
 });
 
-// Read (returns the current value, like signal())
-store.$.user.name(); // 'Alice'
+// Read — just call it, like any signal
+store.$.user.name();          // 'Alice'
 
-// Write (like signal.set())
+// Write — set, update, or replace
 store.$.user.name.set('Bob');
-
-// Update the whole tree
+store.$.user.age.update(n => n + 1);
 store({ user: { name: 'Carol', age: 25 }, settings: { theme: 'light' } });
 ```
 
@@ -46,29 +44,30 @@ npm install @signaltree/core
 
 Requires Angular 17+ (signals support).
 
-## Enhancers
+## Entity Collections
 
-Enhancers add capabilities via `.with()`. Each is opt-in and tree-shakeable.
+The `entityMap()` marker gives any node a normalized collection with full reactive CRUD:
 
 ```typescript
-import { signalTree, batching, memoization, devTools, timeTravel } from '@signaltree/core';
+import { signalTree, entityMap } from '@signaltree/core';
 
-const store = signalTree({ count: 0, items: [] })
-  .with(batching()) // Batch change notifications
-  .with(memoization()) // Cache derived computations
-  .with(timeTravel()) // Undo/redo
-  .with(devTools()); // Redux DevTools integration
+const store = signalTree({
+  users: entityMap<User, number>({ selectId: u => u.id }),
+});
+
+store.$.users.setAll([{ id: 1, name: 'Alice' }, { id: 2, name: 'Bob' }]);
+store.$.users.addOne({ id: 3, name: 'Carol' });
+store.$.users.updateOne(1, { name: 'Alice V2' });
+store.$.users.removeOne(2);
+
+// Reactive queries — all return signals
+store.$.users.all();          // Signal<User[]>
+store.$.users.byId(1);        // Signal<User | undefined>
+store.$.users.count();        // Signal<number>
+store.$.users.where(u => u.active); // Signal<User[]>
 ```
 
-| Enhancer          | Purpose                                                |
-| ----------------- | ------------------------------------------------------ |
-| `batching()`      | Batch change detection notifications for performance   |
-| `memoization()`   | Cache selectors with configurable TTL and LRU eviction |
-| `timeTravel()`    | Undo/redo with configurable history depth              |
-| `devTools()`      | Redux DevTools integration with path-based actions     |
-| `effects()`       | Reactive side effects tied to tree lifecycle           |
-| `serialization()` | JSON serialize/deserialize with type preservation      |
-| `persistence()`   | Auto-save/load to localStorage or custom storage       |
+Additional methods: `addMany`, `upsertOne`, `upsertMany`, `updateMany`, `updateWhere`, `removeMany`, `removeWhere`, `clear`, `has`, `ids`, `find`.
 
 ## Markers
 
@@ -78,50 +77,131 @@ Markers declare special node behavior at tree creation time:
 import { signalTree, entityMap, status, stored } from '@signaltree/core';
 
 const store = signalTree({
-  users: entityMap<User>(), // Normalized entity collection
-  loadingState: status(), // Loading/success/error tracking
+  users: entityMap<User>(),       // Normalized entity collection (see above)
+  loadingState: status(),         // Loading/success/error tracking
   preference: stored('pref-key'), // Auto-persisted to localStorage
 });
+
+store.$.loadingState.setLoading();
+store.$.loadingState.setSuccess(data);
+store.$.loadingState.isLoading(); // Signal<boolean>
 ```
+
+## Enhancers
+
+Enhancers add capabilities via `.with()`. Each is opt-in and tree-shakeable. Duplicate detection prevents applying the same enhancer twice.
+
+```typescript
+import { signalTree, batching, memoization, devTools, timeTravel } from '@signaltree/core';
+
+const store = signalTree({ count: 0, items: [] })
+  .with(batching())                        // Batch change notifications
+  .with(memoization({ preset: 'shallow' })) // Shallow-equality caching
+  .with(timeTravel({ maxHistory: 50 }))    // Undo/redo with 50-step history
+  .with(devTools());                       // Redux DevTools integration
+```
+
+| Enhancer          | Purpose                                                |
+| ----------------- | ------------------------------------------------------ |
+| `batching()`      | Coalesce change-detection notifications into microtask batches |
+| `memoization()`   | Cache selectors with configurable equality, TTL, and LRU eviction |
+| `timeTravel()`    | Undo/redo with configurable history depth              |
+| `devTools()`      | Redux DevTools integration with path-based actions     |
+| `serialization()` | JSON serialize/deserialize with type preservation      |
+| `persistence()`   | Auto-save/load to localStorage, IndexedDB, or custom adapters |
+
+Memoization supports presets (`'shallow'`, `'deep'`, `'selector'`, `'computed'`, `'lightweight'`, `'highFrequency'`) or full config:
+
+```typescript
+memoization({ equality: 'shallow', maxCacheSize: 1000, ttl: 60000, enableLRU: true })
+```
+
+## Derived State
+
+Define derived computations in separate files with full type safety using `derivedFrom()`:
+
+```typescript
+import { derivedFrom } from '@signaltree/core';
+import { computed } from '@angular/core';
+
+const derived = derivedFrom<AppState>();
+
+export const dashboardDerived = derived($ => ({
+  activeUserCount: computed(() => $.users.where(u => u.active).length),
+  totalRevenue: computed(() => $.orders.all().reduce((sum, o) => sum + o.total, 0)),
+}));
+
+// Attach to tree
+const store = signalTree(initialState).derived(dashboardDerived);
+store.$.activeUserCount(); // reactive, type-safe
+```
+
+## Callable Syntax
+
+With `@signaltree/callable-syntax`, leaf nodes become callable for both read and write — a compile-time transform that produces zero runtime overhead:
+
+```typescript
+// With callable syntax installed:
+store.$.user.name();           // Read  (same as before)
+store.$.user.name('Bob');      // Write (compiles to .set('Bob'))
+store.$.count(n => n + 1);    // Update (compiles to .update(n => n + 1))
+```
+
+Install as a dev dependency with a Vite/Webpack plugin — the transform compiles away before production.
 
 ## Subpath Imports
 
-Specialized APIs are available as subpath imports to keep the main barrel small:
+Specialized APIs live in subpath imports to keep the main barrel small:
 
 ```typescript
-import { TREE_PRESETS, createDevTree } from '@signaltree/core/presets';
-import { SecurityValidator } from '@signaltree/core/security';
+import { TREE_PRESETS, createDevTree, createProdTree } from '@signaltree/core/presets';
+import { SecurityValidator, SecurityPresets } from '@signaltree/core/security';
 import { createEditSession } from '@signaltree/core/edit-session';
+import { createStorageAdapter, createIndexedDBAdapter } from '@signaltree/core/storage';
+```
+
+**Edit sessions** provide scoped undo/redo over a subtree — useful for form wizards and multi-step workflows:
+
+```typescript
+const session = createEditSession(store, '$.user.profile');
+session.modify(profile => ({ ...profile, name: 'Updated' }));
+session.undo();   // Revert last change
+session.commit(); // Persist changes to the main tree
 ```
 
 ## Lifecycle
 
-Every tree has a `destroy()` method that cleans up all resources — signals, enhancer timers, caches, and DevTools connections:
+Every tree has deterministic cleanup. `destroy()` tears down all resources — signals, enhancer timers, caches, and DevTools connections — in reverse enhancer order:
 
 ```typescript
 const store = signalTree({ data: null }).with(batching()).with(devTools());
+store.destroyed(); // Signal<boolean> — false
 
-// Later, when done:
-store.destroy(); // All enhancer resources cleaned up automatically
+store.destroy();
+store.destroyed(); // true — all enhancer resources cleaned up
+
+// Custom cleanup hooks
+store.registerCleanup(() => ws.close());
 ```
-
-The `destroyed` signal lets you check tree status: `store.destroyed()`.
 
 ## Optional Packages
 
 | Package                       | Purpose                                  |
 | ----------------------------- | ---------------------------------------- |
-| `@signaltree/ng-forms`        | Angular reactive forms integration       |
-| `@signaltree/enterprise`      | Diff-based updates for 500+ signal trees |
-| `@signaltree/callable-syntax` | Build-time DX transform (dev dependency) |
+| `@signaltree/ng-forms`        | Two-way binding between SignalTree nodes and Angular reactive forms |
+| `@signaltree/enterprise`      | Diff-based `updateOptimized()` for large trees (500+ signals), path indexing |
+| `@signaltree/callable-syntax` | Compile-time callable syntax transform (Vite/Webpack plugin, dev dependency) |
+| `@signaltree/events`          | Event-oriented helpers for reacting to state changes |
+| `@signaltree/realtime`        | Keep entity maps in sync with live data sources (WebSocket, SSE) |
+| `@signaltree/guardrails`      | Dev-only performance budgets, hot-path detection, and policy enforcement |
 
 ## When to Use SignalTree
 
 **Good fit:**
 
-- Apps with structured, hierarchical state (settings, user profiles, forms)
-- Teams that want signal-based state without boilerplate
-- Projects where undo/redo or DevTools integration matter
+- Apps with structured, hierarchical state (settings, user profiles, nested forms)
+- Teams that want signal-based state with dot-notation access and zero boilerplate
+- Projects that need undo/redo, DevTools, entity CRUD, or persistence out of the box
 
 **Consider alternatives when:**
 
@@ -137,28 +217,36 @@ const tree = signalTree(initialState);
 const tree = signalTree(initialState, config);
 
 // Read
-tree(); // Full state snapshot
-tree.$.path.to.leaf(); // Leaf signal value
+tree();                       // Full state snapshot
+tree.$.path.to.leaf();        // Leaf signal value
 
 // Write
-tree(newState); // Replace full state
-tree.$.path.to.leaf.set(v); // Set leaf
+tree(newState);               // Replace full state
+tree.$.path.to.leaf.set(v);   // Set leaf
 tree.$.path.to.leaf.update(fn); // Update leaf
 
-// Enhance
-tree.with(enhancer()); // Add capabilities
+// Entity CRUD
+tree.$.users.addOne(entity);
+tree.$.users.byId(id);
+tree.$.users.all();
+
+// Enhance & derive
+tree.with(enhancer());        // Add capabilities (chainable)
+tree.derived(derivedFn);      // Attach derived state
 
 // Lifecycle
-tree.destroy(); // Clean up all resources
-tree.destroyed(); // Check if destroyed
-tree.registerCleanup(fn); // Register custom cleanup
+tree.destroy();               // Clean up all resources
+tree.destroyed();             // Check if destroyed
+tree.registerCleanup(fn);     // Register custom cleanup
 ```
 
 ## Documentation
 
 - [Architecture Guide](docs/architecture/signaltree-architecture-guide.md)
 - [Custom Enhancers](docs/guides/custom-enhancers.md)
+- [Migration Guide (v8 → v9)](docs/guides/migration-v8-v9.md)
 - [Performance Methodology](docs/performance/methodology.md)
+- [Performance Patterns](docs/performance/performance-patterns.md)
 
 ## Contributing
 

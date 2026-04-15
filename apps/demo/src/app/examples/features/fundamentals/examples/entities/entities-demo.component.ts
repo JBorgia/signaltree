@@ -33,7 +33,7 @@ interface EntitiesState {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './entities-demo.component.html',
-  styleUrls: ['./entities-demo.component.scss'],
+  styleUrl: './entities-demo.component.scss',
 })
 export class EntitiesDemoComponent {
   store = signalTree<EntitiesState>({

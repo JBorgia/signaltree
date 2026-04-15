@@ -34,7 +34,7 @@ export interface ExternalLink {
   standalone: true,
   imports: [CommonModule, RouterModule],
   templateUrl: './navigation.component.html',
-  styleUrls: ['./navigation.component.scss'],
+  styleUrl: './navigation.component.scss',
 })
 export class NavigationComponent {
   readonly coreVersion: string;

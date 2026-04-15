@@ -33,7 +33,7 @@ interface ProfileForm extends Record<string, unknown> {
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './ng-forms-demo.component.html',
-  styleUrls: ['./ng-forms-demo.component.scss'],
+  styleUrl: './ng-forms-demo.component.scss',
 })
 export class NgFormsDemoComponent {
   private readonly storage =

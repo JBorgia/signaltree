@@ -52,7 +52,7 @@ interface ExtremeDepthStructure {
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './extreme-depth.component.html',
-  styleUrls: ['./extreme-depth.component.scss'],
+  styleUrl: './extreme-depth.component.scss',
 })
 export class ExtremeDepthComponent implements OnInit {
   extremeTree = signalTree<ExtremeDepthStructure>({

@@ -26,7 +26,7 @@ interface FitItem {
   standalone: true,
   imports: [CommonModule, RouterModule],
   templateUrl: './home.component.html',
-  styleUrls: ['./home.component.scss'],
+  styleUrl: './home.component.scss',
 })
 export class HomeComponent {
   readonly primaryCtas: HomeCta[] = [

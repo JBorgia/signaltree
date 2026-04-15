@@ -7,7 +7,7 @@ import { FormsModule } from '@angular/forms';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './signals-examples.component.html',
-  styleUrls: ['./signals-examples.component.scss'],
+  styleUrl: './signals-examples.component.scss',
 })
 export class SignalsExamplesComponent {
   // Example A: Counter

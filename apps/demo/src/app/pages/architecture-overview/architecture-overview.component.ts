@@ -19,7 +19,7 @@ interface SavingsMetric {
   standalone: true,
   imports: [CommonModule],
   templateUrl: './architecture-overview.component.html',
-  styleUrls: ['./architecture-overview.component.scss'],
+  styleUrl: './architecture-overview.component.scss',
 })
 export class ArchitectureOverviewComponent {
   comparisons: ArchitectureComparison[] = [

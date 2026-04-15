@@ -53,7 +53,7 @@ interface TestState {
   standalone: true,
   imports: [CommonModule],
   templateUrl: './effect-reactivity-test.component.html',
-  styleUrls: ['./effect-reactivity-test.component.scss'],
+  styleUrl: './effect-reactivity-test.component.scss',
 })
 export class EffectReactivityTestComponent {
   // ============================================================================

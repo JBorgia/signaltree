@@ -303,7 +303,7 @@ interface Task {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './custom-extensions-demo.component.html',
-  styleUrls: ['./custom-extensions-demo.component.scss'],
+  styleUrl: './custom-extensions-demo.component.scss',
 })
 export class CustomExtensionsDemoComponent implements AfterViewInit {
   // ViewChild references for code blocks

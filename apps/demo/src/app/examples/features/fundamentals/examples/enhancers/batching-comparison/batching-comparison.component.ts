@@ -7,7 +7,7 @@ import { batching, signalTree } from '@signaltree/core';
   standalone: true,
   imports: [CommonModule],
   templateUrl: './batching-comparison.component.html',
-  styleUrls: ['./batching-comparison.component.scss'],
+  styleUrl: './batching-comparison.component.scss',
 })
 export class BatchingComparisonComponent {
   // Controls

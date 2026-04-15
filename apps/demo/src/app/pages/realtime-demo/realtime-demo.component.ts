@@ -100,7 +100,7 @@ class SimulatedRealtimeAdapter {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './realtime-demo.component.html',
-  styleUrls: ['./realtime-demo.component.scss'],
+  styleUrl: './realtime-demo.component.scss',
 })
 export class RealtimeDemoComponent implements OnDestroy {
   // Connection state

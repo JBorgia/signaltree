@@ -55,7 +55,7 @@ interface BudgetEntry {
   standalone: true,
   imports: [CommonModule],
   templateUrl: './guardrails-monitoring.component.html',
-  styleUrls: ['./guardrails-monitoring.component.scss'],
+  styleUrl: './guardrails-monitoring.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GuardrailsMonitoringComponent implements OnDestroy {

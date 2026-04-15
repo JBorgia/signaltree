@@ -26,7 +26,7 @@ interface MemoState {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './memoization-demo.component.html',
-  styleUrls: ['./memoization-demo.component.scss'],
+  styleUrl: './memoization-demo.component.scss',
 })
 export class MemoizationDemoComponent {
   private nextLogId = 0;

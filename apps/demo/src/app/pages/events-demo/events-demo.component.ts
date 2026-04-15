@@ -62,7 +62,7 @@ type DemoEvent = TradeProposalCreated | TradeAccepted | UserRegistered;
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './events-demo.component.html',
-  styleUrls: ['./events-demo.component.scss'],
+  styleUrl: './events-demo.component.scss',
 })
 export class EventsDemoComponent {
   // =============================================================================

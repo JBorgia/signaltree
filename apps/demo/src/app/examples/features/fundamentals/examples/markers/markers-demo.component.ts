@@ -33,7 +33,7 @@ interface MarkersState {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './markers-demo.component.html',
-  styleUrls: ['./markers-demo.component.scss'],
+  styleUrl: './markers-demo.component.scss',
 })
 export class MarkersDemoComponent {
   // LoadingState enum for template

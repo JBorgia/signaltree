@@ -89,7 +89,7 @@ class BatchProcessor {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './batching-demo.component.html',
-  styleUrls: ['./batching-demo.component.scss'],
+  styleUrl: './batching-demo.component.scss',
 })
 export class BatchingDemoComponent {
   private store = signalTree<BatchingState>({

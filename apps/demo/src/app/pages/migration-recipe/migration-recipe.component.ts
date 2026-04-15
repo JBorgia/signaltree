@@ -6,6 +6,6 @@ import { Component } from '@angular/core';
   standalone: true,
   imports: [CommonModule],
   templateUrl: './migration-recipe.component.html',
-  styleUrls: ['./migration-recipe.component.scss'],
+  styleUrl: './migration-recipe.component.scss',
 })
 export class MigrationRecipeComponent {}

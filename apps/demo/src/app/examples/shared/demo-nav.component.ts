@@ -7,7 +7,7 @@ import { RouterModule } from '@angular/router';
   standalone: true,
   imports: [CommonModule, RouterModule],
   templateUrl: './demo-nav.component.html',
-  styleUrls: ['./demo-nav.component.scss'],
+  styleUrl: './demo-nav.component.scss',
 })
 export class DemoNavComponent {
   @Input() prev?: { label: string; link: string };

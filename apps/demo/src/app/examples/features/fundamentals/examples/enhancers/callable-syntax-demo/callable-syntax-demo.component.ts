@@ -14,7 +14,7 @@ interface User {
   standalone: true,
   imports: [CommonModule],
   templateUrl: './callable-syntax-demo.component.html',
-  styleUrls: ['./callable-syntax-demo.component.scss'],
+  styleUrl: './callable-syntax-demo.component.scss',
 })
 export class CallableSyntaxDemoComponent {
   activeSection: 'basic' | 'complex' | 'arrays' | 'performance' = 'basic';

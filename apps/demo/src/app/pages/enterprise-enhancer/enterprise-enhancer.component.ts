@@ -18,7 +18,7 @@ interface DashboardState extends Record<string, unknown> {
   standalone: true,
   imports: [CommonModule],
   templateUrl: './enterprise-enhancer.component.html',
-  styleUrls: ['./enterprise-enhancer.component.scss'],
+  styleUrl: './enterprise-enhancer.component.scss',
 })
 export class EnterpriseEnhancerComponent {
   // Demo state with large structure - explicitly type the enhanced tree

@@ -201,7 +201,7 @@ interface BenchmarkService {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './benchmark-orchestrator.component.html',
-  styleUrls: ['./benchmark-orchestrator.component.scss'],
+  styleUrl: './benchmark-orchestrator.component.scss',
 })
 export class BenchmarkOrchestratorComponent
   implements OnDestroy, AfterViewInit

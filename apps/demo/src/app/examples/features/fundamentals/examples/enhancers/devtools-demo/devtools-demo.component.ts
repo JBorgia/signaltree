@@ -32,7 +32,7 @@ interface ActionRecord {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './devtools-demo.component.html',
-  styleUrls: ['./devtools-demo.component.scss'],
+  styleUrl: './devtools-demo.component.scss',
 })
 export class DevtoolsDemoComponent {
   newTodoText = '';

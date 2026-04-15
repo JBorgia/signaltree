@@ -21,7 +21,7 @@ import {
   standalone: true,
   imports: [CommonModule, FormsModule, BenchmarkResultsTableComponent],
   templateUrl: './realistic-benchmark-history.component.html',
-  styleUrls: ['./realistic-benchmark-history.component.scss'],
+  styleUrl: './realistic-benchmark-history.component.scss',
   encapsulation: ViewEncapsulation.None, // Disable view encapsulation for modal to work
 })
 export class RealisticBenchmarkHistoryComponent implements OnInit {

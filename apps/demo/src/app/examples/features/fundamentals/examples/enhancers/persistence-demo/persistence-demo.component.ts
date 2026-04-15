@@ -24,7 +24,7 @@ type Themes = 'light' | 'dark' | 'system';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './persistence-demo.component.html',
-  styleUrls: ['./persistence-demo.component.scss'],
+  styleUrl: './persistence-demo.component.scss',
 })
 export class PersistenceDemoComponent implements OnDestroy {
   // Storage key for this demo

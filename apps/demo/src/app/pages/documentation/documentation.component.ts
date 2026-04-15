@@ -27,7 +27,7 @@ interface DocQuickLink {
   standalone: true,
   imports: [CommonModule, RouterModule],
   templateUrl: './documentation.component.html',
-  styleUrls: ['./documentation.component.scss'],
+  styleUrl: './documentation.component.scss',
 })
 export class DocumentationComponent implements OnInit {
   private readonly http = inject(HttpClient);
