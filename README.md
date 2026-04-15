@@ -26,11 +26,11 @@ const store = signalTree({
 });
 
 // Read — just call it, like any signal
-store.$.user.name();          // 'Alice'
+store.$.user.name(); // 'Alice'
 
 // Write — set, update, or replace
 store.$.user.name.set('Bob');
-store.$.user.age.update(n => n + 1);
+store.$.user.age.update((n) => n + 1);
 store({ user: { name: 'Carol', age: 25 }, settings: { theme: 'light' } });
 ```
 
@@ -52,19 +52,22 @@ The `entityMap()` marker gives any node a normalized collection with full reacti
 import { signalTree, entityMap } from '@signaltree/core';
 
 const store = signalTree({
-  users: entityMap<User, number>({ selectId: u => u.id }),
+  users: entityMap<User, number>({ selectId: (u) => u.id }),
 });
 
-store.$.users.setAll([{ id: 1, name: 'Alice' }, { id: 2, name: 'Bob' }]);
+store.$.users.setAll([
+  { id: 1, name: 'Alice' },
+  { id: 2, name: 'Bob' },
+]);
 store.$.users.addOne({ id: 3, name: 'Carol' });
 store.$.users.updateOne(1, { name: 'Alice V2' });
 store.$.users.removeOne(2);
 
 // Reactive queries — all return signals
-store.$.users.all();          // Signal<User[]>
-store.$.users.byId(1);        // Signal<User | undefined>
-store.$.users.count();        // Signal<number>
-store.$.users.where(u => u.active); // Signal<User[]>
+store.$.users.all(); // Signal<User[]>
+store.$.users.byId(1); // Signal<User | undefined>
+store.$.users.count(); // Signal<number>
+store.$.users.where((u) => u.active); // Signal<User[]>
 ```
 
 Additional methods: `addMany`, `upsertOne`, `upsertMany`, `updateMany`, `updateWhere`, `removeMany`, `removeWhere`, `clear`, `has`, `ids`, `find`.
@@ -77,8 +80,8 @@ Markers declare special node behavior at tree creation time:
 import { signalTree, entityMap, status, stored } from '@signaltree/core';
 
 const store = signalTree({
-  users: entityMap<User>(),       // Normalized entity collection (see above)
-  loadingState: status(),         // Loading/success/error tracking
+  users: entityMap<User>(), // Normalized entity collection (see above)
+  loadingState: status(), // Loading/success/error tracking
   preference: stored('pref-key'), // Auto-persisted to localStorage
 });
 
@@ -95,25 +98,25 @@ Enhancers add capabilities via `.with()`. Each is opt-in and tree-shakeable. Dup
 import { signalTree, batching, memoization, devTools, timeTravel } from '@signaltree/core';
 
 const store = signalTree({ count: 0, items: [] })
-  .with(batching())                        // Batch change notifications
+  .with(batching()) // Batch change notifications
   .with(memoization({ preset: 'shallow' })) // Shallow-equality caching
-  .with(timeTravel({ maxHistory: 50 }))    // Undo/redo with 50-step history
-  .with(devTools());                       // Redux DevTools integration
+  .with(timeTravel({ maxHistory: 50 })) // Undo/redo with 50-step history
+  .with(devTools()); // Redux DevTools integration
 ```
 
-| Enhancer          | Purpose                                                |
-| ----------------- | ------------------------------------------------------ |
-| `batching()`      | Coalesce change-detection notifications into microtask batches |
+| Enhancer          | Purpose                                                           |
+| ----------------- | ----------------------------------------------------------------- |
+| `batching()`      | Coalesce change-detection notifications into microtask batches    |
 | `memoization()`   | Cache selectors with configurable equality, TTL, and LRU eviction |
-| `timeTravel()`    | Undo/redo with configurable history depth              |
-| `devTools()`      | Redux DevTools integration with path-based actions     |
-| `serialization()` | JSON serialize/deserialize with type preservation      |
-| `persistence()`   | Auto-save/load to localStorage, IndexedDB, or custom adapters |
+| `timeTravel()`    | Undo/redo with configurable history depth                         |
+| `devTools()`      | Redux DevTools integration with path-based actions                |
+| `serialization()` | JSON serialize/deserialize with type preservation                 |
+| `persistence()`   | Auto-save/load to localStorage, IndexedDB, or custom adapters     |
 
 Memoization supports presets (`'shallow'`, `'deep'`, `'selector'`, `'computed'`, `'lightweight'`, `'highFrequency'`) or full config:
 
 ```typescript
-memoization({ equality: 'shallow', maxCacheSize: 1000, ttl: 60000, enableLRU: true })
+memoization({ equality: 'shallow', maxCacheSize: 1000, ttl: 60000, enableLRU: true });
 ```
 
 ## Derived State
@@ -126,8 +129,8 @@ import { computed } from '@angular/core';
 
 const derived = derivedFrom<AppState>();
 
-export const dashboardDerived = derived($ => ({
-  activeUserCount: computed(() => $.users.where(u => u.active).length),
+export const dashboardDerived = derived(($) => ({
+  activeUserCount: computed(() => $.users.where((u) => u.active).length),
   totalRevenue: computed(() => $.orders.all().reduce((sum, o) => sum + o.total, 0)),
 }));
 
@@ -142,9 +145,9 @@ With `@signaltree/callable-syntax`, leaf nodes become callable for both read and
 
 ```typescript
 // With callable syntax installed:
-store.$.user.name();           // Read  (same as before)
-store.$.user.name('Bob');      // Write (compiles to .set('Bob'))
-store.$.count(n => n + 1);    // Update (compiles to .update(n => n + 1))
+store.$.user.name(); // Read  (same as before)
+store.$.user.name('Bob'); // Write (compiles to .set('Bob'))
+store.$.count((n) => n + 1); // Update (compiles to .update(n => n + 1))
 ```
 
 Install as a dev dependency with a Vite/Webpack plugin — the transform compiles away before production.
@@ -164,8 +167,8 @@ import { createStorageAdapter, createIndexedDBAdapter } from '@signaltree/core/s
 
 ```typescript
 const session = createEditSession(store, '$.user.profile');
-session.modify(profile => ({ ...profile, name: 'Updated' }));
-session.undo();   // Revert last change
+session.modify((profile) => ({ ...profile, name: 'Updated' }));
+session.undo(); // Revert last change
 session.commit(); // Persist changes to the main tree
 ```
 
@@ -186,25 +189,25 @@ store.registerCleanup(() => ws.close());
 
 ## Optional Packages
 
-| Package                       | Purpose                                  |
-| ----------------------------- | ---------------------------------------- |
-| `@signaltree/ng-forms`        | Two-way binding between SignalTree nodes and Angular reactive forms |
+| Package                       | Purpose                                                                      |
+| ----------------------------- | ---------------------------------------------------------------------------- |
+| `@signaltree/ng-forms`        | Two-way binding between SignalTree nodes and Angular reactive forms          |
 | `@signaltree/enterprise`      | Diff-based `updateOptimized()` for large trees (500+ signals), path indexing |
 | `@signaltree/callable-syntax` | Compile-time callable syntax transform (Vite/Webpack plugin, dev dependency) |
-| `@signaltree/events`          | Event-oriented helpers for reacting to state changes |
-| `@signaltree/realtime`        | Keep entity maps in sync with live data sources (WebSocket, SSE) |
-| `@signaltree/guardrails`      | Dev-only performance budgets, hot-path detection, and policy enforcement |
+| `@signaltree/events`          | Event-oriented helpers for reacting to state changes                         |
+| `@signaltree/realtime`        | Keep entity maps in sync with live data sources (WebSocket, SSE)             |
+| `@signaltree/guardrails`      | Dev-only performance budgets, hot-path detection, and policy enforcement     |
 
-## Production Migration Results
+## Real-World Migration (Case Study)
 
-Measured from a real-world Angular mobile application migrating from NgRx Signal Store to SignalTree:
+Measured from a production Angular mobile application (TruckTrax v3) migrating from NgRx Signal Store to SignalTree. Results reflect one team's experience; your mileage will vary depending on app complexity and existing architecture.
 
-| Metric | NgRx | SignalTree | Change |
-| --- | --- | --- | --- |
-| **App state code** | 11,735 lines / 45 files | 2,825 lines / 23 files | **-76%** |
-| **npm packages** | 4 (@ngrx/\*) | 1 (@signaltree/core) | **-75%** |
-| **State bundle (gzip)** | ~50KB | ~27KB | **-46%** |
-| **Boilerplate files** | 17 custom `withX` helpers | 0 (built-in) | **Eliminated** |
+| Metric                  | NgRx                      | SignalTree             | Change         |
+| ----------------------- | ------------------------- | ---------------------- | -------------- |
+| **App state code**      | 11,735 lines / 45 files   | 2,825 lines / 23 files | **-76%**       |
+| **npm packages**        | 4 (@ngrx/\*)              | 1 (@signaltree/core)   | **-75%**       |
+| **State bundle (gzip)** | ~50KB                     | ~27KB                  | **-46%**       |
+| **Boilerplate files**   | 17 custom `withX` helpers | 0 (built-in)           | **Eliminated** |
 
 > 13 separate stores → 1 unified tree. `entityMap()` replaced a 222-line `withEntityCrud` wrapper. Derived tiers replaced scattered `withComputed` blocks.
 
@@ -230,12 +233,12 @@ const tree = signalTree(initialState);
 const tree = signalTree(initialState, config);
 
 // Read
-tree();                       // Full state snapshot
-tree.$.path.to.leaf();        // Leaf signal value
+tree(); // Full state snapshot
+tree.$.path.to.leaf(); // Leaf signal value
 
 // Write
-tree(newState);               // Replace full state
-tree.$.path.to.leaf.set(v);   // Set leaf
+tree(newState); // Replace full state
+tree.$.path.to.leaf.set(v); // Set leaf
 tree.$.path.to.leaf.update(fn); // Update leaf
 
 // Entity CRUD
@@ -244,13 +247,13 @@ tree.$.users.byId(id);
 tree.$.users.all();
 
 // Enhance & derive
-tree.with(enhancer());        // Add capabilities (chainable)
-tree.derived(derivedFn);      // Attach derived state
+tree.with(enhancer()); // Add capabilities (chainable)
+tree.derived(derivedFn); // Attach derived state
 
 // Lifecycle
-tree.destroy();               // Clean up all resources
-tree.destroyed();             // Check if destroyed
-tree.registerCleanup(fn);     // Register custom cleanup
+tree.destroy(); // Clean up all resources
+tree.destroyed(); // Check if destroyed
+tree.registerCleanup(fn); // Register custom cleanup
 ```
 
 ## Documentation

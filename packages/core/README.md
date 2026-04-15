@@ -1671,7 +1671,8 @@ tree.save(); // Persistence
 ```
 
 ### Aggregated Redux DevTools Instance
-~~~~
+
+````
 When using multiple independent trees (e.g. per lazy-loaded feature module), each `devTools()` call creates a separate Redux DevTools instance by default. Use `aggregatedReduxInstance` to group multiple trees under a **single Redux DevTools instance**:
 
 ```typescript
@@ -2144,9 +2145,9 @@ Consider separate packages when you need:
 
 ## Migration from NgRx
 
-### Production Results
+### Case Study
 
-Measured from a real-world Angular mobile application migrating from NgRx Signal Store to SignalTree:
+Measured from a production Angular mobile application (TruckTrax v3) migrating from NgRx Signal Store to SignalTree. Results reflect one team's experience; your mileage will vary depending on app complexity and existing architecture.
 
 | Metric | NgRx | SignalTree | Change |
 | --- | --- | --- | --- |
@@ -2686,3 +2687,4 @@ MIT License with AI Training Restriction - see the [LICENSE](../../LICENSE) file
 ---
 
 **Ready to get started?** This core package provides everything you need for most applications. Add extensions only when you need them! 🚀
+````

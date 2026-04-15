@@ -212,14 +212,14 @@ The returned `FormTree` exposes:
 ```typescript
 // ✅ Simple case: types inferred automatically
 const form = createFormTree({
-  name: '',           // string
-  age: 0,             // number
-  active: false,      // boolean
+  name: '', // string
+  age: 0, // number
+  active: false, // boolean
 });
 
-form.$.name();        // string
-form.$.age();         // number
-form.form.controls.name;  // FormControl<string>
+form.$.name(); // string
+form.$.age(); // number
+form.form.controls.name; // FormControl<string>
 ```
 
 ### Union Types Need Assertions
@@ -229,7 +229,7 @@ When a field can be one of several specific values, TypeScript widens the inferr
 ```typescript
 // ❌ Without assertion: resolution is inferred as string
 const form = createFormTree({
-  resolution: 'PENDING',  // Inferred as string, not the union
+  resolution: 'PENDING', // Inferred as string, not the union
 });
 
 // ✅ With assertion: resolution is the exact union type
@@ -490,7 +490,7 @@ tree.getAngularForm('profile')?.formGroup; // FormGroup
 
 ### Key differences
 
-| Aspect               | createFormTree()        | form() + formBridge()  |
+| Aspect               | createFormTree()        | form() + formBridge()        |
 | -------------------- | ----------------------- | ---------------------------- |
 | **Standalone**       | Always needs Angular    | form() works without Angular |
 | **Tree integration** | Separate from app state | Lives in your main tree      |
