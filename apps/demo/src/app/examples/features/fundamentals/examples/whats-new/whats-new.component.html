@@ -1,7 +1,63 @@
 <div class="whats-new">
   <h2>🚀 What's New</h2>
 
-  <h3>🎉 v7.0.0 — Production-Validated Release (January 2026)</h3>
+  <h3>� v9.0.0 — API Sharpening Release (April 2026)</h3>
+  <div class="release-highlights">
+    <p>
+      SignalTree v9 aligns the API surface with the core ethos:
+      <strong>state is data, use Angular directly, ship less, mean more.</strong>
+    </p>
+    <h4>⚠️ Breaking Changes</h4>
+    <ul>
+      <li>
+        <strong>37 deprecated exports removed:</strong> Entity aliases
+        (<code>entities()</code>, <code>enableEntities()</code>), async helpers
+        (<code>createAsyncOperation()</code>, <code>trackAsync()</code>),
+        devtools variants (<code>enableDevTools()</code>,
+        <code>fullDevTools()</code>, <code>productionDevTools()</code>), and
+        more. Use the unified factory functions instead.
+      </li>
+      <li>
+        <strong>7 memoization variants consolidated:</strong>
+        <code>shallowMemoization()</code>,
+        <code>lightweightMemoization()</code>, etc. are now
+        <code>memoization(&#123; preset: 'shallow' &#125;)</code>.
+      </li>
+      <li>
+        <strong>Subpath exports:</strong> Security, presets, storage, and
+        edit-session moved to
+        <code>&#64;signaltree/core/security</code>,
+        <code>/presets</code>, <code>/storage</code>,
+        <code>/edit-session</code>.
+      </li>
+    </ul>
+    <h4>✨ New in v9</h4>
+    <ul>
+      <li>
+        <strong>Lifecycle cleanup contract:</strong>
+        <code>tree.destroyed</code> readonly signal and
+        <code>registerCleanup(fn)</code> for deterministic resource disposal.
+      </li>
+      <li>
+        <strong>Enhancer composition safety:</strong> Duplicate enhancer
+        detection via <code>ENHANCER_META</code> symbol — applying the same
+        enhancer twice now throws in dev mode.
+      </li>
+      <li>
+        <strong>CI budget enforcement:</strong> Bundle size, export count, and
+        tree-shaking verified on every commit.
+      </li>
+    </ul>
+    <p>
+      See the
+      <a href="https://github.com/JBorgia/signaltree/blob/main/docs/guides/migration-v8-v9.md"
+        >v8 → v9 migration guide</a
+      >
+      for before/after code and the full list of changes.
+    </p>
+  </div>
+
+  <h3>�🎉 v7.0.0 — Production-Validated Release (January 2026)</h3>
   <div class="release-highlights">
     <p>
       SignalTree v7 has been <strong>validated in production</strong> with the

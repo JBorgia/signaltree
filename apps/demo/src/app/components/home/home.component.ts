@@ -82,7 +82,7 @@ export class HomeComponent {
     {
       title: '@signaltree/core',
       description:
-        'The main package: state tree, entities, batching, memoization, DevTools, time travel, persistence, and serialization.',
+        'The main package: state tree, entity maps, batching, memoization, DevTools, time travel, persistence, and serialization.',
       route: '/docs',
       cta: 'Read core docs →',
       queryParams: { package: 'core' },
@@ -201,7 +201,7 @@ export class HomeComponent {
     {
       name: 'Optional power, not required ceremony',
       description:
-        'Add entities, DevTools, time travel, persistence, forms, or realtime only when you need them.',
+        'Add DevTools, time travel, persistence, forms, realtime, or enterprise features only when you need them.',
       highlight: true,
     },
     {
@@ -216,7 +216,7 @@ export class HomeComponent {
       items: [
         'Angular apps with deep or evolving nested state',
         'Teams that want state to look like data, not framework ceremony',
-        'Apps that benefit from root-level DevTools, time travel, persistence, and entities',
+        'Apps that benefit from root-level DevTools, time travel, persistence, and entity maps',
       ],
     },
     {

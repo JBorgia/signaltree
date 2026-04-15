@@ -6,7 +6,7 @@
 
 Interactive demonstration showcasing SignalTree's revolutionary performance, features, and real-time monitoring capabilities. Includes comprehensive benchmarking, performance dashboard, and practical examples.
 
-## ✨ What's New (September 2025)
+## ✨ What's New (v9.0.0 — April 2026)
 
 ### 📊 Real-Time Performance Dashboard
 
