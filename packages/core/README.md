@@ -2144,6 +2144,21 @@ Consider separate packages when you need:
 
 ## Migration from NgRx
 
+### Production Results
+
+Measured from a real-world Angular mobile application migrating from NgRx Signal Store to SignalTree:
+
+| Metric | NgRx | SignalTree | Change |
+| --- | --- | --- | --- |
+| **App state code** | 11,735 lines / 45 files | 2,825 lines / 23 files | **-76%** |
+| **npm packages** | 4 (@ngrx/\*) | 1 (@signaltree/core) | **-75%** |
+| **State bundle (gzip)** | ~50KB | ~27KB | **-46%** |
+| **Boilerplate files** | 17 custom `withX` helpers | 0 (built-in) | **Eliminated** |
+
+13 separate stores → 1 unified tree. `entityMap()` replaced a 222-line `withEntityCrud` wrapper. Derived tiers replaced scattered `withComputed` blocks.
+
+### Migration Steps
+
 ```typescript
 // Step 1: Create parallel tree
 const tree = signalTree(initialState);

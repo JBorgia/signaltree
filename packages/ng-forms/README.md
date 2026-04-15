@@ -6,7 +6,7 @@
 
 ## Architecture: form() + formBridge()
 
-SignalTree v7 introduces a layered forms architecture:
+SignalTree provides a layered forms architecture:
 
 ```
 @signaltree/core                    @signaltree/ng-forms
