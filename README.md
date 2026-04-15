@@ -156,7 +156,7 @@ tree.registerCleanup(fn); // Register custom cleanup
 
 ## Documentation
 
-- [Architecture Guide](docs/architecture/)
+- [Architecture Guide](docs/architecture/signaltree-architecture-guide.md)
 - [Custom Enhancers](docs/guides/custom-enhancers.md)
 - [Performance Methodology](docs/performance/methodology.md)
 

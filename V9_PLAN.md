@@ -540,4 +540,4 @@ For the v8 → v9 migration guide:
 - [x] All tests pass
 - [x] CHANGELOG.md updated
 - [x] Migration guide complete
-- [ ] Tag v9.0.0
+- [x] Tag v9.0.0
