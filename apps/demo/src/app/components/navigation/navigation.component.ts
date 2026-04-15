@@ -201,20 +201,7 @@ export class NavigationComponent {
       route: '/guardrails',
       category: 'advanced',
     },
-    {
-      id: 'undo-redo',
-      title: 'Undo / Redo',
-      description: 'Focused history workflow demo',
-      route: '/undo-redo',
-      category: 'advanced',
-    },
-    {
-      id: 'bundle-visualizer',
-      title: 'Bundle Visualizer',
-      description: 'Inspect output shape and tree-shaking-oriented packaging',
-      route: '/bundle-visualizer',
-      category: 'advanced',
-    },
+
     {
       id: 'enterprise-enhancer',
       title: 'Enterprise Enhancer',

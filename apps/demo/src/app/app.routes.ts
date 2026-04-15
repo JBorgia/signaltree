@@ -218,20 +218,8 @@ export const appRoutes: Route[] = [
         './pages/architecture-overview/architecture-overview.component'
       ).then((c) => c.ArchitectureOverviewComponent),
   },
-  {
-    path: 'bundle-visualizer',
-    loadComponent: () =>
-      import('./pages/bundle-visualizer/bundle-visualizer.component').then(
-        (c) => c.BundleVisualizerComponent
-      ),
-  },
-  {
-    path: 'undo-redo',
-    loadComponent: () =>
-      import('./pages/undo-redo-demo/undo-redo-demo.component').then(
-        (c) => c.UndoRedoDemoComponent
-      ),
-  },
+  // Bundle Visualizer removed — Architecture page covers bundle data
+  // Undo/Redo removed — Time Travel demo covers this with richer UX
   {
     path: 'enterprise-enhancer',
     loadComponent: () =>

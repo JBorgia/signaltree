@@ -1,4 +1,3 @@
-import { CommonModule } from '@angular/common';
 import { Component, computed, inject, Injectable, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { batching, entityMap, signalTree } from '@signaltree/core';
@@ -219,19 +218,24 @@ export class ApiService {
 @Component({
   selector: 'app-recommended-architecture',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule],
   template: `
     <div class="demo-container">
       <h2>Recommended Architecture Demo</h2>
       <p class="description">
         This demo shows the recommended SignalTree architecture: Global tree +
-        selective facades + direct component access.
+        selective facades + direct component access. Each section includes the
+        code that powers it.
       </p>
 
       <div class="demo-sections">
         <!-- Direct Tree Access Section -->
         <section class="section">
           <h3>1. Direct Tree Access (Simple Operations)</h3>
+          <p class="section-desc">
+            For simple state mutations, inject the tree directly and call
+            <code>.set()</code> or <code>.update()</code>. No facade needed.
+          </p>
           <div class="controls">
             <button (click)="toggleTheme()" class="btn">
               Toggle Theme: {{ tree.$.ui.theme() }}
@@ -240,11 +244,26 @@ export class ApiService {
               Sidebar: {{ tree.$.ui.sidebarOpen() ? 'Open' : 'Closed' }}
             </button>
           </div>
+          <details class="code-block">
+            <summary>View Code</summary>
+            <pre><code>// Direct tree access — no facade needed for simple mutations
+toggleTheme() &#123;
+  this.tree.$.ui.theme.update(t => t === 'light' ? 'dark' : 'light');
+&#125;
+
+toggleSidebar() &#123;
+  this.tree.$.ui.sidebarOpen.update(open => !open);
+&#125;</code></pre>
+          </details>
         </section>
 
         <!-- Facade Orchestration Section -->
         <section class="section">
           <h3>2. Facade Orchestration (Complex Operations)</h3>
+          <p class="section-desc">
+            Use a facade when the operation spans multiple domains, involves
+            async calls, or enforces business rules.
+          </p>
           <div class="controls">
             <button
               (click)="loadUserWithPosts()"
@@ -268,38 +287,87 @@ export class ApiService {
               Delete User + Posts
             </button>
           </div>
+          <details class="code-block">
+            <summary>View Facade Code</summary>
+            <pre><code>&#64;Injectable(&#123; providedIn: 'root' &#125;)
+export class ContentManagementFacade &#123;
+  private tree = inject(APP_TREE);
+
+  // Cross-domain operation: load user + their posts atomically
+  async loadUserWithPosts(userId: number) &#123;
+    this.tree.$.users.loading.set(true);
+    this.tree.$.posts.loading.set(true);
+
+    const [user, posts] = await Promise.all([
+      this.api.getUser(userId),
+      this.api.getPosts(userId),
+    ]);
+
+    // Batch update — one change notification, not many
+    this.tree.batch(() => &#123;
+      this.tree.$.users.entities.addOne(user);
+      this.tree.$.users.selectedUserId.set(userId);
+      posts.forEach(p => this.tree.$.posts.entities.addOne(p));
+    &#125;);
+
+    this.tree.$.users.loading.set(false);
+    this.tree.$.posts.loading.set(false);
+  &#125;
+
+  // Business rule: only admins can publish
+  async publishPost(postId: number) &#123;
+    const post = this.tree.$.posts.entities.byId(postId)?.();
+    const author = this.tree.$.users.entities.byId(post.authorId)?.();
+    if (author?.role !== 'admin') throw new Error('Only admins can publish');
+    this.tree.$.posts.entities.updateOne(postId, &#123; published: true &#125;);
+  &#125;
+&#125;</code></pre>
+          </details>
         </section>
 
         <!-- State Display Section -->
         <section class="section">
           <h3>3. State Display (Reactive Reads)</h3>
+          <p class="section-desc">
+            Components read state via <code>tree.$.path()</code> and use
+            <code>computed()</code> for derived values. All updates are
+            automatic.
+          </p>
 
           <div class="state-grid">
             <div class="state-section">
               <h4>Users ({{ allUsers().length }})</h4>
-              <div class="loading" *ngIf="usersLoading()">Loading users...</div>
-              <div class="error" *ngIf="usersError()">{{ usersError() }}</div>
+              @if (usersLoading()) {
+                <div class="loading">Loading users...</div>
+              }
+              @if (usersError()) {
+                <div class="error">{{ usersError() }}</div>
+              }
               <div class="items">
-                <div
-                  *ngFor="let user of allUsers()"
-                  class="item"
-                  [class.selected]="user.id === selectedUserId()"
-                  (click)="selectUser(user.id)"
-                  (keydown.enter)="selectUser(user.id)"
-                  (keydown.space)="selectUser(user.id); $event.preventDefault()"
-                  tabindex="0"
-                  role="button"
-                >
-                  <strong>{{ user.name }}</strong> ({{ user.role }})
-                  <br /><small>{{ user.email }}</small>
-                </div>
+                @for (user of allUsers(); track user.id) {
+                  <div
+                    class="item"
+                    [class.selected]="user.id === selectedUserId()"
+                    (click)="selectUser(user.id)"
+                    (keydown.enter)="selectUser(user.id)"
+                    tabindex="0"
+                    role="button"
+                  >
+                    <strong>{{ user.name }}</strong> ({{ user.role }})
+                    <br /><small>{{ user.email }}</small>
+                  </div>
+                }
               </div>
             </div>
 
             <div class="state-section">
               <h4>Posts ({{ filteredPosts().length }})</h4>
-              <div class="loading" *ngIf="postsLoading()">Loading posts...</div>
-              <div class="error" *ngIf="postsError()">{{ postsError() }}</div>
+              @if (postsLoading()) {
+                <div class="loading">Loading posts...</div>
+              }
+              @if (postsError()) {
+                <div class="error">{{ postsError() }}</div>
+              }
               <div class="filters">
                 <input
                   type="text"
@@ -318,42 +386,118 @@ export class ApiService {
                 </label>
               </div>
               <div class="items">
-                <div
-                  *ngFor="let post of filteredPosts()"
-                  class="item post-item"
-                  [class.selected]="post.id === selectedPostId()"
-                  (click)="selectPost(post.id)"
-                  (keydown.enter)="selectPost(post.id)"
-                  (keydown.space)="selectPost(post.id); $event.preventDefault()"
-                  tabindex="0"
-                  role="button"
-                >
-                  <div class="post-header">
-                    <strong>{{ post.title }}</strong>
-                    <span class="status" [class.published]="post.published">
-                      {{ post.published ? 'Published' : 'Draft' }}
-                    </span>
+                @for (post of filteredPosts(); track post.id) {
+                  <div
+                    class="item post-item"
+                    [class.selected]="post.id === selectedPostId()"
+                    (click)="selectPost(post.id)"
+                    (keydown.enter)="selectPost(post.id)"
+                    tabindex="0"
+                    role="button"
+                  >
+                    <div class="post-header">
+                      <strong>{{ post.title }}</strong>
+                      <span class="status" [class.published]="post.published">
+                        {{ post.published ? 'Published' : 'Draft' }}
+                      </span>
+                    </div>
+                    <div class="post-meta">
+                      By {{ getAuthorName(post.authorId) }} •
+                      {{ post.likes }} likes
+                    </div>
+                    <div class="post-content">{{ post.content }}</div>
                   </div>
-                  <div class="post-meta">
-                    By {{ getAuthorName(post.authorId) }} •
-                    {{ post.likes }} likes
-                  </div>
-                  <div class="post-content">{{ post.content }}</div>
-                </div>
+                }
               </div>
             </div>
           </div>
+
+          <details class="code-block">
+            <summary>View Component Code</summary>
+            <pre><code>&#64;Component(&#123; ... &#125;)
+export class MyComponent &#123;
+  private tree = inject(APP_TREE);
+  private facade = inject(ContentManagementFacade);
+
+  // Reactive reads — auto-update when tree changes
+  allUsers = computed(() => this.tree.$.users.entities.all());
+  selectedUser = computed(() => &#123;
+    const id = this.tree.$.users.selectedUserId();
+    return id ? this.tree.$.users.entities.byId(id)?.() : null;
+  &#125;);
+
+  filteredPosts = computed(() => &#123;
+    const posts = this.tree.$.posts.entities.all();
+    const search = this.tree.$.posts.filters.search().toLowerCase();
+    return posts.filter(p =>
+      !search || p.title.toLowerCase().includes(search)
+    );
+  &#125;);
+
+  // Simple mutations — direct tree access
+  selectUser(id: number) &#123;
+    this.tree.$.users.selectedUserId.set(id);
+  &#125;
+
+  // Complex operations — delegate to facade
+  loadUserWithPosts() &#123;
+    this.facade.loadUserWithPosts(1);
+  &#125;
+&#125;</code></pre>
+          </details>
+        </section>
+
+        <!-- Tree Definition Section -->
+        <section class="section">
+          <h3>4. Global Tree Definition</h3>
+          <p class="section-desc">
+            The tree declares all shared state as a single typed JSON structure.
+            <code>entityMap()</code> markers provide CRUD operations.
+            <code>batching()</code> groups rapid mutations into a single change event.
+          </p>
+          <details class="code-block" open>
+            <summary>View Tree Code</summary>
+            <pre><code>export const APP_TREE = new InjectionToken('AppTree');
+
+export function createAppTree() &#123;
+  return signalTree(&#123;
+    users: &#123;
+      entities: entityMap&lt;User, number&gt;(&#123;
+        selectId: u => u.id
+      &#125;),
+      loading: false,
+      error: null as string | null,
+      selectedUserId: null as number | null,
+    &#125;,
+    posts: &#123;
+      entities: entityMap&lt;Post, number&gt;(&#123;
+        selectId: p => p.id
+      &#125;),
+      loading: false,
+      error: null as string | null,
+      filters: &#123;
+        search: '',
+        published: null as boolean | null,
+      &#125;,
+    &#125;,
+    ui: &#123;
+      theme: 'light' as 'light' | 'dark',
+      sidebarOpen: false,
+    &#125;,
+  &#125;).with(batching());
+&#125;</code></pre>
+          </details>
         </section>
 
         <!-- Architecture Explanation -->
         <section class="section explanation">
-          <h3>4. Architecture Explanation</h3>
+          <h3>5. Architecture Summary</h3>
           <div class="architecture-diagram">
             <div class="layer">
               <h4>Components</h4>
               <ul>
-                <li>Inject APP_TREE directly for reads</li>
-                <li>Inject facades for orchestrated operations</li>
+                <li>Inject tree directly for reads</li>
+                <li>Inject facades for complex ops</li>
                 <li>Use local signals for UI-only state</li>
               </ul>
             </div>
@@ -369,7 +513,7 @@ export class ApiService {
               <h4>Global Tree</h4>
               <ul>
                 <li>All shared state</li>
-                <li>Entities with entities()</li>
+                <li>Entities with entityMap()</li>
                 <li>Unified dot notation access</li>
               </ul>
             </div>
@@ -624,6 +768,55 @@ export class ApiService {
         .btn {
           width: 100%;
         }
+      }
+
+      .section-desc {
+        color: #555;
+        margin: 0 0 12px;
+        font-size: 0.95em;
+      }
+
+      .code-block {
+        margin-top: 16px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        overflow: hidden;
+      }
+
+      .code-block summary {
+        padding: 10px 14px;
+        background: #f0f4f8;
+        cursor: pointer;
+        font-weight: 600;
+        color: #333;
+        font-size: 0.9em;
+        user-select: none;
+      }
+
+      .code-block summary:hover {
+        background: #e2e8f0;
+      }
+
+      .code-block pre {
+        margin: 0;
+        padding: 16px;
+        background: #1e1e2e;
+        color: #cdd6f4;
+        overflow-x: auto;
+        font-size: 0.85em;
+        line-height: 1.5;
+      }
+
+      .code-block code {
+        font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+      }
+
+      .section-desc code {
+        background: #e8edf3;
+        padding: 2px 5px;
+        border-radius: 3px;
+        font-size: 0.9em;
+        color: #333;
       }
     `,
   ],

@@ -136,13 +136,7 @@ export class HomeComponent {
       route: '/benchmarks',
       cta: 'Review benchmarks →',
     },
-    {
-      title: 'Bundle Visualizer',
-      description:
-        'Inspect package shape and learn how the build pipeline preserves module structure for tree shaking.',
-      route: '/bundle-visualizer',
-      cta: 'View bundle visualizer →',
-    },
+
     {
       title: 'Extreme Depth',
       description:
