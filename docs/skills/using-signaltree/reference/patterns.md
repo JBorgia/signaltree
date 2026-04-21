@@ -676,6 +676,92 @@ appTree.$.banner.visible();  // false
 For authoring larger enhancers (custom markers, scheduler hooks, async
 middleware), see [`../../guides/custom-markers-enhancers.md`](../../guides/custom-markers-enhancers.md).
 
+## Porting `signalStoreFeature` patterns
+
+`@ngrx/signals`' `signalStoreFeature` is used for two distinct jobs in practice.
+SignalTree has a dedicated answer for each:
+
+| What the feature does | SignalTree equivalent |
+|---|---|
+| Adds reusable **state shape + reactive behaviour** to a slice (`withLoadingState`, `withSavingState`, `withEntities`) | **Built-in or custom marker** — the behaviour lives in the tree itself |
+| Adds **cross-cutting tree-level behaviour** needing DI (`withErrorBanners`, `withTelemetryBaggage`) | `createEnhancer` (see above) |
+| **Side-effects on init** (subscriptions, `effect()`) | Constructor body of the Ops class |
+
+### Built-in markers replace `withLoadingState` and `withEntities`
+
+`withLoadingState` adds loading/error state to a store. SignalTree's `status()`
+marker does the same job — declare it once in the state shape and the reactive
+methods appear on that node automatically:
+
+```ts
+import { entityMap, signalTree, status } from '@signaltree/core';
+
+interface Ticket { id: number; title: string }
+
+const tree = signalTree({
+  tickets: {
+    entities: entityMap<Ticket>(),   // replaces withEntities
+    loading:  status(),              // replaces withLoadingState
+  }
+});
+
+// status() attaches setLoading / setLoaded / setError / state / error to the node:
+tree.$.tickets.loading.setLoading();
+tree.$.tickets.loading.setLoaded();
+tree.$.tickets.loading.setError(new Error('network failure'));
+
+const isLoading = tree.$.tickets.loading.state(); // 'loading' | 'loaded' | 'error' | 'idle'
+const err       = tree.$.tickets.loading.error();  // Error | null
+
+// entityMap() attaches upsertOne / setAll / removeOne / byId / all / clear:
+tree.$.tickets.entities.setAll([{ id: 1, title: 'Haul A' }], { selectId: t => t.id });
+const all = tree.$.tickets.entities.all(); // Signal<Ticket[]>
+```
+
+Use `status()` anywhere you previously reached for `withLoadingState` or a
+hand-rolled `{ isLoading, error }` slice. The marker is reusable across every
+domain in the tree — declare it in each domain's state factory, not once globally.
+
+### Custom markers for novel reusable state behaviour
+
+When no built-in marker fits your need — e.g. a `savingState()` marker that
+tracks optimistic writes, or a `pagination()` marker that manages page/pageSize —
+author a **custom marker** with `registerMarkerProcessor`. The marker attaches
+reactive methods to any node it is applied to, exactly like `status()` or
+`entityMap()`.
+
+```ts skip
+// saving-state.marker.ts
+import { registerMarkerProcessor } from '@signaltree/core';
+import { signal, computed } from '@angular/core';
+
+export const savingState = () => Symbol('savingState');
+
+registerMarkerProcessor(savingState, (_initialValue, node) => {
+  const _isSaving = signal(false);
+  const _isSaved  = signal(false);
+
+  Object.assign(node, {
+    isSaving:  computed(() => _isSaving()),
+    isSaved:   computed(() => _isSaved()),
+    setSaving: () => { _isSaving.set(true);  _isSaved.set(false); },
+    setSaved:  () => { _isSaving.set(false); _isSaved.set(true);  },
+    resetSave: () => { _isSaving.set(false); _isSaved.set(false); },
+  });
+});
+
+// Usage in state factory:
+// { ticket: { data: null, saving: savingState() } }
+// → tree.$.ticket.saving.setSaving() / .setSaved() / .isSaving() etc.
+```
+
+> `registerMarkerProcessor` must be called **before** any `signalTree()` call
+> that uses the marker. Call it once at module load time.
+
+The `ts skip` fence above is intentional — the `registerMarkerProcessor` callback
+signature is low-level; verify the exact API against the core package types before
+shipping a custom marker.
+
 ## Replacing `rxMethod` (from `@ngrx/signals`)
 
 `@ngrx/signals` ships `rxMethod` to wire a method to an internally-owned

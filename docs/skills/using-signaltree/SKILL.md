@@ -26,7 +26,14 @@ This skill covers the core product and routes to nested sub-skills when the user
 
 ## Quick-start
 
-See [`reference/install.md`](reference/install.md) for the authoritative install steps (derived from `package.json` peerDependencies).
+**Before writing any code, install the package:**
+
+```bash
+npm install @signaltree/core
+# pnpm: pnpm add @signaltree/core
+```
+
+See [`reference/install.md`](reference/install.md) for optional packages and peer-dependency details.
 
 Minimal example — create a tree, read it, write it:
 

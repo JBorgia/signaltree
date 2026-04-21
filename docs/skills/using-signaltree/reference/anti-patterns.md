@@ -145,6 +145,44 @@ const currentName = tree.$.user.name();  // always reads the live signal
 
 As a rule: pass the `tree` (or a narrow factory-exposed API) rather than long-lived raw node references.
 
+## Do not use branch replacement on subtrees that contain markers
+
+The callable branch form `tree.$.domain(newObj)` replaces the entire subtree with
+a plain object. Any `status()`, `entityMap()`, or custom marker nodes inside that
+subtree are **overwritten** — the marker-backed methods (`setLoading`, `upsertOne`,
+etc.) disappear and the plain value is written in their place.
+
+```ts wrong
+import { signalTree, status, entityMap } from '@signaltree/core';
+
+interface Item { id: number }
+const tree = signalTree({
+  items: { entities: entityMap<Item>(), loading: status() }
+});
+
+// ✗ Wrong — overwrites the marker nodes with plain values
+tree.$.items({ entities: [], loading: { state: 'idle', error: null } });
+// tree.$.items.loading.setLoading is now undefined
+```
+
+```ts
+import { signalTree, status, entityMap } from '@signaltree/core';
+
+interface Item { id: number }
+const tree = signalTree({
+  items: { entities: entityMap<Item>(), loading: status() }
+});
+
+// ✓ Right — update each writable leaf individually
+tree.$.items.entities.clear();
+tree.$.items.loading.setLoading();
+```
+
+This applies to any subtree that contains markers — `status()`, `entityMap()`,
+or custom markers registered via `registerMarkerProcessor`. As a practical rule:
+if a domain slice has markers in it, reset it by calling its individual writable
+leaves rather than replacing the whole branch.
+
 ## Do not service-wrap a component-local tree
 
 SignalTree trees can live on a component or in a plain factory function.
