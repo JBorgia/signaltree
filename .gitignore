@@ -79,6 +79,9 @@ tmp/
 # Local tooling
 .ralphy/
 
+# Skill lint scratch dir (created by scripts/lint-skills.mjs)
+.cache/
+
 # Build artifacts that should not be committed
 *.tgz
 .version_backup

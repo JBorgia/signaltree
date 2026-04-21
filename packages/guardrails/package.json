@@ -42,6 +42,7 @@
   "files": [
     "dist/**/*.js",
     "src/**/*.d.ts",
+    "skills/**/*",
     "README.md",
     "CHANGELOG.md"
   ],

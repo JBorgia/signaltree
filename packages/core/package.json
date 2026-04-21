@@ -37,9 +37,9 @@
     "./package.json": "./package.json"
   },
   "peerDependencies": {
-    "@angular/core": "^20.0.0",
-    "@angular/compiler": "^20.0.0",
-    "@angular/platform-browser-dynamic": "^20.0.0",
+    "@angular/core": "^20.0.0 || ^21.0.0",
+    "@angular/compiler": "^20.0.0 || ^21.0.0",
+    "@angular/platform-browser-dynamic": "^20.0.0 || ^21.0.0",
     "zone.js": "^0.15.0",
     "tslib": "^2.0.0"
   },
@@ -60,6 +60,7 @@
   "files": [
     "dist/**/*.js",
     "src/**/*.d.ts",
+    "skills/**/*",
     "README.md"
   ]
 }

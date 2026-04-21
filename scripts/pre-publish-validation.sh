@@ -182,6 +182,23 @@ else
     exit 1
 fi
 
+# 7a. Skill Code-Block Lint
+# Type-checks every fenced ts/typescript/tsx block in docs/skills/ against
+# the real built @signaltree/* d.ts files. Must run after the build step
+# (needs dist/packages/*). Between lint (step 4) and the build above makes
+# no sense because dist isn't present yet; we run it as soon as the build
+# completes so any skill API drift fails fast before release assets ship.
+print_header "7a. Skill Code-Block Lint"
+print_step "Type-checking SKILL.md / reference/*.md code blocks"
+if node scripts/lint-skills.mjs 2>&1 | tee /tmp/lint-skills.log; then
+    print_success "Skill code blocks all type-check"
+else
+    print_error "Skill code blocks failed type-check"
+    cat /tmp/lint-skills.log
+    print_info "Fix the SKILL.md / reference files flagged above, then re-run"
+    exit 1
+fi
+
 # 8. Verify Package Configurations
 print_header "8. Verifying Package Configurations"
 print_step "Checking package.json files"

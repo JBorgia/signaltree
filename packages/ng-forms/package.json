@@ -21,8 +21,8 @@
     }
   },
   "peerDependencies": {
-    "@angular/core": "^20.0.0",
-    "@angular/forms": "^20.0.0",
+    "@angular/core": "^20.0.0 || ^21.0.0",
+    "@angular/forms": "^20.0.0 || ^21.0.0",
     "@signaltree/core": "workspace:*",
     "rxjs": "^7.0.0"
   },
@@ -38,6 +38,7 @@
   "files": [
     "dist/**/*.js",
     "src/**/*.d.ts",
+    "skills/**/*",
     "README.md"
   ]
 }
