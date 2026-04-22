@@ -118,7 +118,7 @@ Performance and bundle size vary by app shape, build tooling, device, and runtim
 
 ## Best Practices (SignalTree-First)
 
-> 📖 **Full guide**: [Implementation Patterns](https://github.com/JBorgia/signaltree/blob/main/docs/IMPLEMENTATION_PATTERNS.md)
+> 📖 **Production app structure**: For anything beyond a single-component prototype, follow the [Recommended Default Architecture](https://github.com/JBorgia/signaltree/blob/main/docs/architecture/signaltree-architecture-guide.md#recommended-default-architecture) — it wraps the patterns below in an `AppStore` facade with a `$ + ops` split, derived tiers, and an ESLint guard against direct tree mutation from components/services. The snippets in this README are deliberately minimal and use the low-level core API directly so they stay self-contained; in real apps the mutations shown here belong inside `*Ops` classes.
 
 Follow these principles for idiomatic SignalTree code:
 

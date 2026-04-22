@@ -5,6 +5,23 @@
 
 ---
 
+## ⚠️ Read This First — Two Layers, Two Contracts
+
+SignalTree exposes two distinct usage layers. Picking the right one matters:
+
+| Layer                                                                                                                                 | API surface                                                | Use when                                                           |
+| ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------ |
+| **Core API** (this file)                                                                                                              | `tree.$.path.set(...)`, `tree.$.users.addOne(...)`         | Prototypes, demos, single-file examples, library internals, tests. |
+| **Production architecture** ([architecture guide](../architecture/signaltree-architecture-guide.md#recommended-default-architecture)) | `store.$.path()` reads, `store.ops.domain.method()` writes | Anything in an app that will live longer than a sprint.            |
+
+The examples below use the **Core API** so they stay self-contained. In a real
+app, mutations like `store.$.users.addOne(user)` belong inside an `Ops` class
+(e.g. `UserOps.addUser(user)`) and components call the ops method instead.
+See the [Recommended Default Architecture](../architecture/signaltree-architecture-guide.md#recommended-default-architecture) section for the full pattern (`$ + ops` facade,
+derived tiers, folder layout, ESLint guard, decision matrix).
+
+---
+
 ## Quick Reference
 
 ### Installation
