@@ -6,16 +6,16 @@
 
 .documentation-sidebar {
   width: 340px;
-  border-right: 1px solid #e2e8f0;
+  border-right: 1px solid var(--border-color);
   padding: 2.5rem 1.75rem;
   overflow-y: auto;
-  background-color: #f7fafc;
+  background-color: var(--bg-secondary);
 
   h2 {
     margin-top: 0;
     margin-bottom: 2rem;
     font-size: 1.75rem;
-    color: #1a202c;
+    color: var(--text-primary);
     font-weight: 800;
     letter-spacing: -0.02em;
   }
@@ -39,18 +39,18 @@
   align-items: center;
   min-height: 36px;
   padding: 0.45rem 0.8rem;
-  border: 1px solid #cbd5e0;
+  border: 1px solid var(--border-color);
   border-radius: 999px;
-  background: #ffffff;
-  color: #2d3748;
+  background: var(--bg-card);
+  color: var(--color-neutral-800);
   font-size: 0.85rem;
   font-weight: 600;
   text-decoration: none;
   transition: all 0.2s ease;
 
   &:hover {
-    border-color: #4299e1;
-    color: #2b6cb0;
+    border-color: var(--primary-color);
+    color: var(--color-primary-700);
     transform: translateY(-1px);
   }
 }
@@ -60,23 +60,23 @@
   width: 100%;
   padding: 1.25rem;
   text-align: left;
-  background-color: #ffffff;
-  border: 2px solid #cbd5e0;
+  background-color: var(--bg-card);
+  border: 2px solid var(--border-color);
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 
   &:hover {
-    background-color: #f7fafc;
-    border-color: #4299e1;
+    background-color: var(--bg-secondary);
+    border-color: var(--primary-color);
     box-shadow: 0 4px 8px rgba(66, 153, 225, 0.15);
     transform: translateY(-2px);
   }
 
   &.active {
-    background-color: #2d3748;
-    border-color: #2d3748;
+    background-color: var(--color-neutral-800);
+    border-color: var(--color-neutral-800);
     box-shadow: 0 4px 12px rgba(45, 55, 72, 0.4);
 
     .package-name {
@@ -85,7 +85,7 @@
   }
 
   .package-name {
-    color: #ffffff;
+    color: var(--bg-card);
     font-weight: 700;
     font-size: 1.05rem;
     margin-bottom: 0.5rem;
@@ -93,7 +93,7 @@
   }
 
   .package-description {
-    color: #cbd5e0;
+    color: var(--border-color);
     font-size: 0.9rem;
     line-height: 1.5;
     font-weight: 400;
@@ -104,7 +104,7 @@
   flex: 1;
   padding: 3rem 4rem;
   overflow-y: auto;
-  background-color: #edf2f7;
+  background-color: var(--bg-secondary);
 }
 
 .loading-spinner {
@@ -148,11 +148,11 @@
   max-width: 900px;
   margin: 0 auto;
   padding: 3rem;
-  background-color: #ffffff;
+  background-color: var(--bg-card);
   border-radius: 16px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   line-height: 1.75;
-  color: #2d3748;
+  color: var(--color-neutral-800);
 
   // Center logo images
   div[align='center'] {
@@ -165,8 +165,8 @@
     margin-top: 0;
     margin-bottom: 1.75rem;
     padding-bottom: 1rem;
-    border-bottom: 3px solid #cbd5e0;
-    color: #1a202c;
+    border-bottom: 3px solid var(--border-color);
+    color: var(--text-primary);
     font-weight: 800;
     line-height: 1.2;
     letter-spacing: -0.02em;
@@ -177,8 +177,8 @@
     margin-top: 3rem;
     margin-bottom: 1.5rem;
     padding-bottom: 0.75rem;
-    border-bottom: 2px solid #e2e8f0;
-    color: #2d3748;
+    border-bottom: 2px solid var(--border-color);
+    color: var(--color-neutral-800);
     font-weight: 700;
     line-height: 1.3;
     letter-spacing: -0.01em;
@@ -188,7 +188,7 @@
     font-size: 1.5rem;
     margin-top: 2.5rem;
     margin-bottom: 1.25rem;
-    color: #2d3748;
+    color: var(--color-neutral-800);
     font-weight: 700;
     line-height: 1.4;
   }
@@ -211,7 +211,7 @@
   strong,
   b {
     font-weight: 700;
-    color: #1a202c;
+    color: var(--text-primary);
   }
 
   ul,
@@ -225,7 +225,7 @@
       color: #4a5568;
 
       &::marker {
-        color: #4299e1;
+        color: var(--primary-color);
         font-weight: 700;
       }
     }

@@ -1,60 +1,11 @@
-// Entities Demo - Self-contained styling with clear visual hierarchy
-
+// Entities Demo
 @use 'sass:color';
+@use '../../../../shared/styles' as *;
 
-// Local Variables - Color-coded sections for clarity
-$primary: #3b82f6;
-$secondary: #8b5cf6;
-$success: #10b981;
-$warning: #f59e0b;
-$danger: #ef4444;
-$info: #06b6d4;
-$dark: #1f2937;
-$light: #f9fafb;
-$border: #e5e7eb;
-$text: #374151;
-$text-light: #6b7280;
-
-// Section-specific colors for visual distinction
-$users-accent: #3b82f6; // Blue for users section
-$posts-accent: #8b5cf6; // Purple for posts section
-$stats-accent: #10b981; // Green for stats section
-
-// Mixins
-@mixin card {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-  padding: 1.5rem;
-}
-
-@mixin button-base {
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  font-weight: 600;
-  border: none;
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: all 0.2s;
-
-  &:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-@mixin panel-accent($color) {
-  border-top: 4px solid $color;
-
-  h2 {
-    color: $color;
-  }
-}
+// Section-specific accent colors for visual distinction
+$users-accent: $primary;
+$posts-accent: $secondary;
+$stats-accent: $success;
 
 // Main Container
 .container {

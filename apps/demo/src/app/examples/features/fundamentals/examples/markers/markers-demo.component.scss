@@ -32,7 +32,7 @@
   h2 {
     font-size: 1.75rem;
     margin-bottom: 0.5rem;
-    border-bottom: 2px solid #007bff;
+    border-bottom: 2px solid #3b82f6;
     padding-bottom: 0.5rem;
   }
 
@@ -57,9 +57,9 @@
   transition: background 0.3s, color 0.3s;
 
   .card-header {
-    background: #f8f9fa;
+    background: #f9fafb;
     padding: 1rem 1.5rem;
-    border-bottom: 1px solid #e9ecef;
+    border-bottom: 1px solid #e5e7eb;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -87,22 +87,22 @@
   padding: 0.25rem 0.75rem;
   border-radius: 20px;
   font-size: 0.85rem;
-  background: #e9ecef;
-  color: #6c757d;
+  background: #e5e7eb;
+  color: #6b7280;
   transition: all 0.2s;
 
   &.active {
-    background: #007bff;
+    background: #3b82f6;
     color: white;
   }
 
   &.error.active {
-    background: #dc3545;
+    background: #ef4444;
   }
 }
 
 .persistence-badge {
-  background: #28a745;
+  background: #10b981;
   color: white;
   padding: 0.25rem 0.75rem;
   border-radius: 20px;
@@ -133,29 +133,29 @@
   }
 
   &.primary {
-    background: #007bff;
+    background: #3b82f6;
     color: white;
 
     &:hover:not(:disabled) {
-      background: #0056b3;
+      background: #1d4ed8;
     }
   }
 
   &.secondary {
-    background: #6c757d;
+    background: #6b7280;
     color: white;
 
     &:hover:not(:disabled) {
-      background: #545b62;
+      background: #4b5563;
     }
   }
 
   &.danger {
-    background: #dc3545;
+    background: #ef4444;
     color: white;
 
     &:hover:not(:disabled) {
-      background: #c82333;
+      background: #dc2626;
     }
   }
 
@@ -165,7 +165,7 @@
   }
 
   &.active {
-    background: #007bff;
+    background: #3b82f6;
     color: white;
   }
 }
@@ -186,8 +186,8 @@
 }
 
 .error-message {
-  background: #f8d7da;
-  color: #721c24;
+  background: #fee2e2;
+  color: #991b1b;
   padding: 1rem;
   border-radius: 4px;
   margin-bottom: 1rem;
@@ -212,14 +212,14 @@
     list-style: none;
     padding: 0;
     margin: 0;
-    border: 1px solid #e9ecef;
+    border: 1px solid #e5e7eb;
     border-radius: 4px;
     overflow: hidden;
   }
 
   li {
     padding: 0.75rem 1rem;
-    border-bottom: 1px solid #e9ecef;
+    border-bottom: 1px solid #e5e7eb;
     display: flex;
     justify-content: space-between;
     cursor: pointer;
@@ -230,12 +230,12 @@
     }
 
     &:hover {
-      background: #f8f9fa;
+      background: #f9fafb;
     }
 
     &.selected {
-      background: #e7f1ff;
-      border-left: 3px solid #007bff;
+      background: #eff6ff;
+      border-left: 3px solid #3b82f6;
     }
 
     .user-name {
@@ -243,7 +243,7 @@
     }
 
     .user-email {
-      color: #6c757d;
+      color: #6b7280;
       font-size: 0.9rem;
     }
   }
@@ -251,7 +251,7 @@
 
 .state-display,
 .storage-display {
-  background: #f8f9fa;
+  background: #f9fafb;
   border-radius: 4px;
   padding: 1rem;
   margin-top: 1rem;
@@ -259,7 +259,7 @@
   h4 {
     margin: 0 0 0.5rem 0;
     font-size: 0.9rem;
-    color: #6c757d;
+    color: #6b7280;
   }
 
   pre {
@@ -325,7 +325,7 @@
 
   h3 {
     margin: 0 0 1rem 0;
-    color: #007bff;
+    color: #3b82f6;
     font-family: monospace;
     font-size: 1.25rem;
   }
@@ -339,7 +339,7 @@
       line-height: 1.5;
 
       strong {
-        color: #28a745;
+        color: #10b981;
       }
     }
   }
