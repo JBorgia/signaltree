@@ -10,6 +10,7 @@ import { provideEchartsCore } from 'ngx-echarts';
 
 import { appRoutes } from './app.routes';
 import { BenchmarkState } from './pages/realistic-comparison/benchmark-orchestrator/services/ngxs-benchmark.service';
+import { provideAppTree } from './store';
 
 // Register only what we need for our charts
 echarts.use([
@@ -31,5 +32,7 @@ export const appConfig: ApplicationConfig = {
     provideEchartsCore({ echarts }),
     // Provide NgXs store for state management benchmarks
     provideStore([BenchmarkState]),
+    // Provide the canonical SignalTree application tree (see store/)
+    ...provideAppTree(),
   ],
 };
