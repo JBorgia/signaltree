@@ -2147,7 +2147,7 @@ Consider separate packages when you need:
 
 ### Case Study
 
-Measured from a production Angular mobile application (TruckTrax v3) migrating from NgRx Signal Store to SignalTree. Results reflect one team's experience; your mileage will vary depending on app complexity and existing architecture.
+Measured from a production Angular mobile application migrating from NgRx Signal Store to SignalTree. Results reflect one team's experience; your mileage will vary depending on app complexity and existing architecture.
 
 | Metric | NgRx | SignalTree | Change |
 | --- | --- | --- | --- |

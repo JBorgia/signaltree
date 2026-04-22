@@ -339,8 +339,8 @@ describe('derived() marker pattern', () => {
     });
   });
 
-  describe('TruckTrax migration pattern', () => {
-    // Simulating the AppStore computed pattern from TruckTrax
+  describe('production app migration pattern', () => {
+    // Simulating a production AppStore computed pattern
     interface DriverDto {
       id: number;
       name: string;
