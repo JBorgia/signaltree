@@ -2064,6 +2064,7 @@ tree.unwrap(); // Get plain object
 
 // Tree operations
 tree.update(updater); // Update entire tree
+tree.updateAndReport(updater); // Update + return changed leaf paths (9.1+)
 tree.effect(fn); // Create reactive effects
 tree.subscribe(fn); // Manual subscriptions
 tree.destroy(); // Cleanup resources
@@ -2074,6 +2075,26 @@ tree.destroy(); // Cleanup resources
 // tree.$.users.all;         // Get all as array
 // tree.$.users.selectBy(pred);  // Filtered signal
 ```
+
+### updateAndReport (9.1+)
+
+Like `update`, but returns the dot-paths of every leaf signal whose value
+actually changed. Useful for diff logging, audit trails, optimistic-update
+rollback, and selective re-syncing to a server.
+
+```typescript
+const tree = signalTree({ user: { name: 'Ada', age: 36 }, count: 0 });
+
+const changed = tree.updateAndReport({
+  user: { name: 'Ada', age: 37 }, // age changes, name is ref-equal
+  count: 0, // ref-equal, skipped
+});
+// changed === ['user.age']
+```
+
+Reference-equal values are skipped automatically by the underlying
+`update` path, so passing a server-returned partial that mostly matches
+local state is cheap (`O(changed)` instead of `O(N)`).
 
 ## Extending with enhancers
 
