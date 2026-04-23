@@ -9,7 +9,7 @@
 
   h2 {
     margin: 0 0 0.5rem;
-    color: #1a1a2e;
+    color: var(--color-neutral-900);
   }
 
   .description {
@@ -22,7 +22,7 @@
   display: flex;
   gap: 2rem;
   padding: 1rem;
-  background: #f8f9fa;
+  background: var(--color-neutral-50);
   border-radius: 8px;
   flex-wrap: wrap;
 
@@ -67,7 +67,7 @@
 
   h3 {
     margin: 0 0 1rem;
-    color: #1a1a2e;
+    color: var(--color-neutral-900);
     font-size: 1.1rem;
   }
 }
@@ -93,8 +93,8 @@
 
     &:focus {
       outline: none;
-      border-color: #6366f1;
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+      border-color: var(--color-primary-600);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     }
   }
 }
@@ -117,9 +117,9 @@
     }
 
     &.active {
-      background: #6366f1;
+      background: var(--color-primary-600);
       color: white;
-      border-color: #6366f1;
+      border-color: var(--color-primary-600);
     }
   }
 }
@@ -164,21 +164,21 @@
 
     &:focus {
       outline: none;
-      border-color: #6366f1;
+      border-color: var(--color-primary-600);
     }
   }
 
   button {
     align-self: flex-start;
     padding: 0.5rem 1rem;
-    background: #6366f1;
+    background: var(--color-primary-600);
     color: white;
     border: none;
     border-radius: 4px;
     cursor: pointer;
 
     &:hover:not(:disabled) {
-      background: #4f46e5;
+      background: var(--color-primary-700);
     }
 
     &:disabled {
@@ -248,7 +248,7 @@
 .demo-footer {
   margin-top: 2rem;
   padding: 1.5rem;
-  background: #f8f9fa;
+  background: var(--color-neutral-50);
   border-radius: 8px;
 
   h3 {
@@ -281,12 +281,12 @@
     }
 
     &.primary {
-      background: #6366f1;
+      background: var(--color-primary-600);
       color: white;
-      border-color: #6366f1;
+      border-color: var(--color-primary-600);
 
       &:hover {
-        background: #4f46e5;
+        background: var(--color-primary-700);
       }
     }
 

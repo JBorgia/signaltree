@@ -12,7 +12,7 @@
   h1 {
     font-size: 2.5rem;
     margin-bottom: 0.5rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--color-primary-400) 0%, var(--color-purple-600) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -29,7 +29,7 @@
       padding: 0.1rem 0.4rem;
       border-radius: 4px;
       font-size: 0.9em;
-      color: #7c3aed;
+      color: var(--color-purple-700);
     }
   }
 }
@@ -73,7 +73,7 @@
 
     strong {
       display: block;
-      color: #1e3a5f;
+      color: var(--color-primary-900);
       margin-bottom: 0.5rem;
     }
 
@@ -89,7 +89,7 @@
       padding: 0.5rem;
       border-radius: 4px;
       font-size: 0.85rem;
-      color: #7c3aed;
+      color: var(--color-purple-700);
     }
   }
 }
@@ -172,7 +172,7 @@
         padding: 0.1rem 0.3rem;
         border-radius: 3px;
         font-size: 0.85em;
-        color: #6b21a8;
+        color: var(--color-purple-800);
       }
     }
   }
@@ -222,7 +222,7 @@
       padding: 0.5rem;
       border-radius: 4px;
       font-size: 0.85rem;
-      color: #7c3aed;
+      color: var(--color-purple-700);
     }
   }
 }
@@ -271,7 +271,7 @@
       padding: 0.1rem 0.4rem;
       border-radius: 4px;
       font-size: 0.9em;
-      color: #7c3aed;
+      color: var(--color-purple-700);
     }
   }
 }
@@ -536,11 +536,11 @@
   font-size: 0.95rem;
 
   &.primary {
-    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    background: linear-gradient(135deg, #8b5cf6, var(--color-purple-700));
     color: white;
 
     &:hover:not(:disabled) {
-      background: linear-gradient(135deg, #7c3aed, #6d28d9);
+      background: linear-gradient(135deg, var(--color-purple-700), #6d28d9);
       transform: translateY(-1px);
     }
 
@@ -702,7 +702,7 @@
         padding: 0.1rem 0.3rem;
         border-radius: 3px;
         font-size: 0.85em;
-        color: #6b21a8;
+        color: var(--color-purple-800);
       }
     }
   }
@@ -738,7 +738,7 @@
       background: #f3f4f6;
       padding: 0.1rem 0.4rem;
       border-radius: 4px;
-      color: #7c3aed;
+      color: var(--color-purple-700);
     }
   }
 }
@@ -823,7 +823,7 @@
   text-align: center;
   font-size: 1.25rem;
   font-weight: 600;
-  color: #7c3aed;
+  color: var(--color-purple-700);
 }
 
 // Selection Panel
@@ -837,7 +837,7 @@
       background: #f3f4f6;
       padding: 0.1rem 0.4rem;
       border-radius: 4px;
-      color: #7c3aed;
+      color: var(--color-purple-700);
     }
   }
 }
@@ -1103,11 +1103,11 @@
   }
 
   &.primary {
-    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    background: linear-gradient(135deg, #8b5cf6, var(--color-purple-700));
     color: white;
 
     &:hover:not(:disabled) {
-      background: linear-gradient(135deg, #7c3aed, #6d28d9);
+      background: linear-gradient(135deg, var(--color-purple-700), #6d28d9);
     }
   }
 }

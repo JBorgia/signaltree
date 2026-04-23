@@ -63,7 +63,7 @@
   font-weight: 600;
   background: #e2e8f0;
   color: #334155;
-  border: 1px solid #cbd5f5;
+  border: 1px solid #cbd5e1;
 }
 
 .chip.active {
@@ -99,7 +99,7 @@
 
 .meter .bar {
   height: 100%;
-  background: linear-gradient(90deg, #4f46e5, #6366f1);
+  background: linear-gradient(90deg, var(--color-primary-700), var(--color-primary-600));
   transition: width 0.3s ease;
 }
 
@@ -146,7 +146,7 @@ legend {
   width: 100%;
   padding: 0.75rem 0.9rem;
   border-radius: 10px;
-  border: 1px solid #cbd5f5;
+  border: 1px solid #cbd5e1;
   font-size: 0.95rem;
   background: #f8fafc;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -156,8 +156,8 @@ legend {
 .field select:focus,
 .field textarea:focus {
   outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  border-color: var(--color-primary-600);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
   background: #ffffff;
 }
 
@@ -200,9 +200,9 @@ legend {
 .phone-row .remove {
   padding: 0.55rem 1rem;
   border-radius: 999px;
-  border: 1px solid #e11d48;
+  border: 1px solid var(--color-error-600);
   background: transparent;
-  color: #e11d48;
+  color: var(--color-error-600);
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s ease;
@@ -214,23 +214,23 @@ legend {
 }
 
 .phone-row .remove:not(:disabled):hover {
-  background: rgba(225, 29, 72, 0.09);
+  background: rgba(220, 38, 38, 0.09);
 }
 
 .add {
   justify-self: start;
   padding: 0.55rem 1.1rem;
   border-radius: 999px;
-  border: 1px dashed #6366f1;
-  background: rgba(99, 102, 241, 0.08);
-  color: #3730a3;
+  border: 1px dashed var(--color-primary-600);
+  background: rgba(59, 130, 246, 0.08);
+  color: var(--color-primary-800);
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s ease;
 }
 
 .add:hover {
-  background: rgba(99, 102, 241, 0.14);
+  background: rgba(59, 130, 246, 0.14);
 }
 
 .actions {
@@ -245,7 +245,7 @@ legend {
   border: none;
   font-weight: 600;
   cursor: pointer;
-  background: #312e81;
+  background: var(--color-primary-900);
   color: #ffffff;
   transition: background 0.2s ease;
 }
@@ -256,13 +256,13 @@ legend {
 }
 
 .actions button:nth-child(2) {
-  background: #0f172a;
+  background: var(--color-neutral-900);
 }
 
 .actions .reset {
   background: transparent;
-  color: #312e81;
-  border: 1px solid #312e81;
+  color: var(--color-primary-900);
+  border: 1px solid var(--color-primary-900);
 }
 
 .actions .reset:hover:not(:disabled) {
@@ -289,7 +289,7 @@ legend {
 }
 
 .error.async {
-  color: #9d174d;
+  color: var(--color-error-800);
 }
 
 .hint {
@@ -351,7 +351,7 @@ legend {
 
 .summary-card pre {
   margin: 0;
-  background: #0f172a;
+  background: var(--color-neutral-900);
   color: #e2e8f0;
   border-radius: 10px;
   padding: 1rem;
@@ -360,8 +360,8 @@ legend {
 }
 
 .summary-card.callout {
-  background: #1e1b4b;
-  color: #e0e7ff;
+  background: var(--color-neutral-900);
+  color: var(--color-neutral-100);
   border-color: rgba(148, 163, 184, 0.2);
 }
 

@@ -7,11 +7,11 @@
 .demo-title {
   font-size: 1.5rem;
   margin-bottom: 1rem;
-  color: var(--text-primary, #333);
+  color: var(--color-neutral-800);
 }
 
 .intro {
-  background: var(--bg-secondary, #f5f5f5);
+  background: var(--color-neutral-100);
   padding: 1rem;
   border-radius: 8px;
   margin-bottom: 1.5rem;
@@ -22,7 +22,7 @@
   }
 
   code {
-    background: var(--bg-tertiary, #e0e0e0);
+    background: var(--color-neutral-200);
     padding: 0.125rem 0.375rem;
     border-radius: 4px;
     font-family: monospace;
@@ -40,21 +40,21 @@
 }
 
 .panel {
-  background: var(--bg-card, #fff);
-  border: 1px solid var(--border-color, #ddd);
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 1rem;
 
   h3 {
     margin: 0 0 1rem;
     font-size: 1.125rem;
-    color: var(--text-primary, #333);
+    color: var(--color-neutral-800);
   }
 
   h4 {
     margin: 0.75rem 0 0.5rem;
     font-size: 0.875rem;
-    color: var(--text-secondary, #666);
+    color: var(--color-neutral-500);
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
@@ -63,7 +63,7 @@
 .section {
   margin-bottom: 1rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border-light, #eee);
+  border-bottom: 1px solid var(--color-border-light);
 
   &:last-child {
     border-bottom: none;
@@ -78,7 +78,7 @@
   label {
     display: block;
     font-size: 0.75rem;
-    color: var(--text-secondary, #666);
+    color: var(--color-neutral-500);
     margin-bottom: 0.25rem;
   }
 }
@@ -86,14 +86,14 @@
 .input-field {
   width: 100%;
   padding: 0.5rem;
-  border: 1px solid var(--border-color, #ddd);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   font-size: 0.875rem;
   box-sizing: border-box;
 
   &:focus {
     outline: none;
-    border-color: var(--primary-color, #007bff);
+    border-color: var(--color-primary-600);
     box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
   }
 }
@@ -105,11 +105,11 @@
   padding: 0.25rem 0;
 
   .label {
-    color: var(--text-secondary, #666);
+    color: var(--color-neutral-500);
   }
 
   .value {
-    color: var(--text-primary, #333);
+    color: var(--color-neutral-800);
     font-weight: 500;
   }
 }
@@ -126,21 +126,21 @@
 
 .btn {
   padding: 0.5rem 1rem;
-  border: 1px solid var(--border-color, #ddd);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
-  background: var(--bg-secondary, #f5f5f5);
-  color: var(--text-primary, #333);
+  background: var(--color-neutral-100);
+  color: var(--color-neutral-800);
   cursor: pointer;
   font-size: 0.875rem;
   transition: all 0.2s;
 
   &:hover {
-    background: var(--bg-tertiary, #e0e0e0);
+    background: var(--color-neutral-200);
   }
 
   &.active {
-    background: var(--primary-color, #007bff);
-    border-color: var(--primary-color, #007bff);
+    background: var(--color-primary-600);
+    border-color: var(--color-primary-600);
     color: white;
   }
 
@@ -150,32 +150,32 @@
   }
 
   &.btn-primary {
-    background: var(--primary-color, #007bff);
-    border-color: var(--primary-color, #007bff);
+    background: var(--color-primary-600);
+    border-color: var(--color-primary-600);
     color: white;
 
     &:hover {
-      background: var(--primary-hover, #0056b3);
+      background: var(--color-primary-700);
     }
   }
 
   &.btn-success {
-    background: var(--success-color, #28a745);
-    border-color: var(--success-color, #28a745);
+    background: var(--color-secondary-500);
+    border-color: var(--color-secondary-500);
     color: white;
 
     &:hover {
-      background: var(--success-hover, #1e7e34);
+      background: var(--color-secondary-700);
     }
   }
 
   &.btn-danger {
-    background: var(--danger-color, #dc3545);
-    border-color: var(--danger-color, #dc3545);
+    background: var(--color-error-500);
+    border-color: var(--color-error-500);
     color: white;
 
     &:hover {
-      background: var(--danger-hover, #c82333);
+      background: var(--color-error-600);
     }
   }
 }
@@ -189,15 +189,15 @@
 
 .toggle-btn {
   padding: 0.375rem 0.75rem;
-  border: 1px solid var(--border-color, #ddd);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
-  background: var(--bg-secondary, #f5f5f5);
+  background: var(--color-neutral-100);
   cursor: pointer;
   font-size: 0.75rem;
 
   &.on {
-    background: var(--success-color, #28a745);
-    border-color: var(--success-color, #28a745);
+    background: var(--color-secondary-500);
+    border-color: var(--color-secondary-500);
     color: white;
   }
 }
@@ -209,7 +209,7 @@
 }
 
 .item-card {
-  background: var(--bg-secondary, #f5f5f5);
+  background: var(--color-neutral-100);
   border-radius: 4px;
   padding: 0.75rem;
 }
@@ -224,7 +224,7 @@
   }
 
   .item-value {
-    color: var(--primary-color, #007bff);
+    color: var(--color-primary-600);
     font-weight: 600;
   }
 }
@@ -237,11 +237,11 @@
 }
 
 .tag {
-  background: var(--bg-tertiary, #e0e0e0);
+  background: var(--color-neutral-200);
   padding: 0.125rem 0.5rem;
   border-radius: 12px;
   font-size: 0.75rem;
-  color: var(--text-secondary, #666);
+  color: var(--color-neutral-500);
 }
 
 .item-actions {
@@ -281,7 +281,7 @@
   width: 100%;
   min-height: 200px;
   padding: 0.75rem;
-  border: 1px solid var(--border-color, #ddd);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 0.75rem;
@@ -309,17 +309,17 @@
 .status-bar {
   margin-top: 1rem;
   padding: 0.75rem;
-  background: var(--bg-secondary, #f5f5f5);
+  background: var(--color-neutral-100);
   border-radius: 4px;
   font-size: 0.875rem;
 
   .status-label {
-    color: var(--text-secondary, #666);
+    color: var(--color-neutral-500);
     margin-right: 0.5rem;
   }
 
   .status-value {
-    color: var(--text-primary, #333);
+    color: var(--color-neutral-800);
   }
 }
 
@@ -342,17 +342,17 @@
   display: flex;
   justify-content: space-between;
   padding: 0.5rem;
-  background: var(--bg-secondary, #f5f5f5);
+  background: var(--color-neutral-100);
   border-radius: 4px;
   font-size: 0.75rem;
 
   .type-label {
-    color: var(--text-secondary, #666);
+    color: var(--color-neutral-500);
   }
 
   .type-value {
     font-weight: 500;
-    color: var(--success-color, #28a745);
+    color: var(--color-secondary-500);
   }
 }
 
@@ -367,8 +367,8 @@
   }
 
   pre {
-    background: var(--bg-code, #1e1e1e);
-    color: var(--text-code, #d4d4d4);
+    background: #1e1e1e;
+    color: #d4d4d4;
     padding: 1rem;
     border-radius: 8px;
     overflow-x: auto;
