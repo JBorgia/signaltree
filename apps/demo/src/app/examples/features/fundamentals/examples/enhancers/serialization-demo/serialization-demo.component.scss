@@ -288,11 +288,11 @@
   line-height: 1.4;
   resize: vertical;
   box-sizing: border-box;
-  background: var(--bg-code, #f8f9fa);
+  background: var(--bg-code, var(--color-neutral-50));
 }
 
 .json-output {
-  background: var(--bg-code, #f8f9fa);
+  background: var(--bg-code, var(--color-neutral-50));
   white-space: pre-wrap;
   word-break: break-all;
   overflow-y: auto;
@@ -368,7 +368,7 @@
 
   pre {
     background: #1e1e1e;
-    color: #d4d4d4;
+    color: var(--color-neutral-300);
     padding: 1rem;
     border-radius: 8px;
     overflow-x: auto;

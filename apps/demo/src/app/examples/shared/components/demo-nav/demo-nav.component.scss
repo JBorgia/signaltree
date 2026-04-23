@@ -3,7 +3,7 @@
 .demo-nav {
   margin-top: 48px;
   padding: 32px 0 0;
-  border-top: 2px solid #f3f4f6;
+  border-top: 2px solid var(--color-neutral-100);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -11,10 +11,10 @@
 
   &__link {
     text-decoration: none;
-    color: #1a202c;
+    color: var(--color-neutral-900);
     font-weight: 700;
     padding: 14px 28px;
-    border: 2px solid #e5e7eb;
+    border: 2px solid var(--color-border);
     border-radius: 12px;
     background: white;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -32,7 +32,7 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      background: linear-gradient(135deg, var(--color-purple-500) 0%, var(--color-purple-500) 100%);
       opacity: 0;
       transition: opacity 0.3s ease;
       z-index: 0;
@@ -44,7 +44,7 @@
     }
 
     &:hover {
-      border-color: #6366f1;
+      border-color: var(--color-purple-500);
       transform: translateY(-2px);
       box-shadow: 0 8px 20px rgba(99, 102, 241, 0.25);
       color: white;

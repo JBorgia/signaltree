@@ -95,7 +95,7 @@ background: var(--bg-card);
 
         &.winner {
           background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.05) 100%);
-          border-left: 3px solid #ffd700;
+          border-left: 3px solid var(--color-warning-400);
           font-weight: 600;
         }
 

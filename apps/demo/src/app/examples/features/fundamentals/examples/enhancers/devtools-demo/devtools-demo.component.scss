@@ -2,18 +2,20 @@
 
 @use 'sass:color';
 
-// Local Variables
-$primary: #3b82f6;
-$secondary: #8b5cf6;
-$success: #10b981;
-$warning: #f59e0b;
-$danger: #ef4444;
-$info: #06b6d4;
-$dark: #1f2937;
-$light: #f9fafb;
-$border: #e5e7eb;
-$text: #374151;
-$text-light: #6b7280;
+// Local color variables — hex values aligned to design system tokens in styles.scss.
+// These exist to allow SCSS compile-time functions (color.adjust, rgba).
+// All direct property values use var(--color-*) tokens instead.
+$primary:    #3b82f6;  // --color-primary-500
+$secondary:  #a855f7;  // --color-purple-500
+$success:    #22c55e;  // --color-secondary-500
+$warning:    #eab308;  // --color-warning-500
+$danger:     #ef4444;  // --color-error-500
+$info:       #06b6d4;  // --color-info-500
+$dark:       #1f2937;  // --color-dark
+$light:      #f9fafb;  // --color-light
+$border:     #e5e7eb;  // --color-border
+$text:       #404040;  // --color-neutral-700
+$text-light: #737373;  // --color-neutral-500
 
 // Mixins
 @mixin card {
@@ -76,7 +78,7 @@ $text-light: #6b7280;
 .explanation-card {
   @include card;
   margin-bottom: 2rem;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  background: linear-gradient(135deg, var(--color-neutral-50) 0%, var(--color-neutral-100) 100%);
   border-left: 4px solid $primary;
 
   h2 {
@@ -155,9 +157,9 @@ $text-light: #6b7280;
 
   .feature-tag {
     padding: 0.5rem 1rem;
-    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-    border: 1px solid #93c5fd;
-    color: #1e40af;
+    background: linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-primary-100) 100%);
+    border: 1px solid var(--color-primary-300);
+    color: var(--color-primary-800);
     border-radius: 20px;
     font-size: 0.875rem;
     font-weight: 600;
@@ -283,7 +285,7 @@ $text-light: #6b7280;
   transition: all 0.2s;
 
   &:hover {
-    border-color: #cbd5e1;
+    border-color: var(--color-neutral-300);
   }
 
   &:focus {
@@ -341,11 +343,11 @@ $text-light: #6b7280;
 }
 
 .btn-secondary {
-  background: #6b7280;
+  background: var(--color-neutral-500);
   color: white;
 
   &:hover:not(:disabled) {
-    background: color.adjust(#6b7280, $lightness: -5%);
+    background: var(--color-neutral-600);
   }
 }
 
@@ -470,11 +472,11 @@ $text-light: #6b7280;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+    background: var(--color-neutral-300);
     border-radius: 4px;
 
     &:hover {
-      background: #94a3b8;
+      background: var(--color-neutral-400);
     }
   }
 }
@@ -562,11 +564,11 @@ $text-light: #6b7280;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+    background: var(--color-neutral-300);
     border-radius: 4px;
 
     &:hover {
-      background: #94a3b8;
+      background: var(--color-neutral-400);
     }
   }
 }
@@ -596,14 +598,14 @@ $text-light: #6b7280;
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  background: linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-primary-100) 100%);
   color: $primary;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.75rem;
   font-weight: 700;
-  border: 2px solid #93c5fd;
+  border: 2px solid var(--color-primary-300);
 }
 
 .history-details {
@@ -659,7 +661,7 @@ $text-light: #6b7280;
     margin: 0;
     white-space: pre-wrap;
     word-wrap: break-word;
-    color: #10b981;
+    color: var(--color-secondary-500);
     font-family: 'Monaco', 'Courier New', monospace;
   }
 
@@ -668,16 +670,16 @@ $text-light: #6b7280;
   }
 
   &::-webkit-scrollbar-track {
-    background: #374151;
+    background: var(--color-neutral-700);
     border-radius: 4px;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #6b7280;
+    background: var(--color-neutral-500);
     border-radius: 4px;
 
     &:hover {
-      background: #9ca3af;
+      background: var(--color-neutral-400);
     }
   }
 }
@@ -700,11 +702,11 @@ $text-light: #6b7280;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+    background: var(--color-neutral-300);
     border-radius: 4px;
 
     &:hover {
-      background: #94a3b8;
+      background: var(--color-neutral-400);
     }
   }
 }

@@ -2,17 +2,19 @@
 
 @use 'sass:color';
 
-// Local Variables
-$primary: #3b82f6;
-$secondary: #8b5cf6;
-$success: #10b981;
-$warning: #f59e0b;
-$danger: #ef4444;
-$dark: #1f2937;
-$light: #f9fafb;
-$border: #e5e7eb;
-$text: #374151;
-$text-light: #6b7280; // neutral-500 — readable on white
+// Local color variables — hex values aligned to design system tokens in styles.scss.
+// These exist to allow SCSS compile-time functions (color.adjust, rgba).
+// All direct property values use var(--color-*) tokens instead.
+$primary:    #3b82f6;  // --color-primary-500
+$secondary:  #a855f7;  // --color-purple-500
+$success:    #22c55e;  // --color-secondary-500
+$warning:    #eab308;  // --color-warning-500
+$danger:     #ef4444;  // --color-error-500
+$dark:       #1f2937;  // --color-dark
+$light:      #f9fafb;  // --color-light
+$border:     #e5e7eb;  // --color-border
+$text:       #404040;  // --color-neutral-700
+$text-light: #737373;  // --color-neutral-500
 
 // Mixins
 @mixin card {
@@ -108,21 +110,21 @@ $text-light: #6b7280; // neutral-500 — readable on white
 
   &:hover {
     border-color: $primary;
-    background: #eff6ff;
+    background: var(--color-primary-50);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
   }
 
   &.active {
     border-color: $primary;
-    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    background: linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-primary-100) 100%);
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
   }
 }
 
 .preset-name {
   font-weight: 600;
-  color: $dark;  // was $light (#f9fafb) — invisible on white; fixed to dark
+  color: $dark;  // was $light (var(--color-light)) — invisible on white; fixed to dark
   font-size: 1rem;
   margin-bottom: 0.25rem;
   text-transform: capitalize;
@@ -187,7 +189,7 @@ $text-light: #6b7280; // neutral-500 — readable on white
   background: $light;
 
   &:hover {
-    background: #f3f4f6;
+    background: var(--color-neutral-100);
   }
 }
 
@@ -202,12 +204,12 @@ $text-light: #6b7280; // neutral-500 — readable on white
   font-weight: 600;
   padding: 0.25rem 0.75rem;
   border-radius: 4px;
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--color-warning-100);
+  color: var(--color-warning-800);
 
   &.enabled {
-    background: #d1fae5;
-    color: #065f46;
+    background: var(--color-secondary-100);
+    color: var(--color-secondary-900);
   }
 }
 
@@ -216,7 +218,7 @@ $text-light: #6b7280; // neutral-500 — readable on white
   margin-top: 1.5rem;
   padding: 1rem;
   border-radius: 8px;
-  background: #eff6ff;
+  background: var(--color-primary-50);
   border-left: 4px solid $primary;
 
   h4 {
@@ -439,18 +441,18 @@ $text-light: #6b7280; // neutral-500 — readable on white
   text-transform: uppercase;
 
   &.high {
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--color-error-100);
+    color: var(--color-error-800);
   }
 
   &.medium {
-    background: #fef3c7;
-    color: #92400e;
+    background: var(--color-warning-100);
+    color: var(--color-warning-800);
   }
 
   &.low {
-    background: #d1fae5;
-    color: #065f46;
+    background: var(--color-secondary-100);
+    color: var(--color-secondary-900);
   }
 }
 
@@ -504,11 +506,11 @@ $text-light: #6b7280; // neutral-500 — readable on white
 }
 
 .btn-secondary {
-  background: #6b7280;
+  background: var(--color-neutral-500);
   color: white;
 
   &:hover:not(:disabled) {
-    background: color.adjust(#6b7280, $lightness: -5%);
+    background: var(--color-neutral-600);
   }
 }
 
@@ -570,18 +572,18 @@ $text-light: #6b7280; // neutral-500 — readable on white
   text-align: center;
 
   &.info {
-    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-    border: 1px solid #93c5fd;
+    background: linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-primary-100) 100%);
+    border: 1px solid var(--color-primary-300);
   }
 
   &.success {
-    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-    border: 1px solid #86efac;
+    background: linear-gradient(135deg, var(--color-secondary-50) 0%, var(--color-secondary-100) 100%);
+    border: 1px solid var(--color-secondary-300);
   }
 
   &.purple {
-    background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
-    border: 1px solid #d8b4fe;
+    background: linear-gradient(135deg, var(--color-purple-50) 0%, var(--color-purple-100) 100%);
+    border: 1px solid var(--color-purple-300);
   }
 }
 
@@ -593,23 +595,23 @@ $text-light: #6b7280; // neutral-500 — readable on white
   margin-bottom: 0.5rem;
 
   &.info {
-    color: #1e40af;
+    color: var(--color-primary-800);
   }
 
   &.success {
-    color: #065f46;
+    color: var(--color-secondary-900);
   }
 
   &.purple {
-    color: #6b21a8;
+    color: var(--color-purple-800);
   }
 
   &.failed {
-    color: #991b1b;
+    color: var(--color-error-800);
   }
 
   &.duration {
-    color: #92400e;
+    color: var(--color-warning-800);
   }
 }
 
@@ -618,15 +620,15 @@ $text-light: #6b7280; // neutral-500 — readable on white
   font-weight: 700;
 
   &.info {
-    color: #1e40af;
+    color: var(--color-primary-800);
   }
 
   &.success {
-    color: #065f46;
+    color: var(--color-secondary-900);
   }
 
   &.purple {
-    color: #6b21a8;
+    color: var(--color-purple-800);
   }
 }
 

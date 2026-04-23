@@ -2,7 +2,7 @@
 
 .fundamentals-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  background: linear-gradient(135deg, var(--color-neutral-800) 0%, var(--color-neutral-900) 100%);
   position: relative;
 
   &::before {
@@ -51,7 +51,7 @@
   &__badge-icon {
     width: 16px;
     height: 16px;
-    color: #fbbf24;
+    color: var(--color-warning-400);
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 
@@ -64,7 +64,7 @@
     display: block;
     font-size: 64px;
     font-weight: 900;
-    background: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.7) 100%);
+    background: linear-gradient(135deg, var(--color-white) 0%, rgba(255, 255, 255, 0.7) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -131,7 +131,7 @@
 
       &:hover {
         background: rgba(16, 185, 129, 0.2);
-        border-color: #10b981;
+        border-color: var(--color-secondary-500);
       }
     }
 
@@ -140,7 +140,7 @@
 
       &:hover {
         background: rgba(239, 68, 68, 0.2);
-        border-color: #ef4444;
+        border-color: var(--color-error-500);
       }
     }
   }
@@ -175,7 +175,7 @@
   &__stat-number {
     font-size: 36px;
     font-weight: 700;
-    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    background: linear-gradient(135deg, var(--color-purple-500) 0%, var(--color-purple-500) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -231,7 +231,7 @@
     }
 
     &--primary {
-      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      background: linear-gradient(135deg, var(--color-purple-500) 0%, var(--color-purple-500) 100%);
       color: white;
       box-shadow: 0 10px 40px rgba(99, 102, 241, 0.4);
 
@@ -393,7 +393,7 @@
     justify-content: space-between;
     margin-bottom: 32px;
     padding-bottom: 24px;
-    border-bottom: 2px solid #f3f4f6;
+    border-bottom: 2px solid var(--color-neutral-100);
   }
 
   &__header-left {
@@ -405,13 +405,13 @@
   &__icon {
     width: 28px;
     height: 28px;
-    color: #6366f1;
+    color: var(--color-purple-500);
   }
 
   &__title {
     font-size: 28px;
     font-weight: 800;
-    color: #0f172a;
+    color: var(--color-neutral-900);
     margin: 0;
     letter-spacing: -0.02em;
   }
@@ -425,7 +425,7 @@
   &__count {
     font-size: 14px;
     font-weight: 600;
-    color: #64748b;
+    color: var(--color-neutral-500);
   }
 
   &__reset {
@@ -434,8 +434,8 @@
     gap: 8px;
     padding: 10px 20px;
     background: transparent;
-    color: #64748b;
-    border: 2px solid #e2e8f0;
+    color: var(--color-neutral-500);
+    border: 2px solid var(--color-neutral-200);
     border-radius: 10px;
     font-size: 13px;
     font-weight: 700;
@@ -448,9 +448,9 @@
     }
 
     &:hover:not(:disabled) {
-      background: #f8fafc;
-      border-color: #cbd5e1;
-      color: #475569;
+      background: var(--color-neutral-50);
+      border-color: var(--color-neutral-300);
+      color: var(--color-neutral-600);
     }
 
     &:disabled {
@@ -483,7 +483,7 @@
     transform: translateY(-50%);
     width: 22px;
     height: 22px;
-    color: #94a3b8;
+    color: var(--color-neutral-400);
     pointer-events: none;
     transition: color 0.2s ease;
   }
@@ -492,23 +492,23 @@
     width: 100%;
     padding: 18px 120px 18px 56px;
     font-size: 16px;
-    border: 2px solid #e2e8f0;
+    border: 2px solid var(--color-neutral-200);
     border-radius: 14px;
-    background: #f8fafc;
-    color: #0f172a;
+    background: var(--color-neutral-50);
+    color: var(--color-neutral-900);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     font-family: inherit;
 
     &:focus {
       outline: none;
-      border-color: #6366f1;
+      border-color: var(--color-purple-500);
       background: white;
       box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1),
         0 8px 20px rgba(0, 0, 0, 0.05);
       transform: translateY(-2px);
 
       ~ .search-bar__icon {
-        color: #6366f1;
+        color: var(--color-purple-500);
       }
 
       ~ .search-bar__shortcut {
@@ -518,7 +518,7 @@
     }
 
     &::placeholder {
-      color: #94a3b8;
+      color: var(--color-neutral-400);
     }
 
     &:not(:placeholder-shown) ~ .search-bar__shortcut {
@@ -533,11 +533,11 @@
     transform: translateY(-50%);
     padding: 6px 10px;
     background: white;
-    border: 1.5px solid #e2e8f0;
+    border: 1.5px solid var(--color-neutral-200);
     border-radius: 6px;
     font-size: 13px;
     font-weight: 600;
-    color: #94a3b8;
+    color: var(--color-neutral-400);
     pointer-events: none;
     transition: all 0.2s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
@@ -559,7 +559,7 @@
   &__label {
     font-size: 12px;
     font-weight: 700;
-    color: #64748b;
+    color: var(--color-neutral-500);
     text-transform: uppercase;
     letter-spacing: 0.08em;
   }
@@ -568,23 +568,23 @@
     padding: 12px 16px;
     font-size: 14px;
     font-weight: 600;
-    border: 2px solid #e2e8f0;
+    border: 2px solid var(--color-neutral-200);
     border-radius: 10px;
     background: white;
-    color: #0f172a;
+    color: var(--color-neutral-900);
     cursor: pointer;
     transition: all 0.2s ease;
     font-family: inherit;
 
     &:hover {
-      background: #f8fafc;
-      border-color: #cbd5e1;
+      background: var(--color-neutral-50);
+      border-color: var(--color-neutral-300);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     }
 
     &:focus {
       outline: none;
-      border-color: #6366f1;
+      border-color: var(--color-purple-500);
       box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
     }
   }
@@ -608,8 +608,8 @@
   &__pill {
     padding: 10px 20px;
     background: white;
-    color: #64748b;
-    border: 2px solid #e2e8f0;
+    color: var(--color-neutral-500);
+    border: 2px solid var(--color-neutral-200);
     border-radius: 10px;
     font-size: 13px;
     font-weight: 700;
@@ -633,16 +633,16 @@
     }
 
     &:hover {
-      background: #f8fafc;
-      border-color: #cbd5e1;
+      background: var(--color-neutral-50);
+      border-color: var(--color-neutral-300);
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
 
     &--active {
-      background: #0f172a;
+      background: var(--color-neutral-900);
       color: white;
-      border-color: #0f172a;
+      border-color: var(--color-neutral-900);
       box-shadow: 0 4px 12px rgba(15, 23, 42, 0.3);
 
       &::after {
@@ -651,33 +651,33 @@
     }
 
     &--success.pill-group__pill--active {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-      border-color: #10b981;
+      background: linear-gradient(135deg, var(--color-secondary-500) 0%, var(--color-secondary-600) 100%);
+      border-color: var(--color-secondary-500);
       box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
     }
 
     &--warning.pill-group__pill--active {
-      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-      border-color: #f59e0b;
+      background: linear-gradient(135deg, var(--color-warning-500) 0%, var(--color-warning-600) 100%);
+      border-color: var(--color-warning-500);
       box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
     }
 
     &--danger.pill-group__pill--active {
-      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-      border-color: #ef4444;
+      background: linear-gradient(135deg, var(--color-error-500) 0%, var(--color-error-600) 100%);
+      border-color: var(--color-error-500);
       box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
     }
   }
 }
 
 .advanced-filters {
-  border: 2px solid #e2e8f0;
+  border: 2px solid var(--color-neutral-200);
   border-radius: 14px;
   overflow: hidden;
   transition: all 0.3s ease;
 
   &:hover {
-    border-color: #cbd5e1;
+    border-color: var(--color-neutral-300);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   }
 
@@ -686,14 +686,14 @@
     align-items: center;
     gap: 12px;
     padding: 16px 20px;
-    background: #f8fafc;
+    background: var(--color-neutral-50);
     cursor: pointer;
     list-style: none;
     transition: all 0.3s ease;
     user-select: none;
 
     &:hover {
-      background: #f1f5f9;
+      background: var(--color-neutral-100);
     }
 
     &::marker {
@@ -704,20 +704,20 @@
   &__icon {
     width: 20px;
     height: 20px;
-    color: #6366f1;
+    color: var(--color-purple-500);
     transition: transform 0.3s ease;
   }
 
   span {
     font-size: 14px;
     font-weight: 700;
-    color: #0f172a;
+    color: var(--color-neutral-900);
   }
 
   &__badge {
     margin-left: auto;
     padding: 4px 12px;
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    background: linear-gradient(135deg, var(--color-purple-500) 0%, var(--color-purple-500) 100%);
     color: white;
     font-size: 12px;
     font-weight: 700;
@@ -733,12 +733,12 @@
   }
 
   &[open] {
-    border-color: #6366f1;
+    border-color: var(--color-purple-500);
     box-shadow: 0 8px 24px rgba(99, 102, 241, 0.15);
 
     .advanced-filters__toggle {
-      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-      border-bottom: 2px solid #e2e8f0;
+      background: linear-gradient(135deg, var(--color-neutral-50) 0%, var(--color-neutral-100) 100%);
+      border-bottom: 2px solid var(--color-neutral-200);
     }
 
     .advanced-filters__icon {
@@ -751,13 +751,13 @@
   &:not(:last-child) {
     margin-bottom: 28px;
     padding-bottom: 28px;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--color-neutral-100);
   }
 
   &__title {
     font-size: 13px;
     font-weight: 700;
-    color: #64748b;
+    color: var(--color-neutral-500);
     text-transform: uppercase;
     letter-spacing: 0.06em;
     margin: 0 0 16px;
@@ -772,8 +772,8 @@
   &__tag {
     padding: 8px 16px;
     background: white;
-    color: #64748b;
-    border: 2px solid #e2e8f0;
+    color: var(--color-neutral-500);
+    border: 2px solid var(--color-neutral-200);
     border-radius: 8px;
     font-size: 13px;
     font-weight: 600;
@@ -799,8 +799,8 @@
     }
 
     &:hover {
-      background: #f8fafc;
-      border-color: #cbd5e1;
+      background: var(--color-neutral-50);
+      border-color: var(--color-neutral-300);
       transform: translateY(-2px) scale(1.02);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 
@@ -810,9 +810,9 @@
     }
 
     &--active {
-      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      background: linear-gradient(135deg, var(--color-purple-500) 0%, var(--color-purple-500) 100%);
       color: white;
-      border-color: #6366f1;
+      border-color: var(--color-purple-500);
       box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
       transform: scale(1.05);
 
@@ -823,7 +823,7 @@
       }
 
       &:hover {
-        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        background: linear-gradient(135deg, var(--color-purple-600) 0%, var(--color-purple-700) 100%);
         transform: translateY(-2px) scale(1.05);
       }
     }
@@ -869,7 +869,7 @@
     width: 80px;
     height: 80px;
     margin: 0 auto 24px;
-    color: #cbd5e1;
+    color: var(--color-neutral-300);
     animation: bounce 2s ease-in-out infinite;
 
     svg {
@@ -882,14 +882,14 @@
   &__title {
     font-size: 24px;
     font-weight: 700;
-    color: #0f172a;
+    color: var(--color-neutral-900);
     margin: 0 0 12px;
     animation: fadeInDown 0.6s ease-out 0.2s backwards;
   }
 
   &__description {
     font-size: 16px;
-    color: #64748b;
+    color: var(--color-neutral-500);
     margin: 0 0 32px;
     line-height: 1.6;
     animation: fadeInDown 0.6s ease-out 0.3s backwards;
@@ -900,7 +900,7 @@
     align-items: center;
     gap: 10px;
     padding: 14px 28px;
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    background: linear-gradient(135deg, var(--color-purple-500) 0%, var(--color-purple-500) 100%);
     color: white;
     border: none;
     border-radius: 12px;
@@ -1033,7 +1033,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, var(--color-purple-500) 0%, var(--color-purple-500) 100%);
   color: white;
   border: none;
   border-radius: 50%;

@@ -9,11 +9,11 @@
 
   h1 {
     margin: 0 0 0.5rem;
-    color: var(--text-primary, #1a1a1a);
+    color: var(--text-primary, var(--color-neutral-900));
   }
 
   p {
-    color: var(--text-secondary, #666);
+    color: var(--text-secondary, var(--color-neutral-500));
     margin: 0;
   }
 }
@@ -23,26 +23,26 @@
   display: flex;
   gap: 0.5rem;
   margin-bottom: 2rem;
-  border-bottom: 2px solid var(--border-color, #e0e0e0);
+  border-bottom: 2px solid var(--border-color, var(--color-neutral-200));
   padding-bottom: 0.5rem;
 
   button {
     padding: 0.75rem 1.5rem;
     border: none;
     background: transparent;
-    color: var(--text-secondary, #666);
+    color: var(--text-secondary, var(--color-neutral-500));
     cursor: pointer;
     font-size: 1rem;
     border-radius: 8px 8px 0 0;
     transition: all 0.2s;
 
     &:hover {
-      background: var(--bg-hover, #f5f5f5);
-      color: var(--text-primary, #1a1a1a);
+      background: var(--bg-hover, var(--color-neutral-100));
+      color: var(--text-primary, var(--color-neutral-900));
     }
 
     &.active {
-      background: var(--primary-color, #6366f1);
+      background: var(--primary-color, var(--color-purple-500));
       color: white;
     }
   }
@@ -52,17 +52,17 @@
 .demo-section {
   h2 {
     margin: 0 0 1rem;
-    color: var(--text-primary, #1a1a1a);
+    color: var(--text-primary, var(--color-neutral-900));
   }
 }
 
 .info-text {
-  background: var(--info-bg, #eff6ff);
-  border: 1px solid var(--info-border, #bfdbfe);
+  background: var(--info-bg, var(--color-primary-50));
+  border: 1px solid var(--info-border, var(--color-primary-200));
   border-radius: 8px;
   padding: 1rem;
   margin-bottom: 1.5rem;
-  color: var(--info-text, #1e40af);
+  color: var(--info-text, var(--color-primary-800));
 
   code {
     background: rgba(0, 0, 0, 0.1);
@@ -91,14 +91,14 @@
 }
 
 .demo-card {
-  background: var(--bg-card, #fff);
-  border: 1px solid var(--border-color, #e0e0e0);
+  background: var(--bg-card, var(--color-white));
+  border: 1px solid var(--border-color, var(--color-neutral-200));
   border-radius: 12px;
   padding: 1.5rem;
 
   h3 {
     margin: 0 0 1rem;
-    color: var(--text-primary, #1a1a1a);
+    color: var(--text-primary, var(--color-neutral-900));
   }
 }
 
@@ -109,7 +109,7 @@
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 500;
-    color: var(--text-primary, #1a1a1a);
+    color: var(--text-primary, var(--color-neutral-900));
 
     input[type='checkbox'] {
       margin-right: 0.5rem;
@@ -121,13 +121,13 @@
   select {
     width: 100%;
     padding: 0.75rem;
-    border: 1px solid var(--border-color, #e0e0e0);
+    border: 1px solid var(--border-color, var(--color-neutral-200));
     border-radius: 8px;
     font-size: 1rem;
 
     &:focus {
       outline: none;
-      border-color: var(--primary-color, #6366f1);
+      border-color: var(--primary-color, var(--color-purple-500));
       box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
     }
   }
@@ -164,38 +164,38 @@
 }
 
 .btn-primary {
-  background: var(--primary-color, #6366f1);
+  background: var(--primary-color, var(--color-purple-500));
   color: white;
 
   &:hover:not(:disabled) {
-    background: var(--primary-hover, #5558e3);
+    background: var(--primary-hover, var(--color-purple-600));
   }
 }
 
 .btn-secondary {
-  background: var(--bg-secondary, #f3f4f6);
-  color: var(--text-primary, #1a1a1a);
+  background: var(--bg-secondary, var(--color-neutral-100));
+  color: var(--text-primary, var(--color-neutral-900));
 
   &:hover:not(:disabled) {
-    background: var(--bg-hover, #e5e7eb);
+    background: var(--bg-hover, var(--color-border));
   }
 }
 
 .btn-danger {
-  background: var(--error-color, #ef4444);
+  background: var(--error-color, var(--color-error-500));
   color: white;
 
   &:hover:not(:disabled) {
-    background: #dc2626;
+    background: var(--color-error-600);
   }
 }
 
 .btn-warning {
-  background: var(--warning-color, #f59e0b);
+  background: var(--warning-color, var(--color-warning-500));
   color: white;
 
   &:hover:not(:disabled) {
-    background: #d97706;
+    background: var(--color-warning-600);
   }
 }
 
@@ -207,11 +207,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-secondary, #f3f4f6);
-  color: var(--text-primary, #1a1a1a);
+  background: var(--bg-secondary, var(--color-neutral-100));
+  color: var(--text-primary, var(--color-neutral-900));
 
   &:hover {
-    background: var(--bg-hover, #e5e7eb);
+    background: var(--bg-hover, var(--color-border));
   }
 }
 
@@ -225,12 +225,12 @@
   h3 {
     margin: 0 0 1rem;
     font-size: 1rem;
-    color: var(--text-primary, #1a1a1a);
+    color: var(--text-primary, var(--color-neutral-900));
   }
 
   pre {
     background: var(--bg-code, #1e1e1e);
-    color: var(--text-code, #d4d4d4);
+    color: var(--text-code, var(--color-neutral-300));
     padding: 1rem;
     border-radius: 8px;
     overflow: auto;
@@ -263,14 +263,14 @@
 // Storage Value Display
 .current-value,
 .storage-value {
-  background: var(--bg-code, #f8f9fa);
+  background: var(--bg-code, var(--color-neutral-50));
   border-radius: 8px;
   padding: 0.75rem;
   margin-bottom: 1rem;
   font-size: 0.875rem;
 
   strong {
-    color: var(--text-secondary, #666);
+    color: var(--text-secondary, var(--color-neutral-500));
     display: block;
     margin-bottom: 0.25rem;
   }
@@ -281,7 +281,7 @@
   }
 
   .note {
-    color: var(--text-secondary, #666);
+    color: var(--text-secondary, var(--color-neutral-500));
     font-style: italic;
     margin-left: 0.5rem;
   }
@@ -291,7 +291,7 @@
 .settings-group {
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  border-bottom: 1px solid var(--border-color, var(--color-neutral-200));
 
   &:last-child {
     margin-bottom: 0;
@@ -301,7 +301,7 @@
 
   h4 {
     margin: 0 0 1rem;
-    color: var(--text-primary, #1a1a1a);
+    color: var(--text-primary, var(--color-neutral-900));
     font-size: 0.875rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -315,20 +315,20 @@
 
   button {
     padding: 0.5rem 1rem;
-    border: 1px solid var(--border-color, #e0e0e0);
-    background: var(--bg-card, #fff);
+    border: 1px solid var(--border-color, var(--color-neutral-200));
+    background: var(--bg-card, var(--color-white));
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s;
 
     &:hover {
-      border-color: var(--primary-color, #6366f1);
+      border-color: var(--primary-color, var(--color-purple-500));
     }
 
     &.active {
-      background: var(--primary-color, #6366f1);
+      background: var(--primary-color, var(--color-purple-500));
       color: white;
-      border-color: var(--primary-color, #6366f1);
+      border-color: var(--primary-color, var(--color-purple-500));
     }
   }
 }
@@ -352,7 +352,7 @@
   }
 
   &.active {
-    border-color: var(--text-primary, #1a1a1a);
+    border-color: var(--text-primary, var(--color-neutral-900));
   }
 }
 
@@ -377,7 +377,7 @@
     align-items: center;
     padding: 0.75rem 1rem;
     background: rgba(255, 255, 255, 0.05);
-    color: var(--text-code, #d4d4d4);
+    color: var(--text-code, var(--color-neutral-300));
   }
 
   .log-entries {
@@ -390,7 +390,7 @@
     padding: 0.5rem;
     font-family: monospace;
     font-size: 0.75rem;
-    color: var(--text-code, #d4d4d4);
+    color: var(--text-code, var(--color-neutral-300));
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 
     &:last-child {
@@ -401,7 +401,7 @@
   .log-empty {
     padding: 1rem;
     text-align: center;
-    color: var(--text-secondary, #666);
+    color: var(--text-secondary, var(--color-neutral-500));
     font-style: italic;
   }
 }
@@ -409,7 +409,7 @@
 // Cache
 .cache-info {
   margin-bottom: 1rem;
-  color: var(--text-secondary, #666);
+  color: var(--text-secondary, var(--color-neutral-500));
 }
 
 .cache-items {
@@ -423,13 +423,13 @@
 
 .cache-item {
   padding: 0.5rem 0.75rem;
-  background: var(--bg-secondary, #f3f4f6);
+  background: var(--bg-secondary, var(--color-neutral-100));
   border-radius: 4px;
   font-size: 0.875rem;
 }
 
 .cache-empty {
-  color: var(--text-secondary, #666);
+  color: var(--text-secondary, var(--color-neutral-500));
   font-style: italic;
 }
 
@@ -440,7 +440,7 @@
   h4 {
     margin: 0 0 0.5rem;
     font-size: 0.875rem;
-    color: var(--text-secondary, #666);
+    color: var(--text-secondary, var(--color-neutral-500));
   }
 }
 
@@ -452,13 +452,13 @@
 
 .storage-key {
   padding: 0.25rem 0.5rem;
-  background: var(--bg-secondary, #f3f4f6);
+  background: var(--bg-secondary, var(--color-neutral-100));
   border-radius: 4px;
   font-size: 0.75rem;
   font-family: monospace;
 }
 
 .no-keys {
-  color: var(--text-secondary, #666);
+  color: var(--text-secondary, var(--color-neutral-500));
   font-style: italic;
 }

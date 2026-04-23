@@ -29,7 +29,7 @@
 .explanation-card {
   @include card;
   margin-bottom: 2rem;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  background: linear-gradient(135deg, var(--color-neutral-50) 0%, var(--color-neutral-100) 100%);
   border-left: 4px solid $primary;
   h2 {
     font-size: 1.5rem;
@@ -94,9 +94,9 @@
   }
   .feature-tag {
     padding: 0.5rem 1rem;
-    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-    border: 1px solid #93c5fd;
-    color: #1e40af;
+    background: linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-primary-100) 100%);
+    border: 1px solid var(--color-primary-300);
+    color: var(--color-primary-800);
     border-radius: 20px;
     font-size: 0.875rem;
     font-weight: 600;
@@ -200,11 +200,11 @@
   text-align: center;
   border: 2px solid transparent;
   &.expensive {
-    background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+    background: linear-gradient(135deg, var(--color-purple-50) 0%, var(--color-purple-100) 100%);
     border-color: $secondary;
   }
   &.simple {
-    background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%);
+    background: linear-gradient(135deg, var(--color-info-50) 0%, var(--color-info-100) 100%);
     border-color: $info;
   }
 }
@@ -251,7 +251,7 @@
 }
 
 .btn-secondary {
-  background: #6b7280;
+  background: var(--color-neutral-500);
   color: white;
 }
 
@@ -292,19 +292,19 @@
   background: $light;
   &.computations {
     border-color: $info;
-    background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%);
+    background: linear-gradient(135deg, var(--color-info-50) 0%, var(--color-info-100) 100%);
   }
   &.cache-hits {
     border-color: $success;
-    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    background: linear-gradient(135deg, var(--color-secondary-100) 0%, var(--color-secondary-200) 100%);
   }
   &.new-computations {
     border-color: $warning;
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    background: linear-gradient(135deg, var(--color-warning-100) 0%, var(--color-warning-200) 100%);
   }
   &.hit-rate {
     border-color: $secondary;
-    background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
+    background: linear-gradient(135deg, var(--color-purple-100) 0%, var(--color-purple-200) 100%);
   }
 }
 
@@ -366,7 +366,7 @@
   height: 100%;
   transition: width 0.3s ease;
   &.fast {
-    background: linear-gradient(90deg, $success 0%, #34d399 100%);
+    background: linear-gradient(90deg, $success 0%, var(--color-secondary-400) 100%);
   }
   &.slow {
     background: linear-gradient(90deg, $warning 0%, $danger 100%);
@@ -393,7 +393,7 @@
   }
   .empty-hint {
     font-size: 0.8125rem;
-    color: #9ca3af;
+    color: var(--color-neutral-400);
   }
 }
 

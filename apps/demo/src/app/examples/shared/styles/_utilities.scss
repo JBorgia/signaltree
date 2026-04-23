@@ -48,7 +48,7 @@
 // Explanation card (used in most examples)
 .explanation-card {
   @include card;
-  @include gradient-bg(#f8fafc, #f1f5f9);
+  @include gradient-bg(var(--color-neutral-50), var(--color-neutral-100));
   margin-bottom: $spacing-2xl;
   border-left: 4px solid $primary;
 
@@ -124,8 +124,8 @@
   }
 
   .feature-tag {
-    @include badge(linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%), #1e40af);
-    border: 1px solid #93c5fd;
+    @include badge(linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-primary-100) 100%), var(--color-primary-800));
+    border: 1px solid var(--color-primary-300);
     padding: $spacing-sm $spacing-lg;
     transition: all $transition-fast;
 
@@ -335,7 +335,7 @@
 
 // Help text
 .help-text {
-  @include gradient-bg(#fef3c7, #fde68a);
+  @include gradient-bg(var(--color-warning-100), var(--color-warning-200));
   border: 2px solid $warning;
   border-radius: $radius-lg;
   padding: $spacing-lg;
@@ -343,7 +343,7 @@
   text-align: center;
   font-size: $text-sm;
   font-weight: $font-semibold;
-  color: #78350f;
+  color: var(--color-warning-900);
 }
 
 // Stats
@@ -396,7 +396,7 @@
 // Code blocks
 .code-block {
   background: $bg-dark;
-  color: #e5e7eb;
+  color: var(--color-border);
   border-radius: $radius-lg;
   padding: $spacing-lg;
   overflow-x: auto;

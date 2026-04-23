@@ -13,7 +13,7 @@
   }
 
   .release-highlights {
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    background: linear-gradient(135deg, var(--color-info-50) 0%, var(--color-info-100) 100%);
     border: 1px solid $primary;
     border-radius: $radius-lg;
     padding: $spacing-lg;

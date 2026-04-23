@@ -1,6 +1,6 @@
 .example-card {
   padding: 1rem;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--color-neutral-200);
   border-radius: 6px;
 }
 .controls {
@@ -12,6 +12,6 @@
   margin-top: 1rem;
 }
 .note {
-  color: #666;
+  color: var(--color-neutral-500);
   font-size: 12px;
 }

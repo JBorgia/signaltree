@@ -1,83 +1,133 @@
-// Shared variables for all example components
-// This creates a consistent design system across examples
+// Shared variables for all example components.
+//
+// IMPORTANT: This project uses a custom CSS variable design system defined in
+// apps/demo/src/styles.scss. All component styles should prefer using CSS custom
+// properties (var(--color-*, --space-*, --radius-*, etc.)) directly rather than
+// these SCSS variables. These SCSS variables exist only as a bridge for shared
+// example styles and are kept in sync with the CSS token values below.
+//
+// DO NOT add Tailwind CSS, Bootstrap, or any other utility-class framework.
+// DO NOT introduce hardcoded hex values — add a token to styles.scss instead.
 
-// Color Palette
-$primary: #3b82f6;
-$primary-light: #93c5fd; // Lighter shade of primary
-$secondary: #8b5cf6;
-$purple: #8b5cf6; // Purple color (alias for secondary)
-$success: #10b981;
-$success-light: #d1fae5;
-$success-dark: #065f46;
-$warning: #f59e0b;
-$warning-light: #fef3c7;
-$warning-dark: #92400e;
-$danger: #ef4444;
-$danger-light: #fee2e2;
-$danger-dark: #991b1b;
-$info: #06b6d4;
+// ─── Color Palette (values match apps/demo/src/styles.scss :root tokens) ──────
 
-// Neutral Colors
-$dark: #1f2937;
-$medium: #6b7280;
-$light: #f9fafb;
-$border: #e5e7eb;
-$border-dark: #d1d5db; // Darker border color
-$gray-100: #f3f4f6; // Light gray
-$gray-700: #374151; // Dark gray
-$text: #374151;
-$text-primary: #374151; // Alias for consistency
-$text-secondary: #6b7280; // Secondary text color
-$text-tertiary: #9ca3af; // Tertiary text color
-$text-light: #6b7280;
+// Primary (blue — --color-primary-*)
+$primary: #3b82f6;         // --color-primary-500
+$primary-light: #93c5fd;   // --color-primary-300
+$primary-dark: #1d4ed8;    // --color-primary-700
 
-// Background colors
-$background: #ffffff; // Default background
-$bg-white: #ffffff;
-$bg-light: #f9fafb;
-$bg-dark: #111827;
-$background: #ffffff; // Primary background
-$background-secondary: #f9fafb; // Secondary background
+// Secondary (green — --color-secondary-*)
+// NOTE: secondary = green in this design system. Use $purple for purple/violet.
+$secondary: #22c55e;       // --color-secondary-500
+$success: #22c55e;         // --color-secondary-500 (alias)
+$success-light: #dcfce7;   // --color-secondary-100
+$success-dark: #166534;    // --color-secondary-800
 
-// Spacing Scale
-// Spacing
-$spacing-2xs: 0.125rem; // Extra extra small spacing
-$spacing-xs: 0.25rem;
-$spacing-sm: 0.5rem;
-$spacing-md: 0.75rem;
-$spacing-lg: 1rem;
-$spacing-xl: 1.5rem;
-$spacing-2xl: 2rem;
-$spacing-3xl: 3rem;
+// Purple (violet — --color-purple-*)
+$purple: #a855f7;          // --color-purple-500
 
-// Border Radius
-$radius-sm: 0.375rem;
-$radius-md: 0.5rem;
-$radius-lg: 0.75rem;
-$radius-xl: 1rem;
-$radius-full: 9999px;
+// Warning (yellow — --color-warning-*)
+$warning: #f59e0b;         // warning-500 (amber-500, closest semantic match)
+$warning-light: #fef9c3;   // --color-warning-100
+$warning-dark: #a16207;    // --color-warning-700
 
-// Shadows
-$shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-$shadow-md: 0 2px 4px rgba(0, 0, 0, 0.08);
-$shadow-lg: 0 4px 6px rgba(0, 0, 0, 0.1);
-$shadow-xl: 0 8px 15px rgba(0, 0, 0, 0.15);
+// Danger/Error (red — --color-error-*)
+$danger: #ef4444;          // --color-error-500
+$danger-light: #fee2e2;    // --color-error-100
+$danger-dark: #991b1b;     // --color-error-800
 
-// Transitions
-$transition-fast: 150ms ease-in-out;
-$transition-normal: 250ms ease-in-out;
-$transition-slow: 350ms ease-in-out;
+// Info (cyan — --color-info-*)
+$info: #06b6d4;            // --color-info-500
 
-// Typography
+// ─── Neutral Colors (values match --color-neutral-* / shortcut tokens) ────────
+
+$dark: #1f2937;            // --color-dark (exact match)
+$medium: #737373;          // --color-neutral-500
+$light: #f9fafb;           // --color-light (exact match)
+$border: #e5e7eb;          // --color-border (exact match)
+$border-dark: #d4d4d4;     // --color-neutral-300
+
+$gray-100: #f5f5f5;        // --color-neutral-100
+$gray-700: #404040;        // --color-neutral-700
+
+$text: #404040;            // --color-neutral-700
+$text-primary: #404040;    // --color-neutral-700
+$text-secondary: #737373;  // --color-neutral-500
+$text-tertiary: #a3a3a3;   // --color-neutral-400
+$text-light: #737373;      // --color-neutral-500
+
+// ─── Background Colors ───────────────────────────────────────────────────────
+
+$background: #ffffff;           // --color-white
+$bg-white: #ffffff;             // --color-white
+$bg-light: #f9fafb;             // --color-light
+$bg-dark: #171717;              // --color-neutral-900
+$background-secondary: #f9fafb; // --color-light
+
+// ─── Spacing (matches --space-* tokens) ──────────────────────────────────────
+
+$spacing-2xs: 0.125rem;  // --space-0.5
+$spacing-xs: 0.25rem;    // --space-1
+$spacing-sm: 0.5rem;     // --space-2
+$spacing-md: 0.75rem;    // --space-3
+$spacing-lg: 1rem;       // --space-4
+$spacing-xl: 1.5rem;     // --space-6
+$spacing-2xl: 2rem;      // --space-8
+$spacing-3xl: 3rem;      // --space-12
+
+// ─── Border Radius (matches --radius-* tokens) ───────────────────────────────
+
+$radius-sm: 0.125rem;    // --radius-sm
+$radius-md: 0.375rem;    // --radius-md
+$radius-lg: 0.5rem;      // --radius-lg
+$radius-xl: 0.75rem;     // --radius-xl
+$radius-full: 9999px;    // --radius-full
+
+// ─── Shadows (matches --shadow-* tokens) ─────────────────────────────────────
+
+$shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);                                                    // --shadow-sm
+$shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);               // --shadow-md
+$shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);             // --shadow-lg
+$shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);            // --shadow-xl
+
+// ─── Transitions (matches --transition-* tokens) ─────────────────────────────
+
+$transition-fast: 150ms ease-in-out;    // --transition-fast
+$transition-normal: 250ms ease-in-out;  // --transition-normal
+$transition-slow: 350ms ease-in-out;    // --transition-slow
+
+// ─── Typography (matches CSS font tokens) ────────────────────────────────────
+
 $font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
   'Helvetica Neue', Arial, sans-serif;
 $font-family-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
   'Liberation Mono', 'Courier New', monospace;
 
-// Font Sizes
-$text-xs: 0.75rem;
-$text-sm: 0.875rem;
-$text-base: 1rem;
+$text-xs: 0.75rem;    // --text-xs
+$text-sm: 0.875rem;   // --text-sm
+$text-base: 1rem;     // --text-base
+$text-lg: 1.125rem;   // --text-lg
+$text-xl: 1.25rem;    // --text-xl
+$text-2xl: 1.5rem;    // --text-2xl
+$text-3xl: 2rem;
+$text-4xl: 2.5rem;
+
+$font-normal: 400;
+$font-medium: 500;
+$font-semibold: 600;
+$font-bold: 700;
+
+// ─── Z-index Scale ────────────────────────────────────────────────────────────
+
+$z-base: 1;
+$z-dropdown: 100;
+$z-modal: 1000;
+$z-tooltip: 2000;
+
+// ─── Breakpoints ──────────────────────────────────────────────────────────────
+
+$breakpoint-sm: 640px;
+
 $text-lg: 1.125rem;
 $text-xl: 1.25rem;
 $text-2xl: 1.5rem;

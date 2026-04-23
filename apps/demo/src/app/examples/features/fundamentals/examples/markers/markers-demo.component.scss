@@ -14,11 +14,11 @@
   }
 
   .subtitle {
-    color: #666;
+    color: var(--color-neutral-500);
     font-size: 1.1rem;
 
     code {
-      background: #f0f0f0;
+      background: var(--color-neutral-100);
       padding: 0.2rem 0.5rem;
       border-radius: 4px;
       font-weight: 600;
@@ -32,16 +32,16 @@
   h2 {
     font-size: 1.75rem;
     margin-bottom: 0.5rem;
-    border-bottom: 2px solid #3b82f6;
+    border-bottom: 2px solid var(--color-primary-500);
     padding-bottom: 0.5rem;
   }
 
   .section-desc {
-    color: #666;
+    color: var(--color-neutral-500);
     margin-bottom: 1.5rem;
 
     code {
-      background: #f0f0f0;
+      background: var(--color-neutral-100);
       padding: 0.15rem 0.4rem;
       border-radius: 3px;
     }
@@ -57,9 +57,9 @@
   transition: background 0.3s, color 0.3s;
 
   .card-header {
-    background: #f9fafb;
+    background: var(--color-light);
     padding: 1rem 1.5rem;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--color-border);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -87,22 +87,22 @@
   padding: 0.25rem 0.75rem;
   border-radius: 20px;
   font-size: 0.85rem;
-  background: #e5e7eb;
-  color: #6b7280;
+  background: var(--color-border);
+  color: var(--color-neutral-500);
   transition: all 0.2s;
 
   &.active {
-    background: #3b82f6;
+    background: var(--color-primary-500);
     color: white;
   }
 
   &.error.active {
-    background: #ef4444;
+    background: var(--color-error-500);
   }
 }
 
 .persistence-badge {
-  background: #10b981;
+  background: var(--color-secondary-500);
   color: white;
   padding: 0.25rem 0.75rem;
   border-radius: 20px;
@@ -133,29 +133,29 @@
   }
 
   &.primary {
-    background: #3b82f6;
+    background: var(--color-primary-500);
     color: white;
 
     &:hover:not(:disabled) {
-      background: #1d4ed8;
+      background: var(--color-primary-700);
     }
   }
 
   &.secondary {
-    background: #6b7280;
+    background: var(--color-neutral-500);
     color: white;
 
     &:hover:not(:disabled) {
-      background: #4b5563;
+      background: var(--color-neutral-600);
     }
   }
 
   &.danger {
-    background: #ef4444;
+    background: var(--color-error-500);
     color: white;
 
     &:hover:not(:disabled) {
-      background: #dc2626;
+      background: var(--color-error-600);
     }
   }
 
@@ -165,7 +165,7 @@
   }
 
   &.active {
-    background: #3b82f6;
+    background: var(--color-primary-500);
     color: white;
   }
 }
@@ -186,8 +186,8 @@
 }
 
 .error-message {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--color-error-100);
+  color: var(--color-error-800);
   padding: 1rem;
   border-radius: 4px;
   margin-bottom: 1rem;
@@ -212,14 +212,14 @@
     list-style: none;
     padding: 0;
     margin: 0;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--color-border);
     border-radius: 4px;
     overflow: hidden;
   }
 
   li {
     padding: 0.75rem 1rem;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--color-border);
     display: flex;
     justify-content: space-between;
     cursor: pointer;
@@ -230,12 +230,12 @@
     }
 
     &:hover {
-      background: #f9fafb;
+      background: var(--color-light);
     }
 
     &.selected {
-      background: #eff6ff;
-      border-left: 3px solid #3b82f6;
+      background: var(--color-primary-50);
+      border-left: 3px solid var(--color-primary-500);
     }
 
     .user-name {
@@ -243,7 +243,7 @@
     }
 
     .user-email {
-      color: #6b7280;
+      color: var(--color-neutral-500);
       font-size: 0.9rem;
     }
   }
@@ -251,7 +251,7 @@
 
 .state-display,
 .storage-display {
-  background: #f9fafb;
+  background: var(--color-light);
   border-radius: 4px;
   padding: 1rem;
   margin-top: 1rem;
@@ -259,7 +259,7 @@
   h4 {
     margin: 0 0 0.5rem 0;
     font-size: 0.9rem;
-    color: #6b7280;
+    color: var(--color-neutral-500);
   }
 
   pre {
@@ -282,7 +282,7 @@
     }
 
     .value {
-      color: #666;
+      color: var(--color-neutral-500);
     }
   }
 }
@@ -325,7 +325,7 @@
 
   h3 {
     margin: 0 0 1rem 0;
-    color: #3b82f6;
+    color: var(--color-primary-500);
     font-family: monospace;
     font-size: 1.25rem;
   }
@@ -339,7 +339,7 @@
       line-height: 1.5;
 
       strong {
-        color: #10b981;
+        color: var(--color-secondary-500);
       }
     }
   }

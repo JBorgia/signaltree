@@ -79,7 +79,7 @@
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--color-border);
-  background: var(--bg-secondary, #f9fafb);
+  background: var(--bg-secondary, var(--color-light));
 
   h3 {
     margin: 0;
@@ -121,7 +121,7 @@
       color: var(--color-warning-500);
     }
     &.offline {
-      color: var(--text-secondary, #999);
+      color: var(--text-secondary, var(--color-neutral-400));
     }
   }
 }
@@ -172,7 +172,7 @@
     background: var(--color-warning-500);
   }
   &.offline .status-dot {
-    background: var(--text-secondary, #999);
+    background: var(--text-secondary, var(--color-neutral-400));
   }
 }
 
@@ -232,7 +232,7 @@
     }
 
     .time {
-      color: var(--text-secondary, #999);
+      color: var(--text-secondary, var(--color-neutral-400));
     }
   }
 
@@ -261,7 +261,7 @@
     align-self: center;
     background: transparent;
     padding: 0.5rem;
-    color: var(--text-secondary, #999);
+    color: var(--text-secondary, var(--color-neutral-400));
     font-style: italic;
     font-size: 0.8rem;
     max-width: 100%;
@@ -409,7 +409,7 @@
 
   .log-entry {
     padding: 0.25rem 0.5rem;
-    color: var(--text-code, #d4d4d4);
+    color: var(--text-code, var(--color-neutral-300));
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 
     &:last-child {
@@ -422,7 +422,7 @@
 .code-card {
   pre {
     background: var(--bg-code, #1e1e1e);
-    color: var(--text-code, #d4d4d4);
+    color: var(--text-code, var(--color-neutral-300));
     padding: 1rem;
     border-radius: 8px;
     overflow: auto;
@@ -468,7 +468,7 @@
   color: white;
 
   &:hover:not(:disabled) {
-    background: var(--primary-hover, #5558e3);
+    background: var(--primary-hover, var(--color-purple-600));
   }
 }
 
@@ -486,7 +486,7 @@
   color: white;
 
   &:hover:not(:disabled) {
-    background: #dc2626;
+    background: var(--color-error-600);
   }
 }
 
@@ -494,6 +494,6 @@
 .empty-state {
   padding: 2rem;
   text-align: center;
-  color: var(--text-secondary, #999);
+  color: var(--text-secondary, var(--color-neutral-400));
   font-style: italic;
 }

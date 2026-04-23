@@ -13,7 +13,7 @@
 }
 
 .ng-forms-demo header p {
-  color: #475569;
+  color: var(--color-neutral-600);
   max-width: 720px;
 }
 
@@ -31,8 +31,8 @@
 }
 
 .form-panel {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-neutral-50);
+  border: 1px solid var(--color-neutral-200);
   border-radius: 16px;
   padding: 2rem;
   display: grid;
@@ -61,21 +61,21 @@
   padding: 0.35rem 0.85rem;
   font-size: 0.8rem;
   font-weight: 600;
-  background: #e2e8f0;
-  color: #334155;
-  border: 1px solid #cbd5e1;
+  background: var(--color-neutral-200);
+  color: var(--color-neutral-700);
+  border: 1px solid var(--color-neutral-300);
 }
 
 .chip.active {
-  background: #fef3c7;
-  border-color: #facc15;
-  color: #b45309;
+  background: var(--color-warning-100);
+  border-color: var(--color-warning-400);
+  color: var(--color-warning-700);
 }
 
 .chip.success {
-  background: #dcfce7;
-  border-color: #4ade80;
-  color: #166534;
+  background: var(--color-secondary-100);
+  border-color: var(--color-secondary-400);
+  color: var(--color-secondary-800);
 }
 
 .completion {
@@ -83,7 +83,7 @@
   gap: 0.4rem;
   min-width: 180px;
   font-size: 0.85rem;
-  color: #475569;
+  color: var(--color-neutral-600);
 }
 
 .completion label {
@@ -91,7 +91,7 @@
 }
 
 .meter {
-  background: #e2e8f0;
+  background: var(--color-neutral-200);
   border-radius: 999px;
   overflow: hidden;
   height: 0.5rem;
@@ -109,10 +109,10 @@ form {
 }
 
 fieldset {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-neutral-200);
   border-radius: 12px;
   padding: 1.25rem;
-  background: #ffffff;
+  background: var(--color-white);
   display: grid;
   gap: 1rem;
 }
@@ -121,7 +121,7 @@ legend {
   font-size: 0.95rem;
   font-weight: 600;
   padding: 0 0.35rem;
-  color: #1e293b;
+  color: var(--color-neutral-800);
 }
 
 .field-grid {
@@ -137,7 +137,7 @@ legend {
 
 .field label {
   font-weight: 600;
-  color: #1e293b;
+  color: var(--color-neutral-800);
 }
 
 .field input,
@@ -146,9 +146,9 @@ legend {
   width: 100%;
   padding: 0.75rem 0.9rem;
   border-radius: 10px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--color-neutral-300);
   font-size: 0.95rem;
-  background: #f8fafc;
+  background: var(--color-neutral-50);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -158,7 +158,7 @@ legend {
   outline: none;
   border-color: var(--color-primary-600);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-  background: #ffffff;
+  background: var(--color-white);
 }
 
 .field textarea {
@@ -177,7 +177,7 @@ legend {
   align-items: center;
   gap: 0.65rem;
   font-weight: 500;
-  color: #1f2937;
+  color: var(--color-dark);
 }
 
 .preferences {
@@ -246,12 +246,12 @@ legend {
   font-weight: 600;
   cursor: pointer;
   background: var(--color-primary-900);
-  color: #ffffff;
+  color: var(--color-white);
   transition: background 0.2s ease;
 }
 
 .actions button:disabled {
-  background: #94a3b8;
+  background: var(--color-neutral-400);
   cursor: not-allowed;
 }
 
@@ -271,16 +271,16 @@ legend {
 
 .status {
   font-size: 0.9rem;
-  color: #334155;
+  color: var(--color-neutral-700);
 }
 
 .status.error {
-  color: #dc2626;
+  color: var(--color-error-600);
 }
 
 .error {
   margin-top: -0.2rem;
-  color: #b91c1c;
+  color: var(--color-error-700);
   font-size: 0.82rem;
 }
 
@@ -293,7 +293,7 @@ legend {
 }
 
 .hint {
-  color: #64748b;
+  color: var(--color-neutral-500);
   font-size: 0.82rem;
 }
 
@@ -305,8 +305,8 @@ legend {
   display: grid;
   gap: 1rem;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  background: var(--color-primary-50);
+  border: 1px solid var(--color-primary-200);
   border-radius: 12px;
   padding: 1rem;
 }
@@ -316,7 +316,7 @@ legend {
   font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #1e3a8a;
+  color: var(--color-primary-900);
 }
 
 .validation-summary ul {
@@ -340,8 +340,8 @@ legend {
 }
 
 .summary-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--color-white);
+  border: 1px solid var(--color-neutral-200);
   border-radius: 14px;
   padding: 1.5rem;
   display: grid;
@@ -352,7 +352,7 @@ legend {
 .summary-card pre {
   margin: 0;
   background: var(--color-neutral-900);
-  color: #e2e8f0;
+  color: var(--color-neutral-200);
   border-radius: 10px;
   padding: 1rem;
   font-size: 0.82rem;

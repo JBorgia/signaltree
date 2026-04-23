@@ -1,3 +1,44 @@
+/*
+ * ============================================================
+ * SignalTree Demo — CSS Custom Property Design System
+ * ============================================================
+ *
+ * This is the ONLY global stylesheet wired into the Angular build.
+ * It defines every design token as a CSS custom property on :root.
+ *
+ * FRAMEWORK: Custom CSS variables — NO Tailwind CSS, NO Bootstrap,
+ * NO DaisyUI, NO other utility-class framework is installed or used.
+ *
+ * ── Token Namespaces ────────────────────────────────────────
+ *  Colors      --color-primary-{50–900}   (blue)
+ *              --color-secondary-{50–900} (green / success)
+ *              --color-error-{50–900}     (red)
+ *              --color-warning-{50–900}   (yellow)
+ *              --color-purple-{50–900}    (violet)
+ *              --color-info-{50–900}      (cyan)
+ *              --color-orange-{50–900}
+ *              --color-neutral-{50–900}   (zinc)
+ *              --color-white / --color-black
+ *              --color-dark  (#1f2937)    shortcut
+ *              --color-light (#f9fafb)    shortcut
+ *              --color-border (#e5e7eb)   shortcut
+ *
+ *  Spacing     --space-{0–24}   (0.25rem increments)
+ *  Radius      --radius-{sm|md|lg|xl|2xl|full}
+ *  Shadows     --shadow-{sm|md|lg|xl}
+ *  Transitions --transition-{fast|normal|slow}
+ *
+ * ── Rules for component stylesheets ─────────────────────────
+ *  ✅ Use var(--color-*), var(--space-*), var(--radius-*), etc.
+ *  ❌ DO NOT use hardcoded hex values (#3b82f6, #1f2937, etc.)
+ *  ❌ DO NOT import Tailwind or any utility CSS framework
+ *  ❌ DO NOT use Bootstrap CSS variables (--bs-*, --primary-color, etc.)
+ *  ❌ DO NOT redeclare a parallel SCSS variable color system
+ *
+ * If you need a color that has no token, add the token here first.
+ * ============================================================
+ */
+
 /* ===== ANGULAR DESIGN SYSTEM - CSS VARIABLES ===== */
 :root {
   /* Primary Colors */

@@ -5,7 +5,7 @@
   padding: 2rem 1.5rem 4rem;
   max-width: 1400px;
   margin: 0 auto;
-  color: #0f172a;
+  color: var(--color-neutral-900);
 }
 
 .page-header {
@@ -21,13 +21,13 @@
 
   p {
     margin: 0;
-    color: #334155;
+    color: var(--color-neutral-700);
     line-height: 1.6;
   }
 
   .report-timestamp {
     font-size: 0.9rem;
-    color: #1d4ed8;
+    color: var(--color-primary-700);
   }
 }
 
@@ -39,9 +39,9 @@
   button {
     padding: 0.6rem 1.2rem;
     border-radius: 0.6rem;
-    border: 1px solid #1d4ed8;
-    background: #1d4ed8;
-    color: #fff;
+    border: 1px solid var(--color-primary-700);
+    background: var(--color-primary-700);
+    color: var(--color-white);
     font-weight: 600;
     cursor: pointer;
     transition: transform 0.1s ease, box-shadow 0.1s ease;
@@ -52,9 +52,9 @@
     }
 
     &.secondary {
-      background: #e2e8f0;
-      color: #0f172a;
-      border-color: #cbd5f5;
+      background: var(--color-neutral-200);
+      color: var(--color-neutral-900);
+      border-color: var(--color-primary-200);
     }
   }
 }
@@ -65,10 +65,10 @@
   gap: 1rem;
 
   .metric-card {
-    background: #f8fafc;
+    background: var(--color-neutral-50);
     border-radius: 0.9rem;
     padding: 1.1rem;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--color-neutral-200);
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
@@ -76,14 +76,14 @@
     .metric-label {
       font-size: 0.85rem;
       text-transform: uppercase;
-      color: #475569;
+      color: var(--color-neutral-600);
       letter-spacing: 0.03em;
     }
 
     .metric-value {
       font-size: 1.6rem;
       font-weight: 700;
-      color: #0f172a;
+      color: var(--color-neutral-900);
     }
   }
 }
@@ -102,27 +102,27 @@
 }
 
 .budget-card {
-  background: #f1f5f9;
+  background: var(--color-neutral-100);
   border-radius: 0.85rem;
   padding: 1rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-neutral-200);
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
 
   &.budget-warning {
-    border-color: #fbbf24;
-    background: #fef3c7;
+    border-color: var(--color-warning-400);
+    background: var(--color-warning-100);
   }
 
   &.budget-error {
-    border-color: #f87171;
-    background: #fee2e2;
+    border-color: var(--color-error-400);
+    background: var(--color-error-100);
   }
 
   .budget-label {
     font-weight: 600;
-    color: #0f172a;
+    color: var(--color-neutral-900);
   }
 
   .budget-usage {
@@ -132,17 +132,17 @@
 
   .budget-detail {
     font-size: 0.85rem;
-    color: #475569;
+    color: var(--color-neutral-600);
   }
 }
 
 .issues-section,
 .hotpaths-section,
 .scenario-log {
-  background: #f8fafc;
+  background: var(--color-neutral-50);
   border-radius: 1rem;
   padding: 1.25rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-neutral-200);
 
   h2 {
     margin-top: 0;
@@ -169,7 +169,7 @@
     border-radius: 0.75rem;
     padding: 0.9rem 1rem;
     border: 1px solid transparent;
-    background: #fff;
+    background: var(--color-white);
     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
 
     .issue-header {
@@ -185,28 +185,28 @@
 
     .issue-count {
       font-size: 0.85rem;
-      color: #475569;
+      color: var(--color-neutral-600);
     }
 
     .issue-meta {
       font-size: 0.85rem;
-      color: #475569;
+      color: var(--color-neutral-600);
     }
   }
 
   .issue-warning {
-    border-color: #fbbf24;
-    background: #fefce8;
+    border-color: var(--color-warning-400);
+    background: var(--color-warning-50);
   }
 
   .issue-error {
-    border-color: #f87171;
-    background: #fef2f2;
+    border-color: var(--color-error-400);
+    background: var(--color-error-50);
   }
 
   .issue-info {
-    border-color: #93c5fd;
-    background: #eff6ff;
+    border-color: var(--color-primary-300);
+    background: var(--color-primary-50);
   }
 }
 
@@ -217,8 +217,8 @@
   li {
     padding: 0.85rem 1rem;
     border-radius: 0.75rem;
-    border: 1px solid #e2e8f0;
-    background: #fff;
+    border: 1px solid var(--color-neutral-200);
+    background: var(--color-white);
 
     .hotpath-title {
       font-weight: 600;
@@ -227,17 +227,17 @@
 
     .hotpath-meta {
       font-size: 0.9rem;
-      color: #475569;
+      color: var(--color-neutral-600);
     }
   }
 }
 
 .prod-message {
-  background: #eff6ff;
-  border: 1px dashed #60a5fa;
+  background: var(--color-primary-50);
+  border: 1px dashed var(--color-primary-400);
   border-radius: 0.9rem;
   padding: 1.2rem;
-  color: #1d4ed8;
+  color: var(--color-primary-700);
   line-height: 1.6;
 
   code {
@@ -251,7 +251,7 @@
 
 .empty-state {
   margin: 0;
-  color: #64748b;
+  color: var(--color-neutral-500);
   font-style: italic;
 }
 
@@ -261,8 +261,8 @@
 
   li {
     padding: 0.6rem 0.75rem;
-    border-left: 3px solid #1d4ed8;
-    background: #fff;
+    border-left: 3px solid var(--color-primary-700);
+    background: var(--color-white);
     border-radius: 0.5rem;
     margin-left: 0;
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);

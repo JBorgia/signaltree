@@ -356,15 +356,15 @@
 }
 
 .separate-column {
-  color: #ffcccc;
+  color: var(--color-error-100);
 }
 
 .consolidated-column {
-  color: #ccffcc;
+  color: var(--color-secondary-100);
 }
 
 .benefit-column {
-  color: #ffffcc;
+  color: var(--color-warning-100);
   font-style: italic;
 }
 
@@ -396,7 +396,7 @@
   font-size: 2.5rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
-  color: #4ade80;
+  color: var(--color-secondary-400);
 }
 
 .metric-label {
@@ -450,7 +450,7 @@
 
 .import-arrow {
   font-size: 2rem;
-  color: #4ade80;
+  color: var(--color-secondary-400);
   font-weight: bold;
 }
 

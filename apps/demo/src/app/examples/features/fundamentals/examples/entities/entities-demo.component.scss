@@ -26,7 +26,7 @@ $stats-accent: $success;
 .explanation-card {
   @include card;
   margin-bottom: 2rem;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  background: linear-gradient(135deg, var(--color-neutral-50) 0%, var(--color-neutral-100) 100%);
   border-left: 4px solid $primary;
 
   h2 {
@@ -145,9 +145,9 @@ $stats-accent: $success;
 
   .feature-tag {
     padding: 0.5rem 1rem;
-    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-    border: 1px solid #93c5fd;
-    color: #1e40af;
+    background: linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-primary-100) 100%);
+    border: 1px solid var(--color-primary-300);
+    color: var(--color-primary-800);
     border-radius: 20px;
     font-size: 0.875rem;
     font-weight: 600;
@@ -162,15 +162,15 @@ $stats-accent: $success;
 
 // Help Text
 .help-text {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  border: 2px solid #fbbf24;
+  background: linear-gradient(135deg, var(--color-warning-100) 0%, var(--color-warning-200) 100%);
+  border: 2px solid var(--color-warning-400);
   border-radius: 8px;
   padding: 1rem;
   margin-bottom: 1rem;
   text-align: center;
   font-size: 0.9375rem;
   font-weight: 600;
-  color: #78350f;
+  color: var(--color-warning-900);
 }
 
 .help-text-small {
@@ -348,8 +348,8 @@ $stats-accent: $success;
 
 // Filter Panel
 .filter-panel {
-  background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
-  border: 1px solid #cbd5e1;
+  background: linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-primary-100) 100%);
+  border: 1px solid var(--color-neutral-300);
   border-radius: 8px;
   padding: 1rem;
   margin-bottom: 1rem;
@@ -379,7 +379,7 @@ $stats-accent: $success;
 
 // Bulk Actions Bar
 .bulk-actions {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  background: linear-gradient(135deg, var(--color-warning-100) 0%, var(--color-warning-200) 100%);
   border: 2px solid $warning;
   border-radius: 8px;
   padding: 0.75rem 1rem;
@@ -394,7 +394,7 @@ $stats-accent: $success;
 .bulk-count {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #78350f;
+  color: var(--color-warning-900);
 }
 
 .bulk-buttons {
@@ -429,7 +429,7 @@ $stats-accent: $success;
 
   &.selected {
     border-color: $users-accent;
-    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    background: linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-primary-100) 100%);
     box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
   }
 }
@@ -442,7 +442,7 @@ $stats-accent: $success;
   transition: background 0.2s;
 
   &:hover {
-    background: #f9fafb;
+    background: var(--color-light);
   }
 
   &:focus {
@@ -507,7 +507,7 @@ $stats-accent: $success;
 
   &.selected {
     border-color: $posts-accent;
-    background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+    background: linear-gradient(135deg, var(--color-purple-50) 0%, var(--color-purple-100) 100%);
     box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
   }
 }
@@ -565,7 +565,7 @@ $stats-accent: $success;
   font-size: 0.8125rem;
 
   &:hover {
-    background: #fef2f2;
+    background: var(--color-error-50);
     border-color: $danger;
   }
 }
@@ -578,9 +578,9 @@ $stats-accent: $success;
 
 .tag {
   padding: 0.25rem 0.75rem;
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-  border: 1px solid #7dd3fc;
-  color: #075985;
+  background: linear-gradient(135deg, var(--color-info-50) 0%, var(--color-info-100) 100%);
+  border: 1px solid var(--color-info-300);
+  color: var(--color-info-800);
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 600;
@@ -624,11 +624,11 @@ $stats-accent: $success;
 }
 
 .btn-secondary {
-  background: #6b7280;
+  background: var(--color-neutral-500);
   color: white;
 
   &:hover:not(:disabled) {
-    background: color.adjust(#6b7280, $lightness: -5%);
+    background: var(--color-neutral-600);
   }
 }
 
@@ -742,7 +742,7 @@ $stats-accent: $success;
   }
 
   &.stat-pink {
-    color: #ec4899;
+    color: var(--color-error-400);
   }
 
   &.stat-purple {
@@ -758,13 +758,13 @@ $stats-accent: $success;
   display: inline-block;
 
   &.status-active {
-    background: #d1fae5;
-    color: #065f46;
+    background: var(--color-secondary-100);
+    color: var(--color-secondary-900);
   }
 
   &.status-inactive {
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--color-error-100);
+    color: var(--color-error-800);
   }
 }
 
@@ -846,11 +846,11 @@ $stats-accent: $success;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+    background: var(--color-neutral-300);
     border-radius: 4px;
 
     &:hover {
-      background: #94a3b8;
+      background: var(--color-neutral-400);
     }
   }
 }

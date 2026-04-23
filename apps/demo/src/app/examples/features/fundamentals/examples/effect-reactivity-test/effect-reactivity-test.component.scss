@@ -237,7 +237,7 @@ button {
 }
 
 .empty-log {
-  color: #888;
+  color: var(--color-neutral-400);
   font-style: italic;
   margin: 0;
 }
