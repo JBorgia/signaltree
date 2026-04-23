@@ -57,6 +57,7 @@
           @for (theme of themes; track theme.value) {
           <button
             type="button"
+            class="btn btn-sm"
             [class.active]="user().theme === theme.value"
             (click)="updateTheme(theme.value)"
           >

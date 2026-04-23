@@ -24,7 +24,7 @@ import { AppStore } from '../../../../../store';
   standalone: true,
   imports: [FormsModule],
   template: `
-    <div class="demo-container">
+    <div class="demo-container" [class.dark]="theme() === 'dark'">
       <h2>Recommended Architecture Demo</h2>
       <p class="description">
         Canonical SignalTree pattern: tiered derived signals + per-domain ops
@@ -38,7 +38,8 @@ import { AppStore } from '../../../../../store';
           <p class="section-desc">
             Components read state directly from the tree. All mutations go
             through ops services so async logic, validation, and side effects
-            live in one place per domain.
+            live in one place per domain. Click the buttons — the panel below
+            updates in real time so you can see the tree drive the DOM.
           </p>
 
           <div class="controls">
@@ -48,6 +49,22 @@ import { AppStore } from '../../../../../store';
             <button class="btn" (click)="store.ops.ui.toggleSidebar()">
               Sidebar: {{ sidebarOpen() ? 'Open' : 'Closed' }}
             </button>
+          </div>
+
+          <div class="ui-state-preview">
+            <div class="ui-state-preview__main">
+              <strong>Theme:</strong> {{ theme() }} — the panel border + colors
+              react to <code>$.ui.theme</code>.
+            </div>
+            @if (sidebarOpen()) {
+              <aside class="ui-state-preview__sidebar">
+                <strong>Demo sidebar</strong>
+                <p>
+                  Driven by <code>$.ui.sidebarOpen</code>. Click
+                  <em>Sidebar: Open</em> again to hide.
+                </p>
+              </aside>
+            }
           </div>
         </section>
 
@@ -211,11 +228,90 @@ import { AppStore } from '../../../../../store';
         max-width: 1200px;
         margin: 0 auto;
         padding: 20px;
+        transition: background 0.25s ease, color 0.25s ease;
+        border-radius: 12px;
+      }
+      .demo-container.dark {
+        background: #1a1d24;
+        color: #e6e6e6;
+      }
+      .demo-container.dark .description {
+        color: #c1c8d6;
+      }
+      .demo-container.dark .section {
+        background: #232730;
+        border-color: #3a3f4a;
+      }
+      .demo-container.dark .section h3,
+      .demo-container.dark .section h4 {
+        color: #f0f0f0;
+      }
+      .demo-container.dark .section-desc,
+      .demo-container.dark .post-meta,
+      .demo-container.dark .post-content {
+        color: #c1c8d6;
+      }
+      .demo-container.dark .state-section {
+        background: #2a2f3a;
+        border-color: #3a3f4a;
+      }
+      .demo-container.dark .item {
+        border-color: #3a3f4a;
+      }
+      .demo-container.dark .item:hover {
+        background: #323847;
+      }
+      .demo-container.dark .item.selected {
+        background: #1d3557;
+        border-color: #4dabf7;
+      }
+      .demo-container.dark .btn {
+        background: transparent;
+        color: #4dabf7;
+        border-color: #4dabf7;
+      }
+      .demo-container.dark .btn:hover:not(:disabled) {
+        background: #4dabf7;
+        color: #1a1d24;
+      }
+      .demo-container.dark .search-input {
+        background: #1a1d24;
+        color: #e6e6e6;
+        border-color: #3a3f4a;
       }
       .description {
         color: #666;
         margin-bottom: 30px;
         font-style: italic;
+      }
+      .ui-state-preview {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+        padding: 14px 16px;
+        border: 1px dashed #007acc;
+        border-radius: 6px;
+        background: rgba(0, 122, 204, 0.06);
+      }
+      .demo-container.dark .ui-state-preview {
+        border-color: #4dabf7;
+        background: rgba(77, 171, 247, 0.12);
+      }
+      .ui-state-preview__sidebar {
+        padding: 12px 14px;
+        border-left: 4px solid #007acc;
+        background: white;
+        border-radius: 4px;
+      }
+      .demo-container.dark .ui-state-preview__sidebar {
+        background: #2a2f3a;
+        border-left-color: #4dabf7;
+        color: #e6e6e6;
+      }
+      .ui-state-preview__sidebar p {
+        margin: 6px 0 0;
+        font-size: 0.9em;
       }
       .demo-sections {
         display: flex;

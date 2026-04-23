@@ -40,11 +40,14 @@
   padding: 1.5rem;
   border: 1px solid var(--color-neutral-200);
   margin-top: 1rem;
+  // override global .value-proposition rule that sets color: white
+  color: var(--color-neutral-900);
 
   h2 {
     font-size: 1.4rem;
     margin-top: 0;
     margin-bottom: 0.75rem;
+    color: var(--color-neutral-900);
   }
 
   > p {
@@ -87,6 +90,7 @@
     h3 {
       font-size: 1rem;
       margin-bottom: 0.5rem;
+      color: var(--color-neutral-900);
     }
 
     ul {
