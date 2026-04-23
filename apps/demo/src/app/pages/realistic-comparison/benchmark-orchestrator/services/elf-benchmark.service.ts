@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { createStore } from '@ngneat/elf';
+import { createStore, setProps, withProps } from '@ngneat/elf';
 import { getAllEntities, setEntities, updateAllEntities, updateEntities, withEntities } from '@ngneat/elf-entities';
 import { map } from 'rxjs';
 
@@ -201,6 +201,37 @@ export class ElfBenchmarkService {
         updateAllEntities((e: Item) => ({ ...e, value: (e.value + 1) | 0 }))
       );
     }
+    const duration = performance.now() - start;
+    return this.toResult(duration);
+  }
+
+  /**
+   * Server-payload sync — apply a 5000-field partial state with ~10%
+   * churn via Elf's `store.update(state => ({...state, ...payload}))`
+   * pattern. Elf stores produce a new state object on every update; no
+   * built-in ref-equality skip.
+   */
+  async runServerPayloadSyncBenchmark(
+    dataSize: number
+  ): Promise<number | BenchmarkResult> {
+    const size = Math.max(500, Math.min(20000, dataSize));
+    const churn = Math.max(1, Math.floor(size * 0.1));
+
+    const initial: Record<string, number> = {};
+    const payload: Record<string, number> = {};
+    for (let i = 0; i < size; i++) {
+      const k = `k${i}`;
+      initial[k] = i;
+      payload[k] = i < churn ? i + 1_000_000 : i;
+    }
+
+    const store = createStore(
+      { name: 'elf-bench-payload-sync' },
+      withProps<Record<string, number>>(initial)
+    );
+
+    const start = performance.now();
+    store.update(setProps((s) => ({ ...s, ...payload })));
     const duration = performance.now() - start;
     return this.toResult(duration);
   }

@@ -308,6 +308,40 @@ export class AkitaBenchmarkService {
     return this.toResult(duration);
   }
 
+  /**
+   * Server-payload sync — apply a 5000-field partial state with ~10%
+   * churn via Akita's plain `Store.update(stateFn)` API. Akita stores
+   * are immutable, so the merge produces a new object every call; there
+   * is no built-in ref-equality short-circuit.
+   */
+  async runServerPayloadSyncBenchmark(
+    dataSize: number
+  ): Promise<number | BenchmarkResult> {
+    const size = Math.max(500, Math.min(20000, dataSize));
+    const churn = Math.max(1, Math.floor(size * 0.1));
+
+    const initial: Record<string, number> = {};
+    const payload: Record<string, number> = {};
+    for (let i = 0; i < size; i++) {
+      const k = `k${i}`;
+      initial[k] = i;
+      payload[k] = i < churn ? i + 1_000_000 : i;
+    }
+
+    @StoreConfig({ name: 'akita-bench-payload-sync' })
+    class PayloadStore extends Store<Record<string, number>> {
+      constructor() {
+        super(initial);
+      }
+    }
+    const store = new PayloadStore();
+
+    const start = performance.now();
+    store.update((s) => ({ ...s, ...payload }));
+    const duration = performance.now() - start;
+    return this.toResult(duration);
+  }
+
   async runSelectorBenchmark(
     dataSize: number
   ): Promise<number | BenchmarkResult> {
