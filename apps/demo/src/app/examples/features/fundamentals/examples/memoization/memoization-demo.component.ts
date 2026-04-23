@@ -195,7 +195,9 @@ export class MemoizationDemoComponent {
       id: ++this.nextLogId,
       timestamp: Date.now(),
     };
-    this.tree.$.logs.set([newLog, ...this.logs()].slice(0, 50));
+    // Use update() so this.logs is NOT read in the reactive context of any
+    // surrounding effect, preventing the effect → write → re-trigger loop.
+    this.tree.$.logs.update((current) => [newLog, ...current].slice(0, 50));
   }
 
   formatDuration(ms: number): string {
