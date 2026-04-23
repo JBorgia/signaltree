@@ -2894,6 +2894,8 @@ export class BenchmarkOrchestratorComponent
     if (!baseline || !target || baseline.median <= 0 || target.median <= 0) {
       return null;
     }
+    // If either library reported the scenario as unsupported, suppress the CI.
+    if (baseline.median === -1 || target.median === -1) return null;
     // Ops/sec based effect size: percent improvement in throughput.
     const baselineOps =
       baseline.opsPerSecond > 0
@@ -2958,9 +2960,18 @@ export class BenchmarkOrchestratorComponent
     );
 
     if (!result) return '-';
-    if (result.opsPerSecond === -1 || result.opsPerSecond === 0)
-      return 'Not supported';
+    // median === -1 means the library/scenario combination isn't implemented.
+    if (result.median === -1) return 'Not supported';
     if (!isFinite(result.opsPerSecond)) return 'N/A';
+    // Rounded-to-zero ops/s when the scenario is real but extremely slow:
+    // surface the unrounded value with extra precision rather than mis-
+    // labelling it as unsupported.
+    if (result.opsPerSecond <= 0 && result.median > 0) {
+      const realOps = 1000 / result.median;
+      return realOps >= 1
+        ? Math.round(realOps).toLocaleString()
+        : realOps.toFixed(2);
+    }
     return Math.round(result.opsPerSecond).toLocaleString();
   }
 
