@@ -525,7 +525,7 @@ code {
 /* Layout utilities */
 .container {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 0 var(--space-4);
 
@@ -842,7 +842,6 @@ code {
 }
 
 .nav-container {
-  @extend .container;
   display: flex;
   align-items: center;
   justify-content: space-between;
