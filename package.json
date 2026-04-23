@@ -57,7 +57,7 @@
     "build:packages": "nx run-many -t build --projects=enterprise,ng-forms,shared,callable-syntax,guardrails",
     "build:production": "nx run-many -t build --configuration=production --projects=core,enterprise,ng-forms,shared,callable-syntax,guardrails",
     "// Testing Scripts": "Comprehensive testing workflows",
-    "test:all": "nx run-many -t test --projects=core,enterprise,ng-forms,shared,callable-syntax,guardrails",
+    "test:all": "nx run-many -t test --projects=core,enterprise,ng-forms,shared,callable-syntax,guardrails --parallel=1",
     "test:core": "nx test core",
     "test:callable-syntax": "nx test callable-syntax",
     "test:performance": "nx test core --testNamePattern=\"performance\"",
