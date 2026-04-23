@@ -71,9 +71,7 @@ import { enterprise } from '@signaltree/enterprise';
 const tree = signalTree(initialState).with(enterprise());
 
 // Or with auto-optimize threshold (9.1+):
-const tree2 = signalTree(initialState).with(
-  enterprise({ autoOptimizeThreshold: 100 })
-);
+const tree2 = signalTree(initialState).with(enterprise({ autoOptimizeThreshold: 100 }));
 ```
 
 **Options (9.1+):**
@@ -175,12 +173,10 @@ payloads use the regular fast path. Without a threshold this is a plain
 `update`.
 
 ```typescript
-const tree = signalTree(initialState).with(
-  enterprise({ autoOptimizeThreshold: 50 })
-);
+const tree = signalTree(initialState).with(enterprise({ autoOptimizeThreshold: 50 }));
 
-tree.updateAuto({ a: 1, b: 2 });          // fast path
-tree.updateAuto(largeServerPayload);      // diff engine
+tree.updateAuto({ a: 1, b: 2 }); // fast path
+tree.updateAuto(largeServerPayload); // diff engine
 ```
 
 ## Examples
