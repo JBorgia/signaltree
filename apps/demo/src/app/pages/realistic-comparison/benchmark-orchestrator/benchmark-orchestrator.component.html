@@ -1049,6 +1049,15 @@
             Ops/sec derives from median ms/op: 1000 ÷ median(ms/op). Effect size
             deltas show throughput (ops/sec) improvement percentages.
           </p>
+          <p>
+            Sub-millisecond scenarios are amortized across an adaptive number of
+            inner repetitions per timed sample (target ≥5ms per window) to
+            escape the ~0.1ms <code>performance.now()</code> resolution floor.
+            Each sample stored is the mean per-call cost over that window;
+            distribution metrics (median, p95, std-dev) are computed across
+            samples as usual. Per-scenario inner-op counts are included in the
+            CSV/JSON export.
+          </p>
         </div>
         }
       </div>

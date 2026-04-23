@@ -74,6 +74,11 @@ interface BenchmarkResult {
   opsPerSecond: number;
   // Optional memory delta in MB for memory-centric scenarios
   memoryDeltaMB?: number;
+  // Number of inner repetitions per timed sample. Sub-millisecond scenarios
+  // are amortized across innerOps repetitions to escape the ~0.1ms
+  // performance.now() resolution floor. Each entry in `samples` is the mean
+  // per-call duration over innerOps repetitions.
+  innerOps?: number;
 }
 
 interface ExtendedBenchmarkResult extends BenchmarkResult {
@@ -2553,12 +2558,53 @@ export class BenchmarkOrchestratorComponent
         : undefined;
 
     // Warmup runs
+    let lastWarmup = 0;
     for (let i = 0; i < config.warmupRuns; i++) {
       if (!this.isRunning()) break;
-      await this.executeBenchmark(library.id, scenario.id, config, {
+      lastWarmup = await this.executeBenchmark(library.id, scenario.id, config, {
         overrideEnterprise: options?.overrideEnterprise,
       });
       this.currentIteration.set(i + 1);
+    }
+
+    // Adaptive inner-loop calibration.
+    // performance.now() is clamped to ~0.1ms in modern browsers (Spectre
+    // mitigation). Sub-millisecond samples therefore lose 25-100% of their
+    // resolution to quantization, making it impossible to distinguish e.g.
+    // SignalTree baseline (0.18ms) from Enterprise (0.16ms) — both report
+    // 0.2ms. To recover signal we run `innerOps` consecutive calls inside a
+    // single timed window and divide, so each pushed sample represents the
+    // mean per-call cost of a window large enough to escape the floor.
+    const TARGET_SAMPLE_MS = 5;
+    const MAX_INNER_OPS = 500;
+    let probe = lastWarmup;
+    if (probe <= 0) {
+      probe = await this.executeBenchmark(library.id, scenario.id, config, {
+        overrideEnterprise: options?.overrideEnterprise,
+      });
+    }
+    if (probe === -1) {
+      return {
+        libraryId: library.id,
+        scenarioId: scenario.id,
+        samples: [],
+        median: -1,
+        mean: -1,
+        p95: -1,
+        p99: -1,
+        min: -1,
+        max: -1,
+        stdDev: -1,
+        opsPerSecond: -1,
+        memoryDeltaMB: undefined,
+      };
+    }
+    let innerOps = 1;
+    if (probe > 0 && probe < TARGET_SAMPLE_MS) {
+      innerOps = Math.min(
+        MAX_INNER_OPS,
+        Math.max(1, Math.ceil(TARGET_SAMPLE_MS / probe))
+      );
     }
 
     // Measurement runs
@@ -2566,35 +2612,69 @@ export class BenchmarkOrchestratorComponent
       if (!this.isRunning()) break;
       this.currentIteration.set(i + 1);
 
-      const duration = await this.executeBenchmark(
-        library.id,
-        scenario.id,
-        config,
-        {
-          overrideEnterprise: options?.overrideEnterprise,
+      let perCall: number;
+      if (innerOps === 1) {
+        perCall = await this.executeBenchmark(
+          library.id,
+          scenario.id,
+          config,
+          { overrideEnterprise: options?.overrideEnterprise }
+        );
+        if (perCall === -1) {
+          return {
+            libraryId: library.id,
+            scenarioId: scenario.id,
+            samples: [],
+            median: -1,
+            mean: -1,
+            p95: -1,
+            p99: -1,
+            min: -1,
+            max: -1,
+            stdDev: -1,
+            opsPerSecond: -1,
+            memoryDeltaMB: undefined,
+          };
         }
-      );
-
-      // Check if the benchmark returned -1 (unsupported)
-      if (duration === -1) {
-        // Return special result indicating unsupported scenario
-        return {
-          libraryId: library.id,
-          scenarioId: scenario.id,
-          samples: [],
-          median: -1,
-          mean: -1,
-          p95: -1,
-          p99: -1,
-          min: -1,
-          max: -1,
-          stdDev: -1,
-          opsPerSecond: -1,
-          memoryDeltaMB: undefined,
-        };
+      } else {
+        // Time the whole batch with one performance.now pair so the timer
+        // floor is amortized. Discard per-call durations from executeBenchmark
+        // here — wall-clock around the loop is more accurate.
+        const batchStart = performance.now();
+        let aborted = false;
+        for (let k = 0; k < innerOps; k++) {
+          const r = await this.executeBenchmark(
+            library.id,
+            scenario.id,
+            config,
+            { overrideEnterprise: options?.overrideEnterprise }
+          );
+          if (r === -1) {
+            aborted = true;
+            break;
+          }
+        }
+        const batchTotal = performance.now() - batchStart;
+        if (aborted) {
+          return {
+            libraryId: library.id,
+            scenarioId: scenario.id,
+            samples: [],
+            median: -1,
+            mean: -1,
+            p95: -1,
+            p99: -1,
+            min: -1,
+            max: -1,
+            stdDev: -1,
+            opsPerSecond: -1,
+            memoryDeltaMB: undefined,
+          };
+        }
+        perCall = batchTotal / innerOps;
       }
 
-      samples.push(duration);
+      samples.push(perCall);
 
       // Yield to UI
       if (i % 10 === 0) {
@@ -2631,6 +2711,7 @@ export class BenchmarkOrchestratorComponent
       stdDev: this.standardDeviation(samples),
       opsPerSecond: median > 0 ? Math.round(1000 / median) : 0,
       memoryDeltaMB: memoryDeltaMB,
+      innerOps,
     };
 
     // Persist an extended, per-run object on window so automation (Playwright)
@@ -3121,7 +3202,7 @@ export class BenchmarkOrchestratorComponent
     const scenarios = this.completedScenarios();
 
     let csv =
-      'Library,Scenario,Median (ms),Mean (ms),P95 (ms),P99 (ms),Min (ms),Max (ms),Std Dev,Ops/sec,Memory Delta (MB)\n';
+      'Library,Scenario,Median (ms),Mean (ms),P95 (ms),P99 (ms),Min (ms),Max (ms),Std Dev,Ops/sec,Memory Delta (MB),Inner Ops/Sample\n';
 
     for (const result of results) {
       const lib = libraries.find((l) => l.id === result.libraryId);
@@ -3148,7 +3229,8 @@ export class BenchmarkOrchestratorComponent
         typeof result.memoryDeltaMB === 'number'
           ? result.memoryDeltaMB.toFixed(2)
           : ''
-      }\n`;
+      },`;
+      csv += `${result.innerOps ?? 1}\n`;
     }
 
     this.downloadFile(csv, 'benchmark-results.csv', 'text/csv');
