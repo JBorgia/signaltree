@@ -357,6 +357,39 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
 
   // (Async scenarios removed - demo no longer includes the async workflow page)
 
+  // Server-payload sync — exercises the diff/short-circuit path that
+  // most other scenarios bypass. Models the "POST returned a 5000-field
+  // partial; merge it into local state" pattern used by every CRUD app.
+  {
+    id: 'server-payload-sync',
+    name: 'Server Payload Sync',
+    description:
+      'Apply 5000-field partial state with ~90% no-op overlap (server-returned merge)',
+    operations: '5000 keys × 1 merge',
+    complexity: 'Medium',
+    selected: false,
+    category: 'core',
+    purpose:
+      'Measures partial-state merge throughput when most incoming fields are ref-equal to current state. Exercises ref-equality short-circuiting in core and the diff engine in @signaltree/enterprise.',
+    frequencyWeight: 1.6, // High - every CRUD app does this on every save/refresh
+    realWorldFrequency:
+      'High - REST/GraphQL responses, optimistic updates, websocket deltas',
+    architecturalTradeOffs:
+      'Bulk merge favors libraries that can short-circuit unchanged fields. Implementations that always re-set every key pay O(N) regardless of churn; diff-aware implementations pay O(changed).',
+    enhancers: {
+      required: [],
+      optional: ['enterprise'],
+      rationale:
+        'Core baseline benefits from ref-equality short-circuit added in 9.1. Enterprise variant routes through the diff engine + onPathChange listener. Other libraries fall back to their idiomatic partial-state merge API.',
+    },
+    dataRequirements: {
+      minSize: 500,
+      maxSize: 20000,
+      defaultSize: 5000,
+      scalesWith: 'linear',
+    },
+  },
+
   // Full-stack Tests
   // Full-stack Tests
 ];

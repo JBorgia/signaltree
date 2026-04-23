@@ -482,6 +482,73 @@ export class SignalTreeBenchmarkService {
     );
   }
 
+  /**
+   * Server-payload sync benchmark.
+   *
+   * Models the common CRUD pattern of receiving a large partial state
+   * payload from the server (REST/GraphQL/websocket delta) where most
+   * fields are unchanged. Measures bulk-merge throughput.
+   *
+   * Setup: Build a flat record of `dataSize` numeric keys (k0..kN-1).
+   * Workload: Apply a payload that mutates ~10% of keys and leaves ~90%
+   * ref-equal. Both arms exercise the same churn ratio so the only
+   * variable is the merge implementation.
+   *
+   * - Core baseline: `tree(payload)` — relies on the 9.1 ref-equality
+   *   short-circuit in `recursiveUpdate` to skip unchanged signals.
+   * - Enterprise variant: `tree.updateOptimized(payload)` — runs the
+   *   diff engine + path index and notifies `onPathChange` listeners.
+   *
+   * The enterprise variant is selected when the orchestrator includes
+   * `'enterprise'` in `__SIGNALTREE_ACTIVE_ENHANCERS__` (i.e. the
+   * `signaltree-enterprise` library row).
+   */
+  async runServerPayloadSyncBenchmark(
+    dataSize: number
+  ): Promise<number | BenchmarkResult> {
+    const size = Math.max(500, Math.min(20000, dataSize));
+    const churn = Math.max(1, Math.floor(size * 0.1)); // 10% changed
+
+    // Build initial flat state and matching payload
+    const initial: Record<string, number> = {};
+    const payload: Record<string, number> = {};
+    for (let i = 0; i < size; i++) {
+      const k = `k${i}`;
+      initial[k] = i;
+      // ref-equal for 90%, mutated for 10%
+      payload[k] = i < churn ? i + 1_000_000 : i;
+    }
+
+    const base: any = signalTree(initial);
+    const tree: any = this.applyConfiguredEnhancers(base, []);
+
+    const useOptimized =
+      typeof tree.updateOptimized === 'function' &&
+      Array.isArray(window.__SIGNALTREE_ACTIVE_ENHANCERS__) &&
+      (window.__SIGNALTREE_ACTIVE_ENHANCERS__ as string[]).includes(
+        'enterprise'
+      );
+
+    const start = performance.now();
+
+    if (useOptimized) {
+      // Enterprise path — diff engine + path-change notification
+      tree.updateOptimized(payload);
+    } else {
+      // Core path — ref-equality short-circuit in recursiveUpdate
+      tree(payload);
+    }
+
+    const duration = performance.now() - start;
+    return this.toResult(
+      duration,
+      undefined,
+      useOptimized
+        ? 'SignalTree server-payload sync (enterprise diff)'
+        : 'SignalTree server-payload sync (core ref-skip)'
+    );
+  }
+
   async runSerializationBenchmark(
     dataSize: number
   ): Promise<number | BenchmarkResult> {

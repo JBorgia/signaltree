@@ -136,6 +136,9 @@ interface BenchmarkService {
   runSelectorBenchmark?(
     dataSize: number
   ): Promise<number | ServiceBenchmarkResult>;
+  runServerPayloadSyncBenchmark?(
+    dataSize: number
+  ): Promise<number | ServiceBenchmarkResult>;
   runSerializationBenchmark?(
     dataSize: number
   ): Promise<number | ServiceBenchmarkResult>;
@@ -525,6 +528,7 @@ export class BenchmarkOrchestratorComponent
       'computed-chains': 'runComputedBenchmark',
       'batch-updates': 'runBatchUpdatesBenchmark',
       'selector-memoization': 'runSelectorBenchmark',
+      'server-payload-sync': 'runServerPayloadSyncBenchmark',
       serialization: 'runSerializationBenchmark',
       'concurrent-updates': 'runConcurrentUpdatesBenchmark',
       'memory-efficiency': 'runMemoryEfficiencyBenchmark',
@@ -1315,6 +1319,10 @@ export class BenchmarkOrchestratorComponent
         return Math.min(500, dataSize); // Real-time update frequency
       case 'state-size-scaling':
         return Math.min(200, dataSize / 5); // Scaling operations
+      case 'server-payload-sync':
+        // One bulk merge per iteration; report payload size as the
+        // "ops performed" so the column reflects keys-merged/sec.
+        return Math.min(20000, Math.max(500, dataSize));
       default:
         return dataSize; // Default fallback
     }
@@ -1402,6 +1410,11 @@ export class BenchmarkOrchestratorComponent
         // Large entities with properties and relations
         const entitySize = 2048; // bytes per entity (with properties/relations)
         return (Math.min(dataSize * 10, 10000) * entitySize) / (1024 * 1024);
+      }
+      case 'server-payload-sync': {
+        // Flat record: one signal per key + payload object of equal size.
+        const bytesPerKey = 96; // signal wrapper + numeric value
+        return (Math.min(20000, dataSize) * bytesPerKey * 2) / (1024 * 1024);
       }
       default:
         return (dataSize * 64) / (1024 * 1024); // Default: 64 bytes per item
@@ -2230,6 +2243,13 @@ export class BenchmarkOrchestratorComponent
           }
           return await maybeNormalize(
             svc.runSelectorBenchmark(config.dataSize)
+          );
+        case 'server-payload-sync':
+          if (!svc.runServerPayloadSyncBenchmark) {
+            return -1;
+          }
+          return await maybeNormalize(
+            svc.runServerPayloadSyncBenchmark(config.dataSize)
           );
         case 'serialization':
           if (!svc.runSerializationBenchmark) {

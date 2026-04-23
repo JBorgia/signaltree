@@ -234,6 +234,33 @@ export class NgRxSignalsBenchmarkService {
     return this.toResult(duration);
   }
 
+  /**
+   * Server-payload sync — apply a 5000-field partial state with ~10%
+   * churn via NgRx Signals' canonical `patchState(store, partial)` API.
+   * Mirrors the SignalTree benchmark of the same name for direct
+   * comparison of partial-merge throughput.
+   */
+  async runServerPayloadSyncBenchmark(
+    dataSize: number
+  ): Promise<number | BenchmarkResult> {
+    const size = Math.max(500, Math.min(20000, dataSize));
+    const churn = Math.max(1, Math.floor(size * 0.1));
+
+    const initial: Record<string, number> = {};
+    const payload: Record<string, number> = {};
+    for (let i = 0; i < size; i++) {
+      const k = `k${i}`;
+      initial[k] = i;
+      payload[k] = i < churn ? i + 1_000_000 : i;
+    }
+
+    const state = signalState(initial);
+    const start = performance.now();
+    patchState(state, payload);
+    const duration = performance.now() - start;
+    return this.toResult(duration);
+  }
+
   async runSelectorBenchmark(
     dataSize: number
   ): Promise<number | BenchmarkResult> {
