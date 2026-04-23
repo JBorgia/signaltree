@@ -129,6 +129,22 @@ export interface ISignalTree<T> extends NodeAccessor<T> {
    * Enhancers should use this to release resources (intervals, subscriptions, etc.).
    */
   registerCleanup(fn: EnhancerCleanup): void;
+  /**
+   * Apply a partial update and return the dot-paths of leaf signals that
+   * actually changed. Paths whose new value is ref-equal to the existing
+   * value are skipped both in the underlying `set()` and in the result.
+   *
+   * Useful for partial server-payload sync, change-log/audit trails, and
+   * targeted persistence without pulling in the heavier
+   * `@signaltree/enterprise` diff engine.
+   *
+   * @example
+   * ```ts
+   * const changed = tree.updateAndReport(serverPayload);
+   * if (changed.length) persistKeys(changed);
+   * ```
+   */
+  updateAndReport(updates: Partial<T> | ((current: T) => Partial<T>)): string[];
   // Allow enhancers to attach runtime methods — consumers should cast to the
   // specific enhanced shape they expect (e.g. `SignalTree<T> & BatchingMethods<T>`).
 }

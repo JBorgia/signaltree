@@ -1,4 +1,4 @@
-import { isSignal, signal, WritableSignal } from '@angular/core';
+import { isSignal, signal, untracked, WritableSignal } from '@angular/core';
 
 import { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES } from './constants';
 import { batchScope } from './internals/batch-scope';
@@ -240,7 +240,12 @@ function makeNodeAccessor<T>(store: TreeNode<T>): NodeAccessor<T> {
   return accessor;
 }
 
-function recursiveUpdate(target: unknown, updates: unknown): void {
+function recursiveUpdate(
+  target: unknown,
+  updates: unknown,
+  out?: string[],
+  pathPrefix = ''
+): void {
   if (!updates || typeof updates !== 'object') return;
 
   const targetObj = isNodeAccessor(target)
@@ -253,13 +258,25 @@ function recursiveUpdate(target: unknown, updates: unknown): void {
     const prop = targetObj[key];
     if (prop === undefined) continue;
 
+    const childPath = pathPrefix ? `${pathPrefix}.${key}` : key;
+
     if (isSignal(prop) && 'set' in prop) {
-      (prop as WritableSignal<unknown>).set(value);
+      const sig = prop as WritableSignal<unknown>;
+      // Ref-equality short-circuit: skip the .set() entirely when the
+      // incoming value is identical to the current value. Saves the
+      // function-call + Angular's internal equality check + any glitch
+      // tracking. Wrapped in untracked() so reading the current value
+      // never accidentally creates a reactive dependency.
+      const current = untracked(() => sig());
+      if (current === value) continue;
+      sig.set(value);
+      if (out) out.push(childPath);
     } else if (isNodeAccessor(prop)) {
       if (value && typeof value === 'object') {
-        recursiveUpdate(prop, value);
+        recursiveUpdate(prop, value, out, childPath);
       } else {
         (prop as (v: unknown) => void)(value);
+        if (out) out.push(childPath);
       }
     }
   }
@@ -624,6 +641,31 @@ function create<T extends object>(
     configurable: true,
   });
 
+  // updateAndReport(): apply a partial update and return the dot-paths of
+  // signals that actually changed (after ref-equality short-circuit).
+  // Useful for partial server-payload sync, change-log/audit trails, and
+  // targeted persistence without pulling in the @signaltree/enterprise
+  // diff engine.
+  Object.defineProperty(tree, 'updateAndReport', {
+    value: function (arg?: unknown): string[] {
+      if (arguments.length === 0) return [];
+      const out: string[] = [];
+      if (typeof arg === 'function') {
+        const updater = arg as (current: T) => T;
+        const current = unwrap(signalState) as T;
+        batchScope(() => recursiveUpdate(signalState, updater(current), out));
+      } else if (typeof arg === 'object' && arg !== null && !Array.isArray(arg)) {
+        batchScope(() => recursiveUpdate(signalState, arg, out));
+      } else {
+        recursiveUpdate(signalState, arg, out);
+      }
+      return out;
+    },
+    enumerable: false,
+    writable: true,
+    configurable: true,
+  });
+
   // Copy state properties to root for direct access (DEPRECATED - will be removed in v7)
   // Consumers should use tree.$ for state access
   for (const key of Object.keys(signalState as object)) {
@@ -874,6 +916,38 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
       configurable: true,
     });
   }
+
+  // Forward 'updateAndReport' from baseTree (apply partial update +
+  // return changed paths). Defined as non-enumerable on baseTree, so it
+  // isn't picked up by the generic key copy above.
+  Object.defineProperty(builder, 'updateAndReport', {
+    value: function (this: unknown, arg?: unknown): string[] {
+      finalize();
+      const fn = (baseTree as unknown as Record<string, unknown>)[
+        'updateAndReport'
+      ] as ((a?: unknown) => string[]) | undefined;
+      return fn ? fn.call(baseTree, arg) : [];
+    },
+    enumerable: false,
+    writable: false,
+    configurable: true,
+  });
+
+  // Forward 'batchUpdate' from baseTree (mirrors the existing internal
+  // helper; needed because non-enumerable properties don't reach the
+  // builder via the generic copy loop).
+  Object.defineProperty(builder, 'batchUpdate', {
+    value: function (this: unknown, arg?: unknown): void {
+      finalize();
+      const fn = (baseTree as unknown as Record<string, unknown>)[
+        'batchUpdate'
+      ] as ((a?: unknown) => void) | undefined;
+      if (fn) fn.call(baseTree, arg);
+    },
+    enumerable: false,
+    writable: true,
+    configurable: true,
+  });
 
   // Add derived() method
   Object.defineProperty(builder, 'derived', {
