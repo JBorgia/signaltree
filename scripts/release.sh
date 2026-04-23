@@ -412,10 +412,10 @@ for package in "${PACKAGES[@]}"; do
             PUBLISH_CMD="npm publish --access public"
             # Provenance is only supported on trusted CI providers (e.g. GitHub Actions).
             # Enable it automatically when running on CI; skip for local publishes.
-            if [ -n "$GITHUB_ACTIONS" ] || [ "$NPM_CONFIG_PROVENANCE" = "true" ]; then
+            if [ -n "${GITHUB_ACTIONS:-}" ] || [ "${NPM_CONFIG_PROVENANCE:-}" = "true" ]; then
                 PUBLISH_CMD="$PUBLISH_CMD --provenance"
             fi
-            if [ -n "$NPM_TOKEN" ]; then
+            if [ -n "${NPM_TOKEN:-}" ]; then
                 PUBLISH_CMD="$PUBLISH_CMD --userconfig ~/.npmrc.signaltree-temp"
             fi
 
