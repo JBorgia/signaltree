@@ -82,3 +82,4 @@ tmp/
 # Build artifacts that should not be committed
 *.tgz
 .version_backup
+.release_backup/
