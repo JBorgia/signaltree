@@ -2,22 +2,18 @@ import type { ISignalTree } from './types';
 
 const ENHANCER_METHOD_MAP: Record<
   string,
-  { enhancer: string; preset: string }
+  { enhancer: string }
 > = {
-  effect: { enhancer: 'effects()', preset: 'createMinimalTree' },
-  subscribe: { enhancer: 'effects()', preset: 'createMinimalTree' },
-  batch: { enhancer: 'batching()', preset: 'createProdTree' },
-  batchUpdate: { enhancer: 'batching()', preset: 'createProdTree' },
-  memoize: { enhancer: 'memoization()', preset: 'createProdTree' },
-  memoizedUpdate: { enhancer: 'memoization()', preset: 'createProdTree' },
-  clearMemoCache: { enhancer: 'memoization()', preset: 'createProdTree' },
-  getCacheStats: { enhancer: 'memoization()', preset: 'createProdTree' },
-  undo: { enhancer: 'timeTravel()', preset: 'createDevTree' },
-  redo: { enhancer: 'timeTravel()', preset: 'createDevTree' },
-  getHistory: { enhancer: 'timeTravel()', preset: 'createDevTree' },
-  connectDevTools: { enhancer: 'devTools()', preset: 'createDevTree' },
-  disconnectDevTools: { enhancer: 'devTools()', preset: 'createDevTree' },
-  entities: { enhancer: 'entities()', preset: 'createDevTree' },
+  effect: { enhancer: 'effects()' },
+  subscribe: { enhancer: 'effects()' },
+  batch: { enhancer: 'batching()' },
+  batchUpdate: { enhancer: 'batching()' },
+  undo: { enhancer: 'timeTravel()' },
+  redo: { enhancer: 'timeTravel()' },
+  getHistory: { enhancer: 'timeTravel()' },
+  connectDevTools: { enhancer: 'devTools()' },
+  disconnectDevTools: { enhancer: 'devTools()' },
+  entities: { enhancer: 'entities()' },
 };
 
 export function wrapWithDevProxy<T>(tree: ISignalTree<T>): ISignalTree<T> {

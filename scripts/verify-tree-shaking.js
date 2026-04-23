@@ -19,7 +19,6 @@ const tmpDir = join(root, 'tmp', 'tree-shake-test');
 // Enhancer names that should NOT appear if only signalTree is imported
 const ENHANCER_MARKERS = [
   'coalescedUpdates',       // batching internals
-  'memoizationCache',       // memoization internals
   'timeTravelManager',      // time-travel internals
   'connectDevTools',        // devtools internals
   'autoSaveInterval',       // persistence internals

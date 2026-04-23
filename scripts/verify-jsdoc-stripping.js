@@ -11,8 +11,9 @@ try {
   console.log('ℹ️  gzip-size not installed, showing raw file sizes only\n');
 }
 
-// Note: batching, memoization, middleware, entities, devtools, time-travel, presets, serialization
-// were consolidated into @signaltree/core in v4.0.0
+// Note: batching, middleware, entities, devtools, time-travel, serialization
+// were consolidated into @signaltree/core in v4.0.0.
+// Memoization & presets were removed in v10.0.0.
 const packages = ['core', 'ng-forms', 'enterprise', 'callable-syntax'];
 
 console.log('🔍 Verifying JSDoc Stripping and Bundle Sizes\n');

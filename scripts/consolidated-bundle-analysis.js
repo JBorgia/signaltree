@@ -78,12 +78,6 @@ const packages = [
     claimed: 1280,
   },
   {
-    name: 'core/enhancers/memoization',
-    path: 'dist/packages/core/dist/enhancers/memoization/lib/memoization.js',
-    maxSize: 2800,
-    claimed: 2650,
-  },
-  {
     name: 'core/enhancers/time-travel',
     path: 'dist/packages/core/dist/enhancers/time-travel/lib/time-travel.js',
     maxSize: 1950,
@@ -112,12 +106,6 @@ const packages = [
     path: 'dist/packages/core/dist/enhancers/serialization/lib/serialization.js',
     maxSize: 5200,
     claimed: 4860,
-  },
-  {
-    name: 'core/enhancers/presets',
-    path: 'dist/packages/core/dist/enhancers/presets/lib/presets.js',
-    maxSize: 900,
-    claimed: 760,
   },
 ];
 
@@ -549,13 +537,11 @@ class BundleAnalyzer {
     const oldSeparateSizes = {
       core: 7368,
       batching: 1303,
-      memoization: 2328,
       'time-travel': 1788,
       entities: 990,
       middleware: 1931,
       devtools: 2549,
       serialization: 4964,
-      presets: 834,
       'ng-forms': 3462,
     };
 

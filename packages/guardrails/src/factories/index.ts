@@ -46,7 +46,7 @@ function resolveGuardrailsConfig<T extends Record<string, unknown>>(
   }
 
   return {
-    budgets: { maxUpdateTime: 16, maxRecomputations: 100 },
+    budgets: { maxUpdateTime: 16 },
     hotPaths: { enabled: true, threshold: 10 },
     reporting: { console: true },
   } as GuardrailsConfig<T>;
@@ -147,7 +147,6 @@ export function createPerformanceTree<T extends Record<string, unknown>>(
     guardrails: {
       budgets: {
         maxUpdateTime: 8,
-        maxRecomputations: 200,
       },
       hotPaths: { threshold: 50 },
       memoryLeaks: { enabled: false },
@@ -209,7 +208,6 @@ export function createTestTree<T extends Record<string, unknown>>(
       mode: 'throw',
       budgets: {
         maxUpdateTime: 5,
-        maxRecomputations: 50,
       },
       customRules: [
         rules.noFunctionsInState() as unknown as GuardrailRule<T>,

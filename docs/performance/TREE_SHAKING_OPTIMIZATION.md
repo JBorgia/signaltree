@@ -251,7 +251,7 @@ Or manually test:
 npx esbuild test.ts --bundle --minify --drop:console
 
 # Check what's included
-cat bundle.js | grep -o 'batching\|memoization' | sort | uniq
+cat bundle.js | grep -o 'batching\|devTools\|timeTravel' | sort | uniq
 ```
 
 ## Expected Bundle Sizes (Production, gzipped)

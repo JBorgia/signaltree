@@ -457,14 +457,13 @@ describe('Guardrails Enhancer', () => {
     enhanced.__guardrails?.dispose();
   });
 
-  it('exceeds recomputation budget when nested updates spike recomputations', async () => {
+  it('tracks update count under nested update spikes', async () => {
     const tree = createMockTree({
       nested: { a: 1, b: 1, c: 1 },
     });
 
     const enhancer = guardrails({
       ...TEST_CONFIG_BASE,
-      budgets: { maxRecomputations: 1 },
       reporting: { console: false, interval: 50 },
     });
 

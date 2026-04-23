@@ -1,7 +1,9 @@
 /* eslint-disable no-useless-catch */
 /* eslint-disable no-empty */
 // Playwright-based exporter for demo app.
-// Supports MEMO_MODES (comma separated) or MEMO_MODE (single) env var to iterate memoization modes.
+// Note: MEMO_MODE/MEMO_MODES env vars are accepted for backward compatibility
+// with prior versions but have no effect since the memoization enhancer was
+// removed in v10. The browser-side runtime ignores them.
 // Optional environment variables:
 //   DEMO_URL - demo base URL (default http://localhost:4200)
 //   LIBRARY  - run only libraries that fuzzy-match this string

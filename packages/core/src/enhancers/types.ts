@@ -6,8 +6,6 @@
 export {
   BatchingMethods,
   BatchingConfig,
-  MemoizationMethods,
-  MemoizationConfig,
   TimeTravelMethods,
   TimeTravelConfig,
   EffectsMethods,

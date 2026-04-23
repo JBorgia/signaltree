@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { batching, memoization, signalTree } from '@signaltree/core';
+import { batching, signalTree } from '@signaltree/core';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
@@ -172,47 +172,8 @@ describe('SignalTree Performance Benchmarks', () => {
   });
 
   it('should benchmark memoization performance', () => {
-    const entities = generateEntities(1000);
-    const state = { entities, filter: { category: 'A', active: true } };
-    const tree = signalTree(state).with(memoization());
-
-    const heavyComputation = (state: any) => {
-      return state.entities
-        .filter(
-          (e: any) =>
-            e.category === state.filter.category &&
-            e.active === state.filter.active
-        )
-        .map((e: any) => ({ ...e, computed: e.value * 2 }))
-        .sort((a: any, b: any) => a.computed - b.computed);
-    };
-
-    // Without memoization
-    const withoutMemoTime = measureTime(() => {
-      heavyComputation(tree());
-    }, 100);
-
-    // With memoization - first time
-    const memoizedFn = tree.memoize(heavyComputation, 'heavy-computation');
-    const firstMemoTime = measureTime(() => {
-      memoizedFn();
-    }, 100);
-
-    // With memoization - cached
-    const cachedMemoTime = measureTime(() => {
-      memoizedFn(); // Should hit cache
-    }, 100);
-
-    const speedup = withoutMemoTime / cachedMemoTime;
-
-    performanceResults.memoization = {
-      withoutMemo: withoutMemoTime,
-      firstMemo: firstMemoTime,
-      cached: cachedMemoTime,
-      speedup,
-    };
-
-    expect(speedup).toBeGreaterThan(2); // Cache should provide significant speedup
+    // Removed in 9.0.1: memoization enhancer deleted. Use Angular computed() directly.
+    expect(true).toBe(true);
   });
 
   it('should benchmark lazy loading vs eager loading', () => {

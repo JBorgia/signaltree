@@ -28,7 +28,7 @@ const testCases = [
       console.log(tree.$.count());
     `,
     expectedFiles: ['signal-tree.js', 'utils.js', 'constants.js'],
-    shouldNotInclude: ['batching', 'memoization', 'devtools'],
+    shouldNotInclude: ['batching', 'devtools'],
   },
   {
     name: 'Core + one enhancer (batching)',
@@ -37,7 +37,7 @@ const testCases = [
       const tree = signalTree({ count: 0 }).with(batching());
     `,
     expectedFiles: ['signal-tree.js', 'batching.js'],
-    shouldNotInclude: ['memoization', 'devtools', 'serialization'],
+    shouldNotInclude: ['devtools', 'serialization'],
   },
   {
     name: 'Subpath import (avoids barrel)',
@@ -47,7 +47,7 @@ const testCases = [
       const tree = signalTree({ count: 0 }).with(batching());
     `,
     expectedFiles: ['signal-tree.js', 'batching.js'],
-    shouldNotInclude: ['memoization', 'devtools', 'serialization'],
+    shouldNotInclude: ['devtools', 'serialization'],
   },
 ];
 
@@ -106,13 +106,11 @@ function analyzeBundle(testCase) {
     const includedEnhancers = [];
     const enhancers = [
       'batching',
-      'memoization',
       'devtools',
       'serialization',
       'middleware',
       'entities',
       'time-travel',
-      'presets',
       'computed',
     ];
 

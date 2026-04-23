@@ -95,29 +95,23 @@ store.$.loadingState.isLoading(); // Signal<boolean>
 Enhancers add capabilities via `.with()`. Each is opt-in and tree-shakeable. Duplicate detection prevents applying the same enhancer twice.
 
 ```typescript
-import { signalTree, batching, memoization, devTools, timeTravel } from '@signaltree/core';
+import { signalTree, batching, devTools, timeTravel } from '@signaltree/core';
 
 const store = signalTree({ count: 0, items: [] })
   .with(batching()) // Batch change notifications
-  .with(memoization({ preset: 'shallow' })) // Shallow-equality caching
   .with(timeTravel({ maxHistory: 50 })) // Undo/redo with 50-step history
   .with(devTools()); // Redux DevTools integration
 ```
 
-| Enhancer          | Purpose                                                           |
-| ----------------- | ----------------------------------------------------------------- |
-| `batching()`      | Coalesce change-detection notifications into microtask batches    |
-| `memoization()`   | Cache selectors with configurable equality, TTL, and LRU eviction |
-| `timeTravel()`    | Undo/redo with configurable history depth                         |
-| `devTools()`      | Redux DevTools integration with path-based actions                |
-| `serialization()` | JSON serialize/deserialize with type preservation                 |
-| `persistence()`   | Auto-save/load to localStorage, IndexedDB, or custom adapters     |
+| Enhancer          | Purpose                                                        |
+| ----------------- | -------------------------------------------------------------- |
+| `batching()`      | Coalesce change-detection notifications into microtask batches |
+| `timeTravel()`    | Undo/redo with configurable history depth                      |
+| `devTools()`      | Redux DevTools integration with path-based actions             |
+| `serialization()` | JSON serialize/deserialize with type preservation              |
+| `persistence()`   | Auto-save/load to localStorage, IndexedDB, or custom adapters  |
 
-Memoization supports presets (`'shallow'`, `'deep'`, `'selector'`, `'computed'`, `'lightweight'`, `'highFrequency'`) or full config:
-
-```typescript
-memoization({ equality: 'shallow', maxCacheSize: 1000, ttl: 60000, enableLRU: true });
-```
+> **9.0.1:** The `memoization()` enhancer was removed. Use Angular's built-in `computed()` — it already caches by reference equality and adds no runtime overhead.
 
 ## Derived State
 

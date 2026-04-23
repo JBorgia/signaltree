@@ -139,13 +139,6 @@ export class NavigationComponent {
       category: 'examples',
     },
     {
-      id: 'memoization',
-      title: 'Memoization',
-      description: 'Cache expensive computations',
-      route: '/memoization',
-      category: 'examples',
-    },
-    {
       id: 'persistence',
       title: 'Persistence',
       description: 'Persist state deliberately to local storage',

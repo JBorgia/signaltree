@@ -1,9 +1,9 @@
 import { computed } from '@angular/core';
 import { describe, expect, it, vi } from 'vitest';
 
+import { batching } from '../../enhancers/batching/batching';
 import { devTools } from '../../enhancers/devtools/devtools';
 import { entities } from '../../enhancers/entities/entities';
-import { memoization } from '../../enhancers/memoization/memoization';
 import { signalTree } from '../signal-tree';
 import { entityMap } from '../types';
 
@@ -805,7 +805,7 @@ describe('derived() marker pattern', () => {
       doubled: computed(() => $.count() * 2),
     }));
 
-    const w1 = base.with(memoization());
+    const w1 = base.with(batching());
     const w2 = w1.with(devTools({ enabled: false }));
 
     expect(base.$.doubled).toBe(w1.$.doubled);

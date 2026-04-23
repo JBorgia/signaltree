@@ -416,17 +416,18 @@ effect(() => {
 // Best Practices:
 // 1. Use computed() for derived state that depends on signals
 // 2. Keep computations pure - no side effects
-// 3. Leverage automatic memoization for expensive operations
+// 3. Angular's computed() automatically caches results
 // 4. Chain computed values for complex transformations
 // 5. Use factory functions for parameterized computations
 ```
 
-### Performance optimization with memoization
+### Performance optimization with computed()
 
-Computed values become even more powerful with the built-in memoization enhancer:
+Angular's built-in `computed()` provides automatic memoization — a result is cached until one of the signals it reads from changes. No additional enhancer is required:
 
 ```typescript
-import { signalTree, memoization } from '@signaltree/core';
+import { computed } from '@angular/core';
+import { signalTree } from '@signaltree/core';
 
 const tree = signalTree({
   items: Array.from({ length: 10000 }, (_, i) => ({
@@ -434,9 +435,9 @@ const tree = signalTree({
     value: Math.random(),
     category: `cat-${i % 10}`,
   })),
-}).with(memoization());
+});
 
-// Expensive computation - automatically cached by memoization enhancer
+// Expensive computation - automatically cached by Angular's computed()
 const expensiveComputation = computed(() => {
   return tree.$.items()
     .filter((item) => item.value > 0.5)
@@ -444,8 +445,10 @@ const expensiveComputation = computed(() => {
 });
 
 // The computation only runs when tree.$.items() actually changes
-// Subsequent calls return cached result
+// Subsequent calls return the cached result
 ```
+
+> **9.0.1 note:** The `memoization()` enhancer was removed. Angular's `computed()` already memoizes; the enhancer added no value on top of it.
 
 ### Advanced usage (full state tree)
 
@@ -644,9 +647,8 @@ All enhancers are exported directly from `@signaltree/core`:
 **Performance Enhancers:**
 
 - `batching()` - Batch updates to reduce recomputation and rendering
-- `memoization()` - Intelligent caching for expensive computations
-- `highPerformanceBatching()` - Advanced batching for high-frequency updates
-- `withHighPerformanceMemoization()` - Optimized memoization for large state trees
+
+> **9.0.1 note:** The `memoization()` enhancer and all preset variants were removed. Use Angular's built-in `computed()` — it provides equivalent memoization with zero additional runtime cost.
 
 **Data Management:**
 
@@ -660,11 +662,6 @@ All enhancers are exported directly from `@signaltree/core`:
 
 - `devTools()` - Redux DevTools auto-connect, path actions, and time-travel dispatch
 - `withTimeTravel()` - Undo/redo functionality
-
-**Presets:**
-
-- `createDevTree()` - Pre-configured development setup
-- `TREE_PRESETS` - Common configuration patterns
 
 #### Additional Packages
 
@@ -691,7 +688,7 @@ const tree = signalTree({ count: 0 }).with(
 **Performance-Focused Stack:**
 
 ```typescript
-import { signalTree, batching, memoization, entities } from '@signaltree/core';
+import { signalTree, batching, entities } from '@signaltree/core';
 
 const tree = signalTree({
   products: entityMap<Product>(),
@@ -756,27 +753,9 @@ Enhancers can declare metadata for automatic dependency resolution:
 // Enhancers are automatically ordered based on requirements
 const tree = signalTree(state).with(
   devTools(), // Requires: core, provides: debugging
-  batching(), // Requires: core, provides: batching
-  memoization() // Requires: batching, provides: caching
+  batching() // Requires: core, provides: batching
 );
-// Automatically ordered: batching -> memoization -> devtools
-```
-
-#### Quick Start with Presets
-
-For common patterns, use presets that combine multiple enhancers:
-
-```typescript
-import { createDevTree, TREE_PRESETS } from '@signaltree/core';
-
-// Development preset includes: batching, memoization, devtools, time-travel
-const devTree = createDevTree({
-  products: [] as Product[],
-  cart: { items: [], total: 0 },
-});
-
-// Or use preset configurations
-const customTree = signalTree(state, TREE_PRESETS.DASHBOARD);
+// Automatically ordered: batching -> devtools
 ```
 
 #### Core Stubs
@@ -1548,15 +1527,14 @@ tree.effect(() => console.log('State changed'));
 ### Performance-Enhanced Composition
 
 ```typescript
-import { signalTree, batching, memoization } from '@signaltree/core';
+import { signalTree, batching } from '@signaltree/core';
 
 // Add performance optimizations
 const tree = signalTree({
   products: [] as Product[],
   filters: { category: '', search: '' },
 }).with(
-  batching(), // Batch updates for optimal rendering
-  memoization() // Cache expensive computations
+  batching() // Batch updates for optimal rendering
 );
 
 // Now supports batched updates
@@ -1565,7 +1543,7 @@ tree.batchUpdate((state) => ({
   filters: { category: 'electronics', search: '' },
 }));
 
-// Expensive computations are automatically cached
+// Angular's computed() automatically caches derived values
 const filteredProducts = computed(() => {
   return tree.$.products()
     .filter((p) => p.category.includes(tree.$.filters.category()))
@@ -1771,20 +1749,20 @@ const tree = signalTree(state).with(
 ### Preset-Based Composition
 
 ```typescript
-import { createDevTree, TREE_PRESETS } from '@signaltree/core';
+import { signalTree, batching, devTools, withTimeTravel } from '@signaltree/core';
 
-// Use presets for common patterns
-const devTree = createDevTree({
+// Compose the enhancers you actually need
+const devTree = signalTree({
   products: [],
   cart: { items: [], total: 0 },
   user: null,
-});
-// Includes: batching, memoization, devtools, time-travel
-
-// Or use preset configurations directly
-const customTree = signalTree(state, TREE_PRESETS.PERFORMANCE);
-// Includes: batching, memoization optimizations
+})
+  .with(batching())
+  .with(devTools())
+  .with(withTimeTravel());
 ```
+
+> **9.0.1 note:** Preset factories (`createDevTree`, `TREE_PRESETS`, etc.) were removed. Compose enhancers directly with `.with()`.
 
 ### Measuring bundle size
 
@@ -1819,7 +1797,7 @@ if (isDevelopment) {
 }
 
 if (needsPerformance) {
-  tree = tree.with(batching(), memoization());
+  tree = tree.with(batching());
 }
 
 if (needsTimeTravel) {
@@ -2102,10 +2080,10 @@ tree.destroy(); // Cleanup resources
 SignalTree Core includes all enhancers built-in:
 
 ```typescript
-import { signalTree, batching, memoization, withTimeTravel } from '@signaltree/core';
+import { signalTree, batching, withTimeTravel } from '@signaltree/core';
 
 // All enhancers available from @signaltree/core
-const tree = signalTree(initialState).with(batching(), memoization(), withTimeTravel());
+const tree = signalTree(initialState).with(batching(), withTimeTravel());
 ```
 
 ### Available enhancers
@@ -2113,13 +2091,10 @@ const tree = signalTree(initialState).with(batching(), memoization(), withTimeTr
 All enhancers are included in `@signaltree/core`:
 
 - **batching()** - Batch multiple updates for better performance
-- **memoization()** - Intelligent caching & performance optimization
 - **entities()** - Advanced entity management & CRUD operations
 - **devTools()** - Redux DevTools integration for debugging
 - **withTimeTravel()** - Undo/redo functionality & state history
 - **serialization()** - State persistence & SSR support
-- **createDevTree()** - Pre-configured development setup
-- **TREE_PRESETS** - Common configuration patterns (PERFORMANCE, DASHBOARD, etc.)
 
 ## When to use core only
 
@@ -2133,7 +2108,7 @@ Perfect for:
 
 Consider enhancers when you need:
 
-- ⚡ Performance optimization (batching, memoization)
+- ⚡ Performance optimization (batching)
 - 🐛 Advanced debugging (devTools, withTimeTravel)
 - 📦 Entity management (entities)
 
@@ -2281,7 +2256,6 @@ All enhancers are now consolidated in the core package. The following features a
 ### Performance & Optimization
 
 - **batching()** (+1.27KB gzipped) - Batch multiple updates for better performance
-- **memoization()** (+2.33KB gzipped) - Intelligent caching & performance optimization
 
 ### Advanced Features
 
@@ -2295,8 +2269,6 @@ All enhancers are now consolidated in the core package. The following features a
 ### Integration & Convenience
 
 - **serialization()** (+0.84KB gzipped) - State persistence & SSR support
-- **ecommercePreset()** - Pre-configured setups for e-commerce applications
-- **dashboardPreset()** - Pre-configured setups for dashboard applications
 
 ### Quick Start with Extensions
 
@@ -2310,13 +2282,10 @@ npm install @signaltree/core
 import {
   signalTree,
   batching,
-  memoization,
   entities,
   devTools,
   withTimeTravel,
-  serialization,
-  ecommercePreset,
-  dashboardPreset
+  serialization
 } from '@signaltree/core';
 ```
 
@@ -2642,7 +2611,7 @@ export default {
 
 **Start with just `@signaltree/core`** - it includes comprehensive enhancers for most applications:
 
-- Performance optimization (batching, memoization)
+- Performance optimization (batching)
 - Data management (entities, async operations)
 - Development tools (devtools, time-travel)
 - State persistence (serialization)

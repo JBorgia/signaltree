@@ -3,9 +3,14 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { createSelector } from '@ngrx/store';
 import {
   batching,
-  memoization,
   signalTree,
 } from '@signaltree/core';
+
+// 9.0.1: memoization enhancer was removed. No-op stub keeps benchmark code shape.
+const memoization =
+  (_config?: unknown) =>
+  <T>(t: T): T =>
+    t;
 
 import { PerformanceGraphComponent } from '../../../shared/performance-graph/performance-graph.component';
 import { BenchmarkCalibrationService } from '../benchmark-calibration.service';

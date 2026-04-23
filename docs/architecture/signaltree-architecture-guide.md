@@ -2651,8 +2651,7 @@ const tree = signalTree<AppState>({
   plants: entityMap<Plant>(),
 })
   .with(batching())
-  .with(devTools())
-  .with(memoization()); // ❌ "Too many enhancers!"
+  .with(devTools()); // ❌ "Too many enhancers!"
 // Note: v7+ auto-processes markers (entityMap, status, stored), no explicit enhancer needed
 ```
 
@@ -2660,15 +2659,14 @@ const tree = signalTree<AppState>({
 
 Enhancers are designed to compose. Using multiple enhancers that each serve a purpose is not over-engineering—it's using the library correctly.
 
-| Enhancer        | Purpose                | Over-engineering?                     |
-| --------------- | ---------------------- | ------------------------------------- |
-| `entityMap()`   | Entity collections     | No—auto-processed marker in v7+       |
-| `status()`      | Loading/error state    | No—auto-processed marker in v7+       |
-| `stored()`      | Persist to storage     | No—auto-processed marker in v7+       |
-| `batching()`    | Batch multiple updates | No—reduces re-renders                 |
-| `timeTravel()`  | User undo/redo         | No—if you need undo                   |
-| `devTools()`    | Debugging in dev mode  | No—tree-shakes in prod                |
-| `memoization()` | Cache computed values  | No—if you have expensive computations |
+| Enhancer       | Purpose                | Over-engineering?               |
+| -------------- | ---------------------- | ------------------------------- |
+| `entityMap()`  | Entity collections     | No—auto-processed marker in v7+ |
+| `status()`     | Loading/error state    | No—auto-processed marker in v7+ |
+| `stored()`     | Persist to storage     | No—auto-processed marker in v7+ |
+| `batching()`   | Batch multiple updates | No—reduces re-renders           |
+| `timeTravel()` | User undo/redo         | No—if you need undo             |
+| `devTools()`   | Debugging in dev mode  | No—tree-shakes in prod          |
 
 **What IS Over-Engineering:**
 
@@ -3085,7 +3083,7 @@ this._store.users.loadUsers$().subscribe();  // Use store.ops.users instead
 ┌───────────────────────────────▼─────────────────────────────┐
 │                   Signal Tree (app-tree.ts)                 │
 │  • Base state from state/*.state.ts                         │
-│  • Enhancers: devTools, batching, memoization, timeTravel   │
+│  • Enhancers: devTools, batching, timeTravel               │
 │  • Derived tiers: tier-1 → tier-2 → tier-3 → tier-4 → tier-5│
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -3593,8 +3591,8 @@ Start
   ├── Do you have many rapid writes in a single turn?
   │     └── YES → batching()
   │
-  ├── Do you need deep/shallow equality instead of reference equality?
-  │     └── YES → memoization({ equality: 'shallow' | 'deep' })
+  ├── Do you have expensive derivations?
+  │     └── YES → Angular `computed()` (already memoizes by reference)
   │
   ├── Do you need undo/redo?
   │     └── YES → timeTravel()
@@ -3611,14 +3609,14 @@ Start
 
 **Common combinations:**
 
-| Use Case                      | Enhancers                                             |
-| ----------------------------- | ----------------------------------------------------- |
-| Feature store (simple)        | None                                                  |
-| Feature store (with batching) | `batching()`                                          |
-| Form with undo                | `timeTravel()`                                        |
-| Persisted user preferences    | `persistence({ key: 'prefs' })`                       |
-| Development debugging         | `devTools()`                                          |
-| High-frequency dashboard      | `batching()` + `memoization({ equality: 'shallow' })` |
+| Use Case                      | Enhancers                       |
+| ----------------------------- | ------------------------------- |
+| Feature store (simple)        | None                            |
+| Feature store (with batching) | `batching()`                    |
+| Form with undo                | `timeTravel()`                  |
+| Persisted user preferences    | `persistence({ key: 'prefs' })` |
+| Development debugging         | `devTools()`                    |
+| High-frequency dashboard      | `batching()`                    |
 
 ---
 
@@ -3630,7 +3628,6 @@ Start
 // ❌ Don't add every enhancer "just in case"
 const tree = signalTree(state)
   .with(batching())
-  .with(memoization())
   .with(timeTravel())
   .with(devTools())
   .with(persistence({ key: 'all' }));
@@ -3642,11 +3639,12 @@ const tree = signalTree(state);
 ### 2. Duplicating Angular's work
 
 ```typescript
-// ❌ Using memoization for something computed() already handles
-const tree = signalTree({ items: [1, 2, 3] }).with(memoization()); // Angular's computed() already memoizes by reference
+// ❌ Rolling your own memoization layer — Angular's computed() already caches
+// by reference equality for free.
 
-// ✅ Only use memoization when you need deep/shallow equality
-const tree = signalTree({ items: [1, 2, 3] }).with(memoization({ equality: 'deep' })); // Useful when objects are recreated
+// ✅ Use Angular computed() directly for derived values
+import { computed } from '@angular/core';
+const totalItems = computed(() => tree.$.items().length);
 ```
 
 ### 3. Giant monolithic trees

@@ -1,3 +1,42 @@
+## 9.0.1
+
+### ⚠️ Breaking Changes
+
+> These changes are technically breaking but shipped in a patch because v9.0.0 was only just released and usage of the affected APIs is minimal. If you were using `memoization()` or preset factories on 9.0.0, pin to `9.0.0` and migrate on your own schedule.
+
+- **core:** Removed the `memoization` enhancer and all preset factories. Use Angular's built-in `computed()` for memoization — it provides equivalent caching with zero additional runtime cost and smaller bundle size.
+  - Removed: `memoization()` enhancer and its config type `MemoizationConfig`
+  - Removed: `MemoizationMethods` type
+  - Removed: preset factories `shallowMemoization()`, `lightweightMemoization()`, `computedMemoization()`, `selectorMemoization()`, `highPerformanceMemoization()`
+  - Removed: subpath export `@signaltree/core/presets`
+  - Migration: replace `tree.with(memoization())` + selector functions with `computed(() => tree.$.path())` directly in your component or service.
+- **guardrails:** Removed the `maxRecomputations` budget and all recomputation tracking from `GuardrailsConfig.budgets`. The feature depended on the memoization enhancer's internal accounting. `RuntimeStats.recomputationCount` and `recomputationsPerSecond` remain in the public type (always `0`) for backwards-compatible structural consumers.
+- **workspace:** Dropped the orphan `@signaltree/types` and `@signaltree/utils` tsconfig path aliases. These packages were never published.
+
+### 🧭 Migration
+
+Before (9.0.0):
+
+```ts
+import { signalTree, memoization } from '@signaltree/core';
+
+const tree = signalTree(initial).with(memoization());
+```
+
+After (9.0.1):
+
+```ts
+import { computed } from '@angular/core';
+import { signalTree } from '@signaltree/core';
+
+const tree = signalTree(initial);
+const expensive = computed(() => heavyDerive(tree.$.data()));
+```
+
+Full guide: [docs/guides/MIGRATION.md](docs/guides/MIGRATION.md#901).
+
+---
+
 ## 9.0.0
 
 ### ⚠️ Breaking Changes

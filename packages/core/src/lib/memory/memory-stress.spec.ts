@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { signalTree } from '../signal-tree';
 import { batching } from '../../enhancers/batching/batching';
-import { memoization } from '../../enhancers/memoization/memoization';
 
 /**
  * Phase 6: Memory stress tests
@@ -48,8 +47,7 @@ describe('Memory stress tests', () => {
   it('should create and destroy 100 trees with enhancers without error', () => {
     for (let i = 0; i < 100; i++) {
       const tree = signalTree({ count: i, name: `tree_${i}` })
-        .with(batching())
-        .with(memoization());
+        .with(batching());
 
       // Use it
       tree.$.count.set(i + 1);

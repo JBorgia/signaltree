@@ -449,7 +449,7 @@ function create<T extends object>(
   /**
    * Apply a single enhancer to this SignalTree instance and return the enhanced tree.
    *
-   * Enhancers extend the tree with additional capabilities (batching, memoization, time travel, dev tools, entities, serialization, etc).
+   * Enhancers extend the tree with additional capabilities (batching, time travel, dev tools, entities, serialization, etc).
    *
    * Usage:
    * ```ts
@@ -457,7 +457,6 @@ function create<T extends object>(
    * // Chain multiple enhancers:
    * const fullyEnhanced = tree
    *   .with(batching())
-   *   .with(memoization({ maxCacheSize: 500 }))
    *   .with(timeTravel({ maxHistorySize: 100 }))
    *   .with(devTools({ treeName: 'MyTree' }));
    * ```
@@ -468,10 +467,6 @@ function create<T extends object>(
    *   - Batches change detection notifications for performance.
    *   - Signal writes are always synchronous.
    *   - Options: `enabled`, `notificationDelayMs`.
-   *
-   * - `memoization(config?: MemoizationConfig)`
-   *   - Adds memoized selectors and cache management.
-   *   - Options: `maxCacheSize`, `ttl`, `enableLRU`, `equality`, `enabled`.
    *
    * - `timeTravel(config?: TimeTravelConfig)`
    *   - Enables undo/redo and state history.
@@ -492,7 +487,7 @@ function create<T extends object>(
    * @template R The return type of the enhancer (usually the enhanced tree).
    * @param enhancer A function that takes the current tree and returns an enhanced tree.
    * @returns The enhanced tree with additional methods or capabilities.
-   * @see BatchingConfig, MemoizationConfig, TimeTravelConfig, DevToolsConfig, EntitiesEnhancerConfig, SerializationConfig
+   * @see BatchingConfig, TimeTravelConfig, DevToolsConfig, EntitiesEnhancerConfig, SerializationConfig
    */
   Object.defineProperty(tree, 'with', {
     value: function <R>(enhancer: (tree: ISignalTree<T>) => R): R {

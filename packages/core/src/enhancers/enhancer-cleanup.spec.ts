@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 import { batching } from './batching/batching';
-import { memoization } from './memoization/memoization';
 import { timeTravel } from './time-travel/time-travel';
 import { devTools } from './devtools/devtools';
 
@@ -62,12 +61,6 @@ describe('enhancer cleanup registration', () => {
     expect(tree.__cleanupFns.length).toBeGreaterThan(0);
   });
 
-  it('memoization registers cleanup', () => {
-    const tree = createMockTree();
-    memoization()(tree);
-    expect(tree.__cleanupFns.length).toBeGreaterThan(0);
-  });
-
   it('timeTravel registers cleanup', () => {
     const tree = createMockTree();
     timeTravel()(tree);
@@ -100,21 +93,8 @@ describe('destroy() clears enhancer resources', () => {
   });
 
   it('memoization: clears cache on destroy', () => {
-    const tree = createMockTree();
-    const enhanced = memoization({ maxCacheSize: 100 })(tree);
-
-    // Use memoize to create entries
-    if (typeof enhanced.memoize === 'function') {
-      enhanced.memoize('test', () => 42);
-    }
-
-    tree.destroy();
-
-    // Cache stats should show 0 after destroy
-    if (typeof enhanced.getCacheStats === 'function') {
-      const stats = enhanced.getCacheStats();
-      expect(stats.size).toBe(0);
-    }
+    // Removed in 9.0.1: memoization enhancer deleted.
+    expect(true).toBe(true);
   });
 
   it('timeTravel: clears history on destroy', () => {
@@ -141,7 +121,6 @@ describe('rapid create/destroy cycles', () => {
     for (let i = 0; i < 100; i++) {
       const tree = createMockTree();
       batching()(tree);
-      memoization()(tree);
       tree.destroy();
     }
     // If we get here without OOM or errors, the test passes

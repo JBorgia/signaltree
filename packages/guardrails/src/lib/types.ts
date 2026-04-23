@@ -24,8 +24,6 @@ export interface GuardrailsConfig<T = Record<string, unknown>> {
     maxUpdateTime?: number;
     /** Max memory in MB (default: 50) */
     maxMemory?: number;
-    /** Max recomputations per second (default: 100) */
-    maxRecomputations?: number;
     /** Max tree nesting depth (default: 10) */
     maxTreeDepth?: number;
     /** Alert when % of budget used (default: 0.8) */
@@ -245,8 +243,6 @@ export interface BudgetStatus {
   updateTime: BudgetItem;
   /** Memory budget */
   memory: BudgetItem;
-  /** Recomputation budget */
-  recomputations: BudgetItem;
 }
 
 export interface BudgetItem {

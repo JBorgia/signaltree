@@ -284,16 +284,16 @@ import {
   signalTree,
   devTools,
   batching,
-  memoization,
   timeTravel
 } from '@signaltree/core';
 
 const store = signalTree({ ... })
   .with(devTools({ treeName: 'AppStore' }))  // Redux DevTools integration
   .with(batching())                           // Batch multiple updates
-  .with(memoization())                        // Cache computed values
   .with(timeTravel({ maxHistorySize: 50 })); // Undo/redo support
 ```
+
+> **9.0.1:** The `memoization()` enhancer was removed. Use Angular's built-in `computed()` for memoized derivations.
 
 ### Available Enhancers
 
@@ -301,7 +301,6 @@ const store = signalTree({ ... })
 | ----------------- | ----------------------------- | ------------------------- |
 | `devTools()`      | Redux DevTools integration    | Development/debugging     |
 | `batching()`      | Batch multiple signal updates | Performance optimization  |
-| `memoization()`   | Cache expensive computations  | Large derived state       |
 | `timeTravel()`    | Undo/redo functionality       | Form editing, canvas apps |
 | `serialization()` | State persistence             | App reload persistence    |
 
@@ -837,7 +836,7 @@ store.$.users.byId('1'); // Error: expected number key
 
 1. **Use `entityMap`** for collections > 10 items (O(1) lookups)
 2. **Use `batching()`** when updating multiple signals
-3. **Use `memoization()`** for expensive derived computations
+3. **Use Angular `computed()`** for expensive derived computations (memoization enhancer was removed in 9.0.1)
 4. **Avoid reading `.all()` when you need `.byId()`**
 5. **Keep derived computations shallow** - avoid deep nesting
 

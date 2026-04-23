@@ -17,7 +17,6 @@ Each enhancer adds cost. We measure:
 
 - **Disabled enhancer cost**: Even `enabled: false` has a code path. Should be near-zero.
 - **Batching overhead**: Time added per write when batching is active
-- **Memoization overhead**: Time added per read when memoization is active
 - **DevTools overhead (disabled)**: Cost of the disabled codepath
 
 ## Measurement Rules

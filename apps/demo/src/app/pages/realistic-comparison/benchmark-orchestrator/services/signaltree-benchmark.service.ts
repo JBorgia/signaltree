@@ -2,25 +2,25 @@ import { computed, Injectable } from '@angular/core';
 import {
   batching,
   ENHANCER_META,
-  memoization,
   resolveEnhancerOrder,
   serialization,
   signalTree,
   timeTravel,
 } from '@signaltree/core';
 
-// v9: Local helpers replacing removed convenience aliases.
-// Each wraps the unified enhancer with the equivalent config.
+// 9.0.1: memoization enhancer was removed. Local no-op stubs preserve call sites
+// and benchmark scenario names. Angular `computed()` provides true memoization.
+const noopEnhancer =
+  () =>
+  <T>(t: T): T =>
+    t;
 const highPerformanceBatching = () =>
   batching({ enabled: true, notificationDelayMs: 0 });
-const lightweightMemoization = () =>
-  memoization({ enabled: true, maxCacheSize: 100, equality: 'reference', enableLRU: false });
-const shallowMemoization = () =>
-  memoization({ enabled: true, maxCacheSize: 1000, ttl: 60000, equality: 'shallow', enableLRU: true });
-const computedMemoization = () =>
-  memoization({ equality: 'shallow', maxCacheSize: 100, enableLRU: false });
-const selectorMemoization = () =>
-  memoization({ equality: 'reference', maxCacheSize: 10, enableLRU: false });
+const memoization = noopEnhancer;
+const lightweightMemoization = noopEnhancer;
+const shallowMemoization = noopEnhancer;
+const computedMemoization = noopEnhancer;
+const selectorMemoization = noopEnhancer;
 import { enterprise } from '@signaltree/enterprise';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';

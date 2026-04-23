@@ -23,28 +23,18 @@ tree.$.age.set(30);
 
 **Don't use batching** if you only write one field at a time. The enhancer adds overhead per write.
 
-## Memoization: When It Helps vs. When It's Overhead
+## Memoization: Use Angular's `computed()`
 
-Angular's `computed()` already memoizes by **reference equality**. The memoization enhancer adds a second layer using **deep or shallow equality**.
-
-**Use memoization when:**
-
-- Objects are recreated with the same values (API responses, serialized data)
-- You need `equality: 'shallow'` or `equality: 'deep'` comparison
-
-**Don't use memoization when:**
-
-- You're working with primitives (numbers, strings, booleans)
-- Angular's reference equality is sufficient
-- You're not sure if you need it — you probably don't
+Angular's `computed()` already memoizes by reference equality. In 9.0.1 the `memoization()` enhancer was removed — `computed()` covers every common case with zero additional runtime cost and smaller bundles.
 
 ```typescript
-// ✅ Useful: API returns new object references with same data
-const tree = signalTree(state).with(memoization({ equality: 'shallow' }));
+import { computed } from '@angular/core';
 
-// ❌ Unnecessary: primitives already compare by value in Angular
-const tree = signalTree({ count: 0 }).with(memoization()); // Overhead, no benefit
+const totalItems = computed(() => tree.$.items().length);
+const activeUsers = computed(() => tree.$.users().filter((u) => u.active));
 ```
+
+If you need value-equality semantics (e.g. API responses that rebuild the same object), compare inside the consumer or gate updates at the writer (`set`/`update`) rather than re-adding a cache layer.
 
 ## Selector Sharing
 
@@ -84,10 +74,6 @@ Angular's microtask-based change detection already batches many updates in real 
 ### Thousands of subscribers to one node
 
 Split hot state into separate nodes. Use shared selectors instead of per-component inline computed expressions. Virtualize large lists.
-
-### Heavy computation in memoization
-
-Memoization caches results but still pays the equality check cost on every read. If the equality check itself is expensive (large objects with `equality: 'deep'`), the overhead may exceed the savings.
 
 ## Lazy Trees
 

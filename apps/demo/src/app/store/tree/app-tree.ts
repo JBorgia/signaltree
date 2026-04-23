@@ -1,7 +1,6 @@
 import {
   batching,
   devTools,
-  memoization,
   signalTree,
   WithDerived,
 } from '@signaltree/core';
@@ -79,7 +78,6 @@ export function createAppTree() {
   return signalTree(createBaseState())
     .with(devTools({ treeName: STORE_NAME }))
     .with(batching())
-    .with(memoization())
     .derived(tier1Derived)
     .derived(tier2Derived)
     .derived(tier3Derived);

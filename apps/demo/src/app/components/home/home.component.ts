@@ -82,7 +82,7 @@ export class HomeComponent {
     {
       title: '@signaltree/core',
       description:
-        'The main package: state tree, entity maps, batching, memoization, DevTools, time travel, persistence, and serialization.',
+        'The main package: state tree, entity maps, batching, DevTools, time travel, persistence, and serialization.',
       route: '/docs',
       cta: 'Read core docs →',
       queryParams: { package: 'core' },
