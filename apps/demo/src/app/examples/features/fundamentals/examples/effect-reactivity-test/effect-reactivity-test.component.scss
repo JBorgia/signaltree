@@ -27,8 +27,8 @@ h3 {
 .haulers-panel,
 .log-panel,
 .conclusion-card {
-  background: #f9f9f9;
-  border: 1px solid #e0e0e0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 20px;
@@ -40,15 +40,15 @@ h3 {
 }
 
 .warning-callout {
-  background: #fff3cd;
-  border: 1px solid #ffc107;
+  background: var(--color-warning-100);
+  border: 1px solid var(--color-warning-500);
   border-radius: 6px;
   padding: 16px;
   margin-top: 16px;
 }
 
 .warning-callout h3 {
-  color: #856404;
+  color: var(--color-warning-600);
   margin-bottom: 8px;
 }
 
@@ -67,38 +67,38 @@ h3 {
   background: white;
   padding: 12px;
   border-radius: 6px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
 }
 
 .state-item .label {
   display: block;
   font-size: 0.85rem;
-  color: #666;
+  color: var(--text-secondary);
   margin-bottom: 4px;
 }
 
 .state-item .value {
   font-size: 1.2rem;
   font-weight: bold;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .counter-item {
   background: white;
   padding: 16px;
   border-radius: 6px;
-  border: 2px solid #ddd;
+  border: 2px solid var(--border-color);
   text-align: center;
 }
 
 .counter-item.success {
-  border-color: #28a745;
-  background: #d4edda;
+  border-color: var(--color-success-500);
+  background: var(--color-success-100);
 }
 
 .counter-item.warning {
-  border-color: #dc3545;
-  background: #f8d7da;
+  border-color: var(--color-danger-500);
+  background: var(--color-danger-100);
 }
 
 .counter-label {
@@ -120,23 +120,23 @@ h3 {
 }
 
 .success .counter-status {
-  color: #155724;
+  color: var(--color-success-600);
 }
 
 .warning .counter-status {
-  color: #721c24;
+  color: var(--color-danger-600);
 }
 
 .help-text {
   font-size: 0.85rem;
-  color: #666;
+  color: var(--text-secondary);
   margin-bottom: 16px;
 }
 
 .action-group {
   margin-bottom: 20px;
   padding-bottom: 20px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .action-group:last-of-type {
@@ -147,7 +147,7 @@ h3 {
 
 .action-description {
   font-size: 0.85rem;
-  color: #666;
+  color: var(--text-secondary);
   margin-top: 8px;
   margin-bottom: 0;
 }
@@ -167,48 +167,48 @@ button {
 }
 
 .btn-success {
-  background: #28a745;
+  background: var(--color-success-500);
   color: white;
 }
 
 .btn-success:hover {
-  background: #218838;
+  background: var(--color-success-600);
 }
 
 .btn-warning {
-  background: #ffc107;
-  color: #212529;
+  background: var(--color-warning-500);
+  color: var(--text-primary);
 }
 
 .btn-warning:hover {
-  background: #e0a800;
+  background: var(--color-warning-600);
 }
 
 .btn-danger {
-  background: #dc3545;
+  background: var(--color-danger-500);
   color: white;
 }
 
 .btn-danger:hover {
-  background: #c82333;
+  background: var(--color-danger-600);
 }
 
 .btn-primary {
-  background: #007bff;
+  background: var(--color-primary);
   color: white;
 }
 
 .btn-primary:hover {
-  background: #0069d9;
+  background: var(--primary-dark);
 }
 
 .btn-secondary {
-  background: #6c757d;
+  background: var(--color-neutral-500);
   color: white;
 }
 
 .btn-secondary:hover {
-  background: #5a6268;
+  background: var(--color-neutral-600);
 }
 
 .hauler-list {
@@ -220,14 +220,14 @@ button {
 .hauler-list li {
   padding: 8px 12px;
   background: white;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   margin-bottom: 8px;
 }
 
 .log-container {
-  background: #1e1e1e;
-  color: #d4d4d4;
+  background: var(--bg-code);
+  color: var(--text-code);
   font-family: 'Consolas', 'Monaco', monospace;
   font-size: 0.85rem;
   padding: 16px;
@@ -250,17 +250,17 @@ button {
 
 .log-entry.regular {
   background: #1a3a1a;
-  border-left: 3px solid #28a745;
+  border-left: 3px solid var(--color-success-500);
 }
 
 .log-entry.signaltree {
   background: #3a1a1a;
-  border-left: 3px solid #dc3545;
+  border-left: 3px solid var(--color-danger-500);
 }
 
 .conclusion-card {
-  background: #e8f4fd;
-  border-color: #b8daff;
+  background: var(--color-info-50);
+  border-color: var(--color-info-200);
 }
 
 .conclusion-card ul {

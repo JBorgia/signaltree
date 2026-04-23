@@ -71,6 +71,23 @@
   --color-error: #ef4444;
   --color-text-secondary: #6b7280;
 
+  /* Compatibility Aliases — referenced by components using shorter var names */
+  --text: var(--text-primary);
+  --border: var(--border-color);
+  --background: #ffffff;
+  --background-secondary: var(--bg-secondary);
+  --card-background: var(--bg-card);
+  --card-shadow: var(--shadow-md);
+  --primary: var(--color-primary);
+  --primary-dark: var(--color-primary-700);
+  --primary-hover: var(--color-primary-700);
+  --secondary: #8b5cf6;
+  --secondary-dark: #7c3aed;
+  --warning-color: var(--color-warning-500);
+  --bg-code: #1e1e1e;
+  --text-code: #d4d4d4;
+  --color-danger-700: #b91c1c;
+
   /* Spacing Scale */
   --space-0: 0;
   --space-1: 0.25rem;

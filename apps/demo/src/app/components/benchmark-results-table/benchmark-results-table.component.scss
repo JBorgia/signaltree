@@ -1,7 +1,7 @@
 .results-table-wrapper {
   overflow-x: auto;
   border-radius: 8px;
-  border: 1px solid var(--border, #e0e0e0);
+  border: 1px solid var(--border-color);
 
   &.compact {
     font-size: 0.8125rem;
@@ -20,7 +20,7 @@
   font-size: 0.875rem;
 
   thead {
-    background: var(--background-secondary, #f5f5f5);
+    background: var(--bg-secondary);
     position: sticky;
     top: 0;
     z-index: 5;
@@ -31,13 +31,13 @@
       font-size: 0.875rem;
       font-weight: 600;
       white-space: nowrap;
-      border-bottom: 2px solid var(--border, #e0e0e0);
+      border-bottom: 2px solid var(--border-color);
 
       &:first-child {
         text-align: left;
         position: sticky;
         left: 0;
-        background: var(--background-secondary, #f5f5f5);
+        background: var(--bg-secondary);
         z-index: 6;
       }
 
@@ -46,7 +46,7 @@
         margin-top: 0.25rem;
         padding: 0.125rem 0.5rem;
         background: rgba(0, 0, 0, 0.05);
-        color: var(--text-secondary, #757575);
+        color: var(--text-secondary);
         border-radius: 4px;
         font-size: 0.7rem;
         font-weight: 500;
@@ -57,7 +57,7 @@
 
   tbody {
     tr {
-      border-bottom: 1px solid var(--border, #e0e0e0);
+border-bottom: 1px solid var(--border-color);
 
       &:hover {
         background: rgba(0, 0, 0, 0.02);
@@ -75,10 +75,10 @@
         &.scenario-name {
           text-align: left;
           font-weight: 500;
-          color: var(--text, #212121);
+          color: var(--text-primary);
           position: sticky;
           left: 0;
-          background: var(--card-background, #ffffff);
+background: var(--bg-card);
           z-index: 1;
           min-width: 200px;
 
@@ -88,7 +88,7 @@
           }
 
           small {
-            color: var(--text-secondary, #757575);
+            color: var(--text-secondary);
             display: block;
           }
         }
@@ -123,16 +123,16 @@
             font-family: 'Courier New', monospace;
             font-weight: 700;
             font-size: 0.9375rem;
-            color: var(--cell-color, var(--text, #212121));
+            color: var(--cell-color, var(--text-primary));
           }
 
           .relative {
             font-size: 0.75rem;
-            color: var(--text-secondary, #757575);
+            color: var(--text-secondary);
             font-weight: 500;
 
             &.winner-margin {
-              color: #2e7d32;
+              color: var(--color-success-600);
               font-weight: 600;
             }
           }
@@ -142,8 +142,8 @@
           display: inline-block;
           margin-top: 0.25rem;
           padding: 0.125rem 0.5rem;
-          background: #fff3e0;
-          color: #ef6c00;
+          background: var(--color-warning-50);
+            color: var(--color-warning-600);
           border-radius: 8px;
           font-size: 0.7rem;
           font-weight: 600;
@@ -156,7 +156,7 @@
 .no-data {
   text-align: center;
   padding: 2rem;
-  color: var(--text-secondary, #757575);
+  color: var(--text-secondary);
   font-style: italic;
 }
 
