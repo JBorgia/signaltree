@@ -8,7 +8,7 @@
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 .sidebar {
   width: 260px;
-  height: 100vh;
+  height: 100%;         /* fill grid row 2 height, not 100vh (topbar sits above) */
   position: sticky;
   top: 0;
   overflow-y: auto;
@@ -178,6 +178,21 @@
 }
 
 // ── Responsive ────────────────────────────────────────────────────────────────
+
+// Desktop: hide sidebar brand header + footer (they live in the app topbar)
+@media (min-width: 1024px) {
+  .sidebar-header,
+  .sidebar-footer {
+    display: none;
+  }
+
+  // Sidebar fills the grid row below the topbar; sticky relative to that row
+  .sidebar {
+    height: calc(100vh - 52px); /* subtract topbar height */
+    top: 0;
+  }
+}
+
 @media (max-width: 1023px) {
   :host {
     // Remove from grid flow on mobile; sidebar + topbar are fixed

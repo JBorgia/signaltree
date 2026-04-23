@@ -24,6 +24,7 @@
             [routerLink]="example.route"
             [queryParams]="example.queryParams || null"
             routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
             class="nav-item"
             [title]="example.description"
             (click)="closeMobileMenu()"
