@@ -8,18 +8,35 @@ import { NavigationComponent } from './components/navigation/navigation.componen
   selector: 'app-root',
   imports: [CommonModule, RouterModule, NavigationComponent],
   template: `
-    <div class="app-container">
+    <div class="app-shell">
       <app-navigation></app-navigation>
-      <main>
+      <main class="main-content">
         <router-outlet></router-outlet>
       </main>
     </div>
   `,
   styles: [
     `
-      .app-container {
+      .app-shell {
+        display: grid;
+        grid-template-columns: 260px 1fr;
         min-height: 100vh;
         background-color: var(--color-background);
+      }
+
+      .main-content {
+        min-width: 0;
+        overflow-x: hidden;
+      }
+
+      @media (max-width: 1023px) {
+        .app-shell {
+          display: block;
+        }
+
+        .main-content {
+          padding-top: 56px;
+        }
       }
     `,
   ],
