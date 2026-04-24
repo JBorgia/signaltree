@@ -5,38 +5,27 @@ description: Guides AI agents enabling the optional build-time @signaltree/calla
 
 # Using @signaltree/callable-syntax
 
-## When to use this package
+Use when a team prefers `tree.$.count(5)` over `tree.$.count.set(5)`. Build-time Babel AST transform — zero runtime bytes. Skip if team is fine with explicit `.set()` / `.update()`.
 
-Reach for `@signaltree/callable-syntax` when a team prefers `tree.$.count(5)` over `tree.$.count.set(5)` and `tree.$.count(n => n + 1)` over `tree.$.count.update(n => n + 1)` — shorter ergonomics at no runtime cost. The transform runs at build time, ships **zero bytes** to the browser, and is strictly opt-in: the same code compiles and runs identically without it, because every call site is rewritten to the canonical `.set()` / `.update()` form before emit. Skip it if the team is happy with explicit `.set()` / `.update()` or if adding another build-step plugin is not worth the DX win.
-
-## Install
+Install (dev dependency):
 
 ```bash
 npm install --save-dev @signaltree/callable-syntax
 ```
 
-Peer range (from `peerDependencies`): `@angular/core ^20`. The package bundles its Babel deps (`@babel/parser`, `@babel/traverse`, `@babel/generator`, `@babel/types`) internally, so no extra Babel install is required in the consuming project.
+Peer: `@angular/core ^20`. Babel deps (`@babel/parser`, `@babel/traverse`, `@babel/generator`, `@babel/types`) bundled internally — don't install separately.
 
-## Mental model
+Transform rules:
+- Rule A: `tree.$.leaf(value)` where `value` is not a fn → `tree.$.leaf.set(value)`
+- Rule B: `tree.$.leaf(fn)` where `fn` is `FunctionExpression` or `ArrowFunctionExpression` → `tree.$.leaf.update(fn)`
 
-The plugin is a straight Babel-powered AST transform with two rules:
+Non-matching calls left unchanged. Scoped by `rootIdentifiers` — only variables matching the whitelist are candidates.
 
-- `tree.$.leaf(value)` where `value` is not a function → `tree.$.leaf.set(value)`
-- `tree.$.leaf(fn)` where `fn` is a `FunctionExpression` or `ArrowFunctionExpression` → `tree.$.leaf.update(fn)`
-
-Calls that do not match (template literals, method chains, arbitrary object calls) are left untouched. The transform is scoped by configurable `rootIdentifiers` so only variables the team names as tree roots (default includes common names like `tree`, `store`) get rewritten — random `foo.$.bar(x)` in unrelated code is not touched.
-
-There are three build integrations: a Webpack plugin class, a Vite plugin factory, and the raw `transformCode` function for custom build pipelines. Because the transform runs on already-emitted source (Webpack) or on the input pipeline (Vite), it works regardless of whether the code is authored in TypeScript, tsx, or plain JS.
-
-## Core usage
-
-### Vite
+Vite:
 
 ```ts
 // vite.config.ts
-import { defineConfig } from 'vite';
 import { signalTreeSyntaxTransform } from '@signaltree/callable-syntax/vite';
-
 export default defineConfig({
   plugins: [
     signalTreeSyntaxTransform({
@@ -49,15 +38,12 @@ export default defineConfig({
 });
 ```
 
-### Webpack
+Webpack:
 
 ```ts
 // webpack.config.ts
 import { SignalTreeSyntaxWebpackPlugin } from '@signaltree/callable-syntax/webpack';
-import type { Configuration } from 'webpack';
-
-const config: Configuration = {
-  // ...
+const config = {
   plugins: [
     new SignalTreeSyntaxWebpackPlugin({
       test: /src\/.*\.(t|j)sx?$/,
@@ -67,58 +53,49 @@ const config: Configuration = {
     }),
   ],
 };
-
-export default config;
 ```
 
-### What the transform does
+What the transform does:
 
-```ts
+```ts skip
 // Authored
 tree.$.count(5);
 tree.$.count(n => n + 1);
 tree.$.user.name('Ada');
 
-// Emitted (after transform)
+// Emitted
 tree.$.count.set(5);
 tree.$.count.update(n => n + 1);
 tree.$.user.name.set('Ada');
 ```
 
-Non-matching calls are left alone:
+Non-matching (unchanged):
 
-```ts
-tree.$.items.push(item);           // unchanged — `.push` is a method
-doSomething(tree.$.count());       // unchanged — reading the signal
-tree.update(s => ({ ...s, x: 1 })); // unchanged — tree-level update
+```ts skip
+tree.$.items.push(item);            // method — not rewritten
+doSomething(tree.$.count());        // read — not rewritten
+tree.update(s => ({ ...s, x: 1 })); // tree-level — not rewritten
 ```
 
-## Advanced / less-obvious
+Type augmentation — import once (e.g., `polyfills.ts` or `app.config.ts`):
 
-- **Type augmentation for the sugar.** Import the augmentation module once (e.g., at the top of your `polyfills.ts` or `app.config.ts`) to tell TypeScript that a callable signal also accepts a value or updater:
+```ts
+import '@signaltree/callable-syntax/augmentation';
+```
 
-  ```ts
-  import '@signaltree/callable-syntax/augmentation';
-  ```
+Without this, TypeScript errors on `tree.$.count(5)` even when the plugin is active. Type-only import, no runtime output.
 
-  Without the augmentation, TypeScript will still complain about `tree.$.count(5)` even though the transform would rewrite it at build time. The augmentation is a pure type-only import.
+`rootIdentifiers`: exact-name whitelist, not prefix or glob. List every root name used (`userStore`, `cartStore`, etc.).
 
-- **`rootIdentifiers` is a whitelist, not a prefix match.** If one feature module names its tree `userStore` and another names it `cartStore`, list both. There is no glob support; it is a simple identifier-name check against the AST.
+Testing: Jest and Vitest don't run the plugin by default. Prefer explicit `.set()` / `.update()` in tests; override `exclude` only when testing the transform itself.
 
-- **Works without the plugin.** The package is designed so source that uses the callable form continues to work when the plugin is absent — as long as you have the augmentation imported — because SignalTree's leaf signals are already callable for reads. Writes would fall through to a normal function call and throw at runtime, though, so never ship production code that relies on the transform without enabling it in that build.
+Custom pipelines: import `transformCode` from `@signaltree/callable-syntax` and wire into your loader.
 
-- **Testing.** Jest and Vitest do not run the plugin by default. Either enable the plugin in test config or keep test code on explicit `.set()` / `.update()` — the latter is usually simpler.
+Gotchas:
+- Exactly one plugin instance per build — two instances doubles parse cost.
+- Library packages under `packages/*/src/` need their own `include`/`test` regex entry.
+- Dynamic property access `tree.$[key](value)` is not rewritten — static access only.
+- Webpack plugin hooks `emit` (after other loaders) — ensure no later loader drops rewritten output.
+- Never ship callable-write syntax in production without the plugin enabled; writes fall through to no-op reads.
 
-- **Raw `transformCode`.** For custom pipelines (esbuild, SWC pre-processor, Nx executor), import `transformCode` from `@signaltree/callable-syntax` and wire it into your own loader.
-
-## Gotchas
-
-- Always emit exactly one plugin instance per build. Running the transform twice is idempotent on canonical `.set()` / `.update()` output, but doubles the parse cost.
-- The plugin reads from `src/**/*.{ts,tsx,js,jsx}` by default. Library packages whose source is under `packages/*/src/` need their own plugin entry or an adjusted `include`/`test` regex.
-- `.spec.` and `.test.` files are excluded by default. If your test harness needs the sugar, override `exclude`.
-- Dynamic property access like `tree.$[key](value)` is **not** rewritten — the transform only matches static property access.
-- Because the Webpack plugin hooks `emit`, it runs after other loaders. Make sure no later loader re-parses and drops the rewritten output.
-
-## Pointer back
-
-For overall SignalTree mental model, see `../SKILL.md`.
+Related: `using-signaltree` (root), `spec-auditing`, `compression`

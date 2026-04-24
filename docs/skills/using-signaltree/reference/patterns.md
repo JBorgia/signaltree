@@ -235,8 +235,23 @@ export class TicketOps {
 
 ### Component usage
 
-Components depend on `AppStore`, read via `store.$`, and invoke mutations via
-`store.ops.<domain>`:
+**Injection rules — follow these exactly:**
+
+- **Components, resolvers, interceptors, guards, and any other consumer inject `AppStore` only.** Never inject an Ops class or `APP_TREE` directly in a consumer.
+- **Ops classes inject `APP_TREE` directly** for writes, and may inject other services. They do not inject `AppStore`.
+- **`APP_TREE` token is private infrastructure.** Only `AppStore` and Ops classes should ever inject it.
+
+```
+Consumer (component / resolver / interceptor)
+  └─ injects AppStore
+       ├─ $.domain.leaf()          ← reads
+       └─ ops.domain.method()      ← writes (delegates to Ops class)
+
+Ops class
+  └─ injects APP_TREE              ← writes directly to the tree
+```
+
+Components read via `store.$` and trigger mutations via `store.ops.<domain>`:
 
 ```ts
 import { Component, inject } from '@angular/core';
@@ -276,11 +291,11 @@ export class TicketsComponent {
 
 - **State lives in the tree.** Never on the Ops class or `AppStore`.
 - **Derived lives in `.derived()`.** Never on the Ops class.
-- **Ops classes are stateless facades.** No fields other than injected
-  dependencies and a cached slice of `$`.
+- **Ops classes are stateless facades.** No fields other than injected dependencies and a cached slice of `$`.
 - **Cross-domain orchestration goes on `AppStore`.** Not on any one Ops.
-- **Prefer one tree per application.** Keep component-local trees for things
-  that are genuinely local.
+- **One tree per application.** Keep component-local trees only for genuinely ephemeral UI state.
+- **Consumers inject `AppStore`, nothing else.** A component, resolver, interceptor, or guard that injects an Ops class or `APP_TREE` directly is wrong — route everything through `AppStore`.
+- **`APP_TREE` belongs to infrastructure.** Only `AppStore` and Ops classes ever inject the token.
 
 ## Create the tree where it's used
 
@@ -705,13 +720,24 @@ const tree = signalTree({
   }
 });
 
-// status() attaches setLoading / setLoaded / setError / state / error to the node:
+// status() attaches setters, boolean readers, and raw state/error to the node:
 tree.$.tickets.loading.setLoading();
 tree.$.tickets.loading.setLoaded();
 tree.$.tickets.loading.setError(new Error('network failure'));
+tree.$.tickets.loading.setNotLoaded();  // reset to initial state
 
-const isLoading = tree.$.tickets.loading.state(); // 'loading' | 'loaded' | 'error' | 'idle'
-const err       = tree.$.tickets.loading.error();  // Error | null
+// Boolean signals — prefer these over .state() string comparisons
+tree.$.tickets.loading.isLoading();     // Signal<boolean>
+tree.$.tickets.loading.isLoaded();      // Signal<boolean>
+tree.$.tickets.loading.isError();       // Signal<boolean>
+tree.$.tickets.loading.isNotLoaded();   // Signal<boolean>
+
+const err = tree.$.tickets.loading.error();  // Error | null
+
+// If you must compare raw state, import and use the LoadingState enum:
+// import { LoadingState } from '@signaltree/core';
+// tree.$.tickets.loading.state() === LoadingState.Loading  ✓
+// tree.$.tickets.loading.state() === 'loading'             ✗ TypeScript error
 
 // entityMap() attaches upsertOne / setAll / removeOne / byId / all / clear:
 tree.$.tickets.entities.setAll([{ id: 1, title: 'Haul A' }], { selectId: t => t.id });

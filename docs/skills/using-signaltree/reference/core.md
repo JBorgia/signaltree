@@ -120,16 +120,32 @@ Key options live on `EntityConfig<E, K>` (e.g. a custom `idKey`).
 Async operation state (`NotLoaded` | `Loading` | `Loaded` | `Error`), surfaced as a signal-backed object.
 
 ```ts
-import { signalTree, status } from '@signaltree/core';
+import { signalTree, status, LoadingState } from '@signaltree/core';
 
-// status() defaults to Error; pass a type parameter for a custom error shape.
+// status() defaults to Error type; pass a type parameter for a custom error shape.
 const tree = signalTree({
   load: status<string>(),
 });
 
+// Setters
 tree.$.load.setLoading();
 tree.$.load.setLoaded();
 tree.$.load.setError('network failure');
+tree.$.load.setNotLoaded();   // resets to initial NotLoaded state, clears error
+
+// Boolean reader signals — use these in templates and computed()
+tree.$.load.isLoading();      // Signal<boolean>
+tree.$.load.isLoaded();       // Signal<boolean>
+tree.$.load.isError();        // Signal<boolean>
+tree.$.load.isNotLoaded();    // Signal<boolean>
+
+// Raw state and error if you need them
+tree.$.load.state();          // Signal<LoadingState>
+tree.$.load.error();          // Signal<E | null>
+
+// When comparing raw state, always use the LoadingState enum — never string literals
+const isLoading = tree.$.load.state() === LoadingState.Loading;  // ✓
+// tree.$.load.state() === 'loading'                              // ✗ TypeScript error
 ```
 
 ### `stored(key, default)`

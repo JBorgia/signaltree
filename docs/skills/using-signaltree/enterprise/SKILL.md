@@ -5,120 +5,91 @@ description: Guides AI agents applying @signaltree/enterprise to large SignalTre
 
 # Using @signaltree/enterprise
 
-## When to use this package
+Use when the tree has 100s of signals and a single action replaces a large state slice (API hydration, tick-driven snapshots, subtree migrations). Diffs `Partial<T>` and only writes signals whose values changed — 2–5× faster than naive `tree.update()` for large collections. Skip for small/mostly-static trees.
 
-Reach for `@signaltree/enterprise` when the tree has grown past a few hundred signals and a single user action replaces a significant portion of state — think dashboards hydrating 1,000 entities from an API, tick-driven tables re-applying an incoming snapshot, or migrations that rewrite a subtree. The enhancer diffs `Partial<T>` against the current tree and only writes the signals whose values actually changed, which in practice is 2–5× faster than a naive `tree.update(s => ({ ...s, entities: nextEntities }))` for large flat collections. For small or mostly-static trees, skip it — the base `update()` is already cheap and the ~2.4 KB gzipped cost is not worth it.
+**License: BSL-1.1** (not MIT). Surface this when user is building for production commercial deployment.
 
-## Install
+Install:
 
 ```bash
 npm install @signaltree/core @signaltree/enterprise
 ```
 
-Peer range (from `peerDependencies`): `@angular/core ^20`, `@signaltree/core ^9`. The enhancer has no other runtime dependencies.
+Peer: `@angular/core ^20`, `@signaltree/core ^9`. No additional runtime deps.
 
-## Mental model
-
-The base `update()` call walks your updater return value and writes into every reachable signal; for large replacement writes, most of those writes are identity-equal and just add overhead. `enterprise()` adds two capabilities:
-
-1. **`updateOptimized(updates, options?)`** — runs a structural diff between `updates` and the current state, generates a patch list, and only calls `.set()` on leaf signals whose values actually differ. Returns a `UpdateResult` with `changed`, `duration`, `changedPaths`, and optional `stats`.
-2. **`getPathIndex()`** — returns a `PathIndex` built lazily on first use. Useful for devtools, instrumentation, and perf dashboards. Callers can iterate `changedPaths` from an update result against the index to know which computeds will re-run.
-
-The enhancer is zero-overhead until the first `updateOptimized` call — the `PathIndex` and `OptimizedUpdateEngine` are both lazily constructed.
-
-## Core usage
-
-### Apply the enhancer
+Apply the enhancer:
 
 ```ts
 import { signalTree } from '@signaltree/core';
 import { enterprise } from '@signaltree/enterprise';
 
-interface AppState {
-  [key: string]: unknown;
-  entities: Record<string, { id: string; name: string; updatedAt: string }>;
-  filters: { search: string; status: 'all' | 'active' | 'archived' };
-  lastSyncAt: string | null;
-}
-
-const initial: AppState = {
-  entities: {},
-  filters: { search: '', status: 'all' },
-  lastSyncAt: null,
-};
-
 const tree = signalTree(initial).with(enterprise());
 ```
 
-### Bulk replace with `updateOptimized`
+Bulk replace with `updateOptimized`:
 
 ```ts
-async function syncFromServer() {
-  const entities = await fetchEntities(); // Record<string, Entity>
+import { signalTree } from '@signaltree/core';
+import { enterprise } from '@signaltree/enterprise';
 
-  const result = tree.updateOptimized({
-    entities,
-    lastSyncAt: new Date().toISOString(),
-  });
+interface State { entities: { id: number }[]; lastSyncAt: string }
+declare const entities: State['entities'];
+const tree = signalTree<State>({ entities: [], lastSyncAt: '' }).with(enterprise());
 
-  console.log(
-    `Applied ${result.changedPaths.length} path changes in ${result.duration}ms`
-  );
-}
+const result = tree.updateOptimized({
+  entities,
+  lastSyncAt: new Date().toISOString(),
+});
+console.log(`${result.changedPaths.length} paths changed in ${result.duration}ms`);
 ```
 
-`updateOptimized` accepts a `Partial<T>` (not an updater function). It walks only the keys you provided, so other branches of the tree are completely untouched.
+`updateOptimized` takes `Partial<T>` (not an updater fn). Only diffed keys are touched; other branches are completely untouched.
 
-### Tune the diff
+Diff options:
 
 ```ts
+import { signalTree } from '@signaltree/core';
+import { enterprise } from '@signaltree/enterprise';
+
+interface State { entities: { id: number }[] }
+declare const nextEntities: State['entities'];
+const tree = signalTree<State>({ entities: [] }).with(enterprise());
+
 tree.updateOptimized(
   { entities: nextEntities },
   {
-    // Treat arrays as unordered bags — useful when the server returns
-    // items in a different order but you only care about membership.
-    ignoreArrayOrder: true,
-    // Stop diffing below this depth; replace whole subtree instead.
-    maxDepth: 6,
-    // Provide a custom equality for heavy leaf values (e.g., Dates, Buffers).
+    ignoreArrayOrder: true,  // treat arrays as unordered sets — only use when item identity is stable
+    maxDepth: 6,             // stop diffing below this depth; replace whole subtree instead
     equalityFn: (a, b) =>
-      a === b ||
-      (a instanceof Date && b instanceof Date && a.getTime() === b.getTime()),
-    // Batch writes in chunks to keep each microtask short.
+      a === b || (a instanceof Date && b instanceof Date && a.getTime() === b.getTime()),
     autoBatch: true,
-    batchSize: 500,
+    batchSize: 500,          // chunk writes to keep microtasks short
   }
 );
 ```
 
-### Use the result
+`UpdateResult` shape: `{ changed: boolean, duration: number (ms), changedPaths: string[], stats? }`.
+
+`getPathIndex()` — returns `PathIndex` (dotted paths of every leaf) or `null` before first `updateOptimized` call:
 
 ```ts
-const result = tree.updateOptimized({ entities: nextEntities });
+import { signalTree } from '@signaltree/core';
+import { enterprise } from '@signaltree/enterprise';
 
-if (result.changed) {
-  telemetry.record('tree.bulk_update', {
-    paths: result.changedPaths.length,
-    ms: result.duration,
-  });
-}
+const tree = signalTree({ count: 0 }).with(enterprise());
+const idx = tree.getPathIndex();
+if (idx) { /* use idx with result.changedPaths for heatmaps, etc. */ }
 ```
 
-## Advanced / less-obvious
+Key contracts:
+- `undefined` at a path = no change. Use `null` (or empty sentinel) to clear explicitly.
+- `getPathIndex()` is `null` until first `updateOptimized` call. Not live between calls — rebuilt on next optimized write.
+- Dynamic paths (added beyond initial shape) are not auto-indexed; force rebuild via `updateOptimized({})`.
+- Keep using `tree.update(...)` for small targeted writes; `updateOptimized` for large `Partial<T>` replacements only.
 
-- **`getPathIndex()` for monitoring.** The `PathIndex` returned by `tree.getPathIndex()` holds the dotted paths of every leaf signal. Pair it with `result.changedPaths` to build a heatmap of which subtrees churn most. It is `null` until the first `updateOptimized` call, so branch-guard before accessing: `const idx = tree.getPathIndex(); if (idx) { ... }`.
-- **The enhancer does not replace `update()`.** Keep using `tree.update(...)` for small, targeted writes; reach for `updateOptimized` only when you are applying a large `Partial<T>` or replacing collections. Mixing both in the same component is expected.
-- **Diff cost scales with the size of `updates`, not the whole tree.** So `tree.updateOptimized({ filters: { search: 'foo', status: 'active' } })` is O(1) regardless of how many entities sit in `entities`.
-- **License note.** `@signaltree/enterprise` is BSL-1.1, unlike the MIT core and most siblings. Check the license for your deployment before shipping.
+Gotchas:
+- `ignoreArrayOrder: true` treats arrays as sets — reorders silently missed if item identity isn't stable.
+- `updateOptimized` returns `changed: false` when nothing differed — don't assume it always mutates.
+- `maxDepth` stops recursion at that depth; subtree written as unit. `getPathIndex()` rebuilt after plain `update()` on next optimized write — consistent but not live.
 
-## Gotchas
-
-- Do not pass `undefined` at a path you want to clear; the diff engine treats it as "no change." Pass `null` (or the slot's empty sentinel) explicitly.
-- `ignoreArrayOrder: true` treats arrays as sets — only use it when item identity is stable via deep equality, otherwise reorders will be silently missed.
-- `updateOptimized` returns `changed: false` when nothing differed; do not assume it always mutates.
-- `getPathIndex()` reflects the tree after the most recent `updateOptimized` call. If you mutate via plain `update()` between two optimized writes, the index is incrementally rebuilt on the next optimized write — it is not stale, but it is not live either.
-- The enhancer relies on the signals at each path existing on the tree at enhancer-apply time. Dynamically added paths (beyond the initial shape) are not automatically indexed; force a rebuild by calling `updateOptimized({})` or rebuild the index externally.
-
-## Pointer back
-
-For overall SignalTree mental model, see `../SKILL.md`.
+Related: `using-signaltree` (root), `spec-auditing`, `compression`

@@ -5,81 +5,38 @@ description: Guides AI agents integrating Angular reactive forms with SignalTree
 
 # Using @signaltree/ng-forms
 
-## When to use this package
+Use when an Angular component needs both a SignalTree-backed state slice (reactive in templates/computed/effect) and a native Angular `FormGroup`/`FormControl` for `ReactiveFormsModule`, third-party UI libs, or `ControlValueAccessor` interop.
 
-Reach for `@signaltree/ng-forms` whenever an Angular component needs both (a) a SignalTree-backed state slice that stays reactive in templates and computed/effect code and (b) a native Angular `FormGroup` / `FormControl` for template-driven validation, `ReactiveFormsModule` directives, third-party UI libraries, or `ControlValueAccessor` interop. The package keeps the signal tree and the Angular form fully bidirectional: writes on either side propagate to the other without manual subscriptions. It is complementary to Angular's built-in signal forms — you only need ng-forms when you must speak the existing `AbstractControl` API.
-
-## Install
+Install:
 
 ```bash
 npm install @signaltree/core @signaltree/ng-forms
 ```
 
-Peer range (from the package's `peerDependencies`): `@angular/core ^20`, `@angular/forms ^20`, `rxjs ^7`, `@signaltree/core` (workspace-linked, pulled in via `@signaltree/core`). No separate runtime install is required.
+Peer: `@angular/core ^20`, `@angular/forms ^20`, `rxjs ^7`.
 
-## Mental model
+Two patterns — choose one:
+1. **Pattern B: `form()` marker + `formBridge()`** — recommended for new code. Form is one slice of a larger tree.
+2. **Pattern A: `createFormTree()`** — when entire component is a form and you want all helpers on one object. Emits dev-only deprecation note; fully functional.
 
-There are two idiomatic shapes, and both ship from the same package:
-
-1. **`form()` marker + `formBridge()` enhancer** (recommended for new code). You define the form in your tree with the `form()` marker from `@signaltree/core`, then `.with(formBridge())` attaches an Angular FormGroup mirror. Each form slice stays a first-class signal; the FormGroup is discovered via `tree.getAngularForm(path)`.
-2. **`createFormTree()`** (mature, still supported). A single call that returns an object exposing both the tree (`.$` / `.state`) and the Angular `FormGroup` (`.form`), plus helpers like `submit`, `reset`, `validate`, `fieldErrors`. This is the shape most current SignalTree demos use and remains fully functional, though the package emits a dev-only deprecation note pointing to the marker pattern.
-
-Choose marker + bridge when the form is one slice of a larger tree. Choose `createFormTree` when the entire component is a form and you want all helpers on one object. Validators, conditional fields, persistence, and history work with both shapes.
-
-## Core usage
-
-### Pattern A — `createFormTree` with validators, async validation, conditionals, and persistence
+Pattern A — `createFormTree` (full example with validators, async validation, conditionals, persistence):
 
 ```ts
-import { Component } from '@angular/core';
-import { ReactiveFormsModule } from '@angular/forms';
-import {
-  createFormTree,
-  email,
-  minLength,
-  pattern,
-  required,
-} from '@signaltree/ng-forms';
+import { createFormTree, email, minLength, pattern, required } from '@signaltree/ng-forms';
 
 interface ProfileForm extends Record<string, unknown> {
-  name: string;
-  email: string;
-  role: 'individual' | 'manager';
-  company: { name: string; size: '1-10' | '11-50' | '51-250' | '251+' };
+  name: string; email: string; role: string; company: { name: string; size: string }
 }
 
-@Component({
-  selector: 'app-profile',
-  standalone: true,
-  imports: [ReactiveFormsModule],
-  templateUrl: './profile.component.html',
-})
-export class ProfileComponent {
-  private readonly storage =
-    typeof window !== 'undefined' ? window.localStorage : undefined;
-
-  private readonly emailAvailabilityValidator = async (
-    value: unknown
-  ): Promise<string | null> => {
-    const emailValue = String(value ?? '').trim().toLowerCase();
-    if (!emailValue) return null;
-    await new Promise((r) => setTimeout(r, 350));
-    return emailValue.endsWith('@example.dev')
-      ? 'example.dev is reserved for docs'
-      : null;
-  };
+class ProfileComponent {
+  emailAvailabilityValidator: any = null;
 
   readonly profile = createFormTree<ProfileForm>(
-    {
-      name: '',
-      email: '',
-      role: 'individual',
-      company: { name: '', size: '1-10' },
-    },
+    { name: '', email: '', role: 'individual', company: { name: '', size: '1-10' } },
     {
       persistKey: 'profile-form',
-      storage: this.storage,
-      validationBatchMs: 120,
+      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+      validationBatchMs: 120,            // coalesce validation results (80–150ms for many async validators)
       fieldConfigs: {
         name: { validators: [required(), minLength(3)] },
         email: {
@@ -97,34 +54,19 @@ export class ProfileComponent {
 
   async save() {
     try {
-      await this.profile.submit(async (values) => {
-        // Typed `values: ProfileForm`. Runs after sync + async validation.
-        await fetch('/api/profile', {
-          method: 'POST',
-          body: JSON.stringify(values),
-        });
-      });
-    } catch {
-      // FormValidationError is thrown if validation fails.
-    }
+      await this.profile.submit(async (values) => { /* typed ProfileForm */ });
+    } catch { /* FormValidationError thrown on validation failure */ }
   }
 }
 ```
 
-Bind the template with `[formGroup]="profile.form"` exactly like any reactive form. `profile.$.name()` reads the latest signal value; `profile.getFieldError('email')()` returns the current synchronous error string.
+Bind template: `[formGroup]="profile.form"`. Read signal: `profile.$.name()`. Read error: `profile.getFieldError('email')()`.
 
-### Pattern B — `form()` marker + `formBridge()`
+Pattern B — `form()` marker + `formBridge()`:
 
 ```ts
 import { form, FormSignal, signalTree, validators } from '@signaltree/core';
 import { formBridge } from '@signaltree/ng-forms';
-
-interface ContactForm {
-  [key: string]: unknown;
-  name: string;
-  email: string;
-  message: string;
-}
 
 const store = signalTree({
   contact: form<ContactForm>({
@@ -137,28 +79,19 @@ const store = signalTree({
   }),
 }).with(formBridge());
 
-// Grab the typed FormSignal for ergonomic access
-const contactForm = store.$.contact as unknown as FormSignal<ContactForm>;
-
-// Access the Angular FormGroup when you need to hand it to ReactiveFormsModule
 const bridge = store.getAngularForm('contact');
-// bridge?.formGroup is a FormGroup; bridge?.formControl('email') is a FormControl
+// bridge?.formGroup → FormGroup; bridge?.formControl('email') → FormControl
 ```
 
-### Pattern C — multi-step wizard via the `form()` marker
+`formBridge()` auto-discovers all `form()` markers in the tree, including nested paths (`tree.getAngularForm('user.profile')`).
 
-Multi-step wizards are a first-class feature of the core `form()` marker's
-`FormConfig.wizard`. The materialised form carries a `wizard` object you can
-use to navigate steps and validate per step:
+Pattern C — wizard via `form()` marker:
 
 ```ts
-import { signalTree, form } from '@signaltree/core';
+import { form, signalTree } from '@signaltree/core';
 
 interface SignupForm extends Record<string, unknown> {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
+  email: string; password: string; firstName: string; lastName: string
 }
 
 const tree = signalTree({
@@ -166,51 +99,45 @@ const tree = signalTree({
     initial: { email: '', password: '', firstName: '', lastName: '' },
     wizard: {
       steps: ['credentials', 'profile'],
-      stepFields: {
-        credentials: ['email', 'password'],
-        profile: ['firstName', 'lastName'],
-      },
+      stepFields: { credentials: ['email', 'password'], profile: ['firstName', 'lastName'] },
     },
   }),
 });
-
-// tree.$.signup is a FormSignal<SignupForm>; the wizard navigation lives on
-// the materialised form marker. Typical navigation helpers: `next()`,
-// `prev()`, `goTo(step)`, `currentStep`, `isLastStep`.
+// tree.$.signup.wizard: next(), prev(), goTo(step), currentStep, isLastStep
 ```
 
-See `WizardConfig` and `FormWizard` in `@signaltree/core` for the full shape.
+See `WizardConfig` and `FormWizard` in `@signaltree/core` for full shape.
 
-### Pattern D — undo/redo
+Pattern D — undo/redo:
 
 ```ts
+import { createFormTree } from '@signaltree/ng-forms';
 import { withFormHistory } from '@signaltree/ng-forms';
 
-const form = createFormTree({ title: '', body: '' });
-const formWithHistory = withFormHistory(form, { capacity: 20 });
+interface ContactForm extends Record<string, unknown> { name: string; email: string }
+const formTree = createFormTree<ContactForm>({ name: '', email: '' });
 
+const formWithHistory = withFormHistory(formTree, { capacity: 20 });
 formWithHistory.undo();
 formWithHistory.redo();
-formWithHistory.history().past.length; // number of recorded states
+formWithHistory.history().past.length;
 ```
 
-## Advanced / less-obvious
+Key contracts:
+- Conditional fields: `when` predicate `false` → Angular control disabled + excluded from validation. Persisted state respects condition on hydration.
+- Persistence: `persistKey` + `storage` (any `Storage`-shaped object). `persistDebounceMs` defaults to 100ms. Pass `undefined` for `storage` in SSR.
+- `validationBatchMs: 0` = instant feedback; non-zero = coalesce for async validators.
+- Field paths: dotted strings (`'company.name'`). `FormArray` entries use numeric segments (`'phoneNumbers.0.value'`).
+- `SIGNAL_FORM_DIRECTIVES` exported for directive-based binding in `imports:` arrays.
+- Don't call `createFormTree` outside an injection context without passing `destroyRef` explicitly.
+- `FormGroup` is source of truth for `dirty`/`touched`; don't write them directly on the signal. Call `markAsTouched()` on the control.
+- Arrays: use `.push`, `.removeAt`, `.setAt`, `.insertAt`, `.move`, `.clear` — don't use `.set([...])` for per-item updates; breaks `FormArray` sync.
+- `required()` treats `false`, `0`, `''` as missing. For boolean-must-be-true (accept terms), write a custom `FieldValidator`.
 
-- **Conditional fields disable AND hide.** Listing `'company.name'` under `conditionals` with `when: (v) => v.role === 'manager'` automatically disables the Angular control and excludes it from validation when the predicate is false. Persisted state respects the condition on hydration, so a form restored with `role: 'individual'` will not error on an empty `company.name`.
-- **Persistence is opt-in and debounced.** Set `persistKey` + `storage` to round-trip values through any `Storage`-shaped object. `persistDebounceMs` (default 100) batches writes so rapid typing does not thrash `localStorage`. In SSR, pass `undefined` for `storage` to skip persistence cleanly.
-- **`validationBatchMs`** coalesces validation-result recomputation. Set it to a small non-zero value (e.g., 80–150ms) for forms with many async validators to avoid flicker in error UI during fast typing; leave it at `0` for instant feedback.
-- **Field paths are dotted strings**, not nested objects. `fieldConfigs['company.name']` and `profile.getFieldError('company.name')` both work. `FormArray` entries use numeric segments: `'phoneNumbers.0.value'`.
-- **`formBridge()` auto-discovers `form()` markers** anywhere in the tree. Nested forms under `tree.$.user.profile` work with no extra configuration — call `tree.getAngularForm('user.profile')`.
-- **`SIGNAL_FORM_DIRECTIVES`** is exported from the package as a convenience bundle for `imports:` arrays when you prefer directive-based binding over `ReactiveFormsModule`.
+Gotchas:
+- `FormValidationError` thrown from `submit()` — always wrap in `try`/`catch`.
+- `dirty`/`touched` from signal tree = mirrored value; write via Angular control methods only.
+- Arrays: use mutation methods, not `.set([...])`.
+- `required()` won't work for boolean-must-be-true; use a custom validator.
 
-## Gotchas
-
-- `FormValidationError` is thrown from `submit()` when validation fails; always wrap calls in `try`/`catch` or check `form.valid()` first.
-- The Angular `FormGroup` is the source of truth for `dirty` / `touched`; reading those from the signal tree gives the mirrored value but writing to them directly is not supported — call `markAsTouched()` on the control.
-- Do not call `createFormTree` outside an injection context unless you pass `destroyRef` explicitly; the package uses `DestroyRef` for subscription cleanup.
-- Arrays in the form state are replaced with enhanced array signals (`.push`, `.removeAt`, `.setAt`, `.insertAt`, `.move`, `.clear`). Use those instead of `.set([...])` for per-item updates — they keep the `FormArray` in lockstep.
-- The `required()` validator treats `false`, `0`, and `''` as missing. For boolean-must-be-true (e.g., "accept terms"), write a custom `FieldValidator`.
-
-## Pointer back
-
-For overall SignalTree mental model, see `../SKILL.md`.
+Related: `using-signaltree` (root), `spec-auditing`, `compression`
