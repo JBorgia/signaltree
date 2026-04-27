@@ -20,7 +20,6 @@ If you are migrating a large workspace where `@ngrx/signals` is used by shared b
   2. **Keep `@ngrx/signals` in place for the legacy slice; introduce SignalTree alongside as the new canonical store.** With ≥ `9.2.0` this works without typecheck conflicts. Components migrate one at a time from `inject(LegacyStore)` to `inject(AppStore)`.
 - Whichever strategy you pick, **do not introduce a partial SignalTree by per-domain `signalTree()` instances**. The single-tree rule below still applies — the AppStore facade should compose every SignalTree-managed domain into one tree even when other domains are still on the legacy store.
 
-
 ## Critical: one tree for all domains
 
 **Do not create one `signalTree()` per ngrx store.** The entire application — every domain that had its own `signalStore` — must be composed into a single `signalTree()` call behind one `APP_TREE` `InjectionToken`, exposed through a single `AppStore` service.
@@ -33,9 +32,9 @@ If you are migrating a large workspace where `@ngrx/signals` is used by shared b
 
 // CORRECT — all domains in one tree:
 const tree = signalTree({
-  driver:       driverState(),
-  settings:     settingsState(),
-  ticket:       ticketState(),
+  driver: driverState(),
+  settings: settingsState(),
+  ticket: ticketState(),
   featureFlags: featureFlagsState(),
 });
 export const APP_TREE = new InjectionToken<typeof tree>('APP_TREE');
@@ -47,23 +46,23 @@ See `reference/patterns.md` for the full `APP_TREE` + `AppStore` + `Ops` wiring 
 
 ## Concept map
 
-| ngrx/signals | SignalTree equivalent |
-|---|---|
-| `signalStore(...)` | Domain slice in the single `signalTree()` + an `Ops` class for its methods |
-| `withState({ a, b })` | Initial state object passed to `signalTree()` |
-| `withMethods(({ ... }) => ({ ... }))` | Methods on an `Ops` class that injects `APP_TREE` |
-| `withComputed(({ ... }) => ({ ... }))` | Angular `computed()` on the component or in `.derived()` on the tree |
-| `withHooks({ onInit })` | Constructor body of the service / `APP_TREE` factory |
-| `rxMethod(pipe(...))` | Plain method returning `Observable<void>`; writes via `tap()` |
-| `patchState(store, { a, b })` | `tree.$.domain((s) => ({ ...s, a, b }))` or individual `.set()` calls |
-| `withEntities<T>()` | `entityMap<T, K>()` marker |
-| `store.entities()` | `tree.$.items.all()` |
-| `store.entityMap()` | `tree.$.items.byId(id)` |
-| `addEntity(e)` | `tree.$.items.addOne(e)` |
-| `setAllEntities(es)` | `tree.$.items.setAll(es)` |
-| `updateEntity({ id, changes })` | `tree.$.items.upsertOne({ ...existing, ...changes })` |
-| `removeEntity(id)` | `tree.$.items.removeOne(id)` |
-| `provideDevtoolsConfig({ name })` in providers | `.with(devTools({ treeName: name }))` on the tree — remove the provider |
+| ngrx/signals                                   | SignalTree equivalent                                                      |
+| ---------------------------------------------- | -------------------------------------------------------------------------- |
+| `signalStore(...)`                             | Domain slice in the single `signalTree()` + an `Ops` class for its methods |
+| `withState({ a, b })`                          | Initial state object passed to `signalTree()`                              |
+| `withMethods(({ ... }) => ({ ... }))`          | Methods on an `Ops` class that injects `APP_TREE`                          |
+| `withComputed(({ ... }) => ({ ... }))`         | Angular `computed()` on the component or in `.derived()` on the tree       |
+| `withHooks({ onInit })`                        | Constructor body of the service / `APP_TREE` factory                       |
+| `rxMethod(pipe(...))`                          | Plain method returning `Observable<void>`; writes via `tap()`              |
+| `patchState(store, { a, b })`                  | `tree.$.domain((s) => ({ ...s, a, b }))` or individual `.set()` calls      |
+| `withEntities<T>()`                            | `entityMap<T, K>()` marker                                                 |
+| `store.entities()`                             | `tree.$.items.all()`                                                       |
+| `store.entityMap()`                            | `tree.$.items.byId(id)`                                                    |
+| `addEntity(e)`                                 | `tree.$.items.addOne(e)`                                                   |
+| `setAllEntities(es)`                           | `tree.$.items.setAll(es)`                                                  |
+| `updateEntity({ id, changes })`                | `tree.$.items.upsertOne({ ...existing, ...changes })`                      |
+| `removeEntity(id)`                             | `tree.$.items.removeOne(id)`                                               |
+| `provideDevtoolsConfig({ name })` in providers | `.with(devTools({ treeName: name }))` on the tree — remove the provider    |
 
 ## Custom feature patterns (signalStoreFeature)
 
@@ -71,13 +70,14 @@ Custom features that add state shape (e.g. `withLoadingState`, `withSavingState`
 
 ```ts skip
 // ngrx — withLoadingState adds isLoading, error, etc.
-withLoadingState()
+withLoadingState();
 
 // SignalTree — status() marker placed at the relevant path
-load: status<string>()
+load: status<string>();
 ```
 
 The `status()` marker provides:
+
 - `.setLoading()` / `.setLoaded()` / `.setError(e)` / `.setNotLoaded()`
 - Boolean signals: `.isLoading()` / `.isLoaded()` / `.isError()` / `.isNotLoaded()` — use these in templates and `computed()`
 - Raw state via `.state()` — returns `Signal<LoadingState>`. **When comparing the raw value always import and use the `LoadingState` enum from `@signaltree/core`**; never compare to string literals (`'loading'`, `'loaded'`, etc.), which cause TypeScript errors.
@@ -86,10 +86,10 @@ The `status()` marker provides:
 import { LoadingState } from '@signaltree/core';
 
 // ✓
-tree.$.driver.load.state() === LoadingState.Loading
+tree.$.driver.load.state() === LoadingState.Loading;
 
 // ✗ TypeScript error — string literals don't satisfy the enum type
-tree.$.driver.load.state() === 'loading'
+tree.$.driver.load.state() === 'loading';
 ```
 
 Prefer the boolean helpers over raw state comparisons wherever possible.
@@ -104,7 +104,10 @@ import { signalTree, status } from '@signaltree/core';
 import { catchError, EMPTY, map, tap } from 'rxjs';
 import type { Observable } from 'rxjs';
 
-interface DriverState { currentDriver: { name: string } | null; load: ReturnType<typeof status> }
+interface DriverState {
+  currentDriver: { name: string } | null;
+  load: ReturnType<typeof status>;
+}
 const tree = signalTree({ driver: { currentDriver: null as { name: string } | null, load: status<string>() } });
 type AppTree = typeof tree;
 const APP_TREE = new InjectionToken<AppTree>('APP_TREE');
@@ -133,7 +136,7 @@ class DriverOps {
       catchError((err: unknown) => {
         this._$.load.setError(String(err));
         return EMPTY;
-      }),
+      })
     );
   }
 }
