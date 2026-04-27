@@ -42,24 +42,28 @@
   <!-- Section Tabs -->
   <div class="section-tabs">
     <button
+      class="btn-tab"
       [class.active]="activeSection === 'basic'"
       (click)="activeSection = 'basic'"
     >
       Basic Patterns
     </button>
     <button
+      class="btn-tab"
       [class.active]="activeSection === 'complex'"
       (click)="activeSection = 'complex'"
     >
       Complex Objects
     </button>
     <button
+      class="btn-tab"
       [class.active]="activeSection === 'arrays'"
       (click)="activeSection = 'arrays'"
     >
       Array Operations
     </button>
     <button
+      class="btn-tab"
       [class.active]="activeSection === 'performance'"
       (click)="activeSection = 'performance'"
     >
@@ -301,12 +305,14 @@
 
     <div class="code-tabs">
       <button
+        class="btn-tab"
         [class.active]="activeTab === 'callable'"
         (click)="activeTab = 'callable'"
       >
         New Callable Syntax
       </button>
       <button
+        class="btn-tab"
         [class.active]="activeTab === 'current'"
         (click)="activeTab = 'current'"
       >

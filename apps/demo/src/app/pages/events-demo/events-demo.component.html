@@ -9,30 +9,35 @@
   <!-- Tab Navigation -->
   <nav class="demo-tabs">
     <button
+      class="btn-tab"
       [class.active]="activeTab() === 'factory'"
       (click)="setActiveTab('factory')"
     >
       Event Factory
     </button>
     <button
+      class="btn-tab"
       [class.active]="activeTab() === 'validation'"
       (click)="setActiveTab('validation')"
     >
       Validation
     </button>
     <button
+      class="btn-tab"
       [class.active]="activeTab() === 'eventbus'"
       (click)="setActiveTab('eventbus')"
     >
       MockEventBus
     </button>
     <button
+      class="btn-tab"
       [class.active]="activeTab() === 'errors'"
       (click)="setActiveTab('errors')"
     >
       Error Classification
     </button>
     <button
+      class="btn-tab"
       [class.active]="activeTab() === 'idempotency'"
       (click)="setActiveTab('idempotency')"
     >

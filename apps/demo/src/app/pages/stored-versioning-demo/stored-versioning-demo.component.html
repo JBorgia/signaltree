@@ -10,18 +10,21 @@
   <!-- Tab Navigation -->
   <nav class="demo-tabs">
     <button
+      class="btn-tab"
       [class.active]="activeDemo() === 'basic'"
       (click)="activeDemo.set('basic')"
     >
       📦 Basic Versioning
     </button>
     <button
+      class="btn-tab"
       [class.active]="activeDemo() === 'migration'"
       (click)="activeDemo.set('migration')"
     >
       🔄 Migration Chain
     </button>
     <button
+      class="btn-tab"
       [class.active]="activeDemo() === 'utilities'"
       (click)="activeDemo.set('utilities')"
     >
@@ -161,6 +164,7 @@
                 @for (theme of themeOptions; track theme) {
                 <button
                   type="button"
+                  class="btn btn-sm"
                   [attr.aria-pressed]="
                     migrationStore.$.settings().appearance.theme === theme
                   "

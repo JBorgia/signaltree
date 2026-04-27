@@ -926,12 +926,10 @@ export class BenchmarkOrchestratorComponent
   });
 
   reliabilityScore = computed(() => {
-    // Return 0 until calibration is performed
-    const calibration = this.calibrationData();
-    if (!calibration) {
-      return 0;
-    }
-
+    // Score is derived from environmentFactors(), which are detected on init
+    // (calibration only refines CPU/memory baselines, not the score itself).
+    // Previously this returned 0 until calibration ran, which read as a bug
+    // because the factor list was already showing +/- impacts.
     const factors = this.environmentFactors();
     const baseScore = 100;
     const totalImpact = factors.reduce((sum, f) => sum + f.impact, 0);

@@ -11,24 +11,28 @@
   <!-- Tab Navigation -->
   <nav class="demo-tabs">
     <button
+      class="btn-tab"
       [class.active]="activeDemo() === 'basic'"
       (click)="activeDemo.set('basic')"
     >
       📝 Basic Validation
     </button>
     <button
+      class="btn-tab"
       [class.active]="activeDemo() === 'wizard'"
       (click)="activeDemo.set('wizard')"
     >
       🧙 Wizard Form
     </button>
     <button
+      class="btn-tab"
       [class.active]="activeDemo() === 'persistence'"
       (click)="activeDemo.set('persistence')"
     >
       💾 Persistence
     </button>
     <button
+      class="btn-tab"
       [class.active]="activeDemo() === 'angular-bridge'"
       (click)="activeDemo.set('angular-bridge')"
     >
