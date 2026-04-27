@@ -193,7 +193,6 @@ See [`../ng-forms/SKILL.md`](../ng-forms/SKILL.md) for full form guidance.
 import {
   signalTree,
   batching,
-  memoization,
   timeTravel,
   devTools,
   persistence,
@@ -201,7 +200,6 @@ import {
 
 const tree = signalTree({ count: 0 })
   .with(batching())
-  .with(memoization({ equality: 'shallow' }))
   .with(
     timeTravel({
       // Customize the labels that show up in the DevTools action list.
@@ -230,10 +228,11 @@ split hot domains into separately-labeled trees with their own
 Built-in enhancers exported from `@signaltree/core`:
 
 - `batching(config?: BatchingConfig)` — coalesce change-detection notifications.
-- `memoization(config?)` — cached derived values with deep/shallow equality and optional LRU.
 - `timeTravel(config?)` — undo / redo history.
 - `devTools(config?)` — Redux DevTools integration.
 - `serialization(config?)` / `persistence(config?)` — snapshot and auto-persist.
+
+> The `memoization` enhancer was removed in 9.0.1. Use Angular's built-in `computed()` for memoization — it provides equivalent caching at zero runtime cost.
 
 Utilities you may need when composing enhancers yourself:
 

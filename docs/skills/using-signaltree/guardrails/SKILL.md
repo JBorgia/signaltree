@@ -28,7 +28,6 @@ const tree = signalTree<AppState>({ items: [], ui: { search: '' } }).with(
     mode: 'warn',                   // 'warn' | 'throw' | 'silent'
     budgets: {
       maxUpdateTime: 16,            // ms per update
-      maxRecomputations: 100,       // per second
       maxTreeDepth: 8,              // nesting depth, not path-segment count
     },
     hotPaths: { enabled: true, threshold: 10, topN: 5 },

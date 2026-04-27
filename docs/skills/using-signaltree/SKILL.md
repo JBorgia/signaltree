@@ -1,6 +1,6 @@
 ---
 name: using-signaltree
-description: Guides AI agents integrating SignalTree (@signaltree/core and related packages) into Angular 20+ applications. Use when the user mentions SignalTree, @signaltree/core, @signaltree/ng-forms, @signaltree/enterprise, @signaltree/callable-syntax, @signaltree/guardrails, @signaltree/events, @signaltree/realtime, signal tree, reactive state, Angular signals store, or Angular state management; when the user wants to create, read, or update a signalTree() state tree; when the user is choosing enhancers (batching, memoization, persistence, time travel, devTools) or markers (entityMap, status, stored, form); or when the user is building reactive forms, syncing realtime data, or wiring event-driven flows on top of Angular signals.
+description: Guides AI agents integrating SignalTree (@signaltree/core and related packages) into Angular 20+ applications. Use when the user mentions SignalTree, @signaltree/core, @signaltree/ng-forms, @signaltree/enterprise, @signaltree/callable-syntax, @signaltree/guardrails, @signaltree/events, @signaltree/realtime, signal tree, reactive state, Angular signals store, or Angular state management; when the user wants to create, read, or update a signalTree() state tree; when the user is choosing enhancers (batching, persistence, time travel, devTools) or markers (entityMap, status, stored, form); or when the user is building reactive forms, syncing realtime data, or wiring event-driven flows on top of Angular signals.
 ---
 
 # Using SignalTree
@@ -12,7 +12,7 @@ Mental model:
 - `$` proxy: `tree.$.user.profile.name` = signal; `tree.$.user.profile` = group accessor.
 - Read: `tree.$.count()` — subscribes reactive context.
 - Write leaf: `.set(value)` / `.update(fn)`. Write branch: `tree.$.user({ name, email })` (replace) or `tree.$.user((u) => ({ ...u, name }))` (patch). No dispatch.
-- Enhancers: `tree.with(batching()).with(memoization())` — order-sensitive.
+- Enhancers: `tree.with(batching()).with(devTools())` — order-sensitive.
 - Markers: `entityMap<User>()`, `status()`, `stored(key, default)`, `form(fields)` — placeholders; `signalTree()` replaces each with its runtime API at that path.
 
 Don't introduce actions, reducers, action creators, or selectors — they fight the design. No module registration.
@@ -50,7 +50,7 @@ Enhancer / package decision tree — start with `@signaltree/core` alone; add on
 
 - Group CD notifications → `batching()` from `@signaltree/core`.
 - Persist tree to `localStorage` → `persistence({ key, autoSave, autoLoad, debounceMs })` from `@signaltree/core`. Single leaf → `stored()` marker.
-- `computed()` running too often / need deep-equality cache keys → `memoization({ maxCacheSize, equality, enableLRU })` from `@signaltree/core`.
+- `computed()` running too often → use Angular's `computed()` — it already memoizes by reference. SignalTree no longer ships a `memoization` enhancer (removed in 9.0.1); for deep-equality cache keys, derive via your own `computed()` with explicit comparison.
 - Debug history, time travel, Redux DevTools → `timeTravel()` / `devTools({ treeName })` from `@signaltree/core`.
 - Large app, bulk updates slow, diff-based patching → add `@signaltree/enterprise`, compose `enterprise()`. Read [`enterprise/SKILL.md`](enterprise/SKILL.md).
 - Reactive forms (validation, dirty/touched, wizards, FormGroup interop) → add `@signaltree/ng-forms`. Read [`ng-forms/SKILL.md`](ng-forms/SKILL.md).
@@ -62,13 +62,12 @@ Enhancer / package decision tree — start with `@signaltree/core` alone; add on
 Composing enhancers — typical production shape:
 
 ```ts
-import { signalTree, batching, memoization, devTools } from '@signaltree/core';
+import { signalTree, batching, devTools } from '@signaltree/core';
 
 interface AppState { counter: number; ui: { theme: 'light' | 'dark' } }
 
 const tree = signalTree<AppState>({ counter: 0, ui: { theme: 'light' } })
   .with(batching({ enabled: true, notificationDelayMs: 0 }))
-  .with(memoization({ maxCacheSize: 100, equality: 'shallow', enableLRU: true }))
   .with(devTools({ treeName: 'AppStore' }));
 ```
 

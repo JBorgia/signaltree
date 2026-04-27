@@ -60,7 +60,6 @@ import {
   signalTree,
   batching,
   devTools,
-  memoization,
   timeTravel,
 } from '@signaltree/core';
 
@@ -91,7 +90,6 @@ export function createAppTree() {
     signalTree(createBaseState())
       .with(devTools({ treeName: 'AppTree' }))
       .with(batching())
-      .with(memoization())
       .with(timeTravel())
       // Tier 1: entity resolution off raw state.
       .derived(($) => ({
@@ -127,6 +125,84 @@ export function provideAppTree(): Provider[] {
   return [{ provide: APP_TREE, useFactory: () => createAppTree() }];
 }
 ```
+
+### Splitting derived tiers into separate files
+
+When a tier grows beyond ~30 lines, move it into its own file under
+`tree/derived/`. Two practical conventions keep this readable as the tree
+grows:
+
+1. **Name tiers by what they do, not by their position.** `tier-entity-resolution.derived.ts`,
+   `tier-ticket-workflow.derived.ts`, `tier-ui-aggregates.derived.ts` survive
+   refactors. `tier-1`, `tier-2`, … force a rename whenever a tier moves.
+2. **Type each tier function against the tree shape it actually sees.** Use
+   `derivedFrom<TTree>()` (alias `externalDerived<TTree>()`) to declare the
+   tier in its own file with a fully typed `$`, and `WithDerived<…>` to
+   describe the tree shape after each tier so subsequent tiers can reference
+   what came before.
+
+```ts
+// @skip-lint - illustrative cross-file imports; resolved at app build time.
+// tree/app-tree.ts
+import { signalTree, WithDerived } from '@signaltree/core';
+import { entityResolutionDerived } from './derived/tier-entity-resolution.derived';
+import { ticketWorkflowDerived } from './derived/tier-ticket-workflow.derived';
+
+function createBaseState() {
+  /* …state factories… */ return {} as Record<string, unknown>;
+}
+
+/** Tree shape before any derived tiers — what tier-1 sees. */
+export type AppTreeBase = ReturnType<
+  typeof signalTree<ReturnType<typeof createBaseState>>
+>;
+
+/** Tree shape after entity resolution — what tier-2 sees. */
+export type AppTreeWithEntityResolution = WithDerived<
+  AppTreeBase,
+  typeof entityResolutionDerived
+>;
+
+/** Tree shape after ticket workflow — what tier-3 sees, and so on. */
+export type AppTreeWithTicketWorkflow = WithDerived<
+  AppTreeWithEntityResolution,
+  typeof ticketWorkflowDerived
+>;
+```
+
+```ts
+// @skip-lint - relative import to sibling app-tree file shown above.
+// tree/derived/tier-entity-resolution.derived.ts
+import { computed } from '@angular/core';
+import { externalDerived } from '@signaltree/core';
+import type { AppTreeBase } from '../app-tree';
+
+export const entityResolutionDerived = externalDerived<AppTreeBase>()(($) => ({
+  tickets: {
+    active: computed(() => {
+      const id = $.tickets.activeId();
+      return id != null ? ($.tickets.entities.byId(id)?.() ?? null) : null;
+    }),
+  },
+}));
+```
+
+```ts
+// @skip-lint - relative import to sibling app-tree file shown above.
+// tree/derived/tier-ticket-workflow.derived.ts
+import { computed } from '@angular/core';
+import { externalDerived } from '@signaltree/core';
+import type { AppTreeWithEntityResolution } from '../app-tree';
+
+// Sees `tickets.active` from the previous tier, fully typed.
+export const ticketWorkflowDerived = externalDerived<AppTreeWithEntityResolution>()(($) => ({
+  tickets: {
+    canAdvance: computed(() => $.tickets.active() != null),
+  },
+}));
+```
+
+The chain in `createAppTree()` is unchanged — `.derived(entityResolutionDerived).derived(ticketWorkflowDerived)` — but each tier file is independently typed and reviewable.
 
 ### `AppStore` facade
 
@@ -444,7 +520,7 @@ export class CartComponent {
 }
 ```
 
-Reach for `memoization()` from `@signaltree/core` only when `computed()` recomputes too often because of referentially-new inputs you want treated as equal by shallow or deep comparison.
+Reach for plain Angular `computed()` whenever a derivation recomputes more than you'd like — it caches by reference and short-circuits identical inputs. SignalTree no longer ships a `memoization()` enhancer (removed in 9.0.1); for deep- or shallow-equality keying, write the comparison inside your own `computed()`.
 
 ## Effects
 
@@ -586,7 +662,6 @@ overload to expose typed derived props.
 import {
   signalTree,
   batching,
-  memoization,
   devTools,
   persistence,
 } from '@signaltree/core';
@@ -601,7 +676,6 @@ export const appTree = signalTree<AppState>({
   ui: { theme: 'light', sidebarOpen: false },
 })
   .with(batching({ enabled: true, notificationDelayMs: 0 }))
-  .with(memoization({ maxCacheSize: 100, equality: 'shallow', enableLRU: true }))
   .with(devTools({ treeName: 'AppTree' }))
   .with(
     persistence({
@@ -891,14 +965,13 @@ sourced from DI.
 
   ```ts
   import { Injectable } from '@angular/core';
-  import { signalTree, batching, memoization } from '@signaltree/core';
+  import { signalTree, batching } from '@signaltree/core';
 
   @Injectable({ providedIn: 'root' })
   export class UiStore {
     // All config known at class-declaration time → field initializer.
     private readonly _tree = signalTree({ theme: 'light' as const })
-      .with(batching())
-      .with(memoization({ equality: 'shallow' }));
+      .with(batching());
 
     readonly theme = this._tree.$.theme;
   }
