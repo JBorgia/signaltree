@@ -1,5 +1,7 @@
 # Migrating from v8 to v9
 
+> **Historical.** For migrating to the current major see [MIGRATION.md](./MIGRATION.md#901). In 9.0.1 the `memoization` enhancer and all preset factories referenced below were removed — use Angular's built-in `computed()` instead.
+
 ## Breaking Changes
 
 ### Removed Exports

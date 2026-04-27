@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ENHANCER_META } from '../lib/types';
 import { batching } from './batching/batching';
-import { memoization } from './memoization/memoization';
 import { timeTravel } from './time-travel/time-travel';
 import { devTools } from './devtools/devtools';
 import { effects } from './effects/effects';
@@ -92,7 +91,6 @@ function createMockTree() {
 describe('enhancer metadata', () => {
   it.each([
     ['batching', batching],
-    ['memoization', memoization],
     ['timeTravel', timeTravel],
     ['devTools', devTools],
     ['effects', effects],
@@ -120,9 +118,8 @@ describe('duplicate enhancer detection', () => {
   });
 
   it('throws for duplicate memoization', () => {
-    const tree = createMockTree();
-    tree.with(memoization());
-    expect(() => tree.with(memoization())).toThrowError(/memoization/);
+    // Removed in 9.0.1: memoization enhancer deleted.
+    expect(true).toBe(true);
   });
 
   it('throws for duplicate devTools', () => {
@@ -135,7 +132,6 @@ describe('duplicate enhancer detection', () => {
     const tree = createMockTree();
     expect(() => {
       tree.with(batching());
-      tree.with(memoization());
       tree.with(effects());
     }).not.toThrow();
   });

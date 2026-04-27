@@ -66,11 +66,11 @@ fi
 # Note: serialization was never published to npm, so it's excluded
 PACKAGES=(
     "batching:This package has been consolidated into @signaltree/core. Please use: import { batching } from '@signaltree/core'"
-    "memoization:This package has been consolidated into @signaltree/core. Please use: import { memoization } from '@signaltree/core'"
     "devtools:This package has been consolidated into @signaltree/core. Please use: import { withDevtools } from '@signaltree/core'"
     "entities:This package has been consolidated into @signaltree/core. Please use entity helpers from '@signaltree/core'"
     "middleware:Middleware was removed in v5. Use enhancers and entity hooks instead."
-    "presets:This package has been consolidated into @signaltree/core. Please use preset functions from '@signaltree/core'"
+    "memoization:The memoization enhancer was removed in v10. Use Angular computed() directly."
+    "presets:Preset factories were removed in v10. Apply individual enhancers explicitly."
     "time-travel:This package has been consolidated into @signaltree/core. Please use: import { withTimeTravel } from '@signaltree/core'"
 )
 

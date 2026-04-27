@@ -1,89 +1,79 @@
-<nav class="nav-container" [class.nav-container-mobile-open]="mobileMenuOpen()">
-  <div class="nav-content">
-    <!-- Header with Logo and Home Button -->
-    <div class="nav-header">
-      <div class="brand">
-        <img src="/signaltree.svg" alt="SignalTree Logo" class="brand-logo" />
-        <h1 class="brand-title">
-          <span class="brand-name">SignalTree</span>
-          <span class="brand-tagline">Reactive JSON</span>
-        </h1>
+<!-- Desktop: persistent sidebar / Mobile: off-canvas drawer -->
+<aside
+  id="sidebar"
+  class="sidebar"
+  [class.sidebar-open]="mobileMenuOpen()"
+  aria-label="Main navigation"
+>
+  <div class="sidebar-header">
+    <a routerLink="/" class="brand" title="SignalTree home" (click)="closeMobileMenu()">
+      <img src="/signaltree.svg" alt="SignalTree Logo" class="brand-logo" />
+      <div class="brand-text">
+        <span class="brand-name">SignalTree</span>
+        <span class="brand-tagline">Reactive JSON</span>
       </div>
-      <div class="nav-header-actions">
-        <a
-          routerLink="/"
-          class="home-button"
-          title="Return to home page"
-          (click)="closeMobileMenu()"
-        >
-          🏠 Home
-        </a>
-        <button
-          type="button"
-          class="menu-toggle"
-          [attr.aria-expanded]="mobileMenuOpen()"
-          aria-controls="primary-navigation-drawer"
-          [attr.aria-label]="mobileMenuOpen() ? 'Close navigation menu' : 'Open navigation menu'"
-          (click)="toggleMobileMenu()"
-        >
-          <span class="menu-toggle-label">{{ mobileMenuOpen() ? 'Close' : 'Menu' }}</span>
-          <span class="menu-toggle-icon" aria-hidden="true">{{ mobileMenuOpen() ? '✕' : '☰' }}</span>
-        </button>
-      </div>
-    </div>
+    </a>
+  </div>
 
-    <div
-      id="primary-navigation-drawer"
-      class="nav-drawer"
-      [class.nav-drawer-open]="mobileMenuOpen()"
-    >
-      <!-- Navigation Categories -->
-      <div class="nav-categories">
-        @for (category of categories; track category) {
-        <div class="category-block">
-          <h3 class="category-title">
-            {{ getCategoryLabel(category) }}
-          </h3>
-          <div class="category-links">
-            @for (example of getExamplesByCategory(category); track example.id) {
-            <a
-              [routerLink]="example.route"
-              [queryParams]="example.queryParams || null"
-              routerLinkActive="active"
-              class="nav-link"
-              [attr.title]="example.description"
-              (click)="closeMobileMenu()"
-            >
-              {{ example.title }}
-            </a>
-            }
-          </div>
-        </div>
+  <nav class="sidebar-nav" aria-label="Site sections">
+    @for (category of categories; track category) {
+      <div class="nav-section">
+        <p class="nav-section-label">{{ getCategoryLabel(category) }}</p>
+        @for (example of getExamplesByCategory(category); track example.id) {
+          <a
+            [routerLink]="example.route"
+            [queryParams]="example.queryParams || null"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            class="nav-item"
+            [title]="example.description"
+            (click)="closeMobileMenu()"
+          >
+            {{ example.title }}
+          </a>
         }
       </div>
+    }
+  </nav>
 
-      <!-- Version Info and External Links -->
-      <div class="nav-footer">
-        <div class="version-info">
-          <span>{{ versionSummary }}</span>
-          <span class="separator">•</span>
-          <span>Docs, demos, and benchmarks</span>
-        </div>
-        <div class="external-links">
-          @for (link of externalLinks; track link.url) {
-          <a
-            [href]="link.url"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="external-link"
-            [title]="link.title"
-          >
-            <span class="link-icon">{{ link.icon }}</span>
-            <span class="link-label">{{ link.label }}</span>
-          </a>
-          }
-        </div>
-      </div>
+  <div class="sidebar-footer">
+    <div class="version-badge">{{ versionSummary }}</div>
+    <div class="external-links">
+      @for (link of externalLinks; track link.url) {
+        <a
+          [href]="link.url"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="external-link"
+          [title]="link.title"
+        >
+          <span aria-hidden="true">{{ link.icon }}</span>
+          <span>{{ link.label }}</span>
+        </a>
+      }
     </div>
   </div>
-</nav>
+</aside>
+
+<!-- Mobile backdrop -->
+@if (mobileMenuOpen()) {
+  <div class="sidebar-backdrop" (click)="closeMobileMenu()" aria-hidden="true"></div>
+}
+
+<!-- Mobile top bar (hidden on desktop) -->
+<header class="mobile-topbar" role="banner">
+  <a routerLink="/" class="brand-mobile" title="SignalTree home" (click)="closeMobileMenu()">
+    <img src="/signaltree.svg" alt="SignalTree Logo" class="brand-logo-mobile" />
+    <span class="brand-name-mobile">SignalTree</span>
+  </a>
+  <button
+    type="button"
+    class="menu-toggle"
+    [attr.aria-expanded]="mobileMenuOpen()"
+    aria-controls="sidebar"
+    [attr.aria-label]="mobileMenuOpen() ? 'Close navigation menu' : 'Open navigation menu'"
+    (click)="toggleMobileMenu()"
+  >
+    <span aria-hidden="true">{{ mobileMenuOpen() ? '✕' : '☰' }}</span>
+  </button>
+</header>

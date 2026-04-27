@@ -1,59 +1,61 @@
+@use '../../../../shared/styles' as *;
+
 .whats-new {
   h2 {
-    margin-bottom: 12px;
+    margin-bottom: $spacing-md;
   }
   ul {
-    margin: 0 0 12px;
-    padding-left: 20px;
+    margin: 0 0 $spacing-md;
+    padding-left: $spacing-xl;
   }
   .next-steps {
-    color: #555;
+    color: $text-light;
   }
 
   .release-highlights {
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-    border: 1px solid #0ea5e9;
-    border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 20px;
+    background: linear-gradient(135deg, var(--color-info-50) 0%, var(--color-info-100) 100%);
+    border: 1px solid $primary;
+    border-radius: $radius-lg;
+    padding: $spacing-lg;
+    margin-bottom: $spacing-xl;
   }
 
   .metrics-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-    margin: 16px 0;
+    gap: $spacing-lg;
+    margin: $spacing-lg 0;
 
     .metric {
-      background: white;
-      border-radius: 8px;
-      padding: 16px;
+      background: $bg-white;
+      border-radius: $radius-lg;
+      padding: $spacing-lg;
       text-align: center;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      box-shadow: $shadow-md;
 
       .value {
         display: block;
-        font-size: 2rem;
-        font-weight: 700;
-        color: #0ea5e9;
+        font-size: $text-4xl;
+        font-weight: $font-bold;
+        color: $primary;
       }
 
       .label {
         display: block;
-        font-weight: 600;
-        color: #334155;
-        margin: 4px 0;
+        font-weight: $font-semibold;
+        color: $dark;
+        margin: $spacing-xs 0;
       }
 
       .detail {
         display: block;
-        font-size: 0.85rem;
-        color: #64748b;
+        font-size: $text-sm;
+        color: $text-light;
       }
     }
   }
 
-  @media (max-width: 600px) {
+  @include respond-to('sm') {
     .metrics-grid {
       grid-template-columns: 1fr;
     }

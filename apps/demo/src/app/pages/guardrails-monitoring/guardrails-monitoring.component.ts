@@ -64,7 +64,6 @@ export class GuardrailsMonitoringComponent implements OnDestroy {
     mode: 'warn',
     budgets: {
       maxUpdateTime: 6,
-      maxRecomputations: 20,
     },
     hotPaths: {
       enabled: true,
@@ -334,14 +333,6 @@ export class GuardrailsMonitoringComponent implements OnDestroy {
         usage: budgets.updateTime.usage,
         current: budgets.updateTime.current,
         limit: budgets.updateTime.limit,
-      },
-      {
-        key: 'recomputations',
-        label: 'Recomputations',
-        status: this.statusFromBudget(budgets.recomputations.status),
-        usage: budgets.recomputations.usage,
-        current: budgets.recomputations.current,
-        limit: budgets.recomputations.limit,
       },
       {
         key: 'memory',

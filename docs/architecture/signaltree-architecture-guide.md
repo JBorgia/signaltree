@@ -2651,8 +2651,7 @@ const tree = signalTree<AppState>({
   plants: entityMap<Plant>(),
 })
   .with(batching())
-  .with(devTools())
-  .with(memoization()); // ❌ "Too many enhancers!"
+  .with(devTools()); // ❌ "Too many enhancers!"
 // Note: v7+ auto-processes markers (entityMap, status, stored), no explicit enhancer needed
 ```
 
@@ -2660,15 +2659,14 @@ const tree = signalTree<AppState>({
 
 Enhancers are designed to compose. Using multiple enhancers that each serve a purpose is not over-engineering—it's using the library correctly.
 
-| Enhancer        | Purpose                | Over-engineering?                     |
-| --------------- | ---------------------- | ------------------------------------- |
-| `entityMap()`   | Entity collections     | No—auto-processed marker in v7+       |
-| `status()`      | Loading/error state    | No—auto-processed marker in v7+       |
-| `stored()`      | Persist to storage     | No—auto-processed marker in v7+       |
-| `batching()`    | Batch multiple updates | No—reduces re-renders                 |
-| `timeTravel()`  | User undo/redo         | No—if you need undo                   |
-| `devTools()`    | Debugging in dev mode  | No—tree-shakes in prod                |
-| `memoization()` | Cache computed values  | No—if you have expensive computations |
+| Enhancer       | Purpose                | Over-engineering?               |
+| -------------- | ---------------------- | ------------------------------- |
+| `entityMap()`  | Entity collections     | No—auto-processed marker in v7+ |
+| `status()`     | Loading/error state    | No—auto-processed marker in v7+ |
+| `stored()`     | Persist to storage     | No—auto-processed marker in v7+ |
+| `batching()`   | Batch multiple updates | No—reduces re-renders           |
+| `timeTravel()` | User undo/redo         | No—if you need undo             |
+| `devTools()`   | Debugging in dev mode  | No—tree-shakes in prod          |
 
 **What IS Over-Engineering:**
 
@@ -3085,7 +3083,7 @@ this._store.users.loadUsers$().subscribe();  // Use store.ops.users instead
 ┌───────────────────────────────▼─────────────────────────────┐
 │                   Signal Tree (app-tree.ts)                 │
 │  • Base state from state/*.state.ts                         │
-│  • Enhancers: devTools, batching, memoization, timeTravel   │
+│  • Enhancers: devTools, batching, timeTravel               │
 │  • Derived tiers: tier-1 → tier-2 → tier-3 → tier-4 → tier-5│
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -3408,6 +3406,179 @@ export class TicketListComponent {
 
 This gives you unified dot notation access, minimal abstraction layers, and clear separation between state access (`store.$`) and operations (`store.ops`).
 
+### Anti-Patterns Specific to the `$ + ops` Architecture
+
+These four patterns are the most common ways the contract erodes in real codebases. Reject them in PR review:
+
+```typescript
+// ❌ 1. Component-level direct mutation
+@Component({ ... })
+class TicketScreen {
+  private store = inject(AppStore);
+
+  selectTicket(t: TicketDto) {
+    this.store.$.tickets.activeId.set(t.id); // Bypasses ops, hides intent.
+  }
+}
+
+// ✅ Wrap intent in an ops method
+@Component({ ... })
+class TicketScreen {
+  private store = inject(AppStore);
+
+  selectTicket(t: TicketDto) {
+    this.store.ops.tickets.setActiveTicket(t);
+  }
+}
+```
+
+```typescript
+// ❌ 2. Component-level persistence composition
+async saveLot(lot: string) {
+  const active = this.store.$.tickets.active();
+  const updated = { ...active, lotNum: [...active.lotNum, lot].join(',') };
+  await firstValueFrom(this.store.ops.tickets.updateTicket$(updated));
+  this.store.ops.tickets.updateActiveTicket(updated);
+}
+
+// ✅ Hide the composition behind an intent method
+async saveLot(lot: string) {
+  await firstValueFrom(this.store.ops.tickets.addLotNumber$(lot));
+}
+```
+
+```typescript
+// ❌ 3. Cross-domain wiring spread across services
+async logout() {
+  this.store.$.tickets.activeId.set(null);
+  this.store.clearCurrentDriver();
+  this.store.clearAllTrucksAndHaulers();
+  this.store.$.selected.haulerId.set(null);
+  this.store.$.selected.truckId.set(null);
+}
+
+// ✅ One orchestration method on the store
+async logout() {
+  this.store.endSession();
+}
+```
+
+```typescript
+// ❌ 4. Arbitrary services injecting APP_TREE
+@Injectable({ providedIn: 'root' })
+class ReportingService {
+  private $ = inject(APP_TREE).$; // Now mutates state from anywhere.
+}
+
+// ✅ Restrict APP_TREE to store/** and route side-effects through ops
+@Injectable({ providedIn: 'root' })
+class ReportingService {
+  private store = inject(AppStore); // Read via store.$, mutate via store.ops.
+}
+```
+
+### Approved Exceptions
+
+Three categories of code may legitimately bypass the ops layer. Document each exception inline (file header + JIRA reference) and add to the ESLint allow-list:
+
+| Exception                   | Why it's allowed                                                                    | Required mitigation                                                                        |
+| --------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| **Local UI-only signals**   | Modal toggles, hover state, draft form values that never escape the component.      | Use `signal()` directly — never store on the tree at all.                                  |
+| **Infrastructure adapters** | A class wraps a native plugin or socket whose lifecycle creates circular DI to ops. | Mark with header comment + ESLint allow-list entry; plan an adapter/ops split (see below). |
+| **Test harness setup**      | Spec files seed tree state for arrange-act-assert.                                  | Restrict to `**/*.spec.ts` / `**/*.test.ts` glob.                                          |
+
+### Resolving Circular DI Without Bypassing Ops
+
+The most common trigger for the "infra adapter" exception is a service that both **calls a native plugin** and **needs to update tree state**, but is also depended on by `*Ops` (which `AppStore` injects). The dependency cycle looks like:
+
+```
+AppStore → BluetoothOps → BluetoothService → AppStore  ❌
+```
+
+**Long-term fix:** split the service into two roles:
+
+```typescript
+// 1. Pure adapter — no tree, no ops, no store
+@Injectable({ providedIn: 'root' })
+export class BluetoothAdapter {
+  private plugin = inject(TraxBluetoothClassic);
+
+  getPairedDevices$(): Observable<BluetoothDevice[]> {
+    /* ... */
+  }
+  connect$(device: BluetoothDevice): Observable<void> {
+    /* ... */
+  }
+}
+
+// 2. Ops layer — owns all writes, depends on the adapter
+@Injectable({ providedIn: 'root' })
+export class BluetoothOps {
+  private $ = inject(APP_TREE).$.bluetooth;
+  private adapter = inject(BluetoothAdapter);
+
+  scan$(): Observable<BluetoothDevice[]> {
+    this.$.isDiscovering.set(true);
+    return this.adapter.getPairedDevices$().pipe(
+      tap((devices) => {
+        this.$.pairedDevices.setAll(devices, { selectId: (d) => d.id });
+        this.$.isDiscovering.set(false);
+      })
+    );
+  }
+}
+```
+
+The cycle is broken because the adapter no longer depends on `AppStore` or any other ops. If the split is too risky to do in a single change, document the existing service as a temporary exception with a tracking ticket and split it later.
+
+### Testing Ops
+
+Ops are the seam where unit tests give the most leverage — they own all mutation logic and async flows. A typical test setup spins up a real tree with mocked HTTP services and asserts on `$.path()` reads:
+
+```typescript
+import { TestBed } from '@angular/core/testing';
+import { provideAppTree } from './app-tree.provider';
+import { TicketOps } from './ticket.ops';
+import { TicketService } from './ticket.service';
+import { of, throwError } from 'rxjs';
+
+describe('TicketOps', () => {
+  let ops: TicketOps;
+  let api: jest.Mocked<TicketService>;
+
+  beforeEach(() => {
+    api = { update$: jest.fn(), getActiveTicket$: jest.fn() } as any;
+    TestBed.configureTestingModule({
+      providers: [...provideAppTree({ haulerId: null, truckId: null }), { provide: TicketService, useValue: api }],
+    });
+    ops = TestBed.inject(TicketOps);
+  });
+
+  it('addLotNumber$ persists and updates active ticket', async () => {
+    const active = { id: 1, lotNum: 'A,B' } as TicketDto;
+    ops.setActiveTicket(active);
+    api.update$.mockReturnValue(of({ ...active, lotNum: 'A,B,C' }));
+
+    const result = await firstValueFrom(ops.addLotNumber$('C'));
+
+    expect(result).toBe('A,B,C');
+    expect(TestBed.inject(APP_TREE).$.tickets.active()?.lotNum).toBe('A,B,C');
+  });
+
+  it('loadActiveTicket$ surfaces error state on failure', async () => {
+    api.getActiveTicket$.mockReturnValue(throwError(() => new Error('boom')));
+
+    await firstValueFrom(ops.loadActiveTicket$());
+
+    const tree = TestBed.inject(APP_TREE).$;
+    expect(tree.tickets.loading.state()).toBe(LoadingState.NotLoaded);
+    expect(tree.tickets.loading.error()).not.toBeNull();
+  });
+});
+```
+
+Because reads always go through `$`, your tests stay coupled to **state shape**, not to internal mutation choreography — refactoring the ops body without changing the resulting state shape leaves the tests green.
+
 ---
 
 ## When to Use Which Enhancer
@@ -3420,8 +3591,8 @@ Start
   ├── Do you have many rapid writes in a single turn?
   │     └── YES → batching()
   │
-  ├── Do you need deep/shallow equality instead of reference equality?
-  │     └── YES → memoization({ equality: 'shallow' | 'deep' })
+  ├── Do you have expensive derivations?
+  │     └── YES → Angular `computed()` (already memoizes by reference)
   │
   ├── Do you need undo/redo?
   │     └── YES → timeTravel()
@@ -3438,14 +3609,14 @@ Start
 
 **Common combinations:**
 
-| Use Case                      | Enhancers                                             |
-| ----------------------------- | ----------------------------------------------------- |
-| Feature store (simple)        | None                                                  |
-| Feature store (with batching) | `batching()`                                          |
-| Form with undo                | `timeTravel()`                                        |
-| Persisted user preferences    | `persistence({ key: 'prefs' })`                       |
-| Development debugging         | `devTools()`                                          |
-| High-frequency dashboard      | `batching()` + `memoization({ equality: 'shallow' })` |
+| Use Case                      | Enhancers                       |
+| ----------------------------- | ------------------------------- |
+| Feature store (simple)        | None                            |
+| Feature store (with batching) | `batching()`                    |
+| Form with undo                | `timeTravel()`                  |
+| Persisted user preferences    | `persistence({ key: 'prefs' })` |
+| Development debugging         | `devTools()`                    |
+| High-frequency dashboard      | `batching()`                    |
 
 ---
 
@@ -3457,7 +3628,6 @@ Start
 // ❌ Don't add every enhancer "just in case"
 const tree = signalTree(state)
   .with(batching())
-  .with(memoization())
   .with(timeTravel())
   .with(devTools())
   .with(persistence({ key: 'all' }));
@@ -3469,11 +3639,12 @@ const tree = signalTree(state);
 ### 2. Duplicating Angular's work
 
 ```typescript
-// ❌ Using memoization for something computed() already handles
-const tree = signalTree({ items: [1, 2, 3] }).with(memoization()); // Angular's computed() already memoizes by reference
+// ❌ Rolling your own memoization layer — Angular's computed() already caches
+// by reference equality for free.
 
-// ✅ Only use memoization when you need deep/shallow equality
-const tree = signalTree({ items: [1, 2, 3] }).with(memoization({ equality: 'deep' })); // Useful when objects are recreated
+// ✅ Use Angular computed() directly for derived values
+import { computed } from '@angular/core';
+const totalItems = computed(() => tree.$.items().length);
 ```
 
 ### 3. Giant monolithic trees

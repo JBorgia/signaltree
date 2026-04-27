@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/guardrails",
-  "version": "9.0.0",
+  "version": "9.1.0",
   "description": "Development guardrails for SignalTree reactive JSON. Performance monitoring and anti-pattern detection.",
   "type": "module",
   "sideEffects": false,
@@ -58,8 +58,8 @@
     "type-check": "tsc --project tsconfig.lib.json --noEmit"
   },
   "peerDependencies": {
-    "@signaltree/core": "^9.0.0",
-    "@signaltree/shared": "^7.1.0",
+    "@signaltree/core": "^9.0.1",
+    "@signaltree/shared": "^9.0.1",
     "tslib": "^2.0.0"
   },
   "peerDependenciesMeta": {},

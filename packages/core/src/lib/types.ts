@@ -31,19 +31,6 @@ export interface TimeTravelConfig {
     [key: string]: string | undefined;
   };
 }
-// Memoization enhancer configuration (canonical)
-export interface MemoizationConfig {
-  /** Enable/disable memoization (default: true) */
-  enabled?: boolean;
-  /** Maximum number of cached computations (default: 100) */
-  maxCacheSize?: number;
-  /** Time-to-live for cache entries in milliseconds */
-  ttl?: number;
-  /** Enable LRU eviction (default: true) */
-  enableLRU?: boolean;
-  /** Equality strategy for cache comparison (default: 'deep') */
-  equality?: 'deep' | 'shallow' | 'reference';
-}
 // Core v6 types — type-safe enhancer architecture
 
 // Primitives
@@ -142,6 +129,22 @@ export interface ISignalTree<T> extends NodeAccessor<T> {
    * Enhancers should use this to release resources (intervals, subscriptions, etc.).
    */
   registerCleanup(fn: EnhancerCleanup): void;
+  /**
+   * Apply a partial update and return the dot-paths of leaf signals that
+   * actually changed. Paths whose new value is ref-equal to the existing
+   * value are skipped both in the underlying `set()` and in the result.
+   *
+   * Useful for partial server-payload sync, change-log/audit trails, and
+   * targeted persistence without pulling in the heavier
+   * `@signaltree/enterprise` diff engine.
+   *
+   * @example
+   * ```ts
+   * const changed = tree.updateAndReport(serverPayload);
+   * if (changed.length) persistKeys(changed);
+   * ```
+   */
+  updateAndReport(updates: Partial<T> | ((current: T) => Partial<T>)): string[];
   // Allow enhancers to attach runtime methods — consumers should cast to the
   // specific enhanced shape they expect (e.g. `SignalTree<T> & BatchingMethods<T>`).
 }
@@ -227,33 +230,6 @@ export interface BatchingMethods<T = unknown> {
   flushNotifications(): void;
 }
 
-export interface MemoizationMethods<T> {
-  /** Memoize a computation based on state and optional cache key */
-  memoize<R>(fn: (state: T) => R, cacheKey?: string): Signal<R>;
-  /** Memoized update for partial state, with optional cache key */
-  memoizedUpdate?: (
-    updater: (current: T) => Partial<T>,
-    cacheKey?: string
-  ) => void;
-  /** Clear the memoization cache (optionally by key) */
-  clearMemoCache(key?: string): void;
-  /** Alias for clearMemoCache for compatibility */
-  clearCache?: (key?: string) => void;
-  /** Get cache statistics */
-  getCacheStats(): CacheStats;
-}
-
-/**
- * Statistics returned by memoization caches
- */
-export type CacheStats = {
-  size: number;
-  hitRate: number;
-  totalHits: number;
-  totalMisses: number;
-  keys: string[];
-};
-
 export interface TimeTravelMethods<T = unknown> {
   undo(): void;
   redo(): void;
@@ -323,11 +299,8 @@ export interface TimeTravelEntry<T> {
 // CONFIGURATION TYPES
 // ============================================
 
-export type TreePreset = 'basic' | 'performance' | 'development' | 'production';
-
 export interface TreeConfig {
   batchUpdates?: boolean;
-  useMemoization?: boolean;
   enableTimeTravel?: boolean;
   useLazySignals?: boolean;
   useShallowComparison?: boolean;
@@ -790,34 +763,10 @@ export interface EnhancerMeta {
 }
 
 // Main public SignalTree interface expected by downstream packages
-/**
- * Convenience signal tree aliases representing common preset combinations.
- */
-
-export type FullSignalTree<T> = ISignalTree<T> &
-  EffectsMethods<T> &
-  BatchingMethods<T> &
-  MemoizationMethods<T> &
-  TimeTravelMethods<T> &
-  DevToolsMethods &
-  EntitiesEnabled &
-  OptimizedUpdateMethods<T>;
-
-export type ProdSignalTree<T> = ISignalTree<T> &
-  EffectsMethods<T> &
-  BatchingMethods<T> &
-  MemoizationMethods<T> &
-  EntitiesEnabled &
-  OptimizedUpdateMethods<T>;
-
-/** Minimal tree (just effects) */
-export type MinimalSignalTree<T> = ISignalTree<T> & EffectsMethods<T>;
 
 // Backwards-compatible aliases expected by older consumers
 // v6: remove legacy `SignalTree` alias and multi-overload `WithMethod`.
-// Consumers should use `SignalTree<T>` for the minimal runtime shape
-// and opt into `FullSignalTree<T>` / `ProdSignalTree<T>` when they need
-// the enhanced feature set. Helper presets produce those enhanced shapes.
+// Consumers should use `SignalTree<T>` for the minimal runtime shape.
 
 // Note: `SignalTree` alias is provided by the separate `types` package.
 // Core now uses `SignalTree<T>` and the dedicated `types` package

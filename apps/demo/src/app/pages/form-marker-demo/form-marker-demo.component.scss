@@ -1,5 +1,5 @@
 .demo-container {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 2rem;
 }
@@ -9,11 +9,11 @@
 
   h1 {
     margin: 0 0 0.5rem;
-    color: var(--text-primary, #1a1a1a);
+    color: var(--text-primary, var(--color-neutral-900));
   }
 
   p {
-    color: var(--text-secondary, #666);
+    color: var(--text-secondary, var(--color-neutral-500));
     margin: 0;
   }
 }
@@ -23,26 +23,26 @@
   display: flex;
   gap: 0.5rem;
   margin-bottom: 2rem;
-  border-bottom: 2px solid var(--border-color, #e0e0e0);
+  border-bottom: 2px solid var(--border-color, var(--color-neutral-200));
   padding-bottom: 0.5rem;
 
   button {
     padding: 0.75rem 1.5rem;
     border: none;
     background: transparent;
-    color: var(--text-secondary, #666);
+    color: var(--text-secondary, var(--color-neutral-500));
     cursor: pointer;
     font-size: 1rem;
     border-radius: 8px 8px 0 0;
     transition: all 0.2s;
 
     &:hover {
-      background: var(--bg-hover, #f5f5f5);
-      color: var(--text-primary, #1a1a1a);
+      background: var(--bg-hover, var(--color-neutral-100));
+      color: var(--text-primary, var(--color-neutral-900));
     }
 
     &.active {
-      background: var(--primary-color, #6366f1);
+      background: var(--primary-color, var(--color-purple-500));
       color: white;
     }
   }
@@ -52,7 +52,7 @@
 .demo-section {
   h2 {
     margin: 0 0 1rem;
-    color: var(--text-primary, #1a1a1a);
+    color: var(--text-primary, var(--color-neutral-900));
   }
 }
 
@@ -75,8 +75,8 @@
 }
 
 .demo-form {
-  background: var(--bg-card, #fff);
-  border: 1px solid var(--border-color, #e0e0e0);
+  background: var(--bg-card, var(--color-white));
+  border: 1px solid var(--border-color, var(--color-neutral-200));
   border-radius: 12px;
   padding: 1.5rem;
 }
@@ -89,7 +89,7 @@
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 500;
-    color: var(--text-primary, #1a1a1a);
+    color: var(--text-primary, var(--color-neutral-900));
   }
 
   input,
@@ -97,14 +97,14 @@
   select {
     width: 100%;
     padding: 0.75rem;
-    border: 1px solid var(--border-color, #e0e0e0);
+    border: 1px solid var(--border-color, var(--color-neutral-200));
     border-radius: 8px;
     font-size: 1rem;
     transition: border-color 0.2s, box-shadow 0.2s;
 
     &:focus {
       outline: none;
-      border-color: var(--primary-color, #6366f1);
+      border-color: var(--primary-color, var(--color-purple-500));
       box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
     }
   }
@@ -118,14 +118,14 @@
     input,
     textarea,
     select {
-      border-color: var(--error-color, #ef4444);
+      border-color: var(--error-color, var(--color-error-500));
     }
   }
 
   .error {
     display: block;
     margin-top: 0.25rem;
-    color: var(--error-color, #ef4444);
+    color: var(--error-color, var(--color-error-500));
     font-size: 0.875rem;
   }
 }
@@ -154,43 +154,43 @@
 }
 
 .btn-primary {
-  background: var(--primary-color, #6366f1);
+  background: var(--primary-color, var(--color-purple-500));
   color: white;
 
   &:hover:not(:disabled) {
-    background: var(--primary-hover, #5558e3);
+    background: var(--primary-hover, var(--color-purple-600));
   }
 }
 
 .btn-secondary {
-  background: var(--bg-secondary, #f3f4f6);
-  color: var(--text-primary, #1a1a1a);
+  background: var(--bg-secondary, var(--color-neutral-100));
+  color: var(--text-primary, var(--color-neutral-900));
 
   &:hover:not(:disabled) {
-    background: var(--bg-hover, #e5e7eb);
+    background: var(--bg-hover, var(--color-border));
   }
 }
 
 .btn-danger {
-  background: var(--error-color, #ef4444);
+  background: var(--error-color, var(--color-error-500));
   color: white;
 
   &:hover:not(:disabled) {
-    background: #dc2626;
+    background: var(--color-error-600);
   }
 }
 
 // State Panel
 .state-panel {
-  background: var(--bg-code, #f8f9fa);
-  border: 1px solid var(--border-color, #e0e0e0);
+  background: var(--bg-code, var(--color-neutral-50));
+  border: 1px solid var(--border-color, var(--color-neutral-200));
   border-radius: 12px;
   padding: 1rem;
 
   h3 {
     margin: 0 0 1rem;
     font-size: 1rem;
-    color: var(--text-primary, #1a1a1a);
+    color: var(--text-primary, var(--color-neutral-900));
   }
 
   dl {
@@ -200,7 +200,7 @@
     margin: 0;
 
     dt {
-      color: var(--text-secondary, #666);
+      color: var(--text-secondary, var(--color-neutral-500));
     }
 
     dd {
@@ -208,11 +208,11 @@
       font-family: monospace;
 
       &.success {
-        color: var(--success-color, #22c55e);
+        color: var(--success-color, var(--color-secondary-500));
       }
 
       &.error {
-        color: var(--error-color, #ef4444);
+        color: var(--error-color, var(--color-error-500));
       }
 
       pre {
@@ -227,7 +227,7 @@
   .error-list {
     margin: 1rem 0 0;
     padding: 0 0 0 1.5rem;
-    color: var(--error-color, #ef4444);
+    color: var(--error-color, var(--color-error-500));
     font-size: 0.875rem;
   }
 }
@@ -237,12 +237,12 @@
   h3 {
     margin: 0 0 1rem;
     font-size: 1rem;
-    color: var(--text-primary, #1a1a1a);
+    color: var(--text-primary, var(--color-neutral-900));
   }
 
   pre {
     background: var(--bg-code, #1e1e1e);
-    color: var(--text-code, #d4d4d4);
+    color: var(--text-code, var(--color-neutral-300));
     padding: 1rem;
     border-radius: 8px;
     overflow: auto;
@@ -258,8 +258,8 @@
 
 // Wizard Styles
 .wizard-container {
-  background: var(--bg-card, #fff);
-  border: 1px solid var(--border-color, #e0e0e0);
+  background: var(--bg-card, var(--color-white));
+  border: 1px solid var(--border-color, var(--color-neutral-200));
   border-radius: 12px;
   padding: 2rem;
   margin-bottom: 2rem;
@@ -278,7 +278,7 @@
     left: 40px;
     right: 40px;
     height: 2px;
-    background: var(--border-color, #e0e0e0);
+    background: var(--border-color, var(--color-neutral-200));
     z-index: 0;
   }
 }
@@ -294,8 +294,8 @@
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: var(--bg-secondary, #f3f4f6);
-    color: var(--text-secondary, #666);
+    background: var(--bg-secondary, var(--color-neutral-100));
+    color: var(--text-secondary, var(--color-neutral-500));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -306,24 +306,24 @@
 
   .step-name {
     font-size: 0.875rem;
-    color: var(--text-secondary, #666);
+    color: var(--text-secondary, var(--color-neutral-500));
   }
 
   &.active {
     .step-number {
-      background: var(--primary-color, #6366f1);
+      background: var(--primary-color, var(--color-purple-500));
       color: white;
     }
 
     .step-name {
-      color: var(--primary-color, #6366f1);
+      color: var(--primary-color, var(--color-purple-500));
       font-weight: 500;
     }
   }
 
   &.completed {
     .step-number {
-      background: var(--success-color, #22c55e);
+      background: var(--success-color, var(--color-secondary-500));
       color: white;
     }
   }
@@ -337,7 +337,7 @@
 .step-panel {
   h3 {
     margin: 0 0 1.5rem;
-    color: var(--text-primary, #1a1a1a);
+    color: var(--text-primary, var(--color-neutral-900));
   }
 }
 
@@ -346,10 +346,10 @@
   justify-content: space-between;
   align-items: center;
   padding-top: 1rem;
-  border-top: 1px solid var(--border-color, #e0e0e0);
+  border-top: 1px solid var(--border-color, var(--color-neutral-200));
 
   .step-counter {
-    color: var(--text-secondary, #666);
+    color: var(--text-secondary, var(--color-neutral-500));
   }
 }
 
@@ -399,11 +399,11 @@
   align-items: center;
   justify-content: center;
   aspect-ratio: 1;
-  border: 2px dashed var(--border-color, #e0e0e0);
+  border: 2px dashed var(--border-color, var(--color-neutral-200));
   border-radius: 8px;
   background: transparent;
   cursor: pointer;
-  color: var(--text-secondary, #666);
+  color: var(--text-secondary, var(--color-neutral-500));
   transition: all 0.2s;
 
   span:first-child {
@@ -416,14 +416,14 @@
   }
 
   &:hover {
-    border-color: var(--primary-color, #6366f1);
-    color: var(--primary-color, #6366f1);
+    border-color: var(--primary-color, var(--color-purple-500));
+    color: var(--primary-color, var(--color-purple-500));
   }
 }
 
 .help-text {
   font-size: 0.875rem;
-  color: var(--text-secondary, #666);
+  color: var(--text-secondary, var(--color-neutral-500));
 }
 
 // Price Input
@@ -433,11 +433,11 @@
 
   .currency {
     padding: 0.75rem;
-    background: var(--bg-secondary, #f3f4f6);
-    border: 1px solid var(--border-color, #e0e0e0);
+    background: var(--bg-secondary, var(--color-neutral-100));
+    border: 1px solid var(--border-color, var(--color-neutral-200));
     border-right: none;
     border-radius: 8px 0 0 8px;
-    color: var(--text-secondary, #666);
+    color: var(--text-secondary, var(--color-neutral-500));
   }
 
   input {
@@ -458,7 +458,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  background: var(--bg-secondary, #f3f4f6);
+  background: var(--bg-secondary, var(--color-neutral-100));
   border-radius: 20px;
   cursor: pointer;
   transition: all 0.2s;
@@ -468,11 +468,11 @@
   }
 
   &:hover {
-    background: var(--bg-hover, #e5e7eb);
+    background: var(--bg-hover, var(--color-border));
   }
 
   &:has(input:checked) {
-    background: var(--primary-color, #6366f1);
+    background: var(--primary-color, var(--color-purple-500));
     color: white;
   }
 }
@@ -489,14 +489,14 @@
 
 // Review Summary
 .review-summary {
-  background: var(--bg-secondary, #f3f4f6);
+  background: var(--bg-secondary, var(--color-neutral-100));
   border-radius: 8px;
   padding: 1rem;
   margin-top: 1rem;
 
   h4 {
     margin: 0 0 1rem;
-    color: var(--text-primary, #1a1a1a);
+    color: var(--text-primary, var(--color-neutral-900));
   }
 
   dl {
@@ -506,7 +506,7 @@
     margin: 0;
 
     dt {
-      color: var(--text-secondary, #666);
+      color: var(--text-secondary, var(--color-neutral-500));
     }
 
     dd {
@@ -526,14 +526,14 @@
 
   button {
     padding: 0.75rem 1rem;
-    background: var(--primary-color, #6366f1);
+    background: var(--primary-color, var(--color-purple-500));
     color: white;
     border: none;
     border-radius: 8px;
     cursor: pointer;
 
     &:hover {
-      background: var(--primary-hover, #5558e3);
+      background: var(--primary-hover, var(--color-purple-600));
     }
   }
 }
@@ -550,7 +550,7 @@
   align-items: center;
   gap: 0.25rem;
   padding: 0.25rem 0.5rem;
-  background: var(--primary-color, #6366f1);
+  background: var(--primary-color, var(--color-purple-500));
   color: white;
   border-radius: 4px;
   font-size: 0.875rem;
@@ -572,12 +572,12 @@
 
 // Info Text
 .info-text {
-  background: var(--info-bg, #eff6ff);
-  border: 1px solid var(--info-border, #bfdbfe);
+  background: var(--info-bg, var(--color-primary-50));
+  border: 1px solid var(--info-border, var(--color-primary-200));
   border-radius: 8px;
   padding: 1rem;
   margin-bottom: 1.5rem;
-  color: var(--info-text, #1e40af);
+  color: var(--info-text, var(--color-primary-800));
 }
 
 // Star Rating
@@ -590,12 +590,12 @@
     border: none;
     font-size: 2rem;
     cursor: pointer;
-    color: var(--text-secondary, #999);
+    color: var(--text-secondary, var(--color-neutral-400));
     transition: color 0.2s, transform 0.1s;
     padding: 0;
 
     &.filled {
-      color: #f59e0b;
+      color: var(--color-warning-500);
     }
 
     &:hover {
@@ -615,11 +615,11 @@
     h4 {
       margin: 0 0 0.5rem;
       font-size: 0.875rem;
-      color: var(--text-secondary, #666);
+      color: var(--text-secondary, var(--color-neutral-500));
     }
 
     pre {
-      background: var(--bg-code, #f3f4f6);
+      background: var(--bg-code, var(--color-neutral-100));
       padding: 0.75rem;
       border-radius: 4px;
       font-size: 0.75rem;
@@ -631,8 +631,8 @@
 
 .sync-note {
   font-size: 0.875rem;
-  color: var(--text-secondary, #666);
-  background: var(--bg-hover, #f9fafb);
+  color: var(--text-secondary, var(--color-neutral-500));
+  background: var(--bg-hover, var(--color-light));
   padding: 0.75rem;
   border-radius: 4px;
   margin: 0;
@@ -640,11 +640,11 @@
 
 // Section description
 .section-description {
-  color: var(--text-secondary, #666);
+  color: var(--text-secondary, var(--color-neutral-500));
   margin-bottom: 1.5rem;
 
   code {
-    background: var(--bg-code, #f3f4f6);
+    background: var(--bg-code, var(--color-neutral-100));
     padding: 0.125rem 0.375rem;
     border-radius: 4px;
     font-size: 0.9em;

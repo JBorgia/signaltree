@@ -18,10 +18,10 @@
         more. Use the unified factory functions instead.
       </li>
       <li>
-        <strong>7 memoization variants consolidated:</strong>
-        <code>shallowMemoization()</code>,
-        <code>lightweightMemoization()</code>, etc. are now
-        <code>memoization(&#123; preset: 'shallow' &#125;)</code>.
+        <strong>Memoization enhancer removed:</strong>
+        Use Angular's <code>computed()</code> directly. The previous variants
+        (<code>shallowMemoization()</code>, <code>lightweightMemoization()</code>,
+        etc.) were unified in v9 and the entire enhancer was removed in 9.0.1.
       </li>
       <li>
         <strong>Subpath exports:</strong> Security, presets, storage, and
@@ -61,8 +61,8 @@
   <div class="release-highlights">
     <p>
       SignalTree v7 has been <strong>validated in production</strong> with the
-      TruckTrax v3 mobile app migration. Real-world results from a complex
-      Angular enterprise app:
+      migration of a complex Angular mobile app. Real-world results from an
+      enterprise production deployment:
     </p>
     <div class="metrics-grid">
       <div class="metric">

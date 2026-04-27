@@ -1,5 +1,7 @@
 # Memoization Performance Optimization Guide
 
+> **ARCHIVED — 9.0.1 removed the memoization enhancer.** This document describes a feature that no longer exists. Use Angular's built-in `computed()` instead; it memoizes by reference equality with no additional runtime overhead. See [MIGRATION.md](../guides/MIGRATION.md#901).
+
 This guide covers how to choose the right memoization strategy for optimal SignalTree performance.
 
 ## Quick Reference: Equality Strategy Performance

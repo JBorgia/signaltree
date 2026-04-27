@@ -1,5 +1,5 @@
 .persistence-demo {
-  max-width: 800px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 1rem;
 }
@@ -9,11 +9,11 @@
 
   h2 {
     margin: 0 0 0.5rem;
-    color: #1a1a2e;
+    color: var(--color-neutral-900);
   }
 
   .description {
-    color: #666;
+    color: var(--color-neutral-500);
     margin-bottom: 1rem;
   }
 }
@@ -22,7 +22,7 @@
   display: flex;
   gap: 2rem;
   padding: 1rem;
-  background: #f8f9fa;
+  background: var(--color-neutral-50);
   border-radius: 8px;
   flex-wrap: wrap;
 
@@ -33,22 +33,22 @@
 
     .label {
       font-weight: 500;
-      color: #666;
+      color: var(--color-neutral-500);
     }
 
     .value {
       font-family: monospace;
 
       &.saving {
-        color: #f59e0b;
+        color: var(--color-warning-500);
       }
 
       &.saved {
-        color: #10b981;
+        color: var(--color-secondary-500);
       }
 
       &.error {
-        color: #ef4444;
+        color: var(--color-error-500);
       }
     }
   }
@@ -63,11 +63,11 @@
   padding: 1.5rem;
   background: white;
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
 
   h3 {
     margin: 0 0 1rem;
-    color: #1a1a2e;
+    color: var(--color-neutral-900);
     font-size: 1.1rem;
   }
 }
@@ -80,21 +80,21 @@
     display: block;
     margin-bottom: 0.25rem;
     font-weight: 500;
-    color: #374151;
+    color: var(--color-neutral-700);
   }
 
   input,
   select {
     width: 100%;
     padding: 0.5rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--color-neutral-300);
     border-radius: 4px;
     font-size: 1rem;
 
     &:focus {
       outline: none;
-      border-color: #6366f1;
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+      border-color: var(--color-primary-600);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     }
   }
 }
@@ -106,20 +106,20 @@
   button {
     flex: 1;
     padding: 0.5rem 1rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--color-neutral-300);
     background: white;
     border-radius: 4px;
     cursor: pointer;
     transition: all 0.2s;
 
     &:hover {
-      background: #f3f4f6;
+      background: var(--color-neutral-100);
     }
 
     &.active {
-      background: #6366f1;
+      background: var(--color-primary-600);
       color: white;
-      border-color: #6366f1;
+      border-color: var(--color-primary-600);
     }
   }
 }
@@ -157,28 +157,28 @@
   input,
   textarea {
     padding: 0.5rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--color-neutral-300);
     border-radius: 4px;
     font-size: 1rem;
     font-family: inherit;
 
     &:focus {
       outline: none;
-      border-color: #6366f1;
+      border-color: var(--color-primary-600);
     }
   }
 
   button {
     align-self: flex-start;
     padding: 0.5rem 1rem;
-    background: #6366f1;
+    background: var(--color-primary-600);
     color: white;
     border: none;
     border-radius: 4px;
     cursor: pointer;
 
     &:hover:not(:disabled) {
-      background: #4f46e5;
+      background: var(--color-primary-700);
     }
 
     &:disabled {
@@ -195,7 +195,7 @@
 }
 
 .empty-state {
-  color: #9ca3af;
+  color: var(--color-neutral-400);
   text-align: center;
   padding: 2rem;
   font-style: italic;
@@ -203,9 +203,9 @@
 
 .note-card {
   padding: 1rem;
-  background: #f9fafb;
+  background: var(--color-light);
   border-radius: 6px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
 
   .note-header {
     display: flex;
@@ -215,7 +215,7 @@
     h4 {
       margin: 0;
       font-size: 1rem;
-      color: #1f2937;
+      color: var(--color-dark);
     }
 
     .delete-btn {
@@ -234,21 +234,21 @@
 
   .note-content {
     margin: 0.5rem 0;
-    color: #4b5563;
+    color: var(--color-neutral-600);
     font-size: 0.9rem;
   }
 
   .note-date {
     display: block;
     font-size: 0.75rem;
-    color: #9ca3af;
+    color: var(--color-neutral-400);
   }
 }
 
 .demo-footer {
   margin-top: 2rem;
   padding: 1.5rem;
-  background: #f8f9fa;
+  background: var(--color-neutral-50);
   border-radius: 8px;
 
   h3 {
@@ -257,7 +257,7 @@
   }
 
   .hint {
-    color: #666;
+    color: var(--color-neutral-500);
     margin-bottom: 1rem;
     font-size: 0.9rem;
   }
@@ -270,32 +270,32 @@
 
   button {
     padding: 0.5rem 1rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--color-neutral-300);
     background: white;
     border-radius: 4px;
     cursor: pointer;
     transition: all 0.2s;
 
     &:hover {
-      background: #f3f4f6;
+      background: var(--color-neutral-100);
     }
 
     &.primary {
-      background: #6366f1;
+      background: var(--color-primary-600);
       color: white;
-      border-color: #6366f1;
+      border-color: var(--color-primary-600);
 
       &:hover {
-        background: #4f46e5;
+        background: var(--color-primary-700);
       }
     }
 
     &.danger {
-      color: #dc2626;
-      border-color: #dc2626;
+      color: var(--color-error-600);
+      border-color: var(--color-error-600);
 
       &:hover {
-        background: #fef2f2;
+        background: var(--color-error-50);
       }
     }
   }
@@ -304,8 +304,8 @@
 .error-message {
   margin-top: 1rem;
   padding: 0.75rem;
-  background: #fef2f2;
-  color: #dc2626;
+  background: var(--color-error-50);
+  color: var(--color-error-600);
   border-radius: 4px;
   font-size: 0.9rem;
 }

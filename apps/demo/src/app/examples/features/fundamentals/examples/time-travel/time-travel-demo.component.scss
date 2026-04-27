@@ -1,45 +1,10 @@
-$primary: #3b82f6;
-$secondary: #8b5cf6;
-$success: #10b981;
-$warning: #f59e0b;
-$danger: #ef4444;
-$info: #06b6d4;
-$dark: #1f2937;
-$light: #f9fafb;
-$border: #e5e7eb;
-$text: #374151;
-$text-light: #6b7280;
-
-@mixin card {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-  padding: 1.5rem;
-}
-
-@mixin button-base {
-  padding: 0.625rem 1.25rem;
-  border-radius: 6px;
-  font-weight: 600;
-  border: none;
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: all 0.2s;
-  &:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  }
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
+// Time Travel Demo
+@use '../../../../shared/styles' as *;
 
 .container {
   max-width: 1400px;
   margin: 0 auto;
   padding: 2rem;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   h1 { font-size: 2.5rem; font-weight: 700; color: $dark; margin-bottom: 1.5rem; text-align: center; }
   h2 { font-size: 1.5rem; font-weight: 700; color: $dark; margin-bottom: 0.5rem; }
   h3 { font-size: 1rem; font-weight: 600; color: $dark; margin-bottom: 0.75rem; }
@@ -48,7 +13,7 @@ $text-light: #6b7280;
 .explanation-card {
   @include card;
   margin-bottom: 2rem;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  background: linear-gradient(135deg, var(--color-neutral-50) 0%, var(--color-neutral-100) 100%);
   border-left: 4px solid $primary;
   h2 { font-size: 1.5rem; font-weight: 700; color: $primary; margin-bottom: 1rem; }
   .intro-text { font-size: 1rem; line-height: 1.7; color: $text; margin-bottom: 1.5rem; strong { color: $primary; font-weight: 600; } em { font-style: italic; color: $secondary; } }
@@ -82,7 +47,7 @@ $text-light: #6b7280;
 
 .btn-primary, .btn-secondary, .btn-success, .btn-warning, .btn-danger { @include button-base; }
 .btn-primary { background: $primary; color: white; }
-.btn-secondary { background: #6b7280; color: white; }
+.btn-secondary { background: var(--color-neutral-500); color: white; }
 .btn-success { background: $success; color: white; }
 .btn-warning { background: $warning; color: white; }
 .btn-danger { background: $danger; color: white; }
@@ -94,7 +59,7 @@ $text-light: #6b7280;
 
 .history-list { h3 { margin-bottom: 1rem; } max-height: 400px; overflow-y: auto; }
 
-.history-item { display: flex; gap: 0.75rem; padding: 0.75rem; background: $light; border-radius: 6px; margin-bottom: 0.5rem; border: 2px solid transparent; cursor: pointer; transition: all 0.2s; &:hover { border-color: $primary; background: white; } &.active { border-color: $warning; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); } }
+.history-item { display: flex; gap: 0.75rem; padding: 0.75rem; background: $light; border-radius: 6px; margin-bottom: 0.5rem; border: 2px solid transparent; cursor: pointer; transition: all 0.2s; &:hover { border-color: $primary; background: white; } &.active { border-color: $warning; background: linear-gradient(135deg, var(--color-warning-100) 0%, var(--color-warning-200) 100%); } }
 
 .history-index { width: 2rem; height: 2rem; display: flex; align-items: center; justify-content: center; background: $primary; color: white; border-radius: 50%; font-weight: 700; font-size: 0.875rem; flex-shrink: 0; }
 

@@ -1,5 +1,7 @@
 # SignalTree v9 — Comprehensive Improvement Plan
 
+> **Status: HISTORICAL (v9 shipped).** In 9.0.1 the memoization enhancer and preset factories documented below were removed entirely. Use Angular's built-in `computed()` instead. See [CHANGELOG.md](./CHANGELOG.md) and [docs/guides/MIGRATION.md](./docs/guides/MIGRATION.md#901).
+
 **Current version**: 9.0.0
 **Target version**: 9.0.0
 **Breaking changes**: Allowed (documented below)

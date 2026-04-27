@@ -88,27 +88,6 @@ export const appRoutes: Route[] = [
       ).then((c) => c.EntitiesDemoComponent),
   },
   {
-    path: 'memoization',
-    loadComponent: () =>
-      import(
-        './examples/features/fundamentals/examples/memoization/memoization-demo.component'
-      ).then((c) => c.MemoizationDemoComponent),
-  },
-  {
-    path: 'log-filtering',
-    loadComponent: () =>
-      import(
-        './examples/features/fundamentals/examples/memoization/log-filtering-demo.component'
-      ).then((c) => c.LogFilteringDemoComponent),
-  },
-  {
-    path: 'presets',
-    loadComponent: () =>
-      import(
-        './examples/features/fundamentals/examples/enhancers/presets-demo/presets-demo.component'
-      ).then((c) => c.PresetsDemoComponent),
-  },
-  {
     path: 'persistence',
     loadComponent: () =>
       import(

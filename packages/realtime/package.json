@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/realtime",
-  "version": "9.0.0",
+  "version": "9.1.0",
   "description": "Real-time data synchronization enhancers for SignalTree - Supabase, Firebase, and WebSocket support",
   "license": "MIT",
   "type": "module",
@@ -23,7 +23,7 @@
   },
   "peerDependencies": {
     "@angular/core": "^20.0.0 || ^21.0.0",
-    "@signaltree/core": "^9.0.0",
+    "@signaltree/core": "^9.0.1",
     "@supabase/supabase-js": "^2.0.0",
     "tslib": "^2.0.0"
   },

@@ -22,7 +22,6 @@
       "@signaltree/callable-syntax": ["packages/callable-syntax/src/index.ts"],
       "@signaltree/callable-syntax/*": ["packages/callable-syntax/src/*"],
       "@signaltree/core": ["packages/core/src/index.ts"],
-      "@signaltree/core/presets": ["packages/core/src/presets.ts"],
       "@signaltree/core/security": ["packages/core/src/security.ts"],
       "@signaltree/core/edit-session": ["packages/core/src/edit-session.ts"],
       "@signaltree/core/storage": ["packages/core/src/storage.ts"],
@@ -34,9 +33,7 @@
       "@signaltree/realtime": ["packages/realtime/src/index.ts"],
       "@signaltree/realtime/*": ["packages/realtime/src/*"],
       "@signaltree/shared": ["packages/shared/src/index.ts"],
-      "@signaltree/shared/*": ["packages/shared/src/*"],
-      "@signaltree/types": ["packages/types/src/index.ts"],
-      "@signaltree/utils": ["packages/utils/src/index.ts"]
+      "@signaltree/shared/*": ["packages/shared/src/*"]
     }
   },
   "include": ["types.d.ts"],

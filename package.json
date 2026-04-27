@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/workspace",
-  "version": "9.0.0",
+  "version": "9.1.0",
   "license": "BSL-1.1",
   "funding": {
     "type": "github",
@@ -59,7 +59,7 @@
     "build:packages": "nx run-many -t build --projects=enterprise,ng-forms,shared,callable-syntax,guardrails",
     "build:production": "nx run-many -t build --configuration=production --projects=core,enterprise,ng-forms,shared,callable-syntax,guardrails && npm run ship-skills",
     "// Testing Scripts": "Comprehensive testing workflows",
-    "test:all": "nx run-many -t test --projects=core,enterprise,ng-forms,shared,callable-syntax,guardrails",
+    "test:all": "nx run-many -t test --projects=core,enterprise,ng-forms,shared,callable-syntax,guardrails --parallel=1",
     "test:core": "nx test core",
     "test:callable-syntax": "nx test callable-syntax",
     "test:performance": "nx test core --testNamePattern=\"performance\"",
@@ -92,6 +92,7 @@
     "validate:dist": "bash scripts/verify-dist.sh",
     "validate:exports": "node scripts/verify-exports.js",
     "validate:docs": "bash scripts/validate-docs.sh",
+    "validate:doc-snippets": "node scripts/validate-doc-snippets.js",
     "validate:size-claims": "node scripts/verify-size-claims.js",
     "validate:types": "bash scripts/verify-no-broken-dts.sh",
     "validate:budget": "node scripts/v9-budget-checks.js",

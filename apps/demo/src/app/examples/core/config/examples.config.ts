@@ -8,13 +8,11 @@ import { DevtoolsDemoComponent } from '../../features/fundamentals/examples/enha
 import {
     PersistenceDemoComponent,
 } from '../../features/fundamentals/examples/enhancers/persistence-demo/persistence-demo.component';
-import { PresetsDemoComponent } from '../../features/fundamentals/examples/enhancers/presets-demo/presets-demo.component';
 import {
     SerializationDemoComponent,
 } from '../../features/fundamentals/examples/enhancers/serialization-demo/serialization-demo.component';
 import { EntitiesDemoComponent } from '../../features/fundamentals/examples/entities/entities-demo.component';
 import { FormsDemoComponent } from '../../features/fundamentals/examples/forms/forms-demo.component';
-import { MemoizationDemoComponent } from '../../features/fundamentals/examples/memoization/memoization-demo.component';
 import {
     RecommendedArchitectureComponent,
 } from '../../features/fundamentals/examples/recommended-architecture/recommended-architecture.component';
@@ -121,28 +119,8 @@ export const devtoolsExampleMeta: ExampleMeta = {
 };
 
 /**
- * Presets Examples
+ * Presets Examples (removed in 9.0.1)
  */
-export const presetsExampleMeta: ExampleMeta = {
-  id: 'presets-configurations',
-  title: 'Presets & Configurations',
-  description:
-    'Use pre-configured SignalTree setups for common development scenarios.',
-  category: 'Configuration',
-  focusAreas: ['presets', 'configuration', 'setup'],
-  functionalUse: ['quick-start', 'best-practices'],
-  enhancers: ['presets'],
-  route: '/presets',
-  component: PresetsDemoComponent,
-  difficulty: 'intermediate',
-  tags: [
-    'presets',
-    'configuration',
-    'development',
-    'production',
-    'performance',
-  ],
-};
 
 /**
  * Persistence Examples
@@ -187,22 +165,8 @@ export const serializationExampleMeta: ExampleMeta = {
 };
 
 /**
- * Memoization Examples
+ * Memoization Examples (removed in 9.0.1 — use Angular `computed()` directly)
  */
-export const memoizationExampleMeta: ExampleMeta = {
-  id: 'memoization-caching',
-  title: 'Memoization & Caching',
-  description:
-    'Cache expensive computations and optimize performance with memoization.',
-  category: 'Performance',
-  focusAreas: ['memoization', 'caching', 'performance'],
-  functionalUse: ['optimization', 'expensive-computations'],
-  enhancers: ['memoization'],
-  route: '/memoization',
-  component: MemoizationDemoComponent,
-  difficulty: 'intermediate',
-  tags: ['memoization', 'caching', 'performance', 'optimization'],
-};
 
 /**
  * Time Travel Examples
@@ -356,10 +320,8 @@ export const EXAMPLES_REGISTRY: ExampleMeta[] = [
   batchingExampleMeta,
   callableSyntaxExampleMeta,
   devtoolsExampleMeta,
-  presetsExampleMeta,
   persistenceExampleMeta,
   serializationExampleMeta,
-  memoizationExampleMeta,
   timeTravelExampleMeta,
   effectsExampleMeta,
   formsExampleMeta,

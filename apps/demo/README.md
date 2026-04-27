@@ -64,8 +64,7 @@ pnpm nx test core --testNamePattern="recursive performance"
 1. **Deep Nesting Demo**: Unlimited depth with perfect type inference
 2. **Persistence Showcase**: Auto-save with multiple storage backends
 3. **Batch Operations**: Demonstrate batching vs. individual updates
-4. **Memoization**: Demonstrate cached vs. uncached computations
-5. **Framework Comparison**: Side-by-side performance benchmarks
+4. **Framework Comparison**: Side-by-side performance benchmarks
 
 ### Component Architecture
 
@@ -93,7 +92,6 @@ apps/demo/src/app/
 - **Operation Timing**: Real-time measurement of all SignalTree operations
 - **Memory Usage**: Advanced garbage collection monitoring and optimization tracking
 - **Batch Performance**: Compare batched vs. individual update throughput
-- **Memoization**: Compare cached vs. uncached compute paths
 - **Recursive Depth**: Perfect scaling from 5-20+ levels with consistent performance
 
 ### Interactive Testing Modes
@@ -310,7 +308,7 @@ node scripts/consolidated-bundle-analysis.js
 ### Interactive Learning Modules
 
 1. **Getting Started**: Basic SignalTree concepts and setup
-2. **Performance Optimization**: Batching and memoization techniques
+2. **Performance Optimization**: Batching and Angular `computed()` techniques
 3. **Advanced Persistence**: Auto-save and storage adapters
 4. **Type Safety**: Perfect inference and compile-time validation
 5. **Production Deployment**: Best practices and optimization

@@ -28,8 +28,6 @@ export type {
   ISignalTree,
   SignalTree,
   SignalTreeBase,
-  FullSignalTree,
-  ProdSignalTree,
   TreeNode,
   CallableWritableSignal,
   AccessibleNode,
@@ -41,7 +39,6 @@ export type {
 
   // Configuration types
   TreeConfig,
-  TreePreset,
 
   // Enhancer system types
   Enhancer,
@@ -206,17 +203,6 @@ export { batching } from './enhancers/batching/batching';
 export type { BatchingConfig, BatchingMethods } from './lib/types';
 
 /**
- * Memoization enhancer for caching derived computations.
- *
- * NOTE: Angular's computed() already memoizes by reference equality.
- * Use this enhancer when you need deep/shallow equality checks or
- * explicit cache key management beyond what computed() provides.
- *
- * @see {@link memoization} for memoization capabilities
- */
-export { memoization } from './enhancers/memoization/memoization';
-
-/**
  * Time travel enhancer for debugging and undo/redo functionality
  * @see {@link timeTravel} for time travel capabilities
  */
@@ -266,7 +252,6 @@ export { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES, isDev } from './lib/consta
  *
  * **Enhancers (one function each):**
  * - `batching(config?)` - Batch CD notifications
- * - `memoization(config?)` - Cache with deep/shallow equality
  * - `timeTravel(config?)` - Undo/redo
  * - `devTools(config?)` - Redux DevTools integration
  * - `serialization(config?)` - State serialization

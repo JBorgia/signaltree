@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/core",
-  "version": "9.0.0",
+  "version": "9.1.0",
   "description": "Reactive JSON for Angular. JSON branches, reactive leaves. No actions. No reducers. No selectors.",
   "license": "MIT",
   "type": "module",
@@ -13,11 +13,6 @@
       "types": "./src/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
-    },
-    "./presets": {
-      "types": "./src/presets.d.ts",
-      "import": "./dist/presets.js",
-      "default": "./dist/presets.js"
     },
     "./security": {
       "types": "./src/security.d.ts",

@@ -1,67 +1,17 @@
-// Entities Demo - Self-contained styling with clear visual hierarchy
-
+// Entities Demo
 @use 'sass:color';
+@use '../../../../shared/styles' as *;
 
-// Local Variables - Color-coded sections for clarity
-$primary: #3b82f6;
-$secondary: #8b5cf6;
-$success: #10b981;
-$warning: #f59e0b;
-$danger: #ef4444;
-$info: #06b6d4;
-$dark: #1f2937;
-$light: #f9fafb;
-$border: #e5e7eb;
-$text: #374151;
-$text-light: #6b7280;
-
-// Section-specific colors for visual distinction
-$users-accent: #3b82f6; // Blue for users section
-$posts-accent: #8b5cf6; // Purple for posts section
-$stats-accent: #10b981; // Green for stats section
-
-// Mixins
-@mixin card {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-  padding: 1.5rem;
-}
-
-@mixin button-base {
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  font-weight: 600;
-  border: none;
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: all 0.2s;
-
-  &:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-@mixin panel-accent($color) {
-  border-top: 4px solid $color;
-
-  h2 {
-    color: $color;
-  }
-}
+// Section-specific accent colors for visual distinction
+$users-accent: $primary;
+$posts-accent: $secondary;
+$stats-accent: $success;
 
 // Main Container
 .container {
-  max-width: 1600px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 2rem;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   h1 {
     font-size: 2.5rem;
@@ -76,7 +26,7 @@ $stats-accent: #10b981; // Green for stats section
 .explanation-card {
   @include card;
   margin-bottom: 2rem;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  background: linear-gradient(135deg, var(--color-neutral-50) 0%, var(--color-neutral-100) 100%);
   border-left: 4px solid $primary;
 
   h2 {
@@ -112,12 +62,12 @@ $stats-accent: #10b981; // Green for stats section
   }
 
   .new-feature-callout {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--color-primary-400) 0%, var(--color-purple-600) 100%);
     color: white;
     padding: 1.5rem;
     border-radius: 12px;
     margin-bottom: 1.5rem;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 
     h3 {
       margin: 0 0 0.75rem 0;
@@ -142,7 +92,7 @@ $stats-accent: #10b981; // Green for stats section
         font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
         font-size: 0.875rem;
         line-height: 1.6;
-        color: #e0e7ff;
+        color: var(--color-primary-100);
       }
     }
 
@@ -195,9 +145,9 @@ $stats-accent: #10b981; // Green for stats section
 
   .feature-tag {
     padding: 0.5rem 1rem;
-    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-    border: 1px solid #93c5fd;
-    color: #1e40af;
+    background: linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-primary-100) 100%);
+    border: 1px solid var(--color-primary-300);
+    color: var(--color-primary-800);
     border-radius: 20px;
     font-size: 0.875rem;
     font-weight: 600;
@@ -212,15 +162,15 @@ $stats-accent: #10b981; // Green for stats section
 
 // Help Text
 .help-text {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  border: 2px solid #fbbf24;
+  background: linear-gradient(135deg, var(--color-warning-100) 0%, var(--color-warning-200) 100%);
+  border: 2px solid var(--color-warning-400);
   border-radius: 8px;
   padding: 1rem;
   margin-bottom: 1rem;
   text-align: center;
   font-size: 0.9375rem;
   font-weight: 600;
-  color: #78350f;
+  color: var(--color-warning-900);
 }
 
 .help-text-small {
@@ -398,8 +348,8 @@ $stats-accent: #10b981; // Green for stats section
 
 // Filter Panel
 .filter-panel {
-  background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
-  border: 1px solid #cbd5e1;
+  background: linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-primary-100) 100%);
+  border: 1px solid var(--color-neutral-300);
   border-radius: 8px;
   padding: 1rem;
   margin-bottom: 1rem;
@@ -429,7 +379,7 @@ $stats-accent: #10b981; // Green for stats section
 
 // Bulk Actions Bar
 .bulk-actions {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  background: linear-gradient(135deg, var(--color-warning-100) 0%, var(--color-warning-200) 100%);
   border: 2px solid $warning;
   border-radius: 8px;
   padding: 0.75rem 1rem;
@@ -444,7 +394,7 @@ $stats-accent: #10b981; // Green for stats section
 .bulk-count {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #78350f;
+  color: var(--color-warning-900);
 }
 
 .bulk-buttons {
@@ -479,7 +429,7 @@ $stats-accent: #10b981; // Green for stats section
 
   &.selected {
     border-color: $users-accent;
-    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    background: linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-primary-100) 100%);
     box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
   }
 }
@@ -492,7 +442,7 @@ $stats-accent: #10b981; // Green for stats section
   transition: background 0.2s;
 
   &:hover {
-    background: #f9fafb;
+    background: var(--color-light);
   }
 
   &:focus {
@@ -557,7 +507,7 @@ $stats-accent: #10b981; // Green for stats section
 
   &.selected {
     border-color: $posts-accent;
-    background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+    background: linear-gradient(135deg, var(--color-purple-50) 0%, var(--color-purple-100) 100%);
     box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
   }
 }
@@ -615,7 +565,7 @@ $stats-accent: #10b981; // Green for stats section
   font-size: 0.8125rem;
 
   &:hover {
-    background: #fef2f2;
+    background: var(--color-error-50);
     border-color: $danger;
   }
 }
@@ -628,9 +578,9 @@ $stats-accent: #10b981; // Green for stats section
 
 .tag {
   padding: 0.25rem 0.75rem;
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-  border: 1px solid #7dd3fc;
-  color: #075985;
+  background: linear-gradient(135deg, var(--color-info-50) 0%, var(--color-info-100) 100%);
+  border: 1px solid var(--color-info-300);
+  color: var(--color-info-800);
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 600;
@@ -674,11 +624,11 @@ $stats-accent: #10b981; // Green for stats section
 }
 
 .btn-secondary {
-  background: #6b7280;
+  background: var(--color-neutral-500);
   color: white;
 
   &:hover:not(:disabled) {
-    background: color.adjust(#6b7280, $lightness: -5%);
+    background: var(--color-neutral-600);
   }
 }
 
@@ -792,7 +742,7 @@ $stats-accent: #10b981; // Green for stats section
   }
 
   &.stat-pink {
-    color: #ec4899;
+    color: var(--color-error-400);
   }
 
   &.stat-purple {
@@ -808,13 +758,13 @@ $stats-accent: #10b981; // Green for stats section
   display: inline-block;
 
   &.status-active {
-    background: #d1fae5;
-    color: #065f46;
+    background: var(--color-secondary-100);
+    color: var(--color-secondary-900);
   }
 
   &.status-inactive {
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--color-error-100);
+    color: var(--color-error-800);
   }
 }
 
@@ -896,11 +846,11 @@ $stats-accent: #10b981; // Green for stats section
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+    background: var(--color-neutral-300);
     border-radius: 4px;
 
     &:hover {
-      background: #94a3b8;
+      background: var(--color-neutral-400);
     }
   }
 }

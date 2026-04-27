@@ -74,6 +74,11 @@ interface BenchmarkResult {
   opsPerSecond: number;
   // Optional memory delta in MB for memory-centric scenarios
   memoryDeltaMB?: number;
+  // Number of inner repetitions per timed sample. Sub-millisecond scenarios
+  // are amortized across innerOps repetitions to escape the ~0.1ms
+  // performance.now() resolution floor. Each entry in `samples` is the mean
+  // per-call duration over innerOps repetitions.
+  innerOps?: number;
 }
 
 interface ExtendedBenchmarkResult extends BenchmarkResult {
@@ -129,6 +134,9 @@ interface BenchmarkService {
     batchSize?: number
   ): Promise<number | ServiceBenchmarkResult>;
   runSelectorBenchmark?(
+    dataSize: number
+  ): Promise<number | ServiceBenchmarkResult>;
+  runServerPayloadSyncBenchmark?(
     dataSize: number
   ): Promise<number | ServiceBenchmarkResult>;
   runSerializationBenchmark?(
@@ -520,6 +528,7 @@ export class BenchmarkOrchestratorComponent
       'computed-chains': 'runComputedBenchmark',
       'batch-updates': 'runBatchUpdatesBenchmark',
       'selector-memoization': 'runSelectorBenchmark',
+      'server-payload-sync': 'runServerPayloadSyncBenchmark',
       serialization: 'runSerializationBenchmark',
       'concurrent-updates': 'runConcurrentUpdatesBenchmark',
       'memory-efficiency': 'runMemoryEfficiencyBenchmark',
@@ -1310,6 +1319,10 @@ export class BenchmarkOrchestratorComponent
         return Math.min(500, dataSize); // Real-time update frequency
       case 'state-size-scaling':
         return Math.min(200, dataSize / 5); // Scaling operations
+      case 'server-payload-sync':
+        // One bulk merge per iteration; report payload size as the
+        // "ops performed" so the column reflects keys-merged/sec.
+        return Math.min(20000, Math.max(500, dataSize));
       default:
         return dataSize; // Default fallback
     }
@@ -1397,6 +1410,11 @@ export class BenchmarkOrchestratorComponent
         // Large entities with properties and relations
         const entitySize = 2048; // bytes per entity (with properties/relations)
         return (Math.min(dataSize * 10, 10000) * entitySize) / (1024 * 1024);
+      }
+      case 'server-payload-sync': {
+        // Flat record: one signal per key + payload object of equal size.
+        const bytesPerKey = 96; // signal wrapper + numeric value
+        return (Math.min(20000, dataSize) * bytesPerKey * 2) / (1024 * 1024);
       }
       default:
         return (dataSize * 64) / (1024 * 1024); // Default: 64 bytes per item
@@ -2226,6 +2244,13 @@ export class BenchmarkOrchestratorComponent
           return await maybeNormalize(
             svc.runSelectorBenchmark(config.dataSize)
           );
+        case 'server-payload-sync':
+          if (!svc.runServerPayloadSyncBenchmark) {
+            return -1;
+          }
+          return await maybeNormalize(
+            svc.runServerPayloadSyncBenchmark(config.dataSize)
+          );
         case 'serialization':
           if (!svc.runSerializationBenchmark) {
             return -1;
@@ -2553,12 +2578,53 @@ export class BenchmarkOrchestratorComponent
         : undefined;
 
     // Warmup runs
+    let lastWarmup = 0;
     for (let i = 0; i < config.warmupRuns; i++) {
       if (!this.isRunning()) break;
-      await this.executeBenchmark(library.id, scenario.id, config, {
+      lastWarmup = await this.executeBenchmark(library.id, scenario.id, config, {
         overrideEnterprise: options?.overrideEnterprise,
       });
       this.currentIteration.set(i + 1);
+    }
+
+    // Adaptive inner-loop calibration.
+    // performance.now() is clamped to ~0.1ms in modern browsers (Spectre
+    // mitigation). Sub-millisecond samples therefore lose 25-100% of their
+    // resolution to quantization, making it impossible to distinguish e.g.
+    // SignalTree baseline (0.18ms) from Enterprise (0.16ms) — both report
+    // 0.2ms. To recover signal we run `innerOps` consecutive calls inside a
+    // single timed window and divide, so each pushed sample represents the
+    // mean per-call cost of a window large enough to escape the floor.
+    const TARGET_SAMPLE_MS = 5;
+    const MAX_INNER_OPS = 500;
+    let probe = lastWarmup;
+    if (probe <= 0) {
+      probe = await this.executeBenchmark(library.id, scenario.id, config, {
+        overrideEnterprise: options?.overrideEnterprise,
+      });
+    }
+    if (probe === -1) {
+      return {
+        libraryId: library.id,
+        scenarioId: scenario.id,
+        samples: [],
+        median: -1,
+        mean: -1,
+        p95: -1,
+        p99: -1,
+        min: -1,
+        max: -1,
+        stdDev: -1,
+        opsPerSecond: -1,
+        memoryDeltaMB: undefined,
+      };
+    }
+    let innerOps = 1;
+    if (probe > 0 && probe < TARGET_SAMPLE_MS) {
+      innerOps = Math.min(
+        MAX_INNER_OPS,
+        Math.max(1, Math.ceil(TARGET_SAMPLE_MS / probe))
+      );
     }
 
     // Measurement runs
@@ -2566,35 +2632,69 @@ export class BenchmarkOrchestratorComponent
       if (!this.isRunning()) break;
       this.currentIteration.set(i + 1);
 
-      const duration = await this.executeBenchmark(
-        library.id,
-        scenario.id,
-        config,
-        {
-          overrideEnterprise: options?.overrideEnterprise,
+      let perCall: number;
+      if (innerOps === 1) {
+        perCall = await this.executeBenchmark(
+          library.id,
+          scenario.id,
+          config,
+          { overrideEnterprise: options?.overrideEnterprise }
+        );
+        if (perCall === -1) {
+          return {
+            libraryId: library.id,
+            scenarioId: scenario.id,
+            samples: [],
+            median: -1,
+            mean: -1,
+            p95: -1,
+            p99: -1,
+            min: -1,
+            max: -1,
+            stdDev: -1,
+            opsPerSecond: -1,
+            memoryDeltaMB: undefined,
+          };
         }
-      );
-
-      // Check if the benchmark returned -1 (unsupported)
-      if (duration === -1) {
-        // Return special result indicating unsupported scenario
-        return {
-          libraryId: library.id,
-          scenarioId: scenario.id,
-          samples: [],
-          median: -1,
-          mean: -1,
-          p95: -1,
-          p99: -1,
-          min: -1,
-          max: -1,
-          stdDev: -1,
-          opsPerSecond: -1,
-          memoryDeltaMB: undefined,
-        };
+      } else {
+        // Time the whole batch with one performance.now pair so the timer
+        // floor is amortized. Discard per-call durations from executeBenchmark
+        // here — wall-clock around the loop is more accurate.
+        const batchStart = performance.now();
+        let aborted = false;
+        for (let k = 0; k < innerOps; k++) {
+          const r = await this.executeBenchmark(
+            library.id,
+            scenario.id,
+            config,
+            { overrideEnterprise: options?.overrideEnterprise }
+          );
+          if (r === -1) {
+            aborted = true;
+            break;
+          }
+        }
+        const batchTotal = performance.now() - batchStart;
+        if (aborted) {
+          return {
+            libraryId: library.id,
+            scenarioId: scenario.id,
+            samples: [],
+            median: -1,
+            mean: -1,
+            p95: -1,
+            p99: -1,
+            min: -1,
+            max: -1,
+            stdDev: -1,
+            opsPerSecond: -1,
+            memoryDeltaMB: undefined,
+          };
+        }
+        perCall = batchTotal / innerOps;
       }
 
-      samples.push(duration);
+      samples.push(perCall);
 
       // Yield to UI
       if (i % 10 === 0) {
@@ -2631,6 +2731,7 @@ export class BenchmarkOrchestratorComponent
       stdDev: this.standardDeviation(samples),
       opsPerSecond: median > 0 ? Math.round(1000 / median) : 0,
       memoryDeltaMB: memoryDeltaMB,
+      innerOps,
     };
 
     // Persist an extended, per-run object on window so automation (Playwright)
@@ -2813,6 +2914,8 @@ export class BenchmarkOrchestratorComponent
     if (!baseline || !target || baseline.median <= 0 || target.median <= 0) {
       return null;
     }
+    // If either library reported the scenario as unsupported, suppress the CI.
+    if (baseline.median === -1 || target.median === -1) return null;
     // Ops/sec based effect size: percent improvement in throughput.
     const baselineOps =
       baseline.opsPerSecond > 0
@@ -2877,9 +2980,18 @@ export class BenchmarkOrchestratorComponent
     );
 
     if (!result) return '-';
-    if (result.opsPerSecond === -1 || result.opsPerSecond === 0)
-      return 'Not supported';
+    // median === -1 means the library/scenario combination isn't implemented.
+    if (result.median === -1) return 'Not supported';
     if (!isFinite(result.opsPerSecond)) return 'N/A';
+    // Rounded-to-zero ops/s when the scenario is real but extremely slow:
+    // surface the unrounded value with extra precision rather than mis-
+    // labelling it as unsupported.
+    if (result.opsPerSecond <= 0 && result.median > 0) {
+      const realOps = 1000 / result.median;
+      return realOps >= 1
+        ? Math.round(realOps).toLocaleString()
+        : realOps.toFixed(2);
+    }
     return Math.round(result.opsPerSecond).toLocaleString();
   }
 
@@ -3121,7 +3233,7 @@ export class BenchmarkOrchestratorComponent
     const scenarios = this.completedScenarios();
 
     let csv =
-      'Library,Scenario,Median (ms),Mean (ms),P95 (ms),P99 (ms),Min (ms),Max (ms),Std Dev,Ops/sec,Memory Delta (MB)\n';
+      'Library,Scenario,Median (ms),Mean (ms),P95 (ms),P99 (ms),Min (ms),Max (ms),Std Dev,Ops/sec,Memory Delta (MB),Inner Ops/Sample\n';
 
     for (const result of results) {
       const lib = libraries.find((l) => l.id === result.libraryId);
@@ -3148,7 +3260,8 @@ export class BenchmarkOrchestratorComponent
         typeof result.memoryDeltaMB === 'number'
           ? result.memoryDeltaMB.toFixed(2)
           : ''
-      }\n`;
+      },`;
+      csv += `${result.innerOps ?? 1}\n`;
     }
 
     this.downloadFile(csv, 'benchmark-results.csv', 'text/csv');

@@ -1,7 +1,277 @@
 .architecture-overview {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: var(--color-neutral-50);
+  color: var(--text-primary);
+}
+
+.hero-section {
+  padding: var(--space-16) var(--space-8);
+  text-align: center;
+  background: linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-primary-100) 100%);
+  border-bottom: 1px solid var(--color-primary-200);
+}
+
+.hero-title {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: var(--space-4);
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.hero-description {
+  font-size: 1.25rem;
+  max-width: 600px;
+  margin: 0 auto;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.content-section {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--space-16) var(--space-8);
+}
+
+.section-title {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: var(--space-8);
+  text-align: center;
+  color: var(--text-primary);
+}
+
+.comparison-section {
+  margin-bottom: var(--space-16);
+}
+
+.comparison-table {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.table-header {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1.5fr 1.5fr;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--color-neutral-100);
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.table-body {
+  padding: 0;
+}
+
+.comparison-row {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1.5fr 1.5fr;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--border-color);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: var(--bg-hover);
+  }
+}
+
+.aspect-column {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.separate-column {
+  color: var(--color-danger-600);
+}
+
+.consolidated-column {
+  color: var(--color-success-600);
+}
+
+.benefit-column {
+  color: var(--color-neutral-600);
+  font-style: italic;
+}
+
+.savings-section {
+  margin-bottom: var(--space-16);
+}
+
+.savings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--space-6);
+}
+
+.savings-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8);
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+.metric-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: var(--space-2);
+  color: var(--color-primary-600);
+}
+
+.metric-label {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+  color: var(--text-primary);
+}
+
+.metric-description {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.import-section {
+  margin-bottom: var(--space-16);
+}
+
+.import-comparison {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8);
+  box-shadow: var(--shadow-sm);
+}
+
+.import-example {
+  flex: 1;
+}
+
+.import-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: var(--space-4);
+  text-align: center;
+  color: var(--text-primary);
+}
+
+.import-code {
+  background: var(--color-neutral-900);
+  color: var(--color-neutral-100);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  border: 1px solid var(--color-neutral-700);
+}
+
+.import-arrow {
+  font-size: 2rem;
+  color: var(--color-success-500);
+  font-weight: bold;
+}
+
+.features-section {
+  margin-bottom: var(--space-16);
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--space-6);
+}
+
+.feature-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8);
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--color-primary-200);
+  }
+}
+
+.feature-icon {
+  font-size: 3rem;
+  margin-bottom: var(--space-4);
+}
+
+.feature-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: var(--space-4);
+  color: var(--text-primary);
+}
+
+.feature-description {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+  .hero-title {
+    font-size: 2rem;
+  }
+
+  .hero-description {
+    font-size: 1rem;
+  }
+
+  .content-section {
+    padding: var(--space-8) var(--space-4);
+  }
+
+  .comparison-table {
+    font-size: 0.875rem;
+  }
+
+  .table-header,
+  .comparison-row {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+
+  .import-comparison {
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .import-arrow {
+    transform: rotate(90deg);
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .hero-section {
@@ -27,7 +297,7 @@
 }
 
 .content-section {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 4rem 2rem;
 }
@@ -86,15 +356,15 @@
 }
 
 .separate-column {
-  color: #ffcccc;
+  color: var(--color-error-100);
 }
 
 .consolidated-column {
-  color: #ccffcc;
+  color: var(--color-secondary-100);
 }
 
 .benefit-column {
-  color: #ffffcc;
+  color: var(--color-warning-100);
   font-style: italic;
 }
 
@@ -126,7 +396,7 @@
   font-size: 2.5rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
-  color: #4ade80;
+  color: var(--color-secondary-400);
 }
 
 .metric-label {
@@ -180,7 +450,7 @@
 
 .import-arrow {
   font-size: 2rem;
-  color: #4ade80;
+  color: var(--color-secondary-400);
   font-weight: bold;
 }
 

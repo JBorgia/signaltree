@@ -15,13 +15,6 @@ const enhancers = [
     methods: ['batch', 'batchUpdate'],
   },
   {
-    id: 'B',
-    name: 'Memoization',
-    importPath: '../memoization/lib/memoization',
-    typeName: 'MemoizationMethods',
-    methods: ['memoize', 'memoizedUpdate', 'clearMemoCache', 'getCacheStats'],
-  },
-  {
     id: 'C',
     name: 'TimeTravel',
     importPath: '../time-travel/lib/time-travel',

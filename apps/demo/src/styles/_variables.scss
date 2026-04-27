@@ -1,6 +1,6 @@
 // Global variables and CSS custom properties
 :root {
-  /* Color System */
+  /* Color System — Primary */
   --color-primary-50: #eff6ff;
   --color-primary-100: #dbeafe;
   --color-primary-200: #bfdbfe;
@@ -11,6 +11,82 @@
   --color-primary-700: #1d4ed8;
   --color-primary-800: #1e40af;
   --color-primary-900: #1e3a8a;
+
+  /* Color System — Neutral */
+  --color-neutral-50: #f9fafb;
+  --color-neutral-100: #f3f4f6;
+  --color-neutral-200: #e5e7eb;
+  --color-neutral-300: #d1d5db;
+  --color-neutral-400: #9ca3af;
+  --color-neutral-500: #6b7280;
+  --color-neutral-600: #4b5563;
+  --color-neutral-700: #374151;
+  --color-neutral-800: #1f2937;
+  --color-neutral-900: #111827;
+
+  /* Color System — Success */
+  --color-success-50: #f0fdf4;
+  --color-success-100: #dcfce7;
+  --color-success-200: #bbf7d0;
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+
+  /* Color System — Warning */
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-200: #fde68a;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+
+  /* Color System — Danger */
+  --color-danger-50: #fef2f2;
+  --color-danger-100: #fee2e2;
+  --color-danger-200: #fecaca;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+
+  /* Color System — Info */
+  --color-info-50: #eff6ff;
+  --color-info-100: #dbeafe;
+  --color-info-200: #bfdbfe;
+  --color-info-500: #3b82f6;
+  --color-info-600: #2563eb;
+
+  /* Semantic Tokens */
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --bg-card: #ffffff;
+  --bg-secondary: #f9fafb;
+  --bg-hover: #f3f4f6;
+  --border-color: #e5e7eb;
+  --primary-color: #3b82f6;
+  --success-color: #10b981;
+  --error-color: #ef4444;
+  --info-bg: #eff6ff;
+  --info-border: #bfdbfe;
+  --info-text: #1e40af;
+  --color-background: #f9fafb;
+  --color-border: #e5e7eb;
+  --color-primary: #3b82f6;
+  --color-error: #ef4444;
+  --color-text-secondary: #6b7280;
+
+  /* Compatibility Aliases — referenced by components using shorter var names */
+  --text: var(--text-primary);
+  --border: var(--border-color);
+  --background: #ffffff;
+  --background-secondary: var(--bg-secondary);
+  --card-background: var(--bg-card);
+  --card-shadow: var(--shadow-md);
+  --primary: var(--color-primary);
+  --primary-dark: var(--color-primary-700);
+  --primary-hover: var(--color-primary-700);
+  --secondary: #8b5cf6;
+  --secondary-dark: #7c3aed;
+  --warning-color: var(--color-warning-500);
+  --bg-code: #1e1e1e;
+  --text-code: #d4d4d4;
+  --color-danger-700: #b91c1c;
 
   /* Spacing Scale */
   --space-0: 0;

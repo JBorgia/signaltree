@@ -120,16 +120,13 @@ interface GuardrailsContext<T = Record<string, unknown>> {
   >;
   issueMap: Map<string, GuardrailIssue>;
   signalUsage: Map<string, { updates: number; lastSeen: number }>;
-  pathRecomputations: Map<string, number>;
   memoryHistory: Array<{ timestamp: number; count: number }>;
-  recomputationLog: number[];
   pollingIntervalId?: ReturnType<typeof setInterval>;
   previousState?: T;
   disposed: boolean;
 }
 
 const MAX_TIMING_SAMPLES = 1000;
-const RECOMPUTATION_WINDOW_MS = 1000;
 const POLLING_INTERVAL_MS = 50; // Fast polling for dev-time monitoring
 
 /**
@@ -165,36 +162,10 @@ export function guardrails(
       hotPathData: new Map(),
       issueMap: new Map(),
       signalUsage: new Map(),
-      pathRecomputations: new Map(),
       memoryHistory: [],
-      recomputationLog: [],
       previousState: tryStructuredClone((tree as unknown as any)()),
       disposed: false,
     } as GuardrailsContext<any>;
-    // Wire up dev hooks for memoization recomputation tracking
-    (tree as unknown as Record<string, unknown>)['__devHooks'] = {
-      onRecompute: (path: string, count: number) => {
-        if (!context.disposed && !context.suppressed) {
-          recordRecomputations(path, context, count, Date.now());
-
-          // Check budget violations
-          const maxRecomputations = config.budgets?.maxRecomputations;
-
-          if (
-            maxRecomputations &&
-            context.stats.recomputationCount > maxRecomputations
-          ) {
-            addIssue(context, {
-              type: 'budget',
-              severity: 'error',
-              message: `Recomputation budget exceeded: ${context.stats.recomputationCount} > ${maxRecomputations}`,
-              path,
-              count: 1,
-            });
-          }
-        }
-      },
-    };
 
     // Try reactive subscription first (zero polling in Angular production)
     // Fall back to polling for non-Angular environments (tests)
@@ -636,32 +607,6 @@ function updateSignalStats<T>(
   context.stats.memoryGrowthRate = growth;
 }
 
-function recordRecomputations<T>(
-  path: string,
-  context: GuardrailsContext<T>,
-  count: number,
-  timestamp: number
-): void {
-  // Track per-path recomputations
-  const currentPathCount = context.pathRecomputations.get(path) ?? 0;
-  context.pathRecomputations.set(path, currentPathCount + count);
-
-  if (count > 0) {
-    context.stats.recomputationCount += count;
-    for (let i = 0; i < count; i++) {
-      context.recomputationLog.push(timestamp);
-    }
-  }
-
-  if (context.recomputationLog.length) {
-    context.recomputationLog = context.recomputationLog.filter(
-      (value) => timestamp - value <= RECOMPUTATION_WINDOW_MS
-    );
-  }
-
-  context.stats.recomputationsPerSecond = context.recomputationLog.length;
-}
-
 function updateHotPath<T>(
   context: GuardrailsContext<T>,
   hotPath: HotPath
@@ -888,8 +833,6 @@ function getSeverityPrefix(severity: GuardrailIssue['severity']): string {
 function generateReport<T>(context: GuardrailsContext<T>): GuardrailsReport {
   const memoryCurrent = context.stats.signalCount;
   const memoryLimit = context.config.budgets?.maxMemory ?? 50;
-  const recomputationCurrent = context.stats.recomputationsPerSecond;
-  const recomputationLimit = context.config.budgets?.maxRecomputations ?? 100;
 
   const budgets: BudgetStatus = {
     updateTime: createBudgetItem(
@@ -897,7 +840,6 @@ function generateReport<T>(context: GuardrailsContext<T>): GuardrailsReport {
       context.config.budgets?.maxUpdateTime || 16
     ),
     memory: createBudgetItem(memoryCurrent, memoryLimit),
-    recomputations: createBudgetItem(recomputationCurrent, recomputationLimit),
   };
 
   return {

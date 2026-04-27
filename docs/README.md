@@ -12,80 +12,79 @@ Use this index to navigate the documentation.
 
 ## 📚 Getting Started
 
-| Document | Description |
-|----------|-------------|
-| [Overview](overview.md) | High-level project overview and specifications |
-| [Root README](../README.md) | Main project README |
+| Document                    | Description                                    |
+| --------------------------- | ---------------------------------------------- |
+| [Overview](overview.md)     | High-level project overview and specifications |
+| [Root README](../README.md) | Main project README                            |
 
 ---
 
 ## 🏗️ Architecture
 
-| Document | Description |
-|----------|-------------|
+| Document                                                            | Description                                                                                    |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | [Architecture Guide](architecture/signaltree-architecture-guide.md) | Comprehensive patterns and decision frameworks (start with “Recommended Architecture (TL;DR)”) |
 
 ---
 
 ## 📖 Guides
 
-| Document | Description |
-|----------|-------------|
-| [Migration Guide](guides/MIGRATION.md) | Upgrading from v4 package structure |
-| [Custom Markers & Enhancers](guides/custom-markers-enhancers.md) | Building custom markers and enhancers |
-| [Typing Patterns](guides/typing-patterns.md) | Preferred TypeScript typing patterns |
+| Document                                                           | Description                                  |
+| ------------------------------------------------------------------ | -------------------------------------------- |
+| [Migration Guide](guides/MIGRATION.md)                             | Upgrading from v4 package structure          |
+| [Custom Markers & Enhancers](guides/custom-markers-enhancers.md)   | Building custom markers and enhancers        |
+| [Typing Patterns](guides/typing-patterns.md)                       | Preferred TypeScript typing patterns         |
 | [Local Development Symlinks](guides/local-development-symlinks.md) | Troubleshooting dual Angular instance issues |
 
 ---
 
 ## ⚡ Performance
 
-| Document | Description |
-|----------|-------------|
-| [Metrics](performance/metrics.md) | Performance metrics and methodology |
-| [Benchmark Analysis](performance/BENCHMARK_ANALYSIS.md) | Enterprise vs Core benchmarks |
-| [Tree-Shaking Optimization](performance/TREE_SHAKING_OPTIMIZATION.md) | Bundle optimization strategies |
-| [Bundle Optimization](performance/bundle-optimization.md) | Bundle size optimization |
-| [Memoization Optimization](performance/memoization-optimization.md) | Memoization performance tuning |
-| [Performance Patterns](performance/performance-patterns.md) | Common performance patterns |
-| [Hosting Guide](performance/performance-hosting-guide.md) | Performance hosting considerations |
+| Document                                                              | Description                         |
+| --------------------------------------------------------------------- | ----------------------------------- |
+| [Metrics](performance/metrics.md)                                     | Performance metrics and methodology |
+| [Benchmark Analysis](performance/BENCHMARK_ANALYSIS.md)               | Enterprise vs Core benchmarks       |
+| [Tree-Shaking Optimization](performance/TREE_SHAKING_OPTIMIZATION.md) | Bundle optimization strategies      |
+| [Bundle Optimization](performance/bundle-optimization.md)             | Bundle size optimization            |
+| [Performance Patterns](performance/performance-patterns.md)           | Common performance patterns         |
+| [Hosting Guide](performance/performance-hosting-guide.md)             | Performance hosting considerations  |
 
 ---
 
 ## 📦 Package Documentation
 
-| Document | Description |
-|----------|-------------|
-| [Events](events.md) | @signaltree/events package docs |
-| [Core](../packages/core/README.md) | @signaltree/core package |
-| [Enterprise](../packages/enterprise/README.md) | @signaltree/enterprise package |
-| [Angular Forms](../packages/ng-forms/README.md) | @signaltree/ng-forms package |
+| Document                                                 | Description                         |
+| -------------------------------------------------------- | ----------------------------------- |
+| [Events](events.md)                                      | @signaltree/events package docs     |
+| [Core](../packages/core/README.md)                       | @signaltree/core package            |
+| [Enterprise](../packages/enterprise/README.md)           | @signaltree/enterprise package      |
+| [Angular Forms](../packages/ng-forms/README.md)          | @signaltree/ng-forms package        |
 | [Callable Syntax](../packages/callable-syntax/README.md) | @signaltree/callable-syntax package |
 
 ---
 
 ## 🤖 AI/LLM References
 
-| Document | Description |
-|----------|-------------|
+| Document               | Description                       |
+| ---------------------- | --------------------------------- |
 | [LLM Guide](ai/LLM.md) | Quick reference for AI assistants |
 
 ---
 
 ## 🚀 Deployment
 
-| Document | Description |
-|----------|-------------|
+| Document                               | Description                 |
+| -------------------------------------- | --------------------------- |
 | [Production](deployment/production.md) | Production deployment guide |
 
 ---
 
 ## 📝 Learnings
 
-| Document | Description |
-|----------|-------------|
-| [Events Improvement Grid](learnings/events-improvement-grid.md) | Planned improvements for @signaltree/events |
-| [Swapacado Migration Learnings](learnings/swapacado-migration-learnings.md) | Learnings from real-world integration |
+| Document                                                                    | Description                                 |
+| --------------------------------------------------------------------------- | ------------------------------------------- |
+| [Events Improvement Grid](learnings/events-improvement-grid.md)             | Planned improvements for @signaltree/events |
+| [Swapacado Migration Learnings](learnings/swapacado-migration-learnings.md) | Learnings from real-world integration       |
 
 ---
 
@@ -99,11 +98,11 @@ Historical documents preserved for reference:
 
 ## 🛠️ Development
 
-| Document | Description |
-|----------|-------------|
-| [Release Process](../.github/instructions/release-process.instructions.md) | How to release new versions |
-| [Validation Guide](../.github/VALIDATION_GUIDE.md) | Pre-release validation steps |
-| [Scripts](../scripts/README.md) | Build and utility scripts |
+| Document                                                                   | Description                  |
+| -------------------------------------------------------------------------- | ---------------------------- |
+| [Release Process](../.github/instructions/release-process.instructions.md) | How to release new versions  |
+| [Validation Guide](../.github/VALIDATION_GUIDE.md)                         | Pre-release validation steps |
+| [Scripts](../scripts/README.md)                                            | Build and utility scripts    |
 
 ## Archive
 

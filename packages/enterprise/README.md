@@ -7,7 +7,9 @@ Enterprise-grade optimizations for SignalTree. Designed for large-scale applicat
 - **Diff-based updates** - Only update signals that actually changed
 - **Bulk operation optimization** - 2-5x faster for large state updates
 - **Advanced change tracking** - Detailed statistics and monitoring
-- **Path indexing** - Optimized signal lookup for large trees
+- **Path-change subscriptions** - React to specific dot-paths changing (9.1+)
+- **Snapshot / restore** - Cheap structured-clone snapshots with diff-engine restore (9.1+)
+- **Auto-optimize threshold** - Route large updates through the diff engine automatically (9.1+)
 - **Lazy initialization** - Zero overhead until first use
 
 ## Installation
@@ -58,7 +60,7 @@ console.log(result.stats);
 
 ## API
 
-### `enterprise()`
+### `enterprise(options?)`
 
 Enhancer that adds enterprise optimizations to a SignalTree.
 
@@ -67,6 +69,19 @@ import { signalTree } from '@signaltree/core';
 import { enterprise } from '@signaltree/enterprise';
 
 const tree = signalTree(initialState).with(enterprise());
+
+// Or with auto-optimize threshold (9.1+):
+const tree2 = signalTree(initialState).with(enterprise({ autoOptimizeThreshold: 100 }));
+```
+
+**Options (9.1+):**
+
+```typescript
+{
+  autoOptimizeThreshold?: number; // If set, tree.updateAuto(...) routes through
+                                  // updateOptimized when the payload has at
+                                  // least this many top-level keys.
+}
 ```
 
 ### `tree.updateOptimized(updates, options?)`
@@ -106,6 +121,9 @@ Performs optimized bulk updates using diff-based change detection.
 
 ### `tree.getPathIndex()`
 
+> **Deprecated (9.1+):** Path-index access is an internal detail and will be
+> removed in a future major. Use `onPathChange` for change observation.
+
 Get the PathIndex for debugging/monitoring. Returns `null` if `updateOptimized` hasn't been called yet (lazy initialization).
 
 ```typescript
@@ -113,6 +131,52 @@ const index = tree.getPathIndex();
 if (index) {
   console.log('Path index active');
 }
+```
+
+### `tree.onPathChange(listener)` (9.1+)
+
+Subscribe to dot-paths that change on each `updateOptimized` (or
+`updateAuto` when it routes through the diff engine). Returns an
+unsubscribe function.
+
+```typescript
+const off = tree.onPathChange((paths) => {
+  console.log('changed:', paths); // e.g. ['user.name', 'cart.items.0.qty']
+});
+
+tree.updateOptimized({ user: { name: 'Ada' } });
+// → listener fires with ['user.name']
+
+off(); // stop listening
+```
+
+### `tree.snapshot()` / `tree.restore(snap)` (9.1+)
+
+Capture and restore the entire state via a `structuredClone`. `restore`
+routes through the diff engine, so listeners and stats fire as if the
+restored values were a normal optimized update.
+
+```typescript
+const snap = tree.snapshot();
+
+tree.updateOptimized({ user: { name: 'Grace' } });
+
+// later... roll back
+tree.restore(snap);
+```
+
+### `tree.updateAuto(updates)` (9.1+)
+
+When `enterprise({ autoOptimizeThreshold: N })` is configured, payloads
+with `≥ N` top-level keys are routed through `updateOptimized`; smaller
+payloads use the regular fast path. Without a threshold this is a plain
+`update`.
+
+```typescript
+const tree = signalTree(initialState).with(enterprise({ autoOptimizeThreshold: 50 }));
+
+tree.updateAuto({ a: 1, b: 2 }); // fast path
+tree.updateAuto(largeServerPayload); // diff engine
 ```
 
 ## Examples

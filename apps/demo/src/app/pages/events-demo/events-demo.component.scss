@@ -1,9 +1,12 @@
+:host {
+  display: block;
+  background: var(--color-neutral-900); // dark page background for this intentional dark-theme page
+}
+
 .events-demo {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 2rem;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    sans-serif;
 }
 
 .demo-header {
@@ -16,7 +19,7 @@
     font-size: 2.5rem;
     font-weight: 700;
     margin: 0 0 0.5rem;
-    background: linear-gradient(135deg, #60a5fa, #a78bfa);
+    background: linear-gradient(135deg, var(--color-primary-400), var(--color-purple-400));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -49,13 +52,13 @@
 
     &:hover {
       background: rgba(255, 255, 255, 0.1);
-      color: #fff;
+      color: var(--color-white);
     }
 
     &.active {
-      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      background: linear-gradient(135deg, var(--color-primary-500), var(--color-purple-500));
       border-color: transparent;
-      color: #fff;
+      color: var(--color-white);
     }
   }
 }
@@ -72,7 +75,7 @@
     margin: 0 0 0.5rem;
     font-size: 1.5rem;
     font-weight: 600;
-    color: #fff;
+    color: var(--color-white);
   }
 
   .section-description {
@@ -100,8 +103,8 @@
   border: none;
 
   &.primary {
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
-    color: #fff;
+    background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-600));
+    color: var(--color-white);
 
     &:hover {
       transform: translateY(-1px);
@@ -111,7 +114,7 @@
 
   &.secondary {
     background: rgba(139, 92, 246, 0.2);
-    color: #a78bfa;
+    color: var(--color-purple-400);
     border: 1px solid rgba(139, 92, 246, 0.3);
 
     &:hover {
@@ -126,7 +129,7 @@
 
     &:hover {
       background: rgba(255, 255, 255, 0.05);
-      color: #fff;
+      color: var(--color-white);
     }
   }
 }
@@ -178,7 +181,7 @@
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
   font-size: 0.8rem;
   line-height: 1.5;
-  color: #e2e8f0;
+  color: var(--color-neutral-200);
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -214,12 +217,12 @@
   padding: 1rem;
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
   font-size: 0.85rem;
-  color: #e2e8f0;
+  color: var(--color-neutral-200);
   resize: vertical;
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: var(--color-primary-500);
   }
 }
 
@@ -234,13 +237,13 @@
   &.valid {
     background: rgba(34, 197, 94, 0.15);
     border: 1px solid rgba(34, 197, 94, 0.3);
-    color: #4ade80;
+    color: var(--color-secondary-400);
   }
 
   &.invalid {
     background: rgba(239, 68, 68, 0.15);
     border: 1px solid rgba(239, 68, 68, 0.3);
-    color: #f87171;
+    color: var(--color-error-400);
   }
 
   .result-icon {
@@ -285,7 +288,7 @@
 
   .event-type {
     font-weight: 600;
-    color: #60a5fa;
+    color: var(--color-primary-400);
   }
 
   .event-id {
@@ -350,23 +353,23 @@
 
   &.critical {
     background: rgba(239, 68, 68, 0.2);
-    color: #f87171;
+    color: var(--color-error-400);
   }
   &.high {
     background: rgba(249, 115, 22, 0.2);
-    color: #fb923c;
+    color: var(--color-orange-400);
   }
   &.normal {
     background: rgba(59, 130, 246, 0.2);
-    color: #60a5fa;
+    color: var(--color-primary-400);
   }
   &.low {
     background: rgba(34, 197, 94, 0.2);
-    color: #4ade80;
+    color: var(--color-secondary-400);
   }
   &.bulk {
     background: rgba(156, 163, 175, 0.2);
-    color: #9ca3af;
+    color: var(--color-neutral-400);
   }
 }
 
@@ -397,7 +400,7 @@
     &.selected {
       background: rgba(59, 130, 246, 0.2);
       border-color: rgba(59, 130, 246, 0.5);
-      color: #60a5fa;
+      color: var(--color-primary-400);
     }
 
     input {
@@ -432,15 +435,15 @@
 
       &.code {
         font-family: monospace;
-        color: #a78bfa;
+        color: var(--color-purple-400);
       }
 
       &.yes {
-        color: #4ade80;
+        color: var(--color-secondary-400);
       }
 
       &.no {
-        color: #f87171;
+        color: var(--color-error-400);
       }
     }
   }
@@ -456,7 +459,7 @@
     margin: 0 0 1.5rem;
     font-size: 1.5rem;
     font-weight: 600;
-    color: #fff;
+    color: var(--color-white);
   }
 
   .example {

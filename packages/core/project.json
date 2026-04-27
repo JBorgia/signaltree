@@ -21,7 +21,6 @@
       "options": {
         "main": "packages/core/src/index.ts",
         "additionalEntryPoints": [
-          "packages/core/src/presets.ts",
           "packages/core/src/security.ts",
           "packages/core/src/edit-session.ts",
           "packages/core/src/storage.ts"

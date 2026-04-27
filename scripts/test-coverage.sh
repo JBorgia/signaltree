@@ -36,8 +36,8 @@ print_coverage() {
 }
 
 # List of packages to test
-# Note: batching, memoization, middleware, entities, devtools, time-travel, presets
-# were consolidated into @signaltree/core in v4.0.0
+# Note: batching, middleware, entities, devtools, time-travel were consolidated
+# into @signaltree/core in v4.0.0. Memoization & presets were removed in v10.0.0.
 PACKAGES=(
     "core"
     "ng-forms"

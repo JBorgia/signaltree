@@ -31,8 +31,8 @@ print_error() {
 print_step "Verifying package configurations for NPM publishing..."
 echo ""
 
-# Note: batching, memoization, middleware, entities, devtools, time-travel, presets
-# were consolidated into @signaltree/core in v4.0.0
+# Note: batching, middleware, entities, devtools, time-travel were
+# consolidated into @signaltree/core in v4.0.0; memoization & presets removed in v10.
 PACKAGES=(
     "core"
     "ng-forms"

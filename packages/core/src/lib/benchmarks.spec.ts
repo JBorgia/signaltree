@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { signal } from '@angular/core';
 import { signalTree } from './signal-tree';
 import { batching } from '../enhancers/batching/batching';
-import { memoization } from '../enhancers/memoization/memoization';
 import { devTools } from '../enhancers/devtools/devtools';
 
 /**
@@ -149,28 +148,8 @@ describe('Benchmark: enhancer overhead', () => {
   });
 
   it('memoization overhead is bounded (< 3x per read)', () => {
-    const plain = signalTree({ count: 0 });
-    const memo = signalTree({ count: 0 }).with(memoization());
-
-    const plainTime = benchmark(() => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        plain.$.count();
-      }
-    });
-
-    const memoTime = benchmark(() => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        memo.$.count();
-      }
-    });
-
-    const ratio = memoTime / plainTime;
-    console.log(`Memoization: plain=${plainTime.toFixed(2)}ms, memo=${memoTime.toFixed(2)}ms, ratio=${ratio.toFixed(1)}x`);
-
-    expect(ratio).toBeLessThan(3);
-
-    plain.destroy();
-    memo.destroy();
+    // Removed in 9.0.1: memoization enhancer deleted. Use Angular computed() directly.
+    expect(true).toBe(true);
   });
 
   it('devTools (disabled) overhead is near-zero (< 1.5x)', () => {

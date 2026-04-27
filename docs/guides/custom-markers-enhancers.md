@@ -282,7 +282,6 @@ tree.$.theme.reload(); // Re-reads from localStorage
 | `devTools()`      | Redux DevTools integration | `connectDevTools()`, `disconnectDevTools()`     |
 | `batching()`      | Batch CD notifications     | `batch()`, `coalesce()`, `flushNotifications()` |
 | `effects()`       | Reactive effects           | `effect()`, `subscribe()`                       |
-| `memoization()`   | Cached computations        | `memoize()` helpers                             |
 | `serialization()` | JSON export/import         | `toJSON()`, `fromJSON()`                        |
 | `timeTravel()`    | Undo/redo history          | `undo()`, `redo()`, `history`                   |
 
@@ -532,13 +531,6 @@ export function batching(config: BatchingConfig = {}): <T>(tree: ISignalTree<T>)
 // devTools.ts
 export function devTools(config: DevToolsConfig = {}): <T>(tree: ISignalTree<T>) => ISignalTree<T> & DevToolsMethods {
   return <T>(tree: ISignalTree<T>): ISignalTree<T> & DevToolsMethods => {
-    // Implementation...
-  };
-}
-
-// memoization.ts
-export function memoization(config: MemoizationConfig = {}): <T>(tree: ISignalTree<T>) => ISignalTree<T> & MemoizationMethods<T> {
-  return <T>(tree: ISignalTree<T>): ISignalTree<T> & MemoizationMethods<T> => {
     // Implementation...
   };
 }

@@ -36,11 +36,12 @@ if [ ! -f "package.json" ] || [ ! -d "packages" ]; then
 fi
 
 # List of packages to release
-# Note: batching, memoization, middleware, entities, devtools, time-travel, presets, serialization
+# Note: batching, middleware, entities, devtools, time-travel, serialization
 # were consolidated into @signaltree/core in v4.0.0 and are no longer separate packages
+# Note: memoization & presets were removed entirely in v10.0.0
 # Note: "shared" is private (bundled into core) and should NOT be in this list
 PACKAGES=(
-    "core"            # Main package with all enhancers (batching, memoization, etc.)
+    "core"            # Main package with all enhancers (batching, devtools, etc.)
     "events"          # Event-driven architecture (BullMQ, NestJS, testing)
     "ng-forms"        # Angular forms integration
     "realtime"        # Real-time sync with Supabase/WebSocket
@@ -449,8 +450,13 @@ for package in "${PACKAGES[@]}"; do
         # Attempt publish with retry on authentication failure
         PUBLISH_SUCCESS=false
         for attempt in 1 2; do
-            PUBLISH_CMD="npm publish --access public --provenance"
-            if [ -n "$NPM_TOKEN" ]; then
+            PUBLISH_CMD="npm publish --access public"
+            # Provenance is only supported on trusted CI providers (e.g. GitHub Actions).
+            # Enable it automatically when running on CI; skip for local publishes.
+            if [ -n "${GITHUB_ACTIONS:-}" ] || [ "${NPM_CONFIG_PROVENANCE:-}" = "true" ]; then
+                PUBLISH_CMD="$PUBLISH_CMD --provenance"
+            fi
+            if [ -n "${NPM_TOKEN:-}" ]; then
                 PUBLISH_CMD="$PUBLISH_CMD --userconfig ~/.npmrc.signaltree-temp"
             fi
 

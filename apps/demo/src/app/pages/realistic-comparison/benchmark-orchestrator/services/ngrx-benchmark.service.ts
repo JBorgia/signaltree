@@ -618,6 +618,41 @@ export class NgRxBenchmarkService {
     return this.toResult(duration, undefined, 'NgRx batch updates');
   }
 
+  /**
+   * Server-payload sync — apply a 5000-field partial state with ~10%
+   * churn via a pure NgRx reducer that spreads the payload onto state.
+   * NgRx reducers always return a new immutable state object; no
+   * ref-equality short-circuit is possible at the reducer layer.
+   */
+  async runServerPayloadSyncBenchmark(
+    dataSize: number
+  ): Promise<number | BenchmarkResult> {
+    const size = Math.max(500, Math.min(20000, dataSize));
+    const churn = Math.max(1, Math.floor(size * 0.1));
+
+    const initial: Record<string, number> = {};
+    const payload: Record<string, number> = {};
+    for (let i = 0; i < size; i++) {
+      const k = `k${i}`;
+      initial[k] = i;
+      payload[k] = i < churn ? i + 1_000_000 : i;
+    }
+
+    const applyPayload = createAction(
+      '[Test] Apply Payload',
+      props<{ payload: Record<string, number> }>()
+    );
+    const reducer = createReducer(
+      initial,
+      on(applyPayload, (state, { payload }) => ({ ...state, ...payload }))
+    );
+
+    const start = performance.now();
+    reducer(initial, applyPayload({ payload }));
+    const duration = performance.now() - start;
+    return this.toResult(duration, undefined, 'NgRx server-payload sync');
+  }
+
   async runSelectorBenchmark(
     dataSize: number
   ): Promise<number | BenchmarkResult> {

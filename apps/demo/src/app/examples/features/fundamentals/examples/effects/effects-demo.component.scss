@@ -2,7 +2,7 @@
 
 .demo-container {
   padding: 24px;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -10,20 +10,20 @@
   font-size: 32px;
   font-weight: 800;
   margin-bottom: 16px;
-  color: #1f2937;
+  color: var(--color-dark);
 }
 
 .intro {
   margin-bottom: 32px;
   padding: 20px;
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  background: linear-gradient(135deg, var(--color-info-50) 0%, var(--color-info-100) 100%);
   border-radius: 12px;
-  border-left: 4px solid #3b82f6;
+  border-left: 4px solid var(--color-primary-500);
 
   p {
     margin: 0;
     line-height: 1.6;
-    color: #374151;
+    color: var(--color-neutral-700);
   }
 }
 
@@ -39,18 +39,18 @@
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--color-border);
 
   h3 {
     margin: 0 0 12px 0;
     font-size: 20px;
     font-weight: 700;
-    color: #1f2937;
+    color: var(--color-dark);
   }
 
   .description {
     margin: 0 0 20px 0;
-    color: #6b7280;
+    color: var(--color-neutral-500);
     font-size: 14px;
     line-height: 1.5;
   }
@@ -63,7 +63,7 @@
     display: block;
     margin-bottom: 8px;
     font-weight: 600;
-    color: #374151;
+    color: var(--color-neutral-700);
     font-size: 14px;
   }
 }
@@ -71,14 +71,14 @@
 .input-field {
   width: 100%;
   padding: 10px 14px;
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--color-border);
   border-radius: 8px;
   font-size: 14px;
   transition: all 0.2s;
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: var(--color-primary-500);
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 }
@@ -97,14 +97,14 @@ textarea.input-field {
 
 .stat {
   padding: 12px;
-  background: #f9fafb;
+  background: var(--color-light);
   border-radius: 8px;
   text-align: center;
 
   .stat-label {
     display: block;
     font-size: 12px;
-    color: #6b7280;
+    color: var(--color-neutral-500);
     margin-bottom: 4px;
   }
 
@@ -112,21 +112,21 @@ textarea.input-field {
     display: block;
     font-size: 18px;
     font-weight: 700;
-    color: #3b82f6;
+    color: var(--color-primary-500);
   }
 }
 
 .info-box {
   margin-top: 16px;
   padding: 12px;
-  background: #f0fdf4;
-  border: 1px solid #86efac;
+  background: var(--color-secondary-50);
+  border: 1px solid var(--color-secondary-300);
   border-radius: 8px;
   font-size: 13px;
-  color: #166534;
+  color: var(--color-secondary-800);
 
   strong {
-    color: #15803d;
+    color: var(--color-secondary-700);
   }
 
   small {
@@ -161,33 +161,33 @@ textarea.input-field {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-600) 100%);
   color: white;
 }
 
 .btn-secondary {
-  background: #f3f4f6;
-  color: #374151;
-  border: 2px solid #e5e7eb;
+  background: var(--color-neutral-100);
+  color: var(--color-neutral-700);
+  border: 2px solid var(--color-border);
 }
 
 .btn-info {
-  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+  background: linear-gradient(135deg, var(--color-info-500) 0%, var(--color-info-600) 100%);
   color: white;
 }
 
 .btn-success {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, var(--color-secondary-500) 0%, var(--color-secondary-600) 100%);
   color: white;
 }
 
 .btn-warning {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  background: linear-gradient(135deg, var(--color-warning-500) 0%, var(--color-warning-600) 100%);
   color: white;
 }
 
 .btn-danger {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  background: linear-gradient(135deg, var(--color-error-500) 0%, var(--color-error-600) 100%);
   color: white;
 }
 
@@ -213,30 +213,30 @@ textarea.input-field {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 
   &[data-type='info'] {
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-    border-left: 4px solid #3b82f6;
+    background: linear-gradient(135deg, var(--color-primary-100) 0%, var(--color-primary-200) 100%);
+    border-left: 4px solid var(--color-primary-500);
   }
 
   &[data-type='success'] {
-    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-    border-left: 4px solid #10b981;
+    background: linear-gradient(135deg, var(--color-secondary-100) 0%, var(--color-secondary-200) 100%);
+    border-left: 4px solid var(--color-secondary-500);
   }
 
   &[data-type='warning'] {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-    border-left: 4px solid #f59e0b;
+    background: linear-gradient(135deg, var(--color-warning-100) 0%, var(--color-warning-200) 100%);
+    border-left: 4px solid var(--color-warning-500);
   }
 
   &[data-type='error'] {
-    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-    border-left: 4px solid #ef4444;
+    background: linear-gradient(135deg, var(--color-error-100) 0%, var(--color-error-200) 100%);
+    border-left: 4px solid var(--color-error-500);
   }
 }
 
 .notification-message {
   flex: 1;
   font-weight: 500;
-  color: #1f2937;
+  color: var(--color-dark);
 }
 
 .notification-close {
@@ -245,24 +245,24 @@ textarea.input-field {
   font-size: 24px;
   line-height: 1;
   cursor: pointer;
-  color: #6b7280;
+  color: var(--color-neutral-500);
   padding: 0 8px;
   transition: color 0.2s;
 
   &:hover {
-    color: #1f2937;
+    color: var(--color-dark);
   }
 }
 
 .empty-state {
   text-align: center;
   padding: 32px;
-  color: #9ca3af;
+  color: var(--color-neutral-400);
   font-style: italic;
 }
 
 .code-section {
-  background: #1f2937;
+  background: var(--color-dark);
   border-radius: 12px;
   padding: 24px;
   color: white;
@@ -281,7 +281,7 @@ textarea.input-field {
     font-family: 'Courier New', monospace;
     font-size: 13px;
     line-height: 1.6;
-    color: #93c5fd;
+    color: var(--color-primary-300);
   }
 }
 

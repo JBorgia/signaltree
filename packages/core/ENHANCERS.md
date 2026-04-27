@@ -53,13 +53,12 @@ const enhanced = signalTree({ count: 0 }).with(batching, devTools);
 
 ### Use presets for convenient developer setup:
 
-`createDevTree` provides a pre-configured development setup:
+> **9.0.1:** Preset factories (`createDevTree`, `TREE_PRESETS`) were removed. Compose enhancers directly:
 
 ```typescript
-import { createDevTree } from '@signaltree/core';
+import { signalTree, batching, devTools, withTimeTravel } from '@signaltree/core';
 
-const tree = createDevTree({ count: 0 });
-// Includes: batching, memoization, devtools, time-travel
+const tree = signalTree({ count: 0 }).with(batching()).with(devTools()).with(withTimeTravel());
 ```
 
 ## Best practices

@@ -1,4 +1,65 @@
-# Migration Guide: v4.0.0 Package Consolidation
+# SignalTree Migration Guide
+
+> **SignalTree** — Reactive JSON for Angular. JSON branches, reactive leaves.
+
+## 9.0.1
+
+> **Why a patch?** v9.0.0 was only just released; adoption of the removed APIs is minimal. These changes are technically breaking but shipped as `9.0.1`. Pin to `9.0.0` if you were using `memoization()` or preset factories and need time to migrate.
+
+### Memoization enhancer removed
+
+The `memoization()` enhancer and all preset variants (`shallowMemoization`, `lightweightMemoization`, `computedMemoization`, `selectorMemoization`, `highPerformanceMemoization`) have been removed. Use Angular's built-in `computed()` instead — it provides equivalent caching behavior with zero runtime overhead and smaller bundles.
+
+**Before (9.0.0):**
+
+```ts
+import { signalTree, memoization, batching } from '@signaltree/core';
+
+const tree = signalTree(state).with(batching()).with(memoization());
+
+const totalPrice = tree.memoize((s) => s.cart.items.reduce((n, i) => n + i.price, 0), 'totalPrice');
+```
+
+**After (9.0.1):**
+
+```ts
+import { computed } from '@angular/core';
+import { signalTree, batching } from '@signaltree/core';
+
+const tree = signalTree(state).with(batching());
+
+const totalPrice = computed(() => tree.$.cart.items().reduce((n, i) => n + i.price, 0));
+```
+
+### Preset factories and subpath export removed
+
+- `@signaltree/core/presets` subpath is gone.
+- `TREE_PRESETS`, `createDevTree()`, `createProdTree()`, `createMinimalTree()` and other preset helpers are removed. Compose enhancers directly with `.with()`.
+
+### Guardrails: `maxRecomputations` budget removed
+
+`GuardrailsConfig.budgets.maxRecomputations` has been dropped (the feature relied on the deleted memoization accounting). Remove it from your config:
+
+```ts
+// Before
+guardrails({ budgets: { maxUpdateTime: 16, maxRecomputations: 100 } });
+
+// After
+guardrails({ budgets: { maxUpdateTime: 16 } });
+```
+
+`RuntimeStats.recomputationCount` and `recomputationsPerSecond` still exist as always-`0` fields for backwards-compatible consumers.
+
+### Upgrade checklist
+
+1. Remove `memoization` / preset factory imports from `@signaltree/core`.
+2. Replace `.with(memoization())` calls with Angular `computed()` at the consumer site.
+3. Remove `maxRecomputations` from any guardrails `budgets` config.
+4. Drop `@signaltree/core/presets` from your `package.json` / imports.
+
+---
+
+## v4.0.0 Package Consolidation
 
 > **SignalTree** — Reactive JSON for Angular. JSON branches, reactive leaves.
 

@@ -1,15 +1,17 @@
 @use 'sass:color';
 
-// Variables
-$primary: #3b82f6;
-$secondary: #8b5cf6;
-$success: #10b981;
-$info: #06b6d4;
-$warning: #f59e0b;
-$danger: #ef4444;
-$dark: #1f2937;
-$light: #f9fafb;
-$border: #e5e7eb;
+// Local color variables — hex values aligned to design system tokens in styles.scss.
+// These exist to allow SCSS compile-time functions (color.adjust, rgba).
+// All direct property values use var(--color-*) tokens instead.
+$primary:   #3b82f6;  // --color-primary-500
+$secondary: #a855f7;  // --color-purple-500
+$success:   #22c55e;  // --color-secondary-500
+$info:      #06b6d4;  // --color-info-500
+$warning:   #eab308;  // --color-warning-500
+$danger:    #ef4444;  // --color-error-500
+$dark:      #1f2937;  // --color-dark
+$light:     #f9fafb;  // --color-light
+$border:    #e5e7eb;  // --color-border
 
 // Shared placeholders (use @extend to reduce emitted CSS duplication)
 %card {
@@ -54,7 +56,6 @@ $border: #e5e7eb;
   max-width: 1400px;
   margin: 0 auto;
   padding: 2rem;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 // Header
@@ -69,7 +70,7 @@ $border: #e5e7eb;
   }
 
   .subtitle {
-    color: #6b7280;
+    color: var(--color-neutral-500);
     font-size: 1.125rem;
   }
 }
@@ -170,10 +171,10 @@ $border: #e5e7eb;
         font-weight: 600;
 
         &.positive {
-          color: #86efac;
+          color: var(--color-secondary-300);
         }
         &.negative {
-          color: #fca5a5;
+          color: var(--color-error-300);
         }
       }
 
@@ -272,7 +273,7 @@ $border: #e5e7eb;
         .warning-icon {
           width: 20px;
           height: 20px;
-          fill: #fed7aa;
+          fill: var(--color-orange-200);
         }
       }
     }
@@ -366,7 +367,7 @@ $border: #e5e7eb;
       }
 
       p {
-        color: #6b7280;
+        color: var(--color-neutral-500);
         font-size: 0.875rem;
         margin-bottom: 1rem;
       }
@@ -377,7 +378,7 @@ $border: #e5e7eb;
 
         .stat {
           font-size: 0.75rem;
-          color: #9ca3af;
+          color: var(--color-neutral-400);
         }
       }
     }
@@ -396,9 +397,9 @@ $border: #e5e7eb;
     .library-badge.enterprise {
       background: linear-gradient(
         135deg,
-        #1e3a8a 0%,
-        #1e40af 60%,
-        #1d4ed8 100%
+        var(--color-primary-900) 0%,
+        var(--color-primary-800) 60%,
+        var(--color-primary-700) 100%
       );
       box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15),
         0 2px 4px rgba(30, 64, 175, 0.3);
@@ -564,7 +565,7 @@ $border: #e5e7eb;
     small {
       display: block;
       margin-top: 0.25rem;
-      color: #6b7280;
+      color: var(--color-neutral-500);
       font-size: 0.75rem;
     }
   }
@@ -590,7 +591,7 @@ $border: #e5e7eb;
         .estimate-label {
           display: block;
           font-size: 0.875rem;
-          color: #6b7280;
+          color: var(--color-neutral-500);
           margin-bottom: 0.25rem;
         }
 
@@ -652,7 +653,7 @@ $border: #e5e7eb;
 
       p {
         margin: 0 0 1rem 0;
-        color: #6b7280;
+        color: var(--color-neutral-500);
         font-size: 0.875rem;
         line-height: 1.4;
       }
@@ -702,7 +703,7 @@ $border: #e5e7eb;
     .enhancers-note {
       margin: 0;
       font-size: 0.875rem;
-      color: #6b7280;
+      color: var(--color-neutral-500);
       font-style: italic;
     }
 
@@ -735,7 +736,7 @@ $border: #e5e7eb;
 
       .enhancer-tag {
         background: linear-gradient(135deg, $primary 0%, $secondary 100%);
-        color: #fff;
+        color: var(--color-white);
         padding: 0.25rem 0.55rem;
         border-radius: 4px;
         font-size: 0.65rem;
@@ -746,7 +747,7 @@ $border: #e5e7eb;
       }
 
       .no-enhancers {
-        color: #9ca3af;
+        color: var(--color-neutral-400);
         font-style: italic;
         font-size: 0.7rem;
       }
@@ -775,7 +776,7 @@ $border: #e5e7eb;
 
         p {
           margin: 0;
-          color: #4b5563;
+          color: var(--color-neutral-600);
           font-size: 0.875rem;
           line-height: 1.5;
         }
@@ -855,7 +856,7 @@ $border: #e5e7eb;
     }
 
     p {
-      color: #6b7280;
+      color: var(--color-neutral-500);
       font-size: 0.875rem;
       margin-bottom: 1rem;
     }
@@ -867,7 +868,7 @@ $border: #e5e7eb;
 
       .detail {
         font-size: 0.75rem;
-        color: #9ca3af;
+        color: var(--color-neutral-400);
       }
     }
   }
@@ -908,7 +909,7 @@ $border: #e5e7eb;
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    color: #6b7280;
+    color: var(--color-neutral-500);
 
     .dot {
       width: 10px;
@@ -947,7 +948,7 @@ $border: #e5e7eb;
       margin-bottom: 1.5rem;
 
       span {
-        color: #6b7280;
+        color: var(--color-neutral-500);
 
         &.current-library {
           font-weight: 600;
@@ -979,7 +980,7 @@ $border: #e5e7eb;
         right: 0;
         top: -1.5rem;
         font-size: 0.875rem;
-        color: #6b7280;
+        color: var(--color-neutral-500);
       }
     }
 
@@ -995,7 +996,7 @@ $border: #e5e7eb;
         .stat-label {
           display: block;
           font-size: 0.75rem;
-          color: #9ca3af;
+          color: var(--color-neutral-400);
           margin-bottom: 0.25rem;
         }
 
@@ -1028,7 +1029,7 @@ $border: #e5e7eb;
 
   .winner-card {
     @include card;
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    background: linear-gradient(135deg, var(--color-warning-400), var(--color-warning-500));
     color: white;
     display: flex;
     align-items: center;
@@ -1088,7 +1089,7 @@ $border: #e5e7eb;
         .metric-label {
           display: block;
           font-size: 0.75rem;
-          color: #9ca3af;
+          color: var(--color-neutral-400);
           margin-bottom: 0.25rem;
         }
 
@@ -1176,7 +1177,7 @@ $border: #e5e7eb;
 
           small {
             display: block;
-            color: #6b7280;
+            color: var(--color-neutral-500);
             font-size: 0.75rem;
             font-weight: normal;
           }
@@ -1201,7 +1202,7 @@ $border: #e5e7eb;
             rgba(255, 215, 0, 0.15) 0%,
             rgba(255, 215, 0, 0.05) 100%
           );
-          border-left: 3px solid #ffd700;
+          border-left: 3px solid var(--color-warning-400);
         }
 
         &.rank-second {
@@ -1210,7 +1211,7 @@ $border: #e5e7eb;
             rgba(192, 192, 192, 0.15) 0%,
             rgba(192, 192, 192, 0.05) 100%
           );
-          border-left: 3px solid #c0c0c0;
+          border-left: 3px solid var(--color-neutral-300);
         }
 
         &.rank-third {
@@ -1219,7 +1220,7 @@ $border: #e5e7eb;
             rgba(205, 127, 50, 0.15) 0%,
             rgba(205, 127, 50, 0.05) 100%
           );
-          border-left: 3px solid #cd7f32;
+          border-left: 3px solid var(--color-orange-700);
         }
 
         .badges-row {
@@ -1237,8 +1238,8 @@ $border: #e5e7eb;
         }
         .enterprise-badge {
           display: inline-block;
-          background: linear-gradient(90deg, #1e40af, #1d4ed8);
-          color: #fff;
+          background: linear-gradient(90deg, var(--color-primary-800), var(--color-primary-700));
+          color: var(--color-white);
           padding: 0.15rem 0.45rem;
           border-radius: 4px;
           font-size: 0.625rem;
@@ -1258,13 +1259,13 @@ $border: #e5e7eb;
         .ops {
           display: block;
           font-size: 0.875rem;
-          color: #6b7280;
+          color: var(--color-neutral-500);
         }
 
         .relative {
           display: block;
           font-size: 0.75rem;
-          color: #9ca3af;
+          color: var(--color-neutral-400);
         }
       }
     }
@@ -1524,7 +1525,7 @@ $border: #e5e7eb;
 .frequency-weighting-section {
   @extend %card;
   margin: 2rem 0;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  background: linear-gradient(135deg, var(--color-neutral-50) 0%, var(--color-neutral-200) 100%);
   border: 2px solid $primary;
 
   h3 {
@@ -1660,14 +1661,14 @@ $border: #e5e7eb;
     }
 
     .smart-suggestions {
-      background: linear-gradient(135deg, #f8f9ff 0%, #e8f2ff 100%);
-      border: 2px solid #4dabf7;
+      background: linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-primary-100) 100%);
+      border: 2px solid var(--color-info-400);
       border-radius: 12px;
       padding: 1.5rem;
       margin-bottom: 2rem;
 
       h4 {
-        color: #1864ab;
+        color: var(--color-primary-800);
         margin-bottom: 1rem;
         display: flex;
         align-items: center;
@@ -1681,7 +1682,7 @@ $border: #e5e7eb;
 
         .suggestion-card {
           background: white;
-          border: 1px solid #bee3f8;
+          border: 1px solid var(--color-info-100);
           border-radius: 8px;
           padding: 1rem;
           transition: all 0.2s ease;
@@ -1698,12 +1699,12 @@ $border: #e5e7eb;
             margin-bottom: 0.5rem;
 
             strong {
-              color: #1864ab;
+              color: var(--color-primary-800);
               font-size: 1.1rem;
             }
 
             .confidence-badge {
-              background: #4dabf7;
+              background: var(--color-info-400);
               color: white;
               padding: 0.25rem 0.75rem;
               border-radius: 20px;
@@ -1713,7 +1714,7 @@ $border: #e5e7eb;
           }
 
           .suggestion-reason {
-            color: #495057;
+            color: var(--color-neutral-600);
             margin-bottom: 1rem;
             font-size: 0.9rem;
             line-height: 1.4;
@@ -1721,13 +1722,13 @@ $border: #e5e7eb;
 
           .btn-suggestion {
             @include button;
-            background: #4dabf7;
+            background: var(--color-info-400);
             color: white;
             border: none;
             font-size: 0.9rem;
 
             &:hover {
-              background: #339af0;
+              background: var(--color-primary-400);
               transform: translateY(-1px);
             }
           }
@@ -1935,7 +1936,7 @@ $border: #e5e7eb;
 .weighted-results-section {
   @extend %card;
   margin: 2rem 0;
-  background: linear-gradient(135deg, #fef7cd 0%, #fbbf24 20%, #f59e0b 100%);
+  background: linear-gradient(135deg, var(--color-warning-100) 0%, var(--color-warning-400) 20%, var(--color-warning-500) 100%);
   border: 2px solid $warning;
 
   h3 {
@@ -2031,7 +2032,7 @@ $border: #e5e7eb;
 
       &.weighted-winner {
         border-color: $success;
-        background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+        background: linear-gradient(135deg, var(--color-secondary-50) 0%, var(--color-secondary-100) 100%);
 
         .summary-header h4 {
           color: $success;
@@ -2198,7 +2199,7 @@ $border: #e5e7eb;
   }
 
   .smart-help {
-    color: #065f46;
+    color: var(--color-secondary-900);
     font-size: 0.875rem;
     font-style: italic;
   }
@@ -2231,23 +2232,23 @@ $border: #e5e7eb;
 
       &.impact-low {
         background: rgba($success, 0.2);
-        color: #065f46;
+        color: var(--color-secondary-900);
       }
 
       &.impact-medium {
         background: rgba($warning, 0.2);
-        color: #92400e;
+        color: var(--color-warning-800);
       }
 
       &.impact-high {
         background: rgba($danger, 0.2);
-        color: #991b1b;
+        color: var(--color-error-800);
       }
     }
 
     .scenarios-count,
     .benchmarks-count {
-      color: #6b7280;
+      color: var(--color-neutral-500);
       font-size: 0.875rem;
     }
   }
@@ -2289,7 +2290,7 @@ $border: #e5e7eb;
 
         .rank-change {
           font-size: 0.875rem;
-          color: #6b7280;
+          color: var(--color-neutral-500);
 
           .change-indicator {
             margin-left: 0.5rem;
@@ -2359,12 +2360,12 @@ $border: #e5e7eb;
 
             &.positive-impact {
               background: rgba($success, 0.2);
-              color: #065f46;
+              color: var(--color-secondary-900);
             }
 
             &.negative-impact {
               background: rgba($danger, 0.2);
-              color: #991b1b;
+              color: var(--color-error-800);
             }
           }
         }
@@ -2396,7 +2397,7 @@ $border: #e5e7eb;
 
             .frequency-note {
               font-size: 0.75rem;
-              color: #6b7280;
+              color: var(--color-neutral-500);
               font-style: italic;
             }
           }
@@ -2449,7 +2450,7 @@ $border: #e5e7eb;
       }
 
       .info-badge {
-        background: linear-gradient(135deg, $success 0%, #059669 100%);
+        background: linear-gradient(135deg, $success 0%, var(--color-secondary-600) 100%);
         color: white;
         padding: 0.375rem 0.75rem;
         border-radius: 20px;
@@ -2531,7 +2532,7 @@ $border: #e5e7eb;
             li {
               padding: 0.25rem 0;
               font-size: 0.875rem;
-              color: #4b5563;
+              color: var(--color-neutral-600);
 
               strong {
                 color: $dark;
@@ -2551,7 +2552,7 @@ $border: #e5e7eb;
       }
 
       .usage-example {
-        background: #1f2937;
+        background: var(--color-dark);
         padding: 1rem;
         border-radius: 8px;
         margin-bottom: 1rem;
@@ -2567,7 +2568,7 @@ $border: #e5e7eb;
           overflow-x: auto;
 
           code {
-            color: #e5e7eb;
+            color: var(--color-border);
             font-family: 'Courier New', monospace;
             font-size: 0.875rem;
             line-height: 1.5;
@@ -2584,7 +2585,7 @@ $border: #e5e7eb;
         p {
           margin: 0;
           font-size: 0.875rem;
-          color: #4b5563;
+          color: var(--color-neutral-600);
           line-height: 1.6;
 
           strong {

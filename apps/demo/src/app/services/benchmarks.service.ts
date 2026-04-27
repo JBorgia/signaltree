@@ -1,5 +1,5 @@
 import { computed, Injectable, signal } from '@angular/core';
-import { batching, memoization, signalTree } from '@signaltree/core';
+import { batching, signalTree } from '@signaltree/core';
 
 /**
  * @fileoverview Comprehensive benchmarking suite for SignalTree Demo
@@ -481,7 +481,7 @@ export class BenchmarkService {
   }
 
   /**
-   * Benchmark computed values and memoization
+   * Benchmark computed values (memoization removed in 9.0.1).
    */
   benchmarkComputations() {
     const entities = BenchmarkService.generateEntities(1000);
@@ -491,12 +491,12 @@ export class BenchmarkService {
       withMemo: { first: 0, second: 0, cacheHitRate: 0 },
     };
 
-    // Without memoization
+    // Angular computed() already memoizes by reference equality.
     const regularTree = signalTree({
       entities,
       filter: { category: 'A', active: true },
     });
-    const computedWithout = computed(() => {
+    const computedFn = computed(() => {
       const state = regularTree();
       return state.entities.filter(
         (e: Record<string, unknown>) =>
@@ -508,43 +508,20 @@ export class BenchmarkService {
     });
 
     results.withoutMemo.first = BenchmarkService.measureTime(() => {
-      computedWithout();
+      computedFn();
     });
 
     results.withoutMemo.second = BenchmarkService.measureTime(() => {
-      computedWithout();
+      computedFn();
     });
 
-    // With memoization
-    const memoTree = signalTree({
-      entities,
-      filter: { category: 'A', active: true },
-    }).with(memoization());
-
-    const memoizedCompute = memoTree.memoize(
-      (state: {
-        entities: Array<Record<string, unknown>>;
-        filter: { category: string; active: boolean };
-      }) => {
-        return state.entities.filter(
-          (e: Record<string, unknown>) =>
-            (e as { category: string }).category === state.filter.category &&
-            (e as { active: boolean }).active === state.filter.active
-        );
-      },
-      'filtered-entities'
-    );
-
-    results.withMemo.first = BenchmarkService.measureTime(() => {
-      memoizedCompute();
-    });
-
-    results.withMemo.second = BenchmarkService.measureTime(() => {
-      memoizedCompute();
-    });
-
+    // Same path — memoization enhancer was removed in 9.0.1.
+    results.withMemo.first = results.withoutMemo.first;
+    results.withMemo.second = results.withoutMemo.second;
     results.withMemo.cacheHitRate =
-      results.withMemo.second / results.withMemo.first;
+      results.withMemo.first === 0
+        ? 0
+        : results.withMemo.second / results.withMemo.first;
 
     return results;
   }

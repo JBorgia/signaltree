@@ -454,96 +454,7 @@
     </div>
   </section>
 
-  <!-- Memoization Presets Info Card -->
-  <section class="info-section memoization-info">
-    <div class="info-card">
-      <div class="info-header">
-        <h3>📊 Benchmark Fairness: Memoization Presets</h3>
-        <span class="info-badge">New in v3.0.2</span>
-      </div>
-      <div class="info-content">
-        <p class="info-intro">
-          <strong>Benchmark what you ship, ship what you benchmark.</strong>
-          All performance optimizations used in these benchmarks are publicly
-          available in the <code>&#64;signaltree/memoization</code> package.
-        </p>
-
-        <div class="presets-info-grid">
-          <div class="preset-info-card">
-            <h4>🎯 Selector Memoization</h4>
-            <code class="preset-code">selectorMemoization()</code>
-            <ul class="preset-details">
-              <li><strong>Equality:</strong> Reference (~0.3μs)</li>
-              <li><strong>Cache Size:</strong> 10 entries</li>
-              <li>
-                <strong>Use Case:</strong> Fast selector caching for frequently
-                accessed derived state
-              </li>
-            </ul>
-            <p class="preset-note">Used in Selector Benchmarks</p>
-          </div>
-
-          <div class="preset-info-card">
-            <h4>⚡ Computed Memoization</h4>
-            <code class="preset-code">computedMemoization()</code>
-            <ul class="preset-details">
-              <li><strong>Equality:</strong> Shallow (~5-15μs)</li>
-              <li><strong>Cache Size:</strong> 100 entries</li>
-              <li>
-                <strong>Use Case:</strong> Computed properties with object/array
-                dependencies
-              </li>
-            </ul>
-            <p class="preset-note">Used in Computed Benchmarks</p>
-          </div>
-
-          <div class="preset-info-card">
-            <h4>🔍 Deep State Memoization</h4>
-            <code class="preset-code">deepStateMemoization()</code>
-            <ul class="preset-details">
-              <li><strong>Equality:</strong> Deep (~50-200μs)</li>
-              <li><strong>Cache Size:</strong> 50 entries</li>
-              <li>
-                <strong>Use Case:</strong> Complex nested state with deep
-                equality checks
-              </li>
-            </ul>
-            <p class="preset-note">Available for your use</p>
-          </div>
-
-          <div class="preset-info-card">
-            <h4>🚀 High Frequency Memoization</h4>
-            <code class="preset-code">highFrequencyMemoization()</code>
-            <ul class="preset-details">
-              <li><strong>Equality:</strong> Shallow (~5-15μs)</li>
-              <li><strong>Cache Size:</strong> 500 entries</li>
-              <li>
-                <strong>Use Case:</strong> High-frequency operations with large
-                working sets
-              </li>
-            </ul>
-            <p class="preset-note">Available for your use</p>
-          </div>
-        </div>
-
-        <div class="usage-example">
-          <h4>💻 How to Use</h4>
-          <pre><code>import &#123; signalTree &#125; from '&#64;signaltree/core';
-import &#123; selectorMemoization &#125; from '&#64;signaltree/memoization';
-
-const tree = signalTree(state).with(selectorMemoization());</code></pre>
-        </div>
-
-        <div class="info-footer">
-          <p>
-            <strong>Bundle Impact:</strong> ~0.3KB gzipped per preset •
-            <strong>Algorithm:</strong> Optimized shallow equality with zero
-            allocations • <strong>Performance:</strong> +40-60 pts expected gain
-          </p>
-        </div>
-      </div>
-    </div>
-  </section>
+  <!-- Memoization removed in 9.0.1. Use Angular's built-in computed() instead. -->
 
   <!-- Scenario Selection Section -->
   <section class="benchmarks-section">
@@ -1138,6 +1049,15 @@ const tree = signalTree(state).with(selectorMemoization());</code></pre>
             Ops/sec derives from median ms/op: 1000 ÷ median(ms/op). Effect size
             deltas show throughput (ops/sec) improvement percentages.
           </p>
+          <p>
+            Sub-millisecond scenarios are amortized across an adaptive number of
+            inner repetitions per timed sample (target ≥5ms per window) to
+            escape the ~0.1ms <code>performance.now()</code> resolution floor.
+            Each sample stored is the mean per-call cost over that window;
+            distribution metrics (median, p95, std-dev) are computed across
+            samples as usual. Per-scenario inner-op counts are included in the
+            CSV/JSON export.
+          </p>
         </div>
         }
       </div>
@@ -1559,10 +1479,6 @@ const tree = signalTree(state).with(selectorMemoization());</code></pre>
             <span [class.significant]="comparison.pValue < 0.05">
               {{ comparison.pValue | number : '1.4-4' }}
             </span>
-          </div>
-          <div class="stat-row conclusion">
-            <span>Conclusion:</span>
-            <span>{{ comparison.conclusion }}</span>
           </div>
         </div>
         }
