@@ -18,10 +18,11 @@ Mental model:
 Don't introduce actions, reducers, action creators, or selectors — they fight the design. No module registration.
 
 **App-wide state always uses one tree.** All domains (auth, settings, tickets, feature flags, …) go into a single `signalTree()` call — never one tree per domain or one tree per service. The pattern:
-- `createAppTree()` — composes all domain state factories into one `signalTree()`, wired via an `APP_TREE` `InjectionToken` and a `provideAppTree()` function.
+- `createAppTree()` — composes all domain state factories into one `signalTree()`, wired via an `APP_TREE` `InjectionToken` and a `provideAppTree()` function. **Also export `createBaseState()`** — tests need it to build isolated trees.
 - `AppStore` — a single `providedIn: 'root'` class that injects `APP_TREE`, exposes `readonly $ = this.tree.$`, and namespaces per-domain `Ops` classes under `readonly ops = { … } as const`.
 - `Ops` classes — one per domain (`DriverOps`, `SettingsOps`, …), each `Injectable`, each injecting `APP_TREE` directly for writes. No business logic in `AppStore` itself.
 - **Consumers (components, resolvers, interceptors, guards) inject `AppStore` only** — never an Ops class or `APP_TREE` directly. Reads go through `store.$`; writes go through `store.ops.<domain>.<method>()`.
+- **Ship `provideAppTreeForTesting()` alongside `provideAppTree()` from day one.** `AppStore` is `providedIn: 'root'`, so every `TestBed` that touches it (or any consumer that touches it transitively) will fail with `NG0201: APP_TREE` until tests provide the token. See [`reference/testing.md`](reference/testing.md).
 
 Read [`reference/patterns.md`](reference/patterns.md) for the full wiring before writing any store code.
 
@@ -83,7 +84,8 @@ Full signatures: [`reference/core.md`](reference/core.md).
 
 Deep dives:
 - [`reference/core.md`](reference/core.md) — `signalTree()` signatures, `$` proxy, markers, enhancer composition, reads/writes.
-- [`reference/patterns.md`](reference/patterns.md) — idiomatic creation, templates, `computed()`/`effect()` interop, bulk updates, `derivedFrom`/`externalDerived`.
+- [`reference/patterns.md`](reference/patterns.md) — idiomatic creation, templates, `computed()`/`effect()` interop, bulk updates, `derivedFrom`/`externalDerived`, **hybrid migration via legacy facade adapters**, lifetime caveats for root-provided Ops.
+- [`reference/testing.md`](reference/testing.md) — `provideAppTreeForTesting()` recipe, mocking matrix (tree vs ops vs facade), common test-bed pitfalls.
 - [`reference/anti-patterns.md`](reference/anti-patterns.md) — what not to do.
 - [`reference/install.md`](reference/install.md) — Angular version requirement, install commands.
 - [`reference/migration-from-ngrx-signals.md`](reference/migration-from-ngrx-signals.md) — mechanical mapping guide when porting an existing `@ngrx/signals` codebase. Only relevant for `@ngrx/signals` (`signalStore`, `withState`, `rxMethod`) — not classic `@ngrx/store`.
@@ -104,3 +106,5 @@ Operating rules:
 - Don't reintroduce Redux-style patterns.
 - When unsure of an API, read `packages/<pkg>/src/` — repo is source of truth.
 - **One tree per application.** If the codebase has multiple existing stores (ngrx, services, etc.), compose them all into a single `signalTree()` behind `APP_TREE`. Creating multiple `signalTree()` instances for app-wide state is always wrong.
+- **A migration is not done until the test suite is green.** Build-green is necessary but not sufficient — the test suite must pass before declaring the migration complete. The most common failure is `NG0201: APP_TREE` in `TestBed`s; fix it via `provideAppTreeForTesting()` ([`reference/testing.md`](reference/testing.md)), not by mocking `AppStore`.
+- **Hybrid coexistence is expected.** When migrating an existing facade (`@ngrx/signals` `signalStore`, a hand-rolled service, etc.), keep the public class name and shape and replace its internals with adapters over `AppStore` ([`reference/patterns.md`](reference/patterns.md#hybrid-migration-legacy-facade-adapters)). Don't force every consumer to be rewritten in the same PR.

@@ -163,3 +163,25 @@ class DriverOps {
 - **Feature store as service** — the ngrx `signalStore` is a service under the hood. The Ops class is its replacement. Keep `providedIn: 'root'` for app-wide operations; use component providers only for component-local state.
 - **No `inject()` outside injection context** — `APP_TREE` must be injected in a constructor or field initializer, not in a plain function called at module load time.
 - **Spec file placement after migration** — ngrx feature stores bundle state + methods in one class, so tests for both often live in the component spec or a single store spec. After migration, tests that exercise ops methods (loading data, triggering writes, cascading logic) belong in a spec file co-located with the Ops class (e.g. `ticket.ops.spec.ts`), not in the component spec. Component specs should only test rendering and UI interaction. Move any test that calls `store.loadTickets()`, `store.createTicket()`, or similar methods to the ops spec; leave template/binding tests in the component spec.
+
+## Test bed must provide `APP_TREE`
+
+After replacing an `@ngrx/signals` store with `AppStore` + `Ops`, every existing `TestBed` that mocked the old store will start failing with:
+
+```text
+NG0201: No provider found for `InjectionToken APP_TREE`.
+```
+
+…even when `AppStore` is mocked with `useValue`, because Angular still instantiates the legacy facade adapter (or any other `providedIn: 'root'` consumer) which itself injects `AppStore`, which injects `APP_TREE`.
+
+The fix is mechanical:
+
+1. Export `createBaseState()` from `app-tree.ts`.
+2. Add `app-tree.testing.ts` exporting `provideAppTreeForTesting()`.
+3. Add `provideAppTreeForTesting()` to every TestBed `providers` array that fails — do **not** mock `AppStore` or the legacy adapter to "make the error go away".
+
+Full recipe and matrix (which layer to mock per test type) in [`testing.md`](./testing.md).
+
+## Keep the legacy facade — adapt its internals
+
+When the existing `@ngrx/signals` store (e.g. `DriverStore`) is referenced by dozens of components and specs, do not rename it. Replace its internals with a small adapter over `AppStore` so the public shape is preserved while the implementation moves to SignalTree. See [`patterns.md`](./patterns.md#hybrid-migration-legacy-facade-adapters) for the adapter pattern. The legacy spec mocks (`Mock<DriverStore>`) keep working — they now mock the adapter's interface instead of the original `signalStore` instance.

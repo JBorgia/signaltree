@@ -375,6 +375,75 @@ export class TicketsComponent {
 - **One tree per application.** Keep component-local trees only for genuinely ephemeral UI state.
 - **Consumers inject `AppStore`, nothing else.** A component, resolver, interceptor, or guard that injects an Ops class or `APP_TREE` directly is wrong — route everything through `AppStore`.
 - **`APP_TREE` belongs to infrastructure.** Only `AppStore` and Ops classes ever inject the token.
+- **Tests must provide `APP_TREE`.** `providedIn: 'root'` makes `AppStore` ambient — Angular instantiates it (and any consumer that depends on it) inside every `TestBed`, which then fails with `NG0201` because production `provideAppTree()` is never called. Ship `provideAppTreeForTesting()` alongside `provideAppTree()` from day one. See [`testing.md`](./testing.md).
+
+### Lifetime caveat for `providedIn: 'root'` Ops
+
+Ops classes are typically `@Injectable({ providedIn: 'root' })` so consumers can call them anywhere. That makes them **application-lifetime** — `DestroyRef` injected into a root Ops never fires until the app shuts down, so `takeUntilDestroyed(destroyRef)` inside a root-provided Ops is effectively a no-op.
+
+This is fine for fire-and-forget reads (the subscription naturally completes when the source completes), but be deliberate when:
+
+- **You need cancellation between user actions** (a new `loadDriver$()` call should cancel the previous one). Use `switchMap` inside the Ops on a `Subject<TInput>`, not `takeUntilDestroyed`.
+- **The Ops drives an infinite stream** (websocket, polling). Hold an explicit `Subject<void>` cancellation token and expose `cancelLoad(): void { this._cancel$.next(); }`.
+- **Tests need cleanup between specs.** Either drive Ops via `firstValueFrom(...)` so completion is explicit, or expose an explicit cancel hook the test bed can call in `afterEach`.
+
+If you need per-request scoping rather than app-lifetime, drop `providedIn: 'root'` from the Ops and provide it on a feature route or a sub-injector instead. Don't reach for `takeUntilDestroyed` to fix what is really a scoping problem.
+
+## Hybrid migration: legacy facade adapters
+
+Real migrations rarely flip every consumer in one PR. When the existing app exposes a long-standing facade — e.g. an `@ngrx/signals` `DriverStore` — and dozens of components, services, and specs call into it, two-step the migration:
+
+1. **Stand up the new shape first.** Create `AppStore`, `Ops` classes, and `APP_TREE` exactly as in [Shape](#shape).
+2. **Replace the legacy facade's internals with adapters over `AppStore`.** Keep the legacy class name and public signature so consumers and specs keep compiling. Delete the legacy facade only when zero consumers remain.
+
+The adapter is a *typed view* that re-exposes `AppStore` slices in the legacy facade's shape — usually a `readonly` interface plus a small factory:
+
+```ts
+// store.ts (legacy facade, post-migration)
+import { Injectable, Signal, computed, inject } from '@angular/core';
+import { LoadingState } from '@signaltree/core';
+import { AppStore } from './signaltree';
+
+/** Public legacy shape — components and specs already depend on this. */
+export interface LegacyDriverFacade {
+  readonly currentDriver: Signal<{ id: number; name: string } | null>;
+  readonly isLoading: Signal<boolean>;
+  readonly loadingState: Signal<LoadingState>;
+  loadActiveDriver(): void;
+  clearCurrentDriver(): void;
+}
+
+function createLegacyDriverAdapter(app: AppStore): LegacyDriverFacade {
+  const $driver = app.$.driver;
+  return {
+    currentDriver: $driver.currentDriver,
+    isLoading: $driver.load.isLoading,
+    loadingState: computed(() => $driver.load.state()),
+    loadActiveDriver: () => {
+      app.ops.driver.loadActiveDriver$().subscribe();
+    },
+    clearCurrentDriver: () => app.ops.driver.clearCurrentDriver(),
+  };
+}
+
+@Injectable({ providedIn: 'root' })
+export class Store {
+  private readonly _app = inject(AppStore);
+  /** Legacy `store.drivers.*` — same shape as before the migration. */
+  readonly drivers: LegacyDriverFacade = createLegacyDriverAdapter(this._app);
+}
+```
+
+### Adapter rules
+
+- **Adapter functions are pure.** They take an `AppStore` instance and return the legacy interface — no DI, no `inject()`, no state.
+- **Adapter values are computed once per `Store` instance**, not lazily on each access. Components reading `store.drivers.currentDriver` should hit the same `Signal` reference every time.
+- **Ban legacy back-references.** The new `Ops` classes must never read from the legacy facade — only `AppStore -> Ops -> tree`. The arrow goes one way.
+- **Plan the deletion**, even if it's a year out. Keep a `// TODO(legacy-facade): remove after consumers migrated` next to each adapter and grep for it before each release.
+
+### Test impact
+
+Existing specs that mocked `Mock<DriverStore>` keep their shape — they now mock `LegacyDriverFacade` instead. **But** the `TestBed` that constructs `Store` will instantiate `AppStore`, which needs `provideAppTreeForTesting()`. See [`testing.md`](./testing.md) for the full recipe.
 
 ## Create the tree where it's used
 
