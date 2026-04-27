@@ -396,7 +396,7 @@ Real migrations rarely flip every consumer in one PR. When the existing app expo
 1. **Stand up the new shape first.** Create `AppStore`, `Ops` classes, and `APP_TREE` exactly as in [Shape](#shape).
 2. **Replace the legacy facade's internals with adapters over `AppStore`.** Keep the legacy class name and public signature so consumers and specs keep compiling. Delete the legacy facade only when zero consumers remain.
 
-The adapter is a *typed view* that re-exposes `AppStore` slices in the legacy facade's shape — usually a `readonly` interface plus a small factory:
+The adapter is a _typed view_ that re-exposes `AppStore` slices in the legacy facade's shape — usually a `readonly` interface plus a small factory:
 
 ```ts
 // store.ts (legacy facade, post-migration)
@@ -439,6 +439,8 @@ export class Store {
 - **Adapter functions are pure.** They take an `AppStore` instance and return the legacy interface — no DI, no `inject()`, no state.
 - **Adapter values are computed once per `Store` instance**, not lazily on each access. Components reading `store.drivers.currentDriver` should hit the same `Signal` reference every time.
 - **Ban legacy back-references.** The new `Ops` classes must never read from the legacy facade — only `AppStore -> Ops -> tree`. The arrow goes one way.
+- **Move shared types into the `signaltree/` directory before rewriting the legacy facade.** State shapes and DTOs that the slice owns should live next to the new `Ops` and tree definitions, with the legacy file re-exporting them for backward compat. Otherwise the new `Ops` class will need to import the legacy facade for its types — instant circular import.
+- **Cross-cutting `signalStoreFeature` extensions don't port as-is.** Behaviour-only features (error banners, telemetry baggage, refresh hooks) cannot be bolted onto the plain `@Injectable` adapter. Three valid options: **(a)** drop them and reintroduce as SignalTree enhancers in a follow-up (cheapest if no test exercises them); **(b)** rewrite the cross-cutting behaviour as constructor-body subscriptions on the relevant `Ops` class that read `tree.$.<domain>` and call the same downstream services; **(c)** keep the cross-cutting behaviour on the legacy ngrx store until the underlying library is migrated. Document which option you chose in a class-level comment.
 - **Plan the deletion**, even if it's a year out. Keep a `// TODO(legacy-facade): remove after consumers migrated` next to each adapter and grep for it before each release.
 
 ### Test impact

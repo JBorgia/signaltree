@@ -23,7 +23,9 @@ export function provideAppTree(): Provider[] {
 export class AppStore {
   readonly tree = inject(APP_TREE);
   readonly $ = this.tree.$;
-  readonly ops = { /* ... */ } as const;
+  readonly ops = {
+    /* ... */
+  } as const;
 }
 ```
 
@@ -53,9 +55,7 @@ import { APP_TREE, AppTree, createBaseState } from './app-tree';
  * Pass `overrides` to seed any subtree — useful for tests that need a
  * specific `currentDriver`, `featureFlags`, etc. without going through Ops.
  */
-export function provideAppTreeForTesting(
-  overrides?: (state: ReturnType<typeof createBaseState>) => ReturnType<typeof createBaseState>,
-): Provider[] {
+export function provideAppTreeForTesting(overrides?: (state: ReturnType<typeof createBaseState>) => ReturnType<typeof createBaseState>): Provider[] {
   return [
     {
       provide: APP_TREE,
@@ -79,12 +79,12 @@ Notes:
 
 There are three layers — tree, ops, facade — and only one of them should be mocked per test. The matrix:
 
-| Test type                                  | Tree         | Ops classes      | Components / consumers | Notes                                                 |
-| ------------------------------------------ | ------------ | ---------------- | ---------------------- | ----------------------------------------------------- |
-| **Ops class spec** (`*.ops.spec.ts`)       | real (seeded)| **real (SUT)**   | n/a                    | Mock the underlying HTTP / domain services only.      |
-| **Component spec** (template / interaction)| real (seeded)| mocked           | real (SUT)             | Spy on `ops.<domain>.<method>` to assert dispatch.    |
-| **Legacy consumer spec** (using shim)      | real (seeded)| mocked or real   | real                   | Provide the legacy facade adapter; do NOT mock both.  |
-| **`AppStore` spec itself** (rare)          | real         | mocked           | n/a                    | Usually unnecessary — `AppStore` is a thin facade.    |
+| Test type                                   | Tree          | Ops classes    | Components / consumers | Notes                                                |
+| ------------------------------------------- | ------------- | -------------- | ---------------------- | ---------------------------------------------------- |
+| **Ops class spec** (`*.ops.spec.ts`)        | real (seeded) | **real (SUT)** | n/a                    | Mock the underlying HTTP / domain services only.     |
+| **Component spec** (template / interaction) | real (seeded) | mocked         | real (SUT)             | Spy on `ops.<domain>.<method>` to assert dispatch.   |
+| **Legacy consumer spec** (using shim)       | real (seeded) | mocked or real | real                   | Provide the legacy facade adapter; do NOT mock both. |
+| **`AppStore` spec itself** (rare)           | real          | mocked         | n/a                    | Usually unnecessary — `AppStore` is a thin facade.   |
 
 ### Ops spec example
 
@@ -103,10 +103,7 @@ describe('DriverOps', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [
-        provideAppTreeForTesting(),
-        { provide: DriverService, useValue: { load$: () => of({ id: 1, name: 'Ada' }) } },
-      ],
+      providers: [provideAppTreeForTesting(), { provide: DriverService, useValue: { load$: () => of({ id: 1, name: 'Ada' }) } }],
     });
     ops = TestBed.inject(DriverOps);
   });
@@ -132,10 +129,7 @@ describe('SomeComponent', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [SomeComponent],
-      providers: [
-        provideAppTreeForTesting((s) => ({ ...s, driver: { ...s.driver, currentDriver: { id: 1, name: 'Ada' } } })),
-        { provide: DriverOps, useValue: { clearCurrentDriver: jest.fn() } },
-      ],
+      providers: [provideAppTreeForTesting((s) => ({ ...s, driver: { ...s.driver, currentDriver: { id: 1, name: 'Ada' } } })), { provide: DriverOps, useValue: { clearCurrentDriver: jest.fn() } }],
     });
   });
 
@@ -143,14 +137,49 @@ describe('SomeComponent', () => {
 });
 ```
 
+## Wiring `APP_TREE` once for a large existing test suite
+
+Per-TestBed `provideAppTreeForTesting()` is the right shape for **new** specs. For an existing app where dozens of spec files (and their parameterised setup helpers like `provideMockStore()`, `createTestingModule()`) need it, editing each one is mechanical noise that obscures real changes. Register the provider **once** via `getTestBed().initTestEnvironment(...)`:
+
+```ts
+// test-setup.ts
+import { NgModule } from '@angular/core';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
+import { getTestBed } from '@angular/core/testing';
+
+// IMPORTANT: import directly from the testing file, NOT from a barrel.
+// Importing `./signaltree` (the barrel) pulls in AppStore + every Ops class
+// transitively, which pre-loads any service those Ops inject. That breaks
+// specs that rely on `vi.mock(...)` / `jest.mock(...)` hoisting against
+// modules in the Ops dependency graph.
+import { provideAppTreeForTesting } from './app/root-services/store/signaltree/app-tree.testing';
+
+@NgModule({ providers: [...provideAppTreeForTesting()] })
+class SignalTreeTestEnvironmentModule {}
+
+getTestBed().initTestEnvironment(
+  [BrowserTestingModule, SignalTreeTestEnvironmentModule],
+  platformBrowserTesting(),
+  { errorOnUnknownElements: true, errorOnUnknownProperties: true },
+);
+```
+
+Why this works: `useFactory` inside `provideAppTreeForTesting()` runs per child injector, so each `TestBed.configureTestingModule(...)` still gets its own isolated tree — the registration is global but the *value* is per-spec.
+
+**The barrel-import rule is non-negotiable.** Symptom if you ignore it: a spec that has `vi.mock('@some-package')` at the top stops working because `@some-package` was already loaded (transitively, via `index.ts → AppStore → SomeOps → SomeService → @some-package`) before `vi.mock` had a chance to hoist. The error usually surfaces as the real implementation being called instead of the mock, often with a misleading stack trace.
+
+**Per-spec overrides still work.** If a single test needs seeded state, call `provideAppTreeForTesting(s => ({...}))` inside its own `providers` — Angular merges the per-spec provider on top of the global one.
+
+**When to pick which.** New code or a small migration (≤ 5 spec files): per-TestBed. Existing app with many specs: global. Either way, the recipe is the same `provideAppTreeForTesting()`; only the registration site differs.
+
 ## Common test-bed pitfalls
 
-- **Mocking `AppStore` with `useValue`** doesn't stop Angular from also instantiating *other* root-provided services that themselves inject `APP_TREE`. Always provide `APP_TREE` (via `provideAppTreeForTesting()`), even if `AppStore` is also mocked.
+- **Mocking `AppStore` with `useValue`** doesn't stop Angular from also instantiating _other_ root-provided services that themselves inject `APP_TREE`. Always provide `APP_TREE` (via `provideAppTreeForTesting()`), even if `AppStore` is also mocked.
 - **Don't seed via `createAppTree()`.** That production factory often layers `batching()`, `devTools()`, etc. Use `signalTree(createBaseState())` directly so tests stay deterministic.
 - **`takeUntilDestroyed(destroyRef)` inside Ops** is a no-op for `providedIn: 'root'` Ops because root services live for the application's lifetime. In tests, this means subscriptions started by Ops are not cleaned up between specs — either:
   - drive Ops via `firstValueFrom(ops.someMethod$())` so completion is explicit,
   - or scope cancellation with an explicit `Subject<void>` exposed on the Ops class.
-  See "Lifetime caveat" in [`patterns.md`](./patterns.md#lifetime-caveat-for-providedin-root-ops).
+    See "Lifetime caveat" in [`patterns.md`](./patterns.md#lifetime-caveat-for-providedin-root-ops).
 - **`ɵNotFound: NG0201` mid-test, halfway through a suite that previously passed** almost always means a new `providedIn: 'root'` consumer started transitively touching `AppStore`. Add `provideAppTreeForTesting()` to the failing test bed; do not mock the new consumer.
 
 ## Quick checklist for the agent

@@ -178,9 +178,28 @@ The fix is mechanical:
 
 1. Export `createBaseState()` from `app-tree.ts`.
 2. Add `app-tree.testing.ts` exporting `provideAppTreeForTesting()`.
-3. Add `provideAppTreeForTesting()` to every TestBed `providers` array that fails — do **not** mock `AppStore` or the legacy adapter to "make the error go away".
+3. **For a small migration (≤ 5 affected spec files):** add `provideAppTreeForTesting()` to each failing TestBed's `providers`.
+4. **For an existing large app (many parameterised testing helpers):** register `provideAppTreeForTesting()` once globally via `getTestBed().initTestEnvironment(...)` in `test-setup.ts`. This is documented in [`testing.md`](./testing.md#wiring-app_tree-once-for-a-large-existing-test-suite). Each spec still gets an isolated tree because `useFactory` runs per child injector.
+5. Do **not** mock `AppStore` or the legacy adapter to "make the error go away" — the underlying `APP_TREE` still needs to exist for any transitive consumer.
 
 Full recipe and matrix (which layer to mock per test type) in [`testing.md`](./testing.md).
+
+### Specs that called `patchState(store, …)` on the real store
+
+Specs that previously called `patchState(legacyStore, { … })` to seed state on the **real** legacy store (rather than mocking it) will throw `Reflect.ownKeys called on non-object` after the migration — the legacy facade no longer derives from `signalStore`, so `patchState` has nothing to patch.
+
+Replace with one of:
+
+- **Direct tree write** — preferred when the spec needs to set state arbitrarily mid-test:
+  ```ts
+  TestBed.inject(APP_TREE).$.<domain>(s => ({ ...s, ...overrides }));
+  ```
+- **`overrides` callback on `provideAppTreeForTesting()`** — preferred when the spec needs the seeded state from the start:
+  ```ts
+  providers: [provideAppTreeForTesting(s => ({ ...s, driver: { ...s.driver, currentDriver: { id: 1 } } }))]
+  ```
+
+Do not call any `Ops` method to seed state in tests — `Ops` are for runtime behaviour, not test fixtures.
 
 ## Keep the legacy facade — adapt its internals
 
