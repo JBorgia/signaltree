@@ -121,6 +121,18 @@ if [ "$SKIP_TESTS" != "skip-tests" ]; then
     fi
 else
     print_warning "Skipping pre-publish validation (tests disabled)"
+    # Even when tests are skipped, enforce the skill code-block lint so a
+    # release never ships with docs/skills examples that don't compile
+    # against the real @signaltree/* d.ts files. Requires `dist/packages/*`
+    # to exist — run `npm run build:all` before `./scripts/release.sh ... skip-tests`.
+    print_step "Running skill code-block lint (gating even when tests are skipped)"
+    if node scripts/lint-skills.mjs; then
+        print_success "Skill code-block lint passed"
+    else
+        print_error "Skill code-block lint failed!"
+        print_error "Run \`npm run build:all && npm run lint:skills\` locally to iterate"
+        exit 1
+    fi
 fi
 
 # Get current workspace version
@@ -371,7 +383,36 @@ else
     }
 fi
 
-# Step 5: Publish all packages to npm (BEFORE tagging/pushing)
+# Step 4.5: Create signed tag and verify signature BEFORE publish.
+# Tag creation must happen pre-publish so signature verification can gate the
+# publish step. The tag is still considered part of the pre-publish phase, so
+# any failure here will trigger the existing rollback (which also deletes the
+# tag). Idempotent: reuse an existing local tag if one is present.
+TAG_CREATED=0
+TAG_NAME="v$NEW_VERSION"
+print_step "Creating signed git tag $TAG_NAME (idempotent)..."
+if git rev-parse -q --verify "refs/tags/$TAG_NAME" >/dev/null; then
+    print_warning "Tag $TAG_NAME already exists locally; skipping tag creation"
+else
+    if git tag -s -m "Release $TAG_NAME" "$TAG_NAME"; then
+        TAG_CREATED=1
+        print_success "Created signed tag $TAG_NAME"
+    else
+        print_error "Failed to create signed tag $TAG_NAME"
+        print_error "Ensure your GPG/SSH signing key is configured (see RELEASE_PROCESS.md)"
+        exit 1
+    fi
+fi
+
+print_step "Verifying signature on tag $TAG_NAME..."
+if ! git tag -v "$TAG_NAME" >/dev/null 2>&1; then
+    print_error "Signature verification failed for tag $TAG_NAME"
+    print_error "Aborting release; see RELEASE_PROCESS.md for signing setup"
+    exit 1
+fi
+print_success "Tag $TAG_NAME signature verified"
+
+# Step 5: Publish all packages to npm (AFTER tag is created and verified)
 print_step "Publishing all packages to npm..."
 
 PUBLISH_STARTED=true
@@ -498,20 +539,8 @@ if [ ${#FAILED_PACKAGES[@]} -gt 0 ]; then
     exit 1
 fi
 
-# Step 6: Create and push tag (AFTER successful publish)
-# Tagging must be idempotent and must NEVER roll back versions after a successful publish
-TAG_CREATED=0
-print_step "Creating git tag v$NEW_VERSION (idempotent)..."
-if git rev-parse -q --verify "refs/tags/v$NEW_VERSION" >/dev/null; then
-    print_warning "Tag v$NEW_VERSION already exists locally; skipping tag creation"
-else
-    if git tag "v$NEW_VERSION"; then
-        TAG_CREATED=1
-        print_success "Created tag v$NEW_VERSION"
-    else
-        print_warning "Could not create tag v$NEW_VERSION (may already exist remotely). Skipping tag creation"
-    fi
-fi
+# Step 6: Push tag (tag was created and verified pre-publish)
+# Pushing must NEVER roll back versions after a successful publish.
 
 # Determine current branch and push to it (safer than hardcoding 'main')
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD || echo "main")
@@ -521,12 +550,12 @@ if ! git push origin "$CURRENT_BRANCH"; then
 fi
 
 if [ "$TAG_CREATED" -eq 1 ]; then
-    print_step "Pushing tag v$NEW_VERSION to GitHub..."
-    if git push origin "v$NEW_VERSION"; then
-        print_success "Tag v$NEW_VERSION pushed to GitHub"
+    print_step "Pushing tag $TAG_NAME to GitHub..."
+    if git push origin "$TAG_NAME"; then
+        print_success "Tag $TAG_NAME pushed to GitHub"
     else
-        print_warning "Failed to push tag v$NEW_VERSION. It may already exist remotely."
-        print_warning "If needed, recreate or move the tag manually: git tag -d v$NEW_VERSION && git tag v$NEW_VERSION && git push origin v$NEW_VERSION --force"
+        print_warning "Failed to push tag $TAG_NAME. It may already exist remotely."
+        print_warning "If needed, recreate or move the tag manually: git tag -d $TAG_NAME && git tag -s -m \"Release $TAG_NAME\" $TAG_NAME && git push origin $TAG_NAME --force"
     fi
 else
     print_warning "Skipping tag push because tag was not created in this run."

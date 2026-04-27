@@ -258,6 +258,30 @@ tree.registerCleanup(fn); // Register custom cleanup
 - [Performance Methodology](docs/performance/methodology.md)
 - [Performance Patterns](docs/performance/performance-patterns.md)
 
+## Using SignalTree with AI Agents
+
+SignalTree ships a vendor-neutral Agent Skill so AI coding assistants can help you consume `@signaltree/*` packages correctly. The canonical skill lives at [`docs/skills/using-signaltree/`](docs/skills/using-signaltree/) and covers the mental model, quick-start, enhancer decision tree, and per-package sub-skills (one level deep for `ng-forms`, `enterprise`, `callable-syntax`, `guardrails`, `events`, `realtime`).
+
+**Cursor** — copy the folder into your project:
+
+```bash
+cp -r node_modules/@signaltree/core/skills/using-signaltree .cursor/skills/
+```
+
+(A pointer shim at [`.cursor/skills/using-signaltree/SKILL.md`](.cursor/skills/using-signaltree/SKILL.md) already exists in this repo for local development.)
+
+**Claude Code** — same pattern:
+
+```bash
+cp -r node_modules/@signaltree/core/skills/using-signaltree .claude/skills/
+```
+
+(A pointer shim at [`.claude/skills/using-signaltree/SKILL.md`](.claude/skills/using-signaltree/SKILL.md) already exists in this repo for local development.)
+
+**Generic harnesses** — any tool that can point at a directory of `SKILL.md` files can read `docs/skills/` directly (either from a git checkout or from the `skills/` folder shipped inside each published `@signaltree/*` tarball). No harness-specific phrasing lives inside the skill bodies.
+
+For contributor-oriented guidance (commands, bundle limits, validation pipeline, release flow), see [`AGENTS.md`](AGENTS.md).
+
 ## Contributing
 
 Contributions welcome. Please run `npm run validate:all` before submitting PRs.

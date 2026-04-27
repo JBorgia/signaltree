@@ -35,6 +35,7 @@
   "files": [
     "dist/**/*.js",
     "src/**/*.d.ts",
+    "skills/**/*",
     "README.md"
   ],
   "sideEffects": false,
@@ -46,7 +47,7 @@
     "@babel/types": "^7.28.4"
   },
   "peerDependencies": {
-    "@angular/core": "^20.0.0"
+    "@angular/core": "^20.0.0 || ^21.0.0"
   },
   "peerDependenciesMeta": {},
   "devDependencies": {

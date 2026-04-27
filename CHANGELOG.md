@@ -1,3 +1,14 @@
+## 9.2.0
+
+### ⚠️ Breaking Changes
+
+> Technically breaking but expected to be invisible for almost all users. The removed type augmentation was undocumented; the supported entrypoint for callable Angular signals has always been `@signaltree/callable-syntax`.
+
+- **core:** Removed the global `declare module '@angular/core'` augmentation that added callable overloads to Angular's `WritableSignal<T>`. The augmentation lived in `packages/core/src/lib/types.ts` and activated project-wide whenever any file imported from `@signaltree/core`. This made `WritableSignal<T>` invariance-incompatible with libraries that depend on the original signature — most notably `@ngrx/signals`' `WritableStateSource<T>`, surfacing as ~30 `TS2345` errors in mixed `@ngrx/signals` + SignalTree codebases. The callable augmentation is now exclusively owned by `@signaltree/callable-syntax`.
+  - **If you import only from `@signaltree/core`** and use `tree.$.x.set(value)` / `tree.$.x.update(fn)`: nothing changes.
+  - **If you relied on calling raw Angular `WritableSignal<T>` instances as functions** (`mySignal(value)`) without ever installing `@signaltree/callable-syntax`: add `import '@signaltree/callable-syntax/augmentation';` to a side-effect file in your app, or list `@signaltree/callable-syntax` in your `tsconfig.compilerOptions.types`.
+  - This unblocks **gradual adoption alongside `@ngrx/signals`** in monorepos.
+
 ## 9.0.1
 
 ### ⚠️ Breaking Changes
