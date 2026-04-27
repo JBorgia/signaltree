@@ -19,7 +19,7 @@ const tree = signalTree<AppState>({
   user: { name: 'Ada', email: 'ada@example.com' },
 });
 
-tree.$.counter();             // read → 0
+tree.$.counter(); // read → 0
 tree.$.user.name.set('Grace');
 ```
 
@@ -83,7 +83,7 @@ the merge is coalesced into a single change-detection notification. This
 replaces the `patchState(store, { a, b, c })` idiom from `@ngrx/signals` —
 there's no need to add the `batching()` enhancer just to group a multi-field
 update, because branch/root writes are already batched by construction. Reach
-for `batching()` only when you want to coalesce multiple *separate* writes
+for `batching()` only when you want to coalesce multiple _separate_ writes
 (different call sites) within a tick.
 
 ## Markers
@@ -97,7 +97,10 @@ Normalized collection with O(1) CRUD.
 ```ts
 import { signalTree, entityMap } from '@signaltree/core';
 
-interface User { id: number; name: string }
+interface User {
+  id: number;
+  name: string;
+}
 
 const store = signalTree({
   users: entityMap<User, number>(),
@@ -108,8 +111,8 @@ store.$.users.upsertOne({ id: 1, name: 'Ada Lovelace' });
 store.$.users.removeOne(1);
 store.$.users.setAll([{ id: 2, name: 'Grace' }]);
 
-const all = store.$.users.all();          // Signal<User[]> → User[]
-const oneSig = store.$.users.byId(2);     // Signal<User | undefined> | undefined
+const all = store.$.users.all(); // Signal<User[]> → User[]
+const oneSig = store.$.users.byId(2); // Signal<User | undefined> | undefined
 const one = oneSig ? oneSig() : null;
 ```
 
@@ -131,20 +134,20 @@ const tree = signalTree({
 tree.$.load.setLoading();
 tree.$.load.setLoaded();
 tree.$.load.setError('network failure');
-tree.$.load.setNotLoaded();   // resets to initial NotLoaded state, clears error
+tree.$.load.setNotLoaded(); // resets to initial NotLoaded state, clears error
 
 // Boolean reader signals — use these in templates and computed()
-tree.$.load.isLoading();      // Signal<boolean>
-tree.$.load.isLoaded();       // Signal<boolean>
-tree.$.load.isError();        // Signal<boolean>
-tree.$.load.isNotLoaded();    // Signal<boolean>
+tree.$.load.isLoading(); // Signal<boolean>
+tree.$.load.isLoaded(); // Signal<boolean>
+tree.$.load.isError(); // Signal<boolean>
+tree.$.load.isNotLoaded(); // Signal<boolean>
 
 // Raw state and error if you need them
-tree.$.load.state();          // Signal<LoadingState>
-tree.$.load.error();          // Signal<E | null>
+tree.$.load.state(); // Signal<LoadingState>
+tree.$.load.error(); // Signal<E | null>
 
 // When comparing raw state, always use the LoadingState enum — never string literals
-const isLoading = tree.$.load.state() === LoadingState.Loading;  // ✓
+const isLoading = tree.$.load.state() === LoadingState.Loading; // ✓
 // tree.$.load.state() === 'loading'                              // ✗ TypeScript error
 ```
 
@@ -190,13 +193,7 @@ See [`../ng-forms/SKILL.md`](../ng-forms/SKILL.md) for full form guidance.
 `.with(enhancer)` chains enhancers in application order.
 
 ```ts
-import {
-  signalTree,
-  batching,
-  timeTravel,
-  devTools,
-  persistence,
-} from '@signaltree/core';
+import { signalTree, batching, timeTravel, devTools, persistence } from '@signaltree/core';
 
 const tree = signalTree({ count: 0 })
   .with(batching())
@@ -252,7 +249,9 @@ Two helpers for declaring derived functions in separate files without losing typ
 import { derivedFrom } from '@signaltree/core';
 import type { SignalTree } from '@signaltree/core';
 
-interface AppState { counter: number }
+interface AppState {
+  counter: number;
+}
 type AppTree = SignalTree<AppState>;
 
 export const counterDerived = derivedFrom<AppTree>()(($) => ({

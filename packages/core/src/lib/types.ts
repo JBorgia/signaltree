@@ -45,12 +45,18 @@ export type Primitive =
 
 export type NotFn<T> = T extends (...args: unknown[]) => unknown ? never : T;
 
-declare module '@angular/core' {
-  interface WritableSignal<T> {
-    (value: NotFn<T>): void;
-    (updater: (current: T) => T): void;
-  }
-}
+// NOTE: A `declare module '@angular/core'` augmentation that added callable
+// overloads to Angular's `WritableSignal<T>` previously lived here. It was
+// removed because it is a *global* augmentation: importing anything from
+// `@signaltree/core` would activate it project-wide and conflict with
+// libraries that depend on the original invariant `WritableSignal<T>`
+// signature (notably `@ngrx/signals`' `WritableStateSource<T>`, which became
+// invariance-incompatible — surfacing as ~30 TS2345 errors in mixed
+// `@ngrx/signals` + SignalTree codebases). The callable-syntax augmentation
+// is intentionally opt-in via `@signaltree/callable-syntax`. Apps that want
+// `signal(value)` ergonomics on raw Angular signals should `import
+// '@signaltree/callable-syntax'` (side-effect import) or include the
+// package in their tsconfig `types`.
 
 export interface NodeAccessor<T> {
   (): T;
@@ -722,10 +728,19 @@ export type PathInterceptor = (
 // These are intentionally simple aliases or fallbacks to keep the public API stable
 // while allowing internal refactors of the type system.
 
-export type CallableWritableSignal<T> = WritableSignal<T> & {
+// `CallableWritableSignal<T>` is declared as an interface (not an
+// intersection) so TypeScript's overload-resolution picks the getter
+// `(): T` first when `Signal<T>` inference walks the call signatures —
+// e.g. for `toObservable(tree.$.x)`. Prior to 9.2.0 the global
+// `declare module '@angular/core'` augmentation in core also added
+// these overloads to the base `WritableSignal<T>` and incidentally
+// masked the ordering issue; the interface form makes the contract
+// self-contained.
+export interface CallableWritableSignal<T> extends WritableSignal<T> {
+  (): T;
   (value: NotFn<T>): void;
   (updater: (current: T) => T): void;
-};
+}
 
 export type AccessibleNode<T> = NodeAccessor<T> & TreeNode<T>;
 

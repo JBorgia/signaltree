@@ -28,7 +28,11 @@ One file per domain exposing a plain state factory:
 // tickets.state.ts
 import { entityMap } from '@signaltree/core';
 
-interface Ticket { id: number; title: string; done: boolean }
+interface Ticket {
+  id: number;
+  title: string;
+  done: boolean;
+}
 
 export function ticketsState() {
   return {
@@ -40,7 +44,10 @@ export function ticketsState() {
 
 ```ts
 // identity.state.ts
-interface User { id: number; name: string }
+interface User {
+  id: number;
+  name: string;
+}
 
 export function identityState() {
   return {
@@ -56,16 +63,18 @@ multi-tier derivations chain rather than collapse into one block:
 ```ts
 // app-tree.ts
 import { InjectionToken, Provider, computed } from '@angular/core';
-import {
-  signalTree,
-  batching,
-  devTools,
-  timeTravel,
-} from '@signaltree/core';
+import { signalTree, batching, devTools, timeTravel } from '@signaltree/core';
 
 // Local minimal state factories for the snippet to compile standalone.
-interface Ticket { id: number; title: string; done: boolean }
-interface User { id: number; name: string }
+interface Ticket {
+  id: number;
+  title: string;
+  done: boolean;
+}
+interface User {
+  id: number;
+  name: string;
+}
 
 import { entityMap } from '@signaltree/core';
 function ticketsState() {
@@ -97,9 +106,7 @@ export function createAppTree() {
           active: {
             entity: computed(() => {
               const id = $.tickets.activeId();
-              return id != null
-                ? ($.tickets.entities.byId(id)?.() ?? null)
-                : null;
+              return id != null ? $.tickets.entities.byId(id)?.() ?? null : null;
             }),
           },
           all: computed(() => $.tickets.entities.all()),
@@ -109,9 +116,7 @@ export function createAppTree() {
       .derived(($) => ({
         tickets: {
           hasActive: computed(() => $.tickets.active.entity() != null),
-          openCount: computed(
-            () => $.tickets.all().filter((t) => !t.done).length
-          ),
+          openCount: computed(() => $.tickets.all().filter((t) => !t.done).length),
         },
       }))
   );
@@ -153,21 +158,13 @@ function createBaseState() {
 }
 
 /** Tree shape before any derived tiers — what tier-1 sees. */
-export type AppTreeBase = ReturnType<
-  typeof signalTree<ReturnType<typeof createBaseState>>
->;
+export type AppTreeBase = ReturnType<typeof signalTree<ReturnType<typeof createBaseState>>>;
 
 /** Tree shape after entity resolution — what tier-2 sees. */
-export type AppTreeWithEntityResolution = WithDerived<
-  AppTreeBase,
-  typeof entityResolutionDerived
->;
+export type AppTreeWithEntityResolution = WithDerived<AppTreeBase, typeof entityResolutionDerived>;
 
 /** Tree shape after ticket workflow — what tier-3 sees, and so on. */
-export type AppTreeWithTicketWorkflow = WithDerived<
-  AppTreeWithEntityResolution,
-  typeof ticketWorkflowDerived
->;
+export type AppTreeWithTicketWorkflow = WithDerived<AppTreeWithEntityResolution, typeof ticketWorkflowDerived>;
 ```
 
 ```ts
@@ -181,7 +178,7 @@ export const entityResolutionDerived = externalDerived<AppTreeBase>()(($) => ({
   tickets: {
     active: computed(() => {
       const id = $.tickets.activeId();
-      return id != null ? ($.tickets.entities.byId(id)?.() ?? null) : null;
+      return id != null ? $.tickets.entities.byId(id)?.() ?? null : null;
     }),
   },
 }));
@@ -219,17 +216,19 @@ interface AppState {
   tickets: { activeId: number | null };
   identity: { user: { id: number; name: string } | null };
 }
-declare const APP_TREE: InjectionToken<
-  ReturnType<typeof signalTree<AppState>>
->;
+declare const APP_TREE: InjectionToken<ReturnType<typeof signalTree<AppState>>>;
 
 @Injectable({ providedIn: 'root' })
 class TicketOps {
-  clearAll(): void { /* ... */ }
+  clearAll(): void {
+    /* ... */
+  }
 }
 @Injectable({ providedIn: 'root' })
 class IdentityOps {
-  clear(): void { /* ... */ }
+  clear(): void {
+    /* ... */
+  }
 }
 
 @Injectable({ providedIn: 'root' })
@@ -265,16 +264,18 @@ import type { Observable } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
 import { signalTree, entityMap } from '@signaltree/core';
 
-interface Ticket { id: number; title: string; done: boolean }
+interface Ticket {
+  id: number;
+  title: string;
+  done: boolean;
+}
 interface AppState {
   tickets: {
     entities: ReturnType<typeof entityMap<Ticket, number>>;
     activeId: number | null;
   };
 }
-declare const APP_TREE: InjectionToken<
-  ReturnType<typeof signalTree<AppState>>
->;
+declare const APP_TREE: InjectionToken<ReturnType<typeof signalTree<AppState>>>;
 interface TicketApi {
   list$(): Observable<Ticket[]>;
 }
@@ -300,9 +301,7 @@ export class TicketOps {
   // Async — observable return, caller owns subscription.
   load$(): Observable<void> {
     return this._api.list$().pipe(
-      tap((items) =>
-        this._$tickets.entities.setAll(items, { selectId: (t) => t.id })
-      ),
+      tap((items) => this._$tickets.entities.setAll(items, { selectId: (t) => t.id })),
       map(() => void 0)
     );
   }
@@ -333,7 +332,11 @@ Components read via `store.$` and trigger mutations via `store.ops.<domain>`:
 import { Component, inject } from '@angular/core';
 import { signalTree, entityMap } from '@signaltree/core';
 
-interface Ticket { id: number; title: string; done: boolean }
+interface Ticket {
+  id: number;
+  title: string;
+  done: boolean;
+}
 interface AppState {
   tickets: {
     entities: ReturnType<typeof entityMap<Ticket, number>>;
@@ -409,7 +412,10 @@ it the natural target when migrating.
 import { inject, Injectable, Signal } from '@angular/core';
 import { signalTree } from '@signaltree/core';
 
-interface UserState { name: string; email: string }
+interface UserState {
+  name: string;
+  email: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class UserStore {
@@ -451,11 +457,12 @@ token declaration.
 import { InjectionToken } from '@angular/core';
 import { signalTree } from '@signaltree/core';
 
-interface UserState { name: string; email: string }
+interface UserState {
+  name: string;
+  email: string;
+}
 
-export const USER_TREE = new InjectionToken<ReturnType<typeof createUserTree>>(
-  'UserTree'
-);
+export const USER_TREE = new InjectionToken<ReturnType<typeof createUserTree>>('UserTree');
 
 export function createUserTree() {
   const tree = signalTree<UserState>({ name: '', email: '' });
@@ -488,10 +495,9 @@ The `$` proxy exposes signals, so Angular templates consume them directly.
 
 <!-- Conditionals and loops use the same signal reads -->
 @if (tree.$.load.isLoading()) {
-  <spinner />
-}
-@for (user of tree.$.users.all(); track user.id) {
-  <user-row [user]="user" />
+<spinner />
+} @for (user of tree.$.users.all(); track user.id) {
+<user-row [user]="user" />
 }
 ```
 
@@ -503,7 +509,10 @@ Use Angular's `computed()` for derived state. Read tree signals inside the callb
 import { Component, computed } from '@angular/core';
 import { signalTree } from '@signaltree/core';
 
-interface CartItem { price: number; qty: number }
+interface CartItem {
+  price: number;
+  qty: number;
+}
 
 @Component({ selector: 'app-cart', template: '' })
 export class CartComponent {
@@ -512,9 +521,7 @@ export class CartComponent {
     taxRate: 0.08,
   });
 
-  readonly subtotal = computed(() =>
-    this.tree.$.items().reduce((s, i) => s + i.price * i.qty, 0)
-  );
+  readonly subtotal = computed(() => this.tree.$.items().reduce((s, i) => s + i.price * i.qty, 0));
 
   readonly total = computed(() => this.subtotal() * (1 + this.tree.$.taxRate()));
 }
@@ -567,9 +574,7 @@ export class RxBridgeComponent {
 
   constructor() {
     // Observable → tree (write on next).
-    this.query$
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((q) => this.tree.$.count.set(q.length));
+    this.query$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((q) => this.tree.$.count.set(q.length));
   }
 }
 ```
@@ -579,7 +584,11 @@ export class RxBridgeComponent {
 For list mutations, build the new array immutably and pass it to `.update()`.
 
 ```ts
-interface Todo { id: number; text: string; done: boolean }
+interface Todo {
+  id: number;
+  text: string;
+  done: boolean;
+}
 
 const tree = signalTree({ todos: [] as Todo[] });
 
@@ -587,9 +596,7 @@ const tree = signalTree({ todos: [] as Todo[] });
 tree.$.todos.update((ts) => [...ts, { id: 3, text: 'ship it', done: false }]);
 
 // toggle by id
-tree.$.todos.update((ts) =>
-  ts.map((t) => (t.id === 3 ? { ...t, done: !t.done } : t))
-);
+tree.$.todos.update((ts) => ts.map((t) => (t.id === 3 ? { ...t, done: !t.done } : t)));
 
 // remove
 tree.$.todos.update((ts) => ts.filter((t) => t.id !== 3));
@@ -602,7 +609,11 @@ If mutations are hot, switch the list to `entityMap<Todo, number>()` for O(1) CR
 ```ts
 import { signalTree, entityMap } from '@signaltree/core';
 
-interface User { id: number; name: string; active: boolean }
+interface User {
+  id: number;
+  name: string;
+  active: boolean;
+}
 
 const store = signalTree({ users: entityMap<User, number>() });
 
@@ -614,8 +625,8 @@ store.$.users.addOne({ id: 3, name: 'Hedy', active: true });
 store.$.users.upsertOne({ id: 1, name: 'Ada L.', active: true });
 store.$.users.removeOne(2);
 
-const all = store.$.users.all();                     // User[]
-const adaSig = store.$.users.byId(1);                // Signal<User | undefined> | undefined
+const all = store.$.users.all(); // User[]
+const adaSig = store.$.users.byId(1); // Signal<User | undefined> | undefined
 const ada = adaSig ? adaSig() : null;
 ```
 
@@ -627,7 +638,9 @@ When a derived block doesn't belong inline in the component, declare it in a sib
 // derived.ts
 import { derivedFrom, type SignalTree } from '@signaltree/core';
 
-interface AppState { counter: number }
+interface AppState {
+  counter: number;
+}
 type AppTree = SignalTree<AppState>;
 
 export const appDerived = derivedFrom<AppTree>()(($) => ({
@@ -646,8 +659,8 @@ import { signalTree } from '@signaltree/core';
 import { appDerived } from './derived';
 
 export const tree = signalTree({ counter: 0 }, appDerived);
-tree.$.counter();   // number
-tree.$.doubled();   // number (from derived, available at runtime)
+tree.$.counter(); // number
+tree.$.doubled(); // number (from derived, available at runtime)
 ```
 
 Prefer Angular's `computed()` inline (declared next to the component field
@@ -659,12 +672,7 @@ overload to expose typed derived props.
 ## Composing enhancers: a production-shaped tree
 
 ```ts
-import {
-  signalTree,
-  batching,
-  devTools,
-  persistence,
-} from '@signaltree/core';
+import { signalTree, batching, devTools, persistence } from '@signaltree/core';
 
 interface AppState {
   user: { name: string; email: string };
@@ -737,9 +745,11 @@ export const withDismissableBanner = createEnhancer<BannerApi>(
   (tree) => {
     const enhanced = tree as typeof tree & BannerApi;
     // The enhancer is applied to a tree that owns a `banner.visible` leaf.
-    const banner = (tree.$ as unknown as {
-      banner: { visible: { set: (v: boolean) => void } };
-    }).banner;
+    const banner = (
+      tree.$ as unknown as {
+        banner: { visible: { set: (v: boolean) => void } };
+      }
+    ).banner;
     enhanced.dismissBanner = () => banner.visible.set(false);
     return enhanced;
   }
@@ -751,15 +761,11 @@ export const withDismissableBanner = createEnhancer<BannerApi>(
 import type { ISignalTree } from '@signaltree/core';
 
 type BannerState = { banner: { visible: boolean } };
-const appTree = signalTree<BannerState>({ banner: { visible: true } }).with(
-  withDismissableBanner as unknown as (
-    tree: ISignalTree<BannerState>
-  ) => ISignalTree<BannerState> & BannerApi
-);
+const appTree = signalTree<BannerState>({ banner: { visible: true } }).with(withDismissableBanner as unknown as (tree: ISignalTree<BannerState>) => ISignalTree<BannerState> & BannerApi);
 
-appTree.$.banner.visible();  // true
-appTree.dismissBanner();     // available on the builder
-appTree.$.banner.visible();  // false
+appTree.$.banner.visible(); // true
+appTree.dismissBanner(); // available on the builder
+appTree.$.banner.visible(); // false
 ```
 
 For authoring larger enhancers (custom markers, scheduler hooks, async
@@ -770,11 +776,11 @@ middleware), see [`../../guides/custom-markers-enhancers.md`](../../guides/custo
 `@ngrx/signals`' `signalStoreFeature` is used for two distinct jobs in practice.
 SignalTree has a dedicated answer for each:
 
-| What the feature does | SignalTree equivalent |
-|---|---|
+| What the feature does                                                                                                 | SignalTree equivalent                                                  |
+| --------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
 | Adds reusable **state shape + reactive behaviour** to a slice (`withLoadingState`, `withSavingState`, `withEntities`) | **Built-in or custom marker** — the behaviour lives in the tree itself |
-| Adds **cross-cutting tree-level behaviour** needing DI (`withErrorBanners`, `withTelemetryBaggage`) | `createEnhancer` (see above) |
-| **Side-effects on init** (subscriptions, `effect()`) | Constructor body of the Ops class |
+| Adds **cross-cutting tree-level behaviour** needing DI (`withErrorBanners`, `withTelemetryBaggage`)                   | `createEnhancer` (see above)                                           |
+| **Side-effects on init** (subscriptions, `effect()`)                                                                  | Constructor body of the Ops class                                      |
 
 ### Built-in markers replace `withLoadingState` and `withEntities`
 
@@ -785,28 +791,31 @@ methods appear on that node automatically:
 ```ts
 import { entityMap, signalTree, status } from '@signaltree/core';
 
-interface Ticket { id: number; title: string }
+interface Ticket {
+  id: number;
+  title: string;
+}
 
 const tree = signalTree({
   tickets: {
-    entities: entityMap<Ticket>(),   // replaces withEntities
-    loading:  status(),              // replaces withLoadingState
-  }
+    entities: entityMap<Ticket>(), // replaces withEntities
+    loading: status(), // replaces withLoadingState
+  },
 });
 
 // status() attaches setters, boolean readers, and raw state/error to the node:
 tree.$.tickets.loading.setLoading();
 tree.$.tickets.loading.setLoaded();
 tree.$.tickets.loading.setError(new Error('network failure'));
-tree.$.tickets.loading.setNotLoaded();  // reset to initial state
+tree.$.tickets.loading.setNotLoaded(); // reset to initial state
 
 // Boolean signals — prefer these over .state() string comparisons
-tree.$.tickets.loading.isLoading();     // Signal<boolean>
-tree.$.tickets.loading.isLoaded();      // Signal<boolean>
-tree.$.tickets.loading.isError();       // Signal<boolean>
-tree.$.tickets.loading.isNotLoaded();   // Signal<boolean>
+tree.$.tickets.loading.isLoading(); // Signal<boolean>
+tree.$.tickets.loading.isLoaded(); // Signal<boolean>
+tree.$.tickets.loading.isError(); // Signal<boolean>
+tree.$.tickets.loading.isNotLoaded(); // Signal<boolean>
 
-const err = tree.$.tickets.loading.error();  // Error | null
+const err = tree.$.tickets.loading.error(); // Error | null
 
 // If you must compare raw state, import and use the LoadingState enum:
 // import { LoadingState } from '@signaltree/core';
@@ -814,13 +823,38 @@ const err = tree.$.tickets.loading.error();  // Error | null
 // tree.$.tickets.loading.state() === 'loading'             ✗ TypeScript error
 
 // entityMap() attaches upsertOne / setAll / removeOne / byId / all / clear:
-tree.$.tickets.entities.setAll([{ id: 1, title: 'Haul A' }], { selectId: t => t.id });
+tree.$.tickets.entities.setAll([{ id: 1, title: 'Haul A' }], { selectId: (t) => t.id });
 const all = tree.$.tickets.entities.all(); // Signal<Ticket[]>
 ```
 
 Use `status()` anywhere you previously reached for `withLoadingState` or a
 hand-rolled `{ isLoading, error }` slice. The marker is reusable across every
 domain in the tree — declare it in each domain's state factory, not once globally.
+
+#### When NOT to use `status()`
+
+`status()` is opinionated about two things: (1) the loading-state values it stores (its own internal enum string values such as `'LOADED'`), and (2) the error channel — `setError(error)` is a single slot that callers typically end up stringifying.
+
+Reach for a plain slice instead when **either** is true:
+
+- **Your codebase already has a `LoadingState` enum** with different string values (e.g. `'Loaded'` vs `status()`'s `'LOADED'`). Importing both names invites a silent runtime mismatch that only fails in tests that compare on `state()`.
+- **Your codebase has a rich error model** (e.g. a `NotifyErrorModel` with `message`, `errorMessage`, `correlationId`, etc.) and you need to round-trip the full object, not a stringified copy.
+
+In either case, write a tiny slice factory that returns the exact types your codebase already uses:
+
+```ts skip
+// loading-slice.ts
+import { LoadingState, NotifyErrorModel, Nullable } from '@models';
+
+export function loadingSlice() {
+  return {
+    state: LoadingState.NotLoaded as LoadingState,
+    error: null as Nullable<NotifyErrorModel>,
+  };
+}
+```
+
+Then consume it like any other slice — `tree.$.tickets.loading.state()`, `tree.$.tickets.loading.state.set(LoadingState.Loading)`, `tree.$.tickets.loading.error.set(captureError(err))`. You lose the `setLoading()` / `isLoaded()` ergonomic methods, but you keep your existing enum and error type — usually the right trade in established codebases.
 
 ### Custom markers for novel reusable state behaviour
 
@@ -839,14 +873,23 @@ export const savingState = () => Symbol('savingState');
 
 registerMarkerProcessor(savingState, (_initialValue, node) => {
   const _isSaving = signal(false);
-  const _isSaved  = signal(false);
+  const _isSaved = signal(false);
 
   Object.assign(node, {
-    isSaving:  computed(() => _isSaving()),
-    isSaved:   computed(() => _isSaved()),
-    setSaving: () => { _isSaving.set(true);  _isSaved.set(false); },
-    setSaved:  () => { _isSaving.set(false); _isSaved.set(true);  },
-    resetSave: () => { _isSaving.set(false); _isSaved.set(false); },
+    isSaving: computed(() => _isSaving()),
+    isSaved: computed(() => _isSaved()),
+    setSaving: () => {
+      _isSaving.set(true);
+      _isSaved.set(false);
+    },
+    setSaved: () => {
+      _isSaving.set(false);
+      _isSaved.set(true);
+    },
+    resetSave: () => {
+      _isSaving.set(false);
+      _isSaved.set(false);
+    },
   });
 });
 
@@ -881,11 +924,13 @@ import { debounceTime, switchMap, tap } from 'rxjs/operators';
 import type { Observable } from 'rxjs';
 import { signalTree } from '@signaltree/core';
 
-interface AppState { search: { query: string; results: string[] } }
-declare const APP_TREE: InjectionToken<
-  ReturnType<typeof signalTree<AppState>>
->;
-interface SearchApi { query$(q: string): Observable<string[]> }
+interface AppState {
+  search: { query: string; results: string[] };
+}
+declare const APP_TREE: InjectionToken<ReturnType<typeof signalTree<AppState>>>;
+interface SearchApi {
+  query$(q: string): Observable<string[]>;
+}
 declare const SEARCH_API: InjectionToken<SearchApi>;
 
 @Injectable({ providedIn: 'root' })
@@ -918,16 +963,19 @@ import type { Observable } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
 import { signalTree, entityMap } from '@signaltree/core';
 
-interface Ticket { id: number; title: string }
+interface Ticket {
+  id: number;
+  title: string;
+}
 interface AppState {
   tickets: {
     entities: ReturnType<typeof entityMap<Ticket, number>>;
   };
 }
-declare const APP_TREE: InjectionToken<
-  ReturnType<typeof signalTree<AppState>>
->;
-interface TicketApi { list$(): Observable<Ticket[]> }
+declare const APP_TREE: InjectionToken<ReturnType<typeof signalTree<AppState>>>;
+interface TicketApi {
+  list$(): Observable<Ticket[]>;
+}
 declare const TICKET_API: InjectionToken<TicketApi>;
 
 @Injectable({ providedIn: 'root' })
@@ -970,8 +1018,7 @@ sourced from DI.
   @Injectable({ providedIn: 'root' })
   export class UiStore {
     // All config known at class-declaration time → field initializer.
-    private readonly _tree = signalTree({ theme: 'light' as const })
-      .with(batching());
+    private readonly _tree = signalTree({ theme: 'light' as const }).with(batching());
 
     readonly theme = this._tree.$.theme;
   }
@@ -985,7 +1032,9 @@ sourced from DI.
   import { inject, Injectable, InjectionToken } from '@angular/core';
   import { signalTree, persistence } from '@signaltree/core';
 
-  interface AppConfig { storageKey: string }
+  interface AppConfig {
+    storageKey: string;
+  }
   const APP_CONFIG = new InjectionToken<AppConfig>('APP_CONFIG');
 
   @Injectable({ providedIn: 'root' })

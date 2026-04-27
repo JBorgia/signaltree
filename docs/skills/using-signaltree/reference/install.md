@@ -49,6 +49,23 @@ npm install --save-dev @signaltree/callable-syntax
 
 Build-time-only transform — **install as a dev dependency**. Zero bytes at runtime. Wire into your build via the Vite plugin (`@signaltree/callable-syntax/vite`) or the Webpack plugin (`@signaltree/callable-syntax/webpack`). Detailed setup lives in [`../callable-syntax/SKILL.md`](../callable-syntax/SKILL.md).
 
+**TypeScript augmentation (≥ 9.2.0):** `@signaltree/callable-syntax` owns the `declare module '@angular/core'` augmentation that adds callable overloads to `WritableSignal<T>`. Prior to `@signaltree/core@9.2.0` the same augmentation also lived in `core` and activated globally on any import from core; that was removed because it broke type-checking in projects coexisting with `@ngrx/signals`. If you want the callable form on raw Angular signals, opt in explicitly via either:
+
+```ts
+// side-effect import in a file that's part of your app's compilation
+import '@signaltree/callable-syntax/augmentation';
+```
+
+or in `tsconfig.json`:
+
+```jsonc
+{
+  "compilerOptions": {
+    "types": ["@signaltree/callable-syntax"]
+  }
+}
+```
+
 ### `@signaltree/guardrails`
 
 ```bash

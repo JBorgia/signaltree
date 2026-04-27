@@ -9,6 +9,18 @@ Quick reference for converting an existing `@ngrx/signals` codebase. Applies **o
 
 Read the root `SKILL.md` and `reference/patterns.md` for full SignalTree context; use this file for the mechanical mappings.
 
+## Hybrid adoption in a monorepo
+
+If you are migrating a large workspace where `@ngrx/signals` is used by shared base classes (`signalStoreFeature`, custom `withEntity*` features in a `libs/store` package) and consumed by multiple apps, do not assume you can flip one app at a time without preparation:
+
+- **`@signaltree/core@9.2.0`+ no longer ships the global `declare module '@angular/core'` augmentation that previously activated callable overloads on every `WritableSignal<T>`.** Earlier versions (≤ 9.1.0) made the augmentation unconditional on any `core` import, which made `WritableSignal<T>` invariance-incompatible with `@ngrx/signals`' `WritableStateSource<T>`. Symptom on the older versions: ~30 `TS2345` errors in `@ngrx/signals` features the moment any consumer in the same `tsconfig` graph imported from `@signaltree/core`. Upgrade to `^9.2.0` before attempting hybrid adoption.
+- The reverse (a SignalTree consumer that now wants the callable form on raw `WritableSignal<T>`) opts in via `import '@signaltree/callable-syntax/augmentation'` or by listing `@signaltree/callable-syntax` in `tsconfig.compilerOptions.types`. See [`install.md`](./install.md#signaltreecallable-syntax).
+- **Shared `@ngrx/signals`-based base classes do not have to be migrated to SignalTree.** Two valid coexistence strategies:
+  1. **Replace shared base classes with vanilla Angular signals** (`signal()` / `computed()` / `effect()`) and migrate per-app stores to SignalTree at your own pace. The base classes lose the `signalStoreFeature` composition story but keep API parity with consumers.
+  2. **Keep `@ngrx/signals` in place for the legacy slice; introduce SignalTree alongside as the new canonical store.** With ≥ `9.2.0` this works without typecheck conflicts. Components migrate one at a time from `inject(LegacyStore)` to `inject(AppStore)`.
+- Whichever strategy you pick, **do not introduce a partial SignalTree by per-domain `signalTree()` instances**. The single-tree rule below still applies — the AppStore facade should compose every SignalTree-managed domain into one tree even when other domains are still on the legacy store.
+
+
 ## Critical: one tree for all domains
 
 **Do not create one `signalTree()` per ngrx store.** The entire application — every domain that had its own `signalStore` — must be composed into a single `signalTree()` call behind one `APP_TREE` `InjectionToken`, exposed through a single `AppStore` service.
