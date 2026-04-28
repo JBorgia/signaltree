@@ -7,11 +7,57 @@ description: One-to-one mapping guide specifically for porting @ngrx/signals sto
 
 Quick reference for converting an existing `@ngrx/signals` codebase. Applies **only to `@ngrx/signals`** — the signal-based store package (`signalStore`, `withState`, `rxMethod`). Not applicable to classic `@ngrx/store` (reducers, actions, effects) or `@ngrx/component-store`.
 
-Read the root `SKILL.md` and `reference/patterns.md` for full SignalTree context; use this file for the mechanical mappings.
+Read the root `SKILL.md`, [`reference/optimal-implementation.md`](./optimal-implementation.md), and [`reference/patterns.md`](./patterns.md) for full SignalTree context; use this file for the mechanical mappings.
 
-## Hybrid adoption in a monorepo
+## Default: big-bang migration
 
-If you are migrating a large workspace where `@ngrx/signals` is used by shared base classes (`signalStoreFeature`, custom `withEntity*` features in a `libs/store` package) and consumed by multiple apps, do not assume you can flip one app at a time without preparation:
+**Big-bang is the default.** In one PR, you:
+
+1. Stand up the new shape (`AppStore` + `APP_TREE` + per-domain `Ops` + `app-tree.testing.ts`).
+2. Migrate **every** consumer of every legacy `signalStore` to `inject(AppStore)`. Use grep to enumerate consumers up front:
+
+   ```bash
+   grep -rln "from '@ngrx/signals'\|root-services/store/\(driver\|plant\|feature-flag\)\.store" <app-src>/
+   ```
+
+3. **`rm` every legacy store file in the same commit.** This includes `*.store.ts`, its `*.store.spec.ts` sibling, and any barrel/re-export entries that point at it. Standing up the new `AppStore` while leaving the legacy files on disk is _not_ a migration — it is a hybrid you forgot to finish, and it will rot.
+4. Remove `@ngrx/signals` (and `@angular-architects/ngrx-toolkit` if used) from `package.json`.
+5. Update the lockfile and verify `node_modules/@ngrx` is gone.
+6. **Verify deletion with grep before declaring done.** All three commands must return empty (exit 0, no output):
+
+   ```bash
+   grep -rln "from '@ngrx/signals'" <app-src>/      # no remaining imports
+   grep -rln 'signalStore(' <app-src>/                # no remaining store factories
+   find <app-src> -name '*.store.ts' -not -path '*/node_modules/*'   # no legacy filenames
+   ```
+
+   If any command returns output, the migration is **not done**. Do not commit, do not write a report, do not declare success — finish the deletion first.
+
+7. Confirm the test suite is green and lint is clean.
+
+### Use the finishing script
+
+Steps 3, 6, and 7 are mechanical and easy to skip when budget is tight. The repo ships [`scripts/finish-signaltree-migration.sh`](../../../../scripts/finish-signaltree-migration.sh) (in the `signaltree` repo) that does all three in one shot — it deletes the legacy `*.store.ts` files for the named domains, runs the verification greps, runs `pnpm nx build/test/lint`, and (optionally) commits. Invoke it after you have stood up the new shape and migrated all consumers:
+
+```bash
+scripts/finish-signaltree-migration.sh \
+  --app-src   frontend/apps/<app>/src \
+  --nx-project <app> \
+  --pnpm-cwd  frontend \
+  --domain    feature-flag \
+  --domain    driver \
+  --commit    "feat(<app>): migrate feature-flag + driver to SignalTree"
+```
+
+The script exits non-zero if any verification grep is non-empty or any gate fails — that exit code is your "migration is not done" signal. **Always run this script (or its equivalent) before declaring a migration complete.**
+
+The end-state is one mental model in the codebase, no adapter cruft, no "temporary" facades that live forever. See [`optimal-implementation.md`](./optimal-implementation.md#definition-of-done) for the full checklist.
+
+**The hybrid-facade pattern is a fallback**, not the recommended path. Use it only when one of the constraints in [`optimal-implementation.md`](./optimal-implementation.md#when-the-hybrid-pattern-is-acceptable) genuinely applies, and ship it with a deletion deadline.
+
+## Hybrid adoption (fallback path)
+
+If you genuinely cannot land the migration in one PR — the diff is too large to review, multiple teams own consumers, the release cadence forces a coexistence window, or rollback risk demands it — stand up the new shape and use legacy-facade adapters as **temporary scaffolding**:
 
 - **`@signaltree/core@9.2.0`+ no longer ships the global `declare module '@angular/core'` augmentation that previously activated callable overloads on every `WritableSignal<T>`.** Earlier versions (≤ 9.1.0) made the augmentation unconditional on any `core` import, which made `WritableSignal<T>` invariance-incompatible with `@ngrx/signals`' `WritableStateSource<T>`. Symptom on the older versions: ~30 `TS2345` errors in `@ngrx/signals` features the moment any consumer in the same `tsconfig` graph imported from `@signaltree/core`. Upgrade to `^9.2.0` before attempting hybrid adoption.
 - The reverse (a SignalTree consumer that now wants the callable form on raw `WritableSignal<T>`) opts in via `import '@signaltree/callable-syntax/augmentation'` or by listing `@signaltree/callable-syntax` in `tsconfig.compilerOptions.types`. See [`install.md`](./install.md#signaltreecallable-syntax).
@@ -196,11 +242,24 @@ Replace with one of:
   ```
 - **`overrides` callback on `provideAppTreeForTesting()`** — preferred when the spec needs the seeded state from the start:
   ```ts
-  providers: [provideAppTreeForTesting(s => ({ ...s, driver: { ...s.driver, currentDriver: { id: 1 } } }))]
+  providers: [provideAppTreeForTesting((s) => ({ ...s, driver: { ...s.driver, currentDriver: { id: 1 } } }))];
   ```
 
 Do not call any `Ops` method to seed state in tests — `Ops` are for runtime behaviour, not test fixtures.
 
-## Keep the legacy facade — adapt its internals
+## Keep the legacy facade — adapt its internals (fallback only)
 
-When the existing `@ngrx/signals` store (e.g. `DriverStore`) is referenced by dozens of components and specs, do not rename it. Replace its internals with a small adapter over `AppStore` so the public shape is preserved while the implementation moves to SignalTree. See [`patterns.md`](./patterns.md#hybrid-migration-legacy-facade-adapters) for the adapter pattern. The legacy spec mocks (`Mock<DriverStore>`) keep working — they now mock the adapter's interface instead of the original `signalStore` instance.
+> Use this only when [big-bang isn't feasible](./optimal-implementation.md#when-the-hybrid-pattern-is-acceptable). Big-bang gives a cleaner end-state and avoids the dual-store maintenance tax.
+
+When the existing `@ngrx/signals` store (e.g. `DriverStore`) is referenced by dozens of components and specs and you cannot land the full migration in one PR, do not rename it. Replace its internals with a small adapter over `AppStore` so the public shape is preserved while the implementation moves to SignalTree. See [`patterns.md`](./patterns.md#hybrid-migration-legacy-facade-adapters) for the adapter pattern. The legacy spec mocks (`Mock<DriverStore>`) keep working — they now mock the adapter's interface instead of the original `signalStore` instance.
+
+**Every adapter must ship with a deletion deadline.** Add `// TODO(legacy-facade): remove by <date/release>` and open a tracking issue. A facade without a deletion plan becomes a permanent second store — the worst possible end-state.
+
+## Definition of done
+
+A migration is **not done** when the build is green. See [`optimal-implementation.md`](./optimal-implementation.md#definition-of-done) for the full checklist. The hard gates:
+
+- `grep -rln '@ngrx/signals' src/app/` returns nothing in the migrated app.
+- `@ngrx/signals` (and any related toolkit packages) removed from `package.json` (or tracked for removal if a shared lib elsewhere still uses them).
+- All adapter facades either deleted or carrying a deletion-deadline comment + tracking issue.
+- Test suite green; lint clean; DevTools shows the tree under its `treeName`.
