@@ -135,8 +135,11 @@ See `reference/patterns.md` for the full `APP_TREE` + `AppStore` + `Ops` wiring 
 | `withMethods(({ ... }) => ({ ... }))`          | Methods on an `Ops` class that injects `APP_TREE`                          |
 | `withComputed(({ ... }) => ({ ... }))`         | Angular `computed()` on the component or in `.derived()` on the tree       |
 | `withHooks({ onInit })`                        | Constructor body of the service / `APP_TREE` factory                       |
+| `withProps(({ ... }) => ({ ... }))`            | Plain `readonly` fields on the `Ops` class (or `AppStore`); no signal magic needed |
 | `rxMethod(pipe(...))`                          | Plain method returning `Observable<void>`; writes via `tap()`              |
 | `patchState(store, { a, b })`                  | `tree.$.domain((s) => ({ ...s, a, b }))` or individual `.set()` calls      |
+| `getState(store)`                              | `unwrap(tree.$)` (whole tree) or `unwrap(tree.$.domain)` (one slice) — `unwrap` is a free function from `@signaltree/core` |
+| `signalState({ ... })` (standalone)            | `signalTree({ ... })` — `signalState` was the state-only primitive; `signalTree` is the equivalent baseline |
 | `withEntities<T>()`                            | `entityMap<T, K>()` marker                                                 |
 | `store.entities()`                             | `tree.$.items.all()`                                                       |
 | `store.entityMap()`                            | `tree.$.items.byId(id)`                                                    |
