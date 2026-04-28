@@ -115,10 +115,17 @@ Q1 (collection vs singleton): per-domain answer
 Q2 (typed error model present): yes/no — file path if yes
 Q3 (cross-domain lifecycle): yes/no — describe the action(s)
 Q4 (persistence): yes/no — what + where
+Q5 (computed organization): count derived signals per slice from the survey:
+  - total derived signals across the tree: N
+  - any cross-domain rollups (one computed reading from ≥ 2 slices)? yes/no
+  - any duplicated computed (same logic in ≥ 2 consumer files)? yes/no
+  → if N > ~15 OR cross-domain rollups OR duplicates: adopt the
+    five-tier ladder from patterns.md → "Recommended tier ladder".
+  → otherwise: keep computeds inline in state factories.
 
 PATTERNS APPLYING:
   - #1 entityMap state shape: <which domains>
-  - #2 derived tiers: yes/no
+  - #2 derived tiers: <none | minimal-inline | full-ladder>
   - #3 cross-domain Ops: yes/no — name(s)
   - #4 persistence: yes/no
   - #5 sync method support: yes/no
@@ -158,9 +165,12 @@ Do NOT delete any legacy stores. Do NOT migrate any specs.
 - store/tree/app-tree.ts          — exports createBaseState, createAppTree, APP_TREE, provideAppTree
 - store/tree/app-tree.testing.ts  — exports provideAppTreeForTesting
 - store/tree/state/<domain>.state.ts  (one per domain)
+- store/tree/derived/tier-*.derived.ts  (ONLY if Phase 2 audit Q5 selected `full-ladder`; one file per tier)
 - store/ops/<domain>.ops.ts           (one per domain)
 - store/app-store.ts              — single AppStore facade
 - store/index.ts                  — public surface
+
+If the audit selected `full-ladder` for derived tiers, follow patterns.md → "Recommended tier ladder for large apps". Do NOT invent your own tier names; use the validated five-tier ladder (entity-resolution → complex-logic → workflow → navigation → ui-aggregates) and only build the tiers your audited signal count justifies.
 
 Plus exactly one edit:
 - app.config.ts                   — add provideAppTree() to providers
@@ -299,23 +309,23 @@ If exit code is 0, surface to the user:
 
 These rules eliminate the most common orchestration failures observed across runs:
 
-| Rule | Why |
-|---|---|
-| Each implementer prompt MUST include the full Phase 1 catalog and Phase 2 audit. | Implementers re-deriving these facts wastes context and produces drift. |
-| The orchestrator NEVER edits files itself during phases 3–4 unless a fix is < 10 LOC. | Mixing orchestrator edits with implementer edits creates merge confusion in the report. |
-| The verifier is run by the orchestrator, not the implementer, for the final gate. | Implementer reports cannot be trusted as the gate — they paraphrase output. |
-| Skill friction is collected as a separate report section, never folded into the diffstat narrative. | Friction items get lost in long reports; a dedicated section is the only reliable harvest. |
-| If Coder #2 reports that a pre-existing spec was rewritten without prior orchestrator approval, treat that as a friction item against this playbook (not a code defect). | Silent rebaselines defeat the audit trail. |
+| Rule                                                                                                                                                                     | Why                                                                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| Each implementer prompt MUST include the full Phase 1 catalog and Phase 2 audit.                                                                                         | Implementers re-deriving these facts wastes context and produces drift.                    |
+| The orchestrator NEVER edits files itself during phases 3–4 unless a fix is < 10 LOC.                                                                                    | Mixing orchestrator edits with implementer edits creates merge confusion in the report.    |
+| The verifier is run by the orchestrator, not the implementer, for the final gate.                                                                                        | Implementer reports cannot be trusted as the gate — they paraphrase output.                |
+| Skill friction is collected as a separate report section, never folded into the diffstat narrative.                                                                      | Friction items get lost in long reports; a dedicated section is the only reliable harvest. |
+| If Coder #2 reports that a pre-existing spec was rewritten without prior orchestrator approval, treat that as a friction item against this playbook (not a code defect). | Silent rebaselines defeat the audit trail.                                                 |
 
 ## Failure modes and recoveries
 
-| Symptom | Cause | Recovery |
-|---|---|---|
-| Coder #1 returns no/truncated output | Context exhausted on a too-broad scope | Inspect worktree state with `ls` + `git status`; if foundation is partially built, patch it yourself; if not, re-dispatch with a stricter scope (only `app-tree.ts` + `app-tree.testing.ts` first). |
-| Coder #2 commits but verifier fails on second run | Implementer mis-paraphrased the verifier result | Re-dispatch with verifier failure log as the only context; do not re-include the survey. |
-| Implementer adds Ops methods that orchestrator's audit didn't list | Audit missed a required method | Accept the addition; update the audit notes; pass to next phase. |
-| Pre-existing tests broken at base commit | Branch not clean before the migration | Confirm with `git stash && <test-cmd>` against the base commit; if confirmed pre-existing, mark in friction log; do NOT block commit on it. |
-| Verifier `--allow-dep-presence` masks an unremoved package | Sibling apps still reference the legacy package | Open a follow-up tracking issue; do NOT remove the dep until all siblings migrate. |
+| Symptom                                                            | Cause                                           | Recovery                                                                                                                                                                                            |
+| ------------------------------------------------------------------ | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Coder #1 returns no/truncated output                               | Context exhausted on a too-broad scope          | Inspect worktree state with `ls` + `git status`; if foundation is partially built, patch it yourself; if not, re-dispatch with a stricter scope (only `app-tree.ts` + `app-tree.testing.ts` first). |
+| Coder #2 commits but verifier fails on second run                  | Implementer mis-paraphrased the verifier result | Re-dispatch with verifier failure log as the only context; do not re-include the survey.                                                                                                            |
+| Implementer adds Ops methods that orchestrator's audit didn't list | Audit missed a required method                  | Accept the addition; update the audit notes; pass to next phase.                                                                                                                                    |
+| Pre-existing tests broken at base commit                           | Branch not clean before the migration           | Confirm with `git stash && <test-cmd>` against the base commit; if confirmed pre-existing, mark in friction log; do NOT block commit on it.                                                         |
+| Verifier `--allow-dep-presence` masks an unremoved package         | Sibling apps still reference the legacy package | Open a follow-up tracking issue; do NOT remove the dep until all siblings migrate.                                                                                                                  |
 
 ## What this playbook is NOT
 
