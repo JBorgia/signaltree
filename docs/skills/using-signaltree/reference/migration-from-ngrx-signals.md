@@ -135,7 +135,36 @@ When to pick incremental over big-bang or hybrid:
 
 ### Phase 0: foundation-only first PR (recommended)
 
-The first PR should add the foundation (`app/store/app-store.ts`, `tree/app-tree.ts`, the first domain's `state/` and `ops/`) **without importing it from any consumer**. The legacy stores stay; the new files are dead code from the runtime's perspective. This PR's only job is to prove that pulling `@signaltree/core` into the dependency graph keeps `build`, `test`, and `lint` green.
+The first PR should add the foundation **without importing it from any consumer**. The legacy stores stay; the new files are dead code from the runtime's perspective. This PR's only job is to prove that pulling `@signaltree/core` into the dependency graph keeps `build`, `test`, and `lint` green.
+
+**Required foundation file set** (every one of these — missing any of them is a skill violation, not a stylistic choice):
+
+```
+src/app/store/
+├── app-store.ts                              # @Injectable AppStore facade — the ONLY thing consumers inject
+├── index.ts                                  # barrel: export AppStore + types only (never APP_TREE/Ops)
+├── ops/
+│   ├── index.ts                              # barrel
+│   ├── <first-domain>.ops.ts                 # @Injectable XOps service
+│   └── <first-domain>.ops.spec.ts            # XOps spec — required for Phase 0 to count as foundation
+└── tree/
+    ├── app-tree.ts                           # APP_TREE InjectionToken + createAppTree() + provideAppTree()
+    ├── app-tree.spec.ts                      # asserts shape of $.<domain>, presence of derived tiers
+    ├── state/
+    │   ├── index.ts                          # barrel
+    │   ├── selection.state.ts                # ROOT selection slice (see Goal pattern #1) — even if first domain only writes one <x>Id
+    │   └── <first-domain>.state.ts           # domain factory: entityMap + xLoad + xError, NO selection inside
+    └── derived/
+        ├── index.ts                          # barrel
+        └── tier-entity-resolution.derived.ts # Tier 1: id → entity (always exists, even with one domain)
+```
+
+The foundation MUST also include a test helper for downstream PRs:
+
+```
+src/app/testing/
+└── provide-app-tree-for-testing.ts          # provideAppTreeForTesting(seed?) — used by every spec from PR 2 onward
+```
 
 Why this matters: if any test transitively injects the new `AppStore` (even via a route guard that's exercised in a fixture), the failure mode is a `NG0201` cascade through every `Ops` constructor — and you won't know whether the regression came from the foundation or from a consumer rewrite. Phase 0 isolates that risk.
 
@@ -318,23 +347,45 @@ See `reference/patterns.md` for the full `APP_TREE` + `AppStore` + `Ops` wiring 
 
 The concept map above keeps the build green. These five patterns are what separates a passing migration from one that lands at the **right end-state**. A migration that ignores them produces a SignalTree shaped like the old `signalStore` graph (one slice per old store, single-`currentX` signals, eager loads, no derived tiers) — green but architecturally thin. Apply these on first migration; retrofitting later is significantly more churn.
 
-### 1. `currentX: XDto` ngrx signal → `entityMap` + `selected.<id>` + derived current
+### 1. `currentX: XDto` ngrx signal → `entityMap` + root `selected.<id>` + derived current
 
-When the ngrx store has a `currentDriver: DriverDto` (or `selectedTruck`, `activeTicket`) signal, **do not port it as a single signal in the new state**. The "current" is one of many — model it that way:
+When the ngrx store has a `currentDriver: DriverDto` (or `selectedTruck`, `activeTicket`) signal, **do not port it as a single signal in the new state**. The "current" is one of many — model it that way, and put **selection at the *root* of the tree**, not inside the domain slice. Selection is inherently cross-domain (DriverOps writes `selected.driverId`, TruckOps writes `selected.truckId`, derived tiers read both); putting it under `driver.selected` blocks that pattern and forces awkward `$.driver.selected.driverId()` reads.
 
 ```ts
-// driver.state.ts \u2014 entities live here
-import { entityMap } from '@signaltree/core';
+// state/driver.state.ts — domain entities + load state ONLY. No selection.
+import { entityMap, status } from '@signaltree/core';
+import type { NotifyErrorModel, Nullable } from '@models';
 import type { DriverDto } from '@models-v2';
 
 export function driverState() {
   return {
-    drivers: entityMap<DriverDto, number>(),       // all drivers loaded so far
-    selected: { driverId: null as number | null }, // which one is "current"
+    drivers: entityMap<DriverDto, number>(),
+    driversLoad: status<string>(),
+    driversError: null as Nullable<NotifyErrorModel>, // typed sibling — see rule below
   };
 }
 
-// derived/tier-entity-resolution.derived.ts — the current entity is *derived*
+// state/selection.state.ts — root-level selection slice, ONE per app
+import type { Nullable } from '@models';
+
+export function selectionState() {
+  return {
+    driverId: null as Nullable<number>,
+    truckId: null as Nullable<number>,
+    haulerId: null as Nullable<number>,
+    // ...add more <x>Id scalars as new domains migrate; never split this slice
+  };
+}
+
+// app-tree.ts — selection is a TOP-LEVEL slice, sibling to domains
+export function createBaseState() {
+  return {
+    driver: driverState(),
+    selected: selectionState(), // <-- root, not driver.selected
+  };
+}
+
+// derived/tier-entity-resolution.derived.ts — current entity is *derived*
 import { computed } from '@angular/core';
 import { externalDerived } from '@signaltree/core';
 import type { AppTreeBase } from '../app-tree';
@@ -342,14 +393,20 @@ import type { AppTreeBase } from '../app-tree';
 export const entityResolutionDerived = externalDerived<AppTreeBase>()(($) => ({
   driver: {
     current: computed(() => {
-      const id = $.selected.driverId();
-      return id != null ? ($.drivers.byId(id)?.() ?? null) : null;
+      const id = $.selected.driverId(); // <-- root selection
+      return id != null ? $.driver.drivers.byId(id)?.() ?? null : null;
     }),
   },
 }));
 ```
 
-This unlocks `upsertOne`, `removeOne`, `byId`, `setAll` for the entity collection — operations the single-signal port permanently loses access to. **Hard rule:** if the ngrx signal type is `XDto` or `Nullable<XDto>` and `X` has an `id` field, port it as `entityMap<X, K>()` plus a `selected.<x>Id` scalar. No exceptions for "we only ever have one."
+This unlocks `upsertOne`, `removeOne`, `byId`, `setAll` for the entity collection — operations the single-signal port permanently loses access to.
+
+**Hard rules:**
+
+- If the ngrx signal type is `XDto` or `Nullable<XDto>` and `X` has an `id` field, port it as `entityMap<X, K>()` (in the domain slice) plus a `<x>Id: Nullable<K>` scalar (in the root `selected` slice). No exceptions for "we only ever have one."
+- `selected` is **always a top-level slice of the tree**, never nested inside a domain. The derived tier reads `$.selected.<x>Id()` and `$.<domain>.<entityMap>.byId(...)` — both at root.
+- Load + error live in the domain slice as **two siblings**: `xLoad: status<string>()` for the state machine *and* `xError: Nullable<NotifyErrorModel>` (or whatever your typed error model is) so consumers don't lose typed error info to the `string`-only payload of `status<T>().setError(msg)`. Ops set both: `$.x.xLoad.setError(String(err)); $.x.xError.set(toNotifyError(err));`. This is the only correct shape — `status<NotifyErrorModel>()` is **not** a substitute (its API is state-machine, not error-storage).
 
 ### 2. Materialize derivations inside the tree with `externalDerived` + `.derived()`
 
@@ -366,12 +423,14 @@ export type AppTreeWithEntityResolution = WithDerived<AppTreeBase, typeof entity
 export type AppTreeWithComplexLogic = WithDerived<AppTreeWithEntityResolution, typeof complexLogicDerived>;
 export type AppTree = AppTreeWithComplexLogic;
 
-export function createAppTree(initial: { /* ... */ }) {
+export function createAppTree(initial: {
+  /* ... */
+}) {
   return signalTree(createBaseState(initial))
     .with(devTools({ treeName: 'AppTree' }))
     .with(batching())
-    .derived(entityResolutionDerived)   // tier 1: id → entity
-    .derived(complexLogicDerived);      // tier 2+: depends on tier 1
+    .derived(entityResolutionDerived) // tier 1: id → entity
+    .derived(complexLogicDerived); // tier 2+: depends on tier 1
 }
 ```
 
