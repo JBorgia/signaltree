@@ -13,6 +13,17 @@ Read the root `SKILL.md`, [`reference/optimal-implementation.md`](./optimal-impl
 
 **Big-bang is the default.** In one PR, you:
 
+0. **Orient yourself in the codebase first.** Before touching any code, answer:
+
+   - **Where is the migrating app's source root?** (e.g. `src/app`, `apps/<name>/src`, `frontend/apps/<name>/src`). This is your `<app-src>` for every grep and the `--src` for the verifier script.
+   - **Where is the `package.json` that owns `@ngrx/signals`?** Workspace root in npm/single-app, app-local in pnpm workspaces, frontend-root in some monorepos. This is `--package-json`.
+   - **What are the build / test / lint commands?** Read `package.json` `scripts` and any `nx.json` / `angular.json` / `project.json`. These are `--build`, `--test`, `--lint`.
+   - **Is this a single app or a monorepo?** If sibling apps in the same `package.json` still import `@ngrx/signals`, you'll need `--allow-dep-presence` in step 6 and a tracking ticket for the dep removal.
+   - **Is `@angular-architects/ngrx-toolkit` (or any other `@ngrx/signals`-derivative package) also in use?** If yes, plan to remove it in step 5 and pass `--package` repeatedly in step 6.
+   - **Are there shared base classes built on `signalStore` / `signalStoreFeature`?** If yes, decide between the two coexistence strategies in [Hybrid adoption](#hybrid-adoption-fallback-path) before writing any code.
+
+   Capture these answers in your scratch notes — every subsequent step references them.
+
 1. **Discover every legacy store and consumer.** The only universal anchor is the package itself — file names, class names, and folder paths vary by codebase. Use these greps regardless of layout:
 
    ```bash
@@ -26,7 +37,24 @@ Read the root `SKILL.md`, [`reference/optimal-implementation.md`](./optimal-impl
 3. Migrate **every** consumer from the discovery list to `inject(AppStore)`.
 4. **`rm` every file from the `signalStore(` list in the same commit.** Include each file's `*.spec.ts` sibling and any barrel/re-export that points at it. Standing up the new `AppStore` while leaving the legacy files on disk is _not_ a migration — it is a hybrid you forgot to finish, and it will rot.
 5. Remove `@ngrx/signals` (and `@angular-architects/ngrx-toolkit` if used) from `package.json` `dependencies` and `peerDependencies`. Update the lockfile.
-6. **Verify with the package's fingerprint before declaring done.** All three checks must pass:
+
+6. **Verify with [`scripts/verify-signaltree-migration.sh`](../../../../scripts/verify-signaltree-migration.sh).** This is the canonical "am I done?" gate. The script runs all three fingerprint checks (source-import grep, `signalStore(` grep, `package.json` parse) and then the build / test / lint gates in one invocation. It works on any layout and any package manager — you supply the commands:
+
+   ```bash
+   scripts/verify-signaltree-migration.sh \
+     --src    <app-src> \
+     --build  "<your build command>" \
+     --test   "<your test command>" \
+     --lint   "<your lint command>" \
+     [--package-json <path-to-package.json>] \
+     [--package <legacy-pkg>]                    # repeatable; default: @ngrx/signals
+     [--allow-dep-presence]                      # only if another app in the same monorepo still needs the package
+     [--commit "feat(<app>): migrate to SignalTree"]
+   ```
+
+   The script does **not** delete anything — that's your job in step 4 (you know which files you just replaced). Non-zero exit means the migration is not done; do not commit, do not write a report, do not declare success.
+
+   **If the script is unavailable** (downstream consumer without the `signaltree` repo checked out), run the equivalent checks manually:
 
    ```bash
    grep -rln "from '@ngrx/signals'" <app-src>/   # must be empty
@@ -35,33 +63,13 @@ Read the root `SKILL.md`, [`reference/optimal-implementation.md`](./optimal-impl
             ['dependencies','peerDependencies'].forEach(k =>       \
               console.assert(!p[k]?.['@ngrx/signals'],             \
                 '@ngrx/signals still in '+k));"
+   # then your build / test / lint commands
    ```
 
-   If any check fails, the migration is **not done**. Do not commit, do not write a report, do not declare success — finish the deletion first.
-
-7. Confirm the test suite is green and lint is clean.
-
-### Use the verifier script
-
-Steps 6 and 7 are mechanical and easy to skip when budget is tight. The repo ships [`scripts/verify-signaltree-migration.sh`](../../../../scripts/verify-signaltree-migration.sh) (in the `signaltree` repo) that runs all three fingerprint checks plus the gates, in one invocation, on any codebase regardless of layout or package manager:
+#### Worked invocations (flex any shape)
 
 ```bash
-scripts/verify-signaltree-migration.sh \
-  --src    <app-src> \
-  --build  "<your build command>" \
-  --test   "<your test command>" \
-  --lint   "<your lint command>" \
-  [--package-json <path>] \
-  [--allow-dep-presence] \
-  [--commit "feat(<app>): migrate to SignalTree"]
-```
-
-The script does **not** delete anything — that's the agent's job in step 4 (the agent knows which files it just replaced). The script verifies the package's fingerprint is gone from source AND from `package.json`, then runs the build/test/lint gates. Non-zero exit means the migration is not done.
-
-Examples:
-
-```bash
-# Nx + pnpm
+# Nx + pnpm, single app or monorepo with this as the only ngrx app
 scripts/verify-signaltree-migration.sh \
   --src   apps/<app>/src \
   --build "pnpm nx build <app>" \
@@ -76,18 +84,25 @@ scripts/verify-signaltree-migration.sh \
   --test  "npm test -- --watch=false" \
   --lint  "npm run lint"
 
-# Monorepo where another app still uses @ngrx/signals
+# Monorepo where another app still uses @ngrx/signals (don't fail step 3)
 scripts/verify-signaltree-migration.sh \
   --src   apps/<app>/src \
   --build "yarn nx build <app>" \
   --test  "yarn nx test <app>" \
   --lint  "yarn nx lint <app>" \
   --allow-dep-presence
+
+# Migrating off both @ngrx/signals AND @angular-architects/ngrx-toolkit
+scripts/verify-signaltree-migration.sh \
+  --src   src/app \
+  --build "npm run build" \
+  --test  "npm test -- --watch=false" \
+  --lint  "npm run lint" \
+  --package @ngrx/signals \
+  --package @angular-architects/ngrx-toolkit
 ```
 
-**Always run this script (or its equivalent) before declaring a migration complete.**
-
-The end-state is one mental model in the codebase, no adapter cruft, no "temporary" facades that live forever. See [`optimal-implementation.md`](./optimal-implementation.md#definition-of-done) for the full checklist.
+The end-state is one mental model in the codebase, no adapter cruft, no "temporary" facades that live forever. See [`optimal-implementation.md`](./optimal-implementation.md#definition-of-done) for the full Definition-of-Done checklist.
 
 **The hybrid-facade pattern is a fallback**, not the recommended path. Use it only when one of the constraints in [`optimal-implementation.md`](./optimal-implementation.md#when-the-hybrid-pattern-is-acceptable) genuinely applies, and ship it with a deletion deadline.
 
