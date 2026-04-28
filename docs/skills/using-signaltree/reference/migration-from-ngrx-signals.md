@@ -156,6 +156,7 @@ Everything from the big-bang Step 0 (orientation) still applies. The differences
 4. **Step 4 — `rm` the migrated store + its spec + any barrel that re-exports it.** Do **not** ship a legacy facade adapter unless one of the [hybrid constraints](#hybrid-adoption-fallback-path) applies. Incremental is _not_ hybrid — the migrated store goes away in the same PR; it's only the _other_ stores that remain.
 
    **Sequencing rule (do not violate):** Migrate every consumer of the store **first**, run `build` + `test` to confirm green, **then** delete the legacy store / spec / aggregator slot in the same PR. Removing the aggregator slot before the consumer rewrites lands turns every still-broken consumer into a `TS2339` build error and forces a full revert. If you cannot finish all consumers in one PR, leave the legacy store in place and ship the partial work as a Phase 0-style additive PR.
+
 5. **Step 5 — do NOT remove `@ngrx/signals` from `package.json`.** Other domains still need it. The dep removal happens automatically in the final domain's PR.
 6. **Step 6 — verifier invocation, narrowed and permissive:**
    ```bash
@@ -209,6 +210,8 @@ Two safe patterns:
 - **Scope `Ops` to consumers.** Drop `providedIn: 'root'` and let consumers `provide` the `Ops` in a route-level or component-level injector. `AppStore` then exposes a typed `inject<DriverOps>(DriverOps)` accessor inside a component-scoped factory, not as an eager root-singleton.
 
 Either pattern keeps Phase 0 from regressing unrelated tests when the foundation lands.
+
+**If you choose to fix the cascade in test files instead** (acceptable for a single-PR consumer migration), add the missing transitive provider to each affected legacy spec. **Verify each helper actually exists before importing it** — `grep -rn "export function <providerName>" <app-src>/testing/` (and any shared test-utils package). Hallucinated helper names are the most common follow-up failure mode of this fix.
 
 ### Co-locating the new foundation with a legacy `store/` directory
 
