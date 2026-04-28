@@ -139,8 +139,6 @@ describe('SomeComponent', () => {
 
 ## Wiring `APP_TREE` once for a large existing test suite
 
-For a brown-field migration the simplest fix is to declare `APP_TREE` with a tree-shakable `providedIn: 'root'` factory — every child injector (including each per-spec `TestBed`) then gets a fresh isolated tree by default, and existing specs need **no** changes. See ["Brown-field migrations: declare `APP_TREE` with a tree-shakable factory"](./patterns.md#brown-field-migrations-declare-app_tree-with-a-tree-shakable-factory) in `patterns.md`. Use the recipe below only when the token has no `providedIn: 'root'` default and you instead want one global testing provider.
-
 Per-TestBed `provideAppTreeForTesting()` is the right shape for **new** specs. For an existing app where dozens of spec files (and their parameterised setup helpers like `provideMockStore()`, `createTestingModule()`) need it, editing each one is mechanical noise that obscures real changes. Register the provider **once** via `getTestBed().initTestEnvironment(...)`:
 
 ```ts
@@ -159,10 +157,14 @@ import { provideAppTreeForTesting } from './app/root-services/store/signaltree/a
 @NgModule({ providers: [...provideAppTreeForTesting()] })
 class SignalTreeTestEnvironmentModule {}
 
-getTestBed().initTestEnvironment([BrowserTestingModule, SignalTreeTestEnvironmentModule], platformBrowserTesting(), { errorOnUnknownElements: true, errorOnUnknownProperties: true });
+getTestBed().initTestEnvironment(
+  [BrowserTestingModule, SignalTreeTestEnvironmentModule],
+  platformBrowserTesting(),
+  { errorOnUnknownElements: true, errorOnUnknownProperties: true },
+);
 ```
 
-Why this works: `useFactory` inside `provideAppTreeForTesting()` runs per child injector, so each `TestBed.configureTestingModule(...)` still gets its own isolated tree — the registration is global but the _value_ is per-spec.
+Why this works: `useFactory` inside `provideAppTreeForTesting()` runs per child injector, so each `TestBed.configureTestingModule(...)` still gets its own isolated tree — the registration is global but the *value* is per-spec.
 
 **The barrel-import rule is non-negotiable.** Symptom if you ignore it: a spec that has `vi.mock('@some-package')` at the top stops working because `@some-package` was already loaded (transitively, via `index.ts → AppStore → SomeOps → SomeService → @some-package`) before `vi.mock` had a chance to hoist. The error usually surfaces as the real implementation being called instead of the mock, often with a misleading stack trace.
 

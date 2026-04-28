@@ -19,10 +19,8 @@ type Action = { type: 'inc' } | { type: 'reset' };
 
 function reduce(state: { count: number }, action: Action) {
   switch (action.type) {
-    case 'inc':
-      return { ...state, count: state.count + 1 };
-    case 'reset':
-      return { ...state, count: 0 };
+    case 'inc': return { ...state, count: state.count + 1 };
+    case 'reset': return { ...state, count: 0 };
   }
 }
 ```
@@ -33,12 +31,8 @@ import { signalTree } from '@signaltree/core';
 
 const tree = signalTree({ count: 0 });
 
-function inc() {
-  tree.$.count.update((n) => n + 1);
-}
-function reset() {
-  tree.$.count.set(0);
-}
+function inc()   { tree.$.count.update((n) => n + 1); }
+function reset() { tree.$.count.set(0); }
 ```
 
 If you want undo/redo, add `timeTravel()`. If you want DevTools, add `devTools()`. You don't need action types.
@@ -56,7 +50,7 @@ const tree = signalTree({ count: 0, doubled: 0 });
 
 const doubled = computed(() => {
   const n = tree.$.count() * 2;
-  tree.$.doubled.set(n); // ← never do this
+  tree.$.doubled.set(n);   // ← never do this
   return n;
 });
 ```
@@ -85,9 +79,9 @@ These are **private, bundled packages** consumed internally by the public `@sign
 {
   "dependencies": {
     "@signaltree/core": "^9.0.0",
-    "@signaltree/shared": "^9.0.0", // ← don't
-    "@signaltree/types": "^9.0.0", // ← don't
-    "@signaltree/utils": "^9.0.0" // ← don't
+    "@signaltree/shared": "^9.0.0",   // ← don't
+    "@signaltree/types": "^9.0.0",    // ← don't
+    "@signaltree/utils": "^9.0.0"     // ← don't
   }
 }
 ```
@@ -135,8 +129,8 @@ If you replace a subtree wholesale (`tree.$.user(newObj)`) or rebuild the tree i
 import { signalTree } from '@signaltree/core';
 
 const tree = signalTree({ user: { name: 'Ada' } });
-const userNode = tree.$.user; // captured
-tree.$.user({ name: 'Grace' }); // subtree replaced
+const userNode = tree.$.user;            // captured
+tree.$.user({ name: 'Grace' });          // subtree replaced
 // userNode may be stale now — re-read from tree.$ instead
 ```
 
@@ -146,7 +140,7 @@ import { signalTree } from '@signaltree/core';
 
 const tree = signalTree({ user: { name: 'Ada' } });
 tree.$.user({ name: 'Grace' });
-const currentName = tree.$.user.name(); // always reads the live signal
+const currentName = tree.$.user.name();  // always reads the live signal
 ```
 
 As a rule: pass the `tree` (or a narrow factory-exposed API) rather than long-lived raw node references.
@@ -161,11 +155,9 @@ etc.) disappear and the plain value is written in their place.
 ```ts wrong
 import { signalTree, status, entityMap } from '@signaltree/core';
 
-interface Item {
-  id: number;
-}
+interface Item { id: number }
 const tree = signalTree({
-  items: { entities: entityMap<Item>(), loading: status() },
+  items: { entities: entityMap<Item>(), loading: status() }
 });
 
 // ✗ Wrong — overwrites the marker nodes with plain values
@@ -176,11 +168,9 @@ tree.$.items({ entities: [], loading: { state: 'idle', error: null } });
 ```ts
 import { signalTree, status, entityMap } from '@signaltree/core';
 
-interface Item {
-  id: number;
-}
+interface Item { id: number }
 const tree = signalTree({
-  items: { entities: entityMap<Item>(), loading: status() },
+  items: { entities: entityMap<Item>(), loading: status() }
 });
 
 // ✓ Right — update each writable leaf individually
@@ -221,33 +211,6 @@ class CounterComponent {
   readonly tree = signalTree({ count: 0 });
 }
 ```
-
-## Do not leave the legacy `signalStore` on disk after migrating
-
-This is the single most common failure mode when migrating from `@ngrx/signals`. An agent (or a hurried human) stands up the new `AppStore` + `APP_TREE` + per-domain `Ops`, migrates the consumers, and then **stops** — leaving `driver.store.ts`, `feature-flag.store.ts`, etc. on disk, still importing `@ngrx/signals`, still calling `signalStore({ providedIn: 'root' }, ...)`. That is not a migration. It is a half-finished hybrid that will rot: the legacy stores are still constructed at app boot, still register with DevTools, still hold state, and they silently diverge from the new tree.
-
-**The legacy `*.store.ts` files for every migrated domain must be deleted in the same commit that adds the new `AppStore` shape.** This includes the `.store.spec.ts` sibling and any barrel re-exports that point at the deleted file.
-
-```ts skip
-// ✗ Wrong — new AppStore committed alongside untouched legacy stores
-// frontend/apps/<app>/src/app/store/app-store.ts        ← new
-// frontend/apps/<app>/src/app/store/tree/app-tree.ts    ← new
-// frontend/apps/<app>/src/app/root-services/store/driver.store.ts        ← still there, still signalStore(...)
-// frontend/apps/<app>/src/app/root-services/store/feature-flag.store.ts  ← still there, still signalStore(...)
-// frontend/apps/<app>/src/app/root-services/store/plant.store.ts         ← still there, still signalStore(...)
-```
-
-```bash
-# ✓ Right — verify deletion before declaring done.
-# All three must return empty (no output) inside the migrated app:
-grep -rln "from '@ngrx/signals'" frontend/apps/<app>/src/
-grep -rln 'signalStore('         frontend/apps/<app>/src/
-find frontend/apps/<app>/src -name '*.store.ts' -not -path '*/node_modules/*'
-```
-
-If any of those greps returns output and you are not on the explicit hybrid-fallback path documented in [`optimal-implementation.md`](optimal-implementation.md#when-the-hybrid-pattern-is-acceptable), **stop and finish the deletion before committing**. Do not write the migration report, do not push, do not declare success.
-
-The hybrid-facade pattern in [`patterns.md`](patterns.md#hybrid-migration-legacy-facade-adapters-fallback) is the _only_ exception, and it requires a `// TODO(legacy-facade): remove by <date/release>` plus a tracking issue.
 
 ### When a shared service IS correct
 
