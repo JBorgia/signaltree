@@ -16,6 +16,9 @@
 #     --lint   "<your lint command>" \
 #     [--package @ngrx/signals]                  # repeatable; default: @ngrx/signals
 #     [--allow-dep-presence]                     # don't fail if package still in package.json
+#     [--allow-source-presence]                  # don't fail on leftover source imports / signalStore() calls
+#                                                  (use for incremental per-domain migrations — see
+#                                                   reference/migration-from-ngrx-signals.md)
 #     [--package-json package.json]              # default: ./package.json
 #     [--commit "feat: migrate to SignalTree"]
 #     [--dry-run]                                # print what would run, exit 0
@@ -26,6 +29,11 @@
 #                                                         (only checked if --package contains @ngrx/signals)
 #   3. <pkg> not in package.json dependencies / peerDependencies
 #      (devDependencies allowed; --allow-dep-presence skips this entirely)
+#
+# --allow-source-presence demotes Steps 1 and 2 from failures to warnings (still
+# printed, exit code unaffected). Step 3 is unaffected by this flag — use
+# --allow-dep-presence for that. Both flags are safe to combine for incremental
+# migrations where N-1 stores still use the legacy package.
 #
 # Then runs --build, --test, --lint commands as provided. Fail-fast.
 #
@@ -59,6 +67,7 @@ LINT_CMD=""
 COMMIT_MSG=""
 PACKAGE_JSON="package.json"
 ALLOW_DEP=0
+ALLOW_SRC=0
 DRY_RUN=0
 PACKAGES=()
 
@@ -70,10 +79,11 @@ while [[ $# -gt 0 ]]; do
     --lint)                LINT_CMD="$2"; shift 2 ;;
     --package)             PACKAGES+=("$2"); shift 2 ;;
     --package-json)        PACKAGE_JSON="$2"; shift 2 ;;
-    --allow-dep-presence)  ALLOW_DEP=1; shift ;;
-    --commit)              COMMIT_MSG="$2"; shift 2 ;;
-    --dry-run)             DRY_RUN=1; shift ;;
-    -h|--help)             sed -n '2,40p' "$0"; exit 0 ;;
+    --allow-dep-presence)     ALLOW_DEP=1; shift ;;
+    --allow-source-presence)  ALLOW_SRC=1; shift ;;
+    --commit)                 COMMIT_MSG="$2"; shift 2 ;;
+    --dry-run)                DRY_RUN=1; shift ;;
+    -h|--help)                sed -n '2,46p' "$0"; exit 0 ;;
     *) echo "Unknown arg: $1" >&2; exit 2 ;;
   esac
 done
@@ -101,6 +111,7 @@ echo "    build:         $BUILD_CMD"
 echo "    test:          $TEST_CMD"
 echo "    lint:          $LINT_CMD"
 echo "    allow-dep:     $ALLOW_DEP"
+echo "    allow-source:  $ALLOW_SRC"
 echo "    dry-run:       $DRY_RUN"
 echo
 
@@ -111,6 +122,16 @@ fi
 
 fail=0
 
+# When --allow-source-presence is set, Steps 1 & 2 still print findings but
+# do not contribute to the failure count.
+if [[ $ALLOW_SRC -eq 1 ]]; then
+  src_mark="⚠"
+  src_label="warning"
+else
+  src_mark="✗"
+  src_label="leftover"
+fi
+
 # --- 1. source-import fingerprint ----------------------------------------
 echo "--- Step 1: source-import fingerprint (must be empty)"
 step_fail=0
@@ -118,7 +139,7 @@ for pkg in "${PACKAGES[@]}"; do
   # grep returns 1 when no matches — turn that into success.
   if matches=$(grep -rln "from '${pkg}'" "$SRC" 2>/dev/null); then
     if [[ -n "$matches" ]]; then
-      echo "  ✗ leftover \"from '${pkg}'\" imports in:"
+      echo "  ${src_mark} ${src_label} \"from '${pkg}'\" imports in:"
       echo "$matches" | sed 's/^/      /'
       step_fail=1
     fi
@@ -126,13 +147,18 @@ for pkg in "${PACKAGES[@]}"; do
   # Also catch double-quoted form.
   if matches=$(grep -rln "from \"${pkg}\"" "$SRC" 2>/dev/null); then
     if [[ -n "$matches" ]]; then
-      echo "  ✗ leftover \"from \\\"${pkg}\\\"\" imports in:"
+      echo "  ${src_mark} ${src_label} \"from \\\"${pkg}\\\"\" imports in:"
       echo "$matches" | sed 's/^/      /'
       step_fail=1
     fi
   fi
 done
-[[ $step_fail -eq 0 ]] && echo "  ✓ no source imports of: ${PACKAGES[*]}"
+if [[ $step_fail -eq 0 ]]; then
+  echo "  ✓ no source imports of: ${PACKAGES[*]}"
+elif [[ $ALLOW_SRC -eq 1 ]]; then
+  echo "  (allowed by --allow-source-presence; not contributing to failure)"
+  step_fail=0
+fi
 fail=$(( fail | step_fail ))
 echo
 
@@ -142,12 +168,17 @@ if printf '%s\n' "${PACKAGES[@]}" | grep -qx '@ngrx/signals'; then
   step_fail=0
   if matches=$(grep -rln 'signalStore(' "$SRC" 2>/dev/null); then
     if [[ -n "$matches" ]]; then
-      echo "  ✗ leftover signalStore( calls in:"
+      echo "  ${src_mark} ${src_label} signalStore( calls in:"
       echo "$matches" | sed 's/^/      /'
       step_fail=1
     fi
   fi
-  [[ $step_fail -eq 0 ]] && echo "  ✓ no signalStore( calls"
+  if [[ $step_fail -eq 0 ]]; then
+    echo "  ✓ no signalStore( calls"
+  elif [[ $ALLOW_SRC -eq 1 ]]; then
+    echo "  (allowed by --allow-source-presence; not contributing to failure)"
+    step_fail=0
+  fi
   fail=$(( fail | step_fail ))
   echo
 fi
