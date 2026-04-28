@@ -131,6 +131,22 @@ export function provideAppTree(): Provider[] {
 }
 ```
 
+### Brown-field migrations: declare `APP_TREE` with a tree-shakable factory
+
+In a brown-field migration where dozens (or hundreds) of existing `TestBed`s never opt into `provideAppTreeForTesting()`, every spec that transitively touches `AppStore` will fail with `NullInjectorError: APP_TREE` the moment the migration lands. Editing every spec to add the provider is mechanical noise and a poor reviewer experience.
+
+**Solution:** declare the `APP_TREE` token itself with a `providedIn: 'root'` factory. Each child injector (including the per-spec `TestBed` injector) gets a fresh, isolated tree by default. Explicit `provideAppTree()` in `bootstrapApplication` and explicit `provideAppTreeForTesting(seed)` in a spec both still win, because they register a higher-priority provider on the consuming injector.
+
+```ts skip
+// tree/app-tree.ts
+export const APP_TREE = new InjectionToken<AppTree>('APP_TREE', {
+  providedIn: 'root',
+  factory: () => createAppTree(), // bare tree, no enhancers — tests get this by default
+});
+```
+
+This is the recommended default for any migration into an existing app. Greenfield apps where every `TestBed` is authored against the new shape can keep the bare `new InjectionToken<AppTree>('APP_TREE')` form.
+
 ### Splitting derived tiers into separate files
 
 When a tier grows beyond ~30 lines, move it into its own file under
@@ -389,9 +405,11 @@ This is fine for fire-and-forget reads (the subscription naturally completes whe
 
 If you need per-request scoping rather than app-lifetime, drop `providedIn: 'root'` from the Ops and provide it on a feature route or a sub-injector instead. Don't reach for `takeUntilDestroyed` to fix what is really a scoping problem.
 
-## Hybrid migration: legacy facade adapters
+## Hybrid migration: legacy facade adapters (fallback)
 
-Real migrations rarely flip every consumer in one PR. When the existing app exposes a long-standing facade — e.g. an `@ngrx/signals` `DriverStore` — and dozens of components, services, and specs call into it, two-step the migration:
+> **Default is big-bang**, not hybrid. The hybrid pattern below is a _temporary scaffold_ for migrations that cannot land in one PR. See [`optimal-implementation.md`](./optimal-implementation.md#when-the-hybrid-pattern-is-acceptable) for when this is acceptable, and what deletion-deadline metadata you must ship with each adapter.
+
+When big-bang isn't possible — the existing app exposes a long-standing facade like an `@ngrx/signals` `DriverStore`, dozens of consumers depend on it, and you cannot flip them all in one PR — two-step the migration:
 
 1. **Stand up the new shape first.** Create `AppStore`, `Ops` classes, and `APP_TREE` exactly as in [Shape](#shape).
 2. **Replace the legacy facade's internals with adapters over `AppStore`.** Keep the legacy class name and public signature so consumers and specs keep compiling. Delete the legacy facade only when zero consumers remain.
@@ -441,7 +459,7 @@ export class Store {
 - **Ban legacy back-references.** The new `Ops` classes must never read from the legacy facade — only `AppStore -> Ops -> tree`. The arrow goes one way.
 - **Move shared types into the `signaltree/` directory before rewriting the legacy facade.** State shapes and DTOs that the slice owns should live next to the new `Ops` and tree definitions, with the legacy file re-exporting them for backward compat. Otherwise the new `Ops` class will need to import the legacy facade for its types — instant circular import.
 - **Cross-cutting `signalStoreFeature` extensions don't port as-is.** Behaviour-only features (error banners, telemetry baggage, refresh hooks) cannot be bolted onto the plain `@Injectable` adapter. Three valid options: **(a)** drop them and reintroduce as SignalTree enhancers in a follow-up (cheapest if no test exercises them); **(b)** rewrite the cross-cutting behaviour as constructor-body subscriptions on the relevant `Ops` class that read `tree.$.<domain>` and call the same downstream services; **(c)** keep the cross-cutting behaviour on the legacy ngrx store until the underlying library is migrated. Document which option you chose in a class-level comment.
-- **Plan the deletion**, even if it's a year out. Keep a `// TODO(legacy-facade): remove after consumers migrated` next to each adapter and grep for it before each release.
+- **Mandatory deletion deadline.** Every adapter ships with `// TODO(legacy-facade): remove by <date/release>` _and_ a tracking issue. A facade with no deletion plan becomes a permanent second store and a maintenance burden — don't ship one. Grep for the TODO before every release; if the deadline has passed, the next sprint is the deletion sprint, not "we'll get to it."
 
 ### Test impact
 
