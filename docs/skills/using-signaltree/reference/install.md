@@ -16,7 +16,13 @@ Never instruct consumers to install `@signaltree/shared`, `@signaltree/types`, o
 
 ```bash
 npm install @signaltree/core
+# yarn:  yarn add @signaltree/core
+# pnpm:  pnpm add @signaltree/core            # in a single-package repo
+#        pnpm add -w @signaltree/core         # in a pnpm workspace, install at the workspace root
+#        pnpm --filter <pkg> add @signaltree/core   # in a pnpm workspace, install in one package only
 ```
+
+> **pnpm workspaces:** plain `pnpm add @signaltree/core` from the workspace root fails with `ERR_PNPM_ADDING_TO_ROOT`. Use `-w` for the workspace root, or `--filter <pkg>` to scope to one workspace package.
 
 Required peer deps (from `packages/core/package.json`):
 `@angular/core ^20.0.0 || ^21.0.0`, `tslib ^2.0.0`. `@angular/compiler`, `@angular/platform-browser-dynamic`, and `zone.js` are declared optional peers.

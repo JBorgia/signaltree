@@ -42,6 +42,13 @@ Both overloads return a **builder** whose `.with(enhancer)` chain composes enhan
   - Patch the subtree with an updater: `tree.$.user((u) => ({ ...u, name }))`.
   - `@signaltree/callable-syntax` adds the same callable shorthand for leaves (`tree.$.counter(5)` → `.set(5)`).
 
+**What's a leaf vs a branch?** It's a property of the *value's type*, not its position in the tree:
+
+- **Leaves** (have `.set()` / `.update()`): primitives (`string`, `number`, `boolean`, `null`, `undefined`, `bigint`, `symbol`), arrays, `Date`, `Map`, `Set`, `Error`, `RegExp`, `Promise`, functions, and class instances.
+- **Branches** (call form, no `.set()`): plain objects (records, interfaces, type aliases for object literals).
+
+A property typed `currentFilter: PlantFilter` where `PlantFilter` is `{ isArchived: boolean; sortBy: string }` is a **branch**, even though it lives next to primitive siblings. Writing `tree.$.currentFilter.set(merged)` will fail with `Property 'set' does not exist on type 'NodeAccessor<PlantFilter> & TreeNode<PlantFilter>'`. The correct form is the call form: `tree.$.currentFilter(merged)` or `tree.$.currentFilter((c) => ({ ...c, ...changes }))`.
+
 The `$` proxy is fully typed — dotting through `tree.$` gives you accurate autocomplete all the way down.
 
 ## Reads and writes

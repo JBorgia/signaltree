@@ -21,6 +21,7 @@ Read the root `SKILL.md`, [`reference/optimal-implementation.md`](./optimal-impl
    - **Is this a single app or a monorepo?** If sibling apps in the same `package.json` still import `@ngrx/signals`, you'll need `--allow-dep-presence` in step 6 and a tracking ticket for the dep removal.
    - **Is `@angular-architects/ngrx-toolkit` (or any other `@ngrx/signals`-derivative package) also in use?** If yes, plan to remove it in step 5 and pass `--package` repeatedly in step 6.
    - **Are there shared base classes built on `signalStore` / `signalStoreFeature`?** If yes, decide between the two coexistence strategies in [Hybrid adoption](#hybrid-adoption-fallback-path) before writing any code.
+   - **Is `@signaltree/core` already in the discovered `package.json`?** If not, install it before step 1 — see [`install.md`](./install.md). In a pnpm workspace either pass `-w` (root) or `--filter <pkg>` (specific package); plain `pnpm add @signaltree/core` at the workspace root will fail with `ERR_PNPM_ADDING_TO_ROOT`.
 
    Capture these answers in your scratch notes — every subsequent step references them.
 
@@ -245,7 +246,8 @@ See `reference/patterns.md` for the full `APP_TREE` + `AppStore` + `Ops` wiring 
 | `signalState({ ... })` (standalone)            | `signalTree({ ... })` — `signalState` was the state-only primitive; `signalTree` is the equivalent baseline                |
 | `withEntities<T>()`                            | `entityMap<T, K>()` marker                                                                                                 |
 | `store.entities()`                             | `tree.$.items.all()`                                                                                                       |
-| `store.entityMap()`                            | `tree.$.items.byId(id)`                                                                                                    |
+| `store.entityMap()`                            | `tree.$.items.byId(id)` (per-id signal) — see row below for the whole collection                                          |
+| `store.entityMap()` (whole `Record<K, T>`)     | `tree.$.items.map()` returns a `Signal<ReadonlyMap<K, T>>`. Bracket access (`m[id]`) becomes `m.get(id)`; for a `Record`-shaped consumer derive via `computed(() => Object.fromEntries(tree.$.items.map()))` |
 | `addEntity(e)`                                 | `tree.$.items.addOne(e)`                                                                                                   |
 | `setAllEntities(es)`                           | `tree.$.items.setAll(es)`                                                                                                  |
 | `updateEntity({ id, changes })`                | `tree.$.items.updateOne(id, changes)`                                                                                      |
@@ -386,6 +388,22 @@ Replace with one of:
   ```ts
   providers: [provideAppTreeForTesting((s) => ({ ...s, driver: { ...s.driver, currentDriver: { id: 1 } } }))];
   ```
+
+**`patchState(legacyStore, setAllEntities([...]))` and the entity-op family** rewrite to direct `entityMap` API calls on the seeded tree:
+
+```ts skip
+// before
+patchState(legacyStore, setAllEntities(plants));
+patchState(legacyStore, addEntity(p));
+patchState(legacyStore, updateEntity({ id, changes }));
+patchState(legacyStore, removeEntity(id));
+
+// after
+TestBed.inject(APP_TREE).$.<domain>.entities.setAll(plants);
+TestBed.inject(APP_TREE).$.<domain>.entities.addOne(p);
+TestBed.inject(APP_TREE).$.<domain>.entities.updateOne(id, changes);
+TestBed.inject(APP_TREE).$.<domain>.entities.removeOne(id);
+```
 
 Do not call any `Ops` method to seed state in tests — `Ops` are for runtime behaviour, not test fixtures.
 

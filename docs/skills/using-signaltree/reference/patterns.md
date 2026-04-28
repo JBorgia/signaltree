@@ -141,9 +141,14 @@ In a brown-field migration where dozens (or hundreds) of existing `TestBed`s nev
 // tree/app-tree.ts
 export const APP_TREE = new InjectionToken<AppTree>('APP_TREE', {
   providedIn: 'root',
-  factory: () => createAppTree(), // bare tree, no enhancers — tests get this by default
+  factory: () => createAppTree(), // full enhancers; tests get isolation because the factory runs per child injector
 });
 ```
+
+Two notes that bite if you skip them:
+
+- **The factory must return `createAppTree()`, not `signalTree(createBaseState())`.** `AppTree = ReturnType<typeof createAppTree>` includes the enhancer methods (`devTools` connection handle, `timeTravel` history API, etc.). A bare `signalTree(createBaseState())` is structurally narrower and will fail to satisfy `AppTree` with `TS2769`. If you genuinely want a bare tree as the default (for example to keep tests free of DevTools chatter), define `AppTree = ReturnType<typeof signalTree<ReturnType<typeof createBaseState>>>` and have `createAppTree()` return that same narrower type — but then production code that needs the enhancer surface must reach for them via the builder, not via `inject(APP_TREE)`.
+- Each child injector still gets its own tree because the factory runs per injector — enhancers don't leak state between specs.
 
 This is the recommended default for any migration into an existing app. Greenfield apps where every `TestBed` is authored against the new shape can keep the bare `new InjectionToken<AppTree>('APP_TREE')` form.
 
