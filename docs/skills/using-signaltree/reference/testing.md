@@ -75,6 +75,26 @@ Notes:
 - **Skip enhancers in tests** by default. `batching()` adds scheduling, `devTools()` opens a connection, `timeTravel()` keeps history — none help unit tests. If a test specifically exercises batching, layer `batching()` in that test only.
 - **`createBaseState()` must be exported from `app-tree.ts`.** This is the seam that lets tests construct an isolated state without copying the production composition.
 
+### ⚠️ Gotcha: do NOT swap a `Nullable<Object>` leaf to an object value via the seed callback
+
+Tree shape is determined by the **value at construction time** (see [core.md → "What's a leaf vs a branch?"](./core.md)). If production base state has `currentDriver: null` (a leaf), but a test's `overrides` callback returns `currentDriver: { id: 1, name: 'Ada' }`, the constructed tree silently makes `currentDriver` a **branch**. Production code that calls `tree.$.driver.currentDriver.set(null)` then throws `set is not a function` — but only inside that one spec.
+
+**Rule:** the `overrides` callback must preserve the structural shape of the base state. Use it for:
+
+- Replacing primitive leaves (`isLoading: true`, `count: 5`, `currentDriverId: 1`).
+- Patching existing branch contents (`ui: { ...s.ui, theme: 'dark' }` — `ui` is a branch in both prod and seed).
+- Pre-populating `entityMap` slices (`drivers: { ...s.drivers, entities: { 1: driver } }`).
+
+For `Nullable<Object>` leaves (typed `XDto | null`, seeded as `null` in prod), seed via `.set()` **after** injection instead:
+
+```ts
+TestBed.configureTestingModule({ providers: [provideAppTreeForTesting()] });
+const tree = TestBed.inject(APP_TREE);
+tree.$.driver.currentDriver.set({ id: 1, name: 'Ada' }); // safe — leaf shape preserved
+```
+
+The same applies to any leaf typed as `Date | null`, `Map<...> | null`, class-instance | null, etc.
+
 ## Mocking strategy by test type
 
 There are three layers — tree, ops, facade — and only one of them should be mocked per test. The matrix:
@@ -122,6 +142,7 @@ describe('DriverOps', () => {
 // some.component.spec.ts
 import { TestBed } from '@angular/core/testing';
 import { provideAppTreeForTesting } from '../store/tree/app-tree.testing';
+import { APP_TREE } from '../store/tree/app-tree';
 import { DriverOps } from '../store/ops/driver.ops';
 import { SomeComponent } from './some.component';
 
@@ -129,12 +150,23 @@ describe('SomeComponent', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [SomeComponent],
-      providers: [provideAppTreeForTesting((s) => ({ ...s, driver: { ...s.driver, currentDriver: { id: 1, name: 'Ada' } } })), { provide: DriverOps, useValue: { clearCurrentDriver: jest.fn() } }],
+      providers: [provideAppTreeForTesting(), { provide: DriverOps, useValue: { clearCurrentDriver: jest.fn() } }],
     });
+
+    // Seed Nullable<Object> leaves AFTER injection — see gotcha above.
+    const tree = TestBed.inject(APP_TREE);
+    tree.$.driver.currentDriver.set({ id: 1, name: 'Ada' });
   });
 
   // ...
 });
+```
+
+If your seed only touches primitives or already-branch subtrees, you can use the inline callback form instead:
+
+```ts
+// safe — `ui` is a branch in prod and seed; `theme` is a primitive leaf.
+provideAppTreeForTesting((s) => ({ ...s, ui: { ...s.ui, theme: 'dark' } }));
 ```
 
 ## Wiring `APP_TREE` once for a large existing test suite
@@ -189,4 +221,5 @@ Before declaring a SignalTree migration "done":
 3. ✅ Every `TestBed.configureTestingModule({...})` call in the migrated app that fails with `NG0201: APP_TREE` has `provideAppTreeForTesting()` added to its `providers`.
 4. ✅ Ops specs use a real tree + real Ops + mocked downstream services.
 5. ✅ Component specs use a real seeded tree + mocked Ops.
-6. ✅ Test suite runs to green before the next layer of refactor.
+6. ✅ Seeds for `Nullable<Object>` leaves use post-injection `.set()`, not the `overrides` callback (see gotcha).
+7. ✅ Test suite runs to green before the next layer of refactor.
