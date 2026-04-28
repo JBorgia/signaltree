@@ -153,7 +153,9 @@ Everything from the big-bang Step 0 (orientation) still applies. The differences
    ```
 2. **Step 2 — stand up `AppStore` + `APP_TREE` once, on the first PR.** Subsequent PRs add domain slices to the existing tree. The first PR's `AppStore` exposes only the migrated domain; that's expected, not a smell.
 3. **Step 3 — migrate the consumers of _this_ store only.** Other consumers stay on their respective legacy `signalStore`s. If a consumer needs both (transitional state), it injects both — acceptable for one PR, must be cleaned up by the next.
-4. **Step 4 — `rm` the migrated store + its spec + any barrel that re-exports it.** Do **not** ship a legacy facade adapter unless one of the [hybrid constraints](#hybrid-adoption-fallback-path) applies. Incremental is _not_ hybrid — the migrated store goes away in the same PR; it's only the _other_ stores that remain.
+4. **Step 4 — `rm` the migrated store + its spec + any barrel that re-exports it.** Do **not** ship a legacy facade adapter unless one of the [hybrid constraints](#hybrid-adoption-fallback-path) applies, **or** the migrated domain has ≥ ~10 call sites of the form `_store.<domain>.X` through a shared aggregator object (a permitted, time-boxed exception — see below). Incremental is _not_ hybrid — the migrated store goes away in the same PR; it's only the _other_ stores that remain.
+
+   **Time-boxed aggregator-facade exception.** If consumers reach the legacy store through a shared aggregator (e.g. `_store.drivers.currentDriver()` everywhere instead of `inject(DriverStore)`), rewriting all call sites in the same PR can balloon the diff past reviewable size. In that case it is acceptable to keep the aggregator slot (`store.drivers`) backed by a thin adapter object that delegates to `AppStore` — provided you (a) delete `driver.store.ts` and `driver.store.spec.ts` in the same PR, (b) tag the adapter with `// TODO(legacy-facade): remove by <date/release>`, and (c) open a tracking issue for the call-site sweep. The legacy `signalStore` factory must not survive this PR; only the typed object literal that exposes the same field shape may remain.
 
    **Sequencing rule (do not violate):** Migrate every consumer of the store **first**, run `build` + `test` to confirm green, **then** delete the legacy store / spec / aggregator slot in the same PR. Removing the aggregator slot before the consumer rewrites lands turns every still-broken consumer into a `TS2339` build error and forces a full revert. If you cannot finish all consumers in one PR, leave the legacy store in place and ship the partial work as a Phase 0-style additive PR.
 
@@ -204,14 +206,45 @@ The inverse direction — a still-on-ngrx store reading from `AppStore` — also
 
 `Ops` classes are normally `@Injectable({ providedIn: 'root' })` and `AppStore` injects them eagerly. Any constructor work an `Ops` does — subscribing to a refresher, opening a websocket, calling `inject(SomeStore)` that itself injects an HTTP/DB service — runs **the moment any test injects `AppStore`**. In a partially-migrated app this manifests as `NG0201` cascades through transitive dependencies (e.g. `AppStore -> DriverOps -> SettingsStore -> SomeDbService`) in tests that previously had nothing to do with the new store.
 
-Two safe patterns:
+Three safe patterns (pick one):
 
 - **Lazy initialization.** Move constructor side-effects (subscriptions, refresher hookups) into a `start()` method called by the consumer that needs them, or guard them behind a feature flag. Never subscribe in the constructor of a `providedIn: 'root'` `Ops`.
 - **Scope `Ops` to consumers.** Drop `providedIn: 'root'` and let consumers `provide` the `Ops` in a route-level or component-level injector. `AppStore` then exposes a typed `inject<DriverOps>(DriverOps)` accessor inside a component-scoped factory, not as an eager root-singleton.
+- **Optional collaborators + lazy `Injector.get` in `AppStore`.** Keep `Ops` `providedIn: 'root'` but make every side-effect collaborator `inject(X, { optional: true })` and resolve `Ops` from `AppStore` via `inject(Injector).get(DriverOps)` inside the facade method, not as a field. This is the lowest-churn option for a partially-migrated app where unrelated specs only read `tree.$` signals — they never instantiate the `Ops`, so missing collaborators never throw. Required pattern when the migrated `Ops` has ≥ 2 side-effect collaborators (refresher, telemetry, banners, websocket, etc.).
 
-Either pattern keeps Phase 0 from regressing unrelated tests when the foundation lands.
+```ts skip
+// driver.ops.ts — collaborators optional
+@Injectable({ providedIn: 'root' })
+export class DriverOps {
+  private readonly _refresher = inject(AppRefresherService, { optional: true });
+  private readonly _baggage = inject(BaggageService, { optional: true });
+  // …
+}
+
+// app-store.ts — lazy resolve
+@Injectable({ providedIn: 'root' })
+export class AppStore {
+  readonly $ = inject(APP_TREE).$;
+  private readonly _injector = inject(Injector);
+  readonly ops = {
+    driver: {
+      loadActiveDriver$: () => this._injector.get(DriverOps).loadActiveDriver$(),
+    },
+  } as const;
+}
+```
+
+All three patterns keep Phase 0 from regressing unrelated tests when the foundation lands.
 
 **If you choose to fix the cascade in test files instead** (acceptable for a single-PR consumer migration), add the missing transitive provider to each affected legacy spec. **Verify each helper actually exists before importing it** — `grep -rn "export function <providerName>" <app-src>/testing/` (and any shared test-utils package). Hallucinated helper names are the most common follow-up failure mode of this fix.
+
+**While you're in those spec files, sweep dead `providers: [LegacyStoreName]` entries.** Many specs list the legacy store in their `providers` array but never inject it from the SUT — leftover noise from earlier refactors. Migration is the right time to delete them; they will fail loudly if anything actually depended on them, and silently shrink the diff if not. Quick audit:
+
+```bash
+grep -rln "providers:.*<LegacyStoreName>" <app-src>/ | xargs -I {} grep -L "inject(<LegacyStoreName>)\|TestBed.inject(<LegacyStoreName>)" {}
+```
+
+Files in the output list the provider but never inject it — safe to strip.
 
 ### Co-locating the new foundation with a legacy `store/` directory
 
@@ -282,6 +315,20 @@ See `reference/patterns.md` for the full `APP_TREE` + `AppStore` + `Ops` wiring 
 | `provideDevtoolsConfig({ name })` in providers | `.with(devTools({ treeName: name }))` on the tree — remove the provider                                                                                                                                      |
 
 ## Custom feature patterns (signalStoreFeature)
+
+> **Do not silently drop a `withFeature(...)` call during migration.** Custom features encode real behavior (error banners, refresh hooks, telemetry collectors). Map each one to its SignalTree equivalent or an `effect()` inside the `Ops` constructor — never reduce one to a no-op placeholder. A `withErrorBanners(driverStoreName, error)` feature, for example, becomes:
+>
+> ```ts skip
+> // driver.ops.ts
+> constructor() {
+>   effect(() => {
+>     const err = this._$.error();
+>     if (err) this._banners?.show(BannerType.Error, err.message);
+>   });
+> }
+> ```
+>
+> If you legitimately want to drop the behavior, do it in a separate commit with a code-owner sign-off — not silently inside the migration PR.
 
 Custom features that add state shape (e.g. `withLoadingState`, `withSavingState`, `withErrorState`) map to **built-in markers**, not factory functions. Don't recreate the feature as a helper — put the marker directly in the state object.
 
@@ -394,7 +441,26 @@ NG0201: No provider found for `InjectionToken APP_TREE`.
 The fix is mechanical:
 
 1. Export `createBaseState()` from `app-tree.ts`.
-2. Add `app-tree.testing.ts` exporting `provideAppTreeForTesting()`.
+2. Add `app-tree.testing.ts` exporting `provideAppTreeForTesting()`. The un-enhanced testing tree is structurally narrower than the production `AppTree` (no `devTools` / `batching` / `timeTravel`), so the factory must cast:
+
+   ```ts skip
+   // app-tree.testing.ts
+   export function provideAppTreeForTesting(overrides?: (s: ReturnType<typeof createBaseState>) => ReturnType<typeof createBaseState>): Provider[] {
+     return [
+       {
+         provide: APP_TREE,
+         useFactory: (): AppTree => {
+           const base = createBaseState();
+           const seeded = overrides ? overrides(base) : base;
+           // Cast: tree without enhancers satisfies every consumer that
+           // only reads `$` / writes signals.
+           return signalTree(seeded) as unknown as AppTree;
+         },
+       },
+     ];
+   }
+   ```
+
 3. **For a small migration (≤ 5 affected spec files):** add `provideAppTreeForTesting()` to each failing TestBed's `providers`.
 4. **For an existing large app (many parameterised testing helpers):** register `provideAppTreeForTesting()` once globally via `getTestBed().initTestEnvironment(...)` in `test-setup.ts`. This is documented in [`testing.md`](./testing.md#wiring-app_tree-once-for-a-large-existing-test-suite). Each spec still gets an isolated tree because `useFactory` runs per child injector.
 5. Do **not** mock `AppStore` or the legacy adapter to "make the error go away" — the underlying `APP_TREE` still needs to exist for any transitive consumer.
