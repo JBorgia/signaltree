@@ -62,7 +62,11 @@ export function provideAppTreeForTesting(overrides?: (state: ReturnType<typeof c
       useFactory: (): AppTree => {
         const base = createBaseState();
         const seeded = overrides ? overrides(base) : base;
-        return signalTree(seeded);
+        // Cast: the testing tree skips production enhancers (devTools, batching, etc.)
+        // so its inferred type is structurally narrower than `AppTree`. Bake the cast
+        // in here so consumers can write `tree: AppTree = TestBed.inject(APP_TREE)`
+        // without an `as unknown as AppTree` at every call site.
+        return signalTree(seeded) as unknown as AppTree;
       },
     },
   ];
@@ -201,6 +205,53 @@ Why this works: `useFactory` inside `provideAppTreeForTesting()` runs per child 
 **Per-spec overrides still work.** If a single test needs seeded state, call `provideAppTreeForTesting(s => ({...}))` inside its own `providers` — Angular merges the per-spec provider on top of the global one.
 
 **When to pick which.** New code or a small migration (≤ 5 spec files): per-TestBed. Existing app with many specs: global. Either way, the recipe is the same `provideAppTreeForTesting()`; only the registration site differs.
+
+## Re-baselining pre-existing-broken legacy specs
+
+A migration PR will sometimes inherit specs that were already failing at the base commit — they reference deleted infrastructure (`provideMockStore`, sibling-app fixtures, removed mock services). The migration is not the cause; rewriting them in scope is the only way to land a green PR.
+
+**Confirm the breakage is pre-existing first.** From the migration worktree:
+
+```bash
+# Stash your migration work, run the suspect spec against the base commit.
+git stash --include-untracked
+<test-cmd> --testPathPattern=<spec-path>
+git stash pop
+```
+
+If the spec was already red, mark it in the **skill friction log** of your migration report (so the orchestrator surfaces the pre-existing breakage to the user) and use the **minimum-viable rebaseline** below. Do NOT fold a from-scratch rewrite of the spec into the migration commit — that hides genuine regressions in a sea of test churn.
+
+### Minimum-viable rebaseline
+
+Replace the broken spec with the smallest spec that proves the component renders and exercises its primary action. Everything else is a follow-up ticket.
+
+```ts skip
+// settings.component.spec.ts — minimum-viable rebaseline
+import { TestBed } from '@angular/core/testing';
+import { provideAppTreeForTesting } from '../../store/tree/app-tree.testing';
+import { SettingsComponent } from './settings.component';
+
+describe('SettingsComponent (rebaseline — pre-existing fixtures removed)', () => {
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [SettingsComponent],
+      providers: [provideAppTreeForTesting()],
+    });
+  });
+
+  it('renders', () => {
+    const fixture = TestBed.createComponent(SettingsComponent);
+    fixture.detectChanges();
+    expect(fixture.nativeElement).toBeTruthy();
+  });
+});
+```
+
+**Rules:**
+
+- Cap the rebaseline at one render-smoke test plus one assertion of the most important user action. Bigger rewrites belong in a follow-up.
+- Add a `// TODO(<ticket>): restore detailed coverage — minimum-viable rebaseline during SignalTree migration` comment so the deliberate gap is visible in code review.
+- If the orchestrator is driving the migration ([`orchestrating-a-migration.md`](./orchestrating-a-migration.md)), the implementer must **ASK before rebaselining** rather than silently rewriting; silent rebaselines defeat the audit trail.
 
 ## Common test-bed pitfalls
 

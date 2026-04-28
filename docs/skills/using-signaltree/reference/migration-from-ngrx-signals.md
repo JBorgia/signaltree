@@ -612,19 +612,95 @@ The lazy `Injector.get(XOps)` pattern — and the "method-delegation object lite
 
 ## Custom feature patterns (signalStoreFeature)
 
-> **Do not silently drop a `withFeature(...)` call during migration.** Custom features encode real behavior (error banners, refresh hooks, telemetry collectors). Map each one to its SignalTree equivalent or an `effect()` inside the `Ops` constructor — never reduce one to a no-op placeholder. A `withErrorBanners(driverStoreName, error)` feature, for example, becomes:
->
-> ```ts skip
-> // driver.ops.ts
-> constructor() {
->   effect(() => {
->     const err = this._$.error();
->     if (err) this._banners?.show(BannerType.Error, err.message);
->   });
-> }
-> ```
->
-> If you legitimately want to drop the behavior, do it in a separate commit with a code-owner sign-off — not silently inside the migration PR.
+> **Do not silently drop a `withFeature(...)` call during migration.** Custom features encode real behavior (error banners, refresh hooks, telemetry collectors). Map each one to its SignalTree equivalent or an `effect()` inside the `Ops` constructor — never reduce one to a no-op placeholder. If you legitimately want to drop the behavior, do it in a separate commit with a code-owner sign-off — not silently inside the migration PR.
+
+The ngrx feature surface — `withFeature`, `withHooks`, `withProps` — collapses into three SignalTree shapes:
+
+| ngrx primitive | SignalTree equivalent | Where it lives |
+|---|---|---|
+| `withFeature(myFeature)` | `effect(() => { … })` reading `this._$.<leaf>()` | `Ops` class constructor |
+| `withHooks({ onInit, onDestroy })` | `onInit` → `start(injector)` method called from `AppStore` constructor; `onDestroy` → an explicit `Subject<void>` field cancelled in `stop()` | `Ops` class |
+| `withProps({ x$ })` | `readonly x$ = toObservable(this._$.x)` | `Ops` class |
+
+### Worked example: `withErrorBanners` + `withRefreshHandling` + `withTelemetryBaggage`
+
+Before (ngrx — three custom features stacked on `signalStore`):
+
+```ts skip
+export const DriverStore = signalStore(
+  { providedIn: 'root' },
+  withReduxDevtools(driverStoreName),
+  withTelemetryBaggage(driverStoreName),
+  withState(initialState),
+  withErrorBanners(driverStoreName),       // shows a banner on error
+  withRefreshHandling(driverStoreName),    // hooks app-wide refresher
+  withMethods((store, driverService = inject(DriverService)) => ({
+    loadActiveDriver$: rxMethod<void>(/* … */),
+    clearCurrentDriver: () => patchState(store, { currentDriver: null }),
+  })),
+);
+```
+
+After (SignalTree — features become opt-in side-effects on the `Ops` class). All collaborators are `inject(_, { optional: true })` so unrelated specs can construct `DriverOps` without dragging the whole banner / refresher / telemetry chain into the test bed:
+
+```ts skip
+@Injectable({ providedIn: 'root' })
+export class DriverOps {
+  private readonly _tree = inject(APP_TREE);
+  private readonly _$ = this._tree.$.driver;
+  private readonly _driverService = inject(DriverService);
+
+  // Optional collaborators — see "Root-injected Ops side-effect hazard" above.
+  private readonly _banners = inject(BannerStore, { optional: true });
+  private readonly _refresher = inject(AppRefresherService, { optional: true });
+  private readonly _baggage = inject(TelemetryBaggageService, { optional: true });
+
+  constructor() {
+    // ↳ withErrorBanners equivalent: react to error leaf changes.
+    effect(() => {
+      const err = this._$.driverError();
+      if (err) this._banners?.show(BannerType.Error, err.message);
+    });
+
+    // ↳ withTelemetryBaggage equivalent: stamp baggage when the driver changes.
+    effect(() => {
+      const driver = this._$.currentDriver();
+      if (driver) this._baggage?.set('driver.id', driver.id);
+    });
+  }
+
+  /** ↳ withHooks({ onInit }) equivalent — called once from AppStore. */
+  start(injector: Injector): void {
+    this._refresher?.register(injector, () => this.loadActiveDriver$().subscribe());
+  }
+
+  loadActiveDriver$(): Observable<void> { /* … */ }
+  clearCurrentDriver(): void { this._$.currentDriver.set(null); }
+}
+```
+
+And in `AppStore`:
+
+```ts skip
+@Injectable({ providedIn: 'root' })
+export class AppStore {
+  readonly tree = inject(APP_TREE);
+  readonly $ = this.tree.$;
+  readonly ops = { driver: inject(DriverOps), /* … */ } as const;
+
+  constructor() {
+    // Wire each Ops's withHooks({ onInit }) port exactly once.
+    const injector = inject(Injector);
+    this.ops.driver.start(injector);
+  }
+}
+```
+
+Three tradeoffs to call out for the user before signing off the migration:
+
+1. **`effect()` runs eagerly inside the injection context.** Wrap any side-effect that should not fire on initial state in a guard (`if (driver)` above) — `effect()` doesn't have ngrx's `withMethods` lazy semantics.
+2. **`{ optional: true }` collaborators silently no-op when missing.** That's intentional for tests, but it also means a *production* misconfiguration (forgot to `provideRefresher()`) will silently disable the feature instead of throwing. If the feature is mandatory in production, document that in the Ops class header and add a smoke test in `app.config.spec.ts`.
+3. **`withProps({ x$: toObservable(store.x) })` only needs `inject(Injector)` if it runs outside the constructor.** Inside the constructor it's free: `readonly driver$ = toObservable(this._$.currentDriver);`.
 
 Custom features that add state shape (e.g. `withLoadingState`, `withSavingState`, `withErrorState`) map to **built-in markers**, not factory functions. Don't recreate the feature as a helper — put the marker directly in the state object.
 
