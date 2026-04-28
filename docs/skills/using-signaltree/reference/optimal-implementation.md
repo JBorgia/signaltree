@@ -200,7 +200,9 @@ Big-bang is the default. Hybrid (legacy facade adapter over `AppStore`) is accep
 3. **Release cadence.** The migration takes longer than your release cycle, so prod must keep running on the in-flight hybrid state.
 4. **Risk-averse rollback.** Regulated environment requires the ability to revert the foundation without reverting consumer code.
 
-In all four cases, the hybrid is **scaffolding with a deletion deadline**. Ship it with:
+> **If your only constraint is "PR size" because the app has ≥3 stores**, you probably want **incremental per-domain migration**, not hybrid. Incremental migrates one store at a time, deletes each as it goes, and never ships a legacy-facade adapter. Hybrid is for *permanent coexistence* (shared base classes, multi-team cutover, regulated rollback). See [`migration-from-ngrx-signals.md` → Incremental per-domain migration](./migration-from-ngrx-signals.md#incremental-per-domain-migration).
+
+In all four hybrid cases, the hybrid is **scaffolding with a deletion deadline**. Ship it with:
 
 - a `// TODO(legacy-facade): remove by <date/release>` comment on every adapter,
 - a tracking issue in your issue tracker,

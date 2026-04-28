@@ -92,6 +92,19 @@ scripts/verify-signaltree-migration.sh \
   --lint  "yarn nx lint <app>" \
   --allow-dep-presence
 
+# Incremental per-domain migration: only one of N stores migrated this PR.
+# --src is narrowed to the new SignalTree foundation so Steps 1+2 still
+# assert *that domain* is clean; --allow-source-presence + --allow-dep-presence
+# allow the still-on-ngrx siblings to remain. See "Incremental per-domain
+# migration" below for the full pattern.
+scripts/verify-signaltree-migration.sh \
+  --src   apps/<app>/src/app/store \
+  --build "pnpm nx build <app>" \
+  --test  "pnpm nx test <app>" \
+  --lint  "pnpm nx lint <app>" \
+  --allow-source-presence \
+  --allow-dep-presence
+
 # Migrating off both @ngrx/signals AND @angular-architects/ngrx-toolkit
 scripts/verify-signaltree-migration.sh \
   --src   src/app \
@@ -105,6 +118,81 @@ scripts/verify-signaltree-migration.sh \
 The end-state is one mental model in the codebase, no adapter cruft, no "temporary" facades that live forever. See [`optimal-implementation.md`](./optimal-implementation.md#definition-of-done) for the full Definition-of-Done checklist.
 
 **The hybrid-facade pattern is a fallback**, not the recommended path. Use it only when one of the constraints in [`optimal-implementation.md`](./optimal-implementation.md#when-the-hybrid-pattern-is-acceptable) genuinely applies, and ship it with a deletion deadline.
+
+## Incremental per-domain migration
+
+**Use this when big-bang is impractical and hybrid (permanent coexistence) is overkill** — typically: an app has ≥3 `signalStore`s, you want each migration in its own reviewable PR, but the end-state is still one tree. Each PR migrates exactly one domain and leaves the rest untouched on `@ngrx/signals`. The legacy package stays installed until the **last** domain migrates.
+
+When to pick incremental over big-bang or hybrid:
+
+| Shape                                                         | Pick                              |
+| ------------------------------------------------------------- | --------------------------------- |
+| 1–2 stores, all owned by one team                             | **big-bang** (one PR)             |
+| ≥3 stores, single team, no shared `signalStoreFeature` base   | **incremental** (one PR per store) |
+| Shared `signalStoreFeature` base classes blocking partial cut | **hybrid** (legacy facade)        |
+| Multi-team consumer cutover constraint                        | **hybrid** (legacy facade)        |
+
+### Per-PR workflow (one domain at a time)
+
+Everything from the big-bang Step 0 (orientation) still applies. The differences:
+
+1. **Step 1 grep is scoped to the one store you're migrating**, not `<app-src>`. The whole-app grep would list every still-on-ngrx sibling and drown the signal.
+   ```bash
+   grep -rln "<store-file-basename>" <app-src>/   # consumers of just this store
+   ```
+2. **Step 2 — stand up `AppStore` + `APP_TREE` once, on the first PR.** Subsequent PRs add domain slices to the existing tree. The first PR's `AppStore` exposes only the migrated domain; that's expected, not a smell.
+3. **Step 3 — migrate the consumers of *this* store only.** Other consumers stay on their respective legacy `signalStore`s. If a consumer needs both (transitional state), it injects both — acceptable for one PR, must be cleaned up by the next.
+4. **Step 4 — `rm` the migrated store + its spec + any barrel that re-exports it.** Do **not** ship a legacy facade adapter unless one of the [hybrid constraints](#hybrid-adoption-fallback-path) applies. Incremental is *not* hybrid — the migrated store goes away in the same PR; it's only the *other* stores that remain.
+5. **Step 5 — do NOT remove `@ngrx/signals` from `package.json`.** Other domains still need it. The dep removal happens automatically in the final domain's PR.
+6. **Step 6 — verifier invocation, narrowed and permissive:**
+   ```bash
+   scripts/verify-signaltree-migration.sh \
+     --src   <app-src>/<new-foundation-dir>      # e.g. apps/<app>/src/app/store
+     --build "<your build command>" \
+     --test  "<your test command>" \
+     --lint  "<your lint command>" \
+     --package-json <path-to-package.json> \
+     --allow-source-presence \
+     --allow-dep-presence
+   ```
+   - `--src <new-foundation-dir>` asserts the *new* SignalTree code is clean.
+   - `--allow-source-presence` tolerates the leftover `@ngrx/signals` imports in still-on-ngrx siblings.
+   - `--allow-dep-presence` tolerates the leftover entry in `package.json`.
+   - When you migrate the *last* domain, drop both `--allow-*-presence` flags and widen `--src` to the full `<app-src>` — that PR has to pass the strict big-bang verification.
+
+### Cross-store reads from new `Ops` to a still-ngrx store
+
+An `Ops` class can inject a still-on-ngrx `signalStore` directly — it is just an Angular service. Read its public signals or observables; do **not** call `patchState` on it from your `Ops`. When that store later migrates, only the import in your `Ops` (and the seed in tests) changes.
+
+```ts skip
+@Injectable({ providedIn: 'root' })
+class PlantsOps {
+  private readonly _$ = inject(APP_TREE).$.plants;
+  private readonly _settings = inject(SettingsStore); // still on @ngrx/signals
+  private readonly _plantService = inject(PlantService);
+
+  loadAll$(filter?: PlantFilter): Observable<void> {
+    return this._settings.region$.pipe(            // legacy store's public observable
+      filterNullish$,
+      switchMap(region => this._plantService.loadAll$({ ...filter, regionUrl: region.url })),
+      tap(plants => this._$.entities.setAll(plants)),
+      map(() => void 0),
+      take(1),
+    );
+  }
+}
+```
+
+The inverse direction — a still-on-ngrx store reading from `AppStore` — also works (`AppStore` is an Angular service too) and needs no special wiring.
+
+### Co-locating the new foundation with a legacy `store/` directory
+
+If the app already has a `store/` folder for legacy `signalStore`s (common when the team named it that), do **not** put the new SignalTree foundation in the same directory. Two options:
+
+- Rename the legacy folder to `legacy-store/` (or `root-services/store/` if that already matches the codebase) in a separate prep commit, then put the new foundation at `src/app/store/`.
+- Put the new foundation under a sibling name like `src/app/app-tree/` and keep the legacy folder where it is.
+
+The verifier script doesn't care; pick whichever causes fewer import churn lines.
 
 ## Hybrid adoption (fallback path)
 
