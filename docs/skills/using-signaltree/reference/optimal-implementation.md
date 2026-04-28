@@ -162,7 +162,7 @@ A SignalTree migration is **not done** until every box is checked.
 - [ ] Zero imports of `@ngrx/signals` (or whichever legacy package) anywhere in the migrated app's source tree. Verify with `grep -rln '@ngrx/signals' src/app/`.
 - [ ] Legacy package removed from `package.json` `dependencies` (or, if a shared lib outside the migrated app still uses it, a tracking ticket exists with a target removal date).
 - [ ] All legacy facade adapters deleted. If any remain, each must carry `// TODO(legacy-facade): remove by <date/release>` and a tracking issue.
-- [ ] `node_modules/@ngrx` reinstalled clean (`pnpm install` after lockfile update).
+- [ ] `node_modules/@ngrx` reinstalled clean (run your package manager's install after the lockfile update).
 
 ### Architecture
 
