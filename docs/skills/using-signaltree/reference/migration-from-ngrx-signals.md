@@ -128,26 +128,26 @@ See `reference/patterns.md` for the full `APP_TREE` + `AppStore` + `Ops` wiring 
 
 ## Concept map
 
-| ngrx/signals                                   | SignalTree equivalent                                                      |
-| ---------------------------------------------- | -------------------------------------------------------------------------- |
-| `signalStore(...)`                             | Domain slice in the single `signalTree()` + an `Ops` class for its methods |
-| `withState({ a, b })`                          | Initial state object passed to `signalTree()`                              |
-| `withMethods(({ ... }) => ({ ... }))`          | Methods on an `Ops` class that injects `APP_TREE`                          |
-| `withComputed(({ ... }) => ({ ... }))`         | Angular `computed()` on the component or in `.derived()` on the tree       |
-| `withHooks({ onInit })`                        | Constructor body of the service / `APP_TREE` factory                       |
-| `withProps(({ ... }) => ({ ... }))`            | Plain `readonly` fields on the `Ops` class (or `AppStore`); no signal magic needed |
-| `rxMethod(pipe(...))`                          | Plain method returning `Observable<void>`; writes via `tap()`              |
-| `patchState(store, { a, b })`                  | `tree.$.domain((s) => ({ ...s, a, b }))` or individual `.set()` calls      |
+| ngrx/signals                                   | SignalTree equivalent                                                                                                      |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `signalStore(...)`                             | Domain slice in the single `signalTree()` + an `Ops` class for its methods                                                 |
+| `withState({ a, b })`                          | Initial state object passed to `signalTree()`                                                                              |
+| `withMethods(({ ... }) => ({ ... }))`          | Methods on an `Ops` class that injects `APP_TREE`                                                                          |
+| `withComputed(({ ... }) => ({ ... }))`         | Angular `computed()` on the component or in `.derived()` on the tree                                                       |
+| `withHooks({ onInit })`                        | Constructor body of the service / `APP_TREE` factory                                                                       |
+| `withProps(({ ... }) => ({ ... }))`            | Plain `readonly` fields on the `Ops` class (or `AppStore`); no signal magic needed                                         |
+| `rxMethod(pipe(...))`                          | Plain method returning `Observable<void>`; writes via `tap()`                                                              |
+| `patchState(store, { a, b })`                  | `tree.$.domain((s) => ({ ...s, a, b }))` or individual `.set()` calls                                                      |
 | `getState(store)`                              | `unwrap(tree.$)` (whole tree) or `unwrap(tree.$.domain)` (one slice) — `unwrap` is a free function from `@signaltree/core` |
-| `signalState({ ... })` (standalone)            | `signalTree({ ... })` — `signalState` was the state-only primitive; `signalTree` is the equivalent baseline |
-| `withEntities<T>()`                            | `entityMap<T, K>()` marker                                                 |
-| `store.entities()`                             | `tree.$.items.all()`                                                       |
-| `store.entityMap()`                            | `tree.$.items.byId(id)`                                                    |
-| `addEntity(e)`                                 | `tree.$.items.addOne(e)`                                                   |
-| `setAllEntities(es)`                           | `tree.$.items.setAll(es)`                                                  |
-| `updateEntity({ id, changes })`                | `tree.$.items.upsertOne({ ...existing, ...changes })`                      |
-| `removeEntity(id)`                             | `tree.$.items.removeOne(id)`                                               |
-| `provideDevtoolsConfig({ name })` in providers | `.with(devTools({ treeName: name }))` on the tree — remove the provider    |
+| `signalState({ ... })` (standalone)            | `signalTree({ ... })` — `signalState` was the state-only primitive; `signalTree` is the equivalent baseline                |
+| `withEntities<T>()`                            | `entityMap<T, K>()` marker                                                                                                 |
+| `store.entities()`                             | `tree.$.items.all()`                                                                                                       |
+| `store.entityMap()`                            | `tree.$.items.byId(id)`                                                                                                    |
+| `addEntity(e)`                                 | `tree.$.items.addOne(e)`                                                                                                   |
+| `setAllEntities(es)`                           | `tree.$.items.setAll(es)`                                                                                                  |
+| `updateEntity({ id, changes })`                | `tree.$.items.updateOne(id, changes)`                                                                                      |
+| `removeEntity(id)`                             | `tree.$.items.removeOne(id)`                                                                                               |
+| `provideDevtoolsConfig({ name })` in providers | `.with(devTools({ treeName: name }))` on the tree — remove the provider                                                    |
 
 ## Custom feature patterns (signalStoreFeature)
 
