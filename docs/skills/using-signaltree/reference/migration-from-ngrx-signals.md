@@ -9,6 +9,8 @@ Quick reference for converting an existing `@ngrx/signals` codebase. Applies **o
 
 Read the root `SKILL.md`, [`reference/optimal-implementation.md`](./optimal-implementation.md), and [`reference/patterns.md`](./patterns.md) for full SignalTree context; use this file for the mechanical mappings.
 
+> **Driving multiple subagents through this migration?** A single implementer often runs out of context after building the foundation but before sweeping consumers. If the migration touches ≥ 2 legacy stores or ≥ 10 consumer files, read [`orchestrating-a-migration.md`](./orchestrating-a-migration.md) for the phased survey → audit → foundation → consumers → gate playbook before dispatching any subagent.
+
 ## Minimum viable migration (1 small store)
 
 **Skip every pattern below this section** if the legacy app has exactly one `signalStore` with < 5 signals and < 3 methods. The full `AppStore` + `Ops` + tier ceremony is calibrated for multi-domain apps; on a one-store app it is pure overhead.
@@ -26,20 +28,20 @@ Go straight to [Definition of done](#definition-of-done). Patterns 1–5 below a
 
 The goal-state patterns below are **conditional**, not universal. Before applying any of them, answer these four questions about the legacy app and capture the answers in your scratch notes — each pattern explicitly references them:
 
-1. **Are domains entity-collections or singletons?** A *collection* domain has a list/map of records keyed by id (drivers, tickets, products). A *singleton* domain has one record or a handful of scalars (app config, current user, theme, feature flags). Pattern #1 only applies to collection domains.
+1. **Are domains entity-collections or singletons?** A _collection_ domain has a list/map of records keyed by id (drivers, tickets, products). A _singleton_ domain has one record or a handful of scalars (app config, current user, theme, feature flags). Pattern #1 only applies to collection domains.
 2. **Is there a typed error model in the codebase?** Search for an existing `Error`-shaped class, interface, or discriminated union (`grep -rln 'class .*Error\b\|interface .*Error\b' <app-src>/`). If yes, Pattern #1's `xError` sibling rule applies. If no, `status<string>()` alone is correct — do **not** invent an error type just to satisfy the pattern.
 3. **Is there a cross-domain lifecycle?** Login/logout, multi-step wizard, tenant switch, anything that mutates ≥ 2 domain slices in one user action. If yes, Pattern #3 applies. If no, skip Pattern #3 entirely — a one-domain `Ops` calling itself is not orchestration.
 4. **Is anything persisted to `localStorage` / `sessionStorage` / cookies?** If yes, Pattern #4 applies. If no, skip it.
 
 The matrix:
 
-| App shape                                    | Patterns to apply           |
-| -------------------------------------------- | --------------------------- |
-| Entity-CRUD multi-domain w/ session + errors | 1, 2, 3, 4, 5 (all)         |
-| Entity-CRUD multi-domain, no session         | 1, 2, 4, 5                  |
-| Singleton/config-only app                    | 2 (if derivations), 4, 5    |
-| Pure-state stores (no `withMethods`)         | 1 (state shape only), 4     |
-| Mixed (some entity, some singleton)          | 1 for entity domains; 4, 5  |
+| App shape                                    | Patterns to apply          |
+| -------------------------------------------- | -------------------------- |
+| Entity-CRUD multi-domain w/ session + errors | 1, 2, 3, 4, 5 (all)        |
+| Entity-CRUD multi-domain, no session         | 1, 2, 4, 5                 |
+| Singleton/config-only app                    | 2 (if derivations), 4, 5   |
+| Pure-state stores (no `withMethods`)         | 1 (state shape only), 4    |
+| Mixed (some entity, some singleton)          | 1 for entity domains; 4, 5 |
 
 Applying every pattern mechanically to a non-CRUD app produces an awkward shape (empty `selected` slice, derived tier files with one identity computation, `SessionOps` with one method that calls one other Ops). Match the patterns to the app's actual shape.
 
@@ -381,11 +383,11 @@ See `reference/patterns.md` for the full `APP_TREE` + `AppStore` + `Ops` wiring 
 
 The concept map above keeps the build green. These five patterns are what separates a passing migration from one that lands at the **right end-state for a multi-domain entity-CRUD app**. They are **conditional** — each applies only when the [App shape audit](#app-shape-audit-run-before-picking-patterns) says it does. Applying them mechanically to a non-CRUD app produces a worse shape than vanilla SignalTree, not a better one.
 
-A migration that ignores patterns *that do apply* produces a SignalTree shaped like the old `signalStore` graph (one slice per old store, single-`currentX` signals, eager loads, no derived tiers) — green but architecturally thin. Apply on first migration; retrofitting later is significantly more churn.
+A migration that ignores patterns _that do apply_ produces a SignalTree shaped like the old `signalStore` graph (one slice per old store, single-`currentX` signals, eager loads, no derived tiers) — green but architecturally thin. Apply on first migration; retrofitting later is significantly more churn.
 
 ### 1. `currentX: XDto` ngrx signal → `entityMap` + root `selected.<id>` + derived current
 
-**Applies when:** the domain is a *collection* per audit Q1 — multiple records of the same shape with a stable key field. Skip entirely for singleton domains; port them as plain leaves (or `stored()` slots, see Pattern #4).
+**Applies when:** the domain is a _collection_ per audit Q1 — multiple records of the same shape with a stable key field. Skip entirely for singleton domains; port them as plain leaves (or `stored()` slots, see Pattern #4).
 
 When the ngrx store has a `currentFoo: FooDto` (or `selectedBar`, `activeQux`) signal **and `Foo` has a stable key field**, do not port it as a single signal in the new state. The "current" is one of many — model it that way, and put **selection at the _root_ of the tree**, not inside the domain slice. Selection is inherently cross-domain (FooOps writes `selected.fooId`, BarOps writes `selected.barId`, derived tiers read both); putting it under `foo.selected` blocks that pattern and forces awkward `$.foo.selected.fooId()` reads.
 
@@ -570,9 +572,15 @@ export class FooOps {
   loadAll$(): Observable<void> {
     this._$.itemsLoad.setLoading();
     return this._fooService.loadAll$().pipe(
-      tap((items) => { this._$.items.setAll(items); this._$.itemsLoad.setLoaded(); }),
+      tap((items) => {
+        this._$.items.setAll(items);
+        this._$.itemsLoad.setLoaded();
+      }),
       map(() => void 0),
-      catchError((err: unknown) => { this._$.itemsLoad.setError(String(err)); return EMPTY; }),
+      catchError((err: unknown) => {
+        this._$.itemsLoad.setError(String(err));
+        return EMPTY;
+      })
     );
   }
 }
@@ -809,10 +817,10 @@ A migration is **not done** when the build is green. See [`optimal-implementatio
 
 The verifier and the gates above catch import-level and dependency-level regressions. They cannot catch shape-level mistakes — the migration can be green and still ship the wrong architecture. Before you declare done, answer each item below against your own diff. "N/A per app shape audit" is a valid answer; "I forgot" is not.
 
-1. **Selection placement.** If Pattern #1 applies: is `selected` a top-level slice (`$.selected.<key>()`), not nested inside a domain (`$.<domain>.selected.<key>()`)? If Pattern #1 does not apply (singleton-only app): is there *no* `selected` slice at all?
+1. **Selection placement.** If Pattern #1 applies: is `selected` a top-level slice (`$.selected.<key>()`), not nested inside a domain (`$.<domain>.selected.<key>()`)? If Pattern #1 does not apply (singleton-only app): is there _no_ `selected` slice at all?
 2. **Load + error siblings.** For each domain slice that does async I/O: does it have a `xLoad: status<string>()` field? If the app has a typed error model, does it also have a `xError: Nullable<AppError>` sibling? If not, is the absence intentional per audit Q2?
-3. **Derived tiers.** If ≥ 1 derivation is reused across consumers: is there a `derived/tier-<name>.derived.ts` file with a typed `AppTreeWith<Name>` alias? If every derivation is one-shot: is there *no* tier file (component-local `computed()` only)?
-4. **Orchestration boundary.** Does any single `Ops` class inject ≥ 2 other `Ops` classes? If yes, that's a smell — extract to a `<purpose>Ops`. If audit Q3 said no cross-domain lifecycle: is there *no* orchestration `Ops`?
+3. **Derived tiers.** If ≥ 1 derivation is reused across consumers: is there a `derived/tier-<name>.derived.ts` file with a typed `AppTreeWith<Name>` alias? If every derivation is one-shot: is there _no_ tier file (component-local `computed()` only)?
+4. **Orchestration boundary.** Does any single `Ops` class inject ≥ 2 other `Ops` classes? If yes, that's a smell — extract to a `<purpose>Ops`. If audit Q3 said no cross-domain lifecycle: is there _no_ orchestration `Ops`?
 5. **`AppStore` injection style.** Post-migration (no `@ngrx/signals` consumers left): does `AppStore` use eager `inject(XOps)` fields, not lazy `Injector.get(XOps)` calls? Mid-incremental-migration: is the lazy pattern only on Ops whose collaborators trigger NG0201 cascades in unrelated specs?
 
 If any answer is "yes, that's wrong" or "I'm not sure," fix the shape before merging. Retrofitting these later is the most expensive churn in the entire migration.
