@@ -126,12 +126,22 @@ The end-state is one mental model in the codebase, no adapter cruft, no "tempora
 
 When to pick incremental over big-bang or hybrid:
 
-| Shape                                                         | Pick                              |
-| ------------------------------------------------------------- | --------------------------------- |
-| 1–2 stores, all owned by one team                             | **big-bang** (one PR)             |
+| Shape                                                         | Pick                               |
+| ------------------------------------------------------------- | ---------------------------------- |
+| 1–2 stores, all owned by one team                             | **big-bang** (one PR)              |
 | ≥3 stores, single team, no shared `signalStoreFeature` base   | **incremental** (one PR per store) |
-| Shared `signalStoreFeature` base classes blocking partial cut | **hybrid** (legacy facade)        |
-| Multi-team consumer cutover constraint                        | **hybrid** (legacy facade)        |
+| Shared `signalStoreFeature` base classes blocking partial cut | **hybrid** (legacy facade)         |
+| Multi-team consumer cutover constraint                        | **hybrid** (legacy facade)         |
+
+### Phase 0: foundation-only first PR (recommended)
+
+The first PR should add the foundation (`app/store/app-store.ts`, `tree/app-tree.ts`, the first domain's `state/` and `ops/`) **without importing it from any consumer**. The legacy stores stay; the new files are dead code from the runtime's perspective. This PR's only job is to prove that pulling `@signaltree/core` into the dependency graph keeps `build`, `test`, and `lint` green.
+
+Why this matters: if any test transitively injects the new `AppStore` (even via a route guard that's exercised in a fixture), the failure mode is a `NG0201` cascade through every `Ops` constructor — and you won't know whether the regression came from the foundation or from a consumer rewrite. Phase 0 isolates that risk.
+
+Verifier invocation for Phase 0 is the same as Step 6 below (with `--allow-source-presence --allow-dep-presence`); the `--src` points at the new foundation dir and asserts it is clean ESM with no legacy imports.
+
+Once Phase 0 is merged, subsequent PRs follow the per-PR workflow.
 
 ### Per-PR workflow (one domain at a time)
 
@@ -142,8 +152,10 @@ Everything from the big-bang Step 0 (orientation) still applies. The differences
    grep -rln "<store-file-basename>" <app-src>/   # consumers of just this store
    ```
 2. **Step 2 — stand up `AppStore` + `APP_TREE` once, on the first PR.** Subsequent PRs add domain slices to the existing tree. The first PR's `AppStore` exposes only the migrated domain; that's expected, not a smell.
-3. **Step 3 — migrate the consumers of *this* store only.** Other consumers stay on their respective legacy `signalStore`s. If a consumer needs both (transitional state), it injects both — acceptable for one PR, must be cleaned up by the next.
-4. **Step 4 — `rm` the migrated store + its spec + any barrel that re-exports it.** Do **not** ship a legacy facade adapter unless one of the [hybrid constraints](#hybrid-adoption-fallback-path) applies. Incremental is *not* hybrid — the migrated store goes away in the same PR; it's only the *other* stores that remain.
+3. **Step 3 — migrate the consumers of _this_ store only.** Other consumers stay on their respective legacy `signalStore`s. If a consumer needs both (transitional state), it injects both — acceptable for one PR, must be cleaned up by the next.
+4. **Step 4 — `rm` the migrated store + its spec + any barrel that re-exports it.** Do **not** ship a legacy facade adapter unless one of the [hybrid constraints](#hybrid-adoption-fallback-path) applies. Incremental is _not_ hybrid — the migrated store goes away in the same PR; it's only the _other_ stores that remain.
+
+   **Sequencing rule (do not violate):** Migrate every consumer of the store **first**, run `build` + `test` to confirm green, **then** delete the legacy store / spec / aggregator slot in the same PR. Removing the aggregator slot before the consumer rewrites lands turns every still-broken consumer into a `TS2339` build error and forces a full revert. If you cannot finish all consumers in one PR, leave the legacy store in place and ship the partial work as a Phase 0-style additive PR.
 5. **Step 5 — do NOT remove `@ngrx/signals` from `package.json`.** Other domains still need it. The dep removal happens automatically in the final domain's PR.
 6. **Step 6 — verifier invocation, narrowed and permissive:**
    ```bash
@@ -156,10 +168,10 @@ Everything from the big-bang Step 0 (orientation) still applies. The differences
      --allow-source-presence \
      --allow-dep-presence
    ```
-   - `--src <new-foundation-dir>` asserts the *new* SignalTree code is clean.
+   - `--src <new-foundation-dir>` asserts the _new_ SignalTree code is clean.
    - `--allow-source-presence` tolerates the leftover `@ngrx/signals` imports in still-on-ngrx siblings.
    - `--allow-dep-presence` tolerates the leftover entry in `package.json`.
-   - When you migrate the *last* domain, drop both `--allow-*-presence` flags and widen `--src` to the full `<app-src>` — that PR has to pass the strict big-bang verification.
+   - When you migrate the _last_ domain, drop both `--allow-*-presence` flags and widen `--src` to the full `<app-src>` — that PR has to pass the strict big-bang verification.
 
 ### Cross-store reads from new `Ops` to a still-ngrx store
 
@@ -173,18 +185,30 @@ class PlantsOps {
   private readonly _plantService = inject(PlantService);
 
   loadAll$(filter?: PlantFilter): Observable<void> {
-    return this._settings.region$.pipe(            // legacy store's public observable
+    return this._settings.region$.pipe(
+      // legacy store's public observable
       filterNullish$,
-      switchMap(region => this._plantService.loadAll$({ ...filter, regionUrl: region.url })),
-      tap(plants => this._$.entities.setAll(plants)),
+      switchMap((region) => this._plantService.loadAll$({ ...filter, regionUrl: region.url })),
+      tap((plants) => this._$.entities.setAll(plants)),
       map(() => void 0),
-      take(1),
+      take(1)
     );
   }
 }
 ```
 
 The inverse direction — a still-on-ngrx store reading from `AppStore` — also works (`AppStore` is an Angular service too) and needs no special wiring.
+
+### Root-injected `Ops` side-effect hazard
+
+`Ops` classes are normally `@Injectable({ providedIn: 'root' })` and `AppStore` injects them eagerly. Any constructor work an `Ops` does — subscribing to a refresher, opening a websocket, calling `inject(SomeStore)` that itself injects an HTTP/DB service — runs **the moment any test injects `AppStore`**. In a partially-migrated app this manifests as `NG0201` cascades through transitive dependencies (e.g. `AppStore -> DriverOps -> SettingsStore -> SomeDbService`) in tests that previously had nothing to do with the new store.
+
+Two safe patterns:
+
+- **Lazy initialization.** Move constructor side-effects (subscriptions, refresher hookups) into a `start()` method called by the consumer that needs them, or guard them behind a feature flag. Never subscribe in the constructor of a `providedIn: 'root'` `Ops`.
+- **Scope `Ops` to consumers.** Drop `providedIn: 'root'` and let consumers `provide` the `Ops` in a route-level or component-level injector. `AppStore` then exposes a typed `inject<DriverOps>(DriverOps)` accessor inside a component-scoped factory, not as an eager root-singleton.
+
+Either pattern keeps Phase 0 from regressing unrelated tests when the foundation lands.
 
 ### Co-locating the new foundation with a legacy `store/` directory
 
@@ -232,27 +256,27 @@ See `reference/patterns.md` for the full `APP_TREE` + `AppStore` + `Ops` wiring 
 
 ## Concept map
 
-| ngrx/signals                                   | SignalTree equivalent                                                                                                      |
-| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `signalStore(...)`                             | Domain slice in the single `signalTree()` + an `Ops` class for its methods                                                 |
-| `withState({ a, b })`                          | Initial state object passed to `signalTree()`                                                                              |
-| `withMethods(({ ... }) => ({ ... }))`          | Methods on an `Ops` class that injects `APP_TREE`                                                                          |
-| `withComputed(({ ... }) => ({ ... }))`         | Angular `computed()` on the component or in `.derived()` on the tree                                                       |
-| `withHooks({ onInit })`                        | Constructor body of the service / `APP_TREE` factory                                                                       |
-| `withProps(({ ... }) => ({ ... }))`            | Plain `readonly` fields on the `Ops` class (or `AppStore`); no signal magic needed                                         |
-| `rxMethod(pipe(...))`                          | Plain method returning `Observable<void>`; writes via `tap()`                                                              |
-| `patchState(store, { a, b })`                  | `tree.$.domain((s) => ({ ...s, a, b }))` or individual `.set()` calls                                                      |
-| `getState(store)`                              | `unwrap(tree.$)` (whole tree) or `unwrap(tree.$.domain)` (one slice) — `unwrap` is a free function from `@signaltree/core` |
-| `signalState({ ... })` (standalone)            | `signalTree({ ... })` — `signalState` was the state-only primitive; `signalTree` is the equivalent baseline                |
-| `withEntities<T>()`                            | `entityMap<T, K>()` marker                                                                                                 |
-| `store.entities()`                             | `tree.$.items.all()`                                                                                                       |
-| `store.entityMap()`                            | `tree.$.items.byId(id)` (per-id signal) — see row below for the whole collection                                          |
+| ngrx/signals                                   | SignalTree equivalent                                                                                                                                                                                        |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `signalStore(...)`                             | Domain slice in the single `signalTree()` + an `Ops` class for its methods                                                                                                                                   |
+| `withState({ a, b })`                          | Initial state object passed to `signalTree()`                                                                                                                                                                |
+| `withMethods(({ ... }) => ({ ... }))`          | Methods on an `Ops` class that injects `APP_TREE`                                                                                                                                                            |
+| `withComputed(({ ... }) => ({ ... }))`         | Angular `computed()` on the component or in `.derived()` on the tree                                                                                                                                         |
+| `withHooks({ onInit })`                        | Constructor body of the service / `APP_TREE` factory                                                                                                                                                         |
+| `withProps(({ ... }) => ({ ... }))`            | Plain `readonly` fields on the `Ops` class (or `AppStore`); no signal magic needed                                                                                                                           |
+| `rxMethod(pipe(...))`                          | Plain method returning `Observable<void>`; writes via `tap()`                                                                                                                                                |
+| `patchState(store, { a, b })`                  | `tree.$.domain((s) => ({ ...s, a, b }))` or individual `.set()` calls                                                                                                                                        |
+| `getState(store)`                              | `unwrap(tree.$)` (whole tree) or `unwrap(tree.$.domain)` (one slice) — `unwrap` is a free function from `@signaltree/core`                                                                                   |
+| `signalState({ ... })` (standalone)            | `signalTree({ ... })` — `signalState` was the state-only primitive; `signalTree` is the equivalent baseline                                                                                                  |
+| `withEntities<T>()`                            | `entityMap<T, K>()` marker                                                                                                                                                                                   |
+| `store.entities()`                             | `tree.$.items.all()`                                                                                                                                                                                         |
+| `store.entityMap()`                            | `tree.$.items.byId(id)` (per-id signal) — see row below for the whole collection                                                                                                                             |
 | `store.entityMap()` (whole `Record<K, T>`)     | `tree.$.items.map()` returns a `Signal<ReadonlyMap<K, T>>`. Bracket access (`m[id]`) becomes `m.get(id)`; for a `Record`-shaped consumer derive via `computed(() => Object.fromEntries(tree.$.items.map()))` |
-| `addEntity(e)`                                 | `tree.$.items.addOne(e)`                                                                                                   |
-| `setAllEntities(es)`                           | `tree.$.items.setAll(es)`                                                                                                  |
-| `updateEntity({ id, changes })`                | `tree.$.items.updateOne(id, changes)`                                                                                      |
-| `removeEntity(id)`                             | `tree.$.items.removeOne(id)`                                                                                               |
-| `provideDevtoolsConfig({ name })` in providers | `.with(devTools({ treeName: name }))` on the tree — remove the provider                                                    |
+| `addEntity(e)`                                 | `tree.$.items.addOne(e)`                                                                                                                                                                                     |
+| `setAllEntities(es)`                           | `tree.$.items.setAll(es)`                                                                                                                                                                                    |
+| `updateEntity({ id, changes })`                | `tree.$.items.updateOne(id, changes)`                                                                                                                                                                        |
+| `removeEntity(id)`                             | `tree.$.items.removeOne(id)`                                                                                                                                                                                 |
+| `provideDevtoolsConfig({ name })` in providers | `.with(devTools({ treeName: name }))` on the tree — remove the provider                                                                                                                                      |
 
 ## Custom feature patterns (signalStoreFeature)
 
