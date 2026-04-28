@@ -121,8 +121,8 @@ describe('DriverOps', () => {
 ```ts
 // some.component.spec.ts
 import { TestBed } from '@angular/core/testing';
-import { provideAppTreeForTesting } from '../root-services/store/signaltree/app-tree.testing';
-import { DriverOps } from '../root-services/store/signaltree/driver.ops';
+import { provideAppTreeForTesting } from '../store/tree/app-tree.testing';
+import { DriverOps } from '../store/ops/driver.ops';
 import { SomeComponent } from './some.component';
 
 describe('SomeComponent', () => {
@@ -154,7 +154,7 @@ import { getTestBed } from '@angular/core/testing';
 // transitively, which pre-loads any service those Ops inject. That breaks
 // specs that rely on `vi.mock(...)` / `jest.mock(...)` hoisting against
 // modules in the Ops dependency graph.
-import { provideAppTreeForTesting } from './app/root-services/store/signaltree/app-tree.testing';
+import { provideAppTreeForTesting } from './app/store/tree/app-tree.testing';
 
 @NgModule({ providers: [...provideAppTreeForTesting()] })
 class SignalTreeTestEnvironmentModule {}

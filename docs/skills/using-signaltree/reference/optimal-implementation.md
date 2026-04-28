@@ -42,28 +42,35 @@ Rules:
 
 ## The `createAppTree(initial?)` factory
 
-Take bootstrap-time inputs as a parameter when the tree needs runtime values not present in default state (selected hauler/truck, tenant id, etc.). This avoids the anti-pattern of constructing the tree first and then immediately patching it.
+Take bootstrap-time inputs as a parameter when the tree needs runtime values not present in default state (a selected entity id, the active tenant, etc.). This avoids the anti-pattern of constructing the tree first and then immediately patching it.
 
 ```ts skip
 import { signalTree, batching, devTools, timeTravel } from '@signaltree/core';
 import { entityResolutionDerived } from './derived/tier-entity-resolution.derived';
 import { ticketWorkflowDerived } from './derived/tier-ticket-workflow.derived';
 import { ticketsState } from './state/tickets.state';
-import { trucksState } from './state/trucks.state';
+import { customersState } from './state/customers.state';
 // …
 
 export const STORE_NAME = 'AppTree';
 
-export function createBaseState(initial: { haulerId: number | null; truckId: number | null } = { haulerId: null, truckId: null }) {
+export interface AppTreeBootstrap {
+  tenantId: string | null;
+  selectedTicketId: number | null;
+}
+
+const DEFAULT_BOOTSTRAP: AppTreeBootstrap = { tenantId: null, selectedTicketId: null };
+
+export function createBaseState(initial: AppTreeBootstrap = DEFAULT_BOOTSTRAP) {
   return {
     tickets: ticketsState(),
-    trucks: trucksState(),
-    selected: { haulerId: initial.haulerId, truckId: initial.truckId },
+    customers: customersState(),
+    selected: { tenantId: initial.tenantId, ticketId: initial.selectedTicketId },
     // …
   };
 }
 
-export function createAppTree(initial: { haulerId: number | null; truckId: number | null } = { haulerId: null, truckId: null }) {
+export function createAppTree(initial: AppTreeBootstrap = DEFAULT_BOOTSTRAP) {
   return signalTree(createBaseState(initial))
     .with(devTools({ treeName: STORE_NAME }))
     .with(batching())

@@ -230,19 +230,19 @@ This is the single most common failure mode when migrating from `@ngrx/signals`.
 
 ```ts skip
 // ✗ Wrong — new AppStore committed alongside untouched legacy stores
-// frontend/apps/<app>/src/app/store/app-store.ts        ← new
-// frontend/apps/<app>/src/app/store/tree/app-tree.ts    ← new
-// frontend/apps/<app>/src/app/root-services/store/driver.store.ts        ← still there, still signalStore(...)
-// frontend/apps/<app>/src/app/root-services/store/feature-flag.store.ts  ← still there, still signalStore(...)
-// frontend/apps/<app>/src/app/root-services/store/plant.store.ts         ← still there, still signalStore(...)
+// src/app/store/app-store.ts                ← new
+// src/app/store/tree/app-tree.ts            ← new
+// src/app/<legacy-path>/driver.store.ts        ← still there, still signalStore(...)
+// src/app/<legacy-path>/feature-flag.store.ts  ← still there, still signalStore(...)
+// src/app/<legacy-path>/plant.store.ts         ← still there, still signalStore(...)
 ```
 
 ```bash
 # ✓ Right — verify deletion before declaring done.
 # All three must return empty (no output) inside the migrated app:
-grep -rln "from '@ngrx/signals'" frontend/apps/<app>/src/
-grep -rln 'signalStore('         frontend/apps/<app>/src/
-find frontend/apps/<app>/src -name '*.store.ts' -not -path '*/node_modules/*'
+grep -rln "from '@ngrx/signals'" <app-src>/
+grep -rln 'signalStore('         <app-src>/
+find <app-src> -name '*.store.ts' -not -path '*/node_modules/*'
 ```
 
 If any of those greps returns output and you are not on the explicit hybrid-fallback path documented in [`optimal-implementation.md`](optimal-implementation.md#when-the-hybrid-pattern-is-acceptable), **stop and finish the deletion before committing**. Do not write the migration report, do not push, do not declare success.

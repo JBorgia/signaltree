@@ -11,9 +11,9 @@
 # Usage:
 #   scripts/verify-signaltree-migration.sh \
 #     --src    src/app \
-#     --build  "pnpm nx build trax-mobile" \
-#     --test   "pnpm nx test trax-mobile" \
-#     --lint   "pnpm nx lint trax-mobile" \
+#     --build  "<your build command>" \
+#     --test   "<your test command>" \
+#     --lint   "<your lint command>" \
 #     [--package @ngrx/signals]                  # repeatable; default: @ngrx/signals
 #     [--allow-dep-presence]                     # don't fail if package still in package.json
 #     [--package-json package.json]              # default: ./package.json

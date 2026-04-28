@@ -63,11 +63,11 @@ Examples:
 ```bash
 # Nx + pnpm
 scripts/verify-signaltree-migration.sh \
-  --src   frontend/apps/trax-mobile/src \
-  --build "pnpm nx build trax-mobile" \
-  --test  "pnpm nx test trax-mobile" \
-  --lint  "pnpm nx lint trax-mobile" \
-  --package-json frontend/package.json
+  --src   apps/<app>/src \
+  --build "pnpm nx build <app>" \
+  --test  "pnpm nx test <app>" \
+  --lint  "pnpm nx lint <app>" \
+  --package-json package.json
 
 # Plain Angular CLI + npm
 scripts/verify-signaltree-migration.sh \
@@ -78,10 +78,10 @@ scripts/verify-signaltree-migration.sh \
 
 # Monorepo where another app still uses @ngrx/signals
 scripts/verify-signaltree-migration.sh \
-  --src   apps/checkout/src \
-  --build "yarn nx build checkout" \
-  --test  "yarn nx test checkout" \
-  --lint  "yarn nx lint checkout" \
+  --src   apps/<app>/src \
+  --build "yarn nx build <app>" \
+  --test  "yarn nx test <app>" \
+  --lint  "yarn nx lint <app>" \
   --allow-dep-presence
 ```
 
