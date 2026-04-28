@@ -76,6 +76,13 @@ export class HomeComponent {
       route: '/benchmarks',
       cta: 'Review benchmarks →',
     },
+    {
+      title: 'Migrating from another store?',
+      description:
+        'Concept maps and side-by-side examples for @ngrx/signals, classic NgRx, NGXS, Elf/Akita, ComponentStore, @rx-angular/state, and BehaviorSubject services — plus an AI-assistable playbook.',
+      route: '/migrate',
+      cta: 'Open migration guide →',
+    },
   ];
 
   readonly packageCards: HomeLinkCard[] = [

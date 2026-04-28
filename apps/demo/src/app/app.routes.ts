@@ -143,6 +143,14 @@ export const appRoutes: Route[] = [
         (c) => c.MigrationRecipeComponent
       ),
   },
+  // Top-level alias for the multi-source migration guide
+  {
+    path: 'migrate',
+    loadComponent: () =>
+      import('./pages/migration-recipe/migration-recipe.component').then(
+        (c) => c.MigrationRecipeComponent
+      ),
+  },
   // Performance comparisons
   {
     path: 'benchmarks',

@@ -141,3 +141,120 @@
     }
   }
 }
+
+/* --- multi-source migration page additions --- */
+.article {
+  h1 {
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 var(--space-5);
+    line-height: 1.2;
+  }
+
+  h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-neutral-700);
+    margin: var(--space-3) 0 var(--space-2);
+  }
+
+  hr {
+    border: 0;
+    border-top: 1px solid var(--border-color);
+    margin: var(--space-8) 0;
+  }
+
+  .lede {
+    font-size: 1.05rem;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    margin-bottom: var(--space-5);
+  }
+
+  .toc {
+    background: var(--color-neutral-50, #f7fafc);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4) var(--space-5);
+    margin-bottom: var(--space-6);
+
+    strong {
+      display: block;
+      margin-bottom: var(--space-2);
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2) var(--space-4);
+
+      li { margin: 0; }
+
+      a {
+        color: var(--color-primary-700);
+        text-decoration: none;
+        font-size: 0.95rem;
+
+        &:hover { text-decoration: underline; }
+      }
+    }
+  }
+
+  .concept-map {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 var(--space-6);
+    font-size: 0.9rem;
+
+    th, td {
+      text-align: left;
+      padding: var(--space-2) var(--space-3);
+      border-bottom: 1px solid var(--border-color);
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--color-neutral-100);
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    td code {
+      font-size: 0.85em;
+    }
+  }
+
+  .compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-4);
+    margin: 0 0 var(--space-6);
+
+    @media (max-width: 900px) {
+      grid-template-columns: 1fr;
+    }
+
+    > div {
+      min-width: 0; /* allow pre to shrink */
+    }
+  }
+
+  .callout {
+    background: var(--color-neutral-50, #f7fafc);
+    border-left: 4px solid var(--color-neutral-300, #cbd5e0);
+    border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-4);
+    margin: 0 0 var(--space-5);
+    color: var(--text-secondary);
+    line-height: 1.6;
+
+    &.callout-primary {
+      background: linear-gradient(135deg, var(--color-info-50) 0%, var(--color-primary-100) 100%);
+      border-left-color: var(--color-primary-500);
+    }
+  }
+}
