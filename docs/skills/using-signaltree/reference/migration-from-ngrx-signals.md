@@ -314,6 +314,151 @@ See `reference/patterns.md` for the full `APP_TREE` + `AppStore` + `Ops` wiring 
 | `removeEntity(id)`                             | `tree.$.items.removeOne(id)`                                                                                                                                                                                 |
 | `provideDevtoolsConfig({ name })` in providers | `.with(devTools({ treeName: name }))` on the tree — remove the provider                                                                                                                                      |
 
+## Goal-state architectural patterns
+
+The concept map above keeps the build green. These five patterns are what separates a passing migration from one that lands at the **right end-state**. A migration that ignores them produces a SignalTree shaped like the old `signalStore` graph (one slice per old store, single-`currentX` signals, eager loads, no derived tiers) — green but architecturally thin. Apply these on first migration; retrofitting later is significantly more churn.
+
+### 1. `currentX: XDto` ngrx signal → `entityMap` + `selected.<id>` + derived current
+
+When the ngrx store has a `currentDriver: DriverDto` (or `selectedTruck`, `activeTicket`) signal, **do not port it as a single signal in the new state**. The "current" is one of many — model it that way:
+
+```ts
+// driver.state.ts \u2014 entities live here
+import { entityMap } from '@signaltree/core';
+import type { DriverDto } from '@models-v2';
+
+export function driverState() {
+  return {
+    drivers: entityMap<DriverDto, number>(),       // all drivers loaded so far
+    selected: { driverId: null as number | null }, // which one is "current"
+  };
+}
+
+// derived/tier-entity-resolution.derived.ts — the current entity is *derived*
+import { computed } from '@angular/core';
+import { externalDerived } from '@signaltree/core';
+import type { AppTreeBase } from '../app-tree';
+
+export const entityResolutionDerived = externalDerived<AppTreeBase>()(($) => ({
+  driver: {
+    current: computed(() => {
+      const id = $.selected.driverId();
+      return id != null ? ($.drivers.byId(id)?.() ?? null) : null;
+    }),
+  },
+}));
+```
+
+This unlocks `upsertOne`, `removeOne`, `byId`, `setAll` for the entity collection — operations the single-signal port permanently loses access to. **Hard rule:** if the ngrx signal type is `XDto` or `Nullable<XDto>` and `X` has an `id` field, port it as `entityMap<X, K>()` plus a `selected.<x>Id` scalar. No exceptions for "we only ever have one."
+
+### 2. Materialize derivations inside the tree with `externalDerived` + `.derived()`
+
+The naive port of `withComputed(({ ... }) => ({ isExternal: computed(...) }))` is a component-level `computed()`. That works but forfeits SignalTree's strongest feature: **typed derived tiers composed into the tree itself**, reusable from any consumer without reimplementation.
+
+```ts
+// app-tree.ts
+import { signalTree, type WithDerived } from '@signaltree/core';
+import { entityResolutionDerived } from './derived/tier-entity-resolution.derived';
+import { complexLogicDerived } from './derived/tier-complex-logic.derived';
+
+export type AppTreeBase = ReturnType<typeof signalTree<ReturnType<typeof createBaseState>>>;
+export type AppTreeWithEntityResolution = WithDerived<AppTreeBase, typeof entityResolutionDerived>;
+export type AppTreeWithComplexLogic = WithDerived<AppTreeWithEntityResolution, typeof complexLogicDerived>;
+export type AppTree = AppTreeWithComplexLogic;
+
+export function createAppTree(initial: { /* ... */ }) {
+  return signalTree(createBaseState(initial))
+    .with(devTools({ treeName: 'AppTree' }))
+    .with(batching())
+    .derived(entityResolutionDerived)   // tier 1: id → entity
+    .derived(complexLogicDerived);      // tier 2+: depends on tier 1
+}
+```
+
+**When to add a derived tier:** any `computed()` that ≥ 2 components, services, or specs would otherwise reimplement. Common tiers: entity resolution (id → entity), workflow state (current ticket's status, active step), UI aggregates (counts, badge text), navigation guards.
+
+**Tiering rule:** later tiers may read earlier-tier derivations via `$.<earlierTier>.…`; never the reverse. Each tier gets its own `tier-<name>.derived.ts` file and a typed `AppTreeWith<Name>` alias so derived tiers themselves are type-safe.
+
+### 3. Cross-domain orchestration → dedicated `SessionOps`, not domain-Ops
+
+When a migration needs to coordinate two or more domains (logout clears tickets + trucks + selection; login hydrates settings + driver + plants), **do not put the orchestration inside one of the domain `Ops`**. Stand up a dedicated orchestration class:
+
+```ts
+// session.ops.ts
+import { inject, Injectable } from '@angular/core';
+import { SelectionOps } from './selection.ops';
+import { TicketOps } from './ticket.ops';
+import { TruckOps } from './truck.ops';
+
+@Injectable({ providedIn: 'root' })
+export class SessionOps {
+  private readonly _tickets = inject(TicketOps);
+  private readonly _trucks = inject(TruckOps);
+  private readonly _selection = inject(SelectionOps);
+
+  /** Reset all session-scoped state. Order matters: clear active ticket first
+   *  so any UI bound to it sees null before driver/selection are cleared. */
+  endSession(): void {
+    this._tickets.clearActiveTicket();
+    this._trucks.clearAllTrucksAndHaulers();
+    this._selection.clearAll();
+  }
+}
+```
+
+Equivalent pattern for one-shot atomic mutations of `selected.*`: a dedicated `SelectionOps` owns every write to `$.selected.*` so the rest of the codebase has a single, lintable boundary. The domain `Ops` (DriverOps, TruckOps) own their own slice's writes — never another slice's.
+
+**Smell to refactor:** any `Ops` class that injects ≥ 2 other `Ops` classes is doing orchestration; extract to its own `<purpose>Ops`.
+
+### 4. Persisted state → `stored()` slices, not constructor `localStorage` reads
+
+Baseline ngrx stores typically read `localStorage` in `withHooks({ onInit })` and write back via a service. SignalTree's `stored()` marker handles both directions reactively:
+
+```ts
+// settings.state.ts
+import { stored } from '@signaltree/core';
+import type { Nullable } from '@models';
+
+export function settingsState() {
+  return {
+    regionId: stored('trax-settings-regionId', null as Nullable<number>),
+    tenantId: stored('trax-settings-tenantId', null as Nullable<number>),
+    measurementSystem: stored('trax-settings-measurementSystem', null as Nullable<string>),
+    permissionsRequested: stored('trax-settings-permissionsRequested', false),
+  };
+}
+```
+
+**Migration recipe:** every `localStorage.getItem('key')` / `setItem('key', …)` call site that wraps a piece of state becomes a `stored('key', defaultValue)` slot. Delete the `LocalStorageService.set(key, …)` calls in `Ops` — `stored()` writes through automatically on signal mutation.
+
+**When `stored()` doesn't fit:** initial values that depend on other injection (e.g. environment-keyed storage keys like `haulerId-${env.targetEnvironment}`). For those, use the `AppTreeService` pattern: a `providedIn: 'root'` service that reads `LocalStorageService` in its constructor and passes the seed values to `createAppTree({ haulerId, truckId })` once.
+
+### 5. `Ops` injection in `AppStore` → eager by default, lazy only for incremental
+
+For a **completed migration** (no remaining `@ngrx/signals` consumers), `AppStore` injects every `Ops` class eagerly as a field:
+
+```ts
+// app-store.ts \u2014 goal-state pattern
+@Injectable({ providedIn: 'root' })
+export class AppStore {
+  readonly tree = inject(APP_TREE);
+  readonly $ = this.tree.$;
+  readonly ops = {
+    tickets: inject(TicketOps),
+    trucks: inject(TruckOps),
+    drivers: inject(DriversOps),
+    selection: inject(SelectionOps),
+    session: inject(SessionOps),
+  };
+}
+```
+
+This exposes the **whole Ops surface** (`store.ops.tickets.loadTickets$()`, `store.ops.tickets.clearActive()`, etc.) without method-by-method delegation. Discoverable via IDE autocomplete. Adding a new method on `TicketOps` requires zero changes in `AppStore`.
+
+The lazy `Injector.get(XOps)` pattern — and the "method-delegation object literal" shape — is **only** for [incremental migrations](#root-injected-ops-side-effect-hazard) where unrelated specs would otherwise trigger a constructor cascade through Ops they don't use. Once the migration completes, refactor to eager `inject()`.
+
+**Smell that you forgot to refactor:** lazy `Injector.get` calls in `AppStore` after the last domain migrates. If `grep -l '@ngrx/signals' <app-src>/` returns nothing, eager injection is the correct shape.
+
 ## Custom feature patterns (signalStoreFeature)
 
 > **Do not silently drop a `withFeature(...)` call during migration.** Custom features encode real behavior (error banners, refresh hooks, telemetry collectors). Map each one to its SignalTree equivalent or an `effect()` inside the `Ops` constructor — never reduce one to a no-op placeholder. A `withErrorBanners(driverStoreName, error)` feature, for example, becomes:
