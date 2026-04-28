@@ -13,43 +13,79 @@ Read the root `SKILL.md`, [`reference/optimal-implementation.md`](./optimal-impl
 
 **Big-bang is the default.** In one PR, you:
 
-1. Stand up the new shape (`AppStore` + `APP_TREE` + per-domain `Ops` + `app-tree.testing.ts`).
-2. Migrate **every** consumer of every legacy `signalStore` to `inject(AppStore)`. Use grep to enumerate consumers up front:
+1. **Discover every legacy store and consumer.** The only universal anchor is the package itself — file names, class names, and folder paths vary by codebase. Use these greps regardless of layout:
 
    ```bash
-   grep -rln "from '@ngrx/signals'\|root-services/store/\(driver\|plant\|feature-flag\)\.store" <app-src>/
+   grep -rln "from '@ngrx/signals'" <app-src>/   # every consumer + every store file
+   grep -rln 'signalStore('         <app-src>/   # every store factory call site
    ```
 
-3. **`rm` every legacy store file in the same commit.** This includes `*.store.ts`, its `*.store.spec.ts` sibling, and any barrel/re-export entries that point at it. Standing up the new `AppStore` while leaving the legacy files on disk is _not_ a migration — it is a hybrid you forgot to finish, and it will rot.
-4. Remove `@ngrx/signals` (and `@angular-architects/ngrx-toolkit` if used) from `package.json`.
-5. Update the lockfile and verify `node_modules/@ngrx` is gone.
-6. **Verify deletion with grep before declaring done.** All three commands must return empty (exit 0, no output):
+   The first list is your migration scope; the second list is the set of files you will delete.
+
+2. Stand up the new shape (`AppStore` + `APP_TREE` + per-domain `Ops` + `app-tree.testing.ts`).
+3. Migrate **every** consumer from the discovery list to `inject(AppStore)`.
+4. **`rm` every file from the `signalStore(` list in the same commit.** Include each file's `*.spec.ts` sibling and any barrel/re-export that points at it. Standing up the new `AppStore` while leaving the legacy files on disk is _not_ a migration — it is a hybrid you forgot to finish, and it will rot.
+5. Remove `@ngrx/signals` (and `@angular-architects/ngrx-toolkit` if used) from `package.json` `dependencies` and `peerDependencies`. Update the lockfile.
+6. **Verify with the package's fingerprint before declaring done.** All three checks must pass:
 
    ```bash
-   grep -rln "from '@ngrx/signals'" <app-src>/      # no remaining imports
-   grep -rln 'signalStore(' <app-src>/                # no remaining store factories
-   find <app-src> -name '*.store.ts' -not -path '*/node_modules/*'   # no legacy filenames
+   grep -rln "from '@ngrx/signals'" <app-src>/   # must be empty
+   grep -rln 'signalStore('         <app-src>/   # must be empty
+   node -e "const p=require('./package.json');                     \
+            ['dependencies','peerDependencies'].forEach(k =>       \
+              console.assert(!p[k]?.['@ngrx/signals'],             \
+                '@ngrx/signals still in '+k));"
    ```
 
-   If any command returns output, the migration is **not done**. Do not commit, do not write a report, do not declare success — finish the deletion first.
+   If any check fails, the migration is **not done**. Do not commit, do not write a report, do not declare success — finish the deletion first.
 
 7. Confirm the test suite is green and lint is clean.
 
-### Use the finishing script
+### Use the verifier script
 
-Steps 3, 6, and 7 are mechanical and easy to skip when budget is tight. The repo ships [`scripts/finish-signaltree-migration.sh`](../../../../scripts/finish-signaltree-migration.sh) (in the `signaltree` repo) that does all three in one shot — it deletes the legacy `*.store.ts` files for the named domains, runs the verification greps, runs `pnpm nx build/test/lint`, and (optionally) commits. Invoke it after you have stood up the new shape and migrated all consumers:
+Steps 6 and 7 are mechanical and easy to skip when budget is tight. The repo ships [`scripts/verify-signaltree-migration.sh`](../../../../scripts/verify-signaltree-migration.sh) (in the `signaltree` repo) that runs all three fingerprint checks plus the gates, in one invocation, on any codebase regardless of layout or package manager:
 
 ```bash
-scripts/finish-signaltree-migration.sh \
-  --app-src   frontend/apps/<app>/src \
-  --nx-project <app> \
-  --pnpm-cwd  frontend \
-  --domain    feature-flag \
-  --domain    driver \
-  --commit    "feat(<app>): migrate feature-flag + driver to SignalTree"
+scripts/verify-signaltree-migration.sh \
+  --src    <app-src> \
+  --build  "<your build command>" \
+  --test   "<your test command>" \
+  --lint   "<your lint command>" \
+  [--package-json <path>] \
+  [--allow-dep-presence] \
+  [--commit "feat(<app>): migrate to SignalTree"]
 ```
 
-The script exits non-zero if any verification grep is non-empty or any gate fails — that exit code is your "migration is not done" signal. **Always run this script (or its equivalent) before declaring a migration complete.**
+The script does **not** delete anything — that's the agent's job in step 4 (the agent knows which files it just replaced). The script verifies the package's fingerprint is gone from source AND from `package.json`, then runs the build/test/lint gates. Non-zero exit means the migration is not done.
+
+Examples:
+
+```bash
+# Nx + pnpm
+scripts/verify-signaltree-migration.sh \
+  --src   frontend/apps/trax-mobile/src \
+  --build "pnpm nx build trax-mobile" \
+  --test  "pnpm nx test trax-mobile" \
+  --lint  "pnpm nx lint trax-mobile" \
+  --package-json frontend/package.json
+
+# Plain Angular CLI + npm
+scripts/verify-signaltree-migration.sh \
+  --src   src/app \
+  --build "npm run build" \
+  --test  "npm test -- --watch=false" \
+  --lint  "npm run lint"
+
+# Monorepo where another app still uses @ngrx/signals
+scripts/verify-signaltree-migration.sh \
+  --src   apps/checkout/src \
+  --build "yarn nx build checkout" \
+  --test  "yarn nx test checkout" \
+  --lint  "yarn nx lint checkout" \
+  --allow-dep-presence
+```
+
+**Always run this script (or its equivalent) before declaring a migration complete.**
 
 The end-state is one mental model in the codebase, no adapter cruft, no "temporary" facades that live forever. See [`optimal-implementation.md`](./optimal-implementation.md#definition-of-done) for the full checklist.
 
