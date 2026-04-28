@@ -9,6 +9,40 @@ Quick reference for converting an existing `@ngrx/signals` codebase. Applies **o
 
 Read the root `SKILL.md`, [`reference/optimal-implementation.md`](./optimal-implementation.md), and [`reference/patterns.md`](./patterns.md) for full SignalTree context; use this file for the mechanical mappings.
 
+## Minimum viable migration (1 small store)
+
+**Skip every pattern below this section** if the legacy app has exactly one `signalStore` with < 5 signals and < 3 methods. The full `AppStore` + `Ops` + tier ceremony is calibrated for multi-domain apps; on a one-store app it is pure overhead.
+
+Minimum recipe:
+
+1. Replace the `signalStore({...}, withState(s), withMethods(m))` factory with `signalTree(s)` exported via an `APP_TREE` `InjectionToken` + `provideAppTree()`.
+2. Move each `withMethods` function onto a single `@Injectable({ providedIn: 'root' })` `AppOps` class that injects `APP_TREE`.
+3. Replace every `inject(LegacyStore)` with `inject(APP_TREE)` (for reads) or `inject(AppOps)` (for writes). No `AppStore` facade needed.
+4. Run the verifier (Step 6 below).
+
+Go straight to [Definition of done](#definition-of-done). Patterns 1–5 below are about scaling architecture across domains — not relevant when there is only one.
+
+## App shape audit (run before picking patterns)
+
+The goal-state patterns below are **conditional**, not universal. Before applying any of them, answer these four questions about the legacy app and capture the answers in your scratch notes — each pattern explicitly references them:
+
+1. **Are domains entity-collections or singletons?** A *collection* domain has a list/map of records keyed by id (drivers, tickets, products). A *singleton* domain has one record or a handful of scalars (app config, current user, theme, feature flags). Pattern #1 only applies to collection domains.
+2. **Is there a typed error model in the codebase?** Search for an existing `Error`-shaped class, interface, or discriminated union (`grep -rln 'class .*Error\b\|interface .*Error\b' <app-src>/`). If yes, Pattern #1's `xError` sibling rule applies. If no, `status<string>()` alone is correct — do **not** invent an error type just to satisfy the pattern.
+3. **Is there a cross-domain lifecycle?** Login/logout, multi-step wizard, tenant switch, anything that mutates ≥ 2 domain slices in one user action. If yes, Pattern #3 applies. If no, skip Pattern #3 entirely — a one-domain `Ops` calling itself is not orchestration.
+4. **Is anything persisted to `localStorage` / `sessionStorage` / cookies?** If yes, Pattern #4 applies. If no, skip it.
+
+The matrix:
+
+| App shape                                    | Patterns to apply           |
+| -------------------------------------------- | --------------------------- |
+| Entity-CRUD multi-domain w/ session + errors | 1, 2, 3, 4, 5 (all)         |
+| Entity-CRUD multi-domain, no session         | 1, 2, 4, 5                  |
+| Singleton/config-only app                    | 2 (if derivations), 4, 5    |
+| Pure-state stores (no `withMethods`)         | 1 (state shape only), 4     |
+| Mixed (some entity, some singleton)          | 1 for entity domains; 4, 5  |
+
+Applying every pattern mechanically to a non-CRUD app produces an awkward shape (empty `selected` slice, derived tier files with one identity computation, `SessionOps` with one method that calls one other Ops). Match the patterns to the app's actual shape.
+
 ## Default: big-bang migration
 
 **Big-bang is the default.** In one PR, you:
@@ -211,17 +245,17 @@ An `Ops` class can inject a still-on-ngrx `signalStore` directly — it is just 
 
 ```ts skip
 @Injectable({ providedIn: 'root' })
-class PlantsOps {
-  private readonly _$ = inject(APP_TREE).$.plants;
-  private readonly _settings = inject(SettingsStore); // still on @ngrx/signals
-  private readonly _plantService = inject(PlantService);
+class FooOps {
+  private readonly _$ = inject(APP_TREE).$.foo;
+  private readonly _legacy = inject(LegacySettingsStore); // still on @ngrx/signals
+  private readonly _fooService = inject(FooService);
 
-  loadAll$(filter?: PlantFilter): Observable<void> {
-    return this._settings.region$.pipe(
+  loadAll$(filter?: FooFilter): Observable<void> {
+    return this._legacy.scope$.pipe(
       // legacy store's public observable
       filterNullish$,
-      switchMap((region) => this._plantService.loadAll$({ ...filter, regionUrl: region.url })),
-      tap((plants) => this._$.entities.setAll(plants)),
+      switchMap((scope) => this._fooService.loadAll$({ ...filter, scopeUrl: scope.url })),
+      tap((items) => this._$.entities.setAll(items)),
       map(() => void 0),
       take(1)
     );
@@ -233,20 +267,20 @@ The inverse direction — a still-on-ngrx store reading from `AppStore` — also
 
 ### Root-injected `Ops` side-effect hazard
 
-`Ops` classes are normally `@Injectable({ providedIn: 'root' })` and `AppStore` injects them eagerly. Any constructor work an `Ops` does — subscribing to a refresher, opening a websocket, calling `inject(SomeStore)` that itself injects an HTTP/DB service — runs **the moment any test injects `AppStore`**. In a partially-migrated app this manifests as `NG0201` cascades through transitive dependencies (e.g. `AppStore -> DriverOps -> SettingsStore -> SomeDbService`) in tests that previously had nothing to do with the new store.
+`Ops` classes are normally `@Injectable({ providedIn: 'root' })` and `AppStore` injects them eagerly. Any constructor work an `Ops` does — subscribing to a refresher, opening a websocket, calling `inject(SomeStore)` that itself injects an HTTP/DB service — runs **the moment any test injects `AppStore`**. In a partially-migrated app this manifests as `NG0201` cascades through transitive dependencies (e.g. `AppStore -> FooOps -> LegacySettingsStore -> SomeDbService`) in tests that previously had nothing to do with the new store.
 
 Three safe patterns (pick one):
 
 - **Lazy initialization.** Move constructor side-effects (subscriptions, refresher hookups) into a `start()` method called by the consumer that needs them, or guard them behind a feature flag. Never subscribe in the constructor of a `providedIn: 'root'` `Ops`.
-- **Scope `Ops` to consumers.** Drop `providedIn: 'root'` and let consumers `provide` the `Ops` in a route-level or component-level injector. `AppStore` then exposes a typed `inject<DriverOps>(DriverOps)` accessor inside a component-scoped factory, not as an eager root-singleton.
-- **Optional collaborators + lazy `Injector.get` in `AppStore`.** Keep `Ops` `providedIn: 'root'` but make every side-effect collaborator `inject(X, { optional: true })` and resolve `Ops` from `AppStore` via `inject(Injector).get(DriverOps)` inside the facade method, not as a field. This is the lowest-churn option for a partially-migrated app where unrelated specs only read `tree.$` signals — they never instantiate the `Ops`, so missing collaborators never throw. Required pattern when the migrated `Ops` has ≥ 2 side-effect collaborators (refresher, telemetry, banners, websocket, etc.).
+- **Scope `Ops` to consumers.** Drop `providedIn: 'root'` and let consumers `provide` the `Ops` in a route-level or component-level injector. `AppStore` then exposes a typed `inject<FooOps>(FooOps)` accessor inside a component-scoped factory, not as an eager root-singleton.
+- **Optional collaborators + lazy `Injector.get` in `AppStore`.** Keep `Ops` `providedIn: 'root'` but make every side-effect collaborator `inject(X, { optional: true })` and resolve `Ops` from `AppStore` via `inject(Injector).get(FooOps)` inside the facade method, not as a field. This is the lowest-churn option for a partially-migrated app where unrelated specs only read `tree.$` signals — they never instantiate the `Ops`, so missing collaborators never throw. Required pattern when the migrated `Ops` has ≥ 2 side-effect collaborators (refresher, telemetry, banners, websocket, etc.).
 
 ```ts skip
-// driver.ops.ts — collaborators optional
+// foo.ops.ts — collaborators optional
 @Injectable({ providedIn: 'root' })
-export class DriverOps {
-  private readonly _refresher = inject(AppRefresherService, { optional: true });
-  private readonly _baggage = inject(BaggageService, { optional: true });
+export class FooOps {
+  private readonly _refresher = inject(RefresherService, { optional: true });
+  private readonly _telemetry = inject(TelemetryService, { optional: true });
   // …
 }
 
@@ -256,8 +290,8 @@ export class AppStore {
   readonly $ = inject(APP_TREE).$;
   private readonly _injector = inject(Injector);
   readonly ops = {
-    driver: {
-      loadActiveDriver$: () => this._injector.get(DriverOps).loadActiveDriver$(),
+    foo: {
+      loadFoo$: () => this._injector.get(FooOps).loadFoo$(),
     },
   } as const;
 }
@@ -300,17 +334,17 @@ If you genuinely cannot land the migration in one PR — the diff is too large t
 **Do not create one `signalTree()` per ngrx store.** The entire application — every domain that had its own `signalStore` — must be composed into a single `signalTree()` call behind one `APP_TREE` `InjectionToken`, exposed through a single `AppStore` service.
 
 ```ts skip
-// ngrx — DriverStore, SettingsStore, TicketStore, FeatureFlagStore each call signalStore()
+// ngrx — FooStore, BarStore, BazStore, QuxStore each call signalStore()
 // WRONG in SignalTree — do not do this:
-// const driverTree = signalTree(driverState());      // ✗
-// const settingsTree = signalTree(settingsState());  // ✗
+// const fooTree = signalTree(fooState());      // ✗
+// const barTree = signalTree(barState());      // ✗
 
 // CORRECT — all domains in one tree:
 const tree = signalTree({
-  driver: driverState(),
-  settings: settingsState(),
-  ticket: ticketState(),
-  featureFlags: featureFlagsState(),
+  foo: fooState(),
+  bar: barState(),
+  baz: bazState(),
+  qux: quxState(),
 });
 export const APP_TREE = new InjectionToken<typeof tree>('APP_TREE');
 ```
@@ -345,29 +379,32 @@ See `reference/patterns.md` for the full `APP_TREE` + `AppStore` + `Ops` wiring 
 
 ## Goal-state architectural patterns
 
-The concept map above keeps the build green. These five patterns are what separates a passing migration from one that lands at the **right end-state**. A migration that ignores them produces a SignalTree shaped like the old `signalStore` graph (one slice per old store, single-`currentX` signals, eager loads, no derived tiers) — green but architecturally thin. Apply these on first migration; retrofitting later is significantly more churn.
+The concept map above keeps the build green. These five patterns are what separates a passing migration from one that lands at the **right end-state for a multi-domain entity-CRUD app**. They are **conditional** — each applies only when the [App shape audit](#app-shape-audit-run-before-picking-patterns) says it does. Applying them mechanically to a non-CRUD app produces a worse shape than vanilla SignalTree, not a better one.
+
+A migration that ignores patterns *that do apply* produces a SignalTree shaped like the old `signalStore` graph (one slice per old store, single-`currentX` signals, eager loads, no derived tiers) — green but architecturally thin. Apply on first migration; retrofitting later is significantly more churn.
 
 ### 1. `currentX: XDto` ngrx signal → `entityMap` + root `selected.<id>` + derived current
 
-When the ngrx store has a `currentDriver: DriverDto` (or `selectedTruck`, `activeTicket`) signal, **do not port it as a single signal in the new state**. The "current" is one of many — model it that way, and put **selection at the *root* of the tree**, not inside the domain slice. Selection is inherently cross-domain (DriverOps writes `selected.driverId`, TruckOps writes `selected.truckId`, derived tiers read both); putting it under `driver.selected` blocks that pattern and forces awkward `$.driver.selected.driverId()` reads.
+**Applies when:** the domain is a *collection* per audit Q1 — multiple records of the same shape with a stable key field. Skip entirely for singleton domains; port them as plain leaves (or `stored()` slots, see Pattern #4).
+
+When the ngrx store has a `currentFoo: FooDto` (or `selectedBar`, `activeQux`) signal **and `Foo` has a stable key field**, do not port it as a single signal in the new state. The "current" is one of many — model it that way, and put **selection at the _root_ of the tree**, not inside the domain slice. Selection is inherently cross-domain (FooOps writes `selected.fooId`, BarOps writes `selected.barId`, derived tiers read both); putting it under `foo.selected` blocks that pattern and forces awkward `$.foo.selected.fooId()` reads.
 
 ```ts
 // state/driver.state.ts — domain entities + load state ONLY. No selection.
 import { entityMap, status } from '@signaltree/core';
-import type { NotifyErrorModel, Nullable } from '@models';
-import type { DriverDto } from '@models-v2';
+// import your app's DTOs and typed-error / Nullable aliases from wherever they live
+// e.g. import type { DriverDto } from '<your-models>';
+//      import type { AppError, Nullable } from '<your-models>';
 
 export function driverState() {
   return {
     drivers: entityMap<DriverDto, number>(),
     driversLoad: status<string>(),
-    driversError: null as Nullable<NotifyErrorModel>, // typed sibling — see rule below
+    driversError: null as Nullable<AppError>, // typed sibling — see rule below
   };
 }
 
 // state/selection.state.ts — root-level selection slice, ONE per app
-import type { Nullable } from '@models';
-
 export function selectionState() {
   return {
     driverId: null as Nullable<number>,
@@ -402,15 +439,24 @@ export const entityResolutionDerived = externalDerived<AppTreeBase>()(($) => ({
 
 This unlocks `upsertOne`, `removeOne`, `byId`, `setAll` for the entity collection — operations the single-signal port permanently loses access to.
 
-**Hard rules:**
+**Hard rules (when this pattern applies):**
 
-- If the ngrx signal type is `XDto` or `Nullable<XDto>` and `X` has an `id` field, port it as `entityMap<X, K>()` (in the domain slice) plus a `<x>Id: Nullable<K>` scalar (in the root `selected` slice). No exceptions for "we only ever have one."
-- `selected` is **always a top-level slice of the tree**, never nested inside a domain. The derived tier reads `$.selected.<x>Id()` and `$.<domain>.<entityMap>.byId(...)` — both at root.
-- Load + error live in the domain slice as **two siblings**: `xLoad: status<string>()` for the state machine *and* `xError: Nullable<NotifyErrorModel>` (or whatever your typed error model is) so consumers don't lose typed error info to the `string`-only payload of `status<T>().setError(msg)`. Ops set both: `$.x.xLoad.setError(String(err)); $.x.xError.set(toNotifyError(err));`. This is the only correct shape — `status<NotifyErrorModel>()` is **not** a substitute (its API is state-machine, not error-storage).
+- If the ngrx signal type is `XDto` or `Nullable<XDto>` and `X` has a stable key field, port it as `entityMap<X, K>()` (in the domain slice) plus a `<key>: Nullable<K>` scalar (in the root `selected` slice). The selected-key field name should match the natural key (`fooId`, `barUuid`, `quxSlug`) — not force-fit `<x>Id` if the natural key is a string/uuid/composite.
+- For **composite keys** (e.g. `{ tenant, id }`), use `entityMap<X, string>()` with a stringified composite as K, and store the same composite-string in `selected`. SignalTree's `entityMap` only supports primitive K.
+- `selected` is **always a top-level slice of the tree** when used, never nested inside a domain. The derived tier reads `$.selected.<key>()` and `$.<domain>.<entityMap>.byId(...)` — both at root.
+- **Skip the root `selected` slice entirely** if no domain in the app has a "current/selected" concept. An empty `selected: {}` slice is noise.
+- Load + error: see **Typed error sibling rule** below — also conditional.
+
+**Typed error sibling rule (conditional on audit Q2):**
+
+- **If the app has a typed error model** (existing class/interface/discriminated union): the domain slice has **two siblings** — `xLoad: status<string>()` for the state machine _and_ `xError: Nullable<AppError>` for the typed payload (so consumers don't lose typed error info to the `string`-only payload of `status<T>().setError(msg)`). Ops set both: `$.x.xLoad.setError(String(err)); $.x.xError.set(toAppError(err));`. `status<AppError>()` is **not** a substitute — its API is state-machine, not error-storage.
+- **If the app has no typed error model**: `xLoad: status<string>()` alone is correct. Do **not** invent an error type just to satisfy the pattern — the cost (new type, mapping function, every `Ops` learns to use it) outweighs the benefit until the app actually needs structured errors.
 
 ### 2. Materialize derivations inside the tree with `externalDerived` + `.derived()`
 
-The naive port of `withComputed(({ ... }) => ({ isExternal: computed(...) }))` is a component-level `computed()`. That works but forfeits SignalTree's strongest feature: **typed derived tiers composed into the tree itself**, reusable from any consumer without reimplementation.
+**Applies when:** the legacy app has ≥ 1 `withComputed` derivation that is read from ≥ 2 consumers. Skip when every derivation is consumer-local (one component reads it once) — a component-level `computed()` is correct in that case.
+
+The naive port of `withComputed(({ ... }) => ({ isExternal: computed(...) }))` is a component-level `computed()`. That works but forfeits SignalTree's strongest feature when reuse exists: **typed derived tiers composed into the tree itself**, reusable from any consumer without reimplementation.
 
 ```ts
 // app-tree.ts
@@ -434,13 +480,21 @@ export function createAppTree(initial: {
 }
 ```
 
-**When to add a derived tier:** any `computed()` that ≥ 2 components, services, or specs would otherwise reimplement. Common tiers: entity resolution (id → entity), workflow state (current ticket's status, active step), UI aggregates (counts, badge text), navigation guards.
+**When to add a derived tier:** any `computed()` that ≥ 2 components, services, or specs would otherwise reimplement. Common tiers: entity resolution (id → entity), workflow state (current record's status, active step), UI aggregates (counts, badge text), navigation guards.
+
+**When NOT to add a derived tier:**
+
+- One-shot derivations consumed by a single component — use a component-local `computed()`.
+- Pure value transforms with no state read (e.g. `formatDate`) — use a plain function.
+- Derivations that depend on injected services as well as tree state — put them on the consuming service or use `derivedFrom` at the call site, not in a tier (tiers only see `$`).
 
 **Tiering rule:** later tiers may read earlier-tier derivations via `$.<earlierTier>.…`; never the reverse. Each tier gets its own `tier-<name>.derived.ts` file and a typed `AppTreeWith<Name>` alias so derived tiers themselves are type-safe.
 
-### 3. Cross-domain orchestration → dedicated `SessionOps`, not domain-Ops
+### 3. Cross-domain orchestration → dedicated `<purpose>Ops`, not domain-Ops
 
-When a migration needs to coordinate two or more domains (logout clears tickets + trucks + selection; login hydrates settings + driver + plants), **do not put the orchestration inside one of the domain `Ops`**. Stand up a dedicated orchestration class:
+**Applies when:** audit Q3 returned yes — the app has a real cross-domain lifecycle (login/logout, wizard, tenant switch). Skip entirely otherwise. A one-domain `Ops` calling its own slice's writes is not orchestration; do not invent a `SessionOps` that wraps one method on one collaborator.
+
+When a migration needs to coordinate two or more domains (e.g. end-of-session clears qux + bar + selection; start-of-session hydrates config + foo + baz), **do not put the orchestration inside one of the domain `Ops`**. Stand up a dedicated `<purpose>Ops` class — the name reflects the lifecycle, not necessarily "Session":
 
 ```ts
 // session.ops.ts
@@ -465,34 +519,64 @@ export class SessionOps {
 }
 ```
 
-Equivalent pattern for one-shot atomic mutations of `selected.*`: a dedicated `SelectionOps` owns every write to `$.selected.*` so the rest of the codebase has a single, lintable boundary. The domain `Ops` (DriverOps, TruckOps) own their own slice's writes — never another slice's.
+Equivalent pattern for one-shot atomic mutations of `selected.*` (when Pattern #1 applies): a dedicated `SelectionOps` owns every write to `$.selected.*` so the rest of the codebase has a single, lintable boundary. The domain `Ops` (FooOps, BarOps) own their own slice's writes — never another slice's.
 
 **Smell to refactor:** any `Ops` class that injects ≥ 2 other `Ops` classes is doing orchestration; extract to its own `<purpose>Ops`.
 
 ### 4. Persisted state → `stored()` slices, not constructor `localStorage` reads
+
+**Applies when:** audit Q4 returned yes — the legacy app reads/writes `localStorage`/`sessionStorage`/cookies for any piece of state. Skip otherwise.
 
 Baseline ngrx stores typically read `localStorage` in `withHooks({ onInit })` and write back via a service. SignalTree's `stored()` marker handles both directions reactively:
 
 ```ts
 // settings.state.ts
 import { stored } from '@signaltree/core';
-import type { Nullable } from '@models';
+// import your Nullable<T> alias (or inline `T | null`)
+
+const K = '<your-app-prefix>-settings-'; // namespace storage keys per app
 
 export function settingsState() {
   return {
-    regionId: stored('trax-settings-regionId', null as Nullable<number>),
-    tenantId: stored('trax-settings-tenantId', null as Nullable<number>),
-    measurementSystem: stored('trax-settings-measurementSystem', null as Nullable<string>),
-    permissionsRequested: stored('trax-settings-permissionsRequested', false),
+    regionId: stored(`${K}regionId`, null as Nullable<number>),
+    tenantId: stored(`${K}tenantId`, null as Nullable<number>),
+    measurementSystem: stored(`${K}measurementSystem`, null as Nullable<string>),
+    permissionsRequested: stored(`${K}permissionsRequested`, false),
   };
 }
 ```
 
 **Migration recipe:** every `localStorage.getItem('key')` / `setItem('key', …)` call site that wraps a piece of state becomes a `stored('key', defaultValue)` slot. Delete the `LocalStorageService.set(key, …)` calls in `Ops` — `stored()` writes through automatically on signal mutation.
 
-**When `stored()` doesn't fit:** initial values that depend on other injection (e.g. environment-keyed storage keys like `haulerId-${env.targetEnvironment}`). For those, use the `AppTreeService` pattern: a `providedIn: 'root'` service that reads `LocalStorageService` in its constructor and passes the seed values to `createAppTree({ haulerId, truckId })` once.
+**When `stored()` doesn't fit:** initial values that depend on other injection (e.g. environment-keyed storage keys like `<x>Id-${env.targetEnvironment}`). For those, use the `AppTreeService` pattern: a `providedIn: 'root'` service that reads your storage service in its constructor and passes the seed values to `createAppTree(seed)` once.
 
 ### 5. `Ops` injection in `AppStore` → eager by default, lazy only for incremental
+
+**Applies when:** the legacy store has ≥ 1 `withMethods` function. Skip entirely for pure-state stores (just `withState` + optional `withComputed`) — there are no `Ops` to inject; the domain slice in `app-tree.ts` is the whole migration. Components inject `AppStore` and read `store.$.<domain>.*` directly.
+
+**Sync vs async methods:** `Ops` methods don't all need to return `Observable<void>`. Sync setters return `void`; async I/O methods return `Observable<void>`. Pick by what the legacy method did:
+
+```ts skip
+@Injectable({ providedIn: 'root' })
+export class FooOps {
+  private readonly _$ = inject(APP_TREE).$.foo;
+
+  // sync setter — returns void, no observable wrapping
+  setTheme(theme: 'light' | 'dark'): void {
+    this._$.theme.set(theme);
+  }
+
+  // async loader — returns Observable<void>, consumer subscribes
+  loadAll$(): Observable<void> {
+    this._$.itemsLoad.setLoading();
+    return this._fooService.loadAll$().pipe(
+      tap((items) => { this._$.items.setAll(items); this._$.itemsLoad.setLoaded(); }),
+      map(() => void 0),
+      catchError((err: unknown) => { this._$.itemsLoad.setError(String(err)); return EMPTY; }),
+    );
+  }
+}
+```
 
 For a **completed migration** (no remaining `@ngrx/signals` consumers), `AppStore` injects every `Ops` class eagerly as a field:
 
@@ -720,3 +804,15 @@ A migration is **not done** when the build is green. See [`optimal-implementatio
 - `@ngrx/signals` (and any related toolkit packages) removed from `package.json` (or tracked for removal if a shared lib elsewhere still uses them).
 - All adapter facades either deleted or carrying a deletion-deadline comment + tracking issue.
 - Test suite green; lint clean; DevTools shows the tree under its `treeName`.
+
+### Architectural self-check (run on your own diff before declaring done)
+
+The verifier and the gates above catch import-level and dependency-level regressions. They cannot catch shape-level mistakes — the migration can be green and still ship the wrong architecture. Before you declare done, answer each item below against your own diff. "N/A per app shape audit" is a valid answer; "I forgot" is not.
+
+1. **Selection placement.** If Pattern #1 applies: is `selected` a top-level slice (`$.selected.<key>()`), not nested inside a domain (`$.<domain>.selected.<key>()`)? If Pattern #1 does not apply (singleton-only app): is there *no* `selected` slice at all?
+2. **Load + error siblings.** For each domain slice that does async I/O: does it have a `xLoad: status<string>()` field? If the app has a typed error model, does it also have a `xError: Nullable<AppError>` sibling? If not, is the absence intentional per audit Q2?
+3. **Derived tiers.** If ≥ 1 derivation is reused across consumers: is there a `derived/tier-<name>.derived.ts` file with a typed `AppTreeWith<Name>` alias? If every derivation is one-shot: is there *no* tier file (component-local `computed()` only)?
+4. **Orchestration boundary.** Does any single `Ops` class inject ≥ 2 other `Ops` classes? If yes, that's a smell — extract to a `<purpose>Ops`. If audit Q3 said no cross-domain lifecycle: is there *no* orchestration `Ops`?
+5. **`AppStore` injection style.** Post-migration (no `@ngrx/signals` consumers left): does `AppStore` use eager `inject(XOps)` fields, not lazy `Injector.get(XOps)` calls? Mid-incremental-migration: is the lazy pattern only on Ops whose collaborators trigger NG0201 cascades in unrelated specs?
+
+If any answer is "yes, that's wrong" or "I'm not sure," fix the shape before merging. Retrofitting these later is the most expensive churn in the entire migration.
