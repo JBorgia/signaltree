@@ -216,6 +216,8 @@ This is the most common migration path. We ship a complete, AI-agent-ready migra
 
 → [`docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md`](docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md)
 
+For migrations that exceed a single agent's context window (typically >5 consumer files), an orchestrator playbook coordinates multiple implementer subagents through phased work: → [`docs/skills/using-signaltree/reference/orchestrating-a-migration.md`](docs/skills/using-signaltree/reference/orchestrating-a-migration.md)
+
 The guide is written as an Agent Skill — point Cursor, Claude Code, or any `SKILL.md`-aware harness at `node_modules/@signaltree/core/skills/using-signaltree/` and your AI assistant will follow the same playbook end-to-end. See [Using SignalTree with AI Agents](#using-signaltree-with-ai-agents) below.
 
 ## When to Use SignalTree

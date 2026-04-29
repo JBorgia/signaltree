@@ -32,6 +32,8 @@ Use this index to navigate the documentation.
 | Document                                                           | Description                                  |
 | ------------------------------------------------------------------ | -------------------------------------------- |
 | [Migration Guide](guides/MIGRATION.md)                             | Upgrading from v4 package structure          |
+| [Migrating from @ngrx/signals](skills/using-signaltree/reference/migration-from-ngrx-signals.md) | Mechanical mapping guide for porting `@ngrx/signals` codebases |
+| [Orchestrating a Migration](skills/using-signaltree/reference/orchestrating-a-migration.md) | Phased migration playbook for orchestrator + implementer subagents |
 | [Custom Markers & Enhancers](guides/custom-markers-enhancers.md)   | Building custom markers and enhancers        |
 | [Typing Patterns](guides/typing-patterns.md)                       | Preferred TypeScript typing patterns         |
 | [Local Development Symlinks](guides/local-development-symlinks.md) | Troubleshooting dual Angular instance issues |

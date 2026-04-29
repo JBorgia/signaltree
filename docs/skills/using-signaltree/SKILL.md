@@ -90,6 +90,7 @@ Deep dives:
 - [`reference/install.md`](reference/install.md) — Angular version requirement, install commands.
 - [`reference/migration-from-ngrx-signals.md`](reference/migration-from-ngrx-signals.md) — mechanical mapping guide when porting an existing `@ngrx/signals` codebase. Only relevant for `@ngrx/signals` (`signalStore`, `withState`, `rxMethod`) — not classic `@ngrx/store`.
 - [`reference/optimal-implementation.md`](reference/optimal-implementation.md) — prescribed file/folder layout, pattern defaults (`entityMap`, multi-tier derived, enhancer baseline), and the migration definition-of-done checklist. **Read this before beginning any non-trivial migration.**
+- [`reference/orchestrating-a-migration.md`](reference/orchestrating-a-migration.md) — process playbook for an orchestrator agent driving one or more implementer subagents through a phased SignalTree migration. Load when the migration spans more than ~5 consumer files, when a single implementer is likely to exhaust its context window, or when the user asks for a phased / supervised migration.
 
 Sub-skills:
 - [`ng-forms/SKILL.md`](ng-forms/SKILL.md)
