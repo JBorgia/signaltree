@@ -54,17 +54,29 @@
     </table>
 
     <h3>Side-by-side</h3>
+    <p style="font-size:0.875rem;color:var(--text-2,#555);margin-bottom:0.5rem">
+      NgRx <code>signalStore()</code> co-locates state, computed, and methods
+      in one factory. SignalTree separates them: the tree token holds state
+      schema; the <code>Ops</code> service holds computed and methods. The
+      annotations below show what maps to what.
+    </p>
     <div class="compare-grid">
       <div>
         <h4>Before — &#64;ngrx/signals</h4>
         <pre><code>export const TicketStore = signalStore(
   &#123; providedIn: 'root' &#125;,
+
+  // ── STATE SCHEMA ──────────────────────────────
   withState&lt;TicketState&gt;(&#123; tickets: [], filter: '' &#125;),
+
+  // ── COMPUTED ──────────────────────────────────
   withComputed((s) =&gt; (&#123;
     visible: computed(() =&gt;
       s.tickets().filter(t =&gt; t.title.includes(s.filter()))
     )
   &#125;)),
+
+  // ── METHODS ───────────────────────────────────
   withMethods((s, api = inject(TicketApi)) =&gt; (&#123;
     load: rxMethod&lt;void&gt;(pipe(
       switchMap(() =&gt; api.list()),
@@ -75,7 +87,8 @@
       </div>
       <div>
         <h4>After — SignalTree</h4>
-        <pre><code>// app.tree.ts — single root tree
+        <pre><code>// ── STATE SCHEMA (= withState) ────────────────
+// app.tree.ts
 export const APP_TREE = new InjectionToken('AppTree', &#123;
   factory: () =&gt; signalTree(&#123;
     tickets: entityMap&lt;Ticket&gt;(),
@@ -83,7 +96,8 @@ export const APP_TREE = new InjectionToken('AppTree', &#123;
   &#125;)
 &#125;);
 
-// ticket.ops.ts — plain service
+// ── COMPUTED + METHODS (= withComputed + withMethods)
+// ticket.ops.ts
 &#64;Injectable(&#123; providedIn: 'root' &#125;)
 export class TicketOps &#123;
   private tree = inject(APP_TREE);
