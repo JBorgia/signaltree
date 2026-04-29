@@ -62,7 +62,11 @@ export function provideAppTreeForTesting(overrides?: (state: ReturnType<typeof c
       useFactory: (): AppTree => {
         const base = createBaseState();
         const seeded = overrides ? overrides(base) : base;
-        return signalTree(seeded);
+        // Cast: the testing tree skips production enhancers (devTools, batching, etc.)
+        // so its inferred type is structurally narrower than `AppTree`. Bake the cast
+        // in here so consumers can write `tree: AppTree = TestBed.inject(APP_TREE)`
+        // without an `as unknown as AppTree` at every call site.
+        return signalTree(seeded) as unknown as AppTree;
       },
     },
   ];
@@ -74,6 +78,26 @@ Notes:
 - **Use a real tree, not a mock.** Mocking the tree itself defeats the test value of the proxy and `entityMap` semantics. Real trees are cheap.
 - **Skip enhancers in tests** by default. `batching()` adds scheduling, `devTools()` opens a connection, `timeTravel()` keeps history — none help unit tests. If a test specifically exercises batching, layer `batching()` in that test only.
 - **`createBaseState()` must be exported from `app-tree.ts`.** This is the seam that lets tests construct an isolated state without copying the production composition.
+
+### ⚠️ Gotcha: do NOT swap a `Nullable<Object>` leaf to an object value via the seed callback
+
+Tree shape is determined by the **value at construction time** (see [core.md → "What's a leaf vs a branch?"](./core.md)). If production base state has `currentDriver: null` (a leaf), but a test's `overrides` callback returns `currentDriver: { id: 1, name: 'Ada' }`, the constructed tree silently makes `currentDriver` a **branch**. Production code that calls `tree.$.driver.currentDriver.set(null)` then throws `set is not a function` — but only inside that one spec.
+
+**Rule:** the `overrides` callback must preserve the structural shape of the base state. Use it for:
+
+- Replacing primitive leaves (`isLoading: true`, `count: 5`, `currentDriverId: 1`).
+- Patching existing branch contents (`ui: { ...s.ui, theme: 'dark' }` — `ui` is a branch in both prod and seed).
+- Pre-populating `entityMap` slices (`drivers: { ...s.drivers, entities: { 1: driver } }`).
+
+For `Nullable<Object>` leaves (typed `XDto | null`, seeded as `null` in prod), seed via `.set()` **after** injection instead:
+
+```ts
+TestBed.configureTestingModule({ providers: [provideAppTreeForTesting()] });
+const tree = TestBed.inject(APP_TREE);
+tree.$.driver.currentDriver.set({ id: 1, name: 'Ada' }); // safe — leaf shape preserved
+```
+
+The same applies to any leaf typed as `Date | null`, `Map<...> | null`, class-instance | null, etc.
 
 ## Mocking strategy by test type
 
@@ -121,23 +145,37 @@ describe('DriverOps', () => {
 ```ts
 // some.component.spec.ts
 import { TestBed } from '@angular/core/testing';
-import { provideAppTreeForTesting } from '../root-services/store/signaltree/app-tree.testing';
-import { DriverOps } from '../root-services/store/signaltree/driver.ops';
+import { provideAppTreeForTesting } from '../store/tree/app-tree.testing';
+import { APP_TREE } from '../store/tree/app-tree';
+import { DriverOps } from '../store/ops/driver.ops';
 import { SomeComponent } from './some.component';
 
 describe('SomeComponent', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [SomeComponent],
-      providers: [provideAppTreeForTesting((s) => ({ ...s, driver: { ...s.driver, currentDriver: { id: 1, name: 'Ada' } } })), { provide: DriverOps, useValue: { clearCurrentDriver: jest.fn() } }],
+      providers: [provideAppTreeForTesting(), { provide: DriverOps, useValue: { clearCurrentDriver: jest.fn() } }],
     });
+
+    // Seed Nullable<Object> leaves AFTER injection — see gotcha above.
+    const tree = TestBed.inject(APP_TREE);
+    tree.$.driver.currentDriver.set({ id: 1, name: 'Ada' });
   });
 
   // ...
 });
 ```
 
+If your seed only touches primitives or already-branch subtrees, you can use the inline callback form instead:
+
+```ts
+// safe — `ui` is a branch in prod and seed; `theme` is a primitive leaf.
+provideAppTreeForTesting((s) => ({ ...s, ui: { ...s.ui, theme: 'dark' } }));
+```
+
 ## Wiring `APP_TREE` once for a large existing test suite
+
+For a brown-field migration the simplest fix is to declare `APP_TREE` with a tree-shakable `providedIn: 'root'` factory — every child injector (including each per-spec `TestBed`) then gets a fresh isolated tree by default, and existing specs need **no** changes. See ["Brown-field migrations: declare `APP_TREE` with a tree-shakable factory"](./patterns.md#brown-field-migrations-declare-app_tree-with-a-tree-shakable-factory) in `patterns.md`. Use the recipe below only when the token has no `providedIn: 'root'` default and you instead want one global testing provider.
 
 Per-TestBed `provideAppTreeForTesting()` is the right shape for **new** specs. For an existing app where dozens of spec files (and their parameterised setup helpers like `provideMockStore()`, `createTestingModule()`) need it, editing each one is mechanical noise that obscures real changes. Register the provider **once** via `getTestBed().initTestEnvironment(...)`:
 
@@ -152,25 +190,68 @@ import { getTestBed } from '@angular/core/testing';
 // transitively, which pre-loads any service those Ops inject. That breaks
 // specs that rely on `vi.mock(...)` / `jest.mock(...)` hoisting against
 // modules in the Ops dependency graph.
-import { provideAppTreeForTesting } from './app/root-services/store/signaltree/app-tree.testing';
+import { provideAppTreeForTesting } from './app/store/tree/app-tree.testing';
 
 @NgModule({ providers: [...provideAppTreeForTesting()] })
 class SignalTreeTestEnvironmentModule {}
 
-getTestBed().initTestEnvironment(
-  [BrowserTestingModule, SignalTreeTestEnvironmentModule],
-  platformBrowserTesting(),
-  { errorOnUnknownElements: true, errorOnUnknownProperties: true },
-);
+getTestBed().initTestEnvironment([BrowserTestingModule, SignalTreeTestEnvironmentModule], platformBrowserTesting(), { errorOnUnknownElements: true, errorOnUnknownProperties: true });
 ```
 
-Why this works: `useFactory` inside `provideAppTreeForTesting()` runs per child injector, so each `TestBed.configureTestingModule(...)` still gets its own isolated tree — the registration is global but the *value* is per-spec.
+Why this works: `useFactory` inside `provideAppTreeForTesting()` runs per child injector, so each `TestBed.configureTestingModule(...)` still gets its own isolated tree — the registration is global but the _value_ is per-spec.
 
 **The barrel-import rule is non-negotiable.** Symptom if you ignore it: a spec that has `vi.mock('@some-package')` at the top stops working because `@some-package` was already loaded (transitively, via `index.ts → AppStore → SomeOps → SomeService → @some-package`) before `vi.mock` had a chance to hoist. The error usually surfaces as the real implementation being called instead of the mock, often with a misleading stack trace.
 
 **Per-spec overrides still work.** If a single test needs seeded state, call `provideAppTreeForTesting(s => ({...}))` inside its own `providers` — Angular merges the per-spec provider on top of the global one.
 
 **When to pick which.** New code or a small migration (≤ 5 spec files): per-TestBed. Existing app with many specs: global. Either way, the recipe is the same `provideAppTreeForTesting()`; only the registration site differs.
+
+## Re-baselining pre-existing-broken legacy specs
+
+A migration PR will sometimes inherit specs that were already failing at the base commit — they reference deleted infrastructure (`provideMockStore`, sibling-app fixtures, removed mock services). The migration is not the cause; rewriting them in scope is the only way to land a green PR.
+
+**Confirm the breakage is pre-existing first.** From the migration worktree:
+
+```bash
+# Stash your migration work, run the suspect spec against the base commit.
+git stash --include-untracked
+<test-cmd> --testPathPattern=<spec-path>
+git stash pop
+```
+
+If the spec was already red, mark it in the **skill friction log** of your migration report (so the orchestrator surfaces the pre-existing breakage to the user) and use the **minimum-viable rebaseline** below. Do NOT fold a from-scratch rewrite of the spec into the migration commit — that hides genuine regressions in a sea of test churn.
+
+### Minimum-viable rebaseline
+
+Replace the broken spec with the smallest spec that proves the component renders and exercises its primary action. Everything else is a follow-up ticket.
+
+```ts skip
+// settings.component.spec.ts — minimum-viable rebaseline
+import { TestBed } from '@angular/core/testing';
+import { provideAppTreeForTesting } from '../../store/tree/app-tree.testing';
+import { SettingsComponent } from './settings.component';
+
+describe('SettingsComponent (rebaseline — pre-existing fixtures removed)', () => {
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [SettingsComponent],
+      providers: [provideAppTreeForTesting()],
+    });
+  });
+
+  it('renders', () => {
+    const fixture = TestBed.createComponent(SettingsComponent);
+    fixture.detectChanges();
+    expect(fixture.nativeElement).toBeTruthy();
+  });
+});
+```
+
+**Rules:**
+
+- Cap the rebaseline at one render-smoke test plus one assertion of the most important user action. Bigger rewrites belong in a follow-up.
+- Add a `// TODO(<ticket>): restore detailed coverage — minimum-viable rebaseline during SignalTree migration` comment so the deliberate gap is visible in code review.
+- If the orchestrator is driving the migration ([`orchestrating-a-migration.md`](./orchestrating-a-migration.md)), the implementer must **ASK before rebaselining** rather than silently rewriting; silent rebaselines defeat the audit trail.
 
 ## Common test-bed pitfalls
 
@@ -191,4 +272,5 @@ Before declaring a SignalTree migration "done":
 3. ✅ Every `TestBed.configureTestingModule({...})` call in the migrated app that fails with `NG0201: APP_TREE` has `provideAppTreeForTesting()` added to its `providers`.
 4. ✅ Ops specs use a real tree + real Ops + mocked downstream services.
 5. ✅ Component specs use a real seeded tree + mocked Ops.
-6. ✅ Test suite runs to green before the next layer of refactor.
+6. ✅ Seeds for `Nullable<Object>` leaves use post-injection `.set()`, not the `overrides` callback (see gotcha).
+7. ✅ Test suite runs to green before the next layer of refactor.

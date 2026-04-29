@@ -46,4 +46,46 @@ describe('time-travel enhancer', () => {
     const last = history[history.length - 1];
     expect(last.state).toBeDefined();
   });
+
+  it('records history when a top-level leaf signal is written via .set()', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = (await import('../../lib/signal-tree'))
+      .signalTree({ count: 0 })
+      .with(timeTravel());
+    const t = (store as any).__timeTravel;
+    const initial = t.getHistory().length;
+
+    (store as any).$.count.set(5);
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const history = t.getHistory();
+    expect(history.length).toBeGreaterThan(initial);
+    expect(history[history.length - 1].state).toEqual({ count: 5 });
+  });
+
+  it('records history when a nested leaf signal is written via .set()', async () => {
+    const { resetPathNotifier } = await import('../../lib/path-notifier');
+    resetPathNotifier();
+
+    const store = (await import('../../lib/signal-tree'))
+      .signalTree({ user: { profile: { name: 'Ada' } } })
+      .with(timeTravel());
+    const t = (store as any).__timeTravel;
+    const initial = t.getHistory().length;
+
+    (store as any).$.user.profile.name.set('Grace');
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const history = t.getHistory();
+    expect(history.length).toBeGreaterThan(initial);
+    expect(history[history.length - 1].state).toEqual({
+      user: { profile: { name: 'Grace' } },
+    });
+  });
 });

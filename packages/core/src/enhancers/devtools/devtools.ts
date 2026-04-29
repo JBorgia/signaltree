@@ -2,6 +2,7 @@ import { Signal, signal } from '@angular/core';
 
 import { copyTreeProperties } from '../utils/copy-tree-properties';
 import { applyState, snapshotState } from '../../lib/utils';
+import { interceptLeafSignals } from '../../lib/internals/intercept-leaf-signals';
 import { getPathNotifier } from '../../lib/path-notifier';
 
 /**
@@ -1787,56 +1788,23 @@ export function devTools(
       return treeTopKeys.has(root);
     };
 
-    // Intercept plain signal .set()/.update() on tree.$ to emit PathNotifier
-    // notifications. Entity collections already notify via their own internals,
-    // but plain Angular signals (counter, flags, etc.) do not.
+    // Intercept plain signal .set()/.update() throughout the tree to emit
+    // PathNotifier notifications. Entity collections already notify via their
+    // own internals, but plain Angular signals (counter, flags, nested fields,
+    // etc.) do not. We recurse through NodeAccessor nodes so nested leaf
+    // writes like `tree.$.user.profile.name.set(...)` are also captured.
     const notifier = getPathNotifier();
     const restoreInterceptors: Array<() => void> = [];
+
     try {
       if ('$' in tree) {
-        const treeNode = tree.$ as Record<string, unknown>;
-        for (const key of treeTopKeys) {
-          const sig = treeNode[key];
-          // Only wrap plain writable signals (functions with .set and .update)
-          // Skip entity collections (which have .add, .remove, etc. and already
-          // notify PathNotifier internally)
-          if (
-            typeof sig === 'function' &&
-            'set' in sig &&
-            'update' in sig &&
-            typeof (sig as any).set === 'function' &&
-            typeof (sig as any).update === 'function' &&
-            !('add' in sig) &&
-            !('remove' in sig)
-          ) {
-            const original = sig as any;
-            const originalSet = original.set.bind(original);
-            const originalUpdate = original.update.bind(original);
-
-            restoreInterceptors.push(() => {
-              original.set = originalSet;
-              original.update = originalUpdate;
-            });
-
-            original.set = (value: unknown) => {
-              const prev = original();
-              originalSet(value);
-              const next = original();
-              if (next !== prev) {
-                notifier.notify(key, next, prev);
-              }
-            };
-
-            original.update = (updater: (v: unknown) => unknown) => {
-              const prev = original();
-              originalUpdate(updater);
-              const next = original();
-              if (next !== prev) {
-                notifier.notify(key, next, prev);
-              }
-            };
+        const restore = interceptLeafSignals(
+          tree.$ as Record<string, unknown>,
+          (path, next, prev) => {
+            notifier.notify(path, next, prev);
           }
-        }
+        );
+        restoreInterceptors.push(restore);
       }
     } catch {
       // Ignore errors during signal interception
@@ -1879,18 +1847,18 @@ export function devTools(
       }
     });
 
-    // Capture leaf signal updates (e.g. $.count.set()) by tracking the full
-    // unwrapped state via Angular effect(). This is the primary mechanism for
-    // standalone mode — it observes direct signal writes and triggers sends.
-    // pendingPaths collected above are consumed by flushSend for action naming.
-    // PathNotifier flush is the sole mechanism for detecting leaf-level changes
-    // and triggering sends to Redux DevTools (both standalone and aggregated).
-    // Angular effect() was removed because:
-    // 1. tree.$  may contain computed signals (entity collections) that produce
+    // Capture leaf signal updates (e.g. $.count.set()) via the recursive
+    // interceptor above (interceptLeafSignals). PathNotifier flush is then
+    // the sole trigger that schedules sends to Redux DevTools (both standalone
+    // and aggregated). Angular effect() was removed because:
+    // 1. tree.$ may contain computed signals (entity collections) that produce
     //    new object references on every read, causing infinite effect re-runs.
     // 2. originalTreeCall() does not reliably create signal dependencies when
     //    the tree is wrapped by enhancers like batching().
-    // 3. PathNotifier reliably captures all mutations via the signalTree internals.
+    // NOTE: The signalTree mutation pipeline (recursiveUpdate) writes to leaf
+    // signals directly and does NOT call PathNotifier.notify itself — only
+    // entity collections do. The interceptor above is what makes leaf writes
+    // observable to this enhancer; do not remove it without a replacement.
 
     // Always return the enhanced tree with DevTools methods (only those required by DevToolsMethods)
     const result = Object.assign(enhancedTree, {

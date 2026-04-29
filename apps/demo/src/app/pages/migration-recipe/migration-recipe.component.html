@@ -1,55 +1,446 @@
 <div class="article">
-  <h1>Migration Recipe: NgRx to SignalTree</h1>
+  <h1>Migrating to SignalTree</h1>
 
-  <p>
-    This page walks through a small, practical migration from NgRx Signals to
-    SignalTree for a single domain.
+  <p class="lede">
+    SignalTree is designed to be a drop-in replacement for the most common
+    Angular state-management patterns. Pick your starting point below — each
+    section maps the source library's concepts onto SignalTree, shows
+    side-by-side code, and links to the deep guide your AI assistant can follow
+    end-to-end.
   </p>
 
-  <h2>Step 1: Identify the store</h2>
-  <pre><code>// Example NgRx signals store (simplified)
-export const TicketStore = signalStore(
+  <nav class="toc" aria-label="Migration sources">
+    <strong>Jump to:</strong>
+    <ul>
+      <li><a href="#ngrx-signals">@ngrx/signals (signalStore)</a></li>
+      <li><a href="#ngrx-classic">Classic NgRx (@ngrx/store + effects)</a></li>
+      <li><a href="#ngrx-component-store">@ngrx/component-store</a></li>
+      <li><a href="#ngxs">NGXS</a></li>
+      <li><a href="#elf">Elf / Akita</a></li>
+      <li><a href="#rx-angular">@rx-angular/state</a></li>
+      <li><a href="#behavior-subject">Plain BehaviorSubject services</a></li>
+      <li><a href="#plain-signals">Plain Angular signals + service</a></li>
+      <li><a href="#ai-assisted">AI-assisted migration</a></li>
+    </ul>
+  </nav>
+
+  <hr />
+
+  <section id="ngrx-signals">
+    <h2>&#64;ngrx/signals (signalStore)</h2>
+    <p>
+      The closest relative — both libraries give you typed signals over a state
+      object. SignalTree replaces the <code>withX</code> composition model with
+      a single root tree and plain <code>Ops</code> services.
+    </p>
+
+    <h3>Concept map</h3>
+    <table class="concept-map">
+      <thead>
+        <tr><th>&#64;ngrx/signals</th><th>SignalTree</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>signalStore(&#123; providedIn: 'root' &#125;, ...)</code></td><td>Tree slice on <code>AppTree</code> + sibling <code>Ops</code> service</td></tr>
+        <tr><td><code>withState&lt;T&gt;(initial)</code></td><td>Initial state passed to <code>signalTree(initial)</code></td></tr>
+        <tr><td><code>withComputed(store =&gt; (&#123;...&#125;))</code></td><td><code>computed()</code> on the tree, or a <code>Computed</code> service</td></tr>
+        <tr><td><code>withMethods(store =&gt; (&#123;...&#125;))</code></td><td>Methods on an <code>Ops</code> service that update the tree</td></tr>
+        <tr><td><code>withHooks(&#123; onInit &#125;)</code></td><td>Factory body or <code>Ops</code> constructor</td></tr>
+        <tr><td><code>rxMethod(source$ =&gt; ...)</code></td><td>Plain method, optionally returning <code>Observable&lt;void&gt;</code></td></tr>
+        <tr><td><code>withEntities&lt;Entity&gt;()</code></td><td><code>entityMap&lt;Entity&gt;()</code> marker</td></tr>
+        <tr><td><code>patchState(store, partial)</code></td><td><code>tree.$.slice.update(partial)</code></td></tr>
+        <tr><td><code>getState(store)</code></td><td><code>tree.$.slice.unwrap()</code></td></tr>
+        <tr><td><code>withReduxDevtools()</code></td><td><code>devTools()</code> enhancer</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Side-by-side</h3>
+    <div class="compare-grid">
+      <div>
+        <h4>Before — &#64;ngrx/signals</h4>
+        <pre><code>export const TicketStore = signalStore(
   &#123; providedIn: 'root' &#125;,
-  withState&lt;TicketState&gt;(&#123; /* ... */ &#125;),
-  withComputed(...),
-  withMethods(...),
-  withEntities(),
-  withReduxDevtools()
+  withState&lt;TicketState&gt;(&#123; tickets: [], filter: '' &#125;),
+  withComputed((s) =&gt; (&#123;
+    visible: computed(() =&gt;
+      s.tickets().filter(t =&gt; t.title.includes(s.filter()))
+    )
+  &#125;)),
+  withMethods((s, api = inject(TicketApi)) =&gt; (&#123;
+    load: rxMethod&lt;void&gt;(pipe(
+      switchMap(() =&gt; api.list()),
+      tap(tickets =&gt; patchState(s, &#123; tickets &#125;))
+    ))
+  &#125;))
+);</code></pre>
+      </div>
+      <div>
+        <h4>After — SignalTree</h4>
+        <pre><code>// app.tree.ts — single root tree
+export const APP_TREE = new InjectionToken('AppTree', &#123;
+  factory: () =&gt; signalTree(&#123;
+    tickets: entityMap&lt;Ticket&gt;(),
+    filter: '',
+  &#125;)
+&#125;);
+
+// ticket.ops.ts — plain service
+&#64;Injectable(&#123; providedIn: 'root' &#125;)
+export class TicketOps &#123;
+  private tree = inject(APP_TREE);
+  private api = inject(TicketApi);
+
+  visible = computed(() =&gt;
+    this.tree.$.tickets.values().filter(t =&gt;
+      t.title.includes(this.tree.$.filter())
+    )
+  );
+
+  async load() &#123;
+    const tickets = await firstValueFrom(this.api.list());
+    this.tree.$.tickets.setAll(tickets);
+  &#125;
+&#125;</code></pre>
+      </div>
+    </div>
+
+    <p class="callout callout-primary">
+      <strong>Full playbook:</strong> the deep migration guide with three
+      strategies (big-bang, incremental, hybrid), a Phase&nbsp;0 recipe,
+      sequencing rules, and a verifier script lives at
+      <a
+        href="https://github.com/JBorgia/signaltree/blob/main/docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md"
+        target="_blank"
+        rel="noopener"
+        >docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md</a
+      >. It also ships inside <code>&#64;signaltree/core</code> as an Agent
+      Skill — see <a href="#ai-assisted">AI-assisted migration</a>.
+    </p>
+  </section>
+
+  <hr />
+
+  <section id="ngrx-classic">
+    <h2>Classic NgRx (&#64;ngrx/store + &#64;ngrx/effects)</h2>
+    <p>
+      The actions / reducers / selectors / effects model collapses into a
+      single tree plus async methods on an <code>Ops</code> service. Most
+      "type the action, dispatch the action, switch on the action" boilerplate
+      simply disappears.
+    </p>
+
+    <table class="concept-map">
+      <thead><tr><th>NgRx</th><th>SignalTree</th></tr></thead>
+      <tbody>
+        <tr><td><code>createAction</code> + <code>props&lt;T&gt;()</code></td><td>Method parameters on an <code>Ops</code> service</td></tr>
+        <tr><td><code>createReducer</code> + <code>on(...)</code></td><td>Direct tree updates inside the method</td></tr>
+        <tr><td><code>createSelector</code> / <code>createFeatureSelector</code></td><td><code>computed()</code> over <code>tree.$.slice</code></td></tr>
+        <tr><td><code>createEffect</code> + <code>switchMap</code> / <code>concatMap</code></td><td><code>async</code> method on Ops, or <code>rxMethod</code>-style helper</td></tr>
+        <tr><td><code>EntityAdapter</code> / <code>createEntityAdapter</code></td><td><code>entityMap&lt;T&gt;()</code> marker</td></tr>
+        <tr><td><code>Store.dispatch(action)</code></td><td><code>ops.method(args)</code></td></tr>
+        <tr><td><code>store.select(selector)</code></td><td><code>tree.$.path</code> or a <code>computed()</code></td></tr>
+        <tr><td><code>StoreDevtoolsModule</code></td><td><code>devTools()</code> enhancer</td></tr>
+      </tbody>
+    </table>
+
+    <div class="compare-grid">
+      <div>
+        <h4>Before — NgRx</h4>
+        <pre><code>// actions
+export const loadUsers = createAction('[Users] Load');
+export const loadUsersSuccess = createAction(
+  '[Users] Load Success', props&lt;&#123; users: User[] &#125;&gt;()
 );
-</code></pre>
 
-  <h2>Step 2: Map concepts</h2>
+// reducer
+export const usersReducer = createReducer(initialState,
+  on(loadUsersSuccess, (s, &#123; users &#125;) =&gt; (&#123; ...s, users &#125;))
+);
+
+// effect
+loadUsers$ = createEffect(() =&gt; this.actions$.pipe(
+  ofType(loadUsers),
+  switchMap(() =&gt; this.api.list().pipe(
+    map(users =&gt; loadUsersSuccess(&#123; users &#125;))
+  ))
+));
+
+// component
+users$ = this.store.select(selectUsers);
+this.store.dispatch(loadUsers());</code></pre>
+      </div>
+      <div>
+        <h4>After — SignalTree</h4>
+        <pre><code>// users.ops.ts
+&#64;Injectable(&#123; providedIn: 'root' &#125;)
+export class UsersOps &#123;
+  private tree = inject(APP_TREE);
+  private api = inject(UserApi);
+
+  async load() &#123;
+    this.tree.$.users.loading.set(true);
+    try &#123;
+      const users = await firstValueFrom(this.api.list());
+      this.tree.$.users.entities.setAll(users);
+    &#125; finally &#123;
+      this.tree.$.users.loading.set(false);
+    &#125;
+  &#125;
+&#125;
+
+// component
+users = this.tree.$.users.entities.values;
+ops = inject(UsersOps);
+// ops.load()</code></pre>
+      </div>
+    </div>
+
+    <p class="callout">
+      <strong>Strategy:</strong> migrate one feature module at a time. Build
+      the <code>AppTree</code> + a feature <code>Ops</code> service alongside
+      the existing reducer, switch the components, then delete the actions /
+      reducer / effects / selectors files in the same PR.
+    </p>
+  </section>
+
+  <hr />
+
+  <section id="ngrx-component-store">
+    <h2>&#64;ngrx/component-store</h2>
+    <p>
+      Component Store is closest in shape — local state, updaters, effects.
+      Map each <code>ComponentStore</code> to an <code>Ops</code> service
+      bound to a tree slice (or to a small per-component
+      <code>signalTree()</code> if it really is component-scoped).
+    </p>
+
+    <table class="concept-map">
+      <thead><tr><th>&#64;ngrx/component-store</th><th>SignalTree</th></tr></thead>
+      <tbody>
+        <tr><td><code>extends ComponentStore&lt;T&gt;</code></td><td>Tree slice + <code>Ops</code> service</td></tr>
+        <tr><td><code>this.updater((s, v) =&gt; ...)</code></td><td>Method that calls <code>tree.$.x.update(...)</code></td></tr>
+        <tr><td><code>this.select(...)</code></td><td><code>computed()</code> over the tree</td></tr>
+        <tr><td><code>this.effect&lt;T&gt;(source$ =&gt; ...)</code></td><td><code>async</code> method, or RxJS pipeline returning <code>Observable&lt;void&gt;</code></td></tr>
+        <tr><td><code>this.patchState(partial)</code></td><td><code>tree.$.slice.update(partial)</code></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <hr />
+
+  <section id="ngxs">
+    <h2>NGXS</h2>
+    <p>
+      NGXS state classes with <code>&#64;Action</code> handlers and
+      <code>&#64;Selector</code> map directly onto an <code>Ops</code> service
+      with plain methods plus <code>computed()</code> selectors.
+    </p>
+
+    <table class="concept-map">
+      <thead><tr><th>NGXS</th><th>SignalTree</th></tr></thead>
+      <tbody>
+        <tr><td><code>&#64;State&lt;T&gt;(&#123; name, defaults &#125;)</code></td><td>Tree slice on <code>AppTree</code></td></tr>
+        <tr><td><code>&#64;Selector()</code></td><td><code>computed()</code> on the Ops service</td></tr>
+        <tr><td><code>&#64;Action(MyAction)</code></td><td>Method on the Ops service</td></tr>
+        <tr><td><code>ctx.patchState(partial)</code></td><td><code>tree.$.slice.update(partial)</code></td></tr>
+        <tr><td><code>ctx.dispatch(new Other())</code></td><td>Direct call to another <code>Ops</code> method</td></tr>
+        <tr><td><code>store.select(MyState.x)</code></td><td><code>tree.$.x</code> signal</td></tr>
+        <tr><td><code>NgxsReduxDevtoolsPluginModule</code></td><td><code>devTools()</code> enhancer</td></tr>
+      </tbody>
+    </table>
+
+    <p class="callout">
+      <strong>Note:</strong> the action-class registry that NGXS uses for
+      cross-state dispatch becomes a normal Angular dependency in SignalTree —
+      <code>OpsA</code> just <code>inject()</code>s <code>OpsB</code> and calls
+      its method.
+    </p>
+  </section>
+
+  <hr />
+
+  <section id="elf">
+    <h2>Elf / Akita</h2>
+    <p>
+      Elf's repository pattern (and its predecessor Akita's
+      <code>EntityStore</code> / <code>QueryEntity</code>) collapse into
+      <code>entityMap()</code> markers on the tree plus computed selectors.
+    </p>
+
+    <table class="concept-map">
+      <thead><tr><th>Elf / Akita</th><th>SignalTree</th></tr></thead>
+      <tbody>
+        <tr><td><code>createStore(&#123; name &#125;, withProps&lt;T&gt;(...))</code></td><td>Tree slice on <code>AppTree</code></td></tr>
+        <tr><td><code>withEntities&lt;Entity&gt;()</code></td><td><code>entityMap&lt;Entity&gt;()</code></td></tr>
+        <tr><td><code>store.update(setEntities(xs))</code></td><td><code>tree.$.entities.setAll(xs)</code></td></tr>
+        <tr><td><code>store.update(addEntities(x))</code></td><td><code>tree.$.entities.add(x)</code></td></tr>
+        <tr><td><code>store.update(updateEntities(id, p))</code></td><td><code>tree.$.entities.update(id, p)</code></td></tr>
+        <tr><td><code>store.update(deleteEntities(id))</code></td><td><code>tree.$.entities.remove(id)</code></td></tr>
+        <tr><td><code>store.pipe(selectAllEntities())</code></td><td><code>tree.$.entities.values()</code></td></tr>
+        <tr><td><code>QueryEntity</code> selectors</td><td><code>computed()</code> on the Ops service</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <hr />
+
+  <section id="rx-angular">
+    <h2>&#64;rx-angular/state</h2>
+    <p>
+      <code>RxState</code> exposes <code>get</code>, <code>set</code>,
+      <code>select</code>, and <code>connect</code> over a flat object. The
+      tree replaces the object; <code>computed()</code> replaces
+      <code>select</code>; and <code>connect</code>'s "merge an
+      <code>Observable</code> into state" pattern becomes an explicit
+      <code>subscribe</code> in the Ops constructor (or
+      <code>toSignal()</code>).
+    </p>
+
+    <table class="concept-map">
+      <thead><tr><th>&#64;rx-angular/state</th><th>SignalTree</th></tr></thead>
+      <tbody>
+        <tr><td><code>state.set(partial)</code></td><td><code>tree.$.slice.update(partial)</code></td></tr>
+        <tr><td><code>state.get('key')</code></td><td><code>tree.$.key()</code></td></tr>
+        <tr><td><code>state.select('key')</code></td><td><code>tree.$.key</code> signal (or <code>toObservable(...)</code>)</td></tr>
+        <tr><td><code>state.connect('key', source$)</code></td><td><code>source$.subscribe(v =&gt; tree.$.key.set(v))</code> in Ops constructor</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <hr />
+
+  <section id="behavior-subject">
+    <h2>Plain BehaviorSubject services</h2>
+    <p>
+      The classic
+      <code>private _x$ = new BehaviorSubject&lt;T&gt;(initial)</code>
+      pattern becomes a tree slice plus a thin Ops service. You keep the
+      mental model — services own the state — and gain typed paths,
+      <code>computed()</code>, DevTools, and time travel for free.
+    </p>
+
+    <div class="compare-grid">
+      <div>
+        <h4>Before</h4>
+        <pre><code>&#64;Injectable(&#123; providedIn: 'root' &#125;)
+export class CartService &#123;
+  private _items$ = new BehaviorSubject&lt;Item[]&gt;([]);
+  items$ = this._items$.asObservable();
+  count$ = this.items$.pipe(map(xs =&gt; xs.length));
+
+  add(item: Item) &#123;
+    this._items$.next([...this._items$.value, item]);
+  &#125;
+&#125;</code></pre>
+      </div>
+      <div>
+        <h4>After</h4>
+        <pre><code>&#64;Injectable(&#123; providedIn: 'root' &#125;)
+export class CartOps &#123;
+  private tree = inject(APP_TREE);
+
+  items = this.tree.$.cart.items;            // signal&lt;Item[]&gt;
+  count = computed(() =&gt; this.items().length);
+
+  add(item: Item) &#123;
+    this.tree.$.cart.items.update(xs =&gt; [...xs, item]);
+  &#125;
+&#125;</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <hr />
+
+  <section id="plain-signals">
+    <h2>Plain Angular signals + service</h2>
+    <p>
+      If you already have <code>signal()</code> + <code>computed()</code>
+      inside an <code>&#64;Injectable</code>, you mostly just relocate the
+      state into the shared tree. The wins are: one place to inspect
+      everything in DevTools, time travel, persistence, and a single
+      well-typed graph instead of N independent service-owned signals.
+    </p>
+
+    <p>
+      <strong>When you might not migrate:</strong> truly local UI state
+      (collapsed/expanded, hover, transient form state) can stay as plain
+      <code>signal()</code> in the component. The tree is for application
+      state.
+    </p>
+  </section>
+
+  <hr />
+
+  <section id="ai-assisted">
+    <h2>AI-assisted migration</h2>
+    <p>
+      SignalTree ships a vendor-neutral <strong>Agent Skill</strong> that lets
+      Cursor, Claude Code, or any <code>SKILL.md</code>-aware AI assistant run
+      these migrations end-to-end. After installing
+      <code>&#64;signaltree/core</code> the skill lives at
+      <code>node_modules/&#64;signaltree/core/skills/using-signaltree/</code>.
+    </p>
+
+    <h3>Install the skill once per repo</h3>
+    <pre><code># Cursor
+cp -r node_modules/&#64;signaltree/core/skills/using-signaltree .cursor/skills/
+
+# Claude Code
+cp -r node_modules/&#64;signaltree/core/skills/using-signaltree .claude/skills/</code></pre>
+
+    <h3>What the skill gives the agent</h3>
+    <ul>
+      <li>
+        <strong>Mechanical concept maps</strong> for every source library
+        listed above (the deepest coverage is currently
+        <code>&#64;ngrx/signals</code>; PRs welcome for the others).
+      </li>
+      <li>
+        <strong>Three migration strategies</strong> with explicit decision
+        criteria — big-bang (one PR), incremental per-domain (one PR per
+        store, with a Phase&nbsp;0 foundation PR and a sequencing rule), and a
+        hybrid legacy-facade for regulated rollback.
+      </li>
+      <li>
+        A drop-in verifier script
+        (<code>scripts/verify-signaltree-migration.sh</code> in the SignalTree
+        repo) that runs <code>build</code> + <code>test</code> +
+        <code>lint</code> and asserts the source library is gone from
+        application code and <code>package.json</code>. Package-manager and
+        layout agnostic.
+      </li>
+      <li>
+        Anti-pattern catalog (root-injected <code>Ops</code> with eager
+        side-effects, multiple competing trees, brown-field
+        <code>APP_TREE</code> placement) so the agent doesn't repeat known
+        traps.
+      </li>
+    </ul>
+
+    <p class="callout callout-primary">
+      Point your AI assistant at the skill, give it a target store to migrate,
+      and it will follow the playbook and run the verifier itself. See
+      <a
+        href="https://github.com/JBorgia/signaltree#using-signaltree-with-ai-agents"
+        target="_blank"
+        rel="noopener"
+        >Using SignalTree with AI Agents</a
+      >
+      for harness-specific setup.
+    </p>
+  </section>
+
+  <hr />
+
+  <h2>Further reading</h2>
   <ul>
-    <li><strong>State</strong> → add to `app-tree`</li>
-    <li><strong>Computed</strong> → `AppComputed` service</li>
-    <li><strong>Methods</strong> → `ops` service</li>
-    <li><strong>Entities</strong> → `entityMap()`</li>
+    <li><a routerLink="/architecture">Architecture overview</a></li>
     <li>
-      <strong>Devtools</strong> → `devTools()` enhancer (auto-connects to Redux
-      DevTools when the browser extension is installed)
-    </li>
-  </ul>
-
-  <h2>Step 3: Replace in small PRs</h2>
-  <ol>
-    <li>Extract computed values to `AppComputed` and add tests.</li>
-    <li>Move methods to an Ops service and update callers.</li>
-    <li>Replace entity adapter with `entityMap()`.</li>
-    <li>
-      Remove old store files and run `pnpm test` and `pnpm nx build --statsJson`
-      to compare bundle.
-    </li>
-  </ol>
-
-  <h2>Resources</h2>
-  <ul>
-    <li>
-      <a href="/architecture">Architecture guide (migration checklist)</a>
-    </li>
-    <li>
-      <a href="/examples/fundamentals/recommended-architecture"
+      <a routerLink="/examples/fundamentals/recommended-architecture"
         >Recommended architecture</a
       >
     </li>
+    <li><a routerLink="/examples/fundamentals">Fundamentals examples</a></li>
+    <li><a routerLink="/benchmarks">Benchmarks vs other state libraries</a></li>
   </ul>
 </div>

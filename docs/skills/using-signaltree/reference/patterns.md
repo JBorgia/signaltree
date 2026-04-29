@@ -131,6 +131,27 @@ export function provideAppTree(): Provider[] {
 }
 ```
 
+### Brown-field migrations: declare `APP_TREE` with a tree-shakable factory
+
+In a brown-field migration where dozens (or hundreds) of existing `TestBed`s never opt into `provideAppTreeForTesting()`, every spec that transitively touches `AppStore` will fail with `NullInjectorError: APP_TREE` the moment the migration lands. Editing every spec to add the provider is mechanical noise and a poor reviewer experience.
+
+**Solution:** declare the `APP_TREE` token itself with a `providedIn: 'root'` factory. Each child injector (including the per-spec `TestBed` injector) gets a fresh, isolated tree by default. Explicit `provideAppTree()` in `bootstrapApplication` and explicit `provideAppTreeForTesting(seed)` in a spec both still win, because they register a higher-priority provider on the consuming injector.
+
+```ts skip
+// tree/app-tree.ts
+export const APP_TREE = new InjectionToken<AppTree>('APP_TREE', {
+  providedIn: 'root',
+  factory: () => createAppTree(), // full enhancers; tests get isolation because the factory runs per child injector
+});
+```
+
+Two notes that bite if you skip them:
+
+- **The factory must return `createAppTree()`, not `signalTree(createBaseState())`.** `AppTree = ReturnType<typeof createAppTree>` includes the enhancer methods (`devTools` connection handle, `timeTravel` history API, etc.). A bare `signalTree(createBaseState())` is structurally narrower and will fail to satisfy `AppTree` with `TS2769`. If you genuinely want a bare tree as the default (for example to keep tests free of DevTools chatter), define `AppTree = ReturnType<typeof signalTree<ReturnType<typeof createBaseState>>>` and have `createAppTree()` return that same narrower type — but then production code that needs the enhancer surface must reach for them via the builder, not via `inject(APP_TREE)`.
+- Each child injector still gets its own tree because the factory runs per injector — enhancers don't leak state between specs.
+
+This is the recommended default for any migration into an existing app. Greenfield apps where every `TestBed` is authored against the new shape can keep the bare `new InjectionToken<AppTree>('APP_TREE')` form.
+
 ### Splitting derived tiers into separate files
 
 When a tier grows beyond ~30 lines, move it into its own file under
@@ -200,6 +221,55 @@ export const ticketWorkflowDerived = externalDerived<AppTreeWithEntityResolution
 ```
 
 The chain in `createAppTree()` is unchanged — `.derived(entityResolutionDerived).derived(ticketWorkflowDerived)` — but each tier file is independently typed and reviewable.
+
+### Recommended tier ladder for large apps
+
+Once a tree has more than ~3 domains with computeds, ad-hoc `computed(...)` calls scattered across state factories become hard to reason about (which signal depends on which?). Validated production trees converge on a five-tier ladder, each tier strictly building on the one below:
+
+| Tier | Name              | Sees                          | Job                                                                              |
+| ---- | ----------------- | ----------------------------- | -------------------------------------------------------------------------------- |
+| 0    | Base state        | —                             | Raw data: `entityMap`s, primitive leaves, `status()` slices. No computeds.       |
+| 1    | Entity resolution | `AppTreeBase`                 | Resolve `*Id` leaves to full entities via `entityMap.byId()`. Pure lookup.       |
+| 2    | Complex logic     | `AppTreeWithEntityResolution` | Business rules over resolved entities (display names, isExternal, isComplete).   |
+| 3    | Workflow          | `AppTreeWithComplexLogic`     | Domain-specific state machines (workflow steps, current index, status maps).     |
+| 4    | Navigation        | `AppTreeWithWorkflow`         | Position queries on top of workflow (next/previous, canAdvance, statusInfo).     |
+| 5    | UI aggregates     | `AppTreeWithNavigation`       | Cross-domain rollups for shells / error banners (overall isLoading, firstError). |
+
+**Why these specific layers?** Each one answers a different question and depends only on lower layers, so the dependency graph is always acyclic by construction:
+
+- **Tier 1 (entity resolution) MUST come first** — every higher tier wants to talk about entities, not IDs. Doing this lookup once removes a class of bugs where two tiers resolve the same id with different fallbacks.
+- **Tier 2 (complex logic) is where business rules live** — `displayName`, `isComplete`, `isExternal`. If you find yourself writing the same `computed` in two components, it belongs here.
+- **Tier 3+4 (workflow / navigation) split when state-machine code grows** — keep the steps array and current-index in workflow, keep next/previous and `canAdvance` in navigation. Splitting prevents one giant tier file from accumulating every workflow query in the app.
+- **Tier 5 (UI aggregates) is the only tier that touches more than one domain** — overall loading, first-error, has-any-error. Components consume from here so they don't have to OR-together five domain signals inline.
+
+**Type wiring at scale.** Each tier file imports the previous-tier shape it needs:
+
+```ts skip
+// tree/app-tree.ts
+import { signalTree, WithDerived } from '@signaltree/core';
+import { entityResolutionDerived } from './derived/tier-entity-resolution.derived';
+import { complexLogicDerived } from './derived/tier-complex-logic.derived';
+import { ticketWorkflowDerived } from './derived/tier-ticket-workflow.derived';
+import { ticketNavigationDerived } from './derived/tier-ticket-navigation.derived';
+import { uiAggregatesDerived } from './derived/tier-ui-aggregates.derived';
+
+export type AppTreeBase = ReturnType<typeof signalTree<ReturnType<typeof createBaseState>>>;
+export type AppTreeWithEntityResolution = WithDerived<AppTreeBase, typeof entityResolutionDerived>;
+export type AppTreeWithComplexLogic = WithDerived<AppTreeWithEntityResolution, typeof complexLogicDerived>;
+export type AppTreeWithWorkflow = WithDerived<AppTreeWithComplexLogic, typeof ticketWorkflowDerived>;
+export type AppTreeWithNavigation = WithDerived<AppTreeWithWorkflow, typeof ticketNavigationDerived>;
+export type AppTree = ReturnType<typeof createAppTree>; // final, post-uiAggregates
+```
+
+**Consumer rule:** components and Ops always type against `AppTree` (the final composed shape). Only tier files type against intermediate phases. This keeps consumer code stable when tiers are reordered or added.
+
+**When to skip the ladder.** A small app (≤ 2 domains, ≤ 5 computeds total) does not need this — inline `computed`s in state factories are fine. Adopt the ladder when:
+
+- Total derived signals exceed ~15 across the tree, OR
+- Two or more components import the same `computed` from different state files, OR
+- Cross-domain rollups appear (the moment one computed reads from two state slices, you want UI aggregates).
+
+Do NOT pre-build empty tiers — start with whatever tiers you actually have signals for, and add tiers only when crossing the boundary creates real value. The ladder is a destination, not a starting template.
 
 ### `AppStore` facade
 
@@ -389,9 +459,11 @@ This is fine for fire-and-forget reads (the subscription naturally completes whe
 
 If you need per-request scoping rather than app-lifetime, drop `providedIn: 'root'` from the Ops and provide it on a feature route or a sub-injector instead. Don't reach for `takeUntilDestroyed` to fix what is really a scoping problem.
 
-## Hybrid migration: legacy facade adapters
+## Hybrid migration: legacy facade adapters (fallback)
 
-Real migrations rarely flip every consumer in one PR. When the existing app exposes a long-standing facade — e.g. an `@ngrx/signals` `DriverStore` — and dozens of components, services, and specs call into it, two-step the migration:
+> **Default is big-bang**, not hybrid. The hybrid pattern below is a _temporary scaffold_ for migrations that cannot land in one PR. See [`optimal-implementation.md`](./optimal-implementation.md#when-the-hybrid-pattern-is-acceptable) for when this is acceptable, and what deletion-deadline metadata you must ship with each adapter.
+
+When big-bang isn't possible — the existing app exposes a long-standing facade like an `@ngrx/signals` `DriverStore`, dozens of consumers depend on it, and you cannot flip them all in one PR — two-step the migration:
 
 1. **Stand up the new shape first.** Create `AppStore`, `Ops` classes, and `APP_TREE` exactly as in [Shape](#shape).
 2. **Replace the legacy facade's internals with adapters over `AppStore`.** Keep the legacy class name and public signature so consumers and specs keep compiling. Delete the legacy facade only when zero consumers remain.
@@ -441,7 +513,7 @@ export class Store {
 - **Ban legacy back-references.** The new `Ops` classes must never read from the legacy facade — only `AppStore -> Ops -> tree`. The arrow goes one way.
 - **Move shared types into the `signaltree/` directory before rewriting the legacy facade.** State shapes and DTOs that the slice owns should live next to the new `Ops` and tree definitions, with the legacy file re-exporting them for backward compat. Otherwise the new `Ops` class will need to import the legacy facade for its types — instant circular import.
 - **Cross-cutting `signalStoreFeature` extensions don't port as-is.** Behaviour-only features (error banners, telemetry baggage, refresh hooks) cannot be bolted onto the plain `@Injectable` adapter. Three valid options: **(a)** drop them and reintroduce as SignalTree enhancers in a follow-up (cheapest if no test exercises them); **(b)** rewrite the cross-cutting behaviour as constructor-body subscriptions on the relevant `Ops` class that read `tree.$.<domain>` and call the same downstream services; **(c)** keep the cross-cutting behaviour on the legacy ngrx store until the underlying library is migrated. Document which option you chose in a class-level comment.
-- **Plan the deletion**, even if it's a year out. Keep a `// TODO(legacy-facade): remove after consumers migrated` next to each adapter and grep for it before each release.
+- **Mandatory deletion deadline.** Every adapter ships with `// TODO(legacy-facade): remove by <date/release>` _and_ a tracking issue. A facade with no deletion plan becomes a permanent second store and a maintenance burden — don't ship one. Grep for the TODO before every release; if the deadline has passed, the next sprint is the deletion sprint, not "we'll get to it."
 
 ### Test impact
 

@@ -1,4 +1,6 @@
 import { snapshotState } from '../../lib/utils';
+import { interceptLeafSignals } from '../../lib/internals/intercept-leaf-signals';
+import { getPathNotifier } from '../../lib/path-notifier';
 import { deepClone, deepEqual } from './utils';
 
 import type {
@@ -320,17 +322,30 @@ export function timeTravel(
     // If PathNotifier batching is enabled, use flush events to record
     // a single snapshot per flush; otherwise, keep the existing immediate
     // update-based history entry.
+    //
+    // IMPORTANT: signalTree's recursive update pipeline writes to leaf
+    // signals directly without calling PathNotifier.notify(); only entity
+    // collections notify by themselves. To make direct leaf writes such as
+    // `tree.$.user.profile.name.set('x')` observable here we recursively
+    // intercept every plain writable signal and route their writes through
+    // the global notifier. Without this interception, time-travel would
+    // silently miss every leaf .set()/.update() in the tree.
+    let unsubscribeFlush: (() => void) | null = null;
+    let restoreLeafInterceptors: (() => void) | null = null;
     try {
-      // Use a runtime require lookup to avoid TypeScript errors in build
-      // environments that don't expose `require` as a global symbol.
-      const req = (globalThis as any)['require'];
-      if (typeof req === 'function') {
-        const { getPathNotifier } = req(
-          '../../lib/path-notifier'
-        ) as typeof import('../../lib/path-notifier');
-        const notifier = getPathNotifier();
-        if (notifier && typeof notifier.onFlush === 'function') {
-          notifier.onFlush(() => {
+      const notifier = getPathNotifier();
+      if (notifier) {
+        if ('$' in tree) {
+          restoreLeafInterceptors = interceptLeafSignals(
+            (tree as ISignalTree<T>).$ as Record<string, unknown>,
+            (path, next, prev) => {
+              if (isRestoring) return;
+              notifier.notify(path, next, prev);
+            }
+          );
+        }
+        if (typeof notifier.onFlush === 'function') {
+          unsubscribeFlush = notifier.onFlush(() => {
             // Avoid recording history while restoring
             if (isRestoring) return;
             const afterState = originalTreeCall();
@@ -444,9 +459,22 @@ export function timeTravel(
     (enhancedTree as unknown as Record<string, unknown>)['__timeTravel'] =
       timeTravelManager;
 
-    // Register cleanup to free history snapshots on destroy
+    // Register cleanup to free history snapshots on destroy and to tear down
+    // PathNotifier subscriptions / leaf-signal interceptors.
     if (typeof tree.registerCleanup === 'function') {
       tree.registerCleanup(() => {
+        try {
+          unsubscribeFlush?.();
+        } catch {
+          /* ignore */
+        }
+        try {
+          restoreLeafInterceptors?.();
+        } catch {
+          /* ignore */
+        }
+        unsubscribeFlush = null;
+        restoreLeafInterceptors = null;
         timeTravelManager.resetHistory();
       });
     }

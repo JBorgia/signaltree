@@ -2101,10 +2101,10 @@ local state is cheap (`O(changed)` instead of `O(N)`).
 SignalTree Core includes all enhancers built-in:
 
 ```typescript
-import { signalTree, batching, withTimeTravel } from '@signaltree/core';
+import { signalTree, batching, timeTravel } from '@signaltree/core';
 
-// All enhancers available from @signaltree/core
-const tree = signalTree(initialState).with(batching(), withTimeTravel());
+// All enhancers available from @signaltree/core — chain `.with()` (one enhancer per call)
+const tree = signalTree(initialState).with(batching()).with(timeTravel());
 ```
 
 ### Available enhancers
@@ -2154,7 +2154,26 @@ Measured from a production Angular mobile application migrating from NgRx Signal
 
 13 separate stores → 1 unified tree. `entityMap()` replaced a 222-line `withEntityCrud` wrapper. Derived tiers replaced scattered `withComputed` blocks.
 
-### Migration Steps
+### Migrating from `@ngrx/signals` (signalStore / withState / rxMethod)
+
+The full migration playbook ships with this package as an Agent Skill at:
+
+```
+node_modules/@signaltree/core/skills/using-signaltree/reference/migration-from-ngrx-signals.md
+```
+
+It covers:
+
+- A mechanical concept-map table: `signalStore` → tree slice + `Ops`, `withState` → initial state, `withMethods` → `Ops` methods, `withComputed` → `computed()` or `.derived()`, `withHooks` → factory body, `rxMethod` → plain method returning `Observable<void>`, `withEntities` → `entityMap()` marker, `patchState` → tree update, `getState` → `unwrap()`, etc.
+- **Three migration strategies** with explicit decision criteria:
+  - **Big-bang** (1–2 stores, single team): one PR, delete legacy in same commit.
+  - **Incremental per-domain** (≥3 stores): one PR per store. Includes a **Phase 0** recipe (foundation-only first PR), a sequencing rule (consumers before aggregator removal), and a root-injected `Ops` side-effect hazard warning.
+  - **Hybrid legacy-facade** (shared `signalStoreFeature` base classes, multi-team cutover, regulated rollback): adapter shim over `AppStore` with a deletion deadline.
+- A drop-in verifier script (`scripts/verify-signaltree-migration.sh` in the SignalTree repo) that runs `build` + `test` + `lint` and asserts `@ngrx/signals` is gone from source and `package.json`. Package-manager-agnostic, layout-agnostic.
+
+Point your AI assistant (Cursor, Claude Code, or any `SKILL.md`-aware harness) at the shipped `skills/using-signaltree/` directory and it will follow the same playbook end-to-end. See the root README's [Using SignalTree with AI Agents](../../README.md#using-signaltree-with-ai-agents) section for setup.
+
+### Migrating from classic NgRx (`@ngrx/store` / actions / reducers / effects)
 
 ```typescript
 // Step 1: Create parallel tree
