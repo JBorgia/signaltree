@@ -47,8 +47,8 @@
         <tr><td><code>withHooks(&#123; onInit &#125;)</code></td><td>Factory body or <code>Ops</code> constructor</td></tr>
         <tr><td><code>rxMethod(source$ =&gt; ...)</code></td><td>Plain method, optionally returning <code>Observable&lt;void&gt;</code></td></tr>
         <tr><td><code>withEntities&lt;Entity&gt;()</code></td><td><code>entityMap&lt;Entity&gt;()</code> marker</td></tr>
-        <tr><td><code>patchState(store, partial)</code></td><td><code>tree.$.slice.update(partial)</code></td></tr>
-        <tr><td><code>getState(store)</code></td><td><code>tree.$.slice.unwrap()</code></td></tr>
+        <tr><td><code>patchState(store, partial)</code></td><td><code>tree.$.field.set(value)</code> (leaf); <code>tree.$.obj.update(s =&gt; (&#123;...s, ...patch&#125;))</code> (object slice)</td></tr>
+        <tr><td><code>getState(store)</code></td><td><code>tree.$.slice()</code> — no-arg call returns current value</td></tr>
         <tr><td><code>withReduxDevtools()</code></td><td><code>devTools()</code> enhancer</td></tr>
       </tbody>
     </table>
@@ -90,7 +90,7 @@ export class TicketOps &#123;
   private api = inject(TicketApi);
 
   visible = computed(() =&gt;
-    this.tree.$.tickets.values().filter(t =&gt;
+    this.tree.$.tickets.all().filter(t =&gt;
       t.title.includes(this.tree.$.filter())
     )
   );
@@ -102,6 +102,17 @@ export class TicketOps &#123;
 &#125;</code></pre>
       </div>
     </div>
+
+    <p class="callout">
+      <strong>Why two files?</strong> For a single simple store, SignalTree is
+      slightly more lines. The split pays off at scale: the tree stays one file
+      regardless of how many domains you add, and each <code>Ops</code> service
+      is a plain <code>&#64;Injectable</code> with no state-management
+      abstractions — easier to test in isolation, easier to tree-shake, no
+      custom <code>withX</code> helpers to maintain. At 5+ stores, NgRx
+      SignalStore grows 5+ store files each with custom features; SignalTree
+      adds 5 <code>Ops</code> files and zero new concepts.
+    </p>
 
     <p class="callout callout-primary">
       <strong>Full playbook:</strong> the deep migration guide with three
@@ -188,11 +199,20 @@ export class UsersOps &#123;
 &#125;
 
 // component
-users = this.tree.$.users.entities.values;
+users = this.tree.$.users.entities.all;
 ops = inject(UsersOps);
 // ops.load()</code></pre>
       </div>
     </div>
+
+    <p class="callout">
+      <strong>What this comparison shows:</strong> the NgRx side displays the
+      complete boilerplate required across typically three or more files —
+      actions, reducer, effect, and component call-site. The SignalTree side
+      consolidates all of that into a single <code>Ops</code> method. The
+      <code>APP_TREE</code> token and tree definition (shared across all
+      features) are not shown; see the architecture guide for setup.
+    </p>
 
     <p class="callout">
       <strong>Strategy:</strong> migrate one feature module at a time. Build
@@ -220,7 +240,7 @@ ops = inject(UsersOps);
         <tr><td><code>this.updater((s, v) =&gt; ...)</code></td><td>Method that calls <code>tree.$.x.update(...)</code></td></tr>
         <tr><td><code>this.select(...)</code></td><td><code>computed()</code> over the tree</td></tr>
         <tr><td><code>this.effect&lt;T&gt;(source$ =&gt; ...)</code></td><td><code>async</code> method, or RxJS pipeline returning <code>Observable&lt;void&gt;</code></td></tr>
-        <tr><td><code>this.patchState(partial)</code></td><td><code>tree.$.slice.update(partial)</code></td></tr>
+        <tr><td><code>this.patchState(partial)</code></td><td><code>tree.$.field.set(value)</code> per leaf, or <code>tree.$.obj.update(s =&gt; (&#123;...s, ...patch&#125;))</code></td></tr>
       </tbody>
     </table>
   </section>
@@ -241,7 +261,7 @@ ops = inject(UsersOps);
         <tr><td><code>&#64;State&lt;T&gt;(&#123; name, defaults &#125;)</code></td><td>Tree slice on <code>AppTree</code></td></tr>
         <tr><td><code>&#64;Selector()</code></td><td><code>computed()</code> on the Ops service</td></tr>
         <tr><td><code>&#64;Action(MyAction)</code></td><td>Method on the Ops service</td></tr>
-        <tr><td><code>ctx.patchState(partial)</code></td><td><code>tree.$.slice.update(partial)</code></td></tr>
+        <tr><td><code>ctx.patchState(partial)</code></td><td><code>tree.$.field.set(value)</code> per leaf, or <code>tree.$.obj.update(s =&gt; (&#123;...s, ...patch&#125;))</code></td></tr>
         <tr><td><code>ctx.dispatch(new Other())</code></td><td>Direct call to another <code>Ops</code> method</td></tr>
         <tr><td><code>store.select(MyState.x)</code></td><td><code>tree.$.x</code> signal</td></tr>
         <tr><td><code>NgxsReduxDevtoolsPluginModule</code></td><td><code>devTools()</code> enhancer</td></tr>
@@ -272,10 +292,10 @@ ops = inject(UsersOps);
         <tr><td><code>createStore(&#123; name &#125;, withProps&lt;T&gt;(...))</code></td><td>Tree slice on <code>AppTree</code></td></tr>
         <tr><td><code>withEntities&lt;Entity&gt;()</code></td><td><code>entityMap&lt;Entity&gt;()</code></td></tr>
         <tr><td><code>store.update(setEntities(xs))</code></td><td><code>tree.$.entities.setAll(xs)</code></td></tr>
-        <tr><td><code>store.update(addEntities(x))</code></td><td><code>tree.$.entities.add(x)</code></td></tr>
-        <tr><td><code>store.update(updateEntities(id, p))</code></td><td><code>tree.$.entities.update(id, p)</code></td></tr>
-        <tr><td><code>store.update(deleteEntities(id))</code></td><td><code>tree.$.entities.remove(id)</code></td></tr>
-        <tr><td><code>store.pipe(selectAllEntities())</code></td><td><code>tree.$.entities.values()</code></td></tr>
+        <tr><td><code>store.update(addEntities(x))</code></td><td><code>tree.$.entities.addOne(x)</code></td></tr>
+        <tr><td><code>store.update(updateEntities(id, p))</code></td><td><code>tree.$.entities.updateOne(id, p)</code></td></tr>
+        <tr><td><code>store.update(deleteEntities(id))</code></td><td><code>tree.$.entities.removeOne(id)</code></td></tr>
+        <tr><td><code>store.pipe(selectAllEntities())</code></td><td><code>tree.$.entities.all</code> (Signal&lt;E[]&gt;; call <code>.all()</code> to read)</td></tr>
         <tr><td><code>QueryEntity</code> selectors</td><td><code>computed()</code> on the Ops service</td></tr>
       </tbody>
     </table>
@@ -298,7 +318,7 @@ ops = inject(UsersOps);
     <table class="concept-map">
       <thead><tr><th>&#64;rx-angular/state</th><th>SignalTree</th></tr></thead>
       <tbody>
-        <tr><td><code>state.set(partial)</code></td><td><code>tree.$.slice.update(partial)</code></td></tr>
+        <tr><td><code>state.set(partial)</code></td><td><code>tree.$.field.set(value)</code> per leaf, or <code>tree.$.obj.update(s =&gt; (&#123;...s, ...patch&#125;))</code></td></tr>
         <tr><td><code>state.get('key')</code></td><td><code>tree.$.key()</code></td></tr>
         <tr><td><code>state.select('key')</code></td><td><code>tree.$.key</code> signal (or <code>toObservable(...)</code>)</td></tr>
         <tr><td><code>state.connect('key', source$)</code></td><td><code>source$.subscribe(v =&gt; tree.$.key.set(v))</code> in Ops constructor</td></tr>

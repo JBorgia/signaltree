@@ -89,7 +89,15 @@ interface DeepNestedState {
       <h3>SignalTree vs NgRx SignalStore</h3>
       <p>
         Comparing modern state management: SignalTree's direct mutation with
-        batching vs NgRx SignalStore's immutable updates
+        batching vs NgRx SignalStore's immutable updates.
+      </p>
+      <p class="benchmark-disclosure">
+        <strong>Methodology note:</strong> SignalTree benchmarks run with
+        <code>batching()</code> and <code>memoization()</code> enhancers
+        enabled — the configuration recommended for production use. NgRx
+        SignalStore benchmarks use the library's built-in immutable update
+        model. This comparison shows each library at its intended operating
+        mode, not a stripped vanilla baseline.
       </p>
 
       <div class="benchmarks">

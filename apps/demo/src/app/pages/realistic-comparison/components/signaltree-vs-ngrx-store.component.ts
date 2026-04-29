@@ -128,6 +128,14 @@ interface BenchmarkResult {
       </div>
       }
 
+      <div class="benchmark-disclosure" style="margin: 1rem 0; padding: 0.75rem 1rem; background: var(--surface-2, #f5f5f5); border-left: 3px solid var(--primary, #666); font-size: 0.875rem;">
+        <strong>Methodology note:</strong> SignalTree benchmarks run with
+        <code>batching()</code> and <code>memoization()</code> enhancers — the
+        recommended production configuration. Classic NgRx Store benchmarks use
+        the standard immutable reducer + <code>createSelector</code> pattern.
+        This compares each library at its intended operating mode.
+      </div>
+
       <div class="architecture-explanation">
         <h3>Architectural Differences</h3>
         <div class="arch-grid">
