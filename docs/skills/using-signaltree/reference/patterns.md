@@ -226,14 +226,14 @@ The chain in `createAppTree()` is unchanged — `.derived(entityResolutionDerive
 
 Once a tree has more than ~3 domains with computeds, ad-hoc `computed(...)` calls scattered across state factories become hard to reason about (which signal depends on which?). Validated production trees converge on a five-tier ladder, each tier strictly building on the one below:
 
-| Tier | Name | Sees | Job |
-|---|---|---|---|
-| 0 | Base state | — | Raw data: `entityMap`s, primitive leaves, `status()` slices. No computeds. |
-| 1 | Entity resolution | `AppTreeBase` | Resolve `*Id` leaves to full entities via `entityMap.byId()`. Pure lookup. |
-| 2 | Complex logic | `AppTreeWithEntityResolution` | Business rules over resolved entities (display names, isExternal, isComplete). |
-| 3 | Workflow | `AppTreeWithComplexLogic` | Domain-specific state machines (workflow steps, current index, status maps). |
-| 4 | Navigation | `AppTreeWithWorkflow` | Position queries on top of workflow (next/previous, canAdvance, statusInfo). |
-| 5 | UI aggregates | `AppTreeWithNavigation` | Cross-domain rollups for shells / error banners (overall isLoading, firstError). |
+| Tier | Name              | Sees                          | Job                                                                              |
+| ---- | ----------------- | ----------------------------- | -------------------------------------------------------------------------------- |
+| 0    | Base state        | —                             | Raw data: `entityMap`s, primitive leaves, `status()` slices. No computeds.       |
+| 1    | Entity resolution | `AppTreeBase`                 | Resolve `*Id` leaves to full entities via `entityMap.byId()`. Pure lookup.       |
+| 2    | Complex logic     | `AppTreeWithEntityResolution` | Business rules over resolved entities (display names, isExternal, isComplete).   |
+| 3    | Workflow          | `AppTreeWithComplexLogic`     | Domain-specific state machines (workflow steps, current index, status maps).     |
+| 4    | Navigation        | `AppTreeWithWorkflow`         | Position queries on top of workflow (next/previous, canAdvance, statusInfo).     |
+| 5    | UI aggregates     | `AppTreeWithNavigation`       | Cross-domain rollups for shells / error banners (overall isLoading, firstError). |
 
 **Why these specific layers?** Each one answers a different question and depends only on lower layers, so the dependency graph is always acyclic by construction:
 
@@ -255,10 +255,10 @@ import { uiAggregatesDerived } from './derived/tier-ui-aggregates.derived';
 
 export type AppTreeBase = ReturnType<typeof signalTree<ReturnType<typeof createBaseState>>>;
 export type AppTreeWithEntityResolution = WithDerived<AppTreeBase, typeof entityResolutionDerived>;
-export type AppTreeWithComplexLogic     = WithDerived<AppTreeWithEntityResolution, typeof complexLogicDerived>;
-export type AppTreeWithWorkflow         = WithDerived<AppTreeWithComplexLogic, typeof ticketWorkflowDerived>;
-export type AppTreeWithNavigation       = WithDerived<AppTreeWithWorkflow, typeof ticketNavigationDerived>;
-export type AppTree                     = ReturnType<typeof createAppTree>; // final, post-uiAggregates
+export type AppTreeWithComplexLogic = WithDerived<AppTreeWithEntityResolution, typeof complexLogicDerived>;
+export type AppTreeWithWorkflow = WithDerived<AppTreeWithComplexLogic, typeof ticketWorkflowDerived>;
+export type AppTreeWithNavigation = WithDerived<AppTreeWithWorkflow, typeof ticketNavigationDerived>;
+export type AppTree = ReturnType<typeof createAppTree>; // final, post-uiAggregates
 ```
 
 **Consumer rule:** components and Ops always type against `AppTree` (the final composed shape). Only tier files type against intermediate phases. This keeps consumer code stable when tiers are reordered or added.

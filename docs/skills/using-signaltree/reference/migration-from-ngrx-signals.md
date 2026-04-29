@@ -616,11 +616,11 @@ The lazy `Injector.get(XOps)` pattern — and the "method-delegation object lite
 
 The ngrx feature surface — `withFeature`, `withHooks`, `withProps` — collapses into three SignalTree shapes:
 
-| ngrx primitive | SignalTree equivalent | Where it lives |
-|---|---|---|
-| `withFeature(myFeature)` | `effect(() => { … })` reading `this._$.<leaf>()` | `Ops` class constructor |
-| `withHooks({ onInit, onDestroy })` | `onInit` → `start(injector)` method called from `AppStore` constructor; `onDestroy` → an explicit `Subject<void>` field cancelled in `stop()` | `Ops` class |
-| `withProps({ x$ })` | `readonly x$ = toObservable(this._$.x)` | `Ops` class |
+| ngrx primitive                     | SignalTree equivalent                                                                                                                         | Where it lives          |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| `withFeature(myFeature)`           | `effect(() => { … })` reading `this._$.<leaf>()`                                                                                              | `Ops` class constructor |
+| `withHooks({ onInit, onDestroy })` | `onInit` → `start(injector)` method called from `AppStore` constructor; `onDestroy` → an explicit `Subject<void>` field cancelled in `stop()` | `Ops` class             |
+| `withProps({ x$ })`                | `readonly x$ = toObservable(this._$.x)`                                                                                                       | `Ops` class             |
 
 ### Worked example: `withErrorBanners` + `withRefreshHandling` + `withTelemetryBaggage`
 
@@ -632,12 +632,12 @@ export const DriverStore = signalStore(
   withReduxDevtools(driverStoreName),
   withTelemetryBaggage(driverStoreName),
   withState(initialState),
-  withErrorBanners(driverStoreName),       // shows a banner on error
-  withRefreshHandling(driverStoreName),    // hooks app-wide refresher
+  withErrorBanners(driverStoreName), // shows a banner on error
+  withRefreshHandling(driverStoreName), // hooks app-wide refresher
   withMethods((store, driverService = inject(DriverService)) => ({
     loadActiveDriver$: rxMethod<void>(/* … */),
     clearCurrentDriver: () => patchState(store, { currentDriver: null }),
-  })),
+  }))
 );
 ```
 
@@ -674,8 +674,12 @@ export class DriverOps {
     this._refresher?.register(injector, () => this.loadActiveDriver$().subscribe());
   }
 
-  loadActiveDriver$(): Observable<void> { /* … */ }
-  clearCurrentDriver(): void { this._$.currentDriver.set(null); }
+  loadActiveDriver$(): Observable<void> {
+    /* … */
+  }
+  clearCurrentDriver(): void {
+    this._$.currentDriver.set(null);
+  }
 }
 ```
 
@@ -686,7 +690,7 @@ And in `AppStore`:
 export class AppStore {
   readonly tree = inject(APP_TREE);
   readonly $ = this.tree.$;
-  readonly ops = { driver: inject(DriverOps), /* … */ } as const;
+  readonly ops = { driver: inject(DriverOps) /* … */ } as const;
 
   constructor() {
     // Wire each Ops's withHooks({ onInit }) port exactly once.
@@ -699,7 +703,7 @@ export class AppStore {
 Three tradeoffs to call out for the user before signing off the migration:
 
 1. **`effect()` runs eagerly inside the injection context.** Wrap any side-effect that should not fire on initial state in a guard (`if (driver)` above) — `effect()` doesn't have ngrx's `withMethods` lazy semantics.
-2. **`{ optional: true }` collaborators silently no-op when missing.** That's intentional for tests, but it also means a *production* misconfiguration (forgot to `provideRefresher()`) will silently disable the feature instead of throwing. If the feature is mandatory in production, document that in the Ops class header and add a smoke test in `app.config.spec.ts`.
+2. **`{ optional: true }` collaborators silently no-op when missing.** That's intentional for tests, but it also means a _production_ misconfiguration (forgot to `provideRefresher()`) will silently disable the feature instead of throwing. If the feature is mandatory in production, document that in the Ops class header and add a smoke test in `app.config.spec.ts`.
 3. **`withProps({ x$: toObservable(store.x) })` only needs `inject(Injector)` if it runs outside the constructor.** Inside the constructor it's free: `readonly driver$ = toObservable(this._$.currentDriver);`.
 
 Custom features that add state shape (e.g. `withLoadingState`, `withSavingState`, `withErrorState`) map to **built-in markers**, not factory functions. Don't recreate the feature as a helper — put the marker directly in the state object.

@@ -2101,10 +2101,10 @@ local state is cheap (`O(changed)` instead of `O(N)`).
 SignalTree Core includes all enhancers built-in:
 
 ```typescript
-import { signalTree, batching, withTimeTravel } from '@signaltree/core';
+import { signalTree, batching, timeTravel } from '@signaltree/core';
 
-// All enhancers available from @signaltree/core
-const tree = signalTree(initialState).with(batching(), withTimeTravel());
+// All enhancers available from @signaltree/core — chain `.with()` (one enhancer per call)
+const tree = signalTree(initialState).with(batching()).with(timeTravel());
 ```
 
 ### Available enhancers

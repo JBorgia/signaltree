@@ -151,8 +151,8 @@ import { signalTree, batching, memoization, withDevtools, withTimeTravel, serial
 The **API remains 100% compatible** - only import statements change. Your existing code should work without modifications:
 
 ```typescript
-// Your existing code works exactly the same
-const tree = signalTree(state).with(batching(), memoization(), withDevtools());
+// Your existing code works exactly the same — chain `.with()` calls (one enhancer per call)
+const tree = signalTree(state).with(batching()).with(memoization()).with(withDevtools());
 ```
 
 ---
@@ -169,7 +169,7 @@ import { signalTree } from '@signaltree/core';
 import { batching } from '@signaltree/batching';
 import { memoization } from '@signaltree/memoization';
 
-const tree = signalTree(state).with(batching(), memoization());
+const tree = signalTree(state).with(batching()).with(memoization());
 ```
 
 **After:**
@@ -178,7 +178,7 @@ const tree = signalTree(state).with(batching(), memoization());
 // ✅ v4.0.0+
 import { signalTree, batching, memoization } from '@signaltree/core';
 
-const tree = signalTree(state).with(batching(), memoization());
+const tree = signalTree(state).with(batching()).with(memoization());
 ```
 
 ### Example 2: Full Stack with DevTools
@@ -194,7 +194,7 @@ import { withDevtools } from '@signaltree/devtools';
 import { withTimeTravel } from '@signaltree/time-travel';
 import { entities } from '@signaltree/entities';
 
-const tree = signalTree(state).with(batching(), memoization(), entities(), withTimeTravel(), withDevtools());
+const tree = signalTree(state).with(batching()).with(memoization()).with(entities()).with(withTimeTravel()).with(withDevtools());
 ```
 
 **After:**
@@ -203,7 +203,7 @@ const tree = signalTree(state).with(batching(), memoization(), entities(), withT
 // ✅ v4.0.0+
 import { signalTree, batching, memoization, withDevtools, withTimeTravel, entities } from '@signaltree/core';
 
-const tree = signalTree(state).with(batching(), memoization(), entities(), withTimeTravel(), withDevtools());
+const tree = signalTree(state).with(batching()).with(memoization()).with(entities()).with(withTimeTravel()).with(withDevtools());
 ```
 
 ### Example 3: E-commerce Preset
