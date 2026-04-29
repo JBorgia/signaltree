@@ -1,6 +1,6 @@
 ---
 name: signaltree-orchestrating-a-migration
-description: Process playbook for an orchestrator agent driving one or more implementer subagents through a SignalTree migration. Load when the migration target spans more than ~5 consumer files, when a single Coder/implementer subagent is likely to exhaust its context window, or when the user explicitly asks for a phased / supervised migration. Skip for trivial single-file changes.
+description: Process playbook for an orchestrator agent driving one or more implementer subagents through a SignalTree adoption — NgRx Signal Store migration, classic NgRx / BehaviorSubject migration, or greenfield. Load when the work spans more than ~5 consumer files, when a single Coder/implementer subagent is likely to exhaust its context window, or when the user explicitly asks for a phased / supervised rollout. Skip for trivial single-file changes.
 ---
 
 # Orchestrating a SignalTree migration
@@ -13,7 +13,19 @@ A SignalTree migration of a real Angular app routinely exceeds the context budge
 
 The orchestrator's job is to **bound each phase to one implementer's context budget**, gate progression on the verifier, and capture skill friction as a first-class artifact. This file documents the playbook.
 
-> **Read [`migration-from-ngrx-signals.md`](./migration-from-ngrx-signals.md) first.** This file assumes you already know what a "good" migration looks like; it only covers _how to drive subagents through one_.
+> **If migrating from `@ngrx/signals`, read [`migration-from-ngrx-signals.md`](./migration-from-ngrx-signals.md) first.** That guide tells you what a "good" NgRx Signal Store migration looks like; this file only covers _how to drive subagents through one_. For greenfield adoption or non-NgRx legacy, see Applicability below — the playbook still applies, but Phase 1 and Phase 5 need light adaptation.
+
+## Applicability
+
+This playbook is **vendor-neutral** for everything except Phase 1 (survey greps) and Phase 5 (verifier script), which are NgRx-shaped by default. The five-phase loop, the Phase 2 audit, the Phase 3 foundation prompt, and the Phase 4 consumer rewrite rules apply equally to:
+
+| Scenario | Phase 1 (Survey) | Phase 2–4 | Phase 5 (Verifier) |
+| --- | --- | --- | --- |
+| **Migrating from `@ngrx/signals`** (default) | Use the greps below as-is | Apply unchanged | Use `verify-signaltree-migration.sh` as documented |
+| **Migrating from classic `@ngrx/store`, `BehaviorSubject` services, or `@Injectable` state services** | Adapt the greps to your legacy pattern (e.g. `@Injectable.*State\|new BehaviorSubject\(\|createReducer\(`); list legacy services/reducers/selectors as the "LEGACY STORES" rows | Apply unchanged — the audit questions and foundation layout are SignalTree design, not NgRx-specific | Run `build && test && lint` directly, **or** invoke the verifier with `--allow-source-presence --allow-dep-presence` to neutralize the `@ngrx/signals` assertions |
+| **Greenfield adoption** (no legacy state lib at all) | Skip Phase 1; the catalog is just the planned domain list from your design notes | Apply unchanged | Run `build && test && lint` directly; skip the verifier script |
+
+The Phase 2 audit (collection vs singleton, typed errors, cross-domain lifecycle, persistence, derived-tier ladder) is the most valuable part of this playbook for non-NgRx contexts — it forces the architectural decisions that determine whether a SignalTree adoption succeeds, regardless of where the state was living before.
 
 ## When to use this playbook
 
@@ -44,6 +56,8 @@ Each box maps to one tool call sequence on the orchestrator side. Phases 3 and 4
 Goal: produce a single artifact — the **migration catalog** — that phases 3 and 4 will consume verbatim.
 
 Run these commands yourself (do not delegate). Capture the output verbatim into your scratch notes.
+
+> The greps below assume `@ngrx/signals` is the legacy source. For other sources — classic `@ngrx/store`, `BehaviorSubject` services, `@Injectable` state services — adapt the patterns (e.g. `createReducer\(`, `new BehaviorSubject\(`, `@Injectable.*State`) but keep the catalog shape unchanged. For greenfield adoption, skip this phase entirely and use your domain design notes as the catalog input to phases 2–4.
 
 ```bash
 # 1. Locate every legacy store file.
@@ -282,6 +296,8 @@ git add -A && git commit --no-verify -m "<msg>"
 ### Phase 5 — Gate + commit (orchestrator owns)
 
 The orchestrator runs the verifier itself **once more** after Coder #2 returns, regardless of what Coder #2 reported. Trust but verify.
+
+> For non-NgRx scenarios (other legacy state libs, or greenfield adoption), the `verify-signaltree-migration.sh` script's `@ngrx/signals` assertions don't apply. Either run `build && test && lint` directly as the gate, or invoke the verifier with `--allow-source-presence --allow-dep-presence` so it skips the NgRx checks but still runs the full build/test/lint sequence.
 
 ```bash
 cd <worktree>

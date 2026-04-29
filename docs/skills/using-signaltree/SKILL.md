@@ -8,6 +8,7 @@ description: Guides AI agents integrating SignalTree (@signaltree/core and relat
 SignalTree: reactive JSON for Angular. Plain state object → `signalTree()` → every leaf = Angular signal via typed `$` proxy. No actions, reducers, selectors, or registration.
 
 Mental model:
+
 - Reactive JSON tree: `signalTree(state)` mirrors input shape. Leaves = `WritableSignal<T>`. Branches = typed accessors.
 - `$` proxy: `tree.$.user.profile.name` = signal; `tree.$.user.profile` = group accessor.
 - Read: `tree.$.count()` — subscribes reactive context.
@@ -18,6 +19,7 @@ Mental model:
 Don't introduce actions, reducers, action creators, or selectors — they fight the design. No module registration.
 
 **App-wide state always uses one tree.** All domains (auth, settings, tickets, feature flags, …) go into a single `signalTree()` call — never one tree per domain or one tree per service. The pattern:
+
 - `createAppTree()` — composes all domain state factories into one `signalTree()`, wired via an `APP_TREE` `InjectionToken` and a `provideAppTree()` function. **Also export `createBaseState()`** — tests need it to build isolated trees.
 - `AppStore` — a single `providedIn: 'root'` class that injects `APP_TREE`, exposes `readonly $ = this.tree.$`, and namespaces per-domain `Ops` classes under `readonly ops = { … } as const`.
 - `Ops` classes — one per domain (`DriverOps`, `SettingsOps`, …), each `Injectable`, each injecting `APP_TREE` directly for writes. No business logic in `AppStore` itself.
@@ -40,8 +42,8 @@ See [`reference/install.md`](reference/install.md) for optional packages and pee
 ```ts
 import { signalTree } from '@signaltree/core';
 const tree = signalTree({ counter: 0, user: { name: 'Ada', email: 'ada@example.com' } });
-tree.$.user.name();                                       // read
-tree.$.counter.set(1);                                    // write leaf
+tree.$.user.name(); // read
+tree.$.counter.set(1); // write leaf
 tree.$.user({ name: 'Grace', email: 'grace@example.com' }); // write branch
 ```
 
@@ -65,7 +67,10 @@ Composing enhancers — typical production shape:
 ```ts
 import { signalTree, batching, devTools } from '@signaltree/core';
 
-interface AppState { counter: number; ui: { theme: 'light' | 'dark' } }
+interface AppState {
+  counter: number;
+  ui: { theme: 'light' | 'dark' };
+}
 
 const tree = signalTree<AppState>({ counter: 0, ui: { theme: 'light' } })
   .with(batching({ enabled: true, notificationDelayMs: 0 }))
@@ -75,6 +80,7 @@ const tree = signalTree<AppState>({ counter: 0, ui: { theme: 'light' } })
 Cross-package enhancers (`enterprise()`, `guardrails()`, `formBridge()`, `supabaseRealtime(...)`) slot into same chain.
 
 Markers — placed in initial state, replaced by `signalTree()` with fully-typed runtime API:
+
 - `entityMap<T, K>()` — O(1) CRUD: `addOne`, `upsertOne`, `removeOne`, `setAll`, `byId`, `all`, `clear`.
 - `status()` — async op state: loading / loaded / error.
 - `stored(key, default)` — single signal backed by `localStorage`.
@@ -83,6 +89,7 @@ Markers — placed in initial state, replaced by `signalTree()` with fully-typed
 Full signatures: [`reference/core.md`](reference/core.md).
 
 Deep dives:
+
 - [`reference/core.md`](reference/core.md) — `signalTree()` signatures, `$` proxy, markers, enhancer composition, reads/writes.
 - [`reference/patterns.md`](reference/patterns.md) — idiomatic creation, templates, `computed()`/`effect()` interop, bulk updates, `derivedFrom`/`externalDerived`, **hybrid migration via legacy facade adapters**, lifetime caveats for root-provided Ops.
 - [`reference/testing.md`](reference/testing.md) — `provideAppTreeForTesting()` recipe, mocking matrix (tree vs ops vs facade), common test-bed pitfalls.
@@ -90,9 +97,10 @@ Deep dives:
 - [`reference/install.md`](reference/install.md) — Angular version requirement, install commands.
 - [`reference/migration-from-ngrx-signals.md`](reference/migration-from-ngrx-signals.md) — mechanical mapping guide when porting an existing `@ngrx/signals` codebase. Only relevant for `@ngrx/signals` (`signalStore`, `withState`, `rxMethod`) — not classic `@ngrx/store`.
 - [`reference/optimal-implementation.md`](reference/optimal-implementation.md) — prescribed file/folder layout, pattern defaults (`entityMap`, multi-tier derived, enhancer baseline), and the migration definition-of-done checklist. **Read this before beginning any non-trivial migration.**
-- [`reference/orchestrating-a-migration.md`](reference/orchestrating-a-migration.md) — process playbook for an orchestrator agent driving one or more implementer subagents through a phased SignalTree migration. Load when the migration spans more than ~5 consumer files, when a single implementer is likely to exhaust its context window, or when the user asks for a phased / supervised migration.
+- [`reference/orchestrating-a-migration.md`](reference/orchestrating-a-migration.md) — process playbook for an orchestrator agent driving one or more implementer subagents through a phased SignalTree adoption. Applies to NgRx Signal Store migration (default), classic NgRx / `BehaviorSubject` / `@Injectable` state migration (with adapted Phase 1 greps), and greenfield adoption (Phase 1 is a no-op). Load when the work spans more than ~5 consumer files, when a single implementer is likely to exhaust its context window, or when the user asks for a phased / supervised rollout.
 
 Sub-skills:
+
 - [`ng-forms/SKILL.md`](ng-forms/SKILL.md)
 - [`enterprise/SKILL.md`](enterprise/SKILL.md)
 - [`callable-syntax/SKILL.md`](callable-syntax/SKILL.md)
@@ -101,6 +109,7 @@ Sub-skills:
 - [`realtime/SKILL.md`](realtime/SKILL.md)
 
 Operating rules:
+
 - Prefer `@signaltree/core` first. Add optional packages only for concrete problems.
 - Never instruct consumers to install `@signaltree/shared`, `@signaltree/types`, or `@signaltree/utils` — private, bundled at build time.
 - Never write to a signal inside `computed()` — read-only; side effects in `effect()` or event handlers.
@@ -109,8 +118,8 @@ Operating rules:
 - When unsure of an API, read `packages/<pkg>/src/` — repo is source of truth.
 - **One tree per application.** If the codebase has multiple existing stores (ngrx, services, etc.), compose them all into a single `signalTree()` behind `APP_TREE`. Creating multiple `signalTree()` instances for app-wide state is always wrong.
 - **A migration is not done until the test suite is green.** Build-green is necessary but not sufficient — the test suite must pass before declaring the migration complete. The most common failure is `NG0201: APP_TREE` in `TestBed`s; fix it via `provideAppTreeForTesting()` ([`reference/testing.md`](reference/testing.md)), not by mocking `AppStore`.
-- **Big-bang migration is the default.** Migrate every domain, delete every legacy store, drop the legacy package from `package.json` in the same PR. The hybrid-facade pattern is a *fallback* for when PR-size, team-coordination, or release-cadence constraints prevent big-bang — never an end-state. If you ship a hybrid facade, it must include a `// TODO(legacy-facade): remove by <date/release>` and a tracking issue. See [`reference/optimal-implementation.md`](reference/optimal-implementation.md) and [`reference/migration-from-ngrx-signals.md`](reference/migration-from-ngrx-signals.md).
-- **Big-bang means deletion in the same commit.** Standing up the new `AppStore` next to the legacy `signalStore` files is *not* a migration — it's a hybrid you forgot to finish. Before declaring done, the legacy `*.store.ts` files for every migrated domain must be `rm`-ed (along with their `*.store.spec.ts` siblings and any re-exports), and `grep -rln '@ngrx/signals' <migrated-app-src>/` must return empty. If the grep is non-empty and you are not on the explicit hybrid-fallback path, **stop and finish the deletion before continuing**.
+- **Big-bang migration is the default.** Migrate every domain, delete every legacy store, drop the legacy package from `package.json` in the same PR. The hybrid-facade pattern is a _fallback_ for when PR-size, team-coordination, or release-cadence constraints prevent big-bang — never an end-state. If you ship a hybrid facade, it must include a `// TODO(legacy-facade): remove by <date/release>` and a tracking issue. See [`reference/optimal-implementation.md`](reference/optimal-implementation.md) and [`reference/migration-from-ngrx-signals.md`](reference/migration-from-ngrx-signals.md).
+- **Big-bang means deletion in the same commit.** Standing up the new `AppStore` next to the legacy `signalStore` files is _not_ a migration — it's a hybrid you forgot to finish. Before declaring done, the legacy `*.store.ts` files for every migrated domain must be `rm`-ed (along with their `*.store.spec.ts` siblings and any re-exports), and `grep -rln '@ngrx/signals' <migrated-app-src>/` must return empty. If the grep is non-empty and you are not on the explicit hybrid-fallback path, **stop and finish the deletion before continuing**.
 - **Pattern defaults you must apply** unless the codebase explicitly forbids them:
   - **`entityMap<T, K>()` for any keyed collection** (anything with `id`/key lookup, membership tests, or cross-references). Plain `T[]` is only correct for ordered, append-only, non-keyed lists.
   - **Per-domain state files** (`tree/state/<domain>.state.ts`) once the tree has more than two domains. Don't keep all state in one `app-tree.ts`.
