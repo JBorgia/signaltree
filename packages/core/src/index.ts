@@ -59,6 +59,9 @@ export type {
 
   // Lifecycle
   EnhancerCleanup,
+
+  // Effects
+  EffectsMethods,
 } from './lib/types';
 
 // Entity helpers (runtime)
@@ -203,6 +206,13 @@ export { batching } from './enhancers/batching/batching';
 export type { BatchingConfig, BatchingMethods } from './lib/types';
 
 /**
+ * Effects enhancer for reactive side effects and subscriptions
+ * @see {@link effects} for Angular effect-based subscriptions on tree state
+ */
+export { effects } from './enhancers/effects/effects';
+export type { EffectsConfig } from './enhancers/effects/effects';
+
+/**
  * Time travel enhancer for debugging and undo/redo functionality
  * @see {@link timeTravel} for time travel capabilities
  */
@@ -252,6 +262,7 @@ export { SIGNAL_TREE_CONSTANTS, SIGNAL_TREE_MESSAGES, isDev } from './lib/consta
  *
  * **Enhancers (one function each):**
  * - `batching(config?)` - Batch CD notifications
+ * - `effects(config?)` - Reactive side effects and subscriptions
  * - `timeTravel(config?)` - Undo/redo
  * - `devTools(config?)` - Redux DevTools integration
  * - `serialization(config?)` - State serialization

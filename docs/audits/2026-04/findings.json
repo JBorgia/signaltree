@@ -1,0 +1,286 @@
+{
+  "header": {
+    "audit_date": "2026-04-29",
+    "auditor": "AI audit (M1 static review, batch 1)",
+    "signaltree_version": "9.2.1",
+    "angular_baseline": "20.x (peer dep ^20.0.0 || ^21.0.0)",
+    "ngrx_signalstore_version": "TBD — captured before M4 bench runs",
+    "methodology": "specs/design/audit-architecture.md",
+    "checklist": "specs/design/m1-checklist-core.md"
+  },
+  "findings": [
+    {
+      "id": "F-001",
+      "surface": "docs/README.md",
+      "question": "broken-claims",
+      "severity": "P1",
+      "title": "Docs index claims version 7.6.0; actual release is 9.2.1",
+      "steel_man": "The docs/README.md is a navigation index, not a package changelog. The maintainer may have forgotten to bump it after the v7→v9 jump and considers it low priority.",
+      "evidence_refs": [
+        "docs/README.md:4 — 'Latest release: 7.6.0 (DevTools upgrades + reactivity fixes)'",
+        "packages/core/package.json:3 — 'version': '9.2.1'"
+      ],
+      "proposed_action": "Update docs/README.md header to reflect current version 9.2.1 and link to CHANGELOG for recent changes. Add a CI check (e.g. grep or a script) that fails when docs/README.md version diverges from packages/core/package.json.",
+      "status": "resolved",
+      "resolved_in": "v2 cycle — RFC-1 README overhaul (2026-04-29)"
+    },
+    {
+      "id": "F-002",
+      "surface": "packages/core/README.md",
+      "question": "broken-claims",
+      "severity": "P0",
+      "title": "`entities()` enhancer: documented as valid API but throws at runtime and is not exported",
+      "steel_man": "The README likely predates the v7 migration that made entityMap() self-registering. The intent was to document the migration path. The file at packages/core/src/enhancers/entities/entities.ts still exists as a helpful runtime error to guide v6→v7 upgraders.",
+      "evidence_refs": [
+        "packages/core/README.md:648 — 'entities() - Advanced CRUD operations for collections'",
+        "packages/core/README.md:682-700 — '.with(entities())' in composition examples",
+        "packages/core/README.md:1557-1600 — Data Management Composition block using entities()",
+        "packages/core/README.md:128 — 'No .with(entities()) needed in v7+ (deprecated in v6, removed in v7)'",
+        "packages/core/src/index.ts — entities not in exports",
+        "packages/core/src/enhancers/entities/entities.ts:29-32 — throws Error('entities() has been removed. Remove .with(entities())...')"
+      ],
+      "proposed_action": "Remove all `.with(entities())` references from the README. Replace composition examples showing entities() with the v7+ pattern (entityMap() self-registers; no enhancer needed). Add a migration note box to the entityMap() section. Optionally re-export `entities` from index.ts as a shim that throws a helpful error so import failures are caught at the import site rather than runtime.",
+      "status": "resolved",
+      "resolved_in": "v2 cycle — RFC-1 README overhaul (2026-04-29)"
+    },
+    {
+      "id": "F-003",
+      "surface": "packages/core/README.md",
+      "question": "broken-claims",
+      "severity": "P0",
+      "title": "README API reference lists methods not on ISignalTree: `effect()`, `subscribe()`, `update()`, `unwrap()`",
+      "steel_man": "These methods may have existed on older SignalTree versions or may be properties added by enhancers. The README may be describing an intended future API or the Ops-class pattern where these methods live. `effect()` and `subscribe()` exist in the EffectsMethods interface which an effects enhancer can add.",
+      "evidence_refs": [
+        "packages/core/README.md:2064-2067 — Tree Methods section lists tree.unwrap(), tree.update(updater), tree.effect(fn), tree.subscribe(fn)",
+        "packages/core/README.md:1524 — tree.effect(() => console.log('State changed')) without .with(effects())",
+        "packages/core/README.md:2037-2045 — tree.effect() and tree.subscribe() examples",
+        "packages/core/README.md:808 — tree.update((state) => ({...state, newField: 'value'}))",
+        "packages/core/README.md:2063 — tree.unwrap(); // Get plain object",
+        "packages/core/src/lib/types.ts:104-156 — ISignalTree<T> interface — no effect, subscribe, update, unwrap methods",
+        "packages/core/src/index.ts — effects enhancer not exported",
+        "packages/core/src/enhancers/effects/effects.ts:1 — exists but not exported from index.ts"
+      ],
+      "proposed_action": "Audit all Tree Methods listed in the API reference against ISignalTree. For each phantom method: (a) remove from the API reference if it truly doesn't exist, OR (b) export the relevant enhancer (effects()) and show that .with(effects()) is required. For tree.unwrap() specifically: replace with tree() (no-arg call returns current state). For tree.update(), replace with tree(updater). For tree.effect()/tree.subscribe(), either export effects() or remove these examples from non-enhanced sections.",
+      "status": "resolved",
+      "resolved_in": "v2 cycle — RFC-1 README overhaul (2026-04-29)"
+    },
+    {
+      "id": "F-004",
+      "surface": "packages/core/README.md",
+      "question": "broken-claims",
+      "severity": "P0",
+      "title": "README ends with corrupt code fragment: stray closing delimiters and `tree.unwrap()` call",
+      "steel_man": "This is an authoring artifact — likely a paste error or failed merge. It does not affect runtime behavior.",
+      "evidence_refs": [
+        "packages/core/README.md:1957-1968 — stray lines: `]`, `}`, `}));`, `const currentState = tree.unwrap();`, `});`, triple backtick that reopens without closing"
+      ],
+      "proposed_action": "Delete lines 1957-1968 from packages/core/README.md (the corrupt fragment that appears after the UserManagerComponent class body). The section that follows ('Core features') starting at line 1970 is a duplicate of earlier content and should also be removed or merged.",
+      "status": "resolved",
+      "resolved_in": "v2 cycle — RFC-1 README overhaul (2026-04-29)"
+    },
+    {
+      "id": "F-005",
+      "surface": "packages/core/README.md",
+      "question": "broken-claims",
+      "severity": "P1",
+      "title": "`withTimeTravel` referenced throughout README but only `timeTravel` is exported; config key `maxHistory` is wrong (should be `maxHistorySize`)",
+      "steel_man": "`withTimeTravel` may have been the v5/v6 name and the README was partially updated. The intent is correct — there IS a time-travel enhancer.",
+      "evidence_refs": [
+        "packages/core/README.md:1629 — withTimeTravel({ // Undo/redo maxHistory: 50 })",
+        "packages/core/README.md:1730 — withTimeTravel()",
+        "packages/core/README.md:1747 — devTools(), withTimeTravel()",
+        "packages/core/README.md:2119 — withTimeTravel() - Undo/redo functionality",
+        "packages/core/README.md:2115 — import { signalTree, batching, timeTravel } from '@signaltree/core'",
+        "packages/core/src/index.ts:209 — export { timeTravel } from './enhancers/time-travel/time-travel'",
+        "packages/core/src/lib/types.ts:9-33 — TimeTravelConfig.maxHistorySize (not maxHistory)"
+      ],
+      "proposed_action": "Global search-replace all `withTimeTravel` → `timeTravel` in the README. Fix `maxHistory: 50` → `maxHistorySize: 50` in the withTimeTravel config example. Verify all import lines include `timeTravel` not `withTimeTravel`.",
+      "status": "resolved",
+      "resolved_in": "v2 cycle — RFC-1 README overhaul (2026-04-29)"
+    },
+    {
+      "id": "F-006",
+      "surface": "packages/core/README.md",
+      "question": "broken-claims",
+      "severity": "P1",
+      "title": "README shows `.with(enhancerA(), enhancerB())` multi-arg call; `.with()` only accepts a single enhancer — second arg is silently dropped",
+      "steel_man": "The intention is to convey 'apply both enhancers'. A reader may understand the pattern even if the exact syntax is wrong. Other state libraries have multi-arg composition APIs.",
+      "evidence_refs": [
+        "packages/core/README.md:682-685 — .with(batching(), devTools()) two-arg call",
+        "packages/core/README.md:1615-1637 — .with(batching(), entities(), serialization({...}), withTimeTravel({...}), devTools({...})) five-arg call",
+        "packages/core/src/lib/types.ts:126-128 — with<TAdded>(enhancer: (tree: ISignalTree<T>) => ISignalTree<T> & TAdded): this & TAdded — single-arg",
+        "packages/core/src/lib/signal-tree.ts:509-546 — with() implementation checks single enhancer arg"
+      ],
+      "proposed_action": "Replace all multi-arg `.with(a(), b())` examples with chained `.with(a()).with(b())` calls. The multi-arg form silently ignores all arguments after the first (JavaScript discards extra args). Add a note: 'Chain multiple .with() calls — each call applies one enhancer.'",
+      "status": "resolved",
+      "resolved_in": "v2 cycle — RFC-1 README overhaul (2026-04-29)"
+    },
+    {
+      "id": "F-007",
+      "surface": "packages/core/README.md",
+      "question": "broken-claims",
+      "severity": "P1",
+      "title": "README documents multiple non-existent EntitySignal methods: `setMany`, `selectAll`, `selectBy`, `selectTotal`, `selectIds`",
+      "steel_man": "These names match the NgRx SignalStore entity API (selectAll, selectIds, selectTotal, selectBy pattern). The README may have been written referencing NgRx docs before the EntitySignal API was finalized.",
+      "evidence_refs": [
+        "packages/core/README.md:1041 — tree.$.products.setMany([...]) — API has setAll()",
+        "packages/core/README.md:1861 — users.selectAll()() — API has all (Signal<E[]>), call as all()",
+        "packages/core/README.md:1567 — tree.$.users.selectBy((u) => u.active) — API has where()",
+        "packages/core/README.md:1589 — appTree.$.app.data.users.selectBy((u) => u.isAdmin) — API has where()",
+        "packages/core/README.md:1590 — appTree.$.app.data.products.selectTotal() — API has count (Signal<number>), call as count()",
+        "packages/core/README.md:1592 — appTree.$.admin.data.reports.selectIds() — API has ids (Signal<K[]>), call as ids()",
+        "packages/core/src/lib/types.ts:489-522 — EntitySignal<E,K> interface — setAll, where, count, ids, all are correct names"
+      ],
+      "proposed_action": "Update all EntitySignal method references in the README: setMany → setAll; selectAll()() → all(); selectBy(pred) → where(pred); selectTotal() → count(); selectIds() → ids(). Add a 'EntitySignal Quick Reference' table at the top of the entityMap section mapping common NgRx names to SignalTree equivalents — this directly addresses AI-agent confusion.",
+      "status": "resolved",
+      "resolved_in": "v2 cycle — RFC-1 README overhaul (2026-04-29)"
+    },
+    {
+      "id": "F-008",
+      "surface": "packages/core/README.md",
+      "question": "broken-claims",
+      "severity": "P1",
+      "title": "`signalTree(state, { batching: false })` — config key is `batchUpdates`, not `batching`",
+      "steel_man": "Short key names like `batching` are more intuitive. The config may have been renamed during refactoring and the doc wasn't updated.",
+      "evidence_refs": [
+        "packages/core/README.md:221-223 — const tree = signalTree(initialState, { batching: false })",
+        "packages/core/src/lib/types.ts:308 — TreeConfig.batchUpdates?: boolean"
+      ],
+      "proposed_action": "Replace `{ batching: false }` with `{ batchUpdates: false }` in the README. Consider adding a TypeScript playground-style note showing the TreeConfig keys so readers can see the full option set.",
+      "status": "resolved",
+      "resolved_in": "v2 cycle — RFC-1 README overhaul (2026-04-29)"
+    },
+    {
+      "id": "F-009",
+      "surface": "packages/core/README.md",
+      "question": "dx-friction-on-golden-path",
+      "severity": "P1",
+      "title": "Quick Start and most examples use callable setter syntax (`tree.$.count(5)`) without stating this silently fails at runtime without the `@signaltree/callable-syntax` build-time transform",
+      "steel_man": "The callable setter syntax is described in the 'Callable leaf signals' section with correct caveats. A careful reader of the full README would encounter the warning. The section ordering is deliberate: quick/enticing first, caveats second.",
+      "evidence_refs": [
+        "packages/core/README.md:302-316 — Basic Usage example: tree.$.count(5), tree.$.message('Updated!') used as setters without transform caveat",
+        "packages/core/README.md:340-355 — Intermediate usage: tree.$.user.name('Jane Doe'), tree.$.ui.loading(true) used as setters",
+        "packages/core/README.md:84-111 — Callable leaf signals section correctly explains transform requirement — but appears AFTER the Quick Start examples that already used callable syntax",
+        "packages/core/src/lib/signal-tree.ts:360-376 — Leaf signals are created as plain signal(); Angular WritableSignal called with an argument returns the current value and ignores the arg — setter call is silently a no-op",
+        "packages/core/src/lib/types.ts:739-743 — CallableWritableSignal<T> has setter overloads at type level only"
+      ],
+      "proposed_action": "Move the callable-syntax caveat box immediately before or within the Quick Start section. Add a callout: 'NOTE: tree.$.count(5) requires the @signaltree/callable-syntax build transform. Without it, use tree.$.count.set(5). This README shows both styles; examples marked with † require the transform.' Alternatively, rewrite Quick Start using only .set()/.update() syntax so it works out-of-the-box, and introduce callable syntax in a separate optional section.",
+      "status": "resolved",
+      "resolved_in": "v2 cycle — RFC-1 README overhaul (2026-04-29)"
+    },
+    {
+      "id": "F-010",
+      "surface": "packages/core/src/index.ts",
+      "question": "broken-claims",
+      "severity": "P2",
+      "title": "`effects()` enhancer has source code at `src/enhancers/effects/effects.ts` but is NOT exported from `index.ts` — no public import path",
+      "steel_man": "The effects enhancer may have been intentionally omitted while the API is finalized. Angular's built-in `effect()` function is the recommended alternative. The README's use of `tree.effect()` without .with(effects()) may be showing the future desired API.",
+      "evidence_refs": [
+        "packages/core/src/enhancers/effects/effects.ts:1 — file exists",
+        "packages/core/src/index.ts — effects not in any export statement",
+        "packages/core/README.md:1524 — tree.effect(() => console.log('State changed')) shown without import",
+        "packages/core/src/lib/types.ts:162-168 — EffectsMethods<T> interface defined but not reachable without effects enhancer"
+      ],
+      "proposed_action": "Either: (a) export effects() from index.ts and update README to show .with(effects()) is required, or (b) remove effects() source code and all tree.effect() references from the README and direct users to Angular's built-in effect(). Option (b) is cleaner given the current direction toward 'no enhancer for effects'.",
+      "status": "resolved",
+      "resolved_in": "v3 cycle — RFC-3 effects export (2026-04-29)"
+    },
+    {
+      "id": "F-011",
+      "surface": "packages/core/src/lib/entity-signal.ts",
+      "question": "broken-claims",
+      "severity": "P1",
+      "title": "`AddManyOptions.mode` (`'strict' | 'skip' | 'overwrite'`) is typed but not implemented — `addMany()` always throws on duplicates",
+      "steel_man": "The `mode` option may have been planned and the type added ahead of implementation. The `strict` behavior (throw on duplicate) matches what the implementation does, so `mode: 'strict'` is implicitly enforced. The type was likely added as a forward-compatible stub.",
+      "evidence_refs": [
+        "packages/core/src/lib/types.ts:430-432 — AddManyOptions.mode?: 'strict' | 'skip' | 'overwrite'",
+        "packages/core/src/lib/entity-signal.ts:256-265 — addMany checks for duplicates and throws, never reads opts.mode",
+        "packages/core/README.md — no documentation of mode option behavior"
+      ],
+      "proposed_action": "Implement the `mode` option in `addMany()`: `'strict'` (default, throws on duplicate), `'skip'` (silently skip existing IDs), `'overwrite'` (replace existing entities). Alternatively, remove `mode` from `AddManyOptions` and document that `addMany` is strict-only; use `upsertMany` for skip/overwrite semantics. The current state — typed but silently unimplemented — is worse than either option.",
+      "status": "resolved",
+      "resolved_in": "v3 cycle — addMany() mode option implemented ('strict'/'skip'/'overwrite') (2026-04-29)"
+    },
+    {
+      "id": "F-012",
+      "surface": "packages/core/src/lib/entity-signal.ts",
+      "question": "broken-claims",
+      "severity": "P1",
+      "title": "`EntityNode<E>` set/update call signatures (`node(value)`, `node(updater)`) are typed but silently ignored at runtime — only the no-arg getter works",
+      "steel_man": "EntityNode may be intentionally a read-only accessor — the intended mutation path is `updateOne(id, changes)` on the EntitySignal. The callable type overloads may be aspirational or design debt from an earlier architecture.",
+      "evidence_refs": [
+        "packages/core/src/lib/types.ts:474-484 — EntityNode<E> type has (value: E): void and (updater) overloads",
+        "packages/core/src/lib/entity-signal.ts:90-108 — createEntityNode: node = (() => mapSignal().get(id)) — zero-arg only, extra args silently ignored",
+        "packages/core/src/lib/types.ts:474 — EntityNode callable overloads imply node(entity) sets the entity"
+      ],
+      "proposed_action": "Either (a) implement node(value) to call updateOne(id, value) and node(updater) to call updateOne(id, updater(current)), bringing runtime in sync with the type, OR (b) remove the set/update call signatures from EntityNode and document it as a read-only cursor. Option (a) is consistent with SignalTree's callable-everywhere philosophy. Document which mutation path is recommended (callable vs. EntitySignal.updateOne).",
+      "status": "resolved",
+      "resolved_in": "v3 cycle — RFC-2 EntityNode write fix, entity-level callable (2026-04-29)"
+    },
+    {
+      "id": "F-013",
+      "surface": "packages/core/src/lib/entity-signal.ts",
+      "question": "broken-claims",
+      "severity": "P1",
+      "title": "`EntityNode<E>` deep property access is typed as `CallableWritableSignal<T>` but implementation returns a plain read-only closure — `.set()`, `.update()`, `.asReadonly()` all throw at runtime",
+      "steel_man": "Deep entity property access via `byId(id)?.name.set('Bob')` is an advanced pattern. Most users interact with entities at the collection level (addOne, updateOne). The deep-access feature may be documented as read-only in practice even if the types imply write capability.",
+      "evidence_refs": [
+        "packages/core/src/lib/types.ts:478-484 — EntityNode<E>[P] typed as CallableWritableSignal<T[P]> for leaf props",
+        "packages/core/src/lib/entity-signal.ts:97-107 — createEntityNode property getter returns () => mapSignal().get(id)?.[key] — plain function, no .set/.update/.asReadonly",
+        "packages/core/src/lib/types.ts:739-743 — CallableWritableSignal extends WritableSignal which has set, update, asReadonly"
+      ],
+      "proposed_action": "Either (a) implement deep property writes by making each property getter return a proper WritableSignal (or a SignalTree-style callable that delegates to updateOne), OR (b) change the EntityNode type so leaf properties are typed as `Signal<T[P]>` (read-only) not `CallableWritableSignal<T[P]>`. Add a JSDoc note to byId() clarifying the read-only nature of deep access. This is a type-safety hole: TypeScript will accept `node.name.set('Bob')` and the runtime will throw.",
+      "status": "resolved",
+      "resolved_in": "v3 cycle — RFC-2 EntityNode write fix, Option B+ computed-based shim (2026-04-29)"
+    },
+    {
+      "id": "F-014",
+      "surface": "packages/core/src/lib/constants.ts",
+      "question": "dx-friction-on-golden-path",
+      "severity": "P2",
+      "title": "Production error messages are numeric codes ('0', '1', '2'...) — completely opaque when errors surface in production",
+      "steel_man": "Numeric codes minimize bundle size — a reasonable trade-off for a state library. Users can cross-reference against the dev build or source. The strategy matches Angular's own production error codes approach.",
+      "evidence_refs": [
+        "packages/core/src/lib/constants.ts:59-68 — PROD_MESSAGES maps every key to String(i++) — codes 0 through 24",
+        "packages/core/src/lib/constants.ts:24-55 — DEV_MESSAGES keys: NULL_OR_UNDEFINED, CIRCULAR_REF, etc. — readable in dev only",
+        "packages/core/src/lib/constants.ts:98-102 — SIGNAL_TREE_MESSAGES switches to PROD_MESSAGES in production"
+      ],
+      "proposed_action": "Add a production error lookup URL (e.g., `https://signaltree.io/errors/{code}`) appended to every production error message, matching the Angular pattern. Alternatively, keep short but human-readable codes like 'ST-NULL', 'ST-CIRC' instead of bare integers. Without a lookup path, production debugging is blocked. This is a particular concern for AI agents which can't cross-reference a source file in a deployed app.",
+      "status": "resolved",
+      "resolved_in": "v3 cycle — PROD_MESSAGES = DEV_MESSAGES; concise readable strings in all environments (2026-04-29)"
+    },
+    {
+      "id": "F-015",
+      "surface": "packages/core/src/lib/entity-signal.ts",
+      "question": "broken-claims",
+      "severity": "P2",
+      "title": "EntitySignal API reference in README has wrong return-type comments: `all()` returns `E[]` not `Signal<E[]>`; `byId(1)` returns `EntityNode<E>|undefined` not `Signal<Product>|undefined`",
+      "steel_man": "The comments may be describing what the *property* is (a Signal) rather than what the *call* returns (the unwrapped value). A reader familiar with Angular signals would parse 'Signal<Product[]>' as the type annotation for the property, not the call result.",
+      "evidence_refs": [
+        "packages/core/README.md:1044 — tree.$.products.all(); // Signal<Product[]> - all entities — actual return is Product[]",
+        "packages/core/README.md:1045 — tree.$.products.byId(1); // Signal<Product> | undefined — actual return is EntityNode<Product> | undefined",
+        "packages/core/README.md:1046-1048 — ids(), count() same issue",
+        "packages/core/src/lib/entity-signal.ts:164,168,172 — all, count, ids are getters returning Signals; calling the signal (all()) returns the unwrapped array/number/array"
+      ],
+      "proposed_action": "Fix comments in the entityMap API reference: `tree.$.products.all()` → `// Product[]`; `tree.$.products.all` → `// Signal<Product[]>`. Similarly for ids, count, byId. Also add a note clarifying EntityNode vs Signal distinction for byId.",
+      "status": "resolved",
+      "resolved_in": "v2 cycle — RFC-1 README overhaul (2026-04-29)"
+    },
+    {
+      "id": "F-016",
+      "surface": "packages/shared",
+      "question": "broken-claims",
+      "severity": "P3",
+      "title": "`@signaltree/shared` version drift: 9.0.1 vs monorepo 9.2.1",
+      "steel_man": "Shared is an internal-only package not published to npm. Version drift in internal packages is acceptable if the public API surface is unchanged. The 0.2.1 delta covers fixes in core/enterprise/etc. that don't touch shared's exported surface.",
+      "evidence_refs": [
+        "packages/shared/package.json — version: 9.0.1",
+        "packages/core/package.json — version: 9.2.1",
+        "packages/enterprise/package.json — version: 9.2.1 (assumed, per audit scope decision)"
+      ],
+      "proposed_action": "Bump @signaltree/shared to 9.2.1 to keep version parity across the monorepo. Even for internal packages, divergent versions create confusion during debugging (stack traces, lockfile reads). If shared genuinely had no changes, a no-op patch bump is low cost.",
+      "status": "resolved",
+      "resolved_in": "v3 cycle — @signaltree/shared bumped to 9.2.1 (2026-04-29)"
+    }
+  ]
+}

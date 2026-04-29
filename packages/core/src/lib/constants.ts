@@ -54,18 +54,11 @@ const DEV_MESSAGES = {
   SUBSCRIBE_NO_CONTEXT: 'no angular context',
 } as const;
 
-// Compact production messages (very short numeric codes) to keep bundles minimal.
-// We map each key to a short numeric string like '0','1','2' to minimize bytes.
-const PROD_MESSAGES = (() => {
-  const out = {} as Record<keyof typeof DEV_MESSAGES, string>;
-  let i = 0;
-  for (const k of Object.keys(DEV_MESSAGES) as Array<
-    keyof typeof DEV_MESSAGES
-  >) {
-    out[k] = String(i++);
-  }
-  return out;
-})();
+// Production messages use the same short readable strings as dev.
+// The numeric-code approach was abandoned: bare integers ('0','1','2') are
+// completely opaque in production stack traces and tooling. The dev strings
+// are already concise (<25 chars each) so bundle impact is negligible.
+const PROD_MESSAGES = DEV_MESSAGES;
 
 // Prefer Angular's compile-time `ngDevMode` flag. When `ngDevMode` is false
 // in production builds, DEV_MESSAGES can be tree-shaken. Fallback to

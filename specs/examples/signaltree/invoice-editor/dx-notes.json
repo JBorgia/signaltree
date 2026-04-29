@@ -1,0 +1,31 @@
+{
+  "implementation": "signaltree",
+  "feature": "invoice_editor_v1",
+  "signaltree_version": "9.2.1",
+  "angular_baseline": "20.x",
+  "scaffold_date": "2026-04-29",
+  "time_to_first_compiling_invoice_minutes": 25,
+  "ts_errors_hit_count": 3,
+  "ts_errors_hit_examples": [
+    "byId() returns EntityNode<Invoice> | undefined — had to add optional chaining ?.() to dereference to Invoice",
+    "entityMap<Invoice, string>() — second type param (ID type) required; README examples omit it",
+    "invoices.all() — signature is a getter (.all not .all()); README and type mismatch caused confusion"
+  ],
+  "retries_to_get_typing_right": 2,
+  "workarounds_applied": [
+    {
+      "finding": "F-012/F-013",
+      "description": "EntityNode deep writes silently fail at runtime. Cannot use byId(id).lineItems.set(...). Must read full invoice via byId(id)?.(), then call updateOne(id, { lineItems: newArray }) with spread-modified array."
+    },
+    {
+      "finding": "F-009",
+      "description": "Callable setter syntax requires @signaltree/callable-syntax build transform. All mutations use .set()/.update() syntax in this scaffold to remain valid without the transform."
+    },
+    {
+      "finding": "F-002",
+      "description": "entities() enhancer throws at runtime. Used entityMap() marker (self-registering) instead. No .with(entities()) in scaffold."
+    }
+  ],
+  "subjective_1to5": 2,
+  "subjective_rationale": "The core entityMap() + updateOne() pattern is workable but the deep-write limitation (F-012/F-013) forces verbose read-spread-write on every nested array mutation. For a feature like line items this means every addLineItem/updateLineItem/removeLineItem must read the full lineItems array out of the entity, mutate in userland, and write back. NgRx patchState with updateEntity function form is significantly more ergonomic for nested collections. The ?.() dereference on EntityNode is also a notable friction point — byId() returns a cursor, not a value, and the README does not make this clear. Derived state via Angular computed() is idiomatic and works well; no friction there."
+}

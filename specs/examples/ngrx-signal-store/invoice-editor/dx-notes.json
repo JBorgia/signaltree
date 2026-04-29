@@ -1,0 +1,18 @@
+{
+  "implementation": "ngrx-signal-store",
+  "feature": "invoice_editor_v1",
+  "ngrx_signalstore_version": "@ngrx/signals@^20.1.0",
+  "angular_baseline": "20.x",
+  "scaffold_date": "2026-04-29",
+  "time_to_first_compiling_invoice_minutes": 15,
+  "ts_errors_hit_count": 1,
+  "ts_errors_hit_examples": [
+    "updateEntity changes function — TypeScript required Partial<Invoice> return type, triggering strict null check on the mapped lineItems array (resolved by ensuring map returns LineItem[], not (LineItem | undefined)[])"
+  ],
+  "retries_to_get_typing_right": 1,
+  "workarounds_applied": [],
+  "subjective_1to5": 4,
+  "subjective_rationale": "patchState + updateEntity with a function change is the idiomatic path for nested entity mutations and it reads naturally: updateEntity({ id, changes: invoice => ({ lineItems: invoice.lineItems.map(...) }) }). No workarounds needed for deep writes. withEntities() provides entities/entityMap/ids signals out of the box. withHooks.onInit for seeding is clean. The only ergonomic gap: withComputed() cannot easily produce per-ID signal factories (returned methods from withMethods() were used instead, matching the SignalTree invoiceSignals() pattern). Reading from entityMap() inside computed() is slightly more explicit than SignalTree's byId() cursor but equivalent in reactivity.",
+  "second_pair_of_eyes_required": true,
+  "second_pair_review_path": "specs/examples/ngrx-signal-store/invoice-editor/second-pair-review.md"
+}

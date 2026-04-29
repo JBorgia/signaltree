@@ -88,18 +88,47 @@ export function createEntitySignal<
   }
 
   function createEntityNode(id: K, entity: E): EntityNode<E> {
-    // Node is callable: node() returns current entity
-    // IMPORTANT: Read from mapSignal() so consumers who call node() inside
-    // computed/effect properly register a dependency on entity map updates.
-    const node = (() => mapSignal().get(id)) as unknown as EntityNode<E>;
+    // Entity-level callable:
+    //   node()           → reads current entity (reactive via mapSignal)
+    //   node(value)      → full entity replace via updateOne (throws if entity removed)
+    //   node(updater)    → updater-based replace via updateOne (throws if entity removed)
+    const node = ((valueOrUpdater?: E | ((current: E) => E)) => {
+      if (valueOrUpdater === undefined) {
+        return mapSignal().get(id);
+      }
+      if (typeof valueOrUpdater === 'function') {
+        const current = storage.get(id);
+        if (current === undefined) {
+          throw new Error(`Entity with id ${String(id)} not found`);
+        }
+        api.updateOne(id, (valueOrUpdater as (c: E) => E)(current) as Partial<E>);
+      } else {
+        api.updateOne(id, valueOrUpdater as Partial<E>);
+      }
+    }) as unknown as EntityNode<E>;
 
-    // Add properties for deep access
+    // Field properties: Option B+ computed-based shim.
+    // Each field returns a computed(() => field_value) with .set()/.update()/.asReadonly()
+    // attached so that isSignal() returns true and toObservable() works.
+    // Writes delegate to api.updateOne which runs interceptors and tap handlers.
     for (const key of Object.keys(entity)) {
-      Object.defineProperty(node, key, {
-        get: () => {
-          // Return a signal-like callable
-          return () => mapSignal().get(id)?.[key as keyof E];
+      const fieldKey = key as keyof E;
+      const fieldSignal = computed(() => mapSignal().get(id)?.[fieldKey]);
+
+      Object.assign(fieldSignal, {
+        set: (value: E[typeof fieldKey]) => {
+          api.updateOne(id, { [fieldKey]: value } as Partial<E>);
         },
+        update: (fn: (current: E[typeof fieldKey] | undefined) => E[typeof fieldKey]) => {
+          api.updateOne(id, {
+            [fieldKey]: fn(mapSignal().get(id)?.[fieldKey]),
+          } as Partial<E>);
+        },
+        asReadonly: () => fieldSignal,
+      });
+
+      Object.defineProperty(node, key, {
+        get: () => fieldSignal,
         enumerable: true,
         configurable: true,
       });
@@ -254,22 +283,30 @@ export function createEntitySignal<
     },
 
     addMany(entities: E[], opts?: AddManyOptions<E, K>): K[] {
-      // Check for duplicates first
-      const idsToAdd: K[] = [];
+      const mode = opts?.mode ?? 'strict';
+
+      // First pass: validate/filter based on mode
+      const toProcess: Array<{ entity: E; id: K }> = [];
       for (const entity of entities) {
         const id = opts?.selectId?.(entity) ?? selectId(entity);
         if (storage.has(id)) {
-          throw new Error(`Entity with id ${String(id)} already exists`);
+          if (mode === 'strict') {
+            throw new Error(`Entity with id ${String(id)} already exists`);
+          } else if (mode === 'skip') {
+            continue;
+          }
+          // 'overwrite': fall through — storage.set below replaces the existing entry
         }
-        idsToAdd.push(id);
+        toProcess.push({ entity, id });
       }
 
-      // Add all entities without triggering per-entity signal updates
-      const addedEntities: Array<{ id: K; entity: E }> = [];
-      for (let i = 0; i < entities.length; i++) {
-        const entity = entities[i];
-        const id = idsToAdd[i];
+      if (toProcess.length === 0) return [];
 
+      // Process all entities without triggering per-entity signal updates
+      const processedIds: K[] = [];
+      const addedEntities: Array<{ id: K; entity: E }> = [];
+
+      for (const { entity, id } of toProcess) {
         // Run interceptors
         let transformedEntity = entity;
         for (const handler of interceptHandlers) {
@@ -290,25 +327,26 @@ export function createEntitySignal<
 
         storage.set(id, transformedEntity);
         nodeCache.delete(id);
+        processedIds.push(id);
         addedEntities.push({ id, entity: transformedEntity });
       }
 
-      // Single signal update after all entities are added
+      // Single signal update after all entities are processed
       updateSignals();
 
-      // Notify PathNotifier for each added entity
+      // Notify PathNotifier for each processed entity
       for (const { id, entity } of addedEntities) {
         pathNotifier.notify(`${basePath}.${String(id)}`, entity, undefined);
       }
 
-      // Run tap handlers for each added entity
+      // Run tap handlers for each processed entity
       for (const { id, entity } of addedEntities) {
         for (const handler of tapHandlers) {
           handler.onAdd?.(entity, id);
         }
       }
 
-      return idsToAdd;
+      return processedIds;
     },
 
     // ==================

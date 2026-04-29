@@ -3096,11 +3096,11 @@ this._store.users.loadUsers$().subscribe();  // Use store.ops.users instead
 - Computed signals from **previous** tiers
 
 ```typescript
-// ✅ Tier 4 can use Tier 3's $.workflow.statusDisplayMap()
+// ✅ Tier 4 can use Tier 3's $flow.statusDisplayMap()
 .derived($ => ({
   workflow: {
     currentForDisplay: computed(() => {
-      const displayMap = $.workflow.statusDisplayMap(); // From Tier 3
+      const displayMap = $flow.statusDisplayMap(); // From Tier 3
       return { ...status, label: displayMap[status.status]?.label };
     })
   }
@@ -3112,7 +3112,7 @@ this._store.users.loadUsers$().subscribe();  // Use store.ops.users instead
     statusDisplayMap: computed(() => { /* ... */ }),
     currentForDisplay: computed(() => {
       // ERROR: statusDisplayMap doesn't exist yet in this tier!
-      const displayMap = $.workflow.statusDisplayMap();
+      const displayMap = $flow.statusDisplayMap();
     })
   }
 }))
