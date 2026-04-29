@@ -581,6 +581,35 @@ declare module '@nestjs/common' {
 interface ImportMeta {
   env: Record<string, string>;
 }
+
+// --- Pedagogical type aliases --------------------------------------------
+// Skill snippets reference user-app type aliases that the doc comment
+// instructs readers to "import from your own models". Provide \`any\`-typed
+// stand-ins so the snippets type-check without forcing every fence to
+// declare them inline. Real wrong-shape errors (calling \`Nullable\` with
+// the wrong arity, etc.) still surface because we use generics.
+type Nullable<T> = T | null;
+type AppError = { message: string; cause?: unknown };
+interface DriverDto { id: number; name: string; [k: string]: any }
+interface TruckDto { id: number; [k: string]: any }
+interface HaulerDto { id: number; [k: string]: any }
+interface TicketDto { id: number; [k: string]: any }
+interface FooDto { id: number; [k: string]: any }
+
+// --- Test runner globals -------------------------------------------------
+// Skill testing examples use vitest/jest globals. We don't ship those types
+// to the lint program (it's noEmit, no test runner), so declare the few
+// names skill snippets actually use.
+declare const describe: (name: string, fn: () => void | Promise<void>) => void;
+declare const it: (name: string, fn: () => void | Promise<void>) => void;
+declare const test: (name: string, fn: () => void | Promise<void>) => void;
+declare const beforeEach: (fn: () => void | Promise<void>) => void;
+declare const afterEach: (fn: () => void | Promise<void>) => void;
+declare const beforeAll: (fn: () => void | Promise<void>) => void;
+declare const afterAll: (fn: () => void | Promise<void>) => void;
+declare const expect: any;
+declare const jest: { fn: (impl?: any) => any; [k: string]: any };
+declare const vi: { fn: (impl?: any) => any; mock: (mod: string, factory?: any) => void; [k: string]: any };
 `;
   const ambientPath = path.join(tempRoot, '__ambient.d.ts');
   writeFileSync(ambientPath, ambientStub, 'utf8');
@@ -624,6 +653,119 @@ interface ImportMeta {
       '  "user.created",\n' +
       '  { id: string; email: string; name: string }\n' +
       '>;\n',
+    'utf8'
+  );
+
+  // Skill examples for app-tree / Ops / derived patterns reference user-app
+  // modules by relative path (`./app-tree`, `./driver.ops`, `./derived/...`).
+  // Provide loose `any`-typed placeholders so the snippets type-check
+  // without forcing every fence to inline-declare a mock module.
+  const opsStub =
+    'export class DriverOps { [k: string]: any }\n' +
+    'export class TruckOps { [k: string]: any }\n' +
+    'export class TicketOps { [k: string]: any }\n' +
+    'export class SelectionOps { [k: string]: any }\n' +
+    'export class SessionOps { [k: string]: any }\n';
+  const writeOps = (file) =>
+    writeFileSync(path.join(tempRoot, file), opsStub, 'utf8');
+  writeOps('driver.ops.ts');
+  writeOps('truck.ops.ts');
+  writeOps('ticket.ops.ts');
+  writeOps('selection.ops.ts');
+  writeOps('session.ops.ts');
+
+  const appTreeStub =
+    'import type { InjectionToken, Provider } from "@angular/core";\n' +
+    'export type AppTree = any;\n' +
+    'export type AppTreeBase = any;\n' +
+    'export const APP_TREE: InjectionToken<AppTree> = null as any;\n' +
+    'export function createBaseState(initial?: any): any { return {}; }\n' +
+    'export function createAppTree(initial?: any): AppTree { return null as any; }\n' +
+    'export function provideAppTree(): Provider[] { return []; }\n';
+  writeFileSync(path.join(tempRoot, 'app-tree.ts'), appTreeStub, 'utf8');
+
+  writeFileSync(
+    path.join(tempRoot, 'app-tree.testing.ts'),
+    'import type { Provider } from "@angular/core";\n' +
+      'export function provideAppTreeForTesting(overrides?: any): Provider[] { return []; }\n',
+    'utf8'
+  );
+
+  writeFileSync(
+    path.join(tempRoot, 'signaltree.ts'),
+    'export class AppStore { readonly $: any; readonly ops: any; [k: string]: any }\n',
+    'utf8'
+  );
+
+  writeFileSync(
+    path.join(tempRoot, 'some.component.ts'),
+    'export class SomeComponent { [k: string]: any }\n',
+    'utf8'
+  );
+
+  mkdirSync(path.join(tempRoot, 'derived'), { recursive: true });
+  const derivedFactoryStub =
+    'export const entityResolutionDerived: any = () => ({});\n' +
+    'export const complexLogicDerived: any = () => ({});\n';
+  writeFileSync(
+    path.join(tempRoot, 'derived', 'tier-entity-resolution.derived.ts'),
+    derivedFactoryStub,
+    'utf8'
+  );
+  writeFileSync(
+    path.join(tempRoot, 'derived', 'tier-complex-logic.derived.ts'),
+    derivedFactoryStub,
+    'utf8'
+  );
+
+  // Some testing.md fences import from deeper trees: `../app-tree`,
+  // `../store/tree/app-tree`, `./app/store/tree/app-tree.testing` etc.
+  // Mirror the placeholders in the parent of tempRoot and in nested
+  // `store/{tree,ops}` and `app/store/tree` subdirectories.
+  const tempParent = path.dirname(tempRoot); // .cache
+  writeFileSync(path.join(tempParent, 'app-tree.ts'), appTreeStub, 'utf8');
+  writeFileSync(
+    path.join(tempParent, 'app-tree.testing.ts'),
+    'import type { Provider } from "@angular/core";\n' +
+      'export function provideAppTreeForTesting(overrides?: any): Provider[] { return []; }\n',
+    'utf8'
+  );
+  mkdirSync(path.join(tempParent, 'store', 'tree'), { recursive: true });
+  mkdirSync(path.join(tempParent, 'store', 'ops'), { recursive: true });
+  writeFileSync(
+    path.join(tempParent, 'store', 'tree', 'app-tree.ts'),
+    appTreeStub,
+    'utf8'
+  );
+  writeFileSync(
+    path.join(tempParent, 'store', 'tree', 'app-tree.testing.ts'),
+    'import type { Provider } from "@angular/core";\n' +
+      'export function provideAppTreeForTesting(overrides?: any): Provider[] { return []; }\n',
+    'utf8'
+  );
+  writeFileSync(
+    path.join(tempParent, 'store', 'ops', 'driver.ops.ts'),
+    opsStub,
+    'utf8'
+  );
+  // `driver.service` placeholder — referenced via `./driver.service` from
+  // testing examples that live alongside ops files.
+  writeFileSync(
+    path.join(tempRoot, 'driver.service.ts'),
+    'export class DriverService { [k: string]: any }\n',
+    'utf8'
+  );
+  writeFileSync(
+    path.join(tempParent, 'driver.service.ts'),
+    'export class DriverService { [k: string]: any }\n',
+    'utf8'
+  );
+  // And `app/store/tree/app-tree.testing` resolved from tempRoot.
+  mkdirSync(path.join(tempRoot, 'app', 'store', 'tree'), { recursive: true });
+  writeFileSync(
+    path.join(tempRoot, 'app', 'store', 'tree', 'app-tree.testing.ts'),
+    'import type { Provider } from "@angular/core";\n' +
+      'export function provideAppTreeForTesting(overrides?: any): Provider[] { return []; }\n',
     'utf8'
   );
 

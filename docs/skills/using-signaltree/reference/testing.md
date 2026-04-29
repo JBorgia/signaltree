@@ -10,6 +10,12 @@ In the recommended shape from [`patterns.md`](./patterns.md):
 
 ```ts
 // app-tree.ts
+import { InjectionToken, type Provider } from '@angular/core';
+
+// (Defined elsewhere in this file — see `patterns.md` for the full shape.)
+declare const createAppTree: () => any;
+export type AppTree = ReturnType<typeof createAppTree>;
+
 export const APP_TREE = new InjectionToken<AppTree>('APP_TREE');
 
 export function provideAppTree(): Provider[] {
@@ -120,7 +126,7 @@ import { firstValueFrom, of } from 'rxjs';
 import { DriverOps } from './driver.ops';
 import { provideAppTreeForTesting } from './app-tree.testing';
 import { APP_TREE } from './app-tree';
-import { DriverService } from '../../driver.service';
+import { DriverService } from './driver.service';
 
 describe('DriverOps', () => {
   let ops: DriverOps;
