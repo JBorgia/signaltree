@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { devTools, enableDevTools, fullDevTools, productionDevTools } from './devtools';
 import { getPathNotifier, resetPathNotifier } from '../../lib/path-notifier';
+import { signalTree } from '../../lib/signal-tree';
 
 function createMockTree(initialState: Record<string, any> = { count: 0 }) {
   const state = { ...initialState } as Record<string, any>;
@@ -183,6 +184,57 @@ describe('devTools enhancer (v6 API)', () => {
         },
       });
       expect(send.mock.calls[0][1]).toEqual(tree());
+    } finally {
+      (globalThis as any).window = originalWindow;
+    }
+  });
+
+  it('sends updates when nested leaf signals change via direct .set()', async () => {
+    resetPathNotifier();
+
+    const originalWindow = (globalThis as any).window;
+    const send = vi.fn();
+    const connect = vi.fn(() => ({ send }));
+
+    (globalThis as any).window = {
+      __REDUX_DEVTOOLS_EXTENSION__: {
+        connect,
+      },
+    };
+
+    try {
+      const tree = signalTree({
+        user: {
+          profile: {
+            name: 'Ada',
+          },
+        },
+      }).with(devTools({ enabled: true, enableBrowserDevTools: true }));
+
+      send.mockClear();
+
+      tree.$.user.profile.name.set('Grace');
+
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(send).toHaveBeenCalledTimes(1);
+      expect(send.mock.calls[0][0]).toMatchObject({
+        type: 'SignalTree/user.profile.name',
+        payload: 'user.profile.name',
+        meta: {
+          source: 'path-notifier',
+          paths: ['user.profile.name'],
+          timestamp: expect.any(Number),
+        },
+      });
+      expect(send.mock.calls[0][1]).toEqual({
+        user: {
+          profile: {
+            name: 'Grace',
+          },
+        },
+      });
     } finally {
       (globalThis as any).window = originalWindow;
     }
