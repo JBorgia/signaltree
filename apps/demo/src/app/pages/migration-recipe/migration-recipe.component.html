@@ -64,10 +64,8 @@
     <div class="compare-grid">
       <div>
         <h4>Before — <code>tickets.store.ts</code></h4>
-        <pre><code>&#64;Injectable(&#123; providedIn: 'root' &#125;)
-export class TicketStore extends SignalStore&lt;TicketState&gt; &#123;&#125;
-
-export const TicketStore = signalStore(
+        <pre><code>export const TicketStore = signalStore(
+  &#123; providedIn: 'root' &#125;,
   withState(&#123; tickets: [] as Ticket[], filter: '' &#125;),
   withComputed((s) =&gt; (&#123;
     visible: computed(() =&gt;
@@ -84,7 +82,8 @@ export const TicketStore = signalStore(
       </div>
       <div>
         <h4>After — <code>ticket.ops.ts</code></h4>
-        <pre><code>&#64;Injectable(&#123; providedIn: 'root' &#125;)
+        <pre><code>// APP_TREE defined once in app.tree.ts (see architecture guide)
+&#64;Injectable(&#123; providedIn: 'root' &#125;)
 export class TicketOps &#123;
   private tree = inject(APP_TREE);
   private api  = inject(TicketApi);
@@ -354,7 +353,8 @@ export class CartService &#123;
       </div>
       <div>
         <h4>After</h4>
-        <pre><code>&#64;Injectable(&#123; providedIn: 'root' &#125;)
+        <pre><code>// APP_TREE defined once in app.tree.ts (see architecture guide)
+&#64;Injectable(&#123; providedIn: 'root' &#125;)
 export class CartOps &#123;
   private tree = inject(APP_TREE);
 
