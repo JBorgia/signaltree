@@ -55,55 +55,41 @@
 
     <h3>Side-by-side</h3>
     <p style="font-size:0.875rem;color:var(--text-2,#555);margin-bottom:0.5rem">
-      NgRx <code>signalStore()</code> co-locates state, computed, and methods
-      in one factory. SignalTree separates them: the tree token holds state
-      schema; the <code>Ops</code> service holds computed and methods. The
-      annotations below show what maps to what.
+      Both sides show the <strong>feature file</strong> only. NgRx requires
+      <code>StoreModule</code> / <code>provideStore()</code> registration in
+      <code>app.config.ts</code>; SignalTree requires a shared
+      <code>APP_TREE</code> token in <code>app.tree.ts</code>. Neither
+      boilerplate is shown — they're equivalent one-time setup.
     </p>
     <div class="compare-grid">
       <div>
-        <h4>Before — &#64;ngrx/signals</h4>
-        <pre><code>export const TicketStore = signalStore(
-  &#123; providedIn: 'root' &#125;,
+        <h4>Before — <code>tickets.store.ts</code></h4>
+        <pre><code>&#64;Injectable(&#123; providedIn: 'root' &#125;)
+export class TicketStore extends SignalStore&lt;TicketState&gt; &#123;&#125;
 
-  // ── STATE SCHEMA ──────────────────────────────
-  withState&lt;TicketState&gt;(&#123; tickets: [], filter: '' &#125;),
-
-  // ── COMPUTED ──────────────────────────────────
+export const TicketStore = signalStore(
+  withState(&#123; tickets: [] as Ticket[], filter: '' &#125;),
   withComputed((s) =&gt; (&#123;
     visible: computed(() =&gt;
       s.tickets().filter(t =&gt; t.title.includes(s.filter()))
     )
   &#125;)),
-
-  // ── METHODS ───────────────────────────────────
   withMethods((s, api = inject(TicketApi)) =&gt; (&#123;
-    load: rxMethod&lt;void&gt;(pipe(
-      switchMap(() =&gt; api.list()),
-      tap(tickets =&gt; patchState(s, &#123; tickets &#125;))
-    ))
+    async load() &#123;
+      const tickets = await firstValueFrom(api.list());
+      patchState(s, &#123; tickets &#125;);
+    &#125;
   &#125;))
 );</code></pre>
       </div>
       <div>
-        <h4>After — SignalTree</h4>
-        <pre><code>// ── STATE SCHEMA (= withState) ────────────────
-// app.tree.ts
-export const APP_TREE = new InjectionToken('AppTree', &#123;
-  factory: () =&gt; signalTree(&#123;
-    tickets: entityMap&lt;Ticket&gt;(),
-    filter: '',
-  &#125;)
-&#125;);
-
-// ── COMPUTED + METHODS (= withComputed + withMethods)
-// ticket.ops.ts
-&#64;Injectable(&#123; providedIn: 'root' &#125;)
+        <h4>After — <code>ticket.ops.ts</code></h4>
+        <pre><code>&#64;Injectable(&#123; providedIn: 'root' &#125;)
 export class TicketOps &#123;
   private tree = inject(APP_TREE);
-  private api = inject(TicketApi);
+  private api  = inject(TicketApi);
 
-  visible = computed(() =&gt;
+  readonly visible = computed(() =&gt;
     this.tree.$.tickets.all().filter(t =&gt;
       t.title.includes(this.tree.$.filter())
     )
