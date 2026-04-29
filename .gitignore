@@ -78,6 +78,9 @@ tmp/
 
 # Local tooling
 .ralphy/
+.versus/
+.mcp.json
+.claude/
 
 # Skill lint scratch dir (created by scripts/lint-skills.mjs)
 .cache/
