@@ -92,19 +92,20 @@ export function createEntitySignal<
     //   node()           → reads current entity (reactive via mapSignal)
     //   node(value)      → full entity replace via updateOne (throws if entity removed)
     //   node(updater)    → updater-based replace via updateOne (throws if entity removed)
-    const node = ((valueOrUpdater?: E | ((current: E) => E)) => {
+    const node = ((valueOrUpdater?: E | ((current: E) => E)): E | undefined => {
       if (valueOrUpdater === undefined) {
         return mapSignal().get(id);
       }
+      const current = storage.get(id);
+      if (current === undefined) {
+        throw new Error(`Entity with id ${String(id)} not found`);
+      }
       if (typeof valueOrUpdater === 'function') {
-        const current = storage.get(id);
-        if (current === undefined) {
-          throw new Error(`Entity with id ${String(id)} not found`);
-        }
         api.updateOne(id, (valueOrUpdater as (c: E) => E)(current) as Partial<E>);
       } else {
         api.updateOne(id, valueOrUpdater as Partial<E>);
       }
+      return undefined;
     }) as unknown as EntityNode<E>;
 
     // Field properties: Option B+ computed-based shim.
