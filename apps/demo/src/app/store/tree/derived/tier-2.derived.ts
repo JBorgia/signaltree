@@ -57,5 +57,13 @@ export const tier2Derived = derived(($) => ({
       if (!user) return [];
       return $.posts.entities.all().filter((p: Post) => p.authorId === user.id);
     }),
+
+    /** True when the selected post can be published (admin author, not yet published). */
+    canPublishSelected: computed(() => {
+      const post = $.posts.selected();
+      if (!post) return false;
+      const author = $.users.entities.byId(post.authorId)?.();
+      return author?.role === 'admin' && !post.published;
+    }),
   },
 }));

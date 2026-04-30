@@ -42,7 +42,7 @@
       <tbody>
         <tr><td><code>signalStore(&#123; providedIn: 'root' &#125;, ...)</code></td><td>Tree slice on <code>AppTree</code> + sibling <code>Ops</code> service</td></tr>
         <tr><td><code>withState&lt;T&gt;(initial)</code></td><td>Initial state passed to <code>signalTree(initial)</code></td></tr>
-        <tr><td><code>withComputed(store =&gt; (&#123;...&#125;))</code></td><td><code>computed()</code> on the tree, or a <code>Computed</code> service</td></tr>
+        <tr><td><code>withComputed(store =&gt; (&#123;...&#125;))</code></td><td><code>.derived($ =&gt; (&#123;...&#125;))</code> on the tree — reads always live on <code>$</code>, never in Ops</td></tr>
         <tr><td><code>withMethods(store =&gt; (&#123;...&#125;))</code></td><td>Methods on an <code>Ops</code> service that update the tree</td></tr>
         <tr><td><code>withHooks(&#123; onInit &#125;)</code></td><td>Factory body or <code>Ops</code> constructor</td></tr>
         <tr><td><code>rxMethod(source$ =&gt; ...)</code></td><td>Plain method, optionally returning <code>Observable&lt;void&gt;</code></td></tr>
@@ -81,18 +81,25 @@
 );</code></pre>
       </div>
       <div>
-        <h4>After — <code>ticket.ops.ts</code></h4>
-        <pre><code>// APP_TREE defined once in app.tree.ts (see architecture guide)
+        <h4>After — <code>app.tree.ts</code> (state + reads) &amp; <code>ticket.ops.ts</code> (writes)</h4>
+        <pre><code>// app.tree.ts — state + all derived reads in one place
+export const APP_TREE = new InjectionToken('APP_TREE');
+const tree = signalTree(&#123;
+  tickets: entityMap&lt;Ticket&gt;(),
+  filter: ''
+&#125;).derived($ =&gt; (&#123;
+  tickets: &#123;
+    visible: computed(() =&gt;
+      $.tickets.all().filter(t =&gt; t.title.includes($.filter()))
+    )
+  &#125;
+&#125;));
+
+// ticket.ops.ts — writes only, no computed
 &#64;Injectable(&#123; providedIn: 'root' &#125;)
 export class TicketOps &#123;
   private tree = inject(APP_TREE);
   private api  = inject(TicketApi);
-
-  readonly visible = computed(() =&gt;
-    this.tree.$.tickets.all().filter(t =&gt;
-      t.title.includes(this.tree.$.filter())
-    )
-  );
 
   async load() &#123;
     const tickets = await firstValueFrom(this.api.list());
@@ -143,11 +150,11 @@ export class TicketOps &#123;
       <tbody>
         <tr><td><code>createAction</code> + <code>props&lt;T&gt;()</code></td><td>Method parameters on an <code>Ops</code> service</td></tr>
         <tr><td><code>createReducer</code> + <code>on(...)</code></td><td>Direct tree updates inside the method</td></tr>
-        <tr><td><code>createSelector</code> / <code>createFeatureSelector</code></td><td><code>computed()</code> over <code>tree.$.slice</code></td></tr>
+        <tr><td><code>createSelector</code> / <code>createFeatureSelector</code></td><td><code>.derived($ =&gt; (&#123; x: computed(() =&gt; $.slice...) &#125;))</code> on the tree</td></tr>
         <tr><td><code>createEffect</code> + <code>switchMap</code> / <code>concatMap</code></td><td><code>async</code> method on Ops, or <code>rxMethod</code>-style helper</td></tr>
         <tr><td><code>EntityAdapter</code> / <code>createEntityAdapter</code></td><td><code>entityMap&lt;T&gt;()</code> marker</td></tr>
         <tr><td><code>Store.dispatch(action)</code></td><td><code>ops.method(args)</code></td></tr>
-        <tr><td><code>store.select(selector)</code></td><td><code>tree.$.path</code> or a <code>computed()</code></td></tr>
+        <tr><td><code>store.select(selector)</code></td><td><code>tree.$.path</code> signal (or derived signal from <code>.derived()</code>)</td></tr>
         <tr><td><code>StoreDevtoolsModule</code></td><td><code>devTools()</code> enhancer</td></tr>
       </tbody>
     </table>
@@ -237,7 +244,7 @@ ops = inject(UsersOps);
       <tbody>
         <tr><td><code>extends ComponentStore&lt;T&gt;</code></td><td>Tree slice + <code>Ops</code> service</td></tr>
         <tr><td><code>this.updater((s, v) =&gt; ...)</code></td><td>Method that calls <code>tree.$.x.update(...)</code></td></tr>
-        <tr><td><code>this.select(...)</code></td><td><code>computed()</code> over the tree</td></tr>
+        <tr><td><code>this.select(...)</code></td><td><code>tree.$.path</code> signal, or <code>.derived()</code> for cross-slice computed</td></tr>
         <tr><td><code>this.effect&lt;T&gt;(source$ =&gt; ...)</code></td><td><code>async</code> method, or RxJS pipeline returning <code>Observable&lt;void&gt;</code></td></tr>
         <tr><td><code>this.patchState(partial)</code></td><td><code>tree.$.field.set(value)</code> per leaf, or <code>tree.$.obj.update(s =&gt; (&#123;...s, ...patch&#125;))</code></td></tr>
       </tbody>
@@ -258,7 +265,7 @@ ops = inject(UsersOps);
       <thead><tr><th>NGXS</th><th>SignalTree</th></tr></thead>
       <tbody>
         <tr><td><code>&#64;State&lt;T&gt;(&#123; name, defaults &#125;)</code></td><td>Tree slice on <code>AppTree</code></td></tr>
-        <tr><td><code>&#64;Selector()</code></td><td><code>computed()</code> on the Ops service</td></tr>
+        <tr><td><code>&#64;Selector()</code></td><td><code>.derived($ =&gt; (&#123; x: computed(() =&gt; ...) &#125;))</code> on the tree</td></tr>
         <tr><td><code>&#64;Action(MyAction)</code></td><td>Method on the Ops service</td></tr>
         <tr><td><code>ctx.patchState(partial)</code></td><td><code>tree.$.field.set(value)</code> per leaf, or <code>tree.$.obj.update(s =&gt; (&#123;...s, ...patch&#125;))</code></td></tr>
         <tr><td><code>ctx.dispatch(new Other())</code></td><td>Direct call to another <code>Ops</code> method</td></tr>
@@ -295,7 +302,7 @@ ops = inject(UsersOps);
         <tr><td><code>store.update(updateEntities(id, p))</code></td><td><code>tree.$.entities.updateOne(id, p)</code></td></tr>
         <tr><td><code>store.update(deleteEntities(id))</code></td><td><code>tree.$.entities.removeOne(id)</code></td></tr>
         <tr><td><code>store.pipe(selectAllEntities())</code></td><td><code>tree.$.entities.all</code> (Signal&lt;E[]&gt;; call <code>.all()</code> to read)</td></tr>
-        <tr><td><code>QueryEntity</code> selectors</td><td><code>computed()</code> on the Ops service</td></tr>
+        <tr><td><code>QueryEntity</code> selectors</td><td><code>.derived($ =&gt; (&#123; x: computed(() =&gt; $.entities.where(...)) &#125;))</code> on the tree</td></tr>
       </tbody>
     </table>
   </section>
@@ -353,18 +360,25 @@ export class CartService &#123;
       </div>
       <div>
         <h4>After</h4>
-        <pre><code>// APP_TREE defined once in app.tree.ts (see architecture guide)
+        <pre><code>// app.tree.ts — state + reads
+const tree = signalTree(&#123; cart: &#123; items: [] as Item[] &#125; &#125;)
+  .derived($ =&gt; (&#123;
+    cart: &#123; count: computed(() =&gt; $.cart.items().length) &#125;
+  &#125;));
+
+// cart.ops.ts — writes only
 &#64;Injectable(&#123; providedIn: 'root' &#125;)
 export class CartOps &#123;
   private tree = inject(APP_TREE);
 
-  items = this.tree.$.cart.items;            // signal&lt;Item[]&gt;
-  count = computed(() =&gt; this.items().length);
-
   add(item: Item) &#123;
     this.tree.$.cart.items.update(xs =&gt; [...xs, item]);
   &#125;
-&#125;</code></pre>
+&#125;
+
+// component
+items = tree.$.cart.items;   // Signal&lt;Item[]&gt;
+count = tree.$.cart.count;   // Signal&lt;number&gt; — from .derived()</code></pre>
       </div>
     </div>
   </section>

@@ -110,6 +110,68 @@
       </div>
     </div>
 
+    <div class="pillars-section">
+      <h2 class="section-title">The 3-Pillar Pattern</h2>
+      <p class="pillars-intro">
+        Every SignalTree application follows one rule — and once you know it,
+        the architecture is obvious everywhere:
+      </p>
+      <div class="pillars-grid">
+        <div class="pillar-card pillar-read">
+          <div class="pillar-label">READ</div>
+          <h3 class="pillar-title"><code>.derived()</code></h3>
+          <p class="pillar-desc">
+            All computed state lives on the tree — never inside Ops services or
+            component classes. Components read directly from <code>tree.$</code>.
+          </p>
+          <pre class="pillar-code">// app.tree.ts
+signalTree(&#123; tickets: entityMap&lt;Ticket&gt;(), filter: '' &#125;)
+  .derived($ =&gt; (&#123;
+    tickets: &#123;
+      visible: computed(() =&gt;
+        $.tickets.all().filter(t =&gt; t.title.includes($.filter()))
+      )
+    &#125;
+  &#125;));
+
+// component — one inject, all reads available
+tree.$.tickets.visible()</pre>
+        </div>
+        <div class="pillar-card pillar-write">
+          <div class="pillar-label">WRITE</div>
+          <h3 class="pillar-title">Ops services</h3>
+          <p class="pillar-desc">
+            Mutations and async live in thin <code>&#64;Injectable</code> services.
+            No computed properties. No state ownership.
+          </p>
+          <pre class="pillar-code">&#64;Injectable(&#123; providedIn: 'root' &#125;)
+export class TicketOps &#123;
+  private tree = inject(APP_TREE);
+  private api  = inject(TicketApi);
+
+  async load() &#123;
+    const data = await firstValueFrom(this.api.list());
+    this.tree.$.tickets.setAll(data); // write only
+  &#125;
+&#125;</pre>
+        </div>
+        <div class="pillar-card pillar-react">
+          <div class="pillar-label">REACT</div>
+          <h3 class="pillar-title"><code>tree.effect()</code></h3>
+          <p class="pillar-desc">
+            State changes are the events. No actions, no dispatch, no effects
+            registry — just react to state.
+          </p>
+          <pre class="pillar-code">// Registered once in a root service
+tree.effect(state =&gt; &#123;
+  const filters = state.tickets.filters;
+  // re-runs whenever filters change
+  untracked(() =&gt; ticketOps.load(filters));
+&#125;);</pre>
+        </div>
+      </div>
+    </div>
+
     <div class="features-section">
       <h2 class="section-title">All Features Included</h2>
       <div class="features-grid">

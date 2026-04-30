@@ -27,9 +27,11 @@ import { AppStore } from '../../../../../store';
     <div class="demo-container" [class.dark]="theme() === 'dark'">
       <h2>Recommended Architecture Demo</h2>
       <p class="description">
-        Canonical SignalTree pattern: tiered derived signals + per-domain ops
-        services + a thin <code>AppStore</code> facade. Mirrors the v3
-        trax-mobile production layout.
+        The 3-pillar pattern: <strong>READ</strong> via <code>.derived()</code>
+        (all computed on <code>$</code>), <strong>WRITE</strong> via Ops services
+        (mutations + async only), <strong>REACT</strong> via
+        <code>tree.effect()</code> (state changes are the events). One rule,
+        consistently applied.
       </p>
 
       <div class="demo-sections">
@@ -183,30 +185,30 @@ import { AppStore } from '../../../../../store';
         </section>
 
         <section class="section explanation">
-          <h3>4. Architecture summary</h3>
+          <h3>4. The 3-pillar architecture</h3>
           <div class="architecture-diagram">
-            <div class="layer">
-              <h4>Components</h4>
+            <div class="layer pillar-read">
+              <h4>READ — <code>.derived()</code></h4>
               <ul>
-                <li>Inject <code>AppStore</code></li>
-                <li>Read <code>store.$.x.y()</code></li>
-                <li>Call <code>store.ops.x.method()</code></li>
+                <li>All computed state on <code>$</code></li>
+                <li>Tiered (entity → filter → UI)</li>
+                <li>Never in Ops or components</li>
               </ul>
             </div>
-            <div class="layer">
-              <h4>Ops (per domain)</h4>
+            <div class="layer pillar-write">
+              <h4>WRITE — Ops services</h4>
               <ul>
-                <li>Mutations &amp; async</li>
-                <li>Business rules</li>
+                <li>Mutations &amp; async only</li>
+                <li>No computed properties</li>
                 <li>One file per domain</li>
               </ul>
             </div>
-            <div class="layer">
-              <h4>Tree (state + derived)</h4>
+            <div class="layer pillar-react">
+              <h4>REACT — <code>tree.effect()</code></h4>
               <ul>
-                <li>State files per domain</li>
-                <li>Derived signals in tiers</li>
-                <li>Single source of truth</li>
+                <li>State changes are the events</li>
+                <li>No actions, no dispatch</li>
+                <li>Registered in root services</li>
               </ul>
             </div>
             <div class="layer">
@@ -524,12 +526,7 @@ export class RecommendedArchitectureComponent {
   readonly isLoading = this.store.$.ui.isLoading;
   readonly firstError = this.store.$.ui.firstError;
 
-  readonly canPublishSelected = computed(() => {
-    const post = this.selectedPost();
-    if (!post) return false;
-    const author = this.store.$.users.entities.byId(post.authorId)?.();
-    return author?.role === 'admin' && !post.published;
-  });
+  readonly canPublishSelected = this.store.$.posts.canPublishSelected;
 
   loadDashboard(): void {
     this.store.loadDashboard$().subscribe();
