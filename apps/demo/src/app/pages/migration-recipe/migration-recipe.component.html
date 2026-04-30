@@ -82,6 +82,9 @@
       </div>
       <div>
         <h4>After — <code>app.tree.ts</code> (state + reads) &amp; <code>ticket.ops.ts</code> (writes)</h4>
+        <p style="font-size:0.8rem;color:var(--text-secondary,#666);margin:0.25rem 0 0.5rem">
+          <em>Note: <code>computed()</code> is still Angular's primitive — the change is <strong>where</strong> it lives, not how it's written. All reads centralise on the tree; Ops become write-only.</em>
+        </p>
         <pre><code>// app.tree.ts — state + all derived reads in one place
 export const APP_TREE = new InjectionToken('APP_TREE');
 const tree = signalTree(&#123;
@@ -89,7 +92,7 @@ const tree = signalTree(&#123;
   filter: ''
 &#125;).derived($ =&gt; (&#123;
   tickets: &#123;
-    visible: computed(() =&gt;
+    visible: computed(() =&gt;  // Angular computed — same primitive, different home
       $.tickets.all().filter(t =&gt; t.title.includes($.filter()))
     )
   &#125;
