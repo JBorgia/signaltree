@@ -19,10 +19,10 @@
         <div class="benefit-card">
           <h3>📦 46% Smaller Dependencies</h3>
           <p>
-            Real-world v3 migration: NgRx (4 packages) ~45-50KB gzipped →
-            SignalTree (1 package) ~27KB gzipped. Tree-shakable architecture
-            means you only ship what you use. Full core with all enhancers
-            included.
+            Snapshot from one production app: NgRx (4 packages) ~45-50KB
+            gzipped → SignalTree (1 package) ~27KB gzipped. Tree-shakable
+            architecture means you only ship what you use. Full core with
+            all enhancers included. YMMV.
           </p>
         </div>
         <div class="benefit-card">
@@ -44,16 +44,24 @@
         </div>
       </div>
       <p class="comparison">
-        <strong>Real v3 migration:</strong> NgRx (4 packages) = ~45-50KB
-        gzipped. SignalTree core (includes all enhancers) = ~27KB gzipped.
+        <strong>One production-app snapshot:</strong> NgRx (4 packages) =
+        ~45-50KB gzipped. SignalTree core (includes all enhancers) = ~27KB
+        gzipped.
         <strong
           >46% bundle reduction, 76% less app code, 75% fewer packages.</strong
         >
       </p>
       <p class="disclaimer">
         <em
-          >*Metrics from an actual enterprise migration. Your results will vary
-          based on app complexity, existing patterns, and feature usage.</em
+          >*Snapshot from one production Angular mobile app's NgRx Signal Store
+          → SignalTree migration. Both codebases have continued to evolve;
+          re-measuring today yields a 60–70% reduction depending on scope. The
+          directional finding is reproducible — the exact percentages are not.
+          <strong>YMMV</strong> — results depend on app complexity, prior
+          architecture, and how heavily the original code leaned on custom
+          <code>withX</code> helpers. The biggest driver of savings is
+          cross-cutting concerns (devtools, error banners, telemetry) moving
+          from per-store composition to tree-level enhancers.</em
         >
       </p>
     </div>

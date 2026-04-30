@@ -60,12 +60,12 @@ export class ArchitectureOverviewComponent {
       label: 'Bundle Size Reduction',
       value: '~46%',
       description:
-        'NgRx ~45-50KB → SignalTree ~27KB (measured in v3 migration)',
+        'NgRx ~45-50KB → SignalTree ~27KB (one app snapshot — YMMV)',
     },
     {
       label: 'App Code Reduction',
       value: '76%',
-      description: '11,735 → 2,825 lines (v3 migration)',
+      description: '11,735 → 2,825 lines (one app snapshot — YMMV)',
     },
     {
       label: 'Dependency Count',

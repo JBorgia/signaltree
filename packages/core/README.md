@@ -2172,7 +2172,7 @@ Consider separate packages when you need:
 
 ### Case Study
 
-Measured from a production Angular mobile application migrating from NgRx Signal Store to SignalTree. Results reflect one team's experience; your mileage will vary depending on app complexity and existing architecture.
+Snapshot from one production Angular mobile app's NgRx Signal Store → SignalTree migration. Original migration measured ~11,700 → ~2,800 lines of state code (~76%) and ~50KB → ~27KB gzipped state bundle (~46%). Both codebases have continued to evolve; re-measuring today the same scope yields a 60–70% reduction depending on definition (apps-only vs apps+libs, narrow vs broad import filter). The directional finding is reproducible — the exact percentages are not. **YMMV** — your migration's reduction depends on app complexity, prior architecture, and how heavily the original code leaned on custom `withX` helpers. The single biggest driver of the savings is cross-cutting concerns (devtools, error banners, telemetry, refresh handling) moving from per-store composition to tree-level enhancers.
 
 | Metric | NgRx | SignalTree | Change |
 | --- | --- | --- | --- |
