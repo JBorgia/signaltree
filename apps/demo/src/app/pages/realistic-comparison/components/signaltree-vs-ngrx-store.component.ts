@@ -6,12 +6,6 @@ import {
   signalTree,
 } from '@signaltree/core';
 
-// 9.0.1: memoization enhancer was removed. No-op stub keeps benchmark code shape.
-const memoization =
-  (_config?: unknown) =>
-  <T>(t: T): T =>
-    t;
-
 import { PerformanceGraphComponent } from '../../../shared/performance-graph/performance-graph.component';
 import { BenchmarkCalibrationService } from '../benchmark-calibration.service';
 
@@ -130,10 +124,22 @@ interface BenchmarkResult {
 
       <div class="benchmark-disclosure" style="margin: 1rem 0; padding: 0.75rem 1rem; background: var(--surface-2, #f5f5f5); border-left: 3px solid var(--primary, #666); font-size: 0.875rem;">
         <strong>Methodology note:</strong> SignalTree benchmarks run with
-        <code>batching()</code> and <code>memoization()</code> enhancers — the
-        recommended production configuration. Classic NgRx Store benchmarks use
-        the standard immutable reducer + <code>createSelector</code> pattern.
-        This compares each library at its intended operating mode.
+        <code>batching()</code> enabled — the recommended production
+        configuration in v9+. Derived values use Angular's
+        <code>computed()</code> directly; SignalTree no longer ships a
+        memoization enhancer because <code>computed()</code> provides
+        equivalent caching at zero extra cost. Both libraries run identical
+        <code>computed()</code> work per iteration so only library write-path
+        overhead differs. The NgRx Store Deep Nested and Array Update scenarios
+        use Angular's <code>signal()</code> with immutable update patterns —
+        the same architectural paradigm NgRx Store uses, without
+        dispatch/reducer overhead. The Array Update scenario measures
+        immutable spread cost (NgRx paradigm) vs. in-place mutation
+        (SignalTree paradigm) — a deliberate paradigm comparison, not a
+        controlled equivalence test. The Selector scenario uses NgRx's
+        <code>createSelector</code> memoization directly. For full NgRx Store
+        runtime results including dispatch overhead, see the orchestrated
+        benchmark tab.
       </div>
 
       <div class="architecture-explanation">
@@ -144,9 +150,10 @@ interface BenchmarkResult {
             <ul>
               <li><strong>READ</strong> — all computed via <code>.derived()</code> on the tree</li>
               <li><strong>WRITE</strong> — Ops services: mutations + async only</li>
-              <li><strong>REACT</strong> — <code>tree.effect()</code>: state changes are events</li>
+              <li><strong>REACT</strong> — <code>tree.effect()</code> via <code>.with(effects())</code>: state changes are events</li>
               <li>Granular reactivity per path</li>
-              <li>Built-in batching &amp; memoization</li>
+              <li>Change detection batched via <code>batching()</code></li>
+              <li>Derived state via Angular <code>computed()</code> directly</li>
             </ul>
           </div>
           <div class="arch-card">
@@ -524,8 +531,7 @@ export class SignalTreeVsNgrxStoreComponent {
       const testData = this.createDeepNestedData();
       // Deep Nested scenario mapping: batching + shallow memoization
       const store = signalTree(testData)
-        .with(batching())
-        .with(memoization({ equality: 'shallow' }));
+        .with(batching());
 
       // Create computed values with MODERATE intensive work (reduced from extreme)
       const computed1 = computed(() => {
@@ -567,7 +573,7 @@ export class SignalTreeVsNgrxStoreComponent {
       for (let j = 0; j < innerOps; j++) {
         const k = i * innerOps + j;
         const v = valuePlan ? valuePlan[k] : i * 25 + j;
-        store.state.level1.level2.level3.level4.value(v);
+        store.state.level1.level2.level3.level4.value.set(v);
         // Force evaluation of ALL computeds to ensure work is done
         const result1 = computed1();
         const result2 = computed2();
@@ -856,18 +862,40 @@ export class SignalTreeVsNgrxStoreComponent {
             : this.createLargeArray(this.arraySize),
       };
 
-      // Create signals and computeds for equivalent comparison
+      // Create signals and computeds — identical logic to SignalTree side to isolate library overhead
       const stateSignal = signal(state);
-      const totalComputed = computed(() =>
-        stateSignal().items.reduce((sum, item) => sum + item.value, 0)
-      );
-      const filteredComputed = computed(
-        () => stateSignal().items.filter((item) => item.value > 500).length
-      );
+      const totalComputed = computed(() => {
+        const items = stateSignal().items;
+        let total = 0;
+        for (let k = 0; k < Math.min(items.length, 200); k++) {
+          total += items[k].value * (k + 1);
+        }
+        return total;
+      });
+
+      const filteredComputed = computed(() => {
+        const items = stateSignal().items;
+        return items
+          .filter((item) => item.value > 500)
+          .slice(0, 50)
+          .map((item) => item.value * 2)
+          .reduce((sum, val) => sum + val, 0);
+      });
+
+      const aggregatedComputed = computed(() => {
+        const items = stateSignal().items;
+        const grouped = items.slice(0, 100).reduce((acc, item) => {
+          const key = Math.floor(item.value / 100);
+          acc[key] = (acc[key] || 0) + item.value;
+          return acc;
+        }, {} as Record<number, number>);
+        return Object.values(grouped).reduce((sum, val) => sum + val, 0);
+      });
 
       // Warm up
       totalComputed();
       filteredComputed();
+      aggregatedComputed();
 
       const startTime = performance.now();
 
@@ -885,9 +913,11 @@ export class SignalTreeVsNgrxStoreComponent {
 
         // Update signal to trigger reactivity
         stateSignal.set(state);
-        // Force evaluation
-        totalComputed();
-        filteredComputed();
+        // Force evaluation of ALL computeds to ensure work is done
+        const result1 = totalComputed();
+        const result2 = filteredComputed();
+        const result3 = aggregatedComputed();
+        void (result1 + result2 + result3 < -Infinity);
       }
 
       const endTime = performance.now();
@@ -911,8 +941,7 @@ export class SignalTreeVsNgrxStoreComponent {
     // iterations param overrides default
     const seed = seedBase ?? 7777;
     const testData = { items: this.buildLargeArray(this.arraySize, seed) };
-    // Selector Performance scenario mapping: lightweight memoization
-    const store = signalTree(testData).with(memoization({ maxCacheSize: 50, enableLRU: false }));
+    const store = signalTree(testData).with(batching());
 
     // Create derived computation
     const expensiveComputation = computed(() => {
@@ -947,7 +976,7 @@ export class SignalTreeVsNgrxStoreComponent {
         // Update an item to trigger recomputation
         const items = store.state.items();
         items[idx].value = newVal;
-        store.state.items(items);
+        store.state.items.set(items);
         // Re-access after update
         expensiveComputation();
         totalComputed();

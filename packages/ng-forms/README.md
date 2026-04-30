@@ -25,7 +25,30 @@ SignalTree provides a layered forms architecture:
 
 **Key insight**: `form()` is self-sufficient. `formBridge()` adds Angular-specific capabilities.
 
-## Quick Start (Recommended Pattern)
+## Quick Start
+
+### Standalone signal-form pattern
+
+```typescript
+import { signalTree, form } from '@signaltree/core';
+import { email } from '@signaltree/ng-forms';
+
+const tree = signalTree({
+  login: form({
+    initial: { email: '', password: '' },
+    validators: { email: email() },
+  }),
+});
+
+tree.$.login.$.email.set('user@test.com');
+tree.$.login.valid();
+tree.$.login.validate();
+```
+
+This is the smallest working setup. It uses only `form()` and keeps everything
+in signal land.
+
+### Angular bridge pattern (recommended when you need `FormGroup` interop)
 
 ```typescript
 import { signalTree, form } from '@signaltree/core';
@@ -71,6 +94,9 @@ class CheckoutComponent {
   shippingForm = this.tree.getAngularForm('checkout.shipping')?.formGroup;
 }
 ```
+
+This example is intentionally wider in scope than the standalone one because it
+adds Angular `FormGroup` interop via `formBridge()`.
 
 ## When to Use Each Layer
 

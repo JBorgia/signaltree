@@ -6,12 +6,6 @@ import {
   signalTree,
 } from '@signaltree/core';
 
-// 9.0.1: memoization enhancer was removed. No-op stub keeps benchmark code shape.
-const memoization =
-  (_config?: unknown) =>
-  <T>(t: T): T =>
-    t;
-
 import { PerformanceGraphComponent } from '../../../shared/performance-graph/performance-graph.component';
 import { BenchmarkCalibrationService } from '../benchmark-calibration.service';
 
@@ -93,11 +87,20 @@ interface DeepNestedState {
       </p>
       <p class="benchmark-disclosure">
         <strong>Methodology note:</strong> SignalTree benchmarks run with
-        <code>batching()</code> and <code>memoization()</code> enhancers
-        enabled — the configuration recommended for production use. NgRx
-        SignalStore benchmarks use the library's built-in immutable update
-        model. This comparison shows each library at its intended operating
-        mode, not a stripped vanilla baseline.
+        <code>batching()</code> enabled — the recommended production
+        configuration in v9+. Derived values use Angular's
+        <code>computed()</code> directly; SignalTree no longer ships a
+        memoization enhancer because <code>computed()</code> provides
+        equivalent caching at zero extra cost. NgRx SignalStore benchmarks
+        use the library's built-in immutable update model with
+        <code>patchState()</code>. Both libraries run identical
+        <code>computed()</code> work per iteration so only write-path overhead
+        differs. The Large Array Update scenario is a deliberate paradigm
+        comparison: SignalTree uses O(1) in-place mutation inside
+        <code>.update()</code>, while NgRx SignalStore's immutable model
+        requires an O(n) <code>users.map()</code> to produce a new array —
+        this is not an implementation shortcut, it is the architectural cost
+        being measured.
       </p>
 
       <div class="benchmarks">
@@ -152,10 +155,11 @@ interface DeepNestedState {
           <div>
             <h4 style="margin: 0 0 0.5rem; font-size: 0.9rem;">SignalTree — 3-Pillar Pattern</h4>
             <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem; line-height: 1.6;">
-              <li><strong>READ</strong> — all computed via <code>.derived()</code> on the tree</li>
-              <li><strong>WRITE</strong> — Ops services: mutations + async only</li>
-              <li><strong>REACT</strong> — <code>tree.effect()</code>: state changes are events</li>
+              <li><strong>READ</strong> — derived state via Angular <code>computed()</code>; no separate memoization layer needed</li>
+              <li><strong>WRITE</strong> — Ops services: direct mutation + async only</li>
+              <li><strong>REACT</strong> — <code>tree.effect()</code> via <code>.with(effects())</code>: state changes are events</li>
               <li>One tree, all domains — no per-feature store files</li>
+              <li>Change detection batched via <code>batching()</code> enhancer</li>
             </ul>
           </div>
           <div>
@@ -163,7 +167,10 @@ interface DeepNestedState {
             <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem; line-height: 1.6;">
               <li>State via <code>withState()</code></li>
               <li>Computed via <code>withComputed()</code></li>
-              <li>Methods via <code>withMethods()</code></li>
+              <li>Write methods via <code>withMethods()</code></li>
+              <li>Async/reactive via <code>rxMethod()</code> inside <code>withMethods()</code></li>
+              <li>Entity management via <code>withEntities()</code></li>
+              <li>Redux DevTools integration</li>
               <li>One store file per feature/domain</li>
             </ul>
           </div>
@@ -479,9 +486,7 @@ export class SignalTreeVsNgrxSignalsComponent {
   ): Promise<BenchmarkResult> {
     const initialState = this.createInitialState();
     // Deep Nested scenario mapping: batching + shallow memoization
-    const tree = signalTree(initialState)
-      .with(batching())
-      .with(memoization({ equality: 'shallow' }));
+    const tree = signalTree(initialState).with(batching());
 
     const samples: number[] = [];
     let renderCount = 0;
@@ -495,7 +500,7 @@ export class SignalTreeVsNgrxSignalsComponent {
 
     // Warm up
     for (let i = 0; i < 10; i++) {
-      tree.state.level1.level2.level3.level4.level5.counter(i);
+      tree.state.level1.level2.level3.level4.level5.counter.set(i);
       computation(); // Trigger computation
     }
     renderCount = 0;
@@ -506,8 +511,8 @@ export class SignalTreeVsNgrxSignalsComponent {
 
       // Perform N operations per iteration for measurable work
       for (let j = 0; j < innerOps; j++) {
-        tree.state.level1.level2.level3.level4.level5.counter(i * 10 + j);
-        tree.state.level1.level2.level3.level4.level5.data(`updated-${i}-${j}`);
+        tree.state.level1.level2.level3.level4.level5.counter.set(i * 10 + j);
+        tree.state.level1.level2.level3.level4.level5.data.set(`updated-${i}-${j}`);
         computation(); // Trigger computation
       }
 
@@ -922,10 +927,7 @@ export class SignalTreeVsNgrxSignalsComponent {
     onSample?: (ms: number) => void
   ): Promise<BenchmarkResult> {
     const initialState = this.createInitialState();
-    // Computed Performance scenario mapping: batching + shallow memoization
-    const tree = signalTree(initialState)
-      .with(batching())
-      .with(memoization({ equality: 'shallow' }));
+    const tree = signalTree(initialState).with(batching());
 
     const samples: number[] = [];
     let renderCount = 0;
@@ -948,7 +950,7 @@ export class SignalTreeVsNgrxSignalsComponent {
 
     // Warm up
     for (let i = 0; i < 10; i++) {
-      tree.state.level1.level2.level3.level4.level5.counter(i);
+      tree.state.level1.level2.level3.level4.level5.counter.set(i);
       complexComputed();
     }
     renderCount = 0;
@@ -957,8 +959,8 @@ export class SignalTreeVsNgrxSignalsComponent {
     for (let i = 0; i < iterations; i++) {
       const start = performance.now();
 
-      tree.state.level1.level2.level3.level4.level5.counter(i);
-      tree.state.metadata.config.maxItems(100 + i);
+      tree.state.level1.level2.level3.level4.level5.counter.set(i);
+      tree.state.metadata.config.maxItems.set(100 + i);
       // Read the computed multiple times to scale work
       for (let j = 0; j < innerOps; j++) {
         complexComputed();

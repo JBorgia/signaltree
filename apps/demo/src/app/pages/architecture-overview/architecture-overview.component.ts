@@ -31,7 +31,7 @@ export class ArchitectureOverviewComponent {
     },
     {
       aspect: 'Dependencies',
-      separate: 'Multiple packages (fictional old approach)',
+      separate: 'Multiple packages (@signaltree/core, @signaltree/entities, @signaltree/computed…)',
       consolidated: '@signaltree/core (includes all enhancers)',
       benefit: 'Simplified dependency management',
     },

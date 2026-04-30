@@ -8,19 +8,8 @@ import {
   timeTravel,
 } from '@signaltree/core';
 
-// 9.0.1: memoization enhancer was removed. Local no-op stubs preserve call sites
-// and benchmark scenario names. Angular `computed()` provides true memoization.
-const noopEnhancer =
-  () =>
-  <T>(t: T): T =>
-    t;
 const highPerformanceBatching = () =>
   batching({ enabled: true, notificationDelayMs: 0 });
-const memoization = noopEnhancer;
-const lightweightMemoization = noopEnhancer;
-const shallowMemoization = noopEnhancer;
-const computedMemoization = noopEnhancer;
-const selectorMemoization = noopEnhancer;
 import { enterprise } from '@signaltree/enterprise';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
@@ -86,6 +75,18 @@ import {
 /* eslint-disable @typescript-eslint/no-explicit-any */
 @Injectable({ providedIn: 'root' })
 export class SignalTreeBenchmarkService {
+  // Cached setup for server-payload-sync — avoids re-allocating 10k keys and
+  // re-running signalTree() construction on every innerOps call.
+  // Two payload objects alternate so the tree always sees ~10% churn each call.
+  private _serverPayloadCache?: {
+    dataSize: number;
+    initial: Record<string, number>;
+    payload: Record<string, number>;  // 10% mutated from initial
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    tree: any;
+    toggle: boolean;
+  };
+
   // Helper to produce standardized BenchmarkResult
   private toResult(durationMs: number, memoryDeltaMB?: number, notes?: string) {
     return {
@@ -111,18 +112,6 @@ export class SignalTreeBenchmarkService {
 
   private yieldToUI = createYieldToUI();
 
-  // Read runtime memo mode set by the orchestrator (or URL param)
-  private getRuntimeMemoMode(): 'off' | 'light' | 'shallow' | 'full' {
-    try {
-      const g = window.__SIGNALTREE_MEMO_MODE;
-      if (g === 'off' || g === 'light' || g === 'shallow' || g === 'full')
-        return g;
-    } catch {
-      // ignore
-    }
-    return 'light';
-  }
-
   /**
    * Apply the set of enhancers requested by the orchestrator UI (if any).
    * The orchestrator exposes an array of enhancer names on
@@ -134,7 +123,6 @@ export class SignalTreeBenchmarkService {
       const requested = window.__SIGNALTREE_ACTIVE_ENHANCERS__ as
         | string[]
         | undefined;
-      const memoMode = this.getRuntimeMemoMode();
 
       const enhancers: any[] = [];
       if (requested && Array.isArray(requested) && requested.length > 0) {
@@ -145,21 +133,6 @@ export class SignalTreeBenchmarkService {
               break;
             case 'highPerformanceBatching':
               enhancers.push(highPerformanceBatching());
-              break;
-            case 'lightweightMemoization':
-              enhancers.push(lightweightMemoization());
-              break;
-            case 'shallowMemoization':
-              enhancers.push(shallowMemoization());
-              break;
-            case 'memoization':
-              enhancers.push(memoization());
-              break;
-            case 'computedMemoization':
-              enhancers.push(computedMemoization());
-              break;
-            case 'selectorMemoization':
-              enhancers.push(selectorMemoization());
               break;
             case 'serialization':
               enhancers.push(serialization());
@@ -175,37 +148,6 @@ export class SignalTreeBenchmarkService {
               // Unknown enhancer name — ignore to maintain robustness
               break;
           }
-        }
-      }
-
-      // Auto-add memoization based on runtime memo mode if none explicitly requested
-      // Prefer using enhancer metadata (ENHANCER_META) when available rather than
-      // relying on function name heuristics. This is more robust across builds.
-      const hasMemo = enhancers.some((e: any) => {
-        try {
-          const meta = (e as any)[ENHANCER_META] || (e as any).metadata;
-          if (meta && Array.isArray(meta.provides)) {
-            return meta.provides.some((p: string) =>
-              String(p).toLowerCase().includes('memo')
-            );
-          }
-          const name = meta?.name || (e && e.name) || '';
-          return String(name).toLowerCase().includes('memo');
-        } catch {
-          return false;
-        }
-      });
-      if (!hasMemo && memoMode !== 'off') {
-        switch (memoMode) {
-          case 'light':
-            enhancers.push(lightweightMemoization());
-            break;
-          case 'shallow':
-            enhancers.push(shallowMemoization());
-            break;
-          case 'full':
-            enhancers.push(memoization());
-            break;
         }
       }
 
@@ -278,10 +220,7 @@ export class SignalTreeBenchmarkService {
     // ARCHITECTURAL ADVANTAGE: Surgical updates without parent rebuilding
     // Use case: Complex forms, nested configuration objects, tree-like data
     const base = signalTree(createNested(depth));
-    const tree = this.applyConfiguredEnhancers(base, [
-      batching(),
-      shallowMemoization(), // Optimal for nested object structures
-    ]);
+    const tree = this.applyConfiguredEnhancers(base, [batching()]);
 
     // Match NgXs cap of 1000 iterations for fair comparison
     for (
@@ -350,19 +289,11 @@ export class SignalTreeBenchmarkService {
   ): Promise<number | BenchmarkResult> {
     const start = performance.now();
 
-    // SHOWCASING SIGNALTREE: Use computed-optimized memoization preset
-    // This preset is publicly available - users can import and use:
-    // import { computedMemoization } from '@signaltree/core';
-    // const tree = signalTree(state).with(computedMemoization());
     const base: any = signalTree({
       value: 0,
       factors: Array.from({ length: 50 }, (_, i) => i + 1),
     });
-    const tree: any = this.applyConfiguredEnhancers(base, [
-      // Align with scenario definition: requires batching + shallow memoization
-      batching(),
-      shallowMemoization(),
-    ]); // Scenario-aligned enhancer set
+    const tree: any = this.applyConfiguredEnhancers(base, [batching()]);
 
     // FIX: Use Angular's computed() for proper memoization like NgRx SignalStore
     const compute = computed(() => {
@@ -422,10 +353,6 @@ export class SignalTreeBenchmarkService {
   ): Promise<number | BenchmarkResult> {
     const start = performance.now();
 
-    // SHOWCASING SIGNALTREE: Use selector-optimized memoization preset
-    // This preset is publicly available - users can import and use:
-    // import { selectorMemoization } from '@signaltree/core';
-    // const tree = signalTree(state).with(selectorMemoization());
     const base: any = signalTree({
       items: Array.from({ length: dataSize }, (_, i) => ({
         id: i,
@@ -434,13 +361,9 @@ export class SignalTreeBenchmarkService {
         metadata: { category: i % 5, priority: i % 3 },
       })),
     });
-    const tree: any = this.applyConfiguredEnhancers(base, [
-      // Align with scenario definition: selector-memoization requires lightweight memoization
-      lightweightMemoization(),
-    ]); // Scenario-aligned enhancer set
+    const tree: any = this.applyConfiguredEnhancers(base, [batching()]);
 
-    // Use Angular's computed() for proper memoization - works with SignalTree's signals
-    // SignalTree's memoization enhancer optimizes the underlying signal access
+    // Angular's computed() provides memoization; SignalTree's signals integrate directly
     const selectEven = computed(
       () => tree.state.items().filter((x: any) => x.flag).length
     );
@@ -507,39 +430,44 @@ export class SignalTreeBenchmarkService {
     dataSize: number
   ): Promise<number | BenchmarkResult> {
     const size = Math.max(500, Math.min(20000, dataSize));
-    const churn = Math.max(1, Math.floor(size * 0.1)); // 10% changed
 
-    // Build initial flat state and matching payload
-    const initial: Record<string, number> = {};
-    const payload: Record<string, number> = {};
-    for (let i = 0; i < size; i++) {
-      const k = `k${i}`;
-      initial[k] = i;
-      // ref-equal for 90%, mutated for 10%
-      payload[k] = i < churn ? i + 1_000_000 : i;
+    if (!this._serverPayloadCache || this._serverPayloadCache.dataSize !== size) {
+      const churn = Math.max(1, Math.floor(size * 0.1));
+      const initial: Record<string, number> = {};
+      const payload: Record<string, number> = {};
+      for (let i = 0; i < size; i++) {
+        const k = `k${i}`;
+        initial[k] = i;
+        // ref-equal for 90%, mutated for 10%
+        payload[k] = i < churn ? i + 1_000_000 : i;
+      }
+      const base: any = signalTree(initial);
+      const tree: any = this.applyConfiguredEnhancers(base, []);
+      this._serverPayloadCache = { dataSize: size, initial, payload, tree, toggle: false };
     }
 
-    const base: any = signalTree(initial);
-    const tree: any = this.applyConfiguredEnhancers(base, []);
+    const cache = this._serverPayloadCache;
+    const { tree, initial, payload } = cache;
 
     const useOptimized =
       typeof tree.updateOptimized === 'function' &&
       Array.isArray(window.__SIGNALTREE_ACTIVE_ENHANCERS__) &&
-      (window.__SIGNALTREE_ACTIVE_ENHANCERS__ as string[]).includes(
-        'enterprise'
-      );
+      (window.__SIGNALTREE_ACTIVE_ENHANCERS__ as string[]).includes('enterprise');
+
+    // Alternate between payload and initial so each call always has ~10% churn.
+    // Without this, repeated tree(payload) calls would be all-ref-equal after
+    // the first application and measure near-zero work.
+    const nextState = cache.toggle ? initial : payload;
+    cache.toggle = !cache.toggle;
 
     const start = performance.now();
-
     if (useOptimized) {
-      // Enterprise path — diff engine + path-change notification
-      tree.updateOptimized(payload);
+      tree.updateOptimized(nextState);
     } else {
-      // Core path — ref-equality short-circuit in recursiveUpdate
-      tree(payload);
+      tree(nextState);
     }
-
     const duration = performance.now() - start;
+
     return this.toResult(
       duration,
       undefined,
@@ -587,7 +515,6 @@ export class SignalTreeBenchmarkService {
       },
     });
     const tree = this.applyConfiguredEnhancers(base, [
-      memoization(),
       highPerformanceBatching(),
       serialization({ preserveTypes: false, includeMetadata: false }),
     ]);
@@ -639,10 +566,7 @@ export class SignalTreeBenchmarkService {
         ),
       })),
     });
-    const tree = this.applyConfiguredEnhancers(base, [
-      lightweightMemoization(),
-      batching(),
-    ]); // Minimal overhead for memory tests
+    const tree = this.applyConfiguredEnhancers(base, [batching()]);
 
     const start = performance.now();
 
@@ -725,10 +649,7 @@ export class SignalTreeBenchmarkService {
       filters: { search: '', category: '', tags: [] as string[] },
       pagination: { page: 1, size: 50, total: 0 },
     });
-    const tree = this.applyConfiguredEnhancers(base, [
-      batching(),
-      shallowMemoization(),
-    ]); // Good for stable fetched data
+    const tree = this.applyConfiguredEnhancers(base, [batching()]);
 
     // Simulate API response parsing and state hydration
     tree.state.metadata.loaded.set(false);
@@ -784,10 +705,7 @@ export class SignalTreeBenchmarkService {
       notifications: [] as any[],
       alerts: [] as any[],
     });
-    const rtEnhancers: any[] = [
-      highPerformanceBatching(),
-      lightweightMemoization(),
-    ];
+    const rtEnhancers: any[] = [highPerformanceBatching()];
     if (dataSize > 5000) {
       rtEnhancers.push(withLazyArrays({ enabled: true, maxOps: 1024 }));
     }
@@ -877,7 +795,7 @@ export class SignalTreeBenchmarkService {
       cache: {} as Record<string, any>,
       stats: { size: 0, lastUpdate: null as Date | null },
     });
-    const scalingEnhancers: any[] = [lightweightMemoization(), batching()];
+    const scalingEnhancers: any[] = [batching()];
     if (largeDataSet.length > 20000) {
       scalingEnhancers.push(withLazyArrays({ enabled: true }));
     }
@@ -1341,7 +1259,6 @@ export class SignalTreeBenchmarkService {
       middlewareLog: [] as string[],
     });
     const tree = this.applyConfiguredEnhancers(base, [
-      memoization(),
       batching(),
       serialization(),
     ]);
@@ -1474,9 +1391,7 @@ export class SignalTreeBenchmarkService {
         })
       ),
     });
-    const tree = this.applyConfiguredEnhancers(base, [
-      lightweightMemoization(),
-    ]);
+    const tree = this.applyConfiguredEnhancers(base, [batching()]);
 
     // Create computed selector matching NgRx pattern
     const selectEven = computed(
@@ -1520,10 +1435,7 @@ export class SignalTreeBenchmarkService {
         : { level: createNested(level - 1) };
 
     const base = signalTree(createNested(depth));
-    const tree = this.applyConfiguredEnhancers(base, [
-      batching(),
-      shallowMemoization(),
-    ]);
+    const tree = this.applyConfiguredEnhancers(base, [batching()]);
 
     const options: EnhancedBenchmarkOptions = {
       operations: Math.min(dataSize, 1000),
@@ -1610,9 +1522,7 @@ export class SignalTreeBenchmarkService {
         flag: i % 2 === 0,
       })),
     });
-    const tree = this.applyConfiguredEnhancers(base, [
-      lightweightMemoization(),
-    ]);
+    const tree = this.applyConfiguredEnhancers(base, [batching()]);
 
     const selectEven = computed(
       () => tree.state.items().filter((x: any) => x.flag).length
@@ -1622,7 +1532,7 @@ export class SignalTreeBenchmarkService {
     const start = performance.now();
 
     for (let i = 0; i < BENCHMARK_CONSTANTS.ITERATIONS.SELECTOR; i++) {
-      selectEven(); // Should hit memoization cache
+      selectEven();
       // NO YIELDING during measurement
     }
 
@@ -1643,10 +1553,7 @@ export class SignalTreeBenchmarkService {
         : { level: createNested(level - 1) };
 
     const base = signalTree(createNested(depth));
-    const tree = this.applyConfiguredEnhancers(base, [
-      batching(),
-      shallowMemoization(),
-    ]);
+    const tree = this.applyConfiguredEnhancers(base, [batching()]);
 
     const operations = Math.min(
       dataSize,

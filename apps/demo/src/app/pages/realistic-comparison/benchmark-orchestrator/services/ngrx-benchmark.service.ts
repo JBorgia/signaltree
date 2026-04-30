@@ -139,6 +139,16 @@ const benchmarkReducer = createReducer(
 
 @Injectable({ providedIn: 'root' })
 export class NgRxBenchmarkService {
+  // Cached setup for server-payload-sync — avoids re-allocating 10k keys and
+  // re-running createAction/createReducer on every innerOps call.
+  private _serverPayloadCache?: {
+    dataSize: number;
+    initial: Record<string, number>;
+    payload: Record<string, number>;
+    applyPayload: ReturnType<typeof createAction>;
+    reducer: ActionReducer<Record<string, number>>;
+  };
+
   // Helper to return standardized BenchmarkResult
   private toResult(
     durationMs: number,
@@ -623,30 +633,36 @@ export class NgRxBenchmarkService {
    * churn via a pure NgRx reducer that spreads the payload onto state.
    * NgRx reducers always return a new immutable state object; no
    * ref-equality short-circuit is possible at the reducer layer.
+   *
+   * Setup (object allocation, createAction, createReducer) is cached per
+   * dataSize to avoid paying O(N) setup cost on every innerOps call.
    */
   async runServerPayloadSyncBenchmark(
     dataSize: number
   ): Promise<number | BenchmarkResult> {
     const size = Math.max(500, Math.min(20000, dataSize));
-    const churn = Math.max(1, Math.floor(size * 0.1));
 
-    const initial: Record<string, number> = {};
-    const payload: Record<string, number> = {};
-    for (let i = 0; i < size; i++) {
-      const k = `k${i}`;
-      initial[k] = i;
-      payload[k] = i < churn ? i + 1_000_000 : i;
+    if (!this._serverPayloadCache || this._serverPayloadCache.dataSize !== size) {
+      const churn = Math.max(1, Math.floor(size * 0.1));
+      const initial: Record<string, number> = {};
+      const payload: Record<string, number> = {};
+      for (let i = 0; i < size; i++) {
+        const k = `k${i}`;
+        initial[k] = i;
+        payload[k] = i < churn ? i + 1_000_000 : i;
+      }
+      const applyPayload = createAction(
+        '[Test] Apply Payload',
+        props<{ payload: Record<string, number> }>()
+      );
+      const reducer = createReducer(
+        initial,
+        on(applyPayload, (state, { payload: p }) => ({ ...state, ...p }))
+      );
+      this._serverPayloadCache = { dataSize: size, initial, payload, applyPayload, reducer };
     }
 
-    const applyPayload = createAction(
-      '[Test] Apply Payload',
-      props<{ payload: Record<string, number> }>()
-    );
-    const reducer = createReducer(
-      initial,
-      on(applyPayload, (state, { payload }) => ({ ...state, ...payload }))
-    );
-
+    const { initial, payload, applyPayload, reducer } = this._serverPayloadCache;
     const start = performance.now();
     reducer(initial, applyPayload({ payload }));
     const duration = performance.now() - start;

@@ -1081,6 +1081,14 @@
             } @if (summary.weightedScore === -1) {
             <span class="weighted-rank unsupported">Incomplete</span>
             }
+            @if (summary.isPartialCoverage) {
+            <span
+              class="partial-coverage-badge"
+              [title]="'Ranked on ' + summary.scoredCount + ' of ' + summary.totalCount + ' scenarios — ' + (summary.totalCount - summary.scoredCount) + ' skipped'"
+            >
+              {{ summary.scoredCount }}/{{ summary.totalCount }} scenarios
+            </span>
+            }
           </div>
           <div class="weighted-breakdown">
             @for (item of summary.breakdown; track item.scenarioName) {

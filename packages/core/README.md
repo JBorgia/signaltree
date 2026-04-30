@@ -305,7 +305,7 @@ console.log(tree.$.message()); // 'Hello World'
 //   tree.$.message.set('Updated!');
 //   tree.$.count.update((n) => n + 1);
 // See: https://github.com/JBorgia/signaltree/blob/main/packages/callable-syntax/README.md
-tree.$.count(5);          // requires @signaltree/callable-syntax transform
+tree.$.count(5); // requires @signaltree/callable-syntax transform
 tree.$.message('Updated!'); // requires @signaltree/callable-syntax transform
 
 // Use in an Angular component
@@ -343,6 +343,10 @@ const tree = signalTree({
 });
 
 // Access nested signals with full type safety
+// Requires @signaltree/callable-syntax. Without the transform, use:
+// tree.$.user.name.set('Jane Doe');
+// tree.$.user.preferences.theme.set('light');
+// tree.$.ui.loading.set(true);
 tree.$.user.name('Jane Doe');
 tree.$.user.preferences.theme('light');
 tree.$.ui.loading(true);
@@ -500,6 +504,8 @@ const tree = signalTree<AppState>({
 });
 
 // Complex updates with type safety
+// Requires @signaltree/callable-syntax. Without the transform, use
+// tree.set((state) => ({ ... })) or leaf .set() / .update() calls instead.
 tree((state) => ({
   auth: {
     ...state.auth,
@@ -671,16 +677,15 @@ All enhancers are exported directly from `@signaltree/core`:
 ```typescript
 import { signalTree, effects } from '@signaltree/core';
 
-const tree = signalTree({ count: 0, user: { name: 'Alice' } })
-  .with(effects());
+const tree = signalTree({ count: 0, user: { name: 'Alice' } }).with(effects());
 
 // Subscribe with automatic cleanup on destroy
-const unsub = tree.subscribe(state => {
+const unsub = tree.subscribe((state) => {
   console.log('State changed:', state.count);
 });
 
 // Effect with cleanup callback
-const cleanup = tree.effect(state => {
+const cleanup = tree.effect((state) => {
   console.log('Count:', state.count);
   return () => console.log('Previous effect cleaned up');
 });
@@ -708,7 +713,7 @@ import { signalTree, batching, devTools } from '@signaltree/core';
 
 // Apply enhancers by chaining — each .with() takes a single enhancer
 const tree = signalTree({ count: 0 })
-  .with(batching())  // Performance optimization
+  .with(batching()) // Performance optimization
   .with(devTools()); // Development tools
 ```
 
@@ -721,8 +726,7 @@ import { signalTree, batching } from '@signaltree/core';
 const tree = signalTree({
   products: entityMap<Product>(),
   ui: { loading: false },
-})
-  .with(batching()); // Batch updates for optimal rendering
+}).with(batching()); // Batch updates for optimal rendering
 
 // Entity CRUD operations
 tree.$.products.addOne(newProduct);
@@ -741,11 +745,14 @@ const tree = signalTree({
   user: null as User | null,
   preferences: { theme: 'light' },
 })
-  .with(serialization({  // Auto-save to localStorage
-    autoSave: true,
-    storage: 'localStorage',
-  }))
-  .with(timeTravel());   // Undo/redo support
+  .with(
+    serialization({
+      // Auto-save to localStorage
+      autoSave: true,
+      storage: 'localStorage',
+    })
+  )
+  .with(timeTravel()); // Undo/redo support
 
 // For async operations, use manual async or async helpers
 async function fetchUser(id: string) {
@@ -776,8 +783,8 @@ Enhancers can declare metadata for automatic dependency resolution:
 ```typescript
 // Chain enhancers — each .with() takes a single enhancer
 const tree = signalTree(state)
-  .with(batching())   // Requires: core, provides: batching
-  .with(devTools());  // Requires: core, provides: debugging
+  .with(batching()) // Requires: core, provides: batching
+  .with(devTools()); // Requires: core, provides: debugging
 ```
 
 #### Core Stubs
@@ -1653,18 +1660,24 @@ const tree = signalTree({
     data: { users: [], posts: [] },
   },
 })
-  .with(batching())                       // Performance
-  .with(serialization({                   // State persistence
-    autoSave: true,
-    storage: 'localStorage',
-  }))
+  .with(batching()) // Performance
+  .with(
+    serialization({
+      // State persistence
+      autoSave: true,
+      storage: 'localStorage',
+    })
+  )
   .with(timeTravel({ maxHistorySize: 50 })) // Undo/redo
-  .with(devTools({                        // Debug tools (dev only)
-    name: 'MyApp',
-    enableTimeTravel: true,
-    includePaths: ['app.*', 'ui.*'],
-    formatPath: (path) => path.replace(/\.(\d+)/g, '[$1]'),
-  }));
+  .with(
+    devTools({
+      // Debug tools (dev only)
+      name: 'MyApp',
+      enableTimeTravel: true,
+      includePaths: ['app.*', 'ui.*'],
+      formatPath: (path) => path.replace(/\.(\d+)/g, '[$1]'),
+    })
+  );
 
 // Rich feature set available
 async function fetchUser(id: string) {

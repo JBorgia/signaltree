@@ -2049,6 +2049,8 @@ $border:    #e5e7eb;  // --color-border
         display: flex;
         justify-content: space-between;
         align-items: center;
+        flex-wrap: wrap;
+        gap: 0.4rem;
         margin-bottom: 1rem;
 
         h4 {
@@ -2063,6 +2065,17 @@ $border:    #e5e7eb;  // --color-border
           color: white;
           font-size: 0.8rem;
           font-weight: 600;
+        }
+
+        .partial-coverage-badge {
+          padding: 0.2rem 0.6rem;
+          border-radius: 10px;
+          background: #f0f0f0;
+          color: #666;
+          font-size: 0.75rem;
+          font-weight: 500;
+          border: 1px solid #ddd;
+          cursor: help;
         }
       }
 

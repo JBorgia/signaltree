@@ -3,14 +3,31 @@
 
   <p class="lede">
     SignalTree is designed to be a drop-in replacement for the most common
-    Angular state-management patterns. Pick your starting point below — each
-    section maps the source library's concepts onto SignalTree, shows
-    side-by-side code, and links to the deep guide your AI assistant can follow
-    end-to-end.
+    Angular state-management patterns. This guide is structured
+    <strong>feature-first</strong>: each scenario below shows the SAME
+    requirement implemented in SignalTree, NgRx SignalStore, Classic NgRx, and
+    a plain BehaviorSubject service, anchored against an explicit capability
+    checklist. If a checkbox would be empty on either side, it isn't a fair
+    comparison.
+  </p>
+
+  <p class="lede">
+    <strong>Why feature-first?</strong> Library-anchored before/after
+    comparisons tempt the author to strip the "before" to its minimum and
+    polish the "after" to its end state. Anchoring on a feature with a
+    checklist prevents that bias — every implementation must satisfy every
+    checkbox or it isn't a fair comparison.
   </p>
 
   <nav class="toc" aria-label="Migration sources">
-    <strong>Jump to:</strong>
+    <strong>Feature scenarios (full implementations):</strong>
+    <ul>
+      <li><a href="#feat-load">Feature 1: Load + filter + loading state</a></li>
+      <li><a href="#feat-optimistic">Feature 2: Optimistic update with rollback</a></li>
+      <li><a href="#feat-reactive">Feature 3: Reactive side effect on state change</a></li>
+      <li><a href="#feat-error-retry">Feature 4: Async load with error state + retry</a></li>
+    </ul>
+    <strong>Library concept maps (quick reference):</strong>
     <ul>
       <li><a href="#ngrx-signals">@ngrx/signals (signalStore)</a></li>
       <li><a href="#ngrx-classic">Classic NgRx (@ngrx/store + effects)</a></li>
@@ -26,12 +43,847 @@
 
   <hr />
 
+  <section id="feat-load">
+    <h2>Feature 1: Load tickets with filter + loading state</h2>
+
+    <p>
+      The same feature, implemented four ways. Each implementation must
+      satisfy <strong>every</strong> checkbox below — that's how the
+      comparison stays honest.
+    </p>
+
+    <div class="callout">
+      <strong>Capability checklist — every implementation must:</strong>
+      <ul>
+        <li>Hold <code>filter</code> (string) and <code>loading</code> (boolean) state</li>
+        <li>Hold tickets as a normalized entity collection (id-keyed lookup, not just a flat array)</li>
+        <li>Expose a <code>visible</code> derived value (tickets filtered by <code>title</code> contains <code>filter</code>)</li>
+        <li>Provide async <code>load()</code> that toggles loading around the API call</li>
+        <li>Recover loading state on error (loading goes back to <code>false</code> on failure too)</li>
+        <li>Singleton, registered at root DI scope</li>
+        <li>Show <strong>every file the feature requires</strong> — no hidden selectors, no hidden registrations, no hidden types</li>
+      </ul>
+    </div>
+
+    <h3>1.1 SignalTree</h3>
+    <p style="font-size:0.85rem;color:var(--text-2,#555);margin:0.25rem 0 0.5rem">
+      Files: <code>app.tree.ts</code> (state + derived), <code>app.config.ts</code> (provider), <code>ticket.ops.ts</code> (writes), component.
+    </p>
+    <pre><code>// app.tree.ts — state + all derived reads
+export const APP_TREE = new InjectionToken&lt;ReturnType&lt;typeof createAppTree&gt;&gt;('APP_TREE');
+
+export function createAppTree() &#123;
+  return signalTree(&#123;
+    tickets: entityMap&lt;Ticket&gt;(),
+    filter: '',
+    loading: false,
+  &#125;).derived(($) =&gt; (&#123;
+    tickets: &#123;
+      visible: computed(() =&gt;
+        $.tickets.all().filter((t) =&gt; t.title.includes($.filter()))
+      ),
+    &#125;,
+  &#125;));
+&#125;
+
+// app.config.ts — root provider registration
+export const appConfig: ApplicationConfig = &#123;
+  providers: [&#123; provide: APP_TREE, useFactory: createAppTree &#125;],
+&#125;;
+
+// ticket.ops.ts — async writes only
+&#64;Injectable(&#123; providedIn: 'root' &#125;)
+export class TicketOps &#123;
+  private tree = inject(APP_TREE);
+  private api = inject(TicketApi);
+
+  async load() &#123;
+    this.tree.$.loading.set(true);
+    try &#123;
+      const tickets = await firstValueFrom(this.api.list());
+      this.tree.$.tickets.setAll(tickets);
+    &#125; finally &#123;
+      this.tree.$.loading.set(false);
+    &#125;
+  &#125;
+
+  setFilter(filter: string) &#123;
+    this.tree.$.filter.set(filter);
+  &#125;
+&#125;
+
+// tickets-list.component.ts
+&#64;Component(&#123; selector: 'app-tickets', template: '...' &#125;)
+export class TicketsListComponent &#123;
+  private tree = inject(APP_TREE);
+  ops = inject(TicketOps);
+
+  visible = this.tree.$.tickets.visible;   // Signal&lt;Ticket[]&gt;
+  loading = this.tree.$.loading;           // Signal&lt;boolean&gt;
+  filter = this.tree.$.filter;             // Signal&lt;string&gt;
+
+  ngOnInit() &#123; this.ops.load(); &#125;
+&#125;</code></pre>
+
+    <h3>1.2 NgRx SignalStore (<code>&#64;ngrx/signals</code>)</h3>
+    <p style="font-size:0.85rem;color:var(--text-2,#555);margin:0.25rem 0 0.5rem">
+      Files: <code>tickets.store.ts</code>, component. <code>providedIn: 'root'</code> auto-registers — no separate provider.
+    </p>
+    <pre><code>// tickets.store.ts — state + reads + writes in one factory
+export const TicketStore = signalStore(
+  &#123; providedIn: 'root' &#125;,
+  withState(&#123; filter: '', loading: false &#125;),
+  withEntities&lt;Ticket&gt;(),
+  withComputed((store) =&gt; (&#123;
+    visible: computed(() =&gt;
+      store.entities().filter((t) =&gt; t.title.includes(store.filter()))
+    ),
+  &#125;)),
+  withMethods((store, api = inject(TicketApi)) =&gt; (&#123;
+    load: rxMethod&lt;void&gt;(
+      pipe(
+        tap(() =&gt; patchState(store, &#123; loading: true &#125;)),
+        switchMap(() =&gt;
+          api.list().pipe(
+            tap((tickets) =&gt;
+              patchState(store, setAllEntities(tickets), &#123; loading: false &#125;)
+            ),
+            catchError(() =&gt; &#123;
+              patchState(store, &#123; loading: false &#125;);
+              return EMPTY;
+            &#125;)
+          )
+        )
+      )
+    ),
+    setFilter(filter: string) &#123;
+      patchState(store, &#123; filter &#125;);
+    &#125;,
+  &#125;))
+);
+
+// tickets-list.component.ts
+&#64;Component(&#123; selector: 'app-tickets', template: '...' &#125;)
+export class TicketsListComponent &#123;
+  store = inject(TicketStore);
+
+  visible = this.store.visible;     // Signal&lt;Ticket[]&gt;
+  loading = this.store.loading;     // Signal&lt;boolean&gt;
+  filter = this.store.filter;       // Signal&lt;string&gt;
+
+  ngOnInit() &#123; this.store.load(); &#125;
+&#125;</code></pre>
+
+    <h3>1.3 Classic NgRx (<code>&#64;ngrx/store</code> + <code>&#64;ngrx/effects</code>)</h3>
+    <p style="font-size:0.85rem;color:var(--text-2,#555);margin:0.25rem 0 0.5rem">
+      Files: <code>tickets.actions.ts</code>, <code>tickets.reducer.ts</code>, <code>tickets.selectors.ts</code>, <code>tickets.effects.ts</code>, <code>app.config.ts</code> (provideStore + provideEffects), component.
+    </p>
+    <pre><code>// tickets.actions.ts
+export const TicketsActions = createActionGroup(&#123;
+  source: 'Tickets',
+  events: &#123;
+    'Load': emptyProps(),
+    'Load Success': props&lt;&#123; tickets: Ticket[] &#125;&gt;(),
+    'Load Failure': props&lt;&#123; error: string &#125;&gt;(),
+    'Set Filter': props&lt;&#123; filter: string &#125;&gt;(),
+  &#125;,
+&#125;);
+
+// tickets.reducer.ts
+export interface TicketsState extends EntityState&lt;Ticket&gt; &#123;
+  filter: string;
+  loading: boolean;
+&#125;
+
+export const adapter = createEntityAdapter&lt;Ticket&gt;();
+const initialState: TicketsState = adapter.getInitialState(&#123;
+  filter: '',
+  loading: false,
+&#125;);
+
+export const ticketsReducer = createReducer(
+  initialState,
+  on(TicketsActions.load, (s) =&gt; (&#123; ...s, loading: true &#125;)),
+  on(TicketsActions.loadSuccess, (s, &#123; tickets &#125;) =&gt;
+    adapter.setAll(tickets, &#123; ...s, loading: false &#125;)
+  ),
+  on(TicketsActions.loadFailure, (s) =&gt; (&#123; ...s, loading: false &#125;)),
+  on(TicketsActions.setFilter, (s, &#123; filter &#125;) =&gt; (&#123; ...s, filter &#125;))
+);
+
+// tickets.selectors.ts
+const selectTicketsState = createFeatureSelector&lt;TicketsState&gt;('tickets');
+const &#123; selectAll &#125; = adapter.getSelectors(selectTicketsState);
+export const selectFilter = createSelector(selectTicketsState, (s) =&gt; s.filter);
+export const selectLoading = createSelector(selectTicketsState, (s) =&gt; s.loading);
+export const selectVisible = createSelector(
+  selectAll,
+  selectFilter,
+  (tickets, filter) =&gt; tickets.filter((t) =&gt; t.title.includes(filter))
+);
+
+// tickets.effects.ts
+&#64;Injectable()
+export class TicketsEffects &#123;
+  loadTickets$ = createEffect(() =&gt;
+    this.actions$.pipe(
+      ofType(TicketsActions.load),
+      switchMap(() =&gt;
+        this.api.list().pipe(
+          map((tickets) =&gt; TicketsActions.loadSuccess(&#123; tickets &#125;)),
+          catchError((err) =&gt;
+            of(TicketsActions.loadFailure(&#123; error: err.message &#125;))
+          )
+        )
+      )
+    )
+  );
+
+  constructor(
+    private actions$: Actions,
+    private api: TicketApi
+  ) &#123;&#125;
+&#125;
+
+// app.config.ts — root registration
+export const appConfig: ApplicationConfig = &#123;
+  providers: [
+    provideStore(&#123; tickets: ticketsReducer &#125;),
+    provideEffects([TicketsEffects]),
+  ],
+&#125;;
+
+// tickets-list.component.ts
+&#64;Component(&#123; selector: 'app-tickets', template: '...' &#125;)
+export class TicketsListComponent &#123;
+  private store = inject(Store);
+
+  visible = toSignal(this.store.select(selectVisible), &#123; initialValue: [] &#125;);
+  loading = toSignal(this.store.select(selectLoading), &#123; initialValue: false &#125;);
+  filter = toSignal(this.store.select(selectFilter), &#123; initialValue: '' &#125;);
+
+  ngOnInit() &#123; this.store.dispatch(TicketsActions.load()); &#125;
+&#125;</code></pre>
+
+    <h3>1.4 Plain BehaviorSubject service</h3>
+    <p style="font-size:0.85rem;color:var(--text-2,#555);margin:0.25rem 0 0.5rem">
+      Files: <code>ticket.service.ts</code>, component. <strong>Note:</strong> RxJS doesn't ship entity normalization — you write the <code>Map&lt;string, Ticket&gt;</code> yourself to match what the other libraries provide.
+    </p>
+    <pre><code>// ticket.service.ts
+&#64;Injectable(&#123; providedIn: 'root' &#125;)
+export class TicketService &#123;
+  // Manual normalization: ids list + by-id map
+  private _byId = new Map&lt;string, Ticket&gt;();
+  private _ids$ = new BehaviorSubject&lt;string[]&gt;([]);
+  private _filter$ = new BehaviorSubject&lt;string&gt;('');
+  private _loading$ = new BehaviorSubject&lt;boolean&gt;(false);
+
+  filter$ = this._filter$.asObservable();
+  loading$ = this._loading$.asObservable();
+
+  // Derived: full list rebuilt from ids + map
+  all$ = this._ids$.pipe(
+    map((ids) =&gt; ids.map((id) =&gt; this._byId.get(id)!).filter(Boolean))
+  );
+
+  visible$ = combineLatest([this.all$, this.filter$]).pipe(
+    map(([tickets, filter]) =&gt;
+      tickets.filter((t) =&gt; t.title.includes(filter))
+    )
+  );
+
+  constructor(private api: TicketApi) &#123;&#125;
+
+  byId(id: string): Ticket | undefined &#123;
+    return this._byId.get(id);
+  &#125;
+
+  setFilter(filter: string) &#123;
+    this._filter$.next(filter);
+  &#125;
+
+  async load() &#123;
+    this._loading$.next(true);
+    try &#123;
+      const tickets = await firstValueFrom(this.api.list());
+      this._byId.clear();
+      tickets.forEach((t) =&gt; this._byId.set(t.id, t));
+      this._ids$.next(tickets.map((t) =&gt; t.id));
+    &#125; finally &#123;
+      this._loading$.next(false);
+    &#125;
+  &#125;
+&#125;
+
+// tickets-list.component.ts
+&#64;Component(&#123; selector: 'app-tickets', template: '...' &#125;)
+export class TicketsListComponent &#123;
+  service = inject(TicketService);
+
+  visible = toSignal(this.service.visible$, &#123; initialValue: [] &#125;);
+  loading = toSignal(this.service.loading$, &#123; initialValue: false &#125;);
+  filter = toSignal(this.service.filter$, &#123; initialValue: '' &#125;);
+
+  ngOnInit() &#123; this.service.load(); &#125;
+&#125;</code></pre>
+
+    <p class="callout">
+      <strong>What this comparison reveals at the file level:</strong>
+    </p>
+    <ul>
+      <li>
+        <strong>SignalTree</strong> — 3 source files (tree, ops, component) +
+        1 provider line in <code>app.config.ts</code>. Tree owns all reads;
+        Ops owns all writes; entity normalization is built-in via
+        <code>entityMap()</code>.
+      </li>
+      <li>
+        <strong>NgRx SignalStore</strong> — 1 source file + component.
+        <code>signalStore()</code> fuses state + reads + writes;
+        <code>providedIn: 'root'</code> auto-registers; entity normalization
+        is built-in via <code>withEntities()</code>; reactive async via
+        <code>rxMethod()</code>.
+      </li>
+      <li>
+        <strong>Classic NgRx</strong> — 5 source files (actions, reducer,
+        selectors, effects, component) + 2 lines in <code>app.config.ts</code>
+        (<code>provideStore</code> + <code>provideEffects</code>). The
+        action/reducer/effect cycle is genuine boilerplate.
+      </li>
+      <li>
+        <strong>BehaviorSubject service</strong> — 1 source file + component.
+        Smallest in source files, but you write entity normalization (the
+        <code>Map&lt;string, Ticket&gt;</code>) by hand to match what the
+        other three deliver out of the box.
+      </li>
+    </ul>
+
+    <p class="callout">
+      <strong>Where the savings actually come from:</strong> against modern
+      NgRx SignalStore the file-count win for SignalTree is small — both are
+      typed-signal stores. Against Classic NgRx the savings are large because
+      the action/reducer/effect cycle dissolves into direct method calls on a
+      tree. Against BehaviorSubject services you don't save files but you
+      gain typed paths, entity normalization, DevTools, and time travel.
+    </p>
+  </section>
+
+  <hr />
+
+  <section id="feat-optimistic">
+    <h2>Feature 2: Optimistic update with rollback</h2>
+
+    <p>
+      The user edits a ticket title. The UI shows the change immediately. If
+      the server returns an error, the title rolls back to the previous value
+      and the error surfaces to the component.
+    </p>
+
+    <div class="callout">
+      <strong>Capability checklist — every implementation must:</strong>
+      <ul>
+        <li>Capture the current title before the optimistic update (rollback target)</li>
+        <li>Update the entity's title in state immediately</li>
+        <li>Clear any prior error</li>
+        <li>Call <code>api.update(id, &#123; title &#125;)</code> and await the result</li>
+        <li>On success: keep the new state, error stays <code>null</code></li>
+        <li>On failure: rollback to the captured title, set <code>error</code> to a string</li>
+        <li>Component reads the (possibly-rolled-back) title and the error</li>
+      </ul>
+    </div>
+
+    <p style="font-size:0.85rem;color:var(--text-2,#555);margin-top:1rem">
+      All four implementations extend the state shape from Feature 1 with
+      <code>error: string | null</code>.
+    </p>
+
+    <h3>2.1 SignalTree</h3>
+    <pre><code>// ticket.ops.ts
+&#64;Injectable(&#123; providedIn: 'root' &#125;)
+export class TicketOps &#123;
+  private tree = inject(APP_TREE);
+  private api = inject(TicketApi);
+
+  async updateTitle(id: string, title: string) &#123;
+    const previous = this.tree.$.tickets.byId(id)();
+    if (!previous) return;
+
+    // Optimistic
+    this.tree.$.tickets.updateOne(id, &#123; title &#125;);
+    this.tree.$.error.set(null);
+
+    try &#123;
+      await firstValueFrom(this.api.update(id, &#123; title &#125;));
+    &#125; catch (err) &#123;
+      // Rollback
+      this.tree.$.tickets.updateOne(id, &#123; title: previous.title &#125;);
+      this.tree.$.error.set((err as Error).message);
+    &#125;
+  &#125;
+&#125;</code></pre>
+
+    <h3>2.2 NgRx SignalStore</h3>
+    <pre><code>// tickets.store.ts (extends Feature 1's store)
+withMethods((store, api = inject(TicketApi)) =&gt; (&#123;
+  // ... load() from Feature 1 ...
+  async updateTitle(id: string, title: string) &#123;
+    const previous = store.entityMap()[id];
+    if (!previous) return;
+
+    // Optimistic
+    patchState(
+      store,
+      updateEntity(&#123; id, changes: &#123; title &#125; &#125;, &#123; selectId: (t) =&gt; t.id &#125;),
+      &#123; error: null &#125;
+    );
+
+    try &#123;
+      await firstValueFrom(api.update(id, &#123; title &#125;));
+    &#125; catch (err) &#123;
+      // Rollback
+      patchState(
+        store,
+        updateEntity(&#123; id, changes: &#123; title: previous.title &#125; &#125;, &#123; selectId: (t) =&gt; t.id &#125;),
+        &#123; error: (err as Error).message &#125;
+      );
+    &#125;
+  &#125;,
+&#125;))</code></pre>
+
+    <h3>2.3 Classic NgRx</h3>
+    <pre><code>// tickets.actions.ts (additions)
+'Update Title': props&lt;&#123; id: string; title: string; previousTitle: string &#125;&gt;(),
+'Update Title Success': props&lt;&#123; id: string &#125;&gt;(),
+'Update Title Failure': props&lt;&#123; id: string; previousTitle: string; error: string &#125;&gt;(),
+
+// tickets.reducer.ts (additions)
+on(TicketsActions.updateTitle, (s, &#123; id, title &#125;) =&gt;
+  adapter.updateOne(&#123; id, changes: &#123; title &#125; &#125;, &#123; ...s, error: null &#125;)
+),
+on(TicketsActions.updateTitleSuccess, (s) =&gt; s),
+on(TicketsActions.updateTitleFailure, (s, &#123; id, previousTitle, error &#125;) =&gt;
+  adapter.updateOne(&#123; id, changes: &#123; title: previousTitle &#125; &#125;, &#123; ...s, error &#125;)
+),
+
+// tickets.effects.ts (additions)
+updateTitle$ = createEffect(() =&gt;
+  this.actions$.pipe(
+    ofType(TicketsActions.updateTitle),
+    mergeMap((&#123; id, title, previousTitle &#125;) =&gt;
+      this.api.update(id, &#123; title &#125;).pipe(
+        map(() =&gt; TicketsActions.updateTitleSuccess(&#123; id &#125;)),
+        catchError((err) =&gt;
+          of(TicketsActions.updateTitleFailure(&#123;
+            id, previousTitle, error: err.message
+          &#125;))
+        )
+      )
+    )
+  )
+);
+
+// component
+updateTitle(id: string, title: string) &#123;
+  // Component must look up previous title before dispatching, because
+  // the reducer is pure and can't read state at dispatch time.
+  const previousTitle = this.byId(id)?.title;
+  if (!previousTitle) return;
+  this.store.dispatch(TicketsActions.updateTitle(&#123; id, title, previousTitle &#125;));
+&#125;</code></pre>
+
+    <h3>2.4 Plain BehaviorSubject service</h3>
+    <pre><code>async updateTitle(id: string, title: string) &#123;
+  const previous = this._byId.get(id);
+  if (!previous) return;
+
+  // Optimistic
+  this._byId.set(id, &#123; ...previous, title &#125;);
+  this._ids$.next([...this._ids$.value]);  // re-emit to invalidate visible$
+  this._error$.next(null);
+
+  try &#123;
+    await firstValueFrom(this.api.update(id, &#123; title &#125;));
+  &#125; catch (err) &#123;
+    // Rollback
+    this._byId.set(id, previous);
+    this._ids$.next([...this._ids$.value]);
+    this._error$.next((err as Error).message);
+  &#125;
+&#125;</code></pre>
+
+    <p class="callout">
+      <strong>What this comparison reveals:</strong> SignalTree, NgRx
+      SignalStore, and BehaviorSubject all express optimistic+rollback as a
+      plain async method that captures the previous value via direct lookup
+      and rolls back in a <code>catch</code> block. Classic NgRx must
+      round-trip through three actions (<code>UpdateTitle</code>,
+      <code>UpdateTitleSuccess</code>, <code>UpdateTitleFailure</code>) and
+      thread <code>previousTitle</code> through the action payload because
+      the reducer is pure and cannot capture state at dispatch time. The
+      BehaviorSubject version replicates SignalTree's mechanic but must
+      manually re-emit <code>_ids$</code> to invalidate the derived
+      <code>visible$</code> observable.
+    </p>
+  </section>
+
+  <hr />
+
+  <section id="feat-reactive">
+    <h2>Feature 3: Reactive side effect on state change</h2>
+
+    <p>
+      When <code>selectedUserId</code> changes (and is non-null), fetch
+      orders for that user. If a fetch is in flight when the id changes
+      again, cancel it. This is SignalTree's REACT pillar in action.
+    </p>
+
+    <div class="callout">
+      <strong>Capability checklist — every implementation must:</strong>
+      <ul>
+        <li>Hold <code>selectedUserId</code> (string | null), <code>orders</code> (Order[]), <code>ordersLoading</code> (boolean)</li>
+        <li>React to changes in <code>selectedUserId</code></li>
+        <li>If id is <code>null</code>: clear orders, do nothing else</li>
+        <li>If id is non-null: fetch orders for that id, set <code>ordersLoading</code> around the fetch</li>
+        <li>Cancel/discard any in-flight fetch when the id changes (no race conditions)</li>
+        <li>Component reads selected, orders, ordersLoading</li>
+      </ul>
+    </div>
+
+    <h3>3.1 SignalTree</h3>
+    <p style="font-size:0.85rem;color:var(--text-2,#555);margin-top:0.25rem">
+      Requires <code>.with(effects())</code> on the tree to enable
+      <code>tree.effect()</code>.
+    </p>
+    <pre><code>// app.tree.ts — apply the effects enhancer
+export function createAppTree() &#123;
+  return signalTree(&#123;
+    selectedUserId: null as string | null,
+    orders: [] as Order[],
+    ordersLoading: false,
+  &#125;).with(effects())
+    .derived(/* ... */);
+&#125;
+
+// user.ops.ts
+&#64;Injectable(&#123; providedIn: 'root' &#125;)
+export class UserOps &#123;
+  private tree = inject(APP_TREE);
+  private api = inject(OrderApi);
+
+  constructor() &#123;
+    // REACT — runs whenever selectedUserId changes
+    this.tree.effect((state) =&gt; &#123;
+      const userId = state.selectedUserId();
+
+      if (!userId) &#123;
+        untracked(() =&gt; this.tree.$.orders.set([]));
+        return;
+      &#125;
+
+      const controller = new AbortController();
+      untracked(() =&gt; &#123;
+        this.tree.$.ordersLoading.set(true);
+        this.api.list(userId, &#123; signal: controller.signal &#125;)
+          .then((orders) =&gt; this.tree.$.orders.set(orders))
+          .catch(() =&gt; &#123;/* aborted or failed */&#125;)
+          .finally(() =&gt; this.tree.$.ordersLoading.set(false));
+      &#125;);
+
+      return () =&gt; controller.abort();  // cleanup on next run
+    &#125;);
+  &#125;
+
+  selectUser(id: string | null) &#123;
+    this.tree.$.selectedUserId.set(id);
+  &#125;
+&#125;</code></pre>
+
+    <h3>3.2 NgRx SignalStore</h3>
+    <pre><code>// users.store.ts
+export const UserStore = signalStore(
+  &#123; providedIn: 'root' &#125;,
+  withState(&#123;
+    selectedUserId: null as string | null,
+    orders: [] as Order[],
+    ordersLoading: false,
+  &#125;),
+  withMethods((store, api = inject(OrderApi)) =&gt; (&#123;
+    selectUser(id: string | null) &#123;
+      patchState(store, &#123; selectedUserId: id &#125;);
+    &#125;,
+    loadOrdersForUser: rxMethod&lt;string | null&gt;(
+      pipe(
+        switchMap((userId) =&gt; &#123;  // switchMap cancels prior fetch
+          if (!userId) &#123;
+            patchState(store, &#123; orders: [], ordersLoading: false &#125;);
+            return EMPTY;
+          &#125;
+          patchState(store, &#123; ordersLoading: true &#125;);
+          return api.list(userId).pipe(
+            tap((orders) =&gt; patchState(store, &#123; orders, ordersLoading: false &#125;)),
+            catchError(() =&gt; &#123;
+              patchState(store, &#123; ordersLoading: false &#125;);
+              return EMPTY;
+            &#125;)
+          );
+        &#125;)
+      )
+    ),
+  &#125;)),
+  withHooks(&#123;
+    onInit(&#123; selectedUserId, loadOrdersForUser &#125;) &#123;
+      // Subscribe rxMethod to the Signal — re-runs on every change
+      loadOrdersForUser(selectedUserId);
+    &#125;,
+  &#125;)
+);</code></pre>
+
+    <h3>3.3 Classic NgRx</h3>
+    <pre><code>// users.actions.ts
+'Select User': props&lt;&#123; userId: string | null &#125;&gt;(),
+'Load Orders Success': props&lt;&#123; orders: Order[] &#125;&gt;(),
+'Load Orders Failure': props&lt;&#123; error: string &#125;&gt;(),
+
+// users.reducer.ts
+on(UsersActions.selectUser, (s, &#123; userId &#125;) =&gt; (&#123;
+  ...s,
+  selectedUserId: userId,
+  orders: [],
+  ordersLoading: !!userId,
+&#125;)),
+on(UsersActions.loadOrdersSuccess, (s, &#123; orders &#125;) =&gt;
+  (&#123; ...s, orders, ordersLoading: false &#125;)
+),
+on(UsersActions.loadOrdersFailure, (s) =&gt; (&#123; ...s, ordersLoading: false &#125;)),
+
+// users.effects.ts
+loadOrdersOnSelect$ = createEffect(() =&gt;
+  this.actions$.pipe(
+    ofType(UsersActions.selectUser),
+    switchMap((&#123; userId &#125;) =&gt;  // switchMap cancels prior fetch
+      userId
+        ? this.api.list(userId).pipe(
+            map((orders) =&gt; UsersActions.loadOrdersSuccess(&#123; orders &#125;)),
+            catchError((err) =&gt;
+              of(UsersActions.loadOrdersFailure(&#123; error: err.message &#125;))
+            )
+          )
+        : EMPTY
+    )
+  )
+);</code></pre>
+
+    <h3>3.4 Plain BehaviorSubject service</h3>
+    <pre><code>&#64;Injectable(&#123; providedIn: 'root' &#125;)
+export class UserService implements OnDestroy &#123;
+  private _selectedUserId$ = new BehaviorSubject&lt;string | null&gt;(null);
+  private _orders$ = new BehaviorSubject&lt;Order[]&gt;([]);
+  private _ordersLoading$ = new BehaviorSubject&lt;boolean&gt;(false);
+  private destroyed = new Subject&lt;void&gt;();
+
+  selectedUserId$ = this._selectedUserId$.asObservable();
+  orders$ = this._orders$.asObservable();
+  ordersLoading$ = this._ordersLoading$.asObservable();
+
+  constructor(private api: OrderApi) &#123;
+    // React to selectedUserId — switchMap cancels prior fetch
+    this._selectedUserId$.pipe(
+      switchMap((userId) =&gt; &#123;
+        if (!userId) &#123;
+          this._orders$.next([]);
+          this._ordersLoading$.next(false);
+          return EMPTY;
+        &#125;
+        this._ordersLoading$.next(true);
+        return this.api.list(userId).pipe(
+          tap((orders) =&gt; this._orders$.next(orders)),
+          finalize(() =&gt; this._ordersLoading$.next(false)),
+          catchError(() =&gt; EMPTY)
+        );
+      &#125;),
+      takeUntil(this.destroyed)
+    ).subscribe();
+  &#125;
+
+  selectUser(id: string | null) &#123;
+    this._selectedUserId$.next(id);
+  &#125;
+
+  ngOnDestroy() &#123;
+    this.destroyed.next();
+    this.destroyed.complete();
+  &#125;
+&#125;</code></pre>
+
+    <p class="callout">
+      <strong>What this comparison reveals:</strong> all four libraries can
+      cancel in-flight requests on state change — the difference is the
+      mental model.
+      SignalTree's <code>tree.effect()</code> looks like a synchronous
+      callback over state with a cleanup return.
+      NgRx SignalStore's <code>rxMethod</code> + <code>withHooks</code>
+      wires a Signal source through a <code>switchMap</code> pipeline.
+      Classic NgRx's effect listens for the <em>action</em> rather than the
+      state change, but the cancellation semantics via <code>switchMap</code>
+      are identical.
+      The BehaviorSubject version must manage its own subscription lifetime
+      via <code>OnDestroy</code> + <code>takeUntil</code>.
+    </p>
+  </section>
+
+  <hr />
+
+  <section id="feat-error-retry">
+    <h2>Feature 4: Async load with error state and retry</h2>
+
+    <p>
+      Extends Feature 1 with explicit error state and a <code>retry()</code>
+      method. When the load fails, the previous data is preserved (not
+      cleared), the error surfaces to the component, and the user can retry.
+    </p>
+
+    <div class="callout">
+      <strong>Capability checklist — every implementation must:</strong>
+      <ul>
+        <li>Hold <code>error: string | null</code> in state</li>
+        <li>On <code>load()</code>: clear error, set loading, call API</li>
+        <li>On success: items populated, loading <code>false</code>, error <code>null</code></li>
+        <li>On failure: error captured, loading <code>false</code>, items <strong>preserved</strong> (not cleared)</li>
+        <li>Provide a <code>retry()</code> method that re-runs the load</li>
+        <li>Component reads items, loading, error; renders an error+retry UI</li>
+      </ul>
+    </div>
+
+    <h3>4.1 SignalTree</h3>
+    <pre><code>// ticket.ops.ts
+async load() &#123;
+  this.tree.$.loading.set(true);
+  this.tree.$.error.set(null);
+  try &#123;
+    const tickets = await firstValueFrom(this.api.list());
+    this.tree.$.tickets.setAll(tickets);
+  &#125; catch (err) &#123;
+    this.tree.$.error.set((err as Error).message);
+    // Note: tickets entity collection is NOT cleared on failure
+  &#125; finally &#123;
+    this.tree.$.loading.set(false);
+  &#125;
+&#125;
+
+retry() &#123;
+  return this.load();
+&#125;</code></pre>
+
+    <h3>4.2 NgRx SignalStore</h3>
+    <pre><code>// tickets.store.ts (load updated to clear error and set it on failure)
+load: rxMethod&lt;void&gt;(
+  pipe(
+    tap(() =&gt; patchState(store, &#123; loading: true, error: null &#125;)),
+    switchMap(() =&gt;
+      api.list().pipe(
+        tap((tickets) =&gt;
+          patchState(store, setAllEntities(tickets), &#123; loading: false &#125;)
+        ),
+        catchError((err) =&gt; &#123;
+          patchState(store, &#123; loading: false, error: err.message &#125;);
+          // Note: setAllEntities is NOT called on failure — entities preserved
+          return EMPTY;
+        &#125;)
+      )
+    )
+  )
+),
+retry() &#123;
+  this.load();
+&#125;,</code></pre>
+
+    <h3>4.3 Classic NgRx</h3>
+    <p style="font-size:0.85rem;color:var(--text-2,#555);margin-top:0.25rem">
+      The <code>loadFailure</code> action from Feature 1 already preserves
+      entities — the reducer only updates <code>loading</code> and
+      <code>error</code>, never <code>setAll</code>:
+    </p>
+    <pre><code>// tickets.actions.ts (extend Feature 1)
+'Load Failure': props&lt;&#123; error: string &#125;&gt;(),
+
+// tickets.reducer.ts (replace the simple loadFailure from Feature 1)
+on(TicketsActions.load, (s) =&gt; (&#123; ...s, loading: true, error: null &#125;)),
+on(TicketsActions.loadFailure, (s, &#123; error &#125;) =&gt;
+  // Entities NOT touched — only loading + error change.
+  (&#123; ...s, loading: false, error &#125;)
+),
+
+// tickets.effects.ts (extend Feature 1's load effect)
+loadTickets$ = createEffect(() =&gt;
+  this.actions$.pipe(
+    ofType(TicketsActions.load),
+    switchMap(() =&gt;
+      this.api.list().pipe(
+        map((tickets) =&gt; TicketsActions.loadSuccess(&#123; tickets &#125;)),
+        catchError((err) =&gt;
+          of(TicketsActions.loadFailure(&#123; error: err.message &#125;))
+        )
+      )
+    )
+  )
+);
+
+// component
+retry() &#123;
+  this.store.dispatch(TicketsActions.load());
+&#125;</code></pre>
+
+    <h3>4.4 Plain BehaviorSubject service</h3>
+    <pre><code>// ticket.service.ts (extends Feature 1)
+private _error$ = new BehaviorSubject&lt;string | null&gt;(null);
+error$ = this._error$.asObservable();
+
+async load() &#123;
+  this._loading$.next(true);
+  this._error$.next(null);
+  try &#123;
+    const tickets = await firstValueFrom(this.api.list());
+    this._byId.clear();
+    tickets.forEach((t) =&gt; this._byId.set(t.id, t));
+    this._ids$.next(tickets.map((t) =&gt; t.id));
+  &#125; catch (err) &#123;
+    this._error$.next((err as Error).message);
+    // Note: _byId / _ids$ are NOT cleared on failure — entities preserved
+  &#125; finally &#123;
+    this._loading$.next(false);
+  &#125;
+&#125;
+
+retry() &#123;
+  return this.load();
+&#125;</code></pre>
+
+    <p class="callout">
+      <strong>What this comparison reveals:</strong> the patterns converge at
+      this level. SignalTree, SignalStore, and BehaviorSubject all use the
+      same <code>try / catch / finally</code> shape; the only difference is
+      where state lives. Classic NgRx's action/reducer/effect cycle gives you
+      <em>named</em> failure semantics through the
+      <code>loadFailure</code> action — which is more discoverable in DevTools
+      but not functionally different. The "items preserved on failure"
+      requirement is naturally satisfied everywhere because none of the
+      failure paths clear the entity collection.
+    </p>
+  </section>
+
+  <hr />
+
   <section id="ngrx-signals">
     <h2>&#64;ngrx/signals (signalStore)</h2>
     <p>
-      The closest relative — both libraries give you typed signals over a state
-      object. SignalTree replaces the <code>withX</code> composition model with
-      a single root tree and plain <code>Ops</code> services.
+      The closest relative — both libraries give you typed signals over a
+      state object. SignalTree replaces the <code>withX</code> composition
+      model with a single root tree and plain <code>Ops</code> services.
+    </p>
+
+    <p>
+      <strong>Full implementation in both libraries:</strong> see
+      <a href="#feat-load">Feature 1</a> above for a checklisted side-by-side.
     </p>
 
     <h3>Concept map</h3>
@@ -53,91 +905,13 @@
       </tbody>
     </table>
 
-    <h3>Side-by-side</h3>
-    <p style="font-size:0.875rem;color:var(--text-2,#555);margin-bottom:0.5rem">
-      Both sides show the <strong>feature file</strong> only. NgRx requires
-      <code>StoreModule</code> / <code>provideStore()</code> registration in
-      <code>app.config.ts</code>; SignalTree requires a shared
-      <code>APP_TREE</code> token in <code>app.tree.ts</code>. Neither
-      boilerplate is shown — they're equivalent one-time setup.
-    </p>
-    <div class="compare-grid">
-      <div>
-        <h4>Before — <code>tickets.store.ts</code></h4>
-        <pre><code>// Real-world NgRx signalStore uses manual entity normalization
-type TicketsState = &#123;
-  ids: number[];
-  entities: Record&lt;number, Ticket&gt;;
-  filter: string;
-  loading: boolean;
-&#125;;
-
-export const TicketStore = signalStore(
-  &#123; providedIn: 'root' &#125;,
-  withState&lt;TicketsState&gt;(&#123;
-    ids: [], entities: &#123;&#125;, filter: '', loading: false
-  &#125;),
-  withComputed((s) =&gt; (&#123;
-    all: computed(() =&gt; s.ids().map(id =&gt; s.entities()[id])),
-    visible: computed(() =&gt;
-      s.ids().map(id =&gt; s.entities()[id])
-        .filter(t =&gt; t.title.includes(s.filter()))
-    ),
-  &#125;)),
-  withMethods((s, api = inject(TicketApi)) =&gt; (&#123;
-    async load() &#123;
-      patchState(s, &#123; loading: true &#125;);
-      const tickets = await firstValueFrom(api.list());
-      patchState(s, &#123;
-        ids: tickets.map(t =&gt; t.id),
-        entities: Object.fromEntries(tickets.map(t =&gt; [t.id, t])),
-        loading: false,
-      &#125;);
-    &#125;,
-  &#125;))
-);</code></pre>
-      </div>
-      <div>
-        <h4>After — <code>app.tree.ts</code> (state + reads) &amp; <code>ticket.ops.ts</code> (writes)</h4>
-        <p style="font-size:0.8rem;color:var(--text-secondary,#666);margin:0.25rem 0 0.5rem">
-          <em>Paradigm shift: <code>signalStore()</code> is a <strong>function</strong> that fuses state + reads + writes into one unit. SignalTree splits them: a <strong>tree DI token</strong> owns all state and reads; a plain <code>&#64;Injectable</code> service owns all writes. <code>computed()</code> is still Angular's primitive in both.</em>
-        </p>
-        <pre><code>// app.tree.ts — state + all derived reads in one place
-export const APP_TREE = new InjectionToken('APP_TREE');
-const tree = signalTree(&#123;
-  tickets: entityMap&lt;Ticket&gt;(),
-  filter: ''
-&#125;).derived($ =&gt; (&#123;
-  tickets: &#123;
-    visible: computed(() =&gt;
-      $.tickets.all().filter(t =&gt; t.title.includes($.filter()))
-    )
-  &#125;
-&#125;));
-
-// ticket.ops.ts — writes only, no computed
-&#64;Injectable(&#123; providedIn: 'root' &#125;)
-export class TicketOps &#123;
-  private tree = inject(APP_TREE);
-  private api  = inject(TicketApi);
-
-  async load() &#123;
-    const tickets = await firstValueFrom(this.api.list());
-    this.tree.$.tickets.setAll(tickets);
-  &#125;
-&#125;</code></pre>
-      </div>
-    </div>
-
     <p class="callout">
-      <strong>Why two files?</strong> <code>entityMap&lt;T&gt;()</code> eliminates the
-      manual id-array + entities-record + normalization boilerplate that every real
-      NgRx signalStore needs. Each <code>Ops</code> service is a plain
-      <code>&#64;Injectable</code> with no state-management abstractions — easier to
-      test in isolation, easier to tree-shake, no custom <code>withX</code> helpers.
-      At 5+ domains, NgRx SignalStore grows 5+ store files each with custom features;
-      SignalTree adds 5 <code>Ops</code> files and zero new concepts — the tree
-      stays one file regardless.
+      <strong>Architectural difference:</strong> NgRx SignalStore keeps state,
+      computed reads, and write methods in one store factory. SignalTree
+      splits the same responsibilities across a shared tree (state + reads)
+      and per-domain Ops services (writes). The split scales better when many
+      features share state; the fused factory is fewer files for a
+      single-feature store.
     </p>
 
     <p class="callout callout-primary">
@@ -161,8 +935,13 @@ export class TicketOps &#123;
     <p>
       The actions / reducers / selectors / effects model collapses into a
       single tree plus async methods on an <code>Ops</code> service. Most
-      "type the action, dispatch the action, switch on the action" boilerplate
-      simply disappears.
+      "type the action, dispatch the action, switch on the action"
+      boilerplate simply disappears.
+    </p>
+
+    <p>
+      <strong>Full implementation in both libraries:</strong> see
+      <a href="#feat-load">Feature 1</a> above for a checklisted side-by-side.
     </p>
 
     <table class="concept-map">
@@ -178,67 +957,6 @@ export class TicketOps &#123;
         <tr><td><code>StoreDevtoolsModule</code></td><td><code>devTools()</code> enhancer</td></tr>
       </tbody>
     </table>
-
-    <div class="compare-grid">
-      <div>
-        <h4>Before — NgRx</h4>
-        <pre><code>// actions
-export const loadUsers = createAction('[Users] Load');
-export const loadUsersSuccess = createAction(
-  '[Users] Load Success', props&lt;&#123; users: User[] &#125;&gt;()
-);
-
-// reducer
-export const usersReducer = createReducer(initialState,
-  on(loadUsersSuccess, (s, &#123; users &#125;) =&gt; (&#123; ...s, users &#125;))
-);
-
-// effect
-loadUsers$ = createEffect(() =&gt; this.actions$.pipe(
-  ofType(loadUsers),
-  switchMap(() =&gt; this.api.list().pipe(
-    map(users =&gt; loadUsersSuccess(&#123; users &#125;))
-  ))
-));
-
-// component
-users$ = this.store.select(selectUsers);
-this.store.dispatch(loadUsers());</code></pre>
-      </div>
-      <div>
-        <h4>After — SignalTree</h4>
-        <pre><code>// users.ops.ts
-&#64;Injectable(&#123; providedIn: 'root' &#125;)
-export class UsersOps &#123;
-  private tree = inject(APP_TREE);
-  private api = inject(UserApi);
-
-  async load() &#123;
-    this.tree.$.users.loading.set(true);
-    try &#123;
-      const users = await firstValueFrom(this.api.list());
-      this.tree.$.users.entities.setAll(users);
-    &#125; finally &#123;
-      this.tree.$.users.loading.set(false);
-    &#125;
-  &#125;
-&#125;
-
-// component
-users = this.tree.$.users.entities.all;
-ops = inject(UsersOps);
-// ops.load()</code></pre>
-      </div>
-    </div>
-
-    <p class="callout">
-      <strong>What this comparison shows:</strong> the NgRx side displays the
-      complete boilerplate required across typically three or more files —
-      actions, reducer, effect, and component call-site. The SignalTree side
-      consolidates all of that into a single <code>Ops</code> method. The
-      <code>APP_TREE</code> token and tree definition (shared across all
-      features) are not shown; see the architecture guide for setup.
-    </p>
 
     <p class="callout">
       <strong>Strategy:</strong> migrate one feature module at a time. Build
@@ -359,14 +1077,25 @@ ops = inject(UsersOps);
     <p>
       The classic
       <code>private _x$ = new BehaviorSubject&lt;T&gt;(initial)</code>
-      pattern becomes a tree slice plus a thin Ops service. You keep the
-      mental model — services own the state — and gain typed paths,
+      pattern becomes an Angular signal-backed service. You keep the mental
+      model — services own the state — and gain typed paths,
       <code>computed()</code>, DevTools, and time travel for free.
     </p>
 
+    <p>
+      <strong>Full implementation in both styles:</strong> see
+      <a href="#feat-load">Feature 1</a> above for a checklisted side-by-side
+      including manual entity normalization (which RxJS doesn't ship).
+    </p>
+
+    <h3>Quick swap for a simple feature</h3>
+    <p style="font-size:0.875rem;color:var(--text-2,#555);margin-bottom:0.5rem">
+      For a single self-contained service with no entities, the swap is
+      mechanical — same file, same class, same registration:
+    </p>
     <div class="compare-grid">
       <div>
-        <h4>Before</h4>
+        <h4>Before — <code>cart.service.ts</code></h4>
         <pre><code>&#64;Injectable(&#123; providedIn: 'root' &#125;)
 export class CartService &#123;
   private _items$ = new BehaviorSubject&lt;Item[]&gt;([]);
@@ -379,28 +1108,34 @@ export class CartService &#123;
 &#125;</code></pre>
       </div>
       <div>
-        <h4>After</h4>
-        <pre><code>// app.tree.ts — state + reads
-const tree = signalTree(&#123; cart: &#123; items: [] as Item[] &#125; &#125;)
-  .derived($ =&gt; (&#123;
-    cart: &#123; count: computed(() =&gt; $.cart.items().length) &#125;
-  &#125;));
+        <h4>After — <code>cart.service.ts</code></h4>
+        <pre><code>&#64;Injectable(&#123; providedIn: 'root' &#125;)
+export class CartService &#123;
+  private tree = signalTree(&#123; items: [] as Item[] &#125;)
+    .derived($ =&gt; (&#123;
+      count: computed(() =&gt; $.items().length)
+    &#125;));
 
-// cart.ops.ts — writes only
-&#64;Injectable(&#123; providedIn: 'root' &#125;)
-export class CartOps &#123;
-  private tree = inject(APP_TREE);
+  items = this.tree.$.items;   // Signal&lt;Item[]&gt;
+  count = this.tree.$.count;   // Signal&lt;number&gt; — from .derived()
 
   add(item: Item) &#123;
-    this.tree.$.cart.items.update(xs =&gt; [...xs, item]);
+    this.tree.$.items.update(xs =&gt; [...xs, item]);
   &#125;
-&#125;
-
-// component
-items = tree.$.cart.items;   // Signal&lt;Item[]&gt;
-count = tree.$.cart.count;   // Signal&lt;number&gt; — from .derived()</code></pre>
+&#125;</code></pre>
       </div>
     </div>
+
+    <p class="callout">
+      <strong>For multi-domain apps:</strong> if you have many feature
+      services and want a single shared state graph, SignalTree's recommended
+      pattern is one shared <code>AppTree</code> (state + derived) plus
+      per-domain <code>Ops</code> services for writes — see
+      <a href="#feat-load">Feature 1</a> for that layout. Embedding
+      <code>signalTree</code> inside an existing service (as shown here) is
+      the simplest 1:1 swap and works just as well for single-feature
+      services.
+    </p>
   </section>
 
   <hr />

@@ -9,6 +9,17 @@ import { BenchmarkResult, safeGetHeapUsed } from './_types';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 @Injectable({ providedIn: 'root' })
 export class NgRxSignalsBenchmarkService {
+  // Cached setup for server-payload-sync.  signalState(5000 keys) is expensive;
+  // re-creating it per innerOps call caused 500x overhead. State is stateful, so
+  // we toggle between payload and initial to keep ~10% churn each call.
+  private _serverPayloadCache?: {
+    dataSize: number;
+    state: ReturnType<typeof signalState<Record<string, number>>>;
+    initial: Record<string, number>;
+    payload: Record<string, number>;
+    toggle: boolean;
+  };
+
   private toResult(
     durationMs: number,
     memoryDeltaMB?: number | 'N/A' | undefined,
@@ -244,19 +255,34 @@ export class NgRxSignalsBenchmarkService {
     dataSize: number
   ): Promise<number | BenchmarkResult> {
     const size = Math.max(500, Math.min(20000, dataSize));
-    const churn = Math.max(1, Math.floor(size * 0.1));
 
-    const initial: Record<string, number> = {};
-    const payload: Record<string, number> = {};
-    for (let i = 0; i < size; i++) {
-      const k = `k${i}`;
-      initial[k] = i;
-      payload[k] = i < churn ? i + 1_000_000 : i;
+    if (!this._serverPayloadCache || this._serverPayloadCache.dataSize !== size) {
+      const churn = Math.max(1, Math.floor(size * 0.1));
+      const initial: Record<string, number> = {};
+      const payload: Record<string, number> = {};
+      for (let i = 0; i < size; i++) {
+        const k = `k${i}`;
+        initial[k] = i;
+        payload[k] = i < churn ? i + 1_000_000 : i;
+      }
+      this._serverPayloadCache = {
+        dataSize: size,
+        state: signalState(initial),
+        initial,
+        payload,
+        toggle: false,
+      };
     }
 
-    const state = signalState(initial);
+    const cache = this._serverPayloadCache;
+    // Alternate between payload and initial so patchState always sees ~10% churn.
+    // Without toggle, repeated patchState(state, payload) after the first call
+    // would be all-ref-equal and measure near-zero work.
+    const nextState = cache.toggle ? cache.initial : cache.payload;
+    cache.toggle = !cache.toggle;
+
     const start = performance.now();
-    patchState(state, payload);
+    patchState(cache.state, nextState);
     const duration = performance.now() - start;
     return this.toResult(duration);
   }

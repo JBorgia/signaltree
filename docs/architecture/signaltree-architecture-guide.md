@@ -204,11 +204,15 @@ Every SignalTree application follows one rule. Once you know it, every structura
 | ------ | ----- | ---- |
 | **READ** | `.derived()` on the tree | All computed/derived state lives on `$` — never inside Ops services or components |
 | **WRITE** | Ops `@Injectable` services | Mutations + async only. Zero `computed()` properties. |
-| **REACT** | `tree.effect()` | State changes are the events — no actions, no dispatch |
+| **REACT** | `.with(effects()) → tree.effect()` | State changes are the events — no actions, no dispatch |
 
 ```typescript
+import { signalTree, entityMap, effects } from '@signaltree/core';
+
 // READ — all computed on the tree
+// REACT — .with(effects()) adds tree.effect() and tree.subscribe()
 const tree = signalTree({ tickets: entityMap<Ticket>(), filter: '' })
+  .with(effects())
   .derived($ => ({
     tickets: {
       visible: computed(() => $.tickets.all().filter(t => t.title.includes($.filter())))
@@ -225,14 +229,14 @@ export class TicketOps {
   }
 }
 
-// REACT — state changes drive side effects
+// REACT — state changes drive side effects (requires .with(effects()) above)
 tree.effect(state => {
   const filter = state.tickets.filter;
   untracked(() => ticketOps.load(filter));
 });
 ```
 
-**The corollary:** If you find a `readonly x = computed(...)` inside an `@Injectable` service, move it to `.derived()`. If you find async logic inside `.derived()`, move it to Ops. If you find action dispatch, replace it with a state write + `tree.effect()`.
+**The corollary:** If you find a `readonly x = computed(...)` inside an `@Injectable` service, move it to `.derived()`. If you find async logic inside `.derived()`, move it to Ops. If you find action dispatch, replace it with a state write + `tree.effect()` (after `.with(effects())`).
 
 ---
 

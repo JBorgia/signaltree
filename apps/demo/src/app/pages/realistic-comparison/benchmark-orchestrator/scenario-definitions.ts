@@ -250,7 +250,7 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     selected: true,
     category: 'core',
     purpose:
-      'Measures update fanout performance at extreme scale (1000 subscribers). SignalTree is ~15% slower due to Angular computed() dependency tracking (~2μs) vs NgRx pure function selectors (~0.3μs). At realistic scale (10-50 subscribers), the difference is <0.5ms and negligible. Fine-grained reactivity prevents full component re-renders, saving 100-1000x more time downstream.',
+      'Measures update fanout performance at extreme scale (1000 subscribers). At extreme subscriber counts SignalTree incurs a small overhead from Angular computed() dependency tracking that pure-function NgRx selectors avoid; at realistic scale (10-50 subscribers) the difference is <0.5ms and negligible in practice. Fine-grained reactivity prevents full component re-renders, saving 100-1000x more time downstream.',
     frequencyWeight: 1.5, // Medium-High - Reactive apps often have multiple subscribers
     realWorldFrequency:
       'Medium-High - Reactive UIs, data binding, multiple components',

@@ -5,9 +5,28 @@ import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
 import { createYieldToUI } from '../shared/benchmark-utils';
 import { BenchmarkResult, safeGetHeapUsed } from './_types';
 
+// Hoisted outside the service class so the @StoreConfig decorator runs once at
+// module load, not once per benchmark call. Re-creating a decorated class inside
+// a function body caused Akita to re-register the store name on every call.
+@StoreConfig({ name: 'akita-bench-payload-sync' })
+class BenchPayloadStore extends Store<Record<string, number>> {
+  constructor(initial: Record<string, number>) {
+    super(initial);
+  }
+}
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 @Injectable({ providedIn: 'root' })
 export class AkitaBenchmarkService {
+  // Cached setup for server-payload-sync.
+  private _serverPayloadCache?: {
+    dataSize: number;
+    store: BenchPayloadStore;
+    initial: Record<string, number>;
+    payload: Record<string, number>;
+    toggle: boolean;
+  };
+
   private toResult(
     durationMs: number,
     memoryDeltaMB?: number | 'N/A' | undefined,
@@ -318,26 +337,32 @@ export class AkitaBenchmarkService {
     dataSize: number
   ): Promise<number | BenchmarkResult> {
     const size = Math.max(500, Math.min(20000, dataSize));
-    const churn = Math.max(1, Math.floor(size * 0.1));
 
-    const initial: Record<string, number> = {};
-    const payload: Record<string, number> = {};
-    for (let i = 0; i < size; i++) {
-      const k = `k${i}`;
-      initial[k] = i;
-      payload[k] = i < churn ? i + 1_000_000 : i;
-    }
-
-    @StoreConfig({ name: 'akita-bench-payload-sync' })
-    class PayloadStore extends Store<Record<string, number>> {
-      constructor() {
-        super(initial);
+    if (!this._serverPayloadCache || this._serverPayloadCache.dataSize !== size) {
+      const churn = Math.max(1, Math.floor(size * 0.1));
+      const initial: Record<string, number> = {};
+      const payload: Record<string, number> = {};
+      for (let i = 0; i < size; i++) {
+        const k = `k${i}`;
+        initial[k] = i;
+        payload[k] = i < churn ? i + 1_000_000 : i;
       }
+      this._serverPayloadCache = {
+        dataSize: size,
+        store: new BenchPayloadStore(initial),
+        initial,
+        payload,
+        toggle: false,
+      };
     }
-    const store = new PayloadStore();
+
+    const cache = this._serverPayloadCache;
+    // Alternate between payload and initial to keep ~10% churn per call.
+    const nextState = cache.toggle ? cache.initial : cache.payload;
+    cache.toggle = !cache.toggle;
 
     const start = performance.now();
-    store.update((s) => ({ ...s, ...payload }));
+    cache.store.update((s) => ({ ...s, ...nextState }));
     const duration = performance.now() - start;
     return this.toResult(duration);
   }

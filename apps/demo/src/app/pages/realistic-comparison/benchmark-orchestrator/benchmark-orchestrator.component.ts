@@ -2595,6 +2595,14 @@ export class BenchmarkOrchestratorComponent
     // mean per-call cost of a window large enough to escape the floor.
     const TARGET_SAMPLE_MS = 5;
     const MAX_INNER_OPS = 500;
+    // Scenarios where each benchmark call re-creates expensive setup objects
+    // (5000-key allocations, NgRx createReducer/createAction, tree construction)
+    // must not be amplified by innerOps — the setup cost swamps the measurement.
+    const INNER_OPS_CAP_BY_SCENARIO: Record<string, number> = {
+      'server-payload-sync': 1,
+    };
+    const scenarioInnerOpsCap =
+      INNER_OPS_CAP_BY_SCENARIO[scenario.id] ?? MAX_INNER_OPS;
     let probe = lastWarmup;
     if (probe <= 0) {
       probe = await this.executeBenchmark(library.id, scenario.id, config, {
@@ -2620,7 +2628,7 @@ export class BenchmarkOrchestratorComponent
     let innerOps = 1;
     if (probe > 0 && probe < TARGET_SAMPLE_MS) {
       innerOps = Math.min(
-        MAX_INNER_OPS,
+        scenarioInnerOpsCap,
         Math.max(1, Math.ceil(TARGET_SAMPLE_MS / probe))
       );
     }
@@ -3905,6 +3913,8 @@ export class BenchmarkOrchestratorComponent
           });
         });
 
+        const scoredCount = breakdown.filter((b) => b.median !== -1).length;
+        const totalCount = breakdown.length;
         return {
           name: library?.name || libraryId,
           color: library?.color || '#666',
@@ -3912,6 +3922,9 @@ export class BenchmarkOrchestratorComponent
             totalWeight > 0 ? totalWeightedScore / totalWeight : -1,
           breakdown,
           rank: 0, // Will be set after sorting
+          scoredCount,
+          totalCount,
+          isPartialCoverage: scoredCount < totalCount && scoredCount > 0,
         };
       }
     );

@@ -106,6 +106,7 @@ const store = signalTree({ count: 0, items: [] })
 | Enhancer          | Purpose                                                        |
 | ----------------- | -------------------------------------------------------------- |
 | `batching()`      | Coalesce change-detection notifications into microtask batches |
+| `effects()`       | Reactive side effects — `tree.effect(fn)` and `tree.subscribe(fn)` |
 | `timeTravel()`    | Undo/redo with configurable history depth                      |
 | `devTools()`      | Redux DevTools integration with path-based actions             |
 | `serialization()` | JSON serialize/deserialize with type preservation              |
