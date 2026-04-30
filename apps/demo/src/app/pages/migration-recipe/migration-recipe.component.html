@@ -83,7 +83,7 @@
       <div>
         <h4>After — <code>app.tree.ts</code> (state + reads) &amp; <code>ticket.ops.ts</code> (writes)</h4>
         <p style="font-size:0.8rem;color:var(--text-secondary,#666);margin:0.25rem 0 0.5rem">
-          <em>Note: <code>computed()</code> is still Angular's primitive — the change is <strong>where</strong> it lives, not how it's written. All reads centralise on the tree; Ops become write-only.</em>
+          <em>Paradigm shift: <code>signalStore()</code> is a <strong>function</strong> that fuses state + reads + writes into one unit. SignalTree splits them: a <strong>tree DI token</strong> owns all state and reads; a plain <code>&#64;Injectable</code> service owns all writes. <code>computed()</code> is still Angular's primitive in both.</em>
         </p>
         <pre><code>// app.tree.ts — state + all derived reads in one place
 export const APP_TREE = new InjectionToken('APP_TREE');
@@ -92,7 +92,7 @@ const tree = signalTree(&#123;
   filter: ''
 &#125;).derived($ =&gt; (&#123;
   tickets: &#123;
-    visible: computed(() =&gt;  // Angular computed — same primitive, different home
+    visible: computed(() =&gt;
       $.tickets.all().filter(t =&gt; t.title.includes($.filter()))
     )
   &#125;
