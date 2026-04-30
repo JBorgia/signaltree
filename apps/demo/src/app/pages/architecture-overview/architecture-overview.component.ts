@@ -92,7 +92,8 @@ export class ArchitectureOverviewComponent {
 import {
   signalTree,
   batching,
-  entities,
+  devTools,
+  entityMap,
 } from '@signaltree/core';`,
   };
 }
