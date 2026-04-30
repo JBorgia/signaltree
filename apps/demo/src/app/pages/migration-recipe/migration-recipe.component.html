@@ -64,19 +64,36 @@
     <div class="compare-grid">
       <div>
         <h4>Before — <code>tickets.store.ts</code></h4>
-        <pre><code>export const TicketStore = signalStore(
+        <pre><code>// Real-world NgRx signalStore uses manual entity normalization
+type TicketsState = &#123;
+  ids: number[];
+  entities: Record&lt;number, Ticket&gt;;
+  filter: string;
+  loading: boolean;
+&#125;;
+
+export const TicketStore = signalStore(
   &#123; providedIn: 'root' &#125;,
-  withState(&#123; tickets: [] as Ticket[], filter: '' &#125;),
+  withState&lt;TicketsState&gt;(&#123;
+    ids: [], entities: &#123;&#125;, filter: '', loading: false
+  &#125;),
   withComputed((s) =&gt; (&#123;
+    all: computed(() =&gt; s.ids().map(id =&gt; s.entities()[id])),
     visible: computed(() =&gt;
-      s.tickets().filter(t =&gt; t.title.includes(s.filter()))
-    )
+      s.ids().map(id =&gt; s.entities()[id])
+        .filter(t =&gt; t.title.includes(s.filter()))
+    ),
   &#125;)),
   withMethods((s, api = inject(TicketApi)) =&gt; (&#123;
     async load() &#123;
+      patchState(s, &#123; loading: true &#125;);
       const tickets = await firstValueFrom(api.list());
-      patchState(s, &#123; tickets &#125;);
-    &#125;
+      patchState(s, &#123;
+        ids: tickets.map(t =&gt; t.id),
+        entities: Object.fromEntries(tickets.map(t =&gt; [t.id, t])),
+        loading: false,
+      &#125;);
+    &#125;,
   &#125;))
 );</code></pre>
       </div>
@@ -113,14 +130,14 @@ export class TicketOps &#123;
     </div>
 
     <p class="callout">
-      <strong>Why two files?</strong> For a single simple store, SignalTree is
-      slightly more lines. The split pays off at scale: the tree stays one file
-      regardless of how many domains you add, and each <code>Ops</code> service
-      is a plain <code>&#64;Injectable</code> with no state-management
-      abstractions — easier to test in isolation, easier to tree-shake, no
-      custom <code>withX</code> helpers to maintain. At 5+ stores, NgRx
-      SignalStore grows 5+ store files each with custom features; SignalTree
-      adds 5 <code>Ops</code> files and zero new concepts.
+      <strong>Why two files?</strong> <code>entityMap&lt;T&gt;()</code> eliminates the
+      manual id-array + entities-record + normalization boilerplate that every real
+      NgRx signalStore needs. Each <code>Ops</code> service is a plain
+      <code>&#64;Injectable</code> with no state-management abstractions — easier to
+      test in isolation, easier to tree-shake, no custom <code>withX</code> helpers.
+      At 5+ domains, NgRx SignalStore grows 5+ store files each with custom features;
+      SignalTree adds 5 <code>Ops</code> files and zero new concepts — the tree
+      stays one file regardless.
     </p>
 
     <p class="callout callout-primary">
