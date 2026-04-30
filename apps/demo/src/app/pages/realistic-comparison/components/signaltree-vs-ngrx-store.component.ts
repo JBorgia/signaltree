@@ -140,12 +140,13 @@ interface BenchmarkResult {
         <h3>Architectural Differences</h3>
         <div class="arch-grid">
           <div class="arch-card">
-            <h4>SignalTree</h4>
+            <h4>SignalTree — 3-Pillar Pattern</h4>
             <ul>
-              <li>Direct property mutation</li>
+              <li><strong>READ</strong> — all computed via <code>.derived()</code> on the tree</li>
+              <li><strong>WRITE</strong> — Ops services: mutations + async only</li>
+              <li><strong>REACT</strong> — <code>tree.effect()</code>: state changes are events</li>
               <li>Granular reactivity per path</li>
-              <li>Automatic dependency tracking</li>
-              <li>Built-in batching & memoization</li>
+              <li>Built-in batching &amp; memoization</li>
             </ul>
           </div>
           <div class="arch-card">
@@ -153,7 +154,8 @@ interface BenchmarkResult {
             <ul>
               <li>Immutable state updates</li>
               <li>Action/Reducer pattern</li>
-              <li>Memoized selectors</li>
+              <li>Memoized selectors via <code>createSelector</code></li>
+              <li>Side effects via <code>@ngrx/effects</code></li>
               <li>Redux DevTools integration</li>
             </ul>
           </div>

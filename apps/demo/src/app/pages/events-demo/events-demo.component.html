@@ -43,6 +43,13 @@
     >
       Idempotency
     </button>
+    <button
+      class="btn-tab"
+      [class.active]="activeTab() === 'reactions'"
+      (click)="setActiveTab('reactions')"
+    >
+      State Reactions
+    </button>
   </nav>
 
   <!-- Event Factory Tab -->
@@ -391,6 +398,62 @@
           }
         </div>
       </div>
+    </div>
+  </div>
+  }
+
+  <!-- State Reactions Tab -->
+  @if (activeTab() === 'reactions') {
+  <div class="demo-section">
+    <h2>State Reactions — <code>tree.effect()</code></h2>
+    <p class="section-description">
+      <strong>Don't confuse <code>&#64;signaltree/events</code> with <code>tree.effect()</code>.</strong>
+      The events package is an external typed event bus for cross-system communication.
+      <code>tree.effect()</code> is the <strong>REACT pillar</strong> of the 3-pillar architecture —
+      it runs whenever state changes, with no actions or dispatch required.
+    </p>
+
+    <div class="two-column">
+      <div>
+        <h3>&#64;signaltree/events — external event bus</h3>
+        <p style="font-size:0.875rem;color:var(--text-secondary,#666);margin-bottom:0.75rem">
+          For typed, validated, idempotent events crossing system or service boundaries.
+        </p>
+        <pre class="code-block">// Publish a typed, validated event
+const event = factory.create&lt;TradeProposed&gt;('TradeProposed', {{
+  '{' }} tradeId, vehicleId {{ '}' }});
+await eventBus.publish(event);
+
+// Subscribe
+eventBus.subscribe('TradeProposed', handler);</pre>
+      </div>
+      <div>
+        <h3><code>tree.effect()</code> — state-reactive side effects</h3>
+        <p style="font-size:0.875rem;color:var(--text-secondary,#666);margin-bottom:0.75rem">
+          For reacting to app state changes within the same Angular app. No events, no dispatch.
+        </p>
+        <pre class="code-block">// Re-runs whenever filters change
+tree.effect(state =&gt; {{ '{' }}
+  const filters = state.tickets.filters;
+  untracked(() =&gt; ticketOps.load(filters));
+{{ '}' }});
+
+// With cleanup
+tree.effect(state =&gt; {{ '{' }}
+  const userId = state.auth.user()?.id;
+  const sub = ws.subscribe(userId, onMessage);
+  return () =&gt; sub.unsubscribe(); // cleanup on re-run
+{{ '}' }})</pre>
+      </div>
+    </div>
+
+    <div style="margin-top:1.5rem;padding:1rem;background:var(--surface-2,#f5f5f5);border-left:3px solid var(--primary,#007acc);border-radius:4px;font-size:0.875rem">
+      <strong>When to use which:</strong>
+      <ul style="margin:0.5rem 0 0;padding-left:1.25rem;line-height:1.8">
+        <li>Typed, cross-service/cross-app message → <strong>&#64;signaltree/events</strong></li>
+        <li>React to in-app state change (filter, auth, selection) → <strong>tree.effect()</strong></li>
+        <li>Side effect triggered by user action → write state in Ops, react with <strong>tree.effect()</strong></li>
+      </ul>
     </div>
   </div>
   }

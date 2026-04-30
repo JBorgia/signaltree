@@ -145,6 +145,30 @@ interface DeepNestedState {
         </div>
       </div>
       }
+
+      <div class="architecture-explanation" style="margin-top: 1.5rem; padding: 1rem; background: var(--surface-2, #f5f5f5); border-radius: 8px;">
+        <h3 style="margin: 0 0 0.75rem; font-size: 1rem;">Architectural Differences</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div>
+            <h4 style="margin: 0 0 0.5rem; font-size: 0.9rem;">SignalTree — 3-Pillar Pattern</h4>
+            <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem; line-height: 1.6;">
+              <li><strong>READ</strong> — all computed via <code>.derived()</code> on the tree</li>
+              <li><strong>WRITE</strong> — Ops services: mutations + async only</li>
+              <li><strong>REACT</strong> — <code>tree.effect()</code>: state changes are events</li>
+              <li>One tree, all domains — no per-feature store files</li>
+            </ul>
+          </div>
+          <div>
+            <h4 style="margin: 0 0 0.5rem; font-size: 0.9rem;">NgRx SignalStore</h4>
+            <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem; line-height: 1.6;">
+              <li>State via <code>withState()</code></li>
+              <li>Computed via <code>withComputed()</code></li>
+              <li>Methods via <code>withMethods()</code></li>
+              <li>One store file per feature/domain</li>
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
   `,
   styles: [

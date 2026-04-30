@@ -124,7 +124,7 @@ export class EventsDemoComponent {
 
   // Active tab
   readonly activeTab = signal<
-    'factory' | 'validation' | 'eventbus' | 'errors' | 'idempotency'
+    'factory' | 'validation' | 'eventbus' | 'errors' | 'idempotency' | 'reactions'
   >('factory');
 
   // Computed - priority info display
@@ -169,7 +169,7 @@ export class EventsDemoComponent {
   // =============================================================================
 
   setActiveTab(
-    tab: 'factory' | 'validation' | 'eventbus' | 'errors' | 'idempotency'
+    tab: 'factory' | 'validation' | 'eventbus' | 'errors' | 'idempotency' | 'reactions'
   ) {
     this.activeTab.set(tab);
   }
