@@ -196,6 +196,46 @@ Any architectural decision should preserve these principles.
 
 ---
 
+## The 3-Pillar Architecture Rule
+
+Every SignalTree application follows one rule. Once you know it, every structural decision becomes obvious:
+
+| Pillar | Where | Rule |
+| ------ | ----- | ---- |
+| **READ** | `.derived()` on the tree | All computed/derived state lives on `$` — never inside Ops services or components |
+| **WRITE** | Ops `@Injectable` services | Mutations + async only. Zero `computed()` properties. |
+| **REACT** | `tree.effect()` | State changes are the events — no actions, no dispatch |
+
+```typescript
+// READ — all computed on the tree
+const tree = signalTree({ tickets: entityMap<Ticket>(), filter: '' })
+  .derived($ => ({
+    tickets: {
+      visible: computed(() => $.tickets.all().filter(t => t.title.includes($.filter())))
+    }
+  }));
+
+// WRITE — Ops: mutations + async only
+@Injectable({ providedIn: 'root' })
+export class TicketOps {
+  private tree = inject(APP_TREE);
+  private api  = inject(TicketApi);
+  async load() {
+    this.tree.$.tickets.setAll(await firstValueFrom(this.api.list()));
+  }
+}
+
+// REACT — state changes drive side effects
+tree.effect(state => {
+  const filter = state.tickets.filter;
+  untracked(() => ticketOps.load(filter));
+});
+```
+
+**The corollary:** If you find a `readonly x = computed(...)` inside an `@Injectable` service, move it to `.derived()`. If you find async logic inside `.derived()`, move it to Ops. If you find action dispatch, replace it with a state write + `tree.effect()`.
+
+---
+
 ## Architecture Options
 
 ### Category A: Direct Access (Recommended Default)
@@ -274,40 +314,43 @@ export class PlantsComponent {
 
 ---
 
-#### A3: With Shared Selectors
+#### A3: With Derived Tiers
 
-Selector service for cross-domain computed values used app-wide.
+Cross-domain computed values used app-wide belong on the tree via `.derived()` — not in injectable services. The tree is the single source of truth for both state and reads.
 
 ```typescript
-// app-selectors.service.ts
-@Injectable({ providedIn: 'root' })
-export class AppSelectors {
-  private readonly tree = inject(APP_TREE);
+// store/tree/derived/tier-1-resolution.derived.ts
+export const resolutionDerived = derivedFrom<AppTreeBase>()(($ ) => ({
+  selected: {
+    truck: computed(() => {
+      const id = $.selected.truckId();
+      return id ? $.trucks.byId(id)?.() ?? null : null;
+    }),
+    selectableTrucks: computed(() => {
+      const haulerId = $.selected.haulerId();
+      return haulerId ? $.haulers.byId(haulerId)?.()?.trucks ?? [] : [];
+    }),
+  },
+}));
 
-  readonly selectedTruck = computed(() => {
-    const id = this.tree.$.selected.truckId();
-    return id ? this.tree.$.trucks.byId(id)?.() ?? null : null;
-  });
+// app.tree.ts
+const tree = signalTree(baseState)
+  .derived(resolutionDerived);  // now on tree.$
 
-  readonly selectableTrucks = computed(() => {
-    const haulerId = this.tree.$.selected.haulerId();
-    return haulerId ? this.tree.$.haulers.byId(haulerId)?.()?.trucks ?? [] : [];
-  });
-}
-
-// component.ts
+// component.ts — inject one thing, read everything
 export class TruckListComponent {
-  private selectors = inject(AppSelectors);
-  readonly trucks = this.selectors.selectableTrucks;
+  private tree = inject(APP_TREE);
+  readonly trucks = this.tree.$.selected.selectableTrucks;  // Signal<Truck[]>
 }
 ```
 
-| Pros                            | Cons                              |
-| ------------------------------- | --------------------------------- |
-| Reusable cross-domain computed  | Another service to inject         |
-| Single source for complex logic | Can grow unbounded if not careful |
+| Pros                              | Cons                                     |
+| --------------------------------- | ---------------------------------------- |
+| One inject, all reads on `$`      | Derived factory pattern requires learning |
+| Tiered: D2 can read D1 output    | Cross-file types need `WithDerived<>`    |
+| Visible in DevTools + time travel |                                          |
 
-**Best for:** Apps with complex derived state used in 4+ places
+**Best for:** All cross-domain computed state. This is the canonical READ pillar.
 
 ---
 
@@ -1370,10 +1413,10 @@ export class PlantsFacade {
   private tree = inject(APP_TREE);
   private api = inject(PlantsApi);
 
-  // Expose operation states
+  // Expose raw state signals — reads belong on the tree, not here
   readonly loadStatus = this.tree.$.plants.meta.operations.load.status;
   readonly loadError = this.tree.$.plants.meta.operations.load.error;
-  readonly isLoading = computed(() => this.loadStatus() === 'pending');
+  // ✓ isLoading lives in .derived() on the tree, not here as computed()
 
   async loadPlants() {
     this.tree.$.plants.meta.operations.load.set({ status: 'pending', error: null });
@@ -1675,19 +1718,25 @@ export class GardensFacade {
 }
 ```
 
-**Cross-Domain Derived State:**
+**Cross-Domain Derived State** — goes in `.derived()` on the tree, not in a service:
 
 ```typescript
-readonly plantsWithGardenNames = computed(() => {
-  const allPlants = this.tree.$.plants.entities.all();
-  const gardens = this.tree.$.gardens.entities.all();
-  const gardenMap = new Map(gardens.map(g => [g.id, g]));
+// store/tree/derived/tier-2.derived.ts
+export const tier2Derived = derivedFrom<AppTreeWithEntityResolution>()(($) => ({
+  plants: {
+    withGardenNames: computed(() => {
+      const allPlants = $.plants.entities.all();
+      const gardenMap = new Map($.gardens.entities.all().map(g => [g.id, g]));
+      return allPlants.map(p => ({
+        ...p,
+        gardenName: gardenMap.get(p.gardenId)?.name ?? 'Unknown'
+      }));
+    }),
+  },
+}));
 
-  return allPlants.map(p => ({
-    ...p,
-    gardenName: gardenMap.get(p.gardenId)?.name ?? 'Unknown'
-  }));
-});
+// component — reads from tree.$, no extra inject
+readonly plantsWithGardenNames = inject(APP_TREE).$.plants.withGardenNames;
 ```
 
 ---
@@ -1788,46 +1837,30 @@ export class PlantEditorComponent {
 }
 ```
 
-**Selectors:**
+**Selectors — follow the READ pillar: static derived → `.derived()`, parameterized → `entityMap.where()` or factory:**
 
 ```typescript
-export function createPlantSelectors(tree: AppTree) {
-  const plants = tree.$.plants;
+// store/tree/derived/tier-2.derived.ts — static computed on the tree
+export const tier2Derived = derivedFrom<AppTreeBase>()(($) => ({
+  plants: {
+    active: computed(() => $.plants.entities.all().filter(p => p.active)),
 
-  return {
-    // Simple selections
-    all: plants.entities.all,
-    byId: (id: string) => plants.entities.byId(id),
-
-    // Filtered selections
-    active: computed(() =>
-      plants.entities.all().filter(p => p.active)
-    ),
-
-    byGarden: (gardenId: string) => computed(() =>
-      plants.entities.all().filter(p => p.gardenId === gardenId)
-    ),
-
-    // Aggregations
     stats: computed(() => {
-      const all = plants.entities.all();
+      const all = $.plants.entities.all();
       return {
         total: all.length,
         active: all.filter(p => p.active).length,
         needsWater: all.filter(p => p.needsWater).length,
-        bySpecies: groupBy(all, 'species')
       };
     }),
 
-    // Filtered + sorted (combines filters and sort state)
+    // Filtered + sorted (reads filter/sort from tree state)
     filteredAndSorted: computed(() => {
-      const entities = plants.entities.all();
-      const filters = plants.meta.filters();
-      const sort = plants.meta.sort();
+      const entities = $.plants.entities.all();
+      const filters = $.plants.meta.filters();
+      const sort = $.plants.meta.sort();
 
       let result = entities;
-
-      // Apply filters
       if (filters.search) {
         const term = filters.search.toLowerCase();
         result = result.filter(p =>
@@ -1835,37 +1868,30 @@ export function createPlantSelectors(tree: AppTree) {
           p.species.toLowerCase().includes(term)
         );
       }
-
       if (filters.status !== 'all') {
-        result = result.filter(p =>
-          filters.status === 'active' ? p.active : !p.active
-        );
+        result = result.filter(p => filters.status === 'active' ? p.active : !p.active);
       }
-
-      // Apply sort
-      result = [...result].sort((a, b) => {
-        const aVal = a[sort.field];
-        const bVal = b[sort.field];
-        const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+      return [...result].sort((a, b) => {
+        const cmp = a[sort.field] < b[sort.field] ? -1 : a[sort.field] > b[sort.field] ? 1 : 0;
         return sort.direction === 'asc' ? cmp : -cmp;
       });
+    }),
+  },
+}));
 
-      return result;
-    })
-  };
-}
+// Parameterized selector — use entityMap.where() (memoized by predicate reference)
+// tree.$.plants.entities.where(p => p.gardenId === gardenId)
 
-// Usage
+// Usage — component injects tree, reads everything from $
 @Component({...})
 export class PlantsDashboardComponent {
   private tree = inject(APP_TREE);
-  private selectors = createPlantSelectors(this.tree);
 
-  readonly stats = this.selectors.stats;
-  readonly filteredPlants = this.selectors.filteredAndSorted;
+  readonly stats = this.tree.$.plants.stats;                   // from .derived()
+  readonly filteredPlants = this.tree.$.plants.filteredAndSorted; // from .derived()
 
   readonly needsAttention = computed(() =>
-    this.selectors.stats().needsWater > 0
+    this.tree.$.plants.stats().needsWater > 0
   );
 }
 ```
@@ -1899,48 +1925,15 @@ export class PlantsDashboardComponent {
 **Implementation:**
 
 ```typescript
+// filteredAndSorted lives on the tree via .derived() — see tier-2.derived.ts
+
 @Injectable({ providedIn: 'root' })
 export class PlantsFilterService {
   private tree = inject(APP_TREE);
 
+  // Reads come from tree.$, not from this service
   readonly filters = this.tree.$.plants.meta.filters;
   readonly sort = this.tree.$.plants.meta.sort;
-
-  readonly filteredAndSorted = computed(() => {
-    const entities = this.tree.$.plants.entities.all();
-    const filters = this.filters();
-    const sort = this.sort();
-
-    let result = entities;
-
-    // Apply filters
-    if (filters.search) {
-      const term = filters.search.toLowerCase();
-      result = result.filter((p) => p.name.toLowerCase().includes(term) || p.species.toLowerCase().includes(term));
-    }
-
-    if (filters.status !== 'all') {
-      result = result.filter((p) => (filters.status === 'active' ? p.active : !p.active));
-    }
-
-    if (filters.gardenId) {
-      result = result.filter((p) => p.gardenId === filters.gardenId);
-    }
-
-    if (filters.species.length > 0) {
-      result = result.filter((p) => filters.species.includes(p.species));
-    }
-
-    // Apply sort
-    result = [...result].sort((a, b) => {
-      const aVal = a[sort.field];
-      const bVal = b[sort.field];
-      const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
-      return sort.direction === 'asc' ? cmp : -cmp;
-    });
-
-    return result;
-  });
 
   setSearch(term: string) {
     this.tree.$.plants.meta.filters.search.set(term);
@@ -2006,7 +1999,7 @@ export class PlantsPaginationService {
   readonly pagination = this.tree.$.plants.meta.pagination;
   readonly currentPage = this.pagination.page;
   readonly hasMore = this.pagination.hasMore;
-  readonly isLoadingPage = computed(() => this.tree.$.plants.meta.operations.loadPage.status() === 'pending');
+  // isLoadingPage is a read — put it in .derived() on the tree, not here
 
   async loadPage(page: number, mode: 'replace' | 'append' = 'replace') {
     const { pageSize } = this.pagination();
@@ -2082,9 +2075,8 @@ export class AuthService {
 
   readonly user = this.tree.$.auth.user;
   readonly status = this.tree.$.auth.status;
-  readonly isAuthenticated = computed(() => this.status() === 'authenticated');
-  readonly isLoggingIn = computed(() => this.tree.$.auth.meta.operations.login.status() === 'pending');
   readonly loginError = this.tree.$.auth.meta.operations.login.error;
+  // isAuthenticated and isLoggingIn are reads — put them in .derived() on the tree
 
   async login(credentials: Credentials) {
     this.tree.$.auth.meta.operations.login.set({ status: 'pending', error: null });
@@ -2172,7 +2164,7 @@ export class RealtimeService {
   private destroyRef = inject(DestroyRef);
 
   readonly status = this.tree.$.realtime.status;
-  readonly isConnected = computed(() => this.status() === 'connected');
+  // isConnected is a read — put it in .derived() on the tree
 
   connect() {
     this.tree.$.realtime.status.set('connecting');
@@ -2368,15 +2360,8 @@ export class FeatureFlagService {
 export class PlantSelectionService {
   private tree = inject(APP_TREE);
 
-  readonly selection = this.tree.$.plants.meta.selection;
-  readonly selectedIds = computed(() => this.selection().selectedIds);
-  readonly selectedCount = computed(() => this.selectedIds().size);
-  readonly hasSelection = computed(() => this.selectedCount() > 0);
-
-  readonly selectedPlants = computed(() => {
-    const ids = this.selectedIds();
-    return this.tree.$.plants.entities.all().filter((p) => ids.has(p.id));
-  });
+  // selectedIds, selectedCount, hasSelection, selectedPlants are reads —
+  // put them in .derived() on the tree, not here
 
   select(id: string) {
     const mode = this.selection().mode;
@@ -2528,44 +2513,49 @@ export class PlantDashboard {
 
 ---
 
-### Option 3: Injectable Service (For DI Needs)
+### Option 3: `.derived()` Tiers (Canonical — Use for 3+ Places)
 
-For selectors that need dependency injection or are used app-wide.
+For cross-domain computed values used in many components, `.derived()` is the correct answer — not an injectable service. Derived signals are part of the tree, visible in DevTools, and accessible via `tree.$` without any extra inject calls.
 
 ```typescript
-// app-selectors.service.ts
-@Injectable({ providedIn: 'root' })
-export class AppSelectors {
-  private readonly tree = inject(APP_TREE);
+// store/tree/derived/tier-1.derived.ts
+export const tier1Derived = derivedFrom<AppTreeBase>()(($) => ({
+  selected: {
+    truck: computed(() => {
+      const id = $.selected.truckId();
+      return id ? $.trucks.byId(id)?.() ?? null : null;
+    }),
+    isExternal: computed(() => $.driver.current()?.isExternal ?? true),
+    selectableTrucks: computed(() => {
+      const isExternal = $.driver.current()?.isExternal ?? true;
+      if (!isExternal) return $.trucks.all();
+      const haulerId = $.selected.haulerId();
+      return haulerId ? $.haulers.byId(haulerId)?.()?.trucks ?? [] : [];
+    }),
+  },
+}));
 
-  // Cross-domain selectors used everywhere
-  readonly selectedTruck = computed(() => {
-    const id = this.tree.$.selected.truckId();
-    return id ? this.tree.$.trucks.byId(id)?.() ?? null : null;
-  });
+// app.tree.ts — wire it in once
+const tree = signalTree(baseState).derived(tier1Derived);
 
-  readonly isExternal = computed(() => this.tree.$.driver.current()?.isExternal ?? true);
-
-  readonly selectableTrucks = computed(() => {
-    if (!this.isExternal()) return this.tree.$.trucks.all();
-    const haulerId = this.tree.$.selected.haulerId();
-    return haulerId ? this.tree.$.haulers.byId(haulerId)?.()?.trucks ?? [] : [];
-  });
-}
+// Any component — one inject, all reads from $
+readonly trucks = inject(APP_TREE).$.selected.selectableTrucks;
 ```
 
-**Use when:** Selectors are used in 4+ places OR need DI.
+**Use when:** Any selector used in 3+ places, or any cross-domain computed value regardless of usage count. This is the READ pillar of the 3-pillar architecture.
+
+> **Never put `readonly x = computed(...)` inside an `@Injectable` service.** That scatters the read graph across DI and breaks discoverability. The rule: if it's a read, it lives on `$`.
 
 ---
 
 ### Decision Guide
 
-| Selector Usage | Location           | Example                             |
-| -------------- | ------------------ | ----------------------------------- |
-| 1 component    | Component-local    | `readonly filtered = computed(...)` |
-| 2-3 components | Factory function   | `createPlantSelectors(tree)`        |
-| 4+ components  | Injectable service | `AppSelectors`                      |
-| Needs DI       | Injectable service | Selectors using other services      |
+| Selector Usage         | Location              | Example                                    |
+| ---------------------- | --------------------- | ------------------------------------------ |
+| 1 component, UI-only   | Component-local       | `readonly filtered = computed(...)`        |
+| Parameterized (takes args) | Factory function  | `createPlantSelectors(tree)` (for `byId`-style) |
+| 2+ components, static  | `.derived()` on tree  | `tree.$.selected.truck()`                  |
+| Cross-domain, app-wide | `.derived()` tiers    | `tree.$.ui.totals()`, `tree.$.selected.selectableTrucks()` |
 
 ---
 
