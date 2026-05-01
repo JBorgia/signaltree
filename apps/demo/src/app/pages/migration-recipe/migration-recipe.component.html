@@ -2,22 +2,42 @@
   <h1>Migration Recipe &amp; Side-by-Side Comparisons</h1>
 
   <p class="lede">
-    Six progressively more complex feature implementations, each shown in
-    SignalTree and the equivalent state libraries. Every snippet is
+    Six progressively more complex feature implementations, each shown
+    side-by-side: <strong>SignalTree on the left</strong>, the comparison
+    library you pick on the right. Every snippet is
     <strong>100% like-for-like</strong>: if SignalTree's version is a complete
-    service, the comparison is a complete service; if SignalTree splits across
-    state / derived / ops files, the comparison shows every file you would
-    need to write to ship the same feature. No code is hidden off-screen.
+    service, the comparison is a complete service; if SignalTree splits
+    across state / derived / ops files, the comparison shows every file you
+    would need to write to ship the same feature. No code is hidden
+    off-screen.
   </p>
 
-  <p class="lede">
-    The comparison libraries shown here are the ones the SignalTree project
-    treats as primary migration sources: Angular signals,
-    <code>BehaviorSubject</code> services, <code>&#64;ngrx/signals</code>
-    (signalStore), <code>&#64;ngrx/store</code> + <code>&#64;ngrx/effects</code>
-    (classic NgRx), <code>&#64;ngrx/component-store</code>,
-    <code>&#64;ngxs/store</code>, and <code>&#64;ngneat/elf</code>.
-  </p>
+  <!-- =============================================================
+       Library picker
+  ============================================================== -->
+  <div class="lib-picker" role="radiogroup" aria-label="Comparison library">
+    <strong>Compare SignalTree against:</strong>
+    <div class="chips">
+      @for (opt of options; track opt.id) {
+        <button
+          type="button"
+          role="radio"
+          [attr.aria-checked]="compareLib() === opt.id"
+          [class.active]="compareLib() === opt.id"
+          (click)="compareLib.set(opt.id)"
+          [title]="'Available in examples: ' + opt.available.join(', ')"
+        >
+          {{ opt.label }}
+          <span class="chip-count">{{ opt.available.length }}</span>
+        </button>
+      }
+    </div>
+    <p class="picker-note">
+      Showing <strong>{{ selectedLabel() }}</strong>. Available in examples
+      {{ examplesFor(compareLib()).join(', ') }}. Other examples will show a
+      pointer to the closest covered library.
+    </p>
+  </div>
 
   <nav class="toc" aria-label="Examples">
     <strong>Examples (simple &rarr; complex):</strong>
@@ -56,8 +76,10 @@
       </ul>
     </div>
 
-    <h3>SignalTree</h3>
-    <pre ngNonBindable><code>// counter.service.ts
+    <div class="compare-grid example-grid">
+      <div class="lib-pane">
+        <h3 class="pane-title pane-signaltree">SignalTree</h3>
+        <pre ngNonBindable><code>// counter.service.ts
 import &#123; Injectable, computed &#125; from '&#64;angular/core';
 import &#123; signalTree &#125; from '&#64;signaltree/core';
 
@@ -92,9 +114,13 @@ import &#123; CounterService &#125; from './counter.service';
 export class CounterComponent &#123;
   svc = inject(CounterService);
 &#125;</code></pre>
+      </div>
 
-    <h3>Plain Angular signals (no library)</h3>
-    <pre ngNonBindable><code>// counter.service.ts
+      <div class="lib-pane">
+        @switch (compareLib()) {
+          @case ('signals') {
+            <h3 class="pane-title">Plain Angular signals</h3>
+            <pre ngNonBindable><code>// counter.service.ts
 import &#123; Injectable, signal, computed &#125; from '&#64;angular/core';
 
 &#64;Injectable(&#123; providedIn: 'root' &#125;)
@@ -125,9 +151,10 @@ import &#123; CounterService &#125; from './counter.service';
 export class CounterComponent &#123;
   svc = inject(CounterService);
 &#125;</code></pre>
-
-    <h3>BehaviorSubject service</h3>
-    <pre ngNonBindable><code>// counter.service.ts
+          }
+          @case ('behavior') {
+            <h3 class="pane-title">BehaviorSubject service</h3>
+            <pre ngNonBindable><code>// counter.service.ts
 import &#123; Injectable &#125; from '&#64;angular/core';
 import &#123; toSignal &#125; from '&#64;angular/core/rxjs-interop';
 import &#123; BehaviorSubject &#125; from 'rxjs';
@@ -164,12 +191,14 @@ import &#123; CounterService &#125; from './counter.service';
 export class CounterComponent &#123;
   svc = inject(CounterService);
 &#125;</code></pre>
-
-    <h3>&#64;ngrx/signals (signalStore)</h3>
-    <pre ngNonBindable><code>// counter.store.ts
+          }
+          @case ('ngrx-signals') {
+            <h3 class="pane-title">&#64;ngrx/signals (signalStore)</h3>
+            <pre ngNonBindable><code>// counter.store.ts
 import &#123; computed &#125; from '&#64;angular/core';
-import &#123; patchState, signalStore, withComputed, withMethods, withState &#125;
-  from '&#64;ngrx/signals';
+import &#123;
+  patchState, signalStore, withComputed, withMethods, withState,
+&#125; from '&#64;ngrx/signals';
 
 export const CounterStore = signalStore(
   &#123; providedIn: 'root' &#125;,
@@ -200,11 +229,23 @@ import &#123; CounterStore &#125; from './counter.store';
 export class CounterComponent &#123;
   store = inject(CounterStore);
 &#125;</code></pre>
+          }
+          @default {
+            <h3 class="pane-title">{{ selectedLabel() }}</h3>
+            <p class="callout">
+              Not shown for this example. {{ selectedLabel() }} appears in
+              examples {{ examplesFor(compareLib()).join(', ') }}.
+            </p>
+          }
+        }
+      </div>
+    </div>
 
     <p class="callout">
-      <strong>Takeaway:</strong> at this size, all four are about the same
-      length. SignalTree's edge starts to show as soon as the state shape grows
-      beyond a single primitive &mdash; see the next example.
+      <strong>Takeaway:</strong> at this size, the leading options are within
+      a line or two of each other. SignalTree's edge starts to show as soon
+      as the state shape grows beyond a single primitive &mdash; see the
+      next example.
     </p>
   </section>
 
@@ -232,8 +273,10 @@ export class CounterComponent &#123;
       </ul>
     </div>
 
-    <h3>SignalTree</h3>
-    <pre ngNonBindable><code>// cart.types.ts
+    <div class="compare-grid example-grid">
+      <div class="lib-pane">
+        <h3 class="pane-title pane-signaltree">SignalTree</h3>
+        <pre ngNonBindable><code>// cart.types.ts
 export interface CartItem &#123; id: string; price: number; qty: number; &#125;
 
 // cart.service.ts
@@ -261,9 +304,13 @@ export class CartService &#123;
     this.tree.$.items.update((xs) =&gt; xs.filter((x) =&gt; x.id !== id));
   &#125;
 &#125;</code></pre>
+      </div>
 
-    <h3>Plain Angular signals</h3>
-    <pre ngNonBindable><code>// cart.types.ts
+      <div class="lib-pane">
+        @switch (compareLib()) {
+          @case ('signals') {
+            <h3 class="pane-title">Plain Angular signals</h3>
+            <pre ngNonBindable><code>// cart.types.ts
 export interface CartItem &#123; id: string; price: number; qty: number; &#125;
 
 // cart.service.ts
@@ -286,9 +333,10 @@ export class CartService &#123;
     this._items.update((xs) =&gt; xs.filter((x) =&gt; x.id !== id));
   &#125;
 &#125;</code></pre>
-
-    <h3>BehaviorSubject service</h3>
-    <pre ngNonBindable><code>// cart.types.ts
+          }
+          @case ('behavior') {
+            <h3 class="pane-title">BehaviorSubject service</h3>
+            <pre ngNonBindable><code>// cart.types.ts
 export interface CartItem &#123; id: string; price: number; qty: number; &#125;
 
 // cart.service.ts
@@ -320,15 +368,17 @@ export class CartService &#123;
     this._items$.next(this._items$.value.filter((x) =&gt; x.id !== id));
   &#125;
 &#125;</code></pre>
-
-    <h3>&#64;ngrx/signals (signalStore)</h3>
-    <pre ngNonBindable><code>// cart.types.ts
+          }
+          @case ('ngrx-signals') {
+            <h3 class="pane-title">&#64;ngrx/signals (signalStore)</h3>
+            <pre ngNonBindable><code>// cart.types.ts
 export interface CartItem &#123; id: string; price: number; qty: number; &#125;
 
 // cart.store.ts
 import &#123; computed &#125; from '&#64;angular/core';
-import &#123; patchState, signalStore, withComputed, withMethods, withState &#125;
-  from '&#64;ngrx/signals';
+import &#123;
+  patchState, signalStore, withComputed, withMethods, withState,
+&#125; from '&#64;ngrx/signals';
 import &#123; CartItem &#125; from './cart.types';
 
 export const CartStore = signalStore(
@@ -351,9 +401,10 @@ export const CartStore = signalStore(
     &#125;,
   &#125;))
 );</code></pre>
-
-    <h3>NGXS</h3>
-    <pre ngNonBindable><code>// cart.types.ts
+          }
+          @case ('ngxs') {
+            <h3 class="pane-title">NGXS</h3>
+            <pre ngNonBindable><code>// cart.types.ts
 export interface CartItem &#123; id: string; price: number; qty: number; &#125;
 
 // cart.actions.ts
@@ -430,6 +481,17 @@ export class CartComponent &#123;
   add(item: CartItem) &#123; this.store.dispatch(new AddToCart(item)); &#125;
   remove(id: string) &#123; this.store.dispatch(new RemoveFromCart(id)); &#125;
 &#125;</code></pre>
+          }
+          @default {
+            <h3 class="pane-title">{{ selectedLabel() }}</h3>
+            <p class="callout">
+              Not shown for this example. {{ selectedLabel() }} appears in
+              examples {{ examplesFor(compareLib()).join(', ') }}.
+            </p>
+          }
+        }
+      </div>
+    </div>
 
     <p class="callout">
       <strong>Takeaway:</strong> SignalTree, plain signals, and
@@ -464,8 +526,10 @@ export class CartComponent &#123;
       </ul>
     </div>
 
-    <h3>SignalTree (using the <code>status()</code> marker)</h3>
-    <pre ngNonBindable><code>// profile.types.ts
+    <div class="compare-grid example-grid">
+      <div class="lib-pane">
+        <h3 class="pane-title pane-signaltree">SignalTree (using the <code>status()</code> marker)</h3>
+        <pre ngNonBindable><code>// profile.types.ts
 export interface Profile &#123; id: string; name: string; email: string; &#125;
 
 // profile.service.ts
@@ -503,16 +567,21 @@ export class ProfileService &#123;
 
   retry(): Promise&lt;void&gt; &#123; return this.load(); &#125;
 &#125;</code></pre>
+      </div>
 
-    <h3>&#64;ngrx/signals (with <code>rxMethod</code>)</h3>
-    <pre ngNonBindable><code>// profile.types.ts
+      <div class="lib-pane">
+        @switch (compareLib()) {
+          @case ('ngrx-signals') {
+            <h3 class="pane-title">&#64;ngrx/signals (with <code>rxMethod</code>)</h3>
+            <pre ngNonBindable><code>// profile.types.ts
 export interface Profile &#123; id: string; name: string; email: string; &#125;
 
 // profile.store.ts
 import &#123; inject &#125; from '&#64;angular/core';
 import &#123; HttpClient &#125; from '&#64;angular/common/http';
-import &#123; patchState, signalStore, withMethods, withState &#125;
-  from '&#64;ngrx/signals';
+import &#123;
+  patchState, signalStore, withMethods, withState,
+&#125; from '&#64;ngrx/signals';
 import &#123; rxMethod &#125; from '&#64;ngrx/signals/rxjs-interop';
 import &#123; pipe, EMPTY &#125; from 'rxjs';
 import &#123; tap, switchMap, catchError &#125; from 'rxjs/operators';
@@ -546,9 +615,10 @@ export const ProfileStore = signalStore(
     retry() &#123; (this as unknown as &#123; load(v: void): void &#125;).load(); &#125;,
   &#125;))
 );</code></pre>
-
-    <h3>&#64;ngrx/component-store</h3>
-    <pre ngNonBindable><code>// profile.types.ts
+          }
+          @case ('component-store') {
+            <h3 class="pane-title">&#64;ngrx/component-store</h3>
+            <pre ngNonBindable><code>// profile.types.ts
 export interface Profile &#123; id: string; name: string; email: string; &#125;
 
 // profile.store.ts
@@ -601,9 +671,10 @@ export class ProfileStore extends ComponentStore&lt;State&gt; &#123;
 
   retry() &#123; this.load(); &#125;
 &#125;</code></pre>
-
-    <h3>BehaviorSubject service</h3>
-    <pre ngNonBindable><code>// profile.types.ts
+          }
+          @case ('behavior') {
+            <h3 class="pane-title">BehaviorSubject service</h3>
+            <pre ngNonBindable><code>// profile.types.ts
 export interface Profile &#123; id: string; name: string; email: string; &#125;
 
 // profile.service.ts
@@ -640,6 +711,17 @@ export class ProfileService &#123;
 
   retry(): Promise&lt;void&gt; &#123; return this.load(); &#125;
 &#125;</code></pre>
+          }
+          @default {
+            <h3 class="pane-title">{{ selectedLabel() }}</h3>
+            <p class="callout">
+              Not shown for this example. {{ selectedLabel() }} appears in
+              examples {{ examplesFor(compareLib()).join(', ') }}.
+            </p>
+          }
+        }
+      </div>
+    </div>
 
     <p class="callout">
       <strong>Takeaway:</strong> the <code>status()</code> marker collapses
@@ -677,8 +759,10 @@ export class ProfileService &#123;
       </ul>
     </div>
 
-    <h3>SignalTree (multi-file pattern: state / derived / ops / store)</h3>
-    <pre ngNonBindable><code>// tickets/tickets.types.ts
+    <div class="compare-grid example-grid">
+      <div class="lib-pane">
+        <h3 class="pane-title pane-signaltree">SignalTree (multi-file pattern: state / derived / ops / store)</h3>
+        <pre ngNonBindable><code>// tickets/tickets.types.ts
 export interface Ticket &#123; id: string; title: string; done: boolean; &#125;
 
 // tickets/tickets.state.ts
@@ -802,9 +886,13 @@ export class TicketsListComponent implements OnInit &#123;
 // app.config.ts
 import &#123; provideAppTree &#125; from './tree/app-tree';
 export const appConfig = &#123; providers: [provideAppTree()] &#125;;</code></pre>
+      </div>
 
-    <h3>&#64;ngrx/signals (with <code>withEntities</code> + <code>rxMethod</code>)</h3>
-    <pre ngNonBindable><code>// tickets.types.ts
+      <div class="lib-pane">
+        @switch (compareLib()) {
+          @case ('ngrx-signals') {
+            <h3 class="pane-title">&#64;ngrx/signals (with <code>withEntities</code> + <code>rxMethod</code>)</h3>
+            <pre ngNonBindable><code>// tickets.types.ts
 export interface Ticket &#123; id: string; title: string; done: boolean; &#125;
 
 // tickets.store.ts
@@ -895,9 +983,10 @@ export class TicketsListComponent implements OnInit &#123;
 
   ngOnInit() &#123; this.store.load(); &#125;
 &#125;</code></pre>
-
-    <h3>Classic NgRx (<code>&#64;ngrx/store</code> + <code>&#64;ngrx/effects</code>)</h3>
-    <pre ngNonBindable><code>// tickets.types.ts
+          }
+          @case ('ngrx-classic') {
+            <h3 class="pane-title">Classic NgRx (<code>&#64;ngrx/store</code> + <code>&#64;ngrx/effects</code>)</h3>
+            <pre ngNonBindable><code>// tickets.types.ts
 export interface Ticket &#123; id: string; title: string; done: boolean; &#125;
 
 // tickets.actions.ts
@@ -1054,9 +1143,10 @@ export class TicketsListComponent implements OnInit &#123;
 
   retry() &#123; this.store.dispatch(TicketsActions.load()); &#125;
 &#125;</code></pre>
-
-    <h3>Elf (&#64;ngneat/elf with entities)</h3>
-    <pre ngNonBindable><code>// tickets.types.ts
+          }
+          @case ('elf') {
+            <h3 class="pane-title">Elf (&#64;ngneat/elf with entities)</h3>
+            <pre ngNonBindable><code>// tickets.types.ts
 export interface Ticket &#123; id: string; title: string; done: boolean; &#125;
 
 // tickets.repository.ts
@@ -1130,6 +1220,17 @@ export class TicketsRepository &#123;
     &#125;
   &#125;
 &#125;</code></pre>
+          }
+          @default {
+            <h3 class="pane-title">{{ selectedLabel() }}</h3>
+            <p class="callout">
+              Not shown for this example. {{ selectedLabel() }} appears in
+              examples {{ examplesFor(compareLib()).join(', ') }}.
+            </p>
+          }
+        }
+      </div>
+    </div>
 
     <p class="callout">
       <strong>Takeaway:</strong> SignalTree's per-domain layout (state, derived,
@@ -1167,8 +1268,10 @@ export class TicketsRepository &#123;
       </ul>
     </div>
 
-    <h3>SignalTree (Angular <code>effect()</code> + <code>AbortController</code>)</h3>
-    <pre ngNonBindable><code>// orders.types.ts
+    <div class="compare-grid example-grid">
+      <div class="lib-pane">
+        <h3 class="pane-title pane-signaltree">SignalTree (Angular <code>effect()</code> + <code>AbortController</code>)</h3>
+        <pre ngNonBindable><code>// orders.types.ts
 export interface Order &#123; id: string; userId: string; total: number; &#125;
 
 // app-tree.ts
@@ -1251,9 +1354,13 @@ export class UsersComponent &#123;
 
   pick(id: string | null) &#123; this.ops.selectUser(id); &#125;
 &#125;</code></pre>
+      </div>
 
-    <h3>&#64;ngrx/signals (rxMethod + switchMap)</h3>
-    <pre ngNonBindable><code>// orders.types.ts
+      <div class="lib-pane">
+        @switch (compareLib()) {
+          @case ('ngrx-signals') {
+            <h3 class="pane-title">&#64;ngrx/signals (rxMethod + switchMap)</h3>
+            <pre ngNonBindable><code>// orders.types.ts
 export interface Order &#123; id: string; userId: string; total: number; &#125;
 
 // users.store.ts
@@ -1310,9 +1417,10 @@ export const UsersStore = signalStore(
     &#125;,
   &#125;),
 );</code></pre>
-
-    <h3>Classic NgRx (action triggers effect with switchMap)</h3>
-    <pre ngNonBindable><code>// orders.types.ts
+          }
+          @case ('ngrx-classic') {
+            <h3 class="pane-title">Classic NgRx (action triggers effect with switchMap)</h3>
+            <pre ngNonBindable><code>// orders.types.ts
 export interface Order &#123; id: string; userId: string; total: number; &#125;
 
 // users.actions.ts
@@ -1422,6 +1530,17 @@ export class UsersComponent &#123;
     this.store.dispatch(UsersActions.selectUser(&#123; userId: id &#125;));
   &#125;
 &#125;</code></pre>
+          }
+          @default {
+            <h3 class="pane-title">{{ selectedLabel() }}</h3>
+            <p class="callout">
+              Not shown for this example. {{ selectedLabel() }} appears in
+              examples {{ examplesFor(compareLib()).join(', ') }}.
+            </p>
+          }
+        }
+      </div>
+    </div>
 
     <p class="callout">
       <strong>Takeaway:</strong> all three approaches model the same
@@ -1449,8 +1568,10 @@ export class UsersComponent &#123;
       domain, one <code>AppStore</code> facade" pattern earns its keep.
     </p>
 
-    <h3>SignalTree</h3>
-    <pre ngNonBindable><code>// identity/identity.state.ts
+    <div class="compare-grid example-grid">
+      <div class="lib-pane">
+        <h3 class="pane-title pane-signaltree">SignalTree</h3>
+        <pre ngNonBindable><code>// identity/identity.state.ts
 export interface User &#123; id: string; name: string; email: string; &#125;
 export function identityState() &#123;
   return &#123; user: null as User | null &#125;;
@@ -1601,12 +1722,17 @@ export class ShellComponent &#123;
   openTickets      = this.store.$.ui.openTicketsForUser;
   logout()         &#123; this.store.logout(); &#125;
 &#125;</code></pre>
+      </div>
 
-    <h3>&#64;ngrx/signals &mdash; equivalent multi-store composition</h3>
-    <pre ngNonBindable><code>// identity.store.ts
+      <div class="lib-pane">
+        @switch (compareLib()) {
+          @case ('ngrx-signals') {
+            <h3 class="pane-title">&#64;ngrx/signals &mdash; equivalent multi-store composition</h3>
+            <pre ngNonBindable><code>// identity.store.ts
 import &#123; computed &#125; from '&#64;angular/core';
-import &#123; patchState, signalStore, withComputed, withMethods, withState &#125;
-  from '&#64;ngrx/signals';
+import &#123;
+  patchState, signalStore, withComputed, withMethods, withState,
+&#125; from '&#64;ngrx/signals';
 
 export interface User &#123; id: string; name: string; email: string; &#125;
 
@@ -1630,8 +1756,9 @@ export const IdentityStore = signalStore(
 
 // settings.store.ts
 import &#123; effect &#125; from '&#64;angular/core';
-import &#123; patchState, signalStore, withHooks, withMethods, withState &#125;
-  from '&#64;ngrx/signals';
+import &#123;
+  patchState, signalStore, withHooks, withMethods, withState,
+&#125; from '&#64;ngrx/signals';
 
 interface Settings &#123;
   theme: 'light' | 'dark';
@@ -1686,6 +1813,20 @@ export class AppStore &#123;
     // No batching across stores &mdash; two separate change-detection ticks.
   &#125;
 &#125;</code></pre>
+          }
+          @default {
+            <h3 class="pane-title">{{ selectedLabel() }}</h3>
+            <p class="callout">
+              Not shown for this example. {{ selectedLabel() }} appears in
+              examples {{ examplesFor(compareLib()).join(', ') }}. The
+              full-stack multi-domain comparison is currently authored only
+              for <code>&#64;ngrx/signals</code> &mdash; PRs welcome to extend
+              coverage.
+            </p>
+          }
+        }
+      </div>
+    </div>
 
     <p class="callout">
       <strong>Takeaway:</strong> SignalTree composes one tree from

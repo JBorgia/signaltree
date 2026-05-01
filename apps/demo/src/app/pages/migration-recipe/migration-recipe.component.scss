@@ -257,4 +257,105 @@
       border-left-color: var(--color-primary-500);
     }
   }
+
+  /* --- comparison library picker --- */
+  .lib-picker {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3) var(--space-4);
+    margin: 0 0 var(--space-6);
+    box-shadow: var(--shadow-sm);
+
+    > strong {
+      display: block;
+      font-size: 0.95rem;
+      margin-bottom: var(--space-2);
+      color: var(--text-primary);
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+
+    button[role='radio'] {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: 0.35rem 0.75rem;
+      font-size: 0.875rem;
+      font-family: inherit;
+      color: var(--text-primary);
+      background: var(--color-neutral-100);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-full, 999px);
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+
+      &:hover {
+        background: var(--color-neutral-200, #e5e7eb);
+      }
+
+      &.active {
+        background: var(--color-primary-500);
+        color: white;
+        border-color: var(--color-primary-500);
+      }
+
+      .chip-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 1.25rem;
+        height: 1.25rem;
+        padding: 0 0.4rem;
+        font-size: 0.7rem;
+        font-weight: 700;
+        background: rgba(0, 0, 0, 0.08);
+        border-radius: var(--radius-full, 999px);
+        line-height: 1;
+      }
+
+      &.active .chip-count {
+        background: rgba(255, 255, 255, 0.25);
+      }
+    }
+
+    .picker-note {
+      margin: var(--space-2) 0 0;
+      font-size: 0.825rem;
+      color: var(--text-secondary);
+    }
+  }
+
+  /* --- side-by-side example panes --- */
+  .example-grid {
+    align-items: stretch;
+
+    .lib-pane {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+
+      .pane-title {
+        margin-top: 0;
+        padding-bottom: var(--space-2);
+        border-bottom: 2px solid var(--border-color);
+
+        &.pane-signaltree {
+          border-bottom-color: var(--color-primary-500);
+          color: var(--color-primary-700);
+        }
+      }
+
+      pre {
+        flex: 1;
+      }
+    }
+  }
 }
