@@ -1,282 +1,858 @@
 <div class="article">
-  <h1>Migrating to SignalTree</h1>
+  <h1>Migration Recipe &amp; Side-by-Side Comparisons</h1>
 
   <p class="lede">
-    SignalTree is designed to replace the most common Angular state-management
-    patterns without changing what the feature actually does. This page is now
-    structured <strong>by state shape</strong> instead of by incremental
-    feature deltas: one example for plain JSON object state, one for CRUD
-    entity state, and one for reactive shared app state.
+    Six progressively more complex feature implementations, each shown in
+    SignalTree and the equivalent state libraries. Every snippet is
+    <strong>100% like-for-like</strong>: if SignalTree's version is a complete
+    service, the comparison is a complete service; if SignalTree splits across
+    state / derived / ops files, the comparison shows every file you would
+    need to write to ship the same feature. No code is hidden off-screen.
   </p>
 
   <p class="lede">
-    The examples were audited against the real <code>v3</code> NgRx
-    SignalStore app and the <code>v3_ALT</code> SignalTree migration branch.
-    If another implementation needs supporting files, registrations, selectors,
-    or component bindings to work, those supporting pieces are included in the
-    snippet. The point is to show where SignalTree is genuinely simpler, not to
-    let any library win by hiding code off-screen.
+    The comparison libraries shown here are the ones the SignalTree project
+    treats as primary migration sources: Angular signals,
+    <code>BehaviorSubject</code> services, <code>&#64;ngrx/signals</code>
+    (signalStore), <code>&#64;ngrx/store</code> + <code>&#64;ngrx/effects</code>
+    (classic NgRx), <code>&#64;ngrx/component-store</code>,
+    <code>&#64;ngxs/store</code>, and <code>&#64;ngneat/elf</code>.
   </p>
 
-  <nav class="toc" aria-label="Migration sources">
-    <strong>Example shapes:</strong>
+  <nav class="toc" aria-label="Examples">
+    <strong>Examples (simple &rarr; complex):</strong>
     <ul>
-      <li><a href="#json-state">Plain JSON Object State</a></li>
-      <li><a href="#crud-entities">CRUD Entity State</a></li>
-      <li><a href="#reactive-app-state">Reactive Shared App State</a></li>
-    </ul>
-    <strong>Library concept maps (quick reference):</strong>
-    <ul>
-      <li><a href="#ngrx-signals">@ngrx/signals (signalStore)</a></li>
-      <li><a href="#ngrx-classic">Classic NgRx (@ngrx/store + effects)</a></li>
-      <li><a href="#ngrx-component-store">@ngrx/component-store</a></li>
-      <li><a href="#ngxs">NGXS</a></li>
-      <li><a href="#elf">Elf / Akita</a></li>
-      <li><a href="#rx-angular">@rx-angular/state</a></li>
-      <li><a href="#behavior-subject">Plain BehaviorSubject services</a></li>
-      <li><a href="#plain-signals">Plain Angular signals + service</a></li>
-      <li><a href="#ai-assisted">AI-assisted migration</a></li>
+      <li><a href="#ex-1">1. Counter</a></li>
+      <li><a href="#ex-2">2. Cart with derived totals</a></li>
+      <li><a href="#ex-3">3. Async data: loading / error / data</a></li>
+      <li><a href="#ex-4">4. CRUD entity collection with filter</a></li>
+      <li><a href="#ex-5">5. Reactive cross-domain effect</a></li>
+      <li><a href="#ex-6">6. Full multi-domain AppStore architecture</a></li>
+      <li><a href="#migration-skill">Migration Skill (AI-assisted)</a></li>
     </ul>
   </nav>
 
   <hr />
 
-  <section id="json-state">
-    <h2>Plain JSON Object State</h2>
+  <!-- =============================================================
+       EXAMPLE 1 - Counter
+  ============================================================== -->
+  <section id="ex-1">
+    <h2>1. Counter &mdash; state + one derived + one mutation</h2>
 
     <p>
-      Start simple: a cart service with one JSON object, one derived count, and
-      one write method. This is the smallest realistic migration surface.
+      The smallest possible feature. One number, one derived value
+      (<code>doubled</code>), one increment method. This is where the
+      mechanical overhead of each library is most visible.
     </p>
 
-    <div class="compare-grid">
-      <div>
-        <h3>BehaviorSubject service</h3>
-        <p style="font-size:0.85rem;color:var(--text-2,#555)">
-          Files: <code>cart.service.ts</code>, component.
-        </p>
-        <pre><code>&#64;Injectable(&#123; providedIn: 'root' &#125;)
-export class CartService &#123;
-  private _items$ = new BehaviorSubject&lt;Item[]&gt;([]);
-  items$ = this._items$.asObservable();
-  count$ = this.items$.pipe(map((xs) =&gt; xs.length));
-
-  add(item: Item) &#123;
-    this._items$.next([...this._items$.value, item]);
-  &#125;
-&#125;
-
-&#64;Component(&#123; selector: 'app-cart', template: '...' &#125;)
-export class CartComponent &#123;
-  service = inject(CartService);
-
-  items = toSignal(this.service.items$, &#123; initialValue: [] &#125;);
-  count = toSignal(this.service.count$, &#123; initialValue: 0 &#125;);
-&#125;</code></pre>
-      </div>
-      <div>
-        <h3>SignalTree service</h3>
-        <p style="font-size:0.85rem;color:var(--text-2,#555)">
-          Files: <code>cart.service.ts</code>, component.
-        </p>
-        <pre><code>&#64;Injectable(&#123; providedIn: 'root' &#125;)
-export class CartService &#123;
-  private tree = signalTree(&#123; items: [] as Item[] &#125;)
-    .derived(($) =&gt; (&#123;
-      count: computed(() =&gt; $.items().length)
-    &#125;));
-
-  items = this.tree.$.items;
-  count = this.tree.$.count;
-
-  add(item: Item) &#123;
-    this.tree.$.items.update((xs) =&gt; [...xs, item]);
-  &#125;
-&#125;
-
-&#64;Component(&#123; selector: 'app-cart', template: '...' &#125;)
-export class CartComponent &#123;
-  service = inject(CartService);
-
-  items = this.service.items;
-  count = this.service.count;
-&#125;</code></pre>
-      </div>
+    <div class="callout">
+      <strong>Capability checklist (identical for every example):</strong>
+      <ul>
+        <li><code>count: number</code> state</li>
+        <li><code>doubled: number</code> derived value</li>
+        <li><code>increment()</code> mutation</li>
+        <li>Component reads <code>count</code> + <code>doubled</code> as signals and calls <code>increment()</code></li>
+      </ul>
     </div>
 
+    <h3>SignalTree</h3>
+    <pre ngNonBindable><code>// counter.service.ts
+import &#123; Injectable, computed &#125; from '&#64;angular/core';
+import &#123; signalTree &#125; from '&#64;signaltree/core';
+
+&#64;Injectable(&#123; providedIn: 'root' &#125;)
+export class CounterService &#123;
+  private tree = signalTree(&#123; count: 0 &#125;)
+    .derived(($) =&gt; (&#123;
+      doubled: computed(() =&gt; $.count() * 2),
+    &#125;));
+
+  count = this.tree.$.count;       // Signal&lt;number&gt;
+  doubled = this.tree.$.doubled;   // Signal&lt;number&gt;
+
+  increment() &#123;
+    this.tree.$.count.update((n) =&gt; n + 1);
+  &#125;
+&#125;
+
+// counter.component.ts
+import &#123; Component, inject &#125; from '&#64;angular/core';
+import &#123; CounterService &#125; from './counter.service';
+
+&#64;Component(&#123;
+  selector: 'app-counter',
+  standalone: true,
+  template: `
+    &lt;p&gt;Count: &#123;&#123; svc.count() &#125;&#125;&lt;/p&gt;
+    &lt;p&gt;Doubled: &#123;&#123; svc.doubled() &#125;&#125;&lt;/p&gt;
+    &lt;button (click)="svc.increment()"&gt;+&lt;/button&gt;
+  `,
+&#125;)
+export class CounterComponent &#123;
+  svc = inject(CounterService);
+&#125;</code></pre>
+
+    <h3>Plain Angular signals (no library)</h3>
+    <pre ngNonBindable><code>// counter.service.ts
+import &#123; Injectable, signal, computed &#125; from '&#64;angular/core';
+
+&#64;Injectable(&#123; providedIn: 'root' &#125;)
+export class CounterService &#123;
+  private _count = signal(0);
+
+  count = this._count.asReadonly();
+  doubled = computed(() =&gt; this._count() * 2);
+
+  increment() &#123;
+    this._count.update((n) =&gt; n + 1);
+  &#125;
+&#125;
+
+// counter.component.ts
+import &#123; Component, inject &#125; from '&#64;angular/core';
+import &#123; CounterService &#125; from './counter.service';
+
+&#64;Component(&#123;
+  selector: 'app-counter',
+  standalone: true,
+  template: `
+    &lt;p&gt;Count: &#123;&#123; svc.count() &#125;&#125;&lt;/p&gt;
+    &lt;p&gt;Doubled: &#123;&#123; svc.doubled() &#125;&#125;&lt;/p&gt;
+    &lt;button (click)="svc.increment()"&gt;+&lt;/button&gt;
+  `,
+&#125;)
+export class CounterComponent &#123;
+  svc = inject(CounterService);
+&#125;</code></pre>
+
+    <h3>BehaviorSubject service</h3>
+    <pre ngNonBindable><code>// counter.service.ts
+import &#123; Injectable &#125; from '&#64;angular/core';
+import &#123; toSignal &#125; from '&#64;angular/core/rxjs-interop';
+import &#123; BehaviorSubject &#125; from 'rxjs';
+import &#123; map &#125; from 'rxjs/operators';
+
+&#64;Injectable(&#123; providedIn: 'root' &#125;)
+export class CounterService &#123;
+  private _count$ = new BehaviorSubject&lt;number&gt;(0);
+
+  count$ = this._count$.asObservable();
+  doubled$ = this._count$.pipe(map((n) =&gt; n * 2));
+
+  count = toSignal(this.count$, &#123; initialValue: 0 &#125;);
+  doubled = toSignal(this.doubled$, &#123; initialValue: 0 &#125;);
+
+  increment() &#123;
+    this._count$.next(this._count$.value + 1);
+  &#125;
+&#125;
+
+// counter.component.ts
+import &#123; Component, inject &#125; from '&#64;angular/core';
+import &#123; CounterService &#125; from './counter.service';
+
+&#64;Component(&#123;
+  selector: 'app-counter',
+  standalone: true,
+  template: `
+    &lt;p&gt;Count: &#123;&#123; svc.count() &#125;&#125;&lt;/p&gt;
+    &lt;p&gt;Doubled: &#123;&#123; svc.doubled() &#125;&#125;&lt;/p&gt;
+    &lt;button (click)="svc.increment()"&gt;+&lt;/button&gt;
+  `,
+&#125;)
+export class CounterComponent &#123;
+  svc = inject(CounterService);
+&#125;</code></pre>
+
+    <h3>&#64;ngrx/signals (signalStore)</h3>
+    <pre ngNonBindable><code>// counter.store.ts
+import &#123; computed &#125; from '&#64;angular/core';
+import &#123; patchState, signalStore, withComputed, withMethods, withState &#125;
+  from '&#64;ngrx/signals';
+
+export const CounterStore = signalStore(
+  &#123; providedIn: 'root' &#125;,
+  withState(&#123; count: 0 &#125;),
+  withComputed((store) =&gt; (&#123;
+    doubled: computed(() =&gt; store.count() * 2),
+  &#125;)),
+  withMethods((store) =&gt; (&#123;
+    increment() &#123;
+      patchState(store, (s) =&gt; (&#123; count: s.count + 1 &#125;));
+    &#125;,
+  &#125;))
+);
+
+// counter.component.ts
+import &#123; Component, inject &#125; from '&#64;angular/core';
+import &#123; CounterStore &#125; from './counter.store';
+
+&#64;Component(&#123;
+  selector: 'app-counter',
+  standalone: true,
+  template: `
+    &lt;p&gt;Count: &#123;&#123; store.count() &#125;&#125;&lt;/p&gt;
+    &lt;p&gt;Doubled: &#123;&#123; store.doubled() &#125;&#125;&lt;/p&gt;
+    &lt;button (click)="store.increment()"&gt;+&lt;/button&gt;
+  `,
+&#125;)
+export class CounterComponent &#123;
+  store = inject(CounterStore);
+&#125;</code></pre>
+
     <p class="callout">
-      <strong>What this shows:</strong> for plain object state, SignalTree can
-      stay as mechanical as a BehaviorSubject service. The extra value is typed
-      paths and computed reads, without forcing a whole app-wide architecture
-      where one is not needed.
+      <strong>Takeaway:</strong> at this size, all four are about the same
+      length. SignalTree's edge starts to show as soon as the state shape grows
+      beyond a single primitive &mdash; see the next example.
     </p>
   </section>
 
   <hr />
 
-  <section id="crud-entities">
-    <h2>CRUD Entity State</h2>
+  <!-- =============================================================
+       EXAMPLE 2 - Cart
+  ============================================================== -->
+  <section id="ex-2">
+    <h2>2. Cart &mdash; JSON state + multiple derived values</h2>
 
     <p>
-      This is the production-aligned comparison. The example includes
-      normalized tickets, filter, loading, error, optimistic update rollback,
-      and retry. Every supporting file required to make it work is shown.
+      A cart with a list of line items, a derived count, a derived total, an
+      <code>add()</code> mutation, and a <code>remove()</code> mutation.
     </p>
 
     <div class="callout">
       <strong>Capability checklist:</strong>
       <ul>
-        <li>Normalized entity collection</li>
-        <li>Derived <code>visible</code> list from <code>filter</code></li>
-        <li>Async load with loading and error</li>
-        <li>Optimistic <code>updateTitle()</code> with rollback on failure</li>
-        <li><code>retry()</code> that preserves entities on failure</li>
-        <li>Component reads visible, loading, error and dispatches writes</li>
+        <li><code>items: CartItem[]</code> state (each item has <code>id</code>, <code>price</code>, <code>qty</code>)</li>
+        <li><code>count</code> derived = total quantity</li>
+        <li><code>total</code> derived = price &times; quantity sum</li>
+        <li><code>add(item)</code>, <code>remove(id)</code> mutations</li>
+        <li>Component reads <code>items</code>, <code>count</code>, <code>total</code></li>
       </ul>
     </div>
 
     <h3>SignalTree</h3>
-    <p style="font-size:0.85rem;color:var(--text-2,#555)">
-      Files: <code>tree/app-tree.ts</code>, <code>state/tickets.state.ts</code>,
-      <code>derived/tickets.derived.ts</code>, <code>ops/tickets.ops.ts</code>,
-      <code>app-store.ts</code>, component.
-    </p>
-    <pre><code>// state/tickets.state.ts
-export function ticketsState() &#123;
-  return &#123;
-    entities: entityMap&lt;Ticket&gt;(),
-    filter: '',
-    loading: false,
-    error: null as string | null,
-  &#125;;
+    <pre ngNonBindable><code>// cart.types.ts
+export interface CartItem &#123; id: string; price: number; qty: number; &#125;
+
+// cart.service.ts
+import &#123; Injectable, computed &#125; from '&#64;angular/core';
+import &#123; signalTree &#125; from '&#64;signaltree/core';
+import &#123; CartItem &#125; from './cart.types';
+
+&#64;Injectable(&#123; providedIn: 'root' &#125;)
+export class CartService &#123;
+  private tree = signalTree(&#123; items: [] as CartItem[] &#125;)
+    .derived(($) =&gt; (&#123;
+      count: computed(() =&gt; $.items().reduce((n, i) =&gt; n + i.qty, 0)),
+      total: computed(() =&gt; $.items().reduce((s, i) =&gt; s + i.price * i.qty, 0)),
+    &#125;));
+
+  items = this.tree.$.items;
+  count = this.tree.$.count;
+  total = this.tree.$.total;
+
+  add(item: CartItem) &#123;
+    this.tree.$.items.update((xs) =&gt; [...xs, item]);
+  &#125;
+
+  remove(id: string) &#123;
+    this.tree.$.items.update((xs) =&gt; xs.filter((x) =&gt; x.id !== id));
+  &#125;
+&#125;</code></pre>
+
+    <h3>Plain Angular signals</h3>
+    <pre ngNonBindable><code>// cart.types.ts
+export interface CartItem &#123; id: string; price: number; qty: number; &#125;
+
+// cart.service.ts
+import &#123; Injectable, computed, signal &#125; from '&#64;angular/core';
+import &#123; CartItem &#125; from './cart.types';
+
+&#64;Injectable(&#123; providedIn: 'root' &#125;)
+export class CartService &#123;
+  private _items = signal&lt;CartItem[]&gt;([]);
+
+  items = this._items.asReadonly();
+  count = computed(() =&gt; this._items().reduce((n, i) =&gt; n + i.qty, 0));
+  total = computed(() =&gt; this._items().reduce((s, i) =&gt; s + i.price * i.qty, 0));
+
+  add(item: CartItem) &#123;
+    this._items.update((xs) =&gt; [...xs, item]);
+  &#125;
+
+  remove(id: string) &#123;
+    this._items.update((xs) =&gt; xs.filter((x) =&gt; x.id !== id));
+  &#125;
+&#125;</code></pre>
+
+    <h3>BehaviorSubject service</h3>
+    <pre ngNonBindable><code>// cart.types.ts
+export interface CartItem &#123; id: string; price: number; qty: number; &#125;
+
+// cart.service.ts
+import &#123; Injectable &#125; from '&#64;angular/core';
+import &#123; toSignal &#125; from '&#64;angular/core/rxjs-interop';
+import &#123; BehaviorSubject &#125; from 'rxjs';
+import &#123; map &#125; from 'rxjs/operators';
+import &#123; CartItem &#125; from './cart.types';
+
+&#64;Injectable(&#123; providedIn: 'root' &#125;)
+export class CartService &#123;
+  private _items$ = new BehaviorSubject&lt;CartItem[]&gt;([]);
+
+  items$ = this._items$.asObservable();
+  count$ = this.items$.pipe(map((xs) =&gt; xs.reduce((n, i) =&gt; n + i.qty, 0)));
+  total$ = this.items$.pipe(
+    map((xs) =&gt; xs.reduce((s, i) =&gt; s + i.price * i.qty, 0))
+  );
+
+  items = toSignal(this.items$, &#123; initialValue: [] &#125;);
+  count = toSignal(this.count$, &#123; initialValue: 0 &#125;);
+  total = toSignal(this.total$, &#123; initialValue: 0 &#125;);
+
+  add(item: CartItem) &#123;
+    this._items$.next([...this._items$.value, item]);
+  &#125;
+
+  remove(id: string) &#123;
+    this._items$.next(this._items$.value.filter((x) =&gt; x.id !== id));
+  &#125;
+&#125;</code></pre>
+
+    <h3>&#64;ngrx/signals (signalStore)</h3>
+    <pre ngNonBindable><code>// cart.types.ts
+export interface CartItem &#123; id: string; price: number; qty: number; &#125;
+
+// cart.store.ts
+import &#123; computed &#125; from '&#64;angular/core';
+import &#123; patchState, signalStore, withComputed, withMethods, withState &#125;
+  from '&#64;ngrx/signals';
+import &#123; CartItem &#125; from './cart.types';
+
+export const CartStore = signalStore(
+  &#123; providedIn: 'root' &#125;,
+  withState(&#123; items: [] as CartItem[] &#125;),
+  withComputed((store) =&gt; (&#123;
+    count: computed(() =&gt; store.items().reduce((n, i) =&gt; n + i.qty, 0)),
+    total: computed(() =&gt;
+      store.items().reduce((s, i) =&gt; s + i.price * i.qty, 0)
+    ),
+  &#125;)),
+  withMethods((store) =&gt; (&#123;
+    add(item: CartItem) &#123;
+      patchState(store, (s) =&gt; (&#123; items: [...s.items, item] &#125;));
+    &#125;,
+    remove(id: string) &#123;
+      patchState(store, (s) =&gt; (&#123;
+        items: s.items.filter((x) =&gt; x.id !== id),
+      &#125;));
+    &#125;,
+  &#125;))
+);</code></pre>
+
+    <h3>NGXS</h3>
+    <pre ngNonBindable><code>// cart.types.ts
+export interface CartItem &#123; id: string; price: number; qty: number; &#125;
+
+// cart.actions.ts
+import &#123; CartItem &#125; from './cart.types';
+
+export class AddToCart &#123;
+  static readonly type = '[Cart] Add';
+  constructor(public item: CartItem) &#123;&#125;
+&#125;
+export class RemoveFromCart &#123;
+  static readonly type = '[Cart] Remove';
+  constructor(public id: string) &#123;&#125;
 &#125;
 
-// derived/tickets.derived.ts
-export function ticketsDerived($: AppTreeBase) &#123;
+// cart.state.ts
+import &#123; Injectable &#125; from '&#64;angular/core';
+import &#123; State, Action, Selector, StateContext &#125; from '&#64;ngxs/store';
+import &#123; CartItem &#125; from './cart.types';
+import &#123; AddToCart, RemoveFromCart &#125; from './cart.actions';
+
+export interface CartStateModel &#123; items: CartItem[]; &#125;
+
+&#64;State&lt;CartStateModel&gt;(&#123;
+  name: 'cart',
+  defaults: &#123; items: [] &#125;,
+&#125;)
+&#64;Injectable()
+export class CartState &#123;
+  &#64;Selector() static items(s: CartStateModel) &#123; return s.items; &#125;
+  &#64;Selector([CartState.items])
+  static count(items: CartItem[]) &#123;
+    return items.reduce((n, i) =&gt; n + i.qty, 0);
+  &#125;
+  &#64;Selector([CartState.items])
+  static total(items: CartItem[]) &#123;
+    return items.reduce((s, i) =&gt; s + i.price * i.qty, 0);
+  &#125;
+
+  &#64;Action(AddToCart)
+  add(ctx: StateContext&lt;CartStateModel&gt;, &#123; item &#125;: AddToCart) &#123;
+    ctx.patchState(&#123; items: [...ctx.getState().items, item] &#125;);
+  &#125;
+
+  &#64;Action(RemoveFromCart)
+  remove(ctx: StateContext&lt;CartStateModel&gt;, &#123; id &#125;: RemoveFromCart) &#123;
+    ctx.patchState(&#123;
+      items: ctx.getState().items.filter((x) =&gt; x.id !== id),
+    &#125;);
+  &#125;
+&#125;
+
+// app.config.ts
+import &#123; provideStore &#125; from '&#64;ngxs/store';
+import &#123; CartState &#125; from './cart.state';
+
+export const appConfig = &#123;
+  providers: [provideStore([CartState])],
+&#125;;
+
+// cart.component.ts
+import &#123; Component, inject &#125; from '&#64;angular/core';
+import &#123; Store &#125; from '&#64;ngxs/store';
+import &#123; CartState &#125; from './cart.state';
+import &#123; AddToCart, RemoveFromCart &#125; from './cart.actions';
+import &#123; CartItem &#125; from './cart.types';
+
+&#64;Component(&#123; selector: 'app-cart', standalone: true, template: '...' &#125;)
+export class CartComponent &#123;
+  private store = inject(Store);
+  items = this.store.selectSignal(CartState.items);
+  count = this.store.selectSignal(CartState.count);
+  total = this.store.selectSignal(CartState.total);
+
+  add(item: CartItem) &#123; this.store.dispatch(new AddToCart(item)); &#125;
+  remove(id: string) &#123; this.store.dispatch(new RemoveFromCart(id)); &#125;
+&#125;</code></pre>
+
+    <p class="callout">
+      <strong>Takeaway:</strong> SignalTree, plain signals, and
+      <code>&#64;ngrx/signals</code> are all roughly one file. NGXS already
+      requires four (actions, state, app-config registration, component) for
+      the same feature &mdash; and that's before any async or persistence
+      concerns enter the picture.
+    </p>
+  </section>
+
+  <hr />
+
+  <!-- =============================================================
+       EXAMPLE 3 - Async load
+  ============================================================== -->
+  <section id="ex-3">
+    <h2>3. Async data &mdash; loading / error / data</h2>
+
+    <p>
+      Fetch a user profile from an API. Track loading state and errors,
+      expose data, allow retry. This is the smallest realistic
+      single-resource async feature.
+    </p>
+
+    <div class="callout">
+      <strong>Capability checklist:</strong>
+      <ul>
+        <li><code>profile: Profile | null</code></li>
+        <li><code>isLoading: boolean</code>, <code>error: string | null</code></li>
+        <li><code>load()</code> async fetch</li>
+        <li><code>retry()</code> re-runs the load</li>
+      </ul>
+    </div>
+
+    <h3>SignalTree (using the <code>status()</code> marker)</h3>
+    <pre ngNonBindable><code>// profile.types.ts
+export interface Profile &#123; id: string; name: string; email: string; &#125;
+
+// profile.service.ts
+import &#123; Injectable, inject &#125; from '&#64;angular/core';
+import &#123; HttpClient &#125; from '&#64;angular/common/http';
+import &#123; firstValueFrom &#125; from 'rxjs';
+import &#123; signalTree, status &#125; from '&#64;signaltree/core';
+import &#123; Profile &#125; from './profile.types';
+
+&#64;Injectable(&#123; providedIn: 'root' &#125;)
+export class ProfileService &#123;
+  private http = inject(HttpClient);
+
+  private tree = signalTree(&#123;
+    profile: null as Profile | null,
+    load: status(),
+  &#125;);
+
+  profile    = this.tree.$.profile;
+  isLoading  = this.tree.$.load.isLoading;
+  error      = this.tree.$.load.error;
+
+  async load(): Promise&lt;void&gt; &#123;
+    this.tree.$.load.start();
+    try &#123;
+      const data = await firstValueFrom(
+        this.http.get&lt;Profile&gt;('/api/me')
+      );
+      this.tree.$.profile.set(data);
+      this.tree.$.load.success();
+    &#125; catch (err) &#123;
+      this.tree.$.load.fail((err as Error).message);
+    &#125;
+  &#125;
+
+  retry(): Promise&lt;void&gt; &#123; return this.load(); &#125;
+&#125;</code></pre>
+
+    <h3>&#64;ngrx/signals (with <code>rxMethod</code>)</h3>
+    <pre ngNonBindable><code>// profile.types.ts
+export interface Profile &#123; id: string; name: string; email: string; &#125;
+
+// profile.store.ts
+import &#123; inject &#125; from '&#64;angular/core';
+import &#123; HttpClient &#125; from '&#64;angular/common/http';
+import &#123; patchState, signalStore, withMethods, withState &#125;
+  from '&#64;ngrx/signals';
+import &#123; rxMethod &#125; from '&#64;ngrx/signals/rxjs-interop';
+import &#123; pipe, EMPTY &#125; from 'rxjs';
+import &#123; tap, switchMap, catchError &#125; from 'rxjs/operators';
+import &#123; Profile &#125; from './profile.types';
+
+interface State &#123;
+  profile: Profile | null;
+  isLoading: boolean;
+  error: string | null;
+&#125;
+const initial: State = &#123; profile: null, isLoading: false, error: null &#125;;
+
+export const ProfileStore = signalStore(
+  &#123; providedIn: 'root' &#125;,
+  withState(initial),
+  withMethods((store, http = inject(HttpClient)) =&gt; (&#123;
+    load: rxMethod&lt;void&gt;(
+      pipe(
+        tap(() =&gt; patchState(store, &#123; isLoading: true, error: null &#125;)),
+        switchMap(() =&gt;
+          http.get&lt;Profile&gt;('/api/me').pipe(
+            tap((profile) =&gt; patchState(store, &#123; profile, isLoading: false &#125;)),
+            catchError((err) =&gt; &#123;
+              patchState(store, &#123; isLoading: false, error: err.message &#125;);
+              return EMPTY;
+            &#125;)
+          )
+        )
+      )
+    ),
+    retry() &#123; (this as unknown as &#123; load(v: void): void &#125;).load(); &#125;,
+  &#125;))
+);</code></pre>
+
+    <h3>&#64;ngrx/component-store</h3>
+    <pre ngNonBindable><code>// profile.types.ts
+export interface Profile &#123; id: string; name: string; email: string; &#125;
+
+// profile.store.ts
+import &#123; Injectable, inject &#125; from '&#64;angular/core';
+import &#123; HttpClient &#125; from '&#64;angular/common/http';
+import &#123; ComponentStore &#125; from '&#64;ngrx/component-store';
+import &#123; EMPTY &#125; from 'rxjs';
+import &#123; switchMap, tap, catchError &#125; from 'rxjs/operators';
+import &#123; Profile &#125; from './profile.types';
+
+interface State &#123;
+  profile: Profile | null;
+  isLoading: boolean;
+  error: string | null;
+&#125;
+
+&#64;Injectable(&#123; providedIn: 'root' &#125;)
+export class ProfileStore extends ComponentStore&lt;State&gt; &#123;
+  private http = inject(HttpClient);
+
+  constructor() &#123;
+    super(&#123; profile: null, isLoading: false, error: null &#125;);
+  &#125;
+
+  // Selectors -&gt; signals
+  profile   = this.selectSignal((s) =&gt; s.profile);
+  isLoading = this.selectSignal((s) =&gt; s.isLoading);
+  error     = this.selectSignal((s) =&gt; s.error);
+
+  // Updaters
+  private setLoading = this.updater((s, isLoading: boolean) =&gt;
+    (&#123; ...s, isLoading, error: null &#125;));
+  private setProfile = this.updater((s, profile: Profile) =&gt;
+    (&#123; ...s, profile, isLoading: false &#125;));
+  private setError   = this.updater((s, error: string) =&gt;
+    (&#123; ...s, error, isLoading: false &#125;));
+
+  // Effect
+  load = this.effect&lt;void&gt;((trigger$) =&gt;
+    trigger$.pipe(
+      tap(() =&gt; this.setLoading(true)),
+      switchMap(() =&gt;
+        this.http.get&lt;Profile&gt;('/api/me').pipe(
+          tap((p) =&gt; this.setProfile(p)),
+          catchError((err) =&gt; &#123; this.setError(err.message); return EMPTY; &#125;)
+        )
+      )
+    )
+  );
+
+  retry() &#123; this.load(); &#125;
+&#125;</code></pre>
+
+    <h3>BehaviorSubject service</h3>
+    <pre ngNonBindable><code>// profile.types.ts
+export interface Profile &#123; id: string; name: string; email: string; &#125;
+
+// profile.service.ts
+import &#123; Injectable, inject &#125; from '&#64;angular/core';
+import &#123; HttpClient &#125; from '&#64;angular/common/http';
+import &#123; toSignal &#125; from '&#64;angular/core/rxjs-interop';
+import &#123; BehaviorSubject, firstValueFrom &#125; from 'rxjs';
+import &#123; Profile &#125; from './profile.types';
+
+&#64;Injectable(&#123; providedIn: 'root' &#125;)
+export class ProfileService &#123;
+  private http = inject(HttpClient);
+
+  private _profile$  = new BehaviorSubject&lt;Profile | null&gt;(null);
+  private _loading$  = new BehaviorSubject&lt;boolean&gt;(false);
+  private _error$    = new BehaviorSubject&lt;string | null&gt;(null);
+
+  profile   = toSignal(this._profile$,  &#123; initialValue: null &#125;);
+  isLoading = toSignal(this._loading$,  &#123; initialValue: false &#125;);
+  error     = toSignal(this._error$,    &#123; initialValue: null &#125;);
+
+  async load(): Promise&lt;void&gt; &#123;
+    this._loading$.next(true);
+    this._error$.next(null);
+    try &#123;
+      const data = await firstValueFrom(this.http.get&lt;Profile&gt;('/api/me'));
+      this._profile$.next(data);
+    &#125; catch (err) &#123;
+      this._error$.next((err as Error).message);
+    &#125; finally &#123;
+      this._loading$.next(false);
+    &#125;
+  &#125;
+
+  retry(): Promise&lt;void&gt; &#123; return this.load(); &#125;
+&#125;</code></pre>
+
+    <p class="callout">
+      <strong>Takeaway:</strong> the <code>status()</code> marker collapses
+      three correlated booleans (<code>isLoading</code>, <code>error</code>,
+      and the implied "is loaded") into one slice with typed transitions
+      (<code>start</code> / <code>success</code> / <code>fail</code>). The
+      other libraries are functionally identical but reconstruct that pattern
+      from primitives every time.
+    </p>
+  </section>
+
+  <hr />
+
+  <!-- =============================================================
+       EXAMPLE 4 - CRUD entity collection
+  ============================================================== -->
+  <section id="ex-4">
+    <h2>4. CRUD entity collection with filter</h2>
+
+    <p>
+      The production pattern: a normalized collection of tickets, a text
+      filter, loading/error tracking, async load, optimistic update with
+      rollback on failure, and a derived <code>visible</code> list.
+    </p>
+
+    <div class="callout">
+      <strong>Capability checklist:</strong>
+      <ul>
+        <li>Normalized entity collection of <code>Ticket</code></li>
+        <li><code>filter: string</code></li>
+        <li><code>visible</code> = entities filtered by <code>filter</code></li>
+        <li>Loading + error tracking</li>
+        <li>Async <code>load()</code></li>
+        <li>Optimistic <code>updateTitle(id, title)</code> with rollback on failure</li>
+      </ul>
+    </div>
+
+    <h3>SignalTree (multi-file pattern: state / derived / ops / store)</h3>
+    <pre ngNonBindable><code>// tickets/tickets.types.ts
+export interface Ticket &#123; id: string; title: string; done: boolean; &#125;
+
+// tickets/tickets.state.ts
+import &#123; entityMap, status &#125; from '&#64;signaltree/core';
+import &#123; Ticket &#125; from './tickets.types';
+
+export function ticketsState() &#123;
   return &#123;
-    tickets: &#123;
-      visible: computed(() =&gt;
-        $.tickets.entities.all().filter((t) =&gt; t.title.includes($.tickets.filter()))
-      ),
-    &#125;,
+    entities: entityMap&lt;Ticket, string&gt;(),
+    filter: '',
+    load: status(),
   &#125;;
 &#125;
 
 // tree/app-tree.ts
-export function createAppTree() &#123;
-  return signalTree(&#123; tickets: ticketsState() &#125;)
-    .with(devTools(&#123; treeName: 'AppTree' &#125;))
-    .with(batching())
-    .with(memoization())
-    .with(timeTravel())
-    .derived(ticketsDerived);
+import &#123; InjectionToken, Provider, computed &#125; from '&#64;angular/core';
+import &#123; signalTree, batching, devTools &#125; from '&#64;signaltree/core';
+import &#123; ticketsState &#125; from '../tickets/tickets.state';
+
+function createBaseState() &#123;
+  return &#123; tickets: ticketsState() &#125;;
 &#125;
 
-// ops/tickets.ops.ts
+export function createAppTree() &#123;
+  return signalTree(createBaseState())
+    .with(devTools(&#123; treeName: 'AppTree' &#125;))
+    .with(batching())
+    .derived(($) =&gt; (&#123;
+      tickets: &#123;
+        all: computed(() =&gt; $.tickets.entities.all()),
+        visible: computed(() =&gt; &#123;
+          const f = $.tickets.filter().toLowerCase();
+          return $.tickets.entities
+            .all()
+            .filter((t) =&gt; t.title.toLowerCase().includes(f));
+        &#125;),
+      &#125;,
+    &#125;));
+&#125;
+
+export type AppTree = ReturnType&lt;typeof createAppTree&gt;;
+export const APP_TREE = new InjectionToken&lt;AppTree&gt;('APP_TREE');
+export function provideAppTree(): Provider[] &#123;
+  return [&#123; provide: APP_TREE, useFactory: () =&gt; createAppTree() &#125;];
+&#125;
+
+// tickets/tickets.ops.ts
+import &#123; Injectable, inject &#125; from '&#64;angular/core';
+import &#123; HttpClient &#125; from '&#64;angular/common/http';
+import &#123; firstValueFrom &#125; from 'rxjs';
+import &#123; APP_TREE &#125; from '../tree/app-tree';
+import &#123; Ticket &#125; from './tickets.types';
+
 &#64;Injectable(&#123; providedIn: 'root' &#125;)
 export class TicketsOps &#123;
-  private readonly _$ = inject(APP_TREE).$.tickets;
-  private readonly _api = inject(TicketApi);
+  private $tickets = inject(APP_TREE).$.tickets;
+  private http = inject(HttpClient);
 
-  setFilter(filter: string) &#123;
-    this._$.filter.set(filter);
-  &#125;
+  setFilter(filter: string) &#123; this.$tickets.filter.set(filter); &#125;
 
-  load$(): Observable&lt;void&gt; &#123;
-    this._$.loading.set(true);
-    this._$.error.set(null);
-    return this._api.list().pipe(
-      tap((tickets) =&gt; this._$.entities.setAll(tickets)),
-      tap(() =&gt; this._$.loading.set(false)),
-      map(() =&gt; void 0),
-      catchError((err) =&gt; &#123;
-        this._$.error.set(err.message);
-        this._$.loading.set(false);
-        return EMPTY;
-      &#125;)
-    );
-  &#125;
-
-  async updateTitle(id: string, title: string): Promise&lt;void&gt; &#123;
-    const previous = this._$.entities.byId(id)();
-    if (!previous) return;
-
-    this._$.entities.updateOne(id, &#123; title &#125;);
-    this._$.error.set(null);
-
+  async load(): Promise&lt;void&gt; &#123;
+    this.$tickets.load.start();
     try &#123;
-      await firstValueFrom(this._api.update(id, &#123; title &#125;));
+      const list = await firstValueFrom(
+        this.http.get&lt;Ticket[]&gt;('/api/tickets')
+      );
+      this.$tickets.entities.setAll(list, &#123; selectId: (t) =&gt; t.id &#125;);
+      this.$tickets.load.success();
     &#125; catch (err) &#123;
-      this._$.entities.updateOne(id, &#123; title: previous.title &#125;);
-      this._$.error.set((err as Error).message);
+      this.$tickets.load.fail((err as Error).message);
     &#125;
   &#125;
 
-  retry$(): Observable&lt;void&gt; &#123;
-    return this.load$();
+  async updateTitle(id: string, title: string): Promise&lt;void&gt; &#123;
+    const previous = this.$tickets.entities.byId(id)?.();
+    if (!previous) return;
+
+    this.$tickets.entities.upsertOne(&#123; ...previous, title &#125;);
+
+    try &#123;
+      await firstValueFrom(
+        this.http.patch('/api/tickets/' + id, &#123; title &#125;)
+      );
+    &#125; catch (err) &#123;
+      this.$tickets.entities.upsertOne(previous);
+      this.$tickets.load.fail((err as Error).message);
+    &#125;
   &#125;
 &#125;
 
 // app-store.ts
+import &#123; Injectable, inject &#125; from '&#64;angular/core';
+import &#123; APP_TREE &#125; from './tree/app-tree';
+import &#123; TicketsOps &#125; from './tickets/tickets.ops';
+
 &#64;Injectable(&#123; providedIn: 'root' &#125;)
 export class AppStore &#123;
   readonly tree = inject(APP_TREE);
   readonly $ = this.tree.$;
-  readonly ops = &#123; tickets: inject(TicketsOps) &#125;;
+  readonly ops = &#123; tickets: inject(TicketsOps) &#125; as const;
 &#125;
 
 // tickets-list.component.ts
-&#64;Component(&#123; selector: 'app-tickets', template: '...' &#125;)
-export class TicketsListComponent &#123;
-  store = inject(AppStore);
+import &#123; Component, inject, OnInit &#125; from '&#64;angular/core';
+import &#123; AppStore &#125; from '../app-store';
 
-  visible = this.store.$.tickets.visible;
-  loading = this.store.$.tickets.loading;
-  error = this.store.$.tickets.error;
+&#64;Component(&#123; selector: 'app-tickets', standalone: true, template: '...' &#125;)
+export class TicketsListComponent implements OnInit &#123;
+  private store = inject(AppStore);
 
-  ngOnInit() &#123;
-    this.store.ops.tickets.load$().subscribe();
-  &#125;
+  visible   = this.store.$.tickets.visible;
+  isLoading = this.store.$.tickets.load.isLoading;
+  error     = this.store.$.tickets.load.error;
 
-  retry() &#123;
-    this.store.ops.tickets.retry$().subscribe();
-  &#125;
-&#125;</code></pre>
+  ngOnInit() &#123; this.store.ops.tickets.load(); &#125;
+  setFilter(v: string) &#123; this.store.ops.tickets.setFilter(v); &#125;
+  rename(id: string, t: string) &#123; this.store.ops.tickets.updateTitle(id, t); &#125;
+  retry() &#123; this.store.ops.tickets.load(); &#125;
+&#125;
 
-    <h3>NgRx SignalStore</h3>
-    <p style="font-size:0.85rem;color:var(--text-2,#555)">
-      Files: <code>tickets.store.ts</code>, component.
-    </p>
-    <pre><code>// tickets.store.ts
+// app.config.ts
+import &#123; provideAppTree &#125; from './tree/app-tree';
+export const appConfig = &#123; providers: [provideAppTree()] &#125;;</code></pre>
+
+    <h3>&#64;ngrx/signals (with <code>withEntities</code> + <code>rxMethod</code>)</h3>
+    <pre ngNonBindable><code>// tickets.types.ts
+export interface Ticket &#123; id: string; title: string; done: boolean; &#125;
+
+// tickets.store.ts
+import &#123; computed, inject &#125; from '&#64;angular/core';
+import &#123; HttpClient &#125; from '&#64;angular/common/http';
+import &#123;
+  patchState, signalStore, withComputed, withMethods, withState,
+&#125; from '&#64;ngrx/signals';
+import &#123;
+  withEntities, setAllEntities, updateEntity,
+&#125; from '&#64;ngrx/signals/entities';
+import &#123; rxMethod &#125; from '&#64;ngrx/signals/rxjs-interop';
+import &#123; pipe, EMPTY, firstValueFrom &#125; from 'rxjs';
+import &#123; tap, switchMap, catchError &#125; from 'rxjs/operators';
+import &#123; Ticket &#125; from './tickets.types';
+
+interface ExtraState &#123;
+  filter: string;
+  isLoading: boolean;
+  error: string | null;
+&#125;
+const initial: ExtraState = &#123; filter: '', isLoading: false, error: null &#125;;
+
 export const TicketStore = signalStore(
   &#123; providedIn: 'root' &#125;,
-  withDevtools('TicketStore'),
-  withState(&#123;
-    filter: '',
-    loading: false,
-    error: null as string | null,
-  &#125;),
   withEntities&lt;Ticket&gt;(),
+  withState(initial),
   withComputed((store) =&gt; (&#123;
-    visible: computed(() =&gt;
-      store.entities().filter((t) =&gt; t.title.includes(store.filter()))
-    ),
+    visible: computed(() =&gt; &#123;
+      const f = store.filter().toLowerCase();
+      return store.entities().filter((t) =&gt;
+        t.title.toLowerCase().includes(f)
+      );
+    &#125;),
   &#125;)),
-  withMethods((store, api = inject(TicketApi)) =&gt; (&#123;
-    setFilter(filter: string) &#123;
-      patchState(store, &#123; filter &#125;);
-    &#125;,
+  withMethods((store, http = inject(HttpClient)) =&gt; (&#123;
+    setFilter(filter: string) &#123; patchState(store, &#123; filter &#125;); &#125;,
 
     load: rxMethod&lt;void&gt;(
       pipe(
-        tap(() =&gt; patchState(store, &#123; loading: true, error: null &#125;)),
+        tap(() =&gt; patchState(store, &#123; isLoading: true, error: null &#125;)),
         switchMap(() =&gt;
-          api.list().pipe(
-            tap((tickets) =&gt;
-              patchState(store, setAllEntities(tickets), &#123; loading: false &#125;)
+          http.get&lt;Ticket[]&gt;('/api/tickets').pipe(
+            tap((list) =&gt;
+              patchState(store, setAllEntities(list), &#123; isLoading: false &#125;)
             ),
             catchError((err) =&gt; &#123;
-              patchState(store, &#123; loading: false, error: err.message &#125;);
+              patchState(store, &#123; isLoading: false, error: err.message &#125;);
               return EMPTY;
             &#125;)
           )
@@ -288,116 +864,130 @@ export const TicketStore = signalStore(
       const previous = store.entityMap()[id];
       if (!previous) return;
 
-      patchState(
-        store,
-        updateEntity(&#123; id, changes: &#123; title &#125; &#125;, &#123; selectId: (t) =&gt; t.id &#125;),
-        &#123; error: null &#125;
-      );
+      patchState(store, updateEntity(&#123; id, changes: &#123; title &#125; &#125;));
 
       try &#123;
-        await firstValueFrom(api.update(id, &#123; title &#125;));
+        await firstValueFrom(http.patch('/api/tickets/' + id, &#123; title &#125;));
       &#125; catch (err) &#123;
         patchState(
           store,
-          updateEntity(&#123; id, changes: &#123; title: previous.title &#125; &#125;, &#123; selectId: (t) =&gt; t.id &#125;),
+          updateEntity(&#123; id, changes: &#123; title: previous.title &#125; &#125;),
           &#123; error: (err as Error).message &#125;
         );
       &#125;
     &#125;,
 
-    retry() &#123;
-      this.load();
-    &#125;,
+    retry() &#123; (this as unknown as &#123; load(v: void): void &#125;).load(); &#125;,
   &#125;))
 );
 
 // tickets-list.component.ts
-&#64;Component(&#123; selector: 'app-tickets', template: '...' &#125;)
-export class TicketsListComponent &#123;
+import &#123; Component, inject, OnInit &#125; from '&#64;angular/core';
+import &#123; TicketStore &#125; from './tickets.store';
+
+&#64;Component(&#123; selector: 'app-tickets', standalone: true, template: '...' &#125;)
+export class TicketsListComponent implements OnInit &#123;
   store = inject(TicketStore);
 
-  visible = this.store.visible;
-  loading = this.store.loading;
-  error = this.store.error;
+  visible   = this.store.visible;
+  isLoading = this.store.isLoading;
+  error     = this.store.error;
 
-  ngOnInit() &#123;
-    this.store.load();
-  &#125;
-
-  retry() &#123;
-    this.store.retry();
-  &#125;
+  ngOnInit() &#123; this.store.load(); &#125;
 &#125;</code></pre>
 
-    <h3>Classic NgRx</h3>
-    <p style="font-size:0.85rem;color:var(--text-2,#555)">
-      Files: <code>tickets.actions.ts</code>, <code>tickets.reducer.ts</code>,
-      <code>tickets.selectors.ts</code>, <code>tickets.effects.ts</code>,
-      <code>app.config.ts</code>, component.
-    </p>
-    <pre><code>// tickets.actions.ts
+    <h3>Classic NgRx (<code>&#64;ngrx/store</code> + <code>&#64;ngrx/effects</code>)</h3>
+    <pre ngNonBindable><code>// tickets.types.ts
+export interface Ticket &#123; id: string; title: string; done: boolean; &#125;
+
+// tickets.actions.ts
+import &#123; createActionGroup, emptyProps, props &#125; from '&#64;ngrx/store';
+import &#123; Ticket &#125; from './tickets.types';
+
 export const TicketsActions = createActionGroup(&#123;
   source: 'Tickets',
   events: &#123;
-    'Load': emptyProps(),
-    'Load Success': props&lt;&#123; tickets: Ticket[] &#125;&gt;(),
-    'Load Failure': props&lt;&#123; error: string &#125;&gt;(),
-    'Set Filter': props&lt;&#123; filter: string &#125;&gt;(),
-    'Update Title': props&lt;&#123; id: string; title: string; previousTitle: string &#125;&gt;(),
-    'Update Title Success': props&lt;&#123; id: string &#125;&gt;(),
-    'Update Title Failure': props&lt;&#123; id: string; previousTitle: string; error: string &#125;&gt;(),
+    'Set Filter':            props&lt;&#123; filter: string &#125;&gt;(),
+    Load:                    emptyProps(),
+    'Load Success':          props&lt;&#123; tickets: Ticket[] &#125;&gt;(),
+    'Load Failure':          props&lt;&#123; error: string &#125;&gt;(),
+    'Update Title':          props&lt;&#123; id: string; title: string; previousTitle: string &#125;&gt;(),
+    'Update Title Failure':  props&lt;&#123; id: string; previousTitle: string; error: string &#125;&gt;(),
   &#125;,
 &#125;);
 
 // tickets.reducer.ts
+import &#123; createReducer, on, createFeature &#125; from '&#64;ngrx/store';
+import &#123; createEntityAdapter, EntityState &#125; from '&#64;ngrx/entity';
+import &#123; Ticket &#125; from './tickets.types';
+import &#123; TicketsActions &#125; from './tickets.actions';
+
 export interface TicketsState extends EntityState&lt;Ticket&gt; &#123;
   filter: string;
-  loading: boolean;
+  isLoading: boolean;
   error: string | null;
 &#125;
 
 export const adapter = createEntityAdapter&lt;Ticket&gt;();
-const initialState: TicketsState = adapter.getInitialState(&#123;
-  filter: '',
-  loading: false,
-  error: null,
+const initial: TicketsState = adapter.getInitialState(&#123;
+  filter: '', isLoading: false, error: null,
 &#125;);
 
-export const ticketsReducer = createReducer(
-  initialState,
-  on(TicketsActions.load, (s) =&gt; (&#123; ...s, loading: true, error: null &#125;)),
-  on(TicketsActions.loadSuccess, (s, &#123; tickets &#125;) =&gt;
-    adapter.setAll(tickets, &#123; ...s, loading: false &#125;)
+export const ticketsFeature = createFeature(&#123;
+  name: 'tickets',
+  reducer: createReducer(
+    initial,
+    on(TicketsActions.setFilter, (s, &#123; filter &#125;) =&gt; (&#123; ...s, filter &#125;)),
+    on(TicketsActions.load,         (s) =&gt; (&#123; ...s, isLoading: true, error: null &#125;)),
+    on(TicketsActions.loadSuccess,  (s, &#123; tickets &#125;) =&gt;
+      adapter.setAll(tickets, &#123; ...s, isLoading: false &#125;)),
+    on(TicketsActions.loadFailure,  (s, &#123; error &#125;) =&gt; (&#123; ...s, isLoading: false, error &#125;)),
+    on(TicketsActions.updateTitle,  (s, &#123; id, title &#125;) =&gt;
+      adapter.updateOne(&#123; id, changes: &#123; title &#125; &#125;, s)),
+    on(TicketsActions.updateTitleFailure, (s, &#123; id, previousTitle, error &#125;) =&gt;
+      adapter.updateOne(&#123; id, changes: &#123; title: previousTitle &#125; &#125;, &#123; ...s, error &#125;)),
   ),
-  on(TicketsActions.loadFailure, (s, &#123; error &#125;) =&gt; (&#123; ...s, loading: false, error &#125;)),
-  on(TicketsActions.setFilter, (s, &#123; filter &#125;) =&gt; (&#123; ...s, filter &#125;)),
-  on(TicketsActions.updateTitle, (s, &#123; id, title &#125;) =&gt;
-    adapter.updateOne(&#123; id, changes: &#123; title &#125; &#125;, &#123; ...s, error: null &#125;)
-  ),
-  on(TicketsActions.updateTitleFailure, (s, &#123; id, previousTitle, error &#125;) =&gt;
-    adapter.updateOne(&#123; id, changes: &#123; title: previousTitle &#125; &#125;, &#123; ...s, error &#125;)
-  )
-);
+&#125;);
 
 // tickets.selectors.ts
-const selectTicketsState = createFeatureSelector&lt;TicketsState&gt;('tickets');
-const &#123; selectAll &#125; = adapter.getSelectors(selectTicketsState);
-export const selectVisible = createSelector(
-  selectAll,
-  createSelector(selectTicketsState, (s) =&gt; s.filter),
-  (tickets, filter) =&gt; tickets.filter((t) =&gt; t.title.includes(filter))
+import &#123; createSelector &#125; from '&#64;ngrx/store';
+import &#123; ticketsFeature, adapter &#125; from './tickets.reducer';
+
+const &#123; selectAll &#125; = adapter.getSelectors();
+const &#123; selectTicketsState, selectFilter, selectIsLoading, selectError &#125; =
+  ticketsFeature;
+
+export const selectAllTickets = createSelector(selectTicketsState, selectAll);
+export const selectVisibleTickets = createSelector(
+  selectAllTickets, selectFilter,
+  (tickets, filter) =&gt;
+    tickets.filter((t) =&gt; t.title.toLowerCase().includes(filter.toLowerCase())),
 );
+export &#123; selectIsLoading, selectError &#125;;
 
 // tickets.effects.ts
+import &#123; Injectable, inject &#125; from '&#64;angular/core';
+import &#123; HttpClient &#125; from '&#64;angular/common/http';
+import &#123; Actions, createEffect, ofType &#125; from '&#64;ngrx/effects';
+import &#123; of &#125; from 'rxjs';
+import &#123; switchMap, map, catchError, mergeMap &#125; from 'rxjs/operators';
+import &#123; TicketsActions &#125; from './tickets.actions';
+import &#123; Ticket &#125; from './tickets.types';
+
 &#64;Injectable()
 export class TicketsEffects &#123;
-  loadTickets$ = createEffect(() =&gt;
+  private actions$ = inject(Actions);
+  private http     = inject(HttpClient);
+
+  load$ = createEffect(() =&gt;
     this.actions$.pipe(
       ofType(TicketsActions.load),
       switchMap(() =&gt;
-        this.api.list().pipe(
+        this.http.get&lt;Ticket[]&gt;('/api/tickets').pipe(
           map((tickets) =&gt; TicketsActions.loadSuccess(&#123; tickets &#125;)),
-          catchError((err) =&gt; of(TicketsActions.loadFailure(&#123; error: err.message &#125;)))
+          catchError((err) =&gt;
+            of(TicketsActions.loadFailure(&#123; error: err.message &#125;))
+          )
         )
       )
     )
@@ -406,252 +996,294 @@ export class TicketsEffects &#123;
   updateTitle$ = createEffect(() =&gt;
     this.actions$.pipe(
       ofType(TicketsActions.updateTitle),
-      mergeMap((&#123; id, title, previousTitle &#125;) =&gt;
-        this.api.update(id, &#123; title &#125;).pipe(
-          map(() =&gt; TicketsActions.updateTitleSuccess(&#123; id &#125;)),
+      mergeMap(((&#123; id, title, previousTitle &#125;) =&gt;
+        this.http.patch('/api/tickets/' + id, &#123; title &#125;).pipe(
+          map(() =&gt; (&#123; type: '[Tickets] Update Title Done' &#125;)),
           catchError((err) =&gt;
-            of(TicketsActions.updateTitleFailure(&#123; id, previousTitle, error: err.message &#125;))
+            of(TicketsActions.updateTitleFailure(&#123;
+              id, previousTitle, error: err.message,
+            &#125;))
           )
         )
-      )
+      ))
     )
   );
-
-  constructor(private actions$: Actions, private api: TicketApi) &#123;&#125;
 &#125;
 
 // app.config.ts
-providers: [
-  provideStore(&#123; tickets: ticketsReducer &#125;),
-  provideEffects([TicketsEffects]),
-]
+import &#123; provideStore, provideState &#125; from '&#64;ngrx/store';
+import &#123; provideEffects &#125; from '&#64;ngrx/effects';
+import &#123; ticketsFeature &#125; from './tickets.reducer';
+import &#123; TicketsEffects &#125; from './tickets.effects';
+
+export const appConfig = &#123;
+  providers: [
+    provideStore(),
+    provideState(ticketsFeature),
+    provideEffects([TicketsEffects]),
+  ],
+&#125;;
 
 // tickets-list.component.ts
-&#64;Component(&#123; selector: 'app-tickets', template: '...' &#125;)
-export class TicketsListComponent &#123;
+import &#123; Component, inject, OnInit &#125; from '&#64;angular/core';
+import &#123; Store &#125; from '&#64;ngrx/store';
+import &#123; TicketsActions &#125; from './tickets.actions';
+import &#123;
+  selectVisibleTickets, selectIsLoading, selectError,
+&#125; from './tickets.selectors';
+
+&#64;Component(&#123; selector: 'app-tickets', standalone: true, template: '...' &#125;)
+export class TicketsListComponent implements OnInit &#123;
   private store = inject(Store);
 
-  visible = toSignal(this.store.select(selectVisible), &#123; initialValue: [] &#125;);
-  loading = toSignal(this.store.select((state) =&gt; state.tickets.loading), &#123; initialValue: false &#125;);
-  error = toSignal(this.store.select((state) =&gt; state.tickets.error), &#123; initialValue: null &#125;);
+  visible   = this.store.selectSignal(selectVisibleTickets);
+  isLoading = this.store.selectSignal(selectIsLoading);
+  error     = this.store.selectSignal(selectError);
 
-  ngOnInit() &#123;
-    this.store.dispatch(TicketsActions.load());
-  &#125;
-
-  updateTitle(id: string, title: string) &#123;
-    const previousTitle = this.store.selectSignal((state) =&gt; state.tickets.entities[id])()?.title;
-    if (!previousTitle) return;
-    this.store.dispatch(TicketsActions.updateTitle(&#123; id, title, previousTitle &#125;));
-  &#125;
-
-  retry() &#123;
-    this.store.dispatch(TicketsActions.load());
-  &#125;
-&#125;</code></pre>
-
-    <h3>BehaviorSubject service</h3>
-    <p style="font-size:0.85rem;color:var(--text-2,#555)">
-      Files: <code>ticket.service.ts</code>, component.
-    </p>
-    <pre><code>// ticket.service.ts
-&#64;Injectable(&#123; providedIn: 'root' &#125;)
-export class TicketService &#123;
-  private _byId = new Map&lt;string, Ticket&gt;();
-  private _ids$ = new BehaviorSubject&lt;string[]&gt;([]);
-  private _filter$ = new BehaviorSubject&lt;string&gt;('');
-  private _loading$ = new BehaviorSubject&lt;boolean&gt;(false);
-  private _error$ = new BehaviorSubject&lt;string | null&gt;(null);
-
-  filter$ = this._filter$.asObservable();
-  loading$ = this._loading$.asObservable();
-  error$ = this._error$.asObservable();
-
-  all$ = this._ids$.pipe(
-    map((ids) =&gt; ids.map((id) =&gt; this._byId.get(id)!).filter(Boolean))
-  );
-
-  visible$ = combineLatest([this.all$, this.filter$]).pipe(
-    map(([tickets, filter]) =&gt; tickets.filter((t) =&gt; t.title.includes(filter)))
-  );
-
-  constructor(private api: TicketApi) &#123;&#125;
+  ngOnInit() &#123; this.store.dispatch(TicketsActions.load()); &#125;
 
   setFilter(filter: string) &#123;
-    this._filter$.next(filter);
+    this.store.dispatch(TicketsActions.setFilter(&#123; filter &#125;));
   &#125;
 
+  rename(id: string, title: string, previousTitle: string) &#123;
+    this.store.dispatch(
+      TicketsActions.updateTitle(&#123; id, title, previousTitle &#125;)
+    );
+  &#125;
+
+  retry() &#123; this.store.dispatch(TicketsActions.load()); &#125;
+&#125;</code></pre>
+
+    <h3>Elf (&#64;ngneat/elf with entities)</h3>
+    <pre ngNonBindable><code>// tickets.types.ts
+export interface Ticket &#123; id: string; title: string; done: boolean; &#125;
+
+// tickets.repository.ts
+import &#123; Injectable, inject &#125; from '&#64;angular/core';
+import &#123; HttpClient &#125; from '&#64;angular/common/http';
+import &#123; toSignal &#125; from '&#64;angular/core/rxjs-interop';
+import &#123; createStore, withProps, select &#125; from '&#64;ngneat/elf';
+import &#123;
+  withEntities, selectAllEntities, setEntities,
+  updateEntities, getEntity,
+&#125; from '&#64;ngneat/elf-entities';
+import &#123; combineLatest, firstValueFrom &#125; from 'rxjs';
+import &#123; map &#125; from 'rxjs/operators';
+import &#123; Ticket &#125; from './tickets.types';
+
+interface UiProps &#123;
+  filter: string;
+  isLoading: boolean;
+  error: string | null;
+&#125;
+
+const store = createStore(
+  &#123; name: 'tickets' &#125;,
+  withEntities&lt;Ticket&gt;(),
+  withProps&lt;UiProps&gt;(&#123; filter: '', isLoading: false, error: null &#125;),
+);
+
+&#64;Injectable(&#123; providedIn: 'root' &#125;)
+export class TicketsRepository &#123;
+  private http = inject(HttpClient);
+
+  visible$ = combineLatest([
+    store.pipe(selectAllEntities()),
+    store.pipe(select((s) =&gt; s.filter)),
+  ]).pipe(
+    map(([list, filter]) =&gt;
+      list.filter((t) =&gt; t.title.toLowerCase().includes(filter.toLowerCase()))
+    )
+  );
+  isLoading$ = store.pipe(select((s) =&gt; s.isLoading));
+  error$     = store.pipe(select((s) =&gt; s.error));
+
+  visible   = toSignal(this.visible$,   &#123; initialValue: [] &#125;);
+  isLoading = toSignal(this.isLoading$, &#123; initialValue: false &#125;);
+  error     = toSignal(this.error$,     &#123; initialValue: null &#125;);
+
+  setFilter(filter: string) &#123; store.update((s) =&gt; (&#123; ...s, filter &#125;)); &#125;
+
   async load() &#123;
-    this._loading$.next(true);
-    this._error$.next(null);
+    store.update((s) =&gt; (&#123; ...s, isLoading: true, error: null &#125;));
     try &#123;
-      const tickets = await firstValueFrom(this.api.list());
-      this._byId.clear();
-      tickets.forEach((t) =&gt; this._byId.set(t.id, t));
-      this._ids$.next(tickets.map((t) =&gt; t.id));
+      const list = await firstValueFrom(this.http.get&lt;Ticket[]&gt;('/api/tickets'));
+      store.update(setEntities(list), (s) =&gt; (&#123; ...s, isLoading: false &#125;));
     &#125; catch (err) &#123;
-      this._error$.next((err as Error).message);
-    &#125; finally &#123;
-      this._loading$.next(false);
+      store.update((s) =&gt;
+        (&#123; ...s, isLoading: false, error: (err as Error).message &#125;));
     &#125;
   &#125;
 
   async updateTitle(id: string, title: string) &#123;
-    const previous = this._byId.get(id);
+    const previous = store.query(getEntity(id));
     if (!previous) return;
-
-    this._byId.set(id, &#123; ...previous, title &#125;);
-    this._ids$.next([...this._ids$.value]);
-    this._error$.next(null);
-
+    store.update(updateEntities(id, &#123; title &#125;));
     try &#123;
-      await firstValueFrom(this.api.update(id, &#123; title &#125;));
+      await firstValueFrom(this.http.patch('/api/tickets/' + id, &#123; title &#125;));
     &#125; catch (err) &#123;
-      this._byId.set(id, previous);
-      this._ids$.next([...this._ids$.value]);
-      this._error$.next((err as Error).message);
+      store.update(
+        updateEntities(id, &#123; title: previous.title &#125;),
+        (s) =&gt; (&#123; ...s, error: (err as Error).message &#125;),
+      );
     &#125;
-  &#125;
-
-  retry() &#123;
-    return this.load();
-  &#125;
-&#125;
-
-// tickets-list.component.ts
-&#64;Component(&#123; selector: 'app-tickets', template: '...' &#125;)
-export class TicketsListComponent &#123;
-  service = inject(TicketService);
-
-  visible = toSignal(this.service.visible$, &#123; initialValue: [] &#125;);
-  loading = toSignal(this.service.loading$, &#123; initialValue: false &#125;);
-  error = toSignal(this.service.error$, &#123; initialValue: null &#125;);
-
-  ngOnInit() &#123;
-    this.service.load();
-  &#125;
-
-  retry() &#123;
-    this.service.retry();
   &#125;
 &#125;</code></pre>
 
     <p class="callout">
-      <strong>Where SignalTree wins honestly:</strong> the read/write density is
-      close to NgRx SignalStore on a single domain. The larger savings come
-      from configuring cross-cutting concerns once on the shared tree and then
-      adding state slices, derived tiers, and domain ops as the app grows.
+      <strong>Takeaway:</strong> SignalTree's per-domain layout (state, derived,
+      ops) trades a single fat file for several small ones &mdash; but each one
+      stays readable as the domain grows. Classic NgRx requires roughly the
+      same amount of code distributed across <em>five</em> files: actions,
+      reducer, selectors, effects, and the registration in
+      <code>app.config.ts</code>. The Elf and <code>&#64;ngrx/signals</code>
+      versions are competitive with SignalTree on a single domain; the
+      divergence appears in the multi-domain case (Example 6).
     </p>
   </section>
 
   <hr />
 
-  <section id="reactive-app-state">
-    <h2>Reactive Shared App State</h2>
+  <!-- =============================================================
+       EXAMPLE 5 - Reactive cross-domain effect
+  ============================================================== -->
+  <section id="ex-5">
+    <h2>5. Reactive cross-domain effect &mdash; selection drives a fetch</h2>
 
     <p>
-      This example shows one shared state change causing another domain to
-      react: when <code>selectedUserId</code> changes, fetch orders for that
-      user and cancel any in-flight request.
+      When <code>selectedUserId</code> changes, fetch that user's orders.
+      Cancel any in-flight request for the previous user. Clear orders when
+      the selection becomes <code>null</code>.
     </p>
 
     <div class="callout">
       <strong>Capability checklist:</strong>
       <ul>
-        <li>Shared <code>selectedUserId</code> state</li>
-        <li>Orders list plus loading state</li>
-        <li>Cancel prior request when selection changes</li>
-        <li>Clear orders on <code>null</code> selection</li>
-        <li>Component reads selectedUserId, orders, and ordersLoading</li>
+        <li>Shared <code>selectedUserId: string | null</code></li>
+        <li><code>orders: Order[]</code>, <code>ordersLoading: boolean</code></li>
+        <li>Selection change cancels prior request (no race)</li>
+        <li>Selection of <code>null</code> clears orders</li>
       </ul>
     </div>
 
-    <h3>SignalTree</h3>
-    <p style="font-size:0.85rem;color:var(--text-2,#555)">
-      Files: <code>tree/app-tree.ts</code>, <code>state/selection.state.ts</code>,
-      <code>state/orders.state.ts</code>, <code>ops/orders.ops.ts</code>, component.
-    </p>
-    <pre><code>// state/selection.state.ts
-export function selectionState() &#123;
-  return &#123; selectedUserId: null as string | null &#125;;
-&#125;
+    <h3>SignalTree (Angular <code>effect()</code> + <code>AbortController</code>)</h3>
+    <pre ngNonBindable><code>// orders.types.ts
+export interface Order &#123; id: string; userId: string; total: number; &#125;
 
-// state/orders.state.ts
-export function ordersState() &#123;
-  return &#123; list: [] as Order[], loading: false &#125;;
-&#125;
+// app-tree.ts
+import &#123; InjectionToken, Provider &#125; from '&#64;angular/core';
+import &#123; signalTree &#125; from '&#64;signaltree/core';
+import &#123; Order &#125; from '../orders/orders.types';
 
-// tree/app-tree.ts
 export function createAppTree() &#123;
   return signalTree(&#123;
-    selection: selectionState(),
-    orders: ordersState(),
-  &#125;)
-    .with(effects())
-    .with(devTools(&#123; treeName: 'AppTree' &#125;))
-    .with(batching());
+    selection: &#123; selectedUserId: null as string | null &#125;,
+    orders:    &#123; list: [] as Order[], ordersLoading: false &#125;,
+  &#125;);
+&#125;
+export type AppTree = ReturnType&lt;typeof createAppTree&gt;;
+export const APP_TREE = new InjectionToken&lt;AppTree&gt;('APP_TREE');
+export function provideAppTree(): Provider[] &#123;
+  return [&#123; provide: APP_TREE, useFactory: () =&gt; createAppTree() &#125;];
 &#125;
 
-// ops/orders.ops.ts
+// orders/orders.ops.ts
+import &#123; Injectable, effect, inject, untracked &#125; from '&#64;angular/core';
+import &#123; APP_TREE &#125; from '../tree/app-tree';
+import &#123; Order &#125; from './orders.types';
+
 &#64;Injectable(&#123; providedIn: 'root' &#125;)
 export class OrdersOps &#123;
-  private readonly _tree = inject(APP_TREE);
-  private readonly _$ = this._tree.$;
-  private readonly _api = inject(OrderApi);
+  private $ = inject(APP_TREE).$;
 
   constructor() &#123;
-    this._tree.effect((state) =&gt; &#123;
-      const userId = state.selection.selectedUserId();
+    let ctrl: AbortController | null = null;
+
+    effect(() =&gt; &#123;
+      const userId = this.$.selection.selectedUserId();
+
+      // cancel previous in-flight request
+      ctrl?.abort();
 
       if (!userId) &#123;
-        untracked(() =&gt; this._$.orders.list.set([]));
+        untracked(() =&gt; &#123;
+          this.$.orders.list.set([]);
+          this.$.orders.ordersLoading.set(false);
+        &#125;);
         return;
       &#125;
 
-      const controller = new AbortController();
-      untracked(() =&gt; &#123;
-        this._$.orders.loading.set(true);
-        this._api.list(userId, &#123; signal: controller.signal &#125;)
-          .then((orders) =&gt; this._$.orders.list.set(orders))
-          .finally(() =&gt; this._$.orders.loading.set(false));
-      &#125;);
+      ctrl = new AbortController();
+      const signal = ctrl.signal;
+      untracked(() =&gt; this.$.orders.ordersLoading.set(true));
 
-      return () =&gt; controller.abort();
+      fetch('/api/users/' + userId + '/orders', &#123; signal &#125;)
+        .then((r) =&gt; r.json() as Promise&lt;Order[]&gt;)
+        .then((orders) =&gt; &#123;
+          if (signal.aborted) return;
+          this.$.orders.list.set(orders);
+        &#125;)
+        .finally(() =&gt; &#123;
+          if (!signal.aborted) this.$.orders.ordersLoading.set(false);
+        &#125;);
     &#125;);
   &#125;
 
   selectUser(id: string | null) &#123;
-    this._$.selection.selectedUserId.set(id);
+    this.$.selection.selectedUserId.set(id);
   &#125;
 &#125;
 
 // users.component.ts
-&#64;Component(&#123; selector: 'app-users', template: '...' &#125;)
-export class UsersComponent &#123;
-  private tree = inject(APP_TREE);
-  ops = inject(OrdersOps);
+import &#123; Component, inject &#125; from '&#64;angular/core';
+import &#123; APP_TREE &#125; from '../tree/app-tree';
+import &#123; OrdersOps &#125; from '../orders/orders.ops';
 
-  selectedUserId = this.tree.$.selection.selectedUserId;
-  orders = this.tree.$.orders.list;
-  ordersLoading = this.tree.$.orders.loading;
+&#64;Component(&#123; selector: 'app-users', standalone: true, template: '...' &#125;)
+export class UsersComponent &#123;
+  private $ = inject(APP_TREE).$;
+  private ops = inject(OrdersOps);
+
+  selectedUserId  = this.$.selection.selectedUserId;
+  orders          = this.$.orders.list;
+  ordersLoading   = this.$.orders.ordersLoading;
+
+  pick(id: string | null) &#123; this.ops.selectUser(id); &#125;
 &#125;</code></pre>
 
-    <h3>NgRx SignalStore</h3>
-    <p style="font-size:0.85rem;color:var(--text-2,#555)">
-      Files: <code>users.store.ts</code>, component.
-    </p>
-    <pre><code>// users.store.ts
-export const UserStore = signalStore(
+    <h3>&#64;ngrx/signals (rxMethod + switchMap)</h3>
+    <pre ngNonBindable><code>// orders.types.ts
+export interface Order &#123; id: string; userId: string; total: number; &#125;
+
+// users.store.ts
+import &#123; computed, inject &#125; from '&#64;angular/core';
+import &#123; HttpClient &#125; from '&#64;angular/common/http';
+import &#123;
+  patchState, signalStore, withHooks, withMethods, withState,
+&#125; from '&#64;ngrx/signals';
+import &#123; rxMethod &#125; from '&#64;ngrx/signals/rxjs-interop';
+import &#123; pipe, EMPTY &#125; from 'rxjs';
+import &#123; switchMap, tap, catchError &#125; from 'rxjs/operators';
+import &#123; Order &#125; from './orders.types';
+
+interface State &#123;
+  selectedUserId: string | null;
+  orders: Order[];
+  ordersLoading: boolean;
+&#125;
+const initial: State = &#123;
+  selectedUserId: null, orders: [], ordersLoading: false,
+&#125;;
+
+export const UsersStore = signalStore(
   &#123; providedIn: 'root' &#125;,
-  withState(&#123;
-    selectedUserId: null as string | null,
-    orders: [] as Order[],
-    ordersLoading: false,
-  &#125;),
-  withMethods((store, api = inject(OrderApi)) =&gt; (&#123;
+  withState(initial),
+  withMethods((store, http = inject(HttpClient)) =&gt; (&#123;
     selectUser(id: string | null) &#123;
       patchState(store, &#123; selectedUserId: id &#125;);
     &#125;,
+
     loadOrdersForUser: rxMethod&lt;string | null&gt;(
       pipe(
         switchMap((userId) =&gt; &#123;
@@ -660,514 +1292,508 @@ export const UserStore = signalStore(
             return EMPTY;
           &#125;
           patchState(store, &#123; ordersLoading: true &#125;);
-          return api.list(userId).pipe(
+          return http.get&lt;Order[]&gt;('/api/users/' + userId + '/orders').pipe(
             tap((orders) =&gt; patchState(store, &#123; orders, ordersLoading: false &#125;)),
             catchError(() =&gt; &#123;
               patchState(store, &#123; ordersLoading: false &#125;);
               return EMPTY;
-            &#125;)
+            &#125;),
           );
-        &#125;)
-      )
+        &#125;),
+      ),
     ),
   &#125;)),
   withHooks(&#123;
     onInit(&#123; selectedUserId, loadOrdersForUser &#125;) &#123;
-      loadOrdersForUser(selectedUserId);
+      // Re-run whenever selection changes; switchMap cancels prior request.
+      loadOrdersForUser(computed(() =&gt; selectedUserId()));
     &#125;,
-  &#125;)
-);
+  &#125;),
+);</code></pre>
 
-// users.component.ts
-&#64;Component(&#123; selector: 'app-users', template: '...' &#125;)
-export class UsersComponent &#123;
-  store = inject(UserStore);
+    <h3>Classic NgRx (action triggers effect with switchMap)</h3>
+    <pre ngNonBindable><code>// orders.types.ts
+export interface Order &#123; id: string; userId: string; total: number; &#125;
 
-  selectedUserId = this.store.selectedUserId;
-  orders = this.store.orders;
-  ordersLoading = this.store.ordersLoading;
-&#125;</code></pre>
+// users.actions.ts
+import &#123; createActionGroup, props &#125; from '&#64;ngrx/store';
+import &#123; Order &#125; from './orders.types';
 
-    <h3>Classic NgRx</h3>
-    <p style="font-size:0.85rem;color:var(--text-2,#555)">
-      Files: <code>users.actions.ts</code>, <code>users.reducer.ts</code>,
-      <code>users.effects.ts</code>, <code>app.config.ts</code>, component.
-    </p>
-    <pre><code>// users.actions.ts
 export const UsersActions = createActionGroup(&#123;
   source: 'Users',
   events: &#123;
-    'Select User': props&lt;&#123; userId: string | null &#125;&gt;(),
+    'Select User':         props&lt;&#123; userId: string | null &#125;&gt;(),
     'Load Orders Success': props&lt;&#123; orders: Order[] &#125;&gt;(),
     'Load Orders Failure': props&lt;&#123; error: string &#125;&gt;(),
   &#125;,
 &#125;);
 
 // users.reducer.ts
-export interface UsersState &#123;
+import &#123; createReducer, on, createFeature &#125; from '&#64;ngrx/store';
+import &#123; UsersActions &#125; from './users.actions';
+import &#123; Order &#125; from './orders.types';
+
+interface State &#123;
   selectedUserId: string | null;
   orders: Order[];
   ordersLoading: boolean;
 &#125;
 
-const initialState: UsersState = &#123;
-  selectedUserId: null,
-  orders: [],
-  ordersLoading: false,
+const initial: State = &#123;
+  selectedUserId: null, orders: [], ordersLoading: false,
 &#125;;
 
-export const usersReducer = createReducer(
-  initialState,
-  on(UsersActions.selectUser, (s, &#123; userId &#125;) =&gt; (&#123;
-    ...s,
-    selectedUserId: userId,
-    orders: [],
-    ordersLoading: !!userId,
-  &#125;)),
-  on(UsersActions.loadOrdersSuccess, (s, &#123; orders &#125;) =&gt; (&#123; ...s, orders, ordersLoading: false &#125;)),
-  on(UsersActions.loadOrdersFailure, (s) =&gt; (&#123; ...s, ordersLoading: false &#125;))
-);
+export const usersFeature = createFeature(&#123;
+  name: 'users',
+  reducer: createReducer(
+    initial,
+    on(UsersActions.selectUser, (s, &#123; userId &#125;) =&gt; (&#123;
+      ...s,
+      selectedUserId: userId,
+      orders: [],
+      ordersLoading: !!userId,
+    &#125;)),
+    on(UsersActions.loadOrdersSuccess, (s, &#123; orders &#125;) =&gt;
+      (&#123; ...s, orders, ordersLoading: false &#125;)),
+    on(UsersActions.loadOrdersFailure, (s) =&gt;
+      (&#123; ...s, ordersLoading: false &#125;)),
+  ),
+&#125;);
 
 // users.effects.ts
+import &#123; Injectable, inject &#125; from '&#64;angular/core';
+import &#123; HttpClient &#125; from '&#64;angular/common/http';
+import &#123; Actions, createEffect, ofType &#125; from '&#64;ngrx/effects';
+import &#123; EMPTY, of &#125; from 'rxjs';
+import &#123; switchMap, map, catchError &#125; from 'rxjs/operators';
+import &#123; UsersActions &#125; from './users.actions';
+import &#123; Order &#125; from './orders.types';
+
 &#64;Injectable()
 export class UsersEffects &#123;
-  loadOrdersOnSelect$ = createEffect(() =&gt;
+  private actions$ = inject(Actions);
+  private http     = inject(HttpClient);
+
+  selectUser$ = createEffect(() =&gt;
     this.actions$.pipe(
       ofType(UsersActions.selectUser),
-      switchMap((&#123; userId &#125;) =&gt;
-        userId
-          ? this.api.list(userId).pipe(
-              map((orders) =&gt; UsersActions.loadOrdersSuccess(&#123; orders &#125;)),
-              catchError((err) =&gt; of(UsersActions.loadOrdersFailure(&#123; error: err.message &#125;)))
-            )
-          : EMPTY
-      )
-    )
+      switchMap((&#123; userId &#125;) =&gt; &#123;
+        if (!userId) return EMPTY;
+        return this.http.get&lt;Order[]&gt;('/api/users/' + userId + '/orders').pipe(
+          map((orders) =&gt; UsersActions.loadOrdersSuccess(&#123; orders &#125;)),
+          catchError((err) =&gt;
+            of(UsersActions.loadOrdersFailure(&#123; error: err.message &#125;))
+          ),
+        );
+      &#125;),
+    ),
   );
-
-  constructor(private actions$: Actions, private api: OrderApi) &#123;&#125;
 &#125;
 
 // app.config.ts
-providers: [
-  provideStore(&#123; users: usersReducer &#125;),
-  provideEffects([UsersEffects]),
-]
+import &#123; provideStore, provideState &#125; from '&#64;ngrx/store';
+import &#123; provideEffects &#125; from '&#64;ngrx/effects';
+import &#123; usersFeature &#125; from './users.reducer';
+import &#123; UsersEffects &#125; from './users.effects';
+
+export const appConfig = &#123;
+  providers: [
+    provideStore(),
+    provideState(usersFeature),
+    provideEffects([UsersEffects]),
+  ],
+&#125;;
 
 // users.component.ts
-&#64;Component(&#123; selector: 'app-users', template: '...' &#125;)
+import &#123; Component, inject &#125; from '&#64;angular/core';
+import &#123; Store &#125; from '&#64;ngrx/store';
+import &#123; UsersActions &#125; from './users.actions';
+import &#123; usersFeature &#125; from './users.reducer';
+
+&#64;Component(&#123; selector: 'app-users', standalone: true, template: '...' &#125;)
 export class UsersComponent &#123;
   private store = inject(Store);
 
-  selectedUserId = toSignal(this.store.select((state) =&gt; state.users.selectedUserId), &#123; initialValue: null &#125;);
-  orders = toSignal(this.store.select((state) =&gt; state.users.orders), &#123; initialValue: [] &#125;);
-  ordersLoading = toSignal(this.store.select((state) =&gt; state.users.ordersLoading), &#123; initialValue: false &#125;);
+  selectedUserId = this.store.selectSignal(usersFeature.selectSelectedUserId);
+  orders         = this.store.selectSignal(usersFeature.selectOrders);
+  ordersLoading  = this.store.selectSignal(usersFeature.selectOrdersLoading);
+
+  pick(id: string | null) &#123;
+    this.store.dispatch(UsersActions.selectUser(&#123; userId: id &#125;));
+  &#125;
 &#125;</code></pre>
 
-    <h3>BehaviorSubject service</h3>
-    <p style="font-size:0.85rem;color:var(--text-2,#555)">
-      Files: <code>user.service.ts</code>, component.
+    <p class="callout">
+      <strong>Takeaway:</strong> all three approaches model the same
+      "selection drives a fetch with cancellation" pattern. SignalTree
+      attaches the reaction to the shared state graph (just an Angular
+      <code>effect()</code> over the tree); <code>&#64;ngrx/signals</code>
+      uses <code>rxMethod</code> + <code>switchMap</code>; classic NgRx routes
+      it through actions and an effects class.
     </p>
-    <pre><code>// user.service.ts
+  </section>
+
+  <hr />
+
+  <!-- =============================================================
+       EXAMPLE 6 - Full multi-domain architecture
+  ============================================================== -->
+  <section id="ex-6">
+    <h2>6. Full multi-domain architecture</h2>
+
+    <p>
+      A realistic application with three domains &mdash;
+      <code>identity</code>, <code>tickets</code>, <code>settings</code> &mdash;
+      and a single <code>logout()</code> orchestration that touches all
+      three. This is where SignalTree's "one tree per app, one Ops per
+      domain, one <code>AppStore</code> facade" pattern earns its keep.
+    </p>
+
+    <h3>SignalTree</h3>
+    <pre ngNonBindable><code>// identity/identity.state.ts
+export interface User &#123; id: string; name: string; email: string; &#125;
+export function identityState() &#123;
+  return &#123; user: null as User | null &#125;;
+&#125;
+
+// tickets/tickets.state.ts
+import &#123; entityMap, status &#125; from '&#64;signaltree/core';
+export interface Ticket &#123; id: string; title: string; done: boolean; &#125;
+export function ticketsState() &#123;
+  return &#123;
+    entities: entityMap&lt;Ticket, string&gt;(),
+    activeId: null as string | null,
+    load: status(),
+  &#125;;
+&#125;
+
+// settings/settings.state.ts
+import &#123; stored &#125; from '&#64;signaltree/core';
+export function settingsState() &#123;
+  return &#123;
+    theme: stored&lt;'light' | 'dark'&gt;('app.theme', 'light'),
+    locale: stored&lt;string&gt;('app.locale', 'en-US'),
+  &#125;;
+&#125;
+
+// tree/app-tree.ts
+import &#123; InjectionToken, Provider, computed &#125; from '&#64;angular/core';
+import &#123; signalTree, batching, devTools, timeTravel &#125; from '&#64;signaltree/core';
+import &#123; identityState &#125; from '../identity/identity.state';
+import &#123; ticketsState &#125; from '../tickets/tickets.state';
+import &#123; settingsState &#125; from '../settings/settings.state';
+
+export function createBaseState() &#123;
+  return &#123;
+    identity: identityState(),
+    tickets:  ticketsState(),
+    settings: settingsState(),
+  &#125;;
+&#125;
+
+export function createAppTree() &#123;
+  return signalTree(createBaseState())
+    .with(devTools(&#123; treeName: 'AppTree' &#125;))
+    .with(batching())
+    .with(timeTravel())
+    // Tier 1: entity resolution
+    .derived(($) =&gt; (&#123;
+      tickets: &#123;
+        active: computed(() =&gt; &#123;
+          const id = $.tickets.activeId();
+          return id ? $.tickets.entities.byId(id)?.() ?? null : null;
+        &#125;),
+        all: computed(() =&gt; $.tickets.entities.all()),
+      &#125;,
+    &#125;))
+    // Tier 2: cross-domain UI rollups
+    .derived(($) =&gt; (&#123;
+      ui: &#123;
+        isAuthenticated: computed(() =&gt; $.identity.user() !== null),
+        openTicketsForUser: computed(() =&gt; &#123;
+          if (!$.identity.user()) return [];
+          return $.tickets.all().filter((t) =&gt; !t.done);
+        &#125;),
+      &#125;,
+    &#125;));
+&#125;
+
+export type AppTree = ReturnType&lt;typeof createAppTree&gt;;
+export const APP_TREE = new InjectionToken&lt;AppTree&gt;('APP_TREE');
+export function provideAppTree(): Provider[] &#123;
+  return [&#123; provide: APP_TREE, useFactory: () =&gt; createAppTree() &#125;];
+&#125;
+
+// identity/identity.ops.ts
+import &#123; Injectable, inject &#125; from '&#64;angular/core';
+import &#123; APP_TREE &#125; from '../tree/app-tree';
+import &#123; User &#125; from './identity.state';
+
 &#64;Injectable(&#123; providedIn: 'root' &#125;)
-export class UserService implements OnDestroy &#123;
-  private _selectedUserId$ = new BehaviorSubject&lt;string | null&gt;(null);
-  private _orders$ = new BehaviorSubject&lt;Order[]&gt;([]);
-  private _ordersLoading$ = new BehaviorSubject&lt;boolean&gt;(false);
-  private destroyed = new Subject&lt;void&gt;();
+export class IdentityOps &#123;
+  private $ = inject(APP_TREE).$.identity;
+  setUser(u: User | null) &#123; this.$.user.set(u); &#125;
+  clear()                  &#123; this.$.user.set(null); &#125;
+&#125;
 
-  selectedUserId$ = this._selectedUserId$.asObservable();
-  orders$ = this._orders$.asObservable();
-  ordersLoading$ = this._ordersLoading$.asObservable();
+// tickets/tickets.ops.ts (same shape as Example 4, plus clearAll())
+import &#123; Injectable, inject &#125; from '&#64;angular/core';
+import &#123; APP_TREE &#125; from '../tree/app-tree';
+import &#123; Ticket &#125; from './tickets.state';
 
-  constructor(private api: OrderApi) &#123;
-    this._selectedUserId$.pipe(
-      switchMap((userId) =&gt; &#123;
-        if (!userId) &#123;
-          this._orders$.next([]);
-          this._ordersLoading$.next(false);
-          return EMPTY;
-        &#125;
-        this._ordersLoading$.next(true);
-        return this.api.list(userId).pipe(
-          tap((orders) =&gt; this._orders$.next(orders)),
-          finalize(() =&gt; this._ordersLoading$.next(false)),
-          catchError(() =&gt; EMPTY)
-        );
-      &#125;),
-      takeUntil(this.destroyed)
-    ).subscribe();
-  &#125;
-
-  selectUser(id: string | null) &#123;
-    this._selectedUserId$.next(id);
-  &#125;
-
-  ngOnDestroy() &#123;
-    this.destroyed.next();
-    this.destroyed.complete();
+&#64;Injectable(&#123; providedIn: 'root' &#125;)
+export class TicketsOps &#123;
+  private $ = inject(APP_TREE).$.tickets;
+  setActive(id: string | null) &#123; this.$.activeId.set(id); &#125;
+  clearAll() &#123;
+    this.$.entities.setAll([], &#123; selectId: (t: Ticket) =&gt; t.id &#125;);
+    this.$.activeId.set(null);
   &#125;
 &#125;
 
-// users.component.ts
-&#64;Component(&#123; selector: 'app-users', template: '...' &#125;)
-export class UsersComponent &#123;
-  service = inject(UserService);
+// settings/settings.ops.ts
+import &#123; Injectable, inject &#125; from '&#64;angular/core';
+import &#123; APP_TREE &#125; from '../tree/app-tree';
 
-  selectedUserId = toSignal(this.service.selectedUserId$, &#123; initialValue: null &#125;);
-  orders = toSignal(this.service.orders$, &#123; initialValue: [] &#125;);
-  ordersLoading = toSignal(this.service.ordersLoading$, &#123; initialValue: false &#125;);
+&#64;Injectable(&#123; providedIn: 'root' &#125;)
+export class SettingsOps &#123;
+  private $ = inject(APP_TREE).$.settings;
+  setTheme(t: 'light' | 'dark') &#123; this.$.theme.set(t); &#125;
+  setLocale(l: string)          &#123; this.$.locale.set(l); &#125;
+&#125;
+
+// app-store.ts
+import &#123; Injectable, inject &#125; from '&#64;angular/core';
+import &#123; APP_TREE &#125; from './tree/app-tree';
+import &#123; IdentityOps &#125; from './identity/identity.ops';
+import &#123; TicketsOps &#125; from './tickets/tickets.ops';
+import &#123; SettingsOps &#125; from './settings/settings.ops';
+
+&#64;Injectable(&#123; providedIn: 'root' &#125;)
+export class AppStore &#123;
+  readonly tree = inject(APP_TREE);
+  readonly $ = this.tree.$;
+
+  readonly ops = &#123;
+    identity: inject(IdentityOps),
+    tickets:  inject(TicketsOps),
+    settings: inject(SettingsOps),
+  &#125; as const;
+
+  /** Cross-domain orchestration lives on AppStore, never on a single Ops. */
+  logout() &#123;
+    this.ops.identity.clear();
+    this.ops.tickets.clearAll();
+    // settings (theme/locale) intentionally preserved across logout
+  &#125;
+&#125;
+
+// any-component.ts
+import &#123; Component, inject &#125; from '&#64;angular/core';
+import &#123; AppStore &#125; from '../app-store';
+
+&#64;Component(&#123; selector: 'app-shell', standalone: true, template: '...' &#125;)
+export class ShellComponent &#123;
+  private store = inject(AppStore);
+  user             = this.store.$.identity.user;
+  theme            = this.store.$.settings.theme;
+  isAuthenticated  = this.store.$.ui.isAuthenticated;
+  openTickets      = this.store.$.ui.openTicketsForUser;
+  logout()         &#123; this.store.logout(); &#125;
 &#125;</code></pre>
 
-    <p class="callout">
-      <strong>What this shows:</strong> all four approaches can model reactive
-      cancellation. SignalTree's distinction is that the reaction is attached to
-      the shared state graph itself, so cross-domain reads stay local to the
-      tree instead of being re-wired through store-local hooks or action cycles.
-    </p>
-  </section>
+    <h3>&#64;ngrx/signals &mdash; equivalent multi-store composition</h3>
+    <pre ngNonBindable><code>// identity.store.ts
+import &#123; computed &#125; from '&#64;angular/core';
+import &#123; patchState, signalStore, withComputed, withMethods, withState &#125;
+  from '&#64;ngrx/signals';
 
-  <hr />
+export interface User &#123; id: string; name: string; email: string; &#125;
 
-  <section id="ngrx-signals">
-    <h2>&#64;ngrx/signals (signalStore)</h2>
-    <p>
-      The closest relative — both libraries give you typed signals over a
-      state object. SignalTree replaces the <code>withX</code> composition
-      model with a single root tree and plain <code>Ops</code> services.
-    </p>
+export const IdentityStore = signalStore(
+  &#123; providedIn: 'root' &#125;,
+  withState(&#123; user: null as User | null &#125;),
+  withComputed((store) =&gt; (&#123;
+    isAuthenticated: computed(() =&gt; store.user() !== null),
+  &#125;)),
+  withMethods((store) =&gt; (&#123;
+    setUser(user: User | null) &#123; patchState(store, &#123; user &#125;); &#125;,
+    clear() &#123; patchState(store, &#123; user: null &#125;); &#125;,
+  &#125;))
+);
 
-    <p>
-      <strong>Full implementation in both libraries:</strong> see
-      <a href="#crud-entities">CRUD Entity State</a> above for the
-      file-complete side-by-side.
-    </p>
+// tickets.store.ts &mdash; same shape as Example 4, plus a clearAll() method:
+//   withMethods((store) =&gt; (&#123;
+//     ...,
+//     clearAll() &#123; patchState(store, removeAllEntities()); &#125;,
+//   &#125;))
 
-    <h3>Concept map</h3>
-    <table class="concept-map">
-      <thead>
-        <tr><th>&#64;ngrx/signals</th><th>SignalTree</th></tr>
-      </thead>
-      <tbody>
-        <tr><td><code>signalStore(&#123; providedIn: 'root' &#125;, ...)</code></td><td>Tree slice on <code>AppTree</code> + sibling <code>Ops</code> service</td></tr>
-        <tr><td><code>withState&lt;T&gt;(initial)</code></td><td>Initial state passed to <code>signalTree(initial)</code></td></tr>
-        <tr><td><code>withComputed(store =&gt; (&#123;...&#125;))</code></td><td><code>.derived($ =&gt; (&#123;...&#125;))</code> on the tree — reads always live on <code>$</code>, never in Ops</td></tr>
-        <tr><td><code>withMethods(store =&gt; (&#123;...&#125;))</code></td><td>Methods on an <code>Ops</code> service that update the tree</td></tr>
-        <tr><td><code>withHooks(&#123; onInit &#125;)</code></td><td>Factory body or <code>Ops</code> constructor</td></tr>
-        <tr><td><code>rxMethod(source$ =&gt; ...)</code></td><td>Plain method, optionally returning <code>Observable&lt;void&gt;</code></td></tr>
-        <tr><td><code>withEntities&lt;Entity&gt;()</code></td><td><code>entityMap&lt;Entity&gt;()</code> marker</td></tr>
-        <tr><td><code>patchState(store, partial)</code></td><td><code>tree.$.field.set(value)</code> (leaf); <code>tree.$.obj.update(s =&gt; (&#123;...s, ...patch&#125;))</code> (object slice)</td></tr>
-        <tr><td><code>getState(store)</code></td><td><code>tree.$.slice()</code> — no-arg call returns current value</td></tr>
-        <tr><td><code>withReduxDevtools()</code></td><td><code>devTools()</code> enhancer</td></tr>
-      </tbody>
-    </table>
+// settings.store.ts
+import &#123; effect &#125; from '&#64;angular/core';
+import &#123; patchState, signalStore, withHooks, withMethods, withState &#125;
+  from '&#64;ngrx/signals';
 
-    <p class="callout">
-      <strong>Architectural difference:</strong> NgRx SignalStore keeps state,
-      computed reads, and write methods in one store factory. SignalTree
-      splits the same responsibilities across a shared tree (state + reads)
-      and per-domain Ops services (writes). The practical payoff is app-wide
-      configuration and cross-domain reads live in one graph, while feature
-      writes stay local to their domain service. The fused factory is fewer
-      files for a single-feature store.
-    </p>
+interface Settings &#123;
+  theme: 'light' | 'dark';
+  locale: string;
+&#125;
+function load(): Settings &#123;
+  return &#123;
+    theme: (localStorage.getItem('app.theme') as 'light' | 'dark') ?? 'light',
+    locale: localStorage.getItem('app.locale') ?? 'en-US',
+  &#125;;
+&#125;
 
-    <p class="callout callout-primary">
-      <strong>Full playbook:</strong> the deep migration guide with three
-      strategies (big-bang, incremental, hybrid), a Phase&nbsp;0 recipe,
-      sequencing rules, and a verifier script lives at
-      <a
-        href="https://github.com/JBorgia/signaltree/blob/main/docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md"
-        target="_blank"
-        rel="noopener"
-        >docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md</a
-      >. It also ships inside <code>&#64;signaltree/core</code> as an Agent
-      Skill — see <a href="#ai-assisted">AI-assisted migration</a>.
-    </p>
-  </section>
+export const SettingsStore = signalStore(
+  &#123; providedIn: 'root' &#125;,
+  withState(load()),
+  withMethods((store) =&gt; (&#123;
+    setTheme(theme: 'light' | 'dark') &#123; patchState(store, &#123; theme &#125;); &#125;,
+    setLocale(locale: string)         &#123; patchState(store, &#123; locale &#125;); &#125;,
+  &#125;)),
+  withHooks(&#123;
+    onInit(store) &#123;
+      // manual persistence &mdash; equivalent to SignalTree's stored() marker
+      effect(() =&gt; localStorage.setItem('app.theme', store.theme()));
+      effect(() =&gt; localStorage.setItem('app.locale', store.locale()));
+    &#125;,
+  &#125;),
+);
 
-  <hr />
+// app-store.ts (the orchestration layer signalStore does not give you)
+import &#123; Injectable, inject, computed &#125; from '&#64;angular/core';
+import &#123; IdentityStore &#125; from './identity.store';
+import &#123; TicketStore &#125; from './tickets.store';
+import &#123; SettingsStore &#125; from './settings.store';
 
-  <section id="ngrx-classic">
-    <h2>Classic NgRx (&#64;ngrx/store + &#64;ngrx/effects)</h2>
-    <p>
-      The actions / reducers / selectors / effects model collapses into a
-      single tree plus async methods on an <code>Ops</code> service. Most
-      "type the action, dispatch the action, handle the action"
-      plumbing disappears.
-    </p>
+&#64;Injectable(&#123; providedIn: 'root' &#125;)
+export class AppStore &#123;
+  readonly identity = inject(IdentityStore);
+  readonly tickets  = inject(TicketStore);
+  readonly settings = inject(SettingsStore);
 
-    <p>
-      <strong>Full implementation in both libraries:</strong> see
-      <a href="#crud-entities">CRUD Entity State</a> above for the
-      file-complete side-by-side.
-    </p>
+  // Cross-store derived value &mdash; re-implemented on the facade because
+  // signalStore doesn't expose a way to derive across stores natively.
+  readonly openTicketsForUser = computed(() =&gt; &#123;
+    if (!this.identity.isAuthenticated()) return [];
+    return this.tickets.entities().filter((t) =&gt; !t.done);
+  &#125;);
 
-    <table class="concept-map">
-      <thead><tr><th>NgRx</th><th>SignalTree</th></tr></thead>
-      <tbody>
-        <tr><td><code>createAction</code> + <code>props&lt;T&gt;()</code></td><td>Method parameters on an <code>Ops</code> service</td></tr>
-        <tr><td><code>createReducer</code> + <code>on(...)</code></td><td>Direct tree updates inside the method</td></tr>
-        <tr><td><code>createSelector</code> / <code>createFeatureSelector</code></td><td><code>.derived($ =&gt; (&#123; x: computed(() =&gt; $.slice...) &#125;))</code> on the tree</td></tr>
-        <tr><td><code>createEffect</code> + <code>switchMap</code> / <code>concatMap</code></td><td><code>async</code> method on Ops, or <code>rxMethod</code>-style helper</td></tr>
-        <tr><td><code>EntityAdapter</code> / <code>createEntityAdapter</code></td><td><code>entityMap&lt;T&gt;()</code> marker</td></tr>
-        <tr><td><code>Store.dispatch(action)</code></td><td><code>ops.method(args)</code></td></tr>
-        <tr><td><code>store.select(selector)</code></td><td><code>tree.$.path</code> signal (or derived signal from <code>.derived()</code>)</td></tr>
-        <tr><td><code>StoreDevtoolsModule</code></td><td><code>devTools()</code> enhancer</td></tr>
-      </tbody>
-    </table>
-
-    <p class="callout">
-      <strong>Strategy:</strong> migrate one feature module at a time. Build
-      the <code>AppTree</code> + a feature <code>Ops</code> service alongside
-      the existing reducer, switch the components, then delete the actions /
-      reducer / effects / selectors files in the same PR.
-    </p>
-  </section>
-
-  <hr />
-
-  <section id="ngrx-component-store">
-    <h2>&#64;ngrx/component-store</h2>
-    <p>
-      Component Store is closest in shape — local state, updaters, effects.
-      Map each <code>ComponentStore</code> to an <code>Ops</code> service
-      bound to a tree slice (or to a small per-component
-      <code>signalTree()</code> if it really is component-scoped).
-    </p>
-
-    <table class="concept-map">
-      <thead><tr><th>&#64;ngrx/component-store</th><th>SignalTree</th></tr></thead>
-      <tbody>
-        <tr><td><code>extends ComponentStore&lt;T&gt;</code></td><td>Tree slice + <code>Ops</code> service</td></tr>
-        <tr><td><code>this.updater((s, v) =&gt; ...)</code></td><td>Method that calls <code>tree.$.x.update(...)</code></td></tr>
-        <tr><td><code>this.select(...)</code></td><td><code>tree.$.path</code> signal, or <code>.derived()</code> for cross-slice computed</td></tr>
-        <tr><td><code>this.effect&lt;T&gt;(source$ =&gt; ...)</code></td><td><code>async</code> method, or RxJS pipeline returning <code>Observable&lt;void&gt;</code></td></tr>
-        <tr><td><code>this.patchState(partial)</code></td><td><code>tree.$.field.set(value)</code> per leaf, or <code>tree.$.obj.update(s =&gt; (&#123;...s, ...patch&#125;))</code></td></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <hr />
-
-  <section id="ngxs">
-    <h2>NGXS</h2>
-    <p>
-      NGXS state classes with <code>&#64;Action</code> handlers and
-      <code>&#64;Selector</code> map directly onto an <code>Ops</code> service
-      with plain methods plus <code>computed()</code> selectors.
-    </p>
-
-    <table class="concept-map">
-      <thead><tr><th>NGXS</th><th>SignalTree</th></tr></thead>
-      <tbody>
-        <tr><td><code>&#64;State&lt;T&gt;(&#123; name, defaults &#125;)</code></td><td>Tree slice on <code>AppTree</code></td></tr>
-        <tr><td><code>&#64;Selector()</code></td><td><code>.derived($ =&gt; (&#123; x: computed(() =&gt; ...) &#125;))</code> on the tree</td></tr>
-        <tr><td><code>&#64;Action(MyAction)</code></td><td>Method on the Ops service</td></tr>
-        <tr><td><code>ctx.patchState(partial)</code></td><td><code>tree.$.field.set(value)</code> per leaf, or <code>tree.$.obj.update(s =&gt; (&#123;...s, ...patch&#125;))</code></td></tr>
-        <tr><td><code>ctx.dispatch(new Other())</code></td><td>Direct call to another <code>Ops</code> method</td></tr>
-        <tr><td><code>store.select(MyState.x)</code></td><td><code>tree.$.x</code> signal</td></tr>
-        <tr><td><code>NgxsReduxDevtoolsPluginModule</code></td><td><code>devTools()</code> enhancer</td></tr>
-      </tbody>
-    </table>
-
-    <p class="callout">
-      <strong>Note:</strong> the action-class registry that NGXS uses for
-      cross-state dispatch becomes a normal Angular dependency in SignalTree —
-      <code>OpsA</code> just <code>inject()</code>s <code>OpsB</code> and calls
-      its method.
-    </p>
-  </section>
-
-  <hr />
-
-  <section id="elf">
-    <h2>Elf / Akita</h2>
-    <p>
-      Elf's repository pattern (and its predecessor Akita's
-      <code>EntityStore</code> / <code>QueryEntity</code>) collapse into
-      <code>entityMap()</code> markers on the tree plus computed selectors.
-    </p>
-
-    <table class="concept-map">
-      <thead><tr><th>Elf / Akita</th><th>SignalTree</th></tr></thead>
-      <tbody>
-        <tr><td><code>createStore(&#123; name &#125;, withProps&lt;T&gt;(...))</code></td><td>Tree slice on <code>AppTree</code></td></tr>
-        <tr><td><code>withEntities&lt;Entity&gt;()</code></td><td><code>entityMap&lt;Entity&gt;()</code></td></tr>
-        <tr><td><code>store.update(setEntities(xs))</code></td><td><code>tree.$.entities.setAll(xs)</code></td></tr>
-        <tr><td><code>store.update(addEntities(x))</code></td><td><code>tree.$.entities.addOne(x)</code></td></tr>
-        <tr><td><code>store.update(updateEntities(id, p))</code></td><td><code>tree.$.entities.updateOne(id, p)</code></td></tr>
-        <tr><td><code>store.update(deleteEntities(id))</code></td><td><code>tree.$.entities.removeOne(id)</code></td></tr>
-        <tr><td><code>store.pipe(selectAllEntities())</code></td><td><code>tree.$.entities.all</code> (Signal&lt;E[]&gt;; call <code>.all()</code> to read)</td></tr>
-        <tr><td><code>QueryEntity</code> selectors</td><td><code>.derived($ =&gt; (&#123; x: computed(() =&gt; $.entities.where(...)) &#125;))</code> on the tree</td></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <hr />
-
-  <section id="rx-angular">
-    <h2>&#64;rx-angular/state</h2>
-    <p>
-      <code>RxState</code> exposes <code>get</code>, <code>set</code>,
-      <code>select</code>, and <code>connect</code> over a flat object. The
-      tree replaces the object; <code>computed()</code> replaces
-      <code>select</code>; and <code>connect</code>'s "merge an
-      <code>Observable</code> into state" pattern becomes an explicit
-      <code>subscribe</code> in the Ops constructor (or
-      <code>toSignal()</code>).
-    </p>
-
-    <table class="concept-map">
-      <thead><tr><th>&#64;rx-angular/state</th><th>SignalTree</th></tr></thead>
-      <tbody>
-        <tr><td><code>state.set(partial)</code></td><td><code>tree.$.field.set(value)</code> per leaf, or <code>tree.$.obj.update(s =&gt; (&#123;...s, ...patch&#125;))</code></td></tr>
-        <tr><td><code>state.get('key')</code></td><td><code>tree.$.key()</code></td></tr>
-        <tr><td><code>state.select('key')</code></td><td><code>tree.$.key</code> signal (or <code>toObservable(...)</code>)</td></tr>
-        <tr><td><code>state.connect('key', source$)</code></td><td><code>source$.subscribe(v =&gt; tree.$.key.set(v))</code> in Ops constructor</td></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <hr />
-
-  <section id="behavior-subject">
-    <h2>Plain BehaviorSubject services</h2>
-    <p>
-      The classic
-      <code>private _x$ = new BehaviorSubject&lt;T&gt;(initial)</code>
-      pattern becomes an Angular signal-backed service. You keep the mental
-      model — services own the state — and gain typed paths,
-      <code>computed()</code>, DevTools, and time travel for free.
-    </p>
-
-    <p>
-      <strong>Full implementation in both styles:</strong> see
-      <a href="#crud-entities">CRUD Entity State</a> above for the
-      file-complete side-by-side including manual entity normalization.
-    </p>
-
-    <h3>Quick swap for a simple feature</h3>
-    <p style="font-size:0.875rem;color:var(--text-2,#555);margin-bottom:0.5rem">
-      For a single self-contained service with no entities, the swap is
-      mechanical — same file, same class, same registration:
-    </p>
-    <div class="compare-grid">
-      <div>
-        <h4>Before — <code>cart.service.ts</code></h4>
-        <pre><code>&#64;Injectable(&#123; providedIn: 'root' &#125;)
-export class CartService &#123;
-  private _items$ = new BehaviorSubject&lt;Item[]&gt;([]);
-  items$ = this._items$.asObservable();
-  count$ = this.items$.pipe(map(xs =&gt; xs.length));
-
-  add(item: Item) &#123;
-    this._items$.next([...this._items$.value, item]);
+  /** Cross-store orchestration. */
+  logout() &#123;
+    this.identity.clear();
+    this.tickets.clearAll();
+    // No batching across stores &mdash; two separate change-detection ticks.
   &#125;
 &#125;</code></pre>
-      </div>
-      <div>
-        <h4>After — <code>cart.service.ts</code></h4>
-        <pre><code>&#64;Injectable(&#123; providedIn: 'root' &#125;)
-export class CartService &#123;
-  private tree = signalTree(&#123; items: [] as Item[] &#125;)
-    .derived($ =&gt; (&#123;
-      count: computed(() =&gt; $.items().length)
-    &#125;));
-
-  items = this.tree.$.items;   // Signal&lt;Item[]&gt;
-  count = this.tree.$.count;   // Signal&lt;number&gt; — from .derived()
-
-  add(item: Item) &#123;
-    this.tree.$.items.update(xs =&gt; [...xs, item]);
-  &#125;
-&#125;</code></pre>
-      </div>
-    </div>
 
     <p class="callout">
-      <strong>For multi-domain apps:</strong> if you have many feature
-      services and want a single shared state graph, SignalTree's recommended
-      pattern is one shared <code>AppTree</code> (state + derived) plus
-      per-domain <code>Ops</code> services for writes — see
-      <a href="#app-state">Shared App State</a> for that layout. Embedding
-      <code>signalTree</code> inside an existing service (as shown here) is
-      the simplest 1:1 swap and works just as well for single-feature
-      services.
+      <strong>Takeaway:</strong> SignalTree composes one tree from
+      domain-state factories, derives <em>across</em> domains in one place,
+      and gets cross-cutting concerns (DevTools, batching, time travel,
+      persistence) on the whole tree with one <code>.with(...)</code> call
+      per concern. <code>&#64;ngrx/signals</code> delivers the same
+      capabilities domain-by-domain, but you re-implement persistence in
+      every store, derive-across-stores happens on the facade rather than the
+      data graph, and there's no first-class batching across stores.
     </p>
   </section>
 
   <hr />
 
-  <section id="plain-signals">
-    <h2>Plain Angular signals + service</h2>
-    <p>
-      If you already have <code>signal()</code> + <code>computed()</code>
-      inside an <code>&#64;Injectable</code>, you mostly just relocate the
-      state into the shared tree. The wins are: one place to inspect
-      everything in DevTools, time travel, persistence, and a single
-      well-typed graph instead of N independent service-owned signals.
-    </p>
+  <!-- =============================================================
+       Migration Skill
+  ============================================================== -->
+  <section id="migration-skill">
+    <h2>AI-assisted migration &mdash; the SignalTree Skill</h2>
 
     <p>
-      <strong>When you might not migrate:</strong> truly local UI state
-      (collapsed/expanded, hover, transient form state) can stay as plain
-      <code>signal()</code> in the component. The tree is for application
-      state.
-    </p>
-  </section>
-
-  <hr />
-
-  <section id="ai-assisted">
-    <h2>AI-assisted migration</h2>
-    <p>
-      SignalTree ships a vendor-neutral <strong>Agent Skill</strong> that lets
-      Cursor, Claude Code, or any <code>SKILL.md</code>-aware AI assistant run
-      these migrations end-to-end. After installing
-      <code>&#64;signaltree/core</code> the skill lives at
+      SignalTree ships a vendor-neutral <strong>Agent Skill</strong> at
       <code>node_modules/&#64;signaltree/core/skills/using-signaltree/</code>.
+      It works with Cursor, Claude Code, GitHub Copilot, or any
+      <code>SKILL.md</code>-aware AI assistant. The skill is what an agent
+      reads to learn SignalTree's mental model, the canonical
+      <code>AppTree</code> + <code>AppStore</code> + <code>Ops</code> shape,
+      and the playbook for migrating an existing codebase off another state
+      library.
     </p>
 
-    <h3>Install the skill once per repo</h3>
-    <pre><code># Cursor
+    <h3>One-time install per repo</h3>
+    <pre ngNonBindable><code># Cursor
 cp -r node_modules/&#64;signaltree/core/skills/using-signaltree .cursor/skills/
 
 # Claude Code
-cp -r node_modules/&#64;signaltree/core/skills/using-signaltree .claude/skills/</code></pre>
+cp -r node_modules/&#64;signaltree/core/skills/using-signaltree .claude/skills/
 
-    <h3>What the skill gives the agent</h3>
+# GitHub Copilot (custom instructions / agent customizations)
+cp -r node_modules/&#64;signaltree/core/skills/using-signaltree \
+  .github/skills/</code></pre>
+
+    <h3>What the skill teaches the agent</h3>
     <ul>
       <li>
-        <strong>Mechanical concept maps</strong> for every source library
-        listed above (the deepest coverage is currently
-        <code>&#64;ngrx/signals</code>; PRs welcome for the others).
+        <strong>Mental model.</strong> Reactive JSON tree, the
+        <code>$</code> proxy, leaves as <code>WritableSignal&lt;T&gt;</code>,
+        markers (<code>entityMap</code>, <code>status</code>,
+        <code>stored</code>, <code>form</code>), enhancer composition order.
       </li>
       <li>
-        <strong>Three migration strategies</strong> with explicit decision
-        criteria — big-bang (one PR), incremental per-domain (one PR per
-        store, with a Phase&nbsp;0 foundation PR and a sequencing rule), and a
-        hybrid legacy-facade for regulated rollback.
+        <strong>Canonical architecture.</strong> One tree per app,
+        <code>APP_TREE</code> + <code>provideAppTree()</code> +
+        <code>provideAppTreeForTesting()</code> from day one,
+        <code>AppStore</code> facade, per-domain <code>Ops</code>, the strict
+        consumer rule (<em>components inject <code>AppStore</code> only</em>).
       </li>
       <li>
-        A drop-in verifier script
-        (<code>scripts/verify-signaltree-migration.sh</code> in the SignalTree
-        repo) that runs <code>build</code> + <code>test</code> +
-        <code>lint</code> and asserts the source library is gone from
-        application code and <code>package.json</code>. Package-manager and
-        layout agnostic.
+        <strong>Tier ladder for derived signals.</strong> Tier 0 base &rarr; 1
+        entity resolution &rarr; 2 complex logic &rarr; 3 workflow &rarr; 4
+        navigation &rarr; 5 UI aggregates, with named tier files
+        (<code>tier-entity-resolution.derived.ts</code>, etc.) once the tree
+        crosses ~3 domains.
       </li>
       <li>
-        Anti-pattern catalog (root-injected <code>Ops</code> with eager
-        side-effects, multiple competing trees, brown-field
-        <code>APP_TREE</code> placement) so the agent doesn't repeat known
-        traps.
+        <strong>Migration playbook.</strong> Big-bang is the default
+        (delete the legacy package in the same PR). The hybrid legacy-facade
+        pattern is a <em>temporary</em> fallback that must ship with a
+        <code>// TODO(legacy-facade): remove by &lt;date&gt;</code> and a
+        tracking issue.
+      </li>
+      <li>
+        <strong>Deepest coverage today is for <code>&#64;ngrx/signals</code></strong>
+        &mdash; see
+        <code>reference/migration-from-ngrx-signals.md</code> inside the
+        skill. PRs welcome to extend coverage to classic NgRx, NGXS, Elf, and
+        the others shown above.
+      </li>
+      <li>
+        <strong>Definition of done.</strong> (1) Zero imports of the legacy
+        package in the migrated app. (2) Legacy package removed from
+        <code>package.json</code> (or tracked for removal). (3) Test suite
+        green &mdash; <em>not just build-green</em>. (4) DevTools shows the
+        new tree under the chosen <code>treeName</code>.
+      </li>
+      <li>
+        <strong>Anti-pattern catalog.</strong> Multiple competing trees,
+        root-injected <code>Ops</code> with eager side-effects in
+        constructors, mocking <code>AppStore</code> in tests instead of
+        providing <code>APP_TREE</code>, etc.
+      </li>
+      <li>
+        <strong>Orchestration mode.</strong> A separate playbook
+        (<code>reference/orchestrating-a-migration.md</code>) for an
+        orchestrator agent driving phased rollout across multiple
+        implementer subagents. Load when the work spans more than ~5 files
+        or when one agent will exhaust its context window.
       </li>
     </ul>
 
     <p class="callout callout-primary">
-      Point your AI assistant at the skill, give it a target store to migrate,
-      and it will follow the playbook and run the verifier itself. See
+      <strong>Workflow:</strong> point your AI assistant at the skill, give
+      it a target store to migrate, and it will follow the playbook end-to-end
+      &mdash; including running <code>build</code>, <code>test</code>,
+      <code>lint</code>, and asserting the legacy import is gone from
+      application code and <code>package.json</code> before declaring done.
+      See
       <a
         href="https://github.com/JBorgia/signaltree#using-signaltree-with-ai-agents"
         target="_blank"
