@@ -4,12 +4,22 @@
   <p class="lede">
     Six progressively more complex feature implementations, each shown
     side-by-side: <strong>SignalTree on the left</strong>, the comparison
-    library you pick on the right. Every snippet is
-    <strong>100% like-for-like</strong>: if SignalTree's version is a complete
-    service, the comparison is a complete service; if SignalTree splits
-    across state / derived / ops files, the comparison shows every file you
-    would need to write to ship the same feature. No code is hidden
-    off-screen.
+    library you pick on the right. Each example targets the same
+    <em>capability checklist</em>, and within an example both panes are
+    written at the same architectural level &mdash; a compact single-file
+    service compares against a compact single-file store; a multi-file
+    <code>AppTree</code>/<code>Ops</code>/<code>AppStore</code> layout
+    compares against the equivalent multi-store + facade layout.
+  </p>
+
+  <p class="callout">
+    <strong>What we don't claim:</strong> that the libraries' internals are
+    equivalent. SignalTree's <code>status()</code>, <code>entityMap()</code>,
+    <code>stored()</code>, <code>batching()</code>, <code>devTools()</code>,
+    and <code>timeTravel()</code> primitives encapsulate behavior that other
+    libraries reconstruct from primitives in app code. That's the point of
+    the comparison &mdash; not "look how much shorter SignalTree is" but
+    "look at what each library asks <em>your</em> code to express."
   </p>
 
   <!-- =============================================================
@@ -761,131 +771,92 @@ export class ProfileService &#123;
 
     <div class="compare-grid example-grid">
       <div class="lib-pane">
-        <h3 class="pane-title pane-signaltree">SignalTree (multi-file pattern: state / derived / ops / store)</h3>
-        <pre ngNonBindable><code>// tickets/tickets.types.ts
+        <h3 class="pane-title pane-signaltree">SignalTree (single-service form &mdash; matches the <code>signalStore</code> scale)</h3>
+        <pre ngNonBindable><code>// tickets.types.ts
 export interface Ticket &#123; id: string; title: string; done: boolean; &#125;
 
-// tickets/tickets.state.ts
-import &#123; entityMap, status &#125; from '&#64;signaltree/core';
-import &#123; Ticket &#125; from './tickets.types';
-
-export function ticketsState() &#123;
-  return &#123;
-    entities: entityMap&lt;Ticket, string&gt;(),
-    filter: '',
-    load: status(),
-  &#125;;
-&#125;
-
-// tree/app-tree.ts
-import &#123; InjectionToken, Provider, computed &#125; from '&#64;angular/core';
-import &#123; signalTree, batching, devTools &#125; from '&#64;signaltree/core';
-import &#123; ticketsState &#125; from '../tickets/tickets.state';
-
-function createBaseState() &#123;
-  return &#123; tickets: ticketsState() &#125;;
-&#125;
-
-export function createAppTree() &#123;
-  return signalTree(createBaseState())
-    .with(devTools(&#123; treeName: 'AppTree' &#125;))
-    .with(batching())
-    .derived(($) =&gt; (&#123;
-      tickets: &#123;
-        all: computed(() =&gt; $.tickets.entities.all()),
-        visible: computed(() =&gt; &#123;
-          const f = $.tickets.filter().toLowerCase();
-          return $.tickets.entities
-            .all()
-            .filter((t) =&gt; t.title.toLowerCase().includes(f));
-        &#125;),
-      &#125;,
-    &#125;));
-&#125;
-
-export type AppTree = ReturnType&lt;typeof createAppTree&gt;;
-export const APP_TREE = new InjectionToken&lt;AppTree&gt;('APP_TREE');
-export function provideAppTree(): Provider[] &#123;
-  return [&#123; provide: APP_TREE, useFactory: () =&gt; createAppTree() &#125;];
-&#125;
-
-// tickets/tickets.ops.ts
-import &#123; Injectable, inject &#125; from '&#64;angular/core';
+// tickets.service.ts
+import &#123; Injectable, computed, inject &#125; from '&#64;angular/core';
 import &#123; HttpClient &#125; from '&#64;angular/common/http';
 import &#123; firstValueFrom &#125; from 'rxjs';
-import &#123; APP_TREE &#125; from '../tree/app-tree';
+import &#123; signalTree, entityMap, status &#125; from '&#64;signaltree/core';
 import &#123; Ticket &#125; from './tickets.types';
 
 &#64;Injectable(&#123; providedIn: 'root' &#125;)
-export class TicketsOps &#123;
-  private $tickets = inject(APP_TREE).$.tickets;
+export class TicketsService &#123;
   private http = inject(HttpClient);
 
-  setFilter(filter: string) &#123; this.$tickets.filter.set(filter); &#125;
+  private tree = signalTree(&#123;
+    entities: entityMap&lt;Ticket, string&gt;(),
+    filter: '',
+    load: status(),
+  &#125;).derived(($) =&gt; (&#123;
+    visible: computed(() =&gt; &#123;
+      const f = $.filter().toLowerCase();
+      return $.entities.all().filter((t) =&gt;
+        t.title.toLowerCase().includes(f)
+      );
+    &#125;),
+  &#125;));
+
+  visible   = this.tree.$.visible;
+  isLoading = this.tree.$.load.isLoading;
+  error     = this.tree.$.load.error;
+
+  setFilter(filter: string) &#123; this.tree.$.filter.set(filter); &#125;
 
   async load(): Promise&lt;void&gt; &#123;
-    this.$tickets.load.start();
+    this.tree.$.load.start();
     try &#123;
       const list = await firstValueFrom(
         this.http.get&lt;Ticket[]&gt;('/api/tickets')
       );
-      this.$tickets.entities.setAll(list, &#123; selectId: (t) =&gt; t.id &#125;);
-      this.$tickets.load.success();
+      this.tree.$.entities.setAll(list, &#123; selectId: (t) =&gt; t.id &#125;);
+      this.tree.$.load.success();
     &#125; catch (err) &#123;
-      this.$tickets.load.fail((err as Error).message);
+      this.tree.$.load.fail((err as Error).message);
     &#125;
   &#125;
 
   async updateTitle(id: string, title: string): Promise&lt;void&gt; &#123;
-    const previous = this.$tickets.entities.byId(id)?.();
+    const previous = this.tree.$.entities.byId(id)?.();
     if (!previous) return;
 
-    this.$tickets.entities.upsertOne(&#123; ...previous, title &#125;);
+    this.tree.$.entities.upsertOne(&#123; ...previous, title &#125;);
 
     try &#123;
       await firstValueFrom(
         this.http.patch('/api/tickets/' + id, &#123; title &#125;)
       );
     &#125; catch (err) &#123;
-      this.$tickets.entities.upsertOne(previous);
-      this.$tickets.load.fail((err as Error).message);
+      this.tree.$.entities.upsertOne(previous);
+      this.tree.$.load.fail((err as Error).message);
     &#125;
   &#125;
-&#125;
 
-// app-store.ts
-import &#123; Injectable, inject &#125; from '&#64;angular/core';
-import &#123; APP_TREE &#125; from './tree/app-tree';
-import &#123; TicketsOps &#125; from './tickets/tickets.ops';
-
-&#64;Injectable(&#123; providedIn: 'root' &#125;)
-export class AppStore &#123;
-  readonly tree = inject(APP_TREE);
-  readonly $ = this.tree.$;
-  readonly ops = &#123; tickets: inject(TicketsOps) &#125; as const;
+  retry(): Promise&lt;void&gt; &#123; return this.load(); &#125;
 &#125;
 
 // tickets-list.component.ts
 import &#123; Component, inject, OnInit &#125; from '&#64;angular/core';
-import &#123; AppStore &#125; from '../app-store';
+import &#123; TicketsService &#125; from './tickets.service';
 
 &#64;Component(&#123; selector: 'app-tickets', standalone: true, template: '...' &#125;)
 export class TicketsListComponent implements OnInit &#123;
-  private store = inject(AppStore);
+  svc = inject(TicketsService);
 
-  visible   = this.store.$.tickets.visible;
-  isLoading = this.store.$.tickets.load.isLoading;
-  error     = this.store.$.tickets.load.error;
+  visible   = this.svc.visible;
+  isLoading = this.svc.isLoading;
+  error     = this.svc.error;
 
-  ngOnInit() &#123; this.store.ops.tickets.load(); &#125;
-  setFilter(v: string) &#123; this.store.ops.tickets.setFilter(v); &#125;
-  rename(id: string, t: string) &#123; this.store.ops.tickets.updateTitle(id, t); &#125;
-  retry() &#123; this.store.ops.tickets.load(); &#125;
-&#125;
-
-// app.config.ts
-import &#123; provideAppTree &#125; from './tree/app-tree';
-export const appConfig = &#123; providers: [provideAppTree()] &#125;;</code></pre>
+  ngOnInit() &#123; this.svc.load(); &#125;
+&#125;</code></pre>
+        <p class="picker-note">
+          The multi-file <code>AppTree</code> + <code>Ops</code> +
+          <code>AppStore</code> layout used in the previous version of this
+          example earns its keep once you have multiple domains &mdash; see
+          <a href="#ex-6">Example 6</a>.
+        </p>
       </div>
 
       <div class="lib-pane">
@@ -1233,14 +1204,15 @@ export class TicketsRepository &#123;
     </div>
 
     <p class="callout">
-      <strong>Takeaway:</strong> SignalTree's per-domain layout (state, derived,
-      ops) trades a single fat file for several small ones &mdash; but each one
-      stays readable as the domain grows. Classic NgRx requires roughly the
-      same amount of code distributed across <em>five</em> files: actions,
-      reducer, selectors, effects, and the registration in
-      <code>app.config.ts</code>. The Elf and <code>&#64;ngrx/signals</code>
-      versions are competitive with SignalTree on a single domain; the
-      divergence appears in the multi-domain case (Example 6).
+      <strong>Takeaway:</strong> at single-domain scale, SignalTree,
+      <code>&#64;ngrx/signals</code>, and Elf all fit in one service file
+      with comparable line counts. Classic NgRx requires roughly the same
+      logic distributed across <em>five</em> files: actions, reducer,
+      selectors, effects, and the registration in <code>app.config.ts</code>.
+      The interesting divergence shows up in the multi-domain case
+      (<a href="#ex-6">Example 6</a>), where SignalTree composes one tree
+      and one facade while the alternatives compose multiple stores or
+      multiple feature reducers.
     </p>
   </section>
 
@@ -1326,6 +1298,12 @@ export class OrdersOps &#123;
         .then((orders) =&gt; &#123;
           if (signal.aborted) return;
           this.$.orders.list.set(orders);
+        &#125;)
+        .catch((err) =&gt; &#123;
+          if (signal.aborted) return; // cancelled, not a real failure
+          // Match NgRx's catchError(() =&gt; EMPTY) semantics: swallow + stop spinner.
+          // Replace with whatever error surface your app uses.
+          console.error('orders load failed', err);
         &#125;)
         .finally(() =&gt; &#123;
           if (!signal.aborted) this.$.orders.ordersLoading.set(false);
@@ -1657,15 +1635,47 @@ export class IdentityOps &#123;
   clear()                  &#123; this.$.user.set(null); &#125;
 &#125;
 
-// tickets/tickets.ops.ts (same shape as Example 4, plus clearAll())
+// tickets/tickets.ops.ts
 import &#123; Injectable, inject &#125; from '&#64;angular/core';
+import &#123; HttpClient &#125; from '&#64;angular/common/http';
+import &#123; firstValueFrom &#125; from 'rxjs';
 import &#123; APP_TREE &#125; from '../tree/app-tree';
 import &#123; Ticket &#125; from './tickets.state';
 
 &#64;Injectable(&#123; providedIn: 'root' &#125;)
 export class TicketsOps &#123;
   private $ = inject(APP_TREE).$.tickets;
+  private http = inject(HttpClient);
+
   setActive(id: string | null) &#123; this.$.activeId.set(id); &#125;
+
+  async load(): Promise&lt;void&gt; &#123;
+    this.$.load.start();
+    try &#123;
+      const list = await firstValueFrom(
+        this.http.get&lt;Ticket[]&gt;('/api/tickets')
+      );
+      this.$.entities.setAll(list, &#123; selectId: (t) =&gt; t.id &#125;);
+      this.$.load.success();
+    &#125; catch (err) &#123;
+      this.$.load.fail((err as Error).message);
+    &#125;
+  &#125;
+
+  async updateTitle(id: string, title: string): Promise&lt;void&gt; &#123;
+    const previous = this.$.entities.byId(id)?.();
+    if (!previous) return;
+    this.$.entities.upsertOne(&#123; ...previous, title &#125;);
+    try &#123;
+      await firstValueFrom(
+        this.http.patch('/api/tickets/' + id, &#123; title &#125;)
+      );
+    &#125; catch (err) &#123;
+      this.$.entities.upsertOne(previous);
+      this.$.load.fail((err as Error).message);
+    &#125;
+  &#125;
+
   clearAll() &#123;
     this.$.entities.setAll([], &#123; selectId: (t: Ticket) =&gt; t.id &#125;);
     this.$.activeId.set(null);
@@ -1748,11 +1758,80 @@ export const IdentityStore = signalStore(
   &#125;))
 );
 
-// tickets.store.ts &mdash; same shape as Example 4, plus a clearAll() method:
-//   withMethods((store) =&gt; (&#123;
-//     ...,
-//     clearAll() &#123; patchState(store, removeAllEntities()); &#125;,
-//   &#125;))
+// tickets.store.ts &mdash; full store (matches Example 4's signalStore plus a
+// clearAll() method called from the AppStore's logout orchestration).
+import &#123; computed, inject &#125; from '&#64;angular/core';
+import &#123; HttpClient &#125; from '&#64;angular/common/http';
+import &#123;
+  patchState, signalStore, withComputed, withMethods, withState,
+&#125; from '&#64;ngrx/signals';
+import &#123;
+  withEntities, setAllEntities, updateEntity, removeAllEntities,
+&#125; from '&#64;ngrx/signals/entities';
+import &#123; rxMethod &#125; from '&#64;ngrx/signals/rxjs-interop';
+import &#123; pipe, EMPTY, firstValueFrom &#125; from 'rxjs';
+import &#123; tap, switchMap, catchError &#125; from 'rxjs/operators';
+
+export interface Ticket &#123; id: string; title: string; done: boolean; &#125;
+
+interface Extra &#123;
+  activeId: string | null;
+  isLoading: boolean;
+  error: string | null;
+&#125;
+const initial: Extra = &#123; activeId: null, isLoading: false, error: null &#125;;
+
+export const TicketStore = signalStore(
+  &#123; providedIn: 'root' &#125;,
+  withEntities&lt;Ticket&gt;(),
+  withState(initial),
+  withComputed((store) =&gt; (&#123;
+    active: computed(() =&gt; &#123;
+      const id = store.activeId();
+      return id ? store.entityMap()[id] ?? null : null;
+    &#125;),
+  &#125;)),
+  withMethods((store, http = inject(HttpClient)) =&gt; (&#123;
+    setActive(id: string | null) &#123; patchState(store, &#123; activeId: id &#125;); &#125;,
+
+    load: rxMethod&lt;void&gt;(
+      pipe(
+        tap(() =&gt; patchState(store, &#123; isLoading: true, error: null &#125;)),
+        switchMap(() =&gt;
+          http.get&lt;Ticket[]&gt;('/api/tickets').pipe(
+            tap((list) =&gt;
+              patchState(store, setAllEntities(list), &#123; isLoading: false &#125;)
+            ),
+            catchError((err) =&gt; &#123;
+              patchState(store, &#123; isLoading: false, error: err.message &#125;);
+              return EMPTY;
+            &#125;),
+          )
+        )
+      )
+    ),
+
+    async updateTitle(id: string, title: string) &#123;
+      const previous = store.entityMap()[id];
+      if (!previous) return;
+      patchState(store, updateEntity(&#123; id, changes: &#123; title &#125; &#125;));
+      try &#123;
+        await firstValueFrom(http.patch('/api/tickets/' + id, &#123; title &#125;));
+      &#125; catch (err) &#123;
+        patchState(
+          store,
+          updateEntity(&#123; id, changes: &#123; title: previous.title &#125; &#125;),
+          &#123; error: (err as Error).message &#125;,
+        );
+      &#125;
+    &#125;,
+
+    /** Wipes all tickets (called from AppStore.logout()). */
+    clearAll() &#123;
+      patchState(store, removeAllEntities(), &#123; activeId: null &#125;);
+    &#125;,
+  &#125;))
+);
 
 // settings.store.ts
 import &#123; effect &#125; from '&#64;angular/core';
