@@ -22,6 +22,19 @@
     "look at what each library asks <em>your</em> code to express."
   </p>
 
+  <p class="callout">
+    <strong>One more honest note:</strong> SignalTree can be as small as
+    you want it to be. The
+    <code>APP_TREE</code> + <code>provideAppTree()</code> +
+    <code>AppStore</code> + per-domain <code>Ops</code> layout shown in
+    <a href="#ex-6">Example 6</a> is a <em>recommended</em> architecture for
+    multi-domain apps &mdash; it is not mandatory. Examples 1&ndash;5 use
+    plain <code>&#64;Injectable</code> services owning a
+    <code>signalTree</code> directly, which is the same scale as a
+    <code>signalStore</code> or a single <code>BehaviorSubject</code>
+    service. Pick the architecture that fits your app's complexity.
+  </p>
+
   <!-- =============================================================
        Library picker
   ============================================================== -->
@@ -1242,96 +1255,83 @@ export class TicketsRepository &#123;
 
     <div class="compare-grid example-grid">
       <div class="lib-pane">
-        <h3 class="pane-title pane-signaltree">SignalTree (Angular <code>effect()</code> + <code>AbortController</code>)</h3>
+        <h3 class="pane-title pane-signaltree">SignalTree (single-service form &mdash; <code>effect()</code> + <code>AbortController</code>)</h3>
         <pre ngNonBindable><code>// orders.types.ts
 export interface Order &#123; id: string; userId: string; total: number; &#125;
 
-// app-tree.ts
-import &#123; InjectionToken, Provider &#125; from '&#64;angular/core';
+// users.service.ts
+import &#123; Injectable, effect, untracked &#125; from '&#64;angular/core';
 import &#123; signalTree &#125; from '&#64;signaltree/core';
-import &#123; Order &#125; from '../orders/orders.types';
-
-export function createAppTree() &#123;
-  return signalTree(&#123;
-    selection: &#123; selectedUserId: null as string | null &#125;,
-    orders:    &#123; list: [] as Order[], ordersLoading: false &#125;,
-  &#125;);
-&#125;
-export type AppTree = ReturnType&lt;typeof createAppTree&gt;;
-export const APP_TREE = new InjectionToken&lt;AppTree&gt;('APP_TREE');
-export function provideAppTree(): Provider[] &#123;
-  return [&#123; provide: APP_TREE, useFactory: () =&gt; createAppTree() &#125;];
-&#125;
-
-// orders/orders.ops.ts
-import &#123; Injectable, effect, inject, untracked &#125; from '&#64;angular/core';
-import &#123; APP_TREE &#125; from '../tree/app-tree';
 import &#123; Order &#125; from './orders.types';
 
 &#64;Injectable(&#123; providedIn: 'root' &#125;)
-export class OrdersOps &#123;
-  private $ = inject(APP_TREE).$;
+export class UsersService &#123;
+  private tree = signalTree(&#123;
+    selectedUserId: null as string | null,
+    orders:        [] as Order[],
+    ordersLoading: false,
+  &#125;);
+
+  selectedUserId = this.tree.$.selectedUserId;
+  orders         = this.tree.$.orders;
+  ordersLoading  = this.tree.$.ordersLoading;
 
   constructor() &#123;
     let ctrl: AbortController | null = null;
 
     effect(() =&gt; &#123;
-      const userId = this.$.selection.selectedUserId();
+      const userId = this.tree.$.selectedUserId();
 
-      // cancel previous in-flight request
-      ctrl?.abort();
+      ctrl?.abort(); // cancel any in-flight request
 
       if (!userId) &#123;
         untracked(() =&gt; &#123;
-          this.$.orders.list.set([]);
-          this.$.orders.ordersLoading.set(false);
+          this.tree.$.orders.set([]);
+          this.tree.$.ordersLoading.set(false);
         &#125;);
         return;
       &#125;
 
       ctrl = new AbortController();
       const signal = ctrl.signal;
-      untracked(() =&gt; this.$.orders.ordersLoading.set(true));
+      untracked(() =&gt; this.tree.$.ordersLoading.set(true));
 
       fetch('/api/users/' + userId + '/orders', &#123; signal &#125;)
         .then((r) =&gt; r.json() as Promise&lt;Order[]&gt;)
         .then((orders) =&gt; &#123;
           if (signal.aborted) return;
-          this.$.orders.list.set(orders);
+          this.tree.$.orders.set(orders);
         &#125;)
         .catch((err) =&gt; &#123;
           if (signal.aborted) return; // cancelled, not a real failure
-          // Match NgRx's catchError(() =&gt; EMPTY) semantics: swallow + stop spinner.
-          // Replace with whatever error surface your app uses.
           console.error('orders load failed', err);
         &#125;)
         .finally(() =&gt; &#123;
-          if (!signal.aborted) this.$.orders.ordersLoading.set(false);
+          if (!signal.aborted) this.tree.$.ordersLoading.set(false);
         &#125;);
     &#125;);
   &#125;
 
   selectUser(id: string | null) &#123;
-    this.$.selection.selectedUserId.set(id);
+    this.tree.$.selectedUserId.set(id);
   &#125;
 &#125;
 
 // users.component.ts
 import &#123; Component, inject &#125; from '&#64;angular/core';
-import &#123; APP_TREE &#125; from '../tree/app-tree';
-import &#123; OrdersOps &#125; from '../orders/orders.ops';
+import &#123; UsersService &#125; from './users.service';
 
 &#64;Component(&#123; selector: 'app-users', standalone: true, template: '...' &#125;)
 export class UsersComponent &#123;
-  private $ = inject(APP_TREE).$;
-  private ops = inject(OrdersOps);
-
-  selectedUserId  = this.$.selection.selectedUserId;
-  orders          = this.$.orders.list;
-  ordersLoading   = this.$.orders.ordersLoading;
-
-  pick(id: string | null) &#123; this.ops.selectUser(id); &#125;
+  svc = inject(UsersService);
 &#125;</code></pre>
+        <p class="picker-note">
+          The <code>APP_TREE</code> + <code>Ops</code> + <code>AppStore</code>
+          layout shown in <a href="#ex-6">Example 6</a> is the recommended
+          architecture for multi-domain apps &mdash; it is not required.
+          For a single domain, a plain <code>&#64;Injectable</code> service
+          owning a <code>signalTree</code> is perfectly fine.
+        </p>
       </div>
 
       <div class="lib-pane">
