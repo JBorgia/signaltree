@@ -310,6 +310,18 @@ export class CartService &#123;
 
   add(item: CartItem) &#123; this.$.items.update(xs =&gt; [...xs, item]); &#125;
   remove(id: string)  &#123; this.$.items.update(xs =&gt; xs.filter(x =&gt; x.id !== id)); &#125;
+&#125;
+
+// cart.component.ts
+import &#123; Component, inject &#125; from '&#64;angular/core';
+import &#123; CartService &#125; from './cart.service';
+
+&#64;Component(&#123; selector: 'app-cart', standalone: true, template: '...' &#125;)
+export class CartComponent &#123;
+  svc = inject(CartService);
+  items = this.svc.$.items;
+  count = this.svc.$.count;
+  total = this.svc.$.total;
 &#125;</code></pre>
       </div>
 
@@ -1159,6 +1171,8 @@ export class TicketsRepository &#123;
       );
     &#125;
   &#125;
+
+  retry() &#123; return this.load(); &#125;
 &#125;</code></pre>
           }
           @default {
@@ -1325,7 +1339,7 @@ export const UsersStore = signalStore(
 export interface Order &#123; id: string; userId: string; total: number; &#125;
 
 // users.actions.ts
-import &#123; createActionGroup, props &#125; from '&#64;ngrx/store';
+import &#123; createActionGroup, emptyProps, props &#125; from '&#64;ngrx/store';
 import &#123; Order &#125; from './orders.types';
 
 export const UsersActions = createActionGroup(&#123;
@@ -1333,7 +1347,7 @@ export const UsersActions = createActionGroup(&#123;
   events: &#123;
     'Select User':         props&lt;&#123; userId: string | null &#125;&gt;(),
     'Load Orders Success': props&lt;&#123; orders: Order[] &#125;&gt;(),
-    'Load Orders Failure': props&lt;&#123; error: string &#125;&gt;(),
+    'Load Orders Failure': emptyProps(),
   &#125;,
 &#125;);
 
@@ -1390,9 +1404,7 @@ export class UsersEffects &#123;
         if (!userId) return EMPTY;
         return this.http.get&lt;Order[]&gt;('/api/users/' + userId + '/orders').pipe(
           map((orders) =&gt; UsersActions.loadOrdersSuccess(&#123; orders &#125;)),
-          catchError((err) =&gt;
-            of(UsersActions.loadOrdersFailure(&#123; error: err.message &#125;))
-          ),
+          catchError(() =&gt; of(UsersActions.loadOrdersFailure())),
         );
       &#125;),
     ),
@@ -1446,9 +1458,10 @@ export class UsersComponent &#123;
     <p class="callout">
       <strong>Takeaway:</strong> all three approaches model the same
       "selection drives a fetch with cancellation" pattern. SignalTree
-      attaches the reaction to the shared state graph (just an Angular
-      <code>effect()</code> over the tree); <code>&#64;ngrx/signals</code>
-      uses <code>rxMethod</code> + <code>switchMap</code>; classic NgRx routes
+      attaches the reaction to the shared state graph (via
+      <code>toObservable()</code> + <code>switchMap</code> over the tree);
+      <code>&#64;ngrx/signals</code> uses <code>rxMethod</code> +
+      <code>switchMap</code>; classic NgRx routes
       it through actions and an effects class.
     </p>
   </section>
@@ -1814,6 +1827,20 @@ export class AppStore &#123;
     this.tickets.clearAll();
     // No batching across stores &mdash; two separate change-detection ticks.
   &#125;
+&#125;
+
+// any-component.ts
+import &#123; Component, inject &#125; from '&#64;angular/core';
+import &#123; AppStore &#125; from '../app-store';
+
+&#64;Component(&#123; selector: 'app-shell', standalone: true, template: '...' &#125;)
+export class ShellComponent &#123;
+  private store = inject(AppStore);
+  user             = this.store.identity.user;
+  theme            = this.store.settings.theme;
+  isAuthenticated  = this.store.identity.isAuthenticated;
+  openTickets      = this.store.openTicketsForUser;
+  logout()         &#123; this.store.logout(); &#125;
 &#125;</code></pre>
           }
           @default {
