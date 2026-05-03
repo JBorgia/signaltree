@@ -1260,12 +1260,16 @@ export class TicketsRepository &#123;
 export interface Order &#123; id: string; userId: string; total: number; &#125;
 
 // users.service.ts
-import &#123; Injectable, effect, untracked &#125; from '&#64;angular/core';
+import &#123; Injectable, effect, inject, untracked &#125; from '&#64;angular/core';
+import &#123; HttpClient &#125; from '&#64;angular/common/http';
+import &#123; Subscription &#125; from 'rxjs';
 import &#123; signalTree &#125; from '&#64;signaltree/core';
 import &#123; Order &#125; from './orders.types';
 
 &#64;Injectable(&#123; providedIn: 'root' &#125;)
 export class UsersService &#123;
+  private http = inject(HttpClient);
+
   private tree = signalTree(&#123;
     selectedUserId: null as string | null,
     orders:        [] as Order[],
@@ -1277,12 +1281,12 @@ export class UsersService &#123;
   ordersLoading  = this.tree.$.ordersLoading;
 
   constructor() &#123;
-    let ctrl: AbortController | null = null;
+    let sub: Subscription | null = null;
 
     effect(() =&gt; &#123;
       const userId = this.tree.$.selectedUserId();
 
-      ctrl?.abort(); // cancel any in-flight request
+      sub?.unsubscribe(); // cancel any in-flight request
 
       if (!userId) &#123;
         untracked(() =&gt; &#123;
@@ -1292,22 +1296,18 @@ export class UsersService &#123;
         return;
       &#125;
 
-      ctrl = new AbortController();
-      const signal = ctrl.signal;
       untracked(() =&gt; this.tree.$.ordersLoading.set(true));
 
-      fetch('/api/users/' + userId + '/orders', &#123; signal &#125;)
-        .then((r) =&gt; r.json() as Promise&lt;Order[]&gt;)
-        .then((orders) =&gt; &#123;
-          if (signal.aborted) return;
-          this.tree.$.orders.set(orders);
-        &#125;)
-        .catch((err) =&gt; &#123;
-          if (signal.aborted) return; // cancelled, not a real failure
-          console.error('orders load failed', err);
-        &#125;)
-        .finally(() =&gt; &#123;
-          if (!signal.aborted) this.tree.$.ordersLoading.set(false);
+      sub = this.http.get&lt;Order[]&gt;('/api/users/' + userId + '/orders')
+        .subscribe(&#123;
+          next: (orders) =&gt; &#123;
+            this.tree.$.orders.set(orders);
+            this.tree.$.ordersLoading.set(false);
+          &#125;,
+          error: (err) =&gt; &#123;
+            console.error('orders load failed', err);
+            this.tree.$.ordersLoading.set(false);
+          &#125;,
         &#125;);
     &#125;);
   &#125;
