@@ -108,6 +108,8 @@ export class GuardrailsMonitoringComponent implements OnDestroy {
     guardrails(this.config)
   ) as unknown as GuardrailsEnabledTree<GuardrailsDemoState>;
 
+  // __guardrails is a dev-only introspection property — not a public API.
+  // It is available because the guardrails() enhancer attaches it in dev mode.
   private readonly guardrails = this.tree.__guardrails;
 
   private readonly refreshTimerId: ReturnType<typeof setInterval> | undefined;

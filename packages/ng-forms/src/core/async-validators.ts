@@ -15,12 +15,15 @@ import type { FormTreeAsyncValidatorFn } from './ng-forms';
  *
  * @example
  * ```typescript
+ * // In an \@Injectable service:
+ * // private http = inject(HttpClient);
  * createFormTree(data, {
  *   asyncValidators: {
  *     email: unique(
  *       async (email) => {
- *         const response = await fetch(`/api/check-email?email=${email}`);
- *         const { exists } = await response.json();
+ *         const { exists } = await firstValueFrom(
+ *           this.http.get<{ exists: boolean }>(`/api/check-email?email=${email}`)
+ *         );
  *         return exists;
  *       },
  *       'This email is already registered'

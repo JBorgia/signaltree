@@ -246,28 +246,33 @@ v7 embraces a **minimal marker** philosophy. SignalTree provides markers only fo
 > **Only use `.derived()` when you need access to `$` (tree state)**
 
 ```typescript
-signalTree({
-  // ✅ Plain values → become signals
-  count: 0,
-  name: '',
+@Injectable({ providedIn: 'root' })
+export class AppStore {
+  private http = inject(HttpClient);
 
-  // ✅ SignalTree markers (Angular doesn't have these)
-  users: entityMap<User, number>(),
-  usersStatus: status(),
-  theme: stored('theme', 'light'),
+  readonly tree = signalTree({
+    // ✅ Plain values → become signals
+    count: 0,
+    name: '',
 
-  // ✅ Angular primitives that DON'T need tree state
-  windowWidth: linkedSignal(() => window.innerWidth),
-  serverConfig: resource({ loader: () => fetch('/api/config') }),
-}).derived(($) => ({
-  // ✅ Only things that NEED $ go here
-  doubled: computed(() => $.count() * 2),
-  selectedUser: computed(() => $.users.byId($.selectedId())?.()),
-  userDetails: resource({
-    request: () => $.selectedId(),
-    loader: ({ request }) => fetch(`/api/users/${request}`),
-  }),
-}));
+    // ✅ SignalTree markers (Angular doesn't have these)
+    users: entityMap<User, number>(),
+    usersStatus: status(),
+    theme: stored('theme', 'light'),
+
+    // ✅ Angular primitives that DON'T need tree state
+    windowWidth: linkedSignal(() => window.innerWidth),
+    serverConfig: resource({ loader: () => firstValueFrom(this.http.get('/api/config')) }),
+  }).derived(($) => ({
+    // ✅ Only things that NEED $ go here
+    doubled: computed(() => $.count() * 2),
+    selectedUser: computed(() => $.users.byId($.selectedId())?.()),
+    userDetails: resource({
+      request: () => $.selectedId(),
+      loader: ({ request }) => firstValueFrom(this.http.get<Order[]>(`/api/users/${request}`)),
+    }),
+  }));
+}
 ```
 
 ### 🚀 New Features

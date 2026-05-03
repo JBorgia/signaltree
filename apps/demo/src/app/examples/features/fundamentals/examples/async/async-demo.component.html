@@ -125,10 +125,12 @@
   this.loadError.set(null);
 
   try {
-    const data = await fetch('/api/users');
-    this.users.set(await data.json());
+    const users = await firstValueFrom(
+      this.http.get<User[]>('/api/users')
+    );
+    this.users.set(users);
   } catch (error) {
-    this.loadError.set(error.message);
+    this.loadError.set((error as Error).message);
   } finally {
     this.isLoading.set(false);
   }

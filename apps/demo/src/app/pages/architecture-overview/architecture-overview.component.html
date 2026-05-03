@@ -121,8 +121,8 @@
     <div class="pillars-section">
       <h2 class="section-title">The 3-Pillar Pattern</h2>
       <p class="pillars-intro">
-        Every SignalTree application follows one rule — and once you know it,
-        the architecture is obvious everywhere:
+        The recommended multi-domain architecture follows one rule — and once
+        you know it, the pattern is obvious everywhere:
       </p>
       <div class="pillars-grid">
         <div class="pillar-card pillar-read">
@@ -150,7 +150,7 @@ tree.$.tickets.visible()</pre>
           <h3 class="pillar-title">Ops services</h3>
           <p class="pillar-desc">
             Mutations and async live in thin <code>&#64;Injectable</code> services.
-            No computed properties. No state ownership.
+            No computed properties belong here.
           </p>
           <pre class="pillar-code">&#64;Injectable(&#123; providedIn: 'root' &#125;)
 export class TicketOps &#123;
