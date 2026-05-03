@@ -120,20 +120,20 @@
   <!-- Code Example -->
   <div class="code-section">
     <h3>💻 Async Pattern</h3>
-    <pre><code>{{`async loadUsers() {
+    <pre ngNonBindable><code>async loadUsers() &#123;
   this.isLoading.set(true);
   this.loadError.set(null);
 
-  try {
+  try &#123;
     const users = await firstValueFrom(
-      this.http.get<User[]>('/api/users')
+      this.http.get&lt;User[]&gt;('/api/users')
     );
     this.users.set(users);
-  } catch (error) {
+  &#125; catch (error) &#123;
     this.loadError.set((error as Error).message);
-  } finally {
+  &#125; finally &#123;
     this.isLoading.set(false);
-  }
-}`}}</code></pre>
+  &#125;
+&#125;</code></pre>
   </div>
 </div>

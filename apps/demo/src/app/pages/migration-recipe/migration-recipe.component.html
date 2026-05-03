@@ -108,17 +108,11 @@ import &#123; signalTree &#125; from '&#64;signaltree/core';
 
 &#64;Injectable(&#123; providedIn: 'root' &#125;)
 export class CounterService &#123;
-  private tree = signalTree(&#123; count: 0 &#125;)
-    .derived(($) =&gt; (&#123;
-      doubled: computed(() =&gt; $.count() * 2),
-    &#125;));
+  readonly $ = signalTree(&#123; count: 0 &#125;)
+    .derived($ =&gt; (&#123; doubled: computed(() =&gt; $.count() * 2) &#125;))
+    .$;
 
-  count = this.tree.$.count;       // Signal&lt;number&gt;
-  doubled = this.tree.$.doubled;   // Signal&lt;number&gt;
-
-  increment() &#123;
-    this.tree.$.count.update((n) =&gt; n + 1);
-  &#125;
+  increment() &#123; this.$.count.update(n =&gt; n + 1); &#125;
 &#125;
 
 // counter.component.ts
@@ -129,8 +123,8 @@ import &#123; CounterService &#125; from './counter.service';
   selector: 'app-counter',
   standalone: true,
   template: `
-    &lt;p&gt;Count: &#123;&#123; svc.count() &#125;&#125;&lt;/p&gt;
-    &lt;p&gt;Doubled: &#123;&#123; svc.doubled() &#125;&#125;&lt;/p&gt;
+    &lt;p&gt;Count: &#123;&#123; svc.$.count() &#125;&#125;&lt;/p&gt;
+    &lt;p&gt;Doubled: &#123;&#123; svc.$.doubled() &#125;&#125;&lt;/p&gt;
     &lt;button (click)="svc.increment()"&gt;+&lt;/button&gt;
   `,
 &#125;)
@@ -299,33 +293,23 @@ export class CounterComponent &#123;
     <div class="compare-grid example-grid">
       <div class="lib-pane">
         <h3 class="pane-title pane-signaltree">SignalTree</h3>
-        <pre ngNonBindable><code>// cart.types.ts
-export interface CartItem &#123; id: string; price: number; qty: number; &#125;
-
-// cart.service.ts
+        <pre ngNonBindable><code>// cart.service.ts
 import &#123; Injectable, computed &#125; from '&#64;angular/core';
 import &#123; signalTree &#125; from '&#64;signaltree/core';
-import &#123; CartItem &#125; from './cart.types';
+
+interface CartItem &#123; id: string; price: number; qty: number; &#125;
 
 &#64;Injectable(&#123; providedIn: 'root' &#125;)
 export class CartService &#123;
-  private tree = signalTree(&#123; items: [] as CartItem[] &#125;)
-    .derived(($) =&gt; (&#123;
+  readonly $ = signalTree(&#123; items: [] as CartItem[] &#125;)
+    .derived($ =&gt; (&#123;
       count: computed(() =&gt; $.items().reduce((n, i) =&gt; n + i.qty, 0)),
       total: computed(() =&gt; $.items().reduce((s, i) =&gt; s + i.price * i.qty, 0)),
-    &#125;));
+    &#125;))
+    .$;
 
-  items = this.tree.$.items;
-  count = this.tree.$.count;
-  total = this.tree.$.total;
-
-  add(item: CartItem) &#123;
-    this.tree.$.items.update((xs) =&gt; [...xs, item]);
-  &#125;
-
-  remove(id: string) &#123;
-    this.tree.$.items.update((xs) =&gt; xs.filter((x) =&gt; x.id !== id));
-  &#125;
+  add(item: CartItem) &#123; this.$.items.update(xs =&gt; [...xs, item]); &#125;
+  remove(id: string)  &#123; this.$.items.update(xs =&gt; xs.filter(x =&gt; x.id !== id)); &#125;
 &#125;</code></pre>
       </div>
 
@@ -552,43 +536,34 @@ export class CartComponent &#123;
     <div class="compare-grid example-grid">
       <div class="lib-pane">
         <h3 class="pane-title pane-signaltree">SignalTree (using the <code>status()</code> marker)</h3>
-        <pre ngNonBindable><code>// profile.types.ts
-export interface Profile &#123; id: string; name: string; email: string; &#125;
-
-// profile.service.ts
+        <pre ngNonBindable><code>// profile.service.ts
 import &#123; Injectable, inject &#125; from '&#64;angular/core';
 import &#123; HttpClient &#125; from '&#64;angular/common/http';
 import &#123; firstValueFrom &#125; from 'rxjs';
 import &#123; signalTree, status &#125; from '&#64;signaltree/core';
-import &#123; Profile &#125; from './profile.types';
+
+interface Profile &#123; id: string; name: string; email: string; &#125;
 
 &#64;Injectable(&#123; providedIn: 'root' &#125;)
 export class ProfileService &#123;
   private http = inject(HttpClient);
 
-  private tree = signalTree(&#123;
+  readonly $ = signalTree(&#123;
     profile: null as Profile | null,
     load: status(),
-  &#125;);
+  &#125;).$;
 
-  profile    = this.tree.$.profile;
-  isLoading  = this.tree.$.load.isLoading;
-  error      = this.tree.$.load.error;
-
-  async load(): Promise&lt;void&gt; &#123;
-    this.tree.$.load.start();
+  async load() &#123;
+    this.$.load.start();
     try &#123;
-      const data = await firstValueFrom(
-        this.http.get&lt;Profile&gt;('/api/me')
-      );
-      this.tree.$.profile.set(data);
-      this.tree.$.load.success();
+      this.$.profile.set(await firstValueFrom(this.http.get&lt;Profile&gt;('/api/me')));
+      this.$.load.success();
     &#125; catch (err) &#123;
-      this.tree.$.load.fail((err as Error).message);
+      this.$.load.fail((err as Error).message);
     &#125;
   &#125;
 
-  retry(): Promise&lt;void&gt; &#123; return this.load(); &#125;
+  retry() &#123; return this.load(); &#125;
 &#125;</code></pre>
       </div>
 
@@ -784,70 +759,56 @@ export class ProfileService &#123;
 
     <div class="compare-grid example-grid">
       <div class="lib-pane">
-        <h3 class="pane-title pane-signaltree">SignalTree (single-service form &mdash; matches the <code>signalStore</code> scale)</h3>
-        <pre ngNonBindable><code>// tickets.types.ts
-export interface Ticket &#123; id: string; title: string; done: boolean; &#125;
-
-// tickets.service.ts
+        <h3 class="pane-title pane-signaltree">SignalTree</h3>
+        <pre ngNonBindable><code>// tickets.service.ts
 import &#123; Injectable, computed, inject &#125; from '&#64;angular/core';
 import &#123; HttpClient &#125; from '&#64;angular/common/http';
 import &#123; firstValueFrom &#125; from 'rxjs';
 import &#123; signalTree, entityMap, status &#125; from '&#64;signaltree/core';
-import &#123; Ticket &#125; from './tickets.types';
+
+interface Ticket &#123; id: string; title: string; done: boolean; &#125;
 
 &#64;Injectable(&#123; providedIn: 'root' &#125;)
 export class TicketsService &#123;
   private http = inject(HttpClient);
 
-  private tree = signalTree(&#123;
+  readonly $ = signalTree(&#123;
     entities: entityMap&lt;Ticket, string&gt;(),
     filter: '',
     load: status(),
-  &#125;).derived(($) =&gt; (&#123;
+  &#125;).derived($ =&gt; (&#123;
     visible: computed(() =&gt; &#123;
       const f = $.filter().toLowerCase();
-      return $.entities.all().filter((t) =&gt;
-        t.title.toLowerCase().includes(f)
-      );
+      return $.entities.all().filter(t =&gt; t.title.toLowerCase().includes(f));
     &#125;),
-  &#125;));
+  &#125;)).$;
 
-  visible   = this.tree.$.visible;
-  isLoading = this.tree.$.load.isLoading;
-  error     = this.tree.$.load.error;
+  setFilter(f: string) &#123; this.$.filter.set(f); &#125;
 
-  setFilter(filter: string) &#123; this.tree.$.filter.set(filter); &#125;
-
-  async load(): Promise&lt;void&gt; &#123;
-    this.tree.$.load.start();
+  async load() &#123;
+    this.$.load.start();
     try &#123;
-      const list = await firstValueFrom(
-        this.http.get&lt;Ticket[]&gt;('/api/tickets')
-      );
-      this.tree.$.entities.setAll(list, &#123; selectId: (t) =&gt; t.id &#125;);
-      this.tree.$.load.success();
+      const list = await firstValueFrom(this.http.get&lt;Ticket[]&gt;('/api/tickets'));
+      this.$.entities.setAll(list, &#123; selectId: t =&gt; t.id &#125;);
+      this.$.load.success();
     &#125; catch (err) &#123;
-      this.tree.$.load.fail((err as Error).message);
+      this.$.load.fail((err as Error).message);
     &#125;
   &#125;
 
-  async updateTitle(id: string, title: string): Promise&lt;void&gt; &#123;
-    const previous = this.tree.$.entities.byId(id)?.();
-    if (!previous) return;
-
-    this.tree.$.entities.upsertOne(&#123; ...previous, title &#125;);
-
+  async updateTitle(id: string, title: string) &#123;
+    const prev = this.$.entities.byId(id)?.();
+    if (!prev) return;
+    this.$.entities.upsertOne(&#123; ...prev, title &#125;);
     try &#123;
-      await firstValueFrom(
-        this.http.patch('/api/tickets/' + id, &#123; title &#125;)
-      );
+      await firstValueFrom(this.http.patch('/api/tickets/' + id, &#123; title &#125;));
     &#125; catch (err) &#123;
-      this.tree.$.entities.upsertOne(previous);
-      this.tree.$.load.fail((err as Error).message);
+      this.$.entities.upsertOne(prev);
+      this.$.load.fail((err as Error).message);
     &#125;
   &#125;
 
-  retry(): Promise&lt;void&gt; &#123; return this.load(); &#125;
+  retry() &#123; return this.load(); &#125;
 &#125;
 
 // tickets-list.component.ts
@@ -857,11 +818,6 @@ import &#123; TicketsService &#125; from './tickets.service';
 &#64;Component(&#123; selector: 'app-tickets', standalone: true, template: '...' &#125;)
 export class TicketsListComponent implements OnInit &#123;
   svc = inject(TicketsService);
-
-  visible   = this.svc.visible;
-  isLoading = this.svc.isLoading;
-  error     = this.svc.error;
-
   ngOnInit() &#123; this.svc.load(); &#125;
 &#125;</code></pre>
         <p class="picker-note">
@@ -1255,75 +1211,42 @@ export class TicketsRepository &#123;
 
     <div class="compare-grid example-grid">
       <div class="lib-pane">
-        <h3 class="pane-title pane-signaltree">SignalTree (single-service form &mdash; <code>effect()</code> + <code>AbortController</code>)</h3>
-        <pre ngNonBindable><code>// orders.types.ts
-export interface Order &#123; id: string; userId: string; total: number; &#125;
-
-// users.service.ts
-import &#123; Injectable, effect, inject, untracked &#125; from '&#64;angular/core';
+        <h3 class="pane-title pane-signaltree">SignalTree &mdash; <code>toObservable</code> + <code>switchMap</code></h3>
+        <pre ngNonBindable><code>// users.service.ts
+import &#123; Injectable, inject &#125; from '&#64;angular/core';
 import &#123; HttpClient &#125; from '&#64;angular/common/http';
-import &#123; Subscription &#125; from 'rxjs';
+import &#123; toObservable, takeUntilDestroyed &#125; from '&#64;angular/core/rxjs-interop';
+import &#123; EMPTY, switchMap &#125; from 'rxjs';
 import &#123; signalTree &#125; from '&#64;signaltree/core';
-import &#123; Order &#125; from './orders.types';
+
+interface Order &#123; id: string; userId: string; total: number; &#125;
 
 &#64;Injectable(&#123; providedIn: 'root' &#125;)
 export class UsersService &#123;
   private http = inject(HttpClient);
 
-  private tree = signalTree(&#123;
+  readonly $ = signalTree(&#123;
     selectedUserId: null as string | null,
-    orders:        [] as Order[],
+    orders: [] as Order[],
     ordersLoading: false,
-  &#125;);
-
-  selectedUserId = this.tree.$.selectedUserId;
-  orders         = this.tree.$.orders;
-  ordersLoading  = this.tree.$.ordersLoading;
+  &#125;).$;
 
   constructor() &#123;
-    let sub: Subscription | null = null;
-
-    effect(() =&gt; &#123;
-      const userId = this.tree.$.selectedUserId();
-
-      sub?.unsubscribe(); // cancel any in-flight request
-
-      if (!userId) &#123;
-        untracked(() =&gt; &#123;
-          this.tree.$.orders.set([]);
-          this.tree.$.ordersLoading.set(false);
-        &#125;);
-        return;
-      &#125;
-
-      untracked(() =&gt; this.tree.$.ordersLoading.set(true));
-
-      sub = this.http.get&lt;Order[]&gt;('/api/users/' + userId + '/orders')
-        .subscribe(&#123;
-          next: (orders) =&gt; &#123;
-            this.tree.$.orders.set(orders);
-            this.tree.$.ordersLoading.set(false);
-          &#125;,
-          error: (err) =&gt; &#123;
-            console.error('orders load failed', err);
-            this.tree.$.ordersLoading.set(false);
-          &#125;,
-        &#125;);
+    toObservable(this.$.selectedUserId).pipe(
+      switchMap(userId =&gt; &#123;
+        this.$.orders.set([]);
+        if (!userId) &#123; this.$.ordersLoading.set(false); return EMPTY; &#125;
+        this.$.ordersLoading.set(true);
+        return this.http.get&lt;Order[]&gt;('/api/users/' + userId + '/orders');
+      &#125;),
+      takeUntilDestroyed(),
+    ).subscribe(&#123;
+      next:  orders =&gt; &#123; this.$.orders.set(orders); this.$.ordersLoading.set(false); &#125;,
+      error: err    =&gt; &#123; console.error(err); this.$.ordersLoading.set(false); &#125;,
     &#125;);
   &#125;
 
-  selectUser(id: string | null) &#123;
-    this.tree.$.selectedUserId.set(id);
-  &#125;
-&#125;
-
-// users.component.ts
-import &#123; Component, inject &#125; from '&#64;angular/core';
-import &#123; UsersService &#125; from './users.service';
-
-&#64;Component(&#123; selector: 'app-users', standalone: true, template: '...' &#125;)
-export class UsersComponent &#123;
-  svc = inject(UsersService);
+  selectUser(id: string | null) &#123; this.$.selectedUserId.set(id); &#125;
 &#125;</code></pre>
         <p class="picker-note">
           The <code>APP_TREE</code> + <code>Ops</code> + <code>AppStore</code>
