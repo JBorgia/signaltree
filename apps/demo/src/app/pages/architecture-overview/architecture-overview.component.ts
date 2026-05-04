@@ -24,12 +24,6 @@ interface SavingsMetric {
 export class ArchitectureOverviewComponent {
   comparisons: ArchitectureComparison[] = [
     {
-      aspect: 'Bundle Size',
-      separate: 'Multiple packages (core, computed, entities, etc.)',
-      consolidated: 'Single optimized package',
-      benefit: 'Reduced bundle size through better tree-shaking',
-    },
-    {
       aspect: 'Dependencies',
       separate: 'Multiple packages (@signaltree/core, @signaltree/entities, @signaltree/computed…)',
       consolidated: '@signaltree/core (includes all enhancers)',
@@ -44,8 +38,8 @@ export class ArchitectureOverviewComponent {
     {
       aspect: 'Tree Shaking',
       separate: 'Limited optimization between packages',
-      consolidated: 'Advanced tree-shaking across entire library',
-      benefit: 'Smaller production bundles',
+      consolidated: 'Cross-package tree-shaking',
+      benefit: 'Unused enhancers don\'t ship; you pay only for the imports you use',
     },
     {
       aspect: 'API Consistency',
@@ -57,15 +51,15 @@ export class ArchitectureOverviewComponent {
 
   savingsMetrics: SavingsMetric[] = [
     {
-      label: 'Bundle Size Reduction',
-      value: '~46%',
-      description:
-        'NgRx ~45-50KB → SignalTree ~27KB (one app snapshot — YMMV)',
-    },
-    {
       label: 'App Code Reduction',
       value: '76%',
-      description: '11,735 → 2,825 lines (one app snapshot — YMMV)',
+      description: '11,735 → 2,825 lines of state code (one app snapshot — YMMV)',
+    },
+    {
+      label: 'State Bundle Reduction',
+      value: '~46%',
+      description:
+        'Downstream effect of writing less app code: ~50KB → ~27KB gzipped state bundle (one app snapshot — YMMV)',
     },
     {
       label: 'Dependency Count',

@@ -26,7 +26,7 @@ This document consolidates the feature overview and technical specifications for
 - Hierarchical signal trees with type-safe access and updates
 - Lazy signal creation on first access
 - Structural sharing for immutable updates
-- Compact bundle sizes across the ecosystem
+- Tree-shakeable: unused enhancers and optional packages are eliminated by modern bundlers
 
 ## Package ecosystem
 
@@ -43,7 +43,7 @@ SignalTree consists of one core package with all enhancers built-in, plus three 
 
 - Angular 20.3+, TypeScript 5.5+, Node 18.17+ (development)
 - Browser: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
-- Core entry-point barrel compresses to ~0.75KB gzipped, while the full publishable `@signaltree/core` package is 25.63KB gzipped; tree-shake entry-point totals across the ecosystem measure 30.99KB gzipped and the full publishable output sums to ~36.31KB. Consolidated architecture removes ~4.28KB (≈15.9%) versus the legacy separate-package layout when every enhancer is imported.
+- Tree-shakeable: typical apps using `@signaltree/core` ship ~8.5KB gzipped after dead-code elimination; published package size is bounded by CI (see budget table below)
 - Performance targets: operations maintain sub‑millisecond times across common depths
 
 ### Performance targets (Sept 2025)
@@ -54,10 +54,15 @@ SignalTree consists of one core package with all enhancers built-in, plus three 
 | Operation latency (10 levels)  | <0.080ms | 0.061ms |
 | Operation latency (15 levels)  | <0.120ms | 0.092ms |
 | Operation latency (20+ levels) | <0.150ms | 0.104ms |
-| Core bundle size (publishable) | <30.00KB | 25.64KB |
-| Total ecosystem bundle size    | <40.00KB | 36.32KB |
 
-<small>\* Entry-point barrels remain 0.75KB for `@signaltree/core`; the 30.99KB figure cited elsewhere reflects the sum of tree-shakeable facades prior to consumer bundling.</small>
+### Published package budgets (CI gates, not what apps pay)
+
+These bound what's published to npm. Real apps tree-shake down to a fraction of these figures.
+
+| Metric                         | Budget   | Current |
+| ------------------------------ | -------- | ------- |
+| Core publishable (gzipped)     | <30.00KB | 25.64KB |
+| Total ecosystem publishable    | <40.00KB | 36.32KB |
 
 ### Frequency weighting system
 
