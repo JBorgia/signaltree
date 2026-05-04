@@ -1166,6 +1166,8 @@ LoadingState.Error; // 'error'
 
 Auto-syncs state to localStorage with versioning and migration support.
 
+> ⚠️ **Read first:** [Persistence and Security](../../docs/guides/persistence-and-security.md) covers the threat model and what `stored()` is — and isn't — appropriate for. Short version: fine for UI prefs, never for tokens, secrets, or PII.
+
 ```typescript
 import { signalTree, stored, createStorageKeys, clearStoragePrefix } from '@signaltree/core';
 
