@@ -641,4 +641,173 @@ describe('createRealtimeEnhancer()', () => {
       expect(tree.$.products.byId(100)?.().title).toBe('Widget');
     });
   });
+
+  describe('edge cases', () => {
+    it('surfaces error to connection.error when initial connect fails', async () => {
+      const adapter = createMockAdapter({ shouldFailConnect: true });
+      const tree = createTreeWithMaterializedMarkers({
+        items: entityMap<TestEntity, number>(),
+      }).with(
+        createRealtimeEnhancer(
+          adapter,
+          {},
+          { autoReconnect: false, debug: false }
+        ) as AnyEnhancer
+      );
+
+      await vi.runAllTimersAsync();
+
+      expect(tree.realtime.connection.isConnected()).toBe(false);
+      expect(tree.realtime.connection.error()).toBe('Connection failed');
+    });
+
+    it('stops reconnecting after maxReconnectAttempts is reached', async () => {
+      const adapter = createMockAdapter();
+      const tree = createTreeWithMaterializedMarkers({
+        items: entityMap<TestEntity, number>(),
+      }).with(
+        createRealtimeEnhancer(
+          adapter,
+          {},
+          {
+            autoReconnect: true,
+            reconnectDelay: 10,
+            maxReconnectAttempts: 2,
+            debug: false,
+          }
+        ) as AnyEnhancer
+      );
+
+      await vi.runAllTimersAsync();
+      expect(tree.realtime.connection.isConnected()).toBe(true);
+
+      // Force the adapter to fail every reconnect attempt
+      adapter.connect = async () => {
+        throw new Error('always fails');
+      };
+
+      adapter.triggerConnectionChange(false, new Error('lost'));
+
+      // Run all timers to exhaust reconnect attempts
+      for (let i = 0; i < 5; i++) {
+        await vi.advanceTimersByTimeAsync(1000);
+      }
+
+      expect(tree.realtime.connection.error()).toMatch(
+        /Max reconnect attempts reached|always fails|lost/
+      );
+      expect(tree.realtime.connection.reconnectAttempts()).toBeLessThanOrEqual(
+        3
+      );
+    });
+
+    it('manual disconnect stops auto-reconnect from kicking in', async () => {
+      const adapter = createMockAdapter();
+      const tree = createTreeWithMaterializedMarkers({
+        items: entityMap<TestEntity, number>(),
+      }).with(
+        createRealtimeEnhancer(
+          adapter,
+          {},
+          { autoReconnect: true, reconnectDelay: 10, debug: false }
+        ) as AnyEnhancer
+      );
+
+      await vi.runAllTimersAsync();
+      expect(tree.realtime.connection.isConnected()).toBe(true);
+
+      tree.realtime.disconnect();
+      expect(tree.realtime.connection.isConnected()).toBe(false);
+
+      // Wait long enough for auto-reconnect to fire if it were going to
+      await vi.advanceTimersByTimeAsync(2000);
+
+      expect(tree.realtime.connection.isConnected()).toBe(false);
+    });
+
+    it('warns and no-ops when configured path does not exist on tree', async () => {
+      const adapter = createMockAdapter();
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+
+      const tree = createTreeWithMaterializedMarkers({
+        items: entityMap<TestEntity, number>(),
+      }).with(
+        createRealtimeEnhancer(
+          adapter,
+          // 'nonexistent' isn't a real path on the tree
+          { nonexistent: { table: 'whatever', event: '*' } } as never,
+          { debug: true }
+        ) as AnyEnhancer
+      );
+
+      await vi.runAllTimersAsync();
+
+      const sawNoPathWarning = logSpy.mock.calls
+        .map((args) => String(args[0]))
+        .some((msg) => msg.includes('No signal found at path "nonexistent"'));
+      expect(sawNoPathWarning).toBe(true);
+      expect(tree.$.items.all().length).toBe(0); // tree state unaffected
+
+      logSpy.mockRestore();
+    });
+
+    it('warns and no-ops when path is not an entityMap', async () => {
+      const adapter = createMockAdapter();
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+
+      const tree = createTreeWithMaterializedMarkers({
+        plain: { value: 0 }, // a plain nested object, not an entityMap
+        items: entityMap<TestEntity, number>(),
+      }).with(
+        createRealtimeEnhancer(
+          adapter,
+          { plain: { table: 'whatever', event: '*' } } as never,
+          { debug: true }
+        ) as AnyEnhancer
+      );
+
+      await vi.runAllTimersAsync();
+
+      const sawNotEntityMapWarning = logSpy.mock.calls
+        .map((args) => String(args[0]))
+        .some((msg) => msg.includes('not an entityMap'));
+      expect(sawNotEntityMapWarning).toBe(true);
+
+      logSpy.mockRestore();
+    });
+
+    it('subscribe() returns a no-op when adapter is disconnected', async () => {
+      const adapter = createMockAdapter();
+      const tree = createTreeWithMaterializedMarkers({
+        items: entityMap<TestEntity, number>(),
+      }).with(
+        createRealtimeEnhancer(adapter, {}, { debug: false }) as AnyEnhancer
+      );
+
+      await vi.runAllTimersAsync();
+      tree.realtime.disconnect();
+      expect(adapter.isConnected()).toBe(false);
+
+      // Attempt to subscribe while disconnected
+      const cleanup = tree.realtime.subscribe('items', {
+        table: 'items',
+        event: '*',
+      });
+
+      // Should be a no-op — no callbacks registered for 'items' beyond what was there
+      const callbacksForItems = adapter.callbacks.get('items') ?? [];
+      // Our subscribe call should not have registered a new callback
+      adapter.triggerEvent<TestEntity>('items', {
+        eventType: 'INSERT',
+        new: { id: 99, name: 'should not appear', status: 'active' },
+        table: 'items',
+        schema: 'public',
+        timestamp: new Date(),
+      });
+      expect(tree.$.items.all().length).toBe(0);
+
+      cleanup(); // calling the returned noop should not throw
+      expect(callbacksForItems.length).toBeLessThanOrEqual(1);
+    });
+  });
 });
