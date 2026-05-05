@@ -7,6 +7,15 @@ export const appRoutes: Route[] = [
       import('./components/home/home.component').then((c) => c.HomeComponent),
   },
 
+  // Opinionated 5-minute evaluation path
+  {
+    path: 'start',
+    loadComponent: () =>
+      import('./pages/start-here/start-here.component').then(
+        (c) => c.StartHereComponent
+      ),
+  },
+
   // =========================================================================
   // V7 Feature Demos
   // =========================================================================

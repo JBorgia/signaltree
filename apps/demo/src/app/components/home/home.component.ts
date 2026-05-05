@@ -31,8 +31,8 @@ interface FitItem {
 export class HomeComponent {
   readonly primaryCtas: HomeCta[] = [
     {
-      label: 'Start with fundamentals',
-      route: '/examples/fundamentals',
+      label: 'Take the 5-minute tour',
+      route: '/start',
       variant: 'primary',
     },
     {

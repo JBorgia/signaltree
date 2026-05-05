@@ -1,0 +1,105 @@
+<div class="start-container">
+  <header class="page-header">
+    <p class="page-eyebrow">Start here · 5 minutes</p>
+    <h1 class="page-title">Evaluate SignalTree in five minutes.</h1>
+    <p class="page-lede">
+      Read the mental model, see one feature next to its NgRx equivalent,
+      glance at the recommended architecture, then pick where to go next.
+      No abstract claims — just the same things you'll write in real code.
+    </p>
+    <nav class="page-toc" aria-label="On this page">
+      <a href="#model">1. The mental model</a>
+      <a href="#compare">2. Same feature, less code</a>
+      <a href="#architecture">3. Recommended architecture</a>
+      <a href="#decide">4. Pick a path</a>
+    </nav>
+  </header>
+
+  <section id="model" class="section">
+    <p class="section-eyebrow">Step 1 · ~30 seconds</p>
+    <h2 class="section-title">State is data. Reads call. Writes call.</h2>
+    <p class="section-intro">
+      A tree is initialized with a plain JSON object. Every leaf is a typed
+      signal you read by calling and write with <code>.set</code> or
+      <code>.update</code>. There are no actions, reducers, selectors, or
+      registration steps. Path-based access stays type-safe at any depth.
+    </p>
+    <pre class="code-example"><code>{{ mentalModelCode }}</code></pre>
+    <p class="section-aside">
+      That's the entire mental model. Everything else — entity collections,
+      DevTools, persistence, time travel, forms, realtime — composes on top
+      with <code>.with(...)</code> enhancers.
+    </p>
+  </section>
+
+  <section id="compare" class="section section-alt">
+    <p class="section-eyebrow">Step 2 · ~1 minute</p>
+    <h2 class="section-title">Same feature, less code.</h2>
+    <p class="section-intro">
+      A counter feature in NgRx Store and SignalTree. Same behavior, same
+      reactivity guarantees. Boilerplate isn't the only thing that matters,
+      but for nested-state apps it scales nonlinearly with feature count.
+    </p>
+    <div class="compare-grid">
+      <div class="compare-pane">
+        <h3 class="compare-pane-title">NgRx Store</h3>
+        <pre class="code-example"><code>{{ ngrxCounterCode }}</code></pre>
+        <p class="compare-pane-meta">3 files · 4 imports · 7 concepts</p>
+      </div>
+      <div class="compare-pane">
+        <h3 class="compare-pane-title">SignalTree</h3>
+        <pre class="code-example"><code>{{ signalTreeCounterCode }}</code></pre>
+        <p class="compare-pane-meta">2 files · 1 import · 1 concept</p>
+      </div>
+    </div>
+    <p class="section-aside">
+      For a counter the difference is small. For a real app — 50 features,
+      nested entity collections, async loading states — the gap compounds.
+      One measured migration shipped <strong>76% less state code</strong>;
+      see the README for caveats.
+    </p>
+  </section>
+
+  <section id="architecture" class="section">
+    <p class="section-eyebrow">Step 3 · ~1 minute</p>
+    <h2 class="section-title">One runtime tree, typed slices, root-level enhancers.</h2>
+    <p class="section-intro">
+      The recommended pattern: a single tree per app, sliced by feature.
+      DevTools, persistence, and time travel attach at the root, not per
+      feature. Components consume typed slices directly.
+    </p>
+    <pre class="code-example"><code>{{ architectureCode }}</code></pre>
+    <p class="section-aside">
+      Why one tree? You get one DevTools panel, one time-travel history, one
+      persistence layer. Multi-tree setups still work for special cases —
+      see <a routerLink="/examples/fundamentals/recommended-architecture"
+        >recommended architecture</a
+      > for trade-offs and edge cases.
+    </p>
+  </section>
+
+  <section id="decide" class="section section-decide">
+    <p class="section-eyebrow">Step 4 · ~30 seconds</p>
+    <h2 class="section-title">Pick where to go next.</h2>
+    <p class="section-intro">
+      You've seen the model, the comparison, and the architecture. The right
+      next step depends on what you're trying to do.
+    </p>
+    <div class="next-steps-grid">
+      @for (step of nextSteps; track step.title) {
+      <article class="next-step-card">
+        <p class="next-step-audience">{{ step.audience }}</p>
+        <h3 class="next-step-title">{{ step.title }}</h3>
+        <p class="next-step-description">{{ step.description }}</p>
+        <a [routerLink]="step.route" class="next-step-cta">{{ step.cta }}</a>
+      </article>
+      }
+    </div>
+    <p class="section-aside">
+      Honest fit guidance: SignalTree is most compelling for Angular apps
+      with deeply nested or evolving state. For a single counter or a flat
+      todo list, simpler tools (a plain signal, a service) get you there
+      with less library to think about.
+    </p>
+  </section>
+</div>
