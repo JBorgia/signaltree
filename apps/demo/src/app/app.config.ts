@@ -10,6 +10,7 @@ import { provideEchartsCore } from 'ngx-echarts';
 
 import { appRoutes } from './app.routes';
 import { BenchmarkState } from './pages/realistic-comparison/benchmark-orchestrator/services/ngxs-benchmark.service';
+import { provideRouteMetadata } from './shared/route-metadata';
 import { provideAppTree } from './store';
 
 // Register only what we need for our charts
@@ -27,6 +28,7 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(appRoutes),
+    provideRouteMetadata(),
     provideHttpClient(),
     // Provide ECharts core for ngx-echarts
     provideEchartsCore({ echarts }),

@@ -14,6 +14,11 @@ export const appRoutes: Route[] = [
       import('./pages/start-here/start-here.component').then(
         (c) => c.StartHereComponent
       ),
+    data: {
+      title: 'Start here · 5-minute tour',
+      description:
+        'Evaluate SignalTree in five minutes: the mental model, a side-by-side comparison with NgRx, the recommended architecture, and where to go next.',
+    },
   },
 
   // =========================================================================
@@ -55,6 +60,11 @@ export const appRoutes: Route[] = [
       import(
         './examples/features/fundamentals/pages/fundamentals-page/fundamentals-page.component'
       ).then((c) => c.FundamentalsPageComponent),
+    data: {
+      title: 'Fundamentals',
+      description:
+        'Working playground for the SignalTree core API: signalTree initialization, entityMap, status, stored, callable syntax, forms.',
+    },
   },
 
   // Redirect old core route to new examples
@@ -144,6 +154,11 @@ export const appRoutes: Route[] = [
       import(
         './examples/features/fundamentals/examples/recommended-architecture/recommended-architecture.component'
       ).then((c) => c.RecommendedArchitectureComponent),
+    data: {
+      title: 'Recommended architecture',
+      description:
+        'The recommended SignalTree pattern: one runtime tree, typed feature slices, root-level enhancers (DevTools, time travel, persistence).',
+    },
   },
   {
     path: 'examples/fundamentals/migration-recipe',
@@ -151,6 +166,11 @@ export const appRoutes: Route[] = [
       import('./pages/migration-recipe/migration-recipe.component').then(
         (c) => c.MigrationRecipeComponent
       ),
+    data: {
+      title: 'Migration recipe',
+      description:
+        'Phased migration playbook from NgRx and similar stores to SignalTree, with mechanical mapping for actions, reducers, and selectors.',
+    },
   },
   // Top-level alias for the multi-source migration guide
   {
@@ -159,6 +179,11 @@ export const appRoutes: Route[] = [
       import('./pages/migration-recipe/migration-recipe.component').then(
         (c) => c.MigrationRecipeComponent
       ),
+    data: {
+      title: 'Migrate from NgRx',
+      description:
+        'How to migrate an NgRx codebase to SignalTree: actions become setters, reducers become updates, selectors become computed signals.',
+    },
   },
   // Performance comparisons
   {
@@ -167,6 +192,11 @@ export const appRoutes: Route[] = [
       import(
         './pages/realistic-comparison/realistic-comparison.component'
       ).then((c) => c.RealisticComparisonComponent),
+    data: {
+      title: 'Benchmarks',
+      description:
+        'Live cross-library benchmarks against @ngrx/signals, Akita, and Elf — runs in your browser with frequency-weighted realistic scenarios.',
+    },
   },
   // Redirect old route to new one
   {
@@ -206,13 +236,24 @@ export const appRoutes: Route[] = [
       ),
   },
 
-  // Architecture and bundle analysis pages
+  // Architecture overview (renamed from /architecture for clarity vs. /examples/.../recommended-architecture)
   {
-    path: 'architecture',
+    path: 'architecture-overview',
     loadComponent: () =>
       import(
         './pages/architecture-overview/architecture-overview.component'
       ).then((c) => c.ArchitectureOverviewComponent),
+    data: {
+      title: 'Architecture overview',
+      description:
+        'Single-package SignalTree architecture and the measured savings from migrating an NgRx app: ~76% less state code, ~46% smaller state bundle.',
+    },
+  },
+  // Backwards-compat redirect from the old path
+  {
+    path: 'architecture',
+    redirectTo: 'architecture-overview',
+    pathMatch: 'full',
   },
   // Bundle Visualizer removed — Architecture page covers bundle data
   // Undo/Redo removed — Time Travel demo covers this with richer UX
@@ -231,6 +272,11 @@ export const appRoutes: Route[] = [
       import('./pages/documentation/documentation.component').then(
         (c) => c.DocumentationComponent
       ),
+    data: {
+      title: 'Documentation',
+      description:
+        'SignalTree package documentation: core API surface plus optional ng-forms, realtime, enterprise, and callable-syntax packages.',
+    },
   },
 
   // Redirect any unknown routes to home
