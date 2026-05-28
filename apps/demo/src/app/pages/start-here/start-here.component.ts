@@ -104,9 +104,17 @@ export class CartView {
       audience: 'I want the full reference',
       title: 'Browse package docs',
       description:
-        'Core API surface, plus optional packages: ng-forms, realtime, enterprise, callable-syntax. Every type, every signature.',
+        'Core API surface, plus optional packages: ng-forms, realtime, enterprise, callable-syntax, schema. Every type, every signature.',
       route: '/docs',
       cta: 'Open docs →',
+    },
+    {
+      audience: 'I need form / data validation',
+      title: 'See the schema enhancer',
+      description:
+        'StandardSchema-driven validation against tree paths. Zod / Valibot / ArkType compatible. Async-first, observe-only — verdicts surface as signals.',
+      route: '/schema',
+      cta: 'Open schema demo →',
     },
     {
       audience: 'I want proof, not promises',

@@ -46,12 +46,16 @@ fi
 print_status "Verified npm authentication"
 
 # Define packages in dependency order (core first, then others)
+# Keep this list aligned with scripts/release.sh PACKAGES.
 PACKAGES=(
     "core"
-    "enterprise"
+    "events"
     "ng-forms"
+    "realtime"
     "callable-syntax"
+    "enterprise"
     "guardrails"
+    "schema"
 )
 
 # Check if dry-run flag is passed

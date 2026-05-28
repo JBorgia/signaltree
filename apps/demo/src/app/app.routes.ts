@@ -235,6 +235,18 @@ export const appRoutes: Route[] = [
         (c) => c.NgFormsDemoComponent
       ),
   },
+  {
+    path: 'schema',
+    loadComponent: () =>
+      import('./pages/schema-demo/schema-demo.component').then(
+        (c) => c.SchemaDemoComponent
+      ),
+    data: {
+      title: 'Schema validation',
+      description:
+        'StandardSchema-driven validation against tree leaf paths. Zod / Valibot / ArkType compatible. Async-first, observe-only.',
+    },
+  },
 
   // Architecture overview (renamed from /architecture for clarity vs. /examples/.../recommended-architecture)
   {

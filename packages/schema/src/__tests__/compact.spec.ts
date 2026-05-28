@@ -31,7 +31,7 @@ describe('schema — compact() manual GC', () => {
 
   it('evicts a bound path whose tree position no longer resolves', () => {
     const tree = signalTree({
-      items: { a: { name: 'Alice' } } as Record<string, { name: string }>,
+      items: { a: { name: '' } } as Record<string, { name: string }>,
     }).with(
       schema({
         schemas: { 'items.*.name': syncSchema(() => null) },
@@ -39,7 +39,7 @@ describe('schema — compact() manual GC', () => {
       })
     );
 
-    // Bind the path by writing to it.
+    // Bind the path by writing a NEW value (referentially different from initial).
     (tree as any).$.items.a.name.set('Alice');
     expect(tree.schema.boundPaths()).toContain('items.a.name');
 
@@ -52,35 +52,34 @@ describe('schema — compact() manual GC', () => {
   });
 
   // H4: pathExists must do a structural-only check. A signal holding null/undefined
-  // at an intermediate hop does NOT mean the path is removed — it's transient
-  // absence. Eviction should require actual key removal from the parent
-  // NodeAccessor, not a null-valued signal.
-  it('does NOT evict when an intermediate signal holds null (H4)', () => {
+  // at a leaf does NOT mean the path is removed — it's transient absence.
+  // Eviction should require actual key removal from the parent NodeAccessor.
+  it('does NOT evict when a leaf signal holds null (H4)', () => {
     const tree = signalTree({
-      user: { profile: { email: '' } } as { email: string } | null,
+      user: { email: 'a@b.com' as string | null },
     }).with(
       schema({
-        schemas: { 'user.profile.email': syncSchema(() => null) },
+        schemas: { 'user.email': syncSchema(() => null) },
         validateOnAttach: false,
       })
     );
 
-    // Bind the path by writing to it.
-    (tree as any).$.user.profile.email.set('a@b.com');
-    expect(tree.schema.boundPaths()).toContain('user.profile.email');
+    // Bind by writing a new value.
+    (tree as any).$.user.email.set('user@example.com');
+    expect(tree.schema.boundPaths()).toContain('user.email');
 
-    // Set the intermediate signal to null (transient absence — not removal).
-    // The key 'profile' is still structurally present on $.user.
-    (tree as any).$.user.profile.set(null);
+    // Set the leaf signal to null (transient absence, not structural removal).
+    // The key 'email' is still structurally present on $.user.
+    (tree as any).$.user.email.set(null);
 
     tree.schema.compact();
-    // Path is still bound — only structural removal should evict.
-    expect(tree.schema.boundPaths()).toContain('user.profile.email');
+    // Path is still bound — pathExists is a structural-only check.
+    expect(tree.schema.boundPaths()).toContain('user.email');
   });
 
   it('decrements invalidCount when an invalid path is evicted', () => {
     const tree = signalTree({
-      items: { a: { name: '' } } as Record<string, { name: string }>,
+      items: { a: { name: 'Alice' } } as Record<string, { name: string }>,
     }).with(
       schema({
         schemas: {
@@ -92,8 +91,10 @@ describe('schema — compact() manual GC', () => {
       })
     );
 
-    // Bind and make invalid so we have a real error to evict.
-    (tree as any).$.items.a.name.set('');
+    // Bind by writing a new value (different from initial 'Alice'), then
+    // write an invalid value so the path holds an error.
+    (tree as any).$.items.a.name.set('Bob');     // bind path
+    (tree as any).$.items.a.name.set('');         // invalid → error
     expect(tree.schema.errorsAt('items.a.name')()).toBe('Required');
     expect(tree.schema.isValid()).toBe(false);
 

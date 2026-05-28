@@ -81,6 +81,8 @@ tmp/
 .versus/
 .mcp.json
 .claude/
+.claude-octopus/
+.octo/
 
 # Skill lint scratch dir (created by scripts/lint-skills.mjs)
 .cache/

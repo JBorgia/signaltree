@@ -1,9 +1,5 @@
 import { signal } from '@angular/core';
-import {
-  interceptLeafSignals,
-  type ISignalTree,
-  type UpdateMetadata,
-} from '@signaltree/core';
+import { interceptLeafSignals, type ISignalTree } from '@signaltree/core';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { SchemaConfig, SchemaMethods } from './types';
@@ -78,14 +74,10 @@ export function schema(
     const treeRoot = (tree as unknown as { $: unknown }).$;
 
     // Attach leaf interceptor — writes route through routeWrite, which fans
-    // out to leaf + ancestor dispatchers. Explicit param types here because
-    // core's published .d.ts strips inference for this internal symbol.
-    const restoreInterceptor = interceptLeafSignals(
-      treeRoot,
-      (path: string, next: unknown, _prev: unknown, meta?: UpdateMetadata) => {
-        routeWrite(registry, treeRoot, path, next, meta);
-      },
-    );
+    // out to leaf + ancestor dispatchers.
+    const restoreInterceptor = interceptLeafSignals(treeRoot, (path, next, _prev, meta) => {
+      routeWrite(registry, treeRoot, path, next, meta);
+    });
 
     // Optional: initial validation pass.
     if (config.validateOnAttach !== false) {

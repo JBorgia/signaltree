@@ -1,0 +1,156 @@
+<div class="page">
+  <header class="page-header">
+    <h1>@signaltree/schema</h1>
+    <p class="lead">
+      Schema-driven validation against tree leaf paths. StandardSchema-compatible
+      (Zod, Valibot, ArkType, …). Async-first. Observe-only — never blocks writes.
+    </p>
+  </header>
+
+  <section class="demo-grid">
+    <div class="form-panel">
+      <h2>Live form</h2>
+      <p class="hint">
+        Schemas are registered at <code>name</code>, <code>email</code>, <code>age</code>, and <code>username</code>.
+        The <code>username</code> field uses an <em>async</em> Zod refine that simulates a 300ms server check
+        (try typing <code>admin</code>, <code>root</code>, or <code>system</code> to see the async path).
+      </p>
+
+      <div class="field">
+        <label for="name">Name</label>
+        <input
+          id="name"
+          type="text"
+          [value]="name()"
+          (input)="onNameInput($any($event.target).value)"
+          placeholder="At least 2 characters"
+        />
+        @if (nameError()) {
+          <div class="error">{{ nameError() }}</div>
+        }
+      </div>
+
+      <div class="field">
+        <label for="email">Email</label>
+        <input
+          id="email"
+          type="email"
+          [value]="email()"
+          (input)="onEmailInput($any($event.target).value)"
+          placeholder="user@example.com"
+        />
+        @if (emailError()) {
+          <div class="error">{{ emailError() }}</div>
+        }
+      </div>
+
+      <div class="field">
+        <label for="age">Age</label>
+        <input
+          id="age"
+          type="number"
+          [value]="age()"
+          (input)="onAgeInput($any($event.target).value)"
+          placeholder="13–120"
+        />
+        @if (ageError()) {
+          <div class="error">{{ ageError() }}</div>
+        }
+      </div>
+
+      <div class="field">
+        <label for="username">
+          Username
+          @if (usernamePending()) {
+            <span class="pending">checking…</span>
+          }
+        </label>
+        <input
+          id="username"
+          type="text"
+          [value]="username()"
+          (input)="onUsernameInput($any($event.target).value)"
+          placeholder="Try 'admin' to trigger async error"
+        />
+        @if (usernameError()) {
+          <div class="error">{{ usernameError() }}</div>
+        }
+      </div>
+
+      <div class="actions">
+        <button (click)="submit()" [disabled]="submitting()">
+          {{ submitting() ? 'Validating…' : 'Submit' }}
+        </button>
+        <button class="secondary" (click)="reset()">Reset</button>
+      </div>
+
+      @if (lastResult() === 'success') {
+        <div class="result success">All fields valid ✓</div>
+      }
+      @if (lastResult() === 'failure') {
+        <div class="result failure">Validation failed — see field errors above</div>
+      }
+    </div>
+
+    <div class="aggregate-panel">
+      <h2>Aggregate state (reactive signals)</h2>
+
+      <div class="metric">
+        <code>tree.schema.isValid()</code>
+        <span [class.true]="isValid()" [class.false]="!isValid()">{{ isValid() }}</span>
+      </div>
+
+      <div class="metric">
+        <code>tree.schema.pending()</code>
+        <span [class.true]="pending()" [class.false]="!pending()">{{ pending() }}</span>
+      </div>
+
+      <div class="metric">
+        <code>tree.schema.pendingPaths()</code>
+        <span>{{ pendingPaths() | json }}</span>
+      </div>
+
+      <div class="error-list">
+        <h3>tree.schema.errorList()</h3>
+        @if (errorList().length === 0) {
+          <p class="muted">No active errors.</p>
+        } @else {
+          <ul>
+            @for (msg of errorList(); track msg) {
+              <li>{{ msg }}</li>
+            }
+          </ul>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="code-panel">
+    <h2>What this code looks like</h2>
+    <pre><code>{{ codeExample }}</code></pre>
+  </section>
+
+  <section class="links">
+    <h2>Learn more</h2>
+    <ul>
+      <li>
+        <strong>Plan:</strong>
+        <a href="https://github.com/signaltree/signaltree/blob/main/docs/architecture/schema-enhancer-plan.md" target="_blank" rel="noopener">
+          docs/architecture/schema-enhancer-plan.md
+        </a>
+      </li>
+      <li>
+        <strong>Package README:</strong>
+        <a href="https://github.com/signaltree/signaltree/tree/main/packages/schema" target="_blank" rel="noopener">
+          packages/schema/README.md
+        </a>
+      </li>
+      <li>
+        <strong>StandardSchema spec:</strong>
+        <a href="https://github.com/standard-schema/standard-schema" target="_blank" rel="noopener">
+          standard-schema/standard-schema
+        </a>
+      </li>
+    </ul>
+  </section>
+</div>

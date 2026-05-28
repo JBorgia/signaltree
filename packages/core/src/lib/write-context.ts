@@ -95,7 +95,10 @@ export function withWriteContext<R>(
  *
  * Returns `undefined` outside a `withWriteContext` frame.
  *
- * @internal — Intended for enhancer authors, not application code.
+ * @public — Enhancer-author API. Read inside an `onWrite` callback from
+ *   `interceptLeafSignals` (or anywhere the enhancer observes writes) to
+ *   capture the ambient `UpdateMetadata`. Application code should not use
+ *   this directly.
  */
 export function getActiveWriteContext(): UpdateMetadata | undefined {
   return activeContext;

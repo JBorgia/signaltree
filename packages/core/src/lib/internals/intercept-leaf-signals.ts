@@ -25,7 +25,9 @@ import { getActiveWriteContext } from '../write-context';
  * The returned cleanup function restores all wrapped signals to their
  * original methods.
  *
- * @internal
+ * @public — Enhancer-author API. Used by `@signaltree/core`'s built-in
+ *   devtools / time-travel enhancers and by external enhancers like
+ *   `@signaltree/schema`. Application code should not use this directly.
  */
 export function interceptLeafSignals(
   root: unknown,

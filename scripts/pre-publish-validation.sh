@@ -99,7 +99,7 @@ print_header "3. Type Checking"
 print_step "Running TypeScript compiler checks"
 # Type checking happens during build, so we'll verify TypeScript configs exist
 TYPECHECK_PASSED=true
-for package in core ng-forms callable-syntax enterprise guardrails; do
+for package in core ng-forms callable-syntax enterprise guardrails schema; do
     TSCONFIG="./packages/$package/tsconfig.json"
     if [ ! -f "$TSCONFIG" ]; then
         print_error "Missing tsconfig.json for $package"
@@ -173,7 +173,7 @@ else
     exit 1
 fi
 
-PUBLISHED_PACKAGES="callable-syntax,shared,guardrails,events,realtime,enterprise,ng-forms"
+PUBLISHED_PACKAGES="callable-syntax,shared,guardrails,events,realtime,enterprise,ng-forms,schema"
 if NX_DAEMON=false npx nx run-many -t build --projects=$PUBLISHED_PACKAGES --configuration=production 2>&1 | tee /tmp/build.log; then
     print_success "All published packages built successfully"
 else
