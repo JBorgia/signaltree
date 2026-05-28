@@ -27,7 +27,7 @@
           "packages/ng-forms/src/core/async-validators.ts",
           "packages/ng-forms/src/history/history.ts",
           "packages/ng-forms/src/enhancer/form-bridge.ts",
-          "packages/ng-forms/src/audit/index.ts",
+          "packages/ng-forms/src/audit/audit.ts",
           "packages/ng-forms/src/wizard/wizard.ts",
           "packages/ng-forms/src/signals/index.ts"
         ],
