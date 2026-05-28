@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree } from '@signaltree/core';
-import { schema } from '@signaltree/schema';
+import { schemas } from '@signaltree/schema';
 import { z } from 'zod';
 
 // Demo state — a profile form with sync + async validation
@@ -32,7 +32,7 @@ export class SchemaDemoComponent {
     age: 0,
     username: '',
   }).with(
-    schema({
+    schemas({
       schemas: {
         name: z.string().min(2, 'Name must be at least 2 characters'),
         email: z.string().email('Must be a valid email address'),
@@ -65,13 +65,13 @@ export class SchemaDemoComponent {
 
   // Code shown in the example panel
   readonly codeExample = `import { signalTree } from '@signaltree/core';
-import { schema } from '@signaltree/schema';
+import { schemas } from '@signaltree/schema';
 import { z } from 'zod';
 
 const tree = signalTree({
   name: '', email: '', age: 0, username: '',
 }).with(
-  schema({
+  schemas({
     schemas: {
       name: z.string().min(2),
       email: z.string().email(),
@@ -86,28 +86,28 @@ const tree = signalTree({
 );
 
 // Read errors per path (memoized signals).
-tree.schema.errorsAt('email')();      // string | null
+tree.schemas.errorsAt('email')();      // string | null
 
 // Aggregate state (reactive signals).
-tree.schema.isValid();                // O(1) — counter-backed
-tree.schema.pending();                // true if any async run in flight
-tree.schema.errorList();              // readonly string[]
+tree.schemas.isValid();                // O(1) — counter-backed
+tree.schemas.pending();                // true if any async run in flight
+tree.schemas.errorList();              // readonly string[]
 
 // Imperative validate (returns post-validation isValid).
-const ok = await tree.schema.validate();`;
+const ok = await tree.schemas.validate();`;
 
   // Aggregates from the enhancer
-  readonly isValid = computed(() => this.store.schema.isValid());
-  readonly pending = computed(() => this.store.schema.pending());
-  readonly pendingPaths = computed(() => this.store.schema.pendingPaths());
-  readonly errorList = computed(() => this.store.schema.errorList());
+  readonly isValid = computed(() => this.store.schemas.isValid());
+  readonly pending = computed(() => this.store.schemas.pending());
+  readonly pendingPaths = computed(() => this.store.schemas.pendingPaths());
+  readonly errorList = computed(() => this.store.schemas.errorList());
 
   // Per-path error signals (memoized)
-  readonly nameError = this.store.schema.errorsAt('name');
-  readonly emailError = this.store.schema.errorsAt('email');
-  readonly ageError = this.store.schema.errorsAt('age');
-  readonly usernameError = this.store.schema.errorsAt('username');
-  readonly usernamePending = this.store.schema.isPendingAt('username');
+  readonly nameError = this.store.schemas.errorsAt('name');
+  readonly emailError = this.store.schemas.errorsAt('email');
+  readonly ageError = this.store.schemas.errorsAt('age');
+  readonly usernameError = this.store.schemas.errorsAt('username');
+  readonly usernamePending = this.store.schemas.isPendingAt('username');
 
   onNameInput(value: string) {
     this.name.set(value);
@@ -134,7 +134,7 @@ const ok = await tree.schema.validate();`;
     this.submitting.set(true);
     this.lastResult.set(null);
     try {
-      const ok = await this.store.schema.validate();
+      const ok = await this.store.schemas.validate();
       this.lastResult.set(ok ? 'success' : 'failure');
     } finally {
       this.submitting.set(false);

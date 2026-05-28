@@ -96,22 +96,22 @@
       <h2>Aggregate state (reactive signals)</h2>
 
       <div class="metric">
-        <code>tree.schema.isValid()</code>
+        <code>tree.schemas.isValid()</code>
         <span [class.true]="isValid()" [class.false]="!isValid()">{{ isValid() }}</span>
       </div>
 
       <div class="metric">
-        <code>tree.schema.pending()</code>
+        <code>tree.schemas.pending()</code>
         <span [class.true]="pending()" [class.false]="!pending()">{{ pending() }}</span>
       </div>
 
       <div class="metric">
-        <code>tree.schema.pendingPaths()</code>
+        <code>tree.schemas.pendingPaths()</code>
         <span>{{ pendingPaths() | json }}</span>
       </div>
 
       <div class="error-list">
-        <h3>tree.schema.errorList()</h3>
+        <h3>tree.schemas.errorList()</h3>
         @if (errorList().length === 0) {
           <p class="muted">No active errors.</p>
         } @else {

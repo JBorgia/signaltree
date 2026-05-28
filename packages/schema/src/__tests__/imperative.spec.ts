@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { signalTree } from '@signaltree/core';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import { schema } from '../lib/schema';
+import { schemas } from '../lib/schema';
 import { syncSchema, asyncSchema, controllableSchema } from './test-helpers';
 
-describe('schema — imperative validate() / validatePath()', () => {
+describe('schemas — imperative validate() / validatePath()', () => {
   it('validate() returns the current isValid() after dispatched runs settle', async () => {
     const tree = signalTree({ a: 'ok', b: 'bad' }).with(
-      schema({
+      schemas({
         schemas: {
           a: syncSchema((v) => (v === 'ok' ? null : 'a-err')),
           b: syncSchema((v) => (v === 'ok' ? null : 'b-err')),
@@ -17,27 +17,27 @@ describe('schema — imperative validate() / validatePath()', () => {
       })
     );
 
-    const result = await tree.schema.validate();
+    const result = await tree.schemas.validate();
     expect(result).toBe(false);
-    expect(tree.schema.errors()['a']).toBeNull();
-    expect(tree.schema.errors()['b']).toBe('b-err');
+    expect(tree.schemas.errors()['a']).toBeNull();
+    expect(tree.schemas.errors()['b']).toBe('b-err');
   });
 
   it('validate() returns true when every path passes', async () => {
     const tree = signalTree({ a: 'ok' }).with(
-      schema({
+      schemas({
         schemas: { a: syncSchema((v) => (v === 'ok' ? null : 'err')) },
         validateOnAttach: false,
       })
     );
 
-    const result = await tree.schema.validate();
+    const result = await tree.schemas.validate();
     expect(result).toBe(true);
   });
 
   it('validatePath() runs only the schema for the given leaf', async () => {
     const tree = signalTree({ a: 'ok', b: 'bad' }).with(
-      schema({
+      schemas({
         schemas: {
           a: syncSchema(() => null),
           b: syncSchema(() => 'b-err'),
@@ -49,40 +49,40 @@ describe('schema — imperative validate() / validatePath()', () => {
     // Touch `a` so it's bound. b is not touched yet.
     (tree as any).$.a.set('ok');
 
-    const result = await tree.schema.validatePath('a');
+    const result = await tree.schemas.validatePath('a');
     expect(result).toBe(true);
-    expect(tree.schema.errors()['a']).toBeNull();
+    expect(tree.schemas.errors()['a']).toBeNull();
   });
 
   // R3 + R6: aggregate pendingPaths must reflect async leaf runs.
   it('pending() and pendingPaths() reflect in-flight async validate() runs (F3)', async () => {
     const ctrl = controllableSchema<string>();
     const tree = signalTree({ a: 'x' }).with(
-      schema({
+      schemas({
         schemas: { a: ctrl.schema as StandardSchemaV1 },
         validateOnAttach: false,
       })
     );
 
     // Kick off validate() — schema is async/controllable, won't settle until we resolve.
-    const promise = tree.schema.validate();
+    const promise = tree.schemas.validate();
 
     // Microtask drain so runLeafAwait has reached the async branch.
     await Promise.resolve();
 
     // Aggregate state must show pending true and pendingPaths includes 'a'.
-    expect(tree.schema.pending()).toBe(true);
-    expect(tree.schema.pendingPaths()).toContain('a');
-    expect(tree.schema.isPendingAt('a')()).toBe(true);
+    expect(tree.schemas.pending()).toBe(true);
+    expect(tree.schemas.pendingPaths()).toContain('a');
+    expect(tree.schemas.isPendingAt('a')()).toBe(true);
 
     // Settle the schema — verdict null (valid).
     ctrl.resolveLatest(null);
     await promise;
 
     // Aggregate state should now be clean.
-    expect(tree.schema.pending()).toBe(false);
-    expect(tree.schema.pendingPaths()).toEqual([]);
-    expect(tree.schema.isPendingAt('a')()).toBe(false);
+    expect(tree.schemas.pending()).toBe(false);
+    expect(tree.schemas.pendingPaths()).toEqual([]);
+    expect(tree.schemas.isPendingAt('a')()).toBe(false);
   });
 
   // R4 + R6: validate() must await async ancestor schemas before resolving.
@@ -106,7 +106,7 @@ describe('schema — imperative validate() / validatePath()', () => {
     };
 
     const tree = signalTree({ user: { email: 'bad' } }).with(
-      schema({
+      schemas({
         schemas: { user: ancestorSchema },
         validateOnAttach: false,
       })
@@ -114,23 +114,23 @@ describe('schema — imperative validate() / validatePath()', () => {
 
     // BEFORE the fix: validate() would resolve before the async ancestor settled,
     // and the verdict on user.email would still be null at await time.
-    const isValid = await tree.schema.validate();
+    const isValid = await tree.schemas.validate();
 
     expect(isValid).toBe(false);
-    expect(tree.schema.errorsAt('user.email')()).toBe('Invalid email');
+    expect(tree.schemas.errorsAt('user.email')()).toBe('Invalid email');
   });
 
   // Async leaf schema — sanity check that returnvalue tracks settle.
   it('validate() resolves to true after an async-valid leaf schema settles', async () => {
     const tree = signalTree({ a: 'ok' }).with(
-      schema({
+      schemas({
         schemas: { a: asyncSchema((v) => (v === 'ok' ? null : 'err'), 5) },
         validateOnAttach: false,
       })
     );
 
-    const isValid = await tree.schema.validate();
+    const isValid = await tree.schemas.validate();
     expect(isValid).toBe(true);
-    expect(tree.schema.errors()['a']).toBeNull();
+    expect(tree.schemas.errors()['a']).toBeNull();
   });
 });

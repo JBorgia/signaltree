@@ -21,19 +21,22 @@ import { ensurePathState, addPendingPath, removePendingPath } from './internals/
 import { resultToMessage, defaultFormatIssue } from './internals/issue-mapper';
 
 /**
- * Create the `schema()` enhancer — schema-driven validation for SignalTree.
+ * Create the `schemas()` enhancer — schema-driven validation for SignalTree.
  *
  * Registers StandardSchema-compatible schemas against dotted leaf paths and
  * exposes per-path + tree-wide error signals. Observe-only: never blocks writes.
  *
+ * Named `schemas` (plural) to avoid collision with Angular 22 Signal Forms'
+ * own `schema()` factory from `@angular/forms`.
+ *
  * @example Basic usage
  * ```ts
  * import { signalTree } from '@signaltree/core';
- * import { schema } from '@signaltree/schema';
+ * import { schemas } from '@signaltree/schema';
  * import { z } from 'zod';
  *
  * const tree = signalTree({ user: { email: '', age: 0 } }).with(
- *   schema({
+ *   schemas({
  *     schemas: {
  *       'user.email': z.string().email(),
  *       'user.age': z.number().int().min(0),
@@ -42,13 +45,13 @@ import { resultToMessage, defaultFormatIssue } from './internals/issue-mapper';
  * );
  *
  * tree.$.user.email.set('not-an-email');
- * tree.schema.errorsAt('user.email')(); // 'Invalid email'
- * tree.schema.isValid(); // false
+ * tree.schemas.errorsAt('user.email')(); // 'Invalid email'
+ * tree.schemas.isValid(); // false
  * ```
  *
  * @public
  */
-export function schema(
+export function schemas(
   config: SchemaConfig
 ): <T>(tree: ISignalTree<T>) => ISignalTree<T> & SchemaMethods {
   return function <T>(tree: ISignalTree<T>): ISignalTree<T> & SchemaMethods {
@@ -92,7 +95,7 @@ export function schema(
     };
 
     // Build the method namespace.
-    const methods: SchemaMethods['schema'] = {
+    const methods: SchemaMethods['schemas'] = {
       errors: aggregates.errors,
       errorList: aggregates.errorList,
       isValid: aggregates.isValid,
@@ -114,7 +117,7 @@ export function schema(
       boundPaths: registry.boundPathsSignal,
     };
 
-    (tree as unknown as Record<string, unknown>)['schema'] = methods;
+    (tree as unknown as Record<string, unknown>)['schemas'] = methods;
     return tree as ISignalTree<T> & SchemaMethods;
   };
 }
@@ -308,7 +311,7 @@ function runLeafAwait(
   state.inFlightVersion = myVersion;
   state.pendingSignal.set(true);
   // R3 fix: also update the aggregate pendingPathsSet — without this,
-  // tree.schema.pending() lies during await validate() on async schemas.
+  // tree.schemas.pending() lies during await validate() on async schemas.
   addPendingPath(registry, path);
   return result.then(
     (settled) => {

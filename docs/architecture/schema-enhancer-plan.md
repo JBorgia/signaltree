@@ -65,9 +65,9 @@
 | D3 | **Write-sequence guard with per-path version counters.** Each leaf has a monotonic `version`; each schema dispatch captures `version`; on settle, stale verdicts (captured ≠ current) are discarded. Generalized to **ancestor-run records** for one-run→N-leaves cases (see §6.3). | Without the guard, a slow schema run for write A can clobber the verdict for a newer write B. |
 | D4 | **Fixed precedence for ancestor vs specific schemas.** Specific schema owns its leaf; ancestor schema only writes/clears errors for leaves no specific schema claims. Determined at attach time via a `leafOwner` map. | Two unsynchronized clocks (ancestor version, leaf version) cannot last-write-wins coherently. Fixed precedence collapses to one clock per leaf. |
 | D5 | **Ambient write-context channel** (`withWriteContext`) in core. Enhancers consume via `getActiveWriteContext()`. Synchronous capture only — does **not** survive `await` boundaries. | Angular's `WritableSignal.set(value)` signature cannot be widened to carry metadata. An ambient channel is the only seam that doesn't fork the signal API. |
-| D6 | **Single registration site by type-shape.** `signalFormBridge` requires `& SchemaMethods<T>` on its tree parameter. It reads schemas from `tree.schema.schemaFor(path)`. There is no `schemas` argument on the bridge. | Two registration sites = drift = the bug this work exists to kill. Type-shape enforcement makes drift impossible at API surface, not at code-review discipline. |
-| D7 | **Lazy wildcard match-on-write.** Patterns compile to a matcher at attach. On every leaf write, the matcher is consulted; first match (longest-specific) lazily instantiates `PathState`. No upfront entity enumeration, no add/remove event subscription. | Verification confirmed `entityMap` exposes no add/remove notifications. Lazy match avoids both that gap and the O(n) enumeration cost on 1000-item lists. Eviction is deferred — small leak, ship `tree.schema.compact()` as the manual control. |
-| D8 | **Per-path signal memoization in a path-keyed `Map`,** with optional eviction via `tree.schema.compact()`. `errorsAt`, `isValidAt`, `isPendingAt` return the same `Signal` for the same path across calls. | Without memoization, `errorsAt(userId)` inside a list renderer creates a new `computed` per render — classic leak. |
+| D6 | **Single registration site by type-shape.** `signalFormBridge` requires `& SchemaMethods<T>` on its tree parameter. It reads schemas from `tree.schemas.schemaFor(path)`. There is no `schemas` argument on the bridge. | Two registration sites = drift = the bug this work exists to kill. Type-shape enforcement makes drift impossible at API surface, not at code-review discipline. |
+| D7 | **Lazy wildcard match-on-write.** Patterns compile to a matcher at attach. On every leaf write, the matcher is consulted; first match (longest-specific) lazily instantiates `PathState`. No upfront entity enumeration, no add/remove event subscription. | Verification confirmed `entityMap` exposes no add/remove notifications. Lazy match avoids both that gap and the O(n) enumeration cost on 1000-item lists. Eviction is deferred — small leak, ship `tree.schemas.compact()` as the manual control. |
+| D8 | **Per-path signal memoization in a path-keyed `Map`,** with optional eviction via `tree.schemas.compact()`. `errorsAt`, `isValidAt`, `isPendingAt` return the same `Signal` for the same path across calls. | Without memoization, `errorsAt(userId)` inside a list renderer creates a new `computed` per render — classic leak. |
 | D9 | **PR3 default is per-field binding, not whole-object.** Whole-object Signal Forms binding is the optimization branch, attempted only if measured. | H1/H2/H3 of the v2 hypotheses share a root cause: whole-object replacement. Per-field binding makes three of four pass trivially. The actual unknown is whether Signal Forms permits external per-field writables — that's the PR3 API-capability spike, not the perf benchmark. |
 | D10 | **Bundle budget ≤ 6 KB gzipped** for `@signaltree/schema`. Optional `@signaltree/schema/collections` subpath if wildcard expansion proves too heavy to fit. | Re-derived from runtime weight per §11. Types compile to zero; the bulk is the version-guard machinery, path mapping, and matcher. |
 
@@ -248,7 +248,7 @@ export function signalFormBridge(
 ) => ISignalTree<T> & SchemaMethods<T> & SignalFormMethods;
 ```
 
-The `& SchemaMethods<T>` constraint on the input tree is load-bearing — it forces the user to apply `schema()` before `signalFormBridge()`, which is what makes single-registration enforceable at the type level (D6).
+The `& SchemaMethods<T>` constraint on the input tree is load-bearing — it forces the user to apply `schemas()` before `signalFormBridge()`, which is what makes single-registration enforceable at the type level (D6).
 
 ---
 
@@ -449,7 +449,7 @@ function matchLeaf(leafPath: string): SchemaEntry | undefined {
 function matchSpecificity(pattern: readonly (string | typeof WILDCARD)[], segs: string[]): number;
 ```
 
-**Eviction.** `tree.schema.compact()` walks `registry.leafOwner` and removes entries whose path no longer resolves in the current tree (uses a path-existence probe via the tree). Removed paths also have their `PathState`, memoized signals, and `boundPaths` entry torn down. Compaction is opt-in to avoid surprising cost during interactive work.
+**Eviction.** `tree.schemas.compact()` walks `registry.leafOwner` and removes entries whose path no longer resolves in the current tree (uses a path-existence probe via the tree). Removed paths also have their `PathState`, memoized signals, and `boundPaths` entry torn down. Compaction is opt-in to avoid surprising cost during interactive work.
 
 ### 6.3 Ancestor-run version capture (D4)
 
@@ -652,7 +652,7 @@ packages/schema/
 │   │   │   ├── issue-mapper.ts        # issueToLeafPath, formatting
 │   │   │   ├── signal-cache.ts        # errorsAt/isValidAt/isPendingAt memo
 │   │   │   ├── aggregates.ts          # errors, errorList, isValid, pending
-│   │   │   └── compact.ts             # tree.schema.compact()
+│   │   │   └── compact.ts             # tree.schemas.compact()
 │   │   └── types.ts                   # public API types
 │   └── __tests__/                     # see §8.3
 ```
@@ -755,9 +755,9 @@ Bridge attach:
 
 1. Walk `form()` markers in the SignalTree (same scan the existing `formBridge` does).
 2. For each `form()` marker, enumerate its field paths.
-3. For each field path `P`, call `tree.schema.schemaFor(P)`. If a schema is registered, bind it into Signal Forms' field validation via [`validateStandardSchema(schema)`](https://github.com/angular/angular/discussions/60851) (or whatever the Signal Forms public spec lands as — PR3 references the API as it exists when the spike runs).
+3. For each field path `P`, call `tree.schemas.schemaFor(P)`. If a schema is registered, bind it into Signal Forms' field validation via [`validateStandardSchema(schema)`](https://github.com/angular/angular/discussions/60851) (or whatever the Signal Forms public spec lands as — PR3 references the API as it exists when the spike runs).
 4. Bind the field's source signal to the SignalTree leaf's `WritableSignal`. Read and write flow through that single signal — no diff engine, no echo loop, no whole-object replacement.
-5. Subscribe to `tree.schema.boundPaths` (a Signal — D7) and re-walk + rebind when new entity rows arrive or are removed.
+5. Subscribe to `tree.schemas.boundPaths` (a Signal — D7) and re-walk + rebind when new entity rows arrive or are removed.
 
 **Echo-loop guard.** Even with per-field binding, Zod/StandardSchema transforms (`.transform(s => s.trim())`) can return a value not referentially equal to the input. Before writing the transformed value back to the SignalTree leaf, deep-equal-check against the current leaf value via `@signaltree/shared`'s `deepEqual`. If equal, skip the write entirely.
 
@@ -875,7 +875,7 @@ If per-field bridge ships:
 
 1. **PR3 §9.1 spike outcome — three branches (A / B / C) per §9.3.** The spike decides which branch; PR3 + PR4 adapt to whichever lands. Resolved at spike time, not before — pre-deciding would force-binarize an inherently three-way outcome.
 2. **`UpdateMetadata` open extension — keep open, but narrow the contract.** The `[key: string]: unknown` index signature stays for guardrails backward compatibility. However, the validation enhancer **only reads `intent` and `source`** — both closed unions, both protected at the API surface by `NonNullable<UpdateMetadata['intent']>` and `NonNullable<UpdateMetadata['source']>`. The JSDoc on `UpdateMetadata` (§4.2) explicitly states this: validation reads only these two fields; custom keys are guardrails-private. Future readers should not assume validation honors arbitrary keys.
-3. **`compact()` ergonomics — top-level method.** `tree.schema.compact()` for discoverability. The leak shape is documented in the README per §13.1's updated risk row.
+3. **`compact()` ergonomics — top-level method.** `tree.schemas.compact()` for discoverability. The leak shape is documented in the README per §13.1's updated risk row.
 
 ### 13.3 Deferred to follow-ups
 

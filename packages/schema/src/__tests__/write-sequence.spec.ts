@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { signalTree } from '@signaltree/core';
 
-import { schema } from '../lib/schema';
+import { schemas } from '../lib/schema';
 import { controllableSchema } from './test-helpers';
 
-describe('schema — write-sequence guard', () => {
+describe('schemas — write-sequence guard', () => {
   it('drops stale verdicts when a newer write supersedes them', async () => {
     const ctrl = controllableSchema<string>();
     const tree = signalTree({ user: { email: '' } }).with(
-      schema({
+      schemas({
         schemas: { 'user.email': ctrl.schema },
         validateOnAttach: false,
       })
@@ -28,42 +28,42 @@ describe('schema — write-sequence guard', () => {
     // E is current (version 5), so its verdict applies.
     ctrl.resolveLatest('error-E');
     await Promise.resolve();
-    expect(tree.schema.errorsAt('user.email')()).toBe('error-E');
+    expect(tree.schemas.errorsAt('user.email')()).toBe('error-E');
 
     // D/C/B/A are stale and must be dropped — they should NOT change the error.
     ctrl.resolveLatest('error-D'); // resolves the latest still-pending = D
     await Promise.resolve();
-    expect(tree.schema.errorsAt('user.email')()).toBe('error-E'); // unchanged
+    expect(tree.schemas.errorsAt('user.email')()).toBe('error-E'); // unchanged
 
     ctrl.resolveLatest('error-C');
     ctrl.resolveLatest('error-B');
     ctrl.resolveLatest('error-A');
     await Promise.resolve();
-    expect(tree.schema.errorsAt('user.email')()).toBe('error-E'); // still unchanged
+    expect(tree.schemas.errorsAt('user.email')()).toBe('error-E'); // still unchanged
   });
 
   it('clears pending state when the in-flight (current) run settles', async () => {
     const ctrl = controllableSchema<string>();
     const tree = signalTree({ user: { name: '' } }).with(
-      schema({
+      schemas({
         schemas: { 'user.name': ctrl.schema },
         validateOnAttach: false,
       })
     );
 
     (tree as any).$.user.name.set('x');
-    expect(tree.schema.isPendingAt('user.name')()).toBe(true);
+    expect(tree.schemas.isPendingAt('user.name')()).toBe(true);
 
     ctrl.resolveLatest(null);
     await Promise.resolve();
-    expect(tree.schema.isPendingAt('user.name')()).toBe(false);
-    expect(tree.schema.errorsAt('user.name')()).toBeNull();
+    expect(tree.schemas.isPendingAt('user.name')()).toBe(false);
+    expect(tree.schemas.errorsAt('user.name')()).toBeNull();
   });
 
   it('orphaned (stale) runs do not flip the pending signal back to true', async () => {
     const ctrl = controllableSchema<string>();
     const tree = signalTree({ user: { name: '' } }).with(
-      schema({
+      schemas({
         schemas: { 'user.name': ctrl.schema },
         validateOnAttach: false,
       })
@@ -75,12 +75,12 @@ describe('schema — write-sequence guard', () => {
     // Resolve current (#2) first, then the orphan (#1).
     ctrl.resolveLatest('error-y');
     await Promise.resolve();
-    expect(tree.schema.isPendingAt('user.name')()).toBe(false);
+    expect(tree.schemas.isPendingAt('user.name')()).toBe(false);
 
     ctrl.resolveLatest('error-x'); // orphan settles
     await Promise.resolve();
-    expect(tree.schema.isPendingAt('user.name')()).toBe(false); // still false
-    expect(tree.schema.errorsAt('user.name')()).toBe('error-y'); // unchanged
+    expect(tree.schemas.isPendingAt('user.name')()).toBe(false); // still false
+    expect(tree.schemas.errorsAt('user.name')()).toBe('error-y'); // unchanged
   });
 
   // M6: explicit race coverage — write A is older but resolves SECOND;
@@ -89,7 +89,7 @@ describe('schema — write-sequence guard', () => {
   it('B-resolves-before-A race: applies latest version, discards older orphan (M6)', async () => {
     const ctrl = controllableSchema<string>();
     const tree = signalTree({ user: { email: '' } }).with(
-      schema({
+      schemas({
         schemas: { 'user.email': ctrl.schema },
         validateOnAttach: false,
       })
@@ -105,13 +105,13 @@ describe('schema — write-sequence guard', () => {
     // Resolve B first (most recent — current version).
     ctrl.resolveLatest('B-verdict');
     await Promise.resolve();
-    expect(tree.schema.errorsAt('user.email')()).toBe('B-verdict');
+    expect(tree.schemas.errorsAt('user.email')()).toBe('B-verdict');
 
     // Now resolve A (orphan — its version was bumped past it).
     ctrl.resolveLatest('A-verdict');
     await Promise.resolve();
 
     // B's verdict stands; A's orphaned verdict was discarded.
-    expect(tree.schema.errorsAt('user.email')()).toBe('B-verdict');
+    expect(tree.schemas.errorsAt('user.email')()).toBe('B-verdict');
   });
 });

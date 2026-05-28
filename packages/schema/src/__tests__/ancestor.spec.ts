@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { signalTree } from '@signaltree/core';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import { schema } from '../lib/schema';
+import { schemas } from '../lib/schema';
 import { syncSchema } from './test-helpers';
 
 /**
@@ -34,10 +34,10 @@ function userObjectSchema(): StandardSchemaV1<unknown, unknown> {
   };
 }
 
-describe('schema — ancestor schemas (D4 fixed precedence)', () => {
+describe('schemas — ancestor schemas (D4 fixed precedence)', () => {
   it('distributes issues to owned leaves under the ancestor', () => {
     const tree = signalTree({ user: { email: '', age: -1 } }).with(
-      schema({
+      schemas({
         schemas: { user: userObjectSchema() },
         validateOnAttach: false,
       })
@@ -45,33 +45,33 @@ describe('schema — ancestor schemas (D4 fixed precedence)', () => {
 
     // Trigger the ancestor schema by writing to one of its leaves.
     (tree as any).$.user.email.set('bad');
-    expect(tree.schema.errorsAt('user.email')()).toBe('Invalid email');
-    expect(tree.schema.errorsAt('user.age')()).toBe('Invalid age');
+    expect(tree.schemas.errorsAt('user.email')()).toBe('Invalid email');
+    expect(tree.schemas.errorsAt('user.age')()).toBe('Invalid age');
   });
 
   it('clears owned-leaf errors when ancestor schema passes', () => {
     const tree = signalTree({ user: { email: '', age: -1 } }).with(
-      schema({
+      schemas({
         schemas: { user: userObjectSchema() },
         validateOnAttach: false,
       })
     );
 
     (tree as any).$.user.email.set('bad');
-    expect(tree.schema.errorsAt('user.email')()).toBe('Invalid email');
+    expect(tree.schemas.errorsAt('user.email')()).toBe('Invalid email');
 
     (tree as any).$.user.email.set('a@b.com');
     (tree as any).$.user.age.set(25);
-    expect(tree.schema.errorsAt('user.email')()).toBeNull();
-    expect(tree.schema.errorsAt('user.age')()).toBeNull();
-    expect(tree.schema.isValid()).toBe(true);
+    expect(tree.schemas.errorsAt('user.email')()).toBeNull();
+    expect(tree.schemas.errorsAt('user.age')()).toBeNull();
+    expect(tree.schemas.isValid()).toBe(true);
   });
 
   it('D4: specific schema beats ancestor — ancestor verdict for that leaf is dropped', () => {
     // Both an ancestor schema (user) and a specific schema (user.email).
     // Specific owns email; ancestor only owns age (per D4 fixed precedence).
     const tree = signalTree({ user: { email: 'a@b.com', age: -1 } }).with(
-      schema({
+      schemas({
         schemas: {
           user: userObjectSchema(),
           'user.email': syncSchema(() => null), // always valid (specific)
@@ -83,10 +83,10 @@ describe('schema — ancestor schemas (D4 fixed precedence)', () => {
     // Even if ancestor schema would say email is invalid, the specific
     // schema owns user.email and says valid.
     (tree as any).$.user.email.set('also-bad');
-    expect(tree.schema.errorsAt('user.email')()).toBeNull();
+    expect(tree.schemas.errorsAt('user.email')()).toBeNull();
 
     // Ancestor still owns user.age though.
     (tree as any).$.user.age.set(-5);
-    expect(tree.schema.errorsAt('user.age')()).toBe('Invalid age');
+    expect(tree.schemas.errorsAt('user.age')()).toBe('Invalid age');
   });
 });

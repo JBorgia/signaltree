@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { signalTree } from '@signaltree/core';
 
-import { schema } from '../lib/schema';
+import { schemas } from '../lib/schema';
 import { syncSchema } from './test-helpers';
 
 /**
@@ -12,19 +12,19 @@ import { syncSchema } from './test-helpers';
  * on the NodeAccessor — the only way SignalTree supports key removal for
  * non-entityMap shapes.
  */
-describe('schema — compact() manual GC', () => {
+describe('schemas — compact() manual GC', () => {
   it('is a no-op when all bound paths still resolve', () => {
     const tree = signalTree({ user: { email: '' } }).with(
-      schema({
+      schemas({
         schemas: { 'user.email': syncSchema(() => null) },
         validateOnAttach: false,
       })
     );
 
     (tree as any).$.user.email.set('a@b.com');
-    const before = tree.schema.boundPaths();
-    tree.schema.compact();
-    const after = tree.schema.boundPaths();
+    const before = tree.schemas.boundPaths();
+    tree.schemas.compact();
+    const after = tree.schemas.boundPaths();
     expect(after).toEqual(before);
     expect(after).toContain('user.email');
   });
@@ -33,7 +33,7 @@ describe('schema — compact() manual GC', () => {
     const tree = signalTree({
       items: { a: { name: '' } } as Record<string, { name: string }>,
     }).with(
-      schema({
+      schemas({
         schemas: { 'items.*.name': syncSchema(() => null) },
         validateOnAttach: false,
       })
@@ -41,14 +41,14 @@ describe('schema — compact() manual GC', () => {
 
     // Bind the path by writing a NEW value (referentially different from initial).
     (tree as any).$.items.a.name.set('Alice');
-    expect(tree.schema.boundPaths()).toContain('items.a.name');
+    expect(tree.schemas.boundPaths()).toContain('items.a.name');
 
     // Manually delete the entity property from the items NodeAccessor.
     // This is the only way to remove a key from a non-entityMap subtree.
     delete (tree as any).$.items.a;
 
-    tree.schema.compact();
-    expect(tree.schema.boundPaths()).not.toContain('items.a.name');
+    tree.schemas.compact();
+    expect(tree.schemas.boundPaths()).not.toContain('items.a.name');
   });
 
   // H4: pathExists must do a structural-only check. A signal holding null/undefined
@@ -58,7 +58,7 @@ describe('schema — compact() manual GC', () => {
     const tree = signalTree({
       user: { email: 'a@b.com' as string | null },
     }).with(
-      schema({
+      schemas({
         schemas: { 'user.email': syncSchema(() => null) },
         validateOnAttach: false,
       })
@@ -66,22 +66,22 @@ describe('schema — compact() manual GC', () => {
 
     // Bind by writing a new value.
     (tree as any).$.user.email.set('user@example.com');
-    expect(tree.schema.boundPaths()).toContain('user.email');
+    expect(tree.schemas.boundPaths()).toContain('user.email');
 
     // Set the leaf signal to null (transient absence, not structural removal).
     // The key 'email' is still structurally present on $.user.
     (tree as any).$.user.email.set(null);
 
-    tree.schema.compact();
+    tree.schemas.compact();
     // Path is still bound — pathExists is a structural-only check.
-    expect(tree.schema.boundPaths()).toContain('user.email');
+    expect(tree.schemas.boundPaths()).toContain('user.email');
   });
 
   it('decrements invalidCount when an invalid path is evicted', () => {
     const tree = signalTree({
       items: { a: { name: 'Alice' } } as Record<string, { name: string }>,
     }).with(
-      schema({
+      schemas({
         schemas: {
           'items.*.name': syncSchema((v) =>
             typeof v === 'string' && v.length > 0 ? null : 'Required'
@@ -95,15 +95,15 @@ describe('schema — compact() manual GC', () => {
     // write an invalid value so the path holds an error.
     (tree as any).$.items.a.name.set('Bob');     // bind path
     (tree as any).$.items.a.name.set('');         // invalid → error
-    expect(tree.schema.errorsAt('items.a.name')()).toBe('Required');
-    expect(tree.schema.isValid()).toBe(false);
+    expect(tree.schemas.errorsAt('items.a.name')()).toBe('Required');
+    expect(tree.schemas.isValid()).toBe(false);
 
     // Remove + compact.
     delete (tree as any).$.items.a;
-    tree.schema.compact();
+    tree.schemas.compact();
 
     // The bound path is gone; isValid returns true again (no invalid paths).
-    expect(tree.schema.boundPaths()).not.toContain('items.a.name');
-    expect(tree.schema.isValid()).toBe(true);
+    expect(tree.schemas.boundPaths()).not.toContain('items.a.name');
+    expect(tree.schemas.isValid()).toBe(true);
   });
 });

@@ -4,11 +4,11 @@ Schema-driven validation for SignalTree. StandardSchema-compatible, async-first,
 
 ```ts
 import { signalTree } from '@signaltree/core';
-import { schema } from '@signaltree/schema';
+import { schemas } from '@signaltree/schema';
 import { z } from 'zod';
 
 const tree = signalTree({ user: { email: '', age: 0 } }).with(
-  schema({
+  schemas({
     schemas: {
       'user.email': z.string().email(),
       'user.age': z.number().int().min(0),
@@ -17,8 +17,8 @@ const tree = signalTree({ user: { email: '', age: 0 } }).with(
 );
 
 tree.$.user.email.set('not-an-email');
-tree.schema.errorsAt('user.email')(); // 'Invalid email'
-tree.schema.isValid(); // false
+tree.schemas.errorsAt('user.email')(); // 'Invalid email'
+tree.schemas.isValid(); // false
 ```
 
 ## Why this exists
@@ -44,9 +44,9 @@ pnpm add zod    # or valibot, arktype, etc.
 
 ## API
 
-### `schema(config)`
+### `schemas(config)`
 
-Returns an enhancer. Apply via `.with(schema({...}))`.
+Returns an enhancer. Apply via `.with(schemas({...}))`.
 
 ```ts
 interface SchemaConfig {
@@ -60,7 +60,7 @@ interface SchemaConfig {
 }
 ```
 
-### `tree.schema.*` (after `.with(schema({...}))`)
+### `tree.schemas.*` (after `.with(schemas({...}))`)
 
 | Member | Type | Purpose |
 |---|---|---|
@@ -83,7 +83,7 @@ Use wildcard schemas (`users.*.email`) to validate **individual entity fields**.
 
 ```ts
 // ✅ CORRECT — wildcard schemas validate each entity's fields
-schema({
+schemas({
   schemas: {
     'users.*.email': z.string().email(),
     'users.*.age': z.number().int().min(0),
@@ -93,7 +93,7 @@ schema({
 // ❌ AVOID — registering at the collection root receives the entityMap's
 // full marker value (an object with `all`/`ids`/`entities` internals),
 // not an array of users. Your Zod array schema will fail.
-schema({
+schemas({
   schemas: {
     users: z.array(userSchema),  // gets the entityMap value, not the user array
   },
@@ -107,7 +107,7 @@ Entity collections (markers like `entityMap()`) are normalized state, not arrays
 Use `*` segments to match entity collections:
 
 ```ts
-schema({
+schemas({
   schemas: {
     'user.email': z.string().email(),         // specific leaf
     'users.*.email': z.string().email(),      // wildcard — every users entity
@@ -126,7 +126,7 @@ schema({
 A schema registered at a non-leaf path (e.g., `user`) validates the whole subtree at that path. The schema runs against a fresh snapshot every time a covered leaf is written. Issues are distributed to the leaves they reference via `issue.path`.
 
 ```ts
-schema({
+schemas({
   schemas: {
     user: z.object({
       email: z.string().email(),
@@ -136,8 +136,8 @@ schema({
 });
 
 tree.$.user.email.set('bad');
-tree.schema.errorsAt('user.email')(); // 'Invalid email'
-tree.schema.errorsAt('user.age')();   // depends on current age value
+tree.schemas.errorsAt('user.email')(); // 'Invalid email'
+tree.schemas.errorsAt('user.age')();   // depends on current age value
 ```
 
 Issues from ancestor schemas use the leaf's nearest-match path via `issueToLeafPath`. The per-leaf staleness guard ensures slow ancestor runs can't clobber faster leaf writes that happened mid-flight.
@@ -155,7 +155,7 @@ Async schemas (Valibot, custom uniqueness checks, etc.) return Promises. Behavio
 `validate()` called repeatedly during typing piles up orphaned network requests that all run to completion before being discarded. If your schemas hit a server, debounce the caller:
 
 ```ts
-const debouncedValidate = debounce(() => tree.schema.validate(), 300);
+const debouncedValidate = debounce(() => tree.schemas.validate(), 300);
 ```
 
 ## Suppression — skip validation for replays
@@ -163,7 +163,7 @@ const debouncedValidate = debounce(() => tree.schema.validate(), 300);
 By default, validation runs on every write — including time-travel replays, hydration, and migrations. To suppress for specific intents/sources:
 
 ```ts
-schema({
+schemas({
   schemas: { ... },
   suppressIntents: ['hydrate', 'migration'],
   suppressSources: ['time-travel'],
@@ -178,11 +178,11 @@ The suppression reads the ambient write-context set via `withWriteContext()` fro
 
 The registry's `boundPathsSet` is bounded by **distinct leaf paths ever written that matched a schema**, not by current entity count. A long-lived `users.*.email` over a session that churns 10,000 user rows will retain 10,000 `PathState` entries.
 
-Call `tree.schema.compact()` periodically (e.g., on tab visibility change, or after entity-bulk-removal) to evict bound paths that no longer resolve in the tree.
+Call `tree.schemas.compact()` periodically (e.g., on tab visibility change, or after entity-bulk-removal) to evict bound paths that no longer resolve in the tree.
 
 ```ts
 // After removing entities:
-tree.schema.compact();
+tree.schemas.compact();
 ```
 
 ## Why no reject mode

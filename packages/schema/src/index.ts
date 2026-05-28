@@ -8,7 +8,7 @@
  * @packageDocumentation
  */
 
-export { schema } from './lib/schema';
+export { schemas } from './lib/schema';
 export type {
   SchemaConfig,
   SchemaMethods,

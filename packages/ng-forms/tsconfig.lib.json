@@ -10,6 +10,8 @@
     "paths": {
       "@signaltree/core": ["../../packages/core/src/index.ts"],
       "@signaltree/core/*": ["../../packages/core/src/*"],
+      "@signaltree/schema": ["../../packages/schema/src/index.ts"],
+      "@signaltree/schema/*": ["../../packages/schema/src/*"],
       "@signaltree/shared": ["../../packages/shared/src/index.ts"],
       "@signaltree/shared/*": ["../../packages/shared/src/*"]
     }

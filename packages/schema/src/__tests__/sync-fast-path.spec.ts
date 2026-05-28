@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { signalTree } from '@signaltree/core';
 
-import { schema } from '../lib/schema';
+import { schemas } from '../lib/schema';
 import { syncSchema } from './test-helpers';
 
-describe('schema — sync fast-path', () => {
+describe('schemas — sync fast-path', () => {
   it('applies sync schema verdict synchronously (no microtask wait)', () => {
     const tree = signalTree({ user: { email: '' } }).with(
-      schema({
+      schemas({
         schemas: {
           'user.email': syncSchema((v) =>
             typeof v === 'string' && v.includes('@') ? null : 'Invalid email'
@@ -19,13 +19,13 @@ describe('schema — sync fast-path', () => {
 
     (tree as any).$.user.email.set('bad');
     // Read in the same synchronous tick — verdict must be present.
-    expect(tree.schema.errorsAt('user.email')()).toBe('Invalid email');
-    expect(tree.schema.isValid()).toBe(false);
+    expect(tree.schemas.errorsAt('user.email')()).toBe('Invalid email');
+    expect(tree.schemas.isValid()).toBe(false);
   });
 
   it('validateOnAttach: true populates initial errors synchronously', () => {
     const tree = signalTree({ user: { email: 'bad' } }).with(
-      schema({
+      schemas({
         schemas: {
           'user.email': syncSchema((v) =>
             typeof v === 'string' && v.includes('@') ? null : 'Invalid email'
@@ -36,20 +36,20 @@ describe('schema — sync fast-path', () => {
     );
 
     // No await — verdict is in the synchronous attach pass.
-    expect(tree.schema.errors()['user.email']).toBe('Invalid email');
-    expect(tree.schema.isValid()).toBe(false);
+    expect(tree.schemas.errors()['user.email']).toBe('Invalid email');
+    expect(tree.schemas.isValid()).toBe(false);
   });
 
   it('does not mark sync schemas as pending', () => {
     const tree = signalTree({ a: '' }).with(
-      schema({
+      schemas({
         schemas: { a: syncSchema(() => 'err') },
         validateOnAttach: false,
       })
     );
 
     (tree as any).$.a.set('x');
-    expect(tree.schema.isPendingAt('a')()).toBe(false);
-    expect(tree.schema.pending()).toBe(false);
+    expect(tree.schemas.isPendingAt('a')()).toBe(false);
+    expect(tree.schemas.pending()).toBe(false);
   });
 });

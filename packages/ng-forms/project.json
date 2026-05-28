@@ -28,7 +28,8 @@
           "packages/ng-forms/src/history/history.ts",
           "packages/ng-forms/src/enhancer/form-bridge.ts",
           "packages/ng-forms/src/audit/index.ts",
-          "packages/ng-forms/src/wizard/wizard.ts"
+          "packages/ng-forms/src/wizard/wizard.ts",
+          "packages/ng-forms/src/signals/index.ts"
         ],
         "assets": [
           { "input": "packages/ng-forms", "glob": "README.md", "output": "." },

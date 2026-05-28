@@ -20,13 +20,13 @@ Peer: `@signaltree/core ^9`, `@standard-schema/spec ^1`, `@angular/core ^20 || ^
 
 ```ts
 import { signalTree } from '@signaltree/core';
-import { schema } from '@signaltree/schema';
+import { schemas } from '@signaltree/schema';
 import { z } from 'zod';
 
 interface State { user: { email: string; age: number } }
 
 const tree = signalTree<State>({ user: { email: '', age: 0 } }).with(
-  schema({
+  schemas({
     schemas: {
       'user.email': z.string().email(),
       'user.age': z.number().int().min(0),
@@ -35,8 +35,8 @@ const tree = signalTree<State>({ user: { email: '', age: 0 } }).with(
 );
 
 tree.$.user.email.set('not-an-email');
-tree.schema.errorsAt('user.email')();  // 'Invalid email'
-tree.schema.isValid();                  // false
+tree.schemas.errorsAt('user.email')();  // 'Invalid email'
+tree.schemas.isValid();                  // false
 ```
 
 ## Async schemas — pending state + write-sequence guard
@@ -53,13 +53,13 @@ const usernameSchema = z.string().refine(
 );
 
 const tree = signalTree({ user: { username: '' } }).with(
-  schema({ schemas: { 'user.username': usernameSchema } }),
+  schemas({ schemas: { 'user.username': usernameSchema } }),
 );
 
 tree.$.user.username.set('jonathan');
-tree.schema.isPendingAt('user.username')();  // true (in flight)
+tree.schemas.isPendingAt('user.username')();  // true (in flight)
 // On settle:
-tree.schema.errorsAt('user.username')();      // null or 'Username taken'
+tree.schemas.errorsAt('user.username')();      // null or 'Username taken'
 ```
 
 The write-sequence guard drops stale verdicts. If a newer write arrives mid-flight, the older schema run is orphaned — its promise still resolves (we can't abort it), but its verdict is discarded.
@@ -72,7 +72,7 @@ The write-sequence guard drops stale verdicts. If a newer write arrives mid-flig
 
 ```ts
 // ✅ CORRECT — validate each entity's fields via wildcards
-schema({
+schemas({
   schemas: {
     'users.*.email': z.string().email(),
     'users.*.age': z.number().int().min(0),
@@ -81,10 +81,10 @@ schema({
 });
 
 tree.$.users.u42.email.set('bad');
-tree.schema.errorsAt('users.u42.email')();  // 'Invalid email'
+tree.schemas.errorsAt('users.u42.email')();  // 'Invalid email'
 
 // ❌ AVOID — registering at the collection root
-schema({
+schemas({
   schemas: { users: z.array(userSchema) },  // receives entityMap marker, not an array
 });
 ```
@@ -102,12 +102,12 @@ const userSchema = z.object({
 });
 
 const tree = signalTree({ user: { email: '', age: -1 } }).with(
-  schema({ schemas: { user: userSchema } }),
+  schemas({ schemas: { user: userSchema } }),
 );
 
 tree.$.user.email.set('bad');
-tree.schema.errorsAt('user.email')();  // 'Invalid email'
-tree.schema.errorsAt('user.age')();    // 'Invalid age' (initial state)
+tree.schemas.errorsAt('user.email')();  // 'Invalid email'
+tree.schemas.errorsAt('user.age')();    // 'Invalid age' (initial state)
 ```
 
 The ancestor schema validates the whole subtree at the registered path. Issues are distributed to the leaves via `issue.path`.
@@ -115,7 +115,7 @@ The ancestor schema validates the whole subtree at the registered path. Issues a
 ## Precedence (D4) — specific > wildcard > ancestor
 
 ```ts
-schema({
+schemas({
   schemas: {
     user: userSchema,                          // ancestor
     'users.*.email': z.string().email(),       // wildcard
@@ -136,7 +136,7 @@ A write to `user.age` runs the ancestor schema (no more-specific match).
 import { withWriteContext } from '@signaltree/core';
 
 const tree = signalTree(initialState).with(
-  schema({
+  schemas({
     schemas: { 'user.email': z.string().email() },
     suppressIntents: ['hydrate', 'migration'],
     suppressSources: ['time-travel'],
@@ -153,10 +153,10 @@ withWriteContext({ intent: 'hydrate' }, () => {
 ## Imperative — `validate()`, `validatePath()`
 
 ```ts
-const isValid = await tree.schema.validate();
+const isValid = await tree.schemas.validate();
 // Re-runs every registered schema; resolves to current isValid() after all settle.
 
-await tree.schema.validatePath('user.email');
+await tree.schemas.validatePath('user.email');
 // Re-runs schemas bound to one leaf.
 ```
 
@@ -166,16 +166,16 @@ Both **supersede** in-flight runs by bumping version. Orphaned promises still ru
 
 ```ts
 // Per-path
-tree.schema.errorsAt('user.email')();  // string | null
-tree.schema.isValidAt('user.email')(); // boolean
-tree.schema.isPendingAt('user.email')(); // boolean (async runs only)
+tree.schemas.errorsAt('user.email')();  // string | null
+tree.schemas.isValidAt('user.email')(); // boolean
+tree.schemas.isPendingAt('user.email')(); // boolean (async runs only)
 
 // Aggregate
-tree.schema.isValid();           // O(1) — counter-backed
-tree.schema.pending();           // any leaf in flight?
-tree.schema.pendingPaths();      // readonly string[]
-tree.schema.errors();            // Record<path, string | null>
-tree.schema.errorList();         // readonly string[] (non-null only)
+tree.schemas.isValid();           // O(1) — counter-backed
+tree.schemas.pending();           // any leaf in flight?
+tree.schemas.pendingPaths();      // readonly string[]
+tree.schemas.errors();            // Record<path, string | null>
+tree.schemas.errorList();         // readonly string[] (non-null only)
 ```
 
 `isValid()` is O(1) per read — backed by an invalid-count counter maintained inside the verdict applier. Safe to use in button-disabled bindings without performance concern.
@@ -186,7 +186,7 @@ The registry retains `PathState` for every leaf path that's ever been written an
 
 ```ts
 // After bulk-removing entities:
-tree.schema.compact();
+tree.schemas.compact();
 ```
 
 `compact()` walks bound paths and evicts any that no longer resolve in the current tree.
@@ -207,8 +207,8 @@ Full design in [docs/architecture/validation-enhancer-plan.md](../../../docs/arc
 
 ## Common pitfalls
 
-1. **Importing `validation()` instead of `schema()`** — the enhancer factory is `schema()`. (`validation` was the working-name during planning.)
-2. **Reading `tree.validation.*`** — namespace is `tree.schema.*`.
+1. **Importing `validation()` instead of `schemas()`** — the enhancer factory is `schemas()`. (`validation` was the working-name during planning.)
+2. **Reading `tree.validation.*`** — namespace is `tree.schemas.*`.
 3. **Expecting reject mode** — doesn't exist. The enhancer reports; it doesn't block.
 4. **Forgetting `compact()` in entity-churning sessions** — bounded by distinct paths written, not current entity count.
 5. **Not debouncing `validate()` with async schemas** — orphaned network requests pile up.

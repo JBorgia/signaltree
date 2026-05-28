@@ -76,7 +76,7 @@ export interface SchemaConfig {
  * Methods exposed on the tree by the `schema()` enhancer.
  */
 export interface SchemaMethods {
-  schema: {
+  schemas: {
     // --- Settled state ---
 
     /** Path → message of last settled run; `null` if valid. */
@@ -145,21 +145,25 @@ export interface SchemaMethods {
      */
     compact(): void;
 
-    // --- Bridge integration (consumed by signalFormBridge in @signaltree/ng-forms) ---
+    // --- Bridge integration ---
 
     /**
      * Resolve the schema bound to a leaf path (after wildcard expansion).
      * Returns `undefined` if no schema claims this leaf.
      *
-     * @internal — Intended for bridges, not application code.
+     * Used by `@signaltree/ng-forms/signals` to wire schemas into Angular
+     * Signal Forms via `validateStandardSchema`. Available to other bridge
+     * authors who need to introspect the registry.
+     *
+     * @public — Bridge-author API.
      */
     schemaFor(leafPath: string): StandardSchemaV1 | undefined;
 
     /**
-     * Reactive list of all currently-bound leaf paths. A `Signal` so bridges
-     * can subscribe and rebind when wildcards expand or paths evict.
+     * Reactive list of all currently-bound leaf paths. Bridges subscribe to
+     * this to rebind when wildcards expand or paths evict.
      *
-     * @internal — Intended for bridges, not application code.
+     * @public — Bridge-author API.
      */
     readonly boundPaths: Signal<readonly string[]>;
   };
