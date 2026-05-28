@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "../..",
+    "outDir": "../../dist/packages/schema/dist",
+    "declarationDir": "../../dist/packages/schema/dist",
+    "declaration": true,
+    "declarationMap": true,
+    "inlineSources": false,
+    "module": "ESNext",
+    "types": ["node"],
+    "paths": {
+      "@signaltree/core": ["packages/core/src/index.ts"],
+      "@signaltree/core/*": ["packages/core/src/*"]
+    }
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": [
+    "vitest.config.ts",
+    "src/**/*.spec.ts",
+    "src/**/*.test.ts",
+    "tests/**/*.ts"
+  ]
+}

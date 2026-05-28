@@ -192,6 +192,7 @@ store.registerCleanup(() => ws.close());
 | `@signaltree/events`          | Event-oriented helpers for reacting to state changes                         |
 | `@signaltree/realtime`        | Keep entity maps in sync with live data sources (WebSocket, SSE)             |
 | `@signaltree/guardrails`      | Dev-only performance budgets, hot-path detection, and policy enforcement     |
+| `@signaltree/schema`          | Schema-driven validation via StandardSchema (Zod, Valibot, ArkType, …)       |
 
 ## Real-World Migration (Case Study)
 

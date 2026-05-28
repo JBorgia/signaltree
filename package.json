@@ -186,6 +186,7 @@
     "@signaltree/enterprise": "workspace:*",
     "@signaltree/ng-forms": "workspace:*",
     "@signaltree/shared": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
     "@swc-node/register": "~1.9.2",
     "@swc/core": "~1.15.17",
     "@swc/helpers": "~0.5.17",

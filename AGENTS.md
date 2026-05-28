@@ -49,6 +49,7 @@ pnpm nx build demo --configuration=production
 | `callable-syntax` | 5 KB     | 2 KB        |
 | `enterprise`      | 8 KB     | 3 KB        |
 | `guardrails`      | 12 KB    | 4 KB        |
+| `schema`          | 16 KB    | 6 KB        |
 
 Check with `npm run analyze:bundle`.
 

@@ -1,0 +1,65 @@
+{
+  "name": "@signaltree/schema",
+  "version": "9.2.2",
+  "description": "Schema-driven validation for SignalTree. StandardSchema-compatible, async-first, observe-only.",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/**/*.js",
+    "src/**/*.d.ts",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "nx build schema",
+    "test": "nx test schema",
+    "lint": "nx lint schema",
+    "test:watch": "nx test schema --watch",
+    "test:coverage": "nx test schema --coverage",
+    "type-check": "tsc --project tsconfig.lib.json --noEmit"
+  },
+  "peerDependencies": {
+    "@angular/core": "^20.0.0 || ^21.0.0",
+    "@signaltree/core": "^9.0.1",
+    "@standard-schema/spec": "^1.0.0",
+    "tslib": "^2.0.0"
+  },
+  "peerDependenciesMeta": {},
+  "devDependencies": {
+    "@signaltree/core": "workspace:*",
+    "@standard-schema/spec": "^1.0.0"
+  },
+  "keywords": [
+    "signaltree",
+    "state-management",
+    "schema",
+    "validation",
+    "standard-schema",
+    "zod",
+    "valibot",
+    "arktype",
+    "angular",
+    "signals"
+  ],
+  "author": "SignalTree Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/signaltree/signaltree.git",
+    "directory": "packages/schema"
+  }
+}
