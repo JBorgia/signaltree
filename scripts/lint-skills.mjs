@@ -86,6 +86,7 @@ const SIGNALTREE_PATH_MAP = {
   '@signaltree/realtime/supabase': [
     'dist/packages/realtime/src/supabase/index.d.ts',
   ],
+  '@signaltree/schema': ['dist/packages/schema/src/index.d.ts'],
 };
 
 const color = {
