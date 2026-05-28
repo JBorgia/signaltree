@@ -30,10 +30,14 @@
     "@angular/forms": "^20.0.0 || ^21.0.0 || ^22.0.0",
     "@signaltree/core": "workspace:*",
     "@signaltree/schema": "workspace:*",
+    "@standard-schema/spec": "^1.0.0",
     "rxjs": "^7.0.0"
   },
   "peerDependenciesMeta": {
     "@signaltree/schema": {
+      "optional": true
+    },
+    "@standard-schema/spec": {
       "optional": true
     }
   },
