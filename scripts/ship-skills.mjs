@@ -42,6 +42,7 @@ const PACKAGES = [
   { name: 'guardrails', nested: 'guardrails' },
   { name: 'events', nested: 'events' },
   { name: 'realtime', nested: 'realtime' },
+  { name: 'schema', nested: 'schema' },
 ];
 
 const color = {

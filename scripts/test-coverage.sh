@@ -44,6 +44,7 @@ PACKAGES=(
     "enterprise"
     "callable-syntax"
     "guardrails"
+    "schema"
 )
 
 print_step "Starting comprehensive test coverage analysis..."
