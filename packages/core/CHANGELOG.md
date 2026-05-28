@@ -1,6 +1,6 @@
 # @signaltree/core Changelog
 
-## 9.2.3 (2026-05-28)
+## 9.3.0 (2026-05-28)
 
 ### Public API additions (enhancer infrastructure)
 

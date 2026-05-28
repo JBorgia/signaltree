@@ -21,6 +21,7 @@ const PUBLISHED_PACKAGES = [
   'callable-syntax',
   'enterprise',
   'guardrails',
+  'schema',
 ];
 
 const PACKAGES = PUBLISHED_PACKAGES;

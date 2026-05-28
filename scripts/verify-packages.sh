@@ -41,6 +41,7 @@ PACKAGES=(
     "guardrails"
     "events"
     "realtime"
+    "schema"
 )
 
 ISSUES_FOUND=0

@@ -20,6 +20,7 @@ NX_PACKAGES=(
     "realtime"
     "enterprise"
     "ng-forms"
+    "schema"
 )
 ERRORS=0
 
