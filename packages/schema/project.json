@@ -21,6 +21,7 @@
         "tsConfig": "packages/schema/tsconfig.lib.prod.json",
         "outputPath": "dist/packages/schema",
         "format": ["esm"],
+        "rollupConfig": "packages/schema/rollup.config.mjs",
         "assets": [
           {
             "input": "packages/schema",
