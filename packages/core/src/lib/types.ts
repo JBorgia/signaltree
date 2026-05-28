@@ -5,6 +5,34 @@ import { StatusMarker, StatusSignal } from './markers/status';
 import { StoredMarker, StoredSignal } from './markers/stored';
 import { SecurityValidatorConfig } from './security/security-validator';
 
+/**
+ * Metadata describing the intent and source of a tree update.
+ *
+ * Set ambient context for enhancers using `withWriteContext({...}, () => tree.$.x.set(y))`
+ * from `@signaltree/core`. Enhancers read the active context via `getActiveWriteContext()`.
+ *
+ * Consumed by `@signaltree/guardrails` (intent-aware suppression, audit trail) and
+ * `@signaltree/validation` (suppress validation on time-travel/hydration replays).
+ *
+ * NOTE: `@signaltree/validation` reads ONLY `intent` and `source`. Custom keys via
+ * the open index signature are guardrails-private — do not expect other enhancers
+ * to honor them.
+ */
+export interface UpdateMetadata {
+  /** Intent of the update (closed union — adding new intents is a core change). */
+  intent?: 'hydrate' | 'reset' | 'bulk' | 'migration' | 'user' | 'system';
+  /** Source of the update (closed union). */
+  source?: 'serialization' | 'time-travel' | 'devtools' | 'user' | 'system';
+  /** Suppress guardrails for this update. */
+  suppressGuardrails?: boolean;
+  /** Optional correlation ID for related updates. */
+  correlationId?: string;
+  /** Optional timestamp. */
+  timestamp?: number;
+  /** Open extension for guardrails' historical custom-key shape. */
+  [key: string]: unknown;
+}
+
 // Time travel enhancer configuration (canonical)
 export interface TimeTravelConfig {
   /** Enable/disable time travel (default: true) */

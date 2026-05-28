@@ -1,3 +1,6 @@
+import type { UpdateMetadata } from '../types';
+import { getActiveWriteContext } from '../write-context';
+
 /**
  * Recursively walk a NodeAccessor tree and wrap every plain writable leaf
  * signal's `.set()` / `.update()` so callers can observe direct leaf writes.
@@ -8,6 +11,11 @@
  * never produces a PathNotifier event by itself. Enhancers that need to
  * observe every mutation (DevTools, time-travel, etc.) must intercept those
  * leaf writes themselves — this helper centralizes that traversal.
+ *
+ * The `onWrite` callback receives an optional `meta: UpdateMetadata` captured
+ * synchronously from the active `withWriteContext` frame (if any). Existing
+ * 3-arg callbacks `(path, next, prev) => void` continue to work since `meta`
+ * is the trailing optional parameter.
  *
  * Skips:
  *   - Entity-collection signals (have `add`/`remove` and already notify).
@@ -21,7 +29,12 @@
  */
 export function interceptLeafSignals(
   root: unknown,
-  onWrite: (path: string, next: unknown, prev: unknown) => void,
+  onWrite: (
+    path: string,
+    next: unknown,
+    prev: unknown,
+    meta?: UpdateMetadata
+  ) => void,
   options: { maxDepth?: number } = {}
 ): () => void {
   const restorers: Array<() => void> = [];
@@ -81,14 +94,14 @@ export function interceptLeafSignals(
           const prev = original();
           originalSet(value);
           const next = original();
-          if (next !== prev) onWrite(childPath, next, prev);
+          if (next !== prev) onWrite(childPath, next, prev, getActiveWriteContext());
         };
 
         original.update = (updater: (v: unknown) => unknown) => {
           const prev = original();
           originalUpdate(updater);
           const next = original();
-          if (next !== prev) onWrite(childPath, next, prev);
+          if (next !== prev) onWrite(childPath, next, prev, getActiveWriteContext());
         };
         continue;
       }

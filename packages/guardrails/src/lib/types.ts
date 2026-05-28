@@ -3,7 +3,18 @@
  * @packageDocumentation
  */
 
-import type { ISignalTree } from '@signaltree/core';
+import type { ISignalTree, UpdateMetadata } from '@signaltree/core';
+
+/**
+ * Re-export of `UpdateMetadata` lifted to `@signaltree/core` in v9.3.
+ *
+ * NEW CODE: import directly from `@signaltree/core`. This re-export exists for
+ * backwards compatibility with consumers that imported it from
+ * `@signaltree/guardrails`. It will be removed in a future minor release.
+ *
+ * @deprecated Import `UpdateMetadata` from `@signaltree/core` instead.
+ */
+export type { UpdateMetadata };
 
 export interface GuardrailsConfig<T = Record<string, unknown>> {
   /** Behavior mode: warn (console), throw (errors), or silent (collect only) */
@@ -110,21 +121,6 @@ export interface GuardrailsConfig<T = Record<string, unknown>> {
 
   /** Tree identifier for multi-tree scenarios */
   treeId?: string;
-}
-
-export interface UpdateMetadata {
-  /** Intent of the update */
-  intent?: 'hydrate' | 'reset' | 'bulk' | 'migration' | 'user' | 'system';
-  /** Source of the update */
-  source?: 'serialization' | 'time-travel' | 'devtools' | 'user' | 'system';
-  /** Suppress guardrails for this update */
-  suppressGuardrails?: boolean;
-  /** Timestamp */
-  timestamp?: number;
-  /** Correlation ID for related updates */
-  correlationId?: string;
-  /** Additional metadata */
-  [key: string]: unknown;
 }
 
 export interface GuardrailRule<T = Record<string, unknown>> {

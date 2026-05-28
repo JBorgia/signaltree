@@ -4,6 +4,7 @@ import { copyTreeProperties } from '../utils/copy-tree-properties';
 import { applyState, snapshotState } from '../../lib/utils';
 import { interceptLeafSignals } from '../../lib/internals/intercept-leaf-signals';
 import { getPathNotifier } from '../../lib/path-notifier';
+import { withWriteContext } from '../../lib/write-context';
 
 /**
  * v6 DevTools Enhancer
@@ -1408,11 +1409,18 @@ export function devTools(
       if (state === undefined || state === null) return;
       isApplyingExternalState = true;
       try {
-        if ('$' in tree) {
-          applyState((tree as ISignalTree<T>).$ as any, state as T);
-        } else {
-          originalTreeCall(state as T);
-        }
+        // Tag every leaf write performed during this replay with
+        // `source: 'time-travel'`. Enhancers (validation, guardrails) read
+        // this via `getActiveWriteContext()` and can suppress side effects
+        // for replays. The context is synchronous; applyState's recursive
+        // calls inherit it through the synchronous call stack.
+        withWriteContext({ intent: 'system', source: 'time-travel' }, () => {
+          if ('$' in tree) {
+            applyState((tree as ISignalTree<T>).$ as any, state as T);
+          } else {
+            originalTreeCall(state as T);
+          }
+        });
       } finally {
         isApplyingExternalState = false;
         lastSnapshot = readSnapshot();

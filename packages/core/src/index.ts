@@ -62,7 +62,25 @@ export type {
 
   // Effects
   EffectsMethods,
+
+  // Update metadata (lifted from guardrails in v9.3 for cross-enhancer use)
+  UpdateMetadata,
 } from './lib/types';
+
+// ============================================
+// WRITE CONTEXT (enhancer plumbing, ambient channel for UpdateMetadata)
+// ============================================
+// Synchronous ambient channel for tagging writes with UpdateMetadata.
+// Used by enhancers (guardrails, validation, time-travel/devtools replay) to
+// observe and react to write intent without changing Angular's WritableSignal API.
+export { withWriteContext, getActiveWriteContext } from './lib/write-context';
+
+// ============================================
+// LEAF SIGNAL INTERCEPTION (enhancer plumbing)
+// ============================================
+// Used by enhancers that need to observe every leaf write (devtools,
+// time-travel, validation). Application code should not use this directly.
+export { interceptLeafSignals } from './lib/internals/intercept-leaf-signals';
 
 // Entity helpers (runtime)
 export { entityMap } from './lib/types';

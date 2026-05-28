@@ -1,4 +1,4 @@
-import { getPathNotifier } from '@signaltree/core';
+import { getPathNotifier, getActiveWriteContext } from '@signaltree/core';
 import { deepEqual } from '@signaltree/shared';
 
 /**
@@ -928,6 +928,15 @@ function createAPI<T>(
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function extractMetadata(payload: unknown): UpdateMetadata | undefined {
+  // Prefer ambient context set via `withWriteContext()` from @signaltree/core.
+  // This is the forward path: enhancers and replay sites (devtools time-travel,
+  // core time-travel) tag writes through the context channel rather than
+  // shoving metadata into the payload.
+  const context = getActiveWriteContext();
+  if (context) return context;
+
+  // Legacy fallback: payload-shape sniff for callers that haven't migrated
+  // to withWriteContext. Looks for a `metadata` property on the payload.
   if (!isObjectLike(payload)) return undefined;
   const candidate = (payload as Record<string, unknown>)['metadata'];
   return isObjectLike(candidate) ? (candidate as UpdateMetadata) : undefined;

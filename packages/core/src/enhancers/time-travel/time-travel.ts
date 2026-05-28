@@ -1,6 +1,7 @@
 import { snapshotState } from '../../lib/utils';
 import { interceptLeafSignals } from '../../lib/internals/intercept-leaf-signals';
 import { getPathNotifier } from '../../lib/path-notifier';
+import { withWriteContext } from '../../lib/write-context';
 import { deepClone, deepEqual } from './utils';
 
 import type {
@@ -190,12 +191,17 @@ class TimeTravelManager<T> {
    * Restore state without triggering time travel middleware
    */
   private restoreState(state: T): void {
-    if (this.restoreStateFn) {
-      this.restoreStateFn(state);
-    } else {
-      // Fallback if no restoration function provided
-      this.tree(state);
-    }
+    // Tag every leaf write performed during this undo/redo/jump with
+    // `source: 'time-travel'`. Enhancers (validation, guardrails) read this
+    // via `getActiveWriteContext()` and can suppress side effects for replays.
+    withWriteContext({ intent: 'system', source: 'time-travel' }, () => {
+      if (this.restoreStateFn) {
+        this.restoreStateFn(state);
+      } else {
+        // Fallback if no restoration function provided
+        this.tree(state);
+      }
+    });
   }
 }
 
