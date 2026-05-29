@@ -142,7 +142,11 @@ mkdirSync(join(RESULTS_DIR, 'raw'), { recursive: true });
 mkdirSync(join(RESULTS_DIR, 'compile'), { recursive: true });
 mkdirSync(join(RESULTS_DIR, 'behavior'), { recursive: true });
 
-// Load adapters
+// Load adapters. Strategy:
+// - If OPENROUTER_API_KEY is set, ALL agents are routed through the single
+//   OpenRouter adapter (which maps the agent alias to its OR model slug).
+// - Otherwise, fall back to per-provider adapters (which require their own
+//   API keys: ANTHROPIC_API_KEY, OPENAI_API_KEY, GOOGLE_API_KEY, etc.).
 async function loadAdapter(name) {
   try {
     const mod = await import(`./adapters/${name}.mjs`);
@@ -153,9 +157,23 @@ async function loadAdapter(name) {
   }
 }
 
+const useOpenRouter = !!process.env.OPENROUTER_API_KEY && !process.env.FORCE_DIRECT_ADAPTERS;
 const adapters = {};
-for (const agent of agents) {
-  adapters[agent] = await loadAdapter(agent);
+if (useOpenRouter) {
+  console.log('[runner] Using OpenRouter for all agents (set FORCE_DIRECT_ADAPTERS=1 to use per-provider adapters instead).');
+  const orAdapter = await loadAdapter('openrouter');
+  if (!orAdapter) {
+    console.error('[runner] OpenRouter adapter failed to load — aborting');
+    process.exit(1);
+  }
+  for (const agent of agents) {
+    // Wrap so the runner's per-cell call site can pass agent alias to OR adapter.
+    adapters[agent] = (prompt, ctx) => orAdapter(prompt, { ...ctx, agent });
+  }
+} else {
+  for (const agent of agents) {
+    adapters[agent] = await loadAdapter(agent);
+  }
 }
 
 // Main matrix

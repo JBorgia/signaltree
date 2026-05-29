@@ -1,3 +1,35 @@
+## 10.1.0
+
+### ✨ New: `createTreeEditSession(source)` — path-bound draft sessions
+
+The path-bound overload that v10 docs corrected (and deferred). Bind an edit session to a writable tree path or signal; the session holds a draft separate from the source. `applyChanges()` edits the draft, `undo()`/`redo()` navigate history, `commit()` writes back, `cancel()` discards.
+
+```typescript
+import { createTreeEditSession } from '@signaltree/core/edit-session';
+
+const session = createTreeEditSession(tree.$.user.profile);
+
+session.applyChanges((p) => ({ ...p, name: 'V2' }));
+session.modified();   // current draft
+session.isDirty();    // true
+session.undo();
+session.commit();     // tree.$.user.profile === draft
+// or:
+session.cancel();     // discard draft, re-sync from source
+```
+
+Accepts any "callable accessor with `.set()`" — `WritableSignal<T>`, SignalTree branch accessors (`tree.$.user.profile`), or leaf signals (`tree.$.user.profile.name`).
+
+### 🤖 OpenRouter unified adapter for the AI-codegen benchmark
+
+The v10 benchmark scaffolding shipped four separate adapters (Claude, OpenAI, Gemini, Perplexity) each requiring its own API key. v10.1 adds a fifth adapter — `openrouter.mjs` — that proxies to all major providers via one key and one endpoint. When `OPENROUTER_API_KEY` is set, the runner uses OpenRouter for every agent automatically. Per-provider adapters remain available as fallback (set `FORCE_DIRECT_ADAPTERS=1` to opt in).
+
+This makes the benchmark substantially easier to run — one OR key from https://openrouter.ai/keys gets you Claude + GPT-4o + Gemini + Perplexity + Llama.
+
+### Spec coverage
+
+`packages/core/src/lib/edit-session.spec.ts` — 9 cases covering `createEditSession` and `createTreeEditSession` (initialization, applyChanges, commit, cancel, pullFromSource, undo/redo, primitive sources, error handling).
+
 ## 10.0.0
 
 ### 🎯 The DX-and-AI-discoverability release

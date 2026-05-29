@@ -393,7 +393,29 @@ session.setOriginal(value); // commit pattern: set new original, clear history
 // effect(() => { if (session.isDirty()) tree.$.user.profile.set(session.modified()); });
 ```
 
-Edit sessions are NOT a tree-path-bound primitive — they wrap any value and expose undo/redo. A path-bound overload (`createEditSession(tree, pathSelector)`) is planned for v10.1.
+For draft-and-cancel workflows that pipe back to a tree path, use `createTreeEditSession` (v10.1+):
+
+```typescript
+import { createTreeEditSession } from '@signaltree/core/edit-session';
+
+// Pass a writable signal or a SignalTree branch/leaf accessor:
+const session = createTreeEditSession(tree.$.user.profile);
+
+session.applyChanges((p) => ({ ...p, name: 'New Name' }));
+session.modified();   // current draft (untouched source)
+session.isDirty();    // true
+session.undo();       // navigate draft history
+session.redo();
+
+// User clicks Save:
+session.commit();     // writes draft back to tree.$.user.profile
+
+// User clicks Cancel:
+session.cancel();     // discards draft, re-syncs from source, clears history
+
+// External change updated the source? Re-baseline the dirty comparison:
+session.pullFromSource();
+```
 
 ---
 
