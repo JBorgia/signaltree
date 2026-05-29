@@ -74,6 +74,12 @@ export default async function openrouterAdapter(
             'no prose, no markdown fences, no explanations. Use the library named in ' +
             'the prompt; do not substitute.',
         },
+        // Optional retrieval-priming context. Set PRIMING_CONTEXT_FILE to a file
+        // path (e.g. apps/demo/public/llms.txt) to inject its contents as an
+        // additional system message. This measures the AI-discoverability surface.
+        ...(globalThis.__primingContextCache
+          ? [{ role: 'system', content: globalThis.__primingContextCache }]
+          : []),
         { role: 'user', content: promptText },
       ],
       temperature: 0,

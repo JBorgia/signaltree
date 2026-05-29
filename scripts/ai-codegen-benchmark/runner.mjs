@@ -111,7 +111,28 @@ const { values: args } = parseArgs({
 
 const SELF_DIR = fileURLToPath(new URL('.', import.meta.url));
 const PROMPTS_DIR = join(SELF_DIR, 'prompts');
-const RESULTS_DIR = args.out ?? join(SELF_DIR, 'results', new Date().toISOString().replace(/[:.]/g, '-'));
+
+// Optional retrieval priming: read a file (typically llms.txt) and inject
+// its contents as an additional system message in every call. This is how
+// we measure the AI-discoverability surface's impact on codegen accuracy.
+if (process.env.PRIMING_CONTEXT_FILE) {
+  globalThis.__primingContextCache = readFileSync(
+    process.env.PRIMING_CONTEXT_FILE,
+    'utf8'
+  );
+  console.log(
+    `[runner] Priming with: ${process.env.PRIMING_CONTEXT_FILE} (${globalThis.__primingContextCache.length} chars)`
+  );
+}
+
+const RESULTS_DIR =
+  args.out ??
+  join(
+    SELF_DIR,
+    'results',
+    (globalThis.__primingContextCache ? 'primed-' : 'cold-') +
+      new Date().toISOString().replace(/[:.]/g, '-')
+  );
 
 const ALL_LIBRARIES = ['signaltree', 'ngrx-signals', 'ngrx-store', 'akita', 'elf'];
 const ALL_AGENTS = ['claude', 'openai', 'gemini', 'perplexity']; // copilot has no public API
