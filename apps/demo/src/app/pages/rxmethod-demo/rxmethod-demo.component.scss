@@ -195,26 +195,37 @@
   li {
     margin-bottom: 0.4rem;
   }
+}
 
-  pre {
-    background: #1f2937;
-    color: #e5e7eb;
-    border-radius: 6px;
-    padding: 0.85rem 1rem;
-    font-size: 0.82rem;
-    overflow-x: auto;
-    margin: 0 0 0.75rem 0;
-    line-height: 1.5;
-  }
+// Code blocks (pre > code): dark theme, no inline-code box-painting.
+pre {
+  background: #1f2937;
+  color: #e5e7eb;
+  border-radius: 6px;
+  padding: 0.85rem 1rem;
+  font-size: 0.82rem;
+  overflow-x: auto;
+  margin: 0 0 0.75rem 0;
+  line-height: 1.5;
+  font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
 
   code {
-    font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+    // Strip inline-code styling when nested inside a pre block.
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    border-radius: 0;
+    font-size: inherit;
+    font-family: inherit;
   }
 }
 
-code {
+// Inline code only (NOT inside a pre block).
+:not(pre) > code {
   background: #f0f0f3;
+  color: #1f2937;
   padding: 0.1rem 0.35rem;
   border-radius: 3px;
   font-size: 0.88em;
+  font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
 }

@@ -160,6 +160,13 @@ export class NavigationComponent {
       category: 'examples',
     },
     {
+      id: 'rxmethod',
+      title: 'rxMethod (RxJS interop)',
+      description: 'Async pipelines with auto-cleanup — NgRx-symmetric ergonomics',
+      route: '/rxmethod',
+      category: 'examples',
+    },
+    {
       id: 'devtools',
       title: 'DevTools',
       description: 'Redux DevTools integration',

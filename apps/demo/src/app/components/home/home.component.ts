@@ -155,6 +155,13 @@ export class HomeComponent {
 
   readonly advancedRoutes: HomeLinkCard[] = [
     {
+      title: 'rxMethod (RxJS interop) — new in 9.4',
+      description:
+        'Encapsulated async pipelines with auto-cleanup. NgRx-symmetric ergonomics in `@signaltree/core/rxjs-interop`.',
+      route: '/rxmethod',
+      cta: 'Try rxMethod →',
+    },
+    {
       title: 'Persistence & Serialization',
       description:
         'Store and restore state deliberately with local persistence and import/export support.',
