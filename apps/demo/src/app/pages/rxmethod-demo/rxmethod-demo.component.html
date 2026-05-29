@@ -1,6 +1,16 @@
 <div class="page">
+  <aside class="alias-banner">
+    <strong>Migration alias.</strong> The canonical SignalTree async story is
+    the <a routerLink="/async">asyncSource &amp; asyncQuery markers</a> — they
+    fit the marker family (<code>entityMap</code>, <code>status</code>,
+    <code>stored</code>, <code>form</code>) and eliminate the manual
+    <code>tap()</code> / <code>setLoading()</code> wiring this page
+    demonstrates. <code>rxMethod</code> is preserved here for 1:1
+    find-and-replace migration from <code>&#64;ngrx/signals</code>.
+  </aside>
+
   <header class="hero">
-    <h1>rxMethod</h1>
+    <h1>rxMethod (migration alias)</h1>
     <p class="lead">
       Encapsulated async pipelines for SignalTree — direct equivalent of NgRx's
       <code>rxMethod</code>. Same call shape, same input flexibility (raw value,

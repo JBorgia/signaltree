@@ -191,6 +191,74 @@ const tree = signalTree({
 
 See [`../ng-forms/SKILL.md`](../ng-forms/SKILL.md) for full form guidance.
 
+### `asyncSource<T>(config)`
+
+Load-and-expose async primitive. Materializes into an accessor with `data`, `loading`, `error` signals plus `refresh` / `set` / `update` / `reset` methods. Accepts `Observable<T>` or `Promise<T>` from the loader.
+
+```ts
+import { signalTree, asyncSource } from '@signaltree/core';
+import type { Observable } from 'rxjs';
+
+interface User { id: number; name: string; }
+interface Report { id: string; rows: number; }
+declare const api: {
+  list$(): Observable<User[]>;
+  generateReport$(): Observable<Report>;
+};
+
+const store = signalTree({
+  users: asyncSource<User[]>({
+    initial: [],
+    load: () => api.list$(),   // auto-loads on materialization
+  }),
+  report: asyncSource<Report>({
+    load: () => api.generateReport$(),
+    lazy: true,                // skip auto-load; caller invokes .refresh()
+  }),
+});
+
+store.$.users();          // current value (User[] | undefined)
+store.$.users.loading();  // Signal<boolean>
+store.$.users.error();    // Signal<unknown | null>
+store.$.users.refresh();  // reload (cancels in-flight)
+store.$.users.set([{ id: 1, name: 'Override' }]); // manual override
+store.$.users.reset();    // clear data/loading/error
+```
+
+Auto-cleans on the surrounding `DestroyRef`. **No manual `setLoading()` / `setLoaded()` wiring.**
+
+### `asyncQuery<TInput, TResult>(config)`
+
+Input-driven debounced query. A writable `input` signal drives a built-in `debounce → filter → distinctUntilChanged → switchMap(query)` pipeline. Race conditions, cancellation, dedup all handled.
+
+```ts
+import { signalTree, asyncQuery } from '@signaltree/core';
+import type { Observable } from 'rxjs';
+
+interface User { id: number; name: string; }
+declare const api: { search$(q: string): Observable<User[]>; };
+
+const store = signalTree({
+  search: asyncQuery<string, User[]>({
+    initialResult: [],
+    debounce: 300,
+    filter: (q) => q.length > 0,
+    query: (q) => api.search$(q),
+  }),
+});
+
+// Either two-way bind in a template:
+//   <input [(ngModel)]="store.$.search.input">
+// Or set imperatively:
+store.$.search.input.set('alice');
+
+store.$.search();          // current results
+store.$.search.loading();
+store.$.search.error();
+store.$.search.rerun();    // rerun current input, skip dedup
+store.$.search.reset();
+```
+
 ### Custom markers
 
 `registerMarkerProcessor(processor)` extends the marker system. **Call it before any `signalTree()` that uses the custom marker.**
@@ -282,6 +350,6 @@ Prefer plain Angular `computed()` for inline derivations. Reach for `derivedFrom
 - `@signaltree/core/security` — security-oriented helpers.
 - `@signaltree/core/storage` — storage adapter primitives.
 - `@signaltree/core/presets` — tree config presets.
-- `@signaltree/core/rxjs-interop` — `rxMethod` for encapsulated async pipelines with auto-cleanup (NgRx-symmetric ergonomics).
+- `@signaltree/core/rxjs-interop` — `rxMethod` migration alias for `@ngrx/signals` find-and-replace upgrades. For new SignalTree code, prefer the `asyncSource` / `asyncQuery` markers above.
 
 Import from the subpath when you need these — do not expect them on the main barrel.

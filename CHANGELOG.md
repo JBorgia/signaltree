@@ -1,3 +1,17 @@
+## 9.5.2
+
+### 📚 Docs: agent skill, comparison, and AI templates now lead with the markers
+
+Follow-up to 9.5.0/9.5.1: previously the agent skill that ships inside every `@signaltree/*` tarball at `skills/using-signaltree/` still framed `rxMethod` as the canonical async primitive, and several docs surfaces had the same problem. This release updates:
+
+- `skills/using-signaltree/reference/core.md` — adds `asyncSource` / `asyncQuery` to the markers section; reframes the `rxjs-interop` subpath as the migration alias.
+- `skills/using-signaltree/reference/patterns.md` — restructures "Replacing rxMethod" into a three-option breakdown (markers preferred, `rxMethod` alias, plain Observable fallback).
+- `skills/using-signaltree/reference/migration-from-ngrx-signals.md` — mapping table and dedicated `rxMethod` section updated with all three options.
+- `llms-full.txt`, `docs/compare/ngrx-signalstore.md`, `docs/ai/agent-templates.md` — all lead with markers; `rxMethod` clearly labeled as migration alias.
+- `/rxmethod` demo page adds a banner pointing to `/async` as the canonical pattern.
+
+Pure docs/skill content patch — code surface is unchanged from 9.5.1.
+
 ## 9.5.1
 
 ### 🐛 Type fix for `asyncSource` / `asyncQuery` accessors

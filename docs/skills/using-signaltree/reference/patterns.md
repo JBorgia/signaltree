@@ -324,9 +324,12 @@ export class AppStore {
 One `@Injectable({ providedIn: 'root' })` class per domain owns the mutators
 for that slice. Ops classes are **stateless facades** — no fields other than
 injected dependencies and a cached reference to the relevant slice of `$`.
-Async operations return observables so callers control subscription lifetime
-(this is also the idiomatic replacement for `@ngrx/signals`' `rxMethod`; see
-"Replacing `rxMethod`" below).
+Async operations return observables so callers control subscription lifetime.
+For most async needs, **prefer the `asyncSource` and `asyncQuery` markers** in
+the tree literal — they eliminate this Ops-method pattern entirely. Use the
+Ops-method pattern when you need explicit `Observable<void>` returns the
+caller subscribes to (e.g., chained workflows). See "Replacing `rxMethod`"
+below for the full mapping.
 
 ```ts
 import { inject, Injectable, InjectionToken } from '@angular/core';
@@ -1051,10 +1054,62 @@ shipping a custom marker.
 ## Replacing `rxMethod` (from `@ngrx/signals`)
 
 `@ngrx/signals` ships `rxMethod` to wire a method to an internally-owned
-subscription. SignalTree has no direct equivalent — you pick one of two
-patterns based on who owns the subscription.
+subscription. SignalTree gives you **three options**, listed in order of
+preference for new code:
 
-### 1. Store-owned subscription (fire-and-forget effect)
+### 1. `asyncSource` / `asyncQuery` markers (canonical SignalTree pattern)
+
+For the vast majority of cases — load-and-expose or input-driven query — the
+markers eliminate the need for an Ops class subscription entirely. The marker
+materializer wires up `data`/`loading`/`error`/`refresh` automatically.
+
+```ts
+import { signalTree, asyncSource, asyncQuery } from '@signaltree/core';
+
+const store = signalTree({
+  // ngrx style: rxMethod<void>(...) → load triggered by .loadUsers()
+  // signaltree: asyncSource at the path the data lives at
+  users: asyncSource<User[]>({
+    initial: [],
+    load: () => api.list$(),
+  }),
+
+  // ngrx style: rxMethod<string>(input$ => input$.pipe(debounceTime(300), switchMap(...)))
+  // signaltree: asyncQuery — debounce + dedup + switchMap built in
+  search: asyncQuery<string, User[]>({
+    initialResult: [],
+    debounce: 300,
+    filter: (q) => q.length > 0,
+    query: (q) => api.search$(q),
+  }),
+});
+
+store.$.users.refresh();           // load-and-expose
+store.$.search.input.set('alice'); // drives debounced pipeline
+```
+
+See [`core.md` § asyncSource](core.md#asyncsourcetconfig) and [§ asyncQuery](core.md#asyncquerytinput-tresultconfig) for full API.
+
+### 2. `rxMethod` migration alias
+
+For literal find-and-replace migration from `@ngrx/signals`, the `rxMethod`
+API is preserved at `@signaltree/core/rxjs-interop`:
+
+```ts
+import { rxMethod } from '@signaltree/core/rxjs-interop';
+// ...same call shape as @ngrx/signals/rxjs-interop
+```
+
+Use this when you want zero cognitive cost migrating existing NgRx code. For
+new SignalTree code, prefer option 1.
+
+### 3. Plain Observable in an Ops class
+
+When neither marker fits — e.g., complex multi-step orchestration where the
+caller needs explicit subscription control — write an Ops method that returns
+`Observable<void>`. Two sub-flavors based on who owns the subscription:
+
+#### 3a. Store-owned subscription (fire-and-forget effect)
 
 When the Ops class should drive the subscription itself — e.g. a reactive
 debounced search that should run as long as the app is alive — subscribe
@@ -1095,7 +1150,7 @@ export class SearchOps {
 }
 ```
 
-### 2. Caller-owned observable return
+#### 3b. Caller-owned observable return
 
 When callers should decide when/whether to subscribe (HTTP loads, one-shot
 actions with router-level cancellation), return an `Observable`:

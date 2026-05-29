@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { entityMap, signalTree, status } from '@signaltree/core';
 import { rxMethod } from '@signaltree/core/rxjs-interop';
 import { of } from 'rxjs';
@@ -22,7 +23,7 @@ interface User {
 @Component({
   selector: 'app-rxmethod-demo',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './rxmethod-demo.component.html',
   styleUrl: './rxmethod-demo.component.scss',
 })

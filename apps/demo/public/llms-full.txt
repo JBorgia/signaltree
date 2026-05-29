@@ -316,13 +316,51 @@ import { createEditSession } from '@signaltree/core/edit-session';
 import { createStorageAdapter, createIndexedDBAdapter } from '@signaltree/core/storage';
 ```
 
-### RxJS interop — `rxMethod`
+### Async — `asyncSource` and `asyncQuery` markers (canonical, v9.5+)
 
-Import from `@signaltree/core/rxjs-interop`. Direct equivalent of NgRx's `rxMethod`. Encapsulates an RxJS pipeline that runs every time the returned callable is invoked. Subscriptions auto-clean on the surrounding `DestroyRef`.
+Async state belongs **at the tree path it describes**. Two markers cover the two main async patterns and compose with the rest of the marker family:
+
+```typescript
+import { signalTree, asyncSource, asyncQuery } from '@signaltree/core';
+
+const store = signalTree({
+  // Load-and-expose: auto-loads on materialization, exposes data/loading/error
+  users: asyncSource<User[]>({
+    initial: [],
+    load: () => api.list$(),  // Observable<T> or Promise<T>
+  }),
+
+  // Input-driven debounced query
+  search: asyncQuery<string, User[]>({
+    initialResult: [],
+    debounce: 300,
+    filter: (q) => q.length > 0,
+    query: (q) => api.search$(q),
+  }),
+});
+
+// Uniform with every other marker:
+store.$.users();           // current value
+store.$.users.loading();   // boolean
+store.$.users.error();     // unknown | null
+store.$.users.refresh();   // reload (cancels in-flight)
+store.$.users.set([...]);  // manual override
+store.$.users.reset();
+
+store.$.search();          // results
+store.$.search.input.set('alice');  // drives debounced pipeline
+store.$.search.loading();
+store.$.search.rerun();    // rerun current input, skip dedup
+```
+
+Both markers attach at **any tree depth**, accept **Observables or Promises**, and auto-clean on the surrounding `DestroyRef`. **No manual `tap()` / `setLoading()` / `setLoaded()` wiring.**
+
+### Async — `rxMethod` migration alias
+
+For 1:1 find-and-replace migration from `@ngrx/signals`, `rxMethod` is available at the `rxjs-interop` subpath with NgRx-symmetric ergonomics (same call shape, same input flexibility for value / Signal / Observable, same auto-cleanup):
 
 ```typescript
 import { rxMethod } from '@signaltree/core/rxjs-interop';
-import { debounceTime, distinctUntilChanged, switchMap, tap, catchError, EMPTY } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class UserOps {
@@ -332,37 +370,21 @@ export class UserOps {
   readonly loadUsers = rxMethod<void>((input$) =>
     input$.pipe(
       tap(() => this._$.users.loading.setLoading()),
-      switchMap(() =>
-        this._api.list$().pipe(
-          tap((users) => this._$.users.entities.setAll(users)),
-          tap(() => this._$.users.loading.setLoaded()),
-          catchError((err) => {
-            this._$.users.loading.setError(err);
-            return EMPTY;
-          })
-        )
-      )
-    )
-  );
-
-  readonly searchByQuery = rxMethod<string>((input$) =>
-    input$.pipe(
-      debounceTime(300),
-      distinctUntilChanged(),
-      switchMap((q) => this._api.search$(q)),
-      tap((results) => this._$.searchResults.set(results))
-    )
+      switchMap(() => this._api.list$().pipe(
+        tap((users) => this._$.users.entities.setAll(users)),
+        tap(() => this._$.users.loading.setLoaded()),
+        catchError((err) => { this._$.users.loading.setError(err); return EMPTY; }),
+      )),
+    ),
   );
 }
+
+// Same input flexibility as @ngrx/signals/rxjs-interop:
+userOps.loadUsers();
+userOps.loadUsers(rawValueOrSignalOrObservable);
 ```
 
-The returned callable accepts:
-
-- **raw values** — `userOps.searchByQuery('alice')`
-- **Angular signals** — `userOps.searchByQuery(searchTermSignal)` (auto-subscribed via `toObservable`)
-- **observables** — `userOps.searchByQuery(externalQuery$)`
-
-The method also exposes a `.destroy()` for manual lifecycle control in tests or non-Angular environments. Pass `{ destroyRef, injector }` in the options arg if calling outside an injection context.
+For new SignalTree code, prefer the markers above — they eliminate the manual status wiring `rxMethod` requires and live at the tree path the data describes, not in a free-standing service method.
 
 ### Edit sessions
 

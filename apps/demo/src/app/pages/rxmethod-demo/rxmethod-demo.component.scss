@@ -5,6 +5,27 @@
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
+.alias-banner {
+  margin: 0 0 2rem 0;
+  padding: 0.9rem 1.1rem;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-left: 4px solid #f59e0b;
+  border-radius: 6px;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: #78350f;
+
+  strong { color: #78350f; }
+  a {
+    color: #92400e;
+    font-weight: 600;
+    text-decoration: underline;
+
+    &:hover { color: #78350f; }
+  }
+}
+
 .hero {
   margin-bottom: 2.5rem;
 

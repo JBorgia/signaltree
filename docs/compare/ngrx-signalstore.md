@@ -153,29 +153,41 @@ The "any component can mutate" concern is overstated on both sides:
 
 | | NgRx SignalStore | SignalTree |
 |---|---|---|
-| **First-class async helper** | `rxMethod((input$) => input$.pipe(switchMap(...), tap(...)))` | `rxMethod((input$) => input$.pipe(switchMap(...), tap(...)))` from `@signaltree/core/rxjs-interop` |
-| **Race conditions / cancellation** | `switchMap` in `rxMethod` pipeline handles it | Same — standard RxJS operators inside the pipeline |
-| **Input flexibility** | Raw value, Signal, or Observable | Raw value, Signal, or Observable (same) |
-| **Auto-cleanup** | Bound to surrounding `DestroyRef` | Bound to surrounding `DestroyRef` (same) |
-| **Event-bus pattern** | Use `@ngrx/store` (classic) or community packages | `@signaltree/events` provides typed events |
+| **Canonical async primitive** | `rxMethod(pipeline)` — callable factory living inside `withMethods` | `asyncSource(config)` / `asyncQuery(config)` markers — **at the tree path** |
+| **Status wiring** | Manual `tap(() => setLoading())` / `setLoaded()` inside pipeline | **Automatic** — materializer derives `loading` / `error` signals |
+| **Migration alias** | n/a | `rxMethod` from `@signaltree/core/rxjs-interop` — 1:1 NgRx-shape for find-and-replace |
+| **Race conditions / cancellation** | `switchMap` in pipeline | Built into `asyncQuery`; standard RxJS in `asyncSource.load` |
+| **Input flexibility** | Raw value, Signal, or Observable | Signal-driven via `input` (asyncQuery) or explicit `refresh()` (asyncSource); `rxMethod` alias preserves NgRx-shape input flexibility |
+| **Auto-cleanup** | `DestroyRef` | `DestroyRef` (same for all three SignalTree options) |
+| **Event-bus pattern** | `@ngrx/store` (classic) or community packages | `@signaltree/events` provides typed events |
 | **WebSocket/SSE sync** | Manual wiring | `@signaltree/realtime` |
 
-**Honest take:** With `@signaltree/core/rxjs-interop` shipping `rxMethod` (v9.4+), the async ergonomics are at parity. Both call sites read identically:
+**Honest take:** The async story is where SignalTree's marker philosophy shines compared to NgRx's `withMethods` composition. The marker pattern eliminates the entire `tap(() => setLoading())` / `setLoaded()` ceremony and co-locates the async behavior with the data:
 
 ```typescript
-// Both libraries, same shape:
-readonly loadUsers = rxMethod<void>((input$) =>
-  input$.pipe(
-    tap(() => /* set loading */),
-    switchMap(() => this._api.list$().pipe(
-      tap((users) => /* write to store */),
+// SignalTree (canonical):
+const store = signalTree({
+  users: asyncSource<User[]>({
+    initial: [],
+    load: () => this.api.list$(),
+  }),
+});
+// .loading / .error / .data / .refresh derive automatically — no manual wiring.
+
+// NgRx SignalStore (and SignalTree's rxMethod alias):
+withMethods((store) => ({
+  loadUsers: rxMethod<void>((input$) => input$.pipe(
+    tap(() => patchState(store, { loading: true })),
+    switchMap(() => this.api.list$().pipe(
+      tap(users => patchState(store, { users, loading: false })),
       catchError(/* ... */)
     ))
-  )
-);
+  )),
+}))
+// Same expressiveness, but you write the status wiring manually every time.
 ```
 
-The only stylistic difference: NgRx places `rxMethod` inside `withMethods` so it lives in the store definition; SignalTree places it in an `@Injectable()` Ops class alongside other domain operations. Both feed Observables into the same operator pipeline.
+For teams migrating from `@ngrx/signals`, the `rxMethod` alias at `@signaltree/core/rxjs-interop` provides a zero-cognitive-cost migration path. For new SignalTree code, prefer the markers.
 
 ### 7. Devtools and time-travel
 
