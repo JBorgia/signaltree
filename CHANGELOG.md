@@ -1,3 +1,11 @@
+## 9.5.1
+
+### 🐛 Type fix for `asyncSource` / `asyncQuery` accessors
+
+Adds the missing `AsyncSourceMarker → AsyncSourceSignal` and `AsyncQueryMarker → AsyncQuerySignal` mappings to the `TreeNode<T>` type. Without this, TypeScript and Angular's template compiler treated `store.$.users` as the unprocessed marker type (no `.loading`, `.refresh`, etc. visible).
+
+Pure type-only fix — runtime behavior in 9.5.0 was correct; only the TypeScript surface was missing. Anyone using 9.5.0 should upgrade.
+
 ## 9.5.0
 
 ### ✨ New: `asyncSource` and `asyncQuery` markers — the SignalTree-native async story

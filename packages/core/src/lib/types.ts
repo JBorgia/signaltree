@@ -1,5 +1,7 @@
 import { Signal, WritableSignal } from '@angular/core';
 
+import { AsyncQueryMarker, AsyncQuerySignal } from './markers/async-query';
+import { AsyncSourceMarker, AsyncSourceSignal } from './markers/async-source';
 import { FormMarker, FormSignal } from './markers/form';
 import { StatusMarker, StatusSignal } from './markers/status';
 import { StoredMarker, StoredSignal } from './markers/stored';
@@ -109,6 +111,10 @@ export type TreeNode<T> = {
     ? StoredSignal<V>
     : T[K] extends FormMarker<infer F>
     ? FormSignal<F>
+    : T[K] extends AsyncSourceMarker<infer V>
+    ? AsyncSourceSignal<V>
+    : T[K] extends AsyncQueryMarker<infer In, infer Out>
+    ? AsyncQuerySignal<In, Out>
     : T[K] extends Primitive
     ? CallableWritableSignal<T[K]>
     : T[K] extends readonly unknown[]
