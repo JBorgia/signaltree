@@ -3,137 +3,66 @@
 
   <div class="intro">
     <p>
-      Handle <strong>async operations</strong> with signals - loading states,
-      error handling, debounced search, and optimistic updates.
+      Async state in SignalTree is a <strong>marker family</strong>, not a
+      free-standing service method. Two markers cover the two main shapes:
+    </p>
+    <ul>
+      <li>
+        <strong><code>asyncSource&lt;T&gt;(config)</code></strong> —
+        load-and-expose. Auto-loads on materialization. Exposes
+        <code>data</code>, <code>loading</code>, <code>error</code>, plus
+        <code>refresh</code> / <code>set</code> / <code>update</code> /
+        <code>reset</code>. Accepts Observable or Promise loaders.
+      </li>
+      <li>
+        <strong><code>asyncQuery&lt;TInput, TResult&gt;(config)</code></strong> —
+        input-driven debounced query. Writable <code>input</code> signal
+        drives a built-in <code>debounce → filter → distinctUntilChanged →
+        switchMap</code> pipeline. Race conditions, cancellation, dedup all
+        handled automatically.
+      </li>
+    </ul>
+    <p>
+      Both markers attach <strong>at any tree depth</strong> alongside
+      <code>entityMap</code>, <code>status</code>, <code>stored</code>, and
+      <code>form</code>. Auto-clean on the surrounding
+      <code>DestroyRef</code>. <strong>No manual
+      <code>tap()</code> / <code>setLoading()</code> wiring.</strong>
     </p>
   </div>
 
-  <div class="grid-2col">
-    <!-- Data Loading Section -->
-    <div class="section-card">
-      <h3>📥 Data Loading</h3>
-      <p class="description">Fetch users with loading and error states.</p>
-
-      @if (!hasUsers() && !isLoading() && !loadError()) {
-      <div class="empty-state">
-        <p>No users loaded</p>
-        <button (click)="loadUsers()" class="btn btn-primary">
-          Load Users
-        </button>
-      </div>
-      } @if (isLoading()) {
-      <div class="loading-state">
-        <div class="spinner"></div>
-        <p>Loading users...</p>
-      </div>
-      } @if (loadError()) {
-      <div class="error-state">
-        <p>❌ {{ loadError() }}</p>
-        <button (click)="retry()" class="btn btn-warning btn-sm">
-          🔄 Retry
-        </button>
-      </div>
-      } @if (hasUsers() && !isLoading()) {
-      <div class="users-list">
-        @for (user of users(); track user.id) {
-        <div class="user-item">
-          <span class="user-avatar">{{ user.avatar }}</span>
-          <div class="user-info">
-            <div class="user-name">{{ user.name }}</div>
-            <div class="user-email">{{ user.email }}</div>
-          </div>
-          <button
-            (click)="deleteUser(user.id)"
-            class="btn-icon"
-            title="Delete user"
-          >
-            🗑️
-          </button>
-        </div>
-        }
-      </div>
-
-      <div class="button-group">
-        <button (click)="loadUsers()" class="btn btn-secondary btn-sm">
-          🔄 Reload
-        </button>
-        <button (click)="addUser()" class="btn btn-success btn-sm">
-          ➕ Add User (Optimistic)
-        </button>
-      </div>
-      }
-    </div>
-
-    <!-- Debounced Search Section -->
-    <div class="section-card">
-      <h3>🔍 Debounced Search</h3>
-      <p class="description">
-        Search updates after 500ms of inactivity (debounced).
-      </p>
-
-      <div class="search-box">
-        <input
-          type="text"
-          [value]="searchTerm()"
-          (input)="onSearchInput($any($event.target).value)"
-          placeholder="Search users..."
-          class="search-input"
-        />
-        @if (searchTerm()) {
-        <button (click)="clearSearch()" class="search-clear">×</button>
-        }
-      </div>
-
-      @if (isSearching()) {
-      <div class="searching-state">
-        <div class="spinner-sm"></div>
-        <span>Searching...</span>
-      </div>
-      } @if (searchError()) {
-      <div class="error-message">
-        {{ searchError() }}
-      </div>
-      } @if (searchTerm() && !isSearching() && !searchError()) {
-      <div class="search-results">
-        @if (hasResults()) {
-        <p class="results-count">
-          Found {{ searchResults().length }} result(s)
-        </p>
-        @for (user of searchResults(); track user.id) {
-        <div class="result-item">
-          <span class="result-avatar">{{ user.avatar }}</span>
-          <div class="result-info">
-            <div class="result-name">{{ user.name }}</div>
-            <div class="result-email">{{ user.email }}</div>
-          </div>
-        </div>
-        } } @else {
-        <p class="no-results">No users found</p>
-        }
-      </div>
-      } @if (!searchTerm()) {
-      <div class="hint">💡 Start typing to search users</div>
-      }
-    </div>
+  <div class="callout">
+    <p>
+      <strong>👉 Full interactive demo:</strong>
+      <a routerLink="/async">/async</a> — exercise both markers end-to-end
+      with simulated network latency, debounced search, and live counters
+      showing how cancellation and dedup work in practice.
+    </p>
   </div>
 
-  <!-- Code Example -->
-  <div class="code-section">
-    <h3>💻 Async Pattern</h3>
-    <pre ngNonBindable><code>async loadUsers() &#123;
-  this.isLoading.set(true);
-  this.loadError.set(null);
+  <div class="quick-snippet">
+    <pre><code>import &#123; signalTree, asyncSource, asyncQuery &#125; from '&#64;signaltree/core';
 
-  try &#123;
-    const users = await firstValueFrom(
-      this.http.get&lt;User[]&gt;('/api/users')
-    );
-    this.users.set(users);
-  &#125; catch (error) &#123;
-    this.loadError.set((error as Error).message);
-  &#125; finally &#123;
-    this.isLoading.set(false);
-  &#125;
-&#125;</code></pre>
+const store = signalTree(&#123;
+  users: asyncSource&lt;User[]&gt;(&#123;
+    initial: [],
+    load: () =&gt; this.api.list$(),
+  &#125;),
+  search: asyncQuery&lt;string, User[]&gt;(&#123;
+    initialResult: [],
+    debounce: 300,
+    filter: (q) =&gt; q.length &gt; 0,
+    query: (q) =&gt; this.api.search$(q),
+  &#125;),
+&#125;);
+
+// Uniform reads:
+store.$.users();           // User[] | undefined
+store.$.users.loading();   // boolean
+store.$.users.error();     // unknown | null
+store.$.users.refresh();   // reload (cancels in-flight)
+
+store.$.search.input.set('alice');  // drives debounced pipeline
+store.$.search();                    // results</code></pre>
   </div>
 </div>

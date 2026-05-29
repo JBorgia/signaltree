@@ -305,7 +305,7 @@ export const EXAMPLES_REGISTRY: ExampleMeta[] = [
     id: 'whats-new',
     title: "What's New",
     description:
-      'Latest changes: Signal Forms demo, toWritableSignal improvements, accessibility fixes, and deprecations.',
+      'Latest: v9.6.0 removed rxMethod; v9.5.x shipped asyncSource/asyncQuery markers plus AI-discoverability docs.',
     category: 'General',
     focusAreas: ['news', 'changelog'],
     functionalUse: ['release-notes'],

@@ -547,12 +547,11 @@ export class CartComponent &#123;
 
     <div class="compare-grid example-grid">
       <div class="lib-pane">
-        <h3 class="pane-title pane-signaltree">SignalTree (using the <code>status()</code> marker)</h3>
+        <h3 class="pane-title pane-signaltree">SignalTree (using the <code>asyncSource()</code> marker)</h3>
         <pre ngNonBindable><code>// profile.service.ts
 import &#123; Injectable, inject &#125; from '&#64;angular/core';
 import &#123; HttpClient &#125; from '&#64;angular/common/http';
-import &#123; firstValueFrom &#125; from 'rxjs';
-import &#123; signalTree, status &#125; from '&#64;signaltree/core';
+import &#123; signalTree, asyncSource &#125; from '&#64;signaltree/core';
 
 interface Profile &#123; id: string; name: string; email: string; &#125;
 
@@ -560,23 +559,21 @@ interface Profile &#123; id: string; name: string; email: string; &#125;
 export class ProfileService &#123;
   private http = inject(HttpClient);
 
+  // Marker materializes into data/loading/error signals + refresh()/set()/reset() —
+  // no manual setLoading/setLoaded wiring.
   readonly $ = signalTree(&#123;
-    profile: null as Profile | null,
-    load: status(),
+    profile: asyncSource&lt;Profile&gt;(&#123;
+      load: () =&gt; this.http.get&lt;Profile&gt;('/api/me'),
+    &#125;),
   &#125;).$;
 
-  async load() &#123;
-    this.$.load.start();
-    try &#123;
-      this.$.profile.set(await firstValueFrom(this.http.get&lt;Profile&gt;('/api/me')));
-      this.$.load.success();
-    &#125; catch (err) &#123;
-      this.$.load.fail((err as Error).message);
-    &#125;
-  &#125;
+  retry() &#123; this.$.profile.refresh(); &#125;
+&#125;
 
-  retry() &#123; return this.load(); &#125;
-&#125;</code></pre>
+// Consumers read uniformly:
+// service.$.profile();           // Profile | undefined
+// service.$.profile.loading();   // boolean
+// service.$.profile.error();     // unknown | null</code></pre>
       </div>
 
       <div class="lib-pane">
@@ -798,13 +795,13 @@ export class TicketsService &#123;
   setFilter(f: string) &#123; this.$.filter.set(f); &#125;
 
   async load() &#123;
-    this.$.load.start();
+    this.$.load.setLoading();
     try &#123;
       const list = await firstValueFrom(this.http.get&lt;Ticket[]&gt;('/api/tickets'));
       this.$.entities.setAll(list, &#123; selectId: t =&gt; t.id &#125;);
-      this.$.load.success();
+      this.$.load.setLoaded();
     &#125; catch (err) &#123;
-      this.$.load.fail((err as Error).message);
+      this.$.load.setError((err as Error).message);
     &#125;
   &#125;
 
@@ -816,7 +813,7 @@ export class TicketsService &#123;
       await firstValueFrom(this.http.patch('/api/tickets/' + id, &#123; title &#125;));
     &#125; catch (err) &#123;
       this.$.entities.upsertOne(prev);
-      this.$.load.fail((err as Error).message);
+      this.$.load.setError((err as Error).message);
     &#125;
   &#125;
 

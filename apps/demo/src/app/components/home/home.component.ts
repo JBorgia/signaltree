@@ -169,11 +169,11 @@ export class HomeComponent {
       cta: 'Explore persistence →',
     },
     {
-      title: 'Presets & Custom Extensions',
+      title: 'Custom Markers & Enhancers',
       description:
-        'Learn the extension story without leaving the path-first, data-first model.',
-      route: '/presets',
-      cta: 'Explore presets →',
+        'Learn the extension story without leaving the path-first, data-first model. Build your own markers and enhancers via `registerMarkerProcessor()` and `.with()` chains.',
+      route: '/custom-extensions',
+      cta: 'Explore custom extensions →',
     },
     {
       title: 'Guardrails & Undo/Redo',

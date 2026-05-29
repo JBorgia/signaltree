@@ -175,16 +175,9 @@ export class NavigationComponent {
     },
     {
       id: 'custom-extensions',
-      title: 'Custom Extensions',
-      description: 'Create your own markers and enhancers',
+      title: 'Custom Markers & Enhancers',
+      description: 'Build your own markers and enhancers — registerMarkerProcessor() and .with() chains',
       route: '/custom-extensions',
-      category: 'advanced',
-    },
-    {
-      id: 'presets',
-      title: 'Presets',
-      description: 'Pre-configured patterns for common use cases',
-      route: '/presets',
       category: 'advanced',
     },
     {

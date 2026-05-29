@@ -1,7 +1,112 @@
 <div class="whats-new">
   <h2>🚀 What's New</h2>
 
-  <h3>� v9.0.0 — API Sharpening Release (April 2026)</h3>
+  <h3>🧹 v9.6.0 — rxMethod removed; async markers are the only async story (May 2026)</h3>
+  <div class="release-highlights">
+    <p>
+      A short-lived <code>rxMethod</code> alias (shipped in 9.5.0-9.5.2) is gone.
+      Keeping it created two parallel async stories. The canonical answer is, and
+      stays, the <strong>marker family</strong>.
+    </p>
+    <h4>💥 Breaking</h4>
+    <ul>
+      <li>
+        <strong><code>@signaltree/core/rxjs-interop</code> subpath removed.</strong>
+        <code>import &#123; rxMethod &#125; from '&#64;signaltree/core/rxjs-interop'</code> no longer resolves.
+        <code>/rxmethod</code> demo route now 301-redirects to <a routerLink="/async">/async</a>.
+      </li>
+    </ul>
+    <h4>🔄 Migration</h4>
+    <ul>
+      <li><code>rxMethod&lt;void&gt;(pipeline)</code> load-and-expose → <code>asyncSource(config)</code> at the data's tree path.</li>
+      <li><code>rxMethod&lt;TInput&gt;(pipeline)</code> input-driven query → <code>asyncQuery(config)</code> at the search/results tree path.</li>
+      <li>Complex multi-step orchestration neither marker fits → plain Observable method in an <code>&#64;Injectable()</code> Ops class.</li>
+    </ul>
+  </div>
+
+  <h3>✨ v9.5.0 — Async markers: <code>asyncSource</code> and <code>asyncQuery</code> (May 2026)</h3>
+  <div class="release-highlights">
+    <p>
+      The SignalTree-native answer to async state. Two new markers in the same
+      family as <code>entityMap</code>, <code>status</code>, <code>stored</code>,
+      and <code>form</code>: <strong>attach at any tree path, auto-derive
+      <code>data</code>/<code>loading</code>/<code>error</code> signals, no manual
+      <code>tap()/setLoading()</code> wiring.</strong>
+    </p>
+    <h4>✨ New</h4>
+    <ul>
+      <li>
+        <strong><code>asyncSource&lt;T&gt;(config)</code></strong> — load-and-expose.
+        Auto-loads on materialization. Exposes <code>data</code>, <code>loading</code>,
+        <code>error</code>, plus <code>refresh</code> / <code>set</code> / <code>update</code> /
+        <code>reset</code>. Accepts Observable or Promise loaders.
+      </li>
+      <li>
+        <strong><code>asyncQuery&lt;TInput, TResult&gt;(config)</code></strong> — input-driven
+        debounced query. Writable <code>input</code> signal drives a
+        <code>debounce → filter → distinctUntilChanged → switchMap</code> pipeline.
+        Race conditions, cancellation, dedup all handled.
+      </li>
+      <li>
+        <strong>Live demo:</strong> <a routerLink="/async">/async</a>
+      </li>
+    </ul>
+    <p>
+      <strong>v9.5.1</strong> shipped a <code>TreeNode&lt;T&gt;</code> type-mapper fix so the
+      new accessors surface correctly in TypeScript and Angular template AOT.
+      <strong>v9.5.2</strong> leveled the docs surface — agent skill (shipped in npm tarball),
+      llms.txt, comparison doc, agent templates — to lead with the markers.
+    </p>
+  </div>
+
+  <h3>📚 v9.5.x — AI-discoverability docs landed (May 2026)</h3>
+  <div class="release-highlights">
+    <p>
+      Major investment in making SignalTree retrieve and reason well for AI coding agents
+      (Cursor, Claude Code, Copilot, Gemini, Perplexity):
+    </p>
+    <ul>
+      <li><strong><code>/llms.txt</code> and <code>/llms-full.txt</code></strong> at site root — canonical references following the emerging convention.</li>
+      <li><strong>NgRx SignalStore comparison page</strong> — honest axis-by-axis comparison at <a href="https://github.com/JBorgia/signaltree/blob/main/docs/compare/ngrx-signalstore.md">docs/compare/ngrx-signalstore.md</a>.</li>
+      <li><strong>Myths &amp; misconceptions doc</strong> — 16+ catalogued false claims LLMs frequently propagate, with source-code citations.</li>
+      <li><strong>Drop-in AI agent templates</strong> — <code>.cursorrules</code>, <code>CLAUDE.md</code>, <code>copilot-instructions.md</code> for downstream projects.</li>
+    </ul>
+  </div>
+
+  <h3>📦 v9.4.0 (recalled — unpublished from npm) (May 2026)</h3>
+  <div class="release-highlights">
+    <p>
+      Briefly shipped a NgRx-shaped <code>rxMethod</code> primitive at
+      <code>&#64;signaltree/core/rxjs-interop</code> as the canonical async story.
+      <strong>Unpublished after design review</strong> — the marker-based shape
+      (shipped in 9.5.0) is the right SignalTree answer. v9.4.0 stays in CHANGELOG
+      history as a stepping stone, not on npm.
+    </p>
+  </div>
+
+  <h3>🔧 v9.3.0 (April 2026)</h3>
+  <div class="release-highlights">
+    <p>Workspace-wide version sync plus a handful of small fixes:</p>
+    <ul>
+      <li><code>@signaltree/ng-forms</code> <code>./audit</code> subpath pointed at <code>audit.ts</code> directly.</li>
+      <li><code>@signaltree/schema</code> wired <code>rollup.config.mjs</code> into <code>project.json</code> build options.</li>
+      <li><code>@signaltree/schema</code> added to <code>lint-skills</code> resolver map.</li>
+    </ul>
+  </div>
+
+  <h3>🛡️ v9.2.0 — Augmentation safety + hybrid-NgRx support (March 2026)</h3>
+  <div class="release-highlights">
+    <p>
+      Breaking type-only change (invisible for almost all users): removed the global
+      <code>declare module '@angular/core'</code> augmentation from
+      <code>@signaltree/core</code> that added callable overloads to Angular's
+      <code>WritableSignal&lt;T&gt;</code>. Augmentation now lives exclusively in
+      <code>@signaltree/callable-syntax</code>. Unblocks <strong>gradual adoption alongside
+      <code>@ngrx/signals</code></strong> in monorepos.
+    </p>
+  </div>
+
+  <h3>🎯 v9.0.0 — API Sharpening Release (April 2026)</h3>
   <div class="release-highlights">
     <p>
       SignalTree v9 aligns the API surface with the core ethos:

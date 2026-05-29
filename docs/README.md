@@ -6,7 +6,7 @@
 
 Use this index to navigate the documentation.
 
-**Latest release:** 9.2.1. See [CHANGELOG](../CHANGELOG.md).
+**Latest release:** 9.6.0. See [CHANGELOG](../CHANGELOG.md).
 
 ---
 
