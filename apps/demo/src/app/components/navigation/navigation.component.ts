@@ -181,6 +181,13 @@ export class NavigationComponent {
       category: 'learn',
     },
     {
+      id: 'benchmark',
+      title: 'AI-codegen benchmark scorecard',
+      description: '720-cell measured result — SignalTree 49% cold → 91% primed (+42pp). Per-library, per-agent breakdowns.',
+      route: '/benchmark',
+      category: 'learn',
+    },
+    {
       id: 'devtools',
       title: 'DevTools',
       description: 'Redux DevTools integration',

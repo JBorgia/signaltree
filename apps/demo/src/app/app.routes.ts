@@ -88,6 +88,18 @@ export const appRoutes: Route[] = [
         'SignalTree treats AI agents as a first-class consumer of the API. llms.txt, agent skills in every tarball, drop-in .cursorrules / CLAUDE.md templates, and a reproducible codegen accuracy benchmark.',
     },
   },
+  {
+    path: 'benchmark',
+    loadComponent: () =>
+      import('./pages/benchmark/benchmark.component').then(
+        (c) => c.BenchmarkComponent
+      ),
+    data: {
+      title: 'AI-codegen accuracy benchmark — measured scorecard',
+      description:
+        'Reproducible 720-cell benchmark measuring how reliably each major AI agent generates correct SignalTree, NgRx, Akita, and Elf code. v10.2: SignalTree 49% cold → 91% primed with llms.txt (+42pp).',
+    },
+  },
   // /rxmethod redirected to /async — rxMethod was removed in 9.6.0 (was briefly
   // shipped in 9.5.x as a migration alias; the canonical answer is the async markers).
   {

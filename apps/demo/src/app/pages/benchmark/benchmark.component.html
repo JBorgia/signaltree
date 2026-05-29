@@ -1,0 +1,235 @@
+<div class="page">
+  <header class="hero">
+    <span class="kicker">v10.2 measured · 2026-05-29</span>
+    <h1>AI-codegen accuracy benchmark</h1>
+    <p class="lead">
+      How reliably do frontier AI coding agents generate <strong>correct</strong> Angular state code
+      with each major state library? We measured 720 cells. Here is the scorecard.
+    </p>
+    <ul class="headline">
+      <li><strong>49%</strong> — SignalTree cold-run accuracy (no priming)</li>
+      <li><strong>91%</strong> — SignalTree primed with <code>llms.txt</code></li>
+      <li class="lift"><strong>+42 percentage points</strong> from a single retrievable file</li>
+      <li><strong>99/100</strong> — Claude Sonnet 4.6 primed (near ceiling)</li>
+    </ul>
+  </header>
+
+  <section class="scope">
+    <h2>Scope</h2>
+    <div class="scope-grid">
+      <div><strong>720</strong> cells</div>
+      <div><strong>8</strong> prompts</div>
+      <div><strong>5</strong> libraries</div>
+      <div><strong>6</strong> agents</div>
+      <div><strong>3</strong> priming modes</div>
+      <div><strong>~$12</strong> in API spend</div>
+    </div>
+    <p>
+      Cold (no priming) · Primed with <code>llms.txt</code> only · Primed with <code>llms.txt + myths.md</code>.
+      Models: Claude Sonnet 4.6, GPT-5.4, Gemini 3.1 Pro, Perplexity Sonar Pro (frontier tier);
+      Claude Haiku 4.5, GPT-5.4-mini (cost tier).
+      Prompts: counter, paginated users, debounced search, derived totals, login form,
+      undo/redo, deeply nested status, multi-marker editor.
+    </p>
+  </section>
+
+  <section class="scorecard">
+    <h2>Per-library combined score</h2>
+    <p class="caption">
+      Averaged across all 8 prompts × 6 agents. Combined = equal-weighted average of
+      idiomatic-pattern + import-resolution + marker-method validity.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Library</th>
+          <th>Cold</th>
+          <th>Primed (llms.txt)</th>
+          <th>Primed (llms.txt + myths)</th>
+          <th>Δ best vs cold</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of perLibraryScores; track row.lib) {
+          <tr [class.ours]="row.isOurs">
+            <td><code>{{ row.lib }}</code></td>
+            <td>{{ row.cold }}%</td>
+            <td>{{ row.primed }}%</td>
+            <td>{{ row.fullPrimed }}%</td>
+            <td [class.positive]="row.delta > 0" [class.negative]="row.delta < 0">
+              {{ row.delta > 0 ? '+' : '' }}{{ row.delta }}pp
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    <p class="honest-note">
+      <strong>Honest read:</strong> SignalTree-specific priming context slightly degrades
+      cross-library accuracy (-3 to -9pp). Models occasionally cross-pollinate when in
+      "SignalTree mindset." Acceptable trade — priming users are SignalTree users.
+    </p>
+  </section>
+
+  <section class="scorecard">
+    <h2>Per-agent SignalTree score</h2>
+    <p class="caption">
+      Averaged across all 8 prompts. The "+lift" column is cold → primed-with-llms.txt.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Agent</th>
+          <th>Tier</th>
+          <th>Cold</th>
+          <th>Primed</th>
+          <th>+myths</th>
+          <th>Δ lift</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of perAgentScores; track row.agent) {
+          <tr>
+            <td>{{ row.agent }}</td>
+            <td><span class="tier {{ row.tier }}">{{ row.tier }}</span></td>
+            <td>{{ row.cold }}</td>
+            <td><strong>{{ row.primed }}</strong></td>
+            <td>{{ row.fullPrimed }}</td>
+            <td class="positive">+{{ row.delta }}pp</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </section>
+
+  <section class="insights">
+    <h2>Key insights</h2>
+    <div class="insight-grid">
+      <article>
+        <h3>Priming closes the model-tier gap</h3>
+        <p>
+          Cold scores are roughly tier-agnostic (range 41–56).
+          Primed scores are also tier-agnostic (range 80–99).
+        </p>
+        <p>
+          <strong>Primed Haiku 4.5 (97) outscores cold Sonnet 4.6 (41) by 2.4×.</strong>
+          Your code agent on a cheap model still writes correct SignalTree.
+        </p>
+      </article>
+
+      <article>
+        <h3>Claude Sonnet 4.6 hits the ceiling</h3>
+        <p>
+          Primed Claude scored <strong>99/100</strong> across all 8 prompts.
+          Further improvement is at the prompt/scorer level, not the model level.
+        </p>
+      </article>
+
+      <article>
+        <h3>Adding myths.md regressed accuracy</h3>
+        <p>
+          We tested two priming compositions:
+          <code>llms.txt</code> alone (91%) vs <code>llms.txt + myths.md</code> (87%).
+          More context wasn't better — likely context dilution.
+        </p>
+        <p>
+          Gemini regressed sharply (83 → 64). Implication: prioritize focused priming
+          over breadth.
+        </p>
+      </article>
+
+      <article>
+        <h3>The discoverability surface ships with npm</h3>
+        <p>
+          As of v10.2, <code>llms.txt</code> ships in the
+          <code>&#64;signaltree/core</code> tarball. After
+          <code>npm install</code>, retrieval-aware AI agents find
+          <code>node_modules/&#64;signaltree/core/llms.txt</code> automatically.
+        </p>
+        <p>
+          The README also leads with the disambiguation table — rendered on npmjs.com
+          and indexed by every AI tool that crawls node_modules READMEs.
+        </p>
+      </article>
+    </div>
+  </section>
+
+  <section class="residuals">
+    <h2>What's still wrong (residual failure modes)</h2>
+    <p class="caption">
+      The 9pp gap between primed-SignalTree (91) and ceiling (100) lives in these
+      specific marker-method hallucinations. All package/import hallucinations were
+      eliminated by the v10.2 disambiguation table.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Hallucinated call</th>
+          <th>Count</th>
+          <th>What it should be</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of residualFailures; track row.pattern) {
+          <tr>
+            <td><code>{{ row.pattern }}</code></td>
+            <td>{{ row.count }}</td>
+            <td>{{ row.fix }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    <p class="next-target">
+      <strong>v10.3 target:</strong> apply the "meet AI where it is" alias model
+      (shipped on <code>status()</code> in v10.2) to <code>form()</code> and <code>entityMap</code>
+      markers. Unified accessor shape across all markers eliminates the within-SignalTree
+      pattern-matching confusion. Expected lift: +3-5pp → ~95% average.
+    </p>
+  </section>
+
+  <section class="methodology">
+    <h2>Methodology</h2>
+    <ul>
+      <li><strong>Cold mode:</strong> standard prompt + "you are a senior Angular engineer" system message. No SignalTree context.</li>
+      <li><strong>Primed-llms.txt:</strong> the 13.5KB <code>llms.txt</code> injected as an additional system message.</li>
+      <li><strong>Primed-llms.txt + myths.md:</strong> both files concatenated as priming context.</li>
+      <li><strong>Reproducibility:</strong> all prompts as YAML in <code>scripts/ai-codegen-benchmark/prompts/</code>, temperature 0, model versions logged per cell.</li>
+      <li><strong>Scoring:</strong> idiomatic-pattern match + import-resolution against real-package allowlist + marker-method validity against actual API surface. Equal-weighted average.</li>
+    </ul>
+    <p>
+      The marker-method validator catches the dominant primed-run failure mode
+      (hallucinated method names) that text pattern-matching alone misses.
+      Compile + behavior testing in TestBed is deferred to v10.3.
+    </p>
+  </section>
+
+  <section class="cta">
+    <h2>Reproduce it</h2>
+    <p>
+      The full benchmark is open and reproducible. One OpenRouter API key,
+      ~$15 and ~30 minutes of wall-clock for a full quarterly run.
+    </p>
+    <pre><code>git clone https://github.com/JBorgia/signaltree
+cd signaltree
+export OPENROUTER_API_KEY=sk-or-...
+
+# Cold
+node scripts/ai-codegen-benchmark/runner.mjs --include-tier-comparison
+
+# Primed
+PRIMING_CONTEXT_FILE=apps/demo/public/llms.txt \
+  node scripts/ai-codegen-benchmark/runner.mjs --include-tier-comparison
+
+# Aggregate
+node scripts/ai-codegen-benchmark/aggregate.mjs \
+  scripts/ai-codegen-benchmark/results/* > RESULTS.md</code></pre>
+    <div class="links">
+      <a href="https://github.com/JBorgia/signaltree/tree/main/scripts/ai-codegen-benchmark"
+         target="_blank" rel="noopener">Benchmark source →</a>
+      <a href="https://github.com/JBorgia/signaltree/blob/main/scripts/ai-codegen-benchmark/RESULTS-v10.2-FINAL.md"
+         target="_blank" rel="noopener">Full scorecard markdown →</a>
+      <a href="https://github.com/JBorgia/signaltree/blob/main/scripts/ai-codegen-benchmark/CADENCE.md"
+         target="_blank" rel="noopener">Re-run cadence →</a>
+      <a routerLink="/built-for-ai">Built for AI overview →</a>
+    </div>
+  </section>
+</div>
