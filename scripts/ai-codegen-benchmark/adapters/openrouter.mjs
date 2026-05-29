@@ -18,12 +18,11 @@
  */
 
 const ALIAS_TO_MODEL = {
-  claude: process.env.OPENROUTER_CLAUDE_MODEL ?? 'anthropic/claude-3.5-sonnet',
-  openai: process.env.OPENROUTER_OPENAI_MODEL ?? 'openai/gpt-4o',
-  gemini: process.env.OPENROUTER_GEMINI_MODEL ?? 'google/gemini-pro-1.5',
+  claude: process.env.OPENROUTER_CLAUDE_MODEL ?? 'anthropic/claude-sonnet-4.6',
+  openai: process.env.OPENROUTER_OPENAI_MODEL ?? 'openai/gpt-5.4',
+  gemini: process.env.OPENROUTER_GEMINI_MODEL ?? 'google/gemini-3.1-pro-preview',
   perplexity:
-    process.env.OPENROUTER_PERPLEXITY_MODEL ??
-    'perplexity/llama-3.1-sonar-large-128k-chat',
+    process.env.OPENROUTER_PERPLEXITY_MODEL ?? 'perplexity/sonar-pro-search',
   llama: process.env.OPENROUTER_LLAMA_MODEL ?? 'meta-llama/llama-3.1-70b-instruct',
 };
 
