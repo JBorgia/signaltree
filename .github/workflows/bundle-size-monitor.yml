@@ -28,7 +28,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pnpm install --no-frozen-lockfile
+          pnpm install --no-frozen-lockfile --ignore-scripts
 
       - name: Run bundle size check
         id: bundle-check

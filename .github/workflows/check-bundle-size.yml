@@ -22,7 +22,7 @@ jobs:
         with:
           node-version: '22'
       - name: Install
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Build demo with stats
         run: pnpm nx build demo --configuration=production --statsJson
       - name: Run bundle size check

@@ -22,7 +22,7 @@ jobs:
         run: npm i -g pnpm@9
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Build all packages (production)
         run: pnpm nx run-many --target=build --all --configuration=production

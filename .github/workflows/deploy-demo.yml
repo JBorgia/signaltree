@@ -35,7 +35,7 @@ jobs:
           node-version: '22'
 
       - name: Install dependencies (allow lockfile update)
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --no-frozen-lockfile --ignore-scripts
 
       - name: Build demo (GitHub Pages base href)
         run: pnpm run build:demo:prod
