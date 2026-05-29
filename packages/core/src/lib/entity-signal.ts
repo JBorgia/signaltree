@@ -61,6 +61,13 @@ export function createEntitySignal<
   /** Cache for entity nodes (deep access proxies) */
   const nodeCache = new Map<K, EntityNode<E>>();
 
+  /**
+   * Cached `empty` / `isEmpty` computed — shared between the v10.3 canonical
+   * `.empty` and the deprecated `.isEmpty` alias so first-access creates one
+   * computed and both names point at the same Signal instance.
+   */
+  let cachedEmpty: Signal<boolean> | null = null;
+
   /** Function to extract key from entity */
   const selectId: (entity: E) => K =
     config.selectId ??
@@ -211,8 +218,14 @@ export function createEntitySignal<
       return computed(() => mapSignal().has(id));
     },
 
+    // v10.3 canonical (bare) — preferred. Cached so `.empty` and `.isEmpty`
+    // share the same computed instance.
+    get empty(): Signal<boolean> {
+      return (cachedEmpty ??= computed(() => countSignal() === 0));
+    },
+    /** @deprecated v10.3 — use `.empty`. Removed in v11. */
     get isEmpty(): Signal<boolean> {
-      return computed(() => countSignal() === 0);
+      return (cachedEmpty ??= computed(() => countSignal() === 0));
     },
 
     where(predicate: (entity: E) => boolean): Signal<E[]> {

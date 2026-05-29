@@ -210,3 +210,39 @@ describe('EntitySignal predicate caching', () => {
     expect(s()).toEqual([{ id: 1, active: true }]);
   });
 });
+
+describe('v10.3 .empty (canonical) and .isEmpty (deprecated alias)', () => {
+  it('exposes .empty as the canonical bare-name predicate', () => {
+    const api = createEntitySignal(
+      { selectId: (e: any) => e.id },
+      pathNotifier,
+      'test'
+    );
+    expect(api.empty()).toBe(true);
+    api.addOne({ id: 1 } as any);
+    expect(api.empty()).toBe(false);
+    api.clear();
+    expect(api.empty()).toBe(true);
+  });
+
+  it('exposes .isEmpty as a backwards-compatible alias', () => {
+    const api = createEntitySignal(
+      { selectId: (e: any) => e.id },
+      pathNotifier,
+      'test'
+    );
+    expect(api.isEmpty()).toBe(true);
+    api.addOne({ id: 1 } as any);
+    expect(api.isEmpty()).toBe(false);
+  });
+
+  it('.empty and .isEmpty return the SAME Signal instance (single cached computed)', () => {
+    const api = createEntitySignal(
+      { selectId: (e: any) => e.id },
+      pathNotifier,
+      'test'
+    );
+    expect(api.empty).toBe(api.isEmpty);
+    expect(isSignal(api.empty)).toBe(true);
+  });
+});

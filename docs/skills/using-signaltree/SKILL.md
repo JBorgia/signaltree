@@ -81,8 +81,8 @@ Cross-package enhancers (`enterprise()`, `guardrails()`, `formBridge()`, `supaba
 
 Markers — placed in initial state, replaced by `signalTree()` with fully-typed runtime API:
 
-- `entityMap<T, K>()` — O(1) CRUD: `addOne`, `upsertOne`, `removeOne`, `setAll`, `byId`, `all`, `clear`.
-- `status()` — async op state with canonical methods `setLoading()` / `setLoaded()` / `setError(err)` / `setNotLoaded()` / `reset()`. As of v10.2, Promise-vocabulary aliases also work: `.start()` (= setLoading), `.setSuccess()` / `.succeed()` (= setLoaded), `.fail(err)` (= setError). Use either; canonical names preferred for searchability. Read state via signals: `.isLoading()`, `.isLoaded()`, `.isError()`, `.error()` — these are **callable signals**, not properties.
+- `entityMap<T, K>()` — O(1) CRUD: `addOne`, `upsertOne`, `removeOne`, `setAll`, `byId`, `all`, `clear`. Predicates: `.empty()` (v10.3 canonical) / `.isEmpty()` (deprecated alias). Reads: `.count()`, `.has(id)`, `.where(pred)`, `.find(pred)`.
+- `status()` — async op state. Write methods: `setLoading()` / `setLoaded()` / `setError(err)` / `setNotLoaded()` / `reset()`. v10.2 Promise-vocabulary aliases also work: `.start()` (= setLoading), `.setSuccess()` / `.succeed()` (= setLoaded), `.fail(err)` (= setError). Read predicates (v10.3 canonical, bare names): `.loading()`, `.loaded()`, `.notLoaded()`, `.hasError()`. Deprecated `is`-prefix aliases (v10.x only, removal v11): `.isLoading()`, `.isLoaded()`, `.isNotLoaded()`, `.isError()`. All predicates are callable signals — invoke them.
 - `asyncSource<T>(config)` — load-and-expose (preferred over `status()` + manual try/catch). Auto-derives `.loading()`, `.error()`, `.data` accessor, `.refresh()` reload.
 - `asyncQuery<TInput, TResult>(config)` — input-driven debounced query with built-in switchMap + dedup pipeline. Reactive `.input` signal, `.results` history, `.rerun()`.
 - `stored(key, default)` — single signal backed by `localStorage`.

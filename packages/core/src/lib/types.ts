@@ -538,6 +538,16 @@ export interface EntitySignal<E, K extends string | number = string> {
   readonly count: Signal<number>;
   readonly ids: Signal<K[]>;
   has(id: K): Signal<boolean>;
+  /**
+   * True when the collection has no entities. v10.3 canonical name —
+   * aligns with FormControl-style bare-boolean accessors used across
+   * `status` / `form` / `asyncSource` markers.
+   */
+  readonly empty: Signal<boolean>;
+  /**
+   * @deprecated v10.3 — Use `.empty` (bare) instead. Will be removed in v11.0.
+   * Kept for compatibility; backed by the same computed signal as {@link empty}.
+   */
   readonly isEmpty: Signal<boolean>;
   readonly map: Signal<ReadonlyMap<K, E>>;
   where(predicate: (entity: E) => boolean): Signal<E[]>;

@@ -179,6 +179,72 @@ describe('status() marker', () => {
         expect(sig.error()).toBe(null);
       });
     });
+
+    describe('v10.3 bare-name predicates (canonical) — match Angular FormControl shape', () => {
+      it('should expose .loading (bare) returning same Signal as .isLoading', () => {
+        const sig = createStatusSignal({
+          [STATUS_MARKER]: true,
+          initialState: LoadingState.NotLoaded,
+        });
+        sig.setLoading();
+        // Both names work
+        expect(sig.loading()).toBe(true);
+        expect(sig.isLoading()).toBe(true);
+        // Same Signal instance — first access creates one computed,
+        // both bare and is-prefixed accessors return it
+        expect(sig.loading).toBe(sig.isLoading);
+      });
+
+      it('should expose .loaded (bare) returning same Signal as .isLoaded', () => {
+        const sig = createStatusSignal({
+          [STATUS_MARKER]: true,
+          initialState: LoadingState.NotLoaded,
+        });
+        sig.setLoaded();
+        expect(sig.loaded()).toBe(true);
+        expect(sig.isLoaded()).toBe(true);
+        expect(sig.loaded).toBe(sig.isLoaded);
+      });
+
+      it('should expose .notLoaded (bare) returning same Signal as .isNotLoaded', () => {
+        const sig = createStatusSignal({
+          [STATUS_MARKER]: true,
+          initialState: LoadingState.NotLoaded,
+        });
+        expect(sig.notLoaded()).toBe(true);
+        expect(sig.isNotLoaded()).toBe(true);
+        expect(sig.notLoaded).toBe(sig.isNotLoaded);
+      });
+
+      it('should expose .hasError returning same Signal as .isError', () => {
+        const sig = createStatusSignal({
+          [STATUS_MARKER]: true,
+          initialState: LoadingState.NotLoaded,
+        });
+        sig.setError(new Error('boom'));
+        expect(sig.hasError()).toBe(true);
+        expect(sig.isError()).toBe(true);
+        expect(sig.hasError).toBe(sig.isError);
+      });
+
+      it('all four predicates stay reactive across state transitions via bare names', () => {
+        const sig = createStatusSignal({
+          [STATUS_MARKER]: true,
+          initialState: LoadingState.NotLoaded,
+        });
+        expect(sig.notLoaded()).toBe(true);
+        expect(sig.loading()).toBe(false);
+        sig.setLoading();
+        expect(sig.notLoaded()).toBe(false);
+        expect(sig.loading()).toBe(true);
+        sig.setLoaded();
+        expect(sig.loaded()).toBe(true);
+        expect(sig.loading()).toBe(false);
+        sig.setError(new Error('boom'));
+        expect(sig.hasError()).toBe(true);
+        expect(sig.loaded()).toBe(false);
+      });
+    });
   });
 
   describe('integration with signalTree', () => {

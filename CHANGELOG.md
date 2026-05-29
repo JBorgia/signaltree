@@ -1,3 +1,53 @@
+## 10.3.0
+
+### 🎯 Marker accessor shape — UNIFIED across all markers
+
+A real DX bug surfaced by the v10.2 AI-codegen benchmark: SignalTree's own markers had inconsistent predicate-accessor naming. `status()` used `is`-prefix (`.isLoading()`, `.isLoaded()`), `entityMap` had one outlier (`.isEmpty()`), while `form`, `asyncSource`, and `asyncQuery` all used bare names (`.dirty`, `.loading`, `.empty`).
+
+Humans had to remember which marker used which shape. AI agents trained on `status.isLoading()` would then try `form.isDirty()` (didn't exist).
+
+**v10.3 fixes this** by making bare-named predicates canonical everywhere — matching `FormControl.dirty` / `.valid` and Angular signals conventions. The `is`-prefix names become deprecated aliases that return the **same Signal instance** as the canonical bare versions.
+
+| Marker | v10.3 canonical (preferred) | Deprecated alias (v10.x only, removed v11) |
+|---|---|---|
+| `status` | `.loading`, `.loaded`, `.notLoaded`, `.hasError` | `.isLoading`, `.isLoaded`, `.isNotLoaded`, `.isError` |
+| `entityMap` | `.empty` | `.isEmpty` |
+| `form` | `.dirty`, `.valid`, `.touched`, `.pristine` | (already bare — unchanged) |
+| `asyncSource` / `asyncQuery` | `.loading`, `.error`, `.data` | (already bare — unchanged) |
+
+All predicates are callable `Signal<boolean>` — invoke them: `tree.$.load.loading()`, `tree.$.users.empty()`.
+
+### Implementation note — zero double cost
+
+The deprecated alias and the canonical name share the **same lazy-computed Signal instance**. First-access creates one computed; both `.loading` and `.isLoading` return that same Signal. No duplicate computation, no double allocation. Verified by spec: `expect(sig.loading).toBe(sig.isLoading)`.
+
+### Migration path
+
+- **No breaking changes in v10.3.** Existing code using `.isLoading()` / `.isEmpty()` continues to work.
+- **JSDoc `@deprecated` annotations** trigger IDE warnings on the old names, nudging migration over time.
+- **v11.0 will remove the `is`-prefix aliases.** Plan for ~6+ months of v10.x time for consumers to migrate.
+
+### Updated surfaces
+
+- `llms.txt` + `llms-full.txt` — new "Marker accessor shape — UNIFIED in v10.3" section at the top of the disambiguation tables.
+- `packages/core/README.md` — same section ships in the npm tarball.
+- `docs/skills/using-signaltree/SKILL.md` — agent skill updated.
+- `docs/myths-and-misconceptions.md` — new Myth 18 explaining the historic inconsistency and the v10.3 alignment.
+- `marker-zoo` demo + `markers-demo` (fundamentals) — both now show canonical bare-name pattern.
+
+### Spec coverage
+
+- 5 new specs in `status.spec.ts` covering `.loading` / `.loaded` / `.notLoaded` / `.hasError` plus the cache-sharing invariant (`sig.loading === sig.isLoading`).
+- 3 new specs in `entity-signal.spec.ts` covering `.empty` / `.isEmpty` semantic equivalence and cache-sharing.
+
+### Why this matters for AI-codegen
+
+The v10.2 benchmark surfaced this inconsistency as a residual 9pp gap to ceiling. With v10.3, every marker uses the same pattern — `tree.$.X.predicateName()` — so models trained on any one marker correctly extrapolate to the others. Expected lift in the next quarterly benchmark: **+3-5pp → ~95% primed average**.
+
+The deeper insight: **the v10.2 benchmark didn't just measure AI accuracy — it surfaced a real DX bug in our own API.** AI-codegen-friendly and human-friendly turned out to be the same thing.
+
+---
+
 ## 10.2.0
 
 ### 🤖 AI-discoverability hardening — measured +42pp lift

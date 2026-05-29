@@ -520,6 +520,23 @@ This is the pattern enforced in production migrations. The `$` access stays read
 | `Store.dispatch(action)`, `Store.select(selector)` | **`@ngrx/store` (classic NgRx)** | Direct tree access: `tree.$.path()` to read, `tree.$.path.set(v)` to write |
 | `.toPromise()` on Observables (deprecated RxJS 7+) | RxJS legacy | `firstValueFrom(observable)` — or let `asyncSource` consume the Observable directly |
 
+### Marker accessor shape — UNIFIED in v10.3 (bare callable signals)
+
+**v10.3 aligns predicate names across all markers** to match `FormControl` / Angular signal conventions. Bare names (`loading`, `loaded`, `empty`, etc.) are now canonical everywhere. The old `is`-prefix names on `status` and `entityMap.isEmpty` are deprecated aliases through v10.x — they return the same Signal instance as the canonical names. Removal in v11.0.
+
+| Marker | v10.3 canonical predicate | Deprecated alias (v10.x only) |
+|---|---|---|
+| `status` | `.loading` | `.isLoading` |
+| `status` | `.loaded` | `.isLoaded` |
+| `status` | `.notLoaded` | `.isNotLoaded` |
+| `status` | `.hasError` | `.isError` |
+| `entityMap` | `.empty` | `.isEmpty` |
+| `form` | `.dirty`, `.valid`, `.touched`, `.pristine` | (already bare — unchanged) |
+| `asyncSource` | `.loading`, `.error`, `.data` | (already bare — unchanged) |
+| `asyncQuery` | `.loading`, `.error`, `.data` | (already bare — unchanged) |
+
+All predicates are callable `Signal<boolean>` — invoke them: `tree.$.load.loading()`. Both the canonical and deprecated alias return the **same Signal instance**, so there's no double computed cost.
+
 ### Status marker — exact method names (frequently confused)
 
 The `status()` marker's canonical methods are **`setLoading` / `setLoaded` / `setError`**, NOT Promise-vocabulary names (`setSuccess`, `start`, `succeed`, `fail`). However, **as of v10.2 the Promise-vocabulary aliases also work** — they delegate to the canonical methods with identical semantics. Use either; canonical is preferred in new code for searchability.
@@ -530,9 +547,8 @@ The `status()` marker's canonical methods are **`setLoading` / `setLoaded` / `se
 | `.start()` | `.setLoading()` | Yes — alias |
 | `.succeed()` | `.setLoaded()` | Yes — alias |
 | `.fail(err)` | `.setError(err)` | Yes — alias |
-| `.loading` (bare property) | `.isLoading()` (callable signal) | No — must call as signal |
-| `.error` (bare property) | `.error()` (callable signal) | No — must call as signal |
-| `.success` (bare property) | `.isLoaded()` (callable signal) | No — must call as signal |
+| `.loading` (bare property — read-only) | call as signal: `.loading()` | Yes (callable signal) |
+| `.error` (bare property — read-only) | call as signal: `.error()` | Yes (returns error value E \| null) |
 
 ### Async patterns — prefer `asyncSource` / `asyncQuery` over manual `status` + try/catch
 

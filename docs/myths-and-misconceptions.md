@@ -410,6 +410,33 @@ There is **no `.loading` bare property** — `.isLoading()` is a callable signal
 
 ---
 
+## Myth 18: "Each SignalTree marker uses a different shape for boolean predicates."
+
+**Source of confusion:** Through v10.2, this was *partially true*. Inconsistency in our own API:
+
+- `status()` used `is`-prefix: `.isLoading()`, `.isLoaded()`, `.isError()`, `.isNotLoaded()`
+- `entityMap` used `is`-prefix for one: `.isEmpty()`
+- `form()`, `asyncSource()`, `asyncQuery()` all used bare: `.dirty`, `.valid`, `.loading`, `.error`
+
+This was a real DX bug — humans had to remember which marker used which shape, and AI agents trained on `status.isLoading()` would then try `form.isDirty()` (didn't exist).
+
+**The v10.3 truth:** **Bare predicates everywhere.** Matches `FormControl.dirty` / `.valid` / `.touched` and Angular signals conventions.
+
+| Marker | v10.3 canonical | Old `is`-prefix (deprecated, removed v11) |
+|---|---|---|
+| `status` | `.loading`, `.loaded`, `.notLoaded`, `.hasError` | `.isLoading`, `.isLoaded`, `.isNotLoaded`, `.isError` |
+| `entityMap` | `.empty` | `.isEmpty` |
+| `form` | `.dirty`, `.valid`, `.touched`, `.pristine` | (already bare — unchanged) |
+| `asyncSource` / `asyncQuery` | `.loading`, `.error`, `.data` | (already bare — unchanged) |
+
+The deprecated `is`-prefix accessors return the **same Signal instance** as the canonical bare versions — no double computed cost, no migration urgency.
+
+**Why we shipped both instead of forcing a breaking change:** existing code keeps working. New code (and AI-generated code) gets the consistent shape. Deprecation warnings via JSDoc give linters/IDEs the signal to nudge migration over time. Removal in v11.0 gives consumers ~6+ months to migrate.
+
+**Doc-side action:** Use bare-name predicates in new examples. Reserve the `is`-prefix only when discussing the deprecation path.
+
+---
+
 ## Why this page exists
 
 Every error catalogued above is one that **AI coding agents will continue to make** until our docs surface area gives them a higher-quality alternative to retrieve. The cycle:

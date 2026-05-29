@@ -50,7 +50,7 @@ export class MarkersDemoComponent {
   }).derived(($) => ({
     // Derived state combining status and entities
     isReady: computed(
-      () => $.users.status.isLoaded() && $.users.entities.all().length > 0
+      () => $.users.status.loaded() && $.users.entities.all().length > 0
     ),
     selectedUser: computed(() => {
       const id = $.lastViewedUserId();
@@ -129,10 +129,10 @@ const tree = signalTree({
 });
 
 // Derived boolean signals (lazy-created)
-tree.$.users.status.isNotLoaded();  // true initially
-tree.$.users.status.isLoading();    // false
-tree.$.users.status.isLoaded();     // false
-tree.$.users.status.isError();      // false
+tree.$.users.status.notLoaded();  // true initially
+tree.$.users.status.loading();    // false
+tree.$.users.status.loaded();     // false
+tree.$.users.status.hasError();      // false
 
 // Helper methods
 tree.$.users.status.setLoading();   // Start loading
@@ -171,7 +171,7 @@ const tree = signalTree({
 // No .with(entities()) needed in v7+ (deprecated in v6, removed in v7)
 .derived(($) => ({
   isReady: computed(() => 
-    $.users.status.isLoaded() && 
+    $.users.status.loaded() && 
     $.users.entities.all().length > 0
   ),
   selectedUser: computed(() => {

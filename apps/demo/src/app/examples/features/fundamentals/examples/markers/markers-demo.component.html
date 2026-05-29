@@ -21,25 +21,25 @@
         <div class="status-indicators">
           <span
             class="status-badge"
-            [class.active]="store.$.users.status.isNotLoaded()"
+            [class.active]="store.$.users.status.notLoaded()"
           >
             NotLoaded
           </span>
           <span
             class="status-badge"
-            [class.active]="store.$.users.status.isLoading()"
+            [class.active]="store.$.users.status.loading()"
           >
             Loading
           </span>
           <span
             class="status-badge"
-            [class.active]="store.$.users.status.isLoaded()"
+            [class.active]="store.$.users.status.loaded()"
           >
             Loaded
           </span>
           <span
             class="status-badge error"
-            [class.active]="store.$.users.status.isError()"
+            [class.active]="store.$.users.status.hasError()"
           >
             Error
           </span>
@@ -51,27 +51,27 @@
           <button
             class="btn primary"
             (click)="loadUsers()"
-            [disabled]="store.$.users.status.isLoading()"
+            [disabled]="store.$.users.status.loading()"
           >
-            @if (store.$.users.status.isLoading()) {
+            @if (store.$.users.status.loading()) {
             <span class="spinner"></span> Loading... } @else { Load Users }
           </button>
           <button
             class="btn secondary"
             (click)="resetUsers()"
-            [disabled]="store.$.users.status.isNotLoaded()"
+            [disabled]="store.$.users.status.notLoaded()"
           >
             Reset
           </button>
         </div>
 
-        @if (store.$.users.status.isError()) {
+        @if (store.$.users.status.hasError()) {
         <div class="error-message">
           <strong>Error:</strong>
           {{ store.$.users.status.error()?.message }}
           <button class="btn small" (click)="loadUsers()">Retry</button>
         </div>
-        } @if (store.$.users.status.isLoaded()) {
+        } @if (store.$.users.status.loaded()) {
         <div class="users-list">
           <h4>Users ({{ store.$.users.entities.all().length }})</h4>
           <ul>

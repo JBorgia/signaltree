@@ -18,15 +18,25 @@
       <p>Async state machine — loading / loaded / error / not-loaded.</p>
       <div class="row">
         <span class="state">{{ store.$.orgStatus.state() }}</span>
-        @if (store.$.orgStatus.isLoading()) {
+        @if (store.$.orgStatus.loading()) {
           <span class="badge loading">⏳ in-flight</span>
-        } @else if (store.$.orgStatus.isLoaded()) {
+        } @else if (store.$.orgStatus.loaded()) {
           <span class="badge loaded">✅ loaded</span>
         }
       </div>
-      <pre><code>store.$.orgStatus.setLoading();
+      <pre><code>// Read predicates (v10.3 canonical — bare names)
+store.$.orgStatus.loading();      // Signal&lt;boolean&gt;
+store.$.orgStatus.loaded();
+store.$.orgStatus.hasError();
+
+// Deprecated aliases (v10.x only, removed v11):
+// .isLoading, .isLoaded, .isError, .isNotLoaded
+
+// Write methods (canonical):
+store.$.orgStatus.setLoading();
 store.$.orgStatus.setLoaded();
-// v10.2 aliases (equivalent):
+
+// v10.2 Promise-vocabulary aliases (equivalent):
 store.$.orgStatus.start();        // === setLoading
 store.$.orgStatus.setSuccess();   // === setLoaded
 store.$.orgStatus.fail(err);      // === setError</code></pre>

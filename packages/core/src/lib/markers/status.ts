@@ -52,14 +52,37 @@ export interface StatusSignal<E = Error> {
   /** Current error (null if no error) */
   error: WritableSignal<E | null>;
 
-  // Derived signals (read-only)
+  // Derived predicate signals (v10.3 canonical — bare names, matching FormControl /
+  // signals / asyncSource / entityMap / form. The `is`-prefix names below are
+  // kept as deprecated aliases through v10.x and will be removed in v11.0.)
   /** True when state is NotLoaded */
-  isNotLoaded: Signal<boolean>;
+  notLoaded: Signal<boolean>;
   /** True when state is Loading */
-  isLoading: Signal<boolean>;
+  loading: Signal<boolean>;
   /** True when state is Loaded */
+  loaded: Signal<boolean>;
+  /** True when state is Error (i.e. error !== null) */
+  hasError: Signal<boolean>;
+
+  /**
+   * @deprecated v10.3 — Use `.notLoaded` (bare) instead. Will be removed in v11.0.
+   * Kept for compatibility; identical to {@link notLoaded}.
+   */
+  isNotLoaded: Signal<boolean>;
+  /**
+   * @deprecated v10.3 — Use `.loading` (bare) instead. Will be removed in v11.0.
+   * Kept for compatibility; identical to {@link loading}.
+   */
+  isLoading: Signal<boolean>;
+  /**
+   * @deprecated v10.3 — Use `.loaded` (bare) instead. Will be removed in v11.0.
+   * Kept for compatibility; identical to {@link loaded}.
+   */
   isLoaded: Signal<boolean>;
-  /** True when state is Error */
+  /**
+   * @deprecated v10.3 — Use `.hasError` instead. Will be removed in v11.0.
+   * Kept for compatibility; identical to {@link hasError}.
+   */
   isError: Signal<boolean>;
 
   // Canonical helper methods
@@ -183,38 +206,55 @@ export function createStatusSignal<E = Error>(
   const stateSignal = signal<LoadingState>(marker.initialState);
   const errorSignal = signal<E | null>(null);
 
-  // Lazy computed signals - only created on first access
-  // This avoids creating 4 computed signals per status marker upfront
-  let _isNotLoaded: Signal<boolean> | null = null;
-  let _isLoading: Signal<boolean> | null = null;
-  let _isLoaded: Signal<boolean> | null = null;
-  let _isError: Signal<boolean> | null = null;
+  // Lazy computed signals — one per predicate, shared between the v10.3
+  // canonical name and its v10.2-deprecated `is`-prefixed alias so the same
+  // computed instance backs both `.loading` and `.isLoading` (no duplicate
+  // computation, no double allocation).
+  let _notLoaded: Signal<boolean> | null = null;
+  let _loading: Signal<boolean> | null = null;
+  let _loaded: Signal<boolean> | null = null;
+  let _hasError: Signal<boolean> | null = null;
+
+  const getNotLoaded = () =>
+    (_notLoaded ??= computed(() => stateSignal() === LoadingState.NotLoaded));
+  const getLoading = () =>
+    (_loading ??= computed(() => stateSignal() === LoadingState.Loading));
+  const getLoaded = () =>
+    (_loaded ??= computed(() => stateSignal() === LoadingState.Loaded));
+  const getHasError = () =>
+    (_hasError ??= computed(() => stateSignal() === LoadingState.Error));
 
   return {
     // Source signals
     state: stateSignal,
     error: errorSignal,
 
-    // Lazy derived signals - created on first access
+    // v10.3 canonical (bare) — preferred
+    get notLoaded() {
+      return getNotLoaded();
+    },
+    get loading() {
+      return getLoading();
+    },
+    get loaded() {
+      return getLoaded();
+    },
+    get hasError() {
+      return getHasError();
+    },
+
+    // v10.x deprecated aliases — identical computed instances, removed v11
     get isNotLoaded() {
-      return (_isNotLoaded ??= computed(
-        () => stateSignal() === LoadingState.NotLoaded
-      ));
+      return getNotLoaded();
     },
     get isLoading() {
-      return (_isLoading ??= computed(
-        () => stateSignal() === LoadingState.Loading
-      ));
+      return getLoading();
     },
     get isLoaded() {
-      return (_isLoaded ??= computed(
-        () => stateSignal() === LoadingState.Loaded
-      ));
+      return getLoaded();
     },
     get isError() {
-      return (_isError ??= computed(
-        () => stateSignal() === LoadingState.Error
-      ));
+      return getHasError();
     },
 
     // Helper methods

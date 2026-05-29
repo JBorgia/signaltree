@@ -120,18 +120,37 @@ This table catches the most common cross-library hallucinations. **Every "Wrong"
 | `.upsert(user)` on entity collections | **Akita** | `.upsertOne(user)` (singular suffix) |
 | `BehaviorSubject<T>`, `.next(v)`, `.asObservable()` | **RxJS classic** | A plain leaf in the `signalTree()` literal — no Observable wrapping needed |
 
+### Marker accessor shape — UNIFIED in v10.3 (bare callable signals)
+
+**As of v10.3, every marker uses the same accessor shape: bare-named callable signals (matching `FormControl.dirty` / `.valid` and Angular signals conventions).** The `is`-prefix names that used to appear on `status` and `entityMap.isEmpty` are kept as deprecated aliases through v10.x and will be removed in v11.0.
+
+**Cross-marker predicate naming (v10.3 canonical):**
+
+| Marker | Predicate signal (v10.3) | Old name (deprecated alias, v10.x only) |
+|---|---|---|
+| `status` | `.loading` | `.isLoading` |
+| `status` | `.loaded` | `.isLoaded` |
+| `status` | `.notLoaded` | `.isNotLoaded` |
+| `status` | `.hasError` | `.isError` |
+| `entityMap` | `.empty` | `.isEmpty` |
+| `form` | `.dirty`, `.valid`, `.touched`, `.pristine` | (already bare — unchanged) |
+| `asyncSource` | `.loading`, `.error`, `.data` | (already bare — unchanged) |
+| `asyncQuery` | `.loading`, `.error`, `.data` | (already bare — unchanged) |
+
+All predicates are **callable Signals** — invoke them: `tree.$.load.loading()`, `tree.$.users.empty()`. Both `.loading` and `.isLoading` return the same underlying Signal instance; no double allocation.
+
 ### Status marker — exact method names (frequently confused)
 
-The `status()` marker uses **`setLoading` / `setLoaded` / `setError`**, NOT Promise-vocabulary names. **Aliases ship as of v10.2** so the most common wrong-names also work, but the canonical names are:
+The `status()` marker's canonical methods are **`setLoading` / `setLoaded` / `setError` / `setNotLoaded` / `reset`**. Promise-vocabulary aliases also work as of v10.2 (identical semantics):
 
-| Wrong (Promise-vocab guess) | Correct (canonical) | Notes |
+| Wrong (Promise-vocab guess) | Canonical | Notes |
 |---|---|---|
 | `.setSuccess()` | **`.setLoaded()`** | Alias `.setSuccess` works in v10.2+ |
 | `.start()` | **`.setLoading()`** | Alias `.start` works in v10.2+ |
 | `.succeed()` | **`.setLoaded()`** | Alias `.succeed` works in v10.2+ |
 | `.fail(err)` | **`.setError(err)`** | Alias `.fail` works in v10.2+ |
-| `.loading` (property) | **`.isLoading()`** (callable signal — invoke it) |
-| `.error` (property) | **`.error()`** (callable signal — invoke it) |
+| `.loading` (bare property, can't be assigned) | **`.loading()`** (call as signal) | Read-only derived signal |
+| `.error` (bare property, can't be assigned) | **`.error()`** (call as signal) | Read-only error value |
 
 ### Async pattern — prefer `asyncSource` / `asyncQuery` over `status` + manual try/catch
 
