@@ -64,17 +64,12 @@ export const appRoutes: Route[] = [
         'SignalTree-native async primitives. Path-attached markers for load-and-expose and input-driven debounced queries, with auto-cleanup.',
     },
   },
+  // /rxmethod redirected to /async — rxMethod was removed in 9.6.0 (was briefly
+  // shipped in 9.5.x as a migration alias; the canonical answer is the async markers).
   {
     path: 'rxmethod',
-    loadComponent: () =>
-      import('./pages/rxmethod-demo/rxmethod-demo.component').then(
-        (c) => c.RxMethodDemoComponent
-      ),
-    data: {
-      title: 'rxMethod — RxJS interop (migration alias)',
-      description:
-        'Legacy alias for @ngrx/signals migration ergonomics. New SignalTree code should prefer the asyncSource and asyncQuery markers — see /async.',
-    },
+    redirectTo: '/async',
+    pathMatch: 'full',
   },
 
   // Fundamentals examples page (embedded demos on one page)

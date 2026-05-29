@@ -172,14 +172,16 @@ store.$.search.error();</code></pre>
       </li>
     </ul>
 
-    <h3>Coming from NgRx?</h3>
+    <h3>Coming from NgRx <code>rxMethod</code>?</h3>
     <p>
-      <code>rxMethod</code> remains available at
-      <code>&#64;signaltree/core/rxjs-interop</code> as a migration-friendly
-      alias. New SignalTree code should prefer the
-      <code>asyncSource</code> / <code>asyncQuery</code> markers — they
-      compose with the rest of the marker family and eliminate the
-      manual <code>tap()/setLoading()</code> wiring rxMethod requires.
+      SignalTree does not ship a <code>rxMethod</code> primitive — the
+      callable-factory-inside-<code>withMethods</code> shape is NgRx-flavored
+      and doesn't fit SignalTree's path-attached marker philosophy. Map
+      <code>rxMethod&lt;void&gt;</code> doing a load-and-expose →
+      <code>asyncSource</code>. Map <code>rxMethod&lt;TInput&gt;</code> doing
+      a debounced input-driven query → <code>asyncQuery</code>. Complex
+      multi-step orchestration that neither marker fits → plain Observable
+      method in an <code>&#64;Injectable()</code> Ops class.
     </p>
   </section>
 </div>

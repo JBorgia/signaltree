@@ -208,16 +208,15 @@ store.$.search.rerun();    // rerun with current input (skip dedup)
 
 Both markers attach at **any tree depth**, accept **Observables or Promises**, and auto-clean on the surrounding `DestroyRef`. No manual `tap()` / `setLoading()` / `setLoaded()` wiring.
 
-### Migration from `@ngrx/signals`
+### Migration from `@ngrx/signals` `rxMethod`
 
-If you're coming from NgRx and want a 1:1 `rxMethod`-shaped callable for the smoothest migration, it's available at the `rxjs-interop` subpath:
+SignalTree intentionally does **not** ship `rxMethod` — its callable-factory-inside-`withMethods` shape is NgRx-flavored and doesn't fit SignalTree's path-attached marker philosophy. Map NgRx `rxMethod` to:
 
-```typescript
-import { rxMethod } from '@signaltree/core/rxjs-interop';
-// Same call shape, input flexibility, and auto-cleanup as @ngrx/signals/rxjs-interop.
-```
+- **`asyncSource`** when the pipeline is doing load-and-expose
+- **`asyncQuery`** when the pipeline is doing input-driven debounced query
+- **plain Observable method in an Ops class** when the pipeline is doing complex multi-step orchestration that neither marker fits
 
-For new SignalTree code, prefer the `asyncSource` / `asyncQuery` markers — they eliminate the manual status wiring `rxMethod` requires and fit the rest of the marker family.
+See [the migration guide](docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md) for the full mapping with examples.
 
 ## Lifecycle
 
@@ -263,7 +262,7 @@ Snapshot from one production Angular mobile app's NgRx Signal Store → SignalTr
 
 This is the most common migration path. We ship a complete, AI-agent-ready migration guide that covers:
 
-- A mechanical concept map (`signalStore` → tree slice + `Ops`, `withState` → initial state, `rxMethod` → plain method, `withEntities` → `entityMap()` marker, etc.)
+- A mechanical concept map (`signalStore` → tree slice + `Ops`, `withState` → initial state, `rxMethod` → `asyncSource` / `asyncQuery` markers (or plain Observable method for orchestration), `withEntities` → `entityMap()` marker, etc.)
 - **Three migration strategies** with explicit decision criteria — big-bang (one PR), incremental per-domain (one PR per store), and hybrid legacy-facade (permanent coexistence fallback)
 - A **`Phase 0` recipe** for landing the foundation in a single dependency-only PR before touching any consumer
 - The [`scripts/verify-signaltree-migration.sh`](scripts/verify-signaltree-migration.sh) script — drop-in, package-manager-agnostic, runs `build` + `test` + `lint` and asserts `@ngrx/signals` is gone from source and `package.json`
@@ -280,7 +279,7 @@ The guide is written as an Agent Skill — point Cursor, Claude Code, or any `SK
 
 - Apps with structured, hierarchical state (settings, user profiles, nested forms, dashboards)
 - Teams that want signal-based state with dot-notation access and zero boilerplate
-- Projects that need undo/redo, DevTools, entity CRUD, async pipelines (`rxMethod`), or persistence out of the box
+- Projects that need undo/redo, DevTools, entity CRUD, async pipelines (`asyncSource` / `asyncQuery` markers), or persistence out of the box
 - Migrations away from `@ngrx/signals` — the agent-ready migration playbook ships in `@signaltree/core/skills/`
 
 **Consider alternatives when:**
@@ -289,7 +288,7 @@ The guide is written as an Agent Skill — point Cursor, Claude Code, or any `SK
 - Your state is flat key-value pairs (a `Map` or individual signals suffice)
 - You're building a tiny app with one or two signals (overhead exceeds value)
 - Your state shape is highly dynamic — streaming arbitrary JSON with unknown keys at high frequency (real-time log aggregators, fully-dynamic schema editors). SignalTree's markers and type system assume a fixed shape; for genuinely shape-shifting payloads, a flat collection inside a single store slice is a better fit.
-- You have a large existing `@ngrx/store` (classic) + heavy RxJS codebase. The migration target with the lowest cognitive cost is `@ngrx/signals` (NgRx SignalStore), not SignalTree — `rxMethod` transfers directly, the mental model is closer. See [`docs/compare/ngrx-signalstore.md`](docs/compare/ngrx-signalstore.md) for the full decision tree.
+- You have a large existing `@ngrx/store` (classic) + heavy RxJS codebase. The migration target with the lowest cognitive cost is `@ngrx/signals` (NgRx SignalStore), not SignalTree — the RxJS-flavored mental model is closer to where you already are. See [`docs/compare/ngrx-signalstore.md`](docs/compare/ngrx-signalstore.md) for the full decision tree.
 
 ## API Summary
 

@@ -142,16 +142,7 @@ store.$.users.refresh();
 store.$.search.input.set('alice');
 ```
 
-## Async pattern (alternative 1) — `rxMethod` migration alias
-
-For NgRx migration only — preserves the `@ngrx/signals/rxjs-interop` shape:
-
-```typescript
-import { rxMethod } from '@signaltree/core/rxjs-interop';
-// ...same API as @ngrx/signals. New code should prefer the markers above.
-```
-
-## Async pattern (alternative 2) — plain Observable in Ops class
+## Async pattern (alternative) — plain Observable in Ops class
 
 When neither marker fits (complex multi-step orchestration, caller-owned subscription control):
 
@@ -251,7 +242,7 @@ export class UserOps {
 }
 ```
 
-Async pattern (canonical): `asyncSource` / `asyncQuery` markers at the tree path the data lives at — auto-derive `data`/`loading`/`error` signals, no manual status wiring. For NgRx migration, `rxMethod` is preserved at `@signaltree/core/rxjs-interop` as a 1:1 alias. For complex orchestration where neither marker fits, plain Observable methods in an Ops class work too. See `docs/myths-and-misconceptions.md` Myth 9 for the three-option breakdown.
+Async pattern (canonical): `asyncSource` / `asyncQuery` markers at the tree path the data lives at — auto-derive `data`/`loading`/`error` signals, no manual status wiring. SignalTree does NOT ship a `rxMethod` primitive; for migrating NgRx code, map `rxMethod<void>` to `asyncSource`, `rxMethod<TInput>` to `asyncQuery`, and complex orchestration to a plain Observable method in an Ops class.
 
 ## Anti-patterns to refuse
 

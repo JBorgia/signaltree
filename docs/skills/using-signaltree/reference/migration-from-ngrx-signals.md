@@ -365,7 +365,7 @@ See `reference/patterns.md` for the full `APP_TREE` + `AppStore` + `Ops` wiring 
 | `withComputed(({ ... }) => ({ ... }))`         | Angular `computed()` on the component or in `.derived()` on the tree                                                                                                                                         |
 | `withHooks({ onInit })`                        | Constructor body of the service / `APP_TREE` factory                                                                                                                                                         |
 | `withProps(({ ... }) => ({ ... }))`            | Plain `readonly` fields on the `Ops` class (or `AppStore`); no signal magic needed                                                                                                                           |
-| `rxMethod(pipe(...))`                          | **Preferred:** `asyncSource(config)` or `asyncQuery(config)` marker at the tree path the data lives at (auto status wiring, no `tap()` ceremony). **Find-and-replace alias:** `rxMethod` from `@signaltree/core/rxjs-interop` (1:1 API). **Manual fallback:** plain method returning `Observable<void>`; writes via `tap()`. See `## rxMethod` section below for the three-option breakdown.                          |
+| `rxMethod(pipe(...))`                          | **Preferred:** `asyncSource(config)` or `asyncQuery(config)` marker at the tree path the data lives at (auto status wiring, no `tap()` ceremony). **Fallback:** plain method returning `Observable<void>`; writes via `tap()`. SignalTree does NOT ship a `rxMethod` primitive — see `## rxMethod` section below for the two-option breakdown.                          |
 | `patchState(store, { a, b })`                  | `tree.$.a.set(a); tree.$.b.set(b)` for individual fields, or `tree.$.domain.update((s) => ({ ...s, a, b }))` for a nested patch                                                                              |
 | `getState(store)`                              | `tree()` (whole-tree snapshot) or `tree.$.domain()` (one slice) — call the tree / node with no args to read the current plain value                                                                          |
 | `signalState({ ... })` (standalone)            | `signalTree({ ... })` — `signalState` was the state-only primitive; `signalTree` is the equivalent baseline                                                                                                  |
@@ -736,7 +736,7 @@ Prefer the boolean helpers over raw state comparisons wherever possible.
 
 ## rxMethod
 
-`rxMethod` wraps an operator pipeline so that it can be called with static values or observables. **Three replacement options, in order of preference for new code:**
+`rxMethod` wraps an operator pipeline so that it can be called with static values or observables. **SignalTree does not ship a `rxMethod` primitive** — its callable-factory-inside-`withMethods` shape is NgRx-flavored and doesn't fit SignalTree's path-attached marker philosophy. **Two replacement options, in order of preference:**
 
 ### Option A — `asyncSource` / `asyncQuery` markers (canonical, preferred)
 
@@ -773,21 +773,7 @@ store.$.search();          // Result[]
 
 See [`core.md` § asyncSource](core.md#asyncsourcetconfig) and [§ asyncQuery](core.md#asyncquerytinput-tresultconfig).
 
-### Option B — `rxMethod` migration alias (1:1 find-and-replace)
-
-If you want the lowest possible migration friction — literal find-and-replace of the import path — `rxMethod` is preserved at `@signaltree/core/rxjs-interop`:
-
-```ts
-// Before:
-// import { rxMethod } from '@ngrx/signals/rxjs-interop';
-// After:
-import { rxMethod } from '@signaltree/core/rxjs-interop';
-// ...same call shape, same input flexibility, same auto-cleanup via DestroyRef.
-```
-
-The downside vs option A: you still write manual `tap(() => setLoading())` / `setLoaded()` wiring and the async logic lives outside the tree literal. Treat this as a stepping-stone migration path; consider porting to markers as part of a later cleanup pass.
-
-### Option C — plain Observable in an Ops class (manual fallback)
+### Option B — plain Observable in an Ops class (manual fallback)
 
 When neither marker fits — e.g., complex multi-step orchestration where the caller needs explicit subscription control — write a method that returns `Observable<void>` and subscribes at the call site, or fire-and-forget with `.subscribe()` internally:
 

@@ -350,6 +350,5 @@ Prefer plain Angular `computed()` for inline derivations. Reach for `derivedFrom
 - `@signaltree/core/security` — security-oriented helpers.
 - `@signaltree/core/storage` — storage adapter primitives.
 - `@signaltree/core/presets` — tree config presets.
-- `@signaltree/core/rxjs-interop` — `rxMethod` migration alias for `@ngrx/signals` find-and-replace upgrades. For new SignalTree code, prefer the `asyncSource` / `asyncQuery` markers above.
 
 Import from the subpath when you need these — do not expect them on the main barrel.

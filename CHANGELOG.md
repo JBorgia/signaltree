@@ -1,3 +1,50 @@
+## 9.6.0
+
+### 💥 Breaking: `rxMethod` removed
+
+`rxMethod` (briefly shipped in 9.5.0-9.5.2 at `@signaltree/core/rxjs-interop` as a NgRx-migration alias) is **removed in this release**. Keeping it created two parallel async stories and an API surface that didn't fit SignalTree's path-attached marker philosophy.
+
+**The canonical async story is the markers, full stop:** `asyncSource` for load-and-expose, `asyncQuery` for input-driven debounced queries. Both shipped in 9.5.0 and remain unchanged.
+
+**If you used `rxMethod` from 9.5.x:**
+
+- `rxMethod<void>(pipeline)` doing a load-and-expose → replace with `asyncSource(config)` at the data's tree path.
+- `rxMethod<TInput>(pipeline)` doing a debounced input-driven query → replace with `asyncQuery(config)` at the search/results tree path.
+- Complex multi-step orchestration where neither marker fits → write a plain Observable method in an `@Injectable()` Ops class with `tap()` writing to tree paths.
+
+See [`docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md`](docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md) for the full mapping with examples.
+
+### Removed surfaces
+
+- **`@signaltree/core/rxjs-interop`** subpath — entire subpath export is gone. `import { rxMethod } from '@signaltree/core/rxjs-interop'` will fail.
+- **`rxMethod`, `RxMethod`, `RxMethodInput`** — no longer exported from anywhere.
+- **`/rxmethod`** demo route — now 301-redirects to `/async`.
+- **rxMethod nav entry** removed from the sidebar.
+
+### Docs
+
+All docs surfaces updated to drop `rxMethod` references and point migrators at the canonical markers:
+
+- `llms.txt`, `llms-full.txt`
+- `README.md`
+- `docs/compare/ngrx-signalstore.md`
+- `docs/myths-and-misconceptions.md` (Myth 9 rewritten)
+- `docs/ai/agent-templates.md`
+- `docs/skills/using-signaltree/reference/core.md`
+- `docs/skills/using-signaltree/reference/patterns.md`
+- `docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md`
+
+### Why this is a 9.6.0 (minor) and not a 10.0.0 (major)
+
+Strictly, removing a public API is a major-version change. We're treating this as a minor with a clear "recall" framing because:
+
+1. `rxMethod` was only ever public for ~6 hours total across 9.5.0/9.5.1/9.5.2.
+2. Adoption was confirmed minimal (handful of users at most).
+3. The replacement story is straightforward — both replacement options were already documented in 9.5.x.
+4. v9.5.0 (where `rxMethod` shipped) is also marked as a deprecated stepping stone — anyone reading the changelog will see the recall narrative.
+
+If you were one of the early adopters of 9.5.x's `rxMethod` and this break catches you off-guard, please open an issue — we'll help map your specific pipeline to the markers.
+
 ## 9.5.2
 
 ### 📚 Docs: agent skill, comparison, and AI templates now lead with the markers

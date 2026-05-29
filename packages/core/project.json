@@ -23,8 +23,7 @@
         "additionalEntryPoints": [
           "packages/core/src/security.ts",
           "packages/core/src/edit-session.ts",
-          "packages/core/src/storage.ts",
-          "packages/core/src/rxjs-interop.ts"
+          "packages/core/src/storage.ts"
         ],
         "tsConfig": "packages/core/tsconfig.lib.prod.json",
         "outputPath": "dist/packages/core",

@@ -1054,8 +1054,9 @@ shipping a custom marker.
 ## Replacing `rxMethod` (from `@ngrx/signals`)
 
 `@ngrx/signals` ships `rxMethod` to wire a method to an internally-owned
-subscription. SignalTree gives you **three options**, listed in order of
-preference for new code:
+subscription. **SignalTree does not ship a `rxMethod` primitive** — the
+SignalTree-native answer is to put async behavior at the tree path it
+describes. Map NgRx `rxMethod` to one of these two options:
 
 ### 1. `asyncSource` / `asyncQuery` markers (canonical SignalTree pattern)
 
@@ -1090,26 +1091,13 @@ store.$.search.input.set('alice'); // drives debounced pipeline
 
 See [`core.md` § asyncSource](core.md#asyncsourcetconfig) and [§ asyncQuery](core.md#asyncquerytinput-tresultconfig) for full API.
 
-### 2. `rxMethod` migration alias
-
-For literal find-and-replace migration from `@ngrx/signals`, the `rxMethod`
-API is preserved at `@signaltree/core/rxjs-interop`:
-
-```ts
-import { rxMethod } from '@signaltree/core/rxjs-interop';
-// ...same call shape as @ngrx/signals/rxjs-interop
-```
-
-Use this when you want zero cognitive cost migrating existing NgRx code. For
-new SignalTree code, prefer option 1.
-
-### 3. Plain Observable in an Ops class
+### 2. Plain Observable in an Ops class
 
 When neither marker fits — e.g., complex multi-step orchestration where the
 caller needs explicit subscription control — write an Ops method that returns
 `Observable<void>`. Two sub-flavors based on who owns the subscription:
 
-#### 3a. Store-owned subscription (fire-and-forget effect)
+#### 2a. Store-owned subscription (fire-and-forget effect)
 
 When the Ops class should drive the subscription itself — e.g. a reactive
 debounced search that should run as long as the app is alive — subscribe
@@ -1150,7 +1138,7 @@ export class SearchOps {
 }
 ```
 
-#### 3b. Caller-owned observable return
+#### 2b. Caller-owned observable return
 
 When callers should decide when/whether to subscribe (HTTP loads, one-shot
 actions with router-level cancellation), return an `Observable`:

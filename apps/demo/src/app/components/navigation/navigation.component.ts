@@ -167,13 +167,6 @@ export class NavigationComponent {
       category: 'examples',
     },
     {
-      id: 'rxmethod',
-      title: 'rxMethod (RxJS interop, migration alias)',
-      description: 'Legacy NgRx-compatible alias — prefer the async markers above for new code',
-      route: '/rxmethod',
-      category: 'examples',
-    },
-    {
       id: 'devtools',
       title: 'DevTools',
       description: 'Redux DevTools integration',

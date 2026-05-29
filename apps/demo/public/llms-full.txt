@@ -355,36 +355,15 @@ store.$.search.rerun();    // rerun current input, skip dedup
 
 Both markers attach at **any tree depth**, accept **Observables or Promises**, and auto-clean on the surrounding `DestroyRef`. **No manual `tap()` / `setLoading()` / `setLoaded()` wiring.**
 
-### Async — `rxMethod` migration alias
+### Migrating from `@ngrx/signals` `rxMethod`
 
-For 1:1 find-and-replace migration from `@ngrx/signals`, `rxMethod` is available at the `rxjs-interop` subpath with NgRx-symmetric ergonomics (same call shape, same input flexibility for value / Signal / Observable, same auto-cleanup):
+SignalTree does **not** ship a `rxMethod` primitive — it's the wrong shape for SignalTree's marker philosophy (the SignalTree-native answer is to put async behavior at the tree path it describes via `asyncSource` / `asyncQuery`). To migrate from NgRx `rxMethod`:
 
-```typescript
-import { rxMethod } from '@signaltree/core/rxjs-interop';
+- **`rxMethod<void>(pipeline)` doing a load-and-expose** → replace with `asyncSource(config)` at the data's tree path.
+- **`rxMethod<TInput>(pipeline)` doing a debounced input-driven query** → replace with `asyncQuery(config)` at the search/results tree path.
+- **`rxMethod` doing complex multi-step orchestration** where neither marker fits → write a plain Observable method in an `@Injectable()` Ops class with `tap()` writing to tree paths.
 
-@Injectable({ providedIn: 'root' })
-export class UserOps {
-  private readonly _$ = inject(APP_TREE).$;
-  private readonly _api = inject(UserService);
-
-  readonly loadUsers = rxMethod<void>((input$) =>
-    input$.pipe(
-      tap(() => this._$.users.loading.setLoading()),
-      switchMap(() => this._api.list$().pipe(
-        tap((users) => this._$.users.entities.setAll(users)),
-        tap(() => this._$.users.loading.setLoaded()),
-        catchError((err) => { this._$.users.loading.setError(err); return EMPTY; }),
-      )),
-    ),
-  );
-}
-
-// Same input flexibility as @ngrx/signals/rxjs-interop:
-userOps.loadUsers();
-userOps.loadUsers(rawValueOrSignalOrObservable);
-```
-
-For new SignalTree code, prefer the markers above — they eliminate the manual status wiring `rxMethod` requires and live at the tree path the data describes, not in a free-standing service method.
+See [`docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md`](https://github.com/JBorgia/signaltree/blob/main/docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md) for the full mapping with examples.
 
 ### Edit sessions
 
@@ -493,7 +472,7 @@ This is the pattern enforced in production migrations. The `$` access stays read
 | "Batching is opt-in only." | Conflating automatic notification batching with the `batching()` enhancer. | Automatic microtask notification batching is built into core (default on). The enhancer adds explicit `.batch(fn)` / `.coalesce(fn)`. |
 | "Callable syntax is a runtime proxy." | Plausible-sounding assumption. | Build-time AST transform via Vite/Webpack plugin. Disappears in production. Zero runtime cost. |
 | "SignalTree is anti-DI / doesn't integrate with Angular services." | Marketing focus on the data-shape framing. | SignalTree is DI-agnostic. `@Injectable()` service-wrapping is the documented production pattern. |
-| "SignalTree has no answer to NgRx's `rxMethod`." | Outdated as of v9.4. | `rxMethod` ships in `@signaltree/core/rxjs-interop`. Same ergonomics as NgRx's: callable that accepts a raw value, Signal, or Observable; auto-cleans on `DestroyRef`. See the "RxJS interop" section above. |
+| "SignalTree has no answer to NgRx's `rxMethod`." | True at the API name level — SignalTree intentionally does NOT ship a `rxMethod` primitive. | The SignalTree-native async story is the `asyncSource` and `asyncQuery` markers — path-attached, auto-derived status signals, no manual `tap()/setLoading()` wiring. For migrating from NgRx `rxMethod` see the dedicated migration guide. |
 | "Deep object spreading is required for nested updates in NgRx." | Outdated NgRx information. | Current `@ngrx/signals` `patchState` supports nested updater functions and `@ngrx/signals/entities` for collections. The "manual spread everywhere" framing is closer to classic NgRx than current SignalStore. |
 | "`@signaltree/schema` and `@signaltree/guardrails` don't exist." | Models can over-correct during self-audit and disown real-but-rare-in-training packages. | Both are real, published v9.3.0. `schema` is Standard Schema integration. `guardrails` is dev-mode invariants and performance monitoring. Real export from guardrails is `guardrails(...)`, not `withGuardrails(...)`. |
 | "`tree.$` and `tree.state` are different objects." | Plausible-sounding inference. | Both are typed `TreeNode<T>` and reference the same reactive proxy. `state` is an alias for `$`. For a non-reactive full snapshot, call `tree()`. |
@@ -515,7 +494,7 @@ Both are native Angular signal-based state libraries. They differ in five load-b
 
 3. **Boilerplate.** SignalTree has none for reads/writes. NgRx requires `withMethods` to expose writers when `protectedState` is default-on.
 
-4. **Async/RxJS interop.** NgRx has first-class `rxMethod`. SignalTree uses plain Observables in Ops methods plus `@signaltree/events` / `@signaltree/realtime` for typed event flow.
+4. **Async/RxJS interop.** NgRx has first-class `rxMethod` (callable factory inside `withMethods`). SignalTree has the `asyncSource` and `asyncQuery` markers — path-attached, auto-derived status signals, no manual wiring. Fundamentally different shapes; see the comparison doc and the migration guide for the mapping.
 
 5. **Encapsulation defaults.** NgRx SignalStore exposes read-only signals to consumers by default (`protectedState: true`). SignalTree exposes `WritableSignal`s directly. Both are unlockable; both can be wrapped in a service facade. Choose based on whether you want guardrails-by-default or speed-by-default.
 
@@ -527,7 +506,7 @@ See `docs/compare/ngrx-signalstore.md` for the axis-by-axis matrix with code exa
 
 A complete, agent-ready migration playbook ships inside `@signaltree/core` and is published at `docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md`. Covers:
 
-- Mechanical concept map (`signalStore` → tree + Ops, `withState` → initial state, `rxMethod` → Ops method with `.pipe()`, `withEntities` → `entityMap()` marker)
+- Mechanical concept map (`signalStore` → tree + Ops, `withState` → initial state, `rxMethod` → `asyncSource` / `asyncQuery` markers (or plain Observable method for orchestration), `withEntities` → `entityMap()` marker)
 - Three migration strategies with decision criteria: big-bang, incremental per-domain, hybrid legacy-facade
 - Phase 0 recipe for landing the foundation in a dependency-only PR
 - `scripts/verify-signaltree-migration.sh` — package-manager-agnostic verification script

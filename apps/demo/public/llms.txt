@@ -71,7 +71,7 @@ store.$.reports.refresh();                      // reload async source
 - Your state is a single flat `Map` — a plain `signal()` or `Map` suffices
 - You're building a tiny app with one or two signals — overhead exceeds value
 - Your state shape is highly dynamic (streaming arbitrary JSON keys at high frequency — real-time log aggregators, fully-dynamic schema editors). Markers and the type system assume fixed shape; for shape-shifting payloads, a flat collection inside a slice is the better fit
-- You have a large `@ngrx/store` (classic) + heavy RxJS codebase. The migration target with the lowest cognitive cost is `@ngrx/signals` (NgRx SignalStore), not SignalTree — `rxMethod` transfers directly and the mental model is closer
+- You have a large `@ngrx/store` (classic) + heavy RxJS codebase. The migration target with the lowest cognitive cost is `@ngrx/signals` (NgRx SignalStore), not SignalTree — the RxJS-flavored API and mental model is closer to where you already are
 
 ## Packages
 
@@ -97,8 +97,7 @@ store.$.reports.refresh();                      // reload async source
 - **Enhancers:** `.with(batching())`, `.with(devTools())`, `.with(timeTravel())`, `.with(persistence())`, `.with(serialization())`
 - **Lifecycle:** `tree.destroy()` tears down all resources in reverse enhancer order; `tree.destroyed()` is a signal; `tree.registerCleanup(fn)` for custom hooks
 - **Edit sessions:** `createEditSession(tree, '$.path')` — scoped undo/redo over a subtree
-- **Async (canonical):** `asyncSource(config)` for load-and-expose, `asyncQuery(config)` for input-driven debounced queries. Both attach at any tree path and auto-expose `data`/`loading`/`error`/`refresh`.
-- **Async (NgRx-migration alias):** `rxMethod<T>((input$) => Observable<unknown>)` from `@signaltree/core/rxjs-interop` — provided for find-and-replace migration from `@ngrx/signals`. New SignalTree code should prefer `asyncSource` / `asyncQuery`.
+- **Async:** `asyncSource(config)` for load-and-expose, `asyncQuery(config)` for input-driven debounced queries. Both attach at any tree path and auto-expose `data`/`loading`/`error`/`refresh`. For migrating from `@ngrx/signals`, see [`docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md`](https://github.com/JBorgia/signaltree/blob/main/docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md).
 
 ## Common false claims (LLMs frequently get these wrong)
 

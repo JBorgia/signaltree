@@ -100,7 +100,7 @@ The walker (`materializeMarkers`) tracks the path during tree construction and s
 | **State definition** | `withState({...})` | First argument to `signalTree({...})` |
 | **Computed state** | `withComputed(({ keys }) => ({ ... }))` | `.derived($ => ({ ... }))` — deep-merged into the tree |
 | **Methods/mutations** | `withMethods((store) => ({ ... }))` | Direct on leaf, or in an Ops service class (recommended) |
-| **Async/streaming** | `rxMethod(pipeline)` | Plain Observable in Ops method with `tap()` into tree, or `@signaltree/events` |
+| **Async/streaming** | `rxMethod(pipeline)` — callable factory inside `withMethods` | `asyncSource` / `asyncQuery` markers — path-attached, auto-derived status signals, no manual wiring |
 
 ### 2. Read syntax
 
@@ -155,10 +155,9 @@ The "any component can mutate" concern is overstated on both sides:
 |---|---|---|
 | **Canonical async primitive** | `rxMethod(pipeline)` — callable factory living inside `withMethods` | `asyncSource(config)` / `asyncQuery(config)` markers — **at the tree path** |
 | **Status wiring** | Manual `tap(() => setLoading())` / `setLoaded()` inside pipeline | **Automatic** — materializer derives `loading` / `error` signals |
-| **Migration alias** | n/a | `rxMethod` from `@signaltree/core/rxjs-interop` — 1:1 NgRx-shape for find-and-replace |
 | **Race conditions / cancellation** | `switchMap` in pipeline | Built into `asyncQuery`; standard RxJS in `asyncSource.load` |
-| **Input flexibility** | Raw value, Signal, or Observable | Signal-driven via `input` (asyncQuery) or explicit `refresh()` (asyncSource); `rxMethod` alias preserves NgRx-shape input flexibility |
-| **Auto-cleanup** | `DestroyRef` | `DestroyRef` (same for all three SignalTree options) |
+| **Input flexibility** | Raw value, Signal, or Observable | Signal-driven via `input` (asyncQuery) or explicit `refresh()` (asyncSource) |
+| **Auto-cleanup** | `DestroyRef` | `DestroyRef` (same) |
 | **Event-bus pattern** | `@ngrx/store` (classic) or community packages | `@signaltree/events` provides typed events |
 | **WebSocket/SSE sync** | Manual wiring | `@signaltree/realtime` |
 
@@ -174,7 +173,7 @@ const store = signalTree({
 });
 // .loading / .error / .data / .refresh derive automatically — no manual wiring.
 
-// NgRx SignalStore (and SignalTree's rxMethod alias):
+// NgRx SignalStore:
 withMethods((store) => ({
   loadUsers: rxMethod<void>((input$) => input$.pipe(
     tap(() => patchState(store, { loading: true })),
@@ -187,7 +186,7 @@ withMethods((store) => ({
 // Same expressiveness, but you write the status wiring manually every time.
 ```
 
-For teams migrating from `@ngrx/signals`, the `rxMethod` alias at `@signaltree/core/rxjs-interop` provides a zero-cognitive-cost migration path. For new SignalTree code, prefer the markers.
+For teams migrating NgRx `rxMethod` code: the SignalTree-native mapping is `asyncSource` for load-and-expose patterns and `asyncQuery` for input-driven debounced queries. Complex orchestration that doesn't fit either marker maps to a plain Observable method in an Ops class. See [the migration guide](../skills/using-signaltree/reference/migration-from-ngrx-signals.md) for the full breakdown.
 
 ### 7. Devtools and time-travel
 
@@ -367,8 +366,7 @@ Neither is wrong. Pick what your team reads more naturally.
 - **Out-of-the-box read-only consumer exports.** `protectedState: true` exposes signals to consumers as read-only by default; no service facade needed to get that. SignalTree gives you the same outcome via an `@Injectable()` AppStore + Ops pattern, but it's opt-in, not default.
 - **Ecosystem inertia.** More plugins, more StackOverflow answers, more Cursor/Claude/Copilot training data. This matters for code generation and onboarding speed even when the underlying capabilities are at parity.
 - **`@ngrx/store` interop.** If you're keeping a classic `@ngrx/store` slice for legacy/event-sourcing reasons, `@ngrx/signals` integrates with it naturally via shared actions/dispatch. SignalTree treats those as orthogonal worlds.
-
-> Previously this list included `rxMethod`. As of v9.4, `rxMethod` is at full parity in `@signaltree/core/rxjs-interop`. Same call shape, same input flexibility, same auto-cleanup.
+- **`rxMethod` callable-factory ergonomics.** If your team prefers defining async pipelines as callable methods inside the store rather than as markers at a path, that's NgRx's native shape. SignalTree intentionally went the other direction (path-attached markers with auto-derived status). Both are valid; choose what matches your team's mental model.
 
 ### SignalTree wins at
 
@@ -407,7 +405,7 @@ See [`docs/myths-and-misconceptions.md`](../myths-and-misconceptions.md) for the
 
 ## Migration paths
 
-- **From `@ngrx/signals` (SignalStore):** see [`docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md`](../skills/using-signaltree/reference/migration-from-ngrx-signals.md). Includes mechanical concept map, three migration strategies (big-bang / incremental-per-domain / hybrid-legacy-facade), and a verification script. `rxMethod` transfers 1:1 since SignalTree now ships its own `rxMethod` from `@signaltree/core/rxjs-interop`.
+- **From `@ngrx/signals` (SignalStore):** see [`docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md`](../skills/using-signaltree/reference/migration-from-ngrx-signals.md). Includes mechanical concept map, three migration strategies (big-bang / incremental-per-domain / hybrid-legacy-facade), and a verification script. NgRx `rxMethod` does not have a 1:1 SignalTree primitive — map it to `asyncSource` / `asyncQuery` markers (most cases) or a plain Observable method in an Ops class (complex orchestration).
 - **From classic NgRx (`@ngrx/store` + `@ngrx/effects`):** **honest recommendation — consider `@ngrx/signals` first, not SignalTree.** A team with heavy classic-NgRx + RxJS muscle memory will transfer to NgRx SignalStore with much less cognitive cost. SignalTree is worth the larger rewrite if your team is *also* trying to escape the Redux mental model entirely (actions / reducers / effects / selectors → JSON tree + Ops). Treat it as a domain-by-domain rewrite, not a mechanical migration. If your goal is "less boilerplate, same patterns," NgRx SignalStore is the better destination.
 - **From plain signals:** trivial — wrap your state object in `signalTree()` and you're done.
 

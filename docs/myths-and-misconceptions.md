@@ -212,9 +212,9 @@ You can use SignalTree as a plain module-level constant (for tests, demos, libra
 
 ## Myth 9: "SignalTree has no answer to NgRx's `rxMethod` for async/RxJS interop."
 
-**Where this comes from:** True in earlier versions; outdated as of v9.5.
+**Where this comes from:** True at the API-name level — SignalTree intentionally does NOT ship a `rxMethod` primitive. Its callable-factory-inside-`withMethods` shape is NgRx-flavored and doesn't fit SignalTree's path-attached marker philosophy.
 
-**The truth (updated as of v9.5):** SignalTree ships **two canonical async markers** that fit the existing marker family (`entityMap`, `status`, `stored`, `form`) — `asyncSource` for load-and-expose, `asyncQuery` for input-driven debounced queries. Both attach at any tree path, expose `data`/`loading`/`error`/lifecycle methods automatically, and auto-clean on the surrounding `DestroyRef`. **No manual `tap()` / `setLoading()` / `setLoaded()` wiring** of the kind `rxMethod` requires.
+**The truth:** SignalTree's async story is **two markers in the same family as `entityMap`, `status`, `stored`, `form`** — `asyncSource` for load-and-expose, `asyncQuery` for input-driven debounced queries. Both attach at any tree path, expose `data`/`loading`/`error`/lifecycle methods automatically, and auto-clean on the surrounding `DestroyRef`. **No manual `tap()` / `setLoading()` / `setLoaded()` wiring** of the kind `rxMethod` requires.
 
 ```typescript
 import { signalTree, asyncSource, asyncQuery } from '@signaltree/core';
@@ -234,7 +234,9 @@ store.$.users.refresh();
 store.$.search.input.set('alice');
 ```
 
-For **NgRx migration**, `rxMethod` is still exported from `@signaltree/core/rxjs-interop` as a 1:1 compatible alias — find-and-replace the import path and existing NgRx `rxMethod` code keeps working. New SignalTree code should prefer the markers.
+For **migrating from NgRx `rxMethod`**: map `rxMethod<void>(pipeline)` doing a load-and-expose → `asyncSource(config)`. Map `rxMethod<TInput>(pipeline)` doing a debounced input-driven query → `asyncQuery(config)`. Map complex multi-step orchestration that neither marker fits → plain Observable method in an `@Injectable()` Ops class with `tap()` writing to tree paths. See [`docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md`](skills/using-signaltree/reference/migration-from-ngrx-signals.md) for the full mapping with examples.
+
+**Historical note:** A `rxMethod` 1:1 alias briefly shipped in 9.5.0-9.5.2 at `@signaltree/core/rxjs-interop`. It was **removed in 9.6.0** because keeping it created two parallel async stories and an API surface that didn't fit SignalTree's design philosophy. Anyone who shipped against 9.5.x's `rxMethod` should migrate to `asyncSource` / `asyncQuery` (most cases) or a plain Observable method (orchestration cases) when upgrading to 9.6.0+.
 
 ```typescript
 import { rxMethod } from '@signaltree/core/rxjs-interop';

@@ -84,7 +84,7 @@ describe('schemas — aggregate signals', () => {
   });
 
   it('pending signal reflects in-flight async runs', async () => {
-    let resolveCheck: (() => void) | null = null;
+    let resolveCheck: (() => void) | undefined;
     const tree = signalTree({ a: '' }).with(
       schemas({
         schemas: {
@@ -107,7 +107,7 @@ describe('schemas — aggregate signals', () => {
     expect(tree.schemas.pending()).toBe(true);
     expect(tree.schemas.pendingPaths()).toContain('a');
 
-    resolveCheck?.();
+    if (typeof resolveCheck === 'function') resolveCheck();
     await Promise.resolve();
     await Promise.resolve();
     expect(tree.schemas.pending()).toBe(false);
