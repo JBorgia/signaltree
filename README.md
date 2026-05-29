@@ -10,8 +10,20 @@
     <a href="https://www.npmjs.com/package/@signaltree/core" target="_blank">npm</a>
     &nbsp;|&nbsp;
     <a href="https://github.com/JBorgia/signaltree" target="_blank">GitHub</a>
+    &nbsp;|&nbsp;
+    <a href="https://signaltree.io/built-for-ai" target="_blank">Built for AI</a>
   </p>
 </div>
+
+## 🤖 Built for the AI-assisted era
+
+SignalTree is the only Angular state-management library that treats AI coding agents as a first-class consumer of the API. We ship `llms.txt`, disambiguation tables, and an agent skill — and **we measure the result**.
+
+**Measured (v10.2, 2026-05-29):** AI-codegen accuracy goes from **49% → 91% (+42 percentage points)** when `llms.txt` is in the agent's context. Reproducible across 6 frontier models × 8 prompts × 5 libraries × 720 cells. With Claude Sonnet 4.6, primed accuracy hits **99/100**.
+
+The priming surface ships with the npm package: `node_modules/@signaltree/core/llms.txt` is automatically available to retrieval-aware AI tools after `npm install @signaltree/core`. See [Built for AI →](https://signaltree.io/built-for-ai) and the [reproducible benchmark](scripts/ai-codegen-benchmark/RESULTS-v10.2-FINAL.md).
+
+---
 
 ## Mental Model
 

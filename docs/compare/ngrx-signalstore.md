@@ -401,6 +401,24 @@ LLMs (including the major frontier models as of late 2025 / early 2026) routinel
 
 See [`docs/myths-and-misconceptions.md`](../myths-and-misconceptions.md) for the full catalogue with source-code citations.
 
+### What we did about it — measured outcome
+
+In v10.2 (2026-05-29), we ran a reproducible benchmark with 4 frontier and 2 cost-tier models across 8 prompts × 5 libraries × 3 priming modes = **720 cells**. With `llms.txt` injected as priming context:
+
+| Library | Cold (no priming) | Primed with `llms.txt` | Lift |
+|---|---|---|---|
+| **SignalTree** | **49%** | **91%** | **+42pp** |
+| @ngrx/signals | 86% | 80% | −6pp* |
+| @ngrx/store | 91% | 88% | −3pp |
+| Akita | 94% | 85% | −9pp |
+| Elf | 94% | 87% | −7pp |
+
+\* SignalTree priming context slightly degrades cross-library accuracy because models try to cross-pollinate when in "SignalTree mindset." Acceptable trade since priming users are SignalTree users.
+
+**Key result:** primed Haiku 4.5 (97/100) outscores cold Sonnet 4.6 (41/100) by 2.4× — priming closes the model-tier gap. Full scorecard: [`scripts/ai-codegen-benchmark/RESULTS-v10.2-FINAL.md`](../../scripts/ai-codegen-benchmark/RESULTS-v10.2-FINAL.md).
+
+**The priming surface ships with `npm install @signaltree/core`** — `node_modules/@signaltree/core/llms.txt` and the disambiguation table at the top of `README.md` reach every user automatically.
+
 ---
 
 ## Migration paths

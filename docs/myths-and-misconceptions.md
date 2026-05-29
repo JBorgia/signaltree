@@ -387,6 +387,29 @@ This myth is one we should be careful **not** to propagate when making the Signa
 
 ---
 
+## Myth 17: "The `status()` marker has a `.setSuccess()` method, like NgRx-style state machines."
+
+**Source of confusion:** Promise-vocabulary pattern matching. Most async state machines (Promise lifecycle, Redux toolkit RTK Query) use the words "success" and "fail". AI agents trained on those vocabularies reach for `.setSuccess()` / `.start()` / `.succeed()` / `.fail()` by reflex.
+
+**The historic truth:** Through v10.1, the canonical method names were `setLoading()` / `setLoaded()` / `setError(err)` / `setNotLoaded()` / `reset()`. `.setSuccess()` did not exist.
+
+**The v10.2+ truth:** Promise-vocabulary aliases were added in v10.2 as a deliberate "meet the AI where it is" design choice. The aliases are **first-class** with identical semantics:
+
+| Alias (v10.2+) | Canonical | Equivalent? |
+|---|---|---|
+| `.start()` | `.setLoading()` | Yes — alias |
+| `.setSuccess()` | `.setLoaded()` | Yes — alias |
+| `.succeed()` | `.setLoaded()` | Yes — alias |
+| `.fail(err)` | `.setError(err)` | Yes — alias |
+
+There is **no `.loading` bare property** — `.isLoading()` is a callable signal. Same for `.isLoaded()`, `.isError()`, `.error()`.
+
+**Why we added the aliases instead of just correcting the docs:** the reproducible AI-codegen benchmark (`scripts/ai-codegen-benchmark/`) showed `.setSuccess()` and `.fail()` as the most common primed-run hallucinations, even with `llms.txt` in context. Adding the aliases converts the hallucination from a bug into idiomatic prose at zero semantic cost. Both forms work, both are documented, no migration pressure on existing code.
+
+**Doc-side action:** New code should still prefer canonical names for searchability and consistency. Old code or AI-generated code using aliases is fully supported.
+
+---
+
 ## Why this page exists
 
 Every error catalogued above is one that **AI coding agents will continue to make** until our docs surface area gives them a higher-quality alternative to retrieve. The cycle:

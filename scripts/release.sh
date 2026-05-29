@@ -348,6 +348,18 @@ fi
 
 print_success "Package builds completed"
 
+# Copy AI-discoverability priming surfaces into the core tarball so that
+# `node_modules/@signaltree/core/llms.txt` exists for retrieval-aware AI agents
+# without requiring a separate web/GitHub fetch. The +42pp lift we measure
+# only fires when llms.txt is in the agent's context — shipping it via npm
+# install reaches every user automatically.
+if [ -f "apps/demo/public/llms.txt" ] && [ -d "dist/packages/core" ]; then
+    print_step "Copying llms.txt + llms-full.txt into @signaltree/core tarball..."
+    cp apps/demo/public/llms.txt dist/packages/core/llms.txt
+    cp apps/demo/public/llms-full.txt dist/packages/core/llms-full.txt
+    print_success "AI priming surfaces shipped with @signaltree/core"
+fi
+
 # Preflight: ensure all publishable dist folders exist BEFORE publishing anything.
 print_step "Verifying dist outputs exist for all packages (fail-fast)..."
 for package in "${PACKAGES[@]}"; do

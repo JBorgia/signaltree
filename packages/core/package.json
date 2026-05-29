@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/core",
-  "version": "10.1.0",
+  "version": "10.2.0",
   "description": "Reactive JSON for Angular. JSON branches, reactive leaves. No actions. No reducers. No selectors.",
   "license": "MIT",
   "type": "module",
@@ -56,6 +56,8 @@
     "dist/**/*.js",
     "src/**/*.d.ts",
     "skills/**/*",
-    "README.md"
+    "README.md",
+    "llms.txt",
+    "llms-full.txt"
   ]
 }

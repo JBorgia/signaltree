@@ -25,7 +25,11 @@
         }
       </div>
       <pre><code>store.$.orgStatus.setLoading();
-store.$.orgStatus.setLoaded();</code></pre>
+store.$.orgStatus.setLoaded();
+// v10.2 aliases (equivalent):
+store.$.orgStatus.start();        // === setLoading
+store.$.orgStatus.setSuccess();   // === setLoaded
+store.$.orgStatus.fail(err);      // === setError</code></pre>
     </article>
 
     <article class="card">

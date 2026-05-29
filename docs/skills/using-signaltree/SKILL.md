@@ -82,9 +82,11 @@ Cross-package enhancers (`enterprise()`, `guardrails()`, `formBridge()`, `supaba
 Markers — placed in initial state, replaced by `signalTree()` with fully-typed runtime API:
 
 - `entityMap<T, K>()` — O(1) CRUD: `addOne`, `upsertOne`, `removeOne`, `setAll`, `byId`, `all`, `clear`.
-- `status()` — async op state: loading / loaded / error.
+- `status()` — async op state with canonical methods `setLoading()` / `setLoaded()` / `setError(err)` / `setNotLoaded()` / `reset()`. As of v10.2, Promise-vocabulary aliases also work: `.start()` (= setLoading), `.setSuccess()` / `.succeed()` (= setLoaded), `.fail(err)` (= setError). Use either; canonical names preferred for searchability. Read state via signals: `.isLoading()`, `.isLoaded()`, `.isError()`, `.error()` — these are **callable signals**, not properties.
+- `asyncSource<T>(config)` — load-and-expose (preferred over `status()` + manual try/catch). Auto-derives `.loading()`, `.error()`, `.data` accessor, `.refresh()` reload.
+- `asyncQuery<TInput, TResult>(config)` — input-driven debounced query with built-in switchMap + dedup pipeline. Reactive `.input` signal, `.results` history, `.rerun()`.
 - `stored(key, default)` — single signal backed by `localStorage`.
-- `form(fields)` — tree-integrated form state; pair with `formBridge()` from `@signaltree/ng-forms`.
+- `form(fields)` — tree-integrated form state. Call the marker itself (`tree.$.profile()`) to get the value; read `.dirty`, `.valid`, `.touched`, `.errors` as bare properties (NOT `.isDirty()`).
 
 Full signatures: [`reference/core.md`](reference/core.md).
 
