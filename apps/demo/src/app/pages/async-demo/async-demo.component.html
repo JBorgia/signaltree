@@ -1,0 +1,185 @@
+<div class="page">
+  <header class="hero">
+    <h1>Async Markers</h1>
+    <p class="lead">
+      The SignalTree-native way to model async state.
+      <code>asyncSource</code> and <code>asyncQuery</code> attach at any tree
+      path and auto-expose <code>data</code>, <code>loading</code>,
+      <code>error</code>, and lifecycle methods — same family as
+      <code>entityMap</code>, <code>status</code>, <code>stored</code>, and
+      <code>form</code>.
+    </p>
+    <pre><code>import &#123; asyncSource, asyncQuery &#125; from '&#64;signaltree/core';</code></pre>
+  </header>
+
+  <section class="demo">
+    <h2>asyncSource — load-and-expose</h2>
+    <p>
+      Define a loader once. The marker materializes into a fully-functional
+      async accessor: data, loading, error, refresh — all derived
+      automatically. No manual <code>.setLoading()</code> / <code>.setLoaded()</code>
+      wiring, no <code>tap()</code> ceremony in a pipeline.
+    </p>
+
+    <div class="controls">
+      <button
+        (click)="store.$.users.refresh()"
+        [disabled]="store.$.users.loading()"
+      >
+        @if (store.$.users.loading()) {
+          Loading…
+        } @else {
+          Load users
+        }
+      </button>
+      <button class="secondary" (click)="store.$.users.reset()">
+        Reset
+      </button>
+      <span class="status">
+        @if (store.$.users.error()) {
+          ⚠️ Error: {{ store.$.users.error() }}
+        } @else if (store.$.users.loading()) {
+          ⏳ in-flight
+        } @else if ((store.$.users()?.length ?? 0) > 0) {
+          ✅ {{ store.$.users()!.length }} loaded
+        } @else {
+          ⚪ idle
+        }
+      </span>
+    </div>
+
+    @if ((store.$.users()?.length ?? 0) > 0) {
+      <ul class="users">
+        @for (user of store.$.users(); track user.id) {
+          <li>
+            <span class="user-name">{{ user.name }}</span>
+            <span class="badge" [attr.data-role]="user.role">{{ user.role }}</span>
+          </li>
+        }
+      </ul>
+    }
+
+    <details class="code-detail">
+      <summary>Show source</summary>
+      <pre><code>const store = signalTree(&#123;
+  users: asyncSource&lt;User[]&gt;(&#123;
+    initial: [],
+    load: () =&gt; this.api.list$(),  // returns Observable&lt;User[]&gt;
+  &#125;),
+&#125;);
+
+// Read:
+store.$.users();           // User[] | undefined
+store.$.users.loading();   // boolean
+store.$.users.error();     // unknown | null
+
+// Drive lifecycle:
+store.$.users.refresh();   // reload (cancels in-flight)
+store.$.users.set([...]);  // manual override
+store.$.users.reset();     // clear data/error/loading</code></pre>
+    </details>
+  </section>
+
+  <section class="demo">
+    <h2>asyncQuery — input-driven debounced query</h2>
+    <p>
+      Bind an input signal; every change pipes through the
+      <code>debounce</code> → <code>filter</code> → <code>distinctUntilChanged</code>
+      → <code>switchMap(query)</code> pipeline automatically. Race conditions,
+      cancellation, deduplication — all handled.
+    </p>
+
+    <div class="controls">
+      <input
+        type="text"
+        placeholder="Search users by name…"
+        [ngModel]="store.$.search.input()"
+        (ngModelChange)="store.$.search.input.set($event)"
+        class="search-input"
+      />
+      <button class="secondary" (click)="store.$.search.reset()">Reset</button>
+      <span class="status">
+        @if (store.$.search.error()) {
+          ⚠️ Error
+        } @else if (store.$.search.loading()) {
+          ⏳ searching…
+        } @else if ((store.$.search()?.length ?? 0) > 0) {
+          ✅ {{ store.$.search()!.length }} matches
+        } @else if (store.$.search.input()) {
+          ⚪ no matches
+        } @else {
+          ⚪ idle
+        }
+      </span>
+    </div>
+
+    @if ((store.$.search()?.length ?? 0) > 0) {
+      <ul class="users">
+        @for (user of store.$.search(); track user.id) {
+          <li>
+            <span class="user-name">{{ user.name }}</span>
+            <span class="badge" [attr.data-role]="user.role">{{ user.role }}</span>
+          </li>
+        }
+      </ul>
+    }
+
+    <details class="code-detail">
+      <summary>Show source</summary>
+      <pre><code>const store = signalTree(&#123;
+  search: asyncQuery&lt;string, User[]&gt;(&#123;
+    initialResult: [],
+    debounce: 300,
+    filter: (q) =&gt; q.length &gt; 0,
+    query: (q) =&gt; this.api.search$(q),
+  &#125;),
+&#125;);
+
+// Push input — pipeline fires after debounce + dedup:
+store.$.search.input.set('alice');
+
+// Or two-way bind in the template:
+&lt;input [(ngModel)]="store.$.search.input"&gt;
+
+// Read results:
+store.$.search();          // results
+store.$.search.loading();  // in-flight
+store.$.search.error();</code></pre>
+    </details>
+  </section>
+
+  <section class="info">
+    <h2>What you're seeing</h2>
+    <ul>
+      <li>
+        <strong>Both markers attach at any depth.</strong> Here they live at
+        depth 1 (<code>$.users</code>, <code>$.search</code>), but you can drop
+        them anywhere in your state literal — same as <code>entityMap</code>,
+        <code>status</code>, <code>stored</code>, and <code>form</code>.
+      </li>
+      <li>
+        <strong>No manual status wiring.</strong> The marker materializer
+        creates loading/error signals and toggles them as the load runs.
+      </li>
+      <li>
+        <strong>Auto-cleanup.</strong> Subscriptions tear down on the surrounding
+        <code>DestroyRef</code> (component / service teardown).
+      </li>
+      <li>
+        <strong>Observable OR Promise.</strong> Both <code>load()</code> and
+        <code>query()</code> accept either return type — no
+        <code>firstValueFrom</code> ceremony.
+      </li>
+    </ul>
+
+    <h3>Coming from NgRx?</h3>
+    <p>
+      <code>rxMethod</code> remains available at
+      <code>&#64;signaltree/core/rxjs-interop</code> as a migration-friendly
+      alias. New SignalTree code should prefer the
+      <code>asyncSource</code> / <code>asyncQuery</code> markers — they
+      compose with the rest of the marker family and eliminate the
+      manual <code>tap()/setLoading()</code> wiring rxMethod requires.
+    </p>
+  </section>
+</div>

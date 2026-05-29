@@ -212,9 +212,29 @@ You can use SignalTree as a plain module-level constant (for tests, demos, libra
 
 ## Myth 9: "SignalTree has no answer to NgRx's `rxMethod` for async/RxJS interop."
 
-**Where this comes from:** True in earlier versions; outdated as of v9.4.
+**Where this comes from:** True in earlier versions; outdated as of v9.5.
 
-**The truth (updated):** `rxMethod` ships in `@signaltree/core/rxjs-interop`. Same ergonomics as NgRx's, same input flexibility (raw value, Signal, or Observable), same auto-cleanup via the surrounding `DestroyRef`.
+**The truth (updated as of v9.5):** SignalTree ships **two canonical async markers** that fit the existing marker family (`entityMap`, `status`, `stored`, `form`) — `asyncSource` for load-and-expose, `asyncQuery` for input-driven debounced queries. Both attach at any tree path, expose `data`/`loading`/`error`/lifecycle methods automatically, and auto-clean on the surrounding `DestroyRef`. **No manual `tap()` / `setLoading()` / `setLoaded()` wiring** of the kind `rxMethod` requires.
+
+```typescript
+import { signalTree, asyncSource, asyncQuery } from '@signaltree/core';
+
+const store = signalTree({
+  users: asyncSource<User[]>({
+    initial: [],
+    load: () => this.api.list$(),
+  }),
+  search: asyncQuery<string, User[]>({
+    debounce: 300,
+    query: (q) => this.api.search$(q),
+  }),
+});
+
+store.$.users.refresh();
+store.$.search.input.set('alice');
+```
+
+For **NgRx migration**, `rxMethod` is still exported from `@signaltree/core/rxjs-interop` as a 1:1 compatible alias — find-and-replace the import path and existing NgRx `rxMethod` code keeps working. New SignalTree code should prefer the markers.
 
 ```typescript
 import { rxMethod } from '@signaltree/core/rxjs-interop';

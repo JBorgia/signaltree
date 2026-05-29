@@ -167,54 +167,57 @@ session.undo(); // Revert last change
 session.commit(); // Persist changes to the main tree
 ```
 
-## RxJS Interop (`rxMethod`)
+## Async (`asyncSource` / `asyncQuery` markers)
 
-For async pipelines with auto-cleanup — the SignalTree equivalent of NgRx's `rxMethod`. Lives at `@signaltree/core/rxjs-interop`. Subscriptions auto-clean on the surrounding `DestroyRef`:
+Async state belongs **at the tree path it describes**, not in a service method that writes to paths imperatively. Two markers cover the two main async patterns and compose with the rest of the marker family (`entityMap`, `status`, `stored`, `form`):
+
+```typescript
+import { signalTree, asyncSource, asyncQuery } from '@signaltree/core';
+
+const store = signalTree({
+  // Load-and-expose: auto-loads, exposes data/loading/error/refresh
+  users: asyncSource<User[]>({
+    initial: [],
+    load: () => this.api.list$(),  // Observable<T> or Promise<T>
+  }),
+
+  // Input-driven debounced query
+  search: asyncQuery<string, User[]>({
+    initialResult: [],
+    debounce: 300,
+    filter: (q) => q.length > 0,
+    query: (q) => this.api.search$(q),
+  }),
+});
+
+// Read — uniform with every other marker:
+store.$.users();           // User[] | undefined (current value)
+store.$.users.loading();   // boolean
+store.$.users.error();     // unknown | null
+
+store.$.search();          // User[] | undefined (results)
+store.$.search.loading();
+store.$.search.input.set('alice');  // drives debounced pipeline
+
+// Drive lifecycle:
+store.$.users.refresh();   // reload (cancels in-flight)
+store.$.users.set([...]);  // manual override
+store.$.users.reset();     // back to initial state
+store.$.search.rerun();    // rerun with current input (skip dedup)
+```
+
+Both markers attach at **any tree depth**, accept **Observables or Promises**, and auto-clean on the surrounding `DestroyRef`. No manual `tap()` / `setLoading()` / `setLoaded()` wiring.
+
+### Migration from `@ngrx/signals`
+
+If you're coming from NgRx and want a 1:1 `rxMethod`-shaped callable for the smoothest migration, it's available at the `rxjs-interop` subpath:
 
 ```typescript
 import { rxMethod } from '@signaltree/core/rxjs-interop';
-import { debounceTime, distinctUntilChanged, switchMap, tap, catchError, EMPTY } from 'rxjs';
-
-@Injectable({ providedIn: 'root' })
-export class UserOps {
-  private readonly _$ = inject(APP_TREE).$;
-  private readonly _api = inject(UserService);
-
-  readonly loadUsers = rxMethod<void>((input$) =>
-    input$.pipe(
-      tap(() => this._$.users.loading.setLoading()),
-      switchMap(() =>
-        this._api.list$().pipe(
-          tap((users) => this._$.users.entities.setAll(users)),
-          tap(() => this._$.users.loading.setLoaded()),
-          catchError((err) => {
-            this._$.users.loading.setError(err);
-            return EMPTY;
-          })
-        )
-      )
-    )
-  );
-
-  readonly searchByQuery = rxMethod<string>((input$) =>
-    input$.pipe(
-      debounceTime(300),
-      distinctUntilChanged(),
-      switchMap((q) => this._api.search$(q)),
-      tap((results) => this._$.searchResults.set(results))
-    )
-  );
-}
+// Same call shape, input flexibility, and auto-cleanup as @ngrx/signals/rxjs-interop.
 ```
 
-The returned callable accepts raw values, Angular signals, or observables — all auto-subscribed:
-
-```typescript
-userOps.loadUsers();                    // void input
-userOps.searchByQuery('alice');         // raw value
-userOps.searchByQuery(searchTermSignal); // Signal<string>
-userOps.searchByQuery(externalQuery$);   // Observable<string>
-```
+For new SignalTree code, prefer the `asyncSource` / `asyncQuery` markers — they eliminate the manual status wiring `rxMethod` requires and fit the rest of the marker family.
 
 ## Lifecycle
 

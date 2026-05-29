@@ -53,15 +53,27 @@ export const appRoutes: Route[] = [
       ),
   },
   {
+    path: 'async',
+    loadComponent: () =>
+      import('./pages/async-demo/async-demo.component').then(
+        (c) => c.AsyncDemoComponent
+      ),
+    data: {
+      title: 'Async markers — asyncSource & asyncQuery',
+      description:
+        'SignalTree-native async primitives. Path-attached markers for load-and-expose and input-driven debounced queries, with auto-cleanup.',
+    },
+  },
+  {
     path: 'rxmethod',
     loadComponent: () =>
       import('./pages/rxmethod-demo/rxmethod-demo.component').then(
         (c) => c.RxMethodDemoComponent
       ),
     data: {
-      title: 'rxMethod — RxJS interop',
+      title: 'rxMethod — RxJS interop (migration alias)',
       description:
-        'Encapsulated async pipelines with auto-cleanup. SignalTree equivalent of NgRx rxMethod, in @signaltree/core/rxjs-interop.',
+        'Legacy alias for @ngrx/signals migration ergonomics. New SignalTree code should prefer the asyncSource and asyncQuery markers — see /async.',
     },
   },
 

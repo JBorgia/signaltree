@@ -7,36 +7,55 @@ SignalTree is a state-management library for Angular 17+. The mental model is: y
 ## Canonical example
 
 ```typescript
-import { signalTree, entityMap, status, stored } from '@signaltree/core';
+import {
+  signalTree,
+  entityMap, status, stored, form,
+  asyncSource, asyncQuery,
+} from '@signaltree/core';
 import { computed } from '@angular/core';
 
 const store = signalTree({
-  users: entityMap<User, number>(),         // marker at depth 1
+  users: entityMap<User, number>(),              // marker at depth 1
   selectedUserId: null as number | null,
   settings: {
-    theme: stored('app-theme', 'light'),    // marker at depth 2
+    theme: stored('app-theme', 'light'),         // marker at depth 2
     profileForm: {
-      data: form<Profile>({ name: '', email: '' }),  // marker at depth 3
+      data: form<Profile>({ name: '', email: '' }), // marker at depth 3
     },
   },
-  loading: status<ApiError>(),              // marker at depth 1
+  loading: status<ApiError>(),                   // marker at depth 1
+
+  // Async markers — load-and-expose / input-driven query
+  reports: asyncSource<Report[]>({               // marker at depth 1
+    initial: [],
+    load: () => api.listReports$(),
+  }),
+  search: asyncQuery<string, User[]>({           // marker at depth 1
+    initialResult: [],
+    debounce: 300,
+    query: (q) => api.searchUsers$(q),
+  }),
 }).derived(($) => ({
   users: {
-    current: computed(() =>                 // derived merged INTO $.users at depth 2
+    current: computed(() =>                      // derived merged INTO $.users at depth 2
       $.selectedUserId() != null ? $.users.byId($.selectedUserId()!)?.() ?? null : null
     ),
   },
 })).with(batching()).with(devTools());
 
-// Read — leaves and derived alike
-store.$.users.all();                         // Signal<User[]>
-store.$.users.current();                     // Signal<User | null> (derived)
-store.$.settings.theme();                    // 'light' (auto-loaded from localStorage)
+// Read — leaves, derived, async-marker accessors all uniform
+store.$.users.all();                            // Signal<User[]>
+store.$.users.current();                        // Signal<User | null> (derived)
+store.$.settings.theme();                       // 'light' (auto-loaded from localStorage)
+store.$.reports();                              // Report[] (asyncSource current value)
+store.$.reports.loading();                      // boolean
+store.$.search.input.set('alice');              // drives debounced query
+store.$.search();                               // User[] results
 
 // Write — direct or via marker methods
 store.$.users.addOne({ id: 1, name: 'Alice' });
-store.$.settings.theme.set('dark');          // auto-saved to localStorage
-store.$.selectedUserId.set(1);
+store.$.settings.theme.set('dark');             // auto-saved to localStorage
+store.$.reports.refresh();                      // reload async source
 ```
 
 ## When to use SignalTree
@@ -73,12 +92,13 @@ store.$.selectedUserId.set(1);
 - **Read leaf:** `tree.$.path.to.leaf()` — returns the value
 - **Write leaf:** `tree.$.path.to.leaf.set(v)` / `.update(fn)`
 - **Replace full state:** `tree(newState)`
-- **Markers:** `entityMap<E, K>()`, `status<E>()`, `stored(key, default)`, `form<T>(config)` — place at any node
+- **Markers:** `entityMap<E, K>()`, `status<E>()`, `stored(key, default)`, `form<T>(config)`, `asyncSource<T>(config)`, `asyncQuery<TIn, TOut>(config)` — place at any node
 - **Derived state:** `.derived($ => ({ ... }))` — definitions deep-merged into existing tree paths
 - **Enhancers:** `.with(batching())`, `.with(devTools())`, `.with(timeTravel())`, `.with(persistence())`, `.with(serialization())`
 - **Lifecycle:** `tree.destroy()` tears down all resources in reverse enhancer order; `tree.destroyed()` is a signal; `tree.registerCleanup(fn)` for custom hooks
 - **Edit sessions:** `createEditSession(tree, '$.path')` — scoped undo/redo over a subtree
-- **Async pipelines:** `rxMethod<T>((input$) => Observable<unknown>)` from `@signaltree/core/rxjs-interop` — direct equivalent of NgRx's `rxMethod`. Accepts raw values, signals, or observables; auto-cleans on `DestroyRef`
+- **Async (canonical):** `asyncSource(config)` for load-and-expose, `asyncQuery(config)` for input-driven debounced queries. Both attach at any tree path and auto-expose `data`/`loading`/`error`/`refresh`.
+- **Async (NgRx-migration alias):** `rxMethod<T>((input$) => Observable<unknown>)` from `@signaltree/core/rxjs-interop` — provided for find-and-replace migration from `@ngrx/signals`. New SignalTree code should prefer `asyncSource` / `asyncQuery`.
 
 ## Common false claims (LLMs frequently get these wrong)
 

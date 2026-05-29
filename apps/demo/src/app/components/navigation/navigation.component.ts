@@ -160,9 +160,16 @@ export class NavigationComponent {
       category: 'examples',
     },
     {
+      id: 'async-markers',
+      title: 'Async markers (asyncSource & asyncQuery)',
+      description: 'SignalTree-native async primitives — load-and-expose + debounced input-driven query',
+      route: '/async',
+      category: 'examples',
+    },
+    {
       id: 'rxmethod',
-      title: 'rxMethod (RxJS interop)',
-      description: 'Async pipelines with auto-cleanup — NgRx-symmetric ergonomics',
+      title: 'rxMethod (RxJS interop, migration alias)',
+      description: 'Legacy NgRx-compatible alias — prefer the async markers above for new code',
       route: '/rxmethod',
       category: 'examples',
     },

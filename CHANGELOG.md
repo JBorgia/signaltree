@@ -1,3 +1,72 @@
+## 9.5.0
+
+### ✨ New: `asyncSource` and `asyncQuery` markers — the SignalTree-native async story
+
+After shipping `rxMethod` in 9.4.0 as the NgRx-symmetric primitive, we realized the right SignalTree answer isn't "port NgRx's shape" — it's "fit async into the marker family alongside `entityMap`, `status`, `stored`, and `form`." Async behavior belongs **at the tree path it describes**, not in a free-standing service method that writes to paths imperatively.
+
+**`asyncSource<T>(config)`** — load-and-expose async primitive. Place anywhere in your tree literal; materializes into a fully-functional accessor with `data`, `loading`, `error`, and lifecycle methods.
+
+```typescript
+import { signalTree, asyncSource } from '@signaltree/core';
+
+const store = signalTree({
+  users: asyncSource<User[]>({
+    initial: [],
+    load: () => this.api.list$(),
+  }),
+});
+
+store.$.users();         // current value (signal call)
+store.$.users.loading(); // boolean
+store.$.users.error();   // unknown | null
+store.$.users.refresh(); // reload (cancels in-flight)
+store.$.users.set([...]);
+store.$.users.reset();
+```
+
+**`asyncQuery<TInput, TResult>(config)`** — input-driven debounced query. Wire a writable signal to drive the pipeline; debounce, distinct, switchMap-cancellation all built in.
+
+```typescript
+import { asyncQuery } from '@signaltree/core';
+
+const store = signalTree({
+  search: asyncQuery<string, User[]>({
+    initialResult: [],
+    debounce: 300,
+    filter: (q) => q.length > 0,
+    query: (q) => this.api.search$(q),
+  }),
+});
+
+store.$.search.input.set('alice'); // triggers debounced pipeline
+store.$.search();                   // results
+store.$.search.loading();
+```
+
+Both markers:
+
+- Attach at **any tree depth** — same as `entityMap` / `status` / `stored` / `form`.
+- Accept **Observable or Promise** loaders — no `firstValueFrom` ceremony.
+- Auto-clean on the surrounding **`DestroyRef`**.
+- Eliminate manual `tap()` / `setLoading()` / `setLoaded()` wiring entirely.
+
+Live demo at https://signaltree.io/async.
+
+### 🔄 `rxMethod` retained as a migration alias
+
+`rxMethod` (introduced in 9.4.0, unpublished after design review) is **not** available in this release. The SignalTree-native answer is the marker family above. For teams migrating from `@ngrx/signals`, the closest 1:1 swap is `asyncSource` for "load on init" and `asyncQuery` for "input-driven."
+
+If you specifically need the NgRx `rxMethod`-shaped callable pipeline, it remains exported from `@signaltree/core/rxjs-interop`:
+
+```typescript
+import { rxMethod } from '@signaltree/core/rxjs-interop';
+// ... same API as NgRx for migration ergonomics.
+```
+
+### 📚 Documentation
+
+- All docs (llms.txt, llms-full.txt, README, comparison doc, myths doc) updated to lead with `asyncSource` / `asyncQuery` and frame `rxMethod` as the migration alias.
+
 ## 9.4.0
 
 ### ✨ New

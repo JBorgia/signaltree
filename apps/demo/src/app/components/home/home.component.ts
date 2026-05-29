@@ -155,11 +155,11 @@ export class HomeComponent {
 
   readonly advancedRoutes: HomeLinkCard[] = [
     {
-      title: 'rxMethod (RxJS interop) — new in 9.4',
+      title: 'Async markers — new in 9.5',
       description:
-        'Encapsulated async pipelines with auto-cleanup. NgRx-symmetric ergonomics in `@signaltree/core/rxjs-interop`.',
-      route: '/rxmethod',
-      cta: 'Try rxMethod →',
+        '`asyncSource` and `asyncQuery` — SignalTree-native async primitives that compose with `entityMap`, `status`, `stored`, and `form`. Path-attached, auto-cleanup, no boilerplate.',
+      route: '/async',
+      cta: 'Try async markers →',
     },
     {
       title: 'Persistence & Serialization',

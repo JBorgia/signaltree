@@ -149,6 +149,30 @@ export {
   type AsyncValidator,
 } from './lib/markers/form';
 
+// Async-source marker (v9.5) - load-and-expose async primitive
+export {
+  asyncSource,
+  isAsyncSourceMarker,
+  createAsyncSourceSignal,
+  ASYNC_SOURCE_MARKER,
+  type AsyncSourceMarker,
+  type AsyncSourceSignal,
+  type AsyncSourceConfig,
+  type AsyncSourceLoader,
+} from './lib/markers/async-source';
+
+// Async-query marker (v9.5) - input-driven debounced query primitive
+export {
+  asyncQuery,
+  isAsyncQueryMarker,
+  createAsyncQuerySignal,
+  ASYNC_QUERY_MARKER,
+  type AsyncQueryMarker,
+  type AsyncQuerySignal,
+  type AsyncQueryConfig,
+  type AsyncQueryFn,
+} from './lib/markers/async-query';
+
 // Marker processing (v7) - extensibility
 export { registerMarkerProcessor } from './lib/internals/materialize-markers';
 
