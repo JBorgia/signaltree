@@ -25,7 +25,7 @@ import { AppStore } from '../../../../../store';
   imports: [FormsModule],
   template: `
     <div class="demo-container" [class.dark]="theme() === 'dark'">
-      <h2>Recommended Architecture Demo</h2>
+      <h1>Recommended Architecture Demo</h1>
       <p class="description">
         The 3-pillar pattern: <strong>READ</strong> via <code>.derived()</code>
         (all computed on <code>$</code>), <strong>WRITE</strong> via Ops services

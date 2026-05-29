@@ -173,16 +173,11 @@ export const appRoutes: Route[] = [
     },
   },
   {
+    // Canonical lives at /migrate (shorter, more discoverable).
+    // Keep this path as a 301 redirect to avoid duplicate content / split SEO weight.
     path: 'examples/fundamentals/migration-recipe',
-    loadComponent: () =>
-      import('./pages/migration-recipe/migration-recipe.component').then(
-        (c) => c.MigrationRecipeComponent
-      ),
-    data: {
-      title: 'Migration recipe',
-      description:
-        'Phased migration playbook from NgRx and similar stores to SignalTree, with mechanical mapping for actions, reducers, and selectors.',
-    },
+    redirectTo: '/migrate',
+    pathMatch: 'full',
   },
   // Top-level alias for the multi-source migration guide
   {
