@@ -136,6 +136,14 @@ export type TreeNode<T> = {
 // v6: primary runtime tree type is `SignalTree<T>`; a deprecated alias
 // `SignalTree<T>` is provided at the end of this file for compatibility.
 export interface ISignalTree<T> extends NodeAccessor<T> {
+  /**
+   * Reactive tree-node accessor. Identical reference to `$` — kept as an
+   * alias for readability in service classes where `tree.state` reads more
+   * naturally than `tree.$`.
+   *
+   * @deprecated Since v10. Prefer `tree.$` — `state` will be removed in v11.
+   * `$` is the canonical accessor across docs, agent skill, and code examples.
+   */
   readonly state: TreeNode<T>;
   readonly $: TreeNode<T>;
   /**

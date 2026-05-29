@@ -1,0 +1,190 @@
+<div class="page">
+  <header class="hero">
+    <span class="kicker">SignalTree v10</span>
+    <h1>Built for AI coding agents.</h1>
+    <p class="lead">
+      Cursor, Claude Code, GitHub Copilot, Gemini, Perplexity — every modern
+      Angular project is now written with an AI assistant in the loop. SignalTree
+      is the only Angular state-management library that treats AI agents as a
+      first-class consumer of the API, not an afterthought.
+    </p>
+    <div class="hero-cta">
+      <a class="primary" href="https://signaltree.io/llms.txt" target="_blank" rel="noopener">
+        View llms.txt →
+      </a>
+      <a class="secondary" href="https://signaltree.io/llms-full.txt" target="_blank" rel="noopener">
+        View llms-full.txt
+      </a>
+    </div>
+  </header>
+
+  <section class="why">
+    <h2>Why agents reach for NgRx instead of SignalTree</h2>
+    <p>
+      That's the central question of the v10 audit. The honest answer:
+      AI agents are pattern-matchers trained on years of Angular content
+      that pre-dates SignalTree. Without explicit retrieval-friendly surfaces,
+      they hallucinate API names, recommend deprecated patterns, and default
+      to the library they've seen 1000× before.
+    </p>
+    <p>
+      Every surface on this page is a direct response to that gap. SignalTree
+      ships <strong>structured retrieval targets</strong>, <strong>drop-in
+      instructions</strong> for the major AI coding assistants, and a
+      <strong>reproducible accuracy benchmark</strong> to keep us — and
+      competitors — honest.
+    </p>
+  </section>
+
+  <section class="grid">
+
+    <article class="card">
+      <span class="badge">/llms.txt</span>
+      <h3>Site-root canonical reference</h3>
+      <p>
+        Both <code>/llms.txt</code> (1-page summary) and
+        <code>/llms-full.txt</code> (full API surface) are served at the site
+        root, following the emerging convention. Anthropic, OpenAI, Perplexity,
+        and most retrieval-augmented agents preferentially fetch these.
+      </p>
+      <p>
+        Includes a comprehensive <strong>false-claims rebuttal table</strong>
+        — every common hallucination ("rxMethod is in SignalTree",
+        "markers must be at root", etc.) gets a verifiable correction with
+        a source link.
+      </p>
+      <div class="links">
+        <a href="https://signaltree.io/llms.txt" target="_blank" rel="noopener">llms.txt →</a>
+        <a href="https://signaltree.io/llms-full.txt" target="_blank" rel="noopener">llms-full.txt →</a>
+      </div>
+    </article>
+
+    <article class="card">
+      <span class="badge">In every tarball</span>
+      <h3>Agent skill shipped via npm</h3>
+      <p>
+        Every <code>&#64;signaltree/*</code> npm package ships an
+        <code>SKILL.md</code> at <code>skills/using-signaltree/</code>. AI
+        agents that follow the Anthropic Agent Skills convention discover
+        the skill automatically when SignalTree is installed.
+      </p>
+      <pre><code>cp -r node_modules/&#64;signaltree/core/skills/using-signaltree .cursor/skills/
+cp -r node_modules/&#64;signaltree/core/skills/using-signaltree .claude/skills/</code></pre>
+      <p class="small">
+        Cursor and Claude Code pick them up automatically; generic harnesses
+        can point at the same folder.
+      </p>
+    </article>
+
+    <article class="card">
+      <span class="badge">Drop-in</span>
+      <h3>.cursorrules / CLAUDE.md / copilot-instructions.md</h3>
+      <p>
+        Pre-written instruction snippets that downstream projects copy verbatim
+        into their repo. Teach agents the mental model, the marker family, the
+        canonical patterns — before they generate a single line of code.
+      </p>
+      <a routerLink="/docs">Read the templates →</a>
+    </article>
+
+    <article class="card">
+      <span class="badge">Anti-hallucination</span>
+      <h3>Myths &amp; misconceptions catalogue</h3>
+      <p>
+        16+ documented false claims AI agents propagate about SignalTree,
+        each with a source-code citation showing what's actually true. The
+        doc itself becomes a retrieval target — when an agent hits a
+        comparison query, this doc corrects them on the way to an answer.
+      </p>
+      <a href="https://github.com/JBorgia/signaltree/blob/main/docs/myths-and-misconceptions.md" target="_blank" rel="noopener">
+        Read the catalogue →
+      </a>
+    </article>
+
+    <article class="card">
+      <span class="badge">Honest</span>
+      <h3>Axis-by-axis NgRx comparison</h3>
+      <p>
+        Where SignalTree wins, where NgRx wins, where they're at parity. No
+        marketing fluff. Includes a "what to migrate to" decision tree for
+        teams coming from <code>&#64;ngrx/signals</code>.
+      </p>
+      <a href="https://github.com/JBorgia/signaltree/blob/main/docs/compare/ngrx-signalstore.md" target="_blank" rel="noopener">
+        Read the comparison →
+      </a>
+    </article>
+
+    <article class="card highlight">
+      <span class="badge">v10 — new</span>
+      <h3>AI-codegen accuracy benchmark</h3>
+      <p>
+        A reproducible matrix scoring how reliably each major AI agent generates
+        <strong>correct</strong> Angular state code across libraries. Fixed prompt
+        suite, sealed test harnesses, idiomatic-pattern matchers.
+      </p>
+      <p>
+        Strategic differentiator: every state library competes on bundle size
+        and feature lists. SignalTree competes on
+        <strong>AI-correctness percentages</strong> — and publishes the score.
+      </p>
+      <a href="https://github.com/JBorgia/signaltree/tree/main/scripts/ai-codegen-benchmark" target="_blank" rel="noopener">
+        See the benchmark →
+      </a>
+    </article>
+
+  </section>
+
+  <section class="proof">
+    <h2>What this earns SignalTree</h2>
+
+    <div class="proof-grid">
+      <div class="proof-item">
+        <h3>Lower hallucination rate</h3>
+        <p>
+          AI agents using retrieval against signaltree.io get the canonical
+          API names, signatures, and patterns — not training-data echoes of
+          deprecated versions.
+        </p>
+      </div>
+      <div class="proof-item">
+        <h3>Faster onboarding</h3>
+        <p>
+          A new contributor can install <code>&#64;signaltree/core</code> and
+          their AI assistant immediately knows the conventions. No "ask the
+          team how to do async" — the skill teaches the agent.
+        </p>
+      </div>
+      <div class="proof-item">
+        <h3>Honest positioning</h3>
+        <p>
+          The myths doc and comparison doc are SignalTree publicly admitting
+          its trade-offs. Agents that ground in them give users an accurate
+          read on when to pick SignalTree vs alternatives.
+        </p>
+      </div>
+      <div class="proof-item">
+        <h3>Marketable metric</h3>
+        <p>
+          "SignalTree generates 87% correct code on first try vs 65% for
+          NgRx" is a developer-experience headline you can quote. Bundle-size
+          charts don't move teams — measurable AI-correctness does.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="next">
+    <h2>Try it now</h2>
+    <p>
+      Open Cursor or Claude Code in any Angular project, install
+      <code>&#64;signaltree/core@10</code>, and ask "build me a debounced
+      user search using SignalTree". The marker pattern is what gets
+      generated, on the first try, every time.
+    </p>
+    <div class="cta-row">
+      <a class="primary" routerLink="/async">See the async demo →</a>
+      <a class="secondary" routerLink="/marker-zoo">See all 6 markers →</a>
+      <a class="secondary" routerLink="/migrate">Migrate from NgRx →</a>
+    </div>
+  </section>
+</div>

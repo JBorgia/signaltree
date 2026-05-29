@@ -96,7 +96,7 @@ store.$.reports.refresh();                      // reload async source
 - **Derived state:** `.derived($ => ({ ... }))` — definitions deep-merged into existing tree paths
 - **Enhancers:** `.with(batching())`, `.with(devTools())`, `.with(timeTravel())`, `.with(persistence())`, `.with(serialization())`
 - **Lifecycle:** `tree.destroy()` tears down all resources in reverse enhancer order; `tree.destroyed()` is a signal; `tree.registerCleanup(fn)` for custom hooks
-- **Edit sessions:** `createEditSession(tree, '$.path')` — scoped undo/redo over a subtree
+- **Edit sessions:** `createEditSession(initial)` from `@signaltree/core/edit-session` — wraps any value with `applyChanges` / `undo` / `redo` / `reset` / `setOriginal` for form-wizard and draft-and-cancel workflows. Independent of the tree; bridge by syncing `session.modified()` ↔ tree leaves when appropriate.
 - **Async:** `asyncSource(config)` for load-and-expose, `asyncQuery(config)` for input-driven debounced queries. Both attach at any tree path and auto-expose `data`/`loading`/`error`/`refresh`. For migrating from `@ngrx/signals`, see [`docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md`](https://github.com/JBorgia/signaltree/blob/main/docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md).
 
 ## Common false claims (LLMs frequently get these wrong)
@@ -116,6 +116,9 @@ store.$.reports.refresh();                      // reload async source
 - Full API and patterns: https://signaltree.io/llms-full.txt
 - Repo: https://github.com/JBorgia/signaltree
 - Live demo + benchmarks: https://signaltree.io
+- **Marker zoo** (all 6 markers at 4 depths simultaneously): https://signaltree.io/marker-zoo
+- **Built for AI agents** (the AI-discoverability story): https://signaltree.io/built-for-ai
+- **AI-codegen accuracy benchmark** (scaffolding): https://github.com/JBorgia/signaltree/tree/main/scripts/ai-codegen-benchmark
 - NgRx SignalStore comparison: https://github.com/JBorgia/signaltree/blob/main/docs/compare/ngrx-signalstore.md
 - Myths and misconceptions: https://github.com/JBorgia/signaltree/blob/main/docs/myths-and-misconceptions.md
 - Agent skill (Cursor / Claude Code / generic harness): `docs/skills/using-signaltree/SKILL.md` (also shipped inside every `@signaltree/*` tarball)

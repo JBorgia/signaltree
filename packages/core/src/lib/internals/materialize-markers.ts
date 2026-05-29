@@ -106,10 +106,41 @@ export function registerMarkerProcessor<T, R>(
   check: (value: unknown) => value is T,
   create: (marker: T, notifier: PathNotifier, path: string) => R
 ): void {
+  // Dev-mode validation: prevent invalid argument types with a clear error.
+  if (typeof check !== 'function' || typeof create !== 'function') {
+    throw new TypeError(
+      "registerMarkerProcessor: both 'check' (type guard) and 'create' " +
+        '(materializer) must be functions. Received check=' +
+        typeof check +
+        ', create=' +
+        typeof create +
+        '. ' +
+        'See https://signaltree.io/docs (custom markers section) for usage.'
+    );
+  }
+
   // Prevent duplicate registration (same check function)
   const alreadyRegistered = MARKER_PROCESSORS.some((p) => p.check === check);
   if (alreadyRegistered) {
     return;
+  }
+
+  // Dev-mode warning when registering after at least one tree has been built.
+  // Markers registered AFTER tree construction won't be processed in that tree
+  // — they only take effect for trees built after registration. This is one of
+  // the top "why isn't my custom marker working?" support questions.
+  if (
+    (typeof ngDevMode === 'undefined' || ngDevMode) &&
+    treesConstructedCount > 0
+  ) {
+    console.warn(
+      '[SignalTree] registerMarkerProcessor() was called AFTER at least one ' +
+        `signalTree() had already been constructed (${treesConstructedCount} trees so far). ` +
+        'Existing trees will NOT pick up this marker — only trees built after ' +
+        'this point will use it. To process your custom marker in existing ' +
+        "trees, register it at module load time (before any signalTree() call), " +
+        "or rebuild the tree after registration."
+    );
   }
 
   MARKER_PROCESSORS.push({
@@ -120,6 +151,22 @@ export function registerMarkerProcessor<T, R>(
       path: string
     ) => unknown,
   });
+}
+
+/**
+ * @internal
+ * Incremented every time a tree is materialized. Used to detect
+ * post-construction registerMarkerProcessor() calls in dev mode.
+ */
+let treesConstructedCount = 0;
+
+/**
+ * @internal
+ * Called by signalTree() to record that a tree has been built. Powers the
+ * post-construction warning in registerMarkerProcessor.
+ */
+export function _recordTreeConstruction(): void {
+  treesConstructedCount += 1;
 }
 
 // =============================================================================

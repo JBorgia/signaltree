@@ -1,3 +1,41 @@
+## 10.0.0
+
+### 🎯 The DX-and-AI-discoverability release
+
+v10 is a polish-and-flex pass: surfacing what makes SignalTree uniquely good, hardening the things that bit users on previous versions, and shipping the strategic differentiator (AI-codegen benchmark) that no Angular state library has.
+
+### ✨ Code surface
+
+- **`registerMarkerProcessor` post-construction warning.** Calling it AFTER any `signalTree()` has been built now emits a dev-mode console warning explaining why existing trees won't pick up the marker. Argument-type validation throws a clear `TypeError` instead of failing silently at materialization time. Powered by a new internal `_recordTreeConstruction()` hook in `signal-tree.ts`.
+- **`tree.state` JSDoc-deprecated** pointing at `tree.$` as the canonical accessor. No runtime change — both still work — but new code should use `$`. `state` removal planned for v11.
+
+### 📊 New benchmarks (`packages/core/src/lib/benchmarks.spec.ts`)
+
+- **Cold-start construction** — 1000-leaf flat tree built in <50ms median; 10-level-deep tree in <10ms median.
+- **Per-mutation throughput at depth** — writes and reads at depth-5 are <2.5× the cost of depth-1.
+- **Memoization correctness** — verifies Angular `computed()` skips recompute when (a) unrelated leaves change and (b) inputs are set to the same value via `Object.is`.
+
+### 🤖 AI-codegen accuracy benchmark — `scripts/ai-codegen-benchmark/`
+
+Scaffolding for measuring how reliably AI coding agents (Cursor, Claude Code, Copilot, Gemini, Perplexity) generate **correct** Angular state-management code across libraries. Three reproducible prompts shipped (counter, paginated-users, debounced-search). Adapters for Claude, OpenAI, Gemini, Perplexity wired. Runner scores compile + behavior + idiomatic-pattern matching. Run it yourself with `node scripts/ai-codegen-benchmark/runner.mjs` once API keys are set.
+
+This is the strategic differentiator from the v10 audit's HSA L1 #3 priority. Other state libraries compete on bundle size and feature lists; SignalTree publishes **AI-correctness percentages** as a public, auditable metric.
+
+### 🎨 New demos
+
+- **`/marker-zoo`** — all 6 markers (`entityMap`, `status`, `stored`, `form`, `asyncSource`, `asyncQuery`) in ONE tree at FOUR different depths simultaneously. Demonstrates path-attached composition that NgRx's `with*` features can't replicate.
+- **`/built-for-ai`** — the AI-discoverability story as a landing page. Surfaces `llms.txt`, the npm-tarball agent skill, drop-in `.cursorrules` / `CLAUDE.md` templates, the myths catalogue, the honest NgRx comparison, and the AI-codegen benchmark — all in one place.
+
+### 📚 Docs
+
+- `llms.txt` adds the marker-zoo, built-for-ai, and AI-codegen benchmark links.
+- README adds links to all three new surfaces.
+- `createEditSession` docs across `llms.txt`, `llms-full.txt`, `docs/compare/ngrx-signalstore.md`, and `docs/myths-and-misconceptions.md` corrected from the previously-incorrect `(tree, '$.path')` signature to the actual `(initial: T)`. A path-bound overload is planned for v10.1.
+
+### 💥 Breaking changes
+
+None. v10 is additive and corrective. The semver-major bump reflects the deprecation of `tree.state` (slated for removal in v11) plus the depth of the audit pass.
+
 ## 9.6.0
 
 ### 💥 Breaking: `rxMethod` removed

@@ -1,0 +1,17 @@
+{
+  "name": "signaltree",
+  "displayName": "SignalTree",
+  "version": "10.0.0",
+  "packages": [
+    "@signaltree/core",
+    "@signaltree/ng-forms",
+    "@signaltree/schema",
+    "@signaltree/events",
+    "@signaltree/guardrails",
+    "@signaltree/realtime",
+    "@signaltree/enterprise",
+    "@signaltree/callable-syntax"
+  ],
+  "expected_paradigm": "marker-tree",
+  "doc_url": "https://signaltree.io/llms.txt"
+}

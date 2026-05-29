@@ -274,9 +274,9 @@ The previous documented "Ops method returning Observable" pattern still works an
 
 ## Myth 10: "SignalTree has 'explicit subpath isolation' as a built-in encapsulation feature."
 
-**Where this comes from:** Misreading docs that mention `createEditSession(tree, '$.path')`, which is scoped *undo/redo*, not write encapsulation.
+**Where this comes from:** Misreading docs that previously described `createEditSession(tree, '$.path')` — a path-bound overload that **does not exist** in the current shipped API.
 
-**The truth:** SignalTree does **not** ship an explicit "subpath isolation" API. The closest thing is `createEditSession(tree, '$.user.profile')` which provides **scoped undo/redo** over a subtree — useful for form wizards and multi-step editors, not for preventing components from reaching into other parts of the tree.
+**The truth:** SignalTree does **not** ship an explicit "subpath isolation" API. The shipped `createEditSession(initial: T)` is a **value-level** undo/redo wrapper — it takes any initial value and exposes `applyChanges`/`undo`/`redo`/`reset`/`setOriginal`/`isDirty`. Useful for form-wizard draft-and-cancel flows; **independent of the tree** (bridge via an effect if you want changes to flow back to a tree leaf). A path-bound overload is planned for v10.1.
 
 For write encapsulation, the documented options are:
 

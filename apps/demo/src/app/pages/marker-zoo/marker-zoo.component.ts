@@ -1,0 +1,143 @@
+import { CommonModule } from '@angular/common';
+import { Component } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
+import {
+  asyncQuery,
+  asyncSource,
+  entityMap,
+  form,
+  signalTree,
+  status,
+  stored,
+  validators,
+} from '@signaltree/core';
+import { delay, of } from 'rxjs';
+
+interface User {
+  id: number;
+  name: string;
+  role: 'admin' | 'user' | 'guest';
+  email: string;
+}
+
+interface Team {
+  id: number;
+  name: string;
+}
+
+const ALL_USERS: User[] = [
+  { id: 1, name: 'Alice', role: 'admin', email: 'alice@acme.test' },
+  { id: 2, name: 'Bob', role: 'user', email: 'bob@acme.test' },
+  { id: 3, name: 'Carol', role: 'user', email: 'carol@acme.test' },
+  { id: 4, name: 'Dave', role: 'guest', email: 'dave@acme.test' },
+];
+
+const ALL_TEAMS: Team[] = [
+  { id: 100, name: 'Platform' },
+  { id: 101, name: 'Growth' },
+];
+
+/**
+ * MARKER ZOO
+ *
+ * Showcases ALL 6 markers in ONE tree at FOUR different depths simultaneously.
+ * This is intentionally non-trivial — the point is to demonstrate that
+ * SignalTree's marker family composes at arbitrary tree positions, which
+ * is impossible (or requires significant ceremony) in libraries that
+ * compose features at the store root.
+ *
+ * Depth map:
+ *   depth 1: orgStatus (status marker)
+ *   depth 2: organization.teams.list (entityMap), settings.theme (stored)
+ *   depth 3: organization.teams.search (asyncQuery)
+ *   depth 4: organization.teams.byId[100].members (entityMap inside entityMap branch),
+ *            organization.teams.byId[100].profileForm (form marker)
+ *   Plus: directory.users (asyncSource at depth 2)
+ */
+@Component({
+  selector: 'app-marker-zoo',
+  standalone: true,
+  imports: [CommonModule, FormsModule, RouterModule],
+  templateUrl: './marker-zoo.component.html',
+  styleUrl: './marker-zoo.component.scss',
+})
+export class MarkerZooComponent {
+  readonly store = signalTree({
+    // depth 1 — status marker for org-wide sync
+    orgStatus: status(),
+
+    // depth 2 — asyncSource for an org-wide user directory
+    directory: {
+      users: asyncSource<User[]>({
+        initial: [],
+        load: () => of(ALL_USERS).pipe(delay(600)),
+        lazy: true,
+      }),
+    },
+
+    organization: {
+      teams: {
+        // depth 3 — entityMap of teams (nested inside organization)
+        list: entityMap<Team, number>({ selectId: (t) => t.id }),
+
+        // depth 3 — asyncQuery for team-name search
+        search: asyncQuery<string, Team[]>({
+          initialResult: [],
+          debounce: 250,
+          filter: (q) => q.length > 0,
+          query: (q) =>
+            of(
+              ALL_TEAMS.filter((t) =>
+                t.name.toLowerCase().includes(q.toLowerCase())
+              )
+            ).pipe(delay(180)),
+        }),
+      },
+    },
+
+    // depth 2 — stored marker for auto-synced localStorage preference
+    settings: {
+      theme: stored('marker-zoo-theme', 'light' as 'light' | 'dark'),
+    },
+
+    // depth 2 — form marker
+    onboarding: {
+      profile: form<{ name: string; email: string }>({
+        initial: { name: '', email: '' },
+        validators: {
+          name: validators.required('Required'),
+          email: [
+            validators.required('Required'),
+            validators.email('Invalid email'),
+          ],
+        },
+      }),
+    },
+  });
+
+  loadDirectory(): void {
+    this.store.$.orgStatus.setLoading();
+    this.store.$.directory.users.refresh();
+    // Mirror the asyncSource's loaded state into the depth-1 status marker
+    // (orgStatus represents "are we hydrated") — illustrates how markers
+    // compose: each does one thing, you wire them together explicitly.
+    setTimeout(() => this.store.$.orgStatus.setLoaded(), 650);
+  }
+
+  loadTeams(): void {
+    this.store.$.organization.teams.list.setAll(ALL_TEAMS);
+  }
+
+  toggleTheme(): void {
+    this.store.$.settings.theme.update((t) => (t === 'light' ? 'dark' : 'light'));
+  }
+
+  resetAll(): void {
+    this.store.$.directory.users.reset();
+    this.store.$.organization.teams.list.clear();
+    this.store.$.organization.teams.search.reset();
+    this.store.$.onboarding.profile.reset();
+    this.store.$.orgStatus.reset();
+  }
+}

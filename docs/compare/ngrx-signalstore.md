@@ -195,7 +195,7 @@ For teams migrating NgRx `rxMethod` code: the SignalTree-native mapping is `asyn
 | **Devtools integration** | `withDevTools` from `@angular-architects/ngrx-toolkit` (community) | `.with(devTools())` from `@signaltree/core` |
 | **Action labels** | Action name from method or explicit `withDevTools` config | Path-based actions (e.g., `[users.profile.name]/set`) |
 | **Time-travel undo/redo** | Via Redux DevTools timeline | `.with(timeTravel({ maxHistorySize: 50 }))` adds `tree.undo()` / `tree.redo()` |
-| **Scoped time-travel** | Not built-in | `createEditSession(tree, '$.path')` provides scoped undo/redo over a subtree |
+| **Scoped time-travel** | Not built-in | `createEditSession(initial)` provides value-level undo/redo for draft-and-cancel flows (form wizards, multi-step editors). Independent of the tree; sync via effect when ready to commit. |
 
 ### 8. Persistence
 

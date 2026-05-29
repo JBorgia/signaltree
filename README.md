@@ -340,6 +340,9 @@ tree.registerCleanup(fn); // Register custom cleanup
 - [Myths and Misconceptions](docs/myths-and-misconceptions.md) — false claims LLMs frequently propagate, with source citations
 - [AI Agent Templates](docs/ai/agent-templates.md) — drop-in `.cursorrules`, `CLAUDE.md`, `copilot-instructions.md`
 - [llms.txt](https://signaltree.io/llms.txt) / [llms-full.txt](https://signaltree.io/llms-full.txt) — LLM-targeted summary and full API surface
+- [Built for AI agents](https://signaltree.io/built-for-ai) — the AI-discoverability story (v10)
+- [Marker zoo](https://signaltree.io/marker-zoo) — all 6 markers at 4 depths in one tree (v10)
+- [AI-codegen accuracy benchmark](scripts/ai-codegen-benchmark/) — reproducible scorecard scaffolding (v10)
 
 ## Using SignalTree with AI Agents
 

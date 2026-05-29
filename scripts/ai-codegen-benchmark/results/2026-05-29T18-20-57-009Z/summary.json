@@ -1,0 +1,236 @@
+{
+  "startedAt": "2026-05-29T18:20:57.050Z",
+  "prompts": 3,
+  "libraries": [
+    "signaltree",
+    "ngrx-signals",
+    "ngrx-store",
+    "akita",
+    "elf"
+  ],
+  "agents": [
+    "claude",
+    "openai",
+    "gemini",
+    "perplexity"
+  ],
+  "results": {
+    "001-counter": {
+      "signaltree": {
+        "claude": {
+          "dryRun": true
+        },
+        "openai": {
+          "dryRun": true
+        },
+        "gemini": {
+          "dryRun": true
+        },
+        "perplexity": {
+          "dryRun": true
+        }
+      },
+      "ngrx-signals": {
+        "claude": {
+          "dryRun": true
+        },
+        "openai": {
+          "dryRun": true
+        },
+        "gemini": {
+          "dryRun": true
+        },
+        "perplexity": {
+          "dryRun": true
+        }
+      },
+      "ngrx-store": {
+        "claude": {
+          "dryRun": true
+        },
+        "openai": {
+          "dryRun": true
+        },
+        "gemini": {
+          "dryRun": true
+        },
+        "perplexity": {
+          "dryRun": true
+        }
+      },
+      "akita": {
+        "claude": {
+          "dryRun": true
+        },
+        "openai": {
+          "dryRun": true
+        },
+        "gemini": {
+          "dryRun": true
+        },
+        "perplexity": {
+          "dryRun": true
+        }
+      },
+      "elf": {
+        "claude": {
+          "dryRun": true
+        },
+        "openai": {
+          "dryRun": true
+        },
+        "gemini": {
+          "dryRun": true
+        },
+        "perplexity": {
+          "dryRun": true
+        }
+      }
+    },
+    "002-paginated-users": {
+      "signaltree": {
+        "claude": {
+          "dryRun": true
+        },
+        "openai": {
+          "dryRun": true
+        },
+        "gemini": {
+          "dryRun": true
+        },
+        "perplexity": {
+          "dryRun": true
+        }
+      },
+      "ngrx-signals": {
+        "claude": {
+          "dryRun": true
+        },
+        "openai": {
+          "dryRun": true
+        },
+        "gemini": {
+          "dryRun": true
+        },
+        "perplexity": {
+          "dryRun": true
+        }
+      },
+      "ngrx-store": {
+        "claude": {
+          "dryRun": true
+        },
+        "openai": {
+          "dryRun": true
+        },
+        "gemini": {
+          "dryRun": true
+        },
+        "perplexity": {
+          "dryRun": true
+        }
+      },
+      "akita": {
+        "claude": {
+          "dryRun": true
+        },
+        "openai": {
+          "dryRun": true
+        },
+        "gemini": {
+          "dryRun": true
+        },
+        "perplexity": {
+          "dryRun": true
+        }
+      },
+      "elf": {
+        "claude": {
+          "dryRun": true
+        },
+        "openai": {
+          "dryRun": true
+        },
+        "gemini": {
+          "dryRun": true
+        },
+        "perplexity": {
+          "dryRun": true
+        }
+      }
+    },
+    "003-debounced-search": {
+      "signaltree": {
+        "claude": {
+          "dryRun": true
+        },
+        "openai": {
+          "dryRun": true
+        },
+        "gemini": {
+          "dryRun": true
+        },
+        "perplexity": {
+          "dryRun": true
+        }
+      },
+      "ngrx-signals": {
+        "claude": {
+          "dryRun": true
+        },
+        "openai": {
+          "dryRun": true
+        },
+        "gemini": {
+          "dryRun": true
+        },
+        "perplexity": {
+          "dryRun": true
+        }
+      },
+      "ngrx-store": {
+        "claude": {
+          "dryRun": true
+        },
+        "openai": {
+          "dryRun": true
+        },
+        "gemini": {
+          "dryRun": true
+        },
+        "perplexity": {
+          "dryRun": true
+        }
+      },
+      "akita": {
+        "claude": {
+          "dryRun": true
+        },
+        "openai": {
+          "dryRun": true
+        },
+        "gemini": {
+          "dryRun": true
+        },
+        "perplexity": {
+          "dryRun": true
+        }
+      },
+      "elf": {
+        "claude": {
+          "dryRun": true
+        },
+        "openai": {
+          "dryRun": true
+        },
+        "gemini": {
+          "dryRun": true
+        },
+        "perplexity": {
+          "dryRun": true
+        }
+      }
+    }
+  },
+  "endedAt": "2026-05-29T18:20:57.053Z"
+}

@@ -64,6 +64,30 @@ export const appRoutes: Route[] = [
         'SignalTree-native async primitives. Path-attached markers for load-and-expose and input-driven debounced queries, with auto-cleanup.',
     },
   },
+  {
+    path: 'marker-zoo',
+    loadComponent: () =>
+      import('./pages/marker-zoo/marker-zoo.component').then(
+        (c) => c.MarkerZooComponent
+      ),
+    data: {
+      title: 'Marker zoo — all 6 markers at 4 different depths',
+      description:
+        'All SignalTree markers in one tree at depths 1-4 simultaneously: entityMap, status, stored, form, asyncSource, asyncQuery. Demonstrates path-attached composition.',
+    },
+  },
+  {
+    path: 'built-for-ai',
+    loadComponent: () =>
+      import('./pages/built-for-ai/built-for-ai.component').then(
+        (c) => c.BuiltForAIComponent
+      ),
+    data: {
+      title: 'Built for AI coding agents',
+      description:
+        'SignalTree treats AI agents as a first-class consumer of the API. llms.txt, agent skills in every tarball, drop-in .cursorrules / CLAUDE.md templates, and a reproducible codegen accuracy benchmark.',
+    },
+  },
   // /rxmethod redirected to /async — rxMethod was removed in 9.6.0 (was briefly
   // shipped in 9.5.x as a migration alias; the canonical answer is the async markers).
   {

@@ -1,0 +1,8 @@
+{
+  "name": "ngrx-signals",
+  "displayName": "@ngrx/signals",
+  "version": "^20.0.0",
+  "packages": ["@ngrx/signals"],
+  "expected_paradigm": "functional-composition",
+  "doc_url": "https://ngrx.io/guide/signals"
+}

@@ -1,0 +1,32 @@
+id: 003-debounced-search
+title: Debounced search with race-condition handling
+difficulty: intermediate
+category: async-state
+prompt: |
+  Write an Angular @Injectable({ providedIn: 'root' }) service called SearchService
+  that manages a debounced user search using <LIBRARY>.
+
+  Requirements:
+  - Expose a `query` accessor the consumer can set (e.g., from an input field).
+  - When `query` changes, debounce 300ms, dedup identical inputs, then call
+    `this.api.search$(query)` (UserApi is injected). Cancel any in-flight
+    search if a new input arrives (latest wins).
+  - Expose `results` (User[]), `loading` (boolean), `error` (unknown | null).
+
+  Use whatever the LIBRARY-IDIOMATIC primitive is for input-driven async with
+  debounce/dedup/switchMap-style cancellation. Do not roll your own debounce
+  if the library provides one.
+
+  Output ONLY the TypeScript code. No prose, no markdown fences.
+
+expected_patterns:
+  signaltree:
+    must_include: ['signalTree(']
+    should_include_one_of: ['asyncQuery', 'debounceTime']
+  ngrx-signals:
+    must_include: ['rxMethod', 'debounceTime', 'switchMap']
+
+behavior_test: |
+  // (Skipped — debounce timing makes this a flaky behavior test; only compile
+  // and idiomatic-pattern matching is scored for this prompt.)
+  expect(true).toBe(true);

@@ -179,3 +179,165 @@ describe('Benchmark: enhancer overhead', () => {
     withDt.destroy();
   });
 });
+
+// =============================================================================
+// v10 — Cold-start construction time
+// =============================================================================
+
+describe('Benchmark: cold-start construction', () => {
+  it('constructs a 1000-leaf flat tree in <50ms median', () => {
+    function buildState() {
+      const state: Record<string, unknown> = {};
+      for (let i = 0; i < 1000; i++) state['leaf_' + i] = i;
+      return state;
+    }
+
+    const time = benchmark(
+      () => {
+        const t = signalTree(buildState());
+        t.destroy();
+      },
+      5,
+      20
+    );
+
+    console.log(`Cold-start 1000-leaf flat tree: median=${time.toFixed(2)}ms`);
+    expect(time).toBeLessThan(50);
+  });
+
+  it('constructs a 10-level-deep nested tree in <10ms median', () => {
+    function buildDeep(depth: number): unknown {
+      return depth === 0
+        ? { value: 'leaf' }
+        : { nested: buildDeep(depth - 1), sibling: depth };
+    }
+
+    const time = benchmark(
+      () => {
+        const t = signalTree(buildDeep(10) as Record<string, unknown>);
+        t.destroy();
+      },
+      5,
+      30
+    );
+
+    console.log(`Cold-start 10-level-deep tree: median=${time.toFixed(2)}ms`);
+    expect(time).toBeLessThan(10);
+  });
+});
+
+// =============================================================================
+// v10 — Per-mutation throughput at depth
+// =============================================================================
+
+describe('Benchmark: per-mutation throughput at depth', () => {
+  it('writes at depth-5 path are within 2.5x of writes at depth-1', () => {
+    const shallow = signalTree({ value: 0 });
+    const deep = signalTree({
+      a: { b: { c: { d: { e: { value: 0 } } } } },
+    });
+
+    const shallowTime = benchmark(() => {
+      for (let i = 0; i < ITERATIONS; i++) shallow.$.value.set(i);
+    });
+
+    const deepTime = benchmark(() => {
+      for (let i = 0; i < ITERATIONS; i++) deep.$.a.b.c.d.e.value.set(i);
+    });
+
+    const ratio = deepTime / shallowTime;
+    console.log(
+      `Mutation depth: shallow=${shallowTime.toFixed(2)}ms, depth5=${deepTime.toFixed(
+        2
+      )}ms, ratio=${ratio.toFixed(2)}x`
+    );
+    expect(ratio).toBeLessThan(2.5);
+
+    shallow.destroy();
+    deep.destroy();
+  });
+
+  it('reads at depth-5 are within 2.5x of reads at depth-1', () => {
+    const shallow = signalTree({ value: 42 });
+    const deep = signalTree({
+      a: { b: { c: { d: { e: { value: 42 } } } } },
+    });
+
+    const shallowTime = benchmark(() => {
+      for (let i = 0; i < ITERATIONS; i++) shallow.$.value();
+    });
+
+    const deepTime = benchmark(() => {
+      for (let i = 0; i < ITERATIONS; i++) deep.$.a.b.c.d.e.value();
+    });
+
+    const ratio = deepTime / shallowTime;
+    console.log(
+      `Read depth: shallow=${shallowTime.toFixed(2)}ms, depth5=${deepTime.toFixed(2)}ms, ratio=${ratio.toFixed(2)}x`
+    );
+    expect(ratio).toBeLessThan(2.5);
+
+    shallow.destroy();
+    deep.destroy();
+  });
+});
+
+// =============================================================================
+// v10 — Memoization correctness (computed reference equality + skip-recompute)
+// =============================================================================
+
+describe('Memoization correctness', () => {
+  it('Angular computed skips recompute when unrelated tree leaves change', async () => {
+    const { computed } = await import('@angular/core');
+    const tree = signalTree({ a: 1, b: 2, unrelated: 0 });
+    let computeCount = 0;
+    const sumSig = computed(() => {
+      computeCount += 1;
+      return tree.$.a() + tree.$.b();
+    });
+
+    expect(sumSig()).toBe(3);
+    expect(computeCount).toBe(1);
+
+    // Mutate an unrelated leaf — sumSig should NOT recompute.
+    tree.$.unrelated.set(99);
+    expect(sumSig()).toBe(3);
+    expect(computeCount).toBe(1);
+
+    // Mutate one of the inputs — recomputes.
+    tree.$.a.set(10);
+    expect(sumSig()).toBe(12);
+    expect(computeCount).toBe(2);
+
+    tree.destroy();
+  });
+
+  it('computed treats same-value writes as no-op (Object.is equality)', async () => {
+    const { computed } = await import('@angular/core');
+    const tree = signalTree({ x: 5 });
+    let computeCount = 0;
+    const doubled = computed(() => {
+      computeCount += 1;
+      return tree.$.x() * 2;
+    });
+
+    expect(doubled()).toBe(10);
+    expect(computeCount).toBe(1);
+
+    // Re-read cached — no recompute.
+    expect(doubled()).toBe(10);
+    expect(computeCount).toBe(1);
+
+    // Set to same value — Object.is equality holds, no recompute.
+    tree.$.x.set(5);
+    expect(doubled()).toBe(10);
+    expect(computeCount).toBe(1);
+
+    // Set to new value — recomputes.
+    tree.$.x.set(7);
+    expect(doubled()).toBe(14);
+    expect(computeCount).toBe(2);
+
+    tree.destroy();
+  });
+});

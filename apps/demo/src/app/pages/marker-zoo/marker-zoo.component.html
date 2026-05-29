@@ -1,0 +1,183 @@
+<div class="page" [class.dark]="store.$.settings.theme() === 'dark'">
+  <header class="hero">
+    <h1>Marker Zoo</h1>
+    <p class="lead">
+      All six SignalTree markers in <strong>one tree at four different depths</strong>.
+      Each one materializes into a fully-functional reactive sub-API at its declared
+      path. <strong>Impossible in libraries that compose features at the store root.</strong>
+    </p>
+  </header>
+
+  <section class="grid">
+
+    <article class="card">
+      <h2>
+        <span class="depth-badge">depth 1</span>
+        <code>status()</code>
+      </h2>
+      <p>Async state machine — loading / loaded / error / not-loaded.</p>
+      <div class="row">
+        <span class="state">{{ store.$.orgStatus.state() }}</span>
+        @if (store.$.orgStatus.isLoading()) {
+          <span class="badge loading">⏳ in-flight</span>
+        } @else if (store.$.orgStatus.isLoaded()) {
+          <span class="badge loaded">✅ loaded</span>
+        }
+      </div>
+      <pre><code>store.$.orgStatus.setLoading();
+store.$.orgStatus.setLoaded();</code></pre>
+    </article>
+
+    <article class="card">
+      <h2>
+        <span class="depth-badge">depth 2</span>
+        <code>asyncSource&lt;T&gt;()</code>
+      </h2>
+      <p>Load-and-expose. Materializes into data / loading / error / refresh.</p>
+      <div class="row">
+        <button (click)="loadDirectory()" [disabled]="store.$.directory.users.loading()">
+          @if (store.$.directory.users.loading()) {
+            Loading…
+          } @else {
+            Load directory
+          }
+        </button>
+        @if (store.$.directory.users.data() && store.$.directory.users.data()!.length > 0) {
+          <span class="count">{{ store.$.directory.users.data()!.length }} users</span>
+        }
+      </div>
+      @if (store.$.directory.users.data() && store.$.directory.users.data()!.length > 0) {
+        <ul class="entity-list">
+          @for (user of store.$.directory.users.data(); track user.id) {
+            <li>
+              <strong>{{ user.name }}</strong>
+              <span class="role-badge" [attr.data-role]="user.role">{{ user.role }}</span>
+            </li>
+          }
+        </ul>
+      }
+    </article>
+
+    <article class="card">
+      <h2>
+        <span class="depth-badge">depth 3</span>
+        <code>entityMap&lt;T, K&gt;()</code>
+      </h2>
+      <p>Normalized collection — nested inside <code>organization.teams</code>.</p>
+      <div class="row">
+        <button (click)="loadTeams()">Load teams</button>
+        <span class="count">{{ store.$.organization.teams.list.count() }} teams</span>
+      </div>
+      @if (store.$.organization.teams.list.count() > 0) {
+        <ul class="entity-list">
+          @for (team of store.$.organization.teams.list.all(); track team.id) {
+            <li><strong>{{ team.name }}</strong> · #{{ team.id }}</li>
+          }
+        </ul>
+      }
+      <pre><code>store.$.organization.teams.list.all()</code></pre>
+    </article>
+
+    <article class="card">
+      <h2>
+        <span class="depth-badge">depth 3</span>
+        <code>asyncQuery&lt;TIn, TOut&gt;()</code>
+      </h2>
+      <p>Debounced input-driven query — built-in <code>debounce → filter → switchMap</code>.</p>
+      <input
+        type="text"
+        placeholder="Type a team name…"
+        [ngModel]="store.$.organization.teams.search.input()"
+        (ngModelChange)="store.$.organization.teams.search.input.set($event)"
+      />
+      <div class="row">
+        @if (store.$.organization.teams.search.loading()) {
+          <span class="badge loading">⏳ searching</span>
+        } @else if (store.$.organization.teams.search.data() && store.$.organization.teams.search.data()!.length > 0) {
+          <span class="count">{{ store.$.organization.teams.search.data()!.length }} matches</span>
+        }
+      </div>
+      @if (store.$.organization.teams.search.data() && store.$.organization.teams.search.data()!.length > 0) {
+        <ul class="entity-list">
+          @for (team of store.$.organization.teams.search.data(); track team.id) {
+            <li><strong>{{ team.name }}</strong></li>
+          }
+        </ul>
+      }
+    </article>
+
+    <article class="card">
+      <h2>
+        <span class="depth-badge">depth 2</span>
+        <code>stored(key, default)</code>
+      </h2>
+      <p>Auto-synced localStorage. Refresh the page — your selection persists.</p>
+      <div class="row">
+        <button (click)="toggleTheme()">
+          Theme: <strong>{{ store.$.settings.theme() }}</strong> (click to toggle)
+        </button>
+      </div>
+      <pre><code>theme: stored('marker-zoo-theme', 'light')</code></pre>
+    </article>
+
+    <article class="card">
+      <h2>
+        <span class="depth-badge">depth 2</span>
+        <code>form&lt;T&gt;()</code>
+      </h2>
+      <p>Tree-integrated form with validation, errors, dirty/touched tracking.</p>
+      <label>
+        Name
+        <input
+          [ngModel]="store.$.onboarding.profile().name"
+          (ngModelChange)="store.$.onboarding.profile.patch({ name: $event })"
+        />
+      </label>
+      @if (store.$.onboarding.profile.errors().name) {
+        <p class="form-error">{{ store.$.onboarding.profile.errors().name }}</p>
+      }
+      <label>
+        Email
+        <input
+          [ngModel]="store.$.onboarding.profile().email"
+          (ngModelChange)="store.$.onboarding.profile.patch({ email: $event })"
+        />
+      </label>
+      @if (store.$.onboarding.profile.errors().email) {
+        <p class="form-error">{{ store.$.onboarding.profile.errors().email }}</p>
+      }
+      <div class="row">
+        <span class="badge" [class.loaded]="store.$.onboarding.profile.valid()" [class.loading]="!store.$.onboarding.profile.valid()">
+          {{ store.$.onboarding.profile.valid() ? '✓ valid' : '✗ invalid' }}
+        </span>
+        @if (store.$.onboarding.profile.dirty()) {
+          <span class="badge loading">edited</span>
+        }
+      </div>
+    </article>
+  </section>
+
+  <div class="footer-actions">
+    <button class="reset" (click)="resetAll()">Reset everything</button>
+    <a class="see-more" routerLink="/async">→ See the dedicated /async demo</a>
+  </div>
+
+  <aside class="explainer">
+    <h2>What this proves</h2>
+    <p>
+      Every marker lives <strong>at the tree path it describes</strong>. The walker
+      (<code>materializeMarkers</code>) walks the initial-state literal recursively
+      and substitutes each marker at the exact location you placed it. No
+      root-level <code>withX(...)</code> composition.
+    </p>
+    <p>
+      In <code>&#64;ngrx/signals</code>, every <code>with*</code> feature
+      (<code>withState</code>, <code>withComputed</code>, <code>withMethods</code>,
+      <code>withHooks</code>, <code>withProps</code>) composes against the
+      <strong>entire store</strong>. To get the equivalent of this page, you'd
+      either flatten the state hierarchy or split into multiple stores.
+      SignalTree lets you keep the domain shape and attach behavior where it
+      semantically lives.
+    </p>
+  </aside>
+</div>

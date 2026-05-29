@@ -1,0 +1,42 @@
+id: 002-paginated-users
+title: Paginated user list with loading state
+difficulty: intermediate
+category: async-state
+prompt: |
+  Write an Angular @Injectable({ providedIn: 'root' }) service called UsersService
+  that manages a list of users using <LIBRARY>. The service should:
+
+  - Expose a normalized collection of `User` objects (id: number, name: string).
+  - Expose reactive `loading` (boolean) and `error` (unknown | null) accessors.
+  - Have a `load()` method that calls `this.api.list$()` (already injected as
+    `UserApi`) and populates the collection. While in-flight, `loading` is true.
+    On error, `error` captures the error and `loading` becomes false.
+  - Have an `addUser(user)` method that adds a user to the collection.
+
+  Use whatever the LIBRARY-IDIOMATIC pattern is for normalized collections,
+  loading state, and async operations. Do not write manual array operations
+  if the library provides a normalized-collection primitive.
+
+  Output ONLY the TypeScript code for the file. No prose, no markdown fences.
+
+expected_patterns:
+  signaltree:
+    must_include: ['signalTree(', 'entityMap']
+    # SignalTree-idiomatic: asyncSource OR status marker
+    should_include_one_of: ['asyncSource', 'status(']
+    must_not_include: ['BehaviorSubject', 'signalStore(']
+  ngrx-signals:
+    must_include: ['signalStore(', 'withEntities', 'rxMethod']
+    must_not_include: ['signalTree(']
+
+behavior_test: |
+  // Mock API
+  TestBed.overrideProvider(UserApi, { useValue: { list$: () => of([{ id: 1, name: 'Alice' }, { id: 2, name: 'Bob' }]) }});
+  const service = TestBed.inject(UsersService);
+  // Trigger load.
+  service.load();
+  // Allow microtasks to settle.
+  await Promise.resolve();
+  // Library-specific assertions are wrapped to tolerate accessor shape variance:
+  const usersCount = service.users?.all?.()?.length ?? service.users?.entities?.()?.length ?? service.entities?.()?.length;
+  expect(usersCount).toBe(2);

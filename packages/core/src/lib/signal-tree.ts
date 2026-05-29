@@ -5,6 +5,7 @@ import { batchScope } from './internals/batch-scope';
 import { SignalTreeBuilder } from './internals/builder-types';
 import { ProcessDerived } from './internals/derived-types';
 import {
+  _recordTreeConstruction,
   isRegisteredMarker,
   materializeMarkers,
 } from './internals/materialize-markers';
@@ -781,6 +782,9 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
     // can reference entity methods, status signals, and stored signals.
     materializeMarkers(baseTree.$);
     materializeMarkers(baseTree.state);
+    // Record that a tree has been constructed so registerMarkerProcessor()
+    // can warn if user-defined markers are registered AFTER the fact.
+    _recordTreeConstruction();
 
     // Step 2: Apply all queued derived factories
     if (derivedQueue.length > 0) {

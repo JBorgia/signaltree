@@ -167,6 +167,20 @@ export class NavigationComponent {
       category: 'examples',
     },
     {
+      id: 'marker-zoo',
+      title: 'Marker zoo (all 6 markers, 4 depths)',
+      description: 'All marker types in one tree at different depths — showcases path-attached composition',
+      route: '/marker-zoo',
+      category: 'examples',
+    },
+    {
+      id: 'built-for-ai',
+      title: 'Built for AI coding agents',
+      description: 'llms.txt, agent skills, drop-in templates, and the codegen accuracy benchmark',
+      route: '/built-for-ai',
+      category: 'learn',
+    },
+    {
       id: 'devtools',
       title: 'DevTools',
       description: 'Redux DevTools integration',

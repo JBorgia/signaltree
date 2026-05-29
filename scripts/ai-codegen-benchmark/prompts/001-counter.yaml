@@ -1,0 +1,41 @@
+id: 001-counter
+title: Basic counter service
+difficulty: beginner
+category: state-basics
+prompt: |
+  Write an Angular @Injectable({ providedIn: 'root' }) service called CounterService
+  that manages a counter using <LIBRARY>. The service should expose:
+  - A reactive `count` accessor starting at 0 (a Signal in libraries that support it,
+    otherwise an Observable)
+  - An `increment()` method that adds 1
+  - A `decrement()` method that subtracts 1
+  - A `reset()` method that sets back to 0
+
+  Output ONLY the TypeScript code for the file. No prose, no markdown fences.
+
+expected_patterns:
+  signaltree:
+    must_include: ['signalTree(', '@Injectable']
+    must_not_include: ['signalStore(', 'patchState(', 'BehaviorSubject', 'createStore']
+  ngrx-signals:
+    must_include: ['signalStore(', 'withState', 'withMethods']
+    must_not_include: ['signalTree(', 'BehaviorSubject', 'createStore']
+  ngrx-store:
+    must_include: ['createReducer(', 'createAction(', 'Store']
+  akita:
+    must_include: ['Store', 'StoreConfig']
+  elf:
+    must_include: ['createStore', 'withProps']
+
+behavior_test: |
+  const service = TestBed.inject(CounterService);
+  const read = () => 'count' in service ? (typeof service.count === 'function' ? service.count() : service.count) : null;
+  expect(read()).toBe(0);
+  service.increment();
+  service.increment();
+  service.increment();
+  expect(read()).toBe(3);
+  service.decrement();
+  expect(read()).toBe(2);
+  service.reset();
+  expect(read()).toBe(0);

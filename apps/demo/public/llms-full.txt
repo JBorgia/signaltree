@@ -367,18 +367,33 @@ See [`docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md`](ht
 
 ### Edit sessions
 
-Scoped undo/redo over a subtree. Useful for form wizards, multi-step editors, and "draft" flows where the user might cancel.
+A value-level undo/redo wrapper for "draft and cancel" workflows — form wizards, multi-step editors, and any case where the user might discard their changes. Independent of the tree (no path binding); bridge by syncing `session.modified()` ↔ tree leaves as appropriate for your flow.
 
 ```typescript
-const session = createEditSession(store, '$.user.profile');
-session.modify((profile) => ({ ...profile, name: 'Updated' }));
-session.modify((profile) => ({ ...profile, email: 'new@example.com' }));
-session.undo();    // revert last change inside the session
-session.commit();  // persist the final session state into the main tree
-session.cancel();  // discard all session changes
+import { createEditSession } from '@signaltree/core/edit-session';
+
+const session = createEditSession({ name: 'Alice', email: 'a@example.com' });
+
+// applyChanges takes a value or an updater function:
+session.applyChanges((profile) => ({ ...profile, name: 'Updated' }));
+session.applyChanges((profile) => ({ ...profile, email: 'new@example.com' }));
+
+session.modified();   // current draft value (signal)
+session.original();   // initial value (signal)
+session.isDirty();    // boolean signal — true if modified ≠ original
+session.canUndo();    // signal — true if there's history to revert
+session.canRedo();    // signal
+
+session.undo();
+session.redo();
+session.reset();      // back to original; clears history
+session.setOriginal(value); // commit pattern: set new original, clear history
+
+// When you want to "commit" to the tree:
+// effect(() => { if (session.isDirty()) tree.$.user.profile.set(session.modified()); });
 ```
 
-Edit sessions are NOT a general "subpath isolation" or "write encapsulation" mechanism. They are scoped undo/redo over a path.
+Edit sessions are NOT a tree-path-bound primitive — they wrap any value and expose undo/redo. A path-bound overload (`createEditSession(tree, pathSelector)`) is planned for v10.1.
 
 ---
 
@@ -466,7 +481,7 @@ This is the pattern enforced in production migrations. The `$` access stays read
 | "Markers must live at the tree root." | Comparison to NgRx `with*` features. | Markers attach at **any node, any depth**. The walker tracks the path. |
 | "Derived state must live in a separate file, breaking the single-tree illusion." | Mixing up `derivedFrom` (file-org helper) with the actual `.derived($)` method. | `.derived()` merges computed signals **into the tree at arbitrary paths**, alongside source properties. The "single tree" is preserved. |
 | "`derivedFrom(tree, fn)` returns a read-only projection." | Hallucinated signature. | Real signature: `derivedFrom<TTree>()(fn)`. Curried. Zero runtime cost. Pure file-org helper for multi-file derived. |
-| "SignalTree has explicit subpath isolation as a built-in feature." | Misreading the docs. | No subpath-isolation API exists. `createEditSession(tree, path)` is scoped undo/redo only. For write encapsulation use `@signaltree/events` or a service facade. |
+| "SignalTree has explicit subpath isolation as a built-in feature." | Misreading the docs. | No subpath-isolation API exists. `createEditSession(initial)` is a value-level undo/redo primitive (NOT tree-bound — that's planned for v10.1). For write encapsulation use `@signaltree/events` or a service facade. |
 | "Time-travel is in `@signaltree/time-travel`." | Made-up package name. | Import `timeTravel` from `@signaltree/core`. No such separate package. |
 | "Persistence is in `@signaltree/storage`." | Made-up package name. | Use `stored()` marker (per-leaf) or `persistence()` enhancer (tree-wide) from `@signaltree/core`. |
 | "Batching is opt-in only." | Conflating automatic notification batching with the `batching()` enhancer. | Automatic microtask notification batching is built into core (default on). The enhancer adds explicit `.batch(fn)` / `.coalesce(fn)`. |
