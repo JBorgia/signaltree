@@ -124,18 +124,24 @@ cp -r node_modules/&#64;signaltree/core/skills/using-signaltree .claude/skills/<
         validators.
       </p>
       <p>
-        <strong>First measured result (2026-05-29):</strong>
+        <strong>v10.2 expanded result (2026-05-29):</strong>
       </p>
       <ul class="bench-headline">
-        <li><strong>35%</strong> — cold-run accuracy (no priming)</li>
-        <li><strong>79%</strong> — primed with <code>/llms.txt</code></li>
-        <li><strong>+44 percentage points</strong> from a single retrievable file</li>
+        <li><strong>49%</strong> — cold-run accuracy (no priming)</li>
+        <li><strong>91%</strong> — primed with <code>/llms.txt</code></li>
+        <li><strong>+42 percentage points</strong> from a single retrievable file</li>
+        <li><strong>99%</strong> — Claude Sonnet 4.6 primed (near-ceiling)</li>
       </ul>
       <p>
-        Across 4 frontier models — Claude Sonnet 4.6, GPT-5.4, Gemini 3.1 Pro,
-        Perplexity Sonar Pro — on 3 prompts × 5 libraries × 2 modes = 120 cells.
-        Expanded matrix (8 prompts, tier comparison, multi-file priming) shipped
-        with v10.2.
+        Across <strong>6 models</strong> (Claude Sonnet 4.6, GPT-5.4, Gemini 3.1
+        Pro, Perplexity Sonar Pro, Claude Haiku 4.5, GPT-5.4-mini) on
+        <strong>8 prompts × 5 libraries × 3 priming modes = 720 cells</strong>.
+        Scored on idiomatic pattern + import-resolution + marker-method validity.
+      </p>
+      <p>
+        <strong>Key finding:</strong> primed Haiku 4.5 (97/100) outscores
+        cold Sonnet 4.6 (41/100) by 2.4×. Priming closes the model-tier gap
+        — your code agent on a cheap model still writes correct SignalTree.
       </p>
       <p>
         Strategic differentiator: every state library competes on bundle size
