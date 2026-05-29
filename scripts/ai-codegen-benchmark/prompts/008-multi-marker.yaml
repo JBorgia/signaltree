@@ -1,0 +1,47 @@
+id: 008-multi-marker
+title: User profile editor with save status and persisted draft
+difficulty: advanced
+category: multi-primitive
+prompt: |
+  Write an Angular @Injectable({ providedIn: 'root' }) service called ProfileService
+  using <LIBRARY>. The service manages a user profile editor with these requirements:
+
+  - Track an editable profile { firstName: string, lastName: string, email: string }.
+  - The draft must be PERSISTED to localStorage so reloading the page restores it.
+  - Track a separate `saveStatus` (not-saved / saving / saved / error) for save operations.
+  - Expose reactive `profile`, `saveStatus`, and a derived `isDirty` (true when the
+    current draft differs from the last-saved snapshot).
+  - Have an `updateField(key, value)` method.
+  - Have a `save()` method that calls `this.api.save$(profile)` (already injected as
+    `ProfileApi`), updates `saveStatus`, and clears the dirty flag on success.
+  - Have a `discard()` method that resets the draft to the last-saved value.
+
+  Use the LIBRARY-IDIOMATIC pattern for each capability. For persistence, prefer
+  the library's persistence primitive over manual localStorage wiring.
+
+  Output ONLY the TypeScript code for the file. No prose, no markdown fences.
+
+expected_patterns:
+  signaltree:
+    must_include: ['signalTree(']
+    should_include_one_of: ['stored(', 'persistence', 'status(']
+    must_not_include: ['signalStore(', 'createStore']
+  ngrx-signals:
+    must_include: ['signalStore(']
+    must_not_include: ['signalTree(']
+  ngrx-store:
+    must_include: ['Store']
+  akita:
+    must_include: ['Store']
+    should_include_one_of: ['persistState', 'persistStorage']
+  elf:
+    must_include: ['createStore']
+    should_include_one_of: ['persistState', 'localStorageStrategy']
+
+behavior_test: |
+  TestBed.overrideProvider(ProfileApi, { useValue: { save$: () => of({ ok: true }) }});
+  const service = TestBed.inject(ProfileService);
+  service.updateField('firstName', 'Alice');
+  await Promise.resolve();
+  const isDirtyAfter = typeof service.isDirty === 'function' ? service.isDirty() : service.isDirty;
+  expect(isDirtyAfter).toBe(true);

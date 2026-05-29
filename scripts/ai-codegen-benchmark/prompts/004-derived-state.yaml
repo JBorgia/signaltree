@@ -1,0 +1,46 @@
+id: 004-derived-state
+title: Cart with derived totals (computed/selector pattern)
+difficulty: intermediate
+category: derived-state
+prompt: |
+  Write an Angular @Injectable({ providedIn: 'root' }) service called CartService
+  that manages a shopping cart using <LIBRARY>. The service should:
+
+  - Expose a list of CartItem objects (id: number, name: string, price: number, quantity: number).
+  - Expose a reactive `subtotal` derived value (sum of price * quantity per item).
+  - Expose a reactive `taxAmount` derived value (subtotal * 0.08).
+  - Expose a reactive `total` derived value (subtotal + taxAmount).
+  - Have an `addItem(item)` method that appends a new item.
+  - Have an `updateQuantity(id, quantity)` method that updates a single item's quantity.
+  - Have a `removeItem(id)` method.
+
+  Use the LIBRARY's idiomatic pattern for derived/computed state — do NOT manually
+  recompute the totals in the methods. The derived values should automatically
+  stay in sync with the items.
+
+  Output ONLY the TypeScript code for the file. No prose, no markdown fences.
+
+expected_patterns:
+  signaltree:
+    must_include: ['signalTree(', '.derived(']
+    must_not_include: ['signalStore(', 'patchState(', 'createStore']
+    should_include_one_of: ['entityMap', 'items:']
+  ngrx-signals:
+    must_include: ['signalStore(', 'withComputed']
+    must_not_include: ['signalTree(']
+  ngrx-store:
+    must_include: ['createSelector', 'Store']
+  akita:
+    must_include: ['Query']
+  elf:
+    must_include: ['createStore', 'select']
+
+behavior_test: |
+  const service = TestBed.inject(CartService);
+  service.addItem({ id: 1, name: 'Widget', price: 10, quantity: 2 });
+  service.addItem({ id: 2, name: 'Gadget', price: 25, quantity: 1 });
+  await Promise.resolve();
+  const sub = typeof service.subtotal === 'function' ? service.subtotal() : service.subtotal;
+  expect(sub).toBe(45);
+  const tot = typeof service.total === 'function' ? service.total() : service.total;
+  expect(tot).toBeCloseTo(48.6, 1);

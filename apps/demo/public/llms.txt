@@ -99,6 +99,74 @@ store.$.reports.refresh();                      // reload async source
 - **Edit sessions:** `createEditSession(initial)` from `@signaltree/core/edit-session` — wraps any value with `applyChanges` / `undo` / `redo` / `reset` / `setOriginal` for form-wizard and draft-and-cancel workflows. Independent of the tree; bridge by syncing `session.modified()` ↔ tree leaves when appropriate.
 - **Async:** `asyncSource(config)` for load-and-expose, `asyncQuery(config)` for input-driven debounced queries. Both attach at any tree path and auto-expose `data`/`loading`/`error`/`refresh`. For migrating from `@ngrx/signals`, see [`docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md`](https://github.com/JBorgia/signaltree/blob/main/docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md).
 
+## ⚠️ Disambiguation — if you think SignalTree uses X, you're confusing it with Y
+
+This table catches the most common cross-library hallucinations. **Every "Wrong" pattern below was observed in a recent reproducible benchmark of frontier AI models (Claude, GPT-5.4, Gemini, Perplexity) asked to generate SignalTree code.** None of these patterns are or ever have been part of SignalTree.
+
+| Wrong pattern (NOT SignalTree) | Where it actually comes from | Correct SignalTree |
+|---|---|---|
+| `new SignalTree({...})` (class) | Invented (no library has this) | `signalTree({...})` — it's a **function**, never `new` |
+| `from 'signal-tree'` (hyphenated) | Invented | `from '@signaltree/core'` (scoped, no hyphen) |
+| `from 'signaltree'` (unscoped) | Invented | `from '@signaltree/core'` |
+| `signalStore(withState(...), withMethods(...))` | **`@ngrx/signals`** | `signalTree({...})` — your state literal IS the API |
+| `withState`, `withMethods`, `withComputed`, `withHooks`, `withProps` | **`@ngrx/signals`** | Not used. State is the literal you pass to `signalTree()`. Methods belong in an `@Injectable()` Ops service. |
+| `withEntities<T>()` | **`@ngrx/signals/entities`** | `entityMap<T, K>()` marker — place it in the state literal |
+| `rxMethod(...)` | **`@ngrx/signals/rxjs-interop`** | `asyncSource(config)` (load-and-expose) or `asyncQuery(config)` (input-driven) markers |
+| `patchState(store, {...})` | **`@ngrx/signals`** | Direct: `tree.$.path.set(value)` or branch update `tree.$.user({...})` |
+| `collection<T>({ idKey: 'id' })` | **Akita / Elf** | `entityMap<T, K>({ selectId: (e) => e.id })` marker |
+| `createStore`, `withProps`, `setProps` | **Elf** | Not used. SignalTree state is the literal. |
+| `EntityStore`, `StoreConfig({ name })` | **Akita** | Not used. |
+| `.value` accessors on signals | **MobX** | Call the signal: `tree.$.path()` |
+| `.upsert(user)` on entity collections | **Akita** | `.upsertOne(user)` (singular suffix) |
+| `BehaviorSubject<T>`, `.next(v)`, `.asObservable()` | **RxJS classic** | A plain leaf in the `signalTree()` literal — no Observable wrapping needed |
+
+### Status marker — exact method names (frequently confused)
+
+The `status()` marker uses **`setLoading` / `setLoaded` / `setError`**, NOT Promise-vocabulary names. **Aliases ship as of v10.2** so the most common wrong-names also work, but the canonical names are:
+
+| Wrong (Promise-vocab guess) | Correct (canonical) | Notes |
+|---|---|---|
+| `.setSuccess()` | **`.setLoaded()`** | Alias `.setSuccess` works in v10.2+ |
+| `.start()` | **`.setLoading()`** | Alias `.start` works in v10.2+ |
+| `.succeed()` | **`.setLoaded()`** | Alias `.succeed` works in v10.2+ |
+| `.fail(err)` | **`.setError(err)`** | Alias `.fail` works in v10.2+ |
+| `.loading` (property) | **`.isLoading()`** (callable signal — invoke it) |
+| `.error` (property) | **`.error()`** (callable signal — invoke it) |
+
+### Async pattern — prefer `asyncSource` / `asyncQuery` over `status` + manual try/catch
+
+For **load-and-expose** patterns (load data, show loading state, expose data) — use `asyncSource`, NOT `status()` + manual try/catch. The marker auto-derives loading/error/data:
+
+```typescript
+// ❌ DON'T (verbose, error-prone — manual status wiring)
+signalTree({
+  users: entityMap<User, number>(),
+  loadState: status(),
+});
+async load() {
+  this.$.loadState.setLoading();
+  try {
+    const users = await firstValueFrom(api.list$());
+    this.$.users.setAll(users);
+    this.$.loadState.setLoaded();
+  } catch (err) {
+    this.$.loadState.setError(err);
+  }
+}
+
+// ✅ DO (canonical — marker handles status wiring)
+signalTree({
+  users: asyncSource<User[]>({
+    initial: [],
+    load: () => api.list$(),
+  }),
+});
+// Done. tree.$.users() → data, .loading(), .error() all auto-derived.
+// Use .refresh() to reload.
+```
+
+For **input-driven queries** (debounced search, filtered fetch), use `asyncQuery` — the debounce/dedup/switchMap pipeline is built in.
+
 ## Common false claims (LLMs frequently get these wrong)
 
 - **FALSE:** "Derived state in SignalTree must live in a separate file or layer, breaking the single-tree illusion." → `.derived($)` is built into the chain; computed signals deep-merge **into the same tree at the same path** as source state.

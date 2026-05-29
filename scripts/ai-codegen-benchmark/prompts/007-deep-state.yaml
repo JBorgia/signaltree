@@ -1,0 +1,47 @@
+id: 007-deep-state
+title: Dashboard service with deeply-nested status
+difficulty: advanced
+category: state-depth
+prompt: |
+  Write an Angular @Injectable({ providedIn: 'root' }) service called DashboardService
+  using <LIBRARY>. The state structure is intentionally NESTED. The service should manage:
+
+  - dashboard.widgets.users — a list of User { id: number, name: string }
+  - dashboard.widgets.users.loadStatus — a loading status (not-loaded / loading / loaded / error)
+  - dashboard.widgets.metrics.totalUsers — derived from the users count
+  - dashboard.widgets.metrics.lastUpdated — a Date (or null)
+
+  The service should expose:
+  - A `loadUsers()` method that fetches from `this.api.list$()` (already injected as `UserApi`).
+    Updates the nested status during the call.
+  - A reactive `users` accessor at any depth that exposes the list.
+  - A reactive `loading` accessor that reflects the nested status.
+  - A reactive `totalUsers` derived accessor.
+
+  IMPORTANT: do NOT flatten the state. The shape MUST be nested. Place state
+  primitives (collections, status, derived) at the depths described above.
+
+  Output ONLY the TypeScript code for the file. No prose, no markdown fences.
+
+expected_patterns:
+  signaltree:
+    must_include: ['signalTree(']
+    should_include_one_of: ['entityMap', 'asyncSource', 'status(']
+    must_not_include: ['signalStore(', 'BehaviorSubject', 'createStore']
+  ngrx-signals:
+    must_include: ['signalStore(']
+    must_not_include: ['signalTree(']
+  ngrx-store:
+    must_include: ['createReducer', 'Store']
+  akita:
+    must_include: ['Store']
+  elf:
+    must_include: ['createStore']
+
+behavior_test: |
+  TestBed.overrideProvider(UserApi, { useValue: { list$: () => of([{ id: 1, name: 'Alice' }]) }});
+  const service = TestBed.inject(DashboardService);
+  service.loadUsers();
+  await Promise.resolve();
+  const u = typeof service.users === 'function' ? service.users() : service.users;
+  expect(Array.isArray(u) ? u.length : u?.all?.()?.length ?? u?.entities?.()?.length).toBe(1);

@@ -13,6 +13,7 @@ import { readFileSync, readdirSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, basename, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
+import { scoreImports, scoreMarkerMethods, combinedScore } from './scorer.mjs';
 
 // Minimal YAML parser — avoids adding a runtime dependency. Supports the
 // subset of YAML used in our prompts: scalars, multiline `|` strings, nested
@@ -106,22 +107,31 @@ const { values: args } = parseArgs({
     prompt: { type: 'string' },
     dryRun: { type: 'boolean', default: false },
     out: { type: 'string' },
+    'include-tier-comparison': { type: 'boolean', default: false },
   },
 });
 
 const SELF_DIR = fileURLToPath(new URL('.', import.meta.url));
 const PROMPTS_DIR = join(SELF_DIR, 'prompts');
 
-// Optional retrieval priming: read a file (typically llms.txt) and inject
-// its contents as an additional system message in every call. This is how
-// we measure the AI-discoverability surface's impact on codegen accuracy.
+// Optional retrieval priming: read one or more files (comma- or colon-
+// separated) and inject the concatenated contents as an additional system
+// message in every call. This is how we measure the AI-discoverability
+// surface's impact on codegen accuracy.
+//
+// Supports comparison runs: --primed-with llms.txt vs --primed-with
+// llms.txt,myths-and-misconceptions.md to measure the marginal lift of
+// adding more priming context.
 if (process.env.PRIMING_CONTEXT_FILE) {
-  globalThis.__primingContextCache = readFileSync(
-    process.env.PRIMING_CONTEXT_FILE,
-    'utf8'
-  );
+  const paths = process.env.PRIMING_CONTEXT_FILE.split(/[,:]/).map((p) => p.trim()).filter(Boolean);
+  const sections = paths.map((p) => {
+    const content = readFileSync(p, 'utf8');
+    return `=== ${basename(p)} ===\n\n${content}`;
+  });
+  globalThis.__primingContextCache = sections.join('\n\n');
+  globalThis.__primingPaths = paths;
   console.log(
-    `[runner] Priming with: ${process.env.PRIMING_CONTEXT_FILE} (${globalThis.__primingContextCache.length} chars)`
+    `[runner] Priming with ${paths.length} file(s): ${paths.map((p) => basename(p)).join(', ')} (${globalThis.__primingContextCache.length} chars)`
   );
 }
 
@@ -135,10 +145,18 @@ const RESULTS_DIR =
   );
 
 const ALL_LIBRARIES = ['signaltree', 'ngrx-signals', 'ngrx-store', 'akita', 'elf'];
+// Frontier-tier agents always present. Smaller-tier comparison agents (haiku,
+// gpt-mini) opt in via --agent. The runner supports any agent alias that maps
+// to a model slug in the OpenRouter adapter.
 const ALL_AGENTS = ['claude', 'openai', 'gemini', 'perplexity']; // copilot has no public API
+const TIER_COMPARISON_AGENTS = ['haiku', 'gpt-mini'];
 
 const libs = args.library ? [args.library] : ALL_LIBRARIES;
-const agents = args.agent ? [args.agent] : ALL_AGENTS;
+const agents = args.agent
+  ? args.agent.split(',').map((s) => s.trim()).filter(Boolean)
+  : args['include-tier-comparison']
+  ? [...ALL_AGENTS, ...TIER_COMPARISON_AGENTS]
+  : ALL_AGENTS;
 
 // Discover prompts
 const promptFiles = readdirSync(PROMPTS_DIR)
@@ -248,19 +266,32 @@ for (const file of promptFiles) {
 
         const idiomaticScore = (includesAll ? 50 : 0) + (excludesAll ? 25 : 0) + (includesOne ? 25 : 0);
 
-        // (compile + behavior scoring left as TODO — requires Angular workspace harness)
+        // Static analysis scorers (stand-ins for full compile + TestBed)
+        const imports = scoreImports(generated.code);
+        const methods = scoreMarkerMethods(generated.code, lib);
+        const combined = combinedScore({
+          idiomaticScore,
+          importScore: imports.score,
+          methodScore: methods.score,
+        });
+
         const result = {
           model: generated.model,
           idiomaticScore,
+          importScore: imports.score,
+          methodScore: methods.score,
+          combinedScore: combined,
           mustInclude: { ok: includesAll, missing: mustInclude.filter((p) => !generated.code.includes(p)) },
           mustNotInclude: { ok: excludesAll, present: mustNotInclude.filter((p) => generated.code.includes(p)) },
           shouldIncludeOneOf: { ok: includesOne },
-          compileScore: 'TODO',
-          behaviorScore: 'TODO',
+          imports: { total: imports.total, valid: imports.valid, invalid: imports.invalid },
+          methods: { applicable: methods.applicable, total: methods.total, valid: methods.valid, invalid: methods.invalid },
         };
         writeFileSync(join(RESULTS_DIR, 'compile', `${cellKey}.json`), JSON.stringify(result, null, 2));
         summary.results[promptId][lib][agent] = result;
-        console.log(`✓ ${cellKey}  idiomatic=${idiomaticScore}/100`);
+        const importStr = imports.score === null ? '–' : `${imports.score}`;
+        const methodStr = methods.score === null ? '–' : `${methods.score}`;
+        console.log(`✓ ${cellKey}  idiomatic=${idiomaticScore} imports=${importStr} methods=${methodStr} combined=${combined}`);
       } catch (err) {
         console.error(`✗ ${cellKey}: ${err.message}`);
         summary.results[promptId][lib][agent] = { error: err.message };
@@ -281,7 +312,13 @@ function renderMarkdownSummary(s) {
   const out = [];
   out.push(`# AI-codegen benchmark — ${s.startedAt}\n`);
   out.push(`Prompts: ${s.prompts} | Libraries: ${s.libraries.join(', ')} | Agents: ${s.agents.join(', ')}\n`);
-  out.push(`## Idiomatic-pattern scores (compile + behavior TODO)\n`);
+  if (globalThis.__primingPaths) {
+    out.push(`Priming: ${globalThis.__primingPaths.map((p) => basename(p)).join(' + ')}\n`);
+  } else {
+    out.push(`Priming: cold (no context)\n`);
+  }
+  out.push(`## Combined scores (idiomatic + import-resolution + marker-method)\n`);
+  out.push(`Each cell shows: combined / idiomatic / imports / methods\n`);
   out.push(`| Prompt | Library | ${s.agents.join(' | ')} |`);
   out.push(`|---|---|${s.agents.map(() => '---').join('|')}|`);
   for (const [pid, libs] of Object.entries(s.results)) {
@@ -291,10 +328,30 @@ function renderMarkdownSummary(s) {
         if (!r) return '–';
         if (r.skipped) return `_${r.skipped}_`;
         if (r.error) return '❌';
-        return `${r.idiomaticScore ?? '?'}`;
+        const im = r.importScore ?? '–';
+        const mm = r.methodScore ?? '–';
+        return `**${r.combinedScore ?? '?'}** / ${r.idiomaticScore ?? '?'} / ${im} / ${mm}`;
       });
       out.push(`| ${pid} | ${lib} | ${cells.join(' | ')} |`);
     }
+  }
+  out.push('');
+  out.push(`## Per-library averages (combined score)\n`);
+  out.push(`| Library | ${s.agents.join(' | ')} | mean |`);
+  out.push(`|---|${s.agents.map(() => '---').join('|')}|---|`);
+  for (const lib of s.libraries) {
+    const cellsByAgent = {};
+    for (const a of s.agents) cellsByAgent[a] = [];
+    for (const pid of Object.keys(s.results)) {
+      for (const a of s.agents) {
+        const r = s.results[pid][lib]?.[a];
+        if (r && typeof r.combinedScore === 'number') cellsByAgent[a].push(r.combinedScore);
+      }
+    }
+    const avg = (arr) => (arr.length ? Math.round(arr.reduce((x, y) => x + y, 0) / arr.length) : '–');
+    const perAgent = s.agents.map((a) => avg(cellsByAgent[a]));
+    const all = Object.values(cellsByAgent).flat();
+    out.push(`| ${lib} | ${perAgent.join(' | ')} | **${avg(all)}** |`);
   }
   return out.join('\n');
 }

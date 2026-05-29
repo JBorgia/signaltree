@@ -115,12 +115,27 @@ cp -r node_modules/&#64;signaltree/core/skills/using-signaltree .claude/skills/<
     </article>
 
     <article class="card highlight">
-      <span class="badge">v10 — new</span>
+      <span class="badge">v10.2 — measured</span>
       <h3>AI-codegen accuracy benchmark</h3>
       <p>
         A reproducible matrix scoring how reliably each major AI agent generates
         <strong>correct</strong> Angular state code across libraries. Fixed prompt
-        suite, sealed test harnesses, idiomatic-pattern matchers.
+        suite, idiomatic-pattern matchers, import-resolution and marker-method
+        validators.
+      </p>
+      <p>
+        <strong>First measured result (2026-05-29):</strong>
+      </p>
+      <ul class="bench-headline">
+        <li><strong>35%</strong> — cold-run accuracy (no priming)</li>
+        <li><strong>79%</strong> — primed with <code>/llms.txt</code></li>
+        <li><strong>+44 percentage points</strong> from a single retrievable file</li>
+      </ul>
+      <p>
+        Across 4 frontier models — Claude Sonnet 4.6, GPT-5.4, Gemini 3.1 Pro,
+        Perplexity Sonar Pro — on 3 prompts × 5 libraries × 2 modes = 120 cells.
+        Expanded matrix (8 prompts, tier comparison, multi-file priming) shipped
+        with v10.2.
       </p>
       <p>
         Strategic differentiator: every state library competes on bundle size

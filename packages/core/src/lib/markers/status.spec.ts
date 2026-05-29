@@ -122,6 +122,63 @@ describe('status() marker', () => {
       sig.reset();
       expect(sig.state()).toBe(LoadingState.NotLoaded);
     });
+
+    describe('Promise-vocabulary aliases (v10.2)', () => {
+      it('should treat start() as setLoading()', () => {
+        const sig = createStatusSignal({
+          [STATUS_MARKER]: true,
+          initialState: LoadingState.NotLoaded,
+        });
+        sig.start();
+        expect(sig.state()).toBe(LoadingState.Loading);
+        expect(sig.isLoading()).toBe(true);
+        expect(sig.error()).toBe(null);
+      });
+
+      it('should treat setSuccess() as setLoaded()', () => {
+        const sig = createStatusSignal({
+          [STATUS_MARKER]: true,
+          initialState: LoadingState.Loading,
+        });
+        sig.setSuccess();
+        expect(sig.state()).toBe(LoadingState.Loaded);
+        expect(sig.isLoaded()).toBe(true);
+      });
+
+      it('should treat succeed() as setLoaded()', () => {
+        const sig = createStatusSignal({
+          [STATUS_MARKER]: true,
+          initialState: LoadingState.Loading,
+        });
+        sig.succeed();
+        expect(sig.state()).toBe(LoadingState.Loaded);
+        expect(sig.isLoaded()).toBe(true);
+      });
+
+      it('should treat fail(err) as setError(err)', () => {
+        const sig = createStatusSignal({
+          [STATUS_MARKER]: true,
+          initialState: LoadingState.Loading,
+        });
+        const err = new Error('boom');
+        sig.fail(err);
+        expect(sig.state()).toBe(LoadingState.Error);
+        expect(sig.isError()).toBe(true);
+        expect(sig.error()).toBe(err);
+      });
+
+      it('should clear error on start() after a fail()', () => {
+        const sig = createStatusSignal({
+          [STATUS_MARKER]: true,
+          initialState: LoadingState.NotLoaded,
+        });
+        sig.fail(new Error('boom'));
+        expect(sig.error()).not.toBe(null);
+        sig.start();
+        expect(sig.state()).toBe(LoadingState.Loading);
+        expect(sig.error()).toBe(null);
+      });
+    });
   });
 
   describe('integration with signalTree', () => {

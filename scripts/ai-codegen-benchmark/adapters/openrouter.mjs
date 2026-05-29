@@ -24,6 +24,11 @@ const ALIAS_TO_MODEL = {
   perplexity:
     process.env.OPENROUTER_PERPLEXITY_MODEL ?? 'perplexity/sonar-pro-search',
   llama: process.env.OPENROUTER_LLAMA_MODEL ?? 'meta-llama/llama-3.1-70b-instruct',
+  // Per-tier comparison: same provider, smaller/faster model. Used to test
+  // whether the priming lift holds at lower model tiers (e.g. for users on
+  // Cursor's "Cheap" model).
+  haiku: process.env.OPENROUTER_HAIKU_MODEL ?? 'anthropic/claude-haiku-4.5',
+  'gpt-mini': process.env.OPENROUTER_GPT_MINI_MODEL ?? 'openai/gpt-5.4-mini',
 };
 
 const DEFAULT_MODEL =

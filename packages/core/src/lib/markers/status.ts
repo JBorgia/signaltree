@@ -62,7 +62,7 @@ export interface StatusSignal<E = Error> {
   /** True when state is Error */
   isError: Signal<boolean>;
 
-  // Helper methods
+  // Canonical helper methods
   /** Set state to NotLoaded and clear error */
   setNotLoaded(): void;
   /** Set state to Loading and clear error */
@@ -73,6 +73,22 @@ export interface StatusSignal<E = Error> {
   setError(error: E): void;
   /** Reset to NotLoaded (alias for setNotLoaded) */
   reset(): void;
+
+  // v10.2 — Promise-vocabulary aliases.
+  // AI coding agents trained on Promise-state vocabularies (success/start/fail)
+  // frequently reach for these method names instead of the canonical setLoaded/
+  // setLoading/setError. Rather than fight the linguistic gravity, we accept
+  // both names. The aliases are documented as equivalent and have identical
+  // semantics — no second source of truth, just additional vocabulary.
+
+  /** Alias for {@link setLoading}. */
+  start(): void;
+  /** Alias for {@link setLoaded}. */
+  setSuccess(): void;
+  /** Alias for {@link setLoaded}. */
+  succeed(): void;
+  /** Alias for {@link setError}. */
+  fail(error: E): void;
 }
 
 // =============================================================================
@@ -221,6 +237,26 @@ export function createStatusSignal<E = Error>(
     reset() {
       stateSignal.set(LoadingState.NotLoaded);
       errorSignal.set(null);
+    },
+
+    // v10.2 — Promise-vocabulary aliases. Identical semantics to the canonical
+    // methods above; included because AI agents (and humans coming from
+    // Promise-state libraries) consistently reach for these names.
+    start() {
+      stateSignal.set(LoadingState.Loading);
+      errorSignal.set(null);
+    },
+    setSuccess() {
+      stateSignal.set(LoadingState.Loaded);
+      errorSignal.set(null);
+    },
+    succeed() {
+      stateSignal.set(LoadingState.Loaded);
+      errorSignal.set(null);
+    },
+    fail(err: E) {
+      stateSignal.set(LoadingState.Error);
+      errorSignal.set(err);
     },
   };
 }

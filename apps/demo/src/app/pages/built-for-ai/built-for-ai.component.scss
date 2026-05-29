@@ -97,6 +97,23 @@
     box-shadow: 0 2px 8px rgba(29, 78, 216, 0.1);
   }
 
+  .bench-headline {
+    list-style: none;
+    padding: 0.75rem 1rem;
+    margin: 0.75rem 0;
+    background: rgba(29, 78, 216, 0.06);
+    border-left: 3px solid #1d4ed8;
+    border-radius: 4px;
+    li {
+      padding: 0.15rem 0;
+      font-size: 0.95rem;
+      strong {
+        color: #1d4ed8;
+        font-variant-numeric: tabular-nums;
+      }
+    }
+  }
+
   .badge {
     display: inline-block;
     align-self: flex-start;

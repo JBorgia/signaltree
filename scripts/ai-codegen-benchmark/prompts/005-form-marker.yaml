@@ -1,0 +1,46 @@
+id: 005-form-marker
+title: Login form with reactive validity state
+difficulty: intermediate
+category: forms
+prompt: |
+  Write an Angular @Injectable({ providedIn: 'root' }) service called LoginFormService
+  that manages a login form using <LIBRARY>. The service should:
+
+  - Track two form fields: email (string, required, must contain @) and password
+    (string, required, minimum 8 characters).
+  - Expose a reactive `isValid` accessor (true when both fields are valid).
+  - Expose a reactive `errors` accessor (object/map of field -> error message).
+  - Expose a reactive `dirty` accessor (true once user has touched any field).
+  - Have a `setEmail(value)` method, `setPassword(value)` method, and `reset()` method.
+
+  Use the LIBRARY-IDIOMATIC pattern for form state. If the library has a
+  first-class form primitive, use it. Otherwise, build it idiomatically.
+
+  Output ONLY the TypeScript code for the file. No prose, no markdown fences.
+
+expected_patterns:
+  signaltree:
+    must_include: ['signalTree(']
+    should_include_one_of: ['form(', 'form<']
+    must_not_include: ['signalStore(', 'createStore']
+  ngrx-signals:
+    must_include: ['signalStore(']
+    must_not_include: ['signalTree(']
+  ngrx-store:
+    must_include: ['createReducer', 'Store']
+  akita:
+    must_include: ['Store']
+  elf:
+    must_include: ['createStore']
+
+behavior_test: |
+  const service = TestBed.inject(LoginFormService);
+  const read = (k) => typeof service[k] === 'function' ? service[k]() : service[k];
+  expect(read('isValid')).toBe(false);
+  service.setEmail('foo@bar.com');
+  service.setPassword('longenough');
+  await Promise.resolve();
+  expect(read('isValid')).toBe(true);
+  service.setPassword('short');
+  await Promise.resolve();
+  expect(read('isValid')).toBe(false);

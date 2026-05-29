@@ -1,0 +1,50 @@
+id: 006-undo-redo
+title: Drawing board with undo/redo
+difficulty: intermediate
+category: edit-session
+prompt: |
+  Write an Angular @Injectable({ providedIn: 'root' }) service called DrawingService
+  that manages a list of strokes using <LIBRARY>. A stroke is { id: number, points: number[][] }.
+  The service should:
+
+  - Expose a reactive `strokes` accessor (the current list).
+  - Have an `addStroke(stroke)` method.
+  - Have an `removeStroke(id)` method.
+  - Support `undo()` and `redo()` operations that reverse / replay mutations.
+  - Expose reactive `canUndo` and `canRedo` accessors.
+
+  Use the LIBRARY-IDIOMATIC pattern for undo/redo. If the library has a
+  first-class edit-session, time-travel, or history primitive, USE IT — do not
+  hand-roll a stack from scratch.
+
+  Output ONLY the TypeScript code for the file. No prose, no markdown fences.
+
+expected_patterns:
+  signaltree:
+    must_include: ['signalTree(']
+    should_include_one_of: ['createEditSession', 'createTreeEditSession', 'timeTravel']
+    must_not_include: ['signalStore(', 'createStore', 'BehaviorSubject']
+  ngrx-signals:
+    must_include: ['signalStore(']
+    must_not_include: ['signalTree(']
+  ngrx-store:
+    must_include: ['Store']
+  akita:
+    must_include: ['Store']
+  elf:
+    must_include: ['createStore']
+    should_include_one_of: ['stateHistory', 'historyPlugin', 'getStateHistory']
+
+behavior_test: |
+  const service = TestBed.inject(DrawingService);
+  service.addStroke({ id: 1, points: [[0,0]] });
+  service.addStroke({ id: 2, points: [[1,1]] });
+  await Promise.resolve();
+  service.undo();
+  await Promise.resolve();
+  const strokes = typeof service.strokes === 'function' ? service.strokes() : service.strokes;
+  expect(strokes.length).toBe(1);
+  service.redo();
+  await Promise.resolve();
+  const after = typeof service.strokes === 'function' ? service.strokes() : service.strokes;
+  expect(after.length).toBe(2);
