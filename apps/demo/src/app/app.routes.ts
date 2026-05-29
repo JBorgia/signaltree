@@ -52,6 +52,18 @@ export const appRoutes: Route[] = [
         (c) => c.EventsDemoComponent
       ),
   },
+  {
+    path: 'rxmethod',
+    loadComponent: () =>
+      import('./pages/rxmethod-demo/rxmethod-demo.component').then(
+        (c) => c.RxMethodDemoComponent
+      ),
+    data: {
+      title: 'rxMethod — RxJS interop',
+      description:
+        'Encapsulated async pipelines with auto-cleanup. SignalTree equivalent of NgRx rxMethod, in @signaltree/core/rxjs-interop.',
+    },
+  },
 
   // Fundamentals examples page (embedded demos on one page)
   {

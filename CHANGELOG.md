@@ -1,3 +1,34 @@
+## 9.4.0
+
+### ✨ New
+
+- **core:** New subpath export `@signaltree/core/rxjs-interop` ships `rxMethod` — direct equivalent of NgRx's `rxMethod` with the same call shape, the same input flexibility (raw value, `Signal<T>`, or `Observable<T>`), and the same auto-cleanup semantics via the surrounding `DestroyRef`. Closes the last remaining "NgRx ergonomics gap" for async pipelines.
+
+  ```typescript
+  import { rxMethod } from '@signaltree/core/rxjs-interop';
+
+  readonly loadUsers = rxMethod<void>((input$) =>
+    input$.pipe(
+      tap(() => this._$.users.loading.setLoading()),
+      switchMap(() => this._api.list$().pipe(
+        tap((users) => this._$.users.entities.setAll(users)),
+        tap(() => this._$.users.loading.setLoaded()),
+        catchError((err) => { this._$.users.loading.setError(err); return EMPTY; }),
+      )),
+    ),
+  );
+  ```
+
+  Live demo at https://signaltree.io/rxmethod.
+
+### 📚 Documentation
+
+- New `/llms.txt` and `/llms-full.txt` published at the site root for retrieval-augmented AI agents (Cursor, Claude Code, Copilot, Gemini, Perplexity).
+- New `docs/compare/ngrx-signalstore.md` — honest axis-by-axis comparison with NgRx SignalStore.
+- New `docs/myths-and-misconceptions.md` — catalogues 16 false claims LLMs frequently propagate, with source-code citations.
+- New `docs/ai/agent-templates.md` — drop-in `.cursorrules`, `CLAUDE.md`, `copilot-instructions.md` templates for downstream projects.
+- README expanded with `rxMethod`, devTools path-based action callout, and a more complete "When NOT to use SignalTree" section (dynamic-schema streaming and heavy-RxJS-classic-NgRx migration honesty).
+
 ## 9.2.0
 
 ### ⚠️ Breaking Changes

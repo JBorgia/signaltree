@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/core",
-  "version": "9.3.0",
+  "version": "9.4.0",
   "description": "Reactive JSON for Angular. JSON branches, reactive leaves. No actions. No reducers. No selectors.",
   "license": "MIT",
   "type": "module",
@@ -28,6 +28,11 @@
       "types": "./src/storage.d.ts",
       "import": "./dist/storage.js",
       "default": "./dist/storage.js"
+    },
+    "./rxjs-interop": {
+      "types": "./src/rxjs-interop.d.ts",
+      "import": "./dist/rxjs-interop.js",
+      "default": "./dist/rxjs-interop.js"
     },
     "./package.json": "./package.json"
   },

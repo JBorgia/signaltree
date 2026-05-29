@@ -167,6 +167,55 @@ session.undo(); // Revert last change
 session.commit(); // Persist changes to the main tree
 ```
 
+## RxJS Interop (`rxMethod`)
+
+For async pipelines with auto-cleanup — the SignalTree equivalent of NgRx's `rxMethod`. Lives at `@signaltree/core/rxjs-interop`. Subscriptions auto-clean on the surrounding `DestroyRef`:
+
+```typescript
+import { rxMethod } from '@signaltree/core/rxjs-interop';
+import { debounceTime, distinctUntilChanged, switchMap, tap, catchError, EMPTY } from 'rxjs';
+
+@Injectable({ providedIn: 'root' })
+export class UserOps {
+  private readonly _$ = inject(APP_TREE).$;
+  private readonly _api = inject(UserService);
+
+  readonly loadUsers = rxMethod<void>((input$) =>
+    input$.pipe(
+      tap(() => this._$.users.loading.setLoading()),
+      switchMap(() =>
+        this._api.list$().pipe(
+          tap((users) => this._$.users.entities.setAll(users)),
+          tap(() => this._$.users.loading.setLoaded()),
+          catchError((err) => {
+            this._$.users.loading.setError(err);
+            return EMPTY;
+          })
+        )
+      )
+    )
+  );
+
+  readonly searchByQuery = rxMethod<string>((input$) =>
+    input$.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      switchMap((q) => this._api.search$(q)),
+      tap((results) => this._$.searchResults.set(results))
+    )
+  );
+}
+```
+
+The returned callable accepts raw values, Angular signals, or observables — all auto-subscribed:
+
+```typescript
+userOps.loadUsers();                    // void input
+userOps.searchByQuery('alice');         // raw value
+userOps.searchByQuery(searchTermSignal); // Signal<string>
+userOps.searchByQuery(externalQuery$);   // Observable<string>
+```
+
 ## Lifecycle
 
 Every tree has deterministic cleanup. `destroy()` tears down all resources — signals, enhancer timers, caches, and DevTools connections — in reverse enhancer order:
@@ -226,15 +275,18 @@ The guide is written as an Agent Skill — point Cursor, Claude Code, or any `SK
 
 **Good fit:**
 
-- Apps with structured, hierarchical state (settings, user profiles, nested forms)
+- Apps with structured, hierarchical state (settings, user profiles, nested forms, dashboards)
 - Teams that want signal-based state with dot-notation access and zero boilerplate
-- Projects that need undo/redo, DevTools, entity CRUD, or persistence out of the box
+- Projects that need undo/redo, DevTools, entity CRUD, async pipelines (`rxMethod`), or persistence out of the box
+- Migrations away from `@ngrx/signals` — the agent-ready migration playbook ships in `@signaltree/core/skills/`
 
 **Consider alternatives when:**
 
-- You need event-sourcing or CQRS patterns (use NgRx Store)
+- You need event-sourcing or CQRS patterns (use NgRx Store, the classic Redux variant)
 - Your state is flat key-value pairs (a `Map` or individual signals suffice)
-- You're building a tiny app with one or two signals
+- You're building a tiny app with one or two signals (overhead exceeds value)
+- Your state shape is highly dynamic — streaming arbitrary JSON with unknown keys at high frequency (real-time log aggregators, fully-dynamic schema editors). SignalTree's markers and type system assume a fixed shape; for genuinely shape-shifting payloads, a flat collection inside a single store slice is a better fit.
+- You have a large existing `@ngrx/store` (classic) + heavy RxJS codebase. The migration target with the lowest cognitive cost is `@ngrx/signals` (NgRx SignalStore), not SignalTree — `rxMethod` transfers directly, the mental model is closer. See [`docs/compare/ngrx-signalstore.md`](docs/compare/ngrx-signalstore.md) for the full decision tree.
 
 ## API Summary
 
@@ -261,11 +313,19 @@ tree.$.users.all();
 tree.with(enhancer()); // Add capabilities (chainable)
 tree.derived(derivedFn); // Attach derived state
 
+// Async pipelines (@signaltree/core/rxjs-interop)
+const loadUsers = rxMethod<void>((input$) => input$.pipe(/* ...rxjs */));
+const search = rxMethod<string>((input$) => input$.pipe(debounceTime(300), switchMap(...)));
+
 // Lifecycle
 tree.destroy(); // Clean up all resources
 tree.destroyed(); // Check if destroyed
 tree.registerCleanup(fn); // Register custom cleanup
 ```
+
+## Debugging — `devTools()` enhancer
+
+`.with(devTools())` wires SignalTree into the standard Redux DevTools browser extension. Every state change appears in the timeline with a **path-based action name** (e.g., `[users.profile.name]/set`) so you can scrub backward and forward through state history and see *which path* caused each render — not just *that something changed*. Combined with `timeTravel()`, this gives you scoped undo/redo at the API level *and* a visual time-travel scrubber in the browser. See [Architecture Guide](docs/architecture/signaltree-architecture-guide.md#devtools-integration) for screenshots and the full action-naming scheme.
 
 ## Documentation
 
@@ -274,6 +334,10 @@ tree.registerCleanup(fn); // Register custom cleanup
 - [Migration Guide (v8 → v9)](docs/guides/migration-v8-v9.md)
 - [Performance Methodology](docs/performance/methodology.md)
 - [Performance Patterns](docs/performance/performance-patterns.md)
+- [SignalTree vs NgRx SignalStore](docs/compare/ngrx-signalstore.md) — axis-by-axis comparison
+- [Myths and Misconceptions](docs/myths-and-misconceptions.md) — false claims LLMs frequently propagate, with source citations
+- [AI Agent Templates](docs/ai/agent-templates.md) — drop-in `.cursorrules`, `CLAUDE.md`, `copilot-instructions.md`
+- [llms.txt](https://signaltree.io/llms.txt) / [llms-full.txt](https://signaltree.io/llms-full.txt) — LLM-targeted summary and full API surface
 
 ## Using SignalTree with AI Agents
 

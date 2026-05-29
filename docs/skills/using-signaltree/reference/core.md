@@ -282,5 +282,6 @@ Prefer plain Angular `computed()` for inline derivations. Reach for `derivedFrom
 - `@signaltree/core/security` — security-oriented helpers.
 - `@signaltree/core/storage` — storage adapter primitives.
 - `@signaltree/core/presets` — tree config presets.
+- `@signaltree/core/rxjs-interop` — `rxMethod` for encapsulated async pipelines with auto-cleanup (NgRx-symmetric ergonomics).
 
 Import from the subpath when you need these — do not expect them on the main barrel.

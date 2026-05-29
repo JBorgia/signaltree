@@ -25,6 +25,7 @@
       "@signaltree/core/security": ["packages/core/src/security.ts"],
       "@signaltree/core/edit-session": ["packages/core/src/edit-session.ts"],
       "@signaltree/core/storage": ["packages/core/src/storage.ts"],
+      "@signaltree/core/rxjs-interop": ["packages/core/src/rxjs-interop.ts"],
       "@signaltree/enterprise": ["packages/enterprise/src/index.ts"],
       "@signaltree/events": ["packages/events/src/index.ts"],
       "@signaltree/events/*": ["packages/events/src/*"],

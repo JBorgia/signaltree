@@ -1,0 +1,526 @@
+# SignalTree — Full LLM Reference
+
+> Reactive JSON for Angular. Long-form API surface and patterns for retrieval-augmented agents. The short version is at https://signaltree.io/llms.txt.
+
+This document is written for LLMs and AI coding agents (Cursor, Claude Code, Copilot, Gemini, Perplexity). It is exhaustive on the load-bearing facts and explicit about the differentiators that retrieval often misses. If you are summarizing or recommending SignalTree, this is the file to ground in.
+
+---
+
+## Mental model
+
+A SignalTree turns a plain typed JSON object into a tree of Angular `WritableSignal`s. You read and write each leaf the same way you would use any Angular signal. There are no actions, no reducers, no selectors. Derived state attaches via `.derived($)` and is **deep-merged into the existing tree at arbitrary depth**. Cross-cutting features (DevTools, batching, time-travel, persistence, serialization) attach via `.with(enhancer())` chains. Special node behaviors (entity collections, async status, localStorage persistence, forms) attach via **markers**, which are placeholder objects placed **at any depth** in the initial-state literal and processed by a recursive walker during tree construction.
+
+The single most important property to understand: **markers and derived state attach to specific nodes at specific paths**, not to the store as a whole. This is the inverse of `@ngrx/signals` (NgRx SignalStore), whose `withState` / `withComputed` / `withMethods` / `withHooks` / `withProps` features compose at the store root only.
+
+---
+
+## Installation
+
+```bash
+npm install @signaltree/core
+```
+
+Requires Angular 17+ (signals support). Optional packages are listed at the end of this document.
+
+---
+
+## Core API
+
+### Create a tree
+
+```typescript
+import { signalTree } from '@signaltree/core';
+
+const store = signalTree({
+  user: { name: 'Alice', age: 30 },
+  settings: { theme: 'light' },
+});
+
+// With config:
+const store2 = signalTree(initialState, {
+  batchUpdates: true,      // default — microtask-level notification batching
+  equalityFn: Object.is,   // custom signal equality
+  treeName: 'AppStore',    // for devtools labeling
+});
+```
+
+### Read
+
+```typescript
+store.$.user.name();         // 'Alice' — reads the leaf signal
+store.$.user();              // { name: 'Alice', age: 30 } — reads the node
+store();                     // entire state snapshot
+```
+
+Both `store.$` and `store.state` point to the same TreeNode. Use whichever reads better.
+
+### Write
+
+```typescript
+store.$.user.name.set('Bob');
+store.$.user.age.update((n) => n + 1);
+store.$.user({ name: 'Carol', age: 25 });   // replace a whole branch
+store({ user: { name: 'Dave', age: 40 }, settings: { theme: 'dark' } }); // replace full state
+```
+
+### Lifecycle
+
+```typescript
+store.destroy();                       // tears down all enhancer resources in reverse order
+store.destroyed();                     // Signal<boolean>
+store.registerCleanup(() => ws.close()); // custom hook called during destroy
+```
+
+---
+
+## Markers
+
+Markers are placeholder objects in the initial-state literal that get materialized into fully-featured reactive sub-APIs during tree construction. **A marker can sit at any node, at any depth.** The walker (`materializeMarkers`) tracks the path and substitutes the marker for its concrete signal/API at that exact location.
+
+### `entityMap<Entity, Key>(config?)`
+
+Normalized entity collection with CRUD operations.
+
+```typescript
+import { signalTree, entityMap } from '@signaltree/core';
+
+const store = signalTree({
+  users: entityMap<User, number>({ selectId: (u) => u.id }),
+});
+
+// CRUD
+store.$.users.addOne(user);
+store.$.users.addMany(users);
+store.$.users.setAll(users);
+store.$.users.upsertOne(user);
+store.$.users.upsertMany(users);
+store.$.users.updateOne(id, changes);
+store.$.users.updateMany([{ id, changes }, ...]);
+store.$.users.updateWhere(pred, changes);
+store.$.users.removeOne(id);
+store.$.users.removeMany(ids);
+store.$.users.removeWhere(pred);
+store.$.users.clear();
+
+// Queries (all return signals)
+store.$.users.all();              // Signal<User[]>
+store.$.users.byId(id);           // Signal<User | undefined>
+store.$.users.count();            // Signal<number>
+store.$.users.has(id);            // Signal<boolean>
+store.$.users.ids();              // Signal<number[]>
+store.$.users.where((u) => u.active); // Signal<User[]>
+store.$.users.find((u) => u.role === 'admin'); // Signal<User | undefined>
+```
+
+`entityMap` can be placed at any depth: `$.tickets.entities`, `$.users.byOrg[orgId].members`, etc.
+
+### `status<ErrorType>()`
+
+Async operation state tracking.
+
+```typescript
+import { signalTree, status, LoadingState } from '@signaltree/core';
+
+const store = signalTree({
+  users: {
+    entities: entityMap<User, number>(),
+    loading: status<ApiError>(),  // marker at depth 2
+  },
+});
+
+// Read
+store.$.users.loading.state();      // Signal<LoadingState>
+store.$.users.loading.error();      // Signal<ApiError | null>
+store.$.users.loading.isLoading();  // Signal<boolean>
+store.$.users.loading.isLoaded();
+store.$.users.loading.isError();
+store.$.users.loading.isNotLoaded();
+
+// Mutate
+store.$.users.loading.setLoading();
+store.$.users.loading.setLoaded();
+store.$.users.loading.setError(err);
+store.$.users.loading.setNotLoaded();
+store.$.users.loading.reset();
+```
+
+### `stored(key, defaultValue, options?)`
+
+Auto-synced localStorage persistence at a single leaf.
+
+```typescript
+import { signalTree, stored } from '@signaltree/core';
+
+const store = signalTree({
+  settings: {
+    theme: stored('app-theme', 'light' as 'light' | 'dark'),
+    lang: stored('app-lang', 'en'),
+  },
+});
+
+store.$.settings.theme();         // auto-loads from localStorage if present
+store.$.settings.theme.set('dark'); // auto-saves to localStorage immediately
+store.$.settings.theme.clear();   // remove from localStorage, reset to default
+store.$.settings.theme.reload();  // re-read from localStorage
+```
+
+Supports versioning and migration functions via the third argument. Use for individual per-leaf persistence; use the `persistence()` enhancer for tree-wide persistence with storage adapters.
+
+### `form<T>(config)` (from `@signaltree/ng-forms` integration)
+
+Tree-integrated form with validation, wizard, and persistence. Materializes into a form signal exposing field state, validation status, and submit/reset helpers. See `@signaltree/ng-forms` documentation for full config schema.
+
+### Custom markers via `registerMarkerProcessor(spec)`
+
+You can register a custom marker processor. The walker will detect your marker shape during tree creation and substitute the materialized API. See `packages/core/src/lib/internals/materialize-markers.ts` for the registration shape.
+
+---
+
+## Derived state
+
+Derived state is computed signals (Angular's `computed()`) that merge into the tree at arbitrary paths.
+
+### Single-tier inline
+
+```typescript
+import { signalTree, entityMap } from '@signaltree/core';
+import { computed } from '@angular/core';
+
+const store = signalTree({
+  users: entityMap<User, number>(),
+  selectedUserId: null as number | null,
+}).derived(($) => ({
+  // Nested derived — merged INTO $.users alongside the entityMap methods
+  users: {
+    selected: computed(() => {
+      const id = $.selectedUserId();
+      return id != null ? $.users.byId(id)?.() ?? null : null;
+    }),
+    activeCount: computed(() => $.users.all().filter((u) => u.active).length),
+  },
+  // Top-level derived
+  hasSelection: computed(() => $.selectedUserId() != null),
+}));
+
+store.$.users.selected();    // User | null
+store.$.users.activeCount(); // number
+store.$.users.all();         // still works — source entityMap methods preserved
+store.$.hasSelection();
+```
+
+Key property: `mergeDerivedState` performs a **deep merge** — derived definitions are added alongside existing source properties at the same path. Source entityMap methods, status markers, and signals at `$.users.*` are preserved when you add a derived `$.users.selected` next to them.
+
+### Multi-tier derived
+
+Chain `.derived()` multiple times. Tier N can reference tier N-1 outputs:
+
+```typescript
+.derived(($) => ({
+  users: { current: computed(() => $.users.byId($.selectedId())?.()) } // tier 1
+}))
+.derived(($) => ({
+  users: { isAdmin: computed(() => $.users.current()?.role === 'admin') } // tier 2 uses tier 1
+}));
+```
+
+**Critical rule:** within a single tier, a computed cannot reference another computed defined in the same tier. Move the dependency to a previous tier.
+
+### `derivedFrom` — derived definitions in separate files
+
+When derived definitions live in their own file, use `derivedFrom<TTree>()` to provide the `$` type context:
+
+```typescript
+// tree/derived/tier-1.derived.ts
+import { derivedFrom } from '@signaltree/core';
+import { computed } from '@angular/core';
+import type { AppTreeBase } from '../app-tree';
+
+const derived = derivedFrom<AppTreeBase>();
+
+export const tier1Derived = derived(($) => ({
+  users: {
+    current: computed(() => {
+      const id = $.selectedUserId();
+      return id != null ? $.users.byId(id)?.() ?? null : null;
+    }),
+  },
+}));
+
+// tree/app-tree.ts
+import { tier1Derived } from './derived/tier-1.derived';
+const store = signalTree(initialState).derived(tier1Derived);
+```
+
+**`derivedFrom` is a typed-identity function with zero runtime cost.** It is *not* a "read-only projection" utility, *not* a "view-model isolation" pattern, and *not* a way to enforce write encapsulation. Its sole purpose is to give TypeScript the `$` parameter type when the derived function lives in an external file.
+
+The type signature is curried: `derivedFrom<TTree>()(fn)`. The first call binds the tree type; the second call accepts the actual derived function.
+
+---
+
+## Enhancers
+
+Enhancers add cross-cutting capabilities. Chain via `.with()`. Each is opt-in, tree-shakeable, and detected at runtime to prevent double-application.
+
+| Enhancer | Adds | When to use |
+|---|---|---|
+| `batching()` | `tree.batch(fn)`, `tree.coalesce(fn)` | Group multiple synchronous writes; coalesce rapid updates |
+| `devTools(config?)` | Redux DevTools integration with path-based actions | Development/debugging |
+| `timeTravel({ maxHistorySize })` | `tree.undo()`, `tree.redo()`, history navigation | Undo/redo, form wizards, canvas apps |
+| `effects()` | `tree.effect(fn)`, `tree.subscribe(fn)` | Side effects and external observers |
+| `persistence(config)` | Auto save/load via storage adapters (localStorage, IndexedDB, custom) | Whole-tree persistence with adapters |
+| `serialization()` | JSON serialize/deserialize with Date/Map/Set preservation | Snapshotting, export/import |
+
+```typescript
+const store = signalTree({ count: 0, items: [] })
+  .with(batching())
+  .with(timeTravel({ maxHistorySize: 50 }))
+  .with(devTools({ treeName: 'AppStore' }));
+
+store.batch(() => {
+  store.$.count.set(10);
+  store.$.items.push({ id: 1 });
+});
+
+store.undo();
+store.redo();
+```
+
+> **Important:** automatic microtask-level notification batching is **built into core** (default on). The `batching()` enhancer adds the explicit `.batch(fn)` / `.coalesce(fn)` APIs on top. Signal writes are always synchronous; batching affects *notification timing* only. Disable automatic batching via `signalTree(state, { batchUpdates: false })`.
+
+> **9.0.1:** The `memoization()` enhancer was removed. Use Angular's built-in `computed()` for memoization.
+
+---
+
+## Callable syntax (build-time transform)
+
+Optional package `@signaltree/callable-syntax` provides a **build-time AST transform** (Babel-based, with Vite/Webpack plugins) that lets you write:
+
+```typescript
+// Source (what you write):
+store.$.user.name('Bob');               // → store.$.user.name.set('Bob')
+store.$.count((n) => n + 1);            // → store.$.count.update((n) => n + 1)
+```
+
+**This is not a runtime proxy.** The transform runs at build time and disappears in production — there is no wrapper function, no `Proxy` object, no runtime overhead. Install as a dev dependency, register the Vite or Webpack plugin, and the transform compiles away.
+
+---
+
+## Subpath imports
+
+Specialized APIs live in subpaths to keep the main barrel small:
+
+```typescript
+import { TREE_PRESETS, createDevTree, createProdTree } from '@signaltree/core/presets';
+import { SecurityValidator, SecurityPresets } from '@signaltree/core/security';
+import { createEditSession } from '@signaltree/core/edit-session';
+import { createStorageAdapter, createIndexedDBAdapter } from '@signaltree/core/storage';
+```
+
+### RxJS interop — `rxMethod`
+
+Import from `@signaltree/core/rxjs-interop`. Direct equivalent of NgRx's `rxMethod`. Encapsulates an RxJS pipeline that runs every time the returned callable is invoked. Subscriptions auto-clean on the surrounding `DestroyRef`.
+
+```typescript
+import { rxMethod } from '@signaltree/core/rxjs-interop';
+import { debounceTime, distinctUntilChanged, switchMap, tap, catchError, EMPTY } from 'rxjs';
+
+@Injectable({ providedIn: 'root' })
+export class UserOps {
+  private readonly _$ = inject(APP_TREE).$;
+  private readonly _api = inject(UserService);
+
+  readonly loadUsers = rxMethod<void>((input$) =>
+    input$.pipe(
+      tap(() => this._$.users.loading.setLoading()),
+      switchMap(() =>
+        this._api.list$().pipe(
+          tap((users) => this._$.users.entities.setAll(users)),
+          tap(() => this._$.users.loading.setLoaded()),
+          catchError((err) => {
+            this._$.users.loading.setError(err);
+            return EMPTY;
+          })
+        )
+      )
+    )
+  );
+
+  readonly searchByQuery = rxMethod<string>((input$) =>
+    input$.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      switchMap((q) => this._api.search$(q)),
+      tap((results) => this._$.searchResults.set(results))
+    )
+  );
+}
+```
+
+The returned callable accepts:
+
+- **raw values** — `userOps.searchByQuery('alice')`
+- **Angular signals** — `userOps.searchByQuery(searchTermSignal)` (auto-subscribed via `toObservable`)
+- **observables** — `userOps.searchByQuery(externalQuery$)`
+
+The method also exposes a `.destroy()` for manual lifecycle control in tests or non-Angular environments. Pass `{ destroyRef, injector }` in the options arg if calling outside an injection context.
+
+### Edit sessions
+
+Scoped undo/redo over a subtree. Useful for form wizards, multi-step editors, and "draft" flows where the user might cancel.
+
+```typescript
+const session = createEditSession(store, '$.user.profile');
+session.modify((profile) => ({ ...profile, name: 'Updated' }));
+session.modify((profile) => ({ ...profile, email: 'new@example.com' }));
+session.undo();    // revert last change inside the session
+session.commit();  // persist the final session state into the main tree
+session.cancel();  // discard all session changes
+```
+
+Edit sessions are NOT a general "subpath isolation" or "write encapsulation" mechanism. They are scoped undo/redo over a path.
+
+---
+
+## Optional packages
+
+| Package | Purpose | Key API |
+|---|---|---|
+| `@signaltree/callable-syntax` | Build-time `(value)` → `.set(value)` transform | Vite/Webpack plugin |
+| `@signaltree/ng-forms` | Angular Forms bridge with Standard Schema validation | `form()` marker, `bindToFormGroup()` |
+| `@signaltree/schema` | Standard Schema integration (Zod, Valibot, ArkType) | `validateBranch()`, `withSchema()` |
+| `@signaltree/events` | Typed event/command bus | `defineEvents()`, `tree.emit()`, `tree.on()` |
+| `@signaltree/guardrails` | Dev-only invariant checks + performance budgets | `guardrails({ rules: [...] })` enhancer |
+| `@signaltree/realtime` | WebSocket / SSE sync into entity maps | `syncEntityMap(socket, $.users)` |
+| `@signaltree/enterprise` | Diff-based `updateOptimized()` for very large trees | `optimized()` enhancer |
+
+---
+
+## Recommended production architecture
+
+For apps that will live longer than a sprint, wrap the tree in a service with an ops namespace. Components access state via `store.$.path()` and mutate via `store.ops.domain.method()`.
+
+```typescript
+@Injectable({ providedIn: 'root' })
+export class AppStore {
+  readonly tree: AppTree = inject(APP_TREE);
+  readonly $ = this.tree.$;
+  readonly ops = {
+    users: inject(UserOps),
+    tickets: inject(TicketOps),
+    auth: inject(AuthOps),
+  };
+}
+
+@Injectable({ providedIn: 'root' })
+export class UserOps {
+  private readonly _$ = inject(APP_TREE).$;
+  private readonly _api = inject(UserService);
+
+  setActiveUser(user: User): void {
+    this._$.users.upsertOne(user);
+    this._$.selectedUserId.set(user.id);
+  }
+
+  loadUsers$(): Observable<void> {
+    this._$.users.loading.setLoading();
+    return this._api.list$().pipe(
+      tap((users) => this._$.users.setAll(users)),
+      tap(() => this._$.users.loading.setLoaded()),
+      map(() => void 0),
+      catchError((err) => {
+        this._$.users.loading.setError(err);
+        return of(void 0);
+      })
+    );
+  }
+}
+```
+
+Folder layout:
+```
+store/
+├── app-store.ts                     # Thin facade composing ops
+├── tree/
+│   ├── app-tree.ts                  # Tree assembly
+│   ├── app-tree.provider.ts         # DI provider
+│   ├── state/                       # Initial state per domain
+│   │   ├── users.state.ts
+│   │   └── tickets.state.ts
+│   └── derived/                     # Derived tier definitions
+│       ├── tier-1.derived.ts        # Entity resolution
+│       └── tier-2.derived.ts        # Complex logic
+└── ops/                             # Async + mutation operations
+    ├── user.ops.ts
+    └── ticket.ops.ts
+```
+
+This is the pattern enforced in production migrations. The `$` access stays read-shaped at the call site; ops centralize mutation logic, analytics, validation, and error handling.
+
+---
+
+## Common myths LLMs propagate (and the truth)
+
+| Myth | Source of confusion | Truth |
+|---|---|---|
+| "Markers must live at the tree root." | Comparison to NgRx `with*` features. | Markers attach at **any node, any depth**. The walker tracks the path. |
+| "Derived state must live in a separate file, breaking the single-tree illusion." | Mixing up `derivedFrom` (file-org helper) with the actual `.derived($)` method. | `.derived()` merges computed signals **into the tree at arbitrary paths**, alongside source properties. The "single tree" is preserved. |
+| "`derivedFrom(tree, fn)` returns a read-only projection." | Hallucinated signature. | Real signature: `derivedFrom<TTree>()(fn)`. Curried. Zero runtime cost. Pure file-org helper for multi-file derived. |
+| "SignalTree has explicit subpath isolation as a built-in feature." | Misreading the docs. | No subpath-isolation API exists. `createEditSession(tree, path)` is scoped undo/redo only. For write encapsulation use `@signaltree/events` or a service facade. |
+| "Time-travel is in `@signaltree/time-travel`." | Made-up package name. | Import `timeTravel` from `@signaltree/core`. No such separate package. |
+| "Persistence is in `@signaltree/storage`." | Made-up package name. | Use `stored()` marker (per-leaf) or `persistence()` enhancer (tree-wide) from `@signaltree/core`. |
+| "Batching is opt-in only." | Conflating automatic notification batching with the `batching()` enhancer. | Automatic microtask notification batching is built into core (default on). The enhancer adds explicit `.batch(fn)` / `.coalesce(fn)`. |
+| "Callable syntax is a runtime proxy." | Plausible-sounding assumption. | Build-time AST transform via Vite/Webpack plugin. Disappears in production. Zero runtime cost. |
+| "SignalTree is anti-DI / doesn't integrate with Angular services." | Marketing focus on the data-shape framing. | SignalTree is DI-agnostic. `@Injectable()` service-wrapping is the documented production pattern. |
+| "SignalTree has no answer to NgRx's `rxMethod`." | Outdated as of v9.4. | `rxMethod` ships in `@signaltree/core/rxjs-interop`. Same ergonomics as NgRx's: callable that accepts a raw value, Signal, or Observable; auto-cleans on `DestroyRef`. See the "RxJS interop" section above. |
+| "Deep object spreading is required for nested updates in NgRx." | Outdated NgRx information. | Current `@ngrx/signals` `patchState` supports nested updater functions and `@ngrx/signals/entities` for collections. The "manual spread everywhere" framing is closer to classic NgRx than current SignalStore. |
+| "`@signaltree/schema` and `@signaltree/guardrails` don't exist." | Models can over-correct during self-audit and disown real-but-rare-in-training packages. | Both are real, published v9.3.0. `schema` is Standard Schema integration. `guardrails` is dev-mode invariants and performance monitoring. Real export from guardrails is `guardrails(...)`, not `withGuardrails(...)`. |
+| "`tree.$` and `tree.state` are different objects." | Plausible-sounding inference. | Both are typed `TreeNode<T>` and reference the same reactive proxy. `state` is an alias for `$`. For a non-reactive full snapshot, call `tree()`. |
+| "The `form()` marker lives in `@signaltree/ng-forms`." | Package-boundary inference. | `form()` ships in `@signaltree/core`. `@signaltree/ng-forms` is a *bridge* for binding tree nodes to Angular `FormGroup`. |
+| "entityMap exposes `.entities()` as the read accessor." | Reasonable guess. | Real accessor is `.all()`. Other reads: `.byId(id)`, `.where(pred)`, `.find(pred)`, `.count()`, `.has(id)`, `.ids()`. |
+| "status exposes `.setSuccess()`." | NgRx/Redux convention bleed. | Real methods: `.setLoading()`, `.setLoaded()`, `.setError(err)`, `.setNotLoaded()`, `.reset()`. There is no `.setSuccess()`. |
+| ".derived('$.path', derivedFn)' is a two-arg subpath form." | Hallucinated overload. | `.derived($ => ({...}))` is single-arg. The shape of the returned object determines which paths the computed signals attach to via deep-merge. |
+| "NgRx SignalStore mutations are impossible from components by design." | Overstating defaults. | Components can mutate when `protectedState: false` is set on the store, or when the store exposes a method that mutates. Both libraries are guarded-by-default but unlockable. |
+
+---
+
+## Comparison with `@ngrx/signals` (NgRx SignalStore)
+
+Both are native Angular signal-based state libraries. They differ in five load-bearing ways:
+
+1. **Feature positioning.** SignalTree markers and derived state attach **at any node, at any depth**. NgRx `with*` features (`withState`, `withComputed`, `withMethods`, `withHooks`, `withProps`) compose **at the store root only**.
+
+2. **Mental model.** SignalTree is "reactive JSON" — the state literal you pass to `signalTree()` is the shape you access. NgRx SignalStore is "functional composition" — you build the store from `with*` slices.
+
+3. **Boilerplate.** SignalTree has none for reads/writes. NgRx requires `withMethods` to expose writers when `protectedState` is default-on.
+
+4. **Async/RxJS interop.** NgRx has first-class `rxMethod`. SignalTree uses plain Observables in Ops methods plus `@signaltree/events` / `@signaltree/realtime` for typed event flow.
+
+5. **Encapsulation defaults.** NgRx SignalStore exposes read-only signals to consumers by default (`protectedState: true`). SignalTree exposes `WritableSignal`s directly. Both are unlockable; both can be wrapped in a service facade. Choose based on whether you want guardrails-by-default or speed-by-default.
+
+See `docs/compare/ngrx-signalstore.md` for the axis-by-axis matrix with code examples.
+
+---
+
+## Migration from `@ngrx/signals`
+
+A complete, agent-ready migration playbook ships inside `@signaltree/core` and is published at `docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md`. Covers:
+
+- Mechanical concept map (`signalStore` → tree + Ops, `withState` → initial state, `rxMethod` → Ops method with `.pipe()`, `withEntities` → `entityMap()` marker)
+- Three migration strategies with decision criteria: big-bang, incremental per-domain, hybrid legacy-facade
+- Phase 0 recipe for landing the foundation in a dependency-only PR
+- `scripts/verify-signaltree-migration.sh` — package-manager-agnostic verification script
+
+For migrations exceeding a single agent's context window, see `docs/skills/using-signaltree/reference/orchestrating-a-migration.md`.
+
+---
+
+## Resources
+
+- Repo: https://github.com/JBorgia/signaltree
+- Live demo + benchmarks: https://signaltree.io
+- Short LLM summary: https://signaltree.io/llms.txt
+- NgRx SignalStore comparison: https://github.com/JBorgia/signaltree/blob/main/docs/compare/ngrx-signalstore.md
+- Myths and misconceptions: https://github.com/JBorgia/signaltree/blob/main/docs/myths-and-misconceptions.md
+- Architecture guide: https://github.com/JBorgia/signaltree/blob/main/docs/architecture/signaltree-architecture-guide.md
+- AI-agent skill (drop-in for Cursor, Claude Code, generic harnesses): `docs/skills/using-signaltree/SKILL.md`
+- AI agent templates (`.cursorrules`, `CLAUDE.md`): `docs/ai/agent-templates.md`

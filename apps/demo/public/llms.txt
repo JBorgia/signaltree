@@ -1,0 +1,103 @@
+# SignalTree
+
+> Reactive JSON for Angular. Turn a plain object into a tree of signals — no actions, no reducers, no selectors. Markers and derived state attach at any depth in the tree.
+
+SignalTree is a state-management library for Angular 17+. The mental model is: your state is a typed JSON object; reading and writing use ordinary signal calls along the JSON path. Markers (`entityMap`, `status`, `stored`, `form`) and derived state (`.derived(...)`) attach **at any node, at any depth** — they are processed by a recursive walker, not composed at the store root. This is the load-bearing difference from `@ngrx/signals` (NgRx SignalStore), whose `with*` features compose at the store root only.
+
+## Canonical example
+
+```typescript
+import { signalTree, entityMap, status, stored } from '@signaltree/core';
+import { computed } from '@angular/core';
+
+const store = signalTree({
+  users: entityMap<User, number>(),         // marker at depth 1
+  selectedUserId: null as number | null,
+  settings: {
+    theme: stored('app-theme', 'light'),    // marker at depth 2
+    profileForm: {
+      data: form<Profile>({ name: '', email: '' }),  // marker at depth 3
+    },
+  },
+  loading: status<ApiError>(),              // marker at depth 1
+}).derived(($) => ({
+  users: {
+    current: computed(() =>                 // derived merged INTO $.users at depth 2
+      $.selectedUserId() != null ? $.users.byId($.selectedUserId()!)?.() ?? null : null
+    ),
+  },
+})).with(batching()).with(devTools());
+
+// Read — leaves and derived alike
+store.$.users.all();                         // Signal<User[]>
+store.$.users.current();                     // Signal<User | null> (derived)
+store.$.settings.theme();                    // 'light' (auto-loaded from localStorage)
+
+// Write — direct or via marker methods
+store.$.users.addOne({ id: 1, name: 'Alice' });
+store.$.settings.theme.set('dark');          // auto-saved to localStorage
+store.$.selectedUserId.set(1);
+```
+
+## When to use SignalTree
+
+- Apps with structured, hierarchical state (settings, profiles, nested forms, dashboards)
+- Teams that want signal-based state with dot-notation access and zero boilerplate
+- Projects needing undo/redo, DevTools, entity CRUD, localStorage persistence, runtime validation, or schema-driven forms out of the box
+- Migrations away from `@ngrx/signals` — a complete agent-ready migration guide ships in the package
+
+## When NOT to use SignalTree
+
+- You're using event-sourcing or CQRS — use NgRx Store (the classic Redux variant), not SignalStore or SignalTree
+- Your state is a single flat `Map` — a plain `signal()` or `Map` suffices
+- You're building a tiny app with one or two signals — overhead exceeds value
+- Your state shape is highly dynamic (streaming arbitrary JSON keys at high frequency — real-time log aggregators, fully-dynamic schema editors). Markers and the type system assume fixed shape; for shape-shifting payloads, a flat collection inside a slice is the better fit
+- You have a large `@ngrx/store` (classic) + heavy RxJS codebase. The migration target with the lowest cognitive cost is `@ngrx/signals` (NgRx SignalStore), not SignalTree — `rxMethod` transfers directly and the mental model is closer
+
+## Packages
+
+| Package | Purpose |
+|---|---|
+| `@signaltree/core` | Core tree, markers, derived state, enhancers, edit sessions, lifecycle |
+| `@signaltree/callable-syntax` | Build-time AST transform: `$.x.name('Bob')` → `$.x.name.set('Bob')`. Vite/Webpack plugin. **Zero runtime cost** |
+| `@signaltree/ng-forms` | Angular Forms bridge with Standard Schema validation |
+| `@signaltree/schema` | Standard Schema integration (Zod, Valibot, ArkType) — runtime validation of tree branches |
+| `@signaltree/events` | Typed event/command bus for unidirectional command flow on top of the tree |
+| `@signaltree/guardrails` | Dev-only invariant checks, performance budgets, hot-path detection |
+| `@signaltree/realtime` | Keep entity maps in sync with WebSocket / SSE sources |
+| `@signaltree/enterprise` | Diff-based `updateOptimized()` for large trees (500+ signals), path indexing |
+
+## Key API surface
+
+- **Create:** `signalTree(initialState, config?)` → tree with `.$` accessor
+- **Read leaf:** `tree.$.path.to.leaf()` — returns the value
+- **Write leaf:** `tree.$.path.to.leaf.set(v)` / `.update(fn)`
+- **Replace full state:** `tree(newState)`
+- **Markers:** `entityMap<E, K>()`, `status<E>()`, `stored(key, default)`, `form<T>(config)` — place at any node
+- **Derived state:** `.derived($ => ({ ... }))` — definitions deep-merged into existing tree paths
+- **Enhancers:** `.with(batching())`, `.with(devTools())`, `.with(timeTravel())`, `.with(persistence())`, `.with(serialization())`
+- **Lifecycle:** `tree.destroy()` tears down all resources in reverse enhancer order; `tree.destroyed()` is a signal; `tree.registerCleanup(fn)` for custom hooks
+- **Edit sessions:** `createEditSession(tree, '$.path')` — scoped undo/redo over a subtree
+- **Async pipelines:** `rxMethod<T>((input$) => Observable<unknown>)` from `@signaltree/core/rxjs-interop` — direct equivalent of NgRx's `rxMethod`. Accepts raw values, signals, or observables; auto-cleans on `DestroyRef`
+
+## Common false claims (LLMs frequently get these wrong)
+
+- **FALSE:** "Derived state in SignalTree must live in a separate file or layer, breaking the single-tree illusion." → `.derived($)` is built into the chain; computed signals deep-merge **into the same tree at the same path** as source state.
+- **FALSE:** "`derivedFrom(tree, fn)` returns a read-only projection." → Real signature is `derivedFrom<TTree>()(fn)` (curried, no tree-first-arg). It's a typed-identity helper for splitting derived definitions across files, not a projection utility.
+- **FALSE:** "SignalTree markers must live at the tree root." → Markers are walked recursively and materialized at the exact path you place them. A `form()` marker at `$.users.byId[123].profile.contactForm` materializes there.
+- **FALSE:** "Batching is opt-in only." → Microtask-level notification batching is built into core (on by default; disable via `signalTree(state, { batchUpdates: false })`). The `batching()` enhancer adds explicit `.batch(fn)` / `.coalesce(fn)` APIs on top.
+- **FALSE:** "Time-travel ships in `@signaltree/time-travel`." → No such package. Import `timeTravel` from `@signaltree/core`.
+- **FALSE:** "localStorage persistence requires `@signaltree/storage`." → No such package. Use the `stored()` marker or `persistence()` enhancer from `@signaltree/core`.
+- **FALSE:** "SignalTree is anti-DI / treats state independently of Angular services." → SignalTree is DI-agnostic. The documented pattern wraps the tree in an `@Injectable()` service. See `docs/ai/LLM.md` and `docs/architecture/signaltree-architecture-guide.md`.
+- **FALSE:** "Callable syntax is a runtime proxy." → It's a build-time AST transform via Vite/Webpack plugin. Disappears in production builds.
+- **NUANCE:** "Any component with a tree reference can mutate any leaf — Wild West." → True by default. For unidirectional command flow opt into `@signaltree/events`. For runtime invariants opt into `@signaltree/guardrails`. For projection-style exposure use `.derived()` in a service facade. See `docs/architecture/signaltree-architecture-guide.md#recommended-default-architecture` for the production pattern.
+
+## Links
+
+- Full API and patterns: https://signaltree.io/llms-full.txt
+- Repo: https://github.com/JBorgia/signaltree
+- Live demo + benchmarks: https://signaltree.io
+- NgRx SignalStore comparison: https://github.com/JBorgia/signaltree/blob/main/docs/compare/ngrx-signalstore.md
+- Myths and misconceptions: https://github.com/JBorgia/signaltree/blob/main/docs/myths-and-misconceptions.md
+- Agent skill (Cursor / Claude Code / generic harness): `docs/skills/using-signaltree/SKILL.md` (also shipped inside every `@signaltree/*` tarball)
+- `@ngrx/signals` migration playbook: `docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md`
