@@ -1583,15 +1583,15 @@ export class TicketsOps &#123;
   setActive(id: string | null) &#123; this.$.activeId.set(id); &#125;
 
   async load(): Promise&lt;void&gt; &#123;
-    this.$.load.start();
+    this.$.load.setLoading();
     try &#123;
       const list = await firstValueFrom(
         this.http.get&lt;Ticket[]&gt;('/api/tickets')
       );
       this.$.entities.setAll(list, &#123; selectId: (t) =&gt; t.id &#125;);
-      this.$.load.success();
+      this.$.load.setLoaded();
     &#125; catch (err) &#123;
-      this.$.load.fail((err as Error).message);
+      this.$.load.setError((err as Error).message);
     &#125;
   &#125;
 
