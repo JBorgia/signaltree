@@ -620,6 +620,7 @@
 
     pre {
       background: var(--bg-code, var(--color-neutral-100));
+      color: var(--text-code, var(--color-neutral-300));
       padding: 0.75rem;
       border-radius: 4px;
       font-size: 0.75rem;
