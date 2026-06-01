@@ -2,7 +2,7 @@
   <img src="apps/demo/public/signaltree.svg" alt="SignalTree Logo" width="120" height="120" style="background: transparent;" />
   <h1>SignalTree</h1>
   <p><strong>Reactive JSON for Angular</strong></p>
-  <p>JSON branches, reactive leaves. No actions. No reducers. No selectors.</p>
+  <p>Every node is a signal, every path is type-safe. No action creators, no reducers, no selector functions — mutations live as named methods on an <code>Ops</code> service, derivations live as <code>.derived()</code> tiers.</p>
 
   <p>
     <a href="https://jborgia.github.io/signaltree/" target="_blank"><strong>Live Demo</strong></a>
@@ -17,7 +17,7 @@
 
 ## 🤖 Built for the AI-assisted era
 
-SignalTree is the only Angular state-management library that treats AI coding agents as a first-class consumer of the API. We ship `llms.txt`, disambiguation tables, and an agent skill — and **we measure the result**.
+SignalTree is the first Angular state-management library to treat AI coding agents as a first-class consumer of its API. We ship `llms.txt`, disambiguation tables, and a vendor-neutral agent skill — and **we measure the result**.
 
 **Measured (v10.2, 2026-05-29):** AI-codegen accuracy goes from **49% → 91% (+42 percentage points)** when `llms.txt` is in the agent's context. Reproducible across 6 agents (4 frontier + 2 cost-tier) × 8 prompts × 5 libraries × 3 priming modes = **720 cells**. With Claude Sonnet 4.6, primed accuracy hits **99/100**.
 
@@ -27,7 +27,7 @@ The priming surface ships with the npm package: `node_modules/@signaltree/core/l
 
 ## Mental Model
 
-A SignalTree turns a plain JSON object into a tree of Angular signals. Each leaf becomes a `WritableSignal`. You read and write state the same way you'd use any Angular signal — no new concepts.
+A SignalTree turns a plain JSON object into a tree of Angular signals. Each leaf becomes a `WritableSignal`. Reads and writes use the same shape as any Angular signal — `node()` to read, `.set()` / `.update()` to write. Markers, enhancers, and derived tiers add capability on top, but they layer onto that base.
 
 ```typescript
 import { signalTree } from '@signaltree/core';
@@ -40,10 +40,10 @@ const store = signalTree({
 // Read — just call it, like any signal
 store.$.user.name(); // 'Alice'
 
-// Write — set, update, or replace
+// Write — set or update a leaf, or partial-update the whole tree
 store.$.user.name.set('Bob');
 store.$.user.age.update((n) => n + 1);
-store({ user: { name: 'Carol', age: 25 }, settings: { theme: 'light' } });
+store({ settings: { theme: 'light' } }); // deep-merge — `user` is preserved
 ```
 
 In templates, `store.$.user.name()` works exactly like any other signal.
@@ -77,7 +77,7 @@ store.$.users.removeOne(2);
 
 // Reactive queries — all return signals
 store.$.users.all(); // Signal<User[]>
-store.$.users.byId(1); // Signal<User | undefined>
+store.$.users.byId(1); // EntityNode<User> | undefined — callable accessor with per-field signals
 store.$.users.count(); // Signal<number>
 store.$.users.where((u) => u.active); // Signal<User[]>
 ```
@@ -98,14 +98,14 @@ const store = signalTree({
 });
 
 store.$.loadingState.setLoading();
-store.$.users.setAll(data); // payload goes on the data node
+store.$.users.setAll(data); // entities written directly — loadingState is a sibling
 store.$.loadingState.setLoaded();
 store.$.loadingState.loading(); // Signal<boolean> (v10.3 canonical; .isLoading() still works as a deprecated alias)
 ```
 
 ## Enhancers
 
-Enhancers add capabilities via `.with()`. Each is opt-in and tree-shakeable. Duplicate detection prevents applying the same enhancer twice.
+Enhancers add capabilities via `.with()`. Each is opt-in and tree-shakeable (modern bundlers — Vite, esbuild, Rollup, webpack 5+). Applying the same enhancer twice throws a clear error — fail-fast, no silent fallback.
 
 ```typescript
 import { signalTree, batching, devTools, timeTravel } from '@signaltree/core';
@@ -125,7 +125,7 @@ const store = signalTree({ count: 0, items: [] })
 | `serialization()` | JSON serialize/deserialize with type preservation              |
 | `persistence()`   | Auto-save/load to localStorage, IndexedDB, or custom adapters  |
 
-> **9.0.1:** The `memoization()` enhancer was removed. Use Angular's built-in `computed()` — it already caches by reference equality and adds no runtime overhead.
+> **9.0.1:** The `memoization()` enhancer was removed. Use Angular's built-in `computed()` — it memoizes its result and only re-runs when a tracked signal changes, with no extra cost over what Angular already provides.
 
 ## Derived State
 
@@ -138,7 +138,7 @@ import { computed } from '@angular/core';
 const derived = derivedFrom<AppState>();
 
 export const dashboardDerived = derived(($) => ({
-  activeUserCount: computed(() => $.users.where((u) => u.active).length),
+  activeUserCount: computed(() => $.users.where((u) => u.active)().length),
   totalRevenue: computed(() => $.orders.all().reduce((sum, o) => sum + o.total, 0)),
 }));
 
@@ -149,16 +149,23 @@ store.$.activeUserCount(); // reactive, type-safe
 
 ## Callable Syntax
 
-With `@signaltree/callable-syntax`, leaf nodes become callable for both read and write — a compile-time transform that produces zero runtime overhead:
+**Branch nodes are callable for reads AND writes natively** — `store.$.user()` reads the user subtree, `store.$.user({ name: 'Bob' })` partial-updates it. **Leaves are Angular signals**: callable as getters, but writes go through `.set()` / `.update()`. `@signaltree/callable-syntax` is a compile-time transform that brings **leaf writes** into the same call-with-arg shape that branches already support, so a single call expression covers reads and writes at every depth:
 
 ```typescript
-// With callable syntax installed:
-store.$.user.name(); // Read  (same as before)
-store.$.user.name('Bob'); // Write (compiles to .set('Bob'))
-store.$.count((n) => n + 1); // Update (compiles to .update(n => n + 1))
+// Branches — always callable both directions:
+store.$.user();                    // read subtree
+store.$.user({ name: 'Bob' });     // partial-update subtree
+
+// Leaves — read works without the plugin; with @signaltree/callable-syntax,
+// writes use the same shape:
+store.$.user.name();               // read leaf (no plugin needed)
+store.$.user.name('Bob');          // compiles to .set('Bob')
+store.$.count((n) => n + 1);       // compiles to .update(n => n + 1)
 ```
 
-Install as a dev dependency with a Vite/Webpack plugin — the transform compiles away before production.
+It's a Vite/Webpack plugin (dev dependency only) — the transform expands these forms back into `.set()` / `.update()` calls at build time, so production bundles have zero runtime overhead and the underlying signal API is unchanged.
+
+> **Configure `rootIdentifiers`** in the plugin options to match your store variable names. Default is `['tree']`; if you use `store`, `state`, or other names, list them — variables not in the list are left alone.
 
 ## Subpath Imports
 
@@ -184,9 +191,11 @@ session.commit(); // Write the draft back to the source path
 
 The value-level `createEditSession(initial)` primitive (single-arg, no tree binding) is still available for stateful drafts not bound to a tree path.
 
+> **When to reach for what:** use `createTreeEditSession` when you need an uncommitted draft you can `commit()` or `cancel()` against a specific subtree — distinct from `timeTravel()`, which records the whole tree's history and lets you step backward globally rather than holding a separate draft.
+
 ## Async (`asyncSource` / `asyncQuery` markers)
 
-Async state belongs **at the tree path it describes**, not in a service method that writes to paths imperatively. Two markers cover the two main async patterns and compose with the rest of the marker family (`entityMap`, `status`, `stored`, `form`):
+Async state usually belongs **at the tree path it describes** — use `asyncSource` for load-and-expose and `asyncQuery` for input-driven debounced queries. Reach for a plain Observable method on an Ops class only when the orchestration spans multiple paths or stages that no single marker can express (see the migration section). Two markers cover the two main async patterns and compose with the rest of the marker family (`entityMap`, `status`, `stored`, `form`):
 
 ```typescript
 import { signalTree, asyncSource, asyncQuery } from '@signaltree/core';
@@ -223,11 +232,11 @@ store.$.users.reset();     // back to initial state
 store.$.search.rerun();    // rerun with current input (skip dedup)
 ```
 
-Both markers attach at **any tree depth**, accept **Observables or Promises**, and auto-clean on the surrounding `DestroyRef`. No manual `tap()` / `setLoading()` / `setLoaded()` wiring.
+Both markers attach at **any tree depth** and accept **Observables or Promises**. When the tree is constructed inside an Angular injection context, both markers auto-clean their in-flight subscriptions on the surrounding `DestroyRef`. Outside an injection context (e.g., trees built in plain functions or tests), call `store.destroy()` for cleanup. No manual `tap()` / `setLoading()` / `setLoaded()` wiring either way.
 
 ### Migration from `@ngrx/signals` `rxMethod`
 
-SignalTree intentionally does **not** ship `rxMethod` — its callable-factory-inside-`withMethods` shape is NgRx-flavored and doesn't fit SignalTree's path-attached marker philosophy. Map NgRx `rxMethod` to:
+SignalTree no longer ships `rxMethod` (removed in v9.6.0 — it was briefly available as a migration alias in v9.5.x). Its callable-factory-inside-`withMethods` shape was NgRx-flavored and didn't fit SignalTree's path-attached marker philosophy. Map NgRx `rxMethod` to:
 
 - **`asyncSource`** when the pipeline is doing load-and-expose
 - **`asyncQuery`** when the pipeline is doing input-driven debounced query
@@ -237,7 +246,7 @@ See [the migration guide](docs/skills/using-signaltree/reference/migration-from-
 
 ## Lifecycle
 
-Every tree has deterministic cleanup. `destroy()` tears down all resources — signals, enhancer timers, caches, and DevTools connections — in reverse enhancer order:
+Every tree has deterministic cleanup. `destroy()` runs every registered cleanup hook (in registration order), tearing down signals, enhancer timers, caches, and DevTools connections. Built-in enhancers register their own cleanup; custom enhancers must call `tree.registerCleanup(fn)` to participate:
 
 ```typescript
 const store = signalTree({ data: null }).with(batching()).with(devTools());
@@ -264,7 +273,7 @@ store.registerCleanup(() => ws.close());
 
 ## Real-World Migration (Case Study)
 
-Snapshot from one production Angular mobile app's NgRx Signal Store → SignalTree migration. Original migration measured ~11,700 → ~2,800 lines of state code (~76%) and ~50KB → ~27KB gzipped state bundle (~46%). Both codebases have continued to evolve; re-measuring today the same scope yields a 60–70% reduction depending on definition (apps-only vs apps+libs, narrow vs broad import filter). The directional finding is reproducible — the exact percentages are not. **YMMV** — your migration's reduction depends on app complexity, prior architecture, and how heavily the original code leaned on custom `withX` helpers. The single biggest driver of the savings is cross-cutting concerns (devtools, error banners, telemetry, refresh handling) moving from per-store composition to tree-level enhancers.
+Snapshot from one production Angular mobile app's NgRx Signal Store → SignalTree migration. Original migration measured ~11,700 → ~2,800 lines of state code (~76%) and ~50KB → ~27KB gzipped state bundle (~46%). Both codebases have continued to evolve; re-measuring today the same scope yields a 60–70% reduction depending on definition (apps-only vs apps+libs, narrow vs broad import filter). The directional finding is reproducible — the exact percentages are not. **YMMV** — your migration's reduction depends on app complexity, prior architecture, and how heavily the original code leaned on custom `withX` helpers. The most concretely-attributable single reduction was `entityMap()` replacing a 222-line `withEntityCrud` wrapper. The remaining bulk of the savings appears to come from cross-cutting concerns (devtools, error banners, telemetry, refresh handling) consolidating into tree-level enhancers, though we have not separately measured each category.
 
 | Metric                  | NgRx                      | SignalTree             | Change         |
 | ----------------------- | ------------------------- | ---------------------- | -------------- |
@@ -279,7 +288,7 @@ Snapshot from one production Angular mobile app's NgRx Signal Store → SignalTr
 
 This is the most common migration path. We ship a complete, AI-agent-ready migration guide that covers:
 
-- A mechanical concept map (`signalStore` → tree slice + `Ops`, `withState` → initial state, `rxMethod` → `asyncSource` / `asyncQuery` markers (or plain Observable method for orchestration), `withEntities` → `entityMap()` marker, etc.)
+- A concept map that's mechanical for the common cases (`signalStore` → tree slice + `Ops`, `withState` → initial state, `withEntities` → `entityMap()` marker) and supplies a decision tree for `rxMethod` migrations (`asyncSource` for load-and-expose, `asyncQuery` for input-driven, plain Observable method on an Ops class for multi-stage orchestration)
 - **Three migration strategies** with explicit decision criteria — big-bang (one PR), incremental per-domain (one PR per store), and hybrid legacy-facade (permanent coexistence fallback)
 - A **`Phase 0` recipe** for landing the foundation in a single dependency-only PR before touching any consumer
 - The [`scripts/verify-signaltree-migration.sh`](scripts/verify-signaltree-migration.sh) script — drop-in, package-manager-agnostic, runs `build` + `test` + `lint` and asserts `@ngrx/signals` is gone from source and `package.json`
@@ -319,7 +328,7 @@ tree(); // Full state snapshot
 tree.$.path.to.leaf(); // Leaf signal value
 
 // Write
-tree(newState); // Replace full state
+tree(updates); // Partial update — keys not in the payload are preserved
 tree.$.path.to.leaf.set(v); // Set leaf
 tree.$.path.to.leaf.update(fn); // Update leaf
 
@@ -352,7 +361,7 @@ tree.registerCleanup(fn); // Register custom cleanup
 
 ## Debugging — `devTools()` enhancer
 
-`.with(devTools())` wires SignalTree into the standard Redux DevTools browser extension. Every state change appears in the timeline with a **path-based action name** (e.g., `[users.profile.name]/set`) so you can scrub backward and forward through state history and see *which path* caused each render — not just *that something changed*. Combined with `timeTravel()`, this gives you scoped undo/redo at the API level *and* a visual time-travel scrubber in the browser. See [Architecture Guide](docs/architecture/signaltree-architecture-guide.md#devtools-integration) for screenshots and the full action-naming scheme.
+`.with(devTools())` wires SignalTree into the standard Redux DevTools browser extension. Every state change appears in the timeline with a **path-based action name** (e.g., `[users.profile.name]/set`) so you can scrub backward and forward through state history and see *which path* caused each render — not just *that something changed*. `devTools()` alone delivers the in-browser time-travel scrubber (controlled by its own `enableTimeTravel` config flag, default `true`); the separate `timeTravel()` enhancer is an independent API-level surface for programmatic undo/redo/jumpTo from code, useful when you want history control without depending on the browser extension. See [Architecture Guide](docs/architecture/signaltree-architecture-guide.md#devtools-integration) for screenshots and the full action-naming scheme.
 
 ## Documentation
 
