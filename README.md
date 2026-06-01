@@ -2,7 +2,7 @@
   <img src="apps/demo/public/signaltree.svg" alt="SignalTree Logo" width="120" height="120" style="background: transparent;" />
   <h1>SignalTree</h1>
   <p><strong>Reactive JSON for Angular</strong></p>
-  <p>Every node is a signal, every path is type-safe. No action creators, no reducers, no selector functions — mutations live as named methods on an <code>Ops</code> service, derivations live as <code>.derived()</code> tiers.</p>
+  <p>State as shape. Signals at every path.</p>
 
   <p>
     <a href="https://jborgia.github.io/signaltree/" target="_blank"><strong>Live Demo</strong></a>
