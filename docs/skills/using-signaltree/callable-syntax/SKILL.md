@@ -85,7 +85,7 @@ import '@signaltree/callable-syntax/augmentation';
 
 Without this, TypeScript errors on `tree.$.count(5)` even when the plugin is active. Type-only import, no runtime output.
 
-`rootIdentifiers`: exact-name whitelist, not prefix or glob. List every root name used (`userStore`, `cartStore`, etc.).
+`rootIdentifiers`: exact-name whitelist, not prefix or glob. **Default is `['tree']` only** — if your store variable is named `store`, `state`, `userStore`, `cartStore`, etc., you MUST pass `rootIdentifiers: ['tree', 'store', 'state', ...]` to the plugin or those call sites are silently skipped.
 
 Testing: Jest and Vitest don't run the plugin by default. Prefer explicit `.set()` / `.update()` in tests; override `exclude` only when testing the transform itself.
 

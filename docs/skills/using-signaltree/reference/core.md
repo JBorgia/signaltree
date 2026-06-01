@@ -119,11 +119,16 @@ store.$.users.removeOne(1);
 store.$.users.setAll([{ id: 2, name: 'Grace' }]);
 
 const all = store.$.users.all(); // Signal<User[]> → User[]
-const oneSig = store.$.users.byId(2); // Signal<User | undefined> | undefined
-const one = oneSig ? oneSig() : null;
+const userNode = store.$.users.byId(2); // EntityNode<User> | undefined — callable accessor with per-field signals
+const one = userNode?.(); // User | undefined
+const nameSignal = userNode?.name; // Signal<string> | undefined (field-level)
 ```
 
-Key options live on `EntityConfig<E, K>` (e.g. a custom `idKey`).
+Key options live on `EntityConfig<E, K>`: `selectId: (entity) => entity.someKey` for a custom id key (e.g., `selectId: (p) => p.sku`), plus optional `beforeAdd` / `beforeUpdate` / `beforeRemove` lifecycle hooks.
+
+**Full mutation surface:** `addOne`, `addMany`, `upsertOne`, `upsertMany`, `updateOne`, `updateMany(ids: K[], changes: Partial<E>)` (NOT NgRx-style `[{id, changes}]`), `updateWhere(pred, changes)`, `removeOne`, `removeMany`, `removeWhere`, `clear`, `setAll`.
+**Full read surface (Signals — invoke with `()`):** `all`, `count`, `ids`, `map`, `has(id)`, `where(pred)`, `find(pred)`, `empty` (v10.3 canonical; `.isEmpty` is a deprecated alias).
+**Node access:** `byId(id) → EntityNode<E> | undefined`.
 
 ### `status()`
 
@@ -143,18 +148,26 @@ tree.$.load.setLoaded();
 tree.$.load.setError('network failure');
 tree.$.load.setNotLoaded(); // resets to initial NotLoaded state, clears error
 
-// Boolean reader signals — use these in templates and computed()
-tree.$.load.isLoading(); // Signal<boolean>
-tree.$.load.isLoaded(); // Signal<boolean>
-tree.$.load.isError(); // Signal<boolean>
-tree.$.load.isNotLoaded(); // Signal<boolean>
+// Boolean reader signals — v10.3 canonical (bare names). Use these in templates and computed().
+tree.$.load.loading(); // boolean
+tree.$.load.loaded(); // boolean
+tree.$.load.hasError(); // boolean
+tree.$.load.notLoaded(); // boolean
+// Deprecated through v10.x, removed v11: .isLoading / .isLoaded / .isError / .isNotLoaded
+// — same Signal instance, both work; canonical preferred in new code.
+
+// v10.2+ Promise-vocabulary aliases (identical semantics, no args for booleans)
+tree.$.load.start();      // === setLoading()
+tree.$.load.setSuccess(); // === setLoaded() — NO ARGS
+tree.$.load.succeed();    // === setLoaded()
+tree.$.load.fail(err);    // === setError(err)
 
 // Raw state and error if you need them
-tree.$.load.state(); // Signal<LoadingState>
-tree.$.load.error(); // Signal<E | null>
+tree.$.load.state();  // LoadingState (state is WritableSignal<LoadingState>)
+tree.$.load.error();  // E | null (error is WritableSignal<E | null> — write via .error.set(e))
 
 // When comparing raw state, always use the LoadingState enum — never string literals
-const isLoading = tree.$.load.state() === LoadingState.Loading; // ✓
+const loading = tree.$.load.state() === LoadingState.Loading; // ✓
 // tree.$.load.state() === 'loading'                              // ✗ TypeScript error
 ```
 
@@ -346,9 +359,8 @@ Prefer plain Angular `computed()` for inline derivations. Reach for `derivedFrom
 
 `@signaltree/core` ships additional entry points (not re-exported from the root) to keep the main bundle small:
 
-- `@signaltree/core/edit-session` — batched edit sessions.
-- `@signaltree/core/security` — security-oriented helpers.
-- `@signaltree/core/storage` — storage adapter primitives.
-- `@signaltree/core/presets` — tree config presets.
+- `@signaltree/core/edit-session` — value-level (`createEditSession`) and path-bound (`createTreeEditSession`, v10.1+) draft / undo / commit primitives.
+- `@signaltree/core/security` — security-oriented helpers (`SecurityValidator`, `SecurityPresets`).
+- `@signaltree/core/storage` — storage adapter primitives (`createStorageAdapter`, `createIndexedDBAdapter`).
 
 Import from the subpath when you need these — do not expect them on the main barrel.

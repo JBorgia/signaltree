@@ -91,9 +91,9 @@ Tree shape is determined by the **value at construction time** (see [core.md →
 
 **Rule:** the `overrides` callback must preserve the structural shape of the base state. Use it for:
 
-- Replacing primitive leaves (`isLoading: true`, `count: 5`, `currentDriverId: 1`).
+- Replacing primitive leaves (`loading: true`, `count: 5`, `currentDriverId: 1`).
 - Patching existing branch contents (`ui: { ...s.ui, theme: 'dark' }` — `ui` is a branch in both prod and seed).
-- Pre-populating `entityMap` slices (`drivers: { ...s.drivers, entities: { 1: driver } }`).
+- Pre-populating `entityMap` slices: use the public API after TestBed setup — `tree.$.drivers.setAll([driver])` or `.upsertOne(driver)`. The internal entity storage shape (`{ entities: { 1: driver } }`) is not a public contract and shouldn't be reached into by tests.
 
 For `Nullable<Object>` leaves (typed `XDto | null`, seeded as `null` in prod), seed via `.set()` **after** injection instead:
 

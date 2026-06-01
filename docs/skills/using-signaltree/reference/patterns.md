@@ -233,7 +233,7 @@ Once a tree has more than ~3 domains with computeds, ad-hoc `computed(...)` call
 | 2    | Complex logic     | `AppTreeWithEntityResolution` | Business rules over resolved entities (display names, isExternal, isComplete).   |
 | 3    | Workflow          | `AppTreeWithComplexLogic`     | Domain-specific state machines (workflow steps, current index, status maps).     |
 | 4    | Navigation        | `AppTreeWithWorkflow`         | Position queries on top of workflow (next/previous, canAdvance, statusInfo).     |
-| 5    | UI aggregates     | `AppTreeWithNavigation`       | Cross-domain rollups for shells / error banners (overall isLoading, firstError). |
+| 5    | UI aggregates     | `AppTreeWithNavigation`       | Cross-domain rollups for shells / error banners (overall loading, firstError). |
 
 **Why these specific layers?** Each one answers a different question and depends only on lower layers, so the dependency graph is always acyclic by construction:
 
@@ -492,7 +492,7 @@ function createLegacyDriverAdapter(app: AppStore): LegacyDriverFacade {
   const $driver = app.$.driver;
   return {
     currentDriver: $driver.currentDriver,
-    isLoading: $driver.load.isLoading,
+    isLoading: $driver.load.loading, // legacy facade name → v10.3 canonical .loading
     loadingState: computed(() => $driver.load.state()),
     loadActiveDriver: () => {
       app.ops.driver.loadActiveDriver$().subscribe();
@@ -640,7 +640,7 @@ The `$` proxy exposes signals, so Angular templates consume them directly.
 <input [value]="tree.$.fields.email()" />
 
 <!-- Conditionals and loops use the same signal reads -->
-@if (tree.$.load.isLoading()) {
+@if (tree.$.load.loading()) {
 <spinner />
 } @for (user of tree.$.users.all(); track user.id) {
 <user-row [user]="user" />
@@ -772,7 +772,7 @@ store.$.users.upsertOne({ id: 1, name: 'Ada L.', active: true });
 store.$.users.removeOne(2);
 
 const all = store.$.users.all(); // User[]
-const adaSig = store.$.users.byId(1); // Signal<User | undefined> | undefined
+const adaNode = store.$.users.byId(1); // EntityNode<User> | undefined — invoke: adaNode?.()
 const ada = adaSig ? adaSig() : null;
 ```
 
@@ -955,11 +955,12 @@ tree.$.tickets.loading.setLoaded();
 tree.$.tickets.loading.setError(new Error('network failure'));
 tree.$.tickets.loading.setNotLoaded(); // reset to initial state
 
-// Boolean signals — prefer these over .state() string comparisons
-tree.$.tickets.loading.isLoading(); // Signal<boolean>
-tree.$.tickets.loading.isLoaded(); // Signal<boolean>
-tree.$.tickets.loading.isError(); // Signal<boolean>
-tree.$.tickets.loading.isNotLoaded(); // Signal<boolean>
+// Boolean signals — v10.3 canonical (bare names). Prefer these over .state() string comparisons.
+tree.$.tickets.loading.loading();   // boolean
+tree.$.tickets.loading.loaded();    // boolean
+tree.$.tickets.loading.hasError();  // boolean
+tree.$.tickets.loading.notLoaded(); // boolean
+// Deprecated v10.x aliases (removed v11, same Signal instance): .isLoading, .isLoaded, .isError, .isNotLoaded
 
 const err = tree.$.tickets.loading.error(); // Error | null
 
@@ -974,7 +975,7 @@ const all = tree.$.tickets.entities.all(); // Signal<Ticket[]>
 ```
 
 Use `status()` anywhere you previously reached for `withLoadingState` or a
-hand-rolled `{ isLoading, error }` slice. The marker is reusable across every
+hand-rolled `{ loading, error }` slice. The marker is reusable across every
 domain in the tree — declare it in each domain's state factory, not once globally.
 
 #### When NOT to use `status()`
@@ -1000,7 +1001,7 @@ export function loadingSlice() {
 }
 ```
 
-Then consume it like any other slice — `tree.$.tickets.loading.state()`, `tree.$.tickets.loading.state.set(LoadingState.Loading)`, `tree.$.tickets.loading.error.set(captureError(err))`. You lose the `setLoading()` / `isLoaded()` ergonomic methods, but you keep your existing enum and error type — usually the right trade in established codebases.
+Then consume it like any other slice — `tree.$.tickets.loading.state()`, `tree.$.tickets.loading.state.set(LoadingState.Loading)`, `tree.$.tickets.loading.error.set(captureError(err))`. You lose the `setLoading()` / `loaded()` ergonomic methods, but you keep your existing enum and error type — usually the right trade in established codebases.
 
 ### Custom markers for novel reusable state behaviour
 

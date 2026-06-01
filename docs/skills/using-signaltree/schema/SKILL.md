@@ -10,7 +10,7 @@ Enhancer for schema-driven validation. Register StandardSchema-compatible schema
 Install:
 
 ```bash
-npm install @signaltree/schema @signaltree/core
+npm install @signaltree/schema @signaltree/core @standard-schema/spec
 npm install zod   # or valibot, arktype, etc.
 ```
 

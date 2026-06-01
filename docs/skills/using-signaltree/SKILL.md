@@ -5,16 +5,16 @@ description: Guides AI agents integrating SignalTree (@signaltree/core and relat
 
 # Using SignalTree
 
-SignalTree: reactive JSON for Angular. Plain state object → `signalTree()` → every leaf = Angular signal via typed `$` proxy. No actions, reducers, selectors, or registration.
+SignalTree: reactive JSON for Angular. State as shape. Signals at every path. Plain state object → `signalTree()` → every leaf = Angular signal via typed `$` proxy. No action creators, reducer functions, or selector functions — mutations live as named methods on an `Ops` service, derivations as `.derived()` tiers.
 
 Mental model:
 
 - Reactive JSON tree: `signalTree(state)` mirrors input shape. Leaves = `WritableSignal<T>`. Branches = typed accessors.
 - `$` proxy: `tree.$.user.profile.name` = signal; `tree.$.user.profile` = group accessor.
 - Read: `tree.$.count()` — subscribes reactive context.
-- Write leaf: `.set(value)` / `.update(fn)`. Write branch: `tree.$.user({ name, email })` (replace) or `tree.$.user((u) => ({ ...u, name }))` (patch). No dispatch.
+- Write leaf: `.set(value)` / `.update(fn)`. Write branch (both forms are **deep-merge partial writes** — keys absent from the payload are preserved): `tree.$.user({ name, email })` (partial-merge object) or `tree.$.user((u) => ({ ...u, name }))` (updater function). No dispatch. There is no `tree.set(...)` — the root is callable: `tree(partial)` or `tree(updater)`.
 - Enhancers: `tree.with(batching()).with(devTools())` — order-sensitive.
-- Markers: `entityMap<User>()`, `status()`, `stored(key, default)`, `form(fields)` — placeholders; `signalTree()` replaces each with its runtime API at that path.
+- Markers: `entityMap<User>()`, `status()`, `stored(key, defaultValue)`, `form<T>({ initial: T })` — placeholders; `signalTree()` replaces each with its runtime API at that path. Branches are natively callable for reads AND writes (writes are deep-merge partial updates — keys not in the payload are preserved); the `@signaltree/callable-syntax` build-time transform extends call-syntax to **leaf writes** only. Arrays in leaves are `WritableSignal<T[]>` — use `.update(arr => [...arr, x])`, NOT `.push()`.
 
 Don't introduce actions, reducers, action creators, or selectors — they fight the design. No module registration.
 
@@ -84,9 +84,9 @@ Markers — placed in initial state, replaced by `signalTree()` with fully-typed
 - `entityMap<T, K>()` — O(1) CRUD: `addOne`, `upsertOne`, `removeOne`, `setAll`, `byId`, `all`, `clear`. Predicates: `.empty()` (v10.3 canonical) / `.isEmpty()` (deprecated alias). Reads: `.count()`, `.has(id)`, `.where(pred)`, `.find(pred)`.
 - `status()` — async op state. Write methods: `setLoading()` / `setLoaded()` / `setError(err)` / `setNotLoaded()` / `reset()`. v10.2 Promise-vocabulary aliases also work: `.start()` (= setLoading), `.setSuccess()` / `.succeed()` (= setLoaded), `.fail(err)` (= setError). Read predicates (v10.3 canonical, bare names): `.loading()`, `.loaded()`, `.notLoaded()`, `.hasError()`. Deprecated `is`-prefix aliases (v10.x only, removal v11): `.isLoading()`, `.isLoaded()`, `.isNotLoaded()`, `.isError()`. All predicates are callable signals — invoke them.
 - `asyncSource<T>(config)` — load-and-expose (preferred over `status()` + manual try/catch). Auto-derives `.loading()`, `.error()`, `.data` accessor, `.refresh()` reload.
-- `asyncQuery<TInput, TResult>(config)` — input-driven debounced query with built-in switchMap + dedup pipeline. Reactive `.input` signal, `.results` history, `.rerun()`.
+- `asyncQuery<TInput, TResult>(config)` — input-driven debounced query with built-in switchMap + dedup pipeline. Drive via `.input.set(value)`; read current result on `.results` / `.data`; status on `.loading()` / `.error()`. Lifecycle: `.rerun()` re-fires with the current input (bypasses dedup), `.reset()` clears state. No `.refresh()` — that's on `asyncSource` only.
 - `stored(key, default)` — single signal backed by `localStorage`.
-- `form(fields)` — tree-integrated form state. Call the marker itself (`tree.$.profile()`) to get the value; read `.dirty`, `.valid`, `.touched`, `.errors` as bare properties (NOT `.isDirty()`).
+- `form<T>(config: FormConfig<T>)` — tree-integrated form marker, **exported from `@signaltree/core`** (`@signaltree/ng-forms` is a separate FormGroup bridge, not the marker source). Config requires `{ initial: T, validators?, asyncValidators?, wizard? }`. Call the marker itself (`tree.$.profile()`) to read the value; bare-name accessors are `.dirty`, `.valid`, `.touched`, `.submitting` (NOT `.pristine`, NOT `.isDirty()`); value accessors are `.errors`, `.errorList`. Methods: `.validate()`, `.validateField(field)`, `.touch(field)`, `.submit(handler)` (handles touchAll + validate + submitting toggle + error trap internally).
 
 Full signatures: [`reference/core.md`](reference/core.md).
 

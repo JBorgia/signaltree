@@ -1,3 +1,60 @@
+## 10.3.3
+
+Documentation-only patch — fixes the SignalTree agent skill files (`docs/skills/using-signaltree/SKILL.md` + reference deep-dives + per-package sub-skills). These ship in the npm tarball at `node_modules/@signaltree/core/skills/` and are loaded by name by Cursor / Claude Code / SKILL.md-aware harnesses.
+
+7-auditor parallel workflow surfaced 79 raw findings across 16 files. ~30 actionable after synthesis. Highlights:
+
+**Cross-file pattern: deprecated `is`-prefix predicates taught as canonical** (in SKILL.md, reference/core.md, reference/migration-from-ngrx-signals.md, reference/patterns.md). Replaced with v10.3 canonical bare names (`.loading()` / `.loaded()` / `.hasError()` / `.notLoaded()`); the `is`-prefix forms are still documented but explicitly as `@deprecated` aliases removed in v11.
+
+**`byId()` mislabeled as `Signal<E | undefined>`** in core.md, patterns.md, migration-from-ngrx-signals.md. Actually returns `EntityNode<E> | undefined` — a callable cursor with per-field signals. Canonical idiom is `.byId(id)?.()`. Fixed in all 3.
+
+**Wrong / missing API in SKILL.md root file:**
+- `form(fields)` placeholder → `form<T>({ initial: T })` config shape
+- Branch writes called "replace" → corrected to "deep-merge partial" (both arg forms)
+- `asyncQuery .results history, .rerun()` → corrected to current-result + driven via `.input.set()`, no `.refresh()` (that's on `asyncSource`)
+- `form(fields)` accessor list missing `.submitting`, falsely listed `.pristine`
+- Tagline reverted to v10.3 canonical "State as shape. Signals at every path."
+
+**reference/core.md gaps:**
+- `idKey` config field → real name is `selectId`
+- Fabricated `@signaltree/core/presets` subpath → removed
+- entityMap surface incomplete (`updateMany` shape, `.empty()`, full read/mutation list added)
+- form surface incomplete (FormSignal accessors + methods documented)
+- Deprecated `is`-prefix forms replaced
+
+**reference/migration-from-ngrx-signals.md:**
+- `.update()` on branches → branches are callable, no `.update()` method
+- `byId` corrected
+- is-prefix predicates corrected (SignalTree side); NgRx side preserved
+
+**reference/patterns.md:**
+- Templates and code examples migrated to bare-name predicates
+- Legacy facade adapter sources from canonical `.loading` (re-exports as legacy `isLoading`)
+- `byId` type comment corrected
+
+**reference/testing.md:**
+- Hand-seeding `entityMap` via internal `entities` field → use public API (`setAll` / `upsertOne`)
+- Primitive-leaf example `isLoading: true` → `loading: true`
+
+**reference/install.md:**
+- `@signaltree/guardrails` peer range `^9.0.0` → `^9.0.1`
+
+**Per-package sub-skills:**
+- `guardrails/SKILL.md`: `autoSuppress` union conflated with intent/source enums — separated correctly (`autoSuppress` is `'hydrate' | 'reset' | 'bulk' | 'migration' | 'time-travel' | 'serialization'`).
+- `schema/SKILL.md`: install command was missing `@standard-schema/spec` required peer.
+- `callable-syntax/SKILL.md`: `rootIdentifiers` default was unstated — added explicit "default `['tree']` only" warning so `store`/`state` consumers don't silently get no rewrite.
+
+These skill files are exactly what Cursor / Claude Code load when configured for SignalTree work. Every bug here directly produces residual hallucinations in the benchmark's primed-run column.
+
+Doc-patch quadrilogy across 5 days (10.3.0 → 10.3.3):
+- Root README: 22 fixes
+- Tarball README: 22 fixes
+- Priming files (llms.txt + llms-full.txt): 24 fixes
+- Agent skill files: ~30 fixes
+= **~98 documented inaccuracies eliminated** across every AI-discoverability surface that ships in the tarball or serves from signaltree.io.
+
+---
+
 ## 10.3.2
 
 Documentation-only patch — fixes the dedicated AI priming files (`llms.txt`, `llms-full.txt`) that ship in the npm tarball at `node_modules/@signaltree/core/llms*.txt` and are served from `signaltree.io/llms.txt`.

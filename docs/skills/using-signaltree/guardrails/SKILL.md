@@ -49,15 +49,16 @@ const tree = signalTree(initial).with(
       trackUnread: true,
     },
     suppression: {
-      autoSuppress: ['hydrate', 'reset', 'bulk', 'migration'],  // intent values that silence budget warnings
+      autoSuppress: ['hydrate', 'reset', 'bulk', 'migration', 'time-travel', 'serialization'],  // values from intent/source that silence budget warnings
       respectMetadata: true,
     },
   })
 );
 ```
 
-Valid `intent` values: `'hydrate'`, `'reset'`, `'bulk'`, `'migration'`, `'user'`, `'system'`.
-Valid `source` values: `'serialization'`, `'time-travel'`, `'devtools'`, `'user'`, `'system'`.
+Valid `autoSuppress` values (union of intent and source channels that suppression respects): `'hydrate'`, `'reset'`, `'bulk'`, `'migration'`, `'time-travel'`, `'serialization'`.
+Valid `intent` values on `UpdateMetadata`: `'user'`, `'system'`, `'hydrate'`, `'reset'`, `'bulk'`, `'migration'`.
+Valid `source` values on `UpdateMetadata`: `'user'`, `'system'`, `'devtools'`, `'time-travel'`, `'serialization'`.
 
 Custom rule (rules run per changed leaf; `context.path` = string[], `context.value` = new leaf value; `test` returns `true` when rule fires):
 

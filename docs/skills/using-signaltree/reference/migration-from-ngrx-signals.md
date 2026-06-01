@@ -366,12 +366,12 @@ See `reference/patterns.md` for the full `APP_TREE` + `AppStore` + `Ops` wiring 
 | `withHooks({ onInit })`                        | Constructor body of the service / `APP_TREE` factory                                                                                                                                                         |
 | `withProps(({ ... }) => ({ ... }))`            | Plain `readonly` fields on the `Ops` class (or `AppStore`); no signal magic needed                                                                                                                           |
 | `rxMethod(pipe(...))`                          | **Preferred:** `asyncSource(config)` or `asyncQuery(config)` marker at the tree path the data lives at (auto status wiring, no `tap()` ceremony). **Fallback:** plain method returning `Observable<void>`; writes via `tap()`. SignalTree does NOT ship a `rxMethod` primitive — see `## rxMethod` section below for the two-option breakdown.                          |
-| `patchState(store, { a, b })`                  | `tree.$.a.set(a); tree.$.b.set(b)` for individual fields, or `tree.$.domain.update((s) => ({ ...s, a, b }))` for a nested patch                                                                              |
+| `patchState(store, { a, b })`                  | `tree.$.a.set(a); tree.$.b.set(b)` for individual leaves, or `tree.$.domain({ a, b })` / `tree.$.domain((s) => ({ ...s, a, b }))` for a nested patch — branches are natively callable; there is no `.update()` method on branch nodes, and branch writes are always deep-merge partials                                  |
 | `getState(store)`                              | `tree()` (whole-tree snapshot) or `tree.$.domain()` (one slice) — call the tree / node with no args to read the current plain value                                                                          |
 | `signalState({ ... })` (standalone)            | `signalTree({ ... })` — `signalState` was the state-only primitive; `signalTree` is the equivalent baseline                                                                                                  |
 | `withEntities<T>()`                            | `entityMap<T, K>()` marker                                                                                                                                                                                   |
 | `store.entities()`                             | `tree.$.items.all()`                                                                                                                                                                                         |
-| `store.entityMap()`                            | `tree.$.items.byId(id)` (per-id signal) — see row below for the whole collection                                                                                                                             |
+| `store.entityMap()[id]`                        | `tree.$.items.byId(id)?.()` — `byId(id)` returns `EntityNode<E> \| undefined` (a callable cursor with per-field signals), invoke the result to read the entity value                                         |
 | `store.entityMap()` (whole `Record<K, T>`)     | `tree.$.items.map()` returns a `Signal<ReadonlyMap<K, T>>`. Bracket access (`m[id]`) becomes `m.get(id)`; for a `Record`-shaped consumer derive via `computed(() => Object.fromEntries(tree.$.items.map()))` |
 | `addEntity(e)`                                 | `tree.$.items.addOne(e)`                                                                                                                                                                                     |
 | `setAllEntities(es)`                           | `tree.$.items.setAll(es)`                                                                                                                                                                                    |
@@ -719,7 +719,7 @@ load: status<string>();
 The `status()` marker provides:
 
 - `.setLoading()` / `.setLoaded()` / `.setError(e)` / `.setNotLoaded()`
-- Boolean signals: `.isLoading()` / `.isLoaded()` / `.isError()` / `.isNotLoaded()` — use these in templates and `computed()`
+- Boolean signals: `.loading()` / `.loaded()` / `.hasError()` / `.notLoaded()` — v10.3 canonical bare-name predicates; use these in templates and `computed()`. The `is`-prefix forms (`.isLoading()`, `.isLoaded()`, `.isError()`, `.isNotLoaded()`) are `@deprecated` aliases through v10.x, removed in v11.0 — same Signal instance, both work, canonical preferred in new code.
 - Raw state via `.state()` — returns `Signal<LoadingState>`. **When comparing the raw value always import and use the `LoadingState` enum from `@signaltree/core`**; never compare to string literals (`'loading'`, `'loaded'`, etc.), which cause TypeScript errors.
 
 ```ts
@@ -823,7 +823,7 @@ class DriverOps {
 
 ## Gotchas
 
-- **Flat signal reads vs nested paths** — `signalStore` exposes every signal flatly on the store instance: `store.customers()`, `store.isLoading()`, `store.selectedCustomerExternalId()`. In SignalTree those signals live under the `$` proxy at their domain path: `appStore.$.ticket.customers()`, `appStore.$.ticket.isLoading`, `appStore.$.ticket.selectedCustomerExternalId()`. When converting a component that read many signals off the old store, **every read site must be updated** — it is easy to miss them because the old and new injection names look similar. After renaming the injection, grep the component for the old store variable name and make sure no bare `store.signalName()` calls remain.
+- **Flat signal reads vs nested paths** — `signalStore` exposes every signal flatly on the store instance: `store.customers()`, `store.isLoading()`, `store.selectedCustomerExternalId()`. In SignalTree those signals live under the `$` proxy at their domain path: `appStore.$.ticket.customers()`, `appStore.$.ticket.loading()` (v10.3 canonical — formerly `isLoading`), `appStore.$.ticket.selectedCustomerExternalId()`. When converting a component that read many signals off the old store, **every read site must be updated** — it is easy to miss them because the old and new injection names look similar. After renaming the injection, grep the component for the old store variable name and make sure no bare `store.signalName()` calls remain.
 
   ```ts
   // ngrx/signals — signals flat on the store instance

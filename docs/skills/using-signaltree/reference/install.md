@@ -78,7 +78,7 @@ or in `tsconfig.json`:
 npm install --save-dev @signaltree/guardrails
 ```
 
-Development-only package. Its `exports` map resolves to `./dist/noop.js` under the `production` condition, so production bundles contain only no-ops. Peers: `@signaltree/core ^9.0.0`, `tslib ^2.0.0`. Read [`../guardrails/SKILL.md`](../guardrails/SKILL.md).
+Development-only package. Its `exports` map resolves to `./dist/noop.js` under the `production` condition, so production bundles contain only no-ops. Peers: `@signaltree/core ^9.0.1`, `tslib ^2.0.0`. Read [`../guardrails/SKILL.md`](../guardrails/SKILL.md).
 
 ### `@signaltree/events`
 
