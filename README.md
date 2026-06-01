@@ -19,7 +19,7 @@
 
 SignalTree is the only Angular state-management library that treats AI coding agents as a first-class consumer of the API. We ship `llms.txt`, disambiguation tables, and an agent skill — and **we measure the result**.
 
-**Measured (v10.2, 2026-05-29):** AI-codegen accuracy goes from **49% → 91% (+42 percentage points)** when `llms.txt` is in the agent's context. Reproducible across 6 frontier models × 8 prompts × 5 libraries × 720 cells. With Claude Sonnet 4.6, primed accuracy hits **99/100**.
+**Measured (v10.2, 2026-05-29):** AI-codegen accuracy goes from **49% → 91% (+42 percentage points)** when `llms.txt` is in the agent's context. Reproducible across 6 agents (4 frontier + 2 cost-tier) × 8 prompts × 5 libraries × 3 priming modes = **720 cells**. With Claude Sonnet 4.6, primed accuracy hits **99/100**.
 
 The priming surface ships with the npm package: `node_modules/@signaltree/core/llms.txt` is automatically available to retrieval-aware AI tools after `npm install @signaltree/core`. See [Built for AI →](https://signaltree.io/built-for-ai) and the [reproducible benchmark](scripts/ai-codegen-benchmark/RESULTS-v10.2-FINAL.md).
 
@@ -93,13 +93,14 @@ import { signalTree, entityMap, status, stored } from '@signaltree/core';
 
 const store = signalTree({
   users: entityMap<User>(), // Normalized entity collection (see above)
-  loadingState: status(), // Loading/success/error tracking
-  preference: stored('pref-key'), // Auto-persisted to localStorage
+  loadingState: status(), // Loading / loaded / error / not-loaded state machine
+  preference: stored('pref-key', 'light'), // Auto-persisted to localStorage (key, default)
 });
 
 store.$.loadingState.setLoading();
-store.$.loadingState.setSuccess(data);
-store.$.loadingState.isLoading(); // Signal<boolean>
+store.$.users.setAll(data); // payload goes on the data node
+store.$.loadingState.setLoaded();
+store.$.loadingState.loading(); // Signal<boolean> (v10.3 canonical; .isLoading() still works as a deprecated alias)
 ```
 
 ## Enhancers
@@ -164,20 +165,24 @@ Install as a dev dependency with a Vite/Webpack plugin — the transform compile
 Specialized APIs live in subpath imports to keep the main barrel small:
 
 ```typescript
-import { TREE_PRESETS, createDevTree, createProdTree } from '@signaltree/core/presets';
 import { SecurityValidator, SecurityPresets } from '@signaltree/core/security';
-import { createEditSession } from '@signaltree/core/edit-session';
+import { createEditSession, createTreeEditSession } from '@signaltree/core/edit-session';
 import { createStorageAdapter, createIndexedDBAdapter } from '@signaltree/core/storage';
 ```
 
-**Edit sessions** provide scoped undo/redo over a subtree — useful for form wizards and multi-step workflows:
+**Tree edit sessions** (`createTreeEditSession`, v10.1+) provide scoped undo/redo bound to a writable tree path — useful for form wizards and multi-step workflows. The session holds a draft separate from the source; `commit()` writes back, `cancel()` discards.
 
 ```typescript
-const session = createEditSession(store, '$.user.profile');
-session.modify((profile) => ({ ...profile, name: 'Updated' }));
-session.undo(); // Revert last change
-session.commit(); // Persist changes to the main tree
+import { createTreeEditSession } from '@signaltree/core/edit-session';
+
+const session = createTreeEditSession(store.$.user.profile);
+session.applyChanges((profile) => ({ ...profile, name: 'Updated' }));
+session.undo(); // Revert last change in the draft
+session.commit(); // Write the draft back to the source path
+// or session.cancel() — discard the draft, re-sync from source
 ```
+
+The value-level `createEditSession(initial)` primitive (single-arg, no tree binding) is still available for stateful drafts not bound to a tree path.
 
 ## Async (`asyncSource` / `asyncQuery` markers)
 
@@ -327,9 +332,17 @@ tree.$.users.all();
 tree.with(enhancer()); // Add capabilities (chainable)
 tree.derived(derivedFn); // Attach derived state
 
-// Async pipelines (@signaltree/core/rxjs-interop)
-const loadUsers = rxMethod<void>((input$) => input$.pipe(/* ...rxjs */));
-const search = rxMethod<string>((input$) => input$.pipe(debounceTime(300), switchMap(...)));
+// Async — markers attach at any tree path (rxMethod was removed in v9.6.0)
+const tree = signalTree({
+  users: asyncSource<User[]>({ initial: [], load: () => api.list$() }),
+  search: asyncQuery<string, User[]>({
+    initialResult: [],
+    debounce: 300,
+    query: (q) => api.search$(q),
+  }),
+});
+tree.$.users.refresh();         // reload (cancels in-flight)
+tree.$.search.input.set('q');   // drives the debounced pipeline
 
 // Lifecycle
 tree.destroy(); // Clean up all resources
