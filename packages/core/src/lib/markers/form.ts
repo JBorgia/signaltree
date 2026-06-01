@@ -162,6 +162,16 @@ export interface FormSignal<T extends Record<string, unknown>> {
   /** Get all current values */
   (): T;
 
+  /**
+   * v10.4 alias — returns the current form values, identical to calling
+   * the marker itself. Added because AI coding agents trained on form-state
+   * vocabularies (FormGroup, Formik, react-hook-form) consistently reach for
+   * `.data()` to read form values rather than calling the marker directly.
+   * Both forms work; calling the marker (`form()`) is preferred in new code
+   * for consistency with other markers (`status()`, `entityMap()`).
+   */
+  data(): T;
+
   /** Set all values at once */
   set(values: Partial<T>): void;
 
@@ -579,6 +589,12 @@ export function createFormSignal<T extends Record<string, unknown>>(
 
   // Add all properties
   formSignalFn.$ = fieldsProxy;
+
+  // v10.4 — .data() alias. Identical to calling the marker itself.
+  // Absorbs the form-vocab hallucination ("how do I read form values?
+  // .data()") observed in the v10.3.3 AI-codegen benchmark as the last
+  // residual marker-method confusion class.
+  formSignalFn.data = (): T => valuesSignal();
 
   formSignalFn.set = (values: Partial<T>): void => {
     valuesSignal.update((curr) => ({ ...curr, ...values }));

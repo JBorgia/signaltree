@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/core",
-  "version": "10.3.3",
+  "version": "10.4.0",
   "description": "Reactive JSON for Angular. State as shape. Signals at every path.",
   "license": "MIT",
   "type": "module",

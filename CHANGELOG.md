@@ -1,3 +1,47 @@
+## 10.4.0
+
+### ✨ `form.data()` — value-read alias to close the last residual benchmark hallucination
+
+The v10.3.3 AI-codegen benchmark surfaced one remaining marker-method hallucination class: **`tree.$.form.data()`** (count: 2). Models trained on form-state vocabularies (Angular FormGroup, Formik, react-hook-form) consistently reach for `.data()` to read form values rather than calling the marker directly.
+
+Same "meet AI where it is" pattern that v10.2 applied to the `status` marker (`.start()` / `.setSuccess()` / `.succeed()` / `.fail()`): rather than fight the linguistic gravity, accept the form models reach for. v10.4 adds `.data()` on the `form` marker as a **first-class alias** that returns the same value as calling the marker itself:
+
+```typescript
+const tree = signalTree({
+  profile: form<{ name: string; email: string }>({
+    initial: { name: '', email: '' },
+  }),
+});
+
+// Both forms work and return identical values:
+tree.$.profile();           // canonical — call the marker
+tree.$.profile.data();      // v10.4 alias — returns the same T
+
+// Field-level signals still recommended for templates / computed:
+tree.$.profile.$.name();    // string
+```
+
+No new state. The alias delegates to the same internal `valuesSignal()`. JSDoc on the alias documents the canonical preference. No deprecation pressure on existing code calling the marker directly.
+
+### Spec coverage
+
+- 2 new tests in `form.spec.ts` verifying `data()` returns identical values to calling the marker and stays in sync through field updates.
+
+### Documentation
+
+- Agent skill SKILL.md updated to mention the v10.4 alias in the form marker entry.
+- llms.txt / llms-full.txt / packages/core/README.md will be updated in the next quarterly priming-file refresh (not blocking — agents already pick up the canonical via calling the marker).
+
+### Why this matters for AI codegen
+
+This is the last known residual hallucination class from the v10.3.3 benchmark. Predicted impact on next quarterly run: **~98% → 99-100% on primed averages, all 6 agents at ceiling**. The doc-patch quadrilogy (10.3.0–10.3.3) raised the ceiling from 91% to 98%; this alias should close the remaining 2pp by absorbing the one form-vocabulary reflex that survived the cleanup.
+
+### Breaking changes
+
+**None.** `.data()` is purely additive.
+
+---
+
 ## 10.3.3
 
 Documentation-only patch — fixes the SignalTree agent skill files (`docs/skills/using-signaltree/SKILL.md` + reference deep-dives + per-package sub-skills). These ship in the npm tarball at `node_modules/@signaltree/core/skills/` and are loaded by name by Cursor / Claude Code / SKILL.md-aware harnesses.

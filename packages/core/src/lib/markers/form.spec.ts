@@ -104,6 +104,31 @@ describe('form() marker', () => {
         email: 'john@example.com',
       });
     });
+
+    describe('v10.4 .data() alias', () => {
+      it('should return the same values as calling the marker itself', () => {
+        const formSignal = createFormSignal(
+          form<TestFormData>({ initial: defaultFormData })
+        );
+        expect(formSignal.data()).toEqual(formSignal());
+        expect(formSignal.data()).toEqual(defaultFormData);
+      });
+
+      it('should reflect updates through .data()', () => {
+        const formSignal = createFormSignal(
+          form<TestFormData>({ initial: defaultFormData })
+        );
+        formSignal.$.name.set('Alice');
+        formSignal.$.email.set('alice@example.com');
+        expect(formSignal.data()).toEqual({
+          ...defaultFormData,
+          name: 'Alice',
+          email: 'alice@example.com',
+        });
+        // Both forms stay in sync
+        expect(formSignal.data()).toEqual(formSignal());
+      });
+    });
   });
 
   describe('set and patch methods', () => {
