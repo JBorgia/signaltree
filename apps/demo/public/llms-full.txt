@@ -38,9 +38,9 @@ const store = signalTree({
 
 // With config:
 const store2 = signalTree(initialState, {
-  batchUpdates: true,      // default — microtask-level notification batching
-  equalityFn: Object.is,   // custom signal equality
-  treeName: 'AppStore',    // for devtools labeling
+  batchUpdates: true,         // default — microtask-level notification batching
+  useShallowComparison: true, // switch leaf signal equality from deepEqual to Object.is
+  treeName: 'AppStore',       // for devtools labeling
 });
 ```
 
@@ -59,14 +59,15 @@ Both `store.$` and `store.state` point to the same TreeNode. Use whichever reads
 ```typescript
 store.$.user.name.set('Bob');
 store.$.user.age.update((n) => n + 1);
-store.$.user({ name: 'Carol', age: 25 });   // replace a whole branch
-store({ user: { name: 'Dave', age: 40 }, settings: { theme: 'dark' } }); // replace full state
+store.$.user({ name: 'Carol', age: 25 });   // partial deep-merge update; sibling keys preserved
+store({ user: { name: 'Dave', age: 40 }, settings: { theme: 'dark' } }); // partial deep-merge of root; keys not in payload preserved
+store();                                    // no-arg call returns the current snapshot
 ```
 
 ### Lifecycle
 
 ```typescript
-store.destroy();                       // tears down all enhancer resources in reverse order
+store.destroy();                       // runs registered cleanup hooks in registration order
 store.destroyed();                     // Signal<boolean>
 store.registerCleanup(() => ws.close()); // custom hook called during destroy
 ```
@@ -95,7 +96,7 @@ store.$.users.setAll(users);
 store.$.users.upsertOne(user);
 store.$.users.upsertMany(users);
 store.$.users.updateOne(id, changes);
-store.$.users.updateMany([{ id, changes }, ...]);
+store.$.users.updateMany([id1, id2, id3], { active: false }); // shared Partial<E> applied to every id — NOT NgRx-style [{id, changes}]
 store.$.users.updateWhere(pred, changes);
 store.$.users.removeOne(id);
 store.$.users.removeMany(ids);
@@ -104,7 +105,7 @@ store.$.users.clear();
 
 // Queries (all return signals)
 store.$.users.all();              // Signal<User[]>
-store.$.users.byId(id);           // Signal<User | undefined>
+store.$.users.byId(id);           // EntityNode<User> | undefined — invoke: .byId(id)?.() → User | undefined
 store.$.users.count();            // Signal<number>
 store.$.users.has(id);            // Signal<boolean>
 store.$.users.ids();              // Signal<number[]>
@@ -128,20 +129,28 @@ const store = signalTree({
   },
 });
 
-// Read
-store.$.users.loading.state();      // Signal<LoadingState>
-store.$.users.loading.error();      // Signal<ApiError | null>
-store.$.users.loading.isLoading();  // Signal<boolean>
-store.$.users.loading.isLoaded();
-store.$.users.loading.isError();
-store.$.users.loading.isNotLoaded();
+// Read — v10.3 canonical (bare names)
+store.$.users.loading.state();      // LoadingState (calling Signal<LoadingState>)
+store.$.users.loading.error();      // ApiError | null
+store.$.users.loading.loading();    // boolean
+store.$.users.loading.loaded();     // boolean
+store.$.users.loading.hasError();   // boolean
+store.$.users.loading.notLoaded();  // boolean
+// Deprecated through v10.x, removed v11: .isLoading, .isLoaded, .isError, .isNotLoaded
+// (same Signal instance — both work; canonical preferred in new code)
 
-// Mutate
+// Mutate — canonical methods
 store.$.users.loading.setLoading();
 store.$.users.loading.setLoaded();
 store.$.users.loading.setError(err);
 store.$.users.loading.setNotLoaded();
 store.$.users.loading.reset();
+
+// v10.2+ Promise-vocabulary aliases (identical semantics, no args)
+store.$.users.loading.start();      // === setLoading()
+store.$.users.loading.setSuccess(); // === setLoaded() — NO ARGS
+store.$.users.loading.succeed();    // === setLoaded()
+store.$.users.loading.fail(err);    // === setError(err)
 ```
 
 ### `stored(key, defaultValue, options?)`
@@ -166,9 +175,9 @@ store.$.settings.theme.reload();  // re-read from localStorage
 
 Supports versioning and migration functions via the third argument. Use for individual per-leaf persistence; use the `persistence()` enhancer for tree-wide persistence with storage adapters.
 
-### `form<T>(config)` (from `@signaltree/ng-forms` integration)
+### `form<T>(config: FormConfig<T>)`
 
-Tree-integrated form with validation, wizard, and persistence. Materializes into a form signal exposing field state, validation status, and submit/reset helpers. See `@signaltree/ng-forms` documentation for full config schema.
+Tree-integrated form marker, **exported from `@signaltree/core`** (not from `@signaltree/ng-forms`). Materializes into a form signal exposing field state, validation status, and submit/reset helpers. Requires `{ initial: T, validators?, asyncValidators?, wizard? }`. `@signaltree/ng-forms` is a separate **bridge** that binds these markers to Angular `FormGroup` — useful but not required.
 
 ### Custom markers via `registerMarkerProcessor(spec)`
 
@@ -278,7 +287,7 @@ const store = signalTree({ count: 0, items: [] })
 
 store.batch(() => {
   store.$.count.set(10);
-  store.$.items.push({ id: 1 });
+  store.$.items.update((arr) => [...arr, { id: 1 }]); // .push() doesn't exist — arrays live in a WritableSignal
 });
 
 store.undo();
@@ -303,6 +312,8 @@ store.$.count((n) => n + 1);            // → store.$.count.update((n) => n + 1
 
 **This is not a runtime proxy.** The transform runs at build time and disappears in production — there is no wrapper function, no `Proxy` object, no runtime overhead. Install as a dev dependency, register the Vite or Webpack plugin, and the transform compiles away.
 
+> **Configure `rootIdentifiers`**: the plugin's default is `['tree']`. If your tree variable is named `store` or `state` (common in service facades), pass `{ rootIdentifiers: ['tree', 'store', 'state'] }` to the plugin options — variables not in this list are silently skipped.
+
 ---
 
 ## Subpath imports
@@ -310,11 +321,12 @@ store.$.count((n) => n + 1);            // → store.$.count.update((n) => n + 1
 Specialized APIs live in subpaths to keep the main barrel small:
 
 ```typescript
-import { TREE_PRESETS, createDevTree, createProdTree } from '@signaltree/core/presets';
 import { SecurityValidator, SecurityPresets } from '@signaltree/core/security';
-import { createEditSession } from '@signaltree/core/edit-session';
+import { createEditSession, createTreeEditSession } from '@signaltree/core/edit-session';
 import { createStorageAdapter, createIndexedDBAdapter } from '@signaltree/core/storage';
 ```
+
+The only published subpaths in `@signaltree/core` are `./security`, `./edit-session`, and `./storage`. The main barrel (`@signaltree/core`) re-exports everything; modern bundlers tree-shake unused symbols regardless.
 
 ### Async — `asyncSource` and `asyncQuery` markers (canonical, v9.5+)
 
@@ -531,7 +543,7 @@ This is the pattern enforced in production migrations. The `$` access stays read
 | `status` | `.notLoaded` | `.isNotLoaded` |
 | `status` | `.hasError` | `.isError` |
 | `entityMap` | `.empty` | `.isEmpty` |
-| `form` | `.dirty`, `.valid`, `.touched`, `.pristine` | (already bare — unchanged) |
+| `form` | `.dirty`, `.valid`, `.touched`, `.submitting` | (already bare — unchanged) |
 | `asyncSource` | `.loading`, `.error`, `.data` | (already bare — unchanged) |
 | `asyncQuery` | `.loading`, `.error`, `.data` | (already bare — unchanged) |
 
@@ -591,7 +603,7 @@ For **input-driven queries** (debounced search, filtered fetch), use `asyncQuery
 | "Markers must live at the tree root." | Comparison to NgRx `with*` features. | Markers attach at **any node, any depth**. The walker tracks the path. |
 | "Derived state must live in a separate file, breaking the single-tree illusion." | Mixing up `derivedFrom` (file-org helper) with the actual `.derived($)` method. | `.derived()` merges computed signals **into the tree at arbitrary paths**, alongside source properties. The "single tree" is preserved. |
 | "`derivedFrom(tree, fn)` returns a read-only projection." | Hallucinated signature. | Real signature: `derivedFrom<TTree>()(fn)`. Curried. Zero runtime cost. Pure file-org helper for multi-file derived. |
-| "SignalTree has explicit subpath isolation as a built-in feature." | Misreading the docs. | No subpath-isolation API exists. `createEditSession(initial)` is a value-level undo/redo primitive (NOT tree-bound — that's planned for v10.1). For write encapsulation use `@signaltree/events` or a service facade. |
+| "SignalTree has explicit subpath isolation as a built-in feature." | Misreading the docs. | No subpath-isolation API exists. `createEditSession(initial)` is a value-level undo/redo primitive; for path-bound drafts use `createTreeEditSession(accessor)` (v10.1+, in `@signaltree/core/edit-session`). For write encapsulation use `@signaltree/events` or a service facade. |
 | "Time-travel is in `@signaltree/time-travel`." | Made-up package name. | Import `timeTravel` from `@signaltree/core`. No such separate package. |
 | "Persistence is in `@signaltree/storage`." | Made-up package name. | Use `stored()` marker (per-leaf) or `persistence()` enhancer (tree-wide) from `@signaltree/core`. |
 | "Batching is opt-in only." | Conflating automatic notification batching with the `batching()` enhancer. | Automatic microtask notification batching is built into core (default on). The enhancer adds explicit `.batch(fn)` / `.coalesce(fn)`. |
@@ -603,7 +615,7 @@ For **input-driven queries** (debounced search, filtered fetch), use `asyncQuery
 | "`tree.$` and `tree.state` are different objects." | Plausible-sounding inference. | Both are typed `TreeNode<T>` and reference the same reactive proxy. `state` is an alias for `$`. For a non-reactive full snapshot, call `tree()`. |
 | "The `form()` marker lives in `@signaltree/ng-forms`." | Package-boundary inference. | `form()` ships in `@signaltree/core`. `@signaltree/ng-forms` is a *bridge* for binding tree nodes to Angular `FormGroup`. |
 | "entityMap exposes `.entities()` as the read accessor." | Reasonable guess. | Real accessor is `.all()`. Other reads: `.byId(id)`, `.where(pred)`, `.find(pred)`, `.count()`, `.has(id)`, `.ids()`. |
-| "status exposes `.setSuccess()`." | NgRx/Redux convention bleed. | Real methods: `.setLoading()`, `.setLoaded()`, `.setError(err)`, `.setNotLoaded()`, `.reset()`. There is no `.setSuccess()`. |
+| "status exposes `.setSuccess()`." | NgRx/Redux convention bleed. | Canonical methods are `.setLoading()`, `.setLoaded()`, `.setError(err)`, `.setNotLoaded()`, `.reset()`. As of v10.2, Promise-vocabulary aliases `.start()` / `.setSuccess()` / `.succeed()` / `.fail(err)` also work — same semantics, no second source of truth. |
 | ".derived('$.path', derivedFn)' is a two-arg subpath form." | Hallucinated overload. | `.derived($ => ({...}))` is single-arg. The shape of the returned object determines which paths the computed signals attach to via deep-merge. |
 | "NgRx SignalStore mutations are impossible from components by design." | Overstating defaults. | Components can mutate when `protectedState: false` is set on the store, or when the store exposes a method that mutates. Both libraries are guarded-by-default but unlockable. |
 

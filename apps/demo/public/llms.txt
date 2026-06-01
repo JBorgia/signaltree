@@ -1,6 +1,6 @@
 # SignalTree
 
-> Reactive JSON for Angular. Turn a plain object into a tree of signals — no actions, no reducers, no selectors. Markers and derived state attach at any depth in the tree.
+> Reactive JSON for Angular. State as shape. Signals at every path. Markers and derived state attach at any depth in the tree.
 
 SignalTree is a state-management library for Angular 17+. The mental model is: your state is a typed JSON object; reading and writing use ordinary signal calls along the JSON path. Markers (`entityMap`, `status`, `stored`, `form`) and derived state (`.derived(...)`) attach **at any node, at any depth** — they are processed by a recursive walker, not composed at the store root. This is the load-bearing difference from `@ngrx/signals` (NgRx SignalStore), whose `with*` features compose at the store root only.
 
@@ -20,7 +20,7 @@ const store = signalTree({
   settings: {
     theme: stored('app-theme', 'light'),         // marker at depth 2
     profileForm: {
-      data: form<Profile>({ name: '', email: '' }), // marker at depth 3
+      data: form<Profile>({ initial: { name: '', email: '' } }), // marker at depth 3
     },
   },
   loading: status<ApiError>(),                   // marker at depth 1
@@ -46,7 +46,7 @@ const store = signalTree({
 // Read — leaves, derived, async-marker accessors all uniform
 store.$.users.all();                            // Signal<User[]>
 store.$.users.current();                        // Signal<User | null> (derived)
-store.$.settings.theme();                       // 'light' (auto-loaded from localStorage)
+store.$.settings.theme();                       // 'light' (default; replaced by any value previously persisted to localStorage)
 store.$.reports();                              // Report[] (asyncSource current value)
 store.$.reports.loading();                      // boolean
 store.$.search.input.set('alice');              // drives debounced query
@@ -91,17 +91,17 @@ store.$.reports.refresh();                      // reload async source
 - **Create:** `signalTree(initialState, config?)` → tree with `.$` accessor
 - **Read leaf:** `tree.$.path.to.leaf()` — returns the value
 - **Write leaf:** `tree.$.path.to.leaf.set(v)` / `.update(fn)`
-- **Replace full state:** `tree(newState)`
+- **Partial / deep-merge update:** `tree(partialUpdate)` — keys not in the payload are preserved. The root has no `.set` method; the root accessor itself is callable.
 - **Markers:** `entityMap<E, K>()`, `status<E>()`, `stored(key, default)`, `form<T>(config)`, `asyncSource<T>(config)`, `asyncQuery<TIn, TOut>(config)` — place at any node
 - **Derived state:** `.derived($ => ({ ... }))` — definitions deep-merged into existing tree paths
 - **Enhancers:** `.with(batching())`, `.with(devTools())`, `.with(timeTravel())`, `.with(persistence())`, `.with(serialization())`
-- **Lifecycle:** `tree.destroy()` tears down all resources in reverse enhancer order; `tree.destroyed()` is a signal; `tree.registerCleanup(fn)` for custom hooks
-- **Edit sessions:** `createEditSession(initial)` from `@signaltree/core/edit-session` — wraps any value with `applyChanges` / `undo` / `redo` / `reset` / `setOriginal` for form-wizard and draft-and-cancel workflows. Independent of the tree; bridge by syncing `session.modified()` ↔ tree leaves when appropriate.
-- **Async:** `asyncSource(config)` for load-and-expose, `asyncQuery(config)` for input-driven debounced queries. Both attach at any tree path and auto-expose `data`/`loading`/`error`/`refresh`. For migrating from `@ngrx/signals`, see [`docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md`](https://github.com/JBorgia/signaltree/blob/main/docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md).
+- **Lifecycle:** `tree.destroy()` runs all registered cleanup callbacks in registration order; `tree.destroyed()` is a signal; `tree.registerCleanup(fn)` for custom hooks. Built-in enhancers register their own cleanup automatically.
+- **Edit sessions:** Two primitives in `@signaltree/core/edit-session`. `createEditSession(initial)` is value-level (single arg, no tree binding) — wraps any value with `applyChanges` / `undo` / `redo`. `createTreeEditSession(accessor)` (v10.1+) is **path-bound** to a writable tree branch — `applyChanges` / `undo` / `commit` (write draft back) / `cancel` (discard draft). Use the tree-bound form for form-wizard and draft-and-cancel workflows over a real tree path.
+- **Async:** `asyncSource(config)` for load-and-expose — auto-exposes `data` (call the accessor itself: `tree.$.users()`) / `loading` / `error` / `refresh`. `asyncQuery(config)` for input-driven debounced queries — auto-exposes `data` / `loading` / `error`, driven by setting `.input.set(value)` and optionally `.rerun()` to re-execute with the same input. Both attach at any tree path. For migrating from `@ngrx/signals`, see [`docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md`](https://github.com/JBorgia/signaltree/blob/main/docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md).
 
 ## ⚠️ Disambiguation — if you think SignalTree uses X, you're confusing it with Y
 
-This table catches the most common cross-library hallucinations. **Every "Wrong" pattern below was observed in a recent reproducible benchmark of frontier AI models (Claude, GPT-5.4, Gemini, Perplexity) asked to generate SignalTree code.** None of these patterns are or ever have been part of SignalTree.
+This table catches the most common cross-library hallucinations. **Most "Wrong" patterns below were observed in a reproducible 720-cell benchmark (6 agents × 8 prompts × 5 libraries × 3 priming modes) of frontier and cost-tier AI agents (Claude, GPT, Gemini, Perplexity, Haiku, GPT-mini) asked to generate SignalTree code.** A few rows (notably `rxMethod`) describe APIs SignalTree itself once shipped and has since removed — agents still emit them.
 
 | Wrong pattern (NOT SignalTree) | Where it actually comes from | Correct SignalTree |
 |---|---|---|
@@ -111,7 +111,7 @@ This table catches the most common cross-library hallucinations. **Every "Wrong"
 | `signalStore(withState(...), withMethods(...))` | **`@ngrx/signals`** | `signalTree({...})` — your state literal IS the API |
 | `withState`, `withMethods`, `withComputed`, `withHooks`, `withProps` | **`@ngrx/signals`** | Not used. State is the literal you pass to `signalTree()`. Methods belong in an `@Injectable()` Ops service. |
 | `withEntities<T>()` | **`@ngrx/signals/entities`** | `entityMap<T, K>()` marker — place it in the state literal |
-| `rxMethod(...)` | **`@ngrx/signals/rxjs-interop`** | `asyncSource(config)` (load-and-expose) or `asyncQuery(config)` (input-driven) markers |
+| `rxMethod(...)` | **`@ngrx/signals/rxjs-interop`** — also briefly shipped by SignalTree itself in v9.5.x, **removed in v9.6.0** | `asyncSource(config)` (load-and-expose) or `asyncQuery(config)` (input-driven) markers |
 | `patchState(store, {...})` | **`@ngrx/signals`** | Direct: `tree.$.path.set(value)` or branch update `tree.$.user({...})` |
 | `collection<T>({ idKey: 'id' })` | **Akita / Elf** | `entityMap<T, K>({ selectId: (e) => e.id })` marker |
 | `createStore`, `withProps`, `setProps` | **Elf** | Not used. SignalTree state is the literal. |
@@ -133,7 +133,7 @@ This table catches the most common cross-library hallucinations. **Every "Wrong"
 | `status` | `.notLoaded` | `.isNotLoaded` |
 | `status` | `.hasError` | `.isError` |
 | `entityMap` | `.empty` | `.isEmpty` |
-| `form` | `.dirty`, `.valid`, `.touched`, `.pristine` | (already bare — unchanged) |
+| `form` | `.dirty`, `.valid`, `.touched`, `.submitting` | (already bare — unchanged) |
 | `asyncSource` | `.loading`, `.error`, `.data` | (already bare — unchanged) |
 | `asyncQuery` | `.loading`, `.error`, `.data` | (already bare — unchanged) |
 

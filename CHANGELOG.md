@@ -1,3 +1,46 @@
+## 10.3.2
+
+Documentation-only patch — fixes the dedicated AI priming files (`llms.txt`, `llms-full.txt`) that ship in the npm tarball at `node_modules/@signaltree/core/llms*.txt` and are served from `signaltree.io/llms.txt`.
+
+Reproducible 4-auditor workflow (2 per file × signature + logic) ran against both files. 41 raw findings, ~24 actionable after synthesis. All fixed:
+
+**Shared bugs (existed in both files):**
+- `form` accessor row listed phantom `.pristine` — replaced with the real `.submitting`.
+- `tree.destroy()` documented as "reverse enhancer order" — fixed to "registration order" (matches `signal-tree.ts:565-578`).
+- Object-arg root calls described as "replace" — they're deep-merge partial updates; sibling keys are preserved.
+- `rxMethod` row attributed only to `@ngrx/signals/rxjs-interop` — now notes the v9.6.0 removal from SignalTree itself.
+- Tagline drift from v10.3 canonical — restored to "Reactive JSON for Angular. State as shape. Signals at every path."
+
+**`llms.txt` specific:**
+- `form<Profile>({ name: '', email: '' })` — missing `{ initial: ... }` wrapper; fixed to canonical config shape.
+- "auto-loaded from localStorage" `stored()` comment misleading on fresh load.
+- Edit-session paragraph conflated `createEditSession` (value-level) with `createTreeEditSession` (path-bound, v10.1+); split them.
+- "Every wrong pattern was AI-generated" overclaimed (rxMethod was SignalTree's own removed API); softened. Replaced "GPT-5.4" wording with the actual 6-agent matrix description.
+- `asyncQuery` does NOT have `.refresh()` — input-driven via `.input.set()`. Disambiguated from `asyncSource`'s `.refresh()`.
+
+**`llms-full.txt` specific:**
+- Fabricated `@signaltree/core/presets` subpath import (`TREE_PRESETS`, `createDevTree`, `createProdTree` — none exist). Removed.
+- `signalTree(state, { equalityFn: Object.is })` — `equalityFn` isn't a `TreeConfig` field. Replaced with the real `useShallowComparison: boolean`.
+- `updateMany([{ id, changes }, ...])` — NgRx shape. SignalTree's real signature is `(ids: K[], changes: Partial<E>)`.
+- `byId(id); // Signal<User | undefined>` — actually returns `EntityNode<E> | undefined`; invoke as `.byId(id)?.()`.
+- Status section taught deprecated `.isLoading()`-prefix as primary; replaced with v10.3 canonical bare-name predicates plus the v10.2 Promise-vocab aliases.
+- `form<T>(config)` mis-attributed to `@signaltree/ng-forms` — it's exported from `@signaltree/core`; `@signaltree/ng-forms` is the FormGroup bridge.
+- `.push({ id: 1 })` on an array leaf signal — arrays live in a `WritableSignal<T[]>`; use `.update(arr => [...arr, x])`.
+- Stale myth row claimed `setSuccess` doesn't exist; updated to acknowledge v10.2 Promise-vocab aliases.
+- Stale "createTreeEditSession is planned for v10.1" — it shipped in v10.1 and we're now at 10.3.2.
+- `callable-syntax` plugin's `rootIdentifiers` default is `['tree']` — added the config caveat so `store`/`state` variables aren't silently skipped.
+
+Why this matters: these are the priming files the v10.2 benchmark uses as input. The README and llms files together form the AI's view of SignalTree's API surface. Every bug in this surface was a residual hallucination in the benchmark's primed-run column. Fixing them is the most direct path to the next quarterly run's accuracy lift.
+
+Three consecutive docs patches (10.3.0 → 10.3.1 → 10.3.2) closed:
+- Root README: 22 fixes (signatures + logic + tagline)
+- Tarball README: 22 fixes (signatures + logic + tagline + package description)
+- Priming files: 24 fixes (signatures + logic + tagline)
+
+Combined: 68 documented inaccuracies eliminated across the AI-discoverability surface in 4 days. Predicted impact on next quarterly benchmark: +3-7pp on primed avg, frontier code-tuned models approaching the 100/100 ceiling.
+
+---
+
 ## 10.3.1
 
 Documentation-only patch. No code changes.
