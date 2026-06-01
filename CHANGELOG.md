@@ -1,3 +1,44 @@
+## 10.3.1
+
+Documentation-only patch. No code changes.
+
+Reproducible audit workflow ran 3 parallel auditors against
+`packages/core/README.md` (the README that ships in the npm tarball and
+serves as the AI priming surface). 37 raw findings, 22 actionable after
+synthesis. Fixed:
+
+**Wrong API in canonical examples (would not compile or would crash):**
+- `import { ..., entities } from '@signaltree/core'` — `entities` is not exported. Replaced all 4 sites with `entityMap`.
+- `form({ firstName: '', lastName: '' })` — `form<T>(config)` requires `{ initial: T }`. Fixed the canonical pattern.
+- `tree.set((state) => ({...}))` — `tree.set` doesn't exist. The root accessor itself is callable: `tree(updater)`.
+- `tree.$.users.updateMany([{ id, changes }])` — that's the NgRx shape. SignalTree's signature is `updateMany(ids[], changes)`.
+- `tree.$.products.all.filter(...)` — `.all` is `Signal<E[]>`, not an array. Use `.where(predicate)` for a reactive filter or `.all().filter()` for a one-shot read.
+- `tree.$.users.byId(id)()` — `byId` returns `EntityNode<E> | undefined`. Missing `?.` crashes on miss. Fixed 5 sites.
+- `contactForm.setSubmitting(true/false)` — not public. Use `contactForm.submit(handler)` which manages the toggle internally.
+- `import { batching } from '@signaltree/core/enhancers/batching'` — subpath not in `package.json` exports. Tree-shaking from the main barrel is what we ship.
+
+**Stale tagline / deprecated APIs as primary:**
+- Tagline reverted to v10.2-era "JSON branches, reactive leaves. No actions. No reducers. No selectors." — restored to v10.3 canonical "Reactive JSON for Angular. State as shape. Signals at every path." (also fixed the `package.json` description that mirrored it).
+- Status section taught deprecated `.isLoading()` / `.isLoaded()` / `.isError()` as primary. Replaced with v10.3 bare-name canonical (`.loading()`, `.loaded()`, `.hasError()`) plus the v10.2 Promise-vocab aliases (`.start()`, `.setSuccess()`, `.succeed()`, `.fail()`).
+- Status method-names table miscategorized `.loading` and `.error` as "v10.2 aliases" — they're canonical accessors, not aliases. Cleaned up.
+- `form` row listed `.pristine` — that's a `FormControl` field, not a `FormSignal` field. Removed.
+- Disambiguation row for `withProps` listed it under both `@ngrx/signals` and Elf — only Elf is correct.
+- `rxMethod` row now notes the v9.6.0 removal so AI agents see the full history.
+
+**Documented but not exported:**
+- `createAsyncOperation` / `trackAsync` — re-routed to `asyncSource` / `asyncQuery` markers (the canonical async story in v10.x).
+
+**Logic / framing:**
+- Callable-syntax section reframed: branches are natively callable for reads AND writes; the plugin only aligns LEAF writes with that shape.
+- Benchmark arithmetic clarified: "720 cells (6 agents × 8 prompts × 5 libraries × 3 priming modes)".
+- "All predicates are Signal<boolean>" softened to distinguish boolean predicates from value accessors like `.error` and `.data`.
+
+The audit also confirmed 8 claims as accurate (no changes): marker accessor table, `byId(1)?.()` at the inline canonical example, `submit<R>(handler)` description, the rxMethod-to-asyncSource redirect, asyncSource materializer shape, status canonical setters, entity update method shapes, and EntityNode cursor semantics.
+
+Why this matters: the tarball README is what AI agents see after `npm install @signaltree/core` — every wrong API in this file directly feeds the residual hallucinations the v10.2 benchmark measured. Fixing them should close part of the 91→100 ceiling gap on the next benchmark run.
+
+---
+
 ## 10.3.0
 
 ### 🎯 Marker accessor shape — UNIFIED across all markers
