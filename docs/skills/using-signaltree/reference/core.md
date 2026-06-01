@@ -157,10 +157,10 @@ tree.$.load.notLoaded(); // boolean
 // — same Signal instance, both work; canonical preferred in new code.
 
 // v10.2+ Promise-vocabulary aliases (identical semantics, no args for booleans)
-tree.$.load.start();      // === setLoading()
-tree.$.load.setSuccess(); // === setLoaded() — NO ARGS
-tree.$.load.succeed();    // === setLoaded()
-tree.$.load.fail(err);    // === setError(err)
+tree.$.load.start();                       // === setLoading()
+tree.$.load.setSuccess();                  // === setLoaded() — NO ARGS
+tree.$.load.succeed();                     // === setLoaded()
+tree.$.load.fail('network failure');       // === setError('network failure')
 
 // Raw state and error if you need them
 tree.$.load.state();  // LoadingState (state is WritableSignal<LoadingState>)
