@@ -2,7 +2,7 @@
 
 > Reactive JSON for Angular. State as shape. Signals at every path. Markers and derived state attach at any depth in the tree.
 
-SignalTree is a state-management library for Angular 17+. The mental model is: your state is a typed JSON object; reading and writing use ordinary signal calls along the JSON path. Markers (`entityMap`, `status`, `stored`, `form`) and derived state (`.derived(...)`) attach **at any node, at any depth** — they are processed by a recursive walker, not composed at the store root. This is the load-bearing difference from `@ngrx/signals` (NgRx SignalStore), whose `with*` features compose at the store root only.
+SignalTree is a state-management library for Angular 17+. The mental model is: your state is a typed JSON object; reading and writing use ordinary signal calls along the JSON path. Markers (`entityMap`, `status`, `stored`, `form`) and derived state (`.derived(...)`) attach **at any node, at any depth** — they are processed by a recursive walker, not composed at the store root. This is the load-bearing difference from `@ngrx/signals` (NgRx SignalStore, as of v20.1), whose `with*` features compose at the store root only. **Why it matters:** for hierarchical domains (multi-panel workspaces, per-entity forms, nested dashboards) each node owns its form/async/status state co-located by structural path — instead of a flat root namespace of prefixed slices (`editorDraft`, `editorSave`, `sidebarFilters`…) or one nested store per panel. State lives at the path that describes it. For genuinely flat state the difference is negligible.
 
 ## Canonical example
 
@@ -172,6 +172,7 @@ async load() {
     this.$.loadState.setError(err);
   }
 }
+// ^ ANTI-PATTERN. Do not copy the block above. The canonical form follows. ↓
 
 // ✅ DO (canonical — marker handles status wiring)
 signalTree({
@@ -196,6 +197,9 @@ For **input-driven queries** (debounced search, filtered fetch), use `asyncQuery
 - **FALSE:** "localStorage persistence requires `@signaltree/storage`." → No such package. Use the `stored()` marker or `persistence()` enhancer from `@signaltree/core`.
 - **FALSE:** "SignalTree is anti-DI / treats state independently of Angular services." → SignalTree is DI-agnostic. The documented pattern wraps the tree in an `@Injectable()` service. See `docs/ai/LLM.md` and `docs/architecture/signaltree-architecture-guide.md`.
 - **FALSE:** "Callable syntax is a runtime proxy." → It's a build-time AST transform via Vite/Webpack plugin. Disappears in production builds.
+- **GOTCHA (typing):** The tree type is inferred — don't hand-write it. For derived-in-separate-files, derive it: `type AppTreeBase = ReturnType<typeof signalTree<ReturnType<typeof createBaseState>>>`. Widen literal leaves with casts (`null as number | null`, `'light' as 'light' | 'dark'`) or `.set()` won't type-check. `inject(APP_TREE)` must be typed as the post-`.derived().with()` type, not the bare base type, or enhancer methods (`.undo()`, `.batch()`) fail to resolve.
+- **GOTCHA (testing):** Any `TestBed` touching `AppStore` (directly or via a `providedIn: 'root'` consumer) must include `provideAppTreeForTesting()`, else it fails with `NG0201: No provider for APP_TREE`. Use a real seeded tree, not a mock; seed `T | null` leaves via `.set()` after injection, not via the state override. See `llms-full.txt` and `docs/skills/using-signaltree/reference/testing.md`.
+- **GOTCHA (templates):** Read in templates with direct signal calls — `{{ store.$.user.name() }}`, `@if (store.$.users.loading())`, `@for (u of store.$.users.all(); track u.id)`. Never `| async`, never `.value`.
 - **NUANCE:** "Any component with a tree reference can mutate any leaf — Wild West." → True by default. For unidirectional command flow opt into `@signaltree/events`. For runtime invariants opt into `@signaltree/guardrails`. For projection-style exposure use `.derived()` in a service facade. See `docs/architecture/signaltree-architecture-guide.md#recommended-default-architecture` for the production pattern.
 
 ## Links
@@ -210,3 +214,5 @@ For **input-driven queries** (debounced search, filtered fetch), use `asyncQuery
 - Myths and misconceptions: https://github.com/JBorgia/signaltree/blob/main/docs/myths-and-misconceptions.md
 - Agent skill (Cursor / Claude Code / generic harness): `docs/skills/using-signaltree/SKILL.md` (also shipped inside every `@signaltree/*` tarball)
 - `@ngrx/signals` migration playbook: `docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md`
+- Testing recipe (`provideAppTreeForTesting`, `NG0201`, seeding): `docs/skills/using-signaltree/reference/testing.md`
+- Production wiring + typing (`AppTreeBase`, ops, derived tiers): `docs/skills/using-signaltree/reference/patterns.md`

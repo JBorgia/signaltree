@@ -22,6 +22,21 @@ npm install @signaltree/core
 
 Requires Angular 17+ (signals support). Optional packages are listed at the end of this document.
 
+### Version → API availability
+
+All `@signaltree/*` packages publish in lockstep; the current line is **10.4.0** (`@signaltree/shared` trails at 9.2.x — internal-only, never imported directly). If you are pinned to an older version, these features do NOT exist yet — do not emit them:
+
+| Feature | Available from |
+|---|---|
+| `asyncSource` / `asyncQuery` markers | 9.5.0 |
+| `createTreeEditSession` (path-bound) | 10.1.0 |
+| `status` Promise-vocab aliases (`start`, `setSuccess`, `succeed`, `fail`) | 10.2.0 |
+| Bare predicate names (`.loading`, `.loaded`, `.empty`, …) as canonical; `is`-prefixed names become deprecated aliases | 10.3.0 |
+| `form().data()` value alias | 10.4.0 |
+| `memoization()` enhancer | **removed in 9.0.1** — use Angular `computed()` |
+
+When unsure of the installed version, check `node_modules/@signaltree/core/package.json`. Emit the canonical name, not a deprecated alias, in new code.
+
 ---
 
 ## Core API
@@ -77,6 +92,33 @@ store.registerCleanup(() => ws.close()); // custom hook called during destroy
 ## Markers
 
 Markers are placeholder objects in the initial-state literal that get materialized into fully-featured reactive sub-APIs during tree construction. **A marker can sit at any node, at any depth.** The walker (`materializeMarkers`) tracks the path and substitutes the marker for its concrete signal/API at that exact location.
+
+### Why depth-attachment is load-bearing (not just "different")
+
+This is the property that actually decides SignalTree vs `@ngrx/signals`. Consider a multi-panel workspace where each panel owns its *own* form, async source, and status — co-located with that panel's data:
+
+```typescript
+const store = signalTree({
+  workspace: {
+    editor: {
+      doc: asyncSource<Doc>({ initial: emptyDoc, load: () => api.doc$(id) }),
+      draft: form<Doc>({ initial: emptyDoc }),     // form marker, depth 3
+      save: status<ApiError>(),                    // status marker, depth 3
+    },
+    sidebar: {
+      filters: form<Filters>({ initial: defaultFilters }),  // another form, depth 3
+      results: asyncQuery<Filters, Hit[]>({ initialResult: [], query: (f) => api.search$(f) }),
+    },
+  },
+});
+
+store.$.workspace.editor.draft.dirty();   // each panel's state addressed by structural path
+store.$.workspace.sidebar.results();
+```
+
+Because `with*` features in `@ngrx/signals` (as of v20.1, the current line at the time of writing) compose **at the store root**, the equivalent there is either (a) one flat root namespace with prefixed keys — `editorDraft`, `editorSave`, `sidebarFilters`, `sidebarResults` — losing the structural grouping, or (b) a separate nested `signalStore` per panel that you wire together manually. SignalTree expresses it as **plain object nesting**, and the form/status/async APIs materialize exactly where you placed them. The win is *structural locality*: state lives at the path that describes it, so the tree shape mirrors the UI/domain shape instead of a flat slice registry.
+
+This is not "NgRx can't do it" — it can, via nested stores or flat slices. It's that SignalTree makes nesting the *default, zero-ceremony* expression, which is why an agent generating state for a hierarchical domain produces less code and fewer naming decisions. For genuinely flat state (one or two slices) the difference is negligible — see "When NOT to use SignalTree."
 
 ### `entityMap<Entity, Key>(config?)`
 
@@ -263,6 +305,41 @@ const store = signalTree(initialState).derived(tier1Derived);
 **`derivedFrom` is a typed-identity function with zero runtime cost.** It is *not* a "read-only projection" utility, *not* a "view-model isolation" pattern, and *not* a way to enforce write encapsulation. Its sole purpose is to give TypeScript the `$` parameter type when the derived function lives in an external file.
 
 The type signature is curried: `derivedFrom<TTree>()(fn)`. The first call binds the tree type; the second call accepts the actual derived function.
+
+---
+
+## Typing the tree (you almost never write the type by hand)
+
+The tree's type is **inferred** from the state literal — you rarely annotate it. The one place you need a name for it is when derived definitions live in separate files (so `derivedFrom<TTree>()` has a `$` type to bind). Derive that type from the state factory; never hand-write the shape:
+
+```typescript
+import { signalTree, entityMap } from '@signaltree/core';
+
+// 1. The state factory — the single source of truth for shape.
+export function createBaseState() {
+  return {
+    users: entityMap<User, number>(),
+    selectedUserId: null as number | null,   // cast widens the inferred leaf type
+    settings: { theme: 'light' as 'light' | 'dark' },
+  };
+}
+
+// 2. The base tree type — for derivedFrom<>() in external files.
+export type AppTreeBase = ReturnType<typeof signalTree<ReturnType<typeof createBaseState>>>;
+
+// 3. The full assembled tree type — INCLUDES enhancer methods (.undo, .batch, devTools handle…).
+export function createAppTree() {
+  return signalTree(createBaseState())
+    .derived(tier1Derived)
+    .with(batching())
+    .with(devTools());
+}
+export type AppTree = ReturnType<typeof createAppTree>;   // use THIS for inject(APP_TREE)
+```
+
+**Why the `as` casts in the state literal:** `null as number | null` and `'light' as 'light' | 'dark'` widen the inferred leaf type so `.set(42)` / `.set('dark')` type-check. Without the cast, TypeScript infers `null` and `'light'` (the literal), and any other value is a type error. This is the most common SignalTree type mistake agents make.
+
+**Why two type aliases:** `AppTreeBase` (bare `signalTree(state)`) is structurally *narrower* than `AppTree` (post-`.derived().with()`). `inject(APP_TREE)` must be typed `AppTree` — using `AppTreeBase` there drops the enhancer methods and fails with `TS2769`/`TS2339` when you call `.undo()` or `.batch()`. Use `AppTreeBase` only as the `derivedFrom<>()` parameter.
 
 ---
 
@@ -508,6 +585,82 @@ This is the pattern enforced in production migrations. The `$` access stays read
 
 ---
 
+## Consuming the tree in a component template
+
+Reads in templates are **direct signal calls** — no `async` pipe, no `.value`, no subscription. Markers' predicate signals drop straight into control flow:
+
+```typescript
+@Component({
+  template: `
+    @if (store.$.users.loading()) {
+      <spinner />
+    } @else if (store.$.users.empty()) {
+      <p>No users.</p>
+    } @else {
+      <ul>
+        @for (user of store.$.users.all(); track user.id) {
+          <li (click)="store.ops.users.select(user.id)">{{ user.name }}</li>
+        }
+      </ul>
+    }
+    <p>Selected: {{ store.$.users.selected()?.name ?? '—' }}</p>
+  `,
+})
+export class UserList {
+  protected readonly store = inject(AppStore);
+}
+```
+
+- **Never** wrap a tree read in `| async` — leaves are signals, not Observables.
+- **Never** read `.value` — call the signal: `store.$.x()`.
+- `@for` iterates the *value* of an array/`entityMap.all()` signal — call it: `store.$.users.all()`, not `store.$.users.all`.
+- Writes from the template go through ops methods, not `store.$.x.set()` inline, in the recommended architecture.
+
+---
+
+## Testing
+
+> **Single hard rule.** Every `TestBed` that constructs a service or component depending on `AppStore` — directly or transitively through any `providedIn: 'root'` consumer — **must** include `provideAppTreeForTesting()` in `providers`.
+
+Because `AppStore` is `providedIn: 'root'`, Angular instantiates it inside any `TestBed`; it then calls `inject(APP_TREE)`, which fails with **`NG0201: No provider found for InjectionToken APP_TREE`** unless the test registers the token. This is the single most common SignalTree test failure. Ship the testing provider alongside `provideAppTree()` from day one:
+
+```typescript
+// app-tree.testing.ts
+import { Provider } from '@angular/core';
+import { signalTree } from '@signaltree/core';
+import { APP_TREE, AppTree, createBaseState } from './app-tree';
+
+export function provideAppTreeForTesting(
+  overrides?: (s: ReturnType<typeof createBaseState>) => ReturnType<typeof createBaseState>,
+): Provider[] {
+  return [{
+    provide: APP_TREE,
+    // Tests skip production enhancers (devTools/batching/timeTravel); the bare tree is
+    // structurally narrower than AppTree, so bake the cast in here once.
+    useFactory: (): AppTree => {
+      const base = createBaseState();
+      return signalTree(overrides ? overrides(base) : base) as unknown as AppTree;
+    },
+  }];
+}
+```
+
+```typescript
+TestBed.configureTestingModule({ providers: [provideAppTreeForTesting()] });
+const tree = TestBed.inject(APP_TREE);
+tree.$.users.upsertOne({ id: 1, name: 'Ada' });   // seed via the public API
+expect(tree.$.users.count()).toBe(1);
+```
+
+Rules that prevent subtle test-only failures:
+
+- **Use a real tree, not a mock.** Real trees are cheap; mocking defeats `entityMap`/proxy semantics. `createBaseState()` must be **exported** from `app-tree.ts` — it's the seam that lets tests build an isolated state.
+- **Skip enhancers in tests** by default; layer `batching()` in only the spec that exercises it.
+- **The `overrides` callback must preserve structural shape.** A leaf seeded as `null` in production (`currentDriver: null`) is a *leaf*; returning an object for it from `overrides` silently turns it into a *branch*, and production code calling `.set(null)` then throws `set is not a function` — but only in that one spec. For `T | null` leaves, seed via `.set()` **after** injection instead: `tree.$.user.currentDriver.set({ id: 1 })`.
+- **Mock exactly one layer per test:** ops-class specs use a real seeded tree + real ops (SUT); component specs use a real tree + mocked ops (spy on `ops.<domain>.<method>` to assert dispatch).
+
+---
+
 ## ⚠️ Cross-library disambiguation (most common AI hallucinations)
 
 **Empirically validated against a reproducible benchmark of frontier AI agents (Claude Sonnet 4.6, GPT-5.4, Gemini 3.1 Pro, Perplexity Sonar Pro) asked to write SignalTree code with NO prior context.** Every wrong pattern below was actually generated by at least one model. None of these patterns are part of SignalTree.
@@ -582,6 +735,7 @@ async load() {
     this.$.loadState.setError(err);
   }
 }
+// ^ ANTI-PATTERN. Do not copy the block above. The canonical form follows. ↓
 
 // ✅ DO (canonical pattern in 9.5+)
 signalTree({
@@ -611,7 +765,7 @@ For **input-driven queries** (debounced search, filtered fetch), use `asyncQuery
 | "SignalTree is anti-DI / doesn't integrate with Angular services." | Marketing focus on the data-shape framing. | SignalTree is DI-agnostic. `@Injectable()` service-wrapping is the documented production pattern. |
 | "SignalTree has no answer to NgRx's `rxMethod`." | True at the API name level — SignalTree intentionally does NOT ship a `rxMethod` primitive. | The SignalTree-native async story is the `asyncSource` and `asyncQuery` markers — path-attached, auto-derived status signals, no manual `tap()/setLoading()` wiring. For migrating from NgRx `rxMethod` see the dedicated migration guide. |
 | "Deep object spreading is required for nested updates in NgRx." | Outdated NgRx information. | Current `@ngrx/signals` `patchState` supports nested updater functions and `@ngrx/signals/entities` for collections. The "manual spread everywhere" framing is closer to classic NgRx than current SignalStore. |
-| "`@signaltree/schema` and `@signaltree/guardrails` don't exist." | Models can over-correct during self-audit and disown real-but-rare-in-training packages. | Both are real, published v9.3.0. `schema` is Standard Schema integration. `guardrails` is dev-mode invariants and performance monitoring. Real export from guardrails is `guardrails(...)`, not `withGuardrails(...)`. |
+| "`@signaltree/schema` and `@signaltree/guardrails` don't exist." | Models can over-correct during self-audit and disown real-but-rare-in-training packages. | Both are real and published in lockstep with core (currently 10.4.0). `schema` is Standard Schema integration. `guardrails` is dev-mode invariants and performance monitoring. Real export from guardrails is `guardrails(...)`, not `withGuardrails(...)`. |
 | "`tree.$` and `tree.state` are different objects." | Plausible-sounding inference. | Both are typed `TreeNode<T>` and reference the same reactive proxy. `state` is an alias for `$`. For a non-reactive full snapshot, call `tree()`. |
 | "The `form()` marker lives in `@signaltree/ng-forms`." | Package-boundary inference. | `form()` ships in `@signaltree/core`. `@signaltree/ng-forms` is a *bridge* for binding tree nodes to Angular `FormGroup`. |
 | "entityMap exposes `.entities()` as the read accessor." | Reasonable guess. | Real accessor is `.all()`. Other reads: `.byId(id)`, `.where(pred)`, `.find(pred)`, `.count()`, `.has(id)`, `.ids()`. |
