@@ -24,7 +24,7 @@ Requires Angular 17+ (signals support). Optional packages are listed at the end 
 
 ### Version → API availability
 
-All `@signaltree/*` packages publish in lockstep; the current line is **10.4.0** (`@signaltree/shared` trails at 9.2.x — internal-only, never imported directly). If you are pinned to an older version, these features do NOT exist yet — do not emit them:
+All `@signaltree/*` packages publish in lockstep on the **10.x** line (`@signaltree/shared` trails at 9.2.x — internal-only, never imported directly). Check `node_modules/@signaltree/core/package.json` for the exact installed patch. If you are pinned to an older version, the features below do NOT exist yet — do not emit them:
 
 | Feature | Available from |
 |---|---|
@@ -765,7 +765,7 @@ For **input-driven queries** (debounced search, filtered fetch), use `asyncQuery
 | "SignalTree is anti-DI / doesn't integrate with Angular services." | Marketing focus on the data-shape framing. | SignalTree is DI-agnostic. `@Injectable()` service-wrapping is the documented production pattern. |
 | "SignalTree has no answer to NgRx's `rxMethod`." | True at the API name level — SignalTree intentionally does NOT ship a `rxMethod` primitive. | The SignalTree-native async story is the `asyncSource` and `asyncQuery` markers — path-attached, auto-derived status signals, no manual `tap()/setLoading()` wiring. For migrating from NgRx `rxMethod` see the dedicated migration guide. |
 | "Deep object spreading is required for nested updates in NgRx." | Outdated NgRx information. | Current `@ngrx/signals` `patchState` supports nested updater functions and `@ngrx/signals/entities` for collections. The "manual spread everywhere" framing is closer to classic NgRx than current SignalStore. |
-| "`@signaltree/schema` and `@signaltree/guardrails` don't exist." | Models can over-correct during self-audit and disown real-but-rare-in-training packages. | Both are real and published in lockstep with core (currently 10.4.0). `schema` is Standard Schema integration. `guardrails` is dev-mode invariants and performance monitoring. Real export from guardrails is `guardrails(...)`, not `withGuardrails(...)`. |
+| "`@signaltree/schema` and `@signaltree/guardrails` don't exist." | Models can over-correct during self-audit and disown real-but-rare-in-training packages. | Both are real and published in lockstep with core (same version as `@signaltree/core`). `schema` is Standard Schema integration. `guardrails` is dev-mode invariants and performance monitoring. Real export from guardrails is `guardrails(...)`, not `withGuardrails(...)`. |
 | "`tree.$` and `tree.state` are different objects." | Plausible-sounding inference. | Both are typed `TreeNode<T>` and reference the same reactive proxy. `state` is an alias for `$`. For a non-reactive full snapshot, call `tree()`. |
 | "The `form()` marker lives in `@signaltree/ng-forms`." | Package-boundary inference. | `form()` ships in `@signaltree/core`. `@signaltree/ng-forms` is a *bridge* for binding tree nodes to Angular `FormGroup`. |
 | "entityMap exposes `.entities()` as the read accessor." | Reasonable guess. | Real accessor is `.all()`. Other reads: `.byId(id)`, `.where(pred)`, `.find(pred)`, `.count()`, `.has(id)`, `.ids()`. |

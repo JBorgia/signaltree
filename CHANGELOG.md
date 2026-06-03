@@ -1,3 +1,23 @@
+## 10.4.1
+
+### 🐛 Bug fixes
+
+- **Built-in marker registration no longer emits a false "registered after tree construction" warning.** Built-in markers (`status`, `entityMap`, `stored`, `form`, `asyncSource`, `asyncQuery`) self-register lazily on first use, so in multi-store / lazy-loaded apps the first use of a given marker type after another tree already exists tripped the dev-mode post-construction warning — even though built-ins are correct-by-construction (the factory runs inside the state literal before that tree materializes). Built-ins now register via an internal path that suppresses the warning; the public `registerMarkerProcessor` still warns for genuine custom-marker registration after trees exist.
+- **`asyncQuery` survives query errors.** A query that errored previously propagated through `switchMap` and terminated the outer subscription, silently killing the pipeline so no further inputs fired. Errors are now contained per-query — the marker surfaces the error and keeps responding to new inputs.
+- **`asyncQuery.rerun()` now actually re-fires.** It previously pushed the current input back through `distinctUntilChanged` and was deduped away; it now flows through a dedicated path that bypasses debounce + dedup, matching the documented "rerun current input, skip dedup" behavior.
+
+### 🧪 Internal / contributor
+
+- Wired the Angular `TestBed` environment into the core vitest config (`src/test-setup.ts` + `setupFiles`); the `asyncSource` / `asyncQuery` specs now run (they were previously blocked by a missing test environment). Removed five orphaned enhancer `test-setup.ts` files left from the jest→vitest migration. See `docs/development/testing.md`.
+
+### Documentation
+
+- `llms.txt` / `llms-full.txt` hardened for AI codegen: version→API availability table, typing-the-tree section, template-usage section, testing (`provideAppTreeForTesting` / `NG0201`), a worked depth-attachment example vs `@ngrx/signals` v20.1, and self-carrying anti-pattern markers. These ship in the `@signaltree/core` tarball.
+
+### Breaking changes
+
+None.
+
 ## 10.4.0
 
 ### ✨ `form.data()` — value-read alias to close the last residual benchmark hallucination
