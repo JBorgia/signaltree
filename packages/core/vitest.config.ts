@@ -4,6 +4,10 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'happy-dom',
+    // Initializes the Angular TestBed environment for specs that use
+    // TestBed/inject (asyncSource, asyncQuery markers). Without it those
+    // specs fail with "Cannot read properties of null (reading 'ngModule')".
+    setupFiles: ['src/test-setup.ts'],
     include: [
       '**/*.spec.ts',
       'tests/**/*.spec.ts',
