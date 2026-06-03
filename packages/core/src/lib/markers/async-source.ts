@@ -9,7 +9,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { isObservable, type Observable, Subscription } from 'rxjs';
 
-import { registerMarkerProcessor } from '../internals/materialize-markers';
+import { registerBuiltinMarkerProcessor } from '../internals/materialize-markers';
 
 // =============================================================================
 // SYMBOL
@@ -144,7 +144,7 @@ export function asyncSource<T>(
 ): AsyncSourceMarker<T> {
   if (!asyncSourceRegistered) {
     asyncSourceRegistered = true;
-    registerMarkerProcessor(isAsyncSourceMarker, createAsyncSourceSignal);
+    registerBuiltinMarkerProcessor(isAsyncSourceMarker, createAsyncSourceSignal);
   }
   return {
     [ASYNC_SOURCE_MARKER]: true,

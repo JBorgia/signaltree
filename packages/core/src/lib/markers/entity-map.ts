@@ -1,7 +1,7 @@
 import { computed, Signal } from '@angular/core';
 
 import { createEntitySignal } from '../entity-signal';
-import { registerMarkerProcessor } from '../internals/materialize-markers';
+import { registerBuiltinMarkerProcessor } from '../internals/materialize-markers';
 import { isEntityMapMarker } from '../utils';
 
 // Re-export isEntityMapMarker for convenience
@@ -165,7 +165,7 @@ export function entityMap<
   // Self-register on first use (tree-shakeable)
   if (!entityMapRegistered) {
     entityMapRegistered = true;
-    registerMarkerProcessor(
+    registerBuiltinMarkerProcessor(
       isEntityMapMarker as (value: unknown) => value is InternalMarker,
       (marker, notifier, path) => {
         const cfg = marker.__entityMapConfig ?? {};

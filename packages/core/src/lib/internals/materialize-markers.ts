@@ -106,6 +106,38 @@ export function registerMarkerProcessor<T, R>(
   check: (value: unknown) => value is T,
   create: (marker: T, notifier: PathNotifier, path: string) => R
 ): void {
+  // Public entry point — used for custom markers. Emits the post-construction
+  // timing warning, because an imperative custom-marker registration that lands
+  // after trees already exist is a genuine footgun.
+  registerProcessor(check, create, /* suppressTimingWarning */ false);
+}
+
+/**
+ * Register a built-in marker processor (status, entityMap, stored, form,
+ * asyncSource, asyncQuery).
+ *
+ * Built-in markers self-register lazily on first factory call (for tree-shaking).
+ * That factory call always happens INSIDE the state literal — `signalTree({ x:
+ * status() })` evaluates `status()` before `signalTree()` runs — so the processor
+ * is always registered before the tree it belongs to is materialized. The marker
+ * is therefore correct-by-construction and the post-construction timing warning
+ * does NOT apply, even when earlier trees (that never used this marker) already
+ * exist. Suppress it to avoid false alarms in multi-store / lazy-module apps.
+ *
+ * @internal
+ */
+export function registerBuiltinMarkerProcessor<T, R>(
+  check: (value: unknown) => value is T,
+  create: (marker: T, notifier: PathNotifier, path: string) => R
+): void {
+  registerProcessor(check, create, /* suppressTimingWarning */ true);
+}
+
+function registerProcessor<T, R>(
+  check: (value: unknown) => value is T,
+  create: (marker: T, notifier: PathNotifier, path: string) => R,
+  suppressTimingWarning: boolean
+): void {
   // Dev-mode validation: prevent invalid argument types with a clear error.
   if (typeof check !== 'function' || typeof create !== 'function') {
     throw new TypeError(
@@ -128,8 +160,10 @@ export function registerMarkerProcessor<T, R>(
   // Dev-mode warning when registering after at least one tree has been built.
   // Markers registered AFTER tree construction won't be processed in that tree
   // — they only take effect for trees built after registration. This is one of
-  // the top "why isn't my custom marker working?" support questions.
+  // the top "why isn't my custom marker working?" support questions. Built-in
+  // markers route through registerBuiltinMarkerProcessor() and suppress it.
   if (
+    !suppressTimingWarning &&
     (typeof ngDevMode === 'undefined' || ngDevMode) &&
     treesConstructedCount > 0
   ) {

@@ -1,6 +1,6 @@
 import { computed, Signal, signal, WritableSignal } from '@angular/core';
 
-import { registerMarkerProcessor } from '../internals/materialize-markers';
+import { registerBuiltinMarkerProcessor } from '../internals/materialize-markers';
 
 /**
  * Form Marker - Tree-integrated forms with validation, wizard, and persistence
@@ -261,7 +261,7 @@ export function form<T extends Record<string, unknown>>(
   // Self-register on first use (tree-shakeable)
   if (!formRegistered) {
     formRegistered = true;
-    registerMarkerProcessor(isFormMarker, createFormSignal);
+    registerBuiltinMarkerProcessor(isFormMarker, createFormSignal);
   }
 
   return {

@@ -1,6 +1,6 @@
 import { computed, Signal, signal, WritableSignal } from '@angular/core';
 
-import { registerMarkerProcessor } from '../internals/materialize-markers';
+import { registerBuiltinMarkerProcessor } from '../internals/materialize-markers';
 
 // =============================================================================
 // SYMBOL & ENUM
@@ -164,7 +164,7 @@ export function status<E = Error>(
   // Self-register on first use (tree-shakeable)
   if (!statusRegistered) {
     statusRegistered = true;
-    registerMarkerProcessor(isStatusMarker, createStatusSignal);
+    registerBuiltinMarkerProcessor(isStatusMarker, createStatusSignal);
   }
 
   return {

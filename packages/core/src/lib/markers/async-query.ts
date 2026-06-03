@@ -9,16 +9,27 @@ import {
   type WritableSignal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { isObservable, Observable, of, Subject, Subscription } from 'rxjs';
 import {
+  from,
+  isObservable,
+  merge,
+  Observable,
+  of,
+  Subject,
+  Subscription,
+  throwError,
+} from 'rxjs';
+import {
+  catchError,
   debounceTime,
   distinctUntilChanged,
   filter,
+  map,
   switchMap,
   tap,
 } from 'rxjs/operators';
 
-import { registerMarkerProcessor } from '../internals/materialize-markers';
+import { registerBuiltinMarkerProcessor } from '../internals/materialize-markers';
 
 // =============================================================================
 // SYMBOL
@@ -153,7 +164,7 @@ export function asyncQuery<TInput, TResult>(
 ): AsyncQueryMarker<TInput, TResult> {
   if (!asyncQueryRegistered) {
     asyncQueryRegistered = true;
-    registerMarkerProcessor(isAsyncQueryMarker, createAsyncQuerySignal);
+    registerBuiltinMarkerProcessor(isAsyncQueryMarker, createAsyncQuerySignal);
   }
   return {
     [ASYNC_QUERY_MARKER]: true,
@@ -205,7 +216,8 @@ export function createAsyncQuerySignal<TInput, TResult>(
   const errorSignal = signal<unknown | null>(null);
 
   let destroyed = false;
-  const trigger$ = new Subject<TInput>();
+  const trigger$ = new Subject<TInput>(); // input-driven path (debounced + deduped)
+  const rerun$ = new Subject<TInput>(); // explicit rerun() — bypasses debounce + dedup
 
   // Best-effort DestroyRef binding.
   let destroyRef: DestroyRef | null = null;
@@ -217,68 +229,61 @@ export function createAsyncQuerySignal<TInput, TResult>(
   destroyRef?.onDestroy(() => {
     destroyed = true;
     trigger$.complete();
+    rerun$.complete();
   });
 
-  // Pipeline: input changes → optional debounce → optional filter → dedup → switchMap query
-  const pipeline$: Observable<{
-    ok: true;
-    value: TResult;
-  } | { ok: false; error: unknown }> = trigger$.pipe(
+  // Input-driven path: optional debounce → optional filter → dedup.
+  const deduped$: Observable<TInput> = trigger$.pipe(
     debounce > 0 ? debounceTime(debounce) : tap(),
     predicate ? filter(predicate) : tap(),
-    distinctUntilChanged(equal),
+    distinctUntilChanged(equal)
+  );
+
+  // rerun() is an explicit, imperative re-fire: merge it in AFTER dedup so it
+  // bypasses debounce + distinctUntilChanged and always re-runs the current input.
+  //
+  // Errors are caught INSIDE switchMap, per query, and mapped to an outcome
+  // object. This is load-bearing: if a query error escaped switchMap it would
+  // terminate the outer subscription, and the pipeline would silently stop
+  // responding to all future inputs. Containing it here keeps the stream alive.
+  const pipeline$ = merge(deduped$, rerun$).pipe(
     tap(() => {
       loadingSignal.set(true);
       errorSignal.set(null);
     }),
     switchMap((input) => {
+      let query$: Observable<TResult>;
       try {
         const r = query(input);
-        if (isObservable(r)) {
-          return r as Observable<TResult>;
-        }
-        // Convert Promise to Observable for unified handling
-        return new Observable<TResult>((subscriber) => {
-          (r as Promise<TResult>).then(
-            (v) => {
-              subscriber.next(v);
-              subscriber.complete();
-            },
-            (err) => subscriber.error(err)
-          );
-        });
+        query$ = isObservable(r) ? (r as Observable<TResult>) : from(r);
       } catch (err) {
-        return of<TResult>(undefined as unknown as TResult).pipe(
-          tap(() => {
-            errorSignal.set(err);
-            loadingSignal.set(false);
-          })
-        );
+        // Synchronous throw from the query factory.
+        query$ = throwError(() => err);
       }
+      return query$.pipe(
+        map((value) => ({ ok: true as const, value })),
+        catchError((error) => of({ ok: false as const, error }))
+      );
     }),
-    // Wrap success/error so we never lose subscription on error
-    tap({
-      next: (value) => {
-        if (destroyed) return;
-        resultsSignal.set(value);
-        loadingSignal.set(false);
-      },
-      error: (err) => {
-        if (destroyed) return;
-        errorSignal.set(err);
-        loadingSignal.set(false);
-      },
+    tap((outcome) => {
+      if (destroyed) return;
+      if (outcome.ok) {
+        resultsSignal.set(outcome.value);
+        errorSignal.set(null);
+      } else {
+        errorSignal.set(outcome.error);
+      }
+      loadingSignal.set(false);
     })
-  ) as Observable<{ ok: true; value: TResult } | { ok: false; error: unknown }>;
+  );
 
-  // Subscribe with auto-cleanup
+  // Subscribe with auto-cleanup. With per-query error containment above, the
+  // outer stream should never error; the handler is kept as a defensive backstop.
   const sub: Subscription = (destroyRef
     ? pipeline$.pipe(takeUntilDestroyed(destroyRef))
     : pipeline$
   ).subscribe({
     error: (err) => {
-      // Defensive — switchMap should isolate, but if a non-recoverable error
-      // escapes, surface it on the error signal instead of crashing.
       if (destroyed) return;
       errorSignal.set(err);
       loadingSignal.set(false);
@@ -309,7 +314,7 @@ export function createAsyncQuerySignal<TInput, TResult>(
   Object.defineProperty(fn, 'error', { value: errorSignal.asReadonly() });
   fn.rerun = () => {
     const cur = inputSignal();
-    if (cur !== undefined) trigger$.next(cur);
+    if (cur !== undefined) rerun$.next(cur);
   };
   fn.reset = () => {
     loadingSignal.set(false);

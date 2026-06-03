@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 
-import { registerMarkerProcessor } from '../internals/materialize-markers';
+import { registerBuiltinMarkerProcessor } from '../internals/materialize-markers';
 
 /**
  * Stored Marker - Auto-sync to localStorage
@@ -293,7 +293,7 @@ export function stored<T>(
   // Self-register on first use (tree-shakeable)
   if (!storedRegistered) {
     storedRegistered = true;
-    registerMarkerProcessor(isStoredMarker, createStoredSignal);
+    registerBuiltinMarkerProcessor(isStoredMarker, createStoredSignal);
   }
 
   return {
