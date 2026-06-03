@@ -148,6 +148,74 @@ store.$.search.error();</code></pre>
     </details>
   </section>
 
+  <section class="demo">
+    <h2>Error resilience &amp; <code>rerun()</code> <small>(10.4.1)</small></h2>
+    <p>
+      A query that throws does <strong>not</strong> break the pipeline — the
+      error surfaces on <code>error()</code> and the next input still fires.
+      And <code>rerun()</code> bypasses dedup, re-firing the query with the
+      <em>current</em> input (watch the call counter climb on repeat clicks).
+    </p>
+
+    <div class="controls">
+      <input
+        type="text"
+        placeholder="Type a lookup key…"
+        [ngModel]="store.$.lookup.input()"
+        (ngModelChange)="store.$.lookup.input.set($event)"
+        class="search-input"
+      />
+      <button (click)="store.$.lookup.rerun()">Rerun (same input)</button>
+      <label class="toggle">
+        <input
+          type="checkbox"
+          [ngModel]="failNext()"
+          (ngModelChange)="failNext.set($event)"
+        />
+        simulate failure
+      </label>
+      <button class="secondary" (click)="store.$.lookup.reset()">Reset</button>
+    </div>
+
+    <div class="controls">
+      <span class="status">
+        @if (store.$.lookup.error()) {
+          ⚠️ {{ store.$.lookup.error() }}
+        } @else if (store.$.lookup.loading()) {
+          ⏳ running…
+        } @else if (store.$.lookup()) {
+          ✅ {{ store.$.lookup() }}
+        } @else {
+          ⚪ idle
+        }
+      </span>
+      <span class="status">query factory ran {{ lookupCalls() }}×</span>
+    </div>
+
+    <p class="hint">
+      Try: type a key → toggle <em>simulate failure</em> on → change the key
+      (see the error) → toggle it off → change again (it recovers — the pipeline
+      survived). Then click <em>Rerun</em> repeatedly on the same key and watch
+      the call count rise even though the input didn't change.
+    </p>
+
+    <details class="code-detail">
+      <summary>Show source</summary>
+      <pre><code>lookup: asyncQuery&lt;string, string&gt;(&#123;
+  initialResult: '',
+  debounce: 200,
+  filter: (q) =&gt; q.length &gt; 0,
+  query: (q) =&gt; failNext() ? throwError(() =&gt; new Error('…')) : of(result),
+&#125;);
+
+// A failed query no longer kills the stream — new inputs still fire:
+store.$.lookup.input.set('next-key');   // runs even after an error
+
+// rerun() bypasses debounce + dedup — re-fires the CURRENT input:
+store.$.lookup.rerun();</code></pre>
+    </details>
+  </section>
+
   <section class="info">
     <h2>What you're seeing</h2>
     <ul>
