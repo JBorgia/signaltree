@@ -722,6 +722,18 @@ export type IsEntityMap<T> = T extends EntityMapMarker<
 export type DeepEntityAwareTreeNode<T> = {
   [K in keyof T]: T[K] extends EntityMapMarker<infer E, infer Key>
     ? EntitySignal<E, Key>
+    : T[K] extends StatusMarker<infer Err>
+    ? StatusSignal<Err>
+    : T[K] extends StoredMarker<infer V>
+    ? StoredSignal<V>
+    : T[K] extends FormMarker<infer F>
+    ? FormSignal<F>
+    : T[K] extends AsyncSourceMarker<infer V>
+    ? AsyncSourceSignal<V>
+    : T[K] extends AsyncQueryMarker<infer In, infer Out>
+    ? AsyncQuerySignal<In, Out>
+    : T[K] extends AsyncStreamMarker<infer Chunk, infer State>
+    ? AsyncStreamSignal<Chunk, State>
     : T[K] extends object
     ? DeepEntityAwareTreeNode<T[K]>
     : CallableWritableSignal<T[K]>;
@@ -737,6 +749,18 @@ export type DeepEntityAwareTreeNode<T> = {
 export type EntityAwareTreeNode<T> = {
   [K in keyof T]: T[K] extends EntityMapMarker<infer E, infer Key>
     ? EntitySignal<E, Key>
+    : T[K] extends StatusMarker<infer Err>
+    ? StatusSignal<Err>
+    : T[K] extends StoredMarker<infer V>
+    ? StoredSignal<V>
+    : T[K] extends FormMarker<infer F>
+    ? FormSignal<F>
+    : T[K] extends AsyncSourceMarker<infer V>
+    ? AsyncSourceSignal<V>
+    : T[K] extends AsyncQueryMarker<infer In, infer Out>
+    ? AsyncQuerySignal<In, Out>
+    : T[K] extends AsyncStreamMarker<infer Chunk, infer State>
+    ? AsyncStreamSignal<Chunk, State>
     : CallableWritableSignal<T[K]>;
 };
 
