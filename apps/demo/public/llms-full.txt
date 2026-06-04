@@ -777,7 +777,7 @@ store.$.chat.reply.done();     // Signal<boolean> — completed
 store.$.chat.reply.error();    // Signal<unknown | null>
 store.$.chat.reply.cancel();   // abort the in-flight stream (late chunks dropped)
 store.$.chat.reply.reset();    // back to initial
-store.$.chat.reply.regenerate(); // re-run a config.stream factory (e.g. "regenerate")
+store.$.chat.reply.refresh();  // re-run the config.stream factory (alias: .regenerate())
 ```
 
 Key facts:

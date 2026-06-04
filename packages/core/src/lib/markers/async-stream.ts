@@ -63,8 +63,15 @@ export interface AsyncStreamConfig<TChunk, TState> {
   accumulate?: (state: TState, chunk: TChunk) => TState;
   /** Equality for the value signal. Default Object.is — intentionally NOT deepEqual. */
   equal?: (a: TState, b: TState) => boolean;
-  /** Optional source factory; if provided, the stream auto-starts on materialization. */
-  stream?: () => StreamSource<TChunk>;
+  /**
+   * Optional source factory; if provided, the stream auto-starts on
+   * materialization and `refresh()`/`regenerate()` re-invoke it. Receives an
+   * `AbortSignal` that fires on `cancel()`, supersession (a new start/refresh),
+   * `reset()`, and `DestroyRef` teardown — wire it into your `fetch`/SDK call
+   * so cancellation actually aborts the upstream request (stops token billing),
+   * e.g. `stream: (signal) => fetch(url, { signal })`.
+   */
+  stream?: (signal: AbortSignal) => StreamSource<TChunk>;
 }
 
 export interface AsyncStreamSignal<TChunk, TState> {
@@ -78,7 +85,12 @@ export interface AsyncStreamSignal<TChunk, TState> {
   readonly done: Signal<boolean>;
   /** Begin (or replace) the stream. Cancels any in-flight stream first. */
   start(source?: StreamSource<TChunk>): void;
-  /** Re-run the configured `stream` factory from scratch (e.g. "regenerate"). */
+  /**
+   * Re-run the configured `stream` factory from scratch. Family-consistent with
+   * `asyncSource.refresh()`. `regenerate()` is a kept alias (AI vocabulary).
+   */
+  refresh(): void;
+  /** Alias of {@link refresh} — re-run the configured `stream` factory. */
   regenerate(): void;
   /** Abort the in-flight stream; keeps the accumulated value. */
   cancel(): void;
@@ -188,10 +200,23 @@ export function createAsyncStreamSignal<TChunk, TState>(
     teardown = null;
   };
 
-  function begin(source: StreamSource<TChunk>): void {
-    stop();
+  function begin(makeSource: (signal: AbortSignal) => StreamSource<TChunk>): void {
+    // Invalidate any in-flight run BEFORE tearing it down, so a late chunk from
+    // the superseded run can never apply even if teardown throws.
     const myRun = ++runId;
+    stop();
     const live = () => myRun === runId;
+
+    // Per-run AbortController. Every teardown aborts it, so a factory that wired
+    // `signal` into fetch/an SDK cancels the UPSTREAM request on
+    // cancel()/supersession/reset()/destroy — not just the local state updates.
+    const ac = new AbortController();
+    const setTeardown = (specific: () => void) => {
+      teardown = () => {
+        ac.abort();
+        specific();
+      };
+    };
 
     loadingSignal.set(true);
     errorSignal.set(null);
@@ -213,19 +238,21 @@ export function createAsyncStreamSignal<TChunk, TState>(
       doneSignal.set(true);
     };
 
+    const source = makeSource(ac.signal);
+
     if (isObservable(source)) {
       const sub: Subscription = source.subscribe({
         next: onChunk,
         error: onError,
         complete: onDone,
       });
-      teardown = () => sub.unsubscribe();
+      setTeardown(() => sub.unsubscribe());
       return;
     }
 
     if (isReadableStream(source)) {
       const reader = source.getReader();
-      teardown = () => void reader.cancel().catch(() => undefined);
+      setTeardown(() => void reader.cancel().catch(() => undefined));
       void (async () => {
         try {
           for (;;) {
@@ -242,8 +269,11 @@ export function createAsyncStreamSignal<TChunk, TState>(
     }
 
     if (isAsyncIterable(source)) {
-      // Cooperative cancellation: the loop checks live() each iteration.
-      teardown = () => undefined;
+      // Cancellation: aborting `ac` signals a factory-wired source to stop;
+      // the loop also checks live() each iteration. A raw AsyncIterable passed
+      // directly to start() (not via the factory) can't be force-aborted —
+      // prefer the `stream` factory form for cancellable async-iterable sources.
+      setTeardown(() => undefined);
       void (async () => {
         try {
           for await (const chunk of source) {
@@ -259,7 +289,7 @@ export function createAsyncStreamSignal<TChunk, TState>(
     }
 
     // Promise / thenable.
-    teardown = () => undefined;
+    setTeardown(() => undefined);
     Promise.resolve(source as Promise<TChunk>).then(
       (v) => {
         onChunk(v);
@@ -283,22 +313,28 @@ export function createAsyncStreamSignal<TChunk, TState>(
   Object.defineProperty(fn, 'done', { value: doneSignal.asReadonly() });
 
   fn.start = (source?: StreamSource<TChunk>) => {
-    const s = source ?? stream?.();
-    if (s == null) {
+    if (source !== undefined) {
+      // Pre-made source — can't thread our AbortSignal into it.
+      begin(() => source);
+      return;
+    }
+    if (!stream) {
       throw new Error(
         'asyncStream: start() needs a source argument or a config.stream factory'
       );
     }
-    begin(s);
+    begin(stream);
   };
-  fn.regenerate = () => {
+  fn.refresh = () => {
     if (!stream) {
       throw new Error(
-        'asyncStream: regenerate() requires a config.stream factory'
+        'asyncStream: refresh()/regenerate() requires a config.stream factory'
       );
     }
-    begin(stream());
+    begin(stream);
   };
+  // Alias — re-run the stream factory under the AI-vocabulary name.
+  fn.regenerate = fn.refresh;
   fn.cancel = () => {
     stop();
     loadingSignal.set(false);

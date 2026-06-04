@@ -14,12 +14,18 @@ const store = signalTree({
 store.$.reply.start(anthropic.messages.stream({ /* … */ })); // AsyncIterable | ReadableStream
 store.$.reply();          // accumulated text, updates per token
 store.$.reply.loading();  store.$.reply.done();  store.$.reply.error();
-store.$.reply.cancel();   // abort; .regenerate() re-runs a config.stream factory; .reset()
+store.$.reply.cancel();   // abort; .refresh() (alias .regenerate()) re-runs the stream factory; .reset()
 ```
 
 - Consumes all four AI-SDK transports: **`AsyncIterable | ReadableStream | Observable | Promise`**.
 - **`Object.is` equality by default** (not deepEqual) — a growing token string never pays an O(n) compare per chunk.
 - switchMap-style cancellation (a superseded/cancelled stream's chunks are dropped) and error-resilience (a failed stream sets `error()` without wedging the marker; the next `.start()` recovers).
+- **`AbortSignal` threaded to the `stream` factory** — `stream: (signal) => fetch(url, { signal })`. The signal aborts on `cancel()` / supersession / `reset()` / `DestroyRef`, so cancelling actually aborts the upstream request (stops LLM token billing), not just local state updates.
+- `.refresh()` re-runs the configured `stream` factory (family-consistent with `asyncSource.refresh()`); `.regenerate()` is a kept alias.
+
+### Type safety (F0)
+
+- New compile-time type-test harness (`marker-resolution.typing.spec.ts`) + `npm run typecheck` (`tsc --noEmit`) wired into `quality:check`, asserting every marker resolves to its materialized signal type on `tree.$`. The vitest suite runs through esbuild (strips types without checking), so marker type regressions previously shipped silently — this gate closes that. Also fixed the internal `EntityAwareTreeNode` / `DeepEntityAwareTreeNode` variants, which resolved only `entityMap`.
 - Attaches at any tree depth like every marker. Standalone `createAsyncStreamSignal(config)` is available for component-local streaming state without a tree.
 - There is **no** `@signaltree/ai` package — SignalTree is state; wire your AI SDK in directly.
 

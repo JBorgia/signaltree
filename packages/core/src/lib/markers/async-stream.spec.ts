@@ -129,7 +129,7 @@ describe('createAsyncStreamSignal (standalone factory)', () => {
     expect(stream()).toBe('new');
   });
 
-  it('auto-starts and regenerate() re-runs a config.stream factory', async () => {
+  it('auto-starts; refresh() and its regenerate() alias re-run the stream factory', async () => {
     let runs = 0;
     const stream = createAsyncStreamSignal<string, string>({
       initial: '',
@@ -139,13 +139,44 @@ describe('createAsyncStreamSignal (standalone factory)', () => {
     await vi.waitFor(() => expect(stream.done()).toBe(true));
     expect(stream()).toBe('run1');
 
-    stream.regenerate();
+    stream.refresh();
     await vi.waitFor(() => expect(stream()).toBe('run2'));
+
+    // regenerate() is an alias of refresh()
+    expect(stream.regenerate).toBe(stream.refresh);
+    stream.regenerate();
+    await vi.waitFor(() => expect(stream()).toBe('run3'));
   });
 
-  it('regenerate() throws without a configured stream factory', () => {
+  it('refresh() throws without a configured stream factory', () => {
     const stream = createAsyncStreamSignal<string, string>({ initial: '' });
+    expect(() => stream.refresh()).toThrow(/stream factory/);
     expect(() => stream.regenerate()).toThrow(/stream factory/);
+  });
+
+  it('aborts the AbortSignal passed to the stream factory on cancel() and on supersession', async () => {
+    let signals: AbortSignal[] = [];
+    const stream = createAsyncStreamSignal<string, string>({
+      initial: '',
+      accumulate: concat,
+      stream: (signal) => {
+        signals.push(signal);
+        return new Subject<string>(); // never completes
+      },
+    });
+    // auto-started via config.stream
+    expect(signals.length).toBe(1);
+    expect(signals[0].aborted).toBe(false);
+
+    // refresh() supersedes → previous run's signal aborts
+    stream.refresh();
+    expect(signals.length).toBe(2);
+    expect(signals[0].aborted).toBe(true);
+    expect(signals[1].aborted).toBe(false);
+
+    // cancel() aborts the current run's signal
+    stream.cancel();
+    expect(signals[1].aborted).toBe(true);
   });
 
   it('reset() restores initial state and clears flags', async () => {

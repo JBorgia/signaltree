@@ -106,7 +106,7 @@ store.$.reports.refresh();                      // reload async source
   store.$.reply.start(anthropic.messages.stream({ /* … */ })); // AsyncIterable | ReadableStream
   store.$.reply();         // accumulated text, updates per token
   store.$.reply.loading(); store.$.reply.done(); store.$.reply.error();
-  store.$.reply.cancel();  // abort; .regenerate() re-runs a config.stream factory
+  store.$.reply.cancel();  // abort; .refresh() (alias .regenerate()) re-runs a config.stream factory; .reset()
   ```
   Conversation + tool state composes from markers: `messages: entityMap<ChatMessage, string>()`, a `status<E>()` per in-flight tool call at depth, `stored()`/`persistence()` for session memory (⚠️ plaintext localStorage — never for PHI/PII-regulated content). There is **no** `@signaltree/ai` package — SignalTree is state, wire your AI SDK in directly.
 
