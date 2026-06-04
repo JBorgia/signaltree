@@ -173,19 +173,12 @@ export {
   type AsyncQueryFn,
 } from './lib/markers/async-query';
 
-// Async-stream marker (v10.5) - chunk-accumulating streaming primitive for
-// AI-embedded apps (LLM token output) and any AsyncIterable/ReadableStream source
-export {
-  asyncStream,
-  isAsyncStreamMarker,
-  createAsyncStreamMarker,
-  createAsyncStreamSignal,
-  ASYNC_STREAM_MARKER,
-  type AsyncStreamMarker,
-  type AsyncStreamSignal,
-  type AsyncStreamConfig,
-  type StreamSource,
-} from './lib/markers/async-stream';
+// Async-stream marker — EXPERIMENTAL, intentionally NOT exported from the public
+// barrel. Per RFC 0001 (docs/rfcs/0001-ai-embedded-boundary.md §5) streaming
+// stays experimental until there's a real demand signal, and the eventual public
+// shape (a distinct `asyncStream` marker vs an `accumulate` option on
+// `asyncSource`) is deferred. The implementation + tests live in
+// ./lib/markers/async-stream.ts; re-export here to promote it when warranted.
 
 // Marker processing (v7) - extensibility
 export { registerMarkerProcessor } from './lib/internals/materialize-markers';

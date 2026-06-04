@@ -19,7 +19,6 @@
 import type {
   AsyncQuerySignal,
   AsyncSourceSignal,
-  AsyncStreamSignal,
   CallableWritableSignal,
   EntitySignal,
   FormSignal,
@@ -29,13 +28,15 @@ import type {
 import {
   asyncQuery,
   asyncSource,
-  asyncStream,
   entityMap,
   form,
   signalTree,
   status,
   stored,
 } from '../../index';
+// asyncStream is EXPERIMENTAL and not barrel-exported (RFC 0001 §5); import it
+// relatively so the harness still gates its internal type resolution.
+import { asyncStream, type AsyncStreamSignal } from './async-stream';
 // Internal (not barrel-exported) tree-node variants — imported relatively so the
 // harness can gate their marker resolution too.
 import type {

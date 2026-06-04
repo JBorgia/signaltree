@@ -1,10 +1,21 @@
-## 10.5.0
+## Unreleased
 
-### ✨ `asyncStream` marker — streaming state for AI-embedded apps
+> **Note:** the items below are on `main` but **not published**. Per
+> [RFC 0001](docs/rfcs/0001-ai-embedded-boundary.md), streaming is **experimental**
+> and `asyncStream` is intentionally **not exported** from the public barrel; the
+> F0 type-test gate and the internal tree-node variant fix are landable in any
+> future minor. (All consumer-facing bug fixes already shipped in 10.4.1.)
 
-A new built-in marker for **chunk-accumulating** streams — the shape LLM token output needs, and the gap `asyncSource`/`asyncQuery` couldn't fill (those *replace* the value on each emission; `asyncStream` *accumulates*).
+### 🧪 Experimental (not exported): `asyncStream` — chunk-accumulating streaming
+
+Implementation + tests are on `main` but **not public API**. It fills the gap
+`asyncSource`/`asyncQuery` can't (those *replace* the value per emission;
+`asyncStream` *accumulates*). Whether it ships as a distinct marker or as an
+`accumulate` option on `asyncSource` is deferred (RFC 0001 §5) until there's
+demand. Shape under evaluation:
 
 ```typescript
+// EXPERIMENTAL — not exported from @signaltree/core (see RFC 0001).
 import { signalTree, asyncStream } from '@signaltree/core';
 
 const store = signalTree({

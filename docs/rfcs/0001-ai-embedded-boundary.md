@@ -39,20 +39,21 @@ SignalTree is a **state** library — "reactive JSON, signals at every path." Th
 2. **At most one new state primitive in core**: stream accumulation (see §5).
 3. **Everything heavier is external, if-and-when demand appears.** A `@signaltree/ai` exists only for opinionated composites/provider glue and may never be needed if recipes suffice. Parsing → util; schema → `@signaltree/schema`; provider SDKs → never touch core.
 
-## 5. Open decision: `asyncStream` marker vs `asyncSource` option
+## 5. Decision (2026-06-04): streaming stays experimental; defer marker-vs-option
 
-The one legitimately-state primitive (fold a stream into state) is currently built as a **new `asyncStream` marker** (staged, unpublished). Reconsider against the codegen ethos:
+The one legitimately-state primitive (fold a stream into state) was built as a **new `asyncStream` marker** (staged, unpublished). The two shapes:
 
 - **Option A — keep `asyncStream` as a distinct marker.** Pro: clear, distinct cancellation/accumulate/supersede semantics; reads as its own concept. Con: a *third* async marker for agents to learn and disambiguate (`asyncSource`/`asyncQuery`/`asyncStream`), each with its own "redo" verb.
 - **Option B — add `accumulate?` + `equal?` (+ AbortSignal) options to `asyncSource`** (which already multi-emits). Pro: **zero new public surface** — fewer concepts to learn or hallucinate (strictly better for codegen). Con: muddies `asyncSource`'s "load-and-expose" clarity; conflates replace-semantics with accumulate-semantics.
 
-**Recommendation: lean Option B** unless the semantics prove too divergent to share one marker cleanly. Decide before anything streaming-related is published.
+**DECISION:** Streaming stays **experimental and unshipped**. `asyncStream` is **un-exported from the public barrel** (returned to experimental status — the implementation + tests are preserved, but it is not public API). The A-vs-B choice is **deferred** until a real demand signal justifies shipping streaming at all — committing to either *now* would itself be the premature-public-API mistake §4 warns against. When demand appears, **Option B (the `asyncSource` accumulate-option) is the leading candidate**, re-examined against the replace-vs-accumulate semantics concern at that time. Until then, the recipe-first story (§7) uses only shipped primitives.
 
 ## 6. Disposition of the staged 10.5.0 code
 
-- **Hold `asyncStream` (the public marker) from publication** until §5 is decided. It is unpublished, additive, and harmless on `main`; no revert needed yet.
-- **Unaffected / keep:** the F0 type-test gate, the marker-type fixes, the asyncQuery error/rerun fixes (already published in 10.4.1), the marker-warning fix. These are correctness/infra wins independent of the AI question.
-- **The AI-embedded docs** added to llms.txt/SKILL.md should be reframed from "use the `asyncStream` marker" to the recipe-first composition story once §5 lands.
+- **`asyncStream` un-exported from the barrel** (per §5) — the implementation and its tests stay on `main` as experimental/parked; it is not public API and cannot accidentally ship. The TreeNode type-chain entry is left in place (inert — it resolves a now-internal marker type) so re-promotion is a one-line re-export when warranted.
+- **Unaffected / keep & genuinely shippable:** the **F0 type-test gate** and the **internal tree-node variant fix** (correctness/infra, no public-API commitment); the asyncQuery error/rerun fixes and the marker-warning fix are **already published in 10.4.1**.
+- **CHANGELOG:** the speculative "10.5.0" entry is reframed to **Unreleased**, with streaming listed as experimental rather than as a shipped marker.
+- **The AI-embedded docs** in llms.txt/SKILL.md should be reframed from "use the `asyncStream` marker" to the recipe-first composition story (follow-up; low priority while unpublished).
 
 ## 7. Recipes to write (the actual AI deliverable)
 
@@ -74,7 +75,8 @@ This work is **secondary** to the audit's top threat: justifying SignalTree vs r
 
 ## 10. Next steps
 
-1. Decide §5 (`asyncStream` marker vs `asyncSource` option).
-2. Either publish the held primitive in its decided form, or keep it experimental.
-3. Write recipes (§7) — the primary AI-embedded deliverable.
-4. Revisit external `@signaltree/ai` only on a real demand signal.
+1. ~~Decide §5~~ — **done (2026-06-04): streaming experimental, `asyncStream` un-exported, A-vs-B deferred.**
+2. No release needed now — nothing user-facing is stranded (all consumer fixes shipped in 10.4.1). The F0 gate + variant fix can ride a future minor whenever one is cut for another reason.
+3. Write recipes (§7) — the primary AI-embedded deliverable — only when worth the effort; no demand signal yet.
+4. Revisit shipping streaming (and the A-vs-B choice) **only on a real demand signal**, or as a deliberate, timeboxed repositioning bet.
+5. The genuinely higher-leverage next project is the existential one: an NgRx-vs-SignalTree benchmark harness to substantiate or retire the "smaller/faster" goal.
