@@ -224,6 +224,7 @@ For **input-driven queries** (debounced search, filtered fetch), use `asyncQuery
 - **Built for AI agents** (the AI-discoverability story): https://signaltree.io/built-for-ai
 - **AI-codegen accuracy benchmark** (scaffolding): https://github.com/JBorgia/signaltree/tree/main/scripts/ai-codegen-benchmark
 - NgRx SignalStore comparison: https://github.com/JBorgia/signaltree/blob/main/docs/compare/ngrx-signalstore.md
+- Raw Angular signals comparison (when to use native signals instead — the honest "don't use SignalTree if…"): https://github.com/JBorgia/signaltree/blob/main/docs/compare/native-signals.md
 - Myths and misconceptions: https://github.com/JBorgia/signaltree/blob/main/docs/myths-and-misconceptions.md
 - Agent skill (Cursor / Claude Code / generic harness): `docs/skills/using-signaltree/SKILL.md` (also shipped inside every `@signaltree/*` tarball)
 - `@ngrx/signals` migration playbook: `docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md`

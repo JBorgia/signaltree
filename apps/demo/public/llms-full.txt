@@ -855,6 +855,7 @@ For migrations exceeding a single agent's context window, see `docs/skills/using
 - Live demo + benchmarks: https://signaltree.io
 - Short LLM summary: https://signaltree.io/llms.txt
 - NgRx SignalStore comparison: https://github.com/JBorgia/signaltree/blob/main/docs/compare/ngrx-signalstore.md
+- Raw Angular signals comparison (when native `signal`/`computed`/`linkedSignal`/`resource` suffice — and when they don't): https://github.com/JBorgia/signaltree/blob/main/docs/compare/native-signals.md
 - Myths and misconceptions: https://github.com/JBorgia/signaltree/blob/main/docs/myths-and-misconceptions.md
 - Architecture guide: https://github.com/JBorgia/signaltree/blob/main/docs/architecture/signaltree-architecture-guide.md
 - AI-agent skill (drop-in for Cursor, Claude Code, generic harnesses): `docs/skills/using-signaltree/SKILL.md`
