@@ -92,13 +92,23 @@ store.$.reports.refresh();                      // reload async source
 - **Read leaf:** `tree.$.path.to.leaf()` — returns the value
 - **Write leaf:** `tree.$.path.to.leaf.set(v)` / `.update(fn)`
 - **Partial / deep-merge update:** `tree(partialUpdate)` — keys not in the payload are preserved. The root has no `.set` method; the root accessor itself is callable.
-- **Markers:** `entityMap<E, K>()`, `status<E>()`, `stored(key, default)`, `form<T>(config)`, `asyncSource<T>(config)`, `asyncQuery<TIn, TOut>(config)` — place at any node
+- **Markers:** `entityMap<E, K>()`, `status<E>()`, `stored(key, default)`, `form<T>(config)`, `asyncSource<T>(config)`, `asyncQuery<TIn, TOut>(config)`, `asyncStream<TChunk, TState>(config)` (v10.5+, chunk-accumulating streams) — place at any node
 - **Derived state:** `.derived($ => ({ ... }))` — definitions deep-merged into existing tree paths
 - **Enhancers:** `.with(batching())`, `.with(devTools())`, `.with(timeTravel())`, `.with(persistence())`, `.with(serialization())`
 - **Lifecycle:** `tree.destroy()` runs all registered cleanup callbacks in registration order; `tree.destroyed()` is a signal; `tree.registerCleanup(fn)` for custom hooks. Built-in enhancers register their own cleanup automatically.
 - **Edit sessions:** Two primitives in `@signaltree/core/edit-session`. `createEditSession(initial)` is value-level (single arg, no tree binding) — wraps any value with `applyChanges` / `undo` / `redo`. `createTreeEditSession(accessor)` (v10.1+) is **path-bound** to a writable tree branch — `applyChanges` / `undo` / `commit` (write draft back) / `cancel` (discard draft). Use the tree-bound form for form-wizard and draft-and-cancel workflows over a real tree path.
 - **Async:** `asyncSource(config)` for load-and-expose — auto-exposes `data` (call the accessor itself: `tree.$.users()`) / `loading` / `error` / `refresh`. `asyncQuery(config)` for input-driven debounced queries — auto-exposes `data` / `loading` / `error`, driven by setting `.input.set(value)` and optionally `.rerun()` to re-execute with the same input. Both attach at any tree path. For migrating from `@ngrx/signals`, see [`docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md`](https://github.com/JBorgia/signaltree/blob/main/docs/skills/using-signaltree/reference/migration-from-ngrx-signals.md).
-- **Streaming / AI-embedded apps (chat, LLM token output):** `asyncSource` / `asyncQuery` **replace** the value on each source emission — they do **not** accumulate token deltas. Two correct shapes today: (1) feed `asyncSource` a source that emits *accumulated snapshots* (each emission is the full text so far), or (2) accumulate deltas yourself into a plain **string leaf** via `tree.$.reply.update(s => s + delta)`. If you do (2), set `signalTree(state, { useShallowComparison: true })` — the default leaf equality is `deepEqual`, which is O(n) per token on a growing string. Do **not** model tokens as an array you `.push()` to (arrays are signals — no `.push()`; and per-token array writes pay deepEqual too). The SDK transport (`ReadableStream` / `AsyncIterable` from Anthropic/OpenAI) is adapted by you — e.g. `for await (const chunk of stream) tree.$.reply.update(s => s + chunk.delta)`.
+- **Streaming / AI-embedded apps (chat, LLM token output):** use the `asyncStream` marker (v10.5+) — it **accumulates** chunks into state (unlike `asyncSource`/`asyncQuery`, which *replace* on each emission), consumes `AsyncIterable | ReadableStream | Observable | Promise` (the AI-SDK transports), uses `Object.is` equality by default (no O(n) deepEqual per token), cancels switchMap-style, and survives errors.
+  ```typescript
+  const store = signalTree({
+    reply: asyncStream<string, string>({ initial: '', accumulate: (s, c) => s + c }),
+  });
+  store.$.reply.start(anthropic.messages.stream({ /* … */ })); // AsyncIterable | ReadableStream
+  store.$.reply();         // accumulated text, updates per token
+  store.$.reply.loading(); store.$.reply.done(); store.$.reply.error();
+  store.$.reply.cancel();  // abort; .regenerate() re-runs a config.stream factory
+  ```
+  Conversation + tool state composes from markers: `messages: entityMap<ChatMessage, string>()`, a `status<E>()` per in-flight tool call at depth, `stored()`/`persistence()` for session memory (⚠️ plaintext localStorage — never for PHI/PII-regulated content). There is **no** `@signaltree/ai` package — SignalTree is state, wire your AI SDK in directly.
 
 ## ⚠️ Disambiguation — if you think SignalTree uses X, you're confusing it with Y
 
@@ -110,7 +120,7 @@ This table catches the most common cross-library hallucinations. **Most "Wrong" 
 | `from 'signal-tree'` (hyphenated) | Invented | `from '@signaltree/core'` (scoped, no hyphen) |
 | `from 'signaltree'` (unscoped) | Invented | `from '@signaltree/core'` |
 | `from '@signaltree/ai'` / `@signaltree/openai` / `@signaltree/llm` | Invented | No such package. SignalTree is **state**, not an AI SDK — use `@signaltree/core` markers together with your AI SDK (Anthropic / OpenAI / Vercel AI) directly. |
-| `asyncQuery(...)` / `asyncSource(...)` to "stream LLM tokens" | Misuse | These **replace** the value on each emission — they do not **accumulate** token deltas. For live token output, feed a source that emits *accumulated snapshots*, or accumulate deltas into a string leaf (see the Streaming note below). |
+| `asyncQuery(...)` / `asyncSource(...)` to "stream LLM tokens" | Misuse | Those **replace** the value on each emission — they don't **accumulate** token deltas. Use the `asyncStream<TChunk, TState>({ accumulate })` marker (v10.5+) — it consumes `AsyncIterable`/`ReadableStream`/`Observable`/`Promise` and folds chunks into state. |
 | `signalStore(withState(...), withMethods(...))` | **`@ngrx/signals`** | `signalTree({...})` — your state literal IS the API |
 | `withState`, `withMethods`, `withComputed`, `withHooks`, `withProps` | **`@ngrx/signals`** | Not used. State is the literal you pass to `signalTree()`. Methods belong in an `@Injectable()` Ops service. |
 | `withEntities<T>()` | **`@ngrx/signals/entities`** | `entityMap<T, K>()` marker — place it in the state literal |

@@ -1,22 +1,29 @@
 /**
- * EXPERIMENTAL SPIKE — not exported from the public barrel, excluded from the
- * lib build (see tsconfig.lib.json). Proves the fit of a streaming primitive
- * for AI-embedded apps. Do not depend on this from shipped code.
+ * `asyncStream` marker — streaming state for AI-embedded apps (chat / LLM token
+ * output) and any chunked source.
  *
- * Why this exists: SignalTree's async markers (asyncSource/asyncQuery) take an
- * `Observable | Promise`, but the 2026 AI stack (Vercel AI SDK, OpenAI/Anthropic
- * SDKs) emits `ReadableStream` / `AsyncIterable` of token deltas. And SignalTree
- * leaves default to deepEqual, which is an O(n) footgun on a growing token
- * string. This primitive:
- *   - consumes AsyncIterable | ReadableStream | Observable | Promise uniformly,
- *   - ACCUMULATES chunks into state via a reducer (e.g. token concat),
- *   - uses Object.is equality by default (no deepEqual on every token),
- *   - cancels the in-flight stream on a new start()/cancel()/DestroyRef,
- *   - survives errors: a failed stream sets error() and a fresh start() recovers.
+ * Unlike `asyncSource` / `asyncQuery` (which REPLACE the value on each emission),
+ * `asyncStream` ACCUMULATES chunks into state via a reducer — the shape you want
+ * for token-by-token LLM output. It consumes the four transports the modern AI
+ * stack emits (`AsyncIterable` | `ReadableStream` | `Observable` | `Promise`),
+ * uses `Object.is` equality by default (NOT deepEqual — that would be O(n) per
+ * token on a growing string), cancels the in-flight stream switchMap-style on a
+ * new `start()`/`regenerate()`/`cancel()`/`DestroyRef`, and survives errors (a
+ * failed stream sets `error()`; the next `start()` recovers).
  *
- * Promotion path: mirror async-source.ts to wrap this as an `asyncStream()`
- * marker (registerBuiltinMarkerProcessor + a materializer) so it can attach at
- * any tree path like the other markers.
+ * @example Accumulate an LLM token stream into reactive state
+ * ```typescript
+ * const store = signalTree({
+ *   reply: asyncStream<string, string>({ initial: '', accumulate: (s, c) => s + c }),
+ * });
+ *
+ * // Anthropic / OpenAI hand you an AsyncIterable or ReadableStream:
+ * store.$.reply.start(anthropic.messages.stream({ ... }));
+ * store.$.reply();          // accumulated text, updates per token
+ * store.$.reply.loading();  // streaming in flight
+ * store.$.reply.done();     // completed
+ * store.$.reply.cancel();   // abort (late chunks dropped)
+ * ```
  */
 import {
   DestroyRef,
@@ -26,6 +33,18 @@ import {
   type WritableSignal,
 } from '@angular/core';
 import { isObservable, type Observable, type Subscription } from 'rxjs';
+
+import { registerBuiltinMarkerProcessor } from '../internals/materialize-markers';
+
+// =============================================================================
+// SYMBOL
+// =============================================================================
+
+export const ASYNC_STREAM_MARKER = Symbol('ASYNC_STREAM_MARKER');
+
+// =============================================================================
+// TYPES
+// =============================================================================
 
 export type StreamSource<TChunk> =
   | AsyncIterable<TChunk>
@@ -44,7 +63,7 @@ export interface AsyncStreamConfig<TChunk, TState> {
   accumulate?: (state: TState, chunk: TChunk) => TState;
   /** Equality for the value signal. Default Object.is — intentionally NOT deepEqual. */
   equal?: (a: TState, b: TState) => boolean;
-  /** Optional source factory; if provided, the stream auto-starts on creation. */
+  /** Optional source factory; if provided, the stream auto-starts on materialization. */
   stream?: () => StreamSource<TChunk>;
 }
 
@@ -59,10 +78,69 @@ export interface AsyncStreamSignal<TChunk, TState> {
   readonly done: Signal<boolean>;
   /** Begin (or replace) the stream. Cancels any in-flight stream first. */
   start(source?: StreamSource<TChunk>): void;
+  /** Re-run the configured `stream` factory from scratch (e.g. "regenerate"). */
+  regenerate(): void;
   /** Abort the in-flight stream; keeps the accumulated value. */
   cancel(): void;
   /** Abort and restore initial value/loading/error/done. */
   reset(): void;
+}
+
+/** Marker placeholder, materialized into an {@link AsyncStreamSignal} during tree construction. */
+export interface AsyncStreamMarker<TChunk, TState> {
+  [ASYNC_STREAM_MARKER]: true;
+  config: AsyncStreamConfig<TChunk, TState>;
+  /** Phantom types for inference. */
+  readonly __chunkType?: TChunk;
+  readonly __stateType?: TState;
+}
+
+// =============================================================================
+// MARKER FACTORY
+// =============================================================================
+
+let asyncStreamRegistered = false;
+
+/**
+ * Create an `asyncStream` marker. Place it at any depth in a `signalTree()`
+ * state literal; the walker materializes it into an {@link AsyncStreamSignal}.
+ */
+export function asyncStream<TChunk, TState = TChunk>(
+  config: AsyncStreamConfig<TChunk, TState>
+): AsyncStreamMarker<TChunk, TState> {
+  // Self-register on first use (tree-shakeable). Built-in path: suppresses the
+  // post-construction timing warning (correct-by-construction inside the literal).
+  if (!asyncStreamRegistered) {
+    asyncStreamRegistered = true;
+    registerBuiltinMarkerProcessor(isAsyncStreamMarker, createAsyncStreamMarker);
+  }
+  return { [ASYNC_STREAM_MARKER]: true, config };
+}
+
+// =============================================================================
+// TYPE GUARD
+// =============================================================================
+
+export function isAsyncStreamMarker(
+  value: unknown
+): value is AsyncStreamMarker<unknown, unknown> {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    ASYNC_STREAM_MARKER in value &&
+    (value as Record<symbol, unknown>)[ASYNC_STREAM_MARKER] === true
+  );
+}
+
+// =============================================================================
+// MATERIALIZER
+// =============================================================================
+
+/** Materializes an {@link AsyncStreamMarker} (called by the tree walker). */
+export function createAsyncStreamMarker<TChunk, TState>(
+  marker: AsyncStreamMarker<TChunk, TState>
+): AsyncStreamSignal<TChunk, TState> {
+  return createAsyncStreamSignal(marker.config);
 }
 
 function isReadableStream(x: unknown): x is ReadableStream<unknown> {
@@ -80,13 +158,17 @@ function isAsyncIterable(x: unknown): x is AsyncIterable<unknown> {
   );
 }
 
+/**
+ * Standalone factory — builds an {@link AsyncStreamSignal} without a tree.
+ * Use the {@link asyncStream} marker for tree-attached state; use this directly
+ * for component-local streaming state.
+ */
 export function createAsyncStreamSignal<TChunk, TState>(
   config: AsyncStreamConfig<TChunk, TState>
 ): AsyncStreamSignal<TChunk, TState> {
   const {
     initial,
-    accumulate = (_state: TState, chunk: TChunk) =>
-      chunk as unknown as TState,
+    accumulate = (_state: TState, chunk: TChunk) => chunk as unknown as TState,
     equal = Object.is,
     stream,
   } = config;
@@ -204,10 +286,18 @@ export function createAsyncStreamSignal<TChunk, TState>(
     const s = source ?? stream?.();
     if (s == null) {
       throw new Error(
-        'createAsyncStreamSignal: start() needs a source argument or a config.stream factory'
+        'asyncStream: start() needs a source argument or a config.stream factory'
       );
     }
     begin(s);
+  };
+  fn.regenerate = () => {
+    if (!stream) {
+      throw new Error(
+        'asyncStream: regenerate() requires a config.stream factory'
+      );
+    }
+    begin(stream());
   };
   fn.cancel = () => {
     stop();

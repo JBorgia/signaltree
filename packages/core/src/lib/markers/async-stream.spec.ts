@@ -1,7 +1,12 @@
 import { of, Subject } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
-import { createAsyncStreamSignal } from './async-stream';
+import { signalTree } from '../signal-tree';
+import {
+  asyncStream,
+  createAsyncStreamSignal,
+  isAsyncStreamMarker,
+} from './async-stream';
 
 /** Async generator emitting `chunks`, optional delay, optional throw at the end. */
 async function* gen(
@@ -27,7 +32,7 @@ function readable(chunks: string[]): ReadableStream<string> {
 
 const concat = (s: string, c: string) => s + c;
 
-describe('createAsyncStreamSignal (experimental)', () => {
+describe('createAsyncStreamSignal (standalone factory)', () => {
   it('accumulates an AsyncIterable token stream into state', async () => {
     const stream = createAsyncStreamSignal<string, string>({
       initial: '',
@@ -66,9 +71,7 @@ describe('createAsyncStreamSignal (experimental)', () => {
   });
 
   it('consumes a Promise (single chunk)', async () => {
-    const stream = createAsyncStreamSignal<number, number>({
-      initial: 0,
-    });
+    const stream = createAsyncStreamSignal<number, number>({ initial: 0 });
     stream.start(Promise.resolve(42));
     await vi.waitFor(() => expect(stream.done()).toBe(true));
     expect(stream()).toBe(42);
@@ -83,10 +86,8 @@ describe('createAsyncStreamSignal (experimental)', () => {
     stream.start(gen(['par', 'tial'], { throwAfter: true }));
     await vi.waitFor(() => expect(stream.error()).toBeInstanceOf(Error));
     expect(stream.loading()).toBe(false);
-    // Partial accumulation before the error is retained.
     expect(stream()).toBe('partial');
 
-    // Pipeline is not dead — a fresh stream recovers and clears the error.
     stream.start(gen(['ok']));
     await vi.waitFor(() => expect(stream.done()).toBe(true));
     expect(stream.error()).toBeNull();
@@ -107,7 +108,6 @@ describe('createAsyncStreamSignal (experimental)', () => {
     stream.cancel();
     expect(stream.loading()).toBe(false);
 
-    // Emissions after cancel are dropped (superseded run).
     subject.next('b');
     expect(stream()).toBe('a');
   });
@@ -123,21 +123,29 @@ describe('createAsyncStreamSignal (experimental)', () => {
     first.next('old');
     expect(stream()).toBe('old');
 
-    // New stream resets accumulation and ignores the stale subject.
     stream.start(gen(['new']));
     first.next('STALE'); // must be ignored
     await vi.waitFor(() => expect(stream.done()).toBe(true));
     expect(stream()).toBe('new');
   });
 
-  it('auto-starts when a config.stream factory is provided', async () => {
+  it('auto-starts and regenerate() re-runs a config.stream factory', async () => {
+    let runs = 0;
     const stream = createAsyncStreamSignal<string, string>({
       initial: '',
       accumulate: concat,
-      stream: () => gen(['auto']),
+      stream: () => gen([`run${++runs}`]),
     });
     await vi.waitFor(() => expect(stream.done()).toBe(true));
-    expect(stream()).toBe('auto');
+    expect(stream()).toBe('run1');
+
+    stream.regenerate();
+    await vi.waitFor(() => expect(stream()).toBe('run2'));
+  });
+
+  it('regenerate() throws without a configured stream factory', () => {
+    const stream = createAsyncStreamSignal<string, string>({ initial: '' });
+    expect(() => stream.regenerate()).toThrow(/stream factory/);
   });
 
   it('reset() restores initial state and clears flags', async () => {
@@ -153,5 +161,42 @@ describe('createAsyncStreamSignal (experimental)', () => {
     expect(stream.done()).toBe(false);
     expect(stream.error()).toBeNull();
     expect(stream.loading()).toBe(false);
+  });
+});
+
+describe('asyncStream marker (tree-materialized)', () => {
+  it('is recognized by its type guard', () => {
+    const marker = asyncStream<string, string>({ initial: '' });
+    expect(isAsyncStreamMarker(marker)).toBe(true);
+    expect(isAsyncStreamMarker({})).toBe(false);
+    expect(isAsyncStreamMarker(null)).toBe(false);
+  });
+
+  it('materializes at any tree depth and accumulates through tree.$', async () => {
+    const store = signalTree({
+      chat: {
+        reply: asyncStream<string, string>({
+          initial: '',
+          accumulate: concat,
+        }),
+      },
+    });
+
+    expect(store.$.chat.reply()).toBe('');
+    store.$.chat.reply.start(gen(['Hello', ', ', 'world']));
+    expect(store.$.chat.reply.loading()).toBe(true);
+
+    await vi.waitFor(() => expect(store.$.chat.reply.done()).toBe(true));
+    expect(store.$.chat.reply()).toBe('Hello, world');
+    expect(store.$.chat.reply.error()).toBeNull();
+  });
+
+  it('exposes data/loading/error/done as readable signals on the tree node', async () => {
+    const store = signalTree({
+      reply: asyncStream<string, string>({ initial: '', accumulate: concat }),
+    });
+    store.$.reply.start(of('a', 'b'));
+    await vi.waitFor(() => expect(store.$.reply.done()).toBe(true));
+    expect(store.$.reply.data()).toBe('ab');
   });
 });

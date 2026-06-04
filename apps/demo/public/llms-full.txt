@@ -33,6 +33,7 @@ All `@signaltree/*` packages publish in lockstep on the **10.x** line (`@signalt
 | `status` Promise-vocab aliases (`start`, `setSuccess`, `succeed`, `fail`) | 10.2.0 |
 | Bare predicate names (`.loading`, `.loaded`, `.empty`, …) as canonical; `is`-prefixed names become deprecated aliases | 10.3.0 |
 | `form().data()` value alias | 10.4.0 |
+| `asyncStream` marker (chunk-accumulating streams for AI / LLM token output) | 10.5.0 |
 | `memoization()` enhancer | **removed in 9.0.1** — use Angular `computed()` |
 
 When unsure of the installed version, check `node_modules/@signaltree/core/package.json`. Emit the canonical name, not a deprecated alias, in new code.
@@ -751,30 +752,46 @@ signalTree({
 
 For **input-driven queries** (debounced search, filtered fetch), use `asyncQuery` — the debounce + dedup + switchMap pipeline is built in.
 
-### Streaming / AI-embedded apps (chat, LLM token output)
+### Streaming / AI-embedded apps — the `asyncStream` marker (v10.5+)
 
-SignalTree is a **state** library, not an AI SDK — there is no `@signaltree/ai` package. You wire your AI SDK's stream into the tree yourself. The key correctness facts:
+SignalTree is a **state** library, not an AI SDK — there is no `@signaltree/ai` package; you wire your AI SDK's stream into the tree. For live LLM token output use the **`asyncStream`** marker. Unlike `asyncSource`/`asyncQuery` (which **replace** the value on each emission), `asyncStream` **accumulates** chunks via a reducer — the shape token-by-token output needs.
 
-- **`asyncSource` / `asyncQuery` REPLACE the value on each source emission; they do NOT accumulate token deltas.** They are the right tool when each emission is a complete value (or an accumulated snapshot), the wrong tool when the source emits *deltas* you must concatenate.
-- **Two correct shapes for live token output:**
-  1. **Accumulated-snapshot source** — map your SDK stream so each emission is the full text so far, then feed it to `asyncSource`. `asyncSource` updates `tree.$.reply()` on every emission and clears `loading` on complete.
-  2. **String leaf + manual accumulation** — keep a plain `string` leaf and append deltas:
-     ```typescript
-     const tree = signalTree(
-       { reply: '' },
-       { useShallowComparison: true } // IMPORTANT for streaming — see below
-     );
-     for await (const chunk of anthropic.messages.stream(/* … */)) {
-       if (chunk.type === 'content_block_delta')
-         tree.$.reply.update((s) => s + chunk.delta.text);
-     }
-     ```
-- **Disable deepEqual for streaming leaves.** The default leaf equality is `deepEqual` (see config). On a growing token string that is an **O(n) comparison per token** — set `useShallowComparison: true` (tree-wide) or use `Object.is` so each append is O(1).
-- **Do NOT model tokens as an array you `.push()` to.** Arrays live in a `WritableSignal` (no `.push()` — use `.update(a => [...a, x])`), and per-token array spreads pay deepEqual too. A single accumulating string leaf is the right shape for text.
-- **Transport is yours to adapt.** Anthropic/OpenAI SDKs hand you a `ReadableStream` / `AsyncIterable`; consume it with `for await … of` (or `reader.read()`) and write into the tree. Cancel on `DestroyRef` / route change by breaking the loop.
-- **Conversation + per-message state** compose from existing markers: `messages: entityMap<ChatMessage, string>()` for the history, a `status<E>()` marker per in-flight tool call at depth, `stored()`/`persistence()` for session memory (⚠️ plaintext localStorage — never for PHI/PII-regulated chat content).
+```typescript
+import { signalTree, asyncStream } from '@signaltree/core';
 
-> A first-class streaming marker (`asyncStream`) that consumes `AsyncIterable`/`ReadableStream` with built-in accumulation + `Object.is` is in **experimental** development. Until it ships from the public barrel, use the patterns above — do not import `asyncStream` / `createAsyncStreamSignal` from `@signaltree/core` (not yet exported).
+const store = signalTree({
+  chat: {
+    reply: asyncStream<string, string>({
+      initial: '',
+      accumulate: (text, chunk) => text + chunk, // fold each delta into state
+    }),
+  },
+});
+
+// Anthropic / OpenAI / Vercel AI SDK hand you an AsyncIterable or ReadableStream:
+store.$.chat.reply.start(anthropic.messages.stream({ /* … */ }));
+
+store.$.chat.reply();          // accumulated text, updates per token
+store.$.chat.reply.loading();  // Signal<boolean> — streaming in flight
+store.$.chat.reply.done();     // Signal<boolean> — completed
+store.$.chat.reply.error();    // Signal<unknown | null>
+store.$.chat.reply.cancel();   // abort the in-flight stream (late chunks dropped)
+store.$.chat.reply.reset();    // back to initial
+store.$.chat.reply.regenerate(); // re-run a config.stream factory (e.g. "regenerate")
+```
+
+Key facts:
+
+- **Consumes all four AI-SDK transports:** `AsyncIterable | ReadableStream | Observable | Promise`. Pass any to `.start(source)`, or set `config.stream: () => source` to auto-start on materialization (and enable `.regenerate()`).
+- **`Object.is` equality by default** — NOT deepEqual. A growing token string never pays an O(n) compare per chunk. (Override via `config.equal`.)
+- **Accumulate is the AI-specific bit.** Default REPLACES; pass `accumulate: (s, c) => s + c` for text. For Anthropic's multi-block deltas, accumulate `(s, c) => c.type === 'content_block_delta' ? s + c.delta.text : s`.
+- **switchMap-style cancellation + error-resilience:** a new `.start()`/`.regenerate()` supersedes the prior stream; a chunk from a superseded/cancelled stream is dropped; a query error sets `error()` without wedging the marker (next `.start()` recovers).
+- **Attaches at any depth** like every marker — `$.chat.messages.byId[id].content`, etc.
+- **Do NOT** reach for `asyncSource`/`asyncQuery` for token streaming, and do NOT model tokens as an array you `.push()` to (arrays are signals — no `.push()`; and per-token spreads pay deepEqual).
+
+**Conversation + tool state** composes from existing markers: `messages: entityMap<ChatMessage, string>()` for history, a `status<E>()` marker per in-flight tool call at depth, `stored()`/`persistence()` for session memory (⚠️ plaintext localStorage — never for PHI/PII-regulated chat content).
+
+Standalone (component-local, no tree): `createAsyncStreamSignal(config)` returns the same accessor without a marker.
 
 ## Common myths LLMs propagate (and the truth)
 

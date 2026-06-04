@@ -173,6 +173,20 @@ export {
   type AsyncQueryFn,
 } from './lib/markers/async-query';
 
+// Async-stream marker (v10.5) - chunk-accumulating streaming primitive for
+// AI-embedded apps (LLM token output) and any AsyncIterable/ReadableStream source
+export {
+  asyncStream,
+  isAsyncStreamMarker,
+  createAsyncStreamMarker,
+  createAsyncStreamSignal,
+  ASYNC_STREAM_MARKER,
+  type AsyncStreamMarker,
+  type AsyncStreamSignal,
+  type AsyncStreamConfig,
+  type StreamSource,
+} from './lib/markers/async-stream';
+
 // Marker processing (v7) - extensibility
 export { registerMarkerProcessor } from './lib/internals/materialize-markers';
 

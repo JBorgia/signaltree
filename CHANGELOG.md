@@ -1,3 +1,40 @@
+## 10.5.0
+
+### ✨ `asyncStream` marker — streaming state for AI-embedded apps
+
+A new built-in marker for **chunk-accumulating** streams — the shape LLM token output needs, and the gap `asyncSource`/`asyncQuery` couldn't fill (those *replace* the value on each emission; `asyncStream` *accumulates*).
+
+```typescript
+import { signalTree, asyncStream } from '@signaltree/core';
+
+const store = signalTree({
+  reply: asyncStream<string, string>({ initial: '', accumulate: (s, c) => s + c }),
+});
+
+store.$.reply.start(anthropic.messages.stream({ /* … */ })); // AsyncIterable | ReadableStream
+store.$.reply();          // accumulated text, updates per token
+store.$.reply.loading();  store.$.reply.done();  store.$.reply.error();
+store.$.reply.cancel();   // abort; .regenerate() re-runs a config.stream factory; .reset()
+```
+
+- Consumes all four AI-SDK transports: **`AsyncIterable | ReadableStream | Observable | Promise`**.
+- **`Object.is` equality by default** (not deepEqual) — a growing token string never pays an O(n) compare per chunk.
+- switchMap-style cancellation (a superseded/cancelled stream's chunks are dropped) and error-resilience (a failed stream sets `error()` without wedging the marker; the next `.start()` recovers).
+- Attaches at any tree depth like every marker. Standalone `createAsyncStreamSignal(config)` is available for component-local streaming state without a tree.
+- There is **no** `@signaltree/ai` package — SignalTree is state; wire your AI SDK in directly.
+
+### Spec coverage
+
+- 13 specs (9 standalone factory across all four transports + accumulate/cancel/supersede/regenerate/reset; 4 tree-materialized marker including depth-3 placement).
+
+### Documentation
+
+- llms.txt / llms-full.txt / SKILL.md: `asyncStream` streaming section, version-availability row, anti-hallucination rows (no `@signaltree/ai`; `asyncSource`/`asyncQuery` are not token accumulators). These ship in the `@signaltree/core` tarball.
+
+### Breaking changes
+
+None — purely additive.
+
 ## 10.4.1
 
 ### 🐛 Bug fixes
