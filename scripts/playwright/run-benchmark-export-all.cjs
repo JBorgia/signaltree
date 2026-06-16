@@ -179,6 +179,29 @@ async function run() {
         await page.waitForSelector('.benchmark-container', { timeout: 30000 });
       } catch (e) {}
 
+      // Dev-mode guard: Angular dev mode (ngDevMode) heavily instruments signal
+      // operations but NOT plain-object work, which disproportionately inflates
+      // signal-heavy libraries (SignalTree) vs reducer/spread libraries (NgRx) —
+      // e.g. a wide server-payload merge can read ~100x slower than production.
+      // Representative numbers REQUIRE a production build
+      // (`nx build demo --configuration=production` + serve the dist). Warn loudly
+      // so dev-server runs aren't mistaken for real comparisons.
+      try {
+        const ngDev = await page.evaluate(
+          () => typeof ngDevMode !== 'undefined' && !!ngDevMode
+        );
+        if (ngDev) {
+          console.warn(
+            '\n⚠️  WARNING: benchmark target is running in Angular DEV MODE (ngDevMode=true).\n' +
+              '    Dev-mode signal instrumentation inflates signal-heavy libraries vs plain\n' +
+              '    reducers/spreads — these numbers are NOT representative of production.\n' +
+              '    Build a production bundle and point DEMO_URL at it:\n' +
+              '      nx build demo --configuration=production && npx http-server dist/apps/demo -p 4200\n' +
+              '      DEMO_URL=http://localhost:4200/ node scripts/playwright/run-benchmark-export-all.cjs\n'
+          );
+        }
+      } catch (e) {}
+
       try {
         const calibrateBtn = await page.$(
           'button:has-text("Calibrate Environment")'
