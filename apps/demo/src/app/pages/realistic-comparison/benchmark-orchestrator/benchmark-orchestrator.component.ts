@@ -13,6 +13,7 @@ import { ElfBenchmarkService } from './services/elf-benchmark.service';
 import { NgRxBenchmarkService } from './services/ngrx-benchmark.service';
 import { NgRxSignalsBenchmarkService } from './services/ngrx-signals-benchmark.service';
 import { NgxsBenchmarkService } from './services/ngxs-benchmark.service';
+import { RawSignalsBenchmarkService } from './services/raw-signals-benchmark.service';
 import { SignalTreeBenchmarkService } from './services/signaltree-benchmark.service';
 import { BENCHMARK_CONSTANTS } from './shared/benchmark-constants';
 
@@ -406,6 +407,7 @@ export class BenchmarkOrchestratorComponent
   private readonly akitaBench = inject(AkitaBenchmarkService);
   private readonly elfBench = inject(ElfBenchmarkService);
   private readonly ngxsBench = inject(NgxsBenchmarkService);
+  private readonly rawSignalsBench = inject(RawSignalsBenchmarkService);
   private readonly realisticBenchmarkService = inject(
     RealisticBenchmarkService
   );
@@ -432,6 +434,18 @@ export class BenchmarkOrchestratorComponent
       stats: {
         bundleSize: '8.1KB', // Core + enterprise enhancer
         githubStars: 2800,
+      },
+    },
+    {
+      id: 'raw-signals',
+      name: 'Raw Angular Signals',
+      description:
+        'Native signal() + computed() with immutable updates — the "just use signals" baseline',
+      color: '#0ea5e9',
+      selected: true,
+      stats: {
+        bundleSize: '0KB',
+        githubStars: 0,
       },
     },
     {
@@ -522,6 +536,7 @@ export class BenchmarkOrchestratorComponent
     // map library id to service instance (use BenchmarkService type)
     const svcMap: Record<string, BenchmarkService | undefined> = {
       signaltree: this.stBench,
+      'raw-signals': this.rawSignalsBench,
       'ngrx-store': this.ngrxBench,
       'ngrx-signals': this.ngrxSignalsBench,
       akita: this.akitaBench,
@@ -3713,6 +3728,7 @@ export class BenchmarkOrchestratorComponent
     const svcMap: Record<string, BenchmarkService | undefined> = {
       signaltree: this.stBench,
       'signaltree-enterprise': this.stBench,
+      'raw-signals': this.rawSignalsBench,
       'ngrx-store': this.ngrxBench,
       'ngrx-signals': this.ngrxSignalsBench,
       akita: this.akitaBench,
