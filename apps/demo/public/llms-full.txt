@@ -129,7 +129,12 @@ Normalized entity collection with CRUD operations.
 import { signalTree, entityMap } from '@signaltree/core';
 
 const store = signalTree({
-  users: entityMap<User, number>({ selectId: (u) => u.id }),
+  // selectId: custom key. sortComparer (v10.5+, @ngrx/entity parity): keeps
+  // all()/ids() sorted on every read; map() stays insertion-order.
+  users: entityMap<User, number>({
+    selectId: (u) => u.id,
+    sortComparer: (a, b) => a.name.localeCompare(b.name),
+  }),
 });
 
 // CRUD
@@ -154,9 +159,20 @@ store.$.users.has(id);            // Signal<boolean>
 store.$.users.ids();              // Signal<number[]>
 store.$.users.where((u) => u.active); // Signal<User[]>
 store.$.users.find((u) => u.role === 'admin'); // Signal<User | undefined>
+
+// Per-entity reads are body-granular: byId(id).field() re-runs only when THAT
+// entity changes (fan-out 1), not on every collection mutation.
+store.$.users.byId(id)?.name(); // Signal-backed field read
+
+// Computed slices: materialized at runtime; slice names aren't on the static
+// tree.$ type yet, so read via a cast.
+// entityMap<User>().computed('active', (all) => all.filter((u) => u.active))
+(store.$.users as any).active(); // Signal<User[]>
 ```
 
 `entityMap` can be placed at any depth: `$.tickets.entities`, `$.users.byOrg[orgId].members`, etc.
+
+**Dev-mode guardrails (warn-only, tree-shaken in prod):** `[ST2001]` entities resolving to a `null`/`undefined` id (give them an `id` or `selectId`); `[ST2002]` a method from another library (`.upsert`/`.addEntities`/`.next`) → use the SignalTree name. All errors/warnings carry stable `[ST####]` codes — see `docs/errors/README.md`.
 
 ### `status<ErrorType>()`
 

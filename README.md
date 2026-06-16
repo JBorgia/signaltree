@@ -84,6 +84,10 @@ store.$.users.where((u) => u.active); // Signal<User[]>
 
 Additional methods: `addMany`, `upsertOne`, `upsertMany`, `updateMany`, `updateWhere`, `removeMany`, `removeWhere`, `clear`, `has`, `ids`, `find`.
 
+Pass `sortComparer` to keep `all()`/`ids()` sorted on every read (`@ngrx/entity` parity): `entityMap<User>({ selectId, sortComparer: (a, b) => a.name.localeCompare(b.name) })`. Per-entity reads are body-granular — `byId(id).field()` re-runs only when that entity changes.
+
+> **Error codes:** every SignalTree error and dev-mode warning carries a stable, greppable `[ST####]` code. Search it in a stack trace or in [`docs/errors/README.md`](docs/errors/README.md) for the cause and fix. In dev, the core warns on common mistakes (missing `selectId` → `[ST2001]`, wrong-library method names → `[ST2002]`, in-place-mutation no-op writes → `[ST2003]`).
+
 ## Markers
 
 Markers declare special node behavior at tree creation time:
