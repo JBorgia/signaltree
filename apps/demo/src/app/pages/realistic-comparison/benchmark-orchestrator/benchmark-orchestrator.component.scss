@@ -364,6 +364,20 @@ $border:    #e5e7eb;  // --color-border
       h3 {
         color: $dark;
         margin-bottom: 0.5rem;
+
+        .legacy-badge {
+          display: inline-block;
+          margin-left: 0.4rem;
+          padding: 0.05rem 0.4rem;
+          font-size: 0.6rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.03em;
+          color: $warning;
+          border: 1px solid $warning;
+          border-radius: 0.5rem;
+          vertical-align: middle;
+        }
       }
 
       p {

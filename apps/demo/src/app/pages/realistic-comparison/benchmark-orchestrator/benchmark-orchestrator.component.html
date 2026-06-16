@@ -217,7 +217,12 @@
           />
         </div>
         <div class="library-info">
-          <h3>{{ lib.name }}</h3>
+          <h3>
+            {{ lib.name }}
+            @if (lib.legacy) {
+            <span class="legacy-badge" title="Effectively unmaintained">legacy</span>
+            }
+          </h3>
           <p>{{ lib.description }}</p>
           @if (lib.stats) {
           <div class="library-stats">

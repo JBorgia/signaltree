@@ -33,6 +33,8 @@ interface Library {
   description: string;
   color: string;
   selected: boolean;
+  /** Marks an effectively-unmaintained library so results are read in context. */
+  legacy?: boolean;
   stats?: {
     bundleSize: string;
     githubStars: number;
@@ -473,9 +475,11 @@ export class BenchmarkOrchestratorComponent
     {
       id: 'akita',
       name: 'Akita',
-      description: 'Entity-focused state management',
+      description:
+        'Entity-focused state management (legacy — effectively unmaintained; author moved to Elf)',
       color: '#f59e0b',
       selected: false,
+      legacy: true,
       stats: {
         bundleSize: '~40KB', // Updated from 20KB based on actual bundle analysis
         githubStars: 3500,
