@@ -124,11 +124,12 @@ const one = userNode?.(); // User | undefined
 const nameSignal = userNode?.name; // Signal<string> | undefined (field-level)
 ```
 
-Key options live on `EntityConfig<E, K>`: `selectId: (entity) => entity.someKey` for a custom id key (e.g., `selectId: (p) => p.sku`), plus optional `beforeAdd` / `beforeUpdate` / `beforeRemove` lifecycle hooks.
+Key options live on `EntityConfig<E, K>`: `selectId: (entity) => entity.someKey` for a custom id key (e.g., `selectId: (p) => p.sku`); `sortComparer: (a, b) => …` (v10.5+, `@ngrx/entity` parity) to keep `all()` / `ids()` in a stable sorted order (`map()` stays insertion-order); plus optional `beforeAdd` / `beforeUpdate` / `beforeRemove` lifecycle hooks.
 
 **Full mutation surface:** `addOne`, `addMany`, `upsertOne`, `upsertMany`, `updateOne`, `updateMany(ids: K[], changes: Partial<E>)` (NOT NgRx-style `[{id, changes}]`), `updateWhere(pred, changes)`, `removeOne`, `removeMany`, `removeWhere`, `clear`, `setAll`.
 **Full read surface (Signals — invoke with `()`):** `all`, `count`, `ids`, `map`, `has(id)`, `where(pred)`, `find(pred)`, `empty` (v10.3 canonical; `.isEmpty` is a deprecated alias).
-**Node access:** `byId(id) → EntityNode<E> | undefined`.
+**Node access:** `byId(id) → EntityNode<E> | undefined`. **Per-entity reads are body-granular** — `byId(id).field()` re-runs only when *that* entity changes (fan-out 1), not on every collection mutation.
+**Typed computed slices (v10.5+):** `entityMap<User>().computed('active', all => all.filter(u => u.active))` exposes `store.$.users.active()` as a typed `Signal<User[]>` on `tree.$` — no `as any` cast.
 
 ### `status()`
 

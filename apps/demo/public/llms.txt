@@ -93,6 +93,7 @@ store.$.reports.refresh();                      // reload async source
 - **Write leaf:** `tree.$.path.to.leaf.set(v)` / `.update(fn)`
 - **Partial / deep-merge update:** `tree(partialUpdate)` — keys not in the payload are preserved. The root has no `.set` method; the root accessor itself is callable.
 - **Markers:** `entityMap<E, K>()`, `status<E>()`, `stored(key, default)`, `form<T>(config)`, `asyncSource<T>(config)`, `asyncQuery<TIn, TOut>(config)`, `asyncStream<TChunk, TState>(config)` (v10.5+, chunk-accumulating streams) — place at any node
+- **entityMap config & queries:** `entityMap<User, number>({ selectId: (u) => u.id, sortComparer: (a, b) => a.name.localeCompare(b.name) })` — `sortComparer` (v10.5+, `@ngrx/entity` parity) keeps `all()`/`ids()` sorted; `map()` stays insertion-order. CRUD: `addOne/addMany/updateOne/updateMany/upsertOne/upsertMany/removeOne/removeMany/setAll`. Reads: `all()/count()/ids()/byId(id)?.()/where(pred)/find(pred)`. **Per-entity reads are body-granular** — `byId(id).field()` only re-runs when *that* entity changes (fan-out 1), not the whole collection. **Computed slices are typed** (v10.5+): `entityMap<User>().computed('active', all => all.filter(u => u.active))` exposes `tree.$.users.active()` as a typed `Signal<User[]>` — **no `as any` cast**.
 - **Derived state:** `.derived($ => ({ ... }))` — definitions deep-merged into existing tree paths
 - **Enhancers:** `.with(batching())`, `.with(devTools())`, `.with(timeTravel())`, `.with(persistence())`, `.with(serialization())`
 - **Lifecycle:** `tree.destroy()` runs all registered cleanup callbacks in registration order; `tree.destroyed()` is a signal; `tree.registerCleanup(fn)` for custom hooks. Built-in enhancers register their own cleanup automatically.
@@ -214,6 +215,14 @@ For **input-driven queries** (debounced search, filtered fetch), use `asyncQuery
 - **GOTCHA (testing):** Any `TestBed` touching `AppStore` (directly or via a `providedIn: 'root'` consumer) must include `provideAppTreeForTesting()`, else it fails with `NG0201: No provider for APP_TREE`. Use a real seeded tree, not a mock; seed `T | null` leaves via `.set()` after injection, not via the state override. See `llms-full.txt` and `docs/skills/using-signaltree/reference/testing.md`.
 - **GOTCHA (templates):** Read in templates with direct signal calls — `{{ store.$.user.name() }}`, `@if (store.$.users.loading())`, `@for (u of store.$.users.all(); track u.id)`. Never `| async`, never `.value`.
 - **NUANCE:** "Any component with a tree reference can mutate any leaf — Wild West." → True by default. For unidirectional command flow opt into `@signaltree/events`. For runtime invariants opt into `@signaltree/guardrails`. For projection-style exposure use `.derived()` in a service facade. See `docs/architecture/signaltree-architecture-guide.md#recommended-default-architecture` for the production pattern.
+
+## Error codes & dev-mode guardrails (v10.5+)
+
+Every SignalTree error and dev-mode warning carries a stable `[ST####]` code. Search the code in a stack trace, your codebase, or [`docs/errors/README.md`](https://github.com/JBorgia/signaltree/blob/main/docs/errors/README.md) (maps every code → cause + fix). `ST1xxx` = core/update/enhancer; `ST2xxx` = entity/markers. In dev mode the core actively warns on the common AI-codegen mistakes — fix them as the message says:
+
+- **[ST2001]** `entityMap` entity resolved to `null`/`undefined` id → give entities an `id` field or `entityMap({ selectId })`; otherwise all entities collide under one key.
+- **[ST2002]** Called a non-existent entity method from another library (Akita `.upsert`/`.add`, Elf `.addEntities`/`.setProps`, RxJS `.next`) → use the SignalTree name in the warning (`upsertOne`, `addMany`, …).
+- **[ST2003]** A merge write was skipped because the value is reference-identical to the current value — you mutated an object/array in place. Return a **new** reference (spread/slice/map) so the change is observed.
 
 ## Links
 

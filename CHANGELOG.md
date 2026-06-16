@@ -1,3 +1,30 @@
+## 10.6.0 (unreleased)
+
+### Added
+
+- **Typed `entityMap` computed slices** — `entityMap().computed('active', all => …)` now types `tree.$.users.active()` as a `Signal<…>` directly on `tree.$`; the previous `(tree.$.users as any).active()` cast is gone.
+- **Stable error codes** — every core message and dev-mode guardrail carries a greppable `[ST####]` code; new [`docs/errors/README.md`](docs/errors/README.md) maps each code to its cause and fix (`ST1xxx` core, `ST2xxx` entity/markers).
+
+### Dev-mode guardrails (warn-only; tree-shaken from production)
+
+- **[ST2001]** `entityMap` entities resolving to a `null`/`undefined` id (missing `selectId`) — they would otherwise collide under one key.
+- **[ST2002]** wrong entity method names borrowed from other libraries (Akita `.upsert`/`.add`, Elf `.addEntities`/`.setProps`, RxJS `.next`) → hints the SignalTree equivalent.
+
+### Internal
+
+- Reactivity-contract test suite locks bounded fan-out as a regression-gated invariant; property-based fuzzing of `deepEqual`; timing benchmarks gated behind `ST_PERF=1` for deterministic CI.
+
+## 10.5.0
+
+### Added
+
+- **Body-granular `entityMap`** — `byId(id).field()` reads depend only on that entity's signal, so updating one entity no longer re-runs every entity's computeds (fan-out 1). Per-entity signals are materialized lazily and released on removal.
+- **`entityMap` `sortComparer`** config — keeps `all()` / `ids()` in a stable sorted order (`@ngrx/entity` parity); `map()` retains insertion order.
+
+### Fixed (dev-mode)
+
+- **[ST2003]** dev-mode warning when a merge write is skipped because the value is reference-identical to the current value (the in-place-mutation footgun — return a new reference).
+
 ## Unreleased
 
 > **Note:** the items below are on `main` but **not published**. Per
