@@ -65,8 +65,8 @@ describe('entityMap() marker', () => {
       ]);
 
       // Access computed slices
-      const admins = (tree.$.users as any).admins();
-      const activeUsers = (tree.$.users as any).activeUsers();
+      const admins = tree.$.users.admins();
+      const activeUsers = tree.$.users.activeUsers();
 
       expect(admins).toHaveLength(2);
       expect(admins.map((u: User) => u.name)).toContain('Alice');
@@ -88,12 +88,12 @@ describe('entityMap() marker', () => {
         { id: 2, name: 'Bob', role: 'user', active: false, score: 100 },
       ]);
 
-      expect((tree.$.users as any).active()).toHaveLength(1);
+      expect(tree.$.users.active()).toHaveLength(1);
 
       // Update Bob to be active
       tree.$.users.updateOne(2, { active: true });
 
-      expect((tree.$.users as any).active()).toHaveLength(2);
+      expect(tree.$.users.active()).toHaveLength(2);
     });
 
     it('should work with complex filter functions', () => {
@@ -112,7 +112,7 @@ describe('entityMap() marker', () => {
         { id: 4, name: 'Diana', role: 'admin', active: true, score: 300 },
       ]);
 
-      const topActiveAdmins = (tree.$.users as any).topActiveAdmins();
+      const topActiveAdmins = tree.$.users.topActiveAdmins();
 
       expect(topActiveAdmins).toHaveLength(2);
       expect(topActiveAdmins[0].name).toBe('Diana'); // Highest score
@@ -133,8 +133,8 @@ describe('entityMap() marker', () => {
         { id: 2, name: 'Bob', role: 'user', active: true, score: 200 },
       ]);
 
-      const names = (tree.$.users as any).userNames();
-      const total = (tree.$.users as any).totalScore();
+      const names = tree.$.users.userNames();
+      const total = tree.$.users.totalScore();
 
       expect(names).toEqual(['Alice', 'Bob']);
       expect(total).toBe(300);

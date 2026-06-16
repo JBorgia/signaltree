@@ -3,6 +3,13 @@ import { Signal, WritableSignal } from '@angular/core';
 import { AsyncQueryMarker, AsyncQuerySignal } from './markers/async-query';
 import { AsyncSourceMarker, AsyncSourceSignal } from './markers/async-source';
 import { AsyncStreamMarker, AsyncStreamSignal } from './markers/async-stream';
+// Type-only (erased): entityMap builder/with-slices types so TreeNode can carry
+// computed-slice types into `tree.$.users.<slice>()` without an `as any` cast.
+import type {
+  EntityMapBuilder,
+  EntityMapMarkerWithSlices,
+  EntitySignalWithSlices,
+} from './markers/entity-map';
 import { FormMarker, FormSignal } from './markers/form';
 import { StatusMarker, StatusSignal } from './markers/status';
 import { StoredMarker, StoredSignal } from './markers/stored';
@@ -104,7 +111,11 @@ export interface NodeAccessor<T> {
 // Default TreeNode maps known keys to either EntitySignal, StatusSignal, StoredSignal, FormSignal,
 // or CallableWritableSignal and still allows dynamic string indexing at runtime.
 export type TreeNode<T> = {
-  [K in keyof T]: T[K] extends EntityMapMarker<infer E, infer Key>
+  [K in keyof T]: T[K] extends EntityMapBuilder<infer E, infer Key, infer S>
+    ? EntitySignalWithSlices<E, Key, S>
+    : T[K] extends EntityMapMarkerWithSlices<infer E, infer Key, infer S>
+    ? EntitySignalWithSlices<E, Key, S>
+    : T[K] extends EntityMapMarker<infer E, infer Key>
     ? EntitySignal<E, Key>
     : T[K] extends StatusMarker<infer Err>
     ? StatusSignal<Err>
@@ -731,7 +742,11 @@ export type IsEntityMap<T> = T extends EntityMapMarker<
  * the full deep inference.
  */
 export type DeepEntityAwareTreeNode<T> = {
-  [K in keyof T]: T[K] extends EntityMapMarker<infer E, infer Key>
+  [K in keyof T]: T[K] extends EntityMapBuilder<infer E, infer Key, infer S>
+    ? EntitySignalWithSlices<E, Key, S>
+    : T[K] extends EntityMapMarkerWithSlices<infer E, infer Key, infer S>
+    ? EntitySignalWithSlices<E, Key, S>
+    : T[K] extends EntityMapMarker<infer E, infer Key>
     ? EntitySignal<E, Key>
     : T[K] extends StatusMarker<infer Err>
     ? StatusSignal<Err>
@@ -758,7 +773,11 @@ export type DeepEntityAwareTreeNode<T> = {
  * `TypedSignalTree<T>` (see below) or use `DeepEntityAwareTreeNode`.
  */
 export type EntityAwareTreeNode<T> = {
-  [K in keyof T]: T[K] extends EntityMapMarker<infer E, infer Key>
+  [K in keyof T]: T[K] extends EntityMapBuilder<infer E, infer Key, infer S>
+    ? EntitySignalWithSlices<E, Key, S>
+    : T[K] extends EntityMapMarkerWithSlices<infer E, infer Key, infer S>
+    ? EntitySignalWithSlices<E, Key, S>
+    : T[K] extends EntityMapMarker<infer E, infer Key>
     ? EntitySignal<E, Key>
     : T[K] extends StatusMarker<infer Err>
     ? StatusSignal<Err>
