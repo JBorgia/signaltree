@@ -155,6 +155,19 @@ type InternalMarker = EntityMapMarker<
  * tree.$.users.all(); // [{ id: 1, name: 'Alice' }]
  * tree.$.listings.active(); // Signal<Listing[]> - computed slice
  * ```
+ *
+ * ### Reactivity granularity
+ *
+ * Per-entity reads are **body-granular**: `byId(id)` and its field signals
+ * (`tree.$.users.byId(1).name()`) depend only on *that* entity's signal, so
+ * updating a different entity does not re-run them. This is what makes
+ * fine-grained updates O(1) in observers rather than O(collection size).
+ *
+ * Collection reads are **collection-level**: `all`, `map`, `count`, `ids`,
+ * `where`, `find`, and `.computed()` slices derive from the whole collection
+ * and therefore recompute on *any* add/update/remove — which is correct, since
+ * their result depends on every entity. Prefer `byId(id)` for per-row UI to
+ * avoid unnecessary recomputation.
  */
 export function entityMap<
   E,
