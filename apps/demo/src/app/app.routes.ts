@@ -169,6 +169,13 @@ export const appRoutes: Route[] = [
       ).then((c) => c.EntitySortComparerDemoComponent),
   },
   {
+    path: 'granular-reactivity',
+    loadComponent: () =>
+      import(
+        './examples/features/fundamentals/examples/granular-reactivity/granular-reactivity-demo.component'
+      ).then((c) => c.GranularReactivityDemoComponent),
+  },
+  {
     path: 'persistence',
     loadComponent: () =>
       import(

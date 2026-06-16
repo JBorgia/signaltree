@@ -13,6 +13,7 @@ import {
 } from '../../features/fundamentals/examples/enhancers/serialization-demo/serialization-demo.component';
 import { EntitiesDemoComponent } from '../../features/fundamentals/examples/entities/entities-demo.component';
 import { EntitySortComparerDemoComponent } from '../../features/fundamentals/examples/entity-sort-comparer/entity-sort-comparer-demo.component';
+import { GranularReactivityDemoComponent } from '../../features/fundamentals/examples/granular-reactivity/granular-reactivity-demo.component';
 import { FormsDemoComponent } from '../../features/fundamentals/examples/forms/forms-demo.component';
 import {
     RecommendedArchitectureComponent,
@@ -78,6 +79,21 @@ export const entitySortComparerExampleMeta: ExampleMeta = {
   component: EntitySortComparerDemoComponent,
   difficulty: 'beginner',
   tags: ['entities', 'sorting', 'sortComparer', 'collections'],
+};
+
+export const granularReactivityExampleMeta: ExampleMeta = {
+  id: 'granular-reactivity',
+  title: 'Granular Reactivity (who re-renders?)',
+  description:
+    'Side-by-side render-counters: SignalTree entityMap re-renders only the touched row; a naive single signal(object) re-renders every row.',
+  category: 'Performance',
+  focusAreas: ['reactivity', 'performance'],
+  functionalUse: ['performance', 'change-detection'],
+  enhancers: ['entities'],
+  route: '/granular-reactivity',
+  component: GranularReactivityDemoComponent,
+  difficulty: 'beginner',
+  tags: ['reactivity', 'fan-out', 'OnPush', 'performance', 'entities'],
 };
 
 /**
@@ -334,6 +350,7 @@ export const EXAMPLES_REGISTRY: ExampleMeta[] = [
   signalsExampleMeta,
   entitiesExampleMeta,
   entitySortComparerExampleMeta,
+  granularReactivityExampleMeta,
   batchingExampleMeta,
   callableSyntaxExampleMeta,
   devtoolsExampleMeta,
