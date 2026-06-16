@@ -290,7 +290,7 @@ function recursiveUpdate(
             `SignalTree: write at "${childPath}" was skipped — the value is ` +
               `reference-identical to the current value. If you mutated an ` +
               `object/array in place, create a NEW reference (spread/slice/map) ` +
-              `so the change is observed.`
+              `so the change is observed. [ST2003]`
           );
         }
         continue;

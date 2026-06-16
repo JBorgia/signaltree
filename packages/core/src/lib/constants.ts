@@ -20,38 +20,46 @@ export const SIGNAL_TREE_CONSTANTS = {
   DEFAULT_BATCH_SIZE: 10,
 } as const;
 
-// Full developer-facing messages
+// Full developer-facing messages.
+//
+// Each message carries a stable, greppable error code `[ST####]`. The code is
+// the anchor: search it in your code, a stack trace, or docs/errors/README.md
+// (which maps every code to a cause + fix). This keeps the human-readable text
+// (an earlier attempt used bare opaque integers like '0'/'1' — abandoned
+// because they're meaningless in stack traces) while giving AI agents and
+// tooling a stable handle for self-remediation. Codes are append-only and
+// never reused: ST1xxx = core/update/enhancer; ST2xxx = entity/markers.
 const DEV_MESSAGES = {
-  NULL_OR_UNDEFINED: 'null/undefined',
-  CIRCULAR_REF: 'circular ref',
-  UPDATER_INVALID: 'updater invalid',
-  LAZY_FALLBACK: 'lazy fallback',
-  SIGNAL_CREATION_FAILED: 'signal creation failed',
-  UPDATE_PATH_NOT_FOUND: 'update path not found',
-  UPDATE_FAILED: 'update failed',
-  ROLLBACK_FAILED: 'rollback failed',
-  CLEANUP_ERROR: 'cleanup error',
-  PRESET_UNKNOWN: 'unknown preset',
-  STRATEGY_SELECTION: 'strategy select',
-  TREE_DESTROYED: 'destroyed',
-  UPDATE_TRANSACTION: 'update tx',
-  BATCH_NOT_ENABLED: 'batching disabled',
-  MEMOIZE_NOT_ENABLED: 'memoize disabled',
-  MIDDLEWARE_NOT_AVAILABLE: 'middleware missing',
-  ENTITY_HELPERS_NOT_AVAILABLE: 'entity helpers missing',
-  TIME_TRAVEL_NOT_AVAILABLE: 'time travel missing',
-  OPTIMIZE_NOT_AVAILABLE: 'optimize missing',
-  UPDATE_OPTIMIZED_NOT_AVAILABLE: 'update optimized missing',
-  CACHE_NOT_AVAILABLE: 'cache missing',
-  PERFORMANCE_NOT_ENABLED: 'performance disabled',
-  ENHANCER_ORDER_FAILED: 'enhancer order failed',
-  ENHANCER_CYCLE_DETECTED: 'enhancer cycle',
-  ENHANCER_REQUIREMENT_MISSING: 'enhancer req missing',
-  ENHANCER_PROVIDES_MISSING: 'enhancer provides missing',
-  ENHANCER_FAILED: 'enhancer failed',
-  ENHANCER_NOT_FUNCTION: 'enhancer not function',
-  EFFECT_NO_CONTEXT: 'no angular context',
-  SUBSCRIBE_NO_CONTEXT: 'no angular context',
+  NULL_OR_UNDEFINED: 'null/undefined [ST1001]',
+  CIRCULAR_REF: 'circular ref [ST1002]',
+  UPDATER_INVALID: 'updater invalid [ST1003]',
+  LAZY_FALLBACK: 'lazy fallback [ST1004]',
+  SIGNAL_CREATION_FAILED: 'signal creation failed [ST1005]',
+  UPDATE_PATH_NOT_FOUND: 'update path not found [ST1006]',
+  UPDATE_FAILED: 'update failed [ST1007]',
+  ROLLBACK_FAILED: 'rollback failed [ST1008]',
+  CLEANUP_ERROR: 'cleanup error [ST1009]',
+  PRESET_UNKNOWN: 'unknown preset [ST1010]',
+  STRATEGY_SELECTION: 'strategy select [ST1011]',
+  TREE_DESTROYED: 'destroyed [ST1012]',
+  UPDATE_TRANSACTION: 'update tx [ST1013]',
+  BATCH_NOT_ENABLED: 'batching disabled [ST1014]',
+  MEMOIZE_NOT_ENABLED: 'memoize disabled [ST1015]',
+  MIDDLEWARE_NOT_AVAILABLE: 'middleware missing [ST1016]',
+  ENTITY_HELPERS_NOT_AVAILABLE: 'entity helpers missing [ST1017]',
+  TIME_TRAVEL_NOT_AVAILABLE: 'time travel missing [ST1018]',
+  OPTIMIZE_NOT_AVAILABLE: 'optimize missing [ST1019]',
+  UPDATE_OPTIMIZED_NOT_AVAILABLE: 'update optimized missing [ST1020]',
+  CACHE_NOT_AVAILABLE: 'cache missing [ST1021]',
+  PERFORMANCE_NOT_ENABLED: 'performance disabled [ST1022]',
+  ENHANCER_ORDER_FAILED: 'enhancer order failed [ST1023]',
+  ENHANCER_CYCLE_DETECTED: 'enhancer cycle [ST1024]',
+  ENHANCER_REQUIREMENT_MISSING: 'enhancer req missing [ST1025]',
+  ENHANCER_PROVIDES_MISSING: 'enhancer provides missing [ST1026]',
+  ENHANCER_FAILED: 'enhancer failed [ST1027]',
+  ENHANCER_NOT_FUNCTION: 'enhancer not function [ST1028]',
+  EFFECT_NO_CONTEXT: 'no angular context [ST1029]',
+  SUBSCRIBE_NO_CONTEXT: 'no angular context [ST1030]',
 } as const;
 
 // Production messages use the same short readable strings as dev.

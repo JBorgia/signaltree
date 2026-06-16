@@ -184,7 +184,7 @@ export function createEntitySignal<
         `SignalTree entityMap${basePath ? ` at "${basePath}"` : ''}: an entity ` +
           `resolved to id=${String(id)}. Entities need a stable key — give them ` +
           `an \`id\` field or pass entityMap({ selectId: (e) => e.yourKey }). ` +
-          `Without it, entities collide under a single key.`
+          `Without it, entities collide under a single key. [ST2001]`
       );
     }
     return id;
@@ -967,7 +967,7 @@ export function createEntitySignal<
         warnedWrongMethods.add(prop);
         console.warn(
           `SignalTree entityMap has no \`.${prop}()\`. Did you mean: ` +
-            `${WRONG_ENTITY_METHODS[prop]}?`
+            `${WRONG_ENTITY_METHODS[prop]}? [ST2002]`
         );
       }
       // All other access goes directly to api
