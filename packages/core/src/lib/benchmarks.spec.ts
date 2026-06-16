@@ -34,30 +34,53 @@ function benchmark(fn: () => void, warmup = 100, runs = 50): number {
   return median(times);
 }
 
+/**
+ * Stable overhead ratio (candidate / baseline). A single ratio of two tiny
+ * medians is flaky under machine load — one scheduler/GC spike on either side
+ * skews it. Taking the MEDIAN of several paired measurements filters those
+ * spikes, so the bound assertion reflects real overhead, not noise. The
+ * baseline is floored to the timer resolution to avoid divide-by-near-zero.
+ */
+function stableRatio(
+  label: string,
+  baseline: () => void,
+  candidate: () => void,
+  repeats = 5
+): number {
+  const ratios: number[] = [];
+  for (let r = 0; r < repeats; r++) {
+    const base = Math.max(benchmark(baseline), 1e-4);
+    const cand = benchmark(candidate);
+    ratios.push(cand / base);
+  }
+  const ratio = median(ratios);
+  console.log(`${label}: ratio=${ratio.toFixed(2)}x (median of ${repeats})`);
+  return ratio;
+}
+
 describe('Benchmark: signalTree vs raw signal()', () => {
   it('creation overhead is bounded (< 50x for 20 keys)', () => {
-    const rawTime = benchmark(() => {
-      for (let i = 0; i < 100; i++) {
-        const signals: any = {};
-        for (let j = 0; j < 20; j++) {
-          signals[`key_${j}`] = signal(j);
+    const ratio = stableRatio(
+      'Creation',
+      () => {
+        for (let i = 0; i < 100; i++) {
+          const signals: any = {};
+          for (let j = 0; j < 20; j++) {
+            signals[`key_${j}`] = signal(j);
+          }
+        }
+      },
+      () => {
+        for (let i = 0; i < 100; i++) {
+          const state: Record<string, number> = {};
+          for (let j = 0; j < 20; j++) {
+            state[`key_${j}`] = j;
+          }
+          const tree = signalTree(state);
+          tree.destroy();
         }
       }
-    });
-
-    const treeTime = benchmark(() => {
-      for (let i = 0; i < 100; i++) {
-        const state: Record<string, number> = {};
-        for (let j = 0; j < 20; j++) {
-          state[`key_${j}`] = j;
-        }
-        const tree = signalTree(state);
-        tree.destroy();
-      }
-    });
-
-    const ratio = treeTime / rawTime;
-    console.log(`Creation: raw=${rawTime.toFixed(2)}ms, tree=${treeTime.toFixed(2)}ms, ratio=${ratio.toFixed(1)}x`);
+    );
 
     // signalTree does more work (recursion, NodeAccessor creation, config init)
     // so some overhead is expected. 50x is a generous bound.
@@ -76,20 +99,19 @@ describe('Benchmark: signalTree vs raw signal()', () => {
     }
     const tree = signalTree(state);
 
-    const rawTime = benchmark(() => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        signals[`key_${i % 20}`]();
+    const ratio = stableRatio(
+      'Read',
+      () => {
+        for (let i = 0; i < ITERATIONS; i++) {
+          signals[`key_${i % 20}`]();
+        }
+      },
+      () => {
+        for (let i = 0; i < ITERATIONS; i++) {
+          (tree.$ as any)[`key_${i % 20}`]();
+        }
       }
-    });
-
-    const treeTime = benchmark(() => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        (tree.$ as any)[`key_${i % 20}`]();
-      }
-    });
-
-    const ratio = treeTime / rawTime;
-    console.log(`Read: raw=${rawTime.toFixed(2)}ms, tree=${treeTime.toFixed(2)}ms, ratio=${ratio.toFixed(1)}x`);
+    );
 
     expect(ratio).toBeLessThan(5);
 
@@ -100,20 +122,19 @@ describe('Benchmark: signalTree vs raw signal()', () => {
     const rawSig = signal(0);
     const tree = signalTree({ value: 0 });
 
-    const rawTime = benchmark(() => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        rawSig.set(i);
+    const ratio = stableRatio(
+      'Write',
+      () => {
+        for (let i = 0; i < ITERATIONS; i++) {
+          rawSig.set(i);
+        }
+      },
+      () => {
+        for (let i = 0; i < ITERATIONS; i++) {
+          tree.$.value.set(i);
+        }
       }
-    });
-
-    const treeTime = benchmark(() => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        tree.$.value.set(i);
-      }
-    });
-
-    const ratio = treeTime / rawTime;
-    console.log(`Write: raw=${rawTime.toFixed(2)}ms, tree=${treeTime.toFixed(2)}ms, ratio=${ratio.toFixed(1)}x`);
+    );
 
     expect(ratio).toBeLessThan(5);
 
@@ -126,20 +147,19 @@ describe('Benchmark: enhancer overhead', () => {
     const plain = signalTree({ count: 0 });
     const batched = signalTree({ count: 0 }).with(batching());
 
-    const plainTime = benchmark(() => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        plain.$.count.set(i);
+    const ratio = stableRatio(
+      'Batching',
+      () => {
+        for (let i = 0; i < ITERATIONS; i++) {
+          plain.$.count.set(i);
+        }
+      },
+      () => {
+        for (let i = 0; i < ITERATIONS; i++) {
+          batched.$.count.set(i);
+        }
       }
-    });
-
-    const batchedTime = benchmark(() => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        batched.$.count.set(i);
-      }
-    });
-
-    const ratio = batchedTime / plainTime;
-    console.log(`Batching: plain=${plainTime.toFixed(2)}ms, batched=${batchedTime.toFixed(2)}ms, ratio=${ratio.toFixed(1)}x`);
+    );
 
     expect(ratio).toBeLessThan(2);
 
@@ -156,22 +176,21 @@ describe('Benchmark: enhancer overhead', () => {
     const plain = signalTree({ count: 0 });
     const withDt = signalTree({ count: 0 }).with(devTools({ enabled: false }));
 
-    const plainTime = benchmark(() => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        plain.$.count.set(i);
-        plain.$.count();
+    const ratio = stableRatio(
+      'DevTools(disabled)',
+      () => {
+        for (let i = 0; i < ITERATIONS; i++) {
+          plain.$.count.set(i);
+          plain.$.count();
+        }
+      },
+      () => {
+        for (let i = 0; i < ITERATIONS; i++) {
+          withDt.$.count.set(i);
+          withDt.$.count();
+        }
       }
-    });
-
-    const dtTime = benchmark(() => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        withDt.$.count.set(i);
-        withDt.$.count();
-      }
-    });
-
-    const ratio = dtTime / plainTime;
-    console.log(`DevTools(disabled): plain=${plainTime.toFixed(2)}ms, devtools=${dtTime.toFixed(2)}ms, ratio=${ratio.toFixed(1)}x`);
+    );
 
     expect(ratio).toBeLessThan(1.5);
 
