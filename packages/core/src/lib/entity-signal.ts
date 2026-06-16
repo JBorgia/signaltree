@@ -2,6 +2,10 @@ import { computed, Signal, signal, WritableSignal } from '@angular/core';
 
 import { PathNotifier } from '../lib/path-notifier';
 
+// Angular's global dev-mode flag (defined by the Angular CLI; undefined in
+// plain test/node contexts, treated as dev there).
+declare const ngDevMode: boolean | undefined;
+
 /**
  * EntitySignal Implementation (Composition Pattern)
  *
@@ -133,6 +137,34 @@ export function createEntitySignal<
   const selectId: (entity: E) => K =
     config.selectId ??
     ((entity: E) => (entity as unknown as Record<string, K>)['id']);
+
+  // Dev-mode guard state: warn once if entities resolve to a null/undefined id.
+  let warnedMissingId = false;
+
+  /**
+   * Resolve an entity's id (per-call selectId override → config selectId →
+   * default `.id`). Dev-mode guardrail: a null/undefined id means the entity
+   * has no `id` field and no `selectId` was provided, so every such entity
+   * collides under one key — a common mistake (especially in AI-generated
+   * code). Warn once with an actionable fix.
+   */
+  function deriveId(entity: E, opts?: { selectId?: (e: E) => K }): K {
+    const id = opts?.selectId?.(entity) ?? selectId(entity);
+    if (
+      id == null &&
+      (typeof ngDevMode === 'undefined' || ngDevMode) &&
+      !warnedMissingId
+    ) {
+      warnedMissingId = true;
+      console.warn(
+        `SignalTree entityMap${basePath ? ` at "${basePath}"` : ''}: an entity ` +
+          `resolved to id=${String(id)}. Entities need a stable key — give them ` +
+          `an \`id\` field or pass entityMap({ selectId: (e) => e.yourKey }). ` +
+          `Without it, entities collide under a single key.`
+      );
+    }
+    return id;
+  }
 
   /** Handlers for observation */
   const tapHandlers: TapHandlers<E, K>[] = [];
@@ -329,7 +361,7 @@ export function createEntitySignal<
     // ==================
 
     addOne(entity: E, opts?: AddOptions<E, K>): K {
-      const id = opts?.selectId?.(entity) ?? selectId(entity);
+      const id = deriveId(entity, opts);
 
       // Check for duplicates first
       if (storage.has(id)) {
@@ -381,7 +413,7 @@ export function createEntitySignal<
       // First pass: validate/filter based on mode
       const toProcess: Array<{ entity: E; id: K }> = [];
       for (const entity of entities) {
-        const id = opts?.selectId?.(entity) ?? selectId(entity);
+        const id = deriveId(entity, opts);
         if (storage.has(id)) {
           if (mode === 'strict') {
             throw new Error(`Entity with id ${String(id)} already exists`);
@@ -677,7 +709,7 @@ export function createEntitySignal<
     // ==================
 
     upsertOne(entity: E, opts?: AddOptions<E, K>): K {
-      const id = opts?.selectId?.(entity) ?? selectId(entity);
+      const id = deriveId(entity, opts);
       if (storage.has(id)) {
         api.updateOne(id, entity);
       } else {
@@ -694,7 +726,7 @@ export function createEntitySignal<
       const toUpdate: Array<{ entity: E; id: K; prev: E }> = [];
 
       for (const entity of entities) {
-        const id = opts?.selectId?.(entity) ?? selectId(entity);
+        const id = deriveId(entity, opts);
         const existing = storage.get(id);
         if (existing !== undefined) {
           toUpdate.push({ entity, id, prev: existing });
@@ -814,7 +846,7 @@ export function createEntitySignal<
       // Add all entities without triggering per-entity signal updates
       const addedIds: K[] = [];
       for (const entity of entities) {
-        const id = opts?.selectId?.(entity) ?? selectId(entity);
+        const id = deriveId(entity, opts);
 
         // Run interceptors
         let transformedEntity = entity;
