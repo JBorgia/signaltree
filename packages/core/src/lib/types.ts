@@ -410,6 +410,17 @@ export interface EntityConfig<E, K extends string | number = string> {
   selectId?: (entity: E) => K;
 
   /**
+   * Optional comparator that keeps `all` and `ids` in a stable sorted order
+   * (parity with @ngrx/entity's `sortComparer`). When provided, the `all()`
+   * and `ids()` signals reflect this order regardless of insertion order;
+   * `map()` retains insertion order. Omit for insertion-order collections.
+   *
+   * @example
+   * entityMap<User>({ sortComparer: (a, b) => a.name.localeCompare(b.name) })
+   */
+  sortComparer?: (a: E, b: E) => number;
+
+  /**
    * Entity-level hooks (run before collection hooks)
    */
   hooks?: {

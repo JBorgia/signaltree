@@ -86,7 +86,36 @@ describe('granular-reactivity fan-out', () => {
     expect(counters.filter((c) => c > 1).length).toBe(N); // no isolation
   });
 
-  it('entityMap is NOT body-granular (fan-out = N) — isolates propagation, not recompute', () => {
+  it('entityMap via byId() IS body-granular (fan-out = 1) — the per-entity signal layer', () => {
+    interface Row {
+      id: number;
+      v: number;
+    }
+    const tree = signalTree({ rows: entityMap<Row, number>() });
+    const rows = tree.$.rows as unknown as {
+      addMany: (r: Row[]) => void;
+      updateOne: (id: number, patch: Partial<Row>) => void;
+      byId: (id: number) => { v: () => number } | undefined;
+    };
+    rows.addMany(Array.from({ length: N }, (_, i) => ({ id: i, v: 0 })));
+
+    // Idiomatic per-entity read: byId(i).v() depends only on entity i's signal.
+    const { counters, readAll } = instrument((i) => rows.byId(i)?.v() ?? -1);
+
+    readAll();
+    expect(counters.every((c) => c === 1)).toBe(true);
+
+    rows.updateOne(TARGET, { v: 999 });
+    readAll();
+
+    // REGRESSION GUARD: updating one entity must dirty only that entity's
+    // readers. Before the per-entity signal layer this was N (all per-entity
+    // computeds read the single mapSignal). Keep this at 1.
+    expect(counters[TARGET]).toBe(2);
+    expect(counters.filter((c) => c > 1).length).toBe(1);
+  });
+
+  it('entityMap via map() (collection signal) still fans out to N — correct for collection queries', () => {
     interface Row {
       id: number;
       v: number;
@@ -99,17 +128,14 @@ describe('granular-reactivity fan-out', () => {
     };
     rows.addMany(Array.from({ length: N }, (_, i) => ({ id: i, v: 0 })));
 
+    // Reading through the whole-collection signal SHOULD fan out — anything
+    // derived from the entire map legitimately depends on every change.
     const { counters, readAll } = instrument((i) => rows.map().get(i)?.v ?? -1);
 
     readAll();
-    expect(counters.every((c) => c === 1)).toBe(true);
-
     rows.updateOne(TARGET, { v: 999 });
     readAll();
 
-    // Every per-entity body re-runs because they all read the single mapSignal,
-    // which updateSignals() replaces on every write. If a future core change
-    // makes entityMap body-granular, flip this expectation toward 1.
     expect(counters.filter((c) => c > 1).length).toBe(N);
   });
 });

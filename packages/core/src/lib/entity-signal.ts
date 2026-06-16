@@ -58,6 +58,47 @@ export function createEntitySignal<
     ReadonlyMap<K, E>
   >(new Map());
 
+  /**
+   * Per-entity signals — the body-granular reactivity layer.
+   *
+   * Each entity that is read via `byId()`/node access gets its own
+   * `WritableSignal<E | undefined>`. Per-entity field reads and `node()`
+   * depend ONLY on this signal, not on the whole-collection `mapSignal`, so
+   * updating one entity dirties only that entity's readers (fan-out 1) instead
+   * of every entity's computeds (fan-out N). Collection queries (`all`, `map`,
+   * `count`, `ids`, `where`, `find`, computed slices) still depend on the
+   * collection signals and recompute on any change — which is correct.
+   *
+   * Materialized lazily (on first `byId`/node access) and kept O(1) per
+   * mutation by only syncing the entities that actually changed.
+   */
+  const entitySignals = new Map<K, WritableSignal<E | undefined>>();
+
+  /** Get (or lazily create) the per-entity signal, seeded from storage. */
+  function getEntitySignal(id: K): WritableSignal<E | undefined> {
+    let s = entitySignals.get(id);
+    if (!s) {
+      s = signal<E | undefined>(storage.get(id));
+      entitySignals.set(id, s);
+    }
+    return s;
+  }
+
+  /**
+   * Sync one entity's signal from storage after a mutation. No-op if the
+   * entity was never materialized (nothing is observing it yet), keeping
+   * single-entity writes O(1) regardless of collection size.
+   */
+  function syncEntitySignal(id: K): void {
+    const s = entitySignals.get(id);
+    if (s) s.set(storage.get(id));
+  }
+
+  /** Sync every materialized entity signal from storage (for clear/setAll). */
+  function syncAllEntitySignals(): void {
+    entitySignals.forEach((s, id) => s.set(storage.get(id)));
+  }
+
   /** Cache for entity nodes (deep access proxies) */
   const nodeCache = new Map<K, EntityNode<E>>();
 
@@ -85,12 +126,19 @@ export function createEntitySignal<
 
   function updateSignals(): void {
     const entities = Array.from(storage.values());
-    const ids = Array.from(storage.keys());
     const map = new Map(storage);
 
-    allSignal.set(entities);
+    // Apply optional sortComparer so `all`/`ids` expose a stable sorted order
+    // (parity with @ngrx/entity). `map` keeps insertion order.
+    if (config.sortComparer) {
+      entities.sort(config.sortComparer);
+      allSignal.set(entities);
+      idsSignal.set(entities.map((e) => selectId(e)));
+    } else {
+      allSignal.set(entities);
+      idsSignal.set(Array.from(storage.keys()));
+    }
     countSignal.set(entities.length);
-    idsSignal.set(ids);
     mapSignal.set(map);
   }
 
@@ -99,9 +147,13 @@ export function createEntitySignal<
     //   node()           → reads current entity (reactive via mapSignal)
     //   node(value)      → full entity replace via updateOne (throws if entity removed)
     //   node(updater)    → updater-based replace via updateOne (throws if entity removed)
+    // Ensure the per-entity signal exists so field computeds below subscribe
+    // to it (granular) rather than to the whole-collection mapSignal.
+    const entitySig = getEntitySignal(id);
+
     const node = ((valueOrUpdater?: E | ((current: E) => E)): E | undefined => {
       if (valueOrUpdater === undefined) {
-        return mapSignal().get(id);
+        return entitySig();
       }
       const current = storage.get(id);
       if (current === undefined) {
@@ -121,7 +173,7 @@ export function createEntitySignal<
     // Writes delegate to api.updateOne which runs interceptors and tap handlers.
     for (const key of Object.keys(entity)) {
       const fieldKey = key as keyof E;
-      const fieldSignal = computed(() => mapSignal().get(id)?.[fieldKey]);
+      const fieldSignal = computed(() => entitySig()?.[fieldKey]);
 
       Object.assign(fieldSignal, {
         set: (value: E[typeof fieldKey]) => {
@@ -129,7 +181,7 @@ export function createEntitySignal<
         },
         update: (fn: (current: E[typeof fieldKey] | undefined) => E[typeof fieldKey]) => {
           api.updateOne(id, {
-            [fieldKey]: fn(mapSignal().get(id)?.[fieldKey]),
+            [fieldKey]: fn(entitySig()?.[fieldKey]),
           } as Partial<E>);
         },
         asReadonly: () => fieldSignal,
@@ -178,10 +230,10 @@ export function createEntitySignal<
     // ==================
 
     byId(id: K): EntityNode<E> | undefined {
-      // Read mapSignal() so callers register a reactive dependency even when
-      // the entity does not exist yet.
-      const map = mapSignal();
-      const entity = map.get(id);
+      // Read the PER-ENTITY signal (not mapSignal) so callers subscribe only to
+      // this entity — updating a different entity won't re-run them. Seeds
+      // `undefined` when absent so the caller still re-runs once it is added.
+      const entity = getEntitySignal(id)();
       if (!entity) return undefined;
       return getOrCreateNode(id, entity);
     },
@@ -279,6 +331,7 @@ export function createEntitySignal<
       // Store and update signals
       storage.set(id, transformedEntity);
       nodeCache.delete(id);
+      syncEntitySignal(id);
       updateSignals();
 
       // Notify PathNotifier
@@ -341,6 +394,7 @@ export function createEntitySignal<
 
         storage.set(id, transformedEntity);
         nodeCache.delete(id);
+        syncEntitySignal(id);
         processedIds.push(id);
         addedEntities.push({ id, entity: transformedEntity });
       }
@@ -396,6 +450,7 @@ export function createEntitySignal<
       const finalUpdated = { ...entity, ...transformedChanges };
       storage.set(id, finalUpdated);
       nodeCache.delete(id);
+      syncEntitySignal(id);
       updateSignals();
 
       // Notify PathNotifier
@@ -446,6 +501,7 @@ export function createEntitySignal<
         const finalUpdated = { ...entity, ...transformedChanges };
         storage.set(id, finalUpdated);
         nodeCache.delete(id);
+        syncEntitySignal(id);
         updatedEntities.push({ id, prev, finalUpdated, transformedChanges });
       }
 
@@ -511,6 +567,7 @@ export function createEntitySignal<
       // Delete and update signals
       storage.delete(id);
       nodeCache.delete(id);
+      syncEntitySignal(id);
       updateSignals();
 
       // Notify PathNotifier
@@ -557,6 +614,7 @@ export function createEntitySignal<
       for (const { id } of entitiesToRemove) {
         storage.delete(id);
         nodeCache.delete(id);
+        syncEntitySignal(id);
       }
 
       // Single signal update after all entities are removed
@@ -641,6 +699,7 @@ export function createEntitySignal<
         }
         storage.set(id, transformedEntity);
         nodeCache.delete(id);
+        syncEntitySignal(id);
         addedEntities.push({ id, entity: transformedEntity });
       }
 
@@ -672,6 +731,7 @@ export function createEntitySignal<
         const finalUpdated = { ...prev, ...transformedChanges };
         storage.set(id, finalUpdated);
         nodeCache.delete(id);
+        syncEntitySignal(id);
         updatedEntities.push({ id, prev, finalUpdated, transformedChanges });
       }
 
@@ -712,6 +772,7 @@ export function createEntitySignal<
     clear(): void {
       storage.clear();
       nodeCache.clear();
+      syncAllEntitySignals();
       updateSignals();
     },
 
@@ -751,7 +812,10 @@ export function createEntitySignal<
         addedIds.push(id);
       }
 
-      // Single signal update after all entities are added
+      // Single signal update after all entities are added. setAll is a full
+      // reset, so sync every materialized per-entity signal (added, updated,
+      // and now-removed entities alike).
+      syncAllEntitySignals();
       updateSignals();
 
       // Notify PathNotifier for each added entity

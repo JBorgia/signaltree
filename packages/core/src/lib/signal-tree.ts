@@ -241,6 +241,9 @@ function makeNodeAccessor<T>(store: TreeNode<T>): NodeAccessor<T> {
   return accessor;
 }
 
+/** Dev-mode: paths already warned about for ref-identical no-op writes. */
+const warnedNoopPaths = new Set<string>();
+
 function recursiveUpdate(
   target: unknown,
   updates: unknown,
@@ -269,7 +272,29 @@ function recursiveUpdate(
       // tracking. Wrapped in untracked() so reading the current value
       // never accidentally creates a reactive dependency.
       const current = untracked(() => sig());
-      if (current === value) continue;
+      if (current === value) {
+        // Dev-mode footgun guard: a merge write whose value is reference-
+        // identical to the current value is a no-op. For objects/arrays this
+        // almost always means the caller mutated the value in place and re-set
+        // the SAME reference, expecting an update — which silently does
+        // nothing. Warn once per path. (Primitives re-set to the same value
+        // are normal idempotent writes and are not flagged.)
+        if (
+          (typeof ngDevMode === 'undefined' || ngDevMode) &&
+          value !== null &&
+          typeof value === 'object' &&
+          !warnedNoopPaths.has(childPath)
+        ) {
+          warnedNoopPaths.add(childPath);
+          console.warn(
+            `SignalTree: write at "${childPath}" was skipped — the value is ` +
+              `reference-identical to the current value. If you mutated an ` +
+              `object/array in place, create a NEW reference (spread/slice/map) ` +
+              `so the change is observed.`
+          );
+        }
+        continue;
+      }
       sig.set(value);
       if (out) out.push(childPath);
     } else if (isNodeAccessor(prop)) {
