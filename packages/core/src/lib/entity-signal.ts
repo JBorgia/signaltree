@@ -94,9 +94,29 @@ export function createEntitySignal<
     if (s) s.set(storage.get(id));
   }
 
-  /** Sync every materialized entity signal from storage (for clear/setAll). */
-  function syncAllEntitySignals(): void {
-    entitySignals.forEach((s, id) => s.set(storage.get(id)));
+  /**
+   * Release one entity's signal on removal: notify current observers that the
+   * entity is gone (set undefined), then drop it from the map so churning
+   * collections don't accumulate one signal per id ever removed. Held field
+   * references stay valid (read undefined); a later byId() after re-add gets a
+   * fresh signal.
+   */
+  function removeEntitySignal(id: K): void {
+    const s = entitySignals.get(id);
+    if (s) {
+      s.set(undefined);
+      entitySignals.delete(id);
+    }
+  }
+
+  /**
+   * Full reset (clear/setAll): notify all current observers their entity is
+   * gone, then drop every materialized signal so memory returns to baseline.
+   * setAll re-materializes lazily on the next byId() of each surviving entity.
+   */
+  function resetEntitySignals(): void {
+    entitySignals.forEach((s) => s.set(undefined));
+    entitySignals.clear();
   }
 
   /** Cache for entity nodes (deep access proxies) */
@@ -230,12 +250,18 @@ export function createEntitySignal<
     // ==================
 
     byId(id: K): EntityNode<E> | undefined {
-      // Read the PER-ENTITY signal (not mapSignal) so callers subscribe only to
-      // this entity — updating a different entity won't re-run them. Seeds
-      // `undefined` when absent so the caller still re-runs once it is added.
-      const entity = getEntitySignal(id)();
-      if (!entity) return undefined;
-      return getOrCreateNode(id, entity);
+      if (storage.has(id)) {
+        // Present: subscribe to the PER-ENTITY signal only, so callers re-run
+        // when THIS entity changes but not when others do (body-granular).
+        // Materialized lazily here — bounded by the number of live entities.
+        const entity = getEntitySignal(id)();
+        return entity ? getOrCreateNode(id, entity) : undefined;
+      }
+      // Absent: subscribe to the shared ids signal for "appears later"
+      // reactivity WITHOUT materializing a permanent per-entity signal for an
+      // id that may never exist (which would leak one signal per probed id).
+      idsSignal();
+      return undefined;
     },
 
     byIdOrFail(id: K): EntityNode<E> {
@@ -567,7 +593,7 @@ export function createEntitySignal<
       // Delete and update signals
       storage.delete(id);
       nodeCache.delete(id);
-      syncEntitySignal(id);
+      removeEntitySignal(id);
       updateSignals();
 
       // Notify PathNotifier
@@ -614,7 +640,7 @@ export function createEntitySignal<
       for (const { id } of entitiesToRemove) {
         storage.delete(id);
         nodeCache.delete(id);
-        syncEntitySignal(id);
+        removeEntitySignal(id);
       }
 
       // Single signal update after all entities are removed
@@ -772,7 +798,7 @@ export function createEntitySignal<
     clear(): void {
       storage.clear();
       nodeCache.clear();
-      syncAllEntitySignals();
+      resetEntitySignals();
       updateSignals();
     },
 
@@ -813,9 +839,10 @@ export function createEntitySignal<
       }
 
       // Single signal update after all entities are added. setAll is a full
-      // reset, so sync every materialized per-entity signal (added, updated,
-      // and now-removed entities alike).
-      syncAllEntitySignals();
+      // replace: release every materialized per-entity signal (surviving
+      // entities re-materialize lazily on next byId) so memory returns to
+      // baseline instead of retaining one signal per id ever seen.
+      resetEntitySignals();
       updateSignals();
 
       // Notify PathNotifier for each added entity
