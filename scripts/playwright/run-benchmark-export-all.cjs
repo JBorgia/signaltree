@@ -288,10 +288,21 @@ async function run() {
           } catch (e) {}
 
           try {
+            // Select ALL runnable scenarios so the export covers the full
+            // matrix. Only click cards that are NOT already selected —
+            // blindly clicking every card toggles the ones the "All Tests"
+            // preset just selected back OFF, which previously collapsed the
+            // run to a single scenario (deep-nested). Disabled cards
+            // (unsupported for this library) are left unselected → N/A.
             const allScCards = await page.$$('.benchmark-card');
             for (const c of allScCards) {
               try {
-                await clickWithRetry(c, 2);
+                const skip = await c.evaluate(
+                  (el) =>
+                    el.classList.contains('selected') ||
+                    el.classList.contains('disabled')
+                );
+                if (!skip) await clickWithRetry(c, 2);
               } catch (e) {}
             }
           } catch (e) {}

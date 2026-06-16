@@ -2573,12 +2573,34 @@ export class BenchmarkOrchestratorComponent
           this.currentLibrary.set(library.name);
           this.currentScenario.set(scenario.name);
 
-          // Run single benchmark for each library-scenario pair
-          const result = await this.runSingleBenchmark(
-            library,
-            scenario,
-            config
-          );
+          // Run each library-scenario pair in its own try/catch so a single
+          // failure (e.g. an unsupported scenario or a buggy adapter) records
+          // an N/A result and the run CONTINUES. Previously one throw aborted
+          // the entire loop, leaving only the first scenario's results — which
+          // silently truncated the comparison matrix to deep-nested.
+          let result: BenchmarkResult;
+          try {
+            result = await this.runSingleBenchmark(library, scenario, config);
+          } catch (error) {
+            console.warn(
+              `Benchmark failed for ${library.name} / ${scenario.name}; recording N/A and continuing:`,
+              error
+            );
+            result = {
+              libraryId: library.id,
+              scenarioId: scenario.id,
+              samples: [],
+              median: -1,
+              mean: -1,
+              p95: -1,
+              p99: -1,
+              min: -1,
+              max: -1,
+              stdDev: -1,
+              opsPerSecond: -1,
+              memoryDeltaMB: undefined,
+            };
+          }
           this.results.update((r) => [...r, result]);
           this.completedTests.update((c) => c + 1);
         }
