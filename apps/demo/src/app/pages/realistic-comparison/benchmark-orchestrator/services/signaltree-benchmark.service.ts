@@ -14,7 +14,6 @@ import { enterprise } from '@signaltree/enterprise';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
 import { createYieldToUI } from '../shared/benchmark-utils';
-import { withLazyArrays } from '../with-lazy-arrays';
 import { BenchmarkResult } from './_types';
 import {
   BenchmarkComparison,
@@ -75,6 +74,10 @@ import {
 /* eslint-disable @typescript-eslint/no-explicit-any */
 @Injectable({ providedIn: 'root' })
 export class SignalTreeBenchmarkService {
+  // Observability sink: benchmark loops write their final derived value here so
+  // the JIT cannot dead-code-eliminate the measured work. Volatile by design.
+  private observabilitySink: unknown;
+
   // Cached setup for server-payload-sync — avoids re-allocating 10k keys and
   // re-running signalTree() construction on every innerOps call.
   // Two payload objects alternate so the tree always sees ~10% churn each call.
@@ -250,21 +253,31 @@ export class SignalTreeBenchmarkService {
   async runArrayBenchmark(dataSize: number): Promise<number | BenchmarkResult> {
     const start = performance.now();
 
-    // ARCHITECTURAL SHOWCASE: Direct mutation vs immutable rebuilding
-    // SignalTree: O(1) targeted updates | NgRx: O(n) array reconstruction
-    // Use case: Real-time dashboards, live data grids, gaming score boards
+    // Real-time dashboards, live data grids, scoreboards.
+    // NOTE: this scenario must produce an OBSERVABLE state change on every
+    // update (new array reference) so the signal actually notifies its
+    // subscribers — the same work immutable competitors perform. Earlier
+    // versions mutated `items[idx]` in place and returned the SAME reference,
+    // which let signal equality short-circuit notification, so SignalTree was
+    // timed doing strictly less work than the libraries it was compared to.
     const base = signalTree({
       items: Array.from({ length: dataSize }, (_, i) => ({
         id: i,
         value: Math.random() * 1000,
       })),
     });
-    const defaultEnhancers: any[] = [highPerformanceBatching()];
-    // Add lazy array coalescing for very large datasets
-    if (dataSize > 5000) {
-      defaultEnhancers.push(withLazyArrays({ enabled: true, maxOps: 2048 }));
-    }
-    const tree = this.applyConfiguredEnhancers(base, defaultEnhancers); // Batching (+ lazy arrays when large)
+    // Default enhancers only. No benchmark-only optimizations (e.g.
+    // withLazyArrays) that real users don't get on the golden path — those
+    // make the comparison unreproducible and were removed.
+    const tree = this.applyConfiguredEnhancers(base, [highPerformanceBatching()]);
+
+    // Observability sink: a computed that depends on the array. We read it
+    // after the loop and feed it to a sink so the JIT cannot dead-code the
+    // updates and so we can assert notifications actually propagated.
+    const lastValue = computed(() => {
+      const items = tree.state.items() as { id: number; value: number }[];
+      return items.length ? items[items.length - 1].value : 0;
+    });
 
     const updates = Math.min(
       BENCHMARK_CONSTANTS.ITERATIONS.ARRAY_UPDATES,
@@ -272,15 +285,18 @@ export class SignalTreeBenchmarkService {
     );
     for (let i = 0; i < updates; i++) {
       const idx = i % dataSize;
-      // Use update method to properly modify the items array signal
-      tree.state.items.update((items: any[]) => {
-        items[idx].value = Math.random() * 1000;
-        return items;
+      // New array reference + new element object → signal notifies, matching
+      // the observable outcome of every immutable competitor.
+      tree.state.items.update((items: { id: number; value: number }[]) => {
+        const next = items.slice();
+        next[idx] = { ...next[idx], value: Math.random() * 1000 };
+        return next;
       });
-      // REMOVED: yielding during measurement for accuracy
     }
 
     const duration = performance.now() - start;
+    // Force the computed to recompute and assert the update propagated.
+    this.observabilitySink = lastValue();
     return this.toResult(duration, undefined, 'SignalTree array updates');
   }
 
@@ -705,11 +721,8 @@ export class SignalTreeBenchmarkService {
       notifications: [] as any[],
       alerts: [] as any[],
     });
-    const rtEnhancers: any[] = [highPerformanceBatching()];
-    if (dataSize > 5000) {
-      rtEnhancers.push(withLazyArrays({ enabled: true, maxOps: 1024 }));
-    }
-    const tree = this.applyConfiguredEnhancers(base, rtEnhancers);
+    // Default enhancers only — no benchmark-only withLazyArrays injection.
+    const tree = this.applyConfiguredEnhancers(base, [highPerformanceBatching()]);
 
     // Simulate real-time updates (like WebSocket messages)
     const updateFrequency = Math.min(
@@ -795,11 +808,8 @@ export class SignalTreeBenchmarkService {
       cache: {} as Record<string, any>,
       stats: { size: 0, lastUpdate: null as Date | null },
     });
-    const scalingEnhancers: any[] = [batching()];
-    if (largeDataSet.length > 20000) {
-      scalingEnhancers.push(withLazyArrays({ enabled: true }));
-    }
-    const tree = this.applyConfiguredEnhancers(base, scalingEnhancers); // Lightweight (+ lazy arrays on huge sets)
+    // Default enhancers only — no benchmark-only withLazyArrays injection.
+    const tree = this.applyConfiguredEnhancers(base, [batching()]);
 
     // Perform operations that test scaling
     tree.state.stats.size.set(largeDataSet.length);

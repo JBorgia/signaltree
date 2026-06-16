@@ -1338,12 +1338,23 @@
           <div class="metric">
             <span class="metric-label">vs {{ baselineName() }}</span>
             @if (summary.relativeSpeed !== -1) {
+            <!-- Only style as faster/slower when the difference is statistically
+                 significant (Mann-Whitney p < 0.05). Otherwise show parity so a
+                 within-noise median ratio isn't presented as a win or loss. -->
             <span
               class="metric-value"
-              [class.faster]="summary.relativeSpeed > 1"
-              [class.slower]="summary.relativeSpeed < 1"
+              [class.faster]="summary.significant && summary.relativeSpeed > 1"
+              [class.slower]="summary.significant && summary.relativeSpeed < 1"
+              [title]="
+                summary.significant
+                  ? 'Statistically significant (Mann-Whitney p < 0.05)'
+                  : 'Within measurement noise — not statistically significant'
+              "
             >
               {{ summary.relativeSpeed | number : '1.1-1' }}x
+              @if (!summary.significant && summary.name !== baselineName()) {
+              <span class="parity-note">≈ n.s.</span>
+              }
             </span>
             } @if (summary.relativeSpeed === -1) {
             <span class="metric-value unsupported">N/A</span>

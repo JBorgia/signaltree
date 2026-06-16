@@ -693,6 +693,19 @@ export class BenchmarkComparison {
     };
   }
 
+  /**
+   * Public convenience wrapper: is the difference between two sample sets
+   * statistically significant (Mann-Whitney U, p < 0.05)? Returns false when
+   * either sample is too small to judge — i.e. "treat as parity unless proven".
+   */
+  static isDifferenceSignificant(
+    sample1: number[],
+    sample2: number[]
+  ): boolean {
+    if (!sample1?.length || !sample2?.length) return false;
+    return this.mannWhitneyUTest(sample1, sample2).isSignificant;
+  }
+
   private static mannWhitneyUTest(
     sample1: number[],
     sample2: number[]

@@ -1104,6 +1104,14 @@ $border:    #e5e7eb;  // --color-border
           &.slower {
             color: $danger;
           }
+
+          .parity-note {
+            margin-left: 0.35rem;
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: $secondary;
+            opacity: 0.75;
+          }
         }
       }
     }

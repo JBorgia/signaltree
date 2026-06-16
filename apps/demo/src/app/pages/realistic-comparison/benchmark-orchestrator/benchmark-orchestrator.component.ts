@@ -7,6 +7,7 @@ import { Subject } from 'rxjs';
 import { RealisticBenchmarkService, RealisticBenchmarkSubmission } from '../../../services/realistic-benchmark.service';
 import { BenchmarkTestCase, ENHANCED_TEST_CASES } from './scenario-definitions';
 import { BenchmarkResult as ServiceBenchmarkResult } from './services/_types';
+import { BenchmarkComparison } from './services/benchmark-runner';
 import { AkitaBenchmarkService } from './services/akita-benchmark.service';
 import { ElfBenchmarkService } from './services/elf-benchmark.service';
 import { NgRxBenchmarkService } from './services/ngrx-benchmark.service';
@@ -96,6 +97,13 @@ interface LibrarySummary {
   p95: number;
   opsPerSecond: number;
   relativeSpeed: number;
+  // Aggregated per-sample distribution, retained so the vs-baseline delta can
+  // be significance-tested rather than reported from medians alone.
+  samples?: number[];
+  // True when the difference vs the baseline is statistically significant
+  // (Mann-Whitney U, p < 0.05). When false, the delta is within noise and
+  // should be presented as parity, not a win/loss.
+  significant?: boolean;
 }
 
 interface StatisticalComparison {
@@ -1508,6 +1516,7 @@ export class BenchmarkOrchestratorComponent
           p95: aggP95,
           opsPerSecond: aggOps,
           relativeSpeed: 1,
+          samples: aggregatedSamples,
         };
       })
       .filter((s) => s !== null) as LibrarySummary[];
@@ -1536,11 +1545,21 @@ export class BenchmarkOrchestratorComponent
       }
     });
 
-    // Calculate relative speed vs SignalTree for supported libraries
+    // Calculate relative speed vs SignalTree for supported libraries, and flag
+    // whether each difference is statistically significant. A median ratio
+    // alone can report "1.05x faster" from pure noise; gating on Mann-Whitney
+    // keeps the headline honest.
     const signalTree = supportedSummaries.find((s) => s.name === 'SignalTree');
     if (signalTree) {
       supportedSummaries.forEach((s) => {
         s.relativeSpeed = signalTree.median / s.median;
+        s.significant =
+          s.name === signalTree.name
+            ? false
+            : BenchmarkComparison.isDifferenceSignificant(
+                s.samples ?? [],
+                signalTree.samples ?? []
+              );
       });
     }
 

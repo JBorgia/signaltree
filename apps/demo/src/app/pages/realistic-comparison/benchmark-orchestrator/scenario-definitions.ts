@@ -39,13 +39,9 @@ export interface BenchmarkTestCase {
 export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
   // Core Performance Tests
   /**
-   * Rationale Alignment Note (2025-11):
-   * Deep Nested scenario now mapped in implementation to batching + shallow memoization.
-   * This file already lists batching as required and shallow as optional.
-   * We intentionally keep shallow memoization optional here so downstream consumers can
-   * evaluate raw batching only vs batching+shallow. The comparison components and
-   * `SignalTreeBenchmarkService` treat shallow memoization as part of the default set
-   * for Deep Nested fairness versus NgRx/SignalStore which rebuild nested objects.
+   * Deep Nested scenario uses batching (required) with shallow memoization
+   * optional, so consumers can compare batching-only vs batching+shallow.
+   * Each library is exercised through its own idiomatic update API.
    */
   {
     id: 'deep-nested',
@@ -85,12 +81,11 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     complexity: 'Medium',
     selected: false,
     category: 'core',
-    purpose:
-      'Tests O(1) direct mutation vs O(n) immutable array rebuilding. Enterprise enhancer provides +16.7% speedup through diff-based change detection.',
+    purpose: 'Measures array update throughput on large collections.',
     frequencyWeight: 1.8, // High - Lists, tables, collections are very common
     realWorldFrequency: 'High - Lists, tables, data grids, search results',
     architecturalTradeOffs:
-      'Direct mutation provides massive advantages for large arrays vs immutable rebuilding. Enterprise enhancer adds diff engine for targeted updates (skip unchanged elements).',
+      'Direct mutation trades immutability guarantees for update speed; immutable libraries rebuild the array on each change.',
     enhancers: {
       required: ['highPerformanceBatching'],
       optional: [],
@@ -226,12 +221,12 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     realWorldFrequency:
       'Rare - Gaming, real-time data streams, intensive animations',
     architecturalTradeOffs:
-      'SignalTree integrates with Angular\'s change detection (automatic microtask batching). This scenario tests "unmanaged" rapid updates that bypass framework batching, which doesn\'t reflect real Angular usage. Use highPerformanceBatching() for 60Hz+ updates in production.',
+      'Tests rapid sequential updates that bypass framework-level batching. This pattern is uncommon in real Angular apps, which batch updates via change detection.',
     enhancers: {
       required: ['batching'],
       optional: [],
       rationale:
-        "Batching essential to prevent overwhelming the reactivity system. Memoization intentionally excluded—hot update loop rarely benefits from cache hits and would inflate overhead. Note: This scenario is architecturally incompatible with Angular's reactive system, not a performance limitation.",
+        'Batching reduces notification overhead under a hot update loop. Memoization excluded — a hot write loop rarely benefits from cache hits.',
     },
     dataRequirements: {
       minSize: 50,
@@ -250,12 +245,12 @@ export const ENHANCED_TEST_CASES: BenchmarkTestCase[] = [
     selected: true,
     category: 'core',
     purpose:
-      'Measures update fanout performance at extreme scale (1000 subscribers). At extreme subscriber counts SignalTree incurs a small overhead from Angular computed() dependency tracking that pure-function NgRx selectors avoid; at realistic scale (10-50 subscribers) the difference is <0.5ms and negligible in practice. Fine-grained reactivity prevents full component re-renders, saving 100-1000x more time downstream.',
+      'Measures update-fanout performance as the number of subscribers to a single state node scales (10 → 1000).',
     frequencyWeight: 1.5, // Medium-High - Reactive apps often have multiple subscribers
     realWorldFrequency:
       'Medium-High - Reactive UIs, data binding, multiple components',
     architecturalTradeOffs:
-      'Micro-overhead (~2μs per computed) enables macro-optimization (prevents unnecessary component renders). Trade-off: small reactivity cost for massive rendering savings.',
+      'Fine-grained per-subscriber tracking adds small per-computed overhead vs pure-function selectors; the trade-off (reactivity cost vs avoided component re-renders) is not captured by this micro-measurement.',
     enhancers: {
       required: [],
       optional: ['batching'],
