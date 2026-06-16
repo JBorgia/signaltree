@@ -7,6 +7,30 @@ import { PathNotifier } from '../lib/path-notifier';
 declare const ngDevMode: boolean | undefined;
 
 /**
+ * Wrong entityMap method names AI agents and devs reach for (from other state
+ * libraries), mapped to the SignalTree equivalent. Used by a dev-mode proxy
+ * guardrail to turn a cryptic "undefined is not a function" into an actionable
+ * hint. Sourced from the documented cross-library hallucination table.
+ */
+const WRONG_ENTITY_METHODS: Record<string, string> = {
+  upsert: 'upsertOne(entity) / upsertMany(entities)',
+  add: 'addOne(entity) / addMany(entities)',
+  insert: 'addOne(entity)',
+  update: 'updateOne(id, changes) / updateMany(ids, changes)',
+  remove: 'removeOne(id) / removeMany(ids)',
+  delete: 'removeOne(id)',
+  getAll: 'all() (a signal)',
+  selectAll: 'all() (a signal)',
+  selectMany: 'where(predicate)',
+  selectEntity: 'byId(id)',
+  addEntities: 'addMany(entities)',
+  setEntities: 'setAll(entities)',
+  setProps: 'set leaves directly — entityMap has no props (Elf pattern)',
+  next: 'set leaves directly — not an RxJS Subject',
+  asObservable: 'use the signal directly — not an RxJS Subject',
+};
+
+/**
  * EntitySignal Implementation (Composition Pattern)
  *
  * Map-based reactive entity collections with:
@@ -923,11 +947,28 @@ export function createEntitySignal<
 
   // The Proxy only handles bracket notation access (signal[id])
   // All methods are direct properties on api - no binding needed
+  const warnedWrongMethods = new Set<string>();
   return new Proxy(api as unknown as EntitySignal<E, K>, {
     get: (target: EntitySignal<E, K>, prop: string | symbol) => {
       // Handle string/number bracket access: signal[123] or signal['abc']
       if (typeof prop === 'string' && !isNaN(Number(prop))) {
         return api.byId(Number(prop) as K);
+      }
+      // Dev-mode guardrail: a known wrong-method name from another state
+      // library → actionable hint instead of a later "undefined is not a
+      // function". Only fires for names that are NOT real api members.
+      if (
+        typeof prop === 'string' &&
+        !(prop in (target as object)) &&
+        WRONG_ENTITY_METHODS[prop] &&
+        (typeof ngDevMode === 'undefined' || ngDevMode) &&
+        !warnedWrongMethods.has(prop)
+      ) {
+        warnedWrongMethods.add(prop);
+        console.warn(
+          `SignalTree entityMap has no \`.${prop}()\`. Did you mean: ` +
+            `${WRONG_ENTITY_METHODS[prop]}?`
+        );
       }
       // All other access goes directly to api
       return (target as unknown as Record<string | symbol, unknown>)[prop];

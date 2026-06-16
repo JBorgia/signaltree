@@ -626,7 +626,11 @@ describe('stored() marker', () => {
     });
   });
 
-  describe('performance', () => {
+  // Wall-clock timing budgets are environmentally flaky in a parallel test
+  // pool (CPU/memory contention skews them, failing independent of the code).
+  // Run on demand via ST_PERF=1; the dedicated perf gate (scripts/perf-suite.js)
+  // covers regressions in an isolated context.
+  describe.runIf(process.env['ST_PERF'] === '1')('performance', () => {
     it('should initialize 100 markers in under 50ms', async () => {
       const start = performance.now();
 
