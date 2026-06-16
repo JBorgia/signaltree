@@ -162,6 +162,13 @@ export const appRoutes: Route[] = [
       ).then((c) => c.EntitiesDemoComponent),
   },
   {
+    path: 'entity-sort-comparer',
+    loadComponent: () =>
+      import(
+        './examples/features/fundamentals/examples/entity-sort-comparer/entity-sort-comparer-demo.component'
+      ).then((c) => c.EntitySortComparerDemoComponent),
+  },
+  {
     path: 'persistence',
     loadComponent: () =>
       import(

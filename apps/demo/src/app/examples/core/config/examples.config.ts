@@ -12,6 +12,7 @@ import {
     SerializationDemoComponent,
 } from '../../features/fundamentals/examples/enhancers/serialization-demo/serialization-demo.component';
 import { EntitiesDemoComponent } from '../../features/fundamentals/examples/entities/entities-demo.component';
+import { EntitySortComparerDemoComponent } from '../../features/fundamentals/examples/entity-sort-comparer/entity-sort-comparer-demo.component';
 import { FormsDemoComponent } from '../../features/fundamentals/examples/forms/forms-demo.component';
 import {
     RecommendedArchitectureComponent,
@@ -62,6 +63,21 @@ export const entitiesExampleMeta: ExampleMeta = {
   component: EntitiesDemoComponent,
   difficulty: 'intermediate',
   tags: ['entities', 'crud', 'pagination', 'sorting', 'collections'],
+};
+
+export const entitySortComparerExampleMeta: ExampleMeta = {
+  id: 'entity-sort-comparer',
+  title: 'Auto-sorted Entities (sortComparer)',
+  description:
+    'entityMap({ sortComparer }) keeps a collection sorted on every read — no manual re-sort after mutations (v10.5+, @ngrx/entity parity).',
+  category: 'Entities',
+  focusAreas: ['entities', 'collections'],
+  functionalUse: ['data-management', 'sorting'],
+  enhancers: ['entities'],
+  route: '/entity-sort-comparer',
+  component: EntitySortComparerDemoComponent,
+  difficulty: 'beginner',
+  tags: ['entities', 'sorting', 'sortComparer', 'collections'],
 };
 
 /**
@@ -317,6 +333,7 @@ export const EXAMPLES_REGISTRY: ExampleMeta[] = [
   },
   signalsExampleMeta,
   entitiesExampleMeta,
+  entitySortComparerExampleMeta,
   batchingExampleMeta,
   callableSyntaxExampleMeta,
   devtoolsExampleMeta,
