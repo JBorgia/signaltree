@@ -351,16 +351,18 @@ export class SignalTreeBenchmarkService {
     ]);
 
     for (let b = 0; b < batches; b++) {
-      (tree.state as any)['items'].update((arr: any[]) => {
-        for (let i = 0; i < batchSize; i++) {
-          arr[i] = (arr[i] + 1) | 0;
-        }
-        return arr;
-      });
-      // REMOVED: yielding during measurement for accuracy
+      // New array reference so the signal actually notifies — same observable
+      // outcome as the immutable competitors. (Earlier this mutated in place and
+      // returned the same ref, which the ref-equality short-circuit treated as a
+      // no-op — measuring strictly less work than the libraries compared to.)
+      (tree.state as any)['items'].update((arr: number[]) =>
+        arr.map((x) => (x + 1) | 0)
+      );
     }
 
     const duration = performance.now() - start;
+    // Read the array back so the work can't be dead-code-eliminated.
+    this.observabilitySink = (tree.state as any)['items']().length;
     return this.toResult(duration, undefined, 'SignalTree batch updates');
   }
 
