@@ -1,9 +1,28 @@
-import { computed, Injectable } from '@angular/core';
-import { patchState, signalState } from '@ngrx/signals';
+import { computed, Injectable, Injector } from '@angular/core';
+import {
+  getState,
+  patchState,
+  signalState,
+  signalStore,
+  withState,
+} from '@ngrx/signals';
 
 import { BENCHMARK_CONSTANTS } from '../shared/benchmark-constants';
 import { createYieldToUI } from '../shared/benchmark-utils';
 import { BenchmarkResult, safeGetHeapUsed } from './_types';
+
+/**
+ * Build a real `signalStore` INSTANCE for benchmarking. signalStore is a
+ * DI-provided class (unlike signalState, which is inline-instantiable), so we
+ * create it through a throwaway Injector. Creation is done in setup and
+ * excluded from the timed window — only `patchState(store, …)` (SignalStore's
+ * actual update mechanism) is measured, so the comparison reflects the real
+ * @ngrx/signals product, not a bare primitive, while staying fair.
+ */
+function makeSignalStore<T extends object>(initial: T) {
+  const Store = signalStore({ protectedState: false }, withState(initial));
+  return Injector.create({ providers: [Store] }).get(Store);
+}
 
 // ...existing code...
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -14,7 +33,7 @@ export class NgRxSignalsBenchmarkService {
   // we toggle between payload and initial to keep ~10% churn each call.
   private _serverPayloadCache?: {
     dataSize: number;
-    state: ReturnType<typeof signalState<Record<string, number>>>;
+    state: ReturnType<typeof makeSignalStore<Record<string, number>>>;
     initial: Record<string, number>;
     payload: Record<string, number>;
     toggle: boolean;
@@ -136,11 +155,11 @@ export class NgRxSignalsBenchmarkService {
         ? { value: 0, data: 'test' }
         : { level: createNested(level - 1) };
 
-    const state = signalState(createNested(depth));
+    const state = makeSignalStore(createNested(depth));
 
     // Access deep to ensure signals are wired
     const deepAccess = computed(() => {
-      let cur: any = state();
+      let cur: any = getState(state);
       for (let i = 0; i < depth; i++) cur = cur.level;
       return cur?.value;
     });
@@ -168,7 +187,7 @@ export class NgRxSignalsBenchmarkService {
   }
 
   async runArrayBenchmark(dataSize: number): Promise<number | BenchmarkResult> {
-    const state = signalState({
+    const state = makeSignalStore({
       items: Array.from({ length: dataSize }, (_, i) => ({
         id: i,
         value: Math.random() * 1000,
@@ -196,7 +215,7 @@ export class NgRxSignalsBenchmarkService {
   async runComputedBenchmark(
     dataSize: number
   ): Promise<number | BenchmarkResult> {
-    const state = signalState({
+    const state = makeSignalStore({
       value: 0,
       factors: Array.from(
         { length: BENCHMARK_CONSTANTS.DATA_GENERATION.FACTOR_COUNT },
@@ -205,9 +224,9 @@ export class NgRxSignalsBenchmarkService {
     });
 
     const compute = computed(() => {
-      const v = state().value;
+      const v = state.value();
       let acc = 0;
-      for (const f of state().factors) acc += Math.sin(v * f) * Math.cos(f);
+      for (const f of state.factors()) acc += Math.sin(v * f) * Math.cos(f);
       return acc;
     });
     // warm
@@ -231,7 +250,7 @@ export class NgRxSignalsBenchmarkService {
     batches = BENCHMARK_CONSTANTS.ITERATIONS.BATCH_UPDATES,
     batchSize = BENCHMARK_CONSTANTS.ITERATIONS.BATCH_SIZE
   ): Promise<number | BenchmarkResult> {
-    const state = signalState({
+    const state = makeSignalStore({
       items: Array.from({ length: batchSize }, (_, i) => i),
     });
     const start = performance.now();
@@ -267,7 +286,7 @@ export class NgRxSignalsBenchmarkService {
       }
       this._serverPayloadCache = {
         dataSize: size,
-        state: signalState(initial),
+        state: makeSignalStore(initial),
         initial,
         payload,
         toggle: false,
@@ -290,7 +309,7 @@ export class NgRxSignalsBenchmarkService {
   async runSelectorBenchmark(
     dataSize: number
   ): Promise<number | BenchmarkResult> {
-    const state = signalState({
+    const state = makeSignalStore({
       items: Array.from({ length: dataSize }, (_, i) => ({
         id: i,
         flag: i % 2 === 0,
@@ -301,13 +320,13 @@ export class NgRxSignalsBenchmarkService {
 
     // Multiple selectors to match SignalTree test
     const selectEven = computed(
-      () => state().items.filter((x) => x.flag).length
+      () => state.items().filter((x) => x.flag).length
     );
     const selectHighValue = computed(
-      () => state().items.filter((x) => x.value > 50).length
+      () => state.items().filter((x) => x.value > 50).length
     );
     const selectByCategory = computed(() => {
-      const items = state().items;
+      const items = state.items();
       return items.reduce((acc: Record<number, number>, item) => {
         const cat = item.metadata.category;
         acc[cat] = (acc[cat] || 0) + 1;
@@ -323,7 +342,7 @@ export class NgRxSignalsBenchmarkService {
 
       // Occasionally update to test cache invalidation (same as SignalTree/NgRx)
       if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0) {
-        const idx = i % state().items.length;
+        const idx = i % state.items().length;
         patchState(state, (s) => ({
           items: s.items.map((item, index) =>
             index === idx ? { ...item, flag: !item.flag } : item
