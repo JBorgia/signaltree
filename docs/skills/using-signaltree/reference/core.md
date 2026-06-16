@@ -129,7 +129,7 @@ Key options live on `EntityConfig<E, K>`: `selectId: (entity) => entity.someKey`
 **Full mutation surface:** `addOne`, `addMany`, `upsertOne`, `upsertMany`, `updateOne`, `updateMany(ids: K[], changes: Partial<E>)` (NOT NgRx-style `[{id, changes}]`), `updateWhere(pred, changes)`, `removeOne`, `removeMany`, `removeWhere`, `clear`, `setAll`.
 **Full read surface (Signals — invoke with `()`):** `all`, `count`, `ids`, `map`, `has(id)`, `where(pred)`, `find(pred)`, `empty` (v10.3 canonical; `.isEmpty` is a deprecated alias).
 **Node access:** `byId(id) → EntityNode<E> | undefined`. **Per-entity reads are body-granular** — `byId(id).field()` re-runs only when *that* entity changes (fan-out 1), not on every collection mutation.
-**Typed computed slices (v10.5+):** `entityMap<User>().computed('active', all => all.filter(u => u.active))` exposes `store.$.users.active()` as a typed `Signal<User[]>` on `tree.$` — no `as any` cast.
+**Computed slices:** `entityMap<User>().computed('active', all => all.filter(u => u.active))` materializes `store.$.users.active()` as a `Signal<User[]>` at runtime; the slice name isn't on the static `tree.$` type yet, so read it via `(store.$.users as any).active()`.
 
 ### `status()`
 

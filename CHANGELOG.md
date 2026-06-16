@@ -2,7 +2,6 @@
 
 ### Added
 
-- **Typed `entityMap` computed slices** — `entityMap().computed('active', all => …)` now types `tree.$.users.active()` as a `Signal<…>` directly on `tree.$`; the previous `(tree.$.users as any).active()` cast is gone.
 - **Stable error codes** — every core message and dev-mode guardrail carries a greppable `[ST####]` code; new [`docs/errors/README.md`](docs/errors/README.md) maps each code to its cause and fix (`ST1xxx` core, `ST2xxx` entity/markers).
 
 ### Dev-mode guardrails (warn-only; tree-shaken from production)
