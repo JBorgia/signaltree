@@ -20,8 +20,8 @@
 export { signalTree } from './lib/signal-tree';
 
 /**
- * Wrap a tree factory in an injectable Angular service (the idiomatic DI
- * pattern, parallel to NgRx SignalStore's `signalStore()`).
+ * Wrap a tree factory in an injectable Angular service (the idiomatic Angular
+ * DI pattern for a tree; comparable to NgRx SignalStore's `signalStore()`).
  * @see {@link defineStore}
  */
 export { defineStore, type DefineStoreConfig } from './lib/define-store';
@@ -104,7 +104,7 @@ export type {
 export { derivedFrom, externalDerived } from './lib/internals/derived-types';
 
 /**
- * Derived-but-writable signal (the marker-ethos answer to NgRx `withLinkedState`).
+ * Derived-but-writable signal, comparable to NgRx SignalStore's `withLinkedState`.
  * Use inside `.derived($ => ({ ... }))`; wraps Angular's native `linkedSignal`.
  * @see {@link linked}
  */

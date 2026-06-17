@@ -14,7 +14,8 @@ export interface DefineStoreConfig {
 
 /**
  * Wrap a `signalTree(...)` factory in an injectable Angular service class — the
- * idiomatic DI pattern (parallels NgRx SignalStore's `signalStore()`).
+ * idiomatic Angular DI pattern for a tree, comparable to NgRx SignalStore's
+ * `signalStore()`.
  *
  * `inject(MyStore)` resolves to the **real tree** — callable, with `$`, `state`,
  * `.with(...)`, and any enhancer-added methods — not a wrapper. The tree's
@@ -56,8 +57,8 @@ export function defineStore<R>(
       const tree = factory();
 
       // Tie the tree's teardown to the host injector — component-provided stores
-      // dispose with the component, root stores with the app. Mirrors NgRx
-      // SignalStore's `inject(DestroyRef).onDestroy(onDestroy)`.
+      // dispose with the component, root stores with the app. (NgRx SignalStore
+      // ties teardown to the injector's DestroyRef the same way.)
       inject(DestroyRef).onDestroy(() => {
         try {
           (tree as { destroy?: () => void }).destroy?.();

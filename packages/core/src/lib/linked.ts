@@ -32,9 +32,9 @@ export interface LinkedOptions<S, V> {
 }
 
 /**
- * Create a **derived-but-writable** signal — SignalTree's marker-ethos answer to
- * NgRx SignalStore's `withLinkedState`. It wraps Angular's native `linkedSignal`:
- * the value is computed from a source, but is also directly writable (`.set()` /
+ * Create a **derived-but-writable** signal, comparable to NgRx SignalStore's
+ * `withLinkedState`. It wraps Angular's native `linkedSignal`: the value is
+ * computed from a source, but is also directly writable (`.set()` /
  * `.update()`), and re-derives whenever the source changes.
  *
  * Use it inside `.derived($ => ({ ... }))`, where the tree `$` is available as the
