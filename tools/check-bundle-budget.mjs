@@ -4,8 +4,9 @@
  * tools/measure-bundle-sizes.mjs' methodology) and fails if it regresses past
  * the budgets below. Exists because the floor previously inflated silently:
  * statically-reachable optional modules (SecurityValidator, memory-manager)
- * leaked into every bundle. After the v11 security injection the bare floor is
- * ~6.6KB / with-entityMap ~9.4KB gzip; these budgets lock that in with headroom.
+ * leaked into every bundle. After the v11 security + lazy injections the bare
+ * floor is ~5.3KB / with-entityMap ~8.1KB gzip; these budgets lock that in with
+ * headroom.
  *
  * Budgets are gzip KB, own-code only (@angular/rxjs/tslib external). Bump them
  * deliberately in a commit if a real feature justifies it — never silently.
@@ -23,7 +24,7 @@ const REPO_NODE_MODULES = new URL('../node_modules', import.meta.url).pathname;
 // id -> { code, budgetKB }
 const TARGETS = {
   'signaltree-bare': {
-    budgetKB: 7.2,
+    budgetKB: 5.8,
     code: `
       import { signalTree } from ${JSON.stringify(CORE)};
       const t = signalTree({ count: 0, user: { name: 'a' } });
@@ -32,7 +33,7 @@ const TARGETS = {
     `,
   },
   'signaltree-entities': {
-    budgetKB: 10.0,
+    budgetKB: 8.6,
     code: `
       import { signalTree, entityMap } from ${JSON.stringify(CORE)};
       const t = signalTree({ count: 0, users: entityMap() });

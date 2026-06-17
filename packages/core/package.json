@@ -19,6 +19,11 @@
       "import": "./dist/security.js",
       "default": "./dist/security.js"
     },
+    "./lazy": {
+      "types": "./src/lazy.d.ts",
+      "import": "./dist/lazy.js",
+      "default": "./dist/lazy.js"
+    },
     "./edit-session": {
       "types": "./src/edit-session.d.ts",
       "import": "./dist/edit-session.js",

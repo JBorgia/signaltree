@@ -352,6 +352,16 @@ export interface TimeTravelEntry<T> {
 export interface TreeConfig {
   batchUpdates?: boolean;
   enableTimeTravel?: boolean;
+
+  /**
+   * Force lazy (`true`) or eager (`false`) signal creation, overriding the
+   * automatic size threshold.
+   *
+   * v11 change: lazy mode only runs when the `lazy` feature is also injected
+   * (`lazy: lazy()` from `@signaltree/core/lazy`). Without it, this flag is a
+   * no-op and trees are always eager — the lazy proxy + memory manager
+   * (~2.6KB) tree-shake out of bundles that don't opt in.
+   */
   useLazySignals?: boolean;
   useShallowComparison?: boolean;
   maxCacheSize?: number;
@@ -383,6 +393,49 @@ export interface TreeConfig {
    * ```
    */
   security?: SecurityFeature;
+
+  /**
+   * Opt-in lazy signal creation, built with the `lazy()` helper from
+   * `@signaltree/core/lazy`. When present, large trees (or `useLazySignals:
+   * true`) materialize signals on-demand through a Proxy backed by a memory
+   * manager; when absent, trees are always eager.
+   *
+   * v11 change: lazy mode is no longer automatic — inject `lazy: lazy()` to
+   * enable it. This keeps the lazy proxy + `SignalMemoryManager` (~2.6KB) out
+   * of every bundle that doesn't use it.
+   *
+   * @default undefined (eager signal creation)
+   *
+   * @example
+   * ```ts
+   * import { signalTree } from '@signaltree/core';
+   * import { lazy } from '@signaltree/core/lazy';
+   *
+   * // Auto-threshold applies once lazy is injected (large state → lazy):
+   * const tree = signalTree(largeState, { lazy: lazy() });
+   * // Force lazy even for small state:
+   * const forced = signalTree(state, { lazy: lazy(), useLazySignals: true });
+   * ```
+   */
+  lazy?: LazyFeature;
+}
+
+/**
+ * Opt-in lazy feature carried on {@link TreeConfig.lazy}. Built by `lazy()`
+ * from `@signaltree/core/lazy`. Defined here (not in the lazy subpath) so core
+ * can type the config and build the tree without statically importing the lazy
+ * proxy or memory manager, keeping them tree-shakeable.
+ */
+export interface LazyFeature {
+  readonly __signalTreeLazy: true;
+  /**
+   * Build the lazy proxy tree. Returns the tree plus a `dispose` hook the core
+   * calls on `tree.destroy()`. Invoked only when lazy mode is selected.
+   */
+  build<T extends object>(
+    obj: T,
+    equalityFn: (a: unknown, b: unknown) => boolean
+  ): { tree: TreeNode<T>; dispose: () => void };
 }
 
 /**

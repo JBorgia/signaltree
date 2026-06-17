@@ -10,9 +10,8 @@ import {
   materializeMarkers,
 } from './internals/materialize-markers';
 import { applyDerivedFactories } from './internals/merge-derived';
-import { SignalMemoryManager } from './memory/memory-manager';
 import { getPathNotifier } from './path-notifier';
-import { createLazySignalTree, equal, isBuiltInObject, unwrap } from './utils';
+import { equal, isBuiltInObject, unwrap } from './utils';
 
 import type {
   TreeNode,
@@ -373,12 +372,17 @@ function create<T extends object>(
   validateTree(initialState, config);
 
   const equalityFn = createEqualityFn(config.useShallowComparison ?? false);
-  const estimatedSize = estimateObjectSize(initialState);
-  const useLazy = shouldUseLazy(initialState, config, estimatedSize);
+  // Lazy mode is opt-in (v11): it only runs when the `lazy` feature is injected
+  // via `@signaltree/core/lazy`. Without it the size estimate is skipped and the
+  // tree is always eager, so the lazy proxy + memory manager tree-shake out.
+  const lazyFeature = config.lazy;
+  const useLazy = lazyFeature
+    ? shouldUseLazy(initialState, config, estimateObjectSize(initialState))
+    : false;
 
   // Create signal store
   let signalState: TreeNode<T>;
-  let memoryManager: SignalMemoryManager | undefined;
+  let disposeLazy: (() => void) | undefined;
 
   // Configure global PathNotifier batching based on tree config (opt-out via config.batchUpdates=false)
   // Default: batching enabled unless explicitly disabled
@@ -390,19 +394,15 @@ function create<T extends object>(
     // ignore failures (shouldn't happen)
   }
 
-  if (useLazy && typeof initialState === 'object') {
+  if (lazyFeature && useLazy && typeof initialState === 'object') {
     try {
-      memoryManager = new SignalMemoryManager();
-      signalState = createLazySignalTree(
-        initialState,
-        equalityFn,
-        '',
-        memoryManager
-      ) as TreeNode<T>;
+      const built = lazyFeature.build(initialState, equalityFn);
+      signalState = built.tree as TreeNode<T>;
+      disposeLazy = built.dispose;
     } catch (error) {
       console.warn(SIGNAL_TREE_MESSAGES.LAZY_FALLBACK, error);
       signalState = createSignalStore(initialState, equalityFn);
-      memoryManager = undefined;
+      disposeLazy = undefined;
     }
   } else {
     signalState = createSignalStore(initialState, equalityFn);
@@ -556,8 +556,8 @@ function create<T extends object>(
         }
       }
       cleanupFns.length = 0;
-      if (memoryManager) {
-        memoryManager.dispose();
+      if (disposeLazy) {
+        disposeLazy();
       }
       if (config.debugMode) {
         console.log(SIGNAL_TREE_MESSAGES.TREE_DESTROYED);

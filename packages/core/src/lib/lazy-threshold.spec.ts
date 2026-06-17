@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { signalTree } from './signal-tree';
 import { SIGNAL_TREE_CONSTANTS } from './constants';
+import { lazy } from '../lazy';
 
 /**
  * Phase 6: Lazy tree threshold behavior tests
  * Verifies that the lazy/eager signal creation switches at the LAZY_THRESHOLD.
+ *
+ * v11: lazy mode is opt-in — it only engages when `lazy: lazy()` is injected.
+ * The threshold + useLazySignals/debugMode overrides still decide WHEN lazy
+ * runs, but only once the feature is present.
  */
 
 describe('Lazy tree threshold behavior', () => {
@@ -15,9 +20,9 @@ describe('Lazy tree threshold behavior', () => {
       smallState[`key_${i}`] = i;
     }
 
-    const tree = signalTree(smallState);
+    const tree = signalTree(smallState, { lazy: lazy() });
 
-    // Should still work — eager mode
+    // Should still work — eager mode (below threshold)
     expect(tree.$.key_0()).toBe(0);
     expect(tree.$.key_9()).toBe(9);
 
@@ -38,7 +43,7 @@ describe('Lazy tree threshold behavior', () => {
       largeState[`group_${i}`] = nested;
     }
 
-    const tree = signalTree(largeState);
+    const tree = signalTree(largeState, { lazy: lazy() });
 
     // Should still work — lazy mode
     expect(tree.$.group_0.val_0()).toBe(0);
@@ -50,10 +55,29 @@ describe('Lazy tree threshold behavior', () => {
     tree.destroy();
   });
 
+  it('should be eager for large state when lazy() is NOT injected (v11 opt-in)', () => {
+    // Large state, but no lazy feature → always eager (the v11 behavior change).
+    const largeState: Record<string, Record<string, number>> = {};
+    for (let i = 0; i < 20; i++) {
+      const nested: Record<string, number> = {};
+      for (let j = 0; j < 10; j++) nested[`val_${j}`] = j;
+      largeState[`group_${i}`] = nested;
+    }
+
+    const tree = signalTree(largeState);
+
+    // Works identically — just eager (signals created up front).
+    expect(tree.$.group_0.val_0()).toBe(0);
+    tree.$.group_0.val_0.set(999);
+    expect(tree.$.group_0.val_0()).toBe(999);
+
+    tree.destroy();
+  });
+
   it('should respect explicit useLazySignals: true override', () => {
     const smallState = { a: 1, b: 2 };
 
-    const tree = signalTree(smallState, { useLazySignals: true });
+    const tree = signalTree(smallState, { lazy: lazy(), useLazySignals: true });
 
     expect(tree.$.a()).toBe(1);
     tree.$.a.set(10);
@@ -69,7 +93,10 @@ describe('Lazy tree threshold behavior', () => {
       largeState[`k_${i}`] = i;
     }
 
-    const tree = signalTree(largeState, { useLazySignals: false });
+    const tree = signalTree(largeState, {
+      lazy: lazy(),
+      useLazySignals: false,
+    });
 
     expect(tree.$.k_0()).toBe(0);
     tree.$.k_50.set(500);
@@ -85,7 +112,7 @@ describe('Lazy tree threshold behavior', () => {
     }
 
     // debugMode should force eager even for large state
-    const tree = signalTree(largeState, { debugMode: true });
+    const tree = signalTree(largeState, { lazy: lazy(), debugMode: true });
 
     expect(tree.$.k_0()).toBe(0);
     tree.$.k_99.set(999);
