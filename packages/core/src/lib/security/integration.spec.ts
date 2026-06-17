@@ -6,6 +6,30 @@ import { SecurityEvent, SecurityPresets } from './security-validator';
  * Integration tests for SecurityValidator with signalTree
  */
 describe('SecurityValidator Integration', () => {
+  describe('Fail-closed on malformed security config (v11)', () => {
+    it('throws (does not silently skip) when given a pre-v11 raw config object', () => {
+      // A JS/untyped consumer who didn't migrate to security() — must fail loud,
+      // not fail-open (silently skip validation).
+      expect(() => {
+        signalTree(
+          { name: 'x' },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          { security: { preventXSS: true } as any }
+        );
+      }).toThrow(/ST1031/);
+    });
+
+    it('does not throw for a valid security() feature', () => {
+      expect(() => {
+        signalTree({ name: 'x' }, { security: security({ preventXSS: true }) });
+      }).not.toThrow();
+    });
+
+    it('does not throw when no security config is provided', () => {
+      expect(() => signalTree({ name: 'x' })).not.toThrow();
+    });
+  });
+
   describe('Function Value Blocking', () => {
     it('should block function values during tree construction', () => {
       expect(() => {

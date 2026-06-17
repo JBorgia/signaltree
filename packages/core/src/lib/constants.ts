@@ -60,6 +60,10 @@ const DEV_MESSAGES = {
   ENHANCER_NOT_FUNCTION: 'enhancer not function [ST1028]',
   EFFECT_NO_CONTEXT: 'no angular context [ST1029]',
   SUBSCRIBE_NO_CONTEXT: 'no angular context [ST1030]',
+  SECURITY_INVALID:
+    'invalid security config — pass security(config) from @signaltree/core/security, not a raw config object [ST1031]',
+  LAZY_NOT_INJECTED:
+    'useLazySignals:true has no effect without the lazy feature — pass lazy: lazy() from @signaltree/core/lazy [ST1032]',
 } as const;
 
 // Production messages use the same short readable strings as dev.

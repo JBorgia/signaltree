@@ -118,7 +118,20 @@ function validateTree<T>(obj: T, config: TreeConfig): void {
   // `security()` helper. Core no longer statically imports SecurityValidator,
   // so it tree-shakes out of every bundle that doesn't opt in. Validation still
   // runs synchronously here during construction.
-  config.security?.validate(obj);
+  const security = config.security;
+  if (!security) return;
+
+  // Fail-closed: a present-but-malformed `security` (e.g. a pre-v11 raw config
+  // object passed by an untyped/JS consumer who didn't migrate to `security()`)
+  // must NOT silently skip validation — that is fail-open for a security
+  // control. TS consumers get a compile error from the `SecurityFeature` type;
+  // this guard catches the JS/`any`/dynamic case and fails loudly instead.
+  const sec = security as { __signalTreeSecurity?: unknown; validate?: unknown };
+  if (sec.__signalTreeSecurity !== true || typeof sec.validate !== 'function') {
+    throw new Error(SIGNAL_TREE_MESSAGES.SECURITY_INVALID);
+  }
+
+  security.validate(obj);
 }
 
 // =============================================================================
@@ -379,6 +392,16 @@ function create<T extends object>(
   const useLazy = lazyFeature
     ? shouldUseLazy(initialState, config, estimateObjectSize(initialState))
     : false;
+
+  // Dev-mode: `useLazySignals: true` is a silent no-op without the lazy feature.
+  // Warn rather than let a perf-sensitive opt-in vanish unnoticed on upgrade.
+  if (
+    (typeof ngDevMode === 'undefined' || ngDevMode) &&
+    config.useLazySignals === true &&
+    !lazyFeature
+  ) {
+    console.warn(SIGNAL_TREE_MESSAGES.LAZY_NOT_INJECTED);
+  }
 
   // Create signal store
   let signalState: TreeNode<T>;

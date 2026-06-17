@@ -377,6 +377,42 @@ for package in "${PACKAGES[@]}"; do
 done
 print_success "All dist outputs present"
 
+# Preflight 2: resolve the pnpm `workspace:` protocol in published dist manifests.
+# We publish with `npm publish` (below), which — unlike `pnpm publish` — does NOT
+# rewrite `workspace:*` specs. Shipping a literal `workspace:*` breaks installs
+# (hard-fail in `dependencies`, warn + tooling breakage in `peerDependencies`).
+# Rewrite any @signaltree/* spec that is `workspace:*`/`workspace:^`/`workspace:~`
+# or a bare `*` to `^NEW_VERSION` in the dist package.json before publishing.
+print_step "Resolving workspace:* / * specs in dist manifests to ^$NEW_VERSION..."
+for package in "${PACKAGES[@]}"; do
+    DIST_PKG="./dist/packages/$package/package.json"
+    [ -f "$DIST_PKG" ] || continue
+    node -e "
+        const fs = require('fs');
+        const p = '$DIST_PKG';
+        const j = JSON.parse(fs.readFileSync(p, 'utf8'));
+        const ver = '^' + '$NEW_VERSION';
+        let changed = false;
+        const fix = (deps) => {
+            if (!deps) return;
+            for (const k of Object.keys(deps)) {
+                if (!k.startsWith('@signaltree/')) continue;
+                const v = deps[k];
+                if (v === '*' || (typeof v === 'string' && v.startsWith('workspace:'))) {
+                    deps[k] = ver;
+                    changed = true;
+                }
+            }
+        };
+        fix(j.dependencies); fix(j.peerDependencies); fix(j.optionalDependencies);
+        if (changed) {
+            fs.writeFileSync(p, JSON.stringify(j, null, 2) + '\n');
+            console.log('  resolved @signaltree/* specs in ' + p + ' -> ' + ver);
+        }
+    "
+done
+print_success "Workspace specs resolved in dist manifests"
+
 # Step 4: Commit changes
 print_step "Committing version changes (if any)..."
 git add package.json packages/*/package.json
