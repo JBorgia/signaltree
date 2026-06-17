@@ -272,6 +272,21 @@ else
     print_warning "Bundle size analysis encountered issues (non-blocking)"
 fi
 
+# 10b. Bundle Budget Gate (BLOCKING)
+# Re-measures SignalTree's own gzip cost and fails if the floor regresses past
+# budget. Guards against the class of bug where a statically-reachable optional
+# module silently leaks into every bundle (the v11 security-injection fix). Needs
+# the core build (step 7) present.
+print_header "10b. Bundle Budget Gate"
+print_step "Enforcing SignalTree gzip budgets (bare ≤7.2KB, with-entities ≤10KB)"
+if node tools/check-bundle-budget.mjs 2>&1 | tee /tmp/bundle-budget.log; then
+    print_success "Bundle within budget"
+else
+    print_error "Bundle budget exceeded — a regression inflated the floor"
+    cat /tmp/bundle-budget.log
+    exit 1
+fi
+
 # 11. Sanity Checks
 print_header "11. Sanity Checks"
 print_step "Running sanity checks on build outputs"
