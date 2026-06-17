@@ -2,6 +2,53 @@
 
 > **SignalTree** — Reactive JSON for Angular. JSON branches, reactive leaves.
 
+## 11.0.0
+
+> **One breaking change, mechanical to apply.** Everything else in v11 is additive or a fix. If you don't pass a `security` config to `signalTree(...)`, **nothing changes for you** — upgrade and move on.
+
+### `security` config must be wrapped with `security()`
+
+The `security` option used to take a raw `SecurityValidatorConfig`. Because `signalTree()` statically referenced the `SecurityValidator` class, the validator (~1KB gzip) shipped in **every** bundle even when no app used it — the opposite of what the `@signaltree/core/security` subpath was meant to achieve. In v11 the validator is **injected**: `signalTree` only calls an opt-in feature, so the validator is tree-shaken out unless you import it.
+
+**Before (≤10.x):**
+
+```ts
+import { signalTree } from '@signaltree/core';
+
+const tree = signalTree(state, {
+  security: { preventXSS: true, maxStringLength: 10_000 },
+});
+```
+
+**After (11.0.0):**
+
+```ts
+import { signalTree } from '@signaltree/core';
+import { security } from '@signaltree/core/security';
+
+const tree = signalTree(state, {
+  security: security({ preventXSS: true, maxStringLength: 10_000 }),
+});
+```
+
+`SecurityPresets` move the same way:
+
+```ts
+// Before
+signalTree(state, { security: SecurityPresets.strict().getConfig() });
+// After
+import { security, SecurityPresets } from '@signaltree/core/security';
+signalTree(state, { security: security(SecurityPresets.strict().getConfig()) });
+```
+
+The config shape, validation behavior, and construction-time timing are **unchanged** — only the wrapper and import path differ. TypeScript will flag every call site that needs updating (the option's type changed from `SecurityValidatorConfig` to `SecurityFeature`).
+
+### Also in 11.0.0 (no action required)
+
+- **Bundle floor reduced** — removing the always-on `SecurityValidator` drops the bare-tree floor to ~6.6KB gzip (~9.4KB with `entityMap` in use). A blocking CI budget gate now prevents silent regressions.
+- **Honest bundle docs** — the "smaller than NgRx SignalStore" claim was false (SignalStore is ~2.3KB; SignalTree is larger). Docs now frame bundle as *capability-per-KB + zero-deps*, not "smallest". See measured numbers in the benchmark.
+- Includes the 10.5.0/10.6.0 additions (body-granular `entityMap`, `sortComparer`, `[ST####]` error codes, dev-mode guardrails) and the published-package fixes for `@signaltree/guardrails` and `@signaltree/callable-syntax`.
+
 ## 9.0.1
 
 > **Why a patch?** v9.0.0 was only just released; adoption of the removed APIs is minimal. These changes are technically breaking but shipped as `9.0.1`. Pin to `9.0.0` if you were using `memoization()` or preset factories and need time to migrate.

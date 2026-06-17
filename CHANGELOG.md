@@ -1,4 +1,26 @@
-## 10.6.0 (unreleased)
+## 11.0.0
+
+### Breaking
+
+- **`security` config must be wrapped with `security()`** from `@signaltree/core/security`. The raw `SecurityValidatorConfig` kept `SecurityValidator` statically reachable, so it shipped in every bundle; it is now injected and tree-shakeable. Behavior and timing are unchanged — only the wrapper + import path differ. See [MIGRATION.md §11.0.0](docs/guides/MIGRATION.md#1100). TypeScript flags every call site (option type `SecurityValidatorConfig` → `SecurityFeature`).
+
+### Changed
+
+- **Bundle floor reduced** — removing the always-on `SecurityValidator` from the default path drops the bare-tree floor to ~6.6KB gzip (~9.4KB with `entityMap` in use, own code, `@angular`/`rxjs`/`tslib` external).
+- **Honest bundle positioning** — corrected the false "smaller than NgRx SignalStore (~12KB)" claim (SignalStore is ~2.3KB; SignalTree is larger). `llms.txt`, `llms-full.txt`, and the benchmark now carry measured gzip numbers and frame bundle as capability-per-KB + zero-deps.
+
+### Added
+
+- **Bundle-budget CI gate** (`tools/check-bundle-budget.mjs`, wired into pre-publish) — fails if the floor regresses past budget (bare ≤7.2KB, with-entities ≤10KB gzip), guarding against optional modules silently leaking into every bundle.
+- **`tools/measure-bundle-sizes.mjs`** — reproducible own-code gzip measurement across SignalTree and 6 competitors.
+
+### Fixed
+
+- **`@signaltree/guardrails`** — published barrel re-exported a never-emitted `./lib/rules.js`; added `rules.ts` as an entry point so the package resolves.
+- **`@signaltree/callable-syntax`** — slimmed the `.` entry to type-only augmentation so `import '@signaltree/callable-syntax'` no longer drags `@babel` (~196KB) into app bundles; build-time transform stays at the `/vite` `/webpack` subpaths.
+- **Built-barrel smoke test** (`tools/verify-built-barrels.mjs`, pre-publish step 7b) — bundles every published `dist/index.js` and fails on unresolvable re-exports (the class of bug that broke guardrails@10.6.0).
+
+## 10.6.0
 
 ### Added
 
