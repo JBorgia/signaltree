@@ -112,7 +112,7 @@ store.registerCleanup(() => ws.close()); // custom hook called during destroy
 
 ### Injectable store — `defineStore()` (idiomatic DI)
 
-The direct parallel to NgRx SignalStore's `signalStore()`: wrap a tree factory in an injectable service class. `inject(MyStore)` resolves to the real tree (callable, full API), and the tree's `destroy()` is tied to the host injector's `DestroyRef`.
+Comparable to NgRx SignalStore's `signalStore()`: wrap a tree factory in an injectable service class. `inject(MyStore)` resolves to the real tree (callable, full API), and the tree's `destroy()` is tied to the host injector's `DestroyRef`.
 
 ```typescript
 import { signalTree, defineStore } from '@signaltree/core';
@@ -338,7 +338,7 @@ Chain `.derived()` multiple times. Tier N can reference tier N-1 outputs:
 
 ### `linked()` — derived-but-writable state (vs NgRx `withLinkedState`)
 
-`.derived()` values are read-only `computed`s. For a value that is **derived from a source yet also writable** — and re-derives when the source changes — return `linked()` instead of `computed()`. It wraps Angular's native `linkedSignal` and is SignalTree's marker-ethos answer to NgRx SignalStore's `withLinkedState`.
+`.derived()` values are read-only `computed`s. For a value that is **derived from a source yet also writable** — and re-derives when the source changes — return `linked()` instead of `computed()`. It wraps Angular's native `linkedSignal` and is comparable to NgRx SignalStore's `withLinkedState`.
 
 ```typescript
 import { signalTree, linked } from '@signaltree/core';

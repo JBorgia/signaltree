@@ -352,7 +352,7 @@ Prefer plain Angular `computed()` for inline derivations. Reach for `derivedFrom
 
 ### `linked()` — derived-but-writable
 
-`.derived()` values are read-only `computed`s. When you need a value derived from a source that is *also writable* (and re-derives when the source changes), return `linked()` — SignalTree's answer to NgRx `withLinkedState`, wrapping Angular's `linkedSignal`. The merged path is a real `WritableSignal`, so `.set()`/`.update()` type-check.
+`.derived()` values are read-only `computed`s. When you need a value derived from a source that is *also writable* (and re-derives when the source changes), return `linked()` — comparable to NgRx `withLinkedState`, wrapping Angular's `linkedSignal`. The merged path is a real `WritableSignal`, so `.set()`/`.update()` type-check.
 
 ```ts
 import { signalTree, linked } from '@signaltree/core';
