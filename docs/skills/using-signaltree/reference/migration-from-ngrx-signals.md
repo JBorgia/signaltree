@@ -15,9 +15,35 @@ Read the root `SKILL.md`, [`reference/optimal-implementation.md`](./optimal-impl
 
 **Skip every pattern below this section** if the legacy app has exactly one `signalStore` with < 5 signals and < 3 methods. The full `AppStore` + `Ops` + tier ceremony is calibrated for multi-domain apps; on a one-store app it is pure overhead.
 
-Minimum recipe:
+For a one-store app the closest 1:1 swap is **`defineStore()`** — the direct analog of `signalStore()`:
 
-1. Replace the `signalStore({...}, withState(s), withMethods(m))` factory with `signalTree(s)` exported via an `APP_TREE` `InjectionToken` + `provideAppTree()`.
+```ts skip
+// Before (@ngrx/signals)
+export const CounterStore = signalStore(
+  { providedIn: 'root' },
+  withState({ count: 0 }),
+  withComputed(({ count }) => ({ double: computed(() => count() * 2) })),
+  withMethods((store) => ({ inc: () => patchState(store, (s) => ({ count: s.count + 1 })) }))
+);
+
+// After (@signaltree/core)
+import { signalTree, defineStore } from '@signaltree/core';
+import { computed } from '@angular/core';
+
+export const CounterStore = defineStore(
+  () =>
+    signalTree({ count: 0 }).derived(($) => ({ double: computed(() => $.count() * 2) })),
+  { providedIn: 'root' }
+);
+// inject(CounterStore) → the tree. Reads: store.$.count() / store.$.double().
+// Writes: store.$.count.update((n) => n + 1) — no patchState, no withMethods.
+```
+
+`inject(CounterStore)` resolves to the real tree (callable, full `$`/`.with()` API) and its `destroy()` is wired to the injector's `DestroyRef` — same lifecycle guarantee as SignalStore's `onDestroy`. Methods that don't fit inline can live on a thin `@Injectable` Ops service that injects the store, but for a small store the dot-path writes usually replace `withMethods` entirely.
+
+If you prefer the token-based shape (or are about to grow into multi-domain), the explicit recipe is:
+
+1. Replace the `signalStore({...}, withState(s), withMethods(m))` factory with `signalTree(s)` exported via an `APP_TREE` `InjectionToken` + `provideAppTree()` (or just `defineStore()` above).
 2. Move each `withMethods` function onto a single `@Injectable({ providedIn: 'root' })` `AppOps` class that injects `APP_TREE`.
 3. Replace every `inject(LegacyStore)` with `inject(APP_TREE)` (for reads) or `inject(AppOps)` (for writes). No `AppStore` facade needed.
 4. Run the verifier (Step 6 below).

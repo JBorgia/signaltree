@@ -110,6 +110,27 @@ store.destroyed();                     // Signal<boolean>
 store.registerCleanup(() => ws.close()); // custom hook called during destroy
 ```
 
+### Injectable store — `defineStore()` (idiomatic DI)
+
+The direct parallel to NgRx SignalStore's `signalStore()`: wrap a tree factory in an injectable service class. `inject(MyStore)` resolves to the real tree (callable, full API), and the tree's `destroy()` is tied to the host injector's `DestroyRef`.
+
+```typescript
+import { signalTree, defineStore } from '@signaltree/core';
+
+// Component-scoped (disposes with the component):
+export const CounterStore = defineStore(() => signalTree({ count: 0 }));
+// App-wide singleton:
+export const SettingsStore = defineStore(() => signalTree({ theme: 'light' }), { providedIn: 'root' });
+
+@Component({ providers: [CounterStore] })
+export class Counter {
+  readonly store = inject(CounterStore);          // the real tree
+  inc() { this.store.$.count.update((n) => n + 1); }
+}
+```
+
+The factory runs in an injection context — it may `inject()` other services and chain `.with(enhancer())` / `.derived(...)`. `defineStore` tree-shakes out when unused (zero bundle cost if you don't import it). Use it for the common case; the `APP_TREE` `InjectionToken` + Ops-service pattern (later in this doc) remains the choice for large app-wide facades that split methods across multiple services.
+
 ---
 
 ## Markers

@@ -19,6 +19,13 @@
  */
 export { signalTree } from './lib/signal-tree';
 
+/**
+ * Wrap a tree factory in an injectable Angular service (the idiomatic DI
+ * pattern, parallel to NgRx SignalStore's `signalStore()`).
+ * @see {@link defineStore}
+ */
+export { defineStore, type DefineStoreConfig } from './lib/define-store';
+
 // ============================================
 // TYPE EXPORTS
 // ============================================

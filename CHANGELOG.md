@@ -13,7 +13,8 @@
 
 ### Added
 
-- **Bundle-budget CI gate** (`tools/check-bundle-budget.mjs`, wired into pre-publish) — fails if the floor regresses past budget (bare ≤7.2KB, with-entities ≤10KB gzip), guarding against optional modules silently leaking into every bundle.
+- **`defineStore(factory, config?)`** — wraps a `signalTree(...)` factory in an injectable Angular service class (the idiomatic DI pattern, parallel to NgRx SignalStore's `signalStore()`). `inject(MyStore)` resolves to the real tree (callable, full `$`/`state`/`.with()` API); the tree's `destroy()` is tied to the host injector via `DestroyRef`. Supports `providedIn: 'root' | 'platform'`. Tree-shakes out when unused (zero floor impact).
+- **Bundle-budget CI gate** (`tools/check-bundle-budget.mjs`, wired into pre-publish) — fails if the floor regresses past budget (bare ≤5.8KB, with-entities ≤8.6KB gzip), guarding against optional modules silently leaking into every bundle.
 - **`tools/measure-bundle-sizes.mjs`** — reproducible own-code gzip measurement across SignalTree and 6 competitors.
 
 ### Fixed
