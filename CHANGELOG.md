@@ -8,7 +8,7 @@
 ### Changed
 
 - **Bundle floor reduced ~29%** — injecting `SecurityValidator` + the lazy/memory machinery (and routing status/stored marker detection through the registry) drops the bare-tree floor 7.5KB → ~5.3KB gzip (~8.1KB with `entityMap` in use; own code, `@angular`/`rxjs`/`tslib` external).
-- **`devTools()` prod-stripped** — production builds (`ngDevMode` false) drop devtools machinery via an `ngDevMode`-foldable guard, so `.with(devTools())` no longer ships the full ~12KB to prod (15.6KB → 8.7KB min so far; dev unchanged). All wrapper factories funnel through the guard.
+- **`devTools()` fully prod-stripped** — the heavy implementation moved to `devtools-impl.ts`, selected at module level by an `ngDevMode`-foldable ternary. In a production build (`ngDevMode` false) esbuild folds the selection to a noop and the entire impl module tree-shakes out: a tree using `.with(devTools())` drops from ~11.3KB → **5.06KB gzip** (devtools-impl entirely gone). Dev builds keep full devtools. All wrapper factories funnel through the shell.
 - **Honest bundle positioning** — corrected the false "smaller than NgRx SignalStore (~12KB)" claim (SignalStore is ~2.3KB; SignalTree is larger). `llms.txt`, `llms-full.txt`, and the benchmark now carry measured gzip numbers and frame bundle as capability-per-KB + zero-deps.
 
 ### Added

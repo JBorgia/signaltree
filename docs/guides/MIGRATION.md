@@ -64,7 +64,7 @@ Once `lazy: lazy()` is present, the size threshold and `useLazySignals`/`debugMo
 ### Also in 11.0.0 (no action required)
 
 - **Bundle floor reduced ~29%** — injecting both `SecurityValidator` and the lazy/memory machinery drops the bare-tree floor 7.5KB → **5.3KB gzip** (~8.1KB with `entityMap` in use). A blocking CI budget gate prevents silent regressions.
-- **`devTools()` prod-stripped** — production builds (`ngDevMode` false) now drop devtools machinery, so `.with(devTools())` no longer ships ~12KB to prod. Dev builds are unchanged. (Full strip lands incrementally; v11 removes the bulk.)
+- **`devTools()` fully prod-stripped** — production builds (`ngDevMode` false) tree-shake the entire devtools implementation, so `.with(devTools())` no longer ships ~12KB to prod (a devtools-using tree drops ~11.3KB → 5.1KB gzip). Dev builds are unchanged — full devtools as before.
 - **Honest bundle docs** — the "smaller than NgRx SignalStore" claim was false (SignalStore is ~2.3KB; SignalTree is larger). Docs now frame bundle as *capability-per-KB + zero-deps*, not "smallest". See measured numbers in the benchmark.
 - Includes the 10.5.0/10.6.0 additions (body-granular `entityMap`, `sortComparer`, `[ST####]` error codes, dev-mode guardrails) and the published-package fixes for `@signaltree/guardrails` and `@signaltree/callable-syntax`.
 
