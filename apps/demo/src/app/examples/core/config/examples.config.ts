@@ -14,6 +14,7 @@ import {
 import { EntitiesDemoComponent } from '../../features/fundamentals/examples/entities/entities-demo.component';
 import { EntitySortComparerDemoComponent } from '../../features/fundamentals/examples/entity-sort-comparer/entity-sort-comparer-demo.component';
 import { GranularReactivityDemoComponent } from '../../features/fundamentals/examples/granular-reactivity/granular-reactivity-demo.component';
+import { LinkedDerivedDemoComponent } from '../../features/fundamentals/examples/linked-derived/linked-derived-demo.component';
 import { FormsDemoComponent } from '../../features/fundamentals/examples/forms/forms-demo.component';
 import {
     RecommendedArchitectureComponent,
@@ -94,6 +95,21 @@ export const granularReactivityExampleMeta: ExampleMeta = {
   component: GranularReactivityDemoComponent,
   difficulty: 'beginner',
   tags: ['reactivity', 'fan-out', 'OnPush', 'performance', 'entities'],
+};
+
+export const linkedDerivedExampleMeta: ExampleMeta = {
+  id: 'linked-derived',
+  title: 'Derived-but-writable (linked)',
+  description:
+    "linked() inside .derived() gives a value derived from a source that is also writable and re-derives on change — sticky selection. SignalTree's answer to NgRx withLinkedState (wraps Angular's linkedSignal). v11+.",
+  category: 'Fundamentals',
+  focusAreas: ['derived', 'reactivity'],
+  functionalUse: ['derived-state', 'selection'],
+  enhancers: [],
+  route: '/linked-derived',
+  component: LinkedDerivedDemoComponent,
+  difficulty: 'intermediate',
+  tags: ['linked', 'derived', 'writable', 'linkedSignal', 'withLinkedState'],
 };
 
 /**
@@ -351,6 +367,7 @@ export const EXAMPLES_REGISTRY: ExampleMeta[] = [
   entitiesExampleMeta,
   entitySortComparerExampleMeta,
   granularReactivityExampleMeta,
+  linkedDerivedExampleMeta,
   batchingExampleMeta,
   callableSyntaxExampleMeta,
   devtoolsExampleMeta,

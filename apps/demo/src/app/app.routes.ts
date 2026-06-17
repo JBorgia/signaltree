@@ -176,6 +176,13 @@ export const appRoutes: Route[] = [
       ).then((c) => c.GranularReactivityDemoComponent),
   },
   {
+    path: 'linked-derived',
+    loadComponent: () =>
+      import(
+        './examples/features/fundamentals/examples/linked-derived/linked-derived-demo.component'
+      ).then((c) => c.LinkedDerivedDemoComponent),
+  },
+  {
     path: 'persistence',
     loadComponent: () =>
       import(
