@@ -44,8 +44,12 @@ const SEED: Item[] = [
           <ul class="list">
             @for (it of items(); track it.id) {
             <li
+              role="button"
+              tabindex="0"
               [class.active]="it.id === selected()?.id"
               (click)="select(it)"
+              (keyup.enter)="select(it)"
+              (keyup.space)="select(it)"
             >
               {{ it.name }} <span class="muted">#{{ it.id }}</span>
             </li>
