@@ -19,6 +19,11 @@ import type {
 } from '../../lib/types';
 import { ENHANCER_META } from '../../lib/types';
 
+// Angular's compile-time dev flag. When a production build defines it as false,
+// the prod-strip guard in devTools() folds to a constant and the entire
+// devtools machinery (~12KB gzip) tree-shakes out of the bundle.
+declare const ngDevMode: boolean | undefined;
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -1069,6 +1074,26 @@ function getOrCreateDevToolsGroup(
 export function devTools(
   config: DevToolsConfig = {}
 ): <T>(tree: ISignalTree<T>) => ISignalTree<T> & DevToolsMethods {
+  // Production strip (v11): when `ngDevMode` is defined and false (Angular
+  // `ng build`, or any bundler that defines it), this guard folds to a
+  // constant. The heavy enabled-path below becomes unreachable and ~12KB of
+  // devtools machinery (activity trackers, metrics, the Redux DevTools bridge)
+  // tree-shakes out — so adding `.with(devTools())` costs ~nothing in prod.
+  // All wrapper factories (enableDevTools/fullDevTools/productionDevTools/
+  // withDevTools) funnel through here, so they inherit the strip. Apps that
+  // genuinely need devtools in production should use a non-prod build.
+  if (typeof ngDevMode !== 'undefined' && !ngDevMode) {
+    return <T>(tree: ISignalTree<T>): ISignalTree<T> & DevToolsMethods =>
+      Object.assign(tree, {
+        connectDevTools(): void {
+          /* stripped in production */
+        },
+        disconnectDevTools(): void {
+          /* stripped in production */
+        },
+      }) as unknown as ISignalTree<T> & DevToolsMethods;
+  }
+
   const {
     enabled = true,
     treeName = 'SignalTree',
