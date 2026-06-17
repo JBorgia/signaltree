@@ -199,6 +199,21 @@ else
     exit 1
 fi
 
+# 7b. Built-Barrel Smoke Test
+# Bundles each package's PUBLISHED dist/index.js — fails if any internal
+# re-export can't resolve. Catches the class of bug where guardrails@10.6.0
+# shipped a barrel re-exporting a never-emitted ./lib/rules.js (invisible to
+# source tests + the .d.ts gate). Runs after the build (needs dist/packages/*).
+print_header "7b. Built-Barrel Smoke Test"
+print_step "Resolving every published package barrel"
+if node tools/verify-built-barrels.mjs 2>&1 | tee /tmp/verify-barrels.log; then
+    print_success "All package barrels resolve"
+else
+    print_error "A package barrel failed to resolve — the published package would be broken"
+    cat /tmp/verify-barrels.log
+    exit 1
+fi
+
 # 8. Verify Package Configurations
 print_header "8. Verifying Package Configurations"
 print_step "Checking package.json files"

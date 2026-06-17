@@ -24,7 +24,8 @@
         "additionalEntryPoints": [
           "packages/guardrails/src/factories/index.ts",
           "packages/guardrails/src/noop.ts",
-          "packages/guardrails/src/lib/guardrails.ts"
+          "packages/guardrails/src/lib/guardrails.ts",
+          "packages/guardrails/src/lib/rules.ts"
         ],
         "assets": [
           {
