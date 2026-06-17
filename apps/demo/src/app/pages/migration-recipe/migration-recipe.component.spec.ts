@@ -15,7 +15,7 @@ describe('MigrationRecipeComponent', () => {
     const fixture = TestBed.createComponent(MigrationRecipeComponent);
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain(
-      'Migrating to SignalTree'
+      'Migration Recipe'
     );
   });
 

@@ -12,7 +12,7 @@ describe('BatchingComparisonComponent', () => {
   it('should create and render', () => {
     const fixture = TestBed.createComponent(BatchingComparisonComponent);
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('h2').textContent).toContain(
+    expect(fixture.nativeElement.querySelector('h1').textContent).toContain(
       'Batching Comparison'
     );
     expect(fixture.nativeElement.querySelector('button').textContent).toContain(
