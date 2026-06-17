@@ -6,7 +6,6 @@ import { AsyncStreamMarker, AsyncStreamSignal } from './markers/async-stream';
 import { FormMarker, FormSignal } from './markers/form';
 import { StatusMarker, StatusSignal } from './markers/status';
 import { StoredMarker, StoredSignal } from './markers/stored';
-import { SecurityValidatorConfig } from './security/security-validator';
 
 /**
  * Metadata describing the intent and source of a tree update.
@@ -363,32 +362,38 @@ export interface TreeConfig {
   useStructuralSharing?: boolean;
 
   /**
-   * Security validation configuration
-   * When enabled, validates keys and values during tree construction and updates
-   * to prevent prototype pollution, XSS, and function values.
+   * Construction-time security validation, built with the `security()` helper
+   * from `@signaltree/core/security`. When present, its `validate()` runs
+   * synchronously during construction to reject prototype pollution, XSS, and
+   * function values.
+   *
+   * v11 change: pass `security: security(config)` (from the `/security`
+   * subpath), not a raw `SecurityValidatorConfig`. This keeps `SecurityValidator`
+   * (~2.4KB) out of every bundle that doesn't opt in.
    *
    * @default undefined (no security validation)
-   * @see SecurityValidator for configuration options
    *
    * @example
    * ```ts
-   * // Enable all security features
-   * const tree = signalTree(state, {
-   *   security: {
-   *     preventPrototypePollution: true,
-   *     preventXSS: true,
-   *     preventFunctions: true,
-   *     onSecurityEvent: (event) => console.warn('Security event:', event)
-   *   }
-   * });
+   * import { signalTree } from '@signaltree/core';
+   * import { security, SecurityPresets } from '@signaltree/core/security';
    *
-   * // Or use a preset
-   * const tree = signalTree(state, {
-   *   security: SecurityPresets.strict().getConfig()
-   * });
+   * const tree = signalTree(state, { security: security({ preventXSS: true }) });
+   * const strict = signalTree(state, { security: security(SecurityPresets.strict().getConfig()) });
    * ```
    */
-  security?: SecurityValidatorConfig;
+  security?: SecurityFeature;
+}
+
+/**
+ * Construction-time security feature carried on {@link TreeConfig.security}.
+ * Built by `security()` from `@signaltree/core/security`. Defined here (not in
+ * the security subpath) so core can type the config without importing the
+ * validator, keeping it tree-shakeable.
+ */
+export interface SecurityFeature {
+  readonly __signalTreeSecurity: true;
+  validate(state: unknown): void;
 }
 
 // ============================================

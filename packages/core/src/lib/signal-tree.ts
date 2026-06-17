@@ -14,7 +14,6 @@ import { isStatusMarker } from './markers/status';
 import { isStoredMarker } from './markers/stored';
 import { SignalMemoryManager } from './memory/memory-manager';
 import { getPathNotifier } from './path-notifier';
-import { SecurityValidator } from './security/security-validator';
 import { createLazySignalTree, equal, isBuiltInObject, unwrap } from './utils';
 
 import type {
@@ -117,49 +116,12 @@ function shouldUseLazy(
 // =============================================================================
 
 function validateTree<T>(obj: T, config: TreeConfig): void {
-  if (!config.security) return;
-
-  const validator = new SecurityValidator(config.security);
-
-  function validate(value: unknown, path: string[]): void {
-    if (value === null || value === undefined) return;
-
-    if (typeof value !== 'object') {
-      validator.validateValue(value);
-      return;
-    }
-
-    if (isBuiltInObject(value)) return;
-
-    if (Array.isArray(value)) {
-      value.forEach((item, i) => validate(item, [...path, String(i)]));
-      return;
-    }
-
-    for (const key of Object.keys(value as Record<string, unknown>)) {
-      try {
-        validator.validateKey(key);
-      } catch (error) {
-        throw new Error(
-          `${(error as Error).message}\nPath: ${[...path, key].join('.')}`
-        );
-      }
-
-      const val = (value as Record<string, unknown>)[key];
-
-      try {
-        validator.validateValue(val);
-      } catch (error) {
-        throw new Error(
-          `${(error as Error).message}\nPath: ${[...path, key].join('.')}`
-        );
-      }
-
-      validate(val, [...path, key]);
-    }
-  }
-
-  validate(obj, []);
+  // Security is injected (v11+): the validator + its recursive walk live in
+  // `@signaltree/core/security` and are carried on `config.security` by the
+  // `security()` helper. Core no longer statically imports SecurityValidator,
+  // so it tree-shakes out of every bundle that doesn't opt in. Validation still
+  // runs synchronously here during construction.
+  config.security?.validate(obj);
 }
 
 // =============================================================================

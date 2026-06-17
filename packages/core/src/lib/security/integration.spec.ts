@@ -1,4 +1,5 @@
 import { signalTree } from '../signal-tree';
+import { security } from '../../security';
 import { SecurityEvent, SecurityPresets } from './security-validator';
 
 /**
@@ -16,9 +17,9 @@ describe('SecurityValidator Integration', () => {
             },
           },
           {
-            security: {
+            security: security({
               preventFunctions: true,
-            },
+            }),
           }
         );
       }).toThrow('Function values are not allowed');
@@ -34,9 +35,9 @@ describe('SecurityValidator Integration', () => {
             },
           },
           {
-            security: {
+            security: security({
               preventFunctions: true,
-            },
+            }),
           }
         );
       }).toThrow('Function values are not allowed');
@@ -56,9 +57,9 @@ describe('SecurityValidator Integration', () => {
             ],
           },
           {
-            security: {
+            security: security({
               preventFunctions: true,
-            },
+            }),
           }
         );
       }).toThrow('Function values are not allowed');
@@ -71,10 +72,10 @@ describe('SecurityValidator Integration', () => {
           handler: () => 42,
         },
         {
-          security: {
+          security: security({
             preventFunctions: false,
             preventPrototypePollution: true,
-          },
+          }),
         }
       );
 
@@ -94,9 +95,9 @@ describe('SecurityValidator Integration', () => {
           tags: ['admin', 'user'],
         },
         {
-          security: {
+          security: security({
             preventFunctions: true,
-          },
+          }),
         }
       );
 
@@ -117,9 +118,9 @@ describe('SecurityValidator Integration', () => {
             },
           },
           {
-            security: {
+            security: security({
               preventFunctions: true,
-            },
+            }),
           }
         );
         fail('Should have thrown');
@@ -142,9 +143,9 @@ describe('SecurityValidator Integration', () => {
         });
 
         signalTree(malicious, {
-          security: {
+          security: security({
             preventPrototypePollution: true,
-          },
+          }),
         });
       }).toThrow('Dangerous key "constructor"');
     });
@@ -156,9 +157,9 @@ describe('SecurityValidator Integration', () => {
             constructor: { polluted: true },
           } as Record<string, unknown>,
           {
-            security: {
+            security: security({
               preventPrototypePollution: true,
-            },
+            }),
           }
         );
       }).toThrow('Dangerous key "constructor"');
@@ -171,9 +172,9 @@ describe('SecurityValidator Integration', () => {
             prototype: { polluted: true },
           } as Record<string, unknown>,
           {
-            security: {
+            security: security({
               preventPrototypePollution: true,
-            },
+            }),
           }
         );
       }).toThrow('Dangerous key "prototype"');
@@ -187,9 +188,9 @@ describe('SecurityValidator Integration', () => {
       });
 
       const tree = signalTree(malicious, {
-        security: {
+        security: security({
           preventPrototypePollution: false,
-        },
+        }),
       });
 
       expect(tree()).toBeDefined();
@@ -210,9 +211,9 @@ describe('SecurityValidator Integration', () => {
         };
 
         signalTree(malicious, {
-          security: {
+          security: security({
             preventPrototypePollution: true,
-          },
+          }),
         });
       } catch (error) {
         const err = error as Error;
@@ -234,9 +235,9 @@ describe('SecurityValidator Integration', () => {
           bio: '<b>Hello</b>',
         },
         {
-          security: {
+          security: security({
             preventXSS: false, // XSS prevention would require value mutation which we don't do
-          },
+          }),
         }
       );
 
@@ -250,9 +251,9 @@ describe('SecurityValidator Integration', () => {
           name: '<script>alert("xss")</script>',
         },
         {
-          security: {
+          security: security({
             preventXSS: false,
-          },
+          }),
         }
       );
 
@@ -271,7 +272,7 @@ describe('SecurityValidator Integration', () => {
             handler: () => 42,
           },
           {
-            security: SecurityPresets.strict().getConfig(),
+            security: security(SecurityPresets.strict().getConfig()),
           }
         );
       }).toThrow('Function values are not allowed');
@@ -284,7 +285,7 @@ describe('SecurityValidator Integration', () => {
             handler: () => 42,
           },
           {
-            security: SecurityPresets.standard().getConfig(),
+            security: security(SecurityPresets.standard().getConfig()),
           }
         );
       }).toThrow('Function values are not allowed');
@@ -297,7 +298,7 @@ describe('SecurityValidator Integration', () => {
           handler: () => 42,
         },
         {
-          security: SecurityPresets.permissive().getConfig(),
+          security: security(SecurityPresets.permissive().getConfig()),
         }
       );
 
@@ -325,7 +326,7 @@ describe('SecurityValidator Integration', () => {
             handler: () => 42,
           },
           {
-            security: {
+            security: security({
               preventFunctions: true,
               onSecurityEvent: (event: SecurityEvent) => {
                 events.push({
@@ -333,7 +334,7 @@ describe('SecurityValidator Integration', () => {
                   reason: event.reason,
                 });
               },
-            },
+            }),
           }
         );
       }).toThrow();
@@ -354,13 +355,13 @@ describe('SecurityValidator Integration', () => {
             handler: () => 42,
           },
           {
-            security: {
+            security: security({
               preventPrototypePollution: true,
               preventXSS: false,
               preventFunctions: true,
               onSecurityEvent: (event: SecurityEvent) =>
                 events.push({ type: event.type }),
-            },
+            }),
           }
         );
       }).toThrow('Function values are not allowed');
@@ -372,11 +373,11 @@ describe('SecurityValidator Integration', () => {
           age: 30,
         },
         {
-          security: {
+          security: security({
             preventPrototypePollution: true,
             preventXSS: false,
             preventFunctions: true,
-          },
+          }),
         }
       );
 
@@ -419,10 +420,10 @@ describe('SecurityValidator Integration', () => {
             })),
         },
         {
-          security: {
+          security: security({
             preventPrototypePollution: true,
             preventFunctions: true,
-          },
+          }),
         }
       );
 
