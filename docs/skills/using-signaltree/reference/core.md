@@ -127,7 +127,7 @@ const nameSignal = userNode?.name; // Signal<string> | undefined (field-level)
 Key options live on `EntityConfig<E, K>`: `selectId: (entity) => entity.someKey` for a custom id key (e.g., `selectId: (p) => p.sku`); `sortComparer: (a, b) => …` (v10.5+, `@ngrx/entity` parity) to keep `all()` / `ids()` in a stable sorted order (`map()` stays insertion-order); plus optional `beforeAdd` / `beforeUpdate` / `beforeRemove` lifecycle hooks.
 
 **Full mutation surface:** `addOne`, `addMany`, `upsertOne`, `upsertMany`, `updateOne`, `updateMany(ids: K[], changes: Partial<E>)` (NOT NgRx-style `[{id, changes}]`), `updateWhere(pred, changes)`, `removeOne`, `removeMany`, `removeWhere`, `clear`, `setAll`.
-**Full read surface (Signals — invoke with `()`):** `all`, `count`, `ids`, `map`, `has(id)`, `where(pred)`, `find(pred)`, `empty` (v10.3 canonical; `.isEmpty` is a deprecated alias).
+**Full read surface (Signals — invoke with `()`):** `all`, `count`, `ids`, `map`, `has(id)`, `where(pred)`, `find(pred)`, `empty` (the `.isEmpty` alias was removed in v11).
 **Node access:** `byId(id) → EntityNode<E> | undefined`. **Per-entity reads are body-granular** — `byId(id).field()` re-runs only when *that* entity changes (fan-out 1), not on every collection mutation.
 **Computed slices:** `entityMap<User>().computed('active', all => all.filter(u => u.active))` materializes `store.$.users.active()` as a `Signal<User[]>` at runtime; the slice name isn't on the static `tree.$` type yet, so read it via `(store.$.users as any).active()`.
 
@@ -154,7 +154,7 @@ tree.$.load.loading(); // boolean
 tree.$.load.loaded(); // boolean
 tree.$.load.hasError(); // boolean
 tree.$.load.notLoaded(); // boolean
-// Deprecated through v10.x, removed v11: .isLoading / .isLoaded / .isError / .isNotLoaded
+// (The is-prefix aliases .isLoading/.isLoaded/.isError/.isNotLoaded were removed in v11.)
 // — same Signal instance, both work; canonical preferred in new code.
 
 // v10.2+ Promise-vocabulary aliases (identical semantics, no args for booleans)

@@ -1715,14 +1715,6 @@ export function createDevToolsEnhancer(
       configurable: true,
     });
 
-    if ('state' in tree) {
-      Object.defineProperty(enhancedTree, 'state', {
-        value: tree.state,
-        enumerable: false,
-        configurable: true,
-      });
-    }
-
     if ('$' in tree) {
       Object.defineProperty(enhancedTree, '$', {
         value: tree.$,

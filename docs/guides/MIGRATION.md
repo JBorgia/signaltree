@@ -61,6 +61,25 @@ const forced = signalTree(state, { lazy: lazy(), useLazySignals: true }); // for
 
 Once `lazy: lazy()` is present, the size threshold and `useLazySignals`/`debugMode` overrides behave exactly as before. Without it, trees are always eager — functionally identical for reads/writes, just signals created up front. Most apps (small/medium state) never needed lazy mode and require **no change**.
 
+### 3. Removed deprecated aliases (`is`-prefix predicates + `tree.state`)
+
+Two sets of long-deprecated (since v10.3 / v10) aliases were removed. Both are mechanical find-and-replace; TypeScript flags every site.
+
+| Removed | Use instead |
+|---|---|
+| `status().isLoading` / `.isLoaded` / `.isError` / `.isNotLoaded` | `.loading` / `.loaded` / `.hasError` / `.notLoaded` |
+| `entityMap().isEmpty` | `.empty` |
+| `tree.state` | `tree.$` (same reference — `state` was always an alias for `$`) |
+
+```ts
+// Before                          // After
+tree.$.load.isLoading();           tree.$.load.loading();
+tree.$.users.isEmpty();            tree.$.users.empty();
+tree.state.user.name();            tree.$.user.name();
+```
+
+For a non-reactive full snapshot, call `tree()` (unchanged).
+
 ### Also in 11.0.0 (no action required)
 
 - **New `defineStore()`** — wrap a tree factory in an injectable Angular service: `export const CounterStore = defineStore(() => signalTree({ count: 0 }))`, then `inject(CounterStore)`. The idiomatic DI entry point (comparable to NgRx SignalStore's `signalStore()`); `destroy()` is tied to the injector's `DestroyRef`. Purely additive — existing tree usage is unchanged.

@@ -535,7 +535,7 @@ export class SignalTreeVsNgrxStoreComponent {
 
       // Create computed values with MODERATE intensive work (reduced from extreme)
       const computed1 = computed(() => {
-        const value = store.state.level1.level2.level3.level4.value();
+        const value = store.$.level1.level2.level3.level4.value();
         // Moderate mathematical computation (reduced from 5000 to 1000)
         let result = 0;
         for (let k = 0; k < 1000; k++) {
@@ -545,7 +545,7 @@ export class SignalTreeVsNgrxStoreComponent {
       });
 
       const computed2 = computed(() => {
-        const value = store.state.level1.level2.level3.level4.value();
+        const value = store.$.level1.level2.level3.level4.value();
         // Moderate string manipulation (reduced from 1000 to 200)
         let str = value.toString();
         for (let k = 0; k < 200; k++) {
@@ -555,7 +555,7 @@ export class SignalTreeVsNgrxStoreComponent {
       });
 
       const computed3 = computed(() => {
-        const value = store.state.level1.level2.level3.level4.value();
+        const value = store.$.level1.level2.level3.level4.value();
         // Moderate array operations (reduced from 2000 to 500)
         const arr = Array.from({ length: 500 }, (_, idx) => value + idx);
         return arr
@@ -573,7 +573,7 @@ export class SignalTreeVsNgrxStoreComponent {
       for (let j = 0; j < innerOps; j++) {
         const k = i * innerOps + j;
         const v = valuePlan ? valuePlan[k] : i * 25 + j;
-        store.state.level1.level2.level3.level4.value.set(v);
+        store.$.level1.level2.level3.level4.value.set(v);
         // Force evaluation of ALL computeds to ensure work is done
         const result1 = computed1();
         const result2 = computed2();
@@ -781,7 +781,7 @@ export class SignalTreeVsNgrxStoreComponent {
 
       // Create computeds with MODERATE work that depend on the array
       const totalComputed = computed(() => {
-        const items = store.state.items();
+        const items = store.$.items();
         // Moderate computation on array (simplified)
         let total = 0;
         for (let k = 0; k < Math.min(items.length, 200); k++) {
@@ -791,7 +791,7 @@ export class SignalTreeVsNgrxStoreComponent {
       });
 
       const filteredComputed = computed(() => {
-        const items = store.state.items();
+        const items = store.$.items();
         // Moderate filtering and processing
         return items
           .filter((item) => item.value > 500)
@@ -801,7 +801,7 @@ export class SignalTreeVsNgrxStoreComponent {
       });
 
       const aggregatedComputed = computed(() => {
-        const items = store.state.items();
+        const items = store.$.items();
         // Moderate array work
         const grouped = items.slice(0, 100).reduce((acc, item) => {
           const key = Math.floor(item.value / 100);
@@ -823,7 +823,7 @@ export class SignalTreeVsNgrxStoreComponent {
         const k = i * innerOps + j;
         const idx = indexPlan ? indexPlan[k] % this.arraySize : 500 + (j % 500);
         const newVal = valuePlan ? valuePlan[k] : i * innerOps + j;
-        store.state.items.update((items) => {
+        store.$.items.update((items) => {
           items[idx].value = newVal;
           return items;
         });
@@ -945,7 +945,7 @@ export class SignalTreeVsNgrxStoreComponent {
 
     // Create derived computation
     const expensiveComputation = computed(() => {
-      return store.state
+      return store.$
         .items()
         .filter((item) => item.value > 500)
         .map((item) => ({ ...item, computed: item.value * 2 }))
@@ -954,10 +954,10 @@ export class SignalTreeVsNgrxStoreComponent {
 
     // Create additional computeds for more substantial work
     const totalComputed = computed(() =>
-      store.state.items().reduce((sum, item) => sum + item.value, 0)
+      store.$.items().reduce((sum, item) => sum + item.value, 0)
     );
     const averageComputed = computed(
-      () => totalComputed() / store.state.items().length
+      () => totalComputed() / store.$.items().length
     );
 
     for (let i = 0; i < iterations; i++) {
@@ -974,9 +974,9 @@ export class SignalTreeVsNgrxStoreComponent {
         totalComputed();
         averageComputed();
         // Update an item to trigger recomputation
-        const items = store.state.items();
+        const items = store.$.items();
         items[idx].value = newVal;
-        store.state.items.set(items);
+        store.$.items.set(items);
         // Re-access after update
         expensiveComputation();
         totalComputed();

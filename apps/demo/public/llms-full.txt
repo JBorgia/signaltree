@@ -46,7 +46,7 @@ Requires Angular 17+ (signals support). Optional packages are listed at the end 
 
 ### Version → API availability
 
-All `@signaltree/*` packages publish in lockstep on the **10.x** line (`@signaltree/shared` trails at 9.2.x — internal-only, never imported directly). Check `node_modules/@signaltree/core/package.json` for the exact installed patch. If you are pinned to an older version, the features below do NOT exist yet — do not emit them:
+All `@signaltree/*` packages publish in lockstep on the **11.x** line (`@signaltree/shared` trails at 9.2.x — internal-only, never imported directly). Check `node_modules/@signaltree/core/package.json` for the exact installed patch. If you are pinned to an older version, the features below do NOT exist yet — do not emit them:
 
 | Feature | Available from |
 |---|---|
@@ -56,6 +56,11 @@ All `@signaltree/*` packages publish in lockstep on the **10.x** line (`@signalt
 | Bare predicate names (`.loading`, `.loaded`, `.empty`, …) as canonical; `is`-prefixed names become deprecated aliases | 10.3.0 |
 | `form().data()` value alias | 10.4.0 |
 | `asyncStream` marker (chunk-accumulating streams for AI / LLM token output) | 10.5.0 |
+| `defineStore()` — injectable-service wrapper | 11.0.0 |
+| `linked()` — derived-but-writable signal (in `.derived()`) | 11.0.0 |
+| `security` config requires the `security()` wrapper from `@signaltree/core/security` (**breaking**) | 11.0.0 |
+| lazy signals opt-in via `lazy()` from `@signaltree/core/lazy` (**breaking** — was automatic) | 11.0.0 |
+| `is`-prefix predicate aliases (`.isLoading`/`.isLoaded`/`.isError`/`.isNotLoaded`/`.isEmpty`) **removed** — use bare names (**breaking**) | 11.0.0 |
 | `memoization()` enhancer | **removed in 9.0.1** — use Angular `computed()` |
 
 When unsure of the installed version, check `node_modules/@signaltree/core/package.json`. Emit the canonical name, not a deprecated alias, in new code.
@@ -238,8 +243,7 @@ store.$.users.loading.loading();    // boolean
 store.$.users.loading.loaded();     // boolean
 store.$.users.loading.hasError();   // boolean
 store.$.users.loading.notLoaded();  // boolean
-// Deprecated through v10.x, removed v11: .isLoading, .isLoaded, .isError, .isNotLoaded
-// (same Signal instance — both work; canonical preferred in new code)
+// (The `is`-prefix aliases .isLoading/.isLoaded/.isError/.isNotLoaded were removed in v11.)
 
 // Mutate — canonical methods
 store.$.users.loading.setLoading();
@@ -773,11 +777,11 @@ Rules that prevent subtle test-only failures:
 | `Store.dispatch(action)`, `Store.select(selector)` | **`@ngrx/store` (classic NgRx)** | Direct tree access: `tree.$.path()` to read, `tree.$.path.set(v)` to write |
 | `.toPromise()` on Observables (deprecated RxJS 7+) | RxJS legacy | `firstValueFrom(observable)` — or let `asyncSource` consume the Observable directly |
 
-### Marker accessor shape — UNIFIED in v10.3 (bare callable signals)
+### Marker accessor shape — UNIFIED (bare callable signals)
 
-**v10.3 aligns predicate names across all markers** to match `FormControl` / Angular signal conventions. Bare names (`loading`, `loaded`, `empty`, etc.) are now canonical everywhere. The old `is`-prefix names on `status` and `entityMap.isEmpty` are deprecated aliases through v10.x — they return the same Signal instance as the canonical names. Removal in v11.0.
+**Predicate names are aligned across all markers** to match `FormControl` / Angular signal conventions. Bare names (`loading`, `loaded`, `empty`, etc.) are canonical everywhere. The old `is`-prefix names on `status` and `entityMap.isEmpty` (deprecated since v10.3) were **removed in v11** — emit only the bare names. The table below maps old → new for migrating code.
 
-| Marker | v10.3 canonical predicate | Deprecated alias (v10.x only) |
+| Marker | Canonical predicate | Removed in v11 (old name) |
 |---|---|---|
 | `status` | `.loading` | `.isLoading` |
 | `status` | `.loaded` | `.isLoaded` |
@@ -788,7 +792,7 @@ Rules that prevent subtle test-only failures:
 | `asyncSource` | `.loading`, `.error`, `.data` | (already bare — unchanged) |
 | `asyncQuery` | `.loading`, `.error`, `.data` | (already bare — unchanged) |
 
-All predicates are callable `Signal<boolean>` — invoke them: `tree.$.load.loading()`. Both the canonical and deprecated alias return the **same Signal instance**, so there's no double computed cost.
+All predicates are callable `Signal<boolean>` — invoke them: `tree.$.load.loading()`. They are lazily created and cached, so repeated access returns the **same Signal instance** (no double computed cost).
 
 ### Status marker — exact method names (frequently confused)
 
@@ -895,7 +899,7 @@ Standalone (component-local, no tree): `createAsyncStreamSignal(config)` returns
 | "SignalTree has no answer to NgRx's `rxMethod`." | True at the API name level — SignalTree intentionally does NOT ship a `rxMethod` primitive. | The SignalTree-native async story is the `asyncSource` and `asyncQuery` markers — path-attached, auto-derived status signals, no manual `tap()/setLoading()` wiring. For migrating from NgRx `rxMethod` see the dedicated migration guide. |
 | "Deep object spreading is required for nested updates in NgRx." | Outdated NgRx information. | Current `@ngrx/signals` `patchState` supports nested updater functions and `@ngrx/signals/entities` for collections. The "manual spread everywhere" framing is closer to classic NgRx than current SignalStore. |
 | "`@signaltree/schema` and `@signaltree/guardrails` don't exist." | Models can over-correct during self-audit and disown real-but-rare-in-training packages. | Both are real and published in lockstep with core (same version as `@signaltree/core`). `schema` is Standard Schema integration. `guardrails` is dev-mode invariants and performance monitoring. Real export from guardrails is `guardrails(...)`, not `withGuardrails(...)`. |
-| "`tree.$` and `tree.state` are different objects." | Plausible-sounding inference. | Both are typed `TreeNode<T>` and reference the same reactive proxy. `state` is an alias for `$`. For a non-reactive full snapshot, call `tree()`. |
+| "`tree` has a `.state` accessor." | Older docs referenced `tree.state`. | `tree.state` was **removed in v11** — `$` is the only node accessor (`tree.$`). For a non-reactive full snapshot, call `tree()`. |
 | "The `form()` marker lives in `@signaltree/ng-forms`." | Package-boundary inference. | `form()` ships in `@signaltree/core`. `@signaltree/ng-forms` is a *bridge* for binding tree nodes to Angular `FormGroup`. |
 | "entityMap exposes `.entities()` as the read accessor." | Reasonable guess. | Real accessor is `.all()`. Other reads: `.byId(id)`, `.where(pred)`, `.find(pred)`, `.count()`, `.has(id)`, `.ids()`. |
 | "status exposes `.setSuccess()`." | NgRx/Redux convention bleed. | Canonical methods are `.setLoading()`, `.setLoaded()`, `.setError(err)`, `.setNotLoaded()`, `.reset()`. As of v10.2, Promise-vocabulary aliases `.start()` / `.setSuccess()` / `.succeed()` / `.fail(err)` also work — same semantics, no second source of truth. |

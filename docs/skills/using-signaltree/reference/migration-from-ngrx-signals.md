@@ -745,7 +745,7 @@ load: status<string>();
 The `status()` marker provides:
 
 - `.setLoading()` / `.setLoaded()` / `.setError(e)` / `.setNotLoaded()`
-- Boolean signals: `.loading()` / `.loaded()` / `.hasError()` / `.notLoaded()` — v10.3 canonical bare-name predicates; use these in templates and `computed()`. The `is`-prefix forms (`.isLoading()`, `.isLoaded()`, `.isError()`, `.isNotLoaded()`) are `@deprecated` aliases through v10.x, removed in v11.0 — same Signal instance, both work, canonical preferred in new code.
+- Boolean signals: `.loading()` / `.loaded()` / `.hasError()` / `.notLoaded()` — v10.3 canonical bare-name predicates; use these in templates and `computed()`. The `is`-prefix forms (`.isLoading()` etc.) were removed in v11 — use the bare names.
 - Raw state via `.state()` — returns `Signal<LoadingState>`. **When comparing the raw value always import and use the `LoadingState` enum from `@signaltree/core`**; never compare to string literals (`'loading'`, `'loaded'`, etc.), which cause TypeScript errors.
 
 ```ts

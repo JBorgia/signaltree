@@ -44,8 +44,7 @@ describe('NgForms', () => {
     it('should create a form tree with form-specific signals', () => {
       const form = (createFormTree as any)(initialFormData);
 
-      expect(form.state).toBeDefined();
-      expect(form.$).toBe(form.state); // Alias
+      expect(form.$).toBeDefined();
       expect(form.errors).toBeDefined();
       expect(form.asyncErrors).toBeDefined();
       expect(form.touched).toBeDefined();

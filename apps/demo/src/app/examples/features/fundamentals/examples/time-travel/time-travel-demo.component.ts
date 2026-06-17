@@ -75,9 +75,9 @@ export class TimeTravelDemoComponent {
   };
 
   // State signals
-  counter = this.tree.state.counter;
-  message = this.tree.state.message;
-  todos = this.tree.state.todos;
+  counter = this.tree.$.counter;
+  message = this.tree.$.message;
+  todos = this.tree.$.todos;
 
   // Time travel signals - derive from the tree (preserves generics)
   history = signal(this.tree.getHistory());

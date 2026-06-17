@@ -67,7 +67,7 @@ class LazyArrayUpdater<T = unknown> {
       this.timerId = undefined;
     }
 
-    const itemsSignal = (this.tree.state as Record<string, unknown>)[this.key];
+    const itemsSignal = (this.tree.$ as Record<string, unknown>)[this.key];
 
     // Perform a single batched mutation and single set of the backing array
     try {
@@ -124,7 +124,7 @@ class LazyArrayUpdater<T = unknown> {
     } else {
       // Best-effort fallback: replace property on state
       try {
-        (this.tree.state as Record<string, T[]>)[this.key] = current;
+        (this.tree.$ as Record<string, T[]>)[this.key] = current;
       } catch {
         // ignore
       }

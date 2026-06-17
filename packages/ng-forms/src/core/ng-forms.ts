@@ -263,8 +263,8 @@ export function createFormTree<T extends Record<string, unknown>>(
   const initialSnapshot = deepClone(hydratedInitialValues);
 
   const valuesTree = signalTree(hydratedInitialValues, treeConfig);
-  assertTreeNode<T>(valuesTree.state);
-  const flattenedState = valuesTree.state;
+  assertTreeNode<T>(valuesTree.$);
+  const flattenedState = valuesTree.$;
 
   enhanceArraysRecursively(
     flattenedState as unknown as Record<string, unknown>

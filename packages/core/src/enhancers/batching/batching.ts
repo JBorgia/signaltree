@@ -325,15 +325,6 @@ export function batching(
       configurable: true,
     });
 
-    // Define state property
-    if ('state' in tree) {
-      Object.defineProperty(enhancedTree, 'state', {
-        value: tree.state,
-        enumerable: false,
-        configurable: true,
-      });
-    }
-
     // Define $ property
     if ('$' in tree) {
       Object.defineProperty(enhancedTree, '$', {
@@ -355,7 +346,7 @@ export function batching(
         const updates = updater(current);
 
         Object.entries(updates).forEach(([key, value]) => {
-          const property = ((enhancedTree as ISignalTree<T>).state as any)[key];
+          const property = ((enhancedTree as ISignalTree<T>).$ as any)[key];
           if (property && typeof property.set === 'function') {
             property.set(value);
           } else if (typeof property === 'function') {

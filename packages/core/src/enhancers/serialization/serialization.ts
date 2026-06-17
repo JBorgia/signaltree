@@ -698,14 +698,14 @@ export function serialization(
 
         // After applying nodeMap-targeted sets, perform a best-effort deep update for remaining keys
         updateSignals(
-          tree.state as Record<string, unknown>,
+          tree.$ as Record<string, unknown>,
           restoredData as Record<string, unknown>
         );
         return;
       }
 
       updateSignals(
-        tree.state as Record<string, unknown>,
+        tree.$ as Record<string, unknown>,
         restoredData as Record<string, unknown>
       );
     };
@@ -758,7 +758,7 @@ export function serialization(
       // 'set' which may collide with branch helpers; let encodeSpecials
       // handle special type markers.
       const raw = unwrapObjectSafely(
-        tree.state,
+        tree.$,
         new WeakSet<object>(),
         0,
         fullConfig.maxDepth,

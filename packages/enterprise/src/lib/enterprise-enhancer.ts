@@ -85,15 +85,15 @@ export function enterprise<T = unknown>(
     const listeners = new Set<PathChangeListener>();
 
     // Type assertion to access SignalTree properties
-    const signalTree = tree as unknown as { state: T };
+    const signalTree = tree as unknown as { $: T };
     // Cast tree to enhanced type for safe property assignment
     const enhancedTree = tree as ISignalTree<T> & EnterpriseEnhancedTree<T>;
 
     const ensureEngine = () => {
       if (!updateEngine) {
         pathIndex = new PathIndex<Signal<unknown>>();
-        pathIndex.buildFromTree(signalTree.state);
-        updateEngine = new OptimizedUpdateEngine(signalTree.state);
+        pathIndex.buildFromTree(signalTree.$);
+        updateEngine = new OptimizedUpdateEngine(signalTree.$);
       }
       return updateEngine;
     };
@@ -114,13 +114,13 @@ export function enterprise<T = unknown>(
       opts?: Parameters<EnterpriseEnhancedTree<T>['updateOptimized']>[1]
     ): UpdateResult => {
       const engine = ensureEngine();
-      const result = engine.update(signalTree.state, updates, opts);
+      const result = engine.update(signalTree.$, updates, opts);
       if (result.changed && pathIndex) {
         if (result.changedPaths.length) {
-          pathIndex.incrementalUpdate(signalTree.state, result.changedPaths);
+          pathIndex.incrementalUpdate(signalTree.$, result.changedPaths);
         } else {
           pathIndex.clear();
-          pathIndex.buildFromTree(signalTree.state);
+          pathIndex.buildFromTree(signalTree.$);
         }
       }
       notifyListeners(result.changedPaths);

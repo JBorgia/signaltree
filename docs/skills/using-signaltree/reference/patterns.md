@@ -960,7 +960,7 @@ tree.$.tickets.loading.loading();   // boolean
 tree.$.tickets.loading.loaded();    // boolean
 tree.$.tickets.loading.hasError();  // boolean
 tree.$.tickets.loading.notLoaded(); // boolean
-// Deprecated v10.x aliases (removed v11, same Signal instance): .isLoading, .isLoaded, .isError, .isNotLoaded
+// (The is-prefix aliases .isLoading/.isLoaded/.isError/.isNotLoaded were removed in v11.)
 
 const err = tree.$.tickets.loading.error(); // Error | null
 

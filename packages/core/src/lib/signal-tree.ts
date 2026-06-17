@@ -455,12 +455,6 @@ function create<T extends object>(
   const appliedEnhancers = new Set<string>();
 
   // Add core properties
-  Object.defineProperty(tree, 'state', {
-    value: signalState,
-    enumerable: false,
-    writable: false,
-  });
-
   Object.defineProperty(tree, '$', {
     value: signalState,
     enumerable: false,
@@ -784,7 +778,6 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
     // This must happen BEFORE derived processing so that derived factories
     // can reference entity methods, status signals, and stored signals.
     materializeMarkers(baseTree.$);
-    materializeMarkers(baseTree.state);
     // Record that a tree has been constructed so registerMarkerProcessor()
     // can warn if user-defined markers are registered AFTER the fact.
     _recordTreeConstruction();
@@ -808,15 +801,6 @@ function createBuilder<TSource extends object, TAccum = TreeNode<TSource>>(
   (builder as unknown as Record<symbol, boolean>)[NODE_ACCESSOR_SYMBOL] = true;
 
   // Copy all properties from baseTree to builder
-  Object.defineProperty(builder, 'state', {
-    get() {
-      finalize();
-      return baseTree.state;
-    },
-    enumerable: false,
-    configurable: true,
-  });
-
   Object.defineProperty(builder, '$', {
     get() {
       finalize();

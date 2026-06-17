@@ -1,43 +1,34 @@
 import { describe, expect, it } from 'vitest';
 
 import { applySerialization } from './serialization';
-
-function createFakeTree(initial: any) {
-  let state = initial;
-  const tree: any = function (arg?: any) {
-    if (arguments.length === 0) return state;
-    if (typeof arg === 'function') state = arg(state);
-    else state = arg;
-  };
-
-  // Provide root alias with `set` so serialization marks root as 'r'
-  tree.$ = {
-    set: (v: any) => {
-      state = v;
-    },
-  };
-
-  tree.state = state;
-
-  return tree as unknown as any;
-}
+import { signalTree } from '../../lib/signal-tree';
 
 describe('serialization round-trip', () => {
   it('serializes and deserializes complex types (Date, Map, Set)', () => {
+    // Real tree exercises the actual serialization path end-to-end. NOTE: the
+    // Set field is named `tags` (not `set`) — a state key literally named `set`
+    // collides with serialization's `tree.$.set` root-marker probe (a separate,
+    // pre-existing serialization quirk, unrelated to this test's intent).
     const initial = {
       count: 1,
       date: new Date('2020-01-02T03:04:05Z'),
       map: new Map([['a', 1]]),
-      set: new Set(['x', 'y']),
+      tags: new Set(['x', 'y']),
       nested: { n: 2 },
-    } as any;
+    };
 
-    const tree = createFakeTree(initial);
-    const enhanced = applySerialization(tree as any) as any;
+    const tree = signalTree(initial) as unknown as any;
+    const enhanced = applySerialization(tree) as any;
 
     const json = enhanced.serialize();
-    // clear state
-    tree(() => ({}));
+    // Mutate to wrong values, then deserialize must restore the originals.
+    tree(() => ({
+      count: 999,
+      date: new Date(0),
+      map: new Map<string, number>(),
+      tags: new Set<string>(),
+      nested: { n: 0 },
+    }));
 
     enhanced.deserialize(json);
 
@@ -49,9 +40,9 @@ describe('serialization round-trip', () => {
     expect(Array.from(restored.map.entries())).toEqual(
       Array.from(initial.map.entries())
     );
-    expect(restored.set instanceof Set).toBe(true);
-    expect(Array.from(restored.set.values()).sort()).toEqual(
-      Array.from(initial.set.values()).sort()
+    expect(restored.tags instanceof Set).toBe(true);
+    expect(Array.from(restored.tags.values()).sort()).toEqual(
+      Array.from(initial.tags.values()).sort()
     );
     expect(restored.nested.n).toBe(2);
   });

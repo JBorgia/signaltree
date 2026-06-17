@@ -211,7 +211,7 @@ export function _recordTreeConstruction(): void {
  * Process all markers in a tree node.
  * Walks recursively, replacing markers with materialized signals.
  *
- * @param node - The tree node to process (usually tree.$ or tree.state)
+ * @param node - The tree node to process (usually tree.$)
  * @param notifier - PathNotifier for entity signals
  * @param path - Current path for nested processing
  */

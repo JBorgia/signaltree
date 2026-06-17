@@ -52,9 +52,8 @@ export interface StatusSignal<E = Error> {
   /** Current error (null if no error) */
   error: WritableSignal<E | null>;
 
-  // Derived predicate signals (v10.3 canonical — bare names, matching FormControl /
-  // signals / asyncSource / entityMap / form. The `is`-prefix names below are
-  // kept as deprecated aliases through v10.x and will be removed in v11.0.)
+  // Derived predicate signals — bare names, matching FormControl / signals /
+  // asyncSource / entityMap / form. (The `is`-prefix aliases were removed in v11.)
   /** True when state is NotLoaded */
   notLoaded: Signal<boolean>;
   /** True when state is Loading */
@@ -63,27 +62,6 @@ export interface StatusSignal<E = Error> {
   loaded: Signal<boolean>;
   /** True when state is Error (i.e. error !== null) */
   hasError: Signal<boolean>;
-
-  /**
-   * @deprecated v10.3 — Use `.notLoaded` (bare) instead. Will be removed in v11.0.
-   * Kept for compatibility; identical to {@link notLoaded}.
-   */
-  isNotLoaded: Signal<boolean>;
-  /**
-   * @deprecated v10.3 — Use `.loading` (bare) instead. Will be removed in v11.0.
-   * Kept for compatibility; identical to {@link loading}.
-   */
-  isLoading: Signal<boolean>;
-  /**
-   * @deprecated v10.3 — Use `.loaded` (bare) instead. Will be removed in v11.0.
-   * Kept for compatibility; identical to {@link loaded}.
-   */
-  isLoaded: Signal<boolean>;
-  /**
-   * @deprecated v10.3 — Use `.hasError` instead. Will be removed in v11.0.
-   * Kept for compatibility; identical to {@link hasError}.
-   */
-  isError: Signal<boolean>;
 
   // Canonical helper methods
   /** Set state to NotLoaded and clear error */
@@ -206,10 +184,8 @@ export function createStatusSignal<E = Error>(
   const stateSignal = signal<LoadingState>(marker.initialState);
   const errorSignal = signal<E | null>(null);
 
-  // Lazy computed signals — one per predicate, shared between the v10.3
-  // canonical name and its v10.2-deprecated `is`-prefixed alias so the same
-  // computed instance backs both `.loading` and `.isLoading` (no duplicate
-  // computation, no double allocation).
+  // Lazy computed signals — one per predicate, created on first access (no
+  // duplicate computation, no double allocation).
   let _notLoaded: Signal<boolean> | null = null;
   let _loading: Signal<boolean> | null = null;
   let _loaded: Signal<boolean> | null = null;
@@ -240,20 +216,6 @@ export function createStatusSignal<E = Error>(
       return getLoaded();
     },
     get hasError() {
-      return getHasError();
-    },
-
-    // v10.x deprecated aliases — identical computed instances, removed v11
-    get isNotLoaded() {
-      return getNotLoaded();
-    },
-    get isLoading() {
-      return getLoading();
-    },
-    get isLoaded() {
-      return getLoaded();
-    },
-    get isError() {
       return getHasError();
     },
 

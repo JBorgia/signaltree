@@ -153,13 +153,13 @@ This table catches the most common cross-library hallucinations. **Most "Wrong" 
 | `.upsert(user)` on entity collections | **Akita** | `.upsertOne(user)` (singular suffix) |
 | `BehaviorSubject<T>`, `.next(v)`, `.asObservable()` | **RxJS classic** | A plain leaf in the `signalTree()` literal — no Observable wrapping needed |
 
-### Marker accessor shape — UNIFIED in v10.3 (bare callable signals)
+### Marker accessor shape — UNIFIED (bare callable signals)
 
-**As of v10.3, every marker uses the same accessor shape: bare-named callable signals (matching `FormControl.dirty` / `.valid` and Angular signals conventions).** The `is`-prefix names that used to appear on `status` and `entityMap.isEmpty` are kept as deprecated aliases through v10.x and will be removed in v11.0.
+**Every marker uses the same accessor shape: bare-named callable signals (matching `FormControl.dirty` / `.valid` and Angular signals conventions).** The `is`-prefix names that used to appear on `status` and `entityMap.isEmpty` (deprecated since v10.3) were **removed in v11** — emit only the bare names. The table below maps old → new for migrating code.
 
-**Cross-marker predicate naming (v10.3 canonical):**
+**Cross-marker predicate naming (canonical):**
 
-| Marker | Predicate signal (v10.3) | Old name (deprecated alias, v10.x only) |
+| Marker | Predicate signal (canonical) | Removed in v11 (old name) |
 |---|---|---|
 | `status` | `.loading` | `.isLoading` |
 | `status` | `.loaded` | `.isLoaded` |
@@ -170,7 +170,7 @@ This table catches the most common cross-library hallucinations. **Most "Wrong" 
 | `asyncSource` | `.loading`, `.error`, `.data` | (already bare — unchanged) |
 | `asyncQuery` | `.loading`, `.error`, `.data` | (already bare — unchanged) |
 
-All predicates are **callable Signals** — invoke them: `tree.$.load.loading()`, `tree.$.users.empty()`. Both `.loading` and `.isLoading` return the same underlying Signal instance; no double allocation.
+All predicates are **callable Signals** — invoke them: `tree.$.load.loading()`, `tree.$.users.empty()`. They are lazily created and cached (repeated access returns the same Signal instance).
 
 ### Status marker — exact method names (frequently confused)
 

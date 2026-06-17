@@ -231,7 +231,7 @@ export class SignalTreeBenchmarkService {
       i < Math.min(dataSize, BENCHMARK_CONSTANTS.ITERATIONS.DEEP_NESTED);
       i++
     ) {
-      let current: any = tree.state;
+      let current: any = tree.$;
       for (let j = 0; j < depth; j++) {
         if (!current?.level) break;
         current = current.level;
@@ -275,7 +275,7 @@ export class SignalTreeBenchmarkService {
     // after the loop and feed it to a sink so the JIT cannot dead-code the
     // updates and so we can assert notifications actually propagated.
     const lastValue = computed(() => {
-      const items = tree.state.items() as { id: number; value: number }[];
+      const items = tree.$.items() as { id: number; value: number }[];
       return items.length ? items[items.length - 1].value : 0;
     });
 
@@ -287,7 +287,7 @@ export class SignalTreeBenchmarkService {
       const idx = i % dataSize;
       // New array reference + new element object → signal notifies, matching
       // the observable outcome of every immutable competitor.
-      tree.state.items.update((items: { id: number; value: number }[]) => {
+      tree.$.items.update((items: { id: number; value: number }[]) => {
         const next = items.slice();
         next[idx] = { ...next[idx], value: Math.random() * 1000 };
         return next;
@@ -313,9 +313,9 @@ export class SignalTreeBenchmarkService {
 
     // FIX: Use Angular's computed() for proper memoization like NgRx SignalStore
     const compute = computed(() => {
-      const v = tree.state.value();
+      const v = tree.$.value();
       let acc = 0;
-      for (const f of tree.state.factors())
+      for (const f of tree.$.factors())
         acc += Math.sin(v * f) * Math.cos(f);
       return acc;
     });
@@ -325,7 +325,7 @@ export class SignalTreeBenchmarkService {
       i < Math.min(dataSize, BENCHMARK_CONSTANTS.ITERATIONS.COMPUTED);
       i++
     ) {
-      tree.state.value.set(i);
+      tree.$.value.set(i);
       compute(); // Now this is properly memoized!
       if ((i & 1023) === 0) {
         // REMOVED: yielding during measurement for accuracy
@@ -355,14 +355,14 @@ export class SignalTreeBenchmarkService {
       // outcome as the immutable competitors. (Earlier this mutated in place and
       // returned the same ref, which the ref-equality short-circuit treated as a
       // no-op — measuring strictly less work than the libraries compared to.)
-      (tree.state as any)['items'].update((arr: number[]) =>
+      (tree.$ as any)['items'].update((arr: number[]) =>
         arr.map((x) => (x + 1) | 0)
       );
     }
 
     const duration = performance.now() - start;
     // Read the array back so the work can't be dead-code-eliminated.
-    this.observabilitySink = (tree.state as any)['items']().length;
+    this.observabilitySink = (tree.$ as any)['items']().length;
     return this.toResult(duration, undefined, 'SignalTree batch updates');
   }
 
@@ -383,16 +383,16 @@ export class SignalTreeBenchmarkService {
 
     // Angular's computed() provides memoization; SignalTree's signals integrate directly
     const selectEven = computed(
-      () => tree.state.items().filter((x: any) => x.flag).length
+      () => tree.$.items().filter((x: any) => x.flag).length
     );
 
     // Test multiple selectors to stress memoization
     const selectHighValue = computed(
-      () => tree.state.items().filter((x: any) => x.value > 50).length
+      () => tree.$.items().filter((x: any) => x.value > 50).length
     );
 
     const selectByCategory = computed(() => {
-      const items = tree.state.items();
+      const items = tree.$.items();
       return items.reduce((acc: Record<number, number>, item: any) => {
         const cat = item.metadata.category;
         acc[cat] = (acc[cat] || 0) + 1;
@@ -407,7 +407,7 @@ export class SignalTreeBenchmarkService {
 
       // Occasionally update to test cache invalidation (same frequency as NgRx)
       if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.SELECTOR) === 0) {
-        tree.state.items.update((items: any[]) => {
+        tree.$.items.update((items: any[]) => {
           const idx = i % items.length;
           items[idx].flag = !items[idx].flag;
           return items;
@@ -544,7 +544,7 @@ export class SignalTreeBenchmarkService {
 
     // Mutate a little so shape stabilizes
     for (let i = 0; i < 10; i++) {
-      (tree.state as any)['users'].update((arr: any[]) => {
+      (tree.$ as any)['users'].update((arr: any[]) => {
         const idx = i % arr.length;
         (arr[idx] as any).active = !(arr[idx] as any).active;
         return arr;
@@ -593,7 +593,7 @@ export class SignalTreeBenchmarkService {
     for (let t = 0; t < touches; t++) {
       const g = t % groups;
       // Update the entire groups array to modify nested items
-      tree.state.groups.update((groupsArray: any[]) => {
+      tree.$.groups.update((groupsArray: any[]) => {
         // Clone the array to maintain immutability
         const newGroups = [...groupsArray];
         const group = newGroups[g];
@@ -670,11 +670,11 @@ export class SignalTreeBenchmarkService {
     const tree = this.applyConfiguredEnhancers(base, [batching()]);
 
     // Simulate API response parsing and state hydration
-    tree.state.metadata.loaded.set(false);
-    tree.state.items.set(mockApiData);
-    tree.state.metadata.total.set(mockApiData.length);
-    tree.state.metadata.lastFetch.set(new Date());
-    tree.state.metadata.loaded.set(true);
+    tree.$.metadata.loaded.set(false);
+    tree.$.items.set(mockApiData);
+    tree.$.metadata.total.set(mockApiData.length);
+    tree.$.metadata.lastFetch.set(new Date());
+    tree.$.metadata.loaded.set(true);
 
     // Simulate filtering operations (common after data fetch)
     for (
@@ -682,20 +682,20 @@ export class SignalTreeBenchmarkService {
       i < Math.min(BENCHMARK_CONSTANTS.ITERATIONS.BATCH_UPDATES, dataSize / 10);
       i++
     ) {
-      tree.state.filters.search.set(`search${i}`);
-      tree.state.filters.category.set(`cat${i % 5}`);
+      tree.$.filters.search.set(`search${i}`);
+      tree.$.filters.category.set(`cat${i % 5}`);
 
       // Trigger computed-like operations
-      const filteredItems = tree.state
+      const filteredItems = tree.$
         .items()
         .filter(
           (item: any) =>
-            item.title.includes(tree.state.filters.search()) ||
-            item.tags.includes(tree.state.filters.category())
+            item.title.includes(tree.$.filters.search()) ||
+            item.tags.includes(tree.$.filters.category())
         );
 
       // Update pagination based on filtered results
-      tree.state.pagination.total.set(filteredItems.length);
+      tree.$.pagination.total.set(filteredItems.length);
 
       // REMOVED: yielding during measurement for accuracy
     }
@@ -733,18 +733,18 @@ export class SignalTreeBenchmarkService {
     );
     for (let i = 0; i < updateFrequency; i++) {
       // Live metrics updates
-      tree.state.liveMetrics.activeUsers.update(
+      tree.$.liveMetrics.activeUsers.update(
         (x: number) => x + Math.floor(Math.random() * 10 - 5)
       );
-      tree.state.liveMetrics.pageViews.update(
+      tree.$.liveMetrics.pageViews.update(
         (x: number) => x + Math.floor(Math.random() * 20)
       );
-      tree.state.liveMetrics.serverLoad.set(Math.random());
-      tree.state.liveMetrics.responseTime.set(50 + Math.random() * 200);
+      tree.$.liveMetrics.serverLoad.set(Math.random());
+      tree.$.liveMetrics.responseTime.set(50 + Math.random() * 200);
 
       // Add new events (with size limit)
       if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DATA_FETCHING) === 0) {
-        tree.state.recentEvents.update((events: any[]) => [
+        tree.$.recentEvents.update((events: any[]) => [
           ...events.slice(-99), // Keep last 100 events
           {
             id: i,
@@ -757,7 +757,7 @@ export class SignalTreeBenchmarkService {
 
       // Add notifications occasionally
       if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.REAL_TIME_UPDATES) === 0) {
-        tree.state.notifications.update((notifs: any[]) => [
+        tree.$.notifications.update((notifs: any[]) => [
           ...notifs.slice(-9), // Keep last 10 notifications
           {
             id: i,
@@ -814,8 +814,8 @@ export class SignalTreeBenchmarkService {
     const tree = this.applyConfiguredEnhancers(base, [batching()]);
 
     // Perform operations that test scaling
-    tree.state.stats.size.set(largeDataSet.length);
-    tree.state.stats.lastUpdate.set(new Date());
+    tree.$.stats.size.set(largeDataSet.length);
+    tree.$.stats.lastUpdate.set(new Date());
 
     // Build indices (simulate common large-scale operations)
     const operations = Math.min(
@@ -826,7 +826,7 @@ export class SignalTreeBenchmarkService {
       const entityId = i % largeDataSet.length;
 
       // Update entity
-      tree.state.entities.update((entities: any[]) => {
+      tree.$.entities.update((entities: any[]) => {
         const entity = entities[entityId];
         if (entity) {
           entity.properties[0].value = `updated_${Date.now()}`;
@@ -836,7 +836,7 @@ export class SignalTreeBenchmarkService {
 
       // Update cache/index occasionally
       if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.REAL_TIME_UPDATES) === 0) {
-        (tree.state.cache as any).update((cache: any) => ({
+        (tree.$.cache as any).update((cache: any) => ({
           ...cache,
           [`cache_${i}`]: { computed: Math.random(), timestamp: Date.now() },
         }));
@@ -914,8 +914,8 @@ export class SignalTreeBenchmarkService {
     }
 
     // Single loading toggle
-    tree.state.loading.set(true);
-    tree.state.error.set(null);
+    tree.$.loading.set(true);
+    tree.$.error.set(null);
 
     // Worker fetches a small chunk and writes into the preallocated buffer in-place
     const worker = async () => {
@@ -950,7 +950,7 @@ export class SignalTreeBenchmarkService {
               itemsBuffer[dest] = chunk[i];
             }
             // Single set of the backing array reference after in-place writes
-            (tree.state as any).items.set(itemsBuffer);
+            (tree.$ as any).items.set(itemsBuffer);
             applyIndex = (applyIndex + chunk.length) % itemsBuffer.length;
           });
         } else {
@@ -960,11 +960,11 @@ export class SignalTreeBenchmarkService {
             const dest = (startIdx + i) % itemsBuffer.length;
             itemsBuffer[dest] = chunk[i];
           }
-          (tree.state as any).items.set(itemsBuffer.slice());
+          (tree.$ as any).items.set(itemsBuffer.slice());
           applyIndex = (applyIndex + chunk.length) % itemsBuffer.length;
         }
       } catch (e) {
-        tree.state.error.set((e as Error)?.message ?? String(e));
+        tree.$.error.set((e as Error)?.message ?? String(e));
       }
     };
 
@@ -972,7 +972,7 @@ export class SignalTreeBenchmarkService {
 
     await runInBatches(placeholders, worker);
 
-    tree.state.loading.set(false);
+    tree.$.loading.set(false);
 
     const duration = performance.now() - start;
     return this.toResult(duration, undefined, 'SignalTree async workflow');
@@ -987,7 +987,7 @@ export class SignalTreeBenchmarkService {
     });
 
     const asyncOperation = async (id: number) => {
-      tree.state.activeOperations.update((count) => count + 1);
+      tree.$.activeOperations.update((count) => count + 1);
 
       await new Promise((r) =>
         setTimeout(
@@ -997,8 +997,8 @@ export class SignalTreeBenchmarkService {
       ); // Random delay
 
       const result = { id, value: Math.random() };
-      tree.state.results.update((results) => [...results, result]);
-      tree.state.activeOperations.update((count) => count - 1);
+      tree.$.results.update((results) => [...results, result]);
+      tree.$.activeOperations.update((count) => count - 1);
     };
 
     const start = performance.now();
@@ -1026,21 +1026,21 @@ export class SignalTreeBenchmarkService {
 
     for (let i = 0; i < operations; i++) {
       // Cancel previous request if exists
-      const activeRequest = tree.state.activeRequest();
+      const activeRequest = tree.$.activeRequest();
       if (activeRequest) {
         activeRequest.abort();
-        tree.state.cancelled.update((count) => count + 1);
+        tree.$.cancelled.update((count) => count + 1);
       }
 
       // Start new request
       const controller = new AbortController();
-      tree.state.activeRequest.set(controller);
+      tree.$.activeRequest.set(controller);
 
       try {
         await new Promise((resolve, reject) => {
           const timeout = setTimeout(() => {
             if (!controller.signal.aborted) {
-              tree.state.result.set({ id: i, data: 'completed' });
+              tree.$.result.set({ id: i, data: 'completed' });
               resolve(null);
             }
           }, 5);
@@ -1079,8 +1079,8 @@ export class SignalTreeBenchmarkService {
 
     // Make changes
     for (let i = 0; i < operations; i++) {
-      tree.state.counter.set(i);
-      tree.state.data({ value: `step_${i}` });
+      tree.$.counter.set(i);
+      tree.$.data({ value: `step_${i}` });
     }
 
     // Undo half
@@ -1112,8 +1112,8 @@ export class SignalTreeBenchmarkService {
 
     // Make changes to build history
     for (let i = 0; i < historySize; i++) {
-      tree.state.value.set(i);
-      tree.state.data({ content: `step_${i}` });
+      tree.$.value.set(i);
+      tree.$.data({ content: `step_${i}` });
 
       // REMOVED: yielding during measurement for accuracy
     }
@@ -1135,8 +1135,8 @@ export class SignalTreeBenchmarkService {
 
     // Build history first
     for (let i = 0; i < operations; i++) {
-      tree.state.currentState.set(i);
-      tree.state.data({ value: `state_${i}` });
+      tree.$.currentState.set(i);
+      tree.$.data({ value: `state_${i}` });
     }
 
     // Now test jumping to random historical states
@@ -1167,7 +1167,7 @@ export class SignalTreeBenchmarkService {
 
     const middleware = (action: string, value: any) => {
       // Lightweight middleware operation
-      tree.state.middlewareLog.update((log) => [
+      tree.$.middlewareLog.update((log) => [
         ...log.slice(-100),
         `${action}:${value}`,
       ]);
@@ -1177,7 +1177,7 @@ export class SignalTreeBenchmarkService {
 
     for (let i = 0; i < operations; i++) {
       middleware('setValue', i);
-      tree.state.value.set(i);
+      tree.$.value.set(i);
 
       // REMOVED: yielding during measurement for accuracy
     }
@@ -1198,7 +1198,7 @@ export class SignalTreeBenchmarkService {
     const middlewares = Array.from(
       { length: middlewareCount },
       (_, index) => (action: string, value: any) => {
-        tree.state.logs()[index].push(`MW${index}:${action}:${value}`);
+        tree.$.logs()[index].push(`MW${index}:${action}:${value}`);
       }
     );
 
@@ -1207,7 +1207,7 @@ export class SignalTreeBenchmarkService {
     for (let i = 0; i < operations; i++) {
       // Run through all middleware
       middlewares.forEach((mw) => mw('setValue', i));
-      tree.state.value.set(i);
+      tree.$.value.set(i);
 
       // REMOVED: yielding during measurement for accuracy
     }
@@ -1226,8 +1226,8 @@ export class SignalTreeBenchmarkService {
     });
 
     const conditionalMiddleware = (action: string, value: any) => {
-      if (tree.state.condition()) {
-        tree.state.conditionalLog.update((log) => [
+      if (tree.$.condition()) {
+        tree.$.conditionalLog.update((log) => [
           ...log.slice(-50),
           `${action}:${value}`,
         ]);
@@ -1239,11 +1239,11 @@ export class SignalTreeBenchmarkService {
     for (let i = 0; i < operations; i++) {
       // Toggle condition periodically
       if ((i & BENCHMARK_CONSTANTS.YIELD_FREQUENCY.DATA_FETCHING) === 0) {
-        tree.state.condition.set(!tree.state.condition());
+        tree.$.condition.set(!tree.$.condition());
       }
 
       conditionalMiddleware('setValue', i);
-      tree.state.value.set(i);
+      tree.$.value.set(i);
 
       // REMOVED: yielding during measurement for accuracy
     }
@@ -1284,26 +1284,26 @@ export class SignalTreeBenchmarkService {
     ); // Scale with dataSize but cap at 50
     for (let i = 0; i < iterations; i++) {
       // Simulate async load
-      (tree.state as any).loading.set(true);
+      (tree.$ as any).loading.set(true);
       await new Promise((r) =>
         setTimeout(r, BENCHMARK_CONSTANTS.TIMING.TIMEOUT_DELAY_MS)
       );
 
       // Update data
-      (tree.state as any).data.update((data: any[]) => [
+      (tree.$ as any).data.update((data: any[]) => [
         ...data,
         { id: i, value: Math.random() },
       ]);
-      (tree.state as any).loading.set(false);
+      (tree.$ as any).loading.set(false);
 
       // History tracking
-      (tree.state as any).history.update((h: any[]) => [
+      (tree.$ as any).history.update((h: any[]) => [
         ...h.slice(-20),
         { action: 'update', id: i },
       ]);
 
       // Middleware simulation
-      (tree.state as any).middlewareLog.update((log: string[]) => [
+      (tree.$ as any).middlewareLog.update((log: string[]) => [
         ...log.slice(-30),
         `action_${i}`,
       ]);
@@ -1381,7 +1381,7 @@ export class SignalTreeBenchmarkService {
 
     return runEnhancedBenchmark(async (iteration) => {
       const idx = iteration % dataSize;
-      tree.state.items.update((items: any[]) => {
+      tree.$.items.update((items: any[]) => {
         const newItems = [...items];
         newItems[idx] = { ...newItems[idx], value: Math.random() * 1000 };
         return newItems;
@@ -1407,7 +1407,7 @@ export class SignalTreeBenchmarkService {
 
     // Create computed selector matching NgRx pattern
     const selectEven = computed(
-      () => tree.state.items().filter((x: any) => x.flag).length
+      () => tree.$.items().filter((x: any) => x.flag).length
     );
 
     const options: EnhancedBenchmarkOptions = {
@@ -1512,7 +1512,7 @@ export class SignalTreeBenchmarkService {
 
     for (let i = 0; i < updates; i++) {
       const idx = i % dataSize;
-      tree.state.items.update((items: any[]) => {
+      tree.$.items.update((items: any[]) => {
         const newItems = [...items];
         newItems[idx] = { ...newItems[idx], value: Math.random() * 1000 };
         return newItems;
@@ -1537,7 +1537,7 @@ export class SignalTreeBenchmarkService {
     const tree = this.applyConfiguredEnhancers(base, [batching()]);
 
     const selectEven = computed(
-      () => tree.state.items().filter((x: any) => x.flag).length
+      () => tree.$.items().filter((x: any) => x.flag).length
     );
 
     // Pure measurement - NO yielding
@@ -1782,7 +1782,7 @@ export class SignalTreeBenchmarkService {
     for (let i = 0; i < subscriberCount; i++) {
       // Each subscriber computes something based on the counter
       const subscriber = computed(() => {
-        const counter = tree.state.counter();
+        const counter = tree.$.counter();
         // Simulate different computation patterns
         return counter * (i + 1) + Math.sin(counter * 0.1);
       });
@@ -1796,7 +1796,7 @@ export class SignalTreeBenchmarkService {
     );
     for (let i = 0; i < updates; i++) {
       // Update the counter
-      tree.state.counter.set(i);
+      tree.$.counter.set(i);
 
       // Force all subscribers to recompute (simulate reading their values)
       for (const subscriber of subscribers) {

@@ -493,14 +493,14 @@ export class SignalTreeVsNgrxSignalsComponent {
 
     // Setup reactive computation to track renders
     const computation = computed(() => {
-      const counter = tree.state.level1.level2.level3.level4.level5.counter();
+      const counter = tree.$.level1.level2.level3.level4.level5.counter();
       renderCount++;
       return counter;
     });
 
     // Warm up
     for (let i = 0; i < 10; i++) {
-      tree.state.level1.level2.level3.level4.level5.counter.set(i);
+      tree.$.level1.level2.level3.level4.level5.counter.set(i);
       computation(); // Trigger computation
     }
     renderCount = 0;
@@ -511,8 +511,8 @@ export class SignalTreeVsNgrxSignalsComponent {
 
       // Perform N operations per iteration for measurable work
       for (let j = 0; j < innerOps; j++) {
-        tree.state.level1.level2.level3.level4.level5.counter.set(i * 10 + j);
-        tree.state.level1.level2.level3.level4.level5.data.set(`updated-${i}-${j}`);
+        tree.$.level1.level2.level3.level4.level5.counter.set(i * 10 + j);
+        tree.$.level1.level2.level3.level4.level5.data.set(`updated-${i}-${j}`);
         computation(); // Trigger computation
       }
 
@@ -705,14 +705,14 @@ export class SignalTreeVsNgrxSignalsComponent {
     let renderCount = 0;
 
     const computation = computed(() => {
-      const userCount = tree.state.users().length;
+      const userCount = tree.$.users().length;
       renderCount++;
       return userCount;
     });
 
     // Warm up
     for (let i = 0; i < 5; i++) {
-      tree.state.users.update((users) => {
+      tree.$.users.update((users) => {
         users[i].name = `Warm Up User ${i}`;
         return users;
       });
@@ -726,7 +726,7 @@ export class SignalTreeVsNgrxSignalsComponent {
 
       // Perform N operations per iteration for measurable work
       for (let j = 0; j < innerOps; j++) {
-        tree.state.users.update((users) => {
+        tree.$.users.update((users) => {
           const index = (i * innerOps + j) % 100;
           users[index].name = `Updated User ${index}`;
           users[index].email = `updated${index}@example.com`;
@@ -935,9 +935,9 @@ export class SignalTreeVsNgrxSignalsComponent {
     // Complex computed that depends on multiple nested properties
     const complexComputed = computed(() => {
       renderCount++;
-      const users = tree.state.users();
-      const metadata = tree.state.metadata; // metadata is the object, not a function
-      const counter = tree.state.level1.level2.level3.level4.level5.counter();
+      const users = tree.$.users();
+      const metadata = tree.$.metadata; // metadata is the object, not a function
+      const counter = tree.$.level1.level2.level3.level4.level5.counter();
 
       return {
         totalUsers: users.length,
@@ -950,7 +950,7 @@ export class SignalTreeVsNgrxSignalsComponent {
 
     // Warm up
     for (let i = 0; i < 10; i++) {
-      tree.state.level1.level2.level3.level4.level5.counter.set(i);
+      tree.$.level1.level2.level3.level4.level5.counter.set(i);
       complexComputed();
     }
     renderCount = 0;
@@ -959,8 +959,8 @@ export class SignalTreeVsNgrxSignalsComponent {
     for (let i = 0; i < iterations; i++) {
       const start = performance.now();
 
-      tree.state.level1.level2.level3.level4.level5.counter.set(i);
-      tree.state.metadata.config.maxItems.set(100 + i);
+      tree.$.level1.level2.level3.level4.level5.counter.set(i);
+      tree.$.metadata.config.maxItems.set(100 + i);
       // Read the computed multiple times to scale work
       for (let j = 0; j < innerOps; j++) {
         complexComputed();

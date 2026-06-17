@@ -66,7 +66,7 @@ class TimeTravelManager<T> {
     }
 
     // Create new entry
-    const plain = snapshotState(this.tree.state as unknown as TreeNode<T>);
+    const plain = snapshotState(this.tree.$ as unknown as TreeNode<T>);
 
     let cloned: T;
     try {
@@ -419,14 +419,6 @@ export function timeTravel(
       enumerable: false,
       configurable: true,
     });
-
-    if ('state' in tree) {
-      Object.defineProperty(enhancedTree, 'state', {
-        value: tree.state,
-        enumerable: false,
-        configurable: true,
-      });
-    }
 
     if ('$' in tree) {
       Object.defineProperty(enhancedTree, '$', {

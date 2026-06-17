@@ -8,11 +8,11 @@ function createFakeTree(initial: any) {
     if (arguments.length === 0) return state;
     if (typeof arg === 'function') state = arg(state);
     else state = arg;
-    // keep `.state` in sync for snapshotting
-    tree.state = state;
+    // keep the node accessor in sync for snapshotting
+    tree.$ = state;
   };
 
-  tree.state = state;
+  tree.$ = state;
   return tree as unknown as any;
 }
 

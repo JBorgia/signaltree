@@ -317,16 +317,15 @@ This is the inverse of the more familiar hallucination problem: instead of inven
 
 ---
 
-## Myth 14: "`tree.$` and `tree.state` are different objects (one reactive, one raw)."
+## Myth 14: "`tree` has a `.state` accessor (separate from `$`)."
 
-**Where this comes from:** Models invent a plausible-sounding split because the two names exist alongside each other.
+**Where this comes from:** Older versions exposed `tree.state` as a readability alias for `tree.$`. It was deprecated in v10 and **removed in v11**.
 
-**The truth:** Both `tree.$` and `tree.state` are typed `TreeNode<T>` and reference **the same reactive proxy**. `state` is an alias for `$`. There is no separate "raw JavaScript data structure" accessor on the tree.
+**The truth (v11+):** `$` is the single node accessor — `tree.$`, typed `TreeNode<T>`. There is no `tree.state` and no separate "raw JavaScript data structure" accessor.
 
 ```typescript
-// types.ts
+// types.ts (v11+)
 interface SignalTree<T> {
-  readonly state: TreeNode<T>;
   readonly $: TreeNode<T>;
   // ...
 }
@@ -334,9 +333,9 @@ interface SignalTree<T> {
 
 If you want a non-reactive snapshot of the underlying values, call `tree()` to get the full state snapshot, or read individual leaves via `tree.$.path.to.leaf()`.
 
-**Source:** [`packages/core/src/lib/types.ts`](../packages/core/src/lib/types.ts) — both fields declared as `TreeNode<T>`, populated to the same value at tree construction.
+**Source:** [`packages/core/src/lib/types.ts`](../packages/core/src/lib/types.ts) — `$` is the only node accessor; `state` was removed in v11.
 
-**Doc-side action:** None — already correct in the root README and LLM.md. Just need to make sure it's hard to miss.
+**Doc-side action:** Ensure no current docs reference `tree.state`.
 
 ---
 

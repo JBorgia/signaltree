@@ -4,6 +4,7 @@
 
 - **`security` config must be wrapped with `security()`** from `@signaltree/core/security`. The raw `SecurityValidatorConfig` kept `SecurityValidator` statically reachable, so it shipped in every bundle; it is now injected and tree-shakeable. Behavior and timing are unchanged — only the wrapper + import path differ. See [MIGRATION.md §11.0.0](docs/guides/MIGRATION.md#1100). TypeScript flags every call site (option type `SecurityValidatorConfig` → `SecurityFeature`).
 - **Lazy signals are opt-in via `lazy()`** from `@signaltree/core/lazy`. Lazy mode no longer switches on automatically — `signalTree()` statically imported the lazy Proxy + `SignalMemoryManager` to do that (~2.6KB in every bundle). Inject `lazy: lazy()` to restore the auto-threshold/`useLazySignals` behavior; without it, trees are always eager (functionally identical reads/writes). See [MIGRATION.md §11.0.0](docs/guides/MIGRATION.md#1100).
+- **Removed deprecated aliases** (deprecated since v10.3/v10): the `is`-prefix status predicates (`isLoading`/`isLoaded`/`isError`/`isNotLoaded`) → use bare `loading`/`loaded`/`hasError`/`notLoaded`; `entityMap().isEmpty` → `.empty`; and **`tree.state` → `tree.$`** (`state` was always an alias for `$`, same reference). All mechanical; TypeScript flags every site. See [MIGRATION.md §11.0.0](docs/guides/MIGRATION.md#1100).
 
 ### Changed
 

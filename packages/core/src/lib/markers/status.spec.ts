@@ -44,10 +44,10 @@ describe('status() marker', () => {
 
       expect(sig.state()).toBe(LoadingState.NotLoaded);
       expect(sig.error()).toBe(null);
-      expect(sig.isNotLoaded()).toBe(true);
-      expect(sig.isLoading()).toBe(false);
-      expect(sig.isLoaded()).toBe(false);
-      expect(sig.isError()).toBe(false);
+      expect(sig.notLoaded()).toBe(true);
+      expect(sig.loading()).toBe(false);
+      expect(sig.loaded()).toBe(false);
+      expect(sig.hasError()).toBe(false);
     });
 
     it('should respect custom initial state', () => {
@@ -57,8 +57,8 @@ describe('status() marker', () => {
       });
 
       expect(sig.state()).toBe(LoadingState.Loading);
-      expect(sig.isLoading()).toBe(true);
-      expect(sig.isNotLoaded()).toBe(false);
+      expect(sig.loading()).toBe(true);
+      expect(sig.notLoaded()).toBe(false);
     });
   });
 
@@ -72,26 +72,26 @@ describe('status() marker', () => {
       // setLoading
       sig.setLoading();
       expect(sig.state()).toBe(LoadingState.Loading);
-      expect(sig.isLoading()).toBe(true);
+      expect(sig.loading()).toBe(true);
       expect(sig.error()).toBe(null);
 
       // setLoaded
       sig.setLoaded();
       expect(sig.state()).toBe(LoadingState.Loaded);
-      expect(sig.isLoaded()).toBe(true);
+      expect(sig.loaded()).toBe(true);
       expect(sig.error()).toBe(null);
 
       // setError
       const error = new Error('Test error');
       sig.setError(error);
       expect(sig.state()).toBe(LoadingState.Error);
-      expect(sig.isError()).toBe(true);
+      expect(sig.hasError()).toBe(true);
       expect(sig.error()).toBe(error);
 
       // reset
       sig.reset();
       expect(sig.state()).toBe(LoadingState.NotLoaded);
-      expect(sig.isNotLoaded()).toBe(true);
+      expect(sig.notLoaded()).toBe(true);
       expect(sig.error()).toBe(null);
     });
 
@@ -131,7 +131,7 @@ describe('status() marker', () => {
         });
         sig.start();
         expect(sig.state()).toBe(LoadingState.Loading);
-        expect(sig.isLoading()).toBe(true);
+        expect(sig.loading()).toBe(true);
         expect(sig.error()).toBe(null);
       });
 
@@ -142,7 +142,7 @@ describe('status() marker', () => {
         });
         sig.setSuccess();
         expect(sig.state()).toBe(LoadingState.Loaded);
-        expect(sig.isLoaded()).toBe(true);
+        expect(sig.loaded()).toBe(true);
       });
 
       it('should treat succeed() as setLoaded()', () => {
@@ -152,7 +152,7 @@ describe('status() marker', () => {
         });
         sig.succeed();
         expect(sig.state()).toBe(LoadingState.Loaded);
-        expect(sig.isLoaded()).toBe(true);
+        expect(sig.loaded()).toBe(true);
       });
 
       it('should treat fail(err) as setError(err)', () => {
@@ -163,7 +163,7 @@ describe('status() marker', () => {
         const err = new Error('boom');
         sig.fail(err);
         expect(sig.state()).toBe(LoadingState.Error);
-        expect(sig.isError()).toBe(true);
+        expect(sig.hasError()).toBe(true);
         expect(sig.error()).toBe(err);
       });
 
@@ -180,8 +180,8 @@ describe('status() marker', () => {
       });
     });
 
-    describe('v10.3 bare-name predicates (canonical) — match Angular FormControl shape', () => {
-      it('should expose .loading (bare) returning same Signal as .isLoading', () => {
+    describe('bare-name predicates (canonical) — match Angular FormControl shape', () => {
+      it('should cache .loading — repeated access returns the same Signal instance', () => {
         const sig = createStatusSignal({
           [STATUS_MARKER]: true,
           initialState: LoadingState.NotLoaded,
@@ -189,42 +189,41 @@ describe('status() marker', () => {
         sig.setLoading();
         // Both names work
         expect(sig.loading()).toBe(true);
-        expect(sig.isLoading()).toBe(true);
-        // Same Signal instance — first access creates one computed,
-        // both bare and is-prefixed accessors return it
-        expect(sig.loading).toBe(sig.isLoading);
+        expect(sig.loading()).toBe(true);
+        // Same Signal instance — first access creates one cached computed
+        expect(sig.loading).toBe(sig.loading);
       });
 
-      it('should expose .loaded (bare) returning same Signal as .isLoaded', () => {
+      it('should cache .loaded — repeated access returns the same Signal instance', () => {
         const sig = createStatusSignal({
           [STATUS_MARKER]: true,
           initialState: LoadingState.NotLoaded,
         });
         sig.setLoaded();
         expect(sig.loaded()).toBe(true);
-        expect(sig.isLoaded()).toBe(true);
-        expect(sig.loaded).toBe(sig.isLoaded);
+        expect(sig.loaded()).toBe(true);
+        expect(sig.loaded).toBe(sig.loaded);
       });
 
-      it('should expose .notLoaded (bare) returning same Signal as .isNotLoaded', () => {
+      it('should cache .notLoaded — repeated access returns the same Signal instance', () => {
         const sig = createStatusSignal({
           [STATUS_MARKER]: true,
           initialState: LoadingState.NotLoaded,
         });
         expect(sig.notLoaded()).toBe(true);
-        expect(sig.isNotLoaded()).toBe(true);
-        expect(sig.notLoaded).toBe(sig.isNotLoaded);
+        expect(sig.notLoaded()).toBe(true);
+        expect(sig.notLoaded).toBe(sig.notLoaded);
       });
 
-      it('should expose .hasError returning same Signal as .isError', () => {
+      it('should cache .hasError — repeated access returns the same Signal instance', () => {
         const sig = createStatusSignal({
           [STATUS_MARKER]: true,
           initialState: LoadingState.NotLoaded,
         });
         sig.setError(new Error('boom'));
         expect(sig.hasError()).toBe(true);
-        expect(sig.isError()).toBe(true);
-        expect(sig.hasError).toBe(sig.isError);
+        expect(sig.hasError()).toBe(true);
+        expect(sig.hasError).toBe(sig.hasError);
       });
 
       it('all four predicates stay reactive across state transitions via bare names', () => {
@@ -257,7 +256,7 @@ describe('status() marker', () => {
 
       // Access $ to finalize and materialize markers
       expect(tree.$.data.status.state()).toBe(LoadingState.NotLoaded);
-      expect(tree.$.data.status.isNotLoaded()).toBe(true);
+      expect(tree.$.data.status.notLoaded()).toBe(true);
     });
 
     it('should work at top level', () => {
@@ -268,7 +267,7 @@ describe('status() marker', () => {
 
       expect(tree.$.status.state()).toBe(LoadingState.NotLoaded);
       tree.$.status.setLoading();
-      expect(tree.$.status.isLoading()).toBe(true);
+      expect(tree.$.status.loading()).toBe(true);
     });
 
     it('should work with nested structures', () => {
@@ -283,8 +282,8 @@ describe('status() marker', () => {
         },
       });
 
-      expect(tree.$.users.status.isNotLoaded()).toBe(true);
-      expect(tree.$.products.status.isLoading()).toBe(true);
+      expect(tree.$.users.status.notLoaded()).toBe(true);
+      expect(tree.$.products.status.loading()).toBe(true);
     });
 
     it('should work alongside entityMap', () => {
@@ -301,7 +300,7 @@ describe('status() marker', () => {
       });
 
       // Both markers should be materialized
-      expect(tree.$.users.status.isNotLoaded()).toBe(true);
+      expect(tree.$.users.status.notLoaded()).toBe(true);
       expect(typeof tree.$.users.entities.addOne).toBe('function');
 
       // Use both
@@ -309,7 +308,7 @@ describe('status() marker', () => {
       tree.$.users.entities.addOne({ id: 1, name: 'Alice' });
       tree.$.users.status.setLoaded();
 
-      expect(tree.$.users.status.isLoaded()).toBe(true);
+      expect(tree.$.users.status.loaded()).toBe(true);
       expect(tree.$.users.entities.count()).toBe(1);
     });
 
@@ -320,9 +319,9 @@ describe('status() marker', () => {
           status: status(),
         },
       }).derived(($) => ({
-        showSpinner: computed(() => $.users.status.isLoading()),
+        showSpinner: computed(() => $.users.status.loading()),
         hasData: computed(
-          () => $.users.status.isLoaded() && $.users.data().length > 0
+          () => $.users.status.loaded() && $.users.data().length > 0
         ),
       }));
 
@@ -355,12 +354,12 @@ describe('status() marker', () => {
             const id = $.tickets.activeId();
             return id != null ? $.tickets.entities.byId(id)?.() : null;
           }),
-          isReady: computed(() => $.tickets.status.isLoaded()),
+          isReady: computed(() => $.tickets.status.loaded()),
         },
       }));
 
       // Source state preserved
-      expect(tree.$.tickets.status.isNotLoaded()).toBe(true);
+      expect(tree.$.tickets.status.notLoaded()).toBe(true);
       expect(typeof tree.$.tickets.entities.addOne).toBe('function');
 
       // Derived state works
@@ -408,8 +407,8 @@ describe('status() marker', () => {
       expect(elapsed).toBeLessThan(50);
 
       // Verify markers are working
-      expect(trees[0].$.data.status.isNotLoaded()).toBe(true);
-      expect(trees[99].$.data.status.isNotLoaded()).toBe(true);
+      expect(trees[0].$.data.status.notLoaded()).toBe(true);
+      expect(trees[99].$.data.status.notLoaded()).toBe(true);
     });
 
     it('should lazily create computed signals only on access', () => {
@@ -423,13 +422,13 @@ describe('status() marker', () => {
       expect(sig.state()).toBe(LoadingState.NotLoaded);
       expect(sig.error()).toBe(null);
 
-      // Accessing isLoading should still work (created lazily)
-      expect(sig.isLoading()).toBe(false);
+      // Accessing loading should still work (created lazily)
+      expect(sig.loading()).toBe(false);
 
       // All derived signals should work correctly
-      expect(sig.isNotLoaded()).toBe(true);
-      expect(sig.isLoaded()).toBe(false);
-      expect(sig.isError()).toBe(false);
+      expect(sig.notLoaded()).toBe(true);
+      expect(sig.loaded()).toBe(false);
+      expect(sig.hasError()).toBe(false);
     });
 
     it('should have minimal overhead without accessing derived signals', () => {
@@ -474,7 +473,7 @@ describe('status() marker', () => {
       sig.setError(customError);
       expect(sig.error()).toEqual(customError);
       expect(sig.error()?.code).toBe('ERR_001');
-      expect(sig.isError()).toBe(true);
+      expect(sig.hasError()).toBe(true);
     });
 
     it('should integrate with signalTree using custom error type', () => {
@@ -498,12 +497,12 @@ describe('status() marker', () => {
 
       tree.$.tickets.status.setError(customError);
       expect(tree.$.tickets.status.error()).toEqual(customError);
-      expect(tree.$.tickets.status.isError()).toBe(true);
+      expect(tree.$.tickets.status.hasError()).toBe(true);
 
       // Reset clears error
       tree.$.tickets.status.reset();
       expect(tree.$.tickets.status.error()).toBe(null);
-      expect(tree.$.tickets.status.isNotLoaded()).toBe(true);
+      expect(tree.$.tickets.status.notLoaded()).toBe(true);
     });
 
     it('should default to Error type when no generic provided', () => {
