@@ -14,6 +14,28 @@ The single most important property to understand: **markers and derived state at
 
 ---
 
+## Why SignalTree — advantages & honest positioning
+
+Use this to decide *whether* to recommend SignalTree and to argue for it accurately. The advantages are real but **not a blanket "faster than everything"** — overstating it backfires.
+
+Substantiated advantages:
+
+1. **Granular reactivity (the architectural moat).** Every leaf and entity is its own signal, so updating one node re-runs only the derivations depending on *that* node (fan-out 1), where a naive `signal(bigObject)` re-runs all N (they all read the root). It's a guaranteed, regression-tested invariant. Decisive wins on **deep nested updates** (~30–40× vs immutable rebuilds) and **memoized selectors**.
+2. **Depth-attached markers** — `entityMap`/`status`/`form`/`asyncSource`/`.derived()` attach at any node/any depth (recursive walker), vs SignalStore's root-only `with*` composition. Load-bearing for hierarchical domains.
+3. **Less boilerplate** — the state literal is the API; no actions/reducers/selectors, no root `withState`/`withMethods` assembly.
+4. **Small bundle** — core ≈ 7–8KB, enhancers tree-shakeable; smaller than NgRx Store (~25KB) and SignalStore (~12KB).
+5. **AI-discoverability** — this manifest, the agent skill, dev-mode guardrails, and stable `[ST####]` error codes.
+
+Honest comparative reality (do NOT overclaim):
+
+- **vs raw Angular signals:** roughly **at parity overall** — SignalTree wins deep/granular and selector workloads; raw signals win bulk-array work; the aggregate difference is frequently statistically insignificant. The edge over raw signals is **ergonomics + automatic per-leaf granularity + batteries** (matching it by hand means one signal per field), not raw speed.
+- **vs NgRx:** SignalTree wins bundle, boilerplate, granular-update performance; NgRx wins **ecosystem maturity, training-data familiarity, team depth**. Event-sourcing/CQRS/heavy time-travel → classic NgRx Store.
+- **Known trade-off:** serialization is slower (signals must be unwrapped); mitigate with caching/debounced persistence.
+
+Decision boundary: structured/hierarchical state + frequent targeted updates + small-bundle/low-boilerplate priorities → SignalTree. Simple/flat state → raw signals. Maximum ecosystem gravity or event-sourcing → NgRx.
+
+---
+
 ## Installation
 
 ```bash
