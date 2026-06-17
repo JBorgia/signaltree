@@ -431,7 +431,7 @@ export class BenchmarkOrchestratorComponent
       color: '#3b82f6',
       selected: true,
       stats: {
-        bundleSize: '7.3KB', // Updated to match actual core bundle size
+        bundleSize: '9.4KB', // gzip, with entityMap in use — measured by tools/measure-bundle-sizes.mjs
         githubStars: 2800,
       },
     },
@@ -442,7 +442,7 @@ export class BenchmarkOrchestratorComponent
       color: '#1e40af',
       selected: false,
       stats: {
-        bundleSize: '8.1KB', // Core + enterprise enhancer
+        bundleSize: '12.5KB', // gzip, core + enterprise — measured
         githubStars: 2800,
       },
     },
@@ -454,7 +454,7 @@ export class BenchmarkOrchestratorComponent
       color: '#0ea5e9',
       selected: true,
       stats: {
-        bundleSize: '0KB',
+        bundleSize: '0.2KB', // gzip — measured baseline
         githubStars: 0,
       },
     },
@@ -465,7 +465,7 @@ export class BenchmarkOrchestratorComponent
       color: '#ef4444',
       selected: false,
       stats: {
-        bundleSize: '25KB',
+        bundleSize: '5.3KB', // gzip, own code (rxjs external; ~10.6KB if rxjs absent) — measured
         githubStars: 7900,
       },
     },
@@ -476,7 +476,7 @@ export class BenchmarkOrchestratorComponent
       color: '#10b981',
       selected: false,
       stats: {
-        bundleSize: '12KB',
+        bundleSize: '2.3KB', // gzip, with withEntities — measured
         githubStars: 7900,
       },
     },
@@ -489,7 +489,7 @@ export class BenchmarkOrchestratorComponent
       selected: false,
       legacy: true,
       stats: {
-        bundleSize: '~40KB', // Updated from 20KB based on actual bundle analysis
+        bundleSize: '7.8KB', // gzip — measured
         githubStars: 3500,
       },
     },
@@ -500,7 +500,7 @@ export class BenchmarkOrchestratorComponent
       color: '#8b5cf6',
       selected: false,
       stats: {
-        bundleSize: '~5KB', // Updated from 2KB - depends on modules used
+        bundleSize: '2.1KB', // gzip, with elf-entities — measured
         githubStars: 1500,
       },
     },
@@ -512,7 +512,7 @@ export class BenchmarkOrchestratorComponent
       color: '#f97316',
       selected: false,
       stats: {
-        bundleSize: '~30KB',
+        bundleSize: '8.9KB', // gzip — measured
         githubStars: 3400,
       },
     },

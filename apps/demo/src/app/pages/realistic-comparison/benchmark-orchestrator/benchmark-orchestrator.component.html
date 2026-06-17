@@ -274,10 +274,16 @@
     <!-- Bundle Size Disclaimer -->
     <div class="bundle-disclaimer">
       <p>
-        <strong>Note:</strong> Bundle sizes are approximate and depend on usage
-        patterns, tree-shaking, and build configuration. Actual production
-        bundles may vary significantly based on which features you import and
-        use.
+        <strong>Note:</strong> Sizes are <strong>gzipped, own-code only</strong>,
+        measured with esbuild (production minify) by
+        <code>tools/measure-bundle-sizes.mjs</code>. <code>&#64;angular/*</code>,
+        <code>rxjs</code>, and <code>tslib</code> are treated as ambient peers
+        (external), so rxjs-based libraries (NgRx, NgXs, Akita, Elf) show their
+        <em>marginal</em> cost assuming rxjs is already present — NgRx Store is
+        ~10.6KB if it isn't. SignalTree numbers reflect a tree that actually uses
+        <code>entityMap</code> (~9.4KB); a bare tree is ~6.6KB. SignalTree does
+        not win on bundle size — it trades KB for built-in granularity, entity
+        maps, and depth-attached markers.
       </p>
     </div>
 
