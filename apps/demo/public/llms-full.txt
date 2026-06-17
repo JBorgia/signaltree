@@ -336,6 +336,33 @@ Chain `.derived()` multiple times. Tier N can reference tier N-1 outputs:
 
 **Critical rule:** within a single tier, a computed cannot reference another computed defined in the same tier. Move the dependency to a previous tier.
 
+### `linked()` — derived-but-writable state (vs NgRx `withLinkedState`)
+
+`.derived()` values are read-only `computed`s. For a value that is **derived from a source yet also writable** — and re-derives when the source changes — return `linked()` instead of `computed()`. It wraps Angular's native `linkedSignal` and is SignalTree's marker-ethos answer to NgRx SignalStore's `withLinkedState`.
+
+```typescript
+import { signalTree, linked } from '@signaltree/core';
+
+const store = signalTree({ options: [] as Option[] }).derived(($) => ({
+  // Sticky selection: defaults to first option, survives a list refresh if the
+  // chosen item still exists, and is user-overridable.
+  selected: linked({
+    source: () => $.options(),
+    computation: (opts, prev): Option | undefined => opts.find((o) => o.id === prev?.value?.id) ?? opts[0],
+    // optional: equal: (a, b) => a.id === b.id,
+  }),
+}));
+
+store.$.selected();            // derived from options (Option | undefined)
+store.$.selected.set(other);   // user override — WRITABLE
+// → when $.options changes, `computation` re-runs from the new list.
+
+// Simple form (no explicit source — re-derives when its reads change):
+// .derived(($) => ({ doubled: linked(() => $.count() * 2) }))
+```
+
+The merged path is a real `WritableSignal` (the `ProcessDerived` type preserves writability, so `.set()`/`.update()` type-check), and it composes with serialization/persistence/snapshot like any signal. Use `linked()` only when you need the *writable* part; for pure projections use `computed()`. The `source` reads tree state, so `linked()` belongs in `.derived(...)` where `$` is available (a bare state-literal marker can't reference sibling paths at build time).
+
 ### `derivedFrom` — derived definitions in separate files
 
 When derived definitions live in their own file, use `derivedFrom<TTree>()` to provide the `$` type context:

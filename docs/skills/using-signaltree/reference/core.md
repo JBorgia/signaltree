@@ -350,6 +350,38 @@ export const counterDerived = derivedFrom<AppTree>()(($) => ({
 
 Prefer plain Angular `computed()` for inline derivations. Reach for `derivedFrom` only when you need to declare derived logic in a separate file and still get typed `$`.
 
+### `linked()` — derived-but-writable
+
+`.derived()` values are read-only `computed`s. When you need a value derived from a source that is *also writable* (and re-derives when the source changes), return `linked()` — SignalTree's answer to NgRx `withLinkedState`, wrapping Angular's `linkedSignal`. The merged path is a real `WritableSignal`, so `.set()`/`.update()` type-check.
+
+```ts
+import { signalTree, linked } from '@signaltree/core';
+
+interface Option {
+  id: number;
+  label: string;
+}
+
+const tree = signalTree({ options: [] as Option[] }).derived(($) => ({
+  // Sticky selection: derive from options, keep the chosen item across refreshes.
+  // Annotate the computation's return type — like Angular's linkedSignal, TS
+  // can't infer it from the body when `prev.value` is referenced.
+  selected: linked({
+    source: () => $.options(),
+    computation: (opts, prev): Option | undefined =>
+      opts.find((o) => o.id === prev?.value?.id) ?? opts[0],
+  }),
+  // Simple form — re-derives when its reads change (return type inferred):
+  count: linked(() => $.options().length),
+}));
+
+const current: Option | undefined = tree.$.selected(); // read (derived)
+tree.$.selected.set({ id: 9, label: 'manual' }); // write (override) — type-checks
+tree.$.count.update((n) => n + 1); // writable too
+```
+
+Use `linked()` only when you need the writable part; for pure projections use `computed()`. The `source` reads tree state, so `linked()` belongs in `.derived(...)` where `$` is available.
+
 ## Other utilities
 
 - `equal(a, b)` / `deepEqual(a, b)` — equality helpers used internally and safe to consume.

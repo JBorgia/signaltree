@@ -103,6 +103,13 @@ export type {
 // Derived helper (v7.2) - for defining derived functions in separate files with proper typing
 export { derivedFrom, externalDerived } from './lib/internals/derived-types';
 
+/**
+ * Derived-but-writable signal (the marker-ethos answer to NgRx `withLinkedState`).
+ * Use inside `.derived($ => ({ ... }))`; wraps Angular's native `linkedSignal`.
+ * @see {@link linked}
+ */
+export { linked, type LinkedOptions } from './lib/linked';
+
 // Builder types (v7)
 export type { SignalTreeBuilder } from './lib/internals/builder-types';
 

@@ -1,4 +1,4 @@
-import { Signal } from '@angular/core';
+import { Signal, WritableSignal } from '@angular/core';
 
 /**
  * Derived State Type Utilities
@@ -15,11 +15,18 @@ import type { TreeNode } from '../types';
 /**
  * Converts a derived state definition into its signal representation.
  * - DerivedMarker<T> → Signal<T> (read-only computed signal)
+ * - WritableSignal<T> → WritableSignal<T> (preserved — e.g. `linked()`, so `.set()` type-checks)
  * - Signal<T> → Signal<T> (pass through unchanged)
  * - Objects → Recursive processing
+ *
+ * NOTE: WritableSignal is checked BEFORE Signal because it extends Signal —
+ * checking Signal first would widen `linked()`/`linkedSignal()` results to
+ * read-only and break `$.x.set()`.
  */
 export type ProcessDerived<T> = T extends DerivedMarker<infer R>
   ? Signal<R>
+  : T extends WritableSignal<infer W>
+  ? WritableSignal<W>
   : T extends Signal<infer S>
   ? Signal<S>
   : T extends object
