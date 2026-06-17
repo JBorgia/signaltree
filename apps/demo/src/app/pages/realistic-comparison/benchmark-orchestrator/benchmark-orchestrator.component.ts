@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, computed, effect, ElementRef, inject, OnDestroy, signal, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, computed, effect, ElementRef, inject, isDevMode, OnDestroy, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { Subject } from 'rxjs';
@@ -225,6 +225,14 @@ interface BenchmarkService {
 export class BenchmarkOrchestratorComponent
   implements OnDestroy, AfterViewInit
 {
+  /**
+   * True when running an Angular DEV build (`ngDevMode`). Dev-mode instruments
+   * every signal operation but not plain-object work, so it disproportionately
+   * inflates signal-heavy libraries (SignalTree, NgRx SignalStore) vs
+   * reducer/spread libraries — numbers here are NOT production-representative.
+   */
+  readonly isDevBuild = isDevMode();
+
   @ViewChild('combinedChart')
   combinedChartRef!: ElementRef<HTMLCanvasElement>;
 

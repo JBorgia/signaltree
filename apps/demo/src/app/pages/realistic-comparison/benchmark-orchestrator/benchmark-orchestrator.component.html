@@ -31,6 +31,35 @@
       </p>
     </div>
 
+    <!-- Dev-mode accuracy warning (only shown on a development build) -->
+    @if (isDevBuild) {
+    <div
+      class="dev-mode-warning"
+      style="
+        background: #f8d7da;
+        border: 2px solid #dc3545;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 1rem 0;
+      "
+    >
+      <h3 style="margin: 0 0 0.5rem 0; color: #842029; font-size: 1.1rem">
+        🛠️ Development build — numbers are NOT production-representative
+      </h3>
+      <p style="margin: 0; color: #842029; font-size: 0.9rem">
+        Angular dev mode (<code>ngDevMode</code>) instruments every signal
+        operation but not plain-object work, which
+        <strong>disproportionately inflates signal-heavy libraries</strong>
+        (SignalTree, NgRx SignalStore) versus reducer/spread libraries (NgRx
+        Store). Wide-merge scenarios like <em>Server Payload Sync</em> can read
+        ~100× slower than production here. For representative results, run a
+        production build:
+        <code>nx build demo --configuration=production</code> and serve the
+        <code>dist/</code> output.
+      </p>
+    </div>
+    }
+
     <div class="performance-disclaimer">
       <p>
         These benchmarks are here to support evaluation, not replace it.
@@ -488,6 +517,29 @@
     @if (selectedScenarios().length > 0) {
     <div class="enhancers-display">
       <h3>Per-Scenario Enhancers (SignalTree Baseline)</h3>
+      <p
+        class="enhancer-fairness-note"
+        style="
+          background: #fff3cd;
+          border: 1px solid #ffc107;
+          border-radius: 6px;
+          padding: 0.6rem 0.8rem;
+          margin: 0 0 0.75rem 0;
+          color: #856404;
+          font-size: 0.85rem;
+        "
+      >
+        ⚖️ <strong>Read these in context.</strong> SignalTree is run with the
+        per-scenario enhancers below; every other library runs with its
+        <strong>default / idiomatic API</strong> (no equivalent per-scenario
+        tuning). So SignalTree's wins on tuned scenarios reflect
+        <em>architecture + tuning vs competitors' defaults</em>, not a
+        like-for-like contract. Treat the per-scenario deltas as directional,
+        and weigh them against the
+        <a href="https://github.com/JBorgia/signaltree/blob/main/docs/compare/native-signals.md"
+          >honest cross-library positioning</a
+        >.
+      </p>
       <table class="scenario-enhancers-table">
         <thead>
           <tr>
