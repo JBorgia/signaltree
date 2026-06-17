@@ -23,7 +23,7 @@
   },
   "peerDependencies": {
     "@angular/core": "^20.0.0 || ^21.0.0",
-    "@signaltree/core": "^9.0.1",
+    "@signaltree/core": "workspace:*",
     "@supabase/supabase-js": "^2.0.0",
     "tslib": "^2.0.0"
   },

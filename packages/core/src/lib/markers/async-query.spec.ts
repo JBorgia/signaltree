@@ -265,7 +265,7 @@ describe('asyncQuery() marker', () => {
   describe('cancellation', () => {
     it('switchMap cancels prior in-flight query when new input fires', async () => {
       await TestBed.runInInjectionContext(async () => {
-        let firstResolved = false;
+        const firstResolved = false;
         const accessor = createAsyncQuerySignal(
           asyncQuery<string, number>({
             initialResult: 0,

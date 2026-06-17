@@ -155,7 +155,7 @@ describe('createAsyncStreamSignal (standalone factory)', () => {
   });
 
   it('aborts the AbortSignal passed to the stream factory on cancel() and on supersession', async () => {
-    let signals: AbortSignal[] = [];
+    const signals: AbortSignal[] = [];
     const stream = createAsyncStreamSignal<string, string>({
       initial: '',
       accumulate: concat,

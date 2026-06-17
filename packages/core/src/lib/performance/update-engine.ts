@@ -78,7 +78,8 @@ interface ApplyResult {
  *
  * @example
  * ```ts
- * const tree = signalTree(data, { useLazySignals: true });
+ * import { lazy } from '@signaltree/core/lazy';
+ * const tree = signalTree(data, { lazy: lazy(), useLazySignals: true });
  * const engine = new OptimizedUpdateEngine(tree);
  *
  * // Optimized update - only changes what's different
