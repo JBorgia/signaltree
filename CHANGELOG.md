@@ -3,10 +3,12 @@
 ### Breaking
 
 - **`security` config must be wrapped with `security()`** from `@signaltree/core/security`. The raw `SecurityValidatorConfig` kept `SecurityValidator` statically reachable, so it shipped in every bundle; it is now injected and tree-shakeable. Behavior and timing are unchanged — only the wrapper + import path differ. See [MIGRATION.md §11.0.0](docs/guides/MIGRATION.md#1100). TypeScript flags every call site (option type `SecurityValidatorConfig` → `SecurityFeature`).
+- **Lazy signals are opt-in via `lazy()`** from `@signaltree/core/lazy`. Lazy mode no longer switches on automatically — `signalTree()` statically imported the lazy Proxy + `SignalMemoryManager` to do that (~2.6KB in every bundle). Inject `lazy: lazy()` to restore the auto-threshold/`useLazySignals` behavior; without it, trees are always eager (functionally identical reads/writes). See [MIGRATION.md §11.0.0](docs/guides/MIGRATION.md#1100).
 
 ### Changed
 
-- **Bundle floor reduced** — removing the always-on `SecurityValidator` from the default path drops the bare-tree floor to ~6.6KB gzip (~9.4KB with `entityMap` in use, own code, `@angular`/`rxjs`/`tslib` external).
+- **Bundle floor reduced ~29%** — injecting `SecurityValidator` + the lazy/memory machinery (and routing status/stored marker detection through the registry) drops the bare-tree floor 7.5KB → ~5.3KB gzip (~8.1KB with `entityMap` in use; own code, `@angular`/`rxjs`/`tslib` external).
+- **`devTools()` prod-stripped** — production builds (`ngDevMode` false) drop devtools machinery via an `ngDevMode`-foldable guard, so `.with(devTools())` no longer ships the full ~12KB to prod (15.6KB → 8.7KB min so far; dev unchanged). All wrapper factories funnel through the guard.
 - **Honest bundle positioning** — corrected the false "smaller than NgRx SignalStore (~12KB)" claim (SignalStore is ~2.3KB; SignalTree is larger). `llms.txt`, `llms-full.txt`, and the benchmark now carry measured gzip numbers and frame bundle as capability-per-KB + zero-deps.
 
 ### Added

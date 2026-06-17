@@ -431,7 +431,7 @@ export class BenchmarkOrchestratorComponent
       color: '#3b82f6',
       selected: true,
       stats: {
-        bundleSize: '9.4KB', // gzip, with entityMap in use — measured by tools/measure-bundle-sizes.mjs
+        bundleSize: '8.1KB', // gzip, with entityMap in use — measured by tools/measure-bundle-sizes.mjs
         githubStars: 2800,
       },
     },
@@ -442,7 +442,7 @@ export class BenchmarkOrchestratorComponent
       color: '#1e40af',
       selected: false,
       stats: {
-        bundleSize: '12.5KB', // gzip, core + enterprise — measured
+        bundleSize: '11.2KB', // gzip, core + enterprise — measured
         githubStars: 2800,
       },
     },

@@ -4,9 +4,9 @@
 
 ## 11.0.0
 
-> **One breaking change, mechanical to apply.** Everything else in v11 is additive or a fix. If you don't pass a `security` config to `signalTree(...)`, **nothing changes for you** — upgrade and move on.
+> **Two breaking changes, both mechanical and both opt-in surfaces.** The v11 theme: SignalTree's optional/heavy subsystems — security validation and lazy/memory — are now explicitly opt-in so they tree-shake out of bundles that don't use them. The bare-tree floor drops ~29% (7.5KB → 5.3KB gzip). If you pass neither `security` nor `lazy` to `signalTree(...)` and don't ship `devTools()` to production, **nothing changes for you** — upgrade and move on.
 
-### `security` config must be wrapped with `security()`
+### 1. `security` config must be wrapped with `security()`
 
 The `security` option used to take a raw `SecurityValidatorConfig`. Because `signalTree()` statically referenced the `SecurityValidator` class, the validator (~1KB gzip) shipped in **every** bundle even when no app used it — the opposite of what the `@signaltree/core/security` subpath was meant to achieve. In v11 the validator is **injected**: `signalTree` only calls an opt-in feature, so the validator is tree-shaken out unless you import it.
 
@@ -43,9 +43,28 @@ signalTree(state, { security: security(SecurityPresets.strict().getConfig()) });
 
 The config shape, validation behavior, and construction-time timing are **unchanged** — only the wrapper and import path differ. TypeScript will flag every call site that needs updating (the option's type changed from `SecurityValidatorConfig` to `SecurityFeature`).
 
+### 2. Lazy signals are now opt-in via `lazy()`
+
+Lazy signal creation used to switch on automatically for large state (>50 estimated nodes). Because `signalTree()` statically imported the lazy Proxy machinery + `SignalMemoryManager` to do that, ~2.6KB shipped in **every** bundle — even trees that never went lazy. In v11 lazy is injected, so it tree-shakes out unless you opt in.
+
+**Only affects you if** you relied on automatic lazy mode for large trees, or set `useLazySignals: true`. If so, inject the feature:
+
+```ts
+// Before (≤10.x) — automatic for large state, or:
+const tree = signalTree(largeState, { useLazySignals: true });
+
+// After (11.0.0)
+import { lazy } from '@signaltree/core/lazy';
+const tree = signalTree(largeState, { lazy: lazy() });            // auto-threshold applies
+const forced = signalTree(state, { lazy: lazy(), useLazySignals: true }); // force lazy
+```
+
+Once `lazy: lazy()` is present, the size threshold and `useLazySignals`/`debugMode` overrides behave exactly as before. Without it, trees are always eager — functionally identical for reads/writes, just signals created up front. Most apps (small/medium state) never needed lazy mode and require **no change**.
+
 ### Also in 11.0.0 (no action required)
 
-- **Bundle floor reduced** — removing the always-on `SecurityValidator` drops the bare-tree floor to ~6.6KB gzip (~9.4KB with `entityMap` in use). A blocking CI budget gate now prevents silent regressions.
+- **Bundle floor reduced ~29%** — injecting both `SecurityValidator` and the lazy/memory machinery drops the bare-tree floor 7.5KB → **5.3KB gzip** (~8.1KB with `entityMap` in use). A blocking CI budget gate prevents silent regressions.
+- **`devTools()` prod-stripped** — production builds (`ngDevMode` false) now drop devtools machinery, so `.with(devTools())` no longer ships ~12KB to prod. Dev builds are unchanged. (Full strip lands incrementally; v11 removes the bulk.)
 - **Honest bundle docs** — the "smaller than NgRx SignalStore" claim was false (SignalStore is ~2.3KB; SignalTree is larger). Docs now frame bundle as *capability-per-KB + zero-deps*, not "smallest". See measured numbers in the benchmark.
 - Includes the 10.5.0/10.6.0 additions (body-granular `entityMap`, `sortComparer`, `[ST####]` error codes, dev-mode guardrails) and the published-package fixes for `@signaltree/guardrails` and `@signaltree/callable-syntax`.
 

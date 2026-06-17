@@ -23,16 +23,16 @@ Substantiated advantages:
 1. **Granular reactivity (the architectural moat).** Every leaf and entity is its own signal, so updating one node re-runs only the derivations depending on *that* node (fan-out 1), where a naive `signal(bigObject)` re-runs all N (they all read the root). It's a guaranteed, regression-tested invariant. Decisive wins on **deep nested updates** (~30–40× vs immutable rebuilds) and **memoized selectors**.
 2. **Depth-attached markers** — `entityMap`/`status`/`form`/`asyncSource`/`.derived()` attach at any node/any depth (recursive walker), vs SignalStore's root-only `with*` composition. Load-bearing for hierarchical domains.
 3. **Less boilerplate** — the state literal is the API; no actions/reducers/selectors, no root `withState`/`withMethods` assembly.
-4. **Zero runtime deps, batteries-included** (NOT "small bundle"). Measured gzip, own code only (rxjs/@angular external): bare core ≈ **6.6KB**, with `entityMap` in use ≈ **9.4KB**. Cf. NgRx SignalStore ≈ 2.3KB, Elf ≈ 2.1KB, NgRx Store ≈ 5.3KB (rxjs external; ~10.6KB otherwise), NgXs ≈ 8.9KB, Akita ≈ 7.8KB. SignalTree-with-entities is near the **top** of the range — it trades KB for built-in granularity/entities/markers. Optional security/persistence live in tree-shakeable subpaths. Frame as capability-per-KB + zero-deps, never "smallest".
+4. **Zero runtime deps, batteries-included** (NOT "small bundle"). Measured gzip, own code only (rxjs/@angular external): bare core ≈ **5.3KB** (v11 −29% via opt-in security + lazy/memory), with `entityMap` in use ≈ **8.1KB**. Cf. NgRx SignalStore ≈ 2.3KB, Elf ≈ 2.1KB, NgRx Store ≈ 5.3KB (rxjs external; ~10.6KB otherwise), NgXs ≈ 8.9KB, Akita ≈ 7.8KB. SignalTree-with-entities is near the **top** of the range — it trades KB for built-in granularity/entities/markers. Optional security/lazy/persistence live in tree-shakeable subpaths. Frame as capability-per-KB + zero-deps, never "smallest".
 5. **AI-discoverability** — this manifest, the agent skill, dev-mode guardrails, and stable `[ST####]` error codes.
 
 Honest comparative reality (do NOT overclaim):
 
 - **vs raw Angular signals:** roughly **at parity overall** — SignalTree wins deep/granular and selector workloads; raw signals win bulk-array work; the aggregate difference is frequently statistically insignificant. The edge over raw signals is **ergonomics + automatic per-leaf granularity + batteries** (matching it by hand means one signal per field), not raw speed.
-- **vs NgRx:** SignalTree wins boilerplate and granular-update performance. On **bundle it does not win** — SignalStore (~2.3KB) and NgRx Store own code (~5.3KB) are smaller than SignalTree-with-entities (~9.4KB); the KB buy built-in entities/markers/granularity. NgRx wins **ecosystem maturity, training-data familiarity, team depth**. Event-sourcing/CQRS/heavy time-travel → classic NgRx Store.
+- **vs NgRx:** SignalTree wins boilerplate and granular-update performance. On **bundle it does not win** — SignalStore (~2.3KB) and NgRx Store own code (~5.3KB) are smaller than SignalTree-with-entities (~8.1KB); the KB buy built-in entities/markers/granularity. NgRx wins **ecosystem maturity, training-data familiarity, team depth**. Event-sourcing/CQRS/heavy time-travel → classic NgRx Store.
 - **Known trade-off:** serialization is slower (signals must be unwrapped); mitigate with caching/debounced persistence.
 
-Decision boundary: structured/hierarchical state + frequent targeted updates + small-bundle/low-boilerplate priorities → SignalTree. Simple/flat state → raw signals. Maximum ecosystem gravity or event-sourcing → NgRx.
+Decision boundary: structured/hierarchical state + frequent targeted updates + low-boilerplate priorities → SignalTree. Simple/flat state → raw signals. Maximum ecosystem gravity or event-sourcing → NgRx.
 
 ---
 
