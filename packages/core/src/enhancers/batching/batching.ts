@@ -167,8 +167,16 @@ export function batching(
         node.__batchingWrapped = true;
       }
 
-      // If this node has an update method, wrap it
-      if (typeof node.update === 'function' && !node.__batchingUpdateWrapped) {
+      // If this node has an update method, wrap it.
+      // Guard with `'update' in node` FIRST: a bare `node.update` read on an
+      // entityMap proxy hits its get-trap and fires a spurious [ST2002]
+      // "did you mean updateOne/updateMany?" warning. The `in` check goes
+      // through the proxy's has-trap (no warning) and short-circuits the read.
+      if (
+        'update' in node &&
+        typeof node.update === 'function' &&
+        !node.__batchingUpdateWrapped
+      ) {
         const originalUpdate = node.update.bind(node);
 
         node.update = (updater: any) => {

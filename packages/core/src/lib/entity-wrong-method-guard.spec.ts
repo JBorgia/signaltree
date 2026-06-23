@@ -1,3 +1,4 @@
+import { batching } from '../enhancers/batching/batching';
 import { entityMap } from '../index';
 import { signalTree } from './signal-tree';
 
@@ -58,6 +59,15 @@ describe('entityMap wrong-method guard (dev mode)', () => {
     void r.all;
     void r.where;
     void r.byId;
+    expect(warn.mock.calls.length).toBe(0);
+  });
+
+  // Regression: GitHub #18 — batching internally probes `typeof node.update`
+  // while wrapping setters. On an entityMap proxy that bare read used to fire a
+  // spurious [ST2002] hint even though the user never called `.update()`.
+  it('does NOT warn when batching enhancer wraps a tree containing an entityMap', () => {
+    signalTree({ rows: entityMap<Row, number>() }).with(batching());
+    expect(hintFor('update')).toBeFalsy();
     expect(warn.mock.calls.length).toBe(0);
   });
 });
