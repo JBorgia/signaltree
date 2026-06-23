@@ -60,11 +60,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/JBorgia/signaltree.git",
+    "url": "git+https://github.com/JBorgia/signaltree.git",
     "directory": "packages/realtime"
   },
   "bugs": {
     "url": "https://github.com/JBorgia/signaltree/issues"
   },
-  "homepage": "https://signaltree.dev"
+  "homepage": "https://github.com/JBorgia/signaltree/tree/main/packages/realtime#readme"
 }

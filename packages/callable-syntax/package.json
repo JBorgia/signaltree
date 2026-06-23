@@ -58,5 +58,14 @@
     "vite": "^5.0.0",
     "webpack": "^5.90.0",
     "@types/webpack": "^5.28.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JBorgia/signaltree.git",
+    "directory": "packages/callable-syntax"
+  },
+  "bugs": {
+    "url": "https://github.com/JBorgia/signaltree/issues"
+  },
+  "homepage": "https://github.com/JBorgia/signaltree/tree/main/packages/callable-syntax#readme"
 }

@@ -59,7 +59,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/signaltree/signaltree.git",
+    "url": "git+https://github.com/JBorgia/signaltree.git",
     "directory": "packages/schema"
-  }
+  },
+  "bugs": {
+    "url": "https://github.com/JBorgia/signaltree/issues"
+  },
+  "homepage": "https://github.com/JBorgia/signaltree/tree/main/packages/schema#readme"
 }

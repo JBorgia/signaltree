@@ -55,5 +55,14 @@
     "src/**/*.d.ts",
     "skills/**/*",
     "README.md"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JBorgia/signaltree.git",
+    "directory": "packages/ng-forms"
+  },
+  "bugs": {
+    "url": "https://github.com/JBorgia/signaltree/issues"
+  },
+  "homepage": "https://github.com/JBorgia/signaltree/tree/main/packages/ng-forms#readme"
 }

@@ -56,5 +56,14 @@
     "README.md",
     "llms.txt",
     "llms-full.txt"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JBorgia/signaltree.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/JBorgia/signaltree/issues"
+  },
+  "homepage": "https://github.com/JBorgia/signaltree/tree/main/packages/core#readme"
 }

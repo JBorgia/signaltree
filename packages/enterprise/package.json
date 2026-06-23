@@ -57,10 +57,10 @@
     "monitoring"
   ],
   "author": "Jonathan D Borgia",
-  "homepage": "https://github.com/JBorgia/signaltree#readme",
+  "homepage": "https://github.com/JBorgia/signaltree/tree/main/packages/enterprise#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/JBorgia/signaltree.git",
+    "url": "git+https://github.com/JBorgia/signaltree.git",
     "directory": "packages/enterprise"
   },
   "bugs": {

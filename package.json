@@ -4,13 +4,13 @@
   "license": "BSL-1.1",
   "funding": {
     "type": "github",
-    "url": "https://github.com/sponsors/<you>"
+    "url": "https://github.com/sponsors/JBorgia"
   },
   "author": "Jonathan D Borgia",
   "homepage": "https://github.com/JBorgia/signaltree#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/JBorgia/signaltree.git"
+    "url": "git+https://github.com/JBorgia/signaltree.git"
   },
   "bugs": {
     "url": "https://github.com/JBorgia/signaltree/issues"
