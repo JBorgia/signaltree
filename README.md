@@ -107,6 +107,21 @@ store.$.loadingState.setLoaded();
 store.$.loadingState.loading(); // Signal<boolean> (v10.3 canonical; .isLoading() still works as a deprecated alias)
 ```
 
+## Composition model
+
+A SignalTree store is composed from four distinct, type-safe mechanisms — each handles one concern, rather than funneling everything through a single primitive:
+
+| Concern            | Mechanism                                                                                                            | Example                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| **State shape**    | the constructor object — state _is_ the JSON, including markers (`entityMap`, `status`, `stored`, `asyncSource`)     | `signalTree({ users: entityMap<User>() })`               |
+| **Derived state**  | `.derived()` / `derivedFrom()` — computed signals deep-merged at any path                                            | `.derived($ => ({ activeCount: computed(...) }))`        |
+| **Capabilities**   | `.with()` enhancers — opt-in, tree-shakeable, and reusable (author your own custom enhancers)                        | `.with(batching()).with(devTools())`                     |
+| **Actions**        | a plain `@Injectable` Ops service that writes to tree paths — reads (`tree.$`) stay decoupled from writes            | `ops.users.select(id)`                                   |
+
+This deliberately splits across four purpose-built tools what NgRx SignalStore unifies under one `with*` composition primitive (`withState` / `withComputed` / `withMethods` / `signalStoreFeature`). The closest analog to NgRx's reusable-feature primitive (`signalStoreFeature` / `withFeature`) is `.with()` enhancers; state, derived state, and actions live in the other three mechanisms. For an honest, axis-by-axis comparison — including where NgRx wins — see [docs/compare/ngrx-signalstore.md](docs/compare/ngrx-signalstore.md).
+
+The sections below detail each mechanism.
+
 ## Enhancers
 
 Enhancers add capabilities via `.with()`. Each is opt-in and tree-shakeable (modern bundlers — Vite, esbuild, Rollup, webpack 5+). Applying the same enhancer twice throws a clear error — fail-fast, no silent fallback.
