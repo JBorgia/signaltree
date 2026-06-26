@@ -99,6 +99,31 @@
   color: rgba(255, 255, 255, 0.82);
 }
 
+.hero-disambiguation {
+  padding-left: var(--space-3);
+  border-left: 3px solid rgba(255, 255, 255, 0.4);
+
+  code {
+    padding: 0.05em 0.35em;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.14);
+    font-size: 0.92em;
+  }
+}
+
+.use-case-list {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-5);
+  line-height: 1.85;
+
+  code {
+    padding: 0.05em 0.35em;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.06);
+    font-size: 0.92em;
+  }
+}
+
 .hero-actions {
   display: flex;
   flex-wrap: wrap;

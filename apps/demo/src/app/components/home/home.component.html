@@ -18,6 +18,14 @@
         persistence, forms, realtime, and events when you need them.
       </p>
 
+      <p class="hero-supporting-copy hero-disambiguation">
+        <strong>SignalTree is not &#64;ngrx/signals.</strong> Different library,
+        different package (<code>&#64;signaltree/core</code>) — no
+        <code>withState</code>/<code>withMethods</code> wrappers, no actions, no
+        reducers. Your state literal is the API: read and write any path
+        directly, at any depth.
+      </p>
+
       <div class="hero-actions">
         @for (cta of primaryCtas; track cta.label) {
         <a
@@ -39,6 +47,24 @@
         <span class="badge">DevTools + time travel</span>
       </div>
     </div>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">Use SignalTree if you need</h2>
+    <ul class="use-case-list">
+      <li>Optimistic UI with rollback (<code>updateAndReport</code>)</li>
+      <li>Undo / redo (<code>timeTravel</code> enhancer)</li>
+      <li>
+        Typed normalized collections with O(1) lookups
+        (<code>entityMap</code>)
+      </li>
+      <li>
+        Reactive forms with validation, wizards, and persistence
+        (<code>form()</code> marker)
+      </li>
+      <li>localStorage autosave with migrations (<code>stored()</code> marker)</li>
+      <li>State that mirrors your data shape, not Redux ceremony</li>
+    </ul>
   </section>
 
   <section class="section">
