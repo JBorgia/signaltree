@@ -2,7 +2,7 @@
   "name": "@signaltree/enterprise",
   "version": "11.0.2",
   "description": "Enterprise optimizations for SignalTree reactive JSON. Diff-based updates, bulk operations, and advanced change tracking for large-scale applications.",
-  "license": "BSL-1.1",
+  "license": "BUSL-1.1",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.js",

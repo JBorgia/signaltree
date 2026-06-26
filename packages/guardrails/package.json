@@ -78,7 +78,7 @@
     "signals"
   ],
   "author": "SignalTree Team",
-  "license": "MIT",
+  "license": "BUSL-1.1",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/JBorgia/signaltree.git",

@@ -2,7 +2,7 @@
   "name": "@signaltree/core",
   "version": "11.0.2",
   "description": "Reactive JSON for Angular. State as shape. Signals at every path.",
-  "license": "MIT",
+  "license": "BUSL-1.1",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.js",

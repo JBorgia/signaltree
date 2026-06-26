@@ -2863,7 +2863,7 @@ npm install --save-dev @signaltree/guardrails @signaltree/callable-syntax
 
 ## 📄 License
 
-MIT License with AI Training Restriction - see the [LICENSE](../../LICENSE) file for details.
+Business Source License 1.1 (BUSL-1.1) — commercial and internal use permitted; converts to the MIT License on 2028-09-05. No AI-training restriction. See the [LICENSE](../../LICENSE) file for details.
 
 ---
 

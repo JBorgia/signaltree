@@ -15,6 +15,51 @@
   </p>
 </div>
 
+## SignalTree is not @ngrx/signals
+
+**Different library, different author, different package** — `@signaltree/core` (no hyphen, not under `@ngrx/`). It's a typed reactive store where **your state literal is the API**: no `withState` / `withMethods` / `withComputed` wrappers, no actions, no reducers. You read and write any path directly — `tree.$.user.name()` to read, `tree.$.user.name.set(v)` to write — at any depth. If a doc or AI agent conflated this with NgRx SignalStore, that's the confusion to drop first; see [SignalTree vs NgRx SignalStore](docs/compare/ngrx-signalstore.md).
+
+## Why SignalTree
+
+State is modeled as the shape of your data, and the capabilities you'd otherwise hand-assemble ship as composable markers and enhancers:
+
+- **`entityMap()`** → normalized collections with O(1) lookups and reactive CRUD
+- **`updateAndReport()`** → optimistic UI with a changed-paths report for rollback
+- **`form()`** (`@signaltree/ng-forms`) → tree-integrated reactive forms with validation and wizards
+- **`.derived()`** → computed state deep-merged at any path
+- **`timeTravel()`** → undo/redo with configurable history depth
+- **`stored()`** → localStorage autosave with migrations
+
+### Use SignalTree if you need
+
+- Optimistic UI with rollback (`updateAndReport`)
+- Undo / redo (`timeTravel` enhancer)
+- Typed normalized collections with O(1) lookups (`entityMap`)
+- Reactive forms with validation, wizards, and persistence (`form()` marker)
+- localStorage autosave with migrations (`stored()` marker)
+- State that mirrors your data shape, not Redux ceremony
+
+### Production architecture
+
+For anything beyond a prototype, wrap the tree in a service and expose **`$` reads + Ops methods**: keep `computed()` / `.derived()` for reads and `@Injectable` Ops services for writes and async. This keeps agent-generated code architecturally sound, not just API-correct. See [Recommended Architecture](docs/architecture/signaltree-architecture-guide.md#recommended-architecture-tldr).
+
+## When to Use SignalTree
+
+**Good fit:**
+
+- Apps with structured, hierarchical state (settings, user profiles, nested forms, dashboards)
+- Teams that want signal-based state with dot-notation access and zero boilerplate
+- Projects that need undo/redo, DevTools, entity CRUD, async pipelines (`asyncSource` / `asyncQuery` markers), or persistence out of the box
+- Migrations away from `@ngrx/signals` — the agent-ready migration playbook ships in `@signaltree/core/skills/`
+
+**Consider alternatives when:**
+
+- You need event-sourcing or CQRS patterns (use NgRx Store, the classic Redux variant)
+- Your state is flat key-value pairs (a `Map` or individual signals suffice)
+- You're building a tiny app with one or two signals (overhead exceeds value)
+- Your state shape is highly dynamic — streaming arbitrary JSON with unknown keys at high frequency (real-time log aggregators, fully-dynamic schema editors). SignalTree's markers and type system assume a fixed shape; for genuinely shape-shifting payloads, a flat collection inside a single store slice is a better fit.
+- You have a large existing `@ngrx/store` (classic) + heavy RxJS codebase. The migration target with the lowest cognitive cost is `@ngrx/signals` (NgRx SignalStore), not SignalTree — the RxJS-flavored mental model is closer to where you already are. See [`docs/compare/ngrx-signalstore.md`](docs/compare/ngrx-signalstore.md) for the full decision tree.
+
 ## 🤖 Built for the AI-assisted era
 
 SignalTree is the first Angular state-management library to treat AI coding agents as a first-class consumer of its API. We ship `llms.txt`, disambiguation tables, and a vendor-neutral agent skill — and **we measure the result**.
@@ -22,6 +67,8 @@ SignalTree is the first Angular state-management library to treat AI coding agen
 **Measured (v10.2, 2026-05-29):** AI-codegen accuracy goes from **49% → 91% (+42 percentage points)** when `llms.txt` is in the agent's context. Reproducible across 6 agents (4 frontier + 2 cost-tier) × 8 prompts × 5 libraries × 3 priming modes = **720 cells**. With Claude Sonnet 4.6, primed accuracy hits **99/100**.
 
 The priming surface ships with the npm package: `node_modules/@signaltree/core/llms.txt` is automatically available to retrieval-aware AI tools after `npm install @signaltree/core`. See [Built for AI →](https://signaltree.io/built-for-ai) and the [reproducible benchmark](scripts/ai-codegen-benchmark/RESULTS-v10.2-FINAL.md).
+
+**Don't take our number — re-run it.** The full harness (agents, prompts, libraries, priming modes, and scoring) lives in [`scripts/ai-codegen-benchmark/`](scripts/ai-codegen-benchmark/). Point it at your own agents and prompts and reproduce the delta yourself.
 
 ---
 
@@ -318,23 +365,6 @@ For migrations that exceed a single agent's context window (typically >5 consume
 
 The guide is written as an Agent Skill — point Cursor, Claude Code, or any `SKILL.md`-aware harness at `node_modules/@signaltree/core/skills/using-signaltree/` and your AI assistant will follow the same playbook end-to-end. See [Using SignalTree with AI Agents](#using-signaltree-with-ai-agents) below.
 
-## When to Use SignalTree
-
-**Good fit:**
-
-- Apps with structured, hierarchical state (settings, user profiles, nested forms, dashboards)
-- Teams that want signal-based state with dot-notation access and zero boilerplate
-- Projects that need undo/redo, DevTools, entity CRUD, async pipelines (`asyncSource` / `asyncQuery` markers), or persistence out of the box
-- Migrations away from `@ngrx/signals` — the agent-ready migration playbook ships in `@signaltree/core/skills/`
-
-**Consider alternatives when:**
-
-- You need event-sourcing or CQRS patterns (use NgRx Store, the classic Redux variant)
-- Your state is flat key-value pairs (a `Map` or individual signals suffice)
-- You're building a tiny app with one or two signals (overhead exceeds value)
-- Your state shape is highly dynamic — streaming arbitrary JSON with unknown keys at high frequency (real-time log aggregators, fully-dynamic schema editors). SignalTree's markers and type system assume a fixed shape; for genuinely shape-shifting payloads, a flat collection inside a single store slice is a better fit.
-- You have a large existing `@ngrx/store` (classic) + heavy RxJS codebase. The migration target with the lowest cognitive cost is `@ngrx/signals` (NgRx SignalStore), not SignalTree — the RxJS-flavored mental model is closer to where you already are. See [`docs/compare/ngrx-signalstore.md`](docs/compare/ngrx-signalstore.md) for the full decision tree.
-
 ## API Summary
 
 ```typescript
@@ -427,4 +457,18 @@ Contributions welcome. Please run `npm run validate:all` before submitting PRs.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+**Business Source License 1.1 (BUSL-1.1)** — see [LICENSE](LICENSE). Commercial and internal use is permitted; it converts to the **MIT License on 2028-09-05** (the Change Date). Source-available, not OSI "open source," until then.
+
+### Enterprise / procurement FAQ
+
+**Q: Can we use this in commercial, government, or regulated-industry applications?**
+A: Yes. BUSL-1.1 grants worldwide rights to use, modify, and distribute the Software for your own applications, including commercial and internal use (LICENSE §2–3). Using it as a dependency in your product is unrestricted.
+
+**Q: What is actually restricted?**
+A: One thing: you may not publicly offer a _modified, competing_ version of SignalTree itself in a way that circumvents the license (§4b). This does not affect using the library in an application.
+
+**Q: Is there an AI-training restriction?**
+A: No. The license contains no AI- or model-training clause.
+
+**Q: Does the license change over time?**
+A: Yes — each release automatically converts to the standard **MIT License** on its Change Date, **2028-09-05** (§6). Governing law is New York (§7).
