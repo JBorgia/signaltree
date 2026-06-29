@@ -423,7 +423,9 @@ function create<T extends object>(
       signalState = built.tree as TreeNode<T>;
       disposeLazy = built.dispose;
     } catch (error) {
-      console.warn(SIGNAL_TREE_MESSAGES.LAZY_FALLBACK, error);
+      if (typeof ngDevMode === 'undefined' || ngDevMode) {
+        console.warn(SIGNAL_TREE_MESSAGES.LAZY_FALLBACK, error);
+      }
       signalState = createSignalStore(initialState, equalityFn);
       disposeLazy = undefined;
     }

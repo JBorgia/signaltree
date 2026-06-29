@@ -44,14 +44,14 @@ pnpm nx build demo --configuration=production
 
 | Package           | Max size | Max gzipped |
 | ----------------- | -------- | ----------- |
-| `core`            | 15 KB    | 5 KB        |
+| `core`            | 15 KB    | 5.8 KB      |
 | `ng-forms`        | 10 KB    | 4 KB        |
 | `callable-syntax` | 5 KB     | 2 KB        |
 | `enterprise`      | 8 KB     | 3 KB        |
 | `guardrails`      | 12 KB    | 4 KB        |
 | `schema`          | 16 KB    | 6 KB        |
 
-Check with `npm run analyze:bundle`.
+The authoritative gzip gate is [`tools/check-bundle-budget.mjs`](tools/check-bundle-budget.mjs): bare `core` **5.8 KB**, a tree that uses `entityMap` **8.6 KB** (own-code only; `@angular`/`rxjs`/`tslib` external). Check with `npm run analyze:bundle`.
 
 ### Validation pipeline
 

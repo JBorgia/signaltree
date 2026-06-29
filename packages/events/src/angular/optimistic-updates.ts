@@ -1,5 +1,7 @@
 import { computed, Signal, signal } from '@angular/core';
 
+declare const ngDevMode: boolean | undefined;
+
 /**
  * Optimistic Update Manager - Handle optimistic UI updates with rollback
  *
@@ -167,7 +169,7 @@ export class OptimisticUpdateManager {
       return newMap;
     });
 
-    if (error) {
+    if (error && (typeof ngDevMode === 'undefined' || ngDevMode)) {
       console.warn(`Optimistic update rolled back: ${error.message}`);
     }
 

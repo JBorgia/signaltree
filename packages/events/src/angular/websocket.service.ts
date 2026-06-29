@@ -6,6 +6,8 @@ import { webSocket, WebSocketSubject, WebSocketSubjectConfig } from 'rxjs/webSoc
 
 import { BaseEvent } from '../core/types';
 
+declare const ngDevMode: boolean | undefined;
+
 /**
  * WebSocket Service - Base class for real-time event synchronization
  *
@@ -229,7 +231,9 @@ export abstract class WebSocketService implements OnDestroy {
    */
   send(message: WebSocketMessage): void {
     if (!this.socket$ || this._connectionState() !== 'connected') {
-      console.warn('WebSocket not connected, message not sent:', message);
+      if (typeof ngDevMode === 'undefined' || ngDevMode) {
+        console.warn('WebSocket not connected, message not sent:', message);
+      }
       return;
     }
 
@@ -452,9 +456,11 @@ export abstract class WebSocketService implements OnDestroy {
       this.config.reconnect.maxDelayMs
     );
 
-    console.log(
-      `Reconnecting in ${delayMs}ms (attempt ${attempts + 1}/${maxAttempts})`
-    );
+    if (typeof ngDevMode === 'undefined' || ngDevMode) {
+      console.log(
+        `Reconnecting in ${delayMs}ms (attempt ${attempts + 1}/${maxAttempts})`
+      );
+    }
 
     this.reconnectTimer = setTimeout(() => {
       this.connect().catch((error) => {

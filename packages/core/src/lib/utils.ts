@@ -1,6 +1,8 @@
 import { effect, Injector, isSignal, runInInjectionContext, Signal, signal, WritableSignal } from '@angular/core';
 import { deepEqual, isBuiltInObject, parsePath } from '@signaltree/shared';
 
+declare const ngDevMode: boolean | undefined;
+
 /** Symbol to mark callable signals - must match symbol used by signal-tree */
 const CALLABLE_SIGNAL_SYMBOL = Symbol.for('SignalTree:NodeAccessor');
 
@@ -108,9 +110,11 @@ export function toWritableSignal<T>(
     try {
       effect(runner);
     } catch {
-      console.warn(
-        '[SignalTree] toWritableSignal called without injection context; pass Injector for reactivity.'
-      );
+      if (typeof ngDevMode === 'undefined' || ngDevMode) {
+        console.warn(
+          '[SignalTree] toWritableSignal called without injection context; pass Injector for reactivity.'
+        );
+      }
     }
   }
 

@@ -2,6 +2,8 @@ import { ZodIssue, ZodTypeAny } from 'zod';
 
 import { BaseEvent, EventPriority } from './types';
 
+declare const ngDevMode: boolean | undefined;
+
 /**
  * Event Registry - Central catalog of all registered event types
  *
@@ -169,7 +171,11 @@ export class EventRegistry {
     }
 
     // Warn about deprecated events
-    if (registered.deprecated && this.config.warnOnDeprecated) {
+    if (
+      registered.deprecated &&
+      this.config.warnOnDeprecated &&
+      (typeof ngDevMode === 'undefined' || ngDevMode)
+    ) {
       console.warn(
         `[EventRegistry] Event '${type}' is deprecated. ${
           registered.deprecationMessage ?? ''

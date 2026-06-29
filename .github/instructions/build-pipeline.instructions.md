@@ -20,9 +20,22 @@ Historical issues with the Nx `@nx/js:tsc` pipeline and ad-hoc post-build copy s
 
 When configuring the bundler, enable production optimizations that TypeScript’s compiler does not provide:
 
-- Strip console/debugger statements for production bundles (`drop: ['console', 'debugger']` or equivalent).
+- Strip stray `debugger` statements and unintentional `console` logging from production bundles where appropriate.
 - Define `__DEV__ = false` (or similar guard) so dead dev-only branches can be removed.
 - Emit consolidated `.d.ts` bundles (`dts: true`, Rollup `@rollup/plugin-typescript`, etc.) matching the preserved module layout.
+
+> **Library exception — do NOT blanket `drop: ['console']`.** We publish a
+> _library_, not an app. SignalTree's `[ST####]` developer guardrails are
+> intentional `console.warn`/`console.error` calls guarded by
+> `if (typeof ngDevMode === 'undefined' || ngDevMode)` (or an opt-in config
+> flag like `debugMode`). Those guards let the **consumer's** production build
+> strip the warnings (Angular elides `ngDevMode` blocks) while dev builds keep
+> them — which is the whole point of the AI-discoverability guardrail feature.
+> Adding `drop: ['console']` to _our_ build would delete those warnings for
+> everyone, including dev consumers, and silently regress the feature.
+> **Correct policy:** every dev-only `console.*` in published `src/` must be
+> `ngDevMode`-guarded (or config-gated); genuine catch-block error reporting may
+> remain. Enforce that guarding instead of dropping console at our build step.
 
 ## Rationale (summarize for future maintainers)
 

@@ -8,6 +8,8 @@ import type {
 } from '../../lib/types';
 import { ENHANCER_META } from '../../lib/types';
 
+declare const ngDevMode: boolean | undefined;
+
 /**
  * Batching enhancer for SignalTree.
  *
@@ -410,24 +412,30 @@ export function batchingWithConfig(
 
 /** @deprecated Use tree.flushNotifications() instead */
 export function flushBatchedUpdates(): void {
-  console.warn(
-    '[SignalTree] flushBatchedUpdates() is deprecated. Use tree.flushNotifications() instead.'
-  );
+  if (typeof ngDevMode === 'undefined' || ngDevMode) {
+    console.warn(
+      '[SignalTree] flushBatchedUpdates() is deprecated. Use tree.flushNotifications() instead.'
+    );
+  }
 }
 
 /** @deprecated Use tree.hasPendingNotifications() instead */
 export function hasPendingUpdates(): boolean {
-  console.warn(
-    '[SignalTree] hasPendingUpdates() is deprecated. Use tree.hasPendingNotifications() instead.'
-  );
+  if (typeof ngDevMode === 'undefined' || ngDevMode) {
+    console.warn(
+      '[SignalTree] hasPendingUpdates() is deprecated. Use tree.hasPendingNotifications() instead.'
+    );
+  }
   return false;
 }
 
 /** @deprecated No longer needed - signal reads are always synchronous */
 export function getBatchQueueSize(): number {
-  console.warn(
-    '[SignalTree] getBatchQueueSize() is deprecated. Signal writes are now synchronous.'
-  );
+  if (typeof ngDevMode === 'undefined' || ngDevMode) {
+    console.warn(
+      '[SignalTree] getBatchQueueSize() is deprecated. Signal writes are now synchronous.'
+    );
+  }
   return 0;
 }
 

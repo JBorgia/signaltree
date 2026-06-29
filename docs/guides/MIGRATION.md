@@ -497,6 +497,14 @@ If you encounter issues during migration:
 
 ## ng-forms: Angular 17-19 Legacy Bridge Deprecation
 
+> **⚠️ Outdated section (kept for history).** This was written against the old
+> v5→v6 version plan; that scheme never shipped — the project is now at **v11**
+> and `@signaltree/ng-forms` targets Angular `^20 || ^21`. The "v6.0" milestones
+> below did not execute as described. For the current supported-Angular range
+> and any remaining legacy-bridge behavior, treat the
+> [`@signaltree/ng-forms` package README](../../packages/ng-forms/README.md) as
+> authoritative, not this section.
+
 ### Overview
 
 The `@signaltree/ng-forms` package includes a **manual bidirectional bridge** for Angular 17-19 compatibility. This bridge will be **removed in v6.0** when Angular 21 is released.
