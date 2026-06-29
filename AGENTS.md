@@ -71,7 +71,7 @@ Before signing off any release or size/perf change:
 
 ### Private packages
 
-`@signaltree/shared`, `@signaltree/types`, and `@signaltree/utils` are `"private": true`, bundled at build time via Rollup, and must never appear in `dependencies` or `peerDependencies` of published packages. Use `devDependencies` only when needed for local development.
+`@signaltree/shared` is `"private": true`, bundled at build time via Rollup, and must never appear in `dependencies` or `peerDependencies` of published packages. Use `devDependencies` only when needed for local development.
 
 ### Release flow
 
