@@ -76,6 +76,12 @@ export class DocumentationComponent implements OnInit {
       description: 'Build-time transform for optional callable node syntax',
       readmePath: 'assets/docs/callable-syntax/README.md',
     },
+    {
+      id: 'schema',
+      name: '@signaltree/schema',
+      description: 'Schema-based validation enhancer with path-level error reporting',
+      readmePath: 'assets/docs/schema/README.md',
+    },
   ];
 
   readonly quickLinks: DocQuickLink[] = [

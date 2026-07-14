@@ -55,6 +55,11 @@
             "glob": "README.md",
             "input": "packages/guardrails",
             "output": "assets/docs/guardrails"
+          },
+          {
+            "glob": "README.md",
+            "input": "packages/schema",
+            "output": "assets/docs/schema"
           }
         ],
         "styles": ["apps/demo/src/styles.scss"]
