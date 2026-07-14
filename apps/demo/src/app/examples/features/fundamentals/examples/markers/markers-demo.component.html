@@ -8,13 +8,13 @@
   </div>
 
   <!-- Status Marker Section -->
-  <section class="demo-section">
-    <h2>status() Marker - Async Operation State</h2>
-    <p class="section-desc">
-      Track loading states for async operations with automatic derived signals
-      and helper methods.
-    </p>
-
+  <st-example
+    heading="status() Marker — Async Operation State"
+    intro="Track loading states for async operations with automatic derived signals and helper methods."
+    [state]="statusSnapshot()"
+    stateLabel="Current State"
+    [code]="statusCodeFiles"
+  >
     <div class="demo-card">
       <div class="card-header">
         <h3>User Loading Demo</h3>
@@ -89,34 +89,18 @@
           </ul>
         </div>
         }
-
-        <div class="state-display">
-          <h4>Current State</h4>
-          <pre>{{
-            {
-              state: store.$.users.status.state(),
-              isReady: store.$.isReady(),
-              userCount: store.$.users.entities.all().length
-            } | json
-          }}</pre>
-        </div>
       </div>
     </div>
-
-    <div class="code-example">
-      <h4>Code Example</h4>
-      <pre><code>{{ statusExample }}</code></pre>
-    </div>
-  </section>
+  </st-example>
 
   <!-- Stored Marker Section -->
-  <section class="demo-section">
-    <h2>stored() Marker - localStorage Persistence</h2>
-    <p class="section-desc">
-      Auto-sync signals to localStorage with debounced writes. Changes persist
-      across page reloads.
-    </p>
-
+  <st-example
+    heading="stored() Marker — localStorage Persistence"
+    intro="Auto-sync signals to localStorage with debounced writes. Changes persist across page reloads."
+    [state]="storageSnapshot()"
+    stateLabel="localStorage Values"
+    [code]="storedCodeFiles"
+  >
     <div class="demo-card" [ngStyle]="store.$.themeStyles()">
       <div class="card-header">
         <h3>Preferences Demo</h3>
@@ -170,38 +154,19 @@
             Clear All Preferences
           </button>
         </div>
-
-        <div class="storage-display">
-          <h4>localStorage Values</h4>
-          <pre>{{
-            {
-              'demo-theme': store.$.theme(),
-              'demo-fontSize': store.$.fontSize(),
-              'demo-lastViewedUserId': store.$.lastViewedUserId()
-            } | json
-          }}</pre>
-        </div>
       </div>
     </div>
-
-    <div class="code-example">
-      <h4>Code Example</h4>
-      <pre><code>{{ storedExample }}</code></pre>
-    </div>
-  </section>
+  </st-example>
 
   <!-- Combined Usage Section -->
-  <section class="demo-section">
-    <h2>Combining Markers with Derived State</h2>
-    <p class="section-desc">
+  <st-example
+    heading="Combining Markers with Derived State"
+    [code]="combinedCodeFiles"
+  >
+    <p intro>
       Use markers together with <code>.derived()</code> for powerful patterns.
     </p>
-
-    <div class="code-example">
-      <h4>Code Example</h4>
-      <pre><code>{{ combinedExample }}</code></pre>
-    </div>
-  </section>
+  </st-example>
 
   <!-- Performance Notes -->
   <section class="demo-section">

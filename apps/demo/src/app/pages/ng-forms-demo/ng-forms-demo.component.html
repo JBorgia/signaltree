@@ -47,6 +47,13 @@
     </div>
   </header>
 
+  <st-example
+    heading="Interactive profile form"
+    intro="A single createFormTree() call powers nested groups, a dynamic FormArray, sync + async validation, conditional fields, and localStorage persistence — all bound to Angular reactive forms."
+    [state]="preview()"
+    stateLabel="Live State Preview"
+    [code]="codeFiles"
+  >
   <div class="content-grid">
     <section class="form-panel">
       <div class="status-row">
@@ -413,27 +420,6 @@
         </p>
       </article>
 
-      <article class="summary-card callout">
-        <h3>Form Tree Setup</h3>
-        <pre><code>{{ calloutCode }}</code></pre>
-        <p class="hint">
-          This single <code>createFormTree()</code> call configures tree
-          structure, persistence, validation (sync + async), conditional fields,
-          and debouncing. Angular 21 would require separate setup for each
-          concern.
-        </p>
-      </article>
-
-      <article class="summary-card">
-        <h3>Live State Preview</h3>
-        <p>
-          Inspect the entire SignalTree snapshot, including aggregation signals
-          such as <code>valid</code>, <code>dirty</code>, async state, and the
-          current completion heuristic.
-        </p>
-        <pre><code>{{ preview() }}</code></pre>
-      </article>
-
       <article class="summary-card" *ngIf="lastSaved() as saved">
         <h3>Last Saved Payload</h3>
         <p><strong>Name:</strong> {{ saved.name }}</p>
@@ -471,6 +457,7 @@ wizard.currentStep(); // Signal</code></pre>
       </article>
     </aside>
   </div>
+  </st-example>
 </div>
 
 <ng-template #noSyncErrors>

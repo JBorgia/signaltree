@@ -59,13 +59,6 @@
   max-width: 1400px;
   margin: 0 auto;
   padding: var(--space-8) var(--space-4);
-
-  h1 {
-    font-size: 2rem;
-    font-weight: 700;
-    margin-bottom: var(--space-6);
-    color: var(--color-neutral-900);
-  }
 }
 
 // Info Banner
@@ -153,33 +146,6 @@
   }
 }
 
-// Code Tabs (Callable vs Current)
-.code-tabs {
-  display: flex;
-  gap: var(--space-2);
-  margin-bottom: var(--space-4);
-
-  button {
-    @include button(
-      var(--color-neutral-100),
-      var(--color-neutral-700),
-      var(--color-neutral-200)
-    );
-    padding: var(--space-2) var(--space-4);
-    font-size: 0.875rem;
-    border: 2px solid var(--color-neutral-200);
-
-    &.active {
-      @include button(
-        var(--color-primary-500),
-        white,
-        var(--color-primary-600)
-      );
-      border-color: var(--color-primary-600);
-    }
-  }
-}
-
 // Demo Grid
 .demo-grid {
   display: grid;
@@ -206,18 +172,6 @@
     margin-bottom: var(--space-4);
     color: var(--color-neutral-900);
   }
-}
-
-// Code Block
-.code-block {
-  background-color: var(--color-neutral-900);
-  color: var(--color-neutral-100);
-  padding: var(--space-4);
-  border-radius: var(--radius-md);
-  font-family: var(--font-family-mono);
-  font-size: 0.875rem;
-  overflow-x: auto;
-  margin-bottom: var(--space-4);
 }
 
 // State Display
@@ -262,12 +216,6 @@
       color: var(--color-primary-600);
     }
   }
-}
-
-// Example Section
-.example-section {
-  @include card;
-  margin-bottom: var(--space-8);
 }
 
 // Note/Warning Box

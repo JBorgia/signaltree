@@ -1,12 +1,9 @@
 <div class="page">
-  <header class="page-header">
-    <h1>@signaltree/schema</h1>
-    <p class="lead">
-      Schema-driven validation against tree leaf paths. StandardSchema-compatible
-      (Zod, Valibot, ArkType, …). Async-first. Observe-only — never blocks writes.
-    </p>
-  </header>
-
+  <st-example
+    heading="@signaltree/schema"
+    intro="Schema-driven validation against tree leaf paths. StandardSchema-compatible (Zod, Valibot, ArkType, …). Async-first. Observe-only — never blocks writes."
+    [code]="codeFiles"
+  >
   <section class="demo-grid">
     <div class="form-panel">
       <h2>Live form</h2>
@@ -124,11 +121,7 @@
       </div>
     </div>
   </section>
-
-  <section class="code-panel">
-    <h2>What this code looks like</h2>
-    <pre><code>{{ codeExample }}</code></pre>
-  </section>
+  </st-example>
 
   <section class="links">
     <h2>Learn more</h2>

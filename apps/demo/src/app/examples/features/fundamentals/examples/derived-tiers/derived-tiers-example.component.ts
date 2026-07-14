@@ -2,6 +2,8 @@ import { CommonModule } from '@angular/common';
 import { Component, computed } from '@angular/core';
 import { derivedFrom, entityMap, signalTree, WithDerived } from '@signaltree/core';
 
+import { ExampleComponent } from '../../../../shared/components/example-shell';
+
 // =============================================================================
 // EXAMPLE 1: INLINE DERIVED (Simple - Types inferred automatically)
 // =============================================================================
@@ -141,10 +143,17 @@ interface CartItem {
 @Component({
   selector: 'app-derived-tiers-example',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ExampleComponent],
   template: `
-    <div class="example-container">
-      <h2>Derived Tiers Example</h2>
+    <st-example heading="Derived Tiers Example">
+      <div intro>
+        <h4>💡 Key Point</h4>
+        <p>
+          <code>derivedFrom</code> is
+          <strong>only needed for functions defined in separate files</strong>.
+          Inline functions automatically inherit types from the chain.
+        </p>
+      </div>
 
       <section class="example-section">
         <h3>Example 1: Inline Derived (Simple)</h3>
@@ -203,24 +212,10 @@ interface CartItem {
           </div>
         </div>
       </section>
-
-      <section class="code-note">
-        <h4>💡 Key Point</h4>
-        <p>
-          <code>derivedFrom</code> is
-          <strong>only needed for functions defined in separate files</strong>.
-          Inline functions automatically inherit types from the chain.
-        </p>
-      </section>
-    </div>
+    </st-example>
   `,
   styles: [
     `
-      .example-container {
-        padding: 1rem;
-        font-family: system-ui, sans-serif;
-      }
-
       .example-section {
         margin: 1.5rem 0;
         padding: 1rem;
@@ -264,13 +259,6 @@ interface CartItem {
         padding: 1rem;
         background: #f5f5f5;
         border-radius: 4px;
-      }
-
-      .code-note {
-        background: #fffde7;
-        padding: 1rem;
-        border-radius: 4px;
-        border-left: 4px solid #ffc107;
       }
 
       code {

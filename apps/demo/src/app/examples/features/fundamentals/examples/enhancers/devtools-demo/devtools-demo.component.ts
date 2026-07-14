@@ -1,7 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { devTools, signalTree } from '@signaltree/core';
+
+import {
+  type CodeFile,
+  ExampleComponent,
+} from '../../../../../shared/components/example-shell';
 
 interface DevtoolsState {
   counter: number;
@@ -27,10 +32,34 @@ interface ActionRecord {
   action: () => void;
 }
 
+// Source shown in the st-example code panel (mirrors the store setup below).
+const STORE_SOURCE = `import { devTools, signalTree } from '@signaltree/core';
+
+const store = signalTree<DevtoolsState>({
+  counter: 0,
+  user: {
+    name: 'John Doe',
+    email: 'john@example.com',
+    preferences: { notifications: true },
+  },
+  todos: [],
+}).with(
+  devTools({
+    treeName: 'DevTools Demo',
+    enableLogging: true,
+    enableBrowserDevTools: true,
+  })
+);
+
+// Path-based updates surface automatically in Redux DevTools.
+store.$.counter.update((c) => c + 1);
+store.$.user.name.set('Jane Doe');
+store.$.todos.update((t) => [...t, { id: 1, text: 'New', completed: false }]);`;
+
 @Component({
   selector: 'app-devtools-demo',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ExampleComponent],
   templateUrl: './devtools-demo.component.html',
   styleUrl: './devtools-demo.component.scss',
 })
@@ -65,6 +94,17 @@ export class DevtoolsDemoComponent {
   counter = this.store.$.counter;
   user = this.store.$.user;
   todos = this.store.$.todos;
+
+  // Live state snapshot for the st-example inspector.
+  readonly stateSnapshot = computed(() => ({
+    counter: this.counter(),
+    user: this.store.$.user(),
+  }));
+
+  // Source tabs for the st-example code viewer.
+  readonly codeFiles: CodeFile[] = [
+    { label: 'devtools-store.ts', language: 'typescript', source: STORE_SOURCE },
+  ];
 
   // Counter actions
   increment() {

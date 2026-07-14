@@ -4,6 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { asyncQuery, asyncSource, signalTree } from '@signaltree/core';
 import { delay, of, throwError } from 'rxjs';
 
+import { CodeTabsComponent } from '../../examples/shared/components/example-shell';
+import type { CodeFile } from '../../examples/shared/components/example-shell';
+
 interface User {
   id: number;
   name: string;
@@ -22,11 +25,87 @@ const ALL_USERS: User[] = [
 @Component({
   selector: 'app-async-demo',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CodeTabsComponent],
   templateUrl: './async-demo.component.html',
   styleUrl: './async-demo.component.scss',
 })
 export class AsyncDemoComponent {
+  readonly heroImportCode: CodeFile[] = [
+    {
+      label: 'import.ts',
+      language: 'typescript',
+      source: `import { asyncSource, asyncQuery } from '@signaltree/core';`,
+    },
+  ];
+
+  readonly asyncSourceCode: CodeFile[] = [
+    {
+      label: 'asyncSource.ts',
+      language: 'typescript',
+      source: `const store = signalTree({
+  users: asyncSource<User[]>({
+    initial: [],
+    load: () => this.api.list$(),  // returns Observable<User[]>
+  }),
+});
+
+// Read:
+store.$.users();           // User[] | undefined
+store.$.users.loading();   // boolean
+store.$.users.error();     // unknown | null
+
+// Drive lifecycle:
+store.$.users.refresh();   // reload (cancels in-flight)
+store.$.users.set([...]);  // manual override
+store.$.users.reset();     // clear data/error/loading`,
+    },
+  ];
+
+  readonly asyncQueryCode: CodeFile[] = [
+    {
+      label: 'asyncQuery.ts',
+      language: 'typescript',
+      source: `const store = signalTree({
+  search: asyncQuery<string, User[]>({
+    initialResult: [],
+    debounce: 300,
+    filter: (q) => q.length > 0,
+    query: (q) => this.api.search$(q),
+  }),
+});
+
+// Push input — pipeline fires after debounce + dedup:
+store.$.search.input.set('alice');
+
+// Or two-way bind in the template:
+<input [(ngModel)]="store.$.search.input">
+
+// Read results:
+store.$.search();          // results
+store.$.search.loading();  // in-flight
+store.$.search.error();`,
+    },
+  ];
+
+  readonly resilienceCode: CodeFile[] = [
+    {
+      label: 'resilience.ts',
+      language: 'typescript',
+      source: `lookup: asyncQuery<string, string>({
+  initialResult: '',
+  debounce: 200,
+  filter: (q) => q.length > 0,
+  query: (q) => failNext() ? throwError(() => new Error('…')) : of(result),
+});
+
+// A failed query no longer kills the stream — new inputs still fire:
+store.$.lookup.input.set('next-key');   // runs even after an error
+
+// rerun() bypasses debounce + dedup — re-fires the CURRENT input:
+store.$.lookup.rerun();`,
+    },
+  ];
+
   /** Toggle: make the next resilient-lookup query fail (demonstrates recovery). */
   readonly failNext = signal(false);
   /** Counts how many times the resilient-lookup query factory actually ran. */

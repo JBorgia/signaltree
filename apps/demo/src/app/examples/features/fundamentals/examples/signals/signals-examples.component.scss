@@ -30,24 +30,6 @@
   }
 }
 
-.card {
-  @include card;
-
-  h3 {
-    font-size: $text-xl;
-    font-weight: $font-semibold;
-    color: $dark;
-    margin: 0 0 $spacing-sm 0;
-  }
-}
-
-.desc {
-  color: $text-light;
-  margin-bottom: $spacing-md;
-  font-size: $text-sm;
-  line-height: 1.5;
-}
-
 .controls {
   @include flex-row($spacing-sm);
   flex-wrap: wrap;
@@ -92,33 +74,6 @@ select {
 .badge {
   @include badge($bg-light, $dark);
   border: 1px solid $border;
-}
-
-pre.code {
-  @extend .code-block;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: $text-sm;
-
-  th,
-  td {
-    border: 1px solid $border;
-    padding: $spacing-sm $spacing-md;
-    text-align: left;
-  }
-
-  th {
-    background: $bg-light;
-    font-weight: $font-semibold;
-    color: $dark;
-  }
-
-  tr:hover {
-    background: $bg-light;
-  }
 }
 
 .stat {

@@ -3,6 +3,11 @@ import { Component, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree } from '@signaltree/core';
 
+import {
+  type CodeFile,
+  ExampleComponent,
+} from '../../../../shared/components/example-shell';
+
 interface FormState {
   fields: {
     username: string;
@@ -34,7 +39,7 @@ interface FormState {
 @Component({
   selector: 'app-forms-demo',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ExampleComponent],
   templateUrl: './forms-demo.component.html',
   styleUrl: './forms-demo.component.scss',
 })
@@ -165,4 +170,38 @@ export class FormsDemoComponent {
     if (strength === 3) return '#3b82f6';
     return '#10b981';
   }
+
+  // Source shown in the st-example code panel.
+  readonly codeFiles: CodeFile[] = [
+    {
+      label: 'forms-demo.component.ts',
+      language: 'typescript',
+      source: `// Unified form state with SignalTree
+formStore = signalTree<FormState>({
+  fields: {
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    agreeToTerms: false,
+  },
+  touched: { username: false, email: false },
+  submitted: false,
+  submittedData: null,
+});
+
+// Create aliases for cleaner binding
+username = this.formStore.$.fields.username;
+email = this.formStore.$.fields.email;
+
+// Computed validations work the same way
+usernameValid = computed(() => {
+  const value = this.username();
+  return value.length >= 3 && /^[a-zA-Z0-9_]+$/.test(value);
+});
+
+// Reset entire state in one call
+this.formStore.$.set({ fields: { ... }, touched: { ... } });`,
+    },
+  ];
 }

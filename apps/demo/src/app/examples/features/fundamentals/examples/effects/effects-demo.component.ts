@@ -1,6 +1,10 @@
-import { CommonModule } from '@angular/common';
 import { Component, effect, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+
+import {
+  type CodeFile,
+  ExampleComponent,
+} from '../../../../shared/components/example-shell';
 
 interface Notification {
   id: number;
@@ -20,7 +24,7 @@ interface Notification {
 @Component({
   selector: 'app-effects-demo',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule, ExampleComponent],
   templateUrl: './effects-demo.component.html',
   styleUrl: './effects-demo.component.scss',
 })
@@ -34,6 +38,25 @@ export class EffectsDemoComponent {
   // Notification system
   notifications = signal<Notification[]>([]);
   nextNotificationId = 0;
+
+  // ── Source shown in the st-example code panel ─────────────────────────────
+  readonly codeFiles: CodeFile[] = [
+    {
+      label: 'auto-save.effect.ts',
+      language: 'typescript',
+      source: `effect(() => {
+  const title = this.documentTitle();
+  const content = this.documentContent();
+
+  if (title || content) {
+    setTimeout(() => {
+      this.lastSaved.set(new Date());
+      console.log('Auto-saved!');
+    }, 1000);
+  }
+});`,
+    },
+  ];
 
   constructor() {
     // Effect 1: Auto-save when document changes

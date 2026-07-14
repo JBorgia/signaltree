@@ -108,12 +108,12 @@
       <div class="import-comparison">
         <div class="import-example">
           <h3 class="import-title">Separate Packages (v1)</h3>
-          <pre class="import-code">{{ importExamples.separate }}</pre>
+          <st-code-tabs [files]="importSeparate" />
         </div>
         <div class="import-arrow">→</div>
         <div class="import-example">
           <h3 class="import-title">Consolidated (v2)</h3>
-          <pre class="import-code">{{ importExamples.consolidated }}</pre>
+          <st-code-tabs [files]="importConsolidated" />
         </div>
       </div>
     </div>
@@ -132,18 +132,7 @@
             All computed state lives on the tree — never inside Ops services or
             component classes. Components read directly from <code>tree.$</code>.
           </p>
-          <pre class="pillar-code">// app.tree.ts
-signalTree(&#123; tickets: entityMap&lt;Ticket&gt;(), filter: '' &#125;)
-  .derived($ =&gt; (&#123;
-    tickets: &#123;
-      visible: computed(() =&gt;
-        $.tickets.all().filter(t =&gt; t.title.includes($.filter()))
-      )
-    &#125;
-  &#125;));
-
-// component — one inject, all reads available
-tree.$.tickets.visible()</pre>
+          <st-code-tabs [files]="pillarReadCode" />
         </div>
         <div class="pillar-card pillar-write">
           <div class="pillar-label">WRITE</div>
@@ -152,16 +141,7 @@ tree.$.tickets.visible()</pre>
             Mutations and async live in thin <code>&#64;Injectable</code> services.
             No computed properties belong here.
           </p>
-          <pre class="pillar-code">&#64;Injectable(&#123; providedIn: 'root' &#125;)
-export class TicketOps &#123;
-  private tree = inject(APP_TREE);
-  private api  = inject(TicketApi);
-
-  async load() &#123;
-    const data = await firstValueFrom(this.api.list());
-    this.tree.$.tickets.setAll(data); // write only
-  &#125;
-&#125;</pre>
+          <st-code-tabs [files]="pillarWriteCode" />
         </div>
         <div class="pillar-card pillar-react">
           <div class="pillar-label">REACT</div>
@@ -170,12 +150,7 @@ export class TicketOps &#123;
             State changes are the events. No actions, no dispatch, no effects
             registry — just react to state.
           </p>
-          <pre class="pillar-code">// Registered once in a root service
-tree.effect(state =&gt; &#123;
-  const filters = state.tickets.filters;
-  // re-runs whenever filters change
-  untracked(() =&gt; ticketOps.load(filters));
-&#125;);</pre>
+          <st-code-tabs [files]="pillarReactCode" />
         </div>
       </div>
     </div>

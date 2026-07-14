@@ -4,6 +4,8 @@ import { entityMap, signalTree } from '@signaltree/core';
 
 import type { EntityMapMarker } from '@signaltree/core';
 
+import { ExampleComponent } from '../../../../shared/components/example-shell';
+
 interface Row {
   id: number;
   value: number;
@@ -31,17 +33,17 @@ interface Row {
 @Component({
   selector: 'app-granular-reactivity-demo',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ExampleComponent],
   template: `
-    <section class="demo">
-      <h2>Granular reactivity — how many derivations re-run?</h2>
-      <p class="muted">
+    <st-example heading="Granular reactivity — how many derivations re-run?">
+      <p intro class="muted">
         Both columns isolate <em>renders</em> (Angular <code>computed()</code>
         equality). Watch <strong>derivations re-run per change</strong> instead:
         SignalTree re-runs only the touched entity's; the naive single signal
         re-runs all {{ n }}.
       </p>
 
+      <section class="demo">
       <div class="cols">
         <div class="col">
           <h3>SignalTree <code>entityMap</code></h3>
@@ -72,7 +74,8 @@ interface Row {
         difference is the wasted derivation work the naive pattern can't avoid
         without hand-rolling a signal per field.
       </p>
-    </section>
+      </section>
+    </st-example>
   `,
   styles: [
     `

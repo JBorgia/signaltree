@@ -3,6 +3,11 @@ import { Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { clearStoragePrefix, signalTree, stored } from '@signaltree/core';
 
+import {
+  type CodeFile,
+  CodeTabsComponent,
+} from '../../examples/shared/components/example-shell';
+
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -70,7 +75,7 @@ function migrateV2toV3(v2: UserSettingsV2): UserSettingsV3 {
 @Component({
   selector: 'app-stored-versioning-demo',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CodeTabsComponent],
   templateUrl: './stored-versioning-demo.component.html',
   styleUrl: './stored-versioning-demo.component.scss',
 })
@@ -423,6 +428,21 @@ signalTree({
 // Clear all keys with a prefix
 clearStoragePrefix('myapp-');
 // Removes: myapp-user-profile, myapp-user-settings, myapp-cache-data`;
+
+  // Source strings wrapped for the shared tabbed code viewer
+  basicVersioningFiles: CodeFile[] = [
+    {
+      label: 'basic-versioning.ts',
+      language: 'typescript',
+      source: this.basicVersioningCode,
+    },
+  ];
+  migrationFiles: CodeFile[] = [
+    { label: 'migration.ts', language: 'typescript', source: this.migrationCode },
+  ];
+  utilitiesFiles: CodeFile[] = [
+    { label: 'utilities.ts', language: 'typescript', source: this.utilitiesCode },
+  ];
 
   constructor() {
     // Initialize storage keys list

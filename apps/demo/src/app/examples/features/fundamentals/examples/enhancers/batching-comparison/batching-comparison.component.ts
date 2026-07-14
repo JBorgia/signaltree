@@ -1,11 +1,12 @@
-import { CommonModule } from '@angular/common';
 import { Component, effect, signal } from '@angular/core';
 import { batching, signalTree } from '@signaltree/core';
+
+import { ExampleComponent } from '../../../../../shared/components/example-shell';
 
 @Component({
   selector: 'app-batching-comparison',
   standalone: true,
-  imports: [CommonModule],
+  imports: [ExampleComponent],
   templateUrl: './batching-comparison.component.html',
   styleUrl: './batching-comparison.component.scss',
 })

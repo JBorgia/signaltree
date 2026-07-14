@@ -3,6 +3,8 @@ import { Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { signalTree, timeTravel } from '@signaltree/core';
 
+import { ExampleComponent } from '../../../../shared/components/example-shell';
+
 import type { ISignalTree, TimeTravelMethods } from '@signaltree/core';
 
 interface Todo {
@@ -50,7 +52,7 @@ interface TimeTravelTree {
 @Component({
   selector: 'app-time-travel-demo',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ExampleComponent],
   templateUrl: './time-travel-demo.component.html',
   styleUrl: './time-travel-demo.component.scss',
 })

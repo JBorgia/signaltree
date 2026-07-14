@@ -4,42 +4,15 @@
   margin: 0 auto;
 }
 
-.demo-title {
-  font-size: 32px;
-  font-weight: 700;
-  margin-bottom: 16px;
-  color: var(--color-dark);
-}
-
-.intro {
-  background: var(--color-neutral-100);
-  padding: 20px;
-  border-radius: 8px;
-  margin-bottom: 32px;
-
-  p {
-    margin: 0 0 12px 0;
-    line-height: 1.6;
-    color: var(--color-neutral-700);
-  }
-
-  code {
-    background: var(--color-border);
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 13px;
-    color: var(--color-error-700);
-  }
-
-  .sync-status {
-    padding: 12px;
-    background: var(--color-white);
-    border-radius: 6px;
-    border: 2px solid var(--color-border);
-    margin-top: 12px;
-    font-weight: 600;
-    color: var(--color-secondary-600);
-  }
+// Live sync indicator, projected into the st-example [intro] slot.
+.sync-status {
+  padding: 12px;
+  background: var(--color-white);
+  border-radius: 6px;
+  border: 2px solid var(--color-border);
+  margin-top: 12px;
+  font-weight: 600;
+  color: var(--color-secondary-600);
 }
 
 .examples-grid {
@@ -216,98 +189,3 @@
   }
 }
 
-.full-state {
-  background: var(--color-white);
-  border: 2px solid var(--color-border);
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 32px;
-
-  h3 {
-    margin: 0 0 16px 0;
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--color-dark);
-  }
-}
-
-.state-card {
-  background: var(--color-light);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 16px;
-
-  .state-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px;
-    background: var(--color-white);
-    border-radius: 4px;
-    margin-bottom: 12px;
-
-    strong {
-      color: var(--color-dark);
-    }
-
-    span {
-      color: var(--color-primary-500);
-      font-weight: 600;
-    }
-  }
-}
-
-.json-display {
-  margin: 0;
-  padding: 16px;
-  background: var(--color-dark);
-  color: var(--color-secondary-500);
-  border-radius: 6px;
-  font-size: 13px;
-  overflow-x: auto;
-  font-family: 'Courier New', monospace;
-}
-
-.code-examples {
-  background: var(--color-white);
-  border: 2px solid var(--color-border);
-  border-radius: 12px;
-  padding: 24px;
-
-  h3 {
-    margin: 0 0 20px 0;
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--color-dark);
-  }
-}
-
-.code-block {
-  margin-bottom: 24px;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-
-  h4 {
-    margin: 0 0 12px 0;
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--color-neutral-700);
-  }
-
-  pre {
-    margin: 0;
-    padding: 16px;
-    background: var(--color-dark);
-    border-radius: 6px;
-    overflow-x: auto;
-
-    code {
-      color: var(--color-secondary-500);
-      font-size: 13px;
-      line-height: 1.6;
-      font-family: 'Courier New', monospace;
-    }
-  }
-}

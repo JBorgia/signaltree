@@ -139,16 +139,6 @@
     margin: 0 0 0.6rem 0;
   }
   p.small { font-size: 0.82rem; color: #6b7280; }
-  pre {
-    background: #1f2937;
-    color: #e5e7eb;
-    padding: 0.5rem 0.75rem;
-    border-radius: 4px;
-    font-size: 0.74rem;
-    overflow-x: auto;
-    margin: 0.4rem 0;
-    line-height: 1.4;
-  }
   code {
     font-family: 'SF Mono', Menlo, Monaco, monospace;
     background: #f3f4f6;
@@ -156,7 +146,6 @@
     border-radius: 3px;
     font-size: 0.86em;
   }
-  pre code { background: transparent; padding: 0; }
   a {
     color: #1d4ed8;
     font-weight: 600;

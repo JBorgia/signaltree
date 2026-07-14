@@ -1,68 +1,42 @@
 <div class="demo-container">
-  <h2 class="demo-title">⚡ Async Operations</h2>
+  <st-example heading="⚡ Async Operations" [code]="codeFiles">
+    <div intro>
+      <p>
+        Async state in SignalTree is a <strong>marker family</strong>, not a
+        free-standing service method. Two markers cover the two main shapes:
+      </p>
+      <ul>
+        <li>
+          <strong><code>asyncSource&lt;T&gt;(config)</code></strong> —
+          load-and-expose. Auto-loads on materialization. Exposes
+          <code>data</code>, <code>loading</code>, <code>error</code>, plus
+          <code>refresh</code> / <code>set</code> / <code>update</code> /
+          <code>reset</code>. Accepts Observable or Promise loaders.
+        </li>
+        <li>
+          <strong><code>asyncQuery&lt;TInput, TResult&gt;(config)</code></strong> —
+          input-driven debounced query. Writable <code>input</code> signal
+          drives a built-in <code>debounce → filter → distinctUntilChanged →
+          switchMap</code> pipeline. Race conditions, cancellation, dedup all
+          handled automatically.
+        </li>
+      </ul>
+      <p>
+        Both markers attach <strong>at any tree depth</strong> alongside
+        <code>entityMap</code>, <code>status</code>, <code>stored</code>, and
+        <code>form</code>. Auto-clean on the surrounding
+        <code>DestroyRef</code>. <strong>No manual
+        <code>tap()</code> / <code>setLoading()</code> wiring.</strong>
+      </p>
+    </div>
 
-  <div class="intro">
-    <p>
-      Async state in SignalTree is a <strong>marker family</strong>, not a
-      free-standing service method. Two markers cover the two main shapes:
-    </p>
-    <ul>
-      <li>
-        <strong><code>asyncSource&lt;T&gt;(config)</code></strong> —
-        load-and-expose. Auto-loads on materialization. Exposes
-        <code>data</code>, <code>loading</code>, <code>error</code>, plus
-        <code>refresh</code> / <code>set</code> / <code>update</code> /
-        <code>reset</code>. Accepts Observable or Promise loaders.
-      </li>
-      <li>
-        <strong><code>asyncQuery&lt;TInput, TResult&gt;(config)</code></strong> —
-        input-driven debounced query. Writable <code>input</code> signal
-        drives a built-in <code>debounce → filter → distinctUntilChanged →
-        switchMap</code> pipeline. Race conditions, cancellation, dedup all
-        handled automatically.
-      </li>
-    </ul>
-    <p>
-      Both markers attach <strong>at any tree depth</strong> alongside
-      <code>entityMap</code>, <code>status</code>, <code>stored</code>, and
-      <code>form</code>. Auto-clean on the surrounding
-      <code>DestroyRef</code>. <strong>No manual
-      <code>tap()</code> / <code>setLoading()</code> wiring.</strong>
-    </p>
-  </div>
-
-  <div class="callout">
-    <p>
-      <strong>👉 Full interactive demo:</strong>
-      <a routerLink="/async">/async</a> — exercise both markers end-to-end
-      with simulated network latency, debounced search, and live counters
-      showing how cancellation and dedup work in practice.
-    </p>
-  </div>
-
-  <div class="quick-snippet">
-    <pre><code>import &#123; signalTree, asyncSource, asyncQuery &#125; from '&#64;signaltree/core';
-
-const store = signalTree(&#123;
-  users: asyncSource&lt;User[]&gt;(&#123;
-    initial: [],
-    load: () =&gt; this.api.list$(),
-  &#125;),
-  search: asyncQuery&lt;string, User[]&gt;(&#123;
-    initialResult: [],
-    debounce: 300,
-    filter: (q) =&gt; q.length &gt; 0,
-    query: (q) =&gt; this.api.search$(q),
-  &#125;),
-&#125;);
-
-// Uniform reads:
-store.$.users();           // User[] | undefined
-store.$.users.loading();   // boolean
-store.$.users.error();     // unknown | null
-store.$.users.refresh();   // reload (cancels in-flight)
-
-store.$.search.input.set('alice');  // drives debounced pipeline
-store.$.search();                    // results</code></pre>
-  </div>
+    <div class="callout">
+      <p>
+        <strong>👉 Full interactive demo:</strong>
+        <a routerLink="/async">/async</a> — exercise both markers end-to-end
+        with simulated network latency, debounced search, and live counters
+        showing how cancellation and dedup work in practice.
+      </p>
+    </div>
+  </st-example>
 </div>

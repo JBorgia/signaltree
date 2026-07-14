@@ -9,7 +9,7 @@
       <code>entityMap</code>, <code>status</code>, <code>stored</code>, and
       <code>form</code>.
     </p>
-    <pre><code>import &#123; asyncSource, asyncQuery &#125; from '&#64;signaltree/core';</code></pre>
+    <st-code-tabs [files]="heroImportCode" />
   </header>
 
   <section class="demo">
@@ -61,22 +61,7 @@
 
     <details class="code-detail">
       <summary>Show source</summary>
-      <pre><code>const store = signalTree(&#123;
-  users: asyncSource&lt;User[]&gt;(&#123;
-    initial: [],
-    load: () =&gt; this.api.list$(),  // returns Observable&lt;User[]&gt;
-  &#125;),
-&#125;);
-
-// Read:
-store.$.users();           // User[] | undefined
-store.$.users.loading();   // boolean
-store.$.users.error();     // unknown | null
-
-// Drive lifecycle:
-store.$.users.refresh();   // reload (cancels in-flight)
-store.$.users.set([...]);  // manual override
-store.$.users.reset();     // clear data/error/loading</code></pre>
+      <st-code-tabs [files]="asyncSourceCode" />
     </details>
   </section>
 
@@ -126,25 +111,7 @@ store.$.users.reset();     // clear data/error/loading</code></pre>
 
     <details class="code-detail">
       <summary>Show source</summary>
-      <pre><code>const store = signalTree(&#123;
-  search: asyncQuery&lt;string, User[]&gt;(&#123;
-    initialResult: [],
-    debounce: 300,
-    filter: (q) =&gt; q.length &gt; 0,
-    query: (q) =&gt; this.api.search$(q),
-  &#125;),
-&#125;);
-
-// Push input — pipeline fires after debounce + dedup:
-store.$.search.input.set('alice');
-
-// Or two-way bind in the template:
-&lt;input [(ngModel)]="store.$.search.input"&gt;
-
-// Read results:
-store.$.search();          // results
-store.$.search.loading();  // in-flight
-store.$.search.error();</code></pre>
+      <st-code-tabs [files]="asyncQueryCode" />
     </details>
   </section>
 
@@ -201,18 +168,7 @@ store.$.search.error();</code></pre>
 
     <details class="code-detail">
       <summary>Show source</summary>
-      <pre><code>lookup: asyncQuery&lt;string, string&gt;(&#123;
-  initialResult: '',
-  debounce: 200,
-  filter: (q) =&gt; q.length &gt; 0,
-  query: (q) =&gt; failNext() ? throwError(() =&gt; new Error('…')) : of(result),
-&#125;);
-
-// A failed query no longer kills the stream — new inputs still fire:
-store.$.lookup.input.set('next-key');   // runs even after an error
-
-// rerun() bypasses debounce + dedup — re-fires the CURRENT input:
-store.$.lookup.rerun();</code></pre>
+      <st-code-tabs [files]="resilienceCode" />
     </details>
   </section>
 

@@ -181,7 +181,7 @@
 
       <div class="code-panel">
         <h3>Code</h3>
-        <pre><code>{{ basicFormCode }}</code></pre>
+        <st-code-tabs [files]="basicFormFiles" />
       </div>
     </div>
   </section>
@@ -419,7 +419,7 @@
 
     <div class="code-panel">
       <h3>Code</h3>
-      <pre><code>{{ wizardCode }}</code></pre>
+      <st-code-tabs [files]="wizardFiles" />
     </div>
   </section>
   }
@@ -511,7 +511,7 @@
             <dd>{{ draftForm.dirty() }}</dd>
             <dt>Current Values:</dt>
             <dd>
-              <pre>{{ draftForm() | json }}</pre>
+              <st-state-inspector [value]="draftForm()" />
             </dd>
           </dl>
         </div>
@@ -519,7 +519,7 @@
 
       <div class="code-panel">
         <h3>Code</h3>
-        <pre><code>{{ persistenceCode }}</code></pre>
+        <st-code-tabs [files]="persistenceFiles" />
       </div>
     </div>
   </section>
@@ -647,11 +647,11 @@
           <div class="sync-demo">
             <div class="sync-item">
               <h4>SignalTree Signals</h4>
-              <pre>{{ feedbackForm() | json }}</pre>
+              <st-state-inspector [value]="feedbackForm()" />
             </div>
             <div class="sync-item">
               <h4>Angular FormGroup</h4>
-              <pre>{{ feedbackFormGroup?.value | json }}</pre>
+              <st-state-inspector [value]="feedbackFormGroup?.value" />
             </div>
           </div>
           <p class="sync-note">
@@ -663,7 +663,7 @@
 
       <div class="code-panel">
         <h3>Code</h3>
-        <pre><code>{{ formBridgeCode }}</code></pre>
+        <st-code-tabs [files]="formBridgeFiles" />
       </div>
     </div>
   </section>

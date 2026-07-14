@@ -4,6 +4,12 @@ import { FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { form, FormSignal, signalTree, validators } from '@signaltree/core';
 import { formBridge } from '@signaltree/ng-forms';
 
+import {
+  type CodeFile,
+  CodeTabsComponent,
+  StateInspectorComponent,
+} from '../../examples/shared/components/example-shell';
+
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -35,7 +41,13 @@ interface ListingWizard {
 @Component({
   selector: 'app-form-marker-demo',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    CodeTabsComponent,
+    StateInspectorComponent,
+  ],
   templateUrl: './form-marker-demo.component.html',
   styleUrl: './form-marker-demo.component.scss',
 })
@@ -456,4 +468,26 @@ feedbackFormGroup.patchValue({ title: 'Another' }); // Updates signals
 // Access Angular-specific features
 const titleControl = tree.getAngularForm('feedback')?.formControl('title');
 titleControl?.markAsTouched();`;
+
+  // Source strings wrapped for the shared tabbed code viewer
+  basicFormFiles: CodeFile[] = [
+    { label: 'basic-form.ts', language: 'typescript', source: this.basicFormCode },
+  ];
+  wizardFiles: CodeFile[] = [
+    { label: 'wizard-form.ts', language: 'typescript', source: this.wizardCode },
+  ];
+  persistenceFiles: CodeFile[] = [
+    {
+      label: 'persistence.ts',
+      language: 'typescript',
+      source: this.persistenceCode,
+    },
+  ];
+  formBridgeFiles: CodeFile[] = [
+    {
+      label: 'form-bridge.ts',
+      language: 'typescript',
+      source: this.formBridgeCode,
+    },
+  ];
 }

@@ -227,21 +227,6 @@
     font-size: 1rem;
     color: var(--text-primary, var(--color-neutral-900));
   }
-
-  pre {
-    background: var(--bg-code, #1e1e1e);
-    color: var(--text-code, var(--color-neutral-300));
-    padding: 1rem;
-    border-radius: 8px;
-    overflow: auto;
-    font-size: 0.8rem;
-    line-height: 1.5;
-    max-height: 600px;
-
-    code {
-      font-family: 'Fira Code', 'Monaco', monospace;
-    }
-  }
 }
 
 // Counter

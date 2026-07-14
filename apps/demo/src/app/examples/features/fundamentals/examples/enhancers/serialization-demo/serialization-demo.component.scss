@@ -4,12 +4,6 @@
   padding: 1rem;
 }
 
-.demo-title {
-  font-size: 1.5rem;
-  margin-bottom: 1rem;
-  color: var(--color-neutral-800);
-}
-
 .intro {
   background: var(--color-neutral-100);
   padding: 1rem;
@@ -353,30 +347,5 @@
   .type-value {
     font-weight: 500;
     color: var(--color-secondary-500);
-  }
-}
-
-// Code section
-.code-section {
-  margin-top: 1.5rem;
-  grid-column: 1 / -1;
-
-  h3 {
-    margin-bottom: 0.75rem;
-    font-size: 1rem;
-  }
-
-  pre {
-    background: #1e1e1e;
-    color: var(--color-neutral-300);
-    padding: 1rem;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-size: 0.8rem;
-    line-height: 1.5;
-
-    code {
-      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-    }
   }
 }

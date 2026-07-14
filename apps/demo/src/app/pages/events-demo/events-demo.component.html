@@ -86,7 +86,7 @@
 
       @if (generatedEvent()) {
       <h3>Last Generated Event</h3>
-      <pre class="code-block">{{ generatedEvent() | json }}</pre>
+      <st-state-inspector [value]="generatedEvent()" />
       }
     </div>
 
@@ -419,31 +419,14 @@
         <p style="font-size:0.875rem;color:var(--text-secondary,#666);margin-bottom:0.75rem">
           For typed, validated, idempotent events crossing system or service boundaries.
         </p>
-        <pre class="code-block">// Publish a typed, validated event
-const event = factory.create&lt;TradeProposed&gt;('TradeProposed', {{
-  '{' }} tradeId, vehicleId {{ '}' }});
-await eventBus.publish(event);
-
-// Subscribe
-eventBus.subscribe('TradeProposed', handler);</pre>
+        <st-code-tabs [files]="reactionsEventBusCode" />
       </div>
       <div>
         <h3><code>tree.effect()</code> — state-reactive side effects</h3>
         <p style="font-size:0.875rem;color:var(--text-secondary,#666);margin-bottom:0.75rem">
           For reacting to app state changes within the same Angular app. No events, no dispatch.
         </p>
-        <pre class="code-block">// Re-runs whenever filters change
-tree.effect(state =&gt; {{ '{' }}
-  const filters = state.tickets.filters;
-  untracked(() =&gt; ticketOps.load(filters));
-{{ '}' }});
-
-// With cleanup
-tree.effect(state =&gt; {{ '{' }}
-  const userId = state.auth.user()?.id;
-  const sub = ws.subscribe(userId, onMessage);
-  return () =&gt; sub.unsubscribe(); // cleanup on re-run
-{{ '}' }})</pre>
+        <st-code-tabs [files]="reactionsEffectCode" />
       </div>
     </div>
 
@@ -464,72 +447,17 @@ tree.effect(state =&gt; {{ '{' }}
 
     <div class="example">
       <h3>1. Define Event Schemas</h3>
-      <pre class="code-block">
-import {{ '{' }} createEventSchema, z {{ '}' }} from '&#64;signaltree/events';
-
-export const TradeProposalCreatedSchema = createEventSchema('TradeProposalCreated', {{
-          '{'
-        }}
-  tradeId: z.string().uuid(),
-  initiatorId: z.string().uuid(),
-  recipientId: z.string().uuid(),
-  vehicleOfferedId: z.string().uuid(),
-{{ '}' }});
-
-export type TradeProposalCreated = z.infer&lt;typeof TradeProposalCreatedSchema&gt;;</pre
-      >
+      <st-code-tabs [files]="quickStartSchemaCode" />
     </div>
 
     <div class="example">
       <h3>2. Create Events with Factory</h3>
-      <pre class="code-block">
-import {{ '{' }} createEventFactory {{ '}' }} from '&#64;signaltree/events';
-
-const factory = createEventFactory({{ '{' }}
-  source: 'trade-service',
-  environment: 'production',
-{{ '}' }});
-
-const event = factory.create&lt;TradeProposalCreated&gt;('TradeProposalCreated', {{
-          '{'
-        }}
-  tradeId: '550e8400-e29b-41d4-a716-446655440000',
-  initiatorId: 'user-1',
-  recipientId: 'user-2',
-  vehicleOfferedId: 'vehicle-1',
-{{ '}' }}, {{ '{' }}
-  priority: 'high',
-  actor: {{ '{' }} id: 'user-1', type: 'user' {{ '}' }},
-{{ '}' }});</pre
-      >
+      <st-code-tabs [files]="quickStartFactoryCode" />
     </div>
 
     <div class="example">
       <h3>3. Test with MockEventBus</h3>
-      <pre class="code-block">
-import {{ '{' }} createMockEventBus, createTestEvent {{
-          '}'
-        }} from '&#64;signaltree/events/testing';
-
-const eventBus = createMockEventBus();
-
-// Subscribe to events
-eventBus.subscribe('TradeProposalCreated', (event) => {{ '{' }}
-  console.log('Trade proposed:', event.data.tradeId);
-{{ '}' }});
-
-// Publish test event
-await eventBus.publish(createTestEvent('TradeProposalCreated', {{ '{' }}
-  tradeId: '123',
-  initiatorId: 'user-1',
-  recipientId: 'user-2',
-  vehicleOfferedId: 'vehicle-1',
-{{ '}' }}));
-
-// Assert behavior
-expect(eventBus.wasPublished('TradeProposalCreated')).toBe(true);
-expect(eventBus.getPublishedEvents()).toHaveLength(1);</pre
-      >
+      <st-code-tabs [files]="quickStartMockBusCode" />
     </div>
   </div>
 </section>

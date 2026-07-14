@@ -2,6 +2,11 @@ import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
+import {
+  CodeTabsComponent,
+  type CodeFile,
+} from '../../examples/shared/components/example-shell';
+
 interface HomeLinkCard {
   title: string;
   description: string;
@@ -24,7 +29,7 @@ interface FitItem {
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, CodeTabsComponent],
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss',
 })
@@ -237,7 +242,11 @@ export class HomeComponent {
     },
   ];
 
-  readonly quickStartCode = `# Install the core package
+  readonly quickStartCode: CodeFile[] = [
+    {
+      label: 'quick-start.ts',
+      language: 'typescript',
+      source: `# Install the core package
 npm install @signaltree/core
 
 # Optional packages
@@ -290,22 +299,40 @@ appTree((current) => ({
 }));
 
 // Read the full unwrapped snapshot
-const snapshot = appTree();`;
+const snapshot = appTree();`,
+    },
+  ];
 
-  readonly beforeCode = `// Typical nested-state ceremony
+  readonly beforeCode: CodeFile[] = [
+    {
+      label: 'before.ts',
+      language: 'typescript',
+      source: `// Typical nested-state ceremony
 const displayName = selectUserDisplayName(state);
 
 dispatch(updateUserProfile({
   id: userId,
   changes: { name: 'Grace Hopper' }
-}));`;
+}));`,
+    },
+  ];
 
-  readonly afterCode = `// SignalTree
+  readonly afterCode: CodeFile[] = [
+    {
+      label: 'after.ts',
+      language: 'typescript',
+      source: `// SignalTree
 const displayName = appTree.$.user.profile.name();
 
-appTree.$.user.profile.name.set('Grace Hopper');`;
+appTree.$.user.profile.name.set('Grace Hopper');`,
+    },
+  ];
 
-  readonly extremeDepthCode = `import { signalTree } from '@signaltree/core';
+  readonly extremeDepthCode: CodeFile[] = [
+    {
+      label: 'extreme-depth.ts',
+      language: 'typescript',
+      source: `import { signalTree } from '@signaltree/core';
 
 // Deep nested state with strong type inference
 const extremeDepth = signalTree({
@@ -355,5 +382,7 @@ const status = extremeDepth.$.enterprise.divisions.technology
 // Update at extreme depth with full type safety
 extremeDepth.$.enterprise.divisions.technology.departments
   .engineering.teams.frontend.projects.signaltree.releases.v1
-  .features.recursiveTyping.validation.tests.extreme.depth.set(20);`;
+  .features.recursiveTyping.validation.tests.extreme.depth.set(20);`,
+    },
+  ];
 }

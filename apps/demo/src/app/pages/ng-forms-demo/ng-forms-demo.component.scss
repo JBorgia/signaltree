@@ -359,16 +359,6 @@ legend {
   overflow-x: auto;
 }
 
-.summary-card.callout {
-  background: var(--color-neutral-900);
-  color: var(--color-neutral-100);
-  border-color: rgba(148, 163, 184, 0.2);
-}
-
-.summary-card.callout pre {
-  background: rgba(15, 23, 42, 0.7);
-}
-
 .summary-card h3 {
   margin: 0;
   font-size: 1rem;

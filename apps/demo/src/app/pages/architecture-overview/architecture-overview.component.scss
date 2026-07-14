@@ -175,18 +175,6 @@
   color: var(--text-primary);
 }
 
-.import-code {
-  background: var(--color-neutral-900);
-  color: var(--color-neutral-100);
-  border-radius: var(--radius-lg);
-  padding: var(--space-5);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.875rem;
-  line-height: 1.6;
-  white-space: pre-wrap;
-  border: 1px solid var(--color-neutral-700);
-}
-
 .import-arrow {
   font-size: 2rem;
   color: var(--color-success-500);
@@ -260,21 +248,6 @@
   color: var(--text-secondary);
   line-height: 1.55;
   margin: 0;
-}
-
-.pillar-code {
-  background: var(--color-neutral-900);
-  color: var(--color-neutral-100);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.78rem;
-  line-height: 1.6;
-  white-space: pre;
-  overflow-x: auto;
-  border: 1px solid var(--color-neutral-700);
-  margin: 0;
-  flex: 1;
 }
 
 .features-section {
@@ -519,17 +492,6 @@
   font-weight: 600;
   margin-bottom: 1rem;
   text-align: center;
-}
-
-.import-code {
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 8px;
-  padding: 1.5rem;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 0.9rem;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .import-arrow {

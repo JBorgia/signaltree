@@ -26,6 +26,12 @@
   }
 }
 
+// Each interactive demo is hosted in a shared st-example card.
+st-example {
+  display: block;
+  margin-bottom: 3rem;
+}
+
 .demo-section {
   margin-bottom: 3rem;
 
@@ -34,17 +40,6 @@
     margin-bottom: 0.5rem;
     border-bottom: 2px solid var(--color-primary-500);
     padding-bottom: 0.5rem;
-  }
-
-  .section-desc {
-    color: var(--color-neutral-500);
-    margin-bottom: 1.5rem;
-
-    code {
-      background: var(--color-neutral-100);
-      padding: 0.15rem 0.4rem;
-      border-radius: 3px;
-    }
   }
 }
 
@@ -249,26 +244,6 @@
   }
 }
 
-.state-display,
-.storage-display {
-  background: var(--color-light);
-  border-radius: 4px;
-  padding: 1rem;
-  margin-top: 1rem;
-
-  h4 {
-    margin: 0 0 0.5rem 0;
-    font-size: 0.9rem;
-    color: var(--color-neutral-500);
-  }
-
-  pre {
-    margin: 0;
-    font-size: 0.85rem;
-    white-space: pre-wrap;
-  }
-}
-
 .preference-controls {
   display: grid;
   gap: 1.5rem;
@@ -284,30 +259,6 @@
     .value {
       color: var(--color-neutral-500);
     }
-  }
-}
-
-.code-example {
-  background: #282c34;
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-top: 1rem;
-
-  h4 {
-    color: #9cdcfe;
-    margin: 0 0 1rem 0;
-    font-size: 0.9rem;
-  }
-
-  pre {
-    margin: 0;
-    overflow-x: auto;
-  }
-
-  code {
-    color: #abb2bf;
-    font-size: 0.85rem;
-    line-height: 1.6;
   }
 }
 

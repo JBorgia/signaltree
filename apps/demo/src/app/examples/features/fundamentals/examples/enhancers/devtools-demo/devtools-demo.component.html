@@ -1,328 +1,327 @@
 <div class="container">
-  <h1>🛠️ SignalTree DevTools Demo</h1>
-
-  <!-- Explanation Section -->
-  <div class="explanation-card">
-    <h2>📖 What This Demo Shows</h2>
-    <p class="intro-text">
-      This demo showcases <strong>SignalTree's DevTools integration</strong> for
-      debugging and monitoring your application state. The Redux DevTools
-      extension auto-connects, tracks path-based actions, and supports
-      time-travel jumps while SignalTree keeps a live view of state and metrics.
-    </p>
-
-    <div class="how-to-use">
-      <h3>🎯 How to Use This Demo:</h3>
-      <ol class="instruction-list">
-        <li>
-          <strong>Modify State:</strong> Use the controls on the left to change
-          counter, user info, and todos
-        </li>
-        <li>
-          <strong>Monitor Performance:</strong> Watch metrics update in
-          real-time on the right panel
-        </li>
-        <li>
-          <strong>Take Snapshots:</strong> Save current state and restore it
-          later
-        </li>
-        <li>
-          <strong>Review History:</strong> Inspect path-based actions in Redux
-          DevTools and time-travel to prior states
-        </li>
-        <li>
-          <strong>Inspect State:</strong> View live state data at the bottom
-        </li>
-      </ol>
-    </div>
-
-    <div class="key-features">
-      <h3>✨ Key Features:</h3>
-      <div class="feature-tags">
-        <span class="feature-tag">Time-Travel Debugging</span>
-        <span class="feature-tag">State Snapshots</span>
-        <span class="feature-tag">Path-Based Actions</span>
-        <span class="feature-tag">Action Metadata</span>
-        <span class="feature-tag">Performance Metrics</span>
-        <span class="feature-tag">Live State Inspection</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="demo-grid">
-    <!-- State Controls -->
-    <div class="card state-card">
-      <h2>⚡ State Controls</h2>
-      <p class="card-description">
-        Modify state and watch DevTools track changes
+  <st-example
+    heading="🛠️ SignalTree DevTools Demo"
+    [state]="stateSnapshot()"
+    stateLabel="Live state (counter + user)"
+    [code]="codeFiles"
+  >
+    <!-- Explanation (rich markup → intro slot) -->
+    <div intro class="explanation-card">
+      <h2>📖 What This Demo Shows</h2>
+      <p class="intro-text">
+        This demo showcases <strong>SignalTree's DevTools integration</strong>
+        for debugging and monitoring your application state. The Redux DevTools
+        extension auto-connects, tracks path-based actions, and supports
+        time-travel jumps while SignalTree keeps a live view of state and
+        metrics.
       </p>
 
-      <div class="controls-section">
-        <!-- Counter -->
-        <div class="control-group">
-          <h3>🔢 Counter</h3>
-          <div class="counter-display">
-            Current value: <strong>{{ counter() }}</strong>
-          </div>
-          <div class="button-group">
-            <button
-              (click)="increment()"
-              class="btn-primary"
-              title="Increment counter"
-            >
-              ➕ Increment
-            </button>
-            <button
-              (click)="decrement()"
-              class="btn-danger"
-              title="Decrement counter"
-            >
-              ➖ Decrement
-            </button>
-            <button
-              (click)="reset()"
-              class="btn-secondary"
-              title="Reset counter to 0"
-            >
-              ↻ Reset
-            </button>
-          </div>
-        </div>
+      <div class="how-to-use">
+        <h3>🎯 How to Use This Demo:</h3>
+        <ol class="instruction-list">
+          <li>
+            <strong>Modify State:</strong> Use the controls on the left to
+            change counter, user info, and todos
+          </li>
+          <li>
+            <strong>Monitor Performance:</strong> Watch metrics update in
+            real-time on the right panel
+          </li>
+          <li>
+            <strong>Take Snapshots:</strong> Save current state and restore it
+            later
+          </li>
+          <li>
+            <strong>Review History:</strong> Inspect path-based actions in Redux
+            DevTools and time-travel to prior states
+          </li>
+          <li>
+            <strong>Inspect State:</strong> View live state data at the bottom
+          </li>
+        </ol>
+      </div>
 
-        <!-- User Info -->
-        <div class="control-group user-info-section">
-          <h3>👤 User Information</h3>
-          <div class="form-group">
-            <label for="userName" class="label">Name</label>
-            <input
-              id="userName"
-              type="text"
-              [value]="this.store.$.user.name()"
-              (input)="updateUserName($event)"
-              class="form-input"
-              placeholder="Enter user name..."
-            />
-          </div>
-          <div class="form-group">
-            <label for="userEmail" class="label">Email</label>
-            <input
-              id="userEmail"
-              type="email"
-              [value]="this.store.$.user.email()"
-              (input)="updateUserEmail($event)"
-              class="form-input"
-              placeholder="Enter email address..."
-            />
-          </div>
-          <div class="checkbox-group">
-            <input
-              id="notifications"
-              type="checkbox"
-              [checked]="this.store.$.user.preferences.notifications()"
-              (change)="toggleNotifications()"
-            />
-            <label for="notifications">🔔 Enable Notifications</label>
-          </div>
-        </div>
-
-        <!-- Todo Management -->
-        <div class="control-group">
-          <h3>✅ Todo Management</h3>
-          <div class="input-group">
-            <input
-              type="text"
-              [(ngModel)]="newTodoText"
-              placeholder="Enter a new todo..."
-              class="form-input"
-              (keyup.enter)="addTodo()"
-            />
-            <button
-              (click)="addTodo()"
-              [disabled]="!newTodoText.trim()"
-              class="btn-success"
-              title="Add new todo"
-            >
-              ➕ Add
-            </button>
-          </div>
-          <button
-            (click)="addMultipleTodos()"
-            class="btn-purple full-width"
-            title="Add 5 random todos for testing"
-          >
-            🎲 Add 5 Random Todos
-          </button>
+      <div class="key-features">
+        <h3>✨ Key Features:</h3>
+        <div class="feature-tags">
+          <span class="feature-tag">Time-Travel Debugging</span>
+          <span class="feature-tag">State Snapshots</span>
+          <span class="feature-tag">Path-Based Actions</span>
+          <span class="feature-tag">Action Metadata</span>
+          <span class="feature-tag">Performance Metrics</span>
+          <span class="feature-tag">Live State Inspection</span>
         </div>
       </div>
     </div>
 
-    <!-- DevTools Info -->
-    <div class="card devtools-card">
-      <h2>📊 DevTools Information</h2>
-      <p class="card-description">Real-time monitoring and debugging tools</p>
+    <div class="demo-grid">
+      <!-- State Controls -->
+      <div class="card state-card">
+        <h2>⚡ State Controls</h2>
+        <p class="card-description">
+          Modify state and watch DevTools track changes
+        </p>
 
-      <div class="devtools-section">
-        <!-- Performance Metrics -->
-        <div class="metrics-group">
-          <h3>⚡ Performance Metrics</h3>
-          <div class="metrics-list">
-            <p><strong>Updates:</strong> {{ getMetrics().updates }}</p>
-            <p>
-              <strong>Average Update Time:</strong>
-              {{ getMetrics().averageUpdateTime }}ms
-            </p>
-            <p>
-              <strong>Last Update Time:</strong>
-              {{ getMetrics().averageUpdateTime }}ms
-            </p>
-            <p>
-              <strong>Total Execution Time:</strong>
-              {{ getMetrics().computations }}
-            </p>
+        <div class="controls-section">
+          <!-- Counter -->
+          <div class="control-group">
+            <h3>🔢 Counter</h3>
+            <div class="counter-display">
+              Current value: <strong>{{ counter() }}</strong>
+            </div>
+            <div class="button-group">
+              <button
+                (click)="increment()"
+                class="btn-primary"
+                title="Increment counter"
+              >
+                ➕ Increment
+              </button>
+              <button
+                (click)="decrement()"
+                class="btn-danger"
+                title="Decrement counter"
+              >
+                ➖ Decrement
+              </button>
+              <button
+                (click)="reset()"
+                class="btn-secondary"
+                title="Reset counter to 0"
+              >
+                ↻ Reset
+              </button>
+            </div>
+          </div>
+
+          <!-- User Info -->
+          <div class="control-group user-info-section">
+            <h3>👤 User Information</h3>
+            <div class="form-group">
+              <label for="userName" class="label">Name</label>
+              <input
+                id="userName"
+                type="text"
+                [value]="this.store.$.user.name()"
+                (input)="updateUserName($event)"
+                class="form-input"
+                placeholder="Enter user name..."
+              />
+            </div>
+            <div class="form-group">
+              <label for="userEmail" class="label">Email</label>
+              <input
+                id="userEmail"
+                type="email"
+                [value]="this.store.$.user.email()"
+                (input)="updateUserEmail($event)"
+                class="form-input"
+                placeholder="Enter email address..."
+              />
+            </div>
+            <div class="checkbox-group">
+              <input
+                id="notifications"
+                type="checkbox"
+                [checked]="this.store.$.user.preferences.notifications()"
+                (change)="toggleNotifications()"
+              />
+              <label for="notifications">🔔 Enable Notifications</label>
+            </div>
+          </div>
+
+          <!-- Todo Management -->
+          <div class="control-group">
+            <h3>✅ Todo Management</h3>
+            <div class="input-group">
+              <input
+                type="text"
+                [(ngModel)]="newTodoText"
+                placeholder="Enter a new todo..."
+                class="form-input"
+                (keyup.enter)="addTodo()"
+              />
+              <button
+                (click)="addTodo()"
+                [disabled]="!newTodoText.trim()"
+                class="btn-success"
+                title="Add new todo"
+              >
+                ➕ Add
+              </button>
+            </div>
+            <button
+              (click)="addMultipleTodos()"
+              class="btn-purple full-width"
+              title="Add 5 random todos for testing"
+            >
+              🎲 Add 5 Random Todos
+            </button>
           </div>
         </div>
+      </div>
 
-        <!-- State Info -->
-        <div class="metrics-group">
-          <h3>🗂️ State Information</h3>
-          <div class="metrics-list">
-            <p><strong>State Size:</strong> {{ getStateSize() }} properties</p>
-            <p><strong>Deep Update Path:</strong> {{ getDeepestPath() }}</p>
-            <p><strong>Last Action:</strong> {{ lastAction }}</p>
+      <!-- DevTools Info -->
+      <div class="card devtools-card">
+        <h2>📊 DevTools Information</h2>
+        <p class="card-description">Real-time monitoring and debugging tools</p>
+
+        <div class="devtools-section">
+          <!-- Performance Metrics -->
+          <div class="metrics-group">
+            <h3>⚡ Performance Metrics</h3>
+            <div class="metrics-list">
+              <p><strong>Updates:</strong> {{ getMetrics().updates }}</p>
+              <p>
+                <strong>Average Update Time:</strong>
+                {{ getMetrics().averageUpdateTime }}ms
+              </p>
+              <p>
+                <strong>Last Update Time:</strong>
+                {{ getMetrics().averageUpdateTime }}ms
+              </p>
+              <p>
+                <strong>Total Execution Time:</strong>
+                {{ getMetrics().computations }}
+              </p>
+            </div>
           </div>
-        </div>
 
-        <!-- DevTools Actions -->
-        <div class="actions-group">
-          <h3>🔧 DevTools Actions</h3>
-          <div class="action-buttons">
-            <button
-              (click)="logState()"
-              class="btn-info"
-              title="Log current state to console"
-            >
-              📋 Log Current State
-            </button>
-            <button
-              (click)="takeSnapshot()"
-              class="btn-purple"
-              title="Save a snapshot of current state"
-            >
-              📸 Take Snapshot ({{ snapshots.length }})
-            </button>
-            <button
-              (click)="resetMetrics()"
-              class="btn-warning"
-              title="Reset all performance metrics"
-            >
-              ↻ Reset Metrics
-            </button>
+          <!-- State Info -->
+          <div class="metrics-group">
+            <h3>🗂️ State Information</h3>
+            <div class="metrics-list">
+              <p><strong>State Size:</strong> {{ getStateSize() }} properties</p>
+              <p><strong>Deep Update Path:</strong> {{ getDeepestPath() }}</p>
+              <p><strong>Last Action:</strong> {{ lastAction }}</p>
+            </div>
           </div>
-        </div>
 
-        <!-- State Snapshots -->
-        @if (snapshots.length > 0) {
-        <div class="snapshots-group">
-          <h3>💾 Saved Snapshots</h3>
-          <div class="snapshots-list">
-            @for (snapshot of snapshots; track snapshot.timestamp; let i =
-            $index) {
-            <div class="snapshot-item">
-              <div class="snapshot-info">
-                <div class="snapshot-title">Snapshot #{{ i + 1 }}</div>
-                <div class="snapshot-time">
-                  {{ formatTimestamp(snapshot.timestamp) }}
+          <!-- DevTools Actions -->
+          <div class="actions-group">
+            <h3>🔧 DevTools Actions</h3>
+            <div class="action-buttons">
+              <button
+                (click)="logState()"
+                class="btn-info"
+                title="Log current state to console"
+              >
+                📋 Log Current State
+              </button>
+              <button
+                (click)="takeSnapshot()"
+                class="btn-purple"
+                title="Save a snapshot of current state"
+              >
+                📸 Take Snapshot ({{ snapshots.length }})
+              </button>
+              <button
+                (click)="resetMetrics()"
+                class="btn-warning"
+                title="Reset all performance metrics"
+              >
+                ↻ Reset Metrics
+              </button>
+            </div>
+          </div>
+
+          <!-- State Snapshots -->
+          @if (snapshots.length > 0) {
+          <div class="snapshots-group">
+            <h3>💾 Saved Snapshots</h3>
+            <div class="snapshots-list">
+              @for (snapshot of snapshots; track snapshot.timestamp; let i =
+              $index) {
+              <div class="snapshot-item">
+                <div class="snapshot-info">
+                  <div class="snapshot-title">Snapshot #{{ i + 1 }}</div>
+                  <div class="snapshot-time">
+                    {{ formatTimestamp(snapshot.timestamp) }}
+                  </div>
+                </div>
+                <div class="snapshot-actions">
+                  <button
+                    (click)="restoreSnapshot(i)"
+                    class="btn-primary btn-xs"
+                    title="Restore this snapshot"
+                  >
+                    ↻ Restore
+                  </button>
+                  <button
+                    (click)="deleteSnapshot(i)"
+                    class="btn-danger btn-xs"
+                    title="Delete this snapshot"
+                  >
+                    ×
+                  </button>
                 </div>
               </div>
-              <div class="snapshot-actions">
-                <button
-                  (click)="restoreSnapshot(i)"
-                  class="btn-primary btn-xs"
-                  title="Restore this snapshot"
-                >
-                  ↻ Restore
-                </button>
-                <button
-                  (click)="deleteSnapshot(i)"
-                  class="btn-danger btn-xs"
-                  title="Delete this snapshot"
-                >
-                  ×
-                </button>
+              }
+            </div>
+          </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Action History Timeline -->
+    <div class="section-card history-card">
+      <h2>⏱️ Action History Timeline</h2>
+      <p class="card-description">Track and replay all state changes</p>
+      <div class="history-section">
+        <div class="history-header">
+          <span class="history-count"
+            >{{ actionHistory.length }} actions recorded</span
+          >
+          <div class="history-controls">
+            <button
+              (click)="replayActions()"
+              [disabled]="actionHistory.length === 0 || replaying"
+              class="btn-success btn-sm"
+            >
+              {{ replaying ? '▶️ Replaying...' : '▶️ Replay All' }}
+            </button>
+            <button
+              (click)="clearHistory()"
+              [disabled]="actionHistory.length === 0"
+              class="btn-secondary btn-sm"
+            >
+              Clear History
+            </button>
+          </div>
+        </div>
+
+        <div class="history-list">
+          @for (action of actionHistory; track action.timestamp; let i = $index)
+          {
+          <div class="history-item">
+            <div class="history-badge">{{ i + 1 }}</div>
+            <div class="history-details">
+              <div class="history-name">{{ action.name }}</div>
+              <div class="history-meta">
+                {{ formatTimestamp(action.timestamp) }} • {{ action.duration }}ms
               </div>
             </div>
-            }
+            <button
+              (click)="replaySingleAction(i)"
+              class="btn-info btn-xs"
+              title="Replay this action"
+            >
+              ↻
+            </button>
           </div>
+          } @if (actionHistory.length === 0) {
+          <div class="no-history">No actions recorded yet</div>
+          }
         </div>
-        }
       </div>
     </div>
-  </div>
 
-  <!-- Action History Timeline -->
-  <div class="section-card history-card">
-    <h2>⏱️ Action History Timeline</h2>
-    <p class="card-description">Track and replay all state changes</p>
-    <div class="history-section">
-      <div class="history-header">
-        <span class="history-count"
-          >{{ actionHistory.length }} actions recorded</span
-        >
-        <div class="history-controls">
-          <button
-            (click)="replayActions()"
-            [disabled]="actionHistory.length === 0 || replaying"
-            class="btn-success btn-sm"
-          >
-            {{ replaying ? '▶️ Replaying...' : '▶️ Replay All' }}
-          </button>
-          <button
-            (click)="clearHistory()"
-            [disabled]="actionHistory.length === 0"
-            class="btn-secondary btn-sm"
-          >
-            Clear History
-          </button>
-        </div>
-      </div>
-
-      <div class="history-list">
-        @for (action of actionHistory; track action.timestamp; let i = $index) {
-        <div class="history-item">
-          <div class="history-badge">{{ i + 1 }}</div>
-          <div class="history-details">
-            <div class="history-name">{{ action.name }}</div>
-            <div class="history-meta">
-              {{ formatTimestamp(action.timestamp) }} • {{ action.duration }}ms
-            </div>
-          </div>
-          <button
-            (click)="replaySingleAction(i)"
-            class="btn-info btn-xs"
-            title="Replay this action"
-          >
-            ↻
-          </button>
-        </div>
-        } @if (actionHistory.length === 0) {
-        <div class="no-history">No actions recorded yet</div>
-        }
-      </div>
-    </div>
-  </div>
-
-  <!-- Current State Display -->
-  <div class="section-card state-view-card">
-    <h2>🔍 Live State View</h2>
-    <p class="card-description">Inspect current state in real-time</p>
-    <div class="state-grid">
-      <div>
-        <h3>User & Counter</h3>
-        <div class="state-display">
-          <pre>{{ formatUserState() }}</pre>
-        </div>
-      </div>
-      <div>
+    <!-- Todos (interactive; counter + user JSON now shown in the state inspector) -->
+    <div class="section-card state-view-card">
+      <h2>🔍 Live Todos</h2>
+      <p class="card-description">Inspect and edit todos in real-time</p>
+      <div class="todos-column">
         <h3>Todos ({{ todos().length }})</h3>
         <div class="todos-display">
           <ul class="todos-list">
@@ -347,5 +346,5 @@
         </div>
       </div>
     </div>
-  </div>
+  </st-example>
 </div>

@@ -3,6 +3,9 @@ import { Component, computed, OnDestroy, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { entityMap, signalTree } from '@signaltree/core';
 
+import { CodeTabsComponent } from '../../examples/shared/components/example-shell';
+import type { CodeFile } from '../../examples/shared/components/example-shell';
+
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -98,7 +101,7 @@ class SimulatedRealtimeAdapter {
 @Component({
   selector: 'app-realtime-demo',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CodeTabsComponent],
   templateUrl: './realtime-demo.component.html',
   styleUrl: './realtime-demo.component.scss',
 })
@@ -393,7 +396,11 @@ export class RealtimeDemoComponent implements OnDestroy {
   // CODE EXAMPLES
   // =============================================================================
 
-  realtimeCode = `import { createRealtimeEnhancer } from '@signaltree/realtime';
+  readonly realtimeCodeFiles: CodeFile[] = [
+    {
+      label: 'Realtime Enhancer',
+      language: 'typescript',
+      source: `import { createRealtimeEnhancer } from '@signaltree/realtime';
 import { createSupabaseAdapter } from '@signaltree/realtime/supabase';
 
 // Create adapter for your backend
@@ -438,9 +445,15 @@ store.realtime.lastConnectedAt(); // Date | null
 // Manual control
 store.realtime.connect();
 store.realtime.disconnect();
-store.realtime.reconnect();`;
+store.realtime.reconnect();`,
+    },
+  ];
 
-  adapterCode = `// Custom adapter interface
+  readonly adapterCodeFiles: CodeFile[] = [
+    {
+      label: 'Custom Adapter',
+      language: 'typescript',
+      source: `// Custom adapter interface
 interface RealtimeAdapter {
   connect(): void;
   disconnect(): void;
@@ -484,5 +497,7 @@ const myAdapter: RealtimeAdapter = {
     // Track connection status
     return () => { /* cleanup */ };
   },
-};`;
+};`,
+    },
+  ];
 }

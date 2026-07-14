@@ -4,6 +4,28 @@ import { serialization, signalTree } from '@signaltree/core';
 
 import type { ISignalTree } from '@signaltree/core';
 
+import {
+  type CodeFile,
+  ExampleComponent,
+} from '../../../../../shared/components/example-shell';
+
+// Source shown in the st-example code panel (was the hand-rolled code block).
+const USAGE_SOURCE = `// Create store with serialization enhancer
+store = signalTree<AppState>(initialState)
+  .with(serialization({
+    preserveTypes: true,  // Preserve Date, Set, Map types
+    includeMetadata: true // Include timestamp in output
+  }));
+
+// Export state to JSON
+const json = store.serialize();
+
+// Import state from JSON
+store.deserialize(json);
+
+// Get plain object (no type markers)
+const obj = store.toJSON();`;
+
 interface ItemType {
   id: number;
   name: string;
@@ -49,11 +71,16 @@ interface SerializableMethods {
 @Component({
   selector: 'app-serialization-demo',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ExampleComponent],
   templateUrl: './serialization-demo.component.html',
   styleUrl: './serialization-demo.component.scss',
 })
 export class SerializationDemoComponent {
+  // Source tabs for the st-example code viewer.
+  readonly codeFiles: CodeFile[] = [
+    { label: 'Using serialization', language: 'typescript', source: USAGE_SOURCE },
+  ];
+
   // Create store with serialization enhancer
   // Note: Using type assertion due to complex generic constraints in serialization
   store: ISignalTree<AppState> & SerializableMethods;

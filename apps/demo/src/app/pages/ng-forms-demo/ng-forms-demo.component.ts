@@ -3,6 +3,9 @@ import { Component, computed, signal } from '@angular/core';
 import { FormArray, ReactiveFormsModule } from '@angular/forms';
 import { createFormTree, email, FormValidationError, minLength, pattern, required } from '@signaltree/ng-forms';
 
+import { ExampleComponent } from '../../examples/shared/components/example-shell';
+import type { CodeFile } from '../../examples/shared/components/example-shell';
+
 type PhoneLabel = 'work' | 'personal' | 'support';
 
 interface ContactNumber {
@@ -31,7 +34,7 @@ interface ProfileForm extends Record<string, unknown> {
 @Component({
   selector: 'app-ng-forms-demo',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, ExampleComponent],
   templateUrl: './ng-forms-demo.component.html',
   styleUrl: './ng-forms-demo.component.scss',
 })
@@ -183,23 +186,23 @@ export class NgFormsDemoComponent {
     const errors = this.profile.errors();
     const asyncErrors = this.profile.asyncErrors();
 
-    return JSON.stringify(
-      {
-        values: this.profile.unwrap(),
-        valid: this.profile.valid(),
-        dirty: this.profile.dirty(),
-        submitting: this.profile.submitting(),
-        asyncPending: this.profile.asyncValidating(),
-        errors,
-        asyncErrors,
-        completionPercent: this.completionPercent(),
-      },
-      null,
-      2
-    );
+    return {
+      values: this.profile.unwrap(),
+      valid: this.profile.valid(),
+      dirty: this.profile.dirty(),
+      submitting: this.profile.submitting(),
+      asyncPending: this.profile.asyncValidating(),
+      errors,
+      asyncErrors,
+      completionPercent: this.completionPercent(),
+    };
   });
 
-  readonly calloutCode = `import {
+  readonly codeFiles: CodeFile[] = [
+    {
+      label: 'Form Tree Setup',
+      language: 'typescript',
+      source: `import {
   createFormTree,
   required,
   email,
@@ -233,7 +236,9 @@ const profile = createFormTree({
       fields: ['company.name', 'company.size'],
     },
   ],
-});`;
+});`,
+    },
+  ];
 
   get phoneControls(): FormArray {
     return this.profile.form.get('phoneNumbers') as FormArray;

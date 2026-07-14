@@ -2,6 +2,11 @@ import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { signalTree } from '@signaltree/core';
 
+import {
+  type CodeFile,
+  ExampleComponent,
+} from '../../../../../shared/components/example-shell';
+
 // Type definitions for the component
 interface User {
   id: number;
@@ -9,16 +14,72 @@ interface User {
   role: string;
 }
 
+// Code shown in the st-example source panel (was two hand-rolled code tabs).
+const CALLABLE_SOURCE = `// ✨ New Callable Syntax (transforms at build time)
+
+// Basic value setting
+tree.$.name('Jane');                           // → .set('Jane')
+tree.$.age(25);                               // → .set(25)
+tree.$.active(true);                          // → .set(true)
+
+// Functional updates
+tree.$.age(current => current + 1);          // → .update(fn)
+tree.$.tags(tags => [...tags, 'new']);       // → .update(fn)
+
+// Deep nested objects
+tree.$.user.profile.email('new@email.com');  // → .set('new@email.com')
+
+// Complex updates
+tree.$.user.profile(profile => updateProfile(profile));  // → .update(fn)
+
+// Array operations
+tree.$.numbers([10, 20, 30]);                // → .set([10, 20, 30])
+tree.$.users(users => users.filter(u => u.active)); // → .update(fn)
+
+// Reading values (unchanged)
+const name = tree.$.name();                  // Always works
+const age = tree.$.user.profile.age();      // Deep access`;
+
+const CURRENT_SOURCE = `// 🔧 Current Explicit Syntax (always works)
+
+// Basic value setting
+tree.$.name.set('Jane');
+tree.$.age.set(25);
+tree.$.active.set(true);
+
+// Functional updates
+tree.$.age.update(current => current + 1);
+tree.$.tags.update(tags => [...tags, 'new']);
+
+// Deep nested objects
+tree.$.user.profile.email.set('new@email.com');
+
+// Complex updates
+tree.$.user.profile.update(profile => updateProfile(profile));
+
+// Array operations
+tree.$.numbers.set([10, 20, 30]);
+tree.$.users.update(users => users.filter(u => u.active));
+
+// Reading values
+const name = tree.$.name();
+const age = tree.$.user.profile.age();`;
+
 @Component({
   selector: 'app-callable-syntax-demo',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ExampleComponent],
   templateUrl: './callable-syntax-demo.component.html',
   styleUrl: './callable-syntax-demo.component.scss',
 })
 export class CallableSyntaxDemoComponent {
   activeSection: 'basic' | 'complex' | 'arrays' | 'performance' = 'basic';
-  activeTab: 'callable' | 'current' = 'callable';
+
+  // Source tabs for the st-example code viewer.
+  readonly codeFiles: CodeFile[] = [
+    { label: 'New Callable Syntax', language: 'typescript', source: CALLABLE_SOURCE },
+    { label: 'Current Explicit Syntax', language: 'typescript', source: CURRENT_SOURCE },
+  ];
 
   // Basic patterns - from test-cases_transformed.ts
   basicProfile = signalTree({

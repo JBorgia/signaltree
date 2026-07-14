@@ -1,11 +1,15 @@
-import { CommonModule } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+
+import {
+  type CodeFile,
+  ExampleComponent,
+} from '../../../../shared/components/example-shell';
 
 @Component({
   selector: 'app-signals-examples',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule, ExampleComponent],
   templateUrl: './signals-examples.component.html',
   styleUrl: './signals-examples.component.scss',
 })
@@ -25,4 +29,23 @@ export class SignalsExamplesComponent {
   // Example B: Reactive input → greeting (computed)
   name = signal('');
   greeting = computed(() => `Hello, ${this.name().trim() || 'friend'}!`);
+
+  // ── Source shown in the st-example code panels ────────────────────────────
+  readonly counterCode: CodeFile[] = [
+    {
+      label: 'counter.ts',
+      language: 'typescript',
+      source: `const count = signal(0);
+count.update(v => v + 1);`,
+    },
+  ];
+
+  readonly greetingCode: CodeFile[] = [
+    {
+      label: 'greeting.ts',
+      language: 'typescript',
+      source: `const name = signal('');
+const greeting = computed(() => \`Hello, \${name().trim() || 'friend'}!\`);`,
+    },
+  ];
 }

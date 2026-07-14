@@ -1,29 +1,24 @@
-<div class="persistence-demo">
-  <header class="demo-header">
-    <h1>💾 Persistence Demo</h1>
-    <p class="description">
-      State automatically saves to localStorage. Try making changes and
-      refreshing the page!
-    </p>
-
-    <div class="status-bar">
-      <div class="status-item">
-        <span class="label">Status:</span>
-        <span class="value" [class]="saveStatus()">
-          @switch (saveStatus()) { @case ('idle') { Ready } @case ('saving') {
-          Saving... } @case ('saved') { ✓ Saved } @case ('error') { ⚠️ Error } }
-        </span>
-      </div>
-      <div class="status-item">
-        <span class="label">Last Saved:</span>
-        <span class="value">{{ formatDate(lastSaved()) }}</span>
-      </div>
-      <div class="status-item">
-        <span class="label">Storage Size:</span>
-        <span class="value">{{ getStorageSize() }}</span>
-      </div>
+<st-example
+  heading="💾 Persistence Demo"
+  intro="State automatically saves to localStorage. Try making changes and refreshing the page!"
+>
+  <div class="status-bar">
+    <div class="status-item">
+      <span class="label">Status:</span>
+      <span class="value" [class]="saveStatus()">
+        @switch (saveStatus()) { @case ('idle') { Ready } @case ('saving') {
+        Saving... } @case ('saved') { ✓ Saved } @case ('error') { ⚠️ Error } }
+      </span>
     </div>
-  </header>
+    <div class="status-item">
+      <span class="label">Last Saved:</span>
+      <span class="value">{{ formatDate(lastSaved()) }}</span>
+    </div>
+    <div class="status-item">
+      <span class="label">Storage Size:</span>
+      <span class="value">{{ getStorageSize() }}</span>
+    </div>
+  </div>
 
   <div class="demo-content">
     <!-- User Profile Section -->
@@ -181,4 +176,4 @@
     <div class="error-message">Error: {{ lastError() }}</div>
     }
   </footer>
-</div>
+</st-example>

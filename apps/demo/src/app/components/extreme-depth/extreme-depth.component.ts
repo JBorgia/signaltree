@@ -4,6 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { signalTree } from '@signaltree/core';
 
+import {
+  CodeTabsComponent,
+  type CodeFile,
+} from '../../examples/shared/components/example-shell';
+
 interface ExtremeDepthStructure {
   enterprise: {
     divisions: {
@@ -50,7 +55,7 @@ interface ExtremeDepthStructure {
 @Component({
   selector: 'app-extreme-depth',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, CodeTabsComponent],
   templateUrl: './extreme-depth.component.html',
   styleUrl: './extreme-depth.component.scss',
 })
@@ -334,18 +339,30 @@ export class ExtremeDepthComponent implements OnInit {
     ];
   }
 
-  typeInferenceExample = `// TypeScript knows this is a WritableSignal<string>
+  typeInferenceExample: CodeFile[] = [
+    {
+      label: 'type-inference.ts',
+      language: 'typescript',
+      source: `// TypeScript knows this is a WritableSignal<string>
 const status = extremeTree.$.enterprise.divisions.technology
   .departments.engineering.teams.frontend.projects.signaltree
   .releases.v1.features.recursiveTyping.validation.tests
-  .extreme.status(); // Perfect type inference at 15+ levels!`;
+  .extreme.status(); // Perfect type inference at 15+ levels!`,
+    },
+  ];
 
-  updateExample = `// Update with full type safety - no 'any' types!
+  updateExample: CodeFile[] = [
+    {
+      label: 'update.ts',
+      language: 'typescript',
+      source: `// Update with full type safety - no 'any' types!
 extremeTree.$.enterprise.divisions.technology.departments
   .engineering.teams.frontend.projects.signaltree.releases.v1
   .features.recursiveTyping.validation.tests.extreme.depth.set(20);
 
-// TypeScript validates the type at every level`;
+// TypeScript validates the type at every level`,
+    },
+  ];
 
   ngOnInit() {
     this.measurePerformance();

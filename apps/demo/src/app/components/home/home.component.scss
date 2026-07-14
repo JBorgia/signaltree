@@ -277,26 +277,6 @@
   border: 1px solid var(--color-neutral-200);
 }
 
-.code-example {
-  margin: 0;
-  padding: var(--space-5);
-  overflow-x: auto;
-  border-radius: var(--radius-xl);
-  background: var(--color-neutral-900);
-  color: var(--color-neutral-100);
-  font-family: var(--font-family-mono);
-  font-size: 0.875rem;
-  line-height: 1.6;
-}
-
-.code-example code {
-  font-family: inherit;
-}
-
-.code-example-large {
-  min-height: 340px;
-}
-
 .extreme-depth-section {
   display: grid;
   grid-template-columns: 1.05fr 0.95fr;

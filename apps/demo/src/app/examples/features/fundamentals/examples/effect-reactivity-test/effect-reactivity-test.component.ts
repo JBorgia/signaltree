@@ -2,6 +2,8 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, effect, signal } from '@angular/core';
 import { entityMap, signalTree } from '@signaltree/core';
 
+import { ExampleComponent } from '../../../../shared/components/example-shell';
+
 import type { EntityMapMarker } from '@signaltree/core';
 
 /**
@@ -51,7 +53,7 @@ interface TestState {
 @Component({
   selector: 'app-effect-reactivity-test',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ExampleComponent],
   templateUrl: './effect-reactivity-test.component.html',
   styleUrl: './effect-reactivity-test.component.scss',
 })
@@ -89,6 +91,15 @@ export class EffectReactivityTestComponent {
   regularLoadingState = computed(() => this.regularSignal());
   haulerCount = computed(() => this.store.$.haulers.count());
   haulers = computed(() => this.store.$.haulers.all());
+
+  // Snapshot for the st-example live-state inspector (replaces the hand-rolled
+  // "Current Signal Values" grid). Values still update via template polling
+  // during change detection — the same mechanism the demo highlights.
+  stateSnapshot = computed(() => ({
+    regularSignal: this.regularLoadingState(),
+    'loading.state': this.loadingState(),
+    'haulers.count': this.haulerCount(),
+  }));
 
   constructor() {
     // ============================================================================

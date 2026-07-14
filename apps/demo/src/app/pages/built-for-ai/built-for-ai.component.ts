@@ -2,6 +2,9 @@ import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
+import { CodeTabsComponent } from '../../examples/shared/components/example-shell';
+import type { CodeFile } from '../../examples/shared/components/example-shell';
+
 /**
  * "Built for AI coding agents" landing page.
  *
@@ -16,8 +19,18 @@ import { RouterModule } from '@angular/router';
 @Component({
   selector: 'app-built-for-ai',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, CodeTabsComponent],
   templateUrl: './built-for-ai.component.html',
   styleUrl: './built-for-ai.component.scss',
 })
-export class BuiltForAIComponent {}
+export class BuiltForAIComponent {
+  /** Copy-paste commands to install the shipped agent skill. */
+  readonly skillInstall: CodeFile[] = [
+    {
+      label: 'install-skill.sh',
+      language: 'bash',
+      source: `cp -r node_modules/@signaltree/core/skills/using-signaltree .cursor/skills/
+cp -r node_modules/@signaltree/core/skills/using-signaltree .claude/skills/`,
+    },
+  ];
+}

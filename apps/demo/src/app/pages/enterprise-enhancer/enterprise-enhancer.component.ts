@@ -3,6 +3,49 @@ import { Component, computed, signal } from '@angular/core';
 import { signalTree } from '@signaltree/core';
 import { enterprise, UpdateResult } from '@signaltree/enterprise';
 
+import {
+  type CodeFile,
+  ExampleComponent,
+} from '../../examples/shared/components/example-shell';
+
+// ── Source shown in the st-example code panel ────────────────────────────────
+
+const BASIC_SETUP_SOURCE = `import { signalTree } from '@signaltree/core';
+import { enterprise } from '@signaltree/enterprise';
+
+const tree = signalTree(largeState).with(enterprise());
+
+// Optimized bulk update
+const result = tree.updateOptimized(newData, {
+  ignoreArrayOrder: true,
+  maxDepth: 10
+});
+
+console.log(result.stats);
+// { totalPaths: 45, optimizedPaths: 30, batchedUpdates: 5 }`;
+
+const DASHBOARD_SOURCE = `const dashboard = signalTree(initialState).with(enterprise());
+
+// High-frequency WebSocket updates
+socket.on('metrics', (newMetrics) => {
+  const result = dashboard.updateOptimized(
+    { metrics: newMetrics },
+    { ignoreArrayOrder: true }
+  );
+
+  console.log(\`Updated \${result.changedPaths.length} paths\`);
+});`;
+
+const CUSTOM_EQUALITY_SOURCE = `tree.updateOptimized(newState, {
+  equalityFn: (a, b) => {
+    // Custom deep equality for specific types
+    if (a instanceof Date && b instanceof Date) {
+      return a.getTime() === b.getTime();
+    }
+    return a === b;
+  }
+});`;
+
 interface DashboardState extends Record<string, unknown> {
   metrics: Record<string, number>;
   users: Array<{ id: number; name: string; active: boolean }>;
@@ -16,7 +59,7 @@ interface DashboardState extends Record<string, unknown> {
 @Component({
   selector: 'app-enterprise-enhancer',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ExampleComponent],
   templateUrl: './enterprise-enhancer.component.html',
   styleUrl: './enterprise-enhancer.component.scss',
 })
@@ -63,6 +106,29 @@ export class EnterpriseEnhancerComponent {
   batchedUpdates = computed(
     () => this.lastUpdateResult()?.stats?.batchedUpdates ?? 0
   );
+
+  // Live snapshot for the st-example state inspector (replaces the hand-rolled
+  // .state-display block).
+  readonly stateSnapshot = computed(() => ({
+    metrics: this.metrics(),
+    users: this.users(),
+    config: this.config(),
+  }));
+
+  // Source tabs for the st-example code viewer.
+  readonly codeFiles: CodeFile[] = [
+    { label: 'Basic Setup', language: 'typescript', source: BASIC_SETUP_SOURCE },
+    {
+      label: 'Real-Time Dashboard',
+      language: 'typescript',
+      source: DASHBOARD_SOURCE,
+    },
+    {
+      label: 'Custom Equality',
+      language: 'typescript',
+      source: CUSTOM_EQUALITY_SOURCE,
+    },
+  ];
 
   // Demo actions
   updateMetrics() {

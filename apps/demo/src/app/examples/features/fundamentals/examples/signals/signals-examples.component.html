@@ -8,9 +8,11 @@
   </header>
 
   <div class="grid">
-    <article class="card">
-      <h3>Basic Counter</h3>
-      <p class="desc">The smallest possible signal + updater pattern.</p>
+    <st-example
+      heading="Basic Counter"
+      intro="The smallest possible signal + updater pattern."
+      [code]="counterCode"
+    >
       <div class="badges">
         <span class="badge">#signals</span
         ><span class="badge">#state-management</span
@@ -22,13 +24,13 @@
         <button class="btn" (click)="inc()">＋</button>
         <button class="btn" (click)="reset()">Reset</button>
       </div>
-      <pre class="code"><code>const count = signal(0);
-count.update(v => v + 1);</code></pre>
-    </article>
+    </st-example>
 
-    <article class="card">
-      <h3>Reactive Form Control</h3>
-      <p class="desc">Bind an input to a signal and derive a greeting.</p>
+    <st-example
+      heading="Reactive Form Control"
+      intro="Bind an input to a signal and derive a greeting."
+      [code]="greetingCode"
+    >
       <div class="badges">
         <span class="badge">#signals</span><span class="badge">#forms</span>
       </div>
@@ -40,8 +42,6 @@ count.update(v => v + 1);</code></pre>
         />
         <span>{{ greeting() }}</span>
       </div>
-      <pre class="code"><code>const name = signal('');
-const greeting = computed(() => `Hello, &#36;&#123;name().trim() || 'friend'&#125;!`);</code></pre>
-    </article>
+    </st-example>
   </div>
 </section>

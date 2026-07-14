@@ -9,6 +9,11 @@ import {
   stored,
 } from '@signaltree/core';
 
+import {
+  type CodeFile,
+  ExampleComponent,
+} from '../../../../shared/components/example-shell';
+
 interface User {
   id: number;
   name: string;
@@ -31,7 +36,7 @@ interface MarkersState {
 @Component({
   selector: 'app-markers-demo',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ExampleComponent],
   templateUrl: './markers-demo.component.html',
   styleUrl: './markers-demo.component.scss',
 })
@@ -119,6 +124,19 @@ export class MarkersDemoComponent {
     this.store.$.lastViewedUserId.clear();
   }
 
+  // ── st-example: live-state snapshots ───────────────────────────────────────
+  readonly statusSnapshot = computed(() => ({
+    state: this.store.$.users.status.state(),
+    isReady: this.store.$.isReady(),
+    userCount: this.store.$.users.entities.all().length,
+  }));
+
+  readonly storageSnapshot = computed(() => ({
+    'demo-theme': this.store.$.theme(),
+    'demo-fontSize': this.store.$.fontSize(),
+    'demo-lastViewedUserId': this.store.$.lastViewedUserId(),
+  }));
+
   // Code examples for display
   statusExample = `// status() marker - async operation state
 const tree = signalTree({
@@ -176,9 +194,24 @@ const tree = signalTree({
   ),
   selectedUser: computed(() => {
     const id = $.lastViewedUserId();
-    return id != null 
-      ? $.users.entities.byId(id)?.() 
+    return id != null
+      ? $.users.entities.byId(id)?.()
       : null;
   }),
 }));`;
+
+  // ── st-example: source tabs (wrap the example strings above) ────────────────
+  readonly statusCodeFiles: CodeFile[] = [
+    { label: 'status()', language: 'typescript', source: this.statusExample },
+  ];
+  readonly storedCodeFiles: CodeFile[] = [
+    { label: 'stored()', language: 'typescript', source: this.storedExample },
+  ];
+  readonly combinedCodeFiles: CodeFile[] = [
+    {
+      label: 'markers + derived',
+      language: 'typescript',
+      source: this.combinedExample,
+    },
+  ];
 }

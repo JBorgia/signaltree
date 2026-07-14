@@ -20,17 +20,6 @@
     color: #444;
     margin: 0 0 1rem 0;
   }
-
-  pre {
-    background: #f4f4f6;
-    color: #1f2937;
-    border: 1px solid #e1e1e6;
-    border-radius: 6px;
-    padding: 0.6rem 0.85rem;
-    font-size: 0.9rem;
-    overflow-x: auto;
-    margin: 0;
-  }
 }
 
 .demo {
@@ -139,27 +128,6 @@ details.code-detail {
       color: #1f2937;
     }
   }
-
-  pre {
-    background: #1f2937;
-    color: #e5e7eb;
-    border-radius: 6px;
-    padding: 0.85rem 1rem;
-    font-size: 0.82rem;
-    overflow-x: auto;
-    margin: 0.75rem 0 0 0;
-    line-height: 1.5;
-    font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
-
-    code {
-      background: transparent;
-      color: inherit;
-      padding: 0;
-      border-radius: 0;
-      font-size: inherit;
-      font-family: inherit;
-    }
-  }
 }
 
 .users {
@@ -237,29 +205,6 @@ details.code-detail {
 
   li {
     margin-bottom: 0.4rem;
-  }
-}
-
-// Code blocks (pre > code): dark theme, no inline-code box-painting.
-pre {
-  background: #1f2937;
-  color: #e5e7eb;
-  border-radius: 6px;
-  padding: 0.85rem 1rem;
-  font-size: 0.82rem;
-  overflow-x: auto;
-  margin: 0 0 0.75rem 0;
-  line-height: 1.5;
-  font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
-
-  code {
-    // Strip inline-code styling when nested inside a pre block.
-    background: transparent;
-    color: inherit;
-    padding: 0;
-    border-radius: 0;
-    font-size: inherit;
-    font-family: inherit;
   }
 }
 

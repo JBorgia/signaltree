@@ -24,19 +24,7 @@
           <span class="badge loaded">✅ loaded</span>
         }
       </div>
-      <pre><code>// Read predicates (v10.3 canonical — bare names)
-store.$.orgStatus.loading();      // Signal&lt;boolean&gt;
-store.$.orgStatus.loaded();
-store.$.orgStatus.hasError();
-
-// Write methods (canonical):
-store.$.orgStatus.setLoading();
-store.$.orgStatus.setLoaded();
-
-// v10.2 Promise-vocabulary aliases (equivalent):
-store.$.orgStatus.start();        // === setLoading
-store.$.orgStatus.setSuccess();   // === setLoaded
-store.$.orgStatus.fail(err);      // === setError</code></pre>
+      <st-code-tabs [files]="statusCode" />
     </article>
 
     <article class="card">
@@ -86,7 +74,7 @@ store.$.orgStatus.fail(err);      // === setError</code></pre>
           }
         </ul>
       }
-      <pre><code>store.$.organization.teams.list.all()</code></pre>
+      <st-code-tabs [files]="entityMapCode" />
     </article>
 
     <article class="card">
@@ -128,7 +116,7 @@ store.$.orgStatus.fail(err);      // === setError</code></pre>
           Theme: <strong>{{ store.$.settings.theme() }}</strong> (click to toggle)
         </button>
       </div>
-      <pre><code>theme: stored('marker-zoo-theme', 'light')</code></pre>
+      <st-code-tabs [files]="storedCode" />
     </article>
 
     <article class="card">

@@ -214,13 +214,6 @@
       &.error {
         color: var(--error-color, var(--color-error-500));
       }
-
-      pre {
-        margin: 0;
-        font-size: 0.75rem;
-        max-height: 150px;
-        overflow: auto;
-      }
     }
   }
 
@@ -238,21 +231,6 @@
     margin: 0 0 1rem;
     font-size: 1rem;
     color: var(--text-primary, var(--color-neutral-900));
-  }
-
-  pre {
-    background: var(--bg-code, #1e1e1e);
-    color: var(--text-code, var(--color-neutral-300));
-    padding: 1rem;
-    border-radius: 8px;
-    overflow: auto;
-    font-size: 0.8rem;
-    line-height: 1.5;
-    max-height: 500px;
-
-    code {
-      font-family: 'Fira Code', 'Monaco', monospace;
-    }
   }
 }
 
@@ -616,16 +594,6 @@
       margin: 0 0 0.5rem;
       font-size: 0.875rem;
       color: var(--text-secondary, var(--color-neutral-500));
-    }
-
-    pre {
-      background: var(--bg-code, var(--color-neutral-100));
-      color: var(--text-code, var(--color-neutral-300));
-      padding: 0.75rem;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      overflow-x: auto;
-      margin: 0;
     }
   }
 }

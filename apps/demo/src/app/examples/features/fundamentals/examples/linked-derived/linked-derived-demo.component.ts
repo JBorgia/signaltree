@@ -2,6 +2,11 @@ import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { linked, signalTree } from '@signaltree/core';
 
+import {
+  type CodeFile,
+  ExampleComponent,
+} from '../../../../shared/components/example-shell';
+
 interface Item {
   id: number;
   name: string;
@@ -26,18 +31,14 @@ const SEED: Item[] = [
 @Component({
   selector: 'app-linked-derived-demo',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ExampleComponent],
   template: `
-    <section class="demo">
-      <h2>Derived-but-writable — <code>linked()</code></h2>
-      <p class="muted">
-        <code
-          >selected: linked({{ '{' }} source: () =&gt; $.items(), computation:
-          (items, prev) =&gt; items.find(i =&gt; i.id === prev?.value?.id) ??
-          items[0] {{ '}' }})</code
-        >
-      </p>
-
+    <st-example
+      heading="Derived-but-writable — linked()"
+      intro="linked() is SignalTree's derived-but-writable signal (it wraps Angular's linkedSignal). selected is derived from items — defaulting to the first — yet writable (click a row to override), and re-derives when items changes: it keeps the chosen item if it still exists (sticky selection), otherwise falls back to the first."
+      [code]="codeFiles"
+    >
+      <section class="demo">
       <div class="cols">
         <div>
           <h3>items <span class="muted">(click to select)</span></h3>
@@ -79,7 +80,8 @@ const SEED: Item[] = [
         </button>
         <button type="button" (click)="reset()">Reset</button>
       </div>
-    </section>
+      </section>
+    </st-example>
   `,
   styles: [
     `
@@ -143,6 +145,21 @@ export class LinkedDerivedDemoComponent {
 
   items = this.store.$.items;
   selected = this.store.$.selected;
+
+  readonly codeFiles: CodeFile[] = [
+    {
+      label: 'linked-derived-demo.component.ts',
+      language: 'typescript',
+      source: `store = signalTree({ items: [...SEED] }).derived(($) => ({
+  // Sticky selection: derived from items, writable, re-derives on change.
+  selected: linked({
+    source: () => $.items(),
+    computation: (items, prev): Item | undefined =>
+      items.find((i) => i.id === prev?.value?.id) ?? items[0],
+  }),
+}));`,
+    },
+  ];
 
   select(it: Item): void {
     this.store.$.selected.set(it); // manual override — `selected` is writable

@@ -51,14 +51,6 @@ $text-light: #737373;  // --color-neutral-500
   margin: 0 auto;
   padding: 2rem;
 
-  h1 {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: $dark;
-    margin-bottom: 1.5rem;
-    text-align: center;
-  }
-
   h2 {
     font-size: 1.5rem;
     font-weight: 700;
@@ -631,56 +623,13 @@ $text-light: #737373;  // --color-neutral-500
   font-size: 0.875rem;
 }
 
-// State View
-.state-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-
-  @media (max-width: 1024px) {
-    grid-template-columns: 1fr;
-  }
-
+// Todos View
+.todos-column {
   h3 {
     margin-top: 0;
     margin-bottom: 1rem;
     padding-bottom: 0.75rem;
     border-bottom: 2px solid $border;
-  }
-}
-
-.state-display {
-  background: $dark;
-  padding: 1.5rem;
-  border-radius: 8px;
-  max-height: 400px;
-  overflow-y: auto;
-
-  pre {
-    font-size: 0.875rem;
-    margin: 0;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    color: var(--color-secondary-500);
-    font-family: 'Monaco', 'Courier New', monospace;
-  }
-
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: var(--color-neutral-700);
-    border-radius: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: var(--color-neutral-500);
-    border-radius: 4px;
-
-    &:hover {
-      background: var(--color-neutral-400);
-    }
   }
 }
 

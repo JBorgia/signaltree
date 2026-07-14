@@ -1,7 +1,8 @@
-import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { persistence, signalTree } from '@signaltree/core';
+
+import { ExampleComponent } from '../../../../../shared/components/example-shell';
 
 type Themes = 'light' | 'dark' | 'system';
 
@@ -22,7 +23,7 @@ type Themes = 'light' | 'dark' | 'system';
 @Component({
   selector: 'app-persistence-demo',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule, ExampleComponent],
   templateUrl: './persistence-demo.component.html',
   styleUrl: './persistence-demo.component.scss',
 })

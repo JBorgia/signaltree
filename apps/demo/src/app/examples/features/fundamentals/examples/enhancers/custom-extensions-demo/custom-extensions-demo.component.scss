@@ -612,38 +612,6 @@
       color: #e06c75;
     }
   }
-
-  pre {
-    margin: 0;
-    overflow-x: auto;
-    background: #1e1e2e;
-    color: #e5e7eb;
-    padding: 1rem;
-    border-radius: 8px;
-    min-height: 1px;
-  }
-
-  code {
-    display: block;
-    color: #abb2bf;
-    font-family: 'Fira Code', 'Cascadia Code', 'Monaco', monospace;
-    font-size: 0.8rem;
-    line-height: 1.6;
-    white-space: pre;
-  }
-
-  .code-block {
-    margin: 0;
-    overflow-x: auto;
-    background: #1e1e2e;
-    padding: 1rem;
-    border-radius: 8px;
-    color: #abb2bf;
-    font-family: 'Fira Code', 'Cascadia Code', 'Monaco', monospace;
-    font-size: 0.8rem;
-    line-height: 1.6;
-    white-space: pre;
-  }
 }
 
 // Best Practices Section
@@ -721,10 +689,6 @@
 
   .demo-grid {
     grid-template-columns: 1fr;
-  }
-
-  .code-block {
-    font-size: 0.75rem;
   }
 }
 

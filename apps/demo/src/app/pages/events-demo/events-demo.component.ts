@@ -18,6 +18,12 @@ import {
 } from '@signaltree/events';
 import { createMockEventBus, createTestEvent, MockEventBus, PublishedEvent } from '@signaltree/events/testing';
 
+import {
+  type CodeFile,
+  CodeTabsComponent,
+  StateInspectorComponent,
+} from '../../examples/shared/components/example-shell';
+
 // =============================================================================
 // DEMO EVENT TYPES
 // =============================================================================
@@ -60,7 +66,7 @@ type DemoEvent = TradeProposalCreated | TradeAccepted | UserRegistered;
 @Component({
   selector: 'app-events-demo',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CodeTabsComponent, StateInspectorComponent],
   templateUrl: './events-demo.component.html',
   styleUrl: './events-demo.component.scss',
 })
@@ -140,6 +146,109 @@ export class EventsDemoComponent {
       weight: config.weight,
     }));
   });
+
+  // =============================================================================
+  // STATIC CODE SAMPLES (rendered via <st-code-tabs>)
+  // =============================================================================
+
+  readonly reactionsEventBusCode: CodeFile[] = [
+    {
+      label: 'event-bus.ts',
+      language: 'typescript',
+      source: `// Publish a typed, validated event
+const event = factory.create<TradeProposed>('TradeProposed', { tradeId, vehicleId });
+await eventBus.publish(event);
+
+// Subscribe
+eventBus.subscribe('TradeProposed', handler);`,
+    },
+  ];
+
+  readonly reactionsEffectCode: CodeFile[] = [
+    {
+      label: 'effect.ts',
+      language: 'typescript',
+      source: `// Re-runs whenever filters change
+tree.effect(state => {
+  const filters = state.tickets.filters;
+  untracked(() => ticketOps.load(filters));
+});
+
+// With cleanup
+tree.effect(state => {
+  const userId = state.auth.user()?.id;
+  const sub = ws.subscribe(userId, onMessage);
+  return () => sub.unsubscribe(); // cleanup on re-run
+})`,
+    },
+  ];
+
+  readonly quickStartSchemaCode: CodeFile[] = [
+    {
+      label: 'schema.ts',
+      language: 'typescript',
+      source: `import { createEventSchema, z } from '@signaltree/events';
+
+export const TradeProposalCreatedSchema = createEventSchema('TradeProposalCreated', {
+  tradeId: z.string().uuid(),
+  initiatorId: z.string().uuid(),
+  recipientId: z.string().uuid(),
+  vehicleOfferedId: z.string().uuid(),
+});
+
+export type TradeProposalCreated = z.infer<typeof TradeProposalCreatedSchema>;`,
+    },
+  ];
+
+  readonly quickStartFactoryCode: CodeFile[] = [
+    {
+      label: 'factory.ts',
+      language: 'typescript',
+      source: `import { createEventFactory } from '@signaltree/events';
+
+const factory = createEventFactory({
+  source: 'trade-service',
+  environment: 'production',
+});
+
+const event = factory.create<TradeProposalCreated>('TradeProposalCreated', {
+  tradeId: '550e8400-e29b-41d4-a716-446655440000',
+  initiatorId: 'user-1',
+  recipientId: 'user-2',
+  vehicleOfferedId: 'vehicle-1',
+}, {
+  priority: 'high',
+  actor: { id: 'user-1', type: 'user' },
+});`,
+    },
+  ];
+
+  readonly quickStartMockBusCode: CodeFile[] = [
+    {
+      label: 'mock-event-bus.test.ts',
+      language: 'typescript',
+      source: `import { createMockEventBus, createTestEvent } from '@signaltree/events/testing';
+
+const eventBus = createMockEventBus();
+
+// Subscribe to events
+eventBus.subscribe('TradeProposalCreated', (event) => {
+  console.log('Trade proposed:', event.data.tradeId);
+});
+
+// Publish test event
+await eventBus.publish(createTestEvent('TradeProposalCreated', {
+  tradeId: '123',
+  initiatorId: 'user-1',
+  recipientId: 'user-2',
+  vehicleOfferedId: 'vehicle-1',
+}));
+
+// Assert behavior
+expect(eventBus.wasPublished('TradeProposalCreated')).toBe(true);
+expect(eventBus.getPublishedEvents()).toHaveLength(1);`,
+    },
+  ];
 
   constructor() {
     // Set up MockEventBus subscriptions

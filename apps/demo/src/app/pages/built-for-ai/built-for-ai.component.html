@@ -68,8 +68,7 @@
         agents that follow the Anthropic Agent Skills convention discover
         the skill automatically when SignalTree is installed.
       </p>
-      <pre><code>cp -r node_modules/&#64;signaltree/core/skills/using-signaltree .cursor/skills/
-cp -r node_modules/&#64;signaltree/core/skills/using-signaltree .claude/skills/</code></pre>
+      <st-code-tabs [files]="skillInstall" />
       <p class="small">
         Cursor and Claude Code pick them up automatically; generic harnesses
         can point at the same folder.

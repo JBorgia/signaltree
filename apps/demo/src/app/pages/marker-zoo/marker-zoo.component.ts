@@ -14,6 +14,9 @@ import {
 } from '@signaltree/core';
 import { delay, of } from 'rxjs';
 
+import { CodeTabsComponent } from '../../examples/shared/components/example-shell';
+import type { CodeFile } from '../../examples/shared/components/example-shell';
+
 interface User {
   id: number;
   name: string;
@@ -58,11 +61,47 @@ const ALL_TEAMS: Team[] = [
 @Component({
   selector: 'app-marker-zoo',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, CodeTabsComponent],
   templateUrl: './marker-zoo.component.html',
   styleUrl: './marker-zoo.component.scss',
 })
 export class MarkerZooComponent {
+  readonly statusCode: CodeFile[] = [
+    {
+      label: 'status.ts',
+      language: 'typescript',
+      source: `// Read predicates (v10.3 canonical — bare names)
+store.$.orgStatus.loading();      // Signal<boolean>
+store.$.orgStatus.loaded();
+store.$.orgStatus.hasError();
+
+// Write methods (canonical):
+store.$.orgStatus.setLoading();
+store.$.orgStatus.setLoaded();
+
+// v10.2 Promise-vocabulary aliases (equivalent):
+store.$.orgStatus.start();        // === setLoading
+store.$.orgStatus.setSuccess();   // === setLoaded
+store.$.orgStatus.fail(err);      // === setError`,
+    },
+  ];
+
+  readonly entityMapCode: CodeFile[] = [
+    {
+      label: 'entityMap.ts',
+      language: 'typescript',
+      source: `store.$.organization.teams.list.all()`,
+    },
+  ];
+
+  readonly storedCode: CodeFile[] = [
+    {
+      label: 'stored.ts',
+      language: 'typescript',
+      source: `theme: stored('marker-zoo-theme', 'light')`,
+    },
+  ];
+
   readonly store = signalTree({
     // depth 1 — status marker for org-wide sync
     orgStatus: status(),

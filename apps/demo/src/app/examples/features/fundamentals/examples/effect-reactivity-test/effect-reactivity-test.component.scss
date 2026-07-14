@@ -20,8 +20,6 @@ h3 {
   font-size: 1rem;
 }
 
-.explanation-card,
-.state-display,
 .counter-display,
 .actions-panel,
 .haulers-panel,
@@ -56,31 +54,10 @@ h3 {
   margin: 8px 0;
 }
 
-.state-grid,
 .counter-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
-}
-
-.state-item {
-  background: white;
-  padding: 12px;
-  border-radius: 6px;
-  border: 1px solid var(--border-color);
-}
-
-.state-item .label {
-  display: block;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  margin-bottom: 4px;
-}
-
-.state-item .value {
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: var(--text-primary);
 }
 
 .counter-item {

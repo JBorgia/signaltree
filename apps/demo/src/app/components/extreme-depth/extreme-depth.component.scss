@@ -526,27 +526,14 @@
     font-weight: 600;
   }
 
-  .code-example {
-    background: var(--color-dark);
-    color: var(--color-light);
-    padding: 2rem;
-    border-radius: 8px;
+  .code-block {
     margin-bottom: 2rem;
-    overflow-x: auto;
 
     h3 {
-      color: var(--color-neutral-100);
+      color: var(--color-dark);
       margin-bottom: 1rem;
       font-size: 1rem;
       font-weight: 500;
-    }
-
-    pre {
-      margin: 0;
-      font-family: 'Fira Code', 'Courier New', monospace;
-      font-size: 0.875rem;
-      line-height: 1.6;
-      white-space: pre-wrap;
     }
   }
 }

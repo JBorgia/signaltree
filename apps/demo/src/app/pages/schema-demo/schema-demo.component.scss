@@ -4,21 +4,6 @@
   padding: 1.5rem;
 }
 
-.page-header {
-  margin-bottom: 2rem;
-
-  h1 {
-    margin: 0 0 0.5rem;
-    font-size: 1.875rem;
-  }
-
-  .lead {
-    color: var(--text-muted, #555);
-    margin: 0;
-    line-height: 1.5;
-  }
-}
-
 .demo-grid {
   display: grid;
   grid-template-columns: 1.2fr 1fr;
@@ -193,28 +178,6 @@
     color: var(--text-muted, #888);
     font-size: 0.85rem;
     margin: 0;
-  }
-}
-
-.code-panel {
-  margin-top: 2rem;
-  background: #1e1e1e;
-  color: #d4d4d4;
-  border-radius: 6px;
-  padding: 1.25rem;
-  overflow-x: auto;
-
-  h2 {
-    color: #d4d4d4;
-    margin: 0 0 0.75rem;
-    font-size: 1rem;
-  }
-
-  pre {
-    margin: 0;
-    font-family: 'Menlo', 'Monaco', monospace;
-    font-size: 0.85rem;
-    line-height: 1.5;
   }
 }
 

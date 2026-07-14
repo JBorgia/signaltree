@@ -5,6 +5,11 @@ import { signalTree } from '@signaltree/core';
 import { schemas } from '@signaltree/schema';
 import { z } from 'zod';
 
+import {
+  type CodeFile,
+  ExampleComponent,
+} from '../../examples/shared/components/example-shell';
+
 // Demo state — a profile form with sync + async validation
 interface ProfileForm {
   [key: string]: unknown;
@@ -17,7 +22,7 @@ interface ProfileForm {
 @Component({
   selector: 'app-schema-demo',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ExampleComponent],
   templateUrl: './schema-demo.component.html',
   styleUrl: './schema-demo.component.scss',
 })
@@ -95,6 +100,15 @@ tree.schemas.errorList();              // readonly string[]
 
 // Imperative validate (returns post-validation isValid).
 const ok = await tree.schemas.validate();`;
+
+  // Source shown in the example shell's tabbed code viewer
+  readonly codeFiles: CodeFile[] = [
+    {
+      label: 'schema-demo.ts',
+      language: 'typescript',
+      source: this.codeExample,
+    },
+  ];
 
   // Aggregates from the enhancer
   readonly isValid = computed(() => this.store.schemas.isValid());

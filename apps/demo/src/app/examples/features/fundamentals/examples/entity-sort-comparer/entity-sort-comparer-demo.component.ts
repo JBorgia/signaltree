@@ -2,6 +2,8 @@ import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { entityMap, signalTree } from '@signaltree/core';
 
+import { ExampleComponent } from '../../../../shared/components/example-shell';
+
 import type { EntityMapMarker } from '@signaltree/core';
 
 interface Player {
@@ -25,11 +27,10 @@ interface LeaderboardState {
 @Component({
   selector: 'app-entity-sort-comparer-demo',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ExampleComponent],
   template: `
-    <section class="demo">
-      <h2>Auto-sorted collection — <code>sortComparer</code></h2>
-      <p class="muted">
+    <st-example heading="Auto-sorted collection — sortComparer">
+      <p intro class="muted">
         <code
           >entityMap&lt;Player&gt;({{ '{' }} sortComparer: (a, b) =&gt; b.score
           - a.score {{ '}' }})</code
@@ -37,25 +38,27 @@ interface LeaderboardState {
         keeps <code>all()</code> highest-score-first on every read.
       </p>
 
-      <div class="controls">
-        <button type="button" (click)="addRandom()">+ Add player</button>
-        <button type="button" (click)="bumpRandom()">↑ Bump a score</button>
-        <button type="button" (click)="reset()">Reset</button>
-      </div>
+      <div class="demo">
+        <div class="controls">
+          <button type="button" (click)="addRandom()">+ Add player</button>
+          <button type="button" (click)="bumpRandom()">↑ Bump a score</button>
+          <button type="button" (click)="reset()">Reset</button>
+        </div>
 
-      <ol class="board">
-        @for (p of players(); track p.id) {
-        <li>
-          <span class="rank">#{{ $index + 1 }}</span>
-          <span class="name">{{ p.name }}</span>
-          <span class="score">{{ p.score }}</span>
-        </li>
-        }
-      </ol>
-      <p class="muted">
-        Rows reorder automatically — no manual sort runs after mutations.
-      </p>
-    </section>
+        <ol class="board">
+          @for (p of players(); track p.id) {
+          <li>
+            <span class="rank">#{{ $index + 1 }}</span>
+            <span class="name">{{ p.name }}</span>
+            <span class="score">{{ p.score }}</span>
+          </li>
+          }
+        </ol>
+        <p class="muted">
+          Rows reorder automatically — no manual sort runs after mutations.
+        </p>
+      </div>
+    </st-example>
   `,
   styles: [
     `

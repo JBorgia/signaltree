@@ -1,44 +1,29 @@
 <div class="container">
   <h1>🔬 Effect Reactivity Test</h1>
 
-  <div class="explanation-card">
-    <h2>📖 What This Test Shows</h2>
-    <p class="intro-text">
-      This test replicates the exact pattern from the v3 trax-mobile app that revealed a bug in SignalTree.
-      It demonstrates whether <code>effect()</code> properly re-runs when SignalTree signals change.
-    </p>
-
-    <div class="warning-callout">
-      <h3>⚠️ Known Bug</h3>
-      <p>
-        SignalTree signals do NOT trigger Angular's <code>effect()</code> re-execution.
-        This was discovered when migrating the v3 trax-mobile app from NgRx to SignalTree.
+  <st-example
+    heading="📖 What This Test Shows"
+    [state]="stateSnapshot()"
+    stateLabel="📊 Current Signal Values"
+  >
+    <div intro>
+      <p class="intro-text">
+        This test replicates the exact pattern from the v3 trax-mobile app that revealed a bug in SignalTree.
+        It demonstrates whether <code>effect()</code> properly re-runs when SignalTree signals change.
       </p>
-      <p>
-        <strong>Expected:</strong> Effects should re-run when any signal they read changes.<br>
-        <strong>Actual:</strong> Effects only re-run for regular Angular signals, NOT SignalTree signals.
-      </p>
-    </div>
-  </div>
 
-  <!-- Current State Display -->
-  <div class="state-display">
-    <h2>📊 Current Signal Values</h2>
-    <div class="state-grid">
-      <div class="state-item">
-        <span class="label">Regular Signal:</span>
-        <span class="value">{{ regularLoadingState() }}</span>
-      </div>
-      <div class="state-item">
-        <span class="label">SignalTree $.loading.state:</span>
-        <span class="value">{{ loadingState() }}</span>
-      </div>
-      <div class="state-item">
-        <span class="label">SignalTree $.haulers.count():</span>
-        <span class="value">{{ haulerCount() }}</span>
+      <div class="warning-callout">
+        <h3>⚠️ Known Bug</h3>
+        <p>
+          SignalTree signals do NOT trigger Angular's <code>effect()</code> re-execution.
+          This was discovered when migrating the v3 trax-mobile app from NgRx to SignalTree.
+        </p>
+        <p>
+          <strong>Expected:</strong> Effects should re-run when any signal they read changes.<br>
+          <strong>Actual:</strong> Effects only re-run for regular Angular signals, NOT SignalTree signals.
+        </p>
       </div>
     </div>
-  </div>
 
   <!-- Effect Counters -->
   <div class="counter-display">
@@ -162,4 +147,5 @@
       Template binding works because Angular's change detection polls values, not because effects track them.
     </p>
   </div>
+  </st-example>
 </div>

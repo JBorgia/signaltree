@@ -1,7 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, computed, ElementRef, Signal, signal, ViewChild } from '@angular/core';
+import { Component, computed, Signal, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ISignalTree, registerMarkerProcessor, signalTree } from '@signaltree/core';
+
+import {
+  type CodeFile,
+  CodeTabsComponent,
+} from '../../../../../shared/components/example-shell';
 
 // =============================================================================
 // TWO PATTERNS FOR CUSTOM SIGNALS
@@ -301,18 +306,11 @@ interface Task {
 @Component({
   selector: 'app-custom-extensions-demo',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CodeTabsComponent],
   templateUrl: './custom-extensions-demo.component.html',
   styleUrl: './custom-extensions-demo.component.scss',
 })
-export class CustomExtensionsDemoComponent implements AfterViewInit {
-  // ViewChild references for code blocks
-  @ViewChild('counterCode') counterCodeEl!: ElementRef<HTMLPreElement>;
-  @ViewChild('selectionCode') selectionCodeEl!: ElementRef<HTMLPreElement>;
-  @ViewChild('undoCode') undoCodeEl!: ElementRef<HTMLPreElement>;
-  @ViewChild('freezeCode') freezeCodeEl!: ElementRef<HTMLPreElement>;
-  @ViewChild('usageCode') usageCodeEl!: ElementRef<HTMLPreElement>;
-
+export class CustomExtensionsDemoComponent {
   // =============================================================================
   // PATTERN 1: STANDALONE FACTORIES (no registration needed)
   // =============================================================================
@@ -439,28 +437,6 @@ export class CustomExtensionsDemoComponent implements AfterViewInit {
     this.checkpoint();
     const value = (event.target as HTMLInputElement).value;
     this.store.$.userName.set(value);
-  }
-
-  ngAfterViewInit(): void {
-    // Set code block content after view init
-    setTimeout(() => {
-      if (this.counterCodeEl?.nativeElement) {
-        this.counterCodeEl.nativeElement.textContent = this.counterMarkerCode;
-      }
-      if (this.selectionCodeEl?.nativeElement) {
-        this.selectionCodeEl.nativeElement.textContent =
-          this.selectionMarkerCode;
-      }
-      if (this.undoCodeEl?.nativeElement) {
-        this.undoCodeEl.nativeElement.textContent = this.undoEnhancerCode;
-      }
-      if (this.freezeCodeEl?.nativeElement) {
-        this.freezeCodeEl.nativeElement.textContent = this.freezeEnhancerCode;
-      }
-      if (this.usageCodeEl?.nativeElement) {
-        this.usageCodeEl.nativeElement.textContent = this.usageCode;
-      }
-    }, 0);
   }
 
   // Code examples for display
@@ -640,4 +616,21 @@ const tree = signalTree({
 
 tree.$.pageViews.increment();
 tree.$.favoriteIds.toggle(1);`;
+
+  // Code examples wrapped as CodeFile lists for <st-code-tabs> (highlighted + copyable).
+  readonly counterCodeFiles: CodeFile[] = [
+    { label: 'counter.ts', language: 'typescript', source: this.counterMarkerCode },
+  ];
+  readonly selectionCodeFiles: CodeFile[] = [
+    { label: 'selection.ts', language: 'typescript', source: this.selectionMarkerCode },
+  ];
+  readonly undoCodeFiles: CodeFile[] = [
+    { label: 'with-undo.ts', language: 'typescript', source: this.undoEnhancerCode },
+  ];
+  readonly freezeCodeFiles: CodeFile[] = [
+    { label: 'with-freeze.ts', language: 'typescript', source: this.freezeEnhancerCode },
+  ];
+  readonly usageCodeFiles: CodeFile[] = [
+    { label: 'usage.ts', language: 'typescript', source: this.usageCode },
+  ];
 }

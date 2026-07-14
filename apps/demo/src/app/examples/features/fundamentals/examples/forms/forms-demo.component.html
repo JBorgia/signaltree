@@ -1,217 +1,184 @@
 <div class="demo-container">
-  <h2 class="demo-title">📝 Forms Integration</h2>
-
-  <div class="intro">
-    <p>
+  <st-example heading="📝 Forms Integration" [code]="codeFiles">
+    <p intro>
       <strong>Signal-based forms</strong> with real-time validation, computed
       validity, and dynamic feedback - no FormGroup required!
     </p>
-  </div>
 
-  @if (!submitted()) {
-  <form (ngSubmit)="submitForm()" class="registration-form">
-    <!-- Username Field -->
-    <div class="form-group">
-      <label for="username">Username *</label>
-      <input
-        id="username"
-        type="text"
-        [(ngModel)]="username"
-        (blur)="usernameTouched.set(true)"
-        [class.invalid]="usernameTouched() && !usernameValid()"
-        [class.valid]="usernameTouched() && usernameValid()"
-        placeholder="Enter username (3-20 chars, alphanumeric)"
-        class="input-field"
-        name="username"
-      />
-      @if (usernameTouched() && !usernameValid()) {
-      <span class="error-message">
-        Username must be 3-20 characters (letters, numbers, underscore only)
-      </span>
-      } @if (usernameTouched() && usernameValid()) {
-      <span class="success-message">✓ Valid username</span>
-      }
-    </div>
-
-    <!-- Email Field -->
-    <div class="form-group">
-      <label for="email">Email *</label>
-      <input
-        id="email"
-        type="email"
-        [(ngModel)]="email"
-        (blur)="emailTouched.set(true)"
-        [class.invalid]="emailTouched() && !emailValid()"
-        [class.valid]="emailTouched() && emailValid()"
-        placeholder="your.email@example.com"
-        class="input-field"
-        name="email"
-      />
-      @if (emailTouched() && !emailValid()) {
-      <span class="error-message">Please enter a valid email address</span>
-      } @if (emailTouched() && emailValid()) {
-      <span class="success-message">✓ Valid email</span>
-      }
-    </div>
-
-    <!-- Password Field with Strength Indicator -->
-    <div class="form-group">
-      <label for="password">Password *</label>
-      <input
-        id="password"
-        type="password"
-        [(ngModel)]="password"
-        (blur)="passwordTouched.set(true)"
-        [class.invalid]="passwordTouched() && !passwordValid()"
-        [class.valid]="passwordTouched() && passwordValid()"
-        placeholder="Enter a strong password"
-        class="input-field"
-        name="password"
-      />
-
-      @if (password().length > 0) {
-      <div class="password-strength">
-        <div class="strength-bar">
-          <div
-            class="strength-fill"
-            [style.width.%]="passwordStrength() * 25"
-            [style.background]="getPasswordStrengthColor()"
-          ></div>
-        </div>
-        <span class="strength-text" [style.color]="getPasswordStrengthColor()">
-          {{ getPasswordStrengthText() }}
-        </span>
-      </div>
-      } @if (passwordTouched() && !passwordValid()) {
-      <span class="error-message">
-        Password must be strong (8+ chars, mixed case, numbers, symbols)
-      </span>
-      }
-    </div>
-
-    <!-- Confirm Password Field -->
-    <div class="form-group">
-      <label for="confirmPassword">Confirm Password *</label>
-      <input
-        id="confirmPassword"
-        type="password"
-        [(ngModel)]="confirmPassword"
-        (blur)="confirmPasswordTouched.set(true)"
-        [class.invalid]="confirmPasswordTouched() && !passwordsMatch()"
-        [class.valid]="confirmPasswordTouched() && passwordsMatch()"
-        placeholder="Re-enter your password"
-        class="input-field"
-        name="confirmPassword"
-      />
-      @if (confirmPasswordTouched() && !passwordsMatch()) {
-      <span class="error-message">Passwords do not match</span>
-      } @if (confirmPasswordTouched() && passwordsMatch()) {
-      <span class="success-message">✓ Passwords match</span>
-      }
-    </div>
-
-    <!-- Terms Checkbox -->
-    <div class="form-group checkbox-group">
-      <label class="checkbox-label">
+    @if (!submitted()) {
+    <form (ngSubmit)="submitForm()" class="registration-form">
+      <!-- Username Field -->
+      <div class="form-group">
+        <label for="username">Username *</label>
         <input
-          type="checkbox"
-          [(ngModel)]="agreeToTerms"
-          name="agreeToTerms"
-          class="checkbox-input"
+          id="username"
+          type="text"
+          [(ngModel)]="username"
+          (blur)="usernameTouched.set(true)"
+          [class.invalid]="usernameTouched() && !usernameValid()"
+          [class.valid]="usernameTouched() && usernameValid()"
+          placeholder="Enter username (3-20 chars, alphanumeric)"
+          class="input-field"
+          name="username"
         />
-        <span>I agree to the terms and conditions *</span>
-      </label>
-    </div>
-
-    <!-- Form Status -->
-    <div class="form-status">
-      <div class="status-item" [class.valid]="usernameValid()">
-        {{ usernameValid() ? '✓' : '○' }} Username
-      </div>
-      <div class="status-item" [class.valid]="emailValid()">
-        {{ emailValid() ? '✓' : '○' }} Email
-      </div>
-      <div class="status-item" [class.valid]="passwordValid()">
-        {{ passwordValid() ? '✓' : '○' }} Password
-      </div>
-      <div class="status-item" [class.valid]="passwordsMatch()">
-        {{ passwordsMatch() ? '✓' : '○' }} Match
-      </div>
-      <div class="status-item" [class.valid]="agreeToTerms()">
-        {{ agreeToTerms() ? '✓' : '○' }} Terms
-      </div>
-    </div>
-
-    <!-- Submit Button -->
-    <div class="button-group">
-      <button type="submit" class="btn btn-primary" [disabled]="!formValid()">
-        🚀 Submit Registration
-      </button>
-      <button type="button" (click)="resetForm()" class="btn btn-secondary">
-        🔄 Reset Form
-      </button>
-    </div>
-  </form>
-  } @else {
-  <div class="success-card">
-    <h3>✅ Registration Successful!</h3>
-    <p>Your form was submitted with the following data:</p>
-
-    <div class="submitted-data">
-      <div class="data-item">
-        <span class="data-label">Username:</span>
-        <span class="data-value">{{ submittedData()?.username }}</span>
-      </div>
-      <div class="data-item">
-        <span class="data-label">Email:</span>
-        <span class="data-value">{{ submittedData()?.email }}</span>
-      </div>
-      <div class="data-item">
-        <span class="data-label">Password:</span>
-        <span class="data-value">●●●●●●●●</span>
-      </div>
-      <div class="data-item">
-        <span class="data-label">Terms Accepted:</span>
-        <span class="data-value">
-          {{ submittedData()?.agreeToTerms ? 'Yes' : 'No' }}
+        @if (usernameTouched() && !usernameValid()) {
+        <span class="error-message">
+          Username must be 3-20 characters (letters, numbers, underscore only)
         </span>
+        } @if (usernameTouched() && usernameValid()) {
+        <span class="success-message">✓ Valid username</span>
+        }
       </div>
+
+      <!-- Email Field -->
+      <div class="form-group">
+        <label for="email">Email *</label>
+        <input
+          id="email"
+          type="email"
+          [(ngModel)]="email"
+          (blur)="emailTouched.set(true)"
+          [class.invalid]="emailTouched() && !emailValid()"
+          [class.valid]="emailTouched() && emailValid()"
+          placeholder="your.email@example.com"
+          class="input-field"
+          name="email"
+        />
+        @if (emailTouched() && !emailValid()) {
+        <span class="error-message">Please enter a valid email address</span>
+        } @if (emailTouched() && emailValid()) {
+        <span class="success-message">✓ Valid email</span>
+        }
+      </div>
+
+      <!-- Password Field with Strength Indicator -->
+      <div class="form-group">
+        <label for="password">Password *</label>
+        <input
+          id="password"
+          type="password"
+          [(ngModel)]="password"
+          (blur)="passwordTouched.set(true)"
+          [class.invalid]="passwordTouched() && !passwordValid()"
+          [class.valid]="passwordTouched() && passwordValid()"
+          placeholder="Enter a strong password"
+          class="input-field"
+          name="password"
+        />
+
+        @if (password().length > 0) {
+        <div class="password-strength">
+          <div class="strength-bar">
+            <div
+              class="strength-fill"
+              [style.width.%]="passwordStrength() * 25"
+              [style.background]="getPasswordStrengthColor()"
+            ></div>
+          </div>
+          <span class="strength-text" [style.color]="getPasswordStrengthColor()">
+            {{ getPasswordStrengthText() }}
+          </span>
+        </div>
+        } @if (passwordTouched() && !passwordValid()) {
+        <span class="error-message">
+          Password must be strong (8+ chars, mixed case, numbers, symbols)
+        </span>
+        }
+      </div>
+
+      <!-- Confirm Password Field -->
+      <div class="form-group">
+        <label for="confirmPassword">Confirm Password *</label>
+        <input
+          id="confirmPassword"
+          type="password"
+          [(ngModel)]="confirmPassword"
+          (blur)="confirmPasswordTouched.set(true)"
+          [class.invalid]="confirmPasswordTouched() && !passwordsMatch()"
+          [class.valid]="confirmPasswordTouched() && passwordsMatch()"
+          placeholder="Re-enter your password"
+          class="input-field"
+          name="confirmPassword"
+        />
+        @if (confirmPasswordTouched() && !passwordsMatch()) {
+        <span class="error-message">Passwords do not match</span>
+        } @if (confirmPasswordTouched() && passwordsMatch()) {
+        <span class="success-message">✓ Passwords match</span>
+        }
+      </div>
+
+      <!-- Terms Checkbox -->
+      <div class="form-group checkbox-group">
+        <label class="checkbox-label">
+          <input
+            type="checkbox"
+            [(ngModel)]="agreeToTerms"
+            name="agreeToTerms"
+            class="checkbox-input"
+          />
+          <span>I agree to the terms and conditions *</span>
+        </label>
+      </div>
+
+      <!-- Form Status -->
+      <div class="form-status">
+        <div class="status-item" [class.valid]="usernameValid()">
+          {{ usernameValid() ? '✓' : '○' }} Username
+        </div>
+        <div class="status-item" [class.valid]="emailValid()">
+          {{ emailValid() ? '✓' : '○' }} Email
+        </div>
+        <div class="status-item" [class.valid]="passwordValid()">
+          {{ passwordValid() ? '✓' : '○' }} Password
+        </div>
+        <div class="status-item" [class.valid]="passwordsMatch()">
+          {{ passwordsMatch() ? '✓' : '○' }} Match
+        </div>
+        <div class="status-item" [class.valid]="agreeToTerms()">
+          {{ agreeToTerms() ? '✓' : '○' }} Terms
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <div class="button-group">
+        <button type="submit" class="btn btn-primary" [disabled]="!formValid()">
+          🚀 Submit Registration
+        </button>
+        <button type="button" (click)="resetForm()" class="btn btn-secondary">
+          🔄 Reset Form
+        </button>
+      </div>
+    </form>
+    } @else {
+    <div class="success-card">
+      <h3>✅ Registration Successful!</h3>
+      <p>Your form was submitted with the following data:</p>
+
+      <div class="submitted-data">
+        <div class="data-item">
+          <span class="data-label">Username:</span>
+          <span class="data-value">{{ submittedData()?.username }}</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Email:</span>
+          <span class="data-value">{{ submittedData()?.email }}</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Password:</span>
+          <span class="data-value">●●●●●●●●</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Terms Accepted:</span>
+          <span class="data-value">
+            {{ submittedData()?.agreeToTerms ? 'Yes' : 'No' }}
+          </span>
+        </div>
+      </div>
+
+      <button (click)="resetForm()" class="btn btn-primary">
+        Create Another Account
+      </button>
     </div>
-
-    <button (click)="resetForm()" class="btn btn-primary">
-      Create Another Account
-    </button>
-  </div>
-  }
-
-  <!-- Code Example -->
-  <div class="code-section">
-    <h3>💻 SignalTree-Based Form State</h3>
-    <pre><code>// Unified form state with SignalTree
-formStore = signalTree&lt;FormState&gt;({{ '{' }}
-  fields: {{ '{' }}
-    username: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    agreeToTerms: false,
-  {{ '}' }},
-  touched: {{ '{' }} username: false, email: false {{ '}' }},
-  submitted: false,
-  submittedData: null,
-{{ '}' }});
-
-// Create aliases for cleaner binding
-username = this.formStore.$.fields.username;
-email = this.formStore.$.fields.email;
-
-// Computed validations work the same way
-usernameValid = computed(() =&gt; {{ '{' }}
-  const value = this.username();
-  return value.length &gt;= 3 &amp;&amp; /^[a-zA-Z0-9_]+$/.test(value);
-{{ '}' }});
-
-// Reset entire state in one call
-this.formStore.$.set({{ '{' }} fields: {{ '{' }} ... {{ '}' }}, touched: {{ '{' }} ... {{ '}' }} {{ '}' }});</code></pre>
-  </div>
+    }
+  </st-example>
 </div>

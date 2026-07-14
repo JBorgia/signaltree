@@ -97,12 +97,12 @@
     <div class="compare-grid">
       <article class="compare-card">
         <h3 class="compare-title">Typical ceremony</h3>
-        <pre class="code-example"><code>{{ beforeCode }}</code></pre>
+        <st-code-tabs [files]="beforeCode"></st-code-tabs>
       </article>
 
       <article class="compare-card compare-card-highlight">
         <h3 class="compare-title">SignalTree</h3>
-        <pre class="code-example"><code>{{ afterCode }}</code></pre>
+        <st-code-tabs [files]="afterCode"></st-code-tabs>
       </article>
     </div>
   </section>
@@ -113,7 +113,7 @@
       Start with the core package. In production, the recommended shape is one
       root tree with typed branches for domain slices.
     </p>
-    <pre class="code-example code-example-large"><code>{{ quickStartCode }}</code></pre>
+    <st-code-tabs [files]="quickStartCode"></st-code-tabs>
   </section>
 
   <section class="section">
@@ -187,7 +187,7 @@
         </div>
       </div>
     </div>
-    <pre class="code-example extreme-depth-code"><code>{{ extremeDepthCode }}</code></pre>
+    <st-code-tabs class="extreme-depth-code" [files]="extremeDepthCode"></st-code-tabs>
   </section>
 
   <section class="section">

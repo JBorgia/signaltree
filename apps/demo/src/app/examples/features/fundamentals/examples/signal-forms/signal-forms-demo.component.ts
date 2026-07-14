@@ -1,7 +1,19 @@
 import { CommonModule } from '@angular/common';
-import { Component, effect, inject, Injector, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  Injector,
+  signal,
+} from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { signalTree, toWritableSignal } from '@signaltree/core';
+
+import {
+  type CodeFile,
+  ExampleComponent,
+} from '../../../../shared/components/example-shell';
 
 interface UserProfile {
   personal: {
@@ -30,7 +42,7 @@ interface UserProfile {
 @Component({
   selector: 'app-signal-forms-demo',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, ExampleComponent],
   templateUrl: './signal-forms-demo.component.html',
   styleUrl: './signal-forms-demo.component.scss',
 })
@@ -198,4 +210,59 @@ export class SignalFormsDemoComponent {
         return '⏸️';
     }
   }
+
+  // ── st-example: complete-state snapshot for the inspector ───────────────────
+  readonly stateSnapshot = computed(() => ({
+    fullName: this.fullName,
+    personal: {
+      firstName: this.profile.$.personal.firstName(),
+      lastName: this.profile.$.personal.lastName(),
+    },
+    contact: {
+      email: this.profile.$.contact.email(),
+      phone: this.profile.$.contact.phone(),
+    },
+    preferences: {
+      newsletter: this.profile.$.preferences.newsletter(),
+      notifications: this.profile.$.preferences.notifications(),
+    },
+  }));
+
+  // ── st-example: key code patterns shown in the source panel ─────────────────
+  readonly codeFiles: CodeFile[] = [
+    {
+      label: '1. Direct Leaf Connection',
+      language: 'typescript',
+      source: `// Leaves are WritableSignal<T> - use directly
+const tree = signalTree({ user: { name: '' } });
+const nameControl = new FormControl('');
+
+// Works because tree.$.user.name is WritableSignal<string>
+nameControl.connect(tree.$.user.name);`,
+    },
+    {
+      label: '2. Slice Conversion',
+      language: 'typescript',
+      source: `// Slices are NodeAccessor<T> - need conversion
+const tree = signalTree({ user: { name: '', email: '' } });
+const userFormGroup = new FormGroup({
+  name: new FormControl(''),
+  email: new FormControl('')
+});
+
+// Convert slice to WritableSignal<T>
+const userSignal = toWritableSignal(tree.$.user);
+userFormGroup.connect(userSignal);`,
+    },
+    {
+      label: '3. Two-Way Sync',
+      language: 'typescript',
+      source: `// Changes flow both ways automatically:
+tree.$.user.name.set('John');     // → Form updates
+nameControl.setValue('Jane');     // → Tree updates
+
+// Real-time reactivity in templates:
+profile.$.personal.firstName()  // Always current`,
+    },
+  ];
 }

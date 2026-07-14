@@ -6,27 +6,6 @@
   margin: 0 auto;
 }
 
-.demo-title {
-  font-size: 32px;
-  font-weight: 800;
-  margin-bottom: 16px;
-  color: var(--color-dark);
-}
-
-.intro {
-  margin-bottom: 32px;
-  padding: 20px;
-  background: linear-gradient(135deg, var(--color-secondary-50) 0%, var(--color-secondary-100) 100%);
-  border-radius: 12px;
-  border-left: 4px solid var(--color-secondary-500);
-
-  p {
-    margin: 0;
-    line-height: 1.6;
-    color: var(--color-neutral-700);
-  }
-}
-
 .registration-form {
   background: white;
   border-radius: 16px;
@@ -249,30 +228,6 @@
 .data-value {
   font-weight: 500;
   color: var(--color-dark);
-}
-
-.code-section {
-  background: var(--color-dark);
-  border-radius: 12px;
-  padding: 24px;
-  color: white;
-
-  h3 {
-    margin: 0 0 16px 0;
-    color: white;
-  }
-
-  pre {
-    margin: 0;
-    overflow-x: auto;
-  }
-
-  code {
-    font-family: 'Courier New', monospace;
-    font-size: 13px;
-    line-height: 1.6;
-    color: var(--color-primary-300);
-  }
 }
 
 @media (max-width: 768px) {
