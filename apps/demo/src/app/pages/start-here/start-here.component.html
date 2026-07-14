@@ -20,9 +20,12 @@
     <h2 class="section-title">State is data. Reads call. Writes call.</h2>
     <p class="section-intro">
       A tree is initialized with a plain JSON object. Every leaf is a typed
-      signal you read by calling and write with <code>.set</code> or
-      <code>.update</code>. There are no actions, reducers, selectors, or
-      registration steps. Path-based access stays type-safe at any depth.
+      Angular signal — you read it by calling and write with <code>.set</code>
+      or <code>.update</code>. Every branch (any non-leaf node) is callable
+      too: call it to read the subtree, or call it with a partial to
+      deep-merge a write — no transform required. There are no actions,
+      reducers, selectors, or registration steps. Path-based access stays
+      type-safe at any depth.
     </p>
     <pre class="code-example"><code>{{ mentalModelCode }}</code></pre>
     <p class="section-aside">
@@ -70,11 +73,13 @@
     </p>
     <pre class="code-example"><code>{{ architectureCode }}</code></pre>
     <p class="section-aside">
-      Why one tree? You get one DevTools panel, one time-travel history, one
-      persistence layer. Multi-tree setups still work for special cases —
-      see <a routerLink="/examples/fundamentals/recommended-architecture"
+      Why one tree? A single source of truth: one DevTools panel, one
+      time-travel history, one persistence layer. As the app grows, the
+      pattern that keeps it consistent is READ through <code>$</code>, WRITE
+      through <code>ops</code>, REACT through <code>effect()</code> — see
+      <a routerLink="/examples/fundamentals/recommended-architecture"
         >recommended architecture</a
-      > for trade-offs and edge cases.
+      > for the full pattern, live.
     </p>
   </section>
 
@@ -89,7 +94,7 @@
       @for (step of nextSteps; track step.title) {
       <article class="next-step-card">
         <p class="next-step-audience">{{ step.audience }}</p>
-        <h3 class="next-step-title">{{ step.title }}</h3>
+        <h3 class="next-step-title">{{ step.title }}</h3>Í
         <p class="next-step-description">{{ step.description }}</p>
         <a [routerLink]="step.route" class="next-step-cta">{{ step.cta }}</a>
       </article>

@@ -1,0 +1,201 @@
+<div class="container">
+  <h1>🏛️ Recommended Architecture</h1>
+
+  <div class="explanation-card">
+    <h2>One tree, one rule</h2>
+    <p class="intro-text">
+      The production pattern is three pillars applied consistently:
+      <strong>READ</strong> through <code>store.$</code>,
+      <strong>WRITE</strong> through <code>store.ops</code>, and
+      <strong>REACT</strong> through <code>tree.effect()</code> — where a state
+      change <em>is</em> the event, so there are no actions and nothing to
+      dispatch. API services sit underneath as a supporting layer: HTTP only,
+      no state knowledge.
+    </p>
+    <p class="fit-note">
+      Honest fit: this pattern earns its keep in apps with several domains and
+      evolving, nested state. For a counter or a flat todo list it's overkill —
+      a plain signal or one small tree is the better call. It's a way to keep a
+      <em>large</em> app consistent, not a tax on every app.
+    </p>
+  </div>
+
+  <!-- ── The architecture: 3 pillars + a supporting layer ──────────────────── -->
+  <section class="architecture" aria-label="Architecture overview">
+    <p class="architecture__hint">
+      Interact with the live demo below — the pillar you exercise lights up.
+    </p>
+
+    <div class="pillars">
+      <article
+        class="pillar pillar--read"
+        [class.pillar--active]="lastPillar() === 'read'"
+      >
+        <header><span class="pillar__tag">READ</span><code>store.$</code></header>
+        <ul>
+          <li>All computed state on <code>$</code></li>
+          <li>Tiered: entity → filter → UI</li>
+          <li>Never in ops or components</li>
+        </ul>
+      </article>
+
+      <article
+        class="pillar pillar--write"
+        [class.pillar--active]="lastPillar() === 'write'"
+      >
+        <header>
+          <span class="pillar__tag">WRITE</span><code>store.ops</code>
+        </header>
+        <ul>
+          <li>Mutations &amp; async only</li>
+          <li>No computed properties</li>
+          <li>One ops file per domain</li>
+        </ul>
+      </article>
+
+      <article
+        class="pillar pillar--react"
+        [class.pillar--active]="lastPillar() === 'react'"
+      >
+        <header>
+          <span class="pillar__tag">REACT</span><code>tree.effect()</code>
+        </header>
+        <ul>
+          <li>State changes are the events</li>
+          <li>No actions, no dispatch</li>
+          <li>Registered in root services</li>
+        </ul>
+      </article>
+    </div>
+
+    <div class="support">
+      <span class="support__label">Supporting layer</span>
+      <div class="support__body">
+        <strong>API services</strong>
+        <span>HTTP only · return typed observables · no state knowledge</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Live demo, hosted in the shared st-example shell ──────────────────── -->
+  <st-example
+    heading="Live demo"
+    intro="Every value below is a READ through store.$. Every button and keystroke is a WRITE through store.ops. The emission log is the REACT pillar — effects firing straight off state changes."
+    [state]="stateSnapshot()"
+    stateLabel="Live state (store.$)"
+    [emissions]="emissions()"
+    [code]="codeFiles"
+    [stackblitz]="stackblitzConfig"
+  >
+    <div class="demo-controls">
+      <button class="btn" (click)="toggleTheme()">
+        Toggle theme: {{ theme() }}
+      </button>
+      <button class="btn" (click)="toggleSidebar()">
+        Sidebar: {{ sidebarOpen() ? 'Open' : 'Closed' }}
+      </button>
+      <button class="btn" [disabled]="isLoading()" (click)="loadDashboard()">
+        {{ isLoading() ? 'Loading…' : 'Load dashboard (users + posts)' }}
+      </button>
+      <button
+        class="btn btn-danger"
+        [disabled]="!selectedUser()"
+        (click)="deleteSelectedUser()"
+      >
+        Delete selected user + posts
+      </button>
+    </div>
+
+    <div class="preview" [class.preview--dark]="theme() === 'dark'">
+      <div class="preview__main">
+        <strong>Theme:</strong> {{ theme() }} — this panel reacts to
+        <code>$.ui.theme</code>, a plain read driving the DOM.
+      </div>
+      @if (sidebarOpen()) {
+        <aside class="preview__sidebar">
+          <strong>Demo sidebar</strong>
+          <p>
+            Driven by <code>$.ui.sidebarOpen</code>. Toggle <em>Sidebar</em>
+            again to hide it.
+          </p>
+        </aside>
+      }
+    </div>
+
+    @if (firstError()) {
+      <div class="error">{{ firstError() }}</div>
+    }
+
+    <div class="state-grid">
+      <div class="state-section">
+        <h3>Users ({{ totals().users }})</h3>
+        @for (user of allUsers(); track user.id) {
+          <div
+            class="item"
+            [class.item--selected]="user.id === selectedUserId()"
+            (click)="selectUser(user.id)"
+            (keydown.enter)="selectUser(user.id)"
+            tabindex="0"
+            role="button"
+          >
+            <strong>{{ user.name }}</strong> ({{ user.role }})
+            <br /><small>{{ user.email }}</small>
+          </div>
+        }
+      </div>
+
+      <div class="state-section">
+        <h3>Posts ({{ totals().filteredPosts }} / {{ totals().posts }})</h3>
+        <div class="filters">
+          <input
+            class="input-field"
+            type="text"
+            placeholder="Search posts…"
+            [value]="searchTerm()"
+            (input)="setSearch($any($event.target).value)"
+          />
+          <label class="checkbox">
+            <input
+              type="checkbox"
+              [checked]="publishedOnly()"
+              (change)="togglePublishedFilter()"
+            />
+            Published only
+          </label>
+        </div>
+
+        @for (post of filteredPosts(); track post.id) {
+          <div
+            class="item item--post"
+            [class.item--selected]="post.id === selectedPostId()"
+            (click)="selectPost(post.id)"
+            (keydown.enter)="selectPost(post.id)"
+            tabindex="0"
+            role="button"
+          >
+            <div class="post-header">
+              <strong>{{ post.title }}</strong>
+              <span class="status" [class.status--published]="post.published">
+                {{ post.published ? 'Published' : 'Draft' }}
+              </span>
+            </div>
+            <div class="post-meta">
+              By {{ authorName(post.authorId) }} • {{ post.likes }} likes
+            </div>
+            <div class="post-content">{{ post.content }}</div>
+          </div>
+        }
+
+        @if (selectedPost()) {
+          <button
+            class="btn"
+            [disabled]="!canPublishSelected()"
+            (click)="publishSelected()"
+          >
+            Publish selected post
+          </button>
+        }
+      </div>
+    </div>
+  </st-example>
+</div>

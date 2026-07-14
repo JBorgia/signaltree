@@ -25,12 +25,16 @@ const tree = signalTree({
 });
 
 // 2. Read by calling — fully typed, deeply nested
-tree.$.user.name();          // 'Ada'
+tree.$.user.name();          // 'Ada'  (leaf: an Angular signal)
+tree.$.user();               // { name: 'Ada', age: 36 }  (branch: callable)
 tree.$.count();              // 0
 
-// 3. Write with .set or .update
+// 3. Leaves are signals — write with .set / .update
 tree.$.user.name.set('Bo');
-tree.$.count.update((n) => n + 1);`;
+tree.$.count.update((n) => n + 1);
+
+// 4. Branches are callable — call with a partial to deep-merge
+tree.$.user({ age: 37 });    // { name: 'Bo', age: 37 }`;
 
   readonly ngrxCounterCode = `// counter.actions.ts
 export const increment = createAction('[Counter] Increment');
