@@ -1,0 +1,145 @@
+@use '../../styles' as *;
+
+.code-tabs {
+  border-radius: $radius-md;
+  overflow: hidden;
+  background: var(--color-neutral-900);
+
+  &__bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: $spacing-sm $spacing-sm 0;
+    background: var(--color-neutral-900);
+  }
+
+  &__tab {
+    appearance: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: $text-sm;
+    color: var(--color-neutral-400);
+    background: transparent;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $radius-sm $radius-sm 0 0;
+    transition: color 0.15s ease, background 0.15s ease;
+
+    &:hover {
+      color: var(--color-neutral-100);
+    }
+
+    &--active {
+      color: var(--color-white);
+      background: rgba(255, 255, 255, 0.08);
+    }
+  }
+
+  &__body {
+    position: relative;
+  }
+
+  &__copy {
+    position: absolute;
+    top: $spacing-sm;
+    right: $spacing-sm;
+    z-index: 1;
+    appearance: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: $text-xs;
+    color: var(--color-neutral-300);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: $radius-sm;
+    padding: $spacing-xs $spacing-sm;
+    transition: background 0.15s ease, color 0.15s ease;
+
+    &:hover {
+      color: var(--color-white);
+      background: rgba(255, 255, 255, 0.2);
+    }
+  }
+
+  &__pre {
+    margin: 0;
+    padding: $spacing-lg;
+    overflow-x: auto;
+    font-family: var(--font-mono, 'SFMono-Regular', Consolas, monospace);
+    font-size: $text-sm;
+    line-height: 1.6;
+    color: var(--color-neutral-100);
+    @include custom-scrollbar;
+
+    code {
+      font-family: inherit;
+      background: none;
+      padding: 0;
+    }
+  }
+}
+
+// ── highlight.js — dark palette from design tokens ─────────────────────────
+:host ::ng-deep {
+  .hljs {
+    color: var(--color-neutral-100);
+    background: transparent;
+  }
+  .hljs-comment,
+  .hljs-quote {
+    color: var(--color-neutral-500);
+    font-style: italic;
+  }
+  .hljs-keyword,
+  .hljs-selector-tag,
+  .hljs-subst {
+    color: var(--color-error-300);
+    font-weight: 600;
+  }
+  .hljs-number,
+  .hljs-literal,
+  .hljs-variable,
+  .hljs-template-variable,
+  .hljs-tag .hljs-attr {
+    color: var(--color-primary-300);
+  }
+  .hljs-string,
+  .hljs-doctag {
+    color: var(--color-secondary-300);
+  }
+  .hljs-title,
+  .hljs-section,
+  .hljs-selector-id,
+  .hljs-type,
+  .hljs-class .hljs-title {
+    color: var(--color-purple-300);
+    font-weight: 600;
+  }
+  .hljs-tag,
+  .hljs-name,
+  .hljs-attribute {
+    color: var(--color-secondary-300);
+    font-weight: 600;
+  }
+  .hljs-regexp,
+  .hljs-link {
+    color: var(--color-primary-300);
+  }
+  .hljs-symbol,
+  .hljs-bullet {
+    color: var(--color-orange-300);
+  }
+  .hljs-built_in,
+  .hljs-builtin-name {
+    color: var(--color-info-300);
+  }
+  .hljs-meta {
+    color: var(--color-neutral-400);
+  }
+  .hljs-emphasis {
+    font-style: italic;
+  }
+  .hljs-strong {
+    font-weight: 700;
+  }
+}

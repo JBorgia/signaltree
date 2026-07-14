@@ -1,0 +1,101 @@
+@use '../../styles' as *;
+
+.st-example {
+  @include card($spacing-2xl);
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2xl;
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  &__heading {
+    margin: 0;
+    font-size: $text-2xl;
+    font-weight: 700;
+    color: $dark;
+  }
+
+  &__intro {
+    color: $text-secondary;
+    font-size: $text-base;
+    line-height: 1.7;
+
+    p {
+      margin: 0;
+    }
+
+    code {
+      background: var(--color-neutral-100);
+      padding: 1px 5px;
+      border-radius: $radius-sm;
+      font-size: 0.9em;
+    }
+  }
+
+  &__demo {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-lg;
+  }
+
+  &__reactive {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: $spacing-lg;
+
+    @include respond-to('md') {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &__panel-label {
+    margin: 0 0 $spacing-sm;
+    font-size: $text-xs;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: $text-tertiary;
+  }
+
+  &__code-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-md;
+    margin-bottom: $spacing-md;
+  }
+
+  &__code-title {
+    margin: 0;
+    font-size: $text-lg;
+    font-weight: 600;
+    color: $dark;
+  }
+
+  &__edit {
+    appearance: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: $text-sm;
+    font-weight: 600;
+    color: var(--color-white);
+    background: var(--color-primary-600);
+    border: none;
+    border-radius: $radius-md;
+    padding: $spacing-sm $spacing-lg;
+    transition: background 0.15s ease;
+
+    &:hover {
+      background: var(--color-primary-700);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-primary-500);
+      outline-offset: 2px;
+    }
+  }
+}

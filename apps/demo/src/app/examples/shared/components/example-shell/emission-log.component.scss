@@ -1,0 +1,48 @@
+@use '../../styles' as *;
+
+.emission-log {
+  margin: 0;
+  padding: $spacing-sm $spacing-md;
+  list-style: none;
+  background: var(--color-info-50);
+  border-left: 3px solid var(--color-info-500);
+  border-radius: $radius-sm;
+
+  &__row {
+    display: flex;
+    align-items: baseline;
+    gap: $spacing-sm;
+    padding: $spacing-xs 0;
+    font-family: var(--font-mono, 'SFMono-Regular', Consolas, monospace);
+    font-size: $text-sm;
+    // Newest row pulses in.
+    animation: emission-pulse 0.6s ease-out;
+  }
+
+  &__label {
+    flex-shrink: 0;
+    font-weight: 600;
+    color: var(--color-info-700);
+  }
+
+  &__value {
+    color: $text;
+    overflow-wrap: anywhere;
+  }
+
+  &--empty {
+    color: $text-tertiary;
+    font-style: italic;
+    border-left-color: var(--color-neutral-300);
+    background: var(--color-neutral-50);
+  }
+}
+
+@keyframes emission-pulse {
+  from {
+    background: var(--color-info-100);
+  }
+  to {
+    background: transparent;
+  }
+}
