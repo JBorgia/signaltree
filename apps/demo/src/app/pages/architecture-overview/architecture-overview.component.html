@@ -9,52 +9,56 @@
     <div class="value-proposition">
       <h2>🎯 Why Consolidation Matters</h2>
       <p>
-        <strong>Stop choosing between features and bundle size.</strong>
-        Traditional state management forces you to pick: install separate
-        packages for every feature (NgRx: @ngrx/store, @ngrx/effects,
-        @ngrx/entity, @ngrx/router-store, @ngrx/component-store...) or settle
-        for limited functionality.
+        <strong>Model state as data, not framework ceremony.</strong>
+        SignalTree ships a single package where entities, batching, DevTools,
+        time travel, and persistence are enhancers you opt into — unused ones
+        tree-shake away.
       </p>
       <div class="architecture-benefits">
         <div class="benefit-card">
-          <h3>📦 46% Smaller Dependencies</h3>
+          <h3>📦 Less State Code</h3>
           <p>
-            Snapshot from one production app: NgRx (4 packages) ~45-50KB
-            gzipped → SignalTree (1 package) ~27KB gzipped. Tree-shakable
-            architecture means you only ship what you use. Full core with
-            all enhancers included. YMMV.
+            Snapshot from one production Angular app's migration off
+            <code>&#64;ngrx/signals</code> (SignalStore): its shipped
+            state-code bundle went ~50KB → ~27KB gzipped, driven mostly by
+            writing ~76% fewer lines of state code. This is the migrated app's
+            state bundle, not the SignalTree library size (core is ~8.5KB
+            gzipped). YMMV.
           </p>
         </div>
         <div class="benefit-card">
-          <h3>🔧 Zero Version Conflicts</h3>
+          <h3>🔧 One Package, One Version</h3>
           <p>
-            NgRx's separate packages create peer dependency hell. Need
-            @ngrx/store@16.x with @ngrx/effects@16.x and @ngrx/entity@16.x? Hope
-            they're compatible. SignalTree: one package, one version, zero
-            conflicts.
+            SignalTree is a single versioned package: no cross-package peer
+            ranges to reconcile. (Classic NgRx splits @ngrx/store,
+            @ngrx/effects, @ngrx/entity… across separate installs, but that
+            sprawl is not what the measurement above came from.)
           </p>
         </div>
         <div class="benefit-card">
           <h3>⚡ Optimized Together</h3>
           <p>
-            Separate packages can't share optimizations. SignalTree's batching
-            and lazy evaluation work across all features because
-            they're designed as a unified system.
+            All enhancers are designed as a unified system, so SignalTree's
+            batching and lazy evaluation work across every feature without
+            cross-package integration seams.
           </p>
         </div>
       </div>
       <p class="comparison">
-        <strong>One production-app snapshot:</strong> NgRx (4 packages) =
-        ~45-50KB gzipped. SignalTree core (includes all enhancers) = ~27KB
-        gzipped.
+        <strong>One production-app snapshot (migration off
+        <code>&#64;ngrx/signals</code>):</strong> the app's shipped state-code
+        bundle went ~50KB → ~27KB gzipped.
         <strong
-          >46% bundle reduction, 76% less app code, 75% fewer packages.</strong
+          >~46% state-bundle reduction, ~76% less app code.</strong
         >
+        These are one app's numbers, not the library's — the SignalTree core
+        library is ~8.5KB gzipped.
       </p>
       <p class="disclaimer">
         <em
           >*Snapshot from one production Angular mobile app's NgRx Signal Store
-          → SignalTree migration. Both codebases have continued to evolve;
+          (<code>&#64;ngrx/signals</code>) → SignalTree migration. Both
+          codebases have continued to evolve;
           re-measuring today yields a 60–70% reduction depending on scope. The
           directional finding is reproducible — the exact percentages are not.
           <strong>YMMV</strong> — results depend on app complexity, prior
@@ -73,8 +77,8 @@
       <div class="comparison-table">
         <div class="table-header">
           <div class="aspect-column">Aspect</div>
-          <div class="separate-column">Separate Packages (v1)</div>
-          <div class="consolidated-column">Consolidated (v2)</div>
+          <div class="separate-column">Separate Packages (legacy, pre-v4)</div>
+          <div class="consolidated-column">Consolidated (current)</div>
           <div class="benefit-column">Key Benefit</div>
         </div>
         <div class="table-body">
@@ -107,12 +111,12 @@
       <h2 class="section-title">Simplified Imports</h2>
       <div class="import-comparison">
         <div class="import-example">
-          <h3 class="import-title">Separate Packages (v1)</h3>
+          <h3 class="import-title">Separate Packages (legacy, pre-v4)</h3>
           <st-code-tabs [files]="importSeparate" />
         </div>
         <div class="import-arrow">→</div>
         <div class="import-example">
-          <h3 class="import-title">Consolidated (v2)</h3>
+          <h3 class="import-title">Consolidated (current)</h3>
           <st-code-tabs [files]="importConsolidated" />
         </div>
       </div>

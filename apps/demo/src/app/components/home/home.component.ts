@@ -160,7 +160,7 @@ export class HomeComponent {
 
   readonly advancedRoutes: HomeLinkCard[] = [
     {
-      title: 'Async markers — new in 9.5',
+      title: 'SignalTree-native async markers',
       description:
         '`asyncSource` and `asyncQuery` — SignalTree-native async primitives that compose with `entityMap`, `status`, `stored`, and `form`. Path-attached, auto-cleanup, no boilerplate.',
       route: '/async',
@@ -244,17 +244,20 @@ export class HomeComponent {
 
   readonly quickStartCode: CodeFile[] = [
     {
-      label: 'quick-start.ts',
-      language: 'typescript',
+      label: 'install.sh',
+      language: 'bash',
       source: `# Install the core package
 npm install @signaltree/core
 
 # Optional packages
 npm install @signaltree/ng-forms
 npm install @signaltree/realtime
-npm install @signaltree/events
-
-// Create one root tree for app state
+npm install @signaltree/events`,
+    },
+    {
+      label: 'quick-start.ts',
+      language: 'typescript',
+      source: `// Create one root tree for app state
 import {
   signalTree,
   batching,

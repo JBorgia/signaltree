@@ -16,15 +16,20 @@
         <strong>Designed for scale, not for every app.</strong> Most state
         management libraries apply the same overhead to every update, regardless
         of size. Enterprise enhancer uses diff-based updates to skip unchanged
-        signals, giving you 2-5x faster bulk operations.
+        signals. In one bulk-update workload we measured roughly 2-5x faster
+        updates &mdash; your results depend on tree size, change ratio, and
+        hardware, so measure your own.
       </p>
 
       <div class="key-benefits">
         <div class="benefit">
           <h3>⚡ Diff-Based Updates</h3>
           <p>
-            Only update signals that actually changed. NgRx/Redux update entire
-            slices; enterprise tracks individual properties.
+            Only update signals that actually changed. Rather than replacing a
+            whole state slice on each update, the enterprise enhancer diffs and
+            touches individual properties &mdash; complementary to granular
+            approaches like <code>&#64;ngrx/signals</code>
+            <code>patchState</code> and entity helpers.
           </p>
         </div>
         <div class="benefit">
@@ -62,7 +67,8 @@
           <li><strong>Infrequent</strong> state updates</li>
           <li><strong>Startup/prototype</strong> projects</li>
           <li>
-            <strong>Bundle size is critical</strong> (adds +2.4KB gzipped)
+            <strong>Bundle size is critical</strong> (adds ~2.4KB gzipped,
+            approximate)
           </li>
         </ul>
       </div>

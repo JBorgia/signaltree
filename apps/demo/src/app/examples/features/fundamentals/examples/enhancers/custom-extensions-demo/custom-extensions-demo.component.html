@@ -248,7 +248,10 @@
       <!-- Freeze Enhancer Demo -->
       <div class="demo-panel freeze-panel" [class.frozen]="isFrozen()">
         <h3>🔒 withFreeze() Enhancer</h3>
-        <p class="panel-desc">Prevents all mutations while frozen</p>
+        <p class="panel-desc">
+          Blocks this store's mutations (task selection and user name) while
+          frozen
+        </p>
 
         <div class="freeze-controls">
           <button
@@ -261,16 +264,18 @@
           <span class="freeze-status" [class.frozen]="isFrozen()">
             {{
               isFrozen()
-                ? 'State is FROZEN - mutations blocked!'
-                : 'State is mutable'
+                ? 'Store is FROZEN - mutations blocked!'
+                : 'Store is mutable'
             }}
           </span>
         </div>
 
         @if (isFrozen()) {
         <p class="freeze-warning">
-          ⚠️ Try clicking counters or changing text - nothing will happen! Check
-          the console for warnings.
+          ⚠️ Try selecting/completing a task or editing the user name above -
+          the write is blocked and a warning is logged to the console. (The
+          standalone counters use their own signals and are not governed by this
+          store's freeze.)
         </p>
         }
       </div>

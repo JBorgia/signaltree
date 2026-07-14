@@ -251,26 +251,6 @@ export class ExtremeDepthComponent implements OnInit {
     }
   }
 
-  get totalTestsPassing(): number {
-    // Use targetDepth to calculate passing tests
-    const depth = this.targetDepth;
-
-    // Base tests cover standard depths
-    // 8 basic (3-5 levels) + 10 medium (6-10 levels) + 5 performance = 23 base tests
-    const baseTests = 23;
-
-    // Extreme depth tests: at least 5 tests, +1 for every 5 levels beyond 15
-    const extremeTests = 5 + Math.floor(Math.max(0, depth - 15) / 5);
-
-    return baseTests + extremeTests;
-  }
-
-  get extremeDepthTests(): number {
-    // 5 base extreme depth tests, +1 for every 5 additional levels
-    // Use targetDepth for calculations
-    return 5 + Math.floor(Math.max(0, this.targetDepth - 15) / 5);
-  }
-
   get testStatusMessage(): string {
     return `Live testing and verification at ${this.targetDepth} levels deep`;
   }
@@ -280,7 +260,7 @@ export class ExtremeDepthComponent implements OnInit {
     return [
       {
         name: 'Basic Depth (3-5 levels)',
-        status: '✅ 8 Tests Passing',
+        status: '✅ Supported',
         active: depth >= 3,
         description: 'Standard object nesting (user.profile.settings.theme)',
         tests: [
@@ -293,7 +273,7 @@ export class ExtremeDepthComponent implements OnInit {
       },
       {
         name: `Medium Depth (6-10 levels)`,
-        status: `✅ 10 Tests Passing`,
+        status: `✅ Supported`,
         active: depth >= 6,
         description:
           'Complex enterprise structures with organizational hierarchies',
@@ -307,7 +287,7 @@ export class ExtremeDepthComponent implements OnInit {
       },
       {
         name: `Extreme Depth (15+ levels)`,
-        status: `✅ ${this.extremeDepthTests} Tests Passing`,
+        status: `✅ Supported`,
         active: depth >= 15,
         description: `Type inference at ${depth}+ levels without 'any' degradation`,
         tests: [
@@ -324,7 +304,7 @@ export class ExtremeDepthComponent implements OnInit {
       },
       {
         name: 'Performance Validation',
-        status: '✅ 5 Tests Passing',
+        status: '✅ Supported',
         active: true,
         description: `All operations at ${depth} levels complete in < 1ms`,
         tests: [
@@ -334,7 +314,7 @@ export class ExtremeDepthComponent implements OnInit {
           'Memory footprint comparisons',
           'Batch operation performance',
         ],
-        relevance: `Median: 0.036ms at ${depth} levels`,
+        relevance: `Sub-millisecond access/update in this demo (single sample ~0.03ms on one machine — not a per-depth guarantee)`,
       },
     ];
   }

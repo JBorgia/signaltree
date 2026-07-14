@@ -24,7 +24,7 @@ import type { EntityMapMarker } from '@signaltree/core';
  *   2. Match Angular versions between workspaces
  *   3. Use pnpm overrides to force resolution
  *
- * See: /signaltree/docs/LOCAL_DEVELOPMENT_SYMLINK_ISSUE.md for details.
+ * See: docs/guides/local-development-symlinks.md for details.
  */
 
 interface Hauler {

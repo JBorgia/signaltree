@@ -37,18 +37,6 @@ interface TimeTravelInterface {
   canRedo(): boolean;
 }
 
-interface TimeTravelTree {
-  state: {
-    counter: { (): number; set(value: number): void };
-    message: { (): string; set(value: string): void };
-    todos: { (): Todo[]; set(value: Todo[]): void };
-  };
-  __timeTravel: TimeTravelInterface;
-  undo(): void;
-  redo(): void;
-  jumpTo(index: number): void;
-}
-
 @Component({
   selector: 'app-time-travel-demo',
   standalone: true,

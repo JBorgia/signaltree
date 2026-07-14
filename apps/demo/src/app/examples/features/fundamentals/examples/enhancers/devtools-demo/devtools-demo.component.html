@@ -24,8 +24,8 @@
             change counter, user info, and todos
           </li>
           <li>
-            <strong>Monitor Performance:</strong> Watch metrics update in
-            real-time on the right panel
+            <strong>Inspect in Redux DevTools:</strong> Open the Redux DevTools
+            browser extension to see path-based actions and jump between states
           </li>
           <li>
             <strong>Take Snapshots:</strong> Save current state and restore it
@@ -48,7 +48,7 @@
           <span class="feature-tag">State Snapshots</span>
           <span class="feature-tag">Path-Based Actions</span>
           <span class="feature-tag">Action Metadata</span>
-          <span class="feature-tag">Performance Metrics</span>
+          <span class="feature-tag">Redux DevTools Integration</span>
           <span class="feature-tag">Live State Inspection</span>
         </div>
       </div>
@@ -164,25 +164,27 @@
       <!-- DevTools Info -->
       <div class="card devtools-card">
         <h2>📊 DevTools Information</h2>
-        <p class="card-description">Real-time monitoring and debugging tools</p>
+        <p class="card-description">
+          Debugging tools backed by the Redux DevTools browser extension
+        </p>
 
         <div class="devtools-section">
-          <!-- Performance Metrics -->
+          <!-- Redux DevTools connection info -->
           <div class="metrics-group">
-            <h3>⚡ Performance Metrics</h3>
+            <h3>🔌 Redux DevTools</h3>
             <div class="metrics-list">
-              <p><strong>Updates:</strong> {{ getMetrics().updates }}</p>
               <p>
-                <strong>Average Update Time:</strong>
-                {{ getMetrics().averageUpdateTime }}ms
+                This tree is connected to the
+                <strong>Redux DevTools extension</strong> (when installed) with
+                <code>enableBrowserDevTools: true</code>. Open the extension and
+                pick <strong>"DevTools Demo"</strong> to watch path-based actions
+                stream in as you change state, and to time-travel between states.
               </p>
               <p>
-                <strong>Last Update Time:</strong>
-                {{ getMetrics().averageUpdateTime }}ms
-              </p>
-              <p>
-                <strong>Total Execution Time:</strong>
-                {{ getMetrics().computations }}
+                Detailed performance counters (per-module update counts, timings,
+                cache stats) are collected internally by the enhancer and surfaced
+                through the extension in dev builds — they are not re-rendered in
+                this panel.
               </p>
             </div>
           </div>

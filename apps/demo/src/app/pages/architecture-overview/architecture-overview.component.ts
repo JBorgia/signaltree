@@ -67,7 +67,7 @@ export class ArchitectureOverviewComponent {
     {
       label: 'Dependency Count',
       value: '1 package',
-      description: 'Instead of 4 NgRx packages',
+      description: 'One versioned package for all enhancers',
     },
     {
       label: 'Type Conflicts',

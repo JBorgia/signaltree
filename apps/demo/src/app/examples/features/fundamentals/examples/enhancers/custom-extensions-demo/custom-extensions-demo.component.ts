@@ -407,24 +407,43 @@ export class CustomExtensionsDemoComponent {
     return tasks.filter((t) => selectedIds.has(t.id));
   });
 
+  /**
+   * Freeze guard: when the store is frozen, block the mutation and log a
+   * warning (matching the "check the console for warnings" hint in the UI).
+   * Returns true when the caller should abort.
+   */
+  private blockedWhileFrozen(action: string): boolean {
+    if (this.isFrozen()) {
+      console.warn(
+        `[withFreeze] Store is frozen — "${action}" blocked. Unfreeze to allow mutations.`
+      );
+      return true;
+    }
+    return false;
+  }
+
   // Actions
   toggleTask(taskId: number) {
+    if (this.blockedWhileFrozen('toggle task selection')) return;
     this.checkpoint();
     this.selectedTaskIds.toggle(taskId);
   }
 
   selectAllTasks() {
+    if (this.blockedWhileFrozen('select all tasks')) return;
     this.checkpoint();
     const allIds = this.store.$.tasks().map((t) => t.id);
     this.selectedTaskIds.selectAll(allIds);
   }
 
   clearSelection() {
+    if (this.blockedWhileFrozen('clear selection')) return;
     this.checkpoint();
     this.selectedTaskIds.clear();
   }
 
   completeSelected() {
+    if (this.blockedWhileFrozen('complete selected tasks')) return;
     this.checkpoint();
     const selectedIds = this.selectedTaskIds();
     this.store.$.tasks.update((tasks) =>
@@ -434,6 +453,11 @@ export class CustomExtensionsDemoComponent {
   }
 
   updateUserName(event: Event) {
+    if (this.blockedWhileFrozen('update user name')) {
+      // Revert the input's displayed value back to the frozen store value.
+      (event.target as HTMLInputElement).value = this.store.$.userName();
+      return;
+    }
     this.checkpoint();
     const value = (event.target as HTMLInputElement).value;
     this.store.$.userName.set(value);

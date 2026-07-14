@@ -8,19 +8,24 @@
   >
     <div intro>
       <p class="intro-text">
-        This test replicates the exact pattern from the v3 trax-mobile app that revealed a bug in SignalTree.
-        It demonstrates whether <code>effect()</code> properly re-runs when SignalTree signals change.
+        This test replicates the exact pattern from the v3 trax-mobile app.
+        It verifies that <code>effect()</code> correctly re-runs when SignalTree signals change,
+        exactly as it does for regular Angular signals.
       </p>
 
-      <div class="warning-callout">
-        <h3>⚠️ Known Bug</h3>
+      <div class="success-callout">
+        <h3>✅ What This Verifies</h3>
         <p>
-          SignalTree signals do NOT trigger Angular's <code>effect()</code> re-execution.
-          This was discovered when migrating the v3 trax-mobile app from NgRx to SignalTree.
+          SignalTree signals <strong>do</strong> trigger Angular's <code>effect()</code> re-execution.
+          Click the buttons below and watch every effect counter increment — nested primitives and
+          entity signals behave identically to regular Angular signals.
         </p>
-        <p>
-          <strong>Expected:</strong> Effects should re-run when any signal they read changes.<br>
-          <strong>Actual:</strong> Effects only re-run for regular Angular signals, NOT SignalTree signals.
+        <p class="caveat">
+          <strong>Local-dev caveat:</strong> Under <code>pnpm link</code> local development you may hit a
+          "dual Angular instance" issue where SignalTree's signals are created with a different
+          <code>&#64;angular/core</code> than the consuming app, causing <code>isSignal()</code> to return
+          false and breaking effect reactivity. This never affects npm installs. See
+          <code>docs/guides/local-development-symlinks.md</code>.
         </p>
       </div>
     </div>
@@ -33,17 +38,17 @@
       <div class="counter-item success">
         <span class="counter-label">Regular Signal Effect:</span>
         <span class="counter-value">{{ regularEffectCount }}</span>
-        <span class="counter-status">✅ Should increment</span>
+        <span class="counter-status">✅ Increments on change</span>
       </div>
-      <div class="counter-item warning">
+      <div class="counter-item success">
         <span class="counter-label">SignalTree State Effect:</span>
         <span class="counter-value">{{ signalTreeEffectCount }}</span>
-        <span class="counter-status">❌ Should increment but doesn't</span>
+        <span class="counter-status">✅ Increments on change</span>
       </div>
-      <div class="counter-item warning">
+      <div class="counter-item success">
         <span class="counter-label">SignalTree Entity Effect:</span>
         <span class="counter-value">{{ entityEffectCount }}</span>
-        <span class="counter-status">❌ Should increment but doesn't</span>
+        <span class="counter-status">✅ Increments on change</span>
       </div>
     </div>
   </div>
@@ -54,32 +59,32 @@
     <p class="help-text">Click buttons to update signals. Check the console for detailed logs.</p>
 
     <div class="action-group">
-      <h3>Regular Angular Signal (Control - Should Work)</h3>
+      <h3>Regular Angular Signal (Control)</h3>
       <button (click)="updateRegularSignal()" class="btn-success">
         Update Regular Signal
       </button>
-      <p class="action-description">Updates a regular Angular signal. Effect SHOULD re-run and counter SHOULD increment.</p>
+      <p class="action-description">Updates a regular Angular signal. Effect re-runs and the counter increments.</p>
     </div>
 
     <div class="action-group">
-      <h3>SignalTree Nested Primitive (Bug Test)</h3>
-      <button (click)="updateSignalTreeState()" class="btn-warning">
+      <h3>SignalTree Nested Primitive</h3>
+      <button (click)="updateSignalTreeState()" class="btn-success">
         Update $.loading.state
       </button>
-      <p class="action-description">Updates SignalTree's nested primitive signal. Effect SHOULD re-run but DOES NOT.</p>
+      <p class="action-description">Updates SignalTree's nested primitive signal. The effect re-runs and the counter increments.</p>
     </div>
 
     <div class="action-group">
-      <h3>SignalTree Entity Operations (Bug Test)</h3>
+      <h3>SignalTree Entity Operations</h3>
       <div class="button-row">
-        <button (click)="addHauler()" class="btn-warning">
+        <button (click)="addHauler()" class="btn-success">
           Add Hauler
         </button>
         <button (click)="clearHaulers()" class="btn-danger">
           Clear Haulers
         </button>
       </div>
-      <p class="action-description">Modifies SignalTree entities. Effect SHOULD re-run but DOES NOT.</p>
+      <p class="action-description">Modifies SignalTree entities. The entity-count effect re-runs and the counter increments.</p>
     </div>
 
     <div class="action-group">
@@ -89,7 +94,7 @@
       </button>
       <p class="action-description">
         Simulates the exact pattern from v3: set loading → add entities → set loaded.
-        Watch the counters - SignalTree effects won't increment!
+        Watch the counters — every SignalTree effect increments.
       </p>
     </div>
 
@@ -104,8 +109,8 @@
   <div class="haulers-panel" *ngIf="haulerCount() > 0">
     <h2>👥 Loaded Haulers ({{ haulerCount() }})</h2>
     <p class="help-text">
-      Note: The list updates because template binding polls values during change detection.
-      But the effect counter above does NOT increment, proving effects don't re-run.
+      The list updates as entities change, and the entity-count effect above increments in lock-step —
+      confirming SignalTree entity signals are tracked by Angular's effect scheduler.
     </p>
     <ul class="hauler-list">
       @for (hauler of haulers(); track hauler.id) {
@@ -118,8 +123,8 @@
   <div class="log-panel">
     <h2>📜 Effect Execution Log</h2>
     <p class="help-text">
-      This log shows when effects actually run. Notice SignalTree effects only run once (initial),
-      while regular signal effects run each time the signal changes.
+      This log shows when effects actually run. Both regular signal effects and SignalTree effects
+      re-run each time the signal they read changes.
     </p>
     <div class="log-container">
       @if (effectLog.length === 0) {
@@ -136,15 +141,16 @@
   <!-- Conclusion -->
   <div class="conclusion-card">
     <h2>📋 Test Conclusion</h2>
-    <p>If the bug exists:</p>
+    <p>On a normal build (npm install), all three counters increment as you interact:</p>
     <ul>
-      <li><strong>Regular Signal Effect</strong> counter will increment with each click ✅</li>
-      <li><strong>SignalTree State Effect</strong> counter will STAY AT 1 ❌</li>
-      <li><strong>SignalTree Entity Effect</strong> counter will STAY AT 1 ❌</li>
+      <li><strong>Regular Signal Effect</strong> counter increments with each click ✅</li>
+      <li><strong>SignalTree State Effect</strong> counter increments with each change ✅</li>
+      <li><strong>SignalTree Entity Effect</strong> counter increments with each change ✅</li>
     </ul>
     <p>
-      <strong>This proves SignalTree signals don't integrate with Angular's reactive effect scheduling.</strong>
-      Template binding works because Angular's change detection polls values, not because effects track them.
+      <strong>This confirms SignalTree signals integrate correctly with Angular's reactive effect scheduling.</strong>
+      The only exception is <code>pnpm link</code> local development, where a dual <code>&#64;angular/core</code>
+      instance can break <code>isSignal()</code> — see <code>docs/guides/local-development-symlinks.md</code>.
     </p>
   </div>
   </st-example>

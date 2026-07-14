@@ -44,7 +44,7 @@ const ALL_TEAMS: Team[] = [
 /**
  * MARKER ZOO
  *
- * Showcases ALL 6 markers in ONE tree at FOUR different depths simultaneously.
+ * Showcases ALL 6 markers in ONE tree at three different depths simultaneously.
  * This is intentionally non-trivial — the point is to demonstrate that
  * SignalTree's marker family composes at arbitrary tree positions, which
  * is impossible (or requires significant ceremony) in libraries that
@@ -52,11 +52,9 @@ const ALL_TEAMS: Team[] = [
  *
  * Depth map:
  *   depth 1: orgStatus (status marker)
- *   depth 2: organization.teams.list (entityMap), settings.theme (stored)
- *   depth 3: organization.teams.search (asyncQuery)
- *   depth 4: organization.teams.byId[100].members (entityMap inside entityMap branch),
- *            organization.teams.byId[100].profileForm (form marker)
- *   Plus: directory.users (asyncSource at depth 2)
+ *   depth 2: directory.users (asyncSource), settings.theme (stored),
+ *            onboarding.profile (form marker)
+ *   depth 3: organization.teams.list (entityMap), organization.teams.search (asyncQuery)
  */
 @Component({
   selector: 'app-marker-zoo',

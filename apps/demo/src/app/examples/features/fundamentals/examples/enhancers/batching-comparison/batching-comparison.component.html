@@ -1,9 +1,10 @@
 <st-example heading="Batching Comparison">
   <p intro>
-    Compare unbatched signal writes against the <code>batching()</code>
-    enhancer's <code>.batch(fn)</code> grouping. Adjust the operation count and
-    notification delay, then run both modes to see how batching collapses N
-    synchronous writes into a single change-detection notification.
+    Compare unbatched signal writes against a tree enhanced with the
+    <code>batching()</code> enhancer, which automatically coalesces
+    notifications. Adjust the operation count and notification delay, then run
+    both modes to see how batching collapses N synchronous writes into a single
+    change-detection notification on the next microtask.
   </p>
 
   <div class="controls">

@@ -200,8 +200,8 @@ usernameValid = computed(() => {
   return value.length >= 3 && /^[a-zA-Z0-9_]+$/.test(value);
 });
 
-// Reset entire state in one call
-this.formStore.$.set({ fields: { ... }, touched: { ... } });`,
+// Reset entire state in one call (root is callable for merge writes)
+this.formStore.$({ fields: { ... }, touched: { ... } });`,
     },
   ];
 }

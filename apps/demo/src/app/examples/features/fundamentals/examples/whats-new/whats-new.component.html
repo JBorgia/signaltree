@@ -1,6 +1,168 @@
 <div class="whats-new">
   <h2>🚀 What's New</h2>
 
+  <h3>🧹 v11.1.0 — Packaging + demo maintenance (June 2026)</h3>
+  <div class="release-highlights">
+    <p>
+      No API changes. A cleanup release that tidies packaging and the demo app:
+    </p>
+    <ul>
+      <li>
+        <code>@signaltree/guardrails</code> packaging fixes — dropped an
+        unsatisfiable <code>@signaltree/shared</code> peerDependency and stopped the
+        <code>dependency-checks</code> lint from flagging the build-inlined
+        <code>@signaltree/shared</code>.
+      </li>
+      <li>
+        Remaining dev-only <code>console.warn</code> calls guarded behind
+        <code>ngDevMode</code>, so they strip cleanly from production builds.
+      </li>
+      <li>
+        Demo/example pages migrated onto a shared <code>st-example</code> playground
+        toolkit (this page included).
+      </li>
+    </ul>
+  </div>
+
+  <h3>💥 v11.0.0 — Deprecations removed; tree-shakeable by default; <code>linked()</code> (June 2026)</h3>
+  <div class="release-highlights">
+    <p>
+      The cleanup release the v10.3 deprecations pointed at, plus a real bundle-floor
+      reduction and one new primitive.
+    </p>
+    <h4>⚠️ Breaking Changes</h4>
+    <ul>
+      <li>
+        <strong>Deprecated <code>is</code>-prefix predicates removed.</strong> Use the
+        v10.3 canonical bare names: <code>status</code> →
+        <code>loading</code> / <code>loaded</code> / <code>hasError</code> /
+        <code>notLoaded</code> (was <code>isLoading</code> / <code>isLoaded</code> /
+        <code>isError</code> / <code>isNotLoaded</code>), and <code>entityMap().empty</code>
+        (was <code>isEmpty</code>). All mechanical — TypeScript flags every call site.
+      </li>
+      <li>
+        <strong>Root <code>tree.state</code> accessor removed.</strong> Read (and write)
+        through <code>tree.$</code> everywhere — <code>state</code> was always the same
+        reference, now retired.
+      </li>
+      <li>
+        <strong><code>security</code> and lazy signals are opt-in.</strong> Wrap security
+        config with <code>security()</code> from <code>&#64;signaltree/core/security</code>,
+        and inject <code>lazy: lazy()</code> from <code>&#64;signaltree/core/lazy</code> to
+        restore auto-lazy behavior. Both were statically reachable before and shipped in every
+        bundle; they now tree-shake out when unused. Reads/writes are functionally identical.
+      </li>
+    </ul>
+    <h4>✨ New</h4>
+    <ul>
+      <li>
+        <strong><code>linked(...)</code> — derived-but-writable signal.</strong> Wraps
+        Angular's native <code>linkedSignal</code>: a value computed from a source that you
+        can also write directly, re-deriving when the source changes (e.g. a "sticky
+        selection"). Composes with serialization / persistence / snapshot.
+        <pre><code>// simple form
+tree.derived($ =&gt; (&#123; doubled: linked(() =&gt; $.count() * 2) &#125;));
+
+// source + computation form (writable, re-derives on source change)
+tree.derived($ =&gt; (&#123;
+  selected: linked(&#123;
+    source: () =&gt; $.options(),
+    computation: (opts, prev) =&gt; prev?.value ?? opts[0],
+  &#125;),
+&#125;));
+
+tree.$.selected.set(next); // type-checks — it's a real WritableSignal</code></pre>
+      </li>
+      <li>
+        <strong><code>defineStore(factory, config?)</code></strong> — wraps a
+        <code>signalTree(...)</code> factory in an injectable Angular service
+        (<code>inject(MyStore)</code> resolves to the real tree; <code>destroy()</code> is
+        tied to the host injector via <code>DestroyRef</code>). Tree-shakes out when unused.
+      </li>
+    </ul>
+    <h4>📦 Bundle</h4>
+    <p>
+      Injecting the security + lazy/memory machinery drops the bare-tree gzip floor ~29%
+      (7.5KB → ~5.3KB; ~8.1KB with <code>entityMap</code> in use), and
+      <code>devTools()</code> now fully strips from production builds. Same release also
+      <strong>corrected an old, false "smaller than NgRx SignalStore" claim</strong> —
+      SignalStore is ~2.3KB and SignalTree is larger; the honest framing is
+      capability-per-KB and zero runtime dependencies, not raw size.
+    </p>
+  </div>
+
+  <h3>🏷️ v10.6.0 — Stable error codes (June 2026)</h3>
+  <div class="release-highlights">
+    <p>
+      Every core message and dev-mode guardrail now carries a greppable
+      <code>[ST####]</code> code (<code>ST1xxx</code> core, <code>ST2xxx</code>
+      entity/markers), mapped to cause + fix in <code>docs/errors/README.md</code>. New
+      dev-mode guardrails: <strong>[ST2001]</strong> for <code>entityMap</code> entities with
+      a null/undefined id (missing <code>selectId</code>), and <strong>[ST2002]</strong> for
+      entity method names borrowed from other libraries (Akita <code>.upsert</code>, Elf
+      <code>.addEntities</code>, RxJS <code>.next</code>) → hints the SignalTree equivalent.
+    </p>
+  </div>
+
+  <h3>🔢 v10.5.0 — Auto-sorted <code>entityMap</code> + body-granular reads (June 2026)</h3>
+  <div class="release-highlights">
+    <p>
+      <strong>New <code>sortComparer</code> option on <code>entityMap</code></strong> keeps
+      <code>all()</code> / <code>ids()</code> in a stable sorted order
+      (<code>&#64;ngrx/entity</code> parity); <code>map()</code> retains insertion order.
+    </p>
+    <pre><code>users: entityMap&lt;User, number&gt;(&#123;
+  selectId: (u) =&gt; u.id,
+  sortComparer: (a, b) =&gt; a.name.localeCompare(b.name),
+&#125;)
+
+tree.$.users.all();  // always name-sorted</code></pre>
+    <p>
+      Also: <strong>body-granular <code>entityMap</code> reads</strong> —
+      <code>byId(id).field()</code> now depends only on that one entity's signal, so updating
+      one entity no longer re-runs every entity's computeds (fan-out 1). Per-entity signals
+      materialize lazily and release on removal.
+    </p>
+  </div>
+
+  <h3>📝 v10.4.0 — <code>form.data()</code> read alias (June 2026)</h3>
+  <div class="release-highlights">
+    <p>
+      Same "meet AI where it is" pattern v10.2 applied to <code>status()</code>: models
+      trained on form-state vocabularies (Angular <code>FormGroup</code>, Formik,
+      react-hook-form) reach for <code>.data()</code> to read form values. v10.4 adds
+      <code>.data()</code> as a first-class alias that returns the same value as calling the
+      marker directly. Purely additive — no new state, no deprecation on the canonical form.
+    </p>
+    <pre><code>tree.$.profile();        // canonical — call the marker
+tree.$.profile.data();   // v10.4 alias — identical value
+tree.$.profile.$.name(); // field signal (still preferred in templates)</code></pre>
+  </div>
+
+  <h3>🎯 v10.3.0 — Marker accessor shape UNIFIED (bare-name predicates) (May 2026)</h3>
+  <div class="release-highlights">
+    <p>
+      A real DX bug the v10.2 benchmark surfaced: SignalTree's own markers named their
+      predicate accessors inconsistently — <code>status()</code> used
+      <code>is</code>-prefix (<code>.isLoading()</code>), <code>entityMap</code> had
+      <code>.isEmpty()</code>, while <code>form</code>/<code>asyncSource</code>/<code>asyncQuery</code>
+      already used bare names. v10.3 makes <strong>bare names canonical everywhere</strong>,
+      matching <code>FormControl.dirty</code> / <code>.valid</code> and Angular signal
+      conventions.
+    </p>
+    <pre><code>tree.$.load.loading();   // was .isLoading()
+tree.$.load.loaded();    // was .isLoaded()
+tree.$.load.hasError();  // was .isError()
+tree.$.users.empty();    // was .isEmpty()</code></pre>
+    <p>
+      <strong>No breaking changes in v10.3</strong> — the <code>is</code>-prefix names became
+      <code>&#64;deprecated</code> aliases returning the <em>same</em> Signal instance (no
+      double allocation), and were removed in v11.0. The deeper takeaway: the AI-codegen
+      benchmark didn't just measure AI accuracy, it surfaced a genuine DX bug — AI-friendly
+      and human-friendly turned out to be the same thing.
+    </p>
+  </div>
+
   <h3>🤖 v10.2.0 — AI-discoverability hardening, measured +42pp lift (May 2026)</h3>
   <div class="release-highlights">
     <p>
@@ -377,6 +539,13 @@ tree.$.load.fail(err);      // equivalent (v10.2+)</code></pre>
       Angular effects when available, falling back to polling only in tests
     </li>
   </ul>
+  <p class="disclaimer">
+    <em
+      >*The speed and bundle figures above were measured on one app's workload at
+      the time of the v5 release; your results will vary. See the current
+      <a routerLink="/benchmarks">benchmarks</a> for up-to-date, reproducible numbers.</em
+    >
+  </p>
 
   <h3>v4.2.0 (November 2025)</h3>
   <ul>

@@ -37,10 +37,10 @@
       </div>
 
       <div class="concept-card">
-        <h3>🔬 How the Tests Work</h3>
+        <h3>🔬 How This Demo Works</h3>
         <p>
-          This page runs both <strong>live demonstrations</strong> and
-          references <strong>automated test suites</strong> that verify:
+          This page runs <strong>live in your browser</strong> against a real
+          signal tree. As you interact with it, you can confirm:
         </p>
         <ol>
           <li>
@@ -235,12 +235,12 @@
   </div>
 
   <div class="validation-section">
-    <h2>✅ Automated Test Suite Results</h2>
+    <h2>✅ Capabilities This Demo Exercises</h2>
     <div class="test-results">
       <div class="test-summary">
-        <span class="test-count">{{ totalTestsPassing }} Tests Passing</span>
+        <span class="test-count">{{ testCategories.length }} capability groups</span>
         <span class="test-coverage"
-          >Including {{ extremeDepthTests }} Extreme Depth Tests</span
+          >Exercised live in your browser — not CI output</span
         >
         <span class="current-depth-badge">
           Target Depth: {{ targetDepth }} Levels ({{ depthCategory }})
@@ -251,17 +251,19 @@
       </div>
 
       <div class="test-explanation">
-        <h3>📋 Test Categories Explained</h3>
+        <h3>📋 Capability Categories</h3>
         <p>
-          Our test suite validates SignalTree's recursive typing across multiple
-          depth ranges.
+          This interactive demo exercises SignalTree's recursive typing across
+          multiple depth ranges directly in the running app.
           <strong>Target depth: {{ targetDepth }} levels</strong> -
           {{ depthDescription }}
         </p>
         <p class="performance-note">
-          ✅ <strong>Real-time testing:</strong> Every depth change triggers
-          functional verification. Type inference, reactivity, and performance
-          are validated live as you explore different depths.
+          ✅ <strong>Live, not CI:</strong> Every depth change updates the real
+          signal tree in this page. Type inference is enforced by the TypeScript
+          compiler at build time; reactivity and timings below are observed live
+          as you interact. The checkmarks indicate supported capabilities, not a
+          count of passing test cases.
         </p>
       </div>
 
@@ -286,31 +288,29 @@
       </div>
 
       <div class="technical-details">
-        <h3>🔧 Technical Implementation</h3>
+        <h3>🔧 How This Demo Works</h3>
         <p>
-          These tests run in our CI/CD pipeline using Vitest with TypeScript's
-          <code>tsc</code> compiler. Key validation points:
+          Everything on this page runs in the browser against a live
+          <code>signalTree</code>. There is no hidden CI run behind these
+          numbers:
         </p>
         <ul>
           <li>
-            <strong>Compile-Time:</strong>
-            <code>expectType&lt;Exact&lt;T, U&gt;&gt;()</code> assertions verify
-            no type degradation
+            <strong>Compile-Time:</strong> TypeScript's <code>tsc</code> infers
+            the exact signal type at every level when the demo is built — if it
+            degraded to <code>'any'</code>, this page would not compile
           </li>
           <li>
-            <strong>Runtime:</strong> Standard Vitest assertions validate
-            functional correctness
+            <strong>Runtime:</strong> The buttons above read and write signals at
+            the displayed depth, so you can confirm functional correctness
+            yourself
           </li>
           <li>
-            <strong>Performance:</strong>
-            <code>performance.now()</code> measurements with statistical
-            analysis
+            <strong>Performance:</strong> The timings shown are single
+            <code>performance.now()</code> samples measured on your machine, not
+            statistical CI benchmarks
           </li>
         </ul>
-        <p class="repo-link">
-          📂 View test source:
-          <code>/packages/core/src/lib/tests/extreme-depth.spec.ts</code>
-        </p>
       </div>
     </div>
   </div>
