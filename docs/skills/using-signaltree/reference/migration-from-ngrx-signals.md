@@ -5,7 +5,7 @@ description: One-to-one mapping guide specifically for porting @ngrx/signals sto
 
 # Migrating from @ngrx/signals to SignalTree
 
-Quick reference for converting an existing `@ngrx/signals` codebase. Applies **only to `@ngrx/signals`** — the signal-based store package (`signalStore`, `withState`, `rxMethod`). Not applicable to classic `@ngrx/store` (reducers, actions, effects) or `@ngrx/component-store`.
+Quick reference for converting an existing `@ngrx/signals` codebase. Applies **only to `@ngrx/signals`** — the signal-based store package (`signalStore`, `withState`, `rxMethod`). For classic `@ngrx/store` (reducers, actions, effects, `@ngrx/entity`), use [`migration-from-ngrx-store.md`](./migration-from-ngrx-store.md) — it shares this file's target architecture but owns the actions/reducers/selectors/effects mappings. Not applicable to `@ngrx/component-store` (map its `ComponentStore<T>` to a component-local `signalTree()`).
 
 Read the root `SKILL.md`, [`reference/optimal-implementation.md`](./optimal-implementation.md), and [`reference/patterns.md`](./patterns.md) for full SignalTree context; use this file for the mechanical mappings.
 
