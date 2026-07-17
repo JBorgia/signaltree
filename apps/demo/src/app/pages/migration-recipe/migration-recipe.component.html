@@ -1926,11 +1926,21 @@ cp -r node_modules/&#64;signaltree/core/skills/using-signaltree \
         tracking issue.
       </li>
       <li>
-        <strong>Deepest coverage today is for <code>&#64;ngrx/signals</code></strong>
-        &mdash; see
-        <code>reference/migration-from-ngrx-signals.md</code> inside the
-        skill. PRs welcome to extend coverage to classic NgRx, NGXS, Elf, and
-        the others shown above.
+        <strong>Dedicated mechanical-mapping guides for both NgRx flavors.</strong>
+        <code>&#64;ngrx/signals</code> (<code>signalStore</code> /
+        <code>withState</code> / <code>rxMethod</code>) &rarr;
+        <code>reference/migration-from-ngrx-signals.md</code>, the most
+        battle-tested path. Classic <code>&#64;ngrx/store</code>
+        (<code>createAction</code> / <code>createReducer</code> /
+        <code>createSelector</code> / <code>createEffect</code> +
+        <code>&#64;ngrx/entity</code>) &rarr;
+        <code>reference/migration-from-ngrx-store.md</code> &mdash; actions
+        become <code>Ops</code> methods, reducers become signal writes,
+        selectors become <code>computed()</code> / derived tiers, and the
+        <code>load</code> &rarr; effect &rarr; <code>loadSuccess</code> action
+        round-trip collapses into a single <code>asyncSource</code> marker or
+        <code>Ops</code> method. NGXS, Elf, and the others shown above are
+        illustrated side-by-side but not yet in the skill &mdash; PRs welcome.
       </li>
       <li>
         <strong>Definition of done.</strong> (1) Zero imports of the legacy
