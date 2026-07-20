@@ -6,7 +6,15 @@ export default [
   ...nx.configs['flat/typescript'],
   ...nx.configs['flat/javascript'],
   {
-    ignores: ['**/dist', '**/coverage'],
+    ignores: [
+      '**/dist',
+      '**/coverage',
+      '**/.angular', // Angular/Vite build cache — generated, never source
+      '**/.nx', // Nx cache — generated
+      '**/.versus', // local Versus tooling (gitignored)
+      '**/tmp', // scratch dir (gitignored)
+      'scripts/ai-codegen-benchmark/results/**', // raw LLM outputs, malformed by design
+    ],
   },
   {
     files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx'],
