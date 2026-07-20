@@ -5,6 +5,7 @@ import { RouterModule } from '@angular/router';
 import {
   asyncQuery,
   asyncSource,
+  entityCollection,
   entityMap,
   form,
   signalTree,
@@ -29,6 +30,12 @@ interface Team {
   name: string;
 }
 
+interface Plant {
+  id: string;
+  name: string;
+  region: string;
+}
+
 const ALL_USERS: User[] = [
   { id: 1, name: 'Alice', role: 'admin', email: 'alice@acme.test' },
   { id: 2, name: 'Bob', role: 'user', email: 'bob@acme.test' },
@@ -41,10 +48,16 @@ const ALL_TEAMS: Team[] = [
   { id: 101, name: 'Growth' },
 ];
 
+const ALL_PLANTS: Plant[] = [
+  { id: 'plant-a', name: 'Riverside', region: 'east' },
+  { id: 'plant-b', name: 'Lakeshore', region: 'west' },
+  { id: 'plant-c', name: 'Summit', region: 'central' },
+];
+
 /**
  * MARKER ZOO
  *
- * Showcases ALL 6 markers in ONE tree at three different depths simultaneously.
+ * Showcases ALL 7 markers in ONE tree at four different depths simultaneously.
  * This is intentionally non-trivial — the point is to demonstrate that
  * SignalTree's marker family composes at arbitrary tree positions, which
  * is impossible (or requires significant ceremony) in libraries that
@@ -55,6 +68,8 @@ const ALL_TEAMS: Team[] = [
  *   depth 2: directory.users (asyncSource), settings.theme (stored),
  *            onboarding.profile (form marker)
  *   depth 3: organization.teams.list (entityMap), organization.teams.search (asyncQuery)
+ *   depth 4: organization.teams.catalog.plants (entityCollection — cache-aware,
+ *            self-loading entityMap)
  */
 @Component({
   selector: 'app-marker-zoo',
@@ -100,6 +115,24 @@ store.$.orgStatus.fail(err);      // === setError`,
     },
   ];
 
+  readonly entityCollectionCode: CodeFile[] = [
+    {
+      label: 'entityCollection.ts',
+      language: 'typescript',
+      source: `plants: entityCollection<Plant, string>({
+  load: () => of(ALL_PLANTS).pipe(delay(400)),
+  selectId: (p) => p.id,
+  staleTime: '30s',  // load() is a no-op while fresh
+  tags: ['plants'],  // invalidateTag(tree, 'plants')
+})
+
+store.$.organization.teams.catalog.plants.all();      // full entityMap surface
+store.$.organization.teams.catalog.plants.loading();   // Signal<boolean>
+store.$.organization.teams.catalog.plants.load();      // guarded — coalesces concurrent calls
+store.$.organization.teams.catalog.plants.invalidate(); // mark stale`,
+    },
+  ];
+
   readonly store = signalTree({
     // depth 1 — status marker for org-wide sync
     orgStatus: status(),
@@ -130,6 +163,16 @@ store.$.orgStatus.fail(err);      // === setError`,
               )
             ).pipe(delay(180)),
         }),
+
+        catalog: {
+          // depth 4 — entityCollection: cache-aware, self-loading entityMap
+          plants: entityCollection<Plant, string>({
+            load: () => of(ALL_PLANTS).pipe(delay(400)),
+            selectId: (p) => p.id,
+            staleTime: '30s',
+            tags: ['plants'],
+          }),
+        },
       },
     },
 
@@ -166,6 +209,10 @@ store.$.orgStatus.fail(err);      // === setError`,
     this.store.$.organization.teams.list.setAll(ALL_TEAMS);
   }
 
+  loadPlants(): void {
+    this.store.$.organization.teams.catalog.plants.load();
+  }
+
   toggleTheme(): void {
     this.store.$.settings.theme.update((t) => (t === 'light' ? 'dark' : 'light'));
   }
@@ -174,6 +221,8 @@ store.$.orgStatus.fail(err);      // === setError`,
     this.store.$.directory.users.reset();
     this.store.$.organization.teams.list.clear();
     this.store.$.organization.teams.search.reset();
+    this.store.$.organization.teams.catalog.plants.clear();
+    this.store.$.organization.teams.catalog.plants.invalidate();
     this.store.$.onboarding.profile.reset();
     this.store.$.orgStatus.reset();
   }

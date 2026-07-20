@@ -1187,7 +1187,7 @@ export const myDerived = derivedFrom<AppTreeBase>()(($) => ({
 
 ## Built-in Markers
 
-SignalTree provides four built-in markers that handle common state patterns Angular doesn't provide out of the box. All markers are **self-registering** and **tree-shakeable** - only the markers you use are included in your bundle.
+SignalTree provides built-in markers that handle common state patterns Angular doesn't provide out of the box: `entityMap`, `entityCollection` (v11.2+), `status`, `stored`, and `form` (plus the async markers `asyncSource` / `asyncQuery`). All markers are **self-registering** and **tree-shakeable** - only the markers you use are included in your bundle.
 
 ### 9) `entityMap<E, K>()` - Normalized Collections
 
@@ -1268,6 +1268,35 @@ const tree = signalTree({
 // Specify selectId when upserting
 tree.$.users.upsertOne(user, { selectId: (u) => u.odataId });
 ```
+
+### 9b) `entityCollection<E, K>(config)` - Cache-Aware Self-Loading Collection (v11.2+)
+
+A cache-aware `entityMap` that loads itself — reach for it instead of hand-wiring `entityMap` + `status()` + a loader + a load-guard for any server-backed collection. Full `entityMap` surface **plus** a loader, load status, a `staleTime` freshness guard, single-flight dedup, tag-based invalidation, and optional offline-first persistence. See [RFC 0002](../../docs/rfcs/0002-entity-collection.md) and the [cookbook](../../docs/guides/entity-collection-cookbook.md).
+
+```typescript
+import { signalTree, entityCollection, invalidateTag } from '@signaltree/core';
+
+const tree = signalTree({
+  plants: entityCollection<Plant, string>({
+    load: () => plantApi.list$(region), // () => Observable<E[]> | Promise<E[]>
+    selectId: (p) => p.url,
+    staleTime: '30m', // skip refetch while fresh; ms or '30m'. default 0 = always stale
+    swr: true, // serve last value while revalidating
+    tags: ['plants'], // for invalidateTag(tree, 'plants')
+  }),
+});
+
+// Full entityMap surface (all/byId/where/addOne/setAll/…) plus:
+await tree.$.plants.load(); // guarded: no-op if fresh OR in-flight — N callers => one fetch
+await tree.$.plants.refresh(); // force reload, ignores staleTime
+tree.$.plants.invalidate(); // mark stale; next load() refetches
+tree.$.plants.loading(); // + .loaded() / .error() / .lastLoadedAt()
+
+// Push invalidation (SSE / SignalR — the @signaltree/realtime seam):
+invalidateTag(tree, 'plants'); // marks every collection carrying the tag stale
+```
+
+Auto-loads on first `tree.$` access unless `lazy: true`. Keep HTTP-level caching (ETag / conditional GET) in the browser + `HttpClient`; `entityCollection` owns application-level freshness, not the transport.
 
 ### 10) `status()` - Manual Async State
 

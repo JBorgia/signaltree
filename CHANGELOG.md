@@ -1,3 +1,9 @@
+## 11.2.0
+
+### Added
+
+- **`entityCollection<E, K>(config)` marker + `invalidateTag(tree, tag)`** (`@signaltree/core`, [RFC 0002](docs/rfcs/0002-entity-collection.md)) — a cache-aware entity-collection loader. Composes the full `entityMap` surface with a loader, load status, a `staleTime` freshness guard, single-flight dedup, tag-based invalidation, and optional offline-first persistence (`persist` reuses the existing `StorageAdapter`/`createIndexedDBAdapter`, with `hydrateThenRevalidate` for SWR). Deletes the per-consumer `entityMap` + `status` + loader + load-guard boilerplate that the v3 audit flagged as the source of redundant fetches. `.load()` is guarded (no-op if fresh or in-flight → concurrent callers coalesce to one fetch); `.refresh()` forces; `.invalidate()`/`invalidateTag()` mark stale (the push-invalidation seam for SSE/SignalR). Additive and backward-compatible — no migration. See the [cookbook](docs/guides/entity-collection-cookbook.md) and [core changelog](packages/core/CHANGELOG.md).
+
 ## 11.0.0
 
 ### Breaking

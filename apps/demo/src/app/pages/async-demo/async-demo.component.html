@@ -6,8 +6,8 @@
       <code>asyncSource</code> and <code>asyncQuery</code> attach at any tree
       path and auto-expose <code>data</code>, <code>loading</code>,
       <code>error</code>, and lifecycle methods — same family as
-      <code>entityMap</code>, <code>status</code>, <code>stored</code>, and
-      <code>form</code>.
+      <code>entityMap</code>, <code>status</code>, <code>stored</code>,
+      <code>form</code>, and <code>entityCollection</code>.
     </p>
     <st-code-tabs [files]="heroImportCode" />
   </header>
@@ -179,7 +179,8 @@
         <strong>Both markers attach at any depth.</strong> Here they live at
         depth 1 (<code>$.users</code>, <code>$.search</code>), but you can drop
         them anywhere in your state literal — same as <code>entityMap</code>,
-        <code>status</code>, <code>stored</code>, and <code>form</code>.
+        <code>status</code>, <code>stored</code>, <code>form</code>, and
+        <code>entityCollection</code>.
       </li>
       <li>
         <strong>No manual status wiring.</strong> The marker materializer

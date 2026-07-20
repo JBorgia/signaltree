@@ -1,6 +1,6 @@
 # @signaltree/core Changelog
 
-## Unreleased
+## 11.2.0 (2026-07-20)
 
 ### Public API additions — `entityCollection` marker (RFC 0002)
 

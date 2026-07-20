@@ -1,6 +1,64 @@
 <div class="whats-new">
   <h2>🚀 What's New</h2>
 
+  <h3>📡 v11.2.0 — <code>entityCollection()</code> + <code>invalidateTag()</code> (July 2026)</h3>
+  <div class="release-highlights">
+    <p>
+      A cache-aware, self-loading <code>entityMap</code>: the marker family gains a
+      collection primitive that owns its own fetch, freshness, and invalidation —
+      no more hand-wiring <code>asyncSource</code> + <code>entityMap</code> +
+      manual staleness bookkeeping for the common "load a list, cache it, invalidate
+      on demand" shape.
+    </p>
+    <h4>✨ New</h4>
+    <ul>
+      <li>
+        <strong><code>entityCollection&lt;E, K&gt;(config)</code></strong> — composes the
+        full <code>entityMap</code> surface (all CRUD + query signals) with a loader,
+        load status, and cache semantics. <code>.load()</code> is guarded: a no-op while
+        fresh or already in-flight, so concurrent callers coalesce onto one fetch.
+        <code>.refresh()</code> forces a reload; <code>.invalidate()</code> marks the
+        collection stale without fetching.
+      </li>
+      <li>
+        <strong><code>staleTime</code></strong> — freshness window (ms or a duration
+        string like <code>'30m'</code>) that <code>.load()</code> respects before
+        refetching. <strong><code>swr</code></strong> (stale-while-revalidate) keeps
+        <code>loaded()</code> true during background revalidation instead of flipping
+        back to loading.
+      </li>
+      <li>
+        <strong><code>tags</code> + <code>invalidateTag(tree, tag)</code></strong> — register
+        a collection under one or more tags, then invalidate every collection carrying
+        that tag from anywhere with a single call. The push-invalidation seam for
+        SSE/SignalR: an incoming "plants changed" event becomes
+        <code>invalidateTag(tree, 'plants')</code>, no manual fan-out to each consumer.
+      </li>
+      <li>
+        <strong>Optional offline-first persistence</strong> — <code>persist: &#123; adapter, key, hydrateThenRevalidate &#125;</code>
+        seeds rows instantly from a storage adapter on materialize, then revalidates via
+        <code>load()</code> in the background.
+      </li>
+    </ul>
+    <pre><code>const tree = signalTree(&#123;
+  plants: entityCollection&lt;PlantDto, string&gt;(&#123;
+    load: () =&gt; plantApi.list$(region),
+    selectId: (p) =&gt; p.url,
+    staleTime: '30m',     // skip refetch while fresh
+    tags: ['plants'],     // invalidateTag(tree, 'plants')
+  &#125;),
+&#125;);
+
+tree.$.plants.all();        // PlantDto[] (full entityMap surface)
+tree.$.plants.loading();    // Signal&lt;boolean&gt;
+await tree.$.plants.load(); // guarded — no-op while fresh / in-flight
+invalidateTag(tree, 'plants'); // marks every 'plants'-tagged collection stale</code></pre>
+    <p>
+      See the <a routerLink="/marker-zoo">marker zoo</a> for a live depth-4 example, and
+      <code>docs/guides/entity-collection-cookbook.md</code> for the full walkthrough.
+    </p>
+  </div>
+
   <h3>🧹 v11.1.0 — Packaging + demo maintenance (June 2026)</h3>
   <div class="release-highlights">
     <p>

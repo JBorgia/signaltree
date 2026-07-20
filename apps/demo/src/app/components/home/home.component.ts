@@ -162,7 +162,7 @@ export class HomeComponent {
     {
       title: 'SignalTree-native async markers',
       description:
-        '`asyncSource` and `asyncQuery` — SignalTree-native async primitives that compose with `entityMap`, `status`, `stored`, and `form`. Path-attached, auto-cleanup, no boilerplate.',
+        '`asyncSource` and `asyncQuery` — SignalTree-native async primitives that compose with `entityMap`, `status`, `stored`, `form`, and `entityCollection`. Path-attached, auto-cleanup, no boilerplate.',
       route: '/async',
       cta: 'Try async markers →',
     },

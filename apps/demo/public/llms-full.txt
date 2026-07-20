@@ -61,6 +61,7 @@ All `@signaltree/*` packages publish in lockstep on the **11.x** line (`@signalt
 | `security` config requires the `security()` wrapper from `@signaltree/core/security` (**breaking**) | 11.0.0 |
 | lazy signals opt-in via `lazy()` from `@signaltree/core/lazy` (**breaking** — was automatic) | 11.0.0 |
 | `is`-prefix predicate aliases (`.isLoading`/`.isLoaded`/`.isError`/`.isNotLoaded`/`.isEmpty`) **removed** — use bare names (**breaking**) | 11.0.0 |
+| `entityCollection` marker + `invalidateTag()` (cache-aware self-loading entityMap) | 11.2.0 |
 | `memoization()` enhancer | **removed in 9.0.1** — use Angular `computed()` |
 
 When unsure of the installed version, check `node_modules/@signaltree/core/package.json`. Emit the canonical name, not a deprecated alias, in new code.
@@ -221,6 +222,47 @@ store.$.users.byId(id)?.name(); // Signal-backed field read
 `entityMap` can be placed at any depth: `$.tickets.entities`, `$.users.byOrg[orgId].members`, etc.
 
 **Dev-mode guardrails (warn-only, tree-shaken in prod):** `[ST2001]` entities resolving to a `null`/`undefined` id (give them an `id` or `selectId`); `[ST2002]` a method from another library (`.upsert`/`.addEntities`/`.next`) → use the SignalTree name. All errors/warnings carry stable `[ST####]` codes — see `docs/errors/README.md`.
+
+### `entityCollection<Entity, Key>(config)` (v11.2+)
+
+A **cache-aware `entityMap` that loads itself.** Reach for this instead of hand-wiring `entityMap` + `status()` + a loader + a load-guard for any server-backed collection — the composition the v3 audit found every consumer re-implementing (and forgetting the freshness guard, causing redundant fetches). Full `entityMap` surface PLUS a loader, load status, a freshness guard, single-flight dedup, tag invalidation, and optional offline-first persistence.
+
+```typescript
+import { signalTree, entityCollection, invalidateTag, createIndexedDBAdapter } from '@signaltree/core';
+
+const store = signalTree({
+  plants: entityCollection<Plant, string>({
+    load: () => plantApi.list$(region),   // () => Observable<E[]> | Promise<E[]>
+    selectId: (p) => p.url,
+    staleTime: '30m',                       // skip refetch while fresh; ms or '30m'/'90s'/'2h'. default 0 = always stale
+    swr: true,                              // serve last value while revalidating
+    tags: ['plants'],                       // for invalidateTag(tree, 'plants')
+    persist: {                              // optional offline-first (reuses the existing StorageAdapter)
+      adapter: createIndexedDBAdapter(),
+      key: 'plants',
+      hydrateThenRevalidate: true,          // paint cached rows instantly, revalidate in background
+    },
+  }),
+});
+
+// Full entityMap surface: store.$.plants.all() / byId(id) / where(pred) / addOne(...) / setAll(...) / ...
+
+// Cache-aware loading:
+await store.$.plants.load();     // GUARDED — no-op if fresh OR already in-flight; N concurrent callers => ONE fetch
+await store.$.plants.refresh();  // force reload, ignores staleTime, still single-in-flight
+store.$.plants.invalidate();     // mark stale only (does not fetch); next load() refetches
+
+// Status signals:
+store.$.plants.loading();        // Signal<boolean>
+store.$.plants.loaded();         // Signal<boolean>
+store.$.plants.error();          // Signal<unknown | null>
+store.$.plants.lastLoadedAt();   // Signal<number | null>
+
+// Push invalidation (SSE / SignalR — the @signaltree/realtime seam):
+invalidateTag(store, 'plants');  // marks every collection carrying the tag stale; returns the count
+```
+
+Auto-loads on first `tree.$` access (like other markers) unless `lazy: true`. Keep HTTP-level caching (ETag / conditional GET) in the browser + `HttpClient` — `staleTime` decides whether to *ask*, the ETag decides whether the answer costs bytes. Full recipe (HTTP-cache interplay + SSE/SignalR): `docs/guides/entity-collection-cookbook.md`.
 
 ### `status<ErrorType>()`
 

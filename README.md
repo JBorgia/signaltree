@@ -154,13 +154,15 @@ store.$.loadingState.setLoaded();
 store.$.loadingState.loading(); // Signal<boolean> (v10.3 canonical; .isLoading() still works as a deprecated alias)
 ```
 
+`entityCollection<E, K>(config)` (v11.2) is a cache-aware, self-loading `entityMap` — it composes the full `entityMap` surface with a loader, load status, a `staleTime` freshness guard, single-flight dedup, tag-based invalidation, and optional offline-first persistence. See [`docs/guides/entity-collection-cookbook.md`](docs/guides/entity-collection-cookbook.md) for the full walkthrough.
+
 ## Composition model
 
 A SignalTree store is composed from four distinct, type-safe mechanisms — each handles one concern, rather than funneling everything through a single primitive:
 
 | Concern            | Mechanism                                                                                                            | Example                                                  |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| **State shape**    | the constructor object — state _is_ the JSON, including markers (`entityMap`, `status`, `stored`, `asyncSource`)     | `signalTree({ users: entityMap<User>() })`               |
+| **State shape**    | the constructor object — state _is_ the JSON, including markers (`entityMap`, `status`, `stored`, `asyncSource`, `entityCollection`)     | `signalTree({ users: entityMap<User>() })`               |
 | **Derived state**  | `.derived()` / `derivedFrom()` — computed signals deep-merged at any path                                            | `.derived($ => ({ activeCount: computed(...) }))`        |
 | **Capabilities**   | `.with()` enhancers — opt-in, tree-shakeable, and reusable (author your own custom enhancers)                        | `.with(batching()).with(devTools())`                     |
 | **Actions**        | a plain `@Injectable` Ops service that writes to tree paths — reads (`tree.$`) stay decoupled from writes            | `ops.users.select(id)`                                   |
@@ -261,7 +263,7 @@ The value-level `createEditSession(initial)` primitive (single-arg, no tree bind
 
 ## Async (`asyncSource` / `asyncQuery` markers)
 
-Async state usually belongs **at the tree path it describes** — use `asyncSource` for load-and-expose and `asyncQuery` for input-driven debounced queries. Reach for a plain Observable method on an Ops class only when the orchestration spans multiple paths or stages that no single marker can express (see the migration section). Two markers cover the two main async patterns and compose with the rest of the marker family (`entityMap`, `status`, `stored`, `form`):
+Async state usually belongs **at the tree path it describes** — use `asyncSource` for load-and-expose and `asyncQuery` for input-driven debounced queries. Reach for a plain Observable method on an Ops class only when the orchestration spans multiple paths or stages that no single marker can express (see the migration section). Two markers cover the two main async patterns and compose with the rest of the marker family (`entityMap`, `status`, `stored`, `form`, `entityCollection`):
 
 ```typescript
 import { signalTree, asyncSource, asyncQuery } from '@signaltree/core';
@@ -424,7 +426,7 @@ tree.registerCleanup(fn); // Register custom cleanup
 - [AI Agent Templates](docs/ai/agent-templates.md) — drop-in `.cursorrules`, `CLAUDE.md`, `copilot-instructions.md`
 - [llms.txt](https://signaltree.io/llms.txt) / [llms-full.txt](https://signaltree.io/llms-full.txt) — LLM-targeted summary and full API surface
 - [Built for AI agents](https://signaltree.io/built-for-ai) — the AI-discoverability story (v10)
-- [Marker zoo](https://signaltree.io/marker-zoo) — all 6 markers at 4 depths in one tree (v10)
+- [Marker zoo](https://signaltree.io/marker-zoo) — all 7 markers at 4 depths in one tree (v10)
 - [AI-codegen accuracy benchmark](scripts/ai-codegen-benchmark/) — reproducible scorecard scaffolding (v10)
 
 ## Using SignalTree with AI Agents

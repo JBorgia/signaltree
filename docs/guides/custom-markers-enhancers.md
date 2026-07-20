@@ -212,11 +212,12 @@ This pattern ensures:
 
 ## Built-in Markers
 
-| Marker                    | Purpose                      | Materialized Type    |
-| ------------------------- | ---------------------------- | -------------------- |
-| `entityMap<E, K>()`       | Entity collections with CRUD | `EntitySignal<E, K>` |
-| `status<E>()`             | Async loading state          | `StatusSignal<E>`    |
-| `stored<T>(key, default)` | localStorage persistence     | `StoredSignal<T>`    |
+| Marker                           | Purpose                                       | Materialized Type              |
+| -------------------------------- | ---------------------------------------------- | ------------------------------- |
+| `entityMap<E, K>()`              | Entity collections with CRUD                  | `EntitySignal<E, K>`            |
+| `status<E>()`                    | Async loading state                           | `StatusSignal<E>`               |
+| `stored<T>(key, default)`        | localStorage persistence                      | `StoredSignal<T>`               |
+| `entityCollection<E, K>(config)` | cache-aware self-loading entityMap; RFC 0002   | `EntityCollectionSignal<E, K>`  |
 
 ### entityMap()
 

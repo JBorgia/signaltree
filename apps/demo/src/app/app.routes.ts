@@ -71,9 +71,9 @@ export const appRoutes: Route[] = [
         (c) => c.MarkerZooComponent
       ),
     data: {
-      title: 'Marker zoo — all 6 markers at 4 different depths',
+      title: 'Marker zoo — all 7 markers at 4 different depths',
       description:
-        'All SignalTree markers in one tree at depths 1-4 simultaneously: entityMap, status, stored, form, asyncSource, asyncQuery. Demonstrates path-attached composition.',
+        'All SignalTree markers in one tree at depths 1-4 simultaneously: entityMap, status, stored, form, asyncSource, asyncQuery, entityCollection. Demonstrates path-attached composition.',
     },
   },
   {

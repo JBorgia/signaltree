@@ -2,7 +2,7 @@
   <header class="hero">
     <h1>Marker Zoo</h1>
     <p class="lead">
-      All six SignalTree markers in <strong>one tree at three different depths</strong>.
+      All seven SignalTree markers in <strong>one tree at four different depths</strong>.
       Each one materializes into a fully-functional reactive sub-API at its declared
       path. <strong>Impossible in libraries that compose features at the store root.</strong>
     </p>
@@ -75,6 +75,39 @@
         </ul>
       }
       <st-code-tabs [files]="entityMapCode" />
+    </article>
+
+    <article class="card">
+      <h2>
+        <span class="depth-badge">depth 4</span>
+        <code>entityCollection&lt;E, K&gt;()</code>
+      </h2>
+      <p>
+        Cache-aware, self-loading <code>entityMap</code> — nested inside
+        <code>organization.teams.catalog</code>. Auto-loads on materialize,
+        then <code>load()</code> is a no-op while fresh.
+      </p>
+      <div class="row">
+        <button (click)="loadPlants()" [disabled]="store.$.organization.teams.catalog.plants.loading()">
+          @if (store.$.organization.teams.catalog.plants.loading()) {
+            Loading…
+          } @else {
+            Load plants
+          }
+        </button>
+        <span class="count">{{ store.$.organization.teams.catalog.plants.count() }} plants</span>
+        @if (store.$.organization.teams.catalog.plants.loaded()) {
+          <span class="badge loaded">✅ fresh</span>
+        }
+      </div>
+      @if (store.$.organization.teams.catalog.plants.count() > 0) {
+        <ul class="entity-list">
+          @for (plant of store.$.organization.teams.catalog.plants.all(); track plant.id) {
+            <li><strong>{{ plant.name }}</strong> · {{ plant.region }}</li>
+          }
+        </ul>
+      }
+      <st-code-tabs [files]="entityCollectionCode" />
     </article>
 
     <article class="card">
