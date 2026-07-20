@@ -20,7 +20,10 @@ export default [
         'error',
         {
           type: 'element',
-          prefix: 'app',
+          // 'st' is the intentional prefix for the reusable st-example
+          // playground toolkit (st-example, st-code-tabs, …); 'app' for
+          // everything else.
+          prefix: ['app', 'st'],
           style: 'kebab-case',
         },
       ],
