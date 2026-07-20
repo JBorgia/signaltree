@@ -54,8 +54,10 @@ tree.$.plants.loading();    // Signal&lt;boolean&gt;
 await tree.$.plants.load(); // guarded — no-op while fresh / in-flight
 invalidateTag(tree, 'plants'); // marks every 'plants'-tagged collection stale</code></pre>
     <p>
-      See the <a routerLink="/marker-zoo">marker zoo</a> for a live depth-4 example, and
-      <code>docs/guides/entity-collection-cookbook.md</code> for the full walkthrough.
+      Explore the <a routerLink="/entity-collection">interactive showcase</a> — single-flight
+      coalescing, the staleTime freshness ring, tag invalidation, SWR, and offline-first, all
+      visualized. Also see the <a routerLink="/marker-zoo">marker zoo</a> for a live depth-4
+      example, and <code>docs/guides/entity-collection-cookbook.md</code> for the full walkthrough.
     </p>
   </div>
 
