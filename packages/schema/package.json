@@ -33,7 +33,7 @@
     "type-check": "tsc --project tsconfig.lib.json --noEmit"
   },
   "peerDependencies": {
-    "@angular/core": "^20.0.0 || ^21.0.0",
+    "@angular/core": "^20.0.0 || ^21.0.0 || ^22.0.0",
     "@signaltree/core": "workspace:*",
     "@standard-schema/spec": "^1.0.0",
     "tslib": "^2.0.0"

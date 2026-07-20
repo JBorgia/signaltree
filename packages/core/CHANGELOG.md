@@ -14,6 +14,10 @@
 - **`persist` write-through** now uses a per-scope storage key (`${key}::${serializedKey}`) for keyed collections, so multiple scopes persist independently under the same base key. Keyed `hydrateThenRevalidate` seeds a scope on its first `load(params)` call for that key.
 - 100% backward compatible — the parameterless form (`P` defaulting to `void`, no `key`) is unchanged in behavior and typing.
 
+### Compatibility
+
+- **Angular 22 peer support** — `@angular/*` peer ranges widened to `^20 || ^21 || ^22` across all packages (the signals APIs used are stable across these majors). No code change; `@signaltree/*` continues to require Angular 17+ signals.
+
 ## 11.2.0 (2026-07-20)
 
 ### Public API additions — `entityCollection` marker (RFC 0002)

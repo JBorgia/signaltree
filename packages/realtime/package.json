@@ -22,7 +22,7 @@
     "./package.json": "./package.json"
   },
   "peerDependencies": {
-    "@angular/core": "^20.0.0 || ^21.0.0",
+    "@angular/core": "^20.0.0 || ^21.0.0 || ^22.0.0",
     "@signaltree/core": "workspace:*",
     "@supabase/supabase-js": "^2.0.0",
     "tslib": "^2.0.0"

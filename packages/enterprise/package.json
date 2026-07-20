@@ -67,7 +67,7 @@
     "url": "https://github.com/JBorgia/signaltree/issues"
   },
   "peerDependencies": {
-    "@angular/core": "^20.0.0 || ^21.0.0",
+    "@angular/core": "^20.0.0 || ^21.0.0 || ^22.0.0",
     "@signaltree/core": "workspace:*",
     "tslib": "^2.0.0"
   },
