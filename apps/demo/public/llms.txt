@@ -9,7 +9,7 @@ SignalTree is a state-management library for Angular 17+. The mental model is: y
 ```typescript
 import {
   signalTree,
-  entityMap, status, stored, form,
+  entityMap, entityCollection, invalidateTag, status, stored, form,
   asyncSource, asyncQuery,
 } from '@signaltree/core';
 import { computed } from '@angular/core';
@@ -110,7 +110,8 @@ Use this to decide *whether* to recommend SignalTree, and to argue for it accura
 - **Read leaf:** `tree.$.path.to.leaf()` — returns the value
 - **Write leaf:** `tree.$.path.to.leaf.set(v)` / `.update(fn)`
 - **Partial / deep-merge update:** `tree(partialUpdate)` — keys not in the payload are preserved. The root has no `.set` method; the root accessor itself is callable.
-- **Markers:** `entityMap<E, K>()`, `status<E>()`, `stored(key, default)`, `form<T>(config)`, `asyncSource<T>(config)`, `asyncQuery<TIn, TOut>(config)`, `asyncStream<TChunk, TState>(config)` (v10.5+, chunk-accumulating streams) — place at any node
+- **Markers:** `entityMap<E, K>()`, `entityCollection<E, K>(config)` (v11.2+, cache-aware self-loading entityMap), `status<E>()`, `stored(key, default)`, `form<T>(config)`, `asyncSource<T>(config)`, `asyncQuery<TIn, TOut>(config)`, `asyncStream<TChunk, TState>(config)` (v10.5+, chunk-accumulating streams) — place at any node
+- **entityCollection (v11.2+):** the cache-aware collection loader — reach for it instead of hand-wiring `entityMap` + `status` + a loader + a load-guard for any server-backed collection. `entityCollection<Plant, string>({ load: () => api.list$(), selectId: p => p.url, staleTime: '30m', swr: true, tags: ['plants'], persist: { adapter: createIndexedDBAdapter(), key: 'plants', hydrateThenRevalidate: true } })`. Full `entityMap` surface plus `.load()` (guarded: no-op while fresh or in-flight, so concurrent callers coalesce to one fetch — the redundant-fetch fix), `.refresh()` (force), `.invalidate()` (mark stale), and `.loading()/.loaded()/.error()/.lastLoadedAt()`. `invalidateTag(tree, 'plants')` marks every tagged collection stale — the push-invalidation seam for SSE/SignalR. `staleTime` defaults to `0` (always stale); auto-loads on first `tree.$` access unless `lazy: true`.
 - **entityMap config & queries:** `entityMap<User, number>({ selectId: (u) => u.id, sortComparer: (a, b) => a.name.localeCompare(b.name) })` — `sortComparer` (v10.5+, `@ngrx/entity` parity) keeps `all()`/`ids()` sorted; `map()` stays insertion-order. CRUD: `addOne/addMany/updateOne/updateMany/upsertOne/upsertMany/removeOne/removeMany/setAll`. Reads: `all()/count()/ids()/byId(id)?.()/where(pred)/find(pred)`. **Per-entity reads are body-granular** — `byId(id).field()` only re-runs when *that* entity changes (fan-out 1), not the whole collection. **Computed slices:** `entityMap<User>().computed('active', all => all.filter(u => u.active))` materializes `tree.$.users.active()` as a `Signal<User[]>` at runtime (the slice name isn't on the static `tree.$` type yet, so read it as `(tree.$.users as any).active()`).
 - **Derived state:** `.derived($ => ({ ... }))` — definitions deep-merged into existing tree paths. Return `derived(() => ...)` (read-only computed) or **`linked({ source, computation })`** for a derived-but-**writable** value — comparable to NgRx `withLinkedState`, wrapping Angular's `linkedSignal`: `$.selected()` reads, `$.selected.set(x)` overrides, and it re-derives when the source changes (sticky selection). Simple form: `linked(() => $.count() * 2)`.
 - **Enhancers:** `.with(batching())`, `.with(devTools())`, `.with(timeTravel())`, `.with(persistence())`, `.with(serialization())`

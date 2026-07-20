@@ -89,3 +89,19 @@ export {
   type AsyncQueryConfig,
   type AsyncQueryFn,
 } from './async-query';
+
+// Entity-collection marker - cache-aware collection loader (v11.2, RFC 0002)
+export {
+  entityCollection,
+  invalidateTag,
+  isEntityCollectionMarker,
+  createEntityCollectionSignal,
+  parseDuration,
+  ENTITY_COLLECTION_MARKER,
+  type EntityCollectionMarker,
+  type EntityCollectionSignal,
+  type EntityCollectionConfig,
+  type EntityCollectionLoader,
+  type EntityCollectionPersist,
+  type EntityCollectionStorageAdapter,
+} from './entity-collection';

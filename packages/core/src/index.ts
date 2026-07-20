@@ -187,6 +187,21 @@ export {
   type AsyncQueryFn,
 } from './lib/markers/async-query';
 
+// Entity-collection marker (v11.2, RFC 0002) - cache-aware collection loader
+export {
+  entityCollection,
+  invalidateTag,
+  isEntityCollectionMarker,
+  createEntityCollectionSignal,
+  ENTITY_COLLECTION_MARKER,
+  type EntityCollectionMarker,
+  type EntityCollectionSignal,
+  type EntityCollectionConfig,
+  type EntityCollectionLoader,
+  type EntityCollectionPersist,
+  type EntityCollectionStorageAdapter,
+} from './lib/markers/entity-collection';
+
 // Async-stream marker — EXPERIMENTAL, intentionally NOT exported from the public
 // barrel. Per RFC 0001 (docs/rfcs/0001-ai-embedded-boundary.md §5) streaming
 // stays experimental until there's a real demand signal, and the eventual public

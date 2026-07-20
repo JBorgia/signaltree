@@ -1,5 +1,16 @@
 # @signaltree/core Changelog
 
+## Unreleased
+
+### Public API additions — `entityCollection` marker (RFC 0002)
+
+- **`entityCollection<E, K>(config)`** — a cache-aware entity-collection loader. Composes the full `entityMap` surface (CRUD + query signals) with a loader, load status, a freshness guard, single-flight dedup, tag-based invalidation, and optional offline-first persistence — the boilerplate every server-backed `entityMap` consumer previously hand-wired. Config: `load`, `selectId`, `sortComparer`, `lazy`, `staleTime` (ms or `'30m'`; default `0` = always stale), `swr`, `tags`, `persist` (reuses the existing `StorageAdapter`/`createIndexedDBAdapter`, with `hydrateThenRevalidate` for offline-first SWR). Methods: `.load()` (guarded — no-op if fresh OR in-flight, so concurrent callers coalesce to one fetch), `.refresh()` (force, still single-in-flight), `.invalidate()` (mark stale only). Status signals: `.loading()`, `.loaded()`, `.error()`, `.lastLoadedAt()`. Auto-loads on first `tree.$` access unless `lazy: true`.
+- **`invalidateTag(tree, tag)`** — marks every `entityCollection` carrying `tag` stale by walking `tree.$` (no global registry). The clean seam for push-driven freshness (SSE/SignalR → `@signaltree/realtime`). Returns the number of collections invalidated.
+
+### Scope notes (RFC 0002)
+
+- Deliberately **not** added: a 3-way `cache-first | SWR | network-first` policy enum (`staleTime` + `swr` cover the real need); merging the `stored` marker and `persistence` enhancer (distinct scopes, both retained); a general `tree.invalidate(path)` (tag-based invalidation on loaded collections covers the demand, path-based deferred).
+
 ## 9.3.0 (2026-05-28)
 
 ### Public API additions (enhancer infrastructure)
