@@ -1,0 +1,312 @@
+<div class="page" [class.dark]="dark()">
+  <header class="hero">
+    <div class="hero-top">
+      <span class="tag">v11.2 · &#64;signaltree/core</span>
+      <button class="theme-btn" (click)="toggleTheme()">
+        {{ dark() ? '☀ Light' : '☾ Dark' }}
+      </button>
+    </div>
+    <h1><code>entityCollection</code> — the cool parts, made visible</h1>
+    <p class="lead">
+      A cache-aware <code>entityMap</code> that loads itself. The interesting behavior is
+      normally invisible — here it isn't. Every counter below is real: the loaders
+      increment a live network-call tally, so what you see is what actually happened.
+    </p>
+    <a class="back" routerLink="/marker-zoo">← see it in the marker zoo</a>
+  </header>
+
+  <!-- ================= PANEL 1 — single-flight ================= -->
+  <section class="panel">
+    <div class="panel-head">
+      <span class="num">01</span>
+      <div>
+        <h2>Single-flight: 5 callers, 1 fetch</h2>
+        <p>
+          Five subsystems each call <code>.load()</code> in the same tick.
+          The guard coalesces them — the loader runs <strong>once</strong>.
+        </p>
+      </div>
+    </div>
+
+    <div class="viz sf">
+      <div class="callers">
+        @for (c of callers; track c) {
+          <div class="caller" [class.active]="p1.$.items.loading()">
+            <span class="dot"></span> subsystem {{ c }}
+          </div>
+        }
+      </div>
+
+      <div class="wire">
+        <div class="wire-line"></div>
+        @if (p1.$.items.loading()) {
+          <div class="packet"></div>
+        }
+        <span class="wire-label">network</span>
+      </div>
+
+      <div class="server" [class.hit]="p1.$.items.loading()">
+        <span class="server-emoji">🗄️</span> API
+      </div>
+    </div>
+
+    <div class="counters">
+      <div class="counter">
+        <span class="big">{{ p1LoadCalls() }}</span>
+        <span class="cap">load() calls issued</span>
+      </div>
+      <div class="counter accent">
+        <span class="big">{{ p1Fetches() }}</span>
+        <span class="cap">actual network fetches</span>
+      </div>
+      @if (p1BurstFetches() !== null) {
+        <div class="callout">
+          last burst: <strong>5 load() → {{ p1BurstFetches() }} fetch</strong>
+          @if (p1BurstFetches() === 1) { <span class="win">✓ coalesced</span> }
+        </div>
+      }
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" (click)="fireBurst()" [disabled]="p1.$.items.loading()">
+        Fire 5 concurrent load()s
+      </button>
+      <button class="btn ghost" (click)="resetP1()">Reset</button>
+    </div>
+
+    <st-code-tabs [files]="p1Code" />
+  </section>
+
+  <!-- ================= PANEL 2 — staleTime ================= -->
+  <section class="panel">
+    <div class="panel-head">
+      <span class="num">02</span>
+      <div>
+        <h2>staleTime: skip the refetch while fresh</h2>
+        <p>
+          Within the freshness window, <code>.load()</code> is a no-op — served from
+          cache, zero network. This is the redundant-fetch fix, baked in.
+        </p>
+      </div>
+    </div>
+
+    <div class="viz stale">
+      <div class="ring-wrap">
+        <svg viewBox="0 0 120 120" class="ring">
+          <circle class="ring-bg" cx="60" cy="60" r="52" />
+          <circle
+            class="ring-fg"
+            [class.warm]="p2FreshPct() < 0.35"
+            cx="60"
+            cy="60"
+            r="52"
+            [attr.stroke-dasharray]="ringCirc"
+            [attr.stroke-dashoffset]="p2DashOffset()"
+          />
+        </svg>
+        <div class="ring-center">
+          @if (p2.$.items.lastLoadedAt() === null) {
+            <span class="ring-state">idle</span>
+          } @else if (p2FreshPct() > 0) {
+            <span class="ring-secs">{{ p2Remaining().toFixed(1) }}s</span>
+            <span class="ring-state fresh">fresh</span>
+          } @else {
+            <span class="ring-state stale">stale</span>
+          }
+        </div>
+      </div>
+
+      <div class="stale-log">
+        @if (p2Log().length === 0) {
+          <p class="hint">Click “load()” a few times quickly, then wait 8s and try again.</p>
+        }
+        @for (e of p2Log(); track $index) {
+          <div class="log-row" [class.skip]="e.kind === 'skip'">
+            <span class="log-icon">{{ e.kind === 'skip' ? '⏭' : '⬇' }}</span>
+            {{ e.text }}
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" (click)="tryLoad()">load()</button>
+      <button class="btn ghost" (click)="forceRefresh()">refresh() — force</button>
+      <span class="meta">network fetches: <strong>{{ p2Fetches() }}</strong></span>
+    </div>
+
+    <st-code-tabs [files]="p2Code" />
+  </section>
+
+  <!-- ================= PANEL 3 — invalidateTag ================= -->
+  <section class="panel">
+    <div class="panel-head">
+      <span class="num">03</span>
+      <div>
+        <h2>invalidateTag: one event, every tagged collection</h2>
+        <p>
+          Both collections carry <code>tags: ['catalog']</code>. A single push event
+          marks them all stale at once — the clean seam for SSE / SignalR.
+        </p>
+      </div>
+    </div>
+
+    <div class="viz tag">
+      @for (col of [
+        { key: 'plants', label: '🌿 plants', loaded: p3.$.plants.loaded(), seeded: p3.$.plants.lastLoadedAt() !== null, count: p3.$.plants.count(), fetches: p3PlantFetches() },
+        { key: 'seeds', label: '🌱 seeds', loaded: p3.$.seeds.loaded(), seeded: p3.$.seeds.lastLoadedAt() !== null, count: p3.$.seeds.count(), fetches: p3SeedFetches() }
+      ]; track col.key) {
+        <div class="tagcard" [class.stale]="col.seeded && !col.loaded" [class.fresh]="col.loaded">
+          <div class="tagcard-head">
+            <span class="tagcard-title">{{ col.label }}</span>
+            @if (!col.seeded) {
+              <span class="pill-badge idle">not loaded</span>
+            } @else if (col.loaded) {
+              <span class="pill-badge ok">fresh</span>
+            } @else {
+              <span class="pill-badge bad">stale</span>
+            }
+          </div>
+          <div class="tagcard-body">
+            <span class="tagcard-count">{{ col.count }} rows</span>
+            <span class="tagcard-meta">tag: catalog · fetches: {{ col.fetches }}</span>
+          </div>
+        </div>
+      }
+    </div>
+
+    @if (p3Invalidated() !== null) {
+      <div class="callout center">
+        <code>invalidateTag(tree, 'catalog')</code> → marked
+        <strong>{{ p3Invalidated() }}</strong> collections stale
+      </div>
+    }
+
+    <div class="actions">
+      <button class="btn primary" (click)="loadP3()">Load both</button>
+      <button class="btn warn" (click)="emitSseEvent()">📡 Emit “catalog changed” event</button>
+      <button class="btn ghost" (click)="refreshP3()">Refetch stale</button>
+    </div>
+
+    <st-code-tabs [files]="p3Code" />
+  </section>
+
+  <!-- ================= PANEL 4 — swr ================= -->
+  <section class="panel">
+    <div class="panel-head">
+      <span class="num">04</span>
+      <div>
+        <h2>swr: serve the old value while revalidating</h2>
+        <p>
+          Click “revalidate” and watch the difference: <code>swr:true</code> keeps the
+          rows on screen with a shimmer; <code>swr:false</code> blanks to a skeleton.
+        </p>
+      </div>
+    </div>
+
+    <div class="viz swr">
+      <div class="swr-col">
+        <div class="swr-label">
+          <code>swr: true</code>
+          @if (p4.$.withSwr.loading()) { <span class="revalidating">revalidating…</span> }
+        </div>
+        <div class="swr-box" [class.shimmer]="p4.$.withSwr.loading()">
+          @if (p4.$.withSwr.count() === 0) {
+            <p class="hint">— empty —</p>
+          } @else {
+            @for (it of p4.$.withSwr.all(); track it.id) {
+              <div class="swr-row">{{ it.name }} <em>{{ it.detail }}</em></div>
+            }
+          }
+        </div>
+      </div>
+
+      <div class="swr-col">
+        <div class="swr-label">
+          <code>swr: false</code>
+          @if (p4.$.noSwr.loading()) { <span class="revalidating">loading…</span> }
+        </div>
+        <div class="swr-box">
+          @if (p4.$.noSwr.loading() && !p4.$.noSwr.loaded()) {
+            @for (s of [1,2,3,4]; track s) { <div class="skeleton-row"></div> }
+          } @else if (p4.$.noSwr.count() === 0) {
+            <p class="hint">— empty —</p>
+          } @else {
+            @for (it of p4.$.noSwr.all(); track it.id) {
+              <div class="swr-row">{{ it.name }} <em>{{ it.detail }}</em></div>
+            }
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" (click)="loadP4()">Load both</button>
+      <button class="btn ghost" (click)="revalidateP4()">Revalidate both</button>
+    </div>
+
+    <st-code-tabs [files]="p4Code" />
+  </section>
+
+  <!-- ================= PANEL 5 — offline-first ================= -->
+  <section class="panel">
+    <div class="panel-head">
+      <span class="num">05</span>
+      <div>
+        <h2>Offline-first: hydrate, then revalidate</h2>
+        <p>
+          Simulate an app reload. Rows paint <strong>instantly</strong> from the
+          persisted snapshot (marked stale), then swap to fresh data when the network
+          responds — no blank screen.
+        </p>
+      </div>
+    </div>
+
+    <div class="viz offline">
+      @if (offlineTree(); as t) {
+        <div class="timeline">
+          <div class="tl-step done">
+            <span class="tl-dot"></span>
+            <div>
+              <strong>t = 0ms</strong> — {{ t.$.items.count() }} rows painted from cache (IndexedDB)
+            </div>
+          </div>
+          <div class="tl-step" [class.done]="t.$.items.loaded()" [class.active]="!t.$.items.loaded()">
+            <span class="tl-dot"></span>
+            <div>
+              @if (t.$.items.loaded()) {
+                <strong>revalidated</strong> — fresh from network ✓
+              } @else {
+                <strong>revalidating…</strong> — serving cached snapshot meanwhile
+              }
+            </div>
+          </div>
+        </div>
+
+        <div class="offline-box" [class.stale]="!t.$.items.loaded()">
+          <span class="offline-state">
+            {{ t.$.items.loaded() ? '✓ fresh from network' : '⧗ cached snapshot (stale)' }}
+          </span>
+          @for (it of t.$.items.all(); track it.id) {
+            <div class="swr-row">{{ it.name }} <em>{{ it.detail }}</em></div>
+          }
+        </div>
+      } @else {
+        <p class="hint big">Press “Reload app” to hydrate from the cached snapshot.</p>
+      }
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" (click)="reloadOffline()">⟳ Reload app (offline-first)</button>
+    </div>
+
+    <st-code-tabs [files]="p5Code" />
+  </section>
+
+  <footer class="foot">
+    <p>
+      Full recipe (HTTP-cache / ETag interplay + SSE/SignalR wiring):
+      <code>docs/guides/entity-collection-cookbook.md</code> · RFC 0002
+    </p>
+  </footer>
+</div>

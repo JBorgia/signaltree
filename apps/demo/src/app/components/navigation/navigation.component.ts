@@ -174,6 +174,13 @@ export class NavigationComponent {
       category: 'examples',
     },
     {
+      id: 'entity-collection',
+      title: 'entityCollection showcase (v11.2)',
+      description: 'Cache-aware collections, visualized: single-flight, staleTime, invalidateTag, SWR, offline-first',
+      route: '/entity-collection',
+      category: 'examples',
+    },
+    {
       id: 'built-for-ai',
       title: 'Built for AI coding agents',
       description: 'llms.txt, agent skills, drop-in templates, and the codegen accuracy benchmark',

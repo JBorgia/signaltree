@@ -77,6 +77,18 @@ export const appRoutes: Route[] = [
     },
   },
   {
+    path: 'entity-collection',
+    loadComponent: () =>
+      import('./pages/entity-collection/entity-collection.component').then(
+        (c) => c.EntityCollectionShowcaseComponent
+      ),
+    data: {
+      title: 'entityCollection — cache-aware collections, visualized',
+      description:
+        'Interactive showcase of the entityCollection marker (v11.2): single-flight load coalescing, staleTime freshness, invalidateTag push-invalidation, stale-while-revalidate, and offline-first hydrate-then-revalidate.',
+    },
+  },
+  {
     path: 'built-for-ai',
     loadComponent: () =>
       import('./pages/built-for-ai/built-for-ai.component').then(
