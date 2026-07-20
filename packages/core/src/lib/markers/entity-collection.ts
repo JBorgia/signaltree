@@ -31,8 +31,14 @@ export const ENTITY_COLLECTION_SIGNAL = Symbol('ENTITY_COLLECTION_SIGNAL');
 // TYPES
 // =============================================================================
 
-/** Loader for a collection — resolves to the full array of rows. */
-export type EntityCollectionLoader<E> = () => Observable<E[]> | Promise<E[]>;
+/**
+ * Loader for a collection — resolves to the full array of rows. Receives the
+ * scope `params` for keyed collections; `void` (call with no argument) for the
+ * global, parameterless form.
+ */
+export type EntityCollectionLoader<E, P = void> = (
+  params: P
+) => Observable<E[]> | Promise<E[]>;
 
 /**
  * Minimal structural storage contract for {@link EntityCollectionConfig.persist}.
@@ -46,42 +52,58 @@ export interface EntityCollectionStorageAdapter {
   removeItem(key: string): void | Promise<void>;
 }
 
-/** Persistence option — see RFC 0002 §4.4. */
+/** Persistence option — see RFC 0002 §4.4 / RFC 0003 §persist. */
 export type EntityCollectionPersist =
   | false
   | {
       adapter: EntityCollectionStorageAdapter;
       key: string;
       /**
-       * When true, seed rows from the persisted snapshot instantly on
-       * materialize (offline-first), mark stale, and revalidate via `load()` in
-       * the background. Default: `false` (write-through cache only).
+       * When true, seed rows from the persisted snapshot instantly (offline-first),
+       * mark stale, and revalidate via `load()` in the background. For unkeyed
+       * collections this happens on materialize; for keyed collections it happens
+       * on the first `load(params)` for each scope (sync adapters seed before the
+       * fetch; async adapters seed as soon as the read resolves). Default: `false`
+       * (write-through cache only).
        */
       hydrateThenRevalidate?: boolean;
     };
 
 /**
  * Configuration for an {@link entityCollection} marker.
+ *
+ * @typeParam P - scope/params type. Defaults to `void` (the global,
+ *   parameterless form). Provide a `key` function to make the collection keyed;
+ *   `staleTime` freshness is then evaluated against the current scope key.
  */
 export interface EntityCollectionConfig<
   E,
-  K extends string | number = string
+  K extends string | number = string,
+  P = void
 > {
-  /** The fetch — resolves to the full array of rows. */
-  load: EntityCollectionLoader<E>;
+  /** The fetch — resolves to the full array of rows for the given scope. */
+  load: EntityCollectionLoader<E, P>;
+  /**
+   * Freshness key for the current scope. Its presence makes the collection
+   * *keyed*: `staleTime` is checked against this key, and a key change marks the
+   * collection stale and refetches. Return a JSON-stable, order-sensitive array
+   * (like TanStack Query's `queryKey`) — e.g. `({ regionUrl }) => [regionUrl]`.
+   */
+  key?: (params: P) => unknown[];
   /** Identity selector (default: `entity.id`, same as {@link entityMap}). */
   selectId?: (entity: E) => K;
   /** Optional stable sort applied to collection reads. */
   sortComparer?: (a: E, b: E) => number;
   /**
    * If true, skip the initial auto-load — call `.load()` to trigger.
-   * Default: `false` (loads when the tree is materialized).
+   * Default: `false` for unkeyed collections (load on materialize). Keyed
+   * collections are always lazy (no params are available at materialize time).
    */
   lazy?: boolean;
   /**
-   * Freshness window. `load()` is a no-op while data is younger than this.
-   * Accepts ms (`30000`) or a duration string (`'30m'`, `'90s'`, `'2h'`,
-   * `'500ms'`). Default `0` — always stale, so `load()` always refetches.
+   * Freshness window. `load()` is a no-op while the current scope's data is
+   * younger than this. Accepts ms (`30000`) or a duration string (`'30m'`,
+   * `'90s'`, `'2h'`, `'500ms'`). Default `0` — always stale.
    */
   staleTime?: number | string;
   /**
@@ -89,6 +111,12 @@ export interface EntityCollectionConfig<
    * `loaded` true (serve last value, no flip). Default `false`.
    */
   swr?: boolean;
+  /**
+   * When the scope key changes, clear the rows immediately (and drop to a
+   * not-loaded/loading state) instead of keeping the previous scope's rows until
+   * the new load settles. Default `false` (keep-until-settled — no flicker).
+   */
+  clearOnKeyChange?: boolean;
   /** Register under these tags for {@link invalidateTag}. */
   tags?: string[];
   /** Persistence / offline-first hydration — see {@link EntityCollectionPersist}. */
@@ -100,30 +128,43 @@ export interface EntityCollectionConfig<
  */
 export interface EntityCollectionMarker<
   E,
-  K extends string | number = string
+  K extends string | number = string,
+  P = void
 > {
   [ENTITY_COLLECTION_MARKER]: true;
-  config: EntityCollectionConfig<E, K>;
+  config: EntityCollectionConfig<E, K, P>;
   /** Phantom types for inference. */
   readonly __entityType?: E;
   readonly __keyType?: K;
+  readonly __paramsType?: P;
 }
 
 /**
  * The materialized collection accessor — the full {@link EntitySignal} surface
- * (all CRUD + query signals) plus cache-aware loading.
+ * (all CRUD + query signals) plus cache-aware, optionally scope-keyed loading.
  *
- * @see RFC 0002 §4.2
+ * For the parameterless form (`P = void`) call `load()` with no argument. For a
+ * keyed collection, `load(params)` requires the scope argument.
+ *
+ * @see RFC 0002 §4.2, RFC 0003
  */
 export interface EntityCollectionSignal<
   E,
-  K extends string | number = string
+  K extends string | number = string,
+  P = void
 > extends EntitySignal<E, K> {
-  /** Guarded load: no-op if fresh OR already in-flight (single-flight). */
-  load(): Promise<void>;
-  /** Force a reload, ignoring `staleTime`. Still single-in-flight. */
-  refresh(): Promise<void>;
-  /** Mark stale. Does not fetch — the next `load()` (or a caller) does. */
+  /**
+   * Guarded load. No-op if the current scope is fresh OR a load for the same
+   * key is already in flight (single-flight). A different key supersedes any
+   * in-flight load and refetches.
+   */
+  load(params: P): Promise<void>;
+  /**
+   * Force a reload, ignoring `staleTime` and key-match. Still single-in-flight.
+   * Omit `params` to re-run the last-loaded scope.
+   */
+  refresh(params?: P): Promise<void>;
+  /** Mark the current scope stale. Does not fetch — the next `load()` does. */
   invalidate(): void;
 
   /** True while a fetch is in flight. */
@@ -134,6 +175,11 @@ export interface EntityCollectionSignal<
   readonly error: Signal<unknown | null>;
   /** Epoch ms of the last successful load; null until first success. */
   readonly lastLoadedAt: Signal<number | null>;
+  /**
+   * The serialized key of the currently-loaded scope, or null (always null for
+   * unkeyed collections).
+   */
+  readonly currentKey: Signal<string | null>;
 }
 
 // =============================================================================
@@ -169,6 +215,25 @@ export function parseDuration(value: number | string | undefined): number {
   return parseFloat(match[1]) * DURATION_UNITS[match[2]];
 }
 
+/**
+ * Deterministic JSON serialization (object keys sorted at every level) so a key
+ * function that returns equal-by-value scopes yields an identical string
+ * regardless of property insertion order.
+ * @internal
+ */
+export function stableStringify(value: unknown): string {
+  return JSON.stringify(value, (_k, val) => {
+    if (val && typeof val === 'object' && !Array.isArray(val)) {
+      const sorted: Record<string, unknown> = {};
+      for (const kk of Object.keys(val as Record<string, unknown>).sort()) {
+        sorted[kk] = (val as Record<string, unknown>)[kk];
+      }
+      return sorted;
+    }
+    return val;
+  });
+}
+
 // =============================================================================
 // MARKER FACTORY (self-registering for tree-shaking)
 // =============================================================================
@@ -176,39 +241,50 @@ export function parseDuration(value: number | string | undefined): number {
 let entityCollectionRegistered = false;
 
 /**
- * Creates an `entityCollection` marker — a cache-aware entity-collection loader.
- * Composes {@link entityMap} (full CRUD + query surface) with a loader, load
- * status, a freshness guard, single-flight dedup, tag-based invalidation, and
- * optional offline-first persistence.
+ * Creates an `entityCollection` marker — a cache-aware, optionally scope-keyed
+ * entity-collection loader. Composes {@link entityMap} (full CRUD + query
+ * surface) with a loader, load status, a per-scope freshness guard, single-flight
+ * dedup, tag-based invalidation, and optional offline-first persistence.
  *
- * @example
+ * @example Global (parameterless)
  * ```typescript
  * const tree = signalTree({
- *   plants: entityCollection<PlantDto, string>({
- *     load: () => plantApi.list$(region),
+ *   plants: entityCollection<Plant, string>({
+ *     load: () => plantApi.list$(),
  *     selectId: (p) => p.url,
- *     staleTime: '30m',     // skip refetch while fresh
- *     tags: ['plants'],     // invalidateTag(tree, 'plants')
+ *     staleTime: '30m',
+ *     tags: ['plants'],
  *   }),
  * });
- *
- * tree.$.plants.all();       // PlantDto[] (entityMap surface)
- * tree.$.plants.loading();   // boolean
- * await tree.$.plants.load(); // guarded — no-op while fresh / in-flight
- * tree.$.plants.invalidate(); // mark stale; next load() refetches
+ * await tree.$.plants.load();      // guarded — no-op while fresh / in-flight
  * ```
  *
- * @see RFC 0002
+ * @example Keyed (scope-parameterized)
+ * ```typescript
+ * const tree = signalTree({
+ *   customers: entityCollection<Customer, string, { regionUrl: string }>({
+ *     load: ({ regionUrl }) => api.getCustomers$(regionUrl),
+ *     key: ({ regionUrl }) => [regionUrl],   // freshness keyed by scope
+ *     selectId: (c) => c.externalId,
+ *     staleTime: '30m',
+ *   }),
+ * });
+ * await tree.$.customers.load({ regionUrl });   // same key+fresh → no-op; key changed → refetch
+ * ```
+ *
+ * @see RFC 0002, RFC 0003
  */
-export function entityCollection<E, K extends string | number = string>(
-  config: EntityCollectionConfig<E, K>
-): EntityCollectionMarker<E, K> {
+export function entityCollection<
+  E,
+  K extends string | number = string,
+  P = void
+>(config: EntityCollectionConfig<E, K, P>): EntityCollectionMarker<E, K, P> {
   if (!entityCollectionRegistered) {
     entityCollectionRegistered = true;
     registerBuiltinMarkerProcessor(
       isEntityCollectionMarker,
       createEntityCollectionSignal as (
-        marker: EntityCollectionMarker<unknown, string | number>,
+        marker: EntityCollectionMarker<unknown, string | number, unknown>,
         notifier: PathNotifier,
         path: string
       ) => unknown
@@ -226,7 +302,7 @@ export function entityCollection<E, K extends string | number = string>(
 
 export function isEntityCollectionMarker(
   value: unknown
-): value is EntityCollectionMarker<unknown, string | number> {
+): value is EntityCollectionMarker<unknown, string | number, unknown> {
   return (
     value !== null &&
     typeof value === 'object' &&
@@ -246,23 +322,28 @@ export function isEntityCollectionMarker(
  */
 export function createEntityCollectionSignal<
   E extends Record<string, unknown>,
-  K extends string | number = string
+  K extends string | number = string,
+  P = void
 >(
-  marker: EntityCollectionMarker<E, K>,
+  marker: EntityCollectionMarker<E, K, P>,
   notifier: PathNotifier,
   path: string
-): EntityCollectionSignal<E, K> {
+): EntityCollectionSignal<E, K, P> {
   const {
     load: loadFn,
+    key: keyFn,
     selectId,
     sortComparer,
-    lazy = false,
     staleTime,
     swr = false,
+    clearOnKeyChange = false,
     tags,
     persist = false,
   } = marker.config;
 
+  const keyed = typeof keyFn === 'function';
+  // Keyed collections cannot auto-load (no params available at materialize).
+  const lazy = keyed ? true : marker.config.lazy ?? false;
   const staleMs = parseDuration(staleTime);
 
   // Base entity surface (all/byId/where/addOne/setAll/...).
@@ -275,13 +356,23 @@ export function createEntityCollectionSignal<
   const loadingSignal = signal<boolean>(false);
   const errorSignal = signal<unknown | null>(null);
   const lastLoadedAtSignal = signal<number | null>(null);
+  const currentKeySignal = signal<string | null>(null);
   const invalidated = signal<boolean>(false);
 
   const loaded = computed(
     () => lastLoadedAtSignal() !== null && (swr || !invalidated())
   );
 
+  // Internal freshness bookkeeping. `loadedKey` is the key of the last
+  // *successful* load (null for unkeyed, or before the first load).
+  let loadedKey: string | null = null;
+  let lastParams: P | undefined = undefined;
+  const hydratedKeys = new Set<string>();
+
   let inFlight: Promise<void> | null = null;
+  let inFlightKey: string | null = null;
+  let inFlightResolve: (() => void) | null = null;
+  let runId = 0;
   let currentSub: Subscription | null = null;
   let destroyed = false;
 
@@ -296,169 +387,249 @@ export function createEntityCollectionSignal<
     currentSub?.unsubscribe();
     currentSub = null;
     inFlight = null;
+    inFlightKey = null;
+    inFlightResolve = null;
   });
 
-  function isStale(): boolean {
+  const keyOf = (params: P): string | null =>
+    keyFn ? stableStringify(keyFn(params)) : null;
+
+  const storageKey = (k: string | null): string => {
+    const base = persist ? persist.key : '';
+    return keyed && k !== null ? `${base}::${k}` : base;
+  };
+
+  function isStale(k: string | null): boolean {
     if (lastLoadedAtSignal() === null) return true;
     if (invalidated()) return true;
+    if (k !== loadedKey) return true; // scope changed (null===null for unkeyed)
     if (staleMs <= 0) return true;
     return Date.now() - (lastLoadedAtSignal() as number) >= staleMs;
   }
 
-  function writeThrough(): void {
+  function writeThrough(k: string | null): void {
     if (!persist) return;
     try {
-      void persist.adapter.setItem(persist.key, JSON.stringify(entity.all()));
+      void persist.adapter.setItem(storageKey(k), JSON.stringify(entity.all()));
     } catch {
       // Persistence is best-effort; never let a storage failure break loads.
     }
   }
 
-  function runLoad(): Promise<void> {
+  function seedFromSnapshot(raw: string | null): void {
+    if (destroyed || raw == null) return;
+    try {
+      const rows = JSON.parse(raw) as E[];
+      if (Array.isArray(rows)) entity.setAll(rows);
+      // Intentionally do NOT set lastLoadedAt — seeded data is stale.
+    } catch {
+      // Corrupt snapshot: ignore and let the loader repopulate.
+    }
+  }
+
+  function runLoad(k: string | null, params: P): Promise<void> {
     if (destroyed) return Promise.resolve();
+
+    // Supersede any in-flight load (different key / forced refresh): cancel the
+    // observable and release the previous promise's awaiters so they never hang.
     currentSub?.unsubscribe();
     currentSub = null;
+    const prevResolve = inFlightResolve;
+    inFlightResolve = null;
+    inFlight = null;
+
+    const myRun = ++runId;
+    inFlightKey = k;
     loadingSignal.set(true);
     errorSignal.set(null);
 
-    // NOTE: the Promise executor runs synchronously, and a synchronous loader
-    // (e.g. rxjs `of()`) settles *during* construction — before the
-    // `inFlight = p` assignment below. If we cleared the latch only from inside
-    // the executor, the later assignment would clobber the null back to a
-    // resolved promise, and the next same-tick load() would wrongly dedupe
-    // against it. So: track whether we settled synchronously, and only publish
-    // `p` as the in-flight latch when the load is still pending after the
-    // executor runs. Async settles clear the latch from done() (+ a guarded
-    // finally as a backstop).
-    let settledSync = false;
+    let resolveP!: () => void;
     const p = new Promise<void>((resolve) => {
-      let settled = false;
-      const done = (): void => {
-        if (!settled) {
-          settled = true;
-          settledSync = true; // if this runs during the executor, skip publishing p
-          inFlight = null;
-          resolve();
-        }
-      };
-      const settleSuccess = (rows: E[]): void => {
-        if (destroyed) return;
-        entity.setAll(rows);
-        lastLoadedAtSignal.set(Date.now());
-        invalidated.set(false);
-        loadingSignal.set(false);
-        writeThrough();
-        done();
-      };
-      const settleError = (err: unknown): void => {
-        if (destroyed) return;
-        errorSignal.set(err);
-        loadingSignal.set(false);
-        done();
-      };
+      resolveP = resolve;
+    });
+    inFlightResolve = resolveP;
 
-      let result: Observable<E[]> | Promise<E[]>;
-      try {
-        result = loadFn();
-      } catch (err) {
-        settleError(err);
-        return;
-      }
+    let settled = false;
+    let settledSync = false;
+    const done = (): void => {
+      if (settled) return;
+      settled = true;
+      settledSync = true; // if this ran synchronously, we won't publish `p`
+      if (inFlight === p) inFlight = null;
+      if (inFlightKey === k) inFlightKey = null;
+      if (inFlightResolve === resolveP) inFlightResolve = null;
+      resolveP();
+    };
+    const settleSuccess = (rows: E[]): void => {
+      if (destroyed || myRun !== runId) return; // superseded → don't write
+      entity.setAll(rows);
+      lastLoadedAtSignal.set(nowMs());
+      loadedKey = k;
+      currentKeySignal.set(keyed ? k : null);
+      invalidated.set(false);
+      loadingSignal.set(false);
+      lastParams = params;
+      writeThrough(k);
+      done();
+    };
+    const settleError = (err: unknown): void => {
+      if (destroyed || myRun !== runId) return;
+      errorSignal.set(err);
+      loadingSignal.set(false);
+      done();
+    };
 
-      if (isObservable(result)) {
-        const obs = destroyRef
-          ? result.pipe(takeUntilDestroyed(destroyRef))
-          : result;
+    let result: Observable<E[]> | Promise<E[]> | undefined;
+    try {
+      result = loadFn(params);
+    } catch (err) {
+      settleError(err);
+    }
+
+    // result is defined unless loadFn threw (handled synchronously above).
+    if (result !== undefined && !settled) {
+      const r = result;
+      if (isObservable(r)) {
+        const obs = destroyRef ? r.pipe(takeUntilDestroyed(destroyRef)) : r;
         currentSub = obs.subscribe({
           next: (rows) => settleSuccess(rows),
           error: (err) => settleError(err),
           complete: () => {
-            // Empty completion with no emission: clear loading, resolve latch.
-            if (destroyed) return;
+            if (destroyed || myRun !== runId) return;
             loadingSignal.set(false);
             done();
           },
         });
       } else {
-        result.then(
+        r.then(
           (rows) => settleSuccess(rows),
           (err) => settleError(err)
         );
       }
-    });
+    }
 
     // Only publish the latch if the load is still pending; a synchronous loader
     // has already settled (and nulled inFlight) via done() above.
     if (!settledSync) {
       inFlight = p;
       void p.finally(() => {
-        if (inFlight === p) inFlight = null;
+        if (inFlight === p) {
+          inFlight = null;
+          inFlightKey = null;
+        }
       });
     }
+
+    // Release the awaiters of the superseded load, if any.
+    if (prevResolve) prevResolve();
     return p;
   }
 
-  function load(): Promise<void> {
-    if (inFlight) return inFlight; // single-flight dedup
-    if (!isStale()) return Promise.resolve(); // freshness guard
-    return runLoad();
+  function maybeClearOnKeyChange(k: string | null): void {
+    if (clearOnKeyChange && loadedKey !== null && k !== loadedKey) {
+      entity.setAll([]);
+      lastLoadedAtSignal.set(null); // drop to a not-loaded state during the load
+      loadedKey = null;
+    }
   }
 
-  function refresh(): Promise<void> {
-    if (inFlight) return inFlight; // still single-in-flight
-    return runLoad();
+  function beginLoad(k: string | null, params: P): Promise<void> {
+    maybeClearOnKeyChange(k);
+    // Keyed offline-first: seed this scope's snapshot before revalidating.
+    if (
+      persist &&
+      persist.hydrateThenRevalidate &&
+      keyed &&
+      !hydratedKeys.has(k as string)
+    ) {
+      hydratedKeys.add(k as string);
+      let got: string | null | Promise<string | null> = null;
+      try {
+        got = persist.adapter.getItem(storageKey(k));
+      } catch {
+        got = null;
+      }
+      if (got instanceof Promise) {
+        return got
+          .then((raw) => {
+            seedFromSnapshot(raw);
+          }, () => undefined)
+          .then(() => runLoad(k, params));
+      }
+      seedFromSnapshot(got);
+    }
+    return runLoad(k, params);
+  }
+
+  function load(params: P): Promise<void> {
+    const k = keyOf(params);
+    if (inFlight && inFlightKey === k) return inFlight; // same-key coalesce
+    if (!isStale(k)) return Promise.resolve(); // freshness guard
+    return beginLoad(k, params);
+  }
+
+  function refresh(params?: P): Promise<void> {
+    const hasArg = params !== undefined;
+    const resolved = (hasArg ? params : lastParams) as P;
+    if (keyed && !hasArg && lastParams === undefined) {
+      if (typeof ngDevMode === 'undefined' || ngDevMode) {
+        console.warn(
+          '[SignalTree] entityCollection.refresh() called with no params on a ' +
+            'keyed collection that has never loaded — nothing to refresh.'
+        );
+      }
+      return Promise.resolve();
+    }
+    const k = keyOf(resolved);
+    if (inFlight && inFlightKey === k) return inFlight; // still single-in-flight
+    return beginLoad(k, resolved);
   }
 
   function invalidate(): void {
-    // Mark stale only — does not fetch (RFC 0002 §7 decision).
+    // Mark the current scope stale only — does not fetch (RFC 0002 §7).
     invalidated.set(true);
   }
 
-  // --- offline-first hydration (persist.hydrateThenRevalidate) --------------
+  // --- unkeyed offline-first hydration (persist.hydrateThenRevalidate) ------
   let hydrating: Promise<void> | null = null;
-  if (persist && persist.hydrateThenRevalidate) {
-    const seed = (raw: string | null): void => {
-      if (destroyed || raw == null) return;
-      try {
-        const rows = JSON.parse(raw) as E[];
-        if (Array.isArray(rows)) entity.setAll(rows);
-        // Intentionally do NOT set lastLoadedAt — seeded data is stale.
-      } catch {
-        // Corrupt snapshot: ignore and let the loader repopulate.
-      }
-    };
+  if (persist && persist.hydrateThenRevalidate && !keyed) {
     try {
-      const got = persist.adapter.getItem(persist.key);
+      const got = persist.adapter.getItem(storageKey(null));
       hydrating =
         got instanceof Promise
-          ? got.then(seed, () => undefined)
-          : (seed(got), Promise.resolve());
+          ? got.then((raw) => seedFromSnapshot(raw), () => undefined)
+          : (seedFromSnapshot(got), Promise.resolve());
     } catch {
       hydrating = Promise.resolve();
     }
   }
 
-  // --- initial load ---------------------------------------------------------
+  // --- initial load (unkeyed, non-lazy only) --------------------------------
   if (!lazy) {
     if (hydrating) {
       void hydrating.then(() => {
-        if (!destroyed) void load();
+        if (!destroyed) void load(undefined as P);
       });
     } else {
-      void load();
+      void load(undefined as P);
     }
   }
 
   // Attach loader surface onto the entity signal.
-  const target = entity as EntityCollectionSignal<E, K>;
+  const target = entity as EntityCollectionSignal<E, K, P>;
   target.load = load;
   target.refresh = refresh;
   target.invalidate = invalidate;
-  Object.defineProperty(target, 'loading', { value: loadingSignal.asReadonly() });
+  Object.defineProperty(target, 'loading', {
+    value: loadingSignal.asReadonly(),
+  });
   Object.defineProperty(target, 'loaded', { value: loaded });
   Object.defineProperty(target, 'error', { value: errorSignal.asReadonly() });
   Object.defineProperty(target, 'lastLoadedAt', {
     value: lastLoadedAtSignal.asReadonly(),
+  });
+  Object.defineProperty(target, 'currentKey', {
+    value: currentKeySignal.asReadonly(),
   });
 
   // Brand + tags for invalidateTag()'s tree walk.
@@ -468,6 +639,10 @@ export function createEntityCollectionSignal<
   });
 
   return target;
+}
+
+function nowMs(): number {
+  return Date.now();
 }
 
 // =============================================================================
@@ -492,7 +667,8 @@ function isTaggedCollection(value: unknown): value is TaggedCollection {
  * Invalidate every {@link entityCollection} in `tree` that carries `tag`.
  * Walks `tree.$` (no global registry — nothing to leak on teardown). The clean
  * seam for push-driven freshness: an SSE/SignalR "plants changed" event →
- * `invalidateTag(tree, 'plants')` → subscribed collections mark stale.
+ * `invalidateTag(tree, 'plants')` → subscribed collections mark stale. Applies
+ * to keyed collections too (marks the currently-loaded scope stale).
  *
  * @returns the number of collections invalidated.
  * @see RFC 0002 §4.3

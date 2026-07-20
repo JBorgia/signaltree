@@ -74,7 +74,9 @@ describe('entityCollection() marker', () => {
 
   it('does not brand as an entityMap (distinct marker)', () => {
     const m = entityCollection<Plant>({ load: () => of([P1]), selectId });
-    expect((m as Record<string, unknown>)['__isEntityMap']).toBeUndefined();
+    expect(
+      (m as unknown as Record<string, unknown>)['__isEntityMap']
+    ).toBeUndefined();
   });
 });
 

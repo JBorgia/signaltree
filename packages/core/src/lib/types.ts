@@ -107,8 +107,8 @@ export interface NodeAccessor<T> {
 // Default TreeNode maps known keys to either EntitySignal, StatusSignal, StoredSignal, FormSignal,
 // or CallableWritableSignal and still allows dynamic string indexing at runtime.
 export type TreeNode<T> = {
-  [K in keyof T]: T[K] extends EntityCollectionMarker<infer CE, infer CK>
-    ? EntityCollectionSignal<CE, CK>
+  [K in keyof T]: T[K] extends EntityCollectionMarker<infer CE, infer CK, infer CP>
+    ? EntityCollectionSignal<CE, CK, CP>
     : T[K] extends EntityMapMarker<infer E, infer Key>
     ? EntitySignal<E, Key>
     : T[K] extends StatusMarker<infer Err>
@@ -782,8 +782,8 @@ export type IsEntityMap<T> = T extends EntityMapMarker<
  * the full deep inference.
  */
 export type DeepEntityAwareTreeNode<T> = {
-  [K in keyof T]: T[K] extends EntityCollectionMarker<infer CE, infer CK>
-    ? EntityCollectionSignal<CE, CK>
+  [K in keyof T]: T[K] extends EntityCollectionMarker<infer CE, infer CK, infer CP>
+    ? EntityCollectionSignal<CE, CK, CP>
     : T[K] extends EntityMapMarker<infer E, infer Key>
     ? EntitySignal<E, Key>
     : T[K] extends StatusMarker<infer Err>
@@ -811,8 +811,8 @@ export type DeepEntityAwareTreeNode<T> = {
  * `TypedSignalTree<T>` (see below) or use `DeepEntityAwareTreeNode`.
  */
 export type EntityAwareTreeNode<T> = {
-  [K in keyof T]: T[K] extends EntityCollectionMarker<infer CE, infer CK>
-    ? EntityCollectionSignal<CE, CK>
+  [K in keyof T]: T[K] extends EntityCollectionMarker<infer CE, infer CK, infer CP>
+    ? EntityCollectionSignal<CE, CK, CP>
     : T[K] extends EntityMapMarker<infer E, infer Key>
     ? EntitySignal<E, Key>
     : T[K] extends StatusMarker<infer Err>

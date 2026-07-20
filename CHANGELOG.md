@@ -1,3 +1,9 @@
+## 11.3.0
+
+### Added
+
+- **Keyed / scoped `entityCollection<E, K, P>`** (`@signaltree/core`, [RFC 0003](docs/rfcs/0003-keyed-entity-collection.md)) — `entityCollection` gains an optional `key: (params: P) => unknown[]` option that parameterizes the collection by a scope (region, customer, tenant, …): `load(params)` now takes scope params, freshness (`staleTime`) is evaluated per-key, a key change refetches and replaces the entities, and `currentKey`/`refresh(params?)` round out the surface. Before: consumers hand-wired a scope-key guard (a ref of "current region" plus manual clear/refetch on change) around every scoped `entityMap`; after, `key` does it — same-key-fresh is a no-op, same-key-concurrent is single-flight, and a different key while in-flight supersedes (last-request-wins) instead of racing. `persist` now writes through per-scope storage keys. 100% backward compatible — the parameterless form is unchanged. See the [core changelog](packages/core/CHANGELOG.md).
+
 ## 11.2.0
 
 ### Added

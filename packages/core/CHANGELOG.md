@@ -1,5 +1,19 @@
 # @signaltree/core Changelog
 
+## 11.3.0 (2026-07-20)
+
+### Public API additions — keyed `entityCollection` (RFC 0003)
+
+- **`entityCollection<E, K, P>(config)`** gains a third type param `P` (scope/params type; defaults to `void`, i.e. the existing parameterless form is unchanged). `config.load` becomes `(params: P) => Observable<E[]> | Promise<E[]>` — the loader now receives the scope params.
+- **`config.key?: (params: P) => unknown[]`** — presence makes the collection **KEYED**. Return a JSON-stable, order-sensitive array (like a TanStack `queryKey`), e.g. `({ regionUrl }) => [regionUrl]`. `staleTime` freshness is evaluated per-key: a key change marks the collection stale and triggers a refetch even if the previous scope was still fresh. Keyed collections are implicitly lazy (no scope to auto-load until one is supplied).
+- **`config.clearOnKeyChange?: boolean`** (default `false`) — on a key change, keep the previous scope's rows visible (no flicker) until the new scope's load settles. Set `true` to blank rows immediately instead.
+- **`.load(params)`** — keyed collections require the params argument; the parameterless `.load()` is unchanged for unkeyed collections.
+- **`.refresh(params?)`** — omit `params` to force a reload of the last-loaded scope; pass `params` to refresh (or switch to) a specific scope.
+- **`currentKey: Signal<string | null>`** — the serialized key of the currently loaded scope; `null` for unkeyed collections.
+- **Concurrency semantics**: same key + fresh → `.load()` is a no-op; same key while a fetch is already in-flight → single-flight (one request services all callers); a **different** key requested while the previous key's fetch is still in-flight → the new request supersedes (last-request-wins) — the stale in-flight result is never written into state, though its promise still resolves normally for any caller awaiting it.
+- **`persist` write-through** now uses a per-scope storage key (`${key}::${serializedKey}`) for keyed collections, so multiple scopes persist independently under the same base key. Keyed `hydrateThenRevalidate` seeds a scope on its first `load(params)` call for that key.
+- 100% backward compatible — the parameterless form (`P` defaulting to `void`, no `key`) is unchanged in behavior and typing.
+
 ## 11.2.0 (2026-07-20)
 
 ### Public API additions — `entityCollection` marker (RFC 0002)
