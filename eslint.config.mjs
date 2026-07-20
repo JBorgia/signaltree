@@ -87,6 +87,11 @@ export default [
             'tslib',
             // vitest is a test framework - should stay in devDependencies
             'vitest',
+            // @signaltree/shared is bundled at build time via Rollup, not a
+            // runtime dependency (matches the per-package eslint configs).
+            '@signaltree/shared',
+            // @nx/devkit is build/tooling-only.
+            '@nx/devkit',
           ],
         },
       ],

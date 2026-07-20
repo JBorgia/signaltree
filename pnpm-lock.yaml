@@ -158,7 +158,7 @@ importers:
         version: 21.3.9(@babel/core@7.28.5)(@babel/traverse@7.28.5)(@swc-node/register@1.9.2(@swc/core@1.15.17(@swc/helpers@0.5.17))(@swc/types@0.1.25)(typescript@5.9.3))(@swc/core@1.15.17(@swc/helpers@0.5.17))(@types/babel__core@7.20.5)(nx@21.3.9(@swc-node/register@1.9.2(@swc/core@1.15.17(@swc/helpers@0.5.17))(@swc/types@0.1.25)(typescript@5.9.3))(@swc/core@1.15.17(@swc/helpers@0.5.17)))(ts-node@10.9.1(@swc/core@1.15.17(@swc/helpers@0.5.17))(@types/node@22.18.1)(typescript@5.9.3))(typescript@5.9.3)(verdaccio@6.2.1(encoding@0.1.13)(typanion@3.14.0))
       '@nx/vitest':
         specifier: ^22.2.4
-        version: 22.2.4(@babel/traverse@7.28.5)(@swc-node/register@1.9.2(@swc/core@1.15.17(@swc/helpers@0.5.17))(@swc/types@0.1.25)(typescript@5.9.3))(@swc/core@1.15.17(@swc/helpers@0.5.17))(nx@21.3.9(@swc-node/register@1.9.2(@swc/core@1.15.17(@swc/helpers@0.5.17))(@swc/types@0.1.25)(typescript@5.9.3))(@swc/core@1.15.17(@swc/helpers@0.5.17)))(typescript@5.9.3)(verdaccio@6.2.1(encoding@0.1.13)(typanion@3.14.0))(vite@5.4.21(@types/node@22.18.1)(less@4.4.2)(lightningcss@1.30.1)(sass-embedded@1.93.3)(sass@1.94.0)(terser@5.43.1))(vitest@3.2.4)
+        version: 22.2.4(@babel/traverse@7.28.5)(@swc-node/register@1.9.2(@swc/core@1.15.17(@swc/helpers@0.5.17))(@swc/types@0.1.25)(typescript@5.9.3))(@swc/core@1.15.17(@swc/helpers@0.5.17))(nx@21.3.9(@swc-node/register@1.9.2(@swc/core@1.15.17(@swc/helpers@0.5.17))(@swc/types@0.1.25)(typescript@5.9.3))(@swc/core@1.15.17(@swc/helpers@0.5.17)))(typescript@5.9.3)(verdaccio@6.2.1(encoding@0.1.13)(typanion@3.14.0))(vite@7.1.11(@types/node@22.18.1)(jiti@2.6.1)(less@4.4.2)(lightningcss@1.30.1)(sass-embedded@1.93.3)(sass@1.90.0)(terser@5.43.1)(yaml@2.8.1))(vitest@3.2.4)
       '@nx/web':
         specifier: 21.3.9
         version: 21.3.9(@babel/traverse@7.28.5)(@swc-node/register@1.9.2(@swc/core@1.15.17(@swc/helpers@0.5.17))(@swc/types@0.1.25)(typescript@5.9.3))(@swc/core@1.15.17(@swc/helpers@0.5.17))(nx@21.3.9(@swc-node/register@1.9.2(@swc/core@1.15.17(@swc/helpers@0.5.17))(@swc/types@0.1.25)(typescript@5.9.3))(@swc/core@1.15.17(@swc/helpers@0.5.17)))(verdaccio@6.2.1(encoding@0.1.13)(typanion@3.14.0))
@@ -356,7 +356,7 @@ importers:
   packages/core:
     dependencies:
       '@angular/core':
-        specifier: ^20.0.0 || ^21.0.0
+        specifier: ^20.0.0 || ^21.0.0 || ^22.0.0
         version: 20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1)
       rxjs:
         specifier: ^7.0.0
@@ -368,7 +368,7 @@ importers:
   packages/enterprise:
     dependencies:
       '@angular/core':
-        specifier: ^20.0.0 || ^21.0.0
+        specifier: ^20.0.0 || ^21.0.0 || ^22.0.0
         version: 20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1)
       tslib:
         specifier: ^2.0.0
@@ -458,7 +458,7 @@ importers:
   packages/realtime:
     dependencies:
       '@angular/core':
-        specifier: ^20.0.0 || ^21.0.0
+        specifier: ^20.0.0 || ^21.0.0 || ^22.0.0
         version: 20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1)
       tslib:
         specifier: ^2.0.0
@@ -477,7 +477,7 @@ importers:
   packages/schema:
     dependencies:
       '@angular/core':
-        specifier: ^20.0.0 || ^21.0.0
+        specifier: ^20.0.0 || ^21.0.0 || ^22.0.0
         version: 20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1)
       tslib:
         specifier: ^2.0.0
@@ -10696,7 +10696,7 @@ snapshots:
       tinyglobby: 0.2.14
       tslib: 2.8.1
       typescript: 5.9.3
-      vite: 7.1.11(@types/node@22.18.1)(jiti@2.6.1)(less@4.4.2)(lightningcss@1.30.1)(sass-embedded@1.93.3)(sass@1.90.0)(terser@5.43.1)(yaml@2.8.1)
+      vite: 7.1.11(@types/node@22.18.1)(jiti@2.6.1)(less@4.4.2)(lightningcss@1.30.1)(sass-embedded@1.93.3)(sass@1.94.0)(terser@5.43.1)(yaml@2.8.1)
       watchpack: 2.4.4
     optionalDependencies:
       '@angular/core': 20.3.11(@angular/compiler@20.3.11)(rxjs@7.8.2)(zone.js@0.15.1)
@@ -13726,7 +13726,7 @@ snapshots:
       - webpack-cli
       - webpack-hot-middleware
 
-  '@nx/vitest@22.2.4(@babel/traverse@7.28.5)(@swc-node/register@1.9.2(@swc/core@1.15.17(@swc/helpers@0.5.17))(@swc/types@0.1.25)(typescript@5.9.3))(@swc/core@1.15.17(@swc/helpers@0.5.17))(nx@21.3.9(@swc-node/register@1.9.2(@swc/core@1.15.17(@swc/helpers@0.5.17))(@swc/types@0.1.25)(typescript@5.9.3))(@swc/core@1.15.17(@swc/helpers@0.5.17)))(typescript@5.9.3)(verdaccio@6.2.1(encoding@0.1.13)(typanion@3.14.0))(vite@5.4.21(@types/node@22.18.1)(less@4.4.2)(lightningcss@1.30.1)(sass-embedded@1.93.3)(sass@1.94.0)(terser@5.43.1))(vitest@3.2.4)':
+  '@nx/vitest@22.2.4(@babel/traverse@7.28.5)(@swc-node/register@1.9.2(@swc/core@1.15.17(@swc/helpers@0.5.17))(@swc/types@0.1.25)(typescript@5.9.3))(@swc/core@1.15.17(@swc/helpers@0.5.17))(nx@21.3.9(@swc-node/register@1.9.2(@swc/core@1.15.17(@swc/helpers@0.5.17))(@swc/types@0.1.25)(typescript@5.9.3))(@swc/core@1.15.17(@swc/helpers@0.5.17)))(typescript@5.9.3)(verdaccio@6.2.1(encoding@0.1.13)(typanion@3.14.0))(vite@7.1.11(@types/node@22.18.1)(jiti@2.6.1)(less@4.4.2)(lightningcss@1.30.1)(sass-embedded@1.93.3)(sass@1.90.0)(terser@5.43.1)(yaml@2.8.1))(vitest@3.2.4)':
     dependencies:
       '@nx/devkit': 22.2.4(nx@21.3.9(@swc-node/register@1.9.2(@swc/core@1.15.17(@swc/helpers@0.5.17))(@swc/types@0.1.25)(typescript@5.9.3))(@swc/core@1.15.17(@swc/helpers@0.5.17)))
       '@nx/js': 22.2.4(@babel/traverse@7.28.5)(@swc-node/register@1.9.2(@swc/core@1.15.17(@swc/helpers@0.5.17))(@swc/types@0.1.25)(typescript@5.9.3))(@swc/core@1.15.17(@swc/helpers@0.5.17))(nx@21.3.9(@swc-node/register@1.9.2(@swc/core@1.15.17(@swc/helpers@0.5.17))(@swc/types@0.1.25)(typescript@5.9.3))(@swc/core@1.15.17(@swc/helpers@0.5.17)))(verdaccio@6.2.1(encoding@0.1.13)(typanion@3.14.0))
@@ -13734,7 +13734,7 @@ snapshots:
       semver: 7.7.3
       tslib: 2.8.1
     optionalDependencies:
-      vite: 5.4.21(@types/node@22.18.1)(less@4.4.2)(lightningcss@1.30.1)(sass-embedded@1.93.3)(sass@1.94.0)(terser@5.43.1)
+      vite: 7.1.11(@types/node@22.18.1)(jiti@2.6.1)(less@4.4.2)(lightningcss@1.30.1)(sass-embedded@1.93.3)(sass@1.94.0)(terser@5.43.1)(yaml@2.8.1)
       vitest: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.18.1)(@vitest/ui@3.2.4)(happy-dom@20.0.11)(jsdom@26.1.0)(less@4.4.2)(lightningcss@1.30.1)(sass-embedded@1.93.3)(sass@1.94.0)(terser@5.43.1)
     transitivePeerDependencies:
       - '@babel/traverse'
@@ -15122,7 +15122,7 @@ snapshots:
 
   '@vitejs/plugin-basic-ssl@2.1.0(vite@7.1.11(@types/node@22.18.1)(jiti@2.6.1)(less@4.4.2)(lightningcss@1.30.1)(sass-embedded@1.93.3)(sass@1.90.0)(terser@5.43.1)(yaml@2.8.1))':
     dependencies:
-      vite: 7.1.11(@types/node@22.18.1)(jiti@2.6.1)(less@4.4.2)(lightningcss@1.30.1)(sass-embedded@1.93.3)(sass@1.90.0)(terser@5.43.1)(yaml@2.8.1)
+      vite: 7.1.11(@types/node@22.18.1)(jiti@2.6.1)(less@4.4.2)(lightningcss@1.30.1)(sass-embedded@1.93.3)(sass@1.94.0)(terser@5.43.1)(yaml@2.8.1)
 
   '@vitest/coverage-v8@3.2.4(vitest@3.2.4)':
     dependencies:
@@ -21688,7 +21688,7 @@ snapshots:
       sass-embedded: 1.93.3
       terser: 5.43.1
 
-  vite@7.1.11(@types/node@22.18.1)(jiti@2.6.1)(less@4.4.2)(lightningcss@1.30.1)(sass-embedded@1.93.3)(sass@1.90.0)(terser@5.43.1)(yaml@2.8.1):
+  vite@7.1.11(@types/node@22.18.1)(jiti@2.6.1)(less@4.4.2)(lightningcss@1.30.1)(sass-embedded@1.93.3)(sass@1.94.0)(terser@5.43.1)(yaml@2.8.1):
     dependencies:
       esbuild: 0.25.12
       fdir: 6.5.0(picomatch@4.0.3)
@@ -21702,7 +21702,7 @@ snapshots:
       jiti: 2.6.1
       less: 4.4.2
       lightningcss: 1.30.1
-      sass: 1.90.0
+      sass: 1.94.0
       sass-embedded: 1.93.3
       terser: 5.43.1
       yaml: 2.8.1

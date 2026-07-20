@@ -23,9 +23,15 @@ function muteConsole() {
       warn: console.warn,
       error: console.error,
     };
-    console.log = () => {};
-    console.warn = () => {};
-    console.error = () => {};
+    console.log = () => {
+      /* silence during perf run */
+    };
+    console.warn = () => {
+      /* silence during perf run */
+    };
+    console.error = () => {
+      /* silence during perf run */
+    };
   }
 }
 function restoreConsole() {

@@ -1,5 +1,8 @@
 import 'zone.js/dist/zone-node';
 
+// Standalone dev benchmark script (not part of any Nx project); the relative
+// import into the demo app is intentional here.
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import { NgRxBenchmarkService } from '../apps/demo/src/app/pages/realistic-comparison/benchmark-orchestrator/services/ngrx-benchmark.service';
 
 (async function main() {
