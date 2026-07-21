@@ -3,6 +3,7 @@ import { computed, Signal } from '@angular/core';
 import { createEntitySignal } from '../entity-signal';
 import { registerBuiltinMarkerProcessor } from '../internals/materialize-markers';
 import { isEntityMapMarker } from '../utils';
+import { attachLoader, type EntityLoadOptions } from './entity-loader';
 
 // Re-export isEntityMapMarker for convenience
 export { isEntityMapMarker };
@@ -10,11 +11,19 @@ export { isEntityMapMarker };
 /**
  * EntityMap Marker Factory
  *
- * Self-registering marker for entity collections.
- * If you never use `entityMap()`, this code is tree-shaken from your bundle.
+ * Self-registering marker for entity collections. If you never use `entityMap()`,
+ * this code is tree-shaken from your bundle. Passing a `load` (plus optional
+ * `staleTime`/`equal`/`swr`/`tags`/`persist`) turns the collection into a
+ * cache-aware, self-loading one; the loader machinery lives in `./entity-loader`
+ * and is only pulled in when `load` is used.
  */
 
-import type { EntityConfig, EntityMapMarker, EntitySignal } from '../types';
+import type {
+  EntityConfig,
+  EntityMapMarker,
+  EntitySignal,
+  LoadingEntityMapMarker,
+} from '../types';
 
 // =============================================================================
 // COMPUTED SLICE TYPES
@@ -62,35 +71,24 @@ export type EntitySignalWithSlices<
 };
 
 /**
- * Builder for chainable computed slices on entityMap.
- * Extends EntityMapMarker so it's properly recognized by TreeNode type inference.
+ * Builder for chainable computed slices on a plain entityMap.
  */
 export interface EntityMapBuilder<
   E,
   K extends string | number,
   Slices extends Record<string, unknown> = Record<string, never>
 > extends EntityMapMarker<E, K> {
-  /** Computed slices attached to this builder */
   __computedSlices?: EntityMapComputedSlices<E>;
-  /** Type-level only: the computed slice types */
   __sliceTypes?: Slices;
 
   /**
    * Add a computed slice to this entityMap.
-   * The slice is a Signal derived from all() entities.
-   *
-   * @param name - Name of the computed property
-   * @param compute - Function that takes all entities and returns computed value
-   * @returns Builder with the new slice type added
    *
    * @example
    * ```typescript
    * entityMap<Listing>()
    *   .computed('active', all => all.filter(l => l.status === 'active'))
-   *   .computed('byStatus', all => groupBy(all, 'status'))
-   *
    * // Access: tree.$.listings.active() // Signal<Listing[]>
-   * // Access: tree.$.listings.byStatus() // Signal<Record<string, Listing[]>>
    * ```
    */
   computed<N extends string, R>(
@@ -98,11 +96,29 @@ export interface EntityMapBuilder<
     compute: (entities: E[]) => R
   ): EntityMapBuilder<E, K, Slices & Record<N, R>>;
 
-  /**
-   * Finalize and return the marker.
-   * Usually not needed - the builder is assignable to EntityMapMarker.
-   */
+  /** Finalize and return the marker (usually unnecessary — the builder is a marker). */
   build(): EntityMapMarkerWithSlices<E, K, Slices>;
+}
+
+/**
+ * Builder for a cache-aware (loading) entityMap — produced when `load` is
+ * configured. Its materialized signal carries the loader surface.
+ */
+export interface LoadingEntityMapBuilder<
+  E,
+  K extends string | number,
+  P = void,
+  Slices extends Record<string, unknown> = Record<string, never>
+> extends LoadingEntityMapMarker<E, K, P> {
+  __computedSlices?: EntityMapComputedSlices<E>;
+  __sliceTypes?: Slices;
+
+  computed<N extends string, R>(
+    name: N,
+    compute: (entities: E[]) => R
+  ): LoadingEntityMapBuilder<E, K, P, Slices & Record<N, R>>;
+
+  build(): LoadingEntityMapMarker<E, K, P>;
 }
 
 // =============================================================================
@@ -113,68 +129,90 @@ export interface EntityMapBuilder<
 let entityMapRegistered = false;
 
 /**
- * Type for internal use with marker processor
+ * Internal marker shape as seen by the processor (runtime). Carries the optional
+ * load options alongside the entity config.
  * @internal
  */
 type InternalMarker = EntityMapMarker<
   Record<string, unknown>,
   string | number
 > & {
-  __entityMapConfig?: EntityConfig<Record<string, unknown>, string | number>;
+  __entityMapConfig?: EntityConfig<Record<string, unknown>, string | number> &
+    Partial<EntityLoadOptions<Record<string, unknown>, unknown>>;
   __computedSlices?: EntityMapComputedSlices<Record<string, unknown>>;
 };
 
 /**
- * Create an entity map marker for use in signalTree state definition.
+ * Default key type: inferred from the entity's `id` field if present.
+ * @internal
+ */
+type DefaultKey<E> = E extends { id: infer I extends string | number }
+  ? I
+  : string;
+
+/**
+ * Create an entity map marker for use in a `signalTree` state definition.
  *
- * Automatically registers its processor on first use - no manual
- * registration required. If you never use `entityMap()`, the processor
- * is tree-shaken out of your bundle.
+ * Automatically registers its processor on first use — no manual registration.
+ * If you never use `entityMap()`, the processor is tree-shaken out.
  *
- * This is the ONLY way to create a type that satisfies EntityMapMarker,
- * since the brand symbol is not exported.
+ * Passing a `load` (plus optional `staleTime`/`equal`/`swr`/`tags`/`persist`/
+ * `clearOnParamsChange`) makes the collection **cache-aware** — it loads itself,
+ * exposes `.load()/.refresh()/.invalidate()/.loading()/.loaded()/.error()/
+ * .lastLoadedAt()/.params()`, guards refetches by `staleTime`, coalesces
+ * concurrent loads, and (with a loader that declares a param) is scoped per
+ * `params`. Without `load` it's a plain normalized client collection.
  *
- * @typeParam E - Entity type
- * @typeParam K - Key type (inferred from entity's `id` field if present)
- * @param config - Optional entity configuration
- * @returns EntityMapBuilder with chainable .computed() method
- *
- * @example
+ * @example Plain (client-side)
  * ```typescript
- * const tree = signalTree({
- *   users: entityMap<User>(),
- *   products: entityMap<Product, number>(),
- *   // With computed slices:
- *   listings: entityMap<Listing>()
- *     .computed('active', all => all.filter(l => l.status === 'active'))
- *     .computed('count', all => all.length),
- * });
- *
- * // Access entity methods after materialization
+ * const tree = signalTree({ users: entityMap<User, number>() });
  * tree.$.users.addOne({ id: 1, name: 'Alice' });
- * tree.$.users.all(); // [{ id: 1, name: 'Alice' }]
- * tree.$.listings.active(); // Signal<Listing[]> - computed slice
  * ```
  *
- * ### Reactivity granularity
+ * @example Cache-aware (self-loading)
+ * ```typescript
+ * const tree = signalTree({
+ *   plants: entityMap<Plant, string>({
+ *     load: () => plantApi.list$(),
+ *     selectId: (p) => p.url,
+ *     staleTime: '30m',
+ *     tags: ['plants'],
+ *   }),
+ * });
+ * await tree.$.plants.load();   // guarded — no-op while fresh / in-flight
+ * ```
  *
- * Per-entity reads are **body-granular**: `byId(id)` and its field signals
- * (`tree.$.users.byId(1).name()`) depend only on *that* entity's signal, so
- * updating a different entity does not re-run them. This is what makes
- * fine-grained updates O(1) in observers rather than O(collection size).
+ * @example Scoped (parameterized)
+ * ```typescript
+ * const tree = signalTree({
+ *   customers: entityMap<Customer, string, { regionUrl: string }>({
+ *     load: ({ regionUrl }) => api.getCustomers$(regionUrl),
+ *     selectId: (c) => c.externalId,
+ *     staleTime: '30m',
+ *   }),
+ * });
+ * await tree.$.customers.load({ regionUrl });  // per-scope freshness
+ * ```
  *
- * Collection reads are **collection-level**: `all`, `map`, `count`, `ids`,
- * `where`, `find`, and `.computed()` slices derive from the whole collection
- * and therefore recompute on *any* add/update/remove — which is correct, since
- * their result depends on every entity. Prefer `byId(id)` for per-row UI to
- * avoid unnecessary recomputation.
+ * @see RFC 0002, RFC 0003
  */
+// Overload order matters: the LOADING overload is declared first so a config
+// carrying `load` resolves to it; the PLAIN overload is declared LAST so that
+// `ReturnType<typeof entityMap<E, K>>` (a common user idiom, and what the demos
+// use) resolves to the plain builder rather than the loading one.
 export function entityMap<
   E,
-  K extends string | number = E extends { id: infer I extends string | number }
-    ? I
-    : string
->(config?: EntityConfig<E, K>): EntityMapBuilder<E, K, Record<string, never>> {
+  K extends string | number = DefaultKey<E>,
+  P = void
+>(
+  config: EntityConfig<E, K> & EntityLoadOptions<E, P>
+): LoadingEntityMapBuilder<E, K, P, Record<string, never>>;
+export function entityMap<E, K extends string | number = DefaultKey<E>>(
+  config?: EntityConfig<E, K>
+): EntityMapBuilder<E, K, Record<string, never>>;
+export function entityMap<E, K extends string | number = DefaultKey<E>>(
+  config?: EntityConfig<E, K> & Partial<EntityLoadOptions<E, unknown>>
+): EntityMapBuilder<E, K, Record<string, never>> {
   // Self-register on first use (tree-shakeable)
   if (!entityMapRegistered) {
     entityMapRegistered = true;
@@ -188,7 +226,7 @@ export function entityMap<
           path
         );
 
-        // If there are computed slices, add them to the signal
+        // Computed slices
         const slices = marker.__computedSlices;
         if (slices) {
           for (const [name, sliceConfig] of Object.entries(slices)) {
@@ -200,29 +238,34 @@ export function entityMap<
           }
         }
 
+        // Cache-aware loading (only when `load` is configured)
+        if (typeof cfg.load === 'function') {
+          attachLoader(
+            entitySignal as EntitySignal<
+              Record<string, unknown>,
+              string | number
+            >,
+            cfg as EntityLoadOptions<Record<string, unknown>, unknown>
+          );
+        }
+
         return entitySignal;
       }
     );
   }
 
-  // Create builder with chainable .computed()
   const slices: EntityMapComputedSlices<E> = {};
 
-  // Create combined marker + builder object
-  // The marker properties satisfy EntityMapMarker, and the methods satisfy EntityMapBuilder
   const combined = {
-    // Marker properties (satisfies EntityMapMarker)
     __isEntityMap: true as const,
     __entityMapConfig: config ?? {},
     __computedSlices: slices,
 
-    // Builder methods
     computed<N extends string, R>(
       name: N,
       compute: (entities: E[]) => R
     ): EntityMapBuilder<E, K, Record<N, R>> {
       slices[name] = { compute: compute as (entities: E[]) => unknown };
-      // Return same object with updated type (type is tracked via TypeScript inference)
       return combined as unknown as EntityMapBuilder<E, K, Record<N, R>>;
     },
 
@@ -235,6 +278,5 @@ export function entityMap<
     },
   };
 
-  // Cast to builder type - the marker properties are included via the combined object
   return combined as unknown as EntityMapBuilder<E, K, Record<string, never>>;
 }

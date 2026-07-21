@@ -255,7 +255,14 @@ export function createAsyncSourceSignal<T>(
   }
 
   if (!lazy) {
-    runLoad();
+    // Defer the auto-load off the synchronous materialization pass. SignalTree
+    // finalizes markers lazily on first `.$` access — often a template read
+    // during Angular's render — so a synchronous `runLoad()` here would write
+    // `loading`/`data` mid-render (NG0600). A microtask lands the writes after
+    // the current render.
+    queueMicrotask(() => {
+      if (!destroyed) runLoad();
+    });
   }
 
   const fn = (() => dataSignal()) as AsyncSourceSignal<T>;

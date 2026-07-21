@@ -6,6 +6,15 @@
 **Versions at writing:** core 11.1.1 (published); `@signaltree/shared` 9.2.2; `@ngrx/signals` (SignalStore + `withEntities`) as comparator; Angular 20.x
 **Supersedes prior thinking in:** the v3 state audit (redundant-fetch finding) and the prioritized-gaps list (gaps 1–5)
 
+> **Folded into `entityMap` (11.4.0).** This RFC's `entityCollection` shipped as a
+> separate marker in 11.2.0. In 11.4.0 the marker was **removed** and its capability
+> folded into `entityMap` as an opt-in option: `entityMap<E, K>({ load, staleTime, swr,
+> tags, persist, … })` — passing `load` turns on the loader surface this RFC specifies;
+> `entityMap<E, K>()` with no `load` is unchanged. See [RFC 0003 §0](0003-keyed-entity-collection.md#0-revision-note-113x0--1140-same-day-correction)
+> for the rationale and the scoped/parameterized follow-on. The design below is otherwise
+> historical — read `entityCollection<E, K>(config)` as `entityMap<E, K>(config)` with a
+> `load` in `config`.
+
 ---
 
 ## 1. The question
@@ -53,14 +62,16 @@ Folding in the prioritized-gaps list (gaps 1–6):
 ### 4.1 Marker factory
 
 ```typescript
-export function entityCollection<E, K extends string | number = string>(
-  config: EntityCollectionConfig<E, K>
-): EntityCollectionMarker<E, K>;
+// Shipped as entityMap({ load, ... }) in 11.4.0 (folded from the separate
+// entityCollection marker this RFC originally specified — see the note above):
+export function entityMap<E, K extends string | number = string>(
+  config?: EntityMapConfig<E, K>
+): EntityMapSignal<E, K>;
 
-export interface EntityCollectionConfig<E, K extends string | number = string> {
-  // --- loading ---
-  load: () => Observable<E[]> | Promise<E[]>;   // the fetch
-  selectId?: (entity: E) => K;                  // same default as entityMap
+export interface EntityMapConfig<E, K extends string | number = string> {
+  // --- loading (opt-in: presence of `load` turns on the whole loader surface below) ---
+  load?: () => Observable<E[]> | Promise<E[]>;  // the fetch; omit for a plain client-only entityMap
+  selectId?: (entity: E) => K;                  // existing entityMap option, unchanged
   lazy?: boolean;                               // default false: load on materialize; true: wait for .load()
 
   // --- freshness (gap 2, trimmed) ---
@@ -82,10 +93,10 @@ export interface EntityCollectionConfig<E, K extends string | number = string> {
 
 ### 4.2 Materialized signal
 
-The returned signal composes an `entityMap` (all its CRUD/query methods pass through unchanged) plus loader/status surface:
+The returned signal is the same `entityMap` signal (all its CRUD/query methods pass through unchanged), with a loader/status surface added when `load` is present in config:
 
 ```typescript
-export interface EntityCollectionSignal<E, K extends string | number = string>
+export interface EntityMapSignal<E, K extends string | number = string>
   extends EntitySignal<E, K> {              // full entityMap surface: all/byId/where/addOne/updateOne/...
 
   // --- loader control ---

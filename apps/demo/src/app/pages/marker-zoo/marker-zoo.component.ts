@@ -5,7 +5,6 @@ import { RouterModule } from '@angular/router';
 import {
   asyncQuery,
   asyncSource,
-  entityCollection,
   entityMap,
   form,
   signalTree,
@@ -57,7 +56,7 @@ const ALL_PLANTS: Plant[] = [
 /**
  * MARKER ZOO
  *
- * Showcases ALL 7 markers in ONE tree at four different depths simultaneously.
+ * Showcases ALL 6 markers in ONE tree at four different depths simultaneously.
  * This is intentionally non-trivial — the point is to demonstrate that
  * SignalTree's marker family composes at arbitrary tree positions, which
  * is impossible (or requires significant ceremony) in libraries that
@@ -68,8 +67,8 @@ const ALL_PLANTS: Plant[] = [
  *   depth 2: directory.users (asyncSource), settings.theme (stored),
  *            onboarding.profile (form marker)
  *   depth 3: organization.teams.list (entityMap), organization.teams.search (asyncQuery)
- *   depth 4: organization.teams.catalog.plants (entityCollection — cache-aware,
- *            self-loading entityMap)
+ *   depth 4: organization.teams.catalog.plants (entityMap in its cache-aware,
+ *            self-loading form — not a separate marker)
  */
 @Component({
   selector: 'app-marker-zoo',
@@ -115,11 +114,11 @@ store.$.orgStatus.fail(err);      // === setError`,
     },
   ];
 
-  readonly entityCollectionCode: CodeFile[] = [
+  readonly plantsCode: CodeFile[] = [
     {
-      label: 'entityCollection.ts',
+      label: 'plants.ts',
       language: 'typescript',
-      source: `plants: entityCollection<Plant, string>({
+      source: `plants: entityMap<Plant, string>({
   load: () => of(ALL_PLANTS).pipe(delay(400)),
   selectId: (p) => p.id,
   staleTime: '30s',  // load() is a no-op while fresh
@@ -165,12 +164,16 @@ store.$.organization.teams.catalog.plants.invalidate(); // mark stale`,
         }),
 
         catalog: {
-          // depth 4 — entityCollection: cache-aware, self-loading entityMap
-          plants: entityCollection<Plant, string>({
+          // depth 4 — entityMap in its cache-aware, self-loading form
+          plants: entityMap<Plant, string>({
             load: () => of(ALL_PLANTS).pipe(delay(400)),
             selectId: (p) => p.id,
             staleTime: '30s',
             tags: ['plants'],
+            // Non-lazy: auto-loads on materialize. Safe during template-triggered
+            // materialization because the auto-load is deferred off the render
+            // pass (no signal writes mid-render). The "Load plants" button below
+            // acts as a manual refresh.
           }),
         },
       },

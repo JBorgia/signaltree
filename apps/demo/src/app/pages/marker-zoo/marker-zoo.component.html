@@ -2,7 +2,7 @@
   <header class="hero">
     <h1>Marker Zoo</h1>
     <p class="lead">
-      All seven SignalTree markers in <strong>one tree at four different depths</strong>.
+      All six SignalTree markers in <strong>one tree at four different depths</strong>.
       Each one materializes into a fully-functional reactive sub-API at its declared
       path. <strong>Impossible in libraries that compose features at the store root.</strong>
     </p>
@@ -80,12 +80,12 @@
     <article class="card">
       <h2>
         <span class="depth-badge">depth 4</span>
-        <code>entityCollection&lt;E, K&gt;()</code>
+        <code>entityMap&lt;E, K&gt;()</code> <span class="submeta">(cache-aware)</span>
       </h2>
       <p>
-        Cache-aware, self-loading <code>entityMap</code> — nested inside
-        <code>organization.teams.catalog</code>. Auto-loads on materialize,
-        then <code>load()</code> is a no-op while fresh.
+        The same <code>entityMap</code> marker as depth 3, in its cache-aware,
+        self-loading form — nested inside <code>organization.teams.catalog</code>.
+        Auto-loads on materialize, then <code>load()</code> is a no-op while fresh.
       </p>
       <div class="row">
         <button (click)="loadPlants()" [disabled]="store.$.organization.teams.catalog.plants.loading()">
@@ -107,7 +107,7 @@
           }
         </ul>
       }
-      <st-code-tabs [files]="entityCollectionCode" />
+      <st-code-tabs [files]="plantsCode" />
     </article>
 
     <article class="card">

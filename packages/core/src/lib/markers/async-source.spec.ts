@@ -53,8 +53,8 @@ describe('asyncSource() marker', () => {
   });
 
   describe('materialization (Observable loader)', () => {
-    it('returns the initial value before the load completes', () => {
-      TestBed.runInInjectionContext(() => {
+    it('returns the initial value before the load completes', async () => {
+      await TestBed.runInInjectionContext(async () => {
         const fake = makeFakeDestroyRef();
         const accessor = createAsyncSourceSignal(
           asyncSource<number>({
@@ -63,8 +63,9 @@ describe('asyncSource() marker', () => {
             load: () => new Subject<number>(),
           })
         );
-        // The destroyRef hook attached via inject(DestroyRef) is the TestBed's;
-        // wire our fake by calling the cleanup ourselves later if needed.
+        // Auto-load is deferred; after the microtask it is loading (the Subject
+        // never emits), and the value is still the initial.
+        await Promise.resolve();
         expect(accessor()).toBe(0);
         expect(accessor.loading()).toBe(true);
         expect(accessor.error()).toBeNull();
@@ -77,7 +78,9 @@ describe('asyncSource() marker', () => {
         const accessor = createAsyncSourceSignal(
           asyncSource<number>({ initial: 0, load: () => of(7) })
         );
-        // Synchronous of(7) — value should be available immediately.
+        // Auto-load is deferred off the materialize/render pass (NG0600-safe).
+        expect(accessor()).toBe(0);
+        await Promise.resolve();
         expect(accessor()).toBe(7);
         expect(accessor.loading()).toBe(false);
         expect(accessor.error()).toBeNull();
@@ -107,6 +110,7 @@ describe('asyncSource() marker', () => {
             load: () => throwError(() => new Error('boom')),
           })
         );
+        await Promise.resolve();
         expect(accessor.error()).toBeInstanceOf(Error);
         expect((accessor.error() as Error).message).toBe('boom');
         expect(accessor.loading()).toBe(false);
@@ -124,6 +128,7 @@ describe('asyncSource() marker', () => {
             },
           })
         );
+        await Promise.resolve();
         expect((accessor.error() as Error).message).toBe('factory threw');
         expect(accessor.loading()).toBe(false);
       });
@@ -142,6 +147,7 @@ describe('asyncSource() marker', () => {
             },
           })
         );
+        await Promise.resolve(); // deferred auto-load runs
         expect(invocations).toBe(1);
         expect(accessor.loading()).toBe(true);
 
@@ -198,14 +204,15 @@ describe('asyncSource() marker', () => {
   });
 
   describe('imperative methods', () => {
-    it('set() overrides the value, clears loading/error, and cancels in-flight', () => {
-      TestBed.runInInjectionContext(() => {
+    it('set() overrides the value, clears loading/error, and cancels in-flight', async () => {
+      await TestBed.runInInjectionContext(async () => {
         const accessor = createAsyncSourceSignal(
           asyncSource<number>({
             initial: 0,
             load: () => new Subject<number>(), // never resolves
           })
         );
+        await Promise.resolve(); // deferred auto-load runs → loading true
         expect(accessor.loading()).toBe(true);
         accessor.set(42);
         expect(accessor()).toBe(42);
@@ -214,26 +221,28 @@ describe('asyncSource() marker', () => {
       });
     });
 
-    it('update() transforms the value via callback', () => {
-      TestBed.runInInjectionContext(() => {
+    it('update() transforms the value via callback', async () => {
+      await TestBed.runInInjectionContext(async () => {
         const accessor = createAsyncSourceSignal(
           asyncSource<number>({ initial: 10, load: () => of(20) })
         );
-        // After auto-load synchronously, value should be 20.
+        // Auto-load is deferred; after the microtask the value is 20.
+        await Promise.resolve();
         expect(accessor()).toBe(20);
         accessor.update((cur) => (cur ?? 0) * 2);
         expect(accessor()).toBe(40);
       });
     });
 
-    it('reset() restores initial value and clears loading/error', () => {
-      TestBed.runInInjectionContext(() => {
+    it('reset() restores initial value and clears loading/error', async () => {
+      await TestBed.runInInjectionContext(async () => {
         const accessor = createAsyncSourceSignal(
           asyncSource<number>({
             initial: 5,
             load: () => throwError(() => new Error('x')),
           })
         );
+        await Promise.resolve();
         expect(accessor.error()).toBeInstanceOf(Error);
         accessor.reset();
         expect(accessor()).toBe(5);

@@ -187,20 +187,21 @@ export {
   type AsyncQueryFn,
 } from './lib/markers/async-query';
 
-// Entity-collection marker (v11.2, RFC 0002) - cache-aware collection loader
+// Cache-aware loading for entityMap (RFC 0002/0003). `entityMap({ load, … })`
+// turns a plain collection into a self-loading, cache-aware one; `invalidateTag`
+// is the push-invalidation seam. `entityMap` is exported above (from ./lib/types).
 export {
-  entityCollection,
   invalidateTag,
-  isEntityCollectionMarker,
-  createEntityCollectionSignal,
-  ENTITY_COLLECTION_MARKER,
-  type EntityCollectionMarker,
-  type EntityCollectionSignal,
-  type EntityCollectionConfig,
-  type EntityCollectionLoader,
-  type EntityCollectionPersist,
-  type EntityCollectionStorageAdapter,
-} from './lib/markers/entity-collection';
+  type EntityLoader,
+  type EntityLoadOptions,
+  type EntityLoaderSurface,
+  type EntityPersist,
+  type EntityStorageAdapter,
+} from './lib/markers/entity-loader';
+export type {
+  LoadingEntityMapMarker,
+  LoadingEntitySignal,
+} from './lib/types';
 
 // Async-stream marker — EXPERIMENTAL, intentionally NOT exported from the public
 // barrel. Per RFC 0001 (docs/rfcs/0001-ai-embedded-boundary.md §5) streaming

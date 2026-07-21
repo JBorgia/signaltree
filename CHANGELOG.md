@@ -1,8 +1,18 @@
-## 11.3.0
+## 11.4.0 (2026-07-20)
+
+> `entityMap` gains cache-aware loading (`load`/`staleTime`/`equal`/`params`/`persist`/`tags`)
+> + NG0600-safe deferred auto-load; the short-lived 11.3.0 `entityCollection` marker is
+> folded into `entityMap` (removed as a separate marker, not renamed). Its keyed design also
+> supersedes the 11.3.0 `key`/`currentKey`/`clearOnKeyChange` shape, corrected same day —
+> there is no separately-published 11.3.0 to preserve compatibility with. See RFC 0003 §0 in
+> [docs/rfcs/0003-keyed-entity-collection.md](docs/rfcs/0003-keyed-entity-collection.md)
+> for the full rationale.
 
 ### Added
 
-- **Keyed / scoped `entityCollection<E, K, P>`** (`@signaltree/core`, [RFC 0003](docs/rfcs/0003-keyed-entity-collection.md)) — `entityCollection` gains an optional `key: (params: P) => unknown[]` option that parameterizes the collection by a scope (region, customer, tenant, …): `load(params)` now takes scope params, freshness (`staleTime`) is evaluated per-key, a key change refetches and replaces the entities, and `currentKey`/`refresh(params?)` round out the surface. Before: consumers hand-wired a scope-key guard (a ref of "current region" plus manual clear/refetch on change) around every scoped `entityMap`; after, `key` does it — same-key-fresh is a no-op, same-key-concurrent is single-flight, and a different key while in-flight supersedes (last-request-wins) instead of racing. `persist` now writes through per-scope storage keys. 100% backward compatible — the parameterless form is unchanged. See the [core changelog](packages/core/CHANGELOG.md).
+- **`entityCollection` folded into `entityMap`** (`@signaltree/core`, [RFC 0003](docs/rfcs/0003-keyed-entity-collection.md)) — cache-aware loading is no longer a separate marker. Pass `load` in `entityMap`'s config and the collection gains the loader surface (`.load()`, `.refresh()`, `.invalidate()`, `.loading()`, `.loaded()`, `.error()`, `.lastLoadedAt()`, `.params()`); `entityMap<E, K>()` without `load` is unchanged. A separate marker didn't earn its keep — any real app has server-backed entity data, so it would import the loader surface anyway, and two markers just added a "which one?" decision. There is nothing new to import; `entityCollection` no longer exists.
+- **Scoped `entityMap<E, K, P>`** (`@signaltree/core`, [RFC 0003](docs/rfcs/0003-keyed-entity-collection.md)) — `entityMap`'s cache-aware loading gains an optional `equal: (a: P, b: P) => boolean` option that parameterizes the collection by a scope (region, customer, tenant, …): a loader that declares a parameter (`load: (params) => …`) makes the collection scoped, freshness (`staleTime`) is evaluated per-scope via `equal` (default: structural value comparison), a scope change refetches and replaces the entities, and `params: Signal<P | undefined>`/`refresh(params?)`/`clearOnParamsChange` round out the surface. Before: consumers hand-wired a scope-key guard (a ref of "current region" plus manual clear/refetch on change) around every scoped `entityMap`; after, the marker does it — same-scope-fresh is a no-op, same-scope-concurrent is single-flight, and a different scope while in-flight supersedes (last-request-wins) instead of racing. `persist` now writes through per-scope storage keys. 100% backward compatible — the parameterless (global) form is unchanged. See the [core changelog](packages/core/CHANGELOG.md).
+- **NG0600 fix — deferred auto-load** (`@signaltree/core`) — a non-lazy cache-aware `entityMap`'s initial auto-load and offline-first `persist` seed, and `asyncSource`'s initial auto-load, are now deferred to a microtask instead of running synchronously during marker materialization. Reading a non-lazy collection or `asyncSource` first inside a template no longer throws `NG0600: Writing to signals is not allowed while Angular renders`. Auto-load is now asynchronous — data arrives on the next microtask rather than during construction. See the [core changelog](packages/core/CHANGELOG.md).
 
 ### Compatibility
 

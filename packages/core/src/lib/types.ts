@@ -3,10 +3,7 @@ import { Signal, WritableSignal } from '@angular/core';
 import { AsyncQueryMarker, AsyncQuerySignal } from './markers/async-query';
 import { AsyncSourceMarker, AsyncSourceSignal } from './markers/async-source';
 import { AsyncStreamMarker, AsyncStreamSignal } from './markers/async-stream';
-import {
-  EntityCollectionMarker,
-  EntityCollectionSignal,
-} from './markers/entity-collection';
+import type { EntityLoaderSurface } from './markers/entity-loader';
 import { FormMarker, FormSignal } from './markers/form';
 import { StatusMarker, StatusSignal } from './markers/status';
 import { StoredMarker, StoredSignal } from './markers/stored';
@@ -107,8 +104,8 @@ export interface NodeAccessor<T> {
 // Default TreeNode maps known keys to either EntitySignal, StatusSignal, StoredSignal, FormSignal,
 // or CallableWritableSignal and still allows dynamic string indexing at runtime.
 export type TreeNode<T> = {
-  [K in keyof T]: T[K] extends EntityCollectionMarker<infer CE, infer CK, infer CP>
-    ? EntityCollectionSignal<CE, CK, CP>
+  [K in keyof T]: T[K] extends LoadingEntityMapMarker<infer LE, infer LK, infer LP>
+    ? LoadingEntitySignal<LE, LK, LP>
     : T[K] extends EntityMapMarker<infer E, infer Key>
     ? EntitySignal<E, Key>
     : T[K] extends StatusMarker<infer Err>
@@ -511,6 +508,33 @@ export interface EntityMapMarker<E, K extends string | number> {
 }
 
 /**
+ * A cache-aware (loading) entityMap marker — produced by `entityMap({ load, … })`.
+ * Materializes into an {@link EntitySignal} plus the loader surface
+ * ({@link EntityLoaderSurface}). Distinguished from a plain marker by `__hasLoad`
+ * so the type resolver can add the loader methods only when `load` is configured.
+ *
+ * @typeParam P - scope/params type (`void` for the global, parameterless form).
+ */
+export interface LoadingEntityMapMarker<
+  E,
+  K extends string | number,
+  P = void
+> extends EntityMapMarker<E, K> {
+  readonly __hasLoad: true;
+  readonly __loadParams?: P;
+}
+
+/**
+ * An {@link EntitySignal} augmented with the cache-aware loader surface — the
+ * materialized form of `entityMap({ load, … })`.
+ */
+export type LoadingEntitySignal<
+  E,
+  K extends string | number = string,
+  P = void
+> = EntitySignal<E, K> & EntityLoaderSurface<P>;
+
+/**
  * Create an entity map marker for use in signalTree state definition.
  * This is the ONLY way to create a type that satisfies EntityMapMarker,
  * since the brand symbol is not exported.
@@ -782,8 +806,8 @@ export type IsEntityMap<T> = T extends EntityMapMarker<
  * the full deep inference.
  */
 export type DeepEntityAwareTreeNode<T> = {
-  [K in keyof T]: T[K] extends EntityCollectionMarker<infer CE, infer CK, infer CP>
-    ? EntityCollectionSignal<CE, CK, CP>
+  [K in keyof T]: T[K] extends LoadingEntityMapMarker<infer LE, infer LK, infer LP>
+    ? LoadingEntitySignal<LE, LK, LP>
     : T[K] extends EntityMapMarker<infer E, infer Key>
     ? EntitySignal<E, Key>
     : T[K] extends StatusMarker<infer Err>
@@ -811,8 +835,8 @@ export type DeepEntityAwareTreeNode<T> = {
  * `TypedSignalTree<T>` (see below) or use `DeepEntityAwareTreeNode`.
  */
 export type EntityAwareTreeNode<T> = {
-  [K in keyof T]: T[K] extends EntityCollectionMarker<infer CE, infer CK, infer CP>
-    ? EntityCollectionSignal<CE, CK, CP>
+  [K in keyof T]: T[K] extends LoadingEntityMapMarker<infer LE, infer LK, infer LP>
+    ? LoadingEntitySignal<LE, LK, LP>
     : T[K] extends EntityMapMarker<infer E, infer Key>
     ? EntitySignal<E, Key>
     : T[K] extends StatusMarker<infer Err>

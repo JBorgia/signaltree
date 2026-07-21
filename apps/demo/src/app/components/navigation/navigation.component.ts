@@ -168,14 +168,14 @@ export class NavigationComponent {
     },
     {
       id: 'marker-zoo',
-      title: 'Marker zoo (all 7 markers, 4 depths)',
+      title: 'Marker zoo (all 6 markers, 4 depths)',
       description: 'All marker types in one tree at different depths — showcases path-attached composition',
       route: '/marker-zoo',
       category: 'examples',
     },
     {
       id: 'entity-collection',
-      title: 'entityCollection showcase (v11.2)',
+      title: 'entityMap cache-aware loading (v11.2)',
       description: 'Cache-aware collections, visualized: single-flight, staleTime, invalidateTag, SWR, offline-first',
       route: '/entity-collection',
       category: 'examples',

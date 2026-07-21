@@ -90,18 +90,15 @@ export {
   type AsyncQueryFn,
 } from './async-query';
 
-// Entity-collection marker - cache-aware collection loader (v11.2, RFC 0002)
+// Cache-aware loading for entityMap (RFC 0002/0003) — the loader surface that
+// `entityMap({ load, … })` attaches. `entityMap` itself is exported from ./types.
 export {
-  entityCollection,
   invalidateTag,
-  isEntityCollectionMarker,
-  createEntityCollectionSignal,
   parseDuration,
-  ENTITY_COLLECTION_MARKER,
-  type EntityCollectionMarker,
-  type EntityCollectionSignal,
-  type EntityCollectionConfig,
-  type EntityCollectionLoader,
-  type EntityCollectionPersist,
-  type EntityCollectionStorageAdapter,
-} from './entity-collection';
+  stableStringify,
+  type EntityLoader,
+  type EntityLoadOptions,
+  type EntityLoaderSurface,
+  type EntityPersist,
+  type EntityStorageAdapter,
+} from './entity-loader';

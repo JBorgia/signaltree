@@ -1,18 +1,40 @@
 # @signaltree/core Changelog
 
-## 11.3.0 (2026-07-20)
+## 11.4.0 (2026-07-20)
 
-### Public API additions — keyed `entityCollection` (RFC 0003)
+> `entityMap` gains cache-aware loading (`load`/`staleTime`/`equal`/`params`/`persist`/`tags`)
+> + NG0600-safe deferred auto-load. The short-lived 11.3.0 `entityCollection` marker is
+> **folded into `entityMap`** — removed as a separate marker, not just renamed. Its keyed
+> design also supersedes the 11.3.0 `key`/`currentKey`/`clearOnKeyChange` shape, corrected
+> same day (there is no separately-published 11.3.0 to stay compatible with). See RFC 0003
+> §0 for the full rationale behind both corrections.
 
-- **`entityCollection<E, K, P>(config)`** gains a third type param `P` (scope/params type; defaults to `void`, i.e. the existing parameterless form is unchanged). `config.load` becomes `(params: P) => Observable<E[]> | Promise<E[]>` — the loader now receives the scope params.
-- **`config.key?: (params: P) => unknown[]`** — presence makes the collection **KEYED**. Return a JSON-stable, order-sensitive array (like a TanStack `queryKey`), e.g. `({ regionUrl }) => [regionUrl]`. `staleTime` freshness is evaluated per-key: a key change marks the collection stale and triggers a refetch even if the previous scope was still fresh. Keyed collections are implicitly lazy (no scope to auto-load until one is supplied).
-- **`config.clearOnKeyChange?: boolean`** (default `false`) — on a key change, keep the previous scope's rows visible (no flicker) until the new scope's load settles. Set `true` to blank rows immediately instead.
-- **`.load(params)`** — keyed collections require the params argument; the parameterless `.load()` is unchanged for unkeyed collections.
+### Public API changes — `entityCollection` folded into `entityMap`, scoped loading (RFC 0003)
+
+- **The `entityCollection` marker is removed.** Cache-aware loading is no longer a
+  separate marker — it's an option set on `entityMap`: pass `load` in `entityMap`'s
+  config and the collection gains the loader surface below. `entityMap<E, K>()` called
+  without `load` is unchanged (still the plain, lean marker). There is nothing to import
+  besides `entityMap` itself; `entityCollection` and `EntityCollectionConfig` no longer
+  exist. Rationale: a second marker didn't earn its keep — any real app has server-backed
+  entity data, so it would import the loader surface anyway (no tree-shaking win from
+  splitting it out), and two markers only added a "which one?" decision. See RFC 0003 §0
+  and §4 (item 6).
+- **`entityMap<E, K, P>(config)`** gains a third type param `P` (scope/params type; defaults to `void`, i.e. the existing parameterless form is unchanged). `config.load` becomes `(params: P) => Observable<E[]> | Promise<E[]>` — a loader that **declares a parameter** makes the collection **scoped**; `staleTime` freshness is then evaluated per scope.
+- **`config.equal?: (a: P, b: P) => boolean`** — scope-params comparator, mirroring the convention `asyncQuery`/`asyncStream` already use. Default: a structural value comparison, so `{ regionUrl }` object literals compare by value (not reference). When the new `load(params)` scope is not equal to the loaded one, the collection is stale and refetches. Provide a cheaper/narrower comparator (e.g. `(a, b) => a.id === b.id`) when it matters. Scoped collections are implicitly lazy (no scope to auto-load until one is supplied).
+- **`config.clearOnParamsChange?: boolean`** (default `false`) — renamed from the 11.3.0 `clearOnKeyChange`. On a scope change, keep the previous scope's rows visible (no flicker) until the new scope's load settles. Set `true` to blank rows immediately instead.
+- **`.load(params)`** — scoped collections require the params argument; the parameterless `.load()` is unchanged for global (unscoped) collections.
 - **`.refresh(params?)`** — omit `params` to force a reload of the last-loaded scope; pass `params` to refresh (or switch to) a specific scope.
-- **`currentKey: Signal<string | null>`** — the serialized key of the currently loaded scope; `null` for unkeyed collections.
-- **Concurrency semantics**: same key + fresh → `.load()` is a no-op; same key while a fetch is already in-flight → single-flight (one request services all callers); a **different** key requested while the previous key's fetch is still in-flight → the new request supersedes (last-request-wins) — the stale in-flight result is never written into state, though its promise still resolves normally for any caller awaiting it.
-- **`persist` write-through** now uses a per-scope storage key (`${key}::${serializedKey}`) for keyed collections, so multiple scopes persist independently under the same base key. Keyed `hydrateThenRevalidate` seeds a scope on its first `load(params)` call for that key.
-- 100% backward compatible — the parameterless form (`P` defaulting to `void`, no `key`) is unchanged in behavior and typing.
+- **`params: Signal<P | undefined>`** — replaces the 11.3.0 `currentKey: Signal<string | null>`. Exposes the **typed** scope of the currently-loaded data (not a serialized string); `undefined` for a global collection or before its first load.
+- **Concurrency semantics**: same scope (per `equal`) + fresh → `.load()` is a no-op; same scope while a fetch is already in-flight → single-flight (one request services all callers); a scope that is **not equal** to the in-flight one → the new request supersedes (last-request-wins) — the stale in-flight result is never written into state, though its promise still resolves normally for any caller awaiting it.
+- **`persist` write-through** now uses a per-scope storage key (`${key}::${stableStringify(params)}`) for scoped collections, so multiple scopes persist independently under the same base key. Scoped `hydrateThenRevalidate` seeds a scope on its first `load(params)` call for that scope.
+- 100% backward compatible for the parameterless (global) form (`P` defaulting to `void`) — unchanged in behavior and typing. The 11.3.0 `entityCollection` marker itself does not carry forward, but it was never a published release, so nothing real depends on it.
+
+### Fixed — NG0600 on non-lazy cache-aware `entityMap` / `asyncSource`
+
+- **Deferred auto-load + offline-first seed.** SignalTree finalizes markers lazily on first `.$` access, which is frequently a template read *during* Angular's render pass. A non-lazy cache-aware `entityMap`'s initial auto-load, and any `persist.hydrateThenRevalidate` offline-first seed, previously ran synchronously inside that materialization step — writing signals mid-render and throwing `NG0600: Writing to signals is not allowed while Angular renders` when the collection was first read from a template. Both are now deferred to a microtask, landing after the current render pass, so a non-lazy collection (or `asyncSource`) read first inside a template is render-safe.
+- **Observable consequence: auto-load is now asynchronous.** Data for a non-lazy cache-aware `entityMap`/`asyncSource` arrives on the next microtask rather than synchronously during tree construction — `loading()` reads `true` starting the microtask after materialization, not synchronously within it. Tests reading immediately after `signalTree()` construction should `await Promise.resolve()` (or flush microtasks) before asserting loaded state.
+- Applies to both markers: `entityMap`'s cache-aware form (global/non-lazy collections only — scoped collections were already lazy) and `asyncSource`.
 
 ### Compatibility
 
