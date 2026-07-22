@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/realtime",
-  "version": "11.5.1",
+  "version": "11.5.2",
   "description": "Real-time data synchronization enhancers for SignalTree - Supabase, Firebase, and WebSocket support",
   "license": "BUSL-1.1",
   "type": "module",

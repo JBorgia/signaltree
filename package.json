@@ -1,6 +1,6 @@
 {
   "name": "@signaltree/workspace",
-  "version": "11.5.1",
+  "version": "11.5.2",
   "packageManager": "pnpm@10.17.0",
   "license": "BUSL-1.1",
   "funding": {
