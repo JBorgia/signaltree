@@ -319,6 +319,18 @@ export const appRoutes: Route[] = [
       ),
   },
   {
+    path: 'signal-forms',
+    loadComponent: () =>
+      import('./pages/signal-forms-demo/signal-forms-demo.component').then(
+        (c) => c.SignalFormsDemoComponent
+      ),
+    data: {
+      title: 'Signal Forms',
+      description:
+        "Angular 22 Signal Forms interop: a form() marker as a FieldTree (markerSignalForm) and @signaltree/schema registrations auto-applied to a FieldTree (signalFormBridge).",
+    },
+  },
+  {
     path: 'schema',
     loadComponent: () =>
       import('./pages/schema-demo/schema-demo.component').then(

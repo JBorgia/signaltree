@@ -36,8 +36,12 @@ const TARGETS = {
     // Bumped 8.6 → 9.9 for 11.4.1: the 11.4.0 entityMap cache-aware fold
     // (load/staleTime/persist/tags, RFC 0003) raised the measured floor to
     // 9.67KB and shipped that way — the gate was not updated with the
-    // feature. Follow-up (11.5.0): make the loader surface tree-shakeable
-    // when entityMap() has no `load`, then lower this again.
+    // feature. Measured breakdown (11.5.0): entity-loader.js is ~3.5KB
+    // minified (~1.1KB gzip) of that. RFC 0003 deliberately traded this
+    // floor for the one-marker DX; statically tree-shaking a config-driven
+    // branch is impossible, and a sync-stub + dynamic-import split of the
+    // loader is the only way to win it back — worth its own RFC if the
+    // floor ever matters more than the DX. Accepted for now.
     budgetKB: 9.9,
     code: `
       import { signalTree, entityMap } from ${JSON.stringify(CORE)};

@@ -21,7 +21,7 @@ import {
   validateStandardSchema,
   type FieldTree,
 } from '@angular/forms/signals';
-import { toWritableSignal, type ISignalTree } from '@signaltree/core';
+import { toWritableSignal } from '@signaltree/core';
 import type { SchemaMethods } from '@signaltree/schema';
 
 /**
@@ -50,7 +50,7 @@ export function applySignalTreeSchemas(
   // navigates it dynamically (path segments come from the runtime schema
   // registry), so the static SignalTree shape isn't known here.
   fieldRoot: unknown,
-  tree: ISignalTree<unknown> & SchemaMethods,
+  tree: SchemaMethods,
   rootPath = ''
 ): void {
   const bound = tree.schemas.boundPaths();
@@ -118,7 +118,7 @@ export function applySignalTreeSchemas(
  * @public
  */
 export function signalFormBridge<TModel>(
-  tree: ISignalTree<unknown> & SchemaMethods,
+  tree: SchemaMethods,
   rootPath: string,
   subtree: unknown
 ): FieldTree<TModel> {

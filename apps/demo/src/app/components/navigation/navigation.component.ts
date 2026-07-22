@@ -126,6 +126,13 @@ export class NavigationComponent {
       category: 'examples',
     },
     {
+      id: 'signal-forms',
+      title: 'Signal Forms',
+      description: 'Angular 22 Signal Forms interop (FieldTree bridges)',
+      route: '/signal-forms',
+      category: 'examples',
+    },
+    {
       id: 'batching',
       title: 'Batching',
       description: 'Batch multiple updates without losing clarity',

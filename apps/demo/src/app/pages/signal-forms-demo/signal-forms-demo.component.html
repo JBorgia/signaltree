@@ -1,0 +1,115 @@
+<div class="page">
+  <st-example
+    heading="Angular Signal Forms × SignalTree"
+    [headingLevel]="1"
+    intro="Angular 22's stable Signal Forms and SignalTree share one model — no copying, no sync. Two integration paths: a form() marker as a FieldTree (markerSignalForm), and @signaltree/schema registrations auto-applied to a FieldTree (signalFormBridge)."
+  >
+    <section class="demo-grid">
+      <!-- Path 1: form() marker ↔ FieldTree -->
+      <article class="card">
+        <h2><code>markerSignalForm()</code> — form() marker as a FieldTree</h2>
+        <p class="hint">
+          The FieldTree's model IS the marker's values signal. Type below, or
+          write through the marker API — both stay in sync because there is
+          only one source of truth. Marker validators surface as Signal Forms
+          errors (<code>kind: 'signalTree'</code>).
+        </p>
+
+        <div class="field">
+          <label for="sf-name">Name</label>
+          <input id="sf-name" [formField]="profile.name" />
+          @if (profile.name().touched() && !profile.name().valid()) {
+            <p class="error">{{ profile.name().errors()[0]?.message }}</p>
+          }
+        </div>
+
+        <div class="field">
+          <label for="sf-email">Email</label>
+          <input id="sf-email" [formField]="profile.email" />
+          @if (profile.email().touched() && !profile.email().valid()) {
+            <p class="error">{{ profile.email().errors()[0]?.message }}</p>
+          }
+        </div>
+
+        <div class="row badges">
+          <span
+            class="badge"
+            [class.ok]="profile().valid()"
+            [class.bad]="!profile().valid()"
+          >
+            FieldTree: {{ profile().valid() ? '✓ valid' : '✗ invalid' }}
+          </span>
+          <span
+            class="badge"
+            [class.ok]="tree.$.onboarding.profile.valid()"
+            [class.bad]="!tree.$.onboarding.profile.valid()"
+          >
+            marker: {{ tree.$.onboarding.profile.valid() ? '✓ valid' : '✗ invalid' }}
+          </span>
+          @if (tree.$.onboarding.profile.dirty()) {
+            <span class="badge">edited</span>
+          }
+        </div>
+
+        <div class="row">
+          <button type="button" (click)="fillFromMarker()">
+            Fill via marker.patch()
+          </button>
+          <button type="button" class="secondary" (click)="resetProfile()">
+            marker.reset()
+          </button>
+        </div>
+
+        <st-code-tabs [files]="markerCode" />
+      </article>
+
+      <!-- Path 2: schema registrations ↔ FieldTree -->
+      <article class="card">
+        <h2><code>signalFormBridge()</code> — schemas auto-applied</h2>
+        <p class="hint">
+          Zod schemas registered with <code>@signaltree/schema</code> at
+          <code>account.username</code> and <code>account.age</code> are wired
+          into the FieldTree with <code>validateStandardSchema</code> — no
+          per-field wiring.
+        </p>
+
+        <div class="field">
+          <label for="sf-username">Username</label>
+          <input id="sf-username" [formField]="account.username" />
+          @if (account.username().touched() && !account.username().valid()) {
+            <p class="error">{{ account.username().errors()[0]?.message }}</p>
+          }
+        </div>
+
+        <div class="field">
+          <label for="sf-age">Age</label>
+          <input id="sf-age" type="number" [formField]="account.age" />
+          @if (account.age().touched() && !account.age().valid()) {
+            <p class="error">{{ account.age().errors()[0]?.message }}</p>
+          }
+        </div>
+
+        <div class="row badges">
+          <span
+            class="badge"
+            [class.ok]="account().valid()"
+            [class.bad]="!account().valid()"
+          >
+            FieldTree: {{ account().valid() ? '✓ valid' : '✗ invalid' }}
+          </span>
+          <span class="badge">
+            tree value: {{ schemaTree.$.account.username() || '—' }}
+          </span>
+        </div>
+
+        <st-code-tabs [files]="schemaCode" />
+      </article>
+    </section>
+
+    <p class="note">
+      Requires Angular 22+ (<code>&#64;angular/forms/signals</code>). The
+      classic <code>formBridge()</code> (Reactive Forms) remains available for
+      Angular 20/21 apps — see the <a routerLink="/ng-forms">ng-forms demo</a>.
+    </p>
+  </st-example>
+</div>

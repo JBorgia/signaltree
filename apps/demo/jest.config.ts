@@ -7,6 +7,8 @@ module.exports = {
   moduleNameMapper: {
     '^@signaltree/core$': '<rootDir>/../../packages/core/src/index.ts',
     '^@signaltree/core/(.*)$': '<rootDir>/../../packages/core/src/$1/index.ts',
+    '^@signaltree/ng-forms/signals$':
+      '<rootDir>/../../packages/ng-forms/src/signals/index.ts',
     '^@signaltree/(.*)$': '<rootDir>/../../packages/$1/src/index.ts',
     '^@app/(.*)$': '<rootDir>/src/app/$1',
     '^@benchmark/(.*)$': '<rootDir>/src/app/services/benchmark/$1',

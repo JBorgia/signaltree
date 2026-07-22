@@ -1,3 +1,29 @@
+## 11.5.0 (2026-07-21)
+
+> Angular 22 + real Signal Forms support. The workspace now builds against
+> Angular 22.0.7 (stable Signal Forms), the `@signaltree/ng-forms/signals`
+> bridge compiles against the real `@angular/forms/signals` API instead of
+> hand-written shims, and a new `markerSignalForm()` turns a `form()` marker
+> into a Signal Forms `FieldTree` with one shared model. Also fixes a
+> long-standing core bug: `batch()`/`coalesce()` write interception was
+> silently inert.
+
+### Added
+
+- **`markerSignalForm()`** (`@signaltree/ng-forms/signals`, Angular 22+) — turn a core `form()` marker into an Angular Signal Forms `FieldTree` whose model IS the marker's values signal: one source of truth, edits through either API immediately visible to the other, no copying or sync loops. The marker's sync validators run as Signal Forms validators (field errors carry `kind: 'signalTree'`); cross-field rules (`validators.when`) re-run when sibling fields change; the marker's own `errors()`/`valid()` stay live for FieldTree-side writes. Async marker validators remain explicit (`validate()`/`submit()`, or register Signal Forms `validateAsync` rules). Bind with `<input [formField]="profile.name" />`.
+- **`/signal-forms` demo page** — both bridges live: `markerSignalForm` (marker ↔ FieldTree, dual validity badges proving the shared model) and `signalFormBridge` (Zod schemas registered via `@signaltree/schema` auto-applied with `validateStandardSchema`).
+
+### Fixed
+
+- **`batch()`/`coalesce()` write interception was inert** (`@signaltree/core`) — the batching enhancer's setter-wrapping walk rejected callable nodes, but SignalTree NodeAccessors and leaf signals are functions, so no leaf setter was ever wrapped: `coalesce()` applied every same-path write instead of deduplicating to the final value, and per-write notification scheduling never engaged. The walk now descends into callable accessors; regression specs assert 100 coalesced writes → 1 applied write (top-level and nested).
+- **`@signaltree/ng-forms/signals` compiles against the stable API** — the ambient `@angular/forms/signals` shim is gone; the bridge is typed against the real `FieldTree`/`validateStandardSchema` and returns `FieldTree<TModel>`. `signalFormBridge`/`applySignalTreeSchemas` accept any tree carrying `SchemaMethods` (the previous `ISignalTree<unknown> &` intersection rejected `.with(schemas())` builder types).
+
+### Changed
+
+- **Workspace on Angular 22.0.7 / TypeScript 6.0 / Nx 23.1** (vitest 4, jest 30, zone.js 0.16). Package peer ranges already allowed `^22`; published output is now actually compiled against it. Package tsconfigs moved from `moduleResolution: node` to `bundler` (node10 resolution cannot see `exports` maps — the reason the shim existed).
+- **Demo app on built-in control flow** — `*ngIf`/`*ngFor` migrated to `@if`/`@for` via the official schematic; components that relied on the old implicit change-detection default carry an explicit behavior-preserving `ChangeDetectionStrategy.Eager`.
+- **entities bundle floor documented as accepted** — measurement shows `entity-loader` is ~1.1KB gzip of the 9.67KB entities fixture; RFC 0003 deliberately traded that floor for the one-marker DX, and statically tree-shaking a config-driven branch is impossible. The 9.9KB budget stands; a sync-stub + dynamic-import split is possible follow-up if the floor ever outweighs the DX.
+
 ## 11.4.1 (2026-07-21)
 
 > Patch release driven by the 2026-07 outside-auditor site/product audit: the
