@@ -35,7 +35,7 @@ interface Row {
   standalone: true,
   imports: [CommonModule, ExampleComponent],
   template: `
-    <st-example heading="Granular reactivity — how many derivations re-run?">
+    <st-example heading="Granular reactivity — how many derivations re-run?" [headingLevel]="1">
       <p intro class="muted">
         Both columns isolate <em>renders</em> (Angular <code>computed()</code>
         equality). Watch <strong>derivations re-run per change</strong> instead:

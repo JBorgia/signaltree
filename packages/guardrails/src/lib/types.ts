@@ -20,7 +20,14 @@ export interface GuardrailsConfig<T = Record<string, unknown>> {
   /** Behavior mode: warn (console), throw (errors), or silent (collect only) */
   mode?: 'warn' | 'throw' | 'silent';
 
-  /** Enable/disable guardrails */
+  /**
+   * Enable/disable guardrails.
+   *
+   * Omitted (default): guardrails run in dev builds only and are a no-op in
+   * production. Explicitly set, this overrides the environment check —
+   * `enabled: true` runs guardrails even in production builds (demos,
+   * staging diagnostics), `enabled: false` disables them everywhere.
+   */
   enabled?: boolean | (() => boolean);
 
   /** Change detection strategy */

@@ -1,4 +1,4 @@
-import { Component, effect, signal } from '@angular/core';
+import { Component, effect, inject, Injector, signal } from '@angular/core';
 import { batching, signalTree } from '@signaltree/core';
 
 import { ExampleComponent } from '../../../../../shared/components/example-shell';
@@ -11,46 +11,81 @@ import { ExampleComponent } from '../../../../../shared/components/example-shell
   styleUrl: './batching-comparison.component.scss',
 })
 export class BatchingComparisonComponent {
+  // effect() needs an injection context; component methods run outside one,
+  // so we capture the injector here and pass it explicitly (avoids NG0203).
+  private readonly injector = inject(Injector);
+
   // Controls
   ops = signal(1000);
   batchNotificationDelayMs = signal(0);
+  running = signal(false);
 
   // Results
   batchedTime = signal<number | null>(null);
   unbatchedTime = signal<number | null>(null);
+  batchedWrites = signal(0);
+  unbatchedWrites = signal(0);
   batchedRenders = signal(0);
   unbatchedRenders = signal(0);
 
-  // Render counters are incremented via effects attached to the trees
-  runComparison() {
-    this.runUnbatched();
-    this.runBatched();
+  async runComparison(): Promise<void> {
+    if (this.running()) return;
+    this.running.set(true);
+    try {
+      await this.runUnbatched();
+      await this.runBatched();
+    } finally {
+      this.running.set(false);
+    }
   }
 
-  private runUnbatched() {
-    // Create a tree without batching (or with batching disabled)
+  /**
+   * Creates a tree whose counter tracks how many writes actually reach the
+   * underlying signal. The wrap is applied BEFORE any enhancer, so a batched
+   * tree's coalesced writes are counted after deduplication.
+   */
+  private createCountingTree() {
     const tree = signalTree({ counter: 0 });
+    let applied = 0;
+    const counter = tree.$.counter as unknown as { set(v: number): void };
+    const rawSet = counter.set.bind(counter);
+    counter.set = (v: number) => {
+      applied++;
+      rawSet(v);
+    };
+    return { tree, appliedWrites: () => applied };
+  }
 
-    // Count renders using effect
+  private async runUnbatched(): Promise<void> {
+    const { tree, appliedWrites } = this.createCountingTree();
+
     let renders = 0;
-    effect(() => {
-      // read counter to trigger
-      void tree.$.counter();
-      renders++;
-    });
+    const ref = effect(
+      () => {
+        void tree.$.counter();
+        renders++;
+      },
+      { injector: this.injector }
+    );
 
     const n = this.ops();
     const start = performance.now();
     for (let i = 0; i < n; i++) {
-      tree.$.counter.update((c: number) => c + 1);
+      tree.$.counter.set(i + 1);
     }
-    const end = performance.now();
-    this.unbatchedTime.set(end - start);
+    const elapsed = performance.now() - start;
+
+    await this.settle();
+    ref.destroy();
+
+    this.unbatchedTime.set(elapsed);
+    this.unbatchedWrites.set(appliedWrites());
     this.unbatchedRenders.set(renders);
   }
 
-  private runBatched() {
-    const tree = signalTree({ counter: 0 }).with(
+  private async runBatched(): Promise<void> {
+    const { tree: base, appliedWrites } = this.createCountingTree();
+    const tree = base.with(
       batching({
         enabled: true,
         notificationDelayMs: this.batchNotificationDelayMs(),
@@ -58,22 +93,35 @@ export class BatchingComparisonComponent {
     );
 
     let renders = 0;
-    effect(() => {
-      void tree.$.counter();
-      renders++;
-    });
+    const ref = effect(
+      () => {
+        void tree.$.counter();
+        renders++;
+      },
+      { injector: this.injector }
+    );
 
     const n = this.ops();
     const start = performance.now();
-    for (let i = 0; i < n; i++) {
-      tree.$.counter.update((c: number) => c + 1);
-    }
-    // Run microtask to allow batched notifications to flow
-    // We don't await here — batch notificationDelayMs defaults to microtask.
-    Promise.resolve().then(() => {
-      const end = performance.now();
-      this.batchedTime.set(end - start);
-      this.batchedRenders.set(renders);
+    // coalesce() dedupes same-path writes — only the final value is applied
+    // to the underlying signal when the callback completes.
+    tree.coalesce(() => {
+      for (let i = 0; i < n; i++) {
+        tree.$.counter.set(i + 1);
+      }
     });
+    const elapsed = performance.now() - start;
+
+    await this.settle(this.batchNotificationDelayMs());
+    ref.destroy();
+
+    this.batchedTime.set(elapsed);
+    this.batchedWrites.set(appliedWrites());
+    this.batchedRenders.set(renders);
+  }
+
+  /** Wait long enough for effects (and any delayed notification) to flush. */
+  private settle(extraMs = 0): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, extraMs + 20));
   }
 }

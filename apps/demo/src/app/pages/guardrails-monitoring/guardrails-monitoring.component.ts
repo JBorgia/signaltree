@@ -62,6 +62,10 @@ export class GuardrailsMonitoringComponent implements OnDestroy {
   private readonly config: GuardrailsConfig<GuardrailsDemoState> = {
     treeId: 'demo-guardrails',
     mode: 'warn',
+    // The demo site ships as a production build; explicit `enabled: true`
+    // overrides the dev-only default so the page actually demonstrates
+    // guardrails. Real apps should omit this (dev-only, zero prod cost).
+    enabled: true,
     budgets: {
       maxUpdateTime: 6,
     },

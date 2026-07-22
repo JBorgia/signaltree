@@ -748,4 +748,100 @@ describe('validators', () => {
       ).toBeNull();
     });
   });
+
+  describe('live validation (validate-on-write)', () => {
+    const liveMarker = () =>
+      form<TestFormData>({
+        initial: defaultFormData,
+        validators: {
+          name: validators.required('Name required'),
+          email: [
+            validators.required('Email required'),
+            validators.email('Invalid email'),
+          ],
+        },
+      });
+
+    it('should seed validation on init — empty required form is invalid', () => {
+      const formSignal = createFormSignal(liveMarker());
+      expect(formSignal.valid()).toBe(false);
+      expect(formSignal.errors()['name']).toBe('Name required');
+      expect(formSignal.errors()['email']).toBe('Email required');
+    });
+
+    it('should validate on patch()', () => {
+      const formSignal = createFormSignal(liveMarker());
+      formSignal.patch({ email: 'mail.com' });
+      expect(formSignal.errors()['email']).toBe('Invalid email');
+      expect(formSignal.valid()).toBe(false);
+
+      formSignal.patch({ name: 'Alice', email: 'alice@acme.test' });
+      expect(formSignal.errors()['email']).toBeNull();
+      expect(formSignal.valid()).toBe(true);
+    });
+
+    it('should validate on set()', () => {
+      const formSignal = createFormSignal(liveMarker());
+      formSignal.set({ name: 'Bob', email: 'not-an-email' });
+      expect(formSignal.errors()['name']).toBeNull();
+      expect(formSignal.errors()['email']).toBe('Invalid email');
+    });
+
+    it('should validate on field accessor set/update', () => {
+      const formSignal = createFormSignal(liveMarker());
+      formSignal.$.email.set('bad');
+      expect(formSignal.errors()['email']).toBe('Invalid email');
+
+      formSignal.$.email.update(() => 'good@acme.test');
+      expect(formSignal.errors()['email']).toBeNull();
+    });
+
+    it('should re-validate on reset() instead of clearing errors', () => {
+      const formSignal = createFormSignal(liveMarker());
+      formSignal.patch({ name: 'Alice', email: 'alice@acme.test' });
+      expect(formSignal.valid()).toBe(true);
+
+      formSignal.reset();
+      // Back to empty initial values — required validators fail again
+      expect(formSignal.valid()).toBe(false);
+      expect(formSignal.errors()['name']).toBe('Name required');
+    });
+
+    it('should re-validate and reset touched on clear()', () => {
+      const formSignal = createFormSignal(liveMarker());
+      formSignal.patch({ name: 'Alice', email: 'alice@acme.test' });
+      formSignal.touch('name');
+
+      formSignal.clear();
+      expect(formSignal.valid()).toBe(false);
+      expect(formSignal.touched()['name']).toBe(false);
+    });
+
+    it('should pass form values to validators for cross-field validation', () => {
+      interface ShipForm extends Record<string, unknown> {
+        shipToOther: boolean;
+        otherAddress: string;
+      }
+      const formSignal = createFormSignal(
+        form<ShipForm>({
+          initial: { shipToOther: false, otherAddress: '' },
+          validators: {
+            otherAddress: validators.when<ShipForm>(
+              (f) => f.shipToOther,
+              validators.required('Address required')
+            ),
+          },
+        })
+      );
+
+      // Condition false — no error even though empty
+      expect(formSignal.valid()).toBe(true);
+
+      formSignal.patch({ shipToOther: true, otherAddress: '' });
+      expect(formSignal.errors()['otherAddress']).toBe('Address required');
+
+      formSignal.patch({ otherAddress: '123 Main St' });
+      expect(formSignal.valid()).toBe(true);
+    });
+  });
 });

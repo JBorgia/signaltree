@@ -1,3 +1,21 @@
+## 11.4.1 (2026-07-21)
+
+> Patch release driven by the 2026-07 outside-auditor site/product audit: the
+> `form()` marker now actually validates as you type, guardrails can be opted
+> into production demos, the formBridge carries marker validators into the
+> FormGroup, and signaltree.io deep links return HTTP 200.
+
+### Fixed
+
+- **`form()` marker — live validation** (`@signaltree/core`) — sync validators now run on init and on every write (`set`, `patch`, field `.set()`/`.update()`), so `valid` is live instead of "valid until proven invalid". Previously `errors` started `{}` and nothing ran validators until an explicit `validate()`/`submit()`, so an empty form with `required` validators — or a garbage email — reported `valid() === true` (visible on /marker-zoo and /form-marker). `reset()`/`clear()`/`reload()` re-validate instead of wiping errors; `clear()` also resets `touched`. Async validators still run via `validate()`/`validateField()`/`submit()` only.
+- **`validators.when` was dead code** (`@signaltree/core`) — validators now receive the form's current values as a second argument, so cross-field rules (`validators.when(cond, …)`) actually fire. `Validator<T>` is now `(value, formValues?) => string | null` — backward compatible.
+- **`validators.email` consistency** — the core email validator no longer flags empty values (emptiness is `required()`'s job, matching Angular semantics), and the ng-forms `email()` validator now uses the same `local@domain.tld` rule as core instead of only checking for an `@`.
+- **formBridge parity** (`@signaltree/ng-forms`) — the `form()` marker's own validators are now mirrored onto the bridged FormGroup's controls (errors surface as `{ signalTree: '<message>' }`), so `formGroup.valid` agrees with `formSignal.valid()`. Signal-side writes (`patch`/`set`) now propagate to the FormGroup reactively when an injection context (or `config.injector`) is available — previously the FormSignal → FormGroup sync only happened once at creation.
+- **`guardrails()` explicit opt-in for production** (`@signaltree/guardrails`) — an explicit `enabled: true` now overrides the dev-only environment check (demos, staging diagnostics); the default remains dev-only with zero production cost, and `enabled: false` disables everywhere. Fixes the /guardrails demo page rendering no controls in production builds.
+- **Demo: /batching/compare crashed with NG0203** — `effect()` was created in a click handler outside an injection context. The comparison now runs with an explicit injector, destroys its effects after measuring, and reports honest metrics: elapsed time, writes applied to the underlying signal (N unbatched vs 1 with `coalesce()`), and effect runs (similar in both modes, since Angular coalesces synchronous writes natively — the copy now says so).
+- **signaltree.io deep links returned HTTP 404** — GitHub Pages' `404.html` SPA fallback renders but poisons SEO/AI crawlers with 404 statuses. The deploy now generates a real `<route>/index.html` shell for every static route (41 routes → HTTP 200), keeping `404.html` only as the wildcard fallback (`scripts/generate-spa-route-shells.mjs`).
+- **Demo accessibility/SEO** — nine routed demo pages had no `<h1>` (the shared example shell always rendered `<h2>`); the shell gains a `headingLevel` input and routed pages promote their heading to `<h1>`. The /marker-zoo form gates error display on `touched` (wired to blur) so the now-live validation doesn't shout at pristine forms.
+
 ## 11.4.0 (2026-07-20)
 
 > `entityMap` gains cache-aware loading (`load`/`staleTime`/`equal`/`params`/`persist`/`tags`)

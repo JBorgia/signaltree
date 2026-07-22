@@ -35,6 +35,7 @@ const SEED: Item[] = [
   template: `
     <st-example
       heading="Derived-but-writable — linked()"
+      [headingLevel]="1"
       intro="linked() is SignalTree's derived-but-writable signal (it wraps Angular's linkedSignal). selected is derived from items — defaulting to the first — yet writable (click a row to override), and re-derives when items changes: it keeps the chosen item if it still exists (sticky selection), otherwise falls back to the first."
       [code]="codeFiles"
     >

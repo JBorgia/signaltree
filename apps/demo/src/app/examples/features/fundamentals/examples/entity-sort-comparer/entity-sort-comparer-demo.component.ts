@@ -29,7 +29,7 @@ interface LeaderboardState {
   standalone: true,
   imports: [CommonModule, ExampleComponent],
   template: `
-    <st-example heading="Auto-sorted collection — sortComparer">
+    <st-example heading="Auto-sorted collection — sortComparer" [headingLevel]="1">
       <p intro class="muted">
         <code
           >entityMap&lt;Player&gt;({{ '{' }} sortComparer: (a, b) =&gt; b.score

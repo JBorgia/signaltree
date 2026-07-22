@@ -163,9 +163,10 @@
         <input
           [ngModel]="store.$.onboarding.profile().name"
           (ngModelChange)="store.$.onboarding.profile.patch({ name: $event })"
+          (blur)="store.$.onboarding.profile.touch('name')"
         />
       </label>
-      @if (store.$.onboarding.profile.errors().name) {
+      @if (store.$.onboarding.profile.touched().name && store.$.onboarding.profile.errors().name) {
         <p class="form-error">{{ store.$.onboarding.profile.errors().name }}</p>
       }
       <label>
@@ -173,9 +174,10 @@
         <input
           [ngModel]="store.$.onboarding.profile().email"
           (ngModelChange)="store.$.onboarding.profile.patch({ email: $event })"
+          (blur)="store.$.onboarding.profile.touch('email')"
         />
       </label>
-      @if (store.$.onboarding.profile.errors().email) {
+      @if (store.$.onboarding.profile.touched().email && store.$.onboarding.profile.errors().email) {
         <p class="form-error">{{ store.$.onboarding.profile.errors().email }}</p>
       }
       <div class="row">

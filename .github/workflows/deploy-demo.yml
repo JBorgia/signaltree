@@ -40,9 +40,8 @@ jobs:
       - name: Build demo (GitHub Pages base href)
         run: pnpm run build:demo:prod
 
-      - name: Add SPA Fallback (404.html)
-        run: |
-          cp dist/apps/demo/browser/index.html dist/apps/demo/browser/404.html
+      - name: Add SPA route shells (deep links return HTTP 200) + 404 fallback
+        run: node scripts/generate-spa-route-shells.mjs
       - name: Setup Pages
         uses: actions/configure-pages@v4
 

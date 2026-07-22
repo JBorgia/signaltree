@@ -1,10 +1,12 @@
-<st-example heading="Batching Comparison">
+<st-example heading="Batching Comparison" [headingLevel]="1">
   <p intro>
-    Compare unbatched signal writes against a tree enhanced with the
-    <code>batching()</code> enhancer, which automatically coalesces
-    notifications. Adjust the operation count and notification delay, then run
-    both modes to see how batching collapses N synchronous writes into a single
-    change-detection notification on the next microtask.
+    Compare N direct signal writes against the same writes grouped with
+    <code>coalesce()</code> from the <code>batching()</code> enhancer.
+    Coalescing dedupes same-path writes, so only the final value is applied to
+    the underlying signal. Note that Angular's effect scheduler already
+    coalesces renders for synchronous writes — the render count is similar in
+    both modes; what batching saves is the per-write signal-graph work and
+    subscriber notifications.
   </p>
 
   <div class="controls">
@@ -27,7 +29,9 @@
       />
     </label>
 
-    <button (click)="runComparison()">Run Comparison</button>
+    <button (click)="runComparison()" [disabled]="running()">
+      {{ running() ? 'Running…' : 'Run Comparison' }}
+    </button>
   </div>
 
   <div class="results">
@@ -37,27 +41,32 @@
         <tr>
           <th>Mode</th>
           <th>Time (ms)</th>
-          <th>Render Count</th>
+          <th>Writes Applied</th>
+          <th>Effect Runs</th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td>Unbatched</td>
-          <td>{{ unbatchedTime() ?? '—' }}</td>
+          <td>{{ unbatchedTime()?.toFixed(2) ?? '—' }}</td>
+          <td>{{ unbatchedWrites() }}</td>
           <td>{{ unbatchedRenders() }}</td>
         </tr>
         <tr>
-          <td>Batched</td>
-          <td>{{ batchedTime() ?? '—' }}</td>
+          <td>Batched (coalesce)</td>
+          <td>{{ batchedTime()?.toFixed(2) ?? '—' }}</td>
+          <td>{{ batchedWrites() }}</td>
           <td>{{ batchedRenders() }}</td>
         </tr>
       </tbody>
     </table>
 
     <p class="note">
-      Note: Batched timings are measured from call start to the end of
-      synchronous loop; batch notifications may be delivered asynchronously
-      depending on delay.
+      "Writes Applied" counts writes that reached the underlying signal.
+      Unbatched applies all N; coalesce applies only the last value per path.
+      "Effect Runs" counts <code>effect()</code> executions — Angular batches
+      these on the microtask in both modes, which is exactly why per-write
+      renders are not the metric to compare.
     </p>
   </div>
 </st-example>

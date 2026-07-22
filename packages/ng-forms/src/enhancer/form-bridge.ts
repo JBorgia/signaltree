@@ -1,4 +1,4 @@
-import { computed, DestroyRef, inject, Signal } from '@angular/core';
+import { computed, DestroyRef, effect, inject, Injector, Signal } from '@angular/core';
 import {
     AbstractControl,
     AsyncValidatorFn,
@@ -46,6 +46,12 @@ export interface AngularFormsConfig<T = unknown> {
   fieldConfigs?: Record<string, AngularFieldConfig>;
   /** DestroyRef for automatic cleanup (auto-injected if in injection context) */
   destroyRef?: DestroyRef;
+  /**
+   * Injector for reactive FormSignal → FormGroup sync (auto-injected if in
+   * injection context). Without one, signal-side writes only reach the
+   * FormGroup at creation time.
+   */
+  injector?: Injector;
   /** Batch validation updates (ms, default: 0) */
   validationBatchMs?: number;
 }
@@ -139,12 +145,13 @@ function findFormSignals(
 function createFormGroupBridge<T extends Record<string, unknown>>(
   formSignal: FormSignal<T>,
   config: AngularFormsConfig<T>,
-  cleanupCallbacks: Array<() => void>
+  cleanupCallbacks: Array<() => void>,
+  injector?: Injector
 ): AngularFormBridge<T> {
   const values = formSignal();
   const formGroup = createFormGroupFromValues(
     values,
-    config.fieldConfigs || {}
+    mergeMarkerValidators(formSignal, config.fieldConfigs || {})
   );
 
   const angularErrors = computed(() => {
@@ -177,10 +184,18 @@ function createFormGroupBridge<T extends Record<string, unknown>>(
 
   cleanupCallbacks.push(() => subscription.unsubscribe());
 
-  // Watch FormSignal changes via effect-like pattern
-  // Since we're outside Angular's effect context, we poll or use the tree's effect system
-  // For now, we set up initial sync and rely on FormGroup being the primary editor
-  syncSignalToControl();
+  // Watch FormSignal changes. With an injector (auto-detected or passed via
+  // config) an effect keeps the FormGroup in sync with signal-side writes
+  // (tree.$.form.patch(...) etc.). patchFormGroupValues uses emitEvent: false,
+  // so the write-back does not loop through valueChanges.
+  if (injector) {
+    const syncEffect = effect(() => syncSignalToControl(), { injector });
+    cleanupCallbacks.push(() => syncEffect.destroy());
+  } else {
+    // No injection context available — initial sync only; the FormGroup is
+    // the primary editor.
+    syncSignalToControl();
+  }
 
   // Apply conditionals
   if (config.conditionals && config.conditionals.length > 0) {
@@ -227,6 +242,98 @@ function createFormGroupBridge<T extends Record<string, unknown>>(
     angularErrors,
     asyncPending,
   };
+}
+
+/**
+ * Marker-side validator shape (see `Validator` in @signaltree/core):
+ * returns an error message or null; receives the whole form's values as an
+ * optional second argument for cross-field rules.
+ */
+type MarkerValidator = (
+  value: unknown,
+  formValues?: Record<string, unknown>
+) => string | null;
+
+type MarkerAsyncValidator = (value: unknown) => Promise<string | null>;
+
+/**
+ * Mirror the form() marker's own validators onto the Angular controls, so
+ * `formGroup.valid` agrees with `formSignal.valid()`. Marker errors surface
+ * under the `signalTree` key: `{ signalTree: '<message>' }`.
+ */
+function mergeMarkerValidators<T extends Record<string, unknown>>(
+  formSignal: FormSignal<T>,
+  fieldConfigs: Record<string, AngularFieldConfig>
+): Record<string, AngularFieldConfig> {
+  const markerConfig = (
+    formSignal as unknown as {
+      __config?: {
+        validators?: Record<string, MarkerValidator | MarkerValidator[]>;
+        asyncValidators?: Record<string, MarkerAsyncValidator>;
+      };
+    }
+  ).__config;
+  if (!markerConfig?.validators && !markerConfig?.asyncValidators) {
+    return fieldConfigs;
+  }
+
+  const merged: Record<string, AngularFieldConfig> = { ...fieldConfigs };
+
+  const toValidatorFn = (
+    fieldValidators: MarkerValidator | MarkerValidator[]
+  ): ValidatorFn => {
+    const list = Array.isArray(fieldValidators)
+      ? fieldValidators
+      : [fieldValidators];
+    return (control: AbstractControl): ValidationErrors | null => {
+      for (const validator of list) {
+        const error = validator(control.value, formSignal());
+        if (error) return { signalTree: error };
+      }
+      return null;
+    };
+  };
+
+  const toAsyncValidatorFn = (
+    asyncValidator: MarkerAsyncValidator
+  ): AsyncValidatorFn => {
+    return async (
+      control: AbstractControl
+    ): Promise<ValidationErrors | null> => {
+      const error = await asyncValidator(control.value);
+      return error ? { signalTree: error } : null;
+    };
+  };
+
+  const appendTo = (
+    field: string,
+    key: 'validators' | 'asyncValidators',
+    fn: ValidatorFn | AsyncValidatorFn
+  ) => {
+    const existing = merged[field]?.[key];
+    const existingList = existing
+      ? Array.isArray(existing)
+        ? existing
+        : [existing]
+      : [];
+    merged[field] = {
+      ...merged[field],
+      [key]: [...existingList, fn],
+    } as AngularFieldConfig;
+  };
+
+  for (const [field, fieldValidators] of Object.entries(
+    markerConfig.validators ?? {}
+  )) {
+    appendTo(field, 'validators', toValidatorFn(fieldValidators));
+  }
+  for (const [field, asyncValidator] of Object.entries(
+    markerConfig.asyncValidators ?? {}
+  )) {
+    appendTo(field, 'asyncValidators', toAsyncValidatorFn(asyncValidator));
+  }
+
+  return merged;
 }
 
 /**
@@ -396,12 +503,15 @@ export function formBridge<TConfig = unknown>(
     const formLocations: FormLocation[] = [];
     findFormSignals(tree.$, '', formLocations);
 
+    const injector = config.injector ?? tryInjectInjector();
+
     // Create FormGroup bridges for each form
     for (const { path, formSignal } of formLocations) {
       const bridge = createFormGroupBridge(
         formSignal,
         config as AngularFormsConfig<Record<string, unknown>>,
-        cleanupCallbacks
+        cleanupCallbacks,
+        injector
       );
       formBridgeMap.set(path, bridge);
 
@@ -443,6 +553,17 @@ export function formBridge<TConfig = unknown>(
 function tryInjectDestroyRef(): DestroyRef | undefined {
   try {
     return inject(DestroyRef);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Try to inject Injector if we're in an injection context
+ */
+function tryInjectInjector(): Injector | undefined {
+  try {
+    return inject(Injector);
   } catch {
     return undefined;
   }

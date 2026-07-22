@@ -165,6 +165,12 @@ describe('NgForms', () => {
 
       expect(emailValidatorFn('notanemail')).toBe('Invalid email');
       expect(emailValidatorFn('test@example.com')).toBe(null);
+      // Same rule as @signaltree/core — a bare "@" is not enough
+      expect(emailValidatorFn('a@b')).toBe('Invalid email');
+      expect(emailValidatorFn('@@')).toBe('Invalid email');
+      expect(emailValidatorFn('with spaces@example.com')).toBe('Invalid email');
+      // Empty passes — emptiness is required()'s job
+      expect(emailValidatorFn('')).toBe(null);
     });
 
     it('should provide minLength validator', () => {

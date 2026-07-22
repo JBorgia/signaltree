@@ -84,6 +84,23 @@ function tryStructuredClone<T>(value: T): T {
   }
 }
 
+/**
+ * Decides whether guardrails should run.
+ *
+ * Default (no `enabled` in config): dev-only — no-op in production builds.
+ * An explicit `enabled` overrides the environment check: `enabled: true`
+ * runs guardrails even in prod (e.g. demos, staging diagnostics),
+ * `enabled: false` turns it off everywhere.
+ *
+ * @internal exported for testing
+ */
+export function resolveGuardrailsActive(
+  enabled: EnabledOption | undefined,
+  isDev: boolean
+): boolean {
+  return enabled === undefined ? isDev : resolveEnabledFlag(enabled);
+}
+
 function isDevEnvironment(): boolean {
   if (typeof __DEV__ !== 'undefined') return __DEV__;
   if (process?.env?.['NODE_ENV'] === 'production') return false;
@@ -144,8 +161,7 @@ export function guardrails(
   ): Tree & {
     __guardrails?: GuardrailsAPI;
   } {
-    const enabled = resolveEnabledFlag(config.enabled);
-    if (!isDevEnvironment() || !enabled) {
+    if (!resolveGuardrailsActive(config.enabled, isDevEnvironment())) {
       return tree as unknown as Tree & { __guardrails?: GuardrailsAPI };
     }
 

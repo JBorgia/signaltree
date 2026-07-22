@@ -1,3 +1,4 @@
+import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { form, signalTree } from '@signaltree/core';
@@ -249,6 +250,73 @@ describe('formBridge enhancer', () => {
         formGroup: FormGroup;
       };
       expect(profileForm.formGroup).toBeInstanceOf(FormGroup);
+    });
+  });
+
+  describe('marker validators on the FormGroup', () => {
+    it('should mirror form() marker validators onto Angular controls', () => {
+      const tree = signalTree({
+        profile: form({
+          initial: { name: '', email: '' },
+          validators: {
+            name: (v: unknown) => (v ? null : 'Name required'),
+            email: (v: unknown) =>
+              String(v).includes('@') ? null : 'Invalid email',
+          },
+        }),
+      }).with(formBridge());
+
+      const bridge = tree.getAngularForm('profile');
+      const formGroup = bridge?.formGroup as FormGroup;
+
+      // Empty form: marker validators fail on the controls too
+      expect(formGroup.valid).toBe(false);
+      expect(formGroup.get('name')?.errors).toEqual({
+        signalTree: 'Name required',
+      });
+
+      formGroup.patchValue({ name: 'Jane', email: 'jane@test.com' });
+      expect(formGroup.valid).toBe(true);
+
+      // formGroup.valid agrees with formSignal.valid()
+      expect(tree.$.profile.valid()).toBe(true);
+
+      formGroup.patchValue({ email: 'nope' });
+      expect(formGroup.get('email')?.errors).toEqual({
+        signalTree: 'Invalid email',
+      });
+      expect(tree.$.profile.valid()).toBe(false);
+    });
+  });
+
+  describe('reactive FormSignal -> FormGroup sync', () => {
+    it('should propagate signal-side writes to the FormGroup when an injector is available', async () => {
+      const tree = TestBed.runInInjectionContext(() =>
+        signalTree({
+          profile: form({
+            initial: { name: '', email: '' },
+          }),
+        }).with(formBridge())
+      );
+
+      const bridge = tree.getAngularForm('profile');
+
+      tree.$.profile.patch({ name: 'From signal' });
+      // Effects flush asynchronously
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(bridge?.formGroup.get('name')?.value).toBe('From signal');
+    });
+
+    it('should still do an initial sync without an injector', () => {
+      const tree = signalTree({
+        profile: form({
+          initial: { name: 'Initial', email: '' },
+        }),
+      }).with(formBridge());
+
+      const bridge = tree.getAngularForm('profile');
+      expect(bridge?.formGroup.get('name')?.value).toBe('Initial');
     });
   });
 });

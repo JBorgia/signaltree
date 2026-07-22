@@ -32,7 +32,9 @@ export function required(message = 'Required'): FieldValidator {
  * Creates an email format validator
  *
  * @param message - Custom error message (default: "Invalid email")
- * @returns Validator function that checks for @ symbol
+ * @returns Validator function that checks the value against a
+ *   `local@domain.tld` shape (same rule as `validators.email` in
+ *   `@signaltree/core`). Empty values pass — combine with `required()`.
  *
  * @example
  * ```typescript
@@ -46,7 +48,9 @@ export function required(message = 'Required'): FieldValidator {
 export function email(message = 'Invalid email'): FieldValidator {
   return (value: unknown) => {
     const strValue = value as string;
-    return strValue && !strValue.includes('@') ? message : null;
+    return strValue && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(strValue)
+      ? message
+      : null;
   };
 }
 

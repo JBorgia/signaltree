@@ -41,7 +41,11 @@ import { StateInspectorComponent } from './state-inspector.component';
     <section class="st-example">
       <header class="st-example__header">
         @if (heading()) {
-          <h2 class="st-example__heading">{{ heading() }}</h2>
+          @if (headingLevel() === 1) {
+            <h1 class="st-example__heading">{{ heading() }}</h1>
+          } @else {
+            <h2 class="st-example__heading">{{ heading() }}</h2>
+          }
         }
         <div class="st-example__intro">
           <ng-content select="[intro]"></ng-content>
@@ -99,6 +103,11 @@ export class ExampleComponent {
   private readonly stackblitz_ = inject(StackblitzService);
 
   readonly heading = input<string>('');
+  /**
+   * 1 when the example IS the routed page (its heading is the page title);
+   * 2 (default) when embedded alongside other examples.
+   */
+  readonly headingLevel = input<1 | 2>(2);
   readonly intro = input<string>('');
   readonly code = input<CodeFile[]>([]);
   /** Bind a `computed()` snapshot; `undefined` hides the inspector. */
