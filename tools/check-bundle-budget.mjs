@@ -33,7 +33,12 @@ const TARGETS = {
     `,
   },
   'signaltree-entities': {
-    budgetKB: 8.6,
+    // Bumped 8.6 → 9.9 for 11.4.1: the 11.4.0 entityMap cache-aware fold
+    // (load/staleTime/persist/tags, RFC 0003) raised the measured floor to
+    // 9.67KB and shipped that way — the gate was not updated with the
+    // feature. Follow-up (11.5.0): make the loader surface tree-shakeable
+    // when entityMap() has no `load`, then lower this again.
+    budgetKB: 9.9,
     code: `
       import { signalTree, entityMap } from ${JSON.stringify(CORE)};
       const t = signalTree({ count: 0, users: entityMap() });
