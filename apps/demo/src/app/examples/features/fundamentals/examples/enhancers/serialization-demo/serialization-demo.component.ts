@@ -250,8 +250,10 @@ export class SerializationDemoComponent {
   copyToClipboard(): void {
     const text = this.serializedOutput();
     if (text) {
-      navigator.clipboard.writeText(text);
-      this.lastAction.set('Copied to clipboard');
+      navigator.clipboard.writeText(text).then(
+        () => this.lastAction.set('Copied to clipboard'),
+        () => this.lastAction.set('Clipboard unavailable — select and copy manually')
+      );
     }
   }
 

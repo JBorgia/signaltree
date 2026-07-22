@@ -287,13 +287,18 @@ export class PathIndex<T extends object = WritableSignal<any>> {
       return;
     }
 
-    // Only continue if it's an object (not a signal or primitive)
-    if (typeof tree !== 'object') {
+    // Continue into objects AND callable nodes: SignalTree NodeAccessors are
+    // functions (typeof 'function') carrying their children as own
+    // properties — gating on 'object' alone silently skipped every nested
+    // namespace, so nothing below the root was ever indexed (same root cause
+    // as the batching wrapSignalSetters bug).
+    if (typeof tree !== 'object' && typeof tree !== 'function') {
       return;
     }
 
     // Recursively index children
     for (const [key, value] of Object.entries(tree)) {
+      if (key.startsWith('_') || key === 'set' || key === 'update') continue;
       this.buildFromTree(value, [...path, key]);
     }
   }

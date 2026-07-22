@@ -173,6 +173,19 @@ export class DiffEngine {
       return;
     }
 
+    // Unwrap callable tree nodes: SignalTree NodeAccessors and leaf signals
+    // are functions that return their current value. Without unwrapping, an
+    // accessor-vs-object comparison fell into the type-mismatch branch and
+    // replaced whole subtrees (coarse paths, and against `$` the diff never
+    // saw real values at all).
+    if (typeof curr === 'function') {
+      try {
+        curr = (curr as () => unknown)();
+      } catch {
+        // Not a zero-arg callable — compare as-is.
+      }
+    }
+
     // Fast path: identical reference (common in unchanged subtrees after batching)
     if (curr === upd) {
       return; // No change anywhere below

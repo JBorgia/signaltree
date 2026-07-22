@@ -347,7 +347,12 @@ export function createAsyncStreamSignal<TChunk, TState>(
     doneSignal.set(false);
   };
 
-  if (stream) fn.start();
+  // Auto-start deferred off the materialization pass: markers materialize
+  // lazily, often during template rendering, and start() writes
+  // loading/data/error signals synchronously — a direct call here throws
+  // NG0600 (same pattern as asyncSource's and entityMap's deferred
+  // auto-load).
+  if (stream) queueMicrotask(() => fn.start());
 
   return fn;
 }

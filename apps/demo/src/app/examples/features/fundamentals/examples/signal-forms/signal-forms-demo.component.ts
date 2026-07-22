@@ -159,11 +159,15 @@ export class SignalFormsDemoComponent {
       control.setValue(writable());
       control.valueChanges.subscribe((v) => writable.set(v));
       // Keep control updated from signal
-      effect(() => control.setValue(writable(), { emitEvent: false }));
+      effect(() => control.setValue(writable(), { emitEvent: false }), {
+        injector: this.injector,
+      });
     } else if (control instanceof FormGroup) {
       control.patchValue(writable(), { emitEvent: false });
       control.valueChanges.subscribe((v) => writable.set(v));
-      effect(() => control.patchValue(writable(), { emitEvent: false }));
+      effect(() => control.patchValue(writable(), { emitEvent: false }), {
+        injector: this.injector,
+      });
     }
   }
 

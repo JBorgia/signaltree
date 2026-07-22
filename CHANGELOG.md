@@ -1,3 +1,21 @@
+## 11.5.2 (2026-07-22)
+
+> Second sweep of the bug classes found in 11.5.0/11.5.1 — this time across
+> every package, with browser-interaction coverage of all 43 demo routes.
+
+### Fixed
+
+- **`@signaltree/enterprise`: `updateOptimized()` was inert-or-destructive for nested state** — two instances of the same walker defect fixed in batching (11.5.0): `PathIndex.buildFromTree` and `applyPatch`'s fallback both rejected callable nodes, but SignalTree NodeAccessors are functions, so nothing below the root was ever indexed and nested patches either silently no-oped or — worse — plain-assigned an object OVER the branch accessor, destroying the accessor tree (`tree.$.profile.name` stopped being a function). Nested object patches are now distributed into leaf signals (`isSignal` leaves set through the signal; branch accessors are never replaced). Existing specs only exercised flat state or hand-built plain-object fixtures, which is why CI never caught it; a nested-real-tree regression spec now pins values, accessors, and indexing.
+- **`asyncStream` marker: NG0600 on materialization** — the experimental (unexported) stream marker auto-started synchronously in its factory, writing loading/data/error signals mid-materialization; auto-start is now microtask-deferred like `asyncSource` and `entityMap`.
+- **`form({ persist })`: latent NG0600 for returning users** — storage hydration did a synchronous `valuesSignal.set()` in the factory, guarded by `if (stored)` — invisible to every fresh-browser test (empty storage skips the write), but a returning user with a saved draft whose form materializes during render would throw. Hydration now happens through the signal's initial value (pure read).
+- **Demo: NG0203 in the legacy signal-forms example's manual-sync fallback** — two `effect()` calls in a plain method now pass the component's injector.
+- **Demo: serialization Copy button** no longer logs an unhandled error when clipboard permission is denied; it reports "Clipboard unavailable" instead.
+
+### Audit coverage notes
+
+- Interactive browser sweep: all 43 routes loaded and every visible button clicked against the production build — no handler crashes, no blank controls, no rendering artifacts (remaining "undefined" text hits are TypeScript code samples in docs).
+- Walker sweep verdicts (correct as-is): materialize-markers, intercept-leaf-signals, utils unwrap/applyState, signal-tree recursiveUpdate, lazy-tree, merge-derived, form-bridge; NG0600-safe markers: stored, status, asyncSource, entityMap loader.
+
 ## 11.5.1 (2026-07-22)
 
 ### Fixed

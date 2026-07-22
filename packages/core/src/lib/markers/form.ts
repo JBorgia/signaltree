@@ -322,7 +322,33 @@ export function createFormSignal<T extends Record<string, unknown>>(
   // ==================
 
   /** Current form values */
-  const valuesSignal: WritableSignal<T> = signal({ ...initial });
+  const persistStorage =
+    config.storage !== undefined
+      ? config.storage
+      : typeof window !== 'undefined'
+      ? window.localStorage
+      : null;
+
+  /** Pure read of persisted values (no signal writes — NG0600-safe). */
+  function readFromStorage(): T | null {
+    if (!config.persist || !persistStorage) return null;
+    try {
+      const stored = persistStorage.getItem(config.persist);
+      if (stored) {
+        return { ...initial, ...JSON.parse(stored) };
+      }
+    } catch {
+      // Ignore parse errors
+    }
+    return null;
+  }
+
+  // Hydrate from storage via the INITIAL value — markers materialize lazily,
+  // often during template rendering, and a post-create .set() here would
+  // throw NG0600 for returning users with a persisted draft.
+  const valuesSignal: WritableSignal<T> = signal(
+    readFromStorage() ?? { ...initial }
+  );
 
   /** Per-field touched state */
   const touchedSignal: WritableSignal<Record<keyof T, boolean>> = signal(
@@ -418,30 +444,18 @@ export function createFormSignal<T extends Record<string, unknown>>(
   // ==================
 
   let persistTimeout: ReturnType<typeof setTimeout> | null = null;
-  const storage =
-    config.storage !== undefined
-      ? config.storage
-      : typeof window !== 'undefined'
-      ? window.localStorage
-      : null;
 
   function loadFromStorage(): void {
-    if (!config.persist || !storage) return;
-    try {
-      const stored = storage.getItem(config.persist);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        valuesSignal.set({ ...initial, ...parsed });
-      }
-    } catch {
-      // Ignore parse errors
+    const loaded = readFromStorage();
+    if (loaded) {
+      valuesSignal.set(loaded);
     }
   }
 
   function saveToStorage(): void {
-    if (!config.persist || !storage) return;
+    if (!config.persist || !persistStorage) return;
     try {
-      storage.setItem(config.persist, JSON.stringify(valuesSignal()));
+      persistStorage.setItem(config.persist, JSON.stringify(valuesSignal()));
     } catch {
       // Ignore storage errors
     }
@@ -452,12 +466,6 @@ export function createFormSignal<T extends Record<string, unknown>>(
     if (persistTimeout) clearTimeout(persistTimeout);
     persistTimeout = setTimeout(saveToStorage, config.persistDebounceMs ?? 500);
   }
-
-  // Load on init. No validation seeding needed: `errors` is a computed over
-  // the values signal, so validity is live from the first read — and there
-  // are no signal writes here, which matters because markers materialize
-  // lazily, often during template rendering (NG0600).
-  loadFromStorage();
 
   // ==================
   // DEEP FIELD ACCESS
@@ -780,8 +788,8 @@ export function createFormSignal<T extends Record<string, unknown>>(
   };
 
   formSignalFn.clearStorage = (): void => {
-    if (config.persist && storage) {
-      storage.removeItem(config.persist);
+    if (config.persist && persistStorage) {
+      persistStorage.removeItem(config.persist);
     }
   };
 

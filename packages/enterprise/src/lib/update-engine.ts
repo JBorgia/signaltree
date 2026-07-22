@@ -350,17 +350,45 @@ export class OptimizedUpdateEngine {
         }
 
         return true;
-      } // Fallback: Navigate to parent object and update directly
+      } // Fallback: Navigate to the parent node and update directly.
+      // NodeAccessors are callable (typeof 'function') with children as own
+      // properties — rejecting non-objects here made updateOptimized()
+      // silently no-op (return false) for every nested path.
       let current: Record<string, unknown> = tree as Record<string, unknown>;
       for (let i = 0; i < patch.path.length - 1; i++) {
         const key = patch.path[i];
         current = current[key] as Record<string, unknown>;
-        if (!current || typeof current !== 'object') {
+        if (
+          !current ||
+          (typeof current !== 'object' && typeof current !== 'function')
+        ) {
           return false;
         }
       }
 
       const lastKey = patch.path[patch.path.length - 1];
+      const target = current[lastKey];
+
+      // Accessor-tree targets: distribute the patch into the underlying
+      // signals. A leaf accessor IS a signal — set through it so reactivity
+      // fires. A BRANCH accessor (callable NodeAccessor, not a signal) must
+      // never be replaced by plain assignment (that destroys the accessor
+      // tree); recurse the object patch into its per-key leaves instead.
+      if (target && (typeof target === 'function' || typeof target === 'object')) {
+        if (isSignal(target)) {
+          const leaf = target as unknown as WritableSignal<unknown>;
+          if (this.isEqual(leaf(), patch.value)) {
+            return false;
+          }
+          leaf.set(patch.value);
+          return true;
+        }
+        if (patch.value && typeof patch.value === 'object') {
+          return this.applyDeepToNode(target, patch.value);
+        }
+        // Non-object patch aimed at a structured node — nothing safe to do.
+        return false;
+      }
 
       // Only update if value actually changed
       if (this.isEqual(current[lastKey], patch.value)) {
@@ -375,6 +403,38 @@ export class OptimizedUpdateEngine {
       return false;
     }
   }
+  /**
+   * Recursively distribute a plain-object patch into an accessor node's leaf
+   * signals. Returns true if any leaf changed.
+   */
+  private applyDeepToNode(node: unknown, value: unknown): boolean {
+    if (!node) return false;
+    if (isSignal(node)) {
+      const leaf = node as unknown as WritableSignal<unknown>;
+      if (this.isEqual(leaf(), value)) return false;
+      leaf.set(value);
+      return true;
+    }
+    if (
+      (typeof node === 'object' || typeof node === 'function') &&
+      value &&
+      typeof value === 'object'
+    ) {
+      let changed = false;
+      for (const [key, child] of Object.entries(
+        value as Record<string, unknown>
+      )) {
+        changed =
+          this.applyDeepToNode(
+            (node as Record<string, unknown>)[key],
+            child
+          ) || changed;
+      }
+      return changed;
+    }
+    return false;
+  }
+
   /**
    * Check equality
    */
